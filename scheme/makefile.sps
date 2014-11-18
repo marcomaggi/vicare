@@ -175,6 +175,9 @@
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
+  (prefix (only (ikarus.options)
+		verbose?)
+	  option.)
   (prefix (ikarus.compiler) compiler.)
   (prefix (only (psyntax system $bootstrap)
 		current-library-collection
@@ -224,6 +227,8 @@
 (define verbose-output? #t)
 
 ;;; --------------------------------------------------------------------
+
+(option.verbose? #t)
 
 (fasl-write.writing-boot-image? #t)
 

@@ -314,29 +314,44 @@
 
 ;;;; syntax helpers: math operations
 
-(define-syntax (define-object-unary-operation-declarer stx)
-  ;;Usage example:
-  ;;
-  ;;   (define-object-unary-operation-declarer declare-flonum-unary T:flonum)
-  ;;   (declare-flonum-unary flsin)
-  ;;   (declare-flonum-unary flcos)
-  ;;   (declare-flonum-unary fltan)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-     #'(define-syntax ?declarer
-	 (syntax-rules ()
-	   ((_ ?who)
-	    (?declarer ?who safe))
-	   ((_ ?who ?safety)
-	    #'(declare-core-primitive ?who
-		  (?safety)
-		(signatures
-		 ((?type-tag)	=> (?type-tag)))
-		(attributes
-		 ((_)		foldable effect-free result-true))))
-	   )))
-    ))
+(module (define-object-unary-operation-declarer)
+
+  (define-syntax (define-object-unary-operation-declarer stx)
+    ;;Usage example:
+    ;;
+    ;;   (define-object-unary-operation-declarer declare-flonum-unary T:flonum)
+    ;;   (declare-flonum-unary flsin)
+    ;;   (declare-flonum-unary flcos)
+    ;;   (declare-flonum-unary fltan)
+    ;;
+    (syntax-case stx ()
+      ((_ ?declarer ?type-tag)
+       (all-identifiers? #'(?declarer ?type-tag))
+       #'(define-syntax ?declarer
+	   (syntax-rules (safe unsafe replacements)
+	     ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	     ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	     )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag)	=> (?type-tag)))
+	 (attributes
+	  ((_)		foldable effect-free result-true))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DEFINE-OBJECT-UNARY-OPERATION-DECLARER |# )
 
 (define-object-unary-operation-declarer declare-number-unary T:number)
 (define-object-unary-operation-declarer declare-fixnum-unary T:fixnum)
@@ -344,27 +359,42 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax (define-object-binary-operation-declarer stx)
-  ;;Usage examples:
-  ;;
-  ;;   (define-object-binary-operation-declarer declare-flonum-binary T:flonum)
-  ;;   (declare-flonum-binary flexpt)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-    #'(define-syntax ?declarer
-	(syntax-rules ()
-	  ((_ ?who)
-	   (?declarer ?who safe))
-	  ((_ ?who ?safety)
-	   #'(declare-core-primitive ?who
-		 (?safety)
-	       (signatures
-		((?type-tag ?type-tag)	=> (?type-tag)))
-	       (attributes
-		((_ _)			foldable effect-free result-true))))
-	  )))
-    ))
+(module (define-object-binary-operation-declarer)
+
+  (define-syntax (define-object-binary-operation-declarer stx)
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-binary-operation-declarer declare-flonum-binary T:flonum)
+    ;;   (declare-flonum-binary flexpt)
+    ;;
+    (syntax-case stx ()
+      ((_ ?declarer ?type-tag)
+       (all-identifiers? #'(?declarer ?type-tag))
+       #'(define-syntax ?declarer
+	   (syntax-rules (safe unsafe replacements)
+	     ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	     ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	     )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag ?type-tag)	=> (?type-tag)))
+	 (attributes
+	  ((_ _)			foldable effect-free result-true))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DEFINE-OBJECT-BINARY-OPERATION-DECLARER |# )
 
 (define-object-binary-operation-declarer declare-number-binary T:number)
 (define-object-binary-operation-declarer declare-fixnum-binary T:fixnum)
@@ -372,29 +402,44 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax (define-object-unary/binary-operation-declarer stx)
-  ;;Usage examples:
-  ;;
-  ;;   (define-object-unary/binary-operation-declarer declare-flonum-unary/binary T:flonum)
-  ;;   (declare-flonum-unary/binary fllog)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-    #'(define-syntax ?declarer
-	(syntax-rules ()
-	  ((_ ?who)
-	   (?declarer ?who safe))
-	  ((_ ?who ?safety)
-	   #'(declare-core-primitive ?who
-		 (?safety)
-	       (signatures
-		((?type-tag)		=> (?type-tag))
-		((?type-tag ?type-tag)	=> (?type-tag)))
-	       (attributes
-		((_)		foldable effect-free result-true)
-		((_ _)		foldable effect-free result-true))))
-	  )))
-    ))
+(module (define-object-unary/binary-operation-declarer)
+
+  (define-syntax (define-object-unary/binary-operation-declarer stx)
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-unary/binary-operation-declarer declare-flonum-unary/binary T:flonum)
+    ;;   (declare-flonum-unary/binary fllog)
+    ;;
+    (syntax-case stx ()
+      ((_ ?declarer ?type-tag)
+       (all-identifiers? #'(?declarer ?type-tag))
+       #'(define-syntax ?declarer
+	   (syntax-rules (safe unsafe replacements)
+	     ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	     ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	     )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag)			=> (?type-tag))
+	  ((?type-tag ?type-tag)	=> (?type-tag)))
+	 (attributes
+	  ((_)			foldable effect-free result-true)
+	  ((_ _)		foldable effect-free result-true))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DEFINE-OBJECT-UNARY/BINARY-OPERATION-DECLARER |# )
 
 (define-object-unary/binary-operation-declarer declare-number-unary/binary T:number)
 (define-object-unary/binary-operation-declarer declare-fixnum-unary/binary T:fixnum)
@@ -402,34 +447,47 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax (define-object-unary/multi-operation-declarer stx)
-  ;;Usage examples:
-  ;;
-  ;;   (define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
-  ;;   (declare-flonum-unary/multi fl+)
-  ;;   (declare-flonum-unary/multi fl-)
-  ;;   (declare-flonum-unary/multi fl*)
-  ;;   (declare-flonum-unary/multi fl/)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-     #'(define-syntax ?declarer
-	 (syntax-rules ()
-	   ((_ ?who)
-	    (?declarer ?who safe))
-	   ((_ ?who ?safety)
-	    #'(declare-core-primitive ?who
-		  (?safety)
-		(signatures
-		 ((?type-tag)				=> (?type-tag))
-		 ((?type-tag ?type-tag)			=> (?type-tag))
-		 ((?type-tag ?type-tag . ?type-tag)	=> (?type-tag)))
-		(attributes
-		 ((_)			foldable effect-free result-true)
-		 ((_ _)			foldable effect-free result-true)
-		 ((_ _ . _)		foldable effect-free result-true))))
-	   )))
-    ))
+(module (define-object-unary/multi-operation-declarer)
+
+  (define-syntax (define-object-unary/multi-operation-declarer stx)
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
+    ;;   (declare-flonum-unary/multi fl+)
+    ;;   (declare-flonum-unary/multi fl-)
+    ;;   (declare-flonum-unary/multi fl*)
+    ;;   (declare-flonum-unary/multi fl/)
+    ;;
+    (syntax-case stx ()
+      ((_ ?declarer ?type-tag)
+       (all-identifiers? #'(?declarer ?type-tag))
+       #'(define-syntax ?declarer
+	   (syntax-rules (safe unsafe replacements)
+	     ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	     ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	     )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag)			=> (?type-tag))
+	  ((?type-tag . ?type-tag)	=> (?type-tag)))
+	 (attributes
+	  ((_)				foldable effect-free result-true)
+	  ((_ . _)			foldable effect-free result-true))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DEFINE-OBJECT-UNARY/MULTI-OPERATION-DECLARER |# )
 
 (define-object-unary/multi-operation-declarer declare-number-unary/multi T:number)
 (define-object-unary/multi-operation-declarer declare-fixnum-unary/multi T:fixnum)
@@ -437,29 +495,44 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax (define-object-multi-operation-declarer stx)
-  ;;Usage examples:
-  ;;
-  ;;   (define-object-multi-operation-declarer declare-fixnum-multi T:fixnum)
-  ;;   (declare-fixnum-multi fxior)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-     #'(define-syntax ?declarer
-	 (syntax-rules ()
-	   ((_ ?who)
-	    (?declarer ?who safe))
-	   ((_ ?who ?safety)
-	    #'(declare-core-primitive ?who
-		  (?safety)
-		(signatures
-		 (()					=> (?type-tag))
-		 (?type-tag				=> (?type-tag)))
-		(attributes
-		 (()			foldable effect-free result-true)
-		 ((_ . _)		foldable effect-free result-true))))
-	   )))
-    ))
+(module (define-object-multi-operation-declarer)
+
+  (define-syntax (define-object-multi-operation-declarer stx)
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-multi-operation-declarer declare-fixnum-multi T:fixnum)
+    ;;   (declare-fixnum-multi fxior)
+    ;;
+    (syntax-case stx ()
+      ((_ ?declarer ?type-tag)
+       (all-identifiers? #'(?declarer ?type-tag))
+       #'(define-syntax ?declarer
+	   (syntax-rules (safe unsafe replacements)
+	     ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	     ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	     ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	     ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	     )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  (()			=> (?type-tag))
+	  (?type-tag		=> (?type-tag)))
+	 (attributes
+	  (()			foldable effect-free result-true)
+	  ((_ . _)		foldable effect-free result-true))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DEFINE-OBJECT-MULTI-OPERATION-DECLARER |# )
 
 (define-object-multi-operation-declarer declare-number-multi T:number)
 (define-object-multi-operation-declarer declare-fixnum-multi T:fixnum)
@@ -862,6 +935,7 @@
 (declare-fixnum-multi fxand		(replacements $fxlogand))
 (declare-fixnum-multi fxior		(replacements $fxlogor))
 (declare-fixnum-multi fxxor		(replacements $fxlogxor))
+(declare-fixnum-unary fxlognot		(replacements $fxlognot))
 (declare-fixnum-multi fxlogor		(replacements $fxlogor))
 (declare-fixnum-multi fxlogand		(replacements $fxlogand))
 (declare-fixnum-multi fxlogxor		(replacements $fxlogxor))
@@ -952,9 +1026,9 @@
 (declare-fixnum-unary $fxsub1 unsafe)
 (declare-fixnum-unary $fxabs unsafe)
 (declare-fixnum-unary $fxsign unsafe)
-(declare-fixnum-unary $fxremainder unsafe)
-(declare-fixnum-unary $fxquotient unsafe)
-(declare-fixnum-unary $fxmodulo unsafe)
+(declare-fixnum-binary $fxremainder unsafe)
+(declare-fixnum-binary $fxquotient unsafe)
+(declare-fixnum-binary $fxmodulo unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations

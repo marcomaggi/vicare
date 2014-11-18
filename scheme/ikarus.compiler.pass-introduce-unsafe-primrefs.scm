@@ -96,7 +96,7 @@
 
 
 (module (E-funcall)
-  (module (core-primitive-name->signature*
+  (module (core-primitive-name->core-type-signature*
 	   core-primitive-name->replacement*)
     (import CORE-PRIMITIVE-PROPERTIES))
 
@@ -108,14 +108,17 @@
 	(else
 	 (make-funcall (E-known rator) rand*^)))))
 
-  (define* (%E-primref-call safe-prim-name rand*)
+  (define* (%E-primref-call prim-name rand*)
     (define (%no-replacement)
-      (make-funcall (make-primref safe-prim-name) rand*))
+      ;;When no replacement is possible: we return the return value of this function.
+      ;;Just return a copy of the original primitive application.
+      ;;
+      (make-funcall (make-primref prim-name) rand*))
     (parametrise ((%exception-raiser compile-time-error))
       (cond ((null? rand*)
 	     (%no-replacement))
-	    ((%compatible-operands-for-primitive-call? safe-prim-name rand*)
-	     (or (%find-core-primitive-replacement safe-prim-name rand*)
+	    ((%compatible-operands-for-primitive-call? prim-name rand*)
+	     (or (%find-core-primitive-replacement prim-name rand*)
 		 (%no-replacement)))
 	    ((option.strict-r6rs)
 	     ;;The operands do  not match the expected arguments:  resort to run-time
@@ -136,37 +139,40 @@
     ;;Validate the operands  against the types expected by the  core primitive.  If
     ;;they are compatible: return true, otherwise return false.
     ;;
-    (cond ((core-primitive-name->signature* prim-name)
+    (cond ((core-primitive-name->core-type-signature* prim-name)
+	   ;;This core primitive has registered core type signatures.
 	   => (lambda (signature*)
 		;;We expect SIGNATURE* to be a list of pairs with the format:
 		;;
-		;;   ((?rand-preds . ?rv-preds) ...)
+		;;   ((?operands-preds . ?return-values-preds) ...)
 		;;
-		;;in which  both ?RAND-PREDS and  ?RV-PREDS are proper  or improper
-		;;lists of type predicates and false objects.
+		;;in which  both ?OPERANDS-PREDS and ?RETURN-VALUES-PREDS  are proper
+		;;or improper lists of type predicates and false objects.
 		(find (lambda (signature)
 			(%compatible-type-predicates-and-operands? (car signature) rand*))
 		  signature*)))
-	  ;;This  core primitive  has no  registered type  signatures.  Let's  fake
-	  ;;matching arguments.
+	  ;;This core primitive  has no registered core type  signatures.  Let's fake
+	  ;;successfully matching arguments.
 	  ;;
-	  ;;FIXME  In future  we should  replace this  with an  exception: all  the
-	  ;;primitive should have a type  specification.  (Marco Maggi; Sun Sep 21,
+	  ;;FIXME  In future  we  should  replace this  with  an  exception: all  the
+	  ;;primitive should  have a type  specification.  (Marco Maggi; Sun  Sep 21,
 	  ;;2014)
-	  (else #t)))
+	  (else
+	   (print-compiler-warning-message "core primitive without registered core type signature: ~a" prim-name)
+	   #t)))
 
   (define (%matching-operands-for-primitive-call? prim-name rand*)
     ;;Validate the operands  against the types expected by the  core primitive.  If
     ;;they match: return true, otherwise return false.
     ;;
-    (cond ((core-primitive-name->signature* prim-name)
+    (cond ((core-primitive-name->core-type-signature* prim-name)
 	   => (lambda (signature*)
 		;;We expect SIGNATURE* to be a list of pairs pair with the format:
 		;;
-		;;   ((?rand-preds . ?rv-preds) ...)
+		;;   ((?operands-preds . ?return-values-preds) ...)
 		;;
-		;;in which  both ?RAND-PREDS and  ?RV-PREDS are proper  or improper
-		;;lists of type predicates and false objects.
+		;;in which  both ?OPERANDS-PREDS and ?RETURN-VALUES-PREDS  are proper
+		;;or improper lists of type predicates and false objects.
 		(find (lambda (signature)
 			(%matching-type-predicates-and-operands? (car signature) rand*))
 		  signature*)))

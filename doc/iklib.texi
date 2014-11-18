@@ -8428,10 +8428,11 @@ provided all number object involved in that computation are exact.
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun fxlogor @vari{fx} @varii{fx}
+@defun fxlognot @var{fx}
+@defunx fxlogor @vari{fx} @varii{fx}
 @defunx fxlogand @vari{fx} @varii{fx}
 @defunx fxlogxor @vari{fx} @varii{fx}
-Aliases for @func{fxior}, @func{fxand}, @func{fxxor}.
+Aliases for @func{fxnot}, @func{fxior}, @func{fxand}, @func{fxxor}.
 @end defun
 
 @c page

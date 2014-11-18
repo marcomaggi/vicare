@@ -33,7 +33,7 @@
 
 (module CORE-PRIMITIVE-PROPERTIES
   (core-primitive-name->application-attributes*
-   core-primitive-name->signature*
+   core-primitive-name->core-type-signature*
    core-primitive-name->replacement*
    application-attributes-operands-template
    application-attributes-foldable?
@@ -55,12 +55,12 @@
 	   => core-primitive-properties-application-attributes*)
 	  (else #f)))
 
-  (define* (core-primitive-name->signature* {prim-name symbol?})
+  (define* (core-primitive-name->core-type-signature* {prim-name symbol?})
     ;;Return the  SIGNATURE* list of  the core  primitive PRIM-NAME; return  false if
     ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
     ;;
     (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-	   => core-primitive-properties-signature*)
+	   => core-primitive-properties-core-type-signature*)
 	  (else #f)))
 
   (define* (core-primitive-name->replacement* {prim-name symbol?})
@@ -75,13 +75,13 @@
 ;;;; core primitive properties representation
 
 (define-struct core-primitive-properties
-  (signature*
+  (core-type-signature*
 		;A list of pairs with the format:
 		;
-		;   ((?rand-preds . ?rv-preds) ...)
+		;   ((?operands-preds . ?return-values-preds) ...)
 		;
-		;in which both ?RAND-PREDS and ?RV-PREDS are proper or improper lists
-		;of type predicates and false objects.
+		;in which both ?OPERANDS-PREDS and ?RETURN-VALUES-PREDS are proper or
+		;improper lists of type predicates and false objects.
 		;
 		;Every  pair  represents  an  alternative  core  type  signature  for
 		;operands and return values.
@@ -131,67 +131,77 @@
 
 (define-syntax* (declare-core-primitive input-form)
   (define (main stx)
-    (syntax-case stx (safe unsafe signatures attributes replacements)
-
-      ;;Unsafe primitive.
-      ((?ctx ?prim-name (unsafe)
-	     (signatures ?signature ...)
-	     (attributes ?attr-spec ...))
-       (let* ((prim-name	(%parse-prim-name #'?prim-name))
-	      (signature*	(%parse-signatures-sexp #'(?signature ...)))
-	      (attribute*	(%parse-application-attributes-sexp #'(?attr-spec ...)))
-	      (signature-pred*	(%signatures->signature-pred* #'?ctx signature*)))
-	 (with-syntax
-	     ((SIGNATURES-FORM	(%compose-signature-output-form signature-pred*))
-	      (ATTRIBUTES-FORM	(%compose-attributes-output-form attribute*)))
-	   #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-		      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM '())))))
-
-      ;;Safe primitive.
-      ((?ctx ?prim-name (safe)
-	     (signatures ?signature ...)
-	     (attributes ?attr-spec ...))
-       #'(?ctx ?prim-name (safe)
-	       (signatures ?signature ...)
-	       (attributes ?attr-spec ...)
-	       (replacements)))
-
-      ;;Safe primitive with replacements.
-      ((?ctx ?prim-name (safe)
-	     (signatures ?signature ...)
-	     (attributes ?attr-spec ...)
-	     (replacements ?replacement-prim-name ...))
-       (let* ((prim-name		(%parse-prim-name #'?prim-name))
-	      (signature*		(%parse-signatures-sexp #'(?signature ...)))
-	      (attribute*		(%parse-application-attributes-sexp #'(?attr-spec ...)))
-	      (replacement-prim-name*	(%parse-replacements-sexp #'(?replacement-prim-name ...)))
-	      (signature-pred*		(%signatures->signature-pred* #'?ctx signature*)))
-	 (with-syntax
-	     ((SIGNATURES-FORM		(%compose-signature-output-form signature-pred*))
-	      (ATTRIBUTES-FORM		(%compose-attributes-output-form attribute*))
-	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
-	   #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-		      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM)))))
-
-      ;;UNsafe primitive with replacements.
-      ((?ctx ?prim-name (unsafe)
-	     (signatures ?signature ...)
-	     (attributes ?attr-spec ...)
-	     (replacements ?replacement-prim-name ...))
-       (let* ((prim-name		(%parse-prim-name #'?prim-name))
-	      (signature*		(%parse-signatures-sexp #'(?signature ...)))
-	      (attribute*		(%parse-application-attributes-sexp #'(?attr-spec ...)))
-	      (replacement-prim-name*	(%parse-replacements-sexp #'(?replacement-prim-name ...)))
-	      (signature-pred*		(%signatures->signature-pred* #'?ctx signature*)))
-	 (with-syntax
-	     ((SIGNATURES-FORM		(%compose-signature-output-form signature-pred*))
-	      (ATTRIBUTES-FORM		(%compose-attributes-output-form attribute*))
-	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
-	   #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-		      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM)))))
+    (syntax-case stx ()
+      ((?ctx ?prim-name . ?clause*)
+       (let ((prim-name (%parse-prim-name #'?prim-name)))
+	 ;; (fprintf (current-error-port)
+	 ;; 	  "parsing core primitive declaration: ~a\n"
+	 ;; 	  (syntax->datum prim-name))
+	 (receive (safe? signature* attribute* replacement-prim-name*)
+	     (%parse-clauses #'?clause*)
+	   (let ((signature-pred* (%signatures->signature-pred* #'?ctx signature*)))
+	     (with-syntax
+		 ((SIGNATURES-FORM	(%compose-signature-output-form signature-pred*))
+		  (ATTRIBUTES-FORM	(%compose-attributes-output-form attribute*))
+		  (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
+	       #;(fprintf (current-error-port) "registering core primitive properties: ~a\n" (syntax->datum prim-name))
+	       #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+			  (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM)))))))
 
       (_
        (synner "invalid syntax in core primitive declaration"))))
+
+;;; --------------------------------------------------------------------
+;;; input form parsers
+
+  (define (%parse-prim-name stx)
+    (if (identifier? stx)
+	stx
+      (synner "expected identifier as core primitive name" stx)))
+
+  (module (%parse-clauses)
+
+    (define (%parse-clauses clause*.stx)
+      (syntax-case clause*.stx (safe unsafe)
+	(((safe)   . ?other-clause*)
+	 (%parse-rest-clauses #'?other-clause* #t))
+	(((unsafe) . ?other-clause*)
+	 (%parse-rest-clauses #'?other-clause* #f))
+	(_
+	 (synner "first clause must be a safety specification, \"(safe)\" or \"(unsafe)\""
+		 clause*.stx))))
+
+    (define %parse-rest-clauses
+      (case-lambda
+       ((clause*.stx safe?)
+	(%parse-rest-clauses clause*.stx safe? '() '() '()))
+       ((clause*.stx safe? signature* attribute* replacement-prim-name*)
+	(syntax-case clause*.stx (signatures attributes replacements)
+	  (()
+	   (values safe? signature* attribute* replacement-prim-name*))
+
+	  (((signatures ?signature ...) . ?other-clause*)
+	   (%parse-rest-clauses #'?other-clause* safe?
+				(append signature* (%parse-signatures-sexp #'(?signature ...)))
+				attribute*
+				replacement-prim-name*))
+
+	  (((attributes ?attr-spec ...) . ?other-clause*)
+	   (%parse-rest-clauses #'?other-clause* safe?
+				signature*
+				(append attribute* (%parse-application-attributes-sexp #'(?attr-spec ...)))
+				replacement-prim-name*))
+
+	  (((replacements ?replacement-prim-name ...) . ?other-clause*)
+	   (%parse-rest-clauses #'?other-clause* safe?
+				signature*
+				attribute*
+				(append replacement-prim-name* (%parse-replacements-sexp #'(?replacement-prim-name ...)))))
+
+	  ((?bad-clause . ?other-clause*)
+	   (synner "invalid clause" #'?bad-clause))))))
+
+    #| end of module: %PARSE-CLAUSES |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -220,11 +230,6 @@
       #'(quote ())))
 
 ;;; --------------------------------------------------------------------
-
-  (define (%parse-prim-name stx)
-    (if (identifier? stx)
-	stx
-      (synner "expected identifier as core primitive name" stx)))
 
   (define (%parse-signatures-sexp stx)
     ;;A SIGNATURES form has the format:
