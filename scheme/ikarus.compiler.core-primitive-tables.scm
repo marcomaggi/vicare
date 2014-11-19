@@ -621,9 +621,9 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((?obj-tag T:pair)	=> (_)))
+	  ((?obj-tag T:proper-list)	=> (_)))
 	 (attributes
-	  ((_ _)		foldable effect-free))
+	  ((_ _)			foldable effect-free))
 	 (replacements . ?replacements)))
       ))
 
@@ -641,8 +641,8 @@
      (declare-core-primitive ?who
 	 (?safety)
        (signatures
-	((?obj-tag T:pair)	=> (_))
-	((?obj-tag T:null)	=> (T:false)))
+	((?obj-tag T:null)			=> (T:false))
+	((?obj-tag T:non-empty-proper-list)	=> (_)))
        (attributes
 	((_ ())			foldable effect-free result-false)
 	((_ _)			foldable effect-free))))
@@ -691,9 +691,9 @@
 (declare-core-primitive list?
     (safe)
   (signatures
-   ((T:null)		=> (T:true))
-   ((T:pair)		=> (T:true))
-   ((_)			=> (T:boolean)))
+   ((T:proper-list)	=> (T:true))
+   ((T:pair)		=> (T:boolean))
+   ((_)			=> (T:false)))
   (attributes
    ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
@@ -724,18 +724,18 @@
     (safe)
   (signatures
    (()			=> (T:null))
-   ((_ . _)		=> (T:pair)))
+   ((_ . _)		=> (T:non-empty-proper-list)))
   (attributes
    ;;Foldable because it returns null.
    (()			foldable effect-free result-true)
    ;;Not foldable because it must return a newly allocated list every time.
-   ((_ . _)		         effect-free result-true)))
+   ((_ . _)		effect-free result-true)))
 
 (declare-core-primitive reverse
     (safe)
   (signatures
-   ((T:null)		=> (T:null))
-   ((T:pair)		=> (T:pair)))
+   ((T:null)			=> (T:null))
+   ((T:non-empty-proper-list)	=> (T:non-empty-proper-list)))
   (attributes
    ;;This is foldable because it returns null itself.
    ((())		foldable effect-free result-true)
@@ -753,8 +753,8 @@
 (declare-core-primitive length
     (safe)
   (signatures
-   ((T:pair)			=> (_))
-   ((T:null)			=> (T:zero)))
+   ((T:null)			=> (T:zero))
+   ((T:non-empty-proper-list)	=> (_)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -2188,14 +2188,14 @@
 (declare-core-primitive struct?
     (unsafe)
   (signatures
-   ((T:struct)			=> (T:true))
-   ((_)				=> (T:boolean))
-   ((T:struct T:struct-rtd)	=> (T:boolean)))
+   ((T:struct)				=> (T:true))
+   ((_)					=> (T:boolean))
+   ((T:struct T:struct-type-descriptor)	=> (T:boolean)))
   (attributes
-   ((_)				foldable effect-free)
-   ((_ _)			foldable effect-free)))
+   ((_)					foldable effect-free)
+   ((_ _)				foldable effect-free)))
 
-(declare-type-predicate struct-type-descriptor? T:struct-rtd)
+(declare-type-predicate struct-type-descriptor? T:struct-type-descriptor)
 
 
 
@@ -2207,17 +2207,17 @@
 (declare-core-primitive base-rtd
     (unsafe)
   (signatures
-   (()				=> (T:struct-rtd)))
+   (()					=> (T:struct-type-descriptor)))
   (attributes
-   (()				effect-free result-true)))
+   (()					effect-free result-true)))
 
 (declare-core-primitive $struct
     (unsafe)
   (signatures
-   ((T:struct-rtd . _)		=> (T:struct)))
+   ((T:struct-type-descriptor . _)	=> (T:struct)))
   (attributes
    ;;It must return a new struct every time.
-   ((_ . _)			effect-free result-true)))
+   ((_ . _)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
@@ -2225,9 +2225,9 @@
 (declare-core-primitive $struct/rtd?
     (unsafe)
   (signatures
-   ((_ T:struct-rtd)		=> (T:boolean)))
+   ((_ T:struct-type-descriptor)	=> (T:boolean)))
   (attributes
-   ((_ _)			foldable effect-free)))
+   ((_ _)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 

@@ -238,13 +238,13 @@
     ;;
     ;;where each ?SIGNATURE has the format:
     ;;
-    ;;   (?rand-types => ?rv-types)
+    ;;   (?operands-types => ?return-values-types)
     ;;
-    ;;in  which both  ?RAND-TYPES  and  ?RV-TYPES are  proper  or  improper lists  of
-    ;;identifiers,  each identifier  representing the  core  type of  an argument  or
-    ;;return value; the type identifiers are  defined by the Scheme objects ontology.
-    ;;The identifiers  "_" and  "T:object" are  wildcards meaning  "an object  of any
-    ;;type".
+    ;;in which both  ?OPERANDS-TYPES and ?RETURN-VALUES-TYPES are  proper or improper
+    ;;lists of identifiers, each identifier representing the core type of an argument
+    ;;or  return value;  the  type  identifiers are  defined  by  the Scheme  objects
+    ;;ontology.  The identifiers "_" and  "T:object" are wildcards meaning "an object
+    ;;of any type".
     ;;
     ;;The specification of  the return value types is the  specification of the types
     ;;of the consumer procedure:
@@ -252,8 +252,8 @@
     ;;   (call-with-values
     ;;       (lambda ()
     ;;         (?call-to-core-primitive))
-    ;;     (lambda ?rv-types
-    ;;       (consume-rvs)))
+    ;;     (lambda ?return-values-types
+    ;;       (consume-return-values)))
     ;;
     ;;When the list is proper:
     ;;
@@ -275,10 +275,13 @@
     ;;This function parses the SIGNATURES form, raising a "&syntax" exception in case
     ;;of error, and returns a proper list of pairs:
     ;;
-    ;;   ((?rand-types . ?rv-types) ...)
+    ;;   ((?operands-types . ?return-values-types) ...)
     ;;
     ;;in collecting the arguments and return value types; the returned expression has
     ;;a false object in place of the wildcards "_" and "T:object".
+    ;;
+    ;;NOTE The order of  the returned signatures is *the* *same*  order in which they
+    ;;appear in the input form!
     ;;
     (define (%syntax-error)
       (synner "invalid signatures specification in core primitive declaration" stx))
@@ -286,9 +289,9 @@
       ((?signature ...)
        (map (lambda (signature)
 	      (syntax-case signature (=>)
-		((?rand-types => ?rv-types)
-		 (cons (%parse-proper-or-improper-list-of-core-types #'?rand-types)
-		       (%parse-proper-or-improper-list-of-core-types #'?rv-types)))
+		((?operands-types => ?return-values-types)
+		 (cons (%parse-proper-or-improper-list-of-core-types #'?operands-types)
+		       (%parse-proper-or-improper-list-of-core-types #'?return-values-types)))
 		(_
 		 (%syntax-error))))
 	 (syntax->list #'(?signature ...))))
@@ -320,9 +323,14 @@
 	 T:object		T:other-object		T:immediate	T:nonimmediate
 	 T:non-false		T:false			T:true		T:void
 	 T:boolean		T:char			T:symbol	T:string
-	 T:null			T:pair			T:vector	T:bytevector
+	 T:vector		T:bytevector
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
-	 T:struct		T:record		T:struct-rtd	T:other-struct
+
+	 T:struct		T:struct-type-descriptor	T:other-struct
+	 T:record		T:record-type-descriptor
+
+	 T:null			T:standalone-pair	T:non-empty-proper-list
+	 T:pair			T:proper-list		T:improper-list
 
 	 T:port			T:textual-port		T:binary-port
 	 T:input-port		T:output-port		T:input-output-port
@@ -353,7 +361,11 @@
       (T:symbol				type)
       (T:string				type)
       (T:null				type)
+      (T:standalone-pair		type)
+      (T:non-empty-proper-list		type)
       (T:pair				type)
+      (T:proper-list			type)
+      (T:improper-list			type)
       (T:vector				type)
       (T:bytevector			type)
       (T:procedure			type)
@@ -369,11 +381,13 @@
       (T:binary-input-port		type)
       (T:binary-output-port		type)
       (T:binary-input/output-port	type)
+
       (T:struct				type)
-      (T:struct				type)
-      (T:struct-rtd			type)
-      (T:record				type)
+      (T:struct-type-descriptor		type)
       (T:other-struct			type)
+      (T:record				type)
+      (T:record-type-descriptor		type)
+
       (T:transcoder			type)
       (T:pointer			type)
       (T:hashtable			type)
@@ -533,7 +547,7 @@
     ;;Given a list  of (already parsed) core primitive  signature specifications with
     ;;the format:
     ;;
-    ;;   ((?rand-types . ?rv-types) ...)
+    ;;   ((?operands-types . ?return-values-types) ...)
     ;;
     ;;build and return  a new list of  pairs in which the type  identifiers have been
     ;;replaced by the  identifiers of the corresponding type  predicates wrapped into

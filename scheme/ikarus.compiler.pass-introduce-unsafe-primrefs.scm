@@ -158,7 +158,7 @@
 	  ;;primitive should  have a type  specification.  (Marco Maggi; Sun  Sep 21,
 	  ;;2014)
 	  (else
-	   (print-compiler-warning-message "core primitive without registered core type signature: ~a" prim-name)
+	   #;(print-compiler-warning-message "core primitive without registered core type signature: ~a" prim-name)
 	   #t)))
 
   (define (%matching-operands-for-primitive-call? prim-name rand*)

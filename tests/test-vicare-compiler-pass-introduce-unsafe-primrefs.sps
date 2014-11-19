@@ -235,7 +235,7 @@
   (doit ((primitive car) '(1 . 2))
 	(funcall (primref $car)
 	  (known (constant (1 . 2))
-		 (T:pair T:non-false T:nonimmediate T:object))))
+		 (T:standalone-pair T:non-false T:nonimmediate T:pair T:object))))
 
   (check-arity-error
    ((primitive car) '(1 . 2) '3))
@@ -248,7 +248,7 @@
   (doit ((primitive cdr) '(1 . 2))
 	(funcall (primref $cdr)
 	  (known (constant (1 . 2))
-		 (T:pair T:non-false T:nonimmediate T:object))))
+		 (T:standalone-pair T:non-false T:nonimmediate T:pair T:object))))
 
   #t)
 

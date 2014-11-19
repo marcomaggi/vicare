@@ -416,22 +416,22 @@
   (doit* (let ((x (read)))
 	   (cond ((null? x)
 		  (display x))
-		 ((pair? x)
-		  (display x))
 		 ((list? x)
+		  (display x))
+		 ((pair? x)
 		  (display x))
 		 (else
 		  (display x))))
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref null?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:null T:non-false T:immediate T:object)))
-	     (conditional (funcall (primref pair?) x_0)
+		 (known x_0 (T:null T:non-false T:proper-list T:immediate T:object)))
+	     (conditional (funcall (primref list?) x_0)
 		 (funcall (primref display)
-		   (known x_0 (T:pair T:non-false T:nonimmediate T:object)))
-	       (conditional (funcall (primref list?) x_0)
+		   (known x_0 (T:non-false T:proper-list T:object)))
+	       (conditional (funcall (primref pair?) x_0)
 		   (funcall (primref display)
-		     (known x_0 (T:pair T:non-false T:nonimmediate T:object)))
+		     (known x_0 (T:non-false T:nonimmediate T:pair T:object)))
 		 (funcall (primref display) x_0))))))
 
   #t)
@@ -482,7 +482,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref pair?) x_0)
 	       (funcall (primref car)
-		 (known x_0 (T:pair T:non-false T:nonimmediate T:object)))
+		 (known x_0 (T:non-false T:nonimmediate T:pair T:object)))
 	     (constant #f))))
 
 ;;; --------------------------------------------------------------------
@@ -569,7 +569,7 @@
 		  (x_0 (constant (1 . 2))))
 	     (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
 	       (funcall (primref cdr)
-		 (known x_0 (T:pair T:non-false T:nonimmediate T:object))))))
+		 (known x_0 (T:standalone-pair T:non-false T:nonimmediate T:pair T:object))))))
 
     ;;Here the variable X is of unknown type: it is left untagged.
     (doit* (let ((f (lambda (y) y))
@@ -597,7 +597,7 @@
 	       (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
 		 (funcall (primref cdr) x_0))
 	       (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
-		 (known x_0 (T:pair T:non-false T:nonimmediate T:object))))))
+		 (known x_0 (T:non-false T:nonimmediate T:pair T:object))))))
 
     #| end of BEGIN |# )
 

@@ -50,9 +50,14 @@
    T:object		T:other-object		T:immediate	T:nonimmediate
    T:non-false		T:false			T:true		T:void
    T:boolean		T:char			T:symbol	T:string
-   T:null		T:pair			T:vector	T:bytevector
+   T:vector		T:bytevector
    T:procedure		T:transcoder		T:pointer	T:hashtable
-   T:struct		T:record		T:struct-rtd	T:other-struct
+
+   T:struct		T:struct-type-descriptor	T:other-struct
+   T:record		T:record-type-descriptor
+
+   T:null		T:standalone-pair	T:non-empty-proper-list
+   T:pair		T:proper-list		T:improper-list
 
    T:port		T:textual-port		T:binary-port
    T:input-port		T:output-port		T:input/output-port
@@ -101,9 +106,14 @@
    T:object?		T:other-object?		T:immediate?	T:nonimmediate?
    T:non-false?		T:false?		T:true?		T:void?
    T:boolean?		T:char?			T:symbol?	T:string?
-   T:null?		T:pair?			T:vector?	T:bytevector?
+   T:vector?		T:bytevector?
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
-   T:struct?		T:record?		T:struct-rtd?	T:other-struct?
+
+   T:struct?		T:struct-type-descriptor?	T:other-struct?
+   T:record?		T:record-type-descriptor?
+
+   T:null?		T:standalone-pair?	T:non-empty-proper-list?
+   T:pair?		T:proper-list?		T:improper-list?
 
    T:port?		T:textual-port?		T:binary-port?
    T:input-port?	T:output-port?		T:input/output-port?
@@ -471,7 +481,7 @@
 ;;one of the  preceeding values; this "everything else" item  *must* be present, even
 ;;when it  is not used  as type tag.   So the following  are present even  if unused:
 ;;other-number,   other-exact,    other-exact-integer,   other-real,   other-complex,
-;;other-struct, other-port.
+;;other-port.
 ;;
 (define-ontology core-type-tag
   make-core-type-tag core-type-tag? core-type-tag=?
@@ -482,10 +492,15 @@
   (obj-immediacy	(exclusive immediate nonimmediate))
   (immediate		(exclusive fixnum boolean null char transcoder void))
   (obj-truth		(exclusive false non-false))
-  (obj-tag		(exclusive procedure string vector pair null
-				   boolean char transcoder number void bytevector
-				   symbol port pointer hashtable struct other-object))
+  (obj-tag		(exclusive boolean char transcoder void number pointer
+				   null standalone-pair non-empty-proper-list
+				   symbol string procedure vector bytevector
+				   port hashtable struct other-object))
+
   (boolean		(exclusive true false))
+
+  (proper-list		(exclusive null non-empty-proper-list dummy-list))
+  (pair			(exclusive standalone-pair non-empty-proper-list dummy-pair))
 
   (number		(inclusive number-tag number-sign number-exactness))
   (number-sign		(exclusive negative zero positive))
@@ -512,7 +527,12 @@
   (exact-real		(exclusive fixnum bignum ratnum other-exact-real))
   (complex		(exclusive cflonum compnum other-complex))
 
-  (struct		(exclusive record struct-rtd other-struct))
+  ;; T:struct			- Vicare struct
+  ;; T:struct-type-descriptor	- Vicare struct type descriptor
+  ;; T:record			- R6RS record instance
+  ;; T:record-type-descriptor	- R6RS record type descriptor
+  ;; T:other-struct		- struct instance of some type
+  (struct		(exclusive struct-type-descriptor record-type-descriptor record other-struct))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
@@ -529,6 +549,11 @@
   #| end of ontology definition |# )
 
 ;;; --------------------------------------------------------------------
+
+(define-underspecified-core-type T:improper-list
+  T:object)
+
+;;; --------------------------------------------------------------------
 ;;; more fixnum types
 
 (define-underspecified-core-type T:positive-fixnum
@@ -543,13 +568,15 @@
   (define (determine-constant-core-type x)
     (cond ((number?     x)   (%determine-numeric-constant-type x))
 	  ((boolean?    x)   (if x T:true T:false))
-	  ((null?       x)   T:null)
 	  ((char?       x)   T:char)
 	  ((string?     x)   T:string)
 	  ((symbol?     x)   T:symbol)
 	  ((vector?     x)   T:vector)
-	  ((pair?       x)   T:pair)
 	  ((bytevector? x)   T:bytevector)
+
+	  ((null?       x)   T:null)
+	  ((list?       x)   T:non-empty-proper-list)
+	  ((pair?       x)   T:standalone-pair)
 
 	  ;;NOTE  These are  here for  completeness, but  commented out  because such
 	  ;;objects can never be hard-coded constants.
@@ -880,20 +907,27 @@
   (check (T:immediate? T:nonimmediate)		=> no)
 
   (check (T:immediate? T:boolean)		=> yes)
-  (check (T:immediate? T:null)			=> yes)
   (check (T:immediate? T:char)			=> yes)
   (check (T:immediate? T:transcoder)		=> yes)
   (check (T:immediate? T:void)			=> yes)
-  (check (T:immediate? T:pair)			=> no)
   (check (T:immediate? T:procedure)		=> no)
   (check (T:immediate? T:string)		=> no)
   (check (T:immediate? T:symbol)		=> no)
   (check (T:immediate? T:vector)		=> no)
   (check (T:immediate? T:bytevector)		=> no)
   (check (T:immediate? T:port)			=> no)
+
+  (check (T:immediate? T:null)			=> yes)
+  (check (T:immediate? T:standalone-pair)	=> no)
+  (check (T:immediate? T:non-empty-proper-list)	=> no)
+  (check (T:immediate? T:pair)			=> no)
+  (check (T:immediate? T:proper-list)		=> maybe)
+  (check (T:immediate? T:improper-list)		=> maybe)
+
   (check (T:immediate? T:struct)		=> no)
   (check (T:immediate? T:record)		=> no)
-  (check (T:immediate? T:struct-rtd)		=> no)
+  (check (T:immediate? T:struct-type-descriptor) => no)
+  (check (T:immediate? T:record-type-descriptor) => no)
   (check (T:immediate? T:other-struct)		=> no)
   (check (T:immediate? T:other-object)		=> no)
 
@@ -910,59 +944,126 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check (T:nonimmediate? T:immediate)		=> no)
-  (check (T:nonimmediate? T:nonimmediate)	=> yes)
+  (check (T:nonimmediate? T:immediate)			=> no)
+  (check (T:nonimmediate? T:nonimmediate)		=> yes)
 
-  (check (T:nonimmediate? T:boolean)		=> no)
-  (check (T:nonimmediate? T:null)		=> no)
-  (check (T:nonimmediate? T:char)		=> no)
-  (check (T:nonimmediate? T:transcoder)		=> no)
-  (check (T:nonimmediate? T:void)		=> no)
-  (check (T:nonimmediate? T:pair)		=> yes)
-  (check (T:nonimmediate? T:procedure)		=> yes)
-  (check (T:nonimmediate? T:string)		=> yes)
-  (check (T:nonimmediate? T:symbol)		=> yes)
-  (check (T:nonimmediate? T:vector)		=> yes)
-  (check (T:nonimmediate? T:bytevector)		=> yes)
-  (check (T:nonimmediate? T:port)		=> yes)
-  (check (T:nonimmediate? T:struct)		=> yes)
-  (check (T:nonimmediate? T:record)		=> yes)
-  (check (T:nonimmediate? T:struct-rtd)		=> yes)
-  (check (T:nonimmediate? T:other-struct)	=> yes)
-  (check (T:nonimmediate? T:other-object)	=> yes)
+  (check (T:nonimmediate? T:boolean)			=> no)
+  (check (T:nonimmediate? T:char)			=> no)
+  (check (T:nonimmediate? T:transcoder)			=> no)
+  (check (T:nonimmediate? T:void)			=> no)
+  (check (T:nonimmediate? T:procedure)			=> yes)
+  (check (T:nonimmediate? T:string)			=> yes)
+  (check (T:nonimmediate? T:symbol)			=> yes)
+  (check (T:nonimmediate? T:vector)			=> yes)
+  (check (T:nonimmediate? T:bytevector)			=> yes)
+  (check (T:nonimmediate? T:port)			=> yes)
 
-  (check (T:nonimmediate? T:fixnum)		=> no)
-  (check (T:nonimmediate? T:bignum)		=> yes)
-  (check (T:nonimmediate? T:ratnum)		=> yes)
-  (check (T:nonimmediate? T:flonum)		=> yes)
-  (check (T:nonimmediate? T:cflonum)		=> yes)
-  (check (T:nonimmediate? T:compnum)		=> yes)
+  (check (T:nonimmediate? T:null)			=> no)
+  (check (T:nonimmediate? T:standalone-pair)		=> yes)
+  (check (T:nonimmediate? T:non-empty-proper-list)	=> yes)
+  (check (T:nonimmediate? T:pair)			=> yes)
+  (check (T:nonimmediate? T:proper-list)		=> maybe)
+  (check (T:nonimmediate? T:improper-list)		=> maybe)
 
-  (check (T:nonimmediate? T:negative)		=> maybe)
-  (check (T:nonimmediate? T:zero)		=> maybe)
-  (check (T:nonimmediate? T:positive)		=> maybe)
+  (check (T:nonimmediate? T:struct)			=> yes)
+  (check (T:nonimmediate? T:record)			=> yes)
+  (check (T:nonimmediate? T:struct-type-descriptor)	=> yes)
+  (check (T:nonimmediate? T:record-type-descriptor)	=> yes)
+  (check (T:nonimmediate? T:other-struct)		=> yes)
+  (check (T:nonimmediate? T:other-object)		=> yes)
+
+  (check (T:nonimmediate? T:fixnum)			=> no)
+  (check (T:nonimmediate? T:bignum)			=> yes)
+  (check (T:nonimmediate? T:ratnum)			=> yes)
+  (check (T:nonimmediate? T:flonum)			=> yes)
+  (check (T:nonimmediate? T:cflonum)			=> yes)
+  (check (T:nonimmediate? T:compnum)			=> yes)
+
+  (check (T:nonimmediate? T:negative)			=> maybe)
+  (check (T:nonimmediate? T:zero)			=> maybe)
+  (check (T:nonimmediate? T:positive)			=> maybe)
 
 ;;; --------------------------------------------------------------------
 
-  (check (T:struct? T:struct)			=> yes)
-  (check (T:struct? T:record)			=> yes)
-  (check (T:struct? T:struct-rtd)		=> yes)
-  (check (T:struct? T:string)			=> no)
+  (check (T:null? T:null)					=> yes)
+  (check (T:null? T:standalone-pair)				=> no)
+  (check (T:null? T:non-empty-proper-list)			=> no)
+  (check (T:null? T:pair)					=> no)
+  (check (T:null? T:proper-list)				=> maybe)
+  (check (T:null? T:improper-list)				=> maybe)
+  (check (T:null? T:string)					=> no)
 
-  (check (T:struct-rtd? T:struct)		=> maybe)
-  (check (T:struct-rtd? T:record)		=> no)
-  (check (T:struct-rtd? T:struct-rtd)		=> yes)
-  (check (T:struct-rtd? T:string)		=> no)
+  (check (T:standalone-pair? T:null)				=> no)
+  (check (T:standalone-pair? T:standalone-pair)			=> yes)
+  (check (T:standalone-pair? T:non-empty-proper-list)		=> no)
+  (check (T:standalone-pair? T:pair)				=> maybe)
+  (check (T:standalone-pair? T:proper-list)			=> no)
+  (check (T:standalone-pair? T:improper-list)			=> maybe)
+  (check (T:standalone-pair? T:string)				=> no)
 
-  (check (T:record? T:struct)			=> maybe)
-  (check (T:record? T:record)			=> yes)
-  (check (T:record? T:struct-rtd)		=> no)
-  (check (T:record? T:string)			=> no)
+  (check (T:non-empty-proper-list? T:null)			=> no)
+  (check (T:non-empty-proper-list? T:standalone-pair)		=> no)
+  (check (T:non-empty-proper-list? T:non-empty-proper-list)	=> yes)
+  (check (T:non-empty-proper-list? T:pair)			=> maybe)
+  (check (T:non-empty-proper-list? T:proper-list)		=> maybe)
+  (check (T:non-empty-proper-list? T:improper-list)		=> maybe)
+  (check (T:non-empty-proper-list? T:string)			=> no)
 
-  (check (T:other-struct? T:struct)		=> maybe)
-  (check (T:other-struct? T:record)		=> no)
-  (check (T:other-struct? T:struct-rtd)		=> no)
-  (check (T:other-struct? T:string)		=> no)
+  (check (T:pair? T:null)					=> no)
+  (check (T:pair? T:standalone-pair)				=> yes)
+  (check (T:pair? T:non-empty-proper-list)			=> yes)
+  (check (T:pair? T:pair)					=> yes)
+  (check (T:pair? T:proper-list)				=> maybe)
+  (check (T:pair? T:improper-list)				=> maybe)
+  (check (T:pair? T:string)					=> no)
+
+  (check (T:proper-list? T:null)				=> yes)
+  (check (T:proper-list? T:standalone-pair)			=> no)
+  (check (T:proper-list? T:non-empty-proper-list)		=> yes)
+  (check (T:proper-list? T:pair)				=> maybe)
+  (check (T:proper-list? T:proper-list)				=> yes)
+  (check (T:proper-list? T:improper-list)			=> maybe)
+  (check (T:proper-list? T:string)				=> no)
+
+  (check (T:improper-list? T:null)				=> yes)
+  (check (T:improper-list? T:standalone-pair)			=> yes)
+  (check (T:improper-list? T:non-empty-proper-list)		=> yes)
+  (check (T:improper-list? T:pair)				=> yes)
+  (check (T:improper-list? T:proper-list)			=> yes)
+  (check (T:improper-list? T:improper-list)			=> yes)
+  (check (T:improper-list? T:string)				=> yes)
+
+;;; --------------------------------------------------------------------
+
+  (check (T:struct? T:struct)					=> yes)
+  (check (T:struct? T:record)					=> yes)
+  (check (T:struct? T:struct-type-descriptor)			=> yes)
+  (check (T:struct? T:record-type-descriptor)			=> yes)
+  (check (T:struct? T:string)					=> no)
+
+  (check (T:struct-type-descriptor? T:struct)			=> maybe)
+  (check (T:struct-type-descriptor? T:record)			=> no)
+  (check (T:struct-type-descriptor? T:struct-type-descriptor)	=> yes)
+  (check (T:struct-type-descriptor? T:record-type-descriptor)	=> no)
+  (check (T:struct-type-descriptor? T:string)			=> no)
+
+  (check (T:record-type-descriptor? T:struct)			=> maybe)
+  (check (T:record-type-descriptor? T:record)			=> no)
+  (check (T:record-type-descriptor? T:struct-type-descriptor)	=> no)
+  (check (T:record-type-descriptor? T:record-type-descriptor)	=> yes)
+  (check (T:record-type-descriptor? T:string)			=> no)
+
+  (check (T:record? T:struct)					=> maybe)
+  (check (T:record? T:record)					=> yes)
+  (check (T:record? T:struct-type-descriptor)			=> no)
+  (check (T:record? T:record-type-descriptor)			=> no)
+  (check (T:record? T:string)					=> no)
+
+  (check (T:other-struct? T:struct)				=> maybe)
+  (check (T:other-struct? T:record)				=> no)
+  (check (T:other-struct? T:struct-type-descriptor)		=> no)
+  (check (T:other-struct? T:record-type-descriptor)		=> no)
+  (check (T:other-struct? T:string)				=> no)
 
 ;;; --------------------------------------------------------------------
 

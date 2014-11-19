@@ -785,8 +785,11 @@
       ((null?)
        (values (extend-env rand T:null env)
 	       env))
-      ((pair? list?)
+      ((pair?)
        (values (extend-env rand T:pair env)
+	       env))
+      ((list?)
+       (values (extend-env rand T:proper-list env)
 	       env))
 
       ;; numbers
@@ -918,7 +921,7 @@
 	       env))
 
       ((struct-type-descriptor?)
-       (values (extend-env rand T:struct-rtd env)
+       (values (extend-env rand T:struct-type-descriptor env)
 	       env))
 
       ((annotation?)
