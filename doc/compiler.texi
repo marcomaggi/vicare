@@ -113,6 +113,7 @@ semantics is similar to the corresponding standard language syntax:
 (annotated-call @meta{annotation} @meta{fun} @meta{arg} ...)
 @meta{lex}
 (@meta{func} @meta{arg} ...)
+(typed-expr @meta{expr} @meta{core-type-name})
 @end example
 
 @noindent

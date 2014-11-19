@@ -309,6 +309,9 @@
       ((constant)
        #f)
 
+      ((typed-expr expr)
+       (C expr illegals))
+
       ((prelex)
        (%illegal-reference-to? x illegals))
 
@@ -450,6 +453,9 @@
     (struct-case X
       ((constant)
        X)
+
+      ((typed-expr expr core-type)
+       (make-typed-expr (E expr) core-type))
 
       ((prelex)
        X)
@@ -694,6 +700,9 @@
       ((constant)
        x)
 
+      ((typed-expr expr core-type)
+       (make-typed-expr (E expr) core-type))
+
       ((prelex)
        (assert (prelex-source-referenced? x))
        x)
@@ -804,6 +813,9 @@
       (struct-case x
 	((constant)
 	 x)
+
+	((typed-expr expr core-type)
+	 (make-typed-expr (E expr) core-type))
 
 	((prelex)
 	 ;;A reference to a lexical variable.
@@ -1471,6 +1483,9 @@
       (struct-case x
 	((constant)
 	 x)
+
+	((typed-expr expr core-type)
+	 (make-typed-expr (E expr enclosing-binding) core-type))
 
 	((prelex)
 	 #;(assert (prelex-source-referenced? x))

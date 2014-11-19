@@ -240,6 +240,9 @@
        (decrement sc 1)
        x)
 
+      ((typed-expr expr core-type)
+       (make-typed-expr (E expr ctxt env ec sc) core-type))
+
       ((prelex)
        ;;X is a lexical variable reference.
        (E-var x ctxt env ec sc))
@@ -1198,7 +1201,7 @@
 	 ;;follows:
 	 ;;
 	 ;;   (let ((X 1))
-	 ;;     X) ;; <- reference to varaible
+	 ;;     X) ;; <- reference to variable
 	 ;;   ==> (let ((X 1))
 	 ;;         1)
 	 ;;

@@ -55,7 +55,7 @@
   ;;
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
-  ;;   seq		clambda
+  ;;   seq		clambda		typed-expr
   ;;   forcall		funcall
   ;;
   ;;NOTE Every PRELEX struct in the  input expression must represent a proper lexical
@@ -248,6 +248,38 @@
     (struct-case x
       ((constant x.const)
        (values x env (determine-constant-core-type x.const)))
+
+      ((typed-expr expr core-type)
+       (receive (expr^ env^ inferred-core-type)
+	   (V expr env)
+	 (case (core-type-tag-is-a? inferred-core-type core-type)
+	   ((yes maybe)
+	    ;;FIXME Is it fine to always  return CORE-TYPE?  If we can determine that
+	    ;;INFERRED-CORE-TYPE is more refined than  CORE-TYPE, then it makes sense
+	    ;;to return INFERRED-CORE-TYPE.
+	    ;;
+	    ;;We  know  that "T:fixnum"  is  more  refined  than "T:number",  so  the
+	    ;;following expression is true:
+	    ;;
+	    ;;   (and
+	    ;;     (eq? 'yes   (core-type-tag-is-a? T:fixnum T:number))
+	    ;;     (eq? 'maybe (core-type-tag-is-a? T:number T:fixnum)))
+	    ;;
+	    ;;So if:
+	    ;;
+	    ;;   (and
+	    ;;     (eq? 'yes   (core-type-tag-is-a? inferred-core-type core-type))
+	    ;;     (eq? 'maybe (core-type-tag-is-a? core-type inferred-core-type)))
+	    ;;
+	    ;;is  true,  then  INFERRED-CORE-TYPE  is more  refined  than  CORE-TYPE.
+	    ;;(Marco Maggi; Wed Nov 19, 2014)
+	    ;;
+	    (values expr^ env^ core-type))
+	   (else
+	    (compiler-internal-error __module_who__ __who__
+	      "typed expression's core type incompatible with inferred core type"
+	      (unparse-recordized-code x)
+	      inferred-core-type)))))
 
       ((prelex)
        ;;We search  the PRELEX in  the environment collected  so far to  retrieve its

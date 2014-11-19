@@ -1339,6 +1339,18 @@
 (define-constant VOID-CONSTANT
   (make-constant (void)))
 
+;;Structs of this  type are introduced by  the expander and consumed  by the compiler
+;;pass  "core  type  inference".   These  structs  represents  type  informations  of
+;;arbitrary expressions.
+;;
+(define-struct typed-expr
+  (expr
+		;A struct representing an expression as recordised code.
+   type
+		;A struct  of type CORE-TYPE-TAG representing  core type informations
+		;of EXPR.
+   ))
+
 
 ;;;; struct types used in middle-level code representation
 
@@ -1945,6 +1957,7 @@
   ;;   (annotated-call ?annotation ?fun ?arg ...)
   ;;   ?lex
   ;;   (?func ?arg ...)
+  ;;   (typed-expr ?expr ?core-type)
   ;;
   ;;where:  a standalone  ?LEX atom  is  a lex  gensym, interpreted  as reference  to
   ;;binding; ?LHS stands for "left-hand side" and it is a lex gensym; ?RHS stands for
@@ -2114,6 +2127,18 @@
       ;;
       ((quote)
        (make-constant (cadr X)))
+
+      ;;Synopsis: (typed-expr ?expr ?core-type-name)
+      ;;
+      ;;Return a struct instance of type TYPED-EXPR.
+      ;;
+      ((typed-expr)
+       (let ((expr      (E (cadr X)))
+	     (core-type (let ()
+			  (module (name->core-type-tag)
+			    (import SCHEME-OBJECTS-ONTOLOGY))
+			  (name->core-type-tag (caddr X)))))
+	 (make-typed-expr expr core-type)))
 
       ;;Synopsis: (if ?test ?consequent ?alternate)
       ;;
@@ -3018,6 +3043,7 @@
   ;;   bind		recbind		rec*bind
   ;;   conditional	seq		clambda
   ;;   funcall		forcall		assign
+  ;;   typed-expr
   ;;
   ;;Example: COND syntaxes
   ;;----------------------
@@ -3060,6 +3086,9 @@
     (struct-case x
       ((constant)
        x)
+
+      ((typed-expr expr core-type)
+       (make-typed-expr (E expr) core-type))
 
       ((prelex)
        #;(assert (prelex-source-referenced? x))
@@ -3521,7 +3550,7 @@
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
   ;;   seq		clambda		assign
-  ;;   forcall		funcall
+  ;;   forcall		funcall		typed-expr
   ;;
   ;;After  this compiler  pass: there  are  no more  ASSIGN structs  in the  returned
   ;;recordised code.
@@ -3540,6 +3569,9 @@
     (struct-case x
       ((constant)
        x)
+
+      ((typed-expr expr core-type)
+       (make-typed-expr (E expr) core-type))
 
       ((prelex)
        (if (prelex-source-assigned? x)
@@ -3801,7 +3833,7 @@
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
   ;;   seq		clambda		known
-  ;;   forcall		funcall
+  ;;   forcall		funcall		typed-expr
   ;;
   ;;Examples
   ;;--------
@@ -3834,6 +3866,12 @@
     (struct-case x
       ((constant)
        x)
+
+      ;;If we are performing this compiler  pass without first having performed "core
+      ;;type inference":  there may be  TYPED-EXPR structs  in the input.   We remove
+      ;;them.
+      ((typed-expr expr)
+       (E expr))
 
       ((prelex)
        x)

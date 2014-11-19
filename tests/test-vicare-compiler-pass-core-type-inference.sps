@@ -617,6 +617,40 @@
   #t)
 
 
+(parametrise ((check-test-name	'typed-expressions))
+
+;;;Tests  for core  types introduced  by the  code that  generates the  core language
+;;;expression.
+
+  (doit (let ((x (typed-expr ((primitive read))
+			     T:fixnum)))
+	  ((primitive display) x))
+	(bind ((x_0 (funcall (primref read))))
+	  (funcall (primref display)
+	    (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))))
+
+  ;;Here  "+" is  declared to  return a  "T:number"; the  TYPED-EXPR refines  this to
+  ;;"T:fixnum".  The core types "T:number" and "T:fixnum" are compatible.
+  ;;
+  (doit (let ((x (typed-expr ((primitive +) '1 '2)
+			     T:fixnum)))
+	  ((primitive display) x))
+	(bind ((x_0 (funcall (primref +)
+		      (known (constant 1)
+			     (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
+		      (known (constant 2)
+			     (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))))
+	  (funcall (primref display)
+	    (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))))
+
+  ;;This correctly  fails with  specified core type  incompatible with  inferred core
+  ;;type.
+  ;;
+  ;; (doit (typed-expr (quote (1 . 2)) T:fixnum) #f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -39,9 +39,37 @@
 		;with  a   bitwise  OR  operation   and  return  a  record   of  type
 		;CORE-TYPE-TAG holding the result.
 
+   make-core-type-tag-predicate
+		;Given an instance  of record type CORE-TYPE-TAG:  return a predicate
+		;function which can be used to test other instances.  Example:
+		;
+		;   (define p (make-core-type-tag-predicate T:exact-integer))
+		;   (p T:fixnum)	=> yes
+		;   (p T:number)	=> maybe
+		;   (p T:string)	=> no
+		;
+
+   core-type-tag-is-a?
+		;Given 2  instances of record  type CORE-TYPE-TAG: perform  core type
+		;tag inclusion test.  Examples:
+		;
+		;   ;; "T:fixnum" is a "T:number" ?
+		;   (core-type-tag-is-a? T:fixnum T:number)	=> yes
+		;
+		;   ;; "T:number" is a "T:fixnum" ?
+		;   (core-type-tag-is-a? T:number T:fixnum)	=> maybe
+		;
+		;   ;; "T:string" is a "T:number" ?
+		;   (core-type-tag-is-a? T:string T:number)	=> no
+		;
+
    determine-constant-core-type
 		;Given  a  Scheme  object:  return a  record  of  type  CORE-TYPE-TAG
 		;representing its core type.
+
+   name->core-type-tag
+		;Given a  symbol representing  the name  of a  core type:  return the
+		;associated CORE-TYPE-TAG record.  Otherwise raise an exception.
 
    ;;Records  of type  CORE-TYPE-TAG representing  predefined type  descriptions.  By
    ;;themselves they  represent valid type tags;  they are also used  as arguments to
@@ -135,6 +163,20 @@
    #| end of module's export list|# )
 
 
+;;;; helpers
+
+(define-syntax __module_who__
+  (identifier-syntax 'SCHEME-OBJECTS-ONTOLOGY))
+
+(define-constant CORE-TYPE-TAG-PROPKEY
+  (compile-time-gensym "core-type-tag"))
+
+(define* (name->core-type-tag {name symbol?})
+  (or (getprop name CORE-TYPE-TAG-PROPKEY)
+      (compile-time-error __module_who__ __who__
+	"unknown core type tag name" name)))
+
+
 (define-syntax (define-ontology x)
   ;;Define  the operators:  T:description,  T?, T=?,  T:and, T:or  to  be applied  to
   ;;records of type T.
@@ -189,6 +231,10 @@
 			    (else  ls)))
 		      ...)
 		 ls))
+
+	     (module ()
+	       (putprop (quote NAME) CORE-TYPE-TAG-PROPKEY NAME)
+	       ...)
 
 	     )))))
 
@@ -398,6 +444,20 @@
     (void)))
 
 
+(define* (make-core-type-tag-predicate {x core-type-tag?})
+  (let ((x.bits ($core-type-tag-bits x)))
+    (lambda* ({y core-type-tag?})
+      (%test-bits x.bits ($core-type-tag-bits y)))))
+
+(define* (core-type-tag-is-a? {x core-type-tag?} {y core-type-tag?})
+  ;;Perform core type tag inclusion test.  Examples:
+  ;;
+  ;;   (core-type-tag-is-a? T:fixnum T:number)	=> yes		;;T:fixnum is a T:number ?
+  ;;   (core-type-tag-is-a? T:number T:fixnum)	=> maybe	;;T:number is a T:fixnum ?
+  ;;   (core-type-tag-is-a? T:string T:number)	=> no		;;T:string is a T:number ?
+  ;;
+  (%test-bits ($core-type-tag-bits x) ($core-type-tag-bits y)))
+
 (define (%test-bits bits predefined-type-bits)
   (cond ((zero? (bitwise-and bits predefined-type-bits))
 	 ;;None of the  PREDEFINED-TYPE-BITS are set in BITS; some  other bits may be
@@ -469,7 +529,10 @@
 	     ?instance)
 	   (define* (PRED {x core-type-tag?})
 	     (%test-bits ($core-type-tag-bits x)
-			 ($core-type-tag-bits ?type-name))))))
+			 ($core-type-tag-bits ?type-name)))
+	   (module ()
+	     (putprop (quote ?type-name) CORE-TYPE-TAG-PROPKEY ?type-name))
+	   #| end of BEGIN |# )))
     ))
 
 
@@ -1186,6 +1249,12 @@
   (check (T:fixnum? (core-type-tag-or T:fixnum T:string))	=> maybe)
   (check (T:string? (core-type-tag-or T:fixnum T:string))	=> maybe)
   (check (T:pair?   (core-type-tag-or T:fixnum T:string))	=> no)
+
+;;; --------------------------------------------------------------------
+
+  (check (core-type-tag-is-a? T:fixnum T:number)		=> yes)
+  (check (core-type-tag-is-a? T:number T:fixnum)		=> maybe)
+  (check (core-type-tag-is-a? T:string T:number)		=> no)
 
   #| end of module |# )
 

@@ -28,7 +28,7 @@
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
   ;;   seq		clambda		known
-  ;;   forcall		funcall
+  ;;   forcall		funcall		typed-expr
   ;;
   (define-syntax __module_who__
     (identifier-syntax 'introduce-unsafe-primrefs))
@@ -41,6 +41,12 @@
   (struct-case x
     ((constant)
      x)
+
+    ;;If we  are performing this compiler  pass without first having  performed "core
+    ;;type inference" (which we should not do): there may still be TYPED-EXPR structs
+    ;;in the input.  We remove them.
+    ((typed-expr expr core-type)
+     (E expr))
 
     ((prelex)
      x)
