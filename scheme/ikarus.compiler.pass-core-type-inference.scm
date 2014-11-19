@@ -70,7 +70,7 @@
 
   (define (core-type-inference x)
     (receive (y env y.tag)
-	(V x EMPTY-ENV)
+	(%infer-core-types x EMPTY-ENV)
       y))
 
 
@@ -227,7 +227,10 @@
   #| end of module: %and-envs |# )
 
 
-(module (V)
+(define (%infer-core-types x env)
+  ;;Here we  use nested  functions because,  for every compilation  unit, we  want to
+  ;;reset to zero the counter used by %ASSIGN-INDEX-TO-PRELEX!.
+  ;;
 
   (define* (V x env)
     ;;Recursively  process the  recordised code  in X.   ENV maps  PRELEX structs  to
@@ -474,7 +477,9 @@
 
     #| end of module: V-funcall |# )
 
-  #| end of module: V |# )
+;;; --------------------------------------------------------------------
+
+  (V x env))
 
 
 (module (%process-primitive-application)
