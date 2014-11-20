@@ -998,25 +998,19 @@
 (declare-fixnum-binary $fxdiv0 unsafe)
 (declare-fixnum-binary $fxmod0 unsafe)
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive $fxdiv-and-mod
-;;     (unsafe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _)			foldable effect-free result-true)))
+(declare-core-primitive $fxdiv-and-mod
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive $fxdiv-and-mod0
-;;     (unsafe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _)			foldable effect-free result-true)))
+(declare-core-primitive $fxdiv0-and-mod0
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
 
 (declare-fixnum-unary $fxadd1 unsafe)
 (declare-fixnum-unary $fxsub1 unsafe)
@@ -1025,6 +1019,9 @@
 (declare-fixnum-binary $fxremainder unsafe)
 (declare-fixnum-binary $fxquotient unsafe)
 (declare-fixnum-binary $fxmodulo unsafe)
+
+(declare-fixnum-binary $int-quotient unsafe)
+(declare-fixnum-binary $int-remainder unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
@@ -1035,6 +1032,34 @@
 (declare-fixnum-unary $fxnot unsafe)
 (declare-fixnum-binary $fxsll unsafe)
 (declare-fixnum-binary $fxsra unsafe)
+
+(declare-core-primitive $fxcopy-bit
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _)				foldable effect-free result-true)))
+
+(declare-core-primitive $fxcopy-bit-field
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _ _)					foldable effect-free result-true)))
+
+(declare-core-primitive $fxrotate-bit-field
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _ _)					foldable effect-free result-true)))
+
+(declare-core-primitive $fxbit-field
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _)				foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -1063,6 +1088,25 @@
     (unsafe)
   (signatures
    ((T:fixnum)			=> (T:char)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $fixnum->string
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:string))
+   ((T:fixnum T:fixnum)		=> (T:string)))
+  (attributes
+   ((_)				foldable effect-free result-true)
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive $fxinthash
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -4887,54 +4931,7 @@
  $vector-for-all1
  $vector-exists1
 ;;;
- $fxzero?
- $fxpositive?
- $fxnegative?
- $fxnonpositive?
- $fxnonnegative?
- $fxeven?
- $fxodd?
- $fxadd1
- $fxsub1
- $fx>=
- $fx<=
- $fx>
- $fx<
- $fx=
- $fxmin
- $fxmax
- $fxsll
- $fxsra
- $fxquotient
- $fxmodulo
- $fxremainder
- $fxsign
- $int-quotient
- $int-remainder
- $fxlogxor
- $fxlogor
- $fxlognot
- $fxlogand
 
-  (let ((P (C $fx+)))
-    (register-lambda-signature P (S (list (C <fixnum>))
-				    (list (C <fixnum>) (C <fixnum>)))))
-
- $fx*
- $fx-
- $fxinthash
- $fxdiv
- $fxdiv0
- $fxmod
- $fxmod0
- $fxdiv-and-mod
- $fxdiv0-and-mod0
- $fxabs
- $fxcopy-bit
- $fxcopy-bit-field
- $fxrotate-bit-field
- $fxbit-field
- $fixnum->string
 ;;;
  $make-symbol
  $string->symbol
