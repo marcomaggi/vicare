@@ -84,6 +84,8 @@
    T:struct		T:struct-type-descriptor	T:other-struct
    T:record		T:record-type-descriptor
 
+   T:memory-block	T:pointer/memory-block
+
    T:null		T:standalone-pair	T:non-empty-proper-list
    T:pair		T:proper-list		T:improper-list
 
@@ -103,6 +105,8 @@
    T:complex
 
    T:positive-fixnum	T:negative-fixnum
+
+   T:pointer/false	T:string/false
 
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
@@ -140,6 +144,8 @@
    T:struct?		T:struct-type-descriptor?	T:other-struct?
    T:record?		T:record-type-descriptor?
 
+   T:memory-block?	T:pointer/memory-block?
+
    T:null?		T:standalone-pair?	T:non-empty-proper-list?
    T:pair?		T:proper-list?		T:improper-list?
 
@@ -159,6 +165,8 @@
    T:complex?
 
    T:positive-fixnum?	T:negative-fixnum?
+
+   T:pointer/false?	T:string/false?
 
    #| end of module's export list|# )
 
@@ -616,6 +624,12 @@
 (define-underspecified-core-type T:improper-list
   T:object)
 
+(define-underspecified-core-type T:memory-block
+  T:other-struct)
+
+(define-underspecified-core-type T:pointer/memory-block
+  (core-type-tag-or* T:pointer T:memory-block))
+
 ;;; --------------------------------------------------------------------
 ;;; more fixnum types
 
@@ -624,6 +638,14 @@
 
 (define-underspecified-core-type T:negative-fixnum
   (core-type-tag-and* T:fixnum T:negative))
+
+;;; --------------------------------------------------------------------
+
+(define-underspecified-core-type T:pointer/false
+  (core-type-tag-or* T:pointer T:false))
+
+(define-underspecified-core-type T:string/false
+  (core-type-tag-or* T:string T:false))
 
 
 (module (determine-constant-core-type)

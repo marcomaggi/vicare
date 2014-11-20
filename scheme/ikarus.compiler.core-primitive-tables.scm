@@ -2069,6 +2069,84 @@
 
 (declare-type-predicate pointer?)
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive pointer-null?
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:boolean)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive null-pointer
+    (safe)
+  (signatures
+   (()				=> (T:pointer)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive set-pointer-null!
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:void)))
+  (attributes
+   ((_)				result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive pointer-clone
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:pointer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive pointer-diff
+    (safe)
+  (signatures
+   ((T:pointer T:pointer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive pointer-add
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)	=> (T:pointer)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive pointer-and-offset?
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)	=> (T:boolean)))
+  (attributes
+   ((_ _)			effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-pointer-binary-comparison pointer=?)
+(declare-pointer-binary-comparison pointer!=?)
+(declare-pointer-binary-comparison pointer<?)
+(declare-pointer-binary-comparison pointer>?)
+(declare-pointer-binary-comparison pointer<=?)
+(declare-pointer-binary-comparison pointer>=?)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive pointer->integer
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive integer->pointer
+    (safe)
+  (signatures
+   ((T:exact-integer)		=> (T:pointer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
 
 ;;;; pointers, unsafe functions
 
@@ -4628,6 +4706,144 @@
    ((_)			foldable effect-free result-true)))
 
 
+;;;; system interface and foreign functions
+
+(declare-core-primitive errno
+    (safe)
+  (signatures
+   (()				=> (T:fixnum))
+   ((T:fixnum)			=> (T:void)))
+  (attributes
+   (()			effect-free result-true)
+   ((_)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive malloc
+    (safe)
+  (signatures
+   ((T:exact-integer)			=> (T:pointer/false))))
+
+(declare-core-primitive realloc
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)		=> (T:pointer/false))))
+
+(declare-core-primitive calloc
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer)	=> (T:pointer/false))))
+
+(declare-core-primitive free
+    (safe)
+  (signatures
+   ((T:pointer/memory-block)		=> (T:void))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive malloc*
+    (safe)
+  (signatures
+   ((T:exact-integer)		=> (T:pointer))))
+
+(declare-core-primitive realloc*
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)	=> (T:pointer))))
+
+(declare-core-primitive calloc*
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer)	=> (T:pointer))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive guarded-malloc
+    (safe)
+  (signatures
+   ((T:exact-integer)			=> (T:pointer/false))))
+
+(declare-core-primitive guarded-realloc
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)		=> (T:pointer/false))))
+
+(declare-core-primitive guarded-calloc
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer)	=> (T:pointer/false))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive guarded-malloc*
+    (safe)
+  (signatures
+   ((T:exact-integer)		=> (T:pointer))))
+
+(declare-core-primitive guarded-realloc*
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)	=> (T:pointer))))
+
+(declare-core-primitive guarded-calloc*
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer)	=> (T:pointer))))
+
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive memcpy
+    (safe)
+  (signatures
+   ((T:pointer T:pointer T:exact-integer)	=> (T:void))))
+
+(declare-core-primitive memmove
+    (safe)
+  (signatures
+   ((T:pointer T:pointer T:exact-integer)	=> (T:void))))
+
+(declare-core-primitive memcmp
+    (safe)
+  (signatures
+   ((T:pointer T:pointer T:exact-integer)	=> (T:fixnum))))
+
+(declare-core-primitive memset
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer T:exact-integer)	=> (T:void))))
+
+;;; --------------------------------------------------------------------
+
+#|
+
+ make-memory-block
+ make-memory-block/guarded
+ null-memory-block
+ memory-block?
+ memory-block?/non-null
+ memory-block?/not-null
+ memory-block-pointer
+ memory-block-size
+ memory-block-reset
+
+;;; --------------------------------------------------------------------
+
+ make-out-of-memory-error
+ out-of-memory-error?
+ out-of-memory-error.old-pointer
+ out-of-memory-error.number-of-bytes
+ out-of-memory-error.clean?
+ memory-copy
+ memory->bytevector
+ bytevector->memory
+ bytevector->guarded-memory
+ bytevector->memory*
+ bytevector->guarded-memory*
+
+|#
+
+
 ;;;; debugging helpers
 
 (declare-exact-integer-unary integer->machine-word)
@@ -6157,65 +6373,6 @@ variant.
 
  host-info
 
-;;; --------------------------------------------------------------------
-;;; (ikarus system $foreign)
-
- errno
- pointer?
- null-pointer
- pointer->integer
- integer->pointer
- pointer-clone
- pointer-null?
- pointer-diff
- pointer-add
- pointer-and-offset?
- pointer=?
- pointer!=?
- pointer<?
- pointer>?
- pointer<=?
- pointer>=?
- set-pointer-null!
-;;;
- make-memory-block
- make-memory-block/guarded
- null-memory-block
- memory-block?
- memory-block?/non-null
- memory-block?/not-null
- memory-block-pointer
- memory-block-size
- memory-block-reset
-;;;
- make-out-of-memory-error
- out-of-memory-error?
- out-of-memory-error.old-pointer
- out-of-memory-error.number-of-bytes
- out-of-memory-error.clean?
- malloc
- realloc
- calloc
- guarded-malloc
- guarded-realloc
- guarded-calloc
- malloc*
- realloc*
- calloc*
- guarded-malloc*
- guarded-realloc*
- guarded-calloc*
- free
- memcpy
- memcmp
- memmove
- memset
- memory-copy
- memory->bytevector
- bytevector->memory
- bytevector->guarded-memory
- bytevector->memory*
- bytevector->guarded-memory*
 ;;;
  bytevector->cstring
  bytevector->guarded-cstring

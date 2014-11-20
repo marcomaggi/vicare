@@ -965,6 +965,10 @@
        (values (extend-env rand T:other-struct env)
 	       env))
 
+      ((memory-block?)
+       (values (extend-env rand T:other-struct env)
+	       env))
+
       ((record?)
        (values (extend-env rand T:record env)
 	       env))

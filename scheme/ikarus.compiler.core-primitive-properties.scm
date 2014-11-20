@@ -329,6 +329,8 @@
 	 T:struct		T:struct-type-descriptor	T:other-struct
 	 T:record		T:record-type-descriptor
 
+	 T:memory-block		T:pointer/memory-block
+
 	 T:null			T:standalone-pair	T:non-empty-proper-list
 	 T:pair			T:proper-list		T:improper-list
 
@@ -347,7 +349,8 @@
 	 T:real			T:exact-real
 	 T:complex
 
-	 T:positive-fixnum	T:negative-fixnum)
+	 T:positive-fixnum	T:negative-fixnum
+	 T:pointer/false	T:string/false)
       (T:object				#f)
       (T:other-object			type)
       (T:immediate			type)
@@ -389,7 +392,11 @@
       (T:record-type-descriptor		type)
 
       (T:transcoder			type)
+
       (T:pointer			type)
+      (T:memory-block			type)
+      (T:pointer/memory-block		type)
+
       (T:hashtable			type)
       (T:number				type)
       (T:exact				type)
@@ -414,6 +421,10 @@
       (T:complex			type)
       (T:positive-fixnum		type)
       (T:negative-fixnum		type)
+
+      (T:pointer/false			type)
+      (T:string/false			type)
+
       (_
        ;; (if (identifier? type)
        ;; 	   (if (eq? '_ (syntax->datum type))
