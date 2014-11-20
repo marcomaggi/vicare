@@ -927,11 +927,65 @@
 (declare-fixnum-multi fxlogand		(replacements $fxlogand))
 (declare-fixnum-multi fxlogxor		(replacements $fxlogxor))
 
+(declare-fixnum-unary fxlength)
 (declare-fixnum-binary fxsll)
 (declare-fixnum-binary fxsra)
 (declare-fixnum-binary fxarithmetic-shift-left)
 (declare-fixnum-binary fxarithmetic-shift-right)
 (declare-fixnum-binary fxarithmetic-shift)
+
+(declare-fixnum-unary fxbit-count)
+
+(declare-core-primitive fxbit-field
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _)				foldable effect-free result-true)))
+
+(declare-core-primitive fxbit-set?
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive fxreverse-bit-field
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _)				foldable effect-free result-true)))
+
+(declare-core-primitive fxcopy-bit
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _)				foldable effect-free result-true)))
+
+(declare-core-primitive fxcopy-bit-field
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _ _)					foldable effect-free result-true)))
+
+(declare-core-primitive fxrotate-bit-field
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _ _)				foldable effect-free result-true)))
+
+(declare-core-primitive fxif
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _ _)				foldable effect-free result-true)))
+
+(declare-fixnum-unary fxfirst-bit-set)
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -5322,62 +5376,6 @@ Apr 26, 2014)
  bitwise-length
  bitwise-reverse-bit-field
  bitwise-rotate-bit-field
- fixnum?
- fixnum-width
- least-fixnum
- greatest-fixnum
- fx*
- fx*/carry
-
-FX+ is  both a  core primitive  and a primitive  operation, so  it has  no unsafe
-variant.
-  (let ((P (C fx+)))
-    (register-lambda-signature P (S (list (C <fixnum>))
-				    (list (C <fixnum>) (C <fixnum>)))))
-
- fx+/carry
- fx-
- fx-/carry
- fx<=?
- fx<?
- fx=?
- fx!=?
- fx>=?
- fx>?
- fxand
- fxarithmetic-shift
- fxarithmetic-shift-left
- fxarithmetic-shift-right
- fxbit-count
- fxbit-field
- fxbit-set?
- fxcopy-bit
- fxcopy-bit-field
- fxdiv
- fxdiv-and-mod
- fxdiv0
- fxdiv0-and-mod0
- fxabs
- fxeven?
- fxfirst-bit-set
- fxif
- fxior
- fxlength
- fxmax
- fxmin
- fxmod
- fxmod0
- fxnot
- fxodd?
- fxreverse-bit-field
- fxrotate-bit-field
- fxxor
- fxzero?
- fxpositive?
- fxnegative?
- fxnonpositive?
- fxnonnegative?
- fixnum->flonum
 ;;;
  bignum-positive?
  bignum-negative?
