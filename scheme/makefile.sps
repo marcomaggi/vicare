@@ -1130,7 +1130,6 @@
     ($flonum-u8-ref				$flonums)
     ($make-flonum				$flonums)
     ($flonum-set!				$flonums)
-    ($flonum-signed-biased-exponent		$flonums)
     ($flonum-rational?				$flonums)
     ($flonum-integer?				$flonums)
     ($fl+					$flonums)

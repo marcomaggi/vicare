@@ -1582,9 +1582,8 @@
  (declare-flonum-binary $fllog2 unsafe)
  (declare-flonum-unary $flexpm1 unsafe)
  (declare-flonum-unary $fllog1p unsafe)
- (declare-flonum-unary $flexpt unsafe)
+ (declare-flonum-binary $flexpt unsafe)
  (declare-flonum-unary $flsqrt unsafe)
- (declare-flonum-unary $flsquare unsafe)
  (declare-flonum-unary $flsquare unsafe)
  (declare-flonum-unary $flcube unsafe)
  (declare-flonum-unary $flcbrt unsafe)
@@ -1593,15 +1592,12 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
- (declare-flonum-binary-comparison $fl= unsafe)
- (declare-flonum-binary-comparison $fl< unsafe)
- (declare-flonum-binary-comparison $fl> unsafe)
+ (declare-flonum-binary-comparison $fl=  unsafe)
+ (declare-flonum-binary-comparison $fl!= unsafe)
+ (declare-flonum-binary-comparison $fl<  unsafe)
+ (declare-flonum-binary-comparison $fl>  unsafe)
  (declare-flonum-binary-comparison $fl<= unsafe)
  (declare-flonum-binary-comparison $fl>= unsafe)
-
- ;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
- ;;
- ;;(declare-flonum-binary-comparison $fl!=? unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -1619,10 +1615,19 @@
  (declare-flonum-binary $flmax unsafe)
  (declare-flonum-binary $flmin unsafe)
 
- ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
- ;;
- ;;(($fldiv-and-mod _ _)		   foldable effect-free result-true)
- ;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
+ (declare-core-primitive $fldiv-and-mod
+     (unsafe)
+   (signatures
+    ((T:flonum T:flonum)	=> (T:flonum T:flonum)))
+   (attributes
+    ((_ _)			foldable effect-free result-true)))
+
+ (declare-core-primitive $fldiv0-and-mod0
+     (unsafe)
+   (signatures
+    ((T:flonum T:flonum)	=> (T:flonum T:flonum)))
+   (attributes
+    ((_ _)			foldable effect-free result-true)))
 
  /section)
 
@@ -4801,75 +4806,6 @@
  $bytevector->base64
  $base64->bytevector
 ;;;
- $flonum-u8-ref
- $make-flonum
- $flonum-set!
- $flonum-signed-biased-exponent
- $flonum-rational?
- $flonum-integer?
- $fl+
- $fl-
- $fl*
- $fl/
- $fl=
- $fl<
- $fl<=
- $fl>
- $fl>=
- $fldiv
- $flmod
- $fldiv0
- $flmod0
- $fldiv-and-mod
- $fldiv0-and-mod0
- $fixnum->flonum
- $flonum-sbe
- $flonum->exact
- $flzero?
- $flzero?/positive
- $flzero?/negative
- $flpositive?
- $flnegative?
- $flnonpositive?
- $flnonnegative?
- $fleven?
- $flnan?
- $flfinite?
- $flinfinite?
- $flodd?
- $flround
- $flfloor
- $flceiling
- $fltruncate
- $flnumerator
- $fldenominator
- $flabs
- $flsin
- $flcos
- $fltan
- $flasin
- $flacos
- $flatan
- $flsinh
- $flcosh
- $fltanh
- $flasinh
- $flacosh
- $flatanh
- $flatan2
- $flexp
- $fllog
- $fllog2
- $flexpm1
- $fllog1p
- $flexpt
- $flsqrt
- $flcbrt
- $flsquare
- $flcube
- $flhypot
- $flmax
- $flmin
 ;;;
  $make-bignum
  $bignum-positive?
