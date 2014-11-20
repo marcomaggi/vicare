@@ -907,14 +907,14 @@
   (signatures
    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
   (attributes
-   ((_ _)			foldable effect-free result-true)))
+   ((_ _)			effect-free)))
 
 (declare-core-primitive fxdiv0-and-mod0
     (safe)
   (signatures
    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
   (attributes
-   ((_ _)			foldable effect-free result-true)))
+   ((_ _)			effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
@@ -1058,14 +1058,14 @@
   (signatures
    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
   (attributes
-   ((_ _)			foldable effect-free result-true)))
+   ((_ _)			effect-free)))
 
 (declare-core-primitive $fxdiv0-and-mod0
     (unsafe)
   (signatures
    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
   (attributes
-   ((_ _)			foldable effect-free result-true)))
+   ((_ _)			effect-free)))
 
 (declare-fixnum-unary $fxadd1 unsafe)
 (declare-fixnum-unary $fxsub1 unsafe)
@@ -1386,10 +1386,20 @@
  (declare-flonum-unary fldenominator	(replacements $fldenominator))
  (declare-flonum-unary flabs		(replacements $flabs))
 
- ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Thu Nov 13, 2014)
- ;;
- ;; (declare-flonum-unary flonum-bytes)
- ;; (declare-flonum-unary flonum-parts)
+ (declare-core-primitive flonum-bytes
+     (safe)
+   (signatures
+    ((T:flonum)				=> (T:flonum T:flonum T:flonum T:flonum
+						     T:flonum T:flonum T:flonum T:flonum)))
+   (attributes
+    ((_)				effect-free)))
+
+ (declare-core-primitive flonum-parts
+     (safe)
+   (signatures
+    ((T:flonum)				=> (T:boolean T:fixnum T:exact-integer)))
+   (attributes
+    ((_)				effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; trigonometric
@@ -1404,10 +1414,10 @@
      (safe)
    (signatures
     ((T:flonum)			=> (T:flonum))
-    ((T:flonum T:flonum)		=> (T:flonum)))
+    ((T:flonum T:flonum)	=> (T:flonum)))
    (attributes
     ((_)			foldable effect-free result-true)
-    ((_ _)		foldable effect-free result-true))
+    ((_ _)			foldable effect-free result-true))
    (replacements $flatan $flatan2))
 
 ;;; --------------------------------------------------------------------
@@ -1460,10 +1470,19 @@
  (declare-flonum-binary flmod		(replacements $flmod))
  (declare-flonum-binary flmod0		(replacements $flmod0))
 
- ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
- ;;
- ;; (declare-flonum-binary fldiv-and-mod		(replacements $fldiv-and-mod))
- ;; (declare-flonum-binary fldiv0-and-mod0	(replacements $fldiv0-and-mod0))
+ (declare-core-primitive fldiv-and-mod
+     (safe)
+   (signatures
+    ((T:flonum T:flonum)		=> (T:flonum T:flonum)))
+   (attributes
+    ((_ _)				effect-free)))
+
+ (declare-core-primitive fldiv0-and-mod0
+     (safe)
+   (signatures
+    ((T:flonum T:flonum)		=> (T:flonum T:flonum)))
+   (attributes
+    ((_ _)				effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -1675,14 +1694,14 @@
    (signatures
     ((T:flonum T:flonum)	=> (T:flonum T:flonum)))
    (attributes
-    ((_ _)			foldable effect-free result-true)))
+    ((_ _)			effect-free)))
 
  (declare-core-primitive $fldiv0-and-mod0
      (unsafe)
    (signatures
     ((T:flonum T:flonum)	=> (T:flonum T:flonum)))
    (attributes
-    ((_ _)			foldable effect-free result-true)))
+    ((_ _)			effect-free)))
 
  /section)
 
@@ -5391,68 +5410,6 @@ Apr 26, 2014)
  least-positive-bignum
  greatest-negative-bignum
 ;;;
- fl*
- fl+
- fl-
- fl/
- fl<=?
- fl<?
- fl=?
- fl>=?
- fl>?
- flabs
- flceiling
- fldenominator
- fldiv
- fldiv-and-mod
- fldiv0
- fldiv0-and-mod0
- fleven?
- flexp
- flexpm1
- flexpt
- flfinite?
- flfloor
- flinfinite?
- flinteger?
- fllog
- fllog1p
- flhypot
- flmax
- flmin
- flmod
- flmod0
- flnan?
- flnegative?
- flnumerator
- flodd?
- flonum?
- flpositive?
- flnonpositive?
- flnonnegative?
- flround
- flsin
- flcos
- fltan
- flacos
- flasin
- flatan
- flsinh
- flcosh
- fltanh
- flacosh
- flasinh
- flatanh
- flsqrt
- flcbrt
- flsquare
- flcube
- fltruncate
- flzero?
- flzero?/positive
- flzero?/negative
- real->flonum
- flonum->bytevector
  make-no-infinities-violation
  make-no-nans-violation
  &no-infinities
