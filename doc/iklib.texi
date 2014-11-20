@@ -12831,7 +12831,7 @@ referencing the memory and a fixnum representing the length of the
 memory block; if allocating memory fails return @false{} and @false{}.
 
 Memory allocated by @func{bytevector->memory} must be released by
-@func{free}; memory allocated by @func{bytevector->guarded-malloc} is
+@func{free}; memory allocated by @func{bytevector->guarded-memory} is
 automatically released whenever the returned pointer object is garbage
 collected.
 @end defun
