@@ -2648,14 +2648,14 @@
   (attributes
    (()				effect-free result-true)))
 
-;; (declare-core-primitive make-parameter
-;;     (safe)
-;;   (signatures
-;;    ((T:object)			=> (T:procedure))
-;;    ((T:object T:procedure)	=> (T:procedure)))
-;;   (attributes
-;;    ((_)				effect-free result-true)
-;;    ((_ _)			effect-free result-true)))
+(declare-core-primitive make-parameter
+    (safe)
+  (signatures
+   ((T:object)			=> (T:procedure))
+   ((T:object T:procedure)	=> (T:procedure)))
+  (attributes
+   ((_)				effect-free result-true)
+   ((_ _)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 
