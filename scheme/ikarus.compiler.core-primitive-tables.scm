@@ -880,55 +880,40 @@
 (declare-fixnum-binary fxquotient)
 (declare-fixnum-binary fxmodulo)
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive fx+/carry
-;;     (safe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _ _)			foldable effect-free result-true)))
+(declare-core-primitive fx+/carry
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive fx-/carry
-;;     (safe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _ _)			foldable effect-free result-true)))
+(declare-core-primitive fx-/carry
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive fx*/carry
-;;     (safe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _ _)			foldable effect-free result-true)))
+(declare-core-primitive fx*/carry
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive fxdiv-and-mod
-;;     (safe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _)			foldable effect-free result-true)))
+(declare-core-primitive fxdiv-and-mod
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
 
-;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
-;;2014)
-;;
-;; (declare-core-primitive fxdiv-and-mod0
-;;     (safe)
-;;   (signatures
-;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
-;;   (attributes
-;;    ((_ _)			foldable effect-free result-true)))
+(declare-core-primitive fxdiv0-and-mod0
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
@@ -979,6 +964,15 @@
    ((T:fixnum)		=> (T:flonum)))
   (attributes
    ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive fixnum->string
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:string))
+   ((T:fixnum T:fixnum)	=> (T:string)))
+  (attributes
+   ((_)			foldable effect-free result-true)
+   ((_ _)		foldable effect-free result-true)))
 
 
 ;;;; fixnums unsafe operations
@@ -1631,7 +1625,24 @@
 
 (declare-type-predicate symbol? T:symbol)
 
+(declare-core-primitive symbol->string
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:string)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive symbol=?
+    (safe)
+  (signatures
+   ((T:symbol T:symbol)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
+;;; gensyms
+
+(declare-type-predicate gensym?)
 
 (declare-core-primitive gensym
     (safe)
@@ -1643,6 +1654,100 @@
    ;;It must return a new gensym every time.
    (()				effect-free result-true)
    ((_)				effect-free result-true)))
+
+(declare-core-primitive gensym->unique-string
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:string)))
+  (attributes
+   ;;Once a  gensym has been  created, its unique  string is determined  forever.  So
+   ;;this is foldable.
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive symbol-bound?
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:boolean)))
+  (attributes
+   ;;Being bound or not is a run-time property; this is *not* foldable.
+   ((_)				effect-free)))
+
+(declare-core-primitive top-level-value
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:object)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive reset-symbol-proc!
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:void)))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive set-symbol-value!
+    (safe)
+  (signatures
+   ((T:symbol T:object)		=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive symbol-value
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:object)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive system-value
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:object)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive system-label
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:object)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive system-id
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:object)))
+  (attributes
+   ((_)				effect-free)))
+
+;;FIXME These  are variable  bindings.  We  should convert  them into  functions, for
+;;uniformity of syntax.  (Marco Maggi; Thu Nov 20, 2014)
+;;
+;; (declare-core-primitive system-value-gensym
+;;     (safe)
+;;   (signatures
+;;    (()				=> (T:symbol)))
+;;   (attributes
+;;    (()				effect-free result-true)))
+;;
+;; (declare-core-primitive system-label-gensym
+;;     (safe)
+;;   (signatures
+;;    (()				=> (T:symbol)))
+;;   (attributes
+;;    (()				effect-free result-true)))
+;;
+;; (declare-core-primitive system-id-gensym
+;;     (safe)
+;;   (signatures
+;;    (()				=> (T:symbol)))
+;;   (attributes
+;;    (()				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; property lists
@@ -1679,6 +1784,42 @@
   (attributes
    ((_)			effect-free result-true))
   (replacements $property-list))
+
+;;; --------------------------------------------------------------------
+;;; printing gensyms
+
+(declare-core-primitive print-gensym
+    (safe)
+  (signatures
+   (()				=> (T:object))
+   ((T:object)			=> (T:void))
+   ((T:object T:object)		=> (T:void)))
+  (attributes
+   (()				effect-free)
+   ((_)				result-true)
+   ((_ _)			result-true)))
+
+(declare-core-primitive gensym-count
+    (safe)
+  (signatures
+   (()				=> (T:exact-integer))
+   ((T:exact-integer)		=> (T:void))
+   ((T:exact-integer T:object)	=> (T:void)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				result-true)
+   ((_ _)			result-true)))
+
+(declare-core-primitive gensym-prefix
+    (safe)
+  (signatures
+   (()				=> (T:string))
+   ((T:string)			=> (T:void))
+   ((T:string T:object)		=> (T:void)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				result-true)
+   ((_ _)			result-true)))
 
 
 ;;;; symbols, unsafe primitives
@@ -2257,14 +2398,12 @@
 (declare-core-primitive get-annotated-datum
     (safe)
   (signatures
-   ((T:input-port)		=> (_)))
-  (attributes))
+   ((T:input-port)		=> (_))))
 
 (declare-core-primitive annotation-expression
     (safe)
   (signatures
-   ((T:other-struct)		=> (_)))
-  (attributes))
+   ((T:other-struct)		=> (_))))
 
 (declare-core-primitive annotation-stripped
     (safe)
@@ -2276,14 +2415,12 @@
 (declare-core-primitive annotation-textual-position
     (safe)
   (signatures
-   ((T:other-struct)		=> (_)))
-  (attributes))
+   ((T:other-struct)		=> (_))))
 
 (declare-core-primitive annotation-source
     (safe)
   (signatures
-   ((T:other-struct)		=> (_)))
-  (attributes))
+   ((T:other-struct)		=> (_))))
 
 
 ;;;; R6RS records
@@ -2456,21 +2593,51 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-primitive bwp-object
+    (safe)
+  (signatures
+   (()				=> (T:object)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive bwp-object?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive unbound-object
+    (safe)
+  (signatures
+   (()				=> (T:object)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive unbound-object?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive interrupt-handler
     (safe)
   (signatures
    (()				=> (T:procedure))
    ((T:procedure)		=> (T:void))
-   ((T:procedure T:boolean)	=> (T:void)))
-  (attributes))
+   ((T:procedure T:boolean)	=> (T:void))))
 
 (declare-core-primitive engine-handler
     (safe)
   (signatures
    (()				=> (T:procedure))
    ((T:procedure)		=> (T:void))
-   ((T:procedure T:boolean)	=> (T:void)))
-  (attributes))
+   ((T:procedure T:boolean)	=> (T:void))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2480,6 +2647,40 @@
    (()				=> (T:procedure)))
   (attributes
    (()				effect-free result-true)))
+
+;; (declare-core-primitive make-parameter
+;;     (safe)
+;;   (signatures
+;;    ((T:object)			=> (T:procedure))
+;;    ((T:object T:procedure)	=> (T:procedure)))
+;;   (attributes
+;;    ((_)				effect-free result-true)
+;;    ((_ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive always-true
+    (safe)
+  (signatures
+   (_				=> (T:true)))
+  (attributes
+   (_				foldable effect-free result-true)))
+
+(declare-core-primitive always-false
+    (safe)
+  (signatures
+   (_				=> (T:false)))
+  (attributes
+   (_				foldable effect-free result-false)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive uuid
+    (safe)
+  (signatures
+   (()				=> (T:string)))
+  (attributes
+   (()				effect-free result-false)))
 
 
 ;;;; numerics, general arithmetics, addition
@@ -4316,58 +4517,20 @@
 
  make-list
  last-pair
- bwp-object
- bwp-object?
  weak-cons
  weak-pair?
- uuid
  andmap
  ormap
- fx<
- fx<=
- fx>
- fx>=
- fx=
- fx!=
- fxadd1
- fxsub1
- fxquotient
- fxremainder
- fxmodulo
- fxsign
- fxsll
- fxsra
+
+
+
  sra
  sll
- fxlogand
- fxlogxor
- fxlogor
- fxlognot
- fixnum->string
- string->flonum
- flonum->string
- always-true
- always-false
  add1
  sub1
- bignum?
- ratnum?
- compnum?
- cflonum?
- flonum-parts
- flonum-bytes
  quotient+remainder
  random
- gensym?
- getprop
- putprop
- remprop
- property-list
- gensym->unique-string
- symbol-bound?
- top-level-value
- reset-symbol-proc!
- make-guardian
+
  port-mode
  set-port-mode!
  with-input-from-string
@@ -4384,18 +4547,15 @@
  printf
  fprintf
  format
- print-gensym
+
  print-graph
  print-unicode
  printer-integer-radix
+
  unicode-printable-char?
- gensym-count
- gensym-prefix
- make-parameter
+
  call/cf
  print-error
- interrupt-handler
- engine-handler
  assembler-output
  optimizer-output
  assembler-property-key
@@ -4772,10 +4932,6 @@
  $unbound-object?
  $symbol-table-size
  $log-symbol-table-status
- system-value-gensym
- system-label-gensym
- system-value
- system-label
  $getprop
  $putprop
  $remprop
@@ -5168,9 +5324,6 @@ Apr 26, 2014)
  percent-encode
  percent-decode
  normalise-percent-encoding
- symbol->string
- symbol=?
- symbol?
  tan
  truncate
  values
@@ -5951,11 +6104,6 @@ variant.
  string-upcase
  load
  void
- gensym
- symbol-value
- set-symbol-value!
- unbound-object
- unbound-object?
  eval-core
  current-core-eval
  pretty-print
