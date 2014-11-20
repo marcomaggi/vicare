@@ -263,6 +263,7 @@
 (define-object-binary-comparison-declarer declare-object-binary-comparison T:object)
 (define-object-binary-comparison-declarer declare-fixnum-binary-comparison T:fixnum)
 (define-object-binary-comparison-declarer declare-flonum-binary-comparison T:flonum)
+(define-object-binary-comparison-declarer declare-pointer-binary-comparison T:pointer)
 
 ;;; --------------------------------------------------------------------
 
@@ -2048,6 +2049,11 @@
 ;;;; pointers, safe functions
 
 (declare-type-predicate pointer?)
+
+
+;;;; pointers, unsafe functions
+
+(declare-pointer-binary-comparison $pointer= unsafe)
 
 
 ;;;; strings, safe functions
@@ -5011,7 +5017,6 @@
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
 
- $pointer=
 ;;;
  $closure-code
  $code->closure
