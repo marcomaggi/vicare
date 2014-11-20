@@ -2582,7 +2582,7 @@
   (signatures
    (()				=> (T:object)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   (()				foldable effect-free result-true)))
 
 (declare-core-primitive eof-object?
     (safe)
@@ -2681,6 +2681,33 @@
    (()				=> (T:string)))
   (attributes
    (()				effect-free result-false)))
+
+
+;;;; invocation and termination procedures
+
+(declare-core-primitive command-line
+    (safe)
+  (signatures
+   (()				=> (T:non-empty-proper-list)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive exit
+    (safe)
+  (signatures
+   (()				=> (T:void))
+   ((T:fixnum)			=> (T:void))))
+
+(declare-core-primitive exit-hooks
+    (safe)
+  (signatures
+   (()				=> (T:proper-list))
+   ((T:proper-list)		=> (T:void))
+   ((T:proper-list T:object)	=> (T:void)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				result-true)
+   ((_ _)			result-true)))
 
 
 ;;;; numerics, general arithmetics, addition
@@ -4612,7 +4639,6 @@
  time>?
  time>=?
 ;;;
- command-line-arguments
  set-rtd-printer!
  set-rtd-destructor!
  struct?
@@ -4651,10 +4677,6 @@
 
 ;;; --------------------------------------------------------------------
 
- $car
- $cdr
- $set-car!
- $set-cdr!
 ;;;
  $length
  $map1
@@ -5771,9 +5793,6 @@ variant.
 
  string-set!
  string-fill!
- command-line
- exit
- exit-hooks
  delay
  exact->inexact
  force
