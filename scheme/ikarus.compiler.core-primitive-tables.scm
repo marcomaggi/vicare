@@ -2223,8 +2223,8 @@
 (declare-core-primitive string->number
     (safe)
   (signatures
-   ((T:string)		=> (_))
-   ((T:string T:fixnum)	=> (_)))
+   ((T:string)		=> (T:number/false))
+   ((T:string T:fixnum)	=> (T:number/false)))
   (attributes
    ((_)			foldable effect-free)
    ((_ _)		foldable effect-free)))
@@ -4815,27 +4815,124 @@
 
 ;;; --------------------------------------------------------------------
 
-#|
+(declare-core-primitive make-memory-block
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)			=> (T:memory-block))))
 
- make-memory-block
- make-memory-block/guarded
- null-memory-block
- memory-block?
- memory-block?/non-null
- memory-block?/not-null
- memory-block-pointer
- memory-block-size
- memory-block-reset
+(declare-core-primitive make-memory-block/guarded
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)			=> (T:memory-block))))
+
+(declare-core-primitive null-memory-block
+    (safe)
+  (signatures
+   (()						=> (T:memory-block)))
+  (attributes
+   (()						effect-free result-true)))
+
+(declare-core-primitive memory-block?
+    (safe)
+  (signatures
+   ((T:memory-block)				=> (T:boolean))
+   ((T:object)					=> (T:false)))
+  (attributes
+   ((_)						effect-free)))
+
+(declare-core-primitive memory-block?/not-null
+    (safe)
+  (signatures
+   ((T:memory-block)			=> (T:boolean))
+   ((T:object)				=> (T:false)))
+  (attributes
+   ((_)					effect-free)))
+
+(declare-core-primitive memory-block?/non-null
+    (safe)
+  (signatures
+   ((T:memory-block)			=> (T:boolean))
+   ((T:object)				=> (T:false)))
+  (attributes
+   ((_)					effect-free)))
+
+(declare-core-primitive memory-block-pointer
+    (safe)
+  (signatures
+   ((T:memory-block)			=> (T:pointer)))
+  (attributes
+   ((_)					effect-free result-true)))
+
+(declare-core-primitive memory-block-size
+    (safe)
+  (signatures
+   ((T:memory-block)			=> (T:exact-integer)))
+  (attributes
+   ((_)					effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 
- make-out-of-memory-error
- out-of-memory-error?
- out-of-memory-error.old-pointer
- out-of-memory-error.number-of-bytes
- out-of-memory-error.clean?
- memory-copy
- memory->bytevector
+(declare-core-primitive make-out-of-memory-error
+    (safe)
+  (signatures
+   (()					=> (T:record)))
+  (attributes
+   (()					effect-free result-true)))
+
+(declare-core-primitive out-of-memory-error?
+    (safe)
+  (signatures
+   ((T:record)				=> (T:boolean))
+   ((T:object)				=> (T:false)))
+  (attributes
+   ((_)					effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive memory-copy
+    (safe)
+  (signatures
+   ((T:pointer/bytevector T:fixnum T:pointer/bytevector T:fixnum T:fixnum)	=> (T:void))))
+
+(declare-core-primitive memory->bytevector
+    (safe)
+  (signatures
+   ((T:pointer T:fixnum)		=> (T:bytevector)))
+  (attributes
+   ((_ _)				effect-free result-true)))
+
+(declare-core-primitive bytevector->memory
+    (safe)
+  (signatures
+   ((T:bytevector)			=> (T:pointer/false T:fixnum/false)))
+  (attributes
+   ((_ _)				effect-free)))
+
+(declare-core-primitive bytevector->guarded-memory
+    (safe)
+  (signatures
+   ((T:bytevector)			=> (T:pointer/false T:fixnum/false)))
+  (attributes
+   ((_ _)				effect-free)))
+
+(declare-core-primitive bytevector->memory*
+    (safe)
+  (signatures
+   ((T:bytevector)			=> (T:pointer T:fixnum)))
+  (attributes
+   ((_ _)				effect-free)))
+
+(declare-core-primitive bytevector->guarded-memory*
+    (safe)
+  (signatures
+   ((T:bytevector)			=> (T:pointer T:fixnum)))
+  (attributes
+   ((_ _)				effect-free)))
+
+
+#|
+
+
  bytevector->memory
  bytevector->guarded-memory
  bytevector->memory*
