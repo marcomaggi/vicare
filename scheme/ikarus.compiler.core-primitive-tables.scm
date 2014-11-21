@@ -832,8 +832,9 @@
    ((T:procedure T:null)			=> (T:false))
    ((T:procedure T:non-empty-proper-list)	=> (T:object)))
   (attributes
-   ((_ ())				foldable effect-free result-false)
-   ((_ _)				foldable effect-free)))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ ())				foldable effect-free result-false)))
 
 (declare-core-primitive exists
     (safe)
@@ -841,8 +842,9 @@
    ((T:procedure T:null . T:null)					=> (T:false))
    ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
   (attributes
-   ((_ () . ())				foldable effect-free result-false)
-   ((_ _ . _)				foldable effect-free)))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ () . ())				foldable effect-free result-false)))
 
 (declare-core-primitive for-all
     (safe)
@@ -850,9 +852,9 @@
    ((T:procedure T:null . T:null)					=> (T:true))
    ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
   (attributes
-   ((_ () . ())				foldable effect-free result-true)
-   #;((_ _ . _)				foldable effect-free)
-   ))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ () . ())				foldable effect-free result-true)))
 
 (declare-core-primitive filter
     (safe)
@@ -860,8 +862,9 @@
    ((T:procedure T:null)			=> (T:null))
    ((T:procedure T:non-empty-proper-list)	=> (T:proper-list)))
   (attributes
-   ((_ ())				foldable effect-free result-true)
-   ((_ _)				foldable effect-free result-true)))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ ())				foldable effect-free result-true)))
 
 (declare-core-primitive partition
     (safe)
@@ -869,22 +872,27 @@
    ((T:procedure T:null)			=> (T:null T:null))
    ((T:procedure T:non-empty-proper-list)	=> (T:proper-list T:proper-list)))
   (attributes
-   ((_ ())				foldable effect-free)
-   ((_ _)				foldable effect-free)))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ ())				foldable effect-free)))
 
 (declare-core-primitive fold-left
     (safe)
   (signatures
    ((T:procedure T:object T:proper-list . T:proper-list)	=> (T:object)))
   (attributes
-   ((_ _ _ . _)				foldable effect-free)))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ _ () . ())			foldable effect-free)))
 
 (declare-core-primitive fold-right
     (safe)
   (signatures
    ((T:procedure T:object T:proper-list . T:proper-list)	=> (T:object)))
   (attributes
-   ((_ _ _ . _)				foldable effect-free)))
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ _ () . ())			foldable effect-free)))
 
 (declare-core-primitive andmap
     (safe)
@@ -894,10 +902,10 @@
    ((T:procedure T:null T:null)						=> (T:true))
    ((T:procedure T:non-empty-proper-list T:non-empty-proper-list)	=> (T:object)))
   (attributes
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
    ((_ ())				foldable effect-free result-true)
-   ((_ _)				foldable effect-free)
-   ((_ () ())				foldable effect-free result-true)
-   ((_ _ _)				foldable effect-free)))
+   ((_ () ())				foldable effect-free result-true)))
 
 (declare-core-primitive ormap
     (safe)
@@ -905,8 +913,9 @@
    ((T:procedure T:null)			=> (T:false))
    ((T:procedure T:non-empty-proper-list)	=> (T:object)))
   (attributes
-   ((_ ())				foldable effect-free result-false)
-   ((_ _)				foldable effect-free)))
+   ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
+   ;;unknown function.
+   ((_ ())				foldable effect-free result-false)))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
