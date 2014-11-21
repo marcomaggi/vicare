@@ -5039,6 +5039,111 @@ called with at least two arguments.
   #t)
 
 
+(parametrise ((check-test-name	'misc))
+
+  (check
+      (andmap (lambda (x) x) '())
+    => #t)
+
+  (check
+      (andmap (lambda (x) x) '(#f #f #f))
+    => #f)
+
+  (check
+      (andmap (lambda (x) x) '(#t #t #t))
+    => #t)
+
+  (check
+      (andmap (lambda (x) x) '(#t #t #f))
+    => #f)
+
+  (check
+      (andmap (lambda (x) x) '(#t #t 123))
+    => 123)
+
+;;;
+
+  (check
+      (andmap even? '())
+    => #t)
+
+  (check
+      (andmap even? '(1 3 5))
+    => #f)
+
+  (check
+      (andmap even? '(2 4 6 7))
+    => #f)
+
+  (check
+      (andmap even? '(2 4 6))
+    => #t)
+
+;;;
+
+  (check
+      (andmap (lambda (x y) (and x y))
+	      '() '())
+    => #t)
+
+  (check
+      (andmap (lambda (x y) (and x y))
+	      '(1 2) '(3 4))
+    => 4)
+
+  (check
+      (andmap (lambda (x y) (and x y))
+	      '(1 2) '(3 #f))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ormap even? '())
+    => #f)
+
+  (check
+      (ormap even? '(2 4 6))
+    => #t)
+
+  (check
+      (ormap even? '(2 4 5 6))
+    => #t)
+
+;;;
+
+  (check
+      (ormap (lambda (x) (or x 123))
+	     '())
+    => #f)
+
+  (check
+      (ormap (lambda (x) (or x 123))
+	     '(1 2 3))
+    => 1)
+
+  (check
+      (ormap (lambda (x) (or x 123))
+	     '(#f #f 1))
+    => 123)
+
+;;;
+
+  (check
+      (ormap (lambda (x) x) '())
+    => #f)
+
+  (check
+      (ormap (lambda (x) x) '(#f #f #f))
+    => #f)
+
+  (check
+      (ormap (lambda (x) x) '(#f 123 #f))
+    => 123)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
