@@ -758,6 +758,17 @@
    ;;Not foldable because it must return a newly allocated list every time.
    ((_)			effect-free result-true)))
 
+(declare-core-primitive append
+    (safe)
+  (signatures
+   (()				=> (T:null))
+   ((T:object . T:object)	=> (T:improper-list)))
+  (attributes
+   ;;This is foldable because it returns null itself.
+   (()				foldable effect-free result-true)
+   ;;Not foldable because it must return a newly allocated improper list every time.
+   ((_ . _)			effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; inspection
 
@@ -774,7 +785,16 @@
 (declare-list-finder memq T:object)
 (declare-list-finder memv T:object)
 (declare-list-finder member T:object)
-(declare-list-finder memp T:procedure)
+
+(declare-core-primitive memp
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:false))
+   ((T:procedure T:non-empty-proper-list)	=> (_)))
+  (attributes
+   ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
+   ;;unknown function.
+   ((_ ())				foldable effect-free result-false)))
 
 ;;;
 
@@ -784,8 +804,10 @@
    ((T:procedure T:null)			=> (T:null))
    ((T:procedure T:non-empty-proper-list)	=> (T:proper-list)))
   (attributes
+   ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
+   ;;unknown function.
    ((_ ())				foldable effect-free result-true)
-   ((_ _)				foldable effect-free result-true)))
+   ((_ _)				result-true)))
 
 (declare-core-primitive remq
     (safe)
@@ -823,6 +845,44 @@
    ((T:standalone-pair)			=> (T:standalone-pair)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive list-tail
+    (safe)
+  (signatures
+   ((T:non-empty-proper-list T:exact-integer)	=> (T:proper-list)))
+  (attributes
+   ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive list-ref
+    (safe)
+  (signatures
+   ((T:non-empty-proper-list T:exact-integer)	=> (T:object)))
+  (attributes
+   ((_ _)				foldable effect-free)))
+
+;;;
+
+(declare-core-primitive map
+    (safe)
+  (signatures
+   ((T:procedure T:null . T:null)					=> (T:null))
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:non-empty-proper-list)))
+  (attributes
+   ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
+   ;;unknown function.
+   ((_ () . ())				foldable effect-free result-true)
+   ((_ _ . _)				result-true)))
+
+(declare-core-primitive for-each
+    (safe)
+  (signatures
+   ((T:procedure T:null . T:null)					=> (T:void))
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:void)))
+  (attributes
+   ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
+   ;;unknown function.
+   ((_ () . ())				foldable effect-free result-true)
+   ((_ _ . _)				result-true)))
 
 ;;;
 
@@ -970,7 +1030,16 @@
 (declare-alist-accessor assq T:object)
 (declare-alist-accessor assv T:object)
 (declare-alist-accessor assoc T:object)
-(declare-alist-accessor assp T:procedure)
+
+(declare-core-primitive assp
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:false))
+   ((T:procedure T:non-empty-proper-list)	=> (_)))
+  (attributes
+   ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
+   ;;unknown function.
+   ((_ ())				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; weak pairs
@@ -991,6 +1060,25 @@
    ((_)			=> (T:boolean)))
   (attributes
    ((_)			effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive list->string
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string every time.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive list->vector
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:vector)))
+  (attributes
+   ;;Not foldable because it must return a new vector every time.
+   ((_)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
@@ -5638,7 +5726,6 @@
  acosh
  atanh
  angle
- append
  apply
  assert
  assertion-error
@@ -5697,13 +5784,6 @@
  non-negative-exact-integer?
  non-positive-exact-integer?
  lcm
- length
- list
- list->string
- list->vector
- list-ref
- list-tail
- list?
  log
  magnitude
  make-polar
@@ -5711,7 +5791,6 @@
  complex-conjugate
  make-string
  make-vector
- map
  max
  min
  nan?
