@@ -826,36 +826,33 @@
 
 ;;;
 
-;; (section
+(declare-core-primitive find
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:false))
+   ((T:procedure T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ ())				foldable effect-free result-false)
+   ((_ _)				foldable effect-free)))
 
-;; (declare-core-primitive find
-;;     (safe)
-;;   (signatures
-;;    ((T:procedure T:null)			=> (T:false))
-;;    ((T:procedure T:non-empty-proper-list)	=> (T:object)))
-;;   (attributes
-;;    ((_ ())				foldable effect-free result-false)
-;;    ((_ _)				foldable effect-free)))
+(declare-core-primitive exists
+    (safe)
+  (signatures
+   ((T:procedure T:null . T:null)					=> (T:false))
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ () . ())				foldable effect-free result-false)
+   ((_ _ . _)				foldable effect-free)))
 
-;; (declare-core-primitive exists
-;;     (safe)
-;;   (signatures
-;;    ((T:procedure T:null . T:null)					=> (T:false))
-;;    ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
-;;   (attributes
-;;    ((_ () . ())				foldable effect-free result-false)
-;;    ((_ _ . _)				foldable effect-free)))
-
-;; (declare-core-primitive for-all
-;;     (safe)
-;;   (signatures
-;;    ((T:procedure T:null . T:null)					=> (T:true))
-;;    ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
-;;   (attributes
-;;    ((_ () . ())				foldable effect-free result-true)
-;;    ((_ _ . _)				foldable effect-free)))
-
-;; /section)
+(declare-core-primitive for-all
+    (safe)
+  (signatures
+   ((T:procedure T:null . T:null)					=> (T:true))
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ () . ())				foldable effect-free result-true)
+   #;((_ _ . _)				foldable effect-free)
+   ))
 
 (declare-core-primitive filter
     (safe)
