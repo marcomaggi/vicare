@@ -99,12 +99,13 @@
    T:flonum		T:flonum-integer	T:flonum-fractional
    T:flonum-finite	T:flonum-infinite	T:flonum-nan
    T:compnum		T:cflonum
-   T:positive		T:zero			T:negative
    T:exact-integer
    T:real		T:exact-real
    T:complex
 
-   T:positive-fixnum	T:negative-fixnum
+   T:zero	T:positive	T:negative	T:non-positive	T:non-negative
+
+   T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
@@ -159,12 +160,13 @@
    T:flonum?		T:flonum-integer?	T:flonum-fractional?
    T:flonum-finite?	T:flonum-infinite?	T:flonum-nan?
    T:compnum?		T:cflonum?
-   T:positive?		T:zero?			T:negative?
    T:exact-integer?
    T:real?		T:exact-real?
    T:complex?
 
-   T:positive-fixnum?	T:negative-fixnum?
+   T:zero?	T:positive?	T:negative?	T:non-positive?	T:non-negative?
+
+   T:positive-fixnum?	T:negative-fixnum?	T:non-positive-fixnum?	T:non-negative-fixnum?
 
    T:pointer/false?	T:string/false?		T:number/false?		T:fixnum/false?
 
@@ -634,6 +636,14 @@
   (core-type-tag-or* T:pointer T:bytevector))
 
 ;;; --------------------------------------------------------------------
+
+(define-underspecified-core-type T:non-positive
+  (core-type-tag-or* T:zero T:negative))
+
+(define-underspecified-core-type T:non-negative
+  (core-type-tag-or* T:zero T:positive))
+
+;;; --------------------------------------------------------------------
 ;;; more fixnum types
 
 (define-underspecified-core-type T:positive-fixnum
@@ -641,6 +651,12 @@
 
 (define-underspecified-core-type T:negative-fixnum
   (core-type-tag-and* T:fixnum T:negative))
+
+(define-underspecified-core-type T:non-positive-fixnum
+  (core-type-tag-and* T:fixnum T:non-positive))
+
+(define-underspecified-core-type T:non-negative-fixnum
+  (core-type-tag-and* T:fixnum T:non-negative))
 
 ;;; --------------------------------------------------------------------
 

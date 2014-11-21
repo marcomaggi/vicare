@@ -543,21 +543,21 @@
 
 ;;;; syntax helpers: pairs, lists, alists
 
-(module (declare-list-accessor)
+(module (declare-pair-accessor)
 
-  (define-syntax declare-list-accessor
+  (define-syntax declare-pair-accessor
     ;;This is for: CAR, CDR, CAAR, CADR, ...
     ;;
     (syntax-rules (safe unsafe replacements)
-      ((_ ?who)						(%declare-list-accessor ?who safe   (replacements)))
-      ((_ ?who safe)					(%declare-list-accessor ?who safe   (replacements)))
-      ((_ ?who unsafe)					(%declare-list-accessor ?who unsafe (replacements)))
-      ((_ ?who        (replacements . ?replacements))	(%declare-list-accessor ?who safe   (replacements . ?replacements)))
-      ((_ ?who safe   (replacements . ?replacements))	(%declare-list-accessor ?who safe   (replacements . ?replacements)))
-      ((_ ?who unsafe (replacements . ?replacements))	(%declare-list-accessor ?who unsafe (replacements . ?replacements)))
+      ((_ ?who)						(%declare-pair-accessor ?who safe   (replacements)))
+      ((_ ?who safe)					(%declare-pair-accessor ?who safe   (replacements)))
+      ((_ ?who unsafe)					(%declare-pair-accessor ?who unsafe (replacements)))
+      ((_ ?who        (replacements . ?replacements))	(%declare-pair-accessor ?who safe   (replacements . ?replacements)))
+      ((_ ?who safe   (replacements . ?replacements))	(%declare-pair-accessor ?who safe   (replacements . ?replacements)))
+      ((_ ?who unsafe (replacements . ?replacements))	(%declare-pair-accessor ?who unsafe (replacements . ?replacements)))
       ))
 
-  (define-syntax %declare-list-accessor
+  (define-syntax %declare-pair-accessor
     (syntax-rules (replacements)
       ((_ ?who ?safety (replacements . ?replacements))
        (declare-core-primitive ?who
@@ -573,21 +573,21 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (declare-list-mutator)
+(module (declare-pair-mutator)
 
-  (define-syntax declare-list-mutator
+  (define-syntax declare-pair-mutator
     ;;This is for: SET-CAR!, SET-CDR!, ...
     ;;
     (syntax-rules (safe unsafe replacements)
-      ((_ ?who)						(%declare-list-mutator ?who safe   (replacements)))
-      ((_ ?who safe)					(%declare-list-mutator ?who safe   (replacements)))
-      ((_ ?who unsafe)					(%declare-list-mutator ?who unsafe (replacements)))
-      ((_ ?who        (replacements . ?replacements))	(%declare-list-mutator ?who safe   (replacements . ?replacements)))
-      ((_ ?who safe   (replacements . ?replacements))	(%declare-list-mutator ?who safe   (replacements . ?replacements)))
-      ((_ ?who unsafe (replacements . ?replacements))	(%declare-list-mutator ?who unsafe (replacements . ?replacements)))
+      ((_ ?who)						(%declare-pair-mutator ?who safe   (replacements)))
+      ((_ ?who safe)					(%declare-pair-mutator ?who safe   (replacements)))
+      ((_ ?who unsafe)					(%declare-pair-mutator ?who unsafe (replacements)))
+      ((_ ?who        (replacements . ?replacements))	(%declare-pair-mutator ?who safe   (replacements . ?replacements)))
+      ((_ ?who safe   (replacements . ?replacements))	(%declare-pair-mutator ?who safe   (replacements . ?replacements)))
+      ((_ ?who unsafe (replacements . ?replacements))	(%declare-pair-mutator ?who unsafe (replacements . ?replacements)))
       ))
 
-  (define-syntax %declare-list-mutator
+  (define-syntax %declare-pair-mutator
     (syntax-rules (replacements)
       ((_ ?who ?safety (replacements . ?replacements))
        (declare-core-primitive ?who
@@ -599,7 +599,7 @@
 	 (replacements . ?replacements)))
       ))
 
-  #| end of module: DECLARE-LIST-MUTATOR |# )
+  #| end of module: DECLARE-PAIR-MUTATOR |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -734,6 +734,19 @@
    ;;Not foldable because it must return a newly allocated list every time.
    ((_ . _)		effect-free result-true)))
 
+(declare-core-primitive make-list
+    (safe)
+  (signatures
+   ((T:non-negative-fixnum)		=> (T:proper-list))
+   ((T:non-negative-fixnum T:object)	=> (T:proper-list)))
+  (attributes
+   ;;Foldable because it returns null.
+   ((0)				foldable effect-free result-true)
+   ((0 _)			foldable effect-free result-true)
+   ;;Not foldable because it must return a newly allocated list every time.
+   ((_)				effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
 (declare-core-primitive reverse
     (safe)
   (signatures
@@ -748,11 +761,6 @@
 ;;; --------------------------------------------------------------------
 ;;; inspection
 
-(declare-list-finder memq T:object)
-(declare-list-finder memv T:object)
-(declare-list-finder member T:object)
-(declare-list-finder memp T:procedure)
-
 (declare-core-primitive length
     (safe)
   (signatures
@@ -761,51 +769,191 @@
   (attributes
    ((_)				foldable effect-free result-true)))
 
+;;;
+
+(declare-list-finder memq T:object)
+(declare-list-finder memv T:object)
+(declare-list-finder member T:object)
+(declare-list-finder memp T:procedure)
+
+;;;
+
+(declare-core-primitive remp
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:null))
+   ((T:procedure T:non-empty-proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_ ())				foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive remq
+    (safe)
+  (signatures
+   ((T:object T:null)			=> (T:null))
+   ((T:object T:non-empty-proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_ ())				foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive remv
+    (safe)
+  (signatures
+   ((T:object T:null)			=> (T:null))
+   ((T:object T:non-empty-proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_ ())				foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive remove
+    (safe)
+  (signatures
+   ((T:object T:null)			=> (T:null))
+   ((T:object T:non-empty-proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_ ())				foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive last-pair
+    (safe)
+  (signatures
+   ((T:non-empty-proper-list)		=> (T:pair))
+   ((T:standalone-pair)			=> (T:standalone-pair)))
+  (attributes
+   ((_ _)				foldable effect-free result-true)))
+
+;;;
+
+#;(section
+
+(declare-core-primitive find
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:null))
+   ((T:procedure T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ ())				foldable effect-free result-false)
+   ((_ _)				foldable effect-free)))
+
+(declare-core-primitive exists
+    (safe)
+  (signatures
+   ((T:procedure T:null . T:null)					=> (T:false))
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ () . ())				foldable effect-free result-false)
+   ((_ _ . _)				foldable effect-free)))
+
+(declare-core-primitive for-all
+    (safe)
+  (signatures
+   ((T:procedure T:null . T:null)					=> (T:true))
+   ((T:procedure T:non-empty-proper-list . T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ () . ())				foldable effect-free result-false)
+   ((_ _ . _)				foldable effect-free)))
+
+(declare-core-primitive filter
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:null))
+   ((T:procedure T:non-empty-proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_ ())				foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)))
+
+(declare-core-primitive partition
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:null T:null))
+   ((T:procedure T:non-empty-proper-list)	=> (T:proper-list T:proper-list)))
+  (attributes
+   ((_ ())				foldable effect-free)
+   ((_ _)				foldable effect-free)))
+
+(declare-core-primitive fold-left
+    (safe)
+  (signatures
+   ((T:procedure T:object T:proper-list . T:proper-list)	=> (T:object)))
+  (attributes
+   ((_ _ _ . _)				foldable effect-free)))
+
+(declare-core-primitive fold-right
+    (safe)
+  (signatures
+   ((T:procedure T:object T:proper-list . T:proper-list)	=> (T:object)))
+  (attributes
+   ((_ _ _ . _)				foldable effect-free)))
+
+/section)
+
+(declare-core-primitive andmap
+    (safe)
+  (signatures
+   ((T:procedure T:null)						=> (T:false))
+   ((T:procedure T:non-empty-proper-list)				=> (T:object))
+   ((T:procedure T:null T:null)						=> (T:false))
+   ((T:procedure T:non-empty-proper-list T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ () ())				foldable effect-free result-false)
+   ((_ _ _)				foldable effect-free)))
+
+(declare-core-primitive ormap
+    (safe)
+  (signatures
+   ((T:procedure T:null)			=> (T:false))
+   ((T:procedure T:non-empty-proper-list)	=> (T:object)))
+  (attributes
+   ((_ ())				foldable effect-free result-false)
+   ((_ _)				foldable effect-free)))
+
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
-(declare-list-accessor car
+(declare-pair-accessor car
   (replacements $car))
 
-(declare-list-accessor cdr
+(declare-pair-accessor cdr
   (replacements $cdr))
 
-(declare-list-accessor caar)
-(declare-list-accessor cadr)
-(declare-list-accessor cdar)
-(declare-list-accessor cddr)
-(declare-list-accessor caaar)
-(declare-list-accessor caadr)
-(declare-list-accessor cadar)
-(declare-list-accessor caddr)
-(declare-list-accessor cdaar)
-(declare-list-accessor cdadr)
-(declare-list-accessor cddar)
-(declare-list-accessor cdddr)
-(declare-list-accessor caaaar)
-(declare-list-accessor caaadr)
-(declare-list-accessor caadar)
-(declare-list-accessor caaddr)
-(declare-list-accessor cadaar)
-(declare-list-accessor cadadr)
-(declare-list-accessor caddar)
-(declare-list-accessor cadddr)
-(declare-list-accessor cdaaar)
-(declare-list-accessor cdaadr)
-(declare-list-accessor cdadar)
-(declare-list-accessor cdaddr)
-(declare-list-accessor cddaar)
-(declare-list-accessor cddadr)
-(declare-list-accessor cdddar)
-(declare-list-accessor cddddr)
+(declare-pair-accessor caar)
+(declare-pair-accessor cadr)
+(declare-pair-accessor cdar)
+(declare-pair-accessor cddr)
+(declare-pair-accessor caaar)
+(declare-pair-accessor caadr)
+(declare-pair-accessor cadar)
+(declare-pair-accessor caddr)
+(declare-pair-accessor cdaar)
+(declare-pair-accessor cdadr)
+(declare-pair-accessor cddar)
+(declare-pair-accessor cdddr)
+(declare-pair-accessor caaaar)
+(declare-pair-accessor caaadr)
+(declare-pair-accessor caadar)
+(declare-pair-accessor caaddr)
+(declare-pair-accessor cadaar)
+(declare-pair-accessor cadadr)
+(declare-pair-accessor caddar)
+(declare-pair-accessor cadddr)
+(declare-pair-accessor cdaaar)
+(declare-pair-accessor cdaadr)
+(declare-pair-accessor cdadar)
+(declare-pair-accessor cdaddr)
+(declare-pair-accessor cddaar)
+(declare-pair-accessor cddadr)
+(declare-pair-accessor cdddar)
+(declare-pair-accessor cddddr)
 
 ;;; --------------------------------------------------------------------
 ;;; mutators
 
-(declare-list-mutator set-car!
+(declare-pair-mutator set-car!
   (replacements $set-car!))
 
-(declare-list-mutator set-cdr!
+(declare-pair-mutator set-cdr!
   (replacements $set-cdr!))
 
 ;;; --------------------------------------------------------------------
@@ -816,14 +964,46 @@
 (declare-alist-accessor assoc T:object)
 (declare-alist-accessor assp T:procedure)
 
+;;; --------------------------------------------------------------------
+;;; weak pairs
+
+(declare-core-primitive weak-cons
+    (safe)
+  (signatures
+   ((_ _)		=> (T:pair)))
+  (attributes
+   ;;This is not foldable because it must return a newly allocated pair every time.
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive weak-pair?
+    (safe)
+  (signatures
+   ((T:null)		=> (T:false))
+   ((T:pair)		=> (T:boolean))
+   ((_)			=> (T:boolean)))
+  (attributes
+   ((_)			effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive make-queue-procs
+    (safe)
+  (signatures
+   (()				=> (T:procedure T:procedure T:procedure))
+   ((T:proper-list)		=> (T:procedure T:procedure T:procedure)))
+  (attributes
+   (()				effect-free)
+   ((_)				effect-free)))
+
 
 ;;;; pairs and lists, unsafe functions
 
-(declare-list-accessor $car unsafe)
-(declare-list-accessor $cdr unsafe)
+(declare-pair-accessor $car unsafe)
+(declare-pair-accessor $cdr unsafe)
 
-(declare-list-mutator $set-car! unsafe)
-(declare-list-mutator $set-cdr! unsafe)
+(declare-pair-mutator $set-car! unsafe)
+(declare-pair-mutator $set-cdr! unsafe)
 
 
 ;;;; fixnums safe operations
@@ -4983,15 +5163,6 @@
 
 #| list of core primitives to declare
 
- make-list
- last-pair
- weak-cons
- weak-pair?
- andmap
- ormap
-
-
-
  sra
  sll
  add1
@@ -5467,56 +5638,6 @@
  boolean=?
  boolean?
 
-CAR is  both a core primitive  and a primitive  operation.  At present it  has no
-unsafe variant.
-
-FIXME  The right  way  here is  to  have  a multimethod:  one  method for  <pair>
-argument, which can have an unsafe variant; one method for <list> argument, which
-must not have an unsafe variant because  a <list> can be null.  (Marco Maggi; Sat
-Apr 26, 2014)
-  (let ((P (C car)))
-    (register-lambda-signature P (S (list (C <top>))
-				    (list (C <pair>)))))
-
-CDR is  both a core primitive  and a primitive  operation.  At present it  has no
-unsafe variant.
-
-FIXME  The right  way  here is  to  have  a multimethod:  one  method for  <pair>
-argument, which can have an unsafe variant; one method for <list> argument, which
-must not have an unsafe variant because  a <list> can be null.  (Marco Maggi; Sat
-Apr 26, 2014)
-  (let ((P (C cdr)))
-    (register-lambda-signature P (S (list (C <top>))
-				    (list (C <pair>)))))
-
- caar
- cadr
- cdar
- cddr
- caaar
- caadr
- cadar
- caddr
- cdaar
- cdadr
- cddar
- cdddr
- caaaar
- caaadr
- caadar
- caaddr
- cadaar
- cadadr
- caddar
- cadddr
- cdaaar
- cdaadr
- cdadar
- cdaddr
- cddaar
- cddadr
- cdddar
- cddddr
  call-with-current-continuation
  call/cc
  call-with-values
@@ -5963,39 +6084,6 @@ Apr 26, 2014)
  call-with-bytevector-output-port
  call-with-port
  call-with-string-output-port
- assoc
- assp
- assq
- assv
- cons*
- filter
- find
- fold-left
- fold-right
- for-all
- exists
- member
- memp
- memq
- memv
- partition
- remq
- remp
- remv
- remove
- make-queue-procs
-
-SET-CAR! is both a core primitive and  a primitive operation, so it has no unsafe
-variant.
-  (let ((P (C set-car!)))
-    (register-lambda-signature P (S (list (C <void>))
-				    (list (C <pair>) (C <top>)))))
-
-SET-CDR! is both a core primitive and  a primitive operation, so it has no unsafe
-variant.
-  (let ((P (C set-cdr!)))
-    (register-lambda-signature P (S (list (C <void>))
-				    (list (C <pair>) (C <top>)))))
 
  string-set!
  string-fill!
@@ -7475,6 +7563,6 @@ variant.
 ;; Local Variables:
 ;; mode: vicare
 ;; eval: (put 'declare-core-primitive	'scheme-indent-function 2)
-;; eval: (put 'declare-list-accessor	'scheme-indent-function 1)
-;; eval: (put 'declare-list-mutator	'scheme-indent-function 1)
+;; eval: (put 'declare-pair-accessor	'scheme-indent-function 1)
+;; eval: (put 'declare-pair-mutator	'scheme-indent-function 1)
 ;; End:
