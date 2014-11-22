@@ -5636,7 +5636,7 @@ otherwise return @false{}.
 
 @defun $string-total-length @var{init-len} @var{strs}
 Given the list of strings @var{strs}: compute the total length of the
-strings, add it to @var{ini-len} and return the result.  If
+strings, add it to @var{init-len} and return the result.  If
 @var{init-len} is zero: the returned value is the total length of the
 strings in @var{strs}.  The returned value may or may not be in the
 range of the maximum string size.

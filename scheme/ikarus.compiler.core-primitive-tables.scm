@@ -220,6 +220,7 @@
 (define-object-predicate-declarer declare-bignum-predicate T:bignum)
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
 (define-object-predicate-declarer declare-char-predicate T:char)
+(define-object-predicate-declarer declare-string-predicate T:string)
 
 
 ;;;; syntax helpers: comparison functions
@@ -266,6 +267,7 @@
 (define-object-binary-comparison-declarer declare-flonum-binary-comparison T:flonum)
 (define-object-binary-comparison-declarer declare-pointer-binary-comparison T:pointer)
 (define-object-binary-comparison-declarer declare-char-binary-comparison T:char)
+(define-object-binary-comparison-declarer declare-string-binary-comparison T:string)
 
 ;;; --------------------------------------------------------------------
 
@@ -2388,7 +2390,7 @@
 
 ;;;; pointers, safe functions
 
-(declare-type-predicate pointer?)
+(declare-type-predicate pointer? T:pointer)
 
 ;;; --------------------------------------------------------------------
 
@@ -2481,11 +2483,18 @@
 ;;STRING and MAKE-STRING are not FOLDABLE.
 ;;
 
+;;; predicates
+
+(declare-type-predicate string? T:string)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
 (declare-core-primitive string
     (safe)
   (signatures
-   (()		=> (T:string))
-   (T:char	=> (T:string)))
+   (()			=> (T:string))
+   (T:char		=> (T:string)))
   ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
   ;;return value is an empty string.
   (attributes
@@ -2504,13 +2513,6 @@
    ((0 . _)		effect-free result-true)
    (_			effect-free result-true)))
 
-(declare-core-primitive string?
-    (safe)
-  (signatures
-   ((_)		=> (T:boolean)))
-  (attributes
-   ((_)			foldable effect-free)))
-
 (declare-core-primitive string-length
     (safe)
   (signatures
@@ -2518,6 +2520,9 @@
   (attributes
    ((_)			foldable effect-free result-true))
   (replacements $string-length))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
 
 ;;FIXME  This cannot  have $STRING-REF  as  replacement because  there is  no way  to
 ;;validate the index with respect to the string.  But in future another primitive can
@@ -2540,6 +2545,13 @@
    ((T:string T:fixnum T:char)	=> (T:void)))
   (attributes
    ((_ _ _)		result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+
+;;; --------------------------------------------------------------------
+;;; conversion
 
 (declare-core-primitive string->number
     (safe)
@@ -2623,26 +2635,135 @@
 
 ;;;; strings, unsafe functions
 
+;;; predicates
+
+(declare-string-predicate $string-empty?)
+(declare-string-predicate $octets-encoded-string?)
+(declare-string-predicate $ascii-encoded-string?)
+(declare-string-predicate $latin1-encoded-string?)
+(declare-string-predicate $uri-encoded-string?)
+(declare-string-predicate $percent-encoded-string?)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive $make-string
+    (unsafe)
+  (signatures
+   ((T:fixnum)		=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string every time.
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $string
+    (unsafe)
+  (signatures
+   (T:char		=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string every time.
+   (_			effect-free result-true)))
+
+(declare-core-primitive $string-concatenate
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:proper-list)	=> (T:string)))
+  (attributes
+   ((_ ())			foldable effect-free result-true)
+   ;;Not foldable because it must return a new string every time.
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive $string-reverse-and-concatenate
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:proper-list)	=> (T:string)))
+  (attributes
+   ((_ ())			foldable effect-free result-true)
+   ;;Not foldable because it must return a new string every time.
+   ((_ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
 (declare-core-primitive $string-length
     (unsafe)
   (signatures
-   ((T:string)	=> (T:fixnum)))
+   ((T:string)		=> (T:fixnum)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
+(declare-core-primitive $string-total-length
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:proper-list)	=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
 (declare-core-primitive $string-ref
-    (safe)
+    (unsafe)
   (signatures
    ((T:string T:fixnum)	=> (T:char)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
 
 (declare-core-primitive $string-set!
-    (safe)
+    (unsafe)
   (signatures
    ((T:string T:fixnum T:char)	=> (T:void)))
   (attributes
    ((_ _ _)		result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-string-binary-comparison $string=)
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $string->ascii
+    (unsafe)
+  (signatures
+   ((T:string)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector every time.
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $string->octets
+    (unsafe)
+  (signatures
+   ((T:string)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector every time.
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $string->latin1
+    (unsafe)
+  (signatures
+   ((T:string)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector every time.
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $string-base64->bytevector
+    (unsafe)
+  (signatures
+   ((T:string)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector every time.
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive $interned-strings
+    (unsafe)
+  (signatures
+   (()			=> (T:vector)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 
 ;;;; vectors
@@ -5439,34 +5560,6 @@
  $memq
  $memv
 ;;;
- $make-string
- $string
- $string-ref
- $string-set!
-
-  (let ((P (C $string-length)))
-    (register-lambda-signature P (S (list (C <fixnum>))
-				    (list (C <string>)))))
-
- $string-empty?
- $string=
- $string-total-length
- $string-concatenate
- $string-reverse-and-concatenate
- $interned-strings
- $string->ascii
- $ascii->string
- $string->octets
- $octets->string
- $string->latin1
- $latin1->string
- $octets-encoded-string?
- $ascii-encoded-string?
- $latin1-encoded-string?
- $string-base64->bytevector
- $bytevector->string-base64
- $uri-encoded-string?
- $percent-encoded-string?
 
  $make-bytevector
  $bytevector-length
@@ -5500,6 +5593,11 @@
  $percent-normalise-encoding
  $bytevector->base64
  $base64->bytevector
+ $ascii->string
+ $octets->string
+ $latin1->string
+ $bytevector->string-base64
+
 ;;;
 ;;;
  $make-bignum
