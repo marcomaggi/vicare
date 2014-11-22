@@ -205,7 +205,7 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((_)			=> (T:boolean)))
+	  ((?obj-tag)		=> (T:boolean)))
 	 (attributes
 	  ((_)			foldable effect-free))
 	 (replacements . ?replacements)))
@@ -219,6 +219,7 @@
 (define-object-predicate-declarer declare-ratnum-predicate T:ratnum)
 (define-object-predicate-declarer declare-bignum-predicate T:bignum)
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
+(define-object-predicate-declarer declare-char-predicate T:char)
 
 
 ;;;; syntax helpers: comparison functions
@@ -264,6 +265,7 @@
 (define-object-binary-comparison-declarer declare-fixnum-binary-comparison T:fixnum)
 (define-object-binary-comparison-declarer declare-flonum-binary-comparison T:flonum)
 (define-object-binary-comparison-declarer declare-pointer-binary-comparison T:pointer)
+(define-object-binary-comparison-declarer declare-char-binary-comparison T:char)
 
 ;;; --------------------------------------------------------------------
 
@@ -312,6 +314,49 @@
 (define-object-unary/multi-comparison-declarer declare-fixnum-unary/multi-comparison T:fixnum)
 (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison T:flonum)
 
+;;; --------------------------------------------------------------------
+
+(module (define-object-binary/multi-comparison-declarer)
+
+  (define-syntax define-object-binary/multi-comparison-declarer
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-binary/multi-comparison-declarer declare-char-binary/multi-comparison T:char)
+    ;;   (declare-char-binary/multi-comparison char=?)
+    ;;   (declare-char-binary/multi-comparison char<?)
+    ;;   (declare-char-binary/multi-comparison char>?)
+    ;;
+    (syntax-rules (safe unsafe replacements)
+      ((_ ?declarer ?type-tag)
+       (define-syntax ?declarer
+	 (syntax-rules (safe unsafe replacements)
+	   ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	   ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	   ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	   ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	   ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	   ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	   )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag ?type-tag)		=> (T:boolean))
+	  ((?type-tag ?type-tag . ?type-tag)	=> (T:boolean)))
+	 (attributes
+	  ((_ _)			foldable effect-free)
+	  ((_ _ . _)			foldable effect-free))))
+      ))
+
+  #| end of module: DEFINE-OBJECT-BINARY/MULTI-COMPARISON-DECLARER |# )
+
+(define-object-binary/multi-comparison-declarer declare-char-binary/multi-comparison T:char)
+
 
 ;;;; syntax helpers: math operations
 
@@ -358,6 +403,7 @@
 (define-object-unary-operation-declarer declare-fixnum-unary T:fixnum)
 (define-object-unary-operation-declarer declare-flonum-unary T:flonum)
 (define-object-unary-operation-declarer declare-exact-integer-unary T:exact-integer)
+(define-object-unary-operation-declarer declare-char-unary T:char)
 
 ;;; --------------------------------------------------------------------
 
@@ -1137,6 +1183,8 @@
 (declare-fixnum-predicate fxnonnegative?	(replacements $fxnonnegative?))
 (declare-fixnum-predicate fxeven?		(replacements $fxeven?))
 (declare-fixnum-predicate fxodd?		(replacements $fxodd?))
+
+(declare-fixnum-predicate fixnum-in-character-range?)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -2269,6 +2317,41 @@
 
 (declare-type-predicate char? T:char)
 
+(declare-char-predicate char-in-ascii-range?)
+(declare-char-predicate char-alphabetic?)
+(declare-char-predicate char-lower-case?)
+(declare-char-predicate char-numeric?)
+(declare-char-predicate char-title-case?)
+(declare-char-predicate char-upper-case?)
+(declare-char-predicate char-whitespace?)
+(declare-char-predicate unicode-printable-char?)
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-char-binary/multi-comparison char=?		(replacements $char=))
+(declare-char-binary/multi-comparison char!=?		(replacements $char!=))
+(declare-char-binary/multi-comparison char<?		(replacements $char<))
+(declare-char-binary/multi-comparison char>?		(replacements $char>))
+(declare-char-binary/multi-comparison char<=?		(replacements $char<=))
+(declare-char-binary/multi-comparison char>=?		(replacements $char>=))
+
+(declare-char-binary/multi-comparison char-ci=?)
+(declare-char-binary/multi-comparison char-ci!=?)
+(declare-char-binary/multi-comparison char-ci<?)
+(declare-char-binary/multi-comparison char-ci>?)
+(declare-char-binary/multi-comparison char-ci<=?)
+(declare-char-binary/multi-comparison char-ci>=?)
+
+;;; --------------------------------------------------------------------
+;;; transformations
+
+(declare-char-unary char-downcase)
+(declare-char-unary char-foldcase)
+(declare-char-unary char-titlecase)
+(declare-char-unary char-upcase)
+(declare-char-unary char-general-category)
+
 ;;; --------------------------------------------------------------------
 ;;; conversion
 
@@ -2285,50 +2368,12 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-core-primitive $char=
-    (unsafe)
-  (signatures
-   ((T:char T:char)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-;;FIXME Not  implemented.  To  be implemented  before the  next boot  image rotation.
-;;(Marco Maggi; Mon Nov 10, 2014)
-;;
-;; (declare-core-primitive $char!=
-;;     (unsafe)
-;;   (signatures
-;;    ((T:char T:char)		=> (T:boolean)))
-;;   (attributes
-;;    ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $char<
-    (unsafe)
-  (signatures
-   ((T:char T:char)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $char>
-    (unsafe)
-  (signatures
-   ((T:char T:char)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $char<=
-    (unsafe)
-  (signatures
-   ((T:char T:char)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $char>=
-    (unsafe)
-  (signatures
-   ((T:char T:char)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
+(declare-char-binary-comparison $char=		unsafe)
+(declare-char-binary-comparison $char!=		unsafe)
+(declare-char-binary-comparison $char>		unsafe)
+(declare-char-binary-comparison $char<		unsafe)
+(declare-char-binary-comparison $char>=		unsafe)
+(declare-char-binary-comparison $char<=		unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -5287,7 +5332,7 @@
  print-unicode
  printer-integer-radix
 
- unicode-printable-char?
+
 
  call/cf
  print-error
@@ -5393,15 +5438,6 @@
  $exists1
  $memq
  $memv
-;;;
- $char?
- $char=
- $char<
- $char>
- $char<=
- $char>=
- $char->fixnum
- $fixnum->char
 ;;;
  $make-string
  $string
@@ -5737,16 +5773,6 @@
  call/cc
  call-with-values
  ceiling
- ;;
- char->integer
- char<=?
- char<?
- char=?
- char>=?
- char>?
- char?
- char-in-ascii-range?
- fixnum-in-character-range?
  ;;
  complex?
  cons
@@ -6473,22 +6499,6 @@
  syntax-object-marks
  syntax-object-ribs
  syntax-object-source-objects
- char-alphabetic?
- char-ci<=?
- char-ci<?
- char-ci=?
- char-ci>=?
- char-ci>?
- char-downcase
- char-foldcase
- char-titlecase
- char-upcase
- char-general-category
- char-lower-case?
- char-numeric?
- char-title-case?
- char-upper-case?
- char-whitespace?
  string-ci<=?
  string-ci<?
  string-ci=?

@@ -3994,6 +3994,7 @@
 				     (nop)))
 				  ))))
    (define-$char-comparison $char=	=)
+   (define-$char-comparison $char!=	!=)
    (define-$char-comparison $char<	<)
    (define-$char-comparison $char<=	<=)
    (define-$char-comparison $char>	>)
