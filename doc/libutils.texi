@@ -223,6 +223,13 @@ the same list of identifiers and the version of @vari{sexp} is less than
 or equal to the version of @varii{sexp}.
 @end defun
 
+
+@defun library-name-identifiers=? @vari{sexp} @varii{sexp}
+Given two symbolic expressions compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if they have
+the same list of identifiers.
+@end defun
+
 @c ------------------------------------------------------------
 
 @defun library-version=? @vari{vrs} @varii{vrs}
