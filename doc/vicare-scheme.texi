@@ -147,11 +147,6 @@ and at:
 @center @url{http://sourceforge.net/projects/vicare-scheme/}
 
 @noindent
-this project has a mailing list:
-
-@center @url{http://groups.google.com/group/vicare-users}
-
-@noindent
 Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
 Copyright @copyright{} 2006-2010 by Abdulaziz Ghuloum.@*
 Copyright @copyright{} Michael Sperber, R. Kent Dybvig, Matthew Flatt and Anton Van Straaten.

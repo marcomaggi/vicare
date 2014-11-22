@@ -7108,6 +7108,13 @@ Return @true{} if @var{obj} is a fixnum and its value is in one of the
 ranges acceptable by Unicode code points; otherwise return @false{}.
 @end defun
 
+
+@defun unicode-printable-char? @var{ch}
+Return @true{} if @var{ch} is a character and it is printable; if
+@var{ch} is not printable: return @false{}; if @var{ch} is not a
+character: raise an exception.
+@end defun
+
 @c page
 @node iklib keywords
 @section Keyword objects
