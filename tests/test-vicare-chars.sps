@@ -225,6 +225,113 @@
   #t)
 
 
+(parametrise ((check-test-name	'char-not-equal))
+
+  (check
+      (char!=? #\a #\a)
+    => #f)
+
+  (check
+      (char!=? #\a #\b)
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char!=? #\a #\a #\a)
+    => #f)
+
+  (check
+      (char!=? #\a #\b #\b)
+    => #t)
+
+  (check
+      (char!=? #\b #\a #\b)
+    => #t)
+
+  (check
+      (char!=? #\b #\b #\a)
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char!=? #\a #\a #\a #\a)
+    => #f)
+
+  (check
+      (char!=? #\a #\b #\b #\b)
+    => #t)
+
+  (check
+      (char!=? #\b #\a #\b #\b)
+    => #t)
+
+  (check
+      (char!=? #\b #\b #\a #\b)
+    => #t)
+
+  (check
+      (char!=? #\b #\b #\b #\a)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: 2 args
+
+  (check
+      (catch #f
+	(char!=? 123 #\b))
+    => '(123))
+
+  (check
+      (catch #f
+	(char!=? #\b 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: 3 args
+
+  (check
+      (catch #f
+	(char!=? 123 #\b #\b))
+    => '(123))
+
+  (check
+      (catch #f
+	(char!=? #\b 123 #\b))
+    => '(123))
+
+  (check
+      (catch #f
+	(char!=? #\b #\b 123))
+    => '(123))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: 4 args
+
+  (check
+      (catch #f
+	(char!=? 123 #\b #\b #\b))
+    => '(123))
+
+  (check
+      (catch #f
+	(char!=? #\b 123 #\b #\b))
+    => '(123))
+
+  (check
+      (catch #f
+	(char!=? #\b #\b 123 #\b))
+    => '(123))
+
+  (check
+      (catch #f
+	(char!=? #\b #\b #\b 123))
+    => '(123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'char-less))
 
   (check

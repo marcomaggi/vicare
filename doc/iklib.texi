@@ -7115,6 +7115,12 @@ Return @true{} if @var{ch} is a character and it is printable; if
 character: raise an exception.
 @end defun
 
+
+@deffn Procedure {char!=?} @vari{char} @varii{char} @variii{char} @dots{}
+The arguments must be characters.  Return @false{} if the arguments are
+all equal, otherwise return @true{}.
+@end deffn
+
 @c page
 @node iklib keywords
 @section Keyword objects

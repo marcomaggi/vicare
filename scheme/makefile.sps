@@ -1062,6 +1062,7 @@
 ;;;
     ($char?					$chars)
     ($char=					$chars)
+    ($char!=					$chars)
     ($char<					$chars)
     ($char>					$chars)
     ($char<=					$chars)
@@ -1561,6 +1562,7 @@
     (char<=?					v r ba se)
     (char<?					v r ba se)
     (char=?					v r ba se)
+    (char!=?					v $language)
     (char>=?					v r ba se)
     (char>?					v r ba se)
     (char?					v r ba se)
@@ -2458,6 +2460,7 @@
     (char-ci<=?					v r uc se)
     (char-ci<?					v r uc se)
     (char-ci=?					v r uc se)
+    (char-ci!=?					v $language)
     (char-ci>=?					v r uc se)
     (char-ci>?					v r uc se)
     (char-downcase				v r uc se)

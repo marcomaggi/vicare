@@ -17,13 +17,17 @@
 (library (ikarus chars)
   (export
     char->integer		integer->char
-    char=?
+    char=?			char!=?
     char<?			char<=?
     char>?			char>=?
-    char-in-ascii-range?	fixnum-in-character-range?)
+    char-in-ascii-range?	fixnum-in-character-range?
+
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
+    ;;2014)
+    $char!=)
   (import (except (vicare)
 		  char->integer		integer->char
-		  char=?
+		  char=?		char!=?
 		  char<?		char<=?
 		  char>?		char>=?
 		  char-in-ascii-range?	fixnum-in-character-range?)
@@ -118,6 +122,50 @@
 (define-comparison char<=?	$char<=)
 (define-comparison char>?	$char>)
 (define-comparison char>=?	$char>=)
+
+;;; --------------------------------------------------------------------
+
+(define char!=?
+  (case-lambda
+   ((ch1 ch2)
+    (define who 'char!=?)
+    (with-arguments-validation (who)
+	((char  ch1)
+	 (char  ch2))
+      ($char!= ch1 ch2)))
+
+   ((ch1 ch2 ch3)
+    (define who 'char!=?)
+    (with-arguments-validation (who)
+	((char  ch1)
+	 (char  ch2)
+	 (char  ch3))
+      (or ($char!= ch1 ch2)
+	  ($char!= ch2 ch3))))
+
+   ((ch1 . chars)
+    (define who 'char!=?)
+    (with-arguments-validation (who)
+	((char  ch1))
+      (let next-char ((ch1    ch1)
+		      (chars  chars))
+	(if (null? chars)
+	    #f
+	  (let ((ch2 ($car chars)))
+	    (with-arguments-validation (who)
+		((char  ch2))
+	      (if ($char!= ch1 ch2)
+		  (with-arguments-validation (who)
+		      ((list-of-chars ($cdr chars)))
+		    #t)
+		(next-char ch2 ($cdr chars)))))))))
+   ))
+
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Nov 22,
+;;2014)
+;;
+(define ($char!= ch1 ch2)
+  (not ($char= ch1 ch2)))
 
 
 ;;;; miscellaneous functions

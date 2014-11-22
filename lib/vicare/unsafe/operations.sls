@@ -338,6 +338,9 @@
 ;;; --------------------------------------------------------------------
 
     $char=
+    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi; Sat Nov
+    ;;22, 2014)
+    #;$char!=
     $char<
     $char>
     $char>=

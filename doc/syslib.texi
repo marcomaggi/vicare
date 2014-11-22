@@ -5098,6 +5098,11 @@ Evaluate to true if the operands are equal.
 @end deffn
 
 
+@deffn {Unsafe Operation} $char!= @vari{ch} @varii{ch}
+Evaluate to false if the operands are equal.
+@end deffn
+
+
 @deffn {Unsafe Operation} $char< @vari{ch} @varii{ch}
 Evaluate to true if the @vari{ch} is less than @varii{ch}.
 @end deffn
