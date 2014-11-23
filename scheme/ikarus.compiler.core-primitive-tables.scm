@@ -3356,36 +3356,6 @@
    ((_ _)			foldable effect-free result-true)))
 
 
-;;;; hashtables, safe primitives
-
-(declare-core-primitive make-eq-hashtable
-    (safe)
-  (signatures
-   (()				=> (T:hashtable))
-   ((T:exact-integer)		=> (T:hashtable)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				effect-free result-true)))
-
-(declare-core-primitive make-eqv-hashtable
-    (safe)
-  (signatures
-   (()				=> (T:hashtable))
-   ((T:exact-integer)		=> (T:hashtable)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				effect-free result-true)))
-
-(declare-core-primitive make-hashtable
-    (safe)
-  (signatures
-   ((T:procedure T:procedure)			=> (T:hashtable))
-   ((T:procedure T:procedure T:exact-integer)	=> (T:hashtable)))
-  (attributes
-   ((_ _)				effect-free result-true)
-   ((_ _ _)				effect-free result-true)))
-
-
 ;;;; structs, safe primitives
 
 (declare-core-primitive struct?
@@ -3535,6 +3505,189 @@
   (attributes
    ((_ _)			effect-free result-false)
    ((_ _ _)			effect-free result-false)))
+
+
+;;;; hashtables, safe procedures
+
+;;; predicates
+
+(declare-type-predicate hashtable? T:hashtable)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive make-hashtable
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)			=> (T:hashtable))
+   ((T:procedure T:procedure T:exact-integer)	=> (T:hashtable)))
+  (attributes
+   ((_ _)				effect-free result-true)
+   ((_ _ _)				effect-free result-true)))
+
+(declare-core-primitive make-eq-hashtable
+    (safe)
+  (signatures
+   (()					=> (T:hashtable))
+   ((T:exact-integer)			=> (T:hashtable)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive make-eqv-hashtable
+    (safe)
+  (signatures
+   (()					=> (T:hashtable))
+   ((T:exact-integer)			=> (T:hashtable)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive hashtable-copy
+    (safe)
+  (signatures
+   ((T:hashtable)			=> (T:hashtable))
+   ((T:hashtable T:object)		=> (T:hashtable)))
+  (attributes
+   ((_)				effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
+(declare-core-primitive hashtable-ref
+    (safe)
+  (signatures
+   ((T:hashtable T:object T:object)	=> (T:object)))
+  (attributes
+   ((_ _ _)			effect-free)))
+
+(declare-core-primitive hashtable-set!
+    (safe)
+  (signatures
+   ((T:hashtable T:object T:object)	=> (T:void)))
+  (attributes
+   ((_ _ _)				result-true)))
+
+(declare-core-primitive hashtable-delete!
+    (safe)
+  (signatures
+   ((T:hashtable T:object)		=> (T:void)))
+  (attributes
+   ((_ _) 				result-true)))
+
+(declare-core-primitive hashtable-clear!
+    (safe)
+  (signatures
+   ((T:hashtable)			=> (T:void))
+   ((T:hashtable T:exact-integer)	=> (T:void)))
+  (attributes
+   ((_)					result-true)
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-update!
+    (safe)
+  (signatures
+   ((T:hashtable T:object T:procedure T:object)	=> (T:void)))
+  (attributes
+   ((_ _ _ _)				result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-core-primitive hashtable-contains?
+    (safe)
+  (signatures
+   ((T:hashtable T:object)	=> (T:boolean)))
+  (attributes
+   ((_ _)			effect-free)))
+
+
+(declare-core-primitive hashtable-entries
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:vector T:vector)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive hashtable-keys
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:vector)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive hashtable-mutable?
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:boolean)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive hashtable-size
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:exact-integer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive hashtable-hash-function
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:procedure)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive hashtable-equivalence-function
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:procedure)))
+  (attributes
+   ;;This returns false for EQ? and EQV? hashtables!!!
+   ((_)				effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; hash functions
+
+(let-syntax
+    ((declare-hash-function (syntax-rules ()
+			      ((_ ?who ?obj-tag . ?replacements)
+			       (declare-core-primitive ?who
+				   (safe)
+				 (signatures
+				  ((?obj-tag)		=> (T:fixnum)))
+				 (attributes
+				  ((_)			foldable effect-free result-true))
+				 . ?replacements))
+			      )))
+  (declare-hash-function equal-hash		T:object)
+  (declare-hash-function string-hash		T:string	(replacements $string-hash))
+  (declare-hash-function string-ci-hash		T:string	(replacements $string-ci-hash))
+  (declare-hash-function symbol-hash		T:symbol	(replacements $symbol-hash))
+  (declare-hash-function bytevector-hash	T:bytevector	(replacements $bytevector-hash))
+  (declare-hash-function port-hash		T:port)
+  #| end of LET-SYNTAX |# )
+
+
+;;;; hashtables, unsafe procedures
+
+;;; hash functions
+
+(let-syntax
+    ((declare-hash-function (syntax-rules ()
+			      ((_ ?who ?obj-tag)
+			       (declare-core-primitive ?who
+				   (unsafe)
+				 (signatures
+				  ((?obj-tag)		=> (T:fixnum)))
+				 (attributes
+				  ((_)			foldable effect-free result-true))))
+			      )))
+  (declare-hash-function $string-hash		T:string)
+  (declare-hash-function $string-ci-hash	T:string)
+  (declare-hash-function $symbol-hash		T:symbol)
+  (declare-hash-function $bytevector-hash	T:bytevector)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; input/output, safe primitives
@@ -6857,28 +7010,6 @@
  write-char
  call-with-input-file
  call-with-output-file
- hashtable-clear!
- hashtable-contains?
- hashtable-copy
- hashtable-delete!
- hashtable-entries
- hashtable-keys
- hashtable-mutable?
- hashtable-ref
- hashtable-set!
- hashtable-size
- hashtable-update!
- hashtable?
- make-eq-hashtable
- make-eqv-hashtable
- hashtable-hash-function
- make-hashtable
- hashtable-equivalence-function
- equal-hash
- string-hash
- string-ci-hash
- symbol-hash
- bytevector-hash
  list-sort
  file-exists?
  directory-exists?
@@ -6973,7 +7104,6 @@
 ;;;
  port-id
  port-uid
- port-hash
  port-fd
  port-set-non-blocking-mode!
  port-unset-non-blocking-mode!
@@ -7988,14 +8118,6 @@
  $bitwise-xor-fixnum-bignum
  $bitwise-xor-bignum-fixnum
  $bitwise-xor-bignum-bignum
-
-;;; --------------------------------------------------------------------
-;;; (vicare system $hashtables)
-
- $string-hash
- $string-ci-hash
- $symbol-hash
- $bytevector-hash
 
 ;;; --------------------------------------------------------------------
 
