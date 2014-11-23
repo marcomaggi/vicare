@@ -1534,6 +1534,8 @@
 
 ;;;; bignums, unsafe operations
 
+;;; predicates
+
 (declare-bignum-predicate $bignum-positive? unsafe)
 (declare-bignum-predicate $bignum-negative? unsafe)
 (declare-bignum-predicate $bignum-non-positive? unsafe)
@@ -1543,6 +1545,7 @@
 (declare-bignum-predicate $bignum-odd? unsafe)
 
 ;;; --------------------------------------------------------------------
+;;; inspection
 
 (declare-core-primitive $bignum-byte-ref
     (unsafe)
@@ -1559,6 +1562,7 @@
    ((_)				foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
+;;; conversion
 
 (declare-core-primitive $bignum->flonum
     (unsafe)
@@ -2046,6 +2050,22 @@
 
 (declare-type-predicate cflonum? T:cflonum)
 
+
+
+;;;; cflonums, unsafe functions
+
+;;; constructors
+
+(declare-core-primitive $make-cflonum
+    (unsafe)
+  (signatures
+   ((T:real T:real)		=> (T:cflonum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors
+
 (declare-core-primitive $cflonum-real
     (unsafe)
   (signatures
@@ -2065,6 +2085,28 @@
 
 (declare-type-predicate compnum? T:compnum)
 
+
+;;;; compnums, unsafe functions
+
+;;; constructors
+
+(declare-core-primitive $make-compnum
+    (unsafe)
+  (signatures
+   ((T:real T:real)		=> (T:compnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $make-rectangular
+    (unsafe)
+  (signatures
+   ((T:real T:real)		=> (T:complex)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors
+
 (declare-core-primitive $compnum-real
     (unsafe)
   (signatures
@@ -2076,6 +2118,16 @@
     (unsafe)
   (signatures
    ((T:compnum)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $compnum->cflonum
+    (unsafe)
+  (signatures
+   ((T:compnum)			=> (T:cflonum)))
   (attributes
    ((_)				foldable effect-free result-true)))
 
@@ -2292,6 +2344,41 @@
    ((_)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
+;;; components
+
+(let-syntax
+    ((declare-symbol-accessor (syntax-rules ()
+				((_ ?who ?rv-tag)
+				 (declare-core-primitive ?who
+				     (unsafe)
+				   (signatures
+				    ((T:symbol)		=> (?rv-tag)))
+				   (attributes
+				    ((_)		effect-free))))
+				)))
+  (declare-symbol-accessor $symbol-plist		T:proper-list)
+  (declare-symbol-accessor $symbol-proc			T:object)
+  (declare-symbol-accessor $symbol-string		T:string)
+  (declare-symbol-accessor $symbol-unique-string	T:string)
+  (declare-symbol-accessor $symbol-value		T:object)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-symbol-mutator (syntax-rules ()
+			       ((_ ?who ?obj-tag)
+				(declare-core-primitive ?who
+				    (unsafe)
+				  (signatures
+				   ((T:symbol ?obj-tag)	=> (T:void)))))
+			       )))
+  (declare-symbol-mutator $set-symbol-value!		T:object)
+  (declare-symbol-mutator $set-symbol-proc!		T:object)
+  (declare-symbol-mutator $set-symbol-string!		T:string)
+  (declare-symbol-mutator $set-symbol-unique-string!	T:string/false)
+  (declare-symbol-mutator $set-symbol-plist!		T:proper-list)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
 ;;; property lists
 
 (declare-core-primitive $putprop
@@ -2321,6 +2408,16 @@
    ((T:symbol) => (_)))
   (attributes
    ((_)			effect-free	result-true)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $symbol->string
+    (unsafe)
+  (signatures
+   ((T:symbol)			=> (T:string)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; keywords, safe functions
@@ -3837,6 +3934,13 @@
    ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive unbound-object?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $unbound-object?
     (safe)
   (signatures
    ((_)				=> (T:boolean)))
@@ -6171,40 +6275,6 @@
  $bytevector->string-base64
 
 ;;;
-;;;
- $make-bignum
- $bignum-positive?
- $bignum-negative?
- $bignum-non-positive?
- $bignum-non-negative?
- $bignum-size
- $bignum-byte-ref
- $bignum-byte-set!
- $bignum-even?
- $bignum-odd?
- $bignum->flonum
-;;;
- $make-ratnum
- $ratnum-n
- $ratnum-num
- $ratnum-d
- $ratnum-den
- $ratnum->flonum
- $ratnum-positive?
- $ratnum-negative?
- $ratnum-non-positive?
- $ratnum-non-negative?
-;;;
- $make-rectangular
-
- $make-compnum
- $compnum-real
- $compnum-imag
-
- $make-cflonum
- $cflonum-real
- $cflonum-imag
-
  $complex-conjugate-compnum
  $complex-conjugate-cflonum
 
@@ -6221,30 +6291,6 @@
  $magnitude-flonum
  $magnitude-compnum
  $magnitude-cflonum
-;;;
-
-;;;
- $make-symbol
- $symbol->string
- $symbol-unique-string
- $symbol-value
- $symbol-proc
- $symbol-string
- $symbol-plist
- $set-symbol-value!
- $set-symbol-proc!
- $set-symbol-string!
- $set-symbol-unique-string!
- $set-symbol-plist!
- $unintern-gensym
- $init-symbol-value!)
- $unbound-object?
- $symbol-table-size
- $log-symbol-table-status
- $getprop
- $putprop
- $remprop
- $property-list
 ;;;
 
 ;;; --------------------------------------------------------------------
@@ -7508,7 +7554,6 @@
 
 ;;; --------------------------------------------------------------------
 
- $compnum->cflonum
 
  $neg-number
  $neg-fixnum
