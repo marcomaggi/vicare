@@ -315,6 +315,7 @@
 (define-object-unary/multi-comparison-declarer declare-number-unary/multi-comparison T:number)
 (define-object-unary/multi-comparison-declarer declare-fixnum-unary/multi-comparison T:fixnum)
 (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison T:flonum)
+(define-object-unary/multi-comparison-declarer declare-string-unary/multi-comparison T:string)
 
 ;;; --------------------------------------------------------------------
 
@@ -358,6 +359,7 @@
   #| end of module: DEFINE-OBJECT-BINARY/MULTI-COMPARISON-DECLARER |# )
 
 (define-object-binary/multi-comparison-declarer declare-char-binary/multi-comparison T:char)
+(define-object-binary/multi-comparison-declarer declare-string-binary/multi-comparison T:string)
 
 
 ;;;; syntax helpers: math operations
@@ -406,6 +408,7 @@
 (define-object-unary-operation-declarer declare-flonum-unary T:flonum)
 (define-object-unary-operation-declarer declare-exact-integer-unary T:exact-integer)
 (define-object-unary-operation-declarer declare-char-unary T:char)
+(define-object-unary-operation-declarer declare-string-unary T:string)
 
 ;;; --------------------------------------------------------------------
 
@@ -449,6 +452,7 @@
 (define-object-binary-operation-declarer declare-number-binary T:number)
 (define-object-binary-operation-declarer declare-fixnum-binary T:fixnum)
 (define-object-binary-operation-declarer declare-flonum-binary T:flonum)
+(define-object-binary-operation-declarer declare-string-binary T:string)
 
 ;;; --------------------------------------------------------------------
 
@@ -494,6 +498,7 @@
 (define-object-unary/binary-operation-declarer declare-number-unary/binary T:number)
 (define-object-unary/binary-operation-declarer declare-fixnum-unary/binary T:fixnum)
 (define-object-unary/binary-operation-declarer declare-flonum-unary/binary T:flonum)
+(define-object-unary/binary-operation-declarer declare-string-unary/binary T:string)
 
 ;;; --------------------------------------------------------------------
 
@@ -542,6 +547,7 @@
 (define-object-unary/multi-operation-declarer declare-number-unary/multi T:number)
 (define-object-unary/multi-operation-declarer declare-fixnum-unary/multi T:fixnum)
 (define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
+(define-object-unary/multi-operation-declarer declare-string-unary/multi T:string)
 
 ;;; --------------------------------------------------------------------
 
@@ -587,6 +593,7 @@
 (define-object-multi-operation-declarer declare-number-multi T:number)
 (define-object-multi-operation-declarer declare-fixnum-multi T:fixnum)
 (define-object-multi-operation-declarer declare-flonum-multi T:flonum)
+(define-object-multi-operation-declarer declare-string-multi T:string)
 
 
 ;;;; syntax helpers: pairs, lists, alists
@@ -2487,6 +2494,8 @@
 
 (declare-type-predicate string? T:string)
 
+(declare-string-predicate string-empty?)
+
 ;;; --------------------------------------------------------------------
 ;;; constructors
 
@@ -2513,13 +2522,61 @@
    ((0 . _)		effect-free result-true)
    (_			effect-free result-true)))
 
+(declare-core-primitive substring
+    (safe)
+  (signatures
+   ((T:string T:fixnum T:fixnum)	=> (T:string)))
+  ;;Not  foldable because  it must  return a  newly allocated  string, even  when the
+  ;;return value is an empty string.
+  (attributes
+   ((_ _ _)				effect-free result-true)))
+
+(declare-core-primitive string-copy
+    (safe)
+  (signatures
+   ((T:string)		=> (T:void)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive string-copy!
+    (safe)
+  (signatures
+   ((T:string T:fixnum T:string T:fixnum T:fixnum)	=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+(declare-core-primitive string-append
+    (safe)
+  (signatures
+   (T:string			=> (T:string)))
+  (attributes
+   (_				effect-free result-true)))
+
+(declare-core-primitive string-reverse-and-concatenate
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:string)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
 (declare-core-primitive string-length
     (safe)
   (signatures
-   ((T:string)	=> (T:fixnum)))
+   ((T:string)		=> (T:fixnum)))
   (attributes
    ((_)			foldable effect-free result-true))
   (replacements $string-length))
+
+(declare-core-primitive string-for-each
+    (safe)
+  (signatures
+   ((T:procedure T:string . T:string)		=> (T:void)))
+  (attributes
+   ;;Not foldable and not effect-free because it applies an unknown procedure.
+   ((_ _ . _)					result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
@@ -2546,12 +2603,50 @@
   (attributes
    ((_ _ _)		result-true)))
 
+(declare-core-primitive string-fill!
+    (safe)
+  (signatures
+   ((T:string T:char)	=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
+(declare-string-binary/multi-comparison string<=?)
+(declare-string-binary/multi-comparison string<?)
+(declare-string-binary/multi-comparison string=?)
+(declare-string-binary/multi-comparison string>=?)
+(declare-string-binary/multi-comparison string>?)
+
+(declare-string-binary/multi-comparison string-ci<=?)
+(declare-string-binary/multi-comparison string-ci<?)
+(declare-string-binary/multi-comparison string-ci=?)
+(declare-string-binary/multi-comparison string-ci>=?)
+(declare-string-binary/multi-comparison string-ci>?)
+
+;;; --------------------------------------------------------------------
+;;; transformation
+
+(declare-string-unary string-titlecase)
+(declare-string-unary string-upcase)
+(declare-string-unary string-downcase)
+(declare-string-unary string-foldcase)
+
+(declare-string-unary string-normalize-nfc)
+(declare-string-unary string-normalize-nfd)
+(declare-string-unary string-normalize-nfkc)
+(declare-string-unary string-normalize-nfkd)
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
+
+(declare-core-primitive string->flonum
+    (safe)
+  (signatures
+   ((T:string)		=> (T:flonum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive string->number
     (safe)
@@ -2565,72 +2660,115 @@
 (declare-core-primitive string->utf8
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive string->utf16
+    (safe)
+  (signatures
+   ((T:string)			=> (T:bytevector))
+   ((T:string T:symbol)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_ _)			effect-free result-true)))
 
 (declare-core-primitive string->utf16be
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive string->utf16le
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive string->utf16n
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive string->utf32
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive string->ascii
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
 
 (declare-core-primitive string->latin1
     (safe)
   (signatures
-   ((T:string)		=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive string->bytevector
+    (safe)
+  (signatures
+   ((T:string T:transcoder)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector at every application.
+   ((_ _)			effect-free result-true)))
 
 (declare-core-primitive string->symbol
     (safe)
   (signatures
-   ((T:string)		=> (T:symbol)))
+   ((T:string)			=> (T:symbol)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive string-or-symbol->string
+    (safe)
+  (signatures
+   ((T:string)			=> (T:string))
+   ((T:symbol)			=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive string-or-symbol->symbol
+    (safe)
+  (signatures
+   ((T:string)			=> (T:symbol))
+   ((T:symbol)			=> (T:symbol)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 (declare-core-primitive string->keyword
     (safe)
   (signatures
-   ((T:string)		=> (T:other-object)))
+   ((T:string)			=> (T:other-object)))
   (attributes
-   ((_)			effect-free result-true)))
+   ;;Not foldable because keywords cannot be serialised in fasl files.
+   ((_)				effect-free result-true)))
 
-(declare-core-primitive string->flonum
+(declare-core-primitive string->list
     (safe)
   (signatures
-   ((T:string)		=> (T:flonum)))
+   ((T:string)			=> (T:proper-list)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ;;Not foldable because it must return a new list at every application.
+   ((_)				effect-free result-true)))
 
 
 ;;;; strings, unsafe functions
@@ -5913,7 +6051,6 @@
  make-polar
  make-rectangular
  complex-conjugate
- make-string
  make-vector
  max
  min
@@ -5943,31 +6080,6 @@
  cbrt
  square
  cube
- string
- string->list
- string->number
- string->symbol
- string-or-symbol->string
- string-or-symbol->symbol
- string-append
- string-reverse-and-concatenate
- string-copy
- string-for-each
-
-  (let ((P (C string-length)))
-    (set-identifier-unsafe-variant! P (C $string-length))
-    (register-lambda-signature P (S (list (C <fixnum>))
-				    (list (C <string>)))))
-
- string-empty?
- string-ref
- string<=?
- string<?
- string=?
- string>=?
- string>?
- string?
- substring
  string->latin1
  latin1->string
  latin1-encoded-bytevector?
@@ -6096,7 +6208,6 @@
  bytevector->c8b-list
  bytevector->c8n-list
  bytevector-copy
- string-copy!
  bytevector-copy!
  bytevector-fill!
  bytevector-ieee-double-native-ref
@@ -6178,12 +6289,6 @@
  bytevector-reverse-and-concatenate
  native-endianness
  sint-list->bytevector
- string->utf16
- string->utf32
- string->utf8
- string->utf16le
- string->utf16be
- string->utf16n
  u8-list->bytevector
  s8-list->bytevector
  u16l-list->bytevector
@@ -6296,8 +6401,6 @@
  call-with-port
  call-with-string-output-port
 
- string-set!
- string-fill!
  delay
  exact->inexact
  force
@@ -6458,7 +6561,6 @@
  standard-error-port
  standard-input-port
  standard-output-port
- string->bytevector
  textual-port?
  transcoded-port
  transcoder-codec
@@ -6597,19 +6699,6 @@
  syntax-object-marks
  syntax-object-ribs
  syntax-object-source-objects
- string-ci<=?
- string-ci<?
- string-ci=?
- string-ci>=?
- string-ci>?
- string-downcase
- string-foldcase
- string-normalize-nfc
- string-normalize-nfd
- string-normalize-nfkc
- string-normalize-nfkd
- string-titlecase
- string-upcase
  load
  void
  eval-core
