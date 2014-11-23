@@ -3634,17 +3634,17 @@
 (declare-core-primitive hashtable-hash-function
     (safe)
   (signatures
-   ((T:hashtable)		=> (T:procedure)))
+   ((T:hashtable)		=> (T:object)))
   (attributes
+   ;;This returns false for EQ? and EQV? hashtables!!!
    ((_)				effect-free)))
 
 (declare-core-primitive hashtable-equivalence-function
     (safe)
   (signatures
-   ((T:hashtable)		=> (T:object)))
+   ((T:hashtable)		=> (T:procedure)))
   (attributes
-   ;;This returns false for EQ? and EQV? hashtables!!!
-   ((_)				effect-free)))
+   ((_)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; hash functions
