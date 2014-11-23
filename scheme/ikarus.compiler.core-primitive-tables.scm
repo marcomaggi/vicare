@@ -222,6 +222,7 @@
 (define-object-predicate-declarer declare-char-predicate T:char)
 (define-object-predicate-declarer declare-string-predicate T:string)
 (define-object-predicate-declarer declare-keyword-predicate T:keyword)
+(define-object-predicate-declarer declare-vector-predicate T:vector)
 
 
 ;;;; syntax helpers: comparison functions
@@ -3005,39 +3006,78 @@
    ((_)			effect-free result-true)))
 
 
-;;;; vectors
+;;;; vectors, safe functions
 ;;
 ;;According to R6RS:  VECTOR and MAKE-VECTOR must return a  newly allocated string at
 ;;every invocation; so they are not foldable.
 ;;
 
-(declare-core-primitive vector?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+;;; predicates
+
+(declare-type-predicate vector? T:vector)
+
+(declare-vector-predicate vector-empty?)
+
+;;; --------------------------------------------------------------------
+;;; constructors
 
 (declare-core-primitive vector
     (safe)
   (signatures
    (()				=> (T:vector))
    (_				=> (T:vector)))
-  ;;Not foldable because it must return a newly allocated bytevector.
+  ;;Not foldable because it must return a newly allocated vector.
   (attributes
    (()				effect-free result-true)
    (_				effect-free result-true)))
+
+(declare-core-primitive subvector
+    (safe)
+  (signatures
+   ((T:vector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_ _ _)			effect-free result-true)))
 
 (declare-core-primitive make-vector
     (safe)
   (signatures
    ((T:fixnum)			=> (T:vector))
    ((T:fixnum _)		=> (T:vector)))
-  ;;Not foldable because it must return a newly allocated bytevector.
+  ;;Not foldable because it must return a newly allocated vector.
   (attributes
    ((0)				effect-free result-true)
    ((0 _)			effect-free result-true)
    ((_ _)			effect-free result-true)))
+
+(declare-core-primitive vector-resize
+    (safe)
+  (signatures
+   ((T:vector T:non-negative-fixnum)		=> (T:vector))
+   ((T:vector T:non-negative-fixnum T:object)	=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_ _)			effect-free result-true)
+   ((_ _ _)			effect-free result-true)))
+
+(declare-core-primitive vector-append
+    (safe)
+  (signatures
+   (T:vector			=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   (_				effect-free result-true)))
+
+(declare-core-primitive vector-copy
+    (safe)
+  (signatures
+   ((T:vector)			=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated vector.
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
 
 (declare-core-primitive vector-length
     (safe)
@@ -3047,6 +3087,9 @@
    ((_)				foldable effect-free result-true))
   (replacements
    $vector-length))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
 
 ;;FIXME  This cannot  have $VECTOR-REF  as  replacement because  there is  no way  to
 ;;validate the index with respect to the vector.  But in future another primitive can
@@ -3070,7 +3113,114 @@
   (attributes
    ((_ _ _)			result-true)))
 
+(declare-core-primitive vector-copy!
+    (safe)
+  (signatures
+   ((T:vector T:non-negative-fixnum T:vector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:void)))
+  ;;Not foldable  because it must return  a newly allocated vector.   Not effect free
+  ;;because it mutates the operand.
+  (attributes
+   ((_ _ _ _ _)			result-true)))
+
+(declare-core-primitive vector-fill!
+    (safe)
+  (signatures
+   ((T:vector T:object)		=> (T:void)))
+  ;;Not effect free because it mutates the operand.
+  (attributes
+   ((_ _)			foldable result-true)))
+
 ;;; --------------------------------------------------------------------
+;;; sorting
+
+(declare-core-primitive vector-sort
+    (safe)
+  (signatures
+   ((T:procedure T:vector)	=> (T:vector)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free because it invokes an unknown procedure.
+   ((_ _)			result-true)))
+
+(declare-core-primitive vector-sort!
+    (safe)
+  (signatures
+   ((T:procedure T:vector)	=> (T:void)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free because it invokes an unknown procedure and it mutates the operand.
+   ((_ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; iterations
+
+(declare-core-primitive vector-for-each
+    (safe)
+  (signatures
+   ((T:procedure T:vector . T:vector)		=> (T:void)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+(declare-core-primitive vector-map
+    (safe)
+  (signatures
+   ((T:procedure T:vector . T:vector)		=> (T:vector)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+(declare-core-primitive vector-for-all
+    (safe)
+  (signatures
+   ((T:procedure T:vector . T:vector)		=> (T:void)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+(declare-core-primitive vector-exists
+    (safe)
+  (signatures
+   ((T:procedure T:vector . T:vector)		=> (T:void)))
+  (attributes
+   ;;Not  foldable because  it must  return  a new  list at  every application.   Not
+   ;;effect-free becuse it invokes an unknown procedure.
+   ((_ _ . _)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive vector->list
+    (safe)
+  (signatures
+   ((T:vector)			=> (T:proper-list)))
+  (attributes
+   ;;Not foldable because it must return a new list at every application.
+   ((_)				effect-free result-true)))
+
+
+;;;; vectors, unsafe functions
+
+;;; constructors
+
+(declare-core-primitive $make-vector
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-vector-predicate $vector-empty? unsafe)
+
+;;; --------------------------------------------------------------------
+;;; inspection
 
 (declare-core-primitive $vector-length
     (unsafe)
@@ -3079,19 +3229,49 @@
   (attributes
    ((_)				foldable effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
 (declare-core-primitive $vector-ref
-    (safe)
+    (unsafe)
   (signatures
-   ((T:vector T:fixnum)	=> (T:char)))
+   ((T:vector T:fixnum)		=> (T:char)))
   (attributes
-   ((_ _)		foldable effect-free)))
+   ((_ _)			foldable effect-free)))
 
 (declare-core-primitive $vector-set!
-    (safe)
+    (unsafe)
   (signatures
    ((T:vector T:fixnum _)	=> (T:void)))
   (attributes
    ((_ _ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; iterations
+
+(declare-core-primitive $vector-map1
+    (unsafe)
+  (signatures
+   ((T:procedure T:vector)	=> (T:vector)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive $vector-for-each1
+    (unsafe)
+  (signatures
+   ((T:procedure T:vector)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive $vector-for-all1
+    (unsafe)
+  (signatures
+   ((T:procedure T:vector)	=> (T:object))))
+
+(declare-core-primitive $vector-exists1
+    (unsafe)
+  (signatures
+   ((T:procedure T:vector)	=> (T:vector))))
 
 
 ;;;; bytevectors, safe functions
@@ -5889,16 +6069,6 @@
  $magnitude-compnum
  $magnitude-cflonum
 ;;;
- $make-vector
- $vector-length
- $vector-empty?
- $vector-ref
- $vector-set!
- $vector-map1
- $vector-for-each1
- $vector-for-all1
- $vector-exists1
-;;;
 
 ;;;
  $make-symbol
@@ -6146,7 +6316,6 @@
  make-polar
  make-rectangular
  complex-conjugate
- make-vector
  max
  min
  nan?
@@ -6213,23 +6382,6 @@
  truncate
  values
  values->list
- vector
- vector->list
- vector-fill!
- vector-for-each
- vector-length
- vector-empty?
- vector-map
- vector-for-all
- vector-exists
- vector-ref
- vector-set!
- subvector
- vector-append
- vector-copy
- vector-copy!
- vector-resize
- vector?
  zero?
  ...
  =>
@@ -6728,8 +6880,6 @@
  symbol-hash
  bytevector-hash
  list-sort
- vector-sort
- vector-sort!
  file-exists?
  directory-exists?
  delete-file
