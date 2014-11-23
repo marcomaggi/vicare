@@ -221,6 +221,7 @@
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
 (define-object-predicate-declarer declare-char-predicate T:char)
 (define-object-predicate-declarer declare-string-predicate T:string)
+(define-object-predicate-declarer declare-keyword-predicate T:keyword)
 
 
 ;;;; syntax helpers: comparison functions
@@ -268,6 +269,7 @@
 (define-object-binary-comparison-declarer declare-pointer-binary-comparison T:pointer)
 (define-object-binary-comparison-declarer declare-char-binary-comparison T:char)
 (define-object-binary-comparison-declarer declare-string-binary-comparison T:string)
+(define-object-binary-comparison-declarer declare-keyword-binary-comparison T:keyword)
 
 ;;; --------------------------------------------------------------------
 
@@ -2320,6 +2322,98 @@
    ((_)			effect-free	result-true)))
 
 
+;;;; keywords, safe functions
+
+(declare-type-predicate keyword? T:keyword)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive symbol->keyword
+    (safe)
+  (signatures
+   ((T:symbol)			=> (T:keyword)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-keyword-binary-comparison keyword=?)
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive keyword->symbol
+    (safe)
+  (signatures
+   ((T:keyword)			=> (T:symbol)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive keyword->string
+    (safe)
+  (signatures
+   ((T:keyword)			=> (T:string)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive keyword-hash
+    (safe)
+  (signatures
+   ((T:keyword)			=> (T:exact-integer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+
+
+;;;; keywords, unsafe functions
+
+;;; constructors
+
+(declare-core-primitive $symbol->keyword
+    (unsafe)
+  (signatures
+   ((T:symbol)			=> (T:keyword)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-keyword-binary-comparison $keyword=? unsafe)
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $keyword->symbol
+    (unsafe)
+  (signatures
+   ((T:keyword)			=> (T:symbol)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive $keyword->string
+    (unsafe)
+  (signatures
+   ((T:keyword)			=> (T:string)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive $keyword-hash
+    (unsafe)
+  (signatures
+   ((T:keyword)			=> (T:exact-integer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+
 ;;;; characters safe operations
 
 ;;; predicates
@@ -2892,6 +2986,13 @@
   (attributes
    ;;Not foldable because it must return a new bytevector every time.
    ((_)			effect-free result-true)))
+
+(declare-core-primitive $string->symbol
+    (unsafe)
+  (signatures
+   ((T:string)		=> (T:symbol)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; miscellaneous
@@ -5801,7 +5902,6 @@
 
 ;;;
  $make-symbol
- $string->symbol
  $symbol->string
  $symbol-unique-string
  $symbol-value
@@ -5823,11 +5923,6 @@
  $remprop
  $property-list
 ;;;
- $symbol->keyword
- $keyword->symbol
- $keyword->string
- $keyword-hash
- $keyword=?
 
 ;;; --------------------------------------------------------------------
 
@@ -6769,15 +6864,6 @@
  annotation-stripped
  annotation-textual-position
 
-;;; --------------------------------------------------------------------
-;;; keywords
-
- symbol->keyword
- keyword->symbol
- keyword->string
- keyword?
- keyword=?
- keyword-hash
 
 ;;; --------------------------------------------------------------------
 ;;; configuration options

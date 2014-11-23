@@ -78,7 +78,7 @@
    T:object		T:other-object		T:immediate	T:nonimmediate
    T:non-false		T:false			T:true		T:void
    T:boolean		T:char			T:symbol	T:string
-   T:vector		T:bytevector
+   T:vector		T:bytevector		T:keyword
    T:procedure		T:transcoder		T:pointer	T:hashtable
 
    T:struct		T:struct-type-descriptor	T:other-struct
@@ -139,7 +139,7 @@
    T:object?		T:other-object?		T:immediate?	T:nonimmediate?
    T:non-false?		T:false?		T:true?		T:void?
    T:boolean?		T:char?			T:symbol?	T:string?
-   T:vector?		T:bytevector?
+   T:vector?		T:bytevector?		T:keyword?
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
 
    T:struct?		T:struct-type-descriptor?	T:other-struct?
@@ -567,7 +567,7 @@
   (obj-truth		(exclusive false non-false))
   (obj-tag		(exclusive boolean char transcoder void number pointer
 				   null standalone-pair non-empty-proper-list
-				   symbol string procedure vector bytevector
+				   symbol keyword string procedure vector bytevector
 				   port hashtable struct other-object))
 
   (boolean		(exclusive true false))

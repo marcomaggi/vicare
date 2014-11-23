@@ -323,7 +323,7 @@
 	 T:object		T:other-object		T:immediate	T:nonimmediate
 	 T:non-false		T:false			T:true		T:void
 	 T:boolean		T:char			T:symbol	T:string
-	 T:vector		T:bytevector
+	 T:vector		T:bytevector		T:keyword
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
 
 	 T:struct		T:struct-type-descriptor	T:other-struct
@@ -372,6 +372,7 @@
       (T:improper-list			type)
       (T:vector				type)
       (T:bytevector			type)
+      (T:keyword			type)
       (T:procedure			type)
       (T:port				type)
       (T:textual-port			type)
