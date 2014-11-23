@@ -3641,7 +3641,7 @@
 (declare-core-primitive hashtable-equivalence-function
     (safe)
   (signatures
-   ((T:hashtable)		=> (T:procedure)))
+   ((T:hashtable)		=> (T:object)))
   (attributes
    ;;This returns false for EQ? and EQV? hashtables!!!
    ((_)				effect-free)))
