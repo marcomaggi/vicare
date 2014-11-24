@@ -386,6 +386,9 @@
     $bitwise-xor-fixnum-number		$bitwise-xor-bignum-number
     $bitwise-xor-fixnum-fixnum		$bitwise-xor-fixnum-bignum
     $bitwise-xor-bignum-fixnum		$bitwise-xor-bignum-bignum
+
+    ;; rounding
+    $ceiling-fixnum	$ceiling-bignum		$ceiling-ratnum		$ceiling-flonum
     )
 
 
@@ -8007,7 +8010,11 @@
   #| end of module |# )
 
 
-(module (ceiling)
+(module (ceiling
+	 $ceiling-fixnum
+	 $ceiling-bignum
+	 $ceiling-ratnum
+	 $ceiling-flonum)
   ;;Return the smallest integer object not smaller than X.  Return exact
   ;;objects for exact operands and inexact objects for inexact operands.
   ;;
@@ -8021,6 +8028,12 @@
       ((ratnum?)	($ceiling-ratnum x))
       (else
        (%error-not-real-number x))))
+
+  (define ($ceiling-fixnum x)
+    x)
+
+  (define ($ceiling-bignum x)
+    x)
 
   (define ($ceiling-ratnum x)
     (let* ((x.num ($ratnum-n x))

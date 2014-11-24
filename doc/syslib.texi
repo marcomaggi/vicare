@@ -1279,6 +1279,7 @@ level operations on numbers.
 * syslib numerics bitand::      Bitwise logic and.
 * syslib numerics bitior::      Bitwise logic inclusive or.
 * syslib numerics bitxor::      Bitwise logic exclusive or.
+* syslib numerics ceiling::     Ceiling rounding.
 @end menu
 
 @c page
@@ -5079,6 +5080,32 @@ fixnum @var{fx}.
 @deffn {Unsafe Operation} $bitwise-xor-bignum-bignum @vari{bn} @varii{bn}
 Apply the bitwise exclusive OR operation to the bignum @vari{bn} and the
 bignum @varii{bn}.
+@end deffn
+
+@c page
+@node syslib numerics ceiling
+@subsection Ceiling rounding
+
+
+@deffn {Unsafe Operation} $ceiling-fixnum @var{FX}
+Rounding as defined by @func{ceiling}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ceiling-bignum @var{BN}
+Rounding as defined by @func{ceiling}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ceiling-flonum @var{FL}
+Rounding as defined by @func{ceiling}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ceiling-ratnum @var{RN}
+Rounding as defined by @func{ceiling}.  Return an exact integer.
 @end deffn
 
 @c page

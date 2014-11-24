@@ -3802,6 +3802,11 @@
     ($bitwise-xor-bignum-fixnum			$numerics)
     ($bitwise-xor-bignum-bignum			$numerics)
 
+    ($ceiling-fixnum				$numerics)
+    ($ceiling-bignum				$numerics)
+    ($ceiling-ratnum				$numerics)
+    ($ceiling-flonum				$numerics)
+
 ;;; --------------------------------------------------------------------
 ;;; (vicare system $hashtables)
 
