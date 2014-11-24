@@ -4105,7 +4105,7 @@
 ;;
 
 #|
- ceiling
+
  cos
  div
  mod
@@ -4739,6 +4739,21 @@
   (attributes
    ((_)				foldable effect-free result-true))
   (replacements $complex-conjugate-compnum $complex-conjugate-cflonum))
+
+;;; --------------------------------------------------------------------
+;;; rounding
+
+(declare-core-primitive ceiling
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:ratnum))
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $ceiling-fixnum $ceiling-bignum $ceiling-ratnum $ceiling-flonum))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -5761,6 +5776,36 @@
 (declare-unsafe-binary-operation $bitwise-xor-bignum-number	T:bignum	T:exact-integer	      T:exact-integer)
 (declare-unsafe-binary-operation $bitwise-xor-bignum-fixnum	T:bignum	T:fixnum	      T:exact-integer)
 (declare-unsafe-binary-operation $bitwise-xor-bignum-bignum	T:bignum	T:bignum	      T:exact-integer)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $ceiling-fixnum
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $ceiling-bignum
+    (unsafe)
+  (signatures
+   ((T:bignum)			=> (T:bignum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $ceiling-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $ceiling-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; system interface and foreign functions

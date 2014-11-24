@@ -40,6 +40,7 @@
    application-attributes-effect-free?
    application-attributes-result-true?
    application-attributes-result-false?
+   application-attributes-identity?
    CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
   (import SCHEME-OBJECTS-ONTOLOGY)
 
@@ -116,10 +117,13 @@
    result-false?
 		;Boolean.  True  if the associated core  primitive application always
 		;has false as return value.
+   identity?
+		;Boolean.  True  if the  associated core  primitive accepts  a single
+		;argument and it is an identity, returning its argument.
    ))
 
 (define-constant CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES
-  (make-application-attributes '_ #f #f #f #f))
+  (make-application-attributes '_ #f #f #f #f #f))
 
 
 ;;;; syntaxes for parsing tables
@@ -220,7 +224,8 @@
 					     #,(vector-ref attributes-vector 0)
 					     #,(vector-ref attributes-vector 1)
 					     #,(vector-ref attributes-vector 2)
-					     #,(vector-ref attributes-vector 3)))))
+					     #,(vector-ref attributes-vector 3)
+					     #,(vector-ref attributes-vector 4)))))
 			  attribute*))
       #'(quote ())))
 
@@ -467,7 +472,7 @@
       ;;where: ?ARGS is a proper or improper  list of symbols "_", constant #f, 0 and
       ;;null; ?ATTR* is a proper list of the identifiers:
       ;;
-      ;;   foldable	effect-free
+      ;;   foldable	effect-free	identity
       ;;   result-true	result-false
       ;;
       ;;Return a list of pairs with the format:
@@ -524,9 +529,9 @@
 	 (%error-invalid-argument-spec))))
 
     (define (%parse-appliaction-attributes-attributes-specification attr*)
-      (let recur ((flags (make-vector 4 #f))
+      (let recur ((flags (make-vector 5 #f))
 		  (attr* attr*))
-	(syntax-case attr* (foldable effect-free result-true result-false)
+	(syntax-case attr* (foldable identity effect-free result-true result-false)
 	  ((foldable . ?rest)
 	   (vector-set! flags 0 #t)
 	   (recur flags #'?rest))
@@ -541,6 +546,10 @@
 
 	  ((result-false . ?rest)
 	   (vector-set! flags 3 #t)
+	   (recur flags #'?rest))
+
+	  ((identity . ?rest)
+	   (vector-set! flags 4 #t)
 	   (recur flags #'?rest))
 
 	  (()
