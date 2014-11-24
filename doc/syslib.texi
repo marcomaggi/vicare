@@ -1609,7 +1609,8 @@ Add a ratnum with a flonum and return the result as a flonum.
 
 
 @deffn {Unsafe Operation} $add-ratnum-ratnum @vari{rt} @varii{rt}
-Add a ratnum with a ratnum and return the result as a ratnum.
+Add a ratnum with a ratnum and return the result as a fixnum, bignum or
+ratnum.
 @end deffn
 
 
@@ -1643,7 +1644,8 @@ Add a compnum with a ratnum and return the result as a compnum.
 
 
 @deffn {Unsafe Operation} $add-compnum-compnum @vari{cn} @varii{cn}
-Add a compnum with a compnum and return the result as a compnum.
+Add a compnum with a compnum and return the result as a number (not
+necessarily a compnum).
 @end deffn
 
 
@@ -1926,13 +1928,13 @@ Subtract a compnum with a ratnum and return the result as a compnum.
 
 
 @deffn {Unsafe Operation} $sub-compnum-compnum @vari{cn} @varii{cn}
-Subtract a compnum with a compnum and return the result as a compnum.
+Subtract a compnum with a compnum and return the result as a number (not
+necessarily a compnum).
 @end deffn
 
 
 @deffn {Unsafe Operation} $sub-compnum-flonum @var{cn} @var{fl}
-Subtract a compnum with a flonum and return the result as a compnum or
-cflonum.
+Subtract a compnum with a flonum and return the result as a complex.
 @end deffn
 
 
