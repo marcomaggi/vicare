@@ -4380,12 +4380,75 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-number-binary/multi-comparison =)
-(declare-number-binary/multi-comparison !=)
-(declare-number-binary/multi-comparison <)
-(declare-number-binary/multi-comparison >)
-(declare-number-binary/multi-comparison <=)
-(declare-number-binary/multi-comparison >=)
+(declare-core-primitive =
+    (safe)
+  (signatures
+   ((T:positive     T:non-positive . T:number)		=> (T:false))
+   ((T:non-positive T:positive     . T:number)		=> (T:false))
+   ((T:negative     T:non-negative . T:number)		=> (T:false))
+   ((T:non-negative T:negative     . T:number)		=> (T:false))
+   ((T:number       T:number       . T:number)		=> (T:boolean)))
+  (attributes
+   ((_ _ . _)			foldable effect-free)))
+
+(declare-core-primitive !=
+    (safe)
+  (signatures
+   ((T:positive     T:non-positive . T:number)		=> (T:true))
+   ((T:non-positive T:positive     . T:number)		=> (T:true))
+   ((T:negative     T:non-negative . T:number)		=> (T:true))
+   ((T:non-negative T:negative     . T:number)		=> (T:true))
+   ((T:number       T:number       . T:number)		=> (T:boolean)))
+  (attributes
+   ((_ _ . _)			foldable effect-free)))
+
+(declare-core-primitive <
+    (safe)
+  (signatures
+   ((T:positive     T:non-positive)	=> (T:false))
+   ((T:non-negative T:negative)		=> (T:false))
+
+   ((T:non-positive T:positive)		=> (T:true))
+   ((T:negative     T:non-negative)	=> (T:true))
+
+   ((T:number T:number . T:number)	=> (T:boolean)))
+  (attributes
+   ((_ _ . _)			foldable effect-free)))
+
+(declare-core-primitive >
+    (safe)
+  (signatures
+   ((T:positive     T:non-positive)	=> (T:true))
+   ((T:non-negative T:negative)		=> (T:true))
+
+   ((T:non-positive T:positive)		=> (T:false))
+   ((T:negative     T:non-negative)	=> (T:false))
+
+   ((T:number T:number . T:number)	=> (T:boolean)))
+  (attributes
+   ((_ _ . _)			foldable effect-free)))
+
+(declare-core-primitive <=
+    (safe)
+  (signatures
+   ((T:positive T:negative)		=> (T:false))
+   ((T:negative T:positive)		=> (T:true))
+
+   ((T:number T:number . T:number)	=> (T:boolean)))
+  (attributes
+   ((_ _ . _)			foldable effect-free)))
+
+(declare-core-primitive >=
+    (safe)
+  (signatures
+   ((T:positive T:negative)		=> (T:true))
+   ((T:negative T:positive)		=> (T:false))
+
+   ((T:number T:number . T:number)	=> (T:boolean)))
+  (attributes
+   ((_ _ . _)			foldable effect-free)))
+
+;;;
 
 (declare-core-primitive max
     (safe)
