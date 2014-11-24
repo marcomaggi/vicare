@@ -351,6 +351,8 @@
 	 T:zero		T:positive	T:negative	T:non-positive		T:non-negative
 
 	 T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
+	 T:positive-bignum	T:negative-bignum
+
 	 T:pointer/false	T:string/false		T:number/false		T:fixnum/false)
       (T:object				#f)
       (T:other-object			type)
@@ -428,6 +430,8 @@
       (T:negative-fixnum		type)
       (T:non-positive-fixnum		type)
       (T:non-negative-fixnum		type)
+      (T:positive-bignum		type)
+      (T:negative-bignum		type)
 
       (T:pointer/false			type)
       (T:string/false			type)

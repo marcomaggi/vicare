@@ -1359,7 +1359,8 @@ bignum or ratnum.  A fixnum or bignum is returned when the numerator of
 
 
 @deffn {Unsafe Operation} $inv-compnum @var{cn}
-Compute the inverse of a compnum and return the result as a compnum.
+Compute the inverse of a compnum and return the result as a compnum or
+cflonum.
 @end deffn
 
 

@@ -106,6 +106,7 @@
    T:zero	T:positive	T:negative	T:non-positive	T:non-negative
 
    T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
+   T:positive-bignum	T:negative-bignum
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
@@ -167,6 +168,7 @@
    T:zero?	T:positive?	T:negative?	T:non-positive?	T:non-negative?
 
    T:positive-fixnum?	T:negative-fixnum?	T:non-positive-fixnum?	T:non-negative-fixnum?
+   T:positive-bignum?	T:negative-bignum?
 
    T:pointer/false?	T:string/false?		T:number/false?		T:fixnum/false?
 
@@ -657,6 +659,15 @@
 
 (define-underspecified-core-type T:non-negative-fixnum
   (core-type-tag-and* T:fixnum T:non-negative))
+
+;;; --------------------------------------------------------------------
+;;; more bignum types
+
+(define-underspecified-core-type T:positive-bignum
+  (core-type-tag-and* T:bignum T:positive))
+
+(define-underspecified-core-type T:negative-bignum
+  (core-type-tag-and* T:bignum T:negative))
 
 ;;; --------------------------------------------------------------------
 
