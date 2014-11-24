@@ -267,6 +267,7 @@
 (define-object-binary-comparison-declarer declare-object-binary-comparison T:object)
 (define-object-binary-comparison-declarer declare-fixnum-binary-comparison T:fixnum)
 (define-object-binary-comparison-declarer declare-flonum-binary-comparison T:flonum)
+(define-object-binary-comparison-declarer declare-number-binary-comparison T:number)
 (define-object-binary-comparison-declarer declare-pointer-binary-comparison T:pointer)
 (define-object-binary-comparison-declarer declare-char-binary-comparison T:char)
 (define-object-binary-comparison-declarer declare-string-binary-comparison T:string)
@@ -361,6 +362,7 @@
 
   #| end of module: DEFINE-OBJECT-BINARY/MULTI-COMPARISON-DECLARER |# )
 
+(define-object-binary/multi-comparison-declarer declare-number-binary/multi-comparison T:number)
 (define-object-binary/multi-comparison-declarer declare-char-binary/multi-comparison T:char)
 (define-object-binary/multi-comparison-declarer declare-string-binary/multi-comparison T:string)
 
@@ -4102,17 +4104,316 @@
 ;;operands must come *after* the ones accepting more specific operand types.
 ;;
 
+#|
+ ceiling
+ cos
+ div
+ mod
+ div-and-mod
+ div0
+ mod0
+ div0-and-mod0
+ exact
+ exact-integer-sqrt
+ exp
+ expt
+ floor
+ gcd
+ imag-part
+ inexact
+ integer->char
+ lcm
+ log
+
+ fxadd1-error
+ fxsub1-error
+ fx+-type-error
+ fx+-types-error
+ fx+-overflow-error
+ error@fx+
+ error@fxarithmetic-shift-left
+ error@fxarithmetic-shift-right
+ error@fx*
+ error@fx-
+ error@add1
+ error@sub1
+ error@fxadd1
+ error@fxsub1
+ denominator
+ numerator
+ rationalize
+ real-part
+ reverse
+ round
+ sin
+ sqrt
+ cbrt
+ square
+ cube
+
+ tan
+ truncate
+
+ exact->inexact
+ inexact->exact
+ modulo
+ remainder
+ quotient
+
+|#
+
 ;;; predicates
 
-(declare-type-predicate number? T:number)
-(declare-type-predicate complex? T:number)
-(declare-type-predicate real? T:real)
+(declare-type-predicate number?			T:number)
+(declare-type-predicate complex?		T:number)
+
+(declare-core-primitive real?
+    (safe)
+  (signatures
+   ((T:real)			=> (T:true))
+   ((T:compnum)			=> (T:false))
+   ((T:cflonum)			=> (T:false))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive rational?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:true))
+   ((T:bignum)			=> (T:true))
+   ((T:ratnum)			=> (T:true))
+   ((T:flonum-finite)		=> (T:true))
+   ((T:flonum-infinite)		=> (T:false))
+   ((T:flonum-nan)		=> (T:false))
+   ((T:compnum)			=> (T:false))
+   ((T:cflonum)			=> (T:false))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
 (declare-type-predicate rational?)
 (declare-type-predicate integer?)
+
+(declare-type-predicate exact-integer?		T:exact-integer)
 
 (declare-type-predicate real-valued?)
 (declare-type-predicate rational-valued?)
 (declare-type-predicate integer-valued?)
+
+(declare-number-predicate odd?)
+(declare-number-predicate even?)
+
+;;;
+
+(declare-core-primitive zero?
+    (safe)
+  (signatures
+   ((T:positive-fixnum)		=> (T:false))
+   ((T:negative-fixnum)		=> (T:false))
+   ((T:ratnum)			=> (T:false))
+   ((T:bignum)			=> (T:false))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((0)				foldable effect-free result-true)
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive positive?
+    (safe)
+  (signatures
+   ((T:positive-fixnum)		=> (T:true))
+   ((T:negative-fixnum)		=> (T:false))
+   ((T:positive-bignum)		=> (T:true))
+   ((T:negative-bignum)		=> (T:false))
+   ((T:real)			=> (T:boolean)))
+  (attributes
+   ((0)				foldable effect-free result-false)
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive negative?
+    (safe)
+  (signatures
+   ((T:positive-fixnum)		=> (T:false))
+   ((T:negative-fixnum)		=> (T:true))
+   ((T:positive-bignum)		=> (T:false))
+   ((T:negative-bignum)		=> (T:true))
+   ((T:real)			=> (T:boolean)))
+  (attributes
+   ((0)				foldable effect-free result-false)
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-negative?
+    (safe)
+  (signatures
+   ((T:negative-fixnum)		=> (T:false))
+   ((T:non-negative-fixnum)	=> (T:true))
+   ((T:positive-bignum)		=> (T:true))
+   ((T:negative-bignum)		=> (T:false))
+   ((T:real)			=> (T:boolean)))
+  (attributes
+   ((0)				foldable effect-free result-true)
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-positive?
+    (safe)
+  (signatures
+   ((T:positive-fixnum)		=> (T:false))
+   ((T:non-positive-fixnum)	=> (T:true))
+   ((T:positive-bignum)		=> (T:false))
+   ((T:negative-bignum)		=> (T:true))
+   ((T:real)			=> (T:boolean)))
+  (attributes
+   ((0)				foldable effect-free result-true)
+   ((_)				foldable effect-free)))
+
+;;;
+
+(declare-core-primitive zero-exact-integer?
+    (safe)
+  (signatures
+   ((T:object)		=> (T:boolean)))
+  (attributes
+   ((0)			foldable effect-free result-true)
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive positive-exact-integer?
+    (safe)
+  (signatures
+   ((T:positive-fixnum)	=> (T:true))
+   ((T:positive-bignum)	=> (T:true))
+   ((T:negative)	=> (T:false))
+   ((T:object)		=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive negative-exact-integer?
+    (safe)
+  (signatures
+   ((T:negative-fixnum)	=> (T:true))
+   ((T:negative-bignum)	=> (T:true))
+   ((T:positive)	=> (T:false))
+   ((T:object)		=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive non-negative-exact-integer?
+    (safe)
+  (signatures
+   ((T:non-negative-fixnum)	=> (T:true))
+   ((T:positive-bignum)		=> (T:true))
+   ((T:negative)		=> (T:false))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive non-positive-exact-integer?
+    (safe)
+  (signatures
+   ((T:non-positive-fixnum)	=> (T:true))
+   ((T:negative-bignum)		=> (T:true))
+   ((T:positive)		=> (T:false))
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+;;;
+
+(declare-core-primitive exact?
+    (safe)
+  (signatures
+   ((T:exact)			=> (T:true))
+   ((T:inexact)			=> (T:false))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive inexact?
+    (safe)
+  (signatures
+   ((T:exact)			=> (T:false))
+   ((T:inexact)			=> (T:true))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+;;;
+
+(declare-core-primitive finite?
+    (safe)
+  (signatures
+   ((T:flonum-finite)		=> (T:true))
+   ((T:flonum-infinite)		=> (T:false))
+   ((T:flonum-nan)		=> (T:false))
+   ((T:fixnum)			=> (T:true))
+   ((T:bignum)			=> (T:true))
+   ((T:ratnum)			=> (T:true))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive infinite?
+    (safe)
+  (signatures
+   ((T:flonum-finite)		=> (T:false))
+   ((T:flonum-infinite)		=> (T:true))
+   ((T:flonum-nan)		=> (T:false))
+   ((T:fixnum)			=> (T:false))
+   ((T:bignum)			=> (T:false))
+   ((T:ratnum)			=> (T:false))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive nan?
+    (safe)
+  (signatures
+   ((T:flonum-nan)		=> (T:false))
+   ((T:flonum-infinite)		=> (T:false))
+   ((T:flonum-nan)		=> (T:true))
+   ((T:fixnum)			=> (T:false))
+   ((T:bignum)			=> (T:false))
+   ((T:ratnum)			=> (T:false))
+   ((T:number)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-number-binary/multi-comparison =)
+(declare-number-binary/multi-comparison !=)
+(declare-number-binary/multi-comparison <)
+(declare-number-binary/multi-comparison >)
+(declare-number-binary/multi-comparison <=)
+(declare-number-binary/multi-comparison >=)
+
+(declare-core-primitive max
+    (safe)
+  (signatures
+   ((T:real . T:real)		=> (T:real)))
+  (attributes
+   ((_ _)			foldable effect-free result-true))
+  (replacements
+   $max-fixnum-fixnum $max-fixnum-bignum $max-fixnum-flonum $max-fixnum-ratnum
+   $max-bignum-fixnum $max-bignum-bignum $max-bignum-flonum $max-bignum-ratnum
+   $max-flonum-fixnum $max-flonum-bignum $max-flonum-flonum $max-flonum-ratnum
+   $max-ratnum-fixnum $max-ratnum-bignum $max-ratnum-flonum $max-ratnum-ratnum
+   $max-fixnum-number $max-bignum-number $max-flonum-number $max-ratnum-number
+   $max-number-fixnum $max-number-bignum $max-number-flonum $max-number-ratnum))
+
+(declare-core-primitive min
+    (safe)
+  (signatures
+   ((T:real . T:real)		=> (T:real)))
+  (attributes
+   ((_ _)			foldable effect-free result-true))
+  (replacements
+   $min-fixnum-fixnum $min-fixnum-bignum $min-fixnum-flonum $min-fixnum-ratnum
+   $min-bignum-fixnum $min-bignum-bignum $min-bignum-flonum $min-bignum-ratnum
+   $min-flonum-fixnum $min-flonum-bignum $min-flonum-flonum $min-flonum-ratnum
+   $min-ratnum-fixnum $min-ratnum-bignum $min-ratnum-flonum $min-ratnum-ratnum
+   $min-fixnum-number $min-bignum-number $min-flonum-number $min-ratnum-number
+   $min-number-fixnum $min-number-bignum $min-number-flonum $min-number-ratnum))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -4256,7 +4557,9 @@
   (attributes
    ((_)				foldable effect-free result-true))
   (replacements
-   $add1-integer		$add1-bignum	$add1-fixnum))
+   $add1-fixnum
+   $add1-bignum
+   $add1-integer))
 
 (declare-core-primitive sub1
     (safe)
@@ -4265,7 +4568,9 @@
   (attributes
    ((_)				foldable effect-free result-true))
   (replacements
-   $sub1-integer		$sub1-bignum	$sub1-fixnum))
+   $sub1-fixnum
+   $sub1-bignum
+   $sub1-integer))
 
 ;;; --------------------------------------------------------------------
 ;;; exactness
@@ -4308,20 +4613,69 @@
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
-(declare-number-unary real-part)
-(declare-number-unary imag-part)
+(declare-number-unary real-part		(replacements $compnum-real $cflonum-real))
+(declare-number-unary imag-part		(replacements $compnum-imag $cflonum-imag))
 
-;;; --------------------------------------------------------------------
-;;; predicates
+(declare-core-primitive abs
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer))
+   ((T:bignum)			=> (T:exact-integer))
+   ((T:ratnum)			=> (T:ratnum))
+   ((T:flonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $abs-fixnum $abs-bignum $abs-flonum $abs-ratnum))
 
-(declare-number-predicate zero?)
-(declare-number-predicate positive?)
-(declare-number-predicate negative?)
-(declare-number-predicate odd?)
-(declare-number-predicate even?)
-(declare-number-predicate finite?)
-(declare-number-predicate infinite?)
-(declare-number-predicate nan?)
+(declare-core-primitive sign
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:fixnum))
+   ((T:ratnum)			=> (T:fixnum))
+   ((T:flonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $sign-fixnum $sign-bignum $sign-flonum $sign-ratnum))
+
+(declare-core-primitive angle
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:fixnum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:fixnum))
+   ((T:compnum)			=> (T:real))
+   ((T:cflonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $angle-fixnum $angle-bignum $angle-ratnum $angle-flonum $angle-compnum $angle-cflonum))
+
+(declare-core-primitive magnitude
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer))
+   ((T:bignum)			=> (T:exact-integer))
+   ((T:ratnum)			=> (T:ratnum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:compnum)			=> (T:real))
+   ((T:cflonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $magnitude-fixnum $magnitude-bignum $magnitude-ratnum $magnitude-flonum $magnitude-compnum $magnitude-cflonum))
+
+(declare-core-primitive complex-conjugate
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:ratnum)			=> (T:ratnum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:compnum)			=> (T:compnum))
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $complex-conjugate-compnum $complex-conjugate-cflonum))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -4346,11 +4700,182 @@
 ;;; --------------------------------------------------------------------
 ;;; exponentiation, exponentials and logarithms
 
-(declare-number-binary expt)
-(declare-number-unary/binary log)
+(declare-number-binary expt
+  (replacements
+   $expt-fixnum-negative-fixnum $expt-bignum-negative-fixnum $expt-flonum-negative-fixnum $expt-ratnum-negative-fixnum
+   $expt-compnum-negative-fixnum $expt-cflonum-negative-fixnum
+   $expt-fixnum-positive-fixnum $expt-bignum-positive-fixnum $expt-flonum-positive-fixnum $expt-ratnum-positive-fixnum
+   $expt-compnum-positive-fixnum $expt-cflonum-positive-fixnum
+   $expt-fixnum-fixnum $expt-bignum-fixnum $expt-flonum-fixnum $expt-ratnum-fixnum $expt-compnum-fixnum $expt-cflonum-fixnum
+   $expt-fixnum-bignum $expt-bignum-bignum $expt-flonum-bignum $expt-ratnum-bignum $expt-compnum-bignum $expt-cflonum-bignum
+   $expt-fixnum-flonum $expt-bignum-flonum $expt-flonum-flonum $expt-ratnum-flonum $expt-compnum-flonum $expt-cflonum-flonum
+   $expt-fixnum-ratnum $expt-bignum-ratnum $expt-flonum-ratnum $expt-ratnum-ratnum $expt-compnum-ratnum $expt-cflonum-ratnum
+   $expt-fixnum-cflonum $expt-bignum-cflonum $expt-flonum-cflonum $expt-ratnum-cflonum $expt-compnum-cflonum $expt-cflonum-cflonum
+   $expt-fixnum-compnum $expt-bignum-compnum $expt-flonum-compnum $expt-ratnum-compnum $expt-compnum-compnum $expt-cflonum-compnum
+   $expt-number-negative-fixnum $expt-number-positive-fixnum
+   $expt-number-fixnum $expt-number-bignum $expt-number-flonum $expt-number-ratnum $expt-number-compnum $expt-number-cflonum))
+
+(declare-number-unary/binary log
+  (replacements $log-fixnum $log-bignum $log-flonum $log-ratnum $log-compnum $log-cflonum))
 
 ;;; --------------------------------------------------------------------
 ;;; bitwise
+
+(declare-core-primitive bitwise-and
+    (safe)
+  (signatures
+   (()				=> (T:fixnum))
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:fixnum T:fixnum)		=> (T:fixnum))
+   ((T:bignum T:bignum)		=> (T:bignum))
+   ((T:fixnum T:bignum)		=> (T:bignum))
+   ((T:bignum T:fixnum)		=> (T:bignum))
+   (T:exact-integer		=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true))
+  (replacements
+   $bitwise-and-fixnum-fixnum $bitwise-and-fixnum-bignum
+   $bitwise-and-bignum-fixnum $bitwise-and-bignum-bignum
+   $bitwise-and-fixnum-number $bitwise-and-bignum-number))
+
+(declare-core-primitive bitwise-ior
+    (safe)
+  (signatures
+   (()				=> (T:fixnum))
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:fixnum T:fixnum)		=> (T:fixnum))
+   ((T:bignum T:bignum)		=> (T:bignum))
+   ((T:fixnum T:bignum)		=> (T:bignum))
+   ((T:bignum T:fixnum)		=> (T:bignum))
+   (T:exact-integer		=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true))
+  (replacements
+   $bitwise-ior-fixnum-fixnum $bitwise-ior-fixnum-bignum
+   $bitwise-ior-bignum-fixnum $bitwise-ior-bignum-bignum
+   $bitwise-ior-fixnum-number $bitwise-ior-bignum-number))
+
+(declare-core-primitive bitwise-xor
+    (safe)
+  (signatures
+   (()				=> (T:fixnum))
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:fixnum T:fixnum)		=> (T:fixnum))
+   ((T:bignum T:bignum)		=> (T:bignum))
+   ((T:fixnum T:bignum)		=> (T:bignum))
+   ((T:bignum T:fixnum)		=> (T:bignum))
+   (T:exact-integer		=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true))
+  (replacements
+   $bitwise-xor-fixnum-fixnum $bitwise-xor-fixnum-bignum
+   $bitwise-xor-bignum-fixnum $bitwise-xor-bignum-bignum
+   $bitwise-xor-fixnum-number $bitwise-xor-bignum-number))
+
+(declare-core-primitive bitwise-not
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true))
+  (replacements $bitwise-not-fixnum $bitwise-not-bignum))
+
+(declare-core-primitive bitwise-arithmetic-shift
+    (safe)
+  (signatures
+   ((T:exact-integer T:fixnum)	=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-arithmetic-shift-left
+    (safe)
+  (signatures
+   ((T:exact-integer T:fixnum)	=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-arithmetic-shift-right
+    (safe)
+  (signatures
+   ((T:exact-integer T:fixnum)	=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-bit-count
+    (safe)
+  (signatures
+   ((T:exact-integer)		=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-bit-field
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-bit-set?
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer)	=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive bitwise-copy-bit
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-copy-bit-field
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer T:exact-integer T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-first-bit-set
+    (safe)
+  (signatures
+   ((T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-if
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-length
+    (safe)
+  (signatures
+   ((T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-reverse-bit-field
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-rotate-bit-field
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer T:exact-integer T:exact-integer)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
 
 (declare-core-primitive sll
     (safe)
@@ -4368,28 +4893,25 @@
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
-(declare-core-primitive bitwise-and
-    (safe)
-  (signatures
-   (()				=> (T:fixnum))
-   ((T:fixnum)			=> (T:fixnum))
-   ((T:bignum)			=> (T:bignum))
-   ((T:fixnum T:fixnum)		=> (T:fixnum))
-   ((T:bignum T:bignum)		=> (T:bignum))
-   ((T:fixnum T:bignum)		=> (T:bignum))
-   ((T:bignum T:fixnum)		=> (T:bignum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
 ;;; --------------------------------------------------------------------
 ;;; trigonometric
 
-(declare-number-unary sin)
-(declare-number-unary cos)
-(declare-number-unary tan)
-(declare-number-unary asin)
-(declare-number-unary acos)
-(declare-number-unary/binary atan)
+(declare-number-unary sin	(replacements $sin-fixnum $sin-bignum $sin-flonum $sin-ratnum $sin-compnum $sin-cflonum))
+(declare-number-unary cos	(replacements $cos-fixnum $cos-bignum $cos-flonum $cos-ratnum $cos-compnum $cos-cflonum))
+(declare-number-unary tan	(replacements $tan-fixnum $tan-bignum $tan-flonum $tan-ratnum $tan-compnum $tan-cflonum))
+(declare-number-unary asin	(replacements $asin-fixnum $asin-bignum $asin-flonum $asin-ratnum $asin-compnum $asin-cflonum))
+(declare-number-unary acos	(replacements $acos-fixnum $acos-bignum $acos-flonum $acos-ratnum $acos-compnum $acos-cflonum))
+(declare-number-unary/binary atan (replacements $atan-fixnum $atan-bignum $atan-flonum $atan-ratnum $atan-compnum $atan-cflonum))
+
+;;; --------------------------------------------------------------------
+;;; hyperbolic
+
+(declare-number-unary sinh	(replacements $sinh-fixnum $sinh-bignum $sinh-flonum $sinh-ratnum $sinh-compnum $sinh-cflonum))
+(declare-number-unary cosh	(replacements $cosh-fixnum $cosh-bignum $cosh-flonum $cosh-ratnum $cosh-compnum $cosh-cflonum))
+(declare-number-unary tanh	(replacements $tanh-fixnum $tanh-bignum $tanh-flonum $tanh-ratnum $tanh-compnum $tanh-cflonum))
+(declare-number-unary asinh	(replacements $asinh-fixnum $asinh-bignum $asinh-flonum $asinh-ratnum $asinh-compnum $asinh-cflonum))
+(declare-number-unary acosh	(replacements $acosh-fixnum $acosh-bignum $acosh-flonum $acosh-ratnum $acosh-compnum $acosh-cflonum))
+(declare-number-unary atanh	(replacements $atanh-fixnum $atanh-bignum $atanh-flonum $atanh-ratnum $atanh-compnum $atanh-cflonum))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -5629,22 +6151,6 @@
  $bytevector->string-base64
 
 ;;;
- $complex-conjugate-compnum
- $complex-conjugate-cflonum
-
- $angle-fixnum
- $angle-bignum
- $angle-ratnum
- $angle-flonum
- $angle-compnum
- $angle-cflonum
-
- $magnitude-fixnum
- $magnitude-bignum
- $magnitude-ratnum
- $magnitude-flonum
- $magnitude-compnum
- $magnitude-cflonum
 ;;;
 
 ;;; --------------------------------------------------------------------
@@ -5759,12 +6265,7 @@
  top-level-value-error
  car-error
  cdr-error
- fxadd1-error
- fxsub1-error
  cadr-error
- fx+-type-error
- fx+-types-error
- fx+-overflow-error
  $do-event
  do-overflow
  do-overflow-words
@@ -5782,40 +6283,9 @@
  make-promise
  make-traced-procedure
  make-traced-macro
- error@fx+
- error@fxarithmetic-shift-left
- error@fxarithmetic-shift-right
- error@fx*
- error@fx-
- error@add1
- error@sub1
- error@fxadd1
- error@fxsub1
  fasl-write
  fasl-read
  syntax-parameter-value
- <
- <=
- =
- !=
- >
- >=
- +
- -
- *
- /
- abs
- sign
- asin
- acos
- atan
- sinh
- cosh
- tanh
- asinh
- acosh
- atanh
- angle
  apply
  assert
  assertion-error
@@ -5826,76 +6296,18 @@
  call-with-current-continuation
  call/cc
  call-with-values
- ceiling
  ;;
- complex?
+
  cons
- cos
- denominator
- div
- mod
- div-and-mod
- div0
- mod0
- div0-and-mod0
+ pair?
  error
  warning
  die
- even?
- exact
- exact-integer-sqrt
- exact?
- exp
- expt
- finite?
- floor
- gcd
- imag-part
- inexact
- inexact?
- infinite?
- integer->char
- integer-valued?
- integer?
- exact-integer?
- zero-exact-integer?
- negative-exact-integer?
- positive-exact-integer?
- non-negative-exact-integer?
- non-positive-exact-integer?
- lcm
- log
- magnitude
- make-polar
- make-rectangular
- complex-conjugate
- max
- min
- nan?
- negative?
- non-negative?
  not
  null?
- number?
- numerator
- odd?
- pair?
- positive?
- non-positive?
  procedure?
- rational-valued?
- rational?
- rationalize
- real-part
- real-valued?
- real?
- reverse
- round
- sin
- sqrt
- cbrt
- square
- cube
+
+
  string->latin1
  latin1->string
  latin1-encoded-bytevector?
@@ -5930,41 +6342,8 @@
  percent-encode
  percent-decode
  normalise-percent-encoding
- tan
- truncate
  values
  values->list
- zero?
- ...
- =>
- _
- else
- bitwise-arithmetic-shift
- bitwise-arithmetic-shift-left
- bitwise-arithmetic-shift-right
- bitwise-not
- bitwise-and
- bitwise-ior
- bitwise-xor
- bitwise-bit-count
- bitwise-bit-field
- bitwise-bit-set?
- bitwise-copy-bit
- bitwise-copy-bit-field
- bitwise-first-bit-set
- bitwise-if
- bitwise-length
- bitwise-reverse-bit-field
- bitwise-rotate-bit-field
-;;;
- bignum-positive?
- bignum-negative?
- bignum-non-negative?
- bignum-non-positive?
- bignum-odd?
- bignum-even?
- least-positive-bignum
- greatest-negative-bignum
 ;;;
  make-no-infinities-violation
  make-no-nans-violation
@@ -6201,14 +6580,9 @@
  call-with-string-output-port
 
  delay
- exact->inexact
  force
- inexact->exact
- modulo
- remainder
  null-environment
  promise?
- quotient
  scheme-report-environment
  interaction-environment
  new-interaction-environment
@@ -6991,7 +7365,11 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'declare-core-primitive	'scheme-indent-function 2)
-;; eval: (put 'declare-pair-accessor	'scheme-indent-function 1)
-;; eval: (put 'declare-pair-mutator	'scheme-indent-function 1)
+;; eval: (put 'declare-core-primitive		'scheme-indent-function 2)
+;; eval: (put 'declare-pair-accessor		'scheme-indent-function 1)
+;; eval: (put 'declare-pair-mutator		'scheme-indent-function 1)
+;; eval: (put 'declare-number-unary		'scheme-indent-function 1)
+;; eval: (put 'declare-number-binary		'scheme-indent-function 1)
+;; eval: (put 'declare-number-unary/binary	'scheme-indent-function 1)
+;; eval: (put 'declare-number-binary/multi-comparison	'scheme-indent-function 1)
 ;; End:
