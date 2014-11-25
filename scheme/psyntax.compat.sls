@@ -56,6 +56,7 @@
 
     ;; compiler related operations
     compiler.eval-core			compiler.core-expr->optimized-code
+    compiler.core-expr->optimisation-and-core-type-inference-code
     compiler.core-expr->assembly-code
 
     ;; runtime options
@@ -137,6 +138,7 @@
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  core-expr->optimized-code
+		  core-expr->optimisation-and-core-type-inference-code
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler.)

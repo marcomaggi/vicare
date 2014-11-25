@@ -28,6 +28,7 @@
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
     core-expr->optimized-code		core-expr->assembly-code
+    core-expr->optimisation-and-core-type-inference-code
 
     ;; these go in (vicare compiler)
     optimize-level
@@ -626,6 +627,7 @@
 	 compile-core-expr
 	 compile-core-expr->code
 	 core-expr->optimized-code
+	 core-expr->optimisation-and-core-type-inference-code
 	 core-expr->assembly-code)
 
   (define (compile-core-expr-to-port expr port)
@@ -700,6 +702,26 @@
 	       ;; 	      (introduce-unsafe-primrefs p)
 	       ;; 	    p))
 	       )
+	  (unparse-recordized-code/pretty p)))))
+
+  (define (core-expr->optimisation-and-core-type-inference-code core-language-sexp)
+    ;;This is a utility function used for debugging and inspection purposes; it is to
+    ;;be used to inspect the result of optimisation.
+    ;;
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (optimize-direct-calls p))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p))
+	       (p (rewrite-references-and-assignments p))
+	       (p (if (perform-core-type-inference)
+	       	      (core-type-inference p)
+	       	    p))
+	       (p (if (and (perform-core-type-inference)
+	       		   (perform-unsafe-primrefs-introduction))
+	       	      (introduce-unsafe-primrefs p)
+	       	    p)))
 	  (unparse-recordized-code/pretty p)))))
 
   (define (core-expr->assembly-code core-language-sexp)
