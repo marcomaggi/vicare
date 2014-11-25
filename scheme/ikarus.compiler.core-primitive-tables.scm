@@ -4134,9 +4134,7 @@
   (attributes
    ((_)				foldable effect-free)))
 
-(declare-type-predicate rational?)
-(declare-type-predicate integer?)
-
+(declare-type-predicate integer?		T:integer)
 (declare-type-predicate exact-integer?		T:exact-integer)
 
 (declare-type-predicate real-valued?)
@@ -4395,9 +4393,15 @@
 (declare-core-primitive max
     (safe)
   (signatures
-   ((T:real . T:real)		=> (T:real)))
+   ((T:fixnum . T:fixnum)		=> (T:fixnum))
+   ((T:bignum . T:bignum)		=> (T:bignum))
+   ((T:flonum . T:flonum)		=> (T:flonum))
+   ((T:exact-integer . T:exact-integer)	=> (T:exact-integer))
+   ((T:exact-real . T:exact-real)	=> (T:exact-real))
+   ((T:integer . T:integer)		=> (T:integer))
+   ((T:real . T:real)			=> (T:real)))
   (attributes
-   ((_ _)			foldable effect-free result-true))
+   ((_ . _)				foldable effect-free result-true))
   (replacements
    $max-fixnum-fixnum $max-fixnum-bignum $max-fixnum-flonum $max-fixnum-ratnum
    $max-bignum-fixnum $max-bignum-bignum $max-bignum-flonum $max-bignum-ratnum
@@ -4409,9 +4413,15 @@
 (declare-core-primitive min
     (safe)
   (signatures
-   ((T:real . T:real)		=> (T:real)))
+   ((T:fixnum . T:fixnum)		=> (T:fixnum))
+   ((T:bignum . T:bignum)		=> (T:bignum))
+   ((T:flonum . T:flonum)		=> (T:flonum))
+   ((T:exact-integer . T:exact-integer)	=> (T:exact-integer))
+   ((T:exact-real . T:exact-real)	=> (T:exact-real))
+   ((T:integer . T:integer)		=> (T:integer))
+   ((T:real . T:real)			=> (T:real)))
   (attributes
-   ((_ _)			foldable effect-free result-true))
+   ((_ . _)			foldable effect-free result-true))
   (replacements
    $min-fixnum-fixnum $min-fixnum-bignum $min-fixnum-flonum $min-fixnum-ratnum
    $min-bignum-fixnum $min-bignum-bignum $min-bignum-flonum $min-bignum-ratnum
