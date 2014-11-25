@@ -223,6 +223,7 @@
 (define-object-predicate-declarer declare-string-predicate T:string)
 (define-object-predicate-declarer declare-keyword-predicate T:keyword)
 (define-object-predicate-declarer declare-vector-predicate T:vector)
+(define-object-predicate-declarer declare-bytevector-predicate T:bytevector)
 
 
 ;;;; syntax helpers: comparison functions
@@ -3475,6 +3476,37 @@
 
 ;;;; bytevectors, unsafe functions
 
+#|
+ $bytevector-ieee-double-native-ref
+ $bytevector-ieee-double-native-set!
+ $bytevector-ieee-double-nonnative-ref
+ $bytevector-ieee-double-nonnative-set!
+ $bytevector-ieee-single-native-ref
+ $bytevector-ieee-single-native-set!
+ $bytevector-ieee-single-nonnative-ref
+ $bytevector-ieee-single-nonnative-set!
+ $bytevector=
+ $bytevector-total-length
+ $bytevector-concatenate
+ $bytevector-reverse-and-concatenate
+ $bytevector-copy
+ $uri-encode
+ $uri-decode
+ $uri-normalise-encoding
+ $percent-encode
+ $percent-decode
+ $percent-normalise-encoding
+ $bytevector->base64
+ $base64->bytevector
+ $ascii->string
+ $octets->string
+ $latin1->string
+ $bytevector->string-base64
+
+|#
+
+;;; constructors
+
 (declare-core-primitive $make-bytevector
     (safe)
   (signatures
@@ -3487,20 +3519,29 @@
    ((_ _)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
+;;; inspection
 
 (declare-core-primitive $bytevector-length
     (safe)
   (signatures
-   ((T:bytevector)		=> (T:fixnum)))
+   ((T:bytevector)		=> (T:non-negative-fixnum)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
+(declare-bytevector-predicate $bytevector-empty?)
+(declare-bytevector-predicate $uri-encoded-bytevector?)
+(declare-bytevector-predicate $octets-encoded-bytevector?)
+(declare-bytevector-predicate $ascii-encoded-bytevector?)
+(declare-bytevector-predicate $latin1-encoded-bytevector?)
+(declare-bytevector-predicate $percent-encoded-bytevector?)
+
 ;;; --------------------------------------------------------------------
+;;; accessors and mutators
 
 (declare-core-primitive $bytevector-u8-ref
     (safe)
   (signatures
-   ((T:bytevector T:fixnum)	=> (T:fixnum)))
+   ((T:bytevector T:fixnum)	=> (T:non-negative-fixnum)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
@@ -3510,6 +3551,11 @@
    ((T:bytevector T:fixnum)	=> (T:fixnum)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $bytevector-set!
+    (safe)
+  (signatures
+   ((T:bytevector T:non-negative-fixnum T:fixnum)	=> (T:void))))
 
 
 ;;;; structs, safe primitives
@@ -6767,7 +6813,6 @@
 
 ;;; --------------------------------------------------------------------
 
-;;;
  $length
  $map1
  $for-each1
@@ -6775,47 +6820,6 @@
  $exists1
  $memq
  $memv
-;;;
-
- $make-bytevector
- $bytevector-length
- $bytevector-empty?
- $bytevector-s8-ref
- $bytevector-u8-ref
- $bytevector-set!
- $bytevector-ieee-double-native-ref
- $bytevector-ieee-double-native-set!
- $bytevector-ieee-double-nonnative-ref
- $bytevector-ieee-double-nonnative-set!
- $bytevector-ieee-single-native-ref
- $bytevector-ieee-single-native-set!
- $bytevector-ieee-single-nonnative-ref
- $bytevector-ieee-single-nonnative-set!
- $bytevector=
- $bytevector-total-length
- $bytevector-concatenate
- $bytevector-reverse-and-concatenate
- $bytevector-copy
- $uri-encode
- $uri-decode
- $uri-encoded-bytevector?
- $uri-normalise-encoding
- $octets-encoded-bytevector?
- $ascii-encoded-bytevector?
- $latin1-encoded-bytevector?
- $percent-encode
- $percent-decode
- $percent-encoded-bytevector?
- $percent-normalise-encoding
- $bytevector->base64
- $base64->bytevector
- $ascii->string
- $octets->string
- $latin1->string
- $bytevector->string-base64
-
-;;;
-;;;
 
 ;;; --------------------------------------------------------------------
 
