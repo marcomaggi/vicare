@@ -4117,9 +4117,6 @@
  remainder
  quotient
 
- denominator
- numerator
- rationalize
 
  exact
  inexact
@@ -4652,6 +4649,37 @@
 
 ;;; --------------------------------------------------------------------
 ;;; parts
+
+(declare-core-primitive numerator
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:exact-integer))
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $numerator-fixnum $numerator-bignum $numerator-flonum $numerator-ratnum))
+
+(declare-core-primitive denominator
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:exact-integer))
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $denominator-fixnum $denominator-bignum $denominator-flonum $denominator-ratnum))
+
+(declare-core-primitive rationalize
+    (safe)
+  (signatures
+   ((T:real T:real)		=> (T:real)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
 
 (declare-core-primitive make-rectangular
     (safe)
@@ -5446,6 +5474,66 @@
 (declare-unsafe-binary-operation $remainder-flonum-fixnum	T:flonum	T:fixnum      T:flonum)
 (declare-unsafe-binary-operation $remainder-flonum-bignum	T:flonum	T:bignum      T:flonum)
 (declare-unsafe-binary-operation $remainder-flonum-flonum	T:flonum	T:flonum      T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $numerator-fixnum
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $numerator-bignum
+    (safe)
+  (signatures
+   ((T:bignum)			=> (T:bignum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $numerator-flonum
+    (safe)
+  (signatures
+   ((T:flonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $numerator-ratnum
+    (safe)
+  (signatures
+   ((T:ratnum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $denominator-fixnum
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:positive-fixnum)))
+  (attributes
+   ;;This always returns 1.
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $denominator-bignum
+    (safe)
+  (signatures
+   ((T:bignum)			=> (T:positive-bignum)))
+  (attributes
+   ;;This always returns 1.
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $denominator-flonum
+    (safe)
+  (signatures
+   ((T:flonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $denominator-ratnum
+    (safe)
+  (signatures
+   ((T:ratnum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 
