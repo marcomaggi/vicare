@@ -6502,7 +6502,7 @@
   ;;
   (let* ((rtc (make-collector))
 	 (rhs-expr.psi (parametrise ((inv-collector rtc)
-				     (vis-collector (lambda (x) (values))))
+				     (vis-collector (lambda (x) (void))))
 			 (chi-expr rhs-expr.stx lexenv.expand lexenv.expand))))
     ;;We invoke all the libraries needed to evaluate the right-hand side.
     (for-each
@@ -6598,7 +6598,7 @@
 			     (else
 			      (%synner "not an identifier" ?last)))))
        (cond ((null? ?id*)
-	      (values))
+	      (void))
 	     ((not (identifier? (car ?id*)))
 	      (%synner "not an identifier" (car ?id*)))
 	     (else

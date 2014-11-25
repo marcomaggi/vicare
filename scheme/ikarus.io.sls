@@ -2736,7 +2736,7 @@
 	     ;;   ^       ^                             ^
 	     ;;   0     index                     used-size = size
 	     ;;
-	     (values))
+	     (void))
 	    (else
 	     ;;If  PORT does  not  support the  set  port position  (for
 	     ;;example:  it is  a  network socket),  we  just reset  the
@@ -2804,7 +2804,7 @@
 	     ;;   ^       ^                             ^
 	     ;;   0     index                     used-size = size
 	     ;;
-	     (values))
+	     (void))
 	    (else
 	     ;;If  PORT does  not  support the  set  port position  (for
 	     ;;example:  it is  a  netword socket),  we  just reset  the
@@ -7629,7 +7629,7 @@
       (%doit port ch code-point who)
     (case (transcoder-error-handling-mode (port-transcoder port))
       ((ignore)
-       (values))
+       (void))
       ((replace)
        (%doit port ch (char->integer #\?) who))
       ((raise)

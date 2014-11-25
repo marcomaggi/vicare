@@ -2134,7 +2134,7 @@
     (define rtc
       (make-collector))
     (parametrise ((inv-collector rtc)
-		  (vis-collector (lambda (x) (values))))
+		  (vis-collector (lambda (x) (void))))
       (receive (empty
 		lexenv.expand^ lexenv.super^
 		lex* qrhs* module-init** kwd* export-spec*)
@@ -2697,7 +2697,7 @@
       ;;NOTE The following special case matches fine:
       ;;
       ;;   (internal-define ?attributes ({ciao})
-      ;;     (values))
+      ;;     (void))
       ;;
       ;;NOTE We explicitly decide not to rely  on RHS tag propagation to properly tag
       ;;the defined identifier ?WHO.  We could have considered:

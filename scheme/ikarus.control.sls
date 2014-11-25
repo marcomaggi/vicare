@@ -333,7 +333,7 @@
        (()
 	(%winders-pop!)
 	(out-guard)
-	(values))
+	(void))
        ((v1 v2 . v*)
 	(%winders-pop!)
 	(out-guard)
