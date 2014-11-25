@@ -4436,7 +4436,13 @@
 (declare-core-primitive +
     (safe)
   (signatures
-   (T:number		=> (T:number)))
+   (T:flonum			=> (T:flonum))
+   (T:exact-integer		=> (T:exact-integer))
+   (T:exact-real		=> (T:exact-real))
+   (T:integer			=> (T:integer))
+   (T:real			=> (T:real))
+   (T:cflonum			=> (T:cflonum))
+   (T:number			=> (T:number)))
   (attributes
    (_			foldable effect-free result-true))
   (replacements
@@ -4469,7 +4475,13 @@
 (declare-core-primitive -
     (safe)
   (signatures
-   ((T:number . T:number)	=> (T:number)))
+   (T:flonum			=> (T:flonum))
+   (T:exact-integer		=> (T:exact-integer))
+   (T:exact-real		=> (T:exact-real))
+   (T:integer			=> (T:integer))
+   (T:real			=> (T:real))
+   (T:cflonum			=> (T:cflonum))
+   (T:number			=> (T:number)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   (replacements
@@ -4502,7 +4514,13 @@
 (declare-core-primitive *
     (safe)
   (signatures
-   (T:number		=> (T:number)))
+   (T:flonum			=> (T:flonum))
+   (T:exact-integer		=> (T:exact-integer))
+   (T:exact-real		=> (T:exact-real))
+   (T:integer			=> (T:integer))
+   (T:real			=> (T:real))
+   (T:cflonum			=> (T:cflonum))
+   (T:number			=> (T:number)))
   (attributes
    (_			foldable effect-free result-true))
   (replacements
@@ -4535,7 +4553,10 @@
 (declare-core-primitive /
     (safe)
   (signatures
-   ((T:number . T:number)	=> (T:number)))
+   ((T:flonum  . T:flonum)	=> (T:flonum))
+   ((T:real    . T:real)	=> (T:real))
+   ((T:cflonum . T:cflonum)	=> (T:cflonum))
+   ((T:number  . T:number)	=> (T:number)))
   (attributes
    ((_ . _)			foldable effect-free result-true))
   (replacements
@@ -4568,6 +4589,12 @@
 (declare-core-primitive add1
     (safe)
   (signatures
+   ((T:exact-integer)		=> (T:exact-integer))
+   ((T:flonum)			=> (T:flonum))
+   ((T:integer)			=> (T:integer))
+   ((T:real)			=> (T:real))
+   ((T:cflonum)			=> (T:cflonum))
+   ((T:compnum)			=> (T:compnum))
    ((T:number)			=> (T:number)))
   (attributes
    ((_)				foldable effect-free result-true))
@@ -4579,6 +4606,12 @@
 (declare-core-primitive sub1
     (safe)
   (signatures
+   ((T:exact-integer)		=> (T:exact-integer))
+   ((T:flonum)			=> (T:flonum))
+   ((T:integer)			=> (T:integer))
+   ((T:real)			=> (T:real))
+   ((T:cflonum)			=> (T:cflonum))
+   ((T:compnum)			=> (T:compnum))
    ((T:number)			=> (T:number)))
   (attributes
    ((_)				foldable effect-free result-true))
