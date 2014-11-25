@@ -2123,7 +2123,7 @@
 (declare-core-primitive $make-cflonum
     (unsafe)
   (signatures
-   ((T:real T:real)		=> (T:cflonum)))
+   ((T:flonum T:flonum)		=> (T:cflonum)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
@@ -2157,16 +2157,12 @@
 (declare-core-primitive $make-compnum
     (unsafe)
   (signatures
-   ((T:real T:real)		=> (T:compnum)))
+   ((T:exact-real T:exact-real)		=> (T:compnum))
+   ((T:exact-real T:flonum)		=> (T:compnum))
+   ((T:flonum T:exact-real)		=> (T:compnum))
+   ((T:real T:real)			=> (T:compnum)))
   (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $make-rectangular
-    (unsafe)
-  (signatures
-   ((T:real T:real)		=> (T:complex)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
@@ -4897,7 +4893,8 @@
   (signatures
    ((T:real T:real)		=> (T:complex)))
   (attributes
-   ((_ _)			foldable effect-free result-true)))
+   ((_ _)			foldable effect-free result-true))
+  (replacements $make-cflonum $make-compnum $make-rectangular))
 
 (declare-core-primitive make-polar
     (safe)
@@ -5393,6 +5390,15 @@
 
 
 ;;;; numerics, unsafe functions
+
+(declare-core-primitive $make-rectangular
+    (unsafe)
+  (signatures
+   ((T:real T:real)		=> (T:complex)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
 
 (declare-unsafe-unary-operation $neg-number	T:number	T:number)
 (declare-unsafe-unary-operation $neg-fixnum	T:fixnum	T:exact-integer)
