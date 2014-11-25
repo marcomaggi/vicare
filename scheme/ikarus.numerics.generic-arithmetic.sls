@@ -78,6 +78,7 @@
 
     ;; exactness
     exact->inexact		inexact
+    inexact->exact		exact
 
     ;; part functions
     abs				sign
@@ -297,6 +298,9 @@
 
 ;;;
 
+    $exact-fixnum		$exact-bignum		$exact-flonum
+    $exact-ratnum		$exact-compnum		$exact-cflonum
+
     $inexact-fixnum		$inexact-bignum		$inexact-flonum
     $inexact-ratnum		$inexact-compnum	$inexact-cflonum
 
@@ -427,6 +431,7 @@
 
 		;; exactness
 		exact->inexact			inexact
+		inexact->exact			exact
 
 		;; part functions
 		abs				sign
@@ -5582,6 +5587,62 @@
   #| end of module: abs |# )
 
 
+;;;; exactness
+
+(module (exact
+	 inexact->exact
+	 $exact-fixnum
+	 $exact-bignum
+	 $exact-flonum
+	 $exact-ratnum
+	 $exact-compnum
+	 $exact-cflonum)
+
+  (define (inexact->exact x)
+    ($exact x 'inexact->exact))
+
+  (define (exact x)
+    ($exact x 'exact))
+
+  (define ($exact x who)
+    (cond-numeric-operand x
+      ((flonum?)	($exact-flonum x))
+      ((cflonum?)	($exact-cflonum x))
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((ratnum?)	x)
+      ((compnum?)	($exact-compnum x))
+      (else
+       (assertion-violation who "expected number as argument" x))))
+
+  (define ($exact-fixnum x)
+    x)
+
+  (define ($exact-bignum x)
+    x)
+
+  (define ($exact-flonum x)
+    (or ($flonum->exact x)
+	(%error-no-real-value '$exact-flonum x)))
+
+  (define ($exact-ratnum x)
+    x)
+
+  (define* ($exact-compnum x)
+    (make-rectangular ($exact ($compnum-real x) __who__)
+		      ($exact ($compnum-imag x) __who__)))
+
+  (define* ($exact-cflonum x)
+    (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value __who__ x))
+		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value __who__ x))))
+
+  (define (%error-no-real-value who x)
+    (assertion-violation who "number has no real value" x))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
 (module (inexact
 	 exact->inexact
 	 $inexact-fixnum
