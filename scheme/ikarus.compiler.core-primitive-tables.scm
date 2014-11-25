@@ -4106,24 +4106,35 @@
 
 #|
 
- cos
  div
  mod
  div-and-mod
  div0
  mod0
  div0-and-mod0
+
+ modulo
+ remainder
+ quotient
+
+ denominator
+ numerator
+ rationalize
+
  exact
- exact-integer-sqrt
- exp
- expt
- floor
- gcd
- imag-part
  inexact
- integer->char
+ exact-integer-sqrt
+ exact->inexact
+ inexact->exact
+
+ exp
+ sqrt
+ cbrt
+ square
+ cube
+
+ gcd
  lcm
- log
 
  fxadd1-error
  fxsub1-error
@@ -4139,26 +4150,6 @@
  error@sub1
  error@fxadd1
  error@fxsub1
- denominator
- numerator
- rationalize
- real-part
- reverse
- round
- sin
- sqrt
- cbrt
- square
- cube
-
- tan
- truncate
-
- exact->inexact
- inexact->exact
- modulo
- remainder
- quotient
 
 |#
 
@@ -4743,17 +4734,26 @@
 ;;; --------------------------------------------------------------------
 ;;; rounding
 
-(declare-core-primitive ceiling
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum))
-   ((T:bignum)			=> (T:bignum))
-   ((T:flonum)			=> (T:flonum))
-   ((T:ratnum)			=> (T:ratnum))
-   ((T:real)			=> (T:real)))
-  (attributes
-   ((_)				foldable effect-free result-true))
-  (replacements $ceiling-fixnum $ceiling-bignum $ceiling-ratnum $ceiling-flonum))
+(let-syntax
+    ((declare-safe-rounding-primitive
+      (syntax-rules ()
+	((_ ?who . ?replacements)
+	 (declare-core-primitive ?who
+	     (unsafe)
+	   (signatures
+	    ((T:fixnum)			=> (T:fixnum))
+	    ((T:bignum)			=> (T:bignum))
+	    ((T:flonum)			=> (T:flonum))
+	    ((T:ratnum)			=> (T:ratnum))
+	    ((T:real)			=> (T:real)))
+	   (attributes
+	    ((_)			foldable effect-free result-true))
+	   (replacements . ?replacements))))))
+  (declare-safe-rounding-primitive floor	   $floor-fixnum    $floor-bignum    $floor-ratnum    $floor-flonum)
+  (declare-safe-rounding-primitive ceiling	 $ceiling-fixnum  $ceiling-bignum  $ceiling-ratnum  $ceiling-flonum)
+  (declare-safe-rounding-primitive truncate	$truncate-fixnum $truncate-bignum $truncate-ratnum $truncate-flonum)
+  (declare-safe-rounding-primitive round	   $round-fixnum    $round-bignum    $round-ratnum    $round-flonum)
+  #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -5779,33 +5779,41 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-core-primitive $ceiling-fixnum
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true identity)))
-
-(declare-core-primitive $ceiling-bignum
-    (unsafe)
-  (signatures
-   ((T:bignum)			=> (T:bignum)))
-  (attributes
-   ((_)				foldable effect-free result-true identity)))
-
-(declare-core-primitive $ceiling-flonum
-    (unsafe)
-  (signatures
-   ((T:flonum)			=> (T:flonum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $ceiling-ratnum
-    (unsafe)
-  (signatures
-   ((T:ratnum)			=> (T:exact-integer)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
+(let-syntax
+    ((declare-unsafe-rounding-primitives
+       (syntax-rules ()
+	 ((_ ?who-fixnum ?who-bignum ?who-flonum ?who-ratnum)
+	  (begin
+	    (declare-core-primitive ?who-fixnum
+		(unsafe)
+	      (signatures
+	       ((T:fixnum)			=> (T:fixnum)))
+	      (attributes
+	       ((_)				foldable effect-free result-true identity)))
+	    (declare-core-primitive ?who-bignum
+		(unsafe)
+	      (signatures
+	       ((T:bignum)			=> (T:bignum)))
+	      (attributes
+	       ((_)				foldable effect-free result-true identity)))
+	    (declare-core-primitive ?who-flonum
+		(unsafe)
+	      (signatures
+	       ((T:flonum)			=> (T:flonum)))
+	      (attributes
+	       ((_)				foldable effect-free result-true)))
+	    (declare-core-primitive ?who-ratnum
+		(unsafe)
+	      (signatures
+	       ((T:ratnum)			=> (T:exact-integer)))
+	      (attributes
+	       ((_)				foldable effect-free result-true)))))
+	 )))
+  (declare-unsafe-rounding-primitives $floor-fixnum $floor-bignum $floor-flonum $floor-ratnum)
+  (declare-unsafe-rounding-primitives $ceiling-fixnum $ceiling-bignum $ceiling-flonum $ceiling-ratnum)
+  (declare-unsafe-rounding-primitives $truncate-fixnum $truncate-bignum $truncate-flonum $truncate-ratnum)
+  (declare-unsafe-rounding-primitives $round-fixnum $round-bignum $round-flonum $round-ratnum)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; system interface and foreign functions
