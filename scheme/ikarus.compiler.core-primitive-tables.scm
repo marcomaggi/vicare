@@ -2159,8 +2159,7 @@
   (signatures
    ((T:exact-real T:exact-real)		=> (T:compnum))
    ((T:exact-real T:flonum)		=> (T:compnum))
-   ((T:flonum T:exact-real)		=> (T:compnum))
-   ((T:real T:real)			=> (T:compnum)))
+   ((T:flonum T:exact-real)		=> (T:compnum)))
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
@@ -4685,6 +4684,15 @@
   (attributes
    ((_ _)				foldable effect-free result-true)))
 
+(declare-core-primitive quotient+remainder
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer T:integer)))
+  (attributes
+   ((_ _)				effect-free)))
+
 (declare-core-primitive div-and-mod
     (safe)
   (signatures
@@ -4692,7 +4700,7 @@
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer T:exact-integer))
    ((T:real T:real)			=> (T:real T:real)))
   (attributes
-   ((_ _)			effect-free)))
+   ((_ _)				effect-free)))
 
 (declare-core-primitive div0-and-mod0
     (safe)
@@ -4701,7 +4709,7 @@
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer T:exact-integer))
    ((T:real T:real)			=> (T:real T:real)))
   (attributes
-   ((_ _)			effect-free)))
+   ((_ _)				effect-free)))
 
 ;;;
 
@@ -6638,11 +6646,6 @@
 
 #| list of core primitives to declare
 
- sra
- sll
- add1
- sub1
- quotient+remainder
  random
 
  port-mode
