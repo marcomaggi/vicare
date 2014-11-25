@@ -4733,6 +4733,7 @@
    ((T:flonum T:flonum)			=> (T:flonum))
 
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer))
    ((T:real T:real)			=> (T:real))
 
    ((T:real T:real T:real . T:real)	=> (T:real)))
@@ -4773,6 +4774,7 @@
    ((T:flonum T:flonum)			=> (T:flonum))
 
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer))
    ((T:real T:real)			=> (T:real))
 
    ((T:real T:real T:real . T:real)	=> (T:real)))
