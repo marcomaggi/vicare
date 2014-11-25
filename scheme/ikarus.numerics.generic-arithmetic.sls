@@ -296,6 +296,11 @@
     $denominator-fixnum		$denominator-bignum	$denominator-flonum	$denominator-ratnum
 
 ;;;
+
+    $inexact-fixnum		$inexact-bignum		$inexact-flonum
+    $inexact-ratnum		$inexact-compnum	$inexact-cflonum
+
+;;;
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
 
@@ -5577,7 +5582,14 @@
   #| end of module: abs |# )
 
 
-(module (inexact exact->inexact)
+(module (inexact
+	 exact->inexact
+	 $inexact-fixnum
+	 $inexact-bignum
+	 $inexact-flonum
+	 $inexact-ratnum
+	 $inexact-compnum
+	 $inexact-cflonum)
 
   (define (exact->inexact x)
     (->inexact x 'exact->inexact))
@@ -5595,6 +5607,17 @@
       ((cflonum?)	x)
       (else
        (%error-not-number x))))
+
+  (define $inexact-fixnum	$fixnum->flonum)
+  (define $inexact-bignum	$bignum->flonum)
+  (define $inexact-ratnum	$ratnum->flonum)
+  (define $inexact-compnum	$compnum->cflonum)
+
+  (define ($inexact-flonum x)
+    x)
+
+  (define ($inexact-cflonum x)
+    x)
 
   #| end of module |# )
 

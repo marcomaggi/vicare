@@ -3600,6 +3600,20 @@
     ($denominator-ratnum			$numerics)
 
 ;;;
+    ($exact-fixnum				$numerics)
+    ($exact-bignum				$numerics)
+    ($exact-flonum				$numerics)
+    ($exact-ratnum				$numerics)
+    ($exact-compnum				$numerics)
+    ($exact-cflonum				$numerics)
+
+    ($inexact-fixnum				$numerics)
+    ($inexact-bignum				$numerics)
+    ($inexact-flonum				$numerics)
+    ($inexact-ratnum				$numerics)
+    ($inexact-compnum				$numerics)
+    ($inexact-cflonum				$numerics)
+;;;
     ($expt-number-fixnum			$numerics)
 
     ($expt-number-zero-fixnum			$numerics)

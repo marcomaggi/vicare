@@ -1257,6 +1257,8 @@ level operations on numbers.
 * syslib numerics sign::        Sign of real numbers.
 * syslib numerics numerator::   Numerator of real numbers.
 * syslib numerics denominator:: Denominator of real numbers.
+* syslib numerics exact::       Conversion to exact number.
+* syslib numerics inexact::     Conversion to inexact number.
 * syslib numerics expt::        Raising numbers to power.
 * syslib numerics sqrt::        Square root of numbers.
 * syslib numerics cbrt::        Cubic root of numbers.
@@ -3816,6 +3818,79 @@ Return the denominator of @var{fl} as flonum.  This is an alias for
 
 @deffn {Unsafe Operation} $denominator-ratnum @var{rt}
 Return the denominator of @var{rt}: a positive fixnum or bignum.
+@end deffn
+
+@c page
+@node syslib numerics exact
+@subsection Conversion to exact number
+
+
+@deffn {Unsafe Operation} $exact-fixnum @var{fx}
+This is an identity function: always return @var{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-bignum @var{bn}
+This is an identity function: always return @var{bn}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-flonum @var{fl}
+If @var{fl} is an integer flonum: return the corresponding exact
+integer, a fixnum or bignum.  Otherwise raise an exception.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-ratnum @var{rt}
+This is an identity function: always return @var{rt}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-compnum @var{cn}
+Attempt to convert the compnum @var{cn} into the corresponding exact
+compnum.  If either the real or the imaginary parts are not integers:
+raise an exception.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-cflonum @var{cfl}
+Attempt to convert the cflonum @var{cfl} into the corresponding exact
+compnum.  If either the real or the imaginary parts are not integers:
+raise an exception.
+@end deffn
+
+@c page
+@node syslib numerics inexact
+@subsection Conversion to inexact number
+
+
+@deffn {Unsafe Operation} $inexact-fixnum @var{fx}
+Convert the fixnum @var{fx} into the corresponding flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-bignum @var{bn}
+Convert the bignum @var{bn} into the corresponding flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-flonum @var{fl}
+This is an identity function: always return @var{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-ratnum @var{rt}
+Convert the ratnum @var{rt} into the corresponding flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-compnum @var{cn}
+Convert the compnum @var{cn} into the corresponding cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-cflonum @var{cfl}
+This is an identity function: always return @var{cfl}.
 @end deffn
 
 @c page

@@ -20,6 +20,13 @@
     inexact->exact	exact		$flonum->exact
     fixnum->flonum
 
+    $exact-fixnum
+    $exact-bignum
+    $exact-flonum
+    $exact-ratnum
+    $exact-compnum
+    $exact-cflonum
+
     flzero?		$flzero?
     flzero?/positive	$flzero?/positive
     flzero?/negative	$flzero?/negative
@@ -108,6 +115,7 @@
     (vicare system $fx)
     (vicare system $bignums)
     (vicare system $ratnums)
+    (vicare system $compnums)
     (vicare system $bytevectors)
     (except (vicare system $flonums)
 	    $flonum->exact
@@ -497,7 +505,13 @@
 (module (inexact->exact
 	 exact
 	 $flexact
-	 $cflexact)
+	 $cflexact
+	 $exact-fixnum
+	 $exact-bignum
+	 $exact-flonum
+	 $exact-ratnum
+	 $exact-compnum
+	 $exact-cflonum)
 
   (define (inexact->exact x)
     ($exact x 'inexact->exact))
@@ -512,7 +526,7 @@
       ((fixnum?)	x)
       ((bignum?)	x)
       ((ratnum?)	x)
-      ((compnum?)	x)
+      ((compnum?)	($exact-compnum x))
       (else
        (assertion-violation who "expected number as argument" x))))
 
@@ -525,6 +539,23 @@
     (define who '$cflexact)
     (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value who x))
 		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value who x))))
+
+  (define ($exact-fixnum x)
+    x)
+
+  (define ($exact-bignum x)
+    x)
+
+  (define $exact-flonum $flexact)
+
+  (define ($exact-ratnum x)
+    x)
+
+  (define* ($exact-compnum x)
+    (make-rectangular ($exact ($compnum-real x) __who__)
+		      ($exact ($compnum-imag x) __who__)))
+
+  (define $exact-cflonum $cflexact)
 
   (define (%error-no-real-value who x)
     (assertion-violation who "number has no real value" x))
