@@ -4120,15 +4120,9 @@
 
  exact
  inexact
- exact-integer-sqrt
  exact->inexact
  inexact->exact
 
- exp
- sqrt
- cbrt
- square
- cube
 
  gcd
  lcm
@@ -4821,7 +4815,94 @@
    $expt-number-negative-fixnum $expt-number-positive-fixnum
    $expt-number-fixnum $expt-number-bignum $expt-number-flonum $expt-number-ratnum $expt-number-compnum $expt-number-cflonum))
 
-(declare-number-unary/binary log
+(declare-core-primitive square
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer))
+   ((T:bignum)			=> (T:exact-integer))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:exact-real))
+   ((T:compnum)			=> (T:number))
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $square-fixnum $square-bignum $square-flonum $square-ratnum $square-compnum $square-cflonum))
+
+(declare-core-primitive cube
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer))
+   ((T:bignum)			=> (T:exact-integer))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:exact-real))
+   ((T:compnum)			=> (T:number))
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $cube-fixnum $cube-bignum $cube-flonum $cube-ratnum $cube-compnum $cube-cflonum))
+
+(declare-core-primitive sqrt
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:number))
+   ((T:bignum)			=> (T:number))
+   ((T:flonum)			=> (T:inexact))
+   ((T:ratnum)			=> (T:number))
+   ((T:compnum)			=> (T:number))
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $sqrt-fixnum $sqrt-bignum $sqrt-flonum $sqrt-ratnum $sqrt-compnum $sqrt-cflonum))
+
+(declare-core-primitive cbrt
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:number))
+   ((T:bignum)			=> (T:number))
+   ((T:flonum)			=> (T:inexact))
+   ((T:ratnum)			=> (T:number))
+   ((T:compnum)			=> (T:number))
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $cbrt-fixnum $cbrt-bignum $cbrt-flonum $cbrt-ratnum $cbrt-compnum $cbrt-cflonum))
+
+(declare-core-primitive exact-integer-sqrt
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:positive-fixnum T:positive-fixnum))
+   ((T:bignum)			=> (T:exact-integer T:exact-integer))
+   ((T:exact-integer)		=> (T:exact-integer T:exact-integer)))
+  (attributes
+   ((_)				effect-free))
+  (replacements $exact-integer-sqrt-fixnum $exact-integer-sqrt-bignum))
+
+(declare-core-primitive exp
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:real))
+   ((T:bignum)			=> (T:flonum))
+   ((T:flonum)			=> (T:flonum))
+   ((T:ratnum)			=> (T:flonum))
+   ((T:compnum)			=> (T:cflonum))
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements $exp-fixnum $exp-bignum $exp-flonum $exp-ratnum $exp-compnum $exp-cflonum))
+
+(declare-core-primitive log
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:number))
+   ((T:bignum)			=> (T:inexact))
+   ((T:flonum)			=> (T:inexact))
+   ((T:ratnum)			=> (T:inexact))
+   ((T:compnum)			=> (T:inexact))
+   ((T:cflonum)			=> (T:cflonum))
+   ((T:number T:number)		=> (T:number)))
+  (attributes
+   ((_)				foldable effect-free result-true)
+   ((_ _)			foldable effect-free result-true))
   (replacements $log-fixnum $log-bignum $log-flonum $log-ratnum $log-compnum $log-cflonum))
 
 ;;; --------------------------------------------------------------------
@@ -5715,7 +5796,7 @@
 
 (declare-unsafe-unary-operation $sqrt-fixnum		T:fixnum	T:number)
 (declare-unsafe-unary-operation $sqrt-bignum		T:bignum	T:number)
-(declare-unsafe-unary-operation $sqrt-flonum		T:flonum	T:flonum)
+(declare-unsafe-unary-operation $sqrt-flonum		T:flonum	T:inexact)
 (declare-unsafe-unary-operation $sqrt-ratnum		T:ratnum	T:number)
 (declare-unsafe-unary-operation $sqrt-compnum		T:compnum	T:number)
 (declare-unsafe-unary-operation $sqrt-cflonum		T:cflonum	T:cflonum)
@@ -5725,16 +5806,16 @@
 
 (declare-unsafe-unary-operation $cbrt-fixnum		T:fixnum	T:number)
 (declare-unsafe-unary-operation $cbrt-bignum		T:bignum	T:number)
-(declare-unsafe-unary-operation $cbrt-flonum		T:flonum	T:flonum)
+(declare-unsafe-unary-operation $cbrt-flonum		T:flonum	T:inexact)
 (declare-unsafe-unary-operation $cbrt-ratnum		T:ratnum	T:number)
 (declare-unsafe-unary-operation $cbrt-compnum		T:compnum	T:number)
 (declare-unsafe-unary-operation $cbrt-cflonum		T:cflonum	T:cflonum)
 
 (declare-unsafe-unary-operation $log-fixnum		T:fixnum	T:number)
-(declare-unsafe-unary-operation $log-bignum		T:bignum	T:number)
-(declare-unsafe-unary-operation $log-flonum		T:flonum	T:flonum)
-(declare-unsafe-unary-operation $log-ratnum		T:ratnum	T:number)
-(declare-unsafe-unary-operation $log-compnum		T:compnum	T:number)
+(declare-unsafe-unary-operation $log-bignum		T:bignum	T:inexact)
+(declare-unsafe-unary-operation $log-flonum		T:flonum	T:inexact)
+(declare-unsafe-unary-operation $log-ratnum		T:ratnum	T:inexact)
+(declare-unsafe-unary-operation $log-compnum		T:compnum	T:inexact)
 (declare-unsafe-unary-operation $log-cflonum		T:cflonum	T:cflonum)
 
 (declare-unsafe-unary-operation $exp-fixnum		T:fixnum	T:real)
