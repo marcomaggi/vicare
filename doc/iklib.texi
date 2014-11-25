@@ -8930,6 +8930,11 @@ Return the cube of @var{num}: @var{num} times @var{num} times @var{num}.
 @end defun
 
 
+@defun cbrt @var{num}
+Return the cubic root of @var{num}.
+@end defun
+
+
 @defun quotient @vari{N} @varii{N}
 @defunx remainder @vari{N} @varii{N}
 @defunx quotient+remainder @vari{N} @varii{N}

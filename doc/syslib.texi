@@ -4383,7 +4383,7 @@ cflonum.
 
 @deffn {Unsafe Operation} $log-bignum @var{bn}
 Compute the natural logarithm of @var{fl}; return an inexact number
-object.  cflonum.
+object.
 @end deffn
 
 
