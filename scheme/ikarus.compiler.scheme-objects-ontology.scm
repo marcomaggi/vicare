@@ -99,7 +99,7 @@
    T:flonum		T:flonum-integer	T:flonum-fractional
    T:flonum-finite	T:flonum-infinite	T:flonum-nan
    T:cflonum
-   T:exact-integer
+   T:exact-integer	T:integer
    T:real		T:exact-real
    T:compnum		T:exact-compnum
    T:complex
@@ -163,7 +163,7 @@
    T:flonum?		T:flonum-integer?	T:flonum-fractional?
    T:flonum-finite?	T:flonum-infinite?	T:flonum-nan?
    T:cflonum?
-   T:exact-integer?
+   T:exact-integer?	T:integer?
    T:real?		T:exact-real?
    T:compnum?		T:exact-compnum?
    T:complex?
@@ -693,6 +693,9 @@
 
 (define-underspecified-core-type T:exact-compnum
   (core-type-tag-and* T:compnum T:exact))
+
+(define-underspecified-core-type T:integer
+  (core-type-tag-or* T:fixnum T:bignum T:flonum-integer))
 
 ;;; --------------------------------------------------------------------
 

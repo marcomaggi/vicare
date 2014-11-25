@@ -349,7 +349,7 @@
 	 T:flonum		T:flonum-integer	T:flonum-fractional
 	 T:flonum-finite	T:flonum-infinite	T:flonum-nan
 	 T:cflonum
-	 T:exact-integer
+	 T:exact-integer	T:integer
 	 T:real			T:exact-real
 	 T:compnum		T:exact-compnum
 	 T:complex
@@ -430,6 +430,7 @@
       (T:non-positive			type)
       (T:non-negative			type)
       (T:exact-integer			type)
+      (T:integer			type)
       (T:real				type)
       (T:exact-compnum			type)
       (T:exact-real			type)

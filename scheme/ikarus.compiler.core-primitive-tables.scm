@@ -4106,26 +4106,6 @@
 
 #|
 
- div
- mod
- div-and-mod
- div0
- mod0
- div0-and-mod0
-
- modulo
- remainder
- quotient
-
-
-
-
-
- fxadd1-error
- fxsub1-error
- fx+-type-error
- fx+-types-error
- fx+-overflow-error
  error@fx+
  error@fxarithmetic-shift-left
  error@fxarithmetic-shift-right
@@ -4610,6 +4590,89 @@
    $sub1-fixnum
    $sub1-bignum
    $sub1-integer))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive div
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:real T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive mod
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:real T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive div0
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:real T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive mod0
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:real T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive modulo
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive remainder
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive quotient
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive div-and-mod
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer T:exact-integer))
+   ((T:real T:real)			=> (T:real T:real)))
+  (attributes
+   ((_ _)			effect-free)))
+
+(declare-core-primitive div0-and-mod0
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)			=> (T:fixnum T:fixnum))
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer T:exact-integer))
+   ((T:real T:real)			=> (T:real T:real)))
+  (attributes
+   ((_ _)			effect-free)))
 
 ;;;
 
@@ -6765,11 +6828,6 @@
  $incorrect-args-error-handler
  $multiple-values-error
  $debug
- $underflow-misaligned-error
- top-level-value-error
- car-error
- cdr-error
- cadr-error
  $do-event
  do-overflow
  do-overflow-words
