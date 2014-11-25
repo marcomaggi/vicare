@@ -4104,20 +4104,6 @@
 ;;operands must come *after* the ones accepting more specific operand types.
 ;;
 
-#|
-
- error@fx+
- error@fxarithmetic-shift-left
- error@fxarithmetic-shift-right
- error@fx*
- error@fx-
- error@add1
- error@sub1
- error@fxadd1
- error@fxsub1
-
-|#
-
 ;;; predicates
 
 (declare-type-predicate number?			T:number)
@@ -5302,6 +5288,59 @@
    ((_)			foldable effect-free result-true)
    ((_ _)		foldable effect-free result-true)
    ((_ _ _)		foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; shortcut's interrupt handlers
+
+(declare-core-primitive error@fx+
+    (safe)
+  (signatures
+   ((T:object T:object)		=> (T:void))))
+
+(declare-core-primitive error@fx*
+    (safe)
+  (signatures
+   ((T:object T:object)		=> (T:void))))
+
+(declare-core-primitive error@fxadd1
+    (safe)
+  (signatures
+   ((T:object)			=> (T:void))))
+
+(declare-core-primitive error@fxsub1
+    (safe)
+  (signatures
+   ((T:object)			=> (T:void))))
+
+(declare-core-primitive error@fxarithmetic-shift-left
+    (safe)
+  (signatures
+   ((T:object T:object)		=> (T:void))))
+
+(declare-core-primitive error@fxarithmetic-shift-right
+    (safe)
+  (signatures
+   ((T:object T:object)		=> (T:void))))
+
+;;;
+
+(declare-core-primitive error@add1
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer))
+   ((T:bignum)			=> (T:exact-integer))
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive error@sub1
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer))
+   ((T:bignum)			=> (T:exact-integer))
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; numerics, unsafe functions
