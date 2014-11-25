@@ -3588,6 +3588,17 @@
     ($sign-bignum				$numerics)
     ($sign-flonum				$numerics)
     ($sign-ratnum				$numerics)
+
+    ($numerator-fixnum				$numerics)
+    ($numerator-bignum				$numerics)
+    ($numerator-flonum				$numerics)
+    ($numerator-ratnum				$numerics)
+
+    ($denominator-fixnum			$numerics)
+    ($denominator-bignum			$numerics)
+    ($denominator-flonum			$numerics)
+    ($denominator-ratnum			$numerics)
+
 ;;;
     ($expt-number-fixnum			$numerics)
 

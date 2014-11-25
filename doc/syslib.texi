@@ -1255,6 +1255,8 @@ level operations on numbers.
 * syslib numerics min::         Minimum between numbers.
 * syslib numerics abs::         Absolute value of real numbers.
 * syslib numerics sign::        Sign of real numbers.
+* syslib numerics numerator::   Numerator of real numbers.
+* syslib numerics denominator:: Denominator of real numbers.
 * syslib numerics expt::        Raising numbers to power.
 * syslib numerics sqrt::        Square root of numbers.
 * syslib numerics cbrt::        Cubic root of numbers.
@@ -3764,6 +3766,56 @@ not--a--number.
 Return a fixnum representing the sign of the numerator of @var{rt}:
 @code{+1} for positive, @code{-1} for negative.  Ratnums do not
 represent zero.
+@end deffn
+
+@c page
+@node syslib numerics numerator
+@subsection Numerator of real numbers
+
+
+@deffn {Unsafe Operation} $numerator-fixnum @var{fx}
+This is an identity function: return @var{fx} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $numerator-bignum @var{bn}
+This is an identity function: return @var{bn} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $numerator-flonum @var{fl}
+Return the numerator of @var{fl} as flonum.  This is an alias for
+@func{$flnumerator}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $numerator-ratnum @var{rt}
+Return the numerator of @var{rt}: a fixnum or bignum.
+@end deffn
+
+@c page
+@node syslib numerics denominator
+@subsection Denominator of real numbers
+
+
+@deffn {Unsafe Operation} $denominator-fixnum @var{fx}
+Always return the fixnum @code{1}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $denominator-bignum @var{bn}
+Always return the fixnum @code{1}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $denominator-flonum @var{fl}
+Return the denominator of @var{fl} as flonum.  This is an alias for
+@func{$fldenominator}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $denominator-ratnum @var{rt}
+Return the denominator of @var{rt}: a positive fixnum or bignum.
 @end deffn
 
 @c page

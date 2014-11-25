@@ -291,6 +291,10 @@
 
     $sign-fixnum		$sign-bignum
     $sign-flonum		$sign-ratnum
+
+    $numerator-fixnum		$numerator-bignum	$numerator-flonum	$numerator-ratnum
+    $denominator-fixnum		$denominator-bignum	$denominator-flonum	$denominator-ratnum
+
 ;;;
     $expt-number-fixnum		$expt-number-bignum	$expt-number-flonum
     $expt-number-ratnum		$expt-number-compnum	$expt-number-cflonum
@@ -392,6 +396,7 @@
     $ceiling-fixnum	$ceiling-bignum		$ceiling-ratnum		$ceiling-flonum
     $truncate-fixnum	$truncate-bignum	$truncate-ratnum	$truncate-flonum
     $round-fixnum	$round-bignum		$round-ratnum		$round-flonum
+
     #| end of EXPORT |# )
 
 
@@ -7960,25 +7965,67 @@
   #| end of module: atanh |# )
 
 
-(define (numerator x)
-  (define who 'numerator)
-  (cond-real-numeric-operand x
-    ((fixnum?)		x)
-    ((bignum?)		x)
-    ((ratnum?)		($ratnum-n x))
-    ((flonum?)		($flnumerator x))
-    (else
-     (%error-not-real-number x))))
+(module (numerator
+	 $numerator-fixnum
+	 $numerator-bignum
+	 $numerator-flonum
+	 $numerator-ratnum)
 
-(define (denominator x)
-  (define who 'denominator)
-  (cond-real-numeric-operand x
-    ((fixnum?)		1)
-    ((bignum?)		1)
-    ((ratnum?)		($ratnum-d x))
-    ((flonum?)		($fldenominator x))
-    (else
-     (%error-not-real-number x))))
+  (define (numerator x)
+    (define who 'numerator)
+    (cond-real-numeric-operand x
+      ((fixnum?)	x)
+      ((bignum?)	x)
+      ((ratnum?)	($ratnum-n x))
+      ((flonum?)	($flnumerator x))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($numerator-fixnum x)
+    x)
+
+  (define ($numerator-bignum x)
+    x)
+
+  (define ($numerator-flonum x)
+    ($flnumerator x))
+
+  (define ($numerator-ratnum x)
+    ($ratnum-num x))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (denominator
+	 $denominator-fixnum
+	 $denominator-bignum
+	 $denominator-flonum
+	 $denominator-ratnum)
+
+  (define (denominator x)
+    (define who 'denominator)
+    (cond-real-numeric-operand x
+      ((fixnum?)	1)
+      ((bignum?)	1)
+      ((ratnum?)	($ratnum-d x))
+      ((flonum?)	($fldenominator x))
+      (else
+       (%error-not-real-number x))))
+
+  (define ($denominator-fixnum x)
+    1)
+
+  (define ($denominator-bignum x)
+    1)
+
+  (define ($denominator-flonum x)
+    ($fldenominator x))
+
+  (define ($denominator-ratnum x)
+    ($ratnum-den x))
+
+  #| end of module |# )
 
 
 (module (floor
