@@ -4627,36 +4627,40 @@
   (signatures
    ((T:fixnum T:fixnum)			=> (T:fixnum))
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer))
    ((T:real T:real)			=> (T:real)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive mod
     (safe)
   (signatures
    ((T:fixnum T:fixnum)			=> (T:fixnum))
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer))
    ((T:real T:real)			=> (T:real)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive div0
     (safe)
   (signatures
    ((T:fixnum T:fixnum)			=> (T:fixnum))
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer))
    ((T:real T:real)			=> (T:real)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive mod0
     (safe)
   (signatures
    ((T:fixnum T:fixnum)			=> (T:fixnum))
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:integer T:integer)		=> (T:integer))
    ((T:real T:real)			=> (T:real)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive modulo
     (safe)
@@ -4665,7 +4669,7 @@
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
    ((T:integer T:integer)		=> (T:integer)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive remainder
     (safe)
@@ -4674,7 +4678,7 @@
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
    ((T:integer T:integer)		=> (T:integer)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive quotient
     (safe)
@@ -4683,7 +4687,7 @@
    ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
    ((T:integer T:integer)		=> (T:integer)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free result-true)))
 
 (declare-core-primitive div-and-mod
     (safe)
