@@ -3452,7 +3452,15 @@
    ((V x)
     (cogen-value-+ x (K 1))))
 
+ (define-core-primitive-operation $add1-fixnum unsafe
+   ((V x)
+    (cogen-value-+ x (K 1))))
+
  (define-core-primitive-operation sub1 safe
+   ((V x)
+    (cogen-value-+ x (K -1))))
+
+ (define-core-primitive-operation $sub1-fixnum unsafe
    ((V x)
     (cogen-value-+ x (K -1))))
 

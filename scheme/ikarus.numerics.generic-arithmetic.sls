@@ -1158,45 +1158,113 @@
   #| end of module: $add-number-number |# )
 
 
-(module ($add1-integer
+(module (add1
+	 error@add1
+	 $add1-integer
 	 $add1-fixnum
 	 $add1-bignum)
 
-  (define ($add1-integer x)
-    (define who '$add1-integer)
+  (define (add1 x)
+    ;;By importing  the library  here we  shadow the binding  ADD1, causing  the form
+    ;;"(add1 x)" to be processed as  application of the core primitive operation ADD1
+    ;;(the assembly code of the primitive operation is integrated in the body of this
+    ;;function).
+    ;;
+    ;;The primitive operation is equivalent to:
+    ;;
+    ;;   (fx+ x 1)
+    ;;
+    (import (only (vicare) add1))
+    (add1 x))
+
+  (define (error@add1 x)
+    ;;This is  the function invoked  by the interrupt  handler of the  core primitive
+    ;;operation ADD1; this  handler is invoked whenever the operand  is not a fixnum.
+    ;;For details  about this interrupt  handler procedure: scan the  compiler's code
+    ;;for the string "error@add1".
+    ;;
+    ;;By  importing the  library here  we shadow  the bindings  defined in  this very
+    ;;library,  causing  the  forms  below  to   be  processed  by  the  compiler  as
+    ;;applications of the core primitive operations, when possible.
+    ;;
+    (import (vicare))
+    (cond ((fixnum? x)	(+ (greatest-fixnum) 1))
+	  ((bignum? x)	($add1-bignum x))
+	  ((number? x)  ($add-number-fixnum x 1))
+	  (else
+	   (procedure-argument-violation 'add1 "not a number" x))))
+
+  (define* ($add1-integer x)
     (cond-exact-integer-operand x
       ((fixnum?)	($add1-fixnum x))
       ((bignum?)	($add1-bignum x))
       (else
-       (err who x))))
+       (err __who__ x))))
 
   (define ($add1-fixnum x)
+    ;;This is also a core primitive operation.
+    ;;
     ($add-fixnum-fixnum x 1))
 
   (define ($add1-bignum x)
     ($add-bignum-fixnum x 1))
 
-  #| end of module: $add1-integer |# )
+  #| end of module: ADD1 |# )
 
-(module ($sub1-integer
+;;; --------------------------------------------------------------------
+
+(module (sub1
+	 error@sub1
+	 $sub1-integer
 	 $sub1-fixnum
 	 $sub1-bignum)
 
-  (define ($sub1-integer x)
-    (define who '$sub1-integer)
+  (define (sub1 x)
+    ;;By importing  the library  here we  shadow the binding  SUB1, causing  the form
+    ;;"(sub1 x)" to be processed as  application of the core primitive operation SUB1
+    ;;(the assembly code of the primitive operation is integrated in the body of this
+    ;;function).
+    ;;
+    ;;The primitive operation is equivalent to:
+    ;;
+    ;;   (fx- x 1)
+    ;;
+    (import (only (vicare) sub1))
+    (sub1 x))
+
+  (define (error@sub1 x)
+    ;;This is  the function invoked  by the interrupt  handler of the  core primitive
+    ;;operation SUB1; this  handler is invoked whenever the operand  is not a fixnum.
+    ;;For details  about this interrupt  handler procedure: scan the  compiler's code
+    ;;for the string "error@sub1".
+    ;;
+    ;;By  importing the  library here  we shadow  the bindings  defined in  this very
+    ;;library,  causing  the  forms  below  to   be  processed  by  the  compiler  as
+    ;;applications of the core primitive operations, when possible.
+    ;;
+    (import (vicare))
+    (cond ((fixnum? x)	(- (least-fixnum) 1))
+	  ((bignum? x)	($sub1-bignum x))
+	  ((number? x)  ($sub-number-fixnum x 1))
+	  (else
+	   (procedure-argument-violation 'sub1 "not a number" x))))
+
+  (define* ($sub1-integer x)
     (cond-exact-integer-operand x
       ((fixnum?)	($sub1-fixnum x))
       ((bignum?)	($sub1-bignum x))
       (else
-       (err who x))))
+       (err __who__ x))))
 
   (define ($sub1-fixnum x)
+    ;;This is also a core primitive operation.
+    ;;
     ($sub-fixnum-fixnum x 1))
 
   (define ($sub1-bignum x)
     ($sub-bignum-fixnum x 1))
 
-  #| end of module: $sub1-integer |# )
+  #| end of module: SUB1 |# )
 
 
 (module ($sub-number-number
@@ -6714,55 +6782,6 @@
   ;;
   (>= (* ($ratnum-n x) ($ratnum-d y))
       (* ($ratnum-n y) ($ratnum-d x))))
-
-
-(define (error@add1 x)
-  ;;This is the error handler  function called when an interrupt happens
-  ;;while  executing the  primitive operation  ADD1.  For  details about
-  ;;this  error  procedure: scan  the  compiler's  code for  the  string
-  ;;"error@add1".
-  ;;
-  ;;By importing  the library here  we shadow the bindings,  causing the
-  ;;forms  below to  be expanded  by  the optimizer  with the  primitive
-  ;;operations.
-  (import (vicare))
-  (cond ((fixnum? x)	(+ (greatest-fixnum) 1))
-	((number? x)	(+ x 1))
-	(else
-	 (procedure-argument-violation 'add1 "not a number" x))))
-
-(define (add1 x)
-  ;;By importing  the library here  we shadow the binding  ADD1, causing
-  ;;the form  below to be expanded  by the optimizer with  the primitive
-  ;;operation  ADD1 (the  assembly code  of the  primitive operation  is
-  ;;integrated in the body of this function).
-  ;;
-  (import (only (vicare) add1))
-  (add1 x))
-
-(define (error@sub1 x)
-  ;;This is the error handler  function called when an interrupt happens
-  ;;while  executing the  primitive operation  SUB1.  For  details about
-  ;;this  error  procedure: scan  the  compiler's  code for  the  string
-  ;;"error@sub1".
-  ;;
-  ;;By importing  the library here  we shadow the bindings,  causing the
-  ;;forms  below to  be expanded  by  the optimizer  with the  primitive
-  ;;operations.
-  (import (vicare))
-  (cond ((fixnum? x)	(- (least-fixnum) 1))
-	((number? x)	(- x 1))
-	(else
-	 (procedure-argument-violation 'sub1 "not a number" x))))
-
-(define (sub1 x)
-  ;;By importing  the library here  we shadow the binding  SUB1, causing
-  ;;the form  below to be expanded  by the optimizer with  the primitive
-  ;;operation  SUB1 (the  assembly code  of the  primitive operation  is
-  ;;integrated in the body of this function).
-  ;;
-  (import (only (vicare) sub1))
-  (sub1 x))
 
 
 ;;;; generic numbers sign predicates
