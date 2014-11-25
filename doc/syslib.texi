@@ -1279,7 +1279,10 @@ level operations on numbers.
 * syslib numerics bitand::      Bitwise logic and.
 * syslib numerics bitior::      Bitwise logic inclusive or.
 * syslib numerics bitxor::      Bitwise logic exclusive or.
+* syslib numerics floor::       Floor rounding.
 * syslib numerics ceiling::     Ceiling rounding.
+* syslib numerics truncate::    Truncate rounding.
+* syslib numerics round::       Round rounding.
 @end menu
 
 @c page
@@ -5083,6 +5086,32 @@ bignum @varii{bn}.
 @end deffn
 
 @c page
+@node syslib numerics floor
+@subsection Floor rounding
+
+
+@deffn {Unsafe Operation} $floor-fixnum @var{FX}
+Rounding as defined by @func{floor}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $floor-bignum @var{BN}
+Rounding as defined by @func{floor}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $floor-flonum @var{FL}
+Rounding as defined by @func{floor}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $floor-ratnum @var{RN}
+Rounding as defined by @func{floor}.  Return an exact integer.
+@end deffn
+
+@c page
 @node syslib numerics ceiling
 @subsection Ceiling rounding
 
@@ -5106,6 +5135,58 @@ Rounding as defined by @func{ceiling}.  Return a flonum.
 
 @deffn {Unsafe Operation} $ceiling-ratnum @var{RN}
 Rounding as defined by @func{ceiling}.  Return an exact integer.
+@end deffn
+
+@c page
+@node syslib numerics truncate
+@subsection Truncate rounding
+
+
+@deffn {Unsafe Operation} $truncate-fixnum @var{FX}
+Rounding as defined by @func{truncate}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $truncate-bignum @var{BN}
+Rounding as defined by @func{truncate}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $truncate-flonum @var{FL}
+Rounding as defined by @func{truncate}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $truncate-ratnum @var{RN}
+Rounding as defined by @func{truncate}.  Return an exact integer.
+@end deffn
+
+@c page
+@node syslib numerics round
+@subsection Round rounding
+
+
+@deffn {Unsafe Operation} $round-fixnum @var{FX}
+Rounding as defined by @func{round}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $round-bignum @var{BN}
+Rounding as defined by @func{round}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $round-flonum @var{FL}
+Rounding as defined by @func{round}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $round-ratnum @var{RN}
+Rounding as defined by @func{round}.  Return an exact integer.
 @end deffn
 
 @c page

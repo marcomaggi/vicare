@@ -388,8 +388,11 @@
     $bitwise-xor-bignum-fixnum		$bitwise-xor-bignum-bignum
 
     ;; rounding
+    $floor-fixnum	$floor-bignum		$floor-ratnum		$floor-flonum
     $ceiling-fixnum	$ceiling-bignum		$ceiling-ratnum		$ceiling-flonum
-    )
+    $truncate-fixnum	$truncate-bignum	$truncate-ratnum	$truncate-flonum
+    $round-fixnum	$round-bignum		$round-ratnum		$round-flonum
+    #| end of EXPORT |# )
 
 
 (import (except (vicare)
@@ -7978,7 +7981,11 @@
      (%error-not-real-number x))))
 
 
-(module (floor)
+(module (floor
+	 $floor-fixnum
+	 $floor-bignum
+	 $floor-ratnum
+	 $floor-flonum)
   ;;Return the largest  integer object not larger than  X.  Return exact
   ;;objects for exact operands and inexact objects for inexact operands.
   ;;
@@ -7992,6 +7999,12 @@
       ((ratnum?)	($floor-ratnum x))
       (else
        (%error-not-real-number x))))
+
+  (define ($floor-fixnum x)
+    x)
+
+  (define ($floor-bignum x)
+    x)
 
   (define ($floor-ratnum x)
     (let ((x.num ($ratnum-n x))
@@ -8052,7 +8065,11 @@
   #| end of module |# )
 
 
-(module (round)
+(module (round
+	 $round-fixnum
+	 $round-bignum
+	 $round-ratnum
+	 $round-flonum)
   ;;Return the  integer object  closest to  X; round to  even when  X is
   ;;halfway.   Return  exact  objects  for exact  operands  and  inexact
   ;;objects for inexact operands.
@@ -8067,6 +8084,14 @@
       ((ratnum?)	($round-ratnum x))
       (else
        (%error-not-real-number x))))
+
+  (define ($round-fixnum x)
+    x)
+
+  (define ($round-bignum x)
+    x)
+
+  (define $round-flonum $flround)
 
   (define ($round-ratnum x)
     (let ((x.num ($ratnum-n x))
@@ -8086,7 +8111,11 @@
   #| end of module |# )
 
 
-(module (truncate)
+(module (truncate
+	 $truncate-fixnum
+	 $truncate-bignum
+	 $truncate-ratnum
+	 $truncate-flonum)
   ;;Return the integer  object closest to X whose absolute  value is not
   ;;larger than the absolute value of X.
   ;;
@@ -8100,6 +8129,12 @@
       ((ratnum?)	($truncate-ratnum x))
       (else
        (%error-not-real-number x))))
+
+  (define ($truncate-fixnum x)
+    x)
+
+  (define ($truncate-bignum x)
+    x)
 
   (define ($truncate-ratnum x)
     (let ((x.num ($ratnum-n x))

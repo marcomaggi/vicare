@@ -3802,10 +3802,25 @@
     ($bitwise-xor-bignum-fixnum			$numerics)
     ($bitwise-xor-bignum-bignum			$numerics)
 
+    ($floor-fixnum				$numerics)
+    ($floor-bignum				$numerics)
+    ($floor-ratnum				$numerics)
+    ($floor-flonum				$numerics)
+
     ($ceiling-fixnum				$numerics)
     ($ceiling-bignum				$numerics)
     ($ceiling-ratnum				$numerics)
     ($ceiling-flonum				$numerics)
+
+    ($truncate-fixnum				$numerics)
+    ($truncate-bignum				$numerics)
+    ($truncate-ratnum				$numerics)
+    ($truncate-flonum				$numerics)
+
+    ($round-fixnum				$numerics)
+    ($round-bignum				$numerics)
+    ($round-ratnum				$numerics)
+    ($round-flonum				$numerics)
 
 ;;; --------------------------------------------------------------------
 ;;; (vicare system $hashtables)
