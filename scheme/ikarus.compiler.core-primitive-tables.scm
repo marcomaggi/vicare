@@ -4124,8 +4124,6 @@
  inexact->exact
 
 
- gcd
- lcm
 
  fxadd1-error
  fxsub1-error
@@ -4616,6 +4614,88 @@
    $sub1-fixnum
    $sub1-bignum
    $sub1-integer))
+
+;;;
+
+(declare-core-primitive gcd
+    (safe)
+  (signatures
+   (()					=> (T:fixnum))
+
+   ((T:fixnum)				=> (T:fixnum))
+   ((T:bignum)				=> (T:bignum))
+   ((T:flonum)				=> (T:flonum))
+   ((T:exact-integer)			=> (T:exact-integer))
+   ((T:real)				=> (T:real))
+
+   ((T:fixnum T:fixnum)			=> (T:exact-integer))
+   ((T:fixnum T:bignum)			=> (T:exact-integer))
+   ((T:fixnum T:flonum)			=> (T:flonum))
+
+   ((T:bignum T:fixnum)			=> (T:exact-integer))
+   ((T:bignum T:bignum)			=> (T:exact-integer))
+   ((T:bignum T:flonum)			=> (T:flonum))
+
+   ((T:flonum T:fixnum)			=> (T:flonum))
+   ((T:flonum T:bignum)			=> (T:flonum))
+   ((T:flonum T:flonum)			=> (T:flonum))
+
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:real T:real)			=> (T:real))
+
+   ((T:real T:real T:real . T:real)	=> (T:real)))
+  (attributes
+   (()					foldable effect-free result-true)
+   ((_)					foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)
+   ((_ _ _ . _)				foldable effect-free result-true))
+  (replacements
+   $gcd-fixnum-fixnum $gcd-fixnum-bignum $gcd-fixnum-flonum
+   $gcd-bignum-fixnum $gcd-bignum-bignum $gcd-bignum-flonum
+   $gcd-flonum-fixnum $gcd-flonum-bignum $gcd-flonum-flonum
+   $gcd-fixnum-number $gcd-bignum-number $gcd-flonum-number
+   $gcd-number-fixnum $gcd-number-bignum $gcd-number-flonum
+   $gcd-number-number))
+
+(declare-core-primitive lcm
+    (safe)
+  (signatures
+   (()					=> (T:fixnum))
+
+   ((T:fixnum)				=> (T:fixnum))
+   ((T:bignum)				=> (T:bignum))
+   ((T:flonum)				=> (T:flonum))
+   ((T:exact-integer)			=> (T:exact-integer))
+   ((T:real)				=> (T:real))
+
+   ((T:fixnum T:fixnum)			=> (T:exact-integer))
+   ((T:fixnum T:bignum)			=> (T:exact-integer))
+   ((T:fixnum T:flonum)			=> (T:flonum))
+
+   ((T:bignum T:fixnum)			=> (T:exact-integer))
+   ((T:bignum T:bignum)			=> (T:exact-integer))
+   ((T:bignum T:flonum)			=> (T:flonum))
+
+   ((T:flonum T:fixnum)			=> (T:flonum))
+   ((T:flonum T:bignum)			=> (T:flonum))
+   ((T:flonum T:flonum)			=> (T:flonum))
+
+   ((T:exact-integer T:exact-integer)	=> (T:exact-integer))
+   ((T:real T:real)			=> (T:real))
+
+   ((T:real T:real T:real . T:real)	=> (T:real)))
+  (attributes
+   (()					foldable effect-free result-true)
+   ((_)					foldable effect-free result-true)
+   ((_ _)				foldable effect-free result-true)
+   ((_ _ _ . _)				foldable effect-free result-true))
+  (replacements
+   $lcm-fixnum-fixnum $lcm-fixnum-bignum $lcm-fixnum-flonum
+   $lcm-bignum-fixnum $lcm-bignum-bignum $lcm-bignum-flonum
+   $lcm-flonum-fixnum $lcm-flonum-bignum $lcm-flonum-flonum
+   $lcm-fixnum-number $lcm-bignum-number $lcm-flonum-number
+   $lcm-number-fixnum $lcm-number-bignum $lcm-number-flonum
+   $lcm-number-number))
 
 ;;; --------------------------------------------------------------------
 ;;; exactness
