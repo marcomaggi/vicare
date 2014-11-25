@@ -4118,10 +4118,6 @@
  quotient
 
 
- exact
- inexact
- exact->inexact
- inexact->exact
 
 
 
@@ -4700,26 +4696,69 @@
 ;;; --------------------------------------------------------------------
 ;;; exactness
 
-(declare-core-primitive inexact->exact
-    (safe)
-  (signatures
-   ((T:number)		=> (T:exact)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
-
 (declare-core-primitive exact
     (safe)
   (signatures
+   ((T:fixnum)		=> (T:fixnum))
+   ((T:bignum)		=> (T:bignum))
+   ((T:flonum)		=> (T:exact-integer))
+   ((T:ratnum)		=> (T:ratnum))
+   ((T:compnum)		=> (T:exact-compnum))
+   ((T:cflonum)		=> (T:exact-compnum))
+   ((T:real)		=> (T:exact-integer))
    ((T:number)		=> (T:exact)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ((_)			foldable effect-free result-true))
+  (replacements
+   $exact-fixnum $exact-bignum $exact-flonum $exact-ratnum $exact-compnum $exact-cflonum))
 
 (declare-core-primitive inexact
     (safe)
   (signatures
+   ((T:fixnum)		=> (T:flonum))
+   ((T:bignum)		=> (T:flonum))
+   ((T:flonum)		=> (T:flonum))
+   ((T:ratnum)		=> (T:flonum))
+   ((T:compnum)		=> (T:cflonum))
+   ((T:cflonum)		=> (T:cflonum))
+   ((T:real)		=> (T:flonum))
    ((T:number)		=> (T:inexact)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ((_)			foldable effect-free result-true))
+  (replacements
+   $inexact-fixnum $inexact-bignum $inexact-flonum $inexact-ratnum $inexact-compnum $inexact-cflonum))
+
+(declare-core-primitive inexact->exact
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:fixnum))
+   ((T:bignum)		=> (T:bignum))
+   ((T:flonum)		=> (T:exact-integer))
+   ((T:ratnum)		=> (T:ratnum))
+   ((T:compnum)		=> (T:exact-compnum))
+   ((T:cflonum)		=> (T:exact-compnum))
+   ((T:real)		=> (T:exact-integer))
+   ((T:number)		=> (T:exact)))
+  (attributes
+   ((_)			foldable effect-free result-true))
+  (replacements
+   $exact-fixnum $exact-bignum $exact-flonum $exact-ratnum $exact-compnum $exact-cflonum))
+
+(declare-core-primitive exact->inexact
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:flonum))
+   ((T:bignum)		=> (T:flonum))
+   ((T:flonum)		=> (T:flonum))
+   ((T:ratnum)		=> (T:flonum))
+   ((T:compnum)		=> (T:cflonum))
+   ((T:cflonum)		=> (T:cflonum))
+   ((T:real)		=> (T:flonum))
+   ((T:number)		=> (T:inexact)))
+  (attributes
+   ((_)			foldable effect-free result-true))
+  (replacements
+   $inexact-fixnum $inexact-bignum $inexact-flonum $inexact-ratnum $inexact-compnum $inexact-cflonum))
 
 ;;; --------------------------------------------------------------------
 ;;; parts
@@ -5795,6 +5834,106 @@
 (declare-unsafe-unary-operation $sign-bignum		T:bignum	T:fixnum)
 (declare-unsafe-unary-operation $sign-flonum		T:flonum	T:flonum)
 (declare-unsafe-unary-operation $sign-ratnum		T:ratnum	T:fixnum)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $exact-fixnum
+    (unsafe)
+  (signatures
+   ((T:positive-fixnum)		=> (T:positive-fixnum))
+   ((T:negative-fixnum)		=> (T:negative-fixnum))
+   ((T:non-positive-fixnum)	=> (T:non-positive-fixnum))
+   ((T:non-negative-fixnum)	=> (T:non-negative-fixnum))
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $exact-bignum
+    (unsafe)
+  (signatures
+   ((T:positive-bignum)		=> (T:positive-bignum))
+   ((T:negative-bignum)		=> (T:negative-bignum))
+   ((T:bignum)			=> (T:bignum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $exact-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $exact-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum)			=> (T:ratnum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $exact-compnum
+    (unsafe)
+  (signatures
+   ((T:compnum)			=> (T:exact-compnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $exact-cflonum
+    (unsafe)
+  (signatures
+   ((T:cflonum)			=> (T:exact-compnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $inexact-fixnum
+    (unsafe)
+  (signatures
+   ((T:positive-fixnum)		=> (T:positive-flonum))
+   ((T:negative-fixnum)		=> (T:negative-flonum))
+   ((T:non-positive-fixnum)	=> (T:non-positive-flonum))
+   ((T:non-negative-fixnum)	=> (T:non-negative-flonum))
+   ((T:fixnum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $inexact-bignum
+    (unsafe)
+  (signatures
+   ((T:positive-bignum)		=> (T:positive-flonum))
+   ((T:negative-bignum)		=> (T:negative-flonum))
+   ((T:bignum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $inexact-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
+
+(declare-core-primitive $inexact-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $inexact-compnum
+    (unsafe)
+  (signatures
+   ((T:compnum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $inexact-cflonum
+    (unsafe)
+  (signatures
+   ((T:cflonum)			=> (T:cflonum)))
+  (attributes
+   ((_)				foldable effect-free result-true identity)))
 
 ;;; --------------------------------------------------------------------
 

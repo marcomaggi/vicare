@@ -98,15 +98,17 @@
    T:fixnum		T:bignum		T:ratnum
    T:flonum		T:flonum-integer	T:flonum-fractional
    T:flonum-finite	T:flonum-infinite	T:flonum-nan
-   T:compnum		T:cflonum
+   T:cflonum
    T:exact-integer
    T:real		T:exact-real
+   T:compnum		T:exact-compnum
    T:complex
 
    T:zero	T:positive	T:negative	T:non-positive	T:non-negative
 
    T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
    T:positive-bignum	T:negative-bignum
+   T:positive-flonum	T:negative-flonum	T:non-positive-flonum	T:non-negative-flonum
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
@@ -160,15 +162,17 @@
    T:fixnum?		T:bignum?		T:ratnum?
    T:flonum?		T:flonum-integer?	T:flonum-fractional?
    T:flonum-finite?	T:flonum-infinite?	T:flonum-nan?
-   T:compnum?		T:cflonum?
+   T:cflonum?
    T:exact-integer?
    T:real?		T:exact-real?
+   T:compnum?		T:exact-compnum?
    T:complex?
 
    T:zero?	T:positive?	T:negative?	T:non-positive?	T:non-negative?
 
    T:positive-fixnum?	T:negative-fixnum?	T:non-positive-fixnum?	T:non-negative-fixnum?
    T:positive-bignum?	T:negative-bignum?
+   T:positive-flonum?	T:negative-flonum?	T:non-positive-flonum?	T:non-negative-flonum?
 
    T:pointer/false?	T:string/false?		T:number/false?		T:fixnum/false?
 
@@ -668,6 +672,27 @@
 
 (define-underspecified-core-type T:negative-bignum
   (core-type-tag-and* T:bignum T:negative))
+
+;;; --------------------------------------------------------------------
+;;; more flonum types
+
+(define-underspecified-core-type T:positive-flonum
+  (core-type-tag-and* T:flonum T:positive))
+
+(define-underspecified-core-type T:negative-flonum
+  (core-type-tag-and* T:flonum T:negative))
+
+(define-underspecified-core-type T:non-positive-flonum
+  (core-type-tag-and* T:flonum T:non-positive))
+
+(define-underspecified-core-type T:non-negative-flonum
+  (core-type-tag-and* T:flonum T:non-negative))
+
+;;; --------------------------------------------------------------------
+;;; more numeric types
+
+(define-underspecified-core-type T:exact-compnum
+  (core-type-tag-and* T:compnum T:exact))
 
 ;;; --------------------------------------------------------------------
 

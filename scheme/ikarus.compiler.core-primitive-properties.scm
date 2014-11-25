@@ -348,15 +348,17 @@
 	 T:fixnum		T:bignum		T:ratnum
 	 T:flonum		T:flonum-integer	T:flonum-fractional
 	 T:flonum-finite	T:flonum-infinite	T:flonum-nan
-	 T:compnum		T:cflonum
+	 T:cflonum
 	 T:exact-integer
 	 T:real			T:exact-real
+	 T:compnum		T:exact-compnum
 	 T:complex
 
 	 T:zero		T:positive	T:negative	T:non-positive		T:non-negative
 
 	 T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
 	 T:positive-bignum	T:negative-bignum
+	 T:positive-flonum	T:negative-flonum	T:non-positive-flonum	T:non-negative-flonum
 
 	 T:pointer/false	T:string/false		T:number/false		T:fixnum/false)
       (T:object				#f)
@@ -429,6 +431,7 @@
       (T:non-negative			type)
       (T:exact-integer			type)
       (T:real				type)
+      (T:exact-compnum			type)
       (T:exact-real			type)
       (T:complex			type)
       (T:positive-fixnum		type)
@@ -437,6 +440,10 @@
       (T:non-negative-fixnum		type)
       (T:positive-bignum		type)
       (T:negative-bignum		type)
+      (T:positive-flonum		type)
+      (T:negative-flonum		type)
+      (T:non-positive-flonum		type)
+      (T:non-negative-flonum		type)
 
       (T:pointer/false			type)
       (T:string/false			type)
