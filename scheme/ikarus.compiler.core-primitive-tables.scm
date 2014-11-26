@@ -777,7 +777,31 @@
 
 ;;;; syntax helpers: bytevectors
 
+(define-syntax declare-safe-bytevector-conversion
+  ;;Usage examples:
+  ;;
+  ;;   (declare-safe-bytevector-conversion uri-encode T:bytevector)
+  ;;   (declare-safe-bytevector-conversion uri-decode T:bytevector)
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?return-value-tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((T:bytevector)		=> (?return-value-tag)))
+       (attributes
+	;;Not foldable because it must return a new bytevector every time.
+	((_)			effect-free result-true))))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define-syntax declare-unsafe-bytevector-accessor
+  ;;Usage examples:
+  ;;
+  ;;   (declare-unsafe-bytevector-accessor $bytevector-u8-ref T:octet)
+  ;;   (declare-unsafe-bytevector-accessor $bytevector-s8-ref T:byte)
+  ;;
   (syntax-rules ()
     ((_ ?who ?return-value-tag)
      (declare-core-primitive ?who
@@ -789,6 +813,10 @@
     ))
 
 (define-syntax declare-unsafe-bytevector-mutator
+  ;;Usage examples:
+  ;;
+  ;;   (declare-unsafe-bytevector-mutator $bytevector-set! T:octet/byte)
+  ;;
   (syntax-rules ()
     ((_ ?who ?new-value-tag)
      (declare-core-primitive ?who
@@ -798,6 +826,11 @@
     ))
 
 (define-syntax declare-unsafe-bytevector-conversion
+  ;;Usage examples:
+  ;;
+  ;;   (declare-unsafe-bytevector-conversion $uri-encode T:bytevector)
+  ;;   (declare-unsafe-bytevector-conversion $uri-decode T:bytevector)
+  ;;
   (syntax-rules ()
     ((_ ?who ?return-value-tag)
      (declare-core-primitive ?who
@@ -2782,7 +2815,13 @@
 
 (declare-type-predicate string? T:string)
 
-(declare-string-predicate string-empty?)
+(declare-string-predicate string-empty?			(replacements $string-empty?))
+
+(declare-string-predicate ascii-encoded-string?		(replacements $ascii-encoded-string?))
+(declare-string-predicate latin1-encoded-string?	(replacements $latin1-encoded-string?))
+(declare-string-predicate octets-encoded-string?	(replacements $octets-encoded-string?))
+(declare-string-predicate uri-encoded-string?		(replacements $uri-encoded-string?))
+(declare-string-predicate percent-encoded-string?	(replacements $percent-encoded-string?))
 
 ;;; --------------------------------------------------------------------
 ;;; constructors
@@ -3017,6 +3056,30 @@
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
    ((_ _)			effect-free result-true)))
+
+(let-syntax
+    ((declare-string->bytevector-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:string)		=> (T:bytevector)))
+	   (attributes
+	    ;;Not  foldable  because  it  must  return  a  new  bytevector  at  every
+	    ;;application.
+	    ((_ )		effect-free result-true))))
+	)))
+  (declare-string->bytevector-conversion string->latin1)
+  (declare-string->bytevector-conversion string->ascii)
+  (declare-string->bytevector-conversion string->octets)
+  (declare-string->bytevector-conversion string->uri-encoding)
+  (declare-string->bytevector-conversion string->percent-encoding)
+  (declare-string->bytevector-conversion string-hex->bytevector)
+  (declare-string->bytevector-conversion string-base64->bytevector)
+  #| end of LET-SYNTAX |# )
+
+;;;
 
 (declare-core-primitive string->symbol
     (safe)
@@ -3468,10 +3531,76 @@
 
 
 ;;;; bytevectors, safe functions
-;;
-;;According to  R6RS: MAKE-BYTEVECTOR must return  a newly allocated string  at every
-;;invocation; so it is not foldable.
-;;
+
+#|
+ bytevector-copy
+ bytevector-copy!
+ bytevector-fill!
+ bytevector-length
+ bytevector-length?
+ bytevector-index?
+ bytevector-word-size?
+ bytevector-word-count?
+ bytevector-index-for-word?
+ bytevector-index-for-word8?
+ bytevector-index-for-word16?
+ bytevector-index-for-word32?
+ bytevector-index-for-word64?
+ bytevector-start-index-and-count-for-word?
+ bytevector-start-index-and-count-for-word8?
+ bytevector-start-index-and-count-for-word16?
+ bytevector-start-index-and-count-for-word32?
+ bytevector-start-index-and-count-for-word64?
+ list-of-bytevectors?
+ f4l-list->bytevector
+ f4b-list->bytevector
+ f4n-list->bytevector
+ f8l-list->bytevector
+ f8b-list->bytevector
+ f8n-list->bytevector
+ c4l-list->bytevector
+ c4b-list->bytevector
+ c4n-list->bytevector
+ c8l-list->bytevector
+ c8b-list->bytevector
+ c8n-list->bytevector
+ subbytevector-u8
+ subbytevector-u8/count
+ subbytevector-s8
+ subbytevector-s8/count
+ bytevector-append
+ bytevector-reverse-and-concatenate
+ native-endianness
+ sint-list->bytevector
+ u8-list->bytevector
+ s8-list->bytevector
+ u16l-list->bytevector
+ u16b-list->bytevector
+ u16n-list->bytevector
+ s16l-list->bytevector
+ s16b-list->bytevector
+ s16n-list->bytevector
+ u32l-list->bytevector
+ u32b-list->bytevector
+ u32n-list->bytevector
+ s32l-list->bytevector
+ s32b-list->bytevector
+ s32n-list->bytevector
+ u64l-list->bytevector
+ u64b-list->bytevector
+ u64n-list->bytevector
+ s64l-list->bytevector
+ s64b-list->bytevector
+ s64n-list->bytevector
+ uint-list->bytevector
+ utf8->string
+ utf16->string
+ utf16le->string
+ utf16n->string
+ utf16be->string
+ utf32->string
+
+|#
 
 (declare-core-primitive make-bytevector
     (safe)
@@ -3485,6 +3614,20 @@
    ((_ _)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-type-predicate bytevector? T:bytevector)
+
+(declare-bytevector-predicate bytevector-empty?			(replacements $bytevector-empty?))
+
+(declare-bytevector-predicate ascii-encoded-bytevector?		(replacements $ascii-encoded-bytevector?))
+(declare-bytevector-predicate latin1-encoded-bytevector?	(replacements $latin1-encoded-bytevector?))
+(declare-bytevector-predicate octets-encoded-bytevector?	(replacements $octets-encoded-bytevector?))
+(declare-bytevector-predicate uri-encoded-bytevector?		(replacements $uri-encoded-bytevector?))
+(declare-bytevector-predicate percent-encoded-bytevector?	(replacements $percent-encoded-bytevector?))
+
+;;; --------------------------------------------------------------------
+;;; inspection
 
 (declare-core-primitive bytevector-length
     (safe)
@@ -3494,20 +3637,253 @@
    ((_)			foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
+;;; comparison
 
-(declare-core-primitive bytevector-u8-ref
-    (safe)
-  (signatures
-   ((T:bytevector T:fixnum)	=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-bytevector-binary-comparison bytevector=?	(replacements $bytevector=))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
 
 (declare-core-primitive bytevector-s8-ref
     (safe)
   (signatures
-   ((T:bytevector T:fixnum)	=> (T:fixnum)))
+   ((T:bytevector T:fixnum)	=> (T:byte)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bytevector-u8-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum)	=> (T:octet)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(let-syntax
+    ((declare-safe-bytevector-accessor
+      (syntax-rules ()
+	((_ ?who ?return-value-tag)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector T:fixnum)	=> (?return-value-tag)))
+	   (attributes
+	    ((_ _)			foldable effect-free result-true))))
+	)))
+  (declare-safe-bytevector-accessor bytevector-s16-native-ref		T:sint16)
+  (declare-safe-bytevector-accessor bytevector-u16-native-ref		T:uint16)
+  (declare-safe-bytevector-accessor bytevector-s32-native-ref		T:sint32)
+  (declare-safe-bytevector-accessor bytevector-u32-native-ref		T:uint32)
+  (declare-safe-bytevector-accessor bytevector-s64-native-ref		T:sint64)
+  (declare-safe-bytevector-accessor bytevector-u64-native-ref		T:sint64)
+  (declare-safe-bytevector-accessor bytevector-ieee-double-native-ref	T:flonum)
+  (declare-safe-bytevector-accessor bytevector-ieee-single-native-ref	T:flonum)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-safe-bytevector-accessor
+      (syntax-rules ()
+	((_ ?who ?return-value-tag)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector T:fixnum T:symbol)	=> (?return-value-tag)))
+	   (attributes
+	    ((_ _)			foldable effect-free result-true))))
+	)))
+  (declare-safe-bytevector-accessor bytevector-s16-ref		T:sint16)
+  (declare-safe-bytevector-accessor bytevector-u16-ref		T:uint16)
+  (declare-safe-bytevector-accessor bytevector-s32-ref		T:sint32)
+  (declare-safe-bytevector-accessor bytevector-u32-ref		T:uint32)
+  (declare-safe-bytevector-accessor bytevector-s64-ref		T:sint64)
+  (declare-safe-bytevector-accessor bytevector-u64-ref		T:sint64)
+  (declare-safe-bytevector-accessor bytevector-ieee-double-ref	T:flonum)
+  (declare-safe-bytevector-accessor bytevector-ieee-single-ref	T:flonum)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive bytevector-sint-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum T:symbol T:positive-fixnum)	=> (T:exact-integer)))
+  (attributes
+   ((_ _ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bytevector-uint-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer)))
+  (attributes
+   ((_ _ _ _)			foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive bytevector-s8-set!
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum T:byte)	=> (T:void))))
+
+(declare-core-primitive bytevector-u8-set!
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum T:octet)	=> (T:void))))
+
+(let-syntax
+    ((declare-safe-bytevector-mutator
+      (syntax-rules ()
+	((_ ?who ?new-value-tag)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector T:fixnum ?new-value-tag)	=> (T:void)))))
+	)))
+  (declare-safe-bytevector-mutator bytevector-s16-native-set!		T:sint16)
+  (declare-safe-bytevector-mutator bytevector-u16-native-set!		T:uint16)
+  (declare-safe-bytevector-mutator bytevector-s32-native-set!		T:sint32)
+  (declare-safe-bytevector-mutator bytevector-u32-native-set!		T:uint32)
+  (declare-safe-bytevector-mutator bytevector-s64-native-set!		T:sint64)
+  (declare-safe-bytevector-mutator bytevector-u64-native-set!		T:uint64)
+  (declare-safe-bytevector-mutator bytevector-ieee-double-native-set!	T:flonum)
+  (declare-safe-bytevector-mutator bytevector-ieee-single-native-set!	T:flonum)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-safe-bytevector-mutator
+      (syntax-rules ()
+	((_ ?who ?new-value-tag)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector T:fixnum ?new-value-tag T:symbol)	=> (T:void)))))
+	)))
+  (declare-safe-bytevector-mutator bytevector-s16-set!		T:sint16)
+  (declare-safe-bytevector-mutator bytevector-u16-set!		T:uint16)
+  (declare-safe-bytevector-mutator bytevector-s32-set!		T:sint32)
+  (declare-safe-bytevector-mutator bytevector-u32-set!		T:uint32)
+  (declare-safe-bytevector-mutator bytevector-s64-set!		T:sint64)
+  (declare-safe-bytevector-mutator bytevector-u64-set!		T:uint64)
+  (declare-safe-bytevector-mutator bytevector-ieee-double-set!	T:flonum)
+  (declare-safe-bytevector-mutator bytevector-ieee-single-set!	T:flonum)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive bytevector-sint-set!
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:exact-integer))))
+
+(declare-core-primitive bytevector-uint-set!
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer))))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(let-syntax
+    ((declare-bytevector->string-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector)	=> (T:string)))
+	   (attributes
+	    ;;Not foldable because it must return a new string at every application.
+	    ((_) 		effect-free result-true))))
+	)))
+  (declare-bytevector->string-conversion ascii->string)
+  (declare-bytevector->string-conversion bytevector->string-base64)
+  (declare-bytevector->string-conversion bytevector->string-hex)
+  (declare-bytevector->string-conversion latin1->string)
+  (declare-bytevector->string-conversion octets->string)
+  (declare-bytevector->string-conversion percent-encoding->string)
+  (declare-bytevector->string-conversion uri-encoding->string)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-bytevector->bytevector-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector)	=> (T:bytevector)))
+	   (attributes
+	    ;;Not foldable because it must return a new string at every application.
+	    ((_) 		effect-free result-true))))
+	)))
+  (declare-bytevector->bytevector-conversion uri-decode)
+  (declare-bytevector->bytevector-conversion uri-encode)
+  (declare-bytevector->bytevector-conversion base64->bytevector)
+  (declare-bytevector->bytevector-conversion bytevector->base64)
+  (declare-bytevector->bytevector-conversion bytevector->hex)
+  (declare-bytevector->bytevector-conversion hex->bytevector)
+  (declare-bytevector->bytevector-conversion percent-encode)
+  (declare-bytevector->bytevector-conversion percent-decode)
+  (declare-bytevector->bytevector-conversion normalise-percent-encoding)
+  (declare-bytevector->bytevector-conversion normalise-uri-encoding)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive bytevector->sint-list
+    (safe)
+  (signatures
+   ((T:bytevector T:symbol T:positive-fixnum)	=> (T:proper-list)))
+  (attributes
+   ;;Not foldable because it must return a new list at every application.
+   ((_ _ _) 		effect-free result-true)))
+
+(declare-core-primitive bytevector->uint-list
+    (safe)
+  (signatures
+   ((T:bytevector T:symbol T:positive-fixnum)	=> (T:proper-list)))
+  (attributes
+   ;;Not foldable because it must return a new list at every application.
+   ((_ _ _) 		effect-free result-true)))
+
+(let-syntax
+    ((declare-bytevector->list-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector)	=> (T:proper-list)))
+	   (attributes
+	    ;;Not foldable because it must return a new list at every application.
+	    ((_) 		effect-free result-true))))
+	)))
+  (declare-bytevector->list-conversion bytevector->s8-list)
+  (declare-bytevector->list-conversion bytevector->u8-list)
+
+  (declare-bytevector->list-conversion bytevector->c4b-list)
+  (declare-bytevector->list-conversion bytevector->c4l-list)
+  (declare-bytevector->list-conversion bytevector->c4n-list)
+  (declare-bytevector->list-conversion bytevector->c8b-list)
+  (declare-bytevector->list-conversion bytevector->c8l-list)
+  (declare-bytevector->list-conversion bytevector->c8n-list)
+  (declare-bytevector->list-conversion bytevector->f4b-list)
+  (declare-bytevector->list-conversion bytevector->f4l-list)
+  (declare-bytevector->list-conversion bytevector->f4n-list)
+  (declare-bytevector->list-conversion bytevector->f8b-list)
+  (declare-bytevector->list-conversion bytevector->f8l-list)
+  (declare-bytevector->list-conversion bytevector->f8n-list)
+  (declare-bytevector->list-conversion bytevector->s16b-list)
+  (declare-bytevector->list-conversion bytevector->s16l-list)
+  (declare-bytevector->list-conversion bytevector->s16n-list)
+  (declare-bytevector->list-conversion bytevector->s32b-list)
+  (declare-bytevector->list-conversion bytevector->s32l-list)
+  (declare-bytevector->list-conversion bytevector->s32n-list)
+  (declare-bytevector->list-conversion bytevector->s64b-list)
+  (declare-bytevector->list-conversion bytevector->s64l-list)
+  (declare-bytevector->list-conversion bytevector->s64n-list)
+  (declare-bytevector->list-conversion bytevector->u16b-list)
+  (declare-bytevector->list-conversion bytevector->u16l-list)
+  (declare-bytevector->list-conversion bytevector->u16n-list)
+  (declare-bytevector->list-conversion bytevector->u32b-list)
+  (declare-bytevector->list-conversion bytevector->u32l-list)
+  (declare-bytevector->list-conversion bytevector->u32n-list)
+  (declare-bytevector->list-conversion bytevector->u64b-list)
+  (declare-bytevector->list-conversion bytevector->u64l-list)
+  (declare-bytevector->list-conversion bytevector->u64n-list)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; bytevectors, unsafe functions
@@ -7027,40 +7403,6 @@
  procedure?
 
 
- string->latin1
- latin1->string
- latin1-encoded-bytevector?
- ascii-encoded-string?
- latin1-encoded-string?
- string->ascii
- string->octets
- octets-encoded-bytevector?
- octets-encoded-string?
- octets->string
- ascii->string
- ascii-encoded-bytevector?
- bytevector->hex
- hex->bytevector
- string-hex->bytevector
- bytevector->string-hex
- bytevector->base64
- base64->bytevector
- string-base64->bytevector
- bytevector->string-base64
- string->uri-encoding
- uri-encoding->string
- string->percent-encoding
- percent-encoding->string
- uri-encode
- uri-decode
- normalise-uri-encoding
- uri-encoded-bytevector?
- uri-encoded-string?
- percent-encoded-bytevector?
- percent-encoded-string?
- percent-encode
- percent-decode
- normalise-percent-encoding
  values
  values->list
 ;;;
@@ -7070,149 +7412,7 @@
  no-infinities-violation?
  &no-nans
  no-nans-violation?
- bytevector->sint-list
- bytevector->u8-list
- bytevector->s8-list
- bytevector->u16l-list
- bytevector->u16b-list
- bytevector->u16n-list
- bytevector->s16l-list
- bytevector->s16b-list
- bytevector->s16n-list
- bytevector->u32l-list
- bytevector->u32b-list
- bytevector->u32n-list
- bytevector->s32l-list
- bytevector->s32b-list
- bytevector->s32n-list
- bytevector->u64l-list
- bytevector->u64b-list
- bytevector->u64n-list
- bytevector->s64l-list
- bytevector->s64b-list
- bytevector->s64n-list
- bytevector->uint-list
- bytevector->f4l-list
- bytevector->f4b-list
- bytevector->f4n-list
- bytevector->f8l-list
- bytevector->f8b-list
- bytevector->f8n-list
- bytevector->c4l-list
- bytevector->c4b-list
- bytevector->c4n-list
- bytevector->c8l-list
- bytevector->c8b-list
- bytevector->c8n-list
- bytevector-copy
- bytevector-copy!
- bytevector-fill!
- bytevector-ieee-double-native-ref
- bytevector-ieee-double-native-set!
- bytevector-ieee-double-ref
- bytevector-ieee-double-set!
- bytevector-ieee-single-native-ref
- bytevector-ieee-single-native-set!
- bytevector-ieee-single-ref
- bytevector-ieee-single-set!
- bytevector-length
- bytevector-length?
- bytevector-index?
- bytevector-word-size?
- bytevector-word-count?
- bytevector-index-for-word?
- bytevector-index-for-word8?
- bytevector-index-for-word16?
- bytevector-index-for-word32?
- bytevector-index-for-word64?
- bytevector-start-index-and-count-for-word?
- bytevector-start-index-and-count-for-word8?
- bytevector-start-index-and-count-for-word16?
- bytevector-start-index-and-count-for-word32?
- bytevector-start-index-and-count-for-word64?
- list-of-bytevectors?
- bytevector-empty?
- bytevector-s16-native-ref
- bytevector-s16-native-set!
- bytevector-s16-ref
- bytevector-s16-set!
- bytevector-s32-native-ref
- bytevector-s32-native-set!
- bytevector-s32-ref
- bytevector-s32-set!
- bytevector-s64-native-ref
- bytevector-s64-native-set!
- bytevector-s64-ref
- bytevector-s64-set!
- bytevector-s8-ref
- bytevector-s8-set!
- bytevector-sint-ref
- bytevector-sint-set!
- bytevector-u16-native-ref
- bytevector-u16-native-set!
- bytevector-u16-ref
- bytevector-u16-set!
- bytevector-u32-native-ref
- bytevector-u32-native-set!
- bytevector-u32-ref
- bytevector-u32-set!
- bytevector-u64-native-ref
- bytevector-u64-native-set!
- bytevector-u64-ref
- bytevector-u64-set!
- bytevector-u8-ref
- bytevector-u8-set!
- bytevector-uint-ref
- bytevector-uint-set!
- f4l-list->bytevector
- f4b-list->bytevector
- f4n-list->bytevector
- f8l-list->bytevector
- f8b-list->bytevector
- f8n-list->bytevector
- c4l-list->bytevector
- c4b-list->bytevector
- c4n-list->bytevector
- c8l-list->bytevector
- c8b-list->bytevector
- c8n-list->bytevector
- bytevector=?
- bytevector?
- subbytevector-u8
- subbytevector-u8/count
- subbytevector-s8
- subbytevector-s8/count
- bytevector-append
- bytevector-reverse-and-concatenate
- native-endianness
- sint-list->bytevector
- u8-list->bytevector
- s8-list->bytevector
- u16l-list->bytevector
- u16b-list->bytevector
- u16n-list->bytevector
- s16l-list->bytevector
- s16b-list->bytevector
- s16n-list->bytevector
- u32l-list->bytevector
- u32b-list->bytevector
- u32n-list->bytevector
- s32l-list->bytevector
- s32b-list->bytevector
- s32n-list->bytevector
- u64l-list->bytevector
- u64b-list->bytevector
- u64n-list->bytevector
- s64l-list->bytevector
- s64b-list->bytevector
- s64n-list->bytevector
- uint-list->bytevector
- utf8->string
- utf16->string
- utf16le->string
- utf16n->string
- utf16be->string
- utf32->string
+
  print-condition
  condition?
  &assertion

@@ -363,6 +363,9 @@
 	 T:negative-exact-integer	T:non-negative-exact-integer
 
 	 T:octet		T:byte			T:octet/byte
+	 T:sint16		T:uint16
+	 T:sint32		T:uint32
+	 T:sint64		T:uint64
 
 	 T:pointer/false	T:string/false		T:number/false		T:fixnum/false)
       (T:object				#f)
@@ -457,6 +460,12 @@
       (T:octet				type)
       (T:byte				type)
       (T:octet/byte			type)
+      (T:sint16				type)
+      (T:uint16				type)
+      (T:sint32				type)
+      (T:uint32				type)
+      (T:sint64				type)
+      (T:uint64				type)
 
       (T:pointer/false			type)
       (T:string/false			type)

@@ -113,6 +113,9 @@
    T:negative-exact-integer	T:non-negative-exact-integer
 
    T:octet		T:byte			T:octet/byte
+   T:sint16		T:uint16
+   T:sint32		T:uint32
+   T:sint64		T:uint64
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
@@ -181,6 +184,9 @@
    T:negative-exact-integer?	T:non-negative-exact-integer?
 
    T:octet?		T:byte?			T:octet/byte?
+   T:sint16?		T:uint16?
+   T:sint32?		T:uint32?
+   T:sint64?		T:uint64?
 
    T:pointer/false?	T:string/false?		T:number/false?		T:fixnum/false?
 
@@ -725,6 +731,17 @@
 
 (define-underspecified-core-type T:non-negative-exact-integer
   (core-type-tag-and* T:exact-integer T:non-negative))
+
+;;;
+
+(define-underspecified-core-type T:sint16	T:fixnum)
+(define-underspecified-core-type T:uint16	T:non-negative-fixnum)
+
+(define-underspecified-core-type T:sint32	T:exact-integer)
+(define-underspecified-core-type T:uint32	T:non-negative-exact-integer)
+
+(define-underspecified-core-type T:sint64	T:exact-integer)
+(define-underspecified-core-type T:uint64	T:non-negative-exact-integer)
 
 ;;; --------------------------------------------------------------------
 
