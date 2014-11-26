@@ -109,6 +109,10 @@
    T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
    T:positive-bignum	T:negative-bignum
    T:positive-flonum	T:negative-flonum	T:non-positive-flonum	T:non-negative-flonum
+   T:positive-exact-integer	T:non-positive-exact-integer
+   T:negative-exact-integer	T:non-negative-exact-integer
+
+   T:octet		T:byte			T:octet/byte
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
@@ -173,6 +177,10 @@
    T:positive-fixnum?	T:negative-fixnum?	T:non-positive-fixnum?	T:non-negative-fixnum?
    T:positive-bignum?	T:negative-bignum?
    T:positive-flonum?	T:negative-flonum?	T:non-positive-flonum?	T:non-negative-flonum?
+   T:positive-exact-integer?	T:non-positive-exact-integer?
+   T:negative-exact-integer?	T:non-negative-exact-integer?
+
+   T:octet?		T:byte?			T:octet/byte?
 
    T:pointer/false?	T:string/false?		T:number/false?		T:fixnum/false?
 
@@ -664,6 +672,15 @@
 (define-underspecified-core-type T:non-negative-fixnum
   (core-type-tag-and* T:fixnum T:non-negative))
 
+(define-underspecified-core-type T:octet
+  (core-type-tag-and* T:fixnum T:non-negative))
+
+(define-underspecified-core-type T:byte
+  T:fixnum)
+
+(define-underspecified-core-type T:octet/byte
+  (core-type-tag-or* T:octet T:byte))
+
 ;;; --------------------------------------------------------------------
 ;;; more bignum types
 
@@ -696,6 +713,18 @@
 
 (define-underspecified-core-type T:integer
   (core-type-tag-or* T:fixnum T:bignum T:flonum-integer))
+
+(define-underspecified-core-type T:positive-exact-integer
+  (core-type-tag-and* T:exact-integer T:positive))
+
+(define-underspecified-core-type T:negative-exact-integer
+  (core-type-tag-and* T:exact-integer T:negative))
+
+(define-underspecified-core-type T:non-positive-exact-integer
+  (core-type-tag-and* T:exact-integer T:non-positive))
+
+(define-underspecified-core-type T:non-negative-exact-integer
+  (core-type-tag-and* T:exact-integer T:non-negative))
 
 ;;; --------------------------------------------------------------------
 

@@ -359,6 +359,10 @@
 	 T:positive-fixnum	T:negative-fixnum	T:non-positive-fixnum	T:non-negative-fixnum
 	 T:positive-bignum	T:negative-bignum
 	 T:positive-flonum	T:negative-flonum	T:non-positive-flonum	T:non-negative-flonum
+	 T:positive-exact-integer	T:non-positive-exact-integer
+	 T:negative-exact-integer	T:non-negative-exact-integer
+
+	 T:octet		T:byte			T:octet/byte
 
 	 T:pointer/false	T:string/false		T:number/false		T:fixnum/false)
       (T:object				#f)
@@ -445,6 +449,14 @@
       (T:negative-flonum		type)
       (T:non-positive-flonum		type)
       (T:non-negative-flonum		type)
+      (T:positive-exact-integer		type)
+      (T:negative-exact-integer		type)
+      (T:non-positive-exact-integer	type)
+      (T:non-negative-exact-integer	type)
+
+      (T:octet				type)
+      (T:byte				type)
+      (T:octet/byte			type)
 
       (T:pointer/false			type)
       (T:string/false			type)

@@ -273,6 +273,7 @@
 (define-object-binary-comparison-declarer declare-char-binary-comparison T:char)
 (define-object-binary-comparison-declarer declare-string-binary-comparison T:string)
 (define-object-binary-comparison-declarer declare-keyword-binary-comparison T:keyword)
+(define-object-binary-comparison-declarer declare-bytevector-binary-comparison T:bytevector)
 
 ;;; --------------------------------------------------------------------
 
@@ -771,6 +772,41 @@
        (attributes
 	((_ ())			foldable effect-free result-false)
 	((_ _)			foldable effect-free))))
+    ))
+
+
+;;;; syntax helpers: bytevectors
+
+(define-syntax declare-unsafe-bytevector-accessor
+  (syntax-rules ()
+    ((_ ?who ?return-value-tag)
+     (declare-core-primitive ?who
+	 (unsafe)
+       (signatures
+	((T:bytevector T:fixnum)	=> (?return-value-tag)))
+       (attributes
+	((_ _)			foldable effect-free result-true))))
+    ))
+
+(define-syntax declare-unsafe-bytevector-mutator
+  (syntax-rules ()
+    ((_ ?who ?new-value-tag)
+     (declare-core-primitive ?who
+	 (unsafe)
+       (signatures
+	((T:bytevector T:fixnum ?new-value-tag)	=> (T:void)))))
+    ))
+
+(define-syntax declare-unsafe-bytevector-conversion
+  (syntax-rules ()
+    ((_ ?who ?return-value-tag)
+     (declare-core-primitive ?who
+	 (unsafe)
+       (signatures
+	((T:bytevector)		=> (?return-value-tag)))
+       (attributes
+	;;Not foldable because it must return a new bytevector every time.
+	((_)			effect-free result-true))))
     ))
 
 
@@ -3476,39 +3512,10 @@
 
 ;;;; bytevectors, unsafe functions
 
-#|
- $bytevector-ieee-double-native-ref
- $bytevector-ieee-double-native-set!
- $bytevector-ieee-double-nonnative-ref
- $bytevector-ieee-double-nonnative-set!
- $bytevector-ieee-single-native-ref
- $bytevector-ieee-single-native-set!
- $bytevector-ieee-single-nonnative-ref
- $bytevector-ieee-single-nonnative-set!
- $bytevector=
- $bytevector-total-length
- $bytevector-concatenate
- $bytevector-reverse-and-concatenate
- $bytevector-copy
- $uri-encode
- $uri-decode
- $uri-normalise-encoding
- $percent-encode
- $percent-decode
- $percent-normalise-encoding
- $bytevector->base64
- $base64->bytevector
- $ascii->string
- $octets->string
- $latin1->string
- $bytevector->string-base64
-
-|#
-
 ;;; constructors
 
 (declare-core-primitive $make-bytevector
-    (safe)
+    (unsafe)
   (signatures
    ((T:fixnum)		=> (T:bytevector))
    ((T:fixnum T:fixnum)	=> (T:bytevector)))
@@ -3518,44 +3525,93 @@
    ((0 _)			effect-free result-true)
    ((_ _)			effect-free result-true)))
 
+(declare-core-primitive $bytevector-copy
+    (unsafe)
+  (signatures
+   ((T:bytevector)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive $bytevector-concatenate
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:proper-list)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive $bytevector-reverse-and-concatenate
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:proper-list)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_ _)			effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; inspection
 
 (declare-core-primitive $bytevector-length
-    (safe)
+    (unsafe)
   (signatures
    ((T:bytevector)		=> (T:non-negative-fixnum)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
-(declare-bytevector-predicate $bytevector-empty?)
-(declare-bytevector-predicate $uri-encoded-bytevector?)
-(declare-bytevector-predicate $octets-encoded-bytevector?)
-(declare-bytevector-predicate $ascii-encoded-bytevector?)
-(declare-bytevector-predicate $latin1-encoded-bytevector?)
-(declare-bytevector-predicate $percent-encoded-bytevector?)
+(declare-core-primitive $bytevector-total-length
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:proper-list)	=> (T:non-negative-exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-bytevector-predicate $bytevector-empty?		unsafe)
+(declare-bytevector-predicate $uri-encoded-bytevector?		unsafe)
+(declare-bytevector-predicate $octets-encoded-bytevector?	unsafe)
+(declare-bytevector-predicate $ascii-encoded-bytevector?	unsafe)
+(declare-bytevector-predicate $latin1-encoded-bytevector?	unsafe)
+(declare-bytevector-predicate $percent-encoded-bytevector?	unsafe)
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-bytevector-binary-comparison $bytevector=	unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
 
-(declare-core-primitive $bytevector-u8-ref
-    (safe)
-  (signatures
-   ((T:bytevector T:fixnum)	=> (T:non-negative-fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-unsafe-bytevector-accessor $bytevector-u8-ref				T:octet)
+(declare-unsafe-bytevector-accessor $bytevector-s8-ref				T:byte)
+(declare-unsafe-bytevector-mutator  $bytevector-set!				T:octet/byte)
 
-(declare-core-primitive $bytevector-s8-ref
-    (safe)
-  (signatures
-   ((T:bytevector T:fixnum)	=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-unsafe-bytevector-accessor $bytevector-ieee-double-native-ref		T:flonum)
+(declare-unsafe-bytevector-mutator  $bytevector-ieee-double-native-set!		T:flonum)
 
-(declare-core-primitive $bytevector-set!
-    (safe)
-  (signatures
-   ((T:bytevector T:non-negative-fixnum T:fixnum)	=> (T:void))))
+(declare-unsafe-bytevector-accessor $bytevector-ieee-double-nonnative-ref	T:flonum)
+(declare-unsafe-bytevector-mutator  $bytevector-ieee-double-nonnative-set!	T:flonum)
+
+(declare-unsafe-bytevector-accessor $bytevector-ieee-single-native-ref		T:flonum)
+(declare-unsafe-bytevector-mutator  $bytevector-ieee-single-native-set!		T:flonum)
+
+(declare-unsafe-bytevector-accessor $bytevector-ieee-single-nonnative-ref	T:flonum)
+(declare-unsafe-bytevector-mutator  $bytevector-ieee-single-nonnative-set!	T:flonum)
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-unsafe-bytevector-conversion $uri-encode			T:bytevector)
+(declare-unsafe-bytevector-conversion $uri-decode			T:bytevector)
+(declare-unsafe-bytevector-conversion $uri-normalise-encoding		T:bytevector)
+(declare-unsafe-bytevector-conversion $percent-encode			T:bytevector)
+(declare-unsafe-bytevector-conversion $percent-decode			T:bytevector)
+(declare-unsafe-bytevector-conversion $percent-normalise-encoding	T:bytevector)
+(declare-unsafe-bytevector-conversion $bytevector->base64		T:bytevector)
+(declare-unsafe-bytevector-conversion $base64->bytevector		T:bytevector)
+(declare-unsafe-bytevector-conversion $ascii->string			T:string)
+(declare-unsafe-bytevector-conversion $octets->string			T:string)
+(declare-unsafe-bytevector-conversion $latin1->string			T:string)
+(declare-unsafe-bytevector-conversion $bytevector->string-base64	T:string)
 
 
 ;;;; structs, safe primitives
