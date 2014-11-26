@@ -1648,6 +1648,19 @@
 				   (fxsll (char->integer x.const)
 					  char-shift))))
 
+	  ;;NOTE This is  the branch to be used for  transcoders, which are immediate
+	  ;;Scheme objects.   But, at present,  transcoders are not  representable in
+	  ;;FASL files.  So we consider them invalid here.  (Marco Maggi; Wed Nov 26,
+	  ;;2014)
+	  ;;
+	  ;;((transcoder? x.const)
+	  ;; (let ()
+	  ;;   (import (only (vicare system $transcoders)
+	  ;;		   $transcoder->data))
+	  ;;   (make-constant (fxlogor transcoder-tag
+	  ;;			     (fxsll ($transcoder->data x.const)
+	  ;; 				    transcoder-payload-shift)))))
+
 	  ((null? x.const)
 	   (make-constant NULL-OBJECT))
 

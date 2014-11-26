@@ -4548,9 +4548,10 @@
    ((T:symbol T:symbol)			=> (T:transcoder))
    ((T:symbol T:symbol T:symbol)	=> (T:transcoder)))
   (attributes
-   ((_)			 effect-free result-true)
-   ((_ _)		 effect-free result-true)
-   ((_ _ _)		 effect-free result-true)))
+   ;;Not foldable because transcoders are not representable in FASL files.
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
 
 (declare-core-primitive native-transcoder
     (safe)
