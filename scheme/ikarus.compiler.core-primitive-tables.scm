@@ -1362,6 +1362,13 @@
 (declare-pair-mutator $set-car! unsafe)
 (declare-pair-mutator $set-cdr! unsafe)
 
+(declare-core-primitive $length
+    (unsafe)
+  (signatures
+   ((T:proper-list)		=> (T:non-negative-fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
 
 ;;;; fixnums safe operations
 
@@ -4152,8 +4159,24 @@
    ;;It must return a new struct every time.
    ((_ . _)				effect-free result-true)))
 
+(declare-core-primitive $make-struct
+    (unsafe)
+  (signatures
+   ((T:struct-type-descriptor T:non-negative-fixnum)	=> (T:struct)))
+  (attributes
+   ;;Not foldable: it must return a new struct every time.
+   ((_ _)				effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
+
+(declare-core-primitive $struct?
+    (unsafe)
+  (signatures
+   ((T:struct)				=> (T:true))
+   ((_)					=> (T:boolean)))
+  (attributes
+   ((_)					foldable effect-free)))
 
 (declare-core-primitive $struct/rtd?
     (unsafe)
@@ -4163,6 +4186,14 @@
    ((_ _)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
+(declare-core-primitive $struct-rtd
+    (unsafe)
+  (signatures
+   ((T:struct)			=> (T:struct-type-descriptor)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
 
 (declare-core-primitive $struct-ref
     (unsafe)
@@ -4178,6 +4209,53 @@
   (attributes
    ((_ _)			foldable result-true)))
 
+;;;
+
+(let-syntax
+    ((declare-unsafe-struct-accessor
+      (syntax-rules ()
+	((_ ?who ?return-value-tag)
+	 (declare-core-primitive ?who
+	     (unsafe)
+	   (signatures
+	    ((T:struct-type-descriptor)	=> (?return-value-tag)))
+	   (attributes
+	    ((_)			foldable effect-free))))
+	)))
+  (declare-unsafe-struct-accessor $std-std		T:struct-type-descriptor)
+  (declare-unsafe-struct-accessor $std-name		T:string)
+  (declare-unsafe-struct-accessor $std-length		T:non-negative-fixnum)
+  (declare-unsafe-struct-accessor $std-fields		T:proper-list)
+  (declare-unsafe-struct-accessor $std-printer		T:object)
+  (declare-unsafe-struct-accessor $std-symbol		T:object)
+  (declare-unsafe-struct-accessor $std-destructor	T:object)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-unsafe-struct-mutator
+      (syntax-rules ()
+	((_ ?who ?new-value-tag)
+	 (declare-core-primitive ?who
+	     (unsafe)
+	   (signatures
+	    ((T:struct-type-descriptor ?new-value-tag)	=> (T:void)))))
+	)))
+  (declare-unsafe-struct-mutator $set-std-std!		T:struct-type-descriptor)
+  (declare-unsafe-struct-mutator $set-std-name!		T:string)
+  (declare-unsafe-struct-mutator $set-std-length!	T:non-negative-fixnum)
+  (declare-unsafe-struct-mutator $set-std-fields!	T:proper-list)
+  (declare-unsafe-struct-mutator $set-std-printer!	T:object)
+  (declare-unsafe-struct-mutator $set-std-symbol!	T:object)
+  (declare-unsafe-struct-mutator $set-std-destructor!	T:object)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive $struct-guardian
+    (unsafe)
+  (signatures
+   ((T:struct)		=> (T:void))))
 
 
 ;;;; annotations
@@ -4220,7 +4298,7 @@
    ((T:other-struct)		=> (_))))
 
 
-;;;; R6RS records
+;;;; R6RS records, safe primitives
 
 (declare-type-predicate record? T:record)
 
@@ -4265,6 +4343,17 @@
   (attributes
    ((_ _)			effect-free result-false)
    ((_ _ _)			effect-free result-false)))
+
+
+;;;; R6RS records, unsafe primitives
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive $record-guardian
+    (unsafe)
+  (signatures
+   ((T:record)		=> (T:void))))
 
 
 ;;;; hashtables, safe procedures
@@ -7460,73 +7549,6 @@
  library-name
  find-library-by-name
 
-;;; --------------------------------------------------------------------
-
- $length
- $map1
- $for-each1
- $for-all1
- $exists1
- $memq
- $memv
-
-;;; --------------------------------------------------------------------
-
-  (let ((P (C base-rtd)))
-    (register-lambda-signature P (S (list (C <struct-type-descriptor>))
-				    '())))
-
-  (let ((P (C $struct)))
-    (register-lambda-signature P (S (list (C <struct>))
-				    (cons (C <struct-type-descriptor>) (C <list>)))))
-
-  (let ((P (C $make-struct)))
-    (register-lambda-signature P (S (list (C <struct>))
-				    (list (C <struct-type-descriptor>) (C <fixnum>)))))
-
-  (let ((P (C $struct?)))
-    (register-lambda-signature P (S (list (C <boolean>))
-				    (list (C <top>)))))
-
-  (let ((P (C $struct/rtd?)))
-    (register-lambda-signature P (S (list (C <boolean>))
-				    (list (C <top>) (C <struct-type-descriptor>)))))
-
-  (let ((P (C $struct-guardian)))
-    (register-lambda-signature P (S (list (C <top>))
-				    (list (C <struct>)))))
-
-  (let ((P (C $struct-rtd)))
-    (register-lambda-signature P (S (list (C <struct-type-descriptor>))
-				    (list (C <struct>)))))
-
-  (let ((P (C $struct-set!)))
-    (register-lambda-signature P (S (list (C <void>))
-				    (list (C <struct>) (C <fixnum>) (C <top>)))))
-
-  (let ((P (C $struct-ref)))
-    (register-lambda-signature P (S (list (C <top>))
-				    (list (C <struct>) (C <fixnum>)))))
-
- $record-guardian
-
- $std-std
- $std-name
- $std-length
- $std-fields
- $std-printer
- $std-symbol
- $std-destructor
-
- $set-std-std!
- $set-std-name!
- $set-std-length!
- $set-std-fields!
- $set-std-printer!
- $set-std-symbol!
- $set-std-destructor!
-
-;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
 
 ;;;
