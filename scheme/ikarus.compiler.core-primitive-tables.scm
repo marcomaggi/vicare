@@ -859,6 +859,13 @@
   (attributes
    (()				foldable effect-free result-true)))
 
+(declare-core-primitive native-endianness
+    (safe)
+  (signatures
+   (()				=> (T:symbol)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
 
 ;;;; pairs and lists, safe functions
 
@@ -1270,6 +1277,68 @@
    ((T:proper-list)		=> (T:vector)))
   (attributes
    ;;Not foldable because it must return a new vector every time.
+   ((_)				effect-free result-true)))
+
+(let-syntax
+    ((declare-list->bytevector-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:proper-list)		=> (T:bytevector)))
+	   (attributes
+	    ;;Not foldable because it must return a new bytevector every time.
+	    ((_)				effect-free result-true))))
+	)))
+  (declare-list->bytevector-conversion c4b-list->bytevector)
+  (declare-list->bytevector-conversion c4l-list->bytevector)
+  (declare-list->bytevector-conversion c4n-list->bytevector)
+  (declare-list->bytevector-conversion c8b-list->bytevector)
+  (declare-list->bytevector-conversion c8l-list->bytevector)
+  (declare-list->bytevector-conversion c8n-list->bytevector)
+  (declare-list->bytevector-conversion f4b-list->bytevector)
+  (declare-list->bytevector-conversion f4l-list->bytevector)
+  (declare-list->bytevector-conversion f4n-list->bytevector)
+  (declare-list->bytevector-conversion f8b-list->bytevector)
+  (declare-list->bytevector-conversion f8l-list->bytevector)
+  (declare-list->bytevector-conversion f8n-list->bytevector)
+  (declare-list->bytevector-conversion s16b-list->bytevector)
+  (declare-list->bytevector-conversion s16l-list->bytevector)
+  (declare-list->bytevector-conversion s16n-list->bytevector)
+  (declare-list->bytevector-conversion s32b-list->bytevector)
+  (declare-list->bytevector-conversion s32l-list->bytevector)
+  (declare-list->bytevector-conversion s32n-list->bytevector)
+  (declare-list->bytevector-conversion s64b-list->bytevector)
+  (declare-list->bytevector-conversion s64l-list->bytevector)
+  (declare-list->bytevector-conversion s64n-list->bytevector)
+  (declare-list->bytevector-conversion s8-list->bytevector)
+  (declare-list->bytevector-conversion u16b-list->bytevector)
+  (declare-list->bytevector-conversion u16l-list->bytevector)
+  (declare-list->bytevector-conversion u16n-list->bytevector)
+  (declare-list->bytevector-conversion u32b-list->bytevector)
+  (declare-list->bytevector-conversion u32l-list->bytevector)
+  (declare-list->bytevector-conversion u32n-list->bytevector)
+  (declare-list->bytevector-conversion u64b-list->bytevector)
+  (declare-list->bytevector-conversion u64l-list->bytevector)
+  (declare-list->bytevector-conversion u64n-list->bytevector)
+  (declare-list->bytevector-conversion u8-list->bytevector)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive sint-list->bytevector
+    (safe)
+  (signatures
+   ((T:proper-list T:symbol T:positive-fixnum)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector every time.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive uint-list->bytevector
+    (safe)
+  (signatures
+   ((T:proper-list T:symbol T:positive-fixnum)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a new bytevector every time.
    ((_)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
@@ -3001,53 +3070,15 @@
    ;;Not foldable because it must return a new bytevector at every application.
    ((_ _)			effect-free result-true)))
 
-(declare-core-primitive string->utf16be
-    (safe)
-  (signatures
-   ((T:string)			=> (T:bytevector)))
-  (attributes
-   ;;Not foldable because it must return a new bytevector at every application.
-   ((_)				effect-free result-true)))
-
-(declare-core-primitive string->utf16le
-    (safe)
-  (signatures
-   ((T:string)			=> (T:bytevector)))
-  (attributes
-   ;;Not foldable because it must return a new bytevector at every application.
-   ((_)				effect-free result-true)))
-
-(declare-core-primitive string->utf16n
-    (safe)
-  (signatures
-   ((T:string)			=> (T:bytevector)))
-  (attributes
-   ;;Not foldable because it must return a new bytevector at every application.
-   ((_)				effect-free result-true)))
-
 (declare-core-primitive string->utf32
     (safe)
   (signatures
-   ((T:string)			=> (T:bytevector)))
+   ((T:string)			=> (T:bytevector))
+   ((T:string T:symbol)		=> (T:bytevector)))
   (attributes
    ;;Not foldable because it must return a new bytevector at every application.
-   ((_)				effect-free result-true)))
-
-(declare-core-primitive string->ascii
-    (safe)
-  (signatures
-   ((T:string)			=> (T:bytevector)))
-  (attributes
-   ;;Not foldable because it must return a new bytevector at every application.
-   ((_)				effect-free result-true)))
-
-(declare-core-primitive string->latin1
-    (safe)
-  (signatures
-   ((T:string)			=> (T:bytevector)))
-  (attributes
-   ;;Not foldable because it must return a new bytevector at every application.
-   ((_)				effect-free result-true)))
+   ((_)				effect-free result-true)
+   ((_ _)			effect-free result-true)))
 
 (declare-core-primitive string->bytevector
     (safe)
@@ -3070,13 +3101,16 @@
 	    ;;application.
 	    ((_ )		effect-free result-true))))
 	)))
-  (declare-string->bytevector-conversion string->latin1)
   (declare-string->bytevector-conversion string->ascii)
+  (declare-string->bytevector-conversion string->latin1)
   (declare-string->bytevector-conversion string->octets)
-  (declare-string->bytevector-conversion string->uri-encoding)
   (declare-string->bytevector-conversion string->percent-encoding)
-  (declare-string->bytevector-conversion string-hex->bytevector)
+  (declare-string->bytevector-conversion string->uri-encoding)
+  (declare-string->bytevector-conversion string->utf16be)
+  (declare-string->bytevector-conversion string->utf16le)
+  (declare-string->bytevector-conversion string->utf16n)
   (declare-string->bytevector-conversion string-base64->bytevector)
+  (declare-string->bytevector-conversion string-hex->bytevector)
   #| end of LET-SYNTAX |# )
 
 ;;;
@@ -3533,10 +3567,7 @@
 ;;;; bytevectors, safe functions
 
 #|
- bytevector-copy
- bytevector-copy!
- bytevector-fill!
- bytevector-length
+
  bytevector-length?
  bytevector-index?
  bytevector-word-size?
@@ -3551,67 +3582,82 @@
  bytevector-start-index-and-count-for-word16?
  bytevector-start-index-and-count-for-word32?
  bytevector-start-index-and-count-for-word64?
- list-of-bytevectors?
- f4l-list->bytevector
- f4b-list->bytevector
- f4n-list->bytevector
- f8l-list->bytevector
- f8b-list->bytevector
- f8n-list->bytevector
- c4l-list->bytevector
- c4b-list->bytevector
- c4n-list->bytevector
- c8l-list->bytevector
- c8b-list->bytevector
- c8n-list->bytevector
- subbytevector-u8
- subbytevector-u8/count
- subbytevector-s8
- subbytevector-s8/count
- bytevector-append
- bytevector-reverse-and-concatenate
- native-endianness
- sint-list->bytevector
- u8-list->bytevector
- s8-list->bytevector
- u16l-list->bytevector
- u16b-list->bytevector
- u16n-list->bytevector
- s16l-list->bytevector
- s16b-list->bytevector
- s16n-list->bytevector
- u32l-list->bytevector
- u32b-list->bytevector
- u32n-list->bytevector
- s32l-list->bytevector
- s32b-list->bytevector
- s32n-list->bytevector
- u64l-list->bytevector
- u64b-list->bytevector
- u64n-list->bytevector
- s64l-list->bytevector
- s64b-list->bytevector
- s64n-list->bytevector
- uint-list->bytevector
- utf8->string
- utf16->string
- utf16le->string
- utf16n->string
- utf16be->string
- utf32->string
+
 
 |#
 
 (declare-core-primitive make-bytevector
     (safe)
   (signatures
-   ((T:fixnum)		=> (T:bytevector))
-   ((T:fixnum T:fixnum)	=> (T:bytevector)))
+   ((T:non-negative-fixnum)			=> (T:bytevector))
+   ((T:non-negative-fixnum T:octet/byte)	=> (T:bytevector)))
   ;;Not foldable because it must return a newly allocated bytevector.
   (attributes
    ((0)				effect-free result-true)
    ((0 _)			effect-free result-true)
    ((_ _)			effect-free result-true)))
+
+(declare-core-primitive bytevector-copy
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive bytevector-append
+    (safe)
+  (signatures
+   (T:bytevector		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   (_				effect-free result-true)))
+
+(declare-core-primitive bytevector-reverse-and-concatenate
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_)				effect-free result-true)))
+
+;;;
+
+(declare-core-primitive subbytevector-u8
+    (safe)
+  (signatures
+   ((T:bytevector T:non-negative-fixnum)			=> (T:bytevector))
+   ((T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_ _)				effect-free result-true)
+   ((_ _ _)				effect-free result-true)))
+
+(declare-core-primitive subbytevector-s8
+    (safe)
+  (signatures
+   ((T:bytevector T:non-negative-fixnum)			=> (T:bytevector))
+   ((T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_ _)				effect-free result-true)
+   ((_ _ _)				effect-free result-true)))
+
+(declare-core-primitive subbytevector-u8/count
+    (safe)
+  (signatures
+   ((T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_ _ _)				effect-free result-true)))
+
+(declare-core-primitive subbytevector-s8/count
+    (safe)
+  (signatures
+   ((T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:bytevector)))
+  (attributes
+   ;;Not foldable because it must return a newly allocated bytevector.
+   ((_ _ _)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
@@ -3626,13 +3672,20 @@
 (declare-bytevector-predicate uri-encoded-bytevector?		(replacements $uri-encoded-bytevector?))
 (declare-bytevector-predicate percent-encoded-bytevector?	(replacements $percent-encoded-bytevector?))
 
+(declare-core-primitive list-of-bytevectors?
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
 ;;; --------------------------------------------------------------------
 ;;; inspection
 
 (declare-core-primitive bytevector-length
     (safe)
   (signatures
-   ((T:bytevector)	=> (T:fixnum)))
+   ((T:bytevector)	=> (T:non-negative-fixnum)))
   (attributes
    ((_)			foldable effect-free result-true)))
 
@@ -3643,6 +3696,22 @@
 
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
+
+(declare-core-primitive bytevector-fill!
+    (safe)
+  (signatures
+   ((T:bytevector T:octet/byte)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive bytevector-copy!
+    (safe)
+  (signatures
+   ((T:bytevector T:non-negative-fixnum T:bytevector T:non-negative-fixnum T:non-negative-fixnum)     => (T:void)))
+  (attributes
+   ((_ _ _ _ _)			result-true)))
+
+;;;
 
 (declare-core-primitive bytevector-s8-ref
     (safe)
@@ -3665,9 +3734,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:fixnum)	=> (?return-value-tag)))
+	    ((T:bytevector T:non-negative-fixnum)	=> (?return-value-tag)))
 	   (attributes
-	    ((_ _)			foldable effect-free result-true))))
+	    ((_ _)		foldable effect-free result-true))))
 	)))
   (declare-safe-bytevector-accessor bytevector-s16-native-ref		T:sint16)
   (declare-safe-bytevector-accessor bytevector-u16-native-ref		T:uint16)
@@ -3686,9 +3755,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:fixnum T:symbol)	=> (?return-value-tag)))
+	    ((T:bytevector T:non-negative-fixnum T:symbol)	=> (?return-value-tag)))
 	   (attributes
-	    ((_ _)			foldable effect-free result-true))))
+	    ((_ _)		foldable effect-free result-true))))
 	)))
   (declare-safe-bytevector-accessor bytevector-s16-ref		T:sint16)
   (declare-safe-bytevector-accessor bytevector-u16-ref		T:uint16)
@@ -3703,14 +3772,14 @@
 (declare-core-primitive bytevector-sint-ref
     (safe)
   (signatures
-   ((T:bytevector T:fixnum T:symbol T:positive-fixnum)	=> (T:exact-integer)))
+   ((T:bytevector T:non-negative-fixnum T:symbol T:positive-fixnum)	=> (T:exact-integer)))
   (attributes
    ((_ _ _ _)			foldable effect-free result-true)))
 
 (declare-core-primitive bytevector-uint-ref
     (safe)
   (signatures
-   ((T:bytevector T:fixnum T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer)))
+   ((T:bytevector T:non-negative-fixnum T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer)))
   (attributes
    ((_ _ _ _)			foldable effect-free result-true)))
 
@@ -3719,12 +3788,12 @@
 (declare-core-primitive bytevector-s8-set!
     (safe)
   (signatures
-   ((T:bytevector T:fixnum T:byte)	=> (T:void))))
+   ((T:bytevector T:non-negative-fixnum T:byte)	=> (T:void))))
 
 (declare-core-primitive bytevector-u8-set!
     (safe)
   (signatures
-   ((T:bytevector T:fixnum T:octet)	=> (T:void))))
+   ((T:bytevector T:non-negative-fixnum T:octet)	=> (T:void))))
 
 (let-syntax
     ((declare-safe-bytevector-mutator
@@ -3733,7 +3802,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:fixnum ?new-value-tag)	=> (T:void)))))
+	    ((T:bytevector T:non-negative-fixnum ?new-value-tag)	=> (T:void)))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-native-set!		T:sint16)
   (declare-safe-bytevector-mutator bytevector-u16-native-set!		T:uint16)
@@ -3752,7 +3821,7 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:fixnum ?new-value-tag T:symbol)	=> (T:void)))))
+	    ((T:bytevector T:non-negative-fixnum ?new-value-tag T:symbol)	=> (T:void)))))
 	)))
   (declare-safe-bytevector-mutator bytevector-s16-set!		T:sint16)
   (declare-safe-bytevector-mutator bytevector-u16-set!		T:uint16)
@@ -3767,12 +3836,12 @@
 (declare-core-primitive bytevector-sint-set!
     (safe)
   (signatures
-   ((T:bytevector T:fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:exact-integer))))
+   ((T:bytevector T:non-negative-fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:exact-integer))))
 
 (declare-core-primitive bytevector-uint-set!
     (safe)
   (signatures
-   ((T:bytevector T:fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer))))
+   ((T:bytevector T:non-negative-fixnum T:exact-integer T:symbol T:positive-fixnum)	=> (T:non-negative-exact-integer))))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -3789,6 +3858,10 @@
 	    ;;Not foldable because it must return a new string at every application.
 	    ((_) 		effect-free result-true))))
 	)))
+  (declare-bytevector->string-conversion utf8->string)
+  (declare-bytevector->string-conversion utf16le->string)
+  (declare-bytevector->string-conversion utf16n->string)
+  (declare-bytevector->string-conversion utf16be->string)
   (declare-bytevector->string-conversion ascii->string)
   (declare-bytevector->string-conversion bytevector->string-base64)
   (declare-bytevector->string-conversion bytevector->string-hex)
@@ -3797,6 +3870,26 @@
   (declare-bytevector->string-conversion percent-encoding->string)
   (declare-bytevector->string-conversion uri-encoding->string)
   #| end of LET-SYNTAX |# )
+
+(declare-core-primitive utf16->string
+    (safe)
+  (signatures
+   ((T:bytevector T:symbol)		=> (T:string))
+   ((T:bytevector T:symbol T:object)	=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_ _) 		effect-free result-true)
+   ((_ _ _) 		effect-free result-true)))
+
+(declare-core-primitive utf32->string
+    (safe)
+  (signatures
+   ((T:bytevector T:symbol)		=> (T:string))
+   ((T:bytevector T:symbol T:object)	=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_ _) 		effect-free result-true)
+   ((_ _ _) 		effect-free result-true)))
 
 (let-syntax
     ((declare-bytevector->bytevector-conversion
