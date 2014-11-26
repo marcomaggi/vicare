@@ -4621,6 +4621,71 @@
    (()				effect-free result-true)))
 
 
+;;;; input/output, unsafe primitives
+
+;;; constructors
+
+(declare-core-primitive $make-port
+    (unsafe)
+  (signatures
+   ;;attrs                 idx                   buffer-size           buffer   transcoder
+   ((T:non-negative-fixnum T:non-negative-fixnum T:non-negative-fixnum T:object T:object
+			   ;;id     read     write    getp     setp     close    cookie
+			   T:object T:object T:object T:object T:object T:object T:object)	=> (T:port)))
+  (attributes
+   ;;FIXME Should this be foldable?  (Marco Maggi; Wed Nov 26, 2014)
+   ((_ _ _  _ _ _  _ _ _  _ _ _)		effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
+
+(letrec-syntax
+    ((declare-unsafe-port-accessor
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-unsafe-port-accessor ?who T:object))
+	((_ ?who ?return-value-tag)
+	 (declare-core-primitive ?who
+	     (unsafe)
+	   (signatures
+	    ((T:port)			=> (T:object)))
+	   (attributes
+	    ((_)			effect-free))))
+	)))
+  (declare-unsafe-port-accessor $port-tag		T:fixnum)
+  (declare-unsafe-port-accessor $port-attrs		T:non-negative-fixnum)
+  (declare-unsafe-port-accessor $port-index		T:non-negative-fixnum)
+  (declare-unsafe-port-accessor $port-size		T:non-negative-fixnum)
+  (declare-unsafe-port-accessor $port-buffer)
+  (declare-unsafe-port-accessor $port-transcoder	T:transcoder)
+  (declare-unsafe-port-accessor $port-cookie)
+  (declare-unsafe-port-accessor $port-get-position)
+  (declare-unsafe-port-accessor $port-close)
+  (declare-unsafe-port-accessor $port-id)
+  (declare-unsafe-port-accessor $port-read!)
+  (declare-unsafe-port-accessor $port-write!)
+  (declare-unsafe-port-accessor $port-set-position!)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-unsafe-port-mutator
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-unsafe-port-mutator ?who T:object))
+	((_ ?who ?new-value-tag)
+	 (declare-core-primitive ?who
+	     (unsafe)
+	   (signatures
+	    ((T:port ?new-value-tag)	=> (T:void)))
+	   (attributes
+	    ((_ _)			result-true))))
+	)))
+  (declare-unsafe-port-mutator $set-port-index!		T:non-negative-fixnum)
+  (declare-unsafe-port-mutator $set-port-size!		T:non-negative-fixnum)
+  (declare-unsafe-port-mutator $set-port-attrs!		T:non-negative-fixnum)
+  #| end of LET-SYNTAX |# )
+
+
 ;;;; transcoders, safe primitives
 
 ;;; predicates
@@ -4734,6 +4799,15 @@
 ;;;; generic functions
 
 (declare-type-predicate procedure? T:procedure)
+
+(declare-core-primitive  random
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ;;Not foldable  because the random number  must be generated at  run-time, one for
+   ;;each invocation.
+   ((_)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 
@@ -7430,7 +7504,6 @@
 
 #| list of core primitives to declare
 
- random
 
  port-mode
  set-port-mode!
@@ -7448,6 +7521,141 @@
  printf
  fprintf
  format
+ binary-port?
+ buffer-mode
+ buffer-mode?
+ call-with-bytevector-output-port
+ call-with-port
+ call-with-string-output-port
+ close-port
+ eol-style
+ error-handling-mode
+ file-options
+ flush-output-port
+ get-bytevector-all
+ get-bytevector-n
+ get-bytevector-n!
+ get-bytevector-some
+ get-char
+ get-datum
+ get-line
+ read-line
+ get-string-all
+ get-string-n
+ get-string-n!
+ get-string-some
+ get-u8
+ lookahead-char
+ lookahead-u8
+ lookahead-two-u8
+ make-custom-binary-input-port
+ make-custom-binary-output-port
+ make-custom-textual-input-port
+ make-custom-textual-output-port
+ make-custom-binary-input/output-port
+ make-custom-textual-input/output-port
+ make-binary-file-descriptor-input-port
+ make-binary-file-descriptor-input-port*
+ make-binary-file-descriptor-output-port
+ make-binary-file-descriptor-output-port*
+ make-binary-file-descriptor-input/output-port
+ make-binary-file-descriptor-input/output-port*
+ make-binary-socket-input-port
+ make-binary-socket-input-port*
+ make-binary-socket-output-port
+ make-binary-socket-output-port*
+ make-binary-socket-input/output-port
+ make-binary-socket-input/output-port*
+ make-textual-file-descriptor-input-port
+ make-textual-file-descriptor-input-port*
+ make-textual-file-descriptor-output-port
+ make-textual-file-descriptor-output-port*
+ make-textual-file-descriptor-input/output-port
+ make-textual-file-descriptor-input/output-port*
+ make-textual-socket-input-port
+ make-textual-socket-input-port*
+ make-textual-socket-output-port
+ make-textual-socket-output-port*
+ make-textual-socket-input/output-port
+ make-textual-socket-input/output-port*
+ port-id
+ port-uid
+ port-fd
+ port-set-non-blocking-mode!
+ port-unset-non-blocking-mode!
+ port-in-non-blocking-mode?
+ port-putprop
+ port-getprop
+ port-remprop
+ port-property-list
+ port-dump-status
+ port-closed?
+ open-bytevector-input-port
+ open-bytevector-output-port
+ open-file-input-port
+ open-file-input/output-port
+ open-file-output-port
+ open-string-input-port
+ open-string-output-port
+ bytevector-port-buffer-size
+ string-port-buffer-size
+ input-file-buffer-size
+ output-file-buffer-size
+ input/output-file-buffer-size
+ input/output-socket-buffer-size
+ output-port-buffer-mode
+ set-port-buffer-mode!
+ port-eof?
+ port-has-port-position?
+ port-has-set-port-position!?
+ port-position
+ get-char-and-track-textual-position
+ port-textual-position
+ port-transcoder
+ port?
+ put-bytevector
+ put-char
+ put-datum
+ put-string
+ put-u8
+ set-port-position!
+ standard-error-port
+ standard-input-port
+ standard-output-port
+ textual-port?
+ transcoded-port
+ would-block-object
+ would-block-object?
+ input-port?
+ output-port?
+ input/output-port?
+ binary-input-port?
+ textual-input-port?
+ binary-output-port?
+ textual-output-port?
+ binary-input/output-port?
+ textual-input/output-port?
+ current-input-port
+ current-output-port
+ current-error-port
+ eof-object
+ eof-object?
+ close-input-port
+ close-output-port
+ display
+ newline
+ open-input-file
+ open-output-file
+ peek-char
+ read
+ write
+ read-char
+ write-char
+ call-with-input-file
+ call-with-output-file
+
+;;; --------------------------------------------------------------------
+
 
  print-graph
  print-unicode
@@ -7548,8 +7756,6 @@
  current-library-collection
  library-name
  find-library-by-name
-
-;;; (ikarus system $pointers)
 
 ;;;
  $closure-code
@@ -7729,12 +7935,6 @@
  raise-continuable
  with-exception-handler
  guard
- binary-port?
- buffer-mode
- buffer-mode?
- call-with-bytevector-output-port
- call-with-port
- call-with-string-output-port
 
  delay
  force
@@ -7743,24 +7943,6 @@
  scheme-report-environment
  interaction-environment
  new-interaction-environment
- close-port
- eol-style
- error-handling-mode
- file-options
- flush-output-port
- get-bytevector-all
- get-bytevector-n
- get-bytevector-n!
- get-bytevector-some
- get-char
- get-datum
- get-line
- read-line
- get-string-all
- get-string-n
- get-string-n!
- get-string-some
- get-u8
  &i/o
  &i/o-decoding
  i/o-decoding-error?
@@ -7799,39 +7981,6 @@
  procedure-argument-violation?
  &expression-return-value-violation
  expression-return-value-violation?
- lookahead-char
- lookahead-u8
- lookahead-two-u8
- make-custom-binary-input-port
- make-custom-binary-output-port
- make-custom-textual-input-port
- make-custom-textual-output-port
- make-custom-binary-input/output-port
- make-custom-textual-input/output-port
- make-binary-file-descriptor-input-port
- make-binary-file-descriptor-input-port*
- make-binary-file-descriptor-output-port
- make-binary-file-descriptor-output-port*
- make-binary-file-descriptor-input/output-port
- make-binary-file-descriptor-input/output-port*
- make-binary-socket-input-port
- make-binary-socket-input-port*
- make-binary-socket-output-port
- make-binary-socket-output-port*
- make-binary-socket-input/output-port
- make-binary-socket-input/output-port*
- make-textual-file-descriptor-input-port
- make-textual-file-descriptor-input-port*
- make-textual-file-descriptor-output-port
- make-textual-file-descriptor-output-port*
- make-textual-file-descriptor-input/output-port
- make-textual-file-descriptor-input/output-port*
- make-textual-socket-input-port
- make-textual-socket-input-port*
- make-textual-socket-output-port
- make-textual-socket-output-port*
- make-textual-socket-input/output-port
- make-textual-socket-input/output-port*
  make-i/o-decoding-error
  make-i/o-encoding-error
  make-i/o-error
@@ -7853,78 +8002,6 @@
  procedure-argument-violation
  make-expression-return-value-violation
  expression-return-value-violation
- open-bytevector-input-port
- open-bytevector-output-port
- open-file-input-port
- open-file-input/output-port
- open-file-output-port
- open-string-input-port
- open-string-output-port
- bytevector-port-buffer-size
- string-port-buffer-size
- input-file-buffer-size
- output-file-buffer-size
- input/output-file-buffer-size
- input/output-socket-buffer-size
- output-port-buffer-mode
- set-port-buffer-mode!
- port-eof?
- port-has-port-position?
- port-has-set-port-position!?
- port-position
- get-char-and-track-textual-position
- port-textual-position
- port-transcoder
- port?
- put-bytevector
- put-char
- put-datum
- put-string
- put-u8
- set-port-position!
- standard-error-port
- standard-input-port
- standard-output-port
- textual-port?
- transcoded-port
- would-block-object
- would-block-object?
- input-port?
- output-port?
- input/output-port?
- binary-input-port?
- textual-input-port?
- binary-output-port?
- textual-output-port?
- binary-input/output-port?
- textual-input/output-port?
- current-input-port
- current-output-port
- current-error-port
- eof-object
- eof-object?
- close-input-port
- close-output-port
- display
- newline
- open-input-file
- open-output-file
- peek-char
-
-  (let ((P (C read)))
-    (register-lambda-signature P (make-clambda-compound (list (S (list (C <top>)) '())
-							      (S (list (C <top>))
-								 (list (C <textual-input-port>)))))))
-
- read-char
-
-  (let ((P (C write)))
-    (register-lambda-signature P (make-clambda-compound (list (S (list (C <top>)) (list (C <top>)))
-							      (S (list (C <top>)) (list (C <top>) (C <textual-input-port>)))))))
-
- write-char
- call-with-input-file
- call-with-output-file
  list-sort
  file-exists?
  directory-exists?
@@ -8015,40 +8092,10 @@
  run-compensations-store
  push-compensation-thunk
 ;;;
- port-id
- port-uid
- port-fd
- port-set-non-blocking-mode!
- port-unset-non-blocking-mode!
- port-in-non-blocking-mode?
- port-putprop
- port-getprop
- port-remprop
- port-property-list
  string->filename-func
  filename->string-func
  string->pathname-func
  pathname->string-func
- port-dump-status
- port-closed?
-;;; (ikarus system $io)
- $make-port
- $port-tag
- $port-id
- $port-cookie
- $port-transcoder
- $port-index
- $port-size
- $port-buffer
- $port-get-position
- $port-set-position!
- $port-close
- $port-read!
- $port-write!
- $set-port-index!
- $set-port-size!
- $port-attrs
- $set-port-attrs!
 ;;;
  get-annotated-datum
  annotation?

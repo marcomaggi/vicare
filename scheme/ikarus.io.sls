@@ -45,17 +45,19 @@
 ;;by the compiler.
 ;;
 ;;Constructor: $make-port ATTRS IDX SZ BUF TR ID READ WRITE GETP SETP CL COOKIE
-;;Aguments: IDX		- index in input/output buffer,
-;;	    SZ		- number of octets/chars used in the input/output buffer,
-;;          BUF		- input/output buffer,
-;;          TR		- transcoder
-;;          ID		- a Scheme string describing the underlying device
-;;          READ	- read procedure
-;;          WRITE	- write procedure
-;;          GETP	- get-position procedure
-;;          SETP	- set-position procedure
-;;          CL		- close procedure
-;;          COOKIE	- device, position, line and column tracking
+;;Arguments:
+;;	ATTRS	- attributes as fixnum
+;;	IDX	- index in input/output buffer,
+;;	SZ	- number of octets/chars used in the input/output buffer,
+;;      BUF	- input/output buffer,
+;;      TR	- transcoder
+;;      ID	- a Scheme string describing the underlying device
+;;      READ	- read procedure
+;;      WRITE	- write procedure
+;;      GETP	- get-position procedure
+;;      SETP	- set-position procedure
+;;      CL	- close procedure
+;;      COOKIE	- device, position, line and column tracking
 ;;  Build a new port structure and return a Scheme value referencing it.
 ;;  Notice  that the  underlying  device is  not  among the  constructor
 ;;  arguments: it is  stored in the cookie and  implicitly referenced by
