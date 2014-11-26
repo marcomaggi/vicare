@@ -97,7 +97,12 @@
   'utf-bom-codec)
 
 (define (native-eol-style)
-  'none)
+  (module (target-os-uid)
+    (include "ikarus.config.scm" #t))
+  (case target-os-uid
+    ((linux darwin bsd)		'lf)
+    ((windows cygwin)		'crlf)
+    (else			'none)))
 
 
 (define error-handling-mode-alist
@@ -172,10 +177,10 @@
    ((codec eol-style)
     (make-transcoder codec eol-style 'replace))
    ((codec)
-    (make-transcoder codec 'none 'replace))))
+    (make-transcoder codec (native-eol-style) 'replace))))
 
 (define native-transcoder
-  (make-parameter (make-transcoder 'utf-8-codec 'none 'replace)
+  (make-parameter (make-transcoder 'utf-8-codec (native-eol-style) 'replace)
     (lambda (obj)
       (if (transcoder? obj)
 	  obj

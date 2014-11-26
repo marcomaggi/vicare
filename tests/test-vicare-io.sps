@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -70,6 +70,11 @@
 
 (define (%open-disposable-textual-input-port)
   (open-string-input-port "1"))
+
+(define (%mk-transcoder codec)
+  (make-transcoder codec
+		   (eol-style none)
+		   (error-handling-mode replace)))
 
 
 ;;;; binary data
@@ -182,7 +187,7 @@
   ;;
   (cleanup-test-pathname)
   (let ((port (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-				     (make-transcoder codec))))
+				     (%mk-transcoder codec))))
     (put-string port ((test-pathname-data-func)))
     (close-output-port port)))
 
@@ -4095,21 +4100,21 @@
 
   (check
       (let* ((bin-port	(open-bytevector-input-port (string->utf8 TEST-STRING-FOR-UTF-8)))
-	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-8-codec)))))
+	     (tran-port	(transcoded-port bin-port (%mk-transcoder (utf-8-codec)))))
 	(get-string-all tran-port))
     => TEST-STRING-FOR-UTF-8)
 
   (check
       (let* ((bin-port	(open-bytevector-input-port (string->utf16 TEST-STRING-FOR-UTF-16-BE
 								   (endianness big))))
-	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-16-codec)))))
+	     (tran-port	(transcoded-port bin-port (%mk-transcoder (utf-16-codec)))))
 	(get-string-all tran-port))
     => TEST-STRING-FOR-UTF-16-BE)
 
   ;;There is no UTF-32 codec.
   #;(check
       (let* ((bin-port	(open-bytevector-input-port (string->utf32 "ciao mamma     ")))
-	     (tran-port	(transcoded-port bin-port (make-transcoder (utf-32-codec)))))
+	     (tran-port	(transcoded-port bin-port (%mk-transcoder (utf-32-codec)))))
 	(get-string-all tran-port))
     => "ciao mamma     ")
 
@@ -5477,7 +5482,7 @@
 
   (let ((doit (lambda (bv)
 		(let ((port (open-bytevector-input-port
-			     bv (make-transcoder (utf-8-codec)))))
+			     bv (%mk-transcoder (utf-8-codec)))))
 		  (let loop ((L '()))
 		    (if (port-eof? port)
 			(apply string (reverse L))
@@ -5593,7 +5598,7 @@
 ;;; reading from bytevector input port, transcoded UTF-8, 4-bytes chars
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-8-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-8-codec)))))
 		  (read-char port)))))
 
     (check	;read 4-bytes UTF-8 char
@@ -5788,7 +5793,7 @@
 ;;; reading from bytevector input port, transcoded UTF-16
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-16-codec)))))
 		  (let loop ((L '()))
 		    (if (port-eof? port)
 			(apply string (reverse L))
@@ -5812,7 +5817,7 @@
 ;;; reading from bytevector input port, transcoded UTF-16, 1-word chars
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-16-codec)))))
 		  (read-char port)))))
 
     (check	;big endian char, default
@@ -5862,7 +5867,7 @@
 ;;; reading from bytevector input port, transcoded UTF-16, 2-words chars
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-16-codec)))))
 		  (read-char port)))))
 
     (check	;big endian char, default
@@ -6084,7 +6089,7 @@
 
   (let ((doit (lambda (bv)
 		(let ((port (open-bytevector-input-port
-			     bv (make-transcoder (utf-8-codec)))))
+			     bv (%mk-transcoder (utf-8-codec)))))
 		  (let loop ((L '()))
 		    (if (port-eof? port)
 			(apply string (reverse L))
@@ -6200,7 +6205,7 @@
 ;;; peeking from bytevector input port, transcoded UTF-8, 4-bytes chars
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-8-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-8-codec)))))
 		  (%peek-and-consume-char port)))))
 
     (check	;read 4-bytes UTF-8 char
@@ -6395,7 +6400,7 @@
 ;;; peeking from bytevector input port, transcoded UTF-16
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-16-codec)))))
 		  (let loop ((L '()))
 		    (if (port-eof? port)
 			(apply string (reverse L))
@@ -6419,7 +6424,7 @@
 ;;; peeking from bytevector input port, transcoded UTF-16, 1-word chars
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-16-codec)))))
 		  (%peek-and-consume-char port)))))
 
     (check	;big endian char, default
@@ -6469,7 +6474,7 @@
 ;;; peeking from bytevector input port, transcoded UTF-16, 2-words chars
 
   (let ((doit (lambda (bv)
-		(let ((port (open-bytevector-input-port bv (make-transcoder (utf-16-codec)))))
+		(let ((port (open-bytevector-input-port bv (%mk-transcoder (utf-16-codec)))))
 		  (%peek-and-consume-char port)))))
 
     (check	;big endian char, default
@@ -6766,13 +6771,13 @@
 ;;; input from a bytevector with Latin-1 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (latin-1-codec)))))
 	(get-string-n port 10))
     => (eof-object))
 
   (check	;count is bigger than available data
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (latin-1-codec)))))
+					      (%mk-transcoder (latin-1-codec)))))
 	(get-string-n port 10))
     => "ABCD")
 
@@ -6780,7 +6785,7 @@
 	 (src.str LATIN-1-ALL-CHARS-STRING)
 	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (latin-1-codec)))))
 		    (get-string-n port count)))))
 
     (check (doit 0)		=> "")
@@ -6794,13 +6799,13 @@
 ;;; input from a bytevector with UTF-8 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-8-codec)))))
 	(get-string-n port 10))
     => (eof-object))
 
   (check	;count is bigger than available data
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (utf-8-codec)))))
+					      (%mk-transcoder (utf-8-codec)))))
 	(get-string-n port 10))
     => "ABCD")
 
@@ -6812,7 +6817,7 @@
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (string->utf8 src.str))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-8-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-8-codec)))))
 		    (get-string-n port count)))))
 
     (check (doit 0)		=> "")
@@ -6826,13 +6831,13 @@
 ;;; input from a bytevector with UTF-16 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-16-codec)))))
 	(get-string-n port 10))
     => (eof-object))
 
   (check	;count is bigger than available data
       (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(get-string-n port 10))
     => "ABCD")
 
@@ -6845,7 +6850,7 @@
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (string->utf16 src.str (endianness big)))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (get-string-n port count)))))
 
     (check (doit 0)		=> "")
@@ -6865,7 +6870,7 @@
 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
 				     (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (get-string-n port count)))))
 
     (check (doit 0)		=> "")
@@ -6884,7 +6889,7 @@
 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
 				     (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (get-string-n port count)))))
 
     (check (doit 0)		=> "")
@@ -7170,7 +7175,7 @@
 ;;; input from a bytevector with Latin-1 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (latin-1-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
 	      (count		10))
@@ -7179,7 +7184,7 @@
 
   (check	;count is bigger than available data
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (latin-1-codec)))))
+					      (%mk-transcoder (latin-1-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
 	      (count		10))
@@ -7190,7 +7195,7 @@
 	 (src.str LATIN-1-ALL-CHARS-STRING)
 	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count len)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (latin-1-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
 			  (dst.start	0))
 		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
@@ -7206,7 +7211,7 @@
 ;;; input from a bytevector with UTF-8 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-8-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
 	      (count		10))
@@ -7215,7 +7220,7 @@
 
   (check	;count is bigger than available data
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (utf-8-codec)))))
+					      (%mk-transcoder (utf-8-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
 	      (count		10))
@@ -7230,7 +7235,7 @@
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (string->utf8 src.str))
 	 (doit	(lambda (count len)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-8-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-8-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
 			  (dst.start	0))
 		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
@@ -7246,7 +7251,7 @@
 ;;; input from a bytevector with UTF-16 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-16-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
 	      (count		10))
@@ -7255,7 +7260,7 @@
 
   (check	;count is bigger than available data
       (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(let ((dst.str		(make-string 10 #\Z))
 	      (dst.start	0)
 	      (count		10))
@@ -7271,7 +7276,7 @@
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (string->utf16 src.str (endianness big)))
 	 (doit	(lambda (count len)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
 			  (dst.start	0))
 		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
@@ -7293,7 +7298,7 @@
  	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
 				     (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count len)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
 			  (dst.start	0))
 		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
@@ -7315,7 +7320,7 @@
  	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
 				     (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count len)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (let ((dst.str	(make-string len #\Z))
 			  (dst.start	0))
 		      (list (get-string-n! port dst.str dst.start count) dst.str))))))
@@ -7402,13 +7407,13 @@
 ;;; input from a bytevector with Latin-1 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (latin-1-codec)))))
 	(get-string-all port))
     => (eof-object))
 
   (check	;some data available
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (latin-1-codec)))))
+					      (%mk-transcoder (latin-1-codec)))))
 	(get-string-all port))
     => "ABCD")
 
@@ -7416,7 +7421,7 @@
 	 (src.str LATIN-1-ALL-CHARS-STRING)
 	 (src.bv  (string->latin1 src.str))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (latin-1-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (latin-1-codec)))))
 		    (get-string-all port)))))
 
     (check (doit src.len)	=> src.str)
@@ -7427,13 +7432,13 @@
 ;;; input from a bytevector with UTF-8 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-8-codec)))))
 	(get-string-all port))
     => (eof-object))
 
   (check	;some data available
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (utf-8-codec)))))
+					      (%mk-transcoder (utf-8-codec)))))
 	(get-string-all port))
     => "ABCD")
 
@@ -7445,7 +7450,7 @@
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (string->utf8 src.str))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-8-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-8-codec)))))
 		    (get-string-all port)))))
 
     (check (doit src.len)	=> src.str)
@@ -7456,13 +7461,13 @@
 ;;; input from a bytevector with UTF-16 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-16-codec)))))
 	(get-string-all port))
     => (eof-object))
 
   (check	;some data available
       (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(get-string-all port))
     => "ABCD")
 
@@ -7475,7 +7480,7 @@
   		      (string-set! str i (integer->char i)))))
 	 (src.bv  (string->utf16 src.str (endianness big)))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (get-string-all port)))))
 
     (check (doit src.len)	=> src.str)
@@ -7492,7 +7497,7 @@
 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-LE
 				     (string->utf16 src.str (endianness little))))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (get-string-all port)))))
 
     (check (doit src.len)	=> src.str)
@@ -7508,7 +7513,7 @@
 	 (src.bv  (bytevector-append BYTE-ORDER-MARK-UTF-16-BE
 				     (string->utf16 src.str (endianness big))))
 	 (doit	(lambda (count)
-		  (let ((port (open-bytevector-input-port src.bv (make-transcoder (utf-16-codec)))))
+		  (let ((port (open-bytevector-input-port src.bv (%mk-transcoder (utf-16-codec)))))
 		    (get-string-all port)))))
 
     (check (doit src.len)	=> src.str)
@@ -7616,19 +7621,19 @@
 ;;; input from a bytevector with Latin-1 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (latin-1-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (latin-1-codec)))))
 	(read-line port))
     => (eof-object))
 
   (check	;some data available, no newline
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 68)
-					      (make-transcoder (latin-1-codec)))))
+					      (%mk-transcoder (latin-1-codec)))))
 	(read-line port))
     => "ABCD")
 
   (check	;some data available, newline
       (let ((port (open-bytevector-input-port '#vu8(65 66 67 10 68)
-					      (make-transcoder (latin-1-codec)))))
+					      (%mk-transcoder (latin-1-codec)))))
 	(read-line port))
     => "ABC")
 
@@ -7636,19 +7641,19 @@
 ;;; input from a bytevector with UTF-8 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-8-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-8-codec)))))
 	(read-line port))
     => (eof-object))
 
   (check	;some data available, no newline
       (let ((port (open-bytevector-input-port (string->utf8 "ABCD")
-					      (make-transcoder (utf-8-codec)))))
+					      (%mk-transcoder (utf-8-codec)))))
 	(read-line port))
     => "ABCD")
 
   (check	;some data available, newline
       (let ((port (open-bytevector-input-port (string->utf8 "ABC\nD")
-					      (make-transcoder (utf-8-codec)))))
+					      (%mk-transcoder (utf-8-codec)))))
 	(read-line port))
     => "ABC")
 
@@ -7656,19 +7661,19 @@
 ;;; input from a bytevector with UTF-16 encoding
 
   (check	;no data available
-      (let ((port (open-bytevector-input-port '#vu8() (make-transcoder (utf-16-codec)))))
+      (let ((port (open-bytevector-input-port '#vu8() (%mk-transcoder (utf-16-codec)))))
 	(read-line port))
     => (eof-object))
 
   (check	;some data available, no newline
       (let ((port (open-bytevector-input-port (string->utf16 "ABCD" (endianness big))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(read-line port))
     => "ABCD")
 
   (check	;some data available, newline
       (let ((port (open-bytevector-input-port (string->utf16 "ABC\nD" (endianness big))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(read-line port))
     => "ABC")
 
@@ -7676,7 +7681,7 @@
       (let ((port (open-bytevector-input-port (bytevector-append
 					       BYTE-ORDER-MARK-UTF-16-BE
 					       (string->utf16 "ABCD" (endianness big)))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(read-line port))
     => "ABCD")
 
@@ -7684,7 +7689,7 @@
       (let ((port (open-bytevector-input-port (bytevector-append
 					       BYTE-ORDER-MARK-UTF-16-BE
 					       (string->utf16 "ABC\nD" (endianness big)))
-					      (make-transcoder (utf-16-codec)))))
+					      (%mk-transcoder (utf-16-codec)))))
 	(read-line port))
     => "ABC")
 
@@ -8163,20 +8168,20 @@
 ;;; UTF-8 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(put-char port #\A)
 	(utf8->string (extract)))
     => "A")
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(put-char port #\A)
 	(put-char port #\B)
 	(utf8->string (extract)))
     => "AB")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(do ((i 0 (+ 1 i)))
 	    ((= i 10)
 	     (extract))
@@ -8184,7 +8189,7 @@
     => '#vu8(0 1 2 3 4 5 6 7 8 9))
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(let ((str TEST-STRING-FOR-UTF-8))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8196,13 +8201,13 @@
 ;;; UTF-16 LE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(put-char port #\A)
 	(utf16->string (extract) (endianness little)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(let ((str TEST-STRING-FOR-UTF-16-LE))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8214,13 +8219,13 @@
 ;;; UTF-16 BE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(put-char port #\A)
 	(utf16->string (extract) (endianness big)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(let ((str TEST-STRING-FOR-UTF-16-BE))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8232,13 +8237,13 @@
 ;;; Latin-1 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(put-char port #\A)
 	(latin1->string (extract)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(let ((str TEST-STRING-FOR-LATIN-1))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8332,20 +8337,20 @@
 ;;; UTF-8 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(write-char #\A port)
 	(utf8->string (extract)))
     => "A")
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(write-char #\A port)
 	(write-char #\B port)
 	(utf8->string (extract)))
     => "AB")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(do ((i 0 (+ 1 i)))
 	    ((= i 10)
 	     (extract))
@@ -8353,7 +8358,7 @@
     => '#vu8(0 1 2 3 4 5 6 7 8 9))
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(let ((str TEST-STRING-FOR-UTF-8))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8365,13 +8370,13 @@
 ;;; UTF-16 LE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(write-char #\A port)
 	(utf16->string (extract) (endianness little)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(let ((str TEST-STRING-FOR-UTF-16-LE))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8383,13 +8388,13 @@
 ;;; UTF-16 BE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(write-char #\A port)
 	(utf16->string (extract) (endianness big)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(let ((str TEST-STRING-FOR-UTF-16-BE))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8401,13 +8406,13 @@
 ;;; Latin-1 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(write-char #\A port)
 	(latin1->string (extract)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(let ((str TEST-STRING-FOR-LATIN-1))
 	  (do ((i 0 (+ 1 i)))
 	      ((= i (string-length str))
@@ -8498,20 +8503,20 @@
 ;;; UTF-8 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(put-string port "A")
 	(utf8->string (extract)))
     => "A")
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(put-string port "A")
 	(put-string port "B")
 	(utf8->string (extract)))
     => "AB")
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(put-string port TEST-STRING-FOR-UTF-8)
 	(extract))
     => TEST-BYTEVECTOR-FOR-UTF-8)
@@ -8520,13 +8525,13 @@
 ;;; UTF-16 LE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(put-string port "A")
 	(utf16->string (extract) (endianness little)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(put-string port TEST-STRING-FOR-UTF-16-LE)
 	(extract))
     => TEST-BYTEVECTOR-FOR-UTF-16-LE)
@@ -8535,13 +8540,13 @@
 ;;; UTF-16 BE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(put-string port "A")
 	(utf16->string (extract) (endianness big)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(put-string port TEST-STRING-FOR-UTF-16-BE)
 	(extract))
     => TEST-BYTEVECTOR-FOR-UTF-16-BE)
@@ -8550,13 +8555,13 @@
 ;;; Latin-1 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(put-string port "A")
 	(latin1->string (extract)))
     => "A")
 
   (check	;fill the buffer
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(put-string port TEST-STRING-FOR-LATIN-1)
 	(extract))
     => TEST-BYTEVECTOR-FOR-LATIN-1)
@@ -8618,7 +8623,7 @@
 ;;; UTF-8 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-8-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-8-codec)))))
 	(newline port)
 	(utf8->string (extract)))
     => "\n")
@@ -8627,7 +8632,7 @@
 ;;; UTF-16 LE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16le-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16le-codec)))))
 	(newline port)
 	(utf16->string (extract) (endianness little)))
     => "\n")
@@ -8636,7 +8641,7 @@
 ;;; UTF-16 BE transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (utf-16be-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (utf-16be-codec)))))
 	(newline port)
 	(utf16->string (extract) (endianness big)))
     => "\n")
@@ -8645,7 +8650,7 @@
 ;;; Latin-1 transcoder
 
   (check
-      (let-values (((port extract) (open-bytevector-output-port (make-transcoder (latin-1-codec)))))
+      (let-values (((port extract) (open-bytevector-output-port (%mk-transcoder (latin-1-codec)))))
 	(newline port)
 	(latin1->string (extract)))
     => "\n")
@@ -8749,7 +8754,7 @@
 					       TEST-BYTEVECTOR-FOR-LATIN-1)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (latin-1-codec)))))
+			       (%mk-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
@@ -8757,7 +8762,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-8)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (utf-8-codec)))))
+			       (%mk-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
   (check
@@ -8765,7 +8770,7 @@
 					       SPECIAL1-TEST-BYTEVECTOR-FOR-UTF-8)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (utf-8-codec)))))
+			       (%mk-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check
@@ -8773,7 +8778,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-LE)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (utf-16le-codec)))))
+			       (%mk-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
 
@@ -8782,7 +8787,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-BE)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (utf-16be-codec)))))
+			       (%mk-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   (check
@@ -8790,7 +8795,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (utf-16-codec)))))
+			       (%mk-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
@@ -8798,7 +8803,7 @@
 					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM)))
 	(with-textual-input-test-pathname
 	 (open-file-input-port (test-pathname) (file-options) (buffer-mode block)
-			       (make-transcoder (utf-16-codec)))))
+			       (%mk-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   #t)
@@ -8836,7 +8841,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-LATIN-1))
-		    (native-transcoder	(make-transcoder (latin-1-codec))))
+		    (native-transcoder	(%mk-transcoder (latin-1-codec))))
   	(with-textual-input-test-pathname
   	 (open-input-file (test-pathname))))
     => TEST-STRING-FOR-LATIN-1)
@@ -8858,7 +8863,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-LE))
-		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16le-codec))))
   	(with-textual-input-test-pathname
   	 (open-input-file (test-pathname))))
     => TEST-STRING-FOR-UTF-16-LE)
@@ -8866,7 +8871,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-BE))
-		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16be-codec))))
   	(with-textual-input-test-pathname
   	 (open-input-file (test-pathname))))
     => TEST-STRING-FOR-UTF-16-BE)
@@ -8874,7 +8879,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM))
-		    (native-transcoder	(make-transcoder (utf-16-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16-codec))))
   	(with-textual-input-test-pathname
   	 (open-input-file (test-pathname))))
     => TEST-STRING-FOR-UTF-16-LE)
@@ -8882,7 +8887,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM))
-		    (native-transcoder	(make-transcoder (utf-16-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16-codec))))
   	(with-textual-input-test-pathname
   	 (open-input-file (test-pathname))))
     => TEST-STRING-FOR-UTF-16-BE)
@@ -8934,7 +8939,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-LATIN-1))
-		    (native-transcoder	(make-transcoder (latin-1-codec))))
+		    (native-transcoder	(%mk-transcoder (latin-1-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-LATIN-1)
 
@@ -8953,28 +8958,28 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-LE))
-		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16le-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-BE))
-		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16be-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-BE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM))
-		    (native-transcoder	(make-transcoder (utf-16-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM))
-		    (native-transcoder	(make-transcoder (utf-16-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9024,7 +9029,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-LATIN-1))
-		    (native-transcoder	(make-transcoder (latin-1-codec))))
+		    (native-transcoder	(%mk-transcoder (latin-1-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-LATIN-1)
 
@@ -9043,28 +9048,28 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-LE))
-		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16le-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-BE))
-		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16be-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-BE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-LE/BOM))
-		    (native-transcoder	(make-transcoder (utf-16-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-BYTEVECTOR-FOR-UTF-16-BE/BOM))
-		    (native-transcoder	(make-transcoder (utf-16-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16-codec))))
   	(with-textual-input-test-pathname))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9098,7 +9103,7 @@
 	       (unwind-protect
 		   (put-string port ((test-pathname-data-func)))
 		 (close-output-port port))
-	       (textual-read-test-pathname (make-transcoder ?codec)))
+	       (textual-read-test-pathname (%mk-transcoder ?codec)))
 	   (cleanup-test-pathname))))))
 
 ;;; --------------------------------------------------------------------
@@ -9171,7 +9176,7 @@
   					       TEST-STRING-FOR-LATIN-1)))
   	(with-textual-output-test-pathname (latin-1-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-  				(make-transcoder (latin-1-codec)))))
+  				(%mk-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
@@ -9179,7 +9184,7 @@
   					       TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-  				(make-transcoder (utf-8-codec)))))
+  				(%mk-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
   (check
@@ -9187,7 +9192,7 @@
   					       SPECIAL1-TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-  				(make-transcoder (utf-8-codec)))))
+  				(%mk-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check	;default to big endian
@@ -9195,7 +9200,7 @@
   					       TEST-STRING-FOR-UTF-16-BE)))
   	(with-textual-output-test-pathname (utf-16be-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-  				(make-transcoder (utf-16-codec)))))
+  				(%mk-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   (check	;explicit little endianness selection
@@ -9203,7 +9208,7 @@
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-  				(make-transcoder (utf-16le-codec)))))
+  				(%mk-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
@@ -9211,7 +9216,7 @@
   					       TEST-STRING-FOR-UTF-16-BE)))
   	(with-textual-output-test-pathname (utf-16be-codec)
   	 (open-file-output-port (test-pathname) (file-options) (buffer-mode block)
-  				(make-transcoder (utf-16be-codec)))))
+  				(%mk-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   #t)
@@ -9231,7 +9236,7 @@
 	       (unwind-protect
 		   (put-string port ((test-pathname-data-func)))
 		 (close-output-port port))
-	       (textual-read-test-pathname (make-transcoder ?codec)))
+	       (textual-read-test-pathname (%mk-transcoder ?codec)))
 	   (cleanup-test-pathname))))))
 
 ;;; --------------------------------------------------------------------
@@ -9251,28 +9256,28 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-LATIN-1))
-		    (native-transcoder	(make-transcoder (latin-1-codec))))
+		    (native-transcoder	(%mk-transcoder (latin-1-codec))))
   	(with-textual-output-test-pathname (latin-1-codec)))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-8))
-		    (native-transcoder	(make-transcoder (utf-8-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-8-codec))))
   	(with-textual-output-test-pathname (utf-8-codec)))
     => TEST-STRING-FOR-UTF-8)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       SPECIAL1-TEST-STRING-FOR-UTF-8))
-		    (native-transcoder	(make-transcoder (utf-8-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-8-codec))))
   	(with-textual-output-test-pathname (utf-8-codec)))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE))
-		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16le-codec))))
   	(with-textual-output-test-pathname (utf-16le-codec)))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9280,7 +9285,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-BE))
-		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16be-codec))))
   	(with-textual-output-test-pathname (utf-16be-codec)))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9318,7 +9323,7 @@
 	       (with-output-to-file (test-pathname)
 		 (lambda ()
 		   (put-string (current-output-port) ((test-pathname-data-func)))))
-	       (textual-read-test-pathname (make-transcoder ?codec)))
+	       (textual-read-test-pathname (%mk-transcoder ?codec)))
 	   (cleanup-test-pathname))))))
 
 ;;; --------------------------------------------------------------------
@@ -9349,28 +9354,28 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-LATIN-1))
-		    (native-transcoder	(make-transcoder (latin-1-codec))))
+		    (native-transcoder	(%mk-transcoder (latin-1-codec))))
   	(with-textual-output-test-pathname (latin-1-codec)))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-8))
-		    (native-transcoder	(make-transcoder (utf-8-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-8-codec))))
   	(with-textual-output-test-pathname (utf-8-codec)))
     => TEST-STRING-FOR-UTF-8)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       SPECIAL1-TEST-STRING-FOR-UTF-8))
-		    (native-transcoder	(make-transcoder (utf-8-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-8-codec))))
   	(with-textual-output-test-pathname (utf-8-codec)))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE))
-		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16le-codec))))
   	(with-textual-output-test-pathname (utf-16le-codec)))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9378,7 +9383,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-BE))
-		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16be-codec))))
   	(with-textual-output-test-pathname (utf-16be-codec)))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9399,7 +9404,7 @@
 	       (call-with-output-file (test-pathname)
 		 (lambda (port)
 		   (put-string port ((test-pathname-data-func)))))
-	       (textual-read-test-pathname (make-transcoder ?codec)))
+	       (textual-read-test-pathname (%mk-transcoder ?codec)))
 	   (cleanup-test-pathname))))))
 
 ;;; --------------------------------------------------------------------
@@ -9430,28 +9435,28 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-LATIN-1))
-		    (native-transcoder	(make-transcoder (latin-1-codec))))
+		    (native-transcoder	(%mk-transcoder (latin-1-codec))))
   	(with-textual-output-test-pathname (latin-1-codec)))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-8))
-		    (native-transcoder	(make-transcoder (utf-8-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-8-codec))))
   	(with-textual-output-test-pathname (utf-8-codec)))
     => TEST-STRING-FOR-UTF-8)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       SPECIAL1-TEST-STRING-FOR-UTF-8))
-		    (native-transcoder	(make-transcoder (utf-8-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-8-codec))))
   	(with-textual-output-test-pathname (utf-8-codec)))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-LE))
-		    (native-transcoder	(make-transcoder (utf-16le-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16le-codec))))
   	(with-textual-output-test-pathname (utf-16le-codec)))
     => TEST-STRING-FOR-UTF-16-LE)
 
@@ -9459,7 +9464,7 @@
   (check
       (parametrise ((test-pathname-data-func (lambda ()
   					       TEST-STRING-FOR-UTF-16-BE))
-		    (native-transcoder	(make-transcoder (utf-16be-codec))))
+		    (native-transcoder	(%mk-transcoder (utf-16be-codec))))
   	(with-textual-output-test-pathname (utf-16be-codec)))
     => TEST-STRING-FOR-UTF-16-BE)
 
@@ -9516,7 +9521,7 @@
 	       (unwind-protect
 		   (put-string port ((test-pathname-data-func)))
 		 (close-output-port port))
-	       (textual-read-test-pathname (make-transcoder ?codec)))
+	       (textual-read-test-pathname (%mk-transcoder ?codec)))
 	   (cleanup-test-pathname))))))
 
 ;;; --------------------------------------------------------------------
@@ -9630,7 +9635,7 @@
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
-				      (make-transcoder (latin-1-codec)))))
+				      (%mk-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
@@ -9639,7 +9644,7 @@
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
-				      (make-transcoder (utf-8-codec)))))
+				      (%mk-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
   (check
@@ -9648,7 +9653,7 @@
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
-				      (make-transcoder (utf-8-codec)))))
+				      (%mk-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check
@@ -9657,7 +9662,7 @@
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
-				      (make-transcoder (utf-16-codec)))))
+				      (%mk-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   (check
@@ -9666,7 +9671,7 @@
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
-				      (make-transcoder (utf-16le-codec)))))
+				      (%mk-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
@@ -9675,7 +9680,7 @@
 	(with-textual-input-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
 				      (buffer-mode block)
-				      (make-transcoder (utf-16be-codec)))))
+				      (%mk-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
 ;;; --------------------------------------------------------------------
@@ -9704,7 +9709,7 @@
   					       TEST-STRING-FOR-LATIN-1)))
   	(with-textual-output-test-pathname (latin-1-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
-				       (make-transcoder (latin-1-codec)))))
+				       (%mk-transcoder (latin-1-codec)))))
     => TEST-STRING-FOR-LATIN-1)
 
   (check
@@ -9712,7 +9717,7 @@
   					       TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
-				       (make-transcoder (utf-8-codec)))))
+				       (%mk-transcoder (utf-8-codec)))))
     => TEST-STRING-FOR-UTF-8)
 
   (check
@@ -9720,7 +9725,7 @@
   					       SPECIAL1-TEST-STRING-FOR-UTF-8)))
   	(with-textual-output-test-pathname (utf-8-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
-				       (make-transcoder (utf-8-codec)))))
+				       (%mk-transcoder (utf-8-codec)))))
     => SPECIAL1-TEST-STRING-FOR-UTF-8)
 
   (check	;default to big endian
@@ -9728,7 +9733,7 @@
   					       TEST-STRING-FOR-UTF-16-BE)))
   	(with-textual-output-test-pathname (utf-16be-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
-				       (make-transcoder (utf-16-codec)))))
+				       (%mk-transcoder (utf-16-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
   (check	;explicit little endianness selection
@@ -9736,7 +9741,7 @@
   					       TEST-STRING-FOR-UTF-16-LE)))
   	(with-textual-output-test-pathname (utf-16le-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
-				       (make-transcoder (utf-16le-codec)))))
+				       (%mk-transcoder (utf-16le-codec)))))
     => TEST-STRING-FOR-UTF-16-LE)
 
   (check
@@ -9744,7 +9749,7 @@
   					       TEST-STRING-FOR-UTF-16-BE)))
   	(with-textual-output-test-pathname (utf-16be-codec)
 	  (open-file-input/output-port (test-pathname) (file-options) (buffer-mode block)
-				       (make-transcoder (utf-16be-codec)))))
+				       (%mk-transcoder (utf-16be-codec)))))
     => TEST-STRING-FOR-UTF-16-BE)
 
 ;;; --------------------------------------------------------------------
@@ -9788,7 +9793,7 @@
 		    (input/output-file-buffer-size 9))
 	(with-textual-input/output-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-fail no-create no-truncate)
-				      (buffer-mode block) (make-transcoder (utf-8-codec)))
+				      (buffer-mode block) (%mk-transcoder (utf-8-codec)))
 	 (textdata-bytes.str)))
     => (let ((len (bytevector-length (string->utf8 (textdata-bytes.str)))))
 	 `(,len (,(textdata-bytes.str) ,len 0 ,len 0 ,(textdata-bytes.str)))))
@@ -9798,7 +9803,7 @@
 					       (textdata-bytes.str))))
 	(with-textual-input/output-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-fail no-create no-truncate)
-				      (buffer-mode block) (make-transcoder (utf-8-codec)))
+				      (buffer-mode block) (%mk-transcoder (utf-8-codec)))
 	 (textdata-bytes.str)))
     => (let ((len (bytevector-length (string->utf8 (textdata-bytes.str)))))
 	 `(,len (,(textdata-bytes.str) ,len 0 ,len 0 ,(textdata-bytes.str)))))
@@ -9808,7 +9813,7 @@
 					       (textdata-hundreds.str))))
 	(with-textual-input/output-test-pathname
 	 (open-file-input/output-port (test-pathname) (file-options no-create no-truncate)
-				      (buffer-mode block) (make-transcoder (utf-8-codec)))
+				      (buffer-mode block) (%mk-transcoder (utf-8-codec)))
 	 (textdata-hundreds.str)))
     => (let ((len (bytevector-length (string->utf8 (textdata-hundreds.str)))))
 	 `(,len (,(textdata-hundreds.str) ,len 0 ,len 0 ,(textdata-hundreds.str)))))
@@ -11420,7 +11425,7 @@
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(guard (E ((assertion-violation? E)
 ;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
@@ -11430,19 +11435,19 @@
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(get-string-all port))
     => TEST-STRING)
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-16-LE/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(get-string-all port))
     => TEST-STRING)
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-16-BE/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(get-string-all port))
     => TEST-STRING)
 
@@ -11451,7 +11456,7 @@
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(guard (E ((assertion-violation? E)
 ;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
@@ -11461,19 +11466,19 @@
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(get-char port))
     => #\x0)
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-16-LE/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(get-char port))
     => #\x0)
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-16-BE/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(get-char port))
     => #\x0)
 
@@ -11482,7 +11487,7 @@
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(guard (E ((assertion-violation? E)
 ;;;		   (check-pretty-print (condition-message E))
 		   (eq? port (car (condition-irritants E))))
@@ -11492,19 +11497,19 @@
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-8/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(lookahead-char port))
     => #\x0)
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-16-LE/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(lookahead-char port))
     => #\x0)
 
   (check
       (let ((port (open-bytevector-input-port TEST-BV-UTF-16-BE/BOM
-					      (make-transcoder (utf-bom-codec)))))
+					      (%mk-transcoder (utf-bom-codec)))))
 	(lookahead-char port))
     => #\x0)
 

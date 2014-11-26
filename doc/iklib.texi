@@ -11133,7 +11133,7 @@ the Scheme implementation is running.  Under @value{PRJNAME} such
 default is:
 
 @example
-(make-transcoder (utf-8-codec) 'none 'replace)
+(make-transcoder (utf-8-codec) (native-eol-style) 'replace)
 @end example
 
 @noindent
