@@ -3566,26 +3566,6 @@
 
 ;;;; bytevectors, safe functions
 
-#|
-
- bytevector-length?
- bytevector-index?
- bytevector-word-size?
- bytevector-word-count?
- bytevector-index-for-word?
- bytevector-index-for-word8?
- bytevector-index-for-word16?
- bytevector-index-for-word32?
- bytevector-index-for-word64?
- bytevector-start-index-and-count-for-word?
- bytevector-start-index-and-count-for-word8?
- bytevector-start-index-and-count-for-word16?
- bytevector-start-index-and-count-for-word32?
- bytevector-start-index-and-count-for-word64?
-
-
-|#
-
 (declare-core-primitive make-bytevector
     (safe)
   (signatures
@@ -3846,6 +3826,14 @@
 ;;; --------------------------------------------------------------------
 ;;; conversion
 
+(declare-core-primitive bytevector->string
+    (safe)
+  (signatures
+   ((T:bytevector T:transcoder)	=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_ _)			effect-free result-true)))
+
 (let-syntax
     ((declare-bytevector->string-conversion
       (syntax-rules ()
@@ -3976,6 +3964,51 @@
   (declare-bytevector->list-conversion bytevector->u64b-list)
   (declare-bytevector->list-conversion bytevector->u64l-list)
   (declare-bytevector->list-conversion bytevector->u64n-list)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; bytevector related predicates
+
+(declare-type-predicate bytevector-length?	T:non-negative-fixnum)
+(declare-type-predicate bytevector-index?	T:non-negative-fixnum)
+
+(let-syntax
+    ((declare-bytevector-releated-fixnum-predicate
+      (syntax-rules ()
+	((_ ?who ?obj-tag)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((?obj-tag)		=> (T:boolean))
+	    ((T:object)		=> (T:false)))
+	   (attributes
+	    ((_)		foldable effect-free result-true))))
+	)))
+  (declare-bytevector-releated-fixnum-predicate bytevector-word-size?	T:positive-fixnum)
+  (declare-bytevector-releated-fixnum-predicate bytevector-word-count?	T:non-negative-fixnum)
+  (declare-bytevector-releated-fixnum-predicate bytevector-index-for-word?	T:non-negative-fixnum)
+  (declare-bytevector-releated-fixnum-predicate bytevector-index-for-word8?	T:non-negative-fixnum)
+  (declare-bytevector-releated-fixnum-predicate bytevector-index-for-word16?	T:non-negative-fixnum)
+  (declare-bytevector-releated-fixnum-predicate bytevector-index-for-word32?	T:non-negative-fixnum)
+  (declare-bytevector-releated-fixnum-predicate bytevector-index-for-word64?	T:non-negative-fixnum)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-bytevector-releated-fixnum-predicate
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector T:non-negative-fixnum)	=> (T:boolean)))
+	   (attributes
+	    ((_ _)		foldable effect-free result-true))))
+	)))
+  (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word?)
+  (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word8?)
+  (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word16?)
+  (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word32?)
+  (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word64?)
   #| end of LET-SYNTAX |# )
 
 
@@ -4499,9 +4532,99 @@
    (()				effect-free result-true)))
 
 
-;;;; input/output, safe primitives
+;;;; transcoders, safe primitives
 
-;;; transcoders
+;;; predicates
+
+(declare-type-predicate transcoder? T:transcoder)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive make-transcoder
+    (safe)
+  (signatures
+   ((T:symbol)				=> (T:transcoder))
+   ((T:symbol T:symbol)			=> (T:transcoder))
+   ((T:symbol T:symbol T:symbol)	=> (T:transcoder)))
+  (attributes
+   ((_)			 effect-free result-true)
+   ((_ _)		 effect-free result-true)
+   ((_ _ _)		 effect-free result-true)))
+
+(declare-core-primitive native-transcoder
+    (safe)
+  (signatures
+   ;;This is a parameter.
+   (()				=> (T:transcoder))
+   ((T:transcoder)		=> (T:void))
+   ((T:transcoder T:object)	=> (T:void)))
+  (attributes
+   ;;This is a parameter, so it is never foldable.
+   (()			 effect-free result-true)
+   ;;The following  rules mutate the parameter  in the dynamic environment,  so their
+   ;;are not effect- free.
+   ((_)			 result-true)
+   ((_ _)		 result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors
+
+(let-syntax
+    ((declare-transcoder-accessor
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:transcoder)	=> (T:symbol)))
+	   (attributes
+	    ((_)			foldable effect-free result-true))))
+	)))
+  (declare-transcoder-accessor transcoder-codec)
+  (declare-transcoder-accessor transcoder-eol-style)
+  (declare-transcoder-accessor transcoder-error-handling-mode)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; codec values
+
+(let-syntax
+    ((declare-codec-procedure
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    (()			=> (T:symbol)))
+	   (attributes
+	    (()			foldable effect-free result-true))))
+	)))
+  (declare-codec-procedure latin-1-codec)
+  (declare-codec-procedure utf-8-codec)
+  (declare-codec-procedure utf-16-codec)
+  (declare-codec-procedure utf-16le-codec)
+  (declare-codec-procedure utf-16be-codec)
+  (declare-codec-procedure utf-16n-codec)
+  (declare-codec-procedure utf-bom-codec)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive native-eol-style
+    (safe)
+  (signatures
+   (()			=> (T:symbol)))
+  (attributes
+   (()			foldable effect-free result-true)))
+
+(declare-core-primitive native-endianness
+    (safe)
+  (signatures
+   (()			=> (T:symbol)))
+  (attributes
+   (()			foldable effect-free result-true)))
+
+
+;;;; transcoders, unsafe primitives
 
 (declare-core-primitive $data->transcoder
     (unsafe)
@@ -7586,7 +7709,6 @@
  binary-port?
  buffer-mode
  buffer-mode?
- bytevector->string
  call-with-bytevector-output-port
  call-with-port
  call-with-string-output-port
@@ -7657,7 +7779,6 @@
  lookahead-char
  lookahead-u8
  lookahead-two-u8
- make-bytevector
  make-custom-binary-input-port
  make-custom-binary-output-port
  make-custom-textual-input-port
@@ -7709,11 +7830,6 @@
  procedure-argument-violation
  make-expression-return-value-violation
  expression-return-value-violation
- latin-1-codec
- make-transcoder
- native-eol-style
- native-transcoder
- transcoder?
  open-bytevector-input-port
  open-bytevector-output-port
  open-file-input-port
@@ -7748,15 +7864,6 @@
  standard-output-port
  textual-port?
  transcoded-port
- transcoder-codec
- transcoder-eol-style
- transcoder-error-handling-mode
- utf-8-codec
- utf-16-codec
- utf-16le-codec
- utf-16be-codec
- utf-16n-codec
- utf-bom-codec
  would-block-object
  would-block-object?
  input-port?
@@ -7872,8 +7979,6 @@
  pretty-format
  pretty-width
  library
- $transcoder->data
- $data->transcoder
  make-file-options
 ;;;
  set-identifier-unsafe-variant!
