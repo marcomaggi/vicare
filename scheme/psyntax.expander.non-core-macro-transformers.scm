@@ -171,6 +171,10 @@
 		 (bless '(quote #f))))
 	   (bless '(quote #f))))))
 
+    ((stdin)	(lambda (stx) (bless '(console-input-port))))
+    ((stdout)	(lambda (stx) (bless '(console-output-port))))
+    ((stderr)	(lambda (stx) (bless '(console-error-port))))
+
     ;;Expander tags.
     ((<top> <void>
       <boolean> <char> <symbol> <keyword> <pointer> <transcoder>

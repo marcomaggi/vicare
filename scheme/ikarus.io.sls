@@ -199,6 +199,7 @@
 ;;	make-custom-textual-output-port
 ;;	open-string-input-port
 ;;	open-string-input-port/id
+;;	open-string-output-port
 ;;
 ;;  When a  transcoder: it  encodes the  Unicode codec,  the end-of-line
 ;;  conversion  sytle,  the  error  handling modes  for  errors  in  the
@@ -402,8 +403,6 @@
     input-file-buffer-size		output-file-buffer-size
     input/output-file-buffer-size	input/output-socket-buffer-size
 
-    stdin stdout stderr
-
     ;; predicates
     port? input-port? output-port? input/output-port?
     textual-port? binary-port?
@@ -538,7 +537,6 @@
 		  bytevector-port-buffer-size	string-port-buffer-size
 		  input-file-buffer-size	output-file-buffer-size
 		  input/output-file-buffer-size	input/output-socket-buffer-size
-		  stdin stdout stderr
 
 		  ;; predicates
 		  port? input-port? output-port? input/output-port?
@@ -3717,10 +3715,9 @@
 					       DEFAULT-OTHER-ATTRS))
 	     (buffer.index	0)
 	     (buffer.used-size	0)
-	     (buffer		($make-string (string-port-buffer-size))
-				#;(make-string (string-port-buffer-size) #\Z))
+	     (buffer		($make-string (string-port-buffer-size)))
 	     (identifier	"*string-output-port*")
-	     (transcoder	#f)
+	     (transcoder	#t)
 	     (read!		#f)
 	     (get-position	#t)
 	     (close		#f))
@@ -8840,15 +8837,6 @@
   ;;
   (let ((port (current-input-port)))
     (lambda () port)))
-
-(define stdin
-  (console-input-port))
-
-(define stdout
-  (console-output-port))
-
-(define stderr
-  (console-error-port))
 
 
 ;;;; done

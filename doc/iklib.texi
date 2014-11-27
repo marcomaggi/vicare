@@ -11574,12 +11574,12 @@ is used by the @repl{} and the debugger.
 @end defun
 
 
-@defvr Constant stdin
-@defvrx Constant stdout
-@defvrx Constant stderr
-Bound to the values returned by @func{console-input-port},
-@func{console-output-port}, @func{console-error-port} respectively.
-@end defvr
+@deffn {Identifier Syntax} stdin
+@deffnx {Identifier Syntax} stdout
+@deffnx {Identifier Syntax} stderr
+Expand into, respectively: @code{(console-input-port)},
+@code{(console-output-port)}, @code{(console-error-port)}.
+@end deffn
 
 
 @defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
