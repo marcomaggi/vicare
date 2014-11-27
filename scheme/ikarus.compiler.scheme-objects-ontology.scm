@@ -474,10 +474,10 @@
     (void)))
 
 
-(define* (make-core-type-tag-predicate {x core-type-tag?})
-  (let ((x.bits ($core-type-tag-bits x)))
-    (lambda* ({y core-type-tag?})
-      (%test-bits x.bits ($core-type-tag-bits y)))))
+(define* (make-core-type-tag-predicate {y core-type-tag?})
+  (let ((y.bits ($core-type-tag-bits y)))
+    (lambda* ({x core-type-tag?})
+      (%test-bits ($core-type-tag-bits x) y.bits))))
 
 (define* (core-type-tag-is-a? {x core-type-tag?} {y core-type-tag?})
   ;;Perform core type tag inclusion test.  Examples:

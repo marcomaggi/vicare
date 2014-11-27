@@ -213,17 +213,23 @@
 
   #| end of module: DEFINE-OBJECT-PREDICATE-DECLARER |# )
 
-(define-object-predicate-declarer declare-object-predicate T:object)
-(define-object-predicate-declarer declare-number-predicate T:number)
-(define-object-predicate-declarer declare-fixnum-predicate T:fixnum)
-(define-object-predicate-declarer declare-ratnum-predicate T:ratnum)
-(define-object-predicate-declarer declare-bignum-predicate T:bignum)
-(define-object-predicate-declarer declare-flonum-predicate T:flonum)
-(define-object-predicate-declarer declare-char-predicate T:char)
-(define-object-predicate-declarer declare-string-predicate T:string)
-(define-object-predicate-declarer declare-keyword-predicate T:keyword)
-(define-object-predicate-declarer declare-vector-predicate T:vector)
-(define-object-predicate-declarer declare-bytevector-predicate T:bytevector)
+(define-object-predicate-declarer declare-object-predicate		T:object)
+
+(define-object-predicate-declarer declare-fixnum-predicate		T:fixnum)
+(define-object-predicate-declarer declare-bignum-predicate		T:bignum)
+(define-object-predicate-declarer declare-flonum-predicate		T:flonum)
+(define-object-predicate-declarer declare-ratnum-predicate		T:ratnum)
+(define-object-predicate-declarer declare-compnum-predicate		T:compnum)
+(define-object-predicate-declarer declare-cflonum-predicate		T:cflonum)
+(define-object-predicate-declarer declare-number-predicate		T:number)
+
+(define-object-predicate-declarer declare-char-predicate		T:char)
+(define-object-predicate-declarer declare-string-predicate		T:string)
+(define-object-predicate-declarer declare-keyword-predicate		T:keyword)
+(define-object-predicate-declarer declare-vector-predicate		T:vector)
+(define-object-predicate-declarer declare-bytevector-predicate		T:bytevector)
+(define-object-predicate-declarer declare-struct-predicate		T:struct)
+(define-object-predicate-declarer declare-record-predicate		T:record)
 
 
 ;;;; syntax helpers: comparison functions
@@ -862,7 +868,7 @@
 	((?value-tag)		=> (T:void))
 	((?value-tag T:boolean)	=> (T:void)))
        (attributes
-	(()			effect-free result-true)
+	(()			effect-free)
 	((_)			result-true)
 	((_ _)			result-true))))
     ))
@@ -872,6 +878,8 @@
   ;;
   ;;   (declare-object-retriever console-input-port	     T:binary-input-port)
   ;;   (declare-object-retriever native-eol-style   foldable T:symbol)
+  ;;
+  ;;NOTE The returned object must *not* be false.
   ;;
   (syntax-rules (foldable)
     ((_ ?who foldable)
@@ -4746,8 +4754,10 @@
 (declare-core-primitive $make-port
     (unsafe)
   (signatures
-   ;;attrs                 idx                   buffer-size           buffer   transcoder
-   ((T:non-negative-fixnum T:non-negative-fixnum T:non-negative-fixnum T:object T:object
+   ;;attrs                 idx                   buffer-size           buffer
+   ((T:non-negative-fixnum T:non-negative-fixnum T:non-negative-fixnum T:object
+			   ;;transcoder
+			   (or T:transcoder T:boolean)
 			   ;;id     read     write    getp     setp     close    cookie
 			   T:object T:object T:object T:object T:object T:object T:object)	=> (T:port)))
   (attributes
@@ -4849,13 +4859,13 @@
 ;;; --------------------------------------------------------------------
 ;;; codec values
 
-(declare-object-retriever latin-1-codec		foldable)
-(declare-object-retriever utf-8-codec		foldable)
-(declare-object-retriever utf-16-codec		foldable)
-(declare-object-retriever utf-16le-codec	foldable)
-(declare-object-retriever utf-16be-codec	foldable)
-(declare-object-retriever utf-16n-codec		foldable)
-(declare-object-retriever utf-bom-codec		foldable)
+(declare-object-retriever latin-1-codec		foldable	T:symbol)
+(declare-object-retriever utf-8-codec		foldable	T:symbol)
+(declare-object-retriever utf-16-codec		foldable	T:symbol)
+(declare-object-retriever utf-16le-codec	foldable	T:symbol)
+(declare-object-retriever utf-16be-codec	foldable	T:symbol)
+(declare-object-retriever utf-16n-codec		foldable	T:symbol)
+(declare-object-retriever utf-bom-codec		foldable	T:symbol)
 
 (declare-object-retriever native-eol-style	foldable	T:symbol)
 (declare-object-retriever native-endianness	foldable	T:symbol)
@@ -4893,7 +4903,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-object-retriever uuid	T:string)
+(declare-object-retriever uuid			T:string)
 
 (declare-object-retriever bwp-object)
 (declare-object-predicate bwp-object?)

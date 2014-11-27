@@ -149,8 +149,11 @@
 		  (ATTRIBUTES-FORM	(%compose-attributes-output-form attribute*))
 		  (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
 	       #;(fprintf (current-error-port) "registering core primitive properties: ~a\n" (syntax->datum prim-name))
-	       #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-			  (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM)))))))
+	       (receive-and-return (out)
+		   #'(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+			      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM))
+		 #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
+		 (void)))))))
 
       (_
        (synner "invalid syntax in core primitive declaration"))))
@@ -325,6 +328,8 @@
     ;;type" and we convert them to false.
     (syntax-case type
 	( ;;
+	 and or
+
 	 T:object		T:other-object		T:immediate	T:nonimmediate
 	 T:non-false		T:false			T:true		T:void
 	 T:boolean		T:char			T:symbol	T:string
@@ -472,17 +477,18 @@
       (T:number/false			type)
       (T:fixnum/false			type)
 
+      ((and ?tag0 ?tag ...)
+       #`(core-type-tag-and . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
+
+      ((or  ?tag0 ?tag ...)
+       #`(core-type-tag-or  . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
+
       (_
-       ;; (if (identifier? type)
-       ;; 	   (if (eq? '_ (syntax->datum type))
-       ;; 	       #f
-       ;; 	     type)
-       ;; 	 (synner "expected identifier as core type name in core primitive declaration" type))
        (if (and (identifier? type)
 		(eq? '_ (syntax->datum type)))
 	   #f
-	 (synner "expected identifier as core type name in core primitive declaration" type))
-       )))
+	 (synner "expected identifier as core type name in core primitive declaration" type)))
+      ))
 
 ;;; --------------------------------------------------------------------
 
@@ -627,15 +633,20 @@
     ;;
     ;;   ((,T:fixnum? ,T:string? #f) . (,T:string? #f))
     ;;
+    ;; (define (%type->pred type)
+    ;;   (cond ((identifier? type)
+    ;; 	     (list #'unquote
+    ;; 		   (datum->syntax ctx (string->symbol
+    ;; 				       (string-append (symbol->string (syntax->datum type))
+    ;; 						      "?")))))
+    ;; 	    (else
+    ;; 	     (assert (not type))
+    ;; 	     type)))
     (define (%type->pred type)
-      (cond ((identifier? type)
-	     (list #'unquote
-		   (datum->syntax ctx (string->symbol
-				       (string-append (symbol->string (syntax->datum type))
-						      "?")))))
-	    (else
-	     (assert (not type))
-	     type)))
+      (if (not type)
+	  ;;It is false.
+	  type
+	#`(unquote (make-core-type-tag-predicate #,type))))
     (map (lambda (signature)
 	   ;;RAND-TYPES is  a proper or  improper list  of core type  identifiers and
 	   ;;false objects.
