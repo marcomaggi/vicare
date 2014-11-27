@@ -843,6 +843,60 @@
     ))
 
 
+;;;; syntax helpers: miscellaneous
+
+(define-syntax declare-parameter
+  ;;Usage examples:
+  ;;
+  ;;   (declare-parameter current-input-port	T:textual-input-port)
+  ;;   (declare-parameter native-transcoder	T:transcoder)
+  ;;
+  (syntax-rules ()
+    ((_ ?who)
+     (declare-parameter ?who T:object))
+    ((_ ?who ?value-tag)
+     (declare-core-primitive current-input-port
+	 (safe)
+       (signatures
+	(()			=> (?value-tag))
+	((?value-tag)		=> (T:void))
+	((?value-tag T:boolean)	=> (T:void)))
+       (attributes
+	(()			effect-free result-true)
+	((_)			result-true)
+	((_ _)			result-true))))
+    ))
+
+(define-syntax declare-object-retriever
+  ;;Usage examples:
+  ;;
+  ;;   (declare-object-retriever console-input-port	     T:binary-input-port)
+  ;;   (declare-object-retriever native-eol-style   foldable T:symbol)
+  ;;
+  (syntax-rules (foldable)
+    ((_ ?who foldable)
+     (declare-object-retriever ?who foldable T:object))
+    ((_ ?who foldable ?return-value-tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	(()		=> (?return-value-tag)))
+       (attributes
+	(()		foldable effect-free result-true))))
+
+    ((_ ?who)
+     (declare-object-retriever ?who T:object))
+    ((_ ?who ?return-value-tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	(()		=> (?return-value-tag)))
+       (attributes
+	;;Not foldable, we want the object built and returned at run-time.
+	(()		effect-free result-true))))
+    ))
+
+
 ;;;; misc functions
 
 (declare-object-binary-comparison eq?)
@@ -2504,38 +2558,9 @@
 ;;; --------------------------------------------------------------------
 ;;; printing gensyms
 
-(declare-core-primitive print-gensym
-    (safe)
-  (signatures
-   (()				=> (T:object))
-   ((T:object)			=> (T:void))
-   ((T:object T:object)		=> (T:void)))
-  (attributes
-   (()				effect-free)
-   ((_)				result-true)
-   ((_ _)			result-true)))
-
-(declare-core-primitive gensym-count
-    (safe)
-  (signatures
-   (()				=> (T:exact-integer))
-   ((T:exact-integer)		=> (T:void))
-   ((T:exact-integer T:object)	=> (T:void)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				result-true)
-   ((_ _)			result-true)))
-
-(declare-core-primitive gensym-prefix
-    (safe)
-  (signatures
-   (()				=> (T:string))
-   ((T:string)			=> (T:void))
-   ((T:string T:object)		=> (T:void)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				result-true)
-   ((_ _)			result-true)))
+(declare-parameter print-gensym)
+(declare-parameter gensym-count		T:exact-integer)
+(declare-parameter gensym-prefix	T:string)
 
 
 ;;;; symbols, unsafe primitives
@@ -4541,84 +4566,177 @@
 
 ;;;; input/output, safe primitives
 
-(declare-core-primitive current-input-port
-    (safe)
-  (signatures
-   (()					=> (T:textual-input-port))
-   ((T:textual-input-port)		=> (T:void))
-   ((T:textual-input-port T:boolean)	=> (T:void)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				result-true)
-   ((_ _)			result-true)))
+(declare-parameter current-input-port	T:textual-input-port)
+(declare-parameter current-output-port	T:textual-output-port)
+(declare-parameter current-error-port	T:textual-output-port)
 
-(declare-core-primitive current-output-port
-    (safe)
-  (signatures
-   (()					=> (T:textual-output-port))
-   ((T:textual-output-port)		=> (T:void))
-   ((T:textual-output-port T:boolean)	=> (T:void)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				result-true)
-   ((_ _)			result-true)))
+(declare-object-retriever standard-input-port	T:binary-input-port)
+(declare-object-retriever standard-output-port	T:binary-output-port)
+(declare-object-retriever standard-error-port	T:binary-output-port)
 
-(declare-core-primitive current-error-port
-    (safe)
-  (signatures
-   (()					=> (T:textual-output-port))
-   ((T:textual-output-port)		=> (T:void))
-   ((T:textual-output-port T:boolean)	=> (T:void)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				result-true)
-   ((_ _)			result-true)))
+(declare-object-retriever console-input-port	T:textual-input-port)
+(declare-object-retriever console-output-port	T:textual-output-port)
+(declare-object-retriever console-error-port	T:textual-output-port)
 
 ;;; --------------------------------------------------------------------
+;;; special values
 
-(declare-core-primitive standard-input-port
-    (safe)
-  (signatures
-   (()				=> (T:binary-input-port)))
-  (attributes
-   (()				effect-free result-true)))
+(declare-object-retriever eof-object)
+(declare-object-predicate eof-object?)
 
-(declare-core-primitive standard-output-port
-    (safe)
-  (signatures
-   (()				=> (T:binary-output-port)))
-  (attributes
-   (()				effect-free result-true)))
+(declare-object-retriever would-block-object)
+(declare-object-predicate would-block-object?)
 
-(declare-core-primitive standard-error-port
-    (safe)
-  (signatures
-   (()				=> (T:binary-output-port)))
-  (attributes
-   (()				effect-free result-true)))
 
-;;; --------------------------------------------------------------------
+#|
+ port-mode
+ set-port-mode!
+ with-input-from-string
+ get-output-string
+ with-output-to-string
+ console-input-port
+ console-error-port
+ console-output-port
+ stdin
+ stdout
+ stderr
+ reset-input-port!
+ reset-output-port!
+ printf
+ fprintf
+ format
+ binary-port?
+ buffer-mode
+ buffer-mode?
+ call-with-bytevector-output-port
+ call-with-port
+ call-with-string-output-port
+ close-port
+ eol-style
+ error-handling-mode
+ file-options
+ flush-output-port
+ get-bytevector-all
+ get-bytevector-n
+ get-bytevector-n!
+ get-bytevector-some
+ get-char
+ get-datum
+ get-line
+ read-line
+ get-string-all
+ get-string-n
+ get-string-n!
+ get-string-some
+ get-u8
+ lookahead-char
+ lookahead-u8
+ lookahead-two-u8
+ make-custom-binary-input-port
+ make-custom-binary-output-port
+ make-custom-textual-input-port
+ make-custom-textual-output-port
+ make-custom-binary-input/output-port
+ make-custom-textual-input/output-port
+ make-binary-file-descriptor-input-port
+ make-binary-file-descriptor-input-port*
+ make-binary-file-descriptor-output-port
+ make-binary-file-descriptor-output-port*
+ make-binary-file-descriptor-input/output-port
+ make-binary-file-descriptor-input/output-port*
+ make-binary-socket-input-port
+ make-binary-socket-input-port*
+ make-binary-socket-output-port
+ make-binary-socket-output-port*
+ make-binary-socket-input/output-port
+ make-binary-socket-input/output-port*
+ make-textual-file-descriptor-input-port
+ make-textual-file-descriptor-input-port*
+ make-textual-file-descriptor-output-port
+ make-textual-file-descriptor-output-port*
+ make-textual-file-descriptor-input/output-port
+ make-textual-file-descriptor-input/output-port*
+ make-textual-socket-input-port
+ make-textual-socket-input-port*
+ make-textual-socket-output-port
+ make-textual-socket-output-port*
+ make-textual-socket-input/output-port
+ make-textual-socket-input/output-port*
+ port-id
+ port-uid
+ port-fd
+ port-set-non-blocking-mode!
+ port-unset-non-blocking-mode!
+ port-in-non-blocking-mode?
+ port-putprop
+ port-getprop
+ port-remprop
+ port-property-list
+ port-dump-status
+ port-closed?
+ open-bytevector-input-port
+ open-bytevector-output-port
+ open-file-input-port
+ open-file-input/output-port
+ open-file-output-port
+ open-string-input-port
+ open-string-output-port
+ bytevector-port-buffer-size
+ string-port-buffer-size
+ input-file-buffer-size
+ output-file-buffer-size
+ input/output-file-buffer-size
+ input/output-socket-buffer-size
+ output-port-buffer-mode
+ set-port-buffer-mode!
+ port-eof?
+ port-has-port-position?
+ port-has-set-port-position!?
+ port-position
+ get-char-and-track-textual-position
+ port-textual-position
+ port-transcoder
+ port?
+ put-bytevector
+ put-char
+ put-datum
+ put-string
+ put-u8
+ set-port-position!
+ standard-error-port
+ standard-input-port
+ standard-output-port
+ textual-port?
+ transcoded-port
+ input-port?
+ output-port?
+ input/output-port?
+ binary-input-port?
+ textual-input-port?
+ binary-output-port?
+ textual-output-port?
+ binary-input/output-port?
+ textual-input/output-port?
+ current-input-port
+ current-output-port
+ current-error-port
+ close-input-port
+ close-output-port
+ display
+ newline
+ open-input-file
+ open-output-file
+ peek-char
+ read
+ write
+ read-char
+ write-char
+ call-with-input-file
+ call-with-output-file
 
-(declare-core-primitive console-input-port
-    (safe)
-  (signatures
-   (()				=> (T:textual-input-port)))
-  (attributes
-   (()				effect-free result-true)))
 
-(declare-core-primitive console-output-port
-    (safe)
-  (signatures
-   (()				=> (T:textual-output-port)))
-  (attributes
-   (()				effect-free result-true)))
+|#
 
-(declare-core-primitive console-error-port
-    (safe)
-  (signatures
-   (()				=> (T:textual-output-port)))
-  (attributes
-   (()				effect-free result-true)))
 
 
 ;;;; input/output, unsafe primitives
@@ -4707,20 +4825,7 @@
    ((_ _)		effect-free result-true)
    ((_ _ _)		effect-free result-true)))
 
-(declare-core-primitive native-transcoder
-    (safe)
-  (signatures
-   ;;This is a parameter.
-   (()				=> (T:transcoder))
-   ((T:transcoder)		=> (T:void))
-   ((T:transcoder T:object)	=> (T:void)))
-  (attributes
-   ;;This is a parameter, so it is never foldable.
-   (()			 effect-free result-true)
-   ;;The following  rules mutate the parameter  in the dynamic environment,  so their
-   ;;are not effect- free.
-   ((_)			 result-true)
-   ((_ _)		 result-true)))
+(declare-parameter native-transcoder	T:transcoder)
 
 ;;; --------------------------------------------------------------------
 ;;; accessors
@@ -4734,7 +4839,7 @@
 	   (signatures
 	    ((T:transcoder)	=> (T:symbol)))
 	   (attributes
-	    ((_)			foldable effect-free result-true))))
+	    ((_)		foldable effect-free result-true))))
 	)))
   (declare-transcoder-accessor transcoder-codec)
   (declare-transcoder-accessor transcoder-eol-style)
@@ -4744,39 +4849,16 @@
 ;;; --------------------------------------------------------------------
 ;;; codec values
 
-(let-syntax
-    ((declare-codec-procedure
-      (syntax-rules ()
-	((_ ?who)
-	 (declare-core-primitive ?who
-	     (safe)
-	   (signatures
-	    (()			=> (T:symbol)))
-	   (attributes
-	    (()			foldable effect-free result-true))))
-	)))
-  (declare-codec-procedure latin-1-codec)
-  (declare-codec-procedure utf-8-codec)
-  (declare-codec-procedure utf-16-codec)
-  (declare-codec-procedure utf-16le-codec)
-  (declare-codec-procedure utf-16be-codec)
-  (declare-codec-procedure utf-16n-codec)
-  (declare-codec-procedure utf-bom-codec)
-  #| end of LET-SYNTAX |# )
+(declare-object-retriever latin-1-codec		foldable)
+(declare-object-retriever utf-8-codec		foldable)
+(declare-object-retriever utf-16-codec		foldable)
+(declare-object-retriever utf-16le-codec	foldable)
+(declare-object-retriever utf-16be-codec	foldable)
+(declare-object-retriever utf-16n-codec		foldable)
+(declare-object-retriever utf-bom-codec		foldable)
 
-(declare-core-primitive native-eol-style
-    (safe)
-  (signatures
-   (()			=> (T:symbol)))
-  (attributes
-   (()			foldable effect-free result-true)))
-
-(declare-core-primitive native-endianness
-    (safe)
-  (signatures
-   (()			=> (T:symbol)))
-  (attributes
-   (()			foldable effect-free result-true)))
+(declare-object-retriever native-eol-style	foldable	T:symbol)
+(declare-object-retriever native-endianness	foldable	T:symbol)
 
 
 ;;;; transcoders, unsafe primitives
@@ -4811,74 +4893,20 @@
 
 ;;; --------------------------------------------------------------------
 
-(declare-core-primitive eof-object
-    (safe)
-  (signatures
-   (()				=> (T:object)))
-  (attributes
-   (()				foldable effect-free result-true)))
+(declare-object-retriever uuid	T:string)
 
-(declare-core-primitive eof-object?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-object-retriever bwp-object)
+(declare-object-predicate bwp-object?)
+
+(declare-object-retriever unbound-object)
+(declare-object-predicate unbound-object?)
+
+(declare-object-predicate $unbound-object?	unsafe)
 
 ;;; --------------------------------------------------------------------
 
-(declare-core-primitive bwp-object
-    (safe)
-  (signatures
-   (()				=> (T:object)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive bwp-object?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive unbound-object
-    (safe)
-  (signatures
-   (()				=> (T:object)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive unbound-object?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $unbound-object?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive interrupt-handler
-    (safe)
-  (signatures
-   (()				=> (T:procedure))
-   ((T:procedure)		=> (T:void))
-   ((T:procedure T:boolean)	=> (T:void))))
-
-(declare-core-primitive engine-handler
-    (safe)
-  (signatures
-   (()				=> (T:procedure))
-   ((T:procedure)		=> (T:void))
-   ((T:procedure T:boolean)	=> (T:void))))
+(declare-parameter interrupt-handler	T:procedure)
+(declare-parameter engine-handler	T:procedure)
 
 ;;; --------------------------------------------------------------------
 
@@ -4914,24 +4942,10 @@
   (attributes
    (_				foldable effect-free result-false)))
 
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive uuid
-    (safe)
-  (signatures
-   (()				=> (T:string)))
-  (attributes
-   (()				effect-free result-false)))
-
 
 ;;;; invocation and termination procedures
 
-(declare-core-primitive command-line
-    (safe)
-  (signatures
-   (()				=> (T:non-empty-proper-list)))
-  (attributes
-   (()				effect-free result-true)))
+(declare-object-retriever command-line	T:non-empty-proper-list)
 
 (declare-core-primitive exit
     (safe)
@@ -4939,16 +4953,7 @@
    (()				=> (T:void))
    ((T:fixnum)			=> (T:void))))
 
-(declare-core-primitive exit-hooks
-    (safe)
-  (signatures
-   (()				=> (T:proper-list))
-   ((T:proper-list)		=> (T:void))
-   ((T:proper-list T:object)	=> (T:void)))
-  (attributes
-   (()				effect-free result-true)
-   ((_)				result-true)
-   ((_ _)			result-true)))
+(declare-parameter exit-hooks	T:proper-list)
 
 
 ;;;; numerics, safe functions
@@ -7504,155 +7509,6 @@
 
 #| list of core primitives to declare
 
-
- port-mode
- set-port-mode!
- with-input-from-string
- get-output-string
- with-output-to-string
- console-input-port
- console-error-port
- console-output-port
- stdin
- stdout
- stderr
- reset-input-port!
- reset-output-port!
- printf
- fprintf
- format
- binary-port?
- buffer-mode
- buffer-mode?
- call-with-bytevector-output-port
- call-with-port
- call-with-string-output-port
- close-port
- eol-style
- error-handling-mode
- file-options
- flush-output-port
- get-bytevector-all
- get-bytevector-n
- get-bytevector-n!
- get-bytevector-some
- get-char
- get-datum
- get-line
- read-line
- get-string-all
- get-string-n
- get-string-n!
- get-string-some
- get-u8
- lookahead-char
- lookahead-u8
- lookahead-two-u8
- make-custom-binary-input-port
- make-custom-binary-output-port
- make-custom-textual-input-port
- make-custom-textual-output-port
- make-custom-binary-input/output-port
- make-custom-textual-input/output-port
- make-binary-file-descriptor-input-port
- make-binary-file-descriptor-input-port*
- make-binary-file-descriptor-output-port
- make-binary-file-descriptor-output-port*
- make-binary-file-descriptor-input/output-port
- make-binary-file-descriptor-input/output-port*
- make-binary-socket-input-port
- make-binary-socket-input-port*
- make-binary-socket-output-port
- make-binary-socket-output-port*
- make-binary-socket-input/output-port
- make-binary-socket-input/output-port*
- make-textual-file-descriptor-input-port
- make-textual-file-descriptor-input-port*
- make-textual-file-descriptor-output-port
- make-textual-file-descriptor-output-port*
- make-textual-file-descriptor-input/output-port
- make-textual-file-descriptor-input/output-port*
- make-textual-socket-input-port
- make-textual-socket-input-port*
- make-textual-socket-output-port
- make-textual-socket-output-port*
- make-textual-socket-input/output-port
- make-textual-socket-input/output-port*
- port-id
- port-uid
- port-fd
- port-set-non-blocking-mode!
- port-unset-non-blocking-mode!
- port-in-non-blocking-mode?
- port-putprop
- port-getprop
- port-remprop
- port-property-list
- port-dump-status
- port-closed?
- open-bytevector-input-port
- open-bytevector-output-port
- open-file-input-port
- open-file-input/output-port
- open-file-output-port
- open-string-input-port
- open-string-output-port
- bytevector-port-buffer-size
- string-port-buffer-size
- input-file-buffer-size
- output-file-buffer-size
- input/output-file-buffer-size
- input/output-socket-buffer-size
- output-port-buffer-mode
- set-port-buffer-mode!
- port-eof?
- port-has-port-position?
- port-has-set-port-position!?
- port-position
- get-char-and-track-textual-position
- port-textual-position
- port-transcoder
- port?
- put-bytevector
- put-char
- put-datum
- put-string
- put-u8
- set-port-position!
- standard-error-port
- standard-input-port
- standard-output-port
- textual-port?
- transcoded-port
- would-block-object
- would-block-object?
- input-port?
- output-port?
- input/output-port?
- binary-input-port?
- textual-input-port?
- binary-output-port?
- textual-output-port?
- binary-input/output-port?
- textual-input/output-port?
- current-input-port
- current-output-port
- current-error-port
- eof-object
- eof-object?
- close-input-port
- close-output-port
- display
- newline
- open-input-file
- open-output-file
- peek-char
- read
- write
- read-char
- write-char
- call-with-input-file
- call-with-output-file
 
 ;;; --------------------------------------------------------------------
 
