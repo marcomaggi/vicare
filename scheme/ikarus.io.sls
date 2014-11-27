@@ -50,7 +50,7 @@
 ;;	IDX	- index in input/output buffer,
 ;;	SZ	- number of octets/chars used in the input/output buffer,
 ;;      BUF	- input/output buffer,
-;;      TR	- transcoder
+;;      TR	- a boolean or a transcoder object
 ;;      ID	- a Scheme string describing the underlying device
 ;;      READ	- read procedure
 ;;      WRITE	- write procedure
@@ -186,9 +186,23 @@
 ;;
 ;;Field name: transcoder
 ;;Field accessor: $port-transcoder PORT
-;;  A value  of disjoint type  returned by MAKE-TRANSCODER.   It encodes
-;;  the  Unicode  codec, the  end-of-line  conversion  sytle, the  error
-;;  handling modes for errors in the serialisation of characters.
+;;
+;;  A  boolean  (#t,  #f)  or  a value  of  disjoint  type  returned  by
+;;  MAKE-TRANSCODER.   It is  #f for  a  binary port.   It is  #t for  a
+;;  textual port having a string buffer.  It is a transcoder for textual
+;;  ports for which  a transcoder is explicitly selected  or selected by
+;;  default.
+;;
+;;  It is #t for the ports created by:
+;;
+;;	make-custom-textual-input-port
+;;	make-custom-textual-output-port
+;;	open-string-input-port
+;;	open-string-input-port/id
+;;
+;;  When a  transcoder: it  encodes the  Unicode codec,  the end-of-line
+;;  conversion  sytle,  the  error  handling modes  for  errors  in  the
+;;  serialisation of characters.
 ;;
 ;;Field name: id
 ;;Field accessor: $port-id
@@ -3858,8 +3872,8 @@
   ;;
   (define who 'transcoded-port)
   (with-arguments-validation (who)
-      ((port				port)
-       (transcoder			transcoder)
+      ((port			port)
+       (transcoder		transcoder)
        ($binary-port		port)
        ($open-port		port)
        ($not-input/output-port	port))
