@@ -230,6 +230,7 @@
 (define-object-predicate-declarer declare-bytevector-predicate		T:bytevector)
 (define-object-predicate-declarer declare-struct-predicate		T:struct)
 (define-object-predicate-declarer declare-record-predicate		T:record)
+(define-object-predicate-declarer declare-port-predicate		T:port)
 
 
 ;;;; syntax helpers: comparison functions
@@ -4587,6 +4588,45 @@
 (declare-object-retriever console-error-port	T:textual-output-port)
 
 ;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-type-predicate port?				T:port)
+(declare-type-predicate binary-port?			T:binary-port)
+(declare-type-predicate textual-port?			T:textual-port)
+
+(declare-type-predicate input-port?			T:input-port)
+(declare-type-predicate output-port?			T:output-port)
+(declare-type-predicate input/output-port?		T:input/output-port)
+
+(declare-type-predicate binary-input-port?		T:binary-input-port)
+(declare-type-predicate binary-output-port?		T:binary-output-port)
+(declare-type-predicate binary-input/output-port?	T:binary-input/output-port)
+
+(declare-type-predicate textual-input-port?		T:textual-input-port)
+(declare-type-predicate textual-output-port?		T:textual-output-port)
+(declare-type-predicate textual-input/output-port?	T:textual-input/output-port)
+
+(declare-core-primitive port-eof?
+    (safe)
+  (signatures
+   ((T:input-port)	=> (T:boolean)))
+  ;;Not foldable because EOF is an internal, run-time state.  Not effect-free because
+  ;;it requires a lookahead, which consumes data from the underlying device.
+  (attributes))
+
+(declare-core-primitive port-closed?
+    (safe)
+  (signatures
+   ((T:port)		=> (T:boolean)))
+  (attributes
+   ;;Not foldable because "port closed" is an internal, run-time state.
+   ((_)			effect-free)))
+
+(declare-port-predicate port-has-port-position?)
+(declare-port-predicate port-has-set-port-position!?)
+(declare-port-predicate port-in-non-blocking-mode?)
+
+;;; --------------------------------------------------------------------
 ;;; special values
 
 (declare-object-retriever eof-object)
@@ -4595,156 +4635,151 @@
 (declare-object-retriever would-block-object)
 (declare-object-predicate would-block-object?)
 
+(declare-core-primitive buffer-mode?
+    (safe)
+  (signatures
+   ((T:symbol)		=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
 
 #|
- port-mode
- set-port-mode!
- with-input-from-string
- get-output-string
- with-output-to-string
- console-input-port
- console-error-port
- console-output-port
- stdin
- stdout
- stderr
- reset-input-port!
- reset-output-port!
- printf
- fprintf
- format
- binary-port?
- buffer-mode
- buffer-mode?
- call-with-bytevector-output-port
- call-with-port
- call-with-string-output-port
- close-port
- eol-style
- error-handling-mode
- file-options
- flush-output-port
- get-bytevector-all
- get-bytevector-n
- get-bytevector-n!
- get-bytevector-some
- get-char
- get-datum
- get-line
- read-line
- get-string-all
- get-string-n
- get-string-n!
- get-string-some
- get-u8
- lookahead-char
- lookahead-u8
- lookahead-two-u8
- make-custom-binary-input-port
- make-custom-binary-output-port
- make-custom-textual-input-port
- make-custom-textual-output-port
- make-custom-binary-input/output-port
- make-custom-textual-input/output-port
  make-binary-file-descriptor-input-port
  make-binary-file-descriptor-input-port*
  make-binary-file-descriptor-output-port
  make-binary-file-descriptor-output-port*
  make-binary-file-descriptor-input/output-port
  make-binary-file-descriptor-input/output-port*
+
  make-binary-socket-input-port
  make-binary-socket-input-port*
  make-binary-socket-output-port
  make-binary-socket-output-port*
  make-binary-socket-input/output-port
  make-binary-socket-input/output-port*
+
  make-textual-file-descriptor-input-port
  make-textual-file-descriptor-input-port*
  make-textual-file-descriptor-output-port
  make-textual-file-descriptor-output-port*
  make-textual-file-descriptor-input/output-port
  make-textual-file-descriptor-input/output-port*
+
  make-textual-socket-input-port
  make-textual-socket-input-port*
  make-textual-socket-output-port
  make-textual-socket-output-port*
  make-textual-socket-input/output-port
  make-textual-socket-input/output-port*
+
+ make-custom-binary-input-port
+ make-custom-binary-output-port
+ make-custom-textual-input-port
+ make-custom-textual-output-port
+ make-custom-binary-input/output-port
+ make-custom-textual-input/output-port
+
+;;;
+
+ open-input-file
+ open-output-file
+ open-file-input-port
+ open-file-output-port
+ open-file-input/output-port
+ open-string-input-port
+ open-string-output-port
+ open-bytevector-input-port
+ open-bytevector-output-port
+
+ get-output-string
+
+ transcoded-port
+
+ close-port
+ close-input-port
+ close-output-port
+
+ call-with-bytevector-output-port
+ call-with-input-file
+ call-with-output-file
+ call-with-port
+ call-with-string-output-port
+ with-input-from-string
+ with-output-to-string
+
+ port-mode
  port-id
  port-uid
  port-fd
  port-set-non-blocking-mode!
  port-unset-non-blocking-mode!
- port-in-non-blocking-mode?
  port-putprop
  port-getprop
  port-remprop
  port-property-list
  port-dump-status
- port-closed?
- open-bytevector-input-port
- open-bytevector-output-port
- open-file-input-port
- open-file-input/output-port
- open-file-output-port
- open-string-input-port
- open-string-output-port
+ port-position
+ port-textual-position
+ port-transcoder
+
+ set-port-mode!
+ set-port-buffer-mode!
+ set-port-position!
+
+ reset-input-port!
+ reset-output-port!
+
+ get-bytevector-all
+ get-bytevector-n
+ get-bytevector-n!
+ get-bytevector-some
+
+ get-string-all
+ get-string-n
+ get-string-n!
+ get-string-some
+
+ get-u8
+ get-char
+ get-char-and-track-textual-position
+ get-datum
+ get-line
+
+ peek-char
+ lookahead-char
+ lookahead-u8
+ lookahead-two-u8
+
+ read
+ read-char
+ read-line
+
+ put-bytevector
+ put-char
+ put-datum
+ put-string
+ put-u8
+
+ write-char
+ write
+ display
+ newline
+ printf
+ fprintf
+ format
+
+ flush-output-port
+
  bytevector-port-buffer-size
  string-port-buffer-size
  input-file-buffer-size
  output-file-buffer-size
  input/output-file-buffer-size
  input/output-socket-buffer-size
- output-port-buffer-mode
- set-port-buffer-mode!
- port-eof?
- port-has-port-position?
- port-has-set-port-position!?
- port-position
- get-char-and-track-textual-position
- port-textual-position
- port-transcoder
- port?
- put-bytevector
- put-char
- put-datum
- put-string
- put-u8
- set-port-position!
- standard-error-port
- standard-input-port
- standard-output-port
- textual-port?
- transcoded-port
- input-port?
- output-port?
- input/output-port?
- binary-input-port?
- textual-input-port?
- binary-output-port?
- textual-output-port?
- binary-input/output-port?
- textual-input/output-port?
- current-input-port
- current-output-port
- current-error-port
- close-input-port
- close-output-port
- display
- newline
- open-input-file
- open-output-file
- peek-char
- read
- write
- read-char
- write-char
- call-with-input-file
- call-with-output-file
 
+ output-port-buffer-mode
 
 |#
-
 
 
 ;;;; input/output, unsafe primitives

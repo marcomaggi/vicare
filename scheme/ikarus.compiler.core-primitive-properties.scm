@@ -345,7 +345,7 @@
 	 T:pair			T:proper-list		T:improper-list
 
 	 T:port			T:textual-port		T:binary-port
-	 T:input-port		T:output-port		T:input-output-port
+	 T:input-port		T:output-port		T:input/output-port
 	 T:textual-input-port	T:textual-output-port	T:textual-input/output-port
 	 T:binary-input-port	T:binary-output-port	T:binary-input/output-port
 
@@ -400,7 +400,7 @@
       (T:binary-port			type)
       (T:input-port			type)
       (T:output-port			type)
-      (T:input-output-port		type)
+      (T:input/output-port		type)
       (T:textual-input-port		type)
       (T:textual-output-port		type)
       (T:textual-input/output-port	type)

@@ -63,6 +63,19 @@
 		;   (core-type-tag-is-a? T:string T:number)	=> no
 		;
 
+   core-type-tag-is-a?/bits
+		;Perform core type tag inclusion test.  Examples:
+		;
+		;   (core-type-tag-is-a?/bits T:fixnum (core-type-tag-bits T:number))
+		;   => yes		;;T:fixnum is a T:number ?
+		;
+		;   (core-type-tag-is-a?/bits T:number (core-type-tag-bits T:fixnum))
+		;   => maybe	;;T:number is a T:fixnum ?
+		;
+		;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
+		;   => no		;;T:string is a T:number ?
+		;
+
    determine-constant-core-type
 		;Given  a  Scheme  object:  return a  record  of  type  CORE-TYPE-TAG
 		;representing its core type.
@@ -475,6 +488,14 @@
 
 
 (define* (make-core-type-tag-predicate {y core-type-tag?})
+  ;;Given an instance  of record type CORE-TYPE-TAG:  return a predicate
+  ;;function which can be used to test other instances.  Example:
+  ;;
+  ;;   (define p (make-core-type-tag-predicate T:exact-integer))
+  ;;   (p T:fixnum)	=> yes
+  ;;   (p T:number)	=> maybe
+  ;;   (p T:string)	=> no
+  ;;
   (let ((y.bits ($core-type-tag-bits y)))
     (lambda* ({x core-type-tag?})
       (%test-bits ($core-type-tag-bits x) y.bits))))
@@ -487,6 +508,20 @@
   ;;   (core-type-tag-is-a? T:string T:number)	=> no		;;T:string is a T:number ?
   ;;
   (%test-bits ($core-type-tag-bits x) ($core-type-tag-bits y)))
+
+(define* (core-type-tag-is-a?/bits {x core-type-tag?} y.bits)
+  ;;Perform core type tag inclusion test.  Examples:
+  ;;
+  ;;   (core-type-tag-is-a?/bits T:fixnum (core-type-tag-bits T:number))
+  ;;   => yes		;;T:fixnum is a T:number ?
+  ;;
+  ;;   (core-type-tag-is-a?/bits T:number (core-type-tag-bits T:fixnum))
+  ;;   => maybe	;;T:number is a T:fixnum ?
+  ;;
+  ;;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
+  ;;   => no		;;T:string is a T:number ?
+  ;;
+  (%test-bits ($core-type-tag-bits x) y.bits))
 
 (define (%test-bits bits predefined-type-bits)
   (cond ((zero? (bitwise-and bits predefined-type-bits))
