@@ -25,6 +25,10 @@
 		;descriptive and human readable list of symbols representing the type
 		;bits that are set in X.
 
+   $core-type-tag-bits
+		;Given an instance  of CORE-TYPE-TAG: return the  naked bits defining
+		;the type.
+
    core-type-tag=?
 		;Given two  instances of  record type  CORE-TYPE-TAG: return  true if
 		;they have exactly the same bits, otherwise return false.

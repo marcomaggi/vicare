@@ -35,6 +35,7 @@
   (core-primitive-name->application-attributes*
    core-primitive-name->core-type-signature*
    core-primitive-name->replacement*
+   core-type-tag-is-a?/bits
    application-attributes-operands-template
    application-attributes-foldable?
    application-attributes-effect-free?
@@ -134,29 +135,42 @@
   foldable effect-free result-true result-false)
 
 (define-syntax* (declare-core-primitive input-form)
-  (define (main stx)
-    (syntax-case stx ()
-      ((?ctx ?prim-name . ?clause*)
-       (let ((prim-name (%parse-prim-name #'?prim-name)))
-	 ;; (fprintf (current-error-port)
-	 ;; 	  "parsing core primitive declaration: ~a\n"
-	 ;; 	  (syntax->datum prim-name))
-	 (receive (safe? signature* attribute* replacement-prim-name*)
-	     (%parse-clauses #'?clause*)
-	   (let ((signature-pred* (%signatures->signature-pred* #'?ctx signature*)))
-	     (with-syntax
-		 ((SIGNATURES-FORM	(%compose-signature-output-form signature-pred*))
-		  (ATTRIBUTES-FORM	(%compose-attributes-output-form attribute*))
-		  (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
-	       #;(fprintf (current-error-port) "registering core primitive properties: ~a\n" (syntax->datum prim-name))
-	       (receive-and-return (out)
-		   #'(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-			      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM))
-		 #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
-		 (void)))))))
 
-      (_
-       (synner "invalid syntax in core primitive declaration"))))
+  (module (main)
+
+    (define (main stx)
+      (syntax-case stx ()
+	((?ctx ?prim-name . ?clause*)
+	 (let ((prim-name (%parse-prim-name #'?prim-name)))
+	   (receive (safe? signature* attribute* replacement-prim-name*)
+	       (%parse-clauses #'?clause*)
+	     (receive-and-return (out)
+		 #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+			    (make-core-primitive-properties (quasiquote #,signature*)
+							    #,(%compose-attributes-output-form attribute*)
+							    (quote #,replacement-prim-name*)))
+	       #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
+	       (void)))))
+
+	(_
+	 (synner "invalid syntax in core primitive declaration"))))
+
+    (define (%compose-attributes-output-form attribute*)
+      (if (pair? attribute*)
+	  #`(quasiquote #,(map (lambda (attribute*)
+				 (let ((operands-template (car attribute*))
+				       (attributes-vector (cdr attribute*)))
+				   #`(unquote (make-application-attributes
+					       (quote #,operands-template)
+					       #,(vector-ref attributes-vector 0)
+					       #,(vector-ref attributes-vector 1)
+					       #,(vector-ref attributes-vector 2)
+					       #,(vector-ref attributes-vector 3)
+					       #,(vector-ref attributes-vector 4)))))
+			    attribute*))
+	#'(quote ())))
+
+    #| end of module: MAIN |# )
 
 ;;; --------------------------------------------------------------------
 ;;; input form parsers
@@ -212,33 +226,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%compose-signature-output-form signature-pred*)
-    (if (pair? signature-pred*)
-	#`(quasiquote #,signature-pred*)
-      #'(quote ())))
-
-  (define (%compose-attributes-output-form attribute*)
-    (if (pair? attribute*)
-	#`(quasiquote #,(map (lambda (attribute*)
-			       (let ((operands-template (car attribute*))
-				     (attributes-vector (cdr attribute*)))
-				 #`(unquote (make-application-attributes
-					     (quote #,operands-template)
-					     #,(vector-ref attributes-vector 0)
-					     #,(vector-ref attributes-vector 1)
-					     #,(vector-ref attributes-vector 2)
-					     #,(vector-ref attributes-vector 3)
-					     #,(vector-ref attributes-vector 4)))))
-			  attribute*))
-      #'(quote ())))
-
-  (define (%compose-replacements-output-orm replacement*)
-    (if (pair? replacement*)
-	#`(quote #,replacement*)
-      #'(quote ())))
-
-;;; --------------------------------------------------------------------
-
   (define (%parse-signatures-sexp stx)
     ;;A SIGNATURES form has the format:
     ;;
@@ -249,10 +236,16 @@
     ;;   (?operands-types => ?return-values-types)
     ;;
     ;;in which both  ?OPERANDS-TYPES and ?RETURN-VALUES-TYPES are  proper or improper
-    ;;lists of identifiers, each identifier representing the core type of an argument
-    ;;or  return value;  the  type  identifiers are  defined  by  the Scheme  objects
-    ;;ontology.  The identifiers "_" and  "T:object" are wildcards meaning "an object
-    ;;of any type".
+    ;;lists of logic expressions with the format:
+    ;;
+    ;;   ?logic-expr = ?type-tag-id
+    ;;               | (and ?logic-expr0 ?logic-expr ...)
+    ;;               | (or  ?logic-expr0 ?logic-expr ...)
+    ;;
+    ;;representing the core type of an argument or return value; the type identifiers
+    ;;are defined by the Scheme objects ontology.  The identifiers "_" and "T:object"
+    ;;are wildcards meaning "an object of any  type".  The identifiers AND and OR are
+    ;;the ones exported by "(rnrs base (6))".
     ;;
     ;;The specification of  the return value types is the  specification of the types
     ;;of the consumer procedure:
@@ -281,12 +274,16 @@
     ;;arguments/return values.
     ;;
     ;;This function parses the SIGNATURES form, raising a "&syntax" exception in case
-    ;;of error, and returns a proper list of pairs:
+    ;;of error, and returns a syntax object representing a proper list of pairs:
     ;;
     ;;   ((?operands-types . ?return-values-types) ...)
     ;;
-    ;;in collecting the arguments and return value types; the returned expression has
-    ;;a false object in place of the wildcards "_" and "T:object".
+    ;;which is meant  to be wrapped into a QUASIQUOTE;  internal unquoted expressions
+    ;;will evaluate to  an exact integer representing the naked  bits defining a core
+    ;;type specification.
+    ;;
+    ;;the  returned object  has a  false object  in place  of the  wildcards "_"  and
+    ;;"T:object".
     ;;
     ;;NOTE The order of  the returned signatures is *the* *same*  order in which they
     ;;appear in the input form!
@@ -307,19 +304,22 @@
        (%syntax-error))))
 
   (define (%parse-proper-or-improper-list-of-core-types stx)
-    ;;Non-tail recursive  function.  Parse  a proper  or improper  list of  core type
-    ;;identifiers representing  the types of  arguments or  return values for  a core
-    ;;primitive.  If successful: return a proper  or improper list of identifiers and
-    ;;false  objects in  which the  false objects  substitute the  wildcards "_"  and
-    ;;"T:object".  If an invalid syntax is found: raise a "&syntax" exception.
+    ;;Non-tail recursive  function.  Parse a  proper or  improper list of  logic type
+    ;;expressions representing  the types of  arguments or  return values for  a core
+    ;;primitive.
     ;;
+    (define (%maybe-wrap type-spec)
+      (if (not type-spec)
+	  ;;It is false.
+	  type-spec
+	#`(unquote ($core-type-tag-bits #,type-spec))))
     (syntax-case stx ()
       ((?car . ?cdr)
-       (cons (%parse-core-object-type #'?car)
+       (cons (%maybe-wrap (%parse-core-object-type #'?car))
 	     (%parse-proper-or-improper-list-of-core-types #'?cdr)))
       (()  '())
       (?rest
-       (%parse-core-object-type #'?rest))
+       (%maybe-wrap (%parse-core-object-type #'?rest)))
       (_
        (synner "invalid signatures component in core primitive declaration" stx))))
 
@@ -608,65 +608,6 @@
 	   replacement-prim-name*)))
       (_
        (synner "invalid replacements specification in core primitive declaration" stx))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%signatures->signature-pred* ctx signature*)
-    ;;Given a list  of (already parsed) core primitive  signature specifications with
-    ;;the format:
-    ;;
-    ;;   ((?operands-types . ?return-values-types) ...)
-    ;;
-    ;;build and return  a new list of  pairs in which the type  identifiers have been
-    ;;replaced by the  identifiers of the corresponding type  predicates wrapped into
-    ;;an UNQUOTE syntax.
-    ;;
-    ;;For example, the original signature:
-    ;;
-    ;;   ((T:fixnum T:string _) => (T:string _))
-    ;;
-    ;;is parsed into:
-    ;;
-    ;;   ((T:fixnum T:string #f) . (T:string #f))
-    ;;
-    ;;and this function transforms it into:
-    ;;
-    ;;   ((,T:fixnum? ,T:string? #f) . (,T:string? #f))
-    ;;
-    ;; (define (%type->pred type)
-    ;;   (cond ((identifier? type)
-    ;; 	     (list #'unquote
-    ;; 		   (datum->syntax ctx (string->symbol
-    ;; 				       (string-append (symbol->string (syntax->datum type))
-    ;; 						      "?")))))
-    ;; 	    (else
-    ;; 	     (assert (not type))
-    ;; 	     type)))
-    (define (%type->pred type)
-      (if (not type)
-	  ;;It is false.
-	  type
-	#`(unquote (make-core-type-tag-predicate #,type))))
-    (map (lambda (signature)
-	   ;;RAND-TYPES is  a proper or  improper list  of core type  identifiers and
-	   ;;false objects.
-	   (cons (let recur ((rand-types (car signature)))
-		   (cond ((pair? rand-types)
-			  (cons (%type->pred (car rand-types))
-				(recur (cdr rand-types))))
-			 ((null? rand-types)
-			  '())
-			 (else
-			  (%type->pred rand-types))))
-		 (let recur ((rand-types (cdr signature)))
-		   (cond ((pair? rand-types)
-			  (cons (%type->pred (car rand-types))
-				(recur (cdr rand-types))))
-			 ((null? rand-types)
-			  '())
-			 (else
-			  (%type->pred rand-types))))))
-      signature*))
 
 ;;; --------------------------------------------------------------------
 
