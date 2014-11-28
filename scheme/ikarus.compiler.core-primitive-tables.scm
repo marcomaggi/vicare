@@ -4765,50 +4765,163 @@
    ((_ _ _)				result-true)
    ((_ _ _ _)				result-true)))
 
-#|
- open-file-output-port
- open-file-input/output-port
- open-string-input-port
- open-string-output-port
- open-bytevector-input-port
- open-bytevector-output-port
-|#
-
-
-;;; --------------------------------------------------------------------
-;;; special values
-
-(declare-object-retriever eof-object)
-(declare-object-predicate eof-object?)
-
-(declare-object-retriever would-block-object)
-(declare-object-predicate would-block-object?)
-
-(declare-core-primitive buffer-mode?
+(declare-core-primitive open-file-output-port
     (safe)
   (signatures
-   ((T:symbol)		=> (T:boolean)))
+   ((T:string)					=> (T:binary-output-port))
+   ((T:string T:enum-set)			=> (T:binary-output-port))
+   ((T:string T:enum-set T:symbol)		=> (T:binary-output-port))
+   ((T:string T:enum-set T:symbol T:false)	=> (T:binary-output-port))
+   ((T:string T:enum-set T:symbol T:transcoder)	=> (T:textual-output-port)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ((_)					result-true)
+   ((_ _)				result-true)
+   ((_ _ _)				result-true)
+   ((_ _ _ _)				result-true)))
 
+(declare-core-primitive open-file-input/output-port
+    (safe)
+  (signatures
+   ((T:string)					=> (T:binary-input/output-port))
+   ((T:string T:enum-set)			=> (T:binary-input/output-port))
+   ((T:string T:enum-set T:symbol)		=> (T:binary-input/output-port))
+   ((T:string T:enum-set T:symbol T:false)	=> (T:binary-input/output-port))
+   ((T:string T:enum-set T:symbol T:transcoder)	=> (T:textual-input/output-port)))
+  (attributes
+   ((_)					result-true)
+   ((_ _)				result-true)
+   ((_ _ _)				result-true)
+   ((_ _ _ _)				result-true)))
+
+;;;
+
+(declare-core-primitive open-string-input-port
+    (safe)
+  (signatures
+   ((T:string)		=> (T:textual-input-port))
+   ((T:string T:symbol)	=> (T:textual-input-port)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive open-string-input-port/id
+    (safe)
+  (signatures
+   ((T:string T:string)			=> (T:textual-input-port))
+   ((T:string T:string T:symbol)	=> (T:textual-input-port)))
+  (attributes
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
+
+(declare-core-primitive open-string-output-port
+    (safe)
+  (signatures
+   (()			=> (T:textual-output-port T:procedure))
+   ((T:symbol)		=> (T:textual-output-port T:procedure)))
+  (attributes
+   (()			effect-free)))
+
+;;;
+
+(declare-core-primitive open-bytevector-input-port
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:binary-input-port))
+   ((T:bytevector T:false)	=> (T:binary-input-port))
+   ((T:bytevector T:transcoder)	=> (T:textual-input-port)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive open-bytevector-output-port
+    (safe)
+  (signatures
+   (()			=> (T:binary-output-port T:procedure))
+   ((T:false)		=> (T:binary-output-port T:procedure))
+   ((T:transcoder)	=> (T:textual-output-port T:procedure)))
+  (attributes
+   (()			effect-free)
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive call-with-bytevector-output-port
+    (safe)
+  (signatures
+   ((T:procedure)			=> T:object)
+   ((T:procedure T:false)		=> T:object)
+   ((T:procedure T:transcoder)		=> T:object)))
+
+(declare-core-primitive call-with-string-output-port
+    (safe)
+  (signatures
+   ((T:procedure)			=> T:object)))
+
+(declare-core-primitive call-with-input-file
+    (safe)
+  (signatures
+   ((T:string T:procedure)		=> T:object)))
+
+(declare-core-primitive call-with-output-file
+    (safe)
+  (signatures
+   ((T:string T:procedure)		=> T:object)))
+
+(declare-core-primitive call-with-port
+    (safe)
+  (signatures
+   ((T:port T:procedure)		=> T:object)))
+
+(declare-core-primitive with-input-from-file
+    (safe)
+  (signatures
+   ((T:string T:procedure)		=> T:object)))
+
+(declare-core-primitive with-input-from-string
+    (safe)
+  (signatures
+   ((T:string T:procedure)		=> T:object)))
+
+(declare-core-primitive with-output-to-string
+    (safe)
+  (signatures
+   ((T:procedure)			=> T:object)))
+
+(declare-core-primitive transcoded-port
+    (safe)
+  (signatures
+   ((T:binary-port T:transcoder)	=> (T:textual-port)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; closing
+
+(declare-core-primitive close-port
+    (safe)
+  (signatures
+   ((T:port)		=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive close-input-port
+    (safe)
+  (signatures
+   ((T:input-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive close-output-port
+    (safe)
+  (signatures
+   ((T:output-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors and mutators
 
 #|
- get-output-string
-
- transcoded-port
-
- close-port
- close-input-port
- close-output-port
-
- call-with-bytevector-output-port
- call-with-input-file
- call-with-output-file
- call-with-port
- call-with-string-output-port
- with-input-from-string
- with-output-to-string
-
  port-mode
  port-id
  port-uid
@@ -4830,7 +4943,26 @@
 
  reset-input-port!
  reset-output-port!
+|#
 
+;;; --------------------------------------------------------------------
+;;; special values
+
+(declare-object-retriever eof-object)
+(declare-object-predicate eof-object?)
+
+(declare-object-retriever would-block-object)
+(declare-object-predicate would-block-object?)
+
+(declare-core-primitive buffer-mode?
+    (safe)
+  (signatures
+   ((T:symbol)		=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+
+#|
  get-bytevector-all
  get-bytevector-n
  get-bytevector-n!
@@ -4840,6 +4972,8 @@
  get-string-n
  get-string-n!
  get-string-some
+
+ get-output-string
 
  get-u8
  get-char
