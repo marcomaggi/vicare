@@ -218,16 +218,190 @@
 (define-constant CORE-TYPE-TAG-PROPKEY
   (compile-time-gensym "core-type-tag"))
 
+
+;;;; core type tag type definition
+
+(define-struct core-type-tag
+  (bits
+		;A fixnum or bignum handled as bit-field.
+   ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-underspecified-core-type stx)
+  (syntax-case stx ()
+    ((_ ?type-name ?instance-expr)
+     (identifier? #'?type-name)
+     (with-syntax
+	 ((PRED (identifier-suffix #'?type-name "?")))
+       #'(begin
+	   (define-constant ?type-name
+	     ?instance-expr)
+	   (define PRED
+	     (let ((predefined-type-bits ($core-type-tag-bits ?type-name)))
+	       (lambda* ({x core-type-tag?})
+		 (%test-bits ($core-type-tag-bits x) predefined-type-bits))))
+	   (module ()
+	     (putprop (quote ?type-name) CORE-TYPE-TAG-PROPKEY ?type-name))
+	   #| end of BEGIN |# )))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define* (name->core-type-tag {name symbol?})
+  ;;The  symbol name  of a  predefined core  type tag  has the  actual struct  in its
+  ;;property list.  This function retrieves it.
+  ;;
   (or (getprop name CORE-TYPE-TAG-PROPKEY)
-      (compile-time-error __module_who__ __who__
-	"unknown core type tag name" name)))
+      (compile-time-error __module_who__ __who__ "unknown core type tag name" name)))
+
+;;; --------------------------------------------------------------------
+;;; flat comparison
+
+(define* (core-type-tag=? {x core-type-tag?} {y core-type-tag?})
+  (= ($core-type-tag-bits x) ($core-type-tag-bits y)))
+
+;;; --------------------------------------------------------------------
+;;; type specification composition
+
+(define* (core-type-tag-and {x0 core-type-tag?} {x1 core-type-tag?})
+  (make-core-type-tag (bitwise-and ($core-type-tag-bits x0) ($core-type-tag-bits x1))))
+
+(define* (core-type-tag-or {x0 core-type-tag?} {x1 core-type-tag?})
+  (make-core-type-tag (bitwise-ior ($core-type-tag-bits x0) ($core-type-tag-bits x1))))
+
+(define-syntax core-type-tag-and*
+  (syntax-rules ()
+    ((_ ?tag)
+     ?tag)
+    ((_ ?tag0 ?tag1 ?tag ...)
+     (core-type-tag-and ?tag0 (core-type-tag-and* ?tag1 ?tag ...)))
+    ))
+
+(define-syntax core-type-tag-or*
+  (syntax-rules ()
+    ((_ ?tag)
+     ?tag)
+    ((_ ?tag0 ?tag1 ?tag ...)
+     (core-type-tag-or ?tag0 (core-type-tag-or* ?tag1 ?tag ...)))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define* (make-core-type-tag-predicate {y core-type-tag?})
+  ;;Given an instance of CORE-TYPE-TAG: return a predicate function which can be used
+  ;;to test other instances.  Example:
+  ;;
+  ;;   (define p (make-core-type-tag-predicate T:exact-integer))
+  ;;   (p T:fixnum)	=> yes
+  ;;   (p T:number)	=> maybe
+  ;;   (p T:string)	=> no
+  ;;
+  (let ((y.bits ($core-type-tag-bits y)))
+    (lambda* ({x core-type-tag?})
+      (%test-bits ($core-type-tag-bits x) y.bits))))
+
+(define* (core-type-tag-is-a? {x core-type-tag?} {y core-type-tag?})
+  ;;Perform core type tag inclusion test.  Examples:
+  ;;
+  ;;   (core-type-tag-is-a? T:fixnum T:number)	=> yes		;;T:fixnum is a T:number ?
+  ;;   (core-type-tag-is-a? T:number T:fixnum)	=> maybe	;;T:number is a T:fixnum ?
+  ;;   (core-type-tag-is-a? T:string T:number)	=> no		;;T:string is a T:number ?
+  ;;
+  (%test-bits ($core-type-tag-bits x) ($core-type-tag-bits y)))
+
+(define* (core-type-tag-is-a?/bits {x core-type-tag?} y.bits)
+  ;;Perform core type tag inclusion test.  Examples:
+  ;;
+  ;;   (core-type-tag-is-a?/bits T:fixnum (core-type-tag-bits T:number))
+  ;;   => yes		;;T:fixnum is a T:number ?
+  ;;
+  ;;   (core-type-tag-is-a?/bits T:number (core-type-tag-bits T:fixnum))
+  ;;   => maybe	;;T:number is a T:fixnum ?
+  ;;
+  ;;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
+  ;;   => no		;;T:string is a T:number ?
+  ;;
+  (%test-bits ($core-type-tag-bits x) y.bits))
+
+(define (%test-bits bits predefined-type-bits)
+  ;;This function  is for  internal use  and it  is the  heart of  the core  type tag
+  ;;system.
+  ;;
+  ;;BITS must be a fixnum or bignum representing  the core type tag of a return value
+  ;;from an expression in the source  code.  PREDEFINED-TYPE-BITS must be a fixnum or
+  ;;bignum representing  the core  type specification  of a  predefined CORE-TYPE-TAG
+  ;;struct, like "T:fixnum" or "T:positive-exact-integer".
+  ;;
+  ;;The bits are matched against each other and the return value is a symbol:
+  ;;
+  ;;yes -
+  ;;   If BITS is of type PREDEFINED-TYPE-BITS.  Example:
+  ;;
+  ;;      (%test-bits (core-type-tag-bits T:fixnum)
+  ;;                  (core-type-tag-bits T:exact-integer))
+  ;;      => yes
+  ;;
+  ;;no -
+  ;;   If BITS is not of type PREDEFINED-TYPE-BITS.  Example:
+  ;;
+  ;;      (%test-bits (core-type-tag-bits T:fixnum)
+  ;;                  (core-type-tag-bits T:string))
+  ;;      => no
+  ;;
+  ;;maybe -
+  ;;   If BITS is compatible with PREDEFINED-TYPE-BITS, but it may also be of another
+  ;;   type.  Example:
+  ;;
+  ;;      (%test-bits (core-type-tag-bits T:number)
+  ;;                  (core-type-tag-bits T:fixnum))
+  ;;      => maybe
+  ;;
+  (cond ((zero? (bitwise-and bits predefined-type-bits))
+	 ;;None of the  PREDEFINED-TYPE-BITS are set in BITS; some  other bits may be
+	 ;;set in BITS.  Bits examples:
+	 ;;
+	 ;;   BITS   := #b110000
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;BITS and PREDEF is disjunct.  Validator examples:
+	 ;;
+	 ;;   (T:string? T:fixnum)			=> no
+	 ;;   (T:string? (T:or T:fixnum T:pair))	=> no
+	 ;;
+	 'no)
+	((= predefined-type-bits (bitwise-ior bits predefined-type-bits))
+	 ;;All  the  BITS   are  also  set  in  PREDEFINED-TYPE-BITS;   some  of  the
+	 ;;PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
+	 ;;
+	 ;;   BITS   := #b001111
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;   BITS   := #b000011
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;BITS is equal to, or a subset of, PREDEF.  Validator examples:
+	 ;;
+	 ;;   (T:number? T:number)			=> yes
+	 ;;   (T:number? T:fixnum)			=> yes
+	 ;;   (T:exact?  T:fixnum)			=> yes
+	 ;;
+	 'yes)
+	(else
+	 ;;Some of the PREDEFINED-TYPE-BITS are set in BITS; some of the BITS are not
+	 ;;set in PREDEFINED-TYPE-BITS.  Bits examples:
+	 ;;
+	 ;;   BITS   := #b110011
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;Validator examples:
+	 ;;
+	 ;;   (T:string? (T:or T:fixnum T:string))	=> maybe
+	 ;;
+	 'maybe)))
 
 
 (define-syntax (define-ontology x)
-  ;;Define  the operators:  T:description,  T?, T=?,  T:and, T:or  to  be applied  to
-  ;;records of type T.
-  ;;
   (define (main x)
     (syntax-case x ()
       ((_ T make-T T? T:=? T:and T:or T:description
@@ -242,25 +416,6 @@
 							(symbol->string (syntax->datum #'T))
 							"-bits")))))
 	 #'(begin
-	     ;;NOTE This  is a record  rather than a struct  because I like  the fact
-	     ;;that the field is immutable.  (Marco Maggi; Fri Sep 12, 2014)
-	     (define-record-type (T make-T T?)
-	       (sealed #t)
-	       (fields (immutable bits))
-	       (protocol
-		(lambda (make-instance)
-		  (lambda* ({bits exact-integer?})
-		    (make-instance bits)))))
-
-	     (define* (T:=? {x T?} {y T?})
-	       (= ($T-bits x) ($T-bits y)))
-
-	     (define* (T:and {x0 T?} {x1 T?})
-	       (make-T (bitwise-and ($T-bits x0) ($T-bits x1))))
-
-	     (define* (T:or {x0 T?} {x1 T?})
-	       (make-T (bitwise-ior ($T-bits x0) ($T-bits x1))))
-
 	     (define-constant NAME (make-T VAL))
 	     ...
 
@@ -489,120 +644,6 @@
     ;;Uncomment this to get a dump of the macro expansion.
     #;(debug-print (syntax->datum output-form))
     (void)))
-
-
-(define* (make-core-type-tag-predicate {y core-type-tag?})
-  ;;Given an instance  of record type CORE-TYPE-TAG:  return a predicate
-  ;;function which can be used to test other instances.  Example:
-  ;;
-  ;;   (define p (make-core-type-tag-predicate T:exact-integer))
-  ;;   (p T:fixnum)	=> yes
-  ;;   (p T:number)	=> maybe
-  ;;   (p T:string)	=> no
-  ;;
-  (let ((y.bits ($core-type-tag-bits y)))
-    (lambda* ({x core-type-tag?})
-      (%test-bits ($core-type-tag-bits x) y.bits))))
-
-(define* (core-type-tag-is-a? {x core-type-tag?} {y core-type-tag?})
-  ;;Perform core type tag inclusion test.  Examples:
-  ;;
-  ;;   (core-type-tag-is-a? T:fixnum T:number)	=> yes		;;T:fixnum is a T:number ?
-  ;;   (core-type-tag-is-a? T:number T:fixnum)	=> maybe	;;T:number is a T:fixnum ?
-  ;;   (core-type-tag-is-a? T:string T:number)	=> no		;;T:string is a T:number ?
-  ;;
-  (%test-bits ($core-type-tag-bits x) ($core-type-tag-bits y)))
-
-(define* (core-type-tag-is-a?/bits {x core-type-tag?} y.bits)
-  ;;Perform core type tag inclusion test.  Examples:
-  ;;
-  ;;   (core-type-tag-is-a?/bits T:fixnum (core-type-tag-bits T:number))
-  ;;   => yes		;;T:fixnum is a T:number ?
-  ;;
-  ;;   (core-type-tag-is-a?/bits T:number (core-type-tag-bits T:fixnum))
-  ;;   => maybe	;;T:number is a T:fixnum ?
-  ;;
-  ;;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
-  ;;   => no		;;T:string is a T:number ?
-  ;;
-  (%test-bits ($core-type-tag-bits x) y.bits))
-
-(define (%test-bits bits predefined-type-bits)
-  (cond ((zero? (bitwise-and bits predefined-type-bits))
-	 ;;None of the  PREDEFINED-TYPE-BITS are set in BITS; some  other bits may be
-	 ;;set in BITS.  Bits examples:
-	 ;;
-	 ;;   BITS   := #b110000
-	 ;;   PREDEF := #b001111
-	 ;;
-	 ;;BITS and PREDEF is disjunct.  Validator examples:
-	 ;;
-	 ;;   (T:string? T:fixnum)			=> no
-	 ;;   (T:string? (T:or T:fixnum T:pair))	=> no
-	 ;;
-	 'no)
-	((= predefined-type-bits (bitwise-ior bits predefined-type-bits))
-	 ;;All  the  BITS   are  also  set  in  PREDEFINED-TYPE-BITS;   some  of  the
-	 ;;PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
-	 ;;
-	 ;;   BITS   := #b001111
-	 ;;   PREDEF := #b001111
-	 ;;
-	 ;;   BITS   := #b000011
-	 ;;   PREDEF := #b001111
-	 ;;
-	 ;;BITS is equal to, or a subset of, PREDEF.  Validator examples:
-	 ;;
-	 ;;   (T:number? T:number)			=> yes
-	 ;;   (T:number? T:fixnum)			=> yes
-	 ;;   (T:exact?  T:fixnum)			=> yes
-	 ;;
-	 'yes)
-	(else
-	 ;;Some of the PREDEFINED-TYPE-BITS are set in BITS; some of the BITS are not
-	 ;;set in PREDEFINED-TYPE-BITS.  Bits examples:
-	 ;;
-	 ;;   BITS   := #b110011
-	 ;;   PREDEF := #b001111
-	 ;;
-	 ;;Validator examples:
-	 ;;
-	 ;;   (T:string? (T:or T:fixnum T:string))	=> maybe
-	 ;;
-	 'maybe)))
-
-(define-syntax core-type-tag-and*
-  (syntax-rules ()
-    ((_ ?tag)
-     ?tag)
-    ((_ ?tag0 ?tag1 ?tag ...)
-     (core-type-tag-and ?tag0 (core-type-tag-and* ?tag1 ?tag ...)))
-    ))
-
-(define-syntax core-type-tag-or*
-  (syntax-rules ()
-    ((_ ?tag)
-     ?tag)
-    ((_ ?tag0 ?tag1 ?tag ...)
-     (core-type-tag-or ?tag0 (core-type-tag-or* ?tag1 ?tag ...)))
-    ))
-
-(define-syntax (define-underspecified-core-type stx)
-  (syntax-case stx ()
-    ((_ ?type-name ?instance)
-     (identifier? #'?type-name)
-     (with-syntax
-	 ((PRED (identifier-suffix #'?type-name "?")))
-       #'(begin
-	   (define-constant ?type-name
-	     ?instance)
-	   (define* (PRED {x core-type-tag?})
-	     (%test-bits ($core-type-tag-bits x)
-			 ($core-type-tag-bits ?type-name)))
-	   (module ()
-	     (putprop (quote ?type-name) CORE-TYPE-TAG-PROPKEY ?type-name))
-	   #| end of BEGIN |# )))
-    ))
 
 
 ;;;; ontology definition
