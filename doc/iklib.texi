@@ -11963,6 +11963,14 @@ To be used for debugging purposes.  Write to the current error port some
 informations on the internals of @var{port}.
 @end defun
 
+
+@defun reset-input-port! @var{input-port}
+@defunx reset-output-port! @var{output-port}
+Reset to empty the port buffer; return unspecified values.  These
+procedures should be used to attempt an error recovery, only when the
+port's underlying device is stateless, for example at the @repl{}.
+@end defun
+
 @c page
 @node iklib pointers
 @section Handling pointer objects
