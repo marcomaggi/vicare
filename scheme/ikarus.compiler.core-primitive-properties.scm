@@ -337,7 +337,7 @@
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
 
 	 T:struct		T:struct-type-descriptor	T:other-struct
-	 T:record		T:record-type-descriptor
+	 T:record		T:record-type-descriptor	T:enum-set
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -371,6 +371,7 @@
 	 T:sint16		T:uint16
 	 T:sint32		T:uint32
 	 T:sint64		T:uint64
+	 T:file-descriptor
 
 	 T:pointer/false	T:string/false		T:number/false		T:fixnum/false)
       (T:object				#f)
@@ -413,6 +414,7 @@
       (T:other-struct			type)
       (T:record				type)
       (T:record-type-descriptor		type)
+      (T:enum-set			type)
 
       (T:transcoder			type)
 
@@ -471,6 +473,7 @@
       (T:uint32				type)
       (T:sint64				type)
       (T:uint64				type)
+      (T:file-descriptor		type)
 
       (T:pointer/false			type)
       (T:string/false			type)

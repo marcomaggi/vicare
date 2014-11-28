@@ -4627,6 +4627,155 @@
 (declare-port-predicate port-in-non-blocking-mode?)
 
 ;;; --------------------------------------------------------------------
+;;; constructors
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:file-descriptor T:string)	=> (?return-value-tag)))
+		   (attributes
+		    ((_ _)		effect-free result-true))))
+		)))
+  (declare make-binary-file-descriptor-input-port		T:binary-input-port)
+  (declare make-binary-file-descriptor-input-port*		T:binary-input-port)
+  (declare make-binary-file-descriptor-output-port		T:binary-output-port)
+  (declare make-binary-file-descriptor-output-port*		T:binary-output-port)
+  (declare make-binary-file-descriptor-input/output-port	T:binary-input/output-port)
+  (declare make-binary-file-descriptor-input/output-port*	T:binary-input/output-port)
+
+  (declare make-binary-socket-input-port			T:binary-input-port)
+  (declare make-binary-socket-input-port*			T:binary-input-port)
+  (declare make-binary-socket-output-port			T:binary-output-port)
+  (declare make-binary-socket-output-port*			T:binary-output-port)
+  (declare make-binary-socket-input/output-port			T:binary-input/output-port)
+  (declare make-binary-socket-input/output-port*		T:binary-input/output-port)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:file-descriptor T:string T:transcoder)	=> (?return-value-tag)))
+		   (attributes
+		    ((_ _)		effect-free result-true))))
+		)))
+  (declare make-textual-file-descriptor-input-port		T:textual-input-port)
+  (declare make-textual-file-descriptor-input-port*		T:textual-input-port)
+  (declare make-textual-file-descriptor-output-port		T:textual-output-port)
+  (declare make-textual-file-descriptor-output-port*		T:textual-output-port)
+  (declare make-textual-file-descriptor-input/output-port	T:textual-input/output-port)
+  (declare make-textual-file-descriptor-input/output-port*	T:textual-input/output-port)
+
+  (declare make-textual-socket-input-port			T:textual-input-port)
+  (declare make-textual-socket-input-port*			T:textual-input-port)
+  (declare make-textual-socket-output-port			T:textual-output-port)
+  (declare make-textual-socket-output-port*			T:textual-output-port)
+  (declare make-textual-socket-input/output-port		T:textual-input/output-port)
+  (declare make-textual-socket-input/output-port*		T:textual-input/output-port)
+  #| end of LET-SYNTAX |# )
+
+;;;
+
+(declare-core-primitive make-custom-binary-input-port
+    (safe)
+  (signatures
+   ;;id read! get-position set-position close
+   ((T:string T:procedure (or T:false T:procedure) (or T:false T:procedure) (or T:false T:procedure))	=> (T:binary-input-port)))
+  (attributes
+   ((_ _ _ _ _)		effect-free result-true)))
+
+(declare-core-primitive make-custom-textual-input-port
+    (safe)
+  (signatures
+   ;;id read! get-position set-position close
+   ((T:string T:procedure (or T:false T:procedure) (or T:false T:procedure) (or T:false T:procedure))	=> (T:textual-input-port)))
+  (attributes
+   ((_ _ _ _ _)		effect-free result-true)))
+
+;;;
+
+(declare-core-primitive make-custom-binary-output-port
+    (safe)
+  (signatures
+   ;;id write! get-position set-position close
+   ((T:string T:procedure (or T:false T:procedure) (or T:false T:procedure) (or T:false T:procedure))	=> (T:binary-output-port)))
+  (attributes
+   ((_ _ _ _ _)		effect-free result-true)))
+
+(declare-core-primitive make-custom-textual-output-port
+    (safe)
+  (signatures
+   ;;id write! get-position set-position close
+   ((T:string T:procedure (or T:false T:procedure) (or T:false T:procedure) (or T:false T:procedure))	=> (T:textual-output-port)))
+  (attributes
+   ((_ _ _ _ _)		effect-free result-true)))
+
+;;;
+
+(declare-core-primitive make-custom-binary-input/output-port
+    (safe)
+  (signatures
+   ;;id read! write! get-position set-position close
+   ((T:string T:procedure T:procedure (or T:false T:procedure) (or T:false T:procedure) (or T:false T:procedure))
+    => (T:binary-input/output-port)))
+  (attributes
+   ((_ _ _ _ _ _)	effect-free result-true)))
+
+(declare-core-primitive make-custom-textual-input/output-port
+    (safe)
+  (signatures
+   ;;id read! write! get-position set-position close
+   ((T:string T:procedure T:procedure (or T:false T:procedure) (or T:false T:procedure) (or T:false T:procedure))
+    => (T:textual-input/output-port)))
+  (attributes
+   ((_ _ _ _ _ _)	effect-free result-true)))
+
+;;;
+
+(declare-core-primitive open-input-file
+    (safe)
+  (signatures
+   ((T:string)		=> (T:textual-input-port)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive open-output-file
+    (safe)
+  (signatures
+   ((T:string)		=> (T:textual-output-port)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive open-file-input-port
+    (safe)
+  (signatures
+   ((T:string)					=> (T:binary-input-port))
+   ((T:string T:enum-set)			=> (T:binary-input-port))
+   ((T:string T:enum-set T:symbol)		=> (T:binary-input-port))
+   ((T:string T:enum-set T:symbol T:false)	=> (T:binary-input-port))
+   ((T:string T:enum-set T:symbol T:transcoder)	=> (T:textual-input-port)))
+  (attributes
+   ((_)					result-true)
+   ((_ _)				result-true)
+   ((_ _ _)				result-true)
+   ((_ _ _ _)				result-true)))
+
+#|
+ open-file-output-port
+ open-file-input/output-port
+ open-string-input-port
+ open-string-output-port
+ open-bytevector-input-port
+ open-bytevector-output-port
+|#
+
+
+;;; --------------------------------------------------------------------
 ;;; special values
 
 (declare-object-retriever eof-object)
@@ -4644,53 +4793,6 @@
 
 
 #|
- make-binary-file-descriptor-input-port
- make-binary-file-descriptor-input-port*
- make-binary-file-descriptor-output-port
- make-binary-file-descriptor-output-port*
- make-binary-file-descriptor-input/output-port
- make-binary-file-descriptor-input/output-port*
-
- make-binary-socket-input-port
- make-binary-socket-input-port*
- make-binary-socket-output-port
- make-binary-socket-output-port*
- make-binary-socket-input/output-port
- make-binary-socket-input/output-port*
-
- make-textual-file-descriptor-input-port
- make-textual-file-descriptor-input-port*
- make-textual-file-descriptor-output-port
- make-textual-file-descriptor-output-port*
- make-textual-file-descriptor-input/output-port
- make-textual-file-descriptor-input/output-port*
-
- make-textual-socket-input-port
- make-textual-socket-input-port*
- make-textual-socket-output-port
- make-textual-socket-output-port*
- make-textual-socket-input/output-port
- make-textual-socket-input/output-port*
-
- make-custom-binary-input-port
- make-custom-binary-output-port
- make-custom-textual-input-port
- make-custom-textual-output-port
- make-custom-binary-input/output-port
- make-custom-textual-input/output-port
-
-;;;
-
- open-input-file
- open-output-file
- open-file-input-port
- open-file-output-port
- open-file-input/output-port
- open-string-input-port
- open-string-output-port
- open-bytevector-input-port
- open-bytevector-output-port
-
  get-output-string
 
  transcoded-port

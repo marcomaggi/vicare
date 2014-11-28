@@ -99,7 +99,7 @@
    T:procedure		T:transcoder		T:pointer	T:hashtable
 
    T:struct		T:struct-type-descriptor	T:other-struct
-   T:record		T:record-type-descriptor
+   T:record		T:record-type-descriptor	T:enum-set
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -133,6 +133,7 @@
    T:sint16		T:uint16
    T:sint32		T:uint32
    T:sint64		T:uint64
+   T:file-descriptor
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
@@ -170,7 +171,7 @@
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
 
    T:struct?		T:struct-type-descriptor?	T:other-struct?
-   T:record?		T:record-type-descriptor?
+   T:record?		T:record-type-descriptor?	T:enum-set?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -204,6 +205,7 @@
    T:sint16?		T:uint16?
    T:sint32?		T:uint32?
    T:sint64?		T:uint64?
+   T:file-descriptor?
 
    T:pointer/false?	T:string/false?		T:number/false?		T:fixnum/false?
 
@@ -704,8 +706,9 @@
   ;; T:struct-type-descriptor	- Vicare struct type descriptor
   ;; T:record			- R6RS record instance
   ;; T:record-type-descriptor	- R6RS record type descriptor
+  ;; T:enum-set			- struct instance representing an enum-set
   ;; T:other-struct		- struct instance of some type
-  (struct		(exclusive struct-type-descriptor record-type-descriptor record other-struct))
+  (struct		(exclusive struct-type-descriptor record-type-descriptor record enum-set other-struct))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
@@ -766,6 +769,9 @@
 
 (define-underspecified-core-type T:octet/byte
   (core-type-tag-or* T:octet T:byte))
+
+(define-underspecified-core-type T:file-descriptor
+  T:non-negative-fixnum)
 
 ;;; --------------------------------------------------------------------
 ;;; more bignum types
