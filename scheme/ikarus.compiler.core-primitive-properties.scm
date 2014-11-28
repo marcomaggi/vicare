@@ -335,6 +335,8 @@
 	 T:boolean		T:char			T:symbol	T:string
 	 T:vector		T:bytevector		T:keyword
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
+	 T:eof			T:would-block
+
 
 	 T:struct		T:struct-type-descriptor	T:other-struct
 	 T:record		T:record-type-descriptor	T:enum-set
@@ -408,6 +410,8 @@
       (T:binary-input-port		type)
       (T:binary-output-port		type)
       (T:binary-input/output-port	type)
+      (T:eof				type)
+      (T:would-block			type)
 
       (T:struct				type)
       (T:struct-type-descriptor		type)
@@ -481,10 +485,10 @@
       (T:fixnum/false			type)
 
       ((and ?tag0 ?tag ...)
-       #`(core-type-tag-and . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
+       #`(core-type-tag-and* . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
 
       ((or  ?tag0 ?tag ...)
-       #`(core-type-tag-or  . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
+       #`(core-type-tag-or*  . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
 
       (_
        (if (and (identifier? type)

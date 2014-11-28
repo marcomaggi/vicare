@@ -4942,6 +4942,20 @@
   (attributes
    ((_)			effect-free result-true)))
 
+(declare-core-primitive port-transcoder
+    (safe)
+  (signatures
+   ((T:port)		=> ((or T:false T:transcoder))))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive output-port-buffer-mode
+    (safe)
+  (signatures
+   ((T:output-port)		=> (T:symbol)))
+  (attributes
+   ((_)				effect-free result-true)))
+
 ;;;
 
 (declare-core-primitive port-set-non-blocking-mode!
@@ -5043,34 +5057,33 @@
   (attributes
    ((_)			effect-free result-true)))
 
-#|
+;;;
 
- port-transcoder
-
-
- reset-input-port!
- reset-output-port!
-|#
-
-;;; --------------------------------------------------------------------
-;;; special values
-
-(declare-object-retriever eof-object)
-(declare-object-predicate eof-object?)
-
-(declare-object-retriever would-block-object)
-(declare-object-predicate would-block-object?)
-
-(declare-core-primitive buffer-mode?
+(declare-core-primitive reset-input-port!
     (safe)
   (signatures
-   ((T:symbol)		=> (T:boolean)))
+   ((T:input-port)	=> (T:void)))
   (attributes
-   ((_)			foldable effect-free result-true)))
+   ((_)			result-true)))
 
+(declare-core-primitive reset-output-port!
+    (safe)
+  (signatures
+   ((T:input-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+;;; --------------------------------------------------------------------
+;;; input procedures
+
+(declare-core-primitive get-bytevector-all
+    (safe)
+  (signatures
+   ((T:binary-input-port)		=> ((or T:eof T:would-block T:bytevector))))
+  (attributes
+   ((_)					result-true)))
 
 #|
- get-bytevector-all
  get-bytevector-n
  get-bytevector-n!
  get-bytevector-some
@@ -5097,6 +5110,26 @@
  read-char
  read-line
 
+|#
+
+;;; --------------------------------------------------------------------
+;;; special values
+
+(declare-object-retriever eof-object)
+(declare-object-predicate eof-object?)
+
+(declare-object-retriever would-block-object)
+(declare-object-predicate would-block-object?)
+
+(declare-core-primitive buffer-mode?
+    (safe)
+  (signatures
+   ((T:symbol)		=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+
+#|
  put-bytevector
  put-char
  put-datum
@@ -5120,7 +5153,6 @@
  input/output-file-buffer-size
  input/output-socket-buffer-size
 
- output-port-buffer-mode
 
 |#
 

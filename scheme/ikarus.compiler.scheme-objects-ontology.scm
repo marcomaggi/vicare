@@ -34,11 +34,13 @@
 		;they have exactly the same bits, otherwise return false.
 
    core-type-tag-and
+   core-type-tag-and*
 		;Given two instances of record type CORE-TYPE-TAG: combine their bits
 		;with  a  bitwise   AND  operation  and  return  a   record  of  type
 		;CORE-TYPE-TAG holding the result.
 
    core-type-tag-or
+   core-type-tag-or*
 		;Given two instances of record type CORE-TYPE-TAG: combine their bits
 		;with  a   bitwise  OR  operation   and  return  a  record   of  type
 		;CORE-TYPE-TAG holding the result.
@@ -97,6 +99,7 @@
    T:boolean		T:char			T:symbol	T:string
    T:vector		T:bytevector		T:keyword
    T:procedure		T:transcoder		T:pointer	T:hashtable
+   T:eof		T:would-block
 
    T:struct		T:struct-type-descriptor	T:other-struct
    T:record		T:record-type-descriptor	T:enum-set
@@ -169,6 +172,7 @@
    T:boolean?		T:char?			T:symbol?	T:string?
    T:vector?		T:bytevector?		T:keyword?
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
+   T:eof?		T:would-block?
 
    T:struct?		T:struct-type-descriptor?	T:other-struct?
    T:record?		T:record-type-descriptor?	T:enum-set?
@@ -670,7 +674,7 @@
   (obj-tag		(exclusive boolean char transcoder void number pointer
 				   null standalone-pair non-empty-proper-list
 				   symbol keyword string procedure vector bytevector
-				   port hashtable struct other-object))
+				   port hashtable struct eof would-block other-object))
 
   (boolean		(exclusive true false))
 
