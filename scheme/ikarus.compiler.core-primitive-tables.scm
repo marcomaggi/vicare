@@ -4921,25 +4921,132 @@
 ;;; --------------------------------------------------------------------
 ;;; accessors and mutators
 
+(declare-core-primitive port-id
+    (safe)
+  (signatures
+   ((T:port)		=> (T:string)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive port-uid
+    (safe)
+  (signatures
+   ((T:port)		=> (T:symbol)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive port-fd
+    (safe)
+  (signatures
+   ((T:port)		=> ((or T:false T:file-descriptor))))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;;
+
+(declare-core-primitive port-set-non-blocking-mode!
+    (safe)
+  (signatures
+   ((T:port)		=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive port-unset-non-blocking-mode!
+    (safe)
+  (signatures
+   ((T:port)		=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+;;;
+
+(declare-core-primitive port-mode
+    (safe)
+  (signatures
+   ((T:port)		=> (T:symbol)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive set-port-mode!
+    (safe)
+  (signatures
+   ((T:port T:symbol)		=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+;;;
+
+(declare-core-primitive set-port-buffer-mode!
+    (safe)
+  (signatures
+   ((T:port T:symbol)		=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive port-dump-status
+    (safe)
+  (signatures
+   ((T:port)			=> (T:void)))
+  (attributes
+   ((_)				result-true)))
+
+;;;
+
+(declare-core-primitive port-position
+    (safe)
+  (signatures
+   ((T:port)			=> (T:non-negative-exact-integer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive port-textual-position
+    (safe)
+  (signatures
+   ((T:textual-port)		=> (T:record)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive set-port-position!
+    (safe)
+  (signatures
+   ((T:port T:exact-integer)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+;;;
+
+(declare-core-primitive port-putprop
+    (safe)
+  (signatures
+   ((T:port T:symbol T:object)		=> (T:void)))
+  (attributes
+   ((_ _ _)				result-true)))
+
+(declare-core-primitive port-getprop
+    (safe)
+  (signatures
+   ((T:port T:symbol)			=> (T:object)))
+  (attributes
+   ((_ _)				effect-free)))
+
+(declare-core-primitive port-remprop
+    (safe)
+  (signatures
+   ((T:port T:symbol)			=> (T:void)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive port-property-list
+    (safe)
+  (signatures
+   ((T:port)		=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
 #|
- port-mode
- port-id
- port-uid
- port-fd
- port-set-non-blocking-mode!
- port-unset-non-blocking-mode!
- port-putprop
- port-getprop
- port-remprop
- port-property-list
- port-dump-status
- port-position
- port-textual-position
+
  port-transcoder
 
- set-port-mode!
- set-port-buffer-mode!
- set-port-position!
 
  reset-input-port!
  reset-output-port!
