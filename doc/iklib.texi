@@ -11789,6 +11789,35 @@ one), and it updates @var{port} to point just past these characters.
 If no input characters are available: the EOF object is returned.
 @end defun
 
+
+@defun with-input-from-string @var{string} @var{thunk}
+@var{thunk} must be a procedure and it must accept zero arguments; it is
+called with no arguments.  @var{string} must be a Scheme string.
+
+The @var{string} is used as argument for @func{open-string-input-port};
+during the dynamic extent of the call to @var{thunk}, the obtained port
+is made the value returned by procedure @func{current-input-port}; the
+previous default value is reinstated when the dynamic extent is exited.
+
+When @var{thunk} returns, the port is closed automatically.  The values
+returned by @var{thunk} are returned.
+
+If an escape procedure is used to escape back into the call to
+@var{thunk} after @var{thunk} is returned, the behavior is unspecified.
+@end defun
+
+
+@defun with-output-to-string @var{thunk}
+Create a textual output port that accumulates the characters written to
+it, set it as the current output port and call @var{thunk} with no
+arguments.  The port is the current output port only for the extent of
+the call to @var{thunk}.
+
+Whenever @var{thunk} returns, a string consisting of all of the port's
+accumulated characters (regardless of the port's current position) is
+returned and the port is closed.
+@end defun
+
 @c page
 @node iklib io buffer
 @subsection Buffer size customisation
