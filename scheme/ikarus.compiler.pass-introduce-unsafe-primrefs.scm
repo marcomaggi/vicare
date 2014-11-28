@@ -154,7 +154,7 @@
 		;;   ((?operands-bits . ?return-values-bits) ...)
 		;;
 		;;in which both ?OPERANDS-BITS  and ?RETURN-VALUES-BITS are proper or
-		;;improper lists of exact integers and false objects.
+		;;improper lists of exact integers.
 		(find (lambda (signature)
 			(%compatible-type-bits-and-operands? (car signature) rand*))
 		  signature*)))
@@ -179,7 +179,7 @@
 		;;   ((?operands-bits . ?return-values-bits) ...)
 		;;
 		;;in which both ?OPERANDS-BITS  and ?RETURN-VALUES-BITS are proper or
-		;;improper lists of exact integers and false objects.
+		;;improper lists of exact integers.
 		(find (lambda (signature)
 			(%matching-type-bits-and-operands? (car signature) rand*))
 		  signature*)))
@@ -231,12 +231,6 @@
 		  ;;all be complieant with the BITS.
 		  (and (%compatible-type-bits-and-operand?  bits (car rand*))
 		       (%compatible-type-bits-and-operands? bits (cdr rand*))))
-		 ((not bits)
-		  ;;We  expect a  variable number  of arguments;  the rest  operands,
-		  ;;whatever their type, are compliant with the core type "T:object".
-		  ;;If we  are here: all  the operands  matched the type  bits: total
-		  ;;success!!!
-		  #t)
 		 (else
 		  (compiler-internal-error __module_who__ __who__
 		    "invalid type specification in signature of core primitive"
@@ -275,12 +269,6 @@
 		  ;;all match the BITS.
 		  (and (%matching-type-bits-and-operand?  bits (car rand*))
 		       (%matching-type-bits-and-operands? bits (cdr rand*))))
-		 ((not bits)
-		  ;;We expect a variable number  of arguments; the rest operands must
-		  ;;all  satisfy the  predicate "T:object?",  which they  do whatever
-		  ;;their type.   If we are here:  all the operands matched  the type
-		  ;;bits: total success!!!
-		  #t)
 		 (else
 		  (compiler-internal-error __module_who__ __who__
 		    "invalid type specification in signature of core primitive"
@@ -300,6 +288,7 @@
     ;;
     (cond ((or (fixnum? type-bits)
 	       (bignum? type-bits))
+	   ;;This includes the special case TYPE-BITS == 0, which means: any type.
 	   (struct-case rand
 	     ((known _ type)
 	      (case (core-type-tag-is-a?/bits type type-bits)
@@ -314,10 +303,6 @@
 		(else  #t)))
 	     ;;Operand of unknown type: let's handle it as compatible.
 	     (else #t)))
-	  ((not type-bits)
-	   ;;BITS  is false,  which  means that  this  operand can  be  of any  type;
-	   ;;operand's type matches the expected argument's type.
-	   #t)
 	  (else
 	   (compiler-internal-error __module_who__ __who__
 	     "invalid type specification in signature of core primitive" type-bits))))
@@ -328,6 +313,7 @@
     ;;
     (cond ((or (fixnum? type-bits)
 	       (bignum? type-bits))
+	   ;;This includes the special case TYPE-BITS == 0, which means: any type.
 	   (struct-case rand
 	     ((known _ type)
 	      (case (core-type-tag-is-a?/bits type type-bits)
@@ -340,10 +326,6 @@
 		(else  #f)))
 	     ;;Operand of unknown type: let's handle it as *not* matching.
 	     (else #f)))
-	  ((not type-bits)
-	   ;;BITS  is false,  which  means that  this  operand can  be  of any  type;
-	   ;;operand's type matches the expected argument's type.
-	   #t)
 	  (else
 	   (compiler-internal-error __module_who__ __who__
 	     "invalid type specification in signature of core primitive" type-bits))))

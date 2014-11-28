@@ -282,8 +282,7 @@
     ;;will evaluate to  an exact integer representing the naked  bits defining a core
     ;;type specification.
     ;;
-    ;;the  returned object  has a  false object  in place  of the  wildcards "_"  and
-    ;;"T:object".
+    ;;the returned object has "T:object" in place of the wildcard "_".
     ;;
     ;;NOTE The order of  the returned signatures is *the* *same*  order in which they
     ;;appear in the input form!
@@ -308,11 +307,8 @@
     ;;expressions representing  the types of  arguments or  return values for  a core
     ;;primitive.
     ;;
-    (define (%maybe-wrap type-spec)
-      (if (not type-spec)
-	  ;;It is false.
-	  type-spec
-	#`(unquote ($core-type-tag-bits #,type-spec))))
+    (define-syntax-rule (%maybe-wrap ?type-spec)
+      #`(unquote ($core-type-tag-bits #,?type-spec)))
     (syntax-case stx ()
       ((?car . ?cdr)
        (cons (%maybe-wrap (%parse-core-object-type #'?car))
@@ -325,7 +321,7 @@
 
   (define (%parse-core-object-type type)
     ;;We accept a  core type identifier and  return it; "T:object" and  "_" mean "any
-    ;;type" and we convert them to false.
+    ;;type".
     (syntax-case type
 	( ;;
 	 and or
@@ -376,7 +372,7 @@
 	 T:file-descriptor
 
 	 T:pointer/false	T:string/false		T:number/false		T:fixnum/false)
-      (T:object				#f)
+      (T:object				type)
       (T:other-object			type)
       (T:immediate			type)
       (T:nonimmediate			type)
@@ -491,9 +487,10 @@
        #`(core-type-tag-or*  . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
 
       (_
-       (if (and (identifier? type)
-		(eq? '_ (syntax->datum type)))
-	   #f
+       (if (identifier? type)
+	   (if (eq? '_ (syntax->datum type))
+	       #'T:object
+	     (synner "unknown identifier as core type name in core primitive declaration" type))
 	 (synner "expected identifier as core type name in core primitive declaration" type)))
       ))
 

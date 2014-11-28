@@ -4587,6 +4587,10 @@
 (declare-object-retriever console-output-port	T:textual-output-port)
 (declare-object-retriever console-error-port	T:textual-output-port)
 
+(declare-parameter print-graph			T:boolean)
+(declare-parameter print-unicode		T:boolean)
+(declare-parameter printer-integer-radix	T:non-negative-fixnum)
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
@@ -5073,6 +5077,25 @@
   (attributes
    ((_)			result-true)))
 
+;;;
+
+(declare-core-primitive get-output-string
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> (T:string)))
+  (attributes
+   ((_)				result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-parameter bytevector-port-buffer-size		T:non-negative-fixnum)
+(declare-parameter string-port-buffer-size		T:non-negative-fixnum)
+(declare-parameter input-file-buffer-size		T:non-negative-fixnum)
+(declare-parameter output-file-buffer-size		T:non-negative-fixnum)
+(declare-parameter input/output-file-buffer-size	T:non-negative-fixnum)
+(declare-parameter input/output-socket-buffer-size	T:non-negative-fixnum)
+
 ;;; --------------------------------------------------------------------
 ;;; input procedures
 
@@ -5083,34 +5106,268 @@
   (attributes
    ((_)					result-true)))
 
-#|
- get-bytevector-n
- get-bytevector-n!
- get-bytevector-some
+(declare-core-primitive get-bytevector-n
+    (safe)
+  (signatures
+   ((T:binary-input-port T:non-negative-fixnum)		=> ((or T:eof T:would-block T:bytevector))))
+  (attributes
+   ((_ _)			result-true)))
 
- get-string-all
- get-string-n
- get-string-n!
- get-string-some
+(declare-core-primitive get-bytevector-n!
+    (safe)
+  (signatures
+   ((T:binary-input-port T:bytevector T:non-negative-fixnum T:non-negative-fixnum)
+    => ((or T:eof T:would-block T:bytevector))))
+  (attributes
+   ((_ _ _ _)			result-true)))
 
- get-output-string
+(declare-core-primitive get-bytevector-some
+    (safe)
+  (signatures
+   ((T:binary-input-port)	=> ((or T:eof T:would-block T:bytevector))))
+  (attributes
+   ((_ _ _ _)			result-true)))
 
- get-u8
- get-char
- get-char-and-track-textual-position
- get-datum
- get-line
+;;;
 
- peek-char
- lookahead-char
- lookahead-u8
- lookahead-two-u8
+(declare-core-primitive get-string-all
+    (safe)
+  (signatures
+   ((T:textual-input-port)		=> ((or T:eof T:would-block T:string))))
+  (attributes
+   ((_)					result-true)))
 
- read
- read-char
- read-line
+(declare-core-primitive get-string-n
+    (safe)
+  (signatures
+   ((T:textual-input-port T:non-negative-fixnum)	=> ((or T:eof T:would-block T:string))))
+  (attributes
+   ((_ _)			result-true)))
 
-|#
+(declare-core-primitive get-string-n!
+    (safe)
+  (signatures
+   ((T:textual-input-port T:string T:non-negative-fixnum T:non-negative-fixnum)
+    => ((or T:eof T:would-block T:string))))
+  (attributes
+   ((_ _ _ _)			result-true)))
+
+(declare-core-primitive get-string-some
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:string))))
+  (attributes
+   ((_)				result-true)))
+
+;;;
+
+(declare-core-primitive get-u8
+    (safe)
+  (signatures
+   ((T:binary-input-port)	=> ((or T:eof T:would-block T:octet))))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive get-char
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:char))))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive get-char-and-track-textual-position
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:char))))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive get-datum
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:object))))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive get-line
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:string))))
+  (attributes
+   ((_)				result-true)))
+
+;;;
+
+(declare-core-primitive lookahead-u8
+    (safe)
+  (signatures
+   ((T:binary-input-port)	=> ((or T:eof T:would-block T:octet))))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive lookahead-two-u8
+    (safe)
+  (signatures
+   ((T:binary-input-port)	=> ((or T:eof T:would-block T:octet)
+				    (or T:eof T:would-block T:octet))))
+  (attributes
+   ((_)				result-true)))
+
+(declare-core-primitive lookahead-char
+    (safe)
+  (signatures
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:char))))
+  (attributes
+   ((_)				result-true)))
+
+;;;
+
+(declare-core-primitive read
+    (safe)
+  (signatures
+   (()				=> (T:object))
+   ((T:textual-input-port)	=> (T:object))))
+
+(declare-core-primitive read-char
+    (safe)
+  (signatures
+   (()				=> ((or T:eof T:would-block T:char)))
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:char))))
+  (attributes
+   (()				result-true)
+   ((_)				result-true)))
+
+(declare-core-primitive peek-char
+    (safe)
+  (signatures
+   (()				=> ((or T:eof T:would-block T:char)))
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:char))))
+  (attributes
+   (()				result-true)
+   ((_)				result-true)))
+
+(declare-core-primitive read-line
+    (safe)
+  (signatures
+   (()				=> ((or T:eof T:would-block T:string)))
+   ((T:textual-input-port)	=> ((or T:eof T:would-block T:string))))
+  (attributes
+   (()				result-true)
+   ((_)				result-true)))
+
+;;; --------------------------------------------------------------------
+;;; output procedures
+
+(declare-core-primitive put-bytevector
+    (safe)
+  (signatures
+   ((T:binary-output-port T:bytevector)							=> (T:void))
+   ((T:binary-output-port T:bytevector T:non-negative-fixnum)				=> (T:void))
+   ((T:binary-output-port T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)
+   ((_ _ _)			result-true)
+   ((_ _ _ _)			result-true)))
+
+(declare-core-primitive put-string
+    (safe)
+  (signatures
+   ((T:textual-output-port T:string)							=> (T:void))
+   ((T:textual-output-port T:string T:non-negative-fixnum)				=> (T:void))
+   ((T:textual-output-port T:string T:non-negative-fixnum T:non-negative-fixnum)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)
+   ((_ _ _)			result-true)
+   ((_ _ _ _)			result-true)))
+
+(declare-core-primitive put-u8
+    (safe)
+  (signatures
+   ((T:binary-output-port T:octet)		=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+(declare-core-primitive put-char
+    (safe)
+  (signatures
+   ((T:textual-output-port T:char)		=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+(declare-core-primitive put-datum
+    (safe)
+  (signatures
+   ((T:textual-output-port T:object)		=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+(declare-core-primitive write-char
+    (safe)
+  (signatures
+   ((T:char)				=> (T:void))
+   ((T:char T:textual-output-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)
+   ((_ _)		result-true)))
+
+(declare-core-primitive write
+    (safe)
+  (signatures
+   ((T:object)				=> (T:void))
+   ((T:object T:textual-output-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)
+   ((_ _)		result-true)))
+
+(declare-core-primitive display
+    (safe)
+  (signatures
+   ((T:object)				=> (T:void))
+   ((T:object T:textual-output-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)
+   ((_ _)		result-true)))
+
+(declare-core-primitive newline
+    (safe)
+  (signatures
+   (()				=> (T:void))
+   (( T:textual-output-port)	=> (T:void)))
+  (attributes
+   (()			result-true)
+   ((_)			result-true)))
+
+;;;
+
+(declare-core-primitive flush-output-port
+    (safe)
+  (signatures
+   ((T:output-port)		=> (T:void)))
+  (attributes
+   ((_)				result-true)))
+
+;;;
+
+(declare-core-primitive format
+    (safe)
+  (signatures
+   ((T:string . T:object)	=> (T:void)))
+  (attributes
+   ((_ . _)		result-true)))
+
+(declare-core-primitive printf
+    (safe)
+  (signatures
+   ((T:string . T:object)	=> (T:void)))
+  (attributes
+   ((_ . _)		result-true)))
+
+(declare-core-primitive fprintf
+    (safe)
+  (signatures
+   ((T:textual-output-port T:string . T:object)	=> (T:void)))
+  (attributes
+   ((_ _ . _)		result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; special values
@@ -5127,34 +5384,6 @@
    ((T:symbol)		=> (T:boolean)))
   (attributes
    ((_)			foldable effect-free result-true)))
-
-
-#|
- put-bytevector
- put-char
- put-datum
- put-string
- put-u8
-
- write-char
- write
- display
- newline
- printf
- fprintf
- format
-
- flush-output-port
-
- bytevector-port-buffer-size
- string-port-buffer-size
- input-file-buffer-size
- output-file-buffer-size
- input/output-file-buffer-size
- input/output-socket-buffer-size
-
-
-|#
 
 
 ;;;; input/output, unsafe primitives
@@ -7933,9 +8162,6 @@
 ;;; --------------------------------------------------------------------
 
 
- print-graph
- print-unicode
- printer-integer-radix
 
 
 
