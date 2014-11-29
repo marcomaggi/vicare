@@ -257,13 +257,6 @@
 (define-syntax-rule (name->core-type-tag ?name)
   (symbol-value ?name))
 
-;; (define* (name->core-type-tag {name symbol?})
-;;   ;;The  symbol name  of a  predefined core  type tag  has the  actual struct  in its
-;;   ;;property list.  This function retrieves it.
-;;   ;;
-;;   (or (getprop name CORE-TYPE-TAG-PROPKEY)
-;;       (compile-time-error __module_who__ __who__ "unknown core type tag name" name)))
-
 ;;; --------------------------------------------------------------------
 ;;; flat comparison
 
@@ -445,7 +438,6 @@
 
 	     (module ()
 	       (set-symbol-value! (quote NAME) NAME)
-	       #;(putprop (quote NAME) CORE-TYPE-TAG-PROPKEY NAME)
 	       ...)
 
 	     )))))
