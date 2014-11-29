@@ -8119,22 +8119,75 @@
   (declare library-version<=?)
   #| end of LET-SYNTAX |#)
 
+
 ;;;; library references and conformity, safe procedures
 
-#|
- library-reference?
- library-version-reference?
- library-sub-version-reference?
- library-sub-version?
- library-reference-decompose
- library-reference->identifiers
- library-reference->version-reference
- library-reference-identifiers=?
- conforming-sub-version-and-sub-version-reference?
- conforming-version-and-version-reference?
- conforming-library-name-and-library-reference?
-|#
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:object)		=> (T:boolean)))
+		   (attributes
+		    ((_)		foldable effect-free))))
+		)))
+  (declare library-reference?)
+  (declare library-version-reference?)
+  (declare library-sub-version-reference?)
+  (declare library-sub-version?)
+  #| end of LET-SYNTAX |# )
 
+(declare-core-primitive library-reference-decompose
+    (safe)
+  (signatures
+   ((T:object)		=> (T:proper-list T:proper-list)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive library-reference->identifiers
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:proper-list)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive library-reference->version-reference
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:proper-list)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive library-reference-identifiers=?
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)	=> (T:boolean)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+(declare-core-primitive conforming-sub-version-and-sub-version-reference?
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)	=> (T:boolean)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+(declare-core-primitive conforming-version-and-version-reference?
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)	=> (T:boolean)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+(declare-core-primitive conforming-library-name-and-library-reference?
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)	=> (T:boolean)))
+  (attributes
+   ((_ _)		foldable effect-free)))
 
 
 ;;;; system interface and foreign functions
