@@ -5591,6 +5591,47 @@
   (attributes
    (_				foldable effect-free result-false)))
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive new-cafe
+    (safe)
+  (signatures
+   (()			=> (T:void))
+   ((T:procedure)	=> (T:void)))
+  (attributes
+   (()			result-true)
+   ((_)			result-true)))
+
+(declare-parameter waiter-prompt-string		T:string)
+(declare-parameter cafe-input-port		T:textual-input-port)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive readline-enabled?
+    (safe)
+  (signatures
+   (()			=> (T:boolean)))
+  (attributes
+   (()			effect-free)))
+
+(declare-core-primitive readline
+    (safe)
+  (signatures
+   (()						=> (T:string))
+   (((or T:false T:bytevector T:string))	=> (T:string)))
+  (attributes
+   (()			result-true)
+   ((_)			result-true)))
+
+(declare-core-primitive make-readline-input-port
+    (safe)
+  (signatures
+   (()					=> (T:textual-input-port))
+   (((or T:false T:procedure))		=> (T:textual-input-port)))
+  (attributes
+   (()			result-true)
+   ((_)			result-true)))
+
 
 ;;;; invocation and termination procedures
 
@@ -8170,11 +8211,6 @@
  assembler-output
  optimizer-output
  assembler-property-key
- new-cafe
- waiter-prompt-string
- readline-enabled?
- readline
- make-readline-input-port
  expand-form-to-core-language
  expand-library
  expand-library->sexp

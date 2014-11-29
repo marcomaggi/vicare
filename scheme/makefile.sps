@@ -947,6 +947,7 @@
     (assembler-property-key			$codes)
     (new-cafe					v $language)
     (waiter-prompt-string			v $language)
+    (cafe-input-port				v $language)
     (readline-enabled?				v $language)
     (readline					v $language)
     (make-readline-input-port			v $language)
