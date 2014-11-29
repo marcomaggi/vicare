@@ -8056,6 +8056,87 @@
   #| end of LET-SYNTAX |# )
 
 
+;;;; library names, safe primitives
+
+(declare-core-primitive library-name?
+    (safe)
+  (signatures
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive library-version-numbers?
+    (safe)
+  (signatures
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive library-version-number?
+    (safe)
+  (signatures
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive library-name-decompose
+    (safe)
+  (signatures
+   ((T:object)		=> (T:proper-list T:proper-list)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-core-primitive library-name->identifiers
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:proper-list)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive library-name->version
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:proper-list)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:proper-list T:proper-list)	=> (T:boolean)))
+		   (attributes
+		    ((_ _)		foldable effect-free))))
+		)))
+  (declare library-name-identifiers=?)
+  (declare library-name=?)
+  (declare library-name<?)
+  (declare library-name<=?)
+  (declare library-version=?)
+  (declare library-version<?)
+  (declare library-version<=?)
+  #| end of LET-SYNTAX |#)
+
+;;;; library references and conformity, safe procedures
+
+#|
+ library-reference?
+ library-version-reference?
+ library-sub-version-reference?
+ library-sub-version?
+ library-reference-decompose
+ library-reference->identifiers
+ library-reference->version-reference
+ library-reference-identifiers=?
+ conforming-sub-version-and-sub-version-reference?
+ conforming-version-and-version-reference?
+ conforming-library-name-and-library-reference?
+|#
+
+
+
 ;;;; system interface and foreign functions
 
 (declare-core-primitive errno
@@ -9042,38 +9123,6 @@
  syntax-clauses-single-spec
  syntax-clauses-fold-specs
  syntax-clauses-validate-specs
-
-;;; --------------------------------------------------------------------
-;;; library names
-
- library-name?
- library-version-numbers?
- library-version-number?
- library-name-decompose
- library-name->identifiers
- library-name->version
- library-name-identifiers=?
- library-name=?
- library-name<?
- library-name<=?
- library-version=?
- library-version<?
- library-version<=?
-
-;;; --------------------------------------------------------------------
-;;; library references and conformity
-
- library-reference?
- library-version-reference?
- library-sub-version-reference?
- library-sub-version?
- library-reference-decompose
- library-reference->identifiers
- library-reference->version-reference
- library-reference-identifiers=?
- conforming-sub-version-and-sub-version-reference?
- conforming-version-and-version-reference?
- conforming-library-name-and-library-reference?
 
 ;;; --------------------------------------------------------------------
 ;;; library infrastructure
