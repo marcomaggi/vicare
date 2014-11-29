@@ -6630,6 +6630,12 @@ Return the procedure being the printer function for the data structure
 @end defun
 
 
+@defun struct-destructor @var{stru}
+Return @false{} or the procedure being the destructor function for the
+data structure @var{stru}.
+@end defun
+
+
 @defun struct-ref @var{stru} @var{index}
 Return the value of field at @var{index} in the data structure
 @var{stru}.

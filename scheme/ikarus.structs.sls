@@ -359,7 +359,7 @@
   ($std-printer ($struct-rtd stru)))
 
 (define* (struct-destructor {stru struct?})
-  ;;Return  the procedure  being the  destructor function  for the  data
+  ;;Return  false  or the  procedure  being  the  destructor  function for  the  data
   ;;structure STRU.
   ;;
   ($std-destructor ($struct-rtd stru)))

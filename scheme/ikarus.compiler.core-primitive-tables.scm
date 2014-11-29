@@ -4159,8 +4159,10 @@
 
 ;;;; structs, safe primitives
 
+;;; predicates
+
 (declare-core-primitive struct?
-    (unsafe)
+    (safe)
   (signatures
    ((T:struct)				=> (T:true))
    ((_)					=> (T:boolean))
@@ -4171,6 +4173,138 @@
 
 (declare-type-predicate struct-type-descriptor? T:struct-type-descriptor)
 
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive make-struct-type
+    (safe)
+  (signatures
+   ((T:string T:proper-list)		=> (T:struct-type-descriptor))
+   ((T:string T:proper-list T:symbol)	=> (T:struct-type-descriptor)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)
+   ((_ _ _)		foldable effect-free result-true)))
+
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-core-primitive struct=?
+    (safe)
+  (signatures
+   ((T:struct T:struct)			=> (T:boolean)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; struct type descriptor accessors and mutators
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:struct-type-descriptor)		=> (?return-value-tag)))
+		   (attributes
+		    ((_)		foldable effect-free))))
+		)))
+  (declare struct-type-name		T:string)
+  (declare struct-type-symbol		T:symbol)
+  (declare struct-type-field-names	T:proper-list)
+  (declare struct-type-destructor	(or T:false T:procedure))
+  (declare struct-constructor		T:procedure)
+  (declare struct-predicate		T:procedure)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive struct-field-accessor
+    (safe)
+  (signatures
+   ((T:struct-type-descriptor (or T:non-negative-fixnum T:symbol))	=> (T:procedure)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive struct-field-mutator
+    (safe)
+  (signatures
+   ((T:struct-type-descriptor (or T:non-negative-fixnum T:symbol))	=> (T:procedure)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?new-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:struct-type-descriptor ?new-value-tag)	=> (T:void)))
+		   (attributes
+		    ((_ _)		result-true))))
+		)))
+  (declare set-rtd-printer!	T:procedure)
+  (declare set-rtd-destructor!	T:procedure)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; struct instance accessors and mutators
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:struct)		=> (?return-value-tag)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare struct-rtd		T:struct-type-descriptor)
+  (declare struct-name		T:string)
+  (declare struct-length	T:non-negative-fixnum)
+  (declare struct-printer	T:procedure)
+  (declare struct-destructor	(or T:false T:procedure))
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive struct-reset
+    (safe)
+  (signatures
+   ((T:struct)		=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive struct-ref
+    (safe)
+  (signatures
+   ((T:struct T:non-negative-fixnum)	=> (T:object)))
+  (attributes
+   ;;This cannot be foldable because the referenced field may be mutated at run-time.
+   ((_ _)		effect-free)))
+
+(declare-core-primitive struct-set!
+    (safe)
+  (signatures
+   ((T:struct T:non-negative-fixnum _)	=> (T:void)))
+  (attributes
+   ((_ _ _)		result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive default-struct-printer
+    (safe)
+  (signatures
+   ((T:struct)			=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-parameter struct-guardian-logger	(or T:boolean T:procedure))
+
+(declare-core-primitive struct-guardian-log
+    (safe)
+  (signatures
+   ((T:struct _ T:symbol)	=> (T:void)))
+  (attributes
+   ((_ _ _)			result-true)))
 
 
 ;;;; structs, unsafe primitives
@@ -8259,31 +8393,6 @@
  time>?
  time>=?
 ;;;
- set-rtd-printer!
- set-rtd-destructor!
- struct?
- make-struct-type
- struct-type-descriptor?
- struct-type-name
- struct-type-symbol
- struct-type-field-names
- struct-type-destructor
- default-struct-printer
- struct-constructor
- struct-predicate
- struct-field-accessor
- struct-field-mutator
- struct-length
- struct-ref
- struct-set!
- struct-printer
- struct-destructor
- struct-name
- struct-rtd
- struct=?
- struct-reset
- struct-guardian-logger
- struct-guardian-log
  code?
  immediate?
  pointer-value
