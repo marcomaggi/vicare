@@ -244,8 +244,9 @@
 	     (let ((predefined-type-bits ($core-type-tag-bits ?type-name)))
 	       (lambda* ({x core-type-tag?})
 		 (%test-bits ($core-type-tag-bits x) predefined-type-bits))))
+
 	   (module ()
-	     (putprop (quote ?type-name) CORE-TYPE-TAG-PROPKEY ?type-name))
+	     (set-symbol-value! (quote ?type-name) ?type-name))
 	   #| end of BEGIN |# )))
     ))
 
