@@ -221,9 +221,6 @@
 (define-syntax __module_who__
   (identifier-syntax 'SCHEME-OBJECTS-ONTOLOGY))
 
-(define-constant CORE-TYPE-TAG-PROPKEY
-  (compile-time-gensym "core-type-tag"))
-
 
 ;;;; core type tag type definition
 
