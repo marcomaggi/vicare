@@ -308,7 +308,7 @@
     ;;primitive.
     ;;
     (define-syntax-rule (%maybe-wrap ?type-spec)
-      #`(unquote ($core-type-tag-bits #,?type-spec)))
+      #`(unquote (core-type-tag-bits #,?type-spec)))
     (syntax-case stx ()
       ((?car . ?cdr)
        (cons (%maybe-wrap (%parse-core-object-type #'?car))

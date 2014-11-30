@@ -25,7 +25,7 @@
 		;descriptive and human readable list of symbols representing the type
 		;bits that are set in X.
 
-   $core-type-tag-bits
+   core-type-tag-bits
 		;Given an instance  of CORE-TYPE-TAG: return the  naked bits defining
 		;the type.
 
@@ -224,10 +224,26 @@
 
 ;;;; core type tag type definition
 
-(define-struct core-type-tag
-  (bits
+;;We can  use either a  CORE-TYPE-TAG struct or a  naked exact integer  (a standalone
+;;fixnum or  bignum); using naked  exact integers is  faster, and we  value execution
+;;speed in the compiler.  (Marco Maggi; Sun Nov 30, 2014)
+;;
+(cond-expand
+ (#f
+  (define-struct core-type-tag
+    (bits
 		;A fixnum or bignum handled as bit-field.
-   ))
+     )))
+ (else
+  (define* (make-core-type-tag {bits exact-integer?})
+    bits)
+
+  (define core-type-tag? exact-integer?)
+
+  (define-syntax-rule (core-type-tag-bits ?obj)
+    ?obj)
+
+  #| end of ELSE|# ))
 
 ;;; --------------------------------------------------------------------
 
@@ -241,9 +257,9 @@
 	   (define-constant ?type-name
 	     ?instance-expr)
 	   (define PRED
-	     (let ((predefined-type-bits ($core-type-tag-bits ?type-name)))
+	     (let ((predefined-type-bits (core-type-tag-bits ?type-name)))
 	       (lambda* ({x core-type-tag?})
-		 (%test-bits ($core-type-tag-bits x) predefined-type-bits))))
+		 (%test-bits (core-type-tag-bits x) predefined-type-bits))))
 
 	   (module ()
 	     (set-symbol-value! (quote ?type-name) ?type-name))
@@ -259,16 +275,16 @@
 ;;; flat comparison
 
 (define* (core-type-tag=? {x core-type-tag?} {y core-type-tag?})
-  (= ($core-type-tag-bits x) ($core-type-tag-bits y)))
+  (= (core-type-tag-bits x) (core-type-tag-bits y)))
 
 ;;; --------------------------------------------------------------------
 ;;; type specification composition
 
 (define* (core-type-tag-and {x0 core-type-tag?} {x1 core-type-tag?})
-  (make-core-type-tag (bitwise-and ($core-type-tag-bits x0) ($core-type-tag-bits x1))))
+  (make-core-type-tag (bitwise-and (core-type-tag-bits x0) (core-type-tag-bits x1))))
 
 (define* (core-type-tag-or {x0 core-type-tag?} {x1 core-type-tag?})
-  (make-core-type-tag (bitwise-ior ($core-type-tag-bits x0) ($core-type-tag-bits x1))))
+  (make-core-type-tag (bitwise-ior (core-type-tag-bits x0) (core-type-tag-bits x1))))
 
 (define-syntax core-type-tag-and*
   (syntax-rules ()
@@ -297,9 +313,9 @@
   ;;   (p T:number)	=> maybe
   ;;   (p T:string)	=> no
   ;;
-  (let ((y.bits ($core-type-tag-bits y)))
+  (let ((y.bits (core-type-tag-bits y)))
     (lambda* ({x core-type-tag?})
-      (%test-bits ($core-type-tag-bits x) y.bits))))
+      (%test-bits (core-type-tag-bits x) y.bits))))
 
 (define* (core-type-tag-is-a? {x core-type-tag?} {y core-type-tag?})
   ;;Perform core type tag inclusion test.  Examples:
@@ -308,7 +324,7 @@
   ;;   (core-type-tag-is-a? T:number T:fixnum)	=> maybe	;;T:number is a T:fixnum ?
   ;;   (core-type-tag-is-a? T:string T:number)	=> no		;;T:string is a T:number ?
   ;;
-  (%test-bits ($core-type-tag-bits x) ($core-type-tag-bits y)))
+  (%test-bits (core-type-tag-bits x) (core-type-tag-bits y)))
 
 (define* (core-type-tag-is-a?/bits {x core-type-tag?} y.bits)
   ;;Perform core type tag inclusion test.  Examples:
@@ -322,7 +338,7 @@
   ;;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
   ;;   => no		;;T:string is a T:number ?
   ;;
-  (%test-bits ($core-type-tag-bits x) y.bits))
+  (%test-bits (core-type-tag-bits x) y.bits))
 
 (define (%test-bits bits predefined-type-bits)
   ;;This function  is for  internal use  and it  is the  heart of  the core  type tag
@@ -404,23 +420,19 @@
 (define-syntax (define-ontology x)
   (define (main x)
     (syntax-case x ()
-      ((_ T make-T T? T:=? T:and T:or T:description
+      ((_ T make-T T? T-bits T:=? T:and T:or T:description
 	  (?name0 ?cls0)
 	  (?name  ?cls)
 	  ...)
        (with-syntax
 	   ((((NAME PREDNAME VAL) ...)
-	     (%generate-base-cases #'T #'?name0 #'((?name0 ?cls0) (?name ?cls) ...)))
-	    ($T-bits (datum->syntax #'T (string->symbol
-					 (string-append "$"
-							(symbol->string (syntax->datum #'T))
-							"-bits")))))
+	     (%generate-base-cases #'T #'?name0 #'((?name0 ?cls0) (?name ?cls) ...))))
 	 #'(begin
 	     (define-constant NAME (make-T VAL))
 	     ...
 
 	     (define* (PREDNAME {x T?})
-	       (%test-bits ($T-bits x) VAL))
+	       (%test-bits (T-bits x) VAL))
 	     ...
 
 	     (define (T:description x)
@@ -657,13 +669,13 @@
 ;;other-port.
 ;;
 (define-ontology core-type-tag
-  make-core-type-tag core-type-tag? core-type-tag=?
-  core-type-tag-and core-type-tag-or
+  make-core-type-tag core-type-tag? core-type-tag-bits
+  core-type-tag=? core-type-tag-and core-type-tag-or
   core-type-tag-description
 
   (object		(inclusive obj-tag obj-immediacy obj-truth))
   (obj-immediacy	(exclusive immediate nonimmediate))
-  (immediate		(exclusive fixnum boolean null char transcoder void))
+  (immediate		(exclusive fixnum boolean null char transcoder eof void))
   (obj-truth		(exclusive false non-false))
   (obj-tag		(exclusive boolean char transcoder void number pointer
 				   null standalone-pair non-empty-proper-list
@@ -1493,18 +1505,18 @@
 
   (define* (core-type-tag=? (brace x core-type-tag?)
 			    (brace y core-type-tag?))
-    (= ($core-type-tag-bits x)
-       ($core-type-tag-bits y)))
+    (= (core-type-tag-bits x)
+       (core-type-tag-bits y)))
 
   (define* (core-type-tag-and (brace x0 core-type-tag?)
 			      (brace x1 core-type-tag?))
-    (make-core-type-tag (bitwise-and ($core-type-tag-bits x0)
-				     ($core-type-tag-bits x1))))
+    (make-core-type-tag (bitwise-and (core-type-tag-bits x0)
+				     (core-type-tag-bits x1))))
 
   (define* (core-type-tag-or (brace x0 core-type-tag?)
 			     (brace x1 core-type-tag?))
-    (make-core-type-tag (bitwise-ior ($core-type-tag-bits x0)
-				     ($core-type-tag-bits x1))))
+    (make-core-type-tag (bitwise-ior (core-type-tag-bits x0)
+				     (core-type-tag-bits x1))))
 
 ;;;Define the exact integers representing the type informations.
 ;;;
@@ -1570,118 +1582,118 @@
 ;;; --------------------------------------------------------------------
 
   (define* (T:object? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 549755813887))
+    (%test-bits (core-type-tag-bits x) 549755813887))
 
   (define* (T:immediate? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 939527224))
+    (%test-bits (core-type-tag-bits x) 939527224))
 
   (define* (T:boolean? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 3072))
+    (%test-bits (core-type-tag-bits x) 3072))
 
   (define* (T:number? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 549755809792))
+    (%test-bits (core-type-tag-bits x) 549755809792))
 
   (define* (T:exact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 8587866112))
+    (%test-bits (core-type-tag-bits x) 8587866112))
 
   (define* (T:inexact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 541167943680))
+    (%test-bits (core-type-tag-bits x) 541167943680))
 
   (define* (T:exact-integer? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1056964608))
+    (%test-bits (core-type-tag-bits x) 1056964608))
 
   (define* (T:real? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1073479680))
+    (%test-bits (core-type-tag-bits x) 1073479680))
 
   (define* (T:complex? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 548682072064))
+    (%test-bits (core-type-tag-bits x) 548682072064))
 
   (define* (T:nonimmediate? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 548816286663))
+    (%test-bits (core-type-tag-bits x) 548816286663))
 
   (define* (T:non-false? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 549755812863))
+    (%test-bits (core-type-tag-bits x) 549755812863))
 
   (define* (T:other-object? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1))
+    (%test-bits (core-type-tag-bits x) 1))
 
   (define* (T:symbol? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 2))
+    (%test-bits (core-type-tag-bits x) 2))
 
   (define* (T:bytevector? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 4))
+    (%test-bits (core-type-tag-bits x) 4))
 
   (define* (T:void? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 8))
+    (%test-bits (core-type-tag-bits x) 8))
 
   (define* (T:char? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 16))
+    (%test-bits (core-type-tag-bits x) 16))
 
   (define* (T:null? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 32))
+    (%test-bits (core-type-tag-bits x) 32))
 
   (define* (T:pair? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 64))
+    (%test-bits (core-type-tag-bits x) 64))
 
   (define* (T:vector? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 128))
+    (%test-bits (core-type-tag-bits x) 128))
 
   (define* (T:string? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 256))
+    (%test-bits (core-type-tag-bits x) 256))
 
   (define* (T:procedure? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 512))
+    (%test-bits (core-type-tag-bits x) 512))
 
   (define* (T:false? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1024))
+    (%test-bits (core-type-tag-bits x) 1024))
 
   (define* (T:true? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 2048))
+    (%test-bits (core-type-tag-bits x) 2048))
 
   (define* (T:positive? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 78536544256))
+    (%test-bits (core-type-tag-bits x) 78536544256))
 
   (define* (T:zero? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 157073088512))
+    (%test-bits (core-type-tag-bits x) 157073088512))
 
   (define* (T:negative? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 314146177024))
+    (%test-bits (core-type-tag-bits x) 314146177024))
 
   (define* (T:other-number? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 258048))
+    (%test-bits (core-type-tag-bits x) 258048))
 
   (define* (T:other-exact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 7516221440))
+    (%test-bits (core-type-tag-bits x) 7516221440))
 
   (define* (T:other-inexact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 60129771520))
+    (%test-bits (core-type-tag-bits x) 60129771520))
 
   (define* (T:other-exact-integer? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 0))
+    (%test-bits (core-type-tag-bits x) 0))
 
   (define* (T:other-real? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 0))
+    (%test-bits (core-type-tag-bits x) 0))
 
   (define* (T:flonum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1835008))
+    (%test-bits (core-type-tag-bits x) 1835008))
 
   (define* (T:ratnum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 14680064))
+    (%test-bits (core-type-tag-bits x) 14680064))
 
   (define* (T:bignum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 117440512))
+    (%test-bits (core-type-tag-bits x) 117440512))
 
   (define* (T:fixnum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 939524096))
+    (%test-bits (core-type-tag-bits x) 939524096))
 
   (define* (T:other-complex? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 0))
+    (%test-bits (core-type-tag-bits x) 0))
 
   (define* (T:compnum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 67645734912))
+    (%test-bits (core-type-tag-bits x) 67645734912))
 
   (define* (T:cflonum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 481036337152))
+    (%test-bits (core-type-tag-bits x) 481036337152))
 
   (define (core-type-tag-description x)
     (let* ((ls '())
