@@ -169,7 +169,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref cflonum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))
+		 (known x_0 (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))
 	     (funcall (primref void)))))
 
   ;;compnum predicate
@@ -179,7 +179,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref compnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:compnum T:non-false T:nonimmediate T:complex T:number T:object)))
+		 (known x_0 (T:compnum T:non-false T:nonimmediate T:non-real T:number T:object)))
 	     (funcall (primref void)))))
 
 ;;; --------------------------------------------------------------------
@@ -232,13 +232,13 @@
 			 )
 		     (conditional (funcall (primref cflonum?) x_0)
 			 (funcall (primref display)
-			   (known x_0 (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))
+			   (known x_0 (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))
 		       (conditional (funcall (primref number?) x_0)
 			   (funcall (primref display)
 			     (known x_0 (T:non-false T:number T:object)))
 			 (conditional (funcall (primref complex?) x_0)
 			     (funcall (primref display)
-			       (known x_0 (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))
+			       (known x_0 (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))
 			   (conditional (funcall (primref real?) x_0)
 			       (funcall (primref display)
 				 (known x_0 (T:non-false T:real T:number T:object)))
@@ -348,7 +348,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2.3+4.5i)
-		   (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))))
+		   (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2.3+4.5i)))
@@ -356,7 +356,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2.3+4.5i)
-		   (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))))
+		   (T:cflonum T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -0.0+0.0i)))
@@ -364,7 +364,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -0.0+0.0i)
-		   (T:cflonum T:zero T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))))
+		   (T:cflonum T:zero T:non-false T:nonimmediate T:non-real T:inexact T:number T:object)))))
 
   #t)
 
@@ -376,7 +376,7 @@
 	(bind ((f_0 (lambda (x_0) x_0)))
 	  (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2/3+4/5i)
-		   (T:compnum T:non-false T:nonimmediate T:complex T:number T:object)))))
+		   (T:compnum T:non-false T:nonimmediate T:non-real T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2/3+4/5i)))
@@ -384,7 +384,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2/3+4/5i)
-		   (T:compnum T:non-false T:nonimmediate T:complex T:number T:object)))))
+		   (T:compnum T:non-false T:nonimmediate T:non-real T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote 0+0.0i)))
@@ -392,7 +392,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant 0+0.0i)
-		   (T:compnum T:zero T:non-false T:nonimmediate T:complex T:number T:object)))))
+		   (T:compnum T:zero T:non-false T:nonimmediate T:non-real T:number T:object)))))
 
   #t)
 

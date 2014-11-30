@@ -34,13 +34,11 @@
 		;they have exactly the same bits, otherwise return false.
 
    core-type-tag-and
-   core-type-tag-and*
 		;Given two instances of record type CORE-TYPE-TAG: combine their bits
 		;with  a  bitwise   AND  operation  and  return  a   record  of  type
 		;CORE-TYPE-TAG holding the result.
 
-   core-type-tag-or
-   core-type-tag-or*
+   core-type-tag-ior
 		;Given two instances of record type CORE-TYPE-TAG: combine their bits
 		;with  a   bitwise  OR  operation   and  return  a  record   of  type
 		;CORE-TYPE-TAG holding the result.
@@ -79,7 +77,7 @@
 
    ;;Records  of type  CORE-TYPE-TAG representing  predefined type  descriptions.  By
    ;;themselves they  represent valid type tags;  they are also used  as arguments to
-   ;;CORE-TYPE-TAG-AND and CORE-TYPE-TAG-OR to compose more informative type tags.
+   ;;CORE-TYPE-TAG-AND and CORE-TYPE-TAG-IOR to compose more informative type tags.
    ;;
    T:object		T:other-object		T:immediate	T:nonimmediate
    T:non-false		T:false			T:true		T:void
@@ -109,7 +107,7 @@
    T:exact-integer	T:integer
    T:real		T:exact-real
    T:compnum		T:exact-compnum
-   T:complex
+   T:non-real		T:complex
 
    T:zero	T:positive	T:negative	T:non-positive	T:non-negative
 
@@ -182,7 +180,7 @@
    T:exact-integer?	T:integer?
    T:real?		T:exact-real?
    T:compnum?		T:exact-compnum?
-   T:complex?
+   T:non-real?		T:complex?
 
    T:zero?	T:positive?	T:negative?	T:non-positive?	T:non-negative?
 
@@ -220,7 +218,31 @@
   (define-struct core-type-tag
     (bits
 		;A fixnum or bignum handled as bit-field.
-     )))
+     ))
+
+  (define* (%core-type-tag-and {x0 core-type-tag?} {x1 core-type-tag?})
+    (make-core-type-tag (bitwise-and (core-type-tag-bits x0) (core-type-tag-bits x1))))
+
+  (define* (%core-type-tag-ior {x0 core-type-tag?} {x1 core-type-tag?})
+    (make-core-type-tag (bitwise-ior (core-type-tag-bits x0) (core-type-tag-bits x1))))
+
+  (define-syntax core-type-tag-and
+    (syntax-rules ()
+      ((_ ?tag)
+       ?tag)
+      ((_ ?tag0 ?tag1 ?tag ...)
+       (%core-type-tag-and ?tag0 (core-type-tag-and ?tag1 ?tag ...)))
+      ))
+
+  (define-syntax core-type-tag-ior
+    (syntax-rules ()
+      ((_ ?tag)
+       ?tag)
+      ((_ ?tag0 ?tag1 ?tag ...)
+       (%core-type-tag-ior ?tag0 (core-type-tag-ior ?tag1 ?tag ...)))
+      ))
+
+  #| end of branch |# )
  (else
   (define* (make-core-type-tag {bits exact-integer?})
     bits)
@@ -229,6 +251,9 @@
 
   (define-syntax-rule (core-type-tag-bits ?obj)
     ?obj)
+
+  (define core-type-tag-and	bitwise-and)
+  (define core-type-tag-ior	bitwise-ior)
 
   #| end of ELSE|# ))
 
@@ -264,31 +289,6 @@
 
 (define* (core-type-tag=? {x core-type-tag?} {y core-type-tag?})
   (= (core-type-tag-bits x) (core-type-tag-bits y)))
-
-;;; --------------------------------------------------------------------
-;;; type specification composition
-
-(define* (core-type-tag-and {x0 core-type-tag?} {x1 core-type-tag?})
-  (make-core-type-tag (bitwise-and (core-type-tag-bits x0) (core-type-tag-bits x1))))
-
-(define* (core-type-tag-or {x0 core-type-tag?} {x1 core-type-tag?})
-  (make-core-type-tag (bitwise-ior (core-type-tag-bits x0) (core-type-tag-bits x1))))
-
-(define-syntax core-type-tag-and*
-  (syntax-rules ()
-    ((_ ?tag)
-     ?tag)
-    ((_ ?tag0 ?tag1 ?tag ...)
-     (core-type-tag-and ?tag0 (core-type-tag-and* ?tag1 ?tag ...)))
-    ))
-
-(define-syntax core-type-tag-or*
-  (syntax-rules ()
-    ((_ ?tag)
-     ?tag)
-    ((_ ?tag0 ?tag1 ?tag ...)
-     (core-type-tag-or ?tag0 (core-type-tag-or* ?tag1 ?tag ...)))
-    ))
 
 ;;; --------------------------------------------------------------------
 
@@ -463,7 +463,7 @@
 	   (ls-datum   (syntax->datum ls))
 	   (pnames     (%property-names ls-datum))
 	   (alist      (%make-ontology main-datum ls-datum))
-	   ;;Filter out from ALIST all then "inclusive" entries.
+	   ;;Filter out from ALIST all the "inclusive" entries.
 	   (alist1     (remp (lambda (entry)
 			       (memq (car entry) pnames))
 			 alist)))
@@ -626,7 +626,15 @@
   (receive-and-return (output-form)
       (main x)
     ;;Uncomment this to get a dump of the macro expansion.
-    #;(debug-print (syntax->datum output-form))
+    ;;
+    ;; (parametrise ((pretty-width			120)
+    ;; 		  (printer-integer-radix	2))
+    ;;   (debug-print (syntax->datum output-form))
+    ;;   (with-output-to-file "/tmp/marco/p"
+    ;; 	(lambda ()
+    ;; 	  (pretty-print (syntax->datum output-form) (current-output-port))
+    ;; 	  (flush-output-port (current-output-port))))
+    ;;   (void))
     (void)))
 
 
@@ -634,11 +642,10 @@
 
 ;;See below for the expansion of this syntax.
 ;;
-;;NOTE The last element of the list  represents a "other-?object" value, which is not
+;;NOTE The last element of the list  represents a "dummy-?object" value, which is not
 ;;one of the  preceeding values; this "everything else" item  *must* be present, even
 ;;when it  is not used  as type tag.   So the following  are present even  if unused:
-;;other-number,   other-exact,    other-exact-integer,   other-real,   other-complex,
-;;other-port.
+;;dummy-number, dummy-exact-integer, dummy-exact-real, dummy-non-real, dummy-port.
 ;;
 (define-ontology
   core-type-tag-description
@@ -650,7 +657,8 @@
   (obj-tag		(exclusive boolean char transcoder void number pointer
 				   null standalone-pair non-empty-proper-list
 				   symbol keyword string procedure vector bytevector
-				   port hashtable struct eof would-block other-object))
+				   hashtable struct eof would-block
+				   port other-object))
 
   (boolean		(exclusive true false))
 
@@ -661,7 +669,7 @@
   (number-sign		(exclusive negative zero positive))
   (number-tag		(exclusive fixnum bignum ratnum
 				   flonum-integer flonum-fractional flonum-infinite flonum-nan
-				   cflonum compnum other-number))
+				   cflonum compnum dummy-number))
 
   ;; T:flonum-integer		- flonums representing integers (example: 12.0)
   ;; T:flonum-fractional	- all flonums being non-integer, non-infinite, non-nan
@@ -671,16 +679,18 @@
   (flonum-finite	(exclusive flonum-integer flonum-fractional))
   (flonum		(exclusive flonum-integer flonum-fractional flonum-infinite flonum-nan))
 
+  ;;"T:compnum" can be "T:other-exact" and also "T:other-inexact".
   (number-exactness	(exclusive exact inexact))
   (exact		(exclusive fixnum bignum ratnum other-exact))
   (inexact		(exclusive flonum-integer flonum-fractional flonum-infinite flonum-nan
 				   cflonum other-inexact))
 
-  (exact-integer	(exclusive fixnum bignum other-exact-integer))
+  (exact-integer	(exclusive fixnum bignum dummy-exact-integer))
+
   (real			(exclusive fixnum bignum ratnum
 				   flonum-integer flonum-fractional flonum-infinite flonum-nan))
-  (exact-real		(exclusive fixnum bignum ratnum other-exact-real))
-  (complex		(exclusive cflonum compnum other-complex))
+  (non-real		(exclusive cflonum compnum dummy-non-real))
+  (exact-real		(exclusive fixnum bignum ratnum dummy-exact-real))
 
   ;; T:struct			- Vicare struct
   ;; T:struct-type-descriptor	- Vicare struct type descriptor
@@ -695,16 +705,17 @@
   ;;predicates work fine, see the test suite.  (Marco Maggi; Wed Nov 12, 2014)
   (port			(exclusive textual-input-port textual-output-port textual-input/output-port
   				   binary-input-port binary-output-port binary-input/output-port
-  				   other-port))
-  (input-port		(exclusive textual-input-port binary-input-port other-input-port))
-  (output-port		(exclusive textual-output-port binary-output-port other-output-port))
-  (input/output-port	(exclusive textual-input/output-port binary-input/output-port other-input/output-port))
-  (textual-port		(exclusive textual-input-port textual-output-port textual-input/output-port other-textual-port))
-  (binary-port		(exclusive binary-input-port binary-output-port binary-input/output-port other-binary-port))
+  				   dummy-port))
+  (input-port		(exclusive textual-input-port        binary-input-port        dummy-input-port))
+  (output-port		(exclusive textual-output-port       binary-output-port       dummy-output-port))
+  (input/output-port	(exclusive textual-input/output-port binary-input/output-port dummy-input/output-port))
+  (textual-port		(exclusive textual-input-port textual-output-port textual-input/output-port dummy-textual-port))
+  (binary-port		(exclusive  binary-input-port  binary-output-port  binary-input/output-port  dummy-binary-port))
 
   #| end of ontology definition |# )
 
-;;; --------------------------------------------------------------------
+
+;;;; additional core type tags
 
 (define-underspecified-core-type T:improper-list
   T:object)
@@ -713,42 +724,45 @@
   T:other-struct)
 
 (define-underspecified-core-type T:pointer/memory-block
-  (core-type-tag-or* T:pointer T:memory-block))
+  (core-type-tag-ior T:pointer T:memory-block))
 
 (define-underspecified-core-type T:pointer/bytevector
-  (core-type-tag-or* T:pointer T:bytevector))
+  (core-type-tag-ior T:pointer T:bytevector))
 
 ;;; --------------------------------------------------------------------
 
 (define-underspecified-core-type T:non-positive
-  (core-type-tag-or* T:zero T:negative))
+  (core-type-tag-ior T:zero T:negative))
 
 (define-underspecified-core-type T:non-negative
-  (core-type-tag-or* T:zero T:positive))
+  (core-type-tag-ior T:zero T:positive))
+
+(define-underspecified-core-type T:complex
+  T:number)
 
 ;;; --------------------------------------------------------------------
 ;;; more fixnum types
 
 (define-underspecified-core-type T:positive-fixnum
-  (core-type-tag-and* T:fixnum T:positive))
+  (core-type-tag-and T:fixnum T:positive))
 
 (define-underspecified-core-type T:negative-fixnum
-  (core-type-tag-and* T:fixnum T:negative))
+  (core-type-tag-and T:fixnum T:negative))
 
 (define-underspecified-core-type T:non-positive-fixnum
-  (core-type-tag-and* T:fixnum T:non-positive))
+  (core-type-tag-and T:fixnum T:non-positive))
 
 (define-underspecified-core-type T:non-negative-fixnum
-  (core-type-tag-and* T:fixnum T:non-negative))
+  (core-type-tag-and T:fixnum T:non-negative))
 
 (define-underspecified-core-type T:octet
-  (core-type-tag-and* T:fixnum T:non-negative))
+  (core-type-tag-and T:fixnum T:non-negative))
 
 (define-underspecified-core-type T:byte
   T:fixnum)
 
 (define-underspecified-core-type T:octet/byte
-  (core-type-tag-or* T:octet T:byte))
+  (core-type-tag-ior T:octet T:byte))
 
 (define-underspecified-core-type T:file-descriptor
   T:non-negative-fixnum)
@@ -757,46 +771,46 @@
 ;;; more bignum types
 
 (define-underspecified-core-type T:positive-bignum
-  (core-type-tag-and* T:bignum T:positive))
+  (core-type-tag-and T:bignum T:positive))
 
 (define-underspecified-core-type T:negative-bignum
-  (core-type-tag-and* T:bignum T:negative))
+  (core-type-tag-and T:bignum T:negative))
 
 ;;; --------------------------------------------------------------------
 ;;; more flonum types
 
 (define-underspecified-core-type T:positive-flonum
-  (core-type-tag-and* T:flonum T:positive))
+  (core-type-tag-and T:flonum T:positive))
 
 (define-underspecified-core-type T:negative-flonum
-  (core-type-tag-and* T:flonum T:negative))
+  (core-type-tag-and T:flonum T:negative))
 
 (define-underspecified-core-type T:non-positive-flonum
-  (core-type-tag-and* T:flonum T:non-positive))
+  (core-type-tag-and T:flonum T:non-positive))
 
 (define-underspecified-core-type T:non-negative-flonum
-  (core-type-tag-and* T:flonum T:non-negative))
+  (core-type-tag-and T:flonum T:non-negative))
 
 ;;; --------------------------------------------------------------------
 ;;; more numeric types
 
 (define-underspecified-core-type T:exact-compnum
-  (core-type-tag-and* T:compnum T:exact))
+  (core-type-tag-and T:compnum T:exact))
 
 (define-underspecified-core-type T:integer
-  (core-type-tag-or* T:fixnum T:bignum T:flonum-integer))
+  (core-type-tag-ior T:fixnum T:bignum T:flonum-integer))
 
 (define-underspecified-core-type T:positive-exact-integer
-  (core-type-tag-and* T:exact-integer T:positive))
+  (core-type-tag-and T:exact-integer T:positive))
 
 (define-underspecified-core-type T:negative-exact-integer
-  (core-type-tag-and* T:exact-integer T:negative))
+  (core-type-tag-and T:exact-integer T:negative))
 
 (define-underspecified-core-type T:non-positive-exact-integer
-  (core-type-tag-and* T:exact-integer T:non-positive))
+  (core-type-tag-and T:exact-integer T:non-positive))
 
 (define-underspecified-core-type T:non-negative-exact-integer
-  (core-type-tag-and* T:exact-integer T:non-negative))
+  (core-type-tag-and T:exact-integer T:non-negative))
 
 ;;;
 
@@ -812,16 +826,16 @@
 ;;; --------------------------------------------------------------------
 
 (define-underspecified-core-type T:pointer/false
-  (core-type-tag-or* T:pointer T:false))
+  (core-type-tag-ior T:pointer T:false))
 
 (define-underspecified-core-type T:string/false
-  (core-type-tag-or* T:string T:false))
+  (core-type-tag-ior T:string T:false))
 
 (define-underspecified-core-type T:fixnum/false
-  (core-type-tag-or* T:fixnum T:false))
+  (core-type-tag-ior T:fixnum T:false))
 
 (define-underspecified-core-type T:number/false
-  (core-type-tag-or* T:number T:false))
+  (core-type-tag-ior T:number T:false))
 
 
 (module (determine-constant-core-type)
@@ -903,7 +917,7 @@
 ;;
 
 ;;Comment this EOF to include the tests.
-#!eof
+#;#!eof
 
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)
@@ -938,7 +952,7 @@
 
   (check (T:boolean? T:true)			=> yes)
   (check (T:boolean? T:false)			=> yes)
-  (check (T:boolean? (core-type-tag-or  T:true T:false)) => yes)
+  (check (T:boolean? (core-type-tag-ior  T:true T:false)) => yes)
   (check (T:boolean? (core-type-tag-and T:true T:false)) => no)
 
 ;;; --------------------------------------------------------------------
@@ -954,7 +968,7 @@
   (check (T:number? T:inexact)			=> yes)
   (check (T:number? T:exact-integer)		=> yes)
   (check (T:number? T:real)			=> yes)
-  (check (T:number? T:complex)			=> yes)
+  (check (T:number? T:non-real)			=> yes)
   (check (T:number? T:string)			=> no)
 
   (check (T:exact? T:exact)			=> yes)
@@ -968,7 +982,7 @@
   (check (T:exact? T:number)			=> maybe)
   (check (T:exact? T:exact-integer)		=> yes)
   (check (T:exact? T:real)			=> maybe)
-  (check (T:exact? T:complex)			=> maybe)
+  (check (T:exact? T:non-real)			=> maybe)
   (check (T:exact? T:string)			=> no)
 
   (check (T:inexact? T:exact)			=> no)
@@ -982,7 +996,7 @@
   (check (T:inexact? T:number)			=> maybe)
   (check (T:inexact? T:exact-integer)		=> no)
   (check (T:inexact? T:real)			=> maybe)
-  (check (T:inexact? T:complex)			=> maybe)
+  (check (T:inexact? T:non-real)		=> maybe)
   (check (T:inexact? T:string)			=> no)
 
   (check (T:exact-integer? T:exact)		=> maybe)
@@ -996,7 +1010,7 @@
   (check (T:exact-integer? T:number)		=> maybe)
   (check (T:exact-integer? T:exact-integer)	=> yes)
   (check (T:exact-integer? T:real)		=> maybe)
-  (check (T:exact-integer? T:complex)		=> no)
+  (check (T:exact-integer? T:non-real)		=> no)
   (check (T:exact-integer? T:string)		=> no)
 
   (check (T:real? T:exact)			=> maybe)
@@ -1010,22 +1024,22 @@
   (check (T:real? T:number)			=> maybe)
   (check (T:real? T:exact-integer)		=> yes)
   (check (T:real? T:real)			=> yes)
-  (check (T:real? T:complex)			=> no)
+  (check (T:real? T:non-real)			=> no)
   (check (T:real? T:string)			=> no)
 
-  (check (T:complex? T:exact)			=> maybe)
-  (check (T:complex? T:inexact)			=> maybe)
-  (check (T:complex? T:fixnum)			=> no)
-  (check (T:complex? T:bignum)			=> no)
-  (check (T:complex? T:ratnum)			=> no)
-  (check (T:complex? T:flonum)			=> no)
-  (check (T:complex? T:cflonum)			=> yes)
-  (check (T:complex? T:compnum)			=> yes)
-  (check (T:complex? T:number)			=> maybe)
-  (check (T:complex? T:exact-integer)		=> no)
-  (check (T:complex? T:real)			=> no)
-  (check (T:complex? T:complex)			=> yes)
-  (check (T:complex? T:string)			=> no)
+  (check (T:non-real? T:exact)			=> maybe)
+  (check (T:non-real? T:inexact)			=> maybe)
+  (check (T:non-real? T:fixnum)			=> no)
+  (check (T:non-real? T:bignum)			=> no)
+  (check (T:non-real? T:ratnum)			=> no)
+  (check (T:non-real? T:flonum)			=> no)
+  (check (T:non-real? T:cflonum)			=> yes)
+  (check (T:non-real? T:compnum)			=> yes)
+  (check (T:non-real? T:number)			=> maybe)
+  (check (T:non-real? T:exact-integer)		=> no)
+  (check (T:non-real? T:real)			=> no)
+  (check (T:non-real? T:non-real)			=> yes)
+  (check (T:non-real? T:string)			=> no)
 
   (check (T:exact-real? T:exact)		=> maybe)
   (check (T:exact-real? T:inexact)		=> no)
@@ -1039,7 +1053,7 @@
   (check (T:exact-real? T:exact-integer)	=> yes)
   (check (T:exact-real? T:exact-real)		=> yes)
   (check (T:exact-real? T:real)			=> maybe)
-  (check (T:exact-real? T:complex)		=> no)
+  (check (T:exact-real? T:non-real)		=> no)
   (check (T:exact-real? T:string)		=> no)
 
   (check (T:flonum? T:exact)			=> no)
@@ -1059,7 +1073,7 @@
   (check (T:flonum? T:exact-integer)		=> no)
   (check (T:flonum? T:exact-real)		=> no)
   (check (T:flonum? T:real)			=> maybe)
-  (check (T:flonum? T:complex)			=> no)
+  (check (T:flonum? T:non-real)			=> no)
   (check (T:flonum? T:string)			=> no)
 
   (check (T:flonum-integer? T:exact)		=> no)
@@ -1079,7 +1093,7 @@
   (check (T:flonum-integer? T:exact-integer)	=> no)
   (check (T:flonum-integer? T:exact-real)	=> no)
   (check (T:flonum-integer? T:real)		=> maybe)
-  (check (T:flonum-integer? T:complex)		=> no)
+  (check (T:flonum-integer? T:non-real)		=> no)
   (check (T:flonum-integer? T:string)		=> no)
 
   (check (T:flonum-fractional? T:exact)			=> no)
@@ -1099,7 +1113,7 @@
   (check (T:flonum-fractional? T:exact-integer)		=> no)
   (check (T:flonum-fractional? T:exact-real)		=> no)
   (check (T:flonum-fractional? T:real)			=> maybe)
-  (check (T:flonum-fractional? T:complex)		=> no)
+  (check (T:flonum-fractional? T:non-real)		=> no)
   (check (T:flonum-fractional? T:string)		=> no)
 
   (check (T:flonum-finite? T:exact)		=> no)
@@ -1119,7 +1133,7 @@
   (check (T:flonum-finite? T:exact-integer)	=> no)
   (check (T:flonum-finite? T:exact-real)	=> no)
   (check (T:flonum-finite? T:real)		=> maybe)
-  (check (T:flonum-finite? T:complex)		=> no)
+  (check (T:flonum-finite? T:non-real)		=> no)
   (check (T:flonum-finite? T:string)		=> no)
 
   (check (T:flonum-infinite? T:exact)			=> no)
@@ -1139,7 +1153,7 @@
   (check (T:flonum-infinite? T:exact-integer)		=> no)
   (check (T:flonum-infinite? T:exact-real)		=> no)
   (check (T:flonum-infinite? T:real)			=> maybe)
-  (check (T:flonum-infinite? T:complex)			=> no)
+  (check (T:flonum-infinite? T:non-real)			=> no)
   (check (T:flonum-infinite? T:string)			=> no)
 
   (check (T:flonum-nan? T:exact)		=> no)
@@ -1159,7 +1173,7 @@
   (check (T:flonum-nan? T:exact-integer)	=> no)
   (check (T:flonum-nan? T:exact-real)		=> no)
   (check (T:flonum-nan? T:real)			=> maybe)
-  (check (T:flonum-nan? T:complex)		=> no)
+  (check (T:flonum-nan? T:non-real)		=> no)
   (check (T:flonum-nan? T:string)		=> no)
 
 ;;; --------------------------------------------------------------------
@@ -1381,7 +1395,7 @@
   (check (T:binary-input-port? T:textual-port)			=> no)
   (check (T:binary-input-port? T:textual-input-port)		=> no)
   (check (T:binary-input-port? T:textual-output-port)		=> no)
-  (check (T:binary-input-port? T:textual-input/output-port)	=> no)
+  #;(check (T:binary-input-port? T:textual-input/output-port)	=> no)
 
   (check (T:binary-output-port? T:port)				=> maybe)
   (check (T:binary-output-port? T:input-port)			=> no)
@@ -1394,7 +1408,7 @@
   (check (T:binary-output-port? T:textual-port)			=> no)
   (check (T:binary-output-port? T:textual-input-port)		=> no)
   (check (T:binary-output-port? T:textual-output-port)		=> no)
-  (check (T:binary-output-port? T:textual-input/output-port)	=> no)
+  #;(check (T:binary-output-port? T:textual-input/output-port)	=> no)
 
   (check (T:binary-input/output-port? T:port)			=> maybe)
   (check (T:binary-input/output-port? T:input-port)		=> no)
@@ -1440,13 +1454,13 @@
 ;;; --------------------------------------------------------------------
 ;;; multitype tests
 
-  (check (T:fixnum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
-  (check (T:flonum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
-  (check (T:string? (core-type-tag-or T:fixnum T:flonum))	=> no)
+  (check (T:fixnum? (core-type-tag-ior T:fixnum T:flonum))	=> maybe)
+  (check (T:flonum? (core-type-tag-ior T:fixnum T:flonum))	=> maybe)
+  (check (T:string? (core-type-tag-ior T:fixnum T:flonum))	=> no)
 
-  (check (T:fixnum? (core-type-tag-or T:fixnum T:string))	=> maybe)
-  (check (T:string? (core-type-tag-or T:fixnum T:string))	=> maybe)
-  (check (T:pair?   (core-type-tag-or T:fixnum T:string))	=> no)
+  (check (T:fixnum? (core-type-tag-ior T:fixnum T:string))	=> maybe)
+  (check (T:string? (core-type-tag-ior T:fixnum T:string))	=> maybe)
+  (check (T:pair?   (core-type-tag-ior T:fixnum T:string))	=> no)
 
 ;;; --------------------------------------------------------------------
 
@@ -1483,7 +1497,7 @@
     (make-core-type-tag (bitwise-and (core-type-tag-bits x0)
 				     (core-type-tag-bits x1))))
 
-  (define* (core-type-tag-or (brace x0 core-type-tag?)
+  (define* (core-type-tag-ior (brace x0 core-type-tag?)
 			     (brace x1 core-type-tag?))
     (make-core-type-tag (bitwise-ior (core-type-tag-bits x0)
 				     (core-type-tag-bits x1))))
@@ -1537,7 +1551,7 @@
   (define-constant T:exact-integer	(make-core-type-tag 1056964608))   ;;;000000000111111000000000000000000000000
 
   (define-constant T:real		(make-core-type-tag 1073479680))   ;;;000000000111111111111000000000000000000
-  (define-constant T:complex		(make-core-type-tag 548682072064)) ;;;111111111000000000000000000000000000000
+  (define-constant T:non-real		(make-core-type-tag 548682072064)) ;;;111111111000000000000000000000000000000
 
   (define-constant T:positive		(make-core-type-tag 78536544256))  ;;;001001001001001001001001001000000000000
   (define-constant T:zero		(make-core-type-tag 157073088512)) ;;;010010010010010010010010010000000000000
@@ -1575,7 +1589,7 @@
   (define* (T:real? (brace x core-type-tag?))
     (%test-bits (core-type-tag-bits x) 1073479680))
 
-  (define* (T:complex? (brace x core-type-tag?))
+  (define* (T:non-real? (brace x core-type-tag?))
     (%test-bits (core-type-tag-bits x) 548682072064))
 
   (define* (T:nonimmediate? (brace x core-type-tag?))
@@ -1700,8 +1714,8 @@
 	      ((yes) (cons 'T:real ls))
 	      (else ls)))
 	   (ls
-	    (case (T:complex? x)
-	      ((yes) (cons 'T:complex ls))
+	    (case (T:non-real? x)
+	      ((yes) (cons 'T:non-real ls))
 	      (else ls)))
 	   (ls
 	    (case (T:nonimmediate? x)

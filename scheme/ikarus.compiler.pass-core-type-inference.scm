@@ -161,7 +161,7 @@
     (let ((x1 (car a1))
 	  (x2 (car a2)))
       (cond ((eq? x1 x2)
-	     (cons-env x1 (core-type-tag-or (cdr a1) (cdr a2))
+	     (cons-env x1 (core-type-tag-ior (cdr a1) (cdr a2))
 		       (%merge-envs env1 env2)))
 	    ((< x2 x1)
 	     (%merge-envs1 a1 env1 env2))
@@ -402,7 +402,7 @@
 		((altern altern.env altern.tag) (V x.altern x.altern.env)))
 	     (values (make-conditional test conseq altern)
 		     (%or-envs conseq.env altern.env)
-		     (core-type-tag-or conseq.tag altern.tag))))))))
+		     (core-type-tag-ior conseq.tag altern.tag))))))))
 
   (module (V-clambda)
     ;;The purposes of this  module are: to apply V to all  the CLAMBDA clause bodies;
@@ -573,7 +573,7 @@
        (%inject T:void T:vector T:fixnum T:object))
 
       ((length)
-       (%inject T:fixnum (core-type-tag-or T:null T:pair)))
+       (%inject T:fixnum (core-type-tag-ior T:null T:pair)))
 
       ((bytevector-length)
        (%inject T:fixnum T:bytevector))

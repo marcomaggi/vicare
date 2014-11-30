@@ -356,7 +356,7 @@
 	 T:exact-integer	T:integer
 	 T:real			T:exact-real
 	 T:compnum		T:exact-compnum
-	 T:complex
+	 T:non-real		T:complex
 
 	 T:zero		T:positive	T:negative	T:non-positive		T:non-negative
 
@@ -426,6 +426,7 @@
 
       (T:hashtable			type)
       (T:number				type)
+      (T:complex			type)
       (T:exact				type)
       (T:inexact			type)
       (T:fixnum				type)
@@ -449,7 +450,7 @@
       (T:real				type)
       (T:exact-compnum			type)
       (T:exact-real			type)
-      (T:complex			type)
+      (T:non-real			type)
       (T:positive-fixnum		type)
       (T:negative-fixnum		type)
       (T:non-positive-fixnum		type)
@@ -482,10 +483,10 @@
       (T:fixnum/false			type)
 
       ((and ?tag0 ?tag ...)
-       #`(core-type-tag-and* . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
+       #`(core-type-tag-and . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
 
       ((or  ?tag0 ?tag ...)
-       #`(core-type-tag-or*  . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
+       #`(core-type-tag-ior . #,(map %parse-core-object-type (syntax->list #'(?tag0 ?tag ...)))))
 
       (_
        (if (identifier? type)
