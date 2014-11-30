@@ -104,7 +104,8 @@
 (module (E-funcall)
   (module (core-primitive-name->core-type-signature*
 	   core-primitive-name->replacement*
-	   core-type-tag-is-a?/bits)
+	   core-type-tag?
+	   core-type-tag-is-a?)
     (import CORE-PRIMITIVE-PROPERTIES))
 
   (define (E-funcall rator rand*)
@@ -151,12 +152,12 @@
 	   => (lambda (signature*)
 		;;We expect SIGNATURE* to be a list of pairs with the format:
 		;;
-		;;   ((?operands-bits . ?return-values-bits) ...)
+		;;   ((?operands-tags . ?return-values-tags) ...)
 		;;
-		;;in which both ?OPERANDS-BITS  and ?RETURN-VALUES-BITS are proper or
-		;;improper lists of exact integers.
+		;;in which both ?OPERANDS-TAGS  and ?RETURN-VALUES-TAGS are proper or
+		;;improper lists of CORE-TYPE-TAG values.
 		(find (lambda (signature)
-			(%compatible-type-bits-and-operands? (car signature) rand*))
+			(%compatible-type-tags-and-operands? (car signature) rand*))
 		  signature*)))
 	  ;;This core primitive  has no registered core type  signatures.  Let's fake
 	  ;;successfully matching arguments.
@@ -176,12 +177,12 @@
 	   => (lambda (signature*)
 		;;We expect SIGNATURE* to be a list of pairs pair with the format:
 		;;
-		;;   ((?operands-bits . ?return-values-bits) ...)
+		;;   ((?operands-tags . ?return-values-tags) ...)
 		;;
-		;;in which both ?OPERANDS-BITS  and ?RETURN-VALUES-BITS are proper or
-		;;improper lists of exact integers.
+		;;in which both ?OPERANDS-TAGS  and ?RETURN-VALUES-TAGS are proper or
+		;;improper lists of CORE-TYPE-TAG values.
 		(find (lambda (signature)
-			(%matching-type-bits-and-operands? (car signature) rand*))
+			(%matching-type-tags-and-operands? (car signature) rand*))
 		  signature*)))
 	  ;;This core  primitive has no  registered type signatures.  We  must assume
 	  ;;the operands do *not* match.
@@ -205,130 +206,117 @@
 	  ;;This primitive has no registered unsafe replacements.
 	  (else #f)))
 
-  (define* (%compatible-type-bits-and-operands? bits rand*)
-    ;;Recursive function.  Validate the operands in  RAND* against the core type bits
-    ;;in BITS;  if they  are compatible:  return true,  otherwise return  false.  The
-    ;;purpose of this function is to check if the operands are *invalid* according to
-    ;;the KNOWN structs.
-    ;;
-    ;;BITS must  be a proper  or improper list of  exact integers and  false objects.
-    ;;RAND* must be a proper list of structs representing recordised code.
-    ;;
-    (cond ((pair? rand*)
-	   ;;There are further operands to be processed.
-	   (cond ((pair? bits)
-		  ;;There are further bits to be processed.
-		  (and (%compatible-type-bits-and-operand?  (car bits) (car rand*))
-		       (%compatible-type-bits-and-operands? (cdr bits) (cdr rand*))))
-		 ((null? bits)
-		  ;;We  expect  a  fixed  number of  arguments.   There  are  further
-		  ;;operands but no more bits.  The operands do *not* match the bits.
-		  (%exception-raiser compile-time-arity-error)
-		  #f)
-		 ((or (fixnum? bits)
-		      (bignum? bits))
-		  ;;We expect a variable number  of arguments; the rest operands must
-		  ;;all be complieant with the BITS.
-		  (and (%compatible-type-bits-and-operand?  bits (car rand*))
-		       (%compatible-type-bits-and-operands? bits (cdr rand*))))
-		 (else
-		  (compiler-internal-error __module_who__ __who__
-		    "invalid type specification in signature of core primitive"
-		    bits))))
-	  ((pair? bits)
-	   ;;There are no more operands to  be processed, but there are further bits.
-	   ;;The operands do *not* match the bits.
-	   #f)
-	  (else
-	   ;;No more operands to be processed, no more bits to be processed.  All the
-	   ;;operands matched the type bits: total success!!!
-	   #t)))
-
-  (define* (%matching-type-bits-and-operands? bits rand*)
-    ;;Recursive function.   Validate the operands in  RAND* against the type  bits in
-    ;;BITS; if they match: return true,  otherwise return false.  The purpose of this
-    ;;function  is to  check  if the  operands  are *valid*  according  to the  KNOWN
+  (define* (%compatible-type-tags-and-operands? tags rand*)
+    ;;Recursive function.  Validate the operands in RAND* against the core type TAGS;
+    ;;if they  are compatible: return true,  otherwise return false.  The  purpose of
+    ;;this function is to check if the  operands are *invalid* according to the KNOWN
     ;;structs.
     ;;
-    ;;BITS must  be a proper  or improper list of  exact integers and  false objects.
-    ;;RAND* must be a proper list of structs representing recordised code.
+    ;;TAGS must be a proper or improper  list of CORE-TYPE-TAG values.  RAND* must be
+    ;;a proper list of structs representing recordised code.
     ;;
     (cond ((pair? rand*)
 	   ;;There are further operands to be processed.
-	   (cond ((pair? bits)
-		  ;;There are further bits to be processed.
-		  (and (%matching-type-bits-and-operand?  (car bits) (car rand*))
-		       (%matching-type-bits-and-operands? (cdr bits) (cdr rand*))))
-		 ((null? bits)
+	   (cond ((pair? tags)
+		  ;;There are further tags to be processed.
+		  (and (%compatible-type-tag-and-operand?   (car tags) (car rand*))
+		       (%compatible-type-tags-and-operands? (cdr tags) (cdr rand*))))
+		 ((null? tags)
 		  ;;We  expect  a  fixed  number of  arguments.   There  are  further
-		  ;;operands but no more bits.  The operands do *not* match the bits.
+		  ;;operands but no more tags.  The operands do *not* match the tags.
+		  (%exception-raiser compile-time-arity-error)
 		  #f)
-		 ((or (fixnum? bits)
-		      (bignum? bits))
+		 ((core-type-tag? tags)
 		  ;;We expect a variable number  of arguments; the rest operands must
-		  ;;all match the BITS.
-		  (and (%matching-type-bits-and-operand?  bits (car rand*))
-		       (%matching-type-bits-and-operands? bits (cdr rand*))))
+		  ;;all be complieant with the tags.
+		  (and (%compatible-type-tag-and-operand?   tags (car rand*))
+		       (%compatible-type-tags-and-operands? tags (cdr rand*))))
 		 (else
 		  (compiler-internal-error __module_who__ __who__
 		    "invalid type specification in signature of core primitive"
-		    bits))))
-	  ((pair? bits)
-	   ;;There are no more operands to  be processed, but there are further bits.
-	   ;;The operands do *not* match the bits.
+		    tags))))
+	  ((pair? tags)
+	   ;;There are no more operands to  be processed, but there are further tags.
+	   ;;The operands do *not* match the tags.
 	   #f)
 	  (else
-	   ;;No more operands to be processed, no more bits to be processed.  All the
-	   ;;operands matched the type bits: total success!!!
+	   ;;No more operands to be processed, no more tags to be processed.  All the
+	   ;;operands matched the type tags: total success!!!
 	   #t)))
 
-  (define* (%compatible-type-bits-and-operand? type-bits rand)
-    ;;Match the core  type specification TYPE-BITS against the  operand RAND.  Return
-    ;;false if it is known that RAND is not of type TYPE-BITS; otherwise return true.
+  (define* (%matching-type-tags-and-operands? tags rand*)
+    ;;Recursive function.  Validate  the operands in RAND* against the  type TAGS; if
+    ;;they match: return true, otherwise return  false.  The purpose of this function
+    ;;is to check if the operands are *valid* according to the KNOWN structs.
     ;;
-    (cond ((or (fixnum? type-bits)
-	       (bignum? type-bits))
-	   ;;This includes the special case TYPE-BITS == 0, which means: any type.
-	   (struct-case rand
-	     ((known _ type)
-	      (case (core-type-tag-is-a?/bits type type-bits)
-		;;Operand's type matches the expected argument's type.
-		((yes) #t)
-		;;Operand's type does *not* match the expected argument's type.
-		((no)
-		 (%exception-raiser compile-time-operand-core-type-error)
-		 #f)
-		;;Operand's type  maybe matches  the expected argument's  type, maybe
-		;;not: it is compatible.
-		(else  #t)))
-	     ;;Operand of unknown type: let's handle it as compatible.
-	     (else #t)))
+    ;;TAGS must be a proper or improper  list of CORE-TYPE-TAG values.  RAND* must be
+    ;;a proper list of structs representing recordised code.
+    ;;
+    (cond ((pair? rand*)
+	   ;;There are further operands to be processed.
+	   (cond ((pair? tags)
+		  ;;There are further tags to be processed.
+		  (and (%matching-type-tag-and-operand?   (car tags) (car rand*))
+		       (%matching-type-tags-and-operands? (cdr tags) (cdr rand*))))
+		 ((null? tags)
+		  ;;We  expect  a  fixed  number of  arguments.   There  are  further
+		  ;;operands but no more tags.  The operands do *not* match the tags.
+		  #f)
+		 ((core-type-tag? tags)
+		  ;;We expect a variable number  of arguments; the rest operands must
+		  ;;all match the tags.
+		  (and (%matching-type-tag-and-operand?   tags (car rand*))
+		       (%matching-type-tags-and-operands? tags (cdr rand*))))
+		 (else
+		  (compiler-internal-error __module_who__ __who__
+		    "invalid type specification in signature of core primitive"
+		    tags))))
+	  ((pair? tags)
+	   ;;There are no more operands to  be processed, but there are further tags.
+	   ;;The operands do *not* match the tags.
+	   #f)
 	  (else
-	   (compiler-internal-error __module_who__ __who__
-	     "invalid type specification in signature of core primitive" type-bits))))
+	   ;;No more operands to be processed, no more tags to be processed.  All the
+	   ;;operands matched the type tags: total success!!!
+	   #t)))
 
-  (define* (%matching-type-bits-and-operand? type-bits rand)
-    ;;Match the core  type specification TYPE-BITS to the operand  RAND.  Return true
-    ;;if it is known that RAND is of type TYPE-BITS; otherwise return false.
+  (define (%compatible-type-tag-and-operand? tag rand)
+    ;;Match the core  type specification TAG against the operand  RAND.  Return false
+    ;;if it is known that RAND is not of type TAG; otherwise return true.
     ;;
-    (cond ((or (fixnum? type-bits)
-	       (bignum? type-bits))
-	   ;;This includes the special case TYPE-BITS == 0, which means: any type.
-	   (struct-case rand
-	     ((known _ type)
-	      (case (core-type-tag-is-a?/bits type type-bits)
-		;;Operand's type matches the expected argument's type.
-		((yes) #t)
-		;;Operand's type does *not* match the expected argument's type.
-		((no)  #f)
-		;;Operand's type  maybe matches  the expected argument's  type, maybe
-		;;not: let's handle it as *not* matching.
-		(else  #f)))
-	     ;;Operand of unknown type: let's handle it as *not* matching.
-	     (else #f)))
-	  (else
-	   (compiler-internal-error __module_who__ __who__
-	     "invalid type specification in signature of core primitive" type-bits))))
+    #;(assert (core-type-tag? tag))
+    (struct-case rand
+      ((known _ type)
+       (case (core-type-tag-is-a? type tag)
+	 ;;Operand's type matches the expected argument's type.
+	 ((yes) #t)
+	 ;;Operand's type does *not* match the expected argument's type.
+	 ((no)
+	  (%exception-raiser compile-time-operand-core-type-error)
+	  #f)
+	 ;;Operand's type maybe  matches the expected argument's type,  maybe not: it
+	 ;;is compatible.
+	 (else  #t)))
+      ;;Operand of unknown type: let's handle it as compatible.
+      (else #t)))
+
+  (define (%matching-type-tag-and-operand? tag rand)
+    ;;Match the core type  specification TAG to the operand RAND.   Return true if it
+    ;;is known that RAND is of type TAG; otherwise return false.
+    ;;
+    #;(assert (core-type-tag? tag))
+    (struct-case rand
+      ((known _ type)
+       (case (core-type-tag-is-a? type tag)
+	 ;;Operand's type matches the expected argument's type.
+	 ((yes) #t)
+	 ;;Operand's type does *not* match the expected argument's type.
+	 ((no)  #f)
+	 ;;Operand's  type maybe  matches the  expected argument's  type, maybe  not:
+	 ;;let's handle it as *not* matching.
+	 (else  #f)))
+      ;;Operand of unknown type: let's handle it as *not* matching.
+      (else #f)))
 
   #| end of module: E-funcall |# )
 

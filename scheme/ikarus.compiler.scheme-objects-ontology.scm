@@ -69,19 +69,6 @@
 		;   (core-type-tag-is-a? T:string T:number)	=> no
 		;
 
-   core-type-tag-is-a?/bits
-		;Perform core type tag inclusion test.  Examples:
-		;
-		;   (core-type-tag-is-a?/bits T:fixnum (core-type-tag-bits T:number))
-		;   => yes		;;T:fixnum is a T:number ?
-		;
-		;   (core-type-tag-is-a?/bits T:number (core-type-tag-bits T:fixnum))
-		;   => maybe	;;T:number is a T:fixnum ?
-		;
-		;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
-		;   => no		;;T:string is a T:number ?
-		;
-
    determine-constant-core-type
 		;Given  a  Scheme  object:  return a  record  of  type  CORE-TYPE-TAG
 		;representing its core type.
@@ -256,13 +243,14 @@
        #'(begin
 	   (define-constant ?type-name
 	     ?instance-expr)
-	   (define PRED
-	     (let ((predefined-type-bits (core-type-tag-bits ?type-name)))
-	       (lambda* ({x core-type-tag?})
-		 (%test-bits (core-type-tag-bits x) predefined-type-bits))))
+
+	   (define* (PRED {x core-type-tag?})
+	     (%test-bits (core-type-tag-bits x)
+			 (core-type-tag-bits ?type-name)))
 
 	   (module ()
 	     (set-symbol-value! (quote ?type-name) ?type-name))
+
 	   #| end of BEGIN |# )))
     ))
 
@@ -325,20 +313,6 @@
   ;;   (core-type-tag-is-a? T:string T:number)	=> no		;;T:string is a T:number ?
   ;;
   (%test-bits (core-type-tag-bits x) (core-type-tag-bits y)))
-
-(define* (core-type-tag-is-a?/bits {x core-type-tag?} y.bits)
-  ;;Perform core type tag inclusion test.  Examples:
-  ;;
-  ;;   (core-type-tag-is-a?/bits T:fixnum (core-type-tag-bits T:number))
-  ;;   => yes		;;T:fixnum is a T:number ?
-  ;;
-  ;;   (core-type-tag-is-a?/bits T:number (core-type-tag-bits T:fixnum))
-  ;;   => maybe	;;T:number is a T:fixnum ?
-  ;;
-  ;;   (core-type-tag-is-a?/bits T:string (core-type-tag-bits T:number))
-  ;;   => no		;;T:string is a T:number ?
-  ;;
-  (%test-bits (core-type-tag-bits x) y.bits))
 
 (define (%test-bits bits predefined-type-bits)
   ;;This function  is for  internal use  and it  is the  heart of  the core  type tag
@@ -420,24 +394,24 @@
 (define-syntax (define-ontology x)
   (define (main x)
     (syntax-case x ()
-      ((_ T make-T T? T-bits T:=? T:and T:or T:description
+      ((_ T:description
 	  (?name0 ?cls0)
 	  (?name  ?cls)
 	  ...)
        (with-syntax
 	   ((((NAME PREDNAME VAL) ...)
-	     (%generate-base-cases #'T #'?name0 #'((?name0 ?cls0) (?name ?cls) ...))))
+	     (%generate-base-cases #'T:description #'?name0 #'((?name0 ?cls0) (?name ?cls) ...))))
 	 #'(begin
-	     (define-constant NAME (make-T VAL))
+	     (define-constant NAME (make-core-type-tag VAL))
 	     ...
 
-	     (define* (PREDNAME {x T?})
-	       (%test-bits (T-bits x) VAL))
+	     (define* (PREDNAME {x core-type-tag?})
+	       (%test-bits (core-type-tag-bits x) VAL))
 	     ...
 
 	     (define (T:description x)
-	       ;;Convert X, a  record of type T, into a  list of symbols representing
-	       ;;the type bits that are set in X.
+	       ;;Convert X,  a record of type  CORE-TYPE-TAG, into a list  of symbols
+	       ;;representing the type bits that are set in X.
 	       ;;
 	       (let* ((ls '())
 		      (ls (case (PREDNAME x)
@@ -454,16 +428,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%generate-base-cases T main ls)
+  (define (%generate-base-cases ctx main ls)
     (define (%value-name x)
-      ;;Return an identifier with name "T:x" in the lexical context of
-      ;;T.
-      (datum->syntax T (string->symbol (string-append "T:" (symbol->string x)))))
+      ;;Return an identifier with name "T:x" in the lexical context of CTX.
+      (datum->syntax ctx (string->symbol (string-append "T:" (symbol->string x)))))
 
     (define (%predicate-name x)
-      ;;Return an  identifier with name "T:x?" in  the lexical context
-      ;;of T.
-      (datum->syntax T (string->symbol (string-append "T:" (symbol->string x) "?"))))
+      ;;Return an identifier with name "T:x?" in the lexical context of ctx.
+      (datum->syntax ctx (string->symbol (string-append "T:" (symbol->string x) "?"))))
 
     (define (%property-names ls)
       ;;Given a list of S-expressions each having one of the formats:
@@ -668,9 +640,7 @@
 ;;other-number,   other-exact,    other-exact-integer,   other-real,   other-complex,
 ;;other-port.
 ;;
-(define-ontology core-type-tag
-  make-core-type-tag core-type-tag? core-type-tag-bits
-  core-type-tag=? core-type-tag-and core-type-tag-or
+(define-ontology
   core-type-tag-description
 
   (object		(inclusive obj-tag obj-immediacy obj-truth))

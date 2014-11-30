@@ -35,7 +35,8 @@
   (core-primitive-name->application-attributes*
    core-primitive-name->core-type-signature*
    core-primitive-name->replacement*
-   core-type-tag-is-a?/bits
+   core-type-tag?
+   core-type-tag-is-a?
    application-attributes-operands-template
    application-attributes-foldable?
    application-attributes-effect-free?
