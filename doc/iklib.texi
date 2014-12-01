@@ -13276,7 +13276,8 @@ raise a non--continuable exception with components: @condition{who},
 Given a list of bytevectors: convert them into @asciiz{} strings and
 build a @cnull{} terminated array of C pointers referencing the strings.
 Return a pointer to the array.  The strings and the array are stored in
-a single memory block.
+a single memory block.  If successful return the pointer object,
+otherwise return @false{}.
 
 Memory allocated by @func{bytevectors->argv} must be explicitly released
 by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is
