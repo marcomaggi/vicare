@@ -928,28 +928,16 @@
   #| end of LET-SYNTAX |# )
 
 
-;;;; misc functions
+;;;; booleans, sae procedures
 
-(declare-object-binary-comparison eq?)
-(declare-object-binary-comparison neq?)
-(declare-object-binary-comparison eqv?)
-(declare-object-binary-comparison equal?)
+(declare-type-predicate boolean?	T:boolean)
 
-(declare-object-predicate not)
-
-(declare-core-primitive void
+(declare-core-primitive boolean=?
     (safe)
   (signatures
-   (()				=> (T:void)))
+   ((T:boolean T:boolean)		=> (T:boolean)))
   (attributes
-   (()				foldable effect-free result-true)))
-
-(declare-core-primitive native-endianness
-    (safe)
-  (signatures
-   (()				=> (T:symbol)))
-  (attributes
-   (()				foldable effect-free result-true)))
+   ((_ _)		foldable effect-free)))
 
 
 ;;;; pairs and lists, safe functions
@@ -5687,6 +5675,38 @@
 
 (declare-type-predicate procedure? T:procedure)
 
+(declare-object-binary-comparison eq?)
+(declare-object-binary-comparison neq?)
+(declare-object-binary-comparison eqv?)
+(declare-object-binary-comparison equal?)
+
+(declare-object-predicate not)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive void
+    (safe)
+  (signatures
+   (()				=> (T:void)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+(declare-core-primitive native-endianness
+    (safe)
+  (signatures
+   (()				=> (T:symbol)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+(declare-core-primitive values
+    (safe)
+  (signatures
+   (T:object		=> T:object))
+  (attributes
+   (_			effect-free)))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive  random
     (safe)
   (signatures
@@ -5787,6 +5807,45 @@
   (attributes
    (()			result-true)
    ((_)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive error
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive warning
+    (safe)
+  (signatures
+   ;;We do not know the number of returned values.
+   (([or T:false T:symbol T:string] T:string . T:object)		=> T:object)))
+
+;;This is depreccated.
+(declare-core-primitive die
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive raise
+    (safe)
+  (signatures
+   ((T:object)		=> T:object)))
+
+(declare-core-primitive raise-continuable
+    (safe)
+  (signatures
+   ((T:object)		=> T:object)))
+
+(declare-core-primitive with-exception-handler
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)	=> T:object)))
+
+(declare-core-primitive dynamic-wind
+    (safe)
+  (signatures
+   ((T:procedure T:procedure T:procedure)	=> T:object)))
 
 
 ;;;; invocation and termination procedures
@@ -9205,27 +9264,12 @@
  assert
  assertion-error
  assertion-violation
- boolean=?
- boolean?
 
  call-with-current-continuation
  call/cc
  call-with-values
  ;;
 
- cons
- pair?
- error
- warning
- die
- not
- null?
- procedure?
-
-
- values
- values->list
-;;;
  make-no-infinities-violation
  make-no-nans-violation
  &no-infinities
@@ -9285,10 +9329,6 @@
  warning?
  &who
  who-condition?
- case-lambda
- do
- unless
- when
  define-enumeration
  enum-set->list
  enum-set-complement
@@ -9304,10 +9344,6 @@
  enum-set=?
  make-enumeration
  enum-set?
- raise
- raise-continuable
- with-exception-handler
- guard
 
  delay
  force
