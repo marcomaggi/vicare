@@ -609,7 +609,7 @@
 					 fk)))))))))))
 	       (else (error 'pregexp-match-positions-aux "internal error"))))
 	    ((>= i n) (fk))
-	    (else (error 'pregexp-match-positions-aux 0 "internal error"))))
+	    (else (error 'pregexp-match-positions-aux "internal error"))))
 		;(printf "done\n")
     (let ((backrefs (map cdr backrefs)))
       (and (car backrefs) backrefs))))
