@@ -8559,14 +8559,14 @@
   (signatures
    ((T:pointer)			=> ([or T:false T:pointer])))
   (attributes
-   ((_)				effect-free result-true)))
+   ((_)				effect-free)))
 
 (declare-core-primitive guarded-strdup
     (safe)
   (signatures
    ((T:pointer)			=> ([or T:false T:pointer])))
   (attributes
-   ((_)				effect-free result-true)))
+   ((_)				effect-free)))
 
 ;;;
 
@@ -8591,14 +8591,14 @@
   (signatures
    ((T:pointer T:exact-integer)		=> ([or T:false T:pointer])))
   (attributes
-   ((_ _)				effect-free result-true)))
+   ((_ _)				effect-free)))
 
 (declare-core-primitive guarded-strndup
     (safe)
   (signatures
    ((T:pointer T:exact-integer)		=> ([or T:false T:pointer])))
   (attributes
-   ((_ _)				effect-free result-true)))
+   ((_ _)				effect-free)))
 
 ;;;
 
@@ -8623,31 +8623,87 @@
   (signatures
    ((T:proper-list)		=> ([or T:false T:pointer])))
   (attributes
-   ((_)				effect-free result-true)))
+   ((_)				effect-free)))
 
 (declare-core-primitive bytevectors->guarded-argv
     (safe)
   (signatures
    ((T:proper-list)		=> ([or T:false T:pointer])))
   (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive bytevectors->argv*
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:pointer)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive bytevectors->guarded-argv*
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:pointer)))
+  (attributes
+   ((_)				effect-free)))
+
+;;;
+
+(declare-core-primitive strings->argv
+    (safe)
+  (signatures
+   ((T:proper-list)		=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive strings->guarded-argv
+    (safe)
+  (signatures
+   ((T:proper-list)		=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive strings->argv*
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:pointer)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive strings->guarded-argv*
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:pointer)))
+  (attributes
+   ((_)				effect-free)))
+
+;;;
+
+(declare-core-primitive argv->bytevectors
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:proper-list)))
+  (attributes
    ((_)				effect-free result-true)))
+
+(declare-core-primitive argv->strings
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:proper-list)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive argv-length
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:exact-integer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+
+;;;; foreign functions interface: raw memory accessors and mutators, safe procedures
 
 
 #|
-
- argv->bytevectors
- argv-length
- argv->strings
-
- bytevectors->argv*
- bytevectors->guarded-argv
- bytevectors->guarded-argv*
- strings->argv
- strings->argv*
- strings->guarded-argv
- strings->guarded-argv*
-
-;;;
  pointer-ref-c-uint8
  pointer-ref-c-sint8
  pointer-ref-c-uint16
