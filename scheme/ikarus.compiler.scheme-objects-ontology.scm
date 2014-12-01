@@ -118,6 +118,7 @@
    T:negative-exact-integer	T:non-negative-exact-integer
 
    T:octet		T:byte			T:octet/byte
+   T:sint8		T:uint8
    T:sint16		T:uint16
    T:sint32		T:uint32
    T:sint64		T:uint64
@@ -191,6 +192,7 @@
    T:negative-exact-integer?	T:non-negative-exact-integer?
 
    T:octet?		T:byte?			T:octet/byte?
+   T:sint8?		T:uint8?
    T:sint16?		T:uint16?
    T:sint32?		T:uint32?
    T:sint64?		T:uint64?
@@ -814,6 +816,9 @@
 
 ;;;
 
+(define-underspecified-core-type T:sint8	T:byte)
+(define-underspecified-core-type T:uint8	T:octet)
+
 (define-underspecified-core-type T:sint16	T:fixnum)
 (define-underspecified-core-type T:uint16	T:non-negative-fixnum)
 
@@ -917,7 +922,7 @@
 ;;
 
 ;;Comment this EOF to include the tests.
-#;#!eof
+#!eof
 
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)

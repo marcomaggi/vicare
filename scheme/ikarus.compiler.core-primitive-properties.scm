@@ -367,6 +367,7 @@
 	 T:negative-exact-integer	T:non-negative-exact-integer
 
 	 T:octet		T:byte			T:octet/byte
+	 T:sint8		T:uint8
 	 T:sint16		T:uint16
 	 T:sint32		T:uint32
 	 T:sint64		T:uint64
@@ -469,6 +470,8 @@
       (T:octet				type)
       (T:byte				type)
       (T:octet/byte			type)
+      (T:sint8				type)
+      (T:uint8				type)
       (T:sint16				type)
       (T:uint16				type)
       (T:sint32				type)

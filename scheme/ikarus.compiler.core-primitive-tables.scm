@@ -8190,7 +8190,7 @@
    ((_ _)		foldable effect-free)))
 
 
-;;;; system interface and foreign functions
+;;;; system interface and foreign functions interface
 
 (declare-core-primitive errno
     (safe)
@@ -8699,139 +8699,232 @@
   (attributes
    ((_)				effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive dlopen
+    (safe)
+  (signatures
+   (()						=> ([or T:false T:pointer]))
+   (([or T:bytevector T:string])		=> ([or T:false T:pointer]))
+   (([or T:bytevector T:string] _ _)		=> ([or T:false T:pointer]))))
+
+(declare-core-primitive dlclose
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:boolean))))
+
+(declare-core-primitive dlerror
+    (safe)
+  (signatures
+   (()				=> ([or T:false T:string]))))
+
+(declare-core-primitive dlsym
+    (safe)
+  (signatures
+   ((T:pointer T:string)	=> ([or T:false T:pointer]))))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-c-callout-maker
+    (safe)
+  (signatures
+   ((T:symbol T:proper-list)		=> (T:procedure))))
+
+(declare-core-primitive make-c-callout-maker/with-errno
+    (safe)
+  (signatures
+   ((T:symbol T:proper-list)		=> (T:procedure))))
+
+(declare-core-primitive make-c-callback-maker
+    (safe)
+  (signatures
+   ((T:symbol T:proper-list)		=> (T:procedure))))
+
+(declare-core-primitive free-c-callback
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:void))))
+
 
 ;;;; foreign functions interface: raw memory accessors and mutators, safe procedures
 
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:pointer T:non-negative-exact-integer)	=> (?return-value-tag)))
+		   (attributes
+		    ((_ _)		effect-free))))
+		)))
 
-#|
- pointer-ref-c-uint8
- pointer-ref-c-sint8
- pointer-ref-c-uint16
- pointer-ref-c-sint16
- pointer-ref-c-uint32
- pointer-ref-c-sint32
- pointer-ref-c-uint64
- pointer-ref-c-sint64
-;;;
- pointer-ref-c-signed-char
- pointer-ref-c-signed-short
- pointer-ref-c-signed-int
- pointer-ref-c-signed-long
- pointer-ref-c-signed-long-long
- pointer-ref-c-unsigned-char
- pointer-ref-c-unsigned-short
- pointer-ref-c-unsigned-int
- pointer-ref-c-unsigned-long
- pointer-ref-c-unsigned-long-long
-;;;
- pointer-ref-c-float
- pointer-ref-c-double
- pointer-ref-c-pointer
-;;;
- pointer-ref-c-size_t
- pointer-ref-c-ssize_t
- pointer-ref-c-off_t
- pointer-ref-c-ptrdiff_t
-;;;
- pointer-set-c-uint8!
- pointer-set-c-sint8!
- pointer-set-c-uint16!
- pointer-set-c-sint16!
- pointer-set-c-uint32!
- pointer-set-c-sint32!
- pointer-set-c-uint64!
- pointer-set-c-sint64!
-;;;
- pointer-set-c-signed-char!
- pointer-set-c-signed-short!
- pointer-set-c-signed-int!
- pointer-set-c-signed-long!
- pointer-set-c-signed-long-long!
- pointer-set-c-unsigned-char!
- pointer-set-c-unsigned-short!
- pointer-set-c-unsigned-int!
- pointer-set-c-unsigned-long!
- pointer-set-c-unsigned-long-long!
-;;;
- pointer-set-c-float!
- pointer-set-c-double!
- pointer-set-c-pointer!
-;;;
- pointer-set-c-size_t!
- pointer-set-c-ssize_t!
- pointer-set-c-off_t!
- pointer-set-c-ptrdiff_t!
-;;;
- array-ref-c-uint8
- array-ref-c-sint8
- array-ref-c-uint16
- array-ref-c-sint16
- array-ref-c-uint32
- array-ref-c-sint32
- array-ref-c-uint64
- array-ref-c-sint64
-;;;
- array-ref-c-signed-char
- array-ref-c-unsigned-char
- array-ref-c-signed-short
- array-ref-c-unsigned-short
- array-ref-c-signed-int
- array-ref-c-unsigned-int
- array-ref-c-signed-long
- array-ref-c-unsigned-long
- array-ref-c-signed-long-long
- array-ref-c-unsigned-long-long
-;;;
- array-ref-c-float
- array-ref-c-double
- array-ref-c-pointer
-;;;
- array-ref-c-size_t
- array-ref-c-ssize_t
- array-ref-c-off_t
- array-ref-c-ptrdiff_t
-;;;
- array-set-c-uint8!
- array-set-c-sint8!
- array-set-c-uint16!
- array-set-c-sint16!
- array-set-c-uint32!
- array-set-c-sint32!
- array-set-c-uint64!
- array-set-c-sint64!
-;;;
- array-set-c-signed-char!
- array-set-c-unsigned-char!
- array-set-c-signed-short!
- array-set-c-unsigned-short!
- array-set-c-signed-int!
- array-set-c-unsigned-int!
- array-set-c-signed-long!
- array-set-c-unsigned-long!
- array-set-c-signed-long-long!
- array-set-c-unsigned-long-long!
-;;;
- array-set-c-float!
- array-set-c-double!
- array-set-c-pointer!
-;;;
- array-set-c-size_t!
- array-set-c-ssize_t!
- array-set-c-off_t!
- array-set-c-ptrdiff_t!
-;;;
- dlopen
- dlerror
- dlclose
- dlsym
-;;;
- make-c-callout-maker
- make-c-callout-maker/with-errno
- make-c-callback-maker
- free-c-callback
+  (declare pointer-ref-c-uint8		T:uint8)
+  (declare pointer-ref-c-sint8		T:sint8)
+  (declare pointer-ref-c-uint16		T:uint16)
+  (declare pointer-ref-c-sint16		T:sint16)
+  (declare pointer-ref-c-uint32		T:uint32)
+  (declare pointer-ref-c-sint32		T:sint32)
+  (declare pointer-ref-c-uint64		T:uint64)
+  (declare pointer-ref-c-sint64		T:sint64)
 
+  (declare pointer-ref-c-signed-char		T:fixnum)
+  (declare pointer-ref-c-signed-short		T:fixnum)
+  (declare pointer-ref-c-signed-int		T:exact-integer)
+  (declare pointer-ref-c-signed-long		T:exact-integer)
+  (declare pointer-ref-c-signed-long-long	T:exact-integer)
 
-|#
+  (declare pointer-ref-c-unsigned-char		T:non-negative-exact-integer)
+  (declare pointer-ref-c-unsigned-short		T:non-negative-exact-integer)
+  (declare pointer-ref-c-unsigned-int		T:non-negative-exact-integer)
+  (declare pointer-ref-c-unsigned-long		T:non-negative-exact-integer)
+  (declare pointer-ref-c-unsigned-long-long	T:non-negative-exact-integer)
+
+  (declare pointer-ref-c-float			T:flonum)
+  (declare pointer-ref-c-double			T:flonum)
+  (declare pointer-ref-c-pointer		T:pointer)
+
+  (declare pointer-ref-c-size_t			T:non-negative-exact-integer)
+  (declare pointer-ref-c-ssize_t		T:exact-integer)
+  (declare pointer-ref-c-off_t			T:exact-integer)
+  (declare pointer-ref-c-ptrdiff_t		T:exact-integer)
+
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?new-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:pointer T:non-negative-exact-integer ?new-value-tag)	=> (T:void)))
+		   (attributes
+		    ((_ _)		effect-free))))
+		)))
+
+  (declare pointer-set-c-uint8!			T:uint8)
+  (declare pointer-set-c-sint8!			T:sint8)
+  (declare pointer-set-c-uint16!		T:uint16)
+  (declare pointer-set-c-sint16!		T:sint16)
+  (declare pointer-set-c-uint32!		T:uint32)
+  (declare pointer-set-c-sint32!		T:sint32)
+  (declare pointer-set-c-uint64!		T:uint64)
+  (declare pointer-set-c-sint64!		T:sint64)
+
+  (declare pointer-set-c-signed-char!		T:fixnum)
+  (declare pointer-set-c-signed-short!		T:fixnum)
+  (declare pointer-set-c-signed-int!		T:exact-integer)
+  (declare pointer-set-c-signed-long!		T:exact-integer)
+  (declare pointer-set-c-signed-long-long!	T:exact-integer)
+
+  (declare pointer-set-c-unsigned-char!		T:non-negative-exact-integer)
+  (declare pointer-set-c-unsigned-short!	T:non-negative-exact-integer)
+  (declare pointer-set-c-unsigned-int!		T:non-negative-exact-integer)
+  (declare pointer-set-c-unsigned-long!		T:non-negative-exact-integer)
+  (declare pointer-set-c-unsigned-long-long!	T:non-negative-exact-integer)
+
+  (declare pointer-set-c-float!			T:flonum)
+  (declare pointer-set-c-double!		T:flonum)
+  (declare pointer-set-c-pointer!		T:pointer)
+
+  (declare pointer-set-c-size_t!		T:non-negative-exact-integer)
+  (declare pointer-set-c-ssize_t!		T:exact-integer)
+  (declare pointer-set-c-off_t!			T:exact-integer)
+  (declare pointer-set-c-ptrdiff_t!		T:exact-integer)
+
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:pointer T:non-negative-exact-integer)	=> (?return-value-tag)))
+		   (attributes
+		    ((_ _)		effect-free))))
+		)))
+
+  (declare array-ref-c-uint8			T:uint8)
+  (declare array-ref-c-sint8			T:sint8)
+  (declare array-ref-c-uint16			T:uint16)
+  (declare array-ref-c-sint16			T:sint16)
+  (declare array-ref-c-uint32			T:uint32)
+  (declare array-ref-c-sint32			T:sint32)
+  (declare array-ref-c-uint64			T:uint64)
+  (declare array-ref-c-sint64			T:sint64)
+
+  (declare array-ref-c-signed-char		T:fixnum)
+  (declare array-ref-c-signed-short		T:fixnum)
+  (declare array-ref-c-signed-int		T:exact-integer)
+  (declare array-ref-c-signed-long		T:exact-integer)
+  (declare array-ref-c-signed-long-long		T:exact-integer)
+
+  (declare array-ref-c-unsigned-char		T:non-negative-fixnum)
+  (declare array-ref-c-unsigned-short		T:non-negative-fixnum)
+  (declare array-ref-c-unsigned-int		T:non-negative-exact-integer)
+  (declare array-ref-c-unsigned-long		T:non-negative-exact-integer)
+  (declare array-ref-c-unsigned-long-long	T:non-negative-exact-integer)
+
+  (declare array-ref-c-float			T:flonum)
+  (declare array-ref-c-double			T:flonum)
+  (declare array-ref-c-pointer			T:pointer)
+
+  (declare array-ref-c-size_t			T:non-negative-exact-integer)
+  (declare array-ref-c-ssize_t			T:exact-integer)
+  (declare array-ref-c-off_t			T:exact-integer)
+  (declare array-ref-c-ptrdiff_t		T:exact-integer)
+
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?new-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:pointer T:non-negative-exact-integer ?new-value-tag)	=> (T:void)))
+		   (attributes
+		    ((_ _)		effect-free))))
+		)))
+
+  (declare array-set-c-uint8!			T:uint8)
+  (declare array-set-c-sint8!			T:sint8)
+  (declare array-set-c-uint16!			T:uint16)
+  (declare array-set-c-sint16!			T:sint16)
+  (declare array-set-c-uint32!			T:uint32)
+  (declare array-set-c-sint32!			T:sint32)
+  (declare array-set-c-uint64!			T:uint64)
+  (declare array-set-c-sint64!			T:sint64)
+
+  (declare array-set-c-signed-char!		T:fixnum)
+  (declare array-set-c-signed-short!		T:fixnum)
+  (declare array-set-c-signed-int!		T:exact-integer)
+  (declare array-set-c-signed-long!		T:exact-integer)
+  (declare array-set-c-signed-long-long!	T:exact-integer)
+
+  (declare array-set-c-unsigned-char!		T:non-negative-exact-integer)
+  (declare array-set-c-unsigned-short!		T:non-negative-exact-integer)
+  (declare array-set-c-unsigned-int!		T:non-negative-exact-integer)
+  (declare array-set-c-unsigned-long!		T:non-negative-exact-integer)
+  (declare array-set-c-unsigned-long-long!	T:non-negative-exact-integer)
+
+  (declare array-set-c-float!			T:flonum)
+  (declare array-set-c-double!			T:flonum)
+  (declare array-set-c-pointer!			T:pointer)
+
+  (declare array-set-c-size_t!			T:non-negative-exact-integer)
+  (declare array-set-c-ssize_t!			T:exact-integer)
+  (declare array-set-c-off_t!			T:exact-integer)
+  (declare array-set-c-ptrdiff_t!		T:exact-integer)
+
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; debugging helpers
