@@ -906,6 +906,28 @@
     ))
 
 
+;;;; configuration options
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    (()			=> (T:boolean)))
+		   (attributes
+		    (()			effect-free))))
+		)))
+  (declare vicare-built-with-ffi-enabled)
+  (declare vicare-built-with-iconv-enabled)
+  (declare vicare-built-with-posix-enabled)
+  (declare vicare-built-with-glibc-enabled)
+  (declare vicare-built-with-linux-enabled)
+  (declare vicare-built-with-srfi-enabled)
+  (declare vicare-built-with-arguments-validation-enabled)
+  #| end of LET-SYNTAX |# )
+
+
 ;;;; misc functions
 
 (declare-object-binary-comparison eq?)
@@ -8190,6 +8212,89 @@
    ((_ _)		foldable effect-free)))
 
 
+;;;; evaluation and lexical environments
+
+(declare-core-primitive eval
+    (safe)
+  (signatures
+   ((_ T:lexical-environment)	=> T:object)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive environment
+    (safe)
+  (signatures
+   (T:object			=> (T:lexical-environment)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:fixnum)		=> (T:lexical-environment)))
+		   (attributes
+		    (()			effect-free result-true))))
+		)))
+  (declare null-environment)
+  (declare scheme-report-environment)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive interaction-environment
+    (safe)
+  (signatures
+   (()				=> (T:lexical-environment))
+   ((T:lexical-environment)	=> (T:void)))
+  (attributes
+   (()			effect-free result-true)
+   ((_)			result-true)))
+
+(declare-core-primitive new-interaction-environment
+    (safe)
+  (signatures
+   (()				=> (T:lexical-environment))
+   ((T:proper-list)		=> (T:void)))
+  (attributes
+   (()			effect-free result-true)
+   ((_)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive environment?
+    (safe)
+  (signatures
+   ((T:object)			=> (T:boolean)))
+  (attributes
+   ((_)				effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:lexical-environment)	=> (?return-value-tag)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare environment-symbols		T:proper-list)
+  (declare environment-libraries	T:library)
+  (declare environment-labels		T:proper-list)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive environment-binding
+    (safe)
+  (signatures
+   ((T:symbol T:lexical-environment)	=> ([or T:false T:symbol]
+					    [or T:false T:proper-list])))
+  (attributes
+   ((_ _)		effect-free)))
+
+
 ;;;; system interface and foreign functions interface
 
 (declare-core-primitive errno
@@ -8969,13 +9074,6 @@
 
 #| list of core primitives to declare
 
-
-;;; --------------------------------------------------------------------
-
-
-
-
-
  call/cf
  print-error
  assembler-output
@@ -8986,12 +9084,6 @@
  expand-library->sexp
  expand-top-level
  expand-top-level->sexp
-;;;
- environment?
- environment-symbols
- environment-libraries
- environment-labels
- environment-binding
 ;;;
  time-and-gather
  stats?
@@ -9212,8 +9304,6 @@
  enum-set=?
  make-enumeration
  enum-set?
- environment
- eval
  raise
  raise-continuable
  with-exception-handler
@@ -9221,11 +9311,7 @@
 
  delay
  force
- null-environment
  promise?
- scheme-report-environment
- interaction-environment
- new-interaction-environment
  &i/o
  &i/o-decoding
  i/o-decoding-error?
@@ -9379,26 +9465,6 @@
  filename->string-func
  string->pathname-func
  pathname->string-func
-;;;
- get-annotated-datum
- annotation?
- annotation-expression
- annotation-source
- annotation-stripped
- annotation-textual-position
-
-
-;;; --------------------------------------------------------------------
-;;; configuration options
-
- vicare-built-with-ffi-enabled
- vicare-built-with-iconv-enabled
- vicare-built-with-posix-enabled
- vicare-built-with-glibc-enabled
- vicare-built-with-linux-enabled
- vicare-built-with-srfi-enabled
-
- vicare-built-with-arguments-validation-enabled
 
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions

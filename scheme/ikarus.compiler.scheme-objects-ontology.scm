@@ -88,6 +88,7 @@
 
    T:struct		T:struct-type-descriptor	T:other-struct
    T:record		T:record-type-descriptor	T:enum-set
+   T:library		T:lexical-environment
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -162,6 +163,7 @@
 
    T:struct?		T:struct-type-descriptor?	T:other-struct?
    T:record?		T:record-type-descriptor?	T:enum-set?
+   T:library?		T:lexical-environment?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -700,7 +702,8 @@
   ;; T:record-type-descriptor	- R6RS record type descriptor
   ;; T:enum-set			- struct instance representing an enum-set
   ;; T:other-struct		- struct instance of some type
-  (struct		(exclusive struct-type-descriptor record-type-descriptor record enum-set other-struct))
+  (struct		(exclusive struct-type-descriptor record-type-descriptor record enum-set
+				   library lexical-environment other-struct))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
