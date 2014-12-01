@@ -8529,24 +8529,116 @@
   (attributes
    ((_)					effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive strlen
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:exact-integer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive strcmp
+    (safe)
+  (signatures
+   ((T:pointer T:pointer)	=> (T:fixnum)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive strncmp
+    (safe)
+  (signatures
+   ((T:pointer T:pointer T:non-negative-fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _ _)			effect-free result-true)))
+
+;;;
+
+(declare-core-primitive strdup
+    (safe)
+  (signatures
+   ((T:pointer)			=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive guarded-strdup
+    (safe)
+  (signatures
+   ((T:pointer)			=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;;
+
+(declare-core-primitive strdup*
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:pointer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive guarded-strdup*
+    (safe)
+  (signatures
+   ((T:pointer)			=> (T:pointer)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;;
+
+(declare-core-primitive strndup
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)		=> ([or T:false T:pointer])))
+  (attributes
+   ((_ _)				effect-free result-true)))
+
+(declare-core-primitive guarded-strndup
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)		=> ([or T:false T:pointer])))
+  (attributes
+   ((_ _)				effect-free result-true)))
+
+;;;
+
+(declare-core-primitive strndup*
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)		=> (T:pointer)))
+  (attributes
+   ((_ _)				effect-free result-true)))
+
+(declare-core-primitive guarded-strndup*
+    (safe)
+  (signatures
+   ((T:pointer T:exact-integer)		=> (T:pointer)))
+  (attributes
+   ((_ _)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive bytevectors->argv
+    (safe)
+  (signatures
+   ((T:proper-list)		=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive bytevectors->guarded-argv
+    (safe)
+  (signatures
+   ((T:proper-list)		=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free result-true)))
+
 
 #|
- strlen
- strcmp
- strncmp
- strdup
- strndup
- guarded-strdup
- guarded-strndup
- strdup*
- strndup*
- guarded-strdup*
- guarded-strndup*
 
  argv->bytevectors
  argv-length
  argv->strings
- bytevectors->argv
+
  bytevectors->argv*
  bytevectors->guarded-argv
  bytevectors->guarded-argv*
