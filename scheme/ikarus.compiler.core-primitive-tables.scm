@@ -8417,24 +8417,120 @@
 ;;; --------------------------------------------------------------------
 ;;; cstrings
 
+(declare-core-primitive bytevector->cstring
+    (safe)
+  (signatures
+   ((T:bytevector)		=> ((or T:false T:pointer))))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive bytevector->guarded-cstring
+    (safe)
+  (signatures
+   ((T:bytevector)		=> ((or T:false T:pointer))))
+  (attributes
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive bytevector->cstring*
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:pointer)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive bytevector->guarded-cstring*
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:pointer)))
+  (attributes
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive string->cstring
+    (safe)
+  (signatures
+   ((T:string)			=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive string->guarded-cstring
+    (safe)
+  (signatures
+   ((T:string)			=> ([or T:false T:pointer])))
+  (attributes
+   ((_)				effect-free)))
+
+;;;
+
+(declare-core-primitive string->cstring*
+    (safe)
+  (signatures
+   ((T:string)			=> (T:pointer)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive string->guarded-cstring*
+    (safe)
+  (signatures
+   ((T:string)			=> (T:pointer)))
+  (attributes
+   ((_)				effect-free)))
+
+;;;
+
+(declare-core-primitive cstring->bytevector
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:bytevector))
+   ((T:pointer T:non-negative-fixnum)	=> (T:bytevector)))
+  (attributes
+   ((_)					effect-free result-true)
+   ((_ _)				effect-free result-true)))
+
+(declare-core-primitive cstring16->bytevector
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:bytevector)))
+  (attributes
+   ((_)					effect-free result-true)))
+
+;;;
+
+(declare-core-primitive cstring->string
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:string))
+   ((T:pointer T:non-negative-fixnum)	=> (T:string)))
+  (attributes
+   ((_)					effect-free result-true)
+   ((_ _)				effect-free result-true)))
+
+(declare-core-primitive cstring16n->string
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:string)))
+  (attributes
+   ((_)					effect-free result-true)))
+
+(declare-core-primitive cstring16le->string
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:string)))
+  (attributes
+   ((_)					effect-free result-true)))
+
+(declare-core-primitive cstring16be->string
+    (safe)
+  (signatures
+   ((T:pointer)				=> (T:string)))
+  (attributes
+   ((_)					effect-free result-true)))
 
 
 #|
- bytevector->cstring
- bytevector->guarded-cstring
- cstring->bytevector
- cstring16->bytevector
- cstring16n->string
- cstring16le->string
- cstring16be->string
- string->cstring
- string->guarded-cstring
- bytevector->cstring*
- bytevector->guarded-cstring*
- cstring->bytevector*
- string->cstring*
- string->guarded-cstring*
- cstring->string
  strlen
  strcmp
  strncmp
