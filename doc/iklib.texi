@@ -13138,18 +13138,10 @@ garbage collector whenever the returned pointer is garbage collected.
 
 @defun bytevector->cstring* @var{bv}
 @defunx bytevector->guarded-cstring* @var{bv}
-Like @func{bytevector->cstring*} and @func{bytevector->guarded-cstring},
+Like @func{bytevector->cstring} and @func{bytevector->guarded-cstring},
 but if allocation fails raise a non--continuable exception with
 components: @condition{who}, @condition{message},
 @condition{out-of-memory-error}.
-@end defun
-
-
-@defun cstring->bytevector @var{pointer}
-@defunx cstring->bytevector @var{pointer} @var{count}
-Convert between an @asciiz{} string and a Scheme bytevector.  When used,
-@var{count} must be a fixnum representing the number of bytes to include
-in the bytevector.
 @end defun
 
 
@@ -13168,6 +13160,22 @@ garbage collector whenever the returned pointer is garbage collected.
 @end defun
 
 
+@defun string->cstring* @var{str}
+@defunx string->guarded-cstring* @var{str}
+Like @func{string->cstring} and @func{string->guarded-cstring}, but if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
+@end defun
+
+
+@defun cstring->bytevector @var{pointer}
+@defunx cstring->bytevector @var{pointer} @var{count}
+Convert between an @asciiz{} string and a Scheme bytevector.  When used,
+@var{count} must be a fixnum representing the number of bytes to include
+in the bytevector.
+@end defun
+
+
 @defun cstring16->bytevector @var{pointer}
 Convert between an @utf{}-16 string and a Scheme bytevector; this
 function works with all the possible encodings of the string.  The end
@@ -13182,14 +13190,6 @@ consecutive zero bytes, starting at even offset.
 Like @func{cstring16->bytevector}, but convert the result to a Scheme
 string assuming the specified byte order (native, little endian, big
 endian).
-@end defun
-
-
-@defun string->cstring* @var{str}
-@defunx string->guarded-cstring* @var{str}
-Like @func{string->cstring} and @func{string->guarded-cstring}, but if
-allocation fails raise a non--continuable exception with components:
-@condition{who}, @condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
