@@ -2412,6 +2412,7 @@
     (record-constructor				v r rp)
     (record-predicate				v r rp)
     (record-type-descriptor?			v r rp)
+    (record-constructor-descriptor?		v $language)
     (record-type-and-record?			v $language)
     (record-destructor-set!			v $language)
     (record-destructor				v $language)

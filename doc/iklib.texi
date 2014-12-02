@@ -7170,6 +7170,12 @@ Return @true{} if @var{obj} is an @rnrs{6} record, otherwise return
 record--type is opaque.
 @end defun
 
+
+@defun record-constructor-descriptor? @var{obj}
+Return @true{} if @var{obj} is a record constructor descriptor;
+otherwise return @false{}.
+@end defun
+
 @c page
 @node iklib promises
 @section Delay, force and promises
