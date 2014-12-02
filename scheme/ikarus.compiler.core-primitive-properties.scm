@@ -337,7 +337,7 @@
 
 	 T:struct		T:struct-type-descriptor	T:other-struct
 	 T:record		T:record-type-descriptor	T:enum-set
-	 T:library		T:lexical-environment
+	 T:library		T:lexical-environment		T:record-constructor-descriptor
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -417,6 +417,7 @@
       (T:other-struct			type)
       (T:record				type)
       (T:record-type-descriptor		type)
+      (T:record-constructor-descriptor	type)
       (T:enum-set			type)
       (T:library			type)
       (T:lexical-environment		type)

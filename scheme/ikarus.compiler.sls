@@ -794,6 +794,8 @@
 	      (body    (caddr core-language-sexp)))
 	  (parametrise ((option.strict-r6rs (or (memq 'strict-r6rs option*)
 						(option.strict-r6rs))))
+	    (when (option.strict-r6rs)
+	      (print-compiler-warning-message "enabling compiler's strict R6RS support"))
 	    (kont body)))
       (kont core-language-sexp)))
 

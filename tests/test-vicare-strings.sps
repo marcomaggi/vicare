@@ -29,6 +29,7 @@
 (import (except (vicare) catch)
   (vicare system $strings)
   (vicare checks))
+(options strict-r6rs)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare string functions\n")
@@ -45,20 +46,6 @@
 		(condition-irritants E))
 	       (else E))
        (begin . ?body)))))
-
-(define-syntax catch-expand-time-type-mismatch
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((internal-body
-		  (import (prefix (vicare expander object-type-specs) typ.))
-		  (typ.expand-time-type-signature-violation? E))
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(syntax->datum (syntax-violation-subform E)))
-	       (else E))
-       (eval '(begin . ?body)
-	     (environment '(vicare)
-			  '(vicare system $strings)))))))
 
 
 (parametrise ((check-test-name	'string-length))
@@ -78,9 +65,9 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (catch-expand-time-type-mismatch #f
+      (catch #f
 	(string-length 123))
-    => 123)
+    => '(123))
 
 ;;; --------------------------------------------------------------------
 

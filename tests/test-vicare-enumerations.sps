@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare checks))
+(options strict-r6rs)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare enumerations\n")

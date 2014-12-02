@@ -4476,7 +4476,133 @@
    ((T:other-struct)		=> (_))))
 
 
+;;;; enum sets, safe procedure
+
+(declare-type-predicate enum-set?	T:enum-set)
+
+(declare-core-primitive make-enumeration
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:enum-set)))
+  (attributes
+   ((_)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-constructor
+    (safe)
+  (signatures
+   ((T:enum-set)		=> (T:procedure)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive enum-set-member?
+    (safe)
+  (signatures
+   ((T:symbol T:enum-set)	=> (T:boolean)))
+  (attributes
+   ((_ _)			 effect-free)))
+
+(declare-core-primitive enum-set-subset?
+    (safe)
+  (signatures
+   ((T:enum-set T:enum-set)	=> (T:boolean)))
+  (attributes
+   ((_ _)			 effect-free)))
+
+(declare-core-primitive enum-set=?
+    (safe)
+  (signatures
+   ((T:symbol T:enum-set)	=> (T:boolean)))
+  (attributes
+   ((_ _)			 effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; set operations
+
+(declare-core-primitive enum-set-difference
+    (safe)
+  (signatures
+   ((T:enum-set T:enum-set)	=> (T:enum-set)))
+  (attributes
+   ((_ _)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-intersection
+    (safe)
+  (signatures
+   ((T:enum-set T:enum-set)	=> (T:enum-set)))
+  (attributes
+   ((_ _)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-union
+    (safe)
+  (signatures
+   ((T:enum-set T:enum-set)	=> (T:enum-set)))
+  (attributes
+   ((_ _)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-projection
+    (safe)
+  (signatures
+   ((T:enum-set T:enum-set)	=> (T:enum-set)))
+  (attributes
+   ((_ _)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-complement
+    (safe)
+  (signatures
+   ((T:enum-set)	=> (T:enum-set)))
+  (attributes
+   ((_)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-universe
+    (safe)
+  (signatures
+   ((T:enum-set)		=> (T:enum-set)))
+  (attributes
+   ((_)			 effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive enum-set->list
+    (safe)
+  (signatures
+   ((T:enum-set)		=> (T:proper-list)))
+  (attributes
+   ((_)			 effect-free result-true)))
+
+(declare-core-primitive enum-set-indexer
+    (safe)
+  (signatures
+   ((T:enum-set)	=> (T:procedure)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+
 ;;;; R6RS records, safe primitives
+
+#|
+ record-field-mutable?
+ record-rtd
+ record-type-field-names
+ record-type-generative?
+ record-type-name
+ record-type-opaque?
+ record-type-parent
+ record-type-sealed?
+ record-type-uid
+ make-record-constructor-descriptor
+ make-record-type-descriptor
+
+ record-type-descriptor?
+ record-destructor-set!
+ record-destructor
+ record-guardian-logger
+ record-guardian-log
+ record-reset
+ record-and-rtd?
+
+|#
 
 (declare-type-predicate record? T:record)
 
@@ -4485,42 +4611,68 @@
 (declare-core-primitive record-constructor
     (safe)
   (signatures
-   ((_)				=> (T:procedure)))
+   ((T:record-constructor-descriptor)	=> (T:procedure)))
   (attributes
-   ((_)				effect-free result-false)))
+   ((_)					effect-free result-true)))
 
 (declare-core-primitive record-predicate
     (safe)
   (signatures
-   ((_)				=> (T:procedure)))
+   ((T:record-type-descriptor)		=> (T:procedure)))
   (attributes
-   ((_)				effect-free result-false)))
+   ((_)					effect-free result-true)))
 
 (declare-core-primitive record-accessor
     (safe)
   (signatures
-   ((_ T:fixnum)		=> (T:procedure))
-   ((_ T:fixnum T:false)	=> (T:procedure))
-   ((_ T:fixnum T:symbol)	=> (T:procedure))
-   ((_ T:symbol)		=> (T:procedure))
-   ((_ T:symbol T:false)	=> (T:procedure))
-   ((_ T:symbol T:symbol)	=> (T:procedure)))
+   ((T:record-type-descriptor T:non-negative-fixnum)		=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:false)	=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:symbol)	=> (T:procedure))
+   ((T:record-type-descriptor T:symbol)				=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:false)			=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:symbol)		=> (T:procedure)))
   (attributes
-   ((_ _)			effect-free result-false)
-   ((_ _ _)			effect-free result-false)))
+   ((_ _)			effect-free result-true)
+   ((_ _ _)			effect-free result-true)))
 
 (declare-core-primitive record-mutator
     (safe)
   (signatures
-   ((_ T:fixnum)		=> (T:procedure))
-   ((_ T:fixnum T:false)	=> (T:procedure))
-   ((_ T:fixnum T:symbol)	=> (T:procedure))
-   ((_ T:symbol)		=> (T:procedure))
-   ((_ T:symbol T:false)	=> (T:procedure))
-   ((_ T:symbol T:symbol)	=> (T:procedure)))
+   ((T:record-type-descriptor T:non-negative-fixnum)		=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:false)	=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:symbol)	=> (T:procedure))
+   ((T:record-type-descriptor T:symbol)				=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:false)			=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:symbol)		=> (T:procedure)))
   (attributes
-   ((_ _)			effect-free result-false)
-   ((_ _ _)			effect-free result-false)))
+   ((_ _)			effect-free result-true)
+   ((_ _ _)			effect-free result-true)))
+
+(declare-core-primitive unsafe-record-accessor
+    (safe)
+  (signatures
+   ((T:record-type-descriptor T:non-negative-fixnum)		=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:false)	=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:symbol)	=> (T:procedure))
+   ((T:record-type-descriptor T:symbol)				=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:false)			=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:symbol)		=> (T:procedure)))
+  (attributes
+   ((_ _)			effect-free result-true)
+   ((_ _ _)			effect-free result-true)))
+
+(declare-core-primitive unsafe-record-mutator
+    (safe)
+  (signatures
+   ((T:record-type-descriptor T:non-negative-fixnum)		=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:false)	=> (T:procedure))
+   ((T:record-type-descriptor T:non-negative-fixnum T:symbol)	=> (T:procedure))
+   ((T:record-type-descriptor T:symbol)				=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:false)			=> (T:procedure))
+   ((T:record-type-descriptor T:symbol T:symbol)		=> (T:procedure)))
+  (attributes
+   ((_ _)			effect-free result-true)
+   ((_ _ _)			effect-free result-true)))
 
 
 ;;;; R6RS records, unsafe primitives
@@ -5021,6 +5173,11 @@
    ((T:port T:procedure)		=> T:object)))
 
 (declare-core-primitive with-input-from-file
+    (safe)
+  (signatures
+   ((T:string T:procedure)		=> T:object)))
+
+(declare-core-primitive with-output-to-file
     (safe)
   (signatures
    ((T:string T:procedure)		=> T:object)))
@@ -5671,6 +5828,55 @@
    ((_)				effect-free result-true)))
 
 
+;;;; exceptions and dynamic environment, safe procedures
+
+(declare-core-primitive with-exception-handler
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)	=> T:object)))
+
+(declare-core-primitive dynamic-wind
+    (safe)
+  (signatures
+   ((T:procedure T:procedure T:procedure)	=> T:object)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive raise
+    (safe)
+  (signatures
+   ((T:object)		=> T:object)))
+
+(declare-core-primitive raise-continuable
+    (safe)
+  (signatures
+   ((T:object)		=> T:object)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive error
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive assertion-violation
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive warning
+    (safe)
+  (signatures
+   ;;We do not know the number of returned values.
+   (([or T:false T:symbol T:string] T:string . T:object)		=> T:object)))
+
+;;This is depreccated.
+(declare-core-primitive die
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+
 ;;;; generic functions
 
 (declare-type-predicate procedure? T:procedure)
@@ -5807,45 +6013,6 @@
   (attributes
    (()			result-true)
    ((_)			result-true)))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive error
-    (safe)
-  (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
-
-(declare-core-primitive warning
-    (safe)
-  (signatures
-   ;;We do not know the number of returned values.
-   (([or T:false T:symbol T:string] T:string . T:object)		=> T:object)))
-
-;;This is depreccated.
-(declare-core-primitive die
-    (safe)
-  (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
-
-(declare-core-primitive raise
-    (safe)
-  (signatures
-   ((T:object)		=> T:object)))
-
-(declare-core-primitive raise-continuable
-    (safe)
-  (signatures
-   ((T:object)		=> T:object)))
-
-(declare-core-primitive with-exception-handler
-    (safe)
-  (signatures
-   ((T:procedure T:procedure)	=> T:object)))
-
-(declare-core-primitive dynamic-wind
-    (safe)
-  (signatures
-   ((T:procedure T:procedure T:procedure)	=> T:object)))
 
 
 ;;;; invocation and termination procedures
@@ -9261,9 +9428,7 @@
  fasl-read
  syntax-parameter-value
  apply
- assert
- assertion-error
- assertion-violation
+
 
  call-with-current-continuation
  call/cc
@@ -9329,25 +9494,7 @@
  warning?
  &who
  who-condition?
- define-enumeration
- enum-set->list
- enum-set-complement
- enum-set-constructor
- enum-set-difference
- enum-set-indexer
- enum-set-intersection
- enum-set-member?
- enum-set-projection
- enum-set-subset?
- enum-set-union
- enum-set-universe
- enum-set=?
- make-enumeration
- enum-set?
 
- delay
- force
- promise?
  &i/o
  &i/o-decoding
  i/o-decoding-error?
@@ -9407,42 +9554,15 @@
  procedure-argument-violation
  make-expression-return-value-violation
  expression-return-value-violation
+
+
+ delay
+ force
+ promise?
  list-sort
  file-exists?
  directory-exists?
  delete-file
-
-;;; --------------------------------------------------------------------
-
- record-field-mutable?
- record-rtd
- record-type-field-names
- record-type-generative?
- record-type-name
- record-type-opaque?
- record-type-parent
- record-type-sealed?
- record-type-uid
- record?
- make-record-constructor-descriptor
- make-record-type-descriptor
- record-constructor
-
-  (let ((P (C record-predicate)))
-    (register-lambda-signature P (S (list (C <predicate>))
-				    (list (C <record-type-descriptor>)))))
-
- record-type-descriptor?
- record-destructor-set!
- record-destructor
- record-guardian-logger
- record-guardian-log
- record-reset
- record-and-rtd?
- record-accessor
- record-mutator
- unsafe-record-accessor
- unsafe-record-mutator
 
 ;;; --------------------------------------------------------------------
 

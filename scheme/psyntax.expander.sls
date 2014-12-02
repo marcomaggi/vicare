@@ -1950,18 +1950,17 @@
   #| end of module |# )
 
 
-(define* (eval x env)
+(define* (eval x {env environment?})
   ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
   ;;expand the  expression, invoke  its invoke-required  libraries and
   ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
   ;;expansion.
   ;;
-  (unless (environment? env)
-    (error __who__ "not an environment" env))
-  (receive (x invoke-req*)
-      (expand-form-to-core-language x env)
-    (for-each invoke-library invoke-req*)
-    (compiler.eval-core (expanded->core x))))
+  (parametrise ((option.strict-r6rs #t))
+    (receive (x invoke-req*)
+	(expand-form-to-core-language x env)
+      (for-each invoke-library invoke-req*)
+      (compiler.eval-core (expanded->core x)))))
 
 
 (module (expand-form-to-core-language)
@@ -2131,7 +2130,7 @@
     (when (option.tagged-language?)
       (print-expander-warning-message "enabling tagged language support for program"))
     (when (option.strict-r6rs)
-      (print-expander-warning-message "enabling strict R6RS support for program")))
+      (print-expander-warning-message "enabling expander's strict R6RS support for program")))
 
   (define (%parse-top-level-program program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
@@ -2511,7 +2510,7 @@
       (when (option.tagged-language?)
 	(print-expander-warning-message "enabling tagged language support for library: ~a" libname.sexp))
       (when (option.strict-r6rs)
-	(print-expander-warning-message "enabling strict R6RS support for library: ~a" libname.sexp))))
+	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
