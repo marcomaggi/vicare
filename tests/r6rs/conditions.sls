@@ -249,17 +249,17 @@
                i/o-error-filename)
 
     (test-cond &i/o-port &i/o
-               (make-i/o-port-error "Hong Kong")
+               (make-i/o-port-error (current-input-port))
                i/o-port-error?
                i/o-error-port)
 
     (test-cond &i/o-decoding &i/o-port
-               (make-i/o-decoding-error "Hong Kong")
+               (make-i/o-decoding-error (current-input-port))
                i/o-decoding-error?
                i/o-error-port)
 
     (test-cond &i/o-encoding &i/o-port
-               (make-i/o-encoding-error "Hong Kong" #\$)
+               (make-i/o-encoding-error (current-output-port) #\$)
                i/o-encoding-error?
                i/o-error-port
                i/o-encoding-error-char)

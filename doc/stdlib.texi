@@ -3770,13 +3770,13 @@ This condition type could be defined by:
 
 This condition type describes an I/O error that occurred during an
 operation on a named file.  @var{filename} should be the name of the
-file.
+file, a Scheme string object.
 @end deffn
 
 
 @tindex &i/o-file-protection
 @deffn {Condition Type} {&i/o-file-protection}
-@deffnx Procedure {make-i/o-file-protection-error}
+@deffnx Procedure {make-i/o-file-protection-error} @var{filename}
 @deffnx Procedure {i/o-file-protection-error?} @var{obj}
 This condition type could be defined by:
 

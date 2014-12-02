@@ -5015,61 +5015,6 @@
 
 ;;;; condition objects, safe procedures
 
-#|
- make-no-infinities-violation
- make-no-nans-violation
-
-
- condition-irritants
- condition-message
- condition-who
-
-
- make-assertion-violation
- make-error
- make-implementation-restriction-violation
- make-irritants-condition
- make-lexical-violation
- make-message-condition
- make-non-continuable-violation
- make-serious-condition
- make-syntax-violation
- make-undefined-violation
- make-violation
- make-warning
- make-who-condition
-
- syntax-violation-form
- syntax-violation-subform
-
- i/o-encoding-error-char
- i/o-error-filename
- i/o-error-port
- i/o-error-position
-
- make-i/o-decoding-error
- make-i/o-encoding-error
- make-i/o-error
- make-i/o-file-already-exists-error
- make-i/o-file-does-not-exist-error
- make-i/o-file-is-read-only-error
- make-i/o-file-protection-error
- make-i/o-filename-error
- make-i/o-invalid-position-error
- make-i/o-port-error
- make-i/o-read-error
- make-i/o-write-error
- make-i/o-eagain
- make-errno-condition
- condition-errno
- make-h_errno-condition
- condition-h_errno
- make-procedure-argument-violation
- procedure-argument-violation
- make-expression-return-value-violation
- expression-return-value-violation
-|#
-
 ;;; --------------------------------------------------------------------
 ;;; generic condition procedures
 
@@ -5109,6 +5054,144 @@
    ((T:condition T:textual-output-port)	=> (T:void)))
   (attributes
    ((_ _)		result-true)))
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    (()			=> (T:condition)))
+		   (attributes
+		    (()			effect-free result-true))))
+		)))
+  (declare make-assertion-violation)
+  (declare make-error)
+  (declare make-expression-return-value-violation)
+  (declare make-i/o-eagain)
+  (declare make-i/o-error)
+  (declare make-i/o-read-error)
+  (declare make-i/o-write-error)
+  (declare make-implementation-restriction-violation)
+  (declare make-lexical-violation)
+  (declare make-no-infinities-violation)
+  (declare make-no-nans-violation)
+  (declare make-non-continuable-violation)
+  (declare make-procedure-argument-violation)
+  (declare make-serious-condition)
+  (declare make-undefined-violation)
+  (declare make-violation)
+  (declare make-warning)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive make-who-condition
+    (safe)
+  (signatures
+   (([or T:false T:string T:symbol])	=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-message-condition
+    (safe)
+  (signatures
+   ((T:string)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-irritants-condition
+    (safe)
+  (signatures
+   (_			=> (T:condition)))
+  (attributes
+   (_			effect-free result-true)))
+
+(declare-core-primitive make-syntax-violation
+    (safe)
+  (signatures
+   ((_ _)		=> (T:condition)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive make-errno-condition
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-h_errno-condition
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+
+(declare-core-primitive make-i/o-port-error
+    (safe)
+  (signatures
+   ((T:port)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-invalid-position-error
+    (safe)
+  (signatures
+   ((T:object)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-filename-error
+    (safe)
+  (signatures
+   ((T:string)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-file-protection-error
+    (safe)
+  (signatures
+   ((T:string)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-decoding-error
+    (safe)
+  (signatures
+   ((T:port)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-encoding-error
+    (safe)
+  (signatures
+   ((T:port T:char)	=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-file-already-exists-error
+    (safe)
+  (signatures
+   ((T:string)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-file-does-not-exist-error
+    (safe)
+  (signatures
+   ((T:string)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive make-i/o-file-is-read-only-error
+    (safe)
+  (signatures
+   ((T:string)		=> (T:condition)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
@@ -5155,9 +5238,70 @@
   (declare violation?)
   (declare warning?)
   (declare who-condition?)
-
   #| end of LET-SYNTAX |# )
 
+;;; --------------------------------------------------------------------
+
+(letrec-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare ?who T:object))
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:condition)	=> (?return-value-tag)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare condition-errno		T:fixnum)
+  (declare condition-h_errno		T:fixnum)
+  (declare condition-irritants)
+  (declare condition-message		T:string)
+  (declare condition-who		[or T:false T:string T:symbol])
+  (declare i/o-encoding-error-char)
+  (declare i/o-error-filename)
+  (declare i/o-error-port		T:port)
+  (declare i/o-error-position)
+  (declare syntax-violation-form)
+  (declare syntax-violation-subform)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+;;These are not effect-free because raising an exception is a "side effect".
+
+(declare-core-primitive error
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive assertion-violation
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive warning
+    (safe)
+  (signatures
+   ;;We do not know the number of returned values.
+   (([or T:false T:symbol T:string] T:string . T:object)		=> T:object)))
+
+;;This is deprecated.
+(declare-core-primitive die
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+
+(declare-core-primitive procedure-argument-violation
+    (safe)
+  (signatures
+   (([or T:false T:string T:symbol] T:string . _)	=> (T:void))))
+
+(declare-core-primitive expression-return-value-violation
+    (safe)
+  (signatures
+   (([or T:false T:string T:symbol] T:string . _)	=> (T:void))))
 
 
 ;;;; input/output, safe primitives
@@ -6142,30 +6286,6 @@
     (safe)
   (signatures
    ((T:object)		=> T:object)))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive error
-    (safe)
-  (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
-
-(declare-core-primitive assertion-violation
-    (safe)
-  (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
-
-(declare-core-primitive warning
-    (safe)
-  (signatures
-   ;;We do not know the number of returned values.
-   (([or T:false T:symbol T:string] T:string . T:object)		=> T:object)))
-
-;;This is depreccated.
-(declare-core-primitive die
-    (safe)
-  (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
 
 
 ;;;; generic functions
