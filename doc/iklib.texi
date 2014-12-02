@@ -3295,6 +3295,7 @@ Push the given thunk on the current compensations stack.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
 * iklib conditions procarg::    Procedure argument violations.
 * iklib conditions exprret::    Expression return value violations.
+* iklib conditions misc::       Miscellaneous procedures.
 @end menu
 
 @c page
@@ -3463,6 +3464,18 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
 @condition{irritants}, @condition{expression-return-value-validation}.
+@end defun
+
+@c page
+@node iklib conditions misc
+@subsection Miscellaneous procedures
+
+
+@defun print-condition @var{cond}
+@defunx print-condition @var{cond} @var{textual-output-port}
+Print a string representing the condition object @var{cond} to the port
+@var{textual-output-port}, which defaults to the return value of
+@code{(console-error-port)}.
 @end defun
 
 @c page
