@@ -4152,7 +4152,7 @@ invalid encoding.
 
 @tindex &i/o-encoding
 @deffn {Condition Type} {&i/o-encoding}
-@deffnx Procedure {make-i/o-encoding-error} @var{char}
+@deffnx Procedure {make-i/o-encoding-error} @var{port} @var{char}
 @deffnx Procedure {i/o-encoding-error?} @var{obj}
 @deffnx Procedure {i/o-encoding-error-char} @var{condition}
 This condition type could be defined by:
