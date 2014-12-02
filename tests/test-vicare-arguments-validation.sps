@@ -74,7 +74,9 @@
 			    '(vicare language-extensions syntaxes)
 			    '(vicare arguments validation)
 			    '(prefix (vicare arguments validation)
-				     args.))))))))
+				     args.))
+	       (expander-options strict-r6rs)
+	       (compiler-options strict-r6rs)))))))
 
 
 (define-syntax doit

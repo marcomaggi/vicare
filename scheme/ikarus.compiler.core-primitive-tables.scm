@@ -4578,6 +4578,29 @@
   (attributes
    ((_)			effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-file-options
+    (safe)
+  (signatures
+   (T:symbol		=> (T:enum-set)))
+  (attributes
+   (_			effect-free result-true)))
+
+(declare-core-primitive make-expander-options
+    (safe)
+  (signatures
+   (T:symbol		=> (T:enum-set)))
+  (attributes
+   (_			effect-free result-true)))
+
+(declare-core-primitive make-compiler-options
+    (safe)
+  (signatures
+   (T:symbol		=> (T:enum-set)))
+  (attributes
+   (_			effect-free result-true)))
+
 
 ;;;; R6RS records, safe primitives
 
@@ -9604,7 +9627,6 @@
  pretty-format
  pretty-width
  library
- make-file-options
 ;;;
  set-identifier-unsafe-variant!
 ;;;

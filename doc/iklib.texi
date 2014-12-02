@@ -48,6 +48,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib expander::              Interface to the expander.
 * iklib shared::                Shared structures graph notation.
 * iklib environment::           Environments.
+* iklib eval::                  Extended code evaluation.
 * iklib cafe::                  Cafe.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
@@ -6197,6 +6198,56 @@ return false and false.
 @end defun
 
 @c page
+@node iklib eval
+@section Extended code evaluation
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun eval @var{sexp} @var{environment}
+@defunx eval @var{sexp} @var{environment} @var{expander-options} @var{compiler-options}
+Extension of @func{eval} as defined by @rnrs{6}.  The arguments
+@var{expander-options} and @var{compiler-options} must be @false{} or
+enumeration sets as returned by @func{expander-options} and
+@func{compiler-options}.
+@end defun
+
+
+@deffn Syntax expander-options @meta{symbol} @dots{}
+Return an enumeration set to be used as argument to @func{eval}.
+Supported @meta{symbol} options are:
+
+@table @code
+@item strict-r6rs
+Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
+report errors at run--time, rather than at expand--time.
+@end table
+@end deffn
+
+
+@deffn Syntax compiler-options @meta{symbol} @dots{}
+Return an enumeration set to be used as argument to @func{eval}.
+Supported @meta{symbol} options are:
+
+@table @code
+@item strict-r6rs
+Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
+report errors at run--time, rather than at compile--time.
+@end table
+@end deffn
+
+
+@defun make-expander-options @var{symbol} @dots{}
+Return an enumeration set as defined by @func{expander-options}.
+@end defun
+
+
+@defun make-compiler-options @var{symbol} @dots{}
+Return an enumeration set as defined by @func{compiler-options}.
+@end defun
+
+@c page
 @node iklib cafe
 @section Cafe
 
@@ -11985,6 +12036,11 @@ informations on the internals of @var{port}.
 Reset to empty the port buffer; return unspecified values.  These
 procedures should be used to attempt an error recovery, only when the
 port's underlying device is stateless, for example at the @repl{}.
+@end defun
+
+
+@defun make-file-options @var{symbol} ...
+Return an enumeration set as defined by @func{file-options}.
 @end defun
 
 @c page

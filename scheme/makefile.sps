@@ -527,6 +527,8 @@
      (eol-style					(macro . eol-style))
      (buffer-mode				(macro . buffer-mode))
      (file-options				(macro . file-options))
+     (expander-options				(macro . expander-options))
+     (compiler-options				(macro . compiler-options))
      (error-handling-mode			(macro . error-handling-mode))
      (fields					(macro . fields))
      (mutable					(macro . mutable))
@@ -2161,6 +2163,8 @@
     (eol-style					v r ip)
     (error-handling-mode			v r ip)
     (file-options				v r ip)
+    (compiler-options				v $language)
+    (expander-options				v $language)
     (flush-output-port				v r ip)
     (get-bytevector-all				v r ip)
     (get-bytevector-n				v r ip)
@@ -2504,6 +2508,8 @@
     ($transcoder->data				$transc)
     ($data->transcoder				$transc)
     (make-file-options				v $language)
+    (make-expander-options			v $language)
+    (make-compiler-options			v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; special list functions

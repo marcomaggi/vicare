@@ -1950,17 +1950,25 @@
   #| end of module |# )
 
 
-(define* (eval x {env environment?})
-  ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
-  ;;expand the  expression, invoke  its invoke-required  libraries and
-  ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
-  ;;expansion.
-  ;;
-  (parametrise ((option.strict-r6rs #t))
-    (receive (x invoke-req*)
-	(expand-form-to-core-language x env)
-      (for-each invoke-library invoke-req*)
-      (compiler.eval-core (expanded->core x)))))
+(case-define* eval
+  ((x {env environment?})
+   ;;This  is  R6RS's eval.   Take  an  expression  and  an environment:  expand  the
+   ;;expression, invoke its invoke-required libraries  and evaluate its expanded core
+   ;;form.  Return the result of the expansion.
+   ;;
+   (eval x env #f #f))
+  ((x {env environment?} expander-options compiler-options)
+   ;;This is the Vicare extension.
+   ;;
+   (receive (x invoke-req*)
+       (parametrise ((option.strict-r6rs (and expander-options
+					      (enum-set-member? 'strict-r6rs expander-options))))
+	 (expand-form-to-core-language x env))
+     ;;Here we use the expander and compiler options from the libraries.
+     (for-each invoke-library invoke-req*)
+     (parametrise ((option.strict-r6rs (and compiler-options
+					    (enum-set-member? 'strict-r6rs compiler-options))))
+       (compiler.eval-core (expanded->core x))))))
 
 
 (module (expand-form-to-core-language)

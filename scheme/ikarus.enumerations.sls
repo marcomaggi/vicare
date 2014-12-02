@@ -61,7 +61,9 @@
     enum-set=?
     make-enumeration
     enum-set?
-    make-file-options)
+    make-file-options
+    make-expander-options
+    make-compiler-options)
   (import (except (vicare)
 ;;;		  define-enumeration
 		  enum-set->list
@@ -78,7 +80,9 @@
 		  enum-set=?
 		  make-enumeration
 		  enum-set?
-		  make-file-options)
+		  make-file-options
+		  make-expander-options
+		  make-compiler-options)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (vicare arguments validation))
@@ -412,6 +416,14 @@
 (define make-file-options
   ;;This constructor builds empty enum sets.
   (enum-set-constructor (make-enumeration '(no-create no-fail no-truncate))))
+
+(define make-expander-options
+  ;;This constructor builds empty enum sets.
+  (enum-set-constructor (make-enumeration '(strict-r6rs))))
+
+(define make-compiler-options
+  ;;This constructor builds empty enum sets.
+  (enum-set-constructor (make-enumeration '(strict-r6rs))))
 
 
 ;;;; done
