@@ -386,6 +386,7 @@
 	 T:struct		T:struct-type-descriptor	T:other-struct
 	 T:record		T:record-type-descriptor	T:enum-set
 	 T:library		T:lexical-environment		T:record-constructor-descriptor
+	 T:condition		T:other-record
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -469,6 +470,8 @@
       (T:enum-set			type)
       (T:library			type)
       (T:lexical-environment		type)
+      (T:condition			type)
+      (T:other-record			type)
 
       (T:transcoder			type)
 

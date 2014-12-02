@@ -5013,6 +5013,153 @@
   #| end of LET-SYNTAX |# )
 
 
+;;;; condition objects, safe procedures
+
+#|
+ make-no-infinities-violation
+ make-no-nans-violation
+
+
+ condition-irritants
+ condition-message
+ condition-who
+
+
+ make-assertion-violation
+ make-error
+ make-implementation-restriction-violation
+ make-irritants-condition
+ make-lexical-violation
+ make-message-condition
+ make-non-continuable-violation
+ make-serious-condition
+ make-syntax-violation
+ make-undefined-violation
+ make-violation
+ make-warning
+ make-who-condition
+
+ syntax-violation-form
+ syntax-violation-subform
+
+ i/o-encoding-error-char
+ i/o-error-filename
+ i/o-error-port
+ i/o-error-position
+
+ make-i/o-decoding-error
+ make-i/o-encoding-error
+ make-i/o-error
+ make-i/o-file-already-exists-error
+ make-i/o-file-does-not-exist-error
+ make-i/o-file-is-read-only-error
+ make-i/o-file-protection-error
+ make-i/o-filename-error
+ make-i/o-invalid-position-error
+ make-i/o-port-error
+ make-i/o-read-error
+ make-i/o-write-error
+ make-i/o-eagain
+ make-errno-condition
+ condition-errno
+ make-h_errno-condition
+ condition-h_errno
+ make-procedure-argument-violation
+ procedure-argument-violation
+ make-expression-return-value-violation
+ expression-return-value-violation
+|#
+
+;;; --------------------------------------------------------------------
+;;; generic condition procedures
+
+(declare-type-predicate condition? T:condition)
+
+(declare-core-primitive condition
+    (safe)
+  (signatures
+   (T:condition		=> (T:condition)))
+  (attributes
+   (_			effect-free result-true)))
+
+(declare-core-primitive simple-conditions
+    (safe)
+  (signatures
+   ((T:condition)		=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive condition-predicate
+    (safe)
+  (signatures
+   ((T:object)		=> (T:boolean)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive condition-accessor
+    (safe)
+  (signatures
+   ((T:record-type-descriptor T:procedure)	=> (T:procedure)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive print-condition
+    (safe)
+  (signatures
+   ((T:condition T:textual-output-port)	=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((_)		=> (T:boolean)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare assertion-violation?)
+  (declare errno-condition?)
+  (declare error?)
+  (declare expression-return-value-violation?)
+  (declare h_errno-condition?)
+  (declare i/o-decoding-error?)
+  (declare i/o-eagain-error?)
+  (declare i/o-encoding-error?)
+  (declare i/o-error?)
+  (declare i/o-file-already-exists-error?)
+  (declare i/o-file-does-not-exist-error?)
+  (declare i/o-file-is-read-only-error?)
+  (declare i/o-file-protection-error?)
+  (declare i/o-filename-error?)
+  (declare i/o-invalid-position-error?)
+  (declare i/o-port-error?)
+  (declare i/o-read-error?)
+  (declare i/o-write-error?)
+  (declare implementation-restriction-violation?)
+  (declare irritants-condition?)
+  (declare lexical-violation?)
+  (declare message-condition?)
+  (declare no-infinities-violation?)
+  (declare no-nans-violation?)
+  (declare non-continuable-violation?)
+  (declare procedure-argument-violation?)
+  (declare serious-condition?)
+  (declare syntax-violation?)
+  (declare undefined-violation?)
+  (declare violation?)
+  (declare warning?)
+  (declare who-condition?)
+
+  #| end of LET-SYNTAX |# )
+
+
+
 ;;;; input/output, safe primitives
 
 (declare-parameter current-input-port	T:textual-input-port)
@@ -6031,6 +6178,13 @@
 (declare-object-binary-comparison equal?)
 
 (declare-object-predicate not)
+
+(declare-core-primitive pointer-value
+    (safe)
+  (signatures
+   ((T:object)		=> (T:non-false)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 
@@ -9493,7 +9647,6 @@
 ;;;
  code?
  immediate?
- pointer-value
 ;;;
  apropos
  current-primitive-locations
@@ -9578,127 +9731,6 @@
  call/cc
  call-with-values
  ;;
-
- make-no-infinities-violation
- make-no-nans-violation
- &no-infinities
- no-infinities-violation?
- &no-nans
- no-nans-violation?
-
- print-condition
- condition?
- &assertion
- assertion-violation?
- &condition
- condition
- condition-accessor
- condition-irritants
- condition-message
- condition-predicate
- condition-who
- define-condition-type
- &error
- error?
- &implementation-restriction
- implementation-restriction-violation?
- &irritants
- irritants-condition?
- &lexical
- lexical-violation?
- make-assertion-violation
- make-error
- make-implementation-restriction-violation
- make-irritants-condition
- make-lexical-violation
- make-message-condition
- make-non-continuable-violation
- make-serious-condition
- make-syntax-violation
- make-undefined-violation
- make-violation
- make-warning
- make-who-condition
- &message
- message-condition?
- &non-continuable
- non-continuable-violation?
- &serious
- serious-condition?
- simple-conditions
- &syntax
- syntax-violation-form
- syntax-violation-subform
- syntax-violation?
- &undefined
- undefined-violation?
- &violation
- violation?
- &warning
- warning?
- &who
- who-condition?
-
- &i/o
- &i/o-decoding
- i/o-decoding-error?
- &i/o-encoding
- i/o-encoding-error-char
- i/o-encoding-error?
- i/o-error-filename
- i/o-error-port
- i/o-error-position
- i/o-error?
- &i/o-file-already-exists
- i/o-file-already-exists-error?
- &i/o-file-does-not-exist
- i/o-file-does-not-exist-error?
- &i/o-file-is-read-only
- i/o-file-is-read-only-error?
- &i/o-file-protection
- i/o-file-protection-error?
- &i/o-filename
- i/o-filename-error?
- &i/o-invalid-position
- i/o-invalid-position-error?
- &i/o-port
- i/o-port-error?
- &i/o-read
- i/o-read-error?
- &i/o-write
- i/o-write-error?
- &i/o-eagain
- i/o-eagain-error?
- &errno
- errno-condition?
- &h_errno
- h_errno-condition?
- &procedure-argument-violation
- procedure-argument-violation?
- &expression-return-value-violation
- expression-return-value-violation?
- make-i/o-decoding-error
- make-i/o-encoding-error
- make-i/o-error
- make-i/o-file-already-exists-error
- make-i/o-file-does-not-exist-error
- make-i/o-file-is-read-only-error
- make-i/o-file-protection-error
- make-i/o-filename-error
- make-i/o-invalid-position-error
- make-i/o-port-error
- make-i/o-read-error
- make-i/o-write-error
- make-i/o-eagain
- make-errno-condition
- condition-errno
- make-h_errno-condition
- condition-h_errno
- make-procedure-argument-violation
- procedure-argument-violation
- make-expression-return-value-violation
- expression-return-value-violation
-
 
  delay
  force

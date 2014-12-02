@@ -89,6 +89,7 @@
    T:struct		T:struct-type-descriptor	T:other-struct
    T:record		T:record-type-descriptor	T:enum-set
    T:library		T:lexical-environment		T:record-constructor-descriptor
+   T:condition		T:other-record
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -164,6 +165,7 @@
    T:struct?		T:struct-type-descriptor?	T:other-struct?
    T:record?		T:record-type-descriptor?	T:enum-set?
    T:library?		T:lexical-environment?		T:record-constructor-descriptor?
+   T:condition?		T:other-record?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -706,6 +708,9 @@
   (struct		(exclusive struct-type-descriptor record-type-descriptor
 				   record-constructor-descriptor record enum-set
 				   library lexical-environment other-struct))
+
+  ;; T:condition                - R6RS condition object, either simple or compound
+  (record		(exclusive condition other-record))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
