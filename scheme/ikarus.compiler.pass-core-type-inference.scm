@@ -64,6 +64,8 @@
   ;;NOTE This module stores a number in the field OPERAND of the PRELEX structs.
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
+  (module (core-primitive-name->core-type-tag)
+    (import CORE-PRIMITIVE-PROPERTIES))
 
   (define-syntax __module_who__
     (identifier-syntax 'core-type-inference))
@@ -308,9 +310,7 @@
        ;;This PRIMREF is standalone: it is not the operator of a FUNCALL; so it is an
        ;;internal error if it references a  core primitive operation that is not also
        ;;a lexical core primitive function.
-       (values x env (if (symbol-bound? op)
-			 (symbol-value op)
-		       T:object)))
+       (values x env (core-primitive-name->core-type-tag op)))
 
       ((seq x.e0 x.e1)
        ;;First we  do X.E0  and after we  do X.E1; this  allows type  propagation for

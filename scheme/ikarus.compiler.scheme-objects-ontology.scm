@@ -73,7 +73,7 @@
 
    name->core-type-tag
 		;Given a  symbol representing  the name  of a  core type:  return the
-		;associated CORE-TYPE-TAG record.  Otherwise raise an exception.
+		;associated CORE-TYPE-TAG value.  Otherwise raise an exception.
 
    ;;Records  of type  CORE-TYPE-TAG representing  predefined type  descriptions.  By
    ;;themselves they  represent valid type tags;  they are also used  as arguments to

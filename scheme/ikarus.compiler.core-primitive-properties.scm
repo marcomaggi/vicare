@@ -32,7 +32,8 @@
 
 
 (module CORE-PRIMITIVE-PROPERTIES
-  (core-primitive-name->application-attributes*
+  (core-primitive-name->core-type-tag
+   core-primitive-name->application-attributes*
    core-primitive-name->core-type-signature*
    core-primitive-name->replacement*
    core-type-tag?
@@ -46,39 +47,78 @@
    CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-constant CORE-PRIMITIVE-PROPKEY
-    (compile-time-gensym "core-primitive-properties"))
+  (define (core-primitive-name->core-type-tag name)
+    ;;Given a symbol representing the name of a core primitive: return the associated
+    ;;CORE-TYPE-TAG value.  As default return "T:object".
+    ;;
+    (if (and (symbol-bound? name)
+	     (core-primitive-properties? (symbol-value name)))
+	T:procedure
+      T:object))
 
   (define* (core-primitive-name->application-attributes* {prim-name symbol?})
     ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return
     ;;false if PRIM-NAME has  no attributes associated or it is  not a core primitive
     ;;name.
     ;;
-    (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-	   => core-primitive-properties-application-attributes*)
-	  (else #f)))
+    (and (symbol-bound? prim-name)
+	 (core-primitive-properties-application-attributes* (symbol-value prim-name))))
 
   (define* (core-primitive-name->core-type-signature* {prim-name symbol?})
     ;;Return the  SIGNATURE* list of  the core  primitive PRIM-NAME; return  false if
     ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
     ;;
-    (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-	   => core-primitive-properties-core-type-signature*)
-	  (else #f)))
+    (and (symbol-bound? prim-name)
+	 (core-primitive-properties-core-type-signature* (symbol-value prim-name))))
 
   (define* (core-primitive-name->replacement* {prim-name symbol?})
     ;;Return the REPLACEMENT*  list of the core primitive PRIM-NAME;  return false if
     ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
     ;;
-    (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-	   => core-primitive-properties-replacement*)
-	  (else #f)))
+    (and (symbol-bound? prim-name)
+	 (core-primitive-properties-replacement* (symbol-value prim-name))))
+
+;;; --------------------------------------------------------------------
+
+  ;;NOTE This API was once using property  lists; the old implementation is below.  I
+  ;;know that it is bad to keep  old, uncommented code around.  (Marco Maggi; Tue Dec
+  ;;2, 2014)
+
+  ;; (define-constant CORE-PRIMITIVE-PROPKEY
+  ;;   (compile-time-gensym "core-primitive-properties"))
+
+  ;; (define* (core-primitive-name->application-attributes* {prim-name symbol?})
+  ;;   ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return
+  ;;   ;;false if PRIM-NAME has  no attributes associated or it is  not a core primitive
+  ;;   ;;name.
+  ;;   ;;
+  ;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+  ;;   	   => core-primitive-properties-application-attributes*)
+  ;;   	  (else #f)))
+
+  ;; (define* (core-primitive-name->core-type-signature* {prim-name symbol?})
+  ;;   ;;Return the  SIGNATURE* list of  the core  primitive PRIM-NAME; return  false if
+  ;;   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
+  ;;   ;;
+  ;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+  ;;   	   => core-primitive-properties-core-type-signature*)
+  ;;   	  (else #f)))
+
+  ;; (define* (core-primitive-name->replacement* {prim-name symbol?})
+  ;;   ;;Return the REPLACEMENT*  list of the core primitive PRIM-NAME;  return false if
+  ;;   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
+  ;;   ;;
+  ;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+  ;;   	   => core-primitive-properties-replacement*)
+  ;;   	  (else #f)))
 
 
 ;;;; core primitive properties representation
 
 (define-struct core-primitive-properties
-  (core-type-signature*
+  (safe?
+		;Boolean.  True if this core primitive is safe.
+   core-type-signature*
 		;A list of pairs with the format:
 		;
 		;   ((?operands-preds . ?return-values-preds) ...)
@@ -147,11 +187,17 @@
 	       (%parse-clauses #'?clause*)
 	     (receive-and-return (out)
 		 #`(begin
-		     (set-symbol-value! (quote ?prim-name) #,(if safe? #'T:procedure #'T:object))
-		     (putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-			      (make-core-primitive-properties (quasiquote #,signature*)
-							      #,(%compose-attributes-output-form attribute*)
-							      (quote #,replacement-prim-name*))))
+		     (set-symbol-value! (quote ?prim-name)
+					(make-core-primitive-properties #,safe?
+									(quasiquote #,signature*)
+									#,(%compose-attributes-output-form attribute*)
+									(quote #,replacement-prim-name*)))
+		     ;; (putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+		     ;; 	      (make-core-primitive-properties #,safe?
+		     ;; 					      (quasiquote #,signature*)
+		     ;; 					      #,(%compose-attributes-output-form attribute*)
+		     ;; 					      (quote #,replacement-prim-name*)))
+		     )
 	       #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
 	       (void)))))
 

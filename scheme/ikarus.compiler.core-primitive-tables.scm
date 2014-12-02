@@ -4778,12 +4778,6 @@
 
 ;;;; R6RS records, safe primitives
 
-#|
- record-guardian-logger
- record-guardian-log
-
-|#
-
 (declare-type-predicate record? T:record)
 
 (declare-type-predicate record-object? T:record)
@@ -4814,6 +4808,15 @@
    ((T:record)		=> (T:void)))
   (attributes
    ((_)			result-true)))
+
+(declare-core-primitive record-guardian-log
+    (safe)
+  (signatures
+   ((T:record _ T:symbol)	=> (T:void)))
+  (attributes
+   ((_ _ _)			result-true)))
+
+(declare-parameter record-guardian-logger	[or T:boolean T:procedure])
 
 
 ;;;; R6RS records, unsafe primitives
