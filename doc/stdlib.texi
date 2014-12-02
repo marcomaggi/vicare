@@ -3776,7 +3776,7 @@ file.
 
 @tindex &i/o-file-protection
 @deffn {Condition Type} {&i/o-file-protection}
-@deffnx Procedure {make-i/o-file-protection-error} @var{filename}
+@deffnx Procedure {make-i/o-file-protection-error}
 @deffnx Procedure {i/o-file-protection-error?} @var{obj}
 This condition type could be defined by:
 
@@ -4152,7 +4152,7 @@ invalid encoding.
 
 @tindex &i/o-encoding
 @deffn {Condition Type} {&i/o-encoding}
-@deffnx Procedure {make-i/o-encoding-error} @var{pobj} @var{cobj}
+@deffnx Procedure {make-i/o-encoding-error} @var{char}
 @deffnx Procedure {i/o-encoding-error?} @var{obj}
 @deffnx Procedure {i/o-encoding-error-char} @var{condition}
 This condition type could be defined by:
@@ -4166,7 +4166,7 @@ This condition type could be defined by:
 An exception with this type is raised when one of the operations for
 textual output to a port encounters a character that cannot be
 translated into bytes by the output direction of the port's transcoder.
-@var{cobj} is the character that could not be encoded.
+@var{char} is the character that could not be encoded.
 @end deffn
 
 
