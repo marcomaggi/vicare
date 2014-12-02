@@ -4602,34 +4602,34 @@
    (_			effect-free result-true)))
 
 
-;;;; R6RS records, safe primitives
+;;;; R6RS record type descriptors, safe primitives
 
-#|
- record-field-mutable?
- record-rtd
- record-type-field-names
- record-type-generative?
- record-type-name
- record-type-opaque?
- record-type-parent
- record-type-sealed?
- record-type-uid
- make-record-constructor-descriptor
- make-record-type-descriptor
+(declare-type-predicate record-type-descriptor?	T:record-type-descriptor)
 
- record-type-descriptor?
- record-destructor-set!
- record-destructor
- record-guardian-logger
- record-guardian-log
- record-reset
- record-and-rtd?
-
-|#
-
-(declare-type-predicate record? T:record)
+(declare-type-predicate record-constructor-descriptor? T:record-constructor-descriptor)
 
 ;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive make-record-type-descriptor
+    (safe)
+  (signatures
+   ;;name parent uid sealed? opaque? fields
+   ((T:symbol [or T:false T:record-type-descriptor] [or T:false T:symbol] _ _ T:vector)
+    => (T:record-type-descriptor)))
+  (attributes
+   ((_ _ _ _ _ _)		effect-free result-true)))
+
+(declare-core-primitive make-record-constructor-descriptor
+    (safe)
+  (signatures
+   ((T:record-type-descriptor [or T:false T:record-constructor-descriptor] [or T:false T:procedure])
+    => (T:record-constructor-descriptor)))
+  (attributes
+   ((_ _ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; procedures generation
 
 (declare-core-primitive record-constructor
     (safe)
@@ -4696,6 +4696,124 @@
   (attributes
    ((_ _)			effect-free result-true)
    ((_ _ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-core-primitive record-field-mutable?
+    (safe)
+  (signatures
+   ((T:record-type-descriptor T:non-negative-fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)		effect-free)))
+
+;;;
+
+(declare-core-primitive record-type-generative?
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)		=> (T:boolean)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive record-type-opaque?
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)	=> (T:boolean)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive record-type-sealed?
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)	=> (T:boolean)))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive record-type-field-names
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)	=> (T:vector)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive record-type-name
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)	=> (T:symbol)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive record-type-parent
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)	=> ([or T:false T:record-type-descriptor])))
+  (attributes
+   ((_)				effect-free)))
+
+(declare-core-primitive record-type-uid
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)	=> ([or T:false T:symbol])))
+  (attributes
+   ((_)				effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; destructor
+
+(declare-core-primitive record-destructor
+    (safe)
+  (signatures
+   ((T:record-type-descriptor)		=> ([or T:false T:procedure])))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive record-destructor-set!
+    (safe)
+  (signatures
+   ((T:record-type-descriptor T:procedure)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+
+;;;; R6RS records, safe primitives
+
+#|
+ record-guardian-logger
+ record-guardian-log
+
+|#
+
+(declare-type-predicate record? T:record)
+
+(declare-type-predicate record-object? T:record)
+
+;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-core-primitive record-and-rtd?
+    (safe)
+  (signatures
+   ((T:record T:record-type-descriptor)		=> (T:boolean)))
+  (attributes
+   ((_ _)		effect-free)))
+
+(declare-core-primitive record-rtd
+    (safe)
+  (signatures
+   ((T:record)		=> (T:record-type-descriptor)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive record-reset
+    (safe)
+  (signatures
+   ((T:record)		=> (T:void)))
+  (attributes
+   ((_)			result-true)))
 
 
 ;;;; R6RS records, unsafe primitives

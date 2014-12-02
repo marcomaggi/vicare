@@ -146,10 +146,12 @@
 	   (receive (safe? signature* attribute* replacement-prim-name*)
 	       (%parse-clauses #'?clause*)
 	     (receive-and-return (out)
-		 #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-			    (make-core-primitive-properties (quasiquote #,signature*)
-							    #,(%compose-attributes-output-form attribute*)
-							    (quote #,replacement-prim-name*)))
+		 #`(begin
+		     (set-symbol-value! (quote ?prim-name) #,(if safe? #'T:procedure #'T:object))
+		     (putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+			      (make-core-primitive-properties (quasiquote #,signature*)
+							      #,(%compose-attributes-output-form attribute*)
+							      (quote #,replacement-prim-name*))))
 	       #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
 	       (void)))))
 

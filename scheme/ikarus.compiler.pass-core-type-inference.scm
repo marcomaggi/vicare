@@ -291,10 +291,26 @@
        (values x env (%determine-prelex-type x env)))
 
       ((primref op)
-       ;;This PRIMREF is standalone, it is not the operator of a FUNCALL; so it is an
-       ;;error if it references a core primitive operation that is not also a lexical
-       ;;core primitive function.
-       (values x env T:procedure))
+       ;;A standalone reference to primitive can be:
+       ;;
+       ;;* A core primitive function only.
+       ;;
+       ;;* A core primitive function which is also a core primitive operation.
+       ;;
+       ;;* A predefined R6RS record type descriptor.
+       ;;
+       ;;* A predefined R6RS record constructor descriptor.
+       ;;
+       ;;* A predefined gensym for internal use.
+       ;;
+       ;;* Some other constant object.
+       ;;
+       ;;This PRIMREF is standalone: it is not the operator of a FUNCALL; so it is an
+       ;;internal error if it references a  core primitive operation that is not also
+       ;;a lexical core primitive function.
+       (values x env (if (symbol-bound? op)
+			 (symbol-value op)
+		       T:object)))
 
       ((seq x.e0 x.e1)
        ;;First we  do X.E0  and after we  do X.E1; this  allows type  propagation for
