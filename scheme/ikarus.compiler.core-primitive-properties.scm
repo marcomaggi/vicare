@@ -380,15 +380,13 @@
 	 T:boolean		T:char			T:symbol	T:string
 	 T:vector		T:bytevector		T:keyword
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
-	 T:eof			T:would-block
+	 T:eof			T:would-block		T:code
 
 	 T:struct-type-descriptor
 	 T:record-type-descriptor	T:record-constructor-descriptor
-	 T:struct			T:other-record
-	 T:record			T:other-struct
-	 T:enum-set			T:condition
-	 T:library			T:lexical-environment
-	 T:stats			T:time
+	 T:struct		T:other-record		T:record	T:other-struct
+	 T:enum-set		T:condition		T:library	T:lexical-environment
+	 T:stats		T:time			T:promise
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -462,6 +460,7 @@
       (T:binary-input/output-port	type)
       (T:eof				type)
       (T:would-block			type)
+      (T:code				type)
 
       (T:struct-type-descriptor		type)
       (T:record-type-descriptor		type)
@@ -476,6 +475,7 @@
       (T:lexical-environment		type)
       (T:stats				type)
       (T:time				type)
+      (T:promise			type)
 
       (T:transcoder			type)
 

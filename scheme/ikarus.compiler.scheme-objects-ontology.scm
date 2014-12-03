@@ -84,15 +84,13 @@
    T:boolean		T:char			T:symbol	T:string
    T:vector		T:bytevector		T:keyword
    T:procedure		T:transcoder		T:pointer	T:hashtable
-   T:eof		T:would-block
+   T:eof		T:would-block		T:code
 
    T:struct-type-descriptor
    T:record-type-descriptor	T:record-constructor-descriptor
-   T:struct			T:other-record
-   T:record			T:other-struct
-   T:enum-set			T:condition
-   T:library			T:lexical-environment
-   T:stats			T:time
+   T:struct		T:other-record		T:record	T:other-struct
+   T:enum-set		T:condition		T:library	T:lexical-environment
+   T:stats		T:time			T:promise
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -163,15 +161,14 @@
    T:boolean?		T:char?			T:symbol?	T:string?
    T:vector?		T:bytevector?		T:keyword?
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
-   T:eof?		T:would-block?
+   T:eof?		T:would-block?		T:code?
 
    T:struct-type-descriptor?
    T:record-type-descriptor?	T:record-constructor-descriptor?
-   T:struct?			T:other-record?
-   T:record?			T:other-struct?
-   T:enum-set?			T:condition?
-   T:library?			T:lexical-environment?
-   T:stats?			T:time?
+   T:struct?		T:other-record?
+   T:record?		T:other-struct?
+   T:enum-set?		T:condition?		T:library?	T:lexical-environment?
+   T:stats?		T:time?			T:promise?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -670,7 +667,7 @@
 				   null standalone-pair non-empty-proper-list
 				   symbol keyword string procedure vector bytevector
 				   hashtable struct eof would-block
-				   port other-object))
+				   port code other-object))
 
   (boolean		(exclusive true false))
 
@@ -711,10 +708,11 @@
   ;; T:record-constructor-descriptor - R6RS record constructor descriptor
   ;; T:enum-set			- struct instance representing an enum-set
   ;; T:time			- struct instance representing time instant
+  ;; T:promise			- struct instance representing a promise object
   ;; T:other-struct		- struct instance of some type
   (struct		(exclusive struct-type-descriptor record-type-descriptor
 				   record-constructor-descriptor record enum-set
-				   library lexical-environment time other-struct))
+				   library lexical-environment time promise other-struct))
 
   ;; T:condition                - R6RS condition object, either simple or compound
   ;; T:stats			- timing data

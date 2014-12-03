@@ -6290,7 +6290,39 @@
 
 ;;;; generic functions
 
-(declare-type-predicate procedure? T:procedure)
+(declare-core-primitive immediate?
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:true))
+   ((T:char)		=> (T:true))
+   ((T:null)		=> (T:true))
+   ((T:boolean)		=> (T:true))
+   ((T:eof)		=> (T:true))
+   ((T:void)		=> (T:true))
+   ((T:transcoder)	=> (T:true))
+
+   ((T:bignum)		=> (T:false))
+   ((T:flonum)		=> (T:false))
+   ((T:ratnum)		=> (T:false))
+   ((T:compnum)		=> (T:false))
+   ((T:cflonum)		=> (T:false))
+   ((T:pair)		=> (T:false))
+   ((T:string)		=> (T:false))
+   ((T:vector)		=> (T:false))
+   ((T:bytevector)	=> (T:false))
+   ((T:struct)		=> (T:false))
+   ((T:port)		=> (T:false))
+   ((T:symbol)		=> (T:false))
+   ((T:keyword)		=> (T:false))
+   ((T:hashtable)	=> (T:false))
+   ((T:would-block)	=> (T:false))
+
+   ((T:object)		=> (T:boolean)))
+  (attributes
+   ((_)			foldable effect-free)))
+
+(declare-type-predicate code?		T:code)
+(declare-type-predicate procedure?	T:procedure)
 
 (declare-object-binary-comparison eq?)
 (declare-object-binary-comparison neq?)
@@ -6322,12 +6354,34 @@
   (attributes
    (()				foldable effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive values
     (safe)
   (signatures
    (T:object		=> T:object))
   (attributes
    (_			effect-free)))
+
+(declare-core-primitive call-with-current-continuation
+    (safe)
+  (signatures
+   ((T:procedure)	=> T:object)))
+
+(declare-core-primitive call/cc
+    (safe)
+  (signatures
+   ((T:procedure)	=> T:object)))
+
+(declare-core-primitive call-with-values
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)	=> T:object)))
+
+(declare-core-primitive apply
+    (safe)
+  (signatures
+   ((T:procedure . _)		=> T:object)))
 
 ;;; --------------------------------------------------------------------
 
@@ -8822,6 +8876,23 @@
    (()		effect-free result-true)))
 
 
+;;;; promises, safe primitives
+
+(declare-type-predicate promise?	T:promise)
+
+(declare-core-primitive make-promise
+    (safe)
+  (signatures
+   ((T:procedure)	=> (T:promise)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive force
+    (safe)
+  (signatures
+   ((T:promise)		=> T:object)))
+
+
 ;;;; library names, safe primitives
 
 (declare-core-primitive library-name?
@@ -9865,7 +9936,48 @@
 
 #| list of core primitives to declare
 
- call/cf
+
+ list-sort
+ load
+
+ debug-print
+ debug-print-enabled?
+ debug-print*
+ pretty-print
+ pretty-print*
+ pretty-format
+ pretty-width
+
+ push-compensation
+ run-compensations
+ compensations
+ run-compensations-store
+ push-compensation-thunk
+
+;;; --------------------------------------------------------------------
+;;; environment inquiry
+
+ uname
+ utsname?
+ utsname-sysname
+ utsname-nodename
+ utsname-release
+ utsname-version
+ utsname-machine
+
+ implementation-name
+ implementation-version
+ cpu-architecture
+ machine-name
+ os-name
+ os-version
+
+ host-info
+
+;;; --------------------------------------------------------------------
+
+
+
  print-error
  assembler-output
  optimizer-output
@@ -9875,9 +9987,6 @@
  expand-library->sexp
  expand-top-level
  expand-top-level->sexp
-;;;
- code?
- immediate?
 ;;;
  apropos
  current-primitive-locations
@@ -9949,24 +10058,16 @@
  collection-avoidance-list
  purge-collection-avoidance-list
  do-stack-overflow
- make-promise
  make-traced-procedure
  make-traced-macro
  fasl-write
  fasl-read
  syntax-parameter-value
- apply
 
 
- call-with-current-continuation
- call/cc
- call-with-values
  ;;
 
- delay
- force
- promise?
- list-sort
+
  file-exists?
  directory-exists?
  delete-file
@@ -9999,17 +10100,8 @@
  syntax-object-marks
  syntax-object-ribs
  syntax-object-source-objects
- load
- void
  eval-core
  current-core-eval
- pretty-print
- pretty-print*
- debug-print
- debug-print-enabled?
- debug-print*
- pretty-format
- pretty-width
  library
 ;;;
  set-identifier-unsafe-variant!
@@ -10017,11 +10109,6 @@
  set-predicate-procedure-argument-validation!
  set-predicate-return-value-validation!
 ;;;
- push-compensation
- run-compensations
- compensations
- run-compensations-store
- push-compensation-thunk
 ;;;
  string->filename-func
  filename->string-func
@@ -10058,26 +10145,6 @@
  split-search-path-string
  vicare-argv0
  vicare-argv0-string
-
-;;; --------------------------------------------------------------------
-;;; environment inquiry
-
- uname
- utsname?
- utsname-sysname
- utsname-nodename
- utsname-release
- utsname-version
- utsname-machine
-
- implementation-name
- implementation-version
- cpu-architecture
- machine-name
- os-name
- os-version
-
- host-info
 
 ;;;
 ;;; --------------------------------------------------------------------
