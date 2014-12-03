@@ -1249,6 +1249,15 @@
    ;;unknown function.
    ((_ ())				foldable effect-free result-false)))
 
+(declare-core-primitive list-sort
+    (safe)
+  (signatures
+   ((T:procedure T:proper-list)		=> (T:proper-list)))
+  (attributes
+   ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
+   ;;unknown function.
+   ((_ _)		result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
@@ -6121,6 +6130,50 @@
   (attributes
    ((_)			foldable effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+;;; pretty printing
+
+(declare-core-primitive pretty-print
+    (safe)
+  (signatures
+   ((T:object)				=> (T:void))
+   ((T:object T:textual-output-port)	=> (T:void)))
+  (attributes
+   ((_)			result-true)
+   ((_ _)		result-true)))
+
+(declare-core-primitive pretty-print*
+    (safe)
+  (signatures
+   ((T:object T:textual-output-port T:non-negative-fixnum _)	=> (T:void)))
+  (attributes
+   ((_ _ _ _)		result-true)))
+
+(declare-parameter pretty-width		T:non-negative-exact-integer)
+
+(declare-core-primitive pretty-format
+    (safe)
+  (signatures
+   ((T:object)		=> (T:procedure)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive debug-print
+    (safe)
+  (signatures
+   (T:object		=> (T:void)))
+  (attributes
+   (_			result-true)))
+
+(declare-core-primitive debug-print*
+    (safe)
+  (signatures
+   (T:object		=> (T:void)))
+  (attributes
+   (_			result-true)))
+
+(declare-parameter debug-print-enabled?)
+
 
 ;;;; input/output, unsafe primitives
 
@@ -6288,7 +6341,7 @@
    ((T:object)		=> T:object)))
 
 
-;;;; generic functions
+;;;; generic core primitives
 
 (declare-core-primitive immediate?
     (safe)
@@ -6382,6 +6435,12 @@
     (safe)
   (signatures
    ((T:procedure . _)		=> T:object)))
+
+(declare-core-primitive load
+    (safe)
+  (signatures
+   ((T:string)			=> T:object)
+   ((T:string T:procedure)	=> T:object)))
 
 ;;; --------------------------------------------------------------------
 
@@ -9935,18 +9994,6 @@
 ;;;; done
 
 #| list of core primitives to declare
-
-
- list-sort
- load
-
- debug-print
- debug-print-enabled?
- debug-print*
- pretty-print
- pretty-print*
- pretty-format
- pretty-width
 
  push-compensation
  run-compensations
