@@ -74,7 +74,10 @@
   (define (set-stats! t)
     (foreign-call "ikrt_stats_now" t))
 
-  (define verbose-timer (make-parameter #f))
+  (define verbose-timer
+    (make-parameter #f
+      (lambda (obj)
+	(and obj #t))))
 
   (define (print-stats message t1 t0)
     (define (print-time msg msecs gc-msecs)
