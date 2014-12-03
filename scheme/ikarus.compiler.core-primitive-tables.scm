@@ -9713,6 +9713,53 @@
   (attributes
    ((_)			foldable effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive time-it
+    (safe)
+  (signatures
+   ((T:string T:procedure)	=> T:object)))
+
+(declare-core-primitive time-and-gather
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)	=> T:object)))
+
+(declare-parameter verbose-timer)
+
+;;;
+
+(declare-type-predicate stats?		T:stats)
+
+(letrec-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare ?who T:object))
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:stats)		=> (?return-value-tag)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare stats-collection-id)
+  (declare stats-user-secs	T:exact-integer)
+  (declare stats-user-usecs	T:exact-integer)
+  (declare stats-sys-secs	T:exact-integer)
+  (declare stats-sys-usecs	T:exact-integer)
+  (declare stats-real-secs	T:exact-integer)
+  (declare stats-real-usecs	T:exact-integer)
+  (declare stats-gc-user-secs	T:exact-integer)
+  (declare stats-gc-user-usecs	T:exact-integer)
+  (declare stats-gc-sys-secs	T:exact-integer)
+  (declare stats-gc-sys-usecs	T:exact-integer)
+  (declare stats-gc-real-secs	T:exact-integer)
+  (declare stats-gc-real-usecs	T:exact-integer)
+  (declare stats-bytes-minor	T:exact-integer)
+  (declare stats-bytes-major	T:exact-integer)
+  #| end of LET-SYNTAX |# )
+
 
 ;;;; done
 
@@ -9729,26 +9776,7 @@
  expand-top-level
  expand-top-level->sexp
 ;;;
- time-and-gather
- stats?
- stats-user-secs
- stats-user-usecs
- stats-sys-secs
- stats-sys-usecs
- stats-real-secs
- stats-real-usecs
- stats-collection-id
- stats-gc-user-secs
- stats-gc-user-usecs
- stats-gc-sys-secs
- stats-gc-sys-usecs
- stats-gc-real-secs
- stats-gc-real-usecs
- stats-bytes-minor
- stats-bytes-major
- time-it
- verbose-timer
-;;;
+
  current-time
  time-from-now
  time?

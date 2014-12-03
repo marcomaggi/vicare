@@ -382,11 +382,13 @@
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
 	 T:eof			T:would-block
 
-
-	 T:struct		T:struct-type-descriptor	T:other-struct
-	 T:record		T:record-type-descriptor	T:enum-set
-	 T:library		T:lexical-environment		T:record-constructor-descriptor
-	 T:condition		T:other-record
+	 T:struct-type-descriptor
+	 T:record-type-descriptor	T:record-constructor-descriptor
+	 T:struct			T:other-record
+	 T:record			T:other-struct
+	 T:enum-set			T:condition
+	 T:library			T:lexical-environment
+	 T:stats
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -461,17 +463,18 @@
       (T:eof				type)
       (T:would-block			type)
 
-      (T:struct				type)
       (T:struct-type-descriptor		type)
-      (T:other-struct			type)
-      (T:record				type)
       (T:record-type-descriptor		type)
       (T:record-constructor-descriptor	type)
+      (T:struct				type)
+      (T:other-struct			type)
+      (T:record				type)
+      (T:other-record			type)
       (T:enum-set			type)
+      (T:condition			type)
       (T:library			type)
       (T:lexical-environment		type)
-      (T:condition			type)
-      (T:other-record			type)
+      (T:stats				type)
 
       (T:transcoder			type)
 

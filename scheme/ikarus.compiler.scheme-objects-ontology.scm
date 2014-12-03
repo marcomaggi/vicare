@@ -86,10 +86,13 @@
    T:procedure		T:transcoder		T:pointer	T:hashtable
    T:eof		T:would-block
 
-   T:struct		T:struct-type-descriptor	T:other-struct
-   T:record		T:record-type-descriptor	T:enum-set
-   T:library		T:lexical-environment		T:record-constructor-descriptor
-   T:condition		T:other-record
+   T:struct-type-descriptor
+   T:record-type-descriptor	T:record-constructor-descriptor
+   T:struct			T:other-record
+   T:record			T:other-struct
+   T:enum-set			T:condition
+   T:library			T:lexical-environment
+   T:stats
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -162,10 +165,13 @@
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
    T:eof?		T:would-block?
 
-   T:struct?		T:struct-type-descriptor?	T:other-struct?
-   T:record?		T:record-type-descriptor?	T:enum-set?
-   T:library?		T:lexical-environment?		T:record-constructor-descriptor?
-   T:condition?		T:other-record?
+   T:struct-type-descriptor?
+   T:record-type-descriptor?	T:record-constructor-descriptor?
+   T:struct?			T:other-record?
+   T:record?			T:other-struct?
+   T:enum-set?			T:condition?
+   T:library?			T:lexical-environment?
+   T:stats?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -710,7 +716,8 @@
 				   library lexical-environment other-struct))
 
   ;; T:condition                - R6RS condition object, either simple or compound
-  (record		(exclusive condition other-record))
+  ;; T:stats			- timing data
+  (record		(exclusive condition stats other-record))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
