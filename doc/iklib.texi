@@ -10013,6 +10013,11 @@ to go beyond the value of @func{pretty-width}.
 @end deffn
 
 
+@defun pretty-format @var{obj}
+Still undocumented.
+@end defun
+
+
 @defun debug-print . @var{args}
 Print the given arguments on the current error port using
 @func{pretty-print}.  This is a convenience function, useful while
