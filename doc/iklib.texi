@@ -3335,7 +3335,7 @@ of the position in the source.
 @end deftp
 
 
-@defun make-source-position-condition @var{port-id} @var{character}
+@defun make-source-position-condition @var{port-id} @var{byte} @var{character} @var{line} @var{column}
 Build and return a new condition object of type
 @condition{source-position}.
 @end defun
@@ -3349,6 +3349,9 @@ Return true if @var{obj} is a condition object with type
 
 @defun source-position-port-id @var{spos}
 @defunx source-position-character @var{spos}
+@defunx source-position-byte @var{spos}
+@defunx source-position-line @var{spos}
+@defunx source-position-column @var{spos}
 Accessors for the fields of condition objects of type
 @condition{source-position}.
 @end defun
@@ -13816,5 +13819,11 @@ the thunks is catched and discarded.  To add an exit hook:
                   (exit-hooks)))
 @end example
 @end deffn
+
+
+@defun procedure-annotation @var{proc}
+Given a procedure argument return its annotation from the implementation
+code object.
+@end defun
 
 @c end of file
