@@ -806,7 +806,6 @@
     c8b-list->bytevector
     c8l-list->bytevector
     c8n-list->bytevector
-    call/cf
     calloc
     calloc*
     cbrt
