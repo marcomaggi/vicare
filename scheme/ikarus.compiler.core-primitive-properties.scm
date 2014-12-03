@@ -381,6 +381,7 @@
 	 T:vector		T:bytevector		T:keyword
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
 	 T:eof			T:would-block		T:code		T:pathname
+	 T:syntax-object	T:identifier
 
 	 T:struct-type-descriptor
 	 T:record-type-descriptor	T:record-constructor-descriptor
@@ -478,6 +479,8 @@
       (T:time				type)
       (T:promise			type)
       (T:utsname			type)
+      (T:syntax-object			type)
+      (T:identifier			type)
 
       (T:transcoder			type)
 

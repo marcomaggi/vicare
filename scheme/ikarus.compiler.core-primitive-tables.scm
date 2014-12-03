@@ -10276,6 +10276,168 @@
    (()		result-true)))
 
 
+;;;; syntax-case, safe procedures
+
+(declare-type-predicate syntax-object?	T:syntax-object)
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:syntax-object)		=> (T:object)))
+		   (attributes
+		    ((_)			effect-free))))
+		)))
+  (declare syntax-object-expression)
+  (declare syntax-object-marks)
+  (declare syntax-object-ribs)
+  (declare syntax-object-source-objects)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(declare-type-predicate identifier?	T:identifier)
+
+(declare-core-primitive identifier-bound?
+    (safe)
+  (signatures
+   ((T:identifier)	=> (T:boolean)))
+  (attributes
+   ((_)			effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive bound-identifier=?
+    (safe)
+  (signatures
+   ((T:identifier T:identifier)	=> (T:boolean)))
+  (attributes
+   ((_ _)		effect-free)))
+
+(declare-core-primitive free-identifier=?
+    (safe)
+  (signatures
+   ((T:identifier T:identifier)	=> (T:boolean)))
+  (attributes
+   ((_ _)		effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive generate-temporaries
+    (safe)
+  (signatures
+   ((T:object)		=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive datum->syntax
+    (safe)
+  (signatures
+   ((T:identifier T:object)	=> (T:syntax-object)))
+  (attributes
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive syntax->datum
+    (safe)
+  (signatures
+   ((T:object)		=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+;;; --------------------------------------------------------------------
+
+#|
+ make-variable-transformer
+ variable-transformer?
+ variable-transformer-procedure
+
+ make-synonym-transformer
+ synonym-transformer?
+ synonym-transformer-identifier
+
+ make-compile-time-value
+ compile-time-value?
+ compile-time-value-object
+
+ syntax-parameter-value
+
+ syntactic-binding-putprop
+ syntactic-binding-getprop
+ syntactic-binding-remprop
+ syntactic-binding-property-list
+|#
+
+;;; --------------------------------------------------------------------
+;;; syntax utilities
+
+#|
+ identifier->string
+ string->identifier
+ identifier-prefix
+ identifier-suffix
+ identifier-append
+ identifier-format
+ duplicate-identifiers?
+ delete-duplicate-identifiers
+ identifier-memq
+
+ identifier-record-constructor
+ identifier-record-predicate
+ identifier-record-field-accessor
+ identifier-record-field-mutator
+
+ identifier-struct-constructor
+ identifier-struct-predicate
+ identifier-struct-field-accessor
+ identifier-struct-field-mutator
+
+ syntax-car
+ syntax-cdr
+ syntax->list
+ identifiers->list
+ all-identifiers?
+
+ syntax->vector
+ syntax-unwrap
+ syntax=?
+ identifier=symbol?
+
+ syntax-clauses-unwrap
+ syntax-clauses-filter
+ syntax-clauses-remove
+ syntax-clauses-partition
+ syntax-clauses-collapse
+ syntax-clauses-verify-at-least-once
+ syntax-clauses-verify-at-most-once
+ syntax-clauses-verify-exactly-once
+ syntax-clauses-verify-mutually-inclusive
+ syntax-clauses-verify-mutually-exclusive
+|#
+
+;;; --------------------------------------------------------------------
+;;; clause specification structs
+
+#|
+ make-syntax-clause-spec
+ syntax-clause-spec?
+ syntax-clause-spec-keyword
+ syntax-clause-spec-min-number-of-occurrences
+ syntax-clause-spec-max-number-of-occurrences
+ syntax-clause-spec-min-number-of-arguments
+ syntax-clause-spec-max-number-of-arguments
+ syntax-clause-spec-mutually-inclusive
+ syntax-clause-spec-mutually-exclusive
+ syntax-clause-spec-custom-data
+ syntax-clauses-single-spec
+ syntax-clauses-fold-specs
+ syntax-clauses-validate-specs
+|#
+
+
 ;;;; debugging helpers
 
 (declare-exact-integer-unary integer->machine-word)
@@ -10439,104 +10601,17 @@
  $multiple-values-error
  $debug
  $do-event
- syntax-parameter-value
 
 ;;; --------------------------------------------------------------------
 
- bound-identifier=?
- datum->syntax
- syntax->datum
- free-identifier=?
- generate-temporaries
- identifier?
- identifier-bound?
- make-variable-transformer
- variable-transformer?
- variable-transformer-procedure
- make-synonym-transformer
- synonym-transformer?
- synonym-transformer-identifier
- make-compile-time-value
- compile-time-value?
- compile-time-value-object
- syntactic-binding-putprop
- syntactic-binding-getprop
- syntactic-binding-remprop
- syntactic-binding-property-list
- syntax-object?
- syntax-object-expression
- syntax-object-marks
- syntax-object-ribs
- syntax-object-source-objects
  eval-core
  current-core-eval
- library
+
 ;;;
  set-identifier-unsafe-variant!
 ;;;
  set-predicate-procedure-argument-validation!
  set-predicate-return-value-validation!
-
-;;; --------------------------------------------------------------------
-;;; syntax utilities
-
- identifier->string
- string->identifier
- identifier-prefix
- identifier-suffix
- identifier-append
- identifier-format
- duplicate-identifiers?
- delete-duplicate-identifiers
- identifier-memq
-
- identifier-record-constructor
- identifier-record-predicate
- identifier-record-field-accessor
- identifier-record-field-mutator
-
- identifier-struct-constructor
- identifier-struct-predicate
- identifier-struct-field-accessor
- identifier-struct-field-mutator
-
- syntax-car
- syntax-cdr
- syntax->list
- identifiers->list
- all-identifiers?
-
- syntax->vector
- syntax-unwrap
- syntax=?
- identifier=symbol?
- #;quoted-syntax-object?
-
- syntax-clauses-unwrap
- syntax-clauses-filter
- syntax-clauses-remove
- syntax-clauses-partition
- syntax-clauses-collapse
- syntax-clauses-verify-at-least-once
- syntax-clauses-verify-at-most-once
- syntax-clauses-verify-exactly-once
- syntax-clauses-verify-mutually-inclusive
- syntax-clauses-verify-mutually-exclusive
-
-    clause specification structs
- make-syntax-clause-spec
- syntax-clause-spec?
- syntax-clause-spec-keyword
- syntax-clause-spec-min-number-of-occurrences
- syntax-clause-spec-max-number-of-occurrences
- syntax-clause-spec-min-number-of-arguments
- syntax-clause-spec-max-number-of-arguments
- syntax-clause-spec-mutually-inclusive
- syntax-clause-spec-mutually-exclusive
- syntax-clause-spec-custom-data
- syntax-clauses-single-spec
- syntax-clauses-fold-specs
- syntax-clauses-validate-specs
 
 ;;; --------------------------------------------------------------------
 ;;; library infrastructure

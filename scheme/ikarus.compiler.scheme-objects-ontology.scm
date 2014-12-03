@@ -91,6 +91,7 @@
    T:struct		T:other-record		T:record	T:other-struct
    T:enum-set		T:condition		T:library	T:lexical-environment
    T:stats		T:time			T:promise	T:utsname
+   T:syntax-object	T:identifier
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -169,6 +170,7 @@
    T:record?		T:other-struct?
    T:enum-set?		T:condition?		T:library?	T:lexical-environment?
    T:stats?		T:time?			T:promise?	T:utsname?
+   T:syntax-object?	T:identifier?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -710,15 +712,18 @@
   ;; T:time			- struct instance representing time instant
   ;; T:promise			- struct instance representing a promise object
   ;; T:utsname			- struct instance
+  ;; T:syntax-object		- struct instance representing a syntax object
   ;; T:other-struct		- struct instance of some type
   (struct		(exclusive struct-type-descriptor record-type-descriptor
 				   record-constructor-descriptor record enum-set
 				   library lexical-environment time promise
-				   utsname other-struct))
+				   utsname syntax-object other-struct))
 
   ;; T:condition                - R6RS condition object, either simple or compound
   ;; T:stats			- timing data
   (record		(exclusive condition stats other-record))
+
+  (syntax-object	(exclusive identifier other-syntax-object))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
