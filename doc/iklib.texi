@@ -3260,7 +3260,7 @@ in/first out order.  If a compensation thunk raises an exception: the
 exception is catched by @func{guard} and silently discarded.
 
 This function must be called only inside the dynamic environment
-prepared by @func{with-continuations} and similar syntaxes.  It can be
+prepared by @func{with-compensations} and similar syntaxes.  It can be
 called multiple times: every time the compensation thunks are consumed
 and removed from the stack.
 @end defun
