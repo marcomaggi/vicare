@@ -6546,6 +6546,106 @@
    ((_)			result-true)))
 
 
+;;;; compensations, safe primitives
+
+(declare-core-primitive run-compensations
+    (safe)
+  (signatures
+   (()			=> (T:void)))
+  (attributes
+   (()			result-true)))
+
+(declare-core-primitive push-compensation-thunk
+    (safe)
+  (signatures
+   ((T:procedure)	=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+
+;;;; environment inquiry, safe primitives
+
+(declare-core-primitive host-info
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive uname
+    (safe)
+  (signatures
+   (()			=> (T:utsname)))
+  (attributes
+   (()			effect-free result-true)))
+
+(declare-type-predicate utsname?	T:utsname)
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:utsname)	=> (T:string)))
+		   (attributes
+		    ((_)		effect-free result-true))))
+		)))
+  (declare utsname-sysname)
+  (declare utsname-nodename)
+  (declare utsname-release)
+  (declare utsname-version)
+  (declare utsname-machine)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive implementation-name
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			foldable effect-free result-true)))
+
+(declare-core-primitive implementation-version
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   ;;Not foldable.
+   (()			effect-free result-true)))
+
+(declare-core-primitive cpu-architecture
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			effect-free result-true)))
+
+(declare-core-primitive machine-name
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			effect-free result-true)))
+
+(declare-core-primitive os-name
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			effect-free result-true)))
+
+(declare-core-primitive os-version
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			effect-free result-true)))
+
+
 ;;;; invocation and termination procedures
 
 (declare-object-retriever command-line	T:non-empty-proper-list)
@@ -9995,31 +10095,6 @@
 
 #| list of core primitives to declare
 
- push-compensation
- run-compensations
- compensations
- run-compensations-store
- push-compensation-thunk
-
-;;; --------------------------------------------------------------------
-;;; environment inquiry
-
- uname
- utsname?
- utsname-sysname
- utsname-nodename
- utsname-release
- utsname-version
- utsname-machine
-
- implementation-name
- implementation-version
- cpu-architecture
- machine-name
- os-name
- os-version
-
- host-info
 
 ;;; --------------------------------------------------------------------
 

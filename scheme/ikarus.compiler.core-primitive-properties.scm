@@ -386,7 +386,7 @@
 	 T:record-type-descriptor	T:record-constructor-descriptor
 	 T:struct		T:other-record		T:record	T:other-struct
 	 T:enum-set		T:condition		T:library	T:lexical-environment
-	 T:stats		T:time			T:promise
+	 T:stats		T:time			T:promise	T:utsname
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -476,6 +476,7 @@
       (T:stats				type)
       (T:time				type)
       (T:promise			type)
+      (T:utsname			type)
 
       (T:transcoder			type)
 
