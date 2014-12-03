@@ -5084,6 +5084,7 @@
   (declare make-i/o-read-error)
   (declare make-i/o-write-error)
   (declare make-implementation-restriction-violation)
+  (declare make-interrupted-condition)
   (declare make-lexical-violation)
   (declare make-no-infinities-violation)
   (declare make-no-nans-violation)
@@ -5201,6 +5202,14 @@
   (attributes
    ((_)			effect-free result-true)))
 
+(declare-core-primitive make-source-position-condition
+    (safe)
+  (signatures
+   ((T:string T:exact-integer T:exact-integer T:exact-integer T:exact-integer)
+    => (T:condition)))
+  (attributes
+   ((_ _ _ _ _)			effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
@@ -5233,6 +5242,7 @@
   (declare i/o-read-error?)
   (declare i/o-write-error?)
   (declare implementation-restriction-violation?)
+  (declare interrupted-condition?)
   (declare irritants-condition?)
   (declare lexical-violation?)
   (declare message-condition?)
@@ -5241,6 +5251,7 @@
   (declare non-continuable-violation?)
   (declare procedure-argument-violation?)
   (declare serious-condition?)
+  (declare source-position-condition?)
   (declare syntax-violation?)
   (declare undefined-violation?)
   (declare violation?)
@@ -5273,6 +5284,12 @@
   (declare i/o-error-position)
   (declare syntax-violation-form)
   (declare syntax-violation-subform)
+
+  (declare source-position-port-id	T:string)
+  (declare source-position-byte		T:exact-integer)
+  (declare source-position-character	T:exact-integer)
+  (declare source-position-line		T:exact-integer)
+  (declare source-position-column	T:exact-integer)
   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -6346,7 +6363,7 @@
    ((T:object)		=> T:object)))
 
 
-;;;; generic core primitives
+;;;; generic primitives
 
 (declare-core-primitive immediate?
     (safe)
@@ -6381,6 +6398,13 @@
 
 (declare-type-predicate code?		T:code)
 (declare-type-predicate procedure?	T:procedure)
+
+(declare-core-primitive procedure-annotation
+    (safe)
+  (signatures
+   ((T:procedure)	=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
 
 (declare-object-binary-comparison eq?)
 (declare-object-binary-comparison neq?)
@@ -6572,6 +6596,22 @@
   (attributes
    (()			result-true)
    ((_)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive fasl-write
+    (safe)
+  (signatures
+   ((T:object T:binary-output-port)			=> (T:void))
+   ((T:object T:binary-output-port T:proper-list)	=> (T:void)))
+  (attributes
+   ((_ _)		result-true)
+   ((_ _ _)		result-true)))
+
+(declare-core-primitive fasl-read
+    (safe)
+  (signatures
+   ((T:binary-input-port)	=> (T:object))))
 
 
 ;;;; compensations, safe primitives
@@ -10123,19 +10163,6 @@
 
 #| list of core primitives to declare
 
- interrupted-condition?
- make-interrupted-condition
-
- procedure-annotation
-
- source-position-condition?
- make-source-position-condition
- source-position-port-id
- source-position-byte
- source-position-character
- source-position-line
- source-position-column
-
  do-overflow
  do-overflow-words
  do-vararg-overflow
@@ -10152,9 +10179,6 @@
 
  make-traced-procedure
  make-traced-macro
-
- fasl-write
- fasl-read
 
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions
