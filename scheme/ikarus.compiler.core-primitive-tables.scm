@@ -5024,7 +5024,6 @@
 
 ;;;; condition objects, safe procedures
 
-;;; --------------------------------------------------------------------
 ;;; generic condition procedures
 
 (declare-type-predicate condition? T:condition)
@@ -5283,24 +5282,30 @@
 (declare-core-primitive error
     (safe)
   (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+   (([or T:false T:symbol T:string] T:string . T:object)	=> (T:void))))
 
 (declare-core-primitive assertion-violation
     (safe)
   (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+   (([or T:false T:symbol T:string] T:string . T:object)	=> (T:void))))
+
+(declare-core-primitive syntax-violation
+    (safe)
+  (signatures
+   (([or T:false T:symbol T:string] T:string T:object)		=> (T:void))
+   (([or T:false T:symbol T:string] T:string T:object T:object)	=> (T:void))))
 
 (declare-core-primitive warning
     (safe)
   (signatures
    ;;We do not know the number of returned values.
-   (([or T:false T:symbol T:string] T:string . T:object)		=> T:object)))
+   (([or T:false T:symbol T:string] T:string . T:object)	=> T:object)))
 
 ;;This is deprecated.
 (declare-core-primitive die
     (safe)
   (signatures
-   (([or T:false T:symbol T:string] T:string . T:object)		=> (T:void))))
+   (([or T:false T:symbol T:string] T:string . T:object)	=> (T:void))))
 
 (declare-core-primitive procedure-argument-violation
     (safe)
@@ -6393,6 +6398,22 @@
 
 ;;; --------------------------------------------------------------------
 
+(declare-core-primitive vicare-argv0
+    (safe)
+  (signatures
+   (()			=> (T:bytevector)))
+  (attributes
+   (()			effect-free result-true)))
+
+(declare-core-primitive vicare-argv0-string
+    (safe)
+  (signatures
+   (()			=> (T:string)))
+  (attributes
+   (()			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
 (declare-core-primitive void
     (safe)
   (signatures
@@ -6517,6 +6538,13 @@
 
 (declare-parameter waiter-prompt-string		T:string)
 (declare-parameter cafe-input-port		T:textual-input-port)
+
+(declare-core-primitive apropos
+    (safe)
+  (signatures
+   ((T:string)		=> (T:void)))
+  (attributes
+   ((_)			result-true)))
 
 ;;; --------------------------------------------------------------------
 
@@ -10095,10 +10123,78 @@
 
 #| list of core primitives to declare
 
+ interrupted-condition?
+ make-interrupted-condition
+
+ procedure-annotation
+
+ source-position-condition?
+ make-source-position-condition
+ source-position-port-id
+ source-position-byte
+ source-position-character
+ source-position-line
+ source-position-column
+
+ do-overflow
+ do-overflow-words
+ do-vararg-overflow
+ collect
+ collect-key
+ post-gc-hooks
+ register-to-avoid-collecting
+ forget-to-avoid-collecting
+ replace-to-avoid-collecting
+ retrieve-to-avoid-collecting
+ collection-avoidance-list
+ purge-collection-avoidance-list
+ do-stack-overflow
+
+ make-traced-procedure
+ make-traced-macro
+
+ fasl-write
+ fasl-read
 
 ;;; --------------------------------------------------------------------
+;;; POSIX functions
 
+ string->filename-func
+ filename->string-func
+ string->pathname-func
+ pathname->string-func
 
+ file-exists?
+ directory-exists?
+ delete-file
+
+ strerror
+ errno->string
+ getenv
+ environ
+ mkdir
+ mkdir/parents
+ real-pathname
+ file-pathname?
+ file-string-pathname?
+ file-bytevector-pathname?
+ file-absolute-pathname?
+ file-relative-pathname?
+ file-colon-search-path?
+ file-string-colon-search-path?
+ file-bytevector-colon-search-path?
+ file-modification-time
+ split-pathname-root-and-tail
+ search-file-in-environment-path
+ search-file-in-list-path
+ split-pathname
+ split-pathname-bytevector
+ split-pathname-string
+ split-search-path
+ split-search-path-bytevector
+ split-search-path-string
+
+;;; --------------------------------------------------------------------
 
  print-error
  assembler-output
@@ -10110,7 +10206,6 @@
  expand-top-level
  expand-top-level->sexp
 ;;;
- apropos
  current-primitive-locations
  boot-library-expand
  current-library-collection
@@ -10127,7 +10222,6 @@
  $code-ref
  $code-set!
  $set-code-annotation!
- procedure-annotation
  $make-annotated-procedure
  $annotated-procedure-annotation
  $cpref
@@ -10152,51 +10246,15 @@
  $unset-interrupted!
  $swap-engine-counter!
 ;;;
- interrupted-condition?
- make-interrupted-condition
- source-position-condition?
- make-source-position-condition
- source-position-port-id
- source-position-byte
- source-position-character
- source-position-line
- source-position-column
-
  $apply-nonprocedure-error-handler
  $incorrect-args-error-handler
  $multiple-values-error
  $debug
  $do-event
- do-overflow
- do-overflow-words
- do-vararg-overflow
- collect
- collect-key
- post-gc-hooks
- register-to-avoid-collecting
- forget-to-avoid-collecting
- replace-to-avoid-collecting
- retrieve-to-avoid-collecting
- collection-avoidance-list
- purge-collection-avoidance-list
- do-stack-overflow
- make-traced-procedure
- make-traced-macro
- fasl-write
- fasl-read
  syntax-parameter-value
-
-
- ;;
-
-
- file-exists?
- directory-exists?
- delete-file
 
 ;;; --------------------------------------------------------------------
 
- syntax-violation
  bound-identifier=?
  datum->syntax
  syntax->datum
@@ -10230,45 +10288,7 @@
 ;;;
  set-predicate-procedure-argument-validation!
  set-predicate-return-value-validation!
-;;;
-;;;
- string->filename-func
- filename->string-func
- string->pathname-func
- pathname->string-func
 
-;;; --------------------------------------------------------------------
-;;; POSIX functions
-
- strerror
- errno->string
- getenv
- environ
- mkdir
- mkdir/parents
- real-pathname
- file-pathname?
- file-string-pathname?
- file-bytevector-pathname?
- file-absolute-pathname?
- file-relative-pathname?
- file-colon-search-path?
- file-string-colon-search-path?
- file-bytevector-colon-search-path?
- file-modification-time
- split-pathname-root-and-tail
- search-file-in-environment-path
- search-file-in-list-path
- split-pathname
- split-pathname-bytevector
- split-pathname-string
- split-search-path
- split-search-path-bytevector
- split-search-path-string
- vicare-argv0
- vicare-argv0-string
-
-;;;
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
 
