@@ -10074,6 +10074,208 @@
   #| end of LET-SYNTAX |# )
 
 
+;;;; POSIX API, safe primitives
+
+(declare-parameter string->filename-func	T:procedure)
+(declare-parameter string->pathname-func	T:procedure)
+
+(declare-parameter filename->string-func	T:procedure)
+(declare-parameter pathname->string-func	T:procedure)
+
+;;; --------------------------------------------------------------------
+
+(declare-object-predicate file-pathname?)
+(declare-object-predicate file-string-pathname?)
+(declare-object-predicate file-bytevector-pathname?)
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:pathname)	=> (T:boolean)))
+		   (attributes
+		    ;;Not foldable.
+		    ((_)		effect-free))))
+		)))
+  (declare directory-exists?)
+  (declare file-exists?)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:pathname)	=> (T:boolean)))
+		   (attributes
+		    ((_)		foldable effect-free))))
+		)))
+  (declare file-absolute-pathname?)
+  (declare file-relative-pathname?)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?argument-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((?argument-tag)	=> (T:boolean)))
+		   (attributes
+		    ((_)		foldable effect-free))))
+		)))
+  (declare file-colon-search-path?		[or T:string T:bytevector])
+  (declare file-string-colon-search-path?	T:string)
+  (declare file-bytevector-colon-search-path?	T:bytevector)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; file operations
+
+(declare-core-primitive delete-file
+    (safe)
+  (signatures
+   ((T:pathname)	=> (T:void)))
+  (attributes
+   ((_)			result-true)))
+
+(declare-core-primitive file-modification-time
+    (safe)
+  (signatures
+   ((T:pathname)	=> (T:exact-integer)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive real-pathname
+    (safe)
+  (signatures
+   ((T:pathname)	=> (T:pathname)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive mkdir
+    (safe)
+  (signatures
+   ((T:pathname T:fixnum)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+(declare-core-primitive mkdir/parents
+    (safe)
+  (signatures
+   ((T:pathname T:fixnum)	=> (T:void)))
+  (attributes
+   ((_ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive search-file-in-environment-path
+    (safe)
+  (signatures
+   ((T:string T:string)		=> ([or T:false T:string])))
+  (attributes
+   ((_ _)			effect-free)))
+
+(declare-core-primitive search-file-in-list-path
+    (safe)
+  (signatures
+   ((T:string T:proper-list)	=> ([or T:false T:string])))
+  (attributes
+   ((_ _)			effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive split-pathname-root-and-tail
+    (safe)
+  (signatures
+   ((T:string)		=> (T:string T:string)))
+  (attributes
+   ((_ _)		effect-free)))
+
+;;;
+
+(declare-core-primitive split-pathname
+    (safe)
+  (signatures
+   ((T:pathname)	=> (T:boolean T:proper-list)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive split-pathname-bytevector
+    (safe)
+  (signatures
+   ((T:bytevector)	=> (T:boolean T:proper-list)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive split-pathname-string
+    (safe)
+  (signatures
+   ((T:string)		=> (T:boolean T:proper-list)))
+  (attributes
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive split-search-path
+    (safe)
+  (signatures
+   ((T:pathname)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive split-search-path-bytevector
+    (safe)
+  (signatures
+   ((T:bytevector)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive split-search-path-string
+    (safe)
+  (signatures
+   ((T:string)		=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+(declare-core-primitive strerror
+    (safe)
+  (signatures
+   (([or T:boolean T:fixnum])	=> (T:string)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive errno->string
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:string)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; environment
+
+(declare-core-primitive getenv
+    (safe)
+  (signatures
+   ((T:string)		=> ([or T:false T:string])))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive environ
+    (safe)
+  (signatures
+   (()		=> (T:proper-list)))
+  (attributes
+   (()		result-true)))
+
+
 ;;;; debugging helpers
 
 (declare-exact-integer-unary integer->machine-word)
@@ -10179,44 +10381,6 @@
 
  make-traced-procedure
  make-traced-macro
-
-;;; --------------------------------------------------------------------
-;;; POSIX functions
-
- string->filename-func
- filename->string-func
- string->pathname-func
- pathname->string-func
-
- file-exists?
- directory-exists?
- delete-file
-
- strerror
- errno->string
- getenv
- environ
- mkdir
- mkdir/parents
- real-pathname
- file-pathname?
- file-string-pathname?
- file-bytevector-pathname?
- file-absolute-pathname?
- file-relative-pathname?
- file-colon-search-path?
- file-string-colon-search-path?
- file-bytevector-colon-search-path?
- file-modification-time
- split-pathname-root-and-tail
- search-file-in-environment-path
- search-file-in-list-path
- split-pathname
- split-pathname-bytevector
- split-pathname-string
- split-search-path
- split-search-path-bytevector
- split-search-path-string
 
 ;;; --------------------------------------------------------------------
 

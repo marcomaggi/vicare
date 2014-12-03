@@ -380,7 +380,7 @@
 	 T:boolean		T:char			T:symbol	T:string
 	 T:vector		T:bytevector		T:keyword
 	 T:procedure		T:transcoder		T:pointer	T:hashtable
-	 T:eof			T:would-block		T:code
+	 T:eof			T:would-block		T:code		T:pathname
 
 	 T:struct-type-descriptor
 	 T:record-type-descriptor	T:record-constructor-descriptor
@@ -461,6 +461,7 @@
       (T:eof				type)
       (T:would-block			type)
       (T:code				type)
+      (T:pathname			type)
 
       (T:struct-type-descriptor		type)
       (T:record-type-descriptor		type)

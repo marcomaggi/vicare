@@ -84,7 +84,7 @@
    T:boolean		T:char			T:symbol	T:string
    T:vector		T:bytevector		T:keyword
    T:procedure		T:transcoder		T:pointer	T:hashtable
-   T:eof		T:would-block		T:code
+   T:eof		T:would-block		T:code		T:pathname
 
    T:struct-type-descriptor
    T:record-type-descriptor	T:record-constructor-descriptor
@@ -161,7 +161,7 @@
    T:boolean?		T:char?			T:symbol?	T:string?
    T:vector?		T:bytevector?		T:keyword?
    T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
-   T:eof?		T:would-block?		T:code?
+   T:eof?		T:would-block?		T:code?		T:pathname?
 
    T:struct-type-descriptor?
    T:record-type-descriptor?	T:record-constructor-descriptor?
@@ -748,6 +748,9 @@
 
 (define-underspecified-core-type T:pointer/bytevector
   (core-type-tag-ior T:pointer T:bytevector))
+
+(define-underspecified-core-type T:pathname
+  (core-type-tag-ior T:string T:bytevector))
 
 ;;; --------------------------------------------------------------------
 
