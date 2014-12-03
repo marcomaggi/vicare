@@ -8722,6 +8722,106 @@
   #| end of LET-SYNTAX |# )
 
 
+;;;; time and dates, safe functions
+
+(declare-type-predicate time?	T:time)
+
+;;; --------------------------------------------------------------------
+;;; constructors
+
+(declare-core-primitive make-time
+    (safe)
+  (signatures
+   ((T:exact-integer T:exact-integer)	=> (T:time)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive current-time
+    (safe)
+  (signatures
+   (()			=> (T:time)))
+  (attributes
+   (()			effect-free result-true)))
+
+(declare-core-primitive time-from-now
+    (safe)
+  (signatures
+   ((T:time)		=> (T:time)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors
+
+(declare-core-primitive time-second
+    (safe)
+  (signatures
+   ((T:time)		=> (T:exact-integer)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive time-nanosecond
+    (safe)
+  (signatures
+   ((T:time)		=> (T:exact-integer)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive time-gmt-offset
+    (safe)
+  (signatures
+   ((T:time)		=> (T:exact-integer)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:time T:time)	=> (T:boolean)))
+		   (attributes
+		    ((_ _)		effect-free))))
+		)))
+  (declare time=?)
+  (declare time<?)
+  (declare time>?)
+  (declare time<=?)
+  (declare time>=?)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; operations
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:time T:time)	=> (T:time)))
+		   (attributes
+		    ((_ _)		effect-free))))
+		)))
+  (declare time-addition)
+  (declare time-difference)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; miscellaneous
+
+(declare-core-primitive date-string
+    (safe)
+  (signatures
+   (()		=> (T:string)))
+  (attributes
+   (()		effect-free result-true)))
+
+
 ;;;; library names, safe primitives
 
 (declare-core-primitive library-name?
@@ -9775,23 +9875,6 @@
  expand-library->sexp
  expand-top-level
  expand-top-level->sexp
-;;;
-
- current-time
- time-from-now
- time?
- time-second
- time-nanosecond
- time-gmt-offset
- date-string
- make-time
- time-addition
- time-difference
- time=?
- time<?
- time<=?
- time>?
- time>=?
 ;;;
  code?
  immediate?

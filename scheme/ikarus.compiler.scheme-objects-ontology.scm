@@ -92,7 +92,7 @@
    T:record			T:other-struct
    T:enum-set			T:condition
    T:library			T:lexical-environment
-   T:stats
+   T:stats			T:time
 
    T:memory-block	T:pointer/memory-block		T:pointer/bytevector
 
@@ -171,7 +171,7 @@
    T:record?			T:other-struct?
    T:enum-set?			T:condition?
    T:library?			T:lexical-environment?
-   T:stats?
+   T:stats?			T:time?
 
    T:memory-block?	T:pointer/memory-block?		T:pointer/bytevector?
 
@@ -710,10 +710,11 @@
   ;; T:record-type-descriptor	- R6RS record type descriptor
   ;; T:record-constructor-descriptor - R6RS record constructor descriptor
   ;; T:enum-set			- struct instance representing an enum-set
+  ;; T:time			- struct instance representing time instant
   ;; T:other-struct		- struct instance of some type
   (struct		(exclusive struct-type-descriptor record-type-descriptor
 				   record-constructor-descriptor record enum-set
-				   library lexical-environment other-struct))
+				   library lexical-environment time other-struct))
 
   ;; T:condition                - R6RS condition object, either simple or compound
   ;; T:stats			- timing data

@@ -388,7 +388,7 @@
 	 T:record			T:other-struct
 	 T:enum-set			T:condition
 	 T:library			T:lexical-environment
-	 T:stats
+	 T:stats			T:time
 
 	 T:memory-block		T:pointer/memory-block		T:pointer/bytevector
 
@@ -475,6 +475,7 @@
       (T:library			type)
       (T:lexical-environment		type)
       (T:stats				type)
+      (T:time				type)
 
       (T:transcoder			type)
 
