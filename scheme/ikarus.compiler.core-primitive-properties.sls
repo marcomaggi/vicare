@@ -198,18 +198,11 @@
 	   (receive (safe? signature* attribute* replacement-prim-name*)
 	       (%parse-clauses #'?clause*)
 	     (receive-and-return (out)
-		 #`(begin
-		     (set-symbol-value! (quote ?prim-name)
-					(make-core-primitive-properties #,safe?
-									(quasiquote #,signature*)
-									#,(%compose-attributes-output-form attribute*)
-									(quote #,replacement-prim-name*)))
-		     ;; (putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
-		     ;; 	      (make-core-primitive-properties #,safe?
-		     ;; 					      (quasiquote #,signature*)
-		     ;; 					      #,(%compose-attributes-output-form attribute*)
-		     ;; 					      (quote #,replacement-prim-name*)))
-		     )
+		 #`(set-symbol-value! (quote ?prim-name)
+				      (make-core-primitive-properties #,safe?
+								      (quasiquote #,signature*)
+								      #,(%compose-attributes-output-form attribute*)
+								      (quote #,replacement-prim-name*)))
 	       #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
 	       (void)))))
 
@@ -11212,32 +11205,118 @@
 
 ;;;
 
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:identifier)	=> (T:identifier)))
+		   (attributes
+		    ((_)		effect-free result-true))))
+		)))
+  (declare identifier-record-constructor)
+  (declare identifier-record-predicate)
+  (declare identifier-struct-constructor)
+  (declare identifier-struct-predicate)
+  #| end of LET-SYNTAX |# )
 
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:identifier [or T:string T:symbol T:identifier])	=> (T:identifier)))
+		   (attributes
+		    ((_)		effect-free result-true))))
+		)))
+  (declare identifier-record-field-accessor)
+  (declare identifier-record-field-mutator)
+  (declare identifier-struct-field-accessor)
+  (declare identifier-struct-field-mutator)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive syntax-car
+    (safe)
+  (signatures
+   ((T:syntax-object)			=> (T:syntax-object))
+   ((T:syntax-object T:procedure)	=> (T:syntax-object)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-cdr
+    (safe)
+  (signatures
+   ((T:syntax-object)			=> (T:syntax-object))
+   ((T:syntax-object T:procedure)	=> (T:syntax-object)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax->list
+    (safe)
+  (signatures
+   ((T:syntax-object)			=> (T:proper-list))
+   ((T:syntax-object T:procedure)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax->vector
+    (safe)
+  (signatures
+   ((T:syntax-object)			=> (T:proper-list))
+   ((T:syntax-object T:procedure)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive identifiers->list
+    (safe)
+  (signatures
+   ((T:syntax-object)			=> (T:proper-list))
+   ((T:syntax-object T:procedure)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-unwrap
+    (safe)
+  (signatures
+   ((T:object)		=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive all-identifiers?
+    (safe)
+  (signatures
+   ((T:proper-list)	=> (T:boolean)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive syntax=?
+    (safe)
+  (signatures
+   ((T:object T:object)		=> (T:boolean)))
+  (attributes
+   ((_ _)		effect-free)))
+
+(declare-core-primitive identifier=symbol?
+    (safe)
+  (signatures
+   ((T:identifier T:symbol)	=> (T:boolean)))
+  (attributes
+   ((_ _)		effect-free)))
+
+;;; --------------------------------------------------------------------
 
 #|
-
-
- identifier-record-constructor
- identifier-record-predicate
- identifier-record-field-accessor
- identifier-record-field-mutator
-
- identifier-struct-constructor
- identifier-struct-predicate
- identifier-struct-field-accessor
- identifier-struct-field-mutator
-
- syntax-car
- syntax-cdr
- syntax->list
- identifiers->list
- all-identifiers?
-
- syntax->vector
- syntax-unwrap
- syntax=?
- identifier=symbol?
-
  syntax-clauses-unwrap
  syntax-clauses-filter
  syntax-clauses-remove
