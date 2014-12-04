@@ -122,6 +122,8 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.compiler.condition-types)
+    (ikarus.compiler.scheme-objects-ontology)
+    (ikarus.compiler.core-primitive-properties)
     (only (ikarus.intel-assembler)
 	  assemble-sources)
     (prefix (only (ikarus.options)
@@ -1946,12 +1948,6 @@
 		;A CONSTANT struct  representing the offset of the  machine word that
 		;must be extracted from the Scheme object referenced by OBJREF.
    ))
-
-
-;;;; let's include some preliminary modules
-
-(include "ikarus.compiler.scheme-objects-ontology.scm" #t)
-(include "ikarus.compiler.core-primitive-properties.scm" #t)
 
 
 (define* (recordize input-expr)

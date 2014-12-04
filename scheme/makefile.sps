@@ -365,6 +365,8 @@
     "ikarus.intel-assembler.sls"
     "ikarus.fasl.write.sls"
     "ikarus.fasl.read.sls"
+    "ikarus.compiler.scheme-objects-ontology.sls"
+    "ikarus.compiler.core-primitive-properties.sls"
     "ikarus.compiler.sls"
     "ikarus.library-utils.sls"
     "psyntax.compat.sls"

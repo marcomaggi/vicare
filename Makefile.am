@@ -286,8 +286,9 @@ endif
 
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
+	scheme/ikarus.compiler.scheme-objects-ontology.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.sls	\
 	scheme/ikarus.compiler.sls				\
-	scheme/ikarus.compiler.scheme-objects-ontology.scm	\
 	scheme/ikarus.compiler.scheme-objects-layout.scm	\
 	scheme/ikarus.compiler.pass-letrec-optimizer.scm	\
 	scheme/ikarus.compiler.pass-source-optimizer.scm	\
@@ -298,8 +299,6 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.pass-assign-frame-sizes.scm	\
 	scheme/ikarus.compiler.pass-color-by-chaitin.scm	\
 	scheme/ikarus.compiler.pass-flatten-codes.scm		\
-	scheme/ikarus.compiler.core-primitive-properties.scm	\
-	scheme/ikarus.compiler.core-primitive-tables.scm	\
 	scheme/ikarus.compiler.core-primitive-operations.scm	\
 	scheme/ikarus.compiler.intel-assembly.scm		\
 	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
@@ -671,6 +670,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-ikarus-symbol-table.sps				\
 	tests/test-ikarus-unicode.sps					\
 	\
+	tests/test-vicare-compiler-scheme-objects-ontology.sps		\
 	tests/test-vicare-compiler-internals.sps			\
 	tests/test-vicare-compiler-pass-source-optimiser.sps		\
 	tests/test-vicare-compiler-pass-core-type-inference.sps		\
