@@ -11413,21 +11413,68 @@
 ;;; --------------------------------------------------------------------
 ;;; clause specification structs
 
-#|
- make-syntax-clause-spec
- syntax-clause-spec?
- syntax-clause-spec-keyword
- syntax-clause-spec-min-number-of-occurrences
- syntax-clause-spec-max-number-of-occurrences
- syntax-clause-spec-min-number-of-arguments
- syntax-clause-spec-max-number-of-arguments
- syntax-clause-spec-mutually-inclusive
- syntax-clause-spec-mutually-exclusive
- syntax-clause-spec-custom-data
- syntax-clauses-single-spec
- syntax-clauses-fold-specs
- syntax-clauses-validate-specs
-|#
+(declare-core-primitive make-syntax-clause-spec
+    (safe)
+  (signatures
+   ((T:identifier T:real T:real T:real T:real T:proper-list T:proper-list)
+    => (T:object))
+   ((T:identifier T:real T:real T:real T:real T:proper-list T:proper-list T:object)
+    => (T:object)))
+  (attributes
+   ((_ _ _ _ _ _ _)			effect-free result-true)
+   ((_ _ _ _ _ _ _ _)			effect-free result-true)))
+
+(declare-core-primitive syntax-clause-spec?
+    (safe)
+  (signatures
+   ((T:object)		=> (T:boolean)))
+  (attributes
+   ((_)			effect-free)))
+
+(let-syntax
+    ((declare (syntax-rules ()
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:object)		=> (?return-value-tag)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare syntax-clause-spec-keyword			T:identifier)
+  (declare syntax-clause-spec-min-number-of-occurrences	T:real)
+  (declare syntax-clause-spec-max-number-of-occurrences	T:real)
+  (declare syntax-clause-spec-min-number-of-arguments	T:real)
+  (declare syntax-clause-spec-max-number-of-arguments	T:real)
+  (declare syntax-clause-spec-mutually-inclusive	T:proper-list)
+  (declare syntax-clause-spec-mutually-exclusive	T:proper-list)
+  (declare syntax-clause-spec-custom-data		T:object)
+  #| end of LET-SYNTAX |# )
+
+(declare-core-primitive syntax-clauses-single-spec
+    (safe)
+  (signatures
+   ((T:object T:proper-list)			=> (T:vector))
+   ((T:object T:proper-list T:procedure)	=> (T:vector)))
+  (attributes
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-clauses-fold-specs
+    (safe)
+  (signatures
+   ((T:procedure T:object T:proper-list T:proper-list)			=> (T:object))
+   ((T:procedure T:object T:proper-list T:proper-list T:procedure)	=> (T:object)))
+  (attributes
+   ((_ _ _)		effect-free)
+   ((_ _ _ _)		effect-free)))
+
+(declare-core-primitive syntax-clauses-validate-specs
+    (safe)
+  (signatures
+   ((T:proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 
 ;;;; debugging helpers
