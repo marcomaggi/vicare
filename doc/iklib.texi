@@ -4828,8 +4828,11 @@ a string error message and the optional second argument being a subform;
 
 @example
 (define-syntax (my-macro stx)
-  (define (synner message subform)
-    (syntax-violation 'my-macro message stx subform))
+  (case-define synner
+    ((message)
+     (synner message #f))
+    ((message subform)
+     (syntax-violation 'my-macro message stx subform)))
   (syntax-case stx ()
     (pattern body)
     (_
