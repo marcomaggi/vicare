@@ -11245,8 +11245,8 @@
    ((T:syntax-object)			=> (T:syntax-object))
    ((T:syntax-object T:procedure)	=> (T:syntax-object)))
   (attributes
-   ((_)			effect-free result-true)
-   ((_ _)		effect-free result-true)))
+   ((_)			result-true)
+   ((_ _)		result-true)))
 
 (declare-core-primitive syntax-cdr
     (safe)
@@ -11316,18 +11316,99 @@
 
 ;;; --------------------------------------------------------------------
 
-#|
- syntax-clauses-unwrap
- syntax-clauses-filter
- syntax-clauses-remove
- syntax-clauses-partition
- syntax-clauses-collapse
- syntax-clauses-verify-at-least-once
- syntax-clauses-verify-at-most-once
- syntax-clauses-verify-exactly-once
- syntax-clauses-verify-mutually-inclusive
- syntax-clauses-verify-mutually-exclusive
-|#
+(declare-core-primitive syntax-clauses-unwrap
+    (safe)
+  (signatures
+   ((T:object)			=> (T:proper-list))
+   ((T:object T:procedure)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-clauses-filter
+    (safe)
+  (signatures
+   ((T:proper-list T:object)	=> (T:proper-list)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-clauses-remove
+    (safe)
+  (signatures
+   ((T:proper-list T:object)	=> (T:proper-list)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive syntax-clauses-partition
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)	=> (T:proper-list T:proper-list)))
+  (attributes
+   ((_ _)		effect-free)))
+
+(declare-core-primitive syntax-clauses-collapse
+    (safe)
+  (signatures
+   ((T:proper-list)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;;
+
+(declare-core-primitive syntax-clauses-verify-at-least-once
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)		=> (T:void))
+   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
+  (attributes
+   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
+   ;;failure.
+   ((_ _)		result-true)
+   ((_ _ _)		result-true)))
+
+(declare-core-primitive syntax-clauses-verify-at-most-once
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)		=> (T:void))
+   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
+  (attributes
+   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
+   ;;failure.
+   ((_ _)		result-true)
+   ((_ _ _)		result-true)))
+
+(declare-core-primitive syntax-clauses-verify-exactly-once
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)		=> (T:void))
+   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
+  (attributes
+   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
+   ;;failure.
+   ((_ _)		result-true)
+   ((_ _ _)		result-true)))
+
+(declare-core-primitive syntax-clauses-verify-mutually-inclusive
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)		=> (T:void))
+   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
+  (attributes
+   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
+   ;;failure.
+   ((_ _)		result-true)
+   ((_ _ _)		result-true)))
+
+(declare-core-primitive syntax-clauses-verify-mutually-exclusive
+    (safe)
+  (signatures
+   ((T:proper-list T:proper-list)		=> (T:void))
+   ((T:proper-list T:proper-list T:procedure)	=> (T:void)))
+  (attributes
+   ;;Not  effect-free because  it  validates the  input and  raises  an exception  on
+   ;;failure.
+   ((_ _)		result-true)
+   ((_ _ _)		result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; clause specification structs
