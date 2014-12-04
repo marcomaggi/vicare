@@ -296,16 +296,20 @@
 
   #| end of branch |# )
  (else
-  (define* (make-core-type-tag {bits exact-integer?})
-    bits)
+  (define-syntax-rule (make-core-type-tag ?bits)
+    ?bits)
 
-  (define core-type-tag? exact-integer?)
+  (define-syntax-rule (core-type-tag? ?obj)
+    (exact-integer? ?obj))
 
   (define-syntax-rule (core-type-tag-bits ?obj)
     ?obj)
 
-  (define core-type-tag-and	bitwise-and)
-  (define core-type-tag-ior	bitwise-ior)
+  (define-syntax-rule (core-type-tag-and ?tag0 ?tag ...)
+    (bitwise-and ?tag0 ?tag ...))
+
+  (define-syntax-rule (core-type-tag-ior ?tag0 ?tag ...)
+    (bitwise-ior ?tag0 ?tag ...))
 
   #| end of ELSE|# ))
 
@@ -318,11 +322,11 @@
      (with-syntax
 	 ((PRED (identifier-suffix #'?type-name "?")))
        #'(begin
-	   (define-constant ?type-name
-	     ?instance-expr)
+	   (define-syntax ?type-name
+	     (identifier-syntax ?instance-expr))
 
-	   (define* (PRED {x core-type-tag?})
-	     (%test-bits (core-type-tag-bits x)
+	   (define-syntax-rule (PRED ??x)
+	     (%test-bits (core-type-tag-bits ??x)
 			 (core-type-tag-bits ?type-name)))
 
 	   (module ()
@@ -454,11 +458,12 @@
 	   ((((NAME PREDNAME VAL) ...)
 	     (%generate-base-cases #'T:description #'?name0 #'((?name0 ?cls0) (?name ?cls) ...))))
 	 #'(begin
-	     (define-constant NAME (make-core-type-tag VAL))
+	     (define-syntax NAME
+	       (identifier-syntax (make-core-type-tag VAL)))
 	     ...
 
-	     (define* (PREDNAME {x core-type-tag?})
-	       (%test-bits (core-type-tag-bits x) VAL))
+	     (define-syntax-rule (PREDNAME ?x)
+	       (%test-bits (core-type-tag-bits ?x) VAL))
 	     ...
 
 	     (define (T:description x)
