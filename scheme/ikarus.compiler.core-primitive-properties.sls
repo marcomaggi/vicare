@@ -370,13 +370,23 @@
     ;;
     (define-syntax-rule (%maybe-wrap ?type-spec)
       #`(unquote (core-type-tag-bits #,?type-spec)))
-    (syntax-case stx ()
+    (syntax-case stx (and or)
+      ((and ?tag0 ?tag ...)
+       (%maybe-wrap (%parse-core-object-type stx)))
+
+      ((or ?tag0 ?tag ...)
+       (%maybe-wrap (%parse-core-object-type stx)))
+
       ((?car . ?cdr)
        (cons (%maybe-wrap (%parse-core-object-type #'?car))
 	     (%parse-proper-or-improper-list-of-core-types #'?cdr)))
+
       (()  '())
-      (?rest
-       (%maybe-wrap (%parse-core-object-type #'?rest)))
+
+      (?tag
+       (identifier? #'?tag)
+       (%maybe-wrap (%parse-core-object-type stx)))
+
       (_
        (synner "invalid signatures component in core primitive declaration" stx))))
 
@@ -11031,40 +11041,181 @@
 
 ;;; --------------------------------------------------------------------
 
-#|
- make-variable-transformer
- variable-transformer?
- variable-transformer-procedure
+(declare-core-primitive make-variable-transformer
+    (safe)
+  (signatures
+   ((T:procedure)	=> (T:object)))
+  (attributes
+   ((_)			effect-free result-true)))
 
- make-synonym-transformer
- synonym-transformer?
- synonym-transformer-identifier
+(declare-object-predicate variable-transformer?)
 
- make-compile-time-value
- compile-time-value?
- compile-time-value-object
+(declare-core-primitive variable-transformer-procedure
+    (safe)
+  (signatures
+   ((T:object)		=> (T:procedure)))
+  (attributes
+   ((_)			effect-free result-true)))
 
- syntax-parameter-value
+;;;
 
- syntactic-binding-putprop
- syntactic-binding-getprop
- syntactic-binding-remprop
- syntactic-binding-property-list
-|#
+(declare-core-primitive make-synonym-transformer
+    (safe)
+  (signatures
+   ((T:identifier)	=> (T:object)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-object-predicate synonym-transformer?)
+
+(declare-core-primitive synonym-transformer-identifier
+    (safe)
+  (signatures
+   ((T:object)		=> (T:identifier)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;;
+
+(declare-core-primitive make-compile-time-value
+    (safe)
+  (signatures
+   ((T:object)		=> (T:object)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-object-predicate compile-time-value?)
+
+(declare-core-primitive compile-time-value-object
+    (safe)
+  (signatures
+   ((T:object)		=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive syntax-parameter-value
+    (safe)
+  (signatures
+   ((T:identifier)	=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+;;;
+
+(declare-core-primitive syntactic-binding-putprop
+    (safe)
+  (signatures
+   ((T:identifier T:symbol T:object)	=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+(declare-core-primitive syntactic-binding-getprop
+    (safe)
+  (signatures
+   ((T:identifier T:symbol)		=> (T:object)))
+  (attributes
+   ((_ _)		effect-free)))
+
+(declare-core-primitive syntactic-binding-remprop
+    (safe)
+  (signatures
+   ((T:identifier T:symbol)		=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+(declare-core-primitive syntactic-binding-property-list
+    (safe)
+  (signatures
+   ((T:identifier)	=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
 
+(declare-core-primitive identifier->string
+    (safe)
+  (signatures
+   ((T:identifier)	=> (T:string)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive string->identifier
+    (safe)
+  (signatures
+   ((T:identifier T:string)	=> (T:identifier)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+;;;
+
+(declare-core-primitive identifier-prefix
+    (safe)
+  (signatures
+   (([or T:string T:symbol T:identifier] T:identifier)		=> (T:identifier)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive identifier-suffix
+    (safe)
+  (signatures
+   ((T:identifier [or T:string T:symbol T:identifier])		=> (T:identifier)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive identifier-append
+    (safe)
+  (signatures
+   ((T:identifier . [or T:string T:symbol T:identifier])	=> (T:identifier)))
+  (attributes
+   ((_ . _)		effect-free result-true)))
+
+(declare-core-primitive identifier-format
+    (safe)
+  (signatures
+   ((T:identifier T:string . [or T:string T:symbol T:identifier])	=> (T:identifier)))
+  (attributes
+   ((_ _ . _)		effect-free result-true)))
+
+;;;
+
+(declare-core-primitive duplicate-identifiers?
+    (safe)
+  (signatures
+   ((T:proper-list)			=> ([or T:false T:identifier]))
+   ((T:proper-list T:procedure)		=> ([or T:false T:identifier])))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive delete-duplicate-identifiers
+    (safe)
+  (signatures
+   ((T:proper-list)			=> (T:proper-list))
+   ((T:proper-list T:procedure)		=> (T:proper-list)))
+  (attributes
+   ((_)			effect-free result-true)
+   ((_ _)		effect-free result-true)))
+
+;;;
+
+(declare-core-primitive identifier-memq
+    (safe)
+  (signatures
+   ((T:identifier T:proper-list)		=> ([or T:false T:proper-list]))
+   ((T:identifier T:proper-list T:procedure)	=> ([or T:false T:proper-list])))
+  (attributes
+   ((_ _)		effect-free result-true)
+   ((_ _ _)		effect-free result-true)))
+
+;;;
+
+
+
 #|
- identifier->string
- string->identifier
- identifier-prefix
- identifier-suffix
- identifier-append
- identifier-format
- duplicate-identifiers?
- delete-duplicate-identifiers
- identifier-memq
+
 
  identifier-record-constructor
  identifier-record-predicate
