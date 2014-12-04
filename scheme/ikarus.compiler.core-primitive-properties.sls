@@ -1612,7 +1612,7 @@
   #| end of LET-SYNTAX |# )
 
 
-;;;; booleans, sae procedures
+;;;; booleans, safe procedures
 
 (declare-type-predicate boolean?	T:boolean)
 
@@ -6019,6 +6019,99 @@
    (([or T:false T:string T:symbol] T:string . _)	=> (T:void))))
 
 
+;;;; codes and closures, unsafe primitives
+
+(declare-core-primitive $closure-code
+    (safe)
+  (signatures
+   ((T:procedure)	=> (T:code)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $cpref
+    (safe)
+  (signatures
+   ((T:procedure T:non-negative-fixnum)		=> (T:object)))
+  (attributes
+   ((_ _)		effect-free)))
+
+(declare-core-primitive $make-annotated-procedure
+    (safe)
+  (signatures
+   ((T:object T:procedure)	=> (T:procedure)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive $annotated-procedure-annotation
+    (safe)
+  (signatures
+   ((T:procedure)	=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $code->closure
+    (safe)
+  (signatures
+   ((T:code)		=> (T:procedure)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $code-reloc-vector
+    (safe)
+  (signatures
+   ((T:code)		=> (T:object)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $code-freevars
+    (safe)
+  (signatures
+   ((T:code)		=> (T:non-negative-fixnum)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+(declare-core-primitive $code-size
+    (safe)
+  (signatures
+   ((T:code)		=> (T:non-negative-exact-integer)))
+  (attributes
+   ((_)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $code-annotation
+    (safe)
+  (signatures
+   ((T:code)		=> (T:object)))
+  (attributes
+   ((_)			effect-free)))
+
+(declare-core-primitive $set-code-annotation!
+    (safe)
+  (signatures
+   ((T:code T:object)	=> (T:void)))
+  (attributes
+   ((_ _)		result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $code-ref
+    (safe)
+  (signatures
+   ((T:code T:non-negative-exact-integer)	=> (T:octet)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive $code-set!
+    (safe)
+  (signatures
+   ((T:code T:non-negative-exact-integer T:octet)	=> (T:void)))
+  (attributes
+   ((_ _ _)		result-true)))
+
+
 ;;;; input/output, safe primitives
 
 (declare-parameter current-input-port	T:textual-input-port)
@@ -7170,6 +7263,20 @@
   (signatures
    ((T:string)			=> T:object)
    ((T:string T:procedure)	=> T:object)))
+
+(declare-core-primitive make-traced-procedure
+    (safe)
+  (signatures
+   ((T:symbol T:procedure)	=> (T:procedure)))
+  (attributes
+   ((_ _)		effect-free result-true)))
+
+(declare-core-primitive make-traced-macro
+    (safe)
+  (signatures
+   ((T:symbol T:procedure)	=> (T:procedure)))
+  (attributes
+   ((_ _)		effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 
@@ -11416,9 +11523,9 @@
 (declare-core-primitive make-syntax-clause-spec
     (safe)
   (signatures
-   ((T:identifier T:real T:real T:real T:real T:proper-list T:proper-list)
+   ((T:identifier [and T:real T:non-negative] [and T:real T:non-negative] [and T:real T:non-negative] [and T:real T:non-negative] T:proper-list T:proper-list)
     => (T:object))
-   ((T:identifier T:real T:real T:real T:real T:proper-list T:proper-list T:object)
+   ((T:identifier [and T:real T:non-negative] [and T:real T:non-negative] [and T:real T:non-negative] [and T:real T:non-negative] T:proper-list T:proper-list T:object)
     => (T:object)))
   (attributes
    ((_ _ _ _ _ _ _)			effect-free result-true)
@@ -11442,10 +11549,10 @@
 		    ((_)		effect-free))))
 		)))
   (declare syntax-clause-spec-keyword			T:identifier)
-  (declare syntax-clause-spec-min-number-of-occurrences	T:real)
-  (declare syntax-clause-spec-max-number-of-occurrences	T:real)
-  (declare syntax-clause-spec-min-number-of-arguments	T:real)
-  (declare syntax-clause-spec-max-number-of-arguments	T:real)
+  (declare syntax-clause-spec-min-number-of-occurrences	[and T:real T:non-negative])
+  (declare syntax-clause-spec-max-number-of-occurrences	[and T:real T:non-negative])
+  (declare syntax-clause-spec-min-number-of-arguments	[and T:real T:non-negative])
+  (declare syntax-clause-spec-max-number-of-arguments	[and T:real T:non-negative])
   (declare syntax-clause-spec-mutually-inclusive	T:proper-list)
   (declare syntax-clause-spec-mutually-exclusive	T:proper-list)
   (declare syntax-clause-spec-custom-data		T:object)
@@ -11580,9 +11687,6 @@
  purge-collection-avoidance-list
  do-stack-overflow
 
- make-traced-procedure
- make-traced-macro
-
 ;;; --------------------------------------------------------------------
 
  print-error
@@ -11602,18 +11706,6 @@
  find-library-by-name
 
 ;;;
- $closure-code
- $code->closure
- $code-reloc-vector
- $code-freevars
- $code-size
- $code-annotation
- $code-ref
- $code-set!
- $set-code-annotation!
- $make-annotated-procedure
- $annotated-procedure-annotation
- $cpref
  $make-tcbucket
  $tcbucket-key
  $tcbucket-val
@@ -11621,7 +11713,9 @@
  $set-tcbucket-val!
  $set-tcbucket-next!
  $set-tcbucket-tconc!
+
  $arg-list
+
  $collect-key
  $$apply
  $fp-at-base
