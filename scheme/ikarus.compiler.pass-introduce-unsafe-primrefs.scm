@@ -105,7 +105,11 @@
   (module (core-primitive-name->core-type-signature*
 	   core-primitive-name->replacement*
 	   core-type-tag?
-	   core-type-tag-is-a?)
+	   core-type-tag-is-a?
+	   core-type-tag-matches-any-object?
+	   tuple-tags-arity
+	   tuple-tags-rest-objects-tag
+	   tuple-tags-ref)
     (import CORE-PRIMITIVE-PROPERTIES))
 
   (define (E-funcall rator rand*)
@@ -123,42 +127,92 @@
       ;;
       (make-funcall (make-primref prim-name) rand*))
     (parametrise ((%exception-raiser compile-time-error))
-      (cond ((null? rand*)
-	     (%no-replacement))
-	    ((%compatible-operands-for-primitive-call? prim-name rand*)
-	     (or (%find-core-primitive-replacement prim-name rand*)
+      (if (null? rand*)
+	  (%no-replacement)
+	(let ((rand*.vec (list->vector rand*)))
+	  (case (%compatible-operands-for-primitive-call? prim-name rand*.vec)
+	    ((yes)
+	     (or (%find-core-primitive-replacement prim-name rand* rand*.vec)
 		 (%no-replacement)))
-	    ((option.strict-r6rs)
-	     ;;The operands do  not match the expected arguments:  resort to run-time
-	     ;;error as mandated by R6RS.
-	     (print-compiler-warning-message "operands of invalid core type in call to core primitive: ~a"
-					     (unparse-recordized-code/sexp (%no-replacement)))
-	     (%no-replacement))
+	    ((no)
+	     (cond ((option.strict-r6rs)
+		    ;;The operands  do not  match the  expected arguments:  resort to
+		    ;;run-time error as mandated by R6RS.
+		    (print-compiler-warning-message "operands of invalid core type in call to core primitive: ~a"
+						    (unparse-recordized-code/sexp (%no-replacement)))
+		    (%no-replacement))
+		   (else
+		    ((%exception-raiser) __module_who__ __who__
+		     "operands of invalid core type in call to core primitive"
+		     (unparse-recordized-code/sexp (%no-replacement))))))
+	    ((wrong-num-args)
+	     (cond ((option.strict-r6rs)
+		    ;;The operands are  in wrong number: resort to  run-time error as
+		    ;;mandated by R6RS.
+		    (print-compiler-warning-message "wrong number of operands in call to core primitive: ~a"
+						    (unparse-recordized-code/sexp (%no-replacement)))
+		    (%no-replacement))
+		   (else
+		    (compile-time-arity-error __module_who__ __who__
+		      "wrong number of arguments in core primitive application"
+		      (unparse-recordized-code/sexp (%no-replacement))))))
 	    (else
-	     ((%exception-raiser) __module_who__ __who__
-	      "operands of invalid core type in call to core primitive"
-	      (unparse-recordized-code/sexp (%no-replacement)))))))
+	     (compiler-internal-error __module_who__ __who__ "invalid return value")))))))
 
   (define %exception-raiser
     ;;Procedure used to raise an exception when the validation or operands fails.
     (make-parameter compile-time-error))
 
-  (define (%compatible-operands-for-primitive-call? prim-name rand*)
-    ;;Validate the operands  against the types expected by the  core primitive.  If
-    ;;they are compatible: return true, otherwise return false.
+;;; --------------------------------------------------------------------
+
+  (define (%compatible-operands-for-primitive-call? prim-name rand*.vec)
+    ;;Validate the operands  against the types expected by the  core primitive.  Each
+    ;;applicable core primitive might support multiple operands signatures:
+    ;;
+    ;;*  If at  least one  signature matches  the given  operands: return  the symbol
+    ;;"yes".
+    ;;
+    ;;* If no signature matches the given  operands because the number of operands is
+    ;;wrong: return the symbol "wrong-num-args".
+    ;;
+    ;;* If no signature matches the given  operands, but at least one has the correct
+    ;;number of operand (but wrong operand types): return the symbol "no".
     ;;
     (cond ((core-primitive-name->core-type-signature* prim-name)
-	   ;;This core primitive has registered core type signatures.
 	   => (lambda (signature*)
-		;;We expect SIGNATURE* to be a list of pairs with the format:
+		;;We expect SIGNATURE* to be a list of pairs pair with the format:
 		;;
-		;;   ((?operands-tags . ?return-values-tags) ...)
+		;;   ((?operands-tuple-tags . ?return-values-tuple-tags) ...)
 		;;
-		;;in which both ?OPERANDS-TAGS  and ?RETURN-VALUES-TAGS are proper or
-		;;improper lists of CORE-TYPE-TAG values.
-		(find (lambda (signature)
-			(%compatible-type-tags-and-operands? (car signature) rand*))
-		  signature*)))
+		;;in  which both  ?OPERANDS-TUPLE-TAGS and  ?RETURN-VALUES-TUPLE-TAGS
+		;;are TUPLE-TAGS values.
+		(let loop ((signature*      signature*)
+			   ;;This is set  to false if at least one  signature has the
+			   ;;correct number of arguments.
+			   (wrong-num-args? #t))
+		  (cond ((pair? signature*)
+			 ;;Test the next signature.
+			 (case (%compatible-tuple-tags-and-operands? (caar signature*) rand*.vec)
+			   ((yes)
+			    ;;This signature does match.  Success!
+			    'yes)
+			   ((no)
+			    ;;This signature  does not match because  the operands do
+			    ;;not match the required type tags: try the next.
+			    (loop (cdr signature*) #f))
+			   ((wrong-num-args)
+			    ;;This signature  does not match because  of wrong number
+			    ;;of operands: try the next.
+			    (loop (cdr signature*) (and wrong-num-args? #t)))))
+			(wrong-num-args?
+			 ;;No more signatures to test:  no match.  All the signatures
+			 ;;failed to match because of wrong number of operands.
+			 'wrong-num-args)
+			(else
+			 ;;No more signatures to test:  no match.  All the signatures
+			 ;;failed; at least  one with correct number  of operands but
+			 ;;wrong operands types.
+			 'no)))))
 	  ;;This core primitive  has no registered core type  signatures.  Let's fake
 	  ;;successfully matching arguments.
 	  ;;
@@ -167,157 +221,184 @@
 	  ;;2014)
 	  (else
 	   #;(print-compiler-warning-message "core primitive without registered core type signature: ~a" prim-name)
-	   #t)))
+	   'yes)))
 
-  (define (%matching-operands-for-primitive-call? prim-name rand*)
-    ;;Validate the operands  against the types expected by the  core primitive.  If
-    ;;they match: return true, otherwise return false.
-    ;;
-    (cond ((core-primitive-name->core-type-signature* prim-name)
-	   => (lambda (signature*)
-		;;We expect SIGNATURE* to be a list of pairs pair with the format:
-		;;
-		;;   ((?operands-tags . ?return-values-tags) ...)
-		;;
-		;;in which both ?OPERANDS-TAGS  and ?RETURN-VALUES-TAGS are proper or
-		;;improper lists of CORE-TYPE-TAG values.
-		(find (lambda (signature)
-			(%matching-type-tags-and-operands? (car signature) rand*))
-		  signature*)))
-	  ;;This core  primitive has no  registered type signatures.  We  must assume
-	  ;;the operands do *not* match.
-	  (else #f)))
+;;; --------------------------------------------------------------------
 
-  (define (%find-core-primitive-replacement original-prim-name rand*)
-    ;;This function  should be  called if  we know  the list  of operands  in RAND*
-    ;;matches the expected argument types of the ORIGINAL-PRIM-NAME.  Scan the list
-    ;;of registered unsafe  primitives that can replace  ORIGINAL-PRIM-NAME for one
-    ;;whose  expected argument  types match  the  RAND*.  If  successful: return  a
-    ;;FUNCALL struct that must replace the original; otherwise return false.
-    ;;
-    (cond ((core-primitive-name->replacement* original-prim-name)
-	   ;;REPLACEMENT-PRIM-NAME* is a list  of symbols representing public names
-	   ;;of unsafe primitives.
-	   => (lambda (replacement-prim-name*)
-		(vector-exists
-		    (lambda (replacement-prim-name)
-		      (and (%matching-operands-for-primitive-call? replacement-prim-name rand*)
-			   (make-funcall (make-primref replacement-prim-name) rand*)))
-		  replacement-prim-name*)))
-	  ;;This primitive has no registered unsafe replacements.
-	  (else #f)))
+  (module (%find-core-primitive-replacement)
 
-  (define* (%compatible-type-tags-and-operands? tags rand*)
-    ;;Recursive function.  Validate the operands in RAND* against the core type TAGS;
-    ;;if they  are compatible: return true,  otherwise return false.  The  purpose of
-    ;;this function is to check if the  operands are *invalid* according to the KNOWN
-    ;;structs.
-    ;;
-    ;;TAGS must be a proper or improper  list of CORE-TYPE-TAG values.  RAND* must be
-    ;;a proper list of structs representing recordised code.
-    ;;
-    (cond ((pair? rand*)
-	   ;;There are further operands to be processed.
-	   (cond ((pair? tags)
-		  ;;There are further tags to be processed.
-		  (and (%compatible-type-tag-and-operand?   (car tags) (car rand*))
-		       (%compatible-type-tags-and-operands? (cdr tags) (cdr rand*))))
-		 ((null? tags)
-		  ;;We  expect  a  fixed  number of  arguments.   There  are  further
-		  ;;operands but no more tags.  The operands do *not* match the tags.
-		  (%exception-raiser compile-time-arity-error)
-		  #f)
-		 ((core-type-tag? tags)
-		  ;;We expect a variable number  of arguments; the rest operands must
-		  ;;all be complieant with the tags.
-		  (and (%compatible-type-tag-and-operand?   tags (car rand*))
-		       (%compatible-type-tags-and-operands? tags (cdr rand*))))
-		 (else
-		  (compiler-internal-error __module_who__ __who__
-		    "invalid type specification in signature of core primitive"
-		    tags))))
-	  ((pair? tags)
-	   ;;There are no more operands to  be processed, but there are further tags.
-	   ;;The operands do *not* match the tags.
-	   #f)
-	  (else
-	   ;;No more operands to be processed, no more tags to be processed.  All the
-	   ;;operands matched the type tags: total success!!!
-	   #t)))
+    (define (%find-core-primitive-replacement original-prim-name rand* rand*.vec)
+      ;;This function should be called if we know the operands in RAND*.VEC match the
+      ;;expected  argument  types  of  the  ORIGINAL-PRIM-NAME.   Scan  the  list  of
+      ;;registered  unsafe primitives  that  can replace  ORIGINAL-PRIM-NAME for  one
+      ;;whose expected argument  types strictly match the  RAND*.VEC.  If successful:
+      ;;return  a FUNCALL  struct that  must replace  the original;  otherwise return
+      ;;false.
+      ;;
+      (cond ((core-primitive-name->replacement* original-prim-name)
+	     ;;REPLACEMENT-PRIM-NAME*  is a  vector  of  symbols representing  public
+	     ;;names of unsafe primitives.
+	     => (lambda (replacement-prim-name.vec)
+		  (vector-exists
+		      (lambda (replacement-prim-name)
+			(and (%strictly-matching-operands-for-primitive-call? replacement-prim-name rand*.vec)
+			     (make-funcall (make-primref replacement-prim-name) rand*)))
+		    replacement-prim-name.vec)))
+	    ;;This primitive has no registered unsafe replacements.
+	    (else #f)))
 
-  (define* (%matching-type-tags-and-operands? tags rand*)
-    ;;Recursive function.  Validate  the operands in RAND* against the  type TAGS; if
-    ;;they match: return true, otherwise return  false.  The purpose of this function
-    ;;is to check if the operands are *valid* according to the KNOWN structs.
-    ;;
-    ;;TAGS must be a proper or improper  list of CORE-TYPE-TAG values.  RAND* must be
-    ;;a proper list of structs representing recordised code.
-    ;;
-    (cond ((pair? rand*)
-	   ;;There are further operands to be processed.
-	   (cond ((pair? tags)
-		  ;;There are further tags to be processed.
-		  (and (%matching-type-tag-and-operand?   (car tags) (car rand*))
-		       (%matching-type-tags-and-operands? (cdr tags) (cdr rand*))))
-		 ((null? tags)
-		  ;;We  expect  a  fixed  number of  arguments.   There  are  further
-		  ;;operands but no more tags.  The operands do *not* match the tags.
-		  #f)
-		 ((core-type-tag? tags)
-		  ;;We expect a variable number  of arguments; the rest operands must
-		  ;;all match the tags.
-		  (and (%matching-type-tag-and-operand?   tags (car rand*))
-		       (%matching-type-tags-and-operands? tags (cdr rand*))))
-		 (else
-		  (compiler-internal-error __module_who__ __who__
-		    "invalid type specification in signature of core primitive"
-		    tags))))
-	  ((pair? tags)
-	   ;;There are no more operands to  be processed, but there are further tags.
-	   ;;The operands do *not* match the tags.
-	   #f)
-	  (else
-	   ;;No more operands to be processed, no more tags to be processed.  All the
-	   ;;operands matched the type tags: total success!!!
-	   #t)))
+    (define (%strictly-matching-operands-for-primitive-call? prim-name rand*.vec)
+      ;;Validate the operands  against the types expected by the  core primitive.  If
+      ;;they  match: return  true, otherwise  return false.   If a  "wrong number  of
+      ;;operands" is detected: return false.
+      ;;
+      (cond ((core-primitive-name->core-type-signature* prim-name)
+	     => (lambda (signature*)
+		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
+		  ;;
+		  ;;   ((?operands-tuple-tags . ?return-values-tuple-tags) ...)
+		  ;;
+		  ;;in which both  ?OPERANDS-TUPLE-TAGS and ?RETURN-VALUES-TUPLE-TAGS
+		  ;;are TUPLE-TAGS values.
+		  (find (lambda (signature)
+			  (case (%strictly-matching-tuple-tags-and-operands? (car signature) rand*.vec)
+			    ((yes)	#t)
+			    (else	#f)))
+		    signature*)))
+	    ;;This core primitive has no  registered type signatures.  We must assume
+	    ;;the operands do *not* match.
+	    (else #f)))
 
-  (define (%compatible-type-tag-and-operand? tag rand)
-    ;;Match the core  type specification TAG against the operand  RAND.  Return false
-    ;;if it is known that RAND is not of type TAG; otherwise return true.
-    ;;
-    #;(assert (core-type-tag? tag))
-    (struct-case rand
-      ((known _ type)
-       (case (core-type-tag-is-a? type tag)
-	 ;;Operand's type matches the expected argument's type.
-	 ((yes) #t)
-	 ;;Operand's type does *not* match the expected argument's type.
-	 ((no)
-	  (%exception-raiser compile-time-operand-core-type-error)
-	  #f)
-	 ;;Operand's type maybe  matches the expected argument's type,  maybe not: it
-	 ;;is compatible.
-	 (else  #t)))
-      ;;Operand of unknown type: let's handle it as compatible.
-      (else #t)))
+    #| end of module: %FIND-CORE-PRIMITIVE-REPLACEMENT |# )
 
-  (define (%matching-type-tag-and-operand? tag rand)
-    ;;Match the core type  specification TAG to the operand RAND.   Return true if it
-    ;;is known that RAND is of type TAG; otherwise return false.
-    ;;
-    #;(assert (core-type-tag? tag))
-    (struct-case rand
-      ((known _ type)
-       (case (core-type-tag-is-a? type tag)
-	 ;;Operand's type matches the expected argument's type.
-	 ((yes) #t)
-	 ;;Operand's type does *not* match the expected argument's type.
-	 ((no)  #f)
-	 ;;Operand's  type maybe  matches the  expected argument's  type, maybe  not:
-	 ;;let's handle it as *not* matching.
-	 (else  #f)))
-      ;;Operand of unknown type: let's handle it as *not* matching.
-      (else #f)))
+;;; --------------------------------------------------------------------
+
+  (module (%compatible-tuple-tags-and-operands?
+	   %strictly-matching-tuple-tags-and-operands?)
+
+    (define* (%compatible-tuple-tags-and-operands? tags rand*.vec)
+      ;;The  purpose of  this function  is to  detect if  the operands  are *invalid*
+      ;;according to the KNOWN structs.  TAGS  must be a TUPLE-TAGS value.  RAND*.VEC
+      ;;must be a vector of structs representing recordised code.
+      ;;
+      ;;Validate the operands in RAND*.VEC against the core type tags in TAGS:
+      ;;
+      ;;* If the operands are compatible: return the symbol "yes".
+      ;;
+      ;;* If the operands have wrong type: return the symbol "no".
+      ;;
+      ;;* If the operands are in wrong number: return the symbol "wrong-num-args".
+      ;;
+      (%match-tuple-tags-and-operands tags rand*.vec %compatible-type-tag-and-operand?))
+
+    (define* (%strictly-matching-tuple-tags-and-operands? tags rand*.vec)
+      ;;The  purpose  of this  function  is  to check  if  the  operands are  *valid*
+      ;;according to the KNOWN structs.  TAGS  must be a TUPLE-TAGS value.  RAND*.VEC
+      ;;must be a vector of structs representing recordised code.
+      ;;
+      ;;Validate the operands in RAND*.VEC against the type tags in TAGS:
+      ;;
+      ;;* If the operands strictly match: return the symbol "yes".
+      ;;
+      ;;* If the operands have wrong type: return the symbol "no".
+      ;;
+      ;;* If the operands have compatible types, but not exclusively matching: return
+      ;;the symbol "no".
+      ;;
+      ;;* If the operands are in wrong number: return the symbol "wrong-num-args".
+      ;;
+      (%match-tuple-tags-and-operands tags rand*.vec %strictly-matching-type-tag-and-operand?))
+
+    (define* (%match-tuple-tags-and-operands tags rand*.vec matching?)
+      ;;Validate the  operands in RAND*.VEC against  the type tags in  TAGS using the
+      ;;matching procedure  MATCHING?.  TAGS must  be a TUPLE-TAGS  value.  RAND*.VEC
+      ;;must be a vector of structs representing recordised code.
+      ;;
+      ;;If the  operands match according to  MATCHING?: return the symbol  "yes".  If
+      ;;the operands do  not match: return the  symbol "no".  If the  operands are in
+      ;;wrong number: return the symbol "wrong-num-args".
+      ;;
+      (import (only (vicare system $vectors) $vector-ref))
+      (let ((number-of-mandatory-operands (tuple-tags-arity tags))
+	    (number-of-given-operands     (vector-length rand*.vec)))
+	(define (%check-mandatory-operands i)
+	  (cond ((fx=? i number-of-mandatory-operands)
+		 'yes)
+		((matching? (tuple-tags-ref tags i) ($vector-ref rand*.vec i))
+		 (%check-mandatory-operands (fxadd1 i)))
+		(else 'no)))
+	(define (%check-rest-operands i rest-tag)
+	  (cond ((fx=? i number-of-given-operands)
+		 'yes)
+		((matching? rest-tag ($vector-ref rand*.vec i))
+		 (%check-rest-operands (fxadd1 i) rest-tag))
+		(else 'no)))
+	(cond ((tuple-tags-rest-objects-tag tags)
+	       ;;If  we  are here:  the  TUPLE-TAGS  represents  a tuple  of  objects
+	       ;;matching any  number of operands; the  tag of the "rest"  operand is
+	       ;;REST-TAG.
+	       => (lambda (rest-tag)
+		    (cond ((fx=? number-of-mandatory-operands number-of-given-operands)
+			   (%check-mandatory-operands 0))
+			  ((fx<? number-of-mandatory-operands number-of-given-operands)
+			   (if (eq? 'yes (%check-mandatory-operands 0))
+			       ;;If  the REST-TAG  is "T:object":  the rest  operands
+			       ;;always match, so there is no need to iterate them.
+			       (if (core-type-tag-matches-any-object? rest-tag)
+				   'yes
+				 (%check-rest-operands number-of-mandatory-operands rest-tag))
+			     'no))
+			  (else
+			   ;;The number  of given operands  is less than  the minimum
+			   ;;number of required operands.
+			   #;(assert (fx>? number-of-mandatory-operands number-of-given-operands))
+			   'wrong-num-args))))
+	      (else
+	       ;;If  we a  re  here: the  TUPLE-TAGS represents  a  tuple of  objects
+	       ;;matching a fixed, mandatory, number of operands.
+	       (if (fx=? number-of-mandatory-operands number-of-given-operands)
+		   (%check-mandatory-operands 0)
+		 'wrong-num-args)))))
+
+    (define (%compatible-type-tag-and-operand? tag rand)
+      ;;Match the core type specification TAG against the operand RAND.  Return false
+      ;;if it is known that RAND is not of type TAG; otherwise return true.
+      ;;
+      #;(assert (core-type-tag? tag))
+      (struct-case rand
+	((known _ type)
+	 (case (core-type-tag-is-a? type tag)
+	   ;;Operand's type matches the expected argument's type.
+	   ((yes) #t)
+	   ;;Operand's type does *not* match the expected argument's type.
+	   ((no)
+	    (%exception-raiser compile-time-operand-core-type-error)
+	    #f)
+	   ;;Operand's type maybe matches the expected argument's type, maybe not: it
+	   ;;is compatible.
+	   (else  #t)))
+	;;Operand of unknown type: let's handle it as compatible.
+	(else #t)))
+
+    (define (%strictly-matching-type-tag-and-operand? tag rand)
+      ;;Match the core type specification TAG  against the operand RAND.  Return true
+      ;;if it is known that RAND is of type TAG; otherwise return false.
+      ;;
+      #;(assert (core-type-tag? tag))
+      (struct-case rand
+	((known _ type)
+	 (case (core-type-tag-is-a? type tag)
+	   ;;Operand's type matches the expected argument's type.
+	   ((yes) #t)
+	   ;;Operand's type does *not* match the expected argument's type.
+	   ((no)  #f)
+	   ;;Operand's type  maybe matches the  expected argument's type,  maybe not:
+	   ;;let's handle it as *not* matching.
+	   (else  #f)))
+	;;Operand of unknown type: let's handle it as *not* matching.
+	(else #f)))
+
+    #| end of module |# )
 
   #| end of module: E-funcall |# )
 

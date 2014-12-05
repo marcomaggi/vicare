@@ -23,11 +23,11 @@
 
 (module SCHEME-OBJECTS-ONTOLOGY
   (core-type-tag?
-		;Return  true  if the  single  argument  is a  CORE-TYPE-TAG  record,
+		;Return  true  if  the  single argument  is  a  CORE-TYPE-TAG  value,
 		;otherwise return false.
 
    core-type-tag-description
-		;Given an  instance of record  type CORE-TYPE-TAG: convert it  into a
+		;Given  an  instance  of  type   CORE-TYPE-TAG:  convert  it  into  a
 		;descriptive and human readable list of symbols representing the type
 		;bits that are set in X.
 
@@ -36,22 +36,26 @@
 		;the type.
 
    core-type-tag=?
-		;Given two  instances of  record type  CORE-TYPE-TAG: return  true if
-		;they have exactly the same bits, otherwise return false.
+		;Given  two instances  of  CORE-TYPE-TAG: return  true  if they  have
+		;exactly the same bits, otherwise return false.
+
+   core-type-tag-matches-any-object?
+		;Given an instance of CORE-TYPE-TAG:  return true if it is equivalent
+		;to "T:object".
 
    core-type-tag-and
-		;Given two instances of record type CORE-TYPE-TAG: combine their bits
-		;with  a  bitwise   AND  operation  and  return  a   record  of  type
-		;CORE-TYPE-TAG holding the result.
+		;Given  two instances  of CORE-TYPE-TAG:  combine their  bits with  a
+		;bitwise  AND operation  and  return a  value  of type  CORE-TYPE-TAG
+		;holding the result.
 
    core-type-tag-ior
-		;Given two instances of record type CORE-TYPE-TAG: combine their bits
-		;with  a   bitwise  OR  operation   and  return  a  record   of  type
-		;CORE-TYPE-TAG holding the result.
+		;Given  two instances  of CORE-TYPE-TAG:  combine their  bits with  a
+		;bitwise  OR  operation and  return  a  value of  type  CORE-TYPE-TAG
+		;holding the result.
 
    make-core-type-tag-predicate
-		;Given an instance  of record type CORE-TYPE-TAG:  return a predicate
-		;function which can be used to test other instances.  Example:
+		;Given  an instance  of  CORE-TYPE-TAG: return  a predicate  function
+		;which can be used to test other instances.  Example:
 		;
 		;   (define p (make-core-type-tag-predicate T:exact-integer))
 		;   (p T:fixnum)	=> yes
@@ -60,8 +64,8 @@
 		;
 
    core-type-tag-is-a?
-		;Given 2  instances of record  type CORE-TYPE-TAG: perform  core type
-		;tag inclusion test.  Examples:
+		;Given 2 instances of CORE-TYPE-TAG:  perform core type tag inclusion
+		;test.  Examples:
 		;
 		;   ;; "T:fixnum" is a "T:number" ?
 		;   (core-type-tag-is-a? T:fixnum T:number)	=> yes
@@ -74,14 +78,14 @@
 		;
 
    determine-constant-core-type
-		;Given  a  Scheme  object:  return a  record  of  type  CORE-TYPE-TAG
+		;Given  a  Scheme  object:  return  a  value  of  type  CORE-TYPE-TAG
 		;representing its core type.
 
    name->core-type-tag
 		;Given a  symbol representing  the name  of a  core type:  return the
 		;associated CORE-TYPE-TAG value.  Otherwise raise an exception.
 
-   ;;Records  of type  CORE-TYPE-TAG representing  predefined type  descriptions.  By
+   ;;Values  of type  CORE-TYPE-TAG  representing predefined  type descriptions.   By
    ;;themselves they  represent valid type tags;  they are also used  as arguments to
    ;;CORE-TYPE-TAG-AND and CORE-TYPE-TAG-IOR to compose more informative type tags.
    ;;
@@ -136,22 +140,22 @@
 
    T:pointer/false	T:string/false		T:number/false		T:fixnum/false
 
-   ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
+   ;;Type validators; applied to a value of type CORE-TYPE-TAG return the symbol:
    ;;
    ;;yes -
-   ;;   If the type of the record is a subset of the predefined type.  Examples:
+   ;;   If the type of the value is a subset of the predefined type.  Examples:
    ;;
    ;;      (T:number? T:fixnum)		=> yes
    ;;      (T:number? T:exact)		=> yes
    ;;
    ;;no -
-   ;;   If the type of the record it not a subset of the predefined type.  Examples:
+   ;;   If the type of the value it not a subset of the predefined type.  Examples:
    ;;
    ;;      (T:number? T:string)		=> no
    ;;      (T:number? T:exact)		=> no
    ;;
    ;;maybe -
-   ;;   If some the bits in the record are equal to the bits in the predefined type.
+   ;;   If some the bits in the value are equal to the bits in the predefined type.
    ;;
    ;;      (T:exact? T:number)		=> maybe
    ;;
@@ -312,6 +316,9 @@
 (define* (core-type-tag=? {x core-type-tag?} {y core-type-tag?})
   (= (core-type-tag-bits x) (core-type-tag-bits y)))
 
+(define (core-type-tag-matches-any-object? tag)
+  (core-type-tag=? tag T:object))
+
 ;;; --------------------------------------------------------------------
 
 (define* (make-core-type-tag-predicate {y core-type-tag?})
@@ -433,7 +440,7 @@
 	     ...
 
 	     (define (T:description x)
-	       ;;Convert X,  a record of type  CORE-TYPE-TAG, into a list  of symbols
+	       ;;Convert X,  a value of  type CORE-TYPE-TAG,  into a list  of symbols
 	       ;;representing the type bits that are set in X.
 	       ;;
 	       (let* ((ls '())

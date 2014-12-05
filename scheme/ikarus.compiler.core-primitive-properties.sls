@@ -47,6 +47,10 @@
    core-primitive-name->replacement*
    core-type-tag?
    core-type-tag-is-a?
+   core-type-tag-matches-any-object?
+   tuple-tags-arity
+   tuple-tags-rest-objects-tag
+   tuple-tags-ref
    application-attributes-operands-template
    application-attributes-foldable?
    application-attributes-effect-free?
@@ -56,11 +60,11 @@
    CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
   (import SCHEME-OBJECTS-ONTOLOGY
     (only (vicare system $fx)
-	  $fxzero? $fxlogand)
+	  $fxzero? $fxlogand $fxsub1)
     (only (vicare system $pairs)
 	  $car $cdr)
     (only (vicare system $vectors)
-	  $vector-ref))
+	  $vector-length $vector-ref))
 
 
 ;;;; properties from core primitive public names
@@ -69,8 +73,15 @@
   ;;Given a symbol  representing the name of a core  primitive: return the associated
   ;;CORE-TYPE-TAG value.  As default return "T:object".
   ;;
+  ;;At present, given a  symbol representing the public name of  a core primitive, we
+  ;;need to distinguish between:
+  ;;
+  ;;1. Core primitive procedures and core primitive operations.
+  ;;
+  ;;2. Core primitive non-procedures and non-operations.
+  ;;
   (if (and (symbol-bound? prim-name)
-	   (core-primitive-properties? (symbol-value prim-name)))
+	   (applicable-core-primitive-properties? (symbol-value prim-name)))
       T:procedure
     T:object))
 
@@ -80,21 +91,21 @@
   ;;name.
   ;;
   (and (symbol-bound? prim-name)
-       (core-primitive-properties-application-attributes* (symbol-value prim-name))))
+       (applicable-core-primitive-properties-application-attributes* (symbol-value prim-name))))
 
 (define (core-primitive-name->core-type-signature* prim-name)
   ;;Return  the SIGNATURE*  list of  the core  primitive PRIM-NAME;  return false  if
   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
   ;;
   (and (symbol-bound? prim-name)
-       (core-primitive-properties-core-type-signature* (symbol-value prim-name))))
+       (applicable-core-primitive-properties-core-type-signature* (symbol-value prim-name))))
 
 (define (core-primitive-name->replacement* prim-name)
   ;;Return the  REPLACEMENT* list of  the core  primitive PRIM-NAME; return  false if
   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
   ;;
   (and (symbol-bound? prim-name)
-       (core-primitive-properties-replacement* (symbol-value prim-name))))
+       (applicable-core-primitive-properties-replacement* (symbol-value prim-name))))
 
 ;;; --------------------------------------------------------------------
 
@@ -103,7 +114,7 @@
 ;;2014)
 
 ;; (define-constant CORE-PRIMITIVE-PROPKEY
-;;   (compile-time-gensym "core-primitive-properties"))
+;;   (compile-time-gensym "applicable-core-primitive-properties"))
 
 ;; (define* (core-primitive-name->application-attributes* {prim-name symbol?})
 ;;   ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return
@@ -111,7 +122,7 @@
 ;;   ;;name.
 ;;   ;;
 ;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-;;   	   => core-primitive-properties-application-attributes*)
+;;   	   => applicable-core-primitive-properties-application-attributes*)
 ;;   	  (else #f)))
 
 ;; (define* (core-primitive-name->core-type-signature* {prim-name symbol?})
@@ -119,7 +130,7 @@
 ;;   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
 ;;   ;;
 ;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-;;   	   => core-primitive-properties-core-type-signature*)
+;;   	   => applicable-core-primitive-properties-core-type-signature*)
 ;;   	  (else #f)))
 
 ;; (define* (core-primitive-name->replacement* {prim-name symbol?})
@@ -127,7 +138,7 @@
 ;;   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
 ;;   ;;
 ;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-;;   	   => core-primitive-properties-replacement*)
+;;   	   => applicable-core-primitive-properties-replacement*)
 ;;   	  (else #f)))
 
 
@@ -136,7 +147,7 @@
 ;;It  would be  really neat  to use  proper type  definitions to  represent the  core
 ;;primitive properties, for example:
 ;;
-;;   (define-struct core-primitive-properties
+;;   (define-struct applicable-core-primitive-properties
 ;;     (safe? core-type-signature* application-attributes* replacement*))
 ;;
 ;;But initialisation  speed, usage speed  and memory consumption are  also important,
@@ -149,18 +160,20 @@
 ;;(Marco Maggi; Fri Dec 5, 2014)
 ;;
 
-(define-syntax-rule (make-core-primitive-properties safe? core-type-signature* application-attributes* replacement*)
+(define-syntax-rule (make-applicable-core-primitive-properties safe? core-type-signature* application-attributes* replacement*)
   (vector safe? core-type-signature* application-attributes* replacement*))
 
-(define-syntax-rule (core-primitive-properties? ?obj)
+(define-syntax-rule (applicable-core-primitive-properties? ?obj)
+  ;;This is quite weak: it can easily return wrong results.
+  ;;
   (vector? ?obj))
 
-(define-syntax-rule (core-primitive-properties-safe? ?cpp)
+(define-syntax-rule (applicable-core-primitive-properties-safe? ?cpp)
   ;;Boolean.  True if this core primitive is safe.
   ;;
   ($vector-ref ?cpp 0))
 
-(define-syntax-rule (core-primitive-properties-core-type-signature* ?cpp)
+(define-syntax-rule (applicable-core-primitive-properties-core-type-signature* ?cpp)
   ;;A list of pairs with the format:
   ;;
   ;;   ((?operands-tags . ?return-values-tags) ...)
@@ -171,7 +184,7 @@
   ;;
   ($vector-ref ?cpp 1))
 
-(define-syntax-rule (core-primitive-properties-application-attributes* ?cpp)
+(define-syntax-rule (applicable-core-primitive-properties-application-attributes* ?cpp)
   ;;A proper list:
   ;;
   ;;   (?application-attributes ...)
@@ -180,11 +193,75 @@
   ;;
   ($vector-ref ?cpp 2))
 
-(define-syntax-rule (core-primitive-properties-replacement* ?cpp)
+(define-syntax-rule (applicable-core-primitive-properties-replacement* ?cpp)
   ;;List of  symbols representing public  names of  core primitives that  can replace
   ;;this one if the operands are of the correct type.
   ;;
   ($vector-ref ?cpp 3))
+
+
+;;;; tuple tags
+;;
+;;A "tuple-tags" value represents the core type tags signature of a tuple of objects;
+;;it is used to represent:
+;;
+;;*  The core  type  tags of  operands  in  a core  primitive  function or  operation
+;;application.
+;;
+;;* The core type  tags of return values resulting from a  core primitive function or
+;;operation application.
+;;
+;;Examples of TUPLE-TAGS values for operands:
+;;
+;;(fx+ ?fx1 ?fx2) --> `#(#f ,T:fixnum ,T:fixnum)
+;;
+;;   The core primitive FX+ accepts 2 mandatory arguments and no optional arguments.
+;;
+;;(+ ?number ...) --> `#(,T:number)
+;;
+;;   The core  primitive + accepts 0  mandatory arguments and any  number of optional
+;;   arguments.
+;;
+;;(- ?number0 ?number ...) --> `#(,T:number ,T:number)
+;;
+;;   The core  primitive - accepts  1 mandatory argument  and any number  of optional
+;;   arguments.
+;;
+;;A TUPLE-TAGS value is a Scheme vector with the format:
+;;
+;;   #(?rest-objects-tags ?mandatory-object-tag ...)
+;;
+;;the standard LAMBDA formals:
+;;
+;;   (?mandatory-arg ...)
+;;   (?mandatory-arg ... . ?rest-arg)
+;;   ?args
+;;
+;;are represented as:
+;;
+;;   #(#f ?mandatory-arg-tag ...)
+;;   #(?rest-arg-tag ?mandatory-arg-tag ...)
+;;   #(?args-tag)
+;;
+
+(define-syntax-rule (tuple-tags-arity ?tags)
+  ;;Given a TUPLE-TAGS value: return the  number of mandatory objects needed to match
+  ;;it.
+  ;;
+  ($fxsub1 ($vector-length ?tags)))
+
+(define-syntax-rule (tuple-tags-rest-objects-tag ?tags)
+  ;;Given a TUPLE-TAGS value:
+  ;;
+  ;;*  If the  tuple matches  any number  of objects:  return a  core type  tag value
+  ;;representing the type of the objects.
+  ;;
+  ;;* If the tuple matches a fixed number of objects: return false.
+  ;;
+  ($vector-ref ?tags 0))
+
+(define-syntax-rule (tuple-tags-ref ?tags ?index)
+  ($vector-ref ?tags (fxadd1 ?index)))
 
 
 ;;;; core primitive application attributes
@@ -258,13 +335,21 @@
        (let ((prim-name (%parse-prim-name #'?prim-name)))
 	 (receive (safe? signature* attribute* replacement-prim-name*)
 	     (%parse-clauses #'?clause*)
+	   ;; (debug-print
+	   ;;  (syntax->datum #`(set-symbol-value! (quote ?prim-name)
+	   ;; 					(make-applicable-core-primitive-properties
+	   ;; 					 #,safe?
+	   ;; 					 (quasiquote #,signature*)
+	   ;; 					 (quote #,attribute*)
+	   ;; 					 (quote #,(list->vector replacement-prim-name*))))))
 	   #`(set-symbol-value! (quote ?prim-name)
-				(make-core-primitive-properties #,safe?
-								(quasiquote #,signature*)
-								(quote #,attribute*)
-								(quote #,(list->vector replacement-prim-name*)))))))
+				(make-applicable-core-primitive-properties
+				 #,safe?
+				 (quasiquote #,signature*)
+				 (quote #,attribute*)
+				 (quote #,(list->vector replacement-prim-name*)))))))
       (_
-       (synner "invalid syntax in core primitive declaration"))))
+       (synner "invalid syntax in applicable core primitive declaration"))))
 
 ;;; --------------------------------------------------------------------
 ;;; input form parsers
@@ -272,7 +357,7 @@
   (define (%parse-prim-name stx)
     (if (identifier? stx)
 	stx
-      (synner "expected identifier as core primitive name" stx)))
+      (synner "expected identifier as applicable core primitive name" stx)))
 
   (module (%parse-clauses)
 
@@ -370,13 +455,13 @@
     ;;This function parses the SIGNATURES form, raising a "&syntax" exception in case
     ;;of error, and returns a syntax object representing a proper list of pairs:
     ;;
-    ;;   ((?operands-types . ?return-values-types) ...)
+    ;;   ((?operands-tuple-tags . ?return-values-tuple-tags) ...)
     ;;
     ;;which is meant  to be wrapped into a QUASIQUOTE;  internal unquoted expressions
     ;;will evaluate to  an exact integer representing the naked  bits defining a core
     ;;type specification.
     ;;
-    ;;the returned object has "T:object" in place of the wildcard "_".
+    ;;The returned object has "T:object" in place of the wildcard "_".
     ;;
     ;;NOTE The order of  the returned signatures is *the* *same*  order in which they
     ;;appear in the input form!
@@ -397,31 +482,51 @@
        (%syntax-error))))
 
   (define (%parse-proper-or-improper-list-of-core-types stx)
-    ;;Non-tail recursive  function.  Parse a  proper or  improper list of  logic type
-    ;;expressions representing  the types of  arguments or  return values for  a core
-    ;;primitive.
+    ;;Parse a  proper or  improper list  of logic  type expressions  representing the
+    ;;types of  arguments or  return values  for a core  primitive.  Return  a syntax
+    ;;object representing an expression that will evaluate to a TUPLE-TAGS value; the
+    ;;expression needs to be wrapped into a QUASIQUOTE form.
     ;;
-    (define-syntax-rule (%maybe-wrap ?type-spec)
+    (define-syntax-rule (%wrap ?type-spec)
       #`(unquote (core-type-tag-bits #,?type-spec)))
-    (syntax-case stx (and or)
-      ((and ?tag0 ?tag ...)
-       (%maybe-wrap (%parse-core-object-type stx)))
+    (let loop ((stx   stx)
+	       (spec* '()))
+      (syntax-case stx (and or)
+	((and ?tag0 ?tag ...)
+	 ;;It is an improper list having one of the formats:
+	 ;;
+	 ;;   (?item0 ?item ... . (and ?tag0 ?tag ...))
+	 ;;   (and ?tag0 ?tag ...)
+	 ;;
+	 #`#(#,(%wrap (%parse-core-object-type stx)) #,@(reverse spec*)))
 
-      ((or ?tag0 ?tag ...)
-       (%maybe-wrap (%parse-core-object-type stx)))
+	((or ?tag0 ?tag ...)
+	 ;;It is an improper list having one of the formats:
+	 ;;
+	 ;;   (?item0 ?item ... . (or ?tag0 ?tag ...))
+	 ;;   (or ?tag0 ?tag ...)
+	 ;;
+	 #`#(#,(%wrap (%parse-core-object-type stx)) #,@(reverse spec*)))
 
-      ((?car . ?cdr)
-       (cons (%maybe-wrap (%parse-core-object-type #'?car))
-	     (%parse-proper-or-improper-list-of-core-types #'?cdr)))
+	((?car . ?cdr)
+	 ;;The list is not finished yet.
+	 (loop #'?cdr (cons (%wrap (%parse-core-object-type #'?car)) spec*)))
 
-      (()  '())
+	(()
+	 ;;It is a proper list.
+	 #`#(#f #,@(reverse spec*)))
 
-      (?tag
-       (identifier? #'?tag)
-       (%maybe-wrap (%parse-core-object-type stx)))
+	(?tag
+	 (identifier? #'?tag)
+	 ;;It is an improper list having one of the formats:
+	 ;;
+	 ;;   (?item0 ?item ... . ?tag)
+	 ;;   ?tag
+	 ;;
+	 #`#(#,(%wrap (%parse-core-object-type stx)) #,@(reverse spec*)))
 
-      (_
-       (synner "invalid signatures component in core primitive declaration" stx))))
+	(_
+	 (synner "invalid signatures component in core primitive declaration" stx)))))
 
   (define (%parse-core-object-type type)
     ;;We accept a  core type identifier and  return it; "T:object" and  "_" mean "any
