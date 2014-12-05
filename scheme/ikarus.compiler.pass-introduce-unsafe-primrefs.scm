@@ -126,42 +126,37 @@
       ;;Just return a copy of the original primitive application.
       ;;
       (make-funcall (make-primref prim-name) rand*))
-    (parametrise ((%exception-raiser compile-time-error))
-      (if (null? rand*)
-	  (%no-replacement)
-	(let ((rand*.vec (list->vector rand*)))
-	  (case (%compatible-operands-for-primitive-call? prim-name rand*.vec)
-	    ((yes)
-	     (or (%find-core-primitive-replacement prim-name rand* rand*.vec)
-		 (%no-replacement)))
-	    ((no)
-	     (cond ((option.strict-r6rs)
-		    ;;The operands  do not  match the  expected arguments:  resort to
-		    ;;run-time error as mandated by R6RS.
-		    (print-compiler-warning-message "operands of invalid core type in call to core primitive: ~a"
-						    (unparse-recordized-code/sexp (%no-replacement)))
-		    (%no-replacement))
-		   (else
-		    ((%exception-raiser) __module_who__ __who__
-		     "operands of invalid core type in call to core primitive"
-		     (unparse-recordized-code/sexp (%no-replacement))))))
-	    ((wrong-num-args)
-	     (cond ((option.strict-r6rs)
-		    ;;The operands are  in wrong number: resort to  run-time error as
-		    ;;mandated by R6RS.
-		    (print-compiler-warning-message "wrong number of operands in call to core primitive: ~a"
-						    (unparse-recordized-code/sexp (%no-replacement)))
-		    (%no-replacement))
-		   (else
-		    (compile-time-arity-error __module_who__ __who__
-		      "wrong number of arguments in core primitive application"
-		      (unparse-recordized-code/sexp (%no-replacement))))))
-	    (else
-	     (compiler-internal-error __module_who__ __who__ "invalid return value")))))))
-
-  (define %exception-raiser
-    ;;Procedure used to raise an exception when the validation or operands fails.
-    (make-parameter compile-time-error))
+    (if (null? rand*)
+	(%no-replacement)
+      (let ((rand*.vec (list->vector rand*)))
+	(case (%compatible-operands-for-primitive-call? prim-name rand*.vec)
+	  ((yes)
+	   (or (%find-core-primitive-replacement prim-name rand* rand*.vec)
+	       (%no-replacement)))
+	  ((no)
+	   (cond ((option.strict-r6rs)
+		  ;;The  operands do  not  match the  expected  arguments: resort  to
+		  ;;run-time error as mandated by R6RS.
+		  (print-compiler-warning-message "operands of invalid core type in call to core primitive: ~a"
+						  (unparse-recordized-code/sexp (%no-replacement)))
+		  (%no-replacement))
+		 (else
+		  (compile-time-operand-core-type-error __module_who__ __who__
+		    "operands of invalid core type in call to core primitive"
+		    (unparse-recordized-code/sexp (%no-replacement))))))
+	  ((wrong-num-args)
+	   (cond ((option.strict-r6rs)
+		  ;;The operands  are in  wrong number: resort  to run-time  error as
+		  ;;mandated by R6RS.
+		  (print-compiler-warning-message "wrong number of operands in call to core primitive: ~a"
+						  (unparse-recordized-code/sexp (%no-replacement)))
+		  (%no-replacement))
+		 (else
+		  (compile-time-arity-error __module_who__ __who__
+		    "wrong number of arguments in core primitive application"
+		    (unparse-recordized-code/sexp (%no-replacement))))))
+	  (else
+	   (compiler-internal-error __module_who__ __who__ "invalid return value"))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -372,7 +367,6 @@
 	   ((yes) #t)
 	   ;;Operand's type does *not* match the expected argument's type.
 	   ((no)
-	    (%exception-raiser compile-time-operand-core-type-error)
 	    #f)
 	   ;;Operand's type maybe matches the expected argument's type, maybe not: it
 	   ;;is compatible.
