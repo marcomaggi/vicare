@@ -10310,6 +10310,22 @@
    (()				foldable effect-free result-true)
    (_				foldable effect-free result-true)))
 
+(declare-core-primitive foldable-list->vector
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:vector)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive foldable-append
+    (safe)
+  (signatures
+   (()				=> (T:null))
+   ((T:object . T:object)	=> (T:improper-list)))
+  (attributes
+   (()				foldable effect-free result-true)
+   ((_ . _)			foldable effect-free result-true)))
+
 
 ;;;; system interface and foreign functions interface
 
