@@ -361,6 +361,7 @@
     "ikarus.foreign-libraries.sls"
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
+    "ikarus.foldable.sls"
     "ikarus.compiler.condition-types.sls"
     "ikarus.intel-assembler.sls"
     "ikarus.fasl.write.sls"
@@ -1057,6 +1058,16 @@
     (system-label				v)
     (system-id					v)
     (system-id-gensym				v)
+
+;;; --------------------------------------------------------------------
+;;; foldable primitives
+
+    (foldable-cons)
+    (foldable-list)
+    (foldable-vector)
+    (foldable-string)
+    (foldable-list->vector)
+    (foldable-append)
 
 ;;; --------------------------------------------------------------------
 

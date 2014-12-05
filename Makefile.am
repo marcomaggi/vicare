@@ -325,6 +325,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.fasl.read.sls				\
 	scheme/ikarus.fasl.write.sls				\
 	scheme/ikarus.fixnums.sls				\
+	scheme/ikarus.foldable.sls				\
 	scheme/ikarus.guardians.sls				\
 	scheme/ikarus.handlers.sls				\
 	scheme/ikarus.hash-tables.sls				\

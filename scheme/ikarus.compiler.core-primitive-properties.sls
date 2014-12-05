@@ -10274,6 +10274,43 @@
    ((_ _)		effect-free)))
 
 
+;;;; foldable core primitive variants
+
+(declare-core-primitive foldable-cons
+    (safe)
+  (signatures
+   ((_ _)		=> (T:pair)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive foldable-list
+    (safe)
+  (signatures
+   (()			=> (T:null))
+   ((_ . _)		=> (T:non-empty-proper-list)))
+  (attributes
+   (()			foldable effect-free result-true)
+   ((_ . _)		foldable effect-free result-true)))
+
+(declare-core-primitive foldable-string
+    (safe)
+  (signatures
+   (()			=> (T:string))
+   (T:char		=> (T:string)))
+  (attributes
+   (()			foldable effect-free result-true)
+   (_			foldable effect-free result-true)))
+
+(declare-core-primitive foldable-vector
+    (safe)
+  (signatures
+   (()				=> (T:vector))
+   (_				=> (T:vector)))
+  (attributes
+   (()				foldable effect-free result-true)
+   (_				foldable effect-free result-true)))
+
+
 ;;;; system interface and foreign functions interface
 
 (declare-core-primitive errno
