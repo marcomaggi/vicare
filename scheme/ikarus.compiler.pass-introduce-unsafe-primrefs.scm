@@ -199,9 +199,10 @@
 	   ;;REPLACEMENT-PRIM-NAME* is a list  of symbols representing public names
 	   ;;of unsafe primitives.
 	   => (lambda (replacement-prim-name*)
-		(exists (lambda (replacement-prim-name)
-			  (and (%matching-operands-for-primitive-call? replacement-prim-name rand*)
-			       (make-funcall (make-primref replacement-prim-name) rand*)))
+		(vector-exists
+		    (lambda (replacement-prim-name)
+		      (and (%matching-operands-for-primitive-call? replacement-prim-name rand*)
+			   (make-funcall (make-primref replacement-prim-name) rand*)))
 		  replacement-prim-name*)))
 	  ;;This primitive has no registered unsafe replacements.
 	  (else #f)))

@@ -58,21 +58,23 @@
     (only (vicare system $fx)
 	  $fxzero? $fxlogand)
     (only (vicare system $pairs)
-	  $car $cdr))
+	  $car $cdr)
+    (only (vicare system $vectors)
+	  $vector-ref))
 
 
 ;;;; properties from core primitive public names
 
-(define (core-primitive-name->core-type-tag name)
+(define (core-primitive-name->core-type-tag prim-name)
   ;;Given a symbol  representing the name of a core  primitive: return the associated
   ;;CORE-TYPE-TAG value.  As default return "T:object".
   ;;
-  (if (and (symbol-bound? name)
-	   (core-primitive-properties? (symbol-value name)))
+  (if (and (symbol-bound? prim-name)
+	   (core-primitive-properties? (symbol-value prim-name)))
       T:procedure
     T:object))
 
-(define* (core-primitive-name->application-attributes* {prim-name symbol?})
+(define (core-primitive-name->application-attributes* prim-name)
   ;;Return the APPLICATION-ATTRIBUTES*  list of the core  primitive PRIM-NAME; return
   ;;false if  PRIM-NAME has no  attributes associated or it  is not a  core primitive
   ;;name.
@@ -80,14 +82,14 @@
   (and (symbol-bound? prim-name)
        (core-primitive-properties-application-attributes* (symbol-value prim-name))))
 
-(define* (core-primitive-name->core-type-signature* {prim-name symbol?})
+(define (core-primitive-name->core-type-signature* prim-name)
   ;;Return  the SIGNATURE*  list of  the core  primitive PRIM-NAME;  return false  if
   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
   ;;
   (and (symbol-bound? prim-name)
        (core-primitive-properties-core-type-signature* (symbol-value prim-name))))
 
-(define* (core-primitive-name->replacement* {prim-name symbol?})
+(define (core-primitive-name->replacement* prim-name)
   ;;Return the  REPLACEMENT* list of  the core  primitive PRIM-NAME; return  false if
   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
   ;;
@@ -130,29 +132,59 @@
 
 
 ;;;; core primitive properties representation
+;;
+;;It  would be  really neat  to use  proper type  definitions to  represent the  core
+;;primitive properties, for example:
+;;
+;;   (define-struct core-primitive-properties
+;;     (safe? core-type-signature* application-attributes* replacement*))
+;;
+;;But initialisation  speed, usage speed  and memory consumption are  also important,
+;;given that there are is a big number of core primitives.  So we opt for core Scheme
+;;object types, which  can be easily precomputed  and stored in fasl  files as simple
+;;constants.  This  means defining a  number of  syntaxes, rather than  normal DEFINE
+;;bindings,  so  that the  most  constant  values  are  inlined even  across  library
+;;boundaries.
+;;
+;;(Marco Maggi; Fri Dec 5, 2014)
+;;
 
-(define-struct core-primitive-properties
-  (safe?
-		;Boolean.  True if this core primitive is safe.
-   core-type-signature*
-		;A list of pairs with the format:
-		;
-		;   ((?operands-tags . ?return-values-tags) ...)
-		;
-		;in which  both ?OPERANDS-TAGS and ?RETURN-VALUES-TAGS  are proper or
-		;improper lists of  type tags.  Every pair  represents an alternative
-		;core type signature for operands and return values.
-   application-attributes*
-		;A proper list:
-		;
-		;   (?application-attributes ...)
-		;
-		;in  which   every  ?APPLICATION-ATTRIBUTES  is  a   struct  of  type
-		;APPLICATION-ATTRIBUTES.
-   replacement*
-		;List of symbols  representing core primitives that  can replace this
-		;one if the operands are of the correct type.
-   ))
+(define-syntax-rule (make-core-primitive-properties safe? core-type-signature* application-attributes* replacement*)
+  (vector safe? core-type-signature* application-attributes* replacement*))
+
+(define-syntax-rule (core-primitive-properties? ?obj)
+  (vector? ?obj))
+
+(define-syntax-rule (core-primitive-properties-safe? ?cpp)
+  ;;Boolean.  True if this core primitive is safe.
+  ;;
+  ($vector-ref ?cpp 0))
+
+(define-syntax-rule (core-primitive-properties-core-type-signature* ?cpp)
+  ;;A list of pairs with the format:
+  ;;
+  ;;   ((?operands-tags . ?return-values-tags) ...)
+  ;;
+  ;;in which both ?OPERANDS-TAGS and ?RETURN-VALUES-TAGS are proper or improper lists
+  ;;of  type tags.   Every pair  represents an  alternative core  type signature  for
+  ;;operands and return values.
+  ;;
+  ($vector-ref ?cpp 1))
+
+(define-syntax-rule (core-primitive-properties-application-attributes* ?cpp)
+  ;;A proper list:
+  ;;
+  ;;   (?application-attributes ...)
+  ;;
+  ;;in which every ?APPLICATION-ATTRIBUTES is a value of type APPLICATION-ATTRIBUTES.
+  ;;
+  ($vector-ref ?cpp 2))
+
+(define-syntax-rule (core-primitive-properties-replacement* ?cpp)
+  ;;List of  symbols representing public  names of  core primitives that  can replace
+  ;;this one if the operands are of the correct type.
+  ;;
+  ($vector-ref ?cpp 3))
 
 
 ;;;; core primitive application attributes
@@ -220,32 +252,19 @@
 
 (define-syntax* (declare-core-primitive input-form)
 
-  (module (main)
-
-    (define (main stx)
-      (syntax-case stx ()
-	((?ctx ?prim-name . ?clause*)
-	 (let ((prim-name (%parse-prim-name #'?prim-name)))
-	   (receive (safe? signature* attribute* replacement-prim-name*)
-	       (%parse-clauses #'?clause*)
-	     (receive-and-return (out)
-		 #`(set-symbol-value! (quote ?prim-name)
-				      (make-core-primitive-properties #,safe?
-								      (quasiquote #,signature*)
-								      #,(%compose-attributes-output-form attribute*)
-								      (quote #,replacement-prim-name*)))
-	       #;(fprintf (current-error-port) "output: ~a\n" (syntax->datum out))
-	       (void)))))
-
-	(_
-	 (synner "invalid syntax in core primitive declaration"))))
-
-    (define (%compose-attributes-output-form attribute*)
-      (if (pair? attribute*)
-	  #`(quote #,attribute*)
-	#'(quote ())))
-
-    #| end of module: MAIN |# )
+  (define (main stx)
+    (syntax-case stx ()
+      ((?ctx ?prim-name . ?clause*)
+       (let ((prim-name (%parse-prim-name #'?prim-name)))
+	 (receive (safe? signature* attribute* replacement-prim-name*)
+	     (%parse-clauses #'?clause*)
+	   #`(set-symbol-value! (quote ?prim-name)
+				(make-core-primitive-properties #,safe?
+								(quasiquote #,signature*)
+								(quote #,attribute*)
+								(quote #,(list->vector replacement-prim-name*)))))))
+      (_
+       (synner "invalid syntax in core primitive declaration"))))
 
 ;;; --------------------------------------------------------------------
 ;;; input form parsers
