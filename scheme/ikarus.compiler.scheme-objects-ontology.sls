@@ -21,41 +21,6 @@
   (import (vicare))
 
 
-;;;; helpers
-
-(define-syntax (cond-expand stx)
-  ;;A  simple  implementation of  COND-EXPAND  in  which  the tests  are  expressions
-  ;;evaluated at expand time.
-  ;;
-  (syntax-case stx (else)
-    ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ... (else . ?else*))
-     (with-syntax
-	 ((OUTPUT (datum->syntax #'?ctx 'output)))
-       #'(let-syntax ((OUTPUT (lambda (stx)
-				(syntax-case stx ()
-				  ((??ctx)
-				   (datum->syntax #'??ctx
-						  (cond (?test0 '(begin . ?clause0*))
-							(?test  '(begin . ?clause*))
-							...
-							(else   '(begin . ?else*)))))
-				  ))))
-	   (OUTPUT))))
-    ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ...)
-     (with-syntax
-	 ((OUTPUT (datum->syntax #'?ctx 'output)))
-       #'(let-syntax ((OUTPUT (lambda (stx)
-				(syntax-case stx ()
-				  ((??ctx)
-				   (datum->syntax #'??ctx
-						  (cond (?test0 '(begin . ?clause0*))
-							(?test  '(begin . ?clause*))
-							...
-							(else   '(void)))))))))
-	   (OUTPUT))))
-    ))
-
-
 (module SCHEME-OBJECTS-ONTOLOGY
   (core-type-tag?
 		;Return  true  if the  single  argument  is a  CORE-TYPE-TAG  record,
@@ -260,58 +225,59 @@
 
 
 ;;;; core type tag type definition
-
-;;We can  use either a  CORE-TYPE-TAG struct or a  naked exact integer  (a standalone
-;;fixnum or  bignum); using naked  exact integers is  faster, and we  value execution
-;;speed in the compiler.  (Marco Maggi; Sun Nov 30, 2014)
 ;;
-(cond-expand
- (#f
-  (define-struct core-type-tag
-    (bits
-		;A fixnum or bignum handled as bit-field.
-     ))
+;;It would be really  neat to use proper type definitions to  represent the core type
+;;tags, for example:
+;;
+;;   (define-struct core-type-tag
+;;     (bits))
+;;
+;;   (define* (%core-type-tag-and {x0 core-type-tag?} {x1 core-type-tag?})
+;;     (make-core-type-tag (bitwise-and (core-type-tag-bits x0) (core-type-tag-bits x1))))
+;;
+;;   (define* (%core-type-tag-ior {x0 core-type-tag?} {x1 core-type-tag?})
+;;     (make-core-type-tag (bitwise-ior (core-type-tag-bits x0) (core-type-tag-bits x1))))
+;;
+;;   (define-syntax core-type-tag-and
+;;     (syntax-rules ()
+;;       ((_ ?tag)
+;;        ?tag)
+;;       ((_ ?tag0 ?tag1 ?tag ...)
+;;        (%core-type-tag-and ?tag0 (core-type-tag-and ?tag1 ?tag ...)))))
+;;
+;;   (define-syntax core-type-tag-ior
+;;     (syntax-rules ()
+;;       ((_ ?tag)
+;;        ?tag)
+;;       ((_ ?tag0 ?tag1 ?tag ...)
+;;        (%core-type-tag-ior ?tag0 (core-type-tag-ior ?tag1 ?tag ...)))))
+;;
+;;But initialisation  speed, usage speed  and memory consumption are  also important,
+;;given that there  are a number of core  types used to characterise a  big number of
+;;core primitives.  So we opt for naked exact integers, which are faster.
+;;
+;;We attempt  to write code that  maximises the number of  expressions precomputed by
+;;the source optimiser; this means defining  a number of syntaxes, rather than normal
+;;DEFINE bindings, so  that the most constant values are  inlined even across library
+;;boundaries.
+;;
+;;(Marco Maggi; Thu Dec 4, 2014)
+;;
 
-  (define* (%core-type-tag-and {x0 core-type-tag?} {x1 core-type-tag?})
-    (make-core-type-tag (bitwise-and (core-type-tag-bits x0) (core-type-tag-bits x1))))
+(define-syntax-rule (make-core-type-tag ?bits)
+  ?bits)
 
-  (define* (%core-type-tag-ior {x0 core-type-tag?} {x1 core-type-tag?})
-    (make-core-type-tag (bitwise-ior (core-type-tag-bits x0) (core-type-tag-bits x1))))
+(define-syntax-rule (core-type-tag? ?obj)
+  (exact-integer? ?obj))
 
-  (define-syntax core-type-tag-and
-    (syntax-rules ()
-      ((_ ?tag)
-       ?tag)
-      ((_ ?tag0 ?tag1 ?tag ...)
-       (%core-type-tag-and ?tag0 (core-type-tag-and ?tag1 ?tag ...)))
-      ))
+(define-syntax-rule (core-type-tag-bits ?obj)
+  ?obj)
 
-  (define-syntax core-type-tag-ior
-    (syntax-rules ()
-      ((_ ?tag)
-       ?tag)
-      ((_ ?tag0 ?tag1 ?tag ...)
-       (%core-type-tag-ior ?tag0 (core-type-tag-ior ?tag1 ?tag ...)))
-      ))
+(define-syntax-rule (core-type-tag-and ?tag0 ?tag ...)
+  (bitwise-and ?tag0 ?tag ...))
 
-  #| end of branch |# )
- (else
-  (define-syntax-rule (make-core-type-tag ?bits)
-    ?bits)
-
-  (define-syntax-rule (core-type-tag? ?obj)
-    (exact-integer? ?obj))
-
-  (define-syntax-rule (core-type-tag-bits ?obj)
-    ?obj)
-
-  (define-syntax-rule (core-type-tag-and ?tag0 ?tag ...)
-    (bitwise-and ?tag0 ?tag ...))
-
-  (define-syntax-rule (core-type-tag-ior ?tag0 ?tag ...)
-    (bitwise-ior ?tag0 ?tag ...))
-
-  #| end of ELSE|# ))
+(define-syntax-rule (core-type-tag-ior ?tag0 ?tag ...)
+  (bitwise-ior ?tag0 ?tag ...))
 
 ;;; --------------------------------------------------------------------
 

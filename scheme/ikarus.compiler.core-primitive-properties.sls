@@ -54,7 +54,11 @@
    application-attributes-result-false?
    application-attributes-identity?
    CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
-  (import SCHEME-OBJECTS-ONTOLOGY)
+  (import SCHEME-OBJECTS-ONTOLOGY
+    (only (vicare system $fx)
+	  $fxzero? $fxlogand)
+    (only (vicare system $pairs)
+	  $car $cdr))
 
 
 ;;;; properties from core primitive public names
@@ -133,13 +137,11 @@
    core-type-signature*
 		;A list of pairs with the format:
 		;
-		;   ((?operands-preds . ?return-values-preds) ...)
+		;   ((?operands-tags . ?return-values-tags) ...)
 		;
-		;in which both ?OPERANDS-PREDS and ?RETURN-VALUES-PREDS are proper or
-		;improper lists of type predicates and false objects.
-		;
-		;Every  pair  represents  an  alternative  core  type  signature  for
-		;operands and return values.
+		;in which  both ?OPERANDS-TAGS and ?RETURN-VALUES-TAGS  are proper or
+		;improper lists of  type tags.  Every pair  represents an alternative
+		;core type signature for operands and return values.
    application-attributes*
 		;A proper list:
 		;
@@ -152,32 +154,61 @@
 		;one if the operands are of the correct type.
    ))
 
-(define-struct application-attributes
-  (operands-template
-		;A  proper or  improper  list  of items  representing  a template  of
-		;application for the core primitive.  The items are: "_" representing
-		;any operand; "0"  representing an operand equal to  the fixnum zero;
-		;"#f"  representing  an operand  equal  to  the boolean  false;  "()"
-		;representing an operand equal to null.
-   foldable?
-		;Boolean.  True if  the associated core primitive  application can be
-		;precomputed at compile-time when the operands are constants.
-   effect-free?
-		;Boolean.  True if  the associated core primitive  application has no
-		;side effects.
-   result-true?
-		;Boolean.  True  if the associated core  primitive application always
-		;has non-false as return value.
-   result-false?
-		;Boolean.  True  if the associated core  primitive application always
-		;has false as return value.
-   identity?
-		;Boolean.  True  if the  associated core  primitive accepts  a single
-		;argument and it is an identity, returning its argument.
-   ))
+
+;;;; core primitive application attributes
+
+(define-syntax-rule (make-application-attributes ?operands-template ?attributes)
+  (cons ?operands-template ?attributes))
+
+;;; --------------------------------------------------------------------
+
+(define-inline-constant FOLDABLE-MASK		#b00000001)
+(define-inline-constant EFFECT-FREE-MASK	#b00000010)
+(define-inline-constant RESULT-TRUE-MASK	#b00000100)
+(define-inline-constant RESULT-FALSE-MASK	#b00001000)
+(define-inline-constant IDENTITY-MASK		#b00010000)
+
+(define-syntax-rule (application-attributes-operands-template ?attr)
+  ;;A proper or improper list of items representing a template of application for the
+  ;;core primitive.  The items are: "_" representing any operand; "0" representing an
+  ;;operand  equal to  the fixnum  zero; "#f"  representing an  operand equal  to the
+  ;;boolean false; "()" representing an operand equal to null.
+  ;;
+  (car ?attr))
+
+(define-syntax-rule (application-attributes-foldable? ?attr)
+  ;;Boolean.  True if the associated core primitive application can be precomputed at
+  ;;compile-time when the operands are constants.
+  ;;
+  (not ($fxzero? ($fxlogand ($cdr ?attr) FOLDABLE-MASK))))
+
+(define-syntax-rule (application-attributes-effect-free? ?attr)
+  ;;Boolean.  True if the associated core primitive application has no side effects.
+  ;;
+  (not ($fxzero? ($fxlogand ($cdr ?attr) EFFECT-FREE-MASK))))
+
+(define-syntax-rule (application-attributes-result-true? ?attr)
+  ;;Boolean.  True if the associated  core primitive application always has non-false
+  ;;as return value.
+  ;;
+  (not ($fxzero? ($fxlogand ($cdr ?attr) RESULT-TRUE-MASK))))
+
+(define-syntax-rule (application-attributes-result-false? ?attr)
+  ;;Boolean.  True if  the associated core primitive application always  has false as
+  ;;return value.
+  ;;
+  (not ($fxzero? ($fxlogand ($cdr ?attr) RESULT-FALSE-MASK))))
+
+(define-syntax-rule (application-attributes-identity? ?attr)
+  ;;Boolean.  True if the associated core  primitive accepts a single argument and it
+  ;;is an identity, returning its argument.
+  ;;
+  (not ($fxzero? ($fxlogand ($cdr ?attr) IDENTITY-MASK))))
+
+;;; --------------------------------------------------------------------
 
 (define-constant CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES
-  (make-application-attributes '_ #f #f #f #f #f))
+  (make-application-attributes '_ 0))
 
 
 ;;;; syntaxes for parsing tables
@@ -211,17 +242,7 @@
 
     (define (%compose-attributes-output-form attribute*)
       (if (pair? attribute*)
-	  #`(quasiquote #,(map (lambda (attribute*)
-				 (let ((operands-template (car attribute*))
-				       (attributes-vector (cdr attribute*)))
-				   #`(unquote (make-application-attributes
-					       (quote #,operands-template)
-					       #,(vector-ref attributes-vector 0)
-					       #,(vector-ref attributes-vector 1)
-					       #,(vector-ref attributes-vector 2)
-					       #,(vector-ref attributes-vector 3)
-					       #,(vector-ref attributes-vector 4)))))
-			    attribute*))
+	  #`(quote #,attribute*)
 	#'(quote ())))
 
     #| end of module: MAIN |# )
@@ -582,6 +603,12 @@
 
   (module (%parse-application-attributes-sexp)
 
+    (define-inline-constant FOLDABLE-BITS	#b00000001)
+    (define-inline-constant EFFECT-FREE-BITS	#b00000010)
+    (define-inline-constant RESULT-TRUE-BITS	#b00000100)
+    (define-inline-constant RESULT-FALSE-BITS	#b00001000)
+    (define-inline-constant IDENTITY-BITS	#b00010000)
+
     (define (%parse-application-attributes-sexp stx)
       ;;Parse   a  syntax   object   representing  the   core  primitive   attributes
       ;;specification.  The format must be:
@@ -610,7 +637,7 @@
 		(syntax-case attr-spec ()
 		  ((?args-spec . ?attr*)
 		   (cons (%parse-application-attributes-operands-template  #'?args-spec)
-			 (%parse-appliaction-attributes-attributes-specification #'?attr*)))
+			 (%parse-application-attributes-attributes-specification #'?attr*)))
 		  (_
 		   (%syntax-error))))
 	   (syntax->list #'(?attr-spec ...))))
@@ -651,29 +678,24 @@
 	(_
 	 (%error-invalid-argument-spec))))
 
-    (define (%parse-appliaction-attributes-attributes-specification attr*)
-      (let recur ((flags (make-vector 5 #f))
+    (define (%parse-application-attributes-attributes-specification attr*)
+      (let recur ((flags 0)
 		  (attr* attr*))
 	(syntax-case attr* (foldable identity effect-free result-true result-false)
 	  ((foldable . ?rest)
-	   (vector-set! flags 0 #t)
-	   (recur flags #'?rest))
+	   (recur (fxior flags FOLDABLE-BITS) #'?rest))
 
 	  ((effect-free . ?rest)
-	   (vector-set! flags 1 #t)
-	   (recur flags #'?rest))
+	   (recur (fxior flags EFFECT-FREE-BITS) #'?rest))
 
 	  ((result-true . ?rest)
-	   (vector-set! flags 2 #t)
-	   (recur flags #'?rest))
+	   (recur (fxior flags RESULT-TRUE-BITS) #'?rest))
 
 	  ((result-false . ?rest)
-	   (vector-set! flags 3 #t)
-	   (recur flags #'?rest))
+	   (recur (fxior flags RESULT-FALSE-BITS) #'?rest))
 
 	  ((identity . ?rest)
-	   (vector-set! flags 4 #t)
-	   (recur flags #'?rest))
+	   (recur (fxior flags IDENTITY-BITS) #'?rest))
 
 	  (()
 	   flags)
