@@ -161,7 +161,7 @@
 ;;
 
 (define-syntax-rule (make-applicable-core-primitive-properties safe? core-type-signature* application-attributes* replacement*)
-  (vector safe? core-type-signature* application-attributes* replacement*))
+  `#(,safe? ,core-type-signature* ,application-attributes* ,replacement*))
 
 (define-syntax-rule (applicable-core-primitive-properties? ?obj)
   ;;This is quite weak: it can easily return wrong results.
@@ -8713,7 +8713,7 @@
    ((T:bignum T:fixnum)		=> (T:bignum))
    (T:exact-integer		=> (T:exact-integer)))
   (attributes
-   ((_ _)			foldable effect-free result-true))
+   (_				foldable effect-free result-true))
   (replacements
    $bitwise-and-fixnum-fixnum $bitwise-and-fixnum-bignum
    $bitwise-and-bignum-fixnum $bitwise-and-bignum-bignum
@@ -8731,7 +8731,7 @@
    ((T:bignum T:fixnum)		=> (T:bignum))
    (T:exact-integer		=> (T:exact-integer)))
   (attributes
-   ((_ _)			foldable effect-free result-true))
+   (_				foldable effect-free result-true))
   (replacements
    $bitwise-ior-fixnum-fixnum $bitwise-ior-fixnum-bignum
    $bitwise-ior-bignum-fixnum $bitwise-ior-bignum-bignum
@@ -8749,7 +8749,7 @@
    ((T:bignum T:fixnum)		=> (T:bignum))
    (T:exact-integer		=> (T:exact-integer)))
   (attributes
-   ((_ _)			foldable effect-free result-true))
+   (_				foldable effect-free result-true))
   (replacements
    $bitwise-xor-fixnum-fixnum $bitwise-xor-fixnum-bignum
    $bitwise-xor-bignum-fixnum $bitwise-xor-bignum-bignum
@@ -8761,7 +8761,7 @@
    ((T:fixnum)			=> (T:fixnum))
    ((T:bignum)			=> (T:bignum)))
   (attributes
-   ((_ _)			foldable effect-free result-true))
+   ((_)				foldable effect-free result-true))
   (replacements $bitwise-not-fixnum $bitwise-not-bignum))
 
 (declare-core-primitive bitwise-arithmetic-shift

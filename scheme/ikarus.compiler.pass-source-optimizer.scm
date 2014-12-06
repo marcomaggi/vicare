@@ -1608,11 +1608,11 @@
     ;;application.  Otherwise return a PRIMREF struct referencing the primitive.
     ;;
     (let* ((rand*  (app-rand* appctxt))
-	   (info   (%primitive-info prim-name rand*))
-	   (result (or (and (application-attributes-effect-free? info)
-			    (%precompute-effect-free-primitive info appctxt))
-		       (and (application-attributes-foldable? info)
-			    (%precompute-foldable-primitive prim-name rand* ec)))))
+	   (result (let ((info (%primitive-info prim-name rand*)))
+		     (or (and (application-attributes-effect-free? info)
+			      (%precompute-effect-free-primitive-in-context-P/E info appctxt))
+			 (and (application-attributes-foldable? info)
+			      (%precompute-foldable-primitive prim-name rand* ec))))))
       (if result
 	  (begin
 	    (decrement ec 1)
@@ -1639,10 +1639,17 @@
 	  (decrement sc 1)
 	  (mk-primref prim-name)))))
 
-  (define (%precompute-effect-free-primitive info appctxt)
-    ;;The  function call  is effect  free.  If  the evaluation  context is  "for side
-    ;;effects":  the function  call can  be removed.   If the  evaluation context  is
-    ;;"predicate": check if the function call has known boolean result.
+  (define (%precompute-effect-free-primitive-in-context-P/E info appctxt)
+    ;;The core primitive application is effect free.
+    ;;
+    ;;* If  the evaluation context  is "for side effects":  the function call  can be
+    ;;removed.
+    ;;
+    ;;* If the evaluation context is "for  predicate": check if the function call has
+    ;;known boolean result.
+    ;;
+    ;;* If the evaluation context is "for return value": return false, nothing can be
+    ;;done here.
     ;;
     (case-context (app-ctxt appctxt)
       ((e)
@@ -1746,7 +1753,7 @@
 		;;
 		;; (?application-attributes ...)
 		;;
-		;;in  which  every  ?APPLICATION-ATTRIBUTES   is  a  struct  of  type
+		;;in  which   every  ?APPLICATION-ATTRIBUTES  is  a   value  of  type
 		;;APPLICATION-ATTRIBUTES.
 		(cond ((find %matches? application-attributes*))
 		      (else

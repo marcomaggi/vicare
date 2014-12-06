@@ -6710,8 +6710,6 @@
 		    (struct-case x.const
 		      ((foreign-label name)
 		       `(foreign-label ,name))))
-		   ((eq? x.const (void))
-		    '(void))
 		   (else
 		    x.const))))))
 
