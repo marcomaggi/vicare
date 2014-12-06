@@ -1598,7 +1598,7 @@
   (define-syntax __module_who__
     (identifier-syntax 'fold-prim))
 
-  (define (fold-prim prim-name appctxt ec sc)
+  (define* (fold-prim prim-name appctxt ec sc)
     ;;PRIM-NAME must  be a symbol  representing the public  name of a  core primitive
     ;;function.  APPCTXT  must be  a struct  instance of  type APP,  representing the
     ;;context of appliction for PRIM-NAME.  EC is the effort counter.  SC is the size

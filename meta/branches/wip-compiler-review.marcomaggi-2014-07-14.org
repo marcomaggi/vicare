@@ -4,70 +4,9 @@
 
   Development of the source optimiser.
 
-* For every library defined by the boot image classify the relevant primitives
-
-** (vicare system $pairs)
-** (vicare system $lists)
-** (vicare system $chars)
-** (vicare system $strings)
-** (vicare system $vectors)
-** (vicare system $flonums)
-** (vicare system $bignums)
-** (vicare system $bytevectors)
-** (vicare system $transcoders)
-** (vicare system $fx)
-** (vicare system $ratnums)
-** (vicare system $compnums)
-** (vicare system $symbols)
-** (vicare system $keywords)
-** (vicare system $structs)
-** (vicare system $pointers)
-** (vicare system $codes)
-** (vicare system $tcbuckets)
-** (vicare system $arg-list)
-** (vicare system $stack)
-** (vicare system $interrupts)
-** (vicare system $io)
-** (vicare system $foreign)
-** (vicare system $compiler)
-** (vicare system $numerics)
-** (vicare system $hashtables)
-
-** (rnrs r5rs)
-** (rnrs control)
-** (rnrs eval)
-** (rnrs mutable-pairs)
-** (rnrs mutable-strings)
-** (rnrs programs)
-** (rnrs syntax-case)
-** (rnrs files)
-** (rnrs sorting)
-** (rnrs base)
-** (rnrs lists)
-** (rnrs io simple)
-** (rnrs bytevectors)
-** (rnrs unicode)
-** (rnrs exceptions)
-** (rnrs arithmetic bitwise)
-** (rnrs arithmetic fixnums)
-** (rnrs arithmetic flonums)
-** (rnrs hashtables)
-** (rnrs io ports)
-** (rnrs enums)
-** (rnrs conditions)
-** (rnrs records inspection)
-** (rnrs records procedural)
-** (rnrs records syntactic)
-
-** (vicare libraries)
-** (vicare language-extensions)
-** (vicare language-extensions posix)
-
-** (vicare expander object-type-specs)
-** (vicare expander tags)
 * Compiler pass: introduce unsafe primcalls
 
-** Finish the table of core primitives.
+** Use table of core primitives to infer core types.
 
 * Compiler pass: core type inference
 
@@ -75,8 +14,5 @@
 
 * Compiler pass: source optimiser
 
-** Finish the table of primitives.
-
 ** Total code review.
-
 
