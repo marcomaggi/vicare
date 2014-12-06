@@ -28,11 +28,12 @@
 #!vicare
 (import (vicare)
   (prefix (vicare compiler) compiler.)
+  (prefix (vicare platform words) words.)
   (vicare unsafe operations)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare optimiser\n")
+(check-display "*** testing Vicare compiler: source optimiser pass\n")
 
 (compiler.optimize-level 2)
 (compiler.source-optimizer-passes-count 2)
@@ -40,8 +41,81 @@
 ;;(compiler.cp0-size-limit   8)
 
 
-;;;; syntax helpers
+;;;; helpers
 
+(define (gensyms->symbols sexp)
+  (cond ((pair? sexp)
+	 (cons (gensyms->symbols (car sexp))
+	       (gensyms->symbols (cdr sexp))))
+	((vector? sexp)
+	 (vector-map gensyms->symbols sexp))
+	((gensym? sexp)
+	 (string->symbol (symbol->string sexp)))
+	(else sexp)))
+
+;;; --------------------------------------------------------------------
+;;; expansion helpers
+
+(define-constant THE-ENVIRONMENT
+  (environment '(vicare)
+	       '(vicare system $fx)
+	       ;;We  import this  library for  $SYMBOL-STRING, which  is a  primitive
+	       ;;operation bot not a primitive function.
+	       '(vicare system $symbols)
+	       ;;We import this library to  inspect how imported bindings are handled
+	       ;;by the compiler.
+	       '(libtest compiler-internals)
+	       ;;This is to build annotated forms and test debug-calls.
+	       '(only (vicare)
+		      get-annotated-datum)))
+
+(define (%expand standard-language-form)
+  (receive (code libs)
+      (expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
+    code))
+
+(define (%expand-library standard-language-form)
+  (cdr (assq 'invoke-code (expand-library->sexp standard-language-form))))
+
+(define (%make-annotated-form form)
+  (let* ((form.str (receive (port extract)
+		       (open-string-output-port)
+		     (unwind-protect
+			 (begin
+			   (display form port)
+			   (extract))
+		       (close-port port))))
+	 (port     (open-string-input-port form.str)))
+    (unwind-protect
+	(get-annotated-datum port)
+      (close-port port))))
+
+;;; --------------------------------------------------------------------
+
+(define (%source-optimize core-language-form)
+  (let* ((D (compiler.recordize core-language-form))
+	 (D (compiler.optimize-direct-calls D))
+	 (D (compiler.optimize-letrec D))
+	 (D (compiler.source-optimize D))
+	 (S (compiler.unparse-recordized-code/sexp D)))
+    S))
+
+(define-syntax doit
+  (syntax-rules ()
+    ((_ ?core-language-form ?expected-result)
+     (check
+	 (%source-optimize (quasiquote ?core-language-form))
+       => (quasiquote ?expected-result)))
+    ))
+
+(define-syntax doit*
+  (syntax-rules ()
+    ((_ ?standard-language-form ?expected-result)
+     ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+     ;;test fails.
+     (doit ,(%expand (quasiquote ?standard-language-form))
+	   ?expected-result))
+    ))
 
 
 (parametrise ((check-test-name	'variable-references))
@@ -146,11 +220,30 @@
 
   (check
       (optimisation-of (greatest-fixnum))
-    => `(quote ,(greatest-fixnum)))
+    => (words.case-word-size
+	((32)		'(quote +536870911))
+	((64)		'(quote +1152921504606846975))))
 
   (check
       (optimisation-of (least-fixnum))
-    => `(quote ,(least-fixnum)))
+    => (words.case-word-size
+	((32)		'(quote -536870912))
+	((64)		'(quote -1152921504606846976))))
+
+  (doit ((primitive greatest-fixnum))
+	,(words.case-word-size
+	  ((32)		'(constant +536870911))
+	  ((64)		'(constant +1152921504606846975))))
+
+  (doit ((primitive least-fixnum))
+	,(words.case-word-size
+	  ((32)		'(constant -536870912))
+	  ((64)		'(constant -1152921504606846976))))
+
+  (doit ((primitive fixnum-width))
+	,(words.case-word-size
+	  ((32)		'(constant 20))
+	  ((64)		'(constant 61))))
 
 ;;; --------------------------------------------------------------------
 
@@ -158,10 +251,12 @@
       (optimisation-of (fx+ 1 2))
     => '(quote 3))
 
+  ;;Not precomputed because it is an overflow error.
   (check
       (optimisation-of (fx+ 1 (greatest-fixnum)))
     => `(fx+ '1 ',(greatest-fixnum)))
 
+  ;;Not precomputed because it is an overflow error.
   (check
       (optimisation-of (fx+ -1 (least-fixnum)))
     => `(fx+ '-1 ',(least-fixnum)))
@@ -188,8 +283,7 @@
 
   (check
       (optimisation-of (fx* 11 22))
-    => `(quote ,(fx* 11 22)))
-
+    => '(quote 242))
 
   #t)
 

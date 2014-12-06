@@ -6158,7 +6158,7 @@
     (define E-nfv (make-E-nfv E))
     (struct-case x
       ((constant)
-       (E-constant x E))
+       (E-constant 'constant x E))
 
       ((known expr type)
        `(known ,(E expr) ,(core-type-tag-description type)))
@@ -6317,7 +6317,7 @@
     (define (E x)
       (struct-case x
 	((constant)
-	 (E-constant x E))
+	 (E-constant 'constant x E))
 
 	((prelex)
 	 (E-var x))
@@ -6363,7 +6363,7 @@
 	 `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
 
 	((seq e0 e1)
-	 (E-seq e0 e1 E))
+	 (E-seq 'seq e0 e1 E))
 
 	((conditional test conseq altern)
 	 (E-conditional 'conditional test conseq altern E))
@@ -6480,7 +6480,7 @@
     (define (E x)
       (struct-case x
 	((constant)
-	 (E-constant x E))
+	 (E-constant 'quote x E))
 
 	((prelex)
 	 (E-var x))
@@ -6527,7 +6527,7 @@
 	 `(foreign-label ,x))
 
 	((seq e0 e1)
-	 (E-seq e0 e1 E))
+	 (E-seq 'begin e0 e1 E))
 
 	((conditional test conseq altern)
 	 (E-conditional 'if test conseq altern E))
@@ -6693,24 +6693,27 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (E-constant x E)
-    (struct-case x
-      ((constant x.const)
-       (cond ((symbol? x.const)
-	      ;;Extract the pretty name; this is useful when X.CONST is a loc gensym.
-	      `(constant ,(%pretty-symbol x.const)))
-	     ((object? x.const)
-	      `(constant ,(E x.const)))
-	     ((closure-maker? x.const)
-	      `(constant ,(E x.const)))
-	     ((code-loc? x.const)
-	      `(constant ,(E x.const)))
-	     ((foreign-label? x.const)
-	      (struct-case x.const
-		((foreign-label name)
-		 `(constant (foreign-label ,name)))))
-	     (else
-	      `(constant ,x.const))))))
+  (define (E-constant sym x E)
+    (list sym
+	  (struct-case x
+	    ((constant x.const)
+	     (cond ((symbol? x.const)
+		    ;;Extract the pretty name; this is useful when X.CONST is a loc gensym.
+		    (%pretty-symbol x.const))
+		   ((object? x.const)
+		    (E x.const))
+		   ((closure-maker? x.const)
+		    (E x.const))
+		   ((code-loc? x.const)
+		    (E x.const))
+		   ((foreign-label? x.const)
+		    (struct-case x.const
+		      ((foreign-label name)
+		       `(foreign-label ,name))))
+		   ((eq? x.const (void))
+		    '(void))
+		   (else
+		    x.const))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -6794,8 +6797,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (E-seq e0 e1 E)
-    (cons 'seq
+  (define (E-seq sym e0 e1 E)
+    (cons sym
 	  ;;Here we flatten nested SEQ instances into a unique output SEQ form.
 	  (let recur ((expr  e0)
 		      (expr* (list e1)))

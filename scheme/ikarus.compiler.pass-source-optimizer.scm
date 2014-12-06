@@ -268,16 +268,6 @@
 			  rand*)
 		  env ctxt ec sc))
 
-      ((forcall name rand*)
-       ;;X is a  foreign function call performed by the  built in macro FOREIGN-CALL.
-       ;;The name of the  C language function is in NAME, the list  of operands is in
-       ;;RAND*.
-       (decrement sc 1)
-       (make-forcall name (map (lambda (operand)
-				 ;;The operands are evaluated for their return value.
-				 (E operand 'v env ec sc))
-			    rand*)))
-
       ((primref name)
        (case-context ctxt
 	 ((app)
@@ -291,6 +281,16 @@
 	  x)
 	 (else
 	  (make-constant #t))))
+
+      ((forcall name rand*)
+       ;;X is a  foreign function call performed by the  built in macro FOREIGN-CALL.
+       ;;The name of the  C language function is in NAME, the list  of operands is in
+       ;;RAND*.
+       (decrement sc 1)
+       (make-forcall name (map (lambda (operand)
+				 ;;The operands are evaluated for their return value.
+				 (E operand 'v env ec sc))
+			    rand*)))
 
       ((clambda label clause* cp free name)
        (parametrise ((source-optimizer-input x))
@@ -491,9 +491,9 @@
     (let* ((ctxt^  (make-app rand* ctxt))
 	   (rator^ (E rator ctxt^ env ec sc)))
       (if (app-inlined ctxt^)
-	  ;;If this function  call was inlined, we may  need to evaluate
-	  ;;some of  the operands for  their side effect.   For example,
-	  ;;given the function definition:
+	  ;;This  primitive  application either  integrated  or  folded.  If  it  was
+	  ;;integrated: we may  need to evaluate some of the  operands for their side
+	  ;;effects.  For example, given the function definition:
 	  ;;
 	  ;;   (define (fun x y)
 	  ;;     (list 123 x))
@@ -508,6 +508,7 @@
 	  ;;     (display "ciao")
 	  ;;     (list 123 456))
 	  ;;
+	  ;;and so we need to evaluate the application of DISPLAY.
 	  (residualize-operands rator^ rand* sc)
 	(begin
 	  (decrement sc (if (primref? rator^) 1 3))
@@ -1268,8 +1269,9 @@
 			 (lambda () (set-operand-outer-pending! opnd #f))))
 		(residualize-ref x sc)))))
 
-	((primref primsym)
-	 ;;X is a reference to Vicare primitive function.  For example:
+	((primref prim-name)
+	 ;;X  is a  reference  to  core primitive  function;  PRIM-NAME  is a  symbol
+	 ;;representing its public name.  For example:
 	 ;;
 	 ;;   (list   ;; <- reference to variable
 	 ;;    1 2 3)
@@ -1278,7 +1280,7 @@
 	   ((v)		rhs)
 	   ((p)		(make-constant #t))
 	   ((e)		VOID-CONSTANT)
-	   ((app)	(fold-prim primsym ctxt ec sc))))
+	   ((app)	(fold-prim prim-name ctxt ec sc))))
 
 	(else
 	 ;;Give up.  No optimizations possible.
@@ -1580,8 +1582,8 @@
 
 (module (fold-prim)
   ;;Whenever possible attempt  to precompute the result of a  core primitive function
-  ;;application.    This  is   the   place  where   the  "foldable",   "effect-free",
-  ;;"result-true" and "result-false" primitive application attributes are used.
+  ;;application.  This is  the place where the core  primitive application attributes
+  ;;are used.
   ;;
   (module (core-primitive-name->application-attributes*
 	   application-attributes-operands-template
@@ -1589,6 +1591,7 @@
 	   application-attributes-effect-free?
 	   application-attributes-result-true?
 	   application-attributes-result-false?
+	   application-attributes-identity?
 	   CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
     (import CORE-PRIMITIVE-PROPERTIES))
 
@@ -1596,9 +1599,13 @@
     (identifier-syntax 'fold-prim))
 
   (define (fold-prim prim-name appctxt ec sc)
-    ;;PRIM-NAME must  be a symbol  being the name  of a primitive  function.  APPCTXT
-    ;;must be a  struct instance of type APP, representing  the context of appliction
-    ;;for PRIM-NAME.  EC is the effort counter.  SC is the size counter.
+    ;;PRIM-NAME must  be a symbol  representing the public  name of a  core primitive
+    ;;function.  APPCTXT  must be  a struct  instance of  type APP,  representing the
+    ;;context of appliction for PRIM-NAME.  EC is the effort counter.  SC is the size
+    ;;counter.
+    ;;
+    ;;If  folding  is succesful  return  a  struct  representing  the result  of  the
+    ;;application.  Otherwise return a PRIMREF struct referencing the primitive.
     ;;
     (let* ((rand*  (app-rand* appctxt))
 	   (info   (%primitive-info prim-name rand*))
