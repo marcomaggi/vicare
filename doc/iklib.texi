@@ -8237,8 +8237,19 @@ value @samp{#<unbound-object>}; this field has multiple purposes:
 
 @itemize
 @item
-When the symbol is the unique identifier of a data structure type:
-@code{value} holds the @rtd{} of the data structure.
+When the symbol is the unique identifier of a @value{PRJNAME} data
+structure type: @code{value} holds the type-descriptor of the data
+structure.
+
+@item
+When the symbol is the unique identifier of a @rnrs{6} record type:
+@code{value} holds the type-descriptor of the record.
+
+@item
+When the symbol is the ``public name'' of a core primitive defined by
+@value{PRJNAME}, for example @func{display} or @func{+}: we have to
+assume that @code{value} holds a Scheme object for internal use by
+@value{PRJNAME}.
 
 @item
 When the symbol is a label gensym associated to a syntactic binding
@@ -8259,6 +8270,11 @@ variable.
 When the symbol is a fresh symbol returned by a call to @func{gensym}:
 we can use @code{value} for any purpose we want.
 @end itemize
+
+In practise, we should never use the @code{value} field of symbols
+unless they are gensyms we are using for a specific purpose, in which
+case the ability to associate a value with a symbol can be quite useful
+in building some form of associative array with distributed storage.
 
 The following bindings are exported by the library @library{vicare}.
 
