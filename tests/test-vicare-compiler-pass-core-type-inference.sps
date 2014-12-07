@@ -648,6 +648,21 @@
   ;;
   ;; (doit (typed-expr (quote (1 . 2)) T:fixnum) #f)
 
+;;; --------------------------------------------------------------------
+;;; typing LAMBDA arguments
+
+  (doit (lambda (a b c)
+	  (begin
+	    (typed-expr a T:fixnum)
+	    (typed-expr b T:symbol)
+	    (typed-expr c T:string)
+	    ((primitive list) a b c)))
+	(lambda (a_0 b_0 c_0)
+	  (funcall (primref list)
+	    (known a_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
+	    (known b_0 (T:symbol T:non-false T:nonimmediate T:object))
+	    (known c_0 (T:string T:non-false T:nonimmediate T:object)))))
+
   #t)
 
 
