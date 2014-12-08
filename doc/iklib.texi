@@ -6338,7 +6338,10 @@ The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Syntax define-struct @meta{name} (@meta{field} ...)
+@deffnx Syntax define-struct @meta{name} (@meta{field} ...) (nongenerative @meta{uid})
 @deffnx Syntax define-struct (@meta{name} @meta{constructor} @meta{predicate}) (@meta{field} ...)
+@deffnx Syntax define-struct (@meta{name} @meta{constructor} @meta{predicate}) (@meta{field} ...) (nongenerative @meta{uid})
+@deffnx {Auxiliary Syntax} nongenerative
 Define a new data structure type.  This macro is embedded in the
 expander.
 
@@ -6349,6 +6352,12 @@ representing the name of the constructor.  When @meta{predicate} is
 used: it must be an identifier representing the name of the predicate.
 The @meta{field} values must be symbols representing the names of the
 fields; they are used to build names for the accessors and mutators.
+
+When the @clause{nongenerative} clause is used: @meta{uid} must be a
+symbol uniquely identifying the struct type.  Multiple definitions of
+struct type using the same @meta{uid} must have the same type name and
+field names, and represent the same type definition.  See
+@func{make-struct-type} for more details.
 
 The following definition:
 
@@ -6429,6 +6438,56 @@ this type; when not supplied, a symbol is automatically generated.  The
 @func{$symbol-value} field of @var{uid} is set to the newly created
 @rtd{}; if @var{uid} already has a symbol value: such value must be a
 struct descriptor equal to the newly created @rtd{}.
+
+The use of a @var{uid} allows us to define a unique struct type in
+different libraries without sharing the definition by importing
+bindings.  For example, we can define a struct type in a library and
+import the definition in other libraries:
+
+@example
+(library (one)
+  (export
+    make-color color?
+    color-red color-green color-blue)
+  (import (vicare))
+  (define-struct color
+    (red green blue)))
+
+(library (two)
+  (export C)
+  (import (vicare) (one))
+  (define C (make-color 1 2 3)))
+
+(library (three)
+  (export)
+  (import (vicare) (one) (two))
+  (display (color-red C)))
+@end example
+
+@noindent
+but, by specifying a @var{uid}, we can also do:
+
+@example
+(library (two)
+  (export C)
+  (import (vicare))
+  (define-struct color
+    (red green blue)
+    (nongenerative the-color))
+  (define C
+    (make-color 1 2 3)))
+
+(library (three)
+  (export)
+  (import (vicare))
+  (define-struct color
+    (red green blue)
+    (nongenerative the-color))
+  (make-color 1 2 3))
+@end example
+
+@noindent
+and everything will work as before.
 @end defun
 
 

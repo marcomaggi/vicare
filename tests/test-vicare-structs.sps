@@ -198,6 +198,34 @@
   #t)
 
 
+(parametrise ((check-test-name	'nongenerative))
+
+  (define-struct color
+    (red green blue)
+    (nongenerative non-color))
+
+  (define color-std
+    (make-struct-type "color" '(red green blue) 'non-color))
+
+  (check
+      (let ((O ((struct-constructor color-std) 1 2 3)))
+	(values (color? O)
+		(color-red O)
+		(color-green O)
+		(color-blue O)))
+    => #t 1 2 3)
+
+  (check
+      (let ((O (make-color 1 2 3)))
+	(values ((struct-predicate color-std) O)
+		((struct-field-accessor color-std 'red) O)
+		((struct-field-accessor color-std 'green) O)
+		((struct-field-accessor color-std 'blue) O)))
+    => #t 1 2 3)
+
+  #t)
+
+
 (parametrise ((check-test-name	'using))
 
   (define color-rtd

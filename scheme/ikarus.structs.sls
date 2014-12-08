@@ -168,15 +168,15 @@
 
   (({name string?} {field-name* list-of-symbols?} {uid symbol?})
    (if (symbol-bound? uid)
-       (let ((std ($symbol-value uid)))
+       (receive-and-return (std)
+	   ($symbol-value uid)
 	 (unless (and (string=? name (struct-type-name std))
 		      (equal? field-name* (struct-type-field-names std)))
 	   (assertion-violation __who__
 	     "mismatching data structure definition, \
-              selected UID already bound non type descriptor \
-              value or to type descriptor not matching this \
-              definition"))
-	 std)
+              selected UID already bound to non type-descriptor \
+              value or to type-descriptor not matching this \
+              definition")))
      ($make-std name field-name* uid))))
 
 (define (struct-type-descriptor? obj)
