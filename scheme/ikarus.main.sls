@@ -116,10 +116,6 @@
 		  make-readline-input-port)
 	    readline.))
 
-;; #!vicare
-;; (define dummy
-;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main")))
-
   (include "ikarus.wordsize.scm" #t)
 
 
@@ -1238,6 +1234,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   (psyntax.initialise-type-spec-for-built-in-object-types)
   (psyntax.initialise-core-prims-tagging)
+
   #| end of module |# )
 
 
@@ -1442,6 +1439,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 
 ;;;; main expressions
+
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main here"))
 
 (receive (cfg execution-state-initialisation-according-to-command-line-options)
     (parse-command-line-arguments)

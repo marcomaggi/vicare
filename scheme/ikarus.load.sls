@@ -1178,7 +1178,10 @@
 (current-include-file-locator		locate-include-file)
 (current-include-file-loader		read-include-file)
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load"))
+
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -549,7 +549,7 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "library-utils")))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

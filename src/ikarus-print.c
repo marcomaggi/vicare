@@ -70,7 +70,7 @@ ikptr
 ikrt_print_emergency (ikptr s_str, ikpcb *pcb)
 {
   fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_str));
-  return IK_FALSE;
+  return IK_VOID;
 }
 
 

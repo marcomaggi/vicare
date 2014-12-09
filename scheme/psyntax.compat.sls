@@ -230,6 +230,6 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.compat")))
 
-)
+#| end of library |# )
 
 ;;; end of file

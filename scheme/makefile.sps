@@ -4317,7 +4317,7 @@
 	   ;;label gensym.
 	   (for-each
 	       (lambda (func-name.lab)
-		 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
+	   	 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
 	     ',export-subst)
 	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
