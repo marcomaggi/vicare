@@ -40,7 +40,11 @@
 		  char-ci=? char-ci!=? char-ci>? char-ci>=? string-upcase string-downcase
 		  string-foldcase string-titlecase  string-ci<? string-ci<=?
 		  string-ci=? string-ci>? string-ci>=? string-normalize-nfd
-		  string-normalize-nfkd string-normalize-nfc string-normalize-nfkc)
+		  string-normalize-nfkd string-normalize-nfc string-normalize-nfkc
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sat Nov 22, 2014)
+		  char!=?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
     ;;2014)
     (only (ikarus chars) char!=?))

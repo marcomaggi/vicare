@@ -40,6 +40,7 @@
 		  pretty-print pretty-print* write-char
 		  print-condition)
 	    ikarus.)
+    (only (ikarus control) call/cf)
     (vicare language-extensions syntaxes)
     (prefix (vicare platform words)
 	    words.)

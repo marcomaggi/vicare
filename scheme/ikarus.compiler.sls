@@ -91,6 +91,10 @@
 		  greatest-fixnum
 		  least-fixnum
 
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed Dec 10, 2014)
+		  void-object?
+
 		  ;;We need a SYSTEM-VALUE procedure, but the correct one.  See below
 		  ;;the appropriately commented import spec.
 		  #;system-value
