@@ -1972,7 +1972,7 @@
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
-   ((_ () . ())				foldable effect-free result-true)
+   ((_ ())				foldable effect-free result-true)
    ((_ _ . _)				result-true)))
 
 (declare-core-primitive for-each
@@ -1983,7 +1983,7 @@
   (attributes
    ;;In the  general case: neither  foldable nor  effect-free, because it  applies an
    ;;unknown function.
-   ((_ () . ())				foldable effect-free result-true)
+   ((_ ())				foldable effect-free result-true)
    ((_ _ . _)				result-true)))
 
 ;;;
@@ -2006,7 +2006,7 @@
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
-   ((_ () . ())				foldable effect-free result-false)))
+   ((_ ())				foldable effect-free result-false)))
 
 (declare-core-primitive for-all
     (safe)
@@ -2016,7 +2016,7 @@
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
-   ((_ () . ())				foldable effect-free result-true)))
+   ((_ ())				foldable effect-free result-true)))
 
 (declare-core-primitive filter
     (safe)
@@ -2045,7 +2045,7 @@
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
-   ((_ _ () . ())			foldable effect-free)))
+   ((_ _ ())				foldable effect-free)))
 
 (declare-core-primitive fold-right
     (safe)
@@ -2054,7 +2054,7 @@
   (attributes
    ;;In the  general case:  neither foldable  nor effect-free, because it  applies an
    ;;unknown function.
-   ((_ _ () . ())			foldable effect-free)))
+   ((_ _ ())			foldable effect-free)))
 
 (declare-core-primitive andmap
     (safe)

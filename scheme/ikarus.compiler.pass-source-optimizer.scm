@@ -1713,12 +1713,14 @@
       ;;Match the operands in RAND* against the primitive application template in the
       ;;items of APPLICATION-ATTRIBUTES.
       ;;
+      (define full-operands-template
+	(application-attributes-operands-template application-attributes))
       (let loop ((rand*             rand*)
-		 (operands-template (application-attributes-operands-template application-attributes)))
+		 (operands-template full-operands-template))
 	(cond ((pair? operands-template)
 	       (and (pair? rand*)
-		    (let ((optmpl (car operands-template)))
-		      (case optmpl
+		    (let ((next-operand-template (car operands-template)))
+		      (case next-operand-template
 			((_)
 			 ;;An argument matched.  Go on with the rest.
 			 (loop (cdr rand*) (cdr operands-template)))
@@ -1728,25 +1730,42 @@
 			 ;;primitive application; else this template does not match.
 			 (let ((v (value-visit-operand! (car rand*))))
 			   (and (constant? v)
-				(equal? optmpl (constant-value v))
+				(equal? next-operand-template (constant-value v))
 				(loop (cdr rand*) (cdr operands-template)))))
 			(else
 			 (compiler-internal-error __module_who__ __who__
 			   "invalid core primitive template operand specification"
-			   prim-name (car operands-template)))))))
-	      ((eq? operands-template '_)
-	       ;;Success!  The  template is  an improper list:  it represents  a call
-	       ;;accepting  any number  of arguments  (possibly after  some mandatory
-	       ;;arguments).
-	       #t)
+			   prim-name full-operands-template next-operand-template))))))
 	      ((null? operands-template)
 	       ;;The  template is  a proper  list.  If  RAND* is  null: success,  the
 	       ;;template matches the arguments!  Else this template does not match.
 	       (null? rand*))
+	      ((eq? operands-template '_)
+	       ;;Success!  The  template is  an improper list:  it represents  a call
+	       ;;accepting  any number  of arguments  (possibly after  some mandatory
+	       ;;arguments), of any type.
+	       #t)
+	      ((memv operands-template '(0 #f))
+	       ;;The template is an improper list: it represents a call accepting any
+	       ;;number of arguments (possibly after some mandatory arguments).  This
+	       ;;template matches  if all  the optional operands  are: 0,  #f; notice
+	       ;;that ()  cannot be in tail  position to represent any  null optional
+	       ;;arguments.
+	       ;;
+	       ;;If  there are  no  more arguments:  success!!   Otherwise check  the
+	       ;;arguments against the template.
+	       (let nested-loop ((rand*                 rand*)
+				 (tail-operand-template operands-template))
+		 (if (pair? rand*)
+		     (let ((v (value-visit-operand! (car rand*))))
+		       (and (constant? v)
+			    (eqv? tail-operand-template (constant-value v))
+			    (nested-loop (cdr rand*) tail-operand-template)))
+		   #t)))
 	      (else
 	       (compiler-internal-error __module_who__
-		 "invalid core primitive template operand specification"
-		 prim-name operands-template)))))
+		 "invalid core primitive template operand specification, expected proper or improper list"
+		 prim-name full-operands-template)))))
     (cond ((core-primitive-name->application-attributes* prim-name)
 	   => (lambda (application-attributes*)
 		;;A proper list:
