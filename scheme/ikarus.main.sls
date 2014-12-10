@@ -51,7 +51,11 @@
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log
-		  expand-top-level)
+		  expand-top-level
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed Dec 10, 2014)
+		  cafe-input-port)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (ikarus.options)
@@ -109,6 +113,8 @@
     (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Dec 10,
+    ;;2014)
     (only (ikarus cafe)
 	  cafe-input-port)
     (prefix (only (ikarus.readline)
