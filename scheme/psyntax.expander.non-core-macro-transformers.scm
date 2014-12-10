@@ -455,6 +455,7 @@
 	(%clauses->entries input-form.stx clause*.stx)
       (define boolean-entry*		'())
       (define char-entry*		'())
+      (define null-entry*		'())
       (define symbol-entry*		'())
       (define number-entry*		'())
       (define string-entry*		'())
@@ -490,9 +491,12 @@
 		   (set-cons! bytevector-entry* (car entry*))
 		   (loop (cdr entry*)))
 
-		  ((or (null? datum)
-		       (pair? datum))
+		  ((pair? datum)
 		   (set-cons! pair-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((null? datum)
+		   (set-cons! null-entry* (car entry*))
 		   (loop (cdr entry*)))
 
 		  ((vector? datum)
@@ -516,6 +520,7 @@
 		 (mk-datum-clause bytevector?	$bytevector=	bytevector-entry*)
 		 (mk-datum-clause pair?		equal?		pair-entry*)
 		 (mk-datum-clause vector?	equal?		vector-entry*)
+		 (%make-null-clause input-form.stx expr.id null-entry*)
 		 )))))
 
   (define (%clauses->entries input-form.stx clause*.stx)
@@ -581,6 +586,20 @@
 		     entry*)
 		 (else
 		  (,else.id)))))
+      '()))
+
+  (define (%make-null-clause input-form.stx expr.id entry*)
+    (if (pair? entry*)
+	(if (<= 2 (length entry*))
+	    (syntax-violation __who__ "invalid datums, null is present multiple times" input-form.stx)
+	  (bless
+	   `((null? ,expr.id)
+	     ,(let* ((entry      (car  entry*))
+		     (closure.id (cadr entry))
+		     (arrow?     (cddr entry)))
+		(if arrow?
+		    `(,closure.id ,expr.id)
+		  `(,closure.id))))))
       '()))
 
   (define (%make-numbers-clause input-form.stx expr.id else.id entry*)
