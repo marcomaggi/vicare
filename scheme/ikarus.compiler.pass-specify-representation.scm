@@ -651,7 +651,7 @@
 	;;Function     to    be     used     as    value     for    the     parameter
 	;;%RECORD-USE-OF-INTERRUPT-IN-BODY.  It raises an error.
 	;;
-	(compiler-internal-error '%record-use-of-interrupt-in-body
+	(compiler-internal-error __module_who__ '%record-use-of-interrupt-in-body
 	  "attempt to introduce a jump to interrupt handler in the body of an uninterruptible core primitive operation"
 	  primitive-symbol-name simple-rand* ctxt))
       (if (not (primitive-handler-interruptable? prim))
@@ -675,7 +675,7 @@
 
     (define-constant %record-use-of-interrupt-in-body
       (make-parameter (lambda ()
-			(compiler-internal-error '%record-use-of-interrupt-in-body
+			(compiler-internal-error __module_who__ '%record-use-of-interrupt-in-body
 			  "uninitialized parameter"))))
 
     (define (flagged-interrupt)
@@ -690,7 +690,7 @@
 
   (module (%cogen-primop-body)
 
-    (define (%cogen-primop-body prim ctxt simple-rand*)
+    (define* (%cogen-primop-body prim ctxt simple-rand*)
       ;;Actually generate the BODY of a  primitive operation call; this body might be
       ;;wrapped  or not  into  a  SHORTCUT.  This  function  is  where the  primitive
       ;;operation handlers stored in the PRIMITIVE-HANDLER structs are applied to the
@@ -875,7 +875,7 @@
 		(else
 		 (%doit-with-adapter)))))))
 	(else
-	 (compiler-internal-error __module_who__ "invalid evaluation context" ctxt))))
+	 (compiler-internal-error __module_who__ __who__ "invalid evaluation context" ctxt))))
 
     (define-syntax (case-primitive-operation-handler stx)
       (define (main stx)
@@ -1010,7 +1010,7 @@
 		    (K BOOL-FALSE-OBJECT)))))
 
 	(else
-	 (compiler-internal-error __module_who__ "invalid context" ctxt))))
+	 (compiler-internal-error __module_who__ __who__ "invalid context" ctxt))))
 
     (define (%the-body-is-just-an-interrupt-asmcall? body)
       (struct-case body
@@ -1216,9 +1216,9 @@
   ;;   |.....................|.....................|.....................|
   ;;     closure object C_0    closure object B_0    closure object C_0
   ;;
-  (define (handle-fix lhs* rhs* body)
+  (define* (handle-fix lhs* rhs* body)
     (cond ((null? rhs*)
-	   (compiler-internal-error __module_who__
+	   (compiler-internal-error __module_who__ __who__
 	     "invalid FIX struct with empty bindings" lhs* rhs* body))
 	  ((and (null? (cdr rhs*))
 		(%combinator-closure-maker? (car rhs*)))
@@ -1383,7 +1383,7 @@
     (else
      (V x))))
 
-(define (V x)
+(define* (V x)
   ;;X must be a  struct instance representing recordized code to  be executed in "for
   ;;returned  value" context;  the return  value  is a  struct instance  representing
   ;;recordized code (to  be executed in "for returned value"  context) which is meant
@@ -1457,10 +1457,10 @@
      (make-jmpcall label (V rator) (map V rand*)))
 
     (else
-     (compiler-internal-error __module_who__
+     (compiler-internal-error __module_who__ __who__
        "invalid expression in V context" (unparse-recordized-code x)))))
 
-(define (V-simple-operand x)
+(define* (V-simple-operand x)
   ;;Similar to V  but it must be  applied only to the  "simplified operands" prepared
   ;;for  a   core  primitive  operation   application.   Return  a   struct  instance
   ;;representing recordized  code (to  be executed in  "for returned  value" context)
@@ -1488,12 +1488,12 @@
      (V-simple-operand expr))
 
     (else
-     (compiler-internal-error 'cogen-specify-representation:T
+     (compiler-internal-error __module_who__ __who__
        "invalid struct as simplified operand to core primitive operation application"
        (unparse-recordized-code x)))))
 
 
-(define (P x)
+(define* (P x)
   ;;X  must be  a struct  instance  representing recordized  code to  be executed  in
   ;;predicate context.  Return a struct  instance representing recordized code (to be
   ;;executed in predicate context) which is meant to replace X.
@@ -1543,12 +1543,12 @@
      (asm '!= (V x) (KN BOOL-FALSE-OBJECT)))
 
     (else
-     (compiler-internal-error __module_who__
+     (compiler-internal-error __module_who__ __who__
        "invalid recordised expression in P context"
        (unparse-recordized-code x)))))
 
 
-(define (E x)
+(define* (E x)
   ;;X must be a  struct instance representing recordized code to  be executed in "for
   ;;side effect" context.  Return a  struct instance representing recordized code (to
   ;;be executed in "for side effect" context) which is meant to replace X.
@@ -1593,7 +1593,7 @@
      (make-jmpcall label (V rator) (map V rand*)))
 
     (else
-     (compiler-internal-error __module_who__
+     (compiler-internal-error __module_who__ __who__
        "invalid recordised expression in E context"
        (unparse-recordized-code x)))))
 
@@ -1674,7 +1674,7 @@
 	   (make-constant EOF-OBJECT))
 
 	  ((object? x.const)
-	   (compiler-internal-error __who__
+	   (compiler-internal-error __module_who__ __who__
 	     "found recordised constant with double wrapping" (unparse-recordized-code x)))
 
 	  (else
