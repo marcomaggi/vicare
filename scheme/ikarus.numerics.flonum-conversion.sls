@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+;;;Copyright (C) 2006,2007,2008,2014  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -85,22 +85,40 @@
 		(list (chr (+ q 1)))))))))
 
     (define invlog2of
-      (let ((table (make-vector 37))
-	    (log2  (log 2)))
-	(do ((B 2 (+ B 1)))
-	    ((= B 37))
-	  (vector-set! table B (/ log2 (log B))))
+      (let ()
+	(define-syntax at-expand-time
+	  (lambda (stx)
+	    (let ((table (make-vector 37))
+		  (log2  (log 2)))
+	      (do ((x 2 (+ x 1)))
+		  ((= x 37))
+		(vector-set! table x (/ log2 (log x))))
+	      (syntax-case stx ()
+		((_ ?table ?log2)
+		 #`(begin
+		     (define ?table (quote #,table))
+		     (define ?log2  (quote #,log2))))
+		))))
+	(at-expand-time table log2)
 	(lambda (B)
 	  (if (<= 2 B 36)
 	      (vector-ref table B)
 	    (/ log2 (log B))))))
 
     (define exptt
-      (let ((table (make-vector 326)))
-	(do ((k 0 (+ k 1))
-	     (v 1 (* v 10)))
-	    ((= k 326))
-	  (vector-set! table k v))
+      (let ()
+	(define-syntax at-expand-time
+	  (lambda (stx)
+	    (let ((table (make-vector 326)))
+	      (do ((k 0 (+ k 1))
+		   (v 1 (* v 10)))
+		  ((= k 326))
+		(vector-set! table k v))
+	      (syntax-case stx ()
+		((_ ?table)
+		 #`(define ?table (quote #,table)))
+		))))
+	(at-expand-time table)
 	(lambda (B k)
 	  (if (and (= B 10) (<= 0 k 325))
 	      (vector-ref table k)
