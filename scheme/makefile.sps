@@ -4465,7 +4465,8 @@
 	      (expand-all scheme-library-files))))
       ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
       ;;we must register  in the state of  the compiler a closure  capable of mapping
-      ;;lexical-primitive symbol-names to their location gensyms.
+      ;;lexical-primitive symbol-names to their location gensyms.  The loc gensyms of
+      ;;core primitives are created by this very "makefile.sps" script.
       ;;
       ;;EXPORT-PRIMLOCS is an  alist whose keys are the primitive's  symbol names and
       ;;whose values are the primitive's location gensyms.
