@@ -67,9 +67,18 @@ ik_print_no_newline (ikptr x)
 }
 
 ikptr
-ikrt_print_emergency (ikptr s_str, ikpcb *pcb)
+ikrt_print_emergency (ikptr s_bv, ikpcb *pcb)
 {
-  fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_str));
+  fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_bv));
+  return IK_VOID;
+}
+
+ikptr
+ikrt_scheme_print (ikptr x, ikpcb * pcb)
+/* This can be called from Scheme. */
+{
+  print_object(stderr, x, 0);
+  fprintf(stderr, "\n");
   return IK_VOID;
 }
 
