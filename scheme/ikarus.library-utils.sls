@@ -154,9 +154,11 @@
   ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
   ;;list of identifiers.
   ;;
-  (for-all eq?
-	   (library-name->identifiers sexp1)
-	   (library-name->identifiers sexp2)))
+  (let ((ids1 (library-name->identifiers sexp1))
+	(ids2 (library-name->identifiers sexp2)))
+    (and (= (length ids1)
+	    (length ids2))
+	 (for-all eq? ids1 ids2))))
 
 (module (library-name=?
 	 library-name<?
