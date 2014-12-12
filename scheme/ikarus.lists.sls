@@ -1006,13 +1006,18 @@
        (define (null*? ls)
 	 (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
 
+       ;; (define (err* ls*)
+       ;; 	 (cond ((null? ls*)
+       ;; 		(procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+       ;; 	       ((list? (car ls*))
+       ;; 		(err* (cdr ls*)))
+       ;; 	       (else
+       ;; 		(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+
        (define (err* ls*)
-	 (cond ((null? ls*)
-		(procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
-	       ((list? (car ls*))
-		(err* (cdr ls*)))
-	       (else
-		(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+	 (if (for-all list? ls*)
+	     (apply procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS ls*)
+	   (apply procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls*)))
 
        (define (cars+cdrs ls ls*)
 	 (if (null? ls)
@@ -1022,7 +1027,7 @@
 		    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		      (values (cons (car a) cars) (cons (cdr a) cdrs))))
 		   ((list? (car ls*))
-		    (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+		    (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS (cons ls ls*)))
 		   (else
 		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
 
