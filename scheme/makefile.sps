@@ -4120,9 +4120,13 @@
 		      (case-lambda
 		       ((,primloc.arg ,val.arg)
 			(begin
+			  #;(foreign-call (quote "ikrt_scheme_print") ,primloc.arg)
+			  #;(foreign-call (quote "ikrt_scheme_print") ,val.arg)
 			  ((primitive $set-symbol-value!) ,primloc.arg ,val.arg)
 			  (if ((primitive procedure?) ,val.arg)
-			      ((primitive $set-symbol-proc!) ,primloc.arg ,val.arg)
+			      (begin
+				#;(foreign-call (quote "ikrt_print_emergency") '#ve(ascii "is procedure"))
+				((primitive $set-symbol-proc!) ,primloc.arg ,val.arg))
 			    ((primitive $set-symbol-proc!) ,primloc.arg
 			     (case-lambda
 			      ;;Raise an  error if  this lexical  primitive is  not a
@@ -4478,6 +4482,10 @@
 	  (lambda ()
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
 	    (for-each (lambda (name core)
+			;; (begin
+			;;   (print-gensym #f)
+			;;   (when (equal? name '(ikarus chars))
+			;;     (pretty-print (syntax->datum core))))
 	    		(debug-printf " ~s" name)
 	    		(compiler.compile-core-expr-to-port core port))
 	      name*
