@@ -16,7 +16,7 @@
 
 
 #!vicare
-(library (psyntax compat)
+(library (psyntax.compat)
   (export
     define*				define-constant
     case-define				case-define*

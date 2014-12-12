@@ -73,12 +73,12 @@
 	    compiler.)
     (only (ikarus.debugger)
 	  guarded-start)
-    (prefix (only (psyntax expander)
+    (prefix (only (psyntax.expander)
 		  expand-top-level
 		  initialise-type-spec-for-built-in-object-types
 		  initialise-core-prims-tagging)
 	    psyntax.)
-    (prefix (only (psyntax library-manager)
+    (prefix (only (psyntax.library-manager)
 		  current-library-expander
 		  source-code-location
 		  current-library-locator)

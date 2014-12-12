@@ -18,7 +18,7 @@
   (export apropos)
   (import (except (vicare)
 		  apropos)
-    (only (psyntax library-manager)
+    (only (psyntax.library-manager)
 	  library-export-subst
 	  library-name-identifiers
 	  installed-libraries)
