@@ -234,6 +234,18 @@ print_object (FILE* fh, ikptr x, int nested_level)
   else if (IK_FORWARD_PTR == x) {
     fprintf(fh, "#<forward-ptr>");
   }
+  else if (IK_EOF_OBJECT == x) {
+    fprintf(fh, "#<eof>");
+  }
+  else if (IK_VOID_OBJECT == x) {
+    fprintf(fh, "#<void>");
+  }
+  else if (IK_UNBOUND_OBJECT == x) {
+    fprintf(fh, "#<unbound-object>");
+  }
+  else if (IK_BWP_OBJECT == x) {
+    fprintf(fh, "#<bwp-object>");
+  }
   else {
     fprintf(fh, "#<unknown 0x%016lx>", x);
   }

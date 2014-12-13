@@ -9,7 +9,7 @@
 	definitions  in this  file are  duplicated in  "vicare.h", which
 	defines the public API.
 
-  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -409,6 +409,8 @@
 
 #define IK_GUARDIANS_GENERATION_NUMBER	0
 #define IK_GC_GENERATION_COUNT		5  /* generations 0 (nursery), 1, 2, 3, 4 */
+#define IK_GC_GENERATION_NURSERY	0
+#define IK_GC_GENERATION_OLDEST		(IK_GC_GENERATION_COUNT - 1)
 
 /* The PCB's segments  vector is an array of 32-bit  words, each being a
  * bit field  representing the status  of an allocated memory  page.  We
@@ -976,7 +978,7 @@ typedef struct ikcont {
  ** ----------------------------------------------------------------- */
 
 ik_decl ikpcb *		ik_collect		(unsigned long, ikpcb*);
-ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char*);
+ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char * when_description);
 
 ik_private_decl void*	ik_malloc		(int);
 ik_private_decl void	ik_free			(void*, int);

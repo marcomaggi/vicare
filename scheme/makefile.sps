@@ -9,7 +9,7 @@
 ;;;	boot file "vicare.boot".
 ;;;
 ;;;	  This program works  hand-in-hand with the expander,  especially the library
-;;;	(psyntax library-manager) in the file "psyntax.library-manager.sls".
+;;;	(psyntax.library-manager) in the file "psyntax.library-manager.sls".
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
@@ -176,6 +176,7 @@
 ;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
   (prefix (ikarus.compiler) compiler.)
+  #;(only (psyntax.expander) expand-library)
   (prefix (only (psyntax system $bootstrap)
 		current-library-collection
 		find-library-by-name)
@@ -4297,7 +4298,7 @@
 	       (except (vicare)
 		       system-value-gensym
 		       system-label-gensym)
-	     (only (psyntax library-manager)
+	     (only (psyntax.library-manager)
 		   install-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
