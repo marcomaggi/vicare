@@ -4353,7 +4353,8 @@ pages.
 @end example
 
 @noindent
-the free room at the end of the sequence of pages is lost.
+the free room at the end of the sequence of pages is lost.  Large code
+objects are @strong{never} moved by the garbage collector.
 @end enumerate
 
 @c ------------------------------------------------------------
