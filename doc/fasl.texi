@@ -176,14 +176,33 @@ the @samp{x} header:
 @enumerate
 @item
 An exact integer representing the number of bytes actually used in the
-data area of the code object.  On 32-bit platforms: a big endian 32-bit
-integer.  On 64-bit platforms: a sequence of two big endian 32-bit
-integers.
+data area of the code object; this is the number of bytes used by the
+executable machine code.
+
+@itemize
+@item
+On 32-bit platforms: a big endian 32-bit raw integer.
+
+@item
+On 64-bit platforms: a sequence of two big endian 32-bit raw integers;
+the first integer represents the least significant 32 bits, the second
+integer represents the most significant 32 bits.
+@end itemize
 
 @item
 An exact integer representing the number of free variables in the code.
-On 32-bit platforms: a big endian 32-bit integer.  On 64-bit platforms:
-a sequence of two big endian 32-bit integers.
+
+@itemize
+@item
+On 32-bit platforms: a big endian 32-bit integer representing the
+fixnum.
+
+@item
+On 64-bit platforms: a sequence of two big endian 32-bit integers
+representing the fixnum; the first integer represents the least
+significant 32 bits, the second integer represents the most significant
+32 bits.
+@end itemize
 
 @item
 A Scheme object representing the code annotation.

@@ -4289,22 +4289,18 @@ host's processor.
 @subsection Memory layout of code objects
 
 
-A code object is a fixed length memory block, of variable size equal to
-a multiple of the host's page size, referenced by machine words tagged
-as vectors; the memory is allocated with @cfunc{mmap} and is given read,
-write and execution protection.  The memory layout of a code object is
-as follows:
+A code object is a memory block, of variable size, referenced by machine
+words tagged as vectors; the memory is allocated with @cfunc{mmap} and
+is given read, write and execution protection.  The layout of a code
+object is as follows:
 
 @example
-     page size          page size          page size
-|..................|..................|..................|
-|-----------|-----------------------------------|++++++++|
-  meta data                 data area             unused
+|-----------|-----------------------------------| code object
+  meta data                 data area
 @end example
 
 @noindent
-if the requested memory is less than the exact multiple of a page size,
-the last allocated bytes are unused and set to zero at allocation time.
+the data area is filled with executable machine code.
 
 The first machine word of a code memory block is tagged has code in its
 least significant bits and it has the most significant bits set to zero.
@@ -4319,6 +4315,49 @@ least significant bits and it has the most significant bits set to zero.
 
 @c ------------------------------------------------------------
 
+@subsubheading Boot image code objects
+
+Scheme code objects which are part of the boot image are of 2
+categories:
+
+@enumerate
+@item
+Small code objects whose size fits in a single Vicare page.  Small code
+objects are allocated in the ``current code page'' while the boot image
+is loaded: a Vicare page marked as used ``for code'', in which code
+objects are stored one after the other, with size aligned to exact
+multiples of 16 bytes:
+
+@example
+                    current code page
+|..........................................................|
+
+  code object   code object   code object       free
+|.............|.............|.............|++++++++++++++++|
+|----------------------------------------------------------|
+@end example
+
+@noindent
+the free room at the end of the sequence of code objects is lost.
+
+@item
+Large code objects whose size fits in a sequence of adjacent Vicare
+pages.
+
+@example
+    page        page        page        page        page
+|...........|...........|...........|...........|...........|
+
+                large code object                     free
+|---------------------------------------------------|+++++++|
+@end example
+
+@noindent
+the free room at the end of the sequence of pages is lost.
+@end enumerate
+
+@c ------------------------------------------------------------
+
 @subsubheading Meta data in a code memory block
 
 The first words of a code memory block hold meta data:
@@ -4330,9 +4369,7 @@ object as code object.
 
 @item
 The second word contains a non--negative fixnum representing the number
-of used bytes in the allocated block; this is @strong{not} the number of
-allocated bytes (multiple of the page size), just the number of bytes
-actually used by meta data and binary code.
+of used bytes in the data area.
 
 @item
 The third word contains the reference to a Scheme vector used as
@@ -4340,7 +4377,7 @@ relocation vector.
 
 @item
 The fourth word contains a non--negative fixnum representing the number
-of free variables in the contained code.  If such values is zero: the
+of free variables in the contained code.  If such value is zero: the
 code is a thunk.
 
 @item
