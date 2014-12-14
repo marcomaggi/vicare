@@ -465,8 +465,27 @@
     (bitwise-ior c0 (sll c1 8) (sll c2 16) (sll c3 24))))
 
 (define (read-fixnum port)
-  ;;Read from  the input PORT a  fixnum represented as  32-bit or 64-bit
-  ;;value depending on the underlying platform's word size.
+  ;;Read from the input PORT a fixnum represented as 32-bit or 64-bit value depending
+  ;;on the underlying platform's word size:
+  ;;
+  ;;* On 32-bit platforms fixnums are represented as standalone 32-bit integers.
+  ;;
+  ;;*  On 64-bit  platforms  fixnums are  represented  as a  sequence  of two  32-bit
+  ;;integers; the first  integer is the least significant, the  second integer is the
+  ;;most significant.
+  ;;
+  ;;Each 32-bit integer  X is read as  a sequence of bytes in  big-endian layout; the
+  ;;sequence of bytes:
+  ;;
+  ;;                    DD CC BB AA
+  ;;   head of file |--|--|--|--|--|--| tail of file
+  ;;
+  ;;is read and an integer is composed as follows:
+  ;;
+  ;;   X = #xAABBCCDD
+  ;;         ^      ^
+  ;;         |      least significant
+  ;;         most significant
   ;;
   (boot.case-word-size
     ((32)
@@ -476,7 +495,7 @@
 	    (c3 (read-u8 port)))
        (cond
 	((fx<= c3 127)
-	 (fxlogor (fxlogor (fxsra c0 2) (fxsll c1 6))
+	 (fxlogor (fxlogor (fxsra c0  2) (fxsll c1  6))
 		  (fxlogor (fxsll c2 14) (fxsll c3 22))))
 	(else
 	 (let ((c0 (fxlogand #xFF (fxlognot c0)))
@@ -484,10 +503,8 @@
 	       (c2 (fxlogand #xFF (fxlognot c2)))
 	       (c3 (fxlogand #xFF (fxlognot c3))))
 	   (fx- -1
-		(fxlogor (fxlogor (fxsra c0 2)
-				  (fxsll c1 6))
-			 (fxlogor (fxsll c2 14)
-				  (fxsll c3 22)))))))))
+		(fxlogor (fxlogor (fxsra c0  2) (fxsll c1  6))
+			 (fxlogor (fxsll c2 14) (fxsll c3 22)))))))))
     ((64)
      (let* ((u0 (read-u32 port))
 	    (u1 (read-u32 port)))
