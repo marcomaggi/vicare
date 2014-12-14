@@ -225,6 +225,8 @@
 		      (%desuffix       source-pathname ".vicare.sls"))
 		     ((%string-suffix? source-pathname ".sls")
 		      (%desuffix       source-pathname ".sls"))
+		     ((%string-suffix? source-pathname ".sps")
+		      (%desuffix       source-pathname ".sps"))
 		     ((%string-suffix? source-pathname ".vicare.ss")
 		      (%desuffix       source-pathname ".vicare.ss"))
 		     ((%string-suffix? source-pathname ".ss")
@@ -476,9 +478,10 @@
     ;;descriptors required  for its  execution, a  closure object  to be
     ;;called to run it: write the serialized program FASL file.
     ;;
+    (import SOURCE-PATHNAME->BINARY-PATHNAME)
     (define-syntax-rule (%display ?thing)
       (display ?thing stderr))
-    (let ((fasl-filename (string-append (fasl-directory) "/" source-filename ".fasl")))
+    (let ((fasl-filename (source-pathname->binary-pathname source-filename)))
       (%display "serialising ")
       (%display fasl-filename)
       (%display " ... ")
@@ -1112,7 +1115,7 @@
       (or rv
 	  (begin
 	    (%print-verbose-message "WARNING: not using fasl file ~s because invalid or \
-                                  compiled with a different instance of Vicare\n"
+                                     compiled with a different instance of Vicare\n"
 				    fasl-pathname)
 	    #f)))))
 
