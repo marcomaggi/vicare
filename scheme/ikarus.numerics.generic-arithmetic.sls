@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;Implementation of BITWISE-REVERSE-BIT-FIELD from:
@@ -57,11 +57,12 @@
 (library (ikarus generic-arithmetic)
   (export
     + - * /
-    = < <= > >=
+    = != < <= > >=
     min				max
     add1			sub1
     quotient			remainder
     quotient+remainder		modulo
+    factorial
     zero?
     positive?			negative?
     even?			odd?
@@ -124,7 +125,7 @@
     bytevector->bignum		bignum->bytevector
 
 ;;; --------------------------------------------------------------------
-;;; the following go in (ikarus system $numerics)
+;;; the following go in (vicare system $numerics)
 
     $neg-number		$neg-fixnum	$neg-bignum
     $neg-flonum		$neg-ratnum	$neg-compnum
@@ -388,12 +389,13 @@
     )
 
 
-(import (except (ikarus)
-		+ - * / = < <= > >=
+(import (except (vicare)
+		+ - * / = != < <= > >=
 		min				max
 		add1				sub1
 		quotient			remainder
 		quotient+remainder		modulo
+		factorial
 		zero?
 		positive?			negative?
 		even?				odd?
@@ -453,13 +455,13 @@
 		random
 		error@add1			error@sub1
 		bytevector->bignum		bignum->bytevector)
-  (ikarus system $pairs)
-  (ikarus system $fx)
-  (ikarus system $flonums)
+  (vicare system $pairs)
+  (vicare system $fx)
+  (vicare system $flonums)
   ;;FIXME For  no reason I  can figure out now:  here we really  need to
-  ;;import  from "(ikarus  flonums)", rather  than from  "(ikarus system
+  ;;import  from "(ikarus  flonums)", rather  than from  "(vicare system
   ;;$flonums)".  (Marco Maggi; Thu Sep 19, 2013)
-  (rename (only (ikarus flonums) #;(ikarus system $flonums)
+  (rename (only (ikarus flonums) #;(vicare system $flonums)
 		$flexp
 		$flsin
 		$flcos
@@ -477,11 +479,11 @@
 	  ($flcosh	$cosh-flonum)
 	  ($fltanh	$tanh-flonum)
 	  ($flasinh	$asinh-flonum))
-  (ikarus system $ratnums)
-  (ikarus system $bignums)
-  (ikarus system $compnums)
-  (ikarus system $chars)
-  (ikarus system $strings)
+  (vicare system $ratnums)
+  (vicare system $bignums)
+  (vicare system $compnums)
+  (vicare system $chars)
+  (vicare system $strings)
   (vicare arguments validation)
   (vicare language-extensions syntaxes))
 
@@ -524,6 +526,10 @@
   (syntax-rules ()
     ((_ ?who . ?irritants)
      (procedure-argument-violation ?who "undefined operation" . ?irritants))))
+
+(define (%non-negative-integer? obj)
+  (and (integer? obj)
+       (not (negative? obj))))
 
 
 ;;;; constants
@@ -5064,6 +5070,14 @@
   #| end of module: exact-integer-sqrt |# )
 
 
+(define* (factorial {N %non-negative-integer?})
+  (let recur ((N N)
+	      (R 1))
+    (if (zero? N)
+	R
+      (recur (sub1 N) (* N R)))))
+
+
 (module (max
 	 $max-fixnum-number $max-bignum-number $max-flonum-number $max-ratnum-number
 	 $max-number-fixnum $max-number-bignum $max-number-flonum $max-number-ratnum
@@ -5601,7 +5615,7 @@
 		  (make-message-condition "precision argument is not supported"))))
 
     (define-argument-validation (radix who obj)
-      (case-fixnums obj
+      (case obj
 	((2 8 10 16)	#t)
 	(else		#f))
       (procedure-argument-violation who "invalid radix" obj))
@@ -5702,7 +5716,7 @@
   (module (bignum->string)
 
     (define (bignum->string x r)
-      (case-fixnums r
+      (case r
 	((10) (bignum->decimal-string x))
 	((2)  (bignum->power-string x  1 1))
 	((8)  (bignum->power-string x  7 3))
@@ -5899,6 +5913,163 @@
 	    (flfl= y  ($cflonum-real x))))
       ((compnum?)	(cncf= y x))
       ((cflonum?)	(cfcf= x y))
+      (else
+       (%error-not-number y))))
+
+;;; --------------------------------------------------------------------
+
+  (define (cncn= x y)
+    (and (= ($compnum-real x) ($compnum-real y))
+	 (= ($compnum-imag x) ($compnum-imag y))))
+
+  (define (cncf= x y)
+    (and (= ($compnum-real x) ($cflonum-real y))
+	 (= ($compnum-imag x) ($cflonum-imag y))))
+
+  (define (cfcf= x y)
+    (and (= ($cflonum-real x) ($cflonum-real y))
+	 (= ($cflonum-imag x) ($cflonum-imag y))))
+
+  #| end of module |# )
+
+
+(module (!=)
+  (define who (quote !=))
+
+  (define !=
+    (case-lambda
+     ((x y)
+      (cond-numeric-operand x
+	((fixnum?)	($fixnum!=number?  x y))
+	((bignum?)	($bignum!=number?  x y))
+	((flonum?)	($flonum!=number?  x y))
+	((ratnum?)	($ratnum!=number?  x y))
+	((compnum?)	($compnum!=number? x y))
+	((cflonum?)	($cflonum!=number? x y))
+	(else
+	 (%error-not-number x))))
+
+     ((x y z)
+      (cond ((= x y)
+	     (!= y z))
+	    ((number? z)
+	     #t)
+	    (else
+	     (%error-not-number z))))
+
+     ((x)
+      (if (number? x)
+	  #f
+	(%error-not-number x)))
+
+     ((x y . ls)
+      (cond-numeric-operand x
+	((fixnum?)	(%doloop $fixnum!=number?  x y ls))
+	((bignum?)	(%doloop $bignum!=number?  x y ls))
+	((flonum?)	(%doloop $flonum!=number?  x y ls))
+	((ratnum?)	(%doloop $ratnum!=number?  x y ls))
+	((compnum?)	(%doloop $compnum!=number? x y ls))
+	((cflonum?)	(%doloop $cflonum!=number? x y ls))
+	(else
+	 (%error-not-number x))))))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax %doloop
+    (syntax-rules ()
+      ((_ ?cmp ?x0 ?y0 ?ls0)
+       (let loop ((x  ?x0)
+		  (y  ?y0)
+		  (ls ?ls0))
+	 (if (?cmp x y)
+	     (or (null? ls)
+		 (%validate-rest-arguments ($car ls) ($cdr ls)))
+	   (if (null? ls)
+	       #f
+	     (loop x ($car ls) ($cdr ls))))))))
+
+  (define (%validate-rest-arguments x ls)
+    (if (number? x)
+	(if (null? ls)
+	    #t
+	  (%validate-rest-arguments ($car ls) ($cdr ls)))
+      (%error-not-number x)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($fixnum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	(not ($fx= x y)))
+      ((bignum?)	#t)
+      ((flonum?)	(not (fxfl= x y)))
+      ((ratnum?)	#t)
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (fxfl= x  ($cflonum-real y)))))
+      (else
+       (%error-not-number y))))
+
+  (define ($bignum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	(not (bnbn= x y)))
+      ((flonum?)	(not (bnfl= x y)))
+      ((ratnum?)	#t)
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (bnfl= x  ($cflonum-real y)))))
+      (else
+       (%error-not-number y))))
+
+  (define ($flonum!=number? x y)
+    (cond-numeric-operand y
+      ((flonum?)	(not (flfl= x y)))
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (flfl= x  ($cflonum-real y)))))
+      ((fixnum?)	(not (flfx= x y)))
+      ((bignum?)	(not (flbn= x y)))
+      ((ratnum?)	(not (flrt= x y)))
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      (else
+       (%error-not-number y))))
+
+  (define ($ratnum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	#t)
+      ((ratnum?)	(not (rtrt= x y)))
+      ((flonum?)	(not (rtfl= x y)))
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (rtfl= x  ($cflonum-real y)))))
+      (else
+       (%error-not-number y))))
+
+  (define ($compnum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	#t)
+      ((ratnum?)	#t)
+      ((flonum?)	#t)
+      ((compnum?)	(not (cncn= x y)))
+      ((cflonum?)	(not (cncf= x y)))
+      (else
+       (%error-not-number y))))
+
+  (define ($cflonum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	#t)
+      ((ratnum?)	#t)
+      ((flonum?)
+       (and ($flzero? ($cflonum-imag x))
+	    (not (flfl= y  ($cflonum-real x)))))
+      ((compnum?)	(not (cncf= y x)))
+      ((cflonum?)	(not (cfcf= x y)))
       (else
        (%error-not-number y))))
 
@@ -6452,12 +6623,14 @@
 
 (define (error@add1 x)
   ;;This is the error handler  function called when an interrupt happens
-  ;;while executing ADD1.
+  ;;while  executing the  primitive operation  ADD1.  For  details about
+  ;;this  error  procedure: scan  the  compiler's  code for  the  string
+  ;;"error@add1".
   ;;
   ;;By importing  the library here  we shadow the bindings,  causing the
   ;;forms  below to  be expanded  by  the optimizer  with the  primitive
   ;;operations.
-  (import (ikarus))
+  (import (vicare))
   (cond ((fixnum? x)	(+ (greatest-fixnum) 1))
 	((number? x)	(+ x 1))
 	(else
@@ -6466,19 +6639,22 @@
 (define (add1 x)
   ;;By importing  the library here  we shadow the binding  ADD1, causing
   ;;the form  below to be expanded  by the optimizer with  the primitive
-  ;;operation ADD1.
-  (import (only (ikarus)
-		add1))
+  ;;operation  ADD1 (the  assembly code  of the  primitive operation  is
+  ;;integrated in the body of this function).
+  ;;
+  (import (only (vicare) add1))
   (add1 x))
 
 (define (error@sub1 x)
   ;;This is the error handler  function called when an interrupt happens
-  ;;while executing ADD1.
+  ;;while  executing the  primitive operation  SUB1.  For  details about
+  ;;this  error  procedure: scan  the  compiler's  code for  the  string
+  ;;"error@sub1".
   ;;
   ;;By importing  the library here  we shadow the bindings,  causing the
   ;;forms  below to  be expanded  by  the optimizer  with the  primitive
   ;;operations.
-  (import (ikarus))
+  (import (vicare))
   (cond ((fixnum? x)	(- (least-fixnum) 1))
 	((number? x)	(- x 1))
 	(else
@@ -6487,8 +6663,10 @@
 (define (sub1 x)
   ;;By importing  the library here  we shadow the binding  SUB1, causing
   ;;the form  below to be expanded  by the optimizer with  the primitive
-  ;;operation SUB1.
-  (import (ikarus))
+  ;;operation  SUB1 (the  assembly code  of the  primitive operation  is
+  ;;integrated in the body of this function).
+  ;;
+  (import (only (vicare) sub1))
   (sub1 x))
 
 
@@ -8421,7 +8599,7 @@
 	   (unless (or (fixnum? n) (bignum? n))
 	     (procedure-argument-violation who "not an exact integer" n))
 	   (if ($bignum-positive? idx)
-	       (case-fixnums bit
+	       (case bit
 		 ((0)
 		  (if (>= n 0)
 		      n
@@ -8437,7 +8615,7 @@
 	   (procedure-argument-violation who "index is not an exact integer" idx))))
 
   (define (do-copy-bit n idx bit)
-    (case-fixnums bit
+    (case bit
       ((0)
        (if (bitwise-bit-set? n idx)
 	   (bitwise-and n (bitwise-not (sll 1 idx)))
@@ -8496,7 +8674,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.generic-arithmetic"))
+
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

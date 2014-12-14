@@ -20,7 +20,7 @@
 ;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
 ;;;SOFTWARE.
 
-(library (psyntax internal)
+(library (psyntax.internal)
   (export
     ;;Commented out because unused.  (Marco Maggi; Oct 14, 2012)
     ;;
@@ -28,7 +28,7 @@
     ;; compile-core-expr-to-port
     expanded->core)
   (import (rnrs)
-    (psyntax compat)
+    (psyntax.compat)
     (ikarus.compiler))
   (define (expanded->core x)
     x))

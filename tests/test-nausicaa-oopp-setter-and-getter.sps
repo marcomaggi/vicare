@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -123,11 +123,11 @@
 		  ((?var ((?key)) ?val)
 		   #'(<alpha>-setf ?var ?key ?val))))))
 
-    (define (<alpha>-setf (o <alpha>) key value)
+    (define (<alpha>-setf {o <alpha>} key value)
       (set! (o a) (list key value)))
 
     (check
-  	(let (((o <alpha>) (<alpha> (1))))
+  	(let (({o <alpha>} (<alpha> (1))))
   	  (set! (o[2]) 3)
   	  (o a))
       => '(2 3))
@@ -145,11 +145,11 @@
 		  ((?var ((?key0 ?key1)) ?val)
 		   #'(<alpha>-setf ?var ?key0 ?key1 ?val))))))
 
-    (define (<alpha>-setf (o <alpha>) key0 key1 value)
+    (define (<alpha>-setf {o <alpha>} key0 key1 value)
       (set! (o a) (list key0 key1 value)))
 
     (check
-	(let (((o <alpha>) (<alpha> (1))))
+	(let (({o <alpha>} (<alpha> (1))))
 	  (set! (o[2 3]) 4)
 	  (o a))
       => '(2 3 4))
@@ -169,14 +169,14 @@
 		  ((?var ((?key0 ?key1)))
 		   #'(<alpha>-getf ?var ?key0 ?key1))))))
 
-    (define (<alpha>-setf (o <alpha>) key0 key1 value)
+    (define (<alpha>-setf {o <alpha>} key0 key1 value)
       (set! (o a) (list key0 key1 value)))
 
-    (define (<alpha>-getf (o <alpha>) key0 key1)
+    (define (<alpha>-getf {o <alpha>} key0 key1)
       (list (o a) key0 key1))
 
     (check
-	(let (((o <alpha>) (<alpha> (1))))
+	(let (({o <alpha>} (<alpha> (1))))
 	  (set! (o[2 3]) 4)
 	  (o[5 6]))
       => '((2 3 4) 5 6))
@@ -203,14 +203,14 @@
 		  ))))
 
     (define-class <beta>
-      (fields (immutable (a <alpha>))
+      (fields (immutable {a <alpha>})
 	      (mutable   b))
       (setter (lambda (stx tag)
 		(syntax-case stx ()
 		  ((?expr ((?key)) ?value)
 		   #'(<beta>-b-set! ?expr (cons ?key ?value)))
 		  ((?expr ((?key0) (?key1)) ?value)
-		   #`(let (((tmp <alpha>) (#,tag #:oopp-syntax (?expr a))))
+		   #`(let (({tmp <alpha>} (#,tag #:oopp-syntax (?expr a))))
 		       (set! tmp[?key1] ?value)))
 		  )))
       (getter (lambda (stx tag)
@@ -218,36 +218,36 @@
 		  ((?var ((?key0)))
 		   #'(vector ?key0 (?var b)))
 		  ((?expr ((?key0) (?key1)))
-		   #`(let (((tmp <alpha>) (#,tag #:oopp-syntax (?expr a))))
+		   #`(let (({tmp <alpha>} (#,tag #:oopp-syntax (?expr a))))
 		       (tmp[?key1])))
 		  ))))
 
       (check	;one key set, setter syntax 1
-	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
+	  (let (({o <beta>} (<beta>[(<alpha>[1]) 2])))
 	    (set! (o[777]) 999)
 	    (o[333]))
 	=> '#(333 (777 . 999)))
 
       (check	;one key set, setter syntax 2
-	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
+	  (let (({o <beta>} (<beta>[(<alpha>[1]) 2])))
 	    (set! o[777] 999)
 	    (o[333]))
 	=> '#(333 (777 . 999)))
 
       (check	;one key set, nested getter setter
-	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
-	    (set! (o a[777]) 999)
-	    (o a[777]))
+	  (let (({o <beta>} (<beta>[(<alpha>[1]) 2])))
+	    (set! ((o a)[777]) 999)
+	    ((o a)[777]))
 	=> '#(777 (777 . 999)))
 
       (check	;two key sets, setter syntax 1
-	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
+	  (let (({o <beta>} (<beta>[(<alpha>[1]) 2])))
 	    (set! (o[333][777]) 999)
 	    (o[333][777]))
 	=> '#(777 (777 . 999)))
 
       (check	;two key sets, setter syntax 2
-	  (let (((o <beta>) (<beta>[(<alpha>[1]) 2])))
+	  (let (({o <beta>} (<beta>[(<alpha>[1]) 2])))
 	    (set! o[333][777] 999)
 	    (o[333][777]))
 	=> '#(777 (777 . 999)))
@@ -273,7 +273,7 @@
 		  ))))
 
     (check
-	(let (((M <matrix>) '#(#(11 12 13)	;1st row
+	(let (({M <matrix>} '#(#(11 12 13)	;1st row
 			       #(21 22 23)	;2nd row
 			       #(31 32 33)	;3rd row
 			       )))
@@ -281,7 +281,7 @@
       => 11)
 
     (check
-	(let (((M <matrix>) '#(#(11 12 13)	;1st row
+	(let (({M <matrix>} '#(#(11 12 13)	;1st row
 			       #(21 22 23)	;2nd row
 			       #(31 32 33)	;3rd row
 			       )))
@@ -291,7 +291,7 @@
       => '(11 12 13  21 22 23  31 32 33))
 
     (check
-	(let (((M <matrix>) (vector (vector 11 12 13)	;1st row
+	(let (({M <matrix>} (vector (vector 11 12 13)	;1st row
 				    (vector 21 22 23)	;2nd row
 				    (vector 31 32 33)	;3rd row
 				    )))
@@ -322,7 +322,7 @@
 		  ((?var ((?row)) ?value)
 		   #'(vector-set! ?var (- ?row 1) ?value))
 		  ((?var ((?row)(?col)) ?value)
-		   #'(let (((R <row>) (vector-ref ?var (- ?row 1))))
+		   #'(let (({R <row>} (vector-ref ?var (- ?row 1))))
 		       (set! R[?col] ?value)))
 		  )))
       (getter (lambda (stx tag)
@@ -330,12 +330,12 @@
 		  ((?var ((?row)))
 		   #'(vector-ref ?var ?row))
 		  ((?var ((?row)(?col)))
-		   #'(let (((R <row>) (vector-ref ?var (- ?row 1))))
+		   #'(let (({R <row>} (vector-ref ?var (- ?row 1))))
 		       (R[?col])))
 		  ))))
 
     (check
-	(let (((M <matrix>) '#(#(11 12 13)	;1st row
+	(let (({M <matrix>} '#(#(11 12 13)	;1st row
 			       #(21 22 23)	;2nd row
 			       #(31 32 33)	;3rd row
 			       )))
@@ -343,7 +343,7 @@
       => 11)
 
     (check
-	(let (((M <matrix>) '#(#(11 12 13)	;1st row
+	(let (({M <matrix>} '#(#(11 12 13)	;1st row
 			       #(21 22 23)	;2nd row
 			       #(31 32 33)	;3rd row
 			       )))
@@ -353,7 +353,7 @@
       => '(11 12 13  21 22 23  31 32 33))
 
     (check
-	(let (((M <matrix>) (vector (vector 11 12 13) ;1st row
+	(let (({M <matrix>} (vector (vector 11 12 13) ;1st row
 				    (vector 21 22 23) ;2nd row
 				    (vector 31 32 33) ;3rd row
 				    )))
@@ -374,19 +374,19 @@
 ;;; builtin getter/setter
 
   (check	;vector
-      (let (((o <vector>) (vector 0 1 2 3 4)))
+      (let (({o <vector>} (vector 0 1 2 3 4)))
 	(set! o[2] #\c)
 	(o[2]))
     => #\c)
 
   (check	;bytevector
-      (let (((o <bytevector-u8>) (bytevector-copy '#vu8(0 1 2 3))))
+      (let (({o <bytevector-u8>} (bytevector-copy '#vu8(0 1 2 3))))
   	(set! (o[2]) 10)
 	(o[2]))
     => 10)
 
   (check	;hashtable
-      (let (((o <hashtable>) (make-eq-hashtable)))
+      (let (({o <hashtable>} (make-eq-hashtable)))
   	(set! o['ciao] 10)
   	(list (o['ciao])
 	      (o['hello])

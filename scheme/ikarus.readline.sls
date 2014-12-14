@@ -31,7 +31,7 @@
     readline-enabled?
     readline
     make-readline-input-port)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  readline-enabled?
 		  readline
 		  make-readline-input-port)

@@ -10,7 +10,7 @@
     read-with-shared-structure
     (rename (read-with-shared-structure read/ss)))
   (import (rnrs)
-    (only (ikarus) print-graph parameterize))
+    (only (vicare) print-graph parameterize))
 
   (define write-with-shared-structure
     (case-lambda

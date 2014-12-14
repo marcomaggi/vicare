@@ -26,7 +26,8 @@
 
 
 #!vicare
-(library (nausicaa language conditions)
+(library (nausicaa language conditions (0 4))
+  (options visit-upon-loading)
   (export
 
     define-condition-type
@@ -98,6 +99,7 @@
     raise-unimplemented-error)
   (import (except (vicare)
 		  define-condition-type
+		  try finally catch
 
 		  ;; (rnrs conditions (6))
 		  &condition
@@ -137,7 +139,7 @@
 		  &out-of-memory-error
 		  &procedure-argument-violation
 		  &expression-return-value-violation)
-    (prefix (only (vicare)
+    (prefix (only (vicare (0 4))
 		  define-condition-type
 		  ;; (rnrs conditions (6))
 		  &condition
@@ -178,18 +180,18 @@
 		  &procedure-argument-violation
 		  &expression-return-value-violation)
 	    rnrs.)
-    (except (nausicaa language oopp)
+    (except (nausicaa language oopp (0 4))
 	    &tagged-binding-violation
 	    make-tagged-binding-violation
 	    tagged-binding-violation?)
-    (prefix (only (nausicaa language oopp)
+    (prefix (only (nausicaa language oopp (0 4))
 		  &tagged-binding-violation
 		  make-tagged-binding-violation
 		  tagged-binding-violation?)
 	    oopp.)
-    (only (nausicaa language builtins)
+    (only (nausicaa language builtins (0 4))
 	  <condition>)
-    (only (nausicaa language auxiliary-syntaxes)
+    (only (nausicaa language auxiliary-syntaxes (0 4))
 	  parent
 	  fields))
 
@@ -322,7 +324,7 @@
     ;;
     ;;where ?TAGGED-FIELD-NAME has the format:
     ;;
-    ;;	(?FIELD-NAME ?TAG)
+    ;;	(brace ?FIELD-NAME ?TAG)
     ;;
     ;;and ?TAG can be "<top>".
     ;;
@@ -330,31 +332,31 @@
       (%field-id->accessor-name-id lexical-context name-str field-id))
     (let next-field ((output '())
 		     (input  fields-stx))
-      (syntax-case input ()
+      (syntax-case input (brace)
 	(()
 	 (reverse output))
 
 	;;Tagged field with accessor.
 	;;
-	((((?field-name ?tag) ?field-accessor) . ?other-fields)
+	((((brace ?field-name ?tag) ?field-accessor) . ?other-fields)
 	 (all-identifiers? #'(?field-name ?field-accessor ?tag))
-	 (next-field (cons #'(?field-name (?field-name ?tag) ?field-accessor) output)
+	 (next-field (cons #'(?field-name (brace ?field-name ?tag) ?field-accessor) output)
 		     #'?other-fields))
 
 	;;Tagged field without accessor.
 	;;
-	((((?field-name ?tag)) . ?other-fields)
+	((((brace ?field-name ?tag)) . ?other-fields)
 	 (all-identifiers? #'(?field-name ?tag))
 	 (with-syntax
 	     ((ACCESSOR (%field-id->accessor-id #'?field-name)))
-	   (next-field (cons #'(?field-name (?field-name ?tag) ACCESSOR) output)
+	   (next-field (cons #'(?field-name (brace ?field-name ?tag) ACCESSOR) output)
 		       #'?other-fields)))
 
 	;;Field with accessor (no tags).
 	;;
 	(((?field-name ?field-accessor) . ?other-fields)
 	 (all-identifiers? #'(?field-name ?field-accessor))
-	 (next-field (cons #'(?field-name (?field-name <top>) ?field-accessor) output)
+	 (next-field (cons #'(?field-name (brace ?field-name <top>) ?field-accessor) output)
 		     #'?other-fields))
 
 	;;Field name only (no accessor, no tags).
@@ -363,7 +365,7 @@
 	 (identifier? #'?field-name)
 	 (with-syntax
 	     ((ACCESSOR (%field-id->accessor-id #'?field-name)))
-	   (next-field (cons #'(?field-name (?field-name <top>) ACCESSOR) output)
+	   (next-field (cons #'(?field-name (brace ?field-name <top>) ACCESSOR) output)
 		       #'?other-fields)))
 
 	((?field . ?other-fields)
@@ -416,10 +418,10 @@
       ;;The one with the ELSE clause must come first!!!
       (((else ?else-body0 ?else-body ...))
        clauses-stx)
-      (((?tag ?tag-body0 ?tag-body ...) . ?other-clauses)
+      ((((?tag) ?tag-body0 ?tag-body ...) . ?other-clauses)
        (identifier? #'?tag)
        (cons #`((is-a? #,var-id ?tag)
-		(with-tags ((#,var-id ?tag))
+		(with-tags ((brace #,var-id ?tag))
 		  ?tag-body0 ?tag-body ...))
 	     (parse-multiple-catch-clauses var-id #'?other-clauses)))
       ((?clause . ?other-clauses)
@@ -693,9 +695,10 @@
 	       (and ((&who #:predicate) obj)
 		    ((&message #:predicate) obj)
 		    ((&irritants #:predicate) obj))))
-  (virtual-fields (immutable (who	&who)		condition-who)
-		  (immutable (message	&message)	condition-message)
-		  (immutable (irritants &irritants)	condition-irritants)))
+  (virtual-fields
+   (immutable (brace who	&who)		condition-who)
+   (immutable (brace message	&message)	condition-message)
+   (immutable (brace irritants &irritants)	condition-irritants)))
 
 (define-condition-type &mismatch
   (parent &assertion))

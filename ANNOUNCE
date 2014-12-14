@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.3d8
+Subject: [announce] Vicare Scheme revision 0.4d0
 
                              Vicare Scheme
                              =============
@@ -6,10 +6,9 @@ Subject: [announce] Vicare Scheme revision 0.3d8
 
 Vicare Scheme is an R6RS compliant fork of Ikarus Scheme, aiming to be a
 native compiler for R6 Scheme producing single threaded programs running
-on  Intel  x86 32-bit  and  64-bit  processors;  it  is tested  only  on
-GNU+Linux, no  official support for  other platforms is present,  but it
-should run  on Mac  OS X.  It  implements a  foreign-functions interface
-based on Libffi.  "Vicare" is pronounced the etruscan way.
+on  Intel x86  32-bit  and  64-bit processors.   It  is  tested only  on
+GNU+Linux;  it  should work  on  POSIX  platforms,  but not  on  Cygwin.
+"Vicare" is pronounced the etruscan way.
 
   The latest version of this package can be downloaded from:
 
@@ -37,10 +36,83 @@ this project has a mailing list:
 	     <http://groups.google.com/group/vicare-users>
 
 
-Notes for revision 0.3d8
+Notes for revision 0.4d0
 ------------------------
 
-Many backwards incompatibilities... life is hard!
+Lots of backwards incompatibilities... life is hard!
+
+* The boot images have been rotated.
+
+* The package is  now using a single,  big, all-inclusive "Makefile.am".
+  Building the  package is  probably slower then  before.  Using  the -j
+  option of "make" helps  a bit; I am not sure  it can rebuild reliably,
+  but it should.
+
+* BACKWARDS INCOMPATIBILITY Ikarus is no more.  The library (ikarus) and
+  the  libraries in  the  hierarchy  (ikarus system  ---)  do not  exist
+  anymore.
+
+* BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
+  completely overhauled.  There are too  many changes to list them here,
+  but here the most important stuff:
+
+  - Version numbers are supported.  If,  while scanning the search path,
+    a  library is  loaded  and its  version number  does  not match  the
+    version reference: that library is discarded and the search goes on.
+
+  - The library (vicare) now has a version number; the full library name
+    is:
+
+       (vicare (0 4 ?year ?month ?day))
+
+    where ?YEAR,  ?MONTH and ?DAY  are fixnums representing the  date of
+    the last build.
+
+  - The default of this package (and  in future for all the other Vicare
+    packages) is to  install only the FASL files, and  leave the sources
+    uninstalled; to install also the  source libraries we must configure
+    with:
+
+       $ configure --enable-sources-installation ...
+
+  - When running  "make all" from  the build directory of  this package:
+    the libraries are compiled.
+
+  - Previously  there  were   2  file  extensions  for   FASL  files  to
+    distinguish a 32-bit build from a 64-bit build:
+
+       .vicare-32bit-fasl
+       .vicare-64bit-fasl
+
+    there  is now  a single  FASL  file extension:  ".fasl".  We  should
+    arrange  the  package configuration  to  install  32-bit FASL  files
+    under:
+
+       $(prefix)/lib/vicare-scheme
+
+    and 64-bit FASL files under:
+
+       $(prefix)/lib64/vicare-scheme
+
+  See the documentation  node "using libraries".  Most  likely this code
+  needs to be ironed out.
+
+* BACKWARDS INCOMPATIBILITY  The bindings that deal  with library names,
+  library references, search paths and  related stuff have been moved to
+  the  library (vicare  libraries),  which is  implemented  by the  boot
+  image; such  bindings are no  more reexported by  (vicare), (nausicaa)
+  and (nausicaa  mehve).  The relevant  documentation has been  moved to
+  the node "libutils".
+
+* BACKWARDS INCOMPATIBILITIES Removed undocumented libraries exported by
+  the boot image:
+
+     (chez modules)
+     (ikarus symbols)
+     (ikarus parameters)
+
+* BACKWARDS INCOMPATIBILITY The library (vicare $posix) has been renamed
+  to (vicare language-extensions $posix).
 
 * Added     documentation     for    the     previously     undocumented
   MAKE-COMPILE-TIME-VALUE  and  a  general  explanation of  how  to  use
@@ -245,23 +317,23 @@ Many backwards incompatibilities... life is hard!
 
 * Modified syntactic  bindings of  Vicare struct  types and  R6RS record
   types to  allow the identifier name  to act as reference  to the maker
-  function; that is, for struct types:
+  function with a special syntax; that is, for struct types:
 
      (define-struct color
        (red green blue))
 
-     (color 1 2 3)		=> #["color" 1 2 3]
-     (apply color 1 '(2 3))	=> #["color" 1 2 3]
+     (color (1 2 3))			=> #["color" 1 2 3]
+     (apply (color (...)) 1 '(2 3))	=> #["color" 1 2 3]
 
   and for R6RS record types:
 
      (define-record-type color
        (fields red green blue))
 
-     (color 1 2 3)
+     (color (1 2 3))
      => #[r6rs-record: color red=1 green=2 blue=3]
 
-     (apply color 1 '(2 3))
+     (apply (color (...)) 1 '(2 3))
      =>  #[r6rs-record: color red=1 green=2 blue=3]
 
 * Added some experimental functions to (vicare):
@@ -270,6 +342,7 @@ Many backwards incompatibilities... life is hard!
     syntactic-binding-getprop
     syntactic-binding-remprop
     syntactic-binding-property-list
+    identifier-bound?
 
 * Added experimental syntax DEFINE-ALIAS to (vicare):
 
@@ -310,9 +383,6 @@ Many backwards incompatibilities... life is hard!
 
   this behaviour was not present in the previous EVAL-FOR-EXPAND.
 
-* Added unsafe variants API.  See the documentation node "iklib syntaxes
-  unsafe".
-
 * Added synonym syntax transformers.
 
 * Extended LIBRARY form with OPTIONS clause.  Implemented library option
@@ -325,6 +395,90 @@ Many backwards incompatibilities... life is hard!
 * BACKWARDS INCOMPATIBILITY The syntax  CASE-IDENTIFIERS is now exported
   by  (vicare), and  not  more exported  by (vicare  language-extensions
   syntaxes).
+
+* It is  now possible to  compile individual library files,  producing a
+  single FASL file;  one FASL file for each LIBRARY  form.  To write the
+  FASL file to the repository:
+
+     $ vicare --compile-library libname.sls
+
+  the explicitly select an output file name:
+
+     $ vicare \
+        --output libname.vicare-64bit-fasl \
+        --compile-library libname.sls
+
+* Added  command  line  options  --verbose and  --silent.   By  default:
+  execution is now silent.
+
+* BACKWARDS  INCOMPATIBILITY  The  third   (and  optional)  argument  of
+  EXPAND-LIBRARY now must be a function accepting a R6RS library name as
+  single argument.
+
+* Added port predicates to (vicare):
+
+    binary-input-port?			textual-input-port?
+    binary-output-port?			textual-output-port?
+    binary-input/output-port?		textual-input/output-port?
+
+* Added  syntax  DEFINE-FLUID-OVERRIDE  to (vicare);  it  rebinds  fluid
+  syntaxes like FLUID-LET-SYNTAX.
+
+* Added identifier  syntaxes "__file__" and "__line__"  to (vicare); the
+  former expands to a string  representing the source code location; the
+  latter expands to a number representing the line number.
+
+* BACKWARDS INCOMPATIBILITY The following libraries have been removed:
+
+     (vicare language-extensions identifier-alists)
+     (vicare language-extensions identifier-properties)
+
+* Added BRACE to (vicare) and brace lists to the reader.  A fluid syntax
+  which  is free  to be  bound to  whatever user  code needs.   When the
+  Scheme code  reader is in Vicare  mode: brace lists are  read as BRACE
+  forms as follows:
+
+     {}			-> (brace)
+     {1 2 3}		-> (brace 1 2 3)
+     {1 . 2}		-> (brace 1 . 2)
+
+* The library (vicare) now exports the TRY syntax; see the documentation
+  node "iklib syntaxes try".
+
+* The syntaxes LAMBDA*, DEFINE*,  CASE-LAMBDA*, CASE-DEFINE* now use the
+  brace  syntax  to  tag  argument and  return  values  with  validation
+  predicates.
+
+* The following libraries do not exist anymore:
+
+     (vicare language-extensions infix)
+     (vicare language-extensions increments)
+
+* The INFIX syntax  is now exported by (vicare).   See the documentation
+  for the syntax and supported operators.
+
+* New fluid syntax bindings are exported by (vicare):
+
+    ? : ! % & ^ ~ << >> ¦
+
+  they are recognised as operators by the INFIX syntax.
+
+* BACKWARDS INCOMPATIBILITY In the library (vicare posix), the structure
+  "struct-stat"  has   now  fields  for  file   times  with  nanoseconds
+  resolution; they  are used  whenever the underlying  platform supports
+  them.  The field names are now:
+
+     st_atime_nsec
+     st_mtime_nsec
+     st_ctime_nsec
+
+  and the fields with microseconds resolution:
+
+     st_atime_usec
+     st_mtime_usec
+     st_ctime_usec
+
+  do not exist anymore.
 
 
 Notes for revision 0.3d7
@@ -2122,6 +2276,7 @@ Notes for revision 0.2d1
 
 ### end of file
 # Local Variables:
+# coding: utf-8-unix
 # mode: text
 # fill-column: 72
 # paragraph-start: "*"

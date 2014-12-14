@@ -67,7 +67,7 @@
     $unparse-recordized-code
     $unparse-recordized-code/pretty)
   (import (vicare)
-    (ikarus system $compiler))
+    (vicare system $compiler))
 
 
 ;;;; code

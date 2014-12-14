@@ -1,0 +1,1898 @@
+@node obspec
+@chapter Internals of tagged language
+
+
+The library @library{vicare expander object-type-specs} defines the
+low--level @api{} used to define and inspect new data types and tag
+identifiers.
+
+@menu
+* obspec parsers::              Parsing tagged syntaxes.
+* obspec bindings::             Tagged language binding properties.
+* obspec definition::           Object type specification.
+* obspec unsafe variants::      Unsafe binding variants.
+@end menu
+
+@c page
+@node obspec parsers
+@section Parsing tagged syntaxes
+
+
+The library @library{vicare expander object-type-specs} exports
+functions to validate and parse syntax objects representing tagged and
+untagged bindings.
+
+@quotation
+@strong{NOTE} To make the examples simpler: the return value of the
+functions is represented by syntax objects that are @func{syntax=?} to
+the returned values and written with the reader syntax.  For example,
+when the return values are the syntax objects:
+
+@example
+#<syntax expr=X> #<syntax expr=<fixnum>>
+@end example
+
+@noindent
+they are represented as:
+
+@example
+#'X #'<fixnum>
+@end example
+@end quotation
+
+@menu
+* obspec parsers signatures::   Tag signatures data representations.
+* obspec parsers predicates::   Syntax predicates.
+* obspec parsers ids::          Parsing standalone bindings.
+* obspec parsers lists::        Parsing proper lists of bindings.
+* obspec parsers formals::      Parsing tagged formals.
+* obspec parsers callable::     Parsing tagged callable signatures.
+@end menu
+
+@c page
+@node obspec parsers signatures
+@subsection Tag signatures data representations
+
+
+A @dfn{callable specification} is a syntax object representing the name,
+arguments and return values of a callable object: a function or macro.
+A callable can be used as:
+
+@example
+(@meta{callable} @meta{arg} ...)
+@end example
+
+@noindent
+but not as:
+
+@example
+(apply ?callable ?arg ...)
+@end example
+
+A @dfn{return values signature} is an object representing the type and
+number of callable return values.  When the callable has one or more
+return values: a proper list of tag identifiers is used to represent
+them.  When the callable has no return values: null is used.  When the
+callable has an unspecified number of return values: @false{} is used.
+
+A @dfn{formals signature} is an object representing the number and tags
+of a callable formal arguments; it is a proper or improper list of tag
+identifiers, with null and a standalone tagged identifier being
+acceptable.
+
+A @dfn{callable signature} is an object representing the number and tags
+of callable arguments and return values.  @ref{obspec parsers callable}
+for the callable syntax specification.
+
+@menu
+* obspec parsers signatures retvals::  Signatures of return values.
+* obspec parsers signatures formals::  Signatures of formals.
+* obspec parsers signatures lambda::   @func{lambda} signatures.
+* obspec parsers signatures clambda::  @func{case-lambda} compounds.
+@end menu
+
+@c page
+@node obspec parsers signatures retvals
+@subsubsection Signatures of return values
+
+
+Every expression @meta{expr} in the Scheme language can return zero or
+more values of any type; we can imagine any expression as evaluated in
+the following context:
+
+@example
+(call-with-values
+    (lambda ()
+      @meta{expr})
+  (lambda @meta{formals}
+    . @meta{continuation-body}))
+@end example
+
+@noindent
+the signature of the return values is the signature of the consumer's
+@meta{formals}.  The following bindings are exported by the library
+@library{vicare expander object-type-specs}.
+
+
+@deftp {Struct Type} retvals-signature
+Struct type representing the type signature of callable's return values.
+It has the following fields:
+
+@table @code
+@item tags
+It is a compound of tag identifiers:
+
+@itemize
+@item
+When the callable has one or more return values: a proper or improper
+list of tag identifiers is used to represent them; a standalone tag
+identifier is valid.  Whenever an item in the list is of unspecified
+type: the tag @class{top} is used.
+
+@item
+When the callable has no return values: null is used.
+
+@item
+When the callable has an unspecified number of return values of
+unspecified type: the standalone @class{list} tag is used.
+@end itemize
+@end table
+@end deftp
+
+
+@defun make-retvals-signature @var{tags}
+Build and return a new @objtype{retvals-signature} instance.
+@end defun
+
+
+@defun retvals-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{retvals-signature}.
+@end defun
+
+
+@defun retvals-signature-tags @var{rv-signature}
+Accessor for the field of @objtype{retvals-signature} instances.
+@end defun
+
+
+@defun retvals-signature=? @vari{rv-signature} @varii{rv-signature}
+The arguments must be instances of @objtype{retvals-signature}.
+Return @true{} if the arguments are equal, @false{} otherwise.
+@end defun
+
+@c page
+@node obspec parsers signatures formals
+@subsubsection Signatures of formals
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} formals-signature
+Struct type representing the type signature of callable's formals.  It
+has the following fields:
+
+@table @code
+@item tags
+A proper or improper list of tag identifiers, with null and a standalone
+tagged identifier being acceptable.  @class{top} is used when a value
+has unspecified type.
+@end table
+@end deftp
+
+
+@defun make-formals-signature @var{tags}
+Build and return a new @objtype{formals-signature} instance.
+@end defun
+
+
+@defun formals-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{formals-signature}.
+@end defun
+
+
+@defun formals-signature-tags @var{formals-signature}
+Accessor for the field of @objtype{formals-signature} instances.
+@end defun
+
+
+@defun formals-signature=? @vari{formals-signature} @varii{formals-signature}
+The arguments must be instances of @objtype{formals-signature}.  Return
+@true{} if the arguments are equal, @false{} otherwise.
+@end defun
+
+@c page
+@node obspec parsers signatures lambda
+@subsubsection @func{lambda} signatures
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} lambda-signature
+Struct type representing the type signature of a @func{lambda} clause.
+It has the following fields:
+
+@table @code
+@item retvals
+An instance of @objtype{retvals-signature}.
+
+@item formals
+An instance of @objtype{formals-signature}.
+@end table
+@end deftp
+
+
+@defun make-lambda-signature @var{rv-signature} @var{formals-signature}
+Build and return a new @objtype{lambda-signature} instance.
+@end defun
+
+
+@defun lambda-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{lambda-signature}.
+@end defun
+
+
+@defun lambda-signature-retvals @var{signature}
+@defunx lambda-signature-formals @var{signature}
+Accessor for the fields of @objtype{lambda-signature} instances.
+@end defun
+
+
+@defun lambda-signature-retvals-tags @var{signature}
+Return the content of the @code{tags} field in the
+@objtype{retvals-signature} instance from the @code{return-values} field
+of @var{signature}.
+@end defun
+
+
+@defun lambda-signature-formals-tags @var{signature}
+Return the content of the @code{tags} field in the
+@objtype{formals-signature} instance from the @code{formals} field of
+@var{signature}.
+@end defun
+
+
+@defun lambda-signature=? @vari{signature} @varii{signature}
+The arguments must be instances of @objtype{lambda-signature}.  Return
+@true{} if the arguments are equal, @false{} otherwise.
+@end defun
+
+@c page
+@node obspec parsers signatures clambda
+@subsubsection @func{case-lambda} compounds
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} clambda-compound
+Struct type representing the type signature of @func{case-lambda}
+clauses.  It has the following fields:
+
+@table @code
+@item common-retvals-signature
+An instance of @objtype{retvals-signature}.  It represents the signature
+of the common retvals from all the @func{case-lambda} clauses
+represented by this struct.  For example:
+
+@example
+(case-lambda
+ ((@{_ <fixnum>@}) . ?body)
+  (@{_ <fixnum>@}) . ?body)))
+@end example
+
+@noindent
+has common retvals signature @code{(<fixnum>)}, while:
+
+@example
+(case-lambda
+ ((@{_ <fixnum>@}) . ?body)
+  (@{_ <bignum>@}) . ?body)))
+@end example
+
+@noindent
+has common retvals signature @code{(<exact-integer>)}.  When it is not
+possible to determine a common retvals signature: the default value is
+the standalone identifier @class{list}, which means any number of
+objects of any type.
+
+@item lambda-signatures
+A proper list of @objtype{lambda-signature} instances representing the
+signatures of the @func{case-lambda} clauses.
+@end table
+@end deftp
+
+
+@defun make-clambda-compound @var{signatures}
+Build and return a new @objtype{clambda-compound} instance.
+@end defun
+
+
+@defun clambda-compound? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{clambda-compound}.
+@end defun
+
+
+@defun clambda-compound-common-retvals-signature @var{signature}
+@defunx clambda-compound-lambda-signatures @var{signature}
+Accessor for the fields of @objtype{clambda-compound} instances.
+@end defun
+
+@c page
+@node obspec parsers predicates
+@subsection Syntax predicates
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun standard-formals-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing @rnrs{6}
+standard @func{lambda} and @func{let-values} formals; otherwise return
+@false{}.  The return value is true if @var{stx} is a proper or improper
+list of identifiers, with null and a standalone identifier being
+acceptable.
+@end defun
+
+
+@defun formals-signature-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing the tag
+signature of a tagged formals syntax; otherwise return @false{}.  The
+return value is true if @var{stx} is a proper or improper list of tag
+identifiers, with null and a standalone tag identifier being acceptable.
+@end defun
+
+
+@defun retvals-signature-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing the tag
+signature of a set of return values; otherwise return @false{}.  The
+return value is true if @var{stx} is @false{}, null or a proper or
+improper list of tag identifiers, with a standalone tag identifier being
+acceptable.
+@end defun
+
+@c page
+@node obspec parsers ids
+@subsection Parsing standalone identifiers
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun tagged-identifier-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing a tagged or
+untagged identifier, otherwise return @false{}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.tagged-identifier-syntax? #'(brace X <fixnum>)) @result{} #t
+(typ.tagged-identifier-syntax? #'@{X <fixnum>@})       @result{} #t
+(typ.tagged-identifier-syntax? #'X)                  @result{} #t
+(typ.tagged-identifier-syntax? 123)                  @result{} #f
+@end example
+@end defun
+
+
+@defun parse-tagged-identifier-syntax @var{stx}
+If @var{stx} is a tagged or untagged identifier, return 2 values: the
+identifier representing the binding name and the identifier representing
+the tag; otherwise raise an exception with condition type
+@condition{syntax}.  When no tag is present: the tag identifier defaults
+to @class{top}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.parse-tagged-identifier-syntax #'(brace X <fixnum>))
+@result{} #'X #'<fixnum>
+
+(typ.parse-tagged-identifier-syntax #'@{X <fixnum>@})
+@result{} #'X #'<fixnum>
+
+(typ.parse-tagged-identifier-syntax #'X)
+@result{} #'X #'<top>
+
+(receive (id tag)
+    (typ.parse-tagged-identifier-syntax #'@{X <fixnum>@})
+  (free-identifier=? id  #'X)           @result{} #t
+  (free-identifier=? tag #'<fixnum>))   @result{} #t
+@end example
+@end defun
+
+@c page
+@node obspec parsers lists
+@subsection Parsing proper lists of bindings
+
+
+Lists of tagged bindings are often used in binding syntaxes like
+@func{let}, @func{do} and similar.  For example, when expanding the
+syntax:
+
+@example
+#!vicare
+(let ((@{a <fixnum>@} 1)
+      (@{b <string>@} "b")
+      (c            #t))
+  . @meta{body})
+@end example
+
+@noindent
+a list of tagged bindings is extracted:
+
+@example
+(#'(brace a <fixnum>) #'(brace b <string>) #'c)
+@end example
+
+@noindent
+and parsed to yield the identifiers and the tags:
+
+@example
+(#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+@end example
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun list-of-tagged-bindings? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing a proper
+list of tagged or untagged identifiers, otherwise return @false{}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 @{b <string>@}))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 @{b <string>@}
+                                 @{c <vector>@}))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(a))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(a b))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(a b c))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(a @{b <string>@}))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@} b))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(a
+                                 @{b <string>@}
+                                 @{c <vector>@}))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 b
+                                 @{c <vector>@}))
+@result{} #t
+
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 @{b <string>@}
+                                 c))
+@result{} #t
+@end example
+@end defun
+
+
+@defun parse-list-of-tagged-bindings @var{stx}
+@defunx parse-list-of-tagged-bindings @var{stx} @var{input-form.stx}
+Assume @var{stx} is a syntax object representing a proper list of
+possibly tagged binding identifiers; parse the list and, when
+successful, return 2 values: a list of identifiers representing the
+binding identifiers, a list of identifiers representing the type tags;
+@class{top} is used when no tag is present.  If an error occurs raise an
+exception with condition object type @condition{syntax}.
+
+The identifiers must be distinct according to @func{bound-identifier=?}.
+
+The optional argument @var{input-form.stx} is meant to be a syntax
+object representing the form from which @var{stx} was extracted; it is
+used as @code{form} field when raising a syntax violation.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}))
+@result{} (#'a) (#'<fixnum>)
+
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum> #'<string>)
+
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      @{b <string>@}
+                                      @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<vector>)
+
+(typ.parse-list-of-tagged-bindings #'(a))
+@result{} (#'a) (#'<top>)
+
+(typ.parse-list-of-tagged-bindings #'(a b))
+@result{} (#'a #'b) (#'<top> #'<top>)
+
+(typ.parse-list-of-tagged-bindings #'(a b c))
+@result{} (#'a #'b #'c) (#'<top> #'<top> #'<top>)
+
+(typ.parse-list-of-tagged-bindings #'(a @{b <string>@}))
+@result{} (#'a #'b) (#'<top> #'<string>)
+
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@} b))
+@result{} (#'a #'b) (#'<fixnum> #'<top>)
+
+(typ.parse-list-of-tagged-bindings #'(a
+                                      @{b <string>@}
+                                      @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<top> #'<string> #'<vector>)
+
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      b
+                                      @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<fixnum> #'<top> #'<vector>)
+
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      @{b <string>@}
+                                      c))
+@result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+@end example
+@end defun
+
+@c page
+@node obspec parsers formals
+@subsection Parsing tagged formals
+
+
+Tagged formals syntax is used by @func{let-values}, @func{let*-values},
+@func{define-values} and similar syntaxes; it is @strong{not} used by
+@func{lambda} and related syntaxes.
+
+To describe the supported syntax for tagged formals we use the
+conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
+identifiers; @meta{arg-tag}, @meta{rest-tag} and @meta{args-tag} are tag
+identifiers.  The predicate and parser functions for tagged formals
+accept the following standard @rnrs{6} formals formats:
+
+@example
+@meta{args-id}
+(@meta{id} ...)
+(@metao{id} @meta{id} ... . @meta{rest-id})
+@end example
+
+@noindent
+and in addition the following tagged formals:
+
+@example
+(brace @meta{args-id} @meta{args-tag})
+(@meta{arg} ...)
+(@metao{arg} @meta{arg} ... . @meta{rest-arg})
+@end example
+
+@noindent
+where @meta{arg} is a tagged identifier with one of the formats:
+
+@example
+@meta{arg-id}
+(brace @meta{arg-id} @meta{arg-tag})
+@end example
+
+@noindent
+the identifier @func{brace} is the syntax binding exported by
+@library{vicare}.
+
+@noindent
+the binding identifiers must be distinct according to
+@func{bound-identifier=?}.
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun tagged-formals-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing a tagged
+formals syntax; otherwise return @false{}.  @var{stx} is a tagged
+formals syntax if it is a proper or improper list of tagged identifiers,
+wich null and a standalone tagged identifier being acceptable.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               @{b <string>@}))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               @{b <string>@}
+                               @{c <vector>@}))
+@result{} #t
+
+;;; untagged
+
+(typ.tagged-formals-syntax? #'(a))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(a b))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(a b c))
+@result{} #t
+
+;;; mixed tagged and untagged
+
+(typ.tagged-formals-syntax? #'(a
+                               @{b <string>@}))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               b))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(a
+                               @{b <string>@}
+                               @{c <vector>@}))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               b
+                               @{c <vector>@}))
+@result{} #t
+
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               @{b <string>@}
+                               c)
+@result{} #t
+
+;;; args argument
+
+(typ.tagged-formals-syntax? #'@{args <fixnums>@})
+@result{} #t
+
+(typ.tagged-formals-syntax? #'args)
+@result{} #t
+
+;;; rest argument
+
+(typ.tagged-formals-syntax?
+    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} #t
+
+(typ.tagged-formals-syntax?
+    #'(@{a <fixnum>@} . rest))
+@result{} #t
+
+(typ.tagged-formals-syntax?
+    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} #t
+
+(typ.tagged-formals-syntax?
+    #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} #t
+@end example
+@end defun
+
+
+@defun parse-tagged-formals-syntax @var{stx}
+@defunx parse-tagged-formals-syntax @var{stx} @var{input-form.stx}
+Given a syntax object @var{stx} representing tagged formals: parse it
+and split formals from tags.  If successful return 2 values: a proper or
+improper list of identifiers representing the standard formals; an
+instance of @objtype{formals-signature} holding the tag identifiers.  If
+an error occurs raise an exception with condition object type
+@condition{syntax}.
+
+The optional argument @var{input-form.stx} is meant to be a syntax
+object representing the form from which @var{stx} was extracted; it is
+used as @code{form} field when raising a syntax violation.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(define (split stx)
+  (receive (standard-formals signature)
+      (typ.parse-tagged-formals-syntax stx)
+    (values standard-formals (formals-signature-tags signature))))
+
+(split #'(@{a <fixnum>@} @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum> #'<string>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} @{c <vector>@}))
+@result{} (a b c) (<fixnum> <string> <vector>))
+
+;;; untagged
+
+(split #'(a))
+@result{} (#'a) (#'<top>)
+
+(split #'(a b))
+@result{} (#'a #'b) (#'<top> #'<top>)
+
+(split #'(a b c))
+@result{} (#'a #'b #'c) (#'<top> #'<top> #'<top>)
+
+;;; mixed tagged and untagged
+
+(split #'(a @{b <string>@}))
+@result{} (#'a #'b) (#'<top> #'<string>)
+
+(split #'(@{a <fixnum>@} b))
+@result{} (#'a #'b) (#'<fixnum> #'<top>)
+
+(split #'(a @{b <string>@} @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<top> #'<string> #'<vector>)
+
+(split #'(@{a <fixnum>@} b @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<fixnum> #'<top> #'<vector>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} c))
+@result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+
+;;; args argument
+
+(split #'@{args <fixnums>@})
+@result{} #'args #'<fixnums>
+
+(split #'args)
+@result{} #'args #'<list>
+
+;;; rest argument
+
+(split #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} (#'a . #'rest) (#'<fixnum> . #'<fixnums>)
+
+(split #'(@{a <fixnum>@} . rest))
+@result{} (#'a . #'rest) (#'<fixnum> . #'<list>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<fixnums>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<list>)
+@end example
+@end defun
+
+@c page
+@node obspec parsers callable
+@subsection Parsing tagged callable signatures
+
+
+Callable signatures syntax is used by @func{lambda} and similar
+syntaxes.
+
+To describe the supported syntax for callable signatures we use the
+conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
+identifiers; @meta{arg-tag}, @meta{rest-tag}, @meta{args-tag},
+@meta{rv-tag} and @meta{rv-rest-tag} are tag identifiers.  The predicate
+and parser functions for callable signatures accept the following
+standard @rnrs{6} formals formats:
+
+@example
+@meta{args-id}
+(@meta{id} ...)
+(@metao{id} @meta{id} ... . @meta{rest-id})
+@end example
+
+@noindent
+and in addition the following tagged formals:
+
+@example
+(brace @meta{args-id} @meta{args-tag})
+(@meta{arg} ...)
+(@metao{arg} @meta{arg} ... . @meta{rest-arg})
+(@meta{retvals} @meta{arg} ...)
+(@meta{retvals} @meta{arg} ... . @meta{rest-arg})
+@end example
+
+@noindent
+where @meta{arg} is a tagged argument with one of the formats:
+
+@example
+@meta{arg-id}
+(brace @meta{arg-id} @meta{arg-tag})
+@end example
+
+@noindent
+@meta{retvals} is a special syntax that allows to specify the number and
+tags of the expression return values; it has one of the formats:
+
+@example
+(brace _ @meta{rv-tag} ...)
+(brace _ @meta{rv-tag} ... . @meta{rv-rest-tag})
+@end example
+
+@noindent
+the identifiers @func{brace} and @func{_} are the syntax bindings
+exported by @library{vicare}.
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun tagged-lambda-proto-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing valid tagged
+callable signature syntax; otherwise return @false{}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    @{b <string>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    @{b <string>@}
+                                    @{c <vector>@}))
+@result{} #t
+
+;;; untagged
+
+(typ.tagged-lambda-proto-syntax? #'(a))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(a b))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(a b c))
+@result{} #t
+
+;;; mixed tagged and untagged
+
+(typ.tagged-lambda-proto-syntax? #'(a
+                                    @{b <string>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    b))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(a
+                                    @{b <string>@}
+                                    @{c <vector>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    b
+                                    @{c <vector>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    @{b <string>@}
+                                    c)
+@result{} #t
+
+;;; args argument
+
+(typ.tagged-lambda-proto-syntax? #'@{args <fixnums>@})
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax? #'args)
+@result{} #t
+
+;;; rest argument
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{a <fixnum>@} . rest))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} #t
+
+;;; return values tagging
+
+(typ.tagged-lambda-proto-syntax? #'(@{_ <fixnum>@} a b))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
+@result{} #t
+
+(typ.tagged-lambda-proto-syntax?
+    #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
+@result{} #t
+@end example
+@end defun
+
+
+@defun parse-tagged-lambda-proto-syntax @var{stx}
+@defunx parse-tagged-lambda-proto-syntax @var{stx} @var{input-form.stx}
+Given a syntax object @var{stx} representing tagged callable signature
+syntax: parse it and split formals from tags.  If successful return 2
+values: a proper or improper list of identifiers representing the
+standard formals; an instance of @objtype{lambda-signature}.  If an
+error occurs: raise an exception with condition object type
+@condition{syntax}.
+
+The optional argument @var{input-form.stx} is meant to be a syntax
+object representing the form from which @var{stx} was extracted; it is
+used as @code{form} field when raising a syntax violation.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(define (split input)
+  (receive (standard-formals-stx signature)
+      (typ.parse-tagged-lambda-proto-syntax input)
+    (define formals.tags
+      (typ.callable-signature-formals-tags signature))
+    (define retvals.tags
+      (typ.callable-signature-retvals-tags signature))
+    (values standard-formals-stx retvals.tags formals.tags)))
+
+(split #'(@{a <fixnum>@} @{b <string>@}))
+@result{} (#'a #'b) #'<list> (#'<fixnum> #'<string>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} @{c <vector>@}))
+@result{} #'(a b c) #'<list> (#'<fixnum> #'<string> #'<vector>)
+
+;;; untagged
+
+(split #'(a))
+@result{} (#'a) #'<list> (#'<top>)
+
+(split #'(a b))
+@result{} (#'a #'b) #'<list> (#'<top> #'<top>)
+
+(split #'(a b c))
+@result{} (#'a #'b #'c) #'<list> (#'<top> #'<top> #'<top>)
+
+;;; mixed tagged and untagged
+
+(split #'(a @{b <string>@}))
+@result{} (#'a #'b) #'<list> (#'<top> #'<string>)
+
+(split #'(@{a <fixnum>@} b))
+@result{} (#'a #'b) #'<list> (#'<fixnum> #'<top>)
+
+(split #'(a @{b <string>@} @{c <vector>@}))
+@result{} (#'a #'b #'c) #'<list> (#'<top> #'<string> #'<vector>)
+
+(split #'(@{a <fixnum>@} b @{c <vector>@}))
+@result{} (#'a #'b #'c) #'<list> (#'<fixnum> #'<top> #'<vector>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} c))
+@result{} (#'a #'b #'c) #'<list> (#'<fixnum> #'<string> #'<top>)
+
+;;; args argument
+
+(split #'@{args <fixnums>@})
+@result{} #'args #'<list> #'<fixnums>
+
+(split #'args)
+@result{} #'args #'<list> #'<list>
+
+;;; rest argument
+
+(split #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} (#'a . #'rest) #'<list> (#'<fixnum> . #'<fixnums>)
+
+(split #'(@{a <fixnum>@} . rest))
+@result{} (#'a . #'rest) #'<list> (#'<fixnum> . #'<list>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} (#'a #'b . #'rest) #'<list> (#'<fixnum> #'<string> . #'<fixnums>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} (#'a #'b . #'rest) #'<list> (#'<fixnum> #'<string> . #'<list>)
+
+;;; return values tagging
+
+(split #'(@{_@} a b))
+@result{} (#'a #'b) () (#'<top> #'<top>)
+
+(split #'(@{_ <fixnum>@} a b))
+@result{} (#'a #'b) (#'<fixnum>) (#'<top> #'<top>)
+
+(split #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum>) (#'<flonum> #'<string>)
+
+(split #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum> #'<flonum>) (#'<vector> #'<string>)
+
+(split #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
+@result{} #'args (#'<fixnum> #'<flonum>) #'<fixnums>
+@end example
+@end defun
+
+@c page
+@node obspec bindings
+@section Tagged language binding properties
+
+
+@menu
+* obspec bindings tag::         Tag identifier bindings.
+* obspec bindings tagged::      Tagged identifier bindings.
+@end menu
+
+@c page
+@node obspec bindings tag
+@subsection Tag identifier bindings
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun set-identifier-object-type-spec! @var{type-id} @var{spec}
+Add to the property list of the syntactic binding label of @var{type-id}
+an entry representing an object type specification; return unspecified
+values.  If @var{type-id} already has an object type specification
+property: an exception is raised with condition object type
+@condition{&syntax}.
+
+@var{type-id} must be a bound identifier; when this call succeeds:
+@var{type-id} becomes a tag identifier.  @var{spec} must be an instance
+of @objtype{object-type-spec}.
+@end defun
+
+
+@defun identifier-object-type-spec @var{type-id}
+Retrieve from the property list of the syntactic binding label of
+@var{type-id} the @objtype{object-type-spec} instance representing the
+object type specification.
+
+@var{type-id} must be a bound identifier; if it also is a tag
+identifier: the return value is the @objtype{object-type-spec} instance;
+otherwise the return value is @false{}.
+@end defun
+
+
+@defun set-label-object-type-spec! @var{label} @var{spec}
+Add to the property list of the syntactic binding @var{label} an entry
+representing an object type specification; return unspecified values.
+If @var{label} already has an object type specification property: an
+exception is raised with condition object type @condition{&syntax}.
+
+@var{label} must be the symbol used as syntactic binding label for a
+bound identifier; when this call succeeds: the associated identifiers
+become a tag identifiers.  @var{spec} must be an instance of
+@objtype{object-type-spec}.
+@end defun
+
+
+@defun label-object-type-spec @var{label}
+Retrieve from the property list of @var{label} the
+@objtype{object-type-spec} instance representing the object type
+specification.
+
+@var{label} must be a symbol used as syntactic binding label for a bound
+identifier; if the latter is also a tag identifier: the return value is
+the @objtype{object-type-spec} instance; otherwise the return value is
+@false{}.
+@end defun
+
+
+@defun tag-identifier? @var{obj}
+Return @true{} if @var{obj} is a bound identifier with "object-type-spec"
+property set; otherwise return @false{}.
+@end defun
+
+
+@defun all-tag-identifiers? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing a proper or
+improper list of tag identifiers; otherwise return @false{}.
+@end defun
+
+
+@defun tag-super-and-sub? @var{super-tag} @var{sub-tag}
+Given two tag identifiers: return @true{} if @var{super-tag} is
+@func{free-identifier=?}  to @var{sub-tag} or one of its ancestors.
+@end defun
+
+@c page
+@node obspec bindings tagged
+@subsection Tagged identifier bindings
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun set-identifier-tag! @var{binding-id} @var{tag}
+Given a syntactic binding identifier and a tag identifier: add @var{tag}
+to the property list of @var{binding-id} as binding type tagging; this
+tag should represent the object type referenced by the binding.  Return
+unspecified values.  If @var{label} already has a tag property: an
+exception is raised with condition object type @condition{syntax}.
+@end defun
+
+
+@defun identifier-tag @var{binding-id}
+Given a syntactic binding identifier: retrieve from its property list
+the tag identifier representing the binding type tagging; this tag
+identifier should represent the object type referenced by the binding.
+If the identifier has no associated type tag: return @false{}.
+@end defun
+
+
+@defun set-label-tag! @var{label} @var{tag}
+Given a syntactic binding label and a tag identifier: add @var{tag} to
+the property list of @var{label} as binding type tagging; this tag
+should represent the object type referenced by the binding.  Return
+unspecified values.
+
+If the operation succeeds: the associated binding identifiers become
+tagged identifiers.  If @var{label} already has a tag property: an
+exception is raised with condition object type @condition{syntax}.
+@end defun
+
+
+@defun label-tag @var{label}
+Given a syntactic binding label: retrieve from its property list the tag
+identifier representing the binding type tagging; this tag identifier
+should represent the object type referenced by the binding.  If the
+label has no associated type tag: return @false{}.
+@end defun
+
+
+@defun tagged-identifier? @var{id}
+Return @true{} if @var{id} is a bound identifier having a type tagging;
+otherwise return @false{}.  If the return value is true: @var{id} is a
+bound identifier created by some binding syntaxes (@func{define},
+@func{let}, @func{letrec}, @dots{}).  If @var{id} is not a bound
+identifier: an exception is raised.
+@end defun
+
+@c page
+@node obspec definition
+@section Object type specification
+
+
+@menu
+* obspec definition intro::   Introduction to object types specification.
+* obspec definition descr::   Object type descriptor.
+@end menu
+
+@c page
+@node obspec definition intro
+@subsection Introduction to object types specification
+
+
+Records of type @objtype{object-type-spec} are used to describe the
+object type of tag identifiers; a bound identifier is a tag identiier
+if, and only if, it has an @objtype{object-type-spec} in the property
+list of its syntactic binding label.
+
+Below we discuss the fields of @objtype{object-type-spec} and we assume
+the definitions:
+
+@example
+#!vicare
+(import (vicare))
+
+(define-record-type <color>
+  (fields (mutable   red)
+          (immutable green)
+          (mutable   blue)))
+
+(define (@{<color>-string <string>@} @{O <color>@})
+  (format "[~a, ~a, ~a]"
+          (<color>-red   O)
+          (<color>-green O)
+          (<color>-blue  O)))
+
+(define (@{<color>-shift <color>@} @{O <color>@}
+           @{R <fixnum>@} @{G <fixnum>@} @{B <fixnum>@})
+  (make-<color> (fx+ (<color>-red   O) R)
+                (fx+ (<color>-green O) G)
+                (fx+ (<color>-blue  O) B)))
+
+(define @{O <color>@}
+  (make-<color> 1 2 3))
+@end example
+
+@noindent
+and the fields are meant to hold fixnums.
+
+@menu
+* obspec definition intro predicate::  Predicate syntax object.
+* obspec definition intro accessor::   Field accessor maker.
+* obspec definition intro mutator::    Field mutator maker.
+* obspec definition intro getter::     Property getter maker.
+* obspec definition intro setter::     Property setter maker.
+* obspec definition intro dispatcher:: Method dispatcher.
+* obspec definition intro caster::     Object type caster.
+@end menu
+
+@c page
+@node obspec definition intro predicate
+@subsubsection Predicate syntax object
+
+
+It is a syntax object (wrapped or unwrapped) representing an expression;
+expanded by itself and evaluated it must return a type predicate: a
+function accepting a single argument and returning a boolean; @true{} if
+the argument is of the specified type, @false{} otherwise.  It is used
+by the syntax @func{is-a?} to implement the expansion:
+
+@example
+(is-a? O <color>) @expansion{} (<color>? O)
+@end example
+
+@noindent
+the syntax object can just be:
+
+@example
+#'<color>?
+@end example
+
+Notice that it is perfectly fine to define this syntax object as:
+
+@example
+#'(lambda (X)
+    (and (fixnum? X)
+         (fxpositive? X)))
+@end example
+
+@c page
+@node obspec definition intro accessor
+@subsubsection Field accessor maker
+
+
+When the specified object type has accessible fields: the field accessor
+maker is a function accepting 2 arguments and returning a single value;
+otherwise it is @false{}.  The accessor maker arguments are:
+
+@enumerate
+@item
+A symbol representing a field name.
+
+@item
+A syntax object representing the form which originated this accessor
+maker call.  If the accessor maker raises a syntax violation exception:
+this value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end enumerate
+
+When the field is recognised and valid: the accessor maker must return a
+syntax object representing an expression evaluating to a field accessor.
+It is a syntax object (wrapped or unwrapped) representing an expression;
+expanded by itself and evaluated it must return a field accessor: a
+function accepting as single argument an object instance and returning
+as single argument the current field's value.
+
+When the field is unknown: the accessor maker must return @false{}; in
+this case the field will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the field is recognised but invalid (for example: inaccessible):
+the accessor maker must raise a syntax violation.
+
+The accessor maker is used to implement the expansions:
+
+@example
+(slot-ref O red   <color>) @expansion{} (<color>-red   O)
+(slot-ref O green <color>) @expansion{} (<color>-green O)
+(slot-ref O blue  <color>) @expansion{} (<color>-blue  O)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (accessor-maker field-name input-form.stx)
+  (case field-name
+    ((red)      #'<color>-red)
+    ((green)    #'<color>-green)
+    ((blue)     #'<color>-blue)
+    (_          #f)))
+@end example
+
+Notice that it is perfectly fine to define a field accessor syntax
+object as:
+
+@example
+#'(lambda (obj new-value)
+    (object-field-ref obj new-value))
+@end example
+
+@c page
+@node obspec definition intro mutator
+@subsubsection Field mutator maker
+
+
+When the specified object type has mutable fields: the field mutator
+maker is a function accepting 2 arguments and returning a single value;
+otherwise it is @false{}.  The mutator maker arguments are:
+
+@itemize
+@item
+A symbol representing a field name.
+
+@item
+A syntax object representing the form which originated this mutator
+maker call.  If the mutator maker raises a syntax violation exception:
+this value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end itemize
+
+When the field is recognised and valid: the mutator maker must return a
+syntax object representing an expression evaluating to a field mutator.
+It is a syntax object (wrapped or unwrapped) representing an expression;
+expanded by itself and evaluated it must return a field mutator: a
+function accepting as arguments an object instance and a new field's
+value and returning unspecified values.
+
+When the field is unknown: the mutator maker must return @false{}; in
+this case the field will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the field is recognised but invalid (for example: immutable): the
+mutator maker must raise a syntax violation.
+
+The mutator maker is used to implement the expansions:
+
+@example
+(slot-set! O red   <color> 1) @expansion{} (<color>-red-set!  O 1)
+(slot-set! O green <color> 1) @error{} &syntax
+(slot-set! O blue  <color> 1) @expansion{} (<color>-blue-set! O 3)
+(set! (O red)   1)            @expansion{} (<color>-red-set!  O 1)
+(set! (O green) 1)            @error{} &syntax
+(set! (O blue)  1)            @expansion{} (<color>-blue-set! O 3)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (mutator-maker field-name input-form.stx)
+  (case field-name
+    ((red)      #'<color>-red-set!)
+    ((green)
+     (syntax-violation '<color>
+       "requested mutator of immutable field" input-form.stx field-name))
+    ((blue)     #'<color>-blue-set!)
+    (_          #f)))
+@end example
+
+Notice that it is perfectly fine to define a field mutator syntax object
+as:
+
+@example
+#'(lambda (obj new-value)
+    (object-field-set! obj new-value))
+@end example
+
+@c page
+@node obspec definition intro getter
+@subsubsection Property getter maker
+
+
+When the specified object type supports the getter syntax: it is a
+function accepting 2 arguments and returning a single value; otherwise
+it is @false{}.  The getter maker arguments are:
+
+@itemize
+@item
+A syntax object representing the getter keys.  The syntax object's
+expression is a list of lists:
+
+@example
+#'((?key00 ?key0 ...) (?key11 ?key1 ...) ...)
+@end example
+
+@item
+A syntax object representing the form which originated this getter maker
+call.  If the getter maker raises a syntax violation exception: this
+value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end itemize
+
+When the keys are recognised and valid: the getter maker must return a
+syntax object representing an expression evaluating to a property
+getter.  It is a syntax object (wrapped or unwrapped) representing an
+expression; expanded by itself and evaluated it must return a property
+accessor: a function accepting as single argument an object instance and
+returning a tuple of values.
+
+When the keys are unknown: the getter maker must return @false{}; in
+this case another getter will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the keys are recognised but invalid: the getter maker must raise a
+syntax violation.
+
+The getter syntax is used to implement the expansions:
+
+@example
+(O[red])        @expansion{} (tag-getter <color> O ([red]))
+(O[green])      @expansion{} (tag-getter <color> O ([green]))
+(O[blue])       @expansion{} (tag-getter <color> O ([blue]))
+@end example
+
+@noindent
+which in turn will use the getter maker to implement the expansions:
+
+@example
+(tag-getter <color> O ([red]))          @expansion{} (<color>-red O)
+(tag-getter <color> O ([green]))        @error{} &syntax
+(tag-getter <color> O ([blue]))         @expansion{} (<color>-blue O)
+@end example
+
+The getter maker implementation can be:
+
+@example
+(define (getter-maker keys-stx input-form.stx)
+  (syntax-case keys-stx ()
+    (([?field-name])
+     (identifier? #'?field-name)
+     (accessor-maker #'?field-name input-form.stx))
+    (_
+     (syntax-violation '<color>
+       "invalid getter syntax" input-form.stx keys))))
+@end example
+
+@c page
+@node obspec definition intro setter
+@subsubsection Property setter maker
+
+
+When the specified object type supports the setter syntax: it is a
+function accepting 2 arguments and returning a single value; otherwise
+it is @false{}.  The setter maker arguments are:
+
+@itemize
+@item
+A syntax object representing the setter keys.  The syntax object's
+expression is a list of lists:
+
+@example
+#'((?key00 ?key0 ...) (?key11 ?key1 ...) ...)
+@end example
+
+@item
+A syntax object representing the form which originated this setter maker
+call.  If the setter maker raises a syntax violation exception: this
+value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end itemize
+
+When the keys are recognised and valid: the setter maker must return a
+syntax object representing an expression evaluating to a property
+setter.  It is a syntax object (wrapped or unwrapped) representing an
+expression; expanded by itself and evaluated it must return a property
+mutator: a function accepting as arguments an object instance and a new
+property's value and returning unspecified values.
+
+When the keys are unknown: the setter maker must return @false{}; in
+this case another setter will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the keys are recognised but invalid: the setter maker must raise a
+syntax violation.
+
+The @func{set!} syntax is used to implement the expansions:
+
+@example
+(set! O[red]     1) @expansion{} (tag-setter <color> O ([red])   1)
+(set! O[green]   2) @expansion{} (tag-setter <color> O ([green]) 2)
+(set! O[blue]    3) @expansion{} (tag-setter <color> O ([blue])  3)
+(set! (O[red])   1) @expansion{} (tag-setter <color> O ([red])   1)
+(set! (O[green]) 2) @expansion{} (tag-setter <color> O ([green]) 2)
+(set! (O[blue])  3) @expansion{} (tag-setter <color> O ([blue])  3)
+@end example
+
+@noindent
+which in turn will use the setter maker to implement the expansions:
+
+@example
+(tag-setter <color> O ([red])   1) @expansion{} (<color>-red-set!  O 1)
+(tag-setter <color> O ([green]) 2) @error{} &syntax
+(tag-setter <color> O ([blue])  3) @expansion{} (<color>-blue-set! O 3)
+@end example
+
+The setter maker implementation can be:
+
+@example
+(define (setter-maker keys-stx input-form.stx)
+  (syntax-case keys-stx ()
+    (([?field-name])
+     (identifier? #'?field-name)
+     (mutator-maker #'?field-name input-form.stx))
+    (_
+     (syntax-violation '<color>
+       "invalid setter syntax" input-form.stx keys))))
+@end example
+
+@c page
+@node obspec definition intro dispatcher
+@subsubsection Method dispatcher
+
+
+When the specified object type has methods: the methods dispatcher is a
+function accepting 2 arguments and returning a single value; otherwise
+it is @false{}.  The dispatcher arguments are:
+
+@enumerate
+@item
+A symbol representing a method name.
+
+@item
+A syntax object representing the form which originated this dispatcher
+call.  If the dispatcher raises a syntax violation exception: this value
+must be used as @code{form} field in the @condition{syntax} condition
+object.
+@end enumerate
+
+When the method name is recognised and valid: the dispatcher must return
+a syntax object representing the method.  It is a syntax object (wrapped
+or unwrapped) representing an expression; expanded by itself and
+evaluated it must return a callable object: a function accepting as
+first argument the object instance, optional additional arguments, and
+returning any tuple of values.
+
+When the method name is unknown: the dispatcher must return @false{}; in
+this case:
+
+@enumerate
+@item
+The expander first tries the accessor maker (if any) to match the symbol
+name against field names.
+
+@item
+If the accessor maker returns @false{}, the expander tries the parent's
+method dispatcher (if any).
+
+@item
+And so on recursively upwards in the hierarchy of object type
+specifications.  If neither methods nor fields match: a syntax violation
+is raised.
+@end enumerate
+
+When the method name is recognised but invalid: the dispatcher must
+raise a syntax violation.
+
+The method dispatcher is used to implement the expansions:
+
+@example
+(O string) @expansion{} (<color>-string O)
+(O shift 1 2 3)
+@expansion{} (<color>-shift O 1 2 3)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (dispatcher method-name.sym input-form.stx)
+  (case method-name.sym
+    ((string)   #'<color>-string)
+    ((shift)    #'<color>-shift)
+    (else       #f)))
+@end example
+
+@c page
+@node obspec definition intro caster
+@subsubsection Object type caster
+
+
+If the object type supports casting from objects of other type: the
+caster maker is a function accepting 2 arguments and returning a single
+value, otherwise it is @false{}.  The caster maker arguments are:
+
+@enumerate
+@item
+@false{} or a tag identifier representing the type of the source object;
+@false{} is used when the type of the source object is unknown at
+expand--time.
+
+@item
+A syntax object representing the form which originated this dispatcher
+call.  If the caster maker raises a syntax violation exception: this
+value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end enumerate
+
+When the source tag is recognised and valid: the caster maker must
+return a syntax object representing an expression evaluating to an
+object conversion function.  It is a syntax object (wrapped or
+unwrapped) representing an expression; expanded by itself and evaluated
+it must return a callable object: a function accepting as single
+argument the source object and returning an object of the type
+represented by the target tag.
+
+When the source tag is invalid: the caster maker must raise a syntax
+violation exception.
+
+When the source tag is unknown and @false{} is used as argument: the
+caster maker must return a syntax object representing an expression;
+evaluating to an object conversion function.  It is a syntax object
+(wrapped or unwrapped) representing an expression; expanded by itself
+and evaluated it must return a callable object: a function accepting as
+single argument the source object and returning an object of the type
+represented by the target tag; this conversion function must determine
+at run--time the type of the source object.
+
+The caster maker is used to implement the expansions:
+
+@example
+((<string>) 123)        @expansion{} (string->number 123)
+((<string>) 'ciao)      @expansion{} (string->symbol 'ciao)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (caster-maker source-tag input-form.stx)
+  (if source-tag
+      (cond ((free-identifier=? source-tag #'<symbol>)
+             #'symbol->string)
+            ((free-identifier=? source-tag #'<number>)
+             #'number->string)
+            (else
+             (syntax-violation '<string>
+               "invalid cast source object type"
+               input-form.stx source-tag)))
+    #'any->string))
+@end example
+
+@c page
+@node obspec definition descr
+@subsection Object type descriptor
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} object-type-spec
+Type of structs representing the object type to which expressions in
+syntax objects will evaluate; all the Scheme objects are meant to be
+representable with this type specification.  It has the following
+fields:
+
+@table @code
+@item type-id
+A bound identifier representing the name of this type; what matters is
+that it is bound, not what it is bound to.  This identifier has this
+very instance in its syntactic binding property list.
+
+@item pred-id
+An identifier bound to the type predicate.
+
+@item accessor-maker
+@false{} or an accessor maker procedure accepting 2 arguments and
+returning 1 value.
+
+@itemize
+@item
+The arguments are: an identifier representing a slot name; a boolean,
+true if the requested accessor is safe, false if it is unsafe.
+
+@item
+The return value is a syntax object evaluating to a slot accessor, or
+false if this @objtype{object-type-spec} does not provide an accessor
+for the selected slot.
+@end itemize
+
+If the slot name is invalid for some reason (for example the slot is
+hidden): the proceure must raise an exception.  If this
+@objtype{object-type-spec} does not implement the selected slot: the
+return value must be @false{} and the slot will be searched in the
+parent @objtype{object-type-spec}, if any.
+
+@item mutator-maker
+@false{} or a mutator maker procedure accepting 2 arguments and
+returning 1 value.
+
+@itemize
+@item
+The arguments are: an identifier representing a slot name; a boolean,
+true if the requested mutator is safe, false if it is unsafe.
+
+@item
+The return value is a syntax object evaluating to a slot mutator, or
+false if this @objtype{object-type-spec} does not provide a mutator for
+the selected slot.
+@end itemize
+
+If the slot name is invalid for some reason (for example the slot is
+immutable): the proceure must raise an exception.  If this
+@objtype{object-type-spec} does not implement the selected slot: the
+return value must be false and the slot will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+@item dispatcher
+False or a dispatcher procedure accepting a single argument and
+returning a single value, and acting like a macro transformer.
+
+The argument must be a syntax object representing with the format:
+
+@example
+(@meta{var} @metao{arg} @meta{arg} ...)
+@end example
+
+@noindent
+where @meta{var} is an expression evaluating to a single object whose
+type is described by this structure.  The return value must be a syntax
+object representing the output form: an expression to be further
+expanded.
+
+@item parent-spec
+@false{} or an instance of @objtype{object-type-spec} describing the
+parent of this type.
+@end table
+@end deftp
+
+
+@defun make-object-type-spec @var{type-id} @var{pred-id}
+@defunx make-object-type-spec @var{type-id} @var{pred-id} @var{accessor-maker} @var{mutator-maker} @var{dispatcher} @var{parent-id}
+Build and return a new instance of @objtype{object-type-spec}.
+@end defun
+
+
+@defun object-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{object-type-spec}, otherwise return @false{}.
+@end defun
+
+@c page
+@node obspec unsafe variants
+@section Unsafe binding variants
+
+
+Whenever we apply a function to a tuple of arguments of which we know at
+compile--time the type is correct: we can avoid run--time arguments type
+validation; it would be ideal to replace the call to an
+argument--validating (safe) function with a call to a non--validating
+(unsafe) function.  This is what the expander does with unsafe variants.
+
+The @dfn{unsafe variant} of a function is a syntax object which,
+expanded by itself and evaluated, returns a function that does not
+validate the type of its arguments.  As example, the function:
+
+@example
+#!vicare
+(import (vicare))
+
+(define* (@{string-ref-fx fixnum?@} @{str string?@} @{idx fixnum?@})
+  (import (vicare system $chars)
+    (vicare system $strings))
+  (assert (and (fx<=? 0 idx)
+               (fx<?  idx (string-length str))))
+  ($char->fixnum ($string-ref str idx)))
+@end example
+
+@noindent
+can be split into:
+
+@example
+(define* (@{string-ref-fx fixnum?@} @{str string?@} @{idx fixnum?@})
+  ($string-ref-fx str idx))
+
+(define ($string-ref-fx str idx)
+  (import (vicare system $chars)
+    (vicare system $strings))
+  (assert (and (fx<=? 0 idx)
+               (fx<?  idx (string-length str))))
+  ($char->fixnum ($string-ref str idx)))
+@end example
+
+@noindent
+where the function @func{$string-ref-fx} is an unsafe implementation of
+@func{string-ref-fx}; in this case the syntax object:
+
+@example
+(syntax $string-ref-fx)
+@end example
+
+@noindent
+is the unsafe variant of @func{string-ref-fx}; the unsafe variants
+@api{} allows us to register this fact, for use by the expander, as
+follows:
+
+@example
+(begin-for-syntax
+  (import
+     (prefix (vicare expander object-type-specs) typ.))
+  (typ.set-identifier-unsafe-variant! #'string-ref-fx
+    #'$string-ref-fx))
+@end example
+
+All this infrastructure is automatically implemented by the expander
+when we use the tagged language and the built--in @func{define} syntax;
+the expander will use the prefix @samp{~} to generate the unsafe
+function name.  So it is enough for us to write:
+
+@example
+#!vicare
+(import (vicare))
+(option tagged-language)
+
+(define (@{string-ref-fx <fixnum>@} @{str <string>@} @{idx <fixnum>@})
+  (import (vicare system $chars)
+    (vicare system $strings))
+  (assert (and (fx<=? 0 idx)
+               (fx<?  idx (string-length str))))
+  ($char->fixnum ($string-ref str idx)))
+@end example
+
+@noindent
+whenever the expander finds:
+
+@example
+(string-ref-fx "ciao" 2)
+@end example
+
+@noindent
+it can validate the arguments and replace the form with:
+
+@example
+(~string-ref-fx "ciao" 2)
+@end example
+
+We still need to hand--write validations involving multiple arguments.
+
+
+@defun set-identifier-unsafe-variant! @meta{safe.id} @meta{unsafe.stx}
+Specify that the unsafe variant of the binding for the identifier
+@meta{safe.id} is the expression in the syntax object @meta{unsafe.stx}.
+@meta{unsafe.stx} is stored as syntax object and it is expanded and
+evaluated at each use of the unsafe variant.
+@end defun
+
+
+@defun identifier-unsafe-variant @var{safe.id}
+Return the syntax object registered as unsafe variant of the bound
+identifier @var{safe.id}; return @false{} if @var{safe.id} has no unsafe
+variant.
+@end defun
+
+@c end of file

@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa language oopp auxiliary-syntaxes)
+(library (nausicaa language oopp auxiliary-syntaxes (0 4))
   (export
     :flat-oopp-syntax
     :define
@@ -50,7 +50,7 @@
     :mutator-function
     :process-shadowed-identifier
     :insert-mixin-clauses)
-  (import (only (vicare)
+  (import (only (vicare (0 4))
 		define-auxiliary-syntaxes))
   (define-auxiliary-syntaxes
     :flat-oopp-syntax

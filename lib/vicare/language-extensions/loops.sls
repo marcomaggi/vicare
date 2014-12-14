@@ -40,7 +40,8 @@
     :-dispatch-ref :-dispatch-set! make-initial-:-dispatch
     dispatch-union :generator-proc
     nested)
-  (import (vicare))
+  (import (except (vicare)
+		  :))
 
 
 (define-auxiliary-syntaxes

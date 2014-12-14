@@ -54,17 +54,21 @@
   (define optimize-level
     (make-parameter 0
       (lambda (x)
-	(if (memv x '(0 1 2 3))
-	    x
-	  (error 'optimize-level "valid optimization levels are 0, 1, 2, and 3")))))
+	(case x
+	  ((0 1 2 3)
+	   x)
+	  (else
+	   (error 'optimize-level "valid optimization levels are 0, 1, 2, and 3"))))))
 
   (define source-optimizer-passes-count
     (make-parameter 1
       (lambda (obj)
-	(define who 'source-optimizer-passes-count)
-	(with-arguments-validation (who)
-	    ((positive-fixnum	obj))
-	  obj))))
+	(if (and (fixnum?     obj)
+		 (fxpositive? obj))
+	    obj
+	  (procedure-argument-violation 'source-optimizer-passes-count
+	    "expected positive fixnum as parameter value"
+	    obj)))))
 
   (define source-optimizer-input
     ;;This  is used  in  case of  internal error  to  show better  error
@@ -236,7 +240,7 @@
       ((primref name)
        (case-context ctxt
 	 ((app)
-	  (case-symbols name
+	  (case name
 	    ((debug-call)
 	     (E-debug-call ctxt ec sc))
 	    (else
@@ -861,12 +865,22 @@
   (define (primprop p)
     (or (getprop p UNIQUE-PROPERTY-KEY) '()))
 
+  (define-syntax (expand-time-gensym stx)
+    (syntax-case stx ()
+      ((_ ?template)
+       (let* ((tmp (syntax->datum #'?template))
+	      (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	      (str (apply string-append tmp (map (lambda (N)
+						   (string-append "." (number->string N)))
+					      fxs)))
+	      (sym (gensym str)))
+	 (with-syntax
+	     ((SYM (datum->syntax #'here sym)))
+	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	   #'(quote SYM))))))
+
   (define-constant UNIQUE-PROPERTY-KEY
-    (let-syntax
-	((expand-time-gensym (lambda (x)
-			       (with-syntax ((SYM (datum->syntax #'here (gensym))))
-				 #'(quote SYM)))))
-      (expand-time-gensym)))
+    (expand-time-gensym "primitive-operation-property"))
 
   (module (%initialise-primitive-properties)
     ;;For each  symbol being the  name of  a primitive function:  add an
@@ -928,7 +942,7 @@
       ((cons* _ . _)				 effect-free result-true)
       ((list)				foldable effect-free result-true)
       ((list . _)				 effect-free result-true)
-      ((reverse ())			foldable effect-free result-true)
+      ((reverse _)			foldable effect-free result-true)
 
       ;;According to  R6RS: STRING and	MAKE-STRING must return	 a newly
       ;;allocated string at every invocation; if we want the same string
@@ -1057,6 +1071,7 @@
       ((asin _)			   foldable effect-free result-true)
       ((acos _)			   foldable effect-free result-true)
       ((atan _)			   foldable effect-free result-true)
+      ((atan _ _)		   foldable effect-free result-true)
       ((make-eq-hashtable)		    effect-free result-true)
       ((string->number _)	   foldable effect-free		   )
       ((string->number _ _)	   foldable effect-free		   )
@@ -1300,7 +1315,8 @@
       ((make-i/o-file-does-not-exist-error . _))
       ((make-undefined-violation . _))
       ((die . _))
-      ((gensym . _))
+      ;;This must return a new gensym every time.
+      ((gensym . _)				effect-free result-true)
       ((values . _))
       ((error . _))
       ((assertion-violation . _))
@@ -1352,6 +1368,10 @@
       ((command-line-arguments))
       ;;FIXME (Abdulaziz Ghuloum)
       ((make-record-type-descriptor . _))
+      ((record-constructor _)				 effect-free result-true)
+      ((record-predicate _)				 effect-free result-true)
+      ((record-accessor . _)				 effect-free result-true)
+      ((record-mutator . _)				 effect-free result-true)
       ((make-assertion-violation . _))
       ((new-cafe . _))
       ((getenv . _))
@@ -2036,6 +2056,9 @@
 			    (%precompute-effect-free-primitive info appctxt))
 		       (and (%info-foldable? info)
 			    (%precompute-foldable-primitive primsym rand* ec)))))
+      ;; (debug-print 'fold-prim/examining primsym
+      ;; 		   'foldable? (%info-effect-free? info)
+      ;; 		   'effect-free? (%info-effect-free? info))
       (if result
 	  (begin
 	    (decrement ec 1)
@@ -2120,6 +2143,7 @@
 		(decrement ec 10)
 		(k #f))
 	    (lambda ()
+;;;(debug-print 'apply-at-compile-time primsym args)
 	      (make-constant (apply (system-value primsym) args)))))))
 
 ;;; --------------------------------------------------------------------
@@ -2173,17 +2197,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (%info-foldable? info)
-    (memq 'foldable info))
+  (define-syntax-rule (%info-foldable? ?info)
+    (memq 'foldable ?info))
 
-  (define-inline (%info-effect-free? info)
-    (memq 'effect-free info))
+  (define-syntax-rule (%info-effect-free? ?info)
+    (memq 'effect-free ?info))
 
-  (define-inline (%info-result-true? info)
-    (memq 'result-true info))
+  (define-syntax-rule (%info-result-true? ?info)
+    (memq 'result-true ?info))
 
-  (define-inline (%info-result-false? info)
-    (memq 'result-false info))
+  (define-syntax-rule (%info-result-false? ?info)
+    (memq 'result-false ?info))
 
   #| end of module: fold-prim |# )
 
@@ -2194,6 +2218,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; eval: (put 'case-context 'scheme-indent-function 1)
 ;; eval: (put 'with-extended-env 'scheme-indent-function 1)
 ;; End:

@@ -7,7 +7,7 @@
 ;;;
 ;;;	This library is derived from old code in Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2009-2010, 2012-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -47,12 +47,6 @@
 
 
 ;;;; string utilities
-
-(define (keyword->string key)
-  (define who 'keyword->string)
-  (with-arguments-validation (who)
-      ((keyword	key))
-    (symbol->string (keyword->symbol key))))
 
 (define (string->keyword str)
   (define who 'string->keyword)
@@ -147,7 +141,9 @@
 	'()
       (let ((arg (car arguments)))
 	(cond ((assp (lambda (key)
-		       (keyword=? arg key))
+		       (and (keyword? key)
+			    (keyword? arg)
+			    (keyword=? arg key)))
 		 options-specs)
 	       => (lambda (spec)
 		    (let ((without-arg-thunk	(cadr spec))

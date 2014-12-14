@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -380,11 +380,6 @@
 		;;The   referenced   foreign   data   structure   is
 		;;finalised, too, if STRUCT owns it.
 		;;
-		;;Notes:
-		;;
-		;;*  We  ignore  the  return value  of  the  foreign
-		;;  destructor function.
-		;;
 		(if (#,unsafe-alive-pred STRUCT)
 		    (begin
 		      ;;Apply the custom destructor to STRUCT.
@@ -399,11 +394,12 @@
 		      ;;any.
 		      TABLE-DESTRUCTION-FORM ...
 		      ;;Finalise the foreign data structure, if there is
-		      ;;a foreign destructor.
-		      (let ((rv FOREIGN-DESTRUCTOR-CALL))
+		      ;;a foreign  destructor.  Return the  return value
+		      ;;of the destructor or false.
+		      (receive-and-return (rv)
+			  FOREIGN-DESTRUCTOR-CALL
 			;;Nullify the pointer.
-			(#,unsafe-pointer-setter STRUCT #f)
-			rv))
+			(#,unsafe-pointer-setter STRUCT #f)))
 		  #f))
 	      (module ()
 		(set-rtd-destructor! (type-descriptor #,type-id)
@@ -456,9 +452,12 @@
       ;;pointer object.
       ;;
       (if (identifier? foreign-destructor-id)
-	  #`(when (#,unsafe-getter-pointer-owner? #,struct-id)
-	      (guard (E (else #f))
-		(#,foreign-destructor-id #,struct-id)))
+	  #`(if (#,unsafe-getter-pointer-owner? #,struct-id)
+		(guard (E (else #f))
+		  (#,foreign-destructor-id #,struct-id))
+	      ;;Yes, we want false as return value when this struct does
+	      ;;not own the pointer.
+	      #f)
 	#f))
 
     #| end of module: %make-finaliser-definitions |# )

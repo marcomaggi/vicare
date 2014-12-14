@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -108,8 +108,8 @@
   (let ()	;tagged fields with accessors
     (define-condition-type &alpha
       (parent &assertion)
-      (fields ((a <string>)  get-a)
-	      ((b <integer>) get-b)))
+      (fields ({a <string>}  get-a)
+	      ({b <integer>} get-b)))
 
     (check
 	(let ((E (make-alpha-condition "ciao" 2)))
@@ -128,13 +128,13 @@
       => '(#f #t))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
 	  (list (E a) (E b)))
       => '("ciao" 2))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
-	  (list (E a length) (E b positive?)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
+	  (list ((E a) length) ((E b) positive?)))
       => '(4 #t))
 
     #f)
@@ -142,8 +142,8 @@
   (let ()	;tagged fields without accessors
     (define-condition-type &alpha
       (parent &assertion)
-      (fields ((a <string>))
-	      ((b <integer>))))
+      (fields ({a <string>})
+	      ({b <integer>})))
 
     (check
 	(let ((E (make-alpha-condition "ciao" 2)))
@@ -162,13 +162,13 @@
       => '(#f #t))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
 	  (list (E a) (E b)))
       => '("ciao" 2))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
-	  (list (E a length) (E b positive?)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
+	  (list ((E a) length) ((E b) positive?)))
       => '(4 #t))
 
     #f)
@@ -251,9 +251,9 @@
       (try
 	  (thunk)
 	(catch E
-	  (&this
+	  ((&this)
 	   (list (E a) (E b) (E c)))
-	  (&message
+	  ((&message)
 	   (E message))
 	  (else E))))
 
@@ -285,9 +285,9 @@
       (try
 	  (thunk)
 	(catch T
-	  (&that
+	  ((&that)
 	   (list (T a) (T b) (T c)))
-	  (&message
+	  ((&message)
 	   (T message))
 	  (else T))))
 
@@ -325,9 +325,9 @@
 	(try
 	    (thunk)
 	  (catch E
-	    (&this
+	    ((&this)
 	     (list (E a) (E b) (E c)))
-	    (&message
+	    ((&message)
 	     (E message))))))
 
     (check
@@ -353,7 +353,7 @@
       (try
 	  (raise (<common-conditions> ('ciao "bau" '(miao))))
 	(catch E
-	  (<common-conditions>
+	  ((<common-conditions>)
 	   (list (E who) (E message) (E irritants)))
 	  (else E)))
     => '(ciao "bau" (miao)))
@@ -366,8 +366,8 @@
 	(try
 	    (set! a (+ a 10))
 	  (catch E
-	    (&error	E)
-	    (&warning	E)
+	    ((&error)	E)
+	    ((&warning)	E)
 	    (else	E))
 	  (finally
 	   (set! a (+ a 100))))
@@ -379,8 +379,8 @@
 	(try
 	    (raise (&warning ()))
 	  (catch E
-	    (&error	E)
-	    (&warning	(set! a (+ a 10)))
+	    ((&error)	E)
+	    ((&warning)	(set! a (+ a 10)))
 	    (else	E))
 	  (finally
 	   (set! a (+ a 100))))
@@ -463,7 +463,7 @@
 	(try
 	    (raise (&tuple ('ciao "ciao" '(ciao) 1 2 3)))
 	  (catch E
-	    (&tuple
+	    ((&tuple)
 	     (vector (E who) (E message) (E irritants)
 		     (E a) (E b) (E c)))))
       => '#(ciao "ciao" (ciao) 1 2 3))

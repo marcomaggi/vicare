@@ -73,8 +73,8 @@
     ETOOMANYREFS	ETXTBSY		EUCLEAN
     EUNATCH		EUSERS		EWOULDBLOCK
     EXDEV		EXFULL)
-  (import (ikarus)
-    (only (ikarus system $fx)
+  (import (vicare)
+    (only (vicare system $fx)
 	  $fx=))
 
 

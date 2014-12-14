@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (nausicaa uri ip)
   (nausicaa parser-tools ipv4-addresses)
   (prefix (vicare parser-tools silex lexer) lex.)
@@ -48,7 +48,7 @@
       (try
 	  (raise (&ipv4-address-parser-error ()))
 	(catch E
-	  (&ipv4-address-parser-error
+	  ((&ipv4-address-parser-error)
 	   #t)
 	  (else #f)))
     => #t)
@@ -62,9 +62,9 @@
     (let* ((IS		(lex.make-IS (lex.string: string) (lex.counters: 'all)))
 	   (lexer	(lex.make-lexer ipv4-address-lexer-table IS))
 	   (out		'()))
-      (define (push-token! (T lt.<lexical-token>))
+      (define (push-token! {T lt.<lexical-token>})
 	(set-cons! out (cons (T category) (T value))))
-      (do (((token lt.<lexical-token>) (lexer) (lexer)))
+      (do (({token lt.<lexical-token>} (lexer) (lexer)))
 	  ((token special?)
 	   (push-token! token)
 	   (reverse out))
@@ -179,9 +179,9 @@
   (define (tokenise-address string)
     (let* ((lexer	(make-ipv4-address-lexer (string: string)))
 	   (out		'()))
-      (define (push-token! (T lt.<lexical-token>))
+      (define (push-token! {T lt.<lexical-token>})
 	(set-cons! out (cons (T category) (T value))))
-      (do (((token lt.<lexical-token>) (lexer) (lexer)))
+      (do (({token lt.<lexical-token>} (lexer) (lexer)))
 	  ((token special?)
 	   (push-token! token)
 	   (reverse out))
@@ -297,12 +297,12 @@
     (parent &assertion))
 
   (define (make-ipv4-address-parser-error-handler who string)
-    (lambda ((message <string>) (token lt.<lexical-token>))
+    (lambda ({message <string>} {token lt.<lexical-token>})
       (raise
        (condition (make-parser-error-condition)
 		  (make-who-condition who)
 		  (make-message-condition (string-append "invalid IPv4 address input at column "
-							 (token location column string) ": "
+							 (((token location) column) string) ": "
 							 message))
 		  (make-irritants-condition (list string (token value)))))))
 
@@ -357,7 +357,7 @@
       (try
 	  (parse-address "1.2.3.4.5")
 	(catch E
-	  (&parser-error	#t)
+	  ((&parser-error)	#t)
 	  (else			#f)))
     => #t)
 
@@ -365,7 +365,7 @@
       (try
 	  (parse-address "1,")
 	(catch E
-	  (&parser-error	#t)
+	  ((&parser-error)	#t)
 	  (else			#f)))
     => #t)
 
@@ -373,7 +373,7 @@
       (try
 	  (parse-address "1..2..3")
 	(catch E
-	  (&parser-error	#t)
+	  ((&parser-error)	#t)
 	  (else			#f)))
     => #t)
 
@@ -414,7 +414,7 @@
       (try
 	  (parse-ipv4-address-only "1.2.3.4/5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -422,7 +422,7 @@
       (try
 	  (parse-ipv4-address-only "1.2.3.4.5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -430,7 +430,7 @@
       (try
 	  (parse-ipv4-address-only "1,")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -438,7 +438,7 @@
       (try
 	  (parse-ipv4-address-only "1..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -446,7 +446,7 @@
       (try
 	  (parse-ipv4-address-only "1..2..")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -454,7 +454,7 @@
       (try
 	  (parse-ipv4-address-only "..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -479,7 +479,7 @@
       (try
 	  (parse-ipv4-address-prefix "1.2.3.4")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -487,7 +487,7 @@
       (try
 	  (parse-ipv4-address-prefix "1.2.3.4.5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -495,7 +495,7 @@
       (try
 	  (parse-ipv4-address-prefix "1,")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -503,7 +503,7 @@
       (try
 	  (parse-ipv4-address-prefix "1..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -511,7 +511,7 @@
       (try
 	  (parse-ipv4-address-prefix "1..2..")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -519,7 +519,7 @@
       (try
 	  (parse-ipv4-address-prefix "..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -548,7 +548,7 @@
       (try
 	  (parse-ipv4-address "1.2.3.4.5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -556,7 +556,7 @@
       (try
 	  (parse-ipv4-address "1,")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -564,7 +564,7 @@
       (try
 	  (parse-ipv4-address "1..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -572,7 +572,7 @@
       (try
 	  (parse-ipv4-address "1..2..")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -580,7 +580,7 @@
       (try
 	  (parse-ipv4-address "..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -590,186 +590,186 @@
 (parametrise ((check-test-name	'class-address))
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> (1 2 3 4))))
+      (let (({o <ipv4-address>} (<ipv4-address> (1 2 3 4))))
 	(list (o third) (o second) (o first) (o zeroth)))
     => '(1 2 3 4))
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
 	(list (o third) (o second) (o first) (o zeroth)))
     => '(1 2 3 4))
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
 	(o string))
     => "1.2.3.4")
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "1.2.3.4")))))
 	(o bytevector))
     => '#ve(ascii "1.2.3.4"))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "10.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "10.0.0.1")))))
   	(o private?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "172.16.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "172.16.0.1")))))
   	(o private?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "172.20.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "172.20.0.1")))))
   	(o private?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "192.168.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "192.168.0.1")))))
   	(o private?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "123.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "123.0.0.1")))))
   	(o private?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "127.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "127.0.0.1")))))
   	(o loopback?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o loopback?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "127.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "127.0.0.1")))))
   	(o localhost?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o localhost?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "169.254.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "169.254.0.1")))))
   	(o link-local?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o link-local?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "192.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "192.0.0.1")))))
   	(o reserved?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "240.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "240.0.0.1")))))
   	(o reserved?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o reserved?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "192.0.2.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "192.0.2.1")))))
   	(o test-net-1?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o test-net-1?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "192.88.99.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "192.88.99.1")))))
   	(o six-to-four-relay-anycast?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o six-to-four-relay-anycast?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "198.18.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "198.18.0.1")))))
   	(o benchmark-tests?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o benchmark-tests?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "198.51.100.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "198.51.100.1")))))
   	(o test-net-2?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o test-net-2?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "203.0.113.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "203.0.113.1")))))
   	(o test-net-3?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o test-net-3?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "224.0.113.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "224.0.113.1")))))
   	(o multicast?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o multicast?))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "255.255.255.255")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "255.255.255.255")))))
   	(o limited-broadcast?))
     => #t)
 
   (check
-      (let (((o <ipv4-address>) (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
+      (let (({o <ipv4-address>} (<ipv4-address> ((parse-ipv4-address-only "100.0.0.1")))))
   	(o limited-broadcast?))
     => #f)
 
@@ -779,7 +779,7 @@
       (try
 	  (parse-ipv4-address-only "1..2")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -789,21 +789,21 @@
 (parametrise ((check-test-name	'class-prefix))
 
   (check
-      (let (((o <ipv4-address-prefix>) (receive (addr len)
+      (let (({o <ipv4-address-prefix>} (receive (addr len)
 					   (parse-ipv4-address-prefix "1.2.3.4/10")
 					 (<ipv4-address-prefix> (len addr)))))
 	(list (o third) (o second) (o first) (o zeroth) (o prefix-length)))
     => '(1 2 3 4 10))
 
   (check
-      (let (((o <ipv4-address-prefix>) (receive (addr len)
+      (let (({o <ipv4-address-prefix>} (receive (addr len)
 					   (parse-ipv4-address-prefix "1.2.3.4/8")
 					 (<ipv4-address-prefix> (len addr)))))
 	(o string))
     => "1.2.3.4/8")
 
   (check
-      (let (((o <ipv4-address-prefix>) (receive (addr len)
+      (let (({o <ipv4-address-prefix>} (receive (addr len)
 					   (parse-ipv4-address-prefix "1.2.3.4/8")
 					 (<ipv4-address-prefix> (len addr)))))
 	(o bytevector))

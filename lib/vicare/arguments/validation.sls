@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -304,7 +304,7 @@
     identifier.vicare-arguments-validation
     identifier/false.vicare-arguments-validation
     )
-  (import (ikarus)
+  (import (vicare)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)
@@ -312,8 +312,8 @@
 	  FD_SETSIZE)
     (prefix (vicare platform words)
 	    words.)
-    (prefix (vicare $posix)
-	    posix.)
+    (prefix (vicare language-extensions posix)
+     	    posix.)
     (vicare unsafe operations))
 
 

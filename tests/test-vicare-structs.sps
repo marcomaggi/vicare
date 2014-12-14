@@ -26,9 +26,9 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (vicare checks)
-  (ikarus system $structs))
+  (vicare system $structs))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -421,27 +421,31 @@
   (define-struct alpha
     (a b c))
 
-  (set-rtd-destructor! (type-descriptor alpha)
-		       (lambda (S)
-			 (void)))
+  (define (alpha-destructor S)
+    (display "alpha-destructor\n" stderr)
+    (void))
+
+  (set-rtd-destructor! (type-descriptor alpha) alpha-destructor)
+
+  (debug-print ($std-destructor (type-descriptor alpha)))
 
   (check
       (parametrise ((struct-guardian-logger #t))
-	(let ((S (make-alpha 1 2 3)))
-	  (check-pretty-print S)
-	  (collect)))
+  	(let ((S (make-alpha 1 2 3)))
+  	  (check-pretty-print S)
+  	  (collect)))
     => (void))
 
   (check
       (let ((S (make-alpha 1 2 3)))
-	(check-pretty-print S)
-	(collect))
+  	(check-pretty-print S)
+  	(collect))
     => (void))
 
   (check
       (let ((S (make-alpha 1 2 3)))
-	(check-pretty-print S)
-	(collect))
+  	(check-pretty-print S)
+  	(collect))
     => (void))
 
   (collect))
@@ -535,22 +539,22 @@
 ;;; generic maker syntax
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(alpha? stru))
     => #t)
 
   (check
-      (let ((stru (beta 1 2 3)))
+      (let ((stru (beta (1 2 3))))
 	(beta? stru))
     => #t)
 
   (check
-      (let ((stru (apply alpha 1 '(2 3))))
+      (let ((stru (apply (alpha (...)) 1 '(2 3))))
 	(alpha? stru))
     => #t)
 
   (check
-      (let ((stru (apply beta '(1 2 3))))
+      (let ((stru (apply (beta (...)) '(1 2 3))))
 	(beta? stru))
     => #t)
 
@@ -568,6 +572,16 @@
     => #f)
 
   (check
+      (let ((stru (make-alpha 1 2 3)))
+	((is-a? <> alpha) stru))
+    => #t)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	((is-a? _ alpha) stru))
+    => #t)
+
+  (check
       (is-a? 123 alpha)
     => #f)
 
@@ -579,14 +593,14 @@
 ;;; generic safe slot getter and setter
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(list (slot-ref stru a alpha)
 	      (slot-ref stru b alpha)
 	      (slot-ref stru c alpha)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(slot-set! stru a alpha 19)
 	(slot-set! stru b alpha 29)
 	(slot-set! stru c alpha 39)
@@ -596,14 +610,14 @@
     => '(19 29 39))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(list ((slot-ref <> a alpha) stru)
 	      ((slot-ref <> b alpha) stru)
 	      ((slot-ref <> c alpha) stru)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	((slot-set! <> a alpha <>) stru 19)
 	((slot-set! <> b alpha <>) stru 29)
 	((slot-set! <> c alpha <>) stru 39)
@@ -612,47 +626,149 @@
 	      ((slot-ref <> c alpha) stru)))
     => '(19 29 39))
 
+  (check
+      (let ((stru (alpha (1 2 3))))
+	(list ((slot-ref _ a alpha) stru)
+	      ((slot-ref _ b alpha) stru)
+	      ((slot-ref _ c alpha) stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	((slot-set! _ a alpha _) stru 19)
+	((slot-set! _ b alpha _) stru 29)
+	((slot-set! _ c alpha _) stru 39)
+	(list ((slot-ref _ a alpha) stru)
+	      ((slot-ref _ b alpha) stru)
+	      ((slot-ref _ c alpha) stru)))
+    => '(19 29 39))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe-std-operations))
+
+  (define-struct alpha
+    (a b c))
+
+  (define-struct beta
+    (a b c))
+
+  (define (the-beta-destructor S)
+    #t)
+
+  (module ()
+    (set-rtd-destructor! (struct-type-descriptor beta) the-beta-destructor))
+
 ;;; --------------------------------------------------------------------
-;;; generic unsafe slot getter and setter
 
   (check
-      (let ((stru (alpha 1 2 3)))
-	(list ($slot-ref stru a alpha)
-	      ($slot-ref stru b alpha)
-	      ($slot-ref stru c alpha)))
-    => '(1 2 3))
+      ($std-std (struct-type-descriptor alpha))
+    => (base-rtd))
 
   (check
-      (let ((stru (alpha 1 2 3)))
-	($slot-set! stru a alpha 19)
-	($slot-set! stru b alpha 29)
-	($slot-set! stru c alpha 39)
-	(list ($slot-ref stru a alpha)
-	      ($slot-ref stru b alpha)
-	      ($slot-ref stru c alpha)))
-    => '(19 29 39))
+      ($std-name (struct-type-descriptor alpha))
+    => "alpha")
 
   (check
-      (let ((stru (alpha 1 2 3)))
-	(list (($slot-ref <> a alpha) stru)
-	      (($slot-ref <> b alpha) stru)
-	      (($slot-ref <> c alpha) stru)))
-    => '(1 2 3))
+      ($std-length (struct-type-descriptor alpha))
+    => 3)
 
   (check
-      (let ((stru (alpha 1 2 3)))
-	(($slot-set! <> a alpha <>) stru 19)
-	(($slot-set! <> b alpha <>) stru 29)
-	(($slot-set! <> c alpha <>) stru 39)
-	(list (($slot-ref <> a alpha) stru)
-	      (($slot-ref <> b alpha) stru)
-	      (($slot-ref <> c alpha) stru)))
-    => '(19 29 39))
+      ($std-fields (struct-type-descriptor alpha))
+    => '(a b c))
+
+  (check
+      ($std-printer (struct-type-descriptor alpha))
+    => default-struct-printer)
+
+  (check
+      (gensym? ($std-symbol (struct-type-descriptor alpha)))
+    => #t)
+
+  (check
+      ($std-destructor (struct-type-descriptor alpha))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($std-std (struct-type-descriptor beta))
+    => (base-rtd))
+
+  (check
+      ($std-name (struct-type-descriptor beta))
+    => "beta")
+
+  (check
+      ($std-length (struct-type-descriptor beta))
+    => 3)
+
+  (check
+      ($std-fields (struct-type-descriptor beta))
+    => '(a b c))
+
+  (check
+      ($std-printer (struct-type-descriptor beta))
+    => default-struct-printer)
+
+  (check
+      (gensym? ($std-symbol (struct-type-descriptor beta)))
+    => #t)
+
+  (check
+      ($std-destructor (struct-type-descriptor beta))
+    => the-beta-destructor)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-name! std "ciao")
+	($std-name std))
+    => "ciao")
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-length! std 2)
+	($std-length std))
+    => 2)
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-fields! std '(A B))
+	($std-fields std))
+    => '(A B))
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (fun (lambda args (void))))
+	($set-std-printer! std fun)
+	(eq? fun ($std-printer std)))
+    => #t)
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (fun (lambda args (void))))
+	($set-std-destructor! std fun)
+	(eq? fun ($std-destructor std)))
+    => #t)
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (uid (gensym "uid")))
+	(set-symbol-value! uid std)
+	($set-std-symbol! std uid)
+	(values (eq? uid ($std-symbol std))
+		(eq? std (symbol-value uid))))
+    => #t #t)
+
   #t)
 
 
 ;;;; done
 
+(collect)
 (check-report)
 
 ;;; end of file

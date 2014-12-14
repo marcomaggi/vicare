@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (ikarus system $numerics)
+  (vicare system $numerics)
   (vicare checks)
   (only (vicare platform words)
 	case-word-size)

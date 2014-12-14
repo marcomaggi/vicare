@@ -1,0 +1,712 @@
+@node tags
+@chapter Tagged language
+
+
+@value{PRJNAME}'s expander implements an extension to the language
+defined by @rnrs{6} that allows the definition of tagged bindings.
+
+@quotation
+@strong{NOTE} Tagged language support is currently experimental.
+@end quotation
+
+@menu
+* tags intro::                  Introduction to the tagged language.
+* tags syntaxes::               Convenience syntaxes.
+@end menu
+
+@c page
+@node tags intro
+@section Introduction to the tagged language
+
+
+@value{PRJNAME}'s tagged language adds some expand--time binding type
+checking and extended @oop{} syntax to the language specified by
+@rnrs{6}.  The result is a Scheme language dialect in which the code
+writer is invited to explicitly write the type identifiers; there is, in
+practice, @strong{no} type inference.
+
+@menu
+* tags intro philosophy::       Tagged language philosophy.
+* tags intro enabling::         Enabling tagged language extensions.
+* tags intro tag id::           Tag identifiers.
+* tags intro tagged id::        Tagged identifiers.
+@end menu
+
+@c page
+@node tags intro philosophy
+@subsection Tagged language philosophy
+
+
+In the following discussion we refer to @rnrs{6} specifications as
+``standard Scheme language''.  We refer to a function's operands and
+return values as its @dfn{signature}.  When a function is applied to a
+tuple of arguments and a tuple of return values is expected: the number
+and types of arguments and return values must be validated; we refer to
+such validation as @dfn{application signature validation}.
+
+To understand the role of @value{PRJNAME}'s tagged language extensions,
+we have to consider that:
+
+@itemize
+@item
+Standard Scheme is dynamically typed: language implementations might
+perform application signatures validation at run--time every time a
+function is called, considering that the return values of a function
+application are discarded or become the arguments of another function
+application.  For example the function @func{flsin} can be implemented
+as:
+
+@example
+#!r6rs
+(import (rnrs (6))
+  (vicare system $flonums))
+
+(define (flsin x)
+  (assert (flonum? x))
+  ($flsin x))
+@end example
+
+@item
+It is possible to build a standard Scheme language implementation that
+performs compile--time type inference; with such implementation:
+occasionally the compiler can determine the type of arguments and return
+values and collapse multiple validations into a single one.  For
+example:
+
+@example
+#!r6rs
+(import (rnrs (6)))
+
+(define (flsomething x)
+  (values (flsin x) (flcos x) (fltan x)))
+@end example
+
+@noindent
+can be transformed into (pseudo--code):
+
+@example
+#!r6rs
+(import (rnrs (6))
+  (vicare system $flonums))
+
+(define (flsomething x)
+  (assert (flonum? x))
+  (values ($flsin x) ($flcos x) ($fltan x)))
+@end example
+
+@noindent
+or automatically defined safe and unsafe variants of the same function:
+
+@example
+#!r6rs
+(import (rnrs (6))
+  (vicare system $flonums))
+
+(define (flsomething x)
+  (assert (flonum? x))
+  ($flsomething x))
+
+(define ($flsomething x)
+  (values ($flsin x) ($flcos x) ($fltan x)))
+@end example
+
+@noindent
+so that the unsafe @func{$flsomething} can be used later in place of the
+safe @func{flsomething} if we know that the argument is a flonum.
+
+@item
+The Scheme language is defined to have two steps: expansion and
+compilation or interpretation.  Standard Scheme is a ``high--level
+language'' which is transformed into a ``core language'' by the process
+of expansion; the expander allows macros to implement customised
+high--level transformations.  The core language is handed to the
+compiler or the interpreter.
+
+@item
+Type inference does not blend well with standard Scheme macro expansion;
+it is, in general, impossible to infer the types of a macro use before
+fully expanding it, or, in special cases, at least partially expanding
+it.  True type inference can be performed on the core language that is
+the result of fully expanding the standard language.  This means we
+cannot integrate the powerful features of the expander in the code
+resulting from transformations made possible by type inference.
+
+@item
+@value{PRJNAME} is a language dialect whose purpose is to be a standard
+Scheme language with extensions; it allows mixed use of standard
+language syntax and extended language syntax.  The language extensions
+are mostly implemented in the expander, to allow user code to customise
+the generation of core language.
+
+@item
+By explicitly specifying the types of lexical bindings:
+@value{PRJNAME}'s dialect allows some of the expand--time validations
+and transformations that would be possible in a language with full type
+inference.
+@end itemize
+
+@c page
+@node tags intro enabling
+@subsection Enabling tagged language extensions
+
+
+Tagged language extensions are @strong{off} by default.  To enable the
+extensions in libraries we have to use the @code{tagged-language} and
+@code{visit-upon-loading} options as follows (@pxref{iklib syntaxes
+libraries, Extended @code{library} syntax}):
+
+@example
+(library (demo)
+  (options tagged-language visit-upon-loading)
+  (export)
+  (import (vicare))
+  ---)
+@end example
+
+To enable the extensions in programs we have to use the
+@code{tagged-language} option as follows (@pxref{iklib syntaxes
+programs, Extended program syntax}):
+
+@example
+(import (vicare))
+(options tagged-language)
+---
+@end example
+
+The declaration of types makes use of the @func{brace} syntax
+(@pxref{iklib syntaxes misc, brace}) as follows:
+
+@example
+(define (brace O <fixnum>)
+  123)
+@end example
+
+@noindent
+to use the extensions in a friendly manner we need to put the reader in
+@samp{#!vicare} mode; this way @func{brace} can be inserted using actual
+brace characters, as follows:
+
+@example
+#!vicare
+(define @{O <fixnum>@}
+  123)
+@end example
+
+@quotation
+@strong{NOTE} Why is the tagged language off by default?  Mostly because
+of right--hand side type propagation.  Under tagged language, when the
+expander processes the definition:
+
+@example
+(define O 123)
+@end example
+
+@noindent
+it recognises the right--hand side as a fixnum, so it tags the lexical
+variable @code{O} as @class{fixnum}; the definition is equivalent to:
+
+@example
+(define @{O <fixnum>@} 123)
+@end example
+
+It is a common Scheme language pattern to use @false{} as wild card to
+mean: this lexical variable has not been initialised to a valid value,
+so we know that such--and--such state is ``off''.  Under tagged language
+this pattern will fail; the following code:
+
+@example
+(define O #f)
+(set! O 123)    @error{} &expand-time-type-signature-violation
+@end example
+
+@noindent
+will raise an expand--time type violation, because it is considered
+equivalent to:
+
+@example
+(define @{O <boolean>@} #f)
+(set! O 123)    @error{} &expand-time-type-signature-violation
+@end example
+
+@noindent
+and we cannot assign a fixnum to a lexical variable tagged as
+@class{boolean}.
+@end quotation
+
+
+@defun enable-tagged-language
+@defunx disable-tagged-language
+Enable or disable tagged language support.  These functions are meant to
+be used at the @repl{}; they do @strong{not} modify support for tagged
+language for programs and libraries.
+@end defun
+
+@c page
+@node tags intro tag id
+@subsection Tag identifiers
+
+
+Technically, a @dfn{tag identifier} is a bound identifier whose
+syntactic binding label gensym has a specific entry in its property
+list, such entry has an instance of @objtype{object-type-spec} as value;
+tag identifiers must be bound (otherwise they do not have a syntactic
+binding label), but it does not matter to what they are bound.  Tag
+identifiers represent data types.
+
+Typical examples of tag identifiers are:
+
+@itemize
+@item
+Struct type identifiers defined by @func{define-struct}; they are
+automatically made tag identifiers by @value{PRJNAME}.
+
+@item
+@rnrs{6} record type identifiers defined by @func{define-record-type};
+they are automatically made tag identifiers by @value{PRJNAME}.
+Condition object types (like @condition{i/o}) are special cases of
+these.
+
+@item
+A set of non--core macro identifiers (whose implementation is integrated
+in @value{PRJNAME}'s expander) are exported by the library
+@library{vicare expander tags} to be the tags of built--in objects.
+Some of them are: @class{fixnum}, @class{string}, @class{vector},
+@class{textual-input-port}.
+@end itemize
+
+Other tag identifiers can be created using the @api{} exported by the
+library @library{vicare expander object-type-specs}.
+
+Tag identifiers are organised in a tree hierarchy, with subtags
+inheriting properties of supertags; by convention, @class{top} is the
+parent of all the tag identifiers, the root of the tree; @class{top} has
+no parent.
+
+Many predefined type identifiers have names enclosed in ``angular
+parentheses'' @samp{<...>}, but this is just a convention.
+
+@c page
+@node tags intro tagged id
+@subsection Tagged identifiers
+
+
+Technically, a @dfn{tagged identifier} is a bound identifier whose
+syntactic binding label gensym has a specific entry in its property
+list, such entry has a tag identifier as value; tagged identifiers must
+be bound (otherwise they do not have a syntactic binding label) and they
+must be bound to lexical variables.  Tagged identifiers are created by
+the built--in binding syntaxes @func{lambda}, @func{define}, @func{let},
+@func{letrec}, @func{let-values}, etc.
+
+An example of tagged binding creation follows:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+(options tagged-language)
+
+(define @{O <fixnum>@}
+  123)
+@end example
+
+@noindent
+the identifier @code{O} is a tagged identifier with tag identifier
+@class{fixnum}; the braces are used to tag the first identifier with the
+second identifier.  At the time the tagged identifier is created: the
+tag identifier must already be a tag identifier.
+
+@c page
+@node tags syntaxes
+@section Convenience syntaxes
+
+
+@menu
+* tags syntaxes assertions::    Validating object types.
+* tags syntaxes fields::        Accessing and mutating fields.
+* tags syntaxes keys::          Special setter and getter syntaxes.
+* tags syntaxes dispatch::      Dispatching methods.
+* tags syntaxes casting::       Converting objects.
+@end menu
+
+@c page
+@node tags syntaxes assertions
+@subsection Validating object types
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@deffn Syntax tag-predicate @meta{tag}
+Given a tag identifier, expand into an expression evaluating to a
+predicate function: a procedure accepting any object as single argument
+and returning @true{} if the object is of type @meta{tag}, @false{}
+otherwise.
+
+In practice, this syntax is equivalent to:
+
+@example
+(is-a? <> @meta{tag})
+@end example
+@end deffn
+
+
+@deffn Syntax tag-procedure-argument-validator @meta{tag} @meta{expr}
+@deffnx Syntax tag-procedure-argument-validator @meta{tag} <>
+@deffnx {Auxiliary Syntax} <>
+Expand into an expression that applies the predicate of @meta{tag} to
+the result of evaluating @meta{expr}:
+
+@itemize
+@item
+If the predicate returns @true{}: nothing happens and the expression
+returns the result of evaluating @meta{expr}.
+
+@item
+If the predicate returns @false{}: an exception is raised with compound
+condition object of type @condition{procedure-argument-violation}.
+@end itemize
+
+If @meta{expr} is not present and @code{<>} is used instead: the macro
+use expands into a function to be later applied to an arbitrary object
+to perform the validation.
+@end deffn
+
+
+@deffn Syntax tag-return-value-validator @meta{tag} @meta{expr}
+@deffnx Syntax tag-return-value-validator @meta{tag} <>
+@deffnx {Auxiliary Syntax} <>
+Expand into an expression that applies the predicate of @meta{tag} to
+the result of evaluating @meta{expr}:
+
+@itemize
+@item
+If the predicate returns @true{}: nothing happens and the expression
+returns the result of evaluating @meta{expr}.
+
+@item
+If the predicate returns @false{}: an exception is raised with compound
+condition object of type @condition{expression-return-value-violation}.
+@end itemize
+
+If @meta{expr} is not present and @code{<>} is used instead: the macro
+use expands into a function to be later applied to an arbitrary object
+to perform the validation.
+@end deffn
+
+
+@defun tag-assert @meta{retvals-signature} @meta{expr}
+@defunx tag-assert-and-return @meta{retvals-signature} @meta{expr}
+Validate the tuple of values returned by @meta{expr} against the
+signature specified by @meta{retvals-signature}.  If they match: nothing
+happens.  If they do not match: an appropriate exception is raised.
+
+@func{tag-assert} returns unspecified values.
+@func{tag-assert-and-return} returns the return values of @meta{expr}.
+
+When it is @strong{possible} to determine the tag signature of
+@meta{expr} at expand--time and the signatures match: the macro use
+expands to @meta{expr} itself, with no run--time checks.
+
+When it is @strong{impossible} to determine the tag signature of
+@meta{expr} at expand--time: the macro use expands to @meta{expr} and an
+appropriate set of run--time validation forms that raise an exception if
+a return value does not match its specified type.
+
+@meta{retvals-signature} must be @false{}, null or a proper or improper
+list of tag identifiers:
+
+@itemize
+@item
+When @false{}: there is not signature specified and the macro use just
+expands to @meta{expr}, with no validation checks.  Example:
+
+@example
+(tag-assert #f 123) @expansion{} 123
+@end example
+
+@item
+When null: @meta{expr} is meant to return zero values.  Example:
+
+@example
+(define (print a)
+  (display a)
+  (newline)
+  (values))
+
+(tag-assert () (print 123))
+@end example
+
+@noindent
+we have to remember that @code{(values)} is the only form that returns
+zero values.
+
+@item
+When a proper list of @math{N} tag identifiers: @meta{expr} is meant to
+return @math{N} values.  Example:
+
+@example
+(define (N)
+  99)
+
+(define (nums)
+  (values 1 2 3))
+
+(tag-assert (<fixnum>) (N))
+(tag-assert (<fixnum> <fixnum> <fixnum>) (nums))
+@end example
+
+@item
+When an improper list of @math{N} tag identifiers and a ``rest'' tag:
+@meta{expr} is meant to return at least @math{N} values and any number
+of additional values.  Example:
+
+@example
+(define (nums)
+  (values 1 2 3))
+
+(tag-assert (<fixnum> <fixnum> . <list>) (nums))
+@end example
+
+Notice that a standalone tag identifier is a valid improper list retvals
+signature.
+@end itemize
+
+If a tag identifier in @meta{retvals-signature} is @class{unspecified}:
+no expand--time check is performed and run--time check forms are
+inserted.
+@end defun
+
+@c page
+@node tags syntaxes fields
+@subsection Accessing and mutating fields
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@defun tag-accessor @meta{expr} @meta{field}
+Expand to an expression that computes and returns the value of
+@meta{field} from the result of evaluating @meta{expr}.
+
+@meta{expr} must be an expression for which it is possible to determine
+the retvals type signature at expand--time; such signature must be a
+list holding a single tag identifier.
+
+@meta{field} must be an identifier whose symbol name represents a field
+of @meta{expr}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(tag-accessor +123 even?)       @result{} #t
+
+(define-struct alpha
+  (a b c))
+(define @{O alpha@}
+  (make-alpha 1 2 3))
+(tag-accessor O a)              @result{} 1
+@end example
+@end defun
+
+
+@defun tag-mutator @meta{expr} @meta{field} @meta{new-value}
+Expand to an expression that sets a new value for @meta{field} in the
+result of evaluating @meta{expr}.
+
+@meta{expr} must be an expression for which it is possible to determine
+the retvals type signature at expand--time; such signature must be a
+list holding a single tag identifier.
+
+@meta{field} must be an identifier whose symbol name represents a field
+of @meta{expr}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(define-struct alpha
+  (a b c))
+
+(define @{O alpha@}
+  (make-alpha 1 2 3))
+
+(tag-mutator O a 11)
+(tag-accessor O a)              @result{} 11
+@end example
+@end defun
+
+@c page
+@node tags syntaxes keys
+@subsection Special setter and getter syntaxes
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@defun tag-getter @meta{expr} @meta{keys}
+Expand to an expression that computes and returns the value of the
+property selected by @meta{keys} from the result of evaluating
+@meta{expr}.
+
+@meta{expr} must be an expression for which it is possible to determine
+the retvals type signature at expand--time; such signature must be a
+list holding a single tag identifier.
+
+@meta{keys} must be a list of lists holding expressions recognised by
+the tag of @meta{expr}; the syntax of @meta{keys} must be:
+
+@example
+((@metao{key0} @metao{key} ...) (@metai{key1} @metai{key} ...) ...)
+@end example
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(tag-getter "ciao" [1])         @result{} #\i
+(tag-getter "ciao" [3])         @result{} #\o
+@end example
+@end defun
+
+
+@defun tag-setter @meta{expr} @meta{keys} @meta{new-value}
+Expand to an expression that sets a new value for the property selected
+by @meta{keys} in the result of evaluating @meta{expr}.
+
+@meta{expr} must be an expression for which it is possible to determine
+the retvals type signature at expand--time; such signature must be a
+list holding a single tag identifier.
+
+@meta{keys} must be a list of lists holding expressions recognised by
+the tag of @meta{expr}; the syntax of @meta{keys} must be:
+
+@example
+((@metao{key0} @metao{key} ...) (@metai{key1} @metai{key} ...) ...)
+@end example
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(let ((@{S <string>@} (string-copy "ciao")))
+  (tag-setter S [1] #\I)
+  (tag-getter S [1]))
+@result{} #\I)
+
+(receive-and-return (@{S <string>@})
+    (string-copy "ciao")
+  (tag-setter S [3] #\O))
+@result{} "ciaO"
+@end example
+@end defun
+
+@c page
+@node tags syntaxes dispatch
+@subsection Dispatching methods
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@defun tag-dispatch @meta{expr} @meta{member} @meta{arg} @dots{}
+Expand to an expression that applies to the result of evaluating
+@meta{expr} the method @meta{member}.
+
+@meta{expr} must be an expression for which it is possible to determine
+the retvals type signature at expand--time; such signature must be a
+list holding a single tag identifier.
+
+@meta{member} must be an identifier whose symbol name represents the
+name of a method or a field of @meta{expr}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(tag-dispatch "ciao" = "hello")         @result{} #f
+(tag-dispatch "ciao" = "ciao")          @result{} #t
+(tag-dispatch "ciao" substring 1 3)     @result{} "ia"
+(tag-dispatch "ciao" list)              @result{} (#\c #\i #\a #\o)
+
+(define-struct alpha
+  (a b c))
+
+(define @{O alpha@}
+  (make-alpha 1 2 3))
+
+(tag-dispatch O a)                      @result{} 1
+(tag-dispatch O b)                      @result{} 2
+(tag-dispatch O c)                      @result{} 3
+@end example
+@end defun
+
+@c page
+@node tags syntaxes casting
+@subsection Converting objects
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@deffn Syntax tag-cast @meta{tag} @meta{expr}
+Expand to an expression that guarantees to return an object of type
+@meta{tag}.
+
+@meta{expr} must be an expression evaluating to a single value.
+
+@itemize
+@item
+If it is possible to determine the type of @meta{expr} at expand--time:
+
+@itemize -
+@item
+If the type of @meta{expr} is equal to or a subtag of @meta{tag}:
+the macro use expands to @meta{expr} itself.
+
+@item
+If the type of @meta{expr} is recognised by the caster maker of
+@meta{tag}: the macro use expands to a form that evaluates @meta{expr}
+and converts it to a @meta{tag} object as specified by the caster maker.
+
+@item
+If the type of @meta{expr} is incompatible with @meta{tag} or @meta{tag}
+has no caster maker: an exception is raised at expand--time.
+@end itemize
+
+@item
+If it is @strong{not} possible to determine the type of @meta{expr} at
+expand--time, but @meta{tag} has a caster maker: the macro use expands
+into a form that evaluates @meta{expr}, determines its type at
+run--time, and converts it to an object of type @meta{tag} as specified
+by the caster maker.
+
+@item
+If it is @strong{not} possible to determine the type of @meta{expr} at
+expand--time, and @meta{tag} has a caster maker: the macro use expands
+into a form that evaluates @meta{expr} and validates that its return
+value is of type @meta{tag}; then it returns such value.
+@end itemize
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(tag-cast <string> 123)         @result{} "123"
+(tag-cast <string> 'ciao)       @result{} "ciao"
+@end example
+@end deffn
+
+@c end of file

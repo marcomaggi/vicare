@@ -1,4 +1,4 @@
-;;;Copyright (c) 2009-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2012, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2009 Derick Eddington
 ;;;
 ;;;Derived from the SRFI 13 reference implementation.
@@ -198,7 +198,7 @@
     (except (vicare unsafe operations)
 	    $string-copy!
 	    $string-fill!)
-    (only (ikarus system $numerics)
+    (only (vicare system $numerics)
 	  $min-fixnum-fixnum
 	  $add-number-fixnum))
 
@@ -1880,7 +1880,7 @@
 	      (($fx= 1 str.len)
 	       (receive-and-return (retval)
 		   ($make-string result.len)
-		 ($string-fill! retval ($string-ref str start))))
+		 ($string-fill! ($string-ref str start) retval 0 result.len)))
 
 	      ;;Selected text falls entirely within one span.
 	      (($fx= ($fxdiv from str.len)
@@ -1907,7 +1907,7 @@
 		 (assertion-violation who "cannot replicate empty (sub)string"))
 
 		(($fx= 1 str.len)
-		 ($string-fill! dst.str ($string-ref src.str src.start) dst.start tocopy))
+		 ($string-fill! ($string-ref src.str src.start) dst.str dst.start tocopy))
 
 		;; Selected text falls entirely within one span.
 		(($fx= ($fxdiv from str.len)

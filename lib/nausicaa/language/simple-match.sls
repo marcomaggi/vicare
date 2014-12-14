@@ -10,7 +10,7 @@
 ;;;	but it  makes use  of identifiers  from (nausicaa)  as auxiliary
 ;;;	syntaxes.
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,17 +28,17 @@
 
 
 #!r6rs
-(library (nausicaa language simple-match)
+(library (nausicaa language simple-match (0 4))
   (export
     match #;match-debug
 
     ;; auxiliary keywords
     else let let/tags quote quasiquote and or not apply eval syntax ... _ =>)
-  (import (vicare)
-    (only (nausicaa language oopp)
+  (import (vicare (0 4))
+    (only (nausicaa language oopp (0 4))
 	  let/tags)
     (vicare unsafe operations)
-    (only (ikarus system $bytevectors)
+    (only (vicare system $bytevectors)
 	  $bytevector=))
 
 

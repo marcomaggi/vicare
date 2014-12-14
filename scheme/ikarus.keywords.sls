@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,50 +25,66 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.keywords)
   (export
     symbol->keyword
     keyword->symbol
+    keyword->string
     keyword?
     keyword=?
-    keyword-hash)
-  (import (except (ikarus)
+    keyword-hash
+
+    (rename (make-keyword	$symbol->keyword))
+    $keyword->symbol
+    $keyword->string
+    $keyword-hash
+    $keyword=?)
+  (import (except (vicare)
 		  symbol->keyword
 		  keyword->symbol
+		  keyword->string
 		  keyword?
 		  keyword=?
 		  keyword-hash)
-    (vicare arguments validation))
+    (only (vicare system $symbols)
+	  $symbol->string)
+    (only (vicare system $hashtables)
+	  $symbol-hash))
 
 
 (define-struct keyword
   (symbol))
 
-(define (symbol->keyword S)
-  (define who 'symbol->keyword)
-  (with-arguments-validation (who)
-      ((symbol S))
-    (make-keyword S)))
+(define* (symbol->keyword {S symbol?})
+  (make-keyword S))
 
-(define (keyword->symbol K)
-  (define who 'keyword->symbol)
-  (with-arguments-validation (who)
-      ((keyword	K))
-    (keyword-symbol K)))
+(define* (keyword->symbol {K keyword?})
+  ($keyword-symbol K))
 
-(define (keyword=? K1 K2)
-  (and (keyword? K1)
-       (keyword? K2)
-       (or (eq? K1 K2)
-	   (eq? (keyword-symbol K1)
-		(keyword-symbol K2)))))
+(define ($keyword->symbol K)
+  ;;Remember that the unsafe operation $KEYWORD-SYMBOL is a syntax!!!
+  ($keyword-symbol K))
 
-(define (keyword-hash K)
-  (define who 'keyword->symbol)
-  (with-arguments-validation (who)
-      ((keyword	K))
-    (symbol-hash (keyword-symbol K))))
+(define* (keyword->string {K keyword?})
+  ($keyword->string K))
+
+(define ($keyword->string K)
+  (string-append "#:" ($symbol->string ($keyword-symbol K))))
+
+(define* (keyword=? {K1 keyword?} {K2 keyword?})
+  ($keyword=? K1 K2))
+
+(define ($keyword=? K1 K2)
+  (or (eq? K1 K2)
+      (eq? ($keyword->symbol K1)
+	   ($keyword->symbol K2))))
+
+(define* (keyword-hash {K keyword?})
+  ($keyword-hash K))
+
+(define ($keyword-hash K)
+  ($symbol-hash ($keyword->symbol K)))
 
 
 ;;;; done

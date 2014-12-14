@@ -233,7 +233,7 @@
 ;;;; implementation
 
 (define (array:optimize f r)
-  (case-fixnums r
+  (case r
     ((0) (let ((n0 (f))) (array:0 n0)))
     ((1) (let ((n0 (f 0))) (array:1 n0 (- (f 1) n0))))
     ((2)

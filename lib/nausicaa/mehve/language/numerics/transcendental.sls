@@ -25,8 +25,8 @@
 ;;;
 
 
-#!r6rs
-(library (nausicaa mehve language numerics transcendental)
+#!vicare
+(library (nausicaa mehve language numerics transcendental (0 4))
   (options visit-upon-loading)
   (export
     expt sqrt cbrt square cube exp log
@@ -35,11 +35,11 @@
 
     log-1	log-2
     atan-1	atan-2)
-  (import (except (nausicaa)
+  (import (except (nausicaa (0 4))
 		  expt sqrt cbrt square cube exp log
 		  sin cos tan asin acos atan
 		  sinh cosh tanh asinh acosh atanh)
-    (prefix (only (nausicaa)
+    (prefix (only (nausicaa (0 4))
 		  expt sqrt cbrt square cube exp log
 		  sin cos tan asin acos atan
 		  sinh cosh tanh asinh acosh atanh)

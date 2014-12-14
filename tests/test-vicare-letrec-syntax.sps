@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare checks)
-  (ikarus system $compiler))
+  (vicare system $compiler))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare LETREC and LETREC* syntaxes\n")
@@ -55,7 +55,7 @@
 ;;; checking illegal references to bindings
 
   ;; error
-  (check-syntax-violation lex.ciao_0
+  (check-syntax-violation ciao_0
     (let ()
       (define b (ciao))
       (define (ciao)

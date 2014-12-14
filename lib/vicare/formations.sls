@@ -38,8 +38,6 @@
   (export format format-output-column)
   (import (except (vicare)
 		  format)
-    (only (vicare language-extensions infix)
-	  infix)
     (vicare unsafe operations)
     (vicare arguments validation))
 

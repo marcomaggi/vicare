@@ -27,9 +27,9 @@
 
 #!r6rs
 (import (vicare)
-  (ikarus system $ratnums)
-  (ikarus system $compnums)
-  (ikarus system $numerics)
+  (vicare system $ratnums)
+  (vicare system $compnums)
+  (vicare system $numerics)
   (vicare language-extensions syntaxes)
   (only (vicare platform words)
 	case-word-size)

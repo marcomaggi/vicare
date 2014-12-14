@@ -21,7 +21,7 @@
     char<?			char<=?
     char>?			char>=?
     char-in-ascii-range?	fixnum-in-character-range?)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  char->integer		integer->char
 		  char=?
 		  char<?		char<=?
@@ -148,9 +148,9 @@
 )
 
 
-(library (ikarus system chars)
+(library (vicare system chars)
   (export $char= $char->fixnum $fixnum->char)
-  (import (ikarus))
+  (import (vicare))
   (define $char=	char=?)
   (define $char->fixnum char->integer)
   (define $fixnum->char integer->char))

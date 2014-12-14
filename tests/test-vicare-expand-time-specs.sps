@@ -27,115 +27,13 @@
 
 #!vicare
 (import (vicare)
-  (vicare expander object-spec)
+  (for (prefix (vicare expander object-type-specs) typ.)
+    expand)
+  (vicare expander tags)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: expand-time type specifications\n")
-
-
-;;;; type specifications
-
-(define* (fixnum (obj fixnum?))
-  obj)
-
-(define* (bignum (obj bignum?))
-  obj)
-
-(define* (exact-integer (obj exact-integer?))
-  obj)
-
-(define* (ratnum (obj ratnum?))
-  obj)
-
-(define* (flonum (obj flonum?))
-  obj)
-
-(define* (compnum (obj compnum?))
-  obj)
-
-(define* (cflonum (obj cflonum?))
-  obj)
-
-(define* (char (obj char?))
-  obj)
-
-(define* (bytevector (obj bytevector?))
-  obj)
-
-(eval-for-expand
-  (set-identifier-object-spec! #'fixnum
-    (make-object-spec 'fixnum #'fixnum #'fixnum?))
-
-  (set-identifier-object-spec! #'bignum
-    (make-object-spec 'bignum #'bignum #'bignum?))
-
-  (set-identifier-object-spec! #'exact-integer
-    (make-object-spec 'exact-integer #'exact-integer #'exact-integer?))
-
-  (set-identifier-object-spec! #'ratnum
-    (make-object-spec 'ratnum #'ratnum #'ratnum?))
-
-  (set-identifier-object-spec! #'flonum
-    (make-object-spec 'flonum #'flonum #'flonum?))
-
-  (set-identifier-object-spec! #'compnum
-    (make-object-spec 'compnum #'compnum #'compnum?))
-
-  (set-identifier-object-spec! #'cflonum
-    (make-object-spec 'cflonum #'cflonum #'cflonum?))
-
-  ;;;
-
-  (set-identifier-object-spec! #'char
-    (make-object-spec 'char #'char #'char?))
-
-  (set-identifier-object-spec! #'cons
-    (let ()
-      (import (vicare system $pairs))
-      (define (accessor-maker slot-id safe?)
-	(case-identifiers slot-id
-	  ((car) (if safe? #'car #'$car))
-	  ((cdr) (if safe? #'cdr #'$cdr))
-	  (else
-	   (syntax-violation 'pair
-	     "invalid slot name for accessor creation"
-	     slot-id))))
-      (define (mutator-maker slot-id safe?)
-	(case-identifiers slot-id
-	  ((car) (if safe? #'set-car! #'$set-car!))
-	  ((cdr) (if safe? #'set-cdr! #'$set-cdr!))
-	  (else
-	   (syntax-violation 'pair
-	     "invalid slot name for mutation creation" slot-id))))
-      (make-object-spec 'pair #'cons #'pair? accessor-maker mutator-maker)))
-
-  (set-identifier-object-spec! #'vector
-    (let ()
-      (define (accessor-maker slot-id)
-	(case-identifiers slot-id
-	  ((length) #'length)
-	  (else
-	   (syntax-violation 'pair
-	     "invalid slot name for accessor creation"
-	     slot-id))))
-      (define (mutator-maker slot-id)
-	(case-identifiers slot-id
-	  (else
-	   (syntax-violation 'pair
-	     "invalid slot name for mutation creation" slot-id))))
-      (make-object-spec 'vector #'vector #'vector?)))
-
-  (set-identifier-object-spec! #'list
-    (make-object-spec 'list #'list #'list?))
-
-  (set-identifier-object-spec! #'bytevector
-    (make-object-spec 'bytevector #'bytevector #'bytevector?))
-
-  (set-identifier-object-spec! #'string
-    (make-object-spec 'string #'string #'string?))
-
-  #| end of eval-for-expand |# )
 
 
 (parametrise ((check-test-name	'spec-inspection))
@@ -145,10 +43,11 @@
   	(define-syntax (get-name stx)
   	  (syntax-case stx ()
   	    ((_ ?type-id)
-	     #`(quote #,(datum->syntax #'?type-id (object-spec-name (identifier-object-spec #'?type-id)))))
+	     (begin
+	       #`(quote #,(typ.object-type-spec-type-id (typ.identifier-object-type-spec #'?type-id)))))
   	    ))
-  	(get-name vector))
-    => 'vector)
+  	(get-name <vector>))
+    => '<vector>)
 
   #t)
 
@@ -156,13 +55,13 @@
 (parametrise ((check-test-name	'type-descriptor))
 
   (check-for-true
-   (object-spec? (type-descriptor vector)))
+   (typ.object-type-spec? (type-descriptor <vector>)))
 
   (check-for-true
-   (object-spec? (type-descriptor fixnum)))
+   (typ.object-type-spec? (type-descriptor <fixnum>)))
 
   (check-for-true
-   (object-spec? (type-descriptor exact-integer)))
+   (typ.object-type-spec? (type-descriptor <exact-integer>)))
 
   #t)
 
@@ -170,19 +69,19 @@
 (parametrise ((check-test-name	'is-a))
 
   (check
-      (values (is-a? 123 fixnum)
-	      (is-a? "123" fixnum))
+      (values (is-a? 123 <fixnum>)
+	      (is-a? "123" <fixnum>))
     => #t #f)
 
   (check
-      (values (is-a? 123 exact-integer)
-	      (is-a? (least-positive-bignum) exact-integer)
-	      (is-a? "123" exact-integer))
+      (values (is-a? 123 <exact-integer>)
+	      (is-a? (least-positive-bignum) <exact-integer>)
+	      (is-a? "123" <exact-integer>))
     => #t #t #f)
 
   (check
-      (values (is-a? '#(1 2 3) vector)
-	      (is-a? "#(1 2 3)" vector))
+      (values (is-a? '#(1 2 3) <vector>)
+	      (is-a? "#(1 2 3)" <vector>))
     => #t #f)
 
   #t)
@@ -191,97 +90,32 @@
 (parametrise ((check-test-name	'slots))
 
   (check
-      (values (slot-ref '(1 . 2) car cons)
-	      (slot-ref '(1 . 2) cdr cons))
-    => 1 2)
-
-  (check
-      (values ($slot-ref '(1 . 2) car cons)
-	      ($slot-ref '(1 . 2) cdr cons))
+      (values (slot-ref '(1 . 2) car <pair>)
+	      (slot-ref '(1 . 2) cdr <pair>))
     => 1 2)
 
   (check
       (let ((P (cons 1 2)))
-	(slot-set! P car cons 10)
-	(slot-set! P cdr cons 20)
-	(values (slot-ref P car cons)
-		(slot-ref P cdr cons)))
+  	(slot-set! P car <pair> 10)
+  	(slot-set! P cdr <pair> 20)
+  	(values (slot-ref P car <pair>)
+  		(slot-ref P cdr <pair>)))
     => 10 20)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (values ((slot-ref <> car cons) '(1 . 2))
-	      ((slot-ref <> cdr cons) '(1 . 2)))
-    => 1 2)
-
-  (check
-      (values (($slot-ref <> car cons) '(1 . 2))
-	      (($slot-ref <> cdr cons) '(1 . 2)))
+      (values ((slot-ref <> car <pair>) '(1 . 2))
+	      ((slot-ref <> cdr <pair>) '(1 . 2)))
     => 1 2)
 
   (check
       (let ((P (cons 1 2)))
-	((slot-set! <> car cons <>) P 10)
-	((slot-set! <> cdr cons <>) P 20)
-	(values ((slot-ref <> car cons) P)
-		((slot-ref <> cdr cons) P)))
+	((slot-set! <> car <pair> <>) P 10)
+	((slot-set! <> cdr <pair> <>) P 20)
+	(values ((slot-ref <> car <pair>) P)
+		((slot-ref <> cdr <pair>) P)))
     => 10 20)
-
-  #t)
-
-
-(parametrise ((check-test-name	'callable-custom))
-
-  (define (func a b c)
-    #;(debug-print 'func a b c)
-    (* a (+ b c)))
-
-  (define (fxfunc a b c)
-    #;(debug-print 'fxfunc a b c)
-    (fx* a (fx+ b c)))
-
-  (eval-for-expand
-
-    (define fixnum-spec
-      (identifier-object-spec #'fixnum))
-
-    (define exact-integer-spec
-      (identifier-object-spec #'exact-integer))
-
-    (set-identifier-callable-spec! #'func
-      (make-callable-spec 'func 3 3
-			  (lambda (type-a type-b type-c)
-			    (cond ((and (eq? type-a fixnum-spec)
-					(eq? type-b fixnum-spec)
-					(eq? type-c fixnum-spec))
-				   (values #'fxfunc exact-integer-spec))
-				  (else
-				   (values #'func #f))))))
-
-    #| end of eval-for-expand |# )
-
-  (check
-      (func 2 3 4)
-    => (* 2 (+ 3 4)))
-
-  (check
-      (fxfunc 2 3 4)
-    => (* 2 (+ 3 4)))
-
-  (check
-      (let ()
-	(define-syntax (doit stx)
-	  (syntax-case stx ()
-	    ((_ ?who . ?args)
-	     (let ((dispatcher (callable-spec-dispatcher (identifier-callable-spec #'?who)))
-		   (fx-spec    (identifier-object-spec #'fixnum)))
-	       (receive (id rv-spec)
-		   (dispatcher fx-spec fx-spec fx-spec)
-		 #`(#,id . ?args))))
-	    ))
-	(doit func 2 3 4))
-    => (* 2 (+ 3 4)))
 
   #t)
 

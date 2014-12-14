@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -59,7 +59,7 @@
 
   (define-class <my-fixnum>
     (fields N)
-    (method (add1 (O <my-fixnum>))
+    (method (add1 {O <my-fixnum>})
       (<my-fixnum> ((add1 (O N))))))
 
   (check ((<my-fixnum>) (<my-fixnum> (123)))		=> (<my-fixnum> (123)))

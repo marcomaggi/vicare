@@ -16,22 +16,36 @@
 
 
 (library (ikarus.fasl.write)
-  (export fasl-write)
-  (import (except (ikarus)
+  (export
+    fasl-write
+    fasl-write-header
+    fasl-write-object)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
-		  fasl-write)
-    (ikarus system $codes)
-    (only (ikarus system $structs)
+		  fasl-write
+		  fasl-write-header
+		  fasl-write-object)
+    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
+    ;;everything here using the system  libraries and not loading external libraries.
+    ;;(Marco Maggi; Fri May 23, 2014)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $flonums)
+    (vicare system $bignums)
+    (vicare system $vectors)
+    (vicare system $strings)
+    (vicare system $bytevectors)
+    (vicare system $codes)
+    (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)
-    (except (ikarus.code-objects)
-	    procedure-annotation)
-    (vicare unsafe operations)
-    (vicare arguments validation))
+    (prefix (ikarus.code-objects)
+    	    code.))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; helpers
@@ -61,6 +75,11 @@
     (lambda (x)
       (and (or (fixnum? x) (bignum? x))
 	   (<= DN x UP)))))
+
+(define-syntax $fxneg
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx- 0 ?op))))
 
 (define-syntax write-byte
   (syntax-rules ()
@@ -123,43 +142,53 @@
     (write-bytevector bv ($fxadd1 i) bv.len port)))
 
 
-(define fasl-write
-  (case-lambda
-   ((obj port)
-    (fasl-write obj port #f))
-   ((obj port foreign-libraries)
-    ;;Serialise  OBJ to  PORT prefixing  it with  the FASL  file header.
-    ;;FOREIGN-LIBRARIES must be false  or a list of strings representing
-    ;;foreign library  identifiers associated to the  FASL file.  Return
-    ;;unspecified values.
-    ;;
-    (with-arguments-validation (who)
-	((output-port	port)
-	 (binary-port	port))
-      (let ((refcount-table (make-eq-hashtable)))
-	(make-graph obj               refcount-table)
-	(make-graph foreign-libraries refcount-table)
-	(put-tag #\# port)
-	(put-tag #\@ port)
-	(put-tag #\I port)
-	(put-tag #\K port)
-	(put-tag #\0 port)
-	(put-tag (boot.case-word-size
-		  ((32)		#\1)
-		  ((64)		#\2))
-		 port)
-	(let ((next-mark (if foreign-libraries
-			     (let loop ((ls        foreign-libraries)
-					(next-mark 1))
-			       (if (null? ls)
-				   next-mark
-				 (begin
-				   (put-tag #\O port)
-				   (loop (cdr ls)
-					 (fasl-write-object (car ls) port refcount-table next-mark)))))
-			   1)))
-	  (fasl-write-object obj port refcount-table next-mark)
-	  (void)))))))
+(case-define* fasl-write
+  ((obj port)
+   (fasl-write obj port #f))
+  ((obj {port binary-output-port?} foreign-libraries)
+   ;;Serialise OBJ to PORT prefixing it with the FASL file header.  FOREIGN-LIBRARIES
+   ;;must be false or a list of strings representing foreign library identifiers
+   ;;associated to the FASL file.  Return unspecified values.
+   ;;
+   ($fasl-write-header port)
+   ($fasl-write-object obj port foreign-libraries)))
+
+(define* (fasl-write-header {port binary-output-port?})
+  ($fasl-write-header port))
+
+(define ($fasl-write-header port)
+  (put-tag #\# port)
+  (put-tag #\@ port)
+  (put-tag #\I port)
+  (put-tag #\K port)
+  (put-tag #\0 port)
+  (put-tag (boot.case-word-size
+	    ((32)	#\1)
+	    ((64)	#\2))
+	   port))
+
+(case-define* fasl-write-object
+  ((obj {port binary-output-port?})
+   ($fasl-write-object obj port #f))
+  ((obj {port binary-output-port?} foreign-libraries)
+   ($fasl-write-object obj port foreign-libraries)))
+
+(define ($fasl-write-object obj port foreign-libraries)
+  (let ((refcount-table (make-eq-hashtable)))
+    (make-graph obj               refcount-table)
+    (make-graph foreign-libraries refcount-table)
+    (let ((next-mark (if foreign-libraries
+			 (let loop ((ls        foreign-libraries)
+				    (next-mark 1))
+			   (if (null? ls)
+			       next-mark
+			     (begin
+			       (put-tag #\O port)
+			       (loop (cdr ls)
+				     (%write-object (car ls) port refcount-table next-mark)))))
+		       1)))
+      (%write-object obj port refcount-table next-mark)
+      (void))))
 
 
 (define (make-graph x h)
@@ -209,7 +238,7 @@
 		  (void))
 		 ((code? x)
 		  (make-graph ($code-annotation x) h)
-		  (make-graph (code-reloc-vector x) h))
+		  (make-graph (code.code-reloc-vector x) h))
 		 ((hashtable? x)
 		  (when (hashtable-hash-function x)
 		    (assertion-violation who "not fasl-writable" x))
@@ -244,10 +273,10 @@
 				      (f (+ i 1) n)))))))))
 		 ((procedure? x)
 		  (let ((code ($closure-code x)))
-		    (unless (fxzero? (code-freevars code))
+		    (unless (fxzero? (code.code-freevars code))
 		      (assertion-violation who
 			"cannot fasl-write a non-thunk procedure; the one given has free vars"
-			(code-freevars code)))
+			(code.code-freevars code)))
 		    (make-graph code h)))
 		 ((bytevector? x)
 		  (void))
@@ -265,7 +294,7 @@
 		  (assertion-violation who "not fasl-writable" x)))))))
 
 
-(define (fasl-write-object x port refcount-table next-mark)
+(define (%write-object x port refcount-table next-mark)
   ;;Serialise any object X to PORT.
   ;;
   ;;If  X  needs to  be  marked for  future  reference:  use the  fixnum
@@ -356,8 +385,8 @@
   ;;Serialise the first COUNT pairs in the list X to PORT.
   ;;
   (if ($fxzero? count)
-      (fasl-write-object x port refcount-table next-mark)
-    (let ((next-mark (fasl-write-object (car x) port refcount-table next-mark)))
+      (%write-object x port refcount-table next-mark)
+    (let ((next-mark (%write-object (car x) port refcount-table next-mark)))
       (write-pairs (cdr x) port refcount-table next-mark ($fxsub1 count)))))
 
 (define (do-write x port refcount-table next-mark)
@@ -369,14 +398,14 @@
   ;;This function  never uses the  NEXT-MARK argument directly,  it only
   ;;hands it as argument to other functions.
   ;;
-  (define-inline (%write-object obj next-mark)
-    (fasl-write-object obj port refcount-table next-mark))
+  (define-syntax-rule (%write-single-object ?obj ?next-mark)
+    (%write-object ?obj port refcount-table ?next-mark))
 
   (define (%write-r6rs-record-type-descriptor x next-mark)
     (put-tag #\W port)
-    (let* ((next-mark (%write-object (record-type-name x)   next-mark))
-	   (next-mark (%write-object (record-type-parent x) next-mark))
-	   (next-mark (%write-object (record-type-uid x)    next-mark)))
+    (let* ((next-mark (%write-single-object (record-type-name x)   next-mark))
+	   (next-mark (%write-single-object (record-type-parent x) next-mark))
+	   (next-mark (%write-single-object (record-type-uid x)    next-mark)))
       (fasl-write-immediate (record-type-sealed? x) port)
       (fasl-write-immediate (record-type-opaque? x) port)
       (let* ((field-names (record-type-field-names x))
@@ -389,33 +418,33 @@
 	      next-mark
 	    (begin
 	      (fasl-write-immediate (record-field-mutable? x i) port)
-	      (let ((next-mark (%write-object ($vector-ref field-names i) next-mark)))
+	      (let ((next-mark (%write-single-object ($vector-ref field-names i) next-mark)))
 		(next-field ($fxadd1 i) next-mark field-count))))))))
 
   (define (%write-struct-type-descriptor x next-mark)
     (put-tag #\R port)
     (let* ((field-names (struct-type-field-names x))
-	   (next-mark   (%write-object (struct-type-name   x) next-mark))
-	   (next-mark   (%write-object (struct-type-symbol x) next-mark)))
+	   (next-mark   (%write-single-object (struct-type-name   x) next-mark))
+	   (next-mark   (%write-single-object (struct-type-symbol x) next-mark)))
       (write-int (length field-names) port)
       (let next-field ((field-names field-names)
 		       (next-mark   next-mark))
 	(if (null? field-names)
 	    next-mark
-	  (let ((next-mark (%write-object (car field-names) next-mark)))
+	  (let ((next-mark (%write-single-object (car field-names) next-mark)))
 	    (next-field (cdr field-names) next-mark))))))
 
   (define (%write-struct-instance x rtd next-mark)
     (put-tag #\{ port)
     (let ((field-count (struct-length x)))
       (write-int field-count port)
-      (let ((next-mark (%write-object rtd next-mark)))
+      (let ((next-mark (%write-single-object rtd next-mark)))
 	(let next-field ((i           0)
 			 (next-mark   next-mark)
 			 (field-count field-count))
 	  (if ($fx= i field-count)
 	      next-mark
-	    (let ((next-mark (%write-object (struct-ref x i) next-mark)))
+	    (let ((next-mark (%write-single-object (struct-ref x i) next-mark)))
 	      (next-field ($fxadd1 i) next-mark field-count)))))))
 
 
@@ -428,8 +457,8 @@
 		(count	(count-leading-unshared-cdrs D refcount-table)))
 	   (cond (($fxzero? count)
 		  (put-tag #\P port)
-		  (let* ((next-mark (%write-object A next-mark))
-			 (next-mark (%write-object D next-mark)))
+		  (let* ((next-mark (%write-single-object A next-mark))
+			 (next-mark (%write-single-object D next-mark)))
 		    next-mark))
 		 (else
 		  (cond (($fx<= count 255)
@@ -438,7 +467,7 @@
 			(else
 			 (put-tag #\L port)
 			 (write-int count port)))
-		  (let* ((next-mark (%write-object A next-mark))
+		  (let* ((next-mark (%write-single-object A next-mark))
 			 (next-mark (write-pairs D port refcount-table next-mark count)))
 		    next-mark)))))
 
@@ -451,7 +480,7 @@
 	   (let next-item ((x x) (i 0) (x.len x.len) (next-mark next-mark))
 	     (if ($fx= i x.len)
 		 next-mark
-	       (let ((next-mark (%write-object ($vector-ref x i) next-mark)))
+	       (let ((next-mark (%write-single-object ($vector-ref x i) next-mark)))
 		 (next-item x ($fxadd1 i) x.len next-mark))))))
 
 ;;; --------------------------------------------------------------------
@@ -479,36 +508,35 @@
 
 	((gensym? x)
 	 (put-tag #\G port)
-	 (let* ((next-mark (%write-object (symbol->string x)        next-mark))
-		(next-mark (%write-object (gensym->unique-string x) next-mark)))
+	 (let* ((next-mark (%write-single-object (symbol->string x)        next-mark))
+		(next-mark (%write-single-object (gensym->unique-string x) next-mark)))
 	   next-mark))
 
 ;;; --------------------------------------------------------------------
 
 	((symbol? x)
 	 (put-tag #\M port)
-	 (%write-object (symbol->string x) next-mark))
+	 (%write-single-object (symbol->string x) next-mark))
 
 ;;; --------------------------------------------------------------------
 
 	((code? x)	;code object
 	 ;;Write the character "x" as header.
 	 (put-tag #\x port)
-	 ;;Write  an  exact integer  representing  the  number of  bytes
-	 ;;actually used in the data area of the code object;
+	 ;;Write a raw  exact integer representing the number of  bytes actually used
+	 ;;in the data area of the code object;
 	 (write-int ($code-size x) port)
-	 ;;Write  an  exact  integer  representing the  number  of  free
-	 ;;variables in the code.
+	 ;;Write a fixnum representing the number of free variables in the code.
 	 (write-int (bitwise-arithmetic-shift-left ($code-freevars x) fxshift) port)
 	 ;;Write a Scheme object representing the code annotation.
-	 (let ((next-mark (%write-object ($code-annotation x) next-mark)))
+	 (let ((next-mark (%write-single-object ($code-annotation x) next-mark)))
 	   ;;Write an array of bytes being the binary code.
-	   (let next-byte ((i 0) (x.len (code-size x)))
+	   (let next-byte ((i 0) (x.len (code.code-size x)))
 	     (unless ($fx= i x.len)
-	       (write-byte (code-ref x i) port)
+	       (write-byte (code.code-ref x i) port)
 	       (next-byte ($fxadd1 i) x.len)))
 	   ;;Write the relocation vector as Scheme vector.
-	   (%write-object ($code-reloc-vector x) next-mark)))
+	   (%write-single-object ($code-reloc-vector x) next-mark)))
 
 ;;; --------------------------------------------------------------------
 
@@ -517,8 +545,8 @@
 	     (put-tag #\h port)
 	   (put-tag #\H port))
 	 (let* ((v         (hashtable-ref refcount-table x #f))
-		(next-mark (%write-object ($vector-ref v 1) next-mark))
-		(next-mark (%write-object ($vector-ref v 2) next-mark)))
+		(next-mark (%write-single-object ($vector-ref v 1) next-mark))
+		(next-mark (%write-single-object ($vector-ref v 2) next-mark)))
 	   next-mark))
 
 ;;; --------------------------------------------------------------------
@@ -535,7 +563,7 @@
 
 	((procedure? x)
 	 (put-tag #\Q port)
-	 (%write-object ($closure-code x) next-mark))
+	 (%write-single-object ($closure-code x) next-mark))
 
 ;;; --------------------------------------------------------------------
 
@@ -564,8 +592,8 @@
 
 	((ratnum? x)
 	 (put-tag #\r port)
-	 (let* ((next-mark (%write-object (denominator x) next-mark))
-		(next-mark (%write-object (numerator   x) next-mark)))
+	 (let* ((next-mark (%write-single-object (denominator x) next-mark))
+		(next-mark (%write-single-object (numerator   x) next-mark)))
 	   next-mark))
 
 ;;; --------------------------------------------------------------------
@@ -587,8 +615,8 @@
 
 	((or (compnum? x) (cflonum? x))
 	 (put-tag #\i port)
-	 (let* ((next-mark (%write-object (real-part x) next-mark))
-		(next-mark (%write-object (imag-part x) next-mark)))
+	 (let* ((next-mark (%write-single-object (real-part x) next-mark))
+		(next-mark (%write-single-object (imag-part x) next-mark)))
 	   next-mark))
 
 ;;; --------------------------------------------------------------------

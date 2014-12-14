@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -79,16 +79,7 @@
     raise-unix-pathname-normalisation-error)
   (import (except (vicare)
 		  append)
-    (vicare unsafe operations)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    (only (vicare system $strings)
-	  $string->octets
-	  $octets->string)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    (only (vicare system $lists)
-	  $for-each1))
+    (vicare unsafe operations))
 
 
 ;;;; constants
@@ -1503,11 +1494,11 @@
       (if (pair? segments)
 	  (begin
 	    (put-bytevector port ($percent-encode ($car segments)))
-	    ($for-each1 (lambda (segment)
-			  ;; 47 = (char->integer #\/)
-			  (put-u8 port 47)
-			  (put-bytevector port ($percent-encode segment)))
-			($cdr segments)))
+	    (for-each1 (lambda (segment)
+			 ;; 47 = (char->integer #\/)
+			 (put-u8 port 47)
+			 (put-bytevector port ($percent-encode segment)))
+		       ($cdr segments)))
 	(unless absolute?
 	  ;; 46 = (char->integer #\.)
 	  (put-u8 port 46)))

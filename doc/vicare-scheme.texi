@@ -232,8 +232,11 @@ Trademarks used herein are the property of their respective owners.
 * baselib::                     Base library.
 * stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
+* libutils::                    Scheme libraries utility functions.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
+* tags::                        Tagged language.
+* obspec::                      Internals of tagged language.
 * capi::                        C language programming interface.
 
 Internals
@@ -242,6 +245,7 @@ Internals
 * debug int::                   Debug mode.
 * machinery::                   Introduction to execution machinery.
 * compiler::                    Wild notes on the compiler internals.
+* boot image::                  Anatomy of the boot image.
 
 Appendices
 
@@ -281,14 +285,18 @@ External documents
 @include baselib.texi
 @include stdlib.texi
 @include iklib.texi
+@include libutils.texi
 @include ffi.texi
 @include syslib.texi
+@include tags.texi
+@include obspec.texi
 @include capi.texi
 
 @include objects.texi
 @include debug.texi
 @include machinery.texi
 @include compiler.texi
+@include boot-image.texi
 
 @include missing.texi
 @include building.texi

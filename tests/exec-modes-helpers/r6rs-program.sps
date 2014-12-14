@@ -1,7 +1,7 @@
 ;;; r6rs-program.sps --
 
 #!r6rs
-(import (ikarus))
+(import (vicare))
 (define a 123)
 (display "here\n")
 (flush-output-port (current-output-port))

@@ -27,7 +27,7 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (vicare checks))
 
 (define-syntax test
@@ -35,7 +35,7 @@
     (syntax-case q ()
       [(_ x y)
        #`(unless (equal? x y)
-	   (syntax-error #''#,q "test failed"))])))
+	   (assertion-violation #f "test failed" #''#,q))])))
 
 (define (run-unicode-tests)
   (test (char-upcase #\i) #\I)

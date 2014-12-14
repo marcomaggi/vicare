@@ -17,7 +17,7 @@
 
 (library (ikarus rationalize)
   (export rationalize)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  rationalize)
     (vicare language-extensions syntaxes))
 
@@ -108,6 +108,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.rationalize")))
+
+#| end of library |# )
 
 ;;; end of file

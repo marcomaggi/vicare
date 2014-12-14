@@ -14,6 +14,8 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!vicare
 (library (ikarus structs)
   (export
     ;; struct type descriptor constructor
@@ -25,7 +27,7 @@
     struct-type-field-names	struct-type-destructor
 
     ;; struct type descriptor customisation
-    default-struct-printer
+    default-struct-printer	default-struct-printer-details
     set-rtd-printer!		set-rtd-destructor!
 
     ;; struct constructor and predicate
@@ -42,7 +44,7 @@
     struct-rtd
     struct-name			struct-printer
     struct-destructor		struct-length)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; struct type descriptor constructor
 		  make-struct-type
 
@@ -52,7 +54,7 @@
 		  struct-type-field-names	struct-type-destructor
 
 		  ;; struct type descriptor customisation
-		  default-struct-printer
+		  default-struct-printer	default-struct-printer-details
 		  set-rtd-printer!		set-rtd-destructor!
 
 		  ;; struct accessors and mutators
@@ -68,7 +70,6 @@
 		  struct-rtd			struct-type-descriptor
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
-    (ikarus.emergency)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (vicare system $structs)
@@ -107,46 +108,46 @@
     ($set-symbol-value! uid std)))
 
 ;;; --------------------------------------------------------------------
-;;; unsafe RTD fields accessors
+;;; unsafe STD fields accessors
 
-(define-syntax-rule ($std-name std)
-  ($struct-ref std 0))
+;; (define-syntax-rule ($std-name std)
+;;   ($struct-ref std 0))
 
-(define-syntax-rule ($std-length std)
-  ($struct-ref std 1))
+;; (define-syntax-rule ($std-length std)
+;;   ($struct-ref std 1))
 
-(define-syntax-rule ($std-fields std)
-  ($struct-ref std 2))
+;; (define-syntax-rule ($std-fields std)
+;;   ($struct-ref std 2))
 
-(define-syntax-rule ($std-printer std)
-  ($struct-ref std 3))
+;; (define-syntax-rule ($std-printer std)
+;;   ($struct-ref std 3))
 
-(define-syntax-rule ($std-symbol std)
-  ($struct-ref std 4))
+;; (define-syntax-rule ($std-symbol std)
+;;   ($struct-ref std 4))
 
-(define-syntax-rule ($std-destructor std)
-  ($struct-ref std 5))
+;; (define-syntax-rule ($std-destructor std)
+;;   ($struct-ref std 5))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe STD fields mutators
 
-(define-syntax-rule ($set-std-name! std name)
-  ($struct-set! std 0 name))
+;; (define-syntax-rule ($set-std-name! std name)
+;;   ($struct-set! std 0 name))
 
-(define-syntax-rule ($set-std-length! std n)
-  ($struct-set! std 1 n))
+;; (define-syntax-rule ($set-std-length! std n)
+;;   ($struct-set! std 1 n))
 
-(define-syntax-rule ($set-std-fields! std fields)
-  ($struct-set! std 2 fields))
+;; (define-syntax-rule ($set-std-fields! std fields)
+;;   ($struct-set! std 2 fields))
 
-(define-syntax-rule ($set-std-printer! std printer)
-  ($struct-set! std 3 printer))
+;; (define-syntax-rule ($set-std-printer! std printer)
+;;   ($struct-set! std 3 printer))
 
-(define-syntax-rule ($set-std-symbol! std symbol)
-  ($struct-set! std 4 symbol))
+;; (define-syntax-rule ($set-std-symbol! std symbol)
+;;   ($struct-set! std 4 symbol))
 
-(define-syntax-rule ($set-std-destructor! std destructor-func)
-  ($struct-set! std 5 destructor-func))
+;; (define-syntax-rule ($set-std-destructor! std destructor-func)
+;;   ($struct-set! std 5 destructor-func))
 
 
 ;;;; structure type descriptor
@@ -162,10 +163,10 @@
   ;;symbol value,  such value must be  a struct descriptor equal  to the
   ;;newly created RTD.
   ;;
-  (((name string?) (field-name* list-of-symbols?))
+  (({name string?} {field-name* list-of-symbols?})
    ($make-std name field-name* (gensym name)))
 
-  (((name string?) (field-name* list-of-symbols?) (uid symbol?))
+  (({name string?} {field-name* list-of-symbols?} {uid symbol?})
    (if (symbol-bound? uid)
        (let ((std ($symbol-value uid)))
 	 (unless (and (string=? name (struct-type-name std))
@@ -184,30 +185,30 @@
   ;;
   ($struct/rtd? obj (base-rtd)))
 
-(define* (struct-type-name (std struct-type-descriptor?))
-  ;;Return a string represnting the name of structures of type RTD.
+(define* (struct-type-name {std struct-type-descriptor?})
+  ;;Return a string representing the name of structures of type RTD.
   ;;
   ($std-name std))
 
-(define* (struct-type-symbol (std struct-type-descriptor?))
+(define* (struct-type-symbol {std struct-type-descriptor?})
   ;;Return a symbol uniquely identifying the data structure type STD.
   ;;
   ($std-symbol std))
 
-(define* (struct-type-field-names (std struct-type-descriptor?))
+(define* (struct-type-field-names {std struct-type-descriptor?})
   ;;Return  a  list of  symbols  representing  the  names of  fields  in
   ;;structures of type STD.
   ;;
   ($std-fields std))
 
-(define* (struct-type-destructor (std struct-type-descriptor?))
+(define* (struct-type-destructor {std struct-type-descriptor?})
   ;;Return false or a procedure being the destructor of STD.
   ;;
   ($std-destructor std))
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-rtd-printer! (std struct-type-descriptor?) (printer procedure?))
+(define* (set-rtd-printer! {std struct-type-descriptor?} {printer procedure?})
   ;;Select the procedure PRINTER as  printer for data structures of type
   ;;RTD.   The printer  accepts  as  3 arguments:  the  structure to  be
   ;;printed,  the port  to  which  write a  string  represention of  the
@@ -216,7 +217,7 @@
   ;;
   ($set-std-printer! std printer))
 
-(define* (set-rtd-destructor! (std struct-type-descriptor?) (destructor procedure?))
+(define* (set-rtd-destructor! {std struct-type-descriptor?} {destructor procedure?})
   ;;Select the procedure DESTRUCTOR ad destructor for data structures of
   ;;type  RTD.   The destructor  accepts  a  single argument  being  the
   ;;structure instance.
@@ -231,7 +232,7 @@
   ;;constructor accepts as  many arguments as fields defined  by STD and
   ;;returns a new structure instance.
   ;;
-  (define* (struct-constructor (std struct-type-descriptor?))
+  (define* (struct-constructor {std struct-type-descriptor?})
     (lambda args
       (let* ((field-num ($std-length std))
 	     (stru      ($make-struct std field-num)))
@@ -259,7 +260,7 @@
 
   #| end of module: STRUCT-CONSTRUCTOR |# )
 
-(define* (struct-predicate (std struct-type-descriptor?))
+(define* (struct-predicate {std struct-type-descriptor?})
   ;;Return a predicate function for structures of type STD.
   ;;
   (lambda (obj)
@@ -268,7 +269,7 @@
 (module (struct-field-accessor
 	 struct-field-mutator)
 
-  (define* (struct-field-accessor (std struct-type-descriptor?) index/name)
+  (define* (struct-field-accessor {std struct-type-descriptor?} index/name)
     ;;Return an accessor  function for the field at  index INDEX/NAME of
     ;;data structures of type STD.
     ;;
@@ -278,7 +279,7 @@
 	    ((struct-of-type x std))
 	  ($struct-ref x field-idx)))))
 
-  (define* (struct-field-mutator (std struct-type-descriptor?) index/name)
+  (define* (struct-field-mutator {std struct-type-descriptor?} index/name)
     ;;Return a  mutator function  for the field  at index  INDEX/NAME of
     ;;data structures of type RTD.
     ;;
@@ -311,7 +312,7 @@
 
   #| end of module |# )
 
-(define* (struct-reset (x struct?))
+(define* (struct-reset {x struct?})
   ;;Reset to void all the fields of a structure.
   ;;
   (let ((len ($struct-ref ($struct-rtd x) 1)))
@@ -329,48 +330,48 @@
   ;;
   ((x)
    ($struct? x))
-  ((x (std struct-type-descriptor?))
+  ((x {std struct-type-descriptor?})
    ($struct/rtd? x std)))
 
-(define* (struct-rtd (stru struct?))
+(define* (struct-rtd {stru struct?})
   ;;Return  the  STD of  the  data  structure  STRU.  Notice  that  this
   ;;function works with both Vicare's structs and R6RS records.
   ;;
   ($struct-rtd stru))
 
-(define* (struct-length (stru struct?))
+(define* (struct-length {stru struct?})
   ;;Return the number of fields in the data structure STRU.  Notice that
   ;;this function works with both Vicare's structs and R6RS records.
   ;;
   ($std-length ($struct-rtd stru)))
 
-(define* (struct-name (stru struct?))
+(define* (struct-name {stru struct?})
   ;;Return a  string representing the  name of the data  structure STRU.
   ;;Notice that this function works  with both Vicare's structs and R6RS
   ;;records.
   ;;
   ($std-name ($struct-rtd stru)))
 
-(define* (struct-printer (stru struct?))
+(define* (struct-printer {stru struct?})
   ;;Return  the  procedure  being  the printer  function  for  the  data
   ;;structure STRU.
   ;;
   ($std-printer ($struct-rtd stru)))
 
-(define* (struct-destructor (stru struct?))
+(define* (struct-destructor {stru struct?})
   ;;Return  the procedure  being the  destructor function  for the  data
   ;;structure STRU.
   ;;
   ($std-destructor ($struct-rtd stru)))
 
-(define* (struct-ref (stru struct?) i)
+(define* (struct-ref {stru struct?} i)
   ;;Return the value of field at index I in the data structure stru.
   ;;
   (with-arguments-validation (__who__)
       ((index	i stru))
     ($struct-ref stru i)))
 
-(define* (struct-set! (stru struct?) i v)
+(define* (struct-set! {stru struct?} i v)
   ;;Store V in the field at index I in the data structure X.
   ;;
   (with-arguments-validation (__who__)
@@ -394,21 +395,44 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (default-struct-printer (stru struct?) (port output-port?) unused)
+(define default-struct-printer-details
+  (make-parameter #f
+    (lambda (obj)
+      (and obj #t))))
+
+(define* (default-struct-printer {stru struct?} {port output-port?} unused)
   (let ((std ($struct-rtd stru)))
-    (display (if (eq? std (base-rtd))
-		 "#[std type="
-	       "#[struct type=")
-	     port)
-    (display ($std-name std) port)
-    (do ((i 0 ($fxadd1 i))
-	 (field-names ($std-fields std) (cdr field-names)))
-	((null? field-names))
-      (display " " port)
-      (display (car field-names) port)
-      (display "=" port)
-      (display ($struct-ref stru i) port))
-    (display "]" port)))
+    (if (default-struct-printer-details)
+	;;Long variant.
+	(begin
+	  (display (if (eq? std (base-rtd))
+		       "#[std type="
+		     "#[struct type=")
+		   port)
+	  (display ($std-name std) port)
+	  (do ((i 0 ($fxadd1 i))
+	       (field-names ($std-fields std) (cdr field-names)))
+	      ((null? field-names))
+	    (display " " port)
+	    (display (car field-names) port)
+	    (display "=" port)
+	    (display ($struct-ref stru i) port))
+	  (display "]" port))
+      ;;Short variant.
+      (if (eq? std (base-rtd))
+	  ;;struct type descriptor
+	  (begin
+	    (display "#[std type=" port)
+	    (display ($std-name std) port)
+	    (display " " port)
+	    (display "name=" port)
+	    (display ($struct-ref stru 0) port)
+	    (display "]" port))
+	;;struct instance
+	(begin
+	  (display "#[struct type=" port)
+	  (display ($std-name std) port)
+	  (display "]" port))))))
 
 
 ;;;; done
@@ -416,18 +440,21 @@
 ;;Initialise the fields of the base RTD.
 ($set-std-name!       (base-rtd) "base-rtd")
 ($set-std-fields!     (base-rtd) '(name length fields printer symbol destructor))
+;; (let ((uid (gensym "base-rtd")))
+;;   ($set-std-symbol! (base-rtd) uid)
+;;   ($set-symbol-value! uid (base-rtd)))
 ($set-std-destructor! (base-rtd) #f)
 ($set-std-printer!    (base-rtd) default-struct-printer)
 
 #| end of libray (ikarus structs) |# )
 
 
-(library (ikarus systems structs)
+(library (vicare systems structs)
   (export $struct-ref $struct/rtd?)
-  (import (ikarus))
+  (import (vicare))
   (define $struct-ref struct-ref)
   (define ($struct/rtd? x rtd)
-    (import (ikarus system $structs))
+    (import (vicare system $structs))
     ($struct/rtd? x rtd)))
 
 ;;; end of file

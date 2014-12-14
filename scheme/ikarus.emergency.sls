@@ -28,7 +28,7 @@
 #!r6rs
 (library (ikarus.emergency)
   (export emergency-write)
-  (import (ikarus)
+  (import (vicare)
     (prefix (vicare unsafe capi)
 	    capi.)
     (vicare unsafe operations))

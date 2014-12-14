@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa language oopp configuration)
+(library (nausicaa language oopp configuration (0 4))
   (export
     validate-tagged-values?
     enable-satisfactions)

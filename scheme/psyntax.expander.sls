@@ -477,10 +477,7 @@
 ;;
 ;;   (?name . ())
 ;;
-;;where ?NAME is a symbol representing the name of the syntax.  The core
-;;language  syntaxes  are: DEFINE,  DEFINE-SYNTAX,  DEFINE-FLUID-SYNTAX,
-;;MODULE,   LIBRARY,   BEGIN,    IMPORT,   EXPORT,   SET!,   LET-SYNTAX,
-;;LETREC-SYNTAX, STALE-WHEN.
+;;where ?NAME is a symbol representing the name of the syntax.
 ;;
 ;;
 ;;Core macro
@@ -646,17 +643,16 @@
 
 ;;;; introduction: lexical environments, the LEXENV component
 ;;
-;;A  LEXENV  is an  alist  managed  somewhat  like  a stack;  while  the
-;;expansion  proceeds, visiting  the  code in  breadth-first order:  the
-;;LEXENV is updated by pushing new  entries on the stack.  Each entry is
-;;a  pair,  list  or improper  list  and  maps  a  label gensym  to  its
-;;associated syntactic binding descriptor.
+;;A LEXENV is an  alist managed somewhat like a stack;  while the expansion proceeds,
+;;visiting the  code in  breadth-first order:  the LEXENV is  updated by  pushing new
+;;entries on the stack.  Each entry is a pair, list or improper list and maps a label
+;;gensym to its associated syntactic binding descriptor.
 ;;
 ;;A LEXENV entry has the following format:
 ;;
 ;;   (?label . ?syntactic-binding)
 ;;
-;;where: ?LABEL  is a label  gensym uniquely associated to  the binding;
+;;where:   ?LABEL  is   a  label   gensym   uniquely  associated   to  the   binding;
 ;;?SYNTACTIC-BINDING is a syntactic binding descriptor.
 ;;
 ;;
@@ -666,51 +662,49 @@
 ;;Library lexical variables
 ;;-------------------------
 ;;
-;;A syntactic binding representing a lexical variable, as created by LET
-;;and similar syntaxes, LAMBDA, CASE-LAMBDA or DEFINE, has the format:
+;;A syntactic binding representing a lexical  variable, as created by LET and similar
+;;syntaxes, LAMBDA, CASE-LAMBDA or DEFINE, has the format:
 ;;
 ;;   (lexical . (?lexvar . ?mutated))
 ;;
-;;where  "lexical"  is  the  symbol   "lexical";  ?LEXVAR  is  a  gensym
-;;representing the name of the  lexical variable binding in the expanded
-;;code; ?MUTATED is  a boolean, true if somewhere in  the code the value
-;;of this binding is mutated.
+;;where "lexical" is the symbol "lexical";  ?LEXVAR is a gensym representing the name
+;;of the lexical variable  binding in the expanded code; ?MUTATED  is a boolean, true
+;;if somewhere in the code the value of this binding is mutated.
 ;;
-;;We want to keep  track of mutated variables because we  do not want to
-;;export from a library a mutable variable.
+;;We want to keep track of mutated variables  because we do not want to export from a
+;;library a mutable variable.
 ;;
 ;;
 ;;Imported lexical variables
 ;;--------------------------
 ;;
-;;A  syntactic binding  representing  a lexical  variable imported  from
-;;another library has the format:
+;;A syntactic binding  representing a lexical variable imported  from another library
+;;has the format:
 ;;
 ;;   (global . (?library . ?loc))
 ;;
-;;where:  ?LIBRARY represents  the  library from  which  the binding  is
-;;exported, ?LOC  is the gensym  containing the variable's value  in its
-;;"value" field.
+;;where: ?LIBRARY represents the library from  which the binding is exported, ?LOC is
+;;the gensym containing the variable's value in its "value" field.
 ;;
-;;When the  variable is defined  by an  imported library: ?LIBRARY  is a
-;;record of type  LIBRARY.  When the variable was defined  by a previous
-;;REPL expression: ?LIBRARY is the symbol "*interaction*".
+;;When the variable is  defined by an imported library: ?LIBRARY is  a record of type
+;;LIBRARY.  When the variable was defined  by a previous REPL expression: ?LIBRARY is
+;;the symbol "*interaction*".
 ;;
-;;Labels   associated  to   these  imported   bindings  have   the  list
-;;representing the binding itself stored in their "value" fields.
+;;Labels associated to these imported bindings have the list representing the binding
+;;itself stored in their "value" fields.
 ;;
 ;;
 ;;Library non-identifier macro
 ;;----------------------------
 ;;
-;;A binding  representing a macro with  non-variable transformer defined
-;;by the code being expanded has the format:
+;;A binding  representing a macro with  non-variable transformer defined by  the code
+;;being expanded has the format:
 ;;
 ;;   (local-macro . (?transformer . ?expanded-expr))
 ;;
-;;where: ?TRANSFORMER is a  function implementing the macro transformer;
-;;?EXPANDED-EXPR is  the expression in fully  expanded code representing
-;;the right-hand side of the  syntax definition.
+;;where:   ?TRANSFORMER   is  a   function   implementing   the  macro   transformer;
+;;?EXPANDED-EXPR is the expression in fully expanded code representing the right-hand
+;;side of the syntax definition.
 ;;
 ;;?TRANSFORMER is the result of compiling and evaluating ?EXPANDED-EXPR.
 ;;
@@ -718,86 +712,89 @@
 ;;Library identifier macro
 ;;------------------------
 ;;
-;;A binding  representing a macro  with variable transformer  defined by
-;;the code being expanded has the format:
+;;A binding representing a macro with  variable transformer defined by the code being
+;;expanded has the format:
 ;;
 ;;   (local-macro! . (?transformer . ?expanded-expr))
 ;;
-;;where: ?TRANSFORMER is a  function implementing the macro transformer;
-;;?EXPANDED-EXPR is  the expression in fully  expanded code representing
-;;the right-hand side of the syntax definition.
+;;where:   ?TRANSFORMER   is  a   function   implementing   the  macro   transformer;
+;;?EXPANDED-EXPR is the expression in fully expanded code representing the right-hand
+;;side  of the  syntax  definition.   ?TRANSFORMER is  the  result  of compiling  and
+;;evaluating ?EXPANDED-EXPR.
 ;;
-;;?TRANSFORMER is the result of compiling and evaluating ?EXPANDED-EXPR.
+;;When the visit code is composed, the following sexp is added to it:
+;;
+;;   (set! ?loc ?expanded-code)
+;;
+;;where ?LOC is the loc gensym for the macro.
 ;;
 ;;
 ;;Imported non-identifier macro
 ;;-----------------------------
 ;;
-;;A binding representing a macro with a non-variable transformer defined
-;;by code in an imported library has the format:
+;;A binding representing  a macro with a non-variable transformer  defined by code in
+;;an imported library has the format:
 ;;
 ;;   (global-macro . (?library . ?loc))
 ;;
-;;where: ?LIBRARY  is a  record of type  LIBRARY describing  the library
-;;from which  the macro is exported;  ?LOC is the gensym  containing the
-;;transformer function in its "value" field.
+;;where: ?LIBRARY is a  record of type LIBRARY describing the  library from which the
+;;macro is  exported; ?LOC is the  gensym containing the transformer  function in its
+;;"value" field.
 ;;
-;;Labels   associated  to   these  imported   bindings  have   the  list
-;;representing the binding itself stored in their "value" fields.
+;;Labels associated to these imported bindings have the list representing the binding
+;;itself stored in their "value" fields.
 ;;
 ;;
 ;;Imported identifier macro
 ;;-------------------------
 ;;
-;;A binding  representing a macro  with variable transformer  defined by
-;;code in an imported library has the format:
+;;A binding  representing a  macro with  variable transformer defined  by code  in an
+;;imported library has the format:
 ;;
 ;;   (global-macro! . (?library . ?loc))
 ;;
-;;where: ?LIBRARY  is a  record of type  LIBRARY describing  the library
-;;from which  the macro is exported;  ?LOC is the gensym  containing the
-;;transformer function in its "value" field.
+;;where: ?LIBRARY is a  record of type LIBRARY describing the  library from which the
+;;macro is  exported; ?LOC is the  gensym containing the transformer  function in its
+;;"value" field.
 ;;
-;;Labels   associated  to   these  imported   bindings  have   the  list
-;;representing the binding itself stored in their "value" fields.
+;;Labels associated to these imported bindings have the list representing the binding
+;;itself stored in their "value" fields.
 ;;
 ;;
 ;;Library compile-time value
 ;;--------------------------
 ;;
-;;A binding representing a compile-time  value defined by the code being
-;;expanded has the format:
+;;A binding representing a compile-time value  defined by the code being expanded has
+;;the format:
 ;;
 ;;   (local-ctv . (?object . ?expanded-expr))
 ;;
-;;where:  ?OBJECT  is   the  actual  value  computed   at  expand  time;
-;;?EXPANDED-EXPR is the result of fully expanding the right-hand side of
-;;the syntax definition.
-;;
-;;?OBJECT is the result of compiling and evaluating ?EXPANDED-EXPR.
+;;where: ?OBJECT is  the actual value computed at expand  time; ?EXPANDED-EXPR is the
+;;result of fully expanding the right-hand side of the syntax definition.  ?OBJECT is
+;;the result of compiling and evaluating ?EXPANDED-EXPR.
 ;;
 ;;
 ;;Imported compile-time value
 ;;---------------------------
 ;;
-;;A  binding  representing  a  compile-time value  exported  by  another
-;;library has the format:
+;;A binding  representing a compile-time  value exported  by another library  has the
+;;format:
 ;;
 ;;   (global-ctv . (?library . ?loc))
 ;;
-;;where: ?LIBRARY  is a  record of type  LIBRARY describing  the library
-;;from which the binding is exported;  ?LOC is the gensym containing the
-;;actual object in its "value" field.
+;;where: ?LIBRARY is a  record of type LIBRARY describing the  library from which the
+;;binding is exported; ?LOC is the gensym containing the actual object in its "value"
+;;field.
 ;;
-;;Labels   associated  to   these  imported   bindings  have   the  list
-;;representing the binding itself stored in their "value" fields.
+;;Labels associated to these imported bindings have the list representing the binding
+;;itself stored in their "value" fields.
 ;;
 ;;
 ;;Module interface
 ;;----------------
 ;;
-;;A binding representing the interface of a MODULE syntax defined by the
-;;code being expanded has the format:
+;;A binding representing the  interface of a MODULE syntax defined  by the code being
+;;expanded has the format:
 ;;
 ;;   ($module . ?iface)
 ;;
@@ -807,17 +804,16 @@
 ;;Pattern variable
 ;;----------------
 ;;
-;;A binding representing  a pattern variable, as  created by SYNTAX-CASE
-;;and SYNTAX-RULES, has the format:
+;;A  binding  representing  a  pattern   variable,  as  created  by  SYNTAX-CASE  and
+;;SYNTAX-RULES, has the format:
 ;;
 ;;   (syntax . (?name . ?level))
 ;;
-;;where:  "syntax"  is   the  symbol  "syntax";  ?NAME   is  the  symbol
-;;representing  the   name  of  the   pattern  variable;  ?LEVEL   is  a
-;;non-negative exact integer representing the ellipsis nesting level.
+;;where: "syntax" is  the symbol "syntax"; ?NAME is the  symbol representing the name
+;;of the  pattern variable; ?LEVEL is  a non-negative exact integer  representing the
+;;ellipsis nesting level.
 ;;
-;;The  SYNTAX-CASE  patterns below  will  generate  the given  syntactic
-;;bindings:
+;;The SYNTAX-CASE patterns below will generate the given syntactic bindings:
 ;;
 ;;   ?a				->  (syntax . (?a . 0))
 ;;   (?a)			->  (syntax . (?a . 0))
@@ -832,8 +828,8 @@
 ;;Library Vicare struct descriptor
 ;;--------------------------------
 ;;
-;;A binding  representing a Vicare's  struct type descriptor  defined by
-;;the code being expanded has the format:
+;;A binding representing a Vicare's struct  type descriptor defined by the code being
+;;expanded has the format:
 ;;
 ;;   ($rtd . #<type-descriptor-struct>)
 ;;
@@ -843,17 +839,16 @@
 ;;Library R6RS record type descriptor
 ;;-----------------------------------
 ;;
-;;A  binding  representing an  R6RS's  record  type descriptor  and  the
-;;default  record  constructor  descriptor  defined by  the  code  being
-;;expanded has one of the formats:
+;;A binding  representing an  R6RS's record  type descriptor  and the  default record
+;;constructor descriptor defined by the code being expanded has one of the formats:
 ;;
 ;;   ($rtd . (?rtd-id ?rcd-id))
 ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
 ;;
-;;where: "$rtd" is the symbol "$rtd"; ?RTD-ID is the identifier to which
-;;the  record type  descriptor is  bound; ?RCD-ID  is the  identifier to
-;;which the default record constructor  descriptor is bound; ?SPEC is an
-;;instance of record type R6RS-RECORD-TYPE-SPEC.
+;;where: "$rtd" is the  symbol "$rtd"; ?RTD-ID is the identifier  to which the record
+;;type descriptor  is bound; ?RCD-ID  is the identifier  to which the  default record
+;;constructor   descriptor  is   bound;  ?SPEC   is  an   instance  of   record  type
+;;R6RS-RECORD-TYPE-SPEC.
 ;;
 ;;
 ;;Fluid syntax
@@ -865,13 +860,13 @@
 ;;
 ;;where ?FLUID-LABEL is the label gensym associated to the fluid syntax.
 ;;
-;;Let's draw  the picture.  When  a fluid  syntax binding is  created by
+;;Let's   draw  the   picture.   When   a  fluid   syntax  binding   is  created   by
 ;;DEFINE-FLUID-SYNTAX:
 ;;
 ;;   (define-fluid-syntax ?lhs ?rhs)
 ;;
-;;an identifier ?LHS is associated to  a main label ?LABEL, and an entry
-;;is pushed on the lexical environment:
+;;an identifier ?LHS is associated to a main  label ?LABEL, and an entry is pushed on
+;;the lexical environment:
 ;;
 ;;   (?label . ($fluid . ?fluid-label))
 ;;
@@ -879,25 +874,21 @@
 ;;
 ;;   (?fluid-label . ?syntactic-binding)
 ;;
-;;where ?SYNTACTIC-BINDING is the concrete binding descriptor created by
-;;expanding  and evaluating  ?RHS  then interpreting  its return  value.
-;;Given the identifier  ?LHS: we can retrieve the  associated ?LABEL and
-;;so  the ?FLUID-LABEL;  then we  can "follow  through" ?FLUID-LABEL  to
-;;retrieve the actual binding descriptor.
+;;where ?SYNTACTIC-BINDING  is the concrete  binding descriptor created  by expanding
+;;and evaluating ?RHS then interpreting its return value.  Given the identifier ?LHS:
+;;we can retrieve the associated ?LABEL and  so the ?FLUID-LABEL; then we can "follow
+;;through" ?FLUID-LABEL to retrieve the actual binding descriptor.
 ;;
-;;The  fluid syntax  can  be re-defined  any number  of  times by  using
-;;FLUID-LET-SYNTAX:
+;;The fluid syntax can be re-defined any number of times by using FLUID-LET-SYNTAX:
 ;;
 ;;   (fluid-let-syntax ((?lhs ?inner-rhs)) . ?body)
 ;;
-;;causing other entries  associated to ?FLUID-LABEL to be  pushed on the
-;;LEXENV:
+;;causing other entries associated to ?FLUID-LABEL to be pushed on the LEXENV:
 ;;
 ;;   (?fluid-label . ?inner-syntactic-binding)
 ;;
-;;where  ?INNER-SYNTACTIC-BINDING is  the  binding descriptor  resulting
-;;from expanding and evaluating  ?INNER-RHS then interpreting its return
-;;value.
+;;where ?INNER-SYNTACTIC-BINDING  is the binding descriptor  resulting from expanding
+;;and evaluating ?INNER-RHS then interpreting its return value.
 ;;
 ;;
 ;;Synonym syntax
@@ -907,37 +898,49 @@
 ;;
 ;;   ($synonym . ?synonym-label)
 ;;
-;;where ?SYNONYM-LABEL  is the  label gensym  associated to  the synonym
-;;syntax.
+;;where ?SYNONYM-LABEL is the label gensym associated to the synonym syntax.
 ;;
 ;;Let's draw the picture.  When an synonym syntax binding is created:
 ;;
 ;;   (define-syntax ?lhs (make-synonym-transformer ?id))
 ;;
-;;an identifier ?LHS is associated to  a main label ?LABEL, and an entry
-;;is pushed on the lexical environment:
+;;an identifier ?LHS is associated to a main  label ?LABEL, and an entry is pushed on
+;;the lexical environment:
 ;;
 ;;   (?label . ($synonym . ?synonym-label))
 ;;
-;;where ?SYNONYM-LABEL is the label  bound to the identifier ?ID.  Given
-;;the identifier ?LHS: we can retrieve  the associated ?LABEL and so the
-;;?SYNONYM-LABEL;  then  we  can   "follow  through"  ?SYNONYM-LABEL  to
-;;retrieve the actual binding descriptor.
+;;where  ?SYNONYM-LABEL  is  the  label  bound to  the  identifier  ?ID.   Given  the
+;;identifier ?LHS: we  can retrieve the associated ?LABEL and  so the ?SYNONYM-LABEL;
+;;then  we  can  "follow  through"  ?SYNONYM-LABEL to  retrieve  the  actual  binding
+;;descriptor.
+;;
+;;
+;;BEGIN-FOR-SYNTAX code
+;;---------------------
+;;
+;;Each use of BEGIN-FOR-SYNTAX generates visit  code that must be added to serialised
+;;libraries.   Whenever a  BEGIN-FOR-SYNTAX use  is expanded  the following  entry is
+;;pushed on the LEXENV:
+;;
+;;   (?unused-label . (begin-for-syntax . ?visit-code))
+;;
+;;where: ?UNUSED-LABEL is a dummy label gensym  which not used; ?VISIT-CODE is a full
+;;core language expression representing the expanded contents of the BEGIN-FOR-SYNTAX
+;;use.
 ;;
 ;;
 ;;Displaced lexical
 ;;-----------------
 ;;
-;;These lists  have a format  similar to  a LEXENV entry  representing a
-;;syntactic binding, but they are used to represent a failed search into
-;;a LEXENV.
+;;These  lists have  a format  similar  to a  LEXENV entry  representing a  syntactic
+;;binding, but they are used to represent a failed search into a LEXENV.
 ;;
 ;;The following special value represents an unbound label:
 ;;
 ;;     (displaced-lexical . #f)
 ;;
-;;The  following  special  value  represents the  result  of  a  lexical
-;;environment query with invalid label value (not a symbol):
+;;The following  special value represents the  result of a lexical  environment query
+;;with invalid label value (not a symbol):
 ;;
 ;;     (displaced-lexical . ())
 ;;
@@ -946,10 +949,11 @@
 ;;;; introduction: EXPORT-ENV
 ;;
 ;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
-;;top-level  syntactic bindings  to the  corresponding storage  location
-;;gensyms.   Not  all  the  entries  in  EXPORT-ENV  represent  exported
-;;bindings: it  is the role of  the EXPORT-SUBST to select  the exported
-;;ones.
+;;global syntactic  bindings, defined  by a library  or program,  to the
+;;corresponding storage  location gensyms.   "Global bindings"  does not
+;;mean "exported bindings": not all  the entries in EXPORT-ENV represent
+;;exported bindings,  it is the role  of the EXPORT-SUBST to  select the
+;;exported ones.
 ;;
 ;;An EXPORT-ENV is an alist whose entries have the format:
 ;;
@@ -994,12 +998,113 @@
 ;;
 
 
-(library (psyntax expander)
+;;;; core macros, non-core macros, user-defined macros
+;;
+;;First some notes on "languages" Vicare jargon:
+;;
+;;* The "expanded language" is a low level Scheme-like language which is
+;;  the result of  the expansion process: expanding a  Scheme library or
+;;  program  means  to transform  the  input  language into  a  symbolic
+;;  expression in the expanded language.
+;;
+;;* The "core language" is a low level Scheme-like language which is the
+;;  input recognised by the compiler.
+;;
+;;at present the expanded language and  the core language are equal, but
+;;this might change in the future.
+;;
+;;
+;;Core macros
+;;-----------
+;;
+;;These are basic syntaxes into which all the other macros are expanded;
+;;despite being  called "core",  they are neither  part of  the expanded
+;;language nor of  the core language.  Core macros are  split into three
+;;groups, those that can appear in definition context only:
+;;
+;;   define				define-syntax
+;;   define-alias			define-fluid-syntax
+;;   module				library
+;;   begin				import
+;;   export				set!
+;;   stale-when				begin-for-syntax
+;;   eval-for-expand			define-fluid-override
+;;
+;;and those that can appear only in expression context only:
+;;
+;;   foreign-call			quote
+;;   syntax-case			syntax
+;;   letrec				letrec*
+;;   if					lambda
+;;   case-lambda			fluid-let-syntax
+;;   struct-type-descriptor		struct-type-and-struct?
+;;   struct-type-field-ref		struct-type-field-set!
+;;   $struct-type-field-ref		$struct-type-field-set!
+;;   record-type-descriptor		record-constructor-descriptor
+;;   record-type-field-set!		record-type-field-ref
+;;   $record-type-field-set!		$record-type-field-ref
+;;   type-descriptor			is-a?
+;;   slot-ref				slot-set!
+;;   $slot-ref				$slot-set!
+;;   splice-first-expand		unsafe
+;;   predicate-procedure-argument-validation
+;;   predicate-return-value-validation
+;;
+;;those  that  can appear  in  both  definition context  and  expression
+;;context:
+;;
+;;   let-syntax				letrec-syntax
+;;
+;;The implementation  of core macros  that appear in  definition context
+;;only is integrated in the function CHI-BODY*.
+;;
+;;The implementation  of core macros  that appear in  definition context
+;;only consists of proper transformer functions selected by the function
+;;CORE-MACRO-TRANSFORMER.  Such transformers are  applied to input forms
+;;by the function CHI-EXPR.
+;;
+;;Macros  that can  appear  in both  definition  context and  expression
+;;context have double implementation: one  in the function CHI-BODY* and
+;;one in the function CHI-EXPR.
+;;
+;;Core macros  can introduce  bindings by direct  access to  the lexical
+;;environment: their  transformer functions  create new rib  records and
+;;push new entries on the LEXENV.
+;;
+;;
+;;Non-core macros
+;;---------------
+;;
+;;These are macros that expand themselves into uses of core macros; they
+;;have a  proper transformer function  accepting as single  argument the
+;;input form syntax object and returning as single value the output form
+;;syntax object.   The only  difference between a  non-core macro  and a
+;;user-defined macro is that the former is integrated in the expander.
+;;
+;;Non-core   macro   transformers   are   selected   by   the   function
+;;NON-CORE-MACRO-TRANSFORMER.
+;;
+;;
+;;User-defined macros
+;;-------------------
+;;
+;;These are macros defined  by DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,
+;;DEFINE-FLUID-SYNTAX  and  their  derivatives.   Such  syntaxes  expand
+;;themselves into  uses of core  or non-core macros.   Their transformer
+;;functions accept as  single argument the input form  syntax object and
+;;return as single value the output form syntax object.
+;;
+
+
+#!vicare
+(library (psyntax.expander)
   (export
     eval
     environment				environment?
     null-environment			scheme-report-environment
     interaction-environment		new-interaction-environment
+
+    enable-tagged-language		disable-tagged-language
 
     ;; inspection of non-interaction environment objects
     environment-symbols			environment-libraries
@@ -1008,7 +1113,7 @@
     expand-form-to-core-language
     expand-top-level			expand-top-level->sexp
     expand-library			expand-library->sexp
-    expand-r6rs-top-level-make-evaluator boot-library-expand
+    expand-r6rs-top-level-make-evaluator
     expand-r6rs-top-level-make-compiler
 
     make-variable-transformer		variable-transformer?
@@ -1022,16 +1127,17 @@
 
     generate-temporaries		identifier?
     free-identifier=?			bound-identifier=?
+    identifier-bound?			print-identifier-info
     datum->syntax			syntax->datum
 
+    ;; exception raisers
     syntax-violation			assertion-error
-
-    ;;This must  be exported and that's  it.  I am unable  to remove it.
-    ;;Sue me.  (Marco Maggi; Sun Nov 17, 2013)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Apr 12,
+    ;;2014)
     syntax-error
 
-    syntax-dispatch			syntax-transpose
-    ellipsis-map
+    ;;SYNTAX-CASE subroutines
+    syntax-dispatch			ellipsis-map
 
     ;;syntactic binding properties
     syntactic-binding-putprop
@@ -1043,24 +1149,77 @@
     set-predicate-procedure-argument-validation!
     set-predicate-return-value-validation!
 
-    ;; expand-time type specs: object specs
-    identifier-object-spec		set-identifier-object-spec!
-    (rename (public-make-object-spec make-object-spec))
-    object-spec?
-    object-spec-name
-    object-spec-type-id			object-spec-pred-id
+    ;; expand-time object type specs: type specification
+    make-object-type-spec			object-type-spec?
+    object-type-spec-parent-spec
+    object-type-spec-uids
+    object-type-spec-type-id			object-type-spec-pred-stx
+    object-type-spec-constructor-maker
+    object-type-spec-accessor-maker		object-type-spec-mutator-maker
+    object-type-spec-getter-maker		object-type-spec-setter-maker
+    object-type-spec-dispatcher
+    object-type-spec-ancestry
 
-    ;; expand-time type specs: callable specs
-    identifier-callable-spec		set-identifier-callable-spec!
-    make-callable-spec			callable-spec?
-    callable-spec-name			callable-spec-min-arity
-    callable-spec-max-arity		callable-spec-dispatcher
+    ;; expand-time object type specs: parsing tagged identifiers
+    tagged-identifier-syntax?			parse-tagged-identifier-syntax
+    list-of-tagged-bindings?			parse-list-of-tagged-bindings
+    tagged-lambda-proto-syntax?			parse-tagged-lambda-proto-syntax
+    tagged-formals-syntax?			parse-tagged-formals-syntax
+    standard-formals-syntax?
+    formals-signature-syntax?			retvals-signature-syntax?
+
+    make-clambda-compound			clambda-compound?
+    clambda-compound-common-retvals-signature	clambda-compound-lambda-signatures
+
+    make-lambda-signature			lambda-signature?
+    lambda-signature-formals			lambda-signature-retvals
+    lambda-signature-formals-tags		lambda-signature-retvals-tags
+    lambda-signature=?
+
+    make-formals-signature			formals-signature?
+    formals-signature-tags			formals-signature=?
+
+    make-retvals-signature			make-retvals-signature-single-value
+    make-retvals-signature-fully-unspecified
+    retvals-signature?
+    retvals-signature-tags			retvals-signature=?
+    retvals-signature-common-ancestor
+
+    ;; expand-time object type specs: identifiers defining types
+    tag-identifier?				all-tag-identifiers?
+    tag-super-and-sub?				formals-signature-super-and-sub-syntax?
+    identifier-object-type-spec			set-identifier-object-type-spec!
+    label-object-type-spec			set-label-object-type-spec!
+    tag-identifier-ancestry			tag-common-ancestor
+
+    set-tag-identifier-callable-signature!	tag-identifier-callable-signature
+    fabricate-procedure-tag-identifier
+
+    top-tag-id					void-tag-id
+    procedure-tag-id				predicate-tag-id
+    list-tag-id					boolean-tag-id
+    struct-tag-id				record-tag-id
+
+    ;; expand-time object type specs: tagged binding identifiers
+    tagged-identifier?
+    set-identifier-tag!		identifier-tag		override-identifier-tag!
+    set-label-tag!		label-tag		override-label-tag!
+
+    ;; expand-time type checking exception stuff
+    expand-time-type-signature-violation?
+    expand-time-retvals-signature-violation?
+    expand-time-retvals-signature-violation-expected-signature
+    expand-time-retvals-signature-violation-returned-signature
+
+    ;; expand-time type specs: stuff for built-in tags and core primitives
+    initialise-type-spec-for-built-in-object-types
+    initialise-core-prims-tagging
 
     ;;The following are inspection functions for debugging purposes.
     (rename (<stx>?		syntax-object?)
 	    (<stx>-expr		syntax-object-expression)
 	    (<stx>-mark*	syntax-object-marks)
-	    (<stx>-subst*	syntax-object-substs)
+	    (<stx>-rib*		syntax-object-ribs)
 	    (<stx>-ae*		syntax-object-source-objects)))
   (import (except (rnrs)
 		  eval
@@ -1070,35 +1229,28 @@
 		  bound-identifier=?	free-identifier=?
 		  generate-temporaries
 		  datum->syntax		syntax->datum
-		  syntax-violation	make-variable-transformer
-		  syntax-error)
+		  syntax-violation	make-variable-transformer)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
-    (psyntax library-manager)
-    (psyntax builders)
-    (except (psyntax compat)
-	    debug-print)
-    (psyntax config)
-    (psyntax internal))
+    (psyntax.library-manager)
+    (psyntax.builders)
+    (psyntax.compat)
+    (psyntax.config)
+    (psyntax.internal))
 
 
 ;;; helpers
 
-;;This syntax can be used as standalone identifier and it expands to #f.
-;;It is used  as "annotated expression" argument in calls  to the BUILD-
-;;functions when there is no annotated expression to be given.
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Apr 12,
+;;2014)
+(define syntax-error)
+
+;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
+;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
+;;no annotated expression to be given.
 ;;
 (define-syntax no-source
   (lambda (x) #f))
-
-(define (debug-print . args)
-  ;;Print arguments for debugging purposes.
-  ;;
-  (pretty-print args (current-error-port))
-  (newline (current-error-port))
-  (newline (current-error-port))
-  (when (pair? args)
-    (car args)))
 
 (define-syntax-rule (reverse-and-append ?item**)
   (apply append (reverse ?item**)))
@@ -1106,6 +1258,103 @@
 (define (false-or-procedure? obj)
   (or (not obj)
       (procedure? obj)))
+
+(define (non-empty-list-of-symbols? obj)
+  (and (not (null? obj))
+       (list? obj)
+       (for-all symbol? obj)))
+
+(define (improper-list->list-and-rest ell)
+  (let loop ((ell   ell)
+	     (item* '()))
+    (syntax-match ell ()
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*)))
+      (()
+       (values (reverse item*) '()))
+      (_
+       (values (reverse item*) ell)))
+    ))
+
+(define* (proper-list->head-and-last ell)
+  (let loop ((ell   ell)
+	     (item* '()))
+    (syntax-match ell ()
+      (()
+       (assertion-violation __who__ "expected non-empty list" ell))
+      ((?last)
+       (values (reverse item*) ?last))
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*))))))
+
+(define* (proper-list->last-item ell)
+  (syntax-match ell ()
+    (()
+     (assertion-violation __who__ "expected non-empty list" ell))
+    ((?last)
+     ?last)
+    ((?car . ?cdr)
+     (proper-list->last-item ?cdr))
+    ))
+
+(define-syntax-rule (trace-define (?name . ?formals) . ?body)
+  (define (?name . ?formals)
+    (debug-print (quote ?name) 'arguments . ?formals)
+    (call-with-values
+	(lambda () . ?body)
+      (lambda retvals
+	(debug-print (quote ?name) 'retvals retvals)
+	(apply values retvals)))))
+
+(define (self-evaluating? x)
+  (or (number?			x)
+      (string?			x)
+      (char?			x)
+      (boolean?			x)
+      (bytevector?		x)
+      (keyword?			x)
+      (would-block-object?	x)
+      (unbound-object?		x)
+      (bwp-object?		x)))
+
+(define (non-compound-sexp? obj)
+  (or (null? obj)
+      (self-evaluating? obj)
+      ;;Notice that struct instances are not self evaluating.
+      (struct? obj)))
+
+(module ($map-in-order
+	 $map-in-order1)
+
+  (case-define $map-in-order
+    ((func ell)
+     ($map-in-order1 func ell))
+    ((func . ells)
+     (if (null? ells)
+	 '()
+       (let recur ((ells ells))
+	 (if (pair? ($car ells))
+	     (let* ((cars ($map-in-order1 $car ells))
+		    (cdrs ($map-in-order1 $cdr ells))
+		    (head (apply func cars)))
+	       (cons head (recur cdrs)))
+	   '())))))
+
+  (define-syntax-rule ($map-in-order1 ?func ?ell)
+    (let recur ((ell ?ell))
+      (if (pair? ell)
+	  (let ((head (?func ($car ell))))
+	    (cons head (recur ($cdr ell))))
+	ell)))
+
+  #| end of module |# )
+
+(define-syntax-rule (with-tagged-language ?enabled? . ?body)
+  (parametrise ((option.tagged-language? ?enabled?))
+    (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
+		  (option.tagged-language.datums-as-operators? (option.tagged-language?))
+		  (option.tagged-language.setter-forms?        (option.tagged-language?)))
+      . ?body)))
 
 
 ;;;; library records collectors
@@ -1317,7 +1566,7 @@
 ;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
 ;;interaction environment is created to  serve as top level environment.
 ;;The  interaction  environment  is  initialised with  the  core  Vicare
-;;library  "(ikarus)";  an  interaction environment  is  *mutable*:  new
+;;library  "(vicare)";  an  interaction environment  is  *mutable*:  new
 ;;bindings can be added to it.  For this reason interaction environments
 ;;are  represented by  records of  type INTERACTION-ENV,  whose internal
 ;;format allows adding new bindings.
@@ -1423,7 +1672,7 @@
     (assertion-violation __who__
       "expected non-interaction environment object as argument" env))
   (let ((P (vector-exists (lambda (name label)
-			    (import (ikarus system $symbols))
+			    (import (vicare system $symbols))
 			    (and (eq? sym name)
 				 (cons label ($symbol-value label))))
 	     ($env-names  env)
@@ -1479,7 +1728,7 @@
    (new-interaction-environment (base-of-interaction-library)))
   ((libname)
    (let* ((lib (find-library-by-name libname))
-	  (rib (export-subst->rib (library-subst lib))))
+	  (rib (export-subst->rib (library-export-subst lib))))
      (make-interaction-env rib '() '()))))
 
 (define interaction-environment
@@ -1585,7 +1834,7 @@
 ;;
 ;;
 
-(define* (make-synonym-transformer (x identifier?))
+(define* (make-synonym-transformer {x identifier?})
   ;;Build and  return a  "special" value that,  when used  as right-hand
   ;;side of  a syntax  definition, is  recognised by  the expander  as a
   ;;synonym  transformer as  opposed to  a normal  transformer, variable
@@ -1602,7 +1851,7 @@
        (eq? ($car x) 'synonym-transformer)
        (identifier? ($cdr x))))
 
-(define* (synonym-transformer-identifier (x synonym-transformer?))
+(define* (synonym-transformer-identifier {x synonym-transformer?})
   ;;If X is recognised by the  expander as a synonym transformer: return
   ;;the source identifier, otherwise raise an exception.
   ;;
@@ -1671,6 +1920,31 @@
   cdr)
 
 
+;;;; public interface: tagged language support
+
+(module (enable-tagged-language
+	 disable-tagged-language)
+
+  (define (enable-tagged-language)
+    ;;This is meant to be used at the  REPL to turn on tagged language support, which
+    ;;is off by default.
+    ;;
+    (tagged-language-support #t))
+
+  (define (disable-tagged-language)
+    ;;This is meant to be used at the REPL to turn off tagged language support.
+    ;;
+    (tagged-language-support #f))
+
+  (define (tagged-language-support enable?)
+    (option.tagged-language? enable?)
+    (option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
+    (option.tagged-language.datums-as-operators? (option.tagged-language?))
+    (option.tagged-language.setter-forms?        (option.tagged-language?)))
+
+  #| end of module |# )
+
+
 (define* (eval x env)
   ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
   ;;expand the  expression, invoke  its invoke-required  libraries and
@@ -1682,11 +1956,12 @@
   (receive (x invoke-req*)
       (expand-form-to-core-language x env)
     (for-each invoke-library invoke-req*)
-    (eval-core (expanded->core x))))
+    (compiler.eval-core (expanded->core x))))
 
 
 (module (expand-form-to-core-language)
-  (define-constant __who__ 'expand-form-to-core-language)
+  (define-fluid-override __who__
+    (identifier-syntax 'expand-form-to-core-language))
 
   (define (expand-form-to-core-language expr env)
     ;;Interface to the internal expression expander (chi-expr).  Take an
@@ -1700,15 +1975,15 @@
 		   (rtc      (make-collector))
 		   (vtc      (make-collector))
 		   (itc      (env-itc env)))
-	       (let ((expr.core (parametrise ((top-level-context #f)
-					      (inv-collector rtc)
-					      (vis-collector vtc)
-					      (imp-collector itc))
-				  (let ((lexenv.run	'())
-					(lexenv.expand	'()))
-				    (chi-expr expr.stx lexenv.run lexenv.expand)))))
+	       (let ((psi (parametrise ((top-level-context #f)
+					(inv-collector rtc)
+					(vis-collector vtc)
+					(imp-collector itc))
+			    (let ((lexenv.run     '())
+				  (lexenv.expand  '()))
+			      (chi-expr expr.stx lexenv.run lexenv.expand)))))
 		 (seal-rib! rib)
-		 (values expr.core (rtc))))))
+		 (values (psi-core-expr psi) (rtc))))))
 
 	  ((interaction-env? env)
 	   (let ((rib         (interaction-env-rib env))
@@ -1728,62 +2003,77 @@
 	   (assertion-violation __who__ "not an environment" env))))
 
   (define (%chi-interaction-expr expr.stx rib lexenv.run)
-    (receive (e* lexenv.run^ lexenv.expand^ lex* rhs* mod** _kwd* _exp*)
-	(chi-body* (list expr.stx) lexenv.run lexenv.run
-		   '() '() '() '() '() rib #t #f)
-      (let ((expr.core* (%expand-interaction-rhs*/init*
-			 (reverse lex*) (reverse rhs*)
-			 (append (reverse-and-append mod**)
-				 e*)
+    (receive (trailing-init-form*.stx
+	      lexenv.run^ lexenv.expand^
+	      lex* qrhs*
+	      module-init-form**.stx
+	      kwd*.unused internal-export*.unused)
+	(let ((mixed-definitions-and-expressions? #t)
+	      (shadowing-definitions?             #f))
+	  (chi-body* (list expr.stx) lexenv.run lexenv.run
+		     '() '() '() '() '() rib
+		     mixed-definitions-and-expressions?
+		     shadowing-definitions?))
+      (let ((expr*.core (%expand-interaction-qrhs*/init*
+			 (reverse lex*) (reverse qrhs*)
+			 (append (reverse-and-append module-init-form**.stx)
+				 trailing-init-form*.stx)
 			 lexenv.run^ lexenv.expand^)))
-	(let ((expr.core (cond ((null? expr.core*)
+	(let ((expr.core (cond ((null? expr*.core)
 				(build-void))
-			       ((null? (cdr expr.core*))
-				(car expr.core*))
+			       ((null? (cdr expr*.core))
+				(car expr*.core))
 			       (else
-				(build-sequence no-source expr.core*)))))
+				(build-sequence no-source expr*.core)))))
 	  (values expr.core lexenv.run^)))))
 
-  (define (%expand-interaction-rhs*/init* lhs* rhs* init* lexenv.run lexenv.expand)
+  (define (%expand-interaction-qrhs*/init* lhs* qrhs* trailing-init* lexenv.run lexenv.expand)
     ;;Return a list of expressions in the core language.
     ;;
-    (let recur ((lhs* lhs*)
-		(rhs* rhs*))
+    (let recur ((lhs*  lhs*)
+		(qrhs* qrhs*))
       (if (null? lhs*)
 	  (map (lambda (init)
-		 (chi-expr init lexenv.run lexenv.expand))
-	    init*)
-	(let ((lhs (car lhs*))
-	      (rhs (car rhs*)))
-	  (define-inline (%recurse-and-cons ?core-expr)
-	    (cons ?core-expr
-		  (recur (cdr lhs*) (cdr rhs*))))
-	  (case (car rhs)
+		 (psi-core-expr (chi-expr init lexenv.run lexenv.expand)))
+	    trailing-init*)
+	(let ((lhs  (car lhs*))
+	      (qrhs (car qrhs*)))
+	  (define-syntax-rule (%recurse-and-cons ?expr.core)
+	    (cons ?expr.core
+		  (recur (cdr lhs*) (cdr qrhs*))))
+	  (case (car qrhs)
 	    ((defun)
-	     (let ((rhs (chi-defun (cdr rhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
+	     (let ((psi (chi-defun (cdr qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
 	    ((expr)
-	     (let ((rhs (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source lhs rhs))))
+	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
+	    ((untagged-define-expr)
+	     (let ((psi (chi-expr  (cddr qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
 	    ((top-expr)
-	     (let ((core-expr (chi-expr (cdr rhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons core-expr)))
+	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (psi-core-expr psi))))
 	    (else
-	     (error __who__ "invalid" rhs)))))))
+	     (assertion-violation __who__
+	       "invalid qualified RHS while expanding expression" qrhs)))))))
 
   #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
 
 
 (module (expand-r6rs-top-level-make-evaluator)
 
-  (define (expand-r6rs-top-level-make-evaluator expr*)
+  (define (expand-r6rs-top-level-make-evaluator program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level  program, expand it and return a  thunk which, when
     ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
     ;;struct representing the environment after the program execution.
     ;;
     (receive (lib* invoke-code macro* export-subst export-env)
-	(expand-top-level expr*)
+	(expand-top-level program-form*)
       (lambda ()
 	;;Make  sure  that the  code  of  all  the needed  libraries  is
 	;;compiled   and  evaluated.    The  storage   location  gensyms
@@ -1795,7 +2085,7 @@
 	(initial-visit! macro*)
 	;;Convert  the expanded  language  code to  core language  code,
 	;;compile it and evaluate it.
-	(eval-core (expanded->core invoke-code))
+	(compiler.eval-core (expanded->core invoke-code))
 	(make-interaction-env (export-subst->rib export-subst)
 			      (map %export-env-entry->lexenv-entry export-env)
 			      '()))))
@@ -1828,93 +2118,85 @@
       (initial-visit! macro*)
       (values (map library-descriptor lib*)
 	      ;;Convert the expanded language code to core language code.
-	      (compile-core-expr (expanded->core invoke-code))))))
+	      (compiler.compile-core-expr (expanded->core invoke-code))))))
 
 
 ;;;; R6RS program expander
 
 (module (expand-top-level)
 
-  (define (expand-top-level expr*)
+  (define (expand-top-level program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level program, expand it.
     ;;
-    (receive (import-spec* body*)
-	(%parse-top-level-program expr*)
+    (receive (import-spec* option* body*)
+	(%parse-top-level-program program-form*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	  (let ()
-	    (import CORE-BODY-EXPANDER)
-	    (core-body-expander 'all import-spec* body* #t))
+	  (let ((option* (%parse-program-options option*)))
+	    (with-tagged-language (memq 'tagged-language option*)
+	      (let ()
+		(import CORE-BODY-EXPANDER)
+		(core-body-expander 'all import-spec* body* #t))))
 	(values invoke-lib* invoke-code macro* export-subst export-env))))
 
-  (define (%parse-top-level-program expr*)
-    ;;Given a list of  SYNTAX-MATCH expression arguments representing an
-    ;;R6RS top level program, parse it and return 2 values:
+  (define (%parse-top-level-program program-form*)
+    ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
+    ;;level program, possibly with Vicare extensions, parse it and return 3 values:
     ;;
     ;;1. A list of import specifications.
     ;;
-    ;;2. A list of body forms.
+    ;;2. A list of options specifications.
     ;;
-    (syntax-match expr* ()
-      (((?import ?import-spec* ...) body* ...)
+    ;;3. A list of body forms.
+    ;;
+    (syntax-match program-form* ()
+      (((?import  ?import-spec* ...)
+	(?options ?option-spec* ...)
+	?body* ...)
+       (and (eq? (syntax->datum ?import)  'import)
+	    (eq? (syntax->datum ?options) 'options))
+       (values ?import-spec* ?option-spec* ?body*))
+
+      (((?import ?import-spec* ...) ?body* ...)
        (eq? (syntax->datum ?import) 'import)
-       (values ?import-spec* body*))
+       (values ?import-spec* '() ?body*))
 
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
        (syntax-violation 'expander
-	 "invalid syntax of top-level program" (syntax-car expr*)))
+	 "invalid syntax of top-level program" (syntax-car program-form*)))
 
       (_
        (assertion-violation 'expander
 	 "top-level program is missing an (import ---) clause"))))
+
+  (define (%parse-program-options option*)
+    (syntax-match option* ()
+      (() '())
+      ((?opt . ?other*)
+       (symbol? (syntax->datum ?opt))
+       (let ((sym (syntax->datum ?opt)))
+	 (case sym
+	   ((tagged-language)
+	    (cons sym (%parse-program-options ?other*)))
+	   (else
+	    (syntax-violation __who__
+	      "invalid program option" ?opt)))))
+      ))
 
   #| end of module: EXPAND-TOP-LEVEL |# )
 
 (define (expand-top-level->sexp sexp)
   (receive (invoke-lib* invoke-code macro* export-subst export-env)
       (expand-top-level sexp)
-    `((invoke-lib* . ,invoke-lib*)
-      (invoke-code . ,invoke-code)
-      (macro* . ,macro*)
-      (export-subst . ,export-subst)
-      (export-env . ,export-env))))
+    `((invoke-lib*	. ,invoke-lib*)
+      (invoke-code	. ,invoke-code)
+      (macro*		. ,macro*)
+      (export-subst	. ,export-subst)
+      (export-env	. ,export-env))))
 
 
 ;;;; R6RS library expander
-
-(define (boot-library-expand library-sexp)
-  ;;This function  is used  to expand the  libraries composing  the boot
-  ;;image; see "makefile.sps" for details on how it is used.
-  ;;
-  ;;When bootstrapping  the system,  visit-code is  not (and  cannot be)
-  ;;used in the "next" system.  So, we drop it.
-  ;;
-  ;;The returned values are:
-  ;;
-  ;;NAME* -
-  ;;   A list of symbols representing the library name.
-  ;;
-  ;;INVOKE-CODE -
-  ;;    A list  of symbolic  expressions  representing the  body of  the
-  ;;   library.
-  ;;
-  ;;EXPORT-SUBST -
-  ;;   A  subst selecting the bindings  to be exported from  the ones in
-  ;;   EXPORT-ENV.
-  ;;
-  ;;EXPORT-ENV -
-  ;;   Represents the global bindings defined by the library body.
-  ;;
-  (receive (id
-	    name ver
-	    imp-descr* vis-descr* inv-descr*
-	    invoke-code visit-code
-	    export-subst export-env
-	    guard-code guard-descr*
-	    option*)
-      (expand-library library-sexp)
-    (values name invoke-code export-subst export-env)))
 
 (module (expand-library)
   ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
@@ -1932,51 +2214,38 @@
   ;;file from which  the library was loaded; it is  used for information
   ;;purposes.
   ;;
-  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
-  ;;and returning  unspecified values: the  first argument is a  list of
-  ;;symbols from a  library name; the second argument is  null or a list
-  ;;of exact integers representing  the library version.  VERIFY-NAME is
-  ;;meant to  perform some validation  upon the library  name components
+  ;;The optional argument VERIFY-LIBNAME must be a procedure accepting a
+  ;;R6RS  library  name  as  argument;  it  is  meant  to  perform  some
+  ;;validation upon the library name components (especially the version)
   ;;and raise  an exception if  something is wrong; otherwise  it should
   ;;just return.
   ;;
   ;;The returned values are:
   ;;
   ;;UID -
-  ;;   A gensym uniquely identifying this library.
+  ;;  A gensym uniquely identifying this library.
   ;;
-  ;;LIBNAME.IDS -
-  ;;  A list of symbols representing the library name.  For the library:
-  ;;
-  ;;     (library (c i a o)
-  ;;       (export A)
-  ;;       (import (rnrs))
-  ;;       (define A 123))
-  ;;
-  ;;  LIBNAME.IDS is the list (c i a o).
-  ;;
-  ;;LIBNAME.VER -
-  ;;  A  list of exact  integers representing the library  version.  For
-  ;;  the library:
+  ;;LIBNAME -
+  ;;  A R6RS library name.  For the library:
   ;;
   ;;     (library (ciao (1 2))
   ;;       (export A)
   ;;       (import (rnrs))
   ;;       (define A 123))
   ;;
-  ;;  LIBNAME.VER is the list (1 2).
+  ;;  LIBNAME is the list (ciao (1 2)).
   ;;
-  ;;IMPORT-DESC* -
+  ;;IMPORT-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;  to be  imported for the invoke  code.  Each item in the  list is a
   ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;VISIT-DESC* -
+  ;;VISIT-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;  to  be imported for the  visit code.  Each  item in the list  is a
   ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;INVOKE-DESC* -
+  ;;INVOKE-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;   to be  invoked  to  make available  the  values  of the  imported
   ;;  variables.   Each item in  the list  is a "library  descriptor" as
@@ -2001,7 +2270,7 @@
   ;;   A predicate  expression  in the  core  language representing  the
   ;;  stale-when tests from the body of the library.
   ;;
-  ;;GUARD-DESC* -
+  ;;GUARD-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;  to  be invoked for  the STALE-WHEN  code; these are  the libraries
   ;;  accumulated  by the  INV-COLLECTOR while expanding  the STALE-WHEN
@@ -2082,62 +2351,69 @@
   ;;
   (case-define expand-library
     ((library-sexp)
-     (expand-library library-sexp #f       (lambda (ids ver) (values))))
+     (expand-library library-sexp #f       (lambda (libname) (void))))
     ((library-sexp filename)
-     (expand-library library-sexp filename (lambda (ids ver) (values))))
-    ((library-sexp filename verify-name)
-     (receive (libname.ids     ;list of library name symbols
-	       libname.version ;null or list of version numbers
+     (expand-library library-sexp filename (lambda (libname) (void))))
+    ((library-sexp filename verify-libname)
+     (receive (libname
 	       import-lib* invoke-lib* visit-lib*
 	       invoke-code macro*
 	       export-subst export-env
 	       guard-code guard-lib*
 	       option*)
-	 (let ()
-	   (import CORE-LIBRARY-EXPANDER)
-	   (core-library-expander library-sexp verify-name))
+	 (parametrise ((source-code-location (or filename (source-code-location))))
+	   (let ()
+	     (import CORE-LIBRARY-EXPANDER)
+	     (core-library-expander library-sexp verify-libname)))
        (let ((uid		(gensym)) ;library unique-symbol identifier
-
-	     ;;From  list   of  LIBRARY  records  to   list  of  library
-	     ;;descriptors; each descriptor is a list:
-	     ;;
-	     ;;   (?library-uid ?library-name-ids ?library-version)
-	     ;;
-	     (import-desc*	(map library-descriptor import-lib*))
-	     (visit-desc*	(map library-descriptor visit-lib*))
-	     (invoke-desc*	(map library-descriptor invoke-lib*))
-	     (guard-desc*	(map library-descriptor guard-lib*))
-
+	     (import-libdesc*	(map library-descriptor import-lib*))
+	     (visit-libdesc*	(map library-descriptor visit-lib*))
+	     (invoke-libdesc*	(map library-descriptor invoke-lib*))
+	     (guard-libdesc*	(map library-descriptor guard-lib*))
 	     ;;Thunk to eval to visit the library.
 	     (visit-proc	(lambda ()
+				  ;;This initial visit is performed whenever a source
+				  ;;library is visited.
 				  (initial-visit! macro*)))
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc	(lambda ()
-				  (eval-core (expanded->core invoke-code))))
-	     (visit-code	(%build-visit-code macro*)))
-	 (install-library uid libname.ids libname.version
-			  import-desc* visit-desc* invoke-desc*
+				  (compiler.eval-core (expanded->core invoke-code))))
+	     ;;This visit  code is compiled and  stored in FASL files;  the resulting
+	     ;;code objects  are the  ones evaluated whenever  a compiled  library is
+	     ;;loaded and visited.
+	     (visit-code	(%build-visit-code macro*))
+	     (visible?		#t))
+	 (install-library uid libname
+			  import-libdesc* visit-libdesc* invoke-libdesc*
 			  export-subst export-env
 			  visit-proc invoke-proc
 			  visit-code invoke-code
-			  guard-code guard-desc*
-			  #t #;visible?
-			  filename option*)
-	 (values uid libname.ids libname.version
-		 import-desc* visit-desc* invoke-desc*
+			  guard-code guard-libdesc*
+			  visible? filename option*)
+	 (values uid libname
+		 import-libdesc* visit-libdesc* invoke-libdesc*
 		 invoke-code visit-code
 		 export-subst export-env
-		 guard-code guard-desc*
+		 guard-code guard-libdesc*
 		 option*)))))
 
   (define (%build-visit-code macro*)
-    ;;Return a sexp  representing code that initialises  the bindings of
-    ;;macro  definitions in  the  core language:  the  visit code;  code
-    ;;evaluated whenever the library is visited; each library is visited
-    ;;only once the first time an exported binding is used.  MACRO* is a
-    ;;list of sublists, each having the format:
+    ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
+    ;;definitions in the  core language: the visit code; code  evaluated whenever the
+    ;;library  is visited;  each  library is  visited  only once  the  first time  an
+    ;;exported binding is used.
     ;;
-    ;;   (?loc . (?obj . ?src-code))
+    ;;MACRO* is a list of sublists.  The entries with format:
+    ;;
+    ;;   (?loc . (?obj . ?core-code))
+    ;;
+    ;;represent  macros  defined by  DEFINE-SYNTAX;  here  we  build code  to  assign
+    ;;?CORE-CODE to ?LOC.  The entries with format:
+    ;;
+    ;;   (#f   . ?core-code)
+    ;;
+    ;;are  the result  of  expanding  BEGIN-FOR-SYNTAX macro  uses;  here we  include
+    ;;?CORE-CODE as is in the output.
     ;;
     ;;The returned sexp looks like this (one SET! for every macro):
     ;;
@@ -2158,43 +2434,45 @@
     (if (null? macro*)
 	(build-void)
       (build-sequence no-source
-	(map (lambda (x)
-	       (let ((loc (car x))
-		     (src (cddr x)))
-		 (build-global-assignment no-source loc src)))
+	(map (lambda (entry)
+	       (let ((loc (car entry)))
+		 (if loc
+		     (let ((rhs.core (cddr entry)))
+		       (build-global-assignment no-source
+			 loc rhs.core))
+		   (let ((expr.core (cdr entry)))
+		     expr.core))))
 	  macro*))))
 
   #| end of module: EXPAND-LIBRARY |# )
 
 (define (expand-library->sexp libsexp)
-  (receive (uid
-	    libname.ids libname.version
-	    import-desc* visit-desc* invoke-desc*
+  (receive (uid libname
+	    import-libdesc* visit-libdesc* invoke-libdesc*
 	    invoke-code visit-code
 	    export-subst export-env
-	    guard-code guard-desc*
+	    guard-code guard-libdesc*
 	    option*)
       (expand-library libsexp)
-    `((uid . ,uid)
-      (libname.ids . ,libname.ids)
-      (libname.version . ,libname.version)
-      (import-desc* . ,import-desc*)
-      (visit-desc* . ,visit-desc*)
-      (invoke-desc* . ,invoke-desc*)
-      (invoke-code . ,invoke-code)
-      (visit-code . ,visit-code)
-      (export-subst . ,export-subst)
-      (export-env . ,export-env)
-      (guard-code . ,guard-code)
-      (guard-desc* . ,guard-desc*)
-      (option* . ,option*))))
+    `((uid		. ,uid)
+      (libname		. ,libname)
+      (import-libdesc*	. ,import-libdesc*)
+      (visit-libdesc*	. ,visit-libdesc*)
+      (invoke-libdesc*	. ,invoke-libdesc*)
+      (invoke-code	. ,invoke-code)
+      (visit-code	. ,visit-code)
+      (export-subst	. ,export-subst)
+      (export-env	. ,export-env)
+      (guard-code	. ,guard-code)
+      (guard-libdesc*	. ,guard-libdesc*)
+      (option*		. ,option*))))
 
 
 (module CORE-LIBRARY-EXPANDER
   (core-library-expander)
   (define-constant __who__ 'core-library-expander)
 
-  (define (core-library-expander library-sexp verify-name)
+  (define (core-library-expander library-sexp verify-libname)
     ;;Given a  SYNTAX-MATCH expression  argument representing  a LIBRARY
     ;;form:
     ;;
@@ -2203,38 +2481,31 @@
     ;;parse  it  and return  multiple  values  representing the  library
     ;;contents.
     ;;
-    ;;VERIFY-NAME  must  be  a   procedure  accepting  2  arguments  and
-    ;;returning  unspecified values:
+    ;;The optional argument VERIFY-LIBNAME must be a procedure accepting
+    ;;a  R6RS library  name as  argument; it  is meant  to perform  some
+    ;;validation  upon  the  library  name  components  (especially  the
+    ;;version) and raise  an exception if something  is wrong; otherwise
+    ;;it should just return.
     ;;
-    ;;* The first argument is a list of symbols from a library name.
-    ;;
-    ;;*  The  second argument  is  null  or  a  list of  exact  integers
-    ;;  representing the library version.
-    ;;
-    ;;VERIFY-NAME is meant  to perform some validation  upon the library
-    ;;name  components and  raise an  exception if  something is  wrong;
-    ;;otherwise it should just return.
-    ;;
-    (receive (library-name* export-spec* import-spec* body* libopt*)
+    (receive (libname export-spec* import-spec* body* libopt*)
 	(%parse-library library-sexp)
-      (receive (libname.ids libname.version)
-	  (%parse-library-name library-name*)
-	(verify-name libname.ids libname.version)
-	(let* ((option* (%parse-library-options libopt*))
-	       (stale-clt       (%make-stale-collector)))
-	  (receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	      (parametrise ((stale-when-collector stale-clt))
+      (%validate-library-name libname verify-libname)
+      (let* ((option*    (%parse-library-options libopt*))
+	     (stale-clt  (%make-stale-collector)))
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
+	    (parametrise ((stale-when-collector    stale-clt))
+	      (with-tagged-language (memq 'tagged-language option*)
 		(let ((mixed-definitions-and-expressions? #f))
 		  (import CORE-BODY-EXPANDER)
 		  (core-body-expander export-spec* import-spec* body*
-				      mixed-definitions-and-expressions?)))
-	    (receive (guard-code guard-lib*)
-		(stale-clt)
-	      (values libname.ids libname.version
-		      import-lib* invoke-lib* visit-lib*
-		      invoke-code macro* export-subst
-		      export-env guard-code guard-lib*
-		      option*)))))))
+				      mixed-definitions-and-expressions?))))
+	  (receive (guard-code guard-lib*)
+	      (stale-clt)
+	    (values (syntax->datum libname)
+		    import-lib* invoke-lib* visit-lib*
+		    invoke-code macro* export-subst
+		    export-env guard-code guard-lib*
+		    option*))))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
@@ -2277,18 +2548,10 @@
       (_
        (syntax-violation __who__ "malformed library" library-sexp))))
 
-  (define (%parse-library-name libname)
-    ;;Given a  SYNTAX-MATCH expression  argument LIBNAME  representing a
-    ;;library name as defined by R6RS, return 2 values:
-    ;;
-    ;;1. A list of symbols representing the name identifiers.
-    ;;
-    ;;2. A list of fixnums representing the version of the library.
-    ;;
-    ;;Example:
-    ;;
-    ;;   (%parse-library-name (foo bar (1 2 3)))
-    ;;   => (foo bar) (1 2 3)
+  (define (%validate-library-name libname verify-libname)
+    ;;Given a SYNTAX-MATCH expression argument LIBNAME which is meant to
+    ;;represent a R6RS library name: validate it and, if success, return
+    ;;it; otherwise raise ane exception.
     ;;
     (receive (name* ver*)
 	(let recur ((sexp libname))
@@ -2309,8 +2572,8 @@
 	    (_
 	     (syntax-violation __who__ "invalid library name" libname))))
       (when (null? name*)
-	(syntax-violation __who__ "empty library name" libname))
-      (values name* ver*)))
+	(syntax-violation __who__ "empty library name" libname)))
+    (verify-libname (syntax->datum libname)))
 
   (define (%parse-library-options libopt*)
     (syntax-match libopt* ()
@@ -2318,10 +2581,14 @@
       ((?opt . ?other*)
        (symbol? (syntax->datum ?opt))
        (let ((sym (syntax->datum ?opt)))
-	 (if (eq? sym 'visit-upon-loading)
-	     (cons sym (%parse-library-options ?other*))
-	   (syntax-violation __who__
-	     "invalid library option" ?opt))))
+	 (case sym
+	   ((visit-upon-loading)
+	    (cons sym (%parse-library-options ?other*)))
+	   ((tagged-language)
+	    (cons sym (%parse-library-options ?other*)))
+	   (else
+	    (syntax-violation __who__
+	      "invalid library option" ?opt)))))
       ))
 
   (module (%make-stale-collector)
@@ -2375,8 +2642,8 @@
 
 (module CORE-BODY-EXPANDER
   (core-body-expander)
-  ;;Both the R6RS  programs expander and the R6RS  library expander make
-  ;;use of this module to expand the body forms.
+  ;;Both the R6RS  programs expander and the  R6RS library expander make  use of this
+  ;;module to expand the body forms.
   ;;
   ;;Let's take this library as example:
   ;;
@@ -2389,70 +2656,64 @@
   ;;     (define var2 2)
   ;;     (define-syntax (mac stx) 3))
   ;;
-  ;;When expanding the body of a library: the argument EXPORT-SPEC* is a
-  ;;SYNTAX-MATCH  input argument  representing a  set of  library export
-  ;;specifications; when  expanding the body of  a program: EXPORT-SPEC*
-  ;;is the symbol "all".
+  ;;When expanding the body of a library: the argument EXPORT-SPEC* is a SYNTAX-MATCH
+  ;;input  argument  representing  a  set  of  library  export  specifications;  when
+  ;;expanding the body of a program: EXPORT-SPEC* is the symbol "all".
   ;;
-  ;;IMPORT-SPEC* is a SYNTAX-MATCH input  argument representing a set of
-  ;;library import specifications.
+  ;;IMPORT-SPEC*  is a  SYNTAX-MATCH input  argument  representing a  set of  library
+  ;;import specifications.
   ;;
-  ;;BODY-SEXP* is  a SYNTAX-MATCH  input argument representing  the body
-  ;;forms.
+  ;;BODY-SEXP* is a SYNTAX-MATCH input argument representing the body forms.
   ;;
-  ;;MIXED-DEFINITIONS-AND-EXPRESSIONS? is true  when expanding a program
-  ;;and  false when  expanding  a library;  when  true mixing  top-level
-  ;;definitions and expressions is fine.
+  ;;MIXED-DEFINITIONS-AND-EXPRESSIONS?  is true  when expanding  a program  and false
+  ;;when expanding a library; when  true mixing top-level definitions and expressions
+  ;;is fine.
   ;;
   ;;Return multiple values:
   ;;
-  ;;1. A list of LIBRARY records representing the collection accumulated
-  ;;    by  the  IMP-COLLECTOR.   The records  represent  the  libraries
-  ;;   imported by the IMPORT syntaxes.
+  ;;1..A  list of  LIBRARY records  representing  the collection  accumulated by  the
+  ;;   IMP-COLLECTOR.   The records  represent the libraries  imported by  the IMPORT
+  ;;   syntaxes.
   ;;
-  ;;2. A list of LIBRARY records representing the collection accumulated
-  ;;    by  the  INV-COLLECTOR.   The records  represent  the  libraries
-  ;;   exporting the global variable bindings referenced in the run-time
-  ;;   code.
+  ;;2..A  list of  LIBRARY records  representing  the collection  accumulated by  the
+  ;;    INV-COLLECTOR.  The  records  represent the  libraries  exporting the  global
+  ;;   variable bindings referenced in the run-time code.
   ;;
-  ;;3. A list of LIBRARY records representing the collection accumulated
-  ;;    by  the  VIS-COLLECTOR.   The records  represent  the  libraries
-  ;;    exporting  the  global   variable  bindings  referenced  in  the
-  ;;   right-hand sides of syntax definitions.
+  ;;3..A  list of  LIBRARY records  representing  the collection  accumulated by  the
+  ;;    VIS-COLLECTOR.  The  records  represent the  libraries  exporting the  global
+  ;;   variable bindings referenced in the right-hand sides of syntax definitions.
   ;;
-  ;;4.  INVOKE-CODE  is  a   core  language  LIBRARY-LETREC*  expression
-  ;;   representing the  result of expanding the input  source.  For the
-  ;;   library in the example INVOKE-CODE is:
+  ;;4..INVOKE-CODE  is a  core language  LIBRARY-LETREC* expression  representing the
+  ;;    result  of expanding  the  input  source.  For  the  library  in the  example
+  ;;   INVOKE-CODE is:
   ;;
   ;;      (library-letrec*
   ;;          ((lex.var1 loc.lex.var1 '1)
   ;;           (lex.var2 loc.lec.var2 '2))
   ;;        ((primitive void)))
   ;;
-  ;;5. MACRO* is  a list of bindings representing the  macros defined in
-  ;;   the code.  For the example library MACRO* is:
+  ;;5..MACRO* is a list of bindings representing the macros defined in the code.  For
+  ;;   the example library MACRO* is:
   ;;
   ;;      ((lab.mac #<procedure> .
   ;;         (annotated-case-lambda (#'lambda (#'stx) #'3)
   ;;           ((#'stx) '3)))
   ;;
-  ;;6. EXPORT-SUBST is an alist with entries having the format:
+  ;;6..EXPORT-SUBST is an alist with entries having the format:
   ;;
   ;;      (?name . ?label)
   ;;
-  ;;   where:  ?NAME is a  symbol representing  the external name  of an
-  ;;    exported   syntactic  binding;  ?LABEL  is   a  gensym  uniquely
-  ;;    identifying such  syntactic  binding.  For  the  library in  the
-  ;;   example, EXPORT-SUBST is:
+  ;;    where: ?NAME  is  a symbol  representing  the external  name  of an  exported
+  ;;    syntactic binding;  ?LABEL is  a gensym  uniquely identifying  such syntactic
+  ;;   binding.  For the library in the example, EXPORT-SUBST is:
   ;;
   ;;      ((mac      . lab.mac)
   ;;       (the-var2 . lab.var2)
   ;;       (var1     . lab.var1))
   ;;
-  ;;7. EXPORT-ENV is the lexical environment of bindings exported by the
-  ;;   library.   Its format is different  from the one of  the LEXENV.*
-  ;;   values used throughout the expansion process.  For the library in
-  ;;   the example, EXPORT-ENV is:
+  ;;7..EXPORT-ENV is  the lexical  environment of bindings  exported by  the library.
+  ;;   Its format  is different from the  one of the LEXENV.*  values used throughout
+  ;;   the expansion process.  For the library in the example, EXPORT-ENV is:
   ;;
   ;;      ((lab.var1 global       . loc.lex.var1)
   ;;       (lab.var2 global       . loc.lex.var2)
@@ -2463,14 +2724,7 @@
     (parametrise ((imp-collector      itc)
 		  (top-level-context  #f))
       (define rib
-	;;NAME-VEC  is a  vector  of symbols  representing the  external
-	;;names  of the  imported bindings.   LABEL-VEC is  a vector  of
-	;;label gensyms uniquely associated to the imported bindings.
-	(receive (name-vec label-vec)
-	    (let ()
-	      (import PARSE-IMPORT-SPEC)
-	      (parse-import-spec* import-spec*))
-	  (make-top-rib name-vec label-vec)))
+	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap x)
 	(make-<stx> x TOP-MARK* (list rib) '()))
       (let ((body-stx*	(map wrap body-sexp*))
@@ -2478,42 +2732,41 @@
 	    (vtc	(make-collector)))
 	(parametrise ((inv-collector  rtc)
 		      (vis-collector  vtc))
-	  ;;INIT-FORM-STX* is a list  of syntax objects representing the
-	  ;;trailing non-definition  forms from the body  of the library
-	  ;;and the body of the internal modules.
+	  ;;INIT*.STX  is  a  list  of   syntax  objects  representing  the  trailing
+	  ;;non-definition forms  from the body  of the library  and the body  of the
+	  ;;internal modules.
 	  ;;
-	  ;;LEX* is a list of gensyms  to be used in binding definitions
-	  ;;when  building core  language symbolic  expressions for  the
-	  ;;glocal DEFINE forms  in the library.  There is  a gensym for
-	  ;;every item in RHS*.
+	  ;;LEX*  is a  list of  left-hand-side  lex gensyms  to be  used in  binding
+	  ;;definitions  when building  core  language symbolic  expressions for  the
+	  ;;glocal DEFINE forms in the library.  There is a lex gensym for every item
+	  ;;in QRHS*.
 	  ;;
-	  ;;QRHS* is  a list of qualified  right-hand sides representing
-	  ;;the right-hand side expressions in the DEFINE forms from the
-	  ;;body of the library.
+	  ;;QRHS* is a list of qualified right-hand sides representing the right-hand
+	  ;;side expressions in the DEFINE forms from the body of the library.
 	  ;;
-	  ;;INTERNAL-EXPORT* is  a list of identifiers  exported through
-	  ;;internal EXPORT syntaxes rather than  the export spec at the
-	  ;;beginning of the library.
+	  ;;INTERNAL-EXPORT*  is  a list  of  identifiers  exported through  internal
+	  ;;EXPORT  syntaxes rather  than the  export spec  at the  beginning of  the
+	  ;;library.
 	  ;;
-	  (receive (init-form-stx* lexenv.run lexenv.expand lex* qrhs* internal-export*)
-	      (%chi-library-internal body-stx* rib mixed-definitions-and-expressions?)
+	  (receive (init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
+	      (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
 	    (receive (export-name* export-id*)
-		(let ()
-		  (import PARSE-EXPORT-SPEC)
-		  (parse-export-spec* (if (%expanding-program? export-spec*)
-					  (map wrap (top-marked-symbols rib))
-					(append (map wrap export-spec*)
-						internal-export*))))
+		(%parse-all-export-specs export-spec* internal-export* wrap rib)
 	      (seal-rib! rib)
-	      ;;INIT-FORM-CORE*  is a  list  of  core language  symbolic
-	      ;;expressions representing the trailing init forms.
-	      ;;
-	      ;;RHS-FORM-CORE*  is  a  list of  core  language  symbolic
+	      ;;RHS*.PSI is a  list of PSI structs containing  core language symbolic
 	      ;;expressions representing the DEFINE right-hand sides.
 	      ;;
-	      ;;We want order here!?!
-	      (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
-		     (rhs-form-core*   (chi-qrhs*  qrhs*  lexenv.run lexenv.expand)))
+	      ;;INIT*.PSI is a list of  PSI structs containing core language symbolic
+	      ;;expressions representing the trailing init forms.
+	      ;;
+	      ;;We want order here?  Yes.  We  expand first the definitions, then the
+	      ;;init forms;  so that  tag identifiers  have been  put where  they are
+	      ;;needed.
+	      (let* ((rhs*.psi  (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
+		     (init*.psi (chi-expr* init*.stx lexenv.run lexenv.expand)))
+		;;QUESTION Why do we unseal the rib  if we do not use it anymore?  Is
+		;;it an  additional check of  its internal integrity?   (Marco Maggi;
+		;;Sun Mar 23, 2014)
 		(unseal-rib! rib)
 		(let ((loc*          (map gensym-for-storage-location lex*))
 		      (export-subst  (%make-export-subst export-name* export-id*)))
@@ -2522,60 +2775,86 @@
 		    (%validate-exports export-spec* export-subst export-env)
 		    (let ((invoke-code (build-library-letrec* no-source
 					 mixed-definitions-and-expressions?
-					 lex* loc* rhs-form-core*
-					 (if (null? init-form-core*)
+					 lex* loc* (map psi-core-expr rhs*.psi)
+					 (if (null? init*.psi)
 					     (build-void)
-					   (build-sequence no-source init-form-core*)))))
+					   (build-sequence no-source
+					     (map psi-core-expr init*.psi))))))
 		      (values (itc) (rtc) (vtc)
 			      invoke-code macro* export-subst export-env)))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
 
-  (define-inline (%chi-library-internal body-stx* rib mixed-definitions-and-expressions?)
-    ;;Perform  the expansion  of the  top-level forms  in the  body; the
-    ;;right-hand sides  of DEFINE  syntaxes are  not expanded  here; the
-    ;;trailing init forms are not expanded here.
+  (define (%process-import-specs-build-top-level-rib import-spec*)
+    ;;Parse the import  specifications from a library's IMPORT clause  or a program's
+    ;;standalone  IMPORT  syntax;  build  and return  the  top-level  "<rib>"  struct
+    ;;defining the top-level environment.
     ;;
-    (receive (trailing-init-form-stx*
-	      lexenv.run lexenv.expand lex*
-	      qrhs* module-init-form-stx** unused-kwd* internal-export*)
+    (import PARSE-IMPORT-SPEC)
+    ;;NAME-VEC is a vector of symbols representing the external names of the imported
+    ;;bindings.  LABEL-VEC  is a vector of  label gensyms uniquely associated  to the
+    ;;imported bindings.
+    (receive (name-vec label-vec)
+	(parse-import-spec* import-spec*)
+      (make-top-rib name-vec label-vec)))
+
+  (define (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
+    ;;Perform  the preliminary  expansion of  the top-level  forms in  the body;  the
+    ;;right-hand  sides of  DEFINE syntaxes  are *not*  expanded here;  the body  and
+    ;;module trailing init forms are *not* expanded here.
+    ;;
+    (receive (trailing-init-form*.stx
+	      lexenv.run lexenv.expand
+	      lex* qrhs*
+	      module-init-form**.stx unused-kwd* internal-export*)
 	(let ((shadowing-definitions? #t))
 	  (chi-body* body-stx* '() '() '() '() '() '() '() rib
 		     mixed-definitions-and-expressions?
 		     shadowing-definitions?))
-      ;;We build  a list of  init form  putting first the  trailing init
-      ;;forms from the internal MODULE  syntaxes, then the trailing init
-      ;;forms from the library body.
-      (let ((init-form-stx* (append (reverse-and-append module-init-form-stx**)
-				    trailing-init-form-stx*)))
-	(values init-form-stx*
+      ;;We build a list  of init form putting first the trailing  init forms from the
+      ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
+      ;;library/program body.
+      (let ((init-form*.stx (append (reverse-and-append module-init-form**.stx)
+				    trailing-init-form*.stx)))
+	(values init-form*.stx
 		lexenv.run lexenv.expand
-		;;This  is a  list  of  gensyms to  be  used in  binding
-		;;definitions  when  building   core  language  symbolic
-		;;expressions  for  the  DEFINE forms  in  the  library.
-		;;There is a gensym for every item in QRHS*.
+		;;This is  a list of gensyms  to be used in  binding definitions when
+		;;building core language symbolic expressions for the DEFINE forms in
+		;;the library.  There is a gensym for every item in QRHS*.
 		(reverse lex*)
-		;;This  is   a  list   of  qualified   right-hand  sides
-		;;representing  the right-hand  side expressions  in the
-		;;DEFINE forms from the body of the library.
+		;;This  is a  list  of qualified  right-hand  sides representing  the
+		;;right-hand side  expressions in the  DEFINE forms from the  body of
+		;;the library.
 		(reverse qrhs*)
-		;;This  is  a  list   of  identifiers  exported  through
-		;;internal EXPORT  syntaxes rather than the  export spec
-		;;at the beginning of the library.
+		;;This   is   a  list   of   identifiers   representing  the   export
+		;;specifications declared using the EXPORT syntax in the body.
 		internal-export*))))
 
+  (define (%parse-all-export-specs export-spec* internal-export* wrap top-level-rib)
+    ;;Parse all the export specifications.
+    ;;
+    ;;EXPORT-SPEC*  must   be  a   list  of   identifiers  representing   the  export
+    ;;specifications declared in the EXPORT clause of a LIBRARY form.
+    ;;
+    ;;INTERNAL-EXPORT*  must  be  a  list  of  identifiers  representing  the  export
+    ;;specifications declared using the EXPORT syntax in the body.
+    ;;
+    (import PARSE-EXPORT-SPEC)
+    (parse-export-spec* (if (%expanding-program? export-spec*)
+			    (map wrap (top-marked-symbols top-level-rib))
+			  (append (map wrap export-spec*)
+				  internal-export*))))
+
   (define (%make-export-subst export-name* export-id*)
-    ;;For every  identifier in  ID: get  the rib of  ID and  extract the
-    ;;lexical environment from it; search  the environment for a binding
-    ;;associated  to ID  and acquire  its label  (a gensym).   Return an
-    ;;alist with entries having the format:
+    ;;For  every  identifier in  ID:  get  the rib  of  ID  and extract  the  lexical
+    ;;environment from it; search the environment  for a binding associated to ID and
+    ;;acquire its label (a gensym).  Return an alist with entries having the format:
     ;;
     ;;   (?export-name . ?label)
     ;;
-    ;;where ?EXPORT-NAME is  a symbol representing the  external name of
-    ;;an exported  binding, ?LABEL is the  corresponding gensym uniquely
-    ;;identifying the binding.
+    ;;where ?EXPORT-NAME  is a symbol representing  the external name of  an exported
+    ;;binding, ?LABEL is the corresponding gensym uniquely identifying the binding.
     ;;
     (map (lambda (export-name export-id)
 	   (let ((label (id->label export-id)))
@@ -2585,21 +2864,19 @@
       export-name* export-id*))
 
   (module (%make-export-env/macro*)
-    ;;For  each entry  in LEXENV.RUN:  convert  the LEXENV  entry to  an
-    ;;EXPORT-ENV  entry,  accumulating   EXPORT-ENV;  if  the  syntactic
-    ;;binding is  a macro or  compile-time value: accumulate  the MACRO*
-    ;;alist.
+    ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an EXPORT-ENV entry,
+    ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or compile-time
+    ;;value: accumulate the MACRO* alist.
     ;;
-    ;;Notice that EXPORT-ENV contains an  entry for every global lexical
-    ;;variable, both the exported ones and the non-exported ones.  It is
-    ;;responsibility  of   the  EXPORT-SUBST   to  select   the  entries
-    ;;representing the exported bindings.
+    ;;Notice that  EXPORT-ENV contains  an entry for  every global  lexical variable,
+    ;;both the exported ones and the  non-exported ones.  It is responsibility of the
+    ;;EXPORT-SUBST to select the entries representing the exported bindings.
     ;;
-    ;;LEX* must  be a  list of gensyms  representing the  global lexical
-    ;;variables bindings.
+    ;;LEX*  must be  a  list of  gensyms representing  the  global lexical  variables
+    ;;binding names.
     ;;
-    ;;LOC* must  be a list  of storage  location gensyms for  the global
-    ;;lexical variables: there must be a loc for every lex in LEX*.
+    ;;LOC*  must  be a  list  of  storage location  gensyms  for  the global  lexical
+    ;;variables: there must be a loc in LOC* for every lex in LEX*.
     ;;
     (define (%make-export-env/macro* lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
@@ -2612,9 +2889,8 @@
 		 (binding  (lexenv-entry-binding-descriptor entry)))
 	    (case (syntactic-binding-type binding)
 	      ((lexical)
-	       ;;This binding is  a lexical variable.  When  we import a
-	       ;;lexical binding from another  library, we must see such
-	       ;;entry as "global".
+	       ;;This  binding is  a  lexical  variable.  When  we  import a  lexical
+	       ;;binding from another library, we must see such entry as "global".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2624,9 +2900,8 @@
 	       ;;
 	       ;;   (?label ?type . ?loc)
 	       ;;
-	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
-	       ;;"global"; notice that the entries of type "mutable" are
-	       ;;forbidden to be exported.
+	       ;;where ?TYPE is  the symbol "mutable" or the  symbol "global"; notice
+	       ;;that the entries of type "mutable" are forbidden to be exported.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
@@ -2638,10 +2913,9 @@
 		       macro*)))
 
 	      ((local-macro)
-	       ;;When we  define a binding for  a non-identifier syntax:
-	       ;;the local code sees it  as "local-macro".  If we export
-	       ;;such   binding:  the   importer  must   see  it   as  a
-	       ;;"global-macro".
+	       ;;When we define a binding for a non-identifier syntax: the local code
+	       ;;sees it as  "local-macro".  If we export such  binding: the importer
+	       ;;must see it as a "global-macro".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2661,10 +2935,9 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-macro!)
-	       ;;When we define a binding  for an identifier syntax: the
-	       ;;local  code sees  it as  "local-macro!".  If  we export
-	       ;;such   binding:  the   importer  must   see  it   as  a
-	       ;;"global-macro!".
+	       ;;When we  define a binding for  an identifier syntax: the  local code
+	       ;;sees it as "local-macro!".  If  we export such binding: the importer
+	       ;;must see it as a "global-macro!".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2684,10 +2957,9 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-ctv)
-	       ;;When  we  define a  binding  for  a compile-time  value
-	       ;;(CTV): the  local code sees  it as "local-ctv".   If we
-	       ;;export  such binding:  the importer  must see  it as  a
-	       ;;"global-ctv".
+	       ;;When we define  a binding for a compile-time value  (CTV): the local
+	       ;;code  sees  it as  "local-ctv".   If  we  export such  binding:  the
+	       ;;importer must see it as a "global-ctv".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2707,12 +2979,28 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      (($rtd $module $fluid $synonym)
-	       ;;Just add the entry "as is" from the lexical environment
-	       ;;to the EXPORT-ENV.
+	       ;;Just  add the  entry "as  is" from  the lexical  environment to  the
+	       ;;EXPORT-ENV.
 	       ;;
 	       (loop (cdr lexenv.run)
 		     (cons entry export-env)
 		     macro*))
+
+	      ((begin-for-syntax)
+	       ;;This entry is the result of expanding BEGIN-FOR-SYNTAX macro use; we
+	       ;;want this code to be part of the visit code.
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (begin-for-syntax . ?expanded-expr))
+	       ;;
+	       ;;add to the MACRO* an entry like:
+	       ;;
+	       ;;   (#f . ?expanded-expr)
+	       ;;
+	       (loop (cdr lexenv.run)
+		     export-env
+		     (cons (cons #f (syntactic-binding-value binding)) macro*)))
 
 	      (else
 	       (assertion-violation 'core-body-expander
@@ -2721,9 +3009,8 @@
 		 (syntactic-binding-value binding))))))))
 
     (define (%lookup lexical-gensym lex* loc*)
-      ;;Search for  LEXICAL-GENSYM in the  list LEX*: when  found return
-      ;;the corresponding  gensym from LOC*.  LEXICAL-GENSYM  must be an
-      ;;item in LEX*.
+      ;;Search  for  LEXICAL-GENSYM   in  the  list  LEX*:  when   found  return  the
+      ;;corresponding gensym from LOC*.  LEXICAL-GENSYM must be an item in LEX*.
       ;;
       (if (pair? lex*)
 	  (if (eq? lexical-gensym (car lex*))
@@ -2828,7 +3115,7 @@
 	   (and (eq? (syntax->datum ?prefix) 'prefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if (strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "prefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (external*  (map (lambda (id)
@@ -2846,7 +3133,7 @@
 	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if (strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "deprefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (prefix.len (string-length prefix.str))
@@ -2872,7 +3159,7 @@
 	   (and (eq? (syntax->datum ?suffix) 'suffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if (strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "suffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (external*  (map (lambda (id)
@@ -2890,7 +3177,7 @@
 	   (and (eq? (syntax->datum ?desuffix) 'desuffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if (strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "desuffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (suffix.len (string-length suffix.str))
@@ -3121,8 +3408,8 @@
 
 	((?rename ?import-set (?old-name* ?new-name*) ...)
 	 (and (eq? (syntax->datum ?rename) 'rename)
-	      (for-all id-stx? ?old-name*)
-	      (for-all id-stx? ?new-name*))
+	      (for-all symbol-syntax? ?old-name*)
+	      (for-all symbol-syntax? ?new-name*))
 	 (let ((subst       (%recurse ?import-set))
 	       (?old-name*  (map syntax->datum ?old-name*))
 	       (?new-name*  (map syntax->datum ?new-name*)))
@@ -3135,13 +3422,13 @@
 
 	((?except ?import-set ?sym* ...)
 	 (and (eq? (syntax->datum ?except) 'except)
-	      (for-all id-stx? ?sym*))
+	      (for-all symbol-syntax? ?sym*))
 	 (let ((subst (%recurse ?import-set)))
 	   (rem* (map syntax->datum ?sym*) subst)))
 
 	((?only ?import-set ?name* ...)
 	 (and (eq? (syntax->datum ?only) 'only)
-	      (for-all id-stx? ?name*))
+	      (for-all symbol-syntax? ?name*))
 	 (let* ((subst  (%recurse ?import-set))
 		(name*  (map syntax->datum ?name*))
 		(name*  (remove-dups name*))
@@ -3150,7 +3437,7 @@
 
 	((?prefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?prefix) 'prefix)
-	      (id-stx? ?prefix))
+	      (symbol-syntax? ?prefix))
 	 (let ((subst   (%recurse ?import-set))
 	       (prefix  (symbol->string (syntax->datum ?the-prefix))))
 	   (map (lambda (x)
@@ -3161,8 +3448,8 @@
 
 	((?deprefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
-	      (id-stx? ?the-prefix))
-	 (if (strict-r6rs)
+	      (symbol-syntax? ?the-prefix))
+	 (if (option.strict-r6rs)
 	     (%local-synner "deprefix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
@@ -3184,8 +3471,8 @@
 
 	((?suffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?suffix) 'suffix)
-	      (id-stx? ?suffix))
-	 (if (strict-r6rs)
+	      (symbol-syntax? ?suffix))
+	 (if (option.strict-r6rs)
 	     (%local-synner "suffix import specification forbidden in strict R6RS mode")
 	   (let ((subst   (%recurse ?import-set))
 		 (suffix  (symbol->string (syntax->datum ?the-suffix))))
@@ -3197,8 +3484,8 @@
 
 	((?desuffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?desuffix) 'desuffix)
-	      (id-stx? ?the-suffix))
-	 (if (strict-r6rs)
+	      (symbol-syntax? ?the-suffix))
+	 (if (option.strict-r6rs)
 	     (%local-synner "desuffix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (suffix.str  (symbol->string (syntax->datum ?the-suffix)))
@@ -3230,21 +3517,19 @@
 	(_
 	 (%synner "invalid import set" import-spec import-set))))
 
-    (define (%import-library spec*)
+    (define (%import-library libref)
       (receive (name version-conforms-to-reference?)
-	  (%parse-library-reference spec*)
+	  (%parse-library-reference libref)
 	(when (null? name)
-	  (%synner "empty library name" spec*))
+	  (%synner "empty library name" libref))
 	;;Search  for the  library first  in the  collection of  already
 	;;installed libraires, then on  the file system.  If successful:
 	;;LIB is an instance of LIBRARY struct.
-	(let ((lib (find-library-by-name name)))
-	  (unless lib
-	    (%synner "cannot find library with required name" name))
-	  (unless (version-conforms-to-reference? (library-version lib))
-	    (%synner "library does not satisfy version specification" spec* lib))
+	(let ((lib (find-library-by-name (syntax->datum libref))))
+	  (unless (version-conforms-to-reference? (library-name->version (library-name lib)))
+	    (%synner "library does not satisfy version specification" libref lib))
 	  ((imp-collector) lib)
-	  (library-subst lib))))
+	  (library-export-subst lib))))
 
     #| end of module: %IMPORT-SPEC->EXPORT-SUBST |# )
 
@@ -3269,7 +3554,7 @@
 	   (values '() (%build-version-pred ?version-spec* libref)))
 
 	  ((?id . ?rest*)
-	   (id-stx? ?id)
+	   (symbol-syntax? ?id)
 	   (receive (name pred)
 	       (recur ?rest*)
 	     (values (cons (syntax->datum ?id) name)
@@ -3486,12 +3771,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (id-stx? x)
-    ;;Return true if X is an identifier.
-    ;;
-    (symbol? (syntax->datum x)))
-
-;;; --------------------------------------------------------------------
+  (define (symbol-syntax? obj)
+    (symbol? (syntax->datum obj)))
 
   (define (%error-two-import-with-different-bindings name)
     (%synner "two imports with different bindings" name))
@@ -3997,6 +4278,74 @@
   (cdr ?export-binding))
 
 
+;;;; marks of lexical contours
+
+(define gen-mark
+  ;;Generate a new unique mark.  We want a new string for every function
+  ;;call.
+  string)
+;;The version below is useful for debugging.
+;;
+;; (define gen-mark
+;;   (let ((i 0))
+;;     (lambda ()
+;;       (set! i (+ i 1))
+;;       (string-append "m." (number->string i)))))
+
+;;We use #f as the anti-mark.
+(define-constant anti-mark #f)
+(define anti-mark? not)
+
+;;The body of  a library, when it  is first processed, gets  this set of
+;;marks...
+(define-constant TOP-MARK*
+  '(top))
+(define-constant TOP-MARK**
+  '((top)))
+
+(define (list-of-marks? obj)
+  (and (list? obj)
+       (for-all (lambda (item)
+		  (or (eq? 'top obj) ;proper top mark
+		      (string? obj)  ;proper lexical contour mark
+		      (not obj)))    ;anti-mark
+	 obj)))
+
+;;... consequently, every  syntax object that has a "top"  symbol in its
+;;marks set was present in the program source.
+(define-syntax-rule (top-marked? mark*)
+  (memq 'top mark*))
+
+(define* (symbol->top-marked-identifier {sym symbol?})
+  ;;Given a  raw Scheme  symbol return a  syntax object  representing an
+  ;;identifier with top marks.
+  ;;
+  (make-<stx> sym TOP-MARK* '() '()))
+
+(define* (top-marked-symbols {rib rib?})
+  ;;Scan the <rib> RIB and return a list of symbols representing binding
+  ;;names and having the top mark.
+  ;;
+  (receive (sym* mark**)
+      ;;If RIB is sealed the fields  hold vectors, else they hold lists;
+      ;;we want lists here.
+      (let ((sym*   ($<rib>-name*  rib))
+	    (mark** ($<rib>-mark** rib)))
+	(if ($<rib>-sealed/freq rib)
+	    (values (vector->list sym*)
+		    (vector->list mark**))
+	  (values sym* mark**)))
+    (let recur ((sym*   sym*)
+		(mark** mark**))
+      (cond ((null? sym*)
+	     '())
+	    ((equal? ($car mark**) TOP-MARK*)
+	     (cons ($car sym*)
+		   (recur ($cdr sym*) ($cdr mark**))))
+	    (else
+	     (recur ($cdr sym*) ($cdr mark**)))))))
+
+
 ;;;; rib record type definition
 ;;
 ;;A  <RIB> is  a  record constructed  at every  lexical  contour in  the
@@ -4058,7 +4407,7 @@
 ;;   label*      = #(lab.a   lab.b)
 ;;   sealed/freq = #(2       1)
 ;;
-(define-record <rib>
+(define-record (<rib> make-<rib> rib?)
   (name*
 		;List of symbols representing the original binding names
 		;in the source code.
@@ -4088,7 +4437,28 @@
 		;
 		;See  below  the  code  section "sealing  ribs"  for  an
 		;explanation of the frequency vector.
-   ))
+   )
+  (lambda (S port subwriter) ;record printer function
+    (define-syntax-rule (%display ?thing)
+      (display ?thing port))
+    (define-syntax-rule (%write ?thing)
+      (write ?thing port))
+    (define-syntax-rule (%pretty-print ?thing)
+      (pretty-print* ?thing port 0 #f))
+    (%display "#<rib")
+    (%display " name*=")	(%pretty-print (<rib>-name*  S))
+    (%display " mark**=")	(%pretty-print (<rib>-mark** S))
+    (%display " label*=")	(%pretty-print (<rib>-label* S))
+    (%display " sealed/freq=")	(%pretty-print (<rib>-sealed/freq S))
+    (%display ">")))
+
+(define (false-or-rib? obj)
+  (or (not obj)
+      (rib? obj)))
+
+(define (list-of-ribs? obj)
+  (and (list? obj)
+       (for-all rib? obj)))
 
 (define-inline (make-empty-rib)
   ;;Build and return a new empty <RIB> record.
@@ -4146,10 +4516,10 @@
   ;;and  then  hand  the  resulting   syntax  object  BODY-STX^  to  the
   ;;appropriate "chi-*" function to perform the expansion.
   ;;
-  (make-<rib> (map identifier->symbol id*)
-	      (map <stx>-mark* id*)
-	      label*
-	      #f))
+  (let ((name*        (map identifier->symbol id*))
+	(mark**       (map <stx>-mark* id*))
+	(sealed/freq  #f))
+    (make-<rib> name* mark** label* sealed/freq)))
 
 (define* (make-top-rib name-vec label-vec)
   ;;Build  and  return a  new  <rib>  record initialised  with  bindings
@@ -4175,7 +4545,7 @@
   ;;
   ;;when  creating  the  lexical  contour  for  a  top-level  expression
   ;;evaluated by  EVAL in the  context of a  non-interactive environment
-  ;;record we, cando:
+  ;;record we, can do:
   ;;
   ;;   (define env
   ;;     (environment '(vicare)))
@@ -4196,18 +4566,24 @@
       name-vec label-vec)))
 
 (define (export-subst->rib export-subst)
-  ;;Build and return a new  <RIB> structure initialised with the entries
-  ;;of EXPORT-SUBST.
+  ;;Build  and  return  a  new  <RIB>  structure  initialised  with  the  entries  of
+  ;;EXPORT-SUBST.
   ;;
-  ;;An EXPORT-SUBST  selects the  exported bindings among  the syntactic
-  ;;bindings defined at the top-level of a library; it is an alist whose
-  ;;keys are external symbol names of  the bindings and whose values are
-  ;;the associated label gensyms.
+  ;;An  EXPORT-SUBST  selects the  exported  bindings  among the  syntactic  bindings
+  ;;defined at  the top-level of a  library; it is  an alist whose keys  are external
+  ;;symbol names of the bindings and whose values are the associated label gensyms.
   ;;
-  (make-<rib> (map car export-subst)
-	      (map (lambda (x) TOP-MARK*) export-subst)
-	      (map cdr export-subst)
-	      #f))
+  (let loop ((export-subst export-subst)
+	     (name*        '()) ;exported binding names
+	     (mark**       '())
+	     (label*       '()))
+    (if (pair? export-subst)
+	(loop ($cdr export-subst)
+	      (cons ($car ($car export-subst)) name*)
+	      (cons TOP-MARK*                  mark**)
+	      (cons ($cdr ($car export-subst)) label*))
+      (let ((sealed/freq #f))
+	(make-<rib> name* mark** label* sealed/freq)))))
 
 (module (extend-rib!)
   ;;A <RIB> can be extensible, or sealed.  Adding an identifier-to-label
@@ -4278,10 +4654,10 @@
   ;;
   ;;we see that the label has changed.
   ;;
-  (define* (extend-rib! (rib <rib>?) (id identifier?) label shadowing-definitions?)
+  (define* (extend-rib! {rib rib?} {id identifier?} label shadowing-definitions?)
     (when ($<rib>-sealed/freq rib)
-      (assertion-violation __who__
-	"Vicare: internal error: attempt to extend sealed RIB" rib))
+      (assertion-violation/internal-error __who__
+	"attempt to extend sealed RIB" rib))
     (let ((id.sym      (identifier->symbol id))
 	  (id.mark*    ($<stx>-mark*  id))
 	  (rib.name*   ($<rib>-name*  rib))
@@ -4335,7 +4711,7 @@
 
   #| end of module: EXTEND-RIB! |# )
 
-(define* (seal-rib! (rib <rib>?))
+(define* (seal-rib! {rib rib?})
   (let ((name* ($<rib>-name* rib)))
     (unless (null? name*) ;only seal if RIB is not empty
       (let ((name* (list->vector name*)))
@@ -4344,7 +4720,7 @@
 	($set-<rib>-label*!      rib (list->vector ($<rib>-label* rib)))
 	($set-<rib>-sealed/freq! rib (make-vector (vector-length name*) 0))))))
 
-(define* (unseal-rib! (rib <rib>?))
+(define* (unseal-rib! {rib rib?})
   (when ($<rib>-sealed/freq rib)
     ($set-<rib>-sealed/freq! rib #f)
     ($set-<rib>-name*!       rib (vector->list ($<rib>-name*  rib)))
@@ -4357,25 +4733,77 @@
 ;;First, let's  look at identifiers,  since they're the real  reason why
 ;;syntax objects are here to begin  with.  An identifier is an STX whose
 ;;EXPR is a symbol; in addition to the symbol naming the identifier, the
-;;identifer has a list of marks and a list of substitutions.
+;;identifer has a list of marks and a list of ribs (and shifts).
 ;;
 ;;The idea  is that to get  the label of  an identifier, we look  up the
-;;identifier's substitutions for  a mapping with the same  name and same
-;;marks (see SAME-MARKS? below).
+;;identifier's ribs for a mapping with the same name and same marks (see
+;;SAME-MARKS? below).
 ;;
+;;---
+;;
+;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
+;;exactly?
+;;
+;;A "wrapped syntax object" is just  a way of saying it's an STX record.
+;;All identifiers are  STX records (with a symbol  in their EXPR field);
+;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
+;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
+;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
+;;or unwrapped).
+;;
+;;We always  maintain the invariant  that we  do not double  wrap syntax
+;;objects.  The  only way to  get a  doubly-wrapped syntax object  is by
+;;doing  $DATUM->SYNTAX (above)  where  the datum  is  itself a  wrapped
+;;syntax object  (R6RS may not  even consider wrapped syntax  objects as
+;;datum, but let's not worry now).
+;;
+;;Syntax objects have, in addition  to the EXPR, a ribs-and-shifts field
+;;RIB*: it is a list where each  element is either a <rib> or the symbol
+;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
+;;contour of the program in order  to capture the bindings introduced in
+;;that contour.
+;;
+;;The MARK* field of an STX is  a list of marks; each of these marks can
+;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
+;;EQ?-comparable, so we use a string of one char (we assume that strings
+;;are mutable in the underlying Scheme implementation).
 
 (define-record <stx>
   (expr
+		;A  symbolic   expression,  possibly   annotated,  whose
+		;subexpressions can also be instances of <stx>.
    mark*
-   subst*
-   ae*)
+		;Null or  a proper list  of marks, including  the symbol
+		;"top".
+   rib*
+		;Null or  a proper  list of  <rib> instances  or "shift"
+		;symbols.   Every  <rib>  represents  a  nested  lexical
+		;contour; a  "shift" represents the return  from a macro
+		;transformer application.
+		;
+		;NOTE The  items in  the fields MARK*  and RIB*  are not
+		;associated:  the two  lists can  grow independently  of
+		;each other.   But, considering  the whole  structure of
+		;nested  <stx> instances:  the  items in  all the  MARK*
+		;fields are associated to the items in all the RIB*, see
+		;the functions JOIN-WRAPS and ADD-MARK for details.
+   ae*
+		;List of  annotated expressions:  null or a  proper list
+		;whose items are #f or  input forms of macro transformer
+		;calls.  It is used to  trace the transformations a form
+		;undergoes when it is processed as macro use.
+		;
+		;The  #f items  are inserted  when it  this instance  is
+		;processed as input form of  a macro call, but are later
+		;discarded.
+   )
   (lambda (S port subwriter) ;record printer function
-    (define-inline (%display thing)
-      (display thing port))
-    (define-inline (%write thing)
-      (write thing port))
-    (define-inline (%pretty-print thing)
-      (pretty-print* thing port 0 #f))
+    (define-syntax-rule (%display ?thing)
+      (display ?thing port))
+    (define-syntax-rule (%write ?thing)
+      (write ?thing port))
+    (define-syntax-rule (%pretty-print ?thing)
+      (pretty-print* ?thing port 0 #f))
     (%display "#<syntax")
     (%display " expr=")		(%pretty-print (syntax->datum S))
     (%display " mark*=")	(%pretty-print (<stx>-mark* S))
@@ -4388,67 +4816,104 @@
 	    (%display " source=")	(%display (source-position-port-id pos))))))
     (%display ">")))
 
-(define (datum->stx id datum)
+;;; --------------------------------------------------------------------
+
+(define (syntax-object? obj)
+  ;;Return #t if OBJ is a  wrapped or unwrapped syntax object; otherwise
+  ;;return #f.  This is not a full validation, because a component <stx>
+  ;;may contain a raw symbol.
+  ;;
+  (cond ((<stx>? obj)
+	 obj)
+	((pair? obj)
+	 (cons (syntax-object? ($car obj)) (syntax-object? ($cdr obj))))
+	((symbol? obj)
+	 #f)
+	((vector? obj)
+	 (vector-map syntax-object? obj))
+	(else
+	 (non-compound-sexp? obj))))
+
+(define (ribs-and-shifts? obj)
+  ;;Return true  if OBJ is  a valid value for  the field RIB*  of <stx>;
+  ;;otherwise return #f.
+  ;;
+  (and (list? obj)
+       (for-all (lambda (item)
+		  (or (rib? item)
+		      (eq? item 'shift)))
+	 obj)))
+
+;;; --------------------------------------------------------------------
+
+(define* (datum->syntax {id identifier?} datum)
+  ($datum->syntax id datum))
+
+(define ($datum->syntax id datum)
   ;;Since all the identifier->label bindings are encapsulated within the
   ;;identifier, converting a datum to a syntax object (non-hygienically)
-  ;;is  done simply  by creating  an  STX that  has the  same marks  and
-  ;;substitutions as the identifier.
+  ;;is done simply by creating an <stx> that has the same marks and ribs
+  ;;as the identifier.
   ;;
-  (make-<stx> datum
-	      (<stx>-mark*  id)
-	      (<stx>-subst* id)
-	      (<stx>-ae*    id)))
-
-(define (datum->syntax id datum)
-  (if (identifier? id)
-      (datum->stx id datum)
-    (assertion-violation 'datum->syntax
-      "expected identifier as context syntax object" id)))
+  ;;We  include also  the  annotated expression  from  ID because,  when
+  ;;showing  an error  trace,  it  helps to  understand  from where  the
+  ;;returned object comes.
+  ;;
+  (make-<stx> datum ($<stx>-mark* id) ($<stx>-rib* id) ($<stx>-ae* id)))
 
 (define (syntax->datum S)
   (strip S '()))
 
-(define (mkstx stx/expr mark* subst* ae*)
+(define* (mkstx expr-stx mark* {rib* ribs-and-shifts?} ae*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
-  ;;object.  MARK* is a list of marks.  SUBST* is a list of substs.
+  ;;EXPR-STX can  be a raw sexp,  an instance of <STX>  or a (partially)
+  ;;unwrapped syntax object.
   ;;
-  ;;AE* == annotated expressions???
+  ;;MARK* must be  null or a proper list of  marks, including the symbol
+  ;;"top".
   ;;
-  ;;When STX/EXPR  is a  raw sexp:  just build and  return a  new syntax
-  ;;object with the lexical context described by the given arguments.
+  ;;RIB* must  be null or a  proper list of <rib>  instances and "shift"
+  ;;symbols.
   ;;
-  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
+  ;;AE* must be  null or a proper list of  annotated expressions: syntax
+  ;;objects being input forms for macro transformer calls.
+  ;;
+  ;;When EXPR-STX  is a  raw sexp  or an  unwrapped syntax  object: just
+  ;;build  and return  a  new  syntax object  with  the lexical  context
+  ;;described by the given arguments.
+  ;;
+  ;;When EXPR-STX is a <stx> instance: join the wraps from EXPR-STX with
   ;;given wraps, making sure that marks and anti-marks and corresponding
   ;;shifts cancel properly.
   ;;
-  (if (and (<stx>? stx/expr)
+  (if (and (<stx>? expr-stx)
 	   (not (top-marked? mark*)))
-      (receive (mark* subst* ae*)
-	  (join-wraps mark* subst* ae* stx/expr)
-	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
-    (make-<stx> stx/expr mark* subst* ae*)))
+      (receive (mark* rib* ae*)
+	  (join-wraps mark* rib* ae* expr-stx)
+	(make-<stx> (<stx>-expr expr-stx) mark* rib* ae*))
+    (make-<stx> expr-stx mark* rib* ae*)))
 
-(define (push-lexical-contour rib stx/expr)
+(define* (push-lexical-contour {rib rib?} expr-stx)
   ;;Add a rib to a syntax  object or expression and return the resulting
-  ;;syntax object.  This  procedure introduces a lexical  contour in the
-  ;;context of the given syntax object or expression.
+  ;;syntax object.   During the  expansion process  we visit  the nested
+  ;;subexpressions  in a  syntax  object repesenting  source code:  this
+  ;;procedure introduces a  lexical contour in the  context of EXPR-STX,
+  ;;for example when we enter a LET syntax.
   ;;
   ;;RIB must be an instance of <RIB>.
   ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;EXPR-STX can be a raw sexp, an instance of <STX> or a wrapped syntax
   ;;object.
   ;;
   ;;This function prepares  a computation that will  be lazily performed
-  ;;later; the RIB will be pushed on the stack of substitutions in every
-  ;;identifier in the fully unwrapped returned syntax object.
+  ;;later;  the  RIB will  be  pushed  on the  stack  of  ribs in  every
+  ;;identifier in  the fully  unwrapped version  of the  returned syntax
+  ;;object.
   ;;
-  (mkstx stx/expr
-	 '() #;mark*
-	 (list rib)
-	 '() #;ae*
-	 ))
+  (let ((mark*	'())
+	(ae*	'()))
+    (mkstx expr-stx mark* (list rib) ae*)))
 
 (define (expression-position x)
   (if (<stx>? x)
@@ -4476,11 +4941,11 @@
 		(and (pair? x)
 		     (annotation? ($car x)))
 		(and (vector? x)
-		     (> ($vector-length x) 0)
+		     (not ($vector-empty? x))
 		     (annotation? ($vector-ref x 0))))
 	    ;;TODO Ask Kent  why this is a  sufficient test.  (Abdulaziz
 	    ;;Ghuloum)
-	    (strip-annotations x)
+	    (%strip-annotations x)
 	  x)
       (let f ((x x))
 	(cond ((<stx>? x)
@@ -4502,12 +4967,12 @@
 		   (list->vector new))))
 	      (else x)))))
 
-  (define (strip-annotations x)
+  (define (%strip-annotations x)
     (cond ((pair? x)
-	   (cons (strip-annotations ($car x))
-		 (strip-annotations ($cdr x))))
+	   (cons (%strip-annotations ($car x))
+		 (%strip-annotations ($cdr x))))
 	  ((vector? x)
-	   (vector-map strip-annotations x))
+	   (vector-map %strip-annotations x))
 	  ((annotation? x)
 	   (annotation-stripped x))
 	  (else x)))
@@ -4519,24 +4984,28 @@
 
 (module (id->label)
 
-  (define (id->label id)
-    ;;Given the identifier  ID search its substs for  a label associated
+  (define* (id->label {id identifier?})
+    ;;Given the  identifier ID  search its ribs  for a  label associated
     ;;with the  same sym  and marks.   If found  return the  label, else
     ;;return false.
     ;;
     (let ((sym (identifier->symbol id)))
-      (let search ((subst* ($<stx>-subst* id))
-		   (mark*  ($<stx>-mark*  id)))
-	(cond ((null? subst*)
+      (let search ((rib*  ($<stx>-rib*  id))
+		   (mark* ($<stx>-mark* id)))
+	(cond ((null? rib*)
 	       #f)
-	      ((eq? ($car subst*) 'shift)
-	       ;;A shift is inserted when a  mark is added.  So, we search
-	       ;;the rest of the substitution without the mark.
-	       (search ($cdr subst*) ($cdr mark*)))
+	      ((eq? ($car rib*) 'shift)
+	       ;;This is the  only place in the expander  where a symbol
+	       ;;"shift" in a  RIB* makes some difference;  a "shift" is
+	       ;;pushed on the RIB* when a mark is pushed on the MARK*.
+	       ;;
+	       ;;When  we   find  a  "shift"   in  RIB*:  we   skip  the
+	       ;;corresponding mark in MARK*.
+	       (search ($cdr rib*) ($cdr mark*)))
 	      (else
-	       (let ((rib ($car subst*)))
+	       (let ((rib ($car rib*)))
 		 (define (next-search)
-		   (search ($cdr subst*) mark*))
+		   (search ($cdr rib*) mark*))
 		 (if ($<rib>-sealed/freq rib)
 		     (%search-in-sealed-rib rib sym mark* next-search)
 		   (%search-in-rib rib sym mark* next-search))))))))
@@ -4655,9 +5124,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (id->label/or-error who form id)
+(define (id->label/or-error who input-form.stx id)
   (or (id->label id)
-      (%raise-unbound-error who form id)))
+      (%raise-unbound-error who input-form.stx id)))
 
 (define (id->r6rs-record-type-descriptor-binding who form type-name-id lexenv)
   ;;TYPE-NAME-ID is  meant to be an  identifier bound to an  R6RS record
@@ -4678,8 +5147,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type
-  object-spec-type)
+(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type)
 
 (define-syntax (case-object-type-binding stx)
   ;;This syntax is meant to be used as follows:
@@ -4698,11 +5166,11 @@
   ;;where  ?TYPE-ID  is meant  to  be  an  identifier  bound to  a  R6RS
   ;;record-type descriptor or Vicare's struct-type descriptor.
   ;;
-  (sys.syntax-case stx (r6rs-record-type vicare-struct-type object-spec-type)
+  (sys.syntax-case stx (r6rs-record-type vicare-struct-type object-type-spec)
     ((_ (?who ?input-stx ?type-id ?lexenv)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
-	((object-spec-type)	?spec-body0   ?spec-body   ...))
+	((type-spec-type)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
@@ -4714,7 +5182,7 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-descriptor-binding? binding)
 	       ?struct-body0 ?struct-body ...)
-	      ((identifier-object-spec ?type-id)
+	      ((identifier-object-type-spec ?type-id)
 	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
@@ -4723,7 +5191,7 @@
     ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
-	((object-spec-type)	?spec-body0   ?spec-body   ...))
+	((type-spec-type)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
@@ -4735,7 +5203,7 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-descriptor-binding? ?binding)
 	       ?struct-body0 ?struct-body ...)
-	      ((identifier-object-spec ?type-id)
+	      ((identifier-object-type-spec ?type-id)
 	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
@@ -4744,92 +5212,6 @@
     ))
 
 
-;;;; marks
-
-;;The body  of a library, when it  is first processed, gets  this set of
-;;marks...
-(define-constant TOP-MARK*
-  '(top))
-
-;;... consequently, every syntax object that  has a TOP in its marks set
-;;was present in the program source.
-(define-inline (top-marked? m*)
-  (memq 'top m*))
-
-(define (symbol->top-marked-identifier sym)
-  ;;Given a  raw Scheme  symbol return a  syntax object  representing an
-  ;;identifier with top marks.
-  ;;
-  (make-<stx> sym TOP-MARK* '() '()))
-
-(define (top-marked-symbols rib)
-  ;;Scan the <RIB> RIB and return a list of symbols representing binding
-  ;;names and having the top mark.
-  ;;
-  (receive (sym* mark**)
-      ;;If RIB is sealed the fields  hold vectors, else they hold lists;
-      ;;we want lists here.
-      (let ((sym*   (<rib>-name*  rib))
-	    (mark** (<rib>-mark** rib)))
-	(if (<rib>-sealed/freq rib)
-	    (values (vector->list sym*)
-		    (vector->list mark**))
-	  (values sym* mark**)))
-    (let recur ((sym*   sym*)
-		(mark** mark**))
-      (cond ((null? sym*)
-	     '())
-	    ((equal? (car mark**) TOP-MARK*)
-	     (cons (car sym*)
-		   (recur (cdr sym*) (cdr mark**))))
-	    (else
-	     (recur (cdr sym*) (cdr mark**)))))))
-
-;;;; syntax objects and marks
-
-;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
-;;exactly?
-;;
-;;A "wrapped syntax object" is just  a way of saying it's an STX record.
-;;All identifiers are  STX records (with a symbol  in their EXPR field);
-;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
-;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
-;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
-;;or unwrapped).
-;;
-;;We always  maintain the  invariant that we  do not double  wrap syntax
-;;objects.  The  only way  to get a  doubly-wrapped syntax object  is by
-;;doing DATUM->STX  (above) where the  datum is itself a  wrapped syntax
-;;object (R6RS  may not even  consider wrapped syntax objects  as datum,
-;;but let's not worry now).
-;;
-;;Syntax objects  have, in  addition to the  EXPR, a  substitution field
-;;SUBST*: it is a list where each  element is either a RIB or the symbol
-;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
-;;contour of the program in  order to capture the bindings introduced in
-;;that contour.
-;;
-;;The MARK* field of an STX is  a list of marks; each of these marks can
-;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
-;;EQ?-comparable, so we use a string of one char (we assume that strings
-;;are mutable in the underlying Scheme implementation).
-
-(define gen-mark
-  ;;Generate a new unique mark.  We want a new string for every function
-  ;;call.
-  string)
-;;The version below is useful for debugging.
-;;
-;; (define gen-mark
-;;   (let ((i 0))
-;;     (lambda ()
-;;       (set! i (+ i 1))
-;;       (string-append "m." (number->string i)))))
-
-;;We use #f as the anti-mark.
-(define anti-mark #f)
-(define anti-mark? not)
-
 ;;So, what's an anti-mark and why is it there?
 ;;
 ;;The theory goes like this: when a macro call is encountered, the input
@@ -4843,13 +5225,13 @@
 ;;therefore, the mark would stick to them.
 ;;
 ;;Every time  a mark is pushed  to an <stx>-mark* list,  a corresponding
-;;'shift  is pushed  to the  <stx>-subst* list.   Every time  a mark  is
+;;'shift  is pushed  to  the  <stx>-rib* list.   Every  time  a mark  is
 ;;cancelled  by   an  anti-mark,  the  corresponding   shifts  are  also
 ;;cancelled.
 
-;;The procedure join-wraps,  here, is used to compute the  new mark* and
-;;subst* that would  result when the m1*  and s1* are added  to an stx's
-;;mark* and subst*.
+;;The procedure join-wraps,  here, is used to compute the  new MARK* and
+;;RIB* that  would result  when the m1*  and s1* are  added to  an stx's
+;;MARK* and RIB*.
 ;;
 ;;The only tricky part here is that  e may have an anti-mark that should
 ;;cancel with the last mark in m1*.  So, if:
@@ -4861,13 +5243,13 @@
 ;;
 ;;  (mx* ... my* ...)
 ;;
-;;since mx  would cancel with the  anti-mark.  The substs would  have to
-;;also cancel since:
+;;since mx would cancel with the anti-mark.  The ribs would have to also
+;;cancel since:
 ;;
 ;;    s1* = (sx* ... sx)
 ;;    s2* = (sy sy* ...)
 ;;
-;;then the resulting substs should be:
+;;then the resulting ribs should be:
 ;;
 ;;    (sx* ... sy* ...)
 ;;
@@ -4877,26 +5259,17 @@
 ;;%DO-MACRO-CALL.
 ;;
 
-(module (join-wraps)
+(module WRAPS-UTILITIES
+  (%merge-annotated-expr*
+   %append-cancel-facing)
 
-  (define (join-wraps mark1* subst1* ae1* stx2)
-    (let ((mark2*   ($<stx>-mark*  stx2))
-	  (subst2*  ($<stx>-subst* stx2))
-	  (ae2*     ($<stx>-ae*    stx2)))
-      ;;If the first item in mark2* is an anti-mark...
-      (if (and (not (null? mark1*))
-	       (not (null? mark2*))
-	       (anti-mark? ($car mark2*)))
-	  ;;...cancel mark, anti-mark, and corresponding shifts.
-	  (values (%append-cancel-facing mark1*  mark2*)
-		  (%append-cancel-facing subst1* subst2*)
-		  (%merge-ae* ae1* ae2*))
-	;;..else no cancellation takes place.
-	(values (append mark1*  mark2*)
-		(append subst1* subst2*)
-		(%merge-ae* ae1* ae2*)))))
-
-  (define (%merge-ae* ls1 ls2)
+  (define (%merge-annotated-expr* ls1 ls2)
+    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
+    ;;append LS1 and (cdr LS2).
+    ;;
+    ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
+    ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
+    ;;
     (if (and (pair? ls1)
 	     (pair? ls2)
 	     (not ($car ls2)))
@@ -4904,55 +5277,13 @@
       (append ls1 ls2)))
 
   (define (%append-cancel-facing ls1 ls2)
-    ;;Given two non-empty lists: append them discarding the last item in
-    ;;LS1 and the first item in LS2.  Examples:
+    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
+    ;;be a proper list  of one or more elements.  Append  the cdr of LS2
+    ;;to LS1 and return the result:
     ;;
     ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
     ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
     ;;   (%append-cancel-facing '(1)     '(2))		=> ()
-    ;;
-    (let recur ((x   ($car ls1))
-		(ls1 ($cdr ls1)))
-      (if (null? ls1)
-	  ($cdr ls2)
-	(cons x (recur ($car ls1) ($cdr ls1))))))
-
-  #| end of module: JOIN-WRAPS |# )
-
-(define (same-marks? x y)
-  ;;Two lists  of marks are  considered the same  if they have  the same
-  ;;length and the corresponding marks on each are EQ?.
-  ;;
-  (or (and (null? x) (null? y)) ;(eq? x y)
-      (and (pair? x) (pair? y)
-	   (eq? ($car x) ($car y))
-	   (same-marks? ($cdr x) ($cdr y)))))
-
-(define (add-mark mark subst expr ae)
-  ;;Build and return  a new syntax object wrapping  EXPR and having MARK
-  ;;pushed on its list of marks.
-  ;;
-  ;;SUBST can be #f or a list of substitutions.
-  ;;
-  (define (merge-ae* ls1 ls2)
-    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
-    ;;append LS1 and (cdr LS2).
-    ;;
-    ;;   (merge-ae* '(a b c) '(d  e f))   => (a b c d e f)
-    ;;   (merge-ae* '(a b c) '(#f e f))   => (a b c e f)
-    ;;
-    (if (and (pair? ls1)
-	     (pair? ls2)
-	     (not (car ls2)))
-	(cancel ls1 ls2)
-      (append ls1 ls2)))
-  (define (cancel ls1 ls2)
-    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
-    ;;be a proper  list of one or more elements.  Append  the cdr of LS2
-    ;;to LS1 and return the result:
-    ;;
-    ;;   (cancel '(a b c) '(d e f))
-    ;;   => (a b c e f)
     ;;
     ;;This function is like:
     ;;
@@ -4960,53 +5291,214 @@
     ;;
     ;;we just hope to be a bit more efficient.
     ;;
-    (let recur ((A (car ls1))
-		(D (cdr ls1)))
-      (if (null? D)
-	  (cdr ls2)
-	(cons A (recur (car D) (cdr D))))))
-  (define (f sub-expr mark subst1* ae*)
-    (cond ((pair? sub-expr)
-	   (let ((a (f (car sub-expr) mark subst1* ae*))
-		 (d (f (cdr sub-expr) mark subst1* ae*)))
-	     (if (eq? a d)
-		 sub-expr
-	       (cons a d))))
-	  ((vector? sub-expr)
-	   (let* ((ls1 (vector->list sub-expr))
-		  (ls2 (map (lambda (x)
-			      (f x mark subst1* ae*))
+    (let recur ((A1 ($car ls1))
+		(D1 ($cdr ls1)))
+      (if (null? D1)
+	  ($cdr ls2)
+	(cons A1 (recur ($car D1) ($cdr D1))))))
+
+  #| end of module: WRAPS-UTILITIES |# )
+
+(define (same-marks? x y)
+  ;;Two lists  of marks are  considered the same  if they have  the same
+  ;;length and the corresponding marks on each are EQ?.
+  ;;
+  (or (eq? x y)
+      (and (pair? x) (pair? y)
+	   (eq? ($car x) ($car y))
+	   (same-marks? ($cdr x) ($cdr y)))))
+
+(define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* ribs-and-shifts?} stx1.ae {stx2 <stx>?})
+  ;;Join the given wraps with the  ones in STX2 and return the resulting
+  ;;wraps; with "wraps" we mean the marks and ribs, with the addition of
+  ;;the annotated  expressions for debugging purposes.   The scenario is
+  ;;this:
+  ;;
+  ;;* A syntax object STX1 (wrapped or partially unwrapped) contains the
+  ;;  syntax object STX2 (an instance of <stx>) as subexpression.
+  ;;
+  ;;* Whenever STX1 is fully unwrapped (for example by SYNTAX-MATCH) its
+  ;;   marks  and  ribs  must   be  propagated  to  all  its  identifier
+  ;;  subexpressions.
+  ;;
+  ;;* In practice: the  marks of STX1 must be prepended  to the marks of
+  ;;  STX2, the ribs of STX1 must be prepended to the ribs of STX2.
+  ;;
+  ;;this is what this function does.  But: we must also handle anti-mark
+  ;;annihilation and the associated removal of shifts from the ribs.
+  ;;
+  (import WRAPS-UTILITIES)
+  (let ((stx2.mark* ($<stx>-mark* stx2))
+	(stx2.rib*  ($<stx>-rib*  stx2))
+	(stx2.ae*   ($<stx>-ae*   stx2)))
+    ;;If the first item in stx2.mark* is an anti-mark...
+    (if (and (not (null? stx1.mark*))
+	     (not (null? stx2.mark*))
+	     (anti-mark? ($car stx2.mark*)))
+	;;...cancel mark, anti-mark, and corresponding shifts.
+	(values (%append-cancel-facing stx1.mark* stx2.mark*)
+		(%append-cancel-facing stx1.rib*  stx2.rib*)
+		(%merge-annotated-expr* stx1.ae stx2.ae*))
+      ;;..else no cancellation takes place.
+      (values (append stx1.mark* stx2.mark*)
+	      (append stx1.rib*  stx2.rib*)
+	      (%merge-annotated-expr* stx1.ae stx2.ae*)))))
+
+(module ADD-MARK
+  (add-mark)
+  (import WRAPS-UTILITIES)
+
+  (define* (add-mark mark {rib false-or-rib?} expr ae)
+    ;;Build and return a new syntax object wrapping EXPR and having MARK
+    ;;pushed on its list of marks.  This function used only in 2 places:
+    ;;
+    ;;* It  is applied to  the input form  of a macro  transformer, with
+    ;;  MARK being the anti-mark.
+    ;;
+    ;;* It  is applied to the  output form of a  macro transformer, with
+    ;;  MARK being a proper mark.
+    ;;
+    ;;MARK is either the anti-mark or a new mark.
+    ;;
+    ;;RIB can be #f (when MARK is the anti-mark) or an instance of <rib>
+    ;;(when MARK is a new mark).
+    ;;
+    ;;EXPR is either  the input form of a macro  transformer call or the
+    ;;output  form of  a macro  transformer call;  it must  be a  syntax
+    ;;object, either wrapped or unwrapped.
+    ;;
+    ;;AE is either #f (when MARK is  the anti-mark) or the input form of
+    ;;a macro call (when MARK is a  new mark).  This argument is used to
+    ;;keep track of  the transformation a form  undergoes when processed
+    ;;as macro use.
+    ;;
+    ;;The return value  can be either a <stx> instance  or a (partially)
+    ;;unwrapped syntax object.
+    ;;
+    (%find-meaningful-stx expr mark rib expr '() (list ae)))
+
+  ;;NOTE The one  below was the original (modified,  but still original)
+  ;;implementation of this function; it  is kept here for reference.  In
+  ;;my  eternal ignorance,  I do  not understand  why the  syntax object
+  ;;return value of the recursive  function is enclosed in another <stx>
+  ;;with empty wraps; so I removed  such an envelope object.  It appears
+  ;;that there  is no need  for this function  to return an  instance of
+  ;;<stx>: the  code works fine when  the return value is  a (partially)
+  ;;unwrapped syntax object.  (Marco Maggi; Tue Mar 18, 2014)
+  ;;
+  ;; (define* ({add-mark <stx>?} mark {rib false-or-rib?} expr ae)
+  ;;   (let ((mark* '())
+  ;;         (rib*  '())
+  ;;         (ae*   (list ae)))
+  ;;     (mkstx (%find-meaningful-stx expr mark rib expr '() '())
+  ;;            mark* rib* ae*)))
+
+  (define (%find-meaningful-stx top-expr new-mark rib expr accum-rib* ae*)
+    ;;Recursively visit EXPR while EXPR is: a pair, a vector or an <stx>
+    ;;with empty MARK*.  Stop the recursion  when EXPR is: an <stx> with
+    ;;non-empty MARK* or a  non-compound datum (boolean, number, string,
+    ;;..., struct, record,  null).  Raise an exception if EXPR  is a raw
+    ;;symbol.
+    ;;
+    ;;When a  <stx> with non-empty  MARK* is found: perform  the action;
+    ;;see below for details.
+    ;;
+    ;;Return a wrapped  or (partially) unwrapped syntax  object with the
+    ;;mark added.
+    ;;
+    ;;ACCUM-RIB* is  the list of  RIB* (ribs and "shift"  symbols), from
+    ;;outer to  inner, collected so  far while visiting  <stx> instances
+    ;;with empty MARK*.
+    ;;
+    (define-syntax-rule (%recurse ?expr ?accum-rib* ?ae*)
+      (%find-meaningful-stx top-expr new-mark rib ?expr ?accum-rib* ?ae*))
+    (cond ((pair? expr)
+	   ;;Visit the  items in the  pair.  If the visited  items equal
+	   ;;the original items: keep EXPR as result.
+	   (let ((A (%recurse (car expr) accum-rib* ae*))
+		 (D (%recurse (cdr expr) accum-rib* ae*)))
+	     (if (eq? A D)
+		 expr
+	       (cons A D))))
+
+	  ((vector? expr)
+	   ;;Visit all  the items in  the vector.  If the  visited items
+	   ;;equal the original items: keep EXPR as result.
+	   (let* ((ls1 (vector->list expr))
+		  (ls2 (map (lambda (item)
+			      (%recurse item accum-rib* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
-		 sub-expr
+		 expr
 	       (list->vector ls2))))
-	  ((<stx>? sub-expr)
-	   (let ((mark*   (<stx>-mark*  sub-expr))
-		 (subst2* (<stx>-subst* sub-expr)))
-	     (cond ((null? mark*)
-		    (f (<stx>-expr sub-expr)
-		       mark
-		       (append subst1* subst2*)
-		       (merge-ae* ae* (<stx>-ae* sub-expr))))
-		   ((eq? (car mark*) anti-mark)
-		    (make-<stx> (<stx>-expr sub-expr) (cdr mark*)
-				(cdr (append subst1* subst2*))
-				(merge-ae* ae* (<stx>-ae* sub-expr))))
+
+	  ((<stx>? expr)
+	   (let ((expr.mark* ($<stx>-mark* expr))
+		 (expr.rib*  ($<stx>-rib*  expr)))
+	     (cond ((null? expr.mark*)
+		    ;;EXPR  with  empty  MARK*: collect  its  RIB*  then
+		    ;;recurse into its expression.
+		    (%recurse ($<stx>-expr expr)
+			      (append accum-rib* expr.rib*)
+			      (%merge-annotated-expr* ae* ($<stx>-ae* expr))))
+
+		   ((eq? (car expr.mark*) anti-mark)
+		    ;;EXPR with non-empty MARK*  having the anti-mark as
+		    ;;first mark; this means EXPR is the input form of a
+		    ;;macro transformer call.
+		    ;;
+		    ;;Drop  both   NEW-MARK  and  the   anti-mark  (they
+		    ;;annihilate each other) from the resulting MARK*.
+		    ;;
+		    ;;Join the collected  ACCUM-RIB* with the EXPR.RIB*;
+		    ;;the first item in the resulting RIB* is associated
+		    ;;to the  anti-mark (it is  a "shift" symbol)  so we
+		    ;;drop it.
+		    ;;
+		    #;(assert (or (and (not (null? accum-rib*))
+				     (eq? 'shift (car accum-rib*)))
+				(and (not (null? expr.rib*))
+				     (eq? 'shift (car expr.rib*)))))
+		    (let* ((result.rib* (append accum-rib* expr.rib*))
+			   (result.rib* (cdr result.rib*)))
+		      (make-<stx> ($<stx>-expr expr) (cdr expr.mark*)
+				  result.rib*
+				  (%merge-annotated-expr* ae* ($<stx>-ae* expr)))))
+
 		   (else
-		    (make-<stx> (<stx>-expr sub-expr)
-				(cons mark mark*)
-				(let ((s* (cons 'shift (append subst1* subst2*))))
-				  (if subst
-				      (cons subst s*)
-				    s*))
-				(merge-ae* ae* (<stx>-ae* sub-expr)))))))
-	  ((symbol? sub-expr)
+		    ;;EXPR with non-empty MARK*  having a proper mark as
+		    ;;first  mark; this  means EXPR  is a  syntax object
+		    ;;created by a macro transformer and inserted in its
+		    ;;output form.
+		    ;;
+		    ;;Push NEW-MARK on the resulting MARK*.
+		    ;;
+		    ;;Join the  collected ACCUM-RIB* with  the EXPR.RIB*
+		    ;;of  EXPR; push  a "shift"  on the  resulting RIB*,
+		    ;;associated to NEW-MARK in MARK*.
+		    ;;
+		    (let* ((result.rib* (append accum-rib* expr.rib*))
+			   (result.rib* (cons 'shift result.rib*))
+			   (result.rib* (if rib
+					    (cons rib result.rib*)
+					  result.rib*)))
+		      (make-<stx> ($<stx>-expr expr) (cons new-mark expr.mark*)
+				  result.rib*
+				  (%merge-annotated-expr* ae* ($<stx>-ae* expr))))))))
+
+	  ((symbol? expr)
+	   ;;A raw symbol is invalid.
 	   (syntax-violation #f
 	     "raw symbol encountered in output of macro"
-	     expr sub-expr))
+	     top-expr expr))
+
 	  (else
-	   (make-<stx> sub-expr (list mark) subst1* ae*))))
-  (mkstx (f expr mark '() '()) '() '() (list ae)))
+	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
+	   ;;numbers, strings, ..., structs, records).
+	   #;(assert (non-compound-sexp? expr))
+	   expr)))
+
+  #| end of module: ADD-MARK |# )
 
 
 ;;;; stuff about labels, lexical variables, location gensyms
@@ -5213,6 +5705,224 @@
   #| end of module |# )
 
 
+;;;; public interface: identifiers handling
+
+(define (identifier? x)
+  ;;Return true if X is an  identifier: a syntax object whose expression
+  ;;is a symbol.
+  ;;
+  (and (<stx>? x)
+       (let ((expr ($<stx>-expr x)))
+	 (symbol? (if (annotation? expr)
+		      (annotation-stripped expr)
+		    expr)))))
+
+(define (false-or-identifier? x)
+  (or (not x)
+      (identifier? x)))
+
+;;; --------------------------------------------------------------------
+
+(define* (bound-identifier=? {x identifier?} {y identifier?})
+  (bound-id=? x y))
+
+(define (bound-id=? id1 id2)
+  ;;Two identifiers  are BOUND-ID=? if they  have the same name  and the
+  ;;same set of marks.
+  ;;
+  (and (eq? (identifier->symbol id1) (identifier->symbol id2))
+       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
+
+(define* (free-identifier=? {x identifier?} {y identifier?})
+  (free-id=? x y))
+
+(define (free-id=? id1 id2)
+  ;;Two identifiers are  FREE-ID=? if either both are bound  to the same
+  ;;label or if both are unbound and they have the same name.
+  ;;
+  (let ((t1 (id->label id1))
+	(t2 (id->label id2)))
+    (if (or t1 t2)
+	(eq? t1 t2)
+      (eq? (identifier->symbol id1)
+	   (identifier->symbol id2)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (identifier-bound? {id identifier?})
+  ($identifier-bound? id))
+
+(define ($identifier-bound? id)
+  (and (id->label id) #t))
+
+(define (false-or-identifier-bound? id)
+  (or (not id)
+      (and (identifier? id)
+	   ($identifier-bound? id))))
+
+;;; --------------------------------------------------------------------
+
+(define* (identifier->symbol x)
+  ;;Given an identifier return its symbol expression.
+  ;;
+  (define (%error)
+    (assertion-violation __who__
+      "expected identifier as argument" x))
+  (unless (<stx>? x)
+    (%error))
+  (let* ((expr ($<stx>-expr x))
+	 (sym  (if (annotation? expr)
+		   (annotation-stripped expr)
+		 expr)))
+    (if (symbol? sym)
+	sym
+      (%error))))
+
+(define (generate-temporaries list-stx)
+  (syntax-match list-stx ()
+    ((?item* ...)
+     (map (lambda (x)
+	    (make-<stx> (if (identifier? x)
+			    ;;If it is an identifier we do *not* want to use its name
+			    ;;as temporary name, because  it looks ugly and confusing
+			    ;;when  looking  at  the  result of  the  expansion  with
+			    ;;PRINT-GENSYM set to #f.
+			    (gensym 't)
+			  (let ((x (syntax->datum x)))
+			    (if (or (symbol? x)
+				    (string? x))
+				(gensym x)
+			      (gensym 't))))
+			TOP-MARK* '() '()))
+       ?item*))
+    (_
+     (assertion-violation 'generate-temporaries
+       "not a list" list-stx))))
+
+
+;;;; utilities for identifiers
+
+(define (valid-bound-ids? id*)
+  ;;Given a list return #t if it  is made of identifers none of which is
+  ;;BOUND-ID=? to another; else return #f.
+  ;;
+  ;;This function is called to validate  both list of LAMBDA formals and
+  ;;list of LET binding identifiers.  The only guarantee about the input
+  ;;is that it is a list.
+  ;;
+  (and (for-all identifier? id*)
+       (distinct-bound-ids? id*)))
+
+(define (distinct-bound-ids? id*)
+  ;;Given a list of identifiers: return #t if none of the identifiers is
+  ;;BOUND-ID=? to another; else return #f.
+  ;;
+  (or (null? id*)
+      (and (not (bound-id-member? ($car id*) ($cdr id*)))
+	   (distinct-bound-ids? ($cdr id*)))))
+
+(define (duplicate-bound-formals? standard-formals-stx)
+  ;;Given  a  syntax  object  representing a  list  of  UNtagged  LAMBDA
+  ;;formals:  return #f  if none  of the  identifiers is  BOUND-ID=?  to
+  ;;another; else return a duplicate identifier.
+  ;;
+  (let recur ((fmls          standard-formals-stx)
+	      (collected-id* '()))
+    (syntax-match fmls ()
+      ;;STANDARD-FORMALS-STX is a proper list and it ends here.  Good.
+      (() #f)
+      ;;STANDARD-FORMALS-STX is an IMproper list and it ends here with a
+      ;;rest argument.  Check it.
+      (?rest
+       (identifier? ?rest)
+       (if (bound-id-member? ?rest collected-id*)
+	   ?rest
+	 #f))
+      ((?id . ?rest)
+       (identifier? ?id)
+       (if (bound-id-member? ?id collected-id*)
+	   ?id
+	 (recur ?rest (cons ?id collected-id*))))
+      (_
+       (stx-error standard-formals-stx "invalid formals")))))
+
+(define (bound-id-member? id id*)
+  ;;Given an identifier  ID and a list of identifiers  ID*: return #t if
+  ;;ID is BOUND-ID=? to one of the identifiers in ID*; else return #f.
+  ;;
+  (and (pair? id*)
+       (or (bound-id=? id ($car id*))
+	   (bound-id-member? id ($cdr id*)))))
+
+(define* (identifier-append {ctxt identifier?} . str*)
+  ;;Given  the identifier  CTXT  and a  list of  strings  or symbols  or
+  ;;identifiers STR*: concatenate all the items in STR*, with the result
+  ;;build and return a new identifier in the same context of CTXT.
+  ;;
+  ($datum->syntax ctxt
+		  (string->symbol
+		   (apply string-append
+			  (map (lambda (x)
+				 (cond ((symbol? x)
+					(symbol->string x))
+				       ((string? x)
+					x)
+				       ((identifier? x)
+					(symbol->string (syntax->datum x)))
+				       (else
+					(assertion-violation __who__ "BUG"))))
+			    str*)))))
+
+
+;;;; identifiers: syntax parameters
+
+(define current-run-lexenv
+  ;;This parameter holds  a function which is meant to  return the value
+  ;;of LEXENV.RUN while a macro is being expanded.
+  ;;
+  ;;The  default  value will  return  null,  which represents  an  empty
+  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
+  ;;mapping   label/binding  is   performed   only   in  the   top-level
+  ;;environment.
+  ;;
+  ;;Another possibility we could think of is to use as default value the
+  ;;function:
+  ;;
+  ;;   (lambda ()
+  ;;     (syntax-violation 'current-run-lexenv
+  ;; 	   "called outside the extent of a macro expansion"
+  ;; 	   '(current-run-lexenv)))
+  ;;
+  ;;However there are  cases where we actually want  the returned LEXENV
+  ;;to be null, for example: when evaluating the visit code of a library
+  ;;just loaded in  FASL form; such visit code might  need, for example,
+  ;;to access the  syntactic binding property lists, and it  would do it
+  ;;outside any macro expansion.
+  ;;
+  (make-parameter
+      (lambda () '())
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define* (syntax-parameter-value {id identifier?})
+  (let ((label (id->label id)))
+    (if label
+	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
+	  (case (syntactic-binding-type binding)
+	    ((local-ctv)
+	     (local-compile-time-value-binding-object binding))
+
+	    ((global-ctv)
+	     (global-compile-time-value-binding-object binding))
+
+	    (else
+	     (procedure-argument-violation __who__
+	       "expected identifier bound to compile-time value"
+	       id))))
+      (procedure-argument-violation __who__
+	"unbound identifier" id))))
+
+
 ;;;; deconstructors and predicates for syntax objects
 
 (module (syntax-pair?
@@ -5246,597 +5956,146 @@
       (and (syntax-pair? x)
 	   (syntax-list? (syntax-cdr x)))))
 
-(define (syntax-car x)
+(define* (syntax-car x)
   (cond ((<stx>? x)
 	 (mkstx (syntax-car ($<stx>-expr x))
-		($<stx>-mark*  x)
-		($<stx>-subst* x)
-		($<stx>-ae*    x)))
+		($<stx>-mark* x)
+		($<stx>-rib*  x)
+		($<stx>-ae*   x)))
 	((annotation? x)
 	 (syntax-car (annotation-expression x)))
 	((pair? x)
 	 ($car x))
 	(else
-	 (assertion-violation 'syntax-car "BUG: not a pair" x))))
+	 (assertion-violation __who__ "not a pair" x))))
 
-(define (syntax-cdr x)
+(define* (syntax-cdr x)
   (cond ((<stx>? x)
 	 (mkstx (syntax-cdr ($<stx>-expr x))
-		($<stx>-mark*  x)
-		($<stx>-subst* x)
-		($<stx>-ae*    x)))
+		($<stx>-mark* x)
+		($<stx>-rib*  x)
+		($<stx>-ae*   x)))
 	((annotation? x)
 	 (syntax-cdr (annotation-expression x)))
 	((pair? x)
 	 ($cdr x))
 	(else
-	 (assertion-violation 'syntax-cdr "BUG: not a pair" x))))
+	 (assertion-violation __who__ "not a pair" x))))
 
-(define (syntax->list x)
+(define* (syntax->list x)
   (cond ((syntax-pair? x)
 	 (cons (syntax-car x)
 	       (syntax->list (syntax-cdr x))))
 	((syntax-null? x)
 	 '())
 	(else
-	 (assertion-violation 'syntax->list "BUG: invalid argument" x))))
+	 (assertion-violation __who__ "invalid argument" x))))
 
-(define (syntax-vector->list x)
+(define* (syntax-vector->list x)
   (cond ((<stx>? x)
-	 (let ((ls (syntax-vector->list (<stx>-expr x)))
-	       (m* (<stx>-mark* x))
-	       (s* (<stx>-subst* x))
-	       (ae* (<stx>-ae* x)))
+	 (let ((ls     (syntax-vector->list ($<stx>-expr x)))
+	       (mark*  ($<stx>-mark* x))
+	       (rib*   ($<stx>-rib*  x))
+	       (ae*    ($<stx>-ae*   x)))
 	   (map (lambda (x)
-		  (mkstx x m* s* ae*))
+		  (mkstx x mark* rib* ae*))
 	     ls)))
 	((annotation? x)
 	 (syntax-vector->list (annotation-expression x)))
 	((vector? x)
 	 (vector->list x))
 	(else
-	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
+	 (assertion-violation __who__ "not a syntax vector" x))))
+
+(define (syntax-unwrap stx)
+  ;;Given a syntax object STX  decompose it and return the corresponding
+  ;;S-expression holding datums and identifiers.  Take care of returning
+  ;;a proper  list when the  input is a  syntax object holding  a proper
+  ;;list.
+  ;;
+  (syntax-match stx ()
+    (()
+     '())
+    ((?car . ?cdr)
+     (cons (syntax-unwrap ?car)
+	   (syntax-unwrap ?cdr)))
+    (#(?item* ...)
+     (list->vector (syntax-unwrap ?item*)))
+    (?atom
+     (identifier? ?atom)
+     ?atom)
+    (?atom
+     (syntax->datum ?atom))))
 
 
-;;;; public interface identifiers handling
+;;;; various identifiers modules
 
-(define (identifier? x)
-  ;;Return true if X is an  identifier: a syntax object whose expression
-  ;;is a symbol.
-  ;;
-  (and (<stx>? x)
-       (let ((expr ($<stx>-expr x)))
-	 (symbol? (if (annotation? expr)
-		      (annotation-stripped expr)
-		    expr)))))
-
-(define* (identifier->symbol x)
-  ;;Given an identifier return its symbol expression.
-  ;;
-  (define (%error)
-    (assertion-violation __who__
-      "Vicare bug: expected identifier as argument" x))
-  (unless (<stx>? x)
-    (%error))
-  (let* ((expr ($<stx>-expr x))
-	 (sym  (if (annotation? expr)
-		   (annotation-stripped expr)
-		 expr)))
-    (if (symbol? sym)
-	sym
-      (%error))))
-
-(define (generate-temporaries list-stx)
-  (syntax-match list-stx ()
-    ((?item* ...)
-     (map (lambda (x)
-	    (make-<stx> (let ((x (syntax->datum x)))
-			  (if (or (symbol? x)
-				  (string? x))
-			      (gensym x)
-			    (gensym 't)))
-			TOP-MARK* '() '()))
-       ?item*))
-    (_
-     (assertion-violation 'generate-temporaries
-       "not a list" list-stx))))
-
-(define (free-identifier=? x y)
-  (if (identifier? x)
-      (if (identifier? y)
-	  (free-id=? x y)
-	(assertion-violation 'free-identifier=? "not an identifier" y))
-    (assertion-violation 'free-identifier=? "not an identifier" x)))
-
-(define (bound-identifier=? x y)
-  (if (identifier? x)
-      (if (identifier? y)
-	  (bound-id=? x y)
-	(assertion-violation 'bound-identifier=? "not an identifier" y))
-    (assertion-violation 'bound-identifier=? "not an identifier" x)))
-
-
-;;;; identifiers: syntactic binding properties
-
-(define* (syntactic-binding-putprop (id identifier?) (key symbol?) value)
-  (putprop (id->label/or-error __who__ id id) key value))
-
-(define* (syntactic-binding-getprop (id identifier?) (key symbol?))
-  (getprop (id->label/or-error __who__ id id) key))
-
-(define* (syntactic-binding-remprop (id identifier?) (key symbol?))
-  (remprop (id->label/or-error __who__ id id) key))
-
-(define* (syntactic-binding-property-list (id identifier?))
-  (property-list (id->label/or-error __who__ id id)))
-
-
-;;;; identifiers: unsafe variants API
-;;
-;;With the function SET-IDENTIFIER-UNSAFE-VARIANT! and the syntax UNSAFE
-;;we allow the  user to select an  unsafe variant of a  function or (why
-;;not?)  macro.
-;;
-;;The unsafe  variant of  a function  is a  function that  (not strictly
-;;speaking) neither  validates its arguments  nor its return  value.  As
-;;example, the function:
-;;
-;;   (define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
-;;     ($char->fixnum ($string-ref str idx)))
-;;
-;;can be split into:
-;;
-;;   (define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
-;;     ($string-ref-fx str idx))
-;;
-;;   (define ($string-ref-fx str idx)
-;;     ($char->fixnum ($string-ref str idx)))
-;;
-;;where  $STRING-REF-FX  is the  unsafe  variant  of STRING-REF-FX;  the
-;;unsafe variants  API allows us to  register this fact, for  use by the
-;;expander, as follows:
-;;
-;;   (begin-for-syntax
-;;     (set-identifier-unsafe-variant! #'string-ref-fx
-;;       #'$string-ref-fx))
-;;
-;;so, having imported  the binding STRING-REF-FX, we can  use its unsafe
-;;variant as follows:
-;;
-;;   ((unsafe string-ref-fx) "ciao" 2)
-;;
-;;without actually importing the binding $STRING-REF-FX.
-;;
-;;We  use  syntactic  binding  properties  to  implement  this  feature:
-;;SET-IDENTIFIER-UNSAFE-VARIANT!   puts  a  property  in  the  syntactic
-;;binding, which is later retrieved  by the UNSAFE syntax.  The property
-;;value  must  be a  syntax  object  representing an  expression  which,
-;;expanded and evaluated, returns the unsafe variant.
-;;
-;;When specifying  the unsafe variant  of a  function we should  build a
-;;syntax  object   representing  an   expression  which,   expanded  and
-;;evaluated, returns a  proper function; so that it can  be used in both
-;;the expressions:
-;;
-;;  ((unsafe fx+) 1 2)
-;;  (map (unsafe fx+) '(1 2) '(3 4))
-;;
-;;so for FX+ we should do:
-;;
-;;  (begin-for-syntax
-;;    (set-identifier-unsafe-variant! #'fx+
-;;      #'(lambda (a b) ($fx+ a b))))
-;;
-;;because $FX+ is not a function, rather it is a primitive operation.
-;;
-
-(define-constant *UNSAFE-VARIANT-COOKIE*
-  'vicare:expander:unsafe-variant)
-
-(define* (set-identifier-unsafe-variant! (safe-id identifier?) (unsafe-expr-stx <stx>?))
-  (if (syntactic-binding-getprop safe-id *UNSAFE-VARIANT-COOKIE*)
-      (syntax-violation __who__
-	"unsafe variant already defined" safe-id unsafe-expr-stx)
-    (syntactic-binding-putprop safe-id *UNSAFE-VARIANT-COOKIE* unsafe-expr-stx)))
-
-
-;;;; identifiers: predicates axiliary functions API
-;;
-;;Predicate functions, both type  predicates and generic predicates, are
-;;used to  validate procedure  arguments and  their return  values.  The
-;;predicates  auxiliary  functions API  assumes  that  it is  useful  to
-;;associate to certain predicate procedures:
-;;
-;;*  A procedure  that validates  a tuple  of values  and when  failing:
-;;  raises     an    exception     with     condition    object     type
-;;  &procedure-argument-violation.
-;;
-;;*  A procedure  that validates  a tuple  of values  and when  failing:
-;;  raises     an    exception     with     condition    object     type
-;;  &expression-return-value-violation.
-;;
-;;Such auxiliary functions are  made available through syntactic binding
-;;properties  by  just importing  in  the  current lexical  contour  the
-;;identifier bound to the predicate function.
-;;
-;;As example, we  can associate a procedure  argument auxiliary function
-;;to LIST? as follows:
-;;
-;;   (define (list-procedure-argument who obj)
-;;     (if (list? obj)
-;;         obj
-;;       (procedure-argument-violation who
-;;         "expected list object as argument" obj)))
-;;
-;;   (begin-for-syntax
-;;     (set-predicate-procedure-argument-validation! #'list?
-;;       #'list-procedure-argument?))
-;;
-;;   ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
-;;   => (1 2 3)
-;;
-;;   ((predicate-procedure-argument-validation list?) 'hey '#(1 2 3))
-;;   error--> &procedure-argument-violation
-;;
-;;and we  can associate a return  value auxiliary function to  LIST?  as
-;;follows:
-;;
-;;   (define (list-return-value? who obj)
-;;     (if (list? obj)
-;;         obj
-;;       (expression-return-value-violation who
-;;         "expected list object as argument" obj)))
-;;
-;;   (begin-for-syntax
-;;     (set-predicate-return-value-validation! #'list?
-;;       #'list-return-value?))
-;;
-;;    ((predicate-return-value-validation list?) 'hey '(1 2 3))
-;;    => (1 2 3)
-;;
-;;    ((predicate-return-value-validation list?) 'hey '#(1 2 3))
-;;    error--> &expression-return-value-violation
-;;
-
-(define-constant *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
-  'vicare:expander:predicate-procedure-argument-validation)
-
-(define-constant *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
-  'vicare:expander:predicate-return-value-validation)
-
-(define* (set-predicate-procedure-argument-validation! (pred-id identifier?) (validation-stx <stx>?))
-  (if (syntactic-binding-getprop pred-id *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
-      (syntax-violation __who__
-	"predicate procedure argument validation already defined"
-	pred-id validation-stx)
-    (syntactic-binding-putprop pred-id *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
-			       validation-stx)))
-
-(define* (set-predicate-return-value-validation! (pred-id identifier?) (validation-stx <stx>?))
-  (if (syntactic-binding-getprop pred-id  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
-      (syntax-violation __who__
-	"predicate procedure argument validation already defined"
-	pred-id validation-stx)
-    (syntactic-binding-putprop pred-id *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
-			       validation-stx)))
-
-
-;;;; identifiers: expand-time type specification
-;;
-;;Examples of OBJECT-SPEC:
-;;
-;;   (define* (fixnum (obj fixnum?))
-;;     obj)
-;;
-;;   (define* (exact-integer (obj exact-integer?))
-;;     obj)
-;;
-;;   (eval-for-expand
-;;
-;;     (set-identifier-object-spec! #'fixnum
-;;       (make-object-spec 'fixnum #'fixnum #'fixnum?))
-;;
-;;     (set-identifier-object-spec! #'exact-integer
-;;       (make-object-spec 'exact-integer #'exact-integer #'exact-integer?))
-;;
-;;   (set-identifier-object-spec! #'cons
-;;     (let ()
-;;       (import (vicare system $pairs))
-;;
-;;       (define (accessor-maker slot-id safe?)
-;;         (case-identifiers slot-id
-;;           ((car) (if safe? #'car #'$car))
-;;           ((cdr) (if safe? #'cdr #'$cdr))
-;;           (else
-;;            (syntax-violation 'pair
-;;              "invalid slot name for accessor creation"
-;;              slot-id))))
-;;
-;;       (define (mutator-maker slot-id safe?)
-;;         (case-identifiers slot-id
-;;           ((car) (if safe? #'set-car! #'$set-car!))
-;;           ((cdr) (if safe? #'set-cdr! #'$set-cdr!))
-;;           (else
-;;            (syntax-violation 'pair
-;;              "invalid slot name for mutation creation" slot-id))))
-;;
-;;       (make-object-spec 'pair #'cons #'pair? accessor-maker mutator-maker)))
-;;
-;;     #| end of begin-or-expand |# )
-;;
-;;Examples of CALLABLE-SPEC:
-;;
-;;   (define (func a b c)
-;;     (* a (+ b c)))
-;;
-;;   (define (fxfunc a b c)
-;;     (fx* a (fx+ b c)))
-;;
-;;   (eval-for-expand
-;;
-;;     (define fixnum-spec
-;;       (object-spec #'fixnum))
-;;
-;;     (define exact-integer-spec
-;;       (object-spec #'exact-integer))
-;;
-;;     (set-callable-object-spec! #'func
-;;       (make-callable-spec 'func 3 3
-;;         (lambda (type-a type-b type-c)
-;;           (cond ((and (eq? type-a fixnum-spec)
-;;                       (eq? type-b fixnum-spec)
-;;                       (eq? type-c fixnum-spec))
-;;                  (values #'fxfunc exact-integer-spec))
-;;                 (else
-;;                  (values #'func #f))))))
-;;
-;;     #| end of eval-for-expand |# )
-;;
-
-(define-constant *EXPAND-TIME-OBJECT-SPEC-COOKIE*
-  'vicare:expander:object-spec)
-
-(define-constant *EXPAND-TIME-CALLABLE-SPEC-COOKIE*
-  'vicare:expander:callable-spec)
-
-(define-record object-spec
-  ;;A type representing  the object type to which  expressions in syntax
-  ;;objects  will evaluate.   All the  Scheme  objects are  meant to  be
-  ;;representable with this type.
-  ;;
-  ;;Instances of  this type are meant  to be compared with  EQ?, with #f
-  ;;acting as wildcard: it represents any object type.
-  ;;
-  (name
-		;A symbol representing  this type name.  To  be used for
-		;meaningful error reporting.
-   type-id
-		;The  bound identifier  representing  the  name of  this
-		;type.  This  identifier has  this very instance  in its
-		;syntactic binding property list.
-   pred-id
-		;An identifier bound to the type predicate.
-   accessor-maker
-		;False  or  an  accessor  maker  procedure  accepting  2
-		;arguments and returning 1 value.  The return value is a
-		;syntax  object  evaluating  to a  slot  accessor.   The
-		;arguments are: an identifier  representing a slot name;
-		;a  boolean, true  if  the requested  accessor is  safe,
-		;false if it is unsafe.
-   mutator-maker
-		;False  or   a  mutator  maker  procedure   accepting  2
-		;arguments and returning 1 value.  The return value is a
-		;syntax  object  evaluating  to  a  slot  mutator.   The
-		;arguments are: an identifier  representing a slot name;
-		;a boolean, true if the requested mutator is safe, false
-		;if it is unsafe.
-   ))
-
-(case-define* public-make-object-spec
-  (((name symbol?) (type-id identifier?) (pred-id identifier?))
-   (make-object-spec name type-id pred-id #f #f))
-  (((name symbol?) (type-id identifier?) (pred-id identifier?)
-    (accessor-maker false-or-procedure?)
-    (mutator-maker  false-or-procedure?))
-   (make-object-spec name type-id pred-id accessor-maker mutator-maker)))
-
-(define-record callable-spec
-  ;;A struct type representing a callable form binding, either procedure
-  ;;or macro.
-  ;;
-  (name
-		;A symbol  representing this callable name.   To be used
-		;for meaningful error reporting.
-   min-arity
-		;A fixnum  representing the minimum number  of arguments
-		;this callable must be applied to.
-   max-arity
-		;A fixnum or positive  infinity representing the maximum
-		;number of arguments this callable must be applied to.
-   dispatcher
-		;False  or  a  procedure  to be  called  with  the  type
-		;signature of a specific callable application.  The type
-		;signature  of  a tuple  of  arguments  is the  list  of
-		;instances of type OBJECT-SPEC matching the arguments.
-		;
-		;It is meant  to return two values: the  identifier of a
-		;specialised  version  of  this callable  that  is  more
-		;suited to be  applied to a tuple of  arguments with the
-		;given  type  signature;   an  instance  of  OBJECT-SPEC
-		;representing the type of the return value.
-   ))
-
-;;; --------------------------------------------------------------------
-
-(define* (set-identifier-object-spec! (type-id identifier?) (spec object-spec?))
-  (if (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*)
-      (syntax-violation __who__
-	"object specification already defined" type-id spec)
-    (syntactic-binding-putprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE* spec)))
-
-(define* (identifier-object-spec (type-id identifier?))
-  (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*))
-
-;;; --------------------------------------------------------------------
-
-(define* (set-identifier-callable-spec! (type-id identifier?) (spec callable-spec?))
-  (if (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*)
-      (syntax-violation __who__
-	"callable specification already defined" type-id spec)
-    (syntactic-binding-putprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE* spec)))
-
-(define* (identifier-callable-spec (type-id identifier?))
-  (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*))
-
-
-;;;; identifiers: syntax parameters
-
-(define current-run-lexenv
-  ;;This parameter holds  a function which is meant to  return the value
-  ;;of LEXENV.RUN while a macro is being expanded.
-  ;;
-  ;;The  default  value will  return  null,  which represents  an  empty
-  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
-  ;;mapping   label/binding  is   performed   only   in  the   top-level
-  ;;environment.
-  ;;
-  ;;Another possibility we could think of is to use as default value the
-  ;;function:
-  ;;
-  ;;   (lambda ()
-  ;;     (syntax-violation 'current-run-lexenv
-  ;; 	   "called outside the extent of a macro expansion"
-  ;; 	   '(current-run-lexenv)))
-  ;;
-  ;;However there are  cases where we actually want  the returned LEXENV
-  ;;to be null, for example: when evaluating the visit code of a library
-  ;;just loaded in  FASL form; such visit code might  need, for example,
-  ;;to access the  syntactic binding property lists, and it  would do it
-  ;;outside any macro expansion.
-  ;;
-  (make-parameter
-      (lambda () '())))
-
-(define* (syntax-parameter-value (id identifier?))
-  (let ((label (id->label id)))
-    (if label
-	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
-	  (case (syntactic-binding-type binding)
-	    ((local-ctv)
-	     (local-compile-time-value-binding-object binding))
-
-	    ((global-ctv)
-	     (global-compile-time-value-binding-object binding))
-
-	    (else
-	     (procedure-argument-violation __who__
-	       "expected identifier bound to compile-time value"
-	       id))))
-      (procedure-argument-violation __who__
-	"unbound identifier" id))))
-
-
-;;;; utilities for identifiers
-
-(define (bound-id=? id1 id2)
-  ;;Two identifiers  are BOUND-ID=? if they  have the same name  and the
-  ;;same set of marks.
-  ;;
-  (and (eq? (identifier->symbol id1) (identifier->symbol id2))
-       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
-
-(define (free-id=? id1 id2)
-  ;;Two identifiers are  FREE-ID=? if either both are bound  to the same
-  ;;label or if both are unbound and they have the same name.
-  ;;
-  (let ((t1 (id->label id1))
-	(t2 (id->label id2)))
-    (if (or t1 t2)
-	(eq? t1 t2)
-      (eq? (identifier->symbol id1)
-	   (identifier->symbol id2)))))
-
-(define (valid-bound-ids? id*)
-  ;;Given a list return #t if it  is made of identifers none of which is
-  ;;BOUND-ID=? to another; else return #f.
-  ;;
-  ;;This function is called to validate  both list of LAMBDA formals and
-  ;;list of LET binding identifiers.  The only guarantee about the input
-  ;;is that it is a list.
-  ;;
-  (and (for-all identifier? id*)
-       (distinct-bound-ids? id*)))
-
-(define (distinct-bound-ids? id*)
-  ;;Given a list of identifiers: return #t if none of the identifiers is
-  ;;BOUND-ID=? to another; else return #f.
-  ;;
-  (or (null? id*)
-      (and (not (bound-id-member? ($car id*) ($cdr id*)))
-	   (distinct-bound-ids? ($cdr id*)))))
-
-(define (bound-id-member? id id*)
-  ;;Given an identifier  ID and a list of identifiers  ID*: return #t if
-  ;;ID is BOUND-ID=? to one of the identifiers in ID*; else return #f.
-  ;;
-  (and (pair? id*)
-       (or (bound-id=? id ($car id*))
-	   (bound-id-member? id ($cdr id*)))))
-
-(define* (identifier-append ctxt . str*)
-  ;;Given  the identifier  CTXT  and a  list of  strings  or symbols  or
-  ;;identifiers STR*: concatenate all the items in STR*, with the result
-  ;;build and return a new identifier in the same context of CTXT.
-  ;;
-  (datum->stx ctxt
-	      (string->symbol
-	       (apply string-append
-		      (map (lambda (x)
-			     (cond ((symbol? x)
-				    (symbol->string x))
-				   ((string? x)
-				    x)
-				   ((identifier? x)
-				    (symbol->string (syntax->datum x)))
-				   (else
-				    (assertion-violation __who__ "BUG"))))
-			str*)))))
+(include "psyntax.expander.syntactic-binding-properties.scm" #t)
+(include "psyntax.expander.tagged-identifiers.scm" #t)
+(include "psyntax.expander.signatures.scm" #t)
+(module (initialise-type-spec-for-built-in-object-types
+	 retvals-signature-of-datum
+	 procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
+	 list-tag-id			$list-tag-id?		list-tag-id?
+	 top-tag-id			$top-tag-id?		top-tag-id?
+	 boolean-tag-id			void-tag-id
+	 struct-tag-id			record-tag-id		predicate-tag-id)
+  (import (vicare))
+  (include "psyntax.expander.built-in-tags.scm" #t))
+(module (initialise-core-prims-tagging)
+  (include "psyntax.expander.core-prims-init.scm" #t))
 
 
 (define-syntax syntax-match
   ;;The SYNTAX-MATCH macro is almost like SYNTAX-CASE macro.  Except that:
   ;;
-  ;;*  The syntax  objects matched  are OUR  stx objects,  not the  host
-  ;;  systems syntax objects (whatever they may be we don't care).
+  ;;* The  syntax objects matched  are OUR stx objects,  not the host  systems syntax
+  ;;  objects (whatever they may be we don't care).
   ;;
-  ;;*  The literals  are matched  against  those in  the system  library
-  ;;  (psyntax system $all).  -- see scheme-stx
+  ;;* The  literals are matched against  those in the system  library (psyntax system
+  ;;  $all).  See the function SCHEME-STX for how those identifier are created.
   ;;
-  ;;* The variables  in the patters are bound to  ordinary variables not
-  ;;  to special pattern variables.
+  ;;* The variables  in the patterns are  bound to ordinary variables  not to special
+  ;;  pattern variables.
   ;;
-  ;;The actual matching between the input expression and the patterns is
-  ;;performed  by   the  function   SYNTAX-DISPATCH;  the   patterns  in
-  ;;SYNTAX-MATCH are converted to a  sexps and handed to SYNTAX-DISPATCH
-  ;;along with the input expression.
+  ;;The actual matching between the input expression and the patterns is performed by
+  ;;the function  SYNTAX-DISPATCH; the  patterns in SYNTAX-MATCH  are converted  to a
+  ;;sexps and handed to SYNTAX-DISPATCH along with the input expression.
   ;;
   (let ()
     (define (transformer stx)
       (syntax-case stx ()
 
-	;;No  clauses.  Some  of  the  SYNTAX-MATCH clauses  recursively
-	;;expand  to uses  of  SYNTAX-MATCH; when  no  more clauses  are
-	;;available in the input  form, this SYNTAX-CASE clause matches.
-	;;When this happens: we want to raise a syntax error.
+	;;No more clauses.  This clause matches STX when:
 	;;
-	;;Notice that we  do not want to raise a  syntax error here, but
-	;;in the expanded code.
-	((_ ?expr (?literals ...))
+	;;* The SYNTAX-MATCH use input form does not match any of the patterns, so we
+	;;  want to raise a syntax violation in the expanded code.  Example:
+	;;
+	;;     (syntax-match #'(1 2) ()
+	;;      ((?a ?b ?c)
+	;;       (do-something-with ?a ?b ?c)))
+	;;
+	;;  the input form #'(1 2) does not match the pattern "(?a ?b ?c)".
+	;;
+	;;* The SYNTAX-MATCH use has the format:
+	;;
+	;;     (syntax-match ?input-form ?literals)
+	;;
+	;;  that is: no clauses were specified.  In this case we still want to expand
+	;;  into a syntax violation raising form.
+	;;
+	;;Notice, again, that we do not want to raise a syntax error here, but in the
+	;;expanded code.
+	;;
+	((_ ?input-form (?literals ...))
 	 (for-all sys.identifier? (syntax (?literals ...)))
-	 (syntax (syntax-violation #f "invalid syntax" ?expr)))
+	 (syntax
+	  (syntax-violation 'syntax-match
+	    "invalid syntax, no clause matches the input form" ?input-form)))
 
 	;;The next clause has a fender.
-	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
+	;;
+	((_ ?input-form (?literals ...) (?pattern ?fender ?body) ?clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
 	 (receive (pattern ptnvars/levels)
 	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
@@ -5844,22 +6103,20 @@
 	       ((PATTERN                   (sys.datum->syntax (syntax here) pattern))
 		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
 	     (syntax
-	      (let ((T ?expr))
-		;;If   the  input   expression   matches  the   symbolic
-		;;expression PATTERN...
+	      (let ((T ?input-form))
+		;;If the input expression matches the symbolic expression PATTERN...
 		(let ((ls/false (syntax-dispatch T 'PATTERN)))
 		  (if (and ls/false
-			   ;;...and  the pattern  variables satisfy  the
-			   ;;fender...
+			   ;;...and the pattern variables satisfy the fender...
 			   (apply (lambda (PTNVARS ...) ?fender) ls/false))
-		      ;;...evaluate the body  with the pattern variables
-		      ;;assigned.
+		      ;;...evaluate the body with the pattern variables assigned.
 		      (apply (lambda (PTNVARS ...) ?body) ls/false)
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) ?clause* ...))))))))
 
 	;;The next clause has NO fender.
-	((_ ?expr (?literals ...) (?pattern ?body) clause* ...)
+	;;
+	((_ ?input-form (?literals ...) (?pattern ?body) clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
 	 (receive (pattern ptnvars/levels)
 	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
@@ -5867,45 +6124,38 @@
 	       ((PATTERN                   (sys.datum->syntax (syntax here) pattern))
 		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
 	     (syntax
-	      (let ((T ?expr))
-		;;If   the  input   expression   matches  the   symbolic
-		;;expression PATTERN...
+	      (let ((T ?input-form))
+		;;If the input expression matches the symbolic expression PATTERN...
 		(let ((ls/false (syntax-dispatch T 'PATTERN)))
 		  (if ls/false
-		      ;;...evaluate the body  with the pattern variables
-		      ;;assigned.
+		      ;;...evaluate the body with the pattern variables assigned.
 		      (apply (lambda (PTNVARS ...) ?body) ls/false)
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) clause* ...))))))))
 
-	;;This is a true error in he use of SYNTAX-MATCH.  We still want
-	;;the  expanded  code  to  raise  the  violation.   Notice  that
-	;;SYNTAX-VIOLATION  is not  bound in  the expand  environment of
-	;;SYNTAX-MATCH's transformer.
+	;;This is a true error in he use of SYNTAX-MATCH.
 	;;
 	(?stuff
-	 (syntax (syntax-violation #f "invalid syntax" stx)))
+	 (sys.syntax-violation 'syntax-match "invalid syntax in macro use" stx))
 	))
 
     (module (%convert-single-pattern)
 
       (case-define %convert-single-pattern
-	;;Recursive function.  Transform the PATTERN-STX into a symbolic
-	;;expression to be handed  to SYNTAX-DISPATCH.  PATTERN-STX must
-	;;be  a  syntax  object  holding  the  SYNTAX-MATCH  pattern  to
-	;;convert.  LITERALS must  be a syntax object holding  a list of
-	;;identifiers being the literals in the PATTERN-STX.
+	;;Recursive function.   Transform the PATTERN-STX into  a symbolic expression
+	;;to  be handed  to SYNTAX-DISPATCH.   PATTERN-STX  must be  a syntax  object
+	;;holding the  SYNTAX-MATCH pattern  to convert.  LITERALS  must be  a syntax
+	;;object holding a list of identifiers being the literals in the PATTERN-STX.
 	;;
 	;;Return 2 values:
 	;;
 	;;1. The pattern as sexp.
 	;;
-	;;2.   An ordered  list of  pairs, each  representing a  pattern
-	;;   variable that must be bound whenever the body associated to
-	;;   the  pattern is  evaluated.  The  car of  each pair  is the
-	;;   symbol  being the pattern  variable name.  The cdr  of each
-	;;   pair is an exact  integer representing the nesting level of
-	;;   the pattern variable.
+	;;2. An ordered list of pairs, each representing a pattern variable that must
+	;;   be bound whenever the body  associated to the pattern is evaluated.  The
+	;;   car of each pair is the symbol being the pattern variable name.  The cdr
+	;;   of each pair  is an exact integer representing the  nesting level of the
+	;;   pattern variable.
 	;;
 	((pattern-stx literals)
 	 (%convert-single-pattern pattern-stx literals 0 '()))
@@ -5921,8 +6171,7 @@
 	   ;;
 	   ;;   _
 	   ;;
-	   ;;any other identifier will bind a variable and it is encoded
-	   ;;as:
+	   ;;any other identifier will bind a variable and it is encoded as:
 	   ;;
 	   ;;   any
 	   ;;
@@ -5936,13 +6185,12 @@
 		   (values 'any (cons (cons pattern-stx nesting-level)
 				      pattern-vars)))))
 
-	   ;;A  tail  pattern  with  ellipsis which  does  not  bind  a
-	   ;;variable is encoded as:
+	   ;;A tail pattern  with ellipsis which does not bind  a variable is encoded
+	   ;;as:
 	   ;;
 	   ;;   #(each ?pattern)
 	   ;;
-	   ;;a tail pattern with ellipsis which does bind a variable is
-	   ;;encoded as:
+	   ;;a tail pattern with ellipsis which does bind a variable is encoded as:
 	   ;;
 	   ;;   each-any
 	   ;;
@@ -6026,8 +6274,8 @@
 	    (values (cons x y) pattern-vars^^))))
 
       (define (%bound-identifier-member? id list-of-ids)
-	;;Return #t if  the identifier ID is  BOUND-IDENTIFIER=?  to one
-	;;of the identifiers in LIST-OF-IDS.
+	;;Return  #t if  the  identifier  ID is  BOUND-IDENTIFIER=?   to  one of  the
+	;;identifiers in LIST-OF-IDS.
 	;;
 	(and (pair? list-of-ids)
 	     (or (sys.bound-identifier=? id (car list-of-ids))
@@ -6037,5265 +6285,190 @@
 	(and (sys.identifier? x)
 	     (sys.free-identifier=? x (syntax (... ...)))))
 
-      ;;Commented out because unused.  (Marco Maggi; Thu Apr 25, 2013)
-      ;;
-      ;; (define (%free-identifier-member? id1 list-of-ids)
-      ;;   ;;Return #t if  the identifier ID1 is  FREE-IDENTIFIER=?  to one
-      ;;   ;;of the identifiers in LIST-OF-IDS.
-      ;;   ;;
-      ;;   (and (exists (lambda (id2)
-      ;; 		     (sys.free-identifier=? id1 id2))
-      ;; 	     list-of-ids)
-      ;; 	   #t))
-
       #| end of module: %CONVERT-SINGLE-PATTERN |# )
 
     transformer))
 
-(define (bless x)
-  ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
-  ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
-  ;;return a syntax object representing the input, possibly X itself.
-  ;;
-  ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
-  ;;symbols  in X  are considered  references  to bindings  in the  core
-  ;;language:  they are  converted to  identifiers having  empty lexical
-  ;;contexts.
-  ;;
-  (mkstx (let recur ((x x))
-	   (cond ((<stx>? x)
-		  x)
-		 ((pair? x)
-		  (cons (recur (car x)) (recur (cdr x))))
-		 ((symbol? x)
-		  (scheme-stx x))
-		 ((vector? x)
-		  (list->vector (map recur (vector->list x))))
-		 ;;If we are here X is a self-evaluating datum.
-		 (else x)))
-	 '() #;mark*
-	 '() #;subst*
-	 '() #;ae*
-	 ))
+
+;;;; identifiers from the built-in environment
 
-(define scheme-stx
+(define (bless input-form.stx)
+  ;;Given a raw sexp,  a single syntax object, a wrapped  syntax object, an unwrapped
+  ;;syntax  object or  a partly  unwrapped syntax  object X:  return a  syntax object
+  ;;representing the input, possibly X itself.
+  ;;
+  ;;When  INPUT-FORM.STX is  a sexp  or a  (partially) unwrapped  syntax object:  raw
+  ;;symbols in INPUT-FORM.STX are converted to:
+  ;;
+  ;;* Bound identifiers  that will be captured  by a core primitive  binding from the
+  ;;  top-level image.
+  ;;
+  ;;* Free identifiers that will not be captured by any binding.  These can be safely
+  ;;  used for local bindings.
+  ;;
+  (cond ((<stx>? input-form.stx)
+	 input-form.stx)
+	((pair? input-form.stx)
+	 (cons (bless ($car input-form.stx))
+	       (bless ($cdr input-form.stx))))
+	((symbol? input-form.stx)
+	 (scheme-stx input-form.stx))
+	((vector? input-form.stx)
+	 (vector-map bless input-form.stx))
+	(else
+	 ;;If we  are here INPUT-FORM.STX  is a non-compound datum  (boolean, number,
+	 ;;string, ..., struct, record, null).
+	 #;(assert (non-compound-sexp? input-form.stx))
+	 input-form.stx)))
+
+(define (trace-bless input-form.stx)
+  (receive-and-return (output-stx)
+      (bless input-form.stx)
+    (debug-print 'bless-input  (syntax->datum input-form.stx)
+		 'bless-output (syntax->datum output-stx))))
+
+(define* (scheme-stx {sym symbol?})
   ;;Take a symbol  and if it's in the library:
   ;;
   ;;   (psyntax system $all)
   ;;
-  ;;create a fresh identifier that maps  only the symbol to its label in
-  ;;that library.  Symbols not in that library become fresh.
-  ;;
-  (let ((scheme-stx-hashtable (make-eq-hashtable)))
-    (lambda (sym)
-      (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
-		 (stx    (make-<stx> sym TOP-MARK* '() '()))
-		 (stx    (cond ((assq sym subst)
-				=> (lambda (subst.entry)
-				     (let ((name  (car subst.entry))
-					   (label (cdr subst.entry)))
-				       (push-lexical-contour
-					   (make-<rib> (list name)
-						       (list TOP-MARK*)
-						       (list label)
-						       #f)
-					 stx))))
-			       (else stx))))
-	    (hashtable-set! scheme-stx-hashtable sym stx)
-	    stx)))))
-
-
-(module NON-CORE-MACRO-TRANSFORMER
-  (non-core-macro-transformer)
-  ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
-  ;;non-core macros to their macro transformers.
-  ;;
-  ;;We distinguish between "non-core macros" and "core macros".
-  ;;
-  ;;Core macros  are part of the  core language: they cannot  be further
-  ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;can introduce bindings by direct  access to the lexical environment,
-  ;;so their transformer functions take the LEXENV as arguments.
-  ;;
-  ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to a composition of core macros.  Non-core macros introduce
-  ;;bindings by  returning binding syntaxes; their  transformer do *not*
-  ;;take the LEXENV as arguments.
-  ;;
-  ;;The transformers of non-core macros take as argument a syntax object
-  ;;representing an  expression and return a  syntax object representing
-  ;;an expression.
-  ;;
-  ;;NOTE This  module is very  long, so it  is split into  multiple code
-  ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
-  ;;
-  (define* (non-core-macro-transformer x)
-    (define (%error-invalid-macro)
-      (error __who__ "Vicare: internal error: invalid macro" x))
-    (assert (symbol? x))
-    (case x
-      ((define-record-type)		define-record-type-macro)
-      ((record-type-and-record?)	record-type-and-record?-macro)
-      ((define-struct)			define-struct-macro)
-      ((define-condition-type)		define-condition-type-macro)
-      ((cond)				cond-macro)
-      ((let)				let-macro)
-      ((do)				do-macro)
-      ((or)				or-macro)
-      ((and)				and-macro)
-      ((let*)				let*-macro)
-      ((let-values)			let-values-macro)
-      ((let*-values)			let*-values-macro)
-      ((values->list)			values->list-macro)
-      ((syntax-rules)			syntax-rules-macro)
-      ((quasiquote)			quasiquote-macro)
-      ((quasisyntax)			quasisyntax-macro)
-      ((with-syntax)			with-syntax-macro)
-      ((when)				when-macro)
-      ((unless)				unless-macro)
-      ((case)				case-macro)
-      ((case-identifiers)		case-identifiers-macro)
-      ((identifier-syntax)		identifier-syntax-macro)
-      ((time)				time-macro)
-      ((delay)				delay-macro)
-      ((assert)				assert-macro)
-      ((guard)				guard-macro)
-      ((define-enumeration)		define-enumeration-macro)
-      ((let*-syntax)			let*-syntax-macro)
-      ((let-constants)			let-constants-macro)
-      ((let*-constants)			let*-constants-macro)
-      ((letrec-constants)		letrec-constants-macro)
-      ((letrec*-constants)		letrec*-constants-macro)
-      ((case-define)			case-define-macro)
-      ((define*)			define*-macro)
-      ((case-define*)			case-define*-macro)
-      ((lambda*)			lambda*-macro)
-      ((case-lambda*)			case-lambda*-macro)
-
-      ((trace-lambda)			trace-lambda-macro)
-      ((trace-define)			trace-define-macro)
-      ((trace-let)			trace-let-macro)
-      ((trace-define-syntax)		trace-define-syntax-macro)
-      ((trace-let-syntax)		trace-let-syntax-macro)
-      ((trace-letrec-syntax)		trace-letrec-syntax-macro)
-
-      ((define-syntax-parameter)	define-syntax-parameter-macro)
-      ((syntax-parametrise)		syntax-parametrise-macro)
-
-      ((include)			include-macro)
-      ((define-integrable)		define-integrable-macro)
-      ((define-inline)			define-inline-macro)
-      ((define-constant)		define-constant-macro)
-      ((define-inline-constant)		define-inline-constant-macro)
-      ((define-values)			define-values-macro)
-      ((define-constant-values)		define-constant-values-macro)
-      ((receive)			receive-macro)
-      ((receive-and-return)		receive-and-return-macro)
-      ((begin0)				begin0-macro)
-      ((xor)				xor-macro)
-      ((define-syntax-rule)		define-syntax-rule-macro)
-      ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
-      ((define-syntax*)			define-syntax*-macro)
-      ((unwind-protect)			unwind-protect-macro)
-      ((with-implicits)			with-implicits-macro)
-      ((set-cons!)			set-cons!-macro)
-
-      ;; non-Scheme style syntaxes
-      ((while)				while-macro)
-      ((until)				until-macro)
-      ((for)				for-macro)
-      ((define-returnable)		define-returnable-macro)
-      ((lambda-returnable)		lambda-returnable-macro)
-      ((begin-returnable)		begin-returnable-macro)
-
-      ((parameterize)			parameterize-macro)
-      ((parametrise)			parameterize-macro)
-
-      ;; compensations
-      ((with-compensations)		with-compensations-macro)
-      ((with-compensations/on-error)	with-compensations/on-error-macro)
-      ((compensate)			compensate-macro)
-      ((push-compensation)		push-compensation-macro)
-
-      ((eol-style)
-       (lambda (x)
-	 (%allowed-symbol-macro x '(none lf cr crlf nel crnel ls))))
-
-      ((error-handling-mode)
-       (lambda (x)
-	 (%allowed-symbol-macro x '(ignore raise replace))))
-
-      ((buffer-mode)
-       (lambda (x)
-	 (%allowed-symbol-macro x '(none line block))))
-
-      ((endianness)
-       endianness-macro)
-
-      ((file-options)
-       file-options-macro)
-
-      ((... => _ <>
-	    else unquote unquote-splicing
-	    unsyntax unsyntax-splicing
-	    fields mutable immutable parent protocol
-	    sealed opaque nongenerative parent-rtd)
-       (lambda (expr-stx)
-	 (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
-
-      (else
-       (%error-invalid-macro))))
-
-
-;;;; module non-core-macro-transformer: DEFINE-AUXILIARY-SYNTAXES
-
-(define (define-auxiliary-syntaxes-macro expr-stx)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;DEFINE-AUXILIARY-SYNTAXES  macros   from  the  top-level   built  in
-  ;;environment.   Expand  the contents  of  EXPR-STX;  return a  syntax
-  ;;object that must be further expanded.
-  ;;
-  ;;Using an empty SYNTAX-RULES as  transformer function makes sure that
-  ;;whenever an auxiliary syntax is referenced an error is raised.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?id* ...)
-     (for-all identifier? ?id*)
-     (bless
-      `(begin
-	 ,@(map (lambda (id)
-		  `(define-syntax ,id (syntax-rules ())))
-	     ?id*))))))
-
-
-;;;; module non-core-macro-transformer: control structures macros
-
-(define (when-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?test ?expr ?expr* ...)
-     (bless `(if ,?test (begin ,?expr . ,?expr*))))))
-
-(define (unless-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_ ?test ?expr ?expr* ...)
-     (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
-
-
-;;;; module non-core-macro-transformer: CASE, CASE-IDENTIFIERS
-
-(module (case-macro)
-  ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  ;;FIXME This should be rewritten to support the model proposed in:
-  ;;
-  ;;    William   D.   Clinger.    "Rapid  case  dispatch   in  Scheme".
-  ;;    Northeastern University.   Proceedings  of the  2006 Scheme  and
-  ;;   Functional Programming Workshop.  University of Chicago Technical
-  ;;   Report TR-2006-06.
-  ;;
-  (define (case-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ?expr)
-       (bless `(let ((t ,?expr))
-		 (if #f #f))))
-      ((_ ?expr ?clause ?clause* ...)
-       (bless
-	`(let ((t ,?expr))
-	   ,(let recur ((clause  ?clause)
-			(clause* ?clause*))
-	      (if (null? clause*)
-		  (%build-last clause)
-		(%build-one clause (recur (car clause*) (cdr clause*))))))))))
-
-  (define (%build-one clause-stx k)
-    (syntax-match clause-stx (=>)
-      (((?datum* ...) => ?expr)
-       (if (strict-r6rs)
-	   (syntax-violation 'case
-	     "invalid usage of auxiliary keyword => in strict R6RS mode"
-	     clause-stx)
-	 `(if (memv t ',?datum*)
-	      (,?expr t)
-	    ,k)))
-      (((?datum* ...) ?expr ?expr* ...)
-       `(if (memv t ',?datum*)
-	    (begin ,?expr . ,?expr*)
-	  ,k))
-      ))
-
-  (define (%build-last clause)
-    (syntax-match clause (else)
-      ((else ?expr ?expr* ...)
-       `(let () #f ,?expr . ,?expr*))
-      (_
-       (%build-one clause '(if #f #f)))))
-
-  #| end of module: CASE-MACRO |# )
-
-(module (case-identifiers-macro)
-  (define-constant __who__
-    'case-identifiers)
-
-  (define (case-identifiers-macro expr-stx)
-    ;;Transformer  function  used  to expand  Vicare's  CASE-IDENTIFIERS
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
-    ;;
-    (syntax-match expr-stx ()
-      ((_ ?expr)
-       (bless
-	`(let ((t ,?expr))
-	   (if #f #f))))
-      ((_ ?expr ?clause ?clause* ...)
-       (bless
-	`(let* ((t ,?expr)
-		(p (identifier? t)))
-	   ,(let recur ((clause  ?clause)
-			(clause* ?clause*))
-	      (if (null? clause*)
-		  (%build-last expr-stx clause)
-		(%build-one expr-stx clause (recur (car clause*) (cdr clause*))))))))
-      ))
-
-  (define (%build-one expr-stx clause-stx kont)
-    (syntax-match clause-stx (=>)
-      (((?datum* ...) => ?proc)
-       (if (strict-r6rs)
-	   (syntax-violation __who__
-	     "invalid usage of auxiliary keyword => in strict R6RS mode"
-	     clause-stx)
-	 `(if ,(%build-test expr-stx ?datum*)
-	      (,?proc t)
-	    ,kont)))
-
-      (((?datum* ...) ?expr ?expr* ...)
-       `(if ,(%build-test expr-stx ?datum*)
-	    (begin ,?expr . ,?expr*)
-	  ,kont))
-      ))
-
-  (define (%build-last expr-stx clause)
-    (syntax-match clause (else)
-      ((else ?expr ?expr* ...)
-       `(let () #f ,?expr . ,?expr*))
-      (_
-       (%build-one expr-stx clause '(if #f #f)))))
-
-  (define (%build-test expr-stx datum*)
-    `(and p (or . ,(map (lambda (datum)
-			  (if (identifier? datum)
-			      `(free-identifier=? t (syntax ,datum))
-			    (syntax-violation __who__
-			      "expected identifiers as datums"
-			      expr-stx datum)))
-		     datum*))))
-
-  #| end of module: CASE-IDENTIFIERS-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
-
-(module (define-record-type-macro)
-  ;;Transformer function used to expand R6RS's DEFINE-RECORD-TYPE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (define-constant __who__ 'define-record-type)
-
-  (define (define-record-type-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ?namespec ?clause* ...)
-       (begin
-	 (%verify-clauses expr-stx ?clause*)
-	 (%do-define-record expr-stx ?namespec ?clause*)))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (define (%do-define-record expr-stx namespec clause*)
-    (case-define synner
-      ((message)
-       (synner message #f))
-      ((message subform)
-       (syntax-violation __who__ message expr-stx subform)))
-
-    (define-values (foo make-foo foo?)
-      (%parse-full-name-spec namespec))
-    (define foo-rtd		(%named-gensym foo "-rtd"))
-    (define foo-rcd		(%named-gensym foo "-rcd"))
-    (define foo-protocol	(gensym))
-    (define-values
-      (field-names
-		;A list of identifiers representing all the field names.
-       idx*
-		;A list  of fixnums  representing all the  field indexes
-		;(zero-based).
-       foo-x*
-		;A list  of identifiers  representing the  safe accessor
-		;names.
-       unsafe-foo-x*
-		;A list of identifiers  representing the unsafe accessor
-		;names.
-       mutable-field-names
-		;A list  of identifiers  representing the  mutable field
-		;names.
-       set-foo-idx*
-		;A  list  of  fixnums  representing  the  mutable  field
-		;indexes (zero-based).
-       set-foo-x!*
-		;A list of identifiers representing the mutator names.
-       unsafe-set-foo-x!*
-		;A list  of identifiers representing the  unsafe mutator
-		;names.
-       )
-      (%parse-field-specs foo (%get-fields clause*) synner))
-
-    (define binding-spec
-      (%make-binding-spec field-names mutable-field-names
-			  foo-x* set-foo-x!*
-			  unsafe-foo-x* unsafe-set-foo-x!*))
-
-    ;;Code  for parent  record-type  descriptor  and parent  record-type
-    ;;constructor descriptor retrieval.
-    (define-values (parent-rtd-code parent-rcd-code)
-      (%make-parent-rtd+rcd-code clause* synner))
-
-    ;;Code  for  record-type   descriptor  and  record-type  constructor
-    ;;descriptor.
-    (define foo-rtd-code
-      (%make-rtd-code foo clause* parent-rtd-code synner))
-    (define foo-rcd-code
-      (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code))
-
-    ;;Code for protocol.
-    (define protocol-code
-      (%get-protocol-code clause* synner))
-
-    (bless
-     `(begin
-	;;Record type descriptor.
-	(define ,foo-rtd ,foo-rtd-code)
-	;;Protocol function.
-	(define ,foo-protocol ,protocol-code)
-	;;Record constructor descriptor.
-	(define ,foo-rcd ,foo-rcd-code)
-	;;Record instance predicate.
-	(define ,foo? (record-predicate ,foo-rtd))
-	;;Record instance constructor.
-	(define ,make-foo (record-constructor ,foo-rcd))
-	;;Safe record fields accessors.
-	,@(map (lambda (foo-x idx)
-		 `(define ,foo-x (record-accessor ,foo-rtd ,idx (quote ,foo-x))))
-	    foo-x* idx*)
-	;;Safe record fields mutators (if any).
-	,@(map (lambda (set-foo-x! idx)
-		 `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx (quote ,set-foo-x!))))
-	    set-foo-x!* set-foo-idx*)
-
-	;;Binding for record type name.
-	(define-syntax ,foo
-	  (cons '$rtd
-		(cons (syntax ,foo-rtd)
-		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
-
-	. ,(if (strict-r6rs)
-	       '()
-	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
-						unsafe-foo-x*      idx*
-						unsafe-set-foo-x!* set-foo-idx*)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
-					     unsafe-foo-x*      idx*
-					     unsafe-set-foo-x!* set-foo-idx*)
-    (define foo-first-field-offset
-      (gensym))
-    `((define ,foo-first-field-offset
-	;;The field  at index 3  in the RTD is:  the index of  the first
-	;;field of  this subtype in the  layout of instances; it  is the
-	;;total number of fields of the parent type.
-	($struct-ref ,foo-rtd 3))
-
-      ;; Unsafe record fields accessors.
-      ,@(map (lambda (unsafe-foo-x idx)
-	       (let ((t (gensym)))
-		 `(begin
-		    (define ,t
-		      (fx+ ,idx ,foo-first-field-offset))
-		    (define-syntax-rule (,unsafe-foo-x x)
-		      ($struct-ref x ,t)))))
-	  unsafe-foo-x* idx*)
-
-      ;; Unsafe record fields mutators.
-      ,@(map (lambda (unsafe-set-foo-x! idx)
-	       (let ((t (gensym)))
-		 `(begin
-		    (define ,t
-		      (fx+ ,idx ,foo-first-field-offset))
-		    (define-syntax-rule (,unsafe-set-foo-x! x v)
-		      ($struct-set! x ,t v)))))
-	  unsafe-set-foo-x!* set-foo-idx*)
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-full-name-spec spec)
-    ;;Given  a  syntax  object  representing  a  full  record-type  name
-    ;;specification: return the name identifier.
-    ;;
-    (syntax-match spec ()
-      ((?foo ?make-foo ?foo?)
-       (values ?foo ?make-foo ?foo?))
-      (foo
-       (identifier? foo)
-       (values foo
-	       (identifier-append  foo "make-" (syntax->datum foo))
-	       (identifier-append  foo foo "?")))
-      ))
-
-  (define (%make-rtd-code name clause* parent-rtd-code synner)
-    ;;Return a  sexp which,  when evaluated,  will return  a record-type
-    ;;descriptor.
-    ;;
-    (define uid-code
-      (let ((clause (%get-clause 'nongenerative clause*)))
-	(syntax-match clause ()
-	  ((_)
-	   (quasiquote (quote (unquote (gensym)))))
-	  ((_ ?uid)
-	   (identifier? ?uid)
-	   (quasiquote (quote (unquote ?uid))))
-	  ;;No matching clause found.
-	  (#f	#f)
-	  (_
-	   (synner "expected symbol or no argument in nongenerative clause" clause)))))
-    (define sealed?
-      (let ((clause (%get-clause 'sealed clause*)))
-	(syntax-match clause ()
-	  ((_ #t)	#t)
-	  ((_ #f)	#f)
-	  ;;No matching clause found.
-	  (#f		#f)
-	  (_
-	   (synner "invalid argument in SEALED clause" clause)))))
-    (define opaque?
-      (let ((clause (%get-clause 'opaque clause*)))
-	(syntax-match clause ()
-	  ((_ #t)	#t)
-	  ((_ #f)	#f)
-	  ;;No matching clause found.
-	  (#f		#f)
-	  (_
-	   (synner "invalid argument in OPAQUE clause" clause)))))
-    (define fields
-      (let ((clause (%get-clause 'fields clause*)))
-	(syntax-match clause ()
-	  ((_ field-spec* ...)
-	   `(quote ,(list->vector
-		     (map (lambda (field-spec)
-			    (syntax-match field-spec (mutable immutable)
-			      ((mutable ?name . ?rest)
-			       `(mutable ,?name))
-			      ((immutable ?name . ?rest)
-			       `(immutable ,?name))
-			      (?name
-			       `(immutable ,?name))))
-		       field-spec*))))
-	  ;;No matching clause found.
-	  (#f
-	   (quote (quote #())))
-
-	  (_
-	   (synner "invalid syntax in FIELDS clause" clause)))))
-    `(make-record-type-descriptor ',name ,parent-rtd-code
-				  ,uid-code ,sealed? ,opaque? ,fields))
-
-  (define (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code)
-    ;;Return a sexp  which, when evaluated, will  return the record-type
-    ;;default constructor descriptor.
-    ;;
-    `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-protocol))
-
-  (define (%make-parent-rtd+rcd-code clause* synner)
-    ;;Return 2  values: a  sexp which, when  evaluated, will  return the
-    ;;parent record-type descriptor; a  sexp which, when evaluated, will
-    ;;return the parent record-type default constructor descriptor.
-    ;;
-    (let ((parent-clause (%get-clause 'parent clause*)))
-      (syntax-match parent-clause ()
-	;;If there is a PARENT clause insert code that retrieves the RTD
-	;;from the parent type name.
-	((_ ?name)
-	 (identifier? ?name)
-	 (values `(record-type-descriptor ,?name)
-		 `(record-constructor-descriptor ,?name)))
-
-	;;If there  is no PARENT  clause try to retrieve  the expression
-	;;evaluating to the RTD.
-	(#f
-	 (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
-	   (syntax-match parent-rtd-clause ()
-	     ((_ ?rtd ?rcd)
-	      (values ?rtd ?rcd))
-
-	     ;;If  neither the  PARENT  nor the  PARENT-RTD clauses  are
-	     ;;present: just return false.
-	     (#f
-	      (values #f #f))
-
-	     (_
-	      (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
-
-	(_
-	 (synner "invalid syntax in PARENT clause" parent-clause)))))
-
-  (define (%get-protocol-code clause* synner)
-    ;;Return  a  sexp  which,   when  evaluated,  returns  the  protocol
-    ;;function.
-    ;;
-    (let ((clause (%get-clause 'protocol clause*)))
-      (syntax-match clause ()
-	((_ ?expr)
-	 ?expr)
-
-	;;No matching clause found.
-	(#f	#f)
-
-	(_
-	 (synner "invalid syntax in PROTOCOL clause" clause)))))
-
-  (define (%get-fields clause*)
-    ;;Return   a  list   of  syntax   objects  representing   the  field
-    ;;specifications.
-    ;;
-    (syntax-match clause* (fields)
-      (()
-       '())
-      (((fields ?field-spec* ...) . _)
-       ?field-spec*)
-      ((_ . ?rest)
-       (%get-fields ?rest))))
-
-  (define (%parse-field-specs foo field-clause* synner)
-    ;;Given the  arguments of the  fields specification clause  return 4
-    ;;values:
-    ;;
-    ;;1..The list of identifiers representing all the field names.
-    ;;
-    ;;2..The  list  of  fixnums  representings all  the  field  relative
-    ;;   indexes (zero-based).
-    ;;
-    ;;3..A list of identifiers representing the safe accessor names.
-    ;;
-    ;;4..A list of identifiers representing the unsafe accessor names.
-    ;;
-    ;;5..The list of identifiers representing the mutable field names.
-    ;;
-    ;;6..The list  of fixnums  representings the mutable  field relative
-    ;;   indexes (zero-based).
-    ;;
-    ;;7..A list of identifiers representing the safe mutator names.
-    ;;
-    ;;8..A list of identifiers representing the unsafe mutator names.
-    ;;
-    ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
-    ;;
-    (define (gen-safe-accessor-name x)
-      (identifier-append  foo foo "-" x))
-    (define (gen-unsafe-accessor-name x)
-      (identifier-append  foo "$" foo "-" x))
-    (define (gen-safe-mutator-name x)
-      (identifier-append  foo foo "-" x "-set!"))
-    (define (gen-unsafe-mutator-name x)
-      (identifier-append  foo "$" foo "-" x "-set!"))
-    (let loop ((field-clause*		field-clause*)
-	       (i			0)
-	       (field*			'())
-	       (idx*			'())
-	       (accessor*		'())
-	       (unsafe-accessor*	'())
-	       (mutable-field*		'())
-	       (mutable-idx*		'())
-	       (mutator*		'())
-	       (unsafe-mutator*		'()))
-      (syntax-match field-clause* (mutable immutable)
-	(()
-	 (values (reverse field*) (reverse idx*) (reverse accessor*) (reverse unsafe-accessor*)
-		 (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)))
-
-	(((mutable   ?name ?accessor ?mutator) . ?rest)
-	 (and (identifier? ?name)
-	      (identifier? ?accessor)
-	      (identifier? ?mutator))
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       (cons ?name mutable-field*)	(cons i mutable-idx*)
-	       (cons ?mutator mutator*)		(cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
-
-	(((immutable ?name ?accessor) . ?rest)
-	 (and (identifier? ?name)
-	      (identifier? ?accessor))
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*))
-
-	(((mutable   ?name) . ?rest)
-	 (identifier? ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons (gen-safe-accessor-name   ?name) accessor*)
-	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       (cons ?name mutable-field*)	(cons i mutable-idx*)
-	       (cons (gen-safe-mutator-name    ?name) mutator*)
-	       (cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
-
-	(((immutable ?name) . ?rest)
-	 (identifier? ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons (gen-safe-accessor-name   ?name) accessor*)
-	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*))
-
-	((?name . ?rest)
-	 (identifier? ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons (gen-safe-accessor-name   ?name) accessor*)
-	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*))
-
-	((?spec . ?rest)
-	 (synner "invalid field specification in DEFINE-RECORD-TYPE syntax"
-		 ?spec)))))
-
-  (module (%make-binding-spec)
-    (import R6RS-RECORD-TYPE-SPEC)
-
-    (define (%make-binding-spec field-names mutable-field-names
-				foo-x* set-foo-x!*
-				unsafe-foo-x* unsafe-set-foo-x!*)
-
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to an alist in which: keys are symbols representing all
-      ;;the  field  names; values  are  identifiers  bound to  the  safe
-      ;;accessors.
-      (define foo-fields-safe-accessors-table
-	(%make-alist field-names foo-x*))
-
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to  an alist  in which:  keys are  symbols representing
-      ;;mutable  field  names;  values  are identifiers  bound  to  safe
-      ;;mutators.
-      (define foo-fields-safe-mutators-table
-	(%make-alist mutable-field-names set-foo-x!*))
-
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to an alist in which: keys are symbols representing all
-      ;;the  field names;  values are  identifiers bound  to the  unsafe
-      ;;accessors.
-      (define foo-fields-unsafe-accessors-table
-	(%make-alist field-names unsafe-foo-x*))
-
-      ;;A sexp which will be BLESSed  in the output code.  The sexp will
-      ;;evaluate to  an alist  in which:  keys are  symbols representing
-      ;;mutable  field names;  values  are identifiers  bound to  unsafe
-      ;;mutators.
-      (define foo-fields-unsafe-mutators-table
-	(%make-alist mutable-field-names unsafe-set-foo-x!*))
-
-      (if (strict-r6rs)
-	  (make-r6rs-record-type-spec foo-fields-safe-accessors-table
-				      foo-fields-safe-mutators-table
-				      #f #f)
-	(make-r6rs-record-type-spec foo-fields-safe-accessors-table
-				    foo-fields-safe-mutators-table
-				    foo-fields-unsafe-accessors-table
-				    foo-fields-unsafe-mutators-table)))
-
-    (define (%make-alist key-id* operator-id*)
-      (map (lambda (key-id operator-id)
-	     (cons (syntax->datum key-id) operator-id))
-	key-id* operator-id*))
-
-    #| end of module: %MAKE-BINDING-SPEC |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (%verify-clauses)
-
-    (define (%verify-clauses expr-stx cls*)
-      (define VALID-KEYWORDS
-	(map bless
-	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
-      (let loop ((cls*  cls*)
-		 (seen* '()))
-	(unless (null? cls*)
-	  (syntax-match (car cls*) ()
-	    ((?kwd . ?rest)
-	     (cond ((or (not (identifier? ?kwd))
-			(not (%free-id-member? ?kwd VALID-KEYWORDS)))
-		    (stx-error ?kwd "not a valid DEFINE-RECORD-TYPE keyword"))
-		   ((bound-id-member? ?kwd seen*)
-		    (syntax-violation __who__
-		      "invalid duplicate clause in DEFINE-RECORD-TYPE"
-		      expr-stx ?kwd))
-		   (else
-		    (loop (cdr cls*) (cons ?kwd seen*)))))
-	    (?cls
-	     (stx-error ?cls "malformed define-record-type clause"))
-	    ))))
-
-    (define (%free-id-member? x ls)
-      (and (pair? ls)
-	   (or (free-id=? x (car ls))
-	       (%free-id-member? x (cdr ls)))))
-
-    #| end of module: %VERIFY-CLAUSES |# )
-
-  (define (%get-clause sym clause*)
-    ;;Given a symbol SYM representing the  name of a clause and a syntax
-    ;;object  CLAUSE*  representing  the clauses:  search  the  selected
-    ;;clause and return it as syntax object.  When no matching clause is
-    ;;found: return false.
-    ;;
-    (let next ((id       (bless sym))
-	       (clause*  clause*))
-      (syntax-match clause* ()
-	(()
-	 #f)
-	(((?key . ?rest) . ?clause*)
-	 (if (free-id=? id ?key)
-	     `(,?key . ,?rest)
-	   (next id ?clause*))))))
-
-  (define (%named-gensym foo suffix)
-    (gensym (string-append
-	     (symbol->string (syntax->datum foo))
-	     suffix)))
-
-  #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: RECORD-TYPE-AND-RECORD?
-
-(define (record-type-and-record?-macro expr-stx)
-  ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?type-name ?record)
-     (identifier? ?type-name)
-     (bless
-      `(record-and-rtd? ,?record (record-type-descriptor ,?type-name))))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE
-
-(define (define-condition-type-macro expr-stx)
-  ;;Transformer  function  used  to  expand  R6RS  RECORD-CONDITION-TYPE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
-     (and (identifier? ?name)
-	  (identifier? ?super)
-	  (identifier? ?constructor)
-	  (identifier? ?predicate)
-	  (for-all identifier? ?field*)
-	  (for-all identifier? ?accessor*))
-     (let ((aux-accessor* (map (lambda (x)
-				 (gensym))
-			    ?accessor*)))
-       (bless
-	`(module (,?name ,?constructor ,?predicate . ,?accessor*)
-	   (define-record-type (,?name ,?constructor ,(gensym))
-	     (parent ,?super)
-	     (fields ,@(map (lambda (field aux)
-			      `(immutable ,field ,aux))
-			 ?field* aux-accessor*))
-	     (nongenerative)
-	     (sealed #f)
-	     (opaque #f))
-	   (define ,?predicate
-	     ;;Remember  that the  predicate has  to recognise  a simple
-	     ;;condition object embedded in a compound condition object.
-	     (condition-predicate (record-type-descriptor ,?name)))
-	   ,@(map
-		 (lambda (accessor aux)
-		   `(define ,accessor
-		      ;;Remember  that  the  accessor has  to  access  a
-		      ;;simple condition  object embedded in  a compound
-		      ;;condition object.
-		      (condition-accessor (record-type-descriptor ,?name) ,aux)))
-	       ?accessor* aux-accessor*)
-	   #| end of module |# )
-	)))
-    ))
-
-
-;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
-
-(define (parameterize-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's PARAMETERIZE  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  ;;Notice that  MAKE-PARAMETER is  a primitive function  implemented in
-  ;;"ikarus.compiler.sls"  by   "E-make-parameter".   Under   Vicare,  a
-  ;;parameter function  can be  called with  0, 1  or 2  arguments:
-  ;;
-  ;;* When called with 1 argument: it returns the parameter's value.
-  ;;
-  ;;* When called with 2 arguments:  it sets the parameter's value after
-  ;;  checking the new value with the guard function (if any).
-  ;;
-  ;;*  When called  with  3  arguments: it  sets  the parameter's  value
-  ;;   optionally checking  the new  value with  the guard  function (if
-  ;;  any).
-  ;;
-  ;;Under Vicare,  PARAMETERIZE applies  the guard  function to  the new
-  ;;value only the first  time it is set; if the  control flow exits and
-  ;;returns multiple times beacuse  escaping continuations are used, the
-  ;;guard function is  no more applied; this is achieved  by setting the
-  ;;flag variable GUARD?.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ () ?body ?body* ...)
-     (bless
-      `(let () ,?body . ,?body*)))
-
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (let ((lhs* (generate-temporaries ?lhs*))
-	   (rhs* (generate-temporaries ?rhs*)))
-       (bless
-	`((lambda ,(append lhs* rhs*)
-	    (let* ((guard? #t) ;apply the guard function only the first time
-		   (swap   (lambda ()
-			     ,@(map (lambda (lhs rhs)
-				      `(let ((t (,lhs)))
-					 (,lhs ,rhs guard?)
-					 (set! ,rhs t)))
-				 lhs* rhs*)
-			     (set! guard? #f))))
-	      (dynamic-wind
-		  swap
-		  (lambda () ,?body . ,?body*)
-		  swap)))
-	  ,@(append ?lhs* ?rhs*)))))
-    ))
-
-
-;;;; module non-core-macro-transformer: UNWIND-PROTECT
-
-(define (unwind-protect-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where we  do not
-  ;;make the body return continuations to  the caller and then come back
-  ;;again and again, calling CLEANUP multiple times.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?body ?cleanup0 ?cleanup* ...)
-     (bless
-      `(let ((cleanup (lambda () ,?cleanup0 ,@?cleanup*)))
-	 (with-exception-handler
-	     (lambda (E)
-	       (cleanup)
-	       (raise E))
-	   (lambda ()
-	     (begin0
-		 ,?body
-	       (cleanup)))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: WITH-IMPLICITS
-
-(define (with-implicits-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (define (%make-bindings ctx ids)
-    (map (lambda (id)
-	   `(,id (datum->syntax ,ctx (quote ,id))))
-      ids))
-
-  (syntax-match expr-stx ()
-
-    ((_ () ?body0 ?body* ...)
-     (bless
-      `(begin ,?body0 . ,?body*)))
-
-    ((_ ((?ctx ?symbol0 ?symbol* ...))
-	?body0 ?body* ...)
-     (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
-       (bless
-	`(with-syntax ,BINDINGS ,?body0 . ,?body*))))
-
-    ((_ ((?ctx ?symbol0 ?symbol* ...) . ?other-clauses)
-	?body0 ?body* ...)
-     (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
-       (bless
-	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 . ,?body*)))))
-
-    ))
-
-
-;;;; module non-core-macro-transformer: SET-CONS!
-
-(define (set-cons!-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?id ?obj)
-     (identifier? ?id)
-     (bless `(set! ,?id (cons ,?obj ,?id))))
-    ))
-
-
-;;;; module non-core-macro-transformer: compensations
-
-(module (with-compensations/on-error-macro
-	 with-compensations-macro)
-
-  (define (with-compensations/on-error-macro expr-stx)
-    ;;Transformer     function      used     to      expand     Vicare's
-    ;;WITH-COMPENSATIONS/ON-ERROR  macros from  the  top-level built  in
-    ;;environment.   Expand the  contents of  EXPR-STX; return  a syntax
-    ;;object that must be further expanded.
-    ;;
-    (syntax-match expr-stx ()
-      ((_ ?body0 ?body* ...)
-       (bless
-	`(let ,(%make-store-binding)
-	   (parametrise ((compensations store))
-	     ,(%make-with-exception-handler ?body0 ?body*)))))
-      ))
-
-  (define (with-compensations-macro expr-stx)
-    ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATIONS
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
-    ;;
-    (syntax-match expr-stx ()
-      ((_ ?body0 ?body* ...)
-       (bless
-	`(let ,(%make-store-binding)
-	   (parametrise ((compensations store))
-	     (begin0
-		 ,(%make-with-exception-handler ?body0 ?body*)
-	       ;;Better  run  the  cleanup   compensations  out  of  the
-	       ;;WITH-EXCEPTION-HANDLER.
-	       (run-compensations-store store))))))
-      ))
-
-  (define (%make-store-binding)
-    '((store (let ((stack '()))
-	       (case-lambda
-		(()
-		 stack)
-		((false/thunk)
-		 (if false/thunk
-		     (set! stack (cons false/thunk stack))
-		   (set! stack '()))))))))
-
-  (define (%make-with-exception-handler body0 body*)
-    ;;We really have to close the handler upon the STORE function, it is
-    ;;wrong to access the COMPENSATIONS parameter from the handler.  The
-    ;;dynamic environment  is synchronised with continuations:  when the
-    ;;handler is called by  RAISE or RAISE-CONTINUABLE, the continuation
-    ;;is the one of the RAISE or RAISE-CONTINUABLE forms.
-    ;;
-    `(with-exception-handler
-	 (lambda (E)
-	   (run-compensations-store store)
-	   (raise E))
-       (lambda ()
-	 ,body0 ,@body*)))
-
-  #| end of module |# )
-
-(define (push-compensation-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  PUSH-COMPENSATION
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?release0 ?release* ...)
-     (bless
-      `(push-compensation-thunk (lambda () ,?release0 ,@?release*))))
-    ))
-
-(define (compensate-macro expr-stx)
-  ;;Transformer function used to  expand Vicare's COMPENSATE macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (define-constant __who__ 'compensate)
-  (define (%synner message subform)
-    (syntax-violation __who__ message expr-stx subform))
-  (syntax-match expr-stx ()
-    ((_ ?alloc0 ?form* ...)
-     (let ((free #f))
-       (define alloc*
-	 (let recur ((form-stx ?form*))
-	   (syntax-match form-stx (with)
-	     (((with ?release0 ?release* ...))
-	      (begin
-		(set! free `(push-compensation ,?release0 ,@?release*))
-		'()))
-
-	     (()
-	      (%synner "invalid compensation syntax: missing WITH keyword"
-		       form-stx))
-
-	     (((with))
-	      (%synner "invalid compensation syntax: empty WITH keyword"
-		       (bless '(with))))
-
-	     ((?alloc ?form* ...)
-	      (cons ?alloc (recur ?form*)))
-	     )))
-       (bless
-	`(begin0 (begin ,?alloc0 . ,alloc*) ,free))))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-STRUCT
-
-(module (define-struct-macro)
-  ;;Transformer function  used to  expand Vicare's  DEFINE-STRUCT macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (define (define-struct-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ (?name ?maker ?predicate) (?field* ...))
-       (%build-output-form ?name ?maker ?predicate ?field*))
-      ((_ ?name (?field* ...))
-       (%build-output-form ?name #f #f ?field*))
-      ))
-
-  (define (%build-output-form type-id maker-id predicate-id field-name-id*)
-    (let* ((string->id		(lambda (str)
-				  (datum->stx type-id (string->symbol str))))
-	   (namestr		(symbol->string (identifier->symbol type-id)))
-	   (field-sym*		(map identifier->symbol field-name-id*))
-	   (field-str*		(map symbol->string field-sym*))
-	   (rtd			(datum->stx type-id (make-struct-type namestr field-sym*)))
-	   (constructor-id	(or maker-id     (string->id (string-append "make-" namestr))))
-	   (predicate-id	(or predicate-id (string->id (string-append namestr "?"))))
-	   (field-idx*		(enumerate field-name-id*)))
-
-      (define getter-id*
-	(map (lambda (x)
-	       (string->id (string-append namestr "-" x)))
-	  field-str*))
-
-      (define setter-id*
-	(map (lambda (x)
-	       (string->id (string-append "set-" namestr "-" x "!")))
-	  field-str*))
-
-      (define unsafe-getter-id*
-	(map (lambda (x)
-	       (string->id (string-append "$" namestr "-" x)))
-	  field-str*))
-
-      (define unsafe-setter-id*
-	(map (lambda (x)
-	       (string->id (string-append "$set-" namestr "-" x "!")))
-	  field-str*))
-
-      (define getter-sexp*
-	(map (lambda (getter-id unsafe-getter-id)
-	       `(define (,getter-id stru)
-		  (if ($struct/rtd? stru ',rtd)
-		      (,unsafe-getter-id stru)
-		    (assertion-violation ',getter-id
-		      "not a struct of required type as struct getter argument"
-		      stru ',rtd))))
-	  getter-id* unsafe-getter-id*))
-
-      (define setter-sexp*
-	(map (lambda (setter-id unsafe-setter-id)
-	       `(define (,setter-id stru val)
-		  (if ($struct/rtd? stru ',rtd)
-		      (,unsafe-setter-id stru val)
-		    (assertion-violation ',setter-id
-		      "not a struct of required type as struct setter argument"
-		      stru ',rtd))))
-	  setter-id* unsafe-setter-id*))
-
-      (define unsafe-getter-sexp*
-	(map (lambda (unsafe-getter-id field-idx)
-	       `(define-syntax ,unsafe-getter-id
-		  (syntax-rules ()
-		    ((_ ?stru)
-		     ($struct-ref ?stru ,field-idx)))))
-	  unsafe-getter-id* field-idx*))
-
-      (define unsafe-setter-sexp*
-	(map (lambda (unsafe-setter-id field-idx)
-	       `(define-syntax ,unsafe-setter-id
-		  (syntax-rules ()
-		    ((_ ?stru ?val)
-		     ($struct-set! ?stru ,field-idx ?val)))))
-	  unsafe-setter-id* field-idx*))
-
-      (bless
-       `(begin
-	  (define-syntax ,type-id (cons '$rtd ',rtd))
-	  (define (,constructor-id ,@field-name-id*)
-	    (let ((S ($struct ',rtd ,@field-name-id*)))
-	      ;;FIXME  The destructor  accessor  must be  implemented
-	      ;;with a proper  unsafe operation, so that  the index 5
-	      ;;is not hard-coded here.  To be fixed at the next boot
-	      ;;image rotation.  (Marco Maggi; Thu Jan 23, 2014)
-	      (if ($struct-ref ',rtd 5) ;destructor
-		  ($struct-guardian S)
-		S)))
-	  (define (,predicate-id obj)
-	    ($struct/rtd? obj ',rtd))
-	  ,@getter-sexp*
-	  ,@setter-sexp*
-	  ,@unsafe-getter-sexp*
-	  ,@unsafe-setter-sexp*)
-       )))
-
-  (define (enumerate ls)
-    (let recur ((i 0) (ls ls))
-      (if (null? ls)
-	  '()
-	(cons i (recur (+ i 1) (cdr ls))))))
-
-  #| end of module: DEFINE-STRUCT-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: SYNTAX-RULES, DEFINE-SYNTAX-RULE
-
-(define (syntax-rules-macro expr-stx)
-  ;;Transformer function  used to  expand R6RS SYNTAX-RULES  macros from
-  ;;the  top-level  built  in  environment.   Process  the  contents  of
-  ;;EXPR-STX; return a syntax object that needs to be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?literal* ...)
-	(?pattern* ?template*)
-	...)
-     (begin
-       (%verify-literals ?literal* expr-stx)
-       (bless
-	`(lambda (x)
-	   (syntax-case x ,?literal*
-	     ,@(map (lambda (pattern template)
-		      (syntax-match pattern ()
-			((_ . ??rest)
-			 `((g . ,??rest)
-			   (syntax ,template)))
-			(_
-			 (syntax-violation #f
-			   "invalid syntax-rules pattern"
-			   expr-stx pattern))))
-		 ?pattern* ?template*))))))))
-
-(define (define-syntax-rule-macro expr-stx)
-  ;;Transformer  function  used  to expand  Vicare's  DEFINE-SYNTAX-RULE
-  ;;macros  from  the  top-level  built  in  environment.   Process  the
-  ;;contents  of EXPR-STX;  return  a  syntax object  that  needs to  be
-  ;;further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?name ?arg* ... . ?rest) ?body0 ?body* ...)
-     (identifier? ?name)
-     (bless
-      `(define-syntax ,?name
-	 (syntax-rules ()
-	   ((_ ,@?arg* . ,?rest)
-	    (begin ,?body0 ,@?body*))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-SYNTAX*
-
-(define (define-syntax*-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?name)
-     (identifier? ?name)
-     (bless
-      `(define-syntax ,?name (syntax-rules ()))))
-
-    ((_ ?name ?expr)
-     (identifier? ?name)
-     (bless
-      `(define-syntax ,?name ,?expr)))
-
-    ((_ (?name ?stx) ?body0 ?body* ...)
-     (and (identifier? ?name)
-	  (identifier? ?stx))
-     (let ((SYNNER (datum->syntax ?name 'synner)))
-       (bless
-	`(define-syntax ,?name
-	   (lambda (,?stx)
-	     (fluid-let-syntax
-		 ((__who__ (identifier-syntax (quote ,?name))))
-	       (letrec
-		   ((,SYNNER (case-lambda
-			      ((message)
-			       (,SYNNER message #f))
-			      ((message subform)
-			       (syntax-violation __who__ message ,?stx subform)))))
-		 ,?body0 ,@?body*)))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: WITH-SYNTAX
-
-(define (with-syntax-macro expr-stx)
-  ;;Transformer function used to expand R6RS WITH-SYNTAX macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  ;;A WITH-SYNTAX form:
-  ;;
-  ;;   (with-syntax ((?pat0 ?expr0)
-  ;;                 (?pat1 ?expr1))
-  ;;     ?body0 ?body ...)
-  ;;
-  ;;is expanded as follows:
-  ;;
-  ;;   (syntax-case ?expr0 ()
-  ;;     (?pat0
-  ;;      (syntax-case ?expr1 ()
-  ;;       (?pat1
-  ;;        (let () ?body0 ?body ...))
-  ;;       (_
-  ;;        (assertion-violation ---))))
-  ;;     (_
-  ;;      (assertion-violation ---)))
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ((?pat* ?expr*) ...) ?body ?body* ...)
-     (let ((idn* (let recur ((pat* ?pat*))
-		   (if (null? pat*)
-		       '()
-		     (receive (pat idn*)
-			 (convert-pattern (car pat*) '())
-		       (append idn* (recur (cdr pat*))))))))
-       (%verify-formals-syntax (map car idn*) expr-stx)
-       (let ((t* (generate-temporaries ?expr*)))
-	 (bless
-	  `(let ,(map list t* ?expr*)
-	     ,(let recur ((pat* ?pat*)
-			  (t*   t*))
-		(if (null? pat*)
-		    `(let () ,?body . ,?body*)
-		  `(syntax-case ,(car t*) ()
-		     (,(car pat*)
-		      ,(recur (cdr pat*) (cdr t*)))
-		     (_
-		      (assertion-violation 'with-syntax
-			"pattern does not match value"
-			',(car pat*) ,(car t*)))))))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
-
-(define (identifier-syntax-macro stx)
-  ;;Transformer function  used to  expand R6RS  IDENTIFIER-SYNTAX macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match stx (set!)
-    ((_ ?expr)
-     (bless
-      `(lambda (x)
-	 (syntax-case x ()
-	   (??id
-	    (identifier? (syntax ??id))
-	    (syntax ,?expr))
-	   ((??id ??expr* ...)
-	    (identifier? (syntax ??id))
-	    (cons (syntax ,?expr) (syntax (??expr* ...))))
-	   ))))
-
-    ((_ (?id1
-	 ?expr1)
-	((set! ?id2 ?expr2)
-	 ?expr3))
-     (and (identifier? ?id1)
-	  (identifier? ?id2)
-	  (identifier? ?expr2))
-     (bless
-      `(make-variable-transformer
-	(lambda (x)
-	  (syntax-case x (set!)
-	    (??id
-	     (identifier? (syntax ??id))
-	     (syntax ,?expr1))
-	    ((set! ??id ,?expr2)
-	     (syntax ,?expr3))
-	    ((??id ??expr* ...)
-	     (identifier? (syntax ??id))
-	     (syntax (,?expr1 ??expr* ...))))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: LET, LET*, TRACE-LET
-
-(define (let-macro expr-stx)
-  ;;Transformer  function  used  to  expand R6RS  LET  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (if (valid-bound-ids? ?lhs*)
-	 (bless
-	  `((lambda ,?lhs*
-	      ,?body . ,?body*) . ,?rhs*))
-       (%error-invalid-formals-syntax expr-stx ?lhs*)))
-
-    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (identifier? ?recur)
-     (if (valid-bound-ids? ?lhs*)
-	 (bless
-	  `((letrec ((,?recur (lambda ,?lhs*
-				,?body . ,?body*)))
-	      ,?recur) . ,?rhs*))
-       (%error-invalid-formals-syntax expr-stx ?lhs*)))
-    ))
-
-(define (let*-macro expr-stx)
-  ;;Transformer  function  used to  expand  R6RS  LET* macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (for-all identifier? ?lhs*)
-     (bless
-      (let recur ((x* (map list ?lhs* ?rhs*)))
-	(if (null? x*)
-	    `(let () ,?body . ,?body*)
-	  `(let (,(car x*)) ,(recur (cdr x*)))))))
-    ))
-
-(define (trace-let-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  TRACE-LET macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (identifier? ?recur)
-     (if (valid-bound-ids? ?lhs*)
-	 (bless
-	  `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
-					    ,?body . ,?body*)))
-	      ,?recur) . ,?rhs*))
-       (%error-invalid-formals-syntax expr-stx ?lhs*)))
-    ))
-
-
-;;;; module non-core-macro-transformer: LET-VALUES
-
-(module (let-values-macro)
-  ;;Transformer function used to expand  R6RS LET-VALUES macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  ;;A LET-VALUES syntax like:
-  ;;
-  ;;   (let-values (((a b c) rhs0)
-  ;;                ((d e f) rhs1))
-  ;;     ?body0 ?body ...)
-  ;;
-  ;;is expanded to:
-  ;;
-  ;;   (call-with-values
-  ;;       (lambda () rhs0)
-  ;;     (lambda (G.a G.b G.c)
-  ;;       (call-with-values
-  ;;           (lambda () rhs1)
-  ;;         (lambda (G.d G.e G.f)
-  ;;           (let ((a G.a) (b G.b) (c G.c)
-  ;;                 (c G.c) (d G.d) (e G.e))
-  ;;             ?body0 ?body)))))
-  ;;
-  (define-constant __who__ 'let-values)
-
-  (define (let-values-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ () ?body ?body* ...)
-       (cons* (bless 'let) '() ?body ?body*))
-
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (bless
-	(let recur ((lhs*  ?lhs*)
-		    (rhs*  ?rhs*)
-		    (old*  '())
-		    (new*  '()))
-	  (if (null? lhs*)
-	      `(let ,(map list old* new*)
-		 ,?body . ,?body*)
-	    (syntax-match (car lhs*) ()
-	      ((?formal* ...)
-	       (receive (y* old* new*)
-		   (rename* ?formal* old* new* expr-stx)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,y*
-		      ,(recur (cdr lhs*) (cdr rhs*) old* new*)))))
-
-	      ((?formal* ... . ?rest-formal)
-	       (let*-values
-		   (((y  old* new*) (rename  ?rest-formal old* new* expr-stx))
-		    ((y* old* new*) (rename* ?formal*     old* new* expr-stx)))
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,(append y* y)
-		      ,(recur (cdr lhs*) (cdr rhs*)
-			      old* new*)))))
-	      (others
-	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
-      ))
-
-  (define (rename formal old* new* expr-stx)
-    (unless (identifier? formal)
-      (syntax-violation __who__ "not an indentifier" expr-stx formal))
-    (when (bound-id-member? formal old*)
-      (syntax-violation __who__ "duplicate binding" expr-stx formal))
-    (let ((y (gensym (syntax->datum formal))))
-      (values y (cons formal old*) (cons y new*))))
-
-  (define (rename* formal* old* new* expr-stx)
-    (if (null? formal*)
-	(values '() old* new*)
-      (let*-values
-	  (((formal  old* new*) (rename  (car formal*) old* new* expr-stx))
-	   ((formal* old* new*) (rename* (cdr formal*) old* new* expr-stx)))
-	(values (cons formal formal*) old* new*))))
-
-  #| end of module: LET-VALUES-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: LET*-VALUES
-
-(module (let*-values-macro)
-  ;;Transformer function used to expand R6RS LET*-VALUES macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  ;;A LET*-VALUES syntax like:
-  ;;
-  ;;   (let*-values (((a b c) rhs0)
-  ;;                 ((d e f) rhs1))
-  ;;     ?body0 ?body ...)
-  ;;
-  ;;is expanded to:
-  ;;
-  ;;   (call-with-values
-  ;;       (lambda () rhs0)
-  ;;     (lambda (a b c)
-  ;;       (call-with-values
-  ;;           (lambda () rhs1)
-  ;;         (lambda (d e f)
-  ;;           (begin ?body0 ?body)))))
-  ;;
-  (define-constant __who__ 'let*-values)
-
-  (define (let*-values-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ () ?body ?body* ...)
-       (cons* (bless 'let) '() ?body ?body*))
-
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (bless
-	(let recur ((lhs* ?lhs*)
-		    (rhs* ?rhs*))
-	  (if (null? lhs*)
-	      `(begin ,?body . ,?body*)
-	    (syntax-match (car lhs*) ()
-	      ((?formal* ...)
-	       (begin
-		 (check ?formal* expr-stx)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,?formal*
-		      ,(recur (cdr lhs*) (cdr rhs*))))))
-
-	      ((?formal* ... . ?rest-formal)
-	       (begin
-		 (check (cons ?rest-formal ?formal*) expr-stx)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,(append ?formal* ?rest-formal)
-		      ,(recur (cdr lhs*) (cdr rhs*))))))
-
-	      (others
-	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
-      ))
-
-  (define (check x* expr-stx)
-    (unless (null? x*)
-      (let ((x (car x*)))
-	(unless (identifier? x)
-	  (syntax-violation __who__ "not an identifier" expr-stx x))
-	(check (cdr x*) expr-stx)
-	(when (bound-id-member? x (cdr x*))
-	  (syntax-violation __who__ "duplicate identifier" expr-stx x)))))
-
-  #| end of module: LET*-VALUES-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: VALUES->LIST-MACRO
-
-(define (values->list-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's VALUES->LIST  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?expr)
-     (bless
-      `(call-with-values
-	   (lambda () ,?expr)
-	 list)))))
-
-
-;;;; module non-core-macro-transformer: LET*-SYNTAX
-
-(define (let*-syntax-macro expr-stx)
-  ;;Transformer function used to expand Vicare's LET*-SYNTAX macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ;;No bindings.
-    ((_ () ?body ?body* ...)
-     (bless
-      `(begin ,?body . ,?body*)))
-    ;;Single binding.
-    ((_ ((?lhs ?rhs)) ?body ?body* ...)
-     (bless
-      `(let-syntax ((,?lhs ,?rhs))
-	 ,?body . ,?body*)))
-    ;;Multiple bindings
-    ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
-     (bless
-      `(let-syntax ((,?lhs ,?rhs))
-	 (let*-syntax ,(map list ?lhs* ?rhs*)
-	   ,?body . ,?body*))))
-    ))
-
-
-;;;; module non-core-macro-transformer: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
-
-(define (let-constants-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  LET-CONSTANTS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ;;No bindings.
-    ((_ () ?body ?body* ...)
-     (bless
-      `(let () ,?body . ,?body*)))
-    ;;Multiple bindings
-    ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
-     (let ((SHADOW* (generate-temporaries (cons ?lhs ?lhs*))))
-       (bless
-	`(let ,(map list SHADOW* (cons ?rhs ?rhs*))
-	   (let-syntax ,(map (lambda (lhs shadow)
-			       `(,lhs (identifier-syntax ,shadow)))
-			  (cons ?lhs ?lhs*) SHADOW*)
-	     ,?body . ,?body*)))))
-    ))
-
-(define (let*-constants-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  LET*-CONSTANTS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ;;No bindings.
-    ((_ () ?body ?body* ...)
-     (bless
-      `(let () ,?body . ,?body*)))
-    ;;Multiple bindings
-    ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
-     (bless
-      `(let-constants ((,?lhs ,?rhs))
-	 (let*-constants ,(map list ?lhs* ?rhs*)
-	   ,?body . ,?body*))))
-    ))
-
-(define (letrec-constants-macro expr-stx)
-  ;;Transformer function used to expand Vicare's LETREC-CONSTANTS macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ () ?body0 ?body* ...)
-     (bless
-      `(let () ,?body0 . ,?body*)))
-
-    ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
-     (let ((TMP* (generate-temporaries ?lhs*))
-	   (VAR* (generate-temporaries ?lhs*)))
-       (bless
-	`(let ,(map (lambda (var)
-		      `(,var (void)))
-		 VAR*)
-	   (let-syntax ,(map (lambda (lhs var)
-			       `(,lhs (identifier-syntax ,var)))
-			  ?lhs* VAR*)
-	     ;;Do not enforce the order of evaluation of ?RHS.
-	     (let ,(map list TMP* ?rhs*)
-	       ,@(map (lambda (var tmp)
-			`(set! ,var ,tmp))
-		   VAR* TMP*)
-	       (let () ,?body0 . ,?body*)))))))
-    ))
-
-(define (letrec*-constants-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  LETREC*-CONSTANTS
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ () ?body0 ?body* ...)
-     (bless
-      `(let () ,?body0 . ,?body*)))
-
-    ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
-     (let ((TMP* (generate-temporaries ?lhs*))
-	   (VAR* (generate-temporaries ?lhs*)))
-       (bless
-	`(let ,(map (lambda (var)
-		      `(,var (void)))
-		 VAR*)
-	   (let-syntax ,(map (lambda (lhs var)
-			       `(,lhs (identifier-syntax ,var)))
-			  ?lhs* VAR*)
-	     ;;Do enforce the order of evaluation of ?RHS.
-	     (let* ,(map list TMP* ?rhs*)
-	       ,@(map (lambda (var tmp)
-			`(set! ,var ,tmp))
-		   VAR* TMP*)
-	       (let () ,?body0 . ,?body*)))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: CASE-DEFINE
-
-(define (case-define-macro expr-stx)
-  ;;Transformer function used to expand Vicare's CASE-DEFINE macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?who ?cl-clause ?cl-clause* ...)
-     (identifier? ?who)
-     (bless
-      `(define ,?who
-	 (case-lambda ,?cl-clause . ,?cl-clause*))))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
-
-(module (lambda*-macro
-	 define*-macro
-	 case-lambda*-macro
-	 case-define*-macro)
-
-  (define-record argument-validation-spec
-    (arg-id
-		;Identifier representing the formal name of the argument
-		;being validated.
-     expr
-		;Syntax  object  representing   an  argument  validation
-		;expression.
-     ))
-
-  (define-record retval-validation-spec
-    (rv-id
-		;Identifier representing the internal formal name of the
-		;return value being validated.
-     pred
-		;Identifier bound to the predicate  to be applied to the
-		;return value.
-     ))
-
-;;; --------------------------------------------------------------------
-
-  (module (define*-macro)
-    ;;Transformer function  used to expand Vicare's  DEFINE* macros from
-    ;;the  top-level  built  in  environment.  Expand  the  contents  of
-    ;;EXPR-STX.  Return a syntax object that must be further expanded.
-    ;;
-    ;;We want to implement the following example expansions:
-    ;;
-    ;;  (define* ?id ?value)	==> (define ?id ?value)
-    ;;  (define* ?id)		==> (define ?id)
-    ;;
-    ;;  (define* (?who . ?common-formals) . ?body)
-    ;;  ==> (define (?who . ?common-formals)
-    ;;        (fluid-let-syntax
-    ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (let () . ?body)))
-    ;;
-    ;;  (define* (?who (?var ?pred)) . ?body)
-    ;;  ==> (define (?who ?var)
-    ;;        (fluid-let-syntax
-    ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (unless (?pred ?var)
-    ;; 	          (procedure-argument-violation __who__
-    ;; 	            "failed argument validation" '(?pred ?var) ?var))
-    ;;          (let () . ?body)))
-    ;;
-    ;;  (define* ((?who ?pred) ?var) . ?body)
-    ;;  ==> (define (?who ?var)
-    ;;        (fluid-let-syntax
-    ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (receive-and-return (rv)
-    ;;              (let () . ?body)
-    ;;            (unless (?pred rv)
-    ;;              (expression-return-value-violation __who__
-    ;; 	              "failed return value validation" (list '?pred rv))))))
-    ;;
-    (define (define*-macro stx)
-      (define (%synner message subform)
-	(syntax-violation 'define* message stx subform))
-      (syntax-match stx ()
-	;;No ret-pred.
-	((_ (?who . ?formals) ?body0 ?body* ...)
-	 (identifier? ?who)
-	 (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
-
-	;;Ret-pred with list spec.
-	((_ ((?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
-
-	;;Ret-pred with vector spec.
-	((_ (#(?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
-
-	((_ ?who ?expr)
-	 (identifier? ?who)
-	 (bless
-	  `(define ,?who ,?expr)))
-
-	((_ ?who)
-	 (identifier? ?who)
-	 (bless
-	  `(define ,?who (void))))
-
-	))
-
-    (define (%generate-define-output-form/without-ret-pred ?who ?predicate-formals ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  (bless
-	   `(define (,?who . ,?standard-formals)
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote ,?who))))
-		,@ARG-VALIDATION*
-		(let () . ,?body*)))))))
-
-    (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  (bless
-	   `(define (,?who . ,?standard-formals)
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote ,?who))))
-		,@ARG-VALIDATION*
-		(receive-and-return (,@RET*)
-		    (let () . ,?body*)
-		  ,RET-VALIDATION)))))))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (case-define*-macro)
-
-    (define (case-define*-macro stx)
-      ;;Transformer function used to expand Vicare's CASE-DEFINE* macros
-      ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
-      ;;
-      (define (%synner message subform)
-	(syntax-violation 'case-define* message stx subform))
-      (syntax-match stx ()
-	((_ ?who ?clause0 ?clause* ...)
-	 (identifier? ?who)
-	 (bless
-	  `(define ,?who
-	     (case-lambda
-	      ,@(map (lambda (?clause)
-		       (%generate-case-define-form ?who ?clause %synner))
-		  (cons ?clause0 ?clause*))))))
-	))
-
-    (define (%generate-case-define-form ?who ?clause synner)
-      (syntax-match ?clause ()
-	;;Ret-pred with list spec.
-	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
-
-	;;Ret-pred with vector spec.
-	(((#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
-
-	;;No ret-pred.
-	((?formals ?body0 ?body* ...)
-	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner))
-	))
-
-    (define (%generate-case-define-clause-form/without-ret-pred ?who ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote ,?who))))
-	      ,@ARG-VALIDATION*
-	      (let () ,?body0 ,@?body*))))))
-
-    (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote ,?who))))
-	      ,@ARG-VALIDATION*
-	      (receive-and-return (,@RET*)
-		  (let () ,?body0 ,@?body*)
-		,RET-VALIDATION))))))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (lambda*-macro)
-
-    (define (lambda*-macro stx)
-      ;;Transformer function used to expand Vicare's LAMBDA* macros from
-      ;;the  top-level built  in  environment.  Expand  the contents  of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
-      ;;
-      (define (%synner message subform)
-	(syntax-violation 'lambda* message stx subform))
-      (syntax-match stx ()
-	;;Ret-pred with list spec.
-	((?kwd ((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
-
-	;;Ret-pred with vector spec.
-	((?kwd (#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
-
-	;;No ret-pred.
-	((?kwd ?formals ?body0 ?body* ...)
-	 (%generate-lambda-output-form/without-ret-pred ?kwd ?formals ?body0 ?body* %synner))
-
-	))
-
-    (define (%generate-lambda-output-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  (bless
-	   `(lambda ,?standard-formals
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote _))))
-		,@ARG-VALIDATION*
-		(let () ,?body0 ,@?body*)))))))
-
-    (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  (bless
-	   `(lambda ,?standard-formals
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote _))))
-		,@ARG-VALIDATION*
-		(receive-and-return (,@RET*)
-		    (let () ,?body0 ,@?body*)
-		  ,RET-VALIDATION)))))))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (case-lambda*-macro)
-
-    (define (case-lambda*-macro stx)
-      ;;Transformer function used to expand Vicare's CASE-LAMBDA* macros
-      ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
-      ;;
-      (define (%synner message subform)
-	(syntax-violation 'case-lambda* message stx subform))
-      (syntax-match stx ()
-	((?kwd ?clause0 ?clause* ...)
-	 (bless
-	  `(case-lambda
-	    ,@(map (lambda (?clause)
-		     (%generate-case-lambda-form ?kwd ?clause %synner))
-		(cons ?clause0 ?clause*)))))
-	))
-
-    (define (%generate-case-lambda-form ?ctx ?clause synner)
-      (syntax-match ?clause ()
-	;;Ret-pred with list spec.
-	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
-
-	;;Ret-pred with vector spec.
-	(((#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
-
-	;;No ret-pred.
-	((?formals ?body0 ?body* ...)
-	 (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?formals ?body0 ?body* synner))
-	))
-
-    (define (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote _))))
-	      ,@ARG-VALIDATION*
-	      (let () ,?body0 ,@?body*))))))
-
-    (define (%generate-case-lambda-clause-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote _))))
-	      ,@ARG-VALIDATION*
-	      (receive-and-return (,@RET*)
-		  (let () ,?body0 ,@?body*)
-		,RET-VALIDATION))))))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-predicate-formals ?predicate-formals synner)
-    ;;Split  formals from  tags.   We  rely on  the  DEFINE, LAMBDA  and
-    ;;CASE-LAMBDA syntaxes  in the output  form to further  validate the
-    ;;formals against duplicate bindings.
-    ;;
-    ;;We use  the conventions: ?ID,  ?REST-ID and ?ARGS-ID  are argument
-    ;;identifiers;  ?PRED   is  a  predicate  identifier;   ?EXPR  is  a
-    ;;validation expression.
-    ;;
-    ;;We accept the following standard formals formats:
-    ;;
-    ;;   ?args-id
-    ;;   (?id ...)
-    ;;   (?id0 ?id ... . ?rest-id)
-    ;;
-    ;;and in addition the following predicate formals:
-    ;;
-    ;;   #(?args-id ?pred ?expr ...)
-    ;;   (?pred-arg ...)
-    ;;   (?pred-arg0 ?pred-arg ... . ?rest-id)
-    ;;   (?pred-arg0 ?pred-arg ... . #(?rest ?pred ?expr ...))
-    ;;
-    ;;where ?PRED-ARG is a predicate argument with one of the formats:
-    ;;
-    ;;   ?id
-    ;;   (?id ?pred ?expr ...)
-    ;;
-    ;;Return 3 values:
-    ;;
-    ;;* A list  of syntax objects representing the  standard formals for
-    ;;the DEFINE, LAMBDA and CASE-LAMBDA syntaxes.
-    ;;
-    ;;* A list of  ARGUMENT-VALIDATION-SPEC structures each representing
-    ;;a validation predicate.
-    ;;
-    (syntax-match ?predicate-formals ()
-
-      ;;Untagged identifiers without rest argument.
-      ;;
-      ((?id* ...)
-       (for-all identifier? ?id*)
-       (values ?id* '()))
-
-      ;;Untagged identifiers with rest argument.
-      ;;
-      ((?id* ... . ?rest-id)
-       (and (for-all identifier? ?id*)
-	    (identifier? ?rest-id))
-       (values ?predicate-formals '()))
-
-      ;;Possibly tagged identifiers without rest argument.
-      ;;
-      ((?pred-arg* ...)
-       (let recur ((?pred-arg* ?pred-arg*))
-	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
-		 (recur (cdr ?pred-arg*))
-	       (let ((?pred-arg (car ?pred-arg*)))
-		 (syntax-match ?pred-arg ()
-		   ;;Untagged argument.
-		   (?id
-		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals)
-			    arg-validation-spec*))
-		   ;;Tagged argument, list spec.
-		   ((?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   ;;Tagged argument, vector spec.
-		   (#(?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   (else
-		    (synner "invalid argument specification" ?pred-arg)))))
-	   (values '() '()))))
-
-      ;;Possibly tagged identifiers with rest argument.
-      ;;
-      ((?pred-arg* ... . ?rest-var)
-       (let recur ((?pred-arg* ?pred-arg*))
-	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
-		 (recur (cdr ?pred-arg*))
-	       (let ((?pred-arg (car ?pred-arg*)))
-		 (syntax-match ?pred-arg ()
-		   ;;Untagged argument.
-		   (?id
-		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals)
-			    arg-validation-spec*))
-		   ;;Tagged argument, list spec.
-		   ((?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   ;;Tagged argument, vector spec.
-		   (#(?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   (else
-		    (synner "invalid argument specification" ?pred-arg)))))
-	   ;;Process rest argument.
-	   (syntax-match ?rest-var ()
-	     ;;Untagged rest argument.
-	     (?rest-id
-	      (identifier? ?rest-id)
-	      (values ?rest-id '()))
-	     ;;Tagged rest argument.
-	     (#(?rest-id ?rest-pred)
-	      (and (identifier? ?rest-id)
-		   (identifier? ?rest-pred))
-	      (values ?rest-id
-		      (list (make-argument-validation-spec ?rest-id (list ?rest-pred ?rest-id)))))
-	     (else
-	      (synner "invalid argument specification" ?rest-var))))))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (define (%make-arg-validation-forms arg-validation-spec* synner)
-    (if (enable-arguments-validation?)
-	(map (lambda (spec)
-	       (let ((?arg-expr (argument-validation-spec-expr   spec))
-		     (?arg-id   (argument-validation-spec-arg-id spec)))
-		 `(unless ,?arg-expr
-		    (procedure-argument-violation __who__
-		      "failed argument validation"
-		      (quote ,?arg-expr) ,?arg-id))))
-	  arg-validation-spec*)
-      '()))
-
-  (define (%make-ret-validation-form retval-validation-spec* synner)
-    (if (enable-arguments-validation?)
-	`(begin
-	   ,@(map (lambda (spec)
-		    (let ((?pred (retval-validation-spec-pred  spec))
-			  (?ret  (retval-validation-spec-rv-id spec)))
-		      `(unless (,?pred ,?ret)
-			 (expression-return-value-violation __who__
-			   "failed return value validation"
-			   ;;This list  represents the application  of the
-			   ;;predicate to the offending value.
-			   (list (quote ,?pred) ,?ret)))))
-	       retval-validation-spec*))
-      '(void)))
-
-  (define (%underscore? stx)
-    (and (identifier? stx)
-	 (eq? '_ (syntax->datum stx))))
-
-  #| end of module |# )
-
-
-;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
-
-(define (trace-lambda-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's TRACE-LAMBDA  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?who (?formal* ...) ?body ?body* ...)
-     (if (valid-bound-ids? ?formal*)
-	 (bless
-	  `(make-traced-procedure ',?who
-				  (lambda ,?formal*
-				    ,?body . ,?body*)))
-       (%error-invalid-formals-syntax expr-stx ?formal*)))
-
-    ((_  ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
-     (if (valid-bound-ids? (cons ?rest-formal ?formal*))
-	 (bless
-	  `(make-traced-procedure ',?who
-				  (lambda (,@?formal* . ,?rest-formal)
-				    ,?body . ,?body*)))
-       (%error-invalid-formals-syntax expr-stx (append ?formal* ?rest-formal))))
-    ))
-
-(define (trace-define-macro expr-stx)
-  ;;Transformer  function used  to expand  Vicare's TRACE-DEFINE  macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?who ?formal* ...) ?body ?body* ...)
-     (if (valid-bound-ids? ?formal*)
-	 (bless
-	  `(define ,?who
-	     (make-traced-procedure ',?who
-				    (lambda ,?formal*
-				      ,?body . ,?body*))))
-       (%error-invalid-formals-syntax expr-stx ?formal*)))
-
-    ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-     (if (valid-bound-ids? (cons ?rest-formal ?formal*))
-	 (bless
-	  `(define ,?who
-	     (make-traced-procedure ',?who
-				    (lambda (,@?formal* . ,?rest-formal)
-				      ,?body . ,?body*))))
-       (%error-invalid-formals-syntax expr-stx (append ?formal* ?rest-formal))))
-
-    ((_ ?who ?expr)
-     (if (identifier? ?who)
-	 (bless `(define ,?who
-		   (let ((v ,?expr))
-		     (if (procedure? v)
-			 (make-traced-procedure ',?who v)
-		       v))))
-       (stx-error expr-stx "invalid name")))
-    ))
-
-(define (trace-define-syntax-macro expr-stx)
-  ;;Transformer  function used  to  expand Vicare's  TRACE-DEFINE-SYNTAX
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?who ?expr)
-     (if (identifier? ?who)
-	 (bless
-	  `(define-syntax ,?who
-	     (make-traced-macro ',?who ,?expr)))
-       (stx-error expr-stx "invalid name")))
-    ))
-
-
-;;;; module non-core-macro-transformer: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
-
-(module (trace-let-syntax-macro
-	 trace-letrec-syntax-macro)
-
-  (define (%trace-let/rec-syntax who)
-    (lambda (stx)
-      (syntax-match stx ()
-	((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-	 (if (valid-bound-ids? ?lhs*)
-	     (let ((rhs* (map (lambda (lhs rhs)
-				`(make-traced-macro ',lhs ,rhs))
-			   ?lhs* ?rhs*)))
-	       (bless
-		`(,who ,(map list ?lhs* rhs*)
-		       ,?body . ,?body*)))
-	   (%error-invalid-formals-syntax stx ?lhs*)))
-	)))
-
-  (define trace-let-syntax-macro
-    ;;Transformer  function  used  to expand  Vicare's  TRACE-LET-SYNTAX
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
-    ;;
-    (%trace-let/rec-syntax 'let-syntax))
-
-  (define trace-letrec-syntax-macro
-    ;;Transformer function  used to expand  Vicare's TRACE-LETREC-SYNTAX
-    ;;macros  from  the  top-level  built in  environment.   Expand  the
-    ;;contents of EXPR-STX; return a  syntax object that must be further
-    ;;expanded.
-    ;;
-    (%trace-let/rec-syntax 'letrec-syntax))
-
-  #| end of module |# )
-
-
-;;;; module non-core-macro-transformer: GUARD
-
-(module (guard-macro)
-
-  (define (guard-macro x)
-    ;;Transformer function  used to  expand R6RS  GUARD macros  from the
-    ;;top-level built in environment.   Expand the contents of EXPR-STX;
-    ;;return a syntax object that must be further expanded.
-    ;;
-    ;;A syntax without else clause like:
-    ;;
-    ;;   (guard (E
-    ;;           (?test0 ?expr0)
-    ;;           (?test1 ?expr1)))
-    ;;     ?body0 ?body ...)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   ((call/cc
-    ;;        (lambda (outerk)
-    ;;          (lambda ()
-    ;;            (with-exception-handler
-    ;; 	              (lambda (raised-obj)
-    ;; 	                (let ((E raised-obj))
-    ;;                    ((call/cc
-    ;; 		               (lambda (raisek)
-    ;; 		                 (outerk (lambda ()
-    ;; 	                                   (if ?test0
-    ;; 	                                       ?expr0
-    ;;                  	             (if ?test1
-    ;; 	                                         ?expr1
-    ;; 	                                       (raisek (lambda ()
-    ;;                                                   (raise-continuable raised-obj))))))))))))
-    ;;              (lambda ()
-    ;; 	              ?body0 ?body ...))))))
-    ;;
-    (syntax-match x ()
-      ((_ (?variable ?clause* ...) ?body ?body* ...)
-       (identifier? ?variable)
-       (let ((outerk-id     (gensym))
-	     (raised-obj-id (gensym)))
-	 (bless
-	  `((call/cc
-		(lambda (,outerk-id)
-		  (lambda ()
-		    (with-exception-handler
-			(lambda (,raised-obj-id)
-			  (let ((,?variable ,raised-obj-id))
-			    ,(gen-clauses raised-obj-id outerk-id ?clause*)))
-		      (lambda ()
-			,?body . ,?body*))))))
-	  )))
-      ))
-
-  (define (gen-clauses raised-obj-id outerk-id clause*)
-
-    (define (%process-single-cond-clause clause kont-code-stx)
-      (syntax-match clause (=>)
-	((?test => ?proc)
-	 (let ((t (gensym)))
-	   `(let ((,t ,?test))
-	      (if ,t
-		  (,?proc ,t)
-		,kont-code-stx))))
-
-	((?test)
-	 (let ((t (gensym)))
-	   `(let ((,t ,?test))
-	      (if ,t ,t ,kont-code-stx))))
-
-	((?test ?expr ?expr* ...)
-	 `(if ,?test
-	      (begin ,?expr . ,?expr*)
-	    ,kont-code-stx))
-
-	(_
-	 (stx-error clause "invalid guard clause"))))
-
-    (define (%process-multi-cond-clauses clause*)
-      (syntax-match clause* (else)
-	;;There is no ELSE clause: introduce the raise continuation that
-	;;rethrows the exception.
-	(()
-	 (let ((raisek (gensym)))
-	   (values `(,raisek (lambda ()
-			       (raise-continuable ,raised-obj-id)))
-		   raisek)))
-
-	;;There  is an  ELSE  clause:  no need  to  introduce the  raise
-	;;continuation.
-	(((else ?else-body ?else-body* ...))
-	 (values `(begin ,?else-body . ,?else-body*)
-		 #f))
-
-	((?clause . ?clause*)
-	 (receive (code-stx raisek)
-	     (%process-multi-cond-clauses ?clause*)
-	   (values (%process-single-cond-clause ?clause code-stx)
-		   raisek)))
-
-	(others
-	 (stx-error others "invalid guard clause"))))
-
-    (receive (code-stx raisek)
-	(%process-multi-cond-clauses clause*)
-      (if raisek
-	  `((call/cc
-		(lambda (,raisek)
-		  (,outerk-id (lambda () ,code-stx)))))
-	`(,outerk-id (lambda () ,code-stx)))))
-
-  #| end of module: GUARD-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
-
-(define (define-enumeration-macro stx)
-  ;;Transformer function  used to expand R6RS  DEFINE-ENUMERATION macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (define-constant __who__ 'define-enumeration)
-  (define (set? x)
-    (or (null? x)
-	(and (not (memq (car x) (cdr x)))
-	     (set? (cdr x)))))
-  (define (remove-dups ls)
-    (if (null? ls)
-	'()
-      (cons (car ls)
-	    (remove-dups (remq (car ls) (cdr ls))))))
-  (syntax-match stx ()
-    ((_ ?name (?id* ...) ?maker)
-     (begin
-       (unless (identifier? ?name)
-	 (syntax-violation __who__
-	   "expected identifier as enumeration type name" stx ?name))
-       (unless (for-all identifier? ?id*)
-	 (syntax-violation __who__
-	   "expected list of symbols as enumeration elements" stx ?id*))
-       (unless (identifier? ?maker)
-	 (syntax-violation __who__
-	   "expected identifier as enumeration constructor syntax name" stx ?maker))
-       (let ((symbol*		(remove-dups (syntax->datum ?id*)))
-	     (the-constructor	(gensym)))
-	 (bless
-	  `(begin
-	     (define ,the-constructor
-	       (enum-set-constructor (make-enumeration ',symbol*)))
-
-	     (define-syntax ,?name
-	       ;;Check at macro-expansion time whether the symbol ?ARG
-	       ;;is in  the universe associated with ?NAME.   If it is,
-	       ;;the result  of the  expansion is equivalent  to ?ARG.
-	       ;;It is a syntax violation if it is not.
-	       ;;
-	       (lambda (x)
-		 (define universe-of-symbols ',symbol*)
-		 (define (%synner message subform)
-		   (syntax-violation ',?name message
-				     (syntax->datum x) (syntax->datum subform)))
-		 (syntax-case x ()
-		   ((_ ?arg)
-		    (not (identifier? (syntax ?arg)))
-		    (%synner "expected symbol as argument to enumeration validator"
-			     (syntax ?arg)))
-
-		   ((_ ?arg)
-		    (not (memq (syntax->datum (syntax ?arg)) universe-of-symbols))
-		    (%synner "expected symbol in enumeration as argument to enumeration validator"
-			     (syntax ?arg)))
-
-		   ((_ ?arg)
-		    (syntax (quote ?arg)))
-
-		   (_
-		    (%synner "invalid enumeration validator form" #f)))))
-
-	     (define-syntax ,?maker
-	       ;;Given  any  finite sequence  of  the  symbols in  the
-	       ;;universe, possibly  with duplicates, expands  into an
-	       ;;expression that  evaluates to the  enumeration set of
-	       ;;those symbols.
-	       ;;
-	       ;;Check  at  macro-expansion  time  whether  every  input
-	       ;;symbol is in the universe  associated with ?NAME; it is
-	       ;;a syntax violation if one or more is not.
-	       ;;
-	       (lambda (x)
-		 (define universe-of-symbols ',symbol*)
-		 (define (%synner message subform-stx)
-		   (syntax-violation ',?maker
-		     message
-		     (syntax->datum x) (syntax->datum subform-stx)))
-		 (syntax-case x ()
-		   ((_ . ?list-of-symbols)
-		    ;;Check the input  symbols one by one partitioning
-		    ;;the ones in the universe from the one not in the
-		    ;;universe.
-		    ;;
-		    ;;If  an input element  is not  a symbol:  raise a
-		    ;;syntax violation.
-		    ;;
-		    ;;After   all   the   input  symbols   have   been
-		    ;;partitioned,  if the  list of  collected INvalid
-		    ;;ones is not null:  raise a syntax violation with
-		    ;;that list as  subform, else return syntax object
-		    ;;expression   building  a  new   enumeration  set
-		    ;;holding the list of valid symbols.
-		    ;;
-		    (let loop ((valid-symbols-stx	'())
-			       (invalid-symbols-stx	'())
-			       (input-symbols-stx	(syntax ?list-of-symbols)))
-		      (syntax-case input-symbols-stx ()
-
-			;;No more symbols to collect and non-null list
-			;;of collected INvalid symbols.
-			(()
-			 (not (null? invalid-symbols-stx))
-			 (%synner "expected symbols in enumeration as arguments \
-                                     to enumeration constructor syntax"
-				  (reverse invalid-symbols-stx)))
-
-			;;No more symbols to  collect and null list of
-			;;collected INvalid symbols.
-			(()
-			 (quasisyntax
-			  (,the-constructor '(unsyntax (reverse valid-symbols-stx)))))
-
-			;;Error if element is not a symbol.
-			((?symbol0 . ?rest)
-			 (not (identifier? (syntax ?symbol0)))
-			 (%synner "expected symbols as arguments to enumeration constructor syntax"
-				  (syntax ?symbol0)))
-
-			;;Collect a symbol in the set.
-			((?symbol0 . ?rest)
-			 (memq (syntax->datum (syntax ?symbol0)) universe-of-symbols)
-			 (loop (cons (syntax ?symbol0) valid-symbols-stx)
-			       invalid-symbols-stx (syntax ?rest)))
-
-			;;Collect a symbol not in the set.
-			((?symbol0 . ?rest)
-			 (loop valid-symbols-stx
-			       (cons (syntax ?symbol0) invalid-symbols-stx)
-			       (syntax ?rest)))
-
-			))))))
-	     )))))
-    ))
-
-
-;;;; module non-core-macro-transformer: DO
-
-(define (do-macro stx)
-  ;;Transformer  function  used  to  expand  R6RS  DO  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (define (%normalise-binding binding-stx)
-    (syntax-match binding-stx ()
-      ((?var ?init)       `(,?var ,?init ,?var))
-      ((?var ?init ?step) `(,?var ,?init ,?step))
-      (_
-       (stx-error stx "invalid binding"))))
-  (syntax-match stx ()
-    ((_ (?binding* ...)
-	(?test ?expr* ...)
-	?command* ...)
-     (syntax-match (map %normalise-binding ?binding*) ()
-       (((?var* ?init* ?step*) ...)
-	(if (valid-bound-ids? ?var*)
-	    (bless
-	     `(letrec ((loop (lambda ,?var*
-			       (if ,?test
-				   ;;If ?EXPR* is  null: make sure there
-				   ;;is  at  least   one  expression  in
-				   ;;BEGIN.
-				   (begin (if #f #f) . ,?expr*)
-				 (begin
-				   ,@?command*
-				   (loop . ,?step*))))))
-		(loop . ,?init*)))
-	  (stx-error stx "invalid bindings")))
-       ))
-    ))
-
-
-;;;; module non-core-macro-transformer: WHILE, UNTIL, FOR
-
-(define (while-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's WHILE  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?test ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin ,@?body* (loop))
-		   (escape))))))))
-    ))
-
-(define (until-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's UNTIL  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?test ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (escape)
-		   (begin ,@?body* (loop)))))))))
-    ))
-
-(define (for-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  FOR macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?init ?test ?incr) ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     ,?init
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin
-		       ,@?body* ,?incr
-		       (loop))
-		   (escape))))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-RETURNABLE, LAMBDA-RETURNABLE
-
-(define (define-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?name . ?formals) ?body0 ?body* ...)
-     (bless
-      `(define (,?name . ,?formals)
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (lambda-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  LAMBDA-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?body0 ?body* ...)
-     (bless
-      `(lambda ,?formals
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (begin-returnable-macro expr-stx)
-  ;;Transformer function used to expand Vicare's BEGIN-RETURNABLE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?body0 ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (fluid-let-syntax ((return (syntax-rules ()
-					  ((_ . ?args)
-					   (escape . ?args)))))
-	       ,?body0 . ,?body*)))))
-    ))
-
-
-;;;; module non-core-macro-transformer: OR, AND
-
-(define (or-macro expr-stx)
-  ;;Transformer  function  used  to  expand  R6RS  OR  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_) #f)
-
-    ((_ ?expr ?expr* ...)
-     (bless
-      (let recur ((e ?expr) (e* ?expr*))
-	(if (null? e*)
-	    `(begin #f ,e)
-	  `(let ((t ,e))
-	     (if t
-		 t
-	       ,(recur (car e*) (cdr e*))))))))
-    ))
-
-(define (and-macro expr-stx)
-  ;;Transformer  function  used  to  expand R6RS  AND  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_) #t)
-
-    ((_ ?expr ?expr* ...)
-     (bless
-      (let recur ((e ?expr) (e* ?expr*))
-	(if (null? e*)
-	    `(begin #f ,e)
-	  `(if ,e
-	       ,(recur (car e*) (cdr e*))
-	     #f)))))
-    ))
-
-
-;;;; module non-core-macro-transformer: COND
-
-(define (cond-macro expr-stx)
-  ;;Transformer  function  used to  expand  R6RS  COND macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?cls ?cls* ...)
-     (bless
-      (let recur ((cls ?cls) (cls* ?cls*))
-	(if (null? cls*)
-	    (syntax-match cls (else =>)
-	      ((else ?expr ?expr* ...)
-	       `(let () #f ,?expr . ,?expr*))
-
-	      ((?test => ?proc)
-	       `(let ((t ,?test))
-		  (if t (,?proc t))))
-
-	      ((?expr)
-	       `(or ,?expr (if #f #f)))
-
-	      ((?test ?expr* ...)
-	       `(if ,?test
-		    (begin . ,?expr*)))
-
-	      (_
-	       (stx-error expr-stx "invalid last clause")))
-
-	  (syntax-match cls (else =>)
-	    ((else ?expr ?expr* ...)
-	     (stx-error expr-stx "incorrect position of keyword else"))
-
-	    ((?test => ?proc)
-	     `(let ((t ,?test))
-		(if t
-		    (,?proc t)
-		  ,(recur (car cls*) (cdr cls*)))))
-
-	    ((?expr)
-	     `(or ,?expr
-		  ,(recur (car cls*) (cdr cls*))))
-
-	    ((?test ?expr* ...)
-	     `(if ,?test
-		  (begin . ,?expr*)
-		,(recur (car cls*) (cdr cls*))))
-
-	    (_
-	     (stx-error expr-stx "invalid last clause")))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: QUASIQUOTE
-
-(module (quasiquote-macro)
-  ;;Transformer function used to expand  R6RS QUASIQUOTE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  ;;Some example expansions:
-  ;;
-  ;;   (quasiquote (1 2 (unquote (+ 3 4))))
-  ;;   ==> (list '1 '2 (+ '3 '4))
-  ;;
-  ;;   (quasiquote (1 2 (unquote (+ 3 4))))
-  ;;   ==> (vector '1 '2 (+ '3 '4))
-  ;;
-  ;;NOTE We  can test  QUASIQUOTE expansions by  evaluating at  the REPL
-  ;;expressions like:
-  ;;
-  ;;   (expand-form-to-core-language
-  ;;     '(quasiquote ?pattern)
-  ;;     (interaction-environment))
-  ;;
-  (define (quasiquote-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ?expr)
-       (%quasi ?expr 0))
-      ))
-
-  (define (%quasi p nesting-level)
-    ;;Process a list of items representing the items from a list.
-    ;;
-    (syntax-match p (unquote unquote-splicing quasiquote)
-      ((unquote p)
-       (if (zero? nesting-level)
-	   p
-	 (%quasicons (%keyword 'unquote)
-		     (%quasi (list p) (sub1 nesting-level)))))
-
-      (((unquote p ...) . q)
-       (if (zero? nesting-level)
-	   (%quasicons* p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%keyword 'unquote)
-				 (%quasi p (sub1 nesting-level)))
-		     (%quasi q nesting-level))))
-
-      (((unquote-splicing p ...) . q)
-       (if (zero? nesting-level)
-	   (%quasiappend p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%keyword 'unquote-splicing)
-				 (%quasi p (sub1 nesting-level)))
-		     (%quasi q nesting-level))))
-
-      ((quasiquote p)
-       (%quasicons (%keyword 'quasiquote)
-		   (%quasi (list p) (add1 nesting-level))))
-
-      ((p . q)
-       (%quasicons (%quasi p nesting-level)
-		   (%quasi q nesting-level)))
-
-      (#(x ...)
-       (not (<stx>? x))
-       (%quasivector (%vector-quasi x nesting-level)))
-
-      (p
-       (%application 'quote p))
-      ))
-
-  (define (%vector-quasi p nesting-level)
-    ;;Process a list of items representing the items from a vector.
-    ;;
-    (syntax-match p ()
-      ((p . q)
-       (syntax-match p (unquote unquote-splicing)
-  	 ((unquote p ...)
-  	  (if (zero? nesting-level)
-  	      (%quasicons* p (%vector-quasi q nesting-level))
-  	    (%quasicons (%quasicons (%keyword 'unquote)
-  				    (%quasi p (sub1 nesting-level)))
-  			(%vector-quasi q nesting-level))))
-
-  	 ((unquote-splicing p ...)
-  	  (if (zero? nesting-level)
-  	      (%quasiappend p (%vector-quasi q nesting-level))
-  	    (%quasicons (%quasicons (%keyword 'unquote-splicing)
-  				    (%quasi p (sub1 nesting-level)))
-  			(%vector-quasi q nesting-level))))
-
-  	 (p
-  	  (%quasicons (%quasi p nesting-level)
-  		      (%vector-quasi q nesting-level)))
-  	 ))
-
-      (()
-       (%application 'quote '()))
-      ))
-
-  (define (%keyword key)
-    ;;Return a  top-marked syntax  object representing a  quoted symbol;
-    ;;the  symbol  being the  name  of  a  syntax  from the  boot  image
-    ;;EXPORT-ENV.  Expanding  and evaluating the returned  syntax object
-    ;;is equivalent to evaluating:
-    ;;
-    ;;   (quote key)
-    ;;
-    ;;where KEY is one of: quasiquote, unquote, unquote-splicing.
-    ;;
-    (list (scheme-stx 'quote) (mkstx key TOP-MARK* '() '())))
-
-  (define-syntax %application
-    ;;Expand to an expression which, when evaluated, results in a syntax
-    ;;object representing an expression.   Such syntax object expression
-    ;;is the application of ?CONSTRUCTOR to the, possibly empty, list of
-    ;;arguments ?ARG*.
-    ;;
-    ;;?CONSTRUCTOR must be a symbol  representing the name of a function
-    ;;or syntax  from the boot  image EXPORT-ENV; candidates  are: list,
-    ;;vector, list->vector, cons, quote.
-    ;;
-    (syntax-rules (quote)
-      ((_ (quote ?constructor) ?arg* ...)
-       (list (scheme-stx '?constructor) ?arg* ...))
-      ))
-
-  (define-syntax %application*
-    ;;Expand to an expression which, when evaluated, results in a syntax
-    ;;object representing an expression.   Such syntax object expression
-    ;;is the application of ?CONSTRUCTOR to the, possibly empty, list of
-    ;;arguments ?ARG* and the list of arguments ?TAIL-ARG*.
-    ;;
-    ;;?CONSTRUCTOR must be a symbol  representing the name of a function
-    ;;or syntax  from the boot  image EXPORT-ENV; candidates  are: list,
-    ;;append, vector.
-    ;;
-    (syntax-rules (quote)
-      ((_ (quote ?constructor) ?arg* ... ?tail-arg*)
-       (cons* (scheme-stx '?constructor) ?arg* ... ?tail-arg*))))
-
-  (define (%quasicons* x y)
-    (let recur ((x x))
-      (if (null? x)
-	  y
-	(%quasicons (car x) (recur (cdr x))))))
-
-  (define (%quasicons x y)
-    (syntax-match y (quote list)
-      ((quote ?dy)
-       (syntax-match x (quote)
-	 ((quote ?dx)
-	  (%application 'quote (cons ?dx ?dy)))
-
-	 (_
-	  (syntax-match ?dy ()
-	    (()
-	     (%application 'list x))
-	    (_
-	     (%application 'cons x y))
-	    ))
-	 ))
-
-      ((list ?stuff ...)
-       (%application* 'list x ?stuff))
-
-      (_
-       (%application 'cons x y))
-      ))
-
-  (define (%quasiappend x y)
-    (let ((ls (let recur ((x x))
-		(if (null? x)
-		    (syntax-match y (quote)
-		      ((quote ())
-		       '())
-		      (_
-		       (list y)))
-		  (syntax-match (car x) (quote)
-		    ((quote ())
-		     (recur (cdr x)))
-		    (_
-		     (cons (car x) (recur (cdr x)))))))))
-      (cond ((null? ls)
-	     (%application 'quote '()))
-	    ((null? (cdr ls))
-	     (car ls))
+  ;;create a fresh identifier that maps only the symbol to its label in that library.
+  ;;Symbols not in that library become fresh.
+  ;;
+  ;;NOTE  In the  original code,  the labels  of the  core primitives  were extracted
+  ;;directly from the export subst of the library (psyntax system $all); there was no
+  ;;SYSTEM-LABEL function back then.  There was a COND clause as follows:
+  ;;
+  ;;   ((assq sym (or subst
+  ;;                  (receive-and-return (S)
+  ;;                      (library-export-subst
+  ;;                       (find-library-by-name '(psyntax system $all)))
+  ;;                    (set! subst S))))
+  ;;    => (lambda (name.label)
+  ;;         (receive-and-return (id)
+  ;;             (make-<stx> (car name.label) TOP-MARK*
+  ;;                         (list (make-<rib> (list (car name.label))
+  ;;                                           TOP-MARK**
+  ;;                                           (list (cdr name.label))
+  ;;                                           #f))
+  ;;                         '())
+  ;;           (putprop sym system-id-gensym id))))
+  ;;
+  ;;where SUBST  is a variable  SCHEME-STX was closed upon.   I am keeping  this code
+  ;;here as reference (sue me!).  (Marco Maggi; Tue Apr 15, 2014)
+  ;;
+  (or (getprop sym system-id-gensym)
+      (getprop sym '*vicare-scheme-temporary-variable-id*)
+      (cond ((system-label sym)
+	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
+	     ;;with a proper "<rib>" and  the binding's label.  Such bound identifier
+	     ;;will be captured by the entry in the top-level environment.
+	     => (lambda (label)
+		  (receive-and-return (id)
+		      (make-<stx> sym TOP-MARK*
+				  (list (make-<rib> (list sym)
+						    TOP-MARK**
+						    (list label)
+						    #f))
+				  '())
+		    (putprop sym system-id-gensym id))))
 	    (else
-	     (%application* 'append ls)))))
+	     ;;SYM is  not the  name of  a core primitive,  so we  just build  a free
+	     ;;identifier.   Such free  identifier  will work  just  fine in  binding
+	     ;;position.
+	     (receive-and-return (stx)
+		 (make-<stx> sym TOP-MARK* '() '())
+	       (putprop sym '*vicare-scheme-temporary-variable-id* stx))))))
 
-  (define (%quasivector x)
-    (let ((pat-x x))
-      (syntax-match pat-x (quote)
-  	((quote (x* ...))
-  	 (%application 'quote (list->vector x*)))
-
-  	(_
-  	 (let loop ((x x)
-  		    (k (lambda (ls)
-  			 (%application* 'vector ls))))
-  	   (syntax-match x (list cons quote)
-  	     ((quote (x* ...))
-  	      (k (map (lambda (x) (%application 'quote x)) x*)))
-
-  	     ((list x* ...)
-  	      (k x*))
-
-  	     ((cons x y)
-  	      (loop y (lambda (ls)
-  			(k (cons x ls)))))
-
-  	     (_
-  	      (%application 'list->vector pat-x))
-  	     )))
-  	)))
-
-  #| end of module: QUASIQUOTE-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: QUASISYNTAX
-
-(module (quasisyntax-macro)
-  ;;Transformer function used to expand R6RS QUASISYNTAX macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define* (core-prim-id {sym symbol?})
+  ;;Take a symbol  and if it's in the library:
   ;;
-  ;;FIXME: not really correct (Abdulaziz Ghuloum).
+  ;;   (psyntax system $all)
   ;;
-  (define (quasisyntax-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ e)
-       (receive (lhs* rhs* v)
-	   (quasi e 0)
-	 (bless
-	  `(syntax-case (list ,@rhs*) ()
-	     (,lhs*
-	      (syntax ,v))))))
-      ))
-
-  (define (quasi p nesting-level)
-    (syntax-match p (unsyntax unsyntax-splicing quasisyntax)
-      ((unsyntax p)
-       (if (zero? nesting-level)
-	   (let ((g (gensym)))
-	     (values (list g) (list p) g))
-	 (receive (lhs* rhs* p)
-	     (quasi p (sub1 nesting-level))
-	   (values lhs* rhs* (list 'unsyntax p)))))
-
-      (unsyntax
-       (zero? nesting-level)
-       (stx-error p "incorrect use of unsyntax"))
-
-      (((unsyntax p* ...) . q)
-       (receive (lhs* rhs* q)
-	   (quasi q nesting-level)
-	 (if (zero? nesting-level)
-	     (let ((g* (map (lambda (x) (gensym)) p*)))
-	       (values (append g* lhs*)
-		       (append p* rhs*)
-		       (append g* q)))
-	   (receive (lhs2* rhs2* p*)
-	       (quasi p* (sub1 nesting-level))
-	     (values (append lhs2* lhs*)
-		     (append rhs2* rhs*)
-		     `((unsyntax . ,p*) . ,q))))))
-
-      (((unsyntax-splicing p* ...) . q)
-       (receive (lhs* rhs* q)
-	   (quasi q nesting-level)
-	 (if (zero? nesting-level)
-	     (let ((g* (map (lambda (x) (gensym)) p*)))
-	       (values (append (map (lambda (g) `(,g ...)) g*)
-			       lhs*)
-		       (append p* rhs*)
-		       (append (apply append
-				      (map (lambda (g) `(,g ...)) g*))
-			       q)))
-	   (receive (lhs2* rhs2* p*)
-	       (quasi p* (sub1 nesting-level))
-	     (values (append lhs2* lhs*)
-		     (append rhs2* rhs*)
-		     `((unsyntax-splicing . ,p*) . ,q))))))
-
-      (unsyntax-splicing
-       (zero? nesting-level)
-       (stx-error p "incorrect use of unsyntax-splicing"))
-
-      ((quasisyntax p)
-       (receive (lhs* rhs* p)
-	   (quasi p (add1 nesting-level))
-	 (values lhs* rhs* `(quasisyntax ,p))))
-
-      ((p . q)
-       (let-values
-	   (((lhs*  rhs*  p) (quasi p nesting-level))
-	    ((lhs2* rhs2* q) (quasi q nesting-level)))
-	 (values (append lhs2* lhs*)
-		 (append rhs2* rhs*)
-		 (cons p q))))
-
-      (#(x* ...)
-       (receive (lhs* rhs* x*)
-	   (quasi x* nesting-level)
-	 (values lhs* rhs* (list->vector x*))))
-
-      (_
-       (values '() '() p))
-      ))
-
-  #| end of module |# )
-
-
-;;;; module non-core-macro-transformer: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
-
-(define (define-values-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;create a fresh identifier that maps only the symbol to its label in that library.
+  ;;This function is similar to SCHEME-STX,  but it does not create fresh identifiers
+  ;;for non-core-primitive symbols.
   ;;
-  (syntax-match expr-stx ()
-    ((_ (?var* ... ?var0) ?form* ... ?form0)
-     (let ((TMP* (generate-temporaries ?var*)))
-       (bless
-	`(begin
-	   ;;We must make sure that the ?FORMs do not capture the ?VARs.
-	   (define (return-multiple-values)
-	     ,@?form* ,?form0)
-	   ,@(map (lambda (var)
-		    `(define ,var #f))
-	       ?var*)
-	   (define ,?var0
-	     (call-with-values
-		 return-multiple-values
-	       (lambda (,@TMP* T0)
-		 ,@(map (lambda (var TMP)
-			  `(set! ,var ,TMP))
-		     ?var* TMP*)
-		 T0)))
-	   ))))
-    ))
-
-(define (define-constant-values-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's DEFINE-CONSTANT-VALUES
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?var* ... ?var0) ?form* ... ?form0)
-     (let ((SHADOW* (generate-temporaries ?var*))
-	   (TMP*    (generate-temporaries ?var*)))
-       (bless
-	`(begin
-	   (define (return-multiple-values)
-	     ,@?form* ,?form0)
-	   ,@(map (lambda (SHADOW)
-		    `(define ,SHADOW #f))
-	       SHADOW*)
-	   (define SHADOW0
-	     (call-with-values
-		 return-multiple-values
-	       (lambda (,@TMP* T0)
-		 ,@(map (lambda (SHADOW TMP)
-			  `(set! ,SHADOW ,TMP))
-		     SHADOW* TMP*)
-		 T0)))
-	   ,@(map (lambda (var SHADOW)
-		    `(define-syntax ,var
-		       (identifier-syntax ,SHADOW)))
-	       ?var* SHADOW*)
-	   (define-syntax ,?var0
-	     (identifier-syntax SHADOW0))
-	   ))))
-    ))
-
-
-;;;; module non-core-macro-transformer: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
-
-(define (receive-macro expr-stx)
-  ;;Transformer function used to expand Vicare's RECEIVE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?producer-expression ?form0 ?form* ...)
-     (bless
-      `(call-with-values
-	   (lambda () ,?producer-expression)
-	 (lambda ,?formals ,?form0 ,@?form*))))
-    ))
-
-(define (receive-and-return-macro expr-stx)
-  ;;Transformer  function  used  to expand  Vicare's  RECEIVE-AND-RETURN
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?retval* ...) ?producer-expression ?body0 ?body* ...)
-     (bless
-      `(call-with-values
-	   (lambda () ,?producer-expression)
-	 (lambda ,?retval*
-	   ,?body0 ,@?body*
-	   (values ,@?retval*)))))
-    ))
-
-(define (begin0-macro expr-stx)
-  ;;Transformer function used to expand  Vicare's BEGIN0 macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?form0 ?form* ...)
-     (bless
-      `(call-with-values
-	   (lambda () ,?form0)
-	 (lambda args
-	   ,@?form*
-	   (apply values args)))))
-    ))
-
-(module (xor-macro)
-  ;;Transformer function  used to  expand Vicare's  XOR macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (define (xor-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ?expr* ...)
-       (bless (%xor-aux #f ?expr*)))
-      ))
-
-  (define (%xor-aux bool/var expr*)
-    (cond ((null? expr*)
-	   bool/var)
-	  ((null? (cdr expr*))
-	   `(let ((x ,(car expr*)))
-	      (if ,bool/var
-		  (and (not x) ,bool/var)
-		x)))
-	  (else
-	   `(let ((x ,(car expr*)))
-	      (and (or (not ,bool/var)
-		       (not x))
-		   (let ((n (or ,bool/var x)))
-		     ,(%xor-aux 'n (cdr expr*))))))))
-
-  #| end of module: XOR-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: DEFINE-INLINE, DEFINE-CONSTANT
-
-(define (define-constant-macro expr-stx)
-  ;;Transformer function used to  expand Vicare's DEFINE-CONSTANT macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?name ?expr)
-     (bless
-      `(begin
-	 (define ghost ,?expr)
-	 (define-syntax ,?name
-	   (identifier-syntax ghost)))))
-    ))
-
-(define (define-inline-constant-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's DEFINE-INLINE-CONSTANT
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  ;;We want to allow a generic expression to generate the constant value
-  ;;at expand time.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?name ?expr)
-     (bless
-      `(define-syntax ,?name
-	 (let ((const ,?expr))
-	   (lambda (stx)
-	     (syntax-case stx ()
-	       (?id
-		(identifier? #'?id)
-		#`(quote #,const))))))))
-    ))
-
-(define (define-inline-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  DEFINE-INLINE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
-     (and (identifier? ?name)
-	  (for-all identifier? ?arg*)
-	  (or (null? (syntax->datum ?rest))
-	      (identifier? ?rest)))
-     (let ((TMP* (generate-temporaries ?arg*)))
-       (bless
-	`(define-fluid-syntax ,?name
-	   (syntax-rules ()
-	     ((_ ,@TMP* . rest)
-	      (fluid-let-syntax
-		  ((,?name (lambda (stx)
-			     (syntax-violation (quote ,?name)
-			       "cannot recursively expand inline expression"
-			       stx))))
-		(let ,(append (map list ?arg* TMP*)
-			      (if (null? (syntax->datum ?rest))
-				  '()
-				`((,?rest (list . rest)))))
-		  ,?form0 ,@?form*))))))))
-    ))
-
-
-;;;; module non-core-macro-transformer: INCLUDE
-
-(module (include-macro)
-  ;;Transformer function used to expand Vicare's INCLUDE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (define (include-macro expr-stx)
-    (define (%synner message subform)
-      (syntax-violation 'include message expr-stx subform))
-    (syntax-match expr-stx ()
-      ((?context ?filename)
-       (%include-file ?filename ?context #f %synner))
-      ((?context ?filename #t)
-       (%include-file ?filename ?context #t %synner))
-      ))
-
-  (define (%include-file filename-stx context-id verbose? synner)
-    (receive (pathname contents)
-	;;FIXME Why in  fuck I cannot use the  parameter here?!?  (Marco
-	;;Maggi; Tue Feb 11, 2014)
-	(default-include-loader #;(current-include-loader)
-	 (syntax->datum filename-stx) verbose? synner)
-      ;;We expect CONTENTS to be null or a list of annotated datums.
-      (bless
-       `(stale-when (let ()
-		      (import (only (vicare $posix)
-				    file-modification-time))
-		      (or (not (file-exists? ,pathname))
-			  (> (file-modification-time ,pathname)
-			     ,(file-modification-time pathname))))
-	  . ,(map (lambda (item)
-		    (datum->syntax context-id item))
-	       contents)))))
-
-  #| end of module: INCLUDE-MACRO |# )
-
-
-;;;; module non-core-macro-transformer: DEFINE-INTEGRABLE
-
-(define (define-integrable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-INTEGRABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  ;;The original  syntax was  posted by "leppie"  on the  Ikarus mailing
-  ;;list; subject "Macro Challenge of Last Year [Difficulty: *****]", 20
-  ;;Oct 2009.
-  ;;
-  (syntax-match expr-stx (lambda)
-    ((_ (?name . ?formals) ?form0 ?form* ...)
-     (identifier? ?name)
-     (bless
-      `(define-integrable ,?name (lambda ,?formals ,?form0 ,@?form*))))
-
-    ((_ ?name (lambda ?formals ?form0 ?form* ...))
-     (identifier? ?name)
-     (bless
-      `(begin
-	 (define-fluid-syntax ,?name
-	   (lambda (x)
-	     (syntax-case x ()
-	       (_
-		(identifier? x)
-		#'xname)
-
-	       ((_ arg ...)
-		#'((fluid-let-syntax
-		       ((,?name (identifier-syntax xname)))
-		     (lambda ,?formals ,?form0 ,@?form*))
-		   arg ...)))))
-	 (define xname
-	   (fluid-let-syntax ((,?name (identifier-syntax xname)))
-	     (lambda ,?formals ,?form0 ,@?form*)))
-	 )))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
-
-(define (define-syntax-parameter-macro expr-stx)
-  ;;Transformer function used to expand Vicare's DEFINE-SYNTAX-PARAMETER
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?param-id ?param-expr)
-     (identifier? ?param-id)
-     (bless
-      `(define-fluid-syntax ,?param-id
-	 (make-compile-time-value ,?param-expr))))
-    ))
-
-(define (syntax-parametrise-macro expr-stx)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;SYNTAX-PARAMETRISE-MACRO   macros  from   the  top-level   built  in
-  ;;environment.   Expand  the contents  of  EXPR-STX;  return a  syntax
-  ;;object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
-     (for-all identifier? ?lhs*)
-     (bless
-      `(fluid-let-syntax ,(map (lambda (lhs rhs)
-				 (list lhs `(make-compile-time-value ,rhs)))
-			    ?lhs* ?rhs*)
-	 ,?body0 . ,?body*)))
-    ))
-
-
-;;;; module non-core-macro-transformer: miscellanea
-
-(define (time-macro expr-stx)
-  ;;Transformer function  used to expand  Vicare's TIME macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?expr)
-     (let ((str (receive (port getter)
-		    (open-string-output-port)
-		  (write (syntax->datum ?expr) port)
-		  (getter))))
-       (bless
-	`(time-it ,str (lambda () ,?expr)))))))
-
-(define (delay-macro expr-stx)
-  ;;Transformer  function used  to  expand R6RS  DELAY  macros from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?expr)
-     (bless
-      `(make-promise (lambda ()
-		       ,?expr))))))
-
-(define (assert-macro expr-stx)
-  ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
-  ;;If  EXPR returns a  true value,  that value  is returned  from the
-  ;;ASSERT  expression.   If EXPR  returns  false,  an exception  with
-  ;;condition  types  "&assertion"  and  "&message"  is  raised.   The
-  ;;message  provided  in   the  condition  object  is  implementation
-  ;;dependent.
-  ;;
-  ;;NOTE  Implementations should  exploit the  fact that  ASSERT  is a
-  ;;syntax  to  provide as  much  information  as  possible about  the
-  ;;location of the assertion failure.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?expr)
-     (let ((pos (or (expression-position expr-stx)
-		    (expression-position ?expr))))
-       (bless
-	(if (source-position-condition? pos)
-	    `(or ,?expr
-		 (assertion-error
-		  ',?expr ,(source-position-port-id pos)
-		  ,(source-position-byte pos) ,(source-position-character pos)
-		  ,(source-position-line pos) ,(source-position-column    pos)))
-	  `(or ,?expr
-	       (assertion-error ',?expr "unknown source" #f #f #f #f))))))))
-
-(define (file-options-macro expr-stx)
-  ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
-  ;;implemented   as   an   enumeration  type   whose   constructor   is
-  ;;MAKE-FILE-OPTIONS from the boot environment.
-  ;;
-  (define (valid-option? opt-stx)
-    (and (identifier? opt-stx)
-	 (memq (identifier->symbol opt-stx) '(no-fail no-create no-truncate))))
-  (syntax-match expr-stx ()
-    ((_ ?opt* ...)
-     (for-all valid-option? ?opt*)
-     (bless
-      `(make-file-options ',?opt*)))))
-
-(define (endianness-macro expr-stx)
-  ;;Transformer of  ENDIANNESS.  Support  the symbols:  "big", "little",
-  ;;"network", "native"; convert "network" to "big".
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?name)
-     (and (identifier? ?name)
-	  (memq (identifier->symbol ?name) '(big little network native)))
-     (case (identifier->symbol ?name)
-       ((network)
-	(bless '(quote big)))
-       ((native)
-	(bless '(native-endianness)))
-       ((big little)
-	(bless `(quote ,?name)))))))
-
-(define (%allowed-symbol-macro expr-stx allowed-symbol-set)
-  ;;Helper  function used  to  implement the  transformer of:  EOL-STYLE
-  ;;ERROR-HANDLING-MODE, BUFFER-MODE,  ENDIANNESS.  All of  these macros
-  ;;should expand to a quoted symbol among a list of allowed ones.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?name)
-     (and (identifier? ?name)
-	  (memq (identifier->symbol ?name) allowed-symbol-set))
-     (bless
-      `(quote ,?name)))))
-
-
-;;; end of module: NON-CORE-MACRO-TRANSFORMER
-
-)
-
-
-(module (core-macro-transformer
-	 splice-first-envelope?
-	 splice-first-envelope-form)
-  ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
-  ;;non-core macros to their macro transformers.
-  ;;
-  ;;We distinguish between "non-core macros" and "core macros".
-  ;;
-  ;;Core macros  are part of the  core language: they cannot  be further
-  ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;can introduce bindings by direct  access to the lexical environment,
-  ;;so their transformer functions take the LEXENV as arguments.
-  ;;
-  ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to a composition of core macros.  Non-core macros introduce
-  ;;bindings by  returning binding syntaxes; their  transformer do *not*
-  ;;take the LEXENV as arguments.
-  ;;
-  ;;The transformers  of core  macros take as  argument a  syntax object
-  ;;representing an expression  and return a symbolic  expression in the
-  ;;expanded language.
-  ;;
-  ;;At present core macros can be only expressions, not definitions.
-  ;;
-  ;;NOTE This  module is very  long, so it  is split into  multiple code
-  ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
-  ;;
-  (define* (core-macro-transformer name)
-    (case name
-      ((quote)				quote-transformer)
-      ((lambda)				lambda-transformer)
-      ((case-lambda)			case-lambda-transformer)
-      ((letrec)				letrec-transformer)
-      ((letrec*)			letrec*-transformer)
-      ((if)				if-transformer)
-      ((foreign-call)			foreign-call-transformer)
-      ((syntax-case)			syntax-case-transformer)
-      ((syntax)				syntax-transformer)
-      ((fluid-let-syntax)		fluid-let-syntax-transformer)
-      ((splice-first-expand)		splice-first-expand-transformer)
-      ((unsafe)				unsafe-transformer)
-      ((predicate-procedure-argument-validation)	predicate-procedure-argument-validation-transformer)
-      ((predicate-return-value-validation)		predicate-return-value-validation-transformer)
-      ((struct-type-descriptor)		struct-type-descriptor-transformer)
-      ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
-      ((struct-type-field-ref)		struct-type-field-ref-transformer)
-      ((struct-type-field-set!)		struct-type-field-set!-transformer)
-      (($struct-type-field-ref)		$struct-type-field-ref-transformer)
-      (($struct-type-field-set!)	$struct-type-field-set!-transformer)
-      ((record-type-descriptor)		record-type-descriptor-transformer)
-      ((record-constructor-descriptor)	record-constructor-descriptor-transformer)
-      ((record-type-field-set!)		record-type-field-set!-transformer)
-      ((record-type-field-ref)		record-type-field-ref-transformer)
-      (($record-type-field-set!)	$record-type-field-set!-transformer)
-      (($record-type-field-ref)		$record-type-field-ref-transformer)
-      ((type-descriptor)		type-descriptor-transformer)
-      ((is-a?)				is-a?-transformer)
-      ((slot-ref)			slot-ref-transformer)
-      ((slot-set!)			slot-set!-transformer)
-      (($slot-ref)			$slot-ref-transformer)
-      (($slot-set!)			$slot-set!-transformer)
-      (else
-       (assertion-violation __who__
-	 "Vicare: internal error: cannot find transformer" name))))
-
-
-;;;; module core-macro-transformer: IF
-
-(define (if-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used to  expand  R6RS  IF syntaxes  from  the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?test ?consequent ?alternate)
-     (build-conditional no-source
-       (chi-expr ?test       lexenv.run lexenv.expand)
-       (chi-expr ?consequent lexenv.run lexenv.expand)
-       (chi-expr ?alternate  lexenv.run lexenv.expand)))
-    ((_ ?test ?consequent)
-     (build-conditional no-source
-       (chi-expr ?test       lexenv.run lexenv.expand)
-       (chi-expr ?consequent lexenv.run lexenv.expand)
-       (build-void)))
-    ))
-
-
-;;;; module core-macro-transformer: QUOTE
-
-(define (quote-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand R6RS  QUOTE syntaxes  from the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?datum)
-     (build-data no-source
-       (syntax->datum ?datum)))))
-
-
-;;;; module core-macro-transformer: LAMBDA and CASE-LAMBDA
-
-(define (case-lambda-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand R6RS  CASE-LAMBDA syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?formals* ?body* ?body** ...) ...)
-     (receive (formals* body*)
-	 (chi-lambda-clause* expr-stx ?formals*
-			     (map cons ?body* ?body**)
-			     lexenv.run lexenv.expand)
-       (build-case-lambda (syntax-annotation expr-stx)
-	 formals* body*)))))
-
-(define (lambda-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand  R6RS LAMBDA syntaxes  from the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?body ?body* ...)
-     (receive (formals body)
-	 (chi-lambda-clause expr-stx ?formals
-			    (cons ?body ?body*)
-			    lexenv.run lexenv.expand)
-       (build-lambda (syntax-annotation expr-stx)
-	 formals body)))))
-
-
-;;;; module core-macro-transformer: LETREC and LETREC*
-
-(module (letrec-transformer letrec*-transformer)
-
-  (define (letrec-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function  used to  expand  LETREC  syntaxes from  the
-    ;;top-level built in environment.  Expand the syntax object EXPR-STX
-    ;;in the  context of the  given LEXENV; return an  expanded language
-    ;;symbolic expression.
-    ;;
-    (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
-
-  (define (letrec*-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function used  to  expand LETREC*  syntaxes from  the
-    ;;top-level built in environment.  Expand the syntax object EXPR-STX
-    ;;in the  context of the  given LEXENV; return an  expanded language
-    ;;symbolic expression.
-    ;;
-    (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
-
-  (define (%letrec-helper expr-stx lexenv.run lexenv.expand core-lang-builder)
-    (syntax-match expr-stx ()
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;Check  that  the  binding  names are  identifiers  and  without
-       ;;duplicates.
-       (unless (valid-bound-ids? ?lhs*)
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))
-       ;;Generate  unique  variable  names  and labels  for  the  LETREC
-       ;;bindings.
-       (let ((lex* (map gensym-for-lexical-var ?lhs*))
-	     (lab* (map gensym-for-label       ?lhs*)))
-	 ;;Generate what is needed to  create a lexical contour: a <RIB>
-	 ;;and an extended lexical environment in which to evaluate both
-	 ;;the right-hand sides and the body.
-	 ;;
-	 ;;Notice that  the region of  all the LETREC  bindings includes
-	 ;;all the right-hand sides.
-	 (let ((rib        (make-filled-rib ?lhs* lab*))
-	       (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
-	   ;;Create the lexical contour then process body and right-hand
-	   ;;sides of bindings.
-	   (let ((body (chi-internal-body (push-lexical-contour rib
-					    (cons ?body ?body*))
-					  lexenv.run lexenv.expand))
-		 (rhs* (chi-expr*         (map (lambda (rhs)
-						 (push-lexical-contour rib rhs))
-					    ?rhs*)
-					  lexenv.run lexenv.expand)))
-	     ;;Build  the  LETREC  or  LETREC* expression  in  the  core
-	     ;;language.
-	     (core-lang-builder no-source lex* rhs* body)))))
-      ))
-
-  #| end of module |# )
-
-
-;;;; module core-macro-transformer: FLUID-LET-SYNTAX
-
-(define (fluid-let-syntax-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand FLUID-LET-SYNTAX  syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (define (transformer expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;Check that the ?LHS* are all identifiers with no duplicates.
-       (unless (valid-bound-ids? ?lhs*)
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))
-       (let ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
-	     (binding*     (map (lambda (rhs)
-				  (%eval-macro-transformer
-				   (%expand-macro-transformer rhs lexenv.expand)
-				   lexenv.run))
-			     ?rhs*)))
-	 (chi-internal-body (cons ?body ?body*)
-			    (append (map cons fluid-label* binding*) lexenv.run)
-			    (append (map cons fluid-label* binding*) lexenv.expand))))))
-
-  (define (%lookup-binding-in-lexenv.run lhs)
-    ;;Search the binding of the  identifier LHS retrieving its label; if
-    ;;such  label  is  present  and  its  associated  syntactic  binding
-    ;;descriptor from LEXENV.RUN  is of type "fluid  syntax": return the
-    ;;associated fluid label that can be used to rebind the identifier.
-    ;;
-    (let* ((label    (or (id->label lhs)
-			 (stx-error lhs "unbound identifier")))
-	   (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
-      (cond ((fluid-syntax-binding? binding)
-	     (fluid-syntax-binding-fluid-label binding))
+  (or (getprop sym system-id-gensym)
+      (cond ((system-label sym)
+	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
+	     ;;with a proper "<rib>" and  the binding's label.  Such bound identifier
+	     ;;will be captured by the entry in the top-level environment.
+	     => (lambda (label)
+		  (receive-and-return (id)
+		      (make-<stx> sym TOP-MARK*
+				  (list (make-<rib> (list sym)
+						    TOP-MARK**
+						    (list label)
+						    #f))
+				  '())
+		    (putprop sym system-id-gensym id))))
 	    (else
-	     (stx-error lhs "not a fluid identifier")))))
+	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
 
-  (transformer expr-stx))
+(let-syntax
+    ((define-core-prim-id-retriever (syntax-rules ()
+				      ((_ ?who ?core-prim)
+				       (define ?who
+					 (let ((memoized-id #f))
+					   (lambda ()
+					     (or memoized-id
+						 (receive-and-return (id)
+						     (core-prim-id '?core-prim)
+						   (set! memoized-id id))))))))))
+  (define-core-prim-id-retriever underscore-id		_)
+  (define-core-prim-id-retriever ellipsis-id		...)
+  (define-core-prim-id-retriever place-holder-id	<>)
+  (define-core-prim-id-retriever procedure-pred-id	procedure?)
+  #| end of let-syntax |# )
 
-
-;;;; module core-macro-transformer: FOREIGN-CALL
+(define (underscore-id? id)
+  (and (identifier? id)
+       (free-id=? id (underscore-id))))
 
-(define (foreign-call-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand Vicare's  FOREIGN-CALL syntaxes
-  ;;from the top-level  built in environment.  Expand  the syntax object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?name ?arg* ...)
-     (build-foreign-call no-source
-       (chi-expr  ?name lexenv.run lexenv.expand)
-       (chi-expr* ?arg* lexenv.run lexenv.expand)))))
+(define (ellipsis-id? id)
+  (and (identifier? id)
+       (free-id=? id (ellipsis-id))))
 
-
-;;;; module core-macro-transformer: SYNTAX
+(define (place-holder-id? id)
+  (and (identifier? id)
+       (free-id=? id (place-holder-id))))
 
-(module (syntax-transformer)
-  ;;Transformer function used to expand  R6RS's SYNTAX syntaxes from the
-  ;;top-level built in environment.  Process  the contents of USE-STX in
-  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.
-  ;;
-  ;;According to R6RS, the use of the SYNTAX macro must have the format:
-  ;;
-  ;;  (syntax ?template)
-  ;;
-  ;;where ?TEMPLATE is one among:
-  ;;
-  ;;  ?datum
-  ;;  ?pattern-variable
-  ;;  ?id
-  ;;  (?subtemplate ...)
-  ;;  (?subtemplate ... . ?template)
-  ;;  #(?subtemplate ...)
-  ;;
-  ;;in  which:  ?DATUM  is  a literal  datum,  ?PATTERN-VARIABLE  is  an
-  ;;identifier referencing  a pattern  variable created  by SYNTAX-CASE,
-  ;;?ID   is  an   identifier  not   referencing  a   pattern  variable,
-  ;;?SUBTEMPLATE  is  a  template  followed by  zero  or  more  ellipsis
-  ;;identifiers.
-  ;;
-  ;;Return a sexp representing  code in the core language
-  ;;which, when evaluated, returns a  wrapped or unwrapped syntax object
-  ;;containing an expression in which:
-  ;;
-  ;;* All the template identifiers being references to pattern variables
-  ;;  are substituted with the corresponding syntax objects.
-  ;;
-  ;;     (syntax-case #'123 (?obj (syntax ?obj)))
-  ;;     => #<syntax expr=123>
-  ;;
-  ;;     (syntax-case #'(1 2) ((?a ?b) (syntax #(?a ?b))))
-  ;;     => #(#<syntax expr=1> #<syntax expr=1>)
-  ;;
-  ;;* All the identifiers not  being references to pattern variables are
-  ;;  left  alone to  be captured  by the lexical  context at  the level
-  ;;  below the current,  in the context of the SYNTAX  macro use or the
-  ;;  context of the output form.
-  ;;
-  ;;     (syntax-case #'(1) ((?a) (syntax (display ?b))))
-  ;;     => (#<syntax expr=display>
-  ;;         #<syntax expr=1> . #<syntax expr=()>)
-  ;;
-  ;;* All the sub-templates followed by ellipsis are replicated to match
-  ;;  the input pattern.
-  ;;
-  ;;     (syntax-case #'(1 2 3) ((?a ...) (syntax #(?a ...))))
-  ;;     => #(1 2 3)
-  ;;
-  ;;About pattern variables:  they are present in  a lexical environment
-  ;;as entries with format:
-  ;;
-  ;;   (?label . (syntax . (?name . ?level)))
-  ;;
-  ;;where:  ?LABEL  is the  label  in  the identifier's  syntax  object,
-  ;;"syntax" is  the symbol "syntax",  ?NAME is the  symbol representing
-  ;;the  name  of the  pattern  variable,  ?LEVEL  is an  exact  integer
-  ;;representing the  nesting ellipsis level.  The  SYNTAX-CASE patterns
-  ;;below will generate the given entries:
-  ;;
-  ;;   ?a			->  (syntax . (?a . 0))
-  ;;   (?a)			->  (syntax . (?a . 0))
-  ;;   (((?a)))			->  (syntax . (?a . 0))
-  ;;   (?a ...)			->  (syntax . (?a . 1))
-  ;;   ((?a) ...)		->  (syntax . (?a . 1))
-  ;;   ((((?a))) ...)		->  (syntax . (?a . 1))
-  ;;   ((?a ...) ...)		->  (syntax . (?a . 2))
-  ;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
-  ;;
-  ;;The  input template  is  first visited  in  post-order, building  an
-  ;;intermediate  symbolic  representation  of  it;  then  the  symbolic
-  ;;representation is visited in post-order, building core language code
-  ;;that  evaluates  to  the   resulting  syntax  object.   Examples  of
-  ;;intermediate  representation  (-->)  and  expansion  (==>)  follows,
-  ;;assuming identifiers starting with "?"  are pattern variables:
-  #|
-      (syntax display)
-      --> (quote #<syntax expr=display>)
-      ==> (quote #<syntax expr=display>)
-
-      (syntax (display 123))
-      --> (quote #<syntax expr=(display 123)>)
-      ==> (quote #<syntax expr=(display 123)>)
-
-      (syntax ?a)
-      --> (ref ?a)
-      ==> ?a
-
-      (syntax (?a))
-      --> (cons (ref ?a) (quote #<syntax expr=()>))
-      ==> ((primitive cons) ?a (quote #<syntax expr=()>))
-
-      (syntax (?a 1))
-      --> (cons (ref ?a) (quote #<syntax expr=(1)>))
-      ==> ((primitive cons) ?a (quote #<syntax expr=(1)>))
-
-      (syntax (1 ?a 2))
-      --> (cons (quote #<syntax expr=1>)
-                (cons (ref ?a) (quote #<syntax expr=(2)>)))
-      ==> ((primitive cons)
-	   (quote #<syntax expr=1>)
-	   ((primitive cons) ?a (quote #<syntax expr=(2)>)))
-
-      (syntax (display ?a))
-      ==> (cons
-	   (quote #<syntax expr=display>)
-	   (cons (ref ?a) (quote #<syntax expr=()>)))
-      ==> ((primitive cons)
-	   (quote #<syntax expr=display>)
-	   ((primitive cons) ?a (quote #<syntax expr=()>)))
-
-      (syntax #(?a))
-      --> (vector (ref ?a))
-      ==> ((primitive vector) ?a)
-
-      (syntax (?a ...))
-      --> (ref ?a)
-      ==> ?a
-
-      (syntax ((?a ...) ...))
-      --> (ref ?a)
-      ==> ?a
-
-      (syntax ((?a ?b ...) ...))
-      -- (map (primitive cons) (ref ?a) (ref ?b))
-      ==> ((primitive ellipsis-map) (primitive cons) ?a ?b)
-
-      (syntax (((?a ?b ...) ...) ...))
-      --> (map (lambda (tmp2 tmp1)
-                 (map (primitive cons) tmp1 tmp2))
-	    (ref ?b) (ref ?a))
-      ==> ((primitive ellipsis-map)
-	   (case-lambda
-	    ((tmp2 tmp1)
-	     ((primitive ellipsis-map) (primitive cons) tmp1 tmp2)))
-           ?b ?a)
-
-      (syntax ((?a (?a ...)) ...))
-      --> (map (lambda (tmp)
-                 (cons (ref tmp)
-		       (cons (ref ?a)
-			     (quote #<syntax expr=()>))))
-            (ref ?a))
-      ==> ((primitive ellipsis-map)
-           (case-lambda
-            ((tmp)
-             ((primitive cons) tmp
-	                       ((primitive cons) ?a
-                                        	 (quote #<syntax expr=()>)))))
-           ?a)
-  |#
-  (define (syntax-transformer use-stx lexenv.run lexenv.expand)
-    (syntax-match use-stx ()
-      ((_ ?template)
-       (receive (intermediate-sexp maps)
-	   (%gen-syntax use-stx ?template lexenv.run '() ellipsis? #f)
-	 (let ((code (%generate-output-code intermediate-sexp)))
-	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
-	   code)))))
-
-  (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
-    ;;Recursive function.  Expand the contents of a SYNTAX use.
-    ;;
-    ;;USE-STX must be  the syntax object containing  the original SYNTAX
-    ;;macro use; it is used for descriptive error reporting.
-    ;;
-    ;;TEMPLATE-STX must be the template from the SYNTAX macro use.
-    ;;
-    ;;LEXENV is  the lexical  environment in  which the  expansion takes
-    ;;place;  it must  contain  the pattern  variables  visible by  this
-    ;;SYNTAX use.
-    ;;
-    ;;MAPS is  a list  of alists,  one alist  for each  ellipsis nesting
-    ;;level.  If the template has 3 nested ellipsis patterns:
-    ;;
-    ;;   (((?a ...) ...) ...)
-    ;;
-    ;;while  we are  processing the  inner "(?a  ...)"  MAPS  contains 3
-    ;;alists.  The  alists are  used when processing  ellipsis templates
-    ;;that recursively reference the same pattern variable, for example:
-    ;;
-    ;;   ((?a (?a ...)) ...)
-    ;;
-    ;;the inner  ?A is mapped  to a gensym which  is used to  generate a
-    ;;binding in the output code.
-    ;;
-    ;;ELLIPSIS? must be a predicate function returning true when applied
-    ;;to the  ellipsis identifier from  the built in  environment.  Such
-    ;;function  is made  an argument,  so that  it can  be changed  to a
-    ;;predicate  returning   always  false   when  we   are  recursively
-    ;;processing a quoted template:
-    ;;
-    ;;   (... ?sub-template)
-    ;;
-    ;;in which the ellipses in ?SUB-TEMPLATE are to be handled as normal
-    ;;identifiers.
-    ;;
-    ;;VEC? is a boolean: true when this function is processing the items
-    ;;of a vector.
-    ;;
-    (syntax-match template-stx ()
-
-      ;;Standalone ellipses are not allowed.
-      ;;
-      (?dots
-       (ellipsis? ?dots)
-       (stx-error use-stx "misplaced ellipsis in syntax form"))
-
-      ;;Match  a standalone  identifier.   ?ID can  be:  a reference  to
-      ;;pattern variable created by SYNTAX-CASE; an identifier that will
-      ;;be captured by  some binding; an identifier that  will result to
-      ;;be free,  in which  case an "unbound  identifier" error  will be
-      ;;raised later.
-      ;;
-      (?id
-       (identifier? ?id)
-       (let ((binding (label->syntactic-binding (id->label ?id) lexenv)))
-	 (if (pattern-variable-binding? binding)
-	     ;;It is a reference to pattern variable.
-	     (receive (var maps)
-		 (let* ((name.level  (syntactic-binding-value binding))
-			(name        (car name.level))
-			(level       (cdr name.level)))
-		   (%gen-ref use-stx name level maps))
-	       (values (list 'ref var) maps))
-	   ;;It is some other identifier.
-	   (values (list 'quote ?id) maps))))
-
-      ;;Ellipses starting a vector template are not allowed:
-      ;;
-      ;;   #(... 1 2 3)   ==> ERROR
-      ;;
-      ;;but ellipses  starting a list  template are allowed,  they quote
-      ;;the subsequent sub-template:
-      ;;
-      ;;   (... ...)		==> quoted ellipsis
-      ;;   (... ?sub-template)	==> quoted ?SUB-TEMPLATE
-      ;;
-      ;;so that the ellipses in  the ?SUB-TEMPLATE are treated as normal
-      ;;identifiers.  We change the  ELLIPSIS? argument for recursion to
-      ;;a predicate that always returns false.
-      ;;
-      ((?dots ?sub-template)
-       (ellipsis? ?dots)
-       (if vec?
-	   (stx-error use-stx "misplaced ellipsis in syntax form")
-	 (%gen-syntax use-stx ?sub-template lexenv maps (lambda (x) #f) #f)))
-
-      ;;Match a template followed by ellipsis.
-      ;;
-      ((?template ?dots . ?rest)
-       (ellipsis? ?dots)
-       (let loop
-	   ((rest.stx ?rest)
-	    (kont     (lambda (maps)
-			(receive (template^ maps)
-			    (%gen-syntax use-stx ?template lexenv (cons '() maps) ellipsis? #f)
-			  (if (null? (car maps))
-			      (stx-error use-stx "extra ellipsis in syntax form")
-			    (values (%gen-map template^ (car maps))
-				    (cdr maps)))))))
-	 (syntax-match rest.stx ()
-	   (()
-	    (kont maps))
-
-	   ((?dots . ?tail)
-	    (ellipsis? ?dots)
-	    (loop ?tail (lambda (maps)
-			  (receive (template^ maps)
-			      (kont (cons '() maps))
-			    (if (null? (car maps))
-				(stx-error use-stx "extra ellipsis in syntax form")
-			      (values (%gen-mappend template^ (car maps))
-				      (cdr maps)))))))
-
-	   (_
-	    (receive (rest^ maps)
-		(%gen-syntax use-stx rest.stx lexenv maps ellipsis? vec?)
-	      (receive (template^ maps)
-		  (kont maps)
-		(values (%gen-append template^ rest^) maps))))
-	   )))
-
-      ;;Process pair templates.
-      ;;
-      ((?car . ?cdr)
-       (receive (car.new maps)
-	   (%gen-syntax use-stx ?car lexenv maps ellipsis? #f)
-	 (receive (cdr.new maps)
-	     (%gen-syntax use-stx ?cdr lexenv maps ellipsis? vec?)
-	   (values (%gen-cons template-stx ?car ?cdr car.new cdr.new)
-		   maps))))
-
-      ;;Process a vector template.  We set to true the VEC? argument for
-      ;;recursion.
-      ;;
-      (#(?item* ...)
-       (receive (item*.new maps)
-	   (%gen-syntax use-stx ?item* lexenv maps ellipsis? #t)
-	 (values (%gen-vector template-stx ?item* item*.new)
-		 maps)))
-
-      ;;Everything else is just quoted in the output.  This includes all
-      ;;the literal datums.
-      ;;
-      (_
-       (values `(quote ,template-stx) maps))
-      ))
-
-  (define (%gen-ref use-stx var level maps)
-    ;;Recursive function.
-    ;;
-    #;(debug-print 'gen-ref maps)
-    (if (zero? level)
-	(values var maps)
-      (if (null? maps)
-	  (stx-error use-stx "missing ellipsis in syntax form")
-	(receive (outer-var outer-maps)
-	    (%gen-ref use-stx var (- level 1) (cdr maps))
-	  (cond ((assq outer-var (car maps))
-		 => (lambda (b)
-		      (values (cdr b) maps)))
-		(else
-		 (let ((inner-var (gensym-for-lexical-var 'tmp)))
-		   (values inner-var
-			   (cons (cons (cons outer-var inner-var)
-				       (car maps))
-				 outer-maps)))))))))
-
-  (define (%gen-append x y)
-    (if (equal? y '(quote ()))
-	x
-      `(append ,x ,y)))
-
-  (define (%gen-mappend e map-env)
-    `(apply (primitive append) ,(%gen-map e map-env)))
-
-  (define (%gen-map e map-env)
-    (let ((formals (map cdr map-env))
-	  (actuals (map (lambda (x) `(ref ,(car x))) map-env)))
-      (cond
-       ;; identity map equivalence:
-       ;; (map (lambda (x) x) y) == y
-       ((eq? (car e) 'ref)
-	(car actuals))
-       ;; eta map equivalence:
-       ;; (map (lambda (x ...) (f x ...)) y ...) == (map f y ...)
-       ((for-all
-	    (lambda (x) (and (eq? (car x) 'ref) (memq (cadr x) formals)))
-	  (cdr e))
-	(let ((args (map (let ((r (map cons formals actuals)))
-			   (lambda (x) (cdr (assq (cadr x) r))))
-		      (cdr e))))
-	  `(map (primitive ,(car e)) . ,args)))
-       (else
-	(cons* 'map (list 'lambda formals e) actuals)))))
-
-  (define (%gen-cons e x y x.new y.new)
-    (case (car y.new)
-      ((quote)
-       (cond ((eq? (car x.new) 'quote)
-	      (let ((x.new (cadr x.new))
-		    (y.new (cadr y.new)))
-		(if (and (eq? x.new x)
-			 (eq? y.new y))
-		    `(quote ,e)
-		  `(quote ,(cons x.new y.new)))))
-	     ((null? (cadr y.new))
-	      `(list ,x.new))
-	     (else
-	      `(cons ,x.new ,y.new))))
-      ((list)
-       `(list ,x.new . ,(cdr y.new)))
-      (else
-       `(cons ,x.new ,y.new))))
-
-  (define (%gen-vector e ls lsnew)
-    (cond ((eq? (car lsnew) 'quote)
-	   (if (eq? (cadr lsnew) ls)
-	       `(quote ,e)
-	     `(quote #(,@(cadr lsnew)))))
-
-	  ((eq? (car lsnew) 'list)
-	   `(vector . ,(cdr lsnew)))
-
-	  (else
-	   `(list->vector ,lsnew))))
-
-  (define (%generate-output-code x)
-    ;;Recursive function.
-    ;;
-    (case (car x)
-      ((ref)
-       (build-lexical-reference no-source (cadr x)))
-      ((primitive)
-       (build-primref no-source (cadr x)))
-      ((quote)
-       (build-data no-source (cadr x)))
-      ((lambda)
-       (build-lambda no-source (cadr x) (%generate-output-code (caddr x))))
-      ((map)
-       (let ((ls (map %generate-output-code (cdr x))))
-	 (build-application no-source
-			    (build-primref no-source 'ellipsis-map)
-			    ls)))
-      (else
-       (build-application no-source
-			  (build-primref no-source (car x))
-			  (map %generate-output-code (cdr x))))))
-
-  #| end of module: syntax-transformer |# )
+(define (jolly-id? id)
+  (and (identifier? id)
+       (or (free-id=? id (underscore-id))
+	   (free-id=? id (place-holder-id)))))
 
 
-;;;; module core-macro-transformer: SYNTAX-CASE
+;;;; macro transformer modules
 
-(module (syntax-case-transformer)
-  ;;Transformer function used to expand R6RS's SYNTAX-CASE syntaxes from
-  ;;the top-level built in environment.  Process the contents of USE-STX
-  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
-  ;;LEXENV.EXPAND.
-  ;;
-  ;;Notice  that   the  parsing   of  the   patterns  is   performed  by
-  ;;CONVERT-PATTERN at  expand time and  the actual pattern  matching is
-  ;;performed by SYNTAX-DISPATCH at run time.
-  ;;
-  (define (syntax-case-transformer use-stx lexenv.run lexenv.expand)
-    (syntax-match use-stx ()
-      ((_ ?expr (?literal* ...) ?clauses* ...)
-       (%verify-literals ?literal* use-stx)
-       (let* ( ;;The identifier to  which the result of evaluating the
-	      ;;?EXPR is bound.
-	      (expr.id    (gensym-for-lexical-var 'tmp))
-	      ;;The full SYNTAX-CASE  pattern matching code, generated
-	      ;;and transformed to core language.
-	      (body.core  (%gen-syntax-case expr.id ?literal* ?clauses*
-					    lexenv.run lexenv.expand))
-	      ;;The ?EXPR transformed to core language.
-	      (expr.core  (chi-expr ?expr lexenv.run lexenv.expand)))
-	 ;;Return a form like:
-	 ;;
-	 ;;   ((lambda (expr.id) body.core) expr.core)
-	 ;;
-	 (build-application no-source
-	   (build-lambda no-source (list expr.id) body.core)
-	   (list expr.core))))
-      ))
-
-  (define (%gen-syntax-case expr.id literals clauses lexenv.run lexenv.expand)
-    ;;Recursive function.  Generate and return the full pattern matching
-    ;;code in the core language to match the given CLAUSES.
-    ;;
-    (syntax-match clauses ()
-      ;;No pattern matched the input  expression: return code to raise a
-      ;;syntax error.
-      ;;
-      (()
-       (build-application no-source
-	 (build-primref no-source 'syntax-error)
-	 (list (build-lexical-reference no-source expr.id))))
-
-      ;;The pattern  is a standalone  identifier, neither a  literal nor
-      ;;the ellipsis,  and it  has no  fender.  A  standalone identifier
-      ;;with no fender matches everything,  so it is useless to generate
-      ;;the code  for the next clauses:  the code generated here  is the
-      ;;last one.
-      ;;
-      (((?pattern ?output-expr) . ?unused-clauses)
-       (and (identifier? ?pattern)
-	    (not (bound-id-member? ?pattern literals))
-	    (not (ellipsis? ?pattern)))
-       (if (free-id=? ?pattern (scheme-stx '_))
-	   ;;The clause is:
-	   ;;
-	   ;;   (_ ?output-expr)
-	   ;;
-	   ;;the underscore  identifier matches everything and  binds no
-	   ;;pattern variables.
-	   (chi-expr ?output-expr lexenv.run lexenv.expand)
-	 ;;The clause is:
-	 ;;
-	 ;;   (?id ?output-expr)
-	 ;;
-	 ;;a standalone identifier matches everything  and binds it to a
-	 ;;pattern variable whose name is ?ID.
-	 (let ((label (gensym-for-label ?pattern))
-	       (lex   (gensym-for-lexical-var ?pattern)))
-	   ;;The expression  must be  expanded in a  lexical environment
-	   ;;augmented with the pattern variable.
-	   (define output-expr^
-	     (push-lexical-contour
-		 (make-filled-rib (list ?pattern) (list label))
-	       ?output-expr))
-	   (define lexenv.run^
-	     ;;Push a pattern variable entry to the lexical environment.
-	     ;;The ellipsis nesting level is 0.
-	     (cons (cons label (make-binding 'syntax (cons lex 0)))
-		   lexenv.run))
-	   (define output-expr.core
-	     (chi-expr output-expr^ lexenv.run^ lexenv.expand))
-	   (build-application no-source
-	     (build-lambda no-source
-	       (list lex)
-	       output-expr.core)
-	     (list (build-lexical-reference no-source expr.id))))))
-
-      ;;The  pattern is  neither  a standalone  pattern  variable nor  a
-      ;;standalone underscore.  It has no fender, which is equivalent to
-      ;;having a "#t" as fender.
-      ;;
-      (((?pattern ?output-expr) . ?next-clauses)
-       (%gen-clause expr.id literals
-		    ?pattern #t #;fender
-		    ?output-expr
-		    lexenv.run lexenv.expand
-		    ?next-clauses))
-
-      ;;The pattern has a fender.
-      ;;
-      (((?pattern ?fender ?output-expr) . ?next-clauses)
-       (%gen-clause expr.id literals
-		    ?pattern ?fender ?output-expr
-		    lexenv.run lexenv.expand
-		    ?next-clauses))
-      ))
-
-  (define (%gen-clause expr.id literals
-		       pattern.stx fender.stx output-expr.stx
-		       lexenv.run lexenv.expand
-		       next-clauses)
-    ;;Generate  the  code needed  to  match  the clause  represented  by
-    ;;PATTERN.STX, FENDER.STX and  OUTPUT-EXPR.STX; recursively generate
-    ;;the code to match the other clauses in NEXT-CLAUSES.
-    ;;
-    ;;When there is a fender, we build the output form (pseudo-code):
-    ;;
-    ;;  ((lambda (y)
-    ;;      (if (if y
-    ;;              (fender-matches?)
-    ;;            #f)
-    ;;          (output-expr)
-    ;;        (match-next-clauses))
-    ;;   (syntax-dispatch expr.id pattern))
-    ;;
-    ;;when there is no fender, build the output form (pseudo-code):
-    ;;
-    ;;  ((lambda (tmp)
-    ;;      (if tmp
-    ;;          (output-expr)
-    ;;        (match-next-clauses))
-    ;;   (syntax-dispatch expr.id pattern))
-    ;;
-    ;;notice that the  return value of SYNTAX-DISPATCH is:  false if the
-    ;;pattern did not match, otherwise the list of values to be bound to
-    ;;the pattern variables.
-    ;;
-    (receive (pattern.dispatch pvars.levels)
-	;;CONVERT-PATTERN  return 2  values: the  pattern in  the format
-	;;accepted by SYNTAX-DISPATCH, an alist representing the pattern
-	;;variables:
-	;;
-	;;* The keys of the alist are identifiers representing the names
-	;;  of the pattern variables.
-	;;
-	;;*  The values  of the  alist are  non-negative exact  integers
-	;;  representing the ellipsis nesting level of the corresponding
-	;;  pattern variable.  See SYNTAX-TRANSFORMER for details.
-	;;
-	(convert-pattern pattern.stx literals)
-      (let ((pvars (map car pvars.levels)))
-	(unless (distinct-bound-ids? pvars)
-	  (%invalid-ids-error pvars pattern.stx "pattern variable")))
-      (unless (for-all (lambda (x)
-			 (not (ellipsis? (car x))))
-		pvars.levels)
-	(stx-error pattern.stx "misplaced ellipsis in syntax-case pattern"))
-      (let* ((tmp-sym      (gensym-for-lexical-var 'tmp))
-	     (fender-cond  (%build-fender-conditional expr.id literals tmp-sym pvars.levels
-						      fender.stx output-expr.stx
-						      lexenv.run lexenv.expand
-						      next-clauses)))
-	(build-application no-source
-	  (build-lambda no-source
-	    (list tmp-sym)
-	    fender-cond)
-	  (list
-	   (build-application no-source
-	     (build-primref no-source 'syntax-dispatch)
-	     (list (build-lexical-reference no-source expr.id)
-		   (build-data no-source pattern.dispatch))))))))
-
-  (define (%build-fender-conditional expr.id literals tmp-sym pvars.levels
-				     fender.stx output-expr.stx
-				     lexenv.run lexenv.expand
-				     next-clauses)
-    ;;Generate the  code that tests  the fender: if the  fender succeeds
-    ;;run the output expression, else try to match the next clauses.
-    ;;
-    ;;When there is a fender, we build the output form (pseudo-code):
-    ;;
-    ;;   (if (if y
-    ;;           (fender-matches?)
-    ;;         #f)
-    ;;       (output-expr)
-    ;;     (match-next-clauses))
-    ;;
-    ;;when there is no fender, build the output form (pseudo-code):
-    ;;
-    ;;   (if tmp
-    ;;       (output-expr)
-    ;;     (match-next-clauses))
-    ;;
-    (define-inline (%build-call expr.stx)
-      (%build-dispatch-call pvars.levels expr.stx tmp-sym lexenv.run lexenv.expand))
-    (let ((test     (if (eq? fender.stx #t)
-			;;There is no fender.
-			tmp-sym
-		      ;;There is a fender.
-		      (build-conditional no-source
-			(build-lexical-reference no-source tmp-sym)
-			(%build-call fender.stx)
-			(build-data no-source #f))))
-	  (conseq    (%build-call output-expr.stx))
-	  (altern    (%gen-syntax-case expr.id literals next-clauses lexenv.run lexenv.expand)))
-      (build-conditional no-source
-	test conseq altern)))
-
-  (define (%build-dispatch-call pvars.levels expr.stx tmp-sym lexenv.run lexenv.expand)
-    ;;Generate  code to  evaluate EXPR.STX  in an  environment augmented
-    ;;with the pattern variables defined by PVARS.LEVELS.  Return a core
-    ;;language expression representing the following pseudo-code:
-    ;;
-    ;;   (apply (lambda (pattern-var ...) expr) tmp)
-    ;;
-    (define ids
-      ;;For each pattern variable: the identifier representing its name.
-      (map car pvars.levels))
-    (define labels
-      ;;For each pattern variable: a gensym used as label in the lexical
-      ;;environment.
-      (map gensym-for-label ids))
-    (define names
-      ;;For each pattern variable: a gensym used as unique variable name
-      ;;in the lexical environment.
-      (map gensym-for-lexical-var ids))
-    (define levels
-      ;;For  each pattern  variable: an  exact integer  representing the
-      ;;ellipsis nesting level.  See SYNTAX-TRANSFORMER for details.
-      (map cdr pvars.levels))
-    (define bindings
-      ;;For each pattern variable: a binding to be pushed on the lexical
-      ;;environment.
-      (map (lambda (label name level)
-	     (cons label (make-binding 'syntax (cons name level))))
-	labels names levels))
-    (define expr.core
-      ;;Expand the  expression in  a lexical environment  augmented with
-      ;;the pattern variables.
-      ;;
-      ;;NOTE We could have created a syntax object:
-      ;;
-      ;;  #`(lambda (pvar ...) #,expr.stx)
-      ;;
-      ;;and then  expanded it:  EXPR.STX would have  been expanded  in a
-      ;;lexical environment augmented with the PVAR bindings.
-      ;;
-      ;;Instead we have chosen to push  the PVAR bindings on the lexical
-      ;;environment "by hand", then to  expand EXPR.STX in the augmented
-      ;;environment,  finally   to  put  the  resulting   core  language
-      ;;expression in a core language LAMBDA syntax.
-      ;;
-      ;;The two methods are fully equivalent;  the one we have chosen is
-      ;;a bit faster.
-      ;;
-      (chi-expr (push-lexical-contour
-		    (make-filled-rib ids labels)
-		  expr.stx)
-		(append bindings lexenv.run)
-		lexenv.expand))
-    (build-application no-source
-      (build-primref no-source 'apply)
-      (list (build-lambda no-source names expr.core)
-	    (build-lexical-reference no-source tmp-sym))))
-
-  (define (%invalid-ids-error id* e class)
-    (let find ((id* id*)
-	       (ok* '()))
-      (if (null? id*)
-	  (stx-error e) ; shouldn't happen
-	(if (identifier? (car id*))
-	    (if (bound-id-member? (car id*) ok*)
-		(syntax-error (car id*) "duplicate " class)
-	      (find (cdr id*) (cons (car id*) ok*)))
-	  (syntax-error (car id*) "invalid " class)))))
-
-  #| end of module: SYNTAX-CASE-TRANSFORMER |# )
-
-
-;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
-
-(module (splice-first-expand-transformer
-	 splice-first-envelope?
-	 splice-first-envelope-form)
+(module SPLICE-FIRST-ENVELOPE
+  (make-splice-first-envelope
+   splice-first-envelope?
+   splice-first-envelope-form)
 
   (define-record splice-first-envelope
     (form))
 
-  (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (syntax-match expr-stx ()
-      ((_ ?form)
-       (make-splice-first-envelope ?form))
-      ))
-
   #| end of module |# )
 
-
-;;;; module core-macro-transformer: UNSAFE
+(module NON-CORE-MACRO-TRANSFORMER
+  (non-core-macro-transformer)
+  (include "psyntax.expander.non-core-macro-transformers.scm" #t))
 
-(define (unsafe-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  Vicare's UNSAFE macros from the
-  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
-  ;;the  context  of  the  given LEXENV;  return  an  expanded  language
-  ;;symbolic expression.
-  ;;
-  (define-constant __who__
-    'unsafe)
-  (syntax-match expr-stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(syntactic-binding-getprop ?id *UNSAFE-VARIANT-COOKIE*)))
-		     (else
-		      ;;This warning will not abort the process.
-		      (%raise-warning __who__ "requested unavailable unsafe variant"
-				      (or (expression-position expr-stx)
-					  (expression-position ?id))
-				      ?id)
-		      ?id))
-	       lexenv.run lexenv.expand))
-    ))
-
-
-;;;; module core-macro-transformer: PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, PREDICATE-RETURN-VALUE-VALIDATION
-
-(define (predicate-procedure-argument-validation-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from the  top-level
-  ;;built  in  environment.  Expand  the  contents  of EXPR-STX  in  the
-  ;;context of  the given LEXENV;  return an expanded  language symbolic
-  ;;expression.
-  ;;
-  (define-constant __who__
-    'predicate-procedure-argument-validation)
-  (syntax-match expr-stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(syntactic-binding-getprop ?id
-			  *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)))
-		     (else
-		      (stx-error expr-stx "undefined procedure argument validation")))
-	       lexenv.run lexenv.expand))
-    ))
-
-(define (predicate-return-value-validation-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;PREDICATE-RETURN-VALUE-VALIDATION macros from the top-level built in
-  ;;environment.  Expand the contents of  EXPR-STX in the context of the
-  ;;given LEXENV; return an expanded language symbolic expression.
-  ;;
-  (define-constant __who__
-    'predicate-return-value-validation)
-  (syntax-match expr-stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(syntactic-binding-getprop ?id
-			  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)))
-		     (else
-		      (stx-error expr-stx "undefined return value validation")))
-	       lexenv.run lexenv.expand))
-    ))
-
-
-;;;; module core-macro-transformer: struct type descriptor, setter and getter
-
-(module (struct-type-descriptor-transformer
-	 struct-type-and-struct?-transformer
-	 struct-type-field-ref-transformer
-	 struct-type-field-set!-transformer
-	 $struct-type-field-ref-transformer
-	 $struct-type-field-set!-transformer)
-
-  (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   STRUCT-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    ;;FIXME This transformer is  currently unused because the identifier
-    ;;STRUCT-TYPE-DESCRIPTOR  is bound  to  a function.   In future  the
-    ;;function  binding  will be  removed  and  replaced by  the  syntax
-    ;;binding.  (Marco Maggi; Fri Jan 31, 2014)
-    ;;
-    (define-constant __who__ 'struct-type-descriptor)
-    (syntax-match expr-stx ()
-      ((_ ?type-id)
-       (identifier? ?type-id)
-       (build-data no-source
-	 (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
-      ))
-
-  (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function   used  to   expand  STRUCT-TYPE-AND-STRUCT?
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'struct-type-and-struct?)
-    (syntax-match expr-stx ()
-      ((_ ?type-id ?stru)
-       (identifier? ?type-id)
-       (let ((rtd (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
-	 (chi-expr (bless
-		    `($struct/rtd? ,?stru (quote ,rtd)))
-		   lexenv.run lexenv.expand)))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (module (struct-type-field-ref-transformer
-	   $struct-type-field-ref-transformer)
-
-    (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function   used  to   expand  STRUCT-TYPE-FIELD-REF
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
-
-    (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used   to  expand  $STRUCT-TYPE-FIELD-REF
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
-
-    (define (%struct-type-field-ref-transformer who safe? expr-stx lexenv.run lexenv.expand)
-      (syntax-match expr-stx ()
-	((_ ?type-id ?field-id ?stru)
-	 (and (identifier? ?type-id)
-	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
-		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
-	   (chi-expr (bless
-		      (if safe?
-			  `(struct-ref ,?stru ,field-idx)
-			`($struct-ref ,?stru ,field-idx)))
-		     lexenv.run lexenv.expand)))
-	))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (struct-type-field-set!-transformer
-	   $struct-type-field-set!-transformer)
-
-    (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used   to  expand  STRUCT-TYPE-FIELD-SET!
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
-
-    (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used  to  expand  $STRUCT-TYPE-FIELD-SET!
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
-
-    (define (%struct-type-field-set!-transformer who safe? expr-stx lexenv.run lexenv.expand)
-      (syntax-match expr-stx ()
-	((_ ?type-id ?field-id ?stru ?new-value)
-	 (and (identifier? ?type-id)
-	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
-		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
-	   (chi-expr (bless
-		      (if safe?
-			  `(struct-set! ,?stru ,field-idx ,?new-value)
-			`($struct-set! ,?stru ,field-idx ,?new-value)))
-		     lexenv.run lexenv.expand)))
-	))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
-    ;;Given the identifier  of the struct type: find its  label then its
-    ;;syntactic binding  and return the  struct type descriptor.   If no
-    ;;binding captures the identifier or the binding does not describe a
-    ;;structure type descriptor: raise an exception.
-    ;;
-    (cond ((id->label type-id)
-	   => (lambda (label)
-		(let ((binding (label->syntactic-binding label lexenv.run)))
-		  (if (struct-type-descriptor-binding? binding)
-		      (syntactic-binding-value binding)
-		    (syntax-violation who "not a struct type" expr-stx type-id)))))
-	  (else
-	   (%raise-unbound-error who expr-stx type-id))))
-
-  (define (%field-name->field-idx who expr-stx field-names field-id)
-    ;;Given a list of symbols  FIELD-NAMES representing a struct's field
-    ;;names and an identifier FIELD-ID representing the name of a field:
-    ;;return the index of the selected field in the list.
-    ;;
-    (define field-sym (identifier->symbol field-id))
-    (let loop ((i 0) (ls field-names))
-      (if (pair? ls)
-	  (if (eq? field-sym ($car ls))
-	      i
-	    (loop ($fxadd1 i) ($cdr ls)))
-	(syntax-violation who
-	  "invalid struct type field name" expr-stx field-id))))
-
-  #| end of module |# )
-
-
-;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, field setter and getter
-
-(module (record-type-descriptor-transformer
-	 record-constructor-descriptor-transformer
-	 record-type-field-set!-transformer
-	 record-type-field-ref-transformer
-	 $record-type-field-set!-transformer
-	 $record-type-field-ref-transformer)
-  ;;The syntactic  binding representing the R6RS  record type descriptor
-  ;;and record constructor descriptor has one of the formats:
-  ;;
-  ;;   ($rtd . (?rtd-id ?rcd-id))
-  ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
-  ;;
-  ;;where: "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
-  ;;which the record type descriptor is bound; ?RCD-ID is the identifier
-  ;;to which the  default record constructor descriptor  is bound; ?SPEC
-  ;;is a record of type R6RS-RECORD-TYPE-SPEC.
-  ;;
-  (import R6RS-RECORD-TYPE-SPEC)
-
-  (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   RECORD-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'record-type-descriptor)
-    (syntax-match expr-stx ()
-      ((_ ?type-name)
-       (identifier? ?type-name)
-       (chi-expr (r6rs-record-type-descriptor-binding-rtd
-		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-		 lexenv.run lexenv.expand))
-      ))
-
-  (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand RECORD-CONSTRUCTOR-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'record-constructor-descriptor)
-    (syntax-match expr-stx ()
-      ((_ ?type-name)
-       (identifier? ?type-name)
-       (chi-expr (r6rs-record-type-descriptor-binding-rcd
-		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-		 lexenv.run lexenv.expand))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (let-syntax
-      ((define-getter-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?transformer ?actor-getter)
-	    (define (?transformer expr-stx lexenv.run lexenv.expand)
-	      ;;Transformer function  used to expand ?who  syntaxes from
-	      ;;the top-level  built in environment.  Expand  the syntax
-	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
-	      ;;return an expanded language symbolic expression.
-	      ;;
-	      (define-constant __who__ '?who)
-	      (syntax-match expr-stx ()
-		((_ ?type-name ?field-name ?record)
-		 (and (identifier? ?type-name)
-		      (identifier? ?field-name))
-		 (let* ((synner   (lambda (message)
-				    (syntax-violation __who__ message expr-stx ?type-name)))
-			(binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-			(accessor (?actor-getter binding ?field-name synner)))
-		   (chi-expr (bless
-			      (list accessor ?record))
-			     lexenv.run lexenv.expand)))
-		))
-	    ))))
-    (define-getter-transformer record-type-field-ref
-      record-type-field-ref-transformer  r6rs-record-type-descriptor-binding-safe-accessor)
-    (define-getter-transformer $record-type-field-ref
-      $record-type-field-ref-transformer r6rs-record-type-descriptor-binding-unsafe-accessor))
-
-;;; --------------------------------------------------------------------
-
-  (let-syntax
-      ((define-setter-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?transformer ?actor-getter)
-	    (define (?transformer expr-stx lexenv.run lexenv.expand)
-	      ;;Transformer function  used to expand ?WHO  syntaxes from
-	      ;;the top-level  built in environment.  Expand  the syntax
-	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
-	      ;;return an expanded language symbolic expression.
-	      ;;
-	      (define-constant __who__ '?who)
-	      (syntax-match expr-stx ()
-		((_ ?type-name ?field-name ?record ?new-value)
-		 (and (identifier? ?type-name)
-		      (identifier? ?field-name))
-		 (let* ((synner  (lambda (message)
-				   (syntax-violation __who__ message expr-stx ?type-name)))
-			(binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-			(mutator (?actor-getter binding ?field-name synner)))
-		   (chi-expr (bless
-			      (list mutator ?record ?new-value))
-			     lexenv.run lexenv.expand)))
-		))
-	    ))))
-    (define-setter-transformer record-type-field-set!
-      record-type-field-set!-transformer  r6rs-record-type-descriptor-binding-safe-mutator)
-    (define-setter-transformer $record-type-field-set!
-      $record-type-field-set!-transformer r6rs-record-type-descriptor-binding-unsafe-mutator))
-
-  #| end of module |# )
-
-
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR, IS-A?
-
-(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand TYPE-DESCRIPTOR  syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  ;;The result must be an expression evaluating to:
-  ;;
-  ;;* A Vicare  struct type descriptor if the  given identifier argument
-  ;;  is a struct type name.
-  ;;
-  ;;* A R6RS record type descriptor  if the given identifier argument is
-  ;;  a record type name.
-  ;;
-  ;;* An expand-time OBJECT-SPEC instance.
-  ;;
-  (define-constant __who__ 'type-descriptor)
-  (syntax-match expr-stx ()
-    ((_ ?type-id)
-     (identifier? ?type-id)
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run binding)
-       ((r6rs-record-type)
-	(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(build-data no-source
-	  (syntactic-binding-value binding)))
-       ((object-spec-type)
-	(build-data no-source
-	  (identifier-object-spec ?type-id)))
-       ))
-    ))
-
-(define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand Vicare's IS-A?   syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (define-constant __who__ 'is-a?)
-  (syntax-match expr-stx (<>)
-    ((_ <> ?type-id)
-     (identifier? ?type-id)
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (record-type-and-record? ,?type-id obj)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (struct-type-and-struct? ,?type-id obj)))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (chi-expr (object-spec-pred-id spec)
-		    lexenv.run lexenv.expand)))
-       ))
-
-    ((_ ?expr ?type-id)
-     (identifier? ?type-id)
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(record-type-and-record? ,?type-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(struct-type-and-struct? ,?type-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (chi-expr (bless
-		     `(,(object-spec-pred-id spec) ,?expr))
-		    lexenv.run lexenv.expand)))
-       ))
-    ))
-
-
-;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!, $SLOT-REF, $SLOT-SET!
-
-(define (slot-ref-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to  expand Vicare's SLOT-REF syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (define-constant __who__ 'slot-ref)
-  (syntax-match expr-stx (<>)
-    ((_ <> ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (record-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (struct-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-accessor-maker spec)
-		 => (lambda (accessor-maker)
-		      (chi-expr (bless
-				 (accessor-maker ?field-name-id #t))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide accessors")))))
-       ))
-
-    ((_ ?expr ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-accessor-maker spec)
-		 => (lambda (accessor-maker)
-		      (chi-expr (bless
-				 `(,(accessor-maker ?field-name-id #t) ,?expr))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide accessors")))))
-       ))
-    ))
-
-(define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's SLOT-SET! syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (define-constant __who__ 'slot-set!)
-  (syntax-match expr-stx (<>)
-    ((_ <> ?field-name-id ?type-id <>)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      (record-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      (struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-mutator-maker spec)
-		 => (lambda (mutator-maker)
-		      (chi-expr (bless
-				 (mutator-maker ?field-name-id #t))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide mutator")))))
-       ))
-
-    ((_ ?expr ?field-name-id ?type-id ?new-value)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-mutator-maker spec)
-		 => (lambda (mutator-maker)
-		      (chi-expr (bless
-				 `(,(mutator-maker ?field-name-id #t) ,?expr ,?new-value))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide mutator")))))
-       ))
-    ))
-
-(define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's $SLOT-REF syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (define-constant __who__ '$slot-ref)
-  (syntax-match expr-stx (<>)
-    ((_ <> ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      ($record-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      ($struct-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-accessor-maker spec)
-		 => (lambda (accessor-maker)
-		      (chi-expr (bless
-				 (accessor-maker ?field-name-id #f))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide accessors")))))
-       ))
-
-    ((_ ?expr ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `($record-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `($struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-accessor-maker spec)
-		 => (lambda (accessor-maker)
-		      (chi-expr (bless
-				 `(,(accessor-maker ?field-name-id #f) ,?expr))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide accessors")))))
-       ))
-    ))
-
-(define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's $SLOT-SET!  syntaxes
-  ;;from the top-level  built in environment.  Expand  the syntax object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  (define-constant __who__ '$slot-set!)
-  (syntax-match expr-stx (<>)
-    ((_ <> ?field-name-id ?type-id <>)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      ($record-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      ($struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-mutator-maker spec)
-		 => (lambda (mutator-maker)
-		      (chi-expr (bless
-				 (mutator-maker ?field-name-id #f))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide mutators")))))
-       ))
-
-    ((_ ?expr ?field-name-id ?type-id ?new-value)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `($record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `($struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((object-spec-type)
-	(let ((spec (identifier-object-spec ?type-id)))
-	  (cond ((object-spec-mutator-maker spec)
-		 => (lambda (mutator-maker)
-		      (chi-expr (bless
-				 `(,(mutator-maker ?field-name-id #f) ,?expr ,?new-value))
-				lexenv.run lexenv.expand)))
-		(else
-		 (syntax-error expr-stx "object type does not provide mutators")))))
-       ))
-    ))
-
-
-;;;; module core-macro-transformer
-
-#| end of module |# )
+(module CORE-MACRO-TRANSFORMER
+  (core-macro-transformer)
+  (include "psyntax.expander.core-macro-transformers.scm" #t))
 
 
 ;;;; macro transformers helpers
 
-(define (%expand-macro-transformer rhs-expr-stx lexenv.expand)
-  ;;Given a syntax  object representing the right-hand side  of a syntax
-  ;;definition      (DEFINE-SYNTAX,      LET-SYNTAX,      LETREC-SYNTAX,
-  ;;DEFINE-FLUID-SYNTAX,   FLUID-LET-SYNTAX):    expand   it,   invoking
-  ;;libraries as needed, and return  a core language sexp
-  ;;representing transformer expression.
-  ;;
-  ;;Usually   the  return   value  of   this  function   is  handed   to
-  ;;%EVAL-MACRO-TRANSFORMER.
+(define (%expand-macro-transformer rhs-expr.stx lexenv.expand)
+  ;;Given  a  syntax object  representing  the  right-hand  side  (RHS) of  a  syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX): expand it,  invoking libraries as needed, and  return the core
+  ;;language  sexp representing  the expression.   Usually the  return value  of this
+  ;;function is handed to %EVAL-MACRO-TRANSFORMER.
   ;;
   ;;For:
   ;;
@@ -11313,74 +6486,59 @@
   ;;
   ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
   ;;
-  (let* ((rtc           (make-collector))
-	 (expanded-rhs  (parametrise ((inv-collector rtc)
-				      (vis-collector (lambda (x) (values))))
-			  (chi-expr rhs-expr-stx lexenv.expand lexenv.expand))))
-    ;;We  invoke all  the libraries  needed to  evaluate the  right-hand
-    ;;side.
+  (let* ((rtc (make-collector))
+	 (rhs-expr.psi (parametrise ((inv-collector rtc)
+				     (vis-collector (lambda (x) (values))))
+			 (chi-expr rhs-expr.stx lexenv.expand lexenv.expand))))
+    ;;We invoke all the libraries needed to evaluate the right-hand side.
     (for-each
 	(let ((register-visited-library (vis-collector)))
 	  (lambda (lib)
-	    ;;LIB is  a record  of type "library".   Here we  invoke the
-	    ;;library, which means we  evaluate its run-time code.  Then
-	    ;;we mark the library as visited.
+	    ;;LIB is a  record of type "library".  Here we  invoke the library, which
+	    ;;means  we evaluate  its run-time  code.  Then  we mark  the library  as
+	    ;;visited.
 	    (invoke-library lib)
 	    (register-visited-library lib)))
       (rtc))
-    expanded-rhs))
+    (psi-core-expr rhs-expr.psi)))
 
-(define (%eval-macro-transformer expanded-expr lexenv.run)
-  ;;Given a  core language sexp  representing the expression of  a macro
-  ;;transformer: evaluate it  and return a proper  syntactic binding for
-  ;;the resulting object.
-  ;;
-  ;;Usually  this   function  is   applied  to   the  return   value  of
+(define (%eval-macro-transformer rhs-expr.core lexenv.run)
+  ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX):  evaluate it  and return  a proper  syntactic binding  for the
+  ;;resulting  object.  Usually  this  function is  applied to  the  return value  of
   ;;%EXPAND-MACRO-TRANSFORMER.
   ;;
-  ;;When  the RHS  of a  syntax  definition is  evaluated, the  returned
-  ;;object   should  be   either  a   procedure,  an   identifier-syntax
-  ;;transformer, a Vicare struct type  descriptor or an R6RS record type
-  ;;descriptor.  If  the return value is  not of such type:  we raise an
-  ;;assertion violation.
+  ;;When the RHS of  a syntax definition is evaluated, the  returned object should be
+  ;;either:  a  syntax transformer  procedure;  an  identifier-syntax transformer;  a
+  ;;Vicare struct type  descriptor or an R6RS record type  descriptor; a compile-time
+  ;;value; a synonim transformer.  If the return  value is not of such type: we raise
+  ;;an assertion violation.
   ;;
   (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	      (eval-core (expanded->core expanded-expr)))))
+	      (compiler.eval-core (expanded->core rhs-expr.core)))))
     (cond ((procedure? rv)
-	   (make-local-macro-binding rv expanded-expr))
+	   (make-local-macro-binding rv rhs-expr.core))
 	  ((variable-transformer? rv)
-	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) expanded-expr))
+	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) rhs-expr.core))
 	  ((struct-or-record-type-descriptor-binding? rv)
 	   rv)
 	  ((compile-time-value? rv)
-	   (make-local-compile-time-value-binding (compile-time-value-object rv) expanded-expr))
+	   (make-local-compile-time-value-binding (compile-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
 	   (let ((id (synonym-transformer-identifier rv)))
 	     (make-synonym-syntax-binding (id->label/or-error 'expander id id))))
 	  (else
-	   (assertion-violation 'expand
-	     "invalid return value from syntax transformer expression"
-	     rv)))))
+	   (raise
+	    (condition
+	     (make-assertion-violation)
+	     (make-who-condition 'expand)
+	     (make-message-condition "invalid return value from syntax definition right-hand side")
+	     (make-syntax-definition-expanded-rhs-condition rhs-expr.core)
+	     (make-syntax-definition-expression-return-value-condition rv)))))))
 
 
 ;;;; formals syntax validation
-
-(define (%verify-formals-syntax formals-stx input-form-stx)
-  ;;Verify  that  FORMALS-STX  is  a syntax  object  representing  valid
-  ;;formals for  LAMBDA and WITH-SYNTAX syntaxes.   If successful return
-  ;;unspecified values, else raise a syntax violation.
-  ;;
-  (syntax-match formals-stx ()
-    ((?id* ...)
-     (unless (valid-bound-ids? ?id*)
-       (%error-invalid-formals-syntax input-form-stx formals-stx)))
-
-    ((?id* ... . ?rest-id)
-     (unless (valid-bound-ids? (cons ?rest-id ?id*))
-       (%error-invalid-formals-syntax input-form-stx formals-stx)))
-
-    (_
-     (stx-error input-form-stx "invalid syntax"))))
 
 (define (%error-invalid-formals-syntax input-form-stx formals-stx)
   ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and
@@ -11602,76 +6760,6 @@
 	ls*)))
   (apply map proc ls ls*))
 
-(module (syntax-transpose)
-  ;;Mh... what  does this do?   Take BASE-ID  and NEW-ID, which  must be
-  ;;FREE-IDENTIFIER=?, compute the difference  between their marks, push
-  ;;such difference  on top of the  marks of OBJECT, return  the result.
-  ;;What for?  (Marco Maggi; Sun May 5, 2013)
-  ;;
-  (define-constant __who__ 'syntax-transpose)
-
-  (define (syntax-transpose object base-id new-id)
-    (unless (identifier? base-id)
-      (%synner "not an identifier" base-id))
-    (unless (identifier? new-id)
-      (%synner "not an identifier" new-id))
-    (unless (free-identifier=? base-id new-id)
-      (%synner "not the same identifier" base-id new-id))
-    (receive (mark* subst* annotated-expr*)
-	(diff (car ($<stx>-mark* base-id))
-	      ($<stx>-mark*   new-id)
-	      ($<stx>-subst*  new-id)
-	      ($<stx>-ae*     new-id)
-	      (lambda ()
-		(%synner "unmatched identifiers" base-id new-id)))
-      (if (and (null? mark*)
-	       (null? subst*))
-	  object
-	(mkstx object mark* subst* annotated-expr*))))
-
-  (define (diff base.mark new.mark* new.subst* new.annotated-expr* error)
-    (if (null? new.mark*)
-	(error)
-      (let ((new.mark1 (car new.mark*)))
-	(if (eq? base.mark new.mark1)
-	    (values '() (final new.subst*) '())
-	  (receive (subst1* subst2*)
-	      (split new.subst*)
-	    (receive (nm* ns* nae*)
-		(diff base.mark (cdr new.mark*) subst2* (cdr new.annotated-expr*) error)
-	      (values (cons new.mark1 nm*)
-		      (append subst1* ns*)
-		      (cons (car new.annotated-expr*) nae*))))))))
-
-  (define (split subst*)
-    ;;Non-tail recursive  function.  Split  SUBST* and return  2 values:
-    ;;the prefix  of SUBST*  up to  and including  the first  shift, the
-    ;;suffix of SUBST* from the first shift excluded to the end.
-    ;;
-    (if (eq? (car subst*) 'shift)
-	(values (list 'shift)
-		(cdr subst*))
-      (receive (subst1* subst2*)
-	  (split (cdr subst*))
-	(values (cons (car subst*) subst1*)
-		subst2*))))
-
-  (define (final subst*)
-    ;;Non-tail recursive  function.  Return the  prefix of SUBST*  up to
-    ;;and not including  the first shift.  The returned prefix  is a new
-    ;;list spine sharing the cars with SUBST*.
-    ;;
-    (if (or (null? subst*)
-	    (eq? (car subst*) 'shift))
-	'()
-      (cons (car subst*)
-	    (final (cdr subst*)))))
-
-  (define-syntax-rule (%synner ?message ?irritant ...)
-    (assertion-violation __who__ ?message ?irritant ...))
-
-  #| end of module: SYNTAX-TRANSPOSE |# )
-
 
 ;;;; pattern matching
 
@@ -11705,12 +6793,12 @@
   (define (syntax-dispatch expr pattern)
     (%match expr pattern
 	    '() #;mark*
-	    '() #;subst*
+	    '() #;rib*
 	    '() #;annotated-expr*
 	    '() #;pvar*
 	    ))
 
-  (define (%match expr pattern mark* subst* annotated-expr* pvar*)
+  (define (%match expr pattern mark* rib* annotated-expr* pvar*)
     (cond ((not pvar*)
 	   ;;No match.
 	   #f)
@@ -11719,21 +6807,21 @@
 	   pvar*)
 	  ((eq? pattern 'any)
 	   ;;Match anything, bind a pattern variable.
-	   (cons (%make-syntax-object expr mark* subst* annotated-expr*)
+	   (cons (%make-syntax-object expr mark* rib* annotated-expr*)
 		 pvar*))
 	  ((<stx>? expr)
 	   ;;Visit the syntax object.
 	   (and (not (top-marked? mark*))
-		(receive (mark*^ subst*^ annotated-expr*^)
-		    (join-wraps mark* subst* annotated-expr* expr)
-		  (%match (<stx>-expr expr) pattern mark*^ subst*^ annotated-expr*^ pvar*))))
+		(receive (mark*^ rib*^ annotated-expr*^)
+		    (join-wraps mark* rib* annotated-expr* expr)
+		  (%match (<stx>-expr expr) pattern mark*^ rib*^ annotated-expr*^ pvar*))))
 	  ((annotation? expr)
 	   ;;Visit the ANNOTATION struct.
-	   (%match (annotation-expression expr) pattern mark* subst* annotated-expr* pvar*))
+	   (%match (annotation-expression expr) pattern mark* rib* annotated-expr* pvar*))
 	  (else
-	   (%match* expr pattern mark* subst* annotated-expr* pvar*))))
+	   (%match* expr pattern mark* rib* annotated-expr* pvar*))))
 
-  (define (%match* expr pattern mark* subst* annotated-expr* pvar*)
+  (define (%match* expr pattern mark* rib* annotated-expr* pvar*)
     (cond
      ;;End of list pattern: match the end of a list expression.
      ;;
@@ -11745,8 +6833,8 @@
      ;;
      ((pair? pattern)
       (and (pair? expr)
-	   (%match (car expr) (car pattern) mark* subst* annotated-expr*
-		   (%match (cdr expr) (cdr pattern) mark* subst* annotated-expr* pvar*))))
+	   (%match (car expr) (car pattern) mark* rib* annotated-expr*
+		   (%match (cdr expr) (cdr pattern) mark* rib* annotated-expr* pvar*))))
 
      ;;Match any  proper list  expression and  bind a  pattern variable.
      ;;This happens when the original pattern symbolic expression is:
@@ -11757,7 +6845,7 @@
      ;;variable ?VAR.
      ;;
      ((eq? pattern 'each-any)
-      (let ((l (%match-each-any expr mark* subst* annotated-expr*)))
+      (let ((l (%match-each-any expr mark* rib* annotated-expr*)))
 	(and l (cons l pvar*))))
 
      (else
@@ -11780,7 +6868,7 @@
 	 (if (null? expr)
 	     (%match-empty (vector-ref pattern 1) pvar*)
 	   (let ((pvar** (%match-each expr (vector-ref pattern 1)
-				      mark* subst* annotated-expr*)))
+				      mark* rib* annotated-expr*)))
 	     (and pvar**
 		  (%combine pvar** pvar*)))))
 
@@ -11794,7 +6882,7 @@
 	((free-id)
 	 (and (symbol? expr)
 	      (top-marked? mark*)
-	      (free-id=? (%make-syntax-object expr mark* subst* annotated-expr*)
+	      (free-id=? (%make-syntax-object expr mark* rib* annotated-expr*)
 			 (vector-ref pattern 1))
 	      pvar*))
 
@@ -11809,7 +6897,7 @@
 	((scheme-id)
 	 (and (symbol? expr)
 	      (top-marked? mark*)
-	      (free-id=? (%make-syntax-object expr mark* subst* annotated-expr*)
+	      (free-id=? (%make-syntax-object expr mark* rib* annotated-expr*)
 			 (scheme-stx (vector-ref pattern 1)))
 	      pvar*))
 
@@ -11829,7 +6917,7 @@
 			   (vector-ref pattern 1)
 			   (vector-ref pattern 2)
 			   (vector-ref pattern 3)
-			   mark* subst* annotated-expr* pvar*)
+			   mark* rib* annotated-expr* pvar*)
 	   (and pvar*
 		(null? y-pat)
 		(if (null? xr*)
@@ -11858,71 +6946,71 @@
 	((vector)
 	 (and (vector? expr)
 	      (%match (vector->list expr) (vector-ref pattern 1)
-		      mark* subst* annotated-expr* pvar*)))
+		      mark* rib* annotated-expr* pvar*)))
 
 	(else
 	 (assertion-violation 'syntax-dispatch "invalid pattern" pattern))))))
 
-  (define (%match-each expr pattern mark* subst* annotated-expr*)
+  (define (%match-each expr pattern mark* rib* annotated-expr*)
     ;;Recursive function.   The expression  matches if it  is a  list in
     ;;which  every item  matches  PATTERN.   Return null  or  a list  of
     ;;sublists, each sublist being a list of pattern variable values.
     ;;
     (cond ((pair? expr)
-	   (let ((first (%match (car expr) pattern mark* subst* annotated-expr* '())))
+	   (let ((first (%match (car expr) pattern mark* rib* annotated-expr* '())))
 	     (and first
-		  (let ((rest (%match-each (cdr expr) pattern mark* subst* annotated-expr*)))
+		  (let ((rest (%match-each (cdr expr) pattern mark* rib* annotated-expr*)))
 		    (and rest (cons first rest))))))
 	  ((null? expr)
 	   '())
 	  ((<stx>? expr)
 	   (and (not (top-marked? mark*))
-		(receive (mark*^ subst*^ annotated-expr*^)
-		    (join-wraps mark* subst* annotated-expr* expr)
-		  (%match-each (<stx>-expr expr) pattern mark*^ subst*^ annotated-expr*^))))
+		(receive (mark*^ rib*^ annotated-expr*^)
+		    (join-wraps mark* rib* annotated-expr* expr)
+		  (%match-each (<stx>-expr expr) pattern mark*^ rib*^ annotated-expr*^))))
 	  ((annotation? expr)
-	   (%match-each (annotation-expression expr) pattern mark* subst* annotated-expr*))
+	   (%match-each (annotation-expression expr) pattern mark* rib* annotated-expr*))
 	  (else #f)))
 
-  (define (%match-each+ e x-pat y-pat z-pat mark* subst* annotated-expr* pvar*)
-    (let loop ((e e) (mark* mark*) (subst* subst*) (annotated-expr* annotated-expr*))
+  (define (%match-each+ e x-pat y-pat z-pat mark* rib* annotated-expr* pvar*)
+    (let loop ((e e) (mark* mark*) (rib* rib*) (annotated-expr* annotated-expr*))
       (cond ((pair? e)
 	     (receive (xr* y-pat pvar*)
-		 (loop (cdr e) mark* subst* annotated-expr*)
+		 (loop (cdr e) mark* rib* annotated-expr*)
 	       (if pvar*
 		   (if (null? y-pat)
-		       (let ((xr (%match (car e) x-pat mark* subst* annotated-expr* '())))
+		       (let ((xr (%match (car e) x-pat mark* rib* annotated-expr* '())))
 			 (if xr
 			     (values (cons xr xr*) y-pat pvar*)
 			   (values #f #f #f)))
 		     (values '()
 			     (cdr y-pat)
-			     (%match (car e) (car y-pat) mark* subst* annotated-expr* pvar*)))
+			     (%match (car e) (car y-pat) mark* rib* annotated-expr* pvar*)))
 		 (values #f #f #f))))
 	    ((<stx>? e)
 	     (if (top-marked? mark*)
-		 (values '() y-pat (%match e z-pat mark* subst* annotated-expr* pvar*))
-	       (receive (mark* subst* annotated-expr*)
-		   (join-wraps mark* subst* annotated-expr* e)
-		 (loop (<stx>-expr e) mark* subst* annotated-expr*))))
+		 (values '() y-pat (%match e z-pat mark* rib* annotated-expr* pvar*))
+	       (receive (mark* rib* annotated-expr*)
+		   (join-wraps mark* rib* annotated-expr* e)
+		 (loop (<stx>-expr e) mark* rib* annotated-expr*))))
 	    ((annotation? e)
-	     (loop (annotation-expression e) mark* subst* annotated-expr*))
+	     (loop (annotation-expression e) mark* rib* annotated-expr*))
 	    (else
-	     (values '() y-pat (%match e z-pat mark* subst* annotated-expr* pvar*))))))
+	     (values '() y-pat (%match e z-pat mark* rib* annotated-expr* pvar*))))))
 
-  (define (%match-each-any e mark* subst* annotated-expr*)
+  (define (%match-each-any e mark* rib* annotated-expr*)
     (cond ((pair? e)
-	   (let ((l (%match-each-any (cdr e) mark* subst* annotated-expr*)))
-	     (and l (cons (%make-syntax-object (car e) mark* subst* annotated-expr*) l))))
+	   (let ((l (%match-each-any (cdr e) mark* rib* annotated-expr*)))
+	     (and l (cons (%make-syntax-object (car e) mark* rib* annotated-expr*) l))))
 	  ((null? e)
 	   '())
 	  ((<stx>? e)
 	   (and (not (top-marked? mark*))
-		(receive (mark* subst* annotated-expr*)
-		    (join-wraps mark* subst* annotated-expr* e)
-		  (%match-each-any (<stx>-expr e) mark* subst* annotated-expr*))))
+		(receive (mark* rib* annotated-expr*)
+		    (join-wraps mark* rib* annotated-expr* e)
+		  (%match-each-any (<stx>-expr e) mark* rib* annotated-expr*))))
 	  ((annotation? e)
-	   (%match-each-any (annotation-expression e) mark* subst* annotated-expr*))
+	   (%match-each-any (annotation-expression e) mark* rib* annotated-expr*))
 	  (else #f)))
 
   (define (%match-empty p pvar*)
@@ -11953,12 +7041,12 @@
 	     (else
 	      (assertion-violation 'syntax-dispatch "invalid pattern" p))))))
 
-  (define (%make-syntax-object stx mark* subst* annotated-expr*)
+  (define (%make-syntax-object stx mark* rib* annotated-expr*)
     (if (and (null? mark*)
-	     (null? subst*)
+	     (null? rib*)
 	     (null? annotated-expr*))
 	stx
-      (mkstx stx mark* subst* annotated-expr*)))
+      (mkstx stx mark* rib* annotated-expr*)))
 
   (define (%combine pvar** pvar*)
     (if (null? (car pvar**))
@@ -11974,1632 +7062,125 @@
 ;;The  "chi-*"  functions  are  the ones  visiting  syntax  objects  and
 ;;performing the expansion process.
 ;;
-(module (chi-expr
-	 chi-expr*
-	 chi-body*
-	 chi-internal-body
-	 chi-qrhs*
-	 chi-defun
-	 chi-lambda-clause
-	 chi-lambda-clause*)
+(module (make-psi
+	 psi?			psi-stx
+	 psi-core-expr		psi-retvals-signature
+	 psi-application-retvals-signature
+	 chi-expr		chi-expr*
+	 chi-body*		chi-internal-body
+	 chi-qrhs*		chi-defun
+	 chi-lambda		chi-case-lambda
+	 chi-application/psi-first-operand)
+  (include "psyntax.expander.chi-module.scm" #t))
 
 
-;;;; chi procedures: syntax object type inspection
+;;;; condition object types: descriptive objects
 
-(module (expr-syntax-type)
+;;This  is  used  to describe  exceptions  in  which  the  expanded expression  of  a
+;;right-hand side (RHS) syntax  definition (DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,
+;;DEFINE-FLUID-SYNTAX,  FLUID-LET-SYNTAX,  etc.)   has  a role.   The  value  in  the
+;;CORE-EXPR slot must be a symbolic expression representing the a core expression.
+(define-condition-type &syntax-definition-expanded-rhs-condition
+    &condition
+  make-syntax-definition-expanded-rhs-condition
+  syntax-definition-expanded-rhs-condition?
+  (core-expr condition-syntax-definition-expanded-rhs))
 
-  (define (expr-syntax-type expr-stx lexenv)
-    ;;Determine the  syntax type of  an expression.  EXPR-STX must  be a
-    ;;syntax object representing an expression.  Return 2 values:
-    ;;
-    ;;1..A symbol representing the syntax type.
-    ;;
-    ;;2..If  the  syntax  is  a  macro application:  the  value  of  the
-    ;;    syntactic   binding  associated   to  the   macro  identifier.
-    ;;   Otherwise false.
-    ;;
-    ;;3..If  the   syntax  is   a  macro  application:   the  identifier
-    ;;   representing the macro keyword.  Otherwise false.
-    ;;
-    ;;The type of an expression is determined by two things:
-    ;;
-    ;;* The shape of the expression (identifier, pair, or datum).
-    ;;
-    ;;* The binding of the identifier (for id-stx) or the type of car of
-    ;;  the pair.
-    ;;
-    (cond ((identifier? expr-stx)
-	   (let* ((id    expr-stx)
-		  (label (id->label/intern id)))
-	     (unless label
-	       (%raise-unbound-error #f id id))
-	     (let* ((binding (label->syntactic-binding label lexenv))
-		    (type    (syntactic-binding-type binding)))
-	       (case type
-		 ((core-prim
-		   lexical global mutable
-		   local-macro local-macro!
-		   global-macro global-macro!
-		   local-ctv global-ctv
-		   macro import export library $module syntax
-		   displaced-lexical)
-		  (values type (syntactic-binding-value binding) id))
-		 (($rtd)
-		  (values 'type-maker-reference (syntactic-binding-value binding) id))
-		 (else
-		  (values 'other #f #f))))))
+;;This is used to describe exceptions in  which the return value of the evaluation of
+;;a   right-hand   side   (RHS)   syntax   definition   (DEFINE-SYNTAX,   LET-SYNTAX,
+;;LETREC-SYNTAX, DEFINE-FLUID-SYNTAX, FLUID-LET-SYNTAX, etc.)  has a role.  The value
+;;in the  RETVAL slot  must be  the value returned  by the  evaluation of  the syntax
+;;definition RHS expression.
+(define-condition-type &syntax-definition-expression-return-value
+    &condition
+  make-syntax-definition-expression-return-value-condition
+  syntax-definition-expression-return-value-condition?
+  (retval condition-syntax-definition-expression-return-value))
 
-	  ((syntax-pair? expr-stx)
-	   ;;Here we know that EXPR-STX has the format:
-	   ;;
-	   ;;   (?first-form ?form ...)
-	   ;;
-	   (let ((id (syntax-car expr-stx)))
-	     (if (identifier? id)
-		 ;;Here we know that EXPR-STX has the format:
-		 ;;
-		 ;;   (?id ?form ...)
-		 ;;
-		 (let ((label (id->label/intern id)))
-		   (unless label
-		     (%raise-unbound-error #f id id))
-		   (let* ((binding (label->syntactic-binding label lexenv))
-			  (type    (syntactic-binding-type binding)))
-		     (case type
-		       ((core-macro
-			 define define-syntax define-alias define-fluid-syntax
-			 let-syntax letrec-syntax begin-for-syntax
-			 begin set! stale-when
-			 local-ctv global-ctv
-			 local-macro local-macro!
-			 global-macro global-macro!
-			 macro import export library module)
-			(values type (syntactic-binding-value binding) id))
-		       (($rtd)
-			(values 'type-maker-application (syntactic-binding-value binding) id))
-		       (else
-			(values 'call #f #f)))))
-	       ;;Here we know that EXPR-STX has the format:
-	       ;;
-	       ;;   (?non-id ?form ...)
-	       ;;
-	       ;;where ?NON-ID  can be  anything but not  an identifier.
-	       ;;In practice the only valid syntax for this case is:
-	       ;;
-	       ;;   ((?first-subform ?subform ...) ?form ...)
-	       ;;
-	       ;;because ?NON-ID  must be an expression  evaluating to a
-	       ;;closure object.
-	       ;;
-	       (values 'call #f #f))))
+;;This  is used  to include  a retvals  signature specification  in generic  compound
+;;objects, for example because we were expecting a signature with some properties and
+;;the one we got does not have them.
+(define-condition-type &retvals-signature-condition
+    &condition
+  %make-retvals-signature-condition
+  retvals-signature-condition?
+  (signature retvals-signature-condition-signature))
 
-	  (else
-	   (let ((datum (syntax->datum expr-stx)))
-	     (if (self-evaluating? datum)
-		 (values 'constant datum #f)
-	       (values 'other #f #f))))))
+(define* (make-retvals-signature-condition {sig retvals-signature?})
+  (%make-retvals-signature-condition sig))
 
-  (define (self-evaluating? x)
-    (or (number?		x)
-	(string?		x)
-	(char?			x)
-	(boolean?		x)
-	(bytevector?		x)
-	(keyword?		x)
-	(would-block-object?	x)))
-
-  #| end of module: EXPR-SYNTAX-TYPE |# )
-
-
-;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
-
-;;Set to true  whenever we are expanding the first  suborm in a function
-;;application.   This is  where the  syntax SPLICE-FIRST-EXPAND  must be
-;;used; in every other place it must be discarded.
+;;This is used  to describe exceptions in which  the input form of a macro  use has a
+;;role.  The value  in the FORM slot  must be a syntax object  representing the macro
+;;use input form.
 ;;
-(define expanding-application-first-subform?
-  (make-parameter #f))
+;;See MAKE-MACRO-USE-INPUT-FORM-CONDITION for details.
+(define-condition-type &macro-use-input-form-condition
+    &condition
+  %make-macro-use-input-form-condition
+  macro-use-input-form-condition?
+  (form condition-macro-use-input-form))
 
-(define-syntax while-expanding-application-first-subform
-  ;;Evaluate a body while the parameter is true.
+;;This is used to represent the succession  of transformations a macro use input form
+;;undergoes while  expanded; there is  an instance of  this condition type  for every
+;;transformation.
+;;
+;;See MAKE-MACRO-USE-INPUT-FORM-CONDITION for details.
+(define-condition-type &macro-expansion-trace
+    &condition
+  make-macro-expansion-trace macro-expansion-trace?
+  (form macro-expansion-trace-form))
+
+
+;;;; condition object types: error objects
+
+;;This  is used  to  describe exceptions  in  which  there is  a  mismatch between  a
+;;resulting expression type signature and an expected one; this condition type should
+;;be the root of all the condition types in this category.
+(define-condition-type &expand-time-type-signature-violation
+    &violation
+  make-expand-time-type-signature-violation
+  expand-time-type-signature-violation?)
+
+;;This is  used to describe  exceptions in which:  after expanding an  expression, we
+;;were expecting it to  have a "retvals-signature" matching a given  one, but the one
+;;we got does not match.
+;;
+;;See the function EXPAND-TIME-RETVALS-SIGNATURE-VIOLATION for details.
+(define-condition-type &expand-time-retvals-signature-violation
+    &expand-time-type-signature-violation
+  %make-expand-time-retvals-signature-violation
+  expand-time-retvals-signature-violation?
+  (expected-signature expand-time-retvals-signature-violation-expected-signature)
+  (returned-signature expand-time-retvals-signature-violation-returned-signature))
+
+(define* (make-expand-time-retvals-signature-violation {expected-signature retvals-signature?}
+					   {returned-signature retvals-signature?})
+  (%make-expand-time-retvals-signature-violation expected-signature returned-signature))
+
+
+;;;; exception raising functions
+
+(define-syntax with-exception-handler/input-form
+  ;;This macro is typically used as follows:
+  ;;
+  ;;   (with-exception-handler/input-form
+  ;;       input-form.stx
+  ;;     (%eval-macro-transformer
+  ;;        (%expand-macro-transformer input-form.stx lexenv.expand)
+  ;;        lexenv.run))
   ;;
   (syntax-rules ()
-    ((_ ?body0 ?body ...)
-     (parametrise ((expanding-application-first-subform? #t))
-       ?body0 ?body ...))))
-
-(define-syntax while-not-expanding-application-first-subform
-  ;;Evaluate a body while the parameter is false.
-  ;;
-  (syntax-rules ()
-    ((_ ?body0 ?body ...)
-     (parametrise ((expanding-application-first-subform? #f))
-       ?body0 ?body ...))))
-
-(define (chi-drop-splice-first-envelope-maybe expr lexenv.run lexenv.expand)
-  ;;If we are expanding the first subform of an application: just return
-  ;;EXPR;  otherwise if  EXPR is  a splice-first  envelope: extract  its
-  ;;form, expand it and return the result.
-  ;;
-  (if (splice-first-envelope? expr)
-      (if (expanding-application-first-subform?)
-	  expr
-	(chi-drop-splice-first-envelope-maybe (chi-expr (splice-first-envelope-form expr) lexenv.run lexenv.expand)
-					      lexenv.run lexenv.expand))
-    expr))
-
-
-;;;; chi procedures: macro calls
-
-(module (chi-non-core-macro
-	 chi-local-macro
-	 chi-global-macro)
-
-  (define* (chi-non-core-macro (procname symbol?) input-form-expr lexenv.run rib)
-    ;;Expand an expression representing the use of a non-core macro; the
-    ;;transformer function is integrated in the expander.
-    ;;
-    ;;PROCNAME is a symbol representing  the name of the non-core macro;
-    ;;we can map  from such symbol to the transformer  function with the
-    ;;module of NON-CORE-MACRO-TRANSFORMER.
-    ;;
-    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
-    ;;to be expanded.
-    ;;
-    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
-    ;;expression must be expanded.
-    ;;
-    ;;RIB is false or a struct of type "<rib>".
-    ;;
-    (import NON-CORE-MACRO-TRANSFORMER)
-    (%do-macro-call (non-core-macro-transformer procname)
-		    input-form-expr lexenv.run rib))
-
-  (define (chi-local-macro bind-val input-form-expr lexenv.run rib)
-    ;;This  function is  used  to  expand macro  uses  for macros  whose
-    ;;transformer  is defined  by local  user code,  but not  identifier
-    ;;syntaxes;  these are  the lexical  environment entries  with types
-    ;;"local-macro" and "local-macro!".
-    ;;
-    ;;BIND-VAL is the binding value of  the global macro.  The format of
-    ;;the bindings is:
-    ;;
-    ;;     (local-macro  . (?transformer . ?expanded-expr))
-    ;;     (local-macro! . (?transformer . ?expanded-expr))
-    ;;
-    ;;and the argument BIND-VAL is:
-    ;;
-    ;;     (?transformer . ?expanded-expr)
-    ;;
-    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
-    ;;to be expanded.
-    ;;
-    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
-    ;;expression must be expanded.
-    ;;
-    ;;RIB is false or a struct of type "<rib>".
-    ;;
-    (%do-macro-call (car bind-val) input-form-expr lexenv.run rib))
-
-  (define (chi-global-macro bind-val input-form-expr lexenv.run rib)
-    ;;This  function is  used  to  expand macro  uses  for macros  whose
-    ;;transformer is defined  by user code in  imported libraries; these
-    ;;are the lexical environment  entries with types "global-macro" and
-    ;;"global-macro!".
-    ;;
-    ;;BIND-VAL is the binding value of  the global macro.  The format of
-    ;;the bindings is:
-    ;;
-    ;;     (global-macro  . (?library . ?gensym))
-    ;;     (global-macro! . (?library . ?gensym))
-    ;;
-    ;;and the argument BIND-VAL is:
-    ;;
-    ;;     (?library . ?gensym)
-    ;;
-    ;;INPUT-FORM-EXPR is  the syntax object representing  the expression
-    ;;to be expanded.
-    ;;
-    ;;LEXENV.RUN  is  the  run-time  lexical environment  in  which  the
-    ;;expression must be expanded.
-    ;;
-    ;;RIB is false or a struct of type "<rib>".
-    ;;
-    (let ((lib (car bind-val))
-	  (loc (cdr bind-val)))
-      ;;If this global binding use is  the first time a binding from LIB
-      ;;is used: visit the library.
-      (unless (eq? lib '*interaction*)
-	(visit-library lib))
-      (let ((x (symbol-value loc)))
-	(let ((transformer (cond ((procedure? x)
-				  x)
-				 ((variable-transformer? x)
-				  (cdr x))
-				 (else
-				  (assertion-violation 'chi-global-macro
-				    "Vicare: internal error: not a procedure" x)))))
-	  (%do-macro-call transformer input-form-expr lexenv.run rib)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%do-macro-call transformer input-form-expr lexenv.run rib)
-    (define (main)
-      ;;We parametrise here because we can never know which transformer,
-      ;;for example, will query the syntactic binding properties.
-      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(let ((output-form-expr (transformer
-				 ;;Put the anti-mark on the input form.
-				 (add-mark anti-mark #f input-form-expr #f))))
-	  ;;If the  transformer returns  a function:  we must  apply the
-	  ;;returned function to a function acting as compile-time value
-	  ;;retriever.   Such  application  must  return a  value  as  a
-	  ;;transformer would do.
-	  (if (procedure? output-form-expr)
-	      (%return (output-form-expr %ctv-retriever))
-	    (%return output-form-expr)))))
-
-    (define (%return output-form-expr)
-      ;;Check that there are no raw symbols in the value returned by the
-      ;;macro transformer.
-      (let recur ((x output-form-expr))
-	;;Don't feed me cycles.
-	(unless (<stx>? x)
-	  (cond ((pair? x)
-		 (recur (car x))
-		 (recur (cdr x)))
-		((vector? x)
-		 (vector-for-each recur x))
-		((symbol? x)
-		 (syntax-violation #f
-		   "raw symbol encountered in output of macro"
-		   input-form-expr x)))))
-      ;;Put a  new mark  on the  output form.   For all  the identifiers
-      ;;already  present  in the  input  form:  this  new mark  will  be
-      ;;annihilated  by  the  anti-mark  we put  before.   For  all  the
-      ;;identifiers introduced  by the  transformer: this new  mark will
-      ;;stay there.
-      (add-mark (gen-mark) rib output-form-expr input-form-expr))
-
-    (define (%ctv-retriever id)
-      ;;This is  the compile-time  values retriever function.   Given an
-      ;;identifier:  search an  entry in  the lexical  environment; when
-      ;;found return its value, otherwise return false.
-      ;;
-      (unless (identifier? id)
-	(assertion-violation 'rho "not an identifier" id))
-      (let ((binding (label->syntactic-binding (id->label id) lexenv.run)))
-	(case (syntactic-binding-type binding)
-	  ;;The given identifier is bound to a local compile-time value.
-	  ;;The actual object is stored in the binding itself.
-	  ((local-ctv)
-	   (local-compile-time-value-binding-object binding))
-
-	  ;;The  given  identifier  is  bound to  a  compile-time  value
-	  ;;imported from  a library or the  top-level environment.  The
-	  ;;actual  object is  stored  in  the "value"  field  of a  loc
-	  ;;gensym.
-	  ((global-ctv)
-	   (global-compile-time-value-binding-object binding))
-
-	  ;;The given identifier is not bound to a compile-time value.
-	  (else #f))))
-
-    (main))
-
-  #| end of module |# )
-
-
-;;;; chi procedures: expressions
-
-(module (chi-expr)
-
-  (define (chi-expr expr-stx lexenv.run lexenv.expand)
-    ;;Expand a single expression form.
-    ;;
-    (chi-drop-splice-first-envelope-maybe
-     (receive (type bind-val kwd)
-	 (expr-syntax-type expr-stx lexenv.run)
-       (case type
-	 ((core-macro)
-	  (let ((transformer (core-macro-transformer bind-val)))
-	    (transformer expr-stx lexenv.run lexenv.expand)))
-
-	 ((global)
-	  (let* ((lib (car bind-val))
-		 (loc (cdr bind-val)))
-	    ((inv-collector) lib)
-	    (build-global-reference no-source loc)))
-
-	 ((core-prim)
-	  (let ((name bind-val))
-	    (build-primref no-source name)))
-
-	 ((call)
-	  (chi-application expr-stx lexenv.run lexenv.expand))
-
-	 ((lexical)
-	  (let ((lex (lexical-var bind-val)))
-	    (build-lexical-reference no-source lex)))
-
-	 ((global-macro global-macro!)
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-global-macro bind-val expr-stx lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
-
-	 ((local-macro local-macro!)
-	  ;;Here  we expand  uses  of macros  that are  local  in a  non
-	  ;;top-level region.
-	  ;;
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-local-macro bind-val expr-stx lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
-
-	 ((macro)
-	  ;;Here we expand the use of a non-core macro.  Such macros are
-	  ;;integrated in the expander.
-	  ;;
-	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-non-core-macro bind-val expr-stx lexenv.run #f))))
-	    (chi-expr exp-e lexenv.run lexenv.expand)))
-
-	 ((constant)
-	  (let ((datum bind-val))
-	    (build-data no-source datum)))
-
-	 ((set!)
-	  (chi-set! expr-stx lexenv.run lexenv.expand))
-
-	 ((begin)
-	  ;;Here we  expand the use of  the BEGIN core macro.   First we
-	  ;;check with SYNTAX-MATCH that the  syntax is correct, then we
-	  ;;build the expanded language expression.
-	  ;;
-	  (syntax-match expr-stx ()
-	    ((_ x x* ...)
-	     (build-sequence no-source
-	       (while-not-expanding-application-first-subform
-		(chi-expr* (cons x x*) lexenv.run lexenv.expand))))))
-
-	 ((stale-when)
-	  ;;STALE-WHEN  acts  like  BEGIN,  but  in  addition  causes  an
-	  ;;expression  to  be  registered   in  the  current  stale-when
-	  ;;collector.   When such  expression  evaluates  to false:  the
-	  ;;compiled library is  stale with respect to  some source file.
-	  ;;See for example the INCLUDE syntax.
-	  (syntax-match expr-stx ()
-	    ((_ ?guard ?x ?x* ...)
-	     (begin
-	       (handle-stale-when ?guard lexenv.expand)
-	       (build-sequence no-source
-		 (while-not-expanding-application-first-subform
-		  (chi-expr* (cons ?x ?x*) lexenv.run lexenv.expand)))))))
-
-	 ((let-syntax letrec-syntax)
-	  (syntax-match expr-stx ()
-	    ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
-	     (unless (valid-bound-ids? xlhs*)
-	       (stx-error expr-stx "invalid identifiers"))
-	     (let* ((xlab* (map gensym-for-label xlhs*))
-		    (xrib  (make-filled-rib xlhs* xlab*))
-		    (xb*   (map (lambda (x)
-				  (%eval-macro-transformer
-				   (%expand-macro-transformer (if (eq? type 'let-syntax)
-								  x
-								(push-lexical-contour xrib x))
-							      lexenv.expand)
-				   lexenv.run))
-			     xrhs*)))
-	       (build-sequence no-source
-		 (while-not-expanding-application-first-subform
-		  (chi-expr* (map (lambda (x)
-				    (push-lexical-contour xrib x))
-			       (cons xbody xbody*))
-			     (append (map cons xlab* xb*) lexenv.run)
-			     (append (map cons xlab* xb*) lexenv.expand))))))))
-
-	 ((displaced-lexical)
-	  (stx-error expr-stx "identifier out of context"))
-
-	 ((syntax)
-	  (stx-error expr-stx "reference to pattern variable outside a syntax form"))
-
-	 ((define define-syntax define-fluid-syntax module import library)
-	  (stx-error expr-stx (string-append
-			       (case type
-				 ((define)              "a definition")
-				 ((define-syntax)       "a define-syntax")
-				 ((define-fluid-syntax) "a define-fluid-syntax")
-				 ((module)              "a module definition")
-				 ((library)             "a library definition")
-				 ((import)              "an import declaration")
-				 ((export)              "an export declaration")
-				 (else                  "a non-expression"))
-			       " was found where an expression was expected")))
-
-	 ((mutable)
-	  ;;Here we  expand an  identifier in reference  position, whose
-	  ;;binding is a mutable variable.
-	  ;;
-	  (if (and (pair? bind-val)
-		   (let ((lib (car bind-val)))
-		     (eq? lib '*interaction*)))
-	      (let ((loc (cdr bind-val)))
-		(build-global-reference no-source loc))
-	    (stx-error expr-stx "attempt to reference an unexportable variable")))
-
-	 ((type-maker-reference)
-	  ;;Here we  expand an  identifier in reference  position, whose
-	  ;;binding is a  struct or record type name.  The  result is an
-	  ;;expression that evaluates to the struct or record maker.
-	  ;;
-	  (%process-type-maker-reference expr-stx bind-val lexenv.run lexenv.expand))
-
-	 ((type-maker-application)
-	  ;;Here  we expand  a form  whose  car is  an identifier  whose
-	  ;;binding is a  struct or record type name.  The  result is an
-	  ;;expression that  evaluates to the application  of the struct
-	  ;;or record maker.
-	  ;;
-	  (%process-type-maker-application expr-stx bind-val lexenv.run lexenv.expand))
-
-	 (else
-	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr-stx '()))
-	  (stx-error expr-stx "invalid expression"))))
-     lexenv.run lexenv.expand))
-
-  (define (chi-application expr lexenv.run lexenv.expand)
-    ;;Expand a function application form.   This is called when EXPR has
-    ;;the format:
-    ;;
-    ;;   (?rator ?rand ...)
-    ;;
-    ;;and ?RATOR is a pair or a non-macro identifier.  For example it is
-    ;;called when EXPR is:
-    ;;
-    ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
-    ;;
-    (define (%build-core-expression rator rands)
-      (build-application (syntax-annotation expr)
-	rator
-	(while-not-expanding-application-first-subform
-	 (chi-expr* rands lexenv.run lexenv.expand))))
-    (syntax-match expr ()
-      ((?rator ?rands* ...)
-       (if (not (syntax-pair? ?rator))
-       	   ;;This  is a  common function  application: ?RATOR  is not  a
-       	   ;;syntax  keyword.  Let's  make  sure that  we expand  ?RATOR
-       	   ;;first.
-       	   (let ((rator (chi-expr ?rator lexenv.run lexenv.expand)))
-	     (%build-core-expression rator ?rands*))
-	 ;;This is a function application with the format:
-	 ;;
-	 ;;   ((?int-rator ?int-rand ...) ?rand ...)
-	 ;;
-	 ;;we  expand  it considering  the  case  of the  first  subform
-	 ;;expanding to a SPLICE-FIRST-EXPAND form.
-	 (let ((exp-rator (while-expanding-application-first-subform
-			   (chi-expr ?rator lexenv.run lexenv.expand))))
-	   (if (splice-first-envelope? exp-rator)
-	       (syntax-match (splice-first-envelope-form exp-rator) ()
-		 ((?int-rator ?int-rands* ...)
-		  (chi-expr (cons ?int-rator (append ?int-rands* ?rands*))
-			    lexenv.run lexenv.expand))
-		 (_
-		  (stx-error exp-rator
-			     "expected list as argument of splice-first-expand"
-			     'splice-first-expand)))
-	     (%build-core-expression exp-rator ?rands*)))))
-      ))
-
-  (define (chi-set! expr-stx lexenv.run lexenv.expand)
-    (syntax-match expr-stx ()
-      ((_ x v)
-       (identifier? x)
-       (receive (type bind-val kwd)
-	   (expr-syntax-type x lexenv.run)
-	 (case type
-	   ((lexical)
-	    (set-lexical-mutable! bind-val)
-	    (build-lexical-assignment no-source
-	      (lexical-var bind-val)
-	      (chi-expr v lexenv.run lexenv.expand)))
-	   ((core-prim)
-	    (stx-error expr-stx "cannot modify imported core primitive"))
-
-	   ((global)
-	    (stx-error expr-stx "attempt to modify an immutable binding"))
-
-	   ((global-macro!)
-	    (chi-expr (chi-global-macro bind-val expr-stx lexenv.run #f) lexenv.run lexenv.expand))
-
-	   ((local-macro!)
-	    (chi-expr (chi-local-macro bind-val expr-stx lexenv.run #f) lexenv.run lexenv.expand))
-
-	   ((mutable)
-	    (if (and (pair? bind-val)
-		     (let ((lib (car bind-val)))
-		       (eq? lib '*interaction*)))
-		(let ((loc (cdr bind-val)))
-		  (build-global-assignment no-source
-		    loc (chi-expr v lexenv.run lexenv.expand)))
-	      (stx-error expr-stx "attempt to modify an unexportable variable")))
-
-	   (else
-	    (stx-error expr-stx)))))))
-
-  (define (%process-type-maker-reference expr-stx bind-val lexenv.run lexenv.expand)
-    ;;BIND-VAL is the binding value of an R6RS record-type:
-    ;;
-    ;;   (?rtd-id ?rcd-id)
-    ;;   (?rtd-id ?rcd-id . ?r6rs-record-type-spec)
-    ;;
-    ;;or the binding value of a Vicare struct type:
-    ;;
-    ;;   #<struct-type-descriptor>
-    ;;
-    (cond ((r6rs-record-type-descriptor-bindval? bind-val)
-	   ;;The binding is for an R6RS record type.
-	   (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
-	     (chi-expr (bless
-			`(record-constructor ,rcd-id))
-		       lexenv.run lexenv.expand)))
-
-	  ((struct-type-descriptor-bindval? bind-val)
-	   ;;The binding is for a Vicare struct type.
-	   (let ((field-name* (struct-type-field-names
-			       (struct-type-descriptor-bindval-std bind-val))))
-	     (chi-expr (bless
-			`(lambda ,field-name*
-			   ($struct (quote ,bind-val) . ,field-name*)))
-		       lexenv.run lexenv.expand)))
-
-	  (else
-	   (stx-error expr-stx "invalid binding for identifier"))))
-
-  (define (%process-type-maker-application expr-stx bind-val lexenv.run lexenv.expand)
-    ;;BIND-VAL is the binding value of an R6RS record-type:
-    ;;
-    ;;   (?rtd-id ?rcd-id)
-    ;;   (?rtd-id ?rcd-id . ?r6rs-record-type-spec)
-    ;;
-    ;;or the binding value of a Vicare struct type:
-    ;;
-    ;;   #<struct-type-descriptor>
-    ;;
-    (cond ((r6rs-record-type-descriptor-bindval? bind-val)
-	   ;;The binding is for an R6RS record type.
-	   (syntax-match expr-stx ()
-	     ((?rtd ?arg* ...)
-	      (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
-		(chi-expr (bless
-			   `((record-constructor ,rcd-id) . ,?arg*))
-			  lexenv.run lexenv.expand)))
-	     ))
-
-	  ((struct-type-descriptor-bindval? bind-val)
-	   ;;The binding is for a Vicare struct type.
-	   (syntax-match expr-stx ()
-	     ((?rtd ?arg* ...)
-	      (let ((field-name* (struct-type-field-names
-				  (struct-type-descriptor-bindval-std bind-val))))
-		(chi-expr (bless
-			   `((lambda ,field-name*
-			       ($struct (quote ,bind-val) . ,field-name*))
-			     . ,?arg*))
-			  lexenv.run lexenv.expand)))
-	     ))
-
-	  (else
-	   (stx-error expr-stx "invalid binding for identifier"))))
-
-  #| end of module |# )
-
-(define (chi-expr* expr* lexenv.run lexenv.expand)
-  ;;Recursive function.  Expand the expressions in EXPR* left to right.
-  ;;
-  (if (null? expr*)
-      '()
-    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
-    ;;rest.
-    (let ((expr0 (chi-expr (car expr*) lexenv.run lexenv.expand)))
-      (cons expr0
-	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
-
-
-;;;; chi procedures: definitions and lambda clauses
-
-(define (chi-lambda-clause input-form-stx formals-stx body-form-stx* lexenv.run lexenv.expand)
-  ;;Expand  a LAMBDA  or CASE-LAMBDA  clause  body, return  2 values:  a
-  ;;proper or improper list of  lex gensyms representing the formals; an
-  ;;expanded language expression representing the body of the clause.
-  ;;
-  ;;A LAMBDA clause defines a lexical  contour, so: we build a new <RIB>
-  ;;for it,  initialised with  the id/label  associations of  the LAMBDA
-  ;;arguments; we push new lexical bindings on LEXENV.RUN.
-  ;;
-  ;;NOTE  The expander  for the  internal body  will create  yet another
-  ;;lexical contour to hold the body's internal definitions.
-  ;;
-  (while-not-expanding-application-first-subform
-   (syntax-match formals-stx ()
-     ((?arg* ...)
-      (begin
-	(%verify-formals-syntax formals-stx input-form-stx)
-	(let ((lex* (map gensym-for-lexical-var ?arg*))
-	      (lab* (map gensym-for-label       ?arg*)))
-	  (values lex*
-		  (chi-internal-body (push-lexical-contour
-					 (make-filled-rib ?arg* lab*)
-				       body-form-stx*)
-				     (add-lexical-bindings lab* lex* lexenv.run)
-				     lexenv.expand)))))
-     ((?arg* ... . ?rest-arg)
-      (begin
-	(%verify-formals-syntax formals-stx input-form-stx)
-	(let ((lex* (map gensym-for-lexical-var ?arg*))
-	      (lab* (map gensym-for-label       ?arg*))
-	      (lex  (gensym-for-lexical-var ?rest-arg))
-	      (lab  (gensym-for-label       ?rest-arg)))
-	  (values (append lex* lex) ;yes, this builds an improper list
-		  (chi-internal-body (push-lexical-contour
-					 (make-filled-rib (cons ?rest-arg ?arg*)
-							(cons lab       lab*))
-				       body-form-stx*)
-				     (add-lexical-bindings (cons lab lab*)
-							   (cons lex lex*)
-							   lexenv.run)
-				     lexenv.expand)))))
-     (_
-      (stx-error formals-stx "invalid syntax")))))
-
-(define (chi-lambda-clause* input-form-stx formals-stx* body-form-stx** lexenv.run lexenv.expand)
-  ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
-  ;;
-  ;;1. A list of subslist, each  sublist being a proper or improper list
-  ;;   of lex gensyms representing the formals.
-  ;;
-  ;;2.  A list  of expanded language expressions,  each representing the
-  ;;   expanded body of a clause.
-  ;;
-  (if (null? formals-stx*)
-      (values '() '())
-    (receive (formals-lex body-core)
-	(chi-lambda-clause input-form-stx (car formals-stx*) (car body-form-stx**) lexenv.run lexenv.expand)
-      (receive (formals-lex* body-core*)
-	  (chi-lambda-clause* input-form-stx (cdr formals-stx*) (cdr body-form-stx**) lexenv.run lexenv.expand)
-	(values (cons formals-lex formals-lex*)
-		(cons body-core   body-core*))))))
-
-(define (chi-defun input-form-stx lexenv.run lexenv.expand)
-  ;;Expand a syntax object representing a  DEFINE syntax for the case of
-  ;;function  definition.    Return  an  expanded   language  expression
-  ;;representing the expanded definition.
-  ;;
-  ;;NOTE  This  function assumes  the  INPUT-FORM-STX  has already  been
-  ;;parsed, and the  binding for ?CTXT has already been  added to LEXENV
-  ;;by the caller.
-  ;;
-  (syntax-match input-form-stx ()
-    ((_ (?ctxt . ?fmls) . ?body-form*)
-     (receive (fmls body)
-	 (chi-lambda-clause input-form-stx ?fmls ?body-form* lexenv.run lexenv.expand)
-       (build-lambda (syntax-annotation ?ctxt) fmls body)))))
-
-
-;;;; chi procedures: lexical bindings qualified right-hand sides
-;;
-;;A "qualified  right-hand side  expression" is  a pair  whose car  is a
-;;symbol specifying the type of the expression and whose cdr is a syntax
-;;object  representing  the  right-hand  side expression  of  a  lexical
-;;binding definition.
-;;
-;;For  example,  when  CHI-BODY*  expands   a  body  that  allows  mixed
-;;definitions and expressions:
-;;
-;;   (define (fun)
-;;     1)
-;;   (define var (+ 3 4))
-;;   (display 5)
-;;
-;;all the forms are parsed and the following QRHS compounds are created:
-;;
-;;   (defun    . #'(define (fun) 1))
-;;   (expr     . #'(+ 3 4))
-;;   (top-expr . #'(display 5))
-;;
-;;The possible types are:
-;;
-;;DEFUN -
-;;   For a function variable definition.  A syntax like:
-;;
-;;      (define (?id . ?formals) ?body ...)
-;;
-;;EXPR -
-;;  For an non-function variable definition.  A syntax like:
-;;
-;;      (define ?id)
-;;      (define ?id ?val)
-;;
-;;TOP-EXPR -
-;;  For an  expression that is  not a  definition; this QRHS  is created
-;;  only when mixed  definitions and expressions are  allowed.  A syntax
-;;  like:
-;;
-;;     ?expr
-;;
-;;  in this case the caller implicitly handles such expression as:
-;;
-;;     (define dummy ?expr)
-;;
-;;It is responsibility  of the caller to create  the appropriate lexical
-;;binding to represent the DEFINE syntax.
-;;
-
-(define (chi-qrhs qrhs lexenv.run lexenv.expand)
-  ;;Expand a qualified right-hand side expression and return an expanded
-  ;;language expression representing the result.
-  ;;
-  (case (car qrhs)
-    ((defun)
-     (chi-defun (cdr qrhs) lexenv.run lexenv.expand))
-
-    ((expr)
-     (let ((expr (cdr qrhs)))
-       (chi-expr expr lexenv.run lexenv.expand)))
-
-    ((top-expr)
-     (let ((expr (cdr qrhs)))
-       (build-sequence no-source
-	 (list (chi-expr expr lexenv.run lexenv.expand)
-	       (build-void)))))
-
-    (else
-     (assertion-violation 'chi-qrhs "BUG: invalid qrhs" qrhs))))
-
-(define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
-  ;;Expand   the  qualified   right-hand  side   expressions  in   QRHS*,
-  ;;left-to-right.
-  ;;
-  (let loop ((ls qrhs*))
-    ;; chi-qrhs in order
-    (if (null? ls)
-	'()
-      (let ((a (chi-qrhs (car ls) lexenv.run lexenv.expand)))
-	(cons a (loop (cdr ls)))))))
-
-
-;;;; chi procedures: internal body
-
-(define (chi-internal-body body-form-stx* lexenv.run lexenv.expand)
-  ;;This function is used to expand the internal bodies:
-  ;;
-  ;;*  The LET-like  syntaxes are  converted to  LETREC* syntaxes:  this
-  ;;  function processes the internal bodies of LETREC*.
-  ;;
-  ;;* The  LAMBDA syntaxes  are processed  as CASE-LAMBDA  clauses: this
-  ;;  function processes the internal body of CASE-LAMBDA clauses.
-  ;;
-  ;;Return  an expanded  language symbolic  expression representing  the
-  ;;expanded body.
-  ;;
-  ;;An internal body must satisfy the following constraints:
-  ;;
-  ;;* There must be at least one trailing expression, otherwise an error
-  ;;  is raised.
-  ;;
-  ;;*  Mixed  definitions  and   expressions  are  forbidden.   All  the
-  ;;  definitions must come first and the expressions last.
-  ;;
-  ;;* It is impossible to export  an internal binding from the enclosing
-  ;;  library.   The EXPORT  syntaxes present in  the internal  body are
-  ;;  discarded.
-  ;;
-  ;;An internal body having internal definitions:
-  ;;
-  ;;   (define ?id ?rhs)
-  ;;   ...
-  ;;   ?trailing-expr
-  ;;   ...
-  ;;
-  ;;is equivalent to:
-  ;;
-  ;;   (letrec* ((?id ?rhs) ...)
-  ;;     ?trailing-expr)
-  ;;
-  ;;so we create a <RIB> to describe the lexical contour of the implicit
-  ;;LETREC* and push it on the BODY-FORM-STX*.
-  ;;
-  (while-not-expanding-application-first-subform
-   (let ((rib (make-empty-rib)))
-     (receive (trailing-expr-stx*
-	       lexenv.run lexenv.expand
-	       lex* qrhs*
-	       trailing-mod-expr-stx**
-	       unused-kwd* unused-export*)
-	 (let ((mix-definitions-and-expressions?  #f)
-	       (shadowing-definitions?            #t))
-	   (chi-body* (map (lambda (x)
-			     (push-lexical-contour rib x))
-			(syntax->list body-form-stx*))
-		      lexenv.run lexenv.expand
-		      '() '() '() '() '() rib
-		      mix-definitions-and-expressions?
-		      shadowing-definitions?))
-       (when (null? trailing-expr-stx*)
-	 (stx-error trailing-expr-stx* "no expression in body"))
-       (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**)
-						  trailing-expr-stx*)
-					  lexenv.run lexenv.expand))
-	      (rhs-core*       (chi-qrhs* qrhs* lexenv.run lexenv.expand)))
-	 (build-letrec* no-source
-	   (reverse lex*)
-	   (reverse rhs-core*)
-	   (build-sequence no-source
-	     all-expr-core*)))))))
-
-
-;;;; chi procedures: body
-
-(module (chi-body*)
-  ;;The recursive function CHI-BODY* expands  the forms of a body.  Here
-  ;;we  expand:
-  ;;
-  ;;* User-defined the macro definitions and uses.
-  ;;
-  ;;* Non-core macro uses.
-  ;;
-  ;;*  Basic  language  syntaxes: LIBRARY,  MODULE,  BEGIN,  STALE-WHEN,
-  ;;  IMPORT, EXPORT.
-  ;;
-  ;;but  expand neither  the core  macros nor  the variable  definitions
-  ;;(DEFINE forms)  and trailing  expressions: the  variable definitions
-  ;;are accumulated  in the  argument and return  value QRHS*  for later
-  ;;expansion; the trailing expressions  are accumulated in the argument
-  ;;and return value BODY-FORM-STX* for later expansion.
-  ;;
-  ;;Here is a description of the arguments.
-  ;;
-  ;;BODY-FORM-STX* must be null or a list of syntax objects representing
-  ;;the forms.
-  ;;
-  ;;LEXENV.RUN and LEXENV.EXPAND must  be lists representing the current
-  ;;lexical environment for run and expand times.
-  ;;
-  ;;LEX* must be a list of gensyms and QRHS* must be a list of qualified
-  ;;right-hand sides representing right-hand side expressions for DEFINE
-  ;;syntax uses; they  are meant to be processed together  item by item.
-  ;;Whenever the QRHS expressions are  expanded: a core language binding
-  ;;will be  created with a LEX  gensym associate to a  QRHS expression.
-  ;;The QRHS have the formats:
-  ;;
-  ;; (defun . ?full-form)
-  ;;		Represents  a  DEFINE  form which  defines  a  function.
-  ;;		?FULL-FORM is  the syntax  object representing  the full
-  ;;		DEFINE form.
-  ;;
-  ;; (expr  . ?val)
-  ;;		Represents a  DEFINE form  which defines  a non-function
-  ;;		variable.   ?VAL is  a  syntax  object representing  the
-  ;;		variable's value.
-  ;;
-  ;; (top-expr . ?body-form-stx)
-  ;;		Represents   a  dummy   DEFINE   form  introduced   when
-  ;;		processing an expression in a R6RS program.
-  ;;
-  ;;About the MOD** argument.  We  know that module definitions have the
-  ;;syntax:
-  ;;
-  ;;   (module (?export-id ...) ?definition ... ?expression ...)
-  ;;
-  ;;and  the trailing  ?EXPRESSION  forms must  be  evaluated after  the
-  ;;right-hand sides  of the DEFINE syntaxes  of the module but  also of
-  ;;the  enclosing  lexical context.   So  when  expanding a  MODULE  we
-  ;;accumulate such expression syntax objects in the MOD** argument as:
-  ;;
-  ;;   MOD** == ((?expression ...) ...)
-  ;;
-  ;;KWD* is a  list of identifiers representing the  syntaxes defined in
-  ;;this body.  It is used to test for duplicate definitions.
-  ;;
-  ;;EXPORT-SPEC* is  null or a  list of syntax objects  representing the
-  ;;export specifications from this body.  It is to be processed later.
-  ;;
-  ;;RIB is the current lexical environment's rib.
-  ;;
-  ;;MIX? is interpreted  as boolean.  When false:  the expansion process
-  ;;visits all  the definition forms  and stops at the  first expression
-  ;;form; the expression  forms are returned to the  caller.  When true:
-  ;;the  expansion  process visits  all  the  definition and  expression
-  ;;forms, accepting  a mixed  sequence of them;  an expression  form is
-  ;;handled as a dummy definition form.
-  ;;
-  ;;When SD? is false this body  is allowed to redefine bindings created
-  ;;by DEFINE;  this happens when expanding  for the Scheme REPL  in the
-  ;;interaction environment.  When SD? is true: attempting to redefine a
-  ;;DEFINE binding will raise an exception.
-  ;;
-  (define (chi-body* body-form-stx* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib mix? sd?)
-    (while-not-expanding-application-first-subform
-     (if (null? body-form-stx*)
-	 (values body-form-stx* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
-       (let ((body-form-stx (car body-form-stx*)))
-	 (receive (type bind-val kwd)
-	     (expr-syntax-type body-form-stx lexenv.run)
-	   (let ((kwd* (if (identifier? kwd)
-			   (cons kwd kwd*)
-			 kwd*)))
-	     (case type
-
-	       ((define)
-		;;The body form is a core language DEFINE macro use:
-		;;
-		;;   (define ?id ?rhs)
-		;;
-		;;We create a new lexical binding:
-		;;
-		;;* We  generate a  label gensym uniquely  associated to
-		;;  the binding and a lex  gensym as name of the binding
-		;;  in the  expanded code.
-		;;
-		;;* We register the association id/label in the rib.
-		;;
-		;;*  We push  an entry  on LEXENV.RUN  to represent  the
-		;;  association label/lex.
-		;;
-		;;* Finally we recurse on the rest of the body.
-		;;
-		;;Notice that:
-		;;
-		;;* The ?RHS will be expanded later.
-		;;
-		;;*  If the  binding is  at the  top-level of  a program
-		;;  body:  we need a loc  gensym to store the  result of
-		;;  evaluating ?RHS.  This loc will be generated later.
-		;;
-		;;*  If  the binding  is  at  the  top-level of  a  REPL
-		;;  expression: we need a loc gensym to store the result
-		;;   of  evaluating  ?RHS.   In this  case  the  loc  is
-		;;  generated here by GEN-DEFINE-LABEL+LEX.
-		;;
-		(receive (id qrhs)
-		    (%parse-define body-form-stx)
-		  (when (bound-id-member? id kwd*)
-		    (stx-error body-form-stx "cannot redefine keyword"))
-		  (receive (lab lex)
-		      (gen-define-label+lex id rib sd?)
-		    (extend-rib! rib id lab sd?)
-		    (chi-body* (cdr body-form-stx*)
-			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
-			       (cons lex lex*) (cons qrhs qrhs*)
-			       mod** kwd* export-spec* rib mix? sd?))))
-
-	       ((define-syntax)
-		;;The body  form is a core  language DEFINE-SYNTAX macro
-		;;use.    We  expand   and   evaluate  the   transformer
-		;;expression, build a syntactic binding for it, register
-		;;the label in the rib.   Finally we recurse on the rest
-		;;of the body.
-		;;
-		(receive (id rhs-stx)
-		    (%parse-define-syntax body-form-stx)
-		  (when (bound-id-member? id kwd*)
-		    (stx-error body-form-stx "cannot redefine keyword"))
-		  ;;We want order here!?!
-		  (let* ((lab          (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
-		    ;;First map  the identifier  to the  label, creating
-		    ;;the binding; then evaluate the macro transformer.
-		    (extend-rib! rib id lab sd?)
-		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs lexenv.run))))
-		      (chi-body* (cdr body-form-stx*)
-				 (cons entry lexenv.run)
-				 (cons entry lexenv.expand)
-				 lex* qrhs* mod** kwd* export-spec* rib
-				 mix? sd?)))))
-
-	       ((define-fluid-syntax)
-		;;The body  form is a core  language DEFINE-FLUID-SYNTAX
-		;;macro  use.  We  expand and  evaluate the  transformer
-		;;expression, build syntactic  bindings for it, register
-		;;the label in the rib.   Finally we recurse on the rest
-		;;of the body.
-		;;
-		(receive (id rhs-stx)
-		    (%parse-define-syntax body-form-stx)
-		  (when (bound-id-member? id kwd*)
-		    (stx-error body-form-stx "cannot redefine keyword"))
-		  ;;We want order here!?!
-		  (let* ((lab          (gen-define-syntax-label id rib sd?))
-			 (flab         (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
-		    ;;First map the identifier to  the label, so that it
-		    ;;is bound; then evaluate the macro transformer.
-		    (extend-rib! rib id lab sd?)
-		    (let* ((binding  (%eval-macro-transformer expanded-rhs lexenv.run))
-			   ;;This LEXENV entry represents the definition
-			   ;;of the fluid syntax.
-			   (entry1   (cons lab (make-fluid-syntax-binding flab)))
-			   ;;This  LEXENV entry  represents the  current
-			   ;;binding  of the  fluid syntax;  the binding
-			   ;;descriptor   is    of   type   LOCAL-MACRO,
-			   ;;LOCAL-MACRO!  or  LOCAL-CTV.  Other entries
-			   ;;like this  one can be pushed  to rebind the
-			   ;;fluid syntax.
-			   (entry2   (cons flab binding)))
-		      (chi-body* (cdr body-form-stx*)
-				 (cons* entry1 entry2 lexenv.run)
-				 (cons* entry1 entry2 lexenv.expand)
-				 lex* qrhs* mod** kwd* export-spec* rib
-				 mix? sd?)))))
-
-	       ((define-alias)
-		;;The body  form is  a core language  DEFINE-ALIAS macro
-		;;use.  We add a new association identifier/label to the
-		;;current rib.   Finally we recurse  on the rest  of the
-		;;body.
-		;;
-		(receive (alias-id old-id)
-		    (%parse-define-alias body-form-stx)
-		  (when (bound-id-member? old-id kwd*)
-		    (stx-error body-form-stx "cannot redefine keyword"))
-		  (cond ((id->label old-id)
-			 => (lambda (label)
-			      (extend-rib! rib alias-id label sd?)
-			      (chi-body* (cdr body-form-stx*)
-					 lexenv.run lexenv.expand
-					 lex* qrhs* mod** kwd* export-spec* rib
-					 mix? sd?)))
-			(else
-			 (stx-error body-form-stx "unbound source identifier")))))
-
-	       ((let-syntax letrec-syntax)
-		;;The  body  form  is  a  core  language  LET-SYNTAX  or
-		;;LETREC-SYNTAX macro  use.  We expand and  evaluate the
-		;;transformer expressions, build  syntactic bindings for
-		;;them, register their labels in  a new rib because they
-		;;are visible  only in the internal  body.  The internal
-		;;forms are  spliced in the  external body but  with the
-		;;rib added to them.
-		;;
-		(syntax-match body-form-stx ()
-		  ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
-		   (unless (valid-bound-ids? ?xlhs*)
-		     (stx-error body-form-stx "invalid identifiers"))
-		   (let* ((xlab*  (map gensym-for-label ?xlhs*))
-			  (xrib   (make-filled-rib ?xlhs* xlab*))
-			  ;;We evaluate the  transformers for LET-SYNTAX
-			  ;;without   pushing  the   XRIB:  the   syntax
-			  ;;bindings do not exist  in the environment in
-			  ;;which the transformer is evaluated.
-			  ;;
-			  ;;We    evaluate    the    transformers    for
-			  ;;LETREC-SYNTAX  after pushing  the XRIB:  the
-			  ;;syntax bindings do  exist in the environment
-			  ;;in which the transformer is evaluated.
-			  (xbind* (map (lambda (x)
-					 (%eval-macro-transformer
-					  (%expand-macro-transformer
-					   (if (eq? type 'let-syntax)
-					       x
-					     (push-lexical-contour xrib x))
-					   lexenv.expand)
-					  lexenv.run))
-				    ?xrhs*)))
-		     (chi-body*
-		      ;;Splice the internal body forms but add a lexical
-		      ;;contour to them.
-		      (append (map (lambda (internal-body-form)
-				     (push-lexical-contour xrib
-				       internal-body-form))
-				?xbody*)
-			      (cdr body-form-stx*))
-		      ;;Push   on   the  lexical   environment   entries
-		      ;;corresponding  to  the defined  syntaxes.   Such
-		      ;;entries  will  stay  there even  after  we  have
-		      ;;processed the internal body forms; this is not a
-		      ;;problem because the labels cannot be seen by the
-		      ;;rest of the body.
-		      (append (map cons xlab* xbind*) lexenv.run)
-		      (append (map cons xlab* xbind*) lexenv.expand)
-		      lex* qrhs* mod** kwd* export-spec* rib
-		      mix? sd?)))))
-
-	       ((begin-for-syntax)
-		;;The body  form is  a BEGIN-FOR-SYNTAX syntax  use.  We
-		;;expand the  expressions using LEXENV.EXPAND  as LEXENV
-		;;for run-time, much like what we do when evaluating the
-		;;right-hand side  of a DEFINE-SYNTAX, but  handling the
-		;;sequence of  expressions as  a body;  then we  build a
-		;;special   core   language   expression   with   global
-		;;assignments; finally we evaluate result.
-		;;
-		(syntax-match body-form-stx ()
-		  ((_ ?expr* ...)
-		   (receive ( ;;
-			     all-expr-core* rhs-core*
-			     lexenv.expand^ lexenv.super^
-			     lex*^ qrhs*^ mod**^ kwd*^ export-spec*^)
-		       (let ((rtc (make-collector)))
-			 (parametrise ((inv-collector rtc)
-				       (vis-collector (lambda (x) (values))))
-			   (receive (empty
-				     lexenv.expand^ lexenv.super^
-				     lex*^ qrhs*^ mod**^ kwd*^ export-spec*^)
-			       ;;Expand  the  sequence  as  a  top-level
-			       ;;body, accumulating the definitions.
-			       (let ((lexenv.super                     lexenv.expand)
-				     (mix-definitions-and-expressions? #t)
-				     (shadowing-definitions?           #t))
-				 (chi-body* (list (cons (bless 'begin) ?expr*))
-					    lexenv.expand lexenv.super
-					    '() '() '() '() '() rib
-					    mix-definitions-and-expressions?
-					    shadowing-definitions?))
-			     ;;There should  be no  trailing expressions
-			     ;;because we allowed mixing definitions and
-			     ;;expressions as in a top-level program.
-			     (assert (null? empty))
-			     ;;Expand  the  definitions and  the  module
-			     ;;trailing   expressions,  then   build  an
-			     ;;expanded language expression.
-			     (let* ((all-expr-core*  (chi-expr* (reverse-and-append mod**^)
-								lexenv.expand^ lexenv.super^))
-				    (rhs-core*       (chi-qrhs* qrhs*^ lexenv.expand^ lexenv.super^)))
-			       ;;Now  that we  have  fully expanded  the
-			       ;;forms:  we  invoke  all  the  libraries
-			       ;;needed to evaluate them.
-			       (for-each
-				   (let ((register-visited-library (vis-collector)))
-				     (lambda (lib)
-				       (invoke-library lib)
-				       (register-visited-library lib)))
-				 (rtc))
-			       ;;Let's  get   out  of   the  collectors'
-			       ;;PARAMETRISE syntaxes.
-			       (values all-expr-core* rhs-core*
-				       lexenv.expand^ lexenv.super^
-				       lex*^ qrhs*^ mod**^ kwd*^ export-spec*^)))))
-		     ;;Build an expanded code expression and evaluate it.
-		     (let ((code-core (build-sequence no-source
-					(list (if (null? rhs-core*)
-						  (build-void)
-						(build-sequence no-source
-						  (map (lambda (lhs rhs)
-							 (build-global-assignment no-source lhs rhs))
-						    (reverse lex*^)
-						    (reverse rhs-core*))))
-					      (if (null? all-expr-core*)
-						  (build-void)
-						(build-sequence no-source
-						  all-expr-core*))))))
-		       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			 (eval-core (expanded->core code-core))))
-		     ;;Done!  Now go on with the next body forms.
-		     (chi-body* (cdr body-form-stx*)
-				lexenv.run lexenv.expand^
-				lex* qrhs* mod** kwd* export-spec* rib
-				mix? sd?)))
-		  ))
-
-	       ((begin)
-		;;The body form is a  BEGIN syntax use.  Just splice the
-		;;expressions and recurse on them.
-		;;
-		(syntax-match body-form-stx ()
-		  ((_ ?expr* ...)
-		   (chi-body* (append ?expr* (cdr body-form-stx*))
-			      lexenv.run lexenv.expand
-			      lex* qrhs* mod** kwd* export-spec* rib mix? sd?))))
-
-	       ((stale-when)
-		;;The body form is a STALE-WHEN syntax use.  Process the
-		;;stale-when  guard  expression,  then just  splice  the
-		;;internal expressions as we do for BEGIN and recurse.
-		;;
-		(syntax-match body-form-stx ()
-		  ((_ ?guard ?expr* ...)
-		   (begin
-		     (handle-stale-when ?guard lexenv.expand)
-		     (chi-body* (append ?expr* (cdr body-form-stx*))
-				lexenv.run lexenv.expand
-				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
-
-	       ((global-macro global-macro!)
-		;;The  body form  is a  macro  use, where  the macro  is
-		;;imported  from  a  library.    We  perform  the  macro
-		;;expansion,  then  recurse   on  the  resulting  syntax
-		;;object.
-		;;
-		(let ((body-form-stx^ (chi-global-macro bind-val body-form-stx lexenv.run rib)))
-		  (chi-body* (cons body-form-stx^ (cdr body-form-stx*))
-			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
-
-	       ((local-macro local-macro!)
-		;;The  body form  is a  macro  use, where  the macro  is
-		;;locally defined.  We perform the macro expansion, then
-		;;recurse on the resulting syntax object.
-		;;
-		(let ((body-form-stx^ (chi-local-macro bind-val body-form-stx lexenv.run rib)))
-		  (chi-body* (cons body-form-stx^ (cdr body-form-stx*))
-			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
-
-	       ((macro)
-		;;The body  form is a  macro use,  where the macro  is a
-		;;non-core macro integrated in the expander.  We perform
-		;;the  macro expansion,  then recurse  on the  resulting
-		;;syntax object.
-		;;
-		(let ((body-form-stx^ (chi-non-core-macro bind-val body-form-stx lexenv.run rib)))
-		  (chi-body* (cons body-form-stx^ (cdr body-form-stx*))
-			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
-
-	       ((module)
-		;;The body  form is  an internal module  definition.  We
-		;;process the  module, then recurse  on the rest  of the
-		;;body.
-		;;
-		(receive (lex* qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		    (chi-internal-module body-form-stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
-		  ;;Extend the rib with  the syntactic bindings exported
-		  ;;by the module.
-		  (vector-for-each (lambda (id lab)
-				     (extend-rib! rib id lab sd?))
-		    m-exp-id* m-exp-lab*)
-		  (chi-body* (cdr body-form-stx*) lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec*
-			     rib mix? sd?)))
-
-	       ((library)
-		;;The body form is a library definition.  We process the
-		;;library, then recurse on the rest of the body.
-		;;
-		(expand-library (syntax->datum body-form-stx))
-		(chi-body* (cdr body-form-stx*)
-			   lexenv.run lexenv.expand
-			   lex* qrhs* mod** kwd* export-spec*
-			   rib mix? sd?))
-
-	       ((export)
-		;;The body form  is an EXPORT form.   We just accumulate
-		;;the export specifications, to  be processed later, and
-		;;we recurse on the rest of the body.
-		;;
-		(syntax-match body-form-stx ()
-		  ((_ ?export-spec* ...)
-		   (chi-body* (cdr body-form-stx*)
-			      lexenv.run lexenv.expand
-			      lex* qrhs* mod** kwd*
-			      (append ?export-spec* export-spec*)
-			      rib mix? sd?))))
-
-	       ((import)
-		;;The body form is an  IMPORT form.  We just process the
-		;;form  which results  in  extending the  RIB with  more
-		;;identifier-to-label associations.   Finally we recurse
-		;;on the rest of the body.
-		;;
-		(%chi-import body-form-stx lexenv.run rib sd?)
-		(chi-body* (cdr body-form-stx*) lexenv.run lexenv.expand
-			   lex* qrhs* mod** kwd* export-spec* rib mix? sd?))
-
-	       (else
-		;;Any other expression.
-		;;
-		;;If mixed  definitions and expressions are  allowed, we
-		;;handle this expression as an implicit definition:
-		;;
-		;;   (define dummy ?body-form)
-		;;
-		;;which is  not really part of  the lexical environment:
-		;;we  only generate  a lex  and a  qrhs for  it, without
-		;;adding entries to  LEXENV-RUN; then we move  on to the
-		;;next body form.
-		;;
-		;;If mixed definitions and expressions are forbidden: we
-		;;have reached  the end  of definitions and  expect this
-		;;and  all  the  other  forms in  BODY-FORM-STX*  to  be
-		;;expressions.  So BODY-FORM-STX*  becomes the "trailing
-		;;expressions" return value.
-		;;
-		(if mix?
-		    (chi-body* (cdr body-form-stx*)
-			       lexenv.run lexenv.expand
-			       (cons (gensym-for-lexical-var 'dummy) lex*)
-			       (cons (cons 'top-expr body-form-stx) qrhs*)
-			       mod** kwd* export-spec* rib #t sd?)
-		  (values body-form-stx* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*))))))))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%parse-define x)
-    ;;Syntax parser for R6RS's DEFINE.
-    ;;
-    (syntax-match x ()
-      ((_ (?id . ?fmls) ?b ?b* ...)
-       (identifier? ?id)
-       (begin
-	 (%verify-formals-syntax ?fmls x)
-	 (values ?id (cons 'defun x))))
-
-      ((_ ?id ?val)
-       (identifier? ?id)
-       (values ?id (cons 'expr ?val)))
-
-      ((_ ?id)
-       (identifier? ?id)
-       (values ?id (cons 'expr (bless '(void)))))
-      ))
-
-  (define (%parse-define-syntax stx)
-    ;;Syntax  parser for  R6RS's DEFINE-SYNTAX,  extended with  Vicare's
-    ;;syntax.  Accept both:
-    ;;
-    ;;  (define-syntax ?name ?transformer-expr)
-    ;;  (define-syntax (?name ?arg) ?body0 ?body ...)
-    ;;
-    (syntax-match stx ()
-      ((_ ?id)
-       (identifier? ?id)
-       (values ?id (bless '(syntax-rules ()))))
-      ((_ ?id ?transformer-expr)
-       (identifier? ?id)
-       (values ?id ?transformer-expr))
-      ((_ (?id ?arg) ?body0 ?body* ...)
-       (and (identifier? ?id)
-	    (identifier? ?arg))
-       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
-      ))
-
-  (define (%parse-define-alias body-form-stx)
-    ;;Syntax parser for Vicares's DEFINE-ALIAS.
-    ;;
-    (syntax-match body-form-stx ()
-      ((_ ?alias-id ?old-id)
-       (and (identifier? ?alias-id)
-	    (identifier? ?old-id))
-       (values ?alias-id ?old-id))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (module (%chi-import)
-    ;;Process an IMPORT form.  The purpose of such forms is to push some
-    ;;new identifier-to-label association on the current RIB.
-    ;;
-    (define (%chi-import body-form-stx lexenv.run rib sd?)
-      (receive (id* lab*)
-	  (%any-import*-checked body-form-stx lexenv.run)
-	(vector-for-each (lambda (id lab)
-			   (extend-rib! rib id lab sd?))
-	  id* lab*)))
-
-    (define (%any-import*-checked import-form lexenv.run)
-      (syntax-match import-form ()
-	((?ctxt ?import-spec* ...)
-	 (%any-import* ?ctxt ?import-spec* lexenv.run))
-	(_
-	 (stx-error import-form "invalid import form"))))
-
-    (define (%any-import* ctxt import-spec* lexenv.run)
-      (if (null? import-spec*)
-	  (values '#() '#())
-	(let-values
-	    (((t1 t2) (%any-import  ctxt (car import-spec*) lexenv.run))
-	     ((t3 t4) (%any-import* ctxt (cdr import-spec*) lexenv.run)))
-	  (values (vector-append t1 t3)
-		  (vector-append t2 t4)))))
-
-    (define (%any-import ctxt import-spec lexenv.run)
-      (if (identifier? import-spec)
-	  (%module-import (list ctxt import-spec) lexenv.run)
-	(%library-import (list ctxt import-spec))))
-
-    (define (%module-import import-form lexenv.run)
-      (syntax-match import-form ()
-	((_ ?id)
-	 (identifier? ?id)
-	 (receive (type bind-val kwd)
-	     (expr-syntax-type ?id lexenv.run)
-	   (case type
-	     (($module)
-	      (let ((iface bind-val))
-		(values (module-interface-exp-id*     iface ?id)
-			(module-interface-exp-lab-vec iface))))
-	     (else
-	      (stx-error import-form "invalid import")))))))
-
-    (define (%library-import import-form)
-      (syntax-match import-form ()
-	((?ctxt ?imp* ...)
-	 ;;NAME-VEC  is a  vector of  symbols representing  the external
-	 ;;names of  the imported  bindings.  LABEL-VEC  is a  vector of
-	 ;;label gensyms uniquely associated to the imported bindings.
-	 (receive (name-vec label-vec)
-	     (let ()
-	       (import PARSE-IMPORT-SPEC)
-	       (parse-import-spec* (syntax->datum ?imp*)))
-	   (values (vector-map (lambda (name)
-				 (datum->stx ?ctxt name))
-		     name-vec)
-		   label-vec)))
-	(_
-	 (stx-error import-form "invalid import form"))))
-
-    #| end of module: %CHI-IMPORT |# )
-
-  #| end of module: CHI-BODY* |# )
-
-
-;;;; chi procedures: module processing
-
-(module (chi-internal-module
-	 module-interface-exp-id*
-	 module-interface-exp-lab-vec)
-
-  (define-record module-interface
-    (first-mark
-		;The first  mark in  the lexical  context of  the MODULE
-		;form.
-     exp-id-vec
-		;A vector of identifiers exported by the module.
-     exp-lab-vec
-		;A  vector   of  gensyms   acting  as  labels   for  the
-		;identifiers in the field EXP-ID-VEC.
-     ))
-
-  (define (chi-internal-module module-form-stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
-    ;;Expand the  syntax object MODULE-FORM-STX which  represents a core
-    ;;langauge MODULE syntax use.
-    ;;
-    ;;LEXENV.RUN  and  LEXENV.EXPAND  must  be  lists  representing  the
-    ;;current lexical environment for run and expand times.
-    ;;
-    (receive (name export-id* internal-body-form*)
-	(%parse-module module-form-stx)
-      (let* ((module-rib               (make-empty-rib))
-	     (internal-body-form*/rib  (map (lambda (form)
-					      (push-lexical-contour module-rib form))
-					 (syntax->list internal-body-form*))))
-	(receive (leftover-body-expr* lexenv.run lexenv.expand lex* qrhs* mod** kwd* _export-spec*)
-	    ;;In a module: we do not want the trailing expressions to be
-	    ;;converted to dummy definitions; rather  we want them to be
-	    ;;accumulated in the MOD** argument, for later expansion and
-	    ;;evaluation.  So we set MIX? to false.
-	    (let ((empty-export-spec*      '())
-		  (mix?                    #f)
-		  (shadowing-definitions?  #t))
-	      (chi-body* internal-body-form*/rib
-			 lexenv.run lexenv.expand
-			 lex* qrhs* mod** kwd* empty-export-spec*
-			 module-rib mix? shadowing-definitions?))
-	  ;;The list  of exported identifiers  is not only the  one from
-	  ;;the MODULE  argument, but also  the one from all  the EXPORT
-	  ;;forms in the MODULE's body.
-	  (let* ((all-export-id*  (vector-append export-id* (list->vector _export-spec*)))
-		 (all-export-lab* (vector-map
-				      (lambda (id)
-					;;For every  exported identifier
-					;;there must be  a label already
-					;;in the rib.
-					(or (id->label (make-<stx> (identifier->symbol id)
-								   (<stx>-mark* id)
-								   (list module-rib)
-								   '()))
-					    (stx-error id "cannot find module export")))
-				    all-export-id*))
-		 (mod**           (cons leftover-body-expr* mod**)))
-	    (if (not name)
-		;;The module  has no name.  All  the exported identifier
-		;;will go in the enclosing lexical environment.
-		(values lex* qrhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
-	      ;;The module has a name.  Only  the name itself will go in
-	      ;;the enclosing lexical environment.
-	      (let* ((name-label (gensym-for-label 'module))
-		     (iface      (make-module-interface
-				  (car (<stx>-mark* name))
-				  (vector-map
-				      (lambda (x)
-					;;This   is   a  syntax   object
-					;;holding an identifier.
-					(make-<stx> (<stx>-expr x) ;expression
-						    (<stx>-mark* x) ;list of marks
-						    '() ;list of substs
-						    '())) ;annotated expressions
-				    all-export-id*)
-				  all-export-lab*))
-		     (binding    (make-module-binding iface))
-		     (entry      (cons name-label binding)))
-		(values lex* qrhs*
-			;;FIXME:  module   cannot  export   itself  yet.
-			;;Abdulaziz Ghuloum.
-			(vector name)
-			(vector name-label)
-			(cons entry lexenv.run)
-			(cons entry lexenv.expand)
-			mod** kwd*))))))))
-
-  (define (%parse-module module-form-stx)
-    ;;Parse a  syntax object representing  a core language  MODULE form.
-    ;;Return 3  values: false or  an identifier representing  the module
-    ;;name; a list  of identifiers selecting the  exported bindings from
-    ;;the first MODULE  argument; a list of  syntax objects representing
-    ;;the internal body forms.
-    ;;
-    (syntax-match module-form-stx ()
-      ((_ (?export* ...) ?body* ...)
-       (begin
-	 (unless (for-all identifier? ?export*)
-	   (stx-error module-form-stx "module exports must be identifiers"))
-	 (values #f (list->vector ?export*) ?body*)))
-      ((_ ?name (?export* ...) ?body* ...)
-       (begin
-	 (unless (identifier? ?name)
-	   (stx-error module-form-stx "module name must be an identifier"))
-	 (unless (for-all identifier? ?export*)
-	   (stx-error module-form-stx "module exports must be identifiers"))
-	 (values ?name (list->vector ?export*) ?body*)))
-      ))
-
-  (module (module-interface-exp-id*)
-
-    (define (module-interface-exp-id* iface id-for-marks)
-      (let ((diff   (%diff-marks (<stx>-mark* id-for-marks)
-				 (module-interface-first-mark iface)))
-	    (id-vec (module-interface-exp-id-vec iface)))
-	(if (null? diff)
-	    id-vec
-	  (vector-map
-	      (lambda (x)
-		(make-<stx> (<stx>-expr x)		  ;expression
-			    (append diff (<stx>-mark* x)) ;list of marks
-			    '()	  ;list of substs
-			    '())) ;annotated expressions
-	    id-vec))))
-
-    (define (%diff-marks mark* the-mark)
-      ;;MARK* must be  a non-empty list of marks; THE-MARK  must be a mark
-      ;;in MARK*.  Return  a list of the  elements of MARK* up  to and not
-      ;;including THE-MARK.
-      ;;
-      (when (null? mark*)
-	(error '%diff-marks "BUG: should not happen"))
-      (let ((a (car mark*)))
-	(if (eq? a the-mark)
-	    '()
-	  (cons a (%diff-marks (cdr mark*) the-mark)))))
-
-    #| end of module: MODULE-INTERFACE-EXP-ID* |# )
-
-  #| end of module |# )
-
-
-;;;; chi procedures: stale-when handling
-
-(define (handle-stale-when guard-expr lexenv.expand)
-  (let* ((stc       (make-collector))
-	 (core-expr (parametrise ((inv-collector stc))
-		      (chi-expr guard-expr lexenv.expand lexenv.expand))))
-    (cond ((stale-when-collector)
-	   => (lambda (c)
-		(c core-expr (stc)))))))
-
-
-;;;; chi procedures: end of module
-
-#| end of module |# )
-
-
-;;;; errors
+    ((_ ?input-form . ?body)
+     (with-exception-handler
+	 (lambda (E)
+	   (raise (condition E (make-macro-use-input-form-condition ?input-form))))
+       (lambda () . ?body)))
+    ))
 
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset
 			 line-number column-number)
-  ;;Invoked by the  expansion of the ASSERT macro to  raise an assertion
-  ;;violation.
+  ;;Invoked by the expansion of the ASSERT macro to raise an assertion violation.
   ;;
   (raise
    (condition (make-assertion-violation)
@@ -13610,83 +7191,128 @@
 					      byte-offset character-offset
 					      line-number column-number))))
 
+(module (syntax-violation/internal-error
+	    assertion-violation/internal-error)
+
+  (case-define* syntax-violation/internal-error
+    ((who {msg string?} form)
+     (syntax-violation who (string-append PREFIX msg) form #f))
+    ((who {msg string?} form subform)
+     (syntax-violation who (string-append PREFIX msg) form subform)))
+
+  (case-define* assertion-violation/internal-error
+    ((who {msg string?} . irritants)
+     (apply assertion-violation who (string-append PREFIX msg) irritants))
+    ((who {msg string?} . irritants)
+     (apply assertion-violation who (string-append PREFIX msg) irritants)))
+
+  (define-constant PREFIX
+    "Vicare Scheme: internal error: ")
+
+  #| end of module |# )
+
 (define-syntax stx-error
   ;;Convenience wrapper for raising syntax violations.
   ;;
   (syntax-rules (quote)
     ((_ ?expr-stx)
-     (syntax-violation #f "invalid syntax" ?expr-stx))
+     (syntax-violation #f "syntax error" ?expr-stx))
     ((_ ?expr-stx ?msg)
      (syntax-violation #f ?msg ?expr-stx))
     ((_ ?expr-stx ?msg ?who)
      (syntax-violation ?who ?msg ?expr-stx))
     ))
 
-(module (syntax-error
-	 syntax-violation
-	 %raise-unbound-error)
-
-  (define (syntax-error x . args)
-    (unless (for-all string? args)
-      (assertion-violation 'syntax-error "invalid argument" args))
-    (raise
-     (condition (make-message-condition (if (null? args)
-					    "invalid syntax"
-					  (apply string-append args)))
-		(make-syntax-violation (syntax->datum x) #f)
-		(%expression->source-position-condition x)
-		(%extract-trace x))))
+(module (syntax-violation
+	 expand-time-retvals-signature-violation
+	 %raise-unbound-error
+	 make-macro-use-input-form-condition
+	 %raise-compound-condition-object)
 
   (case-define syntax-violation
-    ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
-    ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
-    ;;value.  SUBFORM must be a syntax object or a datum value.
+    ;;Defined by R6RS.  WHO must be false or a string or a symbol.  MESSAGE must be a
+    ;;string.  FORM  must be a  syntax object  or a datum  value.  SUBFORM must  be a
+    ;;syntax object or a datum value.
     ;;
-    ;;The SYNTAX-VIOLATION  procedure raises  an exception,  reporting a
-    ;;syntax violation.  WHO should  describe the macro transformer that
-    ;;detected the exception.  The  MESSAGE argument should describe the
-    ;;violation.  FORM should be the erroneous source syntax object or a
-    ;;datum value  representing a  form.  The optional  SUBFORM argument
-    ;;should be a syntax object or  datum value representing a form that
-    ;;more precisely locates the violation.
+    ;;The  SYNTAX-VIOLATION  procedure  raises   an  exception,  reporting  a  syntax
+    ;;violation.   WHO  should  describe  the macro  transformer  that  detected  the
+    ;;exception.  The MESSAGE argument should describe the violation.  FORM should be
+    ;;the erroneous source  syntax object or a datum value  representing a form.  The
+    ;;optional SUBFORM argument should be a syntax object or datum value representing
+    ;;a form that more precisely locates the violation.
     ;;
-    ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
-    ;;value for the  condition object (see below) as  follows: when FORM
-    ;;is  either  an  identifier  or  a  list-structured  syntax  object
-    ;;containing an identifier  as its first element,  then the inferred
-    ;;value is the identifier's symbol.   Otherwise, no value for WHO is
-    ;;provided as part of the condition object.
+    ;;If WHO  is false, SYNTAX-VIOLATION attempts  to infer an appropriate  value for
+    ;;the condition object (see below) as  follows: when FORM is either an identifier
+    ;;or  a list-structured  syntax  object  containing an  identifier  as its  first
+    ;;element, then  the inferred  value is the  identifier's symbol.   Otherwise, no
+    ;;value for WHO is provided as part of the condition object.
     ;;
-    ;;The condition object provided with the exception has the following
-    ;;condition types:
+    ;;The condition  object provided with  the exception has the  following condition
+    ;;types:
     ;;
-    ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
-    ;;condition type  "&who", with WHO  as the  value of its  field.  In
-    ;;that  case,  WHO should  identify  the  procedure or  entity  that
-    ;;detected the  exception.  If it  is false, the condition  does not
-    ;;have condition type "&who".
+    ;;* If  WHO is not  false or  can be inferred,  the condition has  condition type
+    ;;   "&who", with  WHO as  the value  of  its field.   In that  case, WHO  should
+    ;;   identify the  procedure or  entity that  detected the  exception.  If  it is
+    ;;  false, the condition does not have condition type "&who".
     ;;
-    ;;* The condition has condition type "&message", with MESSAGE as the
-    ;;value of its field.
+    ;;* The condition has condition type "&message", with MESSAGE as the value of its
+    ;;  field.
     ;;
-    ;;* The condition has condition type "&syntax" with FORM and SUBFORM
-    ;;as the value of its fields.  If SUBFORM is not provided, the value
-    ;;of the subform field is false.
+    ;;* The condition has condition type "&syntax" with FORM and SUBFORM as the value
+    ;;  of its fields.  If SUBFORM is not provided, the value of the subform field is
+    ;;  false.
     ;;
     ((who msg form)
      (syntax-violation who msg form #f))
     ((who msg form subform)
-     (%syntax-violation who msg form (make-syntax-violation form subform))))
+     (%raise-compound-condition-object who msg form (make-syntax-violation form subform))))
 
-  (define (%syntax-violation source-who msg form condition-object)
-    (define-constant __who__ 'syntax-violation)
-    (unless (string? msg)
-      (assertion-violation __who__ "message is not a string" msg))
+  (define* (expand-time-retvals-signature-violation source-who form subform
+						    {expected-retvals-signature retvals-signature?}
+						    {returned-retvals-signature retvals-signature?})
+    ;;To be used at  expand-time when we were expecting a  signature from an expanded
+    ;;expression  and we  received  an incompatible  one, for  example  in the  macro
+    ;;transformers of TAG-ASSERT and TAG-ASSERT-AND-RETURN.
+    ;;
+    (%raise-compound-condition-object source-who "expand-time return values signature mismatch" form
+				      (condition
+				       (%make-expand-time-retvals-signature-violation expected-retvals-signature
+										      returned-retvals-signature)
+				       (make-syntax-violation form subform))))
+
+  (define (%raise-unbound-error source-who input-form.stx id)
+    ;;Raise an  "unbound identifier"  exception.  This  is to  be used  when applying
+    ;;ID->LABEL  to the  identifier  ID returns  false, and  such  result is  invalid
+    ;;because we were expecting ID to be bound.
+    ;;
+    ;;Often INPUT-FORM.STX is ID itself, and we can do nothing about it.
+    ;;
+    (%raise-compound-condition-object source-who "unbound identifier" input-form.stx
+				      (condition
+				       (make-undefined-violation)
+				       (make-syntax-violation input-form.stx id))))
+
+  (define* (%raise-compound-condition-object source-who {msg string?} input-form.stx condition-object)
+    ;;Raise a compound condition object.
+    ;;
+    ;;SOURCE-WHO can be  a string, symbol or  false; it is used as  value for "&who".
+    ;;When  false: INPUT-FORM.STX  is inspected  to  determine a  possible value  for
+    ;;"&who".
+    ;;
+    ;;MSG must be a string; it is used as value for "&message".
+    ;;
+    ;;INPUT-FORM.STX must be a (wrapped  or unwrapped) syntax object representing the
+    ;;subject of  the raised exception.   It is used for  both inferring a  value for
+    ;;"&who" and retrieving source location informations.
+    ;;
+    ;;CONDITION-OBJECT is  an already  built condition  object that  is added  to the
+    ;;raised compound.
+    ;;
     (let ((source-who (cond ((or (string? source-who)
 				 (symbol? source-who))
 			     source-who)
 			    ((not source-who)
-			     (syntax-match form ()
+			     (syntax-match input-form.stx ()
 			       (id
 				(identifier? id)
 				(syntax->datum id))
@@ -13702,31 +7328,89 @@
 		    (condition))
 		  (make-message-condition msg)
 		  condition-object
-		  (%expression->source-position-condition form)
-		  (%extract-trace form)))))
+		  (%expression->source-position-condition input-form.stx)
+		  (%extract-macro-expansion-trace input-form.stx)))))
 
-  (define (%raise-unbound-error source-who form id)
-    (raise
-     (condition (if source-who
-		    (make-who-condition source-who)
-		  (condition))
-		(make-message-condition "unbound identifier")
-		(make-undefined-violation)
-		(make-syntax-violation form id)
-		(%expression->source-position-condition id)
-		(%extract-trace id))))
+  (define* (make-macro-use-input-form-condition stx)
+    (condition
+     (%make-macro-use-input-form-condition stx)
+     (%extract-macro-expansion-trace stx)))
 
-  (define (%extract-trace x)
-    (define-condition-type &trace &condition
-      make-trace trace?
-      (form trace-form))
-    (let f ((x x))
-      (cond ((<stx>? x)
+  (define (%extract-macro-expansion-trace stx)
+    ;;Extraxt from the (wrapped or unwrapped) syntax object STX the sequence of macro
+    ;;expansion traces  from the AE* field  of "<stx>" records and  return a compound
+    ;;condition object representing them, as instances of "&macro-expansion-trace".
+    ;;
+    ;;NOTE Unfortunately it  does not always go  as we would like.   For example, the
+    ;;program:
+    ;;
+    ;;   (import (vicare))
+    ;;   (define-syntax (one stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_)
+    ;;        (syntax-violation 'one "demo" stx #f))))
+    ;;   (define-syntax (two stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_)
+    ;;        #'(one))))
+    ;;   (two)
+    ;;
+    ;;raises the error:
+    ;;
+    ;;*** Vicare: unhandled exception:
+    ;;  Condition components:
+    ;;    1. &who: one
+    ;;    2. &message: "demo"
+    ;;    3. &syntax:
+    ;;        form: #<syntax expr=(one) mark*=(#f "" top) ...>
+    ;;        subform: #f
+    ;;    4. &source-position:
+    ;;        port-id: "../tests/test-demo.sps"
+    ;;        byte: 516
+    ;;        character: 514
+    ;;        line: 31
+    ;;        column: 8
+    ;;    5. &macro-expansion-trace: #<syntax expr=(one) mark*=(#f "" top) ...>
+    ;;    6. &macro-expansion-trace: #<syntax expr=(two) mark*=(top) ...>
+    ;;
+    ;;and we can see  the expansion's trace.  But if we compose  the output form with
+    ;;pieces of different origin:
+    ;;
+    ;;   (import (vicare))
+    ;;   (define-syntax (one stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_ . ?stuff)
+    ;;        (syntax-violation 'one "demo" stx #f))))
+    ;;   (define-syntax (two stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_ ?id)
+    ;;        #`(one ?id))))
+    ;;   (two display)
+    ;;
+    ;;the error is:
+    ;;
+    ;;   *** Vicare: unhandled exception:
+    ;;    Condition components:
+    ;;      1. &who: one
+    ;;      2. &message: "demo"
+    ;;      3. &syntax:
+    ;;          form: (#<syntax expr=one mark*=(#f "" top) ...>
+    ;;                 #<syntax expr=display mark*=(#f top) ...>
+    ;;                 . #<syntax expr=() mark*=(#f "" top)>)
+    ;;          subform: #f
+    ;;
+    ;;and there is no trace.  This is  because the syntax object used as "form" value
+    ;;in "&syntax" is  not wrapped, and SYNTAX-VIOLATION cannot decide  from which of
+    ;;its components it makes sense to extract  the trace.  (Marco Maggi; Sat Apr 12,
+    ;;2014)
+    ;;
+    (let loop ((X stx))
+      (cond ((<stx>? X)
 	     (apply condition
-		    (make-trace x)
-		    (map f (<stx>-ae* x))))
-	    ((annotation? x)
-	     (make-trace (make-<stx> x '() '() '())))
+		    (make-macro-expansion-trace X)
+		    (map loop (<stx>-ae* X))))
+	    ((annotation? X)
+	     (make-macro-expansion-trace (make-<stx> X '() '() '())))
 	    (else
 	     (condition)))))
 
@@ -13754,10 +7438,27 @@
 ;;;; R6RS programs and libraries helpers
 
 (define (initial-visit! macro*)
+  ;;Whenever a source  library is loaded and expanded: all  its macro definitions and
+  ;;BEGIN-FOR-SYNTAX macro uses are expanded and evaluated.   All it is left to do to
+  ;;visit such  library is to  store in  the loc gensyms  of macros the  compiled RHS
+  ;;code; this is done by this function.
+  ;;
+  ;;MACRO* is a list of sublists.  The entries with format:
+  ;;
+  ;;   (?loc . (?obj . ?core-code))
+  ;;
+  ;;represent macros defined by DEFINE-SYNTAX; here we store ?OBJ in the "value" slot
+  ;;of ?LOC.  The entries with format:
+  ;;
+  ;;   (#f   . ?core-code)
+  ;;
+  ;;are the result of expanding BEGIN-FOR-SYNTAX macro uses; here we ignore these.
+  ;;
   (for-each (lambda (x)
 	      (let ((loc  (car  x))
 		    (proc (cadr x)))
-		(set-symbol-value! loc proc)))
+		(when loc
+		  (set-symbol-value! loc proc))))
     macro*))
 
 
@@ -13770,6 +7471,7 @@
 
 ;;; end of file
 ;;Local Variables:
+;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
@@ -13787,4 +7489,5 @@
 ;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'with-tagged-language		'scheme-indent-function 1)
 ;;End:

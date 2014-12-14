@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa containers stacks)
   (options visit-upon-loading)
   (export
@@ -39,12 +39,12 @@
     (protocol (lambda () make-stack))
     (predicate stack?)
     (virtual-fields
-     (immutable (empty?		<boolean>)	stack-empty?)
-     (immutable ($empty?	<boolean>)	$stack-empty?)
-     (immutable (not-empty?	<boolean>)	stack-not-empty?)
-     (immutable ($not-empty?	<boolean>)	$stack-not-empty?)
-     (immutable (size		<integer>)	stack-size)
-     (immutable ($size		<integer>)	$stack-size))
+     (immutable {empty?		<boolean>}	stack-empty?)
+     (immutable {$empty?	<boolean>}	$stack-empty?)
+     (immutable {not-empty?	<boolean>}	stack-not-empty?)
+     (immutable {$not-empty?	<boolean>}	$stack-not-empty?)
+     (immutable {size		<integer>}	stack-size)
+     (immutable {$size		<integer>}	$stack-size))
     (methods
      (hash		stack-hash)
      ($hash		$stack-hash)

@@ -25,7 +25,7 @@
     make-traced-procedure	make-traced-macro
 
     integer->machine-word	machine-word->integer)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-traced-procedure
 		  make-traced-macro
 
@@ -35,7 +35,7 @@
 		  display write newline printf
 		  pretty-print pretty-print* write-char
 		  print-condition)
-    (prefix (only (ikarus)
+    (prefix (only (vicare)
 		  display write newline printf
 		  pretty-print pretty-print* write-char
 		  print-condition)

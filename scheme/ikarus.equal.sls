@@ -36,20 +36,22 @@
 
 (library (ikarus.equal)
   (export equal?)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  equal?)
-    (ikarus system $pointers))
+    (vicare system $pointers)
+    (only (vicare system $keywords)
+	  $keyword=?))
 
   (module UNSAFE
     (< <= > >= = + - vector-ref vector-length car cdr)
     (import
-      (rename (ikarus system $vectors)
+      (rename (vicare system $vectors)
         ($vector-length vector-length)
         ($vector-ref    vector-ref))
-      (rename (ikarus system $pairs)
+      (rename (vicare system $pairs)
         ($car   car)
         ($cdr   cdr))
-      (rename (ikarus system $fx)
+      (rename (vicare system $fx)
         ($fx+      +)
         ($fx-      -)
         ($fx<      <)
@@ -124,7 +126,7 @@
 	      k))
 	((keyword? x)
 	 (and (keyword? y)
-	      (keyword=? x y)
+	      ($keyword=? x y)
 	      k))
 	(else	;chars, numbers, booleans, other non-compound value
 	 (and (eqv? x y) k))))
@@ -176,7 +178,7 @@
 	     k))
        ((keyword? x)
 	(and (keyword? y)
-	     (keyword=? x y)
+	     ($keyword=? x y)
 	     k))
        (else
 	(and (eqv? x y) k))))
@@ -213,7 +215,7 @@
 	       k))
 	 ((keyword? x)
 	  (and (keyword? y)
-	       (keyword=? x y)
+	       ($keyword=? x y)
 	       k))
 	 (else
 	  (and (eqv? x y)

@@ -1,26 +1,26 @@
 ;;; Copyright (C) 2008  Abdulaziz Ghuloum, R. Kent Dybvig
 ;;; Copyright (C) 2006,2007  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
 ;;; copy of this software and associated documentation files (the "Software"),
 ;;; to deal in the Software without restriction, including without limitation
 ;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
 ;;; and/or sell copies of the Software, and to permit persons to whom the
 ;;; Software is furnished to do so, subject to the following conditions:
-;;; 
+;;;
 ;;; The above copyright notice and this permission notice shall be included in
 ;;; all copies or substantial portions of the Software.
-;;; 
+;;;
 ;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
 ;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 ;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE. 
+;;; DEALINGS IN THE SOFTWARE.
 
-(import 
-  (ikarus)
+(import
+  (vicare)
   (unicode-data))
 
 ; dropping support for s16 inner vectors for now
@@ -80,7 +80,7 @@
       (cond
         [(= i n) (list (substring str 0 n))]
         [(char=? (string-ref str i) #\space)
-         (cons (substring str 0 i) 
+         (cons (substring str 0 i)
                (split (substring str (+ i 1) n)))]
         [else (f (add1 i) n)]))))
 
@@ -110,7 +110,7 @@
       [else (c*->off (map hex->num ls) n)])))
 
 (define (insert-foldcase-data! ls data)
-  (for-each 
+  (for-each
     (lambda (fields)
       (let ([n (hex->num (car fields))])
         (let ([cdrec (find-cdrec n ls)]
@@ -118,7 +118,7 @@
           (chardata-fcchar-set! cdrec offset)
           (chardata-fcstr-set! cdrec offset))))
     (filter (lambda (fields) (equal? (cadr fields) "C")) data))
-  (for-each 
+  (for-each
     (lambda (fields)
       (let ([n (hex->num (car fields))])
         (chardata-fcstr-set!
@@ -156,7 +156,7 @@
 (define build-table
   (lambda (acc ls)
     (let ([table (make-table 0)])
-      (for-each 
+      (for-each
         (lambda (x)
           (let ([n (car x)] [cdrec (cdr x)])
             (unless (< n code-point-limit)
@@ -171,7 +171,7 @@
       table)))
 
 (define (get-composition-pairs decomp-canon-table)
-  (define ($str-decomp-canon c) 
+  (define ($str-decomp-canon c)
     (define (strop tbl c)
       (let ([n (char->integer c)])
         (if (and (fx< table-limit code-point-limit)
@@ -182,7 +182,7 @@
                   (integer->char (fx+ x n))
                   x)))))
     (strop decomp-canon-table c))
-  (let ([exclusions 
+  (let ([exclusions
          (map hex->num
            (map car (get-unicode-data
                       "UNIDATA/CompositionExclusions.txt")))]
@@ -198,7 +198,7 @@
     (cons (list->vector (map car pairs))
           (list->vector (map cdr pairs)))))
 
-             
+
 
 
 (let ([ls (map data-case (get-unicode-data "UNIDATA/UnicodeData.txt"))])
@@ -253,7 +253,7 @@
              (define ($str-decomp-canon c) (strop decomp-canon-table c))
              (define ($str-decomp-compat c) (strop decomp-compat-table c))
              (define ($composition-pairs)
-               ',(get-composition-pairs 
+               ',(get-composition-pairs
                    (build-table chardata-decomp-canon ls)))))))))
 
 (printf "Happy Happy Joy Joy ~a\n" (sizeof cache))

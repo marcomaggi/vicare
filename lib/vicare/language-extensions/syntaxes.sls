@@ -46,13 +46,6 @@
     with-dangerous-arguments-validation
     arguments-validation-forms
 
-    ;; specialised CASE
-    case-fixnums		$case-fixnums
-    case-integers		$case-integers
-    case-symbols		$case-symbols
-    case-chars			$case-chars
-    case-strings		$case-strings
-
     ;; miscellaneous dispatching
     cond-numeric-operand	cond-real-numeric-operand
     cond-exact-integer-operand	cond-inexact-integer-operand
@@ -214,189 +207,6 @@
 			      (else V))))
 	   ...)
        . ?body))))
-
-
-;;;; specialised CASE
-
-;;Here we define  couples of type-specialised CASE  syntaxes.  For every
-;;type two syntaxes are defined.
-;;
-;;The syntaxes with name prefixed by $  do not check that the ?DATUM are
-;;of the expected type and  evaluate them once, allowing for expressions
-;;to be  used.  This is dangerous  but useful to allow  an identifier in
-;;reference position to be used as ?DATUM.
-
-(define-syntax define-typed-case
-  (syntax-rules ()
-    ((_ ?who ?unsafe-who
-	?type-pred ?unsafe-type= ?type-name-string
-	?custom-definition ...)
-     (begin
-       (define-syntax ?who
-	 (lambda (stx)
-	   (define who (quote ?who))
-	   ?custom-definition ...
-	   (define (%assert-all-datums LL)
-	     (for-each
-		 (lambda (L)
-		   (for-each
-		       (lambda (S)
-			 (unless (?type-pred S)
-			   (syntax-violation who
-			     (string-append "expected " ?type-name-string " as datum")
-			     L S)))
-		     L))
-	       (syntax->datum LL)))
-	   (syntax-case stx (else)
-	     ((_ ?expr
-		 ((?datum0 ?datum (... ...))
-		  ?datum-body0 ?datum-body (... ...))
-		 (... ...)
-		 (else
-		  ?else-body0 ?else-body (... ...)))
-	      (begin
-		(%assert-all-datums #'((?datum0 ?datum (... ...)) (... ...)))
-		#'(let ((key ?expr))
-		    (cond ((or (?unsafe-type= ?datum0 key)
-			       (?unsafe-type= ?datum  key)
-			       (... ...))
-			   ?datum-body0 ?datum-body (... ...))
-			  (... ...)
-			  (else
-			   ?else-body0 ?else-body (... ...))))))
-	     ((_ ?expr
-		 ((?datum0 ?datum (... ...))
-		  ?datum-body0 ?datum-body (... ...))
-		 (... ...))
-	      (begin
-		(%assert-all-datums #'((?datum0 ?datum (... ...)) (... ...)))
-		#'(let ((key ?expr))
-		    (cond ((or (?unsafe-type= ?datum0 key)
-			       (?unsafe-type= ?datum  key)
-			       (... ...))
-			   ?datum-body0 ?datum-body (... ...))
-			  (... ...)))))
-	     )))
-       (define-syntax ?unsafe-who
-	 (syntax-rules (else)
-	   ((_ ?expr
-	       ((?datum0 ?datum (... ...))
-		?datum-body0 ?datum-body (... ...))
-	       (... ...)
-	       (else
-		?else-body0 ?else-body (... ...)))
-	    (let ((key ?expr))
-	      (cond ((or (?unsafe-type= ?datum0 key)
-			 (?unsafe-type= ?datum  key)
-			 (... ...))
-		     ?datum-body0 ?datum-body (... ...))
-		    (... ...)
-		    (else
-		     ?else-body0 ?else-body (... ...)))))
-	   ((_ ?expr
-	       ((?datum0 ?datum (... ...))
-		?datum-body0 ?datum-body (... ...))
-	       (... ...))
-	    (let ((key ?expr))
-	      (cond ((or (?unsafe-type= ?datum0 key)
-			 (?unsafe-type= ?datum  key)
-			 (... ...))
-		     ?datum-body0 ?datum-body (... ...))
-		    (... ...))))
-	   )))
-     )))
-
-(define-typed-case case-fixnums $case-fixnums
-  fixnum? $fx= "fixnum")
-
-(define-typed-case case-integers $case-integers
-  %exact-integer? = "exact integer"
-  (define (%exact-integer? obj)
-    (or (fixnum? obj)
-	(bignum? obj))))
-
-(define-typed-case case-chars $case-chars
-  char? $char= "char")
-
-(define-typed-case case-strings $case-strings
-  string? $string= "string")
-
-;;; --------------------------------------------------------------------
-
-;;Symbols are differents because they need to be quoted.
-
-(define-syntax case-symbols
-  (lambda (stx)
-    (define who (quote case-symbols))
-    (define (%assert-all-datums LL)
-      (for-each
-	  (lambda (L)
-	    (for-each
-		(lambda (S)
-		  (unless (symbol? S)
-		    (syntax-violation who
-		      (string-append "expected symbol as datum")
-		      L S)))
-	      L))
-	(syntax->datum LL)))
-    (syntax-case stx (else)
-      ((_ ?expr
-	  ((?datum0 ?datum ...)
-	   ?datum-body0 ?datum-body ...)
-	  ...
-	  (else
-	   ?else-body0 ?else-body ...))
-       (begin
-	 (%assert-all-datums #'((?datum0 ?datum ...) ...))
-	 #'(let ((key ?expr))
-	     (cond ((or (eq? (quote ?datum0) key)
-			(eq? (quote ?datum)  key)
-			...)
-		    ?datum-body0 ?datum-body ...)
-		   ...
-		   (else
-		    ?else-body0 ?else-body ...)))))
-      ((_ ?expr
-	  ((?datum0 ?datum ...)
-	   ?datum-body0 ?datum-body ...)
-	  ...)
-       (begin
-	 (%assert-all-datums #'((?datum0 ?datum ...) ...))
-	 #'(let ((key ?expr))
-	     (cond ((or (eq? (quote ?datum0) key)
-			(eq? (quote ?datum)  key)
-			...)
-		    ?datum-body0 ?datum-body ...)
-		   ...))))
-      )))
-
-(define-syntax $case-symbols
-  (syntax-rules (else)
-    ((_ ?expr
-	((?datum0 ?datum ...)
-	 ?datum-body0 ?datum-body ...)
-	...
-	(else
-	 ?else-body0 ?else-body ...))
-     (let ((key ?expr))
-       (cond ((or (eq? (quote ?datum0) key)
-		  (eq? (quote ?datum)  key)
-		  ...)
-	      ?datum-body0 ?datum-body ...)
-	     ...
-	     (else
-	      ?else-body0 ?else-body ...))))
-    ((_ ?expr
-	((?datum0 ?datum ...)
-	 ?datum-body0 ?datum-body ...)
-	...)
-     (let ((key ?expr))
-       (cond ((or (eq? (quote ?datum0) key)
-		  (eq? (quote ?datum)  key)
-		  ...)
-	      ?datum-body0 ?datum-body ...)
-	     ...)))
-    ))
 
 
 ;;;; math functions dispatching
@@ -579,7 +389,7 @@
 	((real? exact?)	?body-re0 ?body-re ...)
 	(else		?body-el0 ?body-el ...))
      (let ((num ?num))
-       (import (only (ikarus system $fx)
+       (import (only (vicare system $fx)
 		     $fxzero?))
        (cond ((flonum? num)
 	      ?body-fl0 ?body-fl ...)
@@ -626,101 +436,6 @@
 	     (else		?body-el0 ?body-el ...))))
     ))
 
-;;; --------------------------------------------------------------------
-
-;; (define-syntax fixnum	(syntax-rules ()))
-;; (define-syntax bignum	(syntax-rules ()))
-;; (define-syntax flonum	(syntax-rules ()))
-;; (define-syntax cflonum	(syntax-rules ()))
-;; (define-syntax compnum	(syntax-rules ()))
-
-;; (define-syntax case-one-operand
-;;   (syntax-rules (fixnum bignum flonum cflonum compnum)
-;;     ((case-one-operand (?who ?op)
-;;        ((fixnum)	. ?fixnum-body)
-;;        ((bignum)	. ?bignum-body)
-;;        ((flonum)	. ?flonum-body)
-;;        ((cflonum)	. ?cflonum-body)
-;;        ((compnum)	. ?compnum-body))
-;;      (let ((op ?op))
-;;        (cond ((fixnum?  op)	. ?fixnum-body)
-;; 	     ((bignum?  op)	. ?bignum-body)
-;; 	     ((flonum?  op)	. ?flonum-body)
-;; 	     ((cflonum? op)	. ?cflonum-body)
-;; 	     ((compnum? op)	. ?compnum-body)
-;; 	     (else
-;; 	      (assertion-violation ?who "invalid numeric operand" op)))))))
-
-;; (define-syntax case-two-operands
-;;   (syntax-rules (fixnum bignum flonum cflonum compnum)
-;;     ((case-two-operands (?who ?op1 ?op2)
-;;        ((fixnum)
-;; 	((fixnum)	. ?fixnum/fixnum-body)
-;; 	((bignum)	. ?fixnum/bignum-body)
-;; 	((flonum)	. ?fixnum/flonum-body)
-;; 	((cflonum)	. ?fixnum/cflonum-body)
-;; 	((compnum)	. ?fixnum/compnum-body))
-;;        ((bignum)
-;; 	((fixnum)	. ?bignum/fixnum-body)
-;; 	((bignum)	. ?bignum/bignum-body)
-;; 	((flonum)	. ?bignum/flonum-body)
-;; 	((cflonum)	. ?bignum/cflonum-body)
-;; 	((compnum)	. ?bignum/compnum-body))
-;;        ((flonum)
-;; 	((fixnum)	. ?flonum/fixnum-body)
-;; 	((bignum)	. ?flonum/bignum-body)
-;; 	((flonum)	. ?flonum/flonum-body)
-;; 	((cflonum)	. ?flonum/cflonum-body)
-;; 	((compnum)	. ?flonum/compnum-body))
-;;        ((cflonum)
-;; 	((fixnum)	. ?cflonum/fixnum-body)
-;; 	((bignum)	. ?cflonum/bignum-body)
-;; 	((flonum)	. ?cflonum/flonum-body)
-;; 	((cflonum)	. ?cflonum/cflonum-body)
-;; 	((compnum)	. ?cflonum/compnum-body))
-;;        ((compnum)
-;; 	((fixnum)	. ?compnum/fixnum-body)
-;; 	((bignum)	. ?compnum/bignum-body)
-;; 	((flonum)	. ?compnum/flonum-body)
-;; 	((cflonum)	. ?compnum/cflonum-body)
-;; 	((compnum)	. ?compnum/compnum-body)))
-;;      (case-one-operand (?who ?op1)
-;;        ((fixnum)
-;; 	(case-one-operand (?who ?op2)
-;; 	  ((fixnum)	. ?fixnum/fixnum-body)
-;; 	  ((bignum)	. ?fixnum/bignum-body)
-;; 	  ((flonum)	. ?fixnum/flonum-body)
-;; 	  ((cflonum)	. ?fixnum/cflonum-body)
-;; 	  ((compnum)	. ?fixnum/compnum-body)))
-;;        ((bignum)
-;; 	(case-one-operand (?who ?op2)
-;; 	  ((fixnum)	. ?bignum/fixnum-body)
-;; 	  ((bignum)	. ?bignum/bignum-body)
-;; 	  ((flonum)	. ?bignum/flonum-body)
-;; 	  ((cflonum)	. ?bignum/cflonum-body)
-;; 	  ((compnum)	. ?bignum/compnum-body)))
-;;        ((flonum)
-;; 	(case-one-operand (?who ?op2)
-;; 	  ((fixnum)	. ?flonum/fixnum-body)
-;; 	  ((bignum)	. ?flonum/bignum-body)
-;; 	  ((flonum)	. ?flonum/flonum-body)
-;; 	  ((cflonum)	. ?flonum/cflonum-body)
-;; 	  ((compnum)	. ?flonum/compnum-body)))
-;;        ((cflonum)
-;; 	(case-one-operand (?who ?op2)
-;; 	  ((fixnum)	. ?cflonum/fixnum-body)
-;; 	  ((bignum)	. ?cflonum/bignum-body)
-;; 	  ((flonum)	. ?cflonum/flonum-body)
-;; 	  ((cflonum)	. ?cflonum/cflonum-body)
-;; 	  ((compnum)	. ?cflonum/compnum-body)))
-;;        ((compnum)
-;; 	(case-one-operand (?who ?op2)
-;; 	  ((fixnum)	. ?compnum/fixnum-body)
-;; 	  ((bignum)	. ?compnum/bignum-body)
-;; 	  ((flonum)	. ?compnum/flonum-body)
-;; 	  ((cflonum)	. ?compnum/cflonum-body)
-;; 	  ((compnum)	. ?compnum/compnum-body)))))))
-
 
 ;;;; miscellaneous stuff
 
@@ -745,7 +460,7 @@
   ;;     (define who 'whence->symbol)
   ;;     (with-arguments-validation (who)
   ;;         ((exact-integer      code))
-  ;;       ($case-integers code
+  ;;       (case code
   ;;         ((SEEK_SET)     'SEEK_SET)
   ;;         ((SEEK_CUR)     'SEEK_CUR)
   ;;         ((SEEK_END)     'SEEK_END)
@@ -757,7 +472,7 @@
        (define who '?who)
        (with-arguments-validation (who)
 	   ((exact-integer	code))
-	 ($case-integers code
+	 (case code
 	   ((?code)	'?code)
 	   ...
 	   (else #f)))))))
@@ -771,5 +486,4 @@
 ;;Local Variables:
 ;;eval: (put 'case-one-operand 'scheme-indent-function 1)
 ;;eval: (put 'case-two-operands 'scheme-indent-function 1)
-;;eval: (put 'case-integers 'scheme-indent-function 1)
 ;;End:

@@ -23,8 +23,8 @@
 
     debug-print-enabled?
     debug-print			debug-print*)
-  (import (except (ikarus)
-		  pretty-print		pretty-print*
+  (import (except (vicare)
+		  pretty-print			pretty-print*
 		  pretty-width
 
 		  debug-print-enabled?
@@ -354,7 +354,9 @@
      ;;Right now the would block object is a struct instance, so we have
      ;;to check for  it before checking for structs.   (Marco Maggi; Mon
      ;;May 13, 2013)
-     ((would-block-object? x) (format "~s" x))
+     ((would-block-object? x)	"#<would-block-object>")
+     ((bwp-object? x)		"#<bwp-object>")
+     ((unbound-object? x)	"#<unbound-object>")
      ((struct? x)        (boxify-shared x boxify-struct))
 ;;;((setbox? x)
 ;;; (let ((i (format "#~a=" (setbox-idx x)))

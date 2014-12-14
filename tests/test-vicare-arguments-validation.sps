@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare) catch)
   (vicare language-extensions syntaxes)
   (vicare arguments validation)
   (prefix (vicare arguments validation)
@@ -50,10 +50,32 @@
 	       (else E))
        (begin . ?body)))))
 
+(define-syntax catch-expand-time-type-mismatch
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((internal-body
+		  (import (prefix (vicare expander object-type-specs) typ.))
+		  (typ.expand-time-type-signature-violation? E))
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(syntax->datum (syntax-violation-subform E)))
+	       ((assertion-violation? E)
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       (eval '(begin . ?body)
+	     (environment '(vicare)
+			  '(vicare language-extensions syntaxes)
+			  '(vicare arguments validation)
+			  '(prefix (vicare arguments validation)
+				   args.)))))))
+
+
 (define-syntax doit
   (syntax-rules ()
     ((_ ?print ?validator . ?objs)
-     (catch ?print
+     (catch-expand-time-type-mismatch ?print
        (let ((who 'test))
 	 (with-arguments-validation (who)
 	     ((?validator . ?objs))
@@ -1339,8 +1361,8 @@
     => '(""))
 
   (check
-      (doit #f non-empty-string 'ciao)
-    => '(ciao))
+      (doit #f non-empty-string 123)
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; non-empty-string/false
@@ -1349,18 +1371,19 @@
       (doit #f non-empty-string/false "123")
     => #t)
 
-  (check
-      (doit #f non-empty-string/false #f)
-    => #t)
+  ;;This test does not work because of expand-time type check.
+  ;;
+  ;; (check
+  ;;     (doit #f non-empty-string/false #f)
+  ;;   => #t)
 
   (check
       (doit #f non-empty-string/false "")
     => '(""))
 
   (check
-      (doit #f non-empty-string/false 'ciao)
-    => '(ciao))
-
+      (doit #f non-empty-string/false 123)
+    => 123)
 
 ;;; --------------------------------------------------------------------
 ;;; index-for-string

@@ -19,14 +19,12 @@
 ;;within the compiler itself.
 (library (ikarus startup)
   (export
-    vicare-lib-dir
-    scheme-lib-dir
     vicare-version
     bootfile
     host-info)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  host-info))
-  (include "ikarus.config.ss"))
+  (include "ikarus.config.ss" #t))
 
 
 (library (ikarus main)
@@ -38,47 +36,35 @@
 
     ;; automatic R6RS records finalisation
     $record-guardian
-    record-guardian-logger		record-guardian-log
-
-    ;; vicare configuration options
-    vicare-built-with-srfi-enabled
-    vicare-built-with-ffi-enabled
-    vicare-built-with-iconv-enabled
-    vicare-built-with-posix-enabled
-    vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled)
-  (import (except (ikarus)
+    record-guardian-logger		record-guardian-log)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
 
 		  load-r6rs-script
+		  load-and-serialize-source-library
 		  load
-		  host-info
 		  $struct-guardian
 		  struct-guardian-logger
 		  struct-guardian-log
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log
-		  expand-top-level
-
-		  vicare-built-with-srfi-enabled
-		  vicare-built-with-ffi-enabled
-		  vicare-built-with-iconv-enabled
-		  vicare-built-with-posix-enabled
-		  vicare-built-with-glibc-enabled
-		  vicare-built-with-linux-enabled)
+		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
+		  verbose?
+		  debug-mode-enabled?
 		  print-loaded-libraries
+		  cache-compiled-libraries
 		  report-errors-at-runtime
 		  strict-r6rs
 		  descriptive-labels)
-	    config.)
+	    option.)
     (prefix (only (ikarus.compiler)
-		  $optimize-level
+		  optimize-level
 		  $generate-debug-calls
 		  $assembler-output
 		  $optimizer-output
@@ -87,10 +73,16 @@
 	    compiler.)
     (only (ikarus.debugger)
 	  guarded-start)
-    (only (psyntax expander)
-	  expand-top-level)
-    (only (psyntax library-manager)
-	  current-library-expander)
+    (prefix (only (psyntax.expander)
+		  expand-top-level
+		  initialise-type-spec-for-built-in-object-types
+		  initialise-core-prims-tagging)
+	    psyntax.)
+    (prefix (only (psyntax.library-manager)
+		  current-library-expander
+		  source-code-location
+		  current-library-locator)
+	    psyntax.)
     (only (ikarus.reader)
 	  read-source-file
 	  read-script-source-file)
@@ -103,14 +95,20 @@
 		  load-r6rs-script
 		  compile-r6rs-script
 		  run-serialized-r6rs-script
+		  load-and-serialize-source-library
 		  fasl-directory
-		  fasl-search-path)
-	    loading.)
+		  fasl-search-path
+		  library-path
+		  library-extensions
+		  compile-time-library-locator
+		  run-time-library-locator
+		  source-library-locator)
+	    load.)
     (prefix (only (ikarus.posix)
 		  getenv
 		  real-pathname)
 	    posix.)
-    (only (ikarus system $structs)
+    (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
     (only (ikarus cafe)
@@ -120,7 +118,7 @@
 		  make-readline-input-port)
 	    readline.))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; helpers
@@ -135,13 +133,17 @@
 (define (%error-invalid-rc)
   (%error-and-exit "option --no-rcfile is invalid when used along with --rcfile"))
 
-(define-syntax serialize?	(syntax-rules ()))
-(define-syntax run?		(syntax-rules ()))
+(define-auxiliary-syntaxes
+  serialize?
+  run?)
 
 (define-syntax load-r6rs-script
   (syntax-rules (serialize? run?)
     ((_ ?filename (serialize? ?ser) (run? ?run))
-     (loading.load-r6rs-script ?filename ?ser ?run))))
+     (load.load-r6rs-script ?filename ?ser ?run))
+    ((_ ?filename (serialize? ?ser) (run? ?run))
+     (load.load-r6rs-script ?filename ?ser ?run))
+    ))
 
 (define (%string->sexp expr-string)
   (let loop ((port     (open-string-input-port expr-string))
@@ -156,15 +158,14 @@
 
 (define-struct run-time-config
   (exec-mode
-		;A  symbol representing  the  requested execution  mode:
-		;R6RS-SCRIPT,    R6RS-PROGRAM,     R6RS-REPL,    SCRIPT,
-		;COMPILE-DEPENDENCIES,   COMPILE-PROGRAM,   R6RS-EXPAND,
-		;REPL.
+		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
+		;R6RS-PROGRAM,      R6RS-REPL,     SCRIPT,      COMPILE-DEPENDENCIES,
+		;COMPILE-LIBRARY, COMPILE-PROGRAM, R6RS-EXPAND, REPL.
    script
 		;A  string representing  a file  name: the  main script.
-		;When  in R6RS-SCRIPT  or COMPILE-DEPENDENCIES  mode: it
-		;must hold  an R6RS  program.  When  in script  mode: it
-		;must hold a script.
+		;When     in     R6RS-SCRIPT,     COMPILE-LIBRARY     or
+		;COMPILE-DEPENDENCIES  mode:   it  must  hold   an  R6RS
+		;program.  When in script mode: it must hold a script.
 
    rcfiles	;#f,  #t, null or  a list  of strings  representing file
 		;names.  When #f: avoid executing any run-command files;
@@ -178,10 +179,6 @@
 		;libraries to be instantiated,  adding the result to the
 		;interaction environment, after  the RC files and before
 		;the load scripts.
-
-   print-libraries
-		;For debugging  purposes: when  true print a  message to
-		;stderr showing which library file is loaded.
 
    eval-codes
 		;Null or  an alist with entries:
@@ -227,6 +224,10 @@
    raw-repl
 		;If true  do not create  a readline console  input port,
 		;even when the readline interface is available.
+   output-file
+		;False or  a non-empty string representing  the pathname
+		;of an  output file.   It has multiple  purposes: output
+		;file for compiled libraries.
    ))
 
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
@@ -270,7 +271,6 @@
 	      (CFG.SCRIPT		(%dot-id ".script"))
 	      (CFG.RCFILES		(%dot-id ".rcfiles"))
 	      (CFG.LOAD-LIBRARIES	(%dot-id ".load-libraries"))
-	      (CFG.PRINT-LIBRARIES	(%dot-id ".print-libraries"))
 	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
@@ -278,7 +278,8 @@
 	      (CFG.FASL-SEARCH-PATH	(%dot-id ".fasl-search-path"))
 	      (CFG.FASL-DIRECTORY	(%dot-id ".fasl-directory"))
 	      (CFG.MORE-FILE-EXTENSIONS	(%dot-id ".more-file-extensions"))
-	      (CFG.RAW-REPL		(%dot-id ".raw-repl")))
+	      (CFG.RAW-REPL		(%dot-id ".raw-repl"))
+	      (CFG.OUTPUT-FILE		(%dot-id ".output-file")))
 	   #'(let-syntax
 		 ((CFG.EXEC-MODE
 		   (identifier-syntax
@@ -307,13 +308,6 @@
 		     (run-time-config-load-libraries ?cfg))
 		    ((set! _ ?val)
 		     (set-run-time-config-load-libraries! ?cfg ?val))))
-
-		  (CFG.PRINT-LIBRARIES
-		   (identifier-syntax
-		    (_
-		     (run-time-config-print-libraries ?cfg))
-		    ((set! _ ?val)
-		     (set-run-time-config-print-libraries! ?cfg ?val))))
 
 		  (CFG.EVAL-CODES
 		   (identifier-syntax
@@ -366,7 +360,11 @@
 
 		  (CFG.RAW-REPL
 		   (identifier-syntax
-		    (run-time-config-raw-repl ?cfg))))
+		    (run-time-config-raw-repl ?cfg)))
+
+		  (CFG.OUTPUT-FILE
+		   (identifier-syntax
+		    (run-time-config-output-file ?cfg))))
 	       . ?body)))))))
 
 
@@ -399,7 +397,6 @@
 			  #f		;script
 			  #t		;rcfiles
 			  '()		;load-libraries
-			  #f		;print-libraries
 			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
@@ -408,6 +405,7 @@
 			  #f		;fasl-directory
 			  #f		;more-file-extensions
 			  #f		;raw-repl
+			  #f		;output-file
 			  ))
 
   (let next-option ((args	(command-line-arguments))
@@ -492,6 +490,17 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
+	  ((%option= "--compile-library")
+	   (cond ((null? (cdr args))
+		  (%error-and-exit "option --compile-library requires a library name"))
+		 ((run-time-config-exec-mode cfg)
+		  (%error-and-exit
+		   "option --compile-library given after other mode option"))
+		 (else
+		  (set-run-time-config-exec-mode! cfg 'compile-library)
+		  (set-run-time-config-script!    cfg (cadr args))
+		  (next-option (cddr args) k))))
+
 	  ((%option= "--compile-dependencies")
 	   (cond ((null? (cdr args))
 		  (%error-and-exit "option --compile-dependencies requires a script name"))
@@ -528,10 +537,18 @@
 ;;; Vicare options without argument
 
 	  ((%option= "-d" "-g" "--debug")
+	   (option.debug-mode-enabled? #t)
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #t))))
 
 	  ((%option= "-nd" "--no-debug")
+	   (option.debug-mode-enabled? #f)
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #f))))
+
+	  ((%option= "--gc-integrity-checks")
+	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
+
+	  ((%option= "--no-gc-integrity-checks")
+	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_disable_gc_integrity_checks"))))
 
 	  ((%option= "--no-greetings")
 	   (set-run-time-config-no-greetings! cfg #t)
@@ -555,40 +572,63 @@
 	   (set-run-time-config-raw-repl! cfg #t)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--cache-compiled-libraries")
+	   (option.cache-compiled-libraries #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-cache-compiled-libraries")
+	   (option.cache-compiled-libraries #f)
+	   (next-option (cdr args) k))
+
 	  ((%option= "--print-loaded-libraries")
-	   (set-run-time-config-print-libraries! cfg #t)
+	   (option.print-loaded-libraries #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-print-loaded-libraries")
-	   (set-run-time-config-print-libraries! cfg #f)
+	   (option.print-loaded-libraries #f)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--verbose")
+	   (option.verbose? #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--silent")
+	   (option.verbose? #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--report-errors-at-runtime")
-	   (config.report-errors-at-runtime #t)
+	   (option.report-errors-at-runtime #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-report-errors-at-runtime")
-	   (config.report-errors-at-runtime #f)
+	   (option.report-errors-at-runtime #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--strict-r6rs")
-	   (config.strict-r6rs #t)
+	   (option.strict-r6rs #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-strict-r6rs")
-	   (config.strict-r6rs #f)
+	   (option.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--descriptive-labels")
-	   (config.descriptive-labels #t)
+	   (option.descriptive-labels #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-descriptive-labels")
-	   (config.descriptive-labels #f)
+	   (option.descriptive-labels #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
+
+	  ((%option= "-o" "--output")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--output requires a file name argument")
+	     (begin
+	       (set-run-time-config-output-file! cfg (cadr args))
+	       (next-option (cddr args) k))))
 
 	  ((%option= "--rcfile")
 	   (if (null? (cdr args))
@@ -646,6 +686,21 @@
 	     (let ((prompt (cadr args)))
 	       (next-option (cddr args) (lambda () (k) (waiter-prompt-string prompt))))))
 
+	  ((%option= "--library-locator")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--library-locator requires a locator name")
+	     (let ((name (cadr args)))
+	       (psyntax.current-library-locator
+		(cond ((string=? name "run-time")
+		       load.run-time-library-locator)
+		      ((string=? name "compile-time")
+		       load.compile-time-library-locator)
+		      ((string=? name "source")
+		       load.source-library-locator)
+		      (else
+		       (%error-and-exit "invalid library location selection"))))
+	       (next-option (cddr args) k))))
+
 ;;; --------------------------------------------------------------------
 ;;; compiler options with argument
 
@@ -671,16 +726,16 @@
 ;;; compiler options without argument
 
 	  ((%option= "-O3")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 3))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 3))))
 
 	  ((%option= "-O2")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 2))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 2))))
 
 	  ((%option= "-O1")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 1))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 1))))
 
 	  ((%option= "-O0")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 0))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 0))))
 
 	  ((%option= "--enable-open-mvcalls")
 	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #t))))
@@ -737,7 +792,7 @@
   (%newline)
   (%display "
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011-2013 Marco Maggi\n\n"))
+Copyright (c) 2011-2014 Marco Maggi\n\n"))
 
 (define (print-version-screen)
   ;;Print the version screen.
@@ -786,6 +841,7 @@ vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-program PROGRAM         [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
+vicare [OPTIONS] --compile-library LIBFILE      [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-dependencies PROGRAM [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-program      PROGRAM [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-expand PROGRAM          [-- [PROGRAM OPTS]]
@@ -814,6 +870,10 @@ Options controlling execution modes:
        	sequence of R6RS expressions: such expressions are used as first
        	argument for EVAL under the interaction environment.
 
+   --compile-library LIBFILE
+        Load the  R6RS library source  LIBFILE, compile it and  save the
+        result in the FASL repository.
+
    --compile-dependencies PROGRAM
         Load  the R6RS program  PROGRAM, compile all the  libraries upon
 	which it depends  and save them in the FASL repository.  PROGRAM
@@ -841,6 +901,10 @@ Other options:
 
    --no-rcfile
         Disable loading of run-command files.
+
+   -o OFILE
+   --output OFILE
+        Select the pathname of the output file.
 
    --rcfile RCFILE
         Load and evaluate  RCFILE as an R6RS program  at startup, before
@@ -915,6 +979,21 @@ Other options:
    --no-debug
         Turn off debugging mode.
 
+   --gc-integrity-checks
+        Enable garbage collection integrity checks.  This slows down the
+        garbage collection.
+
+   --no-gc-integrity-checks
+        Disable   garbage   collection integrity   checks.  This  is the
+        default.
+
+   --cache-compiled-libraries
+        Whenever a  library file is  loaded in source  form: compile and
+        serialize it in a FASL file in the selected FASL directory.
+
+   --no-cache-compiled-libraries
+        Disables the effect of --cache-compiled-libraries.
+
    --print-loaded-libraries
         Whenever a library file is loaded print a message on the console
         error port.  This is for debugging purposes.
@@ -946,6 +1025,10 @@ Other options:
         For debugging  purposes: do  not generate descriptive  labels in
         expanded  code  and  assembly code.  Disables   the   effect  of
         --descriptive-labels.  This is the default.
+
+    --library-locator NAME
+        Select a  library  locator.  NAME can  be one  among:  run-time,
+        compile-time, source.
 
    -O0
         Turn off the source optimizer.
@@ -1007,34 +1090,27 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	      ls)
 	    ls))
   (with-run-time-config (cfg)
-    (library-path (append (reverse cfg.search-path)
-			  (cond ((posix.getenv "VICARE_LIBRARY_PATH")
-				 => split-path)
-				(else '()))
-			  (list config.scheme-lib-dir
-				config.vicare-lib-dir)))
+    (load.library-path (append (reverse cfg.search-path)
+			       (cond ((posix.getenv "VICARE_LIBRARY_PATH")
+				      => split-path)
+				     (else '()))))
     (when cfg.more-file-extensions
-      (library-extensions (%prefix "/main"
-				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
+      (load.library-extensions (%prefix "/main"
+					(%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
 
 (define (init-fasl-search-path cfg)
   (with-run-time-config (cfg)
     (when cfg.fasl-directory
       (if (file-exists? cfg.fasl-directory)
-	  (loading.fasl-directory (posix.real-pathname cfg.fasl-directory))
+	  (load.fasl-directory (posix.real-pathname cfg.fasl-directory))
 	(error 'init-fasl-search-path
 	  "invalid fasl directory pathname" cfg.fasl-directory)))
-    (loading.fasl-search-path (append
-			       (if cfg.fasl-directory
-				   (if (file-exists? cfg.fasl-directory)
-				       (list (posix.real-pathname cfg.fasl-directory))
-				     '())
-				 '())
+    (load.fasl-search-path (append
 			       (reverse cfg.fasl-search-path)
 			       (cond ((posix.getenv "VICARE_FASL_PATH")
 				      => split-path)
 				     (else '()))
-			       (loading.fasl-search-path)))))
+			       (load.fasl-search-path)))))
 
 (define (split-path input-string)
   ;;Convert  the  input  string  holding  a  search  pathname  as  colon
@@ -1114,10 +1190,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;there is only one internal collection of loaded libraries.
   ;;
   (with-run-time-config (cfg)
-    (doit (for-each (lambda (filename)
+    (doit (for-each (lambda (source-filename)
 		      (for-each (lambda (library-form)
-				  ((current-library-expander) library-form))
-			(read-source-file filename)))
+				  (parametrise ((psyntax.source-code-location source-filename))
+				    ((psyntax.current-library-expander) library-form)))
+			(read-source-file source-filename)))
 	    cfg.load-libraries))))
 
 (define (evaluate-codes cfg)
@@ -1130,7 +1207,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (doit (for-each (lambda (entry)
 		      (case (car entry)
 			((file)
-			 (loading.load (cdr entry)))
+			 (load.load (cdr entry)))
 			((expr)
 			 (eval (cdr entry) (interaction-environment)))
 			(else
@@ -1151,15 +1228,19 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (compile-program cfg)
   (with-run-time-config (cfg)
-    (doit (loading.compile-r6rs-script cfg.script))))
+    (doit (load.compile-r6rs-script cfg.script))))
 
 (define (run-serialized-program cfg)
   (with-run-time-config (cfg)
-    (doit (loading.run-serialized-r6rs-script cfg.script))))
+    (doit (load.run-serialized-r6rs-script cfg.script))))
+
+(define (compile-library cfg)
+  (with-run-time-config (cfg)
+    (doit (load.load-and-serialize-source-library cfg.script cfg.output-file))))
 
 (define (load-evaluated-script cfg)
   (with-run-time-config (cfg)
-    (doit (loading.load cfg.script))))
+    (doit (load.load cfg.script))))
 
 (define (expand-program cfg)
   ;;FIXME Currently undocumented because the output really really really
@@ -1168,8 +1249,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;
   (with-run-time-config (cfg)
     (doit
-     (let-values (((lib* invoke-code macro* export-subst export-env)
-		   (expand-top-level (read-script-source-file cfg.script))))
+     (receive (lib* invoke-code macro* export-subst export-env)
+	 (psyntax.expand-top-level (read-script-source-file cfg.script))
        (define port (current-output-port))
        (pretty-print invoke-code port)
        ;; (newline port)
@@ -1183,14 +1264,19 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (flush-output-port port)))))
 
 
-;;;; some utility modules
+;;;; some basic initialisation
 
 (module ()
   ;;See "ikarus.symbol-table.sls"  for an explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
   ($initialize-symbol-table!)
   ;;See "ikarus.strings.table.sls".
-  ($initialize-interned-strings-table!))
+  ($initialize-interned-strings-table!)
+
+  (psyntax.initialise-type-spec-for-built-in-object-types)
+  (psyntax.initialise-core-prims-tagging)
+
+  #| end of module |# )
 
 
 ;;;; automatic struct finalisation
@@ -1393,31 +1479,14 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   #| end of module |# )
 
 
-;;;; vicare configuration options
-
-(define (vicare-built-with-srfi-enabled)
-  (foreign-call "ikrt_vicare_built_with_srfi_enabled"))
-
-(define (vicare-built-with-ffi-enabled)
-  (foreign-call "ikrt_vicare_built_with_ffi_enabled"))
-
-(define (vicare-built-with-iconv-enabled)
-  (foreign-call "ikrt_vicare_built_with_iconv_enabled"))
-
-(define (vicare-built-with-posix-enabled)
-  (foreign-call "ikrt_vicare_built_with_posix_enabled"))
-
-(define (vicare-built-with-glibc-enabled)
-  (foreign-call "ikrt_vicare_built_with_glibc_enabled"))
-
-(define (vicare-built-with-linux-enabled)
-  (foreign-call "ikrt_vicare_built_with_linux_enabled"))
-
-
 ;;;; main expressions
 
-(let-values (((cfg execution-state-initialisation-according-to-command-line-options)
-	      (parse-command-line-arguments)))
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main here"))
+
+(receive (cfg execution-state-initialisation-according-to-command-line-options)
+    (parse-command-line-arguments)
+
   (with-run-time-config (cfg)
     (define-inline (%print-greetings)
       (unless cfg.no-greetings
@@ -1425,9 +1494,23 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
     (init-library-path cfg)
     (init-fasl-search-path cfg)
+    (psyntax.current-library-locator
+     ;;If  a library  locator has  already been  selected (perhaps  by a
+     ;;command  line option):  accept it.   Otherwise explicitly  select
+     ;;one.
+     (cond ((psyntax.current-library-locator))
+	   ((memq cfg.exec-mode '(compile-dependencies compile-library))
+	    load.compile-time-library-locator)
+	   (else
+	    load.run-time-library-locator)))
+    ;;When  the  execution mode  is  "compile  library dependencies"  or
+    ;;"compile  this library":  we  disable  caching compiled  libraries
+    ;;loaded in  source form; because  these options have  different and
+    ;;incompatible  ways  to produce  FASL  file  pathnames from  source
+    ;;libraries.
+    (when (memq cfg.exec-mode '(compile-dependencies compile-library))
+      (option.cache-compiled-libraries #f))
     (load-rc-files-as-r6rs-scripts cfg)
-    (config.print-loaded-libraries cfg.print-libraries)
-
     (execution-state-initialisation-according-to-command-line-options)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
@@ -1458,8 +1541,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((compile-dependencies)
        (compile-dependencies cfg))
 
+
       ((compile-program)
        (compile-program cfg))
+
+      ((compile-library)
+       (compile-library cfg))
 
       ((script)
        (load-evaluated-script cfg))

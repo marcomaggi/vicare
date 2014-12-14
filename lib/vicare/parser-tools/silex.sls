@@ -75,7 +75,7 @@
     (vicare parser-tools silex nested-comment-l)
     (prefix (vicare language-extensions makers) mk.)
     (vicare arguments validation)
-    (vicare $posix))
+    (vicare language-extensions posix))
 
 
 ;;;; helpers
@@ -2234,7 +2234,7 @@
 	      (write library-language output-port)
 	      (newline output-port)
 	      (display "(vicare parser-tools silex input-system)\n" output-port)
-	      (display "(ikarus system $fx)\n" output-port)
+	      (display "(vicare system $fx)\n" output-port)
 	      (for-each (lambda (spec)
 			  (write spec output-port)
 			  (newline output-port))

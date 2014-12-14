@@ -101,7 +101,7 @@
 	  expression-return-value-violation?
 	  expression-return-value-violation
 	  )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  define-condition-type condition? simple-conditions
 		  condition condition-predicate condition-accessor
 		  print-condition
@@ -535,8 +535,8 @@
 		       (display "   " port)
 		       (display i port)
 		       (display ". " port)
-		       (%print-simple-condition ($car ls) port)
-		       (loop ($cdr ls) ($fxadd1 i)))))))
+		       (%print-simple-condition (car ls) port)
+		       (loop (cdr ls) (fxadd1 i)))))))
 	     #;(flush-output-port port))
 	    (else
 	     (display " Non-condition object: " port)
@@ -557,10 +557,10 @@
 			    (cons (cons rtd (record-type-field-names rtd))
 				  accum))
 		    (remp (lambda (a)
-			    (zero? (vector-length ($cdr a))))
+			    (zero? (vector-length (cdr a))))
 		      accum))))
 	 (rf-len (fold-left (lambda (sum pair)
-			      (+ sum ($vector-length ($cdr pair))))
+			      (+ sum (vector-length (cdr pair))))
 		   0
 		   rf)
 		 #;(apply + (map vector-length (map cdr rf)))))
@@ -591,12 +591,15 @@
 		 ;; (begin
 		 ;;   (write ((record-accessor rtd i) x) port)
 		 ;;   (newline port))
-		 (loop ($fxadd1 i) rtd v))))
+		 (loop (fxadd1 i) rtd v))))
 	 rf)))))
 
 
 ;;;; done
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions"))
+
+#| end of library |# )
 
 ;;; end of file

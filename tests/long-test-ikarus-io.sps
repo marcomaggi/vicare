@@ -28,7 +28,7 @@
 
 
 #!r6rs
-(import (ikarus)
+(import (vicare)
   (prefix (vicare posix) px.) ;for FILE-SIZE
   (vicare checks))
 
@@ -1528,8 +1528,8 @@
 (parametrise ((check-test-name	'ikarus/file))
 
   ;;Preliminary assertions on input data.
-  (assert (= (px.file-size-char-by-char (src-file "TEST-SOURCE-FILE.txt")) 56573))
-  (assert (= (px.file-size (src-file "TEST-SOURCE-FILE.txt")) 56573))
+  (assert (= (px.file-size-char-by-char (src-file "TEST-SOURCE-FILE.txt")) 56432))
+  (assert (= (px.file-size (src-file "TEST-SOURCE-FILE.txt")) 56432))
   (let ((bv (file->bytevector (src-file "TEST-SOURCE-FILE.txt"))))
     (let-values (((port extract) (open-bytevector-output-port #f)))
       (bytevector->binary-port bv port)

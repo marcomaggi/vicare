@@ -22,12 +22,21 @@
 ;;;SOFTWARE.
 
 
-(library (psyntax library-manager)
+#!vicare
+(library (psyntax.library-manager)
   (export
     ;; library inspection
     library?
-    library-name		library-version
-    library-descriptor		library-subst
+    library-uid			library-name
+    library-imp-lib*		library-vis-lib*
+    library-inv-lib*		library-export-subst
+    library-export-env		library-visit-state
+    library-invoke-state	library-visit-code
+    library-invoke-code		library-guard-code
+    library-guard-lib*		library-visible?
+    library-source-file-name	library-option*
+    library-descriptor
+    library-name-identifiers
     imported-label->syntactic-binding
 
     ;; library installation
@@ -37,16 +46,28 @@
     ;; library operations
     visit-library		invoke-library
     serialize-collected-libraries
+    serialize-library
+
+    ;; installed library collection
+    find-library-by-name	library-exists?
+    current-library-collection
+    install-binary-library-and-its-dependencies
 
     ;; finding and loading libraries
-    library-exists?
-    find-library-by-name	find-library-by-descr
+    current-library-locator
+    current-source-library-file-locator
+    current-source-library-loader
+    current-binary-library-file-locator
+    current-binary-library-loader
+    failed-library-location-collector
+    current-source-library-loader-by-filename
+    current-library-record-serializer
 
+    ;; library locator options
+    library-locator-options-no-raise-when-open-fails?
+
+    ;; expander
     current-library-expander
-    current-library-collection
-    current-library-source-file-locator
-    current-library-source-loader
-    current-library-serialized-loader
 
     ;; finding and loading include files
     default-include-loader
@@ -54,56 +75,85 @@
     current-include-file-locator
     current-include-file-loader
 
-    ;; library names and version numbers
-    library-name?
-    library-version-numbers?		library-version-number?
-    library-name-decompose
-    library-name->identifiers		library-name->version
-    library-name-identifiers=?		library-name=?
-    library-name<?			library-name<=?
-    library-version=?
-    library-version<?			library-version<=?
-
-    ;; library references and conformity
-    library-reference?			library-version-reference?
-    library-sub-version-reference?	library-sub-version?
-    library-reference-decompose
-    library-reference->identifiers
-    library-reference->version-reference
-    library-reference-identifiers=?
-    conforming-sub-version-and-sub-version-reference?
-    conforming-version-and-version-reference?
-    conforming-library-name-and-library-reference?)
+    ;;other parameters
+    source-code-location)
   (import (rnrs)
-    (psyntax compat)
-    (vicare arguments validation)
-    (vicare language-extensions simple-match))
+    (psyntax.compat))
+
+
+;;;; helpers
+
+(define (string-pathname? obj)
+  (and (string? obj)
+       (not (string-empty? obj))))
+
+(define (false-or-library? obj)
+  (or (not obj) (library? obj)))
+
+(module (%log-library-debug-message)
+
+  (define-syntax %log-library-debug-message
+    (if (option.verbose-about-libraries?)
+	(syntax-rules ()
+	  ((_ ?template ?arg ...)
+	   (%logger ?template ?arg ...)))
+      (lambda (stx) #'(void))))
+
+  (define (%logger template . args)
+    (apply fprintf (current-error-port)
+	   (string-append "vicare ***: " template "\n")
+	   args))
+
+  #| end of module |# )
+
+(define (%log-loaded-library template . args)
+  (when (option.print-loaded-libraries)
+    (guard (E (else
+	       ;;We do not  want an exception from the  I/O layer to
+	       ;;ruin things.
+	       (void)))
+      (apply fprintf (current-error-port)
+	     (string-append "vicare: " template "\n")
+	     args))))
 
 
 ;;;; type definitions: library record
 
 (define-record library
-  (id
+  (uid
 		;A gensym uniquely identifying this library.
+		;
+		;This gensym is registered: in the LIBRARY record in the
+		;collection  of installed  libraries; in  the FASL  file
+		;containing  this  library  in compiled  and  serialized
+		;form;  in  the  FASL   files  containing  the  compiled
+		;libraries that import this one.
+		;
+		;Whenever a  compiled library imports this  one, the UID
+		;stored in the FASL files  is compared to this field: if
+		;they  are  EQ?   the  compiled versions  are  in  sync,
+		;otherwise the importing library must be recompiled.
    name
-		;Non-empty list of  symbols representing the identifiers
-		;from the library name.
-   version
-		;Null or a list of non-negative fixnums representing the
-		;version number from the library name.
-   imp*
+		;A library name as defined by R6RS:
+		;
+		;   (?identifier0 ?identifier ... . ?version)
+		;
+		;where the ?IDENTIFIERs are symbols and ?VERSION is null
+		;or  a list  of  non-negative  fixnums representing  the
+		;version numbers.
+   imp-lib*
 		;The  list of  LIBRARY  records selected  by the  IMPORT
 		;syntax.
-   vis*
+   vis-lib*
 		;The list of LIBRARY  records selecting libraries needed
 		;by the visit code.
-   inv*
+   inv-lib*
 		;The list of LIBRARY  records selecting libraries needed
 		;by the invoke code.
-   subst
+   export-subst
 		;A  subst  selecting  the  exported  bindings  from  the
 		;EXPORT-ENV.
-   env
+   export-env
 		;The  EXPORT-ENV  representing  the  top-level  bindings
 		;defined by the library body.
    visit-state
@@ -138,7 +188,7 @@
 		;When this  structure is created from  precompiled FASL:
 		;this  field is  a  thunk  to be  evaluated  to run  the
 		;STALE-WHEN composite test expression.
-   guard-req*
+   guard-lib*
 		;The list of LIBRARY  records selecting libraries needed
 		;by the STALE-WHEN composite test expression.
    visible?
@@ -157,508 +207,758 @@
 		;A sexp holding library options.
    )
   (lambda (S port sub-printer)
-    ;;Printer function.
-    ;;
-    (define-inline (%display thing)
+    (define-syntax-rule (%display thing)
       (display thing port))
-    (define-inline (%write thing)
+    (define-syntax-rule (%write thing)
       (write thing port))
     (%display "#<library ")
-    (%display (if (null? ($library-version S))
-		  ($library-name S)
-		(append ($library-name S)
-			(list ($library-version S)))))
+    (%display ($library-name S))
     (%display " filename=")	(%write ($library-source-file-name S))
     (%display ">")))
 
-(define-argument-validation (library who obj)
-  (library? obj)
-  (assertion-violation who "expected instance of library struct as argument" obj))
-
-(define* (library-descriptor (lib library?))
-  ;;Given a library record return a list holding: the unique library id,
-  ;;the  list of  symbols from  the library  name, null  or the  list of
-  ;;version numbers from the library name.
+(define* (library-descriptor {lib library?})
+  ;;Given a library  record return a pair having the  library UID as car
+  ;;and the library name as cdr.
   ;;
-  (define __who__ 'library-descriptor)
-  (with-arguments-validation (__who__)
-      ((library		lib))
-    (list ($library-id      lib)
-	  ($library-name    lib)
-	  ($library-version lib))))
+  (cons ($library-uid  lib)
+	($library-name lib)))
+
+(define (library-descriptor? obj)
+  (and (pair? obj)
+       (symbol?       ($car obj))
+       (library-name? ($cdr obj))))
+
+(define-syntax-rule (library-descriptor-uid ?lib)
+  (car ?lib))
+
+(define-syntax-rule (library-descriptor-name ?lib)
+  (cdr ?lib))
+
+(define* (library-name-identifiers {lib library?})
+  (library-name->identifiers ($library-name lib)))
 
 
-;;;; expanding libraries
+;;;; errors and condition object types
+
+;;To be used to signal an exeption when: a library loaded in response to
+;;a library reference request has a library name that does not conform.
 ;;
-;;The  current library  expander is  used to  expand LIBRARY  forms from
-;;source files.
-;;
-(define current-library-expander
-  (make-parameter
-      (lambda (x)
-        (assertion-violation 'current-library-expander "not initialized"))
-    (lambda (obj)
-      (define who 'current-library-expander)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
+(define-condition-type &non-conforming-library
+    &error
+  make-non-conforming-library-condition
+  non-conforming-library-condition?
+  (name		non-conforming-library-name)
+  (reference	non-conforming-library-reference)
+  (file		non-conforming-library-file))
+
+(define (raise-non-conforming-library who library-name library-reference filename)
+  (raise
+   (condition
+    (make-non-conforming-library-condition library-name library-reference filename)
+    (make-who-condition who)
+    (make-message-condition "loaded library name does not conform to requested library reference"))))
 
 
 ;;;; collection of already installed libraries
-;;
-;;When a library  is installed: it is added to  this collection.  When a
-;;library is uninstalled: it is removed from this collection.
-;;
-(module (current-library-collection)
 
-  (define (make-collection)
-    ;;Build  and return  a "collection":  a lambda  closed upon  a list.
-    ;;Interface:
-    ;;
-    ;;* When called with no arguments: return the list.
-    ;;
-    ;;* When called  with one argument: add the argument  to the list if
-    ;;  it is not already there according to EQ?.
-    ;;
-    ;;* When called with two arguments:
-    ;;
-    ;;  - If the second argument is true: remove the first argument from
-    ;;    the list, if present according to EQ?.
-    ;;
-    ;;  - If the second argument is false: add the first argument to the
-    ;;    list, if not already there according to EQ?.
-    ;;
+(module (current-library-collection)
+  ;;A  "library  collection"  is  a  closure object  closed  upon  a  list.   Library
+  ;;collections are handled as  stacks: new items are pushed to the  top of the list,
+  ;;items  are searched  from top  to bottom  stopping at  the first  match.  Closure
+  ;;object interface:
+  ;;
+  ;;*  When  called  with no  arguments:  return  the  full  list of  LIBRARY  struct
+  ;;  instances.
+  ;;
+  ;;* When called with one LIBRARY struct  argument: push the argument on the list as
+  ;;  first head item, if it is not already there according to EQ?.
+  ;;
+  ;;* When called with two arguments:
+  ;;
+  ;;  - If the  second argument is true: remove the first argument  from the list, if
+  ;;    present according to EQ?.
+  ;;
+  ;;  - If the  second argument is false: add the first argument  to the list, if not
+  ;;    already there according to EQ?.
+  ;;
+  ;;When a library is installed: it is added to the current library collection.  When
+  ;;a library is uninstalled: it is removed from the current library collection.
+  ;;
+  ;;When reasoning about loading libraries, remember that:
+  ;;
+  ;;* A R6RS library name is a perfectly valid R6RS library reference.
+  ;;
+  ;;* A specific LIBRARY struct instance can be added to the collection only once.
+  ;;
+  ;;* Multiple LIBRARY struct instances having the  same library name might be added to
+  ;;  the collection;  when searching a  LIBRARY in  the collection matching  a library
+  ;;  name: the search is performed from top  to bottom stopping at the first match, so
+  ;;  the last collected instance is  returned.  However adding such multiple instances
+  ;;  should be avoided.
+  ;;
+  ;;The parameter CURRENT-LIBRARY-COLLECTION is initialised with the closure bound to
+  ;;DEFAULT-LIBRARY-COLLECTION;  such  default  collection holds  all  the  libraries
+  ;;installed in a common running "vicare" process.
+  ;;
+  ;;As special case, when building a new boot image: a separate collection defined in
+  ;;the  boot-image  build-script  (BOOTSTRAP-COLLECTION)  is  used  to  collect  the
+  ;;libraries that will  end in the boot  image.  So, while building  the boot image:
+  ;;DEFAULT-LIBRARY-COLLECTION contains the libraries used  to expand and compile the
+  ;;boot  image source  code; BOOTSTRAP-COLLECTION  contains the  libraries that  are
+  ;;components of the boot image.
+  ;;
+  (define default-library-collection
     (let ((set '()))
-      (case-lambda
-       (()
-	set)
-       ((x)
-	(unless (memq x set)
-	  (set! set (cons x set))))
-       ((x del?)
-	(if del?
-	    (set! set (remq x set))
-	  (unless (memq x set)
-	    (set! set (cons x set))))))))
+      (case-lambda*
+	(()
+	 set)
+	(({lib library?})
+	 (unless (memq lib set)
+	   (%log-library-debug-message "installed library: ~a" (library-name lib))
+	   (set! set (cons lib set))))
+	(({lib library?} del?)
+	 (if del?
+	     (set! set (remq lib set))
+	   (unless (memq lib set)
+	     (%log-library-debug-message "installed library: ~a" (library-name lib))
+	     (set! set (cons lib set))))))))
 
   (define current-library-collection
-    ;;Hold a collection of installed LIBRARY structs.
-    ;;
-    (make-parameter (make-collection)
-      (lambda (x)
-	(define who 'current-library-collection)
-	(with-arguments-validation (who)
-	    ((procedure	x))
-	  x))))
+    (make-parameter default-library-collection
+      (lambda* ({obj procedure?})
+	obj)))
 
   #| end of module: CURRENT-LIBRARY-COLLECTION |# )
 
-(define %external-pending-libraries
-  ;;Hold  the list  of  library names  whose  installation is  currently
-  ;;pending; used to detect circular dependencies between libraries.
+(define (library-exists? libref)
+  ;;Given a  R6RS library reference  search the  corresponding LIBRARY record  in the
+  ;;collection of already  installed libraries: if successful  return true, otherwise
+  ;;return false.
   ;;
-  ;;For this  parameter: a "library name"  is a list of  symbols without
-  ;;the version specification.
+  (and (find-library-in-collection-by-reference libref)
+       #t))
+
+(define* ({find-library-in-collection-by-predicate false-or-library?} {pred procedure?})
+  ;;Visit the current  installed libraries collection and return the  first for which
+  ;;PRED returns true.  If PRED returns false  for all the entries in the collection:
+  ;;return false.
+  (let next-library-struct ((ls ((current-library-collection))))
+    (cond ((null? ls)
+	   #f)
+	  ((pred ($car ls))
+	   ($car ls))
+	  (else
+	   (next-library-struct ($cdr ls))))))
+
+(define* (find-library-in-collection-by-descriptor libdesc)
+  ;;Given  a library  descriptor, as  generated by  the function  LIBRARY-DESCRIPTOR:
+  ;;return  the  corresponding  LIBRARY  record  from  the  collection  of  installed
+  ;;libraries or raise an assertion.
   ;;
-  (make-parameter '()))
+  (let ((uid (library-descriptor-uid libdesc)))
+    (or (find-library-in-collection-by-predicate
+	 (lambda (lib)
+	   (eq? uid ($library-uid lib))))
+	(assertion-violation __who__
+	  "cannot find installed library with required descriptor" libdesc))))
+
+(module (find-library-by-name
+	 find-library-in-collection-by-reference
+	 %external-pending-libraries)
+
+  (define (find-library-by-name libref)
+    ;;Given a  R6RS library reference:  try to  search and install  the corresponding
+    ;;library,  if  it   is  not  already  installed;  when   successful  return  the
+    ;;corresponding LIBRARY record, otherwise raise an exception.
+    ;;
+    ;;Search for  the library  in the internal  collection or, if  not found,  in the
+    ;;external   source   (for  example   the   file   system)  using   the   current
+    ;;CURRENT-LIBRARY-LOADER.
+    ;;
+    (or (find-library-in-collection-by-reference libref)
+	(%find-and-install-external-library libref)))
+
+  (define* (find-library-in-collection-by-reference {libref library-reference?})
+    (find-library-in-collection-by-predicate (lambda (lib)
+					       (%conforming-identifiers? libref lib))))
+
+  (define (%conforming-identifiers? libref lib)
+    (equal? (library-reference->identifiers libref)
+	    (library-name-identifiers lib)))
+
+  (define* (%find-and-install-external-library libref)
+    ;;Given  a R6RS  library reference  try to  load a  conforming library  using the
+    ;;current library loader.
+    ;;
+    (with-pending-library-request (__who__ libref)
+      ;;Load the library, either source or precompiled, and install it.
+      ((current-library-loader) libref)
+      ;;Check if we actually succeeded.
+      (or (find-library-in-collection-by-reference libref)
+	  (assertion-violation __who__
+	    "cannot find library conforming to requested library reference"
+	    libref))))
+
+  (module (with-pending-library-request %external-pending-libraries)
+
+    (define %external-pending-libraries
+      ;;Hold  a  list of  items  representing  the  libraries whose  installation  is
+      ;;currently pending.  Each  item is the list of R6RS  library name identifiers.
+      ;;Used to detect circular dependencies between libraries.
+      ;;
+      (make-parameter '()))
+
+    (define (%pending-library-request? libref)
+      (member (library-reference->identifiers libref)
+	      (%external-pending-libraries)))
+
+    (define (%assert-not-pending-library-request who libref)
+      (when (%pending-library-request? libref)
+	(assertion-violation who
+	  "circular attempt to import library was detected" libref)))
+
+    (define-syntax (with-pending-library-request stx)
+      (syntax-case stx ()
+	((_ (?who ?libref) ?body0 ?body ...)
+	 (identifier? #'?who)
+	 #'(let ((libref ?libref))
+	     (%assert-not-pending-library-request ?who libref)
+	     (parametrise ((%external-pending-libraries (cons libref (%external-pending-libraries))))
+	       ?body0 ?body ...)))
+	))
+
+    #| end of module |# )
+
+  #| end of module |# )
 
 
-;;;; loading source and serialized libraries from files
+;;;; parameters
 
-(define current-library-source-file-locator
-  ;;Hold a  function used to  convert a library name  specification into
-  ;;the  corresponding  file  pathname; this  parameter  is  initialised
-  ;;"ikarus.load.sls" with the function LOCATE-LIBRARY-SOURCE-FILE.
-  ;;
-  ;;The selected  function must accept  2 values: a  string representing
-  ;;the source  library file  name; the possibly  empty list  of library
-  ;;names that  representing the  libraries that requested  this library
-  ;;loading.  The second argument is the cdr of the current value in the
-  ;;parameter %EXTERNAL-PENDING-LIBRARIES.
+(define current-library-expander
+  ;;The current  library expander is  used to expand LIBRARY  forms from
+  ;;source files.
   ;;
   (make-parameter
-      (lambda (filename pending-libraries)
-	(error 'current-library-source-file-locator
-	  "source library locator not set" filename))
-    (lambda (obj)
-      (define who 'current-library-source-file-locator)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
+      (lambda (library-sexp)
+        (assertion-violation 'current-library-expander "not initialized"))
+    (lambda* ({obj procedure?})
+      obj)))
 
-(define current-library-source-loader
-  ;;Hold a  function used to  laod a  source library; this  parameter is
-  ;;initialised      "ikarus.load.sls"       with      the      function
-  ;;READ-LIBRARY-SOURCE-FILE.
+(define source-code-location
+  ;;This parameter is  used to expand the  identifier syntax "__file__".
+  ;;It is  meant to be  set to a string  representing the source  of the
+  ;;code being expanded; for example the source file name.
   ;;
-  ;;The  referenced function  must:  accept a  string  file pathname  as
-  ;;single  argument,  open the  pathname  for  input using  the  native
-  ;;transcoder, read the first datum, close the port, return the datum.
+  (make-parameter "<unknown-source-location>"
+    (lambda* ({obj string?})
+      obj)))
+
+
+;;;; loading source and binary libraries
+
+;;NOTE Here we would like to use a proper enumeration definition and the
+;;predicate function below  to test for library locator  options; but we
+;;cannot.  First because using  DEFINE-ENUMERATION causes the boot image
+;;to crash  at initialisation time (for  no fucking reason I  can figure
+;;out);    second    because    we     cannot    export    the    syntax
+;;LIBRARY-LOCATOR-OPTIONS from a library component of the boot image, we
+;;could do  it by defining  the syntax  in an external  library.  (Marco
+;;Maggi; Tue Feb 18, 2014)
+;;
+;; (define-enumeration library-locator-option
+;;   (move-on-when-open-fails
+;; 		;If attempting  to open  a file fails:  do not  raise an
+;; 		;exception, rather move on with the search.
+;;    )
+;;   library-locator-options)
+;;
+;; (define (library-locator-options-no-raise-when-open-fails? options)
+;;   (enum-set-member? 'move-on-when-open-fails options))
+;;
+(define-syntax (library-locator-options stx)
+  (syntax-case stx ()
+    ((_ ?sym ...)
+     (and (all-identifiers? #'(?sym ...))
+	  (let ((syms (syntax->datum #'(?sym ...))))
+	    (for-all (lambda (sym)
+		       (memq sym '(move-on-when-open-fails)))
+	      syms)))
+     #'(list (quote ?sym) ...))))
+
+(define (library-locator-options-no-raise-when-open-fails? options)
+  (memq 'move-on-when-open-fails options))
+
+;;; --------------------------------------------------------------------
+
+(define current-library-locator
+  ;;Hold  a function  used to  locate a  library from  its R6RS  library
+  ;;reference; this parameter  is initialised to false here  and must be
+  ;;by "ikarus.main.sls" with one of the functions:
+  ;;
+  ;;   run-time-library-locator
+  ;;   compile-time-library-locator
+  ;;
+  ;;or a custom function selected by the user.
+  ;;
+  ;;The selected locator function must  accept as  arguments:
+  ;;
+  ;;1. A R6RS library reference.
+  ;;
+  ;;2. A list of symbols representing options.
+  ;;
+  ;;and  it must  return a  thunk as  single value.   When invoked,  the
+  ;;returned thunk must return two values:
+  ;;
+  ;;1. Either:
+  ;;
+  ;;   - An input  port from which the library can be  read; if the port
+  ;;     is binary: a compiled library can  be read from it; if the port
+  ;;      is textual  a  source library  can  be read  from  it.  It  is
+  ;;     responsibility of the caller to close the returned port when no
+  ;;     more needed.
+  ;;
+  ;;   - The boolean true.  It means the library has already been loaded
+  ;;     and installed in the collection.
+  ;;
+  ;;2. A  thunk to be  called to continue the  search; it must  have the
+  ;;   same  API of the  thunk returned  by the locator  function.  This
+  ;;   thunk allows the  caller to reject a library if  it does not meet
+  ;;   some  additional constraint; for  example: if its  version number
+  ;;   does not conform to LIBREF.
+  ;;
+  ;;When no matching library is found: return false and false.
+  ;;
+  (make-parameter
+      #f
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define failed-library-location-collector
+  ;;Hold  a function  that is  used to  register queried  locations that
+  ;;failed  to provide  a  requested library.   Such  locations must  be
+  ;;represented by a printable object, for example a string.
+  ;;
+  ;;The collector  function must  accept 1 or  0 arguments:  when called
+  ;;with one argument  it must register it as  location descriptor; when
+  ;;called with zero arguments it  must return the registered collection
+  ;;or locations as list of  objects.  The collector function can return
+  ;;unspecified values.
+  ;;
+  ;;For example, set the collector function can be set to:
+  ;;
+  ;;   (let ((ell '()))
+  ;;     (case-lambda
+  ;;      (()
+  ;;       ell)
+  ;;      ((location)
+  ;;       (set! ell (cons location ell)))))
+  ;;
+  ;;and used to  collect library file names that where  tried but do not
+  ;;exist or failed to be opened.
+  ;;
+  (make-parameter
+      (case-lambda
+       (()
+	'())
+       ((origin)
+	(void)))
+    (lambda* ({obj procedure?})
+      obj)))
+
+;;; --------------------------------------------------------------------
+
+(define current-source-library-file-locator
+  ;;Hold a  function used to convert  a R6RS library reference  into the
+  ;;corresponding source file pathname and  search for it in the library
+  ;;search path.
+  ;;
+  ;;The referenced function must accept, as single value, a R6RS library
+  ;;reference and it must return  two values.  When successful: a string
+  ;;representing  the source  file pathname;  a  thunk to  be called  to
+  ;;continue  the search  from the  next directory  in the  search path.
+  ;;Otherwise return: false and false.
+  ;;
+  (make-parameter
+      (lambda (libref pending-libraries)
+	(error 'current-source-library-file-locator
+	  "source library locator not set"))
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define current-source-library-loader
+  ;;Hold a function used to laod a library from a textual input port.
+  ;;
+  ;;The referenced  function must accept  two arguments: a  R6RS library
+  ;;reference, a textual input port from which the source library can be
+  ;;read.  It  must: read from  the port a LIBRARY  symbolic expression;
+  ;;verify that its library name conforms to the library reference; load
+  ;;and install  all its  dependency libraries;  expand it;  compile it;
+  ;;install it.
+  ;;
+  ;;If successful the function must  return a sexp representing the R6RS
+  ;;library name of the loaded library; otherwise return false.
   ;;
   (make-parameter
       (lambda (filename)
-	(error 'current-library-source-loader
-	  "source library loader not set" filename))
-    (lambda (obj)
-      (define who 'current-library-source-loader)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
+	(error 'current-source-library-loader
+	  "source library loader not set"))
+    (lambda* ({obj procedure?})
+      obj)))
 
-(define current-library-serialized-loader
-  ;;Hold a function  used to load a precompiled  library; this parameter
-  ;;is    initialised   in    "ikarus.load.sls"   with    the   function
-  ;;LOAD-SERIALIZED-LIBRARY.
+;;; --------------------------------------------------------------------
+
+(define current-binary-library-file-locator
+  ;;Hold a  function used to convert  a R6RS library reference  into the
+  ;;corresponding  FASL file  pathname and  search  for it  in the  FASL
+  ;;search path.
   ;;
-  ;;The  referenced   function  must   accept  2  arguments:   a  string
-  ;;representing the  pathname of the  file from which a  library source
-  ;;can  be  read;  a  function   to  be  called  whenever  loading  the
-  ;;precompiled file succeeds.
-  ;;
-  ;;For   details    on   the   success   continuation    function   see
-  ;;%INSTALL-PRECOMPILED-LIBRARY-AND-ITS-DEPENCENCIES.
+  ;;The referenced function must accept, as single value, a R6RS library
+  ;;reference and it must return  two values.  When successful: a string
+  ;;representing  the  FASL file  pathname;  a  thunk  to be  called  to
+  ;;continue  the search  from the  next directory  in the  search path.
+  ;;Otherwise return: false and false.
   ;;
   (make-parameter
-      (lambda (file-name success-kont)
+      (lambda (libref pending-libraries)
+	(error 'current-binary-library-file-locator
+	  "serialized library locator not set"))
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define current-binary-library-loader
+  ;;Hold a function used to load a serialized library.
+  ;;
+  ;;The referenced  function must accept  two arguments: a  R6RS library
+  ;;reference, a binary input port from which the serialized library can
+  ;;be read.  It  must: read from the port a  serialized library; verify
+  ;;that its library name conforms  to the library reference; install it
+  ;;(and all its dependency libraries).
+  ;;
+  ;;If successful the function must  return a sexp representing the R6RS
+  ;;library name of the installed library; otherwise return false.
+  ;;
+  (make-parameter
+      (lambda (pathname success-kont)
 	#f)
-    (lambda (obj)
-      (define who 'current-library-serialized-loader)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
+    (lambda* ({obj procedure?})
+      obj)))
 
 
-;;;; including files
-
-(module (current-include-loader
-	 default-include-loader)
-
-  (define* (default-include-loader (filename string?) verbose? synner)
-    ;;Default value for the parameter CURRENT-INCLUDE-LOADER.  Search an
-    ;;include file with name FILENAME.  When successful return 2 values:
-    ;;the  full pathname  from which  the  file was  loaded, a  symbolic
-    ;;expresison representing the file  contents.  When an error occurs:
-    ;;call the procedure SYNNER.
-    ;;
-    ;;If VERBOSE? is true: display verbose messages on the current error
-    ;;port describing the including process.
-    ;;
-    (when verbose?
-      (fprintf (current-error-port)
-	       "Vicare: searching include file: ~a\n" filename))
-    (let ((pathname ((current-include-file-locator) filename synner)))
-      (when verbose?
-	(fprintf (current-error-port)
-		 "Vicare: including file: ~a\n" pathname))
-      (values pathname ((current-include-file-loader) pathname synner))))
-
-  (define current-include-loader
-    ;;Hold a function used to load an include file.
-    ;;
-    (make-parameter
-	default-include-loader
-      (lambda (obj)
-	(define who 'current-include-loader)
-	(with-arguments-validation (who)
-	    ((procedure	obj))
-	  obj))))
-
-  #| end of module: CURRENT-INCLUDE-LOADER |# )
-
-(define current-include-file-locator
-  ;;Hold  a function  used  to convert  an include  file  name into  the
-  ;;corresponding   file  pathname;   this   parameter  is   initialised
-  ;;"ikarus.load.sls" with the function LOCATE-INCLUDE-FILE.
-  ;;
-  ;;The referenced function must accept  3 values: a string representing
-  ;;the include  file name; a  boolean, true  if the process  of loading
-  ;;must display  verbose messages on  the current error port;  a synner
-  ;;function used to report errors.
-  ;;
-  (make-parameter
-      (lambda (filename pending-libraries)
-	(error 'current-include-file-locator
-	  "include file locator not set" filename))
-    (lambda (obj)
-      (define who 'current-include-file-locator)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
-
-(define current-include-file-loader
-  ;;Hold a  function used  to laod  an include  file; this  parameter is
-  ;;initialised "ikarus.load.sls" with the function READ-INCLUDE-FILE.
-  ;;
-  ;;The referenced function must accept  3 values: a string representing
-  ;;an existent file pathname; a boolean, true if the process of loading
-  ;;must display  verbose messages on  the current error port;  a synner
-  ;;function used to report errors.
-  ;;
-  (make-parameter
-      (lambda (filename)
-	(error 'current-include-file-loader
-	  "include file loader not set" filename))
-    (lambda (obj)
-      (define who 'current-include-file-loader)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
-
-
-;;;; loading libraries from files
+;;;; loading libraries from files: requesting by library name
 ;;
 ;;The  library  loader  is  a  function that  loads  a  library,  either
 ;;precompiled or from source, and installs it.
 ;;
 (module (current-library-loader)
-  (define-constant __who__ 'default-library-loader)
 
-  (define* (default-library-loader requested-libname)
-    ;;Default value  for the parameter CURRENT-LIBRARY-LOADER.   Given a
-    ;;library name  specification: search  the associated  file pathname
-    ;;and attempt  to load  the file;  try first  to load  a precompiled
-    ;;file,  if any,  then  try to  load the  source  file.  The  loaded
-    ;;library is installed.
-    ;;
-    ;;For this function,  a "library name" is a list  of symbols without
-    ;;the version specification.
-    ;;
-    (let ((filename ((current-library-source-file-locator)
-		     requested-libname
-		     (cdr (%external-pending-libraries)))))
-      (cond ((not filename)
-	     (assertion-violation __who__ "cannot find library" requested-libname))
-	    ;;Try to load  a FASL library file associated  to the source
-	    ;;file pathname.
-	    (((current-library-serialized-loader)
-	      filename %install-precompiled-library-and-its-depencencies))
-	    (else
-	     ;;If we  are here: the precompiled  library loader returned
-	     ;;false, which means no valid  FASL file was available.  So
-	     ;;try to load the source file.
-	     ((current-library-expander)
-	      ;;Return  a symbolic  expression representing  the LIBRARY
-	      ;;form, or raise an exception.
-	      ((current-library-source-loader) filename)
-	      filename
-	      (lambda (library-name.ids library-name.version)
-		(%verify-library requested-libname filename
-				 library-name.ids library-name.version)))))))
+  (module (default-library-loader)
+    (define-constant __who__ 'default-library-loader)
 
-  (define (%install-precompiled-library-and-its-depencencies
-	   filename
-	   uid libname.ids libname.version
-	   import-descr* visit-descr* invoke-descr*
-	   export-subst export-env
-	   visit-proc invoke-proc guard-proc
-	   guard-descr* visible? library-option*)
-    ;;Used  as success  continuation  function by  the  function in  the
-    ;;parameter  CURRENT-LIBRARY-SERIALIZED-LOADER.   All the  arguments
-    ;;after FILENAME are the CONTENTS of the serialized library.
-    ;;
-    ;;Make sure all  dependencies are met, then install  the library and
-    ;;return true; otherwise return #f.
-    ;;
-    (let loop ((descr* (append import-descr* visit-descr* invoke-descr* guard-descr*)))
-      (cond ((null? descr*)
-	     (for-each (lambda (guard-library-descriptor)
-			 (let* ((guard-uid     (car  guard-library-descriptor))
-				(guard-libname (cadr guard-library-descriptor))
-				(guard-lib     (find-library-by-name guard-libname)))
-			   (invoke-library guard-lib)))
-	       guard-descr*)
-	     (if (guard-proc)
-		 ;;The precompiled library is stale.
-		 (begin
-		   (library-stale-warning libname.ids filename)
-		   #f)
-	       (let ((visit-code        #f)
-		     (invoke-code       #f)
-		     (guard-code        (quote (quote #f)))
-		     (guard-descr*      '())
-		     (source-file-name  #f))
-		 (install-library uid
-				  libname.ids libname.version
-				  import-descr* visit-descr* invoke-descr*
-				  export-subst export-env
-				  visit-proc invoke-proc
-				  visit-code invoke-code
-				  guard-code guard-descr*
-				  visible? source-file-name library-option*)
-		 #t)))
-	    (else
-	     ;;We expect each library descriptor to have the format:
-	     ;;
-	     ;;   (?uid ?libname ?version)
-	     ;;
-	     ;;where ?UID is  a unique symbol associated  to the library
-	     ;;and  ?LIBNAME is  the  list of  symbols representing  the
-	     ;;library name.
-	     ;;
-	     (let* ((deplib-descr	(car  descr*))
-		    (deplib-uid		(car  deplib-descr))
-		    (deplib-libname	(cadr deplib-descr))
-		    (deplib-lib		(find-library-by-name deplib-libname)))
-	       (if (and (library? deplib-lib)
-			(eq? deplib-uid (library-id deplib-lib)))
-		   (loop (cdr descr*))
-		 (begin
-		   (library-version-mismatch-warning libname.ids deplib-libname filename)
-		   #f)))))))
+    (define* (default-library-loader libref)
+      ;;Default value for the parameter CURRENT-LIBRARY-LOADER.  Given a
+      ;;R6RS library  reference: attempt  to locate  the library  in the
+      ;;current repository and load it;  try first to load a precompiled
+      ;;library, if any,  then try to load a source  library; the loaded
+      ;;library is  installed along  with all its  dependency libraries.
+      ;;Return unspecified values.
+      ;;
+      ;;LIBREF must be a library reference as defined by R6RS:
+      ;;
+      ;;   (?identifier0 ?identifier ... . ?version-reference)
+      ;;
+      (%log-library-debug-message "~a: searching: ~a" __who__ libref)
+      (parametrise
+	  ((failed-library-location-collector (let ((ell '()))
+						(case-lambda
+						 (()
+						  ell)
+						 ((location)
+						  (set! ell (cons location ell)))))))
+	(let loop ((next-locator-search ((current-library-locator)
+					 libref
+					 (library-locator-options move-on-when-open-fails))))
+	  (receive (port further-locator-search)
+	      (next-locator-search)
+	    (%log-library-debug-message "~a: reading from: ~a" __who__ port)
+	    (cond ((binary-port? port)
+		   ;;A binary location was found.   We can read the binary
+		   ;;library from PORT.
+		   (%print-loading-library port)
+		   (cond ((unwind-protect
+			      ((current-binary-library-loader) libref port)
+			    (close-input-port port))
+			  ;;Success.    The   library    and   all   its
+			  ;;dependencies  have been  successfully loaded
+			  ;;and installed.
+			  => (lambda (libname)
+			       (%print-loaded-library port)
+			       #t))
+			 (else
+			  ;;Failure.   The library  read  from port  has
+			  ;;been rejected; try to go on with the search.
+			  (%print-rejected-library port)
+			  (loop further-locator-search))))
 
-  (define (%verify-library requested-libname filename
-			   found-library-name.ids found-library-name.version)
-    ;;Verify  the  name  of  loaded  library against  the  name  of  the
-    ;;requested library.
-    ;;
-    ;;FOUND-LIBRARY-NAME.IDS  is the  list of  symbols from  the library
-    ;;name.   FOUND-LIBRARY-NAME.VERSION is  null or  the list  of exact
-    ;;integers representing the library version.
-    ;;
-    (unless (equal? found-library-name.ids requested-libname)
-      (assertion-violation __who__
-	(let-values (((port extract) (open-string-output-port)))
-	  (display "expected to find library " port)
-	  (write requested-libname port)
-	  (display " in file " port)
-	  (display filename port)
-	  (display ", found " port)
-	  (write found-library-name.ids port)
-	  (display " instead" port)
-	  (extract)))))
+		  ((textual-port? port)
+		   ;;A source location was found.   We can read the source
+		   ;;library  from  PORT;  we  assume  that  applying  the
+		   ;;function PORT-ID to PROT  will return the source file
+		   ;;name.
+		   (%print-loading-library port)
+		   (cond ((unwind-protect
+			      ((current-source-library-loader) libref port)
+			    (close-input-port port))
+			  ;;Success.    The   library    and   all   its
+			  ;;dependencies  have been  successfully loaded
+			  ;;and installed.
+			  => (lambda (libname)
+			       (when (option.cache-compiled-libraries)
+				 ((current-library-record-serializer) (find-library-by-name libname)))
+			       (%print-loaded-library port)
+			       #t))
+			 ;;Failure.  The library read from port has been
+			 ;;rejected; try to go on with the search.
+			 (else
+			  (%print-rejected-library port)
+			  (loop further-locator-search))))
+
+		  ((and (boolean? port)
+			port)
+		   ;;When the  library locator  returns #t:  it declares
+		   ;;that the library has been  loaded and it is already
+		   ;;in  the installed  libraries collection.   So let's
+		   ;;try to retrieve it.
+		   (let ((lib (find-library-in-collection-by-reference libref)))
+		     (if lib
+			 #t
+		       (loop further-locator-search))))
+
+		  ((not port)
+		   ;;No suitable library was found.
+		   (%file-locator-resolution-error libref
+						   (reverse ((failed-library-location-collector)))
+						   (cdr (%external-pending-libraries))))
+
+		  (else
+		   (assertion-violation __who__
+		     "invalid return values from library locator"
+		     port further-locator-search)))))))
+
+    ;;Keep the library names aligned!!!                                     VV
+    (define (%print-loading-library port)   (%log-loaded-library "loading:  ~a ..." (port-id port)))
+    (define (%print-loaded-library port)    (%log-loaded-library "loaded:   ~a" (port-id port)))
+    (define (%print-rejected-library port)  (%log-loaded-library "rejected: ~a" (port-id port)))
+
+    #| end of module: DEFAULT-LIBRARY-LOADER |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%file-locator-resolution-error libref failed-list pending-libraries)
+    (raise
+     (apply condition (make-error)
+  	    (make-who-condition 'expander)
+  	    (make-message-condition "cannot locate library in library-path")
+  	    (make-library-resolution-condition libref failed-list)
+  	    (map make-imported-from-condition pending-libraries))))
+
+  (define-condition-type &library-resolution
+      &condition
+    make-library-resolution-condition
+    library-resolution-condition?
+    (library condition-library)
+    (files condition-files))
+
+  (define-condition-type &imported-from
+      &condition
+    make-imported-from-condition
+    imported-from-condition?
+    (importing-library importing-library))
+
+;;; --------------------------------------------------------------------
 
   (define current-library-loader
     ;;Hold a function used to load a library, either precompiled or from
-    ;;source.
+    ;;source, given a library name.
     ;;
     (make-parameter
 	default-library-loader
-      (lambda (f)
-	(define who 'current-library-loader)
-	(with-arguments-validation (who)
-	    ((procedure	f))
-	  f))))
+      (lambda* ({obj procedure?})
+	obj)))
 
   #| end of module: CURRENT-LIBRARY-LOADER |# )
 
 
-;;;; finding libraries, already loaded or not
+;;;; loading libraries from files: requesting by library file pathname
 
-(define (library-exists? libname)
-  ;;Given a library name search  the corresponding LIBRARY record in the
-  ;;collection of already installed libraries: return true or false.
-  ;;
-  ;;For this function, a "library name" is a list of symbols without the
-  ;;version specification.
-  ;;
-  (and (%find-library-in-collection-by (lambda (x)
-					 (equal? (library-name x) libname)))
-       #t))
+(module (current-source-library-loader-by-filename)
 
-(module (find-library-by-name)
-
-  (define (find-library-by-name libname)
-    ;;Given a library name: try  to search and install the corresponding
-    ;;library, if  it is not  already installed; when  successful return
-    ;;the corresponding LIBRARY record.
+  (define* (default-library-source-loader-by-filename {source-pathname string-pathname?} {libname-predicate procedure?})
+    ;;Default          value          for         the          parameter
+    ;;CURRENT-SOURCE-LIBRARY-LOADER-BY-FILENAME.   Given a  library file
+    ;;pathname: load  the file, expand  the first LIBRARY  form, compile
+    ;;the result, install the  library, return the corresponding LIBRARY
+    ;;record.
     ;;
-    ;;Search  for the  library in  the  internal collection  or, if  not
-    ;;found, in the external source  (for example the file system) using
-    ;;the current CURRENT-LIBRARY-LOADER.
+    ;;LIBNAME-PREDICATE must  be a  predicate function  to apply  to the
+    ;;R6RS library name of the loaded library.
     ;;
-    ;;For this function,  a "library name" is a list  of symbols without
-    ;;the version specification.
+    (%log-library-debug-message "~a: searching: ~a" __who__ source-pathname)
+    (receive (uid libname
+		  import-desc* visit-desc* invoke-desc*
+		  invoke-code visit-code
+		  export-subst export-env
+		  guard-code guard-desc*
+		  option*)
+	(parametrise ((source-code-location source-pathname))
+	  ((current-library-expander)
+	   ((current-source-library-loader) source-pathname)
+	   source-pathname libname-predicate))
+      (find-library-by-name libname)))
+
+  (define current-source-library-loader-by-filename
+    ;;Hold  a function  used to  load a  source library  given the  file
+    ;;pathname.
     ;;
-    (or (%find-library-in-collection-by (lambda (x)
-					  (equal? (library-name x) libname)))
-	(%find-and-install-external-library libname)))
+    (make-parameter
+	default-library-source-loader-by-filename
+      (lambda* ({obj procedure?})
+	obj)))
 
-  (define* (%find-and-install-external-library libname)
-    ;;Given a  library name  try to  load it  using the  current library
-    ;;loader.
-    ;;
-    ;;For this function,  a "library name" is a list  of symbols without
-    ;;the version specification.
-    ;;
-    (when (member libname (%external-pending-libraries))
-      (assertion-violation __who__
-	"circular attempt to import library was detected" libname))
-    (parametrise ((%external-pending-libraries (cons libname (%external-pending-libraries))))
-      ;;Load the  library, either from  source file or  serialized file,
-      ;;and install it.
-      ((current-library-loader) libname)
-      (or (%find-library-in-collection-by (lambda (x)
-					    (equal? (library-name x) libname)))
-	  (assertion-violation __who__
-	    "handling external library did not yield the correct library" libname))))
-
-  #| end of module: FIND-LIBRARY-BY-NAME |# )
-
-(define (find-library-by-descr descr)
-  (find-library-by-name (cadr descr)))
-
-(define (%find-library-in-collection-by pred)
-  ;;Visit  the current  installed  libraries collection  and return  the
-  ;;first for  which PRED returns true.   If PRED returns false  for all
-  ;;the entries in the collection: return false.
-  ;;
-  (let next-library-struct ((ls ((current-library-collection))))
-    (cond ((null? ls)
-	   #f)
-	  ((pred (car ls))
-	   (car ls))
-	  (else
-	   (next-library-struct (cdr ls))))))
-
-(define (%find-library-in-collection-by-descr/die descr)
-  ;;Given   a  library   descriptor,  as   generated  by   the  function
-  ;;LIBRARY-DESCRIPTOR: return the corresponding LIBRARY record from the
-  ;;collection of installed libraries or raise an assertion.
-  ;;
-  (let ((uid (car descr)))
-    (or (%find-library-in-collection-by (lambda (x)
-					  (eq? uid (library-id x))))
-	(assertion-violation #f
-	  "cannot find installed library with required descriptor" descr))))
+  #| end of module |# )
 
 
 ;;;; serializing precompiled libraries
+
+(define current-library-record-serializer
+  ;;References a  function used to serialize  in a FASL file  a compiled
+  ;;library loaded from a source file.
+  ;;
+  ;;The  referenced function  must accept  1 or  2 arguments:  a library
+  ;;record and  an optional string  file pathname representing  the FASL
+  ;;pathname; it  can return unspecified  values; if an error  occurs it
+  ;;must raise  an exception.  Only  libraries loaded form  source files
+  ;;are serialized:  if the given library  was loaded from a  FASL file:
+  ;;nothing  happens.  When  the FASL  pathname is  not given  or it  is
+  ;;false: a binary pathname is automatically built.
+  ;;
+  (make-parameter
+      (lambda (lib)
+        (assertion-violation 'current-library-record-serializer "not initialized"))
+    (lambda* ({obj procedure?})
+      obj)))
 
 (define (serialize-collected-libraries serialize compile)
   ;;Traverse  the  current collection  of  libraries  and serialize  the
   ;;contents  of all  the  LIBRARY  records having  a  source file  (the
   ;;records that do not have a source file represent the libraries built
-  ;;in the boot image).
+  ;;in the boot image).  Return unspecified values.
   ;;
-  ;;"Serializing" means to write in a FASL file.
+  ;;"Serializing"  means to  write the  precompiled contents  in a  FASL
+  ;;file.
   ;;
-  ;;The   argument    SERIALIZE   should    be   a    closure   wrapping
-  ;;DO-SERIALIZE-LIBRARY.
+  ;;SERIALIZE must be a closure wrapping STORE-SERIALIZE-LIBRARY.
   ;;
-  ;;The  argument COMPILE  should  be a  closure  wrapping the  function
-  ;;COMPILE-CORE-EXPR.
+  ;;COMPILE must be a closure wrapping the function COMPILE-CORE-EXPR.
   ;;
   (for-each (lambda (lib)
 	      (serialize-library lib serialize compile))
     ((current-library-collection))))
 
-(define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
-  (when ($library-source-file-name lib)
-    (serialize ($library-source-file-name lib)
-	       (list ($library-id lib)
+(define* (serialize-library {lib library?} {serialize procedure?} {compile procedure?})
+  ;;Compile and serialize the  given library record.  Return unspecified
+  ;;values.
+  ;;
+  ;;NOTE We  do *not* write the  source file pathname to  the FASL file.
+  ;;When, later, the FASL file will  be loaded and the library installed
+  ;;in the collection: the absence of  the source pathname will mark the
+  ;;LIBRARY record as coming from a FASL file rather than a source file;
+  ;;only  records coming  from a  source files  are serialized  when the
+  ;;--compile-dependencies option  is used.   (Marco Maggi; Sat  Feb 22,
+  ;;2014)
+  ;;
+  (define source-pathname ($library-source-file-name lib))
+  ;;We serialize  only libraries having  a source file in  their LIBRARY
+  ;;record.
+  (when source-pathname
+    (%log-library-debug-message "~a: serializing: ~a" __who__ ($library-name lib))
+    (serialize source-pathname ($library-name lib)
+	       (list ($library-uid lib)
 		     ($library-name lib)
-		     ($library-version lib)
-		     (map library-descriptor ($library-imp* lib))
-		     (map library-descriptor ($library-vis* lib))
-		     (map library-descriptor ($library-inv* lib))
-		     ($library-subst lib)
-		     ($library-env lib)
+		     (map library-descriptor ($library-imp-lib* lib))
+		     (map library-descriptor ($library-vis-lib* lib))
+		     (map library-descriptor ($library-inv-lib* lib))
+		     ($library-export-subst lib)
+		     ($library-export-env lib)
 		     (compile ($library-visit-code lib))
 		     (compile ($library-invoke-code lib))
 		     (compile ($library-guard-code lib))
-		     (map library-descriptor ($library-guard-req* lib))
+		     (map library-descriptor ($library-guard-lib* lib))
 		     ($library-visible? lib)
-		     ($library-option* lib)))))
+		     ($library-option* lib)
+		     source-pathname))))
+
+(define (install-binary-library-and-its-dependencies
+	 uid libname
+	 import-libdesc* visit-libdesc* invoke-libdesc*
+	 export-subst export-env
+	 visit-proc invoke-proc guard-proc
+	 guard-libdesc* visible? library-option* source-filename)
+  ;;Used  as  success  continuation  function by  the  function  in  the
+  ;;parameter  CURRENT-BINARY-LIBRARY-LOADER.  All  the arguments  after
+  ;;SOURCE-FILENAME are the CONTENTS of the serialized library.
+  ;;
+  ;;Make  sure all  dependencies  are met,  by  loading the  appropriate
+  ;;libraries, then install the library represented by the arguments and
+  ;;return a  sexp representing the  R6RS library name of  the installed
+  ;;library; otherwise return #f.
+  ;;
+  (let loop ((libdesc* (append import-libdesc* visit-libdesc* invoke-libdesc* guard-libdesc*)))
+    (if (null? libdesc*)
+	(begin
+	  ;;Invoke  all  the guard  libraries  so  we can  evaluate  the
+	  ;;composite STALE-WHEN test expression.
+	  (for-each (lambda (guard-libdesc)
+		      (invoke-library
+		       (find-library-by-name (library-descriptor-name guard-libdesc))))
+	    guard-libdesc*)
+	  ;;Evaluate the composite STALE-WHEN  test expression and react
+	  ;;appropriately.
+	  (if (guard-proc)
+	      ;;The  precompiled library  is stale:  print a  message to
+	      ;;warn the user then return false.
+	      (begin
+		(library-stale-warning libname source-filename)
+		#f)
+	    ;;The  precompiled library  is fine:  install it  and return
+	    ;;true.
+	    (let ((visit-code        #f)
+		  (invoke-code       #f)
+		  (guard-code        (quote (quote #f)))
+		  (guard-libdesc*    '())
+		  (source-file-name  #f))
+	      (install-library uid libname
+			       import-libdesc* visit-libdesc* invoke-libdesc*
+			       export-subst export-env
+			       visit-proc invoke-proc
+			       visit-code invoke-code
+			       guard-code guard-libdesc*
+			       visible? source-file-name library-option*)
+	      libname)))
+      (begin
+	;;For  every library  descriptor  in the  list of  dependencies:
+	;;search the library, load it if needed and install it.
+	;;
+	(let* ((deplib-descr    (car libdesc*))
+	       (deplib-libname  (library-descriptor-name deplib-descr))
+	       (deplib-lib      (find-library-by-name deplib-libname)))
+	  (if (and (library? deplib-lib)
+		   (eq? (library-descriptor-uid deplib-descr)
+			(library-uid            deplib-lib)))
+	      (loop (cdr libdesc*))
+	    (begin
+	      ;;Print a message to warn the user.
+	      (library-version-mismatch-warning libname deplib-libname source-filename)
+	      #f)))))))
 
 
 ;;;; installing libraries
@@ -674,35 +974,31 @@
    (let next-library-struct ((ls ((current-library-collection))))
      (cond ((null? ls)
 	    '())
-	   ((or all? (library-visible? (car ls)))
-	    (cons (car ls) (next-library-struct (cdr ls))))
+	   ((or all? ($library-visible? ($car ls)))
+	    (cons ($car ls) (next-library-struct ($cdr ls))))
 	   (else
-	    (next-library-struct (cdr ls)))))))
+	    (next-library-struct ($cdr ls)))))))
 
 (module (install-library)
   ;;INSTALL-LIBRARY  builds a  LIBRARY  record and  installs  it in  the
-  ;;internal collection of libraries; return unspecified values.  We can
-  ;;see  EXPAND-LIBRARY  for  a   more  detailed  description,  but  the
+  ;;internal collection  of libraries;  return unspecified  values.  The
   ;;arguments are:
   ;;
-  ;;ID -
+  ;;UID -
   ;;   A gensym uniquely identifying this library.
   ;;
   ;;NAME -
-  ;;   A list of symbols representing the library name.
+  ;;   A R6RS library name.
   ;;
-  ;;VER -
-  ;;   A list of exact integers representing the library version.
-  ;;
-  ;;IMPORT-DESCR* -
+  ;;IMPORT-LIBDESC* -
   ;;   A list of library descriptors enumerating the libraries specified
   ;;   in the IMPORT clauses.
   ;;
-  ;;VISIT-DESCR* -
+  ;;VISIT-LIBDESC* -
   ;;   A list of library descriptors enumerating the libraries needed by
   ;;   the visit code.
   ;;
-  ;;INVOKE-DESCR* -
+  ;;INVOKE-LIBDESC* -
   ;;   A list of library  descriptors enmerating the libraries needed by
   ;;   the invoke code.
   ;;
@@ -738,7 +1034,7 @@
   ;;   is a  thunk to be evaluated to run  the STALE-WHEN composite test
   ;;   expression.
   ;;
-  ;;GUARD-DESCR* -
+  ;;GUARD-LIBDESC* -
   ;;   A list of library  descriptors enmerating the libraries needed by
   ;;   the composite STALE-WHEN test expression.
   ;;
@@ -753,60 +1049,36 @@
   ;;   A list of sexps representing library options.
   ;;
   (define-constant __who__ 'install-library)
-  (case-define install-library
-    ;;FIXME  At  the next  boot  image  rotation the  optional  argument
-    ;;LIBRARY-OPTION*  must become  a mandatory  argument.  For  this to
-    ;;happen  the appropriate  argument must  be  added to  the uses  of
-    ;;INSTALL-LIBRARY in the "makefile.sps".   (Marco Maggi; Mon Feb 10,
-    ;;2014)
-    ((id
-      libname ver
-      import-descr* visit-descr* invoke-descr*
-      export-subst export-env
-      visit-proc invoke-proc
-      visit-code invoke-code
-      guard-code guard-descr*
-      visible? source-file-name)
-     (install-library id libname ver
-		      import-descr* visit-descr* invoke-descr*
-		      export-subst export-env
-		      visit-proc invoke-proc
-		      visit-code invoke-code
-		      guard-code guard-descr*
-		      visible? source-file-name '()))
-    ((id
-      libname ver
-      import-descr* visit-descr* invoke-descr*
-      export-subst export-env
-      visit-proc invoke-proc
-      visit-code invoke-code
-      guard-code guard-descr*
-      visible? source-file-name library-option*)
-     (let ((import-lib*	(map %find-library-in-collection-by-descr/die import-descr*))
-	   (visit-lib*	(map %find-library-in-collection-by-descr/die visit-descr*))
-	   (invoke-lib*	(map %find-library-in-collection-by-descr/die invoke-descr*))
-	   (guard-lib*	(map %find-library-in-collection-by-descr/die guard-descr*)))
-       (unless (and (symbol? id) (list? libname) (list? ver))
-	 (assertion-violation __who__
-	   "invalid spec with id/name/ver" id libname ver))
-       (when (library-exists? libname)
-	 (assertion-violation __who__
-	   "library is already installed" libname))
-       (let ((lib (make-library id libname ver import-lib* visit-lib* invoke-lib*
-				export-subst export-env visit-proc invoke-proc
-				visit-code invoke-code guard-code guard-lib*
-				visible? source-file-name library-option*)))
-	 (%install-library-record lib)
-	 (when (memq 'visit-upon-loading library-option*)
-	   (visit-library lib))))))
+  (define* (install-library {uid symbol?} {libname library-name?}
+			    import-libdesc* visit-libdesc* invoke-libdesc*
+			    export-subst export-env
+			    visit-proc invoke-proc
+			    visit-code invoke-code
+			    guard-code guard-libdesc*
+			    visible? source-file-name library-option*)
+    (let ((import-lib*	(map find-library-in-collection-by-descriptor import-libdesc*))
+	  (visit-lib*	(map find-library-in-collection-by-descriptor visit-libdesc*))
+	  (invoke-lib*	(map find-library-in-collection-by-descriptor invoke-libdesc*))
+	  (guard-lib*	(map find-library-in-collection-by-descriptor guard-libdesc*)))
+      (when (library-exists? libname)
+	(assertion-violation __who__ "library is already installed" libname))
+      (let ((lib (make-library uid libname import-lib* visit-lib* invoke-lib*
+			       export-subst export-env visit-proc invoke-proc
+			       visit-code invoke-code guard-code guard-lib*
+			       visible? source-file-name library-option*)))
+	(%install-library-record lib)
+	(when (memq 'visit-upon-loading library-option*)
+	  (%log-loaded-library "visiting: ~a" libname)
+	  (visit-library lib))))
+    (void))
 
   (define (%install-library-record lib)
     (for-each
 	(lambda (export-env-entry)
 	  ;;See the comments in the expander  code for the format of the
 	  ;;EXPORT-ENV.  Entries  in the  EXPORT-ENV are  different from
-	  ;;entries in the LEXENV; here we transform an EXPORT-ENV entry
-	  ;;into a LEXENV entry.
+	  ;;entries  in  the LEXENV;  here  we  transform an  EXPORT-ENV
+	  ;;binding into a LEXENV binding descriptor.
 	  (let* ((label    (car export-env-entry))
 		 (binding  (cdr export-env-entry))
 		 (binding1 (case (car binding)
@@ -814,25 +1086,27 @@
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
 			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
-			     (( ;;
+			     ((core-prim
 			       library import export
-			       define define-syntax define-alias define-fluid-syntax
+			       define define-syntax define-alias
+			       define-fluid-syntax define-fluid-override
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
 			       global mutable
-			       core-prim core-macro macro
+			       core-macro macro macro!
 			       $core-rtd $rtd $module $fluid $synonym)
 			      binding)
 			     (else
 			      (assertion-violation __who__
 				"invalid syntactic binding descriptor type in EXPORT-ENV entry"
 				lib export-env-entry)))))
-	    ;;When the library is serialized: the content of the "value"
-	    ;;slot is  not saved, so we  have to set it  here every time
-	    ;;the library is loaded.
+	    ;;When the library is serialized: the content of the label's
+	    ;;"value" slot is not saved, so we have to set it here every
+	    ;;time the library is loaded.
 	    (set-label-binding! label binding1)))
       ;;This expression returns the EXPORT-ENV of the library LIB.
-      (library-env lib))
+      ($library-export-env lib))
+    ;;Register the record in the collection of installed libraries.
     ((current-library-collection) lib))
 
   #| end of module: INSTALL-LIBRARY |# )
@@ -845,37 +1119,34 @@
 ;;reinstallation from new files.
 ;;
 (case-define* uninstall-library
-  ;;Uninstall a library.
+  ;;Uninstall a library.  Return unspecified values.
   ;;
   ;;THE IMPLEMENTATION OF THIS FUNCTION IS INCOMPLETE.
   ;;
-  ((name)
-   (uninstall-library name #t))
-  ((name err?)
+  ((libname)
+   (uninstall-library libname #t))
+  (({libname library-name?} err?)
    ;;FIXME: check that no other import is in progress.  (Ghuloum)
-   ;;
-   ;;FIXME: need to  unintern labels and locations  of library bindings.
-   ;;(Ghuloum)
-   (let ((lib (%find-library-in-collection-by (lambda (x)
-						(equal? (library-name x) name)))))
-     (when (and err? (not lib))
-       (assertion-violation __who__ "library not installed" name))
-     ;;Remove LIB from the current collection.
-     ((current-library-collection) lib #t)
-     ;;Remove label gensyms from the internal table.
-     (for-each (lambda (export-env-entry)
-		 ;;We expect the entry to have the format:
-		 ;;
-		 ;;   (?label . (?type . ?loc))
-		 ;;
-		 (let ((label   (car export-env-entry))
-		       (binding (cdr export-env-entry)))
-		   (remove-location label)
-		   (when (memq (car binding)
-			       '(global global-macro global-macro! global-ctv))
-		     (remove-location (cdr binding)))))
-       (library-env lib)))
-   (values)))
+   (cond ((find-library-in-collection-by-reference libname)
+	  => (lambda (lib)
+	       ;;Remove LIB from the current collection.
+	       ((current-library-collection) lib #t)
+	       ;;Remove label gensyms from the internal table.
+	       (for-each (lambda (export-env-entry)
+			   ;;We expect the entry to have the format:
+			   ;;
+			   ;;   (?label . (?type . ?loc))
+			   ;;
+			   (let ((label   (car export-env-entry))
+				 (binding (cdr export-env-entry)))
+			     (remove-location label)
+			     (when (memq (car binding)
+					 '(global global-macro global-macro! global-ctv))
+			       (remove-location (cdr binding)))))
+		 ($library-export-env lib))))
+	 (else
+	  (when err?
+	    (assertion-violation __who__ "library not installed" libname))))))
 
 
 ;;;; utilities for the expansion process
@@ -892,513 +1163,116 @@
   ;;
   (label-binding lab))
 
-(define (invoke-library lib)
-  ;;Evaluate the invoke code for the LIBRARY struct LIB.
+(define* (invoke-library {lib library?})
+  ;;Evaluate the invoke.
   ;;
   (let ((invoke (library-invoke-state lib)))
     (when (procedure? invoke)
-      (set-library-invoke-state! lib
-				 (lambda ()
-				   (assertion-violation 'invoke
-				     "circularity detected" lib)))
-      (for-each invoke-library (library-inv* lib))
-      (set-library-invoke-state! lib
-				 (lambda ()
-				   (assertion-violation 'invoke
-				     "first invoke did not return" lib)))
+      ($set-library-invoke-state! lib (lambda ()
+					(assertion-violation 'invoke
+					  "circularity detected" lib)))
+      (for-each invoke-library ($library-inv-lib* lib))
+      ($set-library-invoke-state! lib (lambda ()
+					(assertion-violation 'invoke
+					  "first invoke did not return" lib)))
       (invoke)
-      (set-library-invoke-state! lib #t))))
+      ($set-library-invoke-state! lib #t))))
 
-(define (visit-library lib)
-  ;;Evaluate the visit code for the LIBRARY struct LIB.
+(define* (visit-library {lib library?})
+  ;;Evaluate the visit code.
   ;;
-  (let ((visit (library-visit-state lib)))
+  (let ((visit ($library-visit-state lib)))
     (when (procedure? visit)
-      (set-library-visit-state! lib
-				(lambda ()
-				  (assertion-violation 'visit
-				    "circularity detected" lib)))
-      (for-each invoke-library (library-vis* lib))
-      (set-library-visit-state! lib
-				(lambda ()
-				  (assertion-violation 'invoke
-				    "first visit did not return" lib)))
+      ($set-library-visit-state! lib (lambda ()
+				       (assertion-violation 'visit
+					 "circularity detected" lib)))
+      (for-each invoke-library ($library-vis-lib* lib))
+      ($set-library-visit-state! lib (lambda ()
+				       (assertion-violation 'invoke
+					 "first visit did not return" lib)))
       (visit)
-      (set-library-visit-state! lib #t))))
+      ($set-library-visit-state! lib #t))))
 
 
-;;;; R6RS library name and version utilities
+;;;; including files
 
-(define (library-version-numbers? obj)
-  ;;Return #t if  OBJ is a list of library  version numbers according to
-  ;;R6RS, this includes OBJ being null.
-  ;;
-  ;;NOTE According to R6RS: OBJ should  be an exact integer, which means
-  ;;a finxum or bignum for Vicare.   We accept only fixnums because they
-  ;;are faster  to handle and "big  enough".  (Marco Maggi; Tue  Apr 23,
-  ;;2013)
-  ;;
-  (or (null? obj)
-      (and (list? obj)
-	   (for-all library-version-number? obj))))
+(module (current-include-loader
+	 default-include-loader)
 
-(define (library-version-number? obj)
-  ;;Return #t if OBJ is a version number according to R6RS.
-  ;;
-  (and (fixnum? obj)
-       ($fxnonnegative? obj)))
-
-(define (library-name? sexp)
-  ;;Return  #t if  SEXP is  a  symbolic expressions  compliant with  the
-  ;;definition of <LIBRARY NAME> according to R6RS.
-  ;;
-  (receive (identifiers version)
-      (library-name-decompose sexp)
-    (if identifiers #t #f)))
-
-;;; --------------------------------------------------------------------
-
-(define (library-name-decompose obj)
-  ;;Scan OBJ  validating it as  a <LIBRARY  NAME> as specified  by R6RS.
-  ;;Return   two  values:   the   list  of   identifiers,  the   version
-  ;;specification.  The  version can  be null.   If OBJ  is not  a valid
-  ;;<LIBRARY NAME>:  return #f  and #f.  The  returned values  may share
-  ;;structure with OBJ.
-  ;;
-  (if (or (null? obj) (not (list? obj)))
-      (values #f #f)
-    (let next-identifier ((next (car obj))
-			  (tail (cdr obj))
-			  (ids  '()))
-      (cond ((symbol? next) ;identifier
-	     (if (null? tail)
-		 ;;There is  no version number, so we  return OBJ itself
-		 ;;as list of identifiers.
-		 (values obj '())
-	       (next-identifier (car tail) (cdr tail) (cons next ids))))
-	    ((and (list? next) (null? tail)) ;version spec
-	     (if (library-version-numbers? next)
-		 (values (reverse ids) next)
-	       (values #f #f)))
-	    (else
-	     (values #f #f))))))
-
-(define (library-name->identifiers sexp)
-  ;;Given  a  symbolic  expressions  compliant with  the  definition  of
-  ;;<LIBRARY NAME>  according to R6RS:  return the list  of identifiers.
-  ;;If SEXP is not compliant return #f.
-  ;;
-  (receive (identifiers version)
-      (library-name-decompose sexp)
-    identifiers))
-
-(define (library-name->version sexp)
-  ;;Given  a  symbolic  expressions  compliant with  the  definition  of
-  ;;<LIBRARY  NAME>  according  to  R6RS:  return the  list  of  version
-  ;;numbers.  If SEXP is not compliant return #f.
-  ;;
-  (receive (identifiers version)
-      (library-name-decompose sexp)
-    version))
-
-;;; --------------------------------------------------------------------
-
-(define* (library-name-identifiers=? (sexp1 library-name?) (sexp2 library-name?))
-  ;;Given  two symbolic  expressions  compliant with  the definition  of
-  ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
-  ;;list of identifiers.
-  ;;
-  (for-all eq?
-	   (library-name->identifiers sexp1)
-	   (library-name->identifiers sexp2)))
-
-(module (library-name=?
-	 library-name<?
-	 library-name<=?)
-
-  (define (library-name=? sexp1 sexp2)
-    ;;Given two  symbolic expressions  compliant with the  definition of
-    ;;<LIBRARY NAME> according to R6RS: return  #t if they have the same
-    ;;list of identifiers and the same version numbers.
+  (define* (default-include-loader {filename string?} verbose? synner)
+    ;;Default value for the parameter CURRENT-INCLUDE-LOADER.  Search an
+    ;;include file with name FILENAME.  When successful return 2 values:
+    ;;the  full pathname  from which  the  file was  loaded, a  symbolic
+    ;;expresison representing the file  contents.  When an error occurs:
+    ;;call the procedure SYNNER.
     ;;
-    (%library-name-comparison library-version=? sexp1 sexp2))
-
-  (define (library-name<? sexp1 sexp2)
-    ;;Given two  symbolic expressions  compliant with the  definition of
-    ;;<LIBRARY NAME> according to R6RS: return  #t if they have the same
-    ;;list of  identifiers and  the version  of SEXP1  is less  than the
-    ;;version of SEXP2.
+    ;;If VERBOSE? is true: display verbose messages on the current error
+    ;;port describing the including process.
     ;;
-    (%library-name-comparison library-version<? sexp1 sexp2))
+    (when verbose?
+      (fprintf (current-error-port)
+	       "Vicare: searching include file: ~a\n" filename))
+    (let ((pathname ((current-include-file-locator) filename synner)))
+      (when verbose?
+	(fprintf (current-error-port)
+		 "Vicare: including file: ~a\n" pathname))
+      (values pathname ((current-include-file-loader) pathname synner))))
 
-  (define (library-name<=? sexp1 sexp2)
-    ;;Given two  symbolic expressions  compliant with the  definition of
-    ;;<LIBRARY NAME> according to R6RS: return  #t if they have the same
-    ;;list of identifiers and the version of SEXP1 is less than or equal
-    ;;to the version of SEXP2.
+  (define current-include-loader
+    ;;Hold a function used to load an include file.
     ;;
-    (%library-name-comparison library-version<=? sexp1 sexp2))
+    (make-parameter
+	default-include-loader
+      (lambda* ({obj procedure?})
+	obj)))
 
-  (define* (%library-name-comparison version-predicate (sexp1 library-name?) (sexp2 library-name?))
-    (let-values
-	(((ids1 vrs1) (library-name-decompose sexp1))
-	 ((ids2 vrs2) (library-name-decompose sexp2)))
-      (and (= (length ids1)
-	      (length ids2))
-	   (for-all eq? ids1 ids2)
-	   (version-predicate vrs1 vrs2))))
+  #| end of module: CURRENT-INCLUDE-LOADER |# )
 
-  #|end of module |# )
-
-;;; --------------------------------------------------------------------
-
-(define* (library-version=? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
-  ;;Given two lists of version  numbers compliant with the definition of
-  ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
-  ;;numbers.
+(define current-include-file-locator
+  ;;Hold  a function  used  to convert  an include  file  name into  the
+  ;;corresponding   file  pathname;   this   parameter  is   initialised
+  ;;"ikarus.load.sls" with the function LOCATE-INCLUDE-FILE.
   ;;
-  ;;If one of the lists is longer  and the elements up to the end of the
-  ;;shortest are equal: the lists are "equal" if the tail of the longest
-  ;;is made of zeros.
+  ;;The referenced function must accept  3 values: a string representing
+  ;;the include  file name; a  boolean, true  if the process  of loading
+  ;;must display  verbose messages on  the current error port;  a synner
+  ;;function used to report errors.
   ;;
-  ;;Examples:
+  (make-parameter
+      (lambda (filename pending-libraries)
+	(error 'current-include-file-locator
+	  "include file locator not set" filename))
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define current-include-file-loader
+  ;;Hold a  function used  to laod  an include  file; this  parameter is
+  ;;initialised "ikarus.load.sls" with the function READ-INCLUDE-FILE.
   ;;
-  ;;	(1 2 3) == (1 2 3)
-  ;;	(1 2 3) != (1 2 3 4)
-  ;;	(1 2 3) == (1 2 3 0 0 0)
+  ;;The referenced function must accept  3 values: a string representing
+  ;;an existent file pathname; a boolean, true if the process of loading
+  ;;must display  verbose messages on  the current error port;  a synner
+  ;;function used to report errors.
   ;;
-  (let loop ((vrs1 vrs1)
-	     (vrs2 vrs2))
-    (cond ((null? vrs1)
-	   (or (null? vrs2)
-	       (for-all (lambda (fx)
-			  ($fxzero? fx))
-		 vrs2)))
-	  ((null? vrs2)
-	   (for-all (lambda (fx)
-		      ($fxzero? fx))
-	     vrs1)) ;it cannot be (null? vrs1) here
-	  (else
-	   (and ($fx= ($car vrs1) ($car vrs2))
-		(loop ($cdr vrs1) ($cdr vrs2)))))))
-
-(define* (library-version<? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
-  ;;Given two lists of version  numbers compliant with the definition of
-  ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
-  ;;represented by VRS1  is less than the version  number represented by
-  ;;VRS2.
-  ;;
-  ;;Comparison  of digits  stops at  the first  digit for  which <  or >
-  ;;return true.
-  ;;
-  ;;If one of the lists is longer  and the elements up to the end of the
-  ;;shortest are equal: the lists are "equal" if the tail of the longest
-  ;;is made of zeros.
-  ;;
-  ;;Examples:
-  ;;
-  ;;	(1 2 3) <  (4 2 3)
-  ;;	(1 2 3) <  (1 4 3)
-  ;;	(1 2 3) <  (1 2 4)
-  ;;	(1 2 3) <  (1 2 3 4)
-  ;;	(1 2 3) !< (1 2 3 0 0 0)
-  ;;
-  (let loop ((vrs1 vrs1)
-	     (vrs2 vrs2))
-    (cond ((null? vrs1)
-	   (cond ((null? vrs2)		#f)
-		 ((find (lambda (fx)
-			  ($fxpositive? fx))
-		    vrs2)		#t)
-		 (else			#f)))
-	  ((null? vrs2)
-	   #f)
-	  (($fx< ($car vrs1) ($car vrs2))
-	   #t)
-	  (($fx> ($car vrs1) ($car vrs2))
-	   #f)
-	  (else ;;(= (car vrs1) (car vrs2))
-	   (loop ($cdr vrs1) ($cdr vrs2))))))
-
-(define* (library-version<=? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
-  ;;Given two lists of version  numbers compliant with the definition of
-  ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
-  ;;represented  by VRS1 is  less than  or equal  to the  version number
-  ;;represented by VRS2.
-  ;;
-  ;;Comparison of digits  stops at the first digit  for which <= returns
-  ;;false.
-  ;;
-  ;;If one of the lists is longer  and the elements up to the end of the
-  ;;shortest are equal: the lists are "equal" if the tail of the longest
-  ;;is made of zeros.
-  ;;
-  ;;Examples:
-  ;;
-  ;;	(1 2 3) <= (1 2 3)
-  ;;	(1 2 3) <= (4 2 3)
-  ;;	(1 2 3) <= (1 4 3)
-  ;;	(1 2 3) <= (1 2 4)
-  ;;	(1 2 3) <= (1 2 3 4)
-  ;;	(1 2 3 0) <= (1 2 3)
-  ;;
-  (let loop ((vrs1 vrs1)
-	     (vrs2 vrs2))
-    (cond ((null? vrs1)
-	   #t)
-	  ((null? vrs2)
-	   (for-all (lambda (fx)
-		      ($fxzero? fx))
-	     vrs1))
-	  (else
-	   (and ($fx<= ($car vrs1) ($car vrs2))
-		(loop  ($cdr vrs1) ($cdr vrs2)))))))
-
-
-;;;; R6RS library references and conformity
-
-(define-syntax %normalise-to-boolean
-  (syntax-rules ()
-    ((_ ?expr)
-     (if ?expr #t #f))))
-
-;;; --------------------------------------------------------------------
-;;; predicates
-
-(define (library-reference? sexp)
-  ;;Return true  if SEXP is  a valid  library reference as  specified by
-  ;;R6RS.
-  ;;
-  (receive (identifiers version)
-      (library-reference-decompose sexp)
-    (%normalise-to-boolean identifiers)))
-
-(define (library-version-reference? obj)
-  ;;Return true if OBJ is a valid library version reference as specified
-  ;;by R6RS.
-  ;;
-  (match obj
-    ;;We decide to  accept empty AND clauses, which  will always match a
-    ;;version specification.
-    (('and (let ?version-reference ...))
-     (for-all library-version-reference? ?version-reference))
-
-    ;;We decide  to accept  empty OR clauses,  which will never  match a
-    ;;version specification.
-    (('or  (let ?version-reference ...))
-     (for-all library-version-reference? ?version-reference))
-
-    (('not (let ?version-reference))
-     (library-version-reference? ?version-reference))
-
-    ;;Notice that null is a valid version reference as specified by R6RS
-    ;;(see  the table  at  the  end of  the  documentation node  "scheme
-    ;;library form version" in Nausicaa).  Null always matches.
-    (((let ?sub-version-reference ...))
-     (for-all library-sub-version-reference? ?sub-version-reference))))
-
-(define (library-sub-version-reference? sub-version)
-  ;;Return  true if  OBJ is  a  valid library  sub-version reference  as
-  ;;specified by R6RS.
-  ;;
-  (match sub-version
-    (('and (let ?sub-version ...))
-     (for-all library-sub-version-reference? ?sub-version))
-    (('or  (let ?sub-version ...))
-     (for-all library-sub-version-reference? ?sub-version))
-    (('not (let ?sub-version))
-     (library-sub-version-reference? ?sub-version))
-    (('<= (let ?sub-version))
-     (library-sub-version-reference? ?sub-version))
-    (('>= (let ?sub-version))
-     (library-sub-version-reference? ?sub-version))
-    ((apply library-sub-version?)
-     #t)
-    (_ #f)))
-
-(define (library-sub-version? obj)
-  ;;Return #t if OBJ is a sub-version number.
-  ;;
-  ;;NOTE According to R6RS: OBJ should be an exact non-negative integer,
-  ;;which means a  non-negative finxum or bignum for  Vicare.  We accept
-  ;;only fixnums  because they  are faster to  handle and  "big enough".
-  ;;(Marco Maggi; Tue Apr 23, 2013)
-  ;;
-  (and (fixnum? obj)
-       ($fxnonnegative? obj)))
-
-;;; --------------------------------------------------------------------
-;;; decomposition
-
-(define (library-reference-decompose obj)
-  ;;Scan  OBJ validating  it as  a <library  reference> as  specified by
-  ;;R6RS.   Return two  values:  the list  of  identifiers, the  version
-  ;;reference.  The version can be null.  If OBJ is not a valid <library
-  ;;reference>: return #f and #f.
-  ;;
-  (if (or (null? obj)
-	  (not (list? obj)))
-      (values #f #f)
-    (let next-identifier ((next ($car obj))
-			  (rest ($cdr obj))
-			  (ids  '()))
-      (cond ((symbol? next) ;identifier
-	     (if (null? rest)
-		 ;;No  version   reference,  so  OBJ  is   the  list  of
-		 ;;identifiers.
-		 (values obj '()) ; == (values (reverse (cons next ids)) '())
-	       (next-identifier ($car rest) ($cdr rest) (cons next ids))))
-	    ((and (list? next) (null? rest)) ;version spec
-	     (if (library-version-reference? next)
-		 (values (reverse ids) next)
-	       (values #f #f)))
-	    (else
-	     (values #f #f))))))
-
-;;; --------------------------------------------------------------------
-
-(define (library-reference->identifiers sexp)
-  (receive (identifiers version)
-      (library-reference-decompose sexp)
-    identifiers))
-
-(define (library-reference->version-reference sexp)
-  (receive (identifiers version)
-      (library-reference-decompose sexp)
-    version))
-
-;;; --------------------------------------------------------------------
-
-(define* (library-reference-identifiers=? (ref1 library-reference?) (ref2 library-reference?))
-  (let ((ids1 (library-reference->identifiers ref1))
-	(ids2 (library-reference->identifiers ref2)))
-    (and (= (length ids1)
-	    (length ids2))
-	 (for-all eq? ids1 ids2))))
-
-;;; --------------------------------------------------------------------
-
-(define* (conforming-sub-version-and-sub-version-reference? (sub-version library-sub-version?)
-							    (sub-version-reference library-sub-version-reference?))
-  ;;SUB-VERSION must  be a fixnum  representing a single  version number
-  ;;from a library name, as defined by R6RS.
-  ;;
-  ;;SUB-VERSION-REFERENCE  must be  a  single  sub-version reference  as
-  ;;specified by R6RS:
-  ;;
-  ;;   ?sub-version-reference
-  ;;     == ?sub-version ...
-  ;;     == (>=  ?sub-version)
-  ;;     == (<=  ?sub-version)
-  ;;     == (and ?sub-version-reference ...)
-  ;;     == (or  ?sub-version-reference ...)
-  ;;     == (not ?sub-version-reference)
-  ;;
-  (define (%recurse sub-ver-ref)
-    (conforming-sub-version-and-sub-version-reference? sub-version sub-ver-ref))
-  (match sub-version-reference
-    ((apply library-sub-version?)
-     ($fx= sub-version sub-version-reference))
-
-    (('>= (let ?sub-version-ref))
-     ($fx>= sub-version ?sub-version-ref))
-
-    (('<= (let ?sub-version-ref))
-     ($fx<= sub-version ?sub-version-ref))
-
-    (('and)
-     #t)
-
-    (('and (let ?sub-version-ref ...))
-     (%normalise-to-boolean
-      (for-all %recurse ?sub-version-ref)))
-
-    (('or)
-     #f)
-
-    (('or (let ?sub-version-reference ...))
-     (%normalise-to-boolean
-      (find %recurse ?sub-version-reference)))
-
-    (('not (let ?sub-version-ref))
-     (not (%recurse ?sub-version-ref)))
-
-    (else
-     (assertion-violation __who__
-       "invalid library sub-version reference" sub-version-reference))))
-
-;;; --------------------------------------------------------------------
-
-(define* (conforming-version-and-version-reference? (version library-version-numbers?)
-						    (version-reference library-version-reference?))
-  ;;VERSION must be a list of version numbers as specified by R6RS.
-  ;;
-  ;;VERSION-REFERENCE must be a version reference as specified by R6RS:
-  ;;
-  ;;  ?version-reference
-  ;;     == (?sub-version-reference ...)
-  ;;     == (and ?version-reference ...)
-  ;;     == (or  ?version-reference ...)
-  ;;     == (not ?version-reference)
-  ;;
-  ;;  ?sub-version-reference
-  ;;     == ?sub-version
-  ;;     == (>=  ?sub-version)
-  ;;     == (<=  ?sub-version)
-  ;;     == (and ?sub-version-reference ...)
-  ;;     == (or  ?sub-version-reference ...)
-  ;;     == (not ?sub-version-reference)
-  ;;
-  ;;  ?sub-version
-  ;;     == #<non-negative fixnum>
-  ;;
-  (match version-reference
-    (()
-     #t)
-
-    (('and (let ?version-reference ...))
-     (%normalise-to-boolean
-      (for-all (lambda (reference)
-		 (conforming-version-and-version-reference? version reference))
-	?version-reference)))
-
-    (('or (let ?version-reference ...))
-     (%normalise-to-boolean
-      (find (lambda (reference)
-	      (conforming-version-and-version-reference? version reference))
-	?version-reference)))
-
-    (('not (let ?version-reference))
-     (not (conforming-version-and-version-reference? version ?version-reference)))
-
-    (_
-     (let next-sub-version ((version		version)
-			    (version-reference	version-reference))
-       (cond ((null? version-reference)
-	      ;;According  to R6RS:  if  the  version reference  is
-	      ;;shorter than the version, it is a match.
-	      #t)
-	     ((null? version)
-	      (null? version-reference))
-	     ((conforming-sub-version-and-sub-version-reference?
-	       ($car version) ($car version-reference))
-	      (next-sub-version ($cdr version) ($cdr version-reference)))
-	     (else
-	      #f))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (conforming-library-name-and-library-reference? (name library-name?)
-							 (reference library-reference?))
-  (let-values
-      (((libnam.ids libnam.version)  (library-name-decompose name))
-       ((libref.ids libref.version)  (library-reference-decompose reference)))
-    (and (for-all eq? libnam.ids libref.ids)
-	 (conforming-version-and-version-reference? libnam.version libref.version))))
+  (make-parameter
+      (lambda (filename)
+	(error 'current-include-file-loader
+	  "include file loader not set" filename))
+    (lambda* ({obj procedure?})
+      obj)))
 
 
 ;;;; done
 
+;; #!vicare
+;; (define dummy
+;;   (let ()
+;;     (import (vicare))
+;;     (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.library-manager"))))
+
 )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'with-pending-library-request 'scheme-indent-function 1)
+;; End:

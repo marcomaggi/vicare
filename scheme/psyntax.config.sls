@@ -22,7 +22,7 @@
 ;;;SOFTWARE.
 
 
-(library (psyntax config)
+(library (psyntax.config)
   (export
     if-wants-define-record	#;if-wants-define-struct
     if-wants-case-lambda
@@ -30,9 +30,8 @@
     if-wants-library-letrec*	if-wants-descriptive-gensyms
     base-of-interaction-library)
   (import (rnrs)
-    (prefix (only (psyntax compat)
-		  descriptive-labels)
-	    config.))
+    (only (psyntax.compat)
+	  option.descriptive-labels))
 
 
 (define (base-of-interaction-library)
@@ -93,7 +92,7 @@
 (define-syntax if-wants-descriptive-gensyms
   (syntax-rules ()
     ((_ ?success-kont ?failure-kont)
-     (if (config.descriptive-labels)
+     (if (option.descriptive-labels)
 	 ?success-kont
        ?failure-kont))
     ))

@@ -41,7 +41,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa parser-tools lalr)
   (export
     lalr-parser (rename (lalr-parser make-lalr-parser))

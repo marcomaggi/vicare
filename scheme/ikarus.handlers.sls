@@ -14,35 +14,35 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(library (ikarus system parameters)
+(library (vicare system parameters)
   (export make-parameter)
-  (import (except (ikarus) make-parameter))
+  (import (except (vicare) make-parameter))
   (define make-parameter
     (let ()
-      (import (ikarus))
+      (import (vicare))
       (case-lambda
         ((x guard) (make-parameter x guard))
         ((x) (make-parameter x))))))
 
 (library (ikarus.pointer-value)
   (export pointer-value)
-  (import (only (ikarus) define import))
+  (import (only (vicare) define import))
   (define (pointer-value x)
-    (import (ikarus))
+    (import (vicare))
     (pointer-value x)))
 
 
-(library (ikarus system handlers)
+(library (vicare system handlers)
   (export
     interrupt-handler engine-handler
     $apply-nonprocedure-error-handler
     $incorrect-args-error-handler
     $multiple-values-error
     $do-event)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  interrupt-handler
 		  engine-handler)
-          (only (ikarus system $interrupts)
+          (only (vicare system $interrupts)
 		$interrupted?
 		$unset-interrupted!))
 
@@ -162,6 +162,6 @@
 
 ;;;; done
 
-#| end of library (ikarus system handlers) |# )
+#| end of library (vicare system handlers) |# )
 
 ;;; end of file

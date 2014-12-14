@@ -23,7 +23,7 @@
 ;;;
 ;;;			<http://code.google.com/p/lalr-scm/>
 ;;;
-;;;Copyright (c) 2009, 2013 Marco Maggi
+;;;Copyright (c) 2009, 2013, 2014 Marco Maggi
 ;;;Copyright (c) 2005-2008 Dominique Boucher
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -41,7 +41,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa parser-tools lalr glr-driver)
   (export glr-driver)
   (import (nausicaa)
@@ -126,7 +126,7 @@
 	    (reduce-loop (append (cdr reduced) reduced*)
 			 (append shifted shifted*))))))
 
-    (define (perform-actions (lookahead lt.<lexical-token>) process)
+    (define (perform-actions {lookahead lt.<lexical-token>} process)
       ;;Perform  a set of  actions on  PROCESS.  The  list of  action is
       ;;selected from the action table according to the current state of
       ;;PROCESS  and  the LOOKAHEAD  token's  category.
@@ -176,7 +176,7 @@
 	      (set! reuse-last-token #f)
 	    (begin
 	      (set! last-token (true-lexer))
-	      (unless ((lt.<lexical-token>) last-token)
+	      (unless (is-a? last-token lt.<lexical-token>)
 		(error-handler "expected lexical token from lexer" last-token)
 		(true-lexer))))
 ;;;	  (debug "~%lookahead ~s" last-token)
@@ -207,7 +207,7 @@
 
       (%main))
 
-    (define (select-actions (lookahead lt.<lexical-token>) state-index)
+    (define (select-actions {lookahead lt.<lexical-token>} state-index)
       (let* ((action-alist (vector-ref action-table state-index))
 	     (pair         (assq (lookahead category) action-alist)))
 	(if pair (cdr pair) (cdar action-alist))))

@@ -7,7 +7,7 @@
 ;;;
 ;;;	Miscellaneous tests for LALR, GLR driver.
 ;;;
-;;;Copyright (c) 2009-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (prefix (nausicaa parser-tools lalr) lalr.)
   (prefix (nausicaa parser-tools lexical-tokens) lt.)
   (prefix (nausicaa parser-tools source-locations) sl.)
@@ -65,7 +65,7 @@
   ;;
   ;;	(make-error-handler (lambda x x))
   ;;
-  (lambda (message (token lt.<lexical-token>))
+  (lambda (message {token lt.<lexical-token>})
     (yycustom `(error-handler . ,(token value)))))
 
 (define (debug:print-tables doit? terminals non-terminals)
@@ -83,7 +83,7 @@
 
 ;;;Test very basic grammars.
 
-  (define (error-handler message (token lt.<lexical-token>))
+  (define (error-handler message {token lt.<lexical-token>})
     (cons message (token value)))
 
   (define (doit-1 . tokens)

@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -391,6 +391,9 @@
     ;; predicates
     port? input-port? output-port? input/output-port?
     textual-port? binary-port?
+    binary-input-port?			textual-input-port?
+    binary-output-port?			textual-output-port?
+    binary-input/output-port?		textual-input/output-port?
     port-eof?
 
     ;; generic port functions
@@ -507,7 +510,7 @@
     make-textual-socket-output-port*
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
-  (import (except (ikarus)
+  (import (except (vicare)
 
 		  ;; would block object
 		  would-block-object			would-block-object?
@@ -524,6 +527,9 @@
 		  ;; predicates
 		  port? input-port? output-port? input/output-port?
 		  textual-port? binary-port?
+		  binary-input-port?			textual-input-port?
+		  binary-output-port?			textual-output-port?
+		  binary-input/output-port?		textual-input/output-port?
 		  port-eof?
 
 		  ;; generic port functions
@@ -644,8 +650,8 @@
 	  strict-r6rs)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
-    (ikarus system $io)
-    (prefix (only (ikarus) port?) primop.)
+    (vicare system $io)
+    (prefix (only (vicare) port?) primop.)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (prefix (vicare unsafe capi)
@@ -1026,7 +1032,7 @@
       (define (%unsupported-by-latin-1)
 	(assertion-violation who
 	  "EOL style conversion unsupported by Latin-1 codec" style))
-      (case-symbols style
+      (case style
 	((none)		0)
 	((lf)		EOL-LINEFEED-TAG)
 	((cr)		EOL-CARRIAGE-RETURN-TAG)
@@ -1521,6 +1527,16 @@
 	     ...
 	     (else
 	      (assertion-violation #f "unknown errno code" errno)))))
+    ))
+
+(define-syntax ($case-fixnums stx)
+  (syntax-case stx (else)
+    ((_ ?id ((?fx) . ?body) ...)
+     (identifier? #'?id)
+     #'(cond (($fx= ?fx ?id) . ?body) ...))
+    ((_ ?id ((?fx) . ?body) ... (else . ?else-body))
+     (identifier? #'?id)
+     #'(cond (($fx= ?fx ?id) . ?body) ...  (else . ?else-body)))
     ))
 
 
@@ -2231,6 +2247,34 @@
        (let ((flags ($port-tag x)))
 	 (or ($fx= ($fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
 	     ($fx= ($fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG)))))
+
+;;; --------------------------------------------------------------------
+
+(define (binary-input-port? obj)
+  (and (input-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-input-port? obj)
+  (and (input-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+(define (binary-output-port? obj)
+  (and (output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-output-port? obj)
+  (and (output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+(define (binary-input/output-port? obj)
+  (and (input/output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-input/output-port? obj)
+  (and (input/output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+;;; --------------------------------------------------------------------
 
 ;;The following predicates have to be used after the argument has
 ;;been validated as  port value.  They are *not*  affected by the
@@ -5892,7 +5936,9 @@
 	   ;;object, else return the number of characters read.
 	   ((would-block-object? ch)
 	    (if (strict-r6rs)
-		(read-next-char)
+		;;In R6RS  mode we ignore the  would-block condition and
+		;;just insist reading with the same destination index.
+		(read-next-char dst.index)
 	      (if ($fx= dst.index dst.start)
 		  ;;Return the would-block object.
 		  ch
@@ -5929,7 +5975,10 @@
 	       ;;another character will be available.
 	       ((would-block-object? ch2)
 		(if (strict-r6rs)
-		    (read-next-char)
+		    ;;In R6RS  mode we ignore the  would-block condition
+		    ;;and just insist reading  with the same destination
+		    ;;index.
+		    (read-next-char dst.index)
 		  (if ($fx= dst.index dst.start)
 		      ;;Return the would-block object.
 		      ch
@@ -6921,7 +6970,7 @@
 		    (case mode
 		      ((ignore)
 		       ;;To ignore means jump to the next.
-		       (recurse))
+		       (recurse port.buffer.index))
 		      ((replace)
 		       #\xFFFD)
 		      ((raise)

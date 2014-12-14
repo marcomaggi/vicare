@@ -83,7 +83,7 @@
   ;;This  module has  the  only  purpose of  making  the binding  COOKIE
   ;;visible only to PRIMOP?, GET-PRIMOP and SET-PRIMOP!.
   ;;
-  (define cookie (gensym))
+  (define cookie (gensym "primitive-operation-cookie"))
 
   (define (primop? x)
     (and (getprop x cookie) #t))
@@ -199,7 +199,7 @@
 		      (k))))
 	  (if (not interrupted?)
 	      body
-	    (case-symbols ctxt
+	    (case ctxt
 	      ((V)
 	       (let ((h (make-interrupt-call x args)))
 		 (if (%interrupt-primcall? body)
@@ -251,6 +251,8 @@
 	       ;;Generate new struct instances of type VAR.
 	       (let ((VAR (unique-var '?lhs))
 		     ...)
+#;(debug-print 'here '(copy-tag ?lhs VAR) ...)
+#;(debug-print 'here1 (copy-tag ?lhs VAR) ...)
 		 ;;Make the binding struct.
 		 (make-bind (list VAR ...) (list ?lhs ...)
 			    ;;The ?BODY forms  expect Scheme bindings to
@@ -258,6 +260,7 @@
 			    ;;structures.
 			    (let ((?lhs (copy-tag ?lhs VAR))
 				  ...)
+#;(debug-print 'there)
 			      ;;Evaluate the  body forms, each  of which
 			      ;;must return recordized code.
 			      (multiple-forms-sequence ?body0 ?body ...))))))))))
@@ -297,10 +300,14 @@
 			      (multiple-forms-sequence ?body0 ?body ...))))))))))
 
   (define (copy-tag orig new)
+#;(debug-print 'enter-copy-tag orig new)
     (struct-case orig
       ((known _ type)
+#;(debug-print 'copy-tag/known new type)
        (make-known new type))
-      (else new)))
+      (else
+#;(debug-print 'copy-tag/not-known new)
+       new)))
 
   #| end of module: with-tmp |# )
 
@@ -429,13 +436,41 @@
       (make-funcall (V pref) args)))
 
   (module (%make-interrupt-call)
-
+    ;;Some core primitives are implemented both as:
+    ;;
+    ;;* Proper procedures.  There exists a loc gensym whose "value" slot references a
+    ;;  closure object, which in turn  references a code object implementing the core
+    ;;  primitive as machine code.
+    ;;
+    ;;*  Primitive operations.   There exist  functions  that the  compiler calls  to
+    ;;  integrate assembly instructions implementing the core primitive.
+    ;;
+    ;;When the core primitive is used as argument as in:
+    ;;
+    ;;   (map fx+ a* b*)
+    ;;
+    ;;the closure object  implementation is used; when the core  primitive is used as
+    ;;first subform of an application form as in:
+    ;;
+    ;;   (fx+ 1 2)
+    ;;
+    ;;the primitive operation is used.
+    ;;
+    ;;Let's consider  FX+.  When the  code object implementation detects  overflow or
+    ;;underflow:  it  raises an  exception.   When  the primitive  operation  detects
+    ;;overflow  or underflow  what should  it do?   The answer  is: every  integrated
+    ;;primitive-operation  assembly-code will  jump to  the same  routine which  will
+    ;;raise an exception.
+    ;;
+    ;;Such exception-raising routines are called ERROR@?PRIM, where ?PRIM is the name
+    ;;of the core primitive.
+    ;;
     (define (%make-interrupt-call op args)
       (let ((pref (make-primref (%primop-interrupt-handler op))))
 	(make-funcall (V pref) args)))
 
     (define (%primop-interrupt-handler x)
-      (case-symbols x
+      (case x
 	((fx+)				'error@fx+)
 	((fx-)				'error@fx-)
 	((fx*)				'error@fx*)
@@ -453,9 +488,6 @@
     (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
 
   (define (cogen-debug-primop op src/loc ctxt args)
-    (define-inline (main)
-      ((make-cogen-handler %make-call %make-call) op ctxt args))
-
     (define (%make-call op args)
       ;;This function clauses upon the argument SRC/LOC.
       ;;
@@ -463,8 +495,7 @@
 		    (cons* (V src/loc)
 			   (V (make-primref op))
 			   args)))
-
-    (main))
+    ((make-cogen-handler %make-call %make-call) op ctxt args))
 
   #| end of module: cogen-primop cogen-debug-primop |# )
 
@@ -790,7 +821,7 @@
 	   (make-constant void-object))
 
 	  ((bwp-object? c)
-	   (make-constant bwp-object))
+	   (make-constant BWP-OBJECT))
 
 	  ((char? c)
 	   ;;Here we  are interested in Scheme  characters as standalone
@@ -937,8 +968,13 @@
        x)
 
       ((primref name)
+       ;;Generate  code to  retrieve the  "slot" field  from a  location
+       ;;gensym; the value of such slot  must contain a reference to the
+       ;;closure object  implementing a  global lexical  procedure.  The
+       ;;location gensym  is stored in the  relocation vector associated
+       ;;the code object we are building.
        (prm 'mref
-	    (K (make-object (primref->symbol name)))
+	    (K (make-object (primref->location-gensym name)))
 	    (K off-symbol-record-value)))
 
       ((code-loc)
@@ -960,7 +996,7 @@
        (make-seq (E e0) (V e1)))
 
       ((primcall op arg*)
-       (case-symbols op
+       (case op
 	 ((debug-call)
 	  (cogen-debug-call op 'V arg* V))
 	 (else
@@ -1026,7 +1062,7 @@
      (handle-fix lhs* rhs* (P body)))
 
     ((primcall op arg*)
-     (case-symbols op
+     (case op
        ((debug-call)
 	(cogen-debug-call op 'P arg* P))
        (else
@@ -1090,7 +1126,7 @@
      (handle-fix lhs* rhs* (E body)))
 
     ((primcall op arg*)
-     (case-symbols op
+     (case op
        ((debug-call)
 	(cogen-debug-call op 'E arg* E))
        (else
@@ -1173,19 +1209,35 @@
     (struct-case x
       ((primcall op args)
        (cond ((and (eq? op 'top-level-value)
-		   (null? ($cdr args))
+		   (null? ($cdr args)) ;only one argument
 		   (%recordized-symbol ($car args)))
 	      ;;The recordized code:
 	      ;;
-	      ;;   #[funcall #[primref top-level-value] (?name)]
+	      ;;   #[primcall #[primref top-level-value] (?loc)]
 	      ;;
-	      ;;represents a reference  to a top level  value; given the
-	      ;;?NAME (a symbol) of a  top level binding: the closure is
-	      ;;stored in the field "proc"  of ?NAME.
+	      ;;represents a  reference to a top  level value.  Whenever
+	      ;;binary code performs a call  to a global closure object,
+	      ;;it does the following:
 	      ;;
-	      => (lambda (sym)
-		   (reset-symbol-proc! sym)
-		   (prm 'mref (T (K sym)) (K off-symbol-record-proc))))
+	      ;;* From the relocation vector of the current code object:
+	      ;;  retrieve the loc gensym of the procedure to call.
+	      ;;
+	      ;;* From the  loc gensym: extract the value  of the "proc"
+	      ;;  slot, which is meant to be a closure object.
+	      ;;
+	      ;;* Actually call the closure object.
+	      ;;
+	      ;;Here we generate  the code needed to  retrieve the value
+	      ;;of the field "proc" from the symbol ?LOC.
+	      ;;
+	      ;;FIXME It is  clear that: at the time  the closure object
+	      ;;call is performed, the loc gensym must have been already
+	      ;;initialised by storing the  closure object in the "proc"
+	      ;;slot.   Good.  But  why  do  we call  RESET-SYMBOL-PROC!
+	      ;;here, at compile-time?  (Marco Maggi; Mon May 19, 2014)
+	      => (lambda (loc)
+		   (reset-symbol-proc! loc)
+		   (prm 'mref (T (K loc)) (K off-symbol-record-proc))))
 	     (else
 	      (nonproc x check?))))
 
@@ -1206,7 +1258,8 @@
     ;;ARG must be a struct instance representing recordized code.
     ;;
     ;;If ARG is  an intance of CONSTANT (possibly wrapped  into a KNOWN)
-    ;;whose value is a symbol: return that symbol; else return #f.
+    ;;whose value is a symbol: return that symbol; else return #f.  Such
+    ;;symbol is meant to be the location gensym of a procedure.
     ;;
     (struct-case arg
       ((constant arg.val)
@@ -1217,6 +1270,10 @@
        #f)))
 
   (define (nonproc x check?)
+    ;;When CHECK? is true: generate the  code needed to test at run-time
+    ;;if evaluating X yields a closure object; if it does: X is returned
+    ;;at run-time, otherwise an error is raised at run-time.
+    ;;
     (if check?
 	(with-tmp ((x (V x)))
 	  (make-shortcut
@@ -1276,7 +1333,7 @@
 
 ;;;; some external code
 
-(include "pass-specify-rep-primops.ss")
+(include "pass-specify-rep-primops.ss" #t)
 
 
 ;;;; done

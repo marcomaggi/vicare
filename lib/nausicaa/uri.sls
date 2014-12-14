@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!vicare
 (library (nausicaa uri)
+  (options visit-upon-loading)
   (export
     <uri> <relative-ref>
 
@@ -115,7 +116,7 @@
   (protocol
    (lambda ()
      ;;Apply the predicate, through the tagged argument, and return.
-     (lambda ((bv <scheme>))
+     (lambda ({bv <scheme>})
        bv)))
 
   (predicate
@@ -128,18 +129,18 @@
 			       1 bv))))
 
   (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <scheme>))
+   (immutable {bytevector <ascii-bytevector>}
+	      (lambda ({O <scheme>})
 		;;58 = #\:
 		(bytevector-append O '#vu8(58))))
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <scheme>))
+   (immutable {string <ascii-string>}
+	      (lambda ({O <scheme>})
 		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
-  (method (put-bytevector (O <scheme>) (port <binary-output-port>))
+  (method (put-bytevector {O <scheme>} {port <binary-output-port>})
     (put-bytevector port O)
     ;;58 = #\:
     (put-u8         port 58))
@@ -155,7 +156,7 @@
   (protocol
    (lambda ()
      ;;Apply the predicate, through the tagged argument, and return.
-     (lambda ((bv <userinfo>))
+     (lambda ({bv <userinfo>})
        bv)))
 
   (predicate
@@ -171,18 +172,18 @@
 		  (loop bv ($fxadd1 i))))))))
 
   (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <userinfo>))
+   (immutable {bytevector <ascii-bytevector>}
+	      (lambda ({O <userinfo>})
 		;;64 = #\@
-		(bytevector-append O #vu8(64)) ))
+		(bytevector-append O #vu8(64))))
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <userinfo>))
+   (immutable {string <ascii-string>}
+	      (lambda ({O <userinfo>})
 		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
-  (method (put-bytevector (O <userinfo>) port)
+  (method (put-bytevector {O <userinfo>} port)
     (put-bytevector port O)
     ;;64 = #\@
     (put-u8         port 64))
@@ -195,7 +196,7 @@
 (define-label <host>
   (parent <ip-address>)
 
-  (method (put-bytevector (O <ip-address>) port)
+  (method (put-bytevector {O <ip-address>} port)
     (put-bytevector port (O bytevector)))
 
   #| end of label |# )
@@ -214,22 +215,22 @@
     (protocol
      (lambda ()
        ;;Validate the value through the tagged argument and return it.
-       (lambda ((fx <port-number>))
+       (lambda ({fx <port-number>})
 	 fx)))
 
     (virtual-fields
-     (immutable (bytevector <ascii-bytevector>)
-		(lambda ((O <port-number>))
+     (immutable {bytevector <ascii-bytevector>}
+		(lambda ({O <port-number>})
 		  ;;58 = #\:
 		  (bytevector-append '#vu8(58) ($fixnum->bytevector O))))
 
-     (immutable (string <ascii-string>)
-		(lambda ((O <port-number>))
+     (immutable {string <ascii-string>}
+		(lambda ({O <port-number>})
 		  ($ascii->string (O bytevector))))
 
      #| end of virtual-fields |# )
 
-    (method (put-bytevector (O <port-number>) port)
+    (method (put-bytevector {O <port-number>} port)
       ;;58 = #\:
       (put-u8 port 58)
       (put-bytevector port (string->ascii (number->string O))))
@@ -253,7 +254,7 @@
   (protocol
    (lambda ()
      ;;Apply the predicate, through the tagged argument, and return.
-     (lambda ((bv <query>))
+     (lambda ({bv <query>})
        bv)))
 
   (predicate
@@ -265,18 +266,18 @@
 		(loop bv ($fxadd1 i)))))))
 
   (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <query>))
+   (immutable {bytevector <ascii-bytevector>}
+	      (lambda ({O <query>})
 		;;63 = ?
 		(bytevector-append '#vu8(63) O)))
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <query>))
+   (immutable {string <ascii-string>}
+	      (lambda ({O <query>})
 		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
-  (method (put-bytevector (O <query>) port)
+  (method (put-bytevector {O <query>} port)
     ;;63 = ?
     (put-u8 port 63)
     (put-bytevector port O))
@@ -292,7 +293,7 @@
   (protocol
    (lambda ()
      ;;Apply the predicate, through the tagged argument, and return.
-     (lambda ((bv <fragment>))
+     (lambda ({bv <fragment>})
        bv)))
 
   (predicate
@@ -304,18 +305,18 @@
 		(loop bv ($fxadd1 i)))))))
 
   (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <fragment>))
+   (immutable {bytevector <ascii-bytevector>}
+	      (lambda ({O <fragment>})
 		;;35 = #
 		(bytevector-append '#vu8(35) O)))
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <fragment>))
+   (immutable {string <ascii-string>}
+	      (lambda ({O <fragment>})
 		($ascii->string (O bytevector))))
 
    #| end of virtual-fields |# )
 
-  (method (put-bytevector (O <fragment>) port)
+  (method (put-bytevector {O <fragment>} port)
     ;;35 = #
     (put-u8 port 35)
     (put-bytevector port O))
@@ -331,7 +332,8 @@
   (protocol
    ;;Apply the predicate, through the tagged argument, and return.
    (lambda ()
-     (lambda ((bv <fragment>)) bv)))
+     (lambda ({bv <fragment>})
+       bv)))
 
   (predicate
    (lambda (bv)
@@ -344,10 +346,10 @@
 
   (virtual-fields
 
-   (immutable (bytevector <segment>)
+   (immutable {bytevector <segment>}
 	      (lambda (O) O))
 
-   (immutable (string <ascii-string>)
+   (immutable {string <ascii-string>}
 	      $ascii->string)
 
    #| end of virtual-fields |# )
@@ -378,20 +380,20 @@
 
     (virtual-fields
 
-     (immutable (bytevector <ascii-bytevector>)
-		(lambda ((O <list-of-segments>))
+     (immutable {bytevector <ascii-bytevector>}
+		(lambda ({O <list-of-segments>})
 		  (receive (port getter)
 		      (open-bytevector-output-port)
 		    (O put-bytevector port)
 		    (getter))))
 
-     (immutable (string <ascii-string>)
-		(lambda ((O <list-of-segments>))
+     (immutable {string <ascii-string>}
+		(lambda ({O <list-of-segments>})
 		  ($ascii->string (O bytevector))))
 
      #| end of virtual-fields |# )
 
-    (method (put-bytevector (O <list-of-segments>) port)
+    (method (put-bytevector {O <list-of-segments>} port)
       ;;We  know  that in  a  normalised  list  of segments:  a  segment
       ;;representing the current directory can come only as last one; so
       ;;if  we find  such  a segment  we stop  putting  after the  slash
@@ -406,7 +408,7 @@
 	      (put-bytevector port (O $car)))
 	  (begin
 	    (put-bytevector port (O $car))
-	    (let loop (((S <spine>) (O $cdr)))
+	    (let loop (({S <spine>} (O $cdr)))
 	      (when (pair? S)
 		;;47 = (char->integer #\/)
 		(put-u8 port 47)
@@ -479,7 +481,7 @@
 			  (next-segment tail (if (null? output-stack)
 						 output-stack
 					       ($cdr output-stack))))
-			 (((<segment> #:predicate) head)
+			 ((is-a? head <segment>)
 			  ;;Just  push  on  the output  stack  a  normal
 			  ;;segment.
 			  (next-segment tail (cons head output-stack)))
@@ -520,7 +522,7 @@
 			 ;;Reject  a  segment representing  the  uplevel
 			 ;;directory.
 			 #f)
-			(((<segment> #:predicate) head)
+			((is-a? head <segment>)
 			 (%normalised-list-of-segments? tail))
 			(else #f)))))
 	  ((null? list-of-segments)
@@ -553,7 +555,7 @@
   (nongenerative nausicaa:net:addresses:uri:<path>)
   (abstract)
 
-  (fields (immutable (path <list-of-segments>))
+  (fields (immutable {path <list-of-segments>})
 	  (mutable   memoized-bytevector)
 	  (mutable   memoized-string))
 
@@ -564,8 +566,8 @@
 
   (virtual-fields
 
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <path>))
+   (immutable {bytevector <ascii-bytevector>}
+	      (lambda ({O <path>})
 		(or (O $memoized-bytevector)
 		    (receive-and-return (bv)
 			(receive (port getter)
@@ -574,14 +576,14 @@
 			  (getter))
 		      (set! (O $memoized-bytevector) bv)))))
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <path>))
+   (immutable {string <ascii-string>}
+	      (lambda ({O <path>})
 		(or (O $memoized-string)
 		    (receive-and-return (str)
 			($ascii->string (O bytevector))
 		      (set! (O $memoized-string) str)))))
 
-   (immutable (type <symbol>)
+   (immutable {type <symbol>}
 	      uri-path-symbol)
 
    #| end of virtual-fields |# )
@@ -590,8 +592,8 @@
 
   #| end of class |# )
 
-(define-method (uri-path-put-bytevector (O <path>) (port <binary-output-port>))
-  (O path put-bytevector port))
+(define-method (uri-path-put-bytevector {O <path>} {port <binary-output-port>})
+  ((O path) put-bytevector port))
 
 ;;; --------------------------------------------------------------------
 
@@ -611,7 +613,7 @@
 	       (set! singleton-instance rv)))))))
   #| end of class |# )
 
-(define-method (uri-path-symbol (O <path-empty>))
+(define-method (uri-path-symbol {O <path-empty>})
   'path-empty)
 
 ;;; --------------------------------------------------------------------
@@ -620,16 +622,16 @@
   (nongenerative nausicaa:net:addresses:uri:<path-abempty>)
   (parent <path>)
   (protocol (lambda (make-path)
-	      (lambda ((path <list>))
+	      (lambda ({path <list>})
 		((make-path path)))))
   #| end of class |# )
 
-(define-method (uri-path-put-bytevector (O <path-abempty>) (port <binary-output-port>))
+(define-method (uri-path-put-bytevector {O <path-abempty>} {port <binary-output-port>})
   ;;47 = (char->integer #\/)
   (put-u8 port 47)
   (call-next-method))
 
-(define-method (uri-path-symbol (O <path-abempty>))
+(define-method (uri-path-symbol {O <path-abempty>})
   'path-abempty)
 
 ;;; --------------------------------------------------------------------
@@ -638,16 +640,16 @@
   (nongenerative nausicaa:net:addresses:uri:<path-absolute>)
   (parent <path>)
   (protocol (lambda (make-path)
-	      (lambda ((path <list>))
+	      (lambda ({path <list>})
 		((make-path path)))))
   #| end of class |# )
 
-(define-method (uri-path-put-bytevector (O <path-absolute>) (port <binary-output-port>))
+(define-method (uri-path-put-bytevector {O <path-absolute>} {port <binary-output-port>})
   ;;47 = (char->integer #\/)
   (put-u8 port 47)
   (call-next-method))
 
-(define-method (uri-path-symbol (O <path-absolute>))
+(define-method (uri-path-symbol {O <path-absolute>})
   'path-absolute)
 
 ;;; --------------------------------------------------------------------
@@ -656,11 +658,11 @@
   (nongenerative nausicaa:net:addresses:uri:<path-rootless>)
   (parent <path>)
   (protocol (lambda (make-path)
-	      (lambda ((path <nonempty-list>))
+	      (lambda ({path <nonempty-list>})
 		((make-path path)))))
   #| end of class |# )
 
-(define-method (uri-path-symbol (O <path-rootless>))
+(define-method (uri-path-symbol {O <path-rootless>})
   'path-rootless)
 
 ;;; --------------------------------------------------------------------
@@ -669,16 +671,16 @@
   (nongenerative nausicaa:net:addresses:uri:<path-noscheme>)
   (parent <path>)
   (protocol (lambda (make-path)
-	      (lambda ((path <nonempty-list>))
+	      (lambda ({path <nonempty-list>})
 		((make-path path)))))
   #| end of class |# )
 
-(define-method (uri-path-symbol (O <path-noscheme>))
+(define-method (uri-path-symbol {O <path-noscheme>})
   'path-noscheme)
 
 ;;; --------------------------------------------------------------------
 
-(define (make-path-object (path-type <symbol>) path)
+(define (make-path-object {path-type <symbol>} path)
   (case path-type
     ((path-abempty)
      (<path-abempty>	(path)))
@@ -699,32 +701,32 @@
 
 (define-label <userinfo/unspecified>
   (predicate (lambda (O)
-	       (or ((<userinfo> #:predicate) O)
+	       (or (is-a? O <userinfo>)
 		   (unspecified? O)))))
 
 (define-label <host/unspecified>
   (predicate (lambda (O)
-	       (or ((<host> #:predicate) O)
+	       (or (is-a? O <host>)
 		   (unspecified? O)))))
 
 (define-label <port-number/unspecified>
   (predicate (lambda (O)
-	       (or ((<port-number> #:predicate) O)
+	       (or (is-a? O <port-number>)
 		   (unspecified?    O)))))
 
 (define-label <path/unspecified>
   (predicate (lambda (O)
-	       (or ((<path> #:predicate) O)
+	       (or (is-a? O <path>)
 		   (unspecified? O)))))
 
 (define-label <query/unspecified>
   (predicate (lambda (O)
-	       (or ((<query> #:predicate) O)
+	       (or (is-a? O <query>)
 		   (unspecified? O)))))
 
 (define-label <fragment/unspecified>
   (predicate (lambda (O)
-	       (or ((<fragment> #:predicate) O)
+	       (or (is-a? O <fragment>)
 		   (unspecified? O)))))
 
 ;;; --------------------------------------------------------------------
@@ -740,7 +742,7 @@
    (immutable port-object)
 		;Unspecified or an instance of "<port-number>".
 
-   (immutable (path <path>))
+   (immutable {path <path>})
 		;An  instance  of  "<path>".  The  "path"  component  is
 		;mandatory for URI objects.   When no path is specified:
 		;it defaults to an instance of "<path-empty>".
@@ -760,36 +762,36 @@
    #| end of fields |# )
 
   (virtual-fields
-   (immutable (has-userinfo?	<boolean>)	(lambda ((O <class>))
+   (immutable {has-userinfo?	<boolean>}	(lambda ({O <class>})
 						  (specified? (O $userinfo-object))))
-   (immutable (has-host?	<boolean>)	(lambda ((O <class>))
+   (immutable {has-host?	<boolean>}	(lambda ({O <class>})
 						  (specified? (O $host-object))))
-   (immutable (has-port?	<boolean>)	(lambda ((O <class>))
+   (immutable {has-port?	<boolean>}	(lambda ({O <class>})
 						  (specified? (O $port-object))))
-   (immutable (has-authority?	<boolean>)	(lambda ((O <class>))
+   (immutable {has-authority?	<boolean>}	(lambda ({O <class>})
 						  (O has-host?)))
-   (immutable (has-query?	<boolean>)	(lambda ((O <class>))
+   (immutable {has-query?	<boolean>}	(lambda ({O <class>})
 						  (specified? (O $query-object))))
-   (immutable (has-fragment?	<boolean>)	(lambda ((O <class>))
+   (immutable {has-fragment?	<boolean>}	(lambda ({O <class>})
 						  (specified? (O $fragment-object))))
    #| end of virtual-fields |# )
 
   (virtual-fields
-   (immutable (userinfo	<userinfo>)	(lambda ((O <class>))
+   (immutable {userinfo	<userinfo>}	(lambda ({O <class>})
 					  (%return-if-specified (O $userinfo-object) O)))
-   (immutable (host	<host>)		(lambda ((O <class>))
+   (immutable {host	<host>}		(lambda ({O <class>})
 					  (%return-if-specified (O $host-object)     O)))
-   (immutable (port	<port-number>)	(lambda ((O <class>))
+   (immutable {port	<port-number>}	(lambda ({O <class>})
 					  (%return-if-specified (O $port-object)     O)))
-   (immutable (query	<query>)	(lambda ((O <class>))
+   (immutable {query	<query>}	(lambda ({O <class>})
 					  (%return-if-specified (O $query-object)    O)))
-   (immutable (fragment	<fragment>)	(lambda ((O <class>))
+   (immutable {fragment	<fragment>}	(lambda ({O <class>})
 					  (%return-if-specified (O $fragment-object) O)))
    #| end of virtual-fields |# )
 
   (virtual-fields
-   (immutable (bytevector <ascii-bytevector>)
-	      (lambda ((O <class>))
+   (immutable {bytevector <ascii-bytevector>}
+	      (lambda ({O <class>})
 		(or (O $memoized-bytevector)
 		    (receive-and-return (bv)
 			(receive (port getter)
@@ -798,15 +800,15 @@
 			  (getter))
 		      (set! (O $memoized-bytevector) bv)))))
 
-   (immutable (string <ascii-string>)
-	      (lambda ((O <class>))
+   (immutable {string <ascii-string>}
+	      (lambda ({O <class>})
 		(or (O $memoized-string)
 		    (receive-and-return (str)
 			($ascii->string (O bytevector))
 		      (set! (O $memoized-string) str)))))
 
-   (immutable (authority <ascii-bytevector>)
-	      (lambda ((O <class>))
+   (immutable {authority <ascii-bytevector>}
+	      (lambda ({O <class>})
 		(if (O has-authority?)
 		    (receive (port getter)
 			(open-bytevector-output-port)
@@ -818,18 +820,18 @@
 
    #| end of virtual-fields |# )
 
-  (method (put-authority-bytevector (O <class>) (port <binary-output-port>))
+  (method (put-authority-bytevector {O <class>} {port <binary-output-port>})
     ;;Notice  that the  leading  "//"  is not  part  of the  "authority"
     ;;component,  it  is  part  of the  "hier-part"  or  "relative-part"
     ;;components.  So we do not print it here.
     ;;
     (when (O has-authority?)
       (when (O has-userinfo?)
-	(O userinfo put-bytevector port))
+	((O userinfo) put-bytevector port))
       ;;The authority is defined only when the host is defined.
-      (O host put-bytevector port)
+      ((O host) put-bytevector port)
       (when (O has-port?)
-	(O port put-bytevector port))))
+	((O port) put-bytevector port))))
 
   #| end of mixin |# )
 
@@ -844,22 +846,22 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((scheme	<scheme>)
-	 (userinfo	<userinfo/unspecified>)
-	 (host		<host/unspecified>)
-	 (port		<port-number/unspecified>)
-	 (path		<path/unspecified>)
-	 (query		<query/unspecified>)
-	 (fragment	<fragment/unspecified>))
-       (define who 'make-<uri>)
+     (lambda ({scheme	<scheme>}
+	 {userinfo	<userinfo/unspecified>}
+	 {host		<host/unspecified>}
+	 {port		<port-number/unspecified>}
+	 {path		<path/unspecified>}
+	 {query		<query/unspecified>}
+	 {fragment	<fragment/unspecified>})
+       (define-fluid-override __who__ (identifier-syntax 'make-<uri>))
        (when (and (specified? userinfo)
 		  (unspecified? host))
-	 (procedure-argument-violation who
+	 (procedure-argument-violation __who__
 	   "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
 	   userinfo))
        (when (and (specified? port)
 		  (unspecified? host))
-	 (procedure-argument-violation who
+	 (procedure-argument-violation __who__
 	   "invalid specification of \"port\" component when the \"host\" component is unspecified"
 	   port))
        ((make-top)
@@ -870,7 +872,7 @@
 	query fragment
 	#f #;memoized-bytevector #f #;memoized-string ))))
 
-  (fields (immutable (scheme <scheme>)))
+  (fields (immutable {scheme <scheme>}))
 		;An  instance of  "<scheme>".  A  "scheme" component  is
 		;mandatory for URI objects.
 
@@ -878,8 +880,8 @@
 	   (<class>	<uri>)))
 
   (virtual-fields
-   (immutable (hier-part <ascii-bytevector>)
-	      (lambda ((O <uri>))
+   (immutable {hier-part <ascii-bytevector>}
+	      (lambda ({O <uri>})
 		(if (O has-authority?)
 		    (receive (port getter)
 			(open-bytevector-output-port)
@@ -890,19 +892,18 @@
 		    O))))
    #| end of virtual-fields |# )
 
-  (method (put-bytevector (O <uri>) (port <binary-output-port>))
+  (method (put-bytevector {O <uri>} {port <binary-output-port>})
     ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
     ;;"Component Recomposition" of RFC 3986.
-    (define who '<uri>-bytevector)
-    (O $scheme put-bytevector port)
+    ((O $scheme) put-bytevector port)
     (O put-hier-part-bytevector port)
-    (O $path put-bytevector port)
+    ((O $path) put-bytevector port)
     (when (O has-query?)
-      (O query put-bytevector port))
+      ((O query) put-bytevector port))
     (when (O has-fragment?)
-      (O fragment put-bytevector port)))
+      ((O fragment) put-bytevector port)))
 
-  (method (put-hier-part-bytevector (O <uri>) (port <binary-output-port>))
+  (method (put-hier-part-bytevector {O <uri>} {port <binary-output-port>})
     ;;Notice that the leading "//" is part of the "hier-part" component.
     (when (O has-authority?)
       ;;47 = #\/
@@ -932,12 +933,12 @@
 
   (protocol
    (lambda (make-top)
-     (lambda ((userinfo	<userinfo/unspecified>)
-	 (host		<host/unspecified>)
-	 (port		<port-number/unspecified>)
-	 (path		<path>)
-	 (query		<query/unspecified>)
-	 (fragment	<fragment/unspecified>))
+     (lambda ({userinfo	<userinfo/unspecified>}
+	 {host		<host/unspecified>}
+	 {port		<port-number/unspecified>}
+	 {path		<path>}
+	 {query		<query/unspecified>}
+	 {fragment	<fragment/unspecified>})
        (define who 'make-<relative-ref>)
        (when (and (specified? userinfo)
 		  (unspecified? host))
@@ -958,8 +959,8 @@
 	   (<class>	<relative-ref>)))
 
   (virtual-fields
-   (immutable (relative-part <ascii-bytevector>)
-	      (lambda ((O <relative-ref>))
+   (immutable {relative-part <ascii-bytevector>}
+	      (lambda ({O <relative-ref>})
 		(if (O has-authority?)
 		    (receive (port getter)
 			(open-bytevector-output-port)
@@ -970,18 +971,17 @@
 		    O))))
    #| end of virtual-fields |# )
 
-  (method (put-bytevector (O <relative-ref>) (port <binary-output-port>))
+  (method (put-bytevector {O <relative-ref>} {port <binary-output-port>})
     ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
     ;;"Component Recomposition" of RFC 3986.
-    (define who '<relative-ref>-bytevector)
     (O put-relative-part-bytevector port)
-    (O $path put-bytevector port)
+    ((O $path) put-bytevector port)
     (when (O has-query?)
-      (O query put-bytevector port))
+      ((O query) put-bytevector port))
     (when (O has-fragment?)
-      (O fragment put-bytevector port)))
+      ((O fragment) put-bytevector port)))
 
-  (method (put-relative-part-bytevector (O <relative-ref>) (port <binary-output-port>))
+  (method (put-relative-part-bytevector {O <relative-ref>} {port <binary-output-port>})
     ;;Notice that the leading "//" is part of the "relative-part" component.
     (when (O has-authority?)
       ;;47 = #\/

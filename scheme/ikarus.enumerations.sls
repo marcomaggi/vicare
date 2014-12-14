@@ -62,7 +62,7 @@
     make-enumeration
     enum-set?
     make-file-options)
-  (import (except (ikarus)
+  (import (except (vicare)
 ;;;		  define-enumeration
 		  enum-set->list
 		  enum-set-complement

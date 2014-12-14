@@ -27,7 +27,7 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (rnrs hashtables)
   (ikarus-test-framework)
   (vicare checks))

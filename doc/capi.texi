@@ -367,9 +367,9 @@ adaptation.
 
 
 We must remember that the @posix{} primitives end up exported by both
-the @library{vicare} and @library{ikarus} libraries; following the
-example of the @cfunc{getpid} function, to add a @posix{} primitive we
-should follow these steps:
+the library @library{vicare}; following the example of the
+@cfunc{getpid} function, to add a @posix{} primitive we should follow
+these steps:
 
 @enumerate
 @item
@@ -400,7 +400,7 @@ and add the binding to the export list.
 @item
 In the file @file{scheme/ikarus.posix.sls}: add the binding to both the
 export list of the library and to the @code{except} import list from
-@library{ikarus}; add the function implementation calling a syntax
+@library{vicare}; add the function implementation calling a syntax
 associated to the foreign function:
 
 @example
@@ -411,7 +411,7 @@ associated to the foreign function:
 @item
 In the file @file{scheme/makefile.sps}: add an entry for the function to
 the list bound to @code{identifier->library-map} to have the function
-exported by @library{ikarus} and @library{vicare}:
+exported by @library{vicare}:
 
 @example
 (getpid         i v)

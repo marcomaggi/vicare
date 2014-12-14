@@ -160,6 +160,21 @@ static const unsigned int META_MT[meta_count] = {
   SYMBOLS_MT
 };
 
+/* ------------------------------------------------------------------ */
+
+static int verify_gc_integrity_option = 0;
+
+ikptr
+ikrt_enable_gc_integrity_checks (ikpcb * pcb) {
+  verify_gc_integrity_option = 1;
+  return IK_VOID;
+}
+ikptr
+ikrt_disable_gc_integrity_checks (ikpcb * pcb) {
+  verify_gc_integrity_option = 0;
+  return IK_VOID;
+}
+
 
 /** --------------------------------------------------------------------
  ** Helpers.
@@ -298,10 +313,12 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
   ikmemblock *		old_heap_pages;
 
   /* fprintf(stderr, "%s: enter\n", __func__); */
-#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-  ik_verify_integrity(pcb, "entry");
+#if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+  verify_gc_integrity_option = 1;
 #endif
-
+  if (verify_gc_integrity_option) {
+    ik_verify_integrity(pcb, "entry");
+  }
   { /* accounting */
     long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
     register_to_collect_count(pcb, bytes);
@@ -469,10 +486,12 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 #endif
   } /* Finished allocating a new nursery heap hot block. */
 
-#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-  ik_verify_integrity(pcb, "exit");
+#if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+  verify_gc_integrity_option = 1;
 #endif
-
+  if (verify_gc_integrity_option) {
+    ik_verify_integrity(pcb, "exit");
+  }
   { /* for GC statistics */
     getrusage(RUSAGE_SELF, &t1);
     gettimeofday(&rt1, 0);
@@ -1305,10 +1324,17 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 
        Notice that we visit here  the referenced code object, because it
        needs some special handling; also  remember that a closure object
-       does not reference  the code object itself, rather  it contains a
+       does not reference the code object itself, rather FIRST_WORD is a
        raw memory pointer  to the entry point in the  executable code of
-       the code object. */
-    ikptr size  = disp_closure_data + IK_REF(first_word, disp_code_freevars - disp_code_data);
+       the code object.
+
+       S_NUM_OF_FREEVARS  is a  fixnum representing  the number  of free
+       variables  associated to  the code  object.  As  raw integer:  it
+       represents the  number bytes used  in the closure object  to hold
+       the actual free variables' values (one machine word for each free
+       variable). */
+    ikptr s_num_of_freevars = IK_REF(first_word, disp_code_freevars - disp_code_data);
+    ikptr size              = disp_closure_data + s_num_of_freevars;
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
     if (size > 1024) {
       ik_debug_message("large closure size=0x%016lx", (long)size);
@@ -1902,16 +1928,18 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
      it alone. */
   {
     page_idx   = IK_PAGE_INDEX(X);
-    uint32_t	page_dbits = gc->segment_vector[page_idx];
-    int		generation = page_dbits & GEN_MASK;
+    uint32_t	page_sbits = gc->segment_vector[page_idx];
+    int		generation = page_sbits & GEN_MASK;
     if (generation > gc->collect_gen)
       return entry;
   }
 
-  /* The number of bytes actually used in the allocated memory block. */
-  long		code_size	= IK_UNFIX(IK_REF(X, disp_code_code_size));
-  /* The total number of allocated bytes. */
-  long		required_mem	= IK_ALIGN(disp_code_data + code_size);
+  /* The number of bytes used in the data area of the code object. */
+  long		binary_code_size= IK_UNFIX(IK_REF(X, disp_code_code_size));
+  /* The number of bytes actually used by the code object. */
+  long		code_object_size= disp_code_data + binary_code_size;
+  /* The total number of allocated bytes for this code object. */
+  long		required_mem	= IK_ALIGN(code_object_size);
   /* The relocation vector. */
   ikptr		s_reloc_vec	= IK_REF(X, disp_code_reloc_vector);
   /* A fixnum representing the number of free variables. */
@@ -1919,17 +1947,17 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
   /* An object that annotates the code object. */
   ikptr		s_annotation	= IK_REF(X, disp_code_annotation);
   if (required_mem >= IK_PAGESIZE) {
-    /* This is a "big" code object and we do not move it around.  */
+    /* This is a "large" code object and we do *not* move it around.  */
     { /* Tag all  the pages  in the  data area of  the code  object: the
 	 first  page as  code, the  subsequent  pages as  data; all  the
 	 tagged pointers  in a code object  are in the first  page.  The
 	 pages are already tagged in the segments vector, but we need to
-	 update the generation number. */
+	 update the generation number for each page. */
       uint32_t	new_tag  = gc->collect_gen_tag;
       long	page_idx = IK_PAGE_INDEX(X);
-      long	i;
+      long	mem;
       gc->segment_vector[page_idx] = new_tag | CODE_MT;
-      for (i=IK_PAGESIZE, page_idx++; i<required_mem; i+=IK_PAGESIZE, page_idx++) {
+      for (mem=IK_PAGESIZE, page_idx++; mem<required_mem; mem+=IK_PAGESIZE, page_idx++) {
 	gc->segment_vector[page_idx] = new_tag | DATA_MT;
       }
     }
@@ -1950,13 +1978,14 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
        scanned by the function "collect_loop()". */
     ikptr	Y = gc_alloc_new_code(required_mem, gc); /* UNtagged pointer */
     IK_REF(Y, disp_code_tag)		= code_tag;
-    IK_REF(Y, disp_code_code_size)	= IK_FIX(code_size);
+    IK_REF(Y, disp_code_code_size)	= IK_FIX(binary_code_size);
     IK_REF(Y, disp_code_reloc_vector)	= s_reloc_vec;
     IK_REF(Y, disp_code_freevars)	= s_freevars;
     IK_REF(Y, disp_code_annotation)	= s_annotation;
+    IK_REF(Y, disp_code_unused)		= IK_FIX(0);
     memcpy((char*)(long)(Y+disp_code_data),
            (char*)(long)(X+disp_code_data),
-           code_size);
+           binary_code_size);
     IK_REF(X, 0)	= IK_FORWARD_PTR;
     IK_REF(X, wordsize)	= Y | vector_tag;
     return Y+disp_code_data;

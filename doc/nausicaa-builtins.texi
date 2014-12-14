@@ -147,18 +147,39 @@ Conventional type for objects satisfying @func{symbol?}.
 @end deftp
 
 
-@deftypeop {Common constructor} @aclass{symbol} @aclass{symbol} constructor @var{string}
+@deftypeop {Common constructor} @aclass{symbol} @aclass{symbol} constructor @var{STRING}
 Return the result of applying @func{string->symbol} to @var{string}.
 @end deftypeop
 
 @c ------------------------------------------------------------
 
-@subsubheading Safe accessors
+@subsubheading Safe and unsafe accessors
 
 
 @deftypecv {Immutable virtual field} @aclass{symbol} @aclass{string} string
+@deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{string} $string
 Accessing this field is like applying @func{symbol->string} to the
 instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{symbol} @aclass{fixnum} hash
+@deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{fixnum} $hash
+A fixnum usable as hash value of the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{symbol} @aclass{boolean} bound?
+@deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{boolean} $bound?
+A boolean: @true{} if the symbol is bound, @false{} if it is unbound;
+@vicareref{iklib symbols value, Symbol values}.
+@end deftypecv
+
+
+@deftypecv {Mutable virtual field} @aclass{symbol} @aclass{top} value
+@deftypecvx {Mutable virtual field} @aclass{symbol} @aclass{top} $value
+The object stored in the @code{value} slot of the symbol object;
+@vicareref{iklib symbols value, Symbol values}.
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -166,8 +187,29 @@ instance.
 @subsubheading Methods
 
 
-@defmethod @aclass{symbol} hash
-Return an integer usable as hash value of the instance.
+@defmethod @aclass{symbol} putprop @{@var{key} @aclass{symbol}@} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+the symbol object.  @var{key} must be a symbol, @var{value} can be any
+value.  If @var{key} is already set: the old entry is mutated to
+reference the new @var{value}.
+@end defmethod
+
+
+@defmethod @aclass{symbol} getprop @{@var{key} @aclass{symbol}@}
+Return the value of the property @var{key} in the property list of the
+symbol object; if @var{key} is not set return false.
+@end defmethod
+
+
+@defmethod @aclass{symbol} remprop @{@var{key} @aclass{symbol}@}
+Remove property @var{key} from the list associated to the symbol object.
+@end defmethod
+
+
+@defmethod @aclass{symbol} property-list
+Return a new association list representing the property list of the
+symbol object.  The order of the entries is the same as the property
+creation order.
 @end defmethod
 
 @c ------------------------------------------------------------
@@ -197,19 +239,25 @@ must be a symbol or string.
 
 @c ------------------------------------------------------------
 
-@subsubheading Safe accessors
+@subsubheading Safe and unsafe accessors
 
 
 @deftypecv {Immutable virtual field} @aclass{keyword} @aclass{symbol} symbol
+@deftypecvx {Immutable virtual field} @aclass{keyword} @aclass{symbol} $symbol
 Accessing this field is like applying @func{keyword->symbol} to the
 instance.
 @end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{keyword} @aclass{string} string
-Return a the string representing the name of the symbol embedded in the
-keyword object.  Mutating the returned string leads to undefined
-behaviour.
+A string representation of the keyword object.  Example:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(((<keyword>)#:ciao) string)    @result{} "#:ciao"
+@end example
 @end deftypecv
 
 @c ------------------------------------------------------------
@@ -260,56 +308,56 @@ Accessing this field is like applying to the instance the function
 @subsubheading Methods: comparison functions
 
 
-@defmethod @aclass{pointer} = @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} = @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer=?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} <> @varii{pointer}
-Calling this method is like applying to the instance, and the argument,
-the function @func{pointer<>?} from @library{vicare}.
-@end defmethod
+@deftypemethod @aclass{pointer} @aclass{boolean} != @varii{pointer}
+Calling this method is like aplying to the instance, and the argument,
+the function @func{pointer!=?} from @library{vicare}.
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} < @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} < @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer<?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} > @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} > @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer>?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} <= @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} <= @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer<=?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} >= @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} >= @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer>=?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: pointer arithmetic
 
 
-@defmethod @aclass{pointer} add @var{offset}
+@deftypemethod @aclass{pointer} @aclass{pointer} add @var{offset}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer-add} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} diff @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{exact-integer} diff @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer-diff} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
@@ -431,7 +479,9 @@ the expressions @meta{car} and @meta{cdr}.
 
 A @dfn{spine} is the head of a proper list: null or a pair whose cdr is
 null or a pair.  It can be used to iterate over a proper list without
-fully validating it first.
+fully validating it first; spines exist because it is not always good to
+iterate once over an object to prove that it is a proper list and then
+iterate over it again to perform a computation.
 
 
 @deftp {Builtin Label} @aclass{spine}
@@ -440,9 +490,8 @@ and, in the case of a pair, having null or a pair as cdr.
 @end deftp
 
 
-@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @var{cdr}
+@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @{@var{cdr} @aclass{spine}@}
 Return the result of applying @func{cons} to @var{car} and @var{cdr}.
-@var{cdr} must be a @class{spine}.
 @end deftypeop
 
 @c ------------------------------------------------------------
@@ -463,7 +512,7 @@ pair using @func{cdr}.
 
 
 @deftypecv {Immutable virtual field} @aclass{spine} @aclass{exact-integer} length
-Access the length of the list.
+The length of the list; it is computed with @func{length}.
 @end deftypecv
 
 
@@ -516,45 +565,54 @@ methods may raise an error if the list structure is not suitable.
 @end defmethod
 
 
-@defmethod @aclass{spine} map @var{proc} . @var{lists}
-Apply @func{map} to the instance list and the optional @var{lists}.
-@end defmethod
+@deftypemethod @aclass{spine} @aclass{list} map @var{proc} . @var{lists}
+Apply @func{map} to the instance list and the optional @var{lists},
+@vicareref{baselib lists, map}.
+@end deftypemethod
 
 
 @defmethod @aclass{spine} for-each @var{proc} . @var{lists}
-Apply @func{for-each} to the instance list and the optional @var{lists}.
-@end defmethod
-
-
-@defmethod @aclass{spine} find @var{proc}
-Apply @func{find} to the list.
+Apply @func{for-each} to the instance list and the optional @var{lists},
+@vicareref{baselib lists, for-each}.
 @end defmethod
 
 
 @defmethod @aclass{spine} reverse @var{proc}
-Apply @func{reverse} to the list.
+Apply @func{reverse} to the list, , @vicareref{baselib lists, map}.
+@end defmethod
+
+
+@defmethod @aclass{spine} append @var{proc}
+Apply @func{append} to the list, , @vicareref{baselib lists, append}.
+@end defmethod
+
+
+@defmethod @aclass{spine} find @var{proc}
+Apply @func{find} to the list, @vicareref{stdlib list, find}.
 @end defmethod
 
 
 @defmethod @aclass{spine} for-all @var{proc}
 @defmethodx @aclass{lits} exists @var{proc}
-Apply @func{for-all} and @func{exists} to the list.
+Apply @func{for-all} and @func{exists} to the list, @vicareref{stdlib
+list, for-all}.
 @end defmethod
 
 
 @defmethod @aclass{spine} filter @var{proc}
 @defmethodx @aclass{spine} partition @var{proc}
-Apply @func{filter} and @func{partition} to the list.
+Apply @func{filter} and @func{partition} to the list, @vicareref{stdlib
+list, filter}.
 @end defmethod
 
 
 @defmethod @aclass{spine} fold-left @var{nil} @var{combine}
-Apply @func{fold-left} to the list.
+Apply @func{fold-left} to the list, @vicareref{stdlib list, fold-left}.
 @end defmethod
 
 
 @defmethod @aclass{spine} fold-right @var{nil} @var{combine}
-Apply @func{fold-right} to the list.
+Apply @func{fold-right} to the list, @vicareref{stdlib list, fold-right}.
 @end defmethod
 
 
@@ -563,7 +621,7 @@ Apply @func{fold-right} to the list.
 @defmethodx @aclass{spine} remv @var{obj}
 @defmethodx @aclass{spine} remq @var{obj}
 Apply @func{remp}, @func{remove}, @func{remv}, @func{remq} to the list
-and the given argument.
+and the given argument, @vicareref{stdlib list, remp}.
 @end defmethod
 
 
@@ -572,7 +630,7 @@ and the given argument.
 @defmethodx @aclass{spine} memv @var{obj} @var{list}
 @defmethodx @aclass{spine} memq @var{obj} @var{list}
 Apply @func{memp}, @func{member}, @func{memv}, @func{memq} to the list
-and the given arguments.
+and the given arguments, @vicareref{stdlib list, memp}.
 @end defmethod
 
 
@@ -581,7 +639,7 @@ and the given arguments.
 @defmethodx @aclass{spine} assv @var{obj}
 @defmethodx @aclass{spine} assq @var{obj}
 Apply @func{assp}, @func{assoc}, @func{assv}, @func{assq} to the list
-and the given argument.
+and the given argument, @vicareref{stdlib list, assp}.
 @end defmethod
 
 @c ------------------------------------------------------------
@@ -616,12 +674,23 @@ it is derived from @class{list}.
 Return the result of applying @func{list} to the @var{item} arguments.
 @end deftypeop
 
+
+@deftypeop {Common constructor} @aclass{nonempty-list} @aclass{nonempty-list} constructor @varo{item} @var{item} @dots{}
+Return the result of applying @func{list} to the @var{item} arguments.
+@end deftypeop
+
 @c ------------------------------------------------------------
 
 @subsubheading @oopp{} syntaxes
 
 
 @defop Maker @aclass{list} @aclass{list} (@meta{item} @dots{})
+Return the result of applying @func{list} to the results of evaluating
+the expressions @meta{item}.
+@end defop
+
+
+@defop Maker @aclass{nonempty-list} @aclass{list} (@metao{item} @meta{item} @dots{})
 Return the result of applying @func{list} to the results of evaluating
 the expressions @meta{item}.
 @end defop
@@ -847,7 +916,7 @@ operations from @library{vicare system $strings}.
 @subsubheading Methods
 
 
-@deftypemethod @aclass{string} @aclass{integer} hash
+@deftypemethod @aclass{string} @aclass{fixnum} hash
 Return the result of applying @func{string-hash} to the string instance.
 @end deftypemethod
 
@@ -910,7 +979,7 @@ penultimate character and so on.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} @aclass{top} ref (@var{index} @aclass{fixnum}) (@var{ch} @aclass{char})
+@deftypemethod @aclass{string} @aclass{top} set! (@var{index} @aclass{fixnum}) (@var{ch} @aclass{char})
 When @var{index} is zero or positive: this method behaves like
 @func{string-set!} from @rsixlibrary{base}.  If @var{index} is negative:
 it is first normalised with:
@@ -1016,10 +1085,10 @@ value and so on.
 @end deftypemethod
 
 
-@defmethod @aclass{vector} map @var{proc} . @var{vectors}
+@deftypemethod @aclass{vector} @aclass{vector} map @var{proc} . @var{vectors}
 Apply @func{vector-map} to the instance vector and the optional
 @var{vectors}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{vector} for-each @var{proc} . @var{vectors}
@@ -1239,8 +1308,8 @@ Build and return a copy of the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{bytevector} @aclass{exact-integer} hash
-@deftypemethodx @aclass{bytevector} @aclass{exact-integer} $hash
+@deftypemethod @aclass{bytevector} @aclass{hash} hash
+@deftypemethodx @aclass{bytevector} @aclass{hash} $hash
 Compute a hash value of bytevector instance using
 @func{bytevector-hash}, @vicareref{iklib bytevectors generic, Generic
 bytevector operations}.
@@ -1541,15 +1610,15 @@ use symbols as keys.
 @subsubheading Safe accessors
 
 
-@defcv {Immutable virtual field} @aclass{hashtable} size
+@deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{exact-integer} size
 Access the size of the table.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{hashtable} keys
+@deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{vector} keys
 Access the keys.  Retrieving this field is like applying
 @func{hashtable-keys} to the hashtable.
-@end defcv
+@end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{boolean} mutable?
@@ -1588,10 +1657,10 @@ Equivalent to applying @func{hashtable-update!} to the instance.
 @end defmethod
 
 
-@defmethod @aclass{hashtable} copy
-@defmethodx @aclass{hashtable} copy @var{mutable?}
+@deftypemethod @aclass{hashtable} @aclass{hashtable} copy
+@deftypemethodx @aclass{hashtable} @aclass{hashtable} copy @var{mutable?}
 Equivalent to applying @func{hashtable-copy} to the instance.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
@@ -1724,212 +1793,216 @@ Accessing this field is like applying to the number the function
 @subsubheading Methods: arithmetic
 
 
-@defmethod @aclass{number} + @var{num} @dots{}
+@deftypemethod @aclass{number} @aclass{number} + @var{num} @dots{}
 Apply @func{+} to the instance and the given optional arguments; return
 the result.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} - @var{num} @dots{}
+@deftypemethod @aclass{number} @aclass{number} - @var{num} @dots{}
 Apply @func{-} to the instance and the given optional arguments; return
 the result.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} * @var{num} @dots{}
+@deftypemethod @aclass{number} @aclass{number} * @var{num} @dots{}
 Apply @func{*} to the instance and the given optional arguments; return
 the result.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} / @var{num} @dots{}
+@deftypemethod @aclass{number} @aclass{number} / @var{num} @dots{}
 Apply @func{/} to the instance and the given optional arguments; return
 the result.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: exactness
 
 
-@defmethod @aclass{number} exact
+@deftypemethod @aclass{number} @aclass{number} exact
 Calling this method is like applying to the instance number the function
 @func{exact} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} inexact
+@deftypemethod @aclass{number} @aclass{number} inexact
 Calling this method is like applying to the instance number the function
 @func{inexact} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: exponentiation and logarithms
 
 
-@defmethod @aclass{number} exp
+@deftypemethod @aclass{number} @aclass{number} exp
 Calling this method is like applying to the instance number the function
 @func{exp} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} log
-@defmethodx @aclass{number} log @var{base}
+@deftypemethod @aclass{number} @aclass{number} log
+@deftypemethodx @aclass{number} @aclass{number} log @var{base}
 Calling this method is like applying to the number and the optional
 @var{base} the function @func{log} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: powers
 
 
-@defmethod @aclass{number} expt @varii{Z2}
+@deftypemethod @aclass{number} @aclass{number} expt @varii{Z2}
 Calling this method is like applying to the number and @varii{Z} the
 function @func{expt} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} square
+@deftypemethod @aclass{number} @aclass{number} square
 Calling this method is like applying to the instance number the function
 @func{square} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} cube
+@deftypemethod @aclass{number} @aclass{number} cube
 Calling this method is like applying to the instance number the function
 @func{cube} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} sqrt
+@deftypemethod @aclass{number} @aclass{number} sqrt
 Calling this method is like applying to the instance number the function
 @func{sqrt} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: trigonometric functions
 
 
-@defmethod @aclass{number} sin
+@deftypemethod @aclass{number} @aclass{number} sin
 Calling this method is like applying to the instance number the function
 @func{sin} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} cos
+@deftypemethod @aclass{number} @aclass{number} cos
 Calling this method is like applying to the instance number the function
 @func{cos} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} tan
+@deftypemethod @aclass{number} @aclass{number} tan
 Calling this method is like applying to the instance number the function
 @func{tan} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} asin
+@deftypemethod @aclass{number} @aclass{number} asin
 Calling this method is like applying to the instance number the function
 @func{asin} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} acos
+@deftypemethod @aclass{number} @aclass{number} acos
 Calling this method is like applying to the instance number the function
 @func{acos} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} atan
+@deftypemethod @aclass{number} @aclass{number} atan
 Calling this method is like applying to the instance number the function
 @func{atan} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: hyperbolic functions
 
 
-@defmethod @aclass{number} sinh
+@deftypemethod @aclass{number} @aclass{number} sinh
 Calling this method is like applying to the instance number the function
 @func{sinh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} cosh
+@deftypemethod @aclass{number} @aclass{number} cosh
 Calling this method is like applying to the instance number the function
 @func{cosh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} tanh
+@deftypemethod @aclass{number} @aclass{number} tanh
 Calling this method is like applying to the instance number the function
 @func{tanh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} asinh
+@deftypemethod @aclass{number} @aclass{number} asinh
 Calling this method is like applying to the instance number the function
 @func{asinh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} acosh
+@deftypemethod @aclass{number} @aclass{number} acosh
 Calling this method is like applying to the instance number the function
 @func{acosh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} atanh
+@deftypemethod @aclass{number} @aclass{number} atanh
 Calling this method is like applying to the instance number the function
 @func{atanh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: complex numbers operations
 
 
-@defmethod @aclass{number} real-part
+@deftypemethod @aclass{number} @aclass{real} real-part
 Calling this method is like applying to the instance number the function
 @func{real-part} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} imag-part
+@deftypemethod @aclass{number} @aclass{real} imag-part
 Calling this method is like applying to the instance number the function
 @func{imag-part} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} magnitude
+@deftypemethod @aclass{number} @aclass{real} magnitude
 Calling this method is like applying to the instance number the function
 @func{magnitude} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} angle
+@deftypemethod @aclass{number} @aclass{real} angle
 Calling this method is like applying to the instance number the function
 @func{angle} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{number} conjugate
+@deftypemethod @aclass{number} @aclass{number} conjugate
 Calling this method is like applying to the instance number the function
 @func{complex-conjugate} from @library{vicare}.
-@end defmethod
+@end deftypemethod
+
+@c ------------------------------------------------------------
+
+@subsubheading Other methods
 
 
-@defmethod @aclass{number} string-radix
-@defmethodx @aclass{number} string-radix @var{radix}
-@defmethodx @aclass{number} string-radix @var{radix} @var{precision}
+@deftypemethod @aclass{number} @aclass{string} string-radix
+@deftypemethodx @aclass{number} @aclass{string} string-radix @var{radix}
+@deftypemethodx @aclass{number} @aclass{string} string-radix @var{radix} @var{precision}
 Calling this method is like applying to the instance number, and the
 optional arguments @var{radix} and @var{precision}, the function
 @func{number->string} from @rsixlibrary{base}.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node builtins numbers complex
@@ -1963,87 +2036,6 @@ Conventioanl type for objects satisfying @func{real-valued?}.  It is
 derived from @class{complex}.
 @end deftp
 
-@c ------------------------------------------------------------
-
-@subsubheading Safe accessors
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} positive?
-Accessing this field is like applying to the instance number the
-function @func{positive?} from @rsixlibrary{base}.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} negative?
-Accessing this field is like applying to the instance number the
-function @func{negative?} from @rsixlibrary{base}.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} non-positive?
-Accessing this field is like applying to the instance number the
-function @func{non-positive?} from @rsixlibrary{base}.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{boolean} non-negative?
-Accessing this field is like applying to the instance number the
-function @func{non-negative?} from @rsixlibrary{base}.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{fixnum} sign
-Accessing this field is like applying to the instance number the
-function @func{sign} from @rsixlibrary{vicare}.  It is the sign of the
-number: @math{+1}, @math{0}, @math{-1}.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{real-valued} numerator
-Accessing this field is like applying to the instance number the
-function @func{numerator} from @rsixlibrary{base}.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{real-valued} @aclass{real-valued} denominator
-Accessing this field is like applying to the instance number the
-function @func{denominator} from @rsixlibrary{base}.
-@end deftypecv
-
-@c ------------------------------------------------------------
-
-@subsubheading Methods: rounding
-
-
-@defmethod @aclass{real-valued} floor
-Calling this method is like applying to the instance number the function
-@func{floor} from @rsixlibrary{base}.
-@end defmethod
-
-
-@defmethod @aclass{real-valued} ceiling
-Calling this method is like applying to the instance number the function
-@func{ceiling} from @rsixlibrary{base}.
-@end defmethod
-
-
-@defmethod @aclass{real-valued} truncate
-Calling this method is like applying to the instance number the function
-@func{truncate} from @rsixlibrary{base}.
-@end defmethod
-
-
-@defmethod @aclass{real-valued} round
-Calling this method is like applying to the instance number the function
-@func{round} from @rsixlibrary{base}.
-@end defmethod
-
-
-@defmethod @aclass{real-valued} rationalize @var{tolerance}
-Calling this method is like applying to the instance number the function
-@func{rationalize} from @rsixlibrary{base}.
-@end defmethod
-
 @c page
 @node builtins numbers real
 @subsection Real number objects
@@ -2063,6 +2055,83 @@ Conventional for objects satisfying @func{real?}.  It is derived from
 Accessing this field is like applying to the instance number the
 function @func{abs} from @rsixlibrary{base}.
 @end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{boolean} positive?
+Accessing this field is like applying to the instance number the
+function @func{positive?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{boolean} negative?
+Accessing this field is like applying to the instance number the
+function @func{negative?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{boolean} non-positive?
+Accessing this field is like applying to the instance number the
+function @func{non-positive?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{boolean} non-negative?
+Accessing this field is like applying to the instance number the
+function @func{non-negative?} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{fixnum} sign
+Accessing this field is like applying to the instance number the
+function @func{sign} from @rsixlibrary{vicare}.  It is the sign of the
+number: @math{+1}, @math{0}, @math{-1}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{real} numerator
+Accessing this field is like applying to the instance number the
+function @func{numerator} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{real} @aclass{real} denominator
+Accessing this field is like applying to the instance number the
+function @func{denominator} from @rsixlibrary{base}.
+@end deftypecv
+
+@c ------------------------------------------------------------
+
+@subsubheading Methods: rounding
+
+
+@deftypemethod @aclass{real} @aclass{real} floor
+Calling this method is like applying to the instance number the function
+@func{floor} from @rsixlibrary{base}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{real} @aclass{real} ceiling
+Calling this method is like applying to the instance number the function
+@func{ceiling} from @rsixlibrary{base}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{real} @aclass{real} truncate
+Calling this method is like applying to the instance number the function
+@func{truncate} from @rsixlibrary{base}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{real} @aclass{real} round
+Calling this method is like applying to the instance number the function
+@func{round} from @rsixlibrary{base}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{real} @aclass{real} rationalize @var{tolerance}
+Calling this method is like applying to the instance number the function
+@func{rationalize} from @rsixlibrary{base}.
+@end deftypemethod
 
 @c page
 @node builtins numbers rationalv
@@ -2089,6 +2158,22 @@ derived from @class{rational-valued}.
 Conventional type for objects satisfying @func{ratnum?}.  It is derived
 from @class{rational}.
 @end deftp
+
+@c ------------------------------------------------------------
+
+@subsubheading Safe accessors
+
+
+@deftypecv {Immutable virtual field} @aclass{ratnum} @aclass{exact-integer} numerator
+Accessing this field is like applying to the instance number the
+function @func{numerator} from @rsixlibrary{base}.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{ratnum} @aclass{exact-integer} denominator
+Accessing this field is like applying to the instance number the
+function @func{denominator} from @rsixlibrary{base}.
+@end deftypecv
 
 @c page
 @node builtins numbers integerv
@@ -2259,16 +2344,16 @@ function @func{fxsign} from @library{vicare}.
 @subsubheading Methods: arithmetic operations
 
 
-@defmethod @aclass{fixnum} abs
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} abs
 Calling this method is like applying to the instance number the function
 @func{fxabs} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} * @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} * @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx*} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{fixnum} mul-with-carry @varii{fx} @variii{fx}
@@ -2278,10 +2363,10 @@ fixnums}.
 @end defmethod
 
 
-@defmethod @aclass{fixnum} + @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} + @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx+} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{fixnum} add-with-carry @varii{fx} @variii{fx}
@@ -2291,16 +2376,16 @@ fixnums}.
 @end defmethod
 
 
-@defmethod @aclass{fixnum} add1
-@defmethodx @aclass{fixnum} $add1
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} add1
+@deftypemethodx @aclass{fixnum} @aclass{exact-integer} $add1
 Add @math{1} to the instance number.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} - @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} - @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx-} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{fixnum} sub-with-carry @varii{fx} @variii{fx}
@@ -2310,24 +2395,24 @@ fixnums}.
 @end defmethod
 
 
-@defmethod @aclass{fixnum} sub1
-@defmethodx @aclass{fixnum} $sub1
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} sub1
+@deftypemethodx @aclass{fixnum} @aclass{exact-integer} $sub1
 Subtract @math{1} from the instance number.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} div @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} div @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxdiv} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} mod @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} mod @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxmod} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{fixnum} div-and-mod @varii{fx}
@@ -2337,18 +2422,18 @@ fixnums}.
 @end defmethod
 
 
-@defmethod @aclass{fixnum} div0 @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} div0 @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxdiv0} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} mod0 @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{exact-integer} mod0 @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxmod0} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{fixnum} div0-and-mod0 @varii{fx}
@@ -2362,209 +2447,209 @@ argument, the function @func{fxdiv0-and-mod0} from
 @subsubheading Methods: comparison operations
 
 
-@defmethod @aclass{fixnum} = @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{boolean} = @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fx=?} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} < @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{boolean} < @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fx<?} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} > @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{boolean} > @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fx>?} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} <= @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{boolean} <= @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fx<=?} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} >= @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{boolean} >= @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fx>=?} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
-@subsubheading Methods: logic operations
+@subsubheading Methods: bitwise logic operations
 
 
-@defmethod @aclass{fixnum} and @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} and @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxand} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} ior @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} ior @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxior} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} xor @varii{fx} @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} xor @varii{fx} @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxxor} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} not @var{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} not @var{fx}
 Calling this method is like applying to the instance number the function
 @func{fxnot} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
-@subsubheading Methods: shift operations
+@subsubheading Methods: bitwise shift operations
 
 
-@defmethod @aclass{fixnum} arithmetic-shift @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} arithmetic-shift @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxarithmetic-shift} from
 @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} arithmetic-shift-left @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} arithmetic-shift-left @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxarithmetic-shift-left} from
 @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} arithmetic-shift-right @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} arithmetic-shift-right @varii{fx}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxarithmetic-shift-right} from
 @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
-@subsubheading Methods: bitwise operations
+@subsubheading Methods: other bitwise operations
 
 
-@defmethod @aclass{fixnum} bit-set? @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{boolean} bit-set? @varii{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxbit-set?} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} bit-count
+@deftypemethod @aclass{fixnum} @aclass{fixnum} bit-count
 Calling this method is like applying to the instance number the function
 @func{fxbit-count} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} bit-field @varii{fx} @variii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} @aclass{fixnum} bit-field @varii{fx} @variii{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxbit-field} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} copy-bit @varii{fx} @varii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} copy-bit @varii{fx} @varii{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxcopy-bit} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} copy-bit-field @varii{fx} @variii{fx} @variv{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} copy-bit-field @varii{fx} @variii{fx} @variv{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxcopy-bit-field} from
 @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} first-bit-set
+@deftypemethod @aclass{fixnum} @aclass{fixnum} first-bit-set
 Calling this method is like applying to the instance number the function
 @func{fxfirst-bit-set} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} if @varii{fx} @variii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} if @varii{fx} @variii{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxif} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} length
+@deftypemethod @aclass{fixnum} @aclass{fixnum} length
 Calling this method is like applying to the instance number the function
 @func{fxlength} from @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} reverse-bit-field @varii{fx} @variii{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} reverse-bit-field @varii{fx} @variii{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxreverse-bit-field} from
 @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} rotate-bit-field @varii{fx} @variii{fx} @variv{fx}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} rotate-bit-field @varii{fx} @variii{fx} @variv{fx}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxrotate-bit-field} from
 @rsixlibrary{arithmetic fixnums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: min and max
 
 
-@defmethod @aclass{fixnum} max @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} max @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 arguments, the function @func{fxmax} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} min @var{fx} @dots{}
+@deftypemethod @aclass{fixnum} @aclass{fixnum} min @var{fx} @dots{}
 Calling this method is like applying to the instance number, and the
 argument, the function @func{fxmin} from @rsixlibrary{arithmetic
 fixnums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: conversion
 
 
-@defmethod @aclass{fixnum} string
-@defmethodx @aclass{fixnum} string @var{base}
-@defmethodx @aclass{fixnum} $string
-@defmethodx @aclass{fixnum} $string @var{base}
+@deftypemethod @aclass{fixnum} @aclass{string} string
+@deftypemethodx @aclass{fixnum} @aclass{string} string @var{base}
+@deftypemethodx @aclass{fixnum} @aclass{string} $string
+@deftypemethodx @aclass{fixnum} @aclass{string} $string @var{base}
 Calling @func{string} is like applying to the instance number the
 function @func{fixnum->string} from @library{vicare}.  Calling
 @func{$string} does the same without validating the argument.
 
 @var{base} must be one among @math{2}, @math{8}, @math{10}, @math{16};
 when not given it defaults to @math{10}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{fixnum} flonum
-@defmethodx @aclass{fixnum} $flonum
+@deftypemethod @aclass{fixnum} @aclass{flonum} flonum
+@deftypemethodx @aclass{fixnum} @aclass{flonum} $flonum
 Calling @func{flonum} is like applying to the instance number the
 function @func{fixnum->flonum} from @rsixlibrary{arithmetic fixnums}.
 Calling @func{$flonum} does the same without validating the argument.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node builtins numbers flonum
@@ -2684,53 +2769,53 @@ function @func{flodd?)} from @rsixlibrary{arithmetic flonums}.
 @subsubheading Methods: arithmetic functions
 
 
-@defmethod @aclass{flonum} abs
-@defmethodx @aclass{flonum} $abs
+@deftypemethod @aclass{flonum} @aclass{flonum} abs
+@deftypemethodx @aclass{flonum} @aclass{flonum} $abs
 Calling this method is like applying to the instance number the function
 @func{flabs} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} * @varii{fl} @var{fl} @dots{}
-Calling this method is like applying to the instance number, and
-arguments, the function @func{flabs} from @rsixlibrary{arithmetic
-flonums}.
-@end defmethod
-
-
-@defmethod @aclass{flonum} + @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{flonum} + @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl+} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} - @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{flonum} - @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl-} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} / @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{flonum} * @varii{fl} @var{fl} @dots{}
+Calling this method is like applying to the instance number, and
+arguments, the function @func{flabs} from @rsixlibrary{arithmetic
+flonums}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{flonum} @aclass{flonum} / @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl/} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} div @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} div @varii{fl}
 Calling this method is like applying to the instance number, and
 argument, the function @func{fldiv} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} mod @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} mod @varii{fl}
 Calling this method is like applying to the instance number, and
 argument, the function @func{flmod} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{flonum} div-and-mod @varii{fl}
@@ -2740,18 +2825,18 @@ flonums}.
 @end defmethod
 
 
-@defmethod @aclass{flonum} div0 @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} div0 @varii{fl}
 Calling this method is like applying to the instance number, and
 argument, the function @func{fldiv0} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} mod0 @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} mod0 @varii{fl}
 Calling this method is like applying to the instance number, and
 argument, the function @func{flmod0} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{flonum} div0-and-mod0 @varii{fl}
@@ -2765,264 +2850,264 @@ argument, the function @func{fldiv0-and-mod0} from
 @subsubheading Methods: power unctions
 
 
-@defmethod @aclass{flonum} expt @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} expt @varii{fl}
 Calling this method is like applying to the instance number, and
 argument, the function @func{flexpt} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} square
+@deftypemethod @aclass{flonum} @aclass{flonum} square
 Calling this method is like applying to the instance number the function
 @func{flsquare} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} cube
+@deftypemethod @aclass{flonum} @aclass{flonum} cube
 Calling this method is like applying to the instance number the function
 @func{flcube} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} sqrt
+@deftypemethod @aclass{flonum} @aclass{flonum} sqrt
 Calling this method is like applying to the instance number the function
 @func{flsqrt} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} cbrt
+@deftypemethod @aclass{flonum} @aclass{flonum} cbrt
 Calling this method is like applying to the instance number the function
 @func{flcbrt} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: comparison functions
 
 
-@defmethod @aclass{flonum} = @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{boolean} = @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl=?} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} < @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{boolean} < @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl<?} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} > @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{boolean} > @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl>?} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} <= @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{boolean} <= @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl<=?} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} >= @varii{fl} @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{boolean} >= @varii{fl} @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 arguments, the function @func{fl>=?} from @rsixlibrary{arithmetic
 flonums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: trigonometric functions
 
 
-@defmethod @aclass{flonum} sin
+@deftypemethod @aclass{flonum} @aclass{flonum} sin
 Calling this method is like applying to the instance number the function
 @func{flsin} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} cos
+@deftypemethod @aclass{flonum} @aclass{flonum} cos
 Calling this method is like applying to the instance number the function
 @func{flcos} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} tan
+@deftypemethod @aclass{flonum} @aclass{flonum} tan
 Calling this method is like applying to the instance number the function
 @func{fltan} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} acos
+@deftypemethod @aclass{flonum} @aclass{flonum} acos
 Calling this method is like applying to the instance number the function
 @func{flacos} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} asin
+@deftypemethod @aclass{flonum} @aclass{flonum} asin
 Calling this method is like applying to the instance number the function
 @func{flasin} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} atan
-@defmethodx @aclass{flonum} atan @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} atan
+@deftypemethodx @aclass{flonum} @aclass{flonum} atan @varii{fl}
 Calling this method is like applying to the instance number, and
 optional argument, the function @func{flatan} from
 @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: hyperbolic functions
 
 
-@defmethod @aclass{flonum} sinh
+@deftypemethod @aclass{flonum} @aclass{flonum} sinh
 Calling this method is like applying to the instance number the function
 @func{flsinh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} cosh
+@deftypemethod @aclass{flonum} @aclass{flonum} cosh
 Calling this method is like applying to the instance number the function
 @func{flcosh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} tanh
+@deftypemethod @aclass{flonum} @aclass{flonum} tanh
 Calling this method is like applying to the instance number the function
 @func{fltanh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} acosh
+@deftypemethod @aclass{flonum} @aclass{flonum} acosh
 Calling this method is like applying to the instance number the function
 @func{flacosh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} asinh
+@deftypemethod @aclass{flonum} @aclass{flonum} asinh
 Calling this method is like applying to the instance number the function
 @func{flasinh} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} atanh
+@deftypemethod @aclass{flonum} @aclass{flonum} atanh
 Calling this method is like applying to the instance number the function
 @func{flatan} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: rounding functions
 
 
-@defmethod @aclass{flonum} ceiling
+@deftypemethod @aclass{flonum} @aclass{flonum} ceiling
 Calling this method is like applying to the instance number the function
 @func{flceiling} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} floor
+@deftypemethod @aclass{flonum} @aclass{flonum} floor
 Calling this method is like applying to the instance number the function
 @func{flfloor} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} round
+@deftypemethod @aclass{flonum} @aclass{flonum} round
 Calling this method is like applying to the instance number the function
 @func{flround} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} truncate
+@deftypemethod @aclass{flonum} @aclass{flonum} truncate
 Calling this method is like applying to the instance number the function
 @func{fltruncate} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: rationals operations
 
 
-@defmethod @aclass{flonum} numerator
+@deftypemethod @aclass{flonum} @aclass{flonum} numerator
 Calling this method is like applying to the instance number the function
 @func{flnumerator} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} denominator
+@deftypemethod @aclass{flonum} @aclass{flonum} denominator
 Calling this method is like applying to the instance number the function
 @func{fldenominator} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: exponentiation and logarithms
 
 
-@defmethod @aclass{flonum} exp
+@deftypemethod @aclass{flonum} @aclass{flonum} exp
 Calling this method is like applying to the instance number the function
 @func{flexp} from @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} log
-@defmethodx @aclass{flonum} log @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} log
+@deftypemethodx @aclass{flonum} @aclass{flonum} log @varii{fl}
 Calling this method is like applying to the instance number, and
 optional argument, the function @func{fllog} from
 @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} log1p
+@deftypemethod @aclass{flonum} @aclass{flonum} log1p
 Calling this method is like applying to the instance number the function
 @func{fllog1p} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} expm1
+@deftypemethod @aclass{flonum} @aclass{flonum} expm1
 Calling this method is like applying to the instance number the function
 @func{flexpm1} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} hypot @varii{fl}
+@deftypemethod @aclass{flonum} @aclass{flonum} hypot @varii{fl}
 Calling this method is like applying to the instance number, and
 argument, the function @func{flhypot} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: min and max
 
 
-@defmethod @aclass{flonum} max @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{flonum} max @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 optional arguments, the function @func{flmax} from
 @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{flonum} min @var{fl} @dots{}
+@deftypemethod @aclass{flonum} @aclass{flonum} min @var{fl} @dots{}
 Calling this method is like applying to the instance number, and
 optional arguments, the function @func{flmin} from
 @rsixlibrary{arithmetic flonums}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: conversion
 
 
-@defmethod @aclass{flonum} string
+@deftypemethod @aclass{flonum} @aclass{string} string
 Calling this method is like applying to the instance number the function
 @func{flonum->string} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c page
 @node builtins transcoders
@@ -3163,7 +3248,7 @@ Accessing this field is like applying to the port the function
 @end deftypecv
 
 
-@deftypecv {Immutable virtual field} @aclass{port} @aclass{integer} hash
+@deftypecv {Immutable virtual field} @aclass{port} @aclass{fixnum} hash
 Accessing this field is like applying to the port the function
 @func{port-hash} from @library{vicare}.
 @end deftypecv

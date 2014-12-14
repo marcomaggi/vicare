@@ -9,7 +9,7 @@
 	functions in this module,  see the official Vicare documentation
 	in Texinfo format.
 
-  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -522,22 +522,28 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
     IK_ASS(IK_FIELD(D, 6), ika_integer_from_ullong(pcb,(ik_ullong)S->st_size));
 
     IK_ASS(IK_FIELD(D, 7), ika_integer_from_long(pcb, (long)S->st_atime));
-#ifdef HAVE_STAT_ST_ATIME_USEC
-    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ulong(pcb, (ik_ulong)S->st_atime_usec));
+#ifdef HAVE_STAT_ST_ATIM_TV_NSEC
+    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ulong(pcb, (ik_ulong)S->st_atim.tv_nsec));
+#elif (defined HAVE_STAT_ST_ATIMENSEC)
+    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ulong(pcb, (ik_ulong)S->st_atimensec));
 #else
     IK_ASS(IK_FIELD(D, 8), IK_FALSE_OBJECT);
 #endif
 
     IK_ASS(IK_FIELD(D, 9) , ika_integer_from_long(pcb, (long)S->st_mtime));
-#ifdef HAVE_STAT_ST_MTIME_USEC
-    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtime_usec));
+#ifdef HAVE_STAT_ST_MTIM_TV_NSEC
+    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtim.tv_nsec));
+#elif (defined HAVE_STAT_ST_MTIMENSEC)
+    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ulong(pcb, (ik_ulong)S->st_mtimensec));
 #else
     IK_ASS(IK_FIELD(D, 10), IK_FALSE_OBJECT);
 #endif
 
     IK_ASS(IK_FIELD(D, 11), ika_integer_from_long(pcb, (long)S->st_ctime));
-#ifdef HAVE_STAT_ST_CTIME_USEC
-    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctime_usec));
+#ifdef HAVE_STAT_ST_CTIM_TV_NSEC
+    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctim.tv_nsec));
+#elif (defined HAVE_STAT_ST_CTIMENSEC)
+    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ulong(pcb, (ik_ulong)S->st_ctimensec));
 #else
     IK_ASS(IK_FIELD(D, 12), IK_FALSE_OBJECT);
 #endif
@@ -556,22 +562,28 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
     IK_ASS(IK_FIELD(D, 6), ika_integer_from_ullong(pcb, (ik_ullong)S->st_size));
 
     IK_ASS(IK_FIELD(D, 7), ika_integer_from_llong(pcb, (long)S->st_atime));
-#ifdef HAVE_STAT_ST_ATIME_USEC
-    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ullong(pcb, (ik_ullong)S->st_atime_usec));
+#ifdef HAVE_STAT_ST_ATIM_TV_NSEC
+    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ullong(pcb, (ik_ullong)S->st_atim.tv_nsec));
+#elif (defined HAVE_STAT_ST_ATIMENSEC)
+    IK_ASS(IK_FIELD(D, 8), ika_integer_from_ullong(pcb, (ik_ullong)S->st_atimensec));
 #else
     IK_ASS(IK_FIELD(D, 8), IK_FALSE_OBJECT);
 #endif
 
     IK_ASS(IK_FIELD(D, 9) , ika_integer_from_llong(pcb, (long)S->st_mtime));
-#ifdef HAVE_STAT_ST_MTIME_USEC
-    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtime_usec));
+#ifdef HAVE_STAT_ST_MTIM_TV_NSEC
+    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtim.tv_nsec));
+#elif (defined HAVE_STAT_ST_MTIMENSEC)
+    IK_ASS(IK_FIELD(D, 10), ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtimensec));
 #else
     IK_ASS(IK_FIELD(D, 10), IK_FALSE_OBJECT);
 #endif
 
     IK_ASS(IK_FIELD(D, 11), ika_integer_from_llong(pcb, (long)S->st_ctime));
-#ifdef HAVE_STAT_ST_CTIME_USEC
-    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctime_usec));
+#ifdef HAVE_STAT_ST_CTIM_TV_NSEC
+    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctim.tv_nsec));
+#elif (defined HAVE_STAT_ST_CTIMENSEC)
+    IK_ASS(IK_FIELD(D, 12), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctimensec));
 #else
     IK_ASS(IK_FIELD(D, 12), IK_FALSE_OBJECT);
 #endif
@@ -802,6 +814,28 @@ ikrt_posix_file_exists (ikptr s_pathname)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_posix_directory_exists (ikptr s_pathname)
+{
+#ifdef HAVE_STAT
+  char *	pathname;
+  struct stat	S;
+  int		rv;
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  errno	   = 0;
+  rv	   = stat(pathname, &S);
+  if (0 == rv)
+    /* NOTE It is not enough to do "S.st_mode & flag", we really have to
+       do "flag == (S.st_mode & flag)". */
+    return (S_IFDIR == (S.st_mode & S_IFDIR))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+  else if ((ENOENT == errno) || (ENOTDIR == errno))
+    return IK_FALSE_OBJECT;
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------
@@ -833,16 +867,18 @@ ikrt_posix_file_ctime (ikptr s_pathname, ikptr s_vector, ikpcb* pcb)
   errno	   = 0;
   rv	   = stat(pathname, &S);
   if (0 == rv) {
-#if HAVE_STAT_ST_CTIMESPEC
-    return timespec_vector(&S.st_ctimespec, s_vector, pcb);
-#elif HAVE_STAT_ST_CTIM
-    return timespec_vector(&S.st_ctim, s_vector, pcb);
-#else
     struct timespec ts;
+#ifdef HAVE_STAT_ST_CTIM_TV_NSEC
+    ts.tv_sec  = S.st_ctime;
+    ts.tv_nsec = S.st_ctim.tv_nsec;
+#elif (defined HAVE_STAT_ST_CTIMENSEC)
+    ts.tv_sec  = S.st_ctime;
+    ts.tv_nsec = S.st_ctimensec;
+#else
     ts.tv_sec  = s.st_ctime;
     ts.tv_nsec = 0;
-    return timespec_vector(&ts, s_vector, pcb);
 #endif
+    return timespec_vector(&ts, s_vector, pcb);
   } else
     return ik_errno_to_code();
 #else
@@ -860,16 +896,18 @@ ikrt_posix_file_mtime (ikptr s_pathname, ikptr s_vector, ikpcb* pcb)
   errno	   = 0;
   rv	   = stat(pathname, &S);
   if (0 == rv) {
-#if HAVE_STAT_ST_MTIMESPEC
-    return timespec_vector(&S.st_mtimespec, s_vector, pcb);
-#elif HAVE_STAT_ST_MTIM
-    return timespec_vector(&S.st_mtim, s_vector, pcb);
-#else
     struct timespec ts;
+#ifdef HAVE_STAT_ST_MTIM_TV_NSEC
+    ts.tv_sec  = S.st_mtime;
+    ts.tv_nsec = S.st_mtim.tv_nsec;
+#elif (defined HAVE_STAT_ST_MTIMENSEC)
+    ts.tv_sec  = S.st_mtime;
+    ts.tv_nsec = S.st_mtimensec;
+#else
     ts.tv_sec  = s.st_mtime;
     ts.tv_nsec = 0;
-    return timespec_vector(&ts, s_vector, pcb);
 #endif
+    return timespec_vector(&ts, s_vector, pcb);
   } else
     return ik_errno_to_code();
 #else
@@ -887,16 +925,18 @@ ikrt_posix_file_atime (ikptr s_pathname, ikptr s_vector, ikpcb* pcb)
   errno	   = 0;
   rv	   = stat(pathname, &S);
   if (0 == rv) {
-#if HAVE_STAT_ST_ATIMESPEC
-    return timespec_vector(&S.st_atimespec, s_vector, pcb);
-#elif HAVE_STAT_ST_ATIM
-    return timespec_vector(&S.st_atim, s_vector, pcb);
-#else
     struct timespec ts;
+#ifdef HAVE_STAT_ST_ATIM_TV_NSEC
+    ts.tv_sec  = S.st_atime;
+    ts.tv_nsec = S.st_atim.tv_nsec;
+#elif (defined HAVE_STAT_ST_ATIMENSEC)
+    ts.tv_sec  = S.st_atime;
+    ts.tv_nsec = S.st_atimensec;
+#else
     ts.tv_sec  = s.st_atime;
     ts.tv_nsec = 0;
-    return timespec_vector(&ts, s_vector, pcb);
 #endif
+    return timespec_vector(&ts, s_vector, pcb);
   } else
     return ik_errno_to_code();
 #else
@@ -4739,6 +4779,49 @@ ikrt_bvftime (ikptr outbv, ikptr fmtbv)
     ik_debug_message("error in strftime: %s\n", strerror(errno));
 #endif
   return IK_FIX(rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_current_time_fixnums (ikpcb * pcb)
+{
+#if ((defined HAVE_TIME) && (defined HAVE_GMTIME_R))
+  time_t	T;
+  struct tm	D;
+  ikptr		s_vec;
+  T     = time(NULL);
+  errno = 0;
+  localtime_r(&T, &D);
+  errno = 0;
+  s_vec = ika_vector_alloc_and_init(pcb, 3);
+  IK_ITEM(s_vec, 0) = IK_FIX(D.tm_year + 1900);
+  IK_ITEM(s_vec, 1) = IK_FIX(D.tm_mon  + 1);
+  IK_ITEM(s_vec, 2) = IK_FIX(D.tm_mday);
+  return s_vec;
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_current_time_fixnums_2 (ikpcb * pcb)
+{
+#if ((defined HAVE_TIME) && (defined HAVE_GMTIME_R))
+  time_t	T;
+  struct tm	D;
+  ikptr		s_vec;
+  T     = time(NULL);
+  errno = 0;
+  localtime_r(&T, &D);
+  errno = 0;
+  s_vec = ika_vector_alloc_and_init(pcb, 6);
+  IK_ITEM(s_vec, 0) = IK_FIX(D.tm_year + 1900);
+  IK_ITEM(s_vec, 1) = IK_FIX(D.tm_mon  + 1);
+  IK_ITEM(s_vec, 2) = IK_FIX(D.tm_mday);
+  IK_ITEM(s_vec, 3) = IK_FIX(D.tm_hour);
+  IK_ITEM(s_vec, 4) = IK_FIX(D.tm_min);
+  IK_ITEM(s_vec, 5) = IK_FIX(D.tm_sec);
+  return s_vec;
 #else
   feature_failure(__func__);
 #endif

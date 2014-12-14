@@ -30,8 +30,8 @@
   (export
     errno-code->symbol
     posix-signal->symbol)
-  (import (ikarus)
-    (only (ikarus system $fx)
+  (import (vicare)
+    (only (vicare system $fx)
 	  $fx=)
     (vicare platform constants))
 

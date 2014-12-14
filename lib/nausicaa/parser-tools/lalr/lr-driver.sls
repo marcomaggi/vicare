@@ -23,7 +23,7 @@
 ;;;
 ;;;			<http://code.google.com/p/lalr-scm/>
 ;;;
-;;;Copyright (c) 2009, 2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2010, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2008 Dominique Boucher
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -43,6 +43,7 @@
 
 #!vicare
 (library (nausicaa parser-tools lalr lr-driver)
+  (options visit-upon-loading)
   (export lr-driver)
   (import (nausicaa)
     (prefix (nausicaa parser-tools lexical-tokens)   lt.)
@@ -70,7 +71,7 @@
 	  (stack-states		'(0))
 	  (reuse-last-token	#f))
 
-      (define (main (lookahead lt.<lexical-token>))
+      (define (main {lookahead lt.<lexical-token>})
 	(let ((category (lookahead category)))
 	  (if (eq? '*lexer-error* category)
 	      (main (attempt-error-recovery lookahead "lexer error, invalid input"))
@@ -105,7 +106,7 @@
 		(set! reuse-last-token #f)
 	      (begin
 		(set! last-token (true-lexer))
-		(unless ((lt.<lexical-token> #:predicate) last-token)
+		(unless (is-a? last-token lt.<lexical-token>)
 		  (error-handler "expected lexical token from lexer" last-token)
 		  (true-lexer))))
 ;;;	    (debug "~%lookahead ~s" last-token)
@@ -146,11 +147,11 @@
 		(reduce (- default-action))
 		(reduce-using-default-actions))))))
 
-      (define (attempt-error-recovery (lookahead lt.<lexical-token>) error-message)
+      (define (attempt-error-recovery {lookahead lt.<lexical-token>} error-message)
 
 	(define (%main)
 	  (error-handler error-message lookahead)
-	  (let (((token lt.<lexical-token>) (synchronise-parser/rewind-stack)))
+	  (let (({token lt.<lexical-token>} (synchronise-parser/rewind-stack)))
 	    ;;If recovery succeeds: TOKEN  is set to the next lookahead.
 	    ;;If recovery fails: TOKEN is set to end--of--input.
 	    (unless (eq? '*eoi* (token category))
@@ -177,7 +178,7 @@
 	  ;; 	 stack-states stack-values error-state-index)
 	  (let* ((error-actions	   (vector-ref action-table error-state-index))
 		 (error-categories (map car (cdr error-actions))))
-	    (let skip-token (((token lt.<lexical-token>) lookahead))
+	    (let skip-token (({token lt.<lexical-token>} lookahead))
 	      (let ((category (token category)))
 		(cond ((eq? category '*eoi*) ;unexpected end-of-input while trying to recover
 ;;;		       (debug "eoi while skipping")

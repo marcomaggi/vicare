@@ -136,7 +136,7 @@ as defined by @rfc{} 3986.
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address->bytevector (@var{addr} @aclass{ip-address})
+@deffn Multimethod ip-address->bytevector @{@var{addr} @aclass{ip-address}@}
 Build and return a bytevector representation of the address from its
 string representation; raise an error if a string representation cannot
 be built.  Expect all the characters in the field @code{string} of
@@ -343,19 +343,19 @@ True if the address prefix is @code{255.255.255.255}.  See Section 3
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address->string (@var{addr} @aclass{ipv4-address})
+@deffn Multimethod ip-address->string @{@var{addr} @aclass{ipv4-address}@}
 Build and return a string representation of the address in the format
 specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address->bytevector (@var{addr} @aclass{ipv4-address})
+@deffn Multimethod ip-address->bytevector @{@var{addr} @aclass{ipv4-address}@}
 Build and return a bytevector representation of the address in the
 format specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address->bignum (@var{addr} @aclass{ipv4-address})
+@deffn Multimethod ip-address->bignum @{@var{addr} @aclass{ipv4-address}@}
 Build and return an exact integer representation of the address.
 @end deffn
 
@@ -572,19 +572,19 @@ multicast, link--local unicast, global unicast.  See Section 2.4
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address->string (@var{addr} @aclass{ipv6-address})
+@deffn Multimethod ip-address->string @{@var{addr} @aclass{ipv6-address}@}
 Build and return a string representation of the address in the format
 specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address->bytevector (@var{addr} @aclass{ipv6-address})
+@deffn Multimethod ip-address->bytevector @{@var{addr} @aclass{ipv6-address}@}
 Build and return a bytevector representation of the address in the
 format specified for @uri{}s by @rfc{} 3986.
 @end deffn
 
 
-@deffn Multimethod ip-address->bignum (@var{addr} @aclass{ipv6-address})
+@deffn Multimethod ip-address->bignum @{@var{addr} @aclass{ipv6-address}@}
 Build and return an exact integer representation of the address.
 @end deffn
 
@@ -748,7 +748,7 @@ common constructor.
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address->string (@var{addr} @aclass{reg-name-address})
+@deffn Multimethod ip-address->string @{@var{addr} @aclass{reg-name-address}@}
 Objects of type @class{reg-name-address} have a percent--encoded
 bytevector representation set by the constructor; this method uses that
 to build a string representation.
@@ -840,14 +840,14 @@ Notice that the bytevector representation of the literal is, in general,
 @subsubheading Multimethod implementations
 
 
-@deffn Multimethod ip-address->string (@var{addr} @aclass{ipvfuture-address})
+@deffn Multimethod ip-address->string @{@var{addr} @aclass{ipvfuture-address}@}
 Build and return a string representation of the address in the format
 specified for @uri{}s by @rfc{} 3986.  In general, the returned object
 is @strong{not} a valid percent--encoded string.
 @end deffn
 
 
-@deffn Multimethod ip-address->bytevector (@var{addr} @aclass{ipvfuture-address})
+@deffn Multimethod ip-address->bytevector @{@var{addr} @aclass{ipvfuture-address}@}
 Build and return a bytevector representation of the address in the
 format specified for @uri{}s by @rfc{} 3986.  In general, the returned
 object is @strong{not} a valid percent--encoded bytevector.
@@ -869,7 +869,7 @@ The version flag must be in the range @math{[0, 15]}.
 @end deftp
 
 
-@defun make-host-object @var{type} (@var{ascii} @aclass{bytevector}) @var{data}
+@defun make-host-object @var{type} @{@var{ascii} @aclass{bytevector}@} @var{data}
 Build and return a new instance of a specialised object of class
 @class{ip-address} representing the host component of a @uri{}.  The
 possible classes of the returned object are: @class{reg-name-address},
@@ -1004,7 +1004,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{scheme} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{scheme} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{scheme}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1062,7 +1062,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{userinfo} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{userinfo} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{userinfo}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1087,7 +1087,7 @@ Label used to tag bytevectors representing the @code{host} component of
 @subsubheading Methods
 
 
-@defmethod @aclass{host} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{host} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{host} component
 in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1145,7 +1145,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{port-number} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{port-number} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{port-number}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1220,7 +1220,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{segment} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{segment} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{segment}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1320,7 +1320,7 @@ that @strong{no} leading slash is inserted.
 @subsubheading Methods
 
 
-@defmethod @aclass{list-of-segments} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{list-of-segments} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{segment}
 components in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1343,13 +1343,13 @@ Base class representing @code{path} components of @uri{}s.
 @subsubheading Constructors and makers
 
 
-@defop {Super constructor} @aclass{path} constructor (@var{obj} @aclass{list-of-segments})
+@defop {Super constructor} @aclass{path} constructor @{@var{obj} @aclass{list-of-segments}@}
 Build and return a new instance of @class{path}.  The argument must be a
 list of objects satisfying the requirements of @class{list-of-segments}.
 @end defop
 
 
-@defun make-path-object (@var{path-type} @aclass{symbol}) @var{path}
+@defun make-path-object @{@var{path-type} @aclass{symbol}@} @var{path}
 Utility function returning a subclass of @class{path}.  @var{path-type}
 must be a symbol among: @code{path-empty}, @code{path-abempty},
 @code{path-absolute}, @code{path-noscheme}, @code{path-rootless}.
@@ -1396,7 +1396,7 @@ A symbol among: @code{path-empty}, @code{path-abempty},
 @subsubheading Methods
 
 
-@defmethod @aclass{path} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{path} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{path}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1437,7 +1437,7 @@ derived from @class{path}.
 @end deftp
 
 
-@defop {Super constructor} @aclass{path-abempty} constructor (@var{obj} @aclass{list-of-segments})
+@defop {Super constructor} @aclass{path-abempty} constructor @{@var{obj} @aclass{list-of-segments}@}
 Build and return a new instance of @class{path-abempty}.  The argument
 must be a list of objects satisfying the requirements of
 @class{list-of-segments}.
@@ -1458,7 +1458,7 @@ is derived from @class{path}.
 @end deftp
 
 
-@defop {Super constructor} @aclass{path-absolute} constructor (@var{obj} @aclass{list-of-segments})
+@defop {Super constructor} @aclass{path-absolute} constructor @{@var{obj} @aclass{list-of-segments}@}
 Build and return a new instance of @class{path-absolute}.  The argument
 must be a list of objects satisfying the requirements of
 @class{list-of-segments}.
@@ -1479,7 +1479,7 @@ is derived from @class{path}.
 @end deftp
 
 
-@defop {Super constructor} @aclass{path-rootless} constructor (@var{obj} @aclass{list-of-segments})
+@defop {Super constructor} @aclass{path-rootless} constructor @{@var{obj} @aclass{list-of-segments}@}
 Build and return a new instance of @class{path-rootless}.  The argument
 must be a non--empty, list of objects satisfying the requirements of
 @class{list-of-segments}.
@@ -1500,7 +1500,7 @@ is derived from @class{path}.
 @end deftp
 
 
-@defop {Super constructor} @aclass{path-noscheme} constructor (@var{obj} @aclass{list-of-segments})
+@defop {Super constructor} @aclass{path-noscheme} constructor @{@var{obj} @aclass{list-of-segments}@}
 Build and return a new instance of @class{path-noscheme}.  The argument
 must be a non--empty, list of objects satisfying the requirements of
 @class{list-of-segments}.
@@ -1559,7 +1559,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{query} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{query} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{query} component
 in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1621,7 +1621,7 @@ requested by @rfc{} 3986.
 @subsubheading Methods
 
 
-@defmethod @aclass{fragment} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{fragment} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{fragment}
 component in the format requested by @rfc{} 3986.
 @end defmethod
@@ -1847,13 +1847,13 @@ A string representing the whole @uri{}; it is built from the
 @subsubheading Methods
 
 
-@defmethod @aclass{uri} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{uri} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{uri} component
 in the format requested by @rfc{} 3986.
 @end defmethod
 
 
-@defmethod @aclass{uri} put-authority-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{uri} put-authority-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{authority}
 component in the format requested by @rfc{} 3986; notice that the
 @code{authority} component may be empty or unspecified.  If the
@@ -1862,7 +1862,7 @@ the port.
 @end defmethod
 
 
-@defmethod @aclass{uri} put-hier-part-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{uri} put-hier-part-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{hier-part}
 component in the format requested by @rfc{} 3986; notice that the
 @code{hier-part} can be empty.  If the @code{hier-part} component is
@@ -2077,19 +2077,19 @@ A string representing the whole @uri{}; it is built from the
 @subsubheading Methods
 
 
-@defmethod @aclass{relative-ref} put-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{relative-ref} put-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{relative-ref} component
 in the format requested by @rfc{} 3986.
 @end defmethod
 
 
-@defmethod @aclass{relative-ref} put-authority-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{relative-ref} put-authority-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{authority}
 component in the format requested by @rfc{} 3986.
 @end defmethod
 
 
-@defmethod @aclass{uri} put-relative-part-bytevector (@var{port} @aclass{binary-output-port})
+@defmethod @aclass{uri} put-relative-part-bytevector @{@var{port} @aclass{binary-output-port}@}
 Write to @var{port} a bytevector representing the @code{relative-part}
 component in the format requested by @rfc{} 3986; notice that the
 @code{relative-part} can be empty.  If the @code{relative-part}

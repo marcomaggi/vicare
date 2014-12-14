@@ -20,7 +20,7 @@
     force
     (rename (public-make-promise make-promise))
     promise?)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  force
 		  make-promise
 		  promise?)

@@ -9,7 +9,7 @@
 ;;;	Built in  binding to the CRE2  library: a C wrapper  for the RE2
 ;;;	regular expressions library from Google.
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -58,19 +58,8 @@
     match
     )
   (import (vicare)
-    (only (vicare language-extensions syntaxes)
-	  define-argument-validation
-	  with-arguments-validation)
-    (vicare unsafe operations)
-    (prefix (only (vicare ffi)
-		  dlopen
-		  pointer?
-		  pointer-null?
-		  null-pointer)
-	    ffi.)
-    (prefix (only (vicare platform words)
-		  signed-int?)
-	    words.))
+    (vicare arguments validation)
+    (vicare unsafe operations))
 
 
 ;;;; helpers
@@ -87,37 +76,9 @@
 
 ;;;; arguments validation
 
-;; (define-argument-validation (boolean who obj)
-;;   (boolean? obj)
-;;   (assertion-violation who "expected boolean as argument" obj))
-
-(define-argument-validation (symbol who obj)
-  (symbol? obj)
-  (assertion-violation who "expected symbol as argument" obj))
-
-(define-argument-validation (bytevector who obj)
-  (bytevector? obj)
-  (assertion-violation who "expected bytevector as argument" obj))
-
-;;; --------------------------------------------------------------------
-
 (define-argument-validation (string/bytevector who obj)
   (or (string? obj) (bytevector? obj))
   (assertion-violation who "expected string or bytevector as argument" obj))
-
-(define-argument-validation (positive-signed-int who obj)
-  (and (words.signed-int? obj) (positive? obj))
-  (assertion-violation who "expected a positive signed int as argument" obj))
-
-(define-argument-validation (index who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
-  (assertion-violation who "expected non-negative fixnum as argument" obj))
-
-(define-argument-validation (false/index who obj)
-  (or (not obj) (and (fixnum? obj) ($fx<= 0 obj)))
-  (assertion-violation who "expected false or non-negative fixnum as argument" obj))
-
-;;; --------------------------------------------------------------------
 
 (define-argument-validation (rex who obj)
   (regexp? obj)
@@ -265,8 +226,8 @@
       (with-bytevectors ((pattern.bv pattern))
 	(let ((rv (capi.cre2-new pattern.bv (if opts
 						(options-pointer opts)
-					      (ffi.null-pointer)))))
-	  (cond ((ffi.pointer? rv)
+					      (null-pointer)))))
+	  (cond ((pointer? rv)
 		 (regexp-guardian (make-regexp rv)))
 		((not rv)
 		 (error who
@@ -318,7 +279,7 @@
 (define (%make-options)
   (define who 'cre2.make-options)
   (let ((rv (capi.cre2-opt-new)))
-    (if (ffi.pointer-null? rv)
+    (if (pointer-null? rv)
 	(error who
 	  "memory allocation error while building RE2 options object")
       (options-guardian (make-options rv)))))
@@ -422,11 +383,11 @@
 (define (match rex text start end anchor)
   (define who 'cre2.match)
   (with-arguments-validation (who)
-      ((rex			rex)
-       (string/bytevector	text)
-       (false/index		start)
-       (false/index		end)
-       (symbol			anchor))
+      ((rex				rex)
+       (string/bytevector		text)
+       (non-negative-fixnum/false	start)
+       (non-negative-fixnum/false	end)
+       (symbol				anchor))
     (with-bytevectors ((text.bv text))
       (let ((start	(or start 0))
 	    (end	(or end   (bytevector-length text.bv)))

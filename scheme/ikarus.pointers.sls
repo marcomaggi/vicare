@@ -24,7 +24,7 @@
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
-    pointer=?				pointer<>?
+    pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     set-pointer-null!
@@ -160,14 +160,14 @@
 
     array-set-c-size_t!			array-set-c-ssize_t!
     array-set-c-off_t!			array-set-c-ptrdiff_t!)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; pointer objects
 		  pointer?
 		  null-pointer				pointer-null?
 		  pointer->integer			integer->pointer
 		  pointer-clone				pointer-and-offset?
 		  pointer-diff				pointer-add
-		  pointer=?				pointer<>?
+		  pointer=?				pointer!=?
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
 		  set-pointer-null!
@@ -302,7 +302,7 @@
 
 		  array-set-c-size_t!			array-set-c-ssize_t!
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
-    (only (ikarus system $pointers)
+    (only (vicare system $pointers)
 	  $pointer=)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
@@ -666,7 +666,7 @@
 		      (?pred ptr1 ptr2)))))))
 
   (define-pointer-comparison pointer=?		$pointer=)
-  (define-pointer-comparison pointer<>?		capi.ffi-pointer-neq)
+  (define-pointer-comparison pointer!=?		capi.ffi-pointer-neq)
   (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
   (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)
   (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)

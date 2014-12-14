@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa containers queues)
   (options visit-upon-loading)
   (export
@@ -39,12 +39,12 @@
     (protocol (lambda () make-queue))
     (predicate queue?)
     (virtual-fields
-     (immutable (empty?		<boolean>)	queue-empty?)
-     (immutable ($empty?	<boolean>)	$queue-empty?)
-     (immutable (not-empty?	<boolean>)	queue-not-empty?)
-     (immutable ($not-empty?	<boolean>)	$queue-not-empty?)
-     (immutable (size		<integer>)	queue-size)
-     (immutable ($size		<integer>)	$queue-size))
+     (immutable {empty?		<boolean>}	queue-empty?)
+     (immutable {$empty?	<boolean>}	$queue-empty?)
+     (immutable {not-empty?	<boolean>}	queue-not-empty?)
+     (immutable {$not-empty?	<boolean>}	$queue-not-empty?)
+     (immutable {size		<integer>}	queue-size)
+     (immutable {$size		<integer>}	$queue-size))
     (methods
      (hash		queue-hash)
      ($hash		$queue-hash)

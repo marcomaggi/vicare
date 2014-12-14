@@ -1,6 +1,6 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
@@ -52,7 +52,7 @@
     check-write
     check-newline
     check-pretty-print)
-  (import (rename (ikarus)
+  (import (rename (vicare)
 		  (display	ikarus:display)
 		  (write	ikarus:write)
 		  (newline	ikarus:newline)
@@ -93,14 +93,17 @@
    ((datum output-port)
     (unless check-quiet-tests?
       (let* ((os	(call-with-string-output-port
-			    (lambda (sop) (check-pretty-print datum sop))))
+			    (lambda (sop)
+			      (parametrise ((current-error-port sop))
+				(check-pretty-print datum)))))
 	     (len	(string-length os))
 	     (os	(if (and (positive? len)
 				 (char=? #\newline
 					 (string-ref os (- len 1))))
 			    (substring os 0 (- len 1))
 			  os)))
-	(check-display os output-port))))
+	(parametrise ((current-error-port output-port))
+	  (check-display os)))))
    ((datum)
     (check-pretty-print/no-trailing-newline datum (current-error-port)))))
 
@@ -209,9 +212,6 @@
   (cond ((null? check:failed)
 	 ;;Success for GNU Automake.
 	 (exit 0))
-	((null? check:failed)
-	 ;;Success for GNU Automake.
-	 (exit 0))
 	((not (null? check:failed))
 	 ;;Test failure for GNU Automake.
 	 (exit 1))
@@ -280,10 +280,10 @@
     ((_ ?form ... ?last-form)
      (parameterize ((result '()))
        ?form ...
-       (let ((last-result ?last-form))
-		;We  need  to make  sure  that  ?LAST-FORM is  evaluated
-		;before (GET-RESULT).
-	 (list last-result (get-result)))))))
+       (call-with-values
+	   (lambda () ?last-form)
+	 (lambda args
+	   (append args (list (get-result)))))))))
 
 (define (add-result value)
   (result (cons value (result)))

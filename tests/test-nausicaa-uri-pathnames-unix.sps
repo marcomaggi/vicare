@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (nausicaa uri pathnames unix)
   (vicare checks))
 
@@ -128,7 +128,7 @@
 	    (<absolute-unix-pathname> O (<> ("path/to/file.ext")))
 	    O)
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -229,7 +229,7 @@
 	    (<relative-unix-pathname> O (<> ("/path/to/file.ext")))
 	    O)
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -270,7 +270,7 @@
 
   (define-syntax-rule (doit ?pathname ?expected)
     (check
-	(let (((O <pathname>) (pathname ?pathname)))
+	(let (({O <pathname>} (pathname ?pathname)))
 	  (O extension))
       => (string->ascii ?expected)))
 
@@ -310,7 +310,7 @@
 
   (define-syntax-rule (doit ?pathname ?expected)
     (check
-	(let (((O <pathname>) (pathname ?pathname)))
+	(let (({O <pathname>} (pathname ?pathname)))
 	  (O dirname))
       (=> pathname=?)
       (pathname ?expected)))
@@ -347,7 +347,7 @@
 
   (define-syntax-rule (doit ?pathname ?expected)
     (check
-	(let (((O <pathname>) (pathname ?pathname)))
+	(let (({O <pathname>} (pathname ?pathname)))
 	  (O tailname))
       (=> pathname=?)
       (pathname ?expected)))
@@ -384,7 +384,7 @@
 
   (define-syntax-rule (doit ?pathname ?expected)
     (check
-	(let (((O <pathname>) (pathname ?pathname)))
+	(let (({O <pathname>} (pathname ?pathname)))
 	  (O rootname))
       (=> pathname=?)
       (pathname ?expected)))
@@ -428,7 +428,7 @@
 
   (define-syntax-rule (doit ?pathname . ?expected)
     (check
-	(let (((O <pathname>) (pathname ?pathname)))
+	(let (({O <pathname>} (pathname ?pathname)))
 	  (O split))
       => . ?expected))
 
@@ -452,8 +452,8 @@
 
   (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
     (check
-	(let (((A <pathname>) (pathname ?pathname1))
-	      ((B <pathname>) (pathname ?pathname2)))
+	(let (({A <pathname>} (pathname ?pathname1))
+	      ({B <pathname>} (pathname ?pathname2)))
 	  (A prefix? B))
       => ?expected))
 
@@ -470,8 +470,8 @@
 
   (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
     (check
-	(let (((A <pathname>) (pathname ?pathname1))
-	      ((B <pathname>) (pathname ?pathname2)))
+	(let (({A <pathname>} (pathname ?pathname1))
+	      ({B <pathname>} (pathname ?pathname2)))
 	  (A suffix? B))
       => ?expected))
 
@@ -488,8 +488,8 @@
 
   (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
     (check
-	(let (((A <relative-pathname>) (pathname ?pathname1))
-	      ((B <pathname>) (pathname ?pathname2)))
+	(let (({A <relative-pathname>} (pathname ?pathname1))
+	      ({B <pathname>} (pathname ?pathname2)))
 	  (A append B))
       (=> pathname=?)
       (pathname ?expected)))
@@ -508,8 +508,8 @@
 
   (define-syntax-rule (doit ?pathname1 ?pathname2 ?expected)
     (check
-	(let (((A <pathname>) (pathname ?pathname1))
-	      ((B <pathname>) (pathname ?pathname2)))
+	(let (({A <pathname>} (pathname ?pathname1))
+	      ({B <pathname>} (pathname ?pathname2)))
 	  (A prepend B))
       (=> pathname=?)
       (pathname ?expected)))
@@ -528,7 +528,7 @@
 
   (define-syntax-rule (doit ?pathname ?extension ?expected)
     (check
-	(let (((A <pathname>) (pathname ?pathname)))
+	(let (({A <pathname>} (pathname ?pathname)))
 	  (A replace-extension ?extension))
       (=> pathname=?)
       (pathname ?expected)))
@@ -538,7 +538,7 @@
 	(try
 	    (doit ?pathname "two" "nothing")
 	  (catch E
-	    (&unix-pathname-normalisation-error
+	    ((&unix-pathname-normalisation-error)
 	     (condition-message E))
 	    (else E)))
       => "cannot append extension to special directory pathname"))
@@ -562,7 +562,7 @@
 
   (define-syntax-rule (doit ?pathname ?expected)
     (check
-	(let (((O <pathname>) (pathname ?pathname)))
+	(let (({O <pathname>} (pathname ?pathname)))
 	  (octets->string (O uri)))
       => ?expected))
 

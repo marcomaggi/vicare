@@ -31,7 +31,7 @@
 
     $fxcopy-bit			$fxcopy-bit-field
     $fxrotate-bit-field		$fxbit-field)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
@@ -43,24 +43,24 @@
 		  fxcopy-bit			fxcopy-bit-field
 		  fxrotate-bit-field		fxreverse-bit-field
 		  fxbit-field)
-    (except (ikarus system $fx)
+    (except (vicare system $fx)
 	    $fxcopy-bit
 	    $fxcopy-bit-field
 	    $fxrotate-bit-field
 	    $fxbit-field)
-    (ikarus system $bignums)
-    (ikarus system $flonums)
+    (vicare system $bignums)
+    (vicare system $flonums)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 (module (bitwise-first-bit-set
 	 fxfirst-bit-set)
 
   (define (byte-first-bit-set x i)
-    (import (ikarus system $bytevectors))
+    (import (vicare system $bytevectors))
     (define-syntax make-first-bit-set-bytevector
       (lambda (x)
 	(define (fst n)
@@ -275,7 +275,7 @@
       ($fxcopy-bit x i b)))
 
   (define ($fxcopy-bit x i b)
-    (case-fixnums b
+    (case b
       ((0)
        ($fxlogand x ($fxlognot ($fxsll 1 i))))
       ((1)
@@ -379,7 +379,7 @@
 	 ($bit-index		start)
 	 ($bit-index		end)
 	 ($bit-index-order	start end))
-      (case-fixnums (fixnum-width)
+      (case (fixnum-width)
 	((61)
 	 (fxior (fxarithmetic-shift-right (%fxreverse-bit-field61 (fxbit-field v start end))
 					  (fx- 60 end))

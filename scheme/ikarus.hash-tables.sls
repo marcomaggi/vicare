@@ -22,7 +22,7 @@
 ;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus hash-tables)
   (export
     make-eq-hashtable		make-eqv-hashtable
@@ -45,11 +45,11 @@
     $string-hash		$string-ci-hash
     $symbol-hash		$bytevector-hash)
   (import
-      (ikarus system $pairs)
-    (ikarus system $vectors)
-    (ikarus system $tcbuckets)
-    (ikarus system $fx)
-    (except (ikarus)
+      (vicare system $pairs)
+    (vicare system $vectors)
+    (vicare system $tcbuckets)
+    (vicare system $fx)
+    (except (vicare)
 	    make-eq-hashtable		make-eqv-hashtable
 	    make-hashtable
 	    hashtable?			hashtable-mutable?
@@ -636,7 +636,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (bytevector-hash (bv bytevector?))
+(define* (bytevector-hash {bv bytevector?})
   ;;Defined by Vicare.
   ;;
   ($bytevector-hash bv))

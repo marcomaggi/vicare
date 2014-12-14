@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   (prefix (nausicaa mehve language numerics transcendental) mehve.)
   (prefix (rnrs) rnrs.)
@@ -66,26 +66,26 @@
 
 (parametrise ((check-test-name	'trigonometric))
 
-  (define-method (mehve.sin (o <vector>))	(o map sin))
-  (define-method (mehve.sin (o <spine>))	(o map sin))
+  (define-method (mehve.sin {o <vector>})	(o map sin))
+  (define-method (mehve.sin {o <spine>})	(o map sin))
 
-  (define-method (mehve.cos (o <vector>))	(o map cos))
-  (define-method (mehve.cos (o <spine>))	(o map cos))
+  (define-method (mehve.cos {o <vector>})	(o map cos))
+  (define-method (mehve.cos {o <spine>})	(o map cos))
 
-  (define-method (mehve.tan (o <vector>))	(o map tan))
-  (define-method (mehve.tan (o <spine>))	(o map tan))
+  (define-method (mehve.tan {o <vector>})	(o map tan))
+  (define-method (mehve.tan {o <spine>})	(o map tan))
 
-  (define-method (mehve.asin (o <vector>))	(o map asin))
-  (define-method (mehve.asin (o <spine>))	(o map asin))
+  (define-method (mehve.asin {o <vector>})	(o map asin))
+  (define-method (mehve.asin {o <spine>})	(o map asin))
 
-  (define-method (mehve.acos (o <vector>))	(o map acos))
-  (define-method (mehve.acos (o <spine>))	(o map acos))
+  (define-method (mehve.acos {o <vector>})	(o map acos))
+  (define-method (mehve.acos {o <spine>})	(o map acos))
 
-  (define-method (mehve.atan-1 (o <vector>))	(o map atan))
-  (define-method (mehve.atan-1 (o <spine>))	(o map atan))
-  (define-method (mehve.atan-2 (x <vector>) (y <vector>))
+  (define-method (mehve.atan-1 {o <vector>})	(o map atan))
+  (define-method (mehve.atan-1 {o <spine>})	(o map atan))
+  (define-method (mehve.atan-2 {x <vector>} {y <vector>})
     (x map atan y))
-  (define-method (mehve.atan-2 (x <spine>) (y <spine>))
+  (define-method (mehve.atan-2 {x <spine>} {y <spine>})
     (x map atan y))
 
 ;; (write (sin '(1.1 2.2 3.3)))(newline)
@@ -139,31 +139,31 @@
 
 (parametrise ((check-test-name	'exponentiation))
 
-  (define-method (mehve.expt (A <vector>) (B <vector>))
+  (define-method (mehve.expt {A <vector>} {B <vector>})
     (A map expt B))
-  (define-method (mehve.expt (A <spine>) (B <spine>))
+  (define-method (mehve.expt {A <spine>} {B <spine>})
     (A map expt B))
 
-  (define-method (mehve.sqrt (A <vector>))
+  (define-method (mehve.sqrt {A <vector>})
     (A map sqrt))
-  (define-method (mehve.sqrt (A <spine>))
+  (define-method (mehve.sqrt {A <spine>})
     (A map sqrt))
 
-  (define-method (mehve.exp (o <vector>))
+  (define-method (mehve.exp {o <vector>})
     (o map exp))
-  (define-method (mehve.exp (o <spine>))
+  (define-method (mehve.exp {o <spine>})
     (o map exp))
 
-  (define-method (mehve.log-1 (o <vector>))
+  (define-method (mehve.log-1 {o <vector>})
     (o map log))
-  (define-method (mehve.log-1 (o <spine>))
+  (define-method (mehve.log-1 {o <spine>})
     (o map log))
 
-  (define-method (mehve.log-2 (o <vector>) (base <complex>))
+  (define-method (mehve.log-2 {o <vector>} {base <complex>})
     (vector-map (lambda (x)
 		  (log x base))
 		o))
-  (define-method (mehve.log-2 (o <spine>) (base <complex>))
+  (define-method (mehve.log-2 {o <spine>} {base <complex>})
     (map (lambda (x)
 	   (log x base))
       o))

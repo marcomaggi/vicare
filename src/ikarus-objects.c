@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute	it and/or modify
   it under the	terms of the GNU General Public	 License as published by
@@ -31,6 +31,22 @@
 #include "internals.h"
 #include <gmp.h>
 #include <ctype.h>	/* for "isxdigit()" */
+
+
+/** --------------------------------------------------------------------
+ ** Special objects.
+ ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_bwp_object (ikpcb * pcb)
+{
+  return IK_BWP_OBJECT;
+}
+ikptr
+ikrt_unbound_object (ikpcb * pcb)
+{
+  return IK_UNBOUND_OBJECT;
+}
 
 
 /** --------------------------------------------------------------------

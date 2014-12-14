@@ -32,7 +32,7 @@
 ;;;        decreasing order of significance.
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -274,9 +274,7 @@
 
     $bytevector=
     $bytevector-fill!
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    #;$bytevector-copy
+    $bytevector-copy
     $bytevector-copy!
     $bytevector-copy!/count
     $bytevector-self-copy-forwards!
@@ -314,12 +312,6 @@
 ;;; --------------------------------------------------------------------
 
     $length
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    #;$map1
-    #;$for-each1
-    $for-all1
-    $exists1
 
 ;;; --------------------------------------------------------------------
 
@@ -382,11 +374,9 @@
     $string-concatenate
     $string-reverse-and-concatenate
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    #;$string->octets
-    #;$octets->string
-    #;$octets-encoded-bytevector?
+    $string->octets
+    $octets->string
+    $octets-encoded-bytevector?
 
     $string->ascii
     $ascii->string
@@ -416,6 +406,19 @@
     $string-ci-hash
     $symbol-hash
     $bytevector-hash
+    $symbol->string
+    $string->symbol
+    $putprop
+    $getprop
+    $remprop
+    $property-list
+
+;;; --------------------------------------------------------------------
+
+    $symbol->keyword
+    $keyword->symbol
+    $keyword-hash
+    $keyword=?
 
 ;;; --------------------------------------------------------------------
 
@@ -440,9 +443,11 @@
     $set-code-annotation!
 
     #| end of export |# )
-  (import (ikarus)
-    (ikarus system $structs)
-    (except (ikarus system $fx)
+  (import (vicare)
+    (vicare system $symbols)
+    (vicare system $keywords)
+    (vicare system $structs)
+    (except (vicare system $fx)
 	    $fxmax
 	    $fxmin
 	    $fx<
@@ -450,28 +455,40 @@
 	    $fx>=
 	    $fx<=
 	    $fx=)
-    (prefix (only (ikarus system $fx)
+    (prefix (only (vicare system $fx)
 		  $fx<
 		  $fx>
 		  $fx>=
 		  $fx<=
 		  $fx=)
 	    sys.)
-    (ikarus system $bignums)
-    (ikarus system $ratnums)
-    (ikarus system $flonums)
-    (ikarus system $compnums)
-    (ikarus system $pairs)
+    (vicare system $bignums)
+    (vicare system $ratnums)
+    (vicare system $flonums)
+    (vicare system $compnums)
+    (vicare system $pairs)
     (vicare system $lists)
-    (ikarus system $vectors)
-    (rename (ikarus system $bytevectors)
+    (vicare system $vectors)
+    (rename (vicare system $bytevectors)
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
-    (ikarus system $chars)
-    (ikarus system $strings)
-    (ikarus system $codes)
-    (ikarus system $pointers)
+    (except (vicare system $chars)
+	    $char=
+	    $char<
+	    $char>
+	    $char>=
+	    $char<=)
+    (prefix (only (vicare system $chars)
+		  $char=
+		  $char<
+		  $char>
+		  $char>=
+		  $char<=)
+	    sys.)
+    (vicare system $strings)
+    (vicare system $codes)
+    (vicare system $pointers)
     (vicare system $hashtables)
     (for (prefix (only (vicare platform configuration)
 		       platform-endianness)
@@ -655,22 +672,22 @@
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax ((define-fx-compar (syntax-rules ()
-				  ((_ ?proc sys.?proc)
-				   (define-syntax ?proc
-				    (syntax-rules ()
-				      ((_ ?op1 ?op2)
-				       (sys.?proc ?op1 ?op2))
-				      ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
-				       (let ((op2 ?op2))
-					 (and (sys.?proc ?op1 op2)
-					      (?proc op2 ?op3 ?op4 (... ...))))))))
-				 )))
-  (define-fx-compar $fx=  sys.$fx=)
-  (define-fx-compar $fx<  sys.$fx<)
-  (define-fx-compar $fx<= sys.$fx<=)
-  (define-fx-compar $fx>  sys.$fx>)
-  (define-fx-compar $fx>= sys.$fx>=))
+(let-syntax ((define-compar (syntax-rules ()
+			      ((_ ?proc sys.?proc)
+			       (define-syntax ?proc
+				 (syntax-rules ()
+				   ((_ ?op1 ?op2)
+				    (sys.?proc ?op1 ?op2))
+				   ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
+				    (let ((op2 ?op2))
+				      (and (sys.?proc ?op1 op2)
+					   (?proc op2 ?op3 ?op4 (... ...))))))))
+			      )))
+  (define-compar $fx=  sys.$fx=)
+  (define-compar $fx<  sys.$fx<)
+  (define-compar $fx<= sys.$fx<=)
+  (define-compar $fx>  sys.$fx>)
+  (define-compar $fx>= sys.$fx>=))
 
 
 ;;;; bignums
@@ -1434,6 +1451,25 @@
   ;;
   (or ($fx= ch #\x000A)	  ;linefeed
       ($fx= ch #\x0085))) ;next line
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-compar (syntax-rules ()
+			      ((_ ?proc sys.?proc)
+			       (define-syntax ?proc
+				 (syntax-rules ()
+				   ((_ ?op1 ?op2)
+				    (sys.?proc ?op1 ?op2))
+				   ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
+				    (let ((op2 ?op2))
+				      (and (sys.?proc ?op1 op2)
+					   (?proc op2 ?op3 ?op4 (... ...))))))))
+			      )))
+  (define-compar $char=  sys.$char=)
+  (define-compar $char<  sys.$char<)
+  (define-compar $char<= sys.$char<=)
+  (define-compar $char>  sys.$char>)
+  (define-compar $char>= sys.$char>=))
 
 
 ;;;; done

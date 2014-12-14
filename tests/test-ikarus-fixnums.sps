@@ -26,7 +26,7 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (vicare checks))
 
 

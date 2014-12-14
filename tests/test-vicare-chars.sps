@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,9 @@
 
 
 #!vicare
-(import (ikarus)
+(import (except (vicare) catch)
+  (prefix (vicare unsafe operations)
+	  unsafe.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -673,6 +675,75 @@
       (catch #f
 	(char>=? #\b #\b #\b 123))
     => '(123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe))
+
+  (check
+      (unsafe.$char= #\a #\a #\a)
+    => #t)
+
+  (check
+      (unsafe.$char= #\a #\b #\a)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char> #\a #\a)
+    => #f)
+
+  (check
+      (unsafe.$char> #\c #\b #\a)
+    => #t)
+
+  (check
+      (unsafe.$char> #\c #\b #\z)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char>= #\a #\a)
+    => #t)
+
+  (check
+      (unsafe.$char>= #\c #\b #\a)
+    => #t)
+
+  (check
+      (unsafe.$char>= #\c #\b #\z)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char< #\a #\a)
+    => #f)
+
+  (check
+      (unsafe.$char< #\a #\b #\c)
+    => #t)
+
+  (check
+      (unsafe.$char< #\c #\d #\a)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char<= #\a #\a)
+    => #t)
+
+  (check
+      (unsafe.$char<= #\a #\b #\c)
+    => #t)
+
+  (check
+      (unsafe.$char<= #\b #\c #\a)
+    => #f)
 
   #t)
 

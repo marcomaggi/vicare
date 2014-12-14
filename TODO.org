@@ -8,7 +8,7 @@
 
 * Code known to be reviewed
 
-** ikarus.io.ss
+** ikarus.io.sls
 
    Solve all the FIXME issues
 
@@ -41,13 +41,6 @@
    scheme/pass-specify-rep-primops.ss
    scheme/ikarus.intel-assembler.ss
 
-   scheme/psyntax.builders.ss
-   scheme/psyntax.compat.ss
-   scheme/psyntax.config.ss
-   scheme/psyntax.expander.ss
-   scheme/psyntax.internal.ss
-   scheme/psyntax.library-manager.ss
-
 ** list of C code that must be reviewed
 
 *** ikarus-numerics.c
@@ -79,7 +72,7 @@
 
    gensym-count
    top-level-value top-level-bound? set-top-level-value!
-   reset-symbol-proc! system-value system-value-gensym
+   reset-symbol-proc!
 
 * List of functions to be tested
 
@@ -145,21 +138,16 @@
 
 * Stuff to think about for the future
 
-** Introduce immutable datums
-
-   Strings  and  bytevectors  read   from  the  source  code  should  be
-   immutable.
-
-** Unique strings in compiled code
-
-   Equal strings read from different places in the source code should be
-   stored only once in the FASL file.
-
 ** glibc interesting functions
 
 *** asynchronous input/output
 
     Could it work with Vicare?
+
+** Introduce immutable datums
+
+   Strings  and  bytevectors  read   from  the  source  code  should  be
+   immutable.
 
 ** Linux interesting functions
 

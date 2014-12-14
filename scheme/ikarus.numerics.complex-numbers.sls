@@ -33,19 +33,19 @@
     $complex-conjugate-compnum	$complex-conjugate-cflonum
 
     $make-rectangular)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-rectangular	make-polar
 		  real-part		imag-part
 		  angle			magnitude
 		  complex-conjugate)
-    (only (ikarus system $compnums)
+    (only (vicare system $compnums)
 	  $make-compnum		$make-cflonum
 	  $compnum-real		$compnum-imag
 	  $cflonum-real		$cflonum-imag)
-    (ikarus system $fx)
-    (ikarus system $bignums)
-    (ikarus system $ratnums)
-    (ikarus system $flonums)
+    (vicare system $fx)
+    (vicare system $bignums)
+    (vicare system $ratnums)
+    (vicare system $flonums)
     (rename (only (ikarus generic-arithmetic)
 		  $abs-fixnum
 		  $abs-bignum

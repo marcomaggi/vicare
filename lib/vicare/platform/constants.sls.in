@@ -662,9 +662,9 @@
     ;; misc
     SIGUSR1		SIGUSR2		SIGWINCH
     SIGINFO)
-  (import (ikarus)
+  (import (vicare)
     (vicare platform errno)
-    (only (ikarus system $fx)
+    (only (vicare system $fx)
 	  $fx=))
 
 

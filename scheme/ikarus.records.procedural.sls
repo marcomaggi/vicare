@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus records procedural)
   (export
     ;; bindings for (rnrs records procedural (6))
@@ -36,7 +37,7 @@
     rtd-subtype?			print-r6rs-record-instance
     record-reset			record-and-rtd?
     record-destructor-set!		record-destructor)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
 		  record-type-descriptor?
@@ -56,8 +57,8 @@
 		  rtd-subtype?				print-r6rs-record-instance
 		  record-reset				record-and-rtd?
 		  record-destructor-set!		record-destructor)
-    (ikarus system $structs)
-    (ikarus system $symbols)
+    (vicare system $structs)
+    (vicare system $symbols)
     (vicare arguments validation)
     (vicare unsafe operations))
 
@@ -570,14 +571,14 @@
 (define ($<rtd>-non-opaque? rtd)
   (not ($<rtd>-opaque? rtd)))
 
-(define* (record-rtd (x record?))
+(define* (record-rtd {x record?})
   ($struct-rtd x))
 
 
 ;;;; record-type descriptor inspection
 
 (define-syntax-rule (define-rtd-inspector ?procname ?accessor)
-  (define* (?procname (rtd <rtd>?))
+  (define* (?procname {rtd <rtd>?})
     (?accessor rtd)))
 
 (define-inline (not-<rtd>-uid rtd)
@@ -601,7 +602,7 @@
 ;;
 (define-rtd-inspector record-type-uid	<rtd>-uid)
 
-(define* (record-type-field-names (rtd <rtd>?))
+(define* (record-type-field-names {rtd <rtd>?})
   ;;Return a vector holding one Scheme symbol for each field of RTD, not
   ;;including fields  of the  parents; the order  of the symbols  is the
   ;;same of the order of the fields in the RTD definition.
@@ -616,7 +617,7 @@
 	  ($vector-set! v i ($cdr ($vector-ref fields-vector i)))
 	  (next-field v ($fxadd1 i)))))))
 
-(define* (record-field-mutable? (rtd <rtd>?) (field-index field-index?))
+(define* (record-field-mutable? {rtd <rtd>?} {field-index field-index?})
   ;;Return true if field FIELD-INDEX of RTD is mutable.
   ;;
   (let* ((prtd			($<rtd>-parent rtd))
@@ -933,7 +934,7 @@
   #| end of module |# )
 
 
-(define* (record-constructor (rcd <rcd>?))
+(define* (record-constructor {rcd <rcd>?})
   ($<rcd>-builder rcd))
 
 
@@ -971,36 +972,36 @@
     ;;Return a function being the  safe accessor for field INDEX/NAME of
     ;;RTD.
     ;;
-    (((rtd <rtd>?) index/name)
+    (({rtd <rtd>?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-accessor #t #t))
-    (((rtd <rtd>?) index/name accessor-who)
+    (({rtd <rtd>?} index/name accessor-who)
      (%record-actor __who__ rtd index/name accessor-who #t #t)))
 
   (case-define* unsafe-record-accessor
     ;;Return a function  being the unsafe accessor  for field INDEX/NAME
     ;;of RTD.
     ;;
-    (((rtd <rtd>?) index/name)
+    (({rtd <rtd>?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-accessor #t #f))
-    (((rtd <rtd>?) index/name accessor-who)
+    (({rtd <rtd>?} index/name accessor-who)
      (%record-actor __who__ rtd index/name accessor-who #t #f)))
 
   (case-define* record-mutator
     ;;Return a function  being the safe mutator for  field INDEX/NAME of
     ;;RTD.
     ;;
-    (((rtd <rtd>?) index/name)
+    (({rtd <rtd>?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-mutator #f #t))
-    (((rtd <rtd>?) index/name mutator-who)
+    (({rtd <rtd>?} index/name mutator-who)
      (%record-actor __who__ rtd index/name mutator-who #f #t)))
 
   (case-define* unsafe-record-mutator
     ;;Return a function being the unsafe mutator for field INDEX/NAME of
     ;;RTD.
     ;;
-    (((rtd <rtd>?) index/name)
+    (({rtd <rtd>?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-mutator #f #f))
-    (((rtd <rtd>?) index/name mutator-who)
+    (({rtd <rtd>?} index/name mutator-who)
      (%record-actor __who__ rtd index/name mutator-who #f #f)))
 
   (define (%record-actor who rtd index/name actor-who accessor? safe?)
@@ -1063,7 +1064,7 @@
   #| end of module |# )
 
 
-(define* (record-predicate (rtd <rtd>?))
+(define* (record-predicate {rtd <rtd>?})
   ;;Return a function being the predicate for RTD.
   ;;
   (lambda (record)
@@ -1092,7 +1093,7 @@
 
 ;;;; non-R6RS extensions
 
-(define* (rtd-subtype? (rtd <rtd>?) (prtd <rtd>?))
+(define* (rtd-subtype? {rtd <rtd>?} {prtd <rtd>?})
   ;;Return true if PRTD is a parent of RTD or they are equal.
   ;;
   (or (eq? rtd prtd)
@@ -1104,7 +1105,7 @@
 (case-define* print-r6rs-record-instance
   ((the-record)
    (print-r6rs-record-instance the-record (current-error-port)))
-  (((the-record record?) (port output-port?))
+  (({the-record record?} {port output-port?})
    (let ((rtd ($struct-rtd the-record)))
      (define (%print-fields rtd first)
        (let* ((fields.vec	($<rtd>-fields rtd))
@@ -1133,7 +1134,7 @@
 			      0))))
      (%display "]"))))
 
-(define* (record-reset (x record?))
+(define* (record-reset {x record?})
   ;;Reset to #f all the fields of a structure.
   ;;
   ;;Remember that the  first 2 fields of an R6RS  record type descriptor
@@ -1147,13 +1148,13 @@
 
 ;;;; non-R6RS extensions: record destructor
 
-(define* (record-destructor-set! (rtd <rtd>?) (func procedure?))
+(define* (record-destructor-set! {rtd <rtd>?} {func procedure?})
   ;;Store a  function as  destructor in  a R6RS  record-type descriptor.
   ;;Return unspecified values.
   ;;
   ($set-<rtd>-destructor! rtd func))
 
-(define* (record-destructor (rtd <rtd>?))
+(define* (record-destructor {rtd <rtd>?})
   ;;Return the value of the destructor field in RTD: #f or a function.
   ;;
   ($<rtd>-destructor rtd))

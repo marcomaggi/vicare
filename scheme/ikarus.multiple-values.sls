@@ -17,10 +17,10 @@
 #!r6rs
 (library (ikarus multiple-values)
   (export call-with-values values)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  call-with-values
 		  values)
-    (ikarus system $stack))
+    (vicare system $stack))
 
   ;;The implementation of these two functions is as assembly subroutines
   ;;defined by the compiler.

@@ -25,10 +25,10 @@
 
 
 #!vicare
-(import (except (vicare)
+(import (except (vicare (0 4))
 		is-a? slot-ref slot-set!)
-  (nausicaa language oopp)
-  (nausicaa language builtins)
+  (nausicaa language oopp (0 4))
+  (nausicaa language builtins (0 4))
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -119,10 +119,10 @@
       (fields (mutable v)))
 
     (define-class <beta>
-      (fields (immutable (a <alpha>))))
+      (fields (immutable {a <alpha>})))
 
     (define-class <gamma>
-      (fields (immutable (b <beta>))))
+      (fields (immutable {b <beta>})))
 
     (<alpha> A (<> (1)))
     (<beta>  B (<> (A)))
@@ -137,17 +137,17 @@
       => #t)
 
     (check
-    	((<alpha> #:predicate) (O b a))
+    	((<alpha> #:predicate) ((O b) a))
       => #t)
 
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => 1)
 
-    (set!/tags (O b a v) 2)
+    (set!/tags (((O b) a) v) 2)
 
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => 2)
 
     #f)
@@ -167,13 +167,13 @@
 		   #'(vector-set! ?var ?idx ?expr))))))
 
     (define-class <alpha>
-      (fields (immutable (v <vector>))))
+      (fields (immutable {v <vector>})))
 
     (define-class <beta>
-      (fields (immutable (a <alpha>))))
+      (fields (immutable {a <alpha>})))
 
     (define-class <gamma>
-      (fields (immutable (b <beta>))))
+      (fields (immutable {b <beta>})))
 
     (<alpha> A (<> ((vector 1 2 3))))
     (<beta>  B (<> (A)))
@@ -186,26 +186,26 @@
 	((<beta> #:predicate) (O b))
       => #t)
     (check
-	((<alpha> #:predicate) (O b a))
+	((<alpha> #:predicate) ((O b) a))
       => #t)
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => '#(1 2 3))
     (check
-    	(O b a v[0])
+    	((((O b) a) v)[0])
       => 1)
     (check
-    	(O b a v[1])
+    	((((O b) a) v)[1])
       => 2)
     (check
-    	(O b a v[2])
+    	((((O b) a) v)[2])
       => 3)
 
-    (set!/tags (O b a v[0]) 10)
-    (set!/tags (O b a v[1]) 20)
-    (set!/tags (O b a v[2]) 30)
+    (set!/tags ((((O b) a) v)[0]) 10)
+    (set!/tags ((((O b) a) v)[1]) 20)
+    (set!/tags ((((O b) a) v)[2]) 30)
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => '#(10 20 30))
 
     #f)
@@ -253,7 +253,7 @@
       (predicate <alpha>?)
       (protocol (lambda () make-<alpha>))
       (virtual-fields (immutable sum
-				 (lambda/tags ((O <beta>))
+				 (lambda/tags ({O <beta>})
 				   (+ (O a) (O b))))))
 
     (<beta> O (<> (1 2)))
@@ -266,7 +266,7 @@
     (check (O b)                   => 2)
     (check (O sum)                 => 3)
 
-    (let/tags (((O <beta>) (make-<beta> 1 2)))
+    (let/tags (({O <beta>} (make-<beta> 1 2)))
 
       (check ((<beta> #:predicate)  O)           => #t)
       (check ((<alpha> #:predicate) O)           => #t)
@@ -355,6 +355,29 @@
 
     #f)
 
+;;; --------------------------------------------------------------------
+
+  (let ()	;nested OOPP syntax
+    (define-label <a-string>
+      (getter (lambda (stx tag)
+		(syntax-case stx ()
+		  ((?expr ((?idx)))
+		   #'(<char> #:nested-oopp-syntax (string-ref ?expr ?idx)))))))
+
+    (check
+	(let ()
+	  (define/tags {S <a-string>} "abc")
+	  (list (S[0]) (S[1]) (S[2])))
+      => '(#\a #\b #\c))
+
+    (check
+	(let ()
+	  (define/tags {S <a-string>} "abc")
+	  ((S[1]) upcase))
+      => #\B)
+
+    #f)
+
   #t)
 
 
@@ -411,14 +434,14 @@
 	  (fields a b))
 	(define A (<alpha> (1 2)))
 	(define V 123)
-	(with-tags ((A <alpha>)
-		    (V <top>))
+	(with-tags ({A <alpha>}
+		    {V <top>})
 	  (vector (A a) V)))
     => '#(1 123))
 
   (check
-      (let*/tags (((a <number>) 123)
-		  ((b <string>) (a string)))
+      (let*/tags (({a <number>} 123)
+		  ({b <string>} (a string)))
 	b)
     => "123")
 
@@ -428,7 +451,7 @@
       (let ()
 	(define f
 	  (case-lambda/tags
-	   (((a <number>))
+	   (({a <number>})
 	    (a string))))
 	(f 123))
     => "123")
@@ -437,8 +460,8 @@
       (let ()
 	(define g
 	  (case-lambda/tags
-	   (#(args <list>)
-	    (args length))))
+	    ({args <list>}
+	     (args length))))
 	(g 1 2 3))
     => 3)
 
@@ -448,7 +471,7 @@
   (check
       (let ()
 	(define f
-	  (lambda/tags ((a <number>))
+	  (lambda/tags ({a <number>})
 	    (a string)))
 	(f 123))
     => "123")
@@ -456,7 +479,7 @@
   (check
       (let ()
 	(define f
-	  (lambda/tags ((a <number>) (b <number>))
+	  (lambda/tags ({a <number>} {b <number>})
 	    (list (a string) (b string))))
 	(f 1 2))
     => '("1" "2"))
@@ -464,7 +487,7 @@
   (check
       (let ()
 	(define g
-	  (lambda/tags #(args <list>)
+	  (lambda/tags {args <list>}
 	    (args length)))
 	(g 1 2 3))
     => 3)
@@ -472,7 +495,7 @@
   (check	;untagged rest argument
       (let ()
 	(define g
-	  (lambda/tags ((a <number>) (b <number>) . args)
+	  (lambda/tags ({a <number>} {b <number>} . args)
 	    (list (a string)
 		  (b string)
 		  (length args))))
@@ -482,7 +505,7 @@
   (check	;rest argument
       (let ()
 	(define g
-	  (lambda/tags ((a <number>) (b <number>) . #(args <list>))
+	  (lambda/tags ({a <number>} {b <number>} . {args <list>})
 	    (list (a string)
 		  (b string)
 		  (args length))))
@@ -494,28 +517,28 @@
 
   (check
       (let ()
-	(define/tags (f (a <number>))
+	(define/tags (f {a <number>})
 	  (a string))
 	(f 123))
     => "123")
 
   (check
       (let ()
-	(define/tags (f (a <number>) (b <number>))
+	(define/tags (f {a <number>} {b <number>})
 	  (list (a string) (b string)))
 	(f 1 2))
     => '("1" "2"))
 
   (check
       (let ()
-	(define/tags (g . #(args <list>))
+	(define/tags (g . {args <list>})
 	  (args length))
 	(g 1 2 3))
     => 3)
 
   (check	;untagged rest argument
       (let ()
-	(define/tags (g (a <number>) (b <number>) . args)
+	(define/tags (g {a <number>} {b <number>} . args)
 	  (list (a string)
 		(b string)
 		(length args)))
@@ -524,7 +547,7 @@
 
   (check	;rest argument
       (let ()
-	(define/tags (g (a <number>) (b <number>) . #(args <list>))
+	(define/tags (g {a <number>} {b <number>} . {args <list>})
 	  (list (a string)
 		(b string)
 		(args length)))
@@ -533,13 +556,13 @@
 
   (check
       (let ()
-	(define/tags #(a <number>) 123)
+	(define/tags {a <number>} 123)
 	(a string))
     => "123")
 
   (check
       (let ()
-	(define/tags #(a <number>))
+	(define/tags {a <number>})
 	(set! a 123)
 	(a string))
     => "123")
@@ -624,7 +647,7 @@
 
   (let ()	;<procedure> does not splice
     (define-class <alpha>
-      (fields (immutable (fun <procedure>))))
+      (fields (immutable {fun <procedure>})))
 
     (<alpha> A (<> (+)))
 
@@ -636,7 +659,7 @@
 
   (let ()	;<top> does not splice
     (define-class <beta>
-      (fields (immutable (fun <top>))))
+      (fields (immutable {fun <top>})))
 
     (<beta> A (<> (*)))
 
@@ -655,6 +678,21 @@
     (check
 	((G fun) 1 2 3)
       => 6)
+
+    (void))
+
+  (let ()
+
+    (define/tags ({the-str <string>})
+      "ciao")
+
+    (check
+	((the-str) upcase)
+      => "CIAO")
+
+    (check
+	((the-str) [1])
+      => #\i)
 
     (void))
 
@@ -677,6 +715,47 @@
     (check ((O[2]) * 10)		=> 20)
 
     (void))
+
+  #t)
+
+
+(parametrise ((check-test-name	'methods))
+
+  (check	;method with tagged return value
+      (let ()
+	(import (nausicaa))
+	(define-class <stuff>
+	  (fields {a <exact-integer>}
+		  {b <exact-integer>})
+	  (methods ({sum <exact-integer>} <stuff>-sum)))
+
+	(define (<stuff>-sum {S <stuff>})
+	  (+ (S a) (S b)))
+
+	(define {S <stuff>}
+	  (<> (1 2)))
+
+	(values (S sum)
+		((S sum) positive?)))
+    => 3 #t)
+
+  (check	;method with tagged return value in the function
+      (let ()
+	(import (nausicaa))
+	(define-class <stuff>
+	  (fields {a <exact-integer>}
+		  {b <exact-integer>})
+	  (methods (sum <stuff>-sum)))
+
+	(define ({<stuff>-sum <exact-integer>} {S <stuff>})
+	  (+ (S a) (S b)))
+
+	(define {S <stuff>}
+	  (<> (1 2)))
+
+	(values (S sum)
+		((S sum) positive?)))
+    => 3 #t)
 
   #t)
 

@@ -1028,37 +1028,42 @@ arguments validation}.
 
 @deffn {Validation Clause} file-pathname @var{obj}
 Succeed if @var{obj} satisfies the predicate @func{file-pathname?} from
-@library{vicare $posix}.
+@library{vicare language-extensions posix}.
 @end deffn
 
 
 @deffn {Validation Clause} file-string-pathname @var{obj}
 Succeed if @var{obj} satisfies the predicate
-@func{file-string-pathname?} from @library{vicare $posix}.
+@func{file-string-pathname?} from @library{vicare language-extensions
+posix}.
 @end deffn
 
 
 @deffn {Validation Clause} file-bytevector-pathname @var{obj}
 Succeed if @var{obj} satisfies the predicate
-@func{file-bytevector-pathname?} from @library{vicare $posix}.
+@func{file-bytevector-pathname?} from @library{vicare
+language-extensions posix}.
 @end deffn
 
 
 @deffn {Validation Clause} file-colon-search-path @var{obj}
 Succeed if @var{obj} satisfies the predicate
-@func{file-colon-search-path?} from @library{vicare $posix}.
+@func{file-colon-search-path?} from @library{vicare language-extensions
+posix}.
 @end deffn
 
 
 @deffn {Validation Clause} file-string-colon-search-path @var{obj}
 Succeed if @var{obj} satisfies the predicate
-@func{file-string-colon-search-path?} from @library{vicare $posix}.
+@func{file-string-colon-search-path?} from @library{vicare
+language-extensions posix}.
 @end deffn
 
 
 @deffn {Validation Clause} file-bytevector-colon-search-path @var{obj}
 Succeed if @var{obj} satisfies the predicate
-@func{file-bytevector-colon-search-path?} from @library{vicare $posix}.
+@func{file-bytevector-colon-search-path?} from @library{vicare
+language-extensions posix}.
 @end deffn
 
 @c page

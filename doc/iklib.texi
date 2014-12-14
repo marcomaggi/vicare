@@ -4,22 +4,18 @@
 
 @cindex Library @library{vicare}
 @cindex @library{vicare}, library
-@cindex Library @library{ikarus}
-@cindex @library{ikarus}, library
 @cindex Library @library{vicare language-extensions}
 @cindex @library{vicare language-extensions}, library
 
 
 In addition to the libraries listed in the @rnrs{6} standard,
-@value{PRJNAME} offers more libraries which provide additional features:
+@value{PRJNAME} offers more libraries which provide additional features;
+here is a list of some of them:
 
 @table @asis
-@item @library{ikarus}
+@item @library{vicare}
 It is a composite library, it exports a superset of all the supported
 bindings of @rnrs{6}.
-
-@item @library{vicare}
-It exports the same bindings of @library{ikarus}.
 
 @item @library{vicare language-extensions}
 It exports all the bindings exported by @library{vicare} that are
@@ -85,7 +81,6 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib errno::                 Interface to @code{errno}.
 * iklib time::                  Basic time and date functions.
 * iklib readline::              Readline interface.
-* iklib libs::                  Scheme libraries utility functions.
 * iklib debug::                 Debugging utilities.
 * iklib misc::                  Miscellaneous functions.
 @end menu
@@ -276,6 +271,7 @@ Example:
 
 @menu
 * iklib syntaxes libraries::    Extended @code{library} syntax.
+* iklib syntaxes programs::     Extended program syntax.
 * iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
 * iklib syntaxes defines::      @func{define}-like additional syntaxes.
 * iklib syntaxes defstxs::      @func{define-syntax}-like additional syntaxes.
@@ -286,15 +282,21 @@ Example:
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes body::         Internal body.
 * iklib syntaxes types::        Type syntaxes.
 * iklib syntaxes predicates::   Predicate syntaxes.
 * iklib syntaxes slots::        Slot getter and setter syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
+* iklib syntaxes increments::   Incrementing and decrementing.
+* iklib syntaxes infix::        Infix to prefix transformer.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
-* iklib syntaxes unsafe::       Unsafe binding variants.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
+* iklib syntaxes type-of::      Determining the type of expressions.
+* iklib syntaxes expansion-of:: Inspecting expansion results.
+* iklib syntaxes optim-of::     Inspecting optimisation results.
+* iklib syntaxes assembly-of::  Inspecting assembly language results.
 @end menu
 
 @c page
@@ -350,6 +352,37 @@ syntactic bindings (@pxref{iklib syntaxes properties}) and when adding
 methods to Nausicaa's multimethods.
 @end defvr
 
+
+@defvr {Library Option} tagged-language
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
+@end defvr
+
+@c page
+@node iklib syntaxes programs
+@subsection Extended program syntax
+
+
+@cindex @clause{options}, program clause
+@cindex Program clause @clause{options}
+
+
+@value{PRJNAME} extends the format of programs by allowing an optional
+@clause{options} clause after the @clause{import} one:
+
+@example
+(import  @meta{import-spec} ...)
+(options @meta{option} ...)
+@meta{program-body}
+@end example
+
+@noindent
+where each @meta{option} is a symbolic expression.
+
+
+@defvr {Library Option} tagged-language
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
+@end defvr
+
 @c page
 @node iklib syntaxes lambdas
 @subsection @func{lambda}--like additional syntaxes
@@ -362,17 +395,18 @@ the return value; a predicate function accepts a single argument and
 returns true or @false{}.  Examples:
 
 @example
+#!vicare
 (import (vicare)
   (vicare system $fx))
 
 (define add
   ;;Fail if called with a non-fixnum argument.
-  (lambda* ((a fixnum?) (b fixnum?))
+  (lambda* (@{a fixnum?@} @{b fixnum?@})
     ($fx+ a b)))
 
 (define vec
   ;;Fail if attempting to return a non-vector.
-  (lambda* ((_ vector?) fun)
+  (lambda* (@{_ vector?@} fun)
     (fun 1 2)))
 
 (add 1 2)       @result{} 3
@@ -384,8 +418,9 @@ returns true or @false{}.  Examples:
 
 @noindent
 in the definition of the function bound to @func{vec}: notice that
-@code{(_ vector?)} is not a function argument, it is a special notation
-used to select a predicate function to validate the return value.
+@code{@{_ vector?@}} is not a function argument, it is a special
+notation used to select a predicate function to validate the return
+value.
 
 In the extended @func{lambda*} and @func{case-lambda*} syntaxes the
 @meta{pred-formals} can have any of the forms:
@@ -403,41 +438,39 @@ identifier is used to name a formal argument, in the extended
 
 @example
 @meta{id}
-(@meta{id} @meta{pred})
-#(@meta{id} @meta{pred})
+(brace @meta{id} @meta{pred})
 @end example
 
 @noindent
-where @meta{id} is an identifier naming the formal argument and
-@meta{pred} is an identifier which, at run time, must evaluate to a
-predicate function; the formal argument @meta{rest} can have only one of
-the following forms:
+where @meta{id} is an identifier naming the formal argument; @meta{pred}
+is an identifier which, at run time, must evaluate to a predicate
+function; @func{brace} is the binding exported by @library{vicare}.  The
+formal argument @meta{rest} can have only one of the following forms:
 
 @example
 @meta{rest-id}
-#(@meta{rest-id} @meta{pred})
+(brace @meta{rest-id} @meta{pred})
 @end example
 
 @noindent
-and the formal argument @meta{args} can have only one of the following
-forms:
+and the formal argument @meta{args} can have one of the following forms:
 
 @example
 @meta{args-id}
-#(@meta{args-id} @meta{pred})
+(brace @meta{args-id} @meta{pred})
 @end example
 
 The first item in the @meta{pred-formals} can have the special syntax:
 
 @example
-(_ @metao{pred} @meta{pred} ...)
+(brace _ @metao{pred} @meta{pred} ...)
 @end example
 
 @noindent
-where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
-exported by @rsixlibrary{base}); in this case such item does
-@strong{not} represent a formal argument, it just selects predicates to
-validate the values returned by the last @meta{body} form.
+where @code{_} is the binding exported by @rsixlibrary{base}; in this
+case such item does @strong{not} represent a formal argument, it just
+selects predicates to validate the values returned by the last
+@meta{body} form.
 
 @c ------------------------------------------------------------
 
@@ -467,15 +500,13 @@ ignored and @func{lambda*} behaves like the standard @func{lambda}.
 If the first element of @meta{pred-formals} has the format:
 
 @example
-(_ @metao{pred} @meta{pred} ...)
+(brace _ @metao{pred} @meta{pred} ...)
 @end example
 
 @noindent
-where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
-exported by @rsixlibrary{base}), the values returned by the last
-@meta{body} form are validated using the given @meta{pred}: if a
-predicate fails for its returned value, an exception is raised using
-@condition{expression-return-value-violation}.
+the values returned by the last @meta{body} form are validated using the
+given @meta{pred}: if a predicate fails for its returned value, an
+exception is raised using @condition{expression-return-value-violation}.
 @end itemize
 
 In addition the fluid identifier syntax @code{__who__} is bound to the
@@ -488,9 +519,10 @@ Usage examples:
 Function with two predicate arguments:
 
 @example
+#!vicare
 (import (vicare))
 (define f
-  (lambda* ((a number?) (b number?))
+  (lambda* (@{a number?@} @{b number?@})
     (list (number->string a) (number->string b))))
 
 (f 1 2)         @result{} ("1" "2")
@@ -500,6 +532,7 @@ Function with two predicate arguments:
 Function with two mandatory arguments and the rest argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
@@ -507,8 +540,8 @@ Function with two mandatory arguments and the rest argument:
        (for-all number? obj)))
 
 (define f
-  (lambda* ((a number?) (b number?)
-            . #(rest list-of-numbers?))
+  (lambda* (@{a number?@} @{b number?@}
+            . @{rest list-of-numbers?@})
     (list (number->string a)
           (number->string b)
           (length rest))))
@@ -516,20 +549,11 @@ Function with two mandatory arguments and the rest argument:
 (f 1 2 3 4 5)           @result{} ("1" "2" 3)
 @end example
 
-@noindent
-notice that a predicate rest argument must be specified using the vector
-syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
-list-of-numbers?)} would be interpreted as:
-
-@example
-((a number?) (b number?) . (rest list-of-numbers?))
-@expansion{} ((a number?) (b number?) rest list-of-numbers?)
-@end example
-
 @item
 Function with the @meta{args} argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
@@ -537,7 +561,7 @@ Function with the @meta{args} argument:
        (for-all number? obj)))
 
 (define f
-  (lambda* #(args list-of-numbers?)
+  (lambda* @{args list-of-numbers?@}
     (length args)))
 
 (f 1 2 3)               @result{} 3
@@ -547,10 +571,11 @@ Function with the @meta{args} argument:
 Function with a single validated return value:
 
 @example
+#!vicare
 (import (vicare))
 
 (define f
-  (lambda* ((_ fixnum?) val)
+  (lambda* (@{_ fixnum?@} val)
     val))
 
 (f 1)                   @result{} 1
@@ -560,10 +585,11 @@ Function with a single validated return value:
 Function with multiple validated return values:
 
 @example
+#!vicare
 (import (vicare))
 
 (define f
-  (lambda* ((_ fixnum? string?) a b)
+  (lambda* (@{_ fixnum? string?@} a b)
     (values a b)))
 
 (f 1 "2")               @result{} 1, "2"
@@ -585,16 +611,17 @@ quoted symbol @code{_}.
 Usage examples:
 
 @example
+#!vicare
 (import (vicare))
 
 (define f
   (case-lambda*
-   (((a number?))
+   ((@{a number?@})
     (number->string a))))
 
 (define g
   (case-lambda*
-   (#(args list?)
+   (@{args list?@}
     (length args))))
 
 (f 123)                 @result{} "123"
@@ -642,9 +669,10 @@ Usage examples:
 Function with two predicate arguments:
 
 @example
+#!vicare
 (import (vicare))
 
-(define* (f (a number?) (b number?))
+(define* (f @{a number?@} @{b number?@})
   (list (number->string a) (number->string b)))
 
 (f 1 2)         @result{} ("1" "2")
@@ -654,14 +682,15 @@ Function with two predicate arguments:
 Function with two mandatory arguments and the rest argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
   (and (list? obj)
        (for-all number? obj)))
 
-(define* (f (a number?) (b number?)
-            . #(rest list-of-numbers?))
+(define* (f @{a number?@} @{b number?@}
+            . @{rest list-of-numbers?@})
   (list (number->string a)
         (number->string b)
         (length rest)))
@@ -669,27 +698,18 @@ Function with two mandatory arguments and the rest argument:
 (f 1 2 3 4 5)           @result{} ("1" "2" 3)
 @end example
 
-@noindent
-notice that a predicate rest argument must be specified using the vector
-syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
-list-of-numbers?)} would be interpreted as:
-
-@example
-((a number?) (b number?) . (rest list-of-numbers?))
-@expansion{} ((a number?) (b number?) rest list-of-numbers?)
-@end example
-
 @item
 Function with the @meta{args} argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
   (and (list? obj)
        (for-all number? obj)))
 
-(define* (f . #(args list-of-numbers?))
+(define* (f . @{args list-of-numbers?@})
   (length args))
 
 (f 1 2 3)               @result{} 3
@@ -699,9 +719,10 @@ Function with the @meta{args} argument:
 Function with a single validated return value:
 
 @example
+#!vicare
 (import (vicare))
 
-(define* ((f fixnum?) val)
+(define* (@{f fixnum?@} val)
   val)
 
 (f 1)                   @result{} 1
@@ -711,9 +732,10 @@ Function with a single validated return value:
 Function with multiple validated return values:
 
 @example
+#!vicare
 (import (vicare))
 
-(define* ((f fixnum? string?) a b)
+(define* (@{f fixnum? string?@} a b)
   (values a b))
 
 (f 1 "2")               @result{} 1, "2"
@@ -750,9 +772,10 @@ quoted symbol @meta{who}.
 
 @c ------------------------------------------------------------
 
-@deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
+@deffn Syntax define-values @meta{formals} @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @meta{var} identifiers.
+last one to the given @meta{var} identifiers.  @var{formals} has the
+same syntax of the @func{lambda} formals.
 
 @example
 (define-values (a b c)
@@ -763,10 +786,11 @@ last one to the given @meta{var} identifiers.
 @end deffn
 
 
-@deffn Syntax define-constant-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
+@deffn Syntax define-constant-values @var{formals} @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @meta{var} identifiers.  Make the @meta{var}
-identifiers immutable.
+last one to the given formals identifiers; make the formals identifiers
+immutable.  @var{formals} has the same syntax of the @func{lambda}
+formals.
 
 @example
 (define-constant-values (a b c)
@@ -1394,8 +1418,75 @@ current error port describing the include operation.
 @end deffn
 
 @c page
+@node iklib syntaxes body
+@subsection Internal body
+
+
+@deffn Syntax internal-body @meta{definition} @dots{} @metao{expr} @meta{expr} @dots{}
+Delimits an internal body, evaluating the definitions and then the
+expression.  This syntax must be used in expression context.
+
+@example
+(import (vicare))
+
+(let ()
+  (define a 1)
+  (display a)
+  (internal-body
+    (define b 2)
+    (define c 3)
+    (display a)
+    (display b)
+    (display c)))
+@print{} 1123
+@end example
+@end deffn
+
+@c page
 @node iklib syntaxes types
 @subsection Type syntaxes
+
+
+The syntactic bindings of Vicare struct types and @rnrs{6} record types
+allow the identifier name to act as reference to the maker function with
+the special syntax:
+
+@example
+(?type (?arg ...))
+@end example
+
+@noindent
+that is, for struct types:
+
+@example
+(import (vicare))
+
+(define-struct color
+  (red green blue))
+
+(color (1 2 3))                    @result{} #["color" 1 2 3]
+(apply (color (...)) 1 '(2 3))     @result{} #["color" 1 2 3]
+@end example
+
+@noindent
+and for @rnrs{6} record types:
+
+@example
+(import (vicare))
+
+(define-record-type color
+  (fields red green blue))
+
+(color (1 2 3))
+@result{} #[r6rs-record: color red=1 green=2 blue=3]
+
+(apply (color (...)) 1 '(2 3))
+@result{}  #[r6rs-record: color red=1 green=2 blue=3]
+@end example
+
+@noindent
+where @code{...} is the ellipsis binding exported by @rsixlibrary{base}
+and @library{vicare}.
 
 
 @deffn Syntax type-descriptor @meta{name}
@@ -1419,7 +1510,9 @@ A @rnrs{6} record type descriptor if the given identifier argument
 
 @deffn Syntax is-a? @meta{expr} @meta{type-id}
 @deffnx Syntax is-a? <> @meta{type-id}
+@deffnx Syntax is-a? _ @meta{type-id}
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to an expression which, when evaluated, returns @true{} if
 @meta{expr} evaluates to a struct or record of type @meta{type-id}.
 
@@ -1501,7 +1594,9 @@ and access to fields of @rnrs{6} records:
 
 @deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{type}
 @deffnx Syntax slot-ref <> @meta{field-name} @meta{type}
+@deffnx Syntax slot-ref _ @meta{field-name} @meta{type}
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
 
 @meta{expr} can be any expression evaluating to an instance of
@@ -1518,15 +1613,17 @@ When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{record-type-field-ref}; @ref{iklib records
 fields, record-type-field-ref}.
 
-When @code{<>} is used in place of @meta{expr}: the syntax evaluates to
-a slot accessor function.
+When @code{<>} or @code{_} is used in place of @meta{expr}: the syntax
+evaluates to a slot accessor function.
 @end deffn
 
 @c ------------------------------------------------------------
 
 @deffn Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
 @deffnx Syntax slot-set! <> @meta{field-name} @meta{type} <>
+@deffnx Syntax slot-set! _ @meta{field-name} @meta{type} _
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
 and @meta{new-val}.
 
@@ -1544,60 +1641,8 @@ When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{record-type-field-set!}; @ref{iklib records
 fields, record-type-field-set!}.
 
-When @code{<>} is used in place of both @meta{expr} and @meta{new-val}:
-the syntax evaluates to a slot mutator function.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@deffn Syntax $slot-ref @meta{expr} @meta{field-name} @meta{type}
-@deffnx Syntax $slot-ref <> @meta{field-name} @meta{type}
-@deffnx {Auxiliary Syntax} <>
-Expand to the unsafe slot accessor of @meta{field-name} applied to
-@meta{expr}.
-
-@meta{expr} can be any expression evaluating to an instance of
-@meta{type}; @meta{type} must be an identifier bound to a Vicare
-struct--type descriptor or a @rnrs{6} record--type descriptor;
-@meta{field-name} must be an identifier representing the name of a
-field.
-
-When @meta{type} is bound to a struct--type descriptor: this syntax
-expands to a use of @func{$struct-type-field-ref}; @ref{iklib structs
-fields, $struct-type-field-ref}.
-
-When @meta{type} is bound to a record--type descriptor: this syntax
-expands to a use of @func{$record-type-field-ref}; @ref{iklib records
-fields, $record-type-field-ref}.
-
-When @code{<>} is used in place of @meta{expr}: the syntax evaluates to
-a slot accessor function.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@deffn Syntax $slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
-@deffnx Syntax $slot-set! <> @meta{field-name} @meta{type} <>
-@deffnx {Auxiliary Syntax} <>
-Expand to the unsafe slot mutator of @meta{field-name} applied to
-@meta{expr} and @meta{new-val}.
-
-@meta{expr} can be any expression evaluating to an instance of
-@meta{type}; @meta{type} must be an identifier bound to a Vicare
-struct--type descriptor or a @rnrs{6} record--type descriptor;
-@meta{field-name} must be an identifier representing the name of a
-field.
-
-When @meta{type} is bound to a struct--type descriptor: this syntax
-expands to a use of @func{$struct-type-field-set!}; @ref{iklib structs
-fields, $struct-type-field-set!}.
-
-When @meta{type} is bound to a record--type descriptor: this syntax
-expands to a use of @func{$record-type-field-set!}; @ref{iklib records
-fields, $record-type-field-set!}.
-
-When @code{<>} is used in place of both @meta{expr} and @meta{new-val}:
-the syntax evaluates to a slot mutator function.
+When @code{<>} or @code{_} is used in place of both @meta{expr} and
+@meta{new-val}: the syntax evaluates to a slot mutator function.
 @end deffn
 
 @c page
@@ -1605,13 +1650,9 @@ the syntax evaluates to a slot mutator function.
 @subsection The @func{try}, @func{catch}, @func{finally} syntaxes
 
 
-@cindex Library @library{vicare language-extensions try}
-@cindex @library{vicare language-extensions try}, library
-
-
-The following bindings are exported by the library @library{vicare
-language-extensions try} and are candidates to be included in the boot
-image.
+The syntax @func{try} can be used to handle raised exceptions in
+addition to the @rnrs{6}--defined syntaxes @func{with-exception-handler}
+and @func{guard}.
 
 
 @deffn Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{})
@@ -1623,8 +1664,7 @@ This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
 Every @meta{catch-clause} has one of the forms:
 
 @example
-(@meta{tag} @metao{tag-body} @meta{tag-body} @dots{})
-((@meta{tag}) @metao{tag-body} @meta{tag-body} @dots{})
+((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} @dots{})
 (else @metao{else-body} @meta{else-body} @dots{})
 @end example
 
@@ -1637,7 +1677,9 @@ clause, it will expand to:
 
 @example
 (guard (@meta{var}
-          ((record-type-and-record? @meta{tag} @meta{var})
+          ((or (is-a? @meta{var} @metao{tag})
+               (is-a? @meta{var} @meta{tag})
+               ...)
            @metao{tag-body}
            @meta{tag-body}
            ...)
@@ -1650,7 +1692,9 @@ and with the @clause{else} clause:
 
 @example
 (guard (@meta{var}
-          ((record-type-and-record? @meta{tag} @meta{var})
+          ((or (is-a? @meta{var} @metao{tag})
+               (is-a? @meta{var} @meta{tag})
+               ...)
            @metao{tag-body}
            @meta{tag-body}
            ...)
@@ -1676,6 +1720,45 @@ Compensation stacks}):
   (guard ---))
 @end example
 @end deffn
+
+
+Some usage examples without the @clause{finally} clause:
+
+@example
+(import (vicare))
+
+(define-condition-type &this
+    &error
+  make-this-condition
+  condition-this?
+  (a condition-this.a)
+  (b condition-this.b)
+  (c condition-this.c))
+
+(define (doit thunk)
+  (try
+      (thunk)
+    (catch E
+      ((&this)
+       (list (condition-this.a E)
+             (condition-this.b E)
+             (condition-this.c E)))
+      ((&message)
+       (condition-message E))
+      (else E))))
+
+(doit (lambda ()
+        (raise (make-this-condition 1 2 3))))
+@result{} (1 2 3)
+
+(doit (lambda ()
+        (raise (make-message-condition "ciao"))))
+@result{} "ciao"
+
+(doit (lambda ()
+        (raise 123)))
+@result{} 123
+@end example
 
 @c page
 @node iklib syntaxes splice1st
@@ -1765,6 +1848,571 @@ Usage examples:
 @end example
 
 @c page
+@node iklib syntaxes infix
+@subsection Infix to prefix transformer
+
+
+@deffn Syntax infix @meta{obj} @dots{}
+The @func{infix} macro converts the traditional infix notation for
+mathematical expressions to the equivalent Scheme's prefix notation.
+@func{infix} expands to a prefix expression to be evaluated at
+run--time, in the lexical context of the macro use; as a special case
+@code{(infix)} is equivalent to @code{(values)}.
+@end deffn
+
+The macro allows us to evaluate forms like:
+
+@example
+(infix atan(1, 2))      @expansion{} (atan 1 2)
+(infix 1 + 2 + 3)       @expansion{} (+ (+ 1 2) 3)
+(infix 1 + 2 * 3)       @expansion{} (+ 1 (* 2 3))
+(infix (1 + 2) * 3)     @expansion{} (* (+ 1 2) 3)
+
+(infix 2 expt 3 expt 4) @expansion{} (expt 2 (expt 3 4))
+(infix 2 ** 3 ** 4)     @expansion{} (expt 2 (expt 3 4))
+
+(infix - 5)             @expansion{} (- 5)
+(infix + 5)             @expansion{} (+ 5)
+(infix 5 !)             @expansion{} (factorial 5)
+
+(infix 1 > 2 ? 3 + 4 : 5 * 6)
+@expansion{} (if (> 1 2) (+ 3 4) (* 5 6))
+
+(define a 1)
+(define b 2)
+(define c 3)
+(infix cos(a) * tan(b) / c)
+@expansion{} (/ (* (cos a) (tan b)) c)
+@end example
+
+@menu
+* iklib syntaxes infix syntax:: Notes on the supported syntax.
+* iklib syntaxes infix prec::   Operators precedence.
+* iklib syntaxes infix notes::  Random notes on the features.
+@end menu
+
+@c page
+@node iklib syntaxes infix syntax
+@subsubsection Notes on the supported syntax
+
+
+Some expression syntax interpretation rules:
+
+@itemize
+@item
+Any Scheme value can be element of the input form; numbers and all the
+other values are just put there as operands.
+
+@example
+#!vicare
+(infix list("ciao", 'hello, '#ve(ascii "salut")))
+@result{} ("ciao" hello #ve(ascii "salut"))
+@end example
+
+@item
+The following bound identifiers exported by @library{vicare} are
+interpreted as binary infix operators:
+
+@example
++ - * / div div0 mod mod0 expt
+fl+ fl- fl* fl/ flexpt
+fx+ fx- fx* fxdiv fxdiv0 fxmod fxmod0
+< > <= >= = !=
+fx<? fx>? fx<=? fx>=? fx=?
+fl<? fl>? fl<=? fl>=? fl=?
+eq? eqv? equal?
+and or xor
+bitwise-and bitwise-ior bitwise-xor
+bitwise-arithmetic-shift-left
+bitwise-arithmetic-shift-right
+fxand fxior fxxor
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+@noindent
+in addition the following identifiers are recognised by their symbol
+name and interpreted as aliases of binary infix operators:
+
+@example
+&&              @expansion{} and
+\x23D0;\x23D0;  @expansion{} or
+\x00AC;         @expansion{} not
+\x2227;         @expansion{} and
+\x2228;         @expansion{} or
+\x22BB;         @expansion{} xor
+==              @expansion{} =
+<>              @expansion{} !=
+\x00D7;         @expansion{} *
+\x22C5;         @expansion{} *
+**              @expansion{} expt
+%               @expansion{} mod
+&               @expansion{} bitwise-and
+\x23D0;         @expansion{} bitwise-ior
+^               @expansion{} bitwise-xor
+<<              @expansion{} bitwise-arithmetic-shift-left
+>>              @expansion{} bitwise-arithmetic-shift-right
+@end example
+
+@noindent
+where the symbols with escape sequences are:
+
+@table @samp
+@item \x00AC;
+Unicode character not sign.
+
+@item \x00D7;
+Unicode character times.
+
+@item \x2227;
+Unicode character logical and.
+
+@item \x2228;
+Unicode character logical or.
+
+@item \x22BB;
+Unicode character xor.
+
+@item \x22C5;
+Unicode character dot operator.
+
+@item \x23D0;
+Unicode character vertical bar extension.
+@end table
+
+@item
+The following bound identifiers exported by @library{vicare} are
+interpreted as unary prefix operators:
+
+@example
++ - ++ --
+fx+ fx- fl+ fl-
+not bitwise-not fxnot
+@end example
+
+@noindent
+in addition the following identifiers are recognised by their symbol
+name and interpreted as aliases of unary prefix operators:
+
+@example
+!       @expansion{} not
+~       @expansion{} bitwise-not
+@end example
+
+@item
+The following bound identifiers exported by @library{vicare} are
+interpreted as unary postfix operators:
+
+@example
+++ --
+@end example
+
+@noindent
+in addition the following identifiers are recognised by their symbol
+name and interpreted as aliases of unary postfix operators:
+
+@example
+!       @expansion{} factorial
+@end example
+
+@item
+Almost all the binary infix operators are left--associative with the
+exception of @func{expt} and @func{flexpt} which are right--associative:
+
+@example
+;; left-associative
+(infix 10 - 5 - 3)              @expansion{} (- (- 10 5) 3)
+(infix 10 - 5 - 3)              @expansion{} (- 10 5 3)
+(infix 10 / 5 / 3)              @expansion{} (/ (/ 10 5) 3)
+(infix 10 / 5 / 3)              @expansion{} (/ 10 5 3)
+
+;; right-associative
+(infix 10 expt 5 expt 3)        @expansion{} (expt 10 (expt 5 3))
+@end example
+
+@item
+The identifiers @func{++} and @func{--} are unary operators that can be
+applied to expressions both in prefix and postfix positions.  They
+expand as follows:
+
+@example
+#!vicare
+(infix ++ X)            @expansion{} (pre-incr! X)
+(infix -- X)            @expansion{} (pre-decr! X)
+(infix X ++)            @expansion{} (post-incr! X)
+(infix X --)            @expansion{} (post-decr! X)
+@end example
+
+@noindent
+where @func{pre-incr!}, @func{pre-decr!}, @func{post-incr!} and
+@func{post-decr!} are the bindings exported by @library{vicare}.
+
+@item
+The ternary conditional operator involves the identifiers @func{?}  and
+@func{:}, which are recognised by their symbol name.
+
+@example
+(infix 1 > 2 ? 3 + 4 : 5 * 6)
+@expansion{} (if (> 1 2) (+ 3 4) (* 5 6))
+@end example
+
+@item
+Identifiers which are not operators are interpreted as variable
+references.
+
+@item
+If an identifier is followed by a left parenthesis: it is interpreted as
+the binding of a procedure in a procedure application.  Procedure
+application requires the arguments to be grouped in a list, using the
+comma as separator.
+
+@example
+(define (fun a b c)
+  (+ a b c))
+
+(infix fun (1, 2, 3))   @expansion{} (fun 1 2 3)
+@end example
+
+@quotation
+@strong{NOTE} The Scheme reader transforms the sequence:
+
+@example
+, @meta{form}
+@end example
+
+@noindent
+into:
+
+@example
+(unsyntax @meta{form})
+@end example
+
+@noindent
+so the list of arguments is:
+
+@example
+( @metai{arg} (unsyntax @meta{arg}) ... )
+@end example
+
+@rnrs{6} does not define the comma to be a delimiter, so writing:
+
+@example
+func (@metai{arg}, @meta{arg}, ...)
+@end example
+
+@noindent
+with no space between the @meta{arg} and the comma is a syntax error in
+strict @rnrs{6} implementations.  @value{PRJNAME} extends the reader to
+handle the comma as a delimiter, so the above expression is valid in the
+@func{infix} syntax.
+@end quotation
+
+@item
+The identifiers @func{quote}, @func{quasiquote}, @func{syntax} and
+@func{quasisyntax} are not subject to infix to prefix conversion; the
+use of such syntaxes just expands to the prefix object:
+
+@example
+(infix (quote       ciao))  @expansion{} (quote ciao)
+(infix (quasiquote  ciao))  @expansion{} (quasiquote ciao)
+(infix (syntax      ciao))  @expansion{} (syntax ciao)
+(infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
+@end example
+
+@item
+Matched left and right round parentheses are used to group
+subexpressions, overriding operators precedence rules.
+@end itemize
+
+@c page
+@node iklib syntaxes infix prec
+@subsubsection Operators precedence
+
+
+To determine sensible precedences for operators, we make the following
+observations:
+
+@itemize
+@item
+Logical operators (@func{and}, @func{or}, @func{not}, @dots{}) are meant
+to be applied to predicate operand expressions and they return a boolean
+value.
+
+@item
+Numeric comparison operators (@func{=}, @func{<}, @func{>}, @dots{}) are
+meant to be applied to numeric operand expressions and they return a
+boolean value.
+
+@item
+Arithmetic operators (@func{+}, @func{-}, @func{*}, @func{/}, @dots{})
+are meant to be applied to numeric operand expressions and they return a
+numeric value.
+
+@item
+The C language has established a tradition of writing expressions
+containing bitwise operators @code{1 & 2 + ~ 3} meaning @code{(1 & 2) +
+(~ 3)}, in which bitwise operators take precedence over every other
+operator.
+
+@item
+It makes sense to write expressions like @code{1 < i and i < 4} meaning
+@code{(1 < i) and (i < 4)}, because it makes no sense to interpret it as
+@code{1 < (i and i) < 4}.
+
+@item
+It makes sense to write expressions like @code{1 + 2 < 3 + 4} meaning
+@code{(1 + 2) < (3 + 4)}, because it makes no sense to interpret it as
+@code{1 + (2 < 3) + 4}.
+@end itemize
+
+So @value{PRJNAME} defines operators precedence as follows, from high
+precedence to low precedence:
+
+@enumerate
+@item
+Procedure application: the left parenthesis preceeded by an identifier
+starts a procedure application.
+
+@item
+Binary infix bitwise shift operators:
+
+@example
+bitwise-arithmetic-shift-left
+bitwise-arithmetic-shift-right
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+@item
+Unary prefix bitwise operators:
+
+@example
+bitwise-not fxnot
+@end example
+
+@item
+Binary infix bitwise operators:
+
+@example
+bitwise-and bitwise-ior bitwise-xor
+fxand fxior fxxor
+@end example
+
+@item
+Unary prefix arithmetic operators:
+
+@example
++ - ++ -- fx+ fx- fl+ fl-
+@end example
+
+@item
+Unary postfix arithmetic operators:
+
+@example
+++ -- !
+@end example
+
+@item
+Binary infix arithmetic exponentiation operators:
+
+@example
+expt flexpt
+@end example
+
+@item
+Binary infix arithmetic modulo operators:
+
+@example
+mod mod0 fxmod fxmod0
+@end example
+
+@item
+Binary infix multiplication and division arithmetic operators:
+
+@example
+* / div div0 fl* fl/ fx* fxdiv fxdiv0
+@end example
+
+@item
+Binary infix addition and subtraction arithmetic operators:
+
+@example
++ - fl+ fl- fx+ fx-
+@end example
+
+@item
+Comparison operators:
+
+@example
+< > <= >= = !=
+fx<? fx>? fx<=? fx>=? fx=?
+fl<? fl>? fl<=? fl>=? fl=?
+eq? eqv? equal?
+@end example
+
+@item
+Unary prefix logical operators:
+
+@example
+not
+@end example
+
+@item
+Binary infix logical operators:
+
+@example
+and or xor
+@end example
+
+@item
+Ternary conditional operator @code{@dots{} ? @dots{} : @dots{}}.
+
+@item
+Procedure application arguments separator, which is the comma.
+@end enumerate
+
+Here some expansion examples:
+
+@example
+(infix ! 2 + 3)         @expansion{} (not (2 + 3))
+(infix (! 2) + 3)       @error{} expected numeric argument
+
+(infix fxnot 3)         @result{} -3
+(infix fxnot 3 + 10)    @result{} 7
+
+(infix ! cos(3))        @expansion{} (not (cos 3))
+@end example
+
+@c page
+@node iklib syntaxes infix notes
+@subsubsection Random notes on the features
+
+
+@subsubheading About the exponentiation and bitwise XOR operators
+
+The @func{infix} macro uses @samp{**} as exponentiation operator and
+@samp{^} as bitwise XOR operator; this is controversial because a lot of
+people, especially LaTeX users, is used to think of @samp{^} as
+exponentiation operator.  The C language has established a tradition to
+interpret @samp{^} as bitwise exclusive OR operator, and the Python
+language has adopted it; @value{PRJNAME} sticks to it, too.
+
+@subsubheading About the vertical bar
+
+The C language has established a tradition of interpreting the single
+vertical bar @samp{|} as bitwise inclusive OR operator and the double
+vertical bar as @samp{||} as logical inclusive OR operator.
+
+In the @rnrs{6} Scheme language the vertical bar is used in the block
+comments delimiters @samp{#| @dots{} |#}.  @value{PRJNAME}'s source code
+reader uses the vertical bar to specify symbols whose name does not
+comply with @rnrs{6}, @ref{iklib reader stx, Miscellaneous additional
+syntaxes}.  Some text editors for software programmers handle the
+vertical bar specially in Scheme mode, in particular for syntax
+highlighting.
+
+It would be possible to extend @value{PRJNAME}'s reader to allow
+@samp{|} and @samp{||} to be symbols, but, at present, this confuses
+some text editors in a way that is not easy to fix.  So, for now, rather
+than the vertical bar, @func{infix} recognises the Unicode character
+vertical bar extension (@samp{\x23D0;}) as bitwise inclusive OR and the
+double vertical bar extension as logical inclusive OR.
+
+@c page
+@node iklib syntaxes increments
+@subsection Incrementing and decrementing
+
+
+@deffn Syntax {++} @meta{expr}
+@deffnx Syntax {++} @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+#!vicare
+(++ @meta{id} @meta{step})
+@expansion{} (begin
+      (set! @meta{id} (+ @meta{id} @meta{step}))
+      @meta{id})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-incr! @meta{expr}
+@deffnx Syntax pre-incr! @meta{expr} @meta{step}
+Alias for @func{++}.
+@end deffn
+
+
+@deffn Syntax post-incr! @meta{expr}
+@deffnx Syntax post-incr! @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(post-incr! @meta{id} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{id}
+      (set! @meta{id} (+ @meta{id} @meta{step})))
+@end example
+@end deffn
+
+
+@deffn Syntax @code{--} @meta{expr}
+@deffnx Syntax @code{--} @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+#!vicare
+(-- @meta{id} @meta{step})
+@expansion{} (begin
+      (set! @meta{id} (- @meta{id} @meta{step}))
+      @meta{id})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-decr! @meta{expr}
+@deffnx Syntax pre-decr! @meta{expr} @meta{step}
+Alias for @func{--}.
+@end deffn
+
+
+@deffn Syntax post-decr! @meta{expr}
+@deffnx Syntax post-decr! @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(post-decr! @meta{id} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{id}
+      (set! @meta{id} (- @meta{id} @meta{step})))
+@end example
+@end deffn
+
+@c page
 @node iklib syntaxes misc
 @subsection Miscellaneous syntaxes
 
@@ -1789,6 +2437,38 @@ object.  It is meant to be used as follows:
       ((__who__ (identifier-syntax (quote func))))
     ---))
 @end example
+@end deffn
+
+
+@deffn {Identifier Syntax} __file__
+Expand to a quoted string representing the source code location, for
+example the source file pathname.
+@end deffn
+
+
+@deffn {Identifier Syntax} __line__
+Expand to @false{} or a number representing the line number.
+@end deffn
+
+
+@deffn {Fluid Syntax} brace
+A fluid syntax which is free to be bound to whatever user code needs.
+When the Scheme code reader is in @code{#!vicare} mode: brace lists are
+read as @func{brace} forms as follows:
+
+@example
+@{@}              @expansion{} (brace)
+@{1 2 3@}         @expansion{} (brace 1 2 3)
+@{1 . 2@}         @expansion{} (brace 1 . 2)
+@end example
+@end deffn
+
+
+@deffn {Fluid Syntax} {<>}
+A fluid syntax which is free to be bound to whatever user code needs.
+It is meant to be a placeholder for some expression defined by the local
+context; for example: it is used by the syntaxes @func{is-a?},
+@func{slot-ref} and @func{slot-set!}.
 @end deffn
 
 
@@ -1998,140 +2678,6 @@ and for one bound by @func{let}:
 @end example
 
 @c page
-@node iklib syntaxes unsafe
-@subsection Unsafe binding variants
-
-
-With the function @func{set-identifier-unsafe-variant!} and the syntax
-@func{unsafe} we allow the user to select an unsafe variant of a
-function or (why not?)  macro.
-
-The unsafe variant of a function is a function that (loosely speaking)
-neither validates its arguments nor its return value.  As example, the
-function:
-
-@example
-(import (vicare)
-  (vicare system $chars)
-  (vicare system $strings))
-
-(define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
-  ($char->fixnum ($string-ref str idx)))
-@end example
-
-@noindent
-can be split into:
-
-@example
-(define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
-  ($string-ref-fx str idx))
-
-(define ($string-ref-fx str idx)
-  ($char->fixnum ($string-ref str idx)))
-@end example
-
-@noindent
-where @func{$string-ref-fx} is the unsafe variant of
-@func{string-ref-fx}; the unsafe variants @api{} allows us to register
-this fact, for use by the expander, as follows:
-
-@example
-(begin-for-syntax
-  (set-identifier-unsafe-variant! #'string-ref-fx
-    #'$string-ref-fx))
-@end example
-
-@noindent
-so, having imported the binding @func{string-ref-fx} in the current
-lexical contour, we can use its unsafe variant as follows:
-
-@example
-((unsafe string-ref-fx) "ciao" 2)
-@end example
-
-@noindent
-without actually importing the binding @func{$string-ref-fx}.
-
-To select an unsafe syntax variant we could do:
-
-@example
-(import (vicare)
-  (vicare system $fx))
-
-(define-syntax (safe stx)
-  (syntax-case stx ()
-    ((_ ?a ?b)
-     #'(fx+ ?a ?b))))
-
-(define-syntax ($safe stx)
-  (syntax-case stx ()
-    ((_ ?a ?b)
-     #'($fx+ ?a ?b))))
-
-(begin-for-syntax
-  (set-identifier-unsafe-variant! #'safe #'$safe))
-@end example
-
-When specifying the unsafe variant of a function we should build an
-expression evaluating to a proper function, so that it can be used in
-both the expressions:
-
-@example
-((unsafe fx+) 1 2)
-(map (unsafe fx+) '(1 2) '(3 4))
-@end example
-
-@noindent
-so for @func{fx+} we should do:
-
-@example
-(import (vicare)
-  (vicare system $fx))
-
-(begin-for-syntax
-  (set-identifier-unsafe-variant! #'fx+
-    #'(lambda (a b)
-        ($fx+ a b))))
-@end example
-
-@noindent
-because the unsafe binding @func{$fx+} is not a function, rather it is a
-primitive operation@footnote{When the compiler finds an expression
-like:
-
-@example
-((lambda (a b) ($fx+ a b)) 1 2)
-@end example
-
-@noindent
-it transforms it to:
-
-@example
-(let ((a 1) (b 2)) ($fx+ a b))
-@end example
-
-@noindent
-where @func{let} is a core language form, not the binding exported by
-@library{vicare}; so we do not have to worry about using a @func{lambda}
-form to define an unsafe variant: it will not lead to the definition of
-redundant closure objects.}.
-
-
-@defun set-identifier-unsafe-variant! @meta{safe-id} @meta{unsafe-stx}
-Specify that the unsafe variant of the binding for the identifier
-@meta{safe-id} is the expression in the syntax object @meta{unsafe-stx}.
-@meta{unsafe-expr} is stored as syntax object and it is expanded and
-evaluated at each use of the unsafe variant.
-@end defun
-
-
-@deffn Syntax unsafe @meta{safe-id}
-Expand into an expression representing the unsafe variant of the binding
-@meta{safe-id}.  If no unsafe variant is available: raise a continuable
-@condition{warning} exception, then expand to @meta{safe-id} itself.
-@end deffn
-
-@c page
 @node iklib syntaxes predaux
 @subsection Predicate auxiliary functions
 
@@ -2232,6 +2778,178 @@ evaluated at each use of the validation function.
 Expand into an expression representing the return value validation
 function associated to the predicate @meta{pred-id}.  If no validation
 function is available: raise a syntax violation.
+@end deffn
+
+@c page
+@node iklib syntaxes type-of
+@subsection Determining the type of expressions
+
+
+@deffn Syntax type-of @meta{expr}
+This syntax is for interactive use only.  Fully expand the given
+expression in the current lexical environment and return a structure of
+type @objtype{retvals-signature} representing the types of the tuple of
+returned values.  The expression is @strong{not} evaluated, only
+expanded; this means that the expansion side effects are performed.
+
+Example session at the @repl{}:
+
+@example
+vicare> (type-of (values))
+$1 = #["retvals-signature" ()]
+
+vicare> (type-of (values 1 2))
+$1 = #["retvals-signature" (#'<fixnum> #'<fixnum>)]
+
+vicare> (type-of 123)
+$1 = #["retvals-signature" (#'<fixnum>)]
+
+vicare> (type-of ((lambda (@{_ symbol@}) 'ciao)))
+$1 = #["retvals-signature" (#'<symbol>)]
+@end example
+@end deffn
+
+
+@defun print-identifier-info @var{id}
+Given an identifier object: print on the current error port a report on
+its properties as identifier; return unspecified values.
+@end defun
+
+@c page
+@node iklib syntaxes expansion-of
+@subsection Inspecting expansion results
+
+
+@deffn Syntax expansion-of @meta{expr}
+This syntax is mostly for interactive use.  Fully expand the given
+expression in the current lexical environment and return a symbolic
+expression representing the resulting invoke code.  The expression is
+@strong{not} evaluated, only expanded; this means that the expansion
+side effects are performed.
+
+As a special case if @meta{expr} is recognised as a @func{define} or
+@func{define*} syntax use:
+
+@example
+(define  . @meta{stuff})
+(define* . @meta{stuff})
+@end example
+
+@noindent
+the expansion will be performed as if @meta{expr} is:
+
+@example
+(internal-body (define  . @meta{stuff}) (void))
+(internal-body (define* . @meta{stuff}) (void))
+@end example
+
+@noindent
+and the definition extracted from the result and reformatted.
+
+Example session at the @repl{}:
+
+@example
+vicare> (import (vicare expander tags))
+vicare> (print-gensym #f)
+
+vicare> (expansion-of (+ 1 2))
+$1 = ((primitive +) (quote 1) (quote 2))
+
+vicare> (expansion-of (lambda (a b) (+ a b)))
+$1 = (lambda (a b) ((primitive +) a b))
+
+vicare> (internal-body
+          (define-syntax (doit stx)
+            (syntax-case stx ()
+              ((_ ?a ?b)
+               #'(vector ?a ?b))))
+          (expansion-of (doit 1 2)))
+$1 = ((primitive vector) (quote 1) (quote 2))
+
+vicare> (internal-body
+          (define-struct alpha
+            (a b c))
+          (define O
+            (alpha (1 2 3)))
+          (expansion-of (slot-ref O a)))
+$1 = (alpha-a O)
+
+vicare> (expansion-of (define (fun a) (+ 1 a)))
+$1 = (define fun (lambda (a) ((primitive +) (quote 1) a)))
+@end example
+@end deffn
+
+
+@deffn Syntax visit-code-of @meta{macro-id}
+This syntax is mostly for interactive use.  Given the identifier of a
+locally defined macro keyword: expand into a quoted symbolic expression
+representing the expanded macro transformer.
+
+Example session at the @repl{}:
+
+@example
+vicare> (print-gensym #f)
+vicare> (define-syntax syn (lambda (stx) #'(void)))
+vicare> (visit-code-of syn)
+$1 = (lambda (stx) #<syntax expr=(void))
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes optim-of
+@subsection Inspecting optimisation results
+
+
+@deffn Syntax optimisation-of @meta{expr}
+This syntax is mostly for interactive use.  Fully expand the given
+expression in the current lexical environment and apply the compiler's
+optimisator to the resulting core language expression; return a symbolic
+expression representing the resulting invoke code.  The expression is
+@strong{not} evaluated, only expanded and optimised; this means that the
+expansion side effects are performed.
+
+@quotation
+@strong{NOTE} Only expressions are expanded and optimised.  It makes no
+sense to give a standalone @func{define} syntax to this macro; when a
+standalone function definition is expanded and optimised: the function
+is never called, so it is removed.
+@end quotation
+
+Example session at the @repl{}:
+
+@example
+vicare> (print-gensym #f)
+
+vicare> (optimisation-of (+ 1 2))
+$1 = 3
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes assembly-of
+@subsection Inspecting assembly language results
+
+
+@deffn Syntax assembly-of @meta{expr}
+This syntax is mostly for interactive use.  Fully expand the given
+expression in the current lexical environment and apply the compiler's
+passes to the resulting core language expression as if to produce a code
+object; return a list of sublists, each sublist representing assembly
+language instructions for a code object.  The expression is @strong{not}
+evaluated, only expanded and compiled to assembly; this means that the
+expansion side effects are performed.
+
+@quotation
+@strong{NOTE} Only expressions are expanded and compiled.  It makes no
+sense to give a standalone @func{define} syntax to this macro; when a
+standalone function definition is expanded and optimised: the function
+is never called, so it is removed.
+@end quotation
+
+@quotation
+@strong{NOTE} At present the return value of this macro is not very
+human friendly; some preprocessing and a specialised printer are needed.
+@end quotation
 @end deffn
 
 @c page
@@ -2733,6 +3451,12 @@ End--of--file marker, @code{#!eof}.
 Would--block object, @code{#!would-block}.
 
 @item
+Unbound object, @code{#!unbound}.
+
+@item
+@acronym{BWP} object, @code{#!bwp}.
+
+@item
 Gensym syntax, @code{#@{gensym@}}.
 
 @item
@@ -2742,8 +3466,15 @@ Shared structures graph notation: @code{#nn=}, @code{#nn#}.
 Special symbols: @code{++}, @code{--}.
 
 @item
+Special symbol @code{|}, which is a standalone vertical bar.
+
+@item
 Special symbols beginning with @code{+g} and @code{-g}, to allow reading
 symbols starting with @code{+greek-pi} and @code{-greek-pi}.
+
+@item
+Brace lists @code{@{ ... @}} are read as @code{(brace ...)}, @ref{iklib
+syntaxes misc, brace}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,
@@ -2987,7 +3718,7 @@ set to @code{vicare}.
 
 
 @deffn {Reader Syntax} {|@var{symbol}|}
-The vertical bars can be used to specify symbols whose name do not
+The vertical bars can be used to specify symbols whose name does not
 comply with the @rnrs{6} specifications; this syntax is available only
 when the port mode is @code{#!vicare}.  Examples:
 
@@ -3095,7 +3826,7 @@ reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
 the file.
 
 @example
-(import (ikarus))
+(import (vicare))
 <some code>
 (display "goodbye\n")
 
@@ -3236,7 +3967,7 @@ Return @true{} if @var{stx} is a syntax object, else return @false{}.
 
 @defun syntax-object-expression @var{stx}
 @defunx syntax-object-marks @var{stx}
-@defunx syntax-object-substs @var{stx}
+@defunx syntax-object-ribs @var{stx}
 @defunx syntax-object-source-objects @var{stx}
 Field accessors for the syntax object structure type, to be used for
 debugging purposes.
@@ -3291,7 +4022,7 @@ assertion violation.
 
 @defun expand-library @var{sexp}
 @defunx expand-library @var{sexp} @var{filename}
-@defunx expand-library @var{sexp} @var{filename} @var{verify-name}
+@defunx expand-library @var{sexp} @var{filename} @var{verify-libname}
 Expand the symbolic expression @var{sexp} representing a library and
 register the result in the internal library manager.  @var{sexp} must be
 a symbolic expression @code{(library . ---)}.
@@ -3300,56 +4031,30 @@ The optional @var{filename} must be @false{} or a string representing
 the source file from which the library was loaded; it is used for
 information purposes.  When not given defaults to @false{}.
 
-The optional @var{verify-name} must be a procedure accepting @math{2}
-arguments and returning unspecified values: the first argument is a list
-of symbols from a library name; the second argument is null or a list of
-exact integers representing the library version.  @var{verify-name} is
-meant to perform some validation upon the library name components and
+The optional argument @var{verify-libname} must be a procedure accepting
+a @rnrs{6} library name as argument and returning unspecified values; it
+is meant to perform some validation upon the library name components and
 raise an exception if something is wrong; otherwise it should just
 return.
 
-Return @math{13} values:
+Return @math{12} values:
 
 @table @var
 @item uid
 A gensym uniquely identifying this library.
 
-@item libname.ids
-A list of symbols representing the library name.  For the library:
+@item libname
+A @rnrs{6} library name.
 
-@example
-(library (c i a o)
-  (export A)
-  (import (rnrs))
-  (define A 123))
-@end example
-
-@noindent
-@code{libname.ids} is the list @code{(c i a o)}.
-
-@item LIBNAME.VER
-A list of exact integers representing the library version.  For the
-library:
-
-@example
-(library (ciao (1 2))
-  (export A)
-  (import (rnrs))
-  (define A 123))
-@end example
-
-@noindent
-@code{libname.ver} is the list @code{(1 2)}.
-
-@item import-desc*
+@item import-libdesc*
 A list of library descriptors representing the libraries that need to be
 imported for the invoke code.
 
-@item visit-desc*
+@item visit-libdesc*
 A list of library descriptors representing the libraries that need to be
 imported for the visit code.
 
-@item invoke-desc*
+@item invoke-libdesc*
 A list of library descriptors representing the libraries that need to be
 invoked to make available the values of the imported variables.
 
@@ -3372,7 +4077,7 @@ A list representing the bindings exported by the library.
 A predicate expression in the core language representing the
 @func{stale-when} tests from the body of the library.
 
-@item guard-desc*
+@item guard-libdesc*
 A list of library descriptors representing the libraries that need to be
 invoked for the @func{stale-when} code.
 
@@ -3389,12 +4094,11 @@ This function is for debugging purposes.  Expand the library form
 alist with the following symbols as keys:
 
 @example
-uid
-libname.ids libname.version
-import-desc* visit-desc* invoke-desc*
+uid libname
+import-libdesc* visit-libdesc* invoke-libdesc*
 invoke-code visit-code
 export-subst export-env
-guard-code guard-desc*
+guard-code guard-libdesc*
 option*
 @end example
 @end defun
@@ -3970,18 +4674,52 @@ Here is an example of module exporting a binding with @func{export}:
 @subsection Fluid syntaxes
 
 
+Fluid syntaxes are macro bindings that can be temporarily redefined
+while expanding a sequence of forms:
+
+@example
+(import (vicare))
+
+(define-fluid-syntax ciao
+  (identifier-syntax "ciao"))
+
+ciao    @result{} "ciao"
+
+(fluid-let-syntax ((ciao (identifier-syntax "hello")))
+  ciao) @result{} "hello"
+
+(fluid-let-syntax ((ciao (identifier-syntax "ohayo")))
+  ciao) @result{} "ohayo"
+
+ciao    @result{} "ciao"
+@end example
+
+
 @deffn Syntax define-fluid-syntax @meta{keyword} @meta{expr}
 Like @func{define-syntax} define a new syntax binding the transformer to
 @meta{keyword}, but mark @meta{keyword} as fluid so that later it can be
-rebound by @func{fluid-let-syntax}.
+rebound by @func{fluid-let-syntax} or @func{define-fluid-override}.
 @end deffn
 
 
 @deffn Syntax fluid-let-syntax ((@meta{keyword} @meta{expr}) ...) @metao{body} @meta{body}
-Similar to @func{let-syntax}, but rather than defining new
-@meta{keyword} bindings, rebind temporarily rebind the keywords to new
-transformers while expanding the body forms.  The given @meta{keyword}
-must be already bound to fluid syntaxes defined by
+Similar, but not equal, to @func{let-syntax}; rather than defining new
+@meta{keyword} bindings, temporarily rebind the keywords to new
+transformers while expanding the @meta{body} forms.  The given
+@meta{keyword} must be already bound to fluid syntaxes defined by
+@func{define-fluid-syntax}.
+
+There are two differences between @func{fluid-let-syntax} and
+@func{let-syntax}: @func{fluid-let-syntax} must appear in expression
+context only; the internal @meta{body} forms are @strong{not} spliced in
+the enclosing body.
+@end deffn
+
+
+@deffn Syntax define-fluid-override @meta{keyword} @meta{expr}
+Temporarily rebind the @meta{keyword} to a new transformer while
+expanding the body forms in which this syntax is used.  The given
+@meta{keyword} must be already bound to a fluid syntaxe defined by
 @func{define-fluid-syntax}.
 @end deffn
 
@@ -4027,6 +4765,51 @@ a string error message and the optional second argument being a subform;
 @c page
 @node iklib expander utils id
 @subsubsection Identifiers processing: generic functions
+
+
+@defun identifier-bound? @var{id}
+Return @true{} if the identifier @var{id} is lexically bound; otherwise
+return @false{}.
+
+@example
+(import (vicare))
+
+(identifier-bound? #'woppa-woppa-woppa)
+@result{} #f
+
+(let ((ciao 123))
+  (define-syntax (doit stx)
+    (identifier-bound? #'ciao))
+  (doit))
+@result{} #t
+
+(let ((ciao 123))
+  (define-syntax (doit stx)
+    (syntax-case stx ()
+      ((_ ?id)
+       (identifier-bound? #'?id))))
+  (doit ciao))
+@result{} #t
+
+(let ()
+  (define ciao 123)
+  (define-syntax (doit stx)
+    (syntax-case stx ()
+      ((_ ?id)
+       (identifier-bound? #'?id))))
+  (doit ciao))
+@result{} #t
+
+(let ()
+  (let-syntax ((ciao (identifier-syntax 123)))
+    (define-syntax (doit stx)
+      (syntax-case stx ()
+        ((_ ?id)
+         (identifier-bound? #'?id))))
+    (doit ciao)))
+@result{} #t
+@end example
+@end defun
 
 
 @defun identifier->string @var{id}
@@ -5564,9 +6347,18 @@ optionally applied to the field values to print them.
 
 
 @defun default-struct-printer @var{stru}
-The default struct printer function.  It can be used as @var{printer}
-argument in calls to @func{set-rtd-printer!}.
+The default struct printer function; the string produced by this printer
+is configured with the parameter @func{default-struct-printer-details}.
+It can be used as @var{printer} argument in calls to
+@func{set-rtd-printer!}.
 @end defun
+
+
+@deffn Parameter default-struct-printer-details
+When set to true: @func{default-struct-printer} will produce a detailed
+description of the structure; otherwise only minimum informations are
+included.  This parameter is inisialised to @false{}.
+@end deffn
 
 @c ------------------------------------------------------------
 
@@ -6301,15 +7093,21 @@ Convert between a symbol and a keyword.
 @end defun
 
 
+@defun keyword->string @var{keyword}
+Return the string representation of a keyword.
+@end defun
+
+
 @defun keyword? @var{obj}
 Return @true{} if @var{obj} is a keyword object, else return @false{}.
 @end defun
 
 
 @defun keyword=? @vari{keyword} @varii{keyword}
-Return @true{} if both @vari{keyword} and @varii{keyword} are keyword
-objects and they are equal.  A keyword object is equal to itself; two
-distinct keyword objects are equal if they have the same symbol.
+The arguments @vari{keyword} and @varii{keyword} must be keyword
+objects, otherwise an exception is raised.  Return @true{} if the
+arguments are equal.  A keyword object is equal to itself; two distinct
+keyword objects are equal if they have the same symbol.
 @end defun
 
 
@@ -6352,10 +7150,15 @@ Return true if @var{obj} is a weak pair.
 @end defun
 
 
-@defun bwp-obejct? @var{obj}
+@defun bwp-object
+Return the @acronym{BWP} object.  @acronym{BWP} stands for ``broken weak
+pointer''.
+@end defun
+
+
+@defun bwp-object? @var{obj}
 Return true if @var{obj} is a weak reference to a value which has been
-already garbage collected (@samp{bwp} stands for ``broken weak
-pointer'').  Example:
+already garbage collected.  Example:
 
 @example
 vicare> (define x (weak-cons (cons 1 2) #f))
@@ -6467,6 +7270,34 @@ Return the last pair in the non--empty, finite list @var{pair}.
 @defun for-each-in-order @var{proc} @varo{list} @var{list} ...
 Like @func{for-each} from @rsixlibrary{base} but guarantees that
 @var{proc} is applied starting from the head of the lists.
+@end defun
+
+
+@defun map1 @var{proc} @var{ell}
+Like @func{map} from @rsixlibrary{lists} for a single list argument, but
+it is meant to be faster.  It does not check for circular list; it
+processes the input list from head to tail (in order).
+@end defun
+
+
+@defun for-each1 @var{proc} @var{ell}
+Like @func{for-each} from @rsixlibrary{lists} for a single list
+argument, but it is meant to be faster.  It does not check for circular
+list; it processes the input list from head to tail (in order).
+@end defun
+
+
+@defun for-all1 @var{proc} @var{ell}
+Like @func{for-all} from @rsixlibrary{lists} for a single list argument,
+but it is meant to be faster.  It does not check for circular list; it
+processes the input list from head to tail (in order).
+@end defun
+
+
+@defun exists1 @var{proc} @var{ell}
+Like @func{exists} from @rsixlibrary{lists} for a single list argument,
+but it is meant to be faster.  It does not check for circular list; it
+processes the input list from head to tail (in order).
 @end defun
 
 @c page
@@ -7140,7 +7971,9 @@ returns @false{}.
 @menu
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
-* iklib symbols system::        System values.
+* iklib symbols values::        System values bound to symbols.
+* iklib symbols labels::        Retrieving syntactic binding labels.
+* iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
 
 @c page
@@ -7177,8 +8010,7 @@ When the symbol is a fresh symbol returned by a call to @func{gensym}:
 we can use @code{value} for any purpose we want.
 @end itemize
 
-The following bindings are exported by the @library{ikarus} and the
-@library{ikarus symbols} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun set-symbol-value! @var{sym} @var{value}
@@ -7197,6 +8029,16 @@ Return true if @var{sym} is a symbol and its @code{value} field is
 value.
 @end defun
 
+
+@defun unbound-object
+Return the unbound object.
+@end defun
+
+
+@defun unbound-object? @var{obj}
+Return @true{} if @var{obj} is the unbound object.
+@end defun
+
 @c page
 @node iklib symbols plists
 @subsection Property lists
@@ -7207,7 +8049,7 @@ Scheme symbol.
 
 @example
 #!ikarus
-(import (ikarus))
+(import (vicare))
 
 (putprop 'ciao 'british 'hello)
 (putprop 'ciao 'spanish 'hola)
@@ -7221,8 +8063,7 @@ Scheme symbol.
 (property-list 'ciao)           @result{} ((spanish . hola))
 @end example
 
-The following bindings are exported by the @library{ikarus} and the
-@library{ikarus symbols} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun putprop @var{symbol} @var{key} @var{value}
@@ -7253,8 +8094,8 @@ creation order.
 @end defun
 
 @c page
-@node iklib symbols system
-@subsection System values
+@node iklib symbols values
+@subsection System values bound to symbols
 
 
 Every core primitive value has a name that is considered part of
@@ -7265,17 +8106,16 @@ record--type descriptor @code{&condition-rtd} is the symbol
 @code{&condition-rtd}.
 
 The property list of the name contains a special entry whose value is
-the storage location gensym of the core primitive value; we can easily
-inspect such situation as follows:
+the @dfn{storage location gensym} (``loc'' for short) of the core
+primitive value; we can easily inspect such situation as follows:
 
 @example
-(import (vicare)
-  (only (vicare system $symbols)
-        system-value-gensym))
+(import (vicare))
 
 (getprop 'display system-value-gensym)
 @result{} loc.display
 
+;; extract the procedure from the loc
 (symbol-value (getprop 'display system-value-gensym))
 @result{} #<procedure display>
 
@@ -7288,8 +8128,7 @@ inspect such situation as follows:
 
 We see that the property list contains an entry with key set to the
 symbol bound to @code{system-value-gensym}; notice that this key is
-different every time we rebuild the boot image; @ref{syslib symbols,
-system-value-gensym}.
+different every time we rebuild the boot image.
 
 
 @defun system-value @var{symbol}
@@ -7298,13 +8137,119 @@ Attempt to extract from @var{symbol} the core primitive value of which
 raise an assertion violation.
 @end defun
 
+
+@defvr Constant system-value-gensym
+A special gensym used internally to map core primitive names to their
+value.
+@end defvr
+
+@c page
+@node iklib symbols labels
+@subsection Retrieving syntactic binding labels
+
+
+Every core primitive value has a name that is considered part of
+Vicare's core language; such primitive name is the actual public name of
+the binding exported by the boot image.  The name of the function
+@func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+Every core primitive syntactic binding has a unique @dfn{label} gensym
+associated to it; the label is used to map identifiers bound to core
+primitives to syntactic binding decriptors in the lexical environment.
+
+The property list of the name contains a special entry whose value is
+the label gensym of the core primitive syntactic binding; we can easily
+inspect such situation as follows:
+
+@example
+(import (vicare))
+
+(getprop 'display system-label-gensym)
+@result{} lab.display
+
+;; extract the lexical environment entry describing DISPLAY
+(symbol-value (getprop 'display system-label-gensym))
+@result{} (core-prim . display)
+
+(system-label 'display)
+@result{} lab.display
+@end example
+
+We see that the property list contains an entry with key set to the
+symbol bound to @code{system-label-gensym}; notice that this key is
+different every time we rebuild the boot image.
+
+
+@defun system-label @var{symbol}
+Attempt to extract from @var{symbol} the core primitive syntactic
+binding label of which @var{symbol} is the name; if successful return
+the label, else return @false{}.
+@end defun
+
+
+@defvr Constant system-label-gensym
+A special gensym used internally to map core primitive names to their
+syntactic binding label gensym.
+@end defvr
+
+@c page
+@node iklib symbols identifiers
+@subsection Retrieving syntactic binding identifiers
+
+
+Every core primitive binding has a name that is considered part of
+Vicare's core language; such primitive name is the actual public name of
+the binding exported by the boot image.  The name of the function
+@func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+Some internal operations generate an identifier bound to the primitive
+and store it in the property list of the public primitive name; we can
+easily inspect such situation as follows:
+
+@example
+(import (vicare))
+
+(getprop 'procedure? system-id-gensym)
+@result{} #<syntax expr=procedure? ...>
+
+(system-id 'procedure?)
+@result{} #<syntax expr=procedure? ...>
+@end example
+
+We see that the property list contains an entry with key set to the
+symbol bound to @code{system-id-gensym}; notice that this key is
+different every time we rebuild the boot image.
+
+
+@defun system-id @var{symbol}
+Attempt to extract from @var{symbol} the bound identifier of which
+@var{symbol} is the name; if successful return the label, else return
+@false{}.
+@end defun
+
+
+@defvr Constant system-id-gensym
+A special gensym used internally to map core primitive names to their
+syntactic binding identifiers.
+@end defvr
+
 @c page
 @node iklib fixnums
 @section Additional functions on fixnums
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun fx!=? @vari{fx} @varii{fx}
+@defunx fx!= @vari{fx} @varii{fx}
+Return @true{} if the arguments are different; otherwise return
+@false{}.  The arguments must be fixnums.
+@end defun
 
 
 @defun fxadd1 @var{fx}
@@ -7348,8 +8293,7 @@ non--negative; else return @false{}.
 @section Additional functions on flonums
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 @c ------------------------------------------------------------
 
@@ -7479,6 +8423,7 @@ representing the mantissa's @math{53} bits.
 
 @menu
 * iklib numerics constants::    Numeric constants.
+* iklib numerics compar::       Additional comparison functions.
 * iklib numerics preds::        Additional numeric predicates.
 * iklib numerics bignums::      Additional bignum functions.
 * iklib numerics math::         Additional math functions.
@@ -7574,14 +8519,27 @@ Evaluate to a constant flonum object representing plus or minus pi
 multiplied by @math{3/4}.
 @end deffn
 
+@c page
+@node iklib numerics compar
+@subsection Additional comparison functions
+
+
+@defun != @vari{Z} @varii{Z} @variii{Z} @dots{}
+Return @true{} if all the arguments are equal, otherwise return
+@false{}; all the arguments must be numbers according to
+@func{number?}.  This function is equivalent to:
+
+@example
+(not (= @vari{Z} @varii{Z} @variii{Z} ...))
+@end example
+@end defun
 
 @c page
 @node iklib numerics preds
 @subsection Additional numeric predicates
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun bignum? @var{obj}
@@ -7690,8 +8648,7 @@ Return the greatest negative bignum.
 @subsection Additional math functions
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 @c ------------------------------------------------------------
 
@@ -7783,6 +8740,12 @@ Return a fixnum representing the sign of the numerator of @var{rn}:
 @end table
 @end defun
 
+
+@defun factorial @var{I}
+Return the factorial of the non--negative integer @var{I} (which can be
+exact or inexact).
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Hyperbolic functions
@@ -7818,8 +8781,7 @@ Return the complex conjugate of the number object @var{num}.
 @subsection Additional bitwise functions
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun sra @var{integer} @var{offset}
@@ -7836,8 +8798,7 @@ An alias for @func{bitwise-arithmetic-shift-left}.
 @section Additional functions on enumerations
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun enum-set? @var{obj}
@@ -9184,8 +10145,8 @@ Return the garbage collection bytes major field of @var{stats}.
 
 @defun collect
 Run the garbage collector.  If post--garbage collection hooks are
-registered, they are run.  This binding is exported by the
-@library{ikarus} library.
+registered, they are run.  This binding is exported by the library
+@library{vicare}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -9276,7 +10237,7 @@ Reset to empty the list of objects registered to avoid collection with
 @cindex Finalisers, objects and guardians
 
 
-Guardians are available in the @library{ikarus} library; quoting
+Guardians are available in the @library{vicare} library; quoting
 @bibref{DYBGUA}:
 
 @quotation
@@ -9308,7 +10269,7 @@ If we use the blocks synchronously with the evaluation of forms, we do
 @func{dynamic-wind} is fine):
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define (do-something-with . args)
@@ -9331,7 +10292,7 @@ If we use the blocks synchronously with the evaluation of forms, we do
 and we can define a syntax for it:
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define (do-something-with . args)
@@ -9367,7 +10328,7 @@ store the pointer value that references a block in a thunk (a closure
 that takes no arguments):
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define *event-source* '())
@@ -9413,7 +10374,7 @@ The following script shows the usage of a guardian to free a memory
 block:
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define g (make-guardian))
@@ -9438,7 +10399,7 @@ into the guardian, and then periodically enqueue as event a call to the
 guardian:
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 ;; Event source handling.
@@ -9606,8 +10567,14 @@ the function returned by @func{filename->string-func}, which defaults to
 @end deffn
 
 
+@defun directory-exists? @var{ptn}
+Return @true{} if @var{ptn} is a string or bytevector representing the
+pathname of an existent directory; otherwise return @false{}.
+@end defun
+
+
 The following bindings are exported by the library @library{vicare
-$posix}.
+language-extensions posix}.
 
 
 @defun file-pathname? @var{obj}
@@ -9825,7 +10792,7 @@ directory only if such directory is listed in the given path.
 @subsection Transcoders and additional codecs
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @defun transcoder? @var{obj}
@@ -10249,7 +11216,15 @@ the would--block object is returned.
 @subsection Additional binary port features
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
+
+
+@defun binary-input-port? @var{obj}
+@defunx binary-output-port? @var{obj}
+@defunx binary-input/output-port? @var{obj}
+Return @true{} if @var{obj} is a binary port and, respectively, it is
+input, output or input/output.
+@end defun
 
 
 @defun lookahead-two-u8 @var{port}
@@ -10346,7 +11321,15 @@ Socket ports do @strong{not} support port position operations.
 @subsection Additional textual port features
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
+
+
+@defun textual-input-port? @var{obj}
+@defunx textual-output-port? @var{obj}
+@defunx textual-input/output-port? @var{obj}
+Return @true{} if @var{obj} is a textual port and, respectively, it is
+input, output or input/output.
+@end defun
 
 
 @defun open-string-input-port @var{string}
@@ -10474,7 +11457,7 @@ If no input characters are available: the EOF object is returned.
 @subsection Buffer size customisation
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @deffn Parameter bytevector-port-buffer-size
@@ -10558,7 +11541,7 @@ Return a new association list representing the property list of
 @subsection Miscellaneous port functions
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @defun input/output-port? @var{port}
@@ -10643,9 +11626,9 @@ location.
 @noindent
 pointers also have @func{pointer=?} as specialised comparison predicate.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun pointer? @var{obj}
@@ -10717,7 +11700,7 @@ without causing a pointer overflow or underflow.
 
 
 @defun pointer=? @vari{ptr} @varii{ptr}
-@defunx pointer<>? @vari{ptr} @varii{ptr}
+@defunx pointer!=? @vari{ptr} @varii{ptr}
 @defunx pointer<? @vari{ptr} @varii{ptr}
 @defunx pointer>? @vari{ptr} @varii{ptr}
 @defunx pointer<=? @vari{ptr} @varii{ptr}
@@ -10745,9 +11728,9 @@ argument must be an exact integer in the range of the C language type
 functions @strong{do not} scale the offset to the size of the poked
 value; pointer arithmetics is performed with byte offsets.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro bitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
@@ -10898,9 +11881,9 @@ offset to a pointer: all the following functions @strong{do not} scale
 the offset to the size of the peeked value; pointer arithmetics is
 performed with byte offsets.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro bitpeeker{BITNUM}
 Peek the \BITNUM\ bits located at @var{offset} from @var{memory} and
@@ -11049,9 +12032,9 @@ argument must be an exact integer in the range of the C language type
 @code{ptrdiff_t}.  When adding an offset to a pointer: all the following
 functions @strong{do} scale the index to the size of the poked value.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro abitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{index} from
@@ -11200,9 +12183,9 @@ in the range of the C language type @code{ptrdiff_t}.  When adding an
 offset to a pointer: all the following functions @strong{do} scale the
 index to the size of the peeked value.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro abitpeeker{BITNUM}
 Peek the \BITNUM\ bits located at @var{index} from @var{memory} and
@@ -11386,9 +12369,9 @@ getting bytes from specific locations in memory.
 @subsection Allocating and freeing memory
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun malloc @var{number-of-bytes}
@@ -11556,9 +12539,9 @@ The memory blocks are actually allocated on the stack of
 @subsection Memory operations
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun memcpy @var{dst} @var{src} @var{count}
@@ -11643,9 +12626,9 @@ components: @condition{who}, @condition{message},
 @subsection Memory blocks
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @deftp {Struct Type} memory-block
@@ -11715,9 +12698,9 @@ Build and return a new instance of @code{memory-block} holding a new
 @subsection Memory allocation condition objects
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @deftp {Condition Type} &out-of-memory-error
@@ -11741,8 +12724,8 @@ Maker and predicate for condition objects of type
 The following functions perform operations on raw @ascii{} coded strings
 terminated by a zero byte, for short @asciiz{} strings; some functions
 act upon raw @utf{}-16 strings.  The following bindings are exported by
-the libraries @library{vicare}, @library{ikarus} and @library{ikarus
-system $foreign} and reexported by the library @library{vicare ffi}.
+the libraries @library{vicare} and @library{vicare system $foreign} and
+reexported by the library @library{vicare ffi}.
 
 
 @defun bytevector->cstring @var{bv}
@@ -11983,9 +12966,9 @@ If some error codes are not defined on a platform: the corresponding
 binding evaluates to @true{}.  Notice that if no error occurred
 @code{errno} is set to the fixnum zero.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun errno
@@ -12026,8 +13009,7 @@ return value from the foreign function and the value of the C variable
 @section Basic time and date functions
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus}.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun current-time
@@ -12128,10 +13110,10 @@ Return @true{} if the @vari{time} is greater than or equal to
 @section Readline interface
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus}.  An extended @api{} for @gnu{} Readline is available
-through the @library{vicare readline} library; @libsref{readline,
-Extended interface to @gnu{} Readline} for details.
+The following bindings are exported by the library @library{vicare}.  An
+extended @api{} for @gnu{} Readline is available through the
+@library{vicare readline} library; @libsref{readline, Extended interface
+to @gnu{} Readline} for details.
 
 
 @defun readline-enabled?
@@ -12160,726 +13142,6 @@ defaults to @false{}; the thunk, when evaluated, must return a string or
 bytevector representing the input prompt in @ascii{} characters; if the
 return value is @false{} or @var{prompt-maker} is not used: no prompt
 will be displayed.
-@end defun
-
-@c page
-@node iklib libs
-@section Scheme libraries utility functions
-
-
-@menu
-* iklib libs names::            Library name utilities.
-* iklib libs refs::             Library references utilities.
-@end menu
-
-@c page
-@node iklib libs names
-@subsection Library name utilities
-
-
-@menu
-* iklib libs names pred::        Library name predicates.
-* iklib libs names split::       Decomposing library names.
-* iklib libs names compar::      Library names comparison.
-@end menu
-
-@c page
-@node iklib libs names pred
-@subsubsection Library name predicates
-
-
-@defun library-version-numbers? @var{obj}
-Return @true{} if @var{obj} is a list of library version numbers
-according to @rnrs{6}, this includes @var{obj} being null.
-
-@example
-(library-version-numbers? '(1))         @result{} #t
-(library-version-numbers? '(1 2 3))     @result{} #t
-(library-version-numbers? '(1 -2 3))    @result{} #f
-(library-version-numbers? '(1 A 3))     @result{} #f
-@end example
-
-@quotation
-@strong{NOTE} According to @rnrs{6}: @var{obj} should be an exact
-integer, which means a finxum or bignum for @value{PRJNAME}.  This
-predicate accepts only fixnums because they are faster to handle and
-``big enough''.
-@end quotation
-@end defun
-
-
-@defun library-version-number? @var{obj}
-Return @true{} if @var{obj} is a single version number according to
-@rnrs{6}.
-@end defun
-
-
-@defun library-name? @var{sexp}
-Return @true{} if @var{sexp} is a symbolic expressions compliant with
-the definition of @meta{library-name} according to @rnrs{6}.
-
-@example
-(library-name? '())                             @result{} #f
-(library-name? '(alpha))                        @result{} #t
-(library-name? '(alpha beta))                   @result{} #t
-(library-name? '(alpha beta gamma))             @result{} #t
-(library-name? '(alpha beta gamma ()))          @result{} #t
-(library-name? '(alpha beta gamma (1)))         @result{} #t
-(library-name? '(alpha beta gamma (1 2 3)))     @result{} #t
-(library-name? '(alpha 123 gamma))              @result{} #f
-(library-name? '(alpha beta gamma (1 ciao)))    @result{} #f
-@end example
-@end defun
-
-@c page
-@node iklib libs names split
-@subsubsection Decomposing library names
-
-
-@defun library-name-decompose @var{obj}
-Scan @var{obj} validating it as a @meta{library-name} as specified by
-@rnrs{6}.  Return two values: the list of identifiers, the version
-specification.  The version can be null.  If @var{obj} is not a valid
-@meta{library-name}: return @false{} and @false{}.  The returned values
-may share structure with @var{obj}.
-
-@example
-(library-name-decompose '(alpha))
-@result{} (alpha) ()
-
-(library-name-decompose '(alpha beta))
-@result{} (alpha beta) ()
-
-(library-name-decompose '(alpha beta gamma))
-@result{} (alpha beta gamma) ()
-
-(library-name-decompose '(alpha beta gamma ()))
-@result{} (alpha beta gamma) ()
-
-(library-name-decompose '(alpha beta gamma (1)))
-@result{} (alpha beta gamma) (1)
-
-(library-name-decompose '(alpha beta gamma (1 2 3)))
-@result{} (alpha beta gamma) (1 2 3)
-
-(library-name-decompose '(alpha beta gamma (1 A 3)))
-@result{} #f #f
-
-(library-name-decompose '(alpha 1 gamma (1 2 3)))
-@result{} #f #f
-@end example
-@end defun
-
-
-@defun library-name->identifiers @var{sexp}
-Given a symbolic expressions compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return the list of
-identifiers.  If @var{sexp} is not compliant return @false{}.
-
-@example
-(library-name->identifiers '(alpha))
-@result{} (alpha)
-
-(library-name->identifiers '(alpha beta))
-@result{} (alpha beta)
-
-(library-name->identifiers '(alpha beta gamma))
-@result{} (alpha beta gamma)
-
-(library-name->identifiers '(alpha beta gamma ()))
-@result{} (alpha beta gamma)
-
-(library-name->identifiers '(alpha beta gamma (1)))
-@result{} (alpha beta gamma)
-
-(library-name->identifiers '(alpha beta gamma (1 2 3)))
-@result{} (alpha beta gamma)
-@end example
-@end defun
-
-
-@defun library-name->version @var{sexp}
-Given a symbolic expressions compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return the list of version
-numbers.  If @var{sexp} is not compliant return @false{}.
-
-@example
-(library-name->version '(alpha))
-@result{} ()
-
-(library-name->version '(alpha beta))
-@result{} ()
-
-(library-name->version '(alpha beta gamma))
-@result{} ()
-
-(library-name->version '(alpha beta gamma ()))
-@result{} ()
-
-(library-name->version '(alpha beta gamma (1)))
-@result{} (1)
-
-(library-name->version '(alpha beta gamma (1 2 3)))
-@result{} (1 2 3)
-@end example
-@end defun
-
-@c page
-@node iklib libs names compar
-@subsubsection Library names comparison
-
-
-The following functions can be used to sort library names according to
-the version number:
-
-@example
-(list-sort library-name<? '((x y (1 2))
-                            (x y (1 3))))
-@result{} ((x y (1 2))
-    (x y (1 3)))
-
-(list-sort library-name<? '((x y (1 4))
-                            (x y (1 2))
-                            (x y (2 1))
-                            (x y (1 3))))
-@result{} ((x y (1 2))
-    (x y (1 3))
-    (x y (1 4))
-    (x y (2 1)))
-@end example
-
-
-@defun library-name=? @vari{sexp} @varii{sexp}
-Given two symbolic expressions compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return @true{} if they have
-the same list of identifiers and the same version numbers.
-@end defun
-
-
-@defun library-name<? @vari{sexp} @varii{sexp}
-Given two symbolic expressions compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return @true{} if they have
-the same list of identifiers and the version of @vari{sexp} is less than
-the version of @varii{sexp}.
-@end defun
-
-
-@defun library-name<=? @vari{sexp} @varii{sexp}
-Given two symbolic expressions compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return @true{} if they have
-the same list of identifiers and the version of @vari{sexp} is less than
-or equal to the version of @varii{sexp}.
-@end defun
-
-@c ------------------------------------------------------------
-
-@defun library-version=? @vari{vrs} @varii{vrs}
-Given two lists of version numbers compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return @true{} if they have
-the same numbers.
-
-If one of the lists is longer and the elements up to the end of the
-shortest are equal: the lists are ``equal'' if the tail of the longest
-is made of zeros.
-
-Examples:
-
-@example
-(1 2 3) == (1 2 3)
-(1 2 3) != (1 2 3 4)
-(1 2 3) == (1 2 3 0 0 0)
-@end example
-@end defun
-
-
-@defun library-version<? @vari{vrs} @varii{vrs}
-Given two lists of version numbers compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return @true{} if the version
-number represented by @vari{vrs} is less than the version number
-represented by @varii{vrs}.
-
-Comparison of digits stops at the first digit for which @func{<} or
-@func{>} return true.
-
-If one of the lists is longer and the elements up to the end of the
-shortest are equal: the lists are ``equal'' if the tail of the longest
-is made of zeros.
-
-Examples:
-
-@example
-(1 2 3) <  (4 2 3)
-(1 2 3) <  (1 4 3)
-(1 2 3) <  (1 2 4)
-(1 2 3) <  (1 2 3 4)
-(1 2 3) !< (1 2 3 0 0 0)
-@end example
-@end defun
-
-
-@defun library-version<=? @vari{vrs} @varii{vrs}
-Given two lists of version numbers compliant with the definition of
-@meta{library-name} according to @rnrs{6}: return @true{} if the version
-number represented by @vari{vrs} is less than or equal to the version
-number represented by @varii{vrs}.
-
-Comparison of digits stops at the first digit for which @func{<=}
-returns false.
-
-If one of the lists is longer and the elements up to the end of the
-shortest are equal: the lists are ``equal'' if the tail of the longest
-is made of zeros.
-
-Examples:
-
-@example
-(1 2 3) <= (1 2 3)
-(1 2 3) <= (4 2 3)
-(1 2 3) <= (1 4 3)
-(1 2 3) <= (1 2 4)
-(1 2 3) <= (1 2 3 4)
-(1 2 3 0) <= (1 2 3)
-@end example
-@end defun
-
-@c page
-@node iklib libs refs
-@subsection Library references utilities
-
-
-@menu
-* iklib libs refs pred::        Library reference predicates.
-* iklib libs refs split::       Decomposing library references.
-* iklib libs refs compar::      Library references comparison.
-* iklib libs refs conform::     Conformity among library references
-                                and names.
-@end menu
-
-@c page
-@node iklib libs refs pred
-@subsubsection Library reference predicates
-
-
-@defun library-reference? @var{obj}
-Return @true{} if @var{obj} is a valid library reference as specified by
-@rnrs{6}.
-
-@example
-(library-reference? '())                        @result{} #f
-(library-reference? '(alpha))                   @result{} #t
-(library-reference? '(alpha beta gamma))        @result{} #t
-(library-reference? '(alpha beta gamma ()))     @result{} #t
-(library-reference? '(alpha beta gamma (1)))    @result{} #t
-(library-reference?
-    '(alpha beta (1
-                  (<= 2)
-                  (or 10 (and (>= 4)
-                              (<= 2))))))
-@result{} #t
-@end example
-@end defun
-
-
-@defun library-version-reference? @var{obj}
-Return @true{} if @var{obj} is a valid library version reference as
-specified by @rnrs{6}.
-
-@example
-(library-version-reference? '())                @result{} #t
-(library-version-reference? '(1))               @result{} #t
-(library-version-reference? '(1 2 3))           @result{} #t
-
-(library-version-reference? '(and))             @result{} #t
-(library-version-reference? '(and (1)))         @result{} #t
-(library-version-reference? '(and (1) (2)))     @result{} #t
-
-(library-version-reference? '(or))              @result{} #t
-(library-version-reference? '(or (1)))          @result{} #t
-(library-version-reference? '(or (1) (2)))      @result{} #t
-
-(library-version-reference? '(not))             @result{} #f
-(library-version-reference? '(not (1)))         @result{} #t
-
-(library-version-reference?
-   '(1
-     (<= 2)
-     (or 10
-         (and (<= 4)
-              (>= 2)))))
-@result{} #t
-@end example
-@end defun
-
-
-@defun library-sub-version-reference? @var{obj}
-Return @true{} if @var{obj} is a valid library sub--version reference as
-specified by @rnrs{6}.
-@end defun
-
-
-@defun library-sub-version? @var{obj}
-Return @true{} if @var{obj} is a @meta{sub-version} number according to
-@rnrs{6}.
-
-@quotation
-@strong{NOTE} According to @rnrs{6}: @var{obj} should be an exact
-non--negative integer, which means a non--negative finxum or bignum.
-@value{PRJNAME} accepts only fixnums because they are faster to handle
-and ``big enough''.
-@end quotation
-@end defun
-
-@c page
-@node iklib libs refs split
-@subsubsection Decomposing library references
-
-
-@defun library-reference-decompose @var{obj}
-Interpret @var{obj} as a symbolic expression representing a library
-reference as specified by @rnrs{6}.  Return two values: the list of
-identifiers, the version reference.  If @var{obj} is not a valid library
-reference: return @false{} and @false{}.
-@end defun
-
-
-@defun library-reference->identifiers @var{obj}
-If @var{obj} is a valid library reference as specified by @rnrs{6},
-return the list of identifiers; else return @false{}.
-@end defun
-
-
-@defun library-reference->version @var{obj}
-If @var{obj} is a valid library reference as specified by @rnrs{6},
-return the version reference; else return @false{}.
-@end defun
-
-@c page
-@node iklib libs refs compar
-@subsubsection Library references comparison
-
-
-@defun library-reference-identifiers=? @vari{reference} @varii{reference}
-Return @true{} if the arguments are library references having equal list
-of identifiers; else return @false{}.
-@end defun
-
-@c page
-@node iklib libs refs conform
-@subsubsection Conformity among library references and names
-
-
-@defun conforming-sub-version-and-sub-version-reference? @var{sub-version} @var{sub-version-reference}
-Interpret @var{sub-version} as a sub--version number as specified by
-@rnrs{6} and @var{sub-version-reference} as a sub--version reference as
-specified by @rnrs{6}.  Return @true{} if the sub--version conforms to
-the sub--version reference; else return @false{}; if the arguments are
-invalid: raise an assertion violation.
-
-@example
-(conforming-sub-version-and-sub-version-reference?
-    1 1)
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 0)
-@result{} #f
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(<= 1))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    2 '(<= 1))
-@result{} #f
-
-(conforming-sub-version-and-sub-version-reference?
-    0 '(<= 1))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(>= 1))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    2 '(>= 1))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    0 '(>= 1))
-@result{} #f
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(not 1))
-@result{} #f
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(not 0))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(or 1 2))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(or 2 1))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(or 2 3))
-@result{} #f
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(or 2 3 4))
-@result{} #f
-
-(conforming-sub-version-and-sub-version-reference?
-    4 '(or 2 3 4))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(and (>= 0) (<= 2)))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    0 '(and (>= 0) (<= 2)))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(and (>= 0) (<= 2) (not 3)))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    1 '(and (>= 0) (<= 2) (not 1)))
-@result{} #f
-
-
-(conforming-sub-version-and-sub-version-reference?
-    4 '(or (and (>= 0) (<= 2)) 4))
-@result{} #t
-
-(conforming-sub-version-and-sub-version-reference?
-    3 '(or (and (>= 0) (<= 2)) 4))
-@result{} #f
-@end example
-@end defun
-
-
-@defun conforming-version-and-version-reference? @vari{version} @varii{version-reference}
-Interpret @var{version} as a version symbolic expression as specified by
-@rnrs{6} and @var{version-reference} as a version reference symbolic
-expression as specified by @rnrs{6}.  Return @true{} if the version
-conforms to the version reference; else return @false{}; if the
-arguments are invalid: raise an assertion violation.
-
-@example
-(conforming-version-and-version-reference?
-    '() '())
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '())
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '() '(1))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1) '(1))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '(0))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1) '((<= 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(2) '((<= 1)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(0) '((<= 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((>= 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(2) '((>= 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(0) '((>= 1)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1) '((not 1)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1) '((not 0)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((or 1 2)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((or 2 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((or 2 3)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1) '((or 2 3 4)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(4) '((or 2 3 4)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(5) '((or 2 (or 3 (or 4 (or 5))))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and 1 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and 1 1 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and 1 (and 1 (and 1 (and 1))))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and (>= 0) (<= 2))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(0) '((and (>= 0) (<= 2))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(2) '((and (>= 0) (<= 2))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and (>= 0) (<= 2) (not 3))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1) '((and (>= 0) (<= 2) (not 1))))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1) '((or (and (>= 0) (<= 2)) 4)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(4) '((or (and (>= 0) (<= 2)) 4)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(3) '((or (and (>= 0) (<= 2)) 4)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1 2 3) '(1 2 3))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 3) '(1 2 4))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1 2 0) '(1 2))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 1) '(1 2))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 3)
-    '(1 (>= 1) (not 1)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 3)
-    '(1 (<= 1) (not 1)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1 2 3)
-    '(or (1 (<= 1) (not 1)) (1 (>= 1) (not 1))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 3) '(or (1 2 5) (1 2 10)))
-@result{} #f
-
-(conforming-version-and-version-reference?
-    '(1 2 3)
-    '(and (1 (>= 1) (not 1)) (1 2 (not 5))))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 3)
-    '(and (1 (<= 1) (not 1)) (1 2 (not 5))))
-@result{} #f)
-
-(conforming-version-and-version-reference?
-    '(1 2 3) '(not (1 5 4)))
-@result{} #t
-
-(conforming-version-and-version-reference?
-    '(1 2 3) '(not (1 2 3)))
-@result{} #f
-@end example
-@end defun
-
-
-@defun conforming-library-name-and-library-reference? @var{name} @var{reference}
-Interpret @var{name} as a library name symbolic expression as specified
-by @rnrs{6} and @var{reference} as a library reference symbolic
-expression as specified by @rnrs{6}.  Return @true{} if the name
-conforms to the reference; else return @false{}; if the arguments are
-invalid: raise an assertion violation.
-
-@example
-(conforming-library-name-and-library-reference?
-    '(a (1)) '(a (1)))
-@result{} #t
-
-(conforming-library-name-and-library-reference?
-    '(a (1)) '(a (0)))
-@result{} #f
-
-(conforming-library-name-and-library-reference?
-    '(a b c (1)) '(a b c (1)))
-@result{} #t
-
-(conforming-library-name-and-library-reference?
-    '(a b c (1)) '(a b c (0)))
-@result{} #f
-
-(conforming-library-name-and-library-reference?
-    '(a b c (1)) '(a z c (1)))
-@result{} #f
-@end example
 @end defun
 
 @c page
@@ -12956,6 +13218,12 @@ return a meaningful value.
 @end defun
 
 
+@defun always-true @var{arg} @dots{}
+@defunx always-false @var{arg} @dots{}
+Always return @true{} or @false{}, ignoring the arguments.
+@end defun
+
+
 @defun apropos @var{key}
 Given a string or symbol @var{key}, search among the internally
 installed libraries all the exported bindings having @var{key} as
@@ -12964,7 +13232,7 @@ Useful when using the @repl{}.  Example:
 
 @example
 vicare> (apropos "-length")
-*** in library (ikarus):
+*** in library (vicare):
 (bitwise-length bytevector-length string-length
   struct-length vector-length)
 

@@ -10,7 +10,7 @@
 ;;;
 ;;;	<http://algs4.cs.princeton.edu/53substring/RabinKarp.java.html>
 ;;;
-;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,8 +36,7 @@
     rabin-karp-search)
   (import (vicare)
     (vicare unsafe operations)
-    (vicare arguments validation)
-    (vicare language-extensions infix))
+    (vicare arguments validation))
 
 
 ;;;; helpers

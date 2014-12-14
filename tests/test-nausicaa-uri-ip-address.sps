@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (prefix (nausicaa uri ip) ip.)
   (prefix (nausicaa parser-tools uri) uri.)
   (vicare checks))
@@ -60,13 +60,13 @@
 	  (protocol (lambda (make-ip-address)
 		      (lambda (num)
 			((make-ip-address) num))))
-	  (fields (immutable (num <number>))))
+	  (fields (immutable {num <number>})))
 
-	(define-method (ip.ip-address->string (O <one-address>))
-	  (O num string))
+	(define-method (ip.ip-address->string {O <one-address>})
+	  ((O num) string))
 
-	(define-method (ip.ip-address->bytevector (O <one-address>))
-	  (O num string percent-encoding))
+	(define-method (ip.ip-address->bytevector {O <one-address>})
+	  (((O num) string) percent-encoding))
 
 	(<one-address> O (<> (123)))
 
@@ -85,10 +85,10 @@
 	  (protocol (lambda (make-ip-address)
 		      (lambda (num)
 			((make-ip-address) num))))
-	  (fields (immutable (num <number>))))
+	  (fields (immutable {num <number>})))
 
-	(define-method (ip.ip-address->string (O <two-address>))
-	  (O num string))
+	(define-method (ip.ip-address->string {O <two-address>})
+	  ((O num) string))
 
 	(<two-address> O (<> (123)))
 
@@ -111,15 +111,15 @@
 	  (protocol (lambda (make-ip-numeric-address)
 		      (lambda (num)
 			((make-ip-numeric-address) num))))
-	  (fields (immutable (num <number>))))
+	  (fields (immutable {num <number>})))
 
-	(define-method (ip.ip-address->string (O <one-address>))
-	  (O num string))
+	(define-method (ip.ip-address->string {O <one-address>})
+	  ((O num) string))
 
-	(define-method (ip.ip-address->bytevector (O <one-address>))
-	  (O num string percent-encoding))
+	(define-method (ip.ip-address->bytevector {O <one-address>})
+	  (((O num) string) percent-encoding))
 
-	(define-method (ip.ip-address->bignum (O <one-address>))
+	(define-method (ip.ip-address->bignum {O <one-address>})
 	  (O num))
 
 	(<one-address> O (<> (123)))
@@ -143,12 +143,12 @@
 	  (protocol (lambda (make-ip-numeric-address)
 		      (lambda (num)
 			((make-ip-numeric-address) num))))
-	  (fields (immutable (num <number>))))
+	  (fields (immutable {num <number>})))
 
-	(define-method (ip.ip-address->string (O <two-address>))
-	  (O num string))
+	(define-method (ip.ip-address->string {O <two-address>})
+	  ((O num) string))
 
-	(define-method (ip.ip-address->bignum (O <two-address>))
+	(define-method (ip.ip-address->bignum {O <two-address>})
 	  (O num))
 
 	(<two-address> O (<> (123)))
@@ -200,7 +200,7 @@
 
   (check
       (let* ((port (mkport "github.io"))
-	     ((host ip.<reg-name-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<reg-name-address>} (receive (host.type host.ascii host.data)
 					       (uri.parse-host port)
 					     (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -208,7 +208,7 @@
 
   (check
       (let* ((port (mkport "github.io"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ip-address>} (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -219,7 +219,7 @@
 
   (check
       (let* ((port (mkport "1.2.3.4"))
-	     ((host ip.<ipv4-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ipv4-address>} (receive (host.type host.ascii host.data)
 					   (uri.parse-host port)
 					 (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -227,7 +227,7 @@
 
   (check
       (let* ((port (mkport "1.2.3.4"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ip-address>} (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -238,7 +238,7 @@
 
   (check
       (let* ((port (mkport "[1:2:3:4:5:6:7:8]"))
-	     ((host ip.<ipv6-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ipv6-address>} (receive (host.type host.ascii host.data)
 					   (uri.parse-host port)
 					 (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -246,7 +246,7 @@
 
   (check
       (let* ((port (mkport "[1:2:3:4:5:6:7:8]"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ip-address>} (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -257,7 +257,7 @@
 
   (check
       (let* ((port (mkport "[v9.ciao]"))
-	     ((host ip.<ipvfuture-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ipvfuture-address>} (receive (host.type host.ascii host.data)
 						(uri.parse-host port)
 					      (ip.make-host-object host.type host.ascii host.data))))
 	(host string))
@@ -265,7 +265,7 @@
 
   (check
       (let* ((port (mkport "[v9.ciao]"))
-	     ((host ip.<ip-address>) (receive (host.type host.ascii host.data)
+	     ({host ip.<ip-address>} (receive (host.type host.ascii host.data)
 					 (uri.parse-host port)
 				       (ip.make-host-object host.type host.ascii host.data))))
 	(host string))

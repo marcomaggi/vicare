@@ -28,7 +28,7 @@
 
 (library (ikarus-test-framework)
   (export define-tests src-file)
-  (import (ikarus)
+  (import (vicare)
     (only (vicare checks)
 	  check-quiet-tests?))
 

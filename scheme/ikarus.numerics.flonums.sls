@@ -80,7 +80,7 @@
 
     flonum-parts	flonum-bytes
     bytevector->flonum	flonum->bytevector)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  inexact->exact	exact		fixnum->flonum
 		  flzero?		flpositive?	flnegative?
 		  flzero?/positive	flzero?/negative
@@ -103,12 +103,12 @@
 		  fl/			flmax		flmin
 		  flonum-parts		flonum-bytes
 		  bytevector->flonum	flonum->bytevector)
-    (ikarus system $pairs)
-    (ikarus system $fx)
-    (ikarus system $bignums)
-    (ikarus system $ratnums)
-    (ikarus system $bytevectors)
-    (except (ikarus system $flonums)
+    (vicare system $pairs)
+    (vicare system $fx)
+    (vicare system $bignums)
+    (vicare system $ratnums)
+    (vicare system $bytevectors)
+    (except (vicare system $flonums)
 	    $flonum->exact
 	    $flzero?
 	    $flzero?/positive
@@ -517,7 +517,7 @@
 	(%error-no-real-value '$flexact x)))
 
   (define ($cflexact x)
-    (import (ikarus system $compnums))
+    (import (vicare system $compnums))
     (define who '$cflexact)
     (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value who x))
 		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value who x))))
@@ -1003,11 +1003,14 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.flonums"))
 
-(library (ikarus system flonums)
+#| end of library |# )
+
+(library (vicare system flonums)
   (export $fixnum->flonum)
-  (import (ikarus))
+  (import (vicare))
   (define $fixnum->flonum fixnum->flonum))
 
 ;;; end of file

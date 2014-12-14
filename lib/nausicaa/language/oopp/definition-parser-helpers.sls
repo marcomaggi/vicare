@@ -27,7 +27,7 @@
 
 
 #!vicare
-(library (nausicaa language oopp definition-parser-helpers)
+(library (nausicaa language oopp definition-parser-helpers (0 4))
   (export
     parse-label-definition		parse-class-definition
     parse-mixin-definition
@@ -60,19 +60,19 @@
 
     <label-spec>?
     <label-spec>-satisfaction-clauses)
-  (import (for (vicare) run expand)
+  (import (for (vicare (0 4)) run expand)
     (for (only (rnrs)
 	       lambda define define-syntax set!)
       (meta -1))
     (vicare unsafe operations)
     (only (vicare language-extensions identifier-substitutions)
 	  multi-identifier-subst)
-    (prefix (only (nausicaa language oopp configuration)
+    (prefix (only (nausicaa language oopp configuration (0 4))
 		  enable-satisfactions)
 	    config.)
-    (for (nausicaa language oopp auxiliary-syntaxes)
+    (for (nausicaa language oopp auxiliary-syntaxes (0 4))
       (meta -1))
-    (for (prefix (only (nausicaa language auxiliary-syntaxes)
+    (for (prefix (only (nausicaa language auxiliary-syntaxes (0 4))
 		       parent		nongenerative
 		       sealed		opaque
 		       predicate	abstract
@@ -166,7 +166,7 @@
   (nongenerative nausicaa:language:oopp:<parsed-spec>)
   (protocol
    (lambda (make-instance)
-     (lambda* ((name-id identifier?) (top-id identifier?) (lambda-id identifier?))
+     (lambda* ({name-id identifier?} {top-id identifier?} {lambda-id identifier?})
        (make-instance name-id top-id lambda-id
 	 '() #;member-identifiers	'() #;definitions
 	 #f  #;abstract?		#f  #;public-constructor-id
@@ -377,7 +377,7 @@
   (nongenerative nausicaa:language:oopp:helpers:<field-spec>)
   (protocol
    (lambda (make-record)
-     (lambda* ((name identifier?) (acc identifier?) (mut %false-or-identifier?) (tag %false-or-identifier?))
+     (lambda* ({name identifier?} {acc identifier?} {mut %false-or-identifier?} {tag %false-or-identifier?})
        (make-record name acc mut tag))))
   (fields (immutable name-id)
 		;Identifier representing the field name.
@@ -406,7 +406,7 @@
 
 ;;;; data type methods: small functions
 
-(define* (<parsed-spec>-member-identifiers-cons! (parsed-spec <parsed-spec>?) id what-string synner)
+(define* (<parsed-spec>-member-identifiers-cons! {parsed-spec <parsed-spec>?} id what-string synner)
   ;;Add  the  identifier  ID  to  the  list  of  member  identifiers  in
   ;;PARSED-SPEC.  If such identifier  is already present: raise a syntax
   ;;violation.
@@ -418,35 +418,35 @@
 	  (else
 	   ($<parsed-spec>-member-identifiers-set! parsed-spec (cons id member-identifiers))))))
 
-(define* (<parsed-spec>-definitions-cons! (parsed-spec <parsed-spec>?) definition)
+(define* (<parsed-spec>-definitions-cons! {parsed-spec <parsed-spec>?} definition)
   ;;Prepend a definition form to the list of definitions in PARSED-SPEC.
   ;;
   ($<parsed-spec>-definitions-set! parsed-spec (cons definition ($<parsed-spec>-definitions parsed-spec))))
 
-(define* (<parsed-spec>-concrete-fields-cons! (parsed-spec <parsed-spec>?) field-record)
+(define* (<parsed-spec>-concrete-fields-cons! {parsed-spec <parsed-spec>?} field-record)
   ;;Prepend a  field record  to the  list of  concrete field  records in
   ;;PARSED-SPEC.
   ;;
   ($<parsed-spec>-concrete-fields-set! parsed-spec (cons field-record ($<parsed-spec>-concrete-fields parsed-spec))))
 
-(define* (<parsed-spec>-virtual-fields-cons! (parsed-spec <parsed-spec>?) field-record)
+(define* (<parsed-spec>-virtual-fields-cons! {parsed-spec <parsed-spec>?} field-record)
   ;;Prepend  a field  record to  the list  of virtual  field  records in
   ;;PARSED-SPEC.
   ;;
   ($<parsed-spec>-virtual-fields-set! parsed-spec (cons field-record ($<parsed-spec>-virtual-fields parsed-spec))))
 
-(define* (<parsed-spec>-methods-table-cons! (parsed-spec <parsed-spec>?)
+(define* (<parsed-spec>-methods-table-cons! {parsed-spec <parsed-spec>?}
 					    method-name-id method-rv-tag-id method-implementation-id)
   ;;Prepend an entry in the methods table.
   ;;
   ($<parsed-spec>-methods-table-set! parsed-spec (cons (list method-name-id method-rv-tag-id method-implementation-id)
 						       ($<parsed-spec>-methods-table parsed-spec))))
 
-(define* (<parsed-spec>-satisfactions-cons! (parsed-spec <parsed-spec>?) id)
+(define* (<parsed-spec>-satisfactions-cons! {parsed-spec <parsed-spec>?} id)
   (when config.enable-satisfactions
     ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec)))))
 
-(define* (<parsed-spec>-mixins-inclusions-cons! (parsed-spec <parsed-spec>?) mixin-inclusion-spec synner)
+(define* (<parsed-spec>-mixins-inclusions-cons! {parsed-spec <parsed-spec>?} mixin-inclusion-spec synner)
   ($<parsed-spec>-mixins-inclusions-set! parsed-spec (cons mixin-inclusion-spec
 							   ($<parsed-spec>-mixins-inclusions parsed-spec))))
 
@@ -455,18 +455,18 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-list-of-uids-id (parsed-spec <parsed-spec>?))
+(define* (<parsed-spec>-list-of-uids-id {parsed-spec <parsed-spec>?})
   (tag-id->list-of-uids-id ($<parsed-spec>-name-id parsed-spec)))
 
-(define* (<class-spec>-default-protocol-id (class-spec <class-spec>?))
+(define* (<class-spec>-default-protocol-id {class-spec <class-spec>?})
   (tag-id->default-protocol-id ($<parsed-spec>-name-id class-spec)))
 
-(define* (<class-spec>-from-fields-constructor-id (class-spec <class-spec>?))
+(define* (<class-spec>-from-fields-constructor-id {class-spec <class-spec>?})
   (tag-id->from-fields-constructor-id ($<parsed-spec>-name-id class-spec)))
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-mutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-mutable-fields-data {spec <parsed-spec>?})
   ;;Select the mutable fields among  the concrete and virtual fields and
   ;;return a list of lists with the format:
   ;;
@@ -484,7 +484,7 @@
 		  ($<parsed-spec>-virtual-fields spec))
 	($<parsed-spec>-virtual-fields spec)))))
 
-(define* (<parsed-spec>-unsafe-mutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-unsafe-mutable-fields-data {spec <parsed-spec>?})
   ;;Select the  mutable fields  among the concrete  fields and  return a
   ;;list of lists with the format:
   ;;
@@ -504,7 +504,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-immutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-immutable-fields-data {spec <parsed-spec>?})
   ;;Select the  immutable fields among  the concrete and  virtual fields
   ;;and return a list of lists with the format:
   ;;
@@ -521,7 +521,7 @@
 		  ($<parsed-spec>-virtual-fields  spec))
 	($<parsed-spec>-virtual-fields spec)))))
 
-(define* (<parsed-spec>-unsafe-immutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-unsafe-immutable-fields-data {spec <parsed-spec>?})
   ;;Select the immutable  fields among the concrete fields  and return a
   ;;list of lists with the format:
   ;;
@@ -541,7 +541,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-concrete-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-concrete-fields-data {spec <parsed-spec>?})
   ;;Take the concrete fields and return a list of lists with the format:
   ;;
   ;;   (?field-spec ...)
@@ -563,7 +563,7 @@
 	     (list #'aux.immutable name-id accessor-id))))
     ($<parsed-spec>-concrete-fields spec)))
 
-(define* (<parsed-spec>-concrete-fields-names (spec <parsed-spec>?))
+(define* (<parsed-spec>-concrete-fields-names {spec <parsed-spec>?})
   ;;Take the concrete fields and return a list with the format:
   ;;
   ;;   (?field-name ...)
@@ -579,7 +579,7 @@
 (module (<label-spec>-satisfaction-clauses
 	 <class-spec>-satisfaction-clauses)
 
-  (define* (<label-spec>-satisfaction-clauses (spec <parsed-spec>?))
+  (define* (<label-spec>-satisfaction-clauses {spec <parsed-spec>?})
     (receive (virtual-mutable-fields virtual-immutable-fields)
 	(%field-spec-satisfaction-clauses ($<parsed-spec>-virtual-fields spec))
       (list (list ($<parsed-spec>-name-id spec)
@@ -595,7 +595,7 @@
 	    (list #'aux.shadows		($<parsed-spec>-shadowed-identifier spec))
 	    )))
 
-  (define* (<class-spec>-satisfaction-clauses (spec <parsed-spec>?))
+  (define* (<class-spec>-satisfaction-clauses {spec <parsed-spec>?})
     (let-values (((concrete-mutable-fields concrete-immutable-fields)
 		  (%field-spec-satisfaction-clauses ($<parsed-spec>-concrete-fields spec)))
 		 ((virtual-mutable-fields virtual-immutable-fields)
@@ -775,7 +775,7 @@
       (_
        (synner "invalid name specification in tag definition" stx))))
 
-  (define* (%process-mixin-inclusion-requests! (parsed-spec <parsed-spec>?) ctv-retriever synner)
+  (define* (%process-mixin-inclusion-requests! {parsed-spec <parsed-spec>?} ctv-retriever synner)
     ;;For  each mixin  inclusion  request in  PARSED-SPEC: retrieve  the
     ;;corresponding compile-time  value (CTV),  which is an  instance of
     ;;"<mixin-clauses-ctv>",  and  apply  the  identifiers  map  to  the
@@ -818,7 +818,7 @@
       ;;order in which they appear in the MIXINS clauses.
       ($<parsed-spec>-mixins-inclusions parsed-spec)))
 
-  (define* (%finalise-clauses-parsing! (parsed-spec <parsed-spec>?) synner)
+  (define* (%finalise-clauses-parsing! {parsed-spec <parsed-spec>?} synner)
     ;;Normalise  the results  of parsing  class, label  or mixin  clauses.
     ;;Mutate PARSED-SPEC.  Return unspecified values.
     ;;
@@ -1117,25 +1117,23 @@
   ;;where ?METHOD-INT has one of the syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  (?method-name-id ?rv-tag0 ?rv-tag ...)
-  ;;  #(?method-name-id ?rv-tag0 ?rv-tag ...)
+  ;;  (brace ?method-name-id ?rv-tag0 ?rv-tag ...)
   ;;
-  ;;where ?METHOD-EXT has one of the syntaxes:
+  ;;and ?METHOD-EXT has one of the syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  #(?method-name-id ?rv-tag)
+  ;;  (brace ?method-name-id ?rv-tag)
   ;;
   ;;?ARG has one of the syntaxes:
   ;;
   ;;  ?arg-id
-  ;;  (?arg-id ?arg-tag-id)
-  ;;  #(?arg-id ?arg-tag-id)
+  ;;  (brace ?arg-id ?arg-tag-id)
   ;;
   ;;?REST has one of the syntaxes:
   ;;
   ;;  ()
   ;;  ?rest-id
-  ;;  #(?rest-id ?rest-tag-id)
+  ;;  (brace ?rest-id ?rest-tag-id)
   ;;
   (define (clause-arguments-parser:single-method parsed-spec args synner)
     ;;We expect ARGS to have the format:
@@ -1151,7 +1149,51 @@
     (define-syntax TOP-ID	(identifier-syntax (<parsed-spec>-top-id    parsed-spec)))
     (define-syntax NAME-ID	(identifier-syntax (<parsed-spec>-name-id   parsed-spec)))
     (define-syntax LAMBDA-ID	(identifier-syntax (<parsed-spec>-lambda-id parsed-spec)))
-    (syntax-case method-spec-stx ()
+    (syntax-case method-spec-stx (brace)
+
+      ;;Tagged single return value method definition.  The clause is:
+      ;;
+      ;;   (method ((brace ?method-name-id ?rv-tag) . ?formals)
+      ;;     ?body0 ?body ...)
+      ;;
+      (#(((brace ?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((brace _ ?rv-tag) . ?formals) ?body0 ?body ...)
+		    synner))
+
+      ;;Tagged multiple return values method definition.  The clause is:
+      ;;
+      ;;   (method ((brace ?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals)
+      ;;     ?body0 ?body ...)
+      ;;
+      (#(((brace ?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+       (%add-method parsed-spec #'?method-name-id TOP-ID
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((brace _ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+		    synner))
+
+      ;;Tagged external lambda method definition.  The clause is:
+      ;;
+      ;;   (method (brace ?method-name-id ?rv-tag)
+      ;;     ?lambda-expr))
+      ;;
+      (#((brace ?method-name-id ?rv-tag) ?lambda-expr)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #'?lambda-expr synner))
+
+      ;;Untagged method definition.  The clause is:
+      ;;
+      ;;   (method (?method-name-id . ?formals)
+      ;;     ?body0 ?body ...)
+      ;;
       (#((?method-name-id . ?formals) ?body0 ?body ...)
        (identifier? #'?method-name-id)
        (%add-method parsed-spec #'?method-name-id TOP-ID
@@ -1159,63 +1201,18 @@
 		    #`(#,LAMBDA-ID ?formals ?body0 ?body ...)
 		    synner))
 
-      ;;Tagged  single   return  value  method  definition.    List  tag
-      ;;specification.
-      (#(((?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name-id #'?rv-tag
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Tagged  single  return  value  method  definition.   Vector  tag
-      ;;specification.
-      (#((#(?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name-id #'?rv-tag
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Tagged  multiple  return  values method  definition.   List  tag
-      ;;specification.
-      (#(((?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-       (%add-method parsed-spec #'?method-name-id TOP-ID
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Tagged  multiple return  values method  definition.  Vector  tag
-      ;;specification.
-      (#((#(?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-       (%add-method parsed-spec #'?method-name-id TOP-ID
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Untagged external lambda method definition.
+      ;;Untagged external lambda method definition.  The clause is:
+      ;;
+      ;;   (method ?method-name-id ?lambda-expr)
+      ;;
       (#(?method-name-id ?lambda-expr)
        (identifier? #'?method-name-id)
        (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
 		    #'?lambda-expr synner))
 
-      ;;Tagged external lambda method definition.
-      (#(#(?method-name-id ?rv-tag) ?lambda-expr)
-       (and (identifier? #'?method-name-id)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name-id #'?rv-tag
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #'?lambda-expr synner))
-
       (_
-       (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
+       (synner "invalid method specification in SINGLE-METHOD clause" method-spec-stx))))
 
   (define (%add-method parsed-spec method-name-id method-rv-tag-id method-implementation-id method-expr synner)
     (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
@@ -1237,8 +1234,7 @@
   ;;and ?METHOD has one of the following syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  (?method-name-id ?rv-tag)
-  ;;  #(?method-name-id ?rv-tag)
+  ;;  (brace ?method-name-id ?rv-tag)
   ;;
   ;;where:  ?METHOD-NAME-ID is  an  identifier  representing the  method
   ;;name;  ?RV-TAG is  an identifier  representing the  type tag  of the
@@ -1261,26 +1257,19 @@
       (identifier-syntax ($<parsed-spec>-top-id parsed-spec)))
     (define-syntax NAME-ID
       (identifier-syntax ($<parsed-spec>-name-id parsed-spec)))
-    (syntax-case method-spec-stx ()
+    (syntax-case method-spec-stx (brace)
+      ;;Tagged return value method definition.
+      ;;
+      (#((brace ?method-name ?rv-tag) ?transformer-expr)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?rv-tag))
+       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
+
       ;;Untagged return value method definition.
       ;;
       (#(?method-name ?transformer-expr)
        (identifier? #'?method-name)
        (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
-
-      ;;Tagged return value method definition.  List tag specification.
-      ;;
-      (#((?method-name ?rv-tag) ?transformer-expr)
-       (and (identifier? #'?method-name)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
-
-      ;;Tagged return value method definition.  Vector tag specification.
-      ;;
-      (#(#(?method-name ?rv-tag) ?transformer-expr)
-       (and (identifier? #'?method-name)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       (_
        (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
@@ -1309,8 +1298,7 @@
   ;;and ?METHOD has one of the following syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  (?method-name-id ?rv-tag)
-  ;;  #(?method-name-id ?rv-tag)
+  ;;  (brace ?method-name-id ?rv-tag)
   ;;
   ;;where:  ?METHOD-NAME-ID is  an  identifier  representing the  method
   ;;name;  ?RV-TAG is  an identifier  representing the  type tag  of the
@@ -1338,7 +1326,7 @@
       (identifier-syntax (<parsed-spec>-top-id parsed-spec)))
     (define-syntax NAME-ID
       (identifier-syntax (<parsed-spec>-name-id parsed-spec)))
-    (syntax-case method-spec-stx ()
+    (syntax-case method-spec-stx (brace)
       (?method-name
        (identifier? #'?method-name)
        (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) synner))
@@ -1349,16 +1337,8 @@
 	    (identifier? #'?invocable-name))
        (%add-method parsed-spec #'?method-name TOP-ID #'?invocable-name synner))
 
-      ;;Tagged return value method definition.  List tag specification.
-      (((?method-name ?rv-tag) ?invocable-name)
-       (and (identifier? #'?method-name)
-	    (identifier? #'?rv-tag)
-	    (identifier? #'?invocable-name))
-       (%add-method parsed-spec #'?method-name #'?rv-tag #'?invocable-name synner))
-
-      ;;Tagged   return    value   method   definition.     Vector   tag
-      ;;specification.
-      ((#(?method-name ?rv-tag) ?invocable-name)
+      ;;Tagged return value method definition.
+      (((brace ?method-name ?rv-tag) ?invocable-name)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag)
 	    (identifier? #'?invocable-name))
@@ -1380,10 +1360,10 @@
   (%parse-field-spec)
 
   (define* (%parse-field-spec field-spec-stx
-			      (parsed-spec <parsed-spec>?)
-			      (register-mutable-field   procedure?)
-			      (register-immutable-field procedure?)
-			      (synner procedure?))
+			      {parsed-spec <parsed-spec>?}
+			      {register-mutable-field   procedure?}
+			      {register-immutable-field procedure?}
+			      {synner procedure?})
     ;;Parse  a concrete  or virtual  field specification  and apply  the
     ;;proper function to the result.
     ;;
@@ -1417,17 +1397,12 @@
        (synner "invalid virtual-field specification" field-spec-stx))))
 
   (define (%parse-field field-stx parsed-spec synner)
-    (syntax-case field-stx ()
+    (syntax-case field-stx (brace)
       (?field-name-id
        (identifier? #'?field-name-id)
        (values #'?field-name-id (<parsed-spec>-top-id parsed-spec)))
 
-      ((?field-name-id ?type-tag-id)
-       (and (identifier? #'?field-name-id)
-	    (identifier? #'?type-tag-id))
-       (values #'?field-name-id #'?type-tag-id))
-
-      (#(?field-name-id ?type-tag-id)
+      ((brace ?field-name-id ?type-tag-id)
        (and (identifier? #'?field-name-id)
 	    (identifier? #'?type-tag-id))
        (values #'?field-name-id #'?type-tag-id))
@@ -1458,8 +1433,7 @@
   ;;where ?FIELD has one of the following syntaxes:
   ;;
   ;;  ?field-name-id
-  ;;  (?field-name-id ?type-tag-id)
-  ;;  #(?field-name-id ?type-tag-id)
+  ;;  (brace ?field-name-id ?type-tag-id)
   ;;
   ;;both ?ACCESSOR and ?MUTATOR must be identifiers.
   ;;
@@ -1497,9 +1471,9 @@
       (make-<concrete-field-spec> field-name-id accessor-id #f type-tag-id))
     (%add-field-record parsed-spec field-spec synner))
 
-  (define* (%parse-concrete-field-acc/mut-spec (field-name-id identifier?)
+  (define* (%parse-concrete-field-acc/mut-spec {field-name-id identifier?}
 					       acc/mut-stx
-					       (parsed-spec <parsed-spec>?)
+					       {parsed-spec <parsed-spec>?}
 					       make-default-id synner)
     ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
     ;;object   ACC/MUT-STX   representing   the  accessor   or   mutator
@@ -1522,7 +1496,7 @@
 	   (synner "expected identifier as field accessor or mutator specification"
 		   acc/mut-stx))))
 
-  (define* (%add-field-record (parsed-spec <parsed-spec>?) (field-record <field-spec>?) synner)
+  (define* (%add-field-record {parsed-spec <parsed-spec>?} {field-record <field-spec>?} synner)
     ;;Add a record representing a field specification to the appropriate
     ;;field in PARSED-SPEC.  Check for duplicate names in members.
     ;;
@@ -1553,8 +1527,7 @@
   ;;where ?FIELD has one of the following syntaxes:
   ;;
   ;;  ?field-name-id
-  ;;  (?field-name-id ?type-tag-id)
-  ;;  #(?field-name-id ?type-tag-id)
+  ;;  (brace ?field-name-id ?type-tag-id)
   ;;
   ;;both ?ACCESSOR  and ?MUTATOR can  be identifiers bound  to functions
   ;;and syntaxes or arbitrary expressions evaluating to the accessor and
@@ -1594,9 +1567,9 @@
       (make-<virtual-field-spec> field-name-id accessor-id #f type-tag-id))
     (%add-field-record parsed-spec field-spec synner))
 
-  (define* (%parse-virtual-field-acc/mut-spec (field-name-id identifier?)
+  (define* (%parse-virtual-field-acc/mut-spec {field-name-id identifier?}
 					      acc/mut-stx
-					      (parsed-spec <parsed-spec>?)
+					      {parsed-spec <parsed-spec>?}
 					      make-default-id synner)
     ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
     ;;object   ACC/MUT-STX   representing   the  accessor   or   mutator
@@ -1628,7 +1601,7 @@
 	  (<parsed-spec>-definitions-cons! parsed-spec (list #'define acc/mut-id acc/mut-stx)))
 	acc/mut-id)))
 
-  (define* (%add-field-record (parsed-spec <parsed-spec>?) (field-record <field-spec>?) synner)
+  (define* (%add-field-record {parsed-spec <parsed-spec>?} {field-record <field-spec>?} synner)
     ;;Add a record representing a field specification to the appropriate
     ;;field in PARSED-SPEC.  Check for duplicate names in members.
     ;;

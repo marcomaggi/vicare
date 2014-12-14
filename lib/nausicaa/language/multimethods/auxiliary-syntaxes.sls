@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa language multimethods auxiliary-syntaxes)
+(library (nausicaa language multimethods auxiliary-syntaxes (0 4))
   (export
     :number-of-arguments
 
@@ -44,7 +44,7 @@
     :before-method-add
     :after-method-add
     :around-method-add)
-  (import (only (vicare)
+  (import (only (vicare (0 4))
 		define-auxiliary-syntaxes))
   (define-auxiliary-syntaxes
     :number-of-arguments

@@ -140,9 +140,9 @@
     fixnum-aligned-to-4?
     fixnum-aligned-to-8?
     fixnum-aligned-to?)
-  (import (ikarus)
-    (ikarus system $fx)
-    (ikarus system $bignums)
+  (import (vicare)
+    (vicare system $fx)
+    (vicare system $bignums)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand))

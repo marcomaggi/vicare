@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus.posix)
   (export
 
@@ -24,6 +25,7 @@
 
     ;; file operations
     file-exists?
+    directory-exists?
     delete-file
     real-pathname
 
@@ -62,13 +64,14 @@
     ;; program name
     vicare-argv0
     vicare-argv0-string)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; errno handling
 		  strerror
 		  errno->string
 
 		  ;; file operations
 		  file-exists?
+		  directory-exists?
 		  delete-file
 		  real-pathname
 
@@ -112,8 +115,7 @@
 	    capi.)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
-    (vicare arguments validation)
-    #;(ikarus.emergency))
+    (vicare arguments validation))
 
 
 ;;;; arguments validation
@@ -418,24 +420,29 @@
 
 ;;;; file predicates
 
-(define (file-exists? pathname)
+(define* (file-exists? {pathname file-pathname?})
   ;;Defined by R6RS.
   ;;
-  (define who 'file-exists?)
-  (with-arguments-validation (who)
-      ((file-pathname	pathname))
-    ($file-exists? pathname)))
+  ($file-exists? pathname))
 
-(define ($file-exists? pathname)
-  (define who 'file-exists?)
+(define* ($file-exists? pathname)
   (with-pathnames ((pathname.bv pathname))
-    ;; (emergency-write pathname)
-    ;; (emergency-write (utf8->string pathname.bv))
-    ;; (emergency-write (if (capi.posix-file-exists? pathname.bv) "yes" "no"))
     (let ((rv (capi.posix-file-exists? pathname.bv)))
       (if (boolean? rv)
 	  rv
-	(%raise-errno-error/filename who rv pathname)))))
+	(%raise-errno-error/filename __who__ rv pathname)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (directory-exists? {pathname file-pathname?})
+  ($directory-exists? pathname))
+
+(define* ($directory-exists? pathname)
+  (with-pathnames ((pathname.bv pathname))
+    (let ((rv (capi.posix-directory-exists? pathname.bv)))
+      (if (boolean? rv)
+	  rv
+	(%raise-errno-error/filename __who__ rv pathname)))))
 
 ;;; --------------------------------------------------------------------
 

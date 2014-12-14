@@ -6,7 +6,7 @@
 (library (vicare language-extensions cond-expand platform-features)
   (export expand-time-features run-time-features)
   (import (rnrs)
-    (only (ikarus) host-info)
+    (only (vicare) host-info)
     (vicare language-extensions cond-expand OS-id-features))
   (define (expand-time-features)
     '(vicare))

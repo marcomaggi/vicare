@@ -17,16 +17,16 @@
 
 (library (ikarus writer)
   (export
-    write		display
-    put-datum		format
-    printf		fprintf
-    print-error
-    print-unicode	print-graph
+    write			display
+    put-datum			format
+    printf			fprintf
+    print-error			debug-print
+    print-unicode		print-graph
     printer-integer-radix
 
     ;;The following are not in "makefile.sps".
     traverse		traversal-helpers)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
@@ -34,10 +34,10 @@
 		  write			display
 		  put-datum		format
 		  printf		fprintf
-		  print-error
+		  print-error		debug-print
 		  print-unicode		print-graph
 		  printer-integer-radix)
-    (only (ikarus system $symbols)
+    (only (vicare system $symbols)
 	  $unbound-object?)
     (only (vicare system $structs)
 	  $struct-rtd)
@@ -46,7 +46,7 @@
     (only (ikarus records procedural)
 	  print-r6rs-record-instance))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 (define print-unicode
@@ -858,6 +858,15 @@
     (die who "not a textual port" p))
   (when (port-closed? p)
     (die who "port is closed" p)))
+
+(define (debug-print . args)
+  ;;Print arguments for debugging purposes.
+  ;;
+  (pretty-print args (current-error-port))
+  (newline (current-error-port))
+  (newline (current-error-port))
+  (when (pair? args)
+    (car args)))
 
 
 ;;;; done

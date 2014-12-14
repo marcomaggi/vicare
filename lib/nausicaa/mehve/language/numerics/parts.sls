@@ -25,20 +25,20 @@
 ;;;
 
 
-#!r6rs
-(library (nausicaa mehve language numerics parts)
+#!vicare
+(library (nausicaa mehve language numerics parts (0 4))
   (options visit-upon-loading)
   (export
     numerator denominator rationalize sign
     floor ceiling truncate round
     real-part imag-part magnitude angle
     make-rectangular make-polar complex-conjugate)
-  (import (except (nausicaa)
+  (import (except (nausicaa (0 4))
 		  numerator denominator rationalize sign
 		  floor ceiling truncate round
 		  real-part imag-part magnitude angle
 		  make-rectangular make-polar complex-conjugate)
-    (prefix (only (nausicaa)
+    (prefix (only (nausicaa (0 4))
 		  numerator denominator rationalize sign
 		  floor ceiling truncate round
 		  real-part imag-part magnitude angle
@@ -72,10 +72,10 @@
 (define-generic make-polar	(M A))
 (define-generic complex-conjugate (x))
 
-(define-method (imag-part (o <real>))
+(define-method (imag-part {o <real>})
   0)
 
-(define-method (angle (o <integer>))
+(define-method (angle {o <integer>})
   0)
 
 ;;According  to  R6RS:  all  the  reals except  Inf  and  NaN  are  also

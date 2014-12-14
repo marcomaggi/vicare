@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2006-2007, 2010-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2006-2007, 2010-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,8 +25,9 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa uri pathnames abstract)
+  (options visit-upon-loading)
   (export
     <pathname>
     <absolute-pathname>
@@ -83,9 +84,9 @@
        ((make-top)))))
 
   (virtual-fields
-   (immutable (bytevector	<bytevector>)	pathname-bytevector)
-   (immutable (string		<string>)	pathname-string)
-   (immutable (uri		<bytevector>)	pathname-uri-representation))
+   (immutable {bytevector	<bytevector>}	pathname-bytevector)
+   (immutable {string		<string>}	pathname-string)
+   (immutable {uri		<bytevector>}	pathname-uri-representation))
 
   (methods
    (extension			pathname-extension)
@@ -134,10 +135,10 @@
 
 ;;;; multimethods implementation
 
-(define-method (pathname=? (A <absolute-pathname>) (B <relative-pathname>))
+(define-method (pathname=? {A <absolute-pathname>} {B <relative-pathname>})
   #f)
 
-(define-method (pathname=? (A <relative-pathname>) (B <absolute-pathname>))
+(define-method (pathname=? {A <relative-pathname>} {B <absolute-pathname>})
   #f)
 
 

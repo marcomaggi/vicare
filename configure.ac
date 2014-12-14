@@ -2,15 +2,15 @@ dnl @configure_input@
 dnl
 
 AC_PREREQ([2.68])
-AC_INIT([Vicare Scheme],[0.3d8],[marco.maggi-ipsu@poste.it],
+AC_INIT([Vicare Scheme],[0.4d0],[marco.maggi-ipsu@poste.it],
   [vicare-scheme],[http://marcomaggi.github.com/vicare.html])
 AC_CONFIG_SRCDIR([src])
-AC_CONFIG_MACRO_DIR([autotools])
-AC_CONFIG_AUX_DIR([autotools])
+AC_CONFIG_MACRO_DIR([meta/autotools])
+AC_CONFIG_AUX_DIR([meta/autotools])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([1.14 foreign dist-xz no-dist-gzip])
+AM_INIT_AUTOMAKE([1.14 foreign subdir-objects dist-xz no-dist-gzip])
 AM_MAINTAINER_MODE
 
 AM_PROG_AR
@@ -41,7 +41,7 @@ AC_DEFINE([IK_PROTECT_FROM_STACK_OVERFLOW],[1],
 #
 #    $ make VFLAGS="-g --print-loaded-libraries"
 #
-AS_VAR_SET(AX_VFLAGS,["-O2"])
+AS_VAR_SET(AX_VFLAGS,["-O2 --verbose --no-rcfile"])
 AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS)])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
@@ -52,6 +52,16 @@ AM_CONDITIONAL([WANT_DEBUG],
 
 AM_COND_IF([WANT_DEBUG],
   [AS_VAR_SET(AX_VFLAGS,"$AX_VFLAGS -g")])
+
+VICARE_ENABLE_OPTION([GC_INTEGRITY],[gc-integrity],[no],
+  [whether to enable garbage collection integrity checks],
+  [to enable garbage collection integrity checks])
+AM_CONDITIONAL([WANT_GC_INTEGRITY],
+  [test "x$vicare_enable_GC_INTEGRITY" = xyes])
+
+AM_COND_IF([WANT_GC_INTEGRITY],
+  [AC_DEFINE([VICARE_GC_INTEGRITY],[1],
+     [when defined enables garbage collection integrity checks])])
 
 VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
   [whether arguments validation is enabled],
@@ -77,45 +87,58 @@ VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],
   [enable installation of SRFI libraries])
 AM_CONDITIONAL([WANT_SRFI],[test "x$vicare_enable_SRFI" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_SRFI_ENABLED,[f])
 AM_COND_IF([WANT_SRFI],
-  [AC_DEFINE([VICARE_BUILT_WITH_SRFI_ENABLED],[1],
-     [defined if SRFI libraries were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_SRFI_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_SRFI_ENABLED])
 
 VICARE_ENABLE_OPTION([NAUSICAA],[nausicaa],[yes],
   [whether to install the Nausicaa libraries],
   [enable installation of Nausicaa libraries])
 AM_CONDITIONAL([WANT_NAUSICAA],[test "x$vicare_enable_NAUSICAA" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_NAUSICAA_ENABLED,[f])
 AM_COND_IF([WANT_NAUSICAA],
-  [AC_DEFINE([VICARE_BUILT_WITH_NAUSICAA_ENABLED],[1],
-     [defined if Nausicaa libraries were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_NAUSICAA_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_NAUSICAA_ENABLED])
 
 VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [whether POSIX features are enabled],
   [enable POSIX features])
 AM_CONDITIONAL([WANT_POSIX],[test "x$vicare_enable_POSIX" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_POSIX_ENABLED,[f])
 AM_COND_IF([WANT_POSIX],
-  [AC_DEFINE([VICARE_BUILT_WITH_POSIX_ENABLED],[1],
-     [defined if POSIX features were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_POSIX_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_POSIX_ENABLED])
 
 VICARE_ENABLE_OPTION([GLIBC],[glibc],[yes],
   [whether GNU C Library features are enabled],
   [enable GNU C Library features])
 AM_CONDITIONAL([WANT_GLIBC],[test "x$vicare_enable_GLIBC" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_GLIBC_ENABLED,[f])
 AM_COND_IF([WANT_GLIBC],
-  [AC_DEFINE([VICARE_BUILT_WITH_GLIBC_ENABLED],[1],
-     [defined if GLIBC features were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_GLIBC_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_GLIBC_ENABLED])
 
 VICARE_ENABLE_OPTION([LINUX],[linux],[yes],
   [whether Linux features are enabled],
   [enable Linux features])
 AM_CONDITIONAL([WANT_LINUX],[test "x$vicare_enable_LINUX" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_LINUX_ENABLED,[f])
 AM_COND_IF([WANT_LINUX],
-  [AC_DEFINE([VICARE_BUILT_WITH_LINUX_ENABLED],[1],
-     [defined if LINUX features were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_LINUX_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_LINUX_ENABLED])
+
+dnl --------------------------------------------------------------------
+
+VICARE_ENABLE_OPTION([INSTALL_SOURCES],[sources-installation],[no],
+  [whether to install source Scheme libraries],
+  [enable installation of source Scheme libraries])
+AM_CONDITIONAL([WANT_INSTALL_SOURCES],
+  [test "x$vicare_enable_INSTALL_SOURCES" = xyes])
 
 dnl --------------------------------------------------------------------
 
@@ -342,63 +365,28 @@ AC_CACHE_SAVE
 #page
 #### POSIX system inspection
 
-AC_CHECK_MEMBER([struct stat.st_atimespec],
-   AC_DEFINE(HAVE_STAT_ST_ATIMESPEC, 1,
-             [stat struct has st_atimespec field]),
-   [],
-   [[#include <sys/stat.h>]])
+dnl $1 - struct stat field name upper case
+dnl $2 - struct stat field name lower case
+AC_DEFUN([VICARE_CHECK_STRUCT_STAT_FIELD],
+  [AC_CHECK_MEMBER([struct stat.$2],
+     [AC_DEFINE(HAVE_STAT_$1,1,[stat struct has $2 field])],
+     [],
+     [[#include <sys/stat.h>]])])
 
-AC_CHECK_MEMBER([struct stat.st_atim],
-   AC_DEFINE(HAVE_STAT_ST_ATIM, 1,
-             [stat struct has st_atim field]),
-   [],
-   [[#include <sys/stat.h>]])
+dnl These should be always present.
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_ATIME],[st_atime])
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_MTIME],[st_mtime])
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_CTIME],[st_ctime])
 
-AC_CHECK_MEMBER([struct stat.st_atime_usec],
-   AC_DEFINE(HAVE_STAT_ST_ATIME_USEC, 1,
-             [stat struct has st_atime_usec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-dnl --------------------------------------------------------------------
-
-AC_CHECK_MEMBER([struct stat.st_mtimespec],
-   AC_DEFINE(HAVE_STAT_ST_MTIMESPEC, 1,
-             [stat struct has st_mtimespec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_mtim],
-   AC_DEFINE(HAVE_STAT_ST_MTIM, 1,
-             [stat struct has st_mtim field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_mtime_usec],
-   AC_DEFINE(HAVE_STAT_ST_MTIME_USEC, 1,
-             [stat struct has st_mtime_usec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-dnl --------------------------------------------------------------------
-
-AC_CHECK_MEMBER([struct stat.st_ctimespec],
-   AC_DEFINE(HAVE_STAT_ST_CTIMESPEC, 1,
-             [stat struct has st_ctimespec field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_ctim],
-   AC_DEFINE(HAVE_STAT_ST_CTIM, 1,
-             [stat struct has st_ctim field]),
-   [],
-   [[#include <sys/stat.h>]])
-
-AC_CHECK_MEMBER([struct stat.st_ctime_usec],
-   AC_DEFINE(HAVE_STAT_ST_CTIME_USEC, 1,
-             [stat struct has st_ctime_usec field]),
-   [],
-   [[#include <sys/stat.h>]])
+dnl For the nanosecond resolution, under the GNU C Library, either these
+dnl are defined ...
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_ATIMENSEC],[st_atimensec])
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_MTIMENSEC],[st_mtimensec])
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_CTIMENSEC],[st_ctimensec])
+dnl ... or these are defined, according to the manual page of stat(2).
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_ATIM_TV_NSEC],[st_atim.tv_nsec])
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_MTIM_TV_NSEC],[st_mtim.tv_nsec])
+VICARE_CHECK_STRUCT_STAT_FIELD([ST_CTIM_TV_NSEC],[st_ctim.tv_nsec])
 
 dnl --------------------------------------------------------------------
 
@@ -459,263 +447,71 @@ AM_COND_IF([WANT_POSIX],[
 
   AC_CHECK_FUNCS([sigwaitinfo sigtimedwait])
 
-  AC_CHECK_MEMBER([siginfo_t.si_signo],
-     [AC_DEFINE([HAVE_SIGINFO_SI_SIGNO],[1],[siginfo_t struct has si_signo field])],
-     [],[[#undef _POSIX_C_SOURCE
+  dnl $1 - struct stat field name upper case
+  dnl $2 - struct stat field name lower case
+  AC_DEFUN([VICARE_CHECK_STRUCT_SIGINFO_FIELD],
+    [AC_CHECK_MEMBER([siginfo_t.$2],
+       [AC_DEFINE([HAVE_SIGINFO_$1],[1],[siginfo_t struct has $2 field])],
+       [],[[
+#undef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 199309L
 #ifdef HAVE_SIGNAL_H
 #  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_errno],
-     [AC_DEFINE([HAVE_SIGINFO_SI_ERRNO],[1],[siginfo_t struct has si_errno field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_code],
-     [AC_DEFINE([HAVE_SIGINFO_SI_CODE],[1],[siginfo_t struct has si_code field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_trapno],
-     [AC_DEFINE([HAVE_SIGINFO_SI_TRAPNO],[1],[siginfo_t struct has si_trapno field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_pid],
-     [AC_DEFINE([HAVE_SIGINFO_SI_PID],[1],[siginfo_t struct has si_pid field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_uid],
-     [AC_DEFINE([HAVE_SIGINFO_SI_UID],[1],[siginfo_t struct has si_uid field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_status],
-     [AC_DEFINE([HAVE_SIGINFO_SI_STATUS],[1],[siginfo_t struct has si_status field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_utime],
-     [AC_DEFINE([HAVE_SIGINFO_SI_UTIME],[1],[siginfo_t struct has si_utime field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_stime],
-     [AC_DEFINE([HAVE_SIGINFO_SI_STIME],[1],[siginfo_t struct has si_stime field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_value],
-     [AC_DEFINE([HAVE_SIGINFO_SI_VALUE],[1],[siginfo_t struct has si_value field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_int],
-     [AC_DEFINE([HAVE_SIGINFO_SI_INT],[1],[siginfo_t struct has si_int field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_ptr],
-     [AC_DEFINE([HAVE_SIGINFO_SI_PTR],[1],[siginfo_t struct has si_ptr field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_overrun],
-     [AC_DEFINE([HAVE_SIGINFO_SI_OVERRUN],[1],[siginfo_t struct has si_overrun field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_timerid],
-     [AC_DEFINE([HAVE_SIGINFO_SI_TIMERID],[1],[siginfo_t struct has si_timerid field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_addr],
-     [AC_DEFINE([HAVE_SIGINFO_SI_ADDR],[1],[siginfo_t struct has si_addr field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_band],
-     [AC_DEFINE([HAVE_SIGINFO_SI_BAND],[1],[siginfo_t struct has si_band field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_fd],
-     [AC_DEFINE([HAVE_SIGINFO_SI_FD],[1],[siginfo_t struct has si_fd field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
-  AC_CHECK_MEMBER([siginfo_t.si_addr_lsb],
-     [AC_DEFINE([HAVE_SIGINFO_SI_ADDR_LSB],[1],[siginfo_t struct has si_addr_lsb field])],
-     [],[[#undef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
-#ifdef HAVE_SIGNAL_H
-#  include <signal.h>
-#endif]])
+#endif
+    ]])])
+
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_SIGNO],[si_signo])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_ERRNO],[si_errno])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_CODE],[si_code])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_TRAPNO],[si_trapno])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_PID],[si_pid])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_UID],[si_uid])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_STATUS],[si_status])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_UTIME],[si_utime])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_STIME],[si_stime])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_VALUE],[si_value])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_INT],[si_int])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_PTR],[si_ptr])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_OVERRUN],[si_overrun])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_TIMERID],[si_timerid])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_ADDR],[si_addr])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_BAND],[si_band])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_FD],[si_fd])
+  VICARE_CHECK_STRUCT_SIGINFO_FIELD([SI_ADDR_LSB],[si_addr_lsb])
 
 dnl --------------------------------------------------------------------
 
-  AC_CHECK_MEMBER([struct rusage.ru_utime],
-     [AC_DEFINE([HAVE_RUSAGE_RU_UTIME],[1],[struct rusage has ru_utime field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
+  dnl $1 - struct stat field name upper case
+  dnl $2 - struct stat field name lower case
+  AC_DEFUN([VICARE_CHECK_STRUCT_RUSAGE_FIELD],
+    [AC_CHECK_MEMBER([struct rusage.$2],
+       [AC_DEFINE([HAVE_RUSAGE_$1],[1],[struct rusage has $2 field])],
+       [],
+       [[
+#ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 #endif
 #ifdef HAVE_SYS_RESOURCE_H
 #  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_stime],
-     [AC_DEFINE([HAVE_RUSAGE_RU_STIME],[1],[struct rusage has ru_stime field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
 #endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_maxrss],
-     [AC_DEFINE([HAVE_RUSAGE_RU_MAXRSS],[1],[struct rusage has ru_maxrss field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_ixrss],
-     [AC_DEFINE([HAVE_RUSAGE_RU_IXRSS],[1],[struct rusage has ru_ixrss field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_idrss],
-     [AC_DEFINE([HAVE_RUSAGE_RU_IDRSS],[1],[struct rusage has ru_idrss field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_isrss],
-     [AC_DEFINE([HAVE_RUSAGE_RU_ISRSS],[1],[struct rusage has ru_isrss field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_minflt],
-     [AC_DEFINE([HAVE_RUSAGE_RU_MINFLT],[1],[struct rusage has ru_minflt field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_majflt],
-     [AC_DEFINE([HAVE_RUSAGE_RU_MAJFLT],[1],[struct rusage has ru_majflt field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_nswap],
-     [AC_DEFINE([HAVE_RUSAGE_RU_NSWAP],[1],[struct rusage has ru_nswap field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_inblock],
-     [AC_DEFINE([HAVE_RUSAGE_RU_INBLOCK],[1],[struct rusage has ru_inblock field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_oublock],
-     [AC_DEFINE([HAVE_RUSAGE_RU_OUBLOCK],[1],[struct rusage has ru_oublock field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_msgsnd],
-     [AC_DEFINE([HAVE_RUSAGE_RU_MSGSND],[1],[struct rusage has ru_msgsnd field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_msgrcv],
-     [AC_DEFINE([HAVE_RUSAGE_RU_MSGRCV],[1],[struct rusage has ru_msgrcv field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_nsignals],
-     [AC_DEFINE([HAVE_RUSAGE_RU_NSIGNALS],[1],[struct rusage has ru_nsignals field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_nvcsw],
-     [AC_DEFINE([HAVE_RUSAGE_RU_NVCSW],[1],[struct rusage has ru_nvcsw field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
-  AC_CHECK_MEMBER([struct rusage.ru_nivcsw],
-     [AC_DEFINE([HAVE_RUSAGE_RU_NIVCSW],[1],[struct rusage has ru_nivcsw field])],
-     [],[[#ifdef HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif]])
+       ]])])
+
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_UTIME],[ru_utime])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_STIME],[ru_stime])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_MAXRSS],[ru_maxrss])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_IXRSS],[ru_ixrss])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_IDRSS],[ru_idrss])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_ISRSS],[ru_isrss])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_MINFLT],[ru_minflt])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_MAJFLT],[ru_majflt])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_NSWAP],[ru_nswap])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_INBLOCK],[ru_inblock])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_OUBLOCK],[ru_oublock])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_MSGSND],[ru_msgsnd])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_MSGRCV],[ru_msgrcv])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_NSIGNALS],[ru_nsignals])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_NVCSW],[ru_nvcsw])
+  VICARE_CHECK_STRUCT_RUSAGE_FIELD([RU_NIVCSW],[ru_nivcsw])
 
   ])
 
@@ -1606,9 +1402,10 @@ VICARE_WITH_LIBRARY([LIBFFI],[libffi],[check],
   [ffi.h],[ffi],[ffi_call])
 AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_FFI_ENABLED,[f])
 AM_COND_IF([WANT_LIBFFI],
-  [AC_DEFINE([VICARE_BUILT_WITH_FFI_ENABLED],[1],
-     [defined if Libffi support is enabled])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_FFI_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_FFI_ENABLED])
 
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
@@ -1645,9 +1442,10 @@ AS_IF([test "x$with_libiconv" != xno],
 dnl
 AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[f])
 AM_COND_IF([WANT_LIBICONV],
-  [AC_DEFINE([VICARE_BUILT_WITH_ICONV_ENABLED],[1],
-     [defined if Libiconv support is enabled])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_ICONV_ENABLED])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library
@@ -1742,15 +1540,12 @@ AC_SUBST([VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES(Makefile
-                src/Makefile scheme/Makefile doc/Makefile lib/Makefile
-                tests/Makefile demos/Makefile
                 src/vicare-platform.h
                 lib/vicare/platform/configuration.sls
                 lib/vicare/platform/constants.sls
                 lib/vicare/platform/errno.sls
                 lib/vicare/platform/words.sls
-                lib/nausicaa/uri/pathnames.sls
-                meta/slackware/doinst.sh)
+                lib/nausicaa/uri/pathnames.sls)
 AC_OUTPUT
 
 ### end of file

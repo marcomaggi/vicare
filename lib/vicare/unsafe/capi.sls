@@ -10,7 +10,7 @@
 ;;;	the Vicare  documentation.  This library  exports only syntaxes,
 ;;;	so it can be used in the source code of Vicare itself.
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -175,7 +175,7 @@
     posix-file-is-symbolic-link?	posix-file-is-socket?
     posix-file-is-fifo?			posix-file-is-message-queue?
     posix-file-is-semaphore?		posix-file-is-shared-memory?
-    posix-file-exists?
+    posix-file-exists?			posix-directory-exists?
     posix-file-size			posix-access
     posix-file-atime			posix-file-mtime
     posix-file-ctime
@@ -407,18 +407,7 @@
     linux-ether_ntohost	linux-ether_hostton
     linux-ether_line
     )
-  (import (ikarus))
-
-
-;;;; helpers
-
-;; (define-syntax define-inline
-;;   (syntax-rules ()
-;;     ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-;;      (define-syntax ?name
-;;        (syntax-rules ()
-;; 	 ((_ ?arg ... . ?rest)
-;; 	  (begin ?form0 ?form ...)))))))
+  (import (vicare))
 
 
 ;;;; foreign functions interface
@@ -1104,6 +1093,9 @@
 
 (define-inline (posix-file-exists? pathname-bv)
   (foreign-call "ikrt_posix_file_exists" pathname-bv))
+
+(define-inline (posix-directory-exists? pathname-bv)
+  (foreign-call "ikrt_posix_directory_exists" pathname-bv))
 
 (define-inline (posix-file-size pathname-bv)
   (foreign-call "ikrt_posix_file_size" pathname-bv))

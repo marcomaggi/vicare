@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,13 +26,9 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (prefix (vicare platform words) words.)
   (vicare unsafe operations)
-  ;;FIXME To be removed at the  next boot image rotation.  (Marco Maggi;
-  ;;Tue Nov 26, 2013)
-  (only (vicare system $bytevectors)
-	$bytevector-copy)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

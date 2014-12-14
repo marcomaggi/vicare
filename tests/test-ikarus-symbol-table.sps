@@ -27,8 +27,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
-  (only (ikarus system $symbols)
+(import (vicare)
+  (only (vicare system $symbols)
 	$symbol-table-size)
   (vicare checks))
 

@@ -16,12 +16,18 @@
 
 
 (library (ikarus fasl read)
-  (export fasl-read)
-  (import (except (ikarus)
+  (export
+    fasl-read
+    fasl-read-header
+    fasl-read-object)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
-		  fasl-read)
+		  __who__
+		  fasl-read
+		  fasl-read-header
+		  fasl-read-object)
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (only (ikarus.strings-table)
@@ -32,12 +38,12 @@
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; main functions
 
-(define who 'fasl-read)
+(define-constant __who__ 'fasl-read)
 
 (define (fasl-read port)
   ;;Read and  validate the  FASL header,  then load  the whole  file and
@@ -45,24 +51,49 @@
   ;;
   (define (%assert x y)
     (unless (eq? x y)
-      (assertion-violation who
+      (assertion-violation __who__
 	(format "while reading fasl header expected ~s, got ~s\n" y x))))
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((input-port	port))
-    (%assert (read-u8-as-char port) #\#)
-    (%assert (read-u8-as-char port) #\@)
-    (%assert (read-u8-as-char port) #\I)
-    (%assert (read-u8-as-char port) #\K)
-    (%assert (read-u8-as-char port) #\0)
-    (boot.case-word-size
-     ((32)
-      (%assert (read-u8-as-char port) #\1))
-     ((64)
-      (%assert (read-u8-as-char port) #\2)))
-    (let ((v (%do-read port)))
+    ($fasl-read-header port)
+    (let ((v ($fasl-read-object port)))
       (if (port-eof? port)
-	  v
-	(assertion-violation who "port did not reach EOF at the end of fasl file")))))
+ 	  v
+ 	(assertion-violation __who__ "port did not reach EOF at the end of fasl file")))))
+
+(define* (fasl-read-header {port binary-input-port?})
+  ($fasl-read-header port))
+
+(define-condition-type &i/o-wrong-fasl-header-error
+    &i/o
+  make-i/o-wrong-fasl-header-error
+  i/o-wrong-fasl-header-error?)
+
+(define* ($fasl-read-header port)
+  (define (%assert-chars x y)
+    (unless (eq? x y)
+      (raise
+       (condition (make-assertion-violation)
+		  (make-i/o-wrong-fasl-header-error)
+		  (make-who-condition __who__)
+		  (make-message-condition (format "while reading fasl header expected ~s, got ~s\n" y x))
+		  (make-irritants-condition (list port))))))
+  (%assert-chars (read-u8-as-char port) #\#)
+  (%assert-chars (read-u8-as-char port) #\@)
+  (%assert-chars (read-u8-as-char port) #\I)
+  (%assert-chars (read-u8-as-char port) #\K)
+  (%assert-chars (read-u8-as-char port) #\0)
+  (boot.case-word-size
+   ((32)
+    (%assert-chars (read-u8-as-char port) #\1))
+   ((64)
+    (%assert-chars (read-u8-as-char port) #\2))))
+
+(define* (fasl-read-object {port binary-input-port?})
+  ($fasl-read-object port))
+
+(define ($fasl-read-object port)
+  (%do-read port))
 
 
 (define (%do-read port)
@@ -89,7 +120,7 @@
 	;;in generating the code.  (Marco Maggi; Oct 7, 2012)
 	(let ((good ($vector-ref MARKS m)))
 	  (if good
-	      (assertion-violation who "mark set twice" m port)
+	      (assertion-violation __who__ "mark set twice" m port)
 	    ($vector-set! MARKS m obj)))
       (let* ((n MARKS.len)
 	     (v (make-vector ($fxmax ($fx* n 2) ($fxadd1 m)) #f)))
@@ -228,8 +259,8 @@
 	 (let ((m (read-u32 port)))
 	   (if ($fx< m MARKS.len)
 	       (or ($vector-ref MARKS m)
-		   (error who "uninitialized mark" m))
-	     (assertion-violation who "invalid mark" m))))
+		   (error __who__ "uninitialized mark" m))
+	     (assertion-violation __who__ "invalid mark" m))))
 	((#\l) ;list of length <= 255
 	 (%read-list (read-u8 port) m))
 	((#\L) ;list of length > 255
@@ -302,7 +333,7 @@
 	 ;;recurse to satisfy the request to return an object
 	 (%read/mark m))
 	(else
-	 (assertion-violation who "unexpected char as fasl object header" ch port)))))
+	 (assertion-violation __who__ "unexpected char as fasl object header" ch port)))))
 
   (define (%read-code code-mark closure-mark)
     ;;Read and  return a  code object.  Unless  CODE-MARK is  false: the
@@ -356,7 +387,7 @@
 	((#\<)
 	 (let ((closure-mark (read-u32 port)))
 	   (unless ($fx< closure-mark MARKS.len)
-	     (assertion-violation who "invalid mark" mark))
+	     (assertion-violation __who__ "invalid mark" mark))
 	   (let* ((code ($vector-ref MARKS closure-mark))
 		  (proc ($code->closure code)))
 	     (when mark (%put-mark mark proc))
@@ -365,13 +396,13 @@
 	 (let ((closure-mark (read-u32 port))
 	       (ch           (read-u8-as-char port)))
 	   (unless ($char= ch #\x)
-	     (assertion-violation who "expected char \"x\"" ch))
+	     (assertion-violation __who__ "expected char \"x\"" ch))
 	   (let ((code (%read-code closure-mark mark)))
 	     (if mark
 		 ($vector-ref MARKS mark)
 	       ($code->closure code)))))
 	(else
-	 (assertion-violation who "invalid code header" ch)))))
+	 (assertion-violation __who__ "invalid code header" ch)))))
 
   (define (%read-list len mark)
     ;;Read and  return a list  of LEN  elements.  Unless MARK  is false:
@@ -406,7 +437,7 @@
 (define (read-u8 port)
   (let ((byte (get-u8 port)))
     (if (eof-object? byte)
-	(error who "invalid eof encountered" port)
+	(error __who__ "invalid eof encountered" port)
       byte)))
 
 (define (read-u8-as-char port)
@@ -414,8 +445,8 @@
 
 (define (char->int x)
   (if (char? x)
-      (char->integer x)
-    (assertion-violation who "unexpected EOF inside a fasl object")))
+      ($char->fixnum x)
+    (assertion-violation __who__ "unexpected EOF inside a fasl object")))
 
 (define (read-u32 port)
   ;;Read from  the input PORT 4  bytes representing an  exact integer in
@@ -434,8 +465,27 @@
     (bitwise-ior c0 (sll c1 8) (sll c2 16) (sll c3 24))))
 
 (define (read-fixnum port)
-  ;;Read from  the input PORT a  fixnum represented as  32-bit or 64-bit
-  ;;value depending on the underlying platform's word size.
+  ;;Read from the input PORT a fixnum represented as 32-bit or 64-bit value depending
+  ;;on the underlying platform's word size:
+  ;;
+  ;;* On 32-bit platforms fixnums are represented as standalone 32-bit integers.
+  ;;
+  ;;*  On 64-bit  platforms  fixnums are  represented  as a  sequence  of two  32-bit
+  ;;integers; the first  integer is the least significant, the  second integer is the
+  ;;most significant.
+  ;;
+  ;;Each 32-bit integer  X is read as  a sequence of bytes in  big-endian layout; the
+  ;;sequence of bytes:
+  ;;
+  ;;                    DD CC BB AA
+  ;;   head of file |--|--|--|--|--|--| tail of file
+  ;;
+  ;;is read and an integer is composed as follows:
+  ;;
+  ;;   X = #xAABBCCDD
+  ;;         ^      ^
+  ;;         |      least significant
+  ;;         most significant
   ;;
   (boot.case-word-size
     ((32)
@@ -445,7 +495,7 @@
 	    (c3 (read-u8 port)))
        (cond
 	((fx<= c3 127)
-	 (fxlogor (fxlogor (fxsra c0 2) (fxsll c1 6))
+	 (fxlogor (fxlogor (fxsra c0  2) (fxsll c1  6))
 		  (fxlogor (fxsll c2 14) (fxsll c3 22))))
 	(else
 	 (let ((c0 (fxlogand #xFF (fxlognot c0)))
@@ -453,10 +503,8 @@
 	       (c2 (fxlogand #xFF (fxlognot c2)))
 	       (c3 (fxlogand #xFF (fxlognot c3))))
 	   (fx- -1
-		(fxlogor (fxlogor (fxsra c0 2)
-				  (fxsll c1 6))
-			 (fxlogor (fxsll c2 14)
-				  (fxsll c3 22)))))))))
+		(fxlogor (fxlogor (fxsra c0  2) (fxsll c1  6))
+			 (fxlogor (fxsll c2 14) (fxsll c3 22)))))))))
     ((64)
      (let* ((u0 (read-u32 port))
 	    (u1 (read-u32 port)))

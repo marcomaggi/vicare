@@ -26,21 +26,23 @@
 
 	  ;; unsafe bindings
 	  $length
-	  $map1		$for-each1
-	  $for-all1	$exists1)
-  (import (except (ikarus)
+	  map1		for-each1
+	  for-all1	exists1)
+  (import (except (vicare)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
-		  make-queue-procs)
+		  make-queue-procs
+		  map1		for-each1
+		  for-all1	exists1)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
 	    $length
-	    $for-all1		$exists1
-	    $map1		$for-each1))
+	    for-all1		exists1
+	    map1		for-each1))
 
 
 ;;;; arguments validation
@@ -1004,13 +1006,18 @@
        (define (null*? ls)
 	 (or (null? ls) (and (null? (car ls)) (null*? (cdr ls)))))
 
+       ;; (define (err* ls*)
+       ;; 	 (cond ((null? ls*)
+       ;; 		(procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+       ;; 	       ((list? (car ls*))
+       ;; 		(err* (cdr ls*)))
+       ;; 	       (else
+       ;; 		(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+
        (define (err* ls*)
-	 (cond ((null? ls*)
-		(procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
-	       ((list? (car ls*))
-		(err* (cdr ls*)))
-	       (else
-		(procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))
+	 (if (for-all list? ls*)
+	     (apply procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS ls*)
+	   (apply procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls*)))
 
        (define (cars+cdrs ls ls*)
 	 (if (null? ls)
@@ -1020,7 +1027,7 @@
 		    (let-values (((cars cdrs) (cars+cdrs (cdr ls) (cdr ls*))))
 		      (values (cons (car a) cars) (cons (cdr a) cdrs))))
 		   ((list? (car ls*))
-		    (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS))
+		    (procedure-argument-violation who LENGTH_MISMATCH_AMONG_LIST_ARGUMENTS (cons ls ls*)))
 		   (else
 		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT (car ls*)))))))
 
@@ -1317,39 +1324,64 @@
 
 ;;;; unsafe functions
 
-(define ($map1 func ell)
-  ;;Defined by Vicare.
+(define (map1 func ell)
+  ;;Defined by Vicare.   Like MAP for a single list  argument, but it is
+  ;;meant  to be  faster.   It  does not  check  for  circular list;  it
+  ;;processes the input list from head to tail (in order).
   ;;
-  (if (pair? ell)
-      (cons (func ($car ell))
-	    ($map1 func ($cdr ell)))
-    '()))
+  (let loop ((L ell)
+	     (H #f) ;head
+	     (T #f)) ;last pair
+    (cond ((pair? L)
+	   (let* ((V (func ($car L))) ;value
+		  (P (cons V '()))    ;new last pair
+		  (T (if T
+			 (begin
+			   ($set-cdr! T P)
+			   P)
+		       P))
+		  (H (or H P)))
+	     (loop ($cdr L) H T)))
+	  ((null? L)
+	   (or H '()))
+	  (else
+	   (procedure-argument-violation 'map1 "expected proper list as argument" L)))))
 
-(define ($for-each1 func ell)
-  ;;Defined by Vicare.
+(define (for-each1 func ell)
+  ;;Defined by Vicare.  Like FOR-EACH for a single list argument, but it
+  ;;is meant  to be  faster.  It  does not check  for circular  list; it
+  ;;processes the input list from head to tail (in order).
   ;;
-  (when (pair? ell)
-    (func ($car ell))
-    ($for-each1 func ($cdr ell))))
+  (cond ((pair? ell)
+	 (func ($car ell))
+	 (for-each1 func ($cdr ell)))
+	((null? ell)
+	 (void))
+	(else
+	 (procedure-argument-violation 'for-each1 "expected proper list as argument" ell))))
 
-(define ($for-all1 func ell)
-  ;;Defined by Vicare.
+(define (for-all1 func ell)
+  ;;Defined by Vicare.  Like FOR-ALL for  a single list argument, but it
+  ;;is meant  to be  faster.  It  does not check  for circular  list; it
+  ;;processes the input list from head to tail (in order).
   ;;
   (if (pair? ell)
       (if (pair? ($cdr ell))
 	  (and (func ($car ell))
-	       ($for-all1 func ($cdr ell)))
+	       (for-all1 func ($cdr ell)))
 	;;Last call in tail position.
 	(func ($car ell)))
     #t))
 
-(define ($exists1 func ell)
-  ;;Defined by Vicare.
+(define (exists1 func ell)
+  ;;Defined by Vicare.   Like EXISTS for a single list  argument, but it
+  ;;is meant  to be  faster.  It  does not check  for circular  list; it
+  ;;processes the input list from head to tail (in order).
   ;;
   (if (pair? ell)
       (if (pair? ($cdr ell))
 	  (or (func ($car ell))
-	      ($exists1 func ($cdr ell)))
+	      (exists1 func ($cdr ell)))
 	;;Last call in tail position.
 	(func ($car ell)))
     #f))

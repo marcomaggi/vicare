@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -91,9 +91,9 @@
     struct-stat-st_dev			struct-stat-st_nlink
     struct-stat-st_uid			struct-stat-st_gid
     struct-stat-st_size
-    struct-stat-st_atime		struct-stat-st_atime_usec
-    struct-stat-st_mtime		struct-stat-st_mtime_usec
-    struct-stat-st_ctime		struct-stat-st_ctime_usec
+    struct-stat-st_atime		struct-stat-st_atime_nsec
+    struct-stat-st_mtime		struct-stat-st_mtime_nsec
+    struct-stat-st_ctime		struct-stat-st_ctime_nsec
     struct-stat-st_blocks		struct-stat-st_blksize
 
     file-is-directory?			file-is-char-device?
@@ -141,7 +141,7 @@
     directory-stream-pathname		directory-stream-pointer
     directory-stream-fd			directory-stream-closed?
 
-    ;; reexported from (vicare $posix)
+    ;; reexported from (vicare language-extensions posix)
     (deprefix (posix.split-pathname-root-and-tail
 	       posix.search-file-in-environment-path
 	       posix.search-file-in-list-path
@@ -422,7 +422,7 @@
 		  remove		time
 		  read			write
 		  truncate)
-    (prefix (only (vicare $posix)
+    (prefix (only (vicare language-extensions posix)
 		  errno->string
 		  split-pathname-root-and-tail
 		  search-file-in-environment-path
@@ -1267,9 +1267,9 @@
   ;;
   (st_mode st_ino st_dev st_nlink
 	   st_uid st_gid st_size
-	   st_atime st_atime_usec
-	   st_mtime st_mtime_usec
-	   st_ctime st_ctime_usec
+	   st_atime st_atime_nsec
+	   st_mtime st_mtime_nsec
+	   st_ctime st_ctime_nsec
 	   st_blocks st_blksize))
 
 (define (%struct-stat-printer S port sub-printer)
@@ -1284,11 +1284,11 @@
   (%display " st_gid=")		(%display (struct-stat-st_gid S))
   (%display " st_size=")	(%display (struct-stat-st_size S))
   (%display " st_atime=")	(%display (struct-stat-st_atime S))
-  (%display " st_atime_usec=")	(%display (struct-stat-st_atime_usec S))
+  (%display " st_atime_nsec=")	(%display (struct-stat-st_atime_nsec S))
   (%display " st_mtime=")	(%display (struct-stat-st_mtime S))
-  (%display " st_mtime_usec=")	(%display (struct-stat-st_mtime_usec S))
+  (%display " st_mtime_nsec=")	(%display (struct-stat-st_mtime_nsec S))
   (%display " st_ctime=")	(%display (struct-stat-st_ctime S))
-  (%display " st_ctime_usec=")	(%display (struct-stat-st_ctime_usec S))
+  (%display " st_ctime_nsec=")	(%display (struct-stat-st_ctime_nsec S))
   (%display " st_blocks=")	(%display (struct-stat-st_blocks S))
   (%display " st_blksize=")	(%display (struct-stat-st_blksize S))
   (%display "]"))

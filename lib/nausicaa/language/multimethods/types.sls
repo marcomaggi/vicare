@@ -42,9 +42,9 @@
 
 
 #!r6rs
-(library (nausicaa language multimethods types)
+(library (nausicaa language multimethods types (0 4))
   (export uid-list method-lambda top)
-  (import (rename (only (nausicaa language oopp)
+  (import (rename (only (nausicaa language oopp (0 4))
 			tag-unique-identifiers
 			lambda/tags
 			<top>)

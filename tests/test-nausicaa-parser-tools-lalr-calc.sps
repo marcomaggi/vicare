@@ -11,7 +11,7 @@
 ;;;	  The lexer and parser libraries used in this file are generated
 ;;;	by the script "make-lalr-calc.sps".
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2004 Dominique Boucher
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -29,8 +29,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (libtest calc-parser)
   (libtest calc-parser-helper)
   (libtest calc-parser-lexer)
@@ -49,13 +49,13 @@
   (error #f
     (if (not (is-a? token lt.<lexical-token>))
 	message
-      (let (((T lt.<lexical-token>) token))
-	(if (T location unspecified?)
+      (let (({T lt.<lexical-token>} token))
+	(if ((T location) unspecified?)
 	    message
-	  (let (((P sl.<source-location>) (T location)))
+	  (let (({P sl.<source-location>} (T location)))
 	    (string-append message
-			   " line "   (if (P line)   (P line string)   "?")
-			   " column " (if (P column) (P column string) "?"))))))
+			   " line "   (if (P line)   ((P line) string)   "?")
+			   " column " (if (P column) ((P column) string) "?"))))))
     token))
 
 

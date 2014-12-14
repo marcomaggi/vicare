@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare) catch)
   (vicare platform errno)
   (prefix (vicare platform constants)
 	  plat.)

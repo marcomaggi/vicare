@@ -25,8 +25,8 @@
 ;;;
 
 
-#!r6rs
-(library (nausicaa mehve language numerics predicates)
+#!vicare
+(library (nausicaa mehve language numerics predicates (0 4))
   (options visit-upon-loading)
   (export
     = < > <= >=
@@ -45,12 +45,12 @@
     less-than-or-equal-to-predicate-0	greater-than-or-equal-to-predicate-0
     less-than-or-equal-to-predicate-1	greater-than-or-equal-to-predicate-1
     less-than-or-equal-to-predicate-2	greater-than-or-equal-to-predicate-2)
-  (import (except (nausicaa)
+  (import (except (nausicaa (0 4))
 		  = < > <= >=
 		  zero? positive? negative? non-negative? non-positive?
 		  odd? even?
 		  finite? infinite? nan?)
-    (prefix (only (nausicaa)
+    (prefix (only (nausicaa (0 4))
 		  = < > <= >=
 		  zero? positive? negative? non-negative? non-positive?
 		  odd? even?
@@ -174,13 +174,13 @@
 (define-generic infinite?	(x))
 (define-generic nan?		(x))
 
-(define-method (finite? (x <fixnum>))
+(define-method (finite? {x <fixnum>})
   #t)
 
-(define-method (infinite? (x <fixnum>))
+(define-method (infinite? {x <fixnum>})
   #f)
 
-(define-method (nan? (x <fixnum>))
+(define-method (nan? {x <fixnum>})
   #f)
 
 

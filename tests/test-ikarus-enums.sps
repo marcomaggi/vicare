@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (vicare checks))
 
 (define (run-tests)
