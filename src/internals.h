@@ -461,7 +461,8 @@
 #define LARGE_OBJECT_TAG	0x00100000
 
 /* These are precomputed  full values for the 32-bit words  in the PCB's
-   segments vector.  Notice that "HOLE_MT" is zero. */
+   segments vector; the  suffix "_MT" stands for Main  Tag.  Notice that
+   "HOLE_MT" is zero. */
 #define HOLE_MT		(HOLE_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
 #define MAINHEAP_MT	(MAINHEAP_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
 #define MAINSTACK_MT	(MAINSTACK_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
