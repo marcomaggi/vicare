@@ -245,6 +245,7 @@ Internals
 * debug int::                   Debug mode.
 * machinery::                   Introduction to execution machinery.
 * compiler::                    Wild notes on the compiler internals.
+* boot image::                  Anatomy of the boot image.
 
 Appendices
 
@@ -295,6 +296,7 @@ External documents
 @include debug.texi
 @include machinery.texi
 @include compiler.texi
+@include boot-image.texi
 
 @include missing.texi
 @include building.texi
