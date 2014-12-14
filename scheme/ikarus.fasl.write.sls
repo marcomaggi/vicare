@@ -43,7 +43,10 @@
 	  base-rtd
 	  $struct-rtd)
     (prefix (ikarus.code-objects)
-    	    code.))
+    	    code.)
+    (prefix (only (ikarus.options)
+		  debug-mode-enabled?)
+	    option.))
 
   (include "ikarus.wordsize.scm" #t)
 
@@ -528,8 +531,13 @@
 	 (write-int ($code-size x) port)
 	 ;;Write a fixnum representing the number of free variables in the code.
 	 (write-int (bitwise-arithmetic-shift-left ($code-freevars x) fxshift) port)
-	 ;;Write a Scheme object representing the code annotation.
-	 (let ((next-mark (%write-single-object ($code-annotation x) next-mark)))
+	 (let ((next-mark (if (option.debug-mode-enabled?)
+			      ;;Write   a  Scheme   object   representing  the   code
+			      ;;annotation.
+			      (%write-single-object ($code-annotation x) next-mark)
+			    (begin
+			      (fasl-write-immediate #f port)
+			      next-mark))))
 	   ;;Write an array of bytes being the binary code.
 	   (let next-byte ((i 0) (x.len (code.code-size x)))
 	     (unless ($fx= i x.len)
