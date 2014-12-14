@@ -1178,7 +1178,8 @@ VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
 VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
-VICARE_COMPILED_TESTS_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --fasl-directory $(builddir)/tests --compile-program
+VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --fasl-directory $(builddir)/tests --compile-program
+VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) -F $(fasldir) --r6rs-program
 VICARE_COMPILED_TESTS_ENV	= \
 	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\
 	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
@@ -1186,15 +1187,23 @@ VICARE_COMPILED_TESTS_ENV	= \
 	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
 	LD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_LD_PATH);	export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_DYLD_PATH);	export DYLD_LIBRARY_PATH;
-VICARE_COMPILED_TESTS_RUN	= $(VICARE_COMPILED_TESTS_ENV) $(builddir)/vicare $(VICARE_COMPILED_TESTS_FLAGS)
+VICARE_COMPILED_TESTS_COMPILE	= $(VICARE_COMPILED_TESTS_ENV) $(builddir)/vicare $(VICARE_COMPILED_TESTS_COMPILE_FLAGS)
+VICARE_COMPILED_TESTS_RUN	= $(VICARE_COMPILED_TESTS_ENV) $(builddir)/vicare $(VICARE_COMPILED_TESTS_RUN_FLAGS)
+
+CLEANFILES	+= $(builddir)/tests/*.sps.fasl
 
 ## --------------------------------------------------------------------
 
-.PHONY: compile-tests
+.PHONY: compile-tests run-compiled-tests
 
 compile-tests: all
 	@echo
-	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_RUN) $$f; done
+	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_COMPILE) $$f; done
+	@echo
+
+run-compiled-tests: compile-tests
+	@echo
+	@for f in $(builddir)/tests/*.sps.fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
 	@echo
 
 #page
