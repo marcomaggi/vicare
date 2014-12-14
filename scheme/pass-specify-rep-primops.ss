@@ -107,6 +107,8 @@
      (K #f)))
 
  (define (dirty-vector-set address)
+   ;;FIXME Why  in hell do  we left-shift  ADDRESS by 2  bits???  (Marco
+   ;;Maggi; Sun Dec 14, 2014)
    (define shift-bits 2)
    (prm 'mset32
 	(prm 'mref pcr (K pcb-dirty-vector))
