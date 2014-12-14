@@ -1170,6 +1170,34 @@ lalr-test:
 	@for f in $(testdir)/make-lalr-*.sps; do export testdir=$(testdir); $(VICARE_TEST_RUN) $$f; done
 
 #page
+#### compiling test files
+
+VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
+
+VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
+
+VICARE_COMPILED_TESTS_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --fasl-directory $(builddir)/tests --compile-program
+VICARE_COMPILED_TESTS_ENV	= \
+	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\
+	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
+	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
+	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
+	LD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_LD_PATH);	export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_DYLD_PATH);	export DYLD_LIBRARY_PATH;
+VICARE_COMPILED_TESTS_RUN	= $(VICARE_COMPILED_TESTS_ENV) $(builddir)/vicare $(VICARE_COMPILED_TESTS_FLAGS)
+
+## --------------------------------------------------------------------
+
+.PHONY: compile-tests
+
+compile-tests: all
+	@echo
+	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_RUN) $$f; done
+	@echo
+
+#page
 #### interface to "make instcheck"
 
 VICARE_INSTCHECK_LIBRARY_PATH	= $(DESTDIR)$(bundledlibsdir):$(testdir):$(srcdir)/scheme:$(VICARE_LIBRARY_PATH)
