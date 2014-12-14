@@ -478,7 +478,7 @@
     ;;
     (define-syntax-rule (%display ?thing)
       (display ?thing stderr))
-    (let ((fasl-filename (string-append source-filename ".fasl")))
+    (let ((fasl-filename (string-append (fasl-directory) "/" source-filename ".fasl")))
       (%display "serialising ")
       (%display fasl-filename)
       (%display " ... ")
