@@ -51,7 +51,7 @@
 	  compile-core-expr)
     (only (vicare.foreign-libraries)
 	  retrieve-filename-foreign-libraries)
-    (only (psyntax library-manager)
+    (only (psyntax.library-manager)
 	  library?
 	  library-name
 	  library-source-file-name
@@ -73,7 +73,7 @@
 	  current-include-file-loader
 	  source-code-location
 	  install-binary-library-and-its-dependencies)
-    (only (psyntax expander)
+    (only (psyntax.expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
 	  get-annotated-datum
@@ -1183,7 +1183,6 @@
 
 ;; #!vicare
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load after"))
-;; (void)
 
 #| end of library |# )
 

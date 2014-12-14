@@ -1097,7 +1097,7 @@
 
 
 #!vicare
-(library (psyntax expander)
+(library (psyntax.expander)
   (export
     eval
     environment				environment?
@@ -1231,11 +1231,11 @@
 		  syntax-violation	make-variable-transformer)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
-    (psyntax library-manager)
-    (psyntax builders)
-    (psyntax compat)
-    (psyntax config)
-    (psyntax internal))
+    (psyntax.library-manager)
+    (psyntax.builders)
+    (psyntax.compat)
+    (psyntax.config)
+    (psyntax.internal))
 
 
 ;;; helpers

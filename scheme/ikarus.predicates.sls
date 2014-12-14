@@ -396,6 +396,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.predicates")))
+
+#| end of library |# )
 
 ;;; end of file

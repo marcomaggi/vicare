@@ -541,7 +541,9 @@
   (let-values
       (((libnam.ids libnam.version)  (library-name-decompose name))
        ((libref.ids libref.version)  (library-reference-decompose reference)))
-    (and (for-all eq? libnam.ids libref.ids)
+    (and (= (length libnam.ids)
+	    (length libref.ids))
+	 (for-all eq? libnam.ids libref.ids)
 	 (conforming-version-and-version-reference? libnam.version libref.version))))
 
 
@@ -551,7 +553,7 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "library-utils")))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

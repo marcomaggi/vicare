@@ -527,11 +527,10 @@
 	((code? x)	;code object
 	 ;;Write the character "x" as header.
 	 (put-tag #\x port)
-	 ;;Write  an  exact integer  representing  the  number of  bytes
-	 ;;actually used in the data area of the code object;
+	 ;;Write a raw  exact integer representing the number of  bytes actually used
+	 ;;in the data area of the code object;
 	 (write-int ($code-size x) port)
-	 ;;Write  an  exact  integer  representing the  number  of  free
-	 ;;variables in the code.
+	 ;;Write a fixnum representing the number of free variables in the code.
 	 (write-int (bitwise-arithmetic-shift-left ($code-freevars x) fxshift) port)
 	 ;;Write a Scheme object representing the code annotation.
 	 (let ((next-mark (%write-single-object ($code-annotation x) next-mark)))

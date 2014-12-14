@@ -34,7 +34,7 @@
 ;;
 
 
-(library (psyntax builders)
+(library (psyntax.builders)
   (export
     build-lexical-assignment		build-global-reference
     build-application			build-conditional
@@ -51,8 +51,8 @@
 
     core-language->sexp)
   (import (rnrs)
-    (psyntax compat)
-    (psyntax config))
+    (psyntax.compat)
+    (psyntax.config))
 
 
 (define (build-with-compilation-options library-option* body)

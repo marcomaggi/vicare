@@ -16,7 +16,7 @@
 
 
 #!vicare
-(library (psyntax compat)
+(library (psyntax.compat)
   (export
     define*				define-constant
     case-define				case-define*
@@ -238,6 +238,6 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.compat")))
 
-)
+#| end of library |# )
 
 ;;; end of file

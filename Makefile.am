@@ -60,9 +60,10 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/obspec.texi					\
 	doc/capi.texi					\
 	doc/objects.texi				\
-	doc/compiler.texi				\
 	doc/debug.texi					\
 	doc/machinery.texi				\
+	doc/compiler.texi				\
+	doc/boot-image.texi				\
 	\
 	doc/missing.texi				\
 	doc/building.texi				\

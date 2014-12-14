@@ -237,9 +237,10 @@ Trademarks used herein are the property of their respective owners.
 Internals
 
 * objects::                     Built in Scheme objects.
-* compiler::                    Low level interface to the compiler.
 * debug int::                   Debug mode.
 * machinery::                   Introduction to execution machinery.
+* compiler::                    Wild notes on the compiler internals.
+* boot image::                  Anatomy of the boot image.
 
 Appendices
 
@@ -288,9 +289,10 @@ External documents
 @include capi.texi
 
 @include objects.texi
-@include compiler.texi
 @include debug.texi
 @include machinery.texi
+@include compiler.texi
+@include boot-image.texi
 
 @include missing.texi
 @include building.texi

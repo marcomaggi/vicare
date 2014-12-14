@@ -9,7 +9,7 @@
 ;;;	boot file "vicare.boot".
 ;;;
 ;;;	  This program works  hand-in-hand with the expander,  especially the library
-;;;	(psyntax library-manager) in the file "psyntax.library-manager.sls".
+;;;	(psyntax.library-manager) in the file "psyntax.library-manager.sls".
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
@@ -179,6 +179,7 @@
 		verbose?)
 	  option.)
   (prefix (ikarus.compiler) compiler.)
+  #;(only (psyntax.expander) expand-library)
   (prefix (only (psyntax system $bootstrap)
 		current-library-collection
 		find-library-by-name)
@@ -4252,9 +4253,13 @@
 		      (case-lambda
 		       ((,primloc.arg ,val.arg)
 			(begin
+			  #;(foreign-call (quote "ikrt_scheme_print") ,primloc.arg)
+			  #;(foreign-call (quote "ikrt_scheme_print") ,val.arg)
 			  ((primitive $set-symbol-value!) ,primloc.arg ,val.arg)
 			  (if ((primitive procedure?) ,val.arg)
-			      ((primitive $set-symbol-proc!) ,primloc.arg ,val.arg)
+			      (begin
+				#;(foreign-call (quote "ikrt_print_emergency") '#ve(ascii "is procedure"))
+				((primitive $set-symbol-proc!) ,primloc.arg ,val.arg))
 			    ((primitive $set-symbol-proc!) ,primloc.arg
 			     (case-lambda
 			      ;;Raise an  error if  this lexical  primitive is  not a
@@ -4425,7 +4430,7 @@
 	       (except (vicare)
 		       system-value-gensym
 		       system-label-gensym)
-	     (only (psyntax library-manager)
+	     (only (psyntax.library-manager)
 		   install-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
@@ -4449,7 +4454,7 @@
 	   ;;label gensym.
 	   (for-each
 	       (lambda (func-name.lab)
-		 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
+	   	 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
 	     ',export-subst)
 	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
@@ -4593,7 +4598,8 @@
 	      (expand-all SCHEME-LIBRARY-FILES))))
       ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
       ;;we must register  in the state of  the compiler a closure  capable of mapping
-      ;;lexical-primitive symbol-names to their location gensyms.
+      ;;lexical-primitive symbol-names to their location gensyms.  The loc gensyms of
+      ;;core primitives are created by this very "makefile.sps" script.
       ;;
       ;;EXPORT-PRIMLOCS is an  alist whose keys are the primitive's  symbol names and
       ;;whose values are the primitive's location gensyms.
@@ -4610,6 +4616,10 @@
 	  (lambda ()
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
 	    (for-each (lambda (name core)
+			;; (begin
+			;;   (print-gensym #f)
+			;;   (when (equal? name '(ikarus chars))
+			;;     (pretty-print (syntax->datum core))))
 	    		(debug-printf " ~s" name)
 	    		(compiler.compile-core-expr-to-port core port))
 	      name*

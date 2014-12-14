@@ -366,6 +366,16 @@
    -1)
 
  (define (dirty-vector-set address)
+   ;;FIXME Why in hell do we do:
+   ;;
+   ;;   (prm 'sll (prm 'srl address (K pageshift)) (K shift-bits))
+   ;;
+   ;;rather than just:
+   ;;
+   ;;   (prm 'srl address (K pageshift))
+   ;;
+   ;;as is done in  C code to compute the page  index of ADDRESS? (Marco
+   ;;Maggi; Sun Dec 14, 2014)
    (define shift-bits 2)
    (asm 'mset32
 	(asm 'mref PC-REGISTER (K pcb-dirty-vector))
