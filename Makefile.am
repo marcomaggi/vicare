@@ -63,6 +63,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/debug.texi					\
 	doc/machinery.texi				\
 	doc/compiler.texi				\
+	doc/boot-image.texi				\
 	\
 	doc/missing.texi				\
 	doc/building.texi				\

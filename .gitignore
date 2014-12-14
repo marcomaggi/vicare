@@ -49,6 +49,8 @@ doc/version-scheme.texi
 doc/version-libs.texi
 doc/version-nausicaa.texi
 doc/version-mehve.texi
+doc/_region_.log
+doc/_region_.texi
 install-sh
 missing
 mkinstalldirs

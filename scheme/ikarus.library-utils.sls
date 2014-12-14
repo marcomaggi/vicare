@@ -154,9 +154,11 @@
   ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
   ;;list of identifiers.
   ;;
-  (for-all eq?
-	   (library-name->identifiers sexp1)
-	   (library-name->identifiers sexp2)))
+  (let ((ids1 (library-name->identifiers sexp1))
+	(ids2 (library-name->identifiers sexp2)))
+    (and (= (length ids1)
+	    (length ids2))
+	 (for-all eq? ids1 ids2))))
 
 (module (library-name=?
 	 library-name<?
@@ -539,7 +541,9 @@
   (let-values
       (((libnam.ids libnam.version)  (library-name-decompose name))
        ((libref.ids libref.version)  (library-reference-decompose reference)))
-    (and (for-all eq? libnam.ids libref.ids)
+    (and (= (length libnam.ids)
+	    (length libref.ids))
+	 (for-all eq? libnam.ids libref.ids)
 	 (conforming-version-and-version-reference? libnam.version libref.version))))
 
 
@@ -549,7 +553,7 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "library-utils")))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -200,16 +200,27 @@ ik_mmap_data (ik_ulong size, int gen, ikpcb* pcb)
   return ik_mmap_typed(size, DATA_MT|gen, pcb);
 }
 ikptr
-ik_mmap_code (ik_ulong size, int gen, ikpcb* pcb)
+ik_mmap_code (ik_ulong aligned_size, int gen, ikpcb* pcb)
+/* Allocate contiguous  memory mapped pages  into a single  memory block
+   which will hold one or more code objects, return a raw pointer to the
+   allocated block.  The first page is  marked in the segments vector as
+   "for code"; subsequent pages, if any, are marked as "for data".
+
+   Question: Why when allocating a code  object the first page is tagged
+   as code  and the subsequent pages  as data?  Answer: Because  we know
+   that the  all the  slots in  a code  object containing  references to
+   other  Scheme  objects  are  in  the  first  page,  so  when  garbage
+   collecting we need to scan only the first page.
+
+   This  function is  used, for  example,  to allocate  memory for  code
+   objects loaded from  the boot image.  If the code  object is "small",
+   it fits into a single page; in this case multiple code objects can be
+   stored in  the same  page (with  each code  object size  aligned with
+   IK_ALIGN). */
 {
-  /* Why when allocating a code object  the first page is tagged as code
-     and the subsequent pages as data?  Because we know that the all the
-     slots  in  a code  object  containing  references to  other  Scheme
-     objects are in  the first page, so when garbage  collecting we need
-     to scan only the first page. */
-  ikptr p = ik_mmap_typed(size, CODE_MT|gen, pcb);
-  if (size > IK_PAGESIZE)
-    set_page_range_type(p+IK_PAGESIZE, size-IK_PAGESIZE, DATA_MT|gen, pcb);
+  ikptr p = ik_mmap_typed(aligned_size, CODE_MT|gen, pcb);
+  if (aligned_size > IK_PAGESIZE)
+    set_page_range_type(p+IK_PAGESIZE, aligned_size-IK_PAGESIZE, DATA_MT|gen, pcb);
   return p;
 }
 ikptr

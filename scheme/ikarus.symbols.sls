@@ -383,7 +383,7 @@
   ;;
   ;;so later we can do:
   ;;
-  ;;   ($symbol-value (getprop x system-value-gensym))
+  ;;   ($symbol-value (getprop 'G-cons system-value-gensym))
   ;;   => #<procedure cons>
   ;;
   ;;or use the equivalent public API:
@@ -415,8 +415,7 @@
 ;;;; done
 
 ;; #!vicare
-;; (define dummy
-;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbols")))
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbols"))
 
 #| end of library |# )
 

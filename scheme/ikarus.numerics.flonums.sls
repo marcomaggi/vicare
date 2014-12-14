@@ -1003,7 +1003,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.flonums"))
+
+#| end of library |# )
 
 (library (vicare system flonums)
   (export $fixnum->flonum)

@@ -23,7 +23,7 @@
 
 
 #!vicare
-(library (psyntax library-manager)
+(library (psyntax.library-manager)
   (export
     ;; library inspection
     library?
@@ -78,7 +78,7 @@
     ;;other parameters
     source-code-location)
   (import (rnrs)
-    (psyntax compat))
+    (psyntax.compat))
 
 
 ;;;; helpers
