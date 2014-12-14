@@ -646,7 +646,7 @@
 		  make-textual-socket-output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
-    (only (vicare options)
+    (only (ikarus.options)
 	  strict-r6rs)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.

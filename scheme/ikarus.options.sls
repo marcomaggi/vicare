@@ -25,7 +25,7 @@
 
 
 #!r6rs
-(library (vicare options)
+(library (ikarus.options)
   (export
     verbose?
     debug-mode-enabled?
