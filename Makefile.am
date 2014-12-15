@@ -4,7 +4,6 @@ ACLOCAL_AMFLAGS		= -I meta/autotools
 EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
 			  scripts/make-last-revision			\
-			  scripts/vie					\
 			  meta/autotools/config.rpath
 
 slsdir			= $(srcdir)/lib
@@ -1264,7 +1263,8 @@ run-compiled-tests: compile-tests
 #page
 #### running vicare on the terminal from the build directory
 
-VIE			= $(srcdir)/scripts/vie
+RLWRAP_TRAMPOLINE	= $(srcdir)/scripts/rlwrap-trampoline
+EXTRA_DIST		+= $(RLWRAP_TRAMPOLINE)
 
 VICARE_TERMINAL_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
 VICARE_TERMINAL_LIBRARY_PATH	= $(slsdir):$(VICARE_LIBRARY_PATH)
@@ -1281,7 +1281,10 @@ VICARE_TERMINAL_RUN_ENV		= \
 	LD_LIBRARY_PATH=$(VICARE_TERMINAL_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_TERMINAL_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_TERMINAL_RUN_FLAGS)
-VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) $(VICARE_NEW_EXECUTABLE) --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
+
+VICARE_TERMINAL_VIE_FLAGS	=  --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
+VICARE_TERMINAL_VIE_ENV	= $(VICARE_TERMINAL_RUN_ENV)
+VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_VIE_ENV) $(RLWRAP_TRAMPOLINE) $(VICARE_NEW_EXECUTABLE) $(VICARE_TERMINAL_VIE_FLAGS)
 
 .PHONY: test-run test-vie test-exec-modes
 
