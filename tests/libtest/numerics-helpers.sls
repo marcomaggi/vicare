@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (numerics helpers)
+(library (libtest numerics-helpers)
   (export
     C R I
     make-test			make-test-1

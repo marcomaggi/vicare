@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (numerics helpers)
+  (libtest numerics-helpers)
   (vicare system $numerics)
   (vicare checks)
   (only (vicare platform words)
