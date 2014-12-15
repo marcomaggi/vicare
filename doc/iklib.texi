@@ -11591,6 +11591,22 @@ To be used for debugging purposes.  Write to the current error port some
 informations on the internals of @var{port}.
 @end defun
 
+
+@deffn Syntax file-options @meta{file-options-symbol} @dots{}
+As defined by @rnrs{6}: return a file--options object that encapsulates
+the specified options.  Each @meta{file-options-symbol} must be a
+symbol.
+
+@value{PRJNAME} extends the standard options adding the following:
+
+@table @code
+@item executable
+Open the file with executable permissions; before the process' file mode
+creation mask is applied, executable permissions are granted to user,
+group and others.  @manpage{umask, Set file mode creation mask}.
+@end table
+@end deffn
+
 @c page
 @node iklib pointers
 @section Handling pointer objects

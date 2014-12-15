@@ -184,7 +184,8 @@ option can be used multiple times.
 @cindex @option{--output}, command line option
 Select the pathname of an output file.  This selection has multiple
 purposes and it is ignored when irrelevant.  @var{OFILE} is used as:
-output @fasl{} file name when compiling individual library files.
+output @fasl{} file name when compiling individual library files; output
+@fasl{} file name when compiling program files.
 
 @item -l @var{LIBFILE}
 @itemx --load-library @var{LIBFILE}

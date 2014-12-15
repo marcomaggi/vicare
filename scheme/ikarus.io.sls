@@ -7840,9 +7840,10 @@
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
   (let* ((opts (if (enum-set? file-options)
-		   ($fxior (if (enum-set-member? 'no-create   file-options) #b001 0)
-				  (if (enum-set-member? 'no-fail     file-options) #b010 0)
-				  (if (enum-set-member? 'no-truncate file-options) #b100 0))
+		   ($fxior (if (enum-set-member? 'no-create   file-options) #b0001 0)
+			   (if (enum-set-member? 'no-fail     file-options) #b0010 0)
+			   (if (enum-set-member? 'no-truncate file-options) #b0100 0)
+			   (if (enum-set-member? 'executable  file-options) #b1000 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
 	 (fd (capi.platform-open-output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)

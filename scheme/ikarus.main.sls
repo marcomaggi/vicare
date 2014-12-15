@@ -225,9 +225,9 @@
 		;If true  do not create  a readline console  input port,
 		;even when the readline interface is available.
    output-file
-		;False or  a non-empty string representing  the pathname
-		;of an  output file.   It has multiple  purposes: output
-		;file for compiled libraries.
+		;False or a  non-empty string representing the pathname  of an output
+		;file.  It has multiple purposes: output file for compiled libraries;
+		;output file for compiled programs.
    ))
 
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
@@ -1228,7 +1228,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (compile-program cfg)
   (with-run-time-config (cfg)
-    (doit (load.compile-r6rs-script cfg.script))))
+    (doit (load.compile-r6rs-script cfg.script cfg.output-file))))
 
 (define (run-serialized-program cfg)
   (with-run-time-config (cfg)

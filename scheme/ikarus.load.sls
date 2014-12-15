@@ -109,6 +109,10 @@
 
 ;;;; arguments validation
 
+(define (%non-empty-string? obj)
+  (and (string? obj)
+       (not (fxzero? (string-length obj)))))
+
 (define (false-or-file-string-pathname? S)
   (or (not S)
       (and (posix.file-string-pathname? S))))
@@ -218,19 +222,18 @@
 ;;;; converting source pathnames to binary pathnames
 
 (module SOURCE-PATHNAME->BINARY-PATHNAME
-  (source-pathname->binary-pathname)
+  (library-source-pathname->library-binary-pathname
+   program-source-pathname->program-binary-pathname)
 
-  (define* (source-pathname->binary-pathname {source-pathname posix.file-string-pathname?})
+  (define* (library-source-pathname->library-binary-pathname {source-pathname posix.file-string-pathname?})
     (define (%error ptn)
       (assertion-violation __who__
-	"unable to build valid FASL file pathname from source pathname"
+	"unable to build valid FASL file pathname from library source pathname"
 	source-pathname ptn))
     (let ((ptn (cond ((%string-suffix? source-pathname ".vicare.sls")
 		      (%desuffix       source-pathname ".vicare.sls"))
 		     ((%string-suffix? source-pathname ".sls")
 		      (%desuffix       source-pathname ".sls"))
-		     ((%string-suffix? source-pathname ".sps")
-		      (%desuffix       source-pathname ".sps"))
 		     ((%string-suffix? source-pathname ".vicare.ss")
 		      (%desuffix       source-pathname ".vicare.ss"))
 		     ((%string-suffix? source-pathname ".ss")
@@ -243,6 +246,22 @@
 		      source-pathname))))
       (if (posix.file-string-pathname? ptn)
 	  (let ((binary-pathname (string-append (fasl-directory) "/" ptn ".fasl")))
+	    (if (posix.file-string-pathname? binary-pathname)
+		binary-pathname
+	      (%error binary-pathname)))
+	(%error ptn))))
+
+  (define* (program-source-pathname->program-binary-pathname {source-pathname posix.file-string-pathname?})
+    (define (%error ptn)
+      (assertion-violation __who__
+	"unable to build valid FASL file pathname from program source pathname"
+	source-pathname ptn))
+    (let ((ptn (cond ((%string-suffix? source-pathname ".sps")
+		      (%desuffix       source-pathname ".sps"))
+		     (else
+		      source-pathname))))
+      (if (posix.file-string-pathname? ptn)
+	  (let ((binary-pathname ptn))
 	    (if (posix.file-string-pathname? binary-pathname)
 		binary-pathname
 	      (%error binary-pathname)))
@@ -413,89 +432,6 @@
 	      ((failed-library-location-collector) binary-pathname)
 	      (%log-library-debug-message "~a: unexistent: ~a" __who__ binary-pathname)
 	      (continue)))))))
-
-  #| end of module |# )
-
-
-;;;; compiling source programs
-
-(module (compile-r6rs-script
-	 run-serialized-r6rs-script)
-
-  (define-struct serialized-program
-    (lib-descr*
-		;A   list  of   library  descriptors   representing  the
-		;libraries needed to run the program.
-     closure
-		;A  closure  object  representing the  program.   To  be
-		;evaluated after having invoked the required libraries.
-     ))
-
-  (define* (compile-r6rs-script {source-filename %non-empty-string?})
-    (receive (lib-descr* thunk)
-	((expand-r6rs-top-level-make-compiler (read-script-source-file source-filename)))
-      (store-serialized-program source-filename lib-descr* thunk)))
-
-  (define* (run-serialized-r6rs-script {fasl-filename %non-empty-string?})
-    (receive (lib-descr* closure)
-	(load-serialized-program fasl-filename)
-      (map (lambda (descr)
-	     (cond ((find-library-by-descriptor descr)
-		    => (lambda (lib)
-			 #;(debug-print 'invoke-library lib)
-			 (invoke-library lib)))
-		   (else
-		    (error __who__
-		      "unable to load library required by program" descr))))
-	lib-descr*)
-      #;(debug-print 'running-thunk closure)
-      (closure)))
-
-  (define* (load-serialized-program fasl-filename)
-    ;;Given the  file name of a  serialized program: load it  and verify
-    ;;its  contents.  Return  2 values:  a list  of library  descriptors
-    ;;representing the program dependencies; a closure object (thunk) to
-    ;;be called to run the program.
-    ;;
-    (if (file-exists? fasl-filename)
-	(let ((x (let ((port (open-file-input-port fasl-filename)))
-		   (unwind-protect
-		       (fasl-read port)
-		     (close-input-port port)))))
-	  (if (serialized-program? x)
-	      (values (serialized-program-lib-descr* x)
-		      (serialized-program-closure    x))
-	    (error __who__
-	      "invalid contents in selected serialized program file"
-	      fasl-filename)))
-      (error __who__
-	"selected serialized program file does not exist" fasl-filename)))
-
-  (define (store-serialized-program source-filename lib-descr* closure)
-    ;;Given  the source  name of  an R6RS  script, the  list of  library
-    ;;descriptors required  for its  execution, a  closure object  to be
-    ;;called to run it: write the serialized program FASL file.
-    ;;
-    (import SOURCE-PATHNAME->BINARY-PATHNAME)
-    (define-syntax-rule (%display ?thing)
-      (display ?thing stderr))
-    (let ((fasl-filename (source-pathname->binary-pathname source-filename)))
-      (%display "serialising ")
-      (%display fasl-filename)
-      (%display " ... ")
-      (receive (dir name)
-	  (posix.split-pathname-root-and-tail fasl-filename)
-	(posix.mkdir/parents dir #o755))
-      (let ((port (open-file-output-port fasl-filename (file-options no-fail))))
-	(unwind-protect
-	    (fasl-write (make-serialized-program lib-descr* closure) port
-			(retrieve-filename-foreign-libraries source-filename))
-	  (close-output-port port)))
-      (%display "done\n")))
-
-  (define (%non-empty-string? obj)
-    (and (string? obj)
-	 (not (fxzero? (string-length obj)))))
 
   #| end of module |# )
 
@@ -925,7 +861,7 @@
   #| end of module: COMPILE-TIME-LIBRARY-LOCATOR |# )
 
 
-;;;; locating source and binary libraries: source-onlye locator
+;;;; locating source and binary libraries: source-only locator
 
 (define* (source-library-locator {libref library-reference?} options)
   ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
@@ -964,75 +900,6 @@
   (import LIBRARY-LOCATOR-UTILS)
   (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
   (%source-search-start libref options (%binary-search-start libref options)))
-
-
-;;;; loading source programs
-
-(define* (load-r6rs-script {file-pathname posix.file-string-pathname?} serialize? run?)
-  ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
-  ;;representing a file  pathname, expecting an R6RS program  or an R6RS
-  ;;library and compile it.
-  ;;
-  ;;If  SERIALIZE? is  true: the  libraries  needed by  the program  are
-  ;;compiled, serialized and saved in FASL files.
-  ;;
-  ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
-  ;;
-  (%log-library-debug-message "~a: loading R6RS script: ~a" __who__ file-pathname)
-  (let* ((prog  (read-script-source-file file-pathname))
-	 (thunk (parametrise ((source-code-location file-pathname))
-		  (expand-r6rs-top-level-make-evaluator prog))))
-    (when serialize?
-      (serialize-collected-libraries (lambda (source-pathname libname contents)
-				       (store-serialized-library (fasl-path libname)
-								 source-pathname libname contents))
-				     (lambda (core-expr)
-				       (compile-core-expr core-expr))))
-    (when run?
-      (thunk))))
-
-(case-define* load
-  ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
-  ;;representing a  file pathname, expecting:  an R6RS program,  an R6RS
-  ;;library or just a list of forms.  Then transform the contents of the
-  ;;file in a list of symbolic  expressions; for each form in the source
-  ;;apply EVAL-PROC to the corresponding symbolic expression.
-  ;;
-  ;;When EVAL-PROC is not given: the  forms are evaluated in the current
-  ;;INTERACTION-ENVIRONMENT.
-  ;;
-  ((file-pathname)
-   (load file-pathname (lambda (sexp)
-			 (eval sexp (interaction-environment)))))
-  (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
-   (%log-library-debug-message "~a: loading script: ~a" __who__ file-pathname)
-   (let next-form ((ls (read-script-source-file file-pathname)))
-     (unless (null? ls)
-       (eval-proc (car ls))
-       (next-form (cdr ls))))))
-
-(define* (load-and-serialize-source-library {source-pathname posix.file-string-pathname?}
-					    {binary-pathname false-or-file-string-pathname?})
-  ;;Load a source library filename, expand it, compile it, serialize it.
-  ;;Return unspecified values.
-  ;;
-  (define lib
-    (let* ((port          (let ()
-			    (import LIBRARY-LOCATOR-UTILS)
-			    (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
-			    (%print-verbose-message "loading library: ~a\n" source-pathname)
-			    (%open-source-library source-pathname)))
-	   (library-sexp  (read-library-source-port port)))
-      (receive (uid libname
-		    import-libdesc* visit-libdesc* invoke-libdesc*
-		    invoke-code visit-code
-		    export-subst export-env
-		    guard-code guard-libdesc*
-		    option*)
-	  ((current-library-expander) library-sexp source-pathname (lambda (libname) (void)))
-	(find-library-by-name libname))))
-  (when lib
-    (serialize-library-record lib binary-pathname)))
 
 
 ;;;; loading libraries from source
@@ -1139,7 +1006,7 @@
 	       (define binary-pathname^
 		 (or binary-pathname (let ()
 				       (import SOURCE-PATHNAME->BINARY-PATHNAME)
-				       (source-pathname->binary-pathname source-pathname))))
+				       (library-source-pathname->library-binary-pathname source-pathname))))
 	       (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
 	       (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
 	       (serialize-library lib
@@ -1215,6 +1082,197 @@
   #| end of module |# )
 
 
+;;;; loading source programs
+
+(define* (load-r6rs-script {file-pathname posix.file-string-pathname?} serialize? run?)
+  ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
+  ;;representing a file  pathname, expecting an R6RS program  or an R6RS
+  ;;library and compile it.
+  ;;
+  ;;If  SERIALIZE? is  true: the  libraries  needed by  the program  are
+  ;;compiled, serialized and saved in FASL files.
+  ;;
+  ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
+  ;;
+  (%log-library-debug-message "~a: loading R6RS script: ~a" __who__ file-pathname)
+  (let* ((prog  (read-script-source-file file-pathname))
+	 (thunk (parametrise ((source-code-location file-pathname))
+		  (expand-r6rs-top-level-make-evaluator prog))))
+    (when serialize?
+      (serialize-collected-libraries (lambda (source-pathname libname contents)
+				       (store-serialized-library (fasl-path libname)
+								 source-pathname libname contents))
+				     (lambda (core-expr)
+				       (compile-core-expr core-expr))))
+    (when run?
+      (thunk))))
+
+(case-define* load
+  ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
+  ;;representing a  file pathname, expecting:  an R6RS program,  an R6RS
+  ;;library or just a list of forms.  Then transform the contents of the
+  ;;file in a list of symbolic  expressions; for each form in the source
+  ;;apply EVAL-PROC to the corresponding symbolic expression.
+  ;;
+  ;;When EVAL-PROC is not given: the  forms are evaluated in the current
+  ;;INTERACTION-ENVIRONMENT.
+  ;;
+  ((file-pathname)
+   (load file-pathname (lambda (sexp)
+			 (eval sexp (interaction-environment)))))
+  (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
+   (%log-library-debug-message "~a: loading script: ~a" __who__ file-pathname)
+   (let next-form ((ls (read-script-source-file file-pathname)))
+     (unless (null? ls)
+       (eval-proc (car ls))
+       (next-form (cdr ls))))))
+
+(define* (load-and-serialize-source-library {source-pathname posix.file-string-pathname?}
+					    {binary-pathname false-or-file-string-pathname?})
+  ;;Load a source library filename, expand it, compile it, serialize it.
+  ;;Return unspecified values.
+  ;;
+  (define lib
+    (let* ((port          (let ()
+			    (import LIBRARY-LOCATOR-UTILS)
+			    (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
+			    (%print-verbose-message "loading library: ~a\n" source-pathname)
+			    (%open-source-library source-pathname)))
+	   (library-sexp  (read-library-source-port port)))
+      (receive (uid libname
+		    import-libdesc* visit-libdesc* invoke-libdesc*
+		    invoke-code visit-code
+		    export-subst export-env
+		    guard-code guard-libdesc*
+		    option*)
+	  ((current-library-expander) library-sexp source-pathname (lambda (libname) (void)))
+	(find-library-by-name libname))))
+  (when lib
+    (serialize-library-record lib binary-pathname)))
+
+
+;;;; compiling source programs to binary programs
+
+(module (compile-r6rs-script
+	 run-serialized-r6rs-script)
+
+  (define-struct serialized-program
+    (lib-descr*
+		;A   list  of   library  descriptors   representing  the
+		;libraries needed to run the program.
+     closure
+		;A  closure  object  representing the  program.   To  be
+		;evaluated after having invoked the required libraries.
+     ))
+
+  (define* (compile-r6rs-script {source-filename %non-empty-string?}
+				{fasl-filename false-or-file-string-pathname?})
+    ;;Read the  file referenced by  the pathname  SOURCE-FILENAME; expand it  as R6RS
+    ;;program with Vicare extensions; compile  it; store the compiled result.  Return
+    ;;unspecified results.
+    ;;
+    ;;If FASL-FILENAME  is a valid file  pathname: the compiled program  is stored in
+    ;;the selected file, overwriting old file contents.  If FASL-FILENAME is false: a
+    ;;pathname  is  built   from  SOURCE-FILENAME  using  a   default  procedure.   I
+    ;;FASL-FILENAME is invalid: an exception is raised.
+    ;;
+    (receive (lib-descr* thunk)
+	((expand-r6rs-top-level-make-compiler (read-script-source-file source-filename)))
+      (store-serialized-program source-filename lib-descr* thunk fasl-filename)))
+
+  (define* (run-serialized-r6rs-script {fasl-filename %non-empty-string?})
+    (receive (lib-descr* closure)
+	(load-serialized-program fasl-filename)
+      (map (lambda (descr)
+	     (cond ((find-library-by-descriptor descr)
+		    => (lambda (lib)
+			 #;(debug-print 'invoke-library lib)
+			 (invoke-library lib)))
+		   (else
+		    (error __who__
+		      "unable to load library required by program" descr))))
+	lib-descr*)
+      #;(debug-print 'running-thunk closure)
+      (closure)))
+
+;;; --------------------------------------------------------------------
+
+  (define* (load-serialized-program {fasl-filename %non-empty-string?})
+    ;;Given the file name  of a serialized program: load it  and verify its contents.
+    ;;Return  2  values: a  list  of  library  descriptors representing  the  program
+    ;;dependencies; a closure object (thunk) to be called to run the program.
+    ;;
+    (cond ((not (posix.file-string-pathname? fasl-filename))
+	   (%error-invalid-pathname __who__
+	     "invalid string as selected serialized program file" fasl-filename))
+	  ((not (file-exists? fasl-filename))
+	   (%error-invalid-pathname __who__
+	     "selected serialized program file does not exist" fasl-filename))
+	  (else
+	   (let ((x (let ((port (open-file-input-port fasl-filename)))
+		      (unwind-protect
+			  (fasl-read port)
+			(close-input-port port)))))
+	     (if (serialized-program? x)
+		 (values (serialized-program-lib-descr* x)
+			 (serialized-program-closure    x))
+	       (error __who__
+		 "invalid contents in selected serialized program file"
+		 fasl-filename))))))
+
+  (define* (store-serialized-program source-filename lib-descr* closure fasl-filename)
+    ;;Given  the source  name of  an  R6RS script,  the list  of library  descriptors
+    ;;required for its execution, a closure object  to be called to run it: write the
+    ;;serialized program FASL file.
+    ;;
+    (import SOURCE-PATHNAME->BINARY-PATHNAME)
+    (define-syntax-rule (%display ?thing)
+      (display ?thing stderr))
+    (let ((fasl-filename (%make-fasl-filename __who__ fasl-filename source-filename)))
+      (%display "serialising ")
+      (%display fasl-filename)
+      (%display " ... ")
+      (receive (dir name)
+	  (posix.split-pathname-root-and-tail fasl-filename)
+	(unless (string-empty? dir)
+	  (posix.mkdir/parents dir #o755)))
+      (let ((port (open-file-output-port fasl-filename
+					 ;;FIXME To  be uncommented at the  next boot
+					 ;;image rotation.  (Marco Maggi; Mon Dec 15,
+					 ;;2014)
+					 #;(file-options no-fail executable)
+					 (let ()
+					   (import (ikarus enumerations))
+					   (make-file-options '(no-fail executable))))))
+	(unwind-protect
+	    (fasl-write (make-serialized-program lib-descr* closure) port
+			(retrieve-filename-foreign-libraries source-filename))
+	  (close-output-port port)))
+      (%display "done\n")))
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-fasl-filename who fasl-filename source-filename)
+    (import SOURCE-PATHNAME->BINARY-PATHNAME)
+    (cond ((posix.file-string-pathname? fasl-filename)
+	   fasl-filename)
+	  ((not fasl-filename)
+	   (program-source-pathname->program-binary-pathname source-filename))
+	  (else
+	   (%error-invalid-pathname who
+	     "invalid FASL filename for serialized program"
+	     fasl-filename))))
+
+  (define (%error-invalid-pathname who message pathname)
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition message)
+		(make-i/o-filename-error pathname)
+		(make-irritants-condition (list pathname)))))
+
+  #| end of module |# )
+
+
 ;;;; locating and loading include files
 
 (define (locate-include-file filename synner)
@@ -1275,5 +1333,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'load-serialized-library 'scheme-indent-function 2)
+;; eval: (put 'load-serialized-library	'scheme-indent-function 2)
+;; eval: (put '%error-invalid-pathname	'scheme-indent-function 1)
 ;; End:
