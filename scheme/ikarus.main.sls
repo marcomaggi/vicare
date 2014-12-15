@@ -159,7 +159,7 @@
 (define-struct run-time-config
   (exec-mode
 		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
-		;COMPILED-PROGRAM,    R6RS-REPL,     SCRIPT,    COMPILE-DEPENDENCIES,
+		;BINARY-PROGRAM,     R6RS-REPL,     SCRIPT,     COMPILE-DEPENDENCIES,
 		;COMPILE-LIBRARY, COMPILE-PROGRAM, R6RS-EXPAND, REPL.
    script
 		;A  string representing  a file  name: the  main script.
@@ -460,13 +460,13 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
-	  ((%option= "--compiled-program")
+	  ((%option= "--binary-program")
 	   (cond ((null? (cdr args))
-		  (%error-and-exit "option --compiled-program requires a program name"))
+		  (%error-and-exit "option --binary-program requires a program name"))
 		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --compiled-programa given after other mode option"))
+		  (%error-and-exit "option --binary-program given after other mode option"))
 		 (else
-		  (set-run-time-config-exec-mode! cfg 'compiled-program)
+		  (set-run-time-config-exec-mode! cfg 'binary-program)
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
@@ -838,7 +838,7 @@ Usage:
 
 vicare [OPTIONS] [FILENAME]                     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --compiled-program PROGRAM     [-- [PROGRAM OPTS]]
+vicare [OPTIONS] --binary-program PROGRAM       [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-library LIBFILE      [-- [PROGRAM OPTS]]
@@ -855,7 +855,7 @@ Options controlling execution modes:
         Start Vicare  in R6RS-script mode.  The PROGRAM  file is handled
        	as an R6RS program.
 
-   --compiled-program PROGRAM
+   --binary-program PROGRAM
         Start  Vicare in  compiled-program  mode.  The  PROGRAM file  is
        	handled as a precompiled R6RS program: loaded and executed.
 
@@ -1528,7 +1528,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((r6rs-script)
        (load-r6rs-program cfg))
 
-      ((compiled-program)
+      ((binary-program)
        (run-serialized-program cfg))
 
       ((r6rs-repl)

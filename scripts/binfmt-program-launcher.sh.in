@@ -11,6 +11,6 @@ VICARE=${bindir}/vicare
 PROGRAM_PATHNAME=$1
 shift
 
-exec ${VICARE} --compiled-program "$PROGRAM_PATHNAME" -- "$@"
+exec ${VICARE} --binary-program "$PROGRAM_PATHNAME" -- "$@"
 
 ### end of file

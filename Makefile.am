@@ -1236,7 +1236,7 @@ VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
 		--cache-compiled-libraries --compile-program
 VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
-		-F $(fasldir) --print-loaded-libraries --compiled-program
+		-F $(fasldir) --print-loaded-libraries --binary-program
 VICARE_COMPILED_TESTS_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\

@@ -53,7 +53,7 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @smallexample
 @value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compiled-program PROGRAM     [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program PROGRAM       [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM      [-- [@var{PROGRAM OPTS}]]
@@ -94,9 +94,9 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
 
-@item --compiled-program @var{PROGRAM}
-@cindex Command line option @option{--compiled-program}
-@cindex @option{--compiled-program}, command line option
+@item --binary-program @var{PROGRAM}
+@cindex Command line option @option{--binary-program}
+@cindex @option{--binary-program}, command line option
 Start Vicare in compiled--program mode.  The @var{PROGRAM} file is
 handled as a serialized @rnrs{6} program: it is loaded and executed.
 
