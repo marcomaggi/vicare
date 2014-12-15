@@ -56,9 +56,10 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program PROGRAM       [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM      [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM
 @end smallexample
 
 @noindent
@@ -143,6 +144,16 @@ upon which it depends and store them in the FASL repository.
 @cindex @option{--compile-library}, command line option
 Load the @rnrs{6} library source @var{LIBFILE}, compile it and save the
 result in the @fasl{} repository.
+
+@item -c @var{FILE}
+@itemx --compile @var{FILE}
+@cindex Command line option @option{-c}
+@cindex @option{-c}, command line option
+@cindex Command line option @option{--compile}
+@cindex @option{--compile}, command line option
+Load the selected @var{FILE}, recognise it as program or library by the
+file extension (@code{.sps} or @code{.sls}), compile it and store it as
+@fasl{} file.
 @end table
 
 When none of these options is given, but a standalone @var{PROGRAM}
