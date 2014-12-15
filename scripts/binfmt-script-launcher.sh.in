@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Launcher script for Vicare Scheme source scripts.
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+
+VICARE=${bindir}/vicare
+
+SCRIPT_PATHNAME=$1
+shift
+
+exec ${VICARE} --r6rs-script "$SCRIPT_PATHNAME" -- "$@"
+
+### end of file

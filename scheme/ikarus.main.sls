@@ -159,7 +159,7 @@
 (define-struct run-time-config
   (exec-mode
 		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
-		;R6RS-PROGRAM,      R6RS-REPL,     SCRIPT,      COMPILE-DEPENDENCIES,
+		;COMPILED-PROGRAM,    R6RS-REPL,     SCRIPT,    COMPILE-DEPENDENCIES,
 		;COMPILE-LIBRARY, COMPILE-PROGRAM, R6RS-EXPAND, REPL.
    script
 		;A  string representing  a file  name: the  main script.
@@ -460,13 +460,13 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
-	  ((%option= "--r6rs-program")
+	  ((%option= "--compiled-program")
 	   (cond ((null? (cdr args))
-		  (%error-and-exit "option --r6rs-program requires a script name"))
+		  (%error-and-exit "option --compiled-program requires a program name"))
 		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --r6rs-programa given after other mode option"))
+		  (%error-and-exit "option --compiled-programa given after other mode option"))
 		 (else
-		  (set-run-time-config-exec-mode! cfg 'r6rs-program)
+		  (set-run-time-config-exec-mode! cfg 'compiled-program)
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
@@ -838,7 +838,7 @@ Usage:
 
 vicare [OPTIONS] [FILENAME]                     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --r6rs-program PROGRAM         [-- [PROGRAM OPTS]]
+vicare [OPTIONS] --compiled-program PROGRAM     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-library LIBFILE      [-- [PROGRAM OPTS]]
@@ -855,9 +855,9 @@ Options controlling execution modes:
         Start Vicare  in R6RS-script mode.  The PROGRAM  file is handled
        	as an R6RS program.
 
-   --r6rs-program PROGRAM
-        Start Vicare  in R6RS-program mode.  The PROGRAM  file is handled
-       	as a precompiled R6RS program: loaded and executed.
+   --compiled-program PROGRAM
+        Start  Vicare in  compiled-program  mode.  The  PROGRAM file  is
+       	handled as a precompiled R6RS program: loaded and executed.
 
    --r6rs-repl PROGRAM
         Start Vicare  in R6RS-script mode.  Act as  if the --r6rs-script
@@ -1528,7 +1528,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((r6rs-script)
        (load-r6rs-program cfg))
 
-      ((r6rs-program)
+      ((compiled-program)
        (run-serialized-program cfg))
 
       ((r6rs-repl)

@@ -179,11 +179,11 @@ with @value{PRJNAME}:
 @example
 if test -f /proc/sys/fs/binfmt_misc/register
 then
-  if test -f /proc/sys/fs/binfmt_misc/VICARE
-  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE
+  if test -f /proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
+  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
   fi
   echo \
-   ':VICARE:M:0:;;;!vicare::/usr/local/bin/vicare:' \
+   ':VICARE_SCRIPTS:M:0:;;;!vicare::/usr/local/bin/vicare:' \
    >/proc/sys/fs/binfmt_misc/register
 fi
 @end example
@@ -202,7 +202,7 @@ Remove the configuration from the registry if it is already there; this
 is done by testing the existence of the special file:
 
 @example
-/proc/sys/fs/binfmt_misc/VICARE
+/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent
@@ -212,7 +212,7 @@ echoing @code{-1} in it removes the @value{PRJNAME} record.
 echo the @value{PRJNAME} record into the registry with the following fields:
 
 @table @code
-@item VICARE
+@item VICARE_SCRIPTS
 It is the name of the special file representing the record in the
 registry.
 
@@ -288,18 +288,18 @@ operations.
 
 We can enable/disable recognition of a single binary format by echoing
 @code{0} or @code{1} to the format specific special file under
-@file{/proc/sys/fs/binfmt_misc}.  For example for @code{VICARE}, at the
-shell prompt and with superuser privileges, to enable:
+@file{/proc/sys/fs/binfmt_misc}.  For example for @code{VICARE_SCRIPTS},
+at the shell prompt and with superuser privileges, to enable:
 
 @example
-$ echo 1 >/proc/sys/fs/binfmt_misc/VICARE
+$ echo 1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent
 and to disable:
 
 @example
-$ echo 0 >/proc/sys/fs/binfmt_misc/VICARE
+$ echo 0 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent
@@ -307,18 +307,18 @@ disabled formats are @strong{not} removed from the internal table.
 
 Applying the command @command{cat} to the format's special file tells us
 the current status of that format and its configuration; for example for
-@code{VICARE}, at the shell prompt:
+@code{VICARE_SCRIPTS}, at the shell prompt:
 
 @example
-$ cat /proc/sys/fs/binfmt_misc/VICARE
+$ cat /proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 We can remove a specific format entry from the registry echoing
-@code{-1} to its special file; for @code{VICARE} at the shell prompt
-and with superuser privileges:
+@code{-1} to its special file; for @code{VICARE_SCRIPTS} at the shell
+prompt and with superuser privileges:
 
 @example
-$ echo -1 >/proc/sys/fs/binfmt_misc/VICARE
+$ echo -1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent

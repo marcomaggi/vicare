@@ -1228,13 +1228,17 @@ lalr-test:
 
 VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
 
+VICARE_COMPILED_TESTS_SEARCH_PATH	= $(testdir):$(fasldir):$(srcdir)/scheme
 VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
 VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
-VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --fasl-directory $(builddir)/tests --compile-program
-VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) -F $(fasldir) --r6rs-program
+VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
+		--cache-compiled-libraries --compile-program
+VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
+		-F $(fasldir) --print-loaded-libraries --compiled-program
 VICARE_COMPILED_TESTS_ENV	= \
+	VICARE_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\
 	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
 	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
@@ -1255,9 +1259,9 @@ compile-tests: all
 	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_COMPILE) $$f; done
 	@echo
 
-run-compiled-tests: compile-tests
+run-compiled-tests:
 	@echo
-	@for f in $(builddir)/tests/*.sps.fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
+	@for f in $(builddir)/tests/*fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
 	@echo
 
 #page
@@ -1301,28 +1305,14 @@ test-exec-modes:
 #### Linux binfmt support
 
 if WANT_BINFMT
-rcddir			= $(sysconfdir)/rc.d
-rcd_SCRIPTS		= rc.vicare-scheme
 
-# Strictly speaking: this  target should depend on  Makfile, but doing
-# it that way causes a lot of unnecessary rebuilds.
-rc.vicare-scheme:
-	@echo '#!/bin/sh' >$(@)
-	@echo '#' >>$(@)
-	@echo '# Setup the  Linux module  "binfmt_misc" to automatically  recognise and' >>$(@)
-	@echo '# run Vicare Scheme programs using the installed "vicare" executable.' >>$(@)
-	@echo '' >>$(@)
-	@echo 'if test -f /proc/sys/fs/binfmt_misc/register' >>$(@)
-	@echo 'then' >>$(@)
-	@echo '  if test -f /proc/sys/fs/binfmt_misc/VICARE' >>$(@)
-	@echo '  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE' >>$(@)
-	@echo '  fi' >>$(@)
-	@echo '  echo -n enabling binfmt Vicare Scheme scripts execution...' >>$(@)
-	@echo '  echo ":VICARE:M:0:;;;!vicare::$(bindir)/vicare:" >/proc/sys/fs/binfmt_misc/register' >>$(@)
-	@echo '  echo done' >>$(@)
-	@echo 'fi' >>$(@)
-	@echo '' >>$(@)
-	@echo '### end of file' >>$(@)
+binfmt_rcd_scriptsdir		= $(sysconfdir)/rc.d
+binfmt_rcd_scripts_SCRIPTS	= scripts/rc.vicare-scheme
+
+binfmt_launcher_scriptsdir	= $(libexecdir)/vicare-scheme
+binfmt_launcher_scripts_SCRIPTS	= \
+	scripts/binfmt-script-launcher.sh	\
+	scripts/binfmt-program-launcher.sh
 
 endif
 

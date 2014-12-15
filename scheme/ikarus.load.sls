@@ -58,6 +58,7 @@
 	  library-name
 	  library-source-file-name
 	  find-library-by-name
+	  find-library-by-descriptor
 	  visit-library		invoke-library
 	  current-library-collection
 	  current-source-library-file-locator
@@ -118,6 +119,9 @@
 
 
 ;;;; helpers
+
+(define-constant REJECT-KEY
+  (gensym))
 
 (define (%print-verbose-message message . format-args)
   (when (options.verbose?)
@@ -436,7 +440,7 @@
     (receive (lib-descr* closure)
 	(load-serialized-program fasl-filename)
       (map (lambda (descr)
-	     (cond ((find-library-by-descr descr)
+	     (cond ((find-library-by-descriptor descr)
 		    => (lambda (lib)
 			 #;(debug-print 'invoke-library lib)
 			 (invoke-library lib)))
@@ -446,12 +450,6 @@
 	lib-descr*)
       #;(debug-print 'running-thunk closure)
       (closure)))
-
-  (define (find-library-by-descr descr)
-    ;;DESCR is a pair having the library UID as car and the library name
-    ;;as cdr.
-    ;;
-    (find-library-by-name (cdr descr)))
 
   (define* (load-serialized-program fasl-filename)
     ;;Given the  file name of a  serialized program: load it  and verify
@@ -1024,8 +1022,7 @@
 			    (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
 			    (%print-verbose-message "loading library: ~a\n" source-pathname)
 			    (%open-source-library source-pathname)))
-	   (library-sexp  (read-library-source-port port))
-	   (reject-key    (gensym)))
+	   (library-sexp  (read-library-source-port port)))
       (receive (uid libname
 		    import-libdesc* visit-libdesc* invoke-libdesc*
 		    invoke-code visit-code
@@ -1056,12 +1053,11 @@
   ;;
   (%log-library-debug-message "~a: loading library from port: ~a" __who__ port)
   (let ((source-pathname  (port-id port))
-	(library-sexp     (read-library-source-port port))
-	(reject-key       (gensym)))
+	(library-sexp     (read-library-source-port port)))
     ;;If the version  of the loaded library does not  conform to LIBREF:
     ;;we make the expander raise  an exception with REJECT-KEY as raised
     ;;object; we catch it here and return false.
-    (guard (E ((eq? E reject-key)
+    (guard (E ((eq? E REJECT-KEY)
 	       (%log-library-debug-message "~a: rejected library from port: ~a" __who__ port)
 	       #f))
       (receive (uid libname
@@ -1075,7 +1071,7 @@
 	     ;;We expect LIBNAME to be  the R6RS library name extracted from
 	     ;;LIBRARY-SEXP.
 	     (unless (conforming-library-name-and-library-reference? libname libref)
-	       (raise reject-key))))
+	       (raise REJECT-KEY))))
 	libname))))
 
 
@@ -1096,12 +1092,11 @@
   ;;
   ;;
   (define fasl-pathname (port-id port))
-  (define reject-key    (gensym))
   ;;If the version of the loaded  library does not conform to LIBREF: we
   ;;make the loader raise an exception with REJECT-KEY as raised object;
   ;;we catch it here and return false.
   (%log-library-debug-message "~a: loading library from port: ~a" __who__ port)
-  (guard (E ((eq? E reject-key)
+  (guard (E ((eq? E REJECT-KEY)
 	     (%log-library-debug-message "~a: rejected library from port: ~a" __who__ port)
 	     #f))
     (let ((rv (load-serialized-library port install-binary-library-and-its-dependencies
@@ -1109,7 +1104,7 @@
 		  ;;We  expect  LIBNAME  to  be the  R6RS  library  name
 		  ;;extracted from the serialized library.
 		  (unless (conforming-library-name-and-library-reference? libname libref)
-		    (raise reject-key))))))
+		    (raise REJECT-KEY))))))
       (when rv
 	(assert (library-name? rv)))
       (or rv
