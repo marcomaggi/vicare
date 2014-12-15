@@ -1156,6 +1156,25 @@
 (module (compile-r6rs-script
 	 run-serialized-r6rs-script)
 
+  ;;NOTE To use  a struct type here looks  cool.  But, if in future we  want to allow
+  ;;compiled programs to be independent from  specific boot image builds, we may need
+  ;;to switch to a basic Scheme object, like a vector:
+  ;;
+  ;;   #(vicare-compiled-program ?lib-descr* ?closure)
+  ;;
+  ;;so the API would be:
+  ;;
+  ;;   (define (make-serialized-program lib-descr* closure)
+  ;;     (vector 'vicare-compiled-program lib-descr* closure))
+  ;;
+  ;;   (define (serialized-program-lib-descr* prog)
+  ;;     (vector-ref prog 1))
+  ;;
+  ;;   (define (serialized-program-closure prog)
+  ;;     (vector-ref prog 2))
+  ;;
+  ;;(Marco Maggi; Mon Dec 15, 2014)
+  ;;
   (define-struct serialized-program
     (lib-descr*
 		;A   list  of   library  descriptors   representing  the
