@@ -203,6 +203,8 @@ doc_mehve_TEXINFOS	= \
 #page
 #### C language runtime executable
 
+VICARE_NEW_EXECUTABLE	= $(builddir)/vicare
+
 AM_CPPFLAGS	= -I $(srcdir)/src -I $(builddir)/src
 AM_CFLAGS	= -Wall
 EXTRA_DIST	+= src/last-revision.h src/vicare-platform.h.in
@@ -456,7 +458,7 @@ ikarus.config.ss:
 # all the options are set in the script "makefile.sps".
 #
 $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.ss scheme/makefile.sps
-	$(VICARE_BOOT_ENV) $(GDB) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 ## --------------------------------------------------------------------
@@ -480,7 +482,7 @@ boot-image-32-bit: vicare
 	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
-	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
@@ -501,7 +503,7 @@ boot-image-64-bit: vicare
 	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
-	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.8.prebuilt
 
@@ -528,7 +530,7 @@ boot-image-64-bit: vicare
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
-	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(builddir)/vicare.boot.try \
+	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 #page
@@ -546,7 +548,7 @@ VICARE_COMPILE_ENV	= \
 	LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
-VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(builddir)/vicare $(VICARE_COMPILE_FLAGS)
+VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
 
 FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
 
@@ -967,11 +969,11 @@ VICARE_SCHEME_CRE2_TESTS	= tests/foreign-test-vicare-cre2.sps
 #### running the test suite: distribution files
 
 EXTRA_DIST	+= \
-	tests/ikarus-test-framework.sls			\
-	tests/lists.sls					\
-	tests/lists/low.sls				\
-	tests/lists/stx.sls				\
-	tests/numerics/helpers.sls			\
+	tests/libtest/ikarus-test-framework.sls		\
+	tests/libtest/lists.sls				\
+	tests/libtest/lists/low.sls			\
+	tests/libtest/lists/stx.sls			\
+	tests/libtest/numerics-helpers.sls		\
 	tests/libtest/calc-code-lexer.sls		\
 	tests/libtest/calc-parser-helper.sls		\
 	tests/libtest/calc-parser-lexer.sls		\
@@ -1045,7 +1047,7 @@ EXTRA_DIST	+= \
 	$(VICARE_SCHEME_CRE2_TESTS)
 
 #page
-#### running the test suite: selecting tests for "make check"
+#### interface for "make check": selecting test programs
 
 TESTS		= $(VICARE_SCHEME_CORE_TESTS)
 XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps tests/test-issue-070.sps
@@ -1086,125 +1088,34 @@ TESTS		+= $(VICARE_SCHEME_CRE2_TESTS)
 endif
 
 #page
-#### running the test suite: customised test rules
-
-VICARE_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
-VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
-VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
-VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
-VICARE_TEST_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_TEST_SEARCH_PATH		= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
-VICARE_TEST_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
-VICARE_TEST_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
-
-# Enable timing  of test files  execution.  We cannot include  this in
-# the separator because it needs  to be placed between the environment
-# variables and the actual command line.
-if WANT_TIME_TESTS
-VICARE_TIME_TESTS	= $(TIME_PROGRAM) -p
-endif
-
-VICARE_TEST_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
-VICARE_TEST_ENV		= \
-	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
-	VICARE_FASL_PATH=$(VICARE_TEST_FASL_PATH);	export VICARE_FASL_PATH;	\
-	CHECK_TEST_NAME=$(name);			export CHECK_TEST_NAME;		\
-	VICARE_SRC_DIR=$(srcdir)/tests;			export VICARE_SRC_DIR;		\
-	VICARE_BUILDDIR=$(builddir);			export VICARE_BUILDDIR;		\
-	SILEX_PATH=$(SILEX_PATH);			export SILEX_PATH;		\
-	LD_LIBRARY_PATH=$(VICARE_TEST_LD_PATH);		export LD_LIBRARY_PATH;		\
-	DYLD_LIBRARY_PATH=$(VICARE_TEST_DYLD_PATH);	export DYLD_LIBRARY_PATH;
-VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(builddir)/vicare $(VICARE_TEST_FLAGS)
-
-## --------------------------------------------------------------------
-## interface to "make check"
-
+#### interface to "make check"
+#
 # Read "Parallel Test Harness" in the documentation of GNU Automake to
 # understand how to use this interface for "make check".
 #
-# We must make sure that this ends with a semicolon!!!
-AM_TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes; export VICARE_CHECK_QUIET; $(VICARE_TEST_ENV)
-TEST_EXTENSIONS		= .sps
-SPS_LOG_COMPILER	= $(builddir)/vicare
-AM_SPS_LOG_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
 
-## --------------------------------------------------------------------
+VICARE_CHECK_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_CHECK_SEARCH_PATH	= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_CHECK_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_CHECK_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
-.PHONY: test tests test-r6rs long-test long-tests
-.PHONY: demo demos foreign-test foreign-tests
-
-test tests:
-	@echo
-	@for f in $(VICARE_SELECTED_TESTS); do $(VICARE_TEST_RUN) $$f; done
-	@echo
-
-long-test long-tests:
-	@echo
-	@for f in $(VICARE_SELECTED_LONG_TESTS); do $(VICARE_TEST_RUN) $$f; done
-	@echo
-
-foreign-test foreign-tests:
-	@echo
-	@for f in $(VICARE_SELECTED_FOREIGN_TESTS); do $(VICARE_TEST_RUN) $$f; done
-	@echo
-
-demo demos:
-	@echo
-	@for f in $(VICARE_SELECTED_DEMOS); do $(VICARE_TEST_RUN) $$f; done
-	@echo
-
-## --------------------------------------------------------------------
-
-## SILex test files
-
-.PHONY: silex-test
-
-silex-test:
-	@for f in $(testdir)/make-silex-*.sps; do export testdir=$(testdir); $(VICARE_TEST_RUN) $$f; done
-
-## special rules: LALR test parsers building
-
-.PHONY: lalr-test
-
-lalr-test:
-	@for f in $(testdir)/make-lalr-*.sps; do export testdir=$(testdir); $(VICARE_TEST_RUN) $$f; done
-
-#page
-#### compiling test files
-
-VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
-
-VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
-VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
-
-VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --fasl-directory $(builddir)/tests --compile-program
-VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) -F $(fasldir) --r6rs-program
-VICARE_COMPILED_TESTS_ENV	= \
-	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\
+VICARE_CHECK_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
+VICARE_CHECK_ENV		= \
+	VICARE_CHECK_QUIET=yes;					export VICARE_CHECK_QUIET;	\
+	VICARE_LIBRARY_PATH=$(VICARE_CHECK_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_FASL_PATH=$(VICARE_CHECK_FASL_PATH);		export VICARE_FASL_PATH;	\
+	CHECK_TEST_NAME=$(name);				export CHECK_TEST_NAME;		\
 	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
 	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
 	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
-	LD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_LD_PATH);	export LD_LIBRARY_PATH;		\
-	DYLD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_DYLD_PATH);	export DYLD_LIBRARY_PATH;
-VICARE_COMPILED_TESTS_COMPILE	= $(VICARE_COMPILED_TESTS_ENV) $(builddir)/vicare $(VICARE_COMPILED_TESTS_COMPILE_FLAGS)
-VICARE_COMPILED_TESTS_RUN	= $(VICARE_COMPILED_TESTS_ENV) $(builddir)/vicare $(VICARE_COMPILED_TESTS_RUN_FLAGS)
+	LD_LIBRARY_PATH=$(VICARE_CHECK_LD_PATH);		export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_CHECK_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 
-CLEANFILES	+= $(builddir)/tests/*.sps.fasl
-
-## --------------------------------------------------------------------
-
-.PHONY: compile-tests run-compiled-tests
-
-compile-tests: all
-	@echo
-	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_COMPILE) $$f; done
-	@echo
-
-run-compiled-tests: compile-tests
-	@echo
-	@for f in $(builddir)/tests/*.sps.fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
-	@echo
+# We must make sure that this ends with a semicolon!!!
+AM_TESTS_ENVIRONMENT	= $(VICARE_CHECK_ENV)
+TEST_EXTENSIONS		= .sps
+SPS_LOG_COMPILER	= $(VICARE_NEW_EXECUTABLE)
+AM_SPS_LOG_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
 
 #page
 #### interface to "make instcheck"
@@ -1229,6 +1140,128 @@ installcheck-local:
 	@for f in $(TESTS); do $(VICARE_INSTCHECK_RUN) $(srcdir)/$$f; done
 
 #page
+#### running the test suite: customised test rules
+
+VICARE_TEST_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
+VICARE_TEST_SELECTED_LONG_TESTS		= $(testdir)/long-test-*$(file)*.sps
+VICARE_TEST_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
+VICARE_TEST_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
+
+VICARE_TEST_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_TEST_SEARCH_PATH		= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_TEST_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_TEST_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
+
+# Enable timing  of test files  execution.  We cannot include  this in
+# the separator because it needs  to be placed between the environment
+# variables and the actual command line.
+if WANT_TIME_TESTS
+VICARE_TIME_TESTS	= $(TIME_PROGRAM) -p
+endif
+
+VICARE_TEST_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
+VICARE_TEST_ENV		= \
+	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_FASL_PATH=$(VICARE_TEST_FASL_PATH);	export VICARE_FASL_PATH;	\
+	CHECK_TEST_NAME=$(name);			export CHECK_TEST_NAME;		\
+	VICARE_SRC_DIR=$(srcdir)/tests;			export VICARE_SRC_DIR;		\
+	VICARE_BUILDDIR=$(builddir);			export VICARE_BUILDDIR;		\
+	SILEX_PATH=$(SILEX_PATH);			export SILEX_PATH;		\
+	LD_LIBRARY_PATH=$(VICARE_TEST_LD_PATH);		export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_TEST_DYLD_PATH);	export DYLD_LIBRARY_PATH;
+VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE_NEW_EXECUTABLE) $(VICARE_TEST_FLAGS)
+
+## --------------------------------------------------------------------
+
+.PHONY: test tests test-r6rs long-test long-tests
+.PHONY: demo demos foreign-test foreign-tests
+
+test tests:
+	@echo
+	@for f in $(VICARE_TEST_SELECTED_TESTS); do $(VICARE_TEST_RUN) $$f; done
+	@echo
+
+long-test long-tests:
+	@echo
+	@for f in $(VICARE_TEST_SELECTED_LONG_TESTS); do $(VICARE_TEST_RUN) $$f; done
+	@echo
+
+foreign-test foreign-tests:
+	@echo
+	@for f in $(VICARE_TEST_SELECTED_FOREIGN_TESTS); do $(VICARE_TEST_RUN) $$f; done
+	@echo
+
+demo demos:
+	@echo
+	@for f in $(VICARE_TEST_SELECTED_DEMOS); do $(VICARE_TEST_RUN) $$f; done
+	@echo
+
+## --------------------------------------------------------------------
+## special test rules
+
+## SILex test files
+
+.PHONY: silex-test
+
+silex-test:
+	@for f in $(testdir)/make-silex-*.sps; do export testdir=$(testdir); $(VICARE_TEST_RUN) $$f; done
+
+## LALR test parsers building
+
+.PHONY: lalr-test
+
+lalr-test:
+	@for f in $(testdir)/make-lalr-*.sps; do export testdir=$(testdir); $(VICARE_TEST_RUN) $$f; done
+
+#page
+#### compiling test libraries
+
+# lib/vicare/platform/configuration.fasl: \
+# 		lib/vicare/platform/configuration.sls \
+# 		$(FASL_PREREQUISITES)
+# 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+# CLEANFILES += lib/vicare/platform/configuration.fasl
+
+
+#page
+#### compiling test files
+
+VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
+
+VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
+
+VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --fasl-directory $(builddir)/tests --compile-program
+VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) -F $(fasldir) --r6rs-program
+VICARE_COMPILED_TESTS_ENV	= \
+	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\
+	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
+	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
+	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
+	LD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_LD_PATH);	export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_DYLD_PATH);	export DYLD_LIBRARY_PATH;
+VICARE_COMPILED_TESTS_COMPILE	= $(VICARE_COMPILED_TESTS_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILED_TESTS_COMPILE_FLAGS)
+VICARE_COMPILED_TESTS_RUN	= $(VICARE_COMPILED_TESTS_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILED_TESTS_RUN_FLAGS)
+
+CLEANFILES	+= $(builddir)/tests/*.sps.fasl
+
+## --------------------------------------------------------------------
+
+.PHONY: compile-tests run-compiled-tests
+
+compile-tests: all
+	@echo
+	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_COMPILE) $$f; done
+	@echo
+
+run-compiled-tests: compile-tests
+	@echo
+	@for f in $(builddir)/tests/*.sps.fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
+	@echo
+
+#page
 #### running vicare on the terminal from the build directory
 
 VIE			= $(srcdir)/scripts/vie
@@ -1247,8 +1280,8 @@ VICARE_TERMINAL_RUN_ENV		= \
 	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
 	LD_LIBRARY_PATH=$(VICARE_TERMINAL_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_TERMINAL_DYLD_PATH);		export DYLD_LIBRARY_PATH;
-VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) $(builddir)/vicare $(VICARE_TERMINAL_RUN_FLAGS)
-VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) $(builddir)/vicare --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
+VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_TERMINAL_RUN_FLAGS)
+VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) $(VICARE_NEW_EXECUTABLE) --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
 
 .PHONY: test-run test-vie test-exec-modes
 
@@ -1259,7 +1292,7 @@ test-vie:
 	$(VICARE_TERMINAL_VIE)
 
 test-exec-modes:
-	$(VICARE_TERMINAL_RUN_ENV) $(testdir)/test-exec-modes.sh $(builddir)/vicare $(VICARE_NEW_BOOT) $(testdir)
+	$(VICARE_TERMINAL_RUN_ENV) $(testdir)/test-exec-modes.sh $(VICARE_NEW_EXECUTABLE) $(VICARE_NEW_BOOT) $(testdir)
 
 #page
 #### Linux binfmt support
