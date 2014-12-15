@@ -30,29 +30,73 @@ PROGRAM_MAGIC='@BINFMT_PROGRAM_MAGIC@'
 SCRIPT_LAUNCHER=${VICARE_LIBEXECDIR}/binfmt-script-launcher.sh
 PROGRAM_LAUNCHER=${VICARE_LIBEXECDIR}/binfmt-program-launcher.sh
 
-if test -f /proc/sys/fs/binfmt_misc/register
-then
-    # This is for source scripts.
-    if test -f /proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
-    then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
-    fi
-    echo -n 'enabling binfmt Vicare Scheme source scripts execution... '
-    echo \
-	":VICARE_SCRIPTS:M:0:${SCRIPT_MAGIC}::${SCRIPT_LAUNCHER}:" \
-	>/proc/sys/fs/binfmt_misc/register
-    echo done
+### --------------------------------------------------------------------
 
-    # This is for compiled programs.
-    if test -f /proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
-    then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
+vicare_binfmt_support_start () {
+    if test -f /proc/sys/fs/binfmt_misc/register
+    then
+	# This is for source scripts.
+	if test -f /proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
+	then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
+	fi
+	echo -n 'enabling binfmt Vicare Scheme source scripts execution... '
+	echo \
+	    ":VICARE_SCRIPTS:M:0:${SCRIPT_MAGIC}::${SCRIPT_LAUNCHER}:" \
+	    >/proc/sys/fs/binfmt_misc/register
+	echo done
+
+	# This is for compiled programs.
+	if test -f /proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
+	then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
+	fi
+	echo -n 'enabling binfmt Vicare Scheme compiled programs execution... '
+	echo \
+	    ":VICARE_PROGRAMS:M:0:${PROGRAM_MAGIC}::${PROGRAM_LAUNCHER}:" \
+	    >/proc/sys/fs/binfmt_misc/register
+	echo done
+    else
+	echo 'rc.vicare-scheme: binfmt support not available'
     fi
-    echo -n 'enabling binfmt Vicare Scheme compiled programs execution... '
-    echo \
-	":VICARE_PROGRAMS:M:0:${PROGRAM_MAGIC}::${PROGRAM_LAUNCHER}:" \
-	>/proc/sys/fs/binfmt_misc/register
-    echo done
-else
-    echo 'rc.vicare-scheme: binfmt support not available'
-fi
+}
+
+vicare_binfmt_support_stop () {
+    if test -f /proc/sys/fs/binfmt_misc/register
+    then
+	echo 'rc.vicare-scheme: disabling binfmt support'
+	# This is for source scripts.
+	if test -f /proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
+	then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
+	fi
+
+	# This is for compiled programs.
+	if test -f /proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
+	then echo -1 >/proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
+	fi
+    else
+	echo 'rc.vicare-scheme: binfmt support not available'
+    fi
+}
+
+vicare_binfmt_support_restart () {
+    vicare_binfmt_support_stop
+    vicare_binfmt_support_start
+}
+
+### --------------------------------------------------------------------
+
+case "$1" in
+    'start')
+	vicare_binfmt_support_start
+	;;
+    'stop')
+	vicare_binfmt_support_stop
+	;;
+    'restart')
+	vicare_binfmt_support_restart
+	;;
+    *)
+	vicare_binfmt_support_restart
+	;;
+esac
 
 ### end of file
