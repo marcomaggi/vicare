@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (numerics helpers)
+  (libtest numerics-helpers)
   (vicare system $flonums)
   (vicare system $ratnums)
   (vicare system $compnums)

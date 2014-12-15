@@ -24,7 +24,7 @@
 
 
 #!r6rs
-(library (lists low)
+(library (libtest lists low)
   (export
 
     ;; predicates

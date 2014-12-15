@@ -1549,6 +1549,18 @@ AC_SUBST([CRE2_LIBS])
 AC_CACHE_SAVE
 
 #page
+#### support for Linux's binfmt module
+
+AS_VAR_SET(BINFMT_PROGRAM_MAGIC_32BIT,['#@IK01'])
+AS_VAR_SET(BINFMT_PROGRAM_MAGIC_64BIT,['#@IK02'])
+
+AS_IF([test "$ac_cv_sizeof_void_p" = 4],
+      [AS_VAR_SET(BINFMT_PROGRAM_MAGIC,["$BINFMT_PROGRAM_MAGIC_32BIT"])],
+      [AS_VAR_SET(BINFMT_PROGRAM_MAGIC,["$BINFMT_PROGRAM_MAGIC_64BIT"])])
+
+AC_SUBST([BINFMT_PROGRAM_MAGIC])
+
+#page
 #### finish
 
 AC_SUBST([AX_VFLAGS])
@@ -1557,13 +1569,16 @@ AC_SUBST([AX_BOOT_VFLAGS])
 AC_SUBST([BOOT_VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES(Makefile
-                src/vicare-platform.h
-                lib/vicare/platform/configuration.sls
-                lib/vicare/platform/constants.sls
-                lib/vicare/platform/errno.sls
-                lib/vicare/platform/words.sls
-                lib/nausicaa/uri/pathnames.sls)
+AC_CONFIG_FILES([Makefile]
+                [scripts/rc.vicare-scheme]
+                [scripts/binfmt-script-launcher.sh]
+                [scripts/binfmt-program-launcher.sh]
+                [src/vicare-platform.h]
+                [lib/vicare/platform/configuration.sls]
+                [lib/vicare/platform/constants.sls]
+                [lib/vicare/platform/errno.sls]
+                [lib/vicare/platform/words.sls]
+                [lib/nausicaa/uri/pathnames.sls])
 AC_OUTPUT
 
 ### end of file

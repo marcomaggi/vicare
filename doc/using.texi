@@ -53,9 +53,12 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @smallexample
 @value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program PROGRAM       [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM
 @end smallexample
 
@@ -92,6 +95,12 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
 
+@item --binary-program @var{PROGRAM}
+@cindex Command line option @option{--binary-program}
+@cindex @option{--binary-program}, command line option
+Start Vicare in compiled--program mode.  The @var{PROGRAM} file is
+handled as a serialized @rnrs{6} program: it is loaded and executed.
+
 @item --r6rs-repl @var{PROGRAM}
 @cindex Command line option @option{--r6rs-repl}
 @cindex @option{--r6rs-repl}, command line option
@@ -116,6 +125,13 @@ $ @value{RAWEXECUTABLE} --script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
 
+@item --compile-program @var{PROGRAM}
+@cindex Command line option @option{--compile-program}
+@cindex @option{--compile-program}, command line option
+Load the source @rnrs{6} program @var{PROGRAM}, compile it and store a
+serialized version of it in a file whose name is built from
+@var{PROGRAM}.  @var{PROGRAM} itself is not evaluated.
+
 @item --compile-dependencies @var{IMPORTS-FILE}
 @cindex Command line option @option{--compile-dependencies}
 @cindex @option{--compile-dependencies}, command line option
@@ -128,6 +144,16 @@ upon which it depends and store them in the FASL repository.
 @cindex @option{--compile-library}, command line option
 Load the @rnrs{6} library source @var{LIBFILE}, compile it and save the
 result in the @fasl{} repository.
+
+@item -c @var{FILE}
+@itemx --compile @var{FILE}
+@cindex Command line option @option{-c}
+@cindex @option{-c}, command line option
+@cindex Command line option @option{--compile}
+@cindex @option{--compile}, command line option
+Load the selected @var{FILE}, recognise it as program or library by the
+file extension (@code{.sps} or @code{.sls}), compile it and store it as
+@fasl{} file.
 @end table
 
 When none of these options is given, but a standalone @var{PROGRAM}
@@ -169,7 +195,8 @@ option can be used multiple times.
 @cindex @option{--output}, command line option
 Select the pathname of an output file.  This selection has multiple
 purposes and it is ignored when irrelevant.  @var{OFILE} is used as:
-output @fasl{} file name when compiling individual library files.
+output @fasl{} file name when compiling individual library files; output
+@fasl{} file name when compiling program files.
 
 @item -l @var{LIBFILE}
 @itemx --load-library @var{LIBFILE}

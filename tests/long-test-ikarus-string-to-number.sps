@@ -30,7 +30,7 @@
 
 #!ikarus
 (import (vicare)
-  (ikarus-test-framework)
+  (libtest ikarus-test-framework)
   (vicare checks))
 
 (define (run-tests)

@@ -49,7 +49,8 @@
     serialize-library
 
     ;; installed library collection
-    find-library-by-name	library-exists?
+    find-library-by-name	find-library-by-descriptor
+    library-exists?
     current-library-collection
     install-binary-library-and-its-dependencies
 
@@ -220,7 +221,7 @@
   ;;Given a library  record return a pair having the  library UID as car
   ;;and the library name as cdr.
   ;;
-  (cons ($library-uid   lib)
+  (cons ($library-uid  lib)
 	($library-name lib)))
 
 (define (library-descriptor? obj)
@@ -363,6 +364,7 @@
 	  "cannot find installed library with required descriptor" libdesc))))
 
 (module (find-library-by-name
+	 find-library-by-descriptor
 	 find-library-in-collection-by-reference
 	 %external-pending-libraries)
 
@@ -377,6 +379,22 @@
     ;;
     (or (find-library-in-collection-by-reference libref)
 	(%find-and-install-external-library libref)))
+
+  (define* (find-library-by-descriptor libdescr)
+    ;;Given  a  library descriptor:  try  to  search  and install  the  corresponding
+    ;;library,  if  it   is  not  already  installed;  when   successful  return  the
+    ;;corresponding LIBRARY record, otherwise raise an exception.
+    ;;
+    ;;Search for  the library  in the internal  collection or, if  not found,  in the
+    ;;external   source   (for  example   the   file   system)  using   the   current
+    ;;CURRENT-LIBRARY-LOADER.
+    ;;
+    (let ((lib (find-library-by-name (library-descriptor-name libdescr))))
+      (if (eq? (library-descriptor-uid libdescr)
+	       (library-uid            lib))
+	  lib
+	(error __who__
+	  "unable to load required library" libdescr))))
 
   (define* (find-library-in-collection-by-reference {libref library-reference?})
     (find-library-in-collection-by-predicate (lambda (lib)

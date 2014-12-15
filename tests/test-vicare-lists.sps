@@ -62,7 +62,7 @@
 		     partition		remove		remp
 		     remq		remv)
 	     expand run)
-  (lists)
+  (libtest lists)
   (prefix (vicare) six.)
   (vicare unsafe operations)
   (vicare system $lists)

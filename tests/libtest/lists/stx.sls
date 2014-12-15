@@ -24,7 +24,7 @@
 
 
 #!r6rs
-(library (lists stx)
+(library (libtest lists stx)
   (export
 
     ;; constructors
@@ -117,7 +117,7 @@
 	       expand run)
     (except (vicare)
 	    make-list last-pair)
-    (lists low))
+    (libtest lists low))
 
 
 ;;;; helpers

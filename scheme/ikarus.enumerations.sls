@@ -415,7 +415,7 @@
 
 (define make-file-options
   ;;This constructor builds empty enum sets.
-  (enum-set-constructor (make-enumeration '(no-create no-fail no-truncate))))
+  (enum-set-constructor (make-enumeration '(no-create no-fail no-truncate executable))))
 
 (define make-expander-options
   ;;This constructor builds empty enum sets.

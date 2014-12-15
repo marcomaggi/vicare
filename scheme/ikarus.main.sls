@@ -97,6 +97,8 @@
     (prefix (only (ikarus load)
 		  load
 		  load-r6rs-script
+		  compile-r6rs-script
+		  run-serialized-r6rs-script
 		  load-and-serialize-source-library
 		  fasl-directory
 		  fasl-search-path
@@ -162,27 +164,27 @@
 
 (define-struct run-time-config
   (exec-mode
-		;A  symbol representing  the  requested execution  mode:
-		;R6RS-SCRIPT,   R6RS-REPL,    SCRIPT,   COMPILE-LIBRARY,
-		;COMPILE-DEPENDENCIES, R6RS-EXPAND, REPL.
+		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
+		;BINARY-PROGRAM,     R6RS-REPL,     SCRIPT,     COMPILE-DEPENDENCIES,
+		;COMPILE-LIBRARY,  COMPILE-PROGRAM,  COMPILE-SOMETHING,  R6RS-EXPAND,
+		;REPL.
    script
-		;A  string representing  a file  name: the  main script.
-		;When     in     R6RS-SCRIPT,     COMPILE-LIBRARY     or
-		;COMPILE-DEPENDENCIES  mode:   it  must  hold   an  R6RS
+		;A  string  representing a  file  name:  the  main script.   When  in
+		;R6RS-SCRIPT,   BINARY-PROGRAM,   COMPILE-PROGRAM,   COMPILE-LIBRARY,
+		;COMPILE-SOMETHING or COMPILE-DEPENDENCIES mode: it must hold an R6RS
 		;program.  When in script mode: it must hold a script.
 
-   rcfiles	;#f,  #t, null or  a list  of strings  representing file
-		;names.  When #f: avoid executing any run-command files;
-		;when #t: load and  execute the default run-command file
-		;as an  R6RS program;  when null or  a list  of strings:
-		;load the listed files  to be evaluated as R6RS programs
+   rcfiles
+		;#f, #t, null or a list of strings representing file names.  When #f:
+		;avoid executing any run-command files; when #t: load and execute the
+		;default run-command file as an R6RS  program; when null or a list of
+		;strings:  load the  listed files  to be  evaluated as  R6RS programs
 		;before instantiating libraries.
 
    load-libraries
-		;Null  or a  list  of strings  representing file  names:
-		;libraries to be instantiated,  adding the result to the
-		;interaction environment, after  the RC files and before
-		;the load scripts.
+		;Null or a  list of strings representing file names:  libraries to be
+		;instantiated,  adding the  result  to  the interaction  environment,
+		;after the RC files and before the load scripts.
 
    eval-codes
 		;Null or  an alist with entries:
@@ -190,48 +192,46 @@
 		;	(file . FILENAME)
 		;	(expr . EXPRESSION)
 		;
-		;FILENAME is a string  representing a file names: source
-		;code  to  be  loaded  and  handed  to  EVAL  under  the
-		;interaction  environment.
+		;FILENAME is  a string representing a  file names: source code  to be
+		;loaded and handed to EVAL under the interaction environment.
 		;
-		;EXPRESSION  is a  symbolic expression  to be  handed to
-		;EVAL under the interaction environment.
+		;EXPRESSION is a  symbolic expression to be handed to  EVAL under the
+		;interaction environment.
 		;
-		;This  code  is  evaluated  before the  main  script  is
-		;evaluated, but after the libraries have been loaded.
+		;This  code is  evaluated before  the main  script is  evaluated, but
+		;after the libraries have been loaded.
 
    program-options
-		;Null  or a  list of  strings representing  command line
-		;options to  be handed  to the executed  program through
-		;the COMMAND-LINE function.
+		;Null or  a list of strings  representing command line options  to be
+		;handed to the executed program through the COMMAND-LINE function.
 
    no-greetings
-		;If  true:  avoid printing  the  greetings message  when
-		;starting the REPL.
+		;If  true: avoid  printing the  greetings message  when starting  the
+		;REPL.
 
    search-path
-		;Null or a list of strings representing directory names:
-		;additional locations in which to search for libraries.
+		;Null or a  list of strings representing  directory names: additional
+		;locations in which to search for libraries.
 
    fasl-search-path
-		;Null or a list of strings representing directory names:
-		;additional locations in which to search for FASL files.
+		;Null or a  list of strings representing  directory names: additional
+		;locations in which to search for FASL files.
 
    fasl-directory
-		;False of  a string  representing the initial  value for
-		;the parameter FASL-DIRECTORY.
+		;False of a  string representing the initial value  for the parameter
+		;FASL-DIRECTORY.
 
    more-file-extensions
-		;Turn  on search  for more  library file  extension than
-		;".vicare.sls" and ".sls".
+		;Turn on  search for more  library file extension  than ".vicare.sls"
+		;and ".sls".
 
    raw-repl
-		;If true  do not create  a readline console  input port,
-		;even when the readline interface is available.
+		;If true do  not create a readline console input  port, even when the
+		;readline interface is available.
    output-file
-		;False or  a non-empty string representing  the pathname
-		;of an  output file.   It has multiple  purposes: output
-		;file for compiled libraries.
+		;False or a  non-empty string representing the pathname  of an output
+		;file.  It has multiple purposes: output file for compiled libraries;
+		;output file for compiled programs.
    ))
 
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
@@ -464,6 +464,16 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
+	  ((%option= "--binary-program")
+	   (cond ((null? (cdr args))
+		  (%error-and-exit "option --binary-program requires a program name"))
+		 ((run-time-config-exec-mode cfg)
+		  (%error-and-exit "option --binary-program given after other mode option"))
+		 (else
+		  (set-run-time-config-exec-mode! cfg 'binary-program)
+		  (set-run-time-config-script!    cfg (cadr args))
+		  (next-option (cddr args) k))))
+
 	  ((%option= "--r6rs-repl")
 	   (cond ((null? (cdr args))
 		  (%error-and-exit "option --r6rs-repl requires a script name"))
@@ -503,6 +513,28 @@
 		   "option --compile-dependencies given after other mode option"))
 		 (else
 		  (set-run-time-config-exec-mode! cfg 'compile-dependencies)
+		  (set-run-time-config-script!    cfg (cadr args))
+		  (next-option (cddr args) k))))
+
+	  ((%option= "--compile-program")
+	   (cond ((null? (cdr args))
+		  (%error-and-exit "option --compile-program requires a script name"))
+		 ((run-time-config-exec-mode cfg)
+		  (%error-and-exit
+		   "option --compile-program given after other mode option"))
+		 (else
+		  (set-run-time-config-exec-mode! cfg 'compile-program)
+		  (set-run-time-config-script!    cfg (cadr args))
+		  (next-option (cddr args) k))))
+
+	  ((%option= "-c" "--compile")
+	   (cond ((null? (cdr args))
+		  (%error-and-exit "option -c or --compile requires a file name"))
+		 ((run-time-config-exec-mode cfg)
+		  (%error-and-exit
+		   "option -c or --compile given after other mode option"))
+		 (else
+		  (set-run-time-config-exec-mode! cfg 'compile-something)
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
@@ -819,11 +851,14 @@ Usage:
 
 vicare [OPTIONS] [FILENAME]                     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
+vicare [OPTIONS] --binary-program PROGRAM       [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --compile-library LIBFILE      [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --compile-dependencies PROGRAM [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --r6rs-expand PROGRAM          [-- [PROGRAM OPTS]]
+vicare [OPTIONS] --compile-library LIBFILE
+vicare [OPTIONS] --compile-dependencies PROGRAM
+vicare [OPTIONS] --compile-program PROGRAM
+vicare [OPTIONS] --compile FILE
+vicare [OPTIONS] --r6rs-expand PROGRAM
 
 the  OPTIONS are  interpreted by  vicare, PROGRAM  OPTS can  be obtained
 using the COMMAND-LINE procedure in the (rnrs programs) library.
@@ -833,6 +868,10 @@ Options controlling execution modes:
    --r6rs-script PROGRAM
         Start Vicare  in R6RS-script mode.  The PROGRAM  file is handled
        	as an R6RS program.
+
+   --binary-program PROGRAM
+        Start  Vicare in  compiled-program  mode.  The  PROGRAM file  is
+       	handled as a precompiled R6RS program: loaded and executed.
 
    --r6rs-repl PROGRAM
         Start Vicare  in R6RS-script mode.  Act as  if the --r6rs-script
@@ -853,6 +892,15 @@ Options controlling execution modes:
         Load  the R6RS program  PROGRAM, compile all the  libraries upon
 	which it depends  and save them in the FASL repository.  PROGRAM
 	itself is not evaluated.
+
+   --compile-program PROGRAM
+        Load  the R6RS program  PROGRAM, compile it and store it as FASL
+        file.  PROGRAMitself is not evaluated.
+
+   --compile FILE
+        Load the  selected file, recognise  it as program or  library by
+	the file  extension (.sps or .sls),  compile it and store  it as
+	FASL file.
 
    --r6rs-expand PROGRAM
         Start Vicare  in R6RS-script mode.  The PROGRAM  file is handled
@@ -1004,7 +1052,7 @@ Other options:
         expanded  code  and  assembly code.  Disables   the   effect  of
         --descriptive-labels.  This is the default.
 
-    --library-locator NAME
+   --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,
         compile-time, source.
 
@@ -1188,6 +1236,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   "*** Vicare internal error: unknown evaluation code type" (car entry)))))
 	    cfg.eval-codes))))
 
+;;; --------------------------------------------------------------------
+
 (define (load-r6rs-program cfg)
   ;;Execute  the  selected main  script  as  R6RS  program.  Return  the
   ;;resulting environment.
@@ -1195,17 +1245,52 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit (load-r6rs-script cfg.script (serialize? #f) (run? #t)))))
 
+(define (run-serialized-program cfg)
+  (with-run-time-config (cfg)
+    (doit (load.run-serialized-r6rs-script cfg.script))))
+
+(define (load-evaluated-script cfg)
+  (with-run-time-config (cfg)
+    (doit (load.load cfg.script))))
+
+;;; --------------------------------------------------------------------
+
 (define (compile-dependencies cfg)
   (with-run-time-config (cfg)
     (doit (load-r6rs-script cfg.script (serialize? #t) (run? #f)))))
+
+(define (compile-program cfg)
+  (with-run-time-config (cfg)
+    (doit (load.compile-r6rs-script cfg.script cfg.output-file))))
 
 (define (compile-library cfg)
   (with-run-time-config (cfg)
     (doit (load.load-and-serialize-source-library cfg.script cfg.output-file))))
 
-(define (load-evaluated-script cfg)
-  (with-run-time-config (cfg)
-    (doit (load.load cfg.script))))
+(module (compile-something)
+
+  (define* (compile-something cfg)
+    (with-run-time-config (cfg)
+      (cond ((%string-suffix? cfg.script ".sls")
+	     (compile-library cfg))
+	    ((%string-suffix? cfg.script ".sps")
+	     (compile-program cfg))
+	    (else
+	     (raise
+	      (condition (make-who-condition __who__)
+			 (make-message-condition "cannot determine type of source file to compile (library or program)")
+			 (make-i/o-filename-error cfg.script)
+			 (make-irritants-condition (list cfg.script))))))))
+
+  (define (%string-suffix? str suffix)
+    (let ((str.len    (string-length str))
+	  (suffix.len (string-length suffix)))
+      (and (fx< suffix.len str.len)
+	   (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
 (define (expand-program cfg)
   ;;FIXME Currently undocumented because the output really really really
@@ -1493,6 +1578,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((r6rs-script)
        (load-r6rs-program cfg))
 
+      ((binary-program)
+       (run-serialized-program cfg))
+
       ((r6rs-repl)
        (let ((env (load-r6rs-program cfg)))
 	 (interaction-environment env)
@@ -1503,8 +1591,16 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((compile-dependencies)
        (compile-dependencies cfg))
 
+
+      ((compile-program)
+       (compile-program cfg))
+
       ((compile-library)
        (compile-library cfg))
+
+      ((compile-something)
+       (compile-something cfg))
+
 
       ((script)
        (load-evaluated-script cfg))

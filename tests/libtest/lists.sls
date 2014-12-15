@@ -24,7 +24,7 @@
 
 
 #!r6rs
-(library (lists)
+(library (libtest lists)
   (export
 
     ;; constructors
@@ -163,8 +163,8 @@
 	       expand run)
     (except (vicare)
 	    break)
-    (lists low)
-    (lists stx))
+    (libtest lists low)
+    (libtest lists stx))
 
 
 ;;;; constructors

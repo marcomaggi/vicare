@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Launcher script for Vicare Scheme compiled programs.
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+
+VICARE=${bindir}/vicare
+
+PROGRAM_PATHNAME=$1
+shift
+
+exec ${VICARE} --binary-program "$PROGRAM_PATHNAME" -- "$@"
+
+### end of file

@@ -27,7 +27,7 @@
 
 #!ikarus
 (import (vicare)
-  (ikarus-test-framework))
+  (libtest ikarus-test-framework))
 
 (define file (src-file "rn100"))
 

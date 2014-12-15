@@ -29,7 +29,7 @@
 
 #!ikarus
 (import (vicare)
-  (ikarus-test-framework)
+  (libtest ikarus-test-framework)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

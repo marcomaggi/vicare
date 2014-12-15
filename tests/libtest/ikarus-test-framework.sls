@@ -26,7 +26,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
-(library (ikarus-test-framework)
+(library (libtest ikarus-test-framework)
   (export define-tests src-file)
   (import (vicare)
     (only (vicare checks)

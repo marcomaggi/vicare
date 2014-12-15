@@ -4594,7 +4594,7 @@
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
-	 (memq (identifier->symbol opt-stx) '(no-fail no-create no-truncate))))
+	 (memq (identifier->symbol opt-stx) '(no-fail no-create no-truncate executable))))
   (syntax-match expr-stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
