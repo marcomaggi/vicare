@@ -94,7 +94,7 @@
 		  load
 		  load-r6rs-script
 		  compile-r6rs-script
-		  run-serialized-r6rs-script
+		  run-compiled-program
 		  load-and-serialize-source-library
 		  fasl-directory
 		  fasl-search-path
@@ -1239,9 +1239,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit (load-r6rs-script cfg.script (serialize? #f) (run? #t)))))
 
-(define (run-serialized-program cfg)
+(define (run-compiled-program cfg)
   (with-run-time-config (cfg)
-    (doit (load.run-serialized-r6rs-script cfg.script))))
+    (doit (load.run-compiled-program cfg.script))))
 
 (define (load-evaluated-script cfg)
   (with-run-time-config (cfg)
@@ -1573,7 +1573,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (load-r6rs-program cfg))
 
       ((binary-program)
-       (run-serialized-program cfg))
+       (run-compiled-program cfg))
 
       ((r6rs-repl)
        (let ((env (load-r6rs-program cfg)))

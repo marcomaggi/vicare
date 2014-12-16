@@ -19,7 +19,7 @@
 (library (ikarus load)
   (export
     compile-r6rs-script
-    run-serialized-r6rs-script
+    run-compiled-program
     load-and-serialize-source-library
     run-time-library-locator
     compile-time-library-locator
@@ -1152,7 +1152,7 @@
 ;;;; compiling source programs to binary programs
 
 (module (compile-r6rs-script
-	 run-serialized-r6rs-script)
+	 run-compiled-program)
 
   ;;NOTE To use  a struct type here looks  cool.  But, if in future we  want to allow
   ;;compiled programs to be independent from  specific boot image builds, we may need
@@ -1197,7 +1197,7 @@
 	((expand-r6rs-top-level-make-compiler (read-script-source-file source-filename)))
       (store-serialized-program source-filename lib-descr* thunk fasl-filename)))
 
-  (define* (run-serialized-r6rs-script {fasl-filename %non-empty-string?})
+  (define* (run-compiled-program {fasl-filename %non-empty-string?})
     (receive (lib-descr* closure)
 	(load-serialized-program fasl-filename)
       (map (lambda (descr)
@@ -1243,12 +1243,8 @@
     ;;serialized program FASL file.
     ;;
     (import SOURCE-PATHNAME->BINARY-PATHNAME)
-    (define-syntax-rule (%display ?thing)
-      (display ?thing stderr))
     (let ((fasl-filename (%make-fasl-filename __who__ fasl-filename source-filename)))
-      (%display "serialising ")
-      (%display fasl-filename)
-      (%display " ... ")
+      (%print-verbose-message "serialising ~a ..." fasl-filename)
       (receive (dir name)
 	  (posix.split-pathname-root-and-tail fasl-filename)
 	(unless (string-empty? dir)
@@ -1265,7 +1261,7 @@
 	    (fasl-write (make-serialized-program lib-descr* closure) port
 			(retrieve-filename-foreign-libraries source-filename))
 	  (close-output-port port)))
-      (%display "done\n")))
+      (%print-verbose-message "done")))
 
 ;;; --------------------------------------------------------------------
 
