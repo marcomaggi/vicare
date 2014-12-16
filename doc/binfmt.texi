@@ -1,5 +1,5 @@
 @node binfmt
-@appendix Launching programs directly
+@appendix Launching programs directly on @gnu{}+Linux
 
 
 This appendix describes an optional feature of @value{PRJNAME}: source

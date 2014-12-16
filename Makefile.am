@@ -1223,11 +1223,17 @@ lalr-test:
 
 #page
 #### compiling test files
+#
+# These  are very  rough rules,  not  integrated in  the GNU  Automake
+# infrastructure.   The purpose,  here, is  to excercise  both program
+# compilation and  the command line  option --cache-compiled-libraries
+# to handle the libraries used by test programs.
+#
 
 VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
 
 VICARE_COMPILED_TESTS_SEARCH_PATH	= $(testdir):$(fasldir):$(srcdir)/scheme
-VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(HOME)/.vicare/precompiled:$(VICARE_FASL_PATH)
 VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
@@ -1246,7 +1252,7 @@ VICARE_COMPILED_TESTS_ENV	= \
 VICARE_COMPILED_TESTS_COMPILE	= $(VICARE_COMPILED_TESTS_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILED_TESTS_COMPILE_FLAGS)
 VICARE_COMPILED_TESTS_RUN	= $(VICARE_COMPILED_TESTS_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILED_TESTS_RUN_FLAGS)
 
-CLEANFILES	+= $(builddir)/tests/*.sps.fasl
+CLEANFILES	+= $(builddir)/tests/*.fasl
 
 ## --------------------------------------------------------------------
 
@@ -1254,12 +1260,15 @@ CLEANFILES	+= $(builddir)/tests/*.sps.fasl
 
 compile-tests: all
 	@echo
-	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do $(VICARE_COMPILED_TESTS_COMPILE) $$f; done
+	@for f in $(VICARE_COMPILED_SELECTED_TESTS); do \
+	    FASL=$(builddir)/tests/$$(basename $$f).fasl ; \
+	    test -x $$FASL || ($(VICARE_COMPILED_TESTS_COMPILE) $$f -o $$FASL); \
+	 done
 	@echo
 
 run-compiled-tests:
 	@echo
-	@for f in $(builddir)/tests/*fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
+	@for f in $(builddir)/tests/*.fasl; do $(VICARE_COMPILED_TESTS_RUN) $$f; done
 	@echo
 
 #page

@@ -13,7 +13,8 @@ script.
 * using interactive::           Interactive sessions.
 * using invoking::              Command line arguments.
 * using script::                Using @command{scheme-script}.
-* using libraries::             @rnrs{6} libraries.
+* using libraries::             @rnrs{6} libraries and extensions.
+* using programs::              @rnrs{6} programs and extensions.
 * using rlwrap::                Using @command{rlwrap}.
 * using binfmt::                Launching programs on Linux.
 @end menu
@@ -581,7 +582,7 @@ executed.  The @code{.command} extension can be hidden from the
 
 @c page
 @node using libraries
-@section @rnrs{6} libraries
+@section @rnrs{6} libraries and extensions
 
 
 A library exports features that can be imported into programs and other
@@ -917,6 +918,10 @@ While @value{RAWEXECUTABLE} is running: we can modify at will the
 content of @func{fasl-search-path}.
 @end enumerate
 
+@noindent
+notice that the value of the parameter @func{fasl-directory} is
+@strong{not} included by default.
+
 In the following example session the user sets
 @env{VICARE_FASL_PATH}; the settings are reflected in the value of
 @code{(fasl-search-path)}; a further directory is then set during the
@@ -956,7 +961,7 @@ is good enough.
 @subsubheading @fasl{} directory initialisation
 
 
-The parameter @func{fasl-search-path} is initialised as follows:
+The parameter @func{fasl-directory} is initialised as follows:
 
 @enumerate
 @item
@@ -1570,6 +1575,45 @@ implementations.
 
 ;;; end of file
 @end example
+
+@c page
+@node using programs
+@section @rnrs{6} programs and extensions
+
+
+@cindex @rnrs{6} programs
+@cindex Scheme programs
+@cindex Scheme scripts
+@cindex Compiling Scheme scripts
+@cindex Binary programs
+
+
+Scheme programs can be executed by @value{PRJNAME} from both source and
+binary formats.
+
+@itemize
+@item
+To run a Scheme script, a program in source form, we invoke the
+executable @command{vicare} using the option @option{--r6rs-script} to
+select the pathname of the file:
+
+@example
+$ vicare --r6rs-script path/to/script.sps
+@end example
+
+@item
+To run a compiled Scheme program, we invoke the executable
+@command{vicare} using the option @option{--binary-program} to select
+the pathname of the file:
+
+@example
+$ vicare --binary-program path/to/program
+@end example
+@end itemize
+
+On @gnu{}+Linux platforms it is possible to execute programs directly
+without explicitly invoking the executable, @ref{binfmt, Launching
+programs directly on @gnu{}+Linux}.
 
 @c page
 @node using rlwrap

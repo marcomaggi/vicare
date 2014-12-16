@@ -21,7 +21,6 @@
     compile-r6rs-script
     run-serialized-r6rs-script
     load-and-serialize-source-library
-    serialize-library-record
     run-time-library-locator
     compile-time-library-locator
     source-library-locator
@@ -235,6 +234,10 @@
    program-source-pathname->program-binary-pathname)
 
   (define* (library-source-pathname->library-binary-pathname {source-pathname posix.file-string-pathname?})
+    ;;Called when we need to serialise a library  into a FASL file and a pathname for
+    ;;the FASL  file was  not explicitly  specified on the  command line.   Build and
+    ;;return the FASL pathname as a Scheme string.
+    ;;
     (define (%error ptn)
       (assertion-violation __who__
 	"unable to build valid FASL file pathname from library source pathname"
@@ -305,18 +308,18 @@
 	 (posix.directory-exists? dir-pathname)))
 
   (define-constant DEFAULT-FASL-DIRECTORY
-    ;;Default  value  for  the   FASL-DIRECTORY  parameter;  it  is  the
-    ;;directory under which new FASL  files holding binary libraries are
-    ;;created when using the "compile dependencies" execution mode.
+    ;;Default value for the FASL-DIRECTORY parameter; it is the directory under which
+    ;;new FASL  files holding binary  libraries are  created when using  the "compile
+    ;;dependencies" execution mode.
     ;;
-    ;;It is initialised with with  the value of the environment variable
-    ;;VICARE_FASL_DIRECTORY, if  set and  holding an  existent pathname;
-    ;;otherwise it is initialised with the pathname:
+    ;;It  is   initialised  with   with  the  value   of  the   environment  variable
+    ;;VICARE_FASL_DIRECTORY, if set and holding an existent pathname; otherwise it is
+    ;;initialised with the pathname:
     ;;
     ;;   ~/.vicare/precompiled
     ;;
-    ;;if  it is  possible  to determine  the value  of  the user's  home
-    ;;directory;      otherwise      it      is      initialised      to:
+    ;;if  it  is possible  to  determine  the value  of  the  user's home  directory;
+    ;;otherwise it is initialised to:
     ;;
     ;;   /tmp/vicare/precompiled
     ;;
@@ -329,15 +332,13 @@
 	    "/tmp/vicare/precompiled")))))
 
   (define fasl-directory
-    ;;The directory under which serialised FASL files must be saved.  It
-    ;;must  be  a  string  representing  the  pathname  of  an  existing
-    ;;directory; such  pathanme is normalised  upon storing it  into the
-    ;;parameter.  This value is prepended to source file names to obtain
-    ;;the pathname of a FASL file in a FASL repository.
+    ;;The directory under  which serialised FASL files  must be saved.  It  must be a
+    ;;string representing  the pathname  of an existing  directory; such  pathanme is
+    ;;normalised upon  storing it  into the  parameter.  This  value is  prepended to
+    ;;source file names to obtain the pathname of a FASL file in a FASL repository.
     ;;
-    ;;When this parameter is set to  the dot string: the FASL files will
-    ;;be stored  in the  current working  directory at  the time  of the
-    ;;parameter mutation.
+    ;;When this parameter is set to the dot  string: the FASL files will be stored in
+    ;;the current working directory at the time of the parameter mutation.
     ;;
     (make-parameter DEFAULT-FASL-DIRECTORY
       (lambda (P)
@@ -351,10 +352,9 @@
 	       (error __who__ "attempt to set non-existent directory pathname" P))))))
 
   (define fasl-search-path
-    ;;The search path  to in which to look for  FASL files.  Notice that
-    ;;we  do not  test for  directories existence:  a directory  may not
-    ;;exist at the time this search  path is initialised, but be created
-    ;;later.
+    ;;The search path  in which to look for  FASL files.  Notice that we  do not test
+    ;;for directories  existence: a directory may  not exist at the  time this search
+    ;;path is initialised, but be created later.
     ;;
     (make-parameter
 	(let ()
@@ -372,21 +372,20 @@
 	P)))
 
   (define* (fasl-path {libref library-reference?})
-    ;;Given  a  R6RS  library  reference:  build  and  return  a  string
-    ;;representing  the  pathname   of  the  FASL  file   in  which  the
-    ;;corresponding binary library can be  stored.  The directory of the
-    ;;pathname is the current value of the parameter FASL-DIRECTORY.
+    ;;Given a  R6RS library  reference: build  and return  a string  representing the
+    ;;pathname of  the FASL  file in  which the corresponding  binary library  can be
+    ;;stored.  The  directory of the pathname  is the current value  of the parameter
+    ;;FASL-DIRECTORY.
     ;;
     (string-append (fasl-directory)
 		   (library-reference->filename-stem libref)
 		   FASL-EXTENSION))
 
   (define* (fasl-stem+extension {libref library-reference?})
-    ;;Given  a  R6RS  library  reference:  build  and  return  a  string
-    ;;representing  the pathname  stem of  the  FASL file  in which  the
-    ;;corresponding  binary library  can  be stored.   The  "stem" is  a
-    ;;string  to append  to  a  directory pathname  to  obtain the  full
-    ;;pathname; for example, the stem of the library reference:
+    ;;Given a  R6RS library  reference: build  and return  a string  representing the
+    ;;pathname stem of the FASL file in which the corresponding binary library can be
+    ;;stored.  The "stem" is a string to append to a directory pathname to obtain the
+    ;;full pathname; for example, the stem of the library reference:
     ;;
     ;;   (alpha beta gamma (1 2 3))
     ;;
@@ -398,14 +397,13 @@
 		   FASL-EXTENSION))
 
   (define* (default-binary-library-file-locator {libref library-reference?})
-    ;;Default   value    for   the   CURRENT-BINARY-LIBRARY-FILE-LOCATOR
-    ;;parameter.  Given a R6RS library  reference: scan the FASL library
-    ;;search path for the corresponding FASL file.
+    ;;Default value  for the CURRENT-BINARY-LIBRARY-FILE-LOCATOR parameter.   Given a
+    ;;R6RS library reference: scan the FASL library search path for the corresponding
+    ;;FASL file.
     ;;
-    ;;Return 2 values.  When successful:  a string representing the fasl
-    ;;file pathname;  a thunk to be  called to continue the  search from
-    ;;the next  directory in the  search path.  Otherwise  return: false
-    ;;and false.
+    ;;Return  2  values.   When  successful:  a string  representing  the  fasl  file
+    ;;pathname; a thunk to  be called to continue the search  from the next directory
+    ;;in the search path.  Otherwise return: false and false.
     ;;
     (%log-library-debug-message "~a: locating binary library file for: ~a" __who__ libref)
     (let loop ((stem.str     (library-reference->filename-stem libref))
@@ -415,9 +413,8 @@
 	  (begin
 	    (%log-library-debug-message "~a: exhausted search path, no binary library file found for: ~a" __who__ libref)
 	    (values #f #f))
-	;;Check the  file existence  in the  current directory  with the
-	;;current  file  extension;  if  not found  try  the  next  file
-	;;extension.
+	;;Check the  file existence in  the current  directory with the  current file
+	;;extension; if not found try the next file extension.
 	(let* ((binary-pathname (string-append ($car directories)
 					       stem.str
 					       FASL-EXTENSION))
@@ -1149,7 +1146,7 @@
 	  ((current-library-expander) library-sexp source-pathname (lambda (libname) (void)))
 	(find-library-by-name libname))))
   (when lib
-    (serialize-library-record lib binary-pathname)))
+    ((current-library-record-serializer) lib binary-pathname)))
 
 
 ;;;; compiling source programs to binary programs

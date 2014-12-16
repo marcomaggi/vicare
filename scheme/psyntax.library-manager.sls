@@ -720,7 +720,7 @@
 		  ((textual-port? port)
 		   ;;A source location was found.   We can read the source
 		   ;;library  from  PORT;  we  assume  that  applying  the
-		   ;;function PORT-ID to PROT  will return the source file
+		   ;;function PORT-ID to PORT  will return the source file
 		   ;;name.
 		   (%print-loading-library port)
 		   (cond ((unwind-protect
@@ -731,6 +731,12 @@
 			  ;;and installed.
 			  => (lambda (libname)
 			       (when (option.cache-compiled-libraries)
+				 ;;We cache  the compiled library.  Obviously,  if we
+				 ;;have  read this  library from  a textual  port, it
+				 ;;means  we  have read  it  in  source form;  so  we
+				 ;;serialise a library only if we have read it from a
+				 ;;source file  (not if we  have read it from  a FASL
+				 ;;file).
 				 ((current-library-record-serializer) (find-library-by-name libname)))
 			       (%print-loaded-library port)
 			       #t))
