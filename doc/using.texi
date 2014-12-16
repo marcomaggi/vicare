@@ -12,9 +12,9 @@ script.
 @menu
 * using interactive::           Interactive sessions.
 * using invoking::              Command line arguments.
-* using script::                Using @command{scheme-script}.
+* using scripts::               Executing Scheme scripts.
 * using libraries::             @rnrs{6} libraries and extensions.
-* using programs::              @rnrs{6} programs and extensions.
+* using programs::              Compiling Scheme programs.
 * using rlwrap::                Using @command{rlwrap}.
 * using binfmt::                Launching programs on Linux.
 @end menu
@@ -481,8 +481,8 @@ default the file @file{.vicarerc} is used searching it in the directory
 selected by the @env{HOME} environment variable.
 
 @c page
-@node using script
-@section Using @command{scheme-script}
+@node using scripts
+@section Executing Scheme scripts
 
 
 Scheme scripts can be executed using the following command:
@@ -499,9 +499,9 @@ or the shorter:
 @end example
 
 @noindent
-@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations
-and does not install a wrapper program called @command{scheme-script} to
-avoid conflicts with other Scheme implementations.
+@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations to
+install a wrapper program called @command{scheme-script} to avoid
+conflicts with other Scheme implementations.
 
 Here is a sample script (Pig Latin---``Igpay Atinlay''---is a code that
 was at one time popular among very young North American children).
@@ -1578,7 +1578,7 @@ implementations.
 
 @c page
 @node using programs
-@section @rnrs{6} programs and extensions
+@section Compiling Scheme programs
 
 
 @cindex @rnrs{6} programs
@@ -1598,7 +1598,7 @@ executable @command{vicare} using the option @option{--r6rs-script} to
 select the pathname of the file:
 
 @example
-$ vicare --r6rs-script path/to/script.sps
+vicare --r6rs-script path/to/script.sps
 @end example
 
 @item
@@ -1607,13 +1607,58 @@ To run a compiled Scheme program, we invoke the executable
 the pathname of the file:
 
 @example
-$ vicare --binary-program path/to/program
+vicare --binary-program path/to/program
 @end example
 @end itemize
 
 On @gnu{}+Linux platforms it is possible to execute programs directly
 without explicitly invoking the executable, @ref{binfmt, Launching
 programs directly on @gnu{}+Linux}.
+
+To compile a source program into binary form, we can use the specific
+command line option @option{--compile-program} or the general command
+line option @option{--compile} (which can be abbreviated as
+@option{-c}).
+
+To compile @file{script.sps} into @file{script.fasl} we can do:
+
+@example
+vicare --compile-program script.sps --output script.fasl
+@end example
+
+@noindent
+the option @option{--compile} recognises input files with extension
+@code{.sps} as programs, so we can also do:
+
+@example
+vicare --compile script.sps --output script.fasl
+@end example
+
+@noindent
+or with short options:
+
+@example
+vicare -c script.sps -o script.fasl
+@end example
+
+There is no need to use the extension @code{.fasl} for binary programs,
+so it is recommended to just do:
+
+@example
+vicare -o script -c script.sps
+@end example
+
+@noindent
+or, even shorter:
+
+@example
+vicare -c script.sps
+@end example
+
+@noindent
+which will automatically build the output file name by stripping
+@code{.sps} from the input file name; the output file name is created in
+the same directory of the input file name.
 
 @c page
 @node using rlwrap

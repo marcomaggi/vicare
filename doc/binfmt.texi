@@ -38,7 +38,7 @@ The common way of running a Scheme script, is to invoke the executable
 pathname of the file:
 
 @example
-$ vicare --r6rs-script path/to/script.sps
+vicare --r6rs-script path/to/script.sps
 @end example
 
 @noindent
@@ -47,7 +47,7 @@ to run a compiled Scheme program, we invoke the executable
 the pathname of the file:
 
 @example
-$ vicare --binary-program path/to/program
+vicare --binary-program path/to/program
 @end example
 
 The features implemented in the @code{binfmt_misc} kernel module allow
@@ -72,14 +72,14 @@ For source scripts, we make the file executable and put as very first
 bytes the string @code{;;;!vicare}, then we just do:
 
 @example
-$ path/to/script.sps
+path/to/script.sps
 @end example
 
 @item
 For compiled programs, we make the file executable and just do:
 
 @example
-$ path/to/program
+path/to/program
 @end example
 @end itemize
 
