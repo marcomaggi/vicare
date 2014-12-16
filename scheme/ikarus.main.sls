@@ -597,7 +597,7 @@
 	   (option.print-loaded-libraries #f)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--verbose")
+	  ((%option= "-v" "--verbose")
 	   (option.verbose? #t)
 	   (next-option (cdr args) k))
 
@@ -1071,6 +1071,12 @@ Other options:
         Print  to the  current error  port a  symbolic  expression which
         results from running the optimiser.
 
+   -v
+   --verbose
+        Enable verbose messages.
+
+   --silent
+        Disable verbose messages.
    -V
    --version
        Print version message on stderr then exit.

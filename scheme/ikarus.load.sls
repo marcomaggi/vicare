@@ -137,7 +137,9 @@
 
 (define (%print-verbose-message message . format-args)
   (when (options.verbose?)
-    (apply fprintf (current-error-port) message format-args)))
+    (let ((P (current-error-port)))
+      (apply fprintf P message format-args)
+      (flush-output-port P))))
 
 (module (%log-library-debug-message)
 
@@ -1062,7 +1064,7 @@
     ;;holding precompiled  code.  See the function  SERIALIZE-LIBRARY in
     ;;"psyntax.library-manager.sls" for details on the format.
     ;;
-    (%print-verbose-message "serializing ~a ..." fasl-pathname)
+    (%print-verbose-message "serializing ~a ...\n" fasl-pathname)
     (receive (dir name)
 	(posix.split-pathname-root-and-tail fasl-pathname)
       (unless (string-empty? dir)
@@ -1075,7 +1077,7 @@
 	    (fasl-write-object (make-serialized-library contents) port
 			       (retrieve-filename-foreign-libraries source-pathname)))
 	(close-output-port port)))
-    (%print-verbose-message " done\n"))
+    (%print-verbose-message "done\n"))
 
   #| end of module |# )
 
@@ -1244,7 +1246,7 @@
     ;;
     (import SOURCE-PATHNAME->BINARY-PATHNAME)
     (let ((fasl-filename (%make-fasl-filename __who__ fasl-filename source-filename)))
-      (%print-verbose-message "serialising ~a ..." fasl-filename)
+      (%print-verbose-message "serialising ~a ... " fasl-filename)
       (receive (dir name)
 	  (posix.split-pathname-root-and-tail fasl-filename)
 	(unless (string-empty? dir)
@@ -1261,7 +1263,7 @@
 	    (fasl-write (make-serialized-program lib-descr* closure) port
 			(retrieve-filename-foreign-libraries source-filename))
 	  (close-output-port port)))
-      (%print-verbose-message "done")))
+      (%print-verbose-message "done\n")))
 
 ;;; --------------------------------------------------------------------
 
