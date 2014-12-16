@@ -1309,6 +1309,16 @@ test-exec-modes:
 	$(VICARE_TERMINAL_RUN_ENV) $(testdir)/test-exec-modes.sh $(VICARE_NEW_EXECUTABLE) $(VICARE_NEW_BOOT) $(testdir)
 
 #page
+#### installation of scheme-script
+
+if WANT_INSTALL_SCHEME_SCRIPT
+
+scheme_scriptdir	= $(bindir)
+scheme_script_SCRIPTS	= scripts/scheme-script
+
+endif
+
+#page
 #### Linux binfmt support
 
 if WANT_BINFMT

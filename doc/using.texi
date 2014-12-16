@@ -461,9 +461,12 @@ Display the help message then exit.
 Mark the end of @value{EXECUTABLE} options; all the arguments after this
 marker can be obtained by calling the @func{command-line} procedure.
 
-@item --verbose
+@item -v
+@itemx --verbose
 @cindex Command line option @option{--verbose}
 @cindex @option{--verbose}, command line option
+@cindex Command line option @option{-v}
+@cindex @option{-v}, command line option
 Turn on verbose messages describing expander and compiler operations.
 
 @item --silent
@@ -498,10 +501,11 @@ or the shorter:
 @value{RAWEXECUTABLE} @var{PROGRAM}
 @end example
 
-@noindent
-@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations to
-install a wrapper program called @command{scheme-script} to avoid
-conflicts with other Scheme implementations.
+@value{PACKAGE} does follows the @rnrs{6} recommendations to install a
+wrapper program called @command{scheme-script} only when the
+@command{configure} option @option{--enable-scheme-script} is used at
+package configuration time; this is to avoid conflicts with other Scheme
+implementations.
 
 Here is a sample script (Pig Latin---``Igpay Atinlay''---is a code that
 was at one time popular among very young North American children).

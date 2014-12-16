@@ -18,6 +18,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
     --libdir="${libdir}"				\
     --enable-binfmt					\
     --enable-time-tests					\
+    --enable-scheme-script				\
     --with-pthread					\
     --with-cre2						\
     CFLAGS='-O3 -pedantic'				\
