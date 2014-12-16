@@ -228,7 +228,7 @@ inserting this code:
 
 @example
 if [ -x "$sysconfdir/rc.d/rc.vicare-scheme" ]; then
-   . "$sysconfdir/rc.d/rc.vicare-scheme"
+   "$sysconfdir/rc.d/rc.vicare-scheme"
 fi
 @end example
 
