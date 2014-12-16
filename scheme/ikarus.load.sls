@@ -124,6 +124,15 @@
 
 ;;;; helpers
 
+(define-constant FASL-EXTENSION
+  ;;The file extension of serialised FASL files.
+  ;;
+  ;;NOTE  In previous  versions  there were  2  extensions: ".vicare-32bit-fasl"  for
+  ;;32-bit  platforms  and  ".vicare-64bit-fasl"  for 64-bit  platforms.   But  since
+  ;;version 0.4 there is a single extension.  (Marco Maggi; Thu Feb 20, 2014)
+  ;;
+  ".fasl")
+
 (define-constant REJECT-KEY
   (gensym))
 
@@ -245,7 +254,7 @@
 		     (else
 		      source-pathname))))
       (if (posix.file-string-pathname? ptn)
-	  (let ((binary-pathname (string-append (fasl-directory) "/" ptn ".fasl")))
+	  (let ((binary-pathname (string-append (fasl-directory) "/" ptn FASL-EXTENSION)))
 	    (if (posix.file-string-pathname? binary-pathname)
 		binary-pathname
 	      (%error binary-pathname)))
@@ -259,7 +268,9 @@
     (let ((ptn (cond ((%string-suffix? source-pathname ".sps")
 		      (%desuffix       source-pathname ".sps"))
 		     (else
-		      source-pathname))))
+		      ;;If the source  program name does not end  with ".sps": append
+		      ;;".fasl" to whatever name it is.
+		      (string-append source-pathname FASL-EXTENSION)))))
       (if (posix.file-string-pathname? ptn)
 	  (let ((binary-pathname ptn))
 	    (if (posix.file-string-pathname? binary-pathname)
@@ -292,16 +303,6 @@
     (and dir-pathname
 	 (not (string-empty? dir-pathname))
 	 (posix.directory-exists? dir-pathname)))
-
-  (define-constant FASL-EXTENSION
-    ;;The file extension of serialised FASL files.
-    ;;
-    ;;NOTE   In    previous   versions   there   were    2   extensions:
-    ;;".vicare-32bit-fasl" for 32-bit platforms and ".vicare-64bit-fasl"
-    ;;for 64-bit  platforms.  But  since version 0.4  there is  a single
-    ;;extension.  (Marco Maggi; Thu Feb 20, 2014)
-    ;;
-    ".fasl")
 
   (define-constant DEFAULT-FASL-DIRECTORY
     ;;Default  value  for  the   FASL-DIRECTORY  parameter;  it  is  the
