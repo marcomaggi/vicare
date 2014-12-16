@@ -563,17 +563,25 @@ lib/vicare/platform/features.sls : features
 
 ## --------------------------------------------------------------------
 
-EXTRA_DIST += \
+EXTRA_DIST		+= \
 	lib/libraries.scm			\
 	scripts/compile-all.sps			\
 	scripts/build-makefile-rules.sps
 
+VICARE_BUILD_DEPS	= \
+	$(VICARE_COMPILE_RUN) \
+		-L $(testdir) --print-loaded-libraries --library-locator source \
+		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps --
+
 .PHONY: dependencies
 
 dependencies:
-	$(VICARE_COMPILE_RUN) --print-loaded-libraries --library-locator source \
-		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps >$(slsdir)/dependencies.make
+	$(VICARE_BUILD_DEPS) $(slsdir)/libraries.scm >$(slsdir)/dependencies.make
 
+# NOTE This  INCLUDE directive is  processed by Automake.   To specify
+# the  pathname  of the  include  file:  we  can use  only  predefined
+# makefile variables like "top_srcdir"; we cannot use custom variables
+# defined by this very makefile.
 include $(top_srcdir)/lib/dependencies.make
 
 ## --------------------------------------------------------------------
@@ -582,6 +590,7 @@ include $(top_srcdir)/lib/dependencies.make
 
 clean-fasl:
 	find $(fasldir) -name \*.fasl -execdir rm -v '{}' ';'
+	find $(builddir)/tests -name \*.fasl -execdir rm -v '{}' ';'
 
 #page
 #### special library rules: SILex lexers building
@@ -1211,17 +1220,6 @@ silex-test:
 
 lalr-test:
 	@for f in $(testdir)/make-lalr-*.sps; do export testdir=$(testdir); $(VICARE_TEST_RUN) $$f; done
-
-#page
-#### compiling test libraries
-
-# lib/vicare/platform/configuration.fasl: \
-# 		lib/vicare/platform/configuration.sls \
-# 		$(FASL_PREREQUISITES)
-# 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-# CLEANFILES += lib/vicare/platform/configuration.fasl
-
 
 #page
 #### compiling test files
