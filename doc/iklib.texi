@@ -40,6 +40,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @menu
 * iklib progname::              Finding the @command{vicare} executable.
 * iklib config::                Configuration options inspection.
+* iklib cmdline::               Command line arguments.
 * iklib env-inquiry::           Environment inquiry.
 * iklib syntaxes::              Additional syntaxes.
 * iklib compensations::         Compensation stacks.
@@ -153,6 +154,20 @@ features enabled; otherwise return @false{}.
 Return @true{} if the package was configured with Linux features
 enabled; otherwise return @false{}.
 @end defun
+
+@c page
+@node iklib cmdline
+@section Command line arguments
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@deffn Parameter command-line-arguments
+Hold the value returned by @func{command-line} as defined by @rnrs{6}.
+It is initialised to the actual command line arguments from the
+@value{PRJNAME} process execution.
+@end deffn
 
 @c page
 @node iklib env-inquiry
