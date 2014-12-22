@@ -448,13 +448,13 @@ Upon starting a @value{PRJNAME} process:
 
 @itemize
 @item
-If the executable @command{vicare} is specified as pathname relative to
+If the executable @value{EXECUTABLE} is specified as pathname relative to
 the current working directory: these functions will return the wrong
 absolute path when the current working directory is changed before a
 call to them.
 
 @item
-If the executable @command{vicare} is specified as file name with no
+If the executable @value{EXECUTABLE} is specified as file name with no
 directory part: these functions may return the wrong absolute path when
 the environment variable @env{PATH} is changed before a call to them.
 @end itemize

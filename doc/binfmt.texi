@@ -34,7 +34,7 @@ option to the @command{configure} script.
 @cindex Binary executables, kernel support
 
 The common way of running a Scheme script, is to invoke the executable
-@command{vicare} using the option @option{--r6rs-script} to select the
+@value{EXECUTABLE} using the option @option{--r6rs-script} to select the
 pathname of the file:
 
 @example
@@ -43,7 +43,7 @@ vicare --r6rs-script path/to/script.sps
 
 @noindent
 to run a compiled Scheme program, we invoke the executable
-@command{vicare} using the option @option{--binary-program} to select
+@value{EXECUTABLE} using the option @option{--binary-program} to select
 the pathname of the file:
 
 @example
@@ -441,7 +441,7 @@ number of times: at each run it resets and reinitialises the
 configuration for Scheme programs.
 
 @item
-The @command{vicare} executable must be in @code{$(bindir)}, else we
+The @value{EXECUTABLE} executable must be in @code{$(bindir)}, else we
 must customise the @file{rc.vicare-scheme} script.
 @end enumerate
 

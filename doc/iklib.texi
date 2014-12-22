@@ -38,7 +38,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @end table
 
 @menu
-* iklib progname::              Finding the @command{vicare} executable.
+* iklib progname::              Finding the @value{EXECUTABLE} executable.
 * iklib config::                Configuration options inspection.
 * iklib cmdline::               Command line arguments.
 * iklib env-inquiry::           Environment inquiry.
@@ -88,7 +88,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 
 @c page
 @node iklib progname
-@section Finding the @command{vicare} executable
+@section Finding the @value{EXECUTABLE} executable
 
 
 The following bindings are exported by the library @library{vicare}.
@@ -6870,8 +6870,9 @@ unsafe accessor and mutator identifiers out of libraries.
 
 These syntaxes are usable only when the @func{define-record-type} syntax
 used to define @meta{type-name} has been expanded in extended Vicare
-mode; if @command{vicare} was run with the option @option{--strict-r6rs}
-use of these syntaxes raises a syntax violation exception.
+mode; if @value{EXECUTABLE} was run with the option
+@option{--strict-r6rs} use of these syntaxes raises a syntax violation
+exception.
 
 @example
 (import (vicare))

@@ -271,9 +271,9 @@ dlsym(RTLD_DEFAULT, function_name);
 @end example
 
 @noindent
-so all the public functions from the running @command{vicare} executable
-are available and also all the functions from host's shared libraries
-loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
+so all the public functions from the running @value{EXECUTABLE}
+executable are available and also all the functions from host's shared
+libraries loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
 RTLD_GLOBAL}.
 
 It is possible to associate one or more host's shared libraries to a
