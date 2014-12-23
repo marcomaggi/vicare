@@ -54,6 +54,7 @@
 
     fixnum->char	char->fixnum
     fixnum->string
+    fixnum-in-character-range?
 
 ;;; --------------------------------------------------------------------
 
@@ -117,8 +118,9 @@
 		  fxarithmetic-shift-right
 		  fxarithmetic-shift
 
-		  fixnum->char		char->fixnum
-		  fixnum->string)
+		  fixnum->char	char->fixnum
+		  fixnum->string
+		  fixnum-in-character-range?)
     (prefix (only (vicare)
 		  fx+ fx* fx-)
 	    sys:)
@@ -653,7 +655,19 @@
      (sra (- (- fx1 fx2) (+ s0 fx3)) (fixnum-width)))))
 
 
-(define* (fixnum->char {fx fixnum?})
+;;;; conversion
+
+(define (fixnum-in-character-range? obj)
+  ;;Defined by Vicare.  Return #t  if OBJ is a fixnum and its value  is in one of the
+  ;;ranges acceptable by Unicode code points; otherwise return #f.
+  ;;
+  (and (fixnum? obj)
+       (or (and ($fx>= obj 0)
+		($fx<  obj #xD800))
+	   (and ($fx>  obj #xDFFF)
+		($fx<= obj #x10FFFF)))))
+
+(define* (fixnum->char {fx fixnum-in-character-range?})
   ($fixnum->char fx))
 
 (define* (char->fixnum {ch char?})
