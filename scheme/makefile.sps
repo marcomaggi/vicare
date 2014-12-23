@@ -838,6 +838,7 @@
     (fxlognot					v $language)
     (fixnum->string				v $language)
     (fixnum->char				v $language)
+    (char->fixnum				v $language)
     (string->flonum				v $language)
     (flonum->string				v $language)
     (always-true				v $language)

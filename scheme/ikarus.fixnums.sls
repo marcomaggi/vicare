@@ -52,7 +52,8 @@
     fx>=		fx>=?
     fxmin		fxmax
 
-    fixnum->char	fixnum->string
+    fixnum->char	char->fixnum
+    fixnum->string
 
 ;;; --------------------------------------------------------------------
 
@@ -116,7 +117,8 @@
 		  fxarithmetic-shift-right
 		  fxarithmetic-shift
 
-		  fixnum->char		fixnum->string)
+		  fixnum->char		char->fixnum
+		  fixnum->string)
     (prefix (only (vicare)
 		  fx+ fx* fx-)
 	    sys:)
@@ -653,6 +655,9 @@
 
 (define* (fixnum->char {fx fixnum?})
   ($fixnum->char fx))
+
+(define* (char->fixnum {ch char?})
+  ($char->fixnum ch))
 
 (module (fixnum->string
 	 $fixnum->string)
