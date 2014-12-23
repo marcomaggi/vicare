@@ -8290,6 +8290,11 @@ the sign of the fixnum @var{fx}.
 @end defun
 
 
+@defun fixnum->char @var{fx}
+Convert the fixnum @var{fx} to a character and return it.
+@end defun
+
+
 @defun fixnum->string @var{fx}
 @defunx fixnum->string @var{fx} @var{base}
 Return a string representation of @var{fx}.  @var{base} must be one
