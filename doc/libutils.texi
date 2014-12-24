@@ -2,6 +2,10 @@
 @chapter Scheme libraries utility functions
 
 
+@cindex @library{vicare libraries}, library
+@cindex Library @library{vicare libraries}
+
+
 The library @library{vicare libraries} exports bindings to deal with the
 libraries infrastructure of @value{PRJNAME}; this library is integrated
 in the boot image.
@@ -776,7 +780,7 @@ search paths}.  The following bindings are exported by the library
 @library{vicare libraries}.
 
 
-@deffn Parameter library-path
+@deffn Parameter library-source-search-path
 Hold a list of strings representing directory pathnames.  It is used as
 search path for source libraries.
 @end deffn
@@ -788,13 +792,13 @@ leading dot included.
 @end deffn
 
 
-@deffn Parameter fasl-search-path
+@deffn Parameter library-binary-search-path
 Hold a list of strings representing directory pathnames.  It is used as
 search path for binary libraries stored in @fasl{} files.
 @end deffn
 
 
-@deffn Parameter fasl-directory
+@deffn Parameter compiled-library-cache-directory
 Hold a string representing a directory pathname.  It is used as
 directory prefix under which new binary library @fasl{} files are
 created.
@@ -805,7 +809,7 @@ created.
 Given a @rnrs{6} library reference: build and return a string
 representing the pathname of the @fasl{} file in which the corresponding
 binary library can be stored.  The directory of the pathname is the
-current value of the parameter @func{fasl-directory}.
+current value of the parameter @func{compiled-library-cache-directory}.
 @end defun
 
 @c page
@@ -933,8 +937,9 @@ Scan the next directory from the source libraries search path for a
 source library whose name matches @var{libref}.
 
 @item
-If a matching source is found: look in the @func{fasl-directory}a for an
-already compiled @fasl{} file.
+If a matching source is found: look in the
+@func{compiled-library-cache-directory} a for an already compiled
+@fasl{} file.
 
 @item
 If the @fasl{} file does not exist or it is older than the source file:
