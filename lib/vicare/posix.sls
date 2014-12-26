@@ -158,7 +158,10 @@
 	       posix.file-bytevector-pathname?
 	       posix.file-colon-search-path?
 	       posix.file-string-colon-search-path?
-	       posix.file-bytevector-colon-search-path?)
+	       posix.file-bytevector-colon-search-path?
+	       posix.list-of-pathnames?
+	       posix.list-of-string-pathnames?
+	       posix.list-of-bytevector-pathnames?)
 	      posix.)
 
     ;; file descriptors
@@ -415,8 +418,7 @@
     file-descriptor.vicare-arguments-validation
     file-descriptor/false.vicare-arguments-validation
     network-port-number.vicare-arguments-validation
-    network-port-number/false.vicare-arguments-validation
-    )
+    network-port-number/false.vicare-arguments-validation)
   (import (except (vicare)
 		  strerror
 		  remove		time
@@ -440,7 +442,10 @@
 		  file-bytevector-pathname?
 		  file-colon-search-path?
 		  file-string-colon-search-path?
-		  file-bytevector-colon-search-path?)
+		  file-bytevector-colon-search-path?
+		  list-of-pathnames?
+		  list-of-string-pathnames?
+		  list-of-bytevector-pathnames?)
 	    posix.)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
