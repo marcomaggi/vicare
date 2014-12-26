@@ -10608,6 +10608,8 @@ including a character whose @ascii{} representation is the null byte.
 
 
 @defun file-absolute-pathname? @var{pathname}
+@defunx file-string-absolute-pathname? @var{pathname}
+@defunx file-bytevector-absolute-pathname? @var{pathname}
 The argument @var{pathname} must be a string or bytevector.  Return
 @true{} if @var{pathname} starts with a @code{/} character, which means
 it is valid as Unix--style absolute pathname; otherwise return @false{}.
@@ -10618,6 +10620,8 @@ system.
 
 
 @defun file-relative-pathname? @var{pathname}
+@defunx file-string-relative-pathname? @var{pathname}
+@defunx file-bytevector-relative-pathname? @var{pathname}
 The argument @var{pathname} must be a string or bytevector.  Return
 @true{} if @var{pathname} doest @strong{not} start with a @code{/}
 character, which means it is valid as Unix--style relative pathname;
@@ -10699,6 +10703,15 @@ be a Scheme string or bytevector.  Empty pathnames are discarded.
 (split-search-path '#ve(ascii "ciao:hello:salut"))
 @result{} (#ve(ascii "ciao") #ve(ascii "hello") #ve(ascii "salut"))
 @end example
+@end defun
+
+
+@defun list-of-pathnames? @var{obj}
+@defunx list-of-string-pathnames? @var{obj}
+@defunx list-of-bytevector-pathnames? @var{obj}
+Return @true{} if @var{obj} is a proper list of pathnames according to
+@func{file-pathname?}, @func{file-string-pathname?},
+@func{file-bytevector-pathname?}.
 @end defun
 
 
