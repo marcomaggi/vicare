@@ -8,7 +8,7 @@ if test -d /lib64
 then libdir=${prefix}/lib64
 else libdir=${prefix}/lib
 fi
-LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
+LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.2.1/include
 
 ../configure \
     --enable-maintainer-mode				\
