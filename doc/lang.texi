@@ -625,8 +625,51 @@ coroutine; return unspecified values.
 
 
 @defun finish-coroutines
+@defunx finish-coroutines @var{exit-loop?}
 Loop running the next coroutine until there are no more; return
 unspecified values.
+
+When the argument @var{exit-loop?} is used: it must be a thunk.  Before
+entering the next coroutine @var{exit-loop?} is called: if it returns
+non-false the loop exits, if it returns @false{} the loop continues.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+
+@deffn Syntax parallel @metao{thunk} @meta{thunk} @dots{}
+Evaluate the given thunks each in its own coroutine.  Return unspecified
+values when all the coroutines are finished.
+@end deffn
+
+
+@deffn Syntax monitor @meta{max-coroutines-count} @meta{thunk}
+Allow only a maximum number of coroutines to concurrently enter the
+evaluation of @meta{thunk}.
+
+The argument @meta{max-coroutines-count} must be an expression
+evaluating to a positive integer representing the maximum number of
+coroutines.  It is evaluated only once.
+
+The argument @meta{thunk} must be an expression evaluating to a thunk.
+It is evaluated only once.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Debugging utilities
+
+
+@defun reset-coroutines!
+Reset the internal state of the coroutine mechanism, discarding all the
+enqueued coroutines.  This function should not be used.
+@end defun
+
+
+@defun dump-coroutines
+Print, on the current error port, a symbolic expression listing the
+currently enqueued coroutine continuation procedures.  This is strictly
+for debugging purposes.
 @end defun
 
 @c page

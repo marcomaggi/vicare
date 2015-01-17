@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,25 +25,27 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare language-extensions coroutines)
-  (export coroutine yield finish-coroutines)
+  (export
+    coroutine yield finish-coroutines
+    reset-coroutines! dump-coroutines
+    parallel monitor)
   (import (vicare)
     (vicare unsafe operations))
 
 
-(module (empty-queue? enqueue! dequeue!)
+(module (empty-queue? enqueue! dequeue! reset-coroutines! dump-coroutines)
 
-  ;;The value of this parameter is #f  or a pair representing a queue of
-  ;;escape functions.
+  ;;The  value of  this parameter  is #f  or a  pair representing  a queue  of escape
+  ;;functions.
   ;;
-  ;;The car of  the queue-pair is the  first pair of the  list of escape
-  ;;functions.  The cdr  of the queue-pair is the last  pair of the list
-  ;;of escape functions.
+  ;;The car of the queue-pair is the first pair of the list of escape functions.  The
+  ;;cdr of the queue-pair is the last pair of the list of escape functions.
   ;;
-  ;;NOTE At present Vicare has no native threads, so this QUEUE variable
-  ;;could  well  be a  simple  binding.   For show  off:  we  make it  a
-  ;;parameter because that would be needed in a multithreading process.
+  ;;NOTE At present Vicare  has no native threads, so this  QUEUE variable could well
+  ;;be a simple binding.   To show off: we make it a parameter  because that would be
+  ;;needed in a multithreading process.
   ;;
   (define queue
     (make-parameter #f))
@@ -68,16 +70,26 @@
 		($car head)
 	      (let ((head ($cdr head)))
 		(if (null? head)
-		    (queue #f)
+		    (reset-coroutines!)
 		  ($set-car! Q head)))))
-	(error 'dequeue! "no more coroutines"))))
+	(error __who__ "no more coroutines"))))
+
+  (define (reset-coroutines!)
+    (queue #f))
+
+  (define (dump-coroutines)
+    (debug-print 'enqueued-coroutines
+		 (let ((Q (queue)))
+		   (if Q
+		       (car Q)
+		     Q))))
 
   #| end of module |# )
 
 
 (define (coroutine thunk)
-  ;;Create  a new  coroutine  having  THUNK as  function  and enter  it.
-  ;;Return unspecified values.
+  ;;Create a new coroutine having THUNK as function and enter it.  Return unspecified
+  ;;values.
   ;;
   (call/cc
       (lambda (reenter)
@@ -86,22 +98,106 @@
 	((dequeue!)))))
 
 (define (yield)
-  ;;Register the  current continuation as  coroutine, then run  the next
-  ;;coroutine.  Return unspecified values.
+  ;;Register  the current  continuation as  coroutine, then  run the  next coroutine.
+  ;;Return unspecified values.
   ;;
-  (coroutine values))
+  (coroutine void))
 
-(define (finish-coroutines)
-  ;;Loop running  the next  coroutine until there  are no  more.  Return
-  ;;unspecified values.
-  ;;
-  (unless (empty-queue?)
-    (yield)
-    (finish-coroutines)))
+(case-define finish-coroutines
+  (()
+   ;;Loop running  the next coroutine  until there  are no more.   Return unspecified
+   ;;values.
+   ;;
+   (unless (empty-queue?)
+     (yield)
+     (finish-coroutines)))
+  ((exit-loop?)
+   ;;Loop running the next coroutine until there  are no more or the thunk EXIT-LOOP?
+   ;;returns true.  Return unspecified values.
+   ;;
+   (unless (or (empty-queue?)
+	       (exit-loop?))
+     (yield)
+     (finish-coroutines exit-loop?))))
+
+
+;;;; parallel evaluation
+
+(define-syntax parallel
+  (syntax-rules ()
+    ((_ ?thunk0 ?thunk ...)
+     (let ((counter 0))
+       (begin
+	 (++ counter)
+	 (coroutine (lambda () (?thunk0) (-- counter))))
+       (begin
+	 (++ counter)
+	 (coroutine (lambda () (?thunk)  (-- counter))))
+       ...
+       (finish-coroutines (lambda ()
+			    (zero? counter)))))
+    ))
+
+
+;;;; monitor
+
+(module (monitor)
+
+  (define-record-type sem
+    (fields (mutable count)
+	    (immutable key)
+	    (immutable max-coroutines))
+    (protocol
+     (lambda (make-record)
+       ;;Under Vicare: the protocol function is evaluated only once.
+       (define sem-table
+	 (make-eq-hashtable))
+       (lambda (key max-coroutines)
+	 (or (hashtable-ref sem-table key #f)
+	     (receive-and-return (sem)
+		 (make-record 0 key max-coroutines)
+	       (hashtable-set! sem-table key sem)))))))
+
+  (define (sem-acquire sem)
+    (define max (sem-max-coroutines sem))
+    (let loop ()
+      (cond ((<= max (sem-count sem))
+	     (yield)
+	     (loop))
+	    (else
+	     (sem-count-set! sem (+ +1 (sem-count sem)))))))
+
+  (define (sem-release sem)
+    (sem-count-set! sem (+ -1 (sem-count sem))))
+
+  (define (do-monitor key max-coroutines body-thunk)
+    (unless (and (integer? max-coroutines)
+		 (positive? max-coroutines))
+      (procedure-argument-violation __who__
+	"expected positive integer as maximum number of concurrent coroutines"
+	max-coroutines))
+    (let ((sem (make-sem key max-coroutines)))
+      ;;We do *not* want to use DYNAMIC-WIND here!!!
+      (sem-acquire sem)
+      (unwind-protect
+	  (body-thunk)
+	(sem-release sem))))
+
+  (define-syntax monitor
+    ;;Allow only ?MAX-COROUTINES to concurrently enter the monitor.
+    ;;
+    (lambda (stx)
+      (syntax-case stx ()
+	((_ ?max-coroutines ?thunk)
+	 (with-syntax (((KEY) (generate-temporaries '(sem-key))))
+	   #`(do-monitor (quote KEY) ?max-coroutines ?thunk)))
+	)))
+
+  #| end of module: MONITOR |# )
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -186,9 +186,13 @@
 	      (yield)
 	      (display "main 4\n")
 	      (yield)
-	      (display "main 5\n")
-	      )))
+	      (display "main 5\n"))))
     => "sub 1\nmain 1\nsub 2\nmain 2\nsub 3\nmain 3\nmain 4\nmain 5\n")
+
+  ;;Here there is still  an escape function in the queue, due to  the above test.  So
+  ;;we reset it.
+  #;(dump-coroutines)
+  (reset-coroutines!)
 
   (check	;main coroutine, one finishing subroutine, longer subroutine
       (call-with-string-output-port
@@ -214,6 +218,140 @@
 	      (yield)
 	      (display "main 3\n"))))
     => "sub 1\nmain 1\nsub 2\nmain 2\nsub 3\nmain 3\n")
+
+  ;;Here there is still  an escape function in the queue, due to  the above test.  So
+  ;;we reset it.
+  #;(dump-coroutines)
+  (reset-coroutines!)
+
+  #t)
+
+
+(parametrise ((check-test-name	'parallel))
+
+  (define (print template . args)
+    (apply fprintf (current-error-port) template args)
+    (yield))
+
+  (define (job N M)
+    (print "sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "sub ~a.~a\n" N M))
+
+;;; --------------------------------------------------------------------
+;;; no parallel
+
+  (check
+      (let ((a #f) (b #f) (c #f))
+	(coroutine
+	    (lambda ()
+	      (print "sub 1.1\n")
+	      (print "sub 1.2\n")
+	      (print "sub 1.3\n")
+	      (set! a #t)))
+	(coroutine
+	    (lambda ()
+	      (print "sub 2.1\n")
+	      (print "sub 2.2\n")
+	      (print "sub 2.3\n")
+	      (set! b #t)))
+	(coroutine
+	    (lambda ()
+	      (print "sub 3.1\n")
+	      (print "sub 3.2\n")
+	      (print "sub 3.3\n")
+	      (set! c #t)))
+	(finish-coroutines)
+    	(values a b c))
+    => #t #t #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((a #f) (b #f) (c #f))
+	(parallel
+	  (lambda ()
+	    (print "sub 1.1\n")
+	    (print "sub 1.2\n")
+	    (print "sub 1.3\n")
+	    (set! a #t))
+	  (lambda ()
+	    (print "sub 2.1\n")
+	    (print "sub 2.2\n")
+	    (print "sub 2.3\n")
+	    (set! b #t))
+	  (lambda ()
+	    (print "sub 3.1\n")
+	    (print "sub 3.2\n")
+	    (print "sub 3.3\n")
+	    (set! c #t)))
+	(values a b c))
+    => #t #t #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((a #f) (b #f) (c #f))
+	(parallel
+	  (lambda ()
+	    (job 1 1)
+	    (set! a #t))
+	  (lambda ()
+	    (job 2 1)
+	    (set! b #t))
+	  (lambda ()
+	    (job 3 1)
+	    (set! c #t)))
+	(values a b c))
+    => #t #t #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'monitor))
+
+  (define (print template . args)
+    (apply fprintf (current-error-port) template args)
+    (yield))
+
+  (define (job N M)
+    (print "monitor sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "monitor sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "monitor sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "monitor sub ~a.~a\n" N M)
+    (set! M (+ 1 M))
+    (print "monitor sub ~a.~a\n" N M))
+
+  (define (monitor-job N M)
+    (monitor 2
+      (lambda ()
+	(job N M))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((a #f) (b #f) (c #f))
+	(parallel
+	  (lambda ()
+	    (monitor-job 1 1)
+	    (set! a #t))
+	  (lambda ()
+	    (monitor-job 2 1)
+	    (set! b #t))
+	  (lambda ()
+	    (monitor-job 3 1)
+	    (set! c #t)))
+	(values a b c))
+    => #t #t #t)
 
   #t)
 
