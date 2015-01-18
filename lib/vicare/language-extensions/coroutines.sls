@@ -143,20 +143,33 @@
 
 (module (monitor)
 
+  ;; (define-record-type sem
+  ;;   (fields (mutable count)
+  ;; 	    (immutable key)
+  ;; 	    (immutable max-coroutines))
+  ;;   (protocol
+  ;;    (lambda (make-record)
+  ;;      ;;Under Vicare: the protocol function is evaluated only once.
+  ;;      (define sem-table
+  ;;      	 (make-eq-hashtable))
+  ;;      (lambda (key max-coroutines)
+  ;; 	 (or (hashtable-ref sem-table key #f)
+  ;; 	     (receive-and-return (sem)
+  ;; 		 (make-record 0 key max-coroutines)
+  ;; 	       (hashtable-set! sem-table key sem)))))))
+
   (define-record-type sem
     (fields (mutable count)
 	    (immutable key)
 	    (immutable max-coroutines))
     (protocol
      (lambda (make-record)
-       ;;Under Vicare: the protocol function is evaluated only once.
-       (define sem-table
-	 (make-eq-hashtable))
        (lambda (key max-coroutines)
-	 (or (hashtable-ref sem-table key #f)
-	     (receive-and-return (sem)
-		 (make-record 0 key max-coroutines)
-	       (hashtable-set! sem-table key sem)))))))
+	 (if (symbol-bound? key)
+	     (symbol-value key)
+	   (receive-and-return (sem)
+	       (make-record 0 key max-coroutines)
+	     (set-symbol-value! key sem)))))))
 
   (define (sem-acquire sem)
     (define max (sem-max-coroutines sem))
