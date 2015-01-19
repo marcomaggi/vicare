@@ -35,7 +35,8 @@
     (vicare unsafe operations))
 
 
-(module (empty-queue? enqueue! dequeue! reset-coroutines! dump-coroutines)
+(module COROUTINE-CONTINUATIONS-QUEUE
+  (empty-queue? enqueue! dequeue! reset-coroutines! dump-coroutines)
 
   ;;The  value of  this parameter  is #f  or a  pair representing  a queue  of escape
   ;;functions.
@@ -86,11 +87,15 @@
 
   #| end of module |# )
 
+(module (dump-coroutines reset-coroutines!)
+  (import COROUTINE-CONTINUATIONS-QUEUE))
+
 
 (define (coroutine thunk)
   ;;Create a new coroutine having THUNK as function and enter it.  Return unspecified
   ;;values.
   ;;
+  (import COROUTINE-CONTINUATIONS-QUEUE)
   (call/cc
       (lambda (reenter)
 	(enqueue! reenter)
@@ -108,6 +113,7 @@
    ;;Loop running  the next coroutine  until there  are no more.   Return unspecified
    ;;values.
    ;;
+   (import COROUTINE-CONTINUATIONS-QUEUE)
    (unless (empty-queue?)
      (yield)
      (finish-coroutines)))
@@ -115,6 +121,7 @@
    ;;Loop running the next coroutine until there  are no more or the thunk EXIT-LOOP?
    ;;returns true.  Return unspecified values.
    ;;
+   (import COROUTINE-CONTINUATIONS-QUEUE)
    (unless (or (empty-queue?)
 	       (exit-loop?))
      (yield)
@@ -143,53 +150,70 @@
 
 (module (monitor)
 
-  ;; (define-record-type sem
-  ;;   (fields (mutable count)
-  ;; 	    (immutable key)
-  ;; 	    (immutable max-coroutines))
-  ;;   (protocol
-  ;;    (lambda (make-record)
-  ;;      ;;Under Vicare: the protocol function is evaluated only once.
-  ;;      (define sem-table
-  ;;      	 (make-eq-hashtable))
-  ;;      (lambda (key max-coroutines)
-  ;; 	 (or (hashtable-ref sem-table key #f)
-  ;; 	     (receive-and-return (sem)
-  ;; 		 (make-record 0 key max-coroutines)
-  ;; 	       (hashtable-set! sem-table key sem)))))))
-
   (define-record-type sem
-    (fields (mutable count)
+    (fields (mutable concurrent-coroutines-counter)
+		;A non-negative  exact integer representing the  number of coroutines
+		;currently inside the critical section.
+	    (mutable pending-continuations)
+		;Null or a proper list,  representing a FIFO queue, holding coroutine
+		;continuation procedures.  Every time a coroutine is denied access to
+		;the critial section: its continuation procedure is appended here.
 	    (immutable key)
-	    (immutable max-coroutines))
+		;A gensym uniquely identifying this monitor.
+	    (immutable concurrent-coroutines-maximum))
+		;A  positive  exact  integer   representing  the  maximum  number  of
+		;coroutines  that  are allowed  to  concurrently  enter the  critical
+		;section.
     (protocol
      (lambda (make-record)
-       (lambda (key max-coroutines)
+       (lambda (key concurrent-coroutines-maximum)
 	 (if (symbol-bound? key)
 	     (symbol-value key)
 	   (receive-and-return (sem)
-	       (make-record 0 key max-coroutines)
+	       (make-record 0 '() key concurrent-coroutines-maximum)
 	     (set-symbol-value! key sem)))))))
 
+  (define-syntax-rule (sem-counter-incr! sem)
+    (sem-concurrent-coroutines-counter-set! sem (+ +1 (sem-concurrent-coroutines-counter sem))))
+
+  (define-syntax-rule (sem-counter-decr! sem)
+    (sem-concurrent-coroutines-counter-set! sem (+ -1 (sem-concurrent-coroutines-counter sem))))
+
+  (define (sem-enqueue-pending-continuation! sem reenter)
+    ;;FIXME  Should this  list be  replaced by  a proper  FIFO queue  object?  (Marco
+    ;;Maggi; Mon Jan 19, 2015)
+    (sem-pending-continuations-set! sem (append (sem-pending-continuations sem)
+						(list reenter))))
+
+  (define (sem-dequeue-pending-continuation! sem)
+    (let ((Q (sem-pending-continuations sem)))
+      (and (pair? Q)
+	   (receive-and-return (reenter)
+	       (car Q)
+	     (sem-pending-continuations-set! sem (cdr Q))))))
+
   (define (sem-acquire sem)
-    (define max (sem-max-coroutines sem))
-    (let loop ()
-      (cond ((<= max (sem-count sem))
-	     (yield)
-	     (loop))
-	    (else
-	     (sem-count-set! sem (+ +1 (sem-count sem)))))))
+    (cond ((< (sem-concurrent-coroutines-counter sem)
+	      (sem-concurrent-coroutines-maximum sem))
+	   ;;The coroutine is allowed entry in the critical section.
+	   (sem-counter-incr! sem))
+	  (else
+	   ;;The  coroutine is  denied  entry in  the critical  section:  we have  to
+	   ;;suspend it.  We enqueue a continuation  function in the queue of pending
+	   ;;coroutines, then jump to the next coroutine.
+	   (call/cc
+	       (lambda (reenter)
+		 (import COROUTINE-CONTINUATIONS-QUEUE)
+		 (sem-enqueue-pending-continuation! sem reenter)
+		 ((dequeue!)))))))
 
   (define (sem-release sem)
-    (sem-count-set! sem (+ -1 (sem-count sem))))
+    (sem-counter-decr! sem)
+    (cond ((sem-dequeue-pending-continuation! sem)
+	   => coroutine)))
 
-  (define (do-monitor key max-coroutines body-thunk)
-    (unless (and (integer? max-coroutines)
-		 (positive? max-coroutines))
-      (procedure-argument-violation __who__
-	"expected positive integer as maximum number of concurrent coroutines"
-	max-coroutines))
-    (let ((sem (make-sem key max-coroutines)))
+  (define* (do-monitor key {concurrent-coroutines-maximum %concurrent-coroutines-maximum?} body-thunk)
+    (let ((sem (make-sem key concurrent-coroutines-maximum)))
       ;;We do *not* want to use DYNAMIC-WIND here!!!
       (sem-acquire sem)
       (unwind-protect
@@ -197,14 +221,20 @@
 	(sem-release sem))))
 
   (define-syntax monitor
-    ;;Allow only ?MAX-COROUTINES to concurrently enter the monitor.
+    ;;Allow only ?CONCURRENT-COROUTINES-MAXIMUM to concurrently enter the monitor.
     ;;
     (lambda (stx)
       (syntax-case stx ()
-	((_ ?max-coroutines ?thunk)
+	((_ ?concurrent-coroutines-maximum ?thunk)
 	 (with-syntax (((KEY) (generate-temporaries '(sem-key))))
-	   #`(do-monitor (quote KEY) ?max-coroutines ?thunk)))
+	   #`(do-monitor (quote KEY) ?concurrent-coroutines-maximum ?thunk)))
 	)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%concurrent-coroutines-maximum? obj)
+    (and (fixnum?     obj)
+	 (fxpositive? obj)))
 
   #| end of module: MONITOR |# )
 
