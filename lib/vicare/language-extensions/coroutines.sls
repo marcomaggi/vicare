@@ -205,7 +205,10 @@
 	       (lambda (reenter)
 		 (import COROUTINE-CONTINUATIONS-QUEUE)
 		 (sem-enqueue-pending-continuation! sem reenter)
-		 ((dequeue!)))))))
+		 ((dequeue!))))
+	   ;;When the  continuation procedure  REENTER is called:  it will  jump back
+	   ;;here and return from this function.
+	   )))
 
   (define (sem-release sem)
     (sem-counter-decr! sem)
