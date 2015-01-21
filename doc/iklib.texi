@@ -1083,24 +1083,52 @@ document, Appendix A ``Formal semantics''.
 
 
 @deffn Syntax while @meta{test} @meta{body} ...
+@deffnx {Auxiliary Syntax} continue
+@deffnx {Auxiliary Syntax} break
 If the expression @meta{test} evaluates to true: evaluate the body forms
-@meta{body} and recurse; else return.  In the body: the syntax
-@func{continue} causes immediate looping to next iteration; the syntax
-@func{break} causes immediate escaping out of the loop.  The use of this
-syntax involves creating a continuation.
+@meta{body} and recurse; else return unspecified values.  In the body:
+the syntax @func{continue} causes immediate looping to next iteration;
+the syntax @func{break} causes immediate escaping out of the loop.
 @end deffn
 
 
 @deffn Syntax until @meta{test} @meta{body} ...
+@deffnx {Auxiliary Syntax} continue
+@deffnx {Auxiliary Syntax} break
 If the expression @meta{test} evaluates to false: evaluate the body
-forms @meta{body} and recurse; else return.  In the body: the syntax
-@func{continue} causes immediate looping to next iteration; the syntax
-@func{break} causes immediate escaping out of the loop.  The use of this
-syntax involves creating a continuation.
+forms @meta{body} and recurse; else return unspecified values.  In the
+body: the syntax @func{continue} causes immediate looping to next
+iteration; the syntax @func{break} causes immediate escaping out of the
+loop.
+@end deffn
+
+
+@deffn Syntax do @meta{body} (while @meta{test})
+@deffnx Syntax do @meta{body} (until @meta{test})
+@deffnx {Auxiliary Syntax} while
+@deffnx {Auxiliary Syntax} until
+@deffnx {Auxiliary Syntax} continue
+@deffnx {Auxiliary Syntax} break
+These syntaxes extend the built--in @syntax{do} syntax as defined by
+@rnrs{6}.
+
+For @code{do ... (while ...)}: evaluate @meta{body} at least once, then:
+if the expression @meta{test} evaluates to non--false loop; else return
+unspecified values.
+
+For @code{do ... (while ...)}: evaluate @meta{body} at least once, then
+if the expression @meta{test} evaluates to false loop; else return
+unspecified values.
+
+In the body: the syntax @syntax{continue} causes immediate looping to
+next iteration; the syntax @syntax{break} causes immediate escaping out
+of the loop.  The use of this syntax involves creating a continuation.
 @end deffn
 
 
 @deffn Syntax for (@meta{init} @meta{test} @meta{post}) @metao{body} @meta{body} @dots{}
+@deffnx {Auxiliary Syntax} continue
+@deffnx {Auxiliary Syntax} break
 This is an iteration syntax similar to the C language @code{for}:
 
 @example

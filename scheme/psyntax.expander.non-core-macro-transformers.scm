@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -3309,9 +3309,9 @@
 ;;;; module non-core-macro-transformer: DO
 
 (define (do-macro expr-stx)
-  ;;Transformer  function  used  to  expand  R6RS  DO  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
+  ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (define (%normalise-binding binding-stx)
     (syntax-match binding-stx ()
@@ -3323,7 +3323,47 @@
        `(,?var ,?init ,?step))
       (_
        (stx-error expr-stx "invalid binding"))))
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (while until)
+
+    ;;This is an extended Vicare syntax.
+    ((_ ?body (while ?test))
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (letrec ((loop (lambda ()
+			      (call/cc
+				  (lambda (next-iteration)
+				    (fluid-let-syntax
+					((break    (syntax-rules ()
+						     ((_) (escape (void)))))
+					 (continue (syntax-rules ()
+						     ((_) (next-iteration)))))
+				      ,?body
+				      (unless ,?test
+					(break)))))
+			      (loop))))
+	       (loop))))))
+
+    ;;This is an extended Vicare syntax.
+    ((_ ?body (until ?test))
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (letrec ((loop (lambda ()
+			      (call/cc
+				  (lambda (next-iteration)
+				    (fluid-let-syntax
+					((break    (syntax-rules ()
+						     ((_) (escape (void)))))
+					 (continue (syntax-rules ()
+						     ((_) (next-iteration)))))
+				      ,?body
+				      (when ,?test
+					(break)))))
+			      (loop))))
+	       (loop))))))
+
+    ;;This is the R6RS syntax.
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
@@ -3332,16 +3372,22 @@
 	(receive (id* tag*)
 	    (parse-list-of-tagged-bindings ?var* expr-stx)
 	  (bless
-	   `(letrec ((loop (lambda ,?var*
-			     (if ,?test
-				 ;;If ?EXPR* is  null: make sure there
-				 ;;is  at  least   one  expression  in
-				 ;;BEGIN.
-				 (begin (if #f #f) . ,?expr*)
-			       (begin
-				 ,@?command*
-				 (loop . ,?step*))))))
-	      (loop . ,?init*)))))
+	   `(call/cc
+		(lambda (escape)
+		  (letrec ((loop (lambda ,?var*
+				   (if ,?test
+				       ,(if (null? ?expr*)
+					    '(void)
+					  `(begin . ,?expr*))
+				     (fluid-let-syntax
+					 ((break    (syntax-rules ()
+						      ((_) (escape))))
+					  (continue (syntax-rules ()
+						      ((_) (loop)))))
+				       (begin
+					 ,@?command*
+					 (loop . ,?step*)))))))
+		    (loop . ,?init*)))))))
        ))
     ))
 
@@ -3349,49 +3395,59 @@
 ;;;; module non-core-macro-transformer: WHILE, UNTIL, FOR
 
 (define (while-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's WHILE  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer  function used  to expand  Vicare's WHILE  macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
      (bless
       `(call/cc
 	   (lambda (escape)
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin ,@?body* (loop))
-		   (escape))))))))
+	     (letrec ((loop (lambda ()
+			      (call/cc
+				  (lambda (next-iteration)
+				    (fluid-let-syntax
+					((break    (syntax-rules ()
+						     ((_) (escape (void)))))
+					 (continue (syntax-rules ()
+						     ((_) (next-iteration)))))
+				      (unless ,?test
+					(break))
+				      ,@?body*)))
+			      (loop))))
+	       (loop))))))
     ))
 
 (define (until-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's UNTIL  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer  function used  to expand  Vicare's UNTIL  macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
      (bless
       `(call/cc
 	   (lambda (escape)
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (escape)
-		   (begin ,@?body* (loop)))))))))
+	     (letrec ((loop (lambda ()
+			      (call/cc
+				  (lambda (next-iteration)
+				    (fluid-let-syntax
+					((break    (syntax-rules ()
+						     ((_) (escape (void)))))
+					 (continue (syntax-rules ()
+						     ((_) (next-iteration)))))
+				      (when ,?test
+					(break))
+				      ,@?body*)))
+			      (loop))))
+	       (loop))))))
     ))
 
 (define (for-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  FOR macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand Vicare's  FOR macros from the top-level built
+  ;;in environment.   Expand the contents  of EXPR-STX;  return a syntax  object that
+  ;;must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
@@ -3399,16 +3455,20 @@
       `(call/cc
 	   (lambda (escape)
 	     ,?init
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin
-		       ,@?body* ,?incr
-		       (loop))
-		   (escape))))))))
+	     (letrec ((loop (lambda ()
+			      (call/cc
+				  (lambda (next-iteration)
+				    (fluid-let-syntax
+					((break    (syntax-rules ()
+						     ((_) (escape (void)))))
+					 (continue (syntax-rules ()
+						     ((_) (next-iteration)))))
+				      (unless ,?test
+					(break))
+				      ,@?body*
+				      ,?incr)))
+			      (loop))))
+	       (loop))))))
     ))
 
 
