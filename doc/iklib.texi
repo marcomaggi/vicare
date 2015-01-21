@@ -1116,7 +1116,7 @@ For @code{do ... (while ...)}: evaluate @meta{body} at least once, then:
 if the expression @meta{test} evaluates to non--false loop; else return
 unspecified values.
 
-For @code{do ... (while ...)}: evaluate @meta{body} at least once, then
+For @code{do ... (until ...)}: evaluate @meta{body} at least once, then
 if the expression @meta{test} evaluates to false loop; else return
 unspecified values.
 
