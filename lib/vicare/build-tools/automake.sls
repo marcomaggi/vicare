@@ -119,7 +119,7 @@
 	    ((%string-prefix? "./lib" pathname)
 	     (%deprefix "../lib" pathname))
 	    (else
-	     (let loop ((dirs (libs.library-path)))
+	     (let loop ((dirs (libs.library-source-search-path)))
 	       (cond ((null? dirs)
 		      pathname)
 		     ((%string-prefix? (car dirs) pathname)
@@ -210,7 +210,7 @@
     (when target/dependencies-list
       (let ((source-pathname (string-append "lib/" (strip-source-file-prefix (libs.library-source-file-name lib))))
 	    ;;Remember that the stem+extension starts with a slash!!!
-	    (binary-pathname (string-append "lib" (libs.fasl-stem+extension libref))))
+	    (binary-pathname (libs.directory+library-stem->library-binary-pathname "lib" (libs.library-reference->filename-stem libref))))
 	(unless (hashtable-ref ALREADY-PROCESSED-TABLE source-pathname #f)
 	  (fprintf stderr "processing: ~a\n" source-pathname)
 	  (%build-compilation-recipe target/dependencies-list binary-pathname source-pathname)
@@ -245,7 +245,9 @@
     (print-makefile-content "~a: \\\n\t\t~a" binary-pathname source-pathname)
     (unless (null? (cdr target/dependencies-list))
       (for-each (lambda (libname)
-		  (print-makefile-content " \\\n\t\tlib~a" (libs.fasl-stem+extension libname)))
+		  (print-makefile-content " \\\n\t\t~a"
+					  (libs.directory+library-stem->library-binary-pathname
+					   "lib" (libs.library-name->filename-stem libname))))
 	(cdr target/dependencies-list)))
     (print-makefile-content " \\\n\t\t$(FASL_PREREQUISITES)\n")
     (print-makefile-content "\t$(VICARE_COMPILE_RUN) --output $@ --compile-library $<\n\n"))

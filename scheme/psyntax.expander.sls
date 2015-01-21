@@ -1605,10 +1605,9 @@
 		;from a set of import specifications as defined by R6RS.
 		;These labels are from the subst of the libraries.
    itc
-		;A collector  function (see MAKE-COLLECTOR)  holding the
-		;LIBRARY records representing  the libraries selected by
-		;the source IMPORT specifications.  These libraries have
-		;already been installed.
+		;A  collector  function  (see  MAKE-COLLECTOR)  holding  the  LIBRARY
+		;records  representing the  libraries selected  by the  source IMPORT
+		;specifications.  These libraries have already been interned.
    )
   (lambda (S port sub-printer)
     (display "#<environment>" port)))
@@ -1726,8 +1725,8 @@
   ;;
   (()
    (new-interaction-environment (base-of-interaction-library)))
-  ((libname)
-   (let* ((lib (find-library-by-name libname))
+  ((libref)
+   (let* ((lib (find-library-by-reference libref))
 	  (rib (export-subst->rib (library-export-subst lib))))
      (make-interaction-env rib '() '()))))
 
@@ -2199,10 +2198,9 @@
 ;;;; R6RS library expander
 
 (module (expand-library)
-  ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
-  ;;symbolic  expression representing  a LIBRARY  form to  core-form; it
-  ;;registers it  with the library  manager, in other words  it installs
-  ;;it.
+  ;;EXPAND-LIBRARY is the default library  expander; it expands a symbolic expression
+  ;;representing  a LIBRARY  form  to core-form;  it registers  it  with the  library
+  ;;manager, in other words it interns it.
   ;;
   ;;The argument LIBRARY-SEXP must be the symbolic expression:
   ;;
@@ -2383,13 +2381,13 @@
 	     ;;loaded and visited.
 	     (visit-code	(%build-visit-code macro*))
 	     (visible?		#t))
-	 (install-library uid libname
-			  import-libdesc* visit-libdesc* invoke-libdesc*
-			  export-subst export-env
-			  visit-proc invoke-proc
-			  visit-code invoke-code
-			  guard-code guard-libdesc*
-			  visible? filename option*)
+	 (intern-library uid libname
+			 import-libdesc* visit-libdesc* invoke-libdesc*
+			 export-subst export-env
+			 visit-proc invoke-proc
+			 visit-code invoke-code
+			 guard-code guard-libdesc*
+			 visible? filename option*)
 	 (values uid libname
 		 import-libdesc* visit-libdesc* invoke-libdesc*
 		 invoke-code visit-code
@@ -2549,9 +2547,9 @@
        (syntax-violation __who__ "malformed library" library-sexp))))
 
   (define (%validate-library-name libname verify-libname)
-    ;;Given a SYNTAX-MATCH expression argument LIBNAME which is meant to
-    ;;represent a R6RS library name: validate it and, if success, return
-    ;;it; otherwise raise ane exception.
+    ;;Given a SYNTAX-MATCH expression argument LIBNAME  which is meant to represent a
+    ;;R6RS  library name:  validate  it.  If  successful  return unspecified  values;
+    ;;otherwise raise an exception.
     ;;
     (receive (name* ver*)
 	(let recur ((sexp libname))
@@ -2573,7 +2571,8 @@
 	     (syntax-violation __who__ "invalid library name" libname))))
       (when (null? name*)
 	(syntax-violation __who__ "empty library name" libname)))
-    (verify-libname (syntax->datum libname)))
+    (verify-libname (syntax->datum libname))
+    (void))
 
   (define (%parse-library-options libopt*)
     (syntax-match libopt* ()
@@ -3369,10 +3368,9 @@
     (define-inline (%import-spec->export-subst import-spec)
       ;;Process the IMPORT-SPEC and return the corresponding subst.
       ;;
-      ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
-      ;;installed, if  not already  in the  library collection;  the raw
-      ;;subst from the library definition  is processed according to the
-      ;;rules in IMPORT-SPEC.
+      ;;The IMPORT-SPEC is  parsed; the specified library is loaded  and interned, if
+      ;;not  already in  the  library  collection; the  raw  subst  from the  library
+      ;;definition is processed according to the rules in IMPORT-SPEC.
       ;;
       ;;If an  error is found, including  library version non-conforming
       ;;to the library reference, an exception is raised.
@@ -3522,10 +3520,10 @@
 	  (%parse-library-reference libref)
 	(when (null? name)
 	  (%synner "empty library name" libref))
-	;;Search  for the  library first  in the  collection of  already
-	;;installed libraires, then on  the file system.  If successful:
-	;;LIB is an instance of LIBRARY struct.
-	(let ((lib (find-library-by-name (syntax->datum libref))))
+	;;Search  for  the  library  first  in the  collection  of  already  interned
+	;;libraires, then on  the file system.  If successful: LIB  is an instance of
+	;;LIBRARY struct.
+	(let ((lib (find-library-by-reference (syntax->datum libref))))
 	  (unless (version-conforms-to-reference? (library-name->version (library-name lib)))
 	    (%synner "library does not satisfy version specification" libref lib))
 	  ((imp-collector) lib)
@@ -6342,7 +6340,7 @@
   ;;   ((assq sym (or subst
   ;;                  (receive-and-return (S)
   ;;                      (library-export-subst
-  ;;                       (find-library-by-name '(psyntax system $all)))
+  ;;                       (find-library-by-reference '(psyntax system $all)))
   ;;                    (set! subst S))))
   ;;    => (lambda (name.label)
   ;;         (receive-and-return (id)

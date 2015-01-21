@@ -415,9 +415,10 @@ BOOT_SEARCH_PATH	= $(srcdir)/scheme:$(builddir)/scheme:$(slsdir):$(fasldir):$(bu
 VICARE_PREBUILT_BOOT	= $(srcdir)/boot/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 
 VICARE_BOOT_ENV		= \
-	VICARE_SRC_DIR=$(srcdir)/scheme; export VICARE_SRC_DIR; \
-	VICARE_BUILD_DIR=$(builddir)/scheme; export VICARE_BUILD_DIR; \
-	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH); export VICARE_LIBRARY_PATH;
+	VICARE_SRC_DIR=$(srcdir)/scheme;		export VICARE_SRC_DIR;		\
+	VICARE_BUILD_DIR=$(builddir)/scheme;		export VICARE_BUILD_DIR;	\
+	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_SOURCE_PATH=$(BOOT_SEARCH_PATH);		export VICARE_SOURCE_PATH;
 VICARE_BOOT_FLAGS	= --print-loaded-libraries --no-rcfile --library-locator source --r6rs-script
 
 CLEANFILES		+= ikarus.config.ss $(VICARE_NEW_BOOT)
@@ -535,18 +536,19 @@ try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
 #page
 #### compiling bundled libraries: build rules
 
-VICARE_COMPILE_LIBRARY_PATH	= $(fasldir):$(slsdir):$(VICARE_LIBRARY_PATH)
-VICARE_COMPILE_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_COMPILE_SOURCE_PATH	= $(fasldir):$(slsdir)
+VICARE_COMPILE_LIBRARY_PATH	= $(fasldir):$(VICARE_LIBRARY_PATH)
 VICARE_COMPILE_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILE_DYLD_PATH	= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_COMPILE_ENV	= \
+	VICARE_SOURCE_PATH=$(VICARE_COMPILE_SOURCE_PATH);	export VICARE_SOURCE_PATH;	\
 	VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
-	VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH);		export VICARE_FASL_PATH;	\
 	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
 	LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_DYLD_PATH);		export DYLD_LIBRARY_PATH;
-VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
+VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
+			  --library-locator compile-time --store-directory $(fasldir)
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
 
 FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
@@ -570,7 +572,7 @@ EXTRA_DIST		+= \
 
 VICARE_BUILD_DEPS	= \
 	$(VICARE_COMPILE_RUN) \
-		-L $(testdir) --print-loaded-libraries --library-locator source \
+		--source-path $(testdir) --print-loaded-libraries --library-locator source \
 		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps --
 
 .PHONY: dependencies
@@ -589,7 +591,7 @@ include $(top_srcdir)/lib/dependencies.make
 .PHONY: clean-fasl
 
 clean-fasl:
-	find $(fasldir) -name \*.fasl -execdir rm -v '{}' ';'
+	find $(fasldir)        -name \*.fasl -execdir rm -v '{}' ';'
 	find $(builddir)/tests -name \*.fasl -execdir rm -v '{}' ';'
 
 #page
@@ -1102,16 +1104,16 @@ endif
 # understand how to use this interface for "make check".
 #
 
-VICARE_CHECK_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_CHECK_SEARCH_PATH	= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_CHECK_LIBRARY_PATH	= $(fasldir):$(VICARE_LIBRARY_PATH)
+VICARE_CHECK_SOURCE_PATH	= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
 VICARE_CHECK_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_CHECK_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_CHECK_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
 VICARE_CHECK_ENV		= \
 	VICARE_CHECK_QUIET=yes;					export VICARE_CHECK_QUIET;	\
-	VICARE_LIBRARY_PATH=$(VICARE_CHECK_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
-	VICARE_FASL_PATH=$(VICARE_CHECK_FASL_PATH);		export VICARE_FASL_PATH;	\
+	VICARE_SOURCE_PATH=$(VICARE_CHECK_SOURCE_PATH);		export VICARE_SOURCE_PATH;	\
+	VICARE_LIBRARY_PATH=$(VICARE_CHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
 	CHECK_TEST_NAME=$(name);				export CHECK_TEST_NAME;		\
 	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
 	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
@@ -1123,19 +1125,18 @@ VICARE_CHECK_ENV		= \
 AM_TESTS_ENVIRONMENT	= $(VICARE_CHECK_ENV)
 TEST_EXTENSIONS		= .sps
 SPS_LOG_COMPILER	= $(VICARE_NEW_EXECUTABLE)
-AM_SPS_LOG_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
+AM_SPS_LOG_FLAGS	= $(VICARE_CHECK_FLAGS)
 
 #page
 #### interface to "make instcheck"
 
-VICARE_INSTCHECK_LIBRARY_PATH	= $(DESTDIR)$(bundledlibsdir):$(testdir):$(srcdir)/scheme:$(VICARE_LIBRARY_PATH)
-VICARE_INSTCHECK_FASL_PATH	= $(DESTDIR)$(bundledlibsdir):$(VICARE_FASL_PATH)
+VICARE_INSTCHECK_SOURCE_PATH	= $(DESTDIR)$(bundledlibsdir):$(testdir):$(srcdir)/scheme
 VICARE_INSTCHECK_LD_PATH	= $(DESTDIR)$(libdir)
 VICARE_INSTCHECK_DYLD_PATH	= $(DESTDIR)$(libdir)
 
 VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(AX_VFLAGS) $(VFLAGS)
 VICARE_INSTCHECK_ENV	= \
-	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_SOURCE_PATH=$(VICARE_INSTCHECK_SOURCE_PATH);	export VICARE_SOURCE_PATH;	\
 	LD_LIBRARY_PATH=$(VICARE_INSTCHECK_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_INSTCHECK_DYLD_PATH);	export DYLD_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
@@ -1155,10 +1156,10 @@ VICARE_TEST_SELECTED_LONG_TESTS		= $(testdir)/long-test-*$(file)*.sps
 VICARE_TEST_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_TEST_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
-VICARE_TEST_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_TEST_SEARCH_PATH		= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
-VICARE_TEST_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
-VICARE_TEST_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
+VICARE_TEST_LIBRARY_PATH		= $(fasldir):$(VICARE_LIBRARY_PATH)
+VICARE_TEST_SOURCE_PATH			= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_TEST_LD_PATH			= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_TEST_DYLD_PATH			= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 # Enable timing  of test files  execution.  We cannot include  this in
 # the separator because it needs  to be placed between the environment
@@ -1169,14 +1170,14 @@ endif
 
 VICARE_TEST_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
 VICARE_TEST_ENV		= \
-	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
-	VICARE_FASL_PATH=$(VICARE_TEST_FASL_PATH);	export VICARE_FASL_PATH;	\
-	CHECK_TEST_NAME=$(name);			export CHECK_TEST_NAME;		\
-	VICARE_SRC_DIR=$(srcdir)/tests;			export VICARE_SRC_DIR;		\
-	VICARE_BUILDDIR=$(builddir);			export VICARE_BUILDDIR;		\
-	SILEX_PATH=$(SILEX_PATH);			export SILEX_PATH;		\
-	LD_LIBRARY_PATH=$(VICARE_TEST_LD_PATH);		export LD_LIBRARY_PATH;		\
-	DYLD_LIBRARY_PATH=$(VICARE_TEST_DYLD_PATH);	export DYLD_LIBRARY_PATH;
+	VICARE_SOURCE_PATH=$(VICARE_TEST_SOURCE_PATH);		export VICARE_SOURCE_PATH;	\
+	VICARE_LIBRARY_PATH=$(VICARE_TEST_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
+	CHECK_TEST_NAME=$(name);				export CHECK_TEST_NAME;		\
+	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
+	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
+	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
+	LD_LIBRARY_PATH=$(VICARE_TEST_LD_PATH);			export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_TEST_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE_NEW_EXECUTABLE) $(VICARE_TEST_FLAGS)
 
 ## --------------------------------------------------------------------
@@ -1226,24 +1227,29 @@ lalr-test:
 #
 # These  are very  rough rules,  not  integrated in  the GNU  Automake
 # infrastructure.   The purpose,  here, is  to excercise  both program
-# compilation and  the command line  option --cache-compiled-libraries
-# to handle the libraries used by test programs.
+# compilation and the command  line option --cache-libraries to handle
+# the libraries used by test programs.
 #
 
 VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
 
 VICARE_COMPILED_TESTS_SEARCH_PATH	= $(testdir):$(fasldir):$(srcdir)/scheme
-VICARE_COMPILED_TESTS_FASL_PATH		= $(fasldir):$(HOME)/.vicare/precompiled:$(VICARE_FASL_PATH)
+VICARE_COMPILED_TESTS_LIBRARY_PATH		= $(fasldir):$(HOME)/.vicare/precompiled:$(VICARE_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
-VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
-		--cache-compiled-libraries --compile-program
-VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
-		-F $(fasldir) --print-loaded-libraries --binary-program
+VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
+		--cache-libraries --cache-path $(builddir)/tests			\
+		--cache-directory $(builddir)/tests --store-directory $(fasldir)	\
+		--print-loaded-libraries --compile-program
+VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
+		--library-path $(fasldir)						\
+		--cache-libraries --cache-path $(builddir)/tests			\
+		--store-directory $(fasldir)						\
+		--print-loaded-libraries --binary-program
 VICARE_COMPILED_TESTS_ENV	= \
-	VICARE_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
-	VICARE_FASL_PATH=$(VICARE_COMPILED_TESTS_FASL_PATH);	export VICARE_FASL_PATH;	\
+	VICARE_SOURCE_PATH=$(VICARE_COMPILED_TESTS_SEARCH_PATH);   export VICARE_SOURCE_PATH;	\
+	VICARE_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_LIBRARY_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir)/tests;				export VICARE_SRC_DIR;		\
 	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
 	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
@@ -1277,15 +1283,15 @@ run-compiled-tests:
 RLWRAP_TRAMPOLINE	= $(srcdir)/scripts/rlwrap-trampoline
 EXTRA_DIST		+= $(RLWRAP_TRAMPOLINE)
 
-VICARE_TERMINAL_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_TERMINAL_LIBRARY_PATH	= $(slsdir):$(VICARE_LIBRARY_PATH)
+VICARE_TERMINAL_LIBRARY_PATH	= $(fasldir):$(VICARE_LIBRARY_PATH)
+VICARE_TERMINAL_SOURCE_PATH	= $(slsdir)
 VICARE_TERMINAL_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_TERMINAL_DYLD_PATH	= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_TERMINAL_RUN_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
 VICARE_TERMINAL_RUN_ENV		= \
-	VICARE_FASL_PATH=$(VICARE_TERMINAL_FASL_PATH);		export VICARE_FASL_PATH;	\
 	VICARE_LIBRARY_PATH=$(VICARE_TERMINAL_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_SOURCE_PATH=$(VICARE_TERMINAL_SOURCE_PATH);	export VICARE_SOURCE_PATH;	\
 	VICARE_SRC_DIR=$(srcdir);				export VICARE_SRC_DIR;		\
 	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
 	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\

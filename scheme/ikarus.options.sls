@@ -28,10 +28,11 @@
 (library (ikarus.options)
   (export
     verbose?
+    print-debug-messages?
+    print-loaded-libraries?
+
     debug-mode-enabled?
-    verbose-about-libraries?
-    print-loaded-libraries
-    cache-compiled-libraries
+    cache-compiled-libraries?
     report-errors-at-runtime
     strict-r6rs
     descriptive-labels
@@ -75,10 +76,10 @@
     ))
 
 (define-boolean-option verbose?)
-(define-boolean-option verbose-about-libraries?)
 (define-boolean-option debug-mode-enabled?)
-(define-boolean-option print-loaded-libraries)
-(define-boolean-option cache-compiled-libraries)
+(define-boolean-option print-debug-messages?)
+(define-boolean-option print-loaded-libraries?)
+(define-boolean-option cache-compiled-libraries?)
 (define-boolean-option report-errors-at-runtime)
 (define-boolean-option strict-r6rs)
 (define-boolean-option descriptive-labels)

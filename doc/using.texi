@@ -100,7 +100,7 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 @cindex Command line option @option{--binary-program}
 @cindex @option{--binary-program}, command line option
 Start Vicare in compiled--program mode.  The @var{PROGRAM} file is
-handled as a serialized @rnrs{6} program: it is loaded and executed.
+handled as a serialised @rnrs{6} program: it is loaded and executed.
 
 @item --r6rs-repl @var{PROGRAM}
 @cindex Command line option @option{--r6rs-repl}
@@ -130,7 +130,7 @@ $ @value{RAWEXECUTABLE} --script test.sps hi there
 @cindex Command line option @option{--compile-program}
 @cindex @option{--compile-program}, command line option
 Load the source @rnrs{6} program @var{PROGRAM}, compile it and store a
-serialized version of it in a file whose name is built from
+serialised version of it in a file whose name is built from
 @var{PROGRAM}.  @var{PROGRAM} itself is not evaluated.
 
 @item --compile-dependencies @var{IMPORTS-FILE}
@@ -233,31 +233,45 @@ After instantiating the libraries hand the @var{EXPRESSION} to
 this code are available if we enter the @repl{}. This option can be used
 multiple times.
 
-@item -L @var{DIRECTORY}
-@itemx --search-path @var{DIRECTORY}
-@cindex Command line option @option{--search-path}
-@cindex @option{--search-path}, command line option
-@cindex Command line option @option{-L}
-@cindex @option{-L}, command line option
+@item --source-path @var{DIRECTORY}
+@cindex Command line option @option{--source-path}
+@cindex @option{--source-path}, command line option
 Add @var{DIRECTORY} to the library search path.  This option can be used
 multiple times.
 
-@item -F @var{DIRECTORY}
-@itemx --fasl-path @var{DIRECTORY}
-@cindex Command line option @option{--fasl-path}
-@cindex @option{--fasl-path}, command line option
-@cindex Command line option @option{-F}
-@cindex @option{-F}, command line option
+@item -L @var{DIRECTORY}
+@itemx --library-path @var{DIRECTORY}
+@cindex Command line option @option{--library-path}
+@cindex @option{--library-path}, command line option
+@cindex Command line option @option{-L}
+@cindex @option{-L}, command line option
 Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
 multiple times.
 
-@item --fasl-directory @var{DIRECTORY}
-@cindex Command line option @option{--fasl-directory}
-@cindex @option{--fasl-directory}, command line option
-Select @var{DIRECTORY} as top pathname under which @fasl{} files are
-stored when libraries are compiled; @var{DIRECTORY} must exist.  When
-used multiple times: the last one wins.  The selected directory is
-always prepended to the @fasl{} search path.
+@item -C @var{DIRECTORY}
+@itemx --cache-path @var{DIRECTORY}
+@cindex Command line option @option{--cache-path}
+@cindex @option{--cache-path}, command line option
+@cindex Command line option @option{-C}
+@cindex @option{-C}, command line option
+Add the directory pathname @var{DIRECTORY} to the cache search path.
+This option can be used multiple times to incrementally build a path.
+The cache directory search path is used to find libraries automatically
+compiled from installed sources.
+
+@item --cache-directory @var{DIRECTORY}
+@cindex Command line option @option{--cache-directory}
+@cindex @option{--cache-directory}, command line option
+Select @var{DIRECTORY} as pathname under which binary library files are
+stored when automatically compiled from installed sources.  When used
+multiple times: the last one wins.
+
+@item --store-directory @var{DIRECTORY}
+@cindex Command line option @option{--store-directory}
+@cindex @option{--store-directory}, command line option
+Select @var{DIRECTORY} as pathname under which compiled library files
+are temporarily stored before being installed.  When used multiple
+times: the last one wins.
 
 @item --more-file-extensions
 @cindex Command line option @option{--more-file-extensions}
@@ -319,28 +333,41 @@ collection.
 @cindex @option{--no-gc-integrity-checks}, command line option
 Disable garbage collection integrity checks.  This is the default.
 
-@item --cache-compiled-libraries
-@cindex Command line option @option{--cache-compiled-libraries}
-@cindex @option{--cache-compiled-libraries}, command line option
-Whenever a library file is loaded in source form: compile and serialize
+@item --cache-libraries
+@cindex Command line option @option{--cache-libraries}
+@cindex @option{--cache-libraries}, command line option
+Whenever a library file is loaded in source form: compile and serialise
 it in a @fasl{} file in the selected @fasl{} directory.  This option is
 ignored when the execution mode is @option{--compile-dependencies}.
 
 @item --no-cache-compiled-libraries
 @cindex Command line option @option{--no-cache-compiled-libraries}
 @cindex @option{--no-cache-compiled-libraries}, command line option
-Disables the effect of @option{--cache-compiled-libraries}.
+Disables the effect of @option{--cache-libraries}.
 
 @item --print-loaded-libraries
 @cindex Command line option @option{--print-loaded-libraries}
 @cindex @option{--print-loaded-libraries}, command line option
 Whenever a library file is loaded print a message on the console error
-port.  This is for debugging purposes.
+port.  This is for debugging purposes.  When used together with
+@option{--debug-messages}: even more detailed messages are generated for
+library related actions.
 
 @item --no-print-loaded-libraries
 @cindex Command line option @option{--no-print-loaded-libraries}
 @cindex @option{--no-print-loaded-libraries}, command line option
 Disables the effect of @option{--print-loaded-libraries}.
+
+@item --debug-messages
+@cindex Command line option @option{--debug-messages}
+@cindex @option{--debug-messages}, command line option
+Be more verbose aboud undertaken actions.  This is for debugging
+purposes.
+
+@item --no-debug-messages
+@cindex Command line option @option{--no-debug-messages}
+@cindex @option{--no-debug-messages}, command line option
+Disables the effect of @option{--debug-messages}.
 
 @item --report-errors-at-runtime
 @cindex Command line option @option{--report-errors-at-runtime}
@@ -380,13 +407,13 @@ code and assembly code.  Disables the effect of
 @option{--descriptive-labels}.  This is the default.
 
 @item --library-locator @var{NAME}
-@cindex Command line option @option{--library-loader}
-@cindex @option{--library-loader}, command line option
+@cindex Command line option @option{--library-locator}
+@cindex @option{--library-locator}, command line option
 Select a Scheme library locator.  @var{NAME} can be one among:
 @samp{run-time}, @samp{compile-time}, @samp{source}. For details on
 searching libraries @ref{using libraries searching, Library search
 algorithms}.  For details on the built--in library locators @api{}
-@ref{libutils locating general, Finding library locations}.
+@ref{libutils locating, Locating libraries}.
 
 @item -O0
 @cindex Command line option @option{-O}
@@ -669,10 +696,17 @@ $(libdir)/vicare-scheme
 @end example
 
 @noindent
-for example on 32-bit @gnu{}+Linux systems:
+on 32-bit @gnu{}+Linux systems:
 
 @example
 /usr/local/lib/vicare-scheme
+@end example
+
+@noindent
+on 64-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib64/vicare-scheme
 @end example
 
 @noindent
@@ -812,15 +846,15 @@ unique component: when building the file stem such component is
 @cindex Binary library source path
 @cindex Source library source path
 @cindex @fasl{} file source path
-@cindex @func{library-path}
-@cindex @func{fasl-directory}
-@cindex @func{fasl-search-path}
+@cindex @func{library-source-search-path}
+@cindex @func{compiled-library-cache-directory}
+@cindex @func{library-binary-search-path}
+@cindex @env{VICARE_SOURCE_PATH}, system environment variable
 @cindex @env{VICARE_LIBRARY_PATH}, system environment variable
-@cindex @env{VICARE_FASL_PATH}, system environment variable
-@cindex @env{VICARE_FASL_DIRECTORY}, system environment variable
+@cindex @env{VICARE_CACHE_DIRECTORY}, system environment variable
+@cindex Environment variable @env{VICARE_SOURCE_PATH}
 @cindex Environment variable @env{VICARE_LIBRARY_PATH}
-@cindex Environment variable @env{VICARE_FASL_PATH}
-@cindex Environment variable @env{VICARE_FASL_DIRECTORY}
+@cindex Environment variable @env{VICARE_CACHE_DIRECTORY}
 
 
 @value{PRJNAME} has a search algorithm for libraries that is similar to
@@ -837,45 +871,46 @@ libraries:
 @itemize
 @item
 The source libraries search path is stored in the parameter
-@func{library-path}.
+@func{library-source-search-path}.
 
 @item
 The binary libraries search path is stored in the parameter
-@func{fasl-search-path}.
+@func{library-binary-search-path}.
 @end itemize
 
 @noindent
 both these parameters are meant to contain lists of strings representing
 directory pathnames and can be updated as necessary.
 
-In addition the parameter @func{fasl-directory} is meant to hold a
-string representing a directory pathname; such directory is searched
-when looking for a compiled version of a library from an existent source
-file.
+In addition the parameter @func{compiled-library-cache-directory} is
+meant to hold a string representing a single directory pathname; such
+directory is searched when looking for a compiled version of a library
+from an existent source file.
 
 @c ------------------------------------------------------------
 
 @subsubheading Source path initialisation
 
 
-The parameter @func{library-path} is initialised as follows:
+The default value of the parameter @func{library-source-search-path} is composed as
+follows:
 
 @enumerate
 @item
 The parameter is initialised to the empty list.
 
 @item
-At the beginning of execution @value{PRJNAME} consults the environment
-variable @env{VICARE_LIBRARY_PATH}; when set, it is expected to hold a
+At the beginning of execution, @value{PRJNAME} consults the environment
+variable @env{VICARE_SOURCE_PATH}; when set, it is expected to hold a
 colon separated list of directory pathnames, in Unix--style.  The list
 is parsed and the directories are placed, in the given order, in
-@func{library-path}.
+@func{library-source-search-path}.
 
 @item
 If the options @option{-L} and @option{--search-path} are present on the
 command line: their value is expected to be a string representing a
 directory pathname.  Such pathnames are prepended, in the given order,
-to @func{library-path}.
+to @func{library-source-search-path}.
 
 @item
 While @value{RAWEXECUTABLE} is running: we can modify at will the content of
@@ -887,7 +922,8 @@ While @value{RAWEXECUTABLE} is running: we can modify at will the content of
 @subsubheading Binary path initialisation
 
 
-The parameter @func{fasl-search-path} is initialised as follows:
+The default value of the parameter @func{library-binary-search-path} is composed
+as follows:
 
 @enumerate
 @item
@@ -917,47 +953,48 @@ and on 32-bit @gnu{}+Linux systems:
 
 @item
 At the beginning of execution @value{PRJNAME} consults the environment
-variable @env{VICARE_FASL_PATH}; when set, it is expected to hold a
+variable @env{VICARE_LIBRARY_PATH}; when set, it is expected to hold a
 colon separated list of directory pathnames, in Unix--style.  The list
 is parsed and the directories are placed, in the given order, in
-@func{fasl-search-path}.
+@func{library-binary-search-path}.
 
 @item
 If the options @option{-F} and @option{--fasl-path} are present on the
 command line: their value is expected to be a string representing a
 directory pathname.  Such pathnames are prepended, in the given order,
-to @func{fasl-search-path}.
+to @func{library-binary-search-path}.
 
 @item
 While @value{RAWEXECUTABLE} is running: we can modify at will the
-content of @func{fasl-search-path}.
+content of @func{library-binary-search-path}.
 @end enumerate
 
 @noindent
-notice that the value of the parameter @func{fasl-directory} is
-@strong{not} included by default.
+notice that the value of the parameter
+@func{compiled-library-cache-directory} is @strong{not} included by
+default in @func{library-binary-search-path}.
 
 In the following example session the user sets
-@env{VICARE_FASL_PATH}; the settings are reflected in the value of
-@code{(fasl-search-path)}; a further directory is then set during the
+@env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
+@code{(library-binary-search-path)}; a further directory is then set during the
 session:
 
 @example
-$ export VICARE_FASL_PATH=$HOME/scheme:/tmp/library
-$ echo $VICARE_FASL_PATH
+$ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
+$ echo $VICARE_LIBRARY_PATH
 /home/marco/scheme:/tmp/library
 $ @value{RAWEXECUTABLE}
 ...
 
 > (import (prefix (vicare libraries) libs.))
-> (libs.fasl-search-path)
+> (libs.library-binary-search-path)
 ("/home/marco/scheme"
  "/tmp/library"
  "/usr/local/lib/scheme/r6rs"
  "/usr/local/lib/vicare-scheme")
-> (libs.fasl-search-path
-     (cons "/opt/sw/extra-libraries" (libs.fasl-search-path)))
-> (libs.fasl-search-path)
+> (libs.library-binary-search-path
+     (cons "/opt/sw/extra-libraries" (libs.library-binary-search-path)))
+> (libs.library-binary-search-path)
 ("/opt/sw/extra-libraries"
  "/home/marco/scheme"
  "/tmp/library"
@@ -966,7 +1003,7 @@ $ @value{RAWEXECUTABLE}
 @end example
 
 In programs intended to be distributed, we should resist the urge to set
-@func{fasl-search-path} and @func{library-path}, as the user's file
+@func{library-binary-search-path} and @func{library-source-search-path}, as the user's file
 hierarchies might not match ours; for most libraries, simply telling the
 user to install the files in one of the directories on the search path
 is good enough.
@@ -976,19 +1013,20 @@ is good enough.
 @subsubheading @fasl{} directory initialisation
 
 
-The parameter @func{fasl-directory} is initialised as follows:
+The parameter @func{compiled-library-cache-directory} is initialised as
+follows:
 
 @enumerate
 @item
 At the beginning of execution @value{PRJNAME} consults the system
-environment variable @env{VICARE_FASL_DIRECTORY}; when set, it is
+environment variable @env{VICARE_CACHE_DIRECTORY}; when set, it is
 expected to hold a directory pathname.  Such pathname is stored in
-@func{fasl-directory}.
+@func{compiled-library-cache-directory}.
 
 @item
-If the system environment variable @env{VICARE_FASL_DIRECTORY} is unset
-or set to an empty or invalid string: an attempt is made to set
-@file{fasl-directory} to:
+If the system environment variable @env{VICARE_CACHE_DIRECTORY} is unset
+or set to an empty or invalid string, an attempt is made to set
+@func{compiled-library-cache-directory} to:
 
 @example
 ~/.vicare/precompiled
@@ -999,10 +1037,11 @@ for this to work the system environment variable @env{HOME} must exist
 and be set to a string representing a directory pathname.
 
 @item
-If the system environment variable @env{VICARE_FASL_DIRECTORY} is unset
+If the system environment variable @env{VICARE_CACHE_DIRECTORY} is unset
 or set to an empty or invalid string and it is not possible to build a
-valid pathname for @file{~/.vicare/precompiled}: @func{fasl-directory}
-is set to the fallback directory:
+valid pathname for @file{~/.vicare/precompiled},
+@func{compiled-library-cache-directory} is set to the fallback
+directory:
 
 @example
 /tmp/vicare/precompiled
@@ -1012,9 +1051,9 @@ is set to the fallback directory:
 which is probably not what we want.
 
 @item
-If the option @option{--fasl-directory} is present on the command line:
+If the option @option{--cache-directory} is present on the command line:
 its value is meant to represent a directory pathname.  Such pathname is
-stored in @func{fasl-directory}.
+stored in @func{compiled-library-cache-directory}.
 @end enumerate
 
 @c page
@@ -1025,7 +1064,7 @@ stored in @func{fasl-directory}.
 In the typical scenario: packages compile source libraries in binary
 format and store them in @fasl{} files; then such @fasl{} files are
 installed in one of the directory referenced by the parameter
-@func{fasl-search-path}; finally, when running an application, imported
+@func{library-binary-search-path}; finally, when running an application, imported
 libraries are loaded in binary form from @fasl{} files.
 
 There are two basic modes to search for libraries:
@@ -1098,7 +1137,7 @@ separator as prefix.  For example the library reference @library{alpha
 beta (1 2)} generates the stem @code{/alpha/beta}.
 
 @item
-All the directories listed in the parameter @func{fasl-search-path} are
+All the directories listed in the parameter @func{library-binary-search-path} are
 visited, in order: the directory is prepended to the stem and the
 @fasl{} file extension is appended to it; the resulting file is tested
 for existence stopping at the first match.  For example the following
@@ -1114,12 +1153,12 @@ files might be tested:
 If a @fasl{} file exists: it is loaded expecting it to contain a binary
 library.  If the library is accepted the search terminates; if the
 library is rejected the search goes on with the next directory from
-@func{fasl-search-path}.
+@func{library-binary-search-path}.
 
 @item
 If no matching @fasl{} file is found or all the binary libraries found
 are rejected: the search continues for source files.  All the
-directories listed in the parameter @func{library-path} are visited, in
+directories listed in the parameter @func{library-source-search-path} are visited, in
 order: the directory is prepended to the stem and the source file
 extensions are appended to it; the resulting file is tested for
 existence stopping at the first match.  For example the following files
@@ -1138,7 +1177,7 @@ might be tested:
 If a source file exists: it is loaded expecting it to contain a source
 library.  If the library is accepted the search terminates; if the
 library is rejected the search goes on with the next file or the next
-directory from @func{library-path}.
+directory from @func{library-source-search-path}.
 
 @item
 If no source file is found or all the source libraries found are
@@ -1168,7 +1207,7 @@ existence stopping at the first match.  For example, in the source tree
 of a package, if:
 
 @example
-(library-path)  @result{} ("./lib")
+(library-source-search-path)  @result{} ("./lib")
 @end example
 
 @noindent
@@ -1184,14 +1223,15 @@ If a source file exists:
 
 @enumerate A
 @item
-The content of the parameter @func{fasl-directory} is retrieved
-expecting it to be the pathname of a directory.
+The content of the parameter @func{compiled-libraries-cache-directory} is
+retrieved expecting it to be the pathname of a directory.
+
 @item
 The name of a @fasl{} file is built from the stem and the value in
-@func{fasl-directory}.  For example, if:
+@func{compiled-libraries-cache-directory}.  For example, if:
 
 @example
-(fasl-directory)        @result{} "./build/lib"
+(compiled-libraries-cache-directory)  @result{} "./build/lib"
 @end example
 
 @noindent
@@ -1213,13 +1253,13 @@ or it contains a library that is rejected: the source file is loaded,
 expecting it to contain a source library.  If the source library is
 accepted: the search terminates; if the source library is rejected: the
 search continues with the next file extension or the next directory from
-@func{library-path}.
+@func{library-source-search-path}.
 @end enumerate
 
 @item
 If a source file does not exist: the search continues looking for a
 binary library.  All the directories listed in the parameter
-@func{fasl-search-path} are visited, in order: the directory is
+@func{library-binary-search-path} are visited, in order: the directory is
 prepended to the stem and the @fasl{} file extension is appended to it;
 the resulting file is tested for existence stopping at the first match.
 For example the following files might be tested:
@@ -1234,7 +1274,7 @@ For example the following files might be tested:
 If a @fasl{} file exists: it is loaded expecting it to contain a binary
 library.  If the library is accepted the search terminates; if the
 library is rejected the search goes on with the next directory from
-@func{fasl-search-path}.
+@func{library-binary-search-path}.
 
 @item
 If no matching @fasl{} file is found or all the binary libraries found
@@ -1258,7 +1298,7 @@ are rejected: the search fails.
 
 
 This library compilation strategy is implemented by a proper execution
-mode of @command{vicare}; in this mode:
+mode of @value{EXECUTABLE}; in this mode:
 
 @itemize
 @item
@@ -1276,12 +1316,12 @@ in binary format.
 @item
 The loaded library is serialized to a @fasl{} file either in an
 explicitly selected output file or in the selected
-@func{fasl-directory}.
+@func{compiled-library-cache-directory}.
 @end itemize
 
 This execution mode is enabled by the command line option
-@option{--compile-library} of @command{vicare}; when using this mode the
-command line option @option{--cache-compiled-libraries} is
+@option{--compile-library} of @value{EXECUTABLE}; when using this mode the
+command line option @option{--cache-libraries} is
 @strong{ignored}.
 
 Let's say we have the libraries:
@@ -1340,7 +1380,7 @@ one library at a time, explicitly selecting the output directory for
 
 @example
 vicare \
-  --fasl-directory $(builddir)/lib \
+  --cache-directory $(builddir)/lib \
   --compile-library $(srcdir)/lib/alpha/beta.sls
 @end example
 
@@ -1349,7 +1389,7 @@ then, to compile @library{alpha gamma (1 2)}, we do:
 
 @example
 vicare \
-  --fasl-directory $(builddir)/lib \
+  --cache-directory $(builddir)/lib \
   --fasl-path $(builddir)/lib \
   --compile-library $(srcdir)/lib/alpha/gamma.sls
 @end example
@@ -1378,7 +1418,7 @@ are ways to automatically generate the needed commands.
 
 
 This library compilation strategy is implemented by a proper execution
-mode of @command{vicare}; in this mode:
+mode of @value{EXECUTABLE}; in this mode:
 
 @itemize
 @item
@@ -1394,14 +1434,14 @@ possibly invoked and visited.
 
 @item
 All the libraries loaded from a source file are serialized to @fasl{}
-files in the selected @func{fasl-directory}; all the libraries loaded
-from a @fasl{} file are left untouched.
+files in the selected @func{compiled-library-cache-directory}; all the
+libraries loaded from a @fasl{} file are left untouched.
 @end itemize
 
 This execution mode is enabled by the command line option
-@option{--compile-dependencies} of @command{vicare}; when using this
+@option{--compile-dependencies} of @value{EXECUTABLE}; when using this
 mode the command line options @option{--output} and
-@option{--cache-compiled-libraries} are @strong{ignored}.
+@option{--cache-libraries} are @strong{ignored}.
 
 Let's say we have the libraries:
 
@@ -1446,7 +1486,7 @@ and we execute it as follows:
 @example
 vicare \
    --search-path $(srcdir)/lib \
-   --fasl-directory $(builddir)/lib \
+   --cache-directory $(builddir)/lib \
    --compile-dependencies compile-all.sps
 @end example
 
@@ -1455,7 +1495,7 @@ If a selected library depends on the other selected library:
 appropriate binary formats.  If a selected library depends on other
 libraries, not explicitly selected by the script: @value{PRJNAME} will
 automatically take care of generating the appropriate binary formats and
-@fasl{} files in the selected @func{fasl-directory}.
+@fasl{} files in the selected @func{compiled-library-cache-directory}.
 
 @c page
 @node using libraries compiling cache
@@ -1463,9 +1503,9 @@ automatically take care of generating the appropriate binary formats and
 
 
 This library compilation strategy is enabled by a command line option
-that does not interfere with the execution modes of @command{vicare}.
+that does not interfere with the execution modes of @value{EXECUTABLE}.
 Caching of compiled libraries is off by default; it is enabled by the
-command line option @option{--cache-compiled-libraries}.  With this
+command line option @option{--cache-libraries}.  With this
 strategy:
 
 @enumerate
@@ -1482,7 +1522,7 @@ extensions and third party distributions fall in this category.
 
 @item
 We select a directory to be used as cache for compiled libraries and set
-it as @func{fasl-directory}; by default it is:
+it as @func{compiled-library-cache-directory}; by default it is:
 
 @example
 ~/.vicare/precompiled
@@ -1505,7 +1545,7 @@ example we can use the command line arguments:
 CACHE=~/.vicare/precompiled
 
 vicare \
-   --cache-compiled-libraries \
+   --cache-libraries \
    --search-path=/usr/local/lib/vicare-scheme \
    --search-path=/usr/lib/vicare-scheme \
    --fasl-path=$CACHE/usr/local/lib/vicare-scheme \
@@ -1609,7 +1649,7 @@ binary formats.
 @itemize
 @item
 To run a Scheme script, a program in source form, we invoke the
-executable @command{vicare} using the option @option{--r6rs-script} to
+executable @value{EXECUTABLE} using the option @option{--r6rs-script} to
 select the pathname of the file:
 
 @example
@@ -1618,7 +1658,7 @@ vicare --r6rs-script path/to/script.sps
 
 @item
 To run a compiled Scheme program, we invoke the executable
-@command{vicare} using the option @option{--binary-program} to select
+@value{EXECUTABLE} using the option @option{--binary-program} to select
 the pathname of the file:
 
 @example
@@ -1758,7 +1798,7 @@ exec "$@{rlwrap_PROGRAM@}"                    \
 When running @value{PRJNAME} on a @gnu{}+Linux system we can take
 advantage of the features offered by the @code{binfmt_misc} kernel
 module to launch directly executable programs without prefixing the
-program name with the @command{vicare} executable.
+program name with the @value{EXECUTABLE} executable.
 
 It all comes down to this: after setting up the feature as explained in
 the appendix @ref{binfmt}, we write a file containing:
@@ -1775,6 +1815,6 @@ application code and @func{main} is the function that starts the
 application.  If we enable executable permissions for the file and make
 sure that the first bytes in the file are the sequence
 @code{;;;!vicare}, we can configure the Linux kernel to start the
-program handing its command line to the executable @command{vicare}.
+program handing its command line to the executable @value{EXECUTABLE}.
 
 @c end of file

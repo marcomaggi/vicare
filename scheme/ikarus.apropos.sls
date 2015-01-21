@@ -21,15 +21,14 @@
     (only (psyntax.library-manager)
 	  library-export-subst
 	  library-name-identifiers
-	  installed-libraries)
+	  interned-libraries)
     (vicare unsafe operations))
 
 
 (define (apropos key)
-  ;;Defined by Ikarus.   Given a string or symbol  KEY, search among the
-  ;;internally installed libraries all  the exported bindings having KEY
-  ;;as substring of their name and print a report to the standard output
-  ;;port.
+  ;;Defined by  Ikarus.  Given a  string or symbol  KEY, search among  the internally
+  ;;interned libraries  all the exported  bindings having  KEY as substring  of their
+  ;;name and print a report to the standard output port.
   ;;
   (for-each (lambda (x)
 	      (display "*** in library ")
@@ -96,7 +95,7 @@
 			      (or (string<? s1 s2)
 				  (and (string=? s1 s2)
 				       (loop ($cdr ls1) ($cdr ls2)))))))))
-	       (installed-libraries))))
+	       (interned-libraries))))
 
 
 ;;;; done

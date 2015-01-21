@@ -28,6 +28,8 @@
 #!vicare
 (library (ikarus library-utils)
   (export
+    init-search-paths-and-directories
+
     ;; library names and version numbers
     library-name?
     library-version-numbers?		library-version-number?
@@ -47,7 +49,29 @@
     library-reference-identifiers=?
     conforming-sub-version-and-sub-version-reference?
     conforming-version-and-version-reference?
-    conforming-library-name-and-library-reference?)
+    conforming-library-name-and-library-reference?
+
+    ;; search paths and special directories
+    library-source-search-path
+    library-binary-search-path
+    library-cache-search-path
+    compiled-libraries-cache-directory
+    compiled-libraries-store-directory
+    library-extensions
+
+    ;; library pathnames
+    library-name->filename-stem
+    library-reference->filename-stem
+    directory+library-stem->library-binary-pathname
+    directory+library-stem->library-source-pathname
+    library-name->library-binary-pathname-in-store-directory
+    library-reference->library-binary-pathname-in-store-directory
+    library-source-pathname->library-binary-pathname-in-cache-directory
+    library-source-pathname->library-stem-pathname
+    library-source-pathname->library-binary-tail-pathname
+
+    ;; program pathnames construction
+    program-source-pathname->program-binary-pathname)
   (import (except (vicare)
 		  ;; library names and version numbers
 		  library-name?
@@ -69,8 +93,92 @@
 		  conforming-sub-version-and-sub-version-reference?
 		  conforming-version-and-version-reference?
 		  conforming-library-name-and-library-reference?)
+    (prefix (ikarus.posix) posix.)
     (vicare unsafe operations)
     (vicare language-extensions simple-match))
+
+
+;;;; helpers
+
+(define (%list-of-strings? obj)
+  (and (list? obj)
+       (for-all string? obj)))
+
+(define (%get-existent-directory-real-pathname-from-env system-environment-variable)
+  (let ((X (posix.getenv system-environment-variable)))
+    (if (and X
+	     (posix.file-string-pathname? X)
+	     (posix.directory-exists?     X))
+	(posix.real-pathname X)
+      #f)))
+
+(define (%get-directory-real-pathname-from-env system-environment-variable)
+  (let ((X (posix.getenv system-environment-variable)))
+    (if (and X (posix.file-string-pathname? X))
+	(if (posix.directory-exists? X)
+	    (posix.real-pathname X)
+	  X)
+      #f)))
+
+;;; --------------------------------------------------------------------
+
+(define (%string-suffix? str suffix)
+  ;;Return true if the string SUFFIX is a suffix for the string STR; otherwise return
+  ;;false.
+  ;;
+  ;;  (%string-suffix? "ciao mamma" "ciao")	=> #t
+  ;;  (%string-suffix? "ciao mamma" "hello")	=> #f
+  ;;
+  (let ((str.len    (string-length str))
+	(suffix.len (string-length suffix)))
+    (and (fx< suffix.len str.len)
+	 (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
+
+(define (%string-desuffix str suffix)
+  ;;Assume that the  string SUFFIX is a  suffix for the string STR;  strip the suffix
+  ;;from STR and return the tail string.
+  ;;
+  ;;  (%string-desuffix "ciao mamma" "ciao ")	=> "mamma"
+  ;;
+  (substring str 0 (fx- (string-length str) (string-length suffix))))
+
+
+;;;; library and program file extensions
+
+(define-constant LIBRARY-SOURCE-EXTENSION
+  ;;The file extension of source library files.
+  ;;
+  ".sls")
+
+(define-constant LIBRARY-BINARY-EXTENSION
+  ;;The file extension of serialised FASL files.
+  ;;
+  ;;NOTE  In previous  versions  there were  2  extensions: ".vicare-32bit-fasl"  for
+  ;;32-bit  platforms  and  ".vicare-64bit-fasl"  for 64-bit  platforms.   But  since
+  ;;version 0.4 there is a single extension.  (Marco Maggi; Thu Feb 20, 2014)
+  ;;
+  ".fasl")
+
+;;; --------------------------------------------------------------------
+
+(define-constant PROGRAM-SOURCE-EXTENSION
+  ;;The file extension of source program files.
+  ;;
+  ".sps")
+
+(define-constant PROGRAM-BINARY-EXTENSION
+  ;;The file extension of serialised FASL programs.
+  ;;
+  LIBRARY-BINARY-EXTENSION)
+
+;;; --------------------------------------------------------------------
+
+(define library-extensions
+  ;;Hold a list of strings representing file name extensions, leading dot included.
+  ;;
+  (make-parameter '()
+    (lambda* ({obj %list-of-strings?})
+      obj)))
 
 
 ;;;; R6RS library name and version utilities
@@ -545,6 +653,476 @@
 	    (length libref.ids))
 	 (for-all eq? libnam.ids libref.ids)
 	 (conforming-version-and-version-reference? libnam.version libref.version))))
+
+
+;;;; source libraries search path
+;;
+;;The search path in  which to look for source library files.   The parameter must be
+;;set to  a, possibly empty, list  of non-empty strings representing  valid directory
+;;pathnames.
+;;
+;;Notice that we must  not test for directories existence: a  directory may not exist
+;;at the time this search path is initialised, but be created later.
+;;
+(define library-source-search-path
+  (make-parameter '()
+    (lambda* ({P posix.list-of-string-pathnames?})
+      P)))
+
+
+;;;; compiled libraries search path
+;;
+;;The search  path in  which to look  for compiled library  files (FASL  files).  The
+;;parameter must be set to a,  possibly empty, list of non-empty strings representing
+;;valid directory pathnames.
+;;
+;;Notice that we must  not test for directories existence: a  directory may not exist
+;;at the time this search path is initialised, but be created later.
+;;
+(define library-binary-search-path
+  (make-parameter '()
+    (lambda* ({P posix.list-of-string-pathnames?})
+      P)))
+
+
+;;;; cached compiled libraries search path
+;;
+;;The search path in which to look  for compiled library files (FASL files) that were
+;;automatically generated from installed source  libraries, when caching libraries is
+;;enabled.  The parameter must be set to a, possibly empty, list of non-empty strings
+;;representing valid directory pathnames.
+;;
+;;Notice that we must  not test for directories existence: a  directory may not exist
+;;at the time this search path is initialised, but be created later.
+;;
+(define library-cache-search-path
+  (make-parameter '()
+    (lambda* ({P posix.list-of-string-pathnames?})
+      P)))
+
+
+;;;; compiled libraries cache directory
+;;
+;;The parameter COMPILED-LIBRARIES-CACHE-DIRECTORY contains a string representing the
+;;absolute pathname of a directory.
+;;
+;;When caching  compiled libraries  is enabled:  when a source  library is  found and
+;;loaded, its compiled version is saved in the cache directory.
+;;
+;;Under the cache  directory: FASL files are stored with  pathnames composed from the
+;;absolute  source   file  pathname.   For   example,  if  the  cache   directory  is
+;;"~/.vicare/precompiled" the source library:
+;;
+;;   /usr/local/lib/vicare-scheme/vicare/posix.sls
+;;
+;;is cached as:
+;;
+;;   ~/.vicare/precompiled/usr/local/lib/vicare-scheme/vicare/posix.fasl
+;;
+(module (compiled-libraries-cache-directory)
+
+  (define-constant DEFAULT-COMPILED-LIBRARIES-CACHE-DIRECTORY
+    ;;Default  value  for   the  COMPILED-LIBRARIES-CACHE-DIRECTORY  parameter.   The
+    ;;default value is built as follows:
+    ;;
+    ;;1.  If  the environment variable  VICARE_CACHE_DIRECTORY is set and  holding an
+    ;;valid directory pathname: select its value.
+    ;;
+    ;;2. If  the envirnoment variable HOME  is set and holding  an existent directory
+    ;;pathname, compose a default value as follows:
+    ;;
+    ;;   $(HOME)/.vicare/precompiled
+    ;;
+    ;;3. Otherwise set the default to:
+    ;;
+    ;;   /tmp/vicare/precompiled
+    ;;
+    (cond ((%get-directory-real-pathname-from-env "VICARE_CACHE_DIRECTORY"))
+	  ((%get-existent-directory-real-pathname-from-env "HOME")
+	   => (lambda (pathname)
+		(string-append pathname "/.vicare/precompiled")))
+	  (else
+	   "/var/cache/vicare-scheme")))
+
+  (define compiled-libraries-cache-directory
+    (make-parameter
+	DEFAULT-COMPILED-LIBRARIES-CACHE-DIRECTORY
+      (lambda* ({pathname posix.file-string-pathname?})
+	pathname)))
+
+  #| end of module |# )
+
+(define* (call-with-compiled-libraries-cache-directory proc)
+  (cond ((compiled-libraries-cache-directory)
+	 => proc)
+	(else
+	 (error __who__ "compiled libraries cache directory is not set"))))
+
+
+;;;; compiled libraries store directory
+;;
+;;The  parameter  COMPILED-LIBRARIES-STORE-DIRECTORY  contains   false  or  a  string
+;;representing the absolute pathname of a directory.
+;;
+;;When the selected library locator is "compile-time": the store directory is used to
+;;search  for  compiled  libraries.   It  is  an error  if  the  library  locator  is
+;;"compile-time" and no store directory is selected.
+;;
+;;Under the store  directory: FASL files are stored with  pathnames composed from the
+;;library stem, which is generated from the  library name.  For example, if the store
+;;directory is "$(builddir)/lib" the source library:
+;;
+;;   $(top_srcdir)/lib/vicare/posix.sls
+;;
+;;is stored as:
+;;
+;;   $(builddir)/lib/vicare/posix.fasl
+;;
+(module (compiled-libraries-store-directory)
+
+  (define-constant DEFAULT-COMPILED-LIBRARIES-STORE-DIRECTORY
+    ;;Default  value  for   the  COMPILED-LIBRARIES-STORE-DIRECTORY  parameter.   The
+    ;;default value is built as follows:
+    ;;
+    ;;1.  If  the environment variable  VICARE_STORE_DIRECTORY is set and  holding an
+    ;;existent directory pathname: select its value.
+    ;;
+    ;;2. Otherwise no store directory is selected and the parameter is set to false.
+    ;;
+    (%get-directory-real-pathname-from-env "VICARE_STORE_DIRECTORY"))
+
+  (define compiled-libraries-store-directory
+    (make-parameter
+	DEFAULT-COMPILED-LIBRARIES-STORE-DIRECTORY
+      (lambda* ({pathname posix.file-string-pathname?})
+	pathname)))
+
+  #| end of module |# )
+
+(define* (call-with-compiled-libraries-store-directory proc)
+  (cond ((compiled-libraries-store-directory)
+	 => proc)
+	(else
+	 (error __who__ "compiled libraries store directory is not set"))))
+
+
+;;;; initialisation of search paths and library directories
+
+(define* (init-search-paths-and-directories library-source-search-path-directory*
+					    library-binary-search-path-directory*
+					    library-cache-search-path-directory*
+					    cache-directory
+					    store-directory
+					    more-file-extensions?)
+  ;;Initialise the search path for source libraries.
+  ;;
+  ;;LIBRARY-SOURCE-SEARCH-PATH-DIRECTORY*  must be  a  list  of strings  representing
+  ;;directory pathnames gathered  from the command line.  The order  of the pathnames
+  ;;must be  the same as  the one in  which the arguments  were given on  the command
+  ;;line.
+  ;;
+  ;;If a directory does not exist: it is  just left there in the search path.  It may
+  ;;not exist at process start time, but maybe it will be created later.
+  ;;
+  (library-source-search-path
+   (append library-source-search-path-directory*
+	   (cond ((posix.getenv "VICARE_SOURCE_PATH")
+		  => posix.split-search-path-string)
+		 (else '()))
+	   (library-source-search-path)))
+
+  ;;Initialise the search path for compiled libraries (FASL files).
+  ;;
+  ;;LIBRARY-BINARY-SEARCH-PATH-DIRECTORY*  must be  a  list  of strings  representing
+  ;;directory pathnames gathered  from the command line.  The order  of the pathnames
+  ;;must be  the same as  the one in  which the arguments  were given on  the command
+  ;;line.
+  ;;
+  ;;If a directory does not exist: it is  just left there in the search path.  It may
+  ;;not exist at process start time, but maybe it will be created later.
+  ;;
+  (library-binary-search-path
+   (append library-binary-search-path-directory*
+	   (cond ((posix.getenv "VICARE_LIBRARY_PATH")
+		  => posix.split-search-path-string)
+		 (else '()))
+	   (let ()
+	     (module (target-os-uid vicare-lib-dir)
+	       (include "ikarus.config.ss"))
+	     (case target-os-uid
+	       ((linux bsd darwin cygwin)
+		(list vicare-lib-dir))
+	       (else
+		(error 'library-binary-search-path
+		  "internal error: invalid target OS UID"
+		  target-os-uid))))
+	   (library-binary-search-path)))
+
+  ;;Initialise the search path for cached compiled libraries (FASL files).
+  ;;
+  ;;LIBRARY-CACHE-SEARCH-PATH-DIRECTORY*  must  be  a list  of  strings  representing
+  ;;directory pathnames gathered  from the command line.  The order  of the pathnames
+  ;;must be  the same as  the one in  which the arguments  were given on  the command
+  ;;line.
+  ;;
+  ;;If a directory does not exist: it is  just left there in the search path.  It may
+  ;;not exist at process start time, but maybe it will be created later.
+  ;;
+  (library-cache-search-path
+   (append library-cache-search-path-directory*
+	   (cond ((posix.getenv "VICARE_CACHE_PATH")
+		  => posix.split-search-path-string)
+		 (else '()))
+	   (library-cache-search-path)))
+
+;;; --------------------------------------------------------------------
+
+  (when cache-directory
+    ;;A  pathname was  selected from  the command  line.  CACHE-DIRECTORY  must be  a
+    ;;string representing the pathname a directory.
+    (if (posix.file-string-pathname? cache-directory)
+	(compiled-libraries-cache-directory (if (posix.directory-exists? cache-directory)
+						(posix.real-pathname cache-directory)
+					      cache-directory))
+      (raise
+       (condition (make-i/o-filename-error cache-directory)
+		  (make-who-condition __who__)
+		  (make-message-condition "invalid compiled libraries cache directory pathname")
+		  (make-irritants-condition (list cache-directory))))))
+
+  (when store-directory
+    ;;A  pathname was  selected from  the command  line.  STORE-DIRECTORY  must be  a
+    ;;string representing the pathname of an existent directory.
+    (if (posix.file-string-pathname? store-directory)
+	(compiled-libraries-store-directory (if (posix.directory-exists? store-directory)
+						(posix.real-pathname store-directory)
+					      store-directory))
+      (raise
+       (condition (make-i/o-file-does-not-exist-error store-directory)
+		  (make-who-condition __who__)
+		  (make-message-condition "invalid compiled libraries store directory pathname")
+		  (make-irritants-condition (list store-directory))))))
+
+  ;;Initialise the list of source library file extensions.
+  ;;
+  (library-extensions
+   (if more-file-extensions?
+       (let ((%prefix (lambda (ext ls)
+			(append (map (lambda (x)
+				       (string-append ext x))
+				  ls)
+				ls))))
+	 (%prefix "/main" (%prefix ".vicare" '(".sls" ".ss" ".scm"))))
+     '(".vicare.sls" ".sls")))
+
+  (void))
+
+
+;;;; file name stems construction
+
+(module (library-name->filename-stem
+	 library-reference->filename-stem)
+
+  (define* (library-reference->filename-stem {libref library-reference?})
+    ;;Convert the non-empty list of identifiers  from a R6RS library reference into a
+    ;;string representing the corresponding relative file pathname, without extension
+    ;;but including a leading #\/ character.  Examples:
+    ;;
+    ;;   (library-reference->filename-stem '(alpha beta gamma ((>= 3))))
+    ;;   => "/alpha/beta/gamma"
+    ;;
+    ;;   (library-reference->filename-stem '(alpha beta main ((>= 3))))
+    ;;   => "/alpha/beta/main_"
+    ;;
+    ;;notice how the component "main", when  appearing last, is "quoted" by appending
+    ;;an underscore.
+    ;;
+    ;;The returned value can be used as:
+    ;;
+    ;;* Source library  name, by appending an extension like  ".sls".
+    ;;
+    ;;* Compiled library name, by appending an extension like ".fasl".
+    ;;
+    (%compose-stem (library-reference->identifiers libref)))
+
+  (define* (library-name->filename-stem {libref library-reference?})
+    ;;Convert  the non-empty  list of  identifiers from  a R6RS  library name  into a
+    ;;string representing the corresponding relative file pathname, without extension
+    ;;but including a leading #\/ character.  Examples:
+    ;;
+    ;;   (library-name->filename-stem '(alpha beta gamma (1 2 3)))
+    ;;   => "/alpha/beta/gamma"
+    ;;
+    ;;   (library-name->filename-stem '(alpha beta main (1 2 3)))
+    ;;   => "/alpha/beta/main_"
+    ;;
+    ;;notice how the component "main", when  appearing last, is "quoted" by appending
+    ;;an underscore.
+    ;;
+    ;;The returned value can be used as:
+    ;;
+    ;;* Source library  name, by appending an extension like  ".sls".
+    ;;
+    ;;* Compiled library name, by appending an extension like ".fasl".
+    ;;
+    (%compose-stem (library-name->identifiers libref)))
+
+  (define (%compose-stem id*)
+    (receive (port extract)
+	(open-string-output-port)
+      (let next-component ((component		(car id*))
+			   (ls			(cdr id*))
+			   (first-component?	#t))
+	(write-char #\/ port)
+	(let ((component-name (symbol->string component)))
+	  (for-each (lambda (N)
+		      (let ((ch (integer->char N)))
+			(if (or (char<=? #\a ch #\z)
+				(char<=? #\A ch #\Z)
+				(char<=? #\0 ch #\9)
+				(char=?  ch #\.)
+				(char=?  ch #\-)
+				(char=?  ch #\+)
+				(char=?  ch #\_))
+			    (write-char ch port)
+			  (receive (D M)
+			      (div-and-mod N 16)
+			    (write-char #\% port)
+			    (%display-hex D port)
+			    (%display-hex M port)))))
+	    (bytevector->u8-list (string->utf8 component-name)))
+	  (if (pair? ls)
+	      (next-component (car ls) (cdr ls) #f)
+	    (when (and (not first-component?)
+		       (%main*? component-name))
+	      (write-char #\_ port)))))
+      (extract)))
+
+  (define (%display-hex N port)
+    (if (fx<= 0 N 9)
+	(display N port)
+      (write-char (integer->char (fx+ (char->integer #\a) (fx- N 10))) port)))
+
+  (define (%main*? component-name)
+    (let ((component-name.len (string-length component-name)))
+      (and (fx>= component-name.len 4)
+	   (string=? (substring component-name 0 4) "main")
+	   (for-all (lambda (ch)
+		      (char=? ch #\_))
+	     (string->list (substring component-name 4 component-name.len))))))
+
+  #| end of module |# )
+
+
+;;;; library pathnames construction
+
+(module (directory+library-stem->library-binary-pathname
+	 directory+library-stem->library-source-pathname)
+
+  (define* (directory+library-stem->library-binary-pathname directory stem)
+    (%build-pathname __who__ directory stem LIBRARY-BINARY-EXTENSION))
+
+  (define* (directory+library-stem->library-source-pathname directory stem)
+    (%build-pathname __who__ directory stem LIBRARY-SOURCE-EXTENSION))
+
+  (define (%build-pathname who directory stem extension)
+    (receive-and-return (pathname)
+	(string-append directory stem extension)
+      (unless (posix.file-string-pathname? pathname)
+	(raise
+	 (condition (make-who-condition who)
+		    (make-message-condition "invalid string as pathname from given arguments")
+		    (make-i/o-filename-error pathname)
+		    (make-irritants-condition (list directory stem extension)))))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define* (library-name->library-binary-pathname-in-store-directory {libname library-name?})
+  ;;Given an R6RS  compliant library name build and return  a string representing the
+  ;;pathname of a binary library in the current store directory.
+  ;;
+  (call-with-compiled-libraries-store-directory
+   (lambda (store-directory)
+     (directory+library-stem->library-binary-pathname store-directory (library-name->filename-stem libname)))))
+
+(define* (library-reference->library-binary-pathname-in-store-directory {libref library-reference?})
+  ;;Given an R6RS compliant library reference  build and return a string representing
+  ;;the pathname of a binary library in the current store directory.
+  ;;
+  (call-with-compiled-libraries-store-directory
+   (lambda (store-directory)
+     (directory+library-stem->library-binary-pathname store-directory (library-reference->filename-stem libref)))))
+
+;;; --------------------------------------------------------------------
+
+(module (library-source-pathname->library-binary-pathname-in-cache-directory
+	 library-source-pathname->library-stem-pathname
+	 library-source-pathname->library-binary-tail-pathname)
+
+  (define* (library-source-pathname->library-binary-pathname-in-cache-directory {source-pathname posix.file-string-pathname?})
+    ;;Given a string representing the pathname  of a source library: build and return
+    ;;a  string representing  the pathname  of a  compiled library  in the  currently
+    ;;selected cache directory.
+    ;;
+    (call-with-compiled-libraries-cache-directory
+     (lambda (cache-directory)
+       (%build-pathname __who__ cache-directory source-pathname))))
+
+  (define* (library-source-pathname->library-stem-pathname {source-pathname posix.file-string-pathname?})
+    (cond ((%string-suffix?  source-pathname ".vicare.sls")
+	   (%string-desuffix source-pathname ".vicare.sls"))
+	  ((%string-suffix?  source-pathname ".sls")
+	   (%string-desuffix source-pathname ".sls"))
+	  ((%string-suffix?  source-pathname ".vicare.ss")
+	   (%string-desuffix source-pathname ".vicare.ss"))
+	  ((%string-suffix?  source-pathname ".ss")
+	   (%string-desuffix source-pathname ".ss"))
+	  ((%string-suffix?  source-pathname ".vicare.scm")
+	   (%string-desuffix source-pathname ".vicare.scm"))
+	  ((%string-suffix?  source-pathname ".scm")
+	   (%string-desuffix source-pathname ".scm"))
+	  (else
+	   source-pathname)))
+
+  (define (library-source-pathname->library-binary-tail-pathname source-pathname)
+    (string-append (library-source-pathname->library-stem-pathname source-pathname) LIBRARY-BINARY-EXTENSION))
+
+  (define (%build-pathname who cache-directory source-pathname)
+    (define (%error ptn)
+      (assertion-violation who
+	"unable to build valid library binary pathname from library source pathname"
+	source-pathname ptn))
+    (define ptn
+      (library-source-pathname->library-stem-pathname source-pathname))
+    (if (posix.file-string-pathname? ptn)
+	(let ((binary-pathname (string-append cache-directory "/" ptn LIBRARY-BINARY-EXTENSION)))
+	  (if (posix.file-string-pathname? binary-pathname)
+	      binary-pathname
+	    (%error binary-pathname)))
+      (%error ptn)))
+
+  #| end of module |# )
+
+
+;;;; program pathnames construction
+
+(define* (program-source-pathname->program-binary-pathname {source-pathname posix.file-string-pathname?})
+  (define (%error ptn)
+    (assertion-violation __who__
+      "unable to build valid FASL file pathname from program source pathname"
+      source-pathname ptn))
+  (let ((ptn (cond ((%string-suffix?  source-pathname PROGRAM-SOURCE-EXTENSION)
+		    (%string-desuffix source-pathname PROGRAM-SOURCE-EXTENSION))
+		   (else
+		    (string-append source-pathname PROGRAM-BINARY-EXTENSION)))))
+    (if (posix.file-string-pathname? ptn)
+	(let ((binary-pathname ptn))
+	  (if (posix.file-string-pathname? binary-pathname)
+	      binary-pathname
+	    (%error binary-pathname)))
+      (%error ptn))))
 
 
 ;;;; done

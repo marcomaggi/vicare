@@ -59,13 +59,13 @@
     compiler.core-expr->assembly-code	compiler.compile-core-expr
 
     ;; runtime options
-    option.verbose-about-libraries?
     option.debug-mode-enabled?
     option.strict-r6rs
     option.enable-arguments-validation?
     option.descriptive-labels
-    option.print-loaded-libraries
-    option.cache-compiled-libraries
+    option.print-loaded-libraries?
+    option.print-debug-messages?
+    option.cache-compiled-libraries?
     option.tagged-language.rhs-tag-propagation?
     option.tagged-language.datums-as-operators?
     option.tagged-language.setter-forms?
@@ -96,6 +96,7 @@
     library-stale-warning
     procedure-argument-violation
     warning
+    library-debug-message
 
     ;; system stuff
     file-modification-time
@@ -139,21 +140,8 @@
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler.)
-    (prefix (rename (only (ikarus.options)
-			  verbose?
-			  verbose-about-libraries?
-			  debug-mode-enabled?
-			  strict-r6rs
-			  descriptive-labels
-			  print-loaded-libraries
-			  cache-compiled-libraries
-			  tagged-language.rhs-tag-propagation?
-			  tagged-language.datums-as-operators?
-			  tagged-language.setter-forms?
-			  tagged-language?
-			  vicare-built-with-arguments-validation-enabled)
-		    (vicare-built-with-arguments-validation-enabled
-		     enable-arguments-validation?))
+    (prefix (rename (ikarus.options)
+		    (vicare-built-with-arguments-validation-enabled enable-arguments-validation?))
 	    option.)
     (ikarus library-utils)
     (only (ikarus.posix)
@@ -193,6 +181,16 @@
 	     "*** Vicare warning: library ~s is stale; file ~s will be \
               recompiled from source.\n"
 	     name filename)))
+
+(define (library-debug-message template . args)
+  (when (option.print-debug-messages?)
+    ;;We do not want an exception from the I/O layer to ruin things.
+    (guard (E (else (void)))
+      (let ((P (current-error-port)))
+	(apply fprintf P (string-append "vicare: " template "\n") args)
+	(flush-output-port P)))))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax define-record
   (syntax-rules ()

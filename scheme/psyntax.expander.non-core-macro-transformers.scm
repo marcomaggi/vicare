@@ -4272,10 +4272,7 @@
     (unless (string? filename.str)
       (stx-error filename-stx "expected string as include file pathname"))
     (receive (pathname contents)
-	;;FIXME Why in  fuck I cannot use the  parameter here?!?  (Marco
-	;;Maggi; Tue Feb 11, 2014)
-	(default-include-loader #;(current-include-loader)
-	  filename.str verbose? synner)
+	((current-include-loader) filename.str verbose? synner)
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (internal-body

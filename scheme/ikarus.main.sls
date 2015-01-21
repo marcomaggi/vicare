@@ -43,7 +43,6 @@
 		  least-fixnum
 
 		  load-r6rs-script
-		  load-and-serialize-source-library
 		  load
 		  $struct-guardian
 		  struct-guardian-logger
@@ -52,17 +51,8 @@
 		  record-guardian-logger
 		  record-guardian-log
 		  expand-top-level)
-    (prefix (ikarus startup)
-	    config.)
-    (prefix (only (ikarus.options)
-		  verbose?
-		  debug-mode-enabled?
-		  print-loaded-libraries
-		  cache-compiled-libraries
-		  report-errors-at-runtime
-		  strict-r6rs
-		  descriptive-labels)
-	    option.)
+    (prefix (ikarus startup) config.)
+    (prefix (ikarus.options) option.)
     (prefix (only (ikarus.compiler)
 		  optimize-level
 		  $generate-debug-calls
@@ -71,8 +61,9 @@
 		  $open-mvcalls
 		  $source-optimizer-passes-count)
 	    compiler.)
-    (only (ikarus.debugger)
-	  guarded-start)
+    (prefix (only (ikarus.debugger)
+		  guarded-start)
+	    debugger.)
     (prefix (only (psyntax.expander)
 		  expand-top-level
 		  initialise-type-spec-for-built-in-object-types
@@ -80,8 +71,7 @@
 	    psyntax.)
     (prefix (only (psyntax.library-manager)
 		  current-library-expander
-		  source-code-location
-		  current-library-locator)
+		  source-code-location)
 	    psyntax.)
     (only (ikarus.reader)
 	  read-source-file
@@ -90,23 +80,14 @@
 	  $initialize-symbol-table!)
     (only (ikarus.strings-table)
 	  $initialize-interned-strings-table!)
-    (prefix (only (ikarus load)
-		  load
-		  load-r6rs-script
-		  compile-r6rs-script
-		  run-compiled-program
-		  load-and-serialize-source-library
-		  fasl-directory
-		  fasl-search-path
-		  library-path
-		  library-extensions
-		  compile-time-library-locator
-		  run-time-library-locator
-		  source-library-locator)
-	    load.)
+    (prefix (ikarus load) load.)
+    (prefix (only (ikarus library-utils)
+		  init-search-paths-and-directories)
+	    libutils.)
     (prefix (only (ikarus.posix)
 		  getenv
-		  real-pathname)
+		  real-pathname
+		  split-search-path-string)
 	    posix.)
     (only (vicare system $structs)
 	  $struct-ref
@@ -134,14 +115,14 @@
   (%error-and-exit "option --no-rcfile is invalid when used along with --rcfile"))
 
 (define-auxiliary-syntaxes
-  serialize?
+  serialise?
   run?)
 
 (define-syntax load-r6rs-script
-  (syntax-rules (serialize? run?)
-    ((_ ?filename (serialize? ?ser) (run? ?run))
+  (syntax-rules (serialise? run?)
+    ((_ ?filename (serialise? ?ser) (run? ?run))
      (load.load-r6rs-script ?filename ?ser ?run))
-    ((_ ?filename (serialize? ?ser) (run? ?run))
+    ((_ ?filename (serialise? ?ser) (run? ?run))
      (load.load-r6rs-script ?filename ?ser ?run))
     ))
 
@@ -203,17 +184,26 @@
 		;If  true: avoid  printing the  greetings message  when starting  the
 		;REPL.
 
-   search-path
+   library-source-search-path
 		;Null or a  list of strings representing  directory names: additional
 		;locations in which to search for libraries.
 
-   fasl-search-path
+   library-binary-search-path
 		;Null or a  list of strings representing  directory names: additional
 		;locations in which to search for FASL files.
 
-   fasl-directory
+   library-cache-search-path
+		;Null  or  a  list   of  strings  representing  directory  pathnames:
+		;additional locations  in which  to search for  library automatically
+		;compiled from installed sources.
+
+   cache-directory
 		;False of a  string representing the initial value  for the parameter
-		;FASL-DIRECTORY.
+		;COMPILED-LIBRARIES-CACHE-DIRECTORY.
+
+   store-directory
+		;False of a  string representing the initial value  for the parameter
+		;COMPILED-LIBRARIES-STORE-DIRECTORY.
 
    more-file-extensions
 		;Turn on  search for more  library file extension  than ".vicare.sls"
@@ -234,11 +224,14 @@
 (define-inline (run-time-config-eval-codes-register! cfg pathname)
   (set-run-time-config-eval-codes! cfg (cons pathname (run-time-config-eval-codes cfg))))
 
-(define-inline (run-time-config-search-path-register! cfg pathname)
-  (set-run-time-config-search-path! cfg (cons pathname (run-time-config-search-path cfg))))
+(define-inline (run-time-config-library-source-search-path-register! cfg pathname)
+  (set-run-time-config-library-source-search-path! cfg (cons pathname (run-time-config-library-source-search-path cfg))))
 
-(define-inline (run-time-config-fasl-search-path-register! cfg pathname)
-  (set-run-time-config-fasl-search-path! cfg (cons pathname (run-time-config-fasl-search-path cfg))))
+(define-inline (run-time-config-library-binary-search-path-register! cfg pathname)
+  (set-run-time-config-library-binary-search-path! cfg (cons pathname (run-time-config-library-binary-search-path cfg))))
+
+(define-inline (run-time-config-library-cache-search-path-register! cfg pathname)
+  (set-run-time-config-library-cache-search-path! cfg (cons pathname (run-time-config-library-cache-search-path cfg))))
 
 (define (run-time-config-rcfiles-register! cfg new-rcfile)
   (let ((rcfiles (run-time-config-rcfiles cfg)))
@@ -272,9 +265,9 @@
 	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
-	      (CFG.SEARCH-PATH		(%dot-id ".search-path"))
-	      (CFG.FASL-SEARCH-PATH	(%dot-id ".fasl-search-path"))
-	      (CFG.FASL-DIRECTORY	(%dot-id ".fasl-directory"))
+	      (CFG.LIBRARY-SOURCE-SEARCH-PATH	(%dot-id ".library-source-search-path"))
+	      (CFG.LIBRARY-BINARY-SEARCH-PATH	(%dot-id ".library-binary-search-path"))
+	      (CFG.STORE-DIRECTORY	(%dot-id ".store-directory"))
 	      (CFG.MORE-FILE-EXTENSIONS	(%dot-id ".more-file-extensions"))
 	      (CFG.RAW-REPL		(%dot-id ".raw-repl"))
 	      (CFG.OUTPUT-FILE		(%dot-id ".output-file")))
@@ -328,26 +321,26 @@
 		    ((set! _ ?val)
 		     (set-run-time-config-no-greetings! ?cfg ?val))))
 
-		  (CFG.SEARCH-PATH
+		  (CFG.LIBRARY-SOURCE-SEARCH-PATH
 		   (identifier-syntax
 		    (_
-		     (run-time-config-search-path ?cfg))
+		     (run-time-config-library-source-search-path ?cfg))
 		    ((set! _ ?val)
-		     (set-run-time-config-search-path! ?cfg ?val))))
+		     (set-run-time-config-library-source-search-path! ?cfg ?val))))
 
-		  (CFG.FASL-SEARCH-PATH
+		  (CFG.LIBRARY-BINARY-SEARCH-PATH
 		   (identifier-syntax
 		    (_
-		     (run-time-config-fasl-search-path ?cfg))
+		     (run-time-config-library-binary-search-path ?cfg))
 		    ((set! _ ?val)
-		     (set-run-time-config-fasl-search-path! ?cfg ?val))))
+		     (set-run-time-config-library-binary-search-path! ?cfg ?val))))
 
-		  (CFG.FASL-DIRECTORY
+		  (CFG.STORE-DIRECTORY
 		   (identifier-syntax
 		    (_
-		     (run-time-config-fasl-directory ?cfg))
+		     (run-time-config-store-directory ?cfg))
 		    ((set! _ ?val)
-		     (set-run-time-config-fasl-directory! ?cfg ?val))))
+		     (set-run-time-config-store-directory! ?cfg ?val))))
 
 		  (CFG.MORE-FILE-EXTENSIONS
 		   (identifier-syntax
@@ -398,9 +391,11 @@
 			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
-			  '()		;search-path
-			  '()		;fasl-search-path
-			  #f		;fasl-directory
+			  '()		;library-source-search-path
+			  '()		;library-binary-search-path
+			  '()		;library-cache-search-path
+			  #f		;cache-directory
+			  #f		;store-directory
 			  #f		;more-file-extensions
 			  #f		;raw-repl
 			  #f		;output-file
@@ -581,20 +576,28 @@
 	   (set-run-time-config-raw-repl! cfg #t)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--cache-compiled-libraries")
-	   (option.cache-compiled-libraries #t)
+	  ((%option= "--cache-libraries")
+	   (option.cache-compiled-libraries? #t)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--no-cache-compiled-libraries")
-	   (option.cache-compiled-libraries #f)
+	  ((%option= "--no-cache-libraries")
+	   (option.cache-compiled-libraries? #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--print-loaded-libraries")
-	   (option.print-loaded-libraries #t)
+	   (option.print-loaded-libraries? #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-print-loaded-libraries")
-	   (option.print-loaded-libraries #f)
+	   (option.print-loaded-libraries? #f)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--debug-messages")
+	   (option.print-debug-messages? #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-debug-messages")
+	   (option.print-debug-messages? #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "-v" "--verbose")
@@ -668,25 +671,39 @@
 	       (run-time-config-load-libraries-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "-L" "--search-path")
+	  ((%option= "--source-path")
 	   (if (null? (cdr args))
-	       (%error-and-exit "-L or --search-path requires a directory name")
+	       (%error-and-exit "--source-path requires a directory name")
 	     (begin
-	       (run-time-config-search-path-register! cfg (cadr args))
+	       (run-time-config-library-source-search-path-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "-F" "--fasl-path")
+	  ((%option= "-L" "--library-path")
 	   (if (null? (cdr args))
-	       (%error-and-exit "--fasl-path requires a directory name")
+	       (%error-and-exit "--library-path requires a directory name")
 	     (begin
-	       (run-time-config-fasl-search-path-register! cfg (cadr args))
+	       (run-time-config-library-binary-search-path-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "--fasl-directory")
+	  ((%option= "-C" "--cache-path")
 	   (if (null? (cdr args))
-	       (%error-and-exit "--fasl-directory requires a directory name")
+	       (%error-and-exit "--cache-path requires a directory name")
 	     (begin
-	       (set-run-time-config-fasl-directory! cfg (cadr args))
+	       (run-time-config-library-cache-search-path-register! cfg (cadr args))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "--cache-directory")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--cache-directory requires a directory name")
+	     (begin
+	       (set-run-time-config-cache-directory! cfg (cadr args))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "--store-directory")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--store-directory requires a directory name")
+	     (begin
+	       (set-run-time-config-store-directory! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "--prompt")
@@ -699,7 +716,7 @@
 	   (if (null? (cdr args))
 	       (%error-and-exit "--library-locator requires a locator name")
 	     (let ((name (cadr args)))
-	       (psyntax.current-library-locator
+	       (load.current-library-locator
 		(cond ((string=? name "run-time")
 		       load.run-time-library-locator)
 		      ((string=? name "compile-time")
@@ -771,6 +788,13 @@
 		    (next-option (cdr args) k))))))))
 
 
+;;;; greetings screen
+
+(define (%print-greetings cfg)
+  (with-run-time-config (cfg)
+    (unless cfg.no-greetings
+      (print-greetings-screen))))
+
 (define (print-greetings-screen)
   ;;Print text to give informations at the start of the REPL.
   ;;
@@ -951,20 +975,30 @@ Other options:
    --no-greetings
         Suppress greetings when entering the REPL.
 
-   -L DIRECTORY
-   --search-path DIRECTORY
+   -S DIRECTORY
+   --source-path DIRECTORY
         Add DIRECTORY  to the library  search path.  This option  can be
         used multiple times.
 
-   -F DIRECTORY
-   --fasl-path DIRECTORY
+   -L DIRECTORY
+   --library-path DIRECTORY
         Add DIRECTORY to the FASL search path.  This option can  be used
         multiple times.
 
-   --fasl-directory DIRECTORY
-        Select DIRECTORY  as top  pathname  under  which FASL  files are
-        stored when libraries  are compiled.  When used  multiple times:
-        the last one wins.
+   -C DIRECTORY
+   --cache-path DIRECTORY
+        Add DIRECTORY to the cache search path.  This option can be used
+        multiple times.
+
+   --cache-directory DIRECTORY
+        Select DIRECTORY as cache  directory pathname under which binary
+        libraries  files are  stored  when  automatically compiled  from
+        installed sources.  When used multiple times: the last one wins.
+
+   --store-directory DIRECTORY
+        Select  DIRECTORY as  pathname  under  which compiled  libraries
+        files are temporarily stored  before being installed.  When used
+        multiple times: the last one wins.
 
    --more-file-extensions
         Rather   than    searching   only   libraries   with   extension
@@ -1002,12 +1036,12 @@ Other options:
         Disable   garbage   collection integrity   checks.  This  is the
         default.
 
-   --cache-compiled-libraries
+   --cache-libraries
         Whenever a  library file is  loaded in source  form: compile and
-        serialize it in a FASL file in the selected FASL directory.
+        serialise it in a FASL file in the selected FASL directory.
 
-   --no-cache-compiled-libraries
-        Disables the effect of --cache-compiled-libraries.
+   --no-cache-libraries
+        Disables the effect of --cache-libraries.
 
    --print-loaded-libraries
         Whenever a library file is loaded print a message on the console
@@ -1015,6 +1049,13 @@ Other options:
 
    --no-print-loaded-libraries
         Disables the effect of --print-loaded-libraries.
+
+   --debug-messages
+        Be more verbose aboud undertaken actions.  This is for debugging
+        purposes.
+
+   --no-debug-messages
+        Disables the effect of --debug-messages.
 
    --report-errors-at-runtime
         When possible  and meaningful:  report errors at  runtime rather
@@ -1104,65 +1145,21 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (flush-output-port (current-output-port)))
 
 
-(define (init-library-path cfg)
-  (define (%prefix ext ls)
-    (append (map (lambda (x)
-		   (string-append ext x))
-	      ls)
-	    ls))
-  (with-run-time-config (cfg)
-    (load.library-path (append (reverse cfg.search-path)
-			       (cond ((posix.getenv "VICARE_LIBRARY_PATH")
-				      => split-path)
-				     (else '()))))
-    (when cfg.more-file-extensions
-      (load.library-extensions (%prefix "/main"
-					(%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
+;;;; code evaluation driver
 
-(define (init-fasl-search-path cfg)
-  (with-run-time-config (cfg)
-    (when cfg.fasl-directory
-      (if (file-exists? cfg.fasl-directory)
-	  (load.fasl-directory (posix.real-pathname cfg.fasl-directory))
-	(error 'init-fasl-search-path
-	  "invalid fasl directory pathname" cfg.fasl-directory)))
-    (load.fasl-search-path (append
-			       (reverse cfg.fasl-search-path)
-			       (cond ((posix.getenv "VICARE_FASL_PATH")
-				      => split-path)
-				     (else '()))
-			       (load.fasl-search-path)))))
+(define-syntax doit
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (start (lambda () ?body0 ?body ...)))))
 
-(define (split-path input-string)
-  ;;Convert  the  input  string  holding  a  search  pathname  as  colon
-  ;;separated  sequence into  a  list of  strings representing  absolute
-  ;;pathnames.  If  an input  pathname does not  exists: it  is silently
-  ;;discarded.
-  ;;
-  (define (nodata idx input-string ls)
-    (cond ((= idx (string-length input-string))
-	   ls)
-	  ((char=? #\: (string-ref input-string idx))
-	   (nodata (+ idx 1) input-string ls))
-	  (else
-	   (data (+ idx 1) input-string ls (list (string-ref input-string idx))))))
-  (define (data idx input-string ls accum)
-    (cond ((= idx (string-length input-string))
-	   (let ((name (list->string (reverse accum))))
-	     (if (file-exists? name)
-		 (cons (posix.real-pathname name) ls)
-	       ls)))
-	  ((char=? (string-ref input-string idx) #\:)
-	   (nodata (+ idx 1) input-string
-		   (let ((name (list->string (reverse accum))))
-		     (if (file-exists? name)
-			 (cons (posix.real-pathname name) ls)
-		       ls))))
-	  (else
-	   (data (+ idx 1) input-string ls (cons (string-ref input-string idx) accum)))))
-  (reverse (nodata 0 input-string '())))
+(define (start proc)
+  (if (compiler.$generate-debug-calls)
+      (debugger.guarded-start proc)
+    (proc)))
 
 
+;;;; before-the-main-action code evaluation procedures
+
 (define (load-rc-files-as-r6rs-scripts cfg)
   ;;Load  the  RC  files  as  R6RS scripts  and  discard  the  resulting
   ;;environment.
@@ -1177,12 +1174,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   (string-append "loading rc file " filename " failed"))
 			  E)))
 	  (lambda ()
-	    (load-r6rs-script filename (serialize? #f) (run? #t)))))
+	    (load-r6rs-script filename (serialise? #f) (run? #t)))))
     (with-run-time-config (cfg)
       (case cfg.rcfiles
 	((#t)
 	 (cond ((posix.getenv "VICARE_RC_FILES")
-		=> split-path)
+		=> posix.split-search-path-string)
 	       ((posix.getenv "HOME")
 		=> (lambda (home)
 		     (let ((f (string-append home "/.vicarerc")))
@@ -1194,29 +1191,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	 '())
 	(else
 	 cfg.rcfiles)))))
-
-
-(define-syntax doit
-  (syntax-rules ()
-    ((_ ?body0 ?body ...)
-     (start (lambda () ?body0 ?body ...)))))
-
-(define (start proc)
-  (if (compiler.$generate-debug-calls)
-      (guarded-start proc)
-    (proc)))
-
-(define (load-libraries cfg)
-  ;;Load the  library files selected  on the command line.   Notice that
-  ;;there is only one internal collection of loaded libraries.
-  ;;
-  (with-run-time-config (cfg)
-    (doit (for-each (lambda (source-filename)
-		      (for-each (lambda (library-form)
-				  (parametrise ((psyntax.source-code-location source-filename))
-				    ((psyntax.current-library-expander) library-form)))
-			(read-source-file source-filename)))
-	    cfg.load-libraries))))
 
 (define (evaluate-codes cfg)
   ;;Load and  eval selected code  files in the  interaction environment;
@@ -1236,14 +1210,27 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 			   "*** Vicare internal error: unknown evaluation code type" (car entry)))))
 	    cfg.eval-codes))))
 
-;;; --------------------------------------------------------------------
+(define (load-libraries cfg)
+  ;;Load the  library files selected  on the command line.   Notice that
+  ;;there is only one internal collection of loaded libraries.
+  ;;
+  (with-run-time-config (cfg)
+    (doit (for-each (lambda (source-filename)
+		      (for-each (lambda (library-form)
+				  (parametrise ((psyntax.source-code-location source-filename))
+				    ((psyntax.current-library-expander) library-form)))
+			(read-source-file source-filename)))
+	    cfg.load-libraries))))
+
+
+;;;; main action procedures
 
 (define (load-r6rs-program cfg)
   ;;Execute  the  selected main  script  as  R6RS  program.  Return  the
   ;;resulting environment.
   ;;
   (with-run-time-config (cfg)
-    (doit (load-r6rs-script cfg.script (serialize? #f) (run? #t)))))
+    (doit (load-r6rs-script cfg.script (serialise? #f) (run? #t)))))
 
 (define (run-compiled-program cfg)
   (with-run-time-config (cfg)
@@ -1257,38 +1244,59 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (compile-dependencies cfg)
   (with-run-time-config (cfg)
-    (doit (load-r6rs-script cfg.script (serialize? #t) (run? #f)))))
+    (doit (load-r6rs-script cfg.script (serialise? #t) (run? #f)))))
 
 (define (compile-program cfg)
   (with-run-time-config (cfg)
-    (doit (load.compile-r6rs-script cfg.script cfg.output-file))))
+    (doit (load.compile-source-program cfg.script cfg.output-file))))
 
 (define (compile-library cfg)
   (with-run-time-config (cfg)
-    (doit (load.load-and-serialize-source-library cfg.script cfg.output-file))))
+    (doit (load.compile-source-library cfg.script cfg.output-file))))
 
 (module (compile-something)
-
+  ;;Compile either  a program  or a library  depending on the  file extension  of the
+  ;;selected main file.
+  ;;
   (define* (compile-something cfg)
     (with-run-time-config (cfg)
-      (cond ((%string-suffix? cfg.script ".sls")
-	     (compile-library cfg))
-	    ((%string-suffix? cfg.script ".sps")
-	     (compile-program cfg))
-	    (else
-	     (raise
-	      (condition (make-who-condition __who__)
-			 (make-message-condition "cannot determine type of source file to compile (library or program)")
-			 (make-i/o-filename-error cfg.script)
-			 (make-irritants-condition (list cfg.script))))))))
+      (case-file-type-from-extension cfg.script
+	((library)
+	 (compile-library cfg))
+	((program)
+	 (compile-program cfg))
+	(else
+	 (raise
+	  (condition (make-who-condition __who__)
+		     (make-message-condition "cannot determine type of source file to compile (library or program)")
+		     (make-i/o-filename-error cfg.script)
+		     (make-irritants-condition (list cfg.script))))))))
 
-  (define (%string-suffix? str suffix)
-    (let ((str.len    (string-length str))
-	  (suffix.len (string-length suffix)))
-      (and (fx< suffix.len str.len)
-	   (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
+  (module (case-file-type-from-extension program library)
 
-  #| end of module |# )
+    (define-auxiliary-syntaxes program library)
+
+    (define-syntax case-file-type-from-extension
+      (syntax-rules (program library else)
+	((_ ?pathname
+	    ((library) . ?library-body)
+	    ((program) . ?program-body)
+	    (else      . ?else-body))
+	 (let ((pathname ?pathname))
+	   (cond ((%string-suffix? pathname ".sls")	. ?library-body)
+		 ((%string-suffix? pathname ".sps")	. ?program-body)
+		 (else					. ?else-body))))
+	))
+
+    (define (%string-suffix? str suffix)
+      (let ((str.len    (string-length str))
+	    (suffix.len (string-length suffix)))
+	(and (fx< suffix.len str.len)
+	     (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
+
+    #| end of module: CASE-FILE-TYPE-FROM-EXTENSION |# )
+
+  #| end of module: COMPILE-SOMETHING |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -1538,42 +1546,51 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (parse-command-line-arguments)
 
   (with-run-time-config (cfg)
-    (define-inline (%print-greetings)
-      (unless cfg.no-greetings
-	(print-greetings-screen)))
+    (execution-state-initialisation-according-to-command-line-options)
 
-    (init-library-path cfg)
-    (init-fasl-search-path cfg)
-    (psyntax.current-library-locator
-     ;;If  a library  locator has  already been  selected (perhaps  by a
-     ;;command  line option):  accept it.   Otherwise explicitly  select
-     ;;one.
-     (cond ((psyntax.current-library-locator))
-	   ((memq cfg.exec-mode '(compile-dependencies compile-library))
+    ;;If  a library  locator has  already been  selected (perhaps  by a  command line
+    ;;option): accept it.  Otherwise explicitly select one.
+    (load.current-library-locator
+     (cond ((load.current-library-locator))
+	   ((memq cfg.exec-mode '(compile-library compile-program compile compile-dependencies))
 	    load.compile-time-library-locator)
 	   (else
 	    load.run-time-library-locator)))
-    ;;When  the  execution mode  is  "compile  library dependencies"  or
-    ;;"compile  this library":  we  disable  caching compiled  libraries
-    ;;loaded in  source form; because  these options have  different and
-    ;;incompatible  ways  to produce  FASL  file  pathnames from  source
-    ;;libraries.
-    (when (memq cfg.exec-mode '(compile-dependencies compile-library))
-      (option.cache-compiled-libraries #f))
-    (load-rc-files-as-r6rs-scripts cfg)
-    (execution-state-initialisation-according-to-command-line-options)
 
-    (when (and (readline.readline-enabled?) (not cfg.raw-repl))
-      (cafe-input-port (readline.make-readline-input-port)))
+    ;;Initialise search paths and library directories.
+    ;;
+    ;;We  must initialise  first  the  library locator,  then  the  search paths  and
+    ;;directories.
+    ;;
+    (libutils.init-search-paths-and-directories (reverse cfg.library-source-search-path)
+						(reverse cfg.library-binary-search-path)
+						(reverse (run-time-config-library-cache-search-path cfg))
+						(run-time-config-cache-directory cfg)
+						cfg.store-directory
+						cfg.more-file-extensions)
 
+    ;;When  the execution  mode is  "compile library  dependencies" or  "compile this
+    ;;library or program": we disable caching  of compiled libraries loaded in source
+    ;;form; these options  have different and incompatible ways to  produce FASL file
+    ;;pathnames from source libraries.
+    ;; (when (memq cfg.exec-mode '(compile-dependencies compile-library compile-program compile))
+    ;;   (option.cache-compiled-libraries? #f))
+
+    ;;Initialise the command line arguments.
     (cond ((eq? 'repl cfg.exec-mode)
 	   (command-line-arguments (cons "*interactive*" cfg.program-options)))
 	  (cfg.script
 	   (command-line-arguments (cons cfg.script      cfg.program-options))))
 
+    (when (and (readline.readline-enabled?) (not cfg.raw-repl))
+      (cafe-input-port (readline.make-readline-input-port)))
+
+    ;;Evaluate code before the main action.
+    (load-rc-files-as-r6rs-scripts cfg)
     (load-libraries cfg)
     (evaluate-codes cfg)
 
+    ;;Perform the main action.
     (case cfg.exec-mode
       ((r6rs-script)
        (load-r6rs-program cfg))
@@ -1584,13 +1601,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((r6rs-repl)
        (let ((env (load-r6rs-program cfg)))
 	 (interaction-environment env)
-	 (%print-greetings)
+	 (%print-greetings cfg)
 	 (new-cafe (lambda (x)
 		     (doit (eval x env))))))
 
       ((compile-dependencies)
        (compile-dependencies cfg))
-
 
       ((compile-program)
        (compile-program cfg))
@@ -1601,7 +1617,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       ((compile-something)
        (compile-something cfg))
 
-
       ((script)
        (load-evaluated-script cfg))
 
@@ -1609,7 +1624,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (expand-program cfg))
 
       ((repl)
-       (%print-greetings)
+       (%print-greetings cfg)
        (new-cafe (lambda (x)
 		   (doit (eval x (interaction-environment))))))
 
@@ -1626,6 +1641,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'with-run-time-config 'scheme-indent-function 1)
-;;eval: (put '%execute 'scheme-indent-function 1)
+;;eval: (put 'with-run-time-config		'scheme-indent-function 1)
+;;eval: (put '%execute				'scheme-indent-function 1)
+;;eval: (put 'case-file-type-from-extension	'scheme-indent-function 1)
 ;;End:

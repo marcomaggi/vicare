@@ -171,9 +171,9 @@
 ;;;; prelude
 
 #!vicare
-;;NOTE  Libraries imported  here are  installed  in the  internal library  collection
+;;NOTE  Libraries imported  here  are  interned in  the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
-;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
+;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
   (prefix (ikarus.compiler) compiler.)
   #;(only (psyntax.expander) expand-library)
@@ -674,7 +674,7 @@
   ;;REQUIRED?  boolean.
   ;;
   ;;The  libraries  marked  as  VISIBLE?   are listed  by  default  by  the  function
-  ;;INSTALLED-LIBRARIES.
+  ;;INTERNED-LIBRARIES.
   ;;
   ;;The libraries  marked as REQUIRED?   are required to build  a new boot  image, so
   ;;they must be already  implemented by the old boot image;  for each library marked
@@ -978,8 +978,6 @@
     (apropos					v $language)
     (current-primitive-locations		$boot)
     (current-library-collection			$boot)
-    (library-name				$boot $libraries)
-    (find-library-by-name			$boot $libraries)
 
 ;;; ------------------------------------------------------------
 ;;; symbols stuff
@@ -2666,9 +2664,16 @@
     (file-bytevector-pathname?			$posix)
     (file-absolute-pathname?			$posix)
     (file-relative-pathname?			$posix)
+    (file-string-absolute-pathname?		$posix)
+    (file-string-relative-pathname?		$posix)
+    (file-bytevector-absolute-pathname?		$posix)
+    (file-bytevector-relative-pathname?		$posix)
     (file-colon-search-path?			$posix)
     (file-string-colon-search-path?		$posix)
     (file-bytevector-colon-search-path?		$posix)
+    (list-of-pathnames?				$posix)
+    (list-of-string-pathnames?			$posix)
+    (list-of-bytevector-pathnames?		$posix)
     (file-modification-time			$posix)
     (split-pathname-root-and-tail		$posix)
     (search-file-in-environment-path		$posix)
@@ -3036,11 +3041,11 @@
 ;;; --------------------------------------------------------------------
 ;;; library infrastructure
 
+    (current-library-expander				$libraries)
+
     (library?						$libraries)
     (library-uid					$libraries)
-;;; These are exported above.
-;;; (library-name					$libraries)
-;;; (find-library-by-name				$libraries)
+    (library-name					$libraries $boot)
     (library-imp-lib*					$libraries)
     (library-vis-lib*					$libraries)
     (library-inv-lib*					$libraries)
@@ -3055,24 +3060,66 @@
     (library-visible?					$libraries)
     (library-source-file-name				$libraries)
     (library-option*					$libraries)
+    (library-loaded-from-source-file?			$libraries)
+    (library-loaded-from-binary-file?			$libraries)
+    (library-descriptor					$libraries)
+    (library-descriptor?				$libraries)
+    (library-descriptor-uid				$libraries)
+    (library-descriptor-name				$libraries)
 
-    (library-path					$libraries)
+    (find-library-by-name				$libraries $boot)
+    (find-library-by-reference				$libraries $boot)
+    (find-library-by-descriptor				$libraries)
+    (find-library-in-collection-by-predicate		$libraries)
+    (find-library-in-collection-by-name			$libraries)
+    (find-library-in-collection-by-reference		$libraries)
+    (find-library-in-collection-by-descriptor		$libraries)
+
+    (interned-libraries					$libraries)
+    (unintern-library					$libraries)
+    (visit-library					$libraries)
+    (invoke-library					$libraries)
+
+    (current-library-loader				$libraries)
+    (default-library-loader				$libraries)
+    (current-source-library-loader			$libraries)
+    (current-binary-library-loader			$libraries)
+
+    (library-source-search-path				$libraries)
+    (library-binary-search-path				$libraries)
+    (compiled-libraries-cache-directory			$libraries)
+    (compiled-libraries-store-directory			$libraries)
+
     (library-extensions					$libraries)
-    (fasl-directory					$libraries)
-    (fasl-search-path					$libraries)
-    (fasl-path						$libraries)
-    (fasl-stem+extension				$libraries)
+    (library-name->filename-stem			$libraries)
+    (library-reference->filename-stem			$libraries)
+    (directory+library-stem->library-binary-pathname	$libraries)
+    (directory+library-stem->library-source-pathname	$libraries)
+    (library-name->library-binary-pathname-in-store-directory			$libraries)
+    (library-reference->library-binary-pathname-in-store-directory		$libraries)
+    (library-source-pathname->library-binary-pathname-in-cache-directory	$libraries)
+    (library-source-pathname->library-stem-pathname				$libraries)
+    (library-source-pathname->library-binary-tail-pathname			$libraries)
+    (program-source-pathname->program-binary-pathname	$libraries)
 
     (current-library-locator				$libraries)
     (run-time-library-locator				$libraries)
     (compile-time-library-locator			$libraries)
     (source-library-locator				$libraries)
-    (current-source-library-file-locator		$libraries)
-    (current-binary-library-file-locator		$libraries)
-    (default-source-library-file-locator		$libraries)
-    (default-binary-library-file-locator		$libraries)
-    (installed-libraries				$libraries)
-    (uninstall-library					$libraries)
+
+    (current-library-source-search-path-scanner		$libraries)
+    (current-library-binary-search-path-scanner		$libraries)
+    (current-library-cache-search-path-scanner		$libraries)
+    (default-library-source-search-path-scanner		$libraries)
+    (default-library-binary-search-path-scanner		$libraries)
+    (default-library-cache-search-path-scanner		$libraries)
+
+    (current-include-loader				$libraries)
+    (default-include-loader				$libraries)
+    (default-include-file-locator			$libraries)
+    (default-include-file-loader			$libraries)
+    (current-include-file-locator			$libraries)
+    (current-include-file-loader			$libraries)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
@@ -3934,7 +3981,7 @@
   ;;The  initial value  is a  list  of LIBRARY  structures  built by  adding all  the
   ;;libraries  in LIBRARY-LEGEND  which are  marked as  REQUIRED?.  Notice  that such
   ;;structures  are built  by FIND-LIBRARY-BY-NAME,  which means  that the  libraries
-  ;;marked as  REQUIRED?  must be  already installed in  the boot image  running this
+  ;;marked as  REQUIRED?  must  be already  interned in the  boot image  running this
   ;;program.
   ;;
   ;;To add  a REQUIRED? library  to a boot  image: first we have  to add an  entry to
@@ -4287,7 +4334,7 @@
       ;;  appropriate  function.  This way  the compile  can retrieve the  loc gensym
       ;;  from the primitive function symbol name.
       ;;
-      ;;* Installs all the libraries composing the boot image.
+      ;;* Interns all the libraries composing the boot image.
       ;;
       ;;Return 2 values: the library name and the library invoke-code.
       ;;
@@ -4301,7 +4348,7 @@
 		       system-value-gensym
 		       system-label-gensym)
 	     (only (psyntax.library-manager)
-		   install-library)
+		   intern-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
 	     ;;These   gensyms   are   fresh    ones   generated   by   the   library
@@ -4326,9 +4373,9 @@
 	       (lambda (func-name.lab)
 	   	 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
 	     ',export-subst)
-	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
+	   ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
-		    (build-install-library-form legend-entry export-subst export-env))
+		    (build-intern-library-form legend-entry export-subst export-env))
 	       library-legend)))
 
       ;;Logging this  symbolic expression  gives some insight  about what  happens at
@@ -4342,8 +4389,8 @@
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
-    (define (build-install-library-form legend-entry export-subst export-env)
-      ;;Return a sexp representing a call to the function INSTALL-LIBRARY.
+    (define (build-intern-library-form legend-entry export-subst export-env)
+      ;;Return a sexp representing a call to the function INTERN-LIBRARY.
       ;;
       ;;Each entry from the LIBRARY-LEGEND has the format:
       ;;
@@ -4373,13 +4420,13 @@
 	     (option*		'()))
 	;;Datums embedded in this symbolic expression are quoted to allow the sexp to
 	;;be handed to EVAL (I guess; Marco Maggi, Aug 26, 2011).
-	`(install-library ',id
-			  (quote ,(append fullname (list version)))
-			  '() ;; import-libs
-			  '() ;; visit-libs
-			  '() ;; invoke-libs
-			  ',subst ',env void void '#f '#f '#f '() ',visible?
-			  (quote ,source-file-name) (quote ,option*))))
+	`(intern-library ',id
+			 (quote ,(append fullname (list version)))
+			 '()  ;; import-libs
+			 '()  ;; visit-libs
+			 '()  ;; invoke-libs
+			 ',subst ',env void void '#f '#f '#f '() ',visible?
+			 (quote ,source-file-name) (quote ,option*))))
 
     (define (get-export-subset nickname export-subst)
       ;;Given the alist of substitutions EXPORT-SUBST, build and return the subset of
@@ -4414,7 +4461,7 @@
   (define (boot-library-expand library-sexp)
     ;;This function  is used to expand  the libraries composing the  boot image.  The
     ;;LIBRARY form in the given symbolic expression is fully expanded and the library
-    ;;is installed in the internal collection.
+    ;;is interned in the internal collection.
     ;;
     ;;When bootstrapping  the system: the visit-code  is not (and cannot  be) used in
     ;;the "next" system, so we drop it.

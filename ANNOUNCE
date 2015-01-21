@@ -54,11 +54,14 @@ Lots of backwards incompatibilities... life is hard!
 
 * BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
   completely overhauled.  There are too  many changes to list them here,
-  but here the most important stuff:
+  but here, we must read  the relevant documentation; system environment
+  variable names and command line option names have changed too (sorry).
+  The most important stuff:
 
   - Version numbers are supported.  If,  while scanning the search path,
     a  library is  loaded  and its  version number  does  not match  the
-    version reference: that library is discarded and the search goes on.
+    requested  version  reference: that  library  is  discarded and  the
+    search goes on.
 
   - The library (vicare) now has a version number; the full library name
     is:
@@ -94,8 +97,8 @@ Lots of backwards incompatibilities... life is hard!
 
        $(prefix)/lib64/vicare-scheme
 
-  See the documentation  node "using libraries".  Most  likely this code
-  needs to be ironed out.
+  See the  documentation nodes  "using libraries" and  "libutils".  Most
+  likely this code needs to be ironed out.
 
 * BACKWARDS INCOMPATIBILITY  The bindings that deal  with library names,
   library references, search paths and  related stuff have been moved to
