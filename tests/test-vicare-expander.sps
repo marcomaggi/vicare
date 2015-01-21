@@ -1465,6 +1465,33 @@
   #t)
 
 
+(parametrise ((check-test-name	'named-let))
+
+  (check
+      (with-result
+       (let loop ((i 0))
+	 (if (= i 5)
+	     i
+	   (begin
+	     (add-result i)
+	     (loop (+ 1 i))))))
+    => '(5 (0 1 2 3 4)))
+
+  (check	;break
+      (with-result
+       (let loop ((i 0))
+	 (if (= i 5)
+	     i
+	   (begin
+	     (when (= i 3)
+	       (break 123))
+	     (add-result i)
+	     (loop (+ 1 i))))))
+    => '(123 (0 1 2)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'return))
 
   (define-syntax define-returnable

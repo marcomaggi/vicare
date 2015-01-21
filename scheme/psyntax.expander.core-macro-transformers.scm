@@ -430,11 +430,25 @@
 
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       ;;NOTE We want an implementation in which:  when BREAK is not used, the escape
+       ;;function is  never referenced, so  the compiler can remove  CALL/CC.  Notice
+       ;;that here binding  CONTINUE makes no sense, because calling  ?RECUR does the
+       ;;job.
        (receive (recur.id recur.tag)
 	   (parse-tagged-identifier-syntax ?recur)
 	 (chi-expr (bless
 		    `(internal-body
-		       (define (,?recur . ,?lhs*) ,?body . ,?body*)
+		       (define (,?recur . ,?lhs*)
+			 (call/cc
+			     (lambda (escape)
+			       (fluid-let-syntax
+				   ((break    (syntax-rules ()
+						((_ . ?retvals)
+						 (escape . ?retvals))))
+				    (continue (lambda (stx)
+						(syntax-violation 'continue
+						  "invalid use of CONTINUE in named let"))))
+				 ,?body . ,?body*))))
 		       (,recur.id . ,?rhs*)))
 		   lexenv.run lexenv.expand)))
 

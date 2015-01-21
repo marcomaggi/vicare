@@ -708,8 +708,8 @@
 	    (loop2 (cdr sp)))))))
 
   ;; -- reflexive and transitive closure
-  (let loop ((continue #t))
-    (when continue
+  (let loop ((continue? #t))
+    (when continue?
       (let loop2 ((i 0) (cont #f))
 	(if (>= i nvars)
 	    (loop cont)

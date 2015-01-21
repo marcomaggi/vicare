@@ -3326,6 +3326,9 @@
   (syntax-match expr-stx (while until)
 
     ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
     ((_ ?body (while ?test))
      (bless
       `(call/cc
@@ -3343,6 +3346,9 @@
 		 (loop)))))))
 
     ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
     ((_ ?body (until ?test))
      (bless
       `(call/cc
@@ -3360,6 +3366,9 @@
 		 (loop)))))))
 
     ;;This is the R6RS syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
@@ -3396,6 +3405,9 @@
   ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
   ;;that must be further expanded.
   ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
      (bless
@@ -3419,6 +3431,9 @@
   ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
   ;;that must be further expanded.
   ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
      (bless
@@ -3441,6 +3456,9 @@
   ;;Transformer function used to expand Vicare's  FOR macros from the top-level built
   ;;in environment.   Expand the contents  of EXPR-STX;  return a syntax  object that
   ;;must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
