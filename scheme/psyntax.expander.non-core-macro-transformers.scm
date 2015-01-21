@@ -3330,38 +3330,34 @@
      (bless
       `(call/cc
 	   (lambda (escape)
-	     (letrec ((loop (lambda ()
-			      (call/cc
-				  (lambda (next-iteration)
-				    (fluid-let-syntax
-					((break    (syntax-rules ()
-						     ((_) (escape (void)))))
-					 (continue (syntax-rules ()
-						     ((_) (next-iteration)))))
-				      ,?body
-				      (unless ,?test
-					(break)))))
-			      (loop))))
-	       (loop))))))
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax
+			       ((break    (syntax-rules ()
+					    ((_) (escape (void)))))
+				(continue (syntax-rules ()
+					    ((_) (next-iteration #t)))))
+			     ,?body
+			     ,?test)))
+		 (loop)))))))
 
     ;;This is an extended Vicare syntax.
     ((_ ?body (until ?test))
      (bless
       `(call/cc
 	   (lambda (escape)
-	     (letrec ((loop (lambda ()
-			      (call/cc
-				  (lambda (next-iteration)
-				    (fluid-let-syntax
-					((break    (syntax-rules ()
-						     ((_) (escape (void)))))
-					 (continue (syntax-rules ()
-						     ((_) (next-iteration)))))
-				      ,?body
-				      (when ,?test
-					(break)))))
-			      (loop))))
-	       (loop))))))
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax
+			       ((break    (syntax-rules ()
+					    ((_) (escape (void)))))
+				(continue (syntax-rules ()
+					    ((_) (next-iteration #t)))))
+			     ,?body
+			     (not ,?test))))
+		 (loop)))))))
 
     ;;This is the R6RS syntax.
     ((_ (?binding* ...)
@@ -3369,25 +3365,26 @@
 	?command* ...)
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
-	(receive (id* tag*)
-	    (parse-list-of-tagged-bindings ?var* expr-stx)
-	  (bless
-	   `(call/cc
-		(lambda (escape)
-		  (letrec ((loop (lambda ,?var*
-				   (if ,?test
-				       ,(if (null? ?expr*)
-					    '(void)
-					  `(begin . ,?expr*))
-				     (fluid-let-syntax
-					 ((break    (syntax-rules ()
-						      ((_) (escape))))
-					  (continue (syntax-rules ()
-						      ((_) (loop)))))
-				       (begin
-					 ,@?command*
-					 (loop . ,?step*)))))))
-		    (loop . ,?init*)))))))
+	(bless
+	 `(call/cc
+	      (lambda (escape)
+		(letrec ((loop (lambda ,?var*
+				 (if (call/cc
+					 (lambda (next-iteration)
+					   (if ,?test
+					       #f
+					     (fluid-let-syntax
+						 ((break    (syntax-rules ()
+							      ((_ . ?retvals)
+							       (escape . ?retvals))))
+						  (continue (syntax-rules ()
+							      ((_) (next-iteration #t)))))
+					       (begin ,@?command* #t)))))
+				     (loop . ,?step*)
+				   ,(if (null? ?expr*)
+					'(void)
+				      `(begin . ,?expr*))))))
+		  (loop . ,?init*))))))
        ))
     ))
 
@@ -3404,19 +3401,17 @@
      (bless
       `(call/cc
 	   (lambda (escape)
-	     (letrec ((loop (lambda ()
-			      (call/cc
-				  (lambda (next-iteration)
-				    (fluid-let-syntax
-					((break    (syntax-rules ()
-						     ((_) (escape (void)))))
-					 (continue (syntax-rules ()
-						     ((_) (next-iteration)))))
-				      (unless ,?test
-					(break))
-				      ,@?body*)))
-			      (loop))))
-	       (loop))))))
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax ((break    (syntax-rules ()
+							  ((_) (escape (void)))))
+					      (continue (syntax-rules ()
+							  ((_) (next-iteration #t)))))
+			     (if ,?test
+				 (begin ,@?body* #t)
+			       #f))))
+		 (loop)))))))
     ))
 
 (define (until-macro expr-stx)
@@ -3429,19 +3424,17 @@
      (bless
       `(call/cc
 	   (lambda (escape)
-	     (letrec ((loop (lambda ()
-			      (call/cc
-				  (lambda (next-iteration)
-				    (fluid-let-syntax
-					((break    (syntax-rules ()
-						     ((_) (escape (void)))))
-					 (continue (syntax-rules ()
-						     ((_) (next-iteration)))))
-				      (when ,?test
-					(break))
-				      ,@?body*)))
-			      (loop))))
-	       (loop))))))
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax ((break    (syntax-rules ()
+							  ((_) (escape (void)))))
+					      (continue (syntax-rules ()
+							  ((_) (next-iteration #t)))))
+			     (if ,?test
+				 #f
+			       (begin ,@?body* #t)))))
+		 (loop)))))))
     ))
 
 (define (for-macro expr-stx)
@@ -3452,23 +3445,11 @@
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
      (bless
-      `(call/cc
-	   (lambda (escape)
-	     ,?init
-	     (letrec ((loop (lambda ()
-			      (call/cc
-				  (lambda (next-iteration)
-				    (fluid-let-syntax
-					((break    (syntax-rules ()
-						     ((_) (escape (void)))))
-					 (continue (syntax-rules ()
-						     ((_) (next-iteration)))))
-				      (unless ,?test
-					(break))
-				      ,@?body*
-				      ,?incr)))
-			      (loop))))
-	       (loop))))))
+      `(internal-body
+	 ,?init
+	 (while ,?test
+	   ,@?body*
+	   ,?incr))))
     ))
 
 

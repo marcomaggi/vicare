@@ -908,14 +908,17 @@
        (call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_) (escape (void)))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ?test
-		     (begin
-		       ?body ...
-		       (loop))
-		   (escape (void))))))))
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax
+			       ((break    (syntax-rules ()
+					    ((_) (escape (void)))))
+				(continue (syntax-rules ()
+					    ((_) (next-iteration #t)))))
+			     (if ?test
+				 (begin ?body ... #t)
+			       #f))))
+		 (loop))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -1024,14 +1027,16 @@
        (call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_) (escape (void)))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ?test
-		     (escape (void))
-		   (begin
-		     ?body ...
-		     (loop))))))))
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax ((break    (syntax-rules ()
+							  ((_) (escape (void)))))
+					      (continue (syntax-rules ()
+							  ((_) (next-iteration #t)))))
+			     (if ?test
+				 #f
+			       (begin ?body ... #t)))))
+		 (loop))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -1334,6 +1339,58 @@
 
 (parametrise ((check-test-name	'do))
 
+;;; standard do
+
+  (check
+      (with-result
+       (do ((i 5 (+ -1 i)))
+	   ((zero? i)
+	    'done)
+	 (add-result i)))
+    => '(done (5 4 3 2 1)))
+
+  (check	;binding with no step
+      (with-result
+       (do ((j 123)
+	    (i 5 (+ -1 i)))
+	   ((zero? i)
+	    j)
+	 (add-result i)))
+    => '(123 (5 4 3 2 1)))
+
+  (check	;break
+      (with-result
+       (do ((i 0 (+ 1 i)))
+	   ((= i 5)
+	    i)
+	 (add-result i)
+	 (when (= i 3)
+	   (break 123))))
+    => '(123 (0 1 2 3)))
+
+  (check	;break
+      (with-result
+       (do ((i 0 (+ 1 i)))
+	   ((= i 5)
+	    i)
+	 (add-result i)
+	 (when (= i 3)
+	   (break 123))))
+    => '(123 (0 1 2 3)))
+
+  (check	;continue
+      (with-result
+       (do ((i 0 (+ 1 i)))
+	   ((= i 5)
+	    i)
+	 (when (= i 3)
+	   (continue))
+	 (add-result i)))
+    => '(5 (0 1 2 4)))
+
+;;; --------------------------------------------------------------------
+;;; do ... while
+
   (check
       (with-result
        (define i 5)
@@ -1369,6 +1426,7 @@
     => `(,(void) (4 3)))
 
 ;;; --------------------------------------------------------------------
+;;; do ... until
 
   (check
       (with-result
