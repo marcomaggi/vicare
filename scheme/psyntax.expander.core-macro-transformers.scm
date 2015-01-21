@@ -439,6 +439,8 @@
 	 (chi-expr (bless
 		    `(internal-body
 		       (define (,?recur . ,?lhs*)
+			 ;;FIXME  We do  not want  "__who__" and  RETURN to  be bound
+			 ;;here.  (Marco Maggi; Wed Jan 21, 2015)
 			 (call/cc
 			     (lambda (escape)
 			       (fluid-let-syntax
