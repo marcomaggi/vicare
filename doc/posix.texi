@@ -309,7 +309,12 @@ be a string holding the command to execute.  If successful return the
 termination status of the executed process, @ref{posix status} for
 details; if an error occurs: an exception is raised.
 
+Example that runs @command{ls}:
+
 @example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
 (system "ls -l")
 @end example
 @end defun
@@ -368,6 +373,15 @@ occurred, an exception is raised.
 
 Before executing the command call
 @func{close-ports-in-close-on-exec-mode}.
+
+Example that runs @command{ls}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execv "/bin/ls" '("ls" "-l"))
+@end example
 @end defun
 
 
@@ -393,6 +407,15 @@ the function returns: an error has occurred, an exception is raised.
 
 Before executing the command call
 @func{close-ports-in-close-on-exec-mode}.
+
+Example that runs @command{ls}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execvp "ls" '("ls" "-l"))
+@end example
 @end defun
 
 
