@@ -72,6 +72,7 @@ External libraries
 * posix log-files::             Logging facilities.
 * posix daemonisations::        Turn the process into a daemon.
 * posix tcp-server-sockets::    @tcp{} server sockets.
+* posix sendmail::              Sending email with @command{sendmail}.
 @end menu
 
 @c page
@@ -6918,5 +6919,78 @@ A bytevector representing the client address as @code{struct sockaddr}.
 Close the Scheme port wrapping a server socket descriptor returned by a
 previous call to @func{make-server-sock-and-port}.
 @end defun
+
+@c page
+@node posix sendmail
+@section Sending email with @command{sendmail}
+
+
+@cindex Library @library{vicare posix sendmail}
+@cindex @library{vicare posix sendmail}, library
+@cindex Sending email with @command{sendmail}
+@cindex @command{sendmail}, sending email
+
+
+The library @library{vicare posix sendmail} exports a simple @api{} to
+send email through the external program @command{sendmail}.  This
+library is a demonstration of the basic mechanism needed to execute an
+external program, write data to its standard input and read data from
+its standard output.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-sendmail.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{sendmail} must be reachable in the current
+@env{PATH}; @command{sendmail} is executed with the options:
+
+@example
+sendmail -t -i -v
+@end example
+
+@noindent
+the @ascii{} text displayed on the standard output is captured for
+diagnostic.
+
+
+@defun sendmail @var{message}
+Send an email message spawning a subprocess that launches
+@command{sendmail}.  @var{message} must be a bytevector representing the
+message in @ascii{} encoding.  When successful: return a string
+representing the output of @command{sendmail}; otherwise raise an
+exception.
+
+The source and destination addresses are extracted from the message
+itself.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+ (vicare posix sendmail))
+
+(define (send-it message)
+  (define rv
+    (sendmail (string->ascii message)))
+  (display rv)
+  (newline)
+  (flush-output-port (current-output-port)))
+
+(send-it "From: <marco@@localhost>
+To: <marco@@localhost>
+Subject: demo 01
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is demo 01.
+--\x20;
+Marco Maggi
+")
+@end example
 
 @c end of file
