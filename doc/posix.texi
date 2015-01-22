@@ -350,6 +350,9 @@ raised.
 (printf "here we are in the parent\n")
 (flush-output-port (current-output-port))
 @end example
+
+@ref{posix fd pipe, pipe} for an explanation of how to setup standard
+file descriptors.
 @end defun
 
 
@@ -1953,8 +1956,10 @@ Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
 pipe}.  Create a pair of file descriptors connected through a pipe.  If
 successful return two values being fixnums representing the file
 descriptors, else raise an exception.
+@end defun
 
-Simple example of process writing to itself through a pipe:
+The following is a simple example of process writing to itself through a
+pipe:
 
 @example
 #!r6rs
@@ -1969,37 +1974,48 @@ Simple example of process writing to itself through a pipe:
 @result{} #vu8(1 2 3 4)
 @end example
 
-@noindent
-here is how to fork a process and setup stdin and stdout in the child to
-use newly created pipe file descriptors to communicate with the parent:
+The following example shows how to fork a process and setup
+@code{stdin}, @code{stdout} and @code{stderr} in the child to use newly
+created pipe file descriptors to communicate with the parent:
 
 @example
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.))
 
+(define (%prepare-child-file-descriptors
+            child-stdin child-stdout child-stderr)
+  ;;Setup stdin.
+  (begin
+    (close-input-port (console-input-port))
+    (px.dup2  child-stdin 0)
+    (px.close child-stdin))
+  ;;Setup stdout.
+  (begin
+    (close-output-port (console-output-port))
+    (px.dup2  child-stdout 1)
+    (px.close child-stdout))
+  ;;Setup stderr.
+  (begin
+    (close-output-port (console-error-port))
+    (px.dup2  child-stderr 2)
+    (px.close child-stderr)))
+
 (let-values
-    (((child-stdin       parent-to-child) (px.pipe))
-     ((parent-from-child child-stdout)    (px.pipe)))
-  (fork
+    (((child-stdin          parent->child-stdin) (px.pipe))
+     ((child-stdout->parent child-stdout)        (px.pipe))
+     ((child-stderr->parent child-stderr)        (px.pipe)))
+  (px.fork
 
     (lambda (pid) ;parent
-      (let ((buf (make-bytevector 1)))
-        (px.read  parent-from-child buf 1)
-        (px.write parent-to-child '#vu8(2) 1)
-        buf))
+      (receive-and-return (buf)
+          (make-bytevector 1)
+        (px.read  child-stdout->parent buf 1)
+        (px.write parent->child-stdin '#vu8(2) 1)))
 
     (lambda () ;child
-      (begin ;setup stdin
-        (close-input-port (current-input-port))
-        (px.dup2 child-stdin 0)
-        (px.close child-stdin))
-
-      (begin ;setup stdout
-        (close-output-port (current-output-port))
-        (px.dup2 child-stdout 1)
-        (px.close child-stdout))
-
+      (%prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
       (let ((buf (make-bytevector 1)))
         (px.write 1 '#vu8(1) 1)
         (px.read  0 buf 1)
@@ -2007,42 +2023,67 @@ use newly created pipe file descriptors to communicate with the parent:
 @result{} #vu8(1)
 @end example
 
-@noindent
-here is how to fork a process and setup stdin and stdout in the child to
-use newly created pipe file descriptors, through Scheme ports, to
-communicate with the parent:
+The following example shows how to fork a process and setup
+@code{stdin}, @code{stdout} and @code{stderr} in the child to use newly
+created pipe file descriptors, through Scheme ports, to communicate with
+the parent:
 
 @example
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.))
 
-(let-values (((child-stdin       parent-to-child) (px.pipe))
-             ((parent-from-child child-stdout)    (px.pipe)))
-  (fork
+(define (%prepare-child-file-descriptors
+            child-stdin child-stdout child-stderr)
+  ;;Setup stdin.
+  (begin
+    (close-input-port (console-input-port))
+    (px.dup2  child-stdin 0)
+    (px.close child-stdin))
+  ;;Setup stdout.
+  (begin
+    (close-output-port (console-output-port))
+    (px.dup2  child-stdout 1)
+    (px.close child-stdout))
+  ;;Setup stderr.
+  (begin
+    (close-output-port (console-error-port))
+    (px.dup2  child-stderr 2)
+    (px.close child-stderr)))
+
+(let-values
+    (((child-stdin          parent->child-stdin) (px.pipe))
+     ((child-stdout->parent child-stdout)        (px.pipe))
+     ((child-stderr->parent child-stderr)        (px.pipe)))
+  (px.fork
+
    (lambda (pid)        ;parent
      (let* ((inp (make-textual-file-descriptor-input-port
-                  parent-from-child "in" (native-transcoder)))
+                  parent->child-stdin  "in" (native-transcoder)))
             (oup (make-textual-file-descriptor-output-port
-                  parent-to-child "out" (native-transcoder)))
-            (buf (get-string-n inp 4)))
-       (display "hello" oup)
-       (flush-output-port oup)
+                  child-stdout->parent "out" (native-transcoder)))
+            (erp (make-textual-file-descriptor-input-port
+                  child-stderr->parent "err" (native-transcoder)))
+            (buf (get-string-n oup 4)))
+       (display "hello" inp)
+       (flush-output-port inp)
        buf))
 
    (lambda ()           ;child
+      (%prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
 
-     (begin      ;setup stdin
-       (close-input-port (current-input-port))
-       (current-input-port
-        (make-textual-file-descriptor-input-port
-         child-stdin "*stdin*" (native-transcoder))))
+      (current-input-port
+       (make-textual-file-descriptor-input-port
+        child-stdin "*stdin*" (native-transcoder)))
 
-     (begin ;setup stdout
-       (close-output-port (current-output-port))
-       (current-output-port
-        (make-textual-file-descriptor-output-port
-         child-stdout "*stdout*" (native-transcoder))))
+      (current-output-port
+       (make-textual-file-descriptor-output-port
+        child-stdout "*stdout*" (native-transcoder)))
+
+      (current-error-port
+       (make-textual-file-descriptor-output-port
+        child-stdout "*stderr*" (native-transcoder)))
 
      (display "ciao")
      (flush-output-port (current-output-port))
@@ -2050,7 +2091,6 @@ communicate with the parent:
      (exit 0))))
 @result{} "ciao"
 @end example
-@end defun
 
 @c page
 @node posix fd fifo
