@@ -7072,7 +7072,7 @@ The library @library{vicare posix mailx} exports a simple @api{} to send
 email through the external program @command{mailx}.  This library is a
 demonstration of the basic mechanism needed to execute an external
 program, write data to its standard input and read data from its
-standard output.
+standard output and standard error.
 
 @quotation
 The source distribution of @value{PRJNAME} includes a simple demo
@@ -7088,16 +7088,16 @@ MAILRC=/dev/null mailx -t -i -v
 @end example
 
 @noindent
-the @ascii{} text displayed on the standard output is captured for
-diagnostic.
+the @ascii{} text displayed on the standard output and standard error is
+captured for diagnostic.
 
 
 @defun mailx @var{message}
 Send an email message spawning a subprocess that launches
 @command{mailx}.  @var{message} must be a bytevector representing the
-message in @ascii{} encoding.  When successful: return a string
-representing the output of @command{mailx}; otherwise raise an
-exception.
+message in @ascii{} encoding.  When successful: return two strings
+representing the output of @command{mailx} to, respectively, standard
+output and standard error; otherwise raise an exception.
 
 The source and destination addresses are extracted from the message
 itself.
