@@ -50,6 +50,16 @@ This is demo 01.
 Marco Maggi
 ")
 
+;;; --------------------------------------------------------------------
+
+;;We are going to use MIME stuff below.  For an introduction to MIME see:
+;;
+;;   <https://en.wikipedia.org/wiki/MIME>
+;;
+
+;;Use "Content-Type: multipart/mixed"  to signal that the message  has multiple parts
+;;containing different contents.
+;;
 (send-it "From: <marco@localhost>
 To: <marco@localhost>
 MIME-Version: 1.0
@@ -71,6 +81,35 @@ Content-Type: text/html
 </head>
 <body>
 <p>This is the HTML part. <a href='http://github.com'>Click Here</a></p>
+</body>
+</html>
+--1234567890/localhost--
+")
+
+;;Use "Content-Type: multipart/alternative"  to signal that the  message has multiple
+;;parts containing alternative versions of the same content.
+;;
+(send-it "From: <marco@localhost>
+To: <marco@localhost>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary=1234567890/localhost
+Subject: html demo ~a
+
+This is a MIME-encapsulated message
+
+--1234567890/localhost
+Content-Type: text/plain
+
+This is the plain text.
+--1234567890/localhost
+Content-Type: text/html
+
+<html>
+<head>
+<title>HTML E-mail</title>
+</head>
+<body>
+<p>This is the HTML text. <a href='http://github.com'>Click Here</a></p>
 </body>
 </html>
 --1234567890/localhost--
