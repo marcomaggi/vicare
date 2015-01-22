@@ -73,6 +73,7 @@ External libraries
 * posix daemonisations::        Turn the process into a daemon.
 * posix tcp-server-sockets::    @tcp{} server sockets.
 * posix sendmail::              Sending email with @command{sendmail}.
+* posix mailx::                 Sending email with @command{mailx}.
 @end menu
 
 @c page
@@ -7017,6 +7018,79 @@ Example:
 (define (send-it message)
   (define rv
     (sendmail (string->ascii message)))
+  (display rv)
+  (newline)
+  (flush-output-port (current-output-port)))
+
+(send-it "From: <marco@@localhost>
+To: <marco@@localhost>
+Subject: demo 01
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is demo 01.
+--\x20;
+Marco Maggi
+")
+@end example
+
+@c page
+@node posix mailx
+@section Sending email with @command{mailx}
+
+
+@cindex Library @library{vicare posix mailx}
+@cindex @library{vicare posix mailx}, library
+@cindex Sending email with @command{mailx}
+@cindex @command{mailx}, sending email
+
+
+The library @library{vicare posix mailx} exports a simple @api{} to send
+email through the external program @command{mailx}.  This library is a
+demonstration of the basic mechanism needed to execute an external
+program, write data to its standard input and read data from its
+standard output.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-mailx.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{mailx} must be reachable in the current
+@env{PATH}; @command{mailx} is executed with the command line:
+
+@example
+MAILRC=/dev/null mailx -t -i -v
+@end example
+
+@noindent
+the @ascii{} text displayed on the standard output is captured for
+diagnostic.
+
+
+@defun mailx @var{message}
+Send an email message spawning a subprocess that launches
+@command{mailx}.  @var{message} must be a bytevector representing the
+message in @ascii{} encoding.  When successful: return a string
+representing the output of @command{mailx}; otherwise raise an
+exception.
+
+The source and destination addresses are extracted from the message
+itself.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+ (vicare posix mailx))
+
+(define (send-it message)
+  (define rv
+    (mailx (string->ascii message)))
   (display rv)
   (newline)
   (flush-output-port (current-output-port)))

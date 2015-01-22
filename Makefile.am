@@ -1041,6 +1041,8 @@ EXTRA_DIST	+= \
 	tests/demo-issue-35.sps				\
 	tests/demo-tcp-connect.sps			\
 	tests/demo-srfi-106.sps				\
+	tests/demo-sendmail.sps				\
+	tests/demo-mailx.sps				\
 	\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\

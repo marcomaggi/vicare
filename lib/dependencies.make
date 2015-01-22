@@ -1771,6 +1771,23 @@ EXTRA_DIST += lib/vicare/posix/sendmail.sls
 CLEANFILES += lib/vicare/posix/sendmail.fasl
 endif
 
+lib/vicare/posix/mailx.fasl: \
+		lib/vicare/posix/mailx.sls \
+		lib/vicare/posix.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_POSIX
+lib_vicare_posix_mailx_fasldir = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_mailx_slsdir  = $(bundledlibsdir)/vicare/posix
+nodist_lib_vicare_posix_mailx_fasl_DATA = lib/vicare/posix/mailx.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_posix_mailx_sls_DATA = lib/vicare/posix/mailx.sls
+endif
+EXTRA_DIST += lib/vicare/posix/mailx.sls
+CLEANFILES += lib/vicare/posix/mailx.fasl
+endif
+
 lib/vicare/glibc.fasl: \
 		lib/vicare/glibc.sls \
 		lib/vicare/posix.fasl \

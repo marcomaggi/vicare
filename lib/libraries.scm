@@ -159,7 +159,8 @@
      (vicare posix daemonisations)
      (vicare posix simple-event-loop)
      (vicare posix tcp-server-sockets)
-     (vicare posix sendmail))
+     (vicare posix sendmail)
+     (vicare posix mailx))
 
     ((WANT_GLIBC)
      (vicare glibc))
