@@ -28,8 +28,18 @@
   (prefix (vicare posix) px.)
   (vicare posix sendmail))
 
-(define message-template
-  "From: <marco@localhost>
+(define (send-it message-template)
+  (define date
+    (px.strftime/string "%F %T" (px.localtime (px.time))))
+  (define message
+    (format message-template date))
+  (define rv
+    (sendmail (string->ascii message)))
+  (display rv)
+  (newline)
+  (flush-output-port (current-output-port)))
+
+(send-it "From: <marco@localhost>
 To: <marco@localhost>
 Subject: demo ~a
 MIME-Version: 1.0
@@ -40,18 +50,31 @@ This is demo 01.
 Marco Maggi
 ")
 
-(define date
-  (px.strftime/string "%F %T" (px.localtime (px.time))))
+(send-it "From: <marco@localhost>
+To: <marco@localhost>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary=1234567890/localhost
+Subject: html demo ~a
 
-(define message
-  (format message-template date))
+This is a MIME-encapsulated message
 
-(define rv
-  (sendmail (string->ascii message)))
+--1234567890/localhost
+Content-Type: text/plain
 
-(display rv)
-(newline)
-(flush-output-port (current-output-port))
+This is the plain part.
+--1234567890/localhost
+Content-Type: text/html
+
+<html>
+<head>
+<title>HTML E-mail</title>
+</head>
+<body>
+<p>This is the HTML part. <a href='http://github.com'>Click Here</a></p>
+</body>
+</html>
+--1234567890/localhost--
+")
 
 ;;; end of file
 ;; Local Variables:
