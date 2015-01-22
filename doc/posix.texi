@@ -322,7 +322,7 @@ fork}.
 
 When called with no arguments: create a new process by forking the
 current one; if successful return a non--negative fixnum representing
-the the return value of @cfunc{fork}, else raise an exception.
+the return value of @cfunc{fork}, else raise an exception.
 
 When called with two arguments: create a new process by forking the
 current one; if successful the parent process applies @var{parent-proc}
