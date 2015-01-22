@@ -45,12 +45,10 @@
 	      (begin
 		(put-bytevector stdin-port message.bv)
 		(flush-output-port stdin-port))
-	    (void)
-	    #;(close-output-port stdin-port))
+	    (close-output-port stdin-port))
 	  (unwind-protect
 	      (begin
 		;;Wait until the child exits.
-		(debug-print 'waiting)
 		(let ((status (px.waitpid child-pid 0)))
 		  (if (and (px.WIFEXITED status)
 			   (zero? (px.WEXITSTATUS status)))
