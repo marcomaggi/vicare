@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -743,7 +743,7 @@
     atanh
     base64->bytevector
     begin0
-    begin-returnable
+    returnable
     bignum?
     bignum->bytevector
     break
@@ -848,7 +848,6 @@
     define-inline
     define-inline-constant
     define-integrable
-    define-returnable
     define-struct
     define-syntax-rule
     define-syntax*
@@ -985,7 +984,6 @@
     keyword?
     keyword-hash
     keyword->symbol
-    lambda-returnable
     last-pair
     library
     load

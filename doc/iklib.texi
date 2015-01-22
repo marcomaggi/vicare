@@ -1273,65 +1273,30 @@ possible to rebind this keyword in custom syntaxes.
 @end deffn
 
 
-@deffn Syntax begin-returnable @metao{body} @meta{body} @dots{}
+@deffn Syntax returnable @metao{body} @meta{body} @dots{}
 Like @func{begin}, but allow the use of the keyword @func{return} to
 return values to the enclosing continuation.
 
 @example
-(begin-returnable
+(returnable
   (display 'before)
   (return)
   (display 'never))
 @print{} before
 
-(begin-returnable
+(returnable
   (display 'before)
   (return 1)
   (display 'never))
 @print{} before
 @result{} 1
 
-(begin-returnable
+(returnable
   (display 'before)
   (return 1 2)
   (display 'never))
 @print{} before
 @result{} 1 2
-@end example
-@end deffn
-
-
-@deffn Syntax lambda-returnable @meta{formals} @metao{body} @meta{body} @dots{}
-Like @func{lambda}, but allow the use of the keyword @func{return} to
-return values to the caller's continuation.
-
-@example
-(define doit
-  (lambda-returnable (a b)
-    (display a)
-    (return b)
-    (display 'never)))
-
-(doit 1 2)
-@print{} 1
-@result{} 2
-@end example
-@end deffn
-
-
-@deffn Syntax define-returnable (@meta{name} . @meta{formals}) @metao{body} @meta{body} @dots{}
-Like @func{define}, but allow the use of the keyword @func{return} to
-return values to the caller's continuation.
-
-@example
-(define-returnable (doit a b)
-  (display a)
-  (return b)
-  (display 'never))
-
-(doit 1 2)
-@print{} 1
-@result{} 2
 @end example
 @end deffn
 

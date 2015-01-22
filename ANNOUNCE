@@ -480,6 +480,17 @@ Lots of backwards incompatibilities... life is hard!
 
   do not exist anymore.
 
+* BACKWARDS  INCOMPATIBILITY  Removed  non-Scheme  style  syntaxes  from
+  (vicare):
+
+    begin-returnable
+    lambda-returnable
+    define-returnable
+
+  added:
+
+    returnable
+
 
 Notes for revision 0.3d7
 ------------------------

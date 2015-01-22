@@ -1701,77 +1701,14 @@
 	 (list a b c)))
     => '((2 3 4) (in)))
 
-  #f)
-
-
-(parametrise ((check-test-name	'define-returnable))
+;;; --------------------------------------------------------------------
+;;; returnable
 
   (check	;no return, no arguments
       (with-result
        (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (add-result 'out)
-	   1)
-	 (ciao)))
-    => '(1 (in out)))
-
-  (check	;no return, arguments
-      (with-result
-       (let ()
-	 (define-returnable (ciao a b)
-	   (add-result 'in)
-	   (add-result 'out)
-	   (list a b))
-	 (ciao 1 2)))
-    => '((1 2) (in out)))
-
-  (check	;return no values
-      (with-result
-       (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (return)
-	   (add-result 'out)
-	   1)
-	 (ciao)
-	 #t))
-    => '(#t (in)))
-
-  (check	;return single value
-      (with-result
-       (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (return 2)
-	   (add-result 'out)
-	   1)
-	 (ciao)))
-    => '(2 (in)))
-
-  (check	;return multiple values
-      (with-result
-       (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (return 2 3 4)
-	   (add-result 'out)
-	   (values 1 2 3))
-	 (receive (a b c)
-	     (ciao)
-	   (list a b c))))
-    => '((2 3 4) (in)))
-
-  #f)
-
-
-(parametrise ((check-test-name	'lambda-returnable))
-
-  (check	;no return, no arguments
-      (with-result
-       (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (add-result 'out)
 	     1))
@@ -1781,8 +1718,8 @@
   (check	;no return, arguments
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable (a b)
+	 (define (ciao a b)
+	   (returnable
 	     (add-result 'in)
 	     (add-result 'out)
 	     (list a b)))
@@ -1792,8 +1729,8 @@
   (check	;return no values
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (return)
 	     (add-result 'out)
@@ -1805,8 +1742,8 @@
   (check	;return single value
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (return 2)
 	     (add-result 'out)
@@ -1817,8 +1754,8 @@
   (check	;return multiple values
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (return 2 3 4)
 	     (add-result 'out)
@@ -1829,57 +1766,6 @@
     => '((2 3 4) (in)))
 
   #f)
-
-
-(parametrise ((check-test-name	'begin-returnable))
-
-  (check	;no return, no arguments
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(add-result 'out)
-	1))
-    => '(1 (in out)))
-
-  (check	;no return, arguments
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(add-result 'out)
-	(list 1 2)))
-    => '((1 2) (in out)))
-
-  (check	;return no values
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(return)
-	(add-result 'out)
-	1)
-       #t)
-    => '(#t (in)))
-
-  (check	;return single value
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(return 2)
-	(add-result 'out)
-	1))
-    => '(2 (in)))
-
-  (check	;return multiple values
-      (with-result
-       (receive (a b c)
-	   (begin-returnable
-	    (add-result 'in)
-	    (return 2 3 4)
-	    (add-result 'out)
-	    (values 1 2 3))
-	 (list a b c)))
-    => '((2 3 4) (in)))
-
-  #t)
 
 
 (parametrise ((check-test-name	'test-unwind-protect))

@@ -100,9 +100,7 @@
     ((while)				while-macro)
     ((until)				until-macro)
     ((for)				for-macro)
-    ((define-returnable)		define-returnable-macro)
-    ((lambda-returnable)		lambda-returnable-macro)
-    ((begin-returnable)			begin-returnable-macro)
+    ((returnable)			returnable-macro)
     ((try)				try-macro)
 
     ((parameterize)			parameterize-macro)
@@ -3471,46 +3469,12 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-RETURNABLE, LAMBDA-RETURNABLE
+;;;; module non-core-macro-transformer: RETURNABLE
 
-(define (define-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?name . ?formals) ?body0 ?body* ...)
-     (bless
-      `(define (,?name . ,?formals)
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (lambda-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  LAMBDA-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?body0 ?body* ...)
-     (bless
-      `(lambda ,?formals
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (begin-returnable-macro expr-stx)
-  ;;Transformer function used to expand Vicare's BEGIN-RETURNABLE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (returnable-macro expr-stx)
+  ;;Transformer function used to expand Vicare's RETURNABLE macros from the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
