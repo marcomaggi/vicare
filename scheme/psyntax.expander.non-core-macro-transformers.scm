@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -100,9 +100,7 @@
     ((while)				while-macro)
     ((until)				until-macro)
     ((for)				for-macro)
-    ((define-returnable)		define-returnable-macro)
-    ((lambda-returnable)		lambda-returnable-macro)
-    ((begin-returnable)			begin-returnable-macro)
+    ((returnable)			returnable-macro)
     ((try)				try-macro)
 
     ((parameterize)			parameterize-macro)
@@ -3309,9 +3307,9 @@
 ;;;; module non-core-macro-transformer: DO
 
 (define (do-macro expr-stx)
-  ;;Transformer  function  used  to  expand  R6RS  DO  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
+  ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (define (%normalise-binding binding-stx)
     (syntax-match binding-stx ()
@@ -3323,25 +3321,77 @@
        `(,?var ,?init ,?step))
       (_
        (stx-error expr-stx "invalid binding"))))
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (while until)
+
+    ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ((_ ?body (while ?test))
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax
+			       ((break    (syntax-rules ()
+					    ((_) (escape (void)))))
+				(continue (syntax-rules ()
+					    ((_) (next-iteration #t)))))
+			     ,?body
+			     ,?test)))
+		 (loop)))))))
+
+    ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ((_ ?body (until ?test))
+     (bless
+      `(call/cc
+	   (lambda (escape)
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax
+			       ((break    (syntax-rules ()
+					    ((_) (escape (void)))))
+				(continue (syntax-rules ()
+					    ((_) (next-iteration #t)))))
+			     ,?body
+			     (not ,?test))))
+		 (loop)))))))
+
+    ;;This is the R6RS syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
-	(receive (id* tag*)
-	    (parse-list-of-tagged-bindings ?var* expr-stx)
-	  (bless
-	   `(letrec ((loop (lambda ,?var*
-			     (if ,?test
-				 ;;If ?EXPR* is  null: make sure there
-				 ;;is  at  least   one  expression  in
-				 ;;BEGIN.
-				 (begin (if #f #f) . ,?expr*)
-			       (begin
-				 ,@?command*
-				 (loop . ,?step*))))))
-	      (loop . ,?init*)))))
+	(bless
+	 `(call/cc
+	      (lambda (escape)
+		(letrec ((loop (lambda ,?var*
+				 (if (call/cc
+					 (lambda (next-iteration)
+					   (if ,?test
+					       #f
+					     (fluid-let-syntax
+						 ((break    (syntax-rules ()
+							      ((_ . ?retvals)
+							       (escape . ?retvals))))
+						  (continue (syntax-rules ()
+							      ((_) (next-iteration #t)))))
+					       (begin ,@?command* #t)))))
+				     (loop . ,?step*)
+				   ,(if (null? ?expr*)
+					'(void)
+				      `(begin . ,?expr*))))))
+		  (loop . ,?init*))))))
        ))
     ))
 
@@ -3349,9 +3399,12 @@
 ;;;; module non-core-macro-transformer: WHILE, UNTIL, FOR
 
 (define (while-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's WHILE  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer  function used  to expand  Vicare's WHILE  macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
@@ -3359,19 +3412,25 @@
       `(call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin ,@?body* (loop))
-		   (escape))))))))
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax ((break    (syntax-rules ()
+							  ((_) (escape (void)))))
+					      (continue (syntax-rules ()
+							  ((_) (next-iteration #t)))))
+			     (if ,?test
+				 (begin ,@?body* #t)
+			       #f))))
+		 (loop)))))))
     ))
 
 (define (until-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's UNTIL  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer  function used  to expand  Vicare's UNTIL  macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
@@ -3379,79 +3438,43 @@
       `(call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (escape)
-		   (begin ,@?body* (loop)))))))))
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax ((break    (syntax-rules ()
+							  ((_) (escape (void)))))
+					      (continue (syntax-rules ()
+							  ((_) (next-iteration #t)))))
+			     (if ,?test
+				 #f
+			       (begin ,@?body* #t)))))
+		 (loop)))))))
     ))
 
 (define (for-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  FOR macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand Vicare's  FOR macros from the top-level built
+  ;;in environment.   Expand the contents  of EXPR-STX;  return a syntax  object that
+  ;;must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
      (bless
-      `(call/cc
-	   (lambda (escape)
-	     ,?init
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin
-		       ,@?body* ,?incr
-		       (loop))
-		   (escape))))))))
+      `(internal-body
+	 ,?init
+	 (while ,?test
+	   ,@?body*
+	   ,?incr))))
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-RETURNABLE, LAMBDA-RETURNABLE
+;;;; module non-core-macro-transformer: RETURNABLE
 
-(define (define-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?name . ?formals) ?body0 ?body* ...)
-     (bless
-      `(define (,?name . ,?formals)
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (lambda-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  LAMBDA-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?body0 ?body* ...)
-     (bless
-      `(lambda ,?formals
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (begin-returnable-macro expr-stx)
-  ;;Transformer function used to expand Vicare's BEGIN-RETURNABLE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (returnable-macro expr-stx)
+  ;;Transformer function used to expand Vicare's RETURNABLE macros from the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)

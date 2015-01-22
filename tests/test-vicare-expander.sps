@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -908,15 +908,17 @@
        (call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ?test
-		     (begin
-		       ?body ...
-		       (loop))
-		   (escape)))))))
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax
+			       ((break    (syntax-rules ()
+					    ((_) (escape (void)))))
+				(continue (syntax-rules ()
+					    ((_) (next-iteration #t)))))
+			     (if ?test
+				 (begin ?body ... #t)
+			       #f))))
+		 (loop))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -960,28 +962,6 @@
 	   (add-result "post"))
 	 i))
     => '(4 (5)))
-
-  (check		;break with single value
-      (with-result
-       (let ((i 5))
-	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (break 'ciao)
-	   (add-result "post"))))
-    => '(ciao (5)))
-
-  (check		;break with multiple values
-      (with-result
-       (let ((i 5))
-	 (receive (a b)
-	     (while (positive? i)
-	       (add-result i)
-	       (set! i (+ -1 i))
-	       (break 'ciao 'hello)
-	       (add-result "post"))
-	   (list a b))))
-    => '((ciao hello) (5)))
 
   #t)
 
@@ -1028,28 +1008,6 @@
 	 i))
     => '(4 (5)))
 
-  (check		;break with single value
-      (with-result
-       (let ((i 5))
-	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (break 'ciao)
-	   (add-result "post"))))
-    => '(ciao (5)))
-
-  (check		;break with multiple values
-      (with-result
-       (let ((i 5))
-	 (receive (a b)
-	     (while (positive? i)
-	       (add-result i)
-	       (set! i (+ -1 i))
-	       (break 'ciao 'hello)
-	       (add-result "post"))
-	   (list a b))))
-    => '((ciao hello) (5)))
-
   #t)
 
 
@@ -1069,15 +1027,16 @@
        (call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ?test
-		     (escape)
-		   (begin
-		     ?body ...
-		     (loop))))))))
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (fluid-let-syntax ((break    (syntax-rules ()
+							  ((_) (escape (void)))))
+					      (continue (syntax-rules ()
+							  ((_) (next-iteration #t)))))
+			     (if ?test
+				 #f
+			       (begin ?body ... #t)))))
+		 (loop))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -1121,28 +1080,6 @@
 	   (add-result "post"))
 	 i))
     => '(4 (5)))
-
-  (check	;break with single value
-      (with-result
-       (let ((i 5))
-	 (until (zero? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (break 'ciao)
-	   (add-result "post"))))
-    => '(ciao (5)))
-
-  (check	;break with multiple values
-      (with-result
-       (let ((i 5))
-	 (receive (a b)
-	     (until (zero? i)
-	       (add-result i)
-	       (set! i (+ -1 i))
-	       (break 'ciao 'hello)
-	       (add-result "post"))
-	   (list a b))))
-    => '((ciao hello) (5)))
 
   #t)
 
@@ -1189,28 +1126,6 @@
 	 i))
     => '(4 (5)))
 
-  (check	;break with single value
-      (with-result
-       (let ((i 5))
-	 (until (zero? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (break 'ciao)
-	   (add-result "post"))))
-    => '(ciao (5)))
-
-  (check	;break with multiple values
-      (with-result
-       (let ((i 5))
-	 (receive (a b)
-	     (until (zero? i)
-	       (add-result i)
-	       (set! i (+ -1 i))
-	       (break 'ciao 'hello)
-	       (add-result "post"))
-	   (list a b))))
-    => '((ciao hello) (5)))
-
   #t)
 
 
@@ -1232,14 +1147,13 @@
 	     ?init
 	     (let loop ()
 	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
+					      ((_) (escape (void)))))
 				  (continue (lambda (stx) #'(loop))))
 		 (if ?test
 		     (begin
 		       ?body ... ?incr
 		       (loop))
-		   (escape)))))))
+		   (escape (void))))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -1276,24 +1190,6 @@
 	 (add-result "post"))
        #t)
     => '(#t (5)))
-
-  (check	;break with single value
-      (with-result
-       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	 (add-result i)
-	 (break 'ciao)
-	 (add-result "post")))
-    => '(ciao (5)))
-
-  (check	;break with multiple values
-      (with-result
-       (receive (a b)
-	   (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	     (add-result i)
-	     (break 'ciao 'hello)
-	     (add-result "post"))
-	 (list a b)))
-    => '((ciao hello) (5)))
 
   (check	;multiple bindings
       (with-result
@@ -1355,24 +1251,6 @@
        #t)
     => '(#t (5)))
 
-  (check	;break with single value
-      (with-result
-       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	 (add-result i)
-	 (break 'ciao)
-	 (add-result "post")))
-    => '(ciao (5)))
-
-  (check	;break with multiple values
-      (with-result
-       (receive (a b)
-	   (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	     (add-result i)
-	     (break 'ciao 'hello)
-	     (add-result "post"))
-	 (list a b)))
-    => '((ciao hello) (5)))
-
   (check	;multiple bindings
       (with-result
        (for ((begin
@@ -1394,6 +1272,222 @@
 	   (add-result i))
 	 i))
     => '(0 (5 4 3 2 1)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'test-do-while))
+
+  (define-syntax do-while
+    (syntax-rules (while)
+      ((_ ?body (while ?test))
+       (call/cc
+	   (lambda (escape)
+	     (letrec ((loop (lambda ()
+			      (call/cc
+				  (lambda (next-loop)
+				    (fluid-let-syntax
+					((break    (syntax-rules ()
+						     ((_) (escape (void)))))
+					 (continue (syntax-rules ()
+						     ((_) (next-loop)))))
+				      ?body
+				      (unless ?test
+					(escape (void))))))
+			      (loop))))
+	       (loop)))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (define i 5)
+       (do-while
+	(begin
+	  (add-result i)
+	  (set! i (+ -1 i)))
+	(while (positive? i))))
+    => `(,(void) (5 4 3 2 1)))
+
+  (check	;continue
+      (with-result
+       (define i 5)
+       (do-while
+	(begin
+	  (set! i (+ -1 i))
+	  (when (= i 3)
+	    (continue))
+	  (add-result i))
+	(while (positive? i))))
+    => `(,(void) (4 2 1 0)))
+
+  (check	;break
+      (with-result
+       (define i 5)
+       (do-while
+	(begin
+	  (set! i (+ -1 i))
+	  (when (= i 2)
+	    (break))
+	  (add-result i))
+	(while (positive? i))))
+    => `(,(void) (4 3)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'do))
+
+;;; standard do
+
+  (check
+      (with-result
+       (do ((i 5 (+ -1 i)))
+	   ((zero? i)
+	    'done)
+	 (add-result i)))
+    => '(done (5 4 3 2 1)))
+
+  (check	;binding with no step
+      (with-result
+       (do ((j 123)
+	    (i 5 (+ -1 i)))
+	   ((zero? i)
+	    j)
+	 (add-result i)))
+    => '(123 (5 4 3 2 1)))
+
+  (check	;break
+      (with-result
+       (do ((i 0 (+ 1 i)))
+	   ((= i 5)
+	    i)
+	 (add-result i)
+	 (when (= i 3)
+	   (break 123))))
+    => '(123 (0 1 2 3)))
+
+  (check	;break
+      (with-result
+       (do ((i 0 (+ 1 i)))
+	   ((= i 5)
+	    i)
+	 (add-result i)
+	 (when (= i 3)
+	   (break 123))))
+    => '(123 (0 1 2 3)))
+
+  (check	;continue
+      (with-result
+       (do ((i 0 (+ 1 i)))
+	   ((= i 5)
+	    i)
+	 (when (= i 3)
+	   (continue))
+	 (add-result i)))
+    => '(5 (0 1 2 4)))
+
+;;; --------------------------------------------------------------------
+;;; do ... while
+
+  (check
+      (with-result
+       (define i 5)
+       (do
+	   (begin
+	     (add-result i)
+	     (set! i (+ -1 i)))
+	   (while (positive? i))))
+    => `(,(void) (5 4 3 2 1)))
+
+  (check 	;continue
+      (with-result
+       (define i 5)
+       (do
+	   (begin
+	     (set! i (+ -1 i))
+	     (when (= i 3)
+	       (continue))
+	     (add-result i))
+	   (while (positive? i))))
+    => `(,(void) (4 2 1 0)))
+
+  (check	;break
+      (with-result
+       (define i 5)
+       (do
+	   (begin
+	     (set! i (+ -1 i))
+	     (when (= i 2)
+	       (break))
+	     (add-result i))
+	   (while (positive? i))))
+    => `(,(void) (4 3)))
+
+;;; --------------------------------------------------------------------
+;;; do ... until
+
+  (check
+      (with-result
+       (define i 5)
+       (do
+	   (begin
+	     (add-result i)
+	     (set! i (+ -1 i)))
+	   (until (zero? i))))
+    => `(,(void) (5 4 3 2 1)))
+
+  (check	;continue
+      (with-result
+       (define i 5)
+       (do
+	   (begin
+	     (set! i (+ -1 i))
+	     (when (= i 3)
+	       (continue))
+	     (add-result i))
+	   (until (zero? i))))
+    => `(,(void) (4 2 1 0)))
+
+  (check	;break
+      (with-result
+       (define i 5)
+       (do
+	   (begin
+	     (set! i (+ -1 i))
+	     (when (= i 2)
+	       (break))
+	     (add-result i))
+	   (until (zero? i))))
+    => `(,(void) (4 3)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'named-let))
+
+  (check
+      (with-result
+       (let loop ((i 0))
+	 (if (= i 5)
+	     i
+	   (begin
+	     (add-result i)
+	     (loop (+ 1 i))))))
+    => '(5 (0 1 2 3 4)))
+
+  (check	;break
+      (with-result
+       (let loop ((i 0))
+	 (if (= i 5)
+	     i
+	   (begin
+	     (when (= i 3)
+	       (break 123))
+	     (add-result i)
+	     (loop (+ 1 i))))))
+    => '(123 (0 1 2)))
 
   #t)
 
@@ -1607,77 +1701,14 @@
 	 (list a b c)))
     => '((2 3 4) (in)))
 
-  #f)
-
-
-(parametrise ((check-test-name	'define-returnable))
+;;; --------------------------------------------------------------------
+;;; returnable
 
   (check	;no return, no arguments
       (with-result
        (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (add-result 'out)
-	   1)
-	 (ciao)))
-    => '(1 (in out)))
-
-  (check	;no return, arguments
-      (with-result
-       (let ()
-	 (define-returnable (ciao a b)
-	   (add-result 'in)
-	   (add-result 'out)
-	   (list a b))
-	 (ciao 1 2)))
-    => '((1 2) (in out)))
-
-  (check	;return no values
-      (with-result
-       (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (return)
-	   (add-result 'out)
-	   1)
-	 (ciao)
-	 #t))
-    => '(#t (in)))
-
-  (check	;return single value
-      (with-result
-       (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (return 2)
-	   (add-result 'out)
-	   1)
-	 (ciao)))
-    => '(2 (in)))
-
-  (check	;return multiple values
-      (with-result
-       (let ()
-	 (define-returnable (ciao)
-	   (add-result 'in)
-	   (return 2 3 4)
-	   (add-result 'out)
-	   (values 1 2 3))
-	 (receive (a b c)
-	     (ciao)
-	   (list a b c))))
-    => '((2 3 4) (in)))
-
-  #f)
-
-
-(parametrise ((check-test-name	'lambda-returnable))
-
-  (check	;no return, no arguments
-      (with-result
-       (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (add-result 'out)
 	     1))
@@ -1687,8 +1718,8 @@
   (check	;no return, arguments
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable (a b)
+	 (define (ciao a b)
+	   (returnable
 	     (add-result 'in)
 	     (add-result 'out)
 	     (list a b)))
@@ -1698,8 +1729,8 @@
   (check	;return no values
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (return)
 	     (add-result 'out)
@@ -1711,8 +1742,8 @@
   (check	;return single value
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (return 2)
 	     (add-result 'out)
@@ -1723,8 +1754,8 @@
   (check	;return multiple values
       (with-result
        (let ()
-	 (define ciao
-	   (lambda-returnable ()
+	 (define (ciao)
+	   (returnable
 	     (add-result 'in)
 	     (return 2 3 4)
 	     (add-result 'out)
@@ -1735,57 +1766,6 @@
     => '((2 3 4) (in)))
 
   #f)
-
-
-(parametrise ((check-test-name	'begin-returnable))
-
-  (check	;no return, no arguments
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(add-result 'out)
-	1))
-    => '(1 (in out)))
-
-  (check	;no return, arguments
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(add-result 'out)
-	(list 1 2)))
-    => '((1 2) (in out)))
-
-  (check	;return no values
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(return)
-	(add-result 'out)
-	1)
-       #t)
-    => '(#t (in)))
-
-  (check	;return single value
-      (with-result
-       (begin-returnable
-	(add-result 'in)
-	(return 2)
-	(add-result 'out)
-	1))
-    => '(2 (in)))
-
-  (check	;return multiple values
-      (with-result
-       (receive (a b c)
-	   (begin-returnable
-	    (add-result 'in)
-	    (return 2 3 4)
-	    (add-result 'out)
-	    (values 1 2 3))
-	 (list a b c)))
-    => '((2 3 4) (in)))
-
-  #t)
 
 
 (parametrise ((check-test-name	'test-unwind-protect))
