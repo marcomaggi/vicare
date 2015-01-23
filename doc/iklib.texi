@@ -11271,21 +11271,41 @@ These are like defined by @rnrs{6}, but in addition they are parameters.
 
 
 @defun console-input-port
-Return the default value of the @func{current-input-port} parameter.
+@defunx console-input-port @var{textual-input-port}
+Return the default textual input port: the default value of the
+parameter @func{current-input-port}; each call returns the same port.
 When the readline interface is not used, this port is used by the
 @repl{} and the debugger.
+
+When applied to an argument: the argument must be a textual input port
+which replaces the old value; the old port is left untouched (it is not
+closed).  When selecting a new console input port: the same port should
+be used as top value for the parameter @func{current-input-port}.
 @end defun
 
 
 @defun console-output-port
-Return the default value of the @func{current-outptu-port} parameter.
-It is used by the @repl{} and the debugger.
+@defunx console-output-port @var{textual-output-port}
+Return the default textual output port: the default value of the
+parameter @func{current-output-port}; each call returns the same port.
+This port is used by the @repl{} and the debugger.
+
+When applied to an argument: the argument must be a textual output port
+which replaces the old value; the old port is left untouched (it is not
+closed).  When selecting a new console output port: the same port should
+be used as top value for the parameter @func{current-output-port}.
 @end defun
 
 
 @defun console-error-port
-Return the default value of the @func{current-error-port} parameter.  It
-is used by the @repl{} and the debugger.
+@defunx console-error-port @var{textual-output-port}
+Return the default textual error port: the default value of the
+parameter @func{current-input-port}; each call returns the same port.
+
+When applied to an argument: the argument must be a textual output port
+and it replaces the old value; the old port is left untouched (it is not
+closed).  When selecting a new console error port: the same port should
+be used as top value for the parameter @func{current-error-port}.
 @end defun
 
 
