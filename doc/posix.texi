@@ -418,8 +418,8 @@ The procedure @var{parent-proc} is called as follows:
 @example
 (parent-proc child-pid
              parent->child-stdin
-             child-stdout->parent
-             child-stderr->parent)
+             parent<-child-stdout
+             parent<-child-stderr)
 @end example
 
 @noindent
@@ -433,16 +433,18 @@ It is a fixnum representing the pid of the child process.
 It is a file descriptor writing into the standard input of the child
 process.
 
-@item child-stdout->parent
-It is a file descriptor reading from into the standard output of the
-child process.
+@item parent<-child-stdout
+It is a file descriptor reading from the standard output of the child
+process.
 
-@item child-stderr->parent
-It is a file descriptor reading from into the standard error of the
-child process.
+@item parent<-child-stderr
+It is a file descriptor reading from the standard error of the child
+process.
 @end table
 
-The thunk @var{child-thunk} is called with no arguments.
+The thunk @var{child-thunk} is called with no arguments.  The child can
+use the standard file descriptors @code{0}, @code{1}, @code{2} which are
+made distinct from the parent's standard file descriptors.
 @end defun
 
 
@@ -478,7 +480,7 @@ descriptors @code{0}, @code{1}, @code{2} after this call will wrap the
 new file descriptors @code{0}, @code{1}, @code{2}.
 
 @item
-It is responsibility of the caller to flush other output ports wrapping
+It is responsibility of the caller to flush the output ports wrapping
 the standard file descriptors, like the ones returned by
 @func{standard-output-port}, @func{standard-error-port},
 @func{console-output-port}, @func{console-error-port}.
@@ -495,8 +497,8 @@ the child process, waits for child to terminate.
 
 (let-values
     (((child-stdin          parent->child-stdin) (px.pipe))
-     ((child-stdout->parent child-stdout)        (px.pipe))
-     ((child-stderr->parent child-stderr)        (px.pipe)))
+     ((parent<-child-stdout child-stdout)        (px.pipe))
+     ((parent<-child-stderr child-stderr)        (px.pipe)))
 
   (define (parent-proc child-pid)
     (px.close child-stdin)
@@ -510,24 +512,25 @@ the child process, waits for child to terminate.
             (if (and (px.WIFEXITED status)
                      (zero? (px.WEXITSTATUS status)))
                 (begin
-                  (px.read child-stdout->parent bufout)
-                  (px.read child-stderr->parent buferr)
+                  (px.read parent<-child-stdout bufout)
+                  (px.read parent<-child-stderr buferr)
                   (values bufout buferr))
               (error #f
                 "child process exited abnormally"
                 status))))
       (px.close parent->child-stdin)
-      (px.close child-stdout->parent)
-      (px.close child-stderr->parent)))
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)))
 
   (define (child-thunk)
     (guard (E (else
                (print-condition E)
                (exit 1)))
       (px.close parent->child-stdin)
-      (px.close child-stdout->parent)
-      (px.close child-stderr->parent)
-      (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)
+      (px.after-fork/prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
       (let ((buf (make-bytevector 5 0)))
         (px.read 0 buf)
         (assert (bytevector=? buf '#ve(ascii "ciao\n")))
@@ -547,42 +550,40 @@ here is the same example using @func{fork-with-fds}:
 (import (vicare)
   (prefix (vicare posix) px.))
 
-(internal-body
+(define (parent-proc child-pid
+           parent->child-stdin
+           parent<-child-stdout
+           parent<-child-stderr)
+  (unwind-protect
+      (let ((bufout (make-bytevector 4 0))
+            (buferr (make-bytevector 4 0)))
+        (px.write parent->child-stdin '#ve(ascii "ciao\n"))
+        (let ((status (px.waitpid child-pid 0)))
+          (if (and (px.WIFEXITED status)
+                   (zero? (px.WEXITSTATUS status)))
+              (begin
+                (px.read parent<-child-stdout bufout)
+                (px.read parent<-child-stderr buferr)
+                (values bufout buferr))
+            (error #f
+              "child process exited abnormally"
+              status))))
+    (px.close parent->child-stdin)
+    (px.close parent<-child-stdout)
+    (px.close parent<-child-stderr)))
 
-  (define (parent-proc child-pid
-             parent->child-stdin
-             child-stdout->parent
-             child-stderr->parent)
-    (unwind-protect
-        (let ((bufout (make-bytevector 4 0))
-              (buferr (make-bytevector 4 0)))
-          (px.write parent->child-stdin '#ve(ascii "ciao\n"))
-          (let ((status (px.waitpid child-pid 0)))
-            (if (and (px.WIFEXITED status)
-                     (zero? (px.WEXITSTATUS status)))
-                (begin
-                  (px.read child-stdout->parent bufout)
-                  (px.read child-stderr->parent buferr)
-                  (values bufout buferr))
-              (error #f
-                "child process exited abnormally"
-                status))))
-      (px.close parent->child-stdin)
-      (px.close child-stdout->parent)
-      (px.close child-stderr->parent)))
+(define (child-thunk)
+  (guard (E (else
+             (print-condition E)
+             (exit 1)))
+    (let ((buf (make-bytevector 5 0)))
+      (px.read 0 buf)
+      (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+      (px.write 1 '#ve(ascii "out\n"))
+      (px.write 2 '#ve(ascii "err\n"))
+      (exit 0))))
 
-  (define (child-thunk)
-    (guard (E (else
-               (print-condition E)
-               (exit 1)))
-      (let ((buf (make-bytevector 5 0)))
-        (px.read 0 buf)
-        (assert (bytevector=? buf '#ve(ascii "ciao\n")))
-        (px.write 1 '#ve(ascii "out\n"))
-        (px.write 2 '#ve(ascii "err\n"))
-        (exit 0))))
-
-  (px.fork-with-fds parent-proc child-thunk))
+(px.fork-with-fds parent-proc child-thunk)
 @end example
 
 @c page
@@ -602,8 +603,8 @@ The procedure @var{parent-proc} is called as follows:
 @example
 (parent-proc child-pid
              parent->child-stdin
-             child-stdout->parent
-             child-stderr->parent)
+             parent<-child-stdout
+             parent<-child-stderr)
 @end example
 
 @noindent
@@ -617,16 +618,20 @@ It is a fixnum representing the pid of the child process.
 It is a binary output port writing into the standard input of the child
 process.
 
-@item child-stdout->parent
-It is a binary input port reading from into the standard output of the
-child process.
+@item parent<-child-stdout
+It is a binary input port reading from the standard output of the child
+process.
 
-@item child-stderr->parent
-It is a binary input port reading from into the standard error of the
-child process.
+@item parent<-child-stderr
+It is a binary input port reading from the standard error of the child
+process.
 @end table
 
-The thunk @var{child-thunk} is called with no arguments.
+The thunk @var{child-thunk} is called with no arguments.  The child can
+use the standard ports returned by @func{standard-input-port},
+@func{standard-output-port}, @func{standard-error-port} which are made
+to wrap standard file descriptors distinct from the parent's standard
+file descriptors.
 @end defun
 
 
@@ -652,7 +657,7 @@ is the port returned by @func{standard-error-port}.
 @end defun
 
 
-@defun after-fork/prepare-parent-binary-input/output-ports @var{parent->child-stdin} @var{child-stdout->parent} @var{child-stderr->parent}
+@defun after-fork/prepare-parent-binary-input/output-ports @var{parent->child-stdin} @var{parent<-child-stdout} @var{parent<-child-stderr}
 To be called in the parent process, after a fork operation, to build
 Scheme input and output binary ports around standard file descriptors
 for the child process.  The arguments are:
@@ -662,11 +667,11 @@ for the child process.  The arguments are:
 It must be a file descriptor that writes in the standard input of the
 child process.
 
-@item child-stdout->parent
+@item parent<-child-stdout
 It must be a file descriptor that reads from the standard output of the
 child process.
 
-@item child-stderr->parent
+@item parent<-child-stderr
 It must be must be a file descriptor that reads from the standard error
 of the child process.
 @end table
@@ -702,8 +707,8 @@ child, waits for child to terminate.
 
 (let-values
     (((child-stdin          parent->child-stdin) (px.pipe))
-     ((child-stdout->parent child-stdout)        (px.pipe))
-     ((child-stderr->parent child-stderr)        (px.pipe)))
+     ((parent<-child-stdout child-stdout)        (px.pipe))
+     ((parent<-child-stderr child-stderr)        (px.pipe)))
 
   (define (parent-proc child-pid)
     (px.close child-stdin)
@@ -711,7 +716,9 @@ child, waits for child to terminate.
     (px.close child-stderr)
     (receive (child-stdin child-stdout child-stderr)
         (px.after-fork/prepare-parent-binary-input/output-ports
-         parent->child-stdin child-stdout->parent child-stderr->parent)
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
       (unwind-protect
           (let ((bufout (make-bytevector 4 0))
                 (buferr (make-bytevector 4 0)))
@@ -736,9 +743,10 @@ child, waits for child to terminate.
                (print-condition E)
                (exit 1)))
       (px.close parent->child-stdin)
-      (px.close child-stdout->parent)
-      (px.close child-stderr->parent)
-      (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)
+      (px.after-fork/prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
       (receive (stdin-port stdout-port stderr-port)
           (px.after-fork/prepare-child-binary-input/output-ports)
         (let ((buf (make-bytevector 5 0)))
@@ -819,8 +827,8 @@ The procedure @var{parent-proc} is called as follows:
 @example
 (parent-proc child-pid
              parent->child-stdin
-             child-stdout->parent
-             child-stderr->parent)
+             parent<-child-stdout
+             parent<-child-stderr)
 @end example
 
 @noindent
@@ -834,16 +842,20 @@ It is a fixnum representing the pid of the child process.
 It is a textual output port writing into the standard input of the child
 process.
 
-@item child-stdout->parent
-It is a textual input port reading from into the standard output of the
-child process.
+@item parent<-child-stdout
+It is a textual input port reading from the standard output of the child
+process.
 
-@item child-stderr->parent
-It is a textual input port reading from into the standard error of the
-child process.
+@item parent<-child-stderr
+It is a textual input port reading from the standard error of the child
+process.
 @end table
 
-The thunk @var{child-thunk} is called with no arguments.
+The thunk @var{child-thunk} is called with no arguments.  The child can
+use the standard ports returned by @func{console-input-port},
+@func{console-output-port}, @func{console-error-port} which are made to
+wrap standard file descriptors distinct from the parent's standard file
+descriptors.
 @end defun
 
 
@@ -862,7 +874,7 @@ for the parameters @func{current-input-port},
 @end defun
 
 
-@defun after-fork/prepare-parent-textual-input/output-ports @var{parent->child-stdin} @var{child-stdout->parent} @var{child-stderr->parent}
+@defun after-fork/prepare-parent-textual-input/output-ports @var{parent->child-stdin} @var{parent<-child-stdout} @var{parent<-child-stderr}
 To be called in the parent process, after a fork operation, to build
 Scheme input and output textual ports around standard file descriptors
 for the child process.  The arguments are:
@@ -872,11 +884,11 @@ for the child process.  The arguments are:
 It must be a file descriptor that writes in the standard input of the
 child process.
 
-@item child-stdout->parent
+@item parent<-child-stdout
 It must be a file descriptor that reads from the standard output of the
 child process.
 
-@item child-stderr->parent
+@item parent<-child-stderr
 It must be must be a file descriptor that reads from the standard error
 of the child process.
 @end table
@@ -912,8 +924,8 @@ waits for the child to terminate.
 
 (let-values
     (((child-stdin          parent->child-stdin) (px.pipe))
-     ((child-stdout->parent child-stdout)        (px.pipe))
-     ((child-stderr->parent child-stderr)        (px.pipe)))
+     ((parent<-child-stdout child-stdout)        (px.pipe))
+     ((parent<-child-stderr child-stderr)        (px.pipe)))
 
   (define (parent-proc child-pid)
     (px.close child-stdin)
@@ -921,7 +933,9 @@ waits for the child to terminate.
     (px.close child-stderr)
     (receive (child-stdin child-stdout child-stderr)
         (px.after-fork/prepare-parent-textual-input/output-ports
-         parent->child-stdin child-stdout->parent child-stderr->parent)
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
       (unwind-protect
           (let ((bufout (make-string 4 #\x00))
                 (buferr (make-string 4 #\x00)))
@@ -946,9 +960,10 @@ waits for the child to terminate.
                (print-condition E)
                (exit 1)))
       (px.close parent->child-stdin)
-      (px.close child-stdout->parent)
-      (px.close child-stderr->parent)
-      (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)
+      (px.after-fork/prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
       (px.after-fork/prepare-child-textual-input/output-ports)
       (let ((buf (make-string 5 #\x00)))
         (get-string-n! (console-input-port) buf 0 5)

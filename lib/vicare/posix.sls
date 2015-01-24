@@ -2331,7 +2331,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (after-fork/prepare-parent-binary-input/output-ports parent->child-stdin child-stdout->parent child-stderr->parent)
+(define (after-fork/prepare-parent-binary-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
   ;;To be  called in the  parent to build  Scheme input/output ports  around standard
   ;;file descriptors for the child process.  Return 3 values:
   ;;
@@ -2348,11 +2348,11 @@
    ;;Output port that writes in the stdin of the child.
    (make-binary-file-descriptor-output-port parent->child-stdin  "*child-stdin*")
    ;;Input port that reads from the stdout of the child.
-   (make-binary-file-descriptor-input-port  child-stdout->parent "*child-stdout*")
+   (make-binary-file-descriptor-input-port  parent<-child-stdout "*child-stdout*")
    ;;Input port that reads from the stderr of the child.
-   (make-binary-file-descriptor-input-port  child-stderr->parent "*child-stderr*")))
+   (make-binary-file-descriptor-input-port  parent<-child-stderr "*child-stderr*")))
 
-(define (after-fork/prepare-parent-textual-input/output-ports parent->child-stdin child-stdout->parent child-stderr->parent)
+(define (after-fork/prepare-parent-textual-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
   ;;To be  called in the  parent to build  Scheme input/output ports  around standard
   ;;file descriptors for the child process.  Return 3 values:
   ;;
@@ -2369,9 +2369,9 @@
    ;;Output port that writes in the stdin of the child.
    (make-textual-file-descriptor-output-port parent->child-stdin  "*child-stdin*"  (native-transcoder))
    ;;Input port that reads from the stdout of the child.
-   (make-textual-file-descriptor-input-port  child-stdout->parent "*child-stdout*" (native-transcoder))
+   (make-textual-file-descriptor-input-port  parent<-child-stdout "*child-stdout*" (native-transcoder))
    ;;Input port that reads from the stderr of the child.
-   (make-textual-file-descriptor-input-port  child-stderr->parent "*child-stderr*" (native-transcoder))))
+   (make-textual-file-descriptor-input-port  parent<-child-stderr "*child-stderr*" (native-transcoder))))
 
 
 ;;;; advanced fork wrappers
@@ -2382,8 +2382,8 @@
   ;;
   (let-values
       (((child-stdin          parent->child-stdin) (pipe))
-       ((child-stdout->parent child-stdout)        (pipe))
-       ((child-stderr->parent child-stderr)        (pipe)))
+       ((parent<-child-stdout child-stdout)        (pipe))
+       ((parent<-child-stderr child-stderr)        (pipe)))
     (flush-output-port (console-output-port))
     (flush-output-port (console-error-port))
     (fork
@@ -2391,13 +2391,16 @@
        (close child-stdin)
        (close child-stdout)
        (close child-stderr)
-       (parent-proc child-pid parent->child-stdin child-stdout->parent child-stderr->parent))
+       (parent-proc child-pid parent->child-stdin parent<-child-stdout parent<-child-stderr))
      (lambda ()
-       (close parent->child-stdin)
-       (close child-stdout->parent)
-       (close child-stderr->parent)
-       (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
-       (child-thunk)))))
+       (guard (E (else
+		  (print-condition E)
+		  (exit 1)))
+	 (close parent->child-stdin)
+	 (close parent<-child-stdout)
+	 (close parent<-child-stderr)
+	 (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	 (child-thunk))))))
 
 (define (fork-with-binary-ports parent-proc child-thunk)
   ;;Wrapper for FORK that  sets up the file descriptor pipes  to communicate with the
@@ -2406,8 +2409,8 @@
   ;;
   (let-values
       (((child-stdin          parent->child-stdin) (pipe))
-       ((child-stdout->parent child-stdout)        (pipe))
-       ((child-stderr->parent child-stderr)        (pipe)))
+       ((parent<-child-stdout child-stdout)        (pipe))
+       ((parent<-child-stderr child-stderr)        (pipe)))
     (flush-output-port (console-output-port))
     (flush-output-port (console-error-port))
     (fork
@@ -2416,15 +2419,18 @@
        (close child-stdout)
        (close child-stderr)
        (receive (stdin-port stdout-port stderr-port)
-	   (after-fork/prepare-parent-binary-input/output-ports parent->child-stdin child-stdout->parent child-stderr->parent)
+	   (after-fork/prepare-parent-binary-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
 	 (parent-proc child-pid stdin-port stdout-port stderr-port)))
      (lambda ()
-       (close parent->child-stdin)
-       (close child-stdout->parent)
-       (close child-stderr->parent)
-       (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
-       (after-fork/prepare-child-binary-input/output-ports)
-       (child-thunk)))))
+       (guard (E (else
+		  (print-condition E)
+		  (exit 1)))
+	 (close parent->child-stdin)
+	 (close parent<-child-stdout)
+	 (close parent<-child-stderr)
+	 (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	 (after-fork/prepare-child-binary-input/output-ports)
+	 (child-thunk))))))
 
 (define (fork-with-textual-ports parent-proc child-thunk)
   ;;Wrapper for FORK that  sets up the file descriptor pipes  to communicate with the
@@ -2433,8 +2439,8 @@
   ;;
   (let-values
       (((child-stdin          parent->child-stdin) (pipe))
-       ((child-stdout->parent child-stdout)        (pipe))
-       ((child-stderr->parent child-stderr)        (pipe)))
+       ((parent<-child-stdout child-stdout)        (pipe))
+       ((parent<-child-stderr child-stderr)        (pipe)))
     (flush-output-port (console-output-port))
     (flush-output-port (console-error-port))
     (fork
@@ -2443,15 +2449,18 @@
        (close child-stdout)
        (close child-stderr)
        (receive (stdin-port stdout-port stderr-port)
-	   (after-fork/prepare-parent-textual-input/output-ports parent->child-stdin child-stdout->parent child-stderr->parent)
+	   (after-fork/prepare-parent-textual-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
 	 (parent-proc child-pid stdin-port stdout-port stderr-port)))
      (lambda ()
-       (close parent->child-stdin)
-       (close child-stdout->parent)
-       (close child-stderr->parent)
-       (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
-       (after-fork/prepare-child-textual-input/output-ports)
-       (child-thunk)))))
+       (guard (E (else
+		  (print-condition E)
+		  (exit 1)))
+	 (close parent->child-stdin)
+	 (close parent<-child-stdout)
+	 (close parent<-child-stderr)
+	 (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	 (after-fork/prepare-child-textual-input/output-ports)
+	 (child-thunk))))))
 
 
 ;;;; ports and "close on exec" status

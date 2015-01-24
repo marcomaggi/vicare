@@ -1240,8 +1240,8 @@
   (check
       (let-values
 	  (((child-stdin          parent->child-stdin) (px.pipe))
-	   ((child-stdout->parent child-stdout)        (px.pipe))
-	   ((child-stderr->parent child-stderr)        (px.pipe)))
+	   ((parent<-child-stdout child-stdout)        (px.pipe))
+	   ((parent<-child-stderr child-stderr)        (px.pipe)))
 
 	(define (parent-proc child-pid)
 	  (px.close child-stdin)
@@ -1255,23 +1255,23 @@
 		  (if (and (px.WIFEXITED status)
 			   (zero? (px.WEXITSTATUS status)))
 		      (begin
-			(px.read child-stdout->parent bufout)
-			(px.read child-stderr->parent buferr)
+			(px.read parent<-child-stdout bufout)
+			(px.read parent<-child-stderr buferr)
 			(values bufout buferr))
 		    (error #f
 		      "child process exited abnormally"
 		      status))))
 	    (px.close parent->child-stdin)
-	    (px.close child-stdout->parent)
-	    (px.close child-stderr->parent)))
+	    (px.close parent<-child-stdout)
+	    (px.close parent<-child-stderr)))
 
 	(define (child-thunk)
 	  (guard (E (else
 		     (print-condition E)
 		     (exit 1)))
 	    (px.close parent->child-stdin)
-	    (px.close child-stdout->parent)
-	    (px.close child-stderr->parent)
+	    (px.close parent<-child-stdout)
+	    (px.close parent<-child-stderr)
 	    (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
 	    (let ((buf (make-bytevector 5 0)))
 	      (px.read 0 buf)
@@ -1293,8 +1293,8 @@
   (check
       (let-values
 	  (((child-stdin          parent->child-stdin) (px.pipe))
-	   ((child-stdout->parent child-stdout)        (px.pipe))
-	   ((child-stderr->parent child-stderr)        (px.pipe)))
+	   ((parent<-child-stdout child-stdout)        (px.pipe))
+	   ((parent<-child-stderr child-stderr)        (px.pipe)))
 
 	(define (parent-proc child-pid)
 	  (px.close child-stdin)
@@ -1302,7 +1302,7 @@
 	  (px.close child-stderr)
 	  (receive (child-stdin child-stdout child-stderr)
 	      (px.after-fork/prepare-parent-binary-input/output-ports
-	       parent->child-stdin child-stdout->parent child-stderr->parent)
+	       parent->child-stdin parent<-child-stdout parent<-child-stderr)
 	    (unwind-protect
 		(let ((bufout (make-bytevector 4 0))
 		      (buferr (make-bytevector 4 0)))
@@ -1327,8 +1327,8 @@
 		     (print-condition E)
 		     (exit 1)))
 	    (px.close parent->child-stdin)
-	    (px.close child-stdout->parent)
-	    (px.close child-stderr->parent)
+	    (px.close parent<-child-stdout)
+	    (px.close parent<-child-stderr)
 	    (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
 	    (receive (stdin-port stdout-port stderr-port)
 		(px.after-fork/prepare-child-binary-input/output-ports)
@@ -1354,8 +1354,8 @@
   (check
       (let-values
 	  (((child-stdin          parent->child-stdin) (px.pipe))
-	   ((child-stdout->parent child-stdout)        (px.pipe))
-	   ((child-stderr->parent child-stderr)        (px.pipe)))
+	   ((parent<-child-stdout child-stdout)        (px.pipe))
+	   ((parent<-child-stderr child-stderr)        (px.pipe)))
 
 	(define (parent-proc child-pid)
 	  (px.close child-stdin)
@@ -1363,7 +1363,7 @@
 	  (px.close child-stderr)
 	  (receive (child-stdin child-stdout child-stderr)
 	      (px.after-fork/prepare-parent-textual-input/output-ports
-	       parent->child-stdin child-stdout->parent child-stderr->parent)
+	       parent->child-stdin parent<-child-stdout parent<-child-stderr)
 	    (unwind-protect
 		(let ((bufout (make-string 4 #\x00))
 		      (buferr (make-string 4 #\x00)))
@@ -1388,8 +1388,8 @@
 		     (print-condition E)
 		     (exit 1)))
 	    (px.close parent->child-stdin)
-	    (px.close child-stdout->parent)
-	    (px.close child-stderr->parent)
+	    (px.close parent<-child-stdout)
+	    (px.close parent<-child-stderr)
 	    (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
 	    (px.after-fork/prepare-child-textual-input/output-ports)
 	    (let ((buf (make-string 5 #\x00)))
@@ -1416,7 +1416,7 @@
   (check
       (internal-body
 
-	(define (parent-proc child-pid parent->child-stdin child-stdout->parent child-stderr->parent)
+	(define (parent-proc child-pid parent->child-stdin parent<-child-stdout parent<-child-stderr)
 	  (unwind-protect
 	      (let ((bufout (make-bytevector 4 0))
 		    (buferr (make-bytevector 4 0)))
@@ -1425,15 +1425,15 @@
 		  (if (and (px.WIFEXITED status)
 			   (zero? (px.WEXITSTATUS status)))
 		      (begin
-			(px.read child-stdout->parent bufout)
-			(px.read child-stderr->parent buferr)
+			(px.read parent<-child-stdout bufout)
+			(px.read parent<-child-stderr buferr)
 			(values bufout buferr))
 		    (error #f
 		      "child process exited abnormally"
 		      status))))
 	    (px.close parent->child-stdin)
-	    (px.close child-stdout->parent)
-	    (px.close child-stderr->parent)))
+	    (px.close parent<-child-stdout)
+	    (px.close parent<-child-stderr)))
 
 	(define (child-thunk)
 	  (guard (E (else
