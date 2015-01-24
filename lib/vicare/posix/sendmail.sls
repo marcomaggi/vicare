@@ -32,56 +32,36 @@
 
 
 (define* (sendmail {message.bv bytevector?})
-  (let-values
-      (((child-stdin          parent->child-stdin) (px.pipe))
-       ((child-stdout->parent child-stdout)        (px.pipe))
-       ((child-stderr->parent child-stderr)        (px.pipe)))
-    (px.fork
-      (lambda (child-pid) ;here we are in the parent
-	;;Write message.
-	(unwind-protect
-	    (px.write parent->child-stdin message.bv)
-	  (px.close parent->child-stdin))
-	(unwind-protect
-	    (begin
-	      ;;Wait until the child exits.
-	      (let ((status (px.waitpid child-pid 0)))
-		(if (and (px.WIFEXITED status)
-			 (zero? (px.WEXITSTATUS status)))
-		    ;;Read the  output from  "sendmail" generated  by the  "-v" flag.
-		    ;;Sendmail writes to its stdout, rather than to its stderr.
-		    (%read-stdout-from-child child-stdout->parent)
-		  (error __who__
-		    "sendmail process exited abnormally"
-		    status))))
-	  (px.close child-stdout->parent)
-	  (px.close child-stderr->parent)))
-      (lambda ()	;here we are in the child
-	(guard (E (else
-		   (print-condition E)
-		   (exit 1)))
-	  (%prepare-child-file-descriptors child-stdin child-stdout child-stderr)
-	  (px.execvp "sendmail" '("sendmail" "-t" "-i" "-v")))))))
+  (px.fork-with-fds
+   ;;Here we are in the parent.
+   (lambda (child-pid parent->child-stdin child-stdout->parent child-stderr->parent)
+     ;;Write message.
+     (unwind-protect
+	 (px.write parent->child-stdin message.bv)
+       (px.close parent->child-stdin))
+     (unwind-protect
+	 (begin
+	   ;;Wait until the child exits.
+	   (let ((status (px.waitpid child-pid 0)))
+	     (if (and (px.WIFEXITED status)
+		      (zero? (px.WEXITSTATUS status)))
+		 ;;Read  the  output from  "sendmail"  generated  by the  "-v"  flag.
+		 ;;Sendmail writes to its stdout, rather than to its stderr.
+		 (%read-stdout-from-child child-stdout->parent)
+	       (error __who__
+		 "sendmail process exited abnormally"
+		 status))))
+       (px.close child-stdout->parent)
+       (px.close child-stderr->parent)))
+   ;;Here we are in the child.
+   (lambda ()
+     (guard (E (else
+		(print-condition E)
+		(exit 1)))
+       (px.execvp "sendmail" '("sendmail" "-t" "-i" "-v"))))))
 
 
 ;;;; file descriptors
-
-(define (%prepare-child-file-descriptors child-stdin child-stdout child-stderr)
-  ;;Setup stdin.
-  (begin
-    (close-input-port (console-input-port))
-    (px.dup2  child-stdin 0)
-    (px.close child-stdin))
-  ;;Setup stdout.
-  (begin
-    (close-output-port (console-output-port))
-    (px.dup2  child-stdout 1)
-    (px.close child-stdout))
-  ;;Setup stderr.
-  (begin
-    (close-output-port (console-error-port))
-    (px.dup2  child-stderr 2)
-    (px.close child-stderr)))
 
 (define (%read-stdout-from-child fd)
   ;;Read  chunks  of data  from  the  file descriptor  FD,  concatenate  them into  a

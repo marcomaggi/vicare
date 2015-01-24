@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -383,7 +383,7 @@
 		   (and (px.WIFEXITED status)
 			(px.WEXITSTATUS status))))
 	       (lambda ()
-		 (px.execle "/bin/ls" '("ls" "Makefile") "VALUE=123")
+		 (px.execle "/bin/sh" "sh" "-c" "echo A is $A" '("A=123"))
 		 (exit 9)))
     => 0)
 
@@ -1229,6 +1229,319 @@
 	      (px.file-size name))
 	  (delete-file name)))
     => 10)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fork-and-pipe))
+
+  ;;Fork a process, setup the file descriptors, wait for child to terminate.
+  ;;
+  (check
+      (let-values
+	  (((child-stdin          parent->child-stdin) (px.pipe))
+	   ((child-stdout->parent child-stdout)        (px.pipe))
+	   ((child-stderr->parent child-stderr)        (px.pipe)))
+
+	(define (parent-proc child-pid)
+	  (px.close child-stdin)
+	  (px.close child-stdout)
+	  (px.close child-stderr)
+	  (unwind-protect
+	      (let ((bufout (make-bytevector 4 0))
+		    (buferr (make-bytevector 4 0)))
+		(px.write parent->child-stdin '#ve(ascii "ciao\n"))
+		(let ((status (px.waitpid child-pid 0)))
+		  (if (and (px.WIFEXITED status)
+			   (zero? (px.WEXITSTATUS status)))
+		      (begin
+			(px.read child-stdout->parent bufout)
+			(px.read child-stderr->parent buferr)
+			(values bufout buferr))
+		    (error #f
+		      "child process exited abnormally"
+		      status))))
+	    (px.close parent->child-stdin)
+	    (px.close child-stdout->parent)
+	    (px.close child-stderr->parent)))
+
+	(define (child-thunk)
+	  (guard (E (else
+		     (print-condition E)
+		     (exit 1)))
+	    (px.close parent->child-stdin)
+	    (px.close child-stdout->parent)
+	    (px.close child-stderr->parent)
+	    (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	    (let ((buf (make-bytevector 5 0)))
+	      (px.read 0 buf)
+	      (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+	      (px.write 1 '#ve(ascii "out\n"))
+	      (px.write 2 '#ve(ascii "err\n"))
+	      (exit 0))))
+
+	(flush-output-port (console-output-port))
+	(flush-output-port (console-error-port))
+	(px.fork parent-proc child-thunk))
+    => '#ve(ascii "out\n") '#ve(ascii "err\n"))
+
+;;; --------------------------------------------------------------------
+
+  ;;Fork a process, setup the file descriptors, setup binary ports, wait for child to
+  ;;terminate.
+  ;;
+  (check
+      (let-values
+	  (((child-stdin          parent->child-stdin) (px.pipe))
+	   ((child-stdout->parent child-stdout)        (px.pipe))
+	   ((child-stderr->parent child-stderr)        (px.pipe)))
+
+	(define (parent-proc child-pid)
+	  (px.close child-stdin)
+	  (px.close child-stdout)
+	  (px.close child-stderr)
+	  (receive (child-stdin child-stdout child-stderr)
+	      (px.after-fork/prepare-parent-binary-input/output-ports
+	       parent->child-stdin child-stdout->parent child-stderr->parent)
+	    (unwind-protect
+		(let ((bufout (make-bytevector 4 0))
+		      (buferr (make-bytevector 4 0)))
+		  (put-bytevector child-stdin '#ve(ascii "ciao\n"))
+		  (flush-output-port child-stdin)
+		  (let ((status (px.waitpid child-pid 0)))
+		    (if (and (px.WIFEXITED status)
+			     (zero? (px.WEXITSTATUS status)))
+			(begin
+			  (get-bytevector-n! child-stdout bufout 0 4)
+			  (get-bytevector-n! child-stderr buferr 0 4)
+			  (values bufout buferr))
+		      (error #f
+			"child process exited abnormally"
+			status))))
+	      (close-output-port child-stdin)
+	      (close-input-port  child-stdout)
+	      (close-input-port  child-stderr))))
+
+	(define (child-thunk)
+	  (guard (E (else
+		     (print-condition E)
+		     (exit 1)))
+	    (px.close parent->child-stdin)
+	    (px.close child-stdout->parent)
+	    (px.close child-stderr->parent)
+	    (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	    (receive (stdin-port stdout-port stderr-port)
+		(px.after-fork/prepare-child-binary-input/output-ports)
+	      (let ((buf (make-bytevector 5 0)))
+		(get-bytevector-n! stdin-port buf 0 5)
+		(assert (bytevector=? buf '#ve(ascii "ciao\n")))
+		(put-bytevector stdout-port '#ve(ascii "out\n"))
+		(put-bytevector stderr-port '#ve(ascii "err\n"))
+		(flush-output-port stdout-port)
+		(flush-output-port stderr-port)
+		(exit 0)))))
+
+	(flush-output-port (console-output-port))
+	(flush-output-port (console-error-port))
+	(px.fork parent-proc child-thunk))
+    => '#ve(ascii "out\n") '#ve(ascii "err\n"))
+
+;;; --------------------------------------------------------------------
+
+  ;;Fork a process,  setup the file descriptors, setup textual  ports, wait for child
+  ;;to terminate.
+  ;;
+  (check
+      (let-values
+	  (((child-stdin          parent->child-stdin) (px.pipe))
+	   ((child-stdout->parent child-stdout)        (px.pipe))
+	   ((child-stderr->parent child-stderr)        (px.pipe)))
+
+	(define (parent-proc child-pid)
+	  (px.close child-stdin)
+	  (px.close child-stdout)
+	  (px.close child-stderr)
+	  (receive (child-stdin child-stdout child-stderr)
+	      (px.after-fork/prepare-parent-textual-input/output-ports
+	       parent->child-stdin child-stdout->parent child-stderr->parent)
+	    (unwind-protect
+		(let ((bufout (make-string 4 #\x00))
+		      (buferr (make-string 4 #\x00)))
+		  (put-string child-stdin "ciao\n")
+		  (flush-output-port child-stdin)
+		  (let ((status (px.waitpid child-pid 0)))
+		    (if (and (px.WIFEXITED status)
+			     (zero? (px.WEXITSTATUS status)))
+			(begin
+			  (get-string-n! child-stdout bufout 0 4)
+			  (get-string-n! child-stderr buferr 0 4)
+			  (values bufout buferr))
+		      (error #f
+			"child process exited abnormally"
+			status))))
+	      (close-output-port child-stdin)
+	      (close-input-port  child-stdout)
+	      (close-input-port  child-stderr))))
+
+	(define (child-thunk)
+	  (guard (E (else
+		     (print-condition E)
+		     (exit 1)))
+	    (px.close parent->child-stdin)
+	    (px.close child-stdout->parent)
+	    (px.close child-stderr->parent)
+	    (px.after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	    (px.after-fork/prepare-child-textual-input/output-ports)
+	    (let ((buf (make-string 5 #\x00)))
+	      (get-string-n! (console-input-port) buf 0 5)
+	      (assert (string=? buf "ciao\n"))
+	      (put-string (console-output-port) "out\n")
+	      (put-string (console-error-port) "err\n")
+	      (flush-output-port (console-output-port))
+	      (flush-output-port (console-error-port))
+	      (exit 0))))
+
+	(flush-output-port (console-output-port))
+	(flush-output-port (console-error-port))
+	(px.fork parent-proc child-thunk))
+    => "out\n" "err\n")
+
+  #t)
+
+
+(parametrise ((check-test-name	'advanced-forks))
+
+  ;;Fork a process, setup the file descriptors, wait for child to terminate.
+  ;;
+  (check
+      (internal-body
+
+	(define (parent-proc child-pid parent->child-stdin child-stdout->parent child-stderr->parent)
+	  (unwind-protect
+	      (let ((bufout (make-bytevector 4 0))
+		    (buferr (make-bytevector 4 0)))
+		(px.write parent->child-stdin '#ve(ascii "ciao\n"))
+		(let ((status (px.waitpid child-pid 0)))
+		  (if (and (px.WIFEXITED status)
+			   (zero? (px.WEXITSTATUS status)))
+		      (begin
+			(px.read child-stdout->parent bufout)
+			(px.read child-stderr->parent buferr)
+			(values bufout buferr))
+		    (error #f
+		      "child process exited abnormally"
+		      status))))
+	    (px.close parent->child-stdin)
+	    (px.close child-stdout->parent)
+	    (px.close child-stderr->parent)))
+
+	(define (child-thunk)
+	  (guard (E (else
+		     (print-condition E)
+		     (exit 1)))
+	    (let ((buf (make-bytevector 5 0)))
+	      (px.read 0 buf)
+	      (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+	      (px.write 1 '#ve(ascii "out\n"))
+	      (px.write 2 '#ve(ascii "err\n"))
+	      (exit 0))))
+
+	(px.fork-with-fds parent-proc child-thunk))
+    => '#ve(ascii "out\n") '#ve(ascii "err\n"))
+
+;;; --------------------------------------------------------------------
+
+  ;;Fork a process, setup the file descriptors, setup binary ports, wait for child to
+  ;;terminate.
+  ;;
+  (check
+      (internal-body
+
+	(define (parent-proc child-pid child-stdin child-stdout child-stderr)
+	  (unwind-protect
+	      (let ((bufout (make-bytevector 4 0))
+		    (buferr (make-bytevector 4 0)))
+		(put-bytevector child-stdin '#ve(ascii "ciao\n"))
+		(flush-output-port child-stdin)
+		(let ((status (px.waitpid child-pid 0)))
+		  (if (and (px.WIFEXITED status)
+			   (zero? (px.WEXITSTATUS status)))
+		      (begin
+			(get-bytevector-n! child-stdout bufout 0 4)
+			(get-bytevector-n! child-stderr buferr 0 4)
+			(values bufout buferr))
+		    (error #f
+		      "child process exited abnormally"
+		      status))))
+	    (close-output-port child-stdin)
+	    (close-input-port  child-stdout)
+	    (close-input-port  child-stderr)))
+
+	(define (child-thunk)
+	  (guard (E (else
+		     (print-condition E)
+		     (exit 1)))
+	    (define-constant stdin-port
+	      (standard-input-port))
+	    (define-constant stdout-port
+	      (standard-output-port))
+	    (define-constant stderr-port
+	      (standard-error-port))
+	    (let ((buf (make-bytevector 5 0)))
+	      (get-bytevector-n! stdin-port buf 0 5)
+	      (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+	      (put-bytevector stdout-port '#ve(ascii "out\n"))
+	      (put-bytevector stderr-port '#ve(ascii "err\n"))
+	      (flush-output-port stdout-port)
+	      (flush-output-port stderr-port)
+	      (exit 0))))
+
+	(px.fork-with-binary-ports parent-proc child-thunk))
+    => '#ve(ascii "out\n") '#ve(ascii "err\n"))
+
+;;; --------------------------------------------------------------------
+
+  ;;Fork a process,  setup the file descriptors, setup textual  ports, wait for child
+  ;;to terminate.
+  ;;
+  (check
+      (internal-body
+
+	(define (parent-proc child-pid child-stdin child-stdout child-stderr)
+	  (unwind-protect
+	      (let ((bufout (make-string 4 #\x00))
+		    (buferr (make-string 4 #\x00)))
+		(put-string child-stdin "ciao\n")
+		(flush-output-port child-stdin)
+		(let ((status (px.waitpid child-pid 0)))
+		  (if (and (px.WIFEXITED status)
+			   (zero? (px.WEXITSTATUS status)))
+		      (begin
+			(get-string-n! child-stdout bufout 0 4)
+			(get-string-n! child-stderr buferr 0 4)
+			(values bufout buferr))
+		    (error #f
+		      "child process exited abnormally"
+		      status))))
+	    (close-output-port child-stdin)
+	    (close-input-port  child-stdout)
+	    (close-input-port  child-stderr)))
+
+	(define (child-thunk)
+	  (guard (E (else
+		     (print-condition E)
+		     (exit 1)))
+	    (let ((buf (make-string 5 #\x00)))
+	      (get-string-n! (console-input-port) buf 0 5)
+	      (assert (string=? buf "ciao\n"))
+	      (put-string (console-output-port) "out\n")
+	      (put-string (console-error-port) "err\n")
+	      (flush-output-port (console-output-port))
+	      (flush-output-port (console-error-port))
+	      (exit 0))))
+
+	(px.fork-with-textual-ports parent-proc child-thunk))
+    => "out\n" "err\n")
 
   #t)
 
