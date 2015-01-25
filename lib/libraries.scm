@@ -162,7 +162,8 @@
      (vicare posix sendmail)
      (vicare posix mailx)
      (vicare posix curl)
-     (vicare posix wget))
+     (vicare posix wget)
+     (vicare posix find))
 
     ((WANT_GLIBC)
      (vicare glibc))
