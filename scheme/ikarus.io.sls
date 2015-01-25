@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -8714,10 +8714,9 @@
 ;;;; standard, console and current ports
 
 (define (standard-input-port)
-  ;;Defined by R6RS.  Return a new binary input port connected to
-  ;;standard input.  Whether  the port supports the PORT-POSITION
-  ;;and   SET-PORT-POSITION!     operations   is   implementation
-  ;;dependent.
+  ;;Defined by  R6RS.  Return a  new binary input  port connected to  standard input.
+  ;;Whether the port supports the PORT-POSITION and SET-PORT-POSITION!  operations is
+  ;;implementation dependent.
   ;;
   (let ((who		'standard-input-port)
 	(fd		0)
@@ -8729,31 +8728,29 @@
     (%file-descriptor->input-port fd attributes port-id buffer.size transcoder close who)))
 
 (define (standard-output-port)
-  ;;Defined by  R6RS.  Return a new binary  output port connected
-  ;;to  the  standard  output.   Whether the  port  supports  the
-  ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
-  ;;implementation dependent.
+  ;;Defined  by R6RS.   Return a  new binary  output port  connected to  the standard
+  ;;output.   Whether  the port  supports  the  PORT-POSITION and  SET-PORT-POSITION!
+  ;;operations is implementation dependent.
   ;;
   (%file-descriptor->output-port 1 0
 				 "*stdout*" (output-file-buffer-size) #f #f 'standard-output-port))
 
 (define (standard-error-port)
-  ;;Defined by  R6RS.  Return a new binary  output port connected
-  ;;to  the  standard  error.   Whether  the  port  supports  the
-  ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
-  ;;implementation dependent.
+  ;;Defined  by R6RS.   Return a  new binary  output port  connected to  the standard
+  ;;error.   Whether  the  port  supports the  PORT-POSITION  and  SET-PORT-POSITION!
+  ;;operations is implementation dependent.
   ;;
   (%file-descriptor->output-port 2 0
 				 "*stderr*" (output-file-buffer-size) #f #f 'standard-error-port))
 
+;;; --------------------------------------------------------------------
+
 (define current-input-port
-  ;;Defined by  R6RS.  Return a  default textual port  for input.
-  ;;Normally,  this  default  port  is associated  with  standard
-  ;;input,   but  can   be  dynamically   reassigned   using  the
-  ;;WITH-INPUT-FROM-FILE procedure from  the (rnrs io simple (6))
-  ;;library.   The  port  may  or  may  not  have  an  associated
-  ;;transcoder;  if  it does,  the  transcoder is  implementation
-  ;;dependent.
+  ;;Defined  by R6RS.   Return  a default  textual port  for  input.  Normally,  this
+  ;;default port is associated with standard input, but can be dynamically reassigned
+  ;;using the WITH-INPUT-FROM-FILE  procedure from the (rnrs io  simple (6)) library.
+  ;;The port may or may not have an associated transcoder; if it does, the transcoder
+  ;;is implementation dependent.
   (make-parameter
       (transcoded-port (standard-input-port) (native-transcoder))
     (lambda (x)
@@ -8764,14 +8761,12 @@
 	x))))
 
 (define current-output-port
-  ;;Defined by  R6RS.  Hold the default textual  port for regular
-  ;;output.   Normally,  this  default  port is  associated  with
-  ;;standard output.
+  ;;Defined by  R6RS.  Hold the default  textual port for regular  output.  Normally,
+  ;;this default port is associated with standard output.
   ;;
-  ;;The  return value of  CURRENT-OUTPUT-PORT can  be dynamically
-  ;;reassigned using  the WITH-OUTPUT-TO-FILE procedure  from the
-  ;;(rnrs  io  simple (6))  library.   A  port  returned by  this
-  ;;procedure may or may not have an associated transcoder; if it
+  ;;The return value  of CURRENT-OUTPUT-PORT can be dynamically  reassigned using the
+  ;;WITH-OUTPUT-TO-FILE  procedure from  the (rnrs  io simple  (6)) library.   A port
+  ;;returned by this  procedure may or may  not have an associated  transcoder; if it
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
@@ -8784,20 +8779,18 @@
 	x))))
 
 (define current-error-port
-  ;;Defined  by R6RS.  Hold  the default  textual port  for error
-  ;;output.   Normally,  this  default  port is  associated  with
-  ;;standard error.
+  ;;Defined by R6RS.  Hold the default textual port for error output.  Normally, this
+  ;;default port is associated with standard error.
   ;;
-  ;;The  return value  of CURRENT-ERROR-PORT  can  be dynamically
-  ;;reassigned using  the WITH-OUTPUT-TO-FILE procedure  from the
-  ;;(rnrs  io  simple (6))  library.   A  port  returned by  this
-  ;;procedure may or may not have an associated transcoder; if it
+  ;;The return  value of CURRENT-ERROR-PORT  can be dynamically reassigned  using the
+  ;;WITH-OUTPUT-TO-FILE  procedure from  the (rnrs  io simple  (6)) library.   A port
+  ;;returned by this  procedure may or may  not have an associated  transcoder; if it
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (let ((port (transcoded-port (standard-error-port) (native-transcoder))))
-	(set-port-buffer-mode! port (buffer-mode line))
-	port)
+      (receive-and-return (port)
+	  (transcoded-port (standard-error-port) (native-transcoder))
+	(set-port-buffer-mode! port (buffer-mode line)))
     (lambda (x)
       (define who 'current-error-port)
       (with-arguments-validation (who)
@@ -8805,26 +8798,45 @@
 	   ($textual-port	x))
 	x))))
 
+;;; --------------------------------------------------------------------
+
 (define console-output-port
-  ;;Defined by Ikarus.  Return a default textual port for output;
-  ;;each call returns the same port.
+  ;;Defined by Ikarus.  Return the default  textual output port: the default value of
+  ;;the parameter CURRENT-OUTPUT-PORT; each call returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
   ;;
   (let ((port (current-output-port)))
-    (lambda () port)))
+    (case-lambda*
+     (() port)
+     (({P textual-output-port?})
+      (set! port P)))))
 
 (define console-error-port
-  ;;Defined by Ikarus.  Return  a default textual port for error;
-  ;;each call returns the same port.
+  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
+  ;;the parameter CURRENT-ERROR-PORT; each call  returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
   ;;
   (let ((port (current-error-port)))
-    (lambda () port)))
+    (case-lambda*
+     (() port)
+     (({P textual-output-port?})
+      (set! port P)))))
 
 (define console-input-port
-  ;;Defined by Ikarus.  Return  a default textual port for input;
-  ;;each call returns the same port.
+  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
+  ;;the parameter CURRENT-INPUT-PORT; each call  returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
   ;;
   (let ((port (current-input-port)))
-    (lambda () port)))
+    (case-lambda*
+     (() port)
+     (({P textual-input-port?})
+      (set! port P)))))
+
+;;; --------------------------------------------------------------------
 
 (define stdin
   (console-input-port))
@@ -8840,12 +8852,11 @@
 
 (post-gc-hooks (cons %close-garbage-collected-ports (post-gc-hooks)))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;;; Local Variables:
 ;;; coding: utf-8-unix
-;;; fill-column: 72
 ;;; eval: (put 'case-errno				'scheme-indent-function 1)
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)

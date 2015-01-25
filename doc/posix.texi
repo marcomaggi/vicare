@@ -72,6 +72,11 @@ External libraries
 * posix log-files::             Logging facilities.
 * posix daemonisations::        Turn the process into a daemon.
 * posix tcp-server-sockets::    @tcp{} server sockets.
+* posix sendmail::              Sending email with @command{sendmail}.
+* posix mailx::                 Sending email with @command{mailx}.
+* posix curl::                  Downloading files with @command{curl}.
+* posix wget::                  Downloading files with @command{wget}.
+* posix find::                  Scanning the file system with @command{find}.
 @end menu
 
 @c page
@@ -300,6 +305,17 @@ Return the process identifier of the parent as a fixnum.
 @section Spawning processes and the like
 
 
+@menu
+* posix process system::        Executing a command through the shell.
+* posix process fork::          Creating a subprocess.
+* posix process exec::          Executing a file.
+@end menu
+
+@c page
+@node posix process system
+@subsection Executing a command through the shell
+
+
 @defun system @var{command}
 Interface to the C function @cfunc{system}, @glibcref{Running a Command,
 system}.  Execute a command through the system shell; @var{command} must
@@ -307,10 +323,39 @@ be a string holding the command to execute.  If successful return the
 termination status of the executed process, @ref{posix status} for
 details; if an error occurs: an exception is raised.
 
+Example that runs @command{ls}:
+
 @example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
 (system "ls -l")
 @end example
 @end defun
+
+@c page
+@node posix process fork
+@subsection Creating a subprocess
+
+
+Forking a process is the act of creating a new process by duplicating
+the current one.
+
+@menu
+* posix process fork fork::     Forking a process.
+* posix process fork fds::      Preparing file descriptors.
+* posix process fork binary::   Preparing binary input/output ports.
+* posix process fork textual::  Preparing textual input/output ports.
+@end menu
+
+@c page
+@node posix process fork fork
+@subsubsection Forking a process
+
+
+@cindex Forking a process
+@cindex Process, forking
+@cindex Subprocess, forking
 
 
 @defun fork
@@ -318,18 +363,28 @@ details; if an error occurs: an exception is raised.
 @cindex Forking processes
 @cindex Processes, forking
 Interface to the C function @cfunc{fork}, @glibcref{Creating a Process,
-fork}.
+fork}.  The behaviour depends upon the number of arguments:
 
+@itemize
+@item
 When called with no arguments: create a new process by forking the
 current one; if successful return a non--negative fixnum representing
-the the return value of @cfunc{fork}, else raise an exception.
+the return value of @cfunc{fork}, else raise an exception.  The return
+value is: @code{0} in the child process; the child process pid in the
+parent.
 
+@item
 When called with two arguments: create a new process by forking the
 current one; if successful the parent process applies @var{parent-proc}
 to a fixnum representing the child process pid and return its return
 value; if successful: the child process evaluates the @var{child-thunk}
 and returns its return value; if an error occurs: an exception is
 raised.
+@end itemize
+@end defun
+
+
+Here is a simple example of forking a process:
 
 @example
 #!r6rs
@@ -349,7 +404,641 @@ raised.
 (printf "here we are in the parent\n")
 (flush-output-port (current-output-port))
 @end example
+
+@c page
+@node posix process fork fds
+@subsubsection Preparing file descriptors
+
+
+@defun fork-with-fds @var{parent-proc} @var{child-thunk}
+Wrapper for @func{fork} that sets up the file descriptor pipes to
+communicate with the child process, @ref{posix process fork fork, fork}.
+When successful: return the same return value of @func{fork}; otherwise
+raise the same exception of @func{fork}.
+
+The procedure @var{parent-proc} is called as follows:
+
+@example
+(parent-proc child-pid
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
+@end example
+
+@noindent
+where the arguments are the following objects:
+
+@table @code
+@item child-pid
+It is a fixnum representing the pid of the child process.
+
+@item parent->child-stdin
+It is a file descriptor writing into the standard input of the child
+process.
+
+@item parent<-child-stdout
+It is a file descriptor reading from the standard output of the child
+process.
+
+@item parent<-child-stderr
+It is a file descriptor reading from the standard error of the child
+process.
+@end table
+
+The thunk @var{child-thunk} is called with no arguments.  The child can
+use the standard file descriptors @code{0}, @code{1}, @code{2} which are
+made distinct from the parent's standard file descriptors.
 @end defun
+
+
+@defun after-fork/prepare-child-file-descriptors @var{child-stdin} @var{child-stdout} @var{child-stderr}
+To be called in the child process, after a fork operation, to replace
+the standard file descriptors @code{0}, @code{1}, @code{2} with the file
+descriptors @var{child-stdin}, @var{child-stdout}, @var{child-stderr}.
+When successful: return unspecified values; otherwise raise an
+exception.
+
+Perform the following operations:
+
+@enumerate
+@item
+Close the standard file descriptors @code{0}, @code{1}, @code{2}.
+
+@item
+Duplicate the file descriptors @var{child-stdin}, @var{child-stdout},
+@var{child-stderr} so that they become new standard file descriptors
+@code{0}, @code{1}, @code{2}.
+
+@item
+Close the file descriptors @var{child-stdin}, @var{child-stdout},
+@var{child-stderr}.
+@end enumerate
+
+Notice that:
+
+@itemize
+@item
+All the ports that, before this call, were wrapping the old file
+descriptors @code{0}, @code{1}, @code{2} after this call will wrap the
+new file descriptors @code{0}, @code{1}, @code{2}.
+
+@item
+It is responsibility of the caller to flush the output ports wrapping
+the standard file descriptors, like the ones returned by
+@func{standard-output-port}, @func{standard-error-port},
+@func{console-output-port}, @func{console-error-port}.
+@end itemize
+@end defun
+
+
+Here is an example that forks a process, sets up the file descriptors in
+the child process, waits for child to terminate.
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(let-values
+    (((child-stdin          parent->child-stdin) (px.pipe))
+     ((parent<-child-stdout child-stdout)        (px.pipe))
+     ((parent<-child-stderr child-stderr)        (px.pipe)))
+
+  (define (parent-proc child-pid)
+    (px.close child-stdin)
+    (px.close child-stdout)
+    (px.close child-stderr)
+    (unwind-protect
+        (let ((bufout (make-bytevector 4 0))
+              (buferr (make-bytevector 4 0)))
+          (px.write parent->child-stdin '#ve(ascii "ciao\n"))
+          (let ((status (px.waitpid child-pid 0)))
+            (if (and (px.WIFEXITED status)
+                     (zero? (px.WEXITSTATUS status)))
+                (begin
+                  (px.read parent<-child-stdout bufout)
+                  (px.read parent<-child-stderr buferr)
+                  (values bufout buferr))
+              (error #f
+                "child process exited abnormally"
+                status))))
+      (px.close parent->child-stdin)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)))
+
+  (define (child-thunk)
+    (guard (E (else
+               (print-condition E)
+               (exit 1)))
+      (px.close parent->child-stdin)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)
+      (px.after-fork/prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
+      (let ((buf (make-bytevector 5 0)))
+        (px.read 0 buf)
+        (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+        (px.write 1 '#ve(ascii "out\n"))
+        (px.write 2 '#ve(ascii "err\n"))
+        (exit 0))))
+
+  (flush-output-port (console-output-port))
+  (flush-output-port (console-error-port))
+  (px.fork parent-proc child-thunk))
+@end example
+
+@noindent
+here is the same example using @func{fork-with-fds}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define (parent-proc child-pid
+           parent->child-stdin
+           parent<-child-stdout
+           parent<-child-stderr)
+  (unwind-protect
+      (let ((bufout (make-bytevector 4 0))
+            (buferr (make-bytevector 4 0)))
+        (px.write parent->child-stdin '#ve(ascii "ciao\n"))
+        (let ((status (px.waitpid child-pid 0)))
+          (if (and (px.WIFEXITED status)
+                   (zero? (px.WEXITSTATUS status)))
+              (begin
+                (px.read parent<-child-stdout bufout)
+                (px.read parent<-child-stderr buferr)
+                (values bufout buferr))
+            (error #f
+              "child process exited abnormally"
+              status))))
+    (px.close parent->child-stdin)
+    (px.close parent<-child-stdout)
+    (px.close parent<-child-stderr)))
+
+(define (child-thunk)
+  (guard (E (else
+             (print-condition E)
+             (exit 1)))
+    (let ((buf (make-bytevector 5 0)))
+      (px.read 0 buf)
+      (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+      (px.write 1 '#ve(ascii "out\n"))
+      (px.write 2 '#ve(ascii "err\n"))
+      (exit 0))))
+
+(px.fork-with-fds parent-proc child-thunk)
+@end example
+
+@c page
+@node posix process fork binary
+@subsubsection Preparing binary input/output ports
+
+
+@defun fork-with-binary-ports @var{parent-proc} @var{child-thunk}
+Wrapper for @func{fork} that sets up the file descriptor pipes and
+binary input/output ports to communicate with the child process,
+@ref{posix process fork fork, fork}.  When successful: return the same
+return value of @func{fork}; otherwise raise the same exception of
+@func{fork}.
+
+The procedure @var{parent-proc} is called as follows:
+
+@example
+(parent-proc child-pid
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
+@end example
+
+@noindent
+where the arguments are the following objects:
+
+@table @code
+@item child-pid
+It is a fixnum representing the pid of the child process.
+
+@item parent->child-stdin
+It is a binary output port writing into the standard input of the child
+process.
+
+@item parent<-child-stdout
+It is a binary input port reading from the standard output of the child
+process.
+
+@item parent<-child-stderr
+It is a binary input port reading from the standard error of the child
+process.
+@end table
+
+The thunk @var{child-thunk} is called with no arguments.  The child can
+use the standard ports returned by @func{standard-input-port},
+@func{standard-output-port}, @func{standard-error-port} which are made
+to wrap standard file descriptors distinct from the parent's standard
+file descriptors.
+@end defun
+
+
+@defun after-fork/prepare-child-binary-input/output-ports
+To be called in the child process, after a fork operation and after
+calling @func{after-fork/prepare-child-file-descriptors} to prepare
+binary input and output ports wrapping the standard file descriptors.
+Return 3 values:
+
+@enumerate
+@item
+Binary input port reading from the standard file descriptor @code{0}.
+It is the port returned by @func{standard-input-port}.
+
+@item
+Binary input port writing to the standard file descriptor @code{1}.  It
+is the port returned by @func{standard-output-port}.
+
+@item
+Binary input port writing to the standard file descriptor @code{2}.  It
+is the port returned by @func{standard-error-port}.
+@end enumerate
+@end defun
+
+
+@defun after-fork/prepare-parent-binary-input/output-ports @var{parent->child-stdin} @var{parent<-child-stdout} @var{parent<-child-stderr}
+To be called in the parent process, after a fork operation, to build
+Scheme input and output binary ports around standard file descriptors
+for the child process.  The arguments are:
+
+@table @var
+@item parent->child-stdin
+It must be a file descriptor that writes in the standard input of the
+child process.
+
+@item parent<-child-stdout
+It must be a file descriptor that reads from the standard output of the
+child process.
+
+@item parent<-child-stderr
+It must be must be a file descriptor that reads from the standard error
+of the child process.
+@end table
+
+Return 3 values:
+
+@enumerate
+@item
+Binary output port that writes in the standard input of the child
+process.  Closing this port will also close the underlying file
+descriptor.
+
+@item
+Binary input port that reads from the standard output of the child
+process.  Closing this port will also close the underlying file
+descriptor.
+
+@item
+Binary input port that reads from the standard error of the child
+process.  Closing this port will also close the underlying file
+descriptor.
+@end enumerate
+@end defun
+
+
+Here is an example that forks a process, sets up the file descriptors in
+the child process, sets up binary ports in both the parent and the
+child, waits for child to terminate.
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(let-values
+    (((child-stdin          parent->child-stdin) (px.pipe))
+     ((parent<-child-stdout child-stdout)        (px.pipe))
+     ((parent<-child-stderr child-stderr)        (px.pipe)))
+
+  (define (parent-proc child-pid)
+    (px.close child-stdin)
+    (px.close child-stdout)
+    (px.close child-stderr)
+    (receive (child-stdin child-stdout child-stderr)
+        (px.after-fork/prepare-parent-binary-input/output-ports
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
+      (unwind-protect
+          (let ((bufout (make-bytevector 4 0))
+                (buferr (make-bytevector 4 0)))
+            (put-bytevector child-stdin '#ve(ascii "ciao\n"))
+            (flush-output-port child-stdin)
+            (let ((status (px.waitpid child-pid 0)))
+              (if (and (px.WIFEXITED status)
+                       (zero? (px.WEXITSTATUS status)))
+                  (begin
+                    (get-bytevector-n! child-stdout bufout 0 4)
+                    (get-bytevector-n! child-stderr buferr 0 4)
+                    (values bufout buferr))
+                (error #f
+                  "child process exited abnormally"
+                  status))))
+        (close-output-port child-stdin)
+        (close-input-port  child-stdout)
+        (close-input-port  child-stderr))))
+
+  (define (child-thunk)
+    (guard (E (else
+               (print-condition E)
+               (exit 1)))
+      (px.close parent->child-stdin)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)
+      (px.after-fork/prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
+      (receive (stdin-port stdout-port stderr-port)
+          (px.after-fork/prepare-child-binary-input/output-ports)
+        (let ((buf (make-bytevector 5 0)))
+          (get-bytevector-n! stdin-port buf 0 5)
+          (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+          (put-bytevector stdout-port '#ve(ascii "out\n"))
+          (put-bytevector stderr-port '#ve(ascii "err\n"))
+          (flush-output-port stdout-port)
+          (flush-output-port stderr-port)
+          (exit 0)))))
+
+  (flush-output-port (console-output-port))
+  (flush-output-port (console-error-port))
+  (px.fork parent-proc child-thunk))
+@end example
+
+@noindent
+here is the same example using @func{fork-with-binary-ports}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define (parent-proc child-pid
+           child-stdin child-stdout child-stderr)
+  (unwind-protect
+      (let ((bufout (make-bytevector 4 0))
+            (buferr (make-bytevector 4 0)))
+        (put-bytevector child-stdin '#ve(ascii "ciao\n"))
+        (flush-output-port child-stdin)
+        (let ((status (px.waitpid child-pid 0)))
+          (if (and (px.WIFEXITED status)
+                   (zero? (px.WEXITSTATUS status)))
+              (begin
+                (get-bytevector-n! child-stdout bufout 0 4)
+                (get-bytevector-n! child-stderr buferr 0 4)
+                (values bufout buferr))
+            (error #f
+              "child process exited abnormally"
+              status))))
+    (close-output-port child-stdin)
+    (close-input-port  child-stdout)
+    (close-input-port  child-stderr)))
+
+(define (child-thunk)
+  (guard (E (else
+             (print-condition E)
+             (exit 1)))
+    (define-constant stdin-port  (standard-input-port))
+    (define-constant stdout-port (standard-output-port))
+    (define-constant stderr-port (standard-error-port))
+    (let ((buf (make-bytevector 5 0)))
+      (get-bytevector-n! stdin-port buf 0 5)
+      (assert (bytevector=? buf '#ve(ascii "ciao\n")))
+      (put-bytevector stdout-port '#ve(ascii "out\n"))
+      (put-bytevector stderr-port '#ve(ascii "err\n"))
+      (flush-output-port stdout-port)
+      (flush-output-port stderr-port)
+      (exit 0))))
+
+(px.fork-with-binary-ports parent-proc child-thunk)
+@end example
+
+@c page
+@node posix process fork textual
+@subsubsection Preparing textual input/output ports
+
+
+@defun fork-with-textual-ports @var{parent-proc} @var{child-thunk}
+Wrapper for @func{fork} that sets up the file descriptor pipes and
+textual input/output ports to communicate with the child process,
+@ref{posix process fork fork, fork}.  When successful: return the same
+return value of @func{fork}; otherwise raise the same exception of
+@func{fork}.
+
+The procedure @var{parent-proc} is called as follows:
+
+@example
+(parent-proc child-pid
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
+@end example
+
+@noindent
+where the arguments are the following objects:
+
+@table @code
+@item child-pid
+It is a fixnum representing the pid of the child process.
+
+@item parent->child-stdin
+It is a textual output port writing into the standard input of the child
+process.
+
+@item parent<-child-stdout
+It is a textual input port reading from the standard output of the child
+process.
+
+@item parent<-child-stderr
+It is a textual input port reading from the standard error of the child
+process.
+@end table
+
+The thunk @var{child-thunk} is called with no arguments.  The child can
+use the standard ports returned by @func{console-input-port},
+@func{console-output-port}, @func{console-error-port} which are made to
+wrap standard file descriptors distinct from the parent's standard file
+descriptors.
+@end defun
+
+
+@defun after-fork/prepare-child-textual-input/output-ports
+To be called in the child process, after a fork operation and after
+calling @func{after-fork/prepare-child-file-descriptors} to prepare
+textual input and output ports wrapping the standard file descriptors.
+New textual input and output ports are built and selected as values
+returned by @func{console-input-port}, @func{console-output-port} and
+@func{console-error-port}, we must use these functions to access the new
+ports.  Return unspecified values.
+
+It is responsibility of the caller to set the new ports as top values
+for the parameters @func{current-input-port},
+@func{current-output-port}, @func{current-error-port}.
+@end defun
+
+
+@defun after-fork/prepare-parent-textual-input/output-ports @var{parent->child-stdin} @var{parent<-child-stdout} @var{parent<-child-stderr}
+To be called in the parent process, after a fork operation, to build
+Scheme input and output textual ports around standard file descriptors
+for the child process.  The arguments are:
+
+@table @var
+@item parent->child-stdin
+It must be a file descriptor that writes in the standard input of the
+child process.
+
+@item parent<-child-stdout
+It must be a file descriptor that reads from the standard output of the
+child process.
+
+@item parent<-child-stderr
+It must be must be a file descriptor that reads from the standard error
+of the child process.
+@end table
+
+Return 3 values:
+
+@enumerate
+@item
+Textual output port that writes in the standard input of the child
+process.  Closing this port will also close the underlying file
+descriptor.
+
+@item
+Textual input port that reads from the standard output of the child
+process.  Closing this port will also close the underlying file
+descriptor.
+
+@item
+Textual input port that reads from the standard error of the child
+process.  Closing this port will also close the underlying file
+descriptor.
+@end enumerate
+@end defun
+
+
+Here is an example that forks a process, sets up the file descriptors in
+the child process, sets up textual ports in both the parent and child,
+waits for the child to terminate.
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(let-values
+    (((child-stdin          parent->child-stdin) (px.pipe))
+     ((parent<-child-stdout child-stdout)        (px.pipe))
+     ((parent<-child-stderr child-stderr)        (px.pipe)))
+
+  (define (parent-proc child-pid)
+    (px.close child-stdin)
+    (px.close child-stdout)
+    (px.close child-stderr)
+    (receive (child-stdin child-stdout child-stderr)
+        (px.after-fork/prepare-parent-textual-input/output-ports
+             parent->child-stdin
+             parent<-child-stdout
+             parent<-child-stderr)
+      (unwind-protect
+          (let ((bufout (make-string 4 #\x00))
+                (buferr (make-string 4 #\x00)))
+            (put-string child-stdin "ciao\n")
+            (flush-output-port child-stdin)
+            (let ((status (px.waitpid child-pid 0)))
+              (if (and (px.WIFEXITED status)
+                       (zero? (px.WEXITSTATUS status)))
+                  (begin
+                    (get-string-n! child-stdout bufout 0 4)
+                    (get-string-n! child-stderr buferr 0 4)
+                    (values bufout buferr))
+                (error #f
+                  "child process exited abnormally"
+                  status))))
+        (close-output-port child-stdin)
+        (close-input-port  child-stdout)
+        (close-input-port  child-stderr))))
+
+  (define (child-thunk)
+    (guard (E (else
+               (print-condition E)
+               (exit 1)))
+      (px.close parent->child-stdin)
+      (px.close parent<-child-stdout)
+      (px.close parent<-child-stderr)
+      (px.after-fork/prepare-child-file-descriptors
+          child-stdin child-stdout child-stderr)
+      (px.after-fork/prepare-child-textual-input/output-ports)
+      (let ((buf (make-string 5 #\x00)))
+        (get-string-n! (console-input-port) buf 0 5)
+        (assert (string=? buf "ciao\n"))
+        (put-string (console-output-port) "out\n")
+        (put-string (console-error-port) "err\n")
+        (flush-output-port (console-output-port))
+        (flush-output-port (console-error-port))
+        (exit 0))))
+
+  (flush-output-port (console-output-port))
+  (flush-output-port (console-error-port))
+  (px.fork parent-proc child-thunk))
+@end example
+
+@noindent
+here is the same example using @func{fork-with-textual-ports}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define (parent-proc child-pid
+           child-stdin child-stdout child-stderr)
+  (unwind-protect
+      (let ((bufout (make-string 4 #\x00))
+            (buferr (make-string 4 #\x00)))
+        (put-string child-stdin "ciao\n")
+        (flush-output-port child-stdin)
+        (let ((status (px.waitpid child-pid 0)))
+          (if (and (px.WIFEXITED status)
+                   (zero? (px.WEXITSTATUS status)))
+              (begin
+                (get-string-n! child-stdout bufout 0 4)
+                (get-string-n! child-stderr buferr 0 4)
+                (values bufout buferr))
+            (error #f
+              "child process exited abnormally"
+              status))))
+    (close-output-port child-stdin)
+    (close-input-port  child-stdout)
+    (close-input-port  child-stderr)))
+
+(define (child-thunk)
+  (guard (E (else
+             (print-condition E)
+             (exit 1)))
+    (let ((buf (make-string 5 #\x00)))
+      (get-string-n! (console-input-port) buf 0 5)
+      (assert (string=? buf "ciao\n"))
+      (put-string (console-output-port) "out\n")
+      (put-string (console-error-port) "err\n")
+      (flush-output-port (console-output-port))
+      (flush-output-port (console-error-port))
+      (exit 0))))
+
+(px.fork-with-textual-ports parent-proc child-thunk)
+@end example
+
+@c page
+@node posix process exec
+@subsection Executing a file
+
+
+The @posix{} functions in the family @code{exec*} execute a file and
+replace the current Vicare process with the new process; when these
+functions are successful: they do not return.
+
+@quotation
+@strong{NOTE} For a clean subprocess execution: before executing the
+command we must call @func{close-ports-in-close-on-exec-mode}.
+@end quotation
 
 
 @defun execv @var{filename} @var{argv}
@@ -361,8 +1050,14 @@ execv}.  @var{filename} must be the pathname of an executable file;
 arguments.  Execute the command; if the function returns: an error has
 occurred, an exception is raised.
 
-Before executing the command call
-@func{close-ports-in-close-on-exec-mode}.
+Example that runs @command{ls}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execv "/bin/ls" '("ls" "-l"))
+@end example
 @end defun
 
 
@@ -374,8 +1069,14 @@ arguments; @var{env} must be a list of strings representing environment
 variables assignments.  Execute the command; if the function returns: an
 error has occurred, an exception is raised.
 
-Before executing the command call
-@func{close-ports-in-close-on-exec-mode}.
+Example that runs @command{sh}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execve "/bin/sh" '("sh" "-c" "echo A is $A") '("A=1"))
+@end example
 @end defun
 
 
@@ -386,24 +1087,64 @@ reachable in the current @env{PATH}; @var{argv} must be a list of
 strings representing command line arguments.  Execute the command; if
 the function returns: an error has occurred, an exception is raised.
 
-Before executing the command call
-@func{close-ports-in-close-on-exec-mode}.
+Example that runs @command{ls}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execvp "ls" '("ls" "-l"))
+@end example
 @end defun
 
 
 @defun execl @var{filename} @varo{arg} @var{arg} ...
-Like @func{execv} but allows the arguments to be given expliticly.
+Like @func{execv} but allows the arguments to be given explicitly.
+Example that runs @command{ls}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execl "/bin/ls" "ls" "-l")
+@end example
 @end defun
 
 
-@defun execle @var{filename} @var{argv} @var{env} ...
-Like @func{execve} but allows the environment to be given expliticly.
+@defun execle @var{filename} @varo{argv} @var{arg} @dots{} @var{env}
+Like @func{execve} but allows the arguments to be given explicitly.
+Example that runs @command{sh}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execle "/bin/sh" "sh" "-c" "echo A is $A" '("A=123"))
+@end example
 @end defun
 
 
 @defun execlp @var{filename} @varo{arg} @var{arg} ...
-Like @func{execvp} but allows the arguments to be given expliticly.
+Like @func{execvp} but allows the arguments to be given explicitly.
+Example that runs @command{ls}:
+
+@example
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(px.execlp "ls" "ls" "-l")
+@end example
 @end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Finding executable files
+
+
+@cindex Finding executable files
+@cindex Executable files, finding
+@cindex Finding programs
+@cindex Programs, finding
 
 
 @defun find-executable-as-bytevector @var{bv-pathname}
@@ -461,7 +1202,7 @@ the environment variable @env{PATH} is changed before a call to them.
 
 For these reasons: these functions are both invoked upon loading the
 library @library{vicare posix} and they cache the result internally.
-Beware of neither change the current working directory nor change the
+Beware to neither change the current working directory nor change the
 @env{PATH} before loading @library{vicare posix}.
 @end defun
 
@@ -1952,104 +2693,25 @@ Interface to the C function @cfunc{pipe}, @glibcref{Creating a Pipe,
 pipe}.  Create a pair of file descriptors connected through a pipe.  If
 successful return two values being fixnums representing the file
 descriptors, else raise an exception.
+@end defun
 
-Simple example of process writing to itself through a pipe:
+
+The following is a simple example of process writing to itself through a
+pipe:
 
 @example
 #!r6rs
 (import (vicare)
   (prefix (vicare posix) px.))
 
-(let-values (((in ou) (px.pipe)))
+(receive (in ou)
+    (px.pipe)
   (px.write ou '#vu8(1 2 3 4) 4)
-  (let ((bv (make-bytevector 4)))
-    (px.read in bv 4)
-    bv))
+  (receive-and-return (bv)
+      (make-bytevector 4)
+    (px.read in bv 4)))
 @result{} #vu8(1 2 3 4)
 @end example
-
-@noindent
-here is how to fork a process and setup stdin and stdout in the child to
-use newly created pipe file descriptors to communicate with the parent:
-
-@example
-#!r6rs
-(import (vicare)
-  (prefix (vicare posix) px.))
-
-(let-values
-    (((child-stdin       parent-to-child) (px.pipe))
-     ((parent-from-child child-stdout)    (px.pipe)))
-  (fork
-
-    (lambda (pid) ;parent
-      (let ((buf (make-bytevector 1)))
-        (px.read  parent-from-child buf 1)
-        (px.write parent-to-child '#vu8(2) 1)
-        buf))
-
-    (lambda () ;child
-      (begin ;setup stdin
-        (close-input-port (current-input-port))
-        (px.dup2 child-stdin 0)
-        (px.close child-stdin))
-
-      (begin ;setup stdout
-        (close-output-port (current-output-port))
-        (px.dup2 child-stdout 1)
-        (px.close child-stdout))
-
-      (let ((buf (make-bytevector 1)))
-        (px.write 1 '#vu8(1) 1)
-        (px.read  0 buf 1)
-        (exit 0)))))
-@result{} #vu8(1)
-@end example
-
-@noindent
-here is how to fork a process and setup stdin and stdout in the child to
-use newly created pipe file descriptors, through Scheme ports, to
-communicate with the parent:
-
-@example
-#!r6rs
-(import (vicare)
-  (prefix (vicare posix) px.))
-
-(let-values (((child-stdin       parent-to-child) (px.pipe))
-             ((parent-from-child child-stdout)    (px.pipe)))
-  (fork
-   (lambda (pid)        ;parent
-     (let* ((inp (make-textual-file-descriptor-input-port
-                  parent-from-child "in" (native-transcoder)))
-            (oup (make-textual-file-descriptor-output-port
-                  parent-to-child "out" (native-transcoder)))
-            (buf (get-string-n inp 4)))
-       (display "hello" oup)
-       (flush-output-port oup)
-       buf))
-
-   (lambda ()           ;child
-
-     (begin      ;setup stdin
-       (close-input-port (current-input-port))
-       (current-input-port
-        (make-textual-file-descriptor-input-port
-         child-stdin "*stdin*" (native-transcoder))))
-
-     (begin ;setup stdout
-       (close-output-port (current-output-port))
-       (current-output-port
-        (make-textual-file-descriptor-output-port
-         child-stdout "*stdout*" (native-transcoder))))
-
-     (display "ciao")
-     (flush-output-port (current-output-port))
-     (get-string-n (current-input-port) 5)
-     (exit 0))))
-@result{} "ciao"
-@end example
-@end defun
 
 @c page
 @node posix fd fifo
@@ -6918,5 +7580,346 @@ A bytevector representing the client address as @code{struct sockaddr}.
 Close the Scheme port wrapping a server socket descriptor returned by a
 previous call to @func{make-server-sock-and-port}.
 @end defun
+
+@c page
+@node posix sendmail
+@section Sending email with @command{sendmail}
+
+
+@cindex Library @library{vicare posix sendmail}
+@cindex @library{vicare posix sendmail}, library
+@cindex Sending email with @command{sendmail}
+@cindex @command{sendmail}, sending email
+
+
+The library @library{vicare posix sendmail} exports a simple @api{} to
+send email through the external program @command{sendmail}.  This
+library is a demonstration of the basic mechanism needed to execute an
+external program, write data to its standard input and read data from
+its standard output.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-sendmail.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{sendmail} must be reachable in the current
+@env{PATH}; @command{sendmail} is executed with the options:
+
+@example
+sendmail -t -i -v
+@end example
+
+@noindent
+the @ascii{} text displayed on the standard output is captured for
+diagnostic.
+
+
+@defun sendmail @var{message}
+Send an email message spawning a subprocess that launches
+@command{sendmail}.  @var{message} must be a bytevector representing the
+message in @ascii{} encoding.  When successful: return a string
+representing the output of @command{sendmail}; otherwise raise an
+exception.
+
+The source and destination addresses are extracted from the message
+itself.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare posix sendmail))
+
+(define (send-it message)
+  (define rv
+    (sendmail (string->ascii message)))
+  (display rv)
+  (newline)
+  (flush-output-port (current-output-port)))
+
+(send-it "From: <marco@@localhost>
+To: <marco@@localhost>
+Subject: demo 01
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is demo 01.
+--\x20;
+Marco Maggi
+")
+@end example
+
+@c page
+@node posix mailx
+@section Sending email with @command{mailx}
+
+
+@cindex Library @library{vicare posix mailx}
+@cindex @library{vicare posix mailx}, library
+@cindex Sending email with @command{mailx}
+@cindex @command{mailx}, sending email
+
+
+The library @library{vicare posix mailx} exports a simple @api{} to send
+email through the external program @command{mailx}.  This library is a
+demonstration of the basic mechanism needed to execute an external
+program, write data to its standard input and read data from its
+standard output and standard error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-mailx.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{mailx} must be reachable in the current
+@env{PATH}; @command{mailx} is executed with the command line:
+
+@example
+MAILRC=/dev/null mailx -t -i -v
+@end example
+
+@noindent
+the @ascii{} text displayed on the standard output and standard error is
+captured for diagnostic.
+
+
+@defun mailx @var{message}
+Send an email message spawning a subprocess that launches
+@command{mailx}.  @var{message} must be a bytevector representing the
+message in @ascii{} encoding.  When successful: return two strings
+representing the output of @command{mailx} to, respectively, standard
+output and standard error; otherwise raise an exception.
+
+The source and destination addresses are extracted from the message
+itself.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare posix mailx))
+
+(define (send-it message)
+  (define rv
+    (mailx (string->ascii message)))
+  (display rv)
+  (newline)
+  (flush-output-port (current-output-port)))
+
+(send-it "From: <marco@@localhost>
+To: <marco@@localhost>
+Subject: demo 01
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is demo 01.
+--\x20;
+Marco Maggi
+")
+@end example
+
+@c page
+@node posix curl
+@section Downloading files with @command{curl}
+
+
+@cindex Library @library{vicare posix curl}
+@cindex @library{vicare posix curl}, library
+@cindex Downloading files with @command{curl}
+@cindex @command{curl}, downloading files
+@cindex @aurl{}, downloading with @command{curl}
+
+
+The library @library{vicare posix curl} exports a simple @api{} to
+download files through the external program @command{curl}.  This
+library is a demonstration of the basic mechanism needed to execute an
+external program and read data from its standard output and standard
+error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-curl.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{curl} must be reachable in the current
+@env{PATH}; @command{curl} is always with the command line:
+
+@example
+curl --silent --show-error
+@end example
+
+@noindent
+the @ascii{} text displayed on the standard output and standard error is
+captured for diagnostic.  Additional options can be appended to the
+command line.
+
+
+@defun curl @var{url} @var{option} @dots{}
+Download a file spawning a subprocess that launches @command{curl}.
+@var{url} must be a string representing the @aurl{} in @ascii{}
+encoding.  Each @var{option} must be a string representing a
+@command{curl} command line argument.  When successful: return two
+strings representing the output of @command{curl} to, respectively,
+standard output and standard error; otherwise raise an exception.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare posix curl))
+
+(define (get-it url)
+  (receive (out err)
+      (curl url)
+    (display out)
+    (newline)
+    (display err)
+    (newline)
+    (flush-output-port (current-output-port))))
+
+(get-it "http://marcomaggi.github.io/index.html")
+@end example
+
+@c page
+@node posix wget
+@section Downloading files with @command{wget}
+
+
+@cindex Library @library{vicare posix wget}
+@cindex @library{vicare posix wget}, library
+@cindex Downloading files with @command{wget}
+@cindex @command{wget}, downloading files
+@cindex @aurl{}, downloading with @command{wget}
+
+
+The library @library{vicare posix wget} exports a simple @api{} to
+download files through the external program @command{wget}.  This
+library is a demonstration of the basic mechanism needed to execute an
+external program and read data from its standard output and standard
+error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-wget.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{wget} must be reachable in the current
+@env{PATH}; the library does @strong{not} use default options for the
+command line of @command{wget}; the @ascii{} text displayed on the
+standard output and standard error is captured for diagnostic.
+
+
+@defun wget @var{option} @dots{}
+Perform an operation spawning a subprocess that launches @command{wget}.
+Each @var{option} must be a string representing a @command{wget} command
+line argument.  When successful: return two strings representing the
+output of @command{wget} to, respectively, standard output and standard
+error; otherwise raise an exception.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare posix wget))
+
+(define (get-it url)
+  (receive (out err)
+      (wget "--output-document=-" url)
+    (display out)
+    (newline)
+    (display err)
+    (newline)
+    (flush-output-port (current-output-port))))
+
+(get-it "http://marcomaggi.github.io/index.html")
+@end example
+
+@c page
+@node posix find
+@section Scanning the file system with @command{find}
+
+
+@cindex Library @library{vicare posix find}
+@cindex @library{vicare posix find}, library
+@cindex Scanning the file system with @command{find}
+@cindex File system scanning with @command{find}
+@cindex @command{find}, scanning the file system
+
+
+The library @library{vicare posix find} exports a simple @api{} to scan
+file systems through the external program @command{find}.  This library
+is a demonstration of the basic mechanism needed to execute an external
+program and read data from its standard output and standard error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-find.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{find} must be reachable in the current
+@env{PATH}; the library does @strong{not} use default options for the
+command line of @command{find}; the @ascii{} text displayed on the
+standard output and standard error is captured for diagnostic.
+
+
+@defun find @var{option} @dots{}
+Perform an operation spawning a subprocess that launches @command{find}.
+Each @var{option} must be a string representing a @command{find} command
+line argument.  When successful return 3 values: a fixnum representing
+the exit status of the subprocess; two strings representing the output
+of @command{find} to, respectively, standard output and standard error;
+otherwise raise an exception.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (prefix (vicare posix find) find.)
+  (only (vicare containers strings)
+        string-tokenise)
+  (only (vicare containers char-sets)
+        char-set char-set-complement))
+
+(define (scan-it root)
+  (receive (status out err)
+      (find.find root "-type" "f"
+                 "-and" "-executable"
+                 "-and" "-maxdepth" "2"
+                 "-and" "-iname" "*bin*"
+                 "-and" "-print0")
+    (when (string? out)
+      (for-each (lambda (hit)
+                  (write hit)
+                  (newline))
+        (string-tokenise out
+          (char-set-complement (char-set #\x00)))))
+    (display err)
+    (newline)
+    (flush-output-port (current-output-port))))
+
+(scan-it "/usr")
+@end example
 
 @c end of file

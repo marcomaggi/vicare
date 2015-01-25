@@ -158,7 +158,12 @@
      (vicare posix log-files)
      (vicare posix daemonisations)
      (vicare posix simple-event-loop)
-     (vicare posix tcp-server-sockets))
+     (vicare posix tcp-server-sockets)
+     (vicare posix sendmail)
+     (vicare posix mailx)
+     (vicare posix curl)
+     (vicare posix wget)
+     (vicare posix find))
 
     ((WANT_GLIBC)
      (vicare glibc))
