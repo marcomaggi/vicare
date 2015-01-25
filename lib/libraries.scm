@@ -160,7 +160,8 @@
      (vicare posix simple-event-loop)
      (vicare posix tcp-server-sockets)
      (vicare posix sendmail)
-     (vicare posix mailx))
+     (vicare posix mailx)
+     (vicare posix curl))
 
     ((WANT_GLIBC)
      (vicare glibc))

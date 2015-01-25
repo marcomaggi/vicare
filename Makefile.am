@@ -1043,6 +1043,7 @@ EXTRA_DIST	+= \
 	tests/demo-srfi-106.sps				\
 	tests/demo-sendmail.sps				\
 	tests/demo-mailx.sps				\
+	tests/demo-curl.sps				\
 	\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\
