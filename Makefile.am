@@ -1044,6 +1044,7 @@ EXTRA_DIST	+= \
 	tests/demo-sendmail.sps				\
 	tests/demo-mailx.sps				\
 	tests/demo-curl.sps				\
+	tests/demo-wget.sps				\
 	\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\

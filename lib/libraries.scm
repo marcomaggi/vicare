@@ -161,7 +161,8 @@
      (vicare posix tcp-server-sockets)
      (vicare posix sendmail)
      (vicare posix mailx)
-     (vicare posix curl))
+     (vicare posix curl)
+     (vicare posix wget))
 
     ((WANT_GLIBC)
      (vicare glibc))
