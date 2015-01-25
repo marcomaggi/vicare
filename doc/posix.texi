@@ -75,6 +75,7 @@ External libraries
 * posix sendmail::              Sending email with @command{sendmail}.
 * posix mailx::                 Sending email with @command{mailx}.
 * posix curl::                  Downloading files with @command{curl}.
+* posix wget::                  Downloading files with @command{wget}.
 @end menu
 
 @c page
@@ -7782,6 +7783,64 @@ Example:
 (define (get-it url)
   (receive (out err)
       (curl url)
+    (display out)
+    (newline)
+    (display err)
+    (newline)
+    (flush-output-port (current-output-port))))
+
+(get-it "http://marcomaggi.github.io/index.html")
+@end example
+
+@c page
+@node posix wget
+@section Downloading files with @command{wget}
+
+
+@cindex Library @library{vicare posix wget}
+@cindex @library{vicare posix wget}, library
+@cindex Downloading files with @command{wget}
+@cindex @command{wget}, downloading files
+@cindex @aurl{}, downloading with @command{wget}
+
+
+The library @library{vicare posix wget} exports a simple @api{} to
+download files through the external program @command{wget}.  This
+library is a demonstration of the basic mechanism needed to execute an
+external program and read data from its standard output and standard
+error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-wget.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{wget} must be reachable in the current
+@env{PATH}; the library does @strong{not} use default options for the
+command line of @command{wget}; the @ascii{} text displayed on the
+standard output and standard error is captured for diagnostic.
+
+
+@defun wget @var{option} @dots{}
+Perform an operation spawning a subprocess that launches @command{wget}.
+Each @var{option} must be a string representing a @command{wget} command
+line argument.  When successful: return two strings representing the
+output of @command{wget} to, respectively, standard output and standard
+error; otherwise raise an exception.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare posix wget))
+
+(define (get-it url)
+  (receive (out err)
+      (wget "--output-document=-" url)
     (display out)
     (newline)
     (display err)
