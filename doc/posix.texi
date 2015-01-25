@@ -74,6 +74,7 @@ External libraries
 * posix tcp-server-sockets::    @tcp{} server sockets.
 * posix sendmail::              Sending email with @command{sendmail}.
 * posix mailx::                 Sending email with @command{mailx}.
+* posix curl::                  Downloading files with @command{curl}.
 @end menu
 
 @c page
@@ -7630,7 +7631,7 @@ Example:
 @example
 #!r6rs
 (import (vicare)
- (vicare posix sendmail))
+  (vicare posix sendmail))
 
 (define (send-it message)
   (define rv
@@ -7703,7 +7704,7 @@ Example:
 @example
 #!r6rs
 (import (vicare)
- (vicare posix mailx))
+  (vicare posix mailx))
 
 (define (send-it message)
   (define rv
@@ -7722,6 +7723,72 @@ This is demo 01.
 --\x20;
 Marco Maggi
 ")
+@end example
+
+@c page
+@node posix curl
+@section Downloading files with @command{curl}
+
+
+@cindex Library @library{vicare posix curl}
+@cindex @library{vicare posix curl}, library
+@cindex Downloading files with @command{curl}
+@cindex @command{curl}, downloading files
+@cindex @aurl{}, downloading with @command{curl}
+
+
+The library @library{vicare posix curl} exports a simple @api{} to
+download files through the external program @command{curl}.  This
+library is a demonstration of the basic mechanism needed to execute an
+external program and read data from its standard output and standard
+error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-curl.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{curl} must be reachable in the current
+@env{PATH}; @command{curl} is always with the command line:
+
+@example
+curl --silent --show-error
+@end example
+
+@noindent
+the @ascii{} text displayed on the standard output and standard error is
+captured for diagnostic.  Additional options can be appended to the
+command line.
+
+
+@defun curl @var{url} @var{option} @dots{}
+Download a file spawning a subprocess that launches @command{curl}.
+@var{url} must be a string representing the @aurl{} in @ascii{}
+encoding.  Each @var{option} must be a string representing a
+@command{curl} command line argument.  When successful: return two
+strings representing the output of @command{curl} to, respectively,
+standard output and standard error; otherwise raise an exception.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (vicare posix curl))
+
+(define (get-it url)
+  (receive (out err)
+      (curl url)
+    (display out)
+    (newline)
+    (display err)
+    (newline)
+    (flush-output-port (current-output-port))))
+
+(get-it "http://marcomaggi.github.io/index.html")
 @end example
 
 @c end of file
