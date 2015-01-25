@@ -76,6 +76,7 @@ External libraries
 * posix mailx::                 Sending email with @command{mailx}.
 * posix curl::                  Downloading files with @command{curl}.
 * posix wget::                  Downloading files with @command{wget}.
+* posix find::                  Scanning the file system with @command{find}.
 @end menu
 
 @c page
@@ -7848,6 +7849,77 @@ Example:
     (flush-output-port (current-output-port))))
 
 (get-it "http://marcomaggi.github.io/index.html")
+@end example
+
+@c page
+@node posix find
+@section Scanning the file system with @command{find}
+
+
+@cindex Library @library{vicare posix find}
+@cindex @library{vicare posix find}, library
+@cindex Scanning the file system with @command{find}
+@cindex File system scanning with @command{find}
+@cindex @command{find}, scanning the file system
+
+
+The library @library{vicare posix find} exports a simple @api{} to scan
+file systems through the external program @command{find}.  This library
+is a demonstration of the basic mechanism needed to execute an external
+program and read data from its standard output and standard error.
+
+@quotation
+The source distribution of @value{PRJNAME} includes a simple demo
+program @file{demo-find.sps} in the @file{tests} subdirectory of the
+source tree.
+@end quotation
+
+The executable file @command{find} must be reachable in the current
+@env{PATH}; the library does @strong{not} use default options for the
+command line of @command{find}; the @ascii{} text displayed on the
+standard output and standard error is captured for diagnostic.
+
+
+@defun find @var{option} @dots{}
+Perform an operation spawning a subprocess that launches @command{find}.
+Each @var{option} must be a string representing a @command{find} command
+line argument.  When successful return 3 values: a fixnum representing
+the exit status of the subprocess; two strings representing the output
+of @command{find} to, respectively, standard output and standard error;
+otherwise raise an exception.
+@end defun
+
+
+Example:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (prefix (vicare posix find) find.)
+  (only (vicare containers strings)
+        string-tokenise)
+  (only (vicare containers char-sets)
+        char-set char-set-complement))
+
+(define (scan-it root)
+  (receive (status out err)
+      (find.find root "-type" "f"
+                 "-and" "-executable"
+                 "-and" "-maxdepth" "2"
+                 "-and" "-iname" "*bin*"
+                 "-and" "-print0")
+    (when (string? out)
+      (for-each (lambda (hit)
+                  (write hit)
+                  (newline))
+        (string-tokenise out
+          (char-set-complement (char-set #\x00)))))
+    (display err)
+    (newline)
+    (flush-output-port (current-output-port))))
+
+(scan-it "/usr")
 @end example
 
 @c end of file
