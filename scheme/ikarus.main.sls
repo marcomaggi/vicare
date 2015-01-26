@@ -140,9 +140,8 @@
 (define-struct run-time-config
   (exec-mode
 		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
-		;BINARY-PROGRAM,     R6RS-REPL,     SCRIPT,     COMPILE-DEPENDENCIES,
-		;COMPILE-LIBRARY,  COMPILE-PROGRAM,  COMPILE-SOMETHING,  R6RS-EXPAND,
-		;REPL.
+		;BINARY-PROGRAM,  R6RS-REPL,  COMPILE-DEPENDENCIES,  COMPILE-LIBRARY,
+		;COMPILE-PROGRAM, COMPILE-SOMETHING, R6RS-EXPAND, REPL.
    script
 		;A  string  representing a  file  name:  the  main script.   When  in
 		;R6RS-SCRIPT,   BINARY-PROGRAM,   COMPILE-PROGRAM,   COMPILE-LIBRARY,
@@ -160,21 +159,6 @@
 		;Null or a  list of strings representing file names:  libraries to be
 		;instantiated,  adding the  result  to  the interaction  environment,
 		;after the RC files and before the load scripts.
-
-   eval-codes
-		;Null or  an alist with entries:
-		;
-		;	(file . FILENAME)
-		;	(expr . EXPRESSION)
-		;
-		;FILENAME is  a string representing a  file names: source code  to be
-		;loaded and handed to EVAL under the interaction environment.
-		;
-		;EXPRESSION is a  symbolic expression to be handed to  EVAL under the
-		;interaction environment.
-		;
-		;This  code is  evaluated before  the main  script is  evaluated, but
-		;after the libraries have been loaded.
 
    program-options
 		;Null or  a list of strings  representing command line options  to be
@@ -212,9 +196,6 @@
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
   (set-run-time-config-load-libraries! cfg (cons pathname (run-time-config-load-libraries cfg))))
 
-(define-inline (run-time-config-eval-codes-register! cfg pathname)
-  (set-run-time-config-eval-codes! cfg (cons pathname (run-time-config-eval-codes cfg))))
-
 (define-inline (run-time-config-library-source-search-path-register! cfg pathname)
   (set-run-time-config-library-source-search-path! cfg (cons pathname (run-time-config-library-source-search-path cfg))))
 
@@ -250,7 +231,6 @@
 	      (CFG.SCRIPT		(%dot-id ".script"))
 	      (CFG.RCFILES		(%dot-id ".rcfiles"))
 	      (CFG.LOAD-LIBRARIES	(%dot-id ".load-libraries"))
-	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
 	      (CFG.LIBRARY-SOURCE-SEARCH-PATH	(%dot-id ".library-source-search-path"))
@@ -287,13 +267,6 @@
 		     (run-time-config-load-libraries ?cfg))
 		    ((set! _ ?val)
 		     (set-run-time-config-load-libraries! ?cfg ?val))))
-
-		  (CFG.EVAL-CODES
-		   (identifier-syntax
-		    (_
-		     (run-time-config-eval-codes ?cfg))
-		    ((set! _ ?val)
-		     (set-run-time-config-eval-codes! ?cfg ?val))))
 
 		  (CFG.PROGRAM-OPTIONS
 		   (identifier-syntax
@@ -358,8 +331,6 @@
   ;;
   ;;* A list of run-command files to be executed, if any.
   ;;
-  ;;* A list of auxiliary scripts to be evaluated, if any.
-  ;;
   ;;* A list of auxiliary libraries to be instantiated, if any.
   ;;
   ;;* A list of options to be handed to the main script as arguments.
@@ -376,7 +347,6 @@
 			  #f		;script
 			  #t		;rcfiles
 			  '()		;load-libraries
-			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
 			  '()		;library-source-search-path
@@ -404,7 +374,6 @@
 	(when (list? rcfiles)
 	  (set-run-time-config-rcfiles!    cfg (reverse rcfiles))))
       (set-run-time-config-load-libraries! cfg (reverse (run-time-config-load-libraries cfg)))
-      (set-run-time-config-eval-codes!     cfg (reverse (run-time-config-eval-codes   cfg)))
       (values cfg k))
 
     (cond ((null? args)
@@ -456,16 +425,6 @@
 		  (%error-and-exit "option --r6rs-repl given after other mode option"))
 		 (else
 		  (set-run-time-config-exec-mode! cfg 'r6rs-repl)
-		  (set-run-time-config-script!    cfg (cadr args))
-		  (next-option (cddr args) k))))
-
-	  ((%option= "--script")
-	   (cond ((null? (cdr args))
-		  (%error-and-exit "option --script requires a script name"))
-		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --script given after other mode option"))
-		 (else
-		  (set-run-time-config-exec-mode! cfg 'script)
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
@@ -625,21 +584,6 @@
 	       (%error-and-exit "--rcfile requires a file name argument")
 	     (begin
 	       (run-time-config-rcfiles-register! cfg (cadr args))
-	       (next-option (cddr args) k))))
-
-	  ((%option= "-f" "--eval-file")
-	   (if (null? (cdr args))
-	       (%error-and-exit "-f or --eval-file requires a file name argument")
-	     (begin
-	       (run-time-config-eval-codes-register! cfg (cons 'file (cadr args)))
-	       (next-option (cddr args) k))))
-
-	  ((%option= "-e" "--eval-expr")
-	   (if (null? (cdr args))
-	       (%error-and-exit "-e or --eval-expr requires an expression argument")
-	     (begin
-	       (run-time-config-eval-codes-register! cfg (cons 'expr
-							       (%string->sexp (cadr args))))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "-l" "--load-library")
@@ -837,7 +781,6 @@ vicare [OPTIONS] [FILENAME]                     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --binary-program PROGRAM       [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-library LIBFILE
 vicare [OPTIONS] --compile-dependencies PROGRAM
 vicare [OPTIONS] --compile-program PROGRAM
@@ -862,11 +805,6 @@ Options controlling execution modes:
         option had been used but,  after the script execution, enter the
         REPL rather  than exiting.   This allows inspection  of bindings
         and state left behind by the program.
-
-   --script CODEFILE
-        Start Vicare in  evaluation mode.  The CODEFILE is  handled as a
-       	sequence of R6RS expressions: such expressions are used as first
-       	argument for EVAL under the interaction environment.
 
    --compile-library LIBFILE
         Load the  R6RS library source  LIBFILE, compile it and  save the
@@ -920,21 +858,6 @@ Other options:
         after executing the RC files, load the libraries in the internal
         collection but do not add  them to any environment.  This option
         can be used multiple times.
-
-   -f CODEFILE
-   --eval-file CODEFILE
-        Load CODEFILE  expecting it  to contain valid  R6RS expressions;
-	after instantiating  the libraries hand  the code to  EVAL under
-	the interaction environment.  Bindings  left behind by this code
-	are  available if we  enter the  REPL. This  option can  be used
-	multiple times.
-
-   -e EXPRESSION
-   --eval-expr EXPRESSION
-        After instantiating  the libraries  hand the EXPRESSION  to EVAL
-	under the interaction environment.  Bindings left behind by this
-	code are available if we enter the REPL. This option can be used
-	multiple times.
 
    --no-greetings
         Suppress greetings when entering the REPL.
@@ -1139,24 +1062,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	(else
 	 cfg.rcfiles)))))
 
-(define (evaluate-codes cfg)
-  ;;Load and  eval selected code  files in the  interaction environment;
-  ;;evaluate  selected  expressions   in  the  interaction  environment.
-  ;;Bindings  left behind by  this code  are available  if we  enter the
-  ;;REPL.
-  ;;
-  (with-run-time-config (cfg)
-    (doit (for-each (lambda (entry)
-		      (case (car entry)
-			((file)
-			 (load.load (cdr entry)))
-			((expr)
-			 (eval (cdr entry) (interaction-environment)))
-			(else
-			 (assertion-violation 'vicare
-			   "*** Vicare internal error: unknown evaluation code type" (car entry)))))
-	    cfg.eval-codes))))
-
 (define (load-libraries cfg)
   ;;Load the  library files selected  on the command line.   Notice that
   ;;there is only one internal collection of loaded libraries.
@@ -1182,10 +1087,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 (define (run-compiled-program cfg)
   (with-run-time-config (cfg)
     (doit (load.run-compiled-program cfg.script))))
-
-(define (load-evaluated-script cfg)
-  (with-run-time-config (cfg)
-    (doit (load.load cfg.script))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1526,7 +1427,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;Evaluate code before the main action.
     (load-rc-files-as-r6rs-scripts cfg)
     (load-libraries cfg)
-    (evaluate-codes cfg)
 
     ;;Perform the main action.
     (case cfg.exec-mode
@@ -1554,9 +1454,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
       ((compile-something)
        (compile-something cfg))
-
-      ((script)
-       (load-evaluated-script cfg))
 
       ((r6rs-expand)
        (expand-program cfg))

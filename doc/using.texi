@@ -56,7 +56,6 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program PROGRAM       [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
@@ -109,22 +108,6 @@ Start Vicare in @rnrs{6}-script mode.  Act as if the
 @option{--r6rs-script} option had been used but, after the program
 execution, enter the @repl{} rather than exiting.  This allows
 inspection of bindings and state left behind by the program.
-
-@item --script @var{CODEFILE}
-@cindex Command line option @option{--script}
-@cindex @option{--script}, command line option
-Start Vicare in evaluation mode.  The @var{CODEFILE} is handled as a
-sequence of @rnrs{6} expressions: such expressions are used as first
-argument for @func{eval} under the interaction environment.  Example:
-
-@example
-$ cat test.sps
-(write (command-line))
-(newline)
-
-$ @value{RAWEXECUTABLE} --script test.sps hi there
-("test.sps" "hi" "there")
-@end example
 
 @item --compile-program @var{PROGRAM}
 @cindex Command line option @option{--compile-program}
@@ -209,29 +192,6 @@ Load @var{libfile} expecting it to contain one or more @rnrs{6}
 libraries; after executing the RC files, load the libraries in the
 internal collection, but do not add them to any environment.  This
 option can be used multiple times.
-
-@item -f @var{CODEFILE}
-@itemx --eval-file @var{CODEFILE}
-@cindex Command line option @option{--eval-file}
-@cindex @option{--eval-file}, command line option
-@cindex Command line option @option{-f}
-@cindex @option{-f}, command line option
-Load @var{CODEFILE} expecting it to contain valid @rnrs{6} expressions;
-after instantiating the libraries hand the code to @func{eval} under the
-interaction environment.  Bindings left behind by this code are
-available if we enter the @repl{}.  This option can be used multiple
-times.
-
-@item -e @var{EXPRESSION}
-@itemx --eval-expr @var{EXPRESSION}
-@cindex Command line option @option{--eval-expr}
-@cindex @option{--eval-expr}, command line option
-@cindex Command line option @option{-e}
-@cindex @option{-e}, command line option
-After instantiating the libraries hand the @var{EXPRESSION} to
-@func{eval} under the interaction environment.  Bindings left behind by
-this code are available if we enter the @repl{}. This option can be used
-multiple times.
 
 @item --source-path @var{DIRECTORY}
 @cindex Command line option @option{--source-path}
