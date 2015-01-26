@@ -871,22 +871,6 @@ referenced by the parameter @func{compiled-libraries-store-directory}.
 @end defun
 
 
-@defun library-source-pathname->library-binary-pathname-in-cache-directory @var{source-pathname}
-Given a string representing the pathname of a source library: build and
-return a string representing the pathname of a compiled library in the
-currently selected cache directory.  The current cache directory is the
-pathname currently referenced by the parameter
-@func{compiled-libraries-cache-directory}.
-
-@smallexample
-(parametrise ((compiled-libraries-cache-directory "/a/b"))
-   (library-source-pathname->library-binary-pathname-in-cache-directory
-      "/c/d.sls"))
-@result{} "/a/b/c/d.fasl"
-@end smallexample
-@end defun
-
-
 @defun library-source-pathname->library-stem-pathname @var{source-pathname}
 Given a string representing the file pathname of a source library: strip
 the file extensions if it is equal to a supported @value{PRJNAME} file
@@ -1593,7 +1577,6 @@ search the file system for a library file pathname matching a specified
 * libutils file-system paths::          Library search paths.
 * libutils file-system binary::         Locating compiled library files.
 * libutils file-system source::         Locating source library files.
-* libutils file-system cache::          Locating cache library files.
 * libutils file-system locators::       Library file locators.
 @end menu
 
@@ -1784,70 +1767,6 @@ of @func{library-source-search-path}.
 @end enumerate
 @end deffn
 
-@c ------------------------------------------------------------
-
-@deffn Parameter library-cache-search-path
-Hold a list of strings representing relative or absolute directory
-pathnames; the strings must represent syntactically valid pathname
-specifications, but the directories might not exist.  The list is used
-as search path for binary libraries serialised in automatically
-generated @fasl{} files, iterating from head to tail.
-
-Files in the cache search path have pathnames formed from the absolute
-pathname of the source library file: by replacing the source file
-extension with the binary file extension and prepending a directory
-pathname from the search path to the result.  For example, if a cache
-directory from the search path is @file{~/.vicare/precompiled}, the
-source library:
-
-@example
-/usr/local/lib/vicare-scheme/vicare/posix.sls
-@end example
-
-@noindent
-is cached as:
-
-@smallexample
-~/.vicare/precompiled/usr/local/lib/vicare-scheme/vicare/posix.fasl
-@end smallexample
-
-Such pathnames can be constructed as follows:
-
-@smallexample
-(define binary-pathname
-  (library-source-pathname->library-binary-pathname-in-cache-directory
-     source-pathname))
-@end smallexample
-
-The value of the parameter @func{library-cache-search-path} is composed
-as follows:
-
-@enumerate
-@item
-The parameter is initialised to the empty list.
-
-@item
-@cindex @env{VICARE_CACHE_PATH}, system environment variable
-@cindex Environment variable @env{VICARE_CACHE_PATH}
-@cindex System environment variable @env{VICARE_CACHE_PATH}
-At the beginning of execution, @value{PRJNAME} consults the environment
-variable @env{VICARE_CACHE_PATH}; when set, it is expected to hold a
-colon separated list of directory pathnames, in Unix--style.  The list
-is parsed and the directories are prepended, in the given order, to
-@func{library-cache-search-path}.
-
-@item
-If the options @option{-C} and @option{--cache-path} are present on the
-command line: their value is expected to be a string representing a
-directory pathname.  Such pathnames are prepended, in the given order,
-to @func{library-cache-search-path}.
-
-@item
-While @value{EXECUTABLE} is running: we can modify at will the content
-of @func{library-cache-search-path}.
-@end enumerate
-@end deffn
-
 @c page
 @node libutils file-system binary
 @subsection Locating compiled library files
@@ -1934,35 +1853,6 @@ directory in the search path.  Otherwise it must return @false{} and
 @end defun
 
 @c page
-@node libutils file-system cache
-@subsection Locating cache library files
-
-
-@deffn Parameter current-library-cache-search-path-scanner
-Hold a function used to convert a @rnrs{6} library reference into the
-corresponding cache file pathname.
-
-The referenced function must accept, as single value, a @rnrs{6} library
-reference and it must return two values.  When successful: a string
-representing the cache file pathname; a thunk to be called to continue
-the search from the next directory in the search path.  Otherwise it
-must return @false{} and @false{}.
-@end deffn
-
-
-@defun default-library-cache-search-path-scanner @var{libref}
-Default value for the parameter
-@func{current-library-cache-search-path-scanner}.  Given a @rnrs{6}
-library reference: scan the cache library search path for the
-corresponding file.
-
-Return two values.  When successful: a string representing the cache
-file pathname; a thunk to be called to continue the search from the next
-directory in the search path.  Otherwise it must return @false{} and
-@false{}.
-@end defun
-
-@c page
 @node libutils file-system locators
 @subsection Library file locators
 
@@ -2028,22 +1918,10 @@ Scan the next directory from the source libraries search path for a
 source library whose name matches @var{libref}.
 
 @item
-If a matching source is found: look in the
-@func{compiled-library-cache-directory} a for an already compiled
-@fasl{} file.
-
-@item
-If the @fasl{} file does not exist or it is older than the source file:
-accept the source file and prepare as next search the search for the
-source file in the next directory from the search path.
-
-@item
-If the @fasl{} file exists and it is newer than the source file: accept
-it and prepare as next search the acceptance of the source file.
+If a matching source is found: accept the source file and prepare as
+next search the search for the source file in the next directory from
+the search path.
 @end enumerate
-
-Remember that the @fasl{} file can be rejected if it has been compiled
-by another boot image or it has the wrong library @uid{}.
 
 @var{options} must be a list of symbols; at present the supported
 options are:
@@ -2129,96 +2007,8 @@ and @false{}.
 
 
 @menu
-* libutils compiling special cache::    The output cache directory.
 * libutils compiling special store::    The output store directory.
 @end menu
-
-@c page
-@node libutils compiling special cache
-@subsubsection The output cache directory
-
-
-@cindex Cache directory
-@cindex Directory, output cache
-
-
-The following bindings are exported by the library @library{vicare
-libraries}.
-
-
-@deffn Parameter compiled-libraries-cache-directory
-Hold a string representing the absolute pathname of a directory; the
-string must represent a syntactically valid pathname, but the directory
-might not exist.  The cache directory is meant to be used to store
-automatically generated @fasl{} files holding binary libraries.
-
-When caching compiled libraries is enabled and a source library is found
-and loaded: its compiled version is serialised in a @fasl{} file under
-the cache directory.
-
-Under the cache directory: @fasl{} files are stored with pathnames
-composed from the absolute source file pathname.  For example, if the
-cache directory is @file{~/.vicare/precompiled} the source library:
-
-@example
-/usr/local/lib/vicare-scheme/vicare/posix.sls
-@end example
-
-@noindent
-is cached as:
-
-@smallexample
-~/.vicare/precompiled/usr/local/lib/vicare-scheme/vicare/posix.fasl
-@end smallexample
-
-Such pathnames can be constructed as follows:
-
-@smallexample
-(define binary-pathname
-  (library-source-pathname->library-binary-pathname-in-cache-directory
-     source-pathname))
-@end smallexample
-
-The value of the parameter @func{compiled-libraries-cache-directory} is
-composed as follows:
-
-@enumerate
-@item
-The parameter is initialised to @file{/var/cache/vicare-scheme}.  If
-this value is left untouched, and caching libraries is enabled: it is
-responsibility of the system administrator to create such directory with
-appropriate ownership and read/write access permissions.
-
-@item
-If the environment variable @var{HOME} is set and holding an existent
-directory pathname, compose a directory pathname as follows:
-
-@example
-$(HOME)/.vicare/precompiled
-@end example
-
-@noindent
-and set it as parameter value.
-
-@item
-@cindex @env{VICARE_CACHE_DIRECTORY}, system environment variable
-@cindex Environment variable @env{VICARE_CACHE_DIRECTORY}
-@cindex System environment variable @env{VICARE_CACHE_DIRECTORY}
-If the environment variable @env{VICARE_CACHE_DIRECTORY} is set and
-holding an valid directory pathname: select its value as parameter
-value.
-
-@item
-If the option @option{--cache-directory} is present on the command line:
-its value is expected to be a string representing a directory pathname,
-otherwise an error is raised.  Such pathname becomes the value of
-@func{compiled-libraries-cache-directory}.
-
-@item
-While @value{EXECUTABLE} is running: we can modify at will the content
-of @func{compiled-libraries-cache-directory}.
-@end enumerate
-@end deffn
 
 @c page
 @node libutils compiling special store

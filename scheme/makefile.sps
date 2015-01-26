@@ -3083,7 +3083,6 @@
 
     (library-source-search-path				$libraries)
     (library-binary-search-path				$libraries)
-    (compiled-libraries-cache-directory			$libraries)
     (compiled-libraries-store-directory			$libraries)
 
     (library-extensions					$libraries)
@@ -3093,7 +3092,6 @@
     (directory+library-stem->library-source-pathname	$libraries)
     (library-name->library-binary-pathname-in-store-directory			$libraries)
     (library-reference->library-binary-pathname-in-store-directory		$libraries)
-    (library-source-pathname->library-binary-pathname-in-cache-directory	$libraries)
     (library-source-pathname->library-stem-pathname				$libraries)
     (library-source-pathname->library-binary-tail-pathname			$libraries)
     (program-source-pathname->program-binary-pathname	$libraries)
@@ -3105,10 +3103,8 @@
 
     (current-library-source-search-path-scanner		$libraries)
     (current-library-binary-search-path-scanner		$libraries)
-    (current-library-cache-search-path-scanner		$libraries)
     (default-library-source-search-path-scanner		$libraries)
     (default-library-binary-search-path-scanner		$libraries)
-    (default-library-cache-search-path-scanner		$libraries)
 
     (current-include-loader				$libraries)
     (default-include-loader				$libraries)

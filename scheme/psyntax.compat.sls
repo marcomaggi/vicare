@@ -65,7 +65,6 @@
     option.descriptive-labels
     option.print-loaded-libraries?
     option.print-debug-messages?
-    option.cache-compiled-libraries?
     option.tagged-language.rhs-tag-propagation?
     option.tagged-language.datums-as-operators?
     option.tagged-language.setter-forms?

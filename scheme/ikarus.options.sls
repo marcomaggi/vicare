@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -32,7 +32,6 @@
     print-loaded-libraries?
 
     debug-mode-enabled?
-    cache-compiled-libraries?
     report-errors-at-runtime
     strict-r6rs
     descriptive-labels
@@ -79,7 +78,6 @@
 (define-boolean-option debug-mode-enabled?)
 (define-boolean-option print-debug-messages?)
 (define-boolean-option print-loaded-libraries?)
-(define-boolean-option cache-compiled-libraries?)
 (define-boolean-option report-errors-at-runtime)
 (define-boolean-option strict-r6rs)
 (define-boolean-option descriptive-labels)

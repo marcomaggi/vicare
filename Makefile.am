@@ -1231,9 +1231,8 @@ lalr-test:
 #### compiling test files
 #
 # These  are very  rough rules,  not  integrated in  the GNU  Automake
-# infrastructure.   The purpose,  here, is  to excercise  both program
-# compilation and the command  line option --cache-libraries to handle
-# the libraries used by test programs.
+# infrastructure.   The   purpose,  here,  is  to   excercise  program
+# compilation to handle the libraries used by test programs.
 #
 
 VICARE_COMPILED_SELECTED_TESTS		= $(testdir)/test-*.sps $(testdir)/long-test-*.sps
@@ -1244,12 +1243,10 @@ VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
-		--cache-libraries --cache-path $(builddir)/tests			\
-		--cache-directory $(builddir)/tests --store-directory $(fasldir)	\
+		--store-directory $(fasldir)						\
 		--print-loaded-libraries --compile-program
 VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
 		--library-path $(fasldir)						\
-		--cache-libraries --cache-path $(builddir)/tests			\
 		--store-directory $(fasldir)						\
 		--print-loaded-libraries --binary-program
 VICARE_COMPILED_TESTS_ENV	= \

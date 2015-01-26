@@ -54,9 +54,9 @@ Lots of backwards incompatibilities... life is hard!
 
 * BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
   completely overhauled.  There are too  many changes to list them here,
-  but here, we must read  the relevant documentation; system environment
-  variable names and command line option names have changed too (sorry).
-  The most important stuff:
+  we must  read the relevant documentation;  system environment variable
+  names and  command line  option names have  changed too  (sorry).  The
+  most important stuff:
 
   - Version numbers are supported.  If,  while scanning the search path,
     a  library is  loaded  and its  version number  does  not match  the
@@ -96,6 +96,9 @@ Lots of backwards incompatibilities... life is hard!
     and 64-bit FASL files under:
 
        $(prefix)/lib64/vicare-scheme
+
+   - Caching of libraries compiled  on-the-fly (under "~/.vicare") is no
+     more supported.
 
   See the  documentation nodes  "using libraries" and  "libutils".  Most
   likely this code needs to be ironed out.

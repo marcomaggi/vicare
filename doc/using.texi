@@ -248,24 +248,6 @@ multiple times.
 Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
 multiple times.
 
-@item -C @var{DIRECTORY}
-@itemx --cache-path @var{DIRECTORY}
-@cindex Command line option @option{--cache-path}
-@cindex @option{--cache-path}, command line option
-@cindex Command line option @option{-C}
-@cindex @option{-C}, command line option
-Add the directory pathname @var{DIRECTORY} to the cache search path.
-This option can be used multiple times to incrementally build a path.
-The cache directory search path is used to find libraries automatically
-compiled from installed sources.
-
-@item --cache-directory @var{DIRECTORY}
-@cindex Command line option @option{--cache-directory}
-@cindex @option{--cache-directory}, command line option
-Select @var{DIRECTORY} as pathname under which binary library files are
-stored when automatically compiled from installed sources.  When used
-multiple times: the last one wins.
-
 @item --store-directory @var{DIRECTORY}
 @cindex Command line option @option{--store-directory}
 @cindex @option{--store-directory}, command line option
@@ -332,18 +314,6 @@ collection.
 @cindex Command line option @option{--no-gc-integrity-checks}
 @cindex @option{--no-gc-integrity-checks}, command line option
 Disable garbage collection integrity checks.  This is the default.
-
-@item --cache-libraries
-@cindex Command line option @option{--cache-libraries}
-@cindex @option{--cache-libraries}, command line option
-Whenever a library file is loaded in source form: compile and serialise
-it in a @fasl{} file in the selected @fasl{} directory.  This option is
-ignored when the execution mode is @option{--compile-dependencies}.
-
-@item --no-cache-compiled-libraries
-@cindex Command line option @option{--no-cache-compiled-libraries}
-@cindex @option{--no-cache-compiled-libraries}, command line option
-Disables the effect of @option{--cache-libraries}.
 
 @item --print-loaded-libraries
 @cindex Command line option @option{--print-loaded-libraries}
@@ -847,14 +817,11 @@ unique component: when building the file stem such component is
 @cindex Source library source path
 @cindex @fasl{} file source path
 @cindex @func{library-source-search-path}
-@cindex @func{compiled-library-cache-directory}
 @cindex @func{library-binary-search-path}
 @cindex @env{VICARE_SOURCE_PATH}, system environment variable
 @cindex @env{VICARE_LIBRARY_PATH}, system environment variable
-@cindex @env{VICARE_CACHE_DIRECTORY}, system environment variable
 @cindex Environment variable @env{VICARE_SOURCE_PATH}
 @cindex Environment variable @env{VICARE_LIBRARY_PATH}
-@cindex Environment variable @env{VICARE_CACHE_DIRECTORY}
 
 
 @value{PRJNAME} has a search algorithm for libraries that is similar to
@@ -881,11 +848,6 @@ The binary libraries search path is stored in the parameter
 @noindent
 both these parameters are meant to contain lists of strings representing
 directory pathnames and can be updated as necessary.
-
-In addition the parameter @func{compiled-library-cache-directory} is
-meant to hold a string representing a single directory pathname; such
-directory is searched when looking for a compiled version of a library
-from an existent source file.
 
 @c ------------------------------------------------------------
 
@@ -969,11 +931,6 @@ While @value{RAWEXECUTABLE} is running: we can modify at will the
 content of @func{library-binary-search-path}.
 @end enumerate
 
-@noindent
-notice that the value of the parameter
-@func{compiled-library-cache-directory} is @strong{not} included by
-default in @func{library-binary-search-path}.
-
 In the following example session the user sets
 @env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
 @code{(library-binary-search-path)}; a further directory is then set during the
@@ -1007,54 +964,6 @@ In programs intended to be distributed, we should resist the urge to set
 hierarchies might not match ours; for most libraries, simply telling the
 user to install the files in one of the directories on the search path
 is good enough.
-
-@c ------------------------------------------------------------
-
-@subsubheading @fasl{} directory initialisation
-
-
-The parameter @func{compiled-library-cache-directory} is initialised as
-follows:
-
-@enumerate
-@item
-At the beginning of execution @value{PRJNAME} consults the system
-environment variable @env{VICARE_CACHE_DIRECTORY}; when set, it is
-expected to hold a directory pathname.  Such pathname is stored in
-@func{compiled-library-cache-directory}.
-
-@item
-If the system environment variable @env{VICARE_CACHE_DIRECTORY} is unset
-or set to an empty or invalid string, an attempt is made to set
-@func{compiled-library-cache-directory} to:
-
-@example
-~/.vicare/precompiled
-@end example
-
-@noindent
-for this to work the system environment variable @env{HOME} must exist
-and be set to a string representing a directory pathname.
-
-@item
-If the system environment variable @env{VICARE_CACHE_DIRECTORY} is unset
-or set to an empty or invalid string and it is not possible to build a
-valid pathname for @file{~/.vicare/precompiled},
-@func{compiled-library-cache-directory} is set to the fallback
-directory:
-
-@example
-/tmp/vicare/precompiled
-@end example
-
-@noindent
-which is probably not what we want.
-
-@item
-If the option @option{--cache-directory} is present on the command line:
-its value is meant to represent a directory pathname.  Such pathname is
-stored in @func{compiled-library-cache-directory}.
-@end enumerate
 
 @c page
 @node using libraries searching
@@ -1219,42 +1128,11 @@ the following files are be tested:
 @end example
 
 @item
-If a source file exists:
-
-@enumerate A
-@item
-The content of the parameter @func{compiled-libraries-cache-directory} is
-retrieved expecting it to be the pathname of a directory.
-
-@item
-The name of a @fasl{} file is built from the stem and the value in
-@func{compiled-libraries-cache-directory}.  For example, if:
-
-@example
-(compiled-libraries-cache-directory)  @result{} "./build/lib"
-@end example
-
-@noindent
-the following file is tested:
-
-@example
-./build/lib/alpha/beta.fasl
-@end example
-
-@item
-If the @fasl{} file exists and it is newer than the source file: the
-@fasl{} file is loaded expecting it to contain a binary library.  If the
-binary library is accepted the search terminates; if the binary library
-is rejected: the search goes on.
-
-@item
-If the @fasl{} file does not exist, or it is older than the source file,
-or it contains a library that is rejected: the source file is loaded,
-expecting it to contain a source library.  If the source library is
-accepted: the search terminates; if the source library is rejected: the
-search continues with the next file extension or the next directory from
+If a source file exists: the source file is loaded, expecting it to
+contain a source library.  If the source library is accepted: the search
+terminates; if the source library is rejected: the search continues with
+the next file extension or the next directory from
 @func{library-source-search-path}.
-@end enumerate
 
 @item
 If a source file does not exist: the search continues looking for a
@@ -1289,7 +1167,6 @@ are rejected: the search fails.
 @menu
 * using libraries compiling lib::   Compiling a single library.
 * using libraries compiling deps::  Compiling all the dependencies.
-* using libraries compiling cache:: Caching compiled libraries.
 @end menu
 
 @c page
@@ -1314,9 +1191,9 @@ It is assumed that all the library's dependency libraries are available
 in binary format.
 
 @item
-The loaded library is serialized to a @fasl{} file either in an
-explicitly selected output file or in the selected
-@func{compiled-library-cache-directory}.
+The loaded library is serialized to a @fasl{} file in an explicitly
+selected output file or in the selected
+@func{compiled-library-store-directory}.
 @end itemize
 
 This execution mode is enabled by the command line option
@@ -1380,7 +1257,7 @@ one library at a time, explicitly selecting the output directory for
 
 @example
 vicare \
-  --cache-directory $(builddir)/lib \
+  --store-directory $(builddir)/lib \
   --compile-library $(srcdir)/lib/alpha/beta.sls
 @end example
 
@@ -1389,7 +1266,7 @@ then, to compile @library{alpha gamma (1 2)}, we do:
 
 @example
 vicare \
-  --cache-directory $(builddir)/lib \
+  --store-directory $(builddir)/lib \
   --fasl-path $(builddir)/lib \
   --compile-library $(srcdir)/lib/alpha/gamma.sls
 @end example
@@ -1434,14 +1311,13 @@ possibly invoked and visited.
 
 @item
 All the libraries loaded from a source file are serialized to @fasl{}
-files in the selected @func{compiled-library-cache-directory}; all the
+files in the selected @func{compiled-library-store-directory}; all the
 libraries loaded from a @fasl{} file are left untouched.
 @end itemize
 
 This execution mode is enabled by the command line option
 @option{--compile-dependencies} of @value{EXECUTABLE}; when using this
-mode the command line options @option{--output} and
-@option{--cache-libraries} are @strong{ignored}.
+mode the command line option @option{--output} is @strong{ignored}.
 
 Let's say we have the libraries:
 
@@ -1486,7 +1362,7 @@ and we execute it as follows:
 @example
 vicare \
    --search-path $(srcdir)/lib \
-   --cache-directory $(builddir)/lib \
+   --store-directory $(builddir)/lib \
    --compile-dependencies compile-all.sps
 @end example
 
@@ -1495,93 +1371,7 @@ If a selected library depends on the other selected library:
 appropriate binary formats.  If a selected library depends on other
 libraries, not explicitly selected by the script: @value{PRJNAME} will
 automatically take care of generating the appropriate binary formats and
-@fasl{} files in the selected @func{compiled-library-cache-directory}.
-
-@c page
-@node using libraries compiling cache
-@subsubsection Caching compiled libraries
-
-
-This library compilation strategy is enabled by a command line option
-that does not interfere with the execution modes of @value{EXECUTABLE}.
-Caching of compiled libraries is off by default; it is enabled by the
-command line option @option{--cache-libraries}.  With this
-strategy:
-
-@enumerate
-@item
-We install in binary form the libraries that we know will not need to be
-recompiled because of dependencies violations.  The libraries bundled
-with @value{PRJNAME}'s distribution fall in this category: they need to
-be recompiled only when @value{PRJNAME}'s boot image is rebuilt.
-
-@item
-We install in source form the libraries that we know will need to be
-recompiled because of dependencies violations.  All the libraries from
-extensions and third party distributions fall in this category.
-
-@item
-We select a directory to be used as cache for compiled libraries and set
-it as @func{compiled-library-cache-directory}; by default it is:
-
-@example
-~/.vicare/precompiled
-@end example
-
-@item
-If we install the source libraries in the directories:
-
-@example
-/usr/local/lib/vicare-scheme
-/usr/lib/vicare-scheme
-@end example
-
-@noindent
-we take care of adding these directories to the library search path, and
-the corresponding cache subdirectories to the @fasl{} search path.  For
-example we can use the command line arguments:
-
-@example
-CACHE=~/.vicare/precompiled
-
-vicare \
-   --cache-libraries \
-   --search-path=/usr/local/lib/vicare-scheme \
-   --search-path=/usr/lib/vicare-scheme \
-   --fasl-path=$CACHE/usr/local/lib/vicare-scheme \
-   --fasl-path=$CACHE/usr/lib/vicare-scheme
-@end example
-
-@item
-We run programs that load libraries.  When executing a program with the
-run--time library locator, the first time:
-
-@enumerate A
-@item
-@value{PRJNAME} will search binary libraries in the @fasl{} search path;
-the cache directories come first, then come the common installation
-directories.
-
-@item
-If a binary library is not found: @value{PRJNAME} will search source
-files in the library search path, load them, compile them, and serialize
-them in the cache; a @fasl{} file for each source file.
-@end enumerate
-
-@noindent
-the second time: @value{PRJNAME} will find the compiled libraries in the
-cache, so it will avoid scanning the source library search path.
-
-@item
-Whenever we reinstall a source library: we have to take care of cleaning
-the corresponding cache directory, so the library will be recompiled and
-cached.  Cleaning the cache is a significant problem.
-@end enumerate
-
-Caching is disabled when the option @option{--compile-dependencies} or
-@option{--compile-library} is used.  When using this strategy the
-command line option @option{--output} is @strong{ignored} for the
-purpose of building the @fasl{} file pathnames.
+@fasl{} files in the selected @func{compiled-library-store-directory}.
 
 @c page
 @node using libraries examples

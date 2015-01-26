@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (c) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -36,11 +36,9 @@
 
     current-library-source-search-path-scanner
     current-library-binary-search-path-scanner
-    current-library-cache-search-path-scanner
 
     default-library-source-search-path-scanner
     default-library-binary-search-path-scanner
-    default-library-cache-search-path-scanner
 
     default-include-loader
     default-include-file-locator
@@ -50,7 +48,6 @@
     current-include-file-loader
 
     current-library-serialiser
-    current-library-cache-directory-serialiser
     current-library-store-directory-serialiser)
   (import (except (vicare)
 		  fixnum-width
@@ -59,7 +56,6 @@
 
 		  load					load-r6rs-script
 		  library-source-search-path		library-extensions
-		  compiled-libraries-cache-directory
 		  library-binary-search-path		get-annotated-datum)
     (prefix (ikarus.posix)
 	    posix.)
@@ -83,7 +79,6 @@
 	  fasl-write-header
 	  fasl-write-object)
     (prefix (only (ikarus.options)
-		  cache-compiled-libraries?
 		  print-loaded-libraries?
 		  print-debug-messages?
 		  verbose?)
@@ -244,12 +239,6 @@
 	   ;;Success.  The  library and all  its dependencies have  been successfully
 	   ;;loaded and interned.
 	   => (lambda (libname)
-		(when (option.cache-compiled-libraries?)
-		  ;;We cache the compiled library.  Obviously, if we have read this
-		  ;;library from a textual port, it means we have read it in source
-		  ;;form; so we serialise a library only  if we have read it from a
-		  ;;source file (not if we have read it from a FASL file).
-		  ((current-library-cache-directory-serialiser) (libman.find-library-by-name libname)))
 		(%print-loaded-library port)
 		#t))
 	  ;;Failure.  The  library read from port  has been rejected; try  to go on
@@ -505,68 +494,11 @@
     (lambda* ({obj procedure?})
       obj)))
 
-;;; --------------------------------------------------------------------
-
-(define* (default-library-cache-search-path-scanner {source-pathname posix.file-string-absolute-pathname?})
-  ;;Default  value for  the  parameter  CURRENT-LIBRARY-CACHE-SEARCH-PATH-SCANNER.  Given  a
-  ;;source  library absolute  pathname:  scan  "(library-cache-search-path)" for  the
-  ;;corresponding FASL file in a cache directory.
-  ;;
-  ;;Return 2 values.  When successful: a  string representing the fasl file pathname;
-  ;;a thunk to be called to continue the search from the next directory in the search
-  ;;path.  Otherwise return: false and false.
-  ;;
-  (%print-library-debug-message "~a: locating cache library file for: ~a" __who__ source-pathname)
-  (let loop ((tail-pathname (library-source-pathname->library-binary-tail-pathname source-pathname))
-	     (directories   (library-cache-search-path)))
-    (if (pair? directories)
-	;;Check file existence in the first directory from the list and prepare thunk
-	;;continue the search in the other directories.
-	(let* ((binary-pathname (string-append (car directories) tail-pathname))
-	       (continue-thunk  (lambda ()
-				  (loop tail-pathname (cdr directories)))))
-	  (%print-library-debug-message "~a: trying: ~a" __who__ binary-pathname)
-	  (if (and (file-exists? binary-pathname)
-		   (receive-and-return (rv)
-		       (< (posix.file-modification-time source-pathname)
-			  (posix.file-modification-time binary-pathname))
-		     (unless rv
-		       (%print-library-verbose-message
-			"warning: not using fasl file ~s because it is older than the source file ~s"
-			binary-pathname source-pathname))))
-	      (begin
-		(%print-library-debug-message "~a: found: ~a" __who__ binary-pathname)
-		(values binary-pathname continue-thunk))
-	    (begin
-	      ((failed-library-location-collector) binary-pathname)
-	      (%print-library-debug-message "~a: unexistent: ~a" __who__ binary-pathname)
-	      (continue-thunk))))
-      ;;No suitable library file was found.
-      (begin
-	(%print-library-debug-message "~a: exhausted search path, no cached binary library file found for: ~a"
-				      __who__ source-pathname)
-	(values #f #f)))))
-
-(define current-library-cache-search-path-scanner
-  ;;Hold a function used to convert  a library source pathname into the corresponding
-  ;;FASL file pathname and search for it in the cache search path.
-  ;;
-  ;;The referenced  function must accept, as  single value, a R6RS  library reference
-  ;;and it must  return two values.  When successful: a  string representing the FASL
-  ;;file  pathname; a  thunk  to be  called  to  continue the  search  from the  next
-  ;;directory in the search path.  Otherwise return: false and false.
-  ;;
-  (make-parameter
-      default-library-cache-search-path-scanner
-    (lambda* ({obj procedure?})
-      obj)))
-
 
 ;;;; locating source and binary libraries: utilities
 
 (module LIBRARY-LOCATOR-UTILS
   (%source-search-start
-   %source-and-cache-search-start
    %binary-search-start
    %open-source-library
    %open-binary-library)
@@ -660,132 +592,6 @@
 	      %continue))
 
     #| end of module: %SOURCE-SEARCH-START |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (%source-and-cache-search-start)
-    ;;This function can be  used to search for a source or  binary library file, with
-    ;;the purpose of  finding a library that matches a  given R6RS library reference.
-    ;;Source  libraries  are  searched  using  the  current  source  library  locator
-    ;;referenced by CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER; if  a match is found,
-    ;;a corresponding cached  compiled library is searched using  the library locator
-    ;;referenced by CURRENT-LIBRARY-CACHE-SEARCH-PATH-SCANNER.
-    ;;
-    ;;The ragument  LIBREF must be a  R6RS library reference.  The  optional argument
-    ;;FAIL-KONT must  be a thunk  to be called when  the search fails.   The argument
-    ;;OPTIONS must be a list of symbols; at present the supported options are:
-    ;;
-    ;;   move-on-when-open-fails
-    ;;
-    ;;The return  value is a thunk  to call to  start the search.  When  the returned
-    ;;thunk finds a matching library source file, it returns two values:
-    ;;
-    ;;1.  A textual or binary input port  from which the source or binary library can
-    ;;   be read; it is responsibility of  the caller to close the returned port when
-    ;;   no more needed.
-    ;;
-    ;;2. A thunk to  be called to continue the search.  This  thunk allows the caller
-    ;;   to  reject a library  if it does not  meet some additional  constraints; for
-    ;;   example: if its version number does not conform to LIBREF.
-    ;;
-    ;;When  no matching  library is  found: the  returned thunk  calls FAIL-KONT  and
-    ;;returns  its return  values; the  default fail  continuation returns  false and
-    ;;false.
-    ;;
-    ;;Pseudo-code usage example:
-    ;;
-    ;;   (let loop ((next-locator-search (%source-and-cache-search-start
-    ;;                                    '(a b (1 2))
-    ;;                                    '(move-on-when-open-fails)
-    ;;                                    (lambda ()
-    ;;                                      (error #f "no match")))))
-    ;;     (receive (port further-locator-match)
-    ;;         (next-locator-search)
-    ;;       (if (validate-library-from-port port)
-    ;;           (success)
-    ;;         (loop further-locator-match))))
-    ;;
-    (case-define* %source-and-cache-search-start
-      (({libref library-reference?} options)
-       (%source-and-cache-search-start libref options (lambda ()
-					      (values #f #f))))
-      (({libref library-reference?} options {fail-kont procedure?})
-       (let ((source-locator (current-library-source-search-path-scanner)))
-	 (lambda ()
-	   (%source-search-step options
-				(lambda ()
-				  (source-locator libref))
-				fail-kont)))))
-
-    (define (%source-search-step options next-source-file-match search-fail-kont)
-      ;;If NEXT-SOURCE-FILE-MATCH  is successful we  expect: SOURCE-PATHNAME to  be a
-      ;;string representing the fasl file pathname; FURTHER-SOURCE-FILE-MATCH to be a
-      ;;thunk to  be called  to continue  the search.  Otherwise  they are  false and
-      ;;false.
-      (receive (source-pathname further-source-file-match)
-	  (next-source-file-match)
-	(if source-pathname
-	    ;;The  source locator  found a  match: we  open the  file and  return the
-	    ;;results.
-	    (%handle-source-file-match options source-pathname
-				       (lambda ()
-					 (%source-search-step options further-source-file-match search-fail-kont)))
-	  ;;Either the  source locator  found no  match or we  have rejected  all the
-	  ;;matching libraries.  Tail-call the fail continuation.
-	  (search-fail-kont))))
-
-    (define (%handle-source-file-match options source-pathname next-source-search-step)
-      ;;The source locator found a match: we verify if a binary library exists in the
-      ;;cache search path, then we attempt to open the file and return the input port
-      ;;and a search-continuation thunk.
-      ;;
-      (cond ((receive (binary-pathname next-search-thunk)
-		 ((current-library-cache-search-path-scanner) source-pathname)
-	       binary-pathname)
-	     => (lambda (binary-pathname)
-		  (define (%continue)
-		    ;;If we  are here it means  the binary library was  rejected.  We
-		    ;;register the pathname for later  use in error messages, then we
-		    ;;tail-call the search-continuation thunk.
-		    ((failed-library-location-collector) binary-pathname)
-		    (%handle-source-only-file-match options source-pathname next-source-search-step))
-		  (values (with-exception-handler
-			      (lambda (E)
-				(if (i/o-error? E)
-				    (if (library-locator-options-no-raise-when-open-fails? options)
-					(%continue)
-				      (raise E))
-				  (raise E)))
-			    (lambda ()
-			      (%open-binary-library binary-pathname)))
-			  %continue)))
-	    (else
-	     (%handle-source-only-file-match options source-pathname next-source-search-step))))
-
-    (define (%handle-source-only-file-match options source-pathname next-source-search-step)
-      ;;The source locator found a match; we have verified if a cached binary library
-      ;;exists and the  result was that no  binary library is usable.   We attempt to
-      ;;open the  source file  and return  the input  port and  a search-continuation
-      ;;thunk.
-      ;;
-      (define (%continue)
-	;;If  we are  here  it means  the  pathname was  rejected.   We register  the
-	;;pathname  for  later   use  in  error  messages,  then   we  tail-call  the
-	;;search-continuation thunk.
-	((failed-library-location-collector) source-pathname)
-	(next-source-search-step))
-      (values (with-exception-handler
-		  (lambda (E)
-		    (if (i/o-error? E)
-			(if (library-locator-options-no-raise-when-open-fails? options)
-			    (%continue)
-			  (raise E))
-		      (raise E)))
-		(lambda ()
-		  (%open-source-library source-pathname)))
-	      %continue))
-
-    #| end of module: %SOURCE-AND-CACHE-SEARCH-START |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -962,7 +768,7 @@
   (import LIBRARY-LOCATOR-UTILS)
   (%print-library-debug-message "~a: locating library for: ~a" __who__ libref)
   (let ((options (current-library-locator-options)))
-    (%binary-search-start libref options (%source-and-cache-search-start libref options))))
+    (%binary-search-start libref options (%source-search-start libref options))))
 
 
 ;;;; locating source and binary libraries: compile-time locator
@@ -1537,35 +1343,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (default-library-cache-directory-serialiser {lib libman.library?})
-  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-CACHE-DIRECTORY-SERIALISER.
-  ;;Given a LIBRARY object:  serialise the compiled library in a  FASL file under the
-  ;;currently selected cache directory.  Return unspecified values.  Serialisation is
-  ;;performed  with the  library  serialiser procedure  referenced  by the  parameter
-  ;;CURRENT-LIBRARY-SERIALISER.
-  ;;
-  (when (libman.library-loaded-from-source-file? lib)
-    (let ((binary-pathname (library-source-pathname->library-binary-pathname-in-cache-directory (libman.library-source-file-name lib))))
-      ((current-library-serialiser) lib binary-pathname))))
-
-(define current-library-cache-directory-serialiser
-  ;;References a  function used to  serialise a compiled library  into a file  in the
-  ;;currently selected cache directory.
-  ;;
-  ;;The referenced  function must accept 2  arguments: a LIBRARY object  and a string
-  ;;file pathname representing  the FASL pathname; it can  return unspecified values;
-  ;;if an error occurs it must raise an exception.
-  ;;
-  ;;Only libraries loaded form source files  are serialised: if the given library was
-  ;;loaded from a FASL file: nothing must happen.
-  ;;
-  (make-parameter
-      default-library-cache-directory-serialiser
-    (lambda* ({obj procedure?})
-      obj)))
-
-;;; --------------------------------------------------------------------
-
 (define* (default-library-store-directory-serialiser {lib libman.library?})
   ;;Default  value  for   the  parameter  CURRENT-LIBRARY-STORE-DIRECTORY-SERIALISER.
   ;;Given aLIBRARY  object: serialise the compiled  library in a FASL  file under the
@@ -1772,8 +1549,6 @@
 	 (store-full-serialised-library-to-file
 	  (cond ((compiled-libraries-store-directory)
 		 (library-name->library-binary-pathname-in-store-directory libname))
-		((compiled-libraries-cache-directory)
-		 (library-source-pathname->library-binary-pathname-in-cache-directory source-pathname))
 		(else
 		 (error __who__
 		   "cannot determine a destination directory for compiled library files")))

@@ -192,15 +192,6 @@
 		;Null or a  list of strings representing  directory names: additional
 		;locations in which to search for FASL files.
 
-   library-cache-search-path
-		;Null  or  a  list   of  strings  representing  directory  pathnames:
-		;additional locations  in which  to search for  library automatically
-		;compiled from installed sources.
-
-   cache-directory
-		;False of a  string representing the initial value  for the parameter
-		;COMPILED-LIBRARIES-CACHE-DIRECTORY.
-
    store-directory
 		;False of a  string representing the initial value  for the parameter
 		;COMPILED-LIBRARIES-STORE-DIRECTORY.
@@ -229,9 +220,6 @@
 
 (define-inline (run-time-config-library-binary-search-path-register! cfg pathname)
   (set-run-time-config-library-binary-search-path! cfg (cons pathname (run-time-config-library-binary-search-path cfg))))
-
-(define-inline (run-time-config-library-cache-search-path-register! cfg pathname)
-  (set-run-time-config-library-cache-search-path! cfg (cons pathname (run-time-config-library-cache-search-path cfg))))
 
 (define (run-time-config-rcfiles-register! cfg new-rcfile)
   (let ((rcfiles (run-time-config-rcfiles cfg)))
@@ -393,8 +381,6 @@
 			  #f		;no-greetings
 			  '()		;library-source-search-path
 			  '()		;library-binary-search-path
-			  '()		;library-cache-search-path
-			  #f		;cache-directory
 			  #f		;store-directory
 			  #f		;more-file-extensions
 			  #f		;raw-repl
@@ -576,14 +562,6 @@
 	   (set-run-time-config-raw-repl! cfg #t)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--cache-libraries")
-	   (option.cache-compiled-libraries? #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-cache-libraries")
-	   (option.cache-compiled-libraries? #f)
-	   (next-option (cdr args) k))
-
 	  ((%option= "--print-loaded-libraries")
 	   (option.print-loaded-libraries? #t)
 	   (next-option (cdr args) k))
@@ -683,20 +661,6 @@
 	       (%error-and-exit "--library-path requires a directory name")
 	     (begin
 	       (run-time-config-library-binary-search-path-register! cfg (cadr args))
-	       (next-option (cddr args) k))))
-
-	  ((%option= "-C" "--cache-path")
-	   (if (null? (cdr args))
-	       (%error-and-exit "--cache-path requires a directory name")
-	     (begin
-	       (run-time-config-library-cache-search-path-register! cfg (cadr args))
-	       (next-option (cddr args) k))))
-
-	  ((%option= "--cache-directory")
-	   (if (null? (cdr args))
-	       (%error-and-exit "--cache-directory requires a directory name")
-	     (begin
-	       (set-run-time-config-cache-directory! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "--store-directory")
@@ -985,16 +949,6 @@ Other options:
         Add DIRECTORY to the FASL search path.  This option can  be used
         multiple times.
 
-   -C DIRECTORY
-   --cache-path DIRECTORY
-        Add DIRECTORY to the cache search path.  This option can be used
-        multiple times.
-
-   --cache-directory DIRECTORY
-        Select DIRECTORY as cache  directory pathname under which binary
-        libraries  files are  stored  when  automatically compiled  from
-        installed sources.  When used multiple times: the last one wins.
-
    --store-directory DIRECTORY
         Select  DIRECTORY as  pathname  under  which compiled  libraries
         files are temporarily stored  before being installed.  When used
@@ -1035,13 +989,6 @@ Other options:
    --no-gc-integrity-checks
         Disable   garbage   collection integrity   checks.  This  is the
         default.
-
-   --cache-libraries
-        Whenever a  library file is  loaded in source  form: compile and
-        serialise it in a FASL file in the selected FASL directory.
-
-   --no-cache-libraries
-        Disables the effect of --cache-libraries.
 
    --print-loaded-libraries
         Whenever a library file is loaded print a message on the console
@@ -1564,17 +1511,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;
     (libutils.init-search-paths-and-directories (reverse cfg.library-source-search-path)
 						(reverse cfg.library-binary-search-path)
-						(reverse (run-time-config-library-cache-search-path cfg))
-						(run-time-config-cache-directory cfg)
 						cfg.store-directory
 						cfg.more-file-extensions)
-
-    ;;When  the execution  mode is  "compile library  dependencies" or  "compile this
-    ;;library or program": we disable caching  of compiled libraries loaded in source
-    ;;form; these options  have different and incompatible ways to  produce FASL file
-    ;;pathnames from source libraries.
-    ;; (when (memq cfg.exec-mode '(compile-dependencies compile-library compile-program compile))
-    ;;   (option.cache-compiled-libraries? #f))
 
     ;;Initialise the command line arguments.
     (cond ((eq? 'repl cfg.exec-mode)
