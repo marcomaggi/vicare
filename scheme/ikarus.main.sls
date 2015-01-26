@@ -140,7 +140,7 @@
 (define-struct run-time-config
   (exec-mode
 		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
-		;BINARY-PROGRAM,  R6RS-REPL,  COMPILE-DEPENDENCIES,  COMPILE-LIBRARY,
+		;BINARY-PROGRAM,        COMPILE-DEPENDENCIES,        COMPILE-LIBRARY,
 		;COMPILE-PROGRAM, COMPILE-SOMETHING, R6RS-EXPAND, REPL.
    script
 		;A  string  representing a  file  name:  the  main script.   When  in
@@ -149,11 +149,15 @@
 		;program.  When in script mode: it must hold a script.
 
    rcfiles
-		;#f, #t, null or a list of strings representing file names.  When #f:
-		;avoid executing any run-command files; when #t: load and execute the
-		;default run-command file as an R6RS  program; when null or a list of
-		;strings:  load the  listed files  to be  evaluated as  R6RS programs
-		;before instantiating libraries.
+		;#f, #t, or a proper list of strings representing file names.
+		;
+		;When #f: avoid executing any run-command files.
+		;
+		;When #t: only if the EXEC-MODE is REPL, load and execute the default
+		;run-command file as an R6RS program.
+		;
+		;When a  list of strings:  load the listed  files to be  evaluated as
+		;R6RS programs before instantiating libraries.
 
    load-libraries
 		;Null or a  list of strings representing file names:  libraries to be
@@ -323,9 +327,9 @@
 (define (parse-command-line-arguments)
   ;;From the command line we want to extract the following informations:
   ;;
-  ;;* The execution mode: interactive REPL, R6RS program then REPL, R6RS
-  ;;program, eval script, compilation  of dependencies.  The default is:
-  ;;interactive REPL.
+  ;;* The execution mode: interactive REPL, R6RS program, eval script, compilation of
+  ;;a program, compilation of a library, compilation of a script's dependencies.  The
+  ;;default is: interactive REPL.
   ;;
   ;;* The main program script, if any.
   ;;
@@ -335,12 +339,11 @@
   ;;
   ;;* A list of options to be handed to the main script as arguments.
   ;;
-  ;;The options  for Vicare itself (debugging, logging,  etc) are parsed
-  ;;and a thunk is assembled to initialise the associated global state.
+  ;;The options for Vicare itself (debugging, logging, etc) are parsed and a thunk is
+  ;;assembled to initialise the associated global state.
   ;;
-  ;;Return  two  values: a  RUN-TIME-CONFIG  structure,  a  thunk to  be
-  ;;evaluated to  configure the global state for  the selected execution
-  ;;mode.
+  ;;Return  two values:  a  RUN-TIME-CONFIG structure,  a thunk  to  be evaluated  to
+  ;;configure the global state for the selected execution mode.
   ;;
   (define cfg
     (make-run-time-config #f		;exec-mode
@@ -415,16 +418,6 @@
 		  (%error-and-exit "option --binary-program given after other mode option"))
 		 (else
 		  (set-run-time-config-exec-mode! cfg 'binary-program)
-		  (set-run-time-config-script!    cfg (cadr args))
-		  (next-option (cddr args) k))))
-
-	  ((%option= "--r6rs-repl")
-	   (cond ((null? (cdr args))
-		  (%error-and-exit "option --r6rs-repl requires a script name"))
-		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --r6rs-repl given after other mode option"))
-		 (else
-		  (set-run-time-config-exec-mode! cfg 'r6rs-repl)
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
@@ -780,7 +773,6 @@ Usage:
 vicare [OPTIONS] [FILENAME]                     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --binary-program PROGRAM       [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-library LIBFILE
 vicare [OPTIONS] --compile-dependencies PROGRAM
 vicare [OPTIONS] --compile-program PROGRAM
@@ -799,12 +791,6 @@ Options controlling execution modes:
    --binary-program PROGRAM
         Start  Vicare in  compiled-program  mode.  The  PROGRAM file  is
        	handled as a precompiled R6RS program: loaded and executed.
-
-   --r6rs-repl PROGRAM
-        Start Vicare  in R6RS-script mode.  Act as  if the --r6rs-script
-        option had been used but,  after the script execution, enter the
-        REPL rather  than exiting.   This allows inspection  of bindings
-        and state left behind by the program.
 
    --compile-library LIBFILE
         Load the  R6RS library source  LIBFILE, compile it and  save the
@@ -849,8 +835,8 @@ Other options:
 
    --rcfile RCFILE
         Load and evaluate  RCFILE as an R6RS program  at startup, before
-	loading libraries, evaluating codes and running the main script.
-	This option can be used multiple times.
+	loading libraries and running the main script.  This  option can
+        be used multiple times.
 
    -l LIBFILE
    --load-library LIBFILE
@@ -1003,13 +989,6 @@ Other options:
    --help
        Print this help message on stderr then exit.
 
-If neither the --no-rcfile nor the  --rcfile options are used: a list of
-run-command files is read from the environment variable VICARE_RC_FILES,
-which  must  contain  a  colon  separated list  of  pathnames.   If  the
-enviroment variable is empty or unset, by default the file \".vicarerc\"
-is  used  searching  for  it  in  the directory  selected  by  the  HOME
-environment variable.
-
 Consult Vicare Scheme User's Guide for more details.\n\n")
 	   (current-output-port))
   (flush-output-port (current-output-port)))
@@ -1041,22 +1020,23 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	      (raise-continuable
 	       (condition (make-who-condition 'vicare)
 			  (make-message-condition
-			   (string-append "loading rc file " filename " failed"))
+			   (string-append "failed loading run-commmand file: " filename))
 			  E)))
 	  (lambda ()
 	    (load-r6rs-script filename (serialise? #f) (run? #t)))))
     (with-run-time-config (cfg)
       (case cfg.rcfiles
 	((#t)
-	 (cond ((posix.getenv "VICARE_RC_FILES")
-		=> posix.split-search-path-string)
-	       ((posix.getenv "HOME")
-		=> (lambda (home)
-		     (let ((f (string-append home "/.vicarerc")))
-		       (if (file-exists? f)
-			   (list f)
-			 '()))))
-	       (else '())))
+	 (when (eq? 'repl cfg.exec-mode)
+	   (cond ((posix.getenv "HOME")
+		  => (lambda (home)
+		       (if (string-empty? home)
+			   '()
+			 (let ((f (string-append home "/.vicarerc")))
+			   (if (file-exists? f)
+			       (list f)
+			     '())))))
+		 (else '()))))
 	((#f)
 	 '())
 	(else
@@ -1435,13 +1415,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
       ((binary-program)
        (run-compiled-program cfg))
-
-      ((r6rs-repl)
-       (let ((env (load-r6rs-program cfg)))
-	 (interaction-environment env)
-	 (%print-greetings cfg)
-	 (new-cafe (lambda (x)
-		     (doit (eval x env))))))
 
       ((compile-dependencies)
        (compile-dependencies cfg))

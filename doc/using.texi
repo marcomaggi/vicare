@@ -55,7 +55,6 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program PROGRAM       [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
@@ -101,14 +100,6 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 Start Vicare in compiled--program mode.  The @var{PROGRAM} file is
 handled as a serialised @rnrs{6} program: it is loaded and executed.
 
-@item --r6rs-repl @var{PROGRAM}
-@cindex Command line option @option{--r6rs-repl}
-@cindex @option{--r6rs-repl}, command line option
-Start Vicare in @rnrs{6}-script mode.  Act as if the
-@option{--r6rs-script} option had been used but, after the program
-execution, enter the @repl{} rather than exiting.  This allows
-inspection of bindings and state left behind by the program.
-
 @item --compile-program @var{PROGRAM}
 @cindex Command line option @option{--compile-program}
 @cindex @option{--compile-program}, command line option
@@ -141,9 +132,13 @@ file extension (@code{.sps} or @code{.sls}), compile it and store it as
 @end table
 
 When none of these options is given, but a standalone @var{PROGRAM}
-argument is present on the command line: act as if the
-@option{--r6rs-script} option had been used with the given file name.
+argument is present on the command line: act as if the option
+@option{--r6rs-script} is present with the given file name.
+
 If no standalone @var{PROGRAM} argument is present: enter the @repl{}.
+When neither the option @option{--rcfile} nor the option
+@option{--no-rcfile} is used: before entering the @repl{}, the default
+run--command file @file{~/.vicarerc} is loaded.
 
 The rest of the command line arguments are recognised by the standard
 Scheme run time system.
@@ -170,8 +165,12 @@ Disable loading of run--command files.
 @cindex Command line option @option{--rcfile}
 @cindex @option{--rcfile}, command line option
 Load and evaluate @var{FILE} as an @rnrs{6} program at startup, before
-loading libraries, evaluating codes and running the main script.  This
-option can be used multiple times.
+loading libraries and running the main program.  This option can be used
+multiple times.
+
+When the execution mode is to enter the @repl{}: using this option
+disables loading the default file @file{~/.vicarerc}; only the selected
+@var{FILE} scripts are loaded.
 
 @item -o @var{OFILE}
 @itemx --output @var{OFILE}
@@ -431,14 +430,6 @@ Turn on verbose messages describing expander and compiler operations.
 @cindex @option{--silent}, command line option
 Turn off verbose messages describing compiler operations.
 @end table
-
-@cindex @env{VICARE_RC_FILES}
-If neither the @option{--no-rcfile} nor the @option{--rcfile} options
-are used: a list of run--command files is read from the environment
-variable @env{VICARE_RC_FILES}, which must contain a colon separated
-list of pathnames.  If the enviroment variable is empty or unset, by
-default the file @file{.vicarerc} is used searching it in the directory
-selected by the @env{HOME} environment variable.
 
 @c page
 @node using scripts
