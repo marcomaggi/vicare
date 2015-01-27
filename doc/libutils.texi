@@ -801,9 +801,9 @@ libraries}.
 @defun library-name->filename-stem @var{libname}
 @defunx library-reference->filename-stem @var{libref}
 Convert the non--empty list of identifiers from a @rnrs{6} library name
-or reference reference into a string representing the corresponding
-relative file pathname, without extension but including a leading
-@code{#\/} character.  Examples:
+@var{libname} or reference @var{libref} into a string representing the
+corresponding relative file pathname, without extension but including a
+leading @code{#\/} character.  Examples:
 
 @example
 (library-name->filename-stem '(alpha beta gamma (1 2 3)))
