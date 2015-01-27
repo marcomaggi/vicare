@@ -49,8 +49,7 @@
 		  struct-guardian-log
 		  $record-guardian
 		  record-guardian-logger
-		  record-guardian-log
-		  expand-top-level)
+		  record-guardian-log)
     (prefix (ikarus startup) config.)
     (prefix (ikarus.options) option.)
     (prefix (only (ikarus.compiler)
@@ -65,7 +64,6 @@
 		  guarded-start)
 	    debugger.)
     (prefix (only (psyntax.expander)
-		  expand-top-level
 		  initialise-type-spec-for-built-in-object-types
 		  initialise-core-prims-tagging)
 	    psyntax.)
@@ -141,7 +139,7 @@
   (exec-mode
 		;A  symbol representing  the requested  execution mode:  R6RS-SCRIPT,
 		;BINARY-PROGRAM,        COMPILE-DEPENDENCIES,        COMPILE-LIBRARY,
-		;COMPILE-PROGRAM, COMPILE-SOMETHING, R6RS-EXPAND, REPL.
+		;COMPILE-PROGRAM, COMPILE-SOMETHING, REPL.
    script
 		;A  string  representing a  file  name:  the  main script.   When  in
 		;R6RS-SCRIPT,   BINARY-PROGRAM,   COMPILE-PROGRAM,   COMPILE-LIBRARY,
@@ -465,16 +463,6 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
-	  ((%option= "--r6rs-expand")
-	   (cond ((null? (cdr args))
-		  (%error-and-exit "option --r6rs-expand requires a script name"))
-		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit "option --r6rs-expand given after other mode option"))
-		 (else
-		  (set-run-time-config-exec-mode! cfg 'r6rs-expand)
-		  (set-run-time-config-script!    cfg (cadr args))
-		  (next-option (cddr args) k))))
-
 ;;; --------------------------------------------------------------------
 ;;; Vicare options without argument
 
@@ -777,7 +765,6 @@ vicare [OPTIONS] --compile-library LIBFILE
 vicare [OPTIONS] --compile-dependencies PROGRAM
 vicare [OPTIONS] --compile-program PROGRAM
 vicare [OPTIONS] --compile FILE
-vicare [OPTIONS] --r6rs-expand PROGRAM
 
 the  OPTIONS are  interpreted by  vicare, PROGRAM  OPTS can  be obtained
 using the COMMAND-LINE procedure in the (rnrs programs) library.
@@ -809,11 +796,6 @@ Options controlling execution modes:
         Load the  selected file, recognise  it as program or  library by
 	the file  extension (.sps or .sls),  compile it and store  it as
 	FASL file.
-
-   --r6rs-expand PROGRAM
-        Start Vicare  in R6RS-script mode.  The PROGRAM  file is handled
-       	as an R6RS  program.  The code is read  and expanded, the result
-       	of the expasion printed to the standard error port.
 
 When none  of these options is given,  but a FILENAME is  present on the
 command line: act as if the  --r6rs-script option had been used with the
@@ -1126,29 +1108,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
   #| end of module: COMPILE-SOMETHING |# )
 
-;;; --------------------------------------------------------------------
-
-(define (expand-program cfg)
-  ;;FIXME Currently undocumented because the output really really really
-  ;;needs  some processing to  be human-friendly  (Marco Maggi;  Oct 27,
-  ;;2011).
-  ;;
-  (with-run-time-config (cfg)
-    (doit
-     (receive (lib* invoke-code macro* export-subst export-env)
-	 (psyntax.expand-top-level (read-script-source-file cfg.script))
-       (define port (current-output-port))
-       (pretty-print invoke-code port)
-       ;; (newline port)
-       ;; (pretty-print lib* port)
-       ;; (newline port)
-       ;; (pretty-print macro* port)
-       ;; (newline port)
-       ;; (pretty-print export-subst port)
-       ;; (newline port)
-       ;; (pretty-print export-env port)
-       (flush-output-port port)))))
-
 
 ;;;; some basic initialisation
 
@@ -1427,9 +1386,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
       ((compile-something)
        (compile-something cfg))
-
-      ((r6rs-expand)
-       (expand-program cfg))
 
       ((repl)
        (%print-greetings cfg)

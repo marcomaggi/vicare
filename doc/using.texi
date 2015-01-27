@@ -52,25 +52,21 @@ the session.
 The synopsis of the @value{EXECUTABLE} program is as follows:
 
 @smallexample
-@value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program PROGRAM       [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM
+@value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]              [-- [@var{PROGOPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script     FILE [-- [@var{PROGOPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program  FILE [-- [@var{PROGOPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program FILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM
 @end smallexample
 
 @noindent
-the @var{OPTIONS} are interpreted by @value{EXECUTABLE}, @var{PROGRAM
-OPTS} can be obtained using the @func{command-line} procedure in the
+the @var{OPTIONS} are interpreted by @value{EXECUTABLE}, @var{PROGOPTS}
+can be obtained using the @func{command-line} procedure in the
 @library{rnrs programs} library; when running the @repl{}: the first
 element of the returned list will be the string @samp{*interactive*},
 corresponding to the script name in @rnrs{6}--script mode.
-
-Some options cause code to be evaluated in the interaction environment:
-it initially contains all the bindings exported from the library
-@library{vicare}.
 
 The @value{EXECUTABLE} executable recognises a few command line switches
 that influence how @value{PACKAGE} starts; the following are the main
