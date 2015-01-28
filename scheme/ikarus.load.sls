@@ -135,6 +135,39 @@
 	(apply fprintf P (string-append "vicare: " template "\n") args)
 	(flush-output-port P)))))
 
+;;; --------------------------------------------------------------------
+
+(define failed-library-location-collector
+  ;;Hold a function that is used to register queried locations that failed to provide
+  ;;a requested library.   Such locations must be represented by  a printable object,
+  ;;for example a string.
+  ;;
+  ;;The  collector function  must  accept 1  or  0 arguments:  when  called with  one
+  ;;argument  it must  register  it as  location descriptor;  when  called with  zero
+  ;;arguments  it must  return  the registered  collection or  locations  as list  of
+  ;;objects.  The collector function can return unspecified values.
+  ;;
+  ;;For example, the collector function can be set to:
+  ;;
+  ;;   (let ((ell '()))
+  ;;     (case-lambda
+  ;;      (()
+  ;;       ell)
+  ;;      ((location)
+  ;;       (set! ell (cons location ell)))))
+  ;;
+  ;;and used  to collect  library file  names that where  tried but  do not  exist or
+  ;;failed to be opened.
+  ;;
+  (make-parameter
+      (case-lambda
+       (()
+	'())
+       ((origin)
+	(void)))
+    (lambda* ({obj procedure?})
+      obj)))
+
 
 ;;;; built-in library locator options
 
@@ -1274,37 +1307,6 @@
   ;;
   (make-parameter
       run-time-library-locator
-    (lambda* ({obj procedure?})
-      obj)))
-
-(define failed-library-location-collector
-  ;;Hold a function that is used to register queried locations that failed to provide
-  ;;a requested library.   Such locations must be represented by  a printable object,
-  ;;for example a string.
-  ;;
-  ;;The  collector function  must  accept 1  or  0 arguments:  when  called with  one
-  ;;argument  it must  register  it as  location descriptor;  when  called with  zero
-  ;;arguments  it must  return  the registered  collection or  locations  as list  of
-  ;;objects.  The collector function can return unspecified values.
-  ;;
-  ;;For example, set the collector function can be set to:
-  ;;
-  ;;   (let ((ell '()))
-  ;;     (case-lambda
-  ;;      (()
-  ;;       ell)
-  ;;      ((location)
-  ;;       (set! ell (cons location ell)))))
-  ;;
-  ;;and used  to collect  library file  names that where  tried but  do not  exist or
-  ;;failed to be opened.
-  ;;
-  (make-parameter
-      (case-lambda
-       (()
-	'())
-       ((origin)
-	(void)))
     (lambda* ({obj procedure?})
       obj)))
 
