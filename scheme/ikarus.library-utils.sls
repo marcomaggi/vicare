@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: library utilities
@@ -8,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -701,6 +700,10 @@
 ;;
 ;;   $(builddir)/lib/vicare/posix.fasl
 ;;
+;;Notice  that the  selected store  directory may  not exist.   If it  exists: it  is
+;;normalised to  its real pathname, otherwise  it is left  untouched and it may  be a
+;;relative pathname.
+;;
 (module (compiled-libraries-store-directory)
 
   (define-constant DEFAULT-COMPILED-LIBRARIES-STORE-DIRECTORY
@@ -997,4 +1000,5 @@
 
 ;;; end of file
 ;; Local Variables:
+;; coding: utf-8-unix
 ;; End:

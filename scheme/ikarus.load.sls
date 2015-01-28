@@ -95,22 +95,26 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax (expand-time-gensym stx)
-  (syntax-case stx ()
-    ((_ ?template)
-     (let* ((tmp (syntax->datum #'?template))
-	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
-	    (str (apply string-append tmp (map (lambda (N)
-						 (string-append "." (number->string N)))
-					    fxs)))
-	    (sym (gensym str)))
-       (with-syntax
-	   ((SYM (datum->syntax #'here sym)))
-	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
-	 #'(quote SYM))))))
+(module (REJECT-KEY)
 
-(define-constant REJECT-KEY
-  (expand-time-gensym "library-reject-key-gensym"))
+  (define-syntax (expand-time-gensym stx)
+    (syntax-case stx ()
+      ((_ ?template)
+       (let* ((tmp (syntax->datum #'?template))
+	      (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	      (str (apply string-append tmp (map (lambda (N)
+						   (string-append "." (number->string N)))
+					      fxs)))
+	      (sym (gensym str)))
+	 (with-syntax
+	     ((SYM (datum->syntax #'here sym)))
+	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	   #'(quote SYM))))))
+
+  (define-constant REJECT-KEY
+    (expand-time-gensym "library-reject-key-gensym"))
+
+  #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -149,7 +153,7 @@
       (library-locator-options move-on-when-open-fails)))
 
 
-;;;; loading libraries from files and ports
+;;;; loading libraries from input ports
 
 (module (default-library-loader)
   (define-syntax __module_who__
@@ -172,6 +176,8 @@
     ;;
     (%print-library-debug-message "~a: searching: ~a" __module_who__ libref)
     (parametrise
+	;;For error reporting  purposes: collect all the library  locations that were
+	;;found by the library locator, but were rejected for some reason.
 	((failed-library-location-collector (let ((ell '()))
 					      (case-lambda
 					       (()
@@ -182,6 +188,7 @@
 	(receive (rv further-locator-search)
 	    (next-locator-search)
 	  (%print-library-debug-message "~a: reading from: ~a" __module_who__ rv)
+	  (assert (or (input-port? rv) (boolean? rv)))
 	  (cond ((binary-port? rv)
 		 (%load-binary-library libref rv (lambda ()
 						   (loop further-locator-search))))
@@ -222,9 +229,10 @@
 		(%print-loaded-library port)
 		#t))
 	  (else
-	   ;;Failure.  The library  read from port has been rejected;  try to go on
+	   ;;Failure.  The  library read from  port has been  rejected; try to  go on
 	   ;;with the search.
 	   (%print-rejected-library port)
+	   (close-input-port port)
 	   (loop))))
 
   (define (%load-source-library libref port loop)
@@ -241,10 +249,11 @@
 	   => (lambda (libname)
 		(%print-loaded-library port)
 		#t))
-	  ;;Failure.  The  library read from port  has been rejected; try  to go on
-	  ;;with the search.
+	  ;;Failure.  The library read from port has been rejected; try to go on with
+	  ;;the search.
 	  (else
 	   (%print-rejected-library port)
+	   (close-input-port port)
 	   (loop))))
 
   ;;Keep the library names aligned!!!
@@ -284,7 +293,7 @@
   ;;Default value  for the parameter CURRENT-SOURCE-LIBRARY-LOADER.   Given a textual
   ;;input PORT:
   ;;
-  ;;1. Read from it a LIBRARY  symbolic expression.
+  ;;1. Read from it a LIBRARY symbolic expression.
   ;;
   ;;2. Verify that its version reference conforms to LIBREF.
   ;;
@@ -310,17 +319,31 @@
     (guard (E ((eq? E REJECT-KEY)
 	       (%print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
 	       #f))
-      (receive (uid libname
-		    import-libdesc* visit-libdesc* invoke-libdesc*
-		    invoke-code visit-code
-		    export-subst export-env
-		    guard-code guard-libdesc*
-		    option*)
+      (receive (uid libname . unused)
 	  ;;This  call to  the library  expander loads  and interns  all the  library
 	  ;;dependencies using FIND-LIBRARY-BY-REFERENCE.
 	  ((libman.current-library-expander) libsexp source-pathname %verify-libname)
 	(%print-library-verbose-message "loaded library \"~a\" from: ~a" libname (port-id port))
 	libname))))
+
+(define current-source-library-loader
+  ;;Reference a function used to load a source library from a textual input port.
+  ;;
+  ;;The referenced  function must accept two  arguments: a R6RS library  reference, a
+  ;;textual input port from which the source library can be read.  It must: read from
+  ;;the port a LIBRARY symbolic expression;  verify that its library name conforms to
+  ;;the library reference;  load and intern all its dependency  libraries; expand it;
+  ;;compile it; intern it.
+  ;;
+  ;;If successful  the function  must return a  symbolic expression  representing the
+  ;;R6RS library name of the loaded library; otherwise return #f.
+  ;;
+  (make-parameter
+      default-source-library-loader
+    (lambda* ({obj procedure?})
+      obj)))
+
+;;; --------------------------------------------------------------------
 
 (define* (default-binary-library-loader {libref library-reference?} {port binary-input-port?})
   ;;Default value  for the  parameter CURRENT-BINARY-LIBRARY-LOADER.  Given  a binary
@@ -353,25 +376,6 @@
 	      "warning: not using FASL file ~s because invalid or compiled with a different instance of Vicare"
 	      binary-pathname)
 	     #f)))))
-
-;;; --------------------------------------------------------------------
-
-(define current-source-library-loader
-  ;;Reference a function used to load a source library from a textual input port.
-  ;;
-  ;;The referenced  function must accept two  arguments: a R6RS library  reference, a
-  ;;textual input port from which the source library can be read.  It must: read from
-  ;;the port a LIBRARY symbolic expression;  verify that its library name conforms to
-  ;;the library reference;  load and intern all its dependency  libraries; expand it;
-  ;;compile it; intern it.
-  ;;
-  ;;If successful  the function  must return a  symbolic expression  representing the
-  ;;R6RS library name of the loaded library; otherwise return #f.
-  ;;
-  (make-parameter
-      default-source-library-loader
-    (lambda* ({obj procedure?})
-      obj)))
 
 (define current-binary-library-loader
   ;;Reference a function used to load a binary library.

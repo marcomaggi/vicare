@@ -18,7 +18,6 @@ in the boot image.  It is suggested to import it using the prefix
 @menu
 * libutils names::              Library name utilities.
 * libutils refs::               Library reference utilities.
-* libutils pathnames::          Library file pathnames.
 * libutils libraries::          Library objects.
 * libutils interning::          Interning libraries.
 * libutils loading::            Loading libraries.
@@ -780,195 +779,13 @@ invalid: raise an assertion violation.
 @end defun
 
 @c page
-@node libutils pathnames
-@section Library file pathnames
-
-
-@menu
-* libutils pathnames library::  Library pathnames.
-* libutils pathnames program::  Program pathnames.
-@end menu
-
-@c page
-@node libutils pathnames library
-@subsection Library pathnames
-
-
-The following bindings are exported by the library @library{vicare
-libraries}.
-
-
-@defun library-name->filename-stem @var{libname}
-@defunx library-reference->filename-stem @var{libref}
-Convert the non--empty list of identifiers from a @rnrs{6} library name
-@var{libname} or reference @var{libref} into a string representing the
-corresponding relative file pathname, without extension but including a
-leading @code{#\/} character.  Examples:
-
-@example
-(library-name->filename-stem '(alpha beta gamma (1 2 3)))
-@result{} "/alpha/beta/gamma"
-
-(library-name->filename-stem '(alpha beta main (1 2 3)))
-@result{} "/alpha/beta/main_"
-
-(library-reference->filename-stem '(alpha beta gamma ((>= 3))))
-@result{} "/alpha/beta/gamma"
-
-(library-reference->filename-stem '(alpha beta main ((>= 3))))
-@result{} "/alpha/beta/main_"
-@end example
-
-@noindent
-notice how the component @samp{main}, when appearing last, is ``quoted''
-by appending an underscore.
-
-The returned value can be used as:
-
-@itemize
-@item
-Source library name, by appending an extension like @code{.sls}.
-
-@item
-Compiled library name, by appending an extension like @code{.fasl}.
-@end itemize
-@end defun
-
-
-@defun directory+library-stem->library-source-pathname @var{directory} @var{stem}
-@defunx directory+library-stem->library-binary-pathname @var{directory} @var{stem}
-Given a string directory pathname and a string library stem: build and
-return a source or binary library file pathname.
-
-@example
-(directory+library-stem->library-source-pathname "a/b/c" "/d/e")
-@result{} "a/b/c/d/e.sls"
-
-(directory+library-stem->library-binary-pathname "a/b/c" "/d/e")
-@result{} "a/b/c/d/e.fasl"
-@end example
-@end defun
-
-
-@defun library-name->library-binary-pathname-in-store-directory @var{libname}
-@defunx library-reference->library-binary-pathname-in-store-directory @var{libref}
-Given a @rnrs{6} compliant library name or reference: build and return a
-string representing the pathname of a binary library in the current
-store directory.  The current store directory is the pathname currently
-referenced by the parameter @func{compiled-libraries-store-directory}.
-
-@example
-(parametrise ((compiled-libraries-store-directory "/a/b"))
-   (library-name->library-binary-pathname-in-store-directory
-      '(c d (1 2 3))))
-@result{} "/a/b/c/d.fasl"
-
-(parametrise ((compiled-libraries-store-directory "/a/b"))
-   (library-reference->library-binary-pathname-in-store-directory
-      '(c d ((>= 2)))))
-@result{} "/a/b/c/d.fasl"
-@end example
-@end defun
-
-
-@defun library-source-pathname->library-stem-pathname @var{source-pathname}
-Given a string representing the file pathname of a source library: strip
-the file extensions if it is equal to a supported @value{PRJNAME} file
-extension and return the result.  If the file extension is not
-recognised: return @var{source-pathname} itself.
-
-@example
-(library-source-pathname->library-stem-pathname "a/b/c.sls")
-@result{} "a/b/c"
-
-(library-source-pathname->library-stem-pathname "a/b/c.vicare.sls")
-@result{} "a/b/c"
-
-(library-source-pathname->library-stem-pathname "a/b/c.scm")
-@result{} "a/b/c"
-
-(library-source-pathname->library-stem-pathname "a/b/c.ss")
-@result{} "a/b/c"
-
-(library-source-pathname->library-stem-pathname "a/b/c.ciao")
-@result{} "a/b/c.ciao"
-@end example
-@end defun
-
-
-@defun library-source-pathname->library-binary-tail-pathname @var{source-pathname}
-Given a string representing the file pathname of a source library: strip
-the file extensions if it is equal to a supported @value{PRJNAME} file
-extension, append the binary library extension and return the result.
-If the file extension is not recognised: return @var{source-pathname}
-itself with the binary library extension appended.
-
-@example
-(library-source-pathname->library-binary-tail-pathname
-   "a/b/c.sls")
-@result{} "a/b/c.fasl"
-
-(library-source-pathname->library-binary-tail-pathname
-   "a/b/c.vicare.sls")
-@result{} "a/b/c.fasl"
-
-(library-source-pathname->library-binary-tail-pathname
-   "a/b/c.scm")
-@result{} "a/b/c.fasl"
-
-(library-source-pathname->library-binary-tail-pathname
-   "a/b/c.ss")
-@result{} "a/b/c.fasl"
-
-(library-source-pathname->library-binary-tail-pathname
-   "a/b/c.ciao")
-@result{} "a/b/c.ciao.fasl"
-@end example
-@end defun
-
-@c page
-@node libutils pathnames program
-@subsection Program pathnames
-
-
-The following bindings are exported by the library @library{vicare
-libraries}.
-
-
-@defun program-source-pathname->program-binary-pathname @var{source-pathname}
-Given a string representing the pathname of a Scheme program: build and
-return the pathname of the corresponding compiled program.
-
-If @var{source-pathname} has file extension @code{.sps}: strip such
-extension; otherwise append the extension @code{.fasl}.
-
-@example
-(program-source-pathname->program-binary-pathname
-   "demo.sps")
-@result{} "demo"
-
-(program-source-pathname->program-binary-pathname
-   "tests/demo.sps")
-@result{} "tests/demo"
-
-(program-source-pathname->program-binary-pathname
-   "demo.ciao")
-@result{} "demo.ciao.fasl"
-
-(program-source-pathname->program-binary-pathname
-   "tests/demo.ciao")
-@result{} "tests/demo.ciao.fasl"
-@end example
-@end defun
-
-@c page
 @node libutils libraries
 @section Library objects
 
 
-@objtype{library} objects are created when a source library is processed
-by the expander and when a binary library is loaded from a @fasl{} file;
-@objtype{library} is a disjoint type.
+Objects of type @objtype{library} are created when a source library is
+processed by the expander and when a binary library is loaded from a
+@fasl{} file; @objtype{library} is a disjoint type.
 
 The following bindings are exported by the library @library{vicare
 libraries}.
@@ -982,12 +799,20 @@ otherwise return @false{}.
 
 @deffn {Accessor for @objtype{library}} library-uid @var{lib}
 Return a gensym uniquely identifying this interned library; it also
-identifies the corresponding serialised library.
+identifies the corresponding serialised library.  This gensym is
+registered in:
 
-This gensym is registered in: the @objtype{library} object created by a
-@value{EXECUTABLE} process at run--time; the binary file containing this
-library in compiled and serialised form; the binary files containing the
-compiled libraries that import this one.
+@itemize
+@item
+The @objtype{library} object created by a @value{EXECUTABLE} process at
+run--time.
+
+@item
+The binary file containing this library in compiled and serialised form.
+
+@item
+The binary files containing the compiled libraries that import this one.
+@end itemize
 
 Whenever a compiled library imports this one, the @uid{} stored in the
 binary file is compared to this field: if they are @func{eq?}  the
@@ -1180,9 +1005,9 @@ libraries}.
 
 @defun interned-libraries
 @defunx interned-libraries @var{all?}
-Return a list of @objtype{library} representing interned libraries.  If
-@var{all?}  is non--false: return all the interned libraries, else
-return only the visible ones.
+Return a list of @objtype{library} objects representing interned
+libraries.  If @var{all?}  is non--false: return all the interned
+libraries, else return only the visible ones.
 @end defun
 
 
@@ -1212,7 +1037,8 @@ the parameter @func{current-library-loader}.
 
 @defun find-library-by-descriptor @var{libdescr}
 Given a library descriptor, as generated by the function
-@func{library-descriptor}: try to search and intern the corresponding
+@func{library-descriptor} (@pxref{libutils libraries,
+library-descriptor}): try to search and intern the corresponding
 library, if it is not already interned; when successful return the
 corresponding @objtype{library} object, otherwise raise an exception.
 
@@ -1574,6 +1400,7 @@ search the file system for a library file pathname matching a specified
 
 @menu
 * libutils file-system extensions::     File extensions.
+* libutils file-system pathnames::      Library file pathnames.
 * libutils file-system paths::          Library search paths.
 * libutils file-system binary::         Locating compiled library files.
 * libutils file-system source::         Locating source library files.
@@ -1630,6 +1457,188 @@ leading dot included.  This parameter is initialised to:
 (".vicare.sls" ".sls")
 @end example
 @end deffn
+
+@c page
+@node libutils file-system pathnames
+@subsection Library file pathnames
+
+
+@menu
+* libutils file-system pathnames library::  Library pathnames.
+* libutils file-system pathnames program::  Program pathnames.
+@end menu
+
+@c page
+@node libutils file-system pathnames library
+@subsubsection Library pathnames
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-name->filename-stem @var{libname}
+@defunx library-reference->filename-stem @var{libref}
+Convert the non--empty list of identifiers from a @rnrs{6} library name
+@var{libname} or reference @var{libref} into a string representing the
+corresponding relative file pathname, without extension but including a
+leading @code{#\/} character.  Examples:
+
+@example
+(library-name->filename-stem '(alpha beta gamma (1 2 3)))
+@result{} "/alpha/beta/gamma"
+
+(library-name->filename-stem '(alpha beta main (1 2 3)))
+@result{} "/alpha/beta/main_"
+
+(library-reference->filename-stem '(alpha beta gamma ((>= 3))))
+@result{} "/alpha/beta/gamma"
+
+(library-reference->filename-stem '(alpha beta main ((>= 3))))
+@result{} "/alpha/beta/main_"
+@end example
+
+@noindent
+notice how the component @samp{main}, when appearing last, is ``quoted''
+by appending an underscore.
+
+The returned value can be used as:
+
+@itemize
+@item
+Source library name, by appending an extension like @code{.sls}.
+
+@item
+Compiled library name, by appending an extension like @code{.fasl}.
+@end itemize
+@end defun
+
+
+@defun directory+library-stem->library-source-pathname @var{directory} @var{stem}
+@defunx directory+library-stem->library-binary-pathname @var{directory} @var{stem}
+Given a string directory pathname and a string library stem: build and
+return a source or binary library file pathname.
+
+@example
+(directory+library-stem->library-source-pathname "a/b/c" "/d/e")
+@result{} "a/b/c/d/e.sls"
+
+(directory+library-stem->library-binary-pathname "a/b/c" "/d/e")
+@result{} "a/b/c/d/e.fasl"
+@end example
+@end defun
+
+
+@defun library-name->library-binary-pathname-in-store-directory @var{libname}
+@defunx library-reference->library-binary-pathname-in-store-directory @var{libref}
+Given a @rnrs{6} compliant library name or reference: build and return a
+string representing the pathname of a binary library in the current
+store directory.  The current store directory is the pathname currently
+referenced by the parameter @func{compiled-libraries-store-directory}.
+
+@example
+(parametrise ((compiled-libraries-store-directory "/a/b"))
+   (library-name->library-binary-pathname-in-store-directory
+      '(c d (1 2 3))))
+@result{} "/a/b/c/d.fasl"
+
+(parametrise ((compiled-libraries-store-directory "/a/b"))
+   (library-reference->library-binary-pathname-in-store-directory
+      '(c d ((>= 2)))))
+@result{} "/a/b/c/d.fasl"
+@end example
+@end defun
+
+
+@defun library-source-pathname->library-stem-pathname @var{source-pathname}
+Given a string representing the file pathname of a source library: strip
+the file extensions if it is equal to a supported @value{PRJNAME} file
+extension and return the result.  If the file extension is not
+recognised: return @var{source-pathname} itself.
+
+@example
+(library-source-pathname->library-stem-pathname "a/b/c.sls")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.vicare.sls")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.scm")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.ss")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.ciao")
+@result{} "a/b/c.ciao"
+@end example
+@end defun
+
+
+@defun library-source-pathname->library-binary-tail-pathname @var{source-pathname}
+Given a string representing the file pathname of a source library: strip
+the file extensions if it is equal to a supported @value{PRJNAME} file
+extension, append the binary library extension and return the result.
+If the file extension is not recognised: return @var{source-pathname}
+itself with the binary library extension appended.
+
+@example
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.sls")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.vicare.sls")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.scm")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.ss")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.ciao")
+@result{} "a/b/c.ciao.fasl"
+@end example
+@end defun
+
+@c page
+@node libutils file-system pathnames program
+@subsubsection Program pathnames
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun program-source-pathname->program-binary-pathname @var{source-pathname}
+Given a string representing the pathname of a Scheme program: build and
+return the pathname of the corresponding compiled program.
+
+If @var{source-pathname} has file extension @code{.sps}: strip such
+extension; otherwise append the extension @code{.fasl}.
+
+@example
+(program-source-pathname->program-binary-pathname
+   "demo.sps")
+@result{} "demo"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.sps")
+@result{} "tests/demo"
+
+(program-source-pathname->program-binary-pathname
+   "demo.ciao")
+@result{} "demo.ciao.fasl"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.ciao")
+@result{} "tests/demo.ciao.fasl"
+@end example
+@end defun
 
 @c page
 @node libutils file-system paths
@@ -2024,11 +2033,11 @@ libraries}.
 
 
 @deffn Parameter compiled-libraries-store-directory
-Hold @false{} or a string representing the absolute pathname of a
-directory; the string must represent a syntactically valid pathname, but
-the directory might not exist.  The store directory is meant to be used
-when compiling libraries in the build directory of a source package for
-later installation.
+Hold @false{} or a string representing the absolute or relative pathname
+of a directory; the string must represent a syntactically valid
+pathname, but the directory might not exist.  The store directory is
+meant to be used when compiling libraries in the build directory of a
+source package for later installation.
 
 When the selected library locator is @code{compile-time}: the store
 directory is used to search for compiled libraries.  It is an error if
