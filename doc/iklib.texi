@@ -1193,16 +1193,16 @@ possible to use this keyword in custom syntaxes.
 
 
 @deffn {Fluid Syntax} break @meta{expr} ...
-Causes the innermost @func{while}, @func{until} or @func{for} loop to
-exit immediately to the current continuation.  When arguments are given:
-they are returned to the continuation.  Being a fluid syntax: it is
-possible to use this keyword in custom syntaxes.
+Causes the innermost @syntax{while}, @syntax{until} or @syntax{for} loop
+to exit immediately to the current continuation.  When arguments are
+given: they are returned to the continuation.  Being a fluid syntax: it
+is possible to use this keyword in custom syntaxes.
 @end deffn
 
 
 @deffn Syntax unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
-Not a general @func{unwind-protect} for Scheme, but fine where we do not
-make the body return continuations to the caller and then come back
+Not a general @syntax{unwind-protect} for Scheme, but fine where we do
+not make the body return continuations to the caller and then come back
 again and again, calling @code{cleanup} multiple times.  Expand to:
 
 @example
@@ -1219,11 +1219,14 @@ again and again, calling @code{cleanup} multiple times.  Expand to:
           @meta{body}
         (cleanup)))))
 @end example
+
+Notice that what appears to be a tail--call in @meta{body} is not a
+tail--call for @syntax{unwind-protect}.
 @end deffn
 
 
 @deffn Syntax xor @meta{expr} ...
-Exclusive @func{or}.  When expanded with no expressions: evaluate to
+Exclusive @syntax{or}.  When expanded with no expressions: evaluate to
 @false{}.
 @end deffn
 
