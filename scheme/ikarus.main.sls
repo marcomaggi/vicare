@@ -992,8 +992,15 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 ;;;; before-the-main-action code evaluation procedures
 
 (define (load-rc-files-as-r6rs-scripts cfg)
-  ;;Load  the  RC  files  as  R6RS scripts  and  discard  the  resulting
-  ;;environment.
+  ;;Load the RC files as R6RS scripts and discard the resulting environment.
+  ;;
+  ;;When  CFG.RCFILES  is  #t: if  the  execution  mode  is  REPL, load  the  default
+  ;;run-command file "~/.vicarerc".
+  ;;
+  ;;When CFG.RCFILES is #f: do nothing.
+  ;;
+  ;;When CFG.RCFILES  is not  a boolean: it  must be a  list of  strings representing
+  ;;run-command file pathnames.  The files are loaded an evaluated as R6RS scripts.
   ;;
   (for-each
       (lambda (filename)
