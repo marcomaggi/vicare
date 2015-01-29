@@ -1207,8 +1207,8 @@ Evaluate the @meta{body} and then the @meta{cleanup} forms, whether the
 the return value of @var{body}.
 
 Not a general @syntax{unwind-protect} for Scheme, but fine when we do
-@strong{not} create escaping continuations and reenter the @meta{body}
-again after having executed the @meta{cleanup} forms once.
+@strong{not} create a continuation and reenter the @meta{body} again
+after having executed the @meta{cleanup} forms once.
 
 The implementation is equivalent to:
 
@@ -13465,8 +13465,8 @@ Call the thunk @meta{body} and then the thunk @var{cleanup}, whether the
 the return value of @var{body}.
 
 Not a general unwind--protection for Scheme, but fine when we do
-@strong{not} create escaping continuations and reenter the @var{body}
-again after having executed the @var{cleanup} once.
+@strong{not} create a continuation and reenter the @var{body} again
+after having executed the @var{cleanup} once.
 
 The implementation is equivalent to:
 
