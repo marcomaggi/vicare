@@ -1201,9 +1201,16 @@ is possible to use this keyword in custom syntaxes.
 
 
 @deffn Syntax unwind-protect @meta{body} @metao{cleanup} @meta{cleanup} ...
-Not a general @syntax{unwind-protect} for Scheme, but fine where we do
-not make the body return continuations to the caller and then come back
-again and again, calling @code{cleanup} multiple times.  Expand to:
+Evaluate the @meta{body} and then the @meta{cleanup} forms, whether the
+@meta{body} performs a normal return or raises an exception.  When
+@var{body} returns: the return value of @func{with-unwind-protection} is
+the return value of @var{body}.
+
+Not a general @syntax{unwind-protect} for Scheme, but fine when we do
+@strong{not} create escaping continuations and reenter the @meta{body}
+again after having executed the @meta{cleanup} forms once.
+
+The implementation is equivalent to:
 
 @example
 (let ((cleanup (lambda ()
@@ -13449,5 +13456,34 @@ the thunks is catched and discarded.  To add an exit hook:
                   (exit-hooks)))
 @end example
 @end deffn
+
+
+@defun with-unwind-protection @var{body} @var{cleanup}
+Call the thunk @meta{body} and then the thunk @var{cleanup}, whether the
+@var{body} performs a normal return or raises an exception.  When
+@var{body} returns: the return value of @func{with-unwind-protection} is
+the return value of @var{body}.
+
+Not a general unwind--protection for Scheme, but fine when we do
+@strong{not} create escaping continuations and reenter the @var{body}
+again after having executed the @var{cleanup} once.
+
+The implementation is equivalent to:
+
+@example
+(guard (E (else
+           (@var{cleanup})
+           (raise E)))
+  (begin0
+      (@var{body})
+    (@var{cleanup})))
+@end example
+
+@noindent
+notice that what appears to be a tail--call in @meta{body} is not a
+tail--call for @syntax{unwind-protect}.  Using this function with with
+coroutines is fine.  @ref{iklib syntaxes control, unwind-protect} for
+further details.
+@end defun
 
 @c end of file

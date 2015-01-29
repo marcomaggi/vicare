@@ -20,12 +20,14 @@
     with-exception-handler
     raise		raise-continuable
     error		warning
-    assertion-violation	die)
+    assertion-violation	die
+    with-unwind-protection)
   (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
 		  error			warning
-		  assertion-violation	die))
+		  assertion-violation	die
+		  with-unwind-protection))
 
 
 (define current-handlers
@@ -59,6 +61,14 @@
       (raise (condition
 	      (make-non-continuable-violation)
 	      (make-message-condition "handler returned from non-continuable exception"))))))
+
+(define (with-unwind-protection body cleanup)
+  (guard (E (else
+	     (cleanup)
+	     (raise E)))
+    (begin0
+      (body)
+      (cleanup))))
 
 
 (module (error assertion-violation warning die)

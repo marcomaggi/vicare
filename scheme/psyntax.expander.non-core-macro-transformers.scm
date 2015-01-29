@@ -1748,9 +1748,28 @@
   ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
   ;;object that must be further expanded.
   ;;
-  ;;Not a general UNWIND-PROTECT  for Scheme, but fine where we do  not make the body
-  ;;return continuations  to the caller and  then come back again  and again, calling
-  ;;CLEANUP multiple times.
+  ;;Not  a general  UNWIND-PROTECT  for Scheme,  but  fine when  we  do *not*  create
+  ;;escaping  continuations and  reenter the  ?BODY again  after having  executed the
+  ;;?CLEANUP forms once.
+  ;;
+  ;;NOTE This implementation works fine with coroutines.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?body ?cleanup0 ?cleanup* ...)
+     (bless
+      `(with-unwind-protection
+	   (lambda () ,?body)
+	 (lambda () ,?cleanup0 . ,?cleanup*))))
+    ))
+
+#;(define (unwind-protect-macro expr-stx)
+  ;;Transformer  function used  to  expand Vicare's  UNWIND-PROTECT  macros from  the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
+  ;;
+  ;;Not  a general  UNWIND-PROTECT  for Scheme,  but  fine when  we  do *not*  create
+  ;;escaping  continuations and  reenter the  ?BODY again  after having  executed the
+  ;;?CLEANUP forms once.
   ;;
   ;;NOTE This implementation works fine with coroutines.
   ;;

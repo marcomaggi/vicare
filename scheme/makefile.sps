@@ -2058,6 +2058,7 @@
     (raise					v r ex)
     (raise-continuable				v r ex)
     (with-exception-handler			v r ex)
+    (with-unwind-protection			v $language)
     (guard					v r ex)
     (binary-port?				v r ip)
     (buffer-mode				v r ip)
