@@ -67,7 +67,7 @@
 	     (cleanup)
 	     (raise E)))
     (begin0
-      (body)
+	(body)
       (cleanup))))
 
 
