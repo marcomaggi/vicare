@@ -1210,14 +1210,12 @@ again and again, calling @code{cleanup} multiple times.  Expand to:
                  @metao{cleanup}
                  @meta{cleanup}
                  ...)))
-  (with-exception-handler
-      (lambda (E)
-        (cleanup)
-        (raise E))
-    (lambda ()
-      (begin0
-          @meta{body}
-        (cleanup)))))
+  (guard (E (else
+             (cleanup)
+             (raise E)))
+    (begin0
+        @meta{body}
+      (cleanup))))
 @end example
 
 @noindent

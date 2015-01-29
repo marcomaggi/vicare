@@ -1744,26 +1744,26 @@
 ;;;; module non-core-macro-transformer: UNWIND-PROTECT
 
 (define (unwind-protect-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;Transformer  function used  to  expand Vicare's  UNWIND-PROTECT  macros from  the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
   ;;
-  ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where we  do not
-  ;;make the body return continuations to  the caller and then come back
-  ;;again and again, calling CLEANUP multiple times.
+  ;;Not a general UNWIND-PROTECT  for Scheme, but fine where we do  not make the body
+  ;;return continuations  to the caller and  then come back again  and again, calling
+  ;;CLEANUP multiple times.
+  ;;
+  ;;NOTE This implementation works fine with coroutines.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body ?cleanup0 ?cleanup* ...)
      (bless
-      `(let ((cleanup (lambda () ,?cleanup0 ,@?cleanup*)))
-	 (with-exception-handler
-	     (lambda (E)
-	       (cleanup)
-	       (raise E))
-	   (lambda ()
-	     (begin0
-	       ,?body
-	       (cleanup)))))))
+      `(let ((cleanup (lambda () ,?cleanup0 . ,?cleanup*)))
+	 (guard (E (else
+		    (cleanup)
+		    (raise E)))
+	   (begin0
+	     ,?body
+	     (cleanup))))))
     ))
 
 
