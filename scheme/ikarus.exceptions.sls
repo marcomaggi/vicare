@@ -21,13 +21,12 @@
     raise		raise-continuable
     error		warning
     assertion-violation	die
-    with-unwind-protection)
+    %run-escape-handlers)
   (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
 		  error			warning
-		  assertion-violation	die
-		  with-unwind-protection))
+		  assertion-violation	die))
 
 
 (define current-handlers
@@ -64,14 +63,6 @@
 			     (make-message-condition "handler returned from non-continuable exception")))))
   #| end of LET-SYNTAX |# )
 
-(define (with-unwind-protection body cleanup)
-  (guard (E (else
-	     (cleanup)
-	     (raise E)))
-    (begin0
-	(body)
-      (cleanup))))
-
 
 (module (error assertion-violation warning die)
 
@@ -101,6 +92,14 @@
 	(string? obj)))
 
   #| end of module |# )
+
+
+(define (%run-escape-handlers handlers)
+  (for-each (lambda (handler)
+	      (guard (E (else
+			 (void)))
+		(handler)))
+    handlers))
 
 
 ;;;; done

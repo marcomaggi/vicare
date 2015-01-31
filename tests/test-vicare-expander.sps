@@ -892,80 +892,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'test-while))
-
-  (define-fluid-syntax continue
-    (lambda (stx)
-      (syntax-violation 'continue "syntax \"continue\" out of any loop" stx)))
-
-  (define-fluid-syntax break
-    (lambda (stx)
-      (syntax-violation 'continue "syntax \"break\" out of any loop" stx)))
-
-  (define-syntax while
-    (syntax-rules ()
-      ((_ ?test ?body ...)
-       (call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (fluid-let-syntax
-			       ((break    (syntax-rules ()
-					    ((_) (escape (void)))))
-				(continue (syntax-rules ()
-					    ((_) (next-iteration #t)))))
-			     (if ?test
-				 (begin ?body ... #t)
-			       #f))))
-		 (loop))))))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (with-result
-       (let ((i 5))
-	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i)))
-	 i))
-    => '(0 (5 4 3 2 1)))
-
-  (check
-      (with-result
-       (let ((i 0))
-	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i)))
-	 i))
-    => '(0 ()))
-
-  (check
-      (with-result	;continue
-       (let ((i 5))
-	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (continue)
-	   (add-result "post"))
-	 i))
-    => '(0 (5 4 3 2 1)))
-
-  (check
-      (with-result	;break
-       (let ((i 5))
-	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (break)
-	   (add-result "post"))
-	 i))
-    => '(4 (5)))
-
-  #t)
-
-
 (parametrise ((check-test-name	'while))
 
   (check
@@ -1001,79 +927,6 @@
       (with-result	;break
        (let ((i 5))
 	 (while (positive? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (break)
-	   (add-result "post"))
-	 i))
-    => '(4 (5)))
-
-  #t)
-
-
-(parametrise ((check-test-name	'test-until))
-
-  (define-fluid-syntax continue
-    (lambda (stx)
-      (syntax-violation 'continue "syntax \"continue\" out of any loop" stx)))
-
-  (define-fluid-syntax break
-    (lambda (stx)
-      (syntax-violation 'break "syntax \"break\" out of any loop" stx)))
-
-  (define-syntax until
-    (syntax-rules ()
-      ((_ ?test ?body ...)
-       (call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (fluid-let-syntax ((break    (syntax-rules ()
-							  ((_) (escape (void)))))
-					      (continue (syntax-rules ()
-							  ((_) (next-iteration #t)))))
-			     (if ?test
-				 #f
-			       (begin ?body ... #t)))))
-		 (loop))))))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (with-result
-       (let ((i 5))
-	 (until (zero? i)
-	   (add-result i)
-	   (set! i (+ -1 i)))
-	 i))
-    => '(0 (5 4 3 2 1)))
-
-  (check
-      (with-result
-       (let ((i 0))
-	 (until (zero? i)
-	   (add-result i)
-	   (set! i (+ -1 i)))
-	 i))
-    => '(0 ()))
-
-  (check	;continue
-      (with-result
-       (let ((i 5))
-	 (until (zero? i)
-	   (add-result i)
-	   (set! i (+ -1 i))
-	   (continue)
-	   (add-result "post"))
-	 i))
-    => '(0 (5 4 3 2 1)))
-
-  (check	;break with no values
-      (with-result
-       (let ((i 5))
-	 (until (zero? i)
 	   (add-result i)
 	   (set! i (+ -1 i))
 	   (break)
@@ -1129,93 +982,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'test-for))
-
-  (define-fluid-syntax continue
-    (lambda (stx)
-      (syntax-violation 'continue "syntax \"continue\" out of any loop" stx)))
-
-  (define-fluid-syntax break
-    (lambda (stx)
-      (syntax-violation 'break "syntax \"break\" out of any loop" stx)))
-
-  (define-syntax for
-    (syntax-rules ()
-      ((_ (?init ?test ?incr) ?body ...)
-       (call/cc
-	   (lambda (escape)
-	     ?init
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_) (escape (void)))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ?test
-		     (begin
-		       ?body ... ?incr
-		       (loop))
-		   (escape (void))))))))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (check	;test true
-      (with-result
-       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	 (add-result i))
-       #t)
-    => '(#t (5 4 3 2 1)))
-
-  (check	;test immediately false
-      (with-result
-       (for ((define i 0) (positive? i) (set! i (+ -1 i)))
-	 (add-result i))
-       #t)
-    => '(#t ()))
-
-  (check	;continue
-      (with-result
-       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	 (add-result i)
-	 (set! i (+ -1 i))
-	 (continue)
-	 (add-result "post"))
-       #t)
-    => '(#t (5 4 3 2 1)))
-
-  (check	;break with no values
-      (with-result
-       (for ((define i 5) (positive? i) (set! i (+ -1 i)))
-	 (add-result i)
-	 (break)
-	 (add-result "post"))
-       #t)
-    => '(#t (5)))
-
-  (check	;multiple bindings
-      (with-result
-       (for ((begin
-	       (define i 5)
-	       (define j 10))
-	     (positive? i)
-	     (begin
-	       (set! i (+ -1 i))
-	       (set! j (+ -1 j))))
-	 (add-result i)
-	 (add-result j))
-       #t)
-    => '(#t (5 10 4 9 3 8 2 7 1 6)))
-
-  (check	;no bindings
-      (with-result
-       (let ((i #f))
-	 (for ((set! i 5) (positive? i) (set! i (+ -1 i)))
-	   (add-result i))
-	 i))
-    => '(0 (5 4 3 2 1)))
-
-  #t)
-
-
 (parametrise ((check-test-name	'for))
 
   (check	;test true
@@ -1236,7 +1002,6 @@
       (with-result
        (for ((define i 5) (positive? i) (set! i (+ -1 i)))
 	 (add-result i)
-	 (set! i (+ -1 i))
 	 (continue)
 	 (add-result "post"))
        #t)
@@ -1272,67 +1037,6 @@
 	   (add-result i))
 	 i))
     => '(0 (5 4 3 2 1)))
-
-  #t)
-
-
-(parametrise ((check-test-name	'test-do-while))
-
-  (define-syntax do-while
-    (syntax-rules (while)
-      ((_ ?body (while ?test))
-       (call/cc
-	   (lambda (escape)
-	     (letrec ((loop (lambda ()
-			      (call/cc
-				  (lambda (next-loop)
-				    (fluid-let-syntax
-					((break    (syntax-rules ()
-						     ((_) (escape (void)))))
-					 (continue (syntax-rules ()
-						     ((_) (next-loop)))))
-				      ?body
-				      (unless ?test
-					(escape (void))))))
-			      (loop))))
-	       (loop)))))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (with-result
-       (define i 5)
-       (do-while
-	(begin
-	  (add-result i)
-	  (set! i (+ -1 i)))
-	(while (positive? i))))
-    => `(,(void) (5 4 3 2 1)))
-
-  (check	;continue
-      (with-result
-       (define i 5)
-       (do-while
-	(begin
-	  (set! i (+ -1 i))
-	  (when (= i 3)
-	    (continue))
-	  (add-result i))
-	(while (positive? i))))
-    => `(,(void) (4 2 1 0)))
-
-  (check	;break
-      (with-result
-       (define i 5)
-       (do-while
-	(begin
-	  (set! i (+ -1 i))
-	  (when (= i 2)
-	    (break))
-	  (add-result i))
-	(while (positive? i))))
-    => `(,(void) (4 3)))
 
   #t)
 
@@ -1423,7 +1127,7 @@
 	       (break))
 	     (add-result i))
 	   (while (positive? i))))
-    => `(,(void) (4 3)))
+    => '((4 3)))
 
 ;;; --------------------------------------------------------------------
 ;;; do ... until
@@ -1460,7 +1164,7 @@
 	       (break))
 	     (add-result i))
 	   (until (zero? i))))
-    => `(,(void) (4 3)))
+    => '((4 3)))
 
   #t)
 
@@ -1476,18 +1180,6 @@
 	     (add-result i)
 	     (loop (+ 1 i))))))
     => '(5 (0 1 2 3 4)))
-
-  (check	;break
-      (with-result
-       (let loop ((i 0))
-	 (if (= i 5)
-	     i
-	   (begin
-	     (when (= i 3)
-	       (break 123))
-	     (add-result i)
-	     (loop (+ 1 i))))))
-    => '(123 (0 1 2)))
 
   #t)
 
@@ -1768,80 +1460,432 @@
   #f)
 
 
-(parametrise ((check-test-name	'test-unwind-protect))
-
-  (define-syntax unwind-protect
-    ;;Not a general UNWIND-PROTECT for Scheme,  but fine where we do not
-    ;;make the  body return  continuations to the  caller and  then come
-    ;;back again and again, calling CLEANUP multiple times.
-    ;;
-    (syntax-rules ()
-      ((_ ?body ?cleanup0 ?cleanup ...)
-       (let ((cleanup (lambda () ?cleanup0 ?cleanup ...)))
-	 (with-exception-handler
-	     (lambda (E)
-	       (cleanup)
-	       (raise E))
-	   (lambda ()
-	     (begin0
-		 ?body
-	       (cleanup))))))))
-
-;;; --------------------------------------------------------------------
+(parametrise ((check-test-name	'with-unwind-protection))
 
   (check
       (with-result
-       (unwind-protect
-	   (begin
-	     (add-result 'in)
-	     1)
-	 (add-result 'out)))
+	(with-unwind-protection
+	    (lambda ()
+	      (add-result 'out))
+	  (lambda ()
+	    (add-result 'in)
+	    1)))
     => '(1 (in out)))
 
+  (check	;normal exit
+      (with-result
+	(receive-and-return (flag)
+	    #f
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup)
+		(set! flag #t))
+	    (lambda ()
+	      (add-result 'body)))))
+    => '(#t (body cleanup)))
+
   (check
       (with-result
-       (unwind-protect
-	   (begin
-	     (add-result 'in)
-	     1)
-	 (add-result 'out1)
-	 (add-result 'out2)))
+	(with-unwind-protection
+	    (lambda ()
+	      (add-result 'out1)
+	      (add-result 'out2))
+	  (lambda ()
+	    (add-result 'in)
+	    1)))
     => '(1 (in out1 out2)))
 
   (check	;multiple return values
       (with-result
-       (receive (a b)
-	   (unwind-protect
-	       (begin
-		 (add-result 'in)
-		 (values 1 2))
-	     (add-result 'out1)
-	     (add-result 'out2))
-	 (list a b)))
+	(receive (a b)
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'out1)
+		  (add-result 'out2))
+	      (lambda ()
+		(add-result 'in)
+		(values 1 2)))
+	  (list a b)))
     => '((1 2) (in out1 out2)))
 
   (check	;zero return values
       (with-result
-       (unwind-protect
-  	   (begin
-  	     (add-result 'in)
-  	     (values))
-  	 (add-result 'out1)
-  	 (add-result 'out2))
-       #t)
+	(with-unwind-protection
+	    (lambda ()
+	      (add-result 'out1)
+	      (add-result 'out2))
+	  (lambda ()
+	    (add-result 'in)
+	    (values)))
+	#t)
     => `(#t (in out1 out2)))
+
+;;; --------------------------------------------------------------------
+;;; exceptions
 
   (check	;exception in body
       (with-result
-       (guard (E (else #t))
-	 (unwind-protect
-	     (begin
-	       (add-result 'in)
-	       (error #f "fail!!!")
-	       (add-result 'after)
-	       1)
-	   (add-result 'out))))
+	(guard (E (else #t))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'out))
+	    (lambda ()
+	      (add-result 'in)
+	      (error #f "fail!!!")
+	      (add-result 'after)
+	      1))))
     => '(#t (in out)))
+
+  (check	;exception in body
+      (with-result
+	(receive-and-return (flag)
+	    #f
+	  (guard (E (else
+		     (void)))
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (set! flag #t))
+	      (lambda ()
+		(add-result 'body-in)
+		(raise 123)
+		(add-result 'body-out))))))
+    => '(#t (body-in cleanup)))
+
+;;; --------------------------------------------------------------------
+;;; non-local exit with RETURN
+
+  (check	;return in body
+      (with-result
+	(receive-and-return (flag)
+	    #f
+	  (returnable
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (set! flag #t))
+	      (lambda ()
+		(add-result 'body-in)
+		(return 123)
+		(add-result 'body-out))))))
+    => '(#t (body-in cleanup)))
+
+  (check	;return in body, documentation example
+      (internal-body
+	(define y #f)
+	(define x
+	  (returnable
+	    (with-unwind-protection
+		(lambda ()
+		  (set! y #t))
+	      (lambda ()
+		(return 1)))))
+	(values x y))
+    => 1 #t)
+
+;;; --------------------------------------------------------------------
+;;; non-local exit in WHILE loop
+
+  (check	;break in body
+      (with-result
+	(receive-and-return (flag)
+	    #f
+	  (while #t
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (set! flag #t))
+	      (lambda ()
+		(add-result 'body-in)
+		(break)
+		(add-result 'body-out))))))
+    => '(#t (body-in cleanup)))
+
+  (check	;continue in body
+      (with-result
+	(receive-and-return (flag)
+	    0
+	  (let ((i 3))
+	    (while (positive? i)
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup)
+		    (set! flag (add1 flag)))
+		(lambda ()
+		  (add-result 'body-in)
+		  (set! i (sub1 i))
+		  (continue)
+		  (add-result 'body-out)))))))
+    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
+
+  (check	;break in body, simple example for documentation
+      (internal-body
+	(define x 3)
+	(define y #f)
+	(while (positive? x)
+	  (with-unwind-protection
+	      (lambda ()
+		(set! y #t))
+	    (lambda ()
+	      (-- x)
+	      (break)
+	      (exit))))
+	(values x y))
+    => 2 #t)
+
+  (check	;continue in body, simple example for documentation
+      (internal-body
+	(define x 3)
+	(define y 0)
+	(while (positive? x)
+	  (with-unwind-protection
+	      (lambda ()
+		(++ y))
+	    (lambda ()
+	      (-- x)
+	      (continue)
+	      (exit))))
+	(values x y))
+    => 0 3)
+
+;;; --------------------------------------------------------------------
+;;; non-local exit in UNTIL loop
+
+  (check	;break in body
+      (with-result
+	(receive-and-return (flag)
+	    0
+	  (let ((i 3))
+	    (until (zero? i)
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup)
+		    (set! flag (add1 flag)))
+		(lambda ()
+		  (add-result 'body-in)
+		  (set! i (sub1 i))
+		  (break)
+		  (add-result 'body-out)))))))
+    => '(1 (body-in cleanup)))
+
+  (check	;continue in body
+      (with-result
+	(receive-and-return (flag)
+	    0
+	  (let ((i 3))
+	    (until (zero? i)
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup)
+		    (set! flag (add1 flag)))
+		(lambda ()
+		  (add-result 'body-in)
+		  (set! i (sub1 i))
+		  (continue)
+		  (add-result 'body-out)))))))
+    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
+
+  (check	;break in body, simple example for documentation
+      (internal-body
+	(define x 3)
+	(define y #f)
+	(until (zero? x)
+	  (with-unwind-protection
+	      (lambda ()
+		(set! y #t))
+	    (lambda ()
+	      (-- x)
+	      (break)
+	      (exit))))
+	(values x y))
+    => 2 #t)
+
+  (check	;continue in body, simple example for documentation
+      (internal-body
+	(define x 3)
+	(define y 0)
+	(until (zero? x)
+	  (with-unwind-protection
+	      (lambda ()
+		(++ y))
+	    (lambda ()
+	      (-- x)
+	      (continue)
+	      (exit))))
+	(values x y))
+    => 0 3)
+
+;;; --------------------------------------------------------------------
+;;; non-local exit in FOR loop
+
+  (check	;break in body
+      (with-result
+	(receive-and-return (flag)
+	    #f
+	  (for ((define i 3) (positive? i) (-- i))
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (set! flag #t))
+	      (lambda ()
+		(add-result 'body-in)
+		(break)
+		(add-result 'body-out))))))
+    => '(#t (body-in cleanup)))
+
+  (check	;continue in body
+      (with-result
+  	(receive-and-return (flag)
+  	    0
+  	  (for ((define i 3) (positive? i) (-- i))
+  	    (with-unwind-protection
+  		(lambda ()
+  		  (add-result 'cleanup)
+  		  (++ flag))
+  	      (lambda ()
+  		(add-result 'body-in)
+  		(continue)
+  		(add-result 'body-out))))))
+    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
+
+  (check	;break in body, simple example for documentation
+      (internal-body
+  	(define y #f)
+  	(define x 3)
+  	(for ((void) (positive? x) (-- x))
+  	  (with-unwind-protection
+  	      (lambda ()
+  		(set! y #t))
+  	    (lambda ()
+  	      (break)
+  	      (exit))))
+  	(values x y))
+    => 3 #t)
+
+  (check	;continue in body, simple example for documentation
+      (internal-body
+  	(define x 3)
+  	(define y 0)
+  	(for ((void) (positive? x) (-- x))
+  	  (with-unwind-protection
+  	      (lambda ()
+  		(++ y))
+  	    (lambda ()
+  	      (continue)
+  	      (exit))))
+  	(values x y))
+    => 0 3)
+
+;;; --------------------------------------------------------------------
+;;; non-local exit in DO ... WHILE loop
+
+  (check	;break in body
+      (with-result
+	(define x 3)
+	(define y #f)
+	(do
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (set! y #t))
+	      (lambda ()
+		(add-result 'body-in)
+		(break)
+		(add-result 'body-out)))
+	    (while (positive? x)))
+	(values x y))
+    => '(3 #t (body-in cleanup)))
+
+  (check	;continue in body
+      (with-result
+	(define x 3)
+	(define y 0)
+	(do
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (++ y))
+	      (lambda ()
+		(add-result 'body-in)
+		(-- x)
+		(continue)
+		(add-result 'body-out)))
+	    (while (positive? x)))
+	(values x y))
+    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
+
+;;; --------------------------------------------------------------------
+;;; non-local exit in DO ... UNTIL loop
+
+  (check	;break in body
+      (with-result
+	(define x 3)
+	(define y #f)
+	(do
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (set! y #t))
+	      (lambda ()
+		(add-result 'body-in)
+		(break)
+		(add-result 'body-out)))
+	    (until (zero? x)))
+	(values x y))
+    => '(3 #t (body-in cleanup)))
+
+  (check	;continue in body
+      (with-result
+	(define x 3)
+	(define y 0)
+	(do
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup)
+		  (++ y))
+	      (lambda ()
+		(add-result 'body-in)
+		(-- x)
+		(continue)
+		(add-result 'body-out)))
+	    (until (zero? x)))
+	(values x y))
+    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
+
+;;; --------------------------------------------------------------------
+;;; non-local exit in DO standard syntax
+
+  (check	;break in body
+      (with-result
+	(do ((x 3 (-- x))
+	     (y #f))
+	    ((zero? x)
+	     (values x y))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup)
+		(set! y #t))
+	    (lambda ()
+	      (add-result 'body-in)
+	      (break x y)
+	      (add-result 'body-out)))))
+    => '(3 #t (body-in cleanup)))
+
+  (check	;continue in body
+      (with-result
+	(do ((x 3 (-- x))
+	     (y 0))
+	    ((zero? x)
+	     (values x y))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup)
+		(++ y))
+	    (lambda ()
+	      (add-result 'body-in)
+	      (continue)
+	      (add-result 'body-out)))))
+    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
 
   #t)
 
@@ -1850,56 +1894,56 @@
 
   (check
       (with-result
-       (unwind-protect
-	   (begin
-	     (add-result 'in)
-	     1)
-	 (add-result 'out)))
+	(unwind-protect
+	    (begin
+	      (add-result 'in)
+	      1)
+	  (add-result 'out)))
     => '(1 (in out)))
 
   (check
       (with-result
-       (unwind-protect
-	   (begin
-	     (add-result 'in)
-	     1)
-	 (add-result 'out1)
-	 (add-result 'out2)))
+	(unwind-protect
+	    (begin
+	      (add-result 'in)
+	      1)
+	  (add-result 'out1)
+	  (add-result 'out2)))
     => '(1 (in out1 out2)))
 
   (check	;multiple return values
       (with-result
-       (receive (a b)
-	   (unwind-protect
-	       (begin
-		 (add-result 'in)
-		 (values 1 2))
-	     (add-result 'out1)
-	     (add-result 'out2))
-	 (list a b)))
+	(receive (a b)
+	    (unwind-protect
+		(begin
+		  (add-result 'in)
+		  (values 1 2))
+	      (add-result 'out1)
+	      (add-result 'out2))
+	  (list a b)))
     => '((1 2) (in out1 out2)))
 
   (check	;zero return values
       (with-result
-       (unwind-protect
-  	   (begin
-  	     (add-result 'in)
-  	     (values))
-  	 (add-result 'out1)
-  	 (add-result 'out2))
-       #t)
+	(unwind-protect
+	    (begin
+	      (add-result 'in)
+	      (values))
+	  (add-result 'out1)
+	  (add-result 'out2))
+	#t)
     => `(#t (in out1 out2)))
 
   (check	;exception in body
       (with-result
-       (guard (E (else #t))
-	 (unwind-protect
-	     (begin
-	       (add-result 'in)
-	       (error #f "fail!!!")
-	       (add-result 'after)
-	       1)
-	   (add-result 'out))))
+	(guard (E (else #t))
+	  (unwind-protect
+	      (begin
+		(add-result 'in)
+		(error #f "fail!!!")
+		(add-result 'after)
+		1)
+	    (add-result 'out))))
     => '(#t (in out)))
 
   #t)

@@ -441,16 +441,7 @@
 		       (define (,?recur . ,?lhs*)
 			 ;;FIXME  We do  not want  "__who__" and  RETURN to  be bound
 			 ;;here.  (Marco Maggi; Wed Jan 21, 2015)
-			 (call/cc
-			     (lambda (escape)
-			       (fluid-let-syntax
-				   ((break    (syntax-rules ()
-						((_ . ?retvals)
-						 (escape . ?retvals))))
-				    (continue (lambda (stx)
-						(syntax-violation 'continue
-						  "invalid use of CONTINUE in named let"))))
-				 ,?body . ,?body*))))
+			 ,?body . ,?body*)
 		       (,recur.id . ,?rhs*)))
 		   lexenv.run lexenv.expand)))
 

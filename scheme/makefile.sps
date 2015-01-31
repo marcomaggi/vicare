@@ -349,7 +349,9 @@
      (break					($fluid . ,(gensym "fluid-label.break")))
      (with					($fluid . ,(gensym "fluid-label.with")))
      (brace					($fluid . ,(gensym "fluid-label.brace")))
-     (<>					($fluid . ,(gensym "fluid-label.<>"))))
+     (<>					($fluid . ,(gensym "fluid-label.<>")))
+     (with-escape-handler			($fluid . ,(gensym "fluid-label.with-escape-handler")))
+     (run-escape-handlers			($fluid . ,(gensym "fluid-label.run-escape-handlers"))))
    '((internal-define				(define))
      (define-syntax				(define-syntax))
      (define-alias				(define-alias))
@@ -504,7 +506,11 @@
      (receive-and-return			(macro . receive-and-return))
      (begin0					(macro . begin0))
      (xor					(macro . xor))
+
      (unwind-protect				(macro . unwind-protect))
+     (with-unwind-protection			(macro . with-unwind-protection))
+     (with-escape-handlers-stack		(macro . with-escape-handlers-stack))
+
      (with-implicits				(macro . with-implicits))
      (include					(macro . include))
      (set-cons!					(macro . set-cons!))
@@ -757,12 +763,20 @@
 
 
 (define identifier->library-map
-  ;;Map  all the  identifiers of  exported  bindings (and  more) to  the
-  ;;libraries   exporting   them,  using   the   nicknames  defined   by
-  ;;LIBRARY-LEGEND.
+  ;;Map  all  the identifiers  of  exported  bindings  (and  more) to  the  libraries
+  ;;exporting them, using the nicknames defined  by LIBRARY-LEGEND; each entry in the
+  ;;list has the format:
   ;;
-  ;;Notice that  the map includes  LIBRARY, IMPORT and EXPORT  which are
-  ;;not bindings.
+  ;;   (?binding . ?library*)
+  ;;
+  ;;where:  ?BINDING is  a  symbol representing  the binding  name;  ?library* is  a,
+  ;;possibly  empty, proper  list representing  a  list of  library nicknames.   Each
+  ;;binding is  exported by  the given  libraries and also  by the  library "(psyntax
+  ;;system  $all)"; when  ?LIBRARY* is  null:  the binding  is exported  only by  the
+  ;;library "(psyntax system $all)".
+  ;;
+  ;;Notice that  the map includes LIBRARY,  IMPORT and EXPORT which  are both special
+  ;;forms and bindings.
   ;;
   '((import					v $language)
     (export					v $language)
@@ -2058,7 +2072,6 @@
     (raise					v r ex)
     (raise-continuable				v r ex)
     (with-exception-handler			v r ex)
-    (with-unwind-protection			v $language)
     (guard					v r ex)
     (binary-port?				v r ip)
     (buffer-mode				v r ip)
@@ -2474,10 +2487,22 @@
     (receive-and-return				v $language)
     (begin0					v $language)
     (xor					v $language)
-    (unwind-protect				v $language)
     (with-implicits				v $language)
     (include					v $language)
     (set-cons!					v $language)
+;;;
+    (unwind-protect				v $language)
+    (with-unwind-protection			v $language)
+    ;;NOTE These "escape handlers" bindings must  be exported only by (psyntax system
+    ;;$all).  With  the exception of  %RUN-ESCAPE-HANDLERS, which is  really private,
+    ;;the other  bindings could be  exported by (vicare).   They are not  because: to
+    ;;avoid a mess,  the fluid bindings must  not be redefined by the  user code; the
+    ;;unwind-protection mechanism may be not yet stable to be exposed.  (Marco Maggi;
+    ;;Sat Jan 31, 2015)
+    (with-escape-handlers-stack)
+    (with-escape-handler)
+    (run-escape-handlers)
+    (%run-escape-handlers)
 ;;;
     (set-predicate-procedure-argument-validation! v $language)
     (set-predicate-return-value-validation!	v $language)
@@ -3946,9 +3971,7 @@
 
 ;;;; built-in object types utilities
 
-    ;;Remember that bindings that have  no library listed here are still
-    ;;exported by the library "(psyntax system $all)".
-
+    ;;These are exported only by "(psyntax system $all)".
     (procedure-argument-validation-with-predicate)
     (return-value-validation-with-predicate)
     (any->symbol)

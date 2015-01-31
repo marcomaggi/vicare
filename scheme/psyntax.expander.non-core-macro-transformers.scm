@@ -92,9 +92,13 @@
     ((define-syntax-rule)		define-syntax-rule-macro)
     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
     ((define-syntax*)			define-syntax*-macro)
-    ((unwind-protect)			unwind-protect-macro)
     ((with-implicits)			with-implicits-macro)
     ((set-cons!)			set-cons!-macro)
+
+    ((with-escape-handlers-stack)	with-escape-handlers-stack-macro)
+
+    ((with-unwind-protection)		with-unwind-protection-macro)
+    ((unwind-protect)			unwind-protect-macro)
 
     ;; non-Scheme style syntaxes
     ((while)				while-macro)
@@ -1741,15 +1745,68 @@
     ))
 
 
-;;;; module non-core-macro-transformer: UNWIND-PROTECT
+;;;; module non-core-macro-transformer: WITH-ESCAPE-HANDLERS-STACK
+
+(define (with-escape-handlers-stack-macro expr-stx)
+  ;;Transformer function  used to  expand Vicare's  WITH-ESCAPE-HANDLERS-STACK macros
+  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
+  ;;a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?body . ?body*)
+     (bless
+      `(let ((escape-handlers '()))
+	 (fluid-let-syntax
+	     ((with-escape-handler (syntax-rules ()
+				     ((_ ??handler ??body)
+				      (begin
+					(set-cons! escape-handlers ??handler)
+					(??body)))
+				     ))
+	      (run-escape-handlers (syntax-rules ()
+				     ((_)
+				      (unless (null? escape-handlers)
+					(%run-escape-handlers escape-handlers))))))
+	   ,?body . ,?body*))))
+    ))
+
+
+;;;; module non-core-macro-transformer: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
+
+(define (with-unwind-protection-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  WITH-UNWIND-PROTECTION macros from
+  ;;the top-level  built in environment.  Expand  the contents of EXPR-STX;  return a
+  ;;syntax object that must be further expanded.
+  ;;
+  ;;Not a  general UNWIND-PROTECT  mechanism for  Scheme, but fine  when we  do *not*
+  ;;create  continuations that  reenter the  ?BODY  again after  having executed  the
+  ;;?CLEANUP forms once.
+  ;;
+  ;;NOTE This implementation works fine with coroutines.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?cleanup ?body)
+     (bless
+      `(let ((cleanup ,?cleanup))
+	 (begin0
+	     (with-exception-handler
+		 (lambda (E)
+		   (cleanup)
+		   (raise E))
+	       (lambda ()
+		 (with-escape-handler
+		     cleanup
+		   ,?body)))
+	   (cleanup)))))
+    ))
 
 (define (unwind-protect-macro expr-stx)
   ;;Transformer  function used  to  expand Vicare's  UNWIND-PROTECT  macros from  the
   ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
   ;;object that must be further expanded.
   ;;
-  ;;Not  a general  UNWIND-PROTECT  for Scheme,  but  fine when  we  do *not*  create
-  ;;escaping  continuations and  reenter the  ?BODY again  after having  executed the
+  ;;Not a  general UNWIND-PROTECT  mechanism for  Scheme, but fine  when we  do *not*
+  ;;create  continuations that  reenter the  ?BODY  again after  having executed  the
   ;;?CLEANUP forms once.
   ;;
   ;;NOTE This implementation works fine with coroutines.
@@ -1758,8 +1815,8 @@
     ((_ ?body ?cleanup0 ?cleanup* ...)
      (bless
       `(with-unwind-protection
-	   (lambda () ,?body)
-	 (lambda () ,?cleanup0 . ,?cleanup*))))
+	   (lambda () ,?cleanup0 . ,?cleanup*)
+	 (lambda () ,?body))))
     ))
 
 
@@ -3300,7 +3357,35 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DO
+;;;; module non-core-macro-transformer: DO, WHILE, UNTIL, FOR
+
+(define (with-escape-handlers-wrap escape next-iteration body*)
+  ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
+  ;;values  when given  zero arguments.   Returning  zero values  can be  meaningful,
+  ;;example:
+  ;;
+  ;;   (receive args
+  ;;       (values)
+  ;;     args)
+  ;;   => ()
+  ;;
+  ;;so we  do not want  force "(break)"  to return a  single value like  #<void> just
+  ;;because it  is faster to  return one value rather  than return 0  values.  (Marco
+  ;;Maggi; Sat Jan 31, 2015)
+  ;;
+  `(fluid-let-syntax
+       ((break    (syntax-rules ()
+		    ((_ . ?args)
+		     (begin
+		       (run-escape-handlers)
+		       (,escape . ?args)))
+		    ))
+	(continue (syntax-rules ()
+		    ((_)
+		     (begin
+		       (run-escape-handlers)
+		       (,next-iteration #t))))))
+     (with-escape-handlers-stack . ,body*)))
 
 (define (do-macro expr-stx)
   ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
@@ -3323,40 +3408,34 @@
     ;;
     ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
     ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ;;
+    ;;NOTE Using CONTINUE in the body causes a jump to the test.
     ((_ ?body (while ?test))
      (bless
       `(call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (fluid-let-syntax
-			       ((break    (syntax-rules ()
-					    ((_) (escape (void)))))
-				(continue (syntax-rules ()
-					    ((_) (next-iteration #t)))))
-			     ,?body
-			     ,?test)))
+	       (call/cc
+		   (lambda (next-iteration)
+		     ,(with-escape-handlers-wrap 'escape 'next-iteration (list ?body))))
+	       (when ,?test
 		 (loop)))))))
 
     ;;This is an extended Vicare syntax.
     ;;
     ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
     ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ;;
+    ;;NOTE Using CONTINUE in the body causes a jump to the test.
     ((_ ?body (until ?test))
      (bless
       `(call/cc
 	   (lambda (escape)
 	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (fluid-let-syntax
-			       ((break    (syntax-rules ()
-					    ((_) (escape (void)))))
-				(continue (syntax-rules ()
-					    ((_) (next-iteration #t)))))
-			     ,?body
-			     (not ,?test))))
+	       (call/cc
+		   (lambda (next-iteration)
+		     ,(with-escape-handlers-wrap 'escape 'next-iteration (list ?body))))
+	       (until ,?test
 		 (loop)))))))
 
     ;;This is the R6RS syntax.
@@ -3376,13 +3455,7 @@
 					 (lambda (next-iteration)
 					   (if ,?test
 					       #f
-					     (fluid-let-syntax
-						 ((break    (syntax-rules ()
-							      ((_ . ?retvals)
-							       (escape . ?retvals))))
-						  (continue (syntax-rules ()
-							      ((_) (next-iteration #t)))))
-					       (begin ,@?command* #t)))))
+					     ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?command* #t)))))
 				     (loop . ,?step*)
 				   ,(if (null? ?expr*)
 					'(void)
@@ -3391,8 +3464,7 @@
        ))
     ))
 
-
-;;;; module non-core-macro-transformer: WHILE, UNTIL, FOR
+;;; --------------------------------------------------------------------
 
 (define (while-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's WHILE  macros from  the top-level
@@ -3410,13 +3482,9 @@
 	     (let loop ()
 	       (when (call/cc
 			 (lambda (next-iteration)
-			   (fluid-let-syntax ((break    (syntax-rules ()
-							  ((_) (escape (void)))))
-					      (continue (syntax-rules ()
-							  ((_) (next-iteration #t)))))
-			     (if ,?test
-				 (begin ,@?body* #t)
-			       #f))))
+			   (if ,?test
+			       ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?body* #t))
+			     #f)))
 		 (loop)))))))
     ))
 
@@ -3436,13 +3504,9 @@
 	     (let loop ()
 	       (when (call/cc
 			 (lambda (next-iteration)
-			   (fluid-let-syntax ((break    (syntax-rules ()
-							  ((_) (escape (void)))))
-					      (continue (syntax-rules ()
-							  ((_) (next-iteration #t)))))
-			     (if ,?test
-				 #f
-			       (begin ,@?body* #t)))))
+			   (if ,?test
+			       #f
+			     ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?body* #t)))))
 		 (loop)))))))
     ))
 
@@ -3454,14 +3518,22 @@
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
+  ;;NOTE The CONTINUE must skip the rest of the body and jump to the increment.
+  ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
      (bless
-      `(internal-body
-	 ,?init
-	 (while ,?test
-	   ,@?body*
-	   ,?incr))))
+      `(call/cc
+	   (lambda (escape)
+	     ,?init
+	     (let loop ()
+	       (when (call/cc
+			 (lambda (next-iteration)
+			   (if ,?test
+			       ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?body* #t))
+			     #f)))
+		 ,?incr
+		 (loop)))))))
     ))
 
 
@@ -3479,8 +3551,10 @@
 	   (lambda (escape)
 	     (fluid-let-syntax ((return (syntax-rules ()
 					  ((_ . ?args)
-					   (escape . ?args)))))
-	       ,?body0 . ,?body*)))))
+					   (begin
+					     (run-escape-handlers)
+					     (escape . ?args))))))
+	       (with-escape-handlers-stack ,?body0 . ,?body*))))))
     ))
 
 

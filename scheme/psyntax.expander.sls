@@ -2726,7 +2726,21 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap x)
 	(make-<stx> x TOP-MARK* (list rib) '()))
-      (let ((body-stx*	(map wrap body-sexp*))
+      ;;FIXME This  is quite ugly, but,  at present, there is  no other way to  set a
+      ;;default binding for fluid syntaxes.  So we do it here.  (Marco Maggi; Fri Jan
+      ;;30, 2015)
+      (define fluid-defaults*
+	(bless
+	 '((define-fluid-override with-escape-handler
+	     (syntax-rules ()
+	       ((_ ?handler ?body)
+		(?body))))
+	   (define-fluid-override run-escape-handlers
+	     (syntax-rules ()
+	       ((_)
+		(void)))))))
+      (let ((body-stx*	(append fluid-defaults*
+				(map wrap body-sexp*)))
 	    (rtc	(make-collector))
 	    (vtc	(make-collector)))
 	(parametrise ((inv-collector  rtc)
