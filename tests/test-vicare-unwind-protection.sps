@@ -35,18 +35,6 @@
 
 (parametrise ((check-test-name	'test-with-unwind-protection))
 
-  (define-condition-type &non-reinstatable
-      &violation
-    make-non-reinstatable-violation
-    non-reinstatable-violation?)
-
-  (define (non-reinstatable-violation who message . irritants)
-    (raise
-     (condition (make-non-reinstatable-violation)
-		(make-who-condition who)
-		(make-message-condition message)
-		(make-irritants-condition irritants))))
-
   (define-syntax with-unwind-protection
     (syntax-rules ()
       ((_ ?cleanup ?body)

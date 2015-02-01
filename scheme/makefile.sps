@@ -612,6 +612,8 @@
 							      &procedure-argument-violation-rcd)))
      (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
+     (&non-reinstatable				($core-rtd . (&non-reinstatable-rtd
+							      &non-reinstatable-rcd)))
 ;;;
      (<top>					(macro . <top>))
      (<void>					(macro . <void>))
@@ -2176,6 +2178,10 @@
     (procedure-argument-violation?		v $language)
     (&expression-return-value-violation		v $language)
     (expression-return-value-violation?		v $language)
+    (&non-reinstatable				v $language)
+    (make-non-reinstatable-violation		v $language)
+    (non-reinstatable-violation?		v $language)
+    (non-reinstatable-violation			v $language)
     (lookahead-char				v r ip)
     (lookahead-u8				v r ip)
     (lookahead-two-u8				v $language)

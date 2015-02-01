@@ -100,7 +100,11 @@
 	  make-expression-return-value-violation
 	  expression-return-value-violation?
 	  expression-return-value-violation
-	  )
+
+	  &non-reinstatable
+	  make-non-reinstatable-violation
+	  non-reinstatable-violation?
+	  non-reinstatable-violation)
   (import (except (vicare)
 		  define-condition-type condition? simple-conditions
 		  condition condition-predicate condition-accessor
@@ -176,7 +180,14 @@
 		  &expression-return-value-violation-rcd
 		  make-expression-return-value-violation
 		  expression-return-value-violation?
-		  expression-return-value-violation)
+		  expression-return-value-violation
+
+		  &non-reinstatable
+		  &non-reinstatable-rtd
+		  &non-reinstatable-rcd
+		  make-non-reinstatable-violation
+		  non-reinstatable-violation?
+		  non-reinstatable-violation)
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare language-extensions syntaxes)
@@ -476,7 +487,7 @@
   (line		source-position-line)
   (column	source-position-column))
 
-;;; --------------------------------------------------------------------
+
 ;;; Vicare specific condition types
 
 (define-condition-type &i/o-eagain &i/o
@@ -490,6 +501,8 @@
   make-h_errno-condition h_errno-condition?
   (code		condition-h_errno))
 
+;;; --------------------------------------------------------------------
+
 (define-condition-type &procedure-argument-violation &assertion
   make-procedure-argument-violation procedure-argument-violation?)
 
@@ -500,6 +513,8 @@
 	      (make-irritants-condition irritants)
 	      (make-procedure-argument-violation))))
 
+;;; --------------------------------------------------------------------
+
 (define-condition-type &expression-return-value-violation &assertion
   make-expression-return-value-violation expression-return-value-violation?)
 
@@ -509,6 +524,20 @@
 	      (make-message-condition message)
 	      (make-irritants-condition irritants)
 	      (make-expression-return-value-violation))))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &non-reinstatable
+    &violation
+  make-non-reinstatable-violation
+  non-reinstatable-violation?)
+
+(define (non-reinstatable-violation who message . irritants)
+  (raise
+   (condition (make-non-reinstatable-violation)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
 
 
 ;;;; printing condition objects

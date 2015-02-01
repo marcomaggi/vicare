@@ -3703,6 +3703,7 @@ Push the given thunk on the current compensations stack.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
 * iklib conditions procarg::    Procedure argument violations.
 * iklib conditions exprret::    Expression return value violations.
+* iklib conditions non-reinst:: Non-reinstatable continuations.
 @end menu
 
 @c page
@@ -3871,6 +3872,36 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
 @condition{irritants}, @condition{expression-return-value-validation}.
+@end defun
+
+@c page
+@node iklib conditions non-reinst
+@subsection Non--reinstatable continuations
+
+
+@deftp {Condition Type} &non-reinstatable
+Condition object type representing an attempt to reinstate a
+continuation in an invalid context; it is derived from
+@condition{violation}.
+@end deftp
+
+
+@defun make-non-reinstatable-violation
+Build and return a new condition object of type
+@condition{non-reinstatable}.
+@end defun
+
+
+@defun non-reinstatable-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{non-reinstatable}; otherwise return @false{}.
+@end defun
+
+
+@defun non-reinstatable-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a compound condition object with components: @condition{who},
+@condition{message}, @condition{irritants},
+@condition{non-reinstatable}.
 @end defun
 
 @c page
