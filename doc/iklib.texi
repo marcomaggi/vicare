@@ -3383,19 +3383,17 @@ clean--up forms to be evaluated twice:
 (define (add obj)
   (set-cons! order obj))
 
-(define rv
-  (with-unwind-protection
-      (lambda ()
-        (add 'cleanup))
-    (lambda ()
-      (add 'body-in)
-      (begin0
-          (call/cc values)
-        (add 'body-out)))))
-
-(if (procedure? rv)
-    (rv 123)
-  rv)
+(let ((rv (with-unwind-protection
+              (lambda ()
+                (add 'cleanup))
+            (lambda ()
+              (add 'body-in)
+              (begin0
+                  (call/cc values)
+                (add 'body-out))))))
+  (if (procedure? rv)
+       (rv 123)
+    rv))
 @result{} 123
 
 (reverse order)
