@@ -1887,6 +1887,116 @@
 	      (add-result 'body-out)))))
     => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
 
+;;; --------------------------------------------------------------------
+;;; exceptions from the cleanup forms
+
+  (check
+      (with-result
+	(guard (E (else
+		   E))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup-in)
+		(raise 2)
+		(add-result 'cleanup-out))
+	    (lambda ()
+	      (add-result 'body-in)
+	      (raise 1)
+	      (add-result 'body-out)))))
+    => '(2 (body-in cleanup-in)))
+
+;;; --------------------------------------------------------------------
+;;; continuable exceptions
+
+  (check	;show the mechanism of continuable exceptions
+      (with-exception-handler
+	  (lambda (E)
+	    (+ E 2))
+	(lambda ()
+	  (raise-continuable 1)))
+    => 3)
+
+  (check	;continuable exception from the body
+      (with-result
+	(guard (E ((non-continuable-violation? E)
+		   #t)
+		  (else #f))
+	  (with-exception-handler
+	      (lambda (E)
+		(add-result 'exception-handler)
+		(+ E 2))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup))
+		(lambda ()
+		  (add-result 'body-in)
+		  (raise-continuable 1)
+		  (add-result 'body-out)))))))
+    => '(#t (body-in cleanup exception-handler)))
+
+  (check	;documentation example
+      (internal-body
+	(define order '())
+	(define (add obj)
+	  (set-cons! order obj))
+	(define result
+	  (guard (E ((non-continuable-violation? E)
+		     #t)
+		    (else #f))
+	    (with-exception-handler
+		(lambda (E)
+		  (add 'exception-handler)
+		  (+ E 2))
+	      (lambda ()
+		(with-unwind-protection
+		    (lambda ()
+		      (add 'cleanup))
+		  (lambda ()
+		    (add 'body-in)
+		    (raise-continuable 1)
+		    (add 'body-out)))))))
+	(values result (reverse order)))
+    => #t '(body-in cleanup exception-handler))
+
+;;; --------------------------------------------------------------------
+;;; wrong handling of reentering full continuations
+
+  (check	;reentering continuation
+      (with-result
+	(define rv
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup))
+	    (lambda ()
+	      (add-result 'body-in)
+	      (begin0
+		  (call/cc values)
+		(add-result 'body-out)))))
+	(if (procedure? rv)
+	    (rv 123)
+	  rv))
+    => '(123 (body-in body-out cleanup body-out cleanup)))
+
+  (check	;documentation example
+      (internal-body
+	(define order '())
+	(define (add obj)
+	  (set-cons! order obj))
+	(define rv
+	  (with-unwind-protection
+	      (lambda ()
+		(add 'cleanup))
+	    (lambda ()
+	      (add 'body-in)
+	      (begin0
+		  (call/cc values)
+		(add 'body-out)))))
+	(if (procedure? rv)
+	    (rv 123)
+	  (values rv (reverse order))))
+    => 123 '(body-in body-out cleanup body-out cleanup))
+
   #t)
 
 

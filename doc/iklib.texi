@@ -3276,13 +3276,136 @@ lines printed:
 
 @c ------------------------------------------------------------------------
 
+@unnumberedsubsec Example: raising exceptions from the clean--up forms
+
+If we raise an exception from both the body and the clean--up forms: the
+exception raises from the clean--up discards the one raised from the
+body, which is lost forever.
+
+@example
+(import (vicare))
+(guard (E (else E))
+  (with-unwind-protection
+      (lambda ()
+        (raise 2))
+    (lambda ()
+      (raise 1))))
+@result{} 2
+@end example
+
+@c ------------------------------------------------------------------------
+
 @unnumberedsubsec Example: wrong handling of continuable exceptions
 
+A continuable exception is raised with @func{raise-continuable} and it
+is a way to resume the execution of a chunk of code after raising an
+exception.  This example shows the basic mechanism:
 
+@example
+(import (rnrs))
+(with-exception-handler
+    (lambda (E)
+      (+ E 2))
+  (lambda ()
+    (raise-continuable 1)))
+@result{} 3
+@end example
+
+When the clean--up forms are evaluated because the body raised an
+exception: the exception is raised again with @func{raise}, which is not
+allowed to return from an exception handler.  In the following example:
+
+@enumerate
+@item
+The body of @syntax{with-unwind-protect} raises a continuable exception.
+
+@item
+The clean--up of @syntax{with-unwind-protect} is evaluated and the
+exception raised again with @func{raise}.
+
+@item
+The handler of @syntax{with-exception-handler} is applied to the raised
+object and it returns an object to its caller, which is @func{raise}.
+
+@item
+The primitive @func{raise} raises a compound exception with condition
+object @condition{non-continuable}.
+
+@item
+The enclosing @syntax{guard} intercepts the compound exception and
+returns @true{}.
+@end enumerate
+
+@example
+(import (vicare))
+
+(define order '())
+(define (add obj)
+  (set-cons! order obj))
+
+(guard (E ((non-continuable-violation? E)
+           #t)
+          (else #f))
+  (with-exception-handler
+      (lambda (E)
+        (add 'exception-handler)
+        (+ E 2))
+    (lambda ()
+      (with-unwind-protection
+          (lambda ()
+            (add 'cleanup))
+        (lambda ()
+          (add 'body-in)
+          (raise-continuable 1)
+          (add 'body-out))))))
+@result{} #t
+(reverse order)
+@result{} (body-in cleanup exception-handler)
+@end example
 
 @c ------------------------------------------------------------------------
 
 @unnumberedsubsec Example: wrong handling of full reentering continuations
+
+When using the clean--up forms to release an allocated resource: we
+usually do not want to evaluate them more than once.  Unfortunately this
+is what happens when using reentering continuations, for example the
+@syntax{amb} operator, @libsref{amb, McCarthy's @syntax{amb} operator}.
+
+The following example shows how calling a continuation escape function
+created in the body of a @syntax{with-unwind-protection} causes the
+clean--up forms to be evaluated twice:
+
+@example
+(import (vicare))
+
+(define order '())
+(define (add obj)
+  (set-cons! order obj))
+
+(define rv
+  (with-unwind-protection
+      (lambda ()
+        (add 'cleanup))
+    (lambda ()
+      (add 'body-in)
+      (begin0
+          (call/cc values)
+        (add 'body-out)))))
+
+(if (procedure? rv)
+    (rv 123)
+  rv)
+@result{} 123
+
+(reverse order)
+@result{} (body-in body-out cleanup body-out cleanup)
+@end example
+
+The first problem with reentering continuations is that the body is
+reentered, not that the clean--up is evaluated twice; if the clean--up
+releases a resource: when the body is reentered the resource is gone and
+an error ensues if the body tries to use it.
 
 @c page
 @node iklib compensations
