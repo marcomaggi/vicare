@@ -70,8 +70,8 @@
 		     ?thunk))))
 	    ))
 	(with-blocked-exceptions
-	 (lambda ()
-	   (raise 123))))
+	    (lambda ()
+	      (raise 123))))
     => 123)
 
   ;;To  block a  raised exception  we do  as follows.   With this  implementation the
@@ -94,10 +94,10 @@
 		     ?thunk))))
 	    ))
 	(with-blocked-exceptions
-	 (lambda (E)
-	   (values E 1 2 3))
-	 (lambda ()
-	   (raise 99))))
+	    (lambda (E)
+	      (values E 1 2 3))
+	  (lambda ()
+	    (raise 99))))
     => 99 1 2 3)
 
   #t)
@@ -107,17 +107,21 @@
 
   (define-syntax with-blocked-exceptions
     (syntax-rules ()
-      ((_ ?thunk)
+      ((_ ?exception-retvals-maker ?thunk)
        (call/cc
 	   (lambda (reinstate-with-blocked-exceptions-continuation)
 	     (with-exception-handler
-		 reinstate-with-blocked-exceptions-continuation
+		 (lambda (E)
+		   (call-with-values
+		       (lambda ()
+			 (?exception-retvals-maker E))
+		     reinstate-with-blocked-exceptions-continuation))
 	       ?thunk))))
       ))
 
   (define-syntax with-current-dynamic-environment
     (syntax-rules ()
-      ((_ ?thunk)
+      ((_ ?exception-retvals-maker ?thunk)
        (call/cc
 	   (lambda (return-thunk-with-packed-environment)
 	     ((call/cc
@@ -130,7 +134,9 @@
 			      (lambda ()
 				(call-with-values
 				    (lambda ()
-				      (with-blocked-exceptions ?thunk))
+				      (with-blocked-exceptions
+					  ?exception-retvals-maker
+					?thunk))
 				  reinstate-thunk-call-continuation)))))))))))))
       ))
 
@@ -142,9 +148,10 @@
 	  (let* ((counter 0)
 		 (thunk   (parametrise ((parm 'inner))
 			    (with-current-dynamic-environment
-			     (lambda ()
-			       (set! counter (+ 1 counter))
-			       (add-result (list 'inside-thunk (parm))))))))
+				values
+			      (lambda ()
+				(set! counter (+ 1 counter))
+				(add-result (list 'inside-thunk (parm))))))))
 	    (add-result (parm))
 	    (add-result 'calling-thunk-1)
 	    (thunk)
@@ -161,11 +168,12 @@
 	  (let* ((counter 0)
 		 (thunk   (parametrise ((parm 'inner))
 			    (with-current-dynamic-environment
-			     (lambda ()
-			       (set! counter (+ 1 counter))
-			       (add-result (list 'inside-thunk (parm)))
-			       (add-result 'raise-exception)
-			       (raise 123))))))
+				values
+			      (lambda ()
+				(set! counter (+ 1 counter))
+				(add-result (list 'inside-thunk (parm)))
+				(add-result 'raise-exception)
+				(raise 123))))))
 	    (add-result (parm))
 	    (add-result 'calling-thunk-1)
 	    (thunk)
