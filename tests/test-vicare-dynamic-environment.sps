@@ -88,16 +88,17 @@
 		   (with-exception-handler
 		       (lambda (E)
 			 (call-with-values
-			     ?exception-retvals-maker
+			     (lambda ()
+			       (?exception-retvals-maker E))
 			   reinstate-with-blocked-exceptions-continuation))
 		     ?thunk))))
 	    ))
 	(with-blocked-exceptions
-	 (lambda ()
-	   (values 1 2 3))
+	 (lambda (E)
+	   (values E 1 2 3))
 	 (lambda ()
 	   (raise 99))))
-    => 1 2 3)
+    => 99 1 2 3)
 
   #t)
 
