@@ -680,6 +680,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-expander.sps					\
 	tests/test-vicare-expand-time-specs.sps				\
 	tests/test-vicare-debugging.sps					\
+	tests/test-vicare-dynamic-environment.sps			\
 	tests/test-vicare-fasl.sps					\
 	tests/test-vicare-fixnums.sps					\
 	tests/test-vicare-flonum-base.sps				\
