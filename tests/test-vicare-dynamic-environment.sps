@@ -52,26 +52,130 @@
 	      (raise-continuable 2)))))
     => 'inner-parm)
 
-  ;;To block a raised exception we do as  follows.  In the handler we must avoid code
-  ;;that may raise a further exception.
+;;; --------------------------------------------------------------------
+;;; blocking exceptions
+
+  ;;To  block a  raised exception  we do  as follows.   With this  implementation the
+  ;;handler returns the raised object.
   ;;
   (check
-      (let-syntax
-	  ((with-blocked-exceptions (syntax-rules ()
-				      ((_ ?thunk)
-				       (call/cc
-					   (lambda (reinstate-with-blocked-exceptions-continuation)
-					     (with-exception-handler
-						 (lambda (E)
-						   (reinstate-with-blocked-exceptions-continuation #f))
-					       ?thunk))))
-				      )))
+      (internal-body
+	(define-syntax with-blocked-exceptions
+	  (syntax-rules ()
+	    ((_ ?thunk)
+	     (call/cc
+		 (lambda (reinstate-with-blocked-exceptions-continuation)
+		   (with-exception-handler
+		       reinstate-with-blocked-exceptions-continuation
+		     ?thunk))))
+	    ))
 	(with-blocked-exceptions
 	 (lambda ()
 	   (raise 123))))
-    => #f)
+    => 123)
+
+  ;;To  block a  raised exception  we do  as follows.   With this  implementation the
+  ;;handler evaluate  an appropriate thunk  to compute the  return values in  case of
+  ;;exception.
+  ;;
+  (check
+      (internal-body
+	(define-syntax with-blocked-exceptions
+	  (syntax-rules ()
+	    ((_ ?exception-retvals-maker ?thunk)
+	     (call/cc
+		 (lambda (reinstate-with-blocked-exceptions-continuation)
+		   (with-exception-handler
+		       (lambda (E)
+			 (call-with-values
+			     ?exception-retvals-maker
+			   reinstate-with-blocked-exceptions-continuation))
+		     ?thunk))))
+	    ))
+	(with-blocked-exceptions
+	 (lambda ()
+	   (values 1 2 3))
+	 (lambda ()
+	   (raise 99))))
+    => 1 2 3)
 
   #t)
+
+
+(parametrise ((check-test-name	'current-environment))
+
+  (define-syntax with-blocked-exceptions
+    (syntax-rules ()
+      ((_ ?thunk)
+       (call/cc
+	   (lambda (reinstate-with-blocked-exceptions-continuation)
+	     (with-exception-handler
+		 reinstate-with-blocked-exceptions-continuation
+	       ?thunk))))
+      ))
+
+  (define-syntax with-current-dynamic-environment
+    (syntax-rules ()
+      ((_ ?thunk)
+       (call/cc
+	   (lambda (return-thunk-with-packed-environment)
+	     ((call/cc
+		  (lambda (reinstate-target-environment-continuation)
+		    (return-thunk-with-packed-environment
+		     (lambda ()
+		       (call/cc
+			   (lambda (reinstate-thunk-call-continuation)
+			     (reinstate-target-environment-continuation
+			      (lambda ()
+				(call-with-values
+				    (lambda ()
+				      (with-blocked-exceptions ?thunk))
+				  reinstate-thunk-call-continuation)))))))))))))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+	(parametrise ((parm 'outer))
+	  (let* ((counter 0)
+		 (thunk   (parametrise ((parm 'inner))
+			    (with-current-dynamic-environment
+			     (lambda ()
+			       (set! counter (+ 1 counter))
+			       (add-result (list 'inside-thunk (parm))))))))
+	    (add-result (parm))
+	    (add-result 'calling-thunk-1)
+	    (thunk)
+	    (add-result 'calling-thunk-2)
+	    (thunk)
+	    counter)))
+    => '(2 (outer
+	    calling-thunk-1 (inside-thunk inner)
+	    calling-thunk-2 (inside-thunk inner))))
+
+  (check	;raising exception
+      (with-result
+	(parametrise ((parm 'outer))
+	  (let* ((counter 0)
+		 (thunk   (parametrise ((parm 'inner))
+			    (with-current-dynamic-environment
+			     (lambda ()
+			       (set! counter (+ 1 counter))
+			       (add-result (list 'inside-thunk (parm)))
+			       (add-result 'raise-exception)
+			       (raise 123))))))
+	    (add-result (parm))
+	    (add-result 'calling-thunk-1)
+	    (thunk)
+	    (add-result 'calling-thunk-2)
+	    (thunk)
+	    counter)))
+    => '(2 (outer
+	    calling-thunk-1 (inside-thunk inner) raise-exception
+	    calling-thunk-2 (inside-thunk inner) raise-exception)))
+
+  #f)
 
 
 ;;;; done
