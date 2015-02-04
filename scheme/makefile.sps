@@ -2500,15 +2500,20 @@
     (unwind-protect				v $language)
     (with-unwind-protection			v $language)
     ;;NOTE These "escape handlers" bindings must  be exported only by (psyntax system
-    ;;$all).  With  the exception of  %RUN-ESCAPE-HANDLERS, which is  really private,
-    ;;the other  bindings could be  exported by (vicare).   They are not  because: to
-    ;;avoid a mess,  the fluid bindings must  not be redefined by the  user code; the
-    ;;unwind-protection mechanism may be not yet stable to be exposed.  (Marco Maggi;
-    ;;Sat Jan 31, 2015)
+    ;;$all).  With  the exception of:
+    ;;
+    ;;   %RUN-ESCAPE-HANDLERS
+    ;;   RUN-UNWIND-PROTECTION-CLEANUP-UPON-EXIT?
+    ;;
+    ;;which are  really private, the  other bindings  could be exported  by (vicare).
+    ;;They are not because: to avoid a mess, the fluid bindings must not be redefined
+    ;;by the user code;  the unwind-protection mechanism may be not  yet stable to be
+    ;;exposed.  (Marco Maggi; Sat Jan 31, 2015)
     (with-escape-handlers-stack)
     (with-escape-handler)
     (run-escape-handlers)
     (%run-escape-handlers)
+    (run-unwind-protection-cleanup-upon-exit?)
 ;;;
     (set-predicate-procedure-argument-validation! v $language)
     (set-predicate-return-value-validation!	v $language)

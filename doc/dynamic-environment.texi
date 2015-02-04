@@ -1,0 +1,58 @@
+@node dynamic environment
+@appendix Notes on the dynamic environment
+
+
+In this section we inspect, by examples, the concepts of ``dynamic
+environment'' and ``dynamic extent of a function call''.  @ref{scheme
+basic dynamic extent, Dynamic extent and the dynamic environment}, for
+the meaning as defined by @rnrs{6}.
+
+About exiting from the dynamic extent of a function call, we must
+acknowledge that:
+
+@itemize
+@item
+The normal return from a function call exits its dynamic extent.
+
+@item
+Calling an escape procedure from within a function call to reinstate a
+continuation outside the function, exits the dynamic extent of the call.
+
+@example
+(define (fun escape)
+  (do-something)
+  (escape 123)
+  (do-something))
+
+(call/cc fun)
+@end example
+
+@item
+Raising a continuable or non--continuable exception from within a
+function call, by itself, does @strong{not} exit the dynamic extent of
+the call.
+
+@example
+(define (fun)
+  (do-something)
+  ;;Does not exit the dynamic extent of the call to FUN.
+  (raise 123))
+@end example
+
+@item
+Both the tests and expressions in the clauses of the standard syntax
+@syntax{guard} are executed outside the extent of the @syntax{guard}
+body.
+
+@item
+There is @strong{no} guarantee that: after exiting the dynamic extent of
+a function call without a normal return: such extent will be reentered
+later and continue to a normal return.
+@end itemize
+
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme"
+@c End:

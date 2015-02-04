@@ -67,6 +67,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/missing.texi				\
 	doc/building.texi				\
 	doc/credits.texi				\
+	doc/dynamic-environment.texi			\
 	doc/unicode.texi				\
 	doc/fasl.texi					\
 	doc/shmem.texi					\

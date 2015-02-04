@@ -252,6 +252,7 @@ Appendices
 * missing::                     Missing Features.
 * building::                    Building infrastructure.
 * credits::                     Credits for this document.
+* dynamic environment::         Notes on the dynamic environment.
 * unicode::                     On Unicode and @utf{} encodings.
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
@@ -301,6 +302,7 @@ External documents
 @include missing.texi
 @include building.texi
 @include credits.texi
+@include dynamic-environment.texi
 @include unicode.texi
 @include fasl.texi
 @include shmem.texi

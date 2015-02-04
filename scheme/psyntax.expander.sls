@@ -1245,6 +1245,15 @@
 ;;2014)
 (define syntax-error)
 
+(define-syntax commented-out
+  ;;Comment out a sequence of forms.  It allows us to comment out forms and still use
+  ;;the editor's autoindentation features in the commented out section.
+  ;;
+  (syntax-rules ()
+    ((_ . ?form)
+     (module ()))
+    ))
+
 ;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
 ;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
 ;;no annotated expression to be given.

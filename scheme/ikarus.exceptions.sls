@@ -21,7 +21,8 @@
     raise		raise-continuable
     error		warning
     assertion-violation	die
-    %run-escape-handlers)
+    %run-escape-handlers
+    run-unwind-protection-cleanup-upon-exit?)
   (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
@@ -101,9 +102,20 @@
 		(handler)))
     handlers))
 
+(define run-unwind-protection-cleanup-upon-exit?
+  ;;This is used  in the interaction between the unwind-protection  mechanism and the
+  ;;GUARD syntax.
+  ;;
+  (let ((B #f))
+    (case-lambda
+     (()
+      B)
+     ((obj)
+      (set! B (and obj #t))))))
+
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

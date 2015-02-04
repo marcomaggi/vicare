@@ -1,6 +1,5 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Vicare
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for the expander
 ;;;Date: Tue Sep 25, 2012
 ;;;
@@ -8,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,55 +25,101 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare)
+		with-unwind-protection)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: expander, unwind-protection\n")
 
 
-(parametrise ((check-test-name	'test-with-unwind-protection))
+;;;; alternative versions
 
-  (define-syntax with-unwind-protection
-    (syntax-rules ()
-      ((_ ?cleanup ?body)
-       (let ((cleanup      ?cleanup)
-	     (normal-exit? #f)
-	     (except-exit? #f)
-	     (escape-exit? #f))
-	 (import (only (psyntax system $all)
-		       with-escape-handler))
-	 (dynamic-wind
-	     (lambda ()
-	       (when (or normal-exit?
-			 except-exit?)
-		 (non-reinstatable-violation 'with-unwind-protection
-					     "attempt to reenter body")))
-	     (lambda ()
-	       (begin0
-		   (with-exception-handler
-		       (lambda (E)
-			 (set! except-exit? #t)
-			 (receive-and-return args
-			     (raise-continuable E)
-			   (set! except-exit? #f)))
-		     (lambda ()
-		       (with-escape-handler
-			   (lambda ()
-			     (set! escape-exit? #t))
-			 ?body)))
-		 (set! normal-exit? #t)))
-	     (lambda ()
-	       #;(debug-print 'out-guard normal-exit? except-exit? escape-exit?)
-	       (when (or normal-exit?
-			 except-exit?
-			 escape-exit?)
-		 (cleanup))))))
-      ))
+(define-syntax commented-out
+  (syntax-rules ()
+    ((_ . ?form)
+     (module ()))
+    ))
 
-;;; --------------------------------------------------------------------
+;;This imports the built-in version.
+(import (only (vicare) with-unwind-protection))
 
-  (check
+;;The following  is an old  version.  It worked  fine with: escape  continuations and
+;;coroutines.   It  correctly  raised   a  "&non-reinstatable"  exception  with  full
+;;continuations reentering  after clean-up  evaluation.  It INcorrectly  executes the
+;;cleanup  if an  exception handler  exits  the dynamic  extent of  ?THUNK, like  the
+;;standard GUARD does.
+;;
+(commented-out
+ (define-syntax with-unwind-protection
+   (syntax-rules ()
+     ((_ ?cleanup ?thunk)
+      (let ((cleanup            ?cleanup)
+	    ;;True if the dynamic extent of the call to THUNK is terminated.
+	    (terminated?        #f)
+	    ;;True  if  the dynamic  extent  of  the call  to  ?THUNK  was exited  by
+	    ;;performing a normal return.
+	    (normal-exit?       #f)
+	    ;;True if the dynamic extent of the  call to ?THUNK was exited by calling
+	    ;;an escape handler.
+	    (escape-exit?	 #f)
+	    ;;True  if  the dynamic  extent  of  the call  to  ?THUNK  was exited  by
+	    ;;reinstating an external continuation in an exception handler.
+	    (except-exit?	 #f))
+	(import (only (psyntax system $all)
+		      with-escape-handler))
+	(dynamic-wind
+	    (lambda ()
+	      (when terminated?
+		(non-reinstatable-violation 'with-unwind-protection
+		  "attempt to reenter thunk with terminated dynamic extent")))
+	    (lambda ()
+	      (begin0
+		  (with-exception-handler
+		      (lambda (E)
+			(set! except-exit? #t)
+			(begin0
+			    (raise-continuable E)
+			  (set! except-exit? #f)))
+		    (lambda ()
+		      (with-escape-handler
+			  (lambda ()
+			    (set! escape-exit? #t))
+			?thunk)))
+		(set! normal-exit? #t)))
+	    (lambda ()
+	      (when (or normal-exit?
+			escape-exit?
+			except-exit?)
+		(set! terminated? #t)
+		(cleanup))))))
+     )))
+
+;;The following  is an  old version.   It worked  fine with:  escaping continuations;
+;;non-contiuable  exceptions; coroutines.   It failed  with: continuable  exceptions;
+;;reentering continuations after clean-up evaluation.
+;;
+(commented-out
+ (define-syntax with-unwind-protection-macro
+   (syntax-rules ()
+     ((_ ?cleanup ?body)
+      (let ((cleanup ?cleanup))
+	(begin0
+	    (with-exception-handler
+		(lambda (E)
+		  (cleanup)
+		  (raise E))
+	      (lambda ()
+		(with-escape-handler
+		    cleanup
+		  ?body)))
+	  (cleanup))))
+     )))
+
+
+(parametrise ((check-test-name	'basic-mechanism))
+
+  (check	;normal exit
       (with-result
 	(with-unwind-protection
 	    (lambda ()
@@ -96,76 +141,433 @@
 	      (add-result 'body)))))
     => '(#t (body cleanup)))
 
-  (check
-      (with-result
-	(with-unwind-protection
-	    (lambda ()
-	      (add-result 'out1)
-	      (add-result 'out2))
-	  (lambda ()
-	    (add-result 'in)
-	    1)))
-    => '(1 (in out1 out2)))
-
   (check	;multiple return values
       (with-result
 	(receive (a b)
 	    (with-unwind-protection
 		(lambda ()
-		  (add-result 'out1)
-		  (add-result 'out2))
+		  (add-result 'out))
 	      (lambda ()
 		(add-result 'in)
 		(values 1 2)))
 	  (list a b)))
-    => '((1 2) (in out1 out2)))
+    => '((1 2) (in out)))
 
   (check	;zero return values
       (with-result
 	(with-unwind-protection
 	    (lambda ()
-	      (add-result 'out1)
-	      (add-result 'out2))
+	      (add-result 'out))
 	  (lambda ()
 	    (add-result 'in)
 	    (values)))
 	#t)
-    => `(#t (in out1 out2)))
+    => `(#t (in out)))
+
+  #f)
+
+
+(parametrise ((check-test-name	'non-continuable-exceptions-from-thunk))
+
+  (check	;show the mechanism of non-continuable exceptions
+      (call/cc
+	  (lambda (escape)
+	    (with-exception-handler
+		(lambda (E)
+		  (escape E))
+	      (lambda ()
+		(raise 1)))))
+    => 1)
+
+  (check	;show the mechanism of non-continuable exceptions
+      (call/cc
+	  (lambda (escape)
+	    (with-exception-handler
+		escape
+	      (lambda ()
+		(with-exception-handler
+		    (lambda (E)
+		      (raise E))
+		  (lambda ()
+		    (raise 1)))))))
+    => 1)
 
 ;;; --------------------------------------------------------------------
-;;; exceptions
 
-  (check	;exception in body
+  (check 	;exception in body, GUARD's ELSE clause
       (with-result
-	(guard (E (else #t))
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
 	  (with-unwind-protection
 	      (lambda ()
-		(add-result 'out))
+		(add-result 'cleanup))
 	    (lambda ()
-	      (add-result 'in)
-	      (error #f "fail!!!")
-	      (add-result 'after)
+	      (add-result 'thunk-in)
+	      (raise 2)
+	      (add-result 'thunk-out)
 	      1))))
-    => '(#t (in out)))
+    => '(2 (thunk-in cleanup guard-else)))
 
-  (check	;exception in body
+  (check 	;exception in body, GUARD's clause
       (with-result
-	(receive-and-return (flag)
-	    #f
-	  (guard (E (else
-		     (void)))
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! flag #t))
+	(guard (E ((begin
+		     (add-result 'guard-test)
+		     #t)
+		   (add-result 'guard-expr)
+		   E))
+	  (with-unwind-protection
 	      (lambda ()
-		(add-result 'body-in)
-		(raise 123)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
+		(add-result 'cleanup))
+	    (lambda ()
+	      (add-result 'thunk-in)
+	      (raise 2)
+	      (add-result 'thunk-out)
+	      1))))
+    => '(2 (thunk-in guard-test cleanup guard-expr)))
+
+  (check  	;exception in body, nested GUARD uses, nested DYNAMIC-WIND
+      (with-result
+	(guard (E ((begin
+		     (add-result 'guard-outer-test)
+		     #t)
+		   (add-result 'guard-outer-expr)
+		   E))
+	  (guard (E ((begin
+		       (add-result 'guard-inner-test)
+		       #f)
+		     (add-result 'guard-inner-expr)
+		     E))
+	    (dynamic-wind
+		(lambda ()
+		  (add-result 'outer-before))
+		(lambda ()
+		  (with-unwind-protection
+		      (lambda ()
+			(add-result 'cleanup))
+		    (lambda ()
+		      (dynamic-wind
+			  (lambda ()
+			    (add-result 'inner-before))
+			  (lambda ()
+			    (add-result 'thunk-in)
+			    (raise 2)
+			    (add-result 'thunk-out)
+			    1)
+			  (lambda ()
+			    (add-result 'inner-after))))))
+		(lambda ()
+		  (add-result 'outer-after))))))
+    => '(2 (outer-before inner-before thunk-in inner-after outer-after
+			 guard-inner-test
+			 outer-before inner-before inner-after outer-after
+			 guard-outer-test
+			 outer-before inner-before inner-after cleanup outer-after
+			 guard-outer-expr)))
 
 ;;; --------------------------------------------------------------------
-;;; non-local exit with RETURN
+;;; exiting the dynamic extent of ?THUNK
+
+  ;;Exit the dynamic  extent of ?THUNK by reinstating an  escape continuation from an
+  ;;exception handler.  The ?CLEANUP is not called.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'exception-handler)
+		    (escape E))
+		(lambda ()
+		  (with-unwind-protection
+		      (lambda ()
+			(add-result 'cleanup))
+		    (lambda ()
+		      (add-result 'thunk-in)
+		      (raise 123)
+		      (add-result 'thunk-out))))))))
+    => '(123 (thunk-in exception-handler)))
+
+  ;;Exit the dynamic  extent of ?THUNK by reinstating an  escape continuation from an
+  ;;exception handler.  The ?CLEANUP is not called.
+  ;;
+  (check
+      (with-result
+	(receive (rv)
+	    (call/cc
+		(lambda (escape)
+		  (with-exception-handler
+		      (lambda (E)
+			(add-result 'exception-handler)
+			(escape (lambda ()
+				  (add-result 'after-escape)
+				  E)))
+		    (lambda ()
+		      (with-unwind-protection
+			  (lambda ()
+			    (add-result 'cleanup))
+			(lambda ()
+			  (add-result 'thunk-in)
+			  (raise 123)
+			  (add-result 'thunk-out)))))))
+	  (rv)))
+    => '(123 (thunk-in exception-handler after-escape)))
+
+  ;;Exit the dynamic extent of ?THUNK  by reinstating an escape continuation from the
+  ;;internals of a GUARD clause.
+  ;;
+  (check
+      (with-result
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup))
+	    (lambda ()
+	      (add-result 'thunk-in)
+	      (raise 123)
+	      (add-result 'thunk-out)))))
+    => '(123 (thunk-in cleanup guard-else)))
+
+;;; --------------------------------------------------------------------
+;;; raising non-continuable exceptions and DYNAMIC-WIND
+
+  ;;The ?CLEANUP is not called.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'exception-handler)
+		    (escape E))
+		(lambda ()
+		  (with-unwind-protection
+		      (lambda ()
+			(add-result 'cleanup))
+		    (lambda ()
+		      (dynamic-wind
+			  (lambda ()
+			    (add-result 'in-guard))
+			  (lambda ()
+			    (add-result 'thunk-in)
+			    (raise 123)
+			    (add-result 'thunk-out))
+			  (lambda ()
+			    (add-result 'out-guard))))))))))
+    => '(123 (in-guard thunk-in exception-handler out-guard)))
+
+  #f)
+
+
+(parametrise ((check-test-name	'continuable-exceptions-from-thunk))
+
+  (check	;show the mechanism of continuable exceptions
+      (with-exception-handler
+	  (lambda (E)
+	    (+ E 2))
+	(lambda ()
+	  (raise-continuable 1)))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check	;continuable exception from the body
+      (with-result
+	(with-exception-handler
+	    (lambda (E)
+	      (add-result 'exception-handler)
+	      (+ E 2))
+	  (lambda ()
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup))
+	      (lambda ()
+		(add-result 'thunk-in)
+		(begin0
+		    (raise-continuable 1)
+		  (add-result 'thunk-out)))))))
+    => '(3 (thunk-in exception-handler thunk-out cleanup)))
+
+  (check	;continuable exception from the body
+      (with-result
+	(guard (E ((non-continuable-violation? E)
+		   99)
+		  (else E))
+	  (with-exception-handler
+	      (lambda (E)
+		(add-result 'exception-handler)
+		(+ E 2))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup))
+		(lambda ()
+		  (add-result 'thunk-in)
+		  (begin0
+		      (raise-continuable 1)
+		    (add-result 'thunk-out))))))))
+    => '(3 (thunk-in exception-handler thunk-out cleanup)))
+
+;;; --------------------------------------------------------------------
+;;; exiting the dynamic extent of ?THUNK
+
+  ;;Exit the dynamic  extent of ?THUNK by reinstating an  escape continuation from an
+  ;;exception handler.  ?CLEANUP is not called.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'exception-handler)
+		    (escape E))
+		(lambda ()
+		  (with-unwind-protection
+		      (lambda ()
+			(add-result 'cleanup))
+		    (lambda ()
+		      (add-result 'thunk-in)
+		      (raise-continuable 123)
+		      (add-result 'thunk-out))))))))
+    => '(123 (thunk-in exception-handler)))
+
+  ;;Exit the dynamic  extent of ?THUNK by reinstating an  escape continuation from an
+  ;;exception handler.  ?CLEANUP is not called.
+  (check
+      (with-result
+	(receive (rv)
+	    (call/cc
+		(lambda (escape)
+		  (with-exception-handler
+		      (lambda (E)
+			(add-result 'exception-handler)
+			(escape (lambda ()
+				  (add-result 'after-escape)
+				  E)))
+		    (lambda ()
+		      (with-unwind-protection
+			  (lambda ()
+			    (add-result 'cleanup))
+			(lambda ()
+			  (add-result 'thunk-in)
+			  (raise-continuable 123)
+			  (add-result 'thunk-out)))))))
+	  (rv)))
+    => '(123 (thunk-in exception-handler after-escape)))
+
+  ;;Exit the dynamic extent of ?THUNK  by reinstating an escape continuation from the
+  ;;ELSE GUARD clause.
+  ;;
+  (check
+      (with-result
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup))
+	    (lambda ()
+	      (add-result 'thunk-in)
+	      (raise-continuable 123)
+	      (add-result 'thunk-out)))))
+    => '(123 (thunk-in cleanup guard-else)))
+
+  ;;Raise a continuable exception  in ?THUNK; go through a GUARD  with no ELSE, which
+  ;;reraises  the continuable  exception;  execute an  exception  handler; return  to
+  ;;?thunk; perform normal return.
+  ;;
+  (check
+      (with-result
+	(with-exception-handler
+	    (lambda (E)
+	      (add-result 'exception-handler)
+	      (+ 2 E))
+	  (lambda ()
+	    (guard (E ((error? E)
+		       (add-result 'guard-error)
+		       E))
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup))
+		(lambda ()
+		  (add-result 'thunk-in)
+		  (begin0
+		      (raise-continuable 1)
+		    (add-result 'thunk-out))))))))
+    => '(3 (thunk-in exception-handler thunk-out cleanup)))
+
+;;; --------------------------------------------------------------------
+;;; raising continuable exceptions and DYNAMIC-WIND
+
+  (check	;cleanup not called
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'exception-handler)
+		    (escape E))
+		(lambda ()
+		  (with-unwind-protection
+		      (lambda ()
+			(add-result 'cleanup))
+		    (lambda ()
+		      (dynamic-wind
+			  (lambda ()
+			    (add-result 'in-guard))
+			  (lambda ()
+			    (add-result 'thunk-in)
+			    (raise-continuable 123)
+			    (add-result 'thunk-out))
+			  (lambda ()
+			    (add-result 'out-guard))))))))))
+    => '(123 (in-guard thunk-in exception-handler out-guard)))
+
+  #f)
+
+
+(parametrise ((check-test-name	'exceptions-from-cleanup))
+
+  (check
+      (call/cc
+	  (lambda (escape)
+	    (with-exception-handler
+		escape
+	      (lambda ()
+		(with-exception-handler
+		    (lambda (E)
+		      (raise 2))
+		  (lambda ()
+		    (raise 1)))))))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check	;the exception in the cleanup is discarded
+      (with-result
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup-in)
+		(raise 2)
+		(add-result 'cleanup-out))
+	    (lambda ()
+	      (add-result 'thunk-in)
+	      (raise 1)
+	      (add-result 'thunk-out)))))
+    => '(1 (thunk-in cleanup-in guard-else)))
+
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-with-return))
 
   (check	;return in body
       (with-result
@@ -177,10 +579,10 @@
 		  (add-result 'cleanup)
 		  (set! flag #t))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(return 123)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
+		(add-result 'thunk-out))))))
+    => '(#t (thunk-in cleanup)))
 
   (check	;return in body, documentation example
       (internal-body
@@ -195,8 +597,10 @@
 	(values x y))
     => 1 #t)
 
-;;; --------------------------------------------------------------------
-;;; non-local exit in WHILE loop
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-in-while-loop))
 
   (check	;break in body
       (with-result
@@ -208,10 +612,10 @@
 		  (add-result 'cleanup)
 		  (set! flag #t))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(break)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
+		(add-result 'thunk-out))))))
+    => '(#t (thunk-in cleanup)))
 
   (check	;continue in body
       (with-result
@@ -224,11 +628,11 @@
 		    (add-result 'cleanup)
 		    (set! flag (add1 flag)))
 		(lambda ()
-		  (add-result 'body-in)
+		  (add-result 'thunk-in)
 		  (set! i (sub1 i))
 		  (continue)
-		  (add-result 'body-out)))))))
-    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
+		  (add-result 'thunk-out)))))))
+    => '(3 (thunk-in cleanup thunk-in cleanup thunk-in cleanup)))
 
   (check	;break in body, simple example for documentation
       (internal-body
@@ -260,8 +664,10 @@
 	(values x y))
     => 0 3)
 
-;;; --------------------------------------------------------------------
-;;; non-local exit in UNTIL loop
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-in-until-loop))
 
   (check	;break in body
       (with-result
@@ -274,11 +680,11 @@
 		    (add-result 'cleanup)
 		    (set! flag (add1 flag)))
 		(lambda ()
-		  (add-result 'body-in)
+		  (add-result 'thunk-in)
 		  (set! i (sub1 i))
 		  (break)
-		  (add-result 'body-out)))))))
-    => '(1 (body-in cleanup)))
+		  (add-result 'thunk-out)))))))
+    => '(1 (thunk-in cleanup)))
 
   (check	;continue in body
       (with-result
@@ -291,11 +697,11 @@
 		    (add-result 'cleanup)
 		    (set! flag (add1 flag)))
 		(lambda ()
-		  (add-result 'body-in)
+		  (add-result 'thunk-in)
 		  (set! i (sub1 i))
 		  (continue)
-		  (add-result 'body-out)))))))
-    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
+		  (add-result 'thunk-out)))))))
+    => '(3 (thunk-in cleanup thunk-in cleanup thunk-in cleanup)))
 
   (check	;break in body, simple example for documentation
       (internal-body
@@ -327,8 +733,10 @@
 	(values x y))
     => 0 3)
 
-;;; --------------------------------------------------------------------
-;;; non-local exit in FOR loop
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-in-for-loop))
 
   (check	;break in body
       (with-result
@@ -340,10 +748,10 @@
 		  (add-result 'cleanup)
 		  (set! flag #t))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(break)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
+		(add-result 'thunk-out))))))
+    => '(#t (thunk-in cleanup)))
 
   (check	;continue in body
       (with-result
@@ -355,10 +763,10 @@
   		  (add-result 'cleanup)
   		  (++ flag))
   	      (lambda ()
-  		(add-result 'body-in)
+  		(add-result 'thunk-in)
   		(continue)
-  		(add-result 'body-out))))))
-    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
+  		(add-result 'thunk-out))))))
+    => '(3 (thunk-in cleanup thunk-in cleanup thunk-in cleanup)))
 
   (check	;break in body, simple example for documentation
       (internal-body
@@ -388,8 +796,10 @@
   	(values x y))
     => 0 3)
 
-;;; --------------------------------------------------------------------
-;;; non-local exit in DO ... WHILE loop
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-in-do-while-loop))
 
   (check	;break in body
       (with-result
@@ -401,12 +811,12 @@
 		  (add-result 'cleanup)
 		  (set! y #t))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(break)
-		(add-result 'body-out)))
+		(add-result 'thunk-out)))
 	    (while (positive? x)))
 	(values x y))
-    => '(3 #t (body-in cleanup)))
+    => '(3 #t (thunk-in cleanup)))
 
   (check	;continue in body
       (with-result
@@ -418,16 +828,18 @@
 		  (add-result 'cleanup)
 		  (++ y))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(-- x)
 		(continue)
-		(add-result 'body-out)))
+		(add-result 'thunk-out)))
 	    (while (positive? x)))
 	(values x y))
-    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
+    => '(0 3 (thunk-in cleanup thunk-in cleanup thunk-in cleanup)))
 
-;;; --------------------------------------------------------------------
-;;; non-local exit in DO ... UNTIL loop
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-in-do-until-loop))
 
   (check	;break in body
       (with-result
@@ -439,12 +851,12 @@
 		  (add-result 'cleanup)
 		  (set! y #t))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(break)
-		(add-result 'body-out)))
+		(add-result 'thunk-out)))
 	    (until (zero? x)))
 	(values x y))
-    => '(3 #t (body-in cleanup)))
+    => '(3 #t (thunk-in cleanup)))
 
   (check	;continue in body
       (with-result
@@ -456,16 +868,18 @@
 		  (add-result 'cleanup)
 		  (++ y))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(-- x)
 		(continue)
-		(add-result 'body-out)))
+		(add-result 'thunk-out)))
 	    (until (zero? x)))
 	(values x y))
-    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
+    => '(0 3 (thunk-in cleanup thunk-in cleanup thunk-in cleanup)))
 
-;;; --------------------------------------------------------------------
-;;; non-local exit in DO standard syntax
+  #f)
+
+
+(parametrise ((check-test-name	'non-local-exit-standard-do-loop))
 
   (check 	;break in body
       (with-result
@@ -481,11 +895,11 @@
 		  (set! y #t)
 		  (add-result 'cleanup-out))
 	      (lambda ()
-		(add-result 'body-in)
+		(add-result 'thunk-in)
 		(break x)
-		(add-result 'body-out)))))
+		(add-result 'thunk-out)))))
 	(values x y))
-    => '(3 #t (body-in cleanup-in cleanup-out)))
+    => '(3 #t (thunk-in cleanup-in cleanup-out)))
 
   (check	;continue in body
       (with-result
@@ -498,87 +912,15 @@
 		(add-result 'cleanup)
 		(++ y))
 	    (lambda ()
-	      (add-result 'body-in)
+	      (add-result 'thunk-in)
 	      (continue)
-	      (add-result 'body-out)))))
-    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
+	      (add-result 'thunk-out)))))
+    => '(0 3 (thunk-in cleanup thunk-in cleanup thunk-in cleanup)))
 
-;;; --------------------------------------------------------------------
-;;; exceptions from the cleanup forms
+  #f)
 
-  (check
-      (with-result
-	(guard (E (else
-		   E))
-	  (with-unwind-protection
-	      (lambda ()
-		(add-result 'cleanup-in)
-		(raise 2)
-		(add-result 'cleanup-out))
-	    (lambda ()
-	      (add-result 'body-in)
-	      (raise 1)
-	      (add-result 'body-out)))))
-    => '(2 (body-in cleanup-in)))
-
-;;; --------------------------------------------------------------------
-;;; continuable exceptions
-
-  (check	;show the mechanism of continuable exceptions
-      (with-exception-handler
-	  (lambda (E)
-	    (+ E 2))
-	(lambda ()
-	  (raise-continuable 1)))
-    => 3)
-
-  (check	;continuable exception from the body
-      (with-result
-	(guard (E ((non-continuable-violation? E)
-		   2)
-		  (else E))
-	  (with-exception-handler
-	      (lambda (E)
-		(add-result 'exception-handler)
-		(+ E 2))
-	    (lambda ()
-	      (with-unwind-protection
-		  (lambda ()
-		    (add-result 'cleanup))
-		(lambda ()
-		  (add-result 'body-in)
-		  (raise-continuable 1)
-		  (add-result 'body-out)
-		  1))))))
-    => '(1 (body-in exception-handler body-out cleanup)))
-
-  (check	;documentation example
-      (internal-body
-	(define order '())
-	(define (add obj)
-	  (set-cons! order obj))
-	(define result
-	  (guard (E ((non-continuable-violation? E)
-		     2)
-		    (else E))
-	    (with-exception-handler
-		(lambda (E)
-		  (add 'exception-handler)
-		  (+ E 2))
-	      (lambda ()
-		(with-unwind-protection
-		    (lambda ()
-		      (add 'cleanup))
-		  (lambda ()
-		    (add 'body-in)
-		    (raise-continuable 1)
-		    (add 'body-out)
-		    1))))))
-	(values result (reverse order)))
-    => 1 '(body-in exception-handler body-out cleanup))
-
-;;; --------------------------------------------------------------------
-;;; wrong handling of reentering full continuations
+
+(parametrise ((check-test-name	'reentering-continuations))
 
   (check	;reentering continuation
       (with-result
@@ -590,17 +932,17 @@
 			(lambda ()
 			  (add-result 'cleanup))
 		      (lambda ()
-			(add-result 'body-in)
+			(add-result 'thunk-in)
 			(begin0
 			    (call/cc values)
-			  (add-result 'body-out))))))
+			  (add-result 'thunk-out))))))
 	    (cond ((procedure? rv)
 		   (add-result 'reinstating)
 		   (rv 123))
 		  (else
 		   (add-result 'returning)
 		   rv)))))
-    => '(#t (body-in body-out cleanup reinstating violation)))
+    => '(#t (thunk-in thunk-out cleanup reinstating violation)))
 
   (check	;documentation example
       (internal-body
@@ -617,10 +959,10 @@
 			  (lambda ()
 			    (add 'cleanup))
 			(lambda ()
-			  (add 'body-in)
+			  (add 'thunk-in)
 			  (begin0
 			      (call/cc values)
-			    (add 'body-out))))))
+			    (add 'thunk-out))))))
 	      (cond ((procedure? rv)
 		     (add 'reinstating)
 		     (rv 123))
@@ -628,592 +970,173 @@
 		     (add 'returning)
 		     rv)))))
 	(values rv (reverse order)))
-    => #t '(body-in body-out cleanup reinstating violation))
+    => #t '(thunk-in thunk-out cleanup reinstating violation))
+
+  #f)
+
+
+(parametrise ((check-test-name	'coroutines))
+
+  (import (vicare language-extensions coroutines))
+
+  (define (print template . args)
+    (apply fprintf (current-error-port) template args)
+    (yield))
 
 ;;; --------------------------------------------------------------------
 
-  (internal-body
-    (import (vicare language-extensions coroutines))
-
-    (define (print template . args)
-      (apply fprintf (current-error-port) template args)
-      (yield))
-
-    (check
-	(let ((a #f) (b #f) (c #f))
-	  (parallel
-	    (lambda ()
-	      (unwind-protect
-		  (begin
-		    (set! a 1.1)
-		    (print "unwind-protect sub 1.1: ~a\n" a)
-		    (set! a 1.2)
-		    (print "unwind-protect sub 1.2: ~a\n" a)
-		    (set! a 1.3)
-		    (print "unwind-protect sub 1.3: ~a\n" a))
-		(set! a 1.4)))
-	    (lambda ()
-	      (unwind-protect
-		  (begin
-		    (set! b 2.1)
-		    (print "unwind-protect sub 2.1: ~a\n" b)
-		    (set! b 2.2)
-		    (print "unwind-protect sub 2.2: ~a\n" b)
-		    (set! b 2.3)
-		    (print "unwind-protect sub 2.3: ~a\n" b))
-		(set! b 2.4)))
-	    (lambda ()
-	      (unwind-protect
-		  (begin
-		    (set! c 3.1)
-		    (print "unwind-protect sub 3.1: ~a\n" c)
-		    (set! c 3.2)
-		    (print "unwind-protect sub 3.2: ~a\n" c)
-		    (set! c 3.3)
-		    (print "unwind-protect sub 3.3: ~a\n" c))
-		(set! c 3.4))))
-	  (values a b c))
-      => 1.4 2.4 3.4))
+  (check
+      (let ((a #f) (b #f) (c #f))
+	(parallel
+	  (lambda ()
+	    (unwind-protect
+		(begin
+		  (set! a 1.1)
+		  (print "unwind-protect sub 1.1: ~a\n" a)
+		  (set! a 1.2)
+		  (print "unwind-protect sub 1.2: ~a\n" a)
+		  (set! a 1.3)
+		  (print "unwind-protect sub 1.3: ~a\n" a))
+	      (set! a 1.4)))
+	  (lambda ()
+	    (unwind-protect
+		(begin
+		  (set! b 2.1)
+		  (print "unwind-protect sub 2.1: ~a\n" b)
+		  (set! b 2.2)
+		  (print "unwind-protect sub 2.2: ~a\n" b)
+		  (set! b 2.3)
+		  (print "unwind-protect sub 2.3: ~a\n" b))
+	      (set! b 2.4)))
+	  (lambda ()
+	    (unwind-protect
+		(begin
+		  (set! c 3.1)
+		  (print "unwind-protect sub 3.1: ~a\n" c)
+		  (set! c 3.2)
+		  (print "unwind-protect sub 3.2: ~a\n" c)
+		  (set! c 3.3)
+		  (print "unwind-protect sub 3.3: ~a\n" c))
+	      (set! c 3.4))))
+	(values a b c))
+    => 1.4 2.4 3.4)
 
   #t)
 
 
-(parametrise ((check-test-name	'with-unwind-protection))
+(parametrise ((check-test-name	'dynamic-environment))
+
+  (define parm
+    (make-parameter #f))
+
+;;; --------------------------------------------------------------------
 
   (check
       (with-result
-	(with-unwind-protection
-	    (lambda ()
-	      (add-result 'out))
-	  (lambda ()
-	    (add-result 'in)
-	    1)))
-    => '(1 (in out)))
-
-  (check	;normal exit
-      (with-result
-	(receive-and-return (flag)
-	    #f
-	  (with-unwind-protection
-	      (lambda ()
-		(add-result 'cleanup)
-		(set! flag #t))
-	    (lambda ()
-	      (add-result 'body)))))
-    => '(#t (body cleanup)))
-
-  (check
-      (with-result
-	(with-unwind-protection
-	    (lambda ()
-	      (add-result 'out1)
-	      (add-result 'out2))
-	  (lambda ()
-	    (add-result 'in)
-	    1)))
-    => '(1 (in out1 out2)))
-
-  (check	;multiple return values
-      (with-result
-	(receive (a b)
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'out1)
-		  (add-result 'out2))
-	      (lambda ()
-		(add-result 'in)
-		(values 1 2)))
-	  (list a b)))
-    => '((1 2) (in out1 out2)))
-
-  (check	;zero return values
-      (with-result
-	(with-unwind-protection
-	    (lambda ()
-	      (add-result 'out1)
-	      (add-result 'out2))
-	  (lambda ()
-	    (add-result 'in)
-	    (values)))
-	#t)
-    => `(#t (in out1 out2)))
-
-;;; --------------------------------------------------------------------
-;;; exceptions
-
-  (check	;exception in body
-      (with-result
-	(guard (E (else #t))
-	  (with-unwind-protection
-	      (lambda ()
-		(add-result 'out))
-	    (lambda ()
-	      (add-result 'in)
-	      (error #f "fail!!!")
-	      (add-result 'after)
-	      1))))
-    => '(#t (in out)))
-
-  (check	;exception in body
-      (with-result
-	(receive-and-return (flag)
-	    #f
-	  (guard (E (else
-		     (void)))
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! flag #t))
-	      (lambda ()
-		(add-result 'body-in)
-		(raise 123)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
-
-;;; --------------------------------------------------------------------
-;;; non-local exit with RETURN
-
-  (check	;return in body
-      (with-result
-	(receive-and-return (flag)
-	    #f
-	  (returnable
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! flag #t))
-	      (lambda ()
-		(add-result 'body-in)
-		(return 123)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
-
-  (check	;return in body, documentation example
-      (internal-body
-	(define y #f)
-	(define x
-	  (returnable
-	    (with-unwind-protection
-		(lambda ()
-		  (set! y #t))
-	      (lambda ()
-		(return 1)))))
-	(values x y))
-    => 1 #t)
-
-;;; --------------------------------------------------------------------
-;;; non-local exit in WHILE loop
-
-  (check	;break in body
-      (with-result
-	(receive-and-return (flag)
-	    #f
-	  (while #t
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! flag #t))
-	      (lambda ()
-		(add-result 'body-in)
-		(break)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
-
-  (check	;continue in body
-      (with-result
-	(receive-and-return (flag)
-	    0
-	  (let ((i 3))
-	    (while (positive? i)
-	      (with-unwind-protection
-		  (lambda ()
-		    (add-result 'cleanup)
-		    (set! flag (add1 flag)))
-		(lambda ()
-		  (add-result 'body-in)
-		  (set! i (sub1 i))
-		  (continue)
-		  (add-result 'body-out)))))))
-    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
-
-  (check	;break in body, simple example for documentation
-      (internal-body
-	(define x 3)
-	(define y #f)
-	(while (positive? x)
-	  (with-unwind-protection
-	      (lambda ()
-		(set! y #t))
-	    (lambda ()
-	      (-- x)
-	      (break)
-	      (exit))))
-	(values x y))
-    => 2 #t)
-
-  (check	;continue in body, simple example for documentation
-      (internal-body
-	(define x 3)
-	(define y 0)
-	(while (positive? x)
-	  (with-unwind-protection
-	      (lambda ()
-		(++ y))
-	    (lambda ()
-	      (-- x)
-	      (continue)
-	      (exit))))
-	(values x y))
-    => 0 3)
-
-;;; --------------------------------------------------------------------
-;;; non-local exit in UNTIL loop
-
-  (check	;break in body
-      (with-result
-	(receive-and-return (flag)
-	    0
-	  (let ((i 3))
-	    (until (zero? i)
-	      (with-unwind-protection
-		  (lambda ()
-		    (add-result 'cleanup)
-		    (set! flag (add1 flag)))
-		(lambda ()
-		  (add-result 'body-in)
-		  (set! i (sub1 i))
-		  (break)
-		  (add-result 'body-out)))))))
-    => '(1 (body-in cleanup)))
-
-  (check	;continue in body
-      (with-result
-	(receive-and-return (flag)
-	    0
-	  (let ((i 3))
-	    (until (zero? i)
-	      (with-unwind-protection
-		  (lambda ()
-		    (add-result 'cleanup)
-		    (set! flag (add1 flag)))
-		(lambda ()
-		  (add-result 'body-in)
-		  (set! i (sub1 i))
-		  (continue)
-		  (add-result 'body-out)))))))
-    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
-
-  (check	;break in body, simple example for documentation
-      (internal-body
-	(define x 3)
-	(define y #f)
-	(until (zero? x)
-	  (with-unwind-protection
-	      (lambda ()
-		(set! y #t))
-	    (lambda ()
-	      (-- x)
-	      (break)
-	      (exit))))
-	(values x y))
-    => 2 #t)
-
-  (check	;continue in body, simple example for documentation
-      (internal-body
-	(define x 3)
-	(define y 0)
-	(until (zero? x)
-	  (with-unwind-protection
-	      (lambda ()
-		(++ y))
-	    (lambda ()
-	      (-- x)
-	      (continue)
-	      (exit))))
-	(values x y))
-    => 0 3)
-
-;;; --------------------------------------------------------------------
-;;; non-local exit in FOR loop
-
-  (check	;break in body
-      (with-result
-	(receive-and-return (flag)
-	    #f
-	  (for ((define i 3) (positive? i) (-- i))
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! flag #t))
-	      (lambda ()
-		(add-result 'body-in)
-		(break)
-		(add-result 'body-out))))))
-    => '(#t (body-in cleanup)))
-
-  (check	;continue in body
-      (with-result
-  	(receive-and-return (flag)
-  	    0
-  	  (for ((define i 3) (positive? i) (-- i))
-  	    (with-unwind-protection
-  		(lambda ()
-  		  (add-result 'cleanup)
-  		  (++ flag))
-  	      (lambda ()
-  		(add-result 'body-in)
-  		(continue)
-  		(add-result 'body-out))))))
-    => '(3 (body-in cleanup body-in cleanup body-in cleanup)))
-
-  (check	;break in body, simple example for documentation
-      (internal-body
-  	(define y #f)
-  	(define x 3)
-  	(for ((void) (positive? x) (-- x))
-  	  (with-unwind-protection
-  	      (lambda ()
-  		(set! y #t))
-  	    (lambda ()
-  	      (break)
-  	      (exit))))
-  	(values x y))
-    => 3 #t)
-
-  (check	;continue in body, simple example for documentation
-      (internal-body
-  	(define x 3)
-  	(define y 0)
-  	(for ((void) (positive? x) (-- x))
-  	  (with-unwind-protection
-  	      (lambda ()
-  		(++ y))
-  	    (lambda ()
-  	      (continue)
-  	      (exit))))
-  	(values x y))
-    => 0 3)
-
-;;; --------------------------------------------------------------------
-;;; non-local exit in DO ... WHILE loop
-
-  (check	;break in body
-      (with-result
-	(define x 3)
-	(define y #f)
-	(do
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! y #t))
-	      (lambda ()
-		(add-result 'body-in)
-		(break)
-		(add-result 'body-out)))
-	    (while (positive? x)))
-	(values x y))
-    => '(3 #t (body-in cleanup)))
-
-  (check	;continue in body
-      (with-result
-	(define x 3)
-	(define y 0)
-	(do
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (++ y))
-	      (lambda ()
-		(add-result 'body-in)
-		(-- x)
-		(continue)
-		(add-result 'body-out)))
-	    (while (positive? x)))
-	(values x y))
-    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
-
-;;; --------------------------------------------------------------------
-;;; non-local exit in DO ... UNTIL loop
-
-  (check	;break in body
-      (with-result
-	(define x 3)
-	(define y #f)
-	(do
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (set! y #t))
-	      (lambda ()
-		(add-result 'body-in)
-		(break)
-		(add-result 'body-out)))
-	    (until (zero? x)))
-	(values x y))
-    => '(3 #t (body-in cleanup)))
-
-  (check	;continue in body
-      (with-result
-	(define x 3)
-	(define y 0)
-	(do
-	    (with-unwind-protection
-		(lambda ()
-		  (add-result 'cleanup)
-		  (++ y))
-	      (lambda ()
-		(add-result 'body-in)
-		(-- x)
-		(continue)
-		(add-result 'body-out)))
-	    (until (zero? x)))
-	(values x y))
-    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
-
-;;; --------------------------------------------------------------------
-;;; non-local exit in DO standard syntax
-
-  (check	;break in body
-      (with-result
-	(do ((x 3 (-- x))
-	     (y #f))
-	    ((zero? x)
-	     (values x y))
-	  (with-unwind-protection
-	      (lambda ()
-		(add-result 'cleanup)
-		(set! y #t))
-	    (lambda ()
-	      (add-result 'body-in)
-	      (break x y)
-	      (add-result 'body-out)))))
-    => '(3 #t (body-in cleanup)))
-
-  (check	;continue in body
-      (with-result
-	(do ((x 3 (-- x))
-	     (y 0))
-	    ((zero? x)
-	     (values x y))
-	  (with-unwind-protection
-	      (lambda ()
-		(add-result 'cleanup)
-		(++ y))
-	    (lambda ()
-	      (add-result 'body-in)
-	      (continue)
-	      (add-result 'body-out)))))
-    => '(0 3 (body-in cleanup body-in cleanup body-in cleanup)))
-
-;;; --------------------------------------------------------------------
-;;; exceptions from the cleanup forms
-
-  (check
-      (with-result
-	(guard (E (else
-		   E))
+	(parametrise ((parm 'parm))
 	  (with-unwind-protection
 	      (lambda ()
 		(add-result 'cleanup-in)
-		(raise 2)
+		(add-result (parm))
 		(add-result 'cleanup-out))
 	    (lambda ()
-	      (add-result 'body-in)
-	      (raise 1)
-	      (add-result 'body-out)))))
-    => '(2 (body-in cleanup-in)))
+	      (add-result 'thunk-in)
+	      (add-result (parm))
+	      (add-result 'thunk-out)
+	      1))))
+    => '(1 (thunk-in parm thunk-out cleanup-in parm cleanup-out)))
+
+  ;;Changing the environment inside ?THUNK does not affect ?CLEANUP.
+  ;;
+  (check
+      (with-result
+	(parametrise ((parm 'outer-parm))
+	  (with-unwind-protection
+	      (lambda ()
+		(add-result 'cleanup-in)
+		(add-result (parm))
+		(add-result 'cleanup-out))
+	    (lambda ()
+	      (parametrise ((parm 'inner-parm))
+		(add-result 'thunk-in)
+		(add-result (parm))
+		(add-result 'thunk-out)
+		1)))))
+    => '(1 (thunk-in inner-parm thunk-out cleanup-in outer-parm cleanup-out)))
+
+  ;;Changing  the environment  inside ?THUNK  does  not affect  ?CLEANUP.  Exit  with
+  ;;RETURN.
+  ;;
+  (check
+      (with-result
+	(returnable
+	  (parametrise ((parm 'outer-parm))
+	    (with-unwind-protection
+		(lambda ()
+		  (add-result 'cleanup-in)
+		  (add-result (parm))
+		  (add-result 'cleanup-out))
+	      (lambda ()
+		(parametrise ((parm 'inner-parm))
+		  (add-result 'thunk-in)
+		  (add-result (parm))
+		  (return 2)
+		  (add-result 'thunk-out)
+		  1))))))
+    => '(2 (thunk-in inner-parm cleanup-in outer-parm cleanup-out)))
 
 ;;; --------------------------------------------------------------------
-;;; continuable exceptions
+;;; exit with RETURN
 
-  (check	;show the mechanism of continuable exceptions
-      (with-exception-handler
-	  (lambda (E)
-	    (+ E 2))
-	(lambda ()
-	  (raise-continuable 1)))
-    => 3)
-
-  (check	;continuable exception from the body
+  (check
       (with-result
-	(guard (E ((non-continuable-violation? E)
-		   #t)
-		  (else #f))
-	  (with-exception-handler
-	      (lambda (E)
-		(add-result 'exception-handler)
-		(+ E 2))
-	    (lambda ()
+	(parametrise ((parm 'outer-parm))
+	  (returnable
+	    (parametrise ((parm 'inner-parm))
 	      (with-unwind-protection
 		  (lambda ()
-		    (add-result 'cleanup))
+		    (add-result 'cleanup-in)
+		    (add-result (parm))
+		    (add-result 'cleanup-out))
 		(lambda ()
-		  (add-result 'body-in)
-		  (raise-continuable 1)
-		  (add-result 'body-out)))))))
-    => '(#t (body-in cleanup exception-handler)))
-
-  (check	;documentation example
-      (internal-body
-	(define order '())
-	(define (add obj)
-	  (set-cons! order obj))
-	(define result
-	  (guard (E ((non-continuable-violation? E)
-		     #t)
-		    (else #f))
-	    (with-exception-handler
-		(lambda (E)
-		  (add 'exception-handler)
-		  (+ E 2))
-	      (lambda ()
-		(with-unwind-protection
-		    (lambda ()
-		      (add 'cleanup))
-		  (lambda ()
-		    (add 'body-in)
-		    (raise-continuable 1)
-		    (add 'body-out)))))))
-	(values result (reverse order)))
-    => #t '(body-in cleanup exception-handler))
+		  (add-result 'thunk-in)
+		  (add-result (parm))
+		  (return 2)
+		  (add-result 'thunk-out)
+		  1))))))
+    => '(2 (thunk-in inner-parm cleanup-in inner-parm cleanup-out)))
 
 ;;; --------------------------------------------------------------------
-;;; wrong handling of reentering full continuations
+;;; raising exception from thunk
 
-  (check	;reentering continuation
+  (check
       (with-result
-	(define rv
-	  (with-unwind-protection
-	      (lambda ()
-		(add-result 'cleanup))
-	    (lambda ()
-	      (add-result 'body-in)
-	      (begin0
-		  (call/cc values)
-		(add-result 'body-out)))))
-	(if (procedure? rv)
-	    (rv 123)
-	  rv))
-    => '(123 (body-in body-out cleanup body-out cleanup)))
-
-  (check	;documentation example
-      (internal-body
-	(define order '())
-	(define (add obj)
-	  (set-cons! order obj))
-	(define rv
-	  (with-unwind-protection
-	      (lambda ()
-		(add 'cleanup))
-	    (lambda ()
-	      (add 'body-in)
-	      (begin0
-		  (call/cc values)
-		(add 'body-out)))))
-	(if (procedure? rv)
-	    (rv 123)
-	  (values rv (reverse order))))
-    => 123 '(body-in body-out cleanup body-out cleanup))
+	(parametrise ((parm 'outer-parm))
+	  (guard (E ((begin
+		       (add-result 'guard-test-in)
+		       (add-result (parm))
+		       (add-result 'guard-test-out)
+		       #t)
+		     (add-result 'guard-expr-in)
+		     (add-result (parm))
+		     (add-result 'guard-expr-out)
+		     E))
+	    (parametrise ((parm 'inner-parm))
+	      (with-unwind-protection
+		  (lambda ()
+		    (add-result 'cleanup-in)
+		    (add-result (parm))
+		    (add-result 'cleanup-out))
+		(lambda ()
+		  (add-result 'thunk-in)
+		  (add-result (parm))
+		  (raise 2)
+		  (add-result 'thunk-out)
+		  1))))))
+    => '(2 (thunk-in inner-parm
+		     guard-test-in outer-parm guard-test-out
+		     cleanup-in inner-parm cleanup-out
+		     guard-expr-in outer-parm guard-expr-out)))
 
   #t)
 
@@ -1264,15 +1187,17 @@
 
   (check	;exception in body
       (with-result
-	(guard (E (else #t))
+	(guard (E (else
+		   (add-result 'guard-else)
+		   #t))
 	  (unwind-protect
 	      (begin
-		(add-result 'in)
+		(add-result 'body-in)
 		(error #f "fail!!!")
-		(add-result 'after)
+		(add-result 'body-out)
 		1)
-	    (add-result 'out))))
-    => '(#t (in out)))
+	    (add-result 'cleanup))))
+    => '(#t (body-in cleanup guard-else)))
 
   #t)
 
@@ -1283,4 +1208,5 @@
 
 ;;; end of file
 ;; Local Variables:
+;; coding: utf-8-unix
 ;; End:

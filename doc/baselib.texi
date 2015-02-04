@@ -3571,6 +3571,7 @@ as @var{consumer} has returned.
 @end deffn
 
 
+@anchor{dynamic-wind}
 @deffn Procedure dynamic-wind @var{before} @var{thunk} @var{after}
 @var{before}, @var{thunk}, and @var{after} must be procedures, and each
 should accept zero arguments.  These procedures may return any number of

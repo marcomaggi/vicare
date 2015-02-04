@@ -1,4 +1,5 @@
 ;;;Copyright (c) 2008 Matthew Flatt
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This library is free software;  you can redistribute it and/or modify
 ;;;it  under the  terms of  the GNU  Library General  Public  License as
@@ -90,6 +91,25 @@
               &non-continuable)
 
 
+    ;;NOTE The original test was this:
+    ;;
+    ;; (let ([v '()])
+    ;;   (test (guard (exn [(equal? exn 5) 'five])
+    ;;                ;; `guard' should jump back in before re-raising
+    ;;                (guard (exn [(equal? exn 6) 'six])
+    ;;                       (dynamic-wind
+    ;;                           (lambda () (set! v (cons 'in v)))
+    ;;                           (lambda () (raise 5))
+    ;;                           (lambda () (set! v (cons 'out v))))))
+    ;;         'five)
+    ;;   (test v '(out in out in)))
+    ;;
+    ;;but GUARD  integration with  the unwind-protection  mechanism causes  a further
+    ;;jump in to evaluate the unwind-protection  cleanup thunks (there are none here,
+    ;;but GUARD  must jump back  in anyway).   So: the inner  GUARD jumps back  in to
+    ;;reraise the  exception, the outer GUARD  jumps back in to  evaluate the cleanup
+    ;;thunks.  (Marco Maggi; Mon Feb 2, 2015)
+    ;;
     (let ([v '()])
       (test (guard (exn [(equal? exn 5) 'five])
                    ;; `guard' should jump back in before re-raising
@@ -99,7 +119,7 @@
                               (lambda () (raise 5))
                               (lambda () (set! v (cons 'out v))))))
             'five)
-      (test v '(out in out in)))
+      (test v '(out in out in out in)))
 
 
 
