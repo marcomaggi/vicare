@@ -33,6 +33,7 @@ lightweight-testing, @ansrfi{78} lightweight testing}, for details.
 * checks select::               Selecting tests to be run.
 * checks eval::                 Evaluating code.
 * checks result::               Handling multiple results.
+* checks output::               Special output functions.
 @end menu
 
 @c page
@@ -251,5 +252,43 @@ Append @var{obj} to the list in the implicit variable defined by
 Return the current value of the implicit variable defined by
 @func{with-result}.
 @end defun
+
+@c page
+@node checks output
+@section Special output functions
+
+
+@defvr Constant check-quiet-tests?
+@cindex @env{VICARE_CHECK_QUIET}
+Set to a boolean value.  It is initialised from the system environment
+variable @env{VICARE_CHECK_QUIET}: when the variable is set to
+@samp{yes} or a non--zero fixnum, the boolean is @true{}; otherwise it
+is @false{}.
+@end defvr
+
+
+@defun check-display @var{obj}
+Display @var{obj} to the current error port if @code{check-quiet-tests?}
+is set to @true{}.
+@end defun
+
+
+@defun check-write @var{obj}
+Write @var{obj} to the current error port if @code{check-quiet-tests?}
+is set to @true{}.
+@end defun
+
+
+@defun check-newline
+Display a newline character to the current error port if
+@code{check-quiet-tests?}  is set to @true{}.
+@end defun
+
+
+@defun check-pretty-print @var{obj}
+Pretty prints @var{obj} to the current error port if
+@code{check-quiet-tests?}  is set to @true{}.
+@end defun
+
 
 @c end of file
