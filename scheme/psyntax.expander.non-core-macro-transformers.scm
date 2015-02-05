@@ -3947,9 +3947,12 @@
 	 (validate-variable expr-stx ?var)
 	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
 	   (bless
-	    `(with-compensations
-	       (push-compensation ,?finally-body0 . ,?finally-body*)
-	       (guard (,?var . ,GUARD-CLAUSE*) ,?body))))))
+	    `(guard (,?var . ,GUARD-CLAUSE*)
+	       (with-unwind-protection
+		   (lambda ()
+		     ,?finally-body0 . ,?finally-body*)
+		 (lambda ()
+		   ,?body)))))))
 
       ;;Only catch, no finally.
       ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...))

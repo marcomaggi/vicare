@@ -1745,72 +1745,126 @@ When @code{<>} or @code{_} is used in place of both @meta{expr} and
 
 The syntax @func{try} can be used to handle raised exceptions in
 addition to the @rnrs{6}--defined syntaxes @func{with-exception-handler}
-and @func{guard}.
+and @func{guard}.  The syntax is basically a wrapper for @func{guard}
+from @rsixlibrary{exceptions}; @ref{guard}, for details.
 
 
-@deffn Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{})
-@deffnx Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{}) (finally @metao{finally-body} @meta{finally-body} @dots{})
+@deffn Syntax try @meta{body} @meta{catch-clauses}
+@deffnx Syntax try @meta{body}  @meta{catch-clauses} @meta{finally-clause}
 @deffnx {Auxiliary Syntax} catch
 @deffnx {Auxiliary Syntax} finally
 @deffnx {Auxiliary Syntax} else
-This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
-Every @meta{catch-clause} has one of the forms:
+Evaluate the form @meta{body} and return its results.  If no exceptions
+are raised by @meta{body}: before returning evaluate the
+@meta{finally-clause}.  If an exception is raised by @meta{body}: handle
+it with the @meta{catch-clauses} and, before returning, evaluate the
+@meta{finally-clause}.
+
+The @meta{catch-clauses} argument must have the format:
 
 @example
-((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} @dots{})
-(else @metao{else-body} @meta{else-body} @dots{})
+(catch @meta{var} @metao{catch-clause} @meta{catch-clause} ...)
+@end example
+
+@noindent
+where @meta{var} must be an identifier and every @meta{catch-clause} has
+one of the forms:
+
+@example
+((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...)
+(else @metao{else-body} @meta{else-body} ...)
 @end example
 
 @noindent
 where the optional @clause{else} clause must appear only once as last
 one.
 
-When no @clause{finally} clause is present, and without the @func{else}
-clause, it will expand to:
+The @meta{finally-clause} must have the format:
 
 @example
-(guard (@meta{var}
-          ((or (is-a? @meta{var} @metao{tag})
-               (is-a? @meta{var} @meta{tag})
-               ...)
-           @metao{tag-body}
-           @meta{tag-body}
-           ...)
-          ...)
-  @meta{body})
+(finally @metao{finally-body} @meta{finally-body} ...)
 @end example
 
 @noindent
-and with the @clause{else} clause:
+when the @clause{finally} clause is present: the @meta{body} is wrapped
+into an unwind--protection syntax, @xref{iklib unwind-protect, The
+unwind-protection mechanism}.
+
+The following expansions take place:
 
 @example
-(guard (@meta{var}
-          ((or (is-a? @meta{var} @metao{tag})
-               (is-a? @meta{var} @meta{tag})
+;;No else, no finally.
+(try
+   @meta{body}
+  (catch @meta{var}
+    ((@metao{tag} @meta{tag} ...)
+     @metao{tag-body}
+     @meta{tag-body}
+     ...)
+    ...))
+@expansion{} (guard (@meta{var}
+              ((or (is-a? @meta{var} @metao{tag})
+                   (is-a? @meta{var} @meta{tag})
+                   ...)
+               @metao{tag-body}
+               @meta{tag-body}
                ...)
-           @metao{tag-body}
-           @meta{tag-body}
-           ...)
-           ...
-          (else
-           @metao{else-body}
-           @meta{else-body}
-           ...))
-  @meta{body})
+              ...)
+      @meta{body})
 @end example
-
-@noindent
-remember that when no @clause{else} clause is present: the exception
-will be re--raised with @func{raise-continuable}.
-
-When the @clause{finally} clause is present: the same @func{guard} form
-is wrapped into a compensation stack (@pxref{iklib compensations,
-Compensation stacks}):
-
 @example
-(with-compensations
-  (push-compensation @metao{finally-body} @meta{finally-body} ...)
-  (guard ---))
+;;Else, no finally.
+(try
+   @meta{body}
+  (catch @meta{var}
+    ((@metao{tag} @meta{tag} ...)
+     @metao{tag-body}
+     @meta{tag-body}
+     ...)
+    ...)
+    (else
+     @metao{else-body}
+     @meta{else-body}
+     ...))
+@expansion{} (guard (@meta{var}
+              ((or (is-a? @meta{var} @metao{tag})
+                   (is-a? @meta{var} @meta{tag})
+                   ...)
+               @metao{tag-body}
+               @meta{tag-body}
+               ...)
+               ...
+              (else
+               @metao{else-body}
+               @meta{else-body}
+               ...))
+      @meta{body})
+@end example
+@example
+;;Finally, no else.
+(try
+   @meta{body}
+  (catch @meta{var}
+    ((@metao{tag} @meta{tag} ...)
+     @metao{tag-body}
+     @meta{tag-body}
+     ...)
+    ...))
+@expansion{} (guard (@meta{var}
+              ((or (is-a? @meta{var} @metao{tag})
+                   (is-a? @meta{var} @meta{tag})
+                   ...)
+               @metao{tag-body}
+               @meta{tag-body}
+               ...)
+              ...)
+      (with-unwind-protection
+          (lambda ()
+            @metao{finally-body}
+            @meta{finally-body}
+            ...)
+        (lambda ()
+          @meta{body})))
 @end example
 @end deffn
 

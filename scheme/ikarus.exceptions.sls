@@ -106,12 +106,7 @@
   ;;This is used  in the interaction between the unwind-protection  mechanism and the
   ;;GUARD syntax.
   ;;
-  (let ((B #f))
-    (case-lambda
-     (()
-      B)
-     ((obj)
-      (set! B (and obj #t))))))
+  (make-parameter #f))
 
 
 ;;;; done
