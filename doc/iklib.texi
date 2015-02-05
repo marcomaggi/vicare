@@ -1397,13 +1397,17 @@ Sometimes we want to block raised exceptions, for example when we are
 already handling a previously raised exception.
 
 
-@deffn Syntax with-blocked-exceptions @meta{exception-retvals-maker} @meta{thunk}
-Evaluate @meta{thunk} and return its return values.  If @meta{thunk}
-raises an exception: apply the procedure @meta{exception-retvals-maker}
-to the raised object and return its return values.
+@deffn Syntax with-blocked-exceptions @meta{thunk}
+@deffnx Syntax with-blocked-exceptions @meta{exception-retvals-maker} @meta{thunk}
+Evaluate @meta{thunk} and return its return values.
 
-Exceptions raised by @meta{exception-retvals-maker} are @strong{not}
-blocked.
+When used with one argument: if @meta{thunk} raises an exception, return
+the raised object.
+
+When used with two arguments: if @meta{thunk} raises an exception, apply
+the procedure @meta{exception-retvals-maker} to the raised object and
+return its return values.  Exceptions raised by
+@meta{exception-retvals-maker} are @strong{not} blocked.
 @end deffn
 
 
@@ -1411,6 +1415,11 @@ Usage examples:
 
 @example
 (import (vicare))
+
+(with-blocked-exceptions
+  (lambda ()
+    (raise 99)))
+@result{} 99
 
 (with-blocked-exceptions
     (lambda (E)
@@ -1963,7 +1972,7 @@ The following expansions take place:
                ...)
               ...)
       (with-unwind-protection
-          (lambda ()
+          (lambda (dummy)
             @metao{finally-body}
             @meta{finally-body}
             ...)
@@ -3209,10 +3218,12 @@ human friendly; some preprocessing and a specialised printer are needed.
 
 
 The unwind--protection allows operations to be performed synchronously
-with respect to the execution of a thunk; the mechanism is sophisticated
-because there are multiple, sophisticated ways to exit the dynamic
-extent of a function call.  The typical application is to release
-resources, like input/output ports and database connections.
+with respect to the dynamic extent of a call to thunk; the mechanism is
+sophisticated because there are multiple, sophisticated ways to exit the
+dynamic extent of a function call.  The typical application is to
+release resources, like input/output ports and database connections.
+@ref{resources, Allocating and releasing resources}, for an overview of
+resource management under @value{PRJNAME}.
 
 @menu
 * iklib unwind-protect intro::       Introduction to the unwind
@@ -3250,7 +3261,7 @@ used as follows:
 
 (let ((port (open-file-output-port "file.ext")))
   (with-unwind-protection
-      (lambda ()
+      (lambda (dummy)
         (close-output-port port))
     (lambda ()
       (put-bytevector port '#ve(ascii "ciao")))))
@@ -3281,13 +3292,15 @@ it in the body forms; finally we release it in the clean--up forms.
 
 @deffn Syntax with-unwind-protection @meta{cleanup} @meta{thunk}
 Call @meta{thunk} and then, when the dynamic extent of the call
-@strong{terminates}, call the thunk @meta{cleanup}.  When @meta{thunk}
-performs a normal return: the return values of @meta{thunk} become the
-return values of @func{with-unwind-protection}.
+@strong{terminates}, call the procedure @meta{cleanup}.  When
+@meta{thunk} performs a normal return: the return values of @meta{thunk}
+become the return values of @func{with-unwind-protection}.
 
 The argument @meta{cleanup} comes before the argument @meta{thunk} for
 uniformity with @func{with-exception-handler}, @ref{stdlib exceptions
-exceptions, with-exception-handler}.
+exceptions, with-exception-handler}.  When called: @meta{cleanup} is
+applied to a Scheme symbol representing the cause of the call:
+@samp{return}, @samp{escape}, @samp{exception}.
 
 Notice that a function tail--call in @meta{thunk} is @strong{not} a
 tail--call for @syntax{with-unwind-protection}.
@@ -3300,7 +3313,7 @@ syntax similar to that of Common Lisp's macro.  It is expanded to:
 
 @example
 (with-unwind-protection
-    (lambda () @metao{cleanup} @meta{cleanup} ...)
+    (lambda (dummy) @metao{cleanup} @meta{cleanup} ...)
   (lambda () @meta{body}))
 @end example
 @end deffn
@@ -3321,7 +3334,7 @@ dynamic environment}, for the meaning as defined by @rnrs{6}.
 @ref{dynamic environment, Notes on the dynamic environment}, for further
 explanations and examples.
 
-The thunk @meta{cleanup} is called when the dynamic extent of the
+The procedure @meta{cleanup} is called when the dynamic extent of the
 invocation of @meta{thunk} terminates; dynamic extent
 @strong{termination} is different from dynamic extent @strong{exiting}
 as determined by @func{dynamic-wind}, @ref{dynamic-wind}.  When the
@@ -3340,7 +3353,8 @@ so @meta{cleanup} @strong{is} invoked, when:
 
 @itemize
 @item
-@meta{thunk} performs a normal return.
+@meta{thunk} performs a normal return.  @meta{cleanup} is applied to the
+symbol @samp{return}.
 
 @item
 @meta{thunk} raises a continuable or non--continuable exception that is
@@ -3356,6 +3370,7 @@ the use of @syntax{guard} and it returns non--false.
 @item
 The @meta{cleanup} is called in the dynamic environment of the use of
 @syntax{with-unwind-protection} and its return values discarded.
+@meta{cleanup} is applied to the symbol @samp{exception}.
 
 @item
 The clause's expression is evaluated in the dynamic environment of the
@@ -3367,7 +3382,8 @@ continuation of @syntax{guard}.
 @meta{thunk} executes a use of the fluid syntaxes @syntax{break},
 @syntax{continue} or @syntax{return}, as defined by the library
 @library{vicare}, to escape from a form that encloses an
-unwind--protection syntax.
+unwind--protection syntax.  @meta{cleanup} is applied to the symbol
+@samp{escape}.
 
 As bound by the loop syntaxes @syntax{while}, @syntax{until}, @dots{}
 and the syntax @syntax{returnable}: these fluid syntaxes reinstate a
@@ -3522,7 +3538,7 @@ escaping from the exception handler skips the call to the
               (escape E))
           (lambda ()
             (with-unwind-protection
-                (lambda ()
+                (lambda (why)
                   (add-result 'cleanup))
               (lambda ()
                 (add-result 'thunk-in)
@@ -3556,7 +3572,7 @@ evaluation order.
              (add-result 'guard-else)
              E))
     (with-unwind-protection
-        (lambda ()
+        (lambda (why)
           (add-result 'cleanup))
       (lambda ()
         (add-result 'thunk-in)
@@ -3584,7 +3600,7 @@ clause has test and expression.  We can see the forms evaluation order.
              (add-result 'guard-expr)
              E))
     (with-unwind-protection
-        (lambda ()
+        (lambda (why)
           (add-result 'cleanup))
       (lambda ()
         (add-result 'thunk-in)
@@ -3623,7 +3639,7 @@ expression returning @false{}, so the exception is re--raised with
             (add-result 'outer-before))
           (lambda ()
             (with-unwind-protection
-                (lambda ()
+                (lambda (why)
                   (add-result 'cleanup))
               (lambda ()
                 (dynamic-wind
@@ -3743,7 +3759,7 @@ exception from the @meta{thunk}.
         (+ E 2))
     (lambda ()
       (with-unwind-protection
-          (lambda ()
+          (lambda (why)
             (add-result 'cleanup))
         (lambda ()
           (add-result 'thunk-in)
@@ -3795,7 +3811,7 @@ following example shows the mechanism.
              (add-result 'guard-else)
              E))
     (with-unwind-protection
-        (lambda ()
+        (lambda (why)
           (add-result 'cleanup-in)
           (raise 2)
           (add-result 'cleanup-out))
@@ -3829,7 +3845,7 @@ the clean--up are evaluated only once; @func{exit} is never called.
 (define y #f)
 (while (positive? x)
   (with-unwind-protection
-      (lambda ()
+      (lambda (why)
         (set! y #t))
     (lambda ()
       (-- x)
@@ -3850,7 +3866,7 @@ never called.
 (define y 0)
 (while (positive? x)
   (with-unwind-protection
-      (lambda ()
+      (lambda (why)
         (++ y))
     (lambda ()
       (-- x)
@@ -3878,7 +3894,7 @@ implemented by an escaping continuation.
 (define y #f)
 (returnable
   (with-unwind-protection
-      (lambda ()
+      (lambda (why)
         (set! y #t))
     (lambda ()
       (return 1))))
@@ -3993,7 +4009,7 @@ exception to be raised:
              #t)
             (else E))
     (let ((rv (with-unwind-protection
-                  (lambda ()
+                  (lambda (why)
                     (add-result 'cleanup))
                 (lambda ()
                   (add-result 'body-in)
@@ -4035,8 +4051,8 @@ mechanism:
 @end example
 
 @noindent
-the thunk @meta{cleanup} is called in the dynamic environment of the use
-of @syntax{with-unwind-protection}.
+the procedure @meta{cleanup} is called in the dynamic environment of the
+use of @syntax{with-unwind-protection}.
 
 For example, when escaping from @meta{thunk} with @syntax{return}:
 
@@ -4054,7 +4070,7 @@ For example, when escaping from @meta{thunk} with @syntax{return}:
     (returnable
       (parametrise ((parm 'inner-parm))
         (with-unwind-protection
-            (lambda ()
+            (lambda (why)
               (add-result 'cleanup-in)
               (add-result (parm))
               (add-result 'cleanup-out))
@@ -4098,7 +4114,7 @@ Even more descriptive is the case of raising an exception from
                E))
       (parametrise ((parm 'inner-parm))
         (with-unwind-protection
-            (lambda ()
+            (lambda (why)
               (add-result 'cleanup-in)
               (add-result (parm))
               (add-result 'cleanup-out))
@@ -4134,7 +4150,7 @@ Changing the environment inside @meta{thunk} does not affect
 (with-result
   (parametrise ((parm 'outer-parm))
     (with-unwind-protection
-        (lambda ()
+        (lambda (why)
           (add-result 'cleanup-in)
           (add-result (parm))
           (add-result 'cleanup-out))
@@ -4151,7 +4167,7 @@ Changing the environment inside @meta{thunk} does not affect
   (returnable
     (parametrise ((parm 'outer-parm))
       (with-unwind-protection
-          (lambda ()
+          (lambda (why)
             (add-result 'cleanup-in)
             (add-result (parm))
             (add-result 'cleanup-out))
@@ -4177,9 +4193,10 @@ Changing the environment inside @meta{thunk} does not affect
 @cindex Asynchronous resources, releasing
 
 
-Compensation stacks allow us to write code to allocate an asynchronous
-resource near the code that releases it in case of error.  Compensation
-stacks are described in:
+Compensation stacks allow us to write code to allocate resources near
+the code that releases them; @ref{resources, Allocating and releasing
+resources}, for an overview of resource management under
+@value{PRJNAME}.  Compensation stacks are described in:
 
 @quotation
 Westley Weimer, George C. Necula.  ``Finding and Preventing Run--Time
@@ -4188,27 +4205,11 @@ Conference on Object--Oriented Programming, Systems, Languages, and
 Applications, 2004.
 @end quotation
 
-@value{PRJNAME} has ways to deal with releasing asynchronous resources
-relying on the garbage collector:
+@value{PRJNAME} implements compensation stacks on top of the unwind
+protection mechanism, which allows operations to be performed
+synchronously with respect to the dynamic extent of a call to thunk.
+@ref{iklib unwind-protect, The unwind--protection mechanism}.
 
-@itemize
-@item
-Directly use guardians, @ref{iklib guardians, Guardians and garbage
-collection}.
-
-@item
-Wrap the reference to the resource in a @value{PRJNAME} data structure
-and register a finalisation function in the structure type descriptor,
-@ref{iklib structs rtd, Automatic finalisation of structures}.
-
-@item
-Wrap the reference to the resource in a @rnrs{6} record and register a
-finalisation function in the record type descriptor, @ref{iklib records
-final, Automatic finalisation of records}.
-@end itemize
-
-Compensation stacks are useful when relying on the garbage collector is
-not good for releasing asynchronous resources.
 
 @menu
 * iklib compensations usage::   Basic compensations usage.
@@ -4269,12 +4270,12 @@ A form that makes use of a compensation stack looks like this:
 
 @example
 (with-compensations
-    (compensate
-        ALLOC-FORMS-1
-      (with RELEASE-FORMS-1))
-    (compensate
-        ALLOC-FORMS-2
-      (with RELEASE-FORMS-2))
+  (compensate
+      ALLOC-FORMS-1
+    (with RELEASE-FORMS-1))
+  (compensate
+      ALLOC-FORMS-2
+    (with RELEASE-FORMS-2))
   BODY-FORMS)
 @end example
 
@@ -4358,12 +4359,12 @@ compensation forms only in case of error:
 
 @example
 (with-compensations/on-error
-    (compensate
-        ALLOC-FORMS-1
-      (with RELEASE-FORMS-1))
-    (compensate
-        ALLOC-FORMS-2
-      (with RELEASE-FORMS-2))
+  (compensate
+      ALLOC-FORMS-1
+    (with RELEASE-FORMS-1))
+  (compensate
+      ALLOC-FORMS-2
+    (with RELEASE-FORMS-2))
   BODY-FORMS)
 @end example
 
@@ -4383,53 +4384,59 @@ constructors and initialisation functions, where we want to run the
 compensations only if an error occurs; if no error is raised, we just
 want the constructor to return.
 
-We must not let the control flow return multiple times to the release
-forms; if we create a continuation, return its escape function out of a
-@func{with-compensations} syntax, then invoke it multiple times the
-behaviour is undefined.  It is fine, however, to yield a coroutine and
-come back later; this is because the coroutine reenters at the same
-point without causing the execution of the compensation thunks.
-
 @c page
 @node iklib compensations api
 @subsection Compensations @api{}
 
 
+The compensations mechanism is built on top of the unwind protection
+mechanism:
+
+@itemize
+@item
+All the @meta{alloc} and @meta{body} forms end in the body of a thunk;
+the compensations are evaluated when the dynamic extent of the call to
+such thunk is terminated, as defined by the unwind protection mechanism.
+
+@item
+All the @meta{release} forms end in the body of a clean--up procedure;
+such forms are evaluated in the @strong{dynamic environment of the
+syntax use that allocates the compensations stack}.
+@end itemize
+
+
 @deffn Syntax with-compensations @metao{body} @meta{body} @dots{}
-Initialise a new local compensations stack, then evaluate all the
-@meta{body} forms in the given order.  If no error occurs: call
+Allocate a new compensations stack, then evaluate all the @meta{body}
+forms in the given order.  If no error occurs: call
 @func{run-compensations}, reset the compensations stack to empty,
 finally return the result value of the last @meta{body} form.
 
-If a @meta{body} expression raises an exception: the exception is
-intercepted, @func{run-compensations} is called, the compensations stack
-is reset to empty, finally the exception is raised again as
-@strong{non--continuable} exception.  It is @strong{not} possible to
-return to the @meta{body} forms with a continuable exception.
+If the dynamic extent of the evaluation of the @meta{body} forms is
+terminated: the accumulated compensations are evaluated in reverse
+order.
 @end deffn
 
 
 @deffn Syntax with-compensations/on-error @metao{body} @meta{body} @dots{}
-Initialise a new local compensations stack, then evaluate all the
-@meta{body} forms in the given order.  If no error occurs: reset the
-compensations stack to empty, return the result value of the last
-@meta{body} form.
+Allocate a new compensations stack, then evaluate all the @meta{body}
+forms in the given order.  If no error occurs: reset the compensations
+stack to empty, return the result value of the last @meta{body} form.
 
-If a @meta{body} expression raises an exception: the exception is
-intercepted, @func{run-compensations} is called, the compensations stack
-is reset to empty, finally the exception is raised again as
-@strong{non--continuable} exception.  It is @strong{not} possible to
-return to the @meta{body} forms with a continuable exception.
+If the dynamic extent of the evaluation of the @meta{body} forms is
+terminated by escaping from the body directly or by escaping from the
+body while handling a raised a exception: the accumulated compensations
+are evaluated in reverse order.
 @end deffn
 
 
 @defun run-compensations
 Evaluate all the compensation thunks in the current stack, in last
-in/first out order.  If a compensation thunk raises an exception: the
-exception is catched by @func{guard} and silently discarded.
+in/first out order; compensation thunks are called in the current
+dynamic environment.  If a compensation thunk raises an exception: the
+exception is blocked and silently discarded.
 
-This function must be called only inside the dynamic environment
-prepared by @func{with-continuations} and similar syntaxes.  It can be
+This function should be called only inside the dynamic environment
+prepared by @func{with-compensations} and similar syntaxes.  It can be
 called multiple times: every time the compensation thunks are consumed
 and removed from the stack.
 @end defun

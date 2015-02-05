@@ -1784,7 +1784,9 @@
     ((_ ?cleanup ?thunk)
      (let ((terminated?  (gensym))
 	   (normal-exit? (gensym))
-	   (escape-exit? (gensym)))
+	   (escape-exit? (gensym))
+	   (why          (gensym))
+	   (escape       (gensym)))
        (bless
 	`(let (;;True if the dynamic extent of the call to THUNK is terminated.
 	       (,terminated?   #f)
@@ -1808,14 +1810,19 @@
 		   (set! ,normal-exit? #t)))
 	       (lambda ()
 		 (unless ,terminated? ;be safe
-		   (when (or ,normal-exit?
-			     ,escape-exit?
-			     (run-unwind-protection-cleanup-upon-exit?))
-		     (set! ,terminated? #t)
-		     ;;We want to discard any exception raised by the cleanup thunk.
-		     (call/cc
-			 (lambda (escape)
-			   (with-exception-handler escape ,?cleanup)))))))))))
+		   (cond ((cond (,normal-exit?					'return)
+				(,escape-exit?					'escape)
+				((run-unwind-protection-cleanup-upon-exit?)	'exception)
+				(else						#f))
+			  => (lambda (,why)
+			       (set! ,terminated? #t)
+			       ;;We want to discard any exception raised by the cleanup thunk.
+			       (call/cc
+				   (lambda (,escape)
+				     (with-exception-handler
+					 ,escape
+				       (lambda ()
+					 (,?cleanup ,why)))))))))))))))
     ))
 
 (define (unwind-protect-macro expr-stx)
@@ -1831,10 +1838,11 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?body ?cleanup0 ?cleanup* ...)
-     (bless
-      `(with-unwind-protection
-	   (lambda () ,?cleanup0 . ,?cleanup*)
-	 (lambda () ,?body))))
+     (let ((why (gensym)))
+       (bless
+	`(with-unwind-protection
+	     (lambda (,why) ,?cleanup0 . ,?cleanup*)
+	   (lambda () ,?body)))))
     ))
 
 
@@ -1928,10 +1936,17 @@
     ;;
     (syntax-match expr-stx ()
       ((_ ?body0 ?body* ...)
-       (bless
-	`(let ,(%make-store-binding)
-	   (parametrise ((compensations store))
-	     ,(%make-with-exception-handler ?body0 ?body*)))))
+       (let ((store (gensym))
+	     (why   (gensym)))
+	 (bless
+	  `(let ,(%make-store-binding store)
+	     (parametrise ((compensations ,store))
+	       (with-unwind-protection
+		   (lambda (,why)
+		     (when (eq? ,why 'exception)
+		       (run-compensations-store ,store)))
+		 (lambda ()
+		   ,?body0 . ,?body*)))))))
       ))
 
   (define (with-compensations-macro expr-stx)
@@ -1942,39 +1957,29 @@
     ;;
     (syntax-match expr-stx ()
       ((_ ?body0 ?body* ...)
-       (bless
-	`(let ,(%make-store-binding)
-	   (parametrise ((compensations store))
-	     (begin0
-	       ,(%make-with-exception-handler ?body0 ?body*)
-	       ;;Better  run  the  cleanup   compensations  out  of  the
-	       ;;WITH-EXCEPTION-HANDLER.
-	       (run-compensations-store store))))))
+       (let ((store (gensym))
+	     (why   (gensym)))
+	 (bless
+	  `(let ,(%make-store-binding store)
+	     (parametrise ((compensations ,store))
+	       (with-unwind-protection
+		   (lambda (,why)
+		     (run-compensations-store ,store))
+		 (lambda ()
+		   ,?body0 . ,?body*)))))))
       ))
 
-  (define (%make-store-binding)
-    '((store (let ((stack '()))
-	       (case-lambda
-		(()
-		 stack)
-		((false/thunk)
-		 (if false/thunk
-		     (set! stack (cons false/thunk stack))
-		   (set! stack '()))))))))
-
-  (define (%make-with-exception-handler body0 body*)
-    ;;We really have to close the handler upon the STORE function, it is
-    ;;wrong to access the COMPENSATIONS parameter from the handler.  The
-    ;;dynamic environment  is synchronised with continuations:  when the
-    ;;handler is called by  RAISE or RAISE-CONTINUABLE, the continuation
-    ;;is the one of the RAISE or RAISE-CONTINUABLE forms.
-    ;;
-    `(with-exception-handler
-	 (lambda (E)
-	   (run-compensations-store store)
-	   (raise E))
-       (lambda ()
-	 ,body0 ,@body*)))
+  (define (%make-store-binding store)
+    (let ((stack        (gensym))
+	  (false/thunk  (gensym)))
+      `((,store (let ((,stack '()))
+		  (case-lambda
+		   (()
+		    ,stack)
+		   ((,false/thunk)
+		    (if ,false/thunk
+			(set! ,stack (cons ,false/thunk ,stack))
+		      (set! ,stack '())))))))))
 
   #| end of module |# )
 
@@ -3947,11 +3952,12 @@
       ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...) (finally ?finally-body0 ?finally-body* ...))
        (begin
 	 (validate-variable expr-stx ?var)
-	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
+	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*)))
+	       (why           (gensym)))
 	   (bless
 	    `(guard (,?var . ,GUARD-CLAUSE*)
 	       (with-unwind-protection
-		   (lambda ()
+		   (lambda (,why)
 		     ,?finally-body0 . ,?finally-body*)
 		 (lambda ()
 		   ,?body)))))))
@@ -4012,6 +4018,13 @@
 		       (lambda ()
 			 (,?exception-retvals-maker E))
 		     reinstate-with-blocked-exceptions-continuation))
+	       ,?thunk)))))
+    ((_ ?thunk)
+     (bless
+      `(call/cc
+	   (lambda (reinstate-with-blocked-exceptions-continuation)
+	     (with-exception-handler
+		 reinstate-with-blocked-exceptions-continuation
 	       ,?thunk)))))
     ))
 

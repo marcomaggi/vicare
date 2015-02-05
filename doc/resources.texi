@@ -1,0 +1,49 @@
+@node resources
+@appendix Allocating and releasing resources
+
+
+In this section we do an overview of the facilities @value{PRJNAME}
+provides to handle resource allocation and release.
+
+@value{PRJNAME} has ways to deal with releasing resources by relying on
+the garbage collector; if we use such mechanisms the resource is
+``asynchronous'' with respect to code execution.  These are the methods
+asynchronous resource handling:
+
+@itemize
+@item
+Directly use guardians, @ref{iklib guardians, Guardians and garbage
+collection}.
+
+@item
+Wrap the reference to the resource in a @value{PRJNAME} data structure
+and register a finalisation function in the structure type descriptor,
+@ref{iklib structs rtd, Automatic finalisation of structures}.
+
+@item
+Wrap the reference to the resource in a @rnrs{6} record and register a
+finalisation function in the record type descriptor, @ref{iklib records
+final, Automatic finalisation of records}.
+@end itemize
+
+Asynchronous resource management is often not good, because there is no
+guarantee that a resource is released before the @value{PRJNAME} process
+termination.  Sometimes it is better to associate the life of an
+allocated resource to the dynamic extent of a call to function; if we
+use such mechanism the resource is ``synchronous'' with respect to code
+execution.  These are the methods synchronous resource handling:
+
+@itemize
+@item
+The unwind protection mechanism; @ref{iklib unwind-protect}, for
+details.
+
+@item
+The compensation stacks; @ref{iklib compensations}, for details.
+@end itemize
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme"
+@c End:

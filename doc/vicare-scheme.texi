@@ -253,6 +253,7 @@ Appendices
 * building::                    Building infrastructure.
 * credits::                     Credits for this document.
 * dynamic environment::         Notes on the dynamic environment.
+* resources::                   Allocating and releasing resources.
 * unicode::                     On Unicode and @utf{} encodings.
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
@@ -303,6 +304,7 @@ External documents
 @include building.texi
 @include credits.texi
 @include dynamic-environment.texi
+@include resources.texi
 @include unicode.texi
 @include fasl.texi
 @include shmem.texi

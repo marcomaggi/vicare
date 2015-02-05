@@ -122,7 +122,7 @@
   (check	;normal exit
       (with-result
 	(with-unwind-protection
-	    (lambda ()
+	    (lambda (why)
 	      (add-result 'out))
 	  (lambda ()
 	    (add-result 'in)
@@ -134,7 +134,7 @@
 	(receive-and-return (flag)
 	    #f
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup)
 		(set! flag #t))
 	    (lambda ()
@@ -145,7 +145,7 @@
       (with-result
 	(receive (a b)
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'out))
 	      (lambda ()
 		(add-result 'in)
@@ -156,7 +156,7 @@
   (check	;zero return values
       (with-result
 	(with-unwind-protection
-	    (lambda ()
+	    (lambda (why)
 	      (add-result 'out))
 	  (lambda ()
 	    (add-result 'in)
@@ -200,7 +200,7 @@
 		   (add-result 'guard-else)
 		   E))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup))
 	    (lambda ()
 	      (add-result 'thunk-in)
@@ -217,7 +217,7 @@
 		   (add-result 'guard-expr)
 		   E))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup))
 	    (lambda ()
 	      (add-result 'thunk-in)
@@ -243,7 +243,7 @@
 		  (add-result 'outer-before))
 		(lambda ()
 		  (with-unwind-protection
-		      (lambda ()
+		      (lambda (why)
 			(add-result 'cleanup))
 		    (lambda ()
 		      (dynamic-wind
@@ -281,7 +281,7 @@
 		    (escape E))
 		(lambda ()
 		  (with-unwind-protection
-		      (lambda ()
+		      (lambda (why)
 			(add-result 'cleanup))
 		    (lambda ()
 		      (add-result 'thunk-in)
@@ -305,7 +305,7 @@
 				  E)))
 		    (lambda ()
 		      (with-unwind-protection
-			  (lambda ()
+			  (lambda (why)
 			    (add-result 'cleanup))
 			(lambda ()
 			  (add-result 'thunk-in)
@@ -323,7 +323,7 @@
 		   (add-result 'guard-else)
 		   E))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup))
 	    (lambda ()
 	      (add-result 'thunk-in)
@@ -346,7 +346,7 @@
 		    (escape E))
 		(lambda ()
 		  (with-unwind-protection
-		      (lambda ()
+		      (lambda (why)
 			(add-result 'cleanup))
 		    (lambda ()
 		      (dynamic-wind
@@ -383,7 +383,7 @@
 	      (+ E 2))
 	  (lambda ()
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup))
 	      (lambda ()
 		(add-result 'thunk-in)
@@ -403,7 +403,7 @@
 		(+ E 2))
 	    (lambda ()
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup))
 		(lambda ()
 		  (add-result 'thunk-in)
@@ -428,7 +428,7 @@
 		    (escape E))
 		(lambda ()
 		  (with-unwind-protection
-		      (lambda ()
+		      (lambda (why)
 			(add-result 'cleanup))
 		    (lambda ()
 		      (add-result 'thunk-in)
@@ -451,7 +451,7 @@
 				  E)))
 		    (lambda ()
 		      (with-unwind-protection
-			  (lambda ()
+			  (lambda (why)
 			    (add-result 'cleanup))
 			(lambda ()
 			  (add-result 'thunk-in)
@@ -469,7 +469,7 @@
 		   (add-result 'guard-else)
 		   E))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup))
 	    (lambda ()
 	      (add-result 'thunk-in)
@@ -492,7 +492,7 @@
 		       (add-result 'guard-error)
 		       E))
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup))
 		(lambda ()
 		  (add-result 'thunk-in)
@@ -514,7 +514,7 @@
 		    (escape E))
 		(lambda ()
 		  (with-unwind-protection
-		      (lambda ()
+		      (lambda (why)
 			(add-result 'cleanup))
 		    (lambda ()
 		      (dynamic-wind
@@ -554,7 +554,7 @@
 		   (add-result 'guard-else)
 		   E))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup-in)
 		(raise 2)
 		(add-result 'cleanup-out))
@@ -575,7 +575,7 @@
 	    #f
 	  (returnable
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (set! flag #t))
 	      (lambda ()
@@ -590,7 +590,7 @@
 	(define x
 	  (returnable
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (set! y #t))
 	      (lambda ()
 		(return 1)))))
@@ -608,7 +608,7 @@
 	    #f
 	  (while #t
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (set! flag #t))
 	      (lambda ()
@@ -624,7 +624,7 @@
 	  (let ((i 3))
 	    (while (positive? i)
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup)
 		    (set! flag (add1 flag)))
 		(lambda ()
@@ -640,7 +640,7 @@
 	(define y #f)
 	(while (positive? x)
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(set! y #t))
 	    (lambda ()
 	      (-- x)
@@ -655,7 +655,7 @@
 	(define y 0)
 	(while (positive? x)
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(++ y))
 	    (lambda ()
 	      (-- x)
@@ -676,7 +676,7 @@
 	  (let ((i 3))
 	    (until (zero? i)
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup)
 		    (set! flag (add1 flag)))
 		(lambda ()
@@ -693,7 +693,7 @@
 	  (let ((i 3))
 	    (until (zero? i)
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup)
 		    (set! flag (add1 flag)))
 		(lambda ()
@@ -709,7 +709,7 @@
 	(define y #f)
 	(until (zero? x)
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(set! y #t))
 	    (lambda ()
 	      (-- x)
@@ -724,7 +724,7 @@
 	(define y 0)
 	(until (zero? x)
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(++ y))
 	    (lambda ()
 	      (-- x)
@@ -744,7 +744,7 @@
 	    #f
 	  (for ((define i 3) (positive? i) (-- i))
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (set! flag #t))
 	      (lambda ()
@@ -759,7 +759,7 @@
   	    0
   	  (for ((define i 3) (positive? i) (-- i))
   	    (with-unwind-protection
-  		(lambda ()
+  		(lambda (why)
   		  (add-result 'cleanup)
   		  (++ flag))
   	      (lambda ()
@@ -774,7 +774,7 @@
   	(define x 3)
   	(for ((void) (positive? x) (-- x))
   	  (with-unwind-protection
-  	      (lambda ()
+  	      (lambda (why)
   		(set! y #t))
   	    (lambda ()
   	      (break)
@@ -788,7 +788,7 @@
   	(define y 0)
   	(for ((void) (positive? x) (-- x))
   	  (with-unwind-protection
-  	      (lambda ()
+  	      (lambda (why)
   		(++ y))
   	    (lambda ()
   	      (continue)
@@ -807,7 +807,7 @@
 	(define y #f)
 	(do
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (set! y #t))
 	      (lambda ()
@@ -824,7 +824,7 @@
 	(define y 0)
 	(do
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (++ y))
 	      (lambda ()
@@ -847,7 +847,7 @@
 	(define y #f)
 	(do
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (set! y #t))
 	      (lambda ()
@@ -864,7 +864,7 @@
 	(define y 0)
 	(do
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup)
 		  (++ y))
 	      (lambda ()
@@ -890,7 +890,7 @@
 	       (add-result 'do-exit)
 	       (values x y))
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup-in)
 		  (set! y #t)
 		  (add-result 'cleanup-out))
@@ -908,7 +908,7 @@
 	    ((zero? x)
 	     (values x y))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup)
 		(++ y))
 	    (lambda ()
@@ -929,7 +929,7 @@
 		   #t)
 		  (else E))
 	  (let ((rv (with-unwind-protection
-			(lambda ()
+			(lambda (why)
 			  (add-result 'cleanup))
 		      (lambda ()
 			(add-result 'thunk-in)
@@ -956,7 +956,7 @@
 		     #t)
 		    (else E))
 	    (let ((rv (with-unwind-protection
-			  (lambda ()
+			  (lambda (why)
 			    (add 'cleanup))
 			(lambda ()
 			  (add 'thunk-in)
@@ -1035,7 +1035,7 @@
       (with-result
 	(parametrise ((parm 'parm))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup-in)
 		(add-result (parm))
 		(add-result 'cleanup-out))
@@ -1052,7 +1052,7 @@
       (with-result
 	(parametrise ((parm 'outer-parm))
 	  (with-unwind-protection
-	      (lambda ()
+	      (lambda (why)
 		(add-result 'cleanup-in)
 		(add-result (parm))
 		(add-result 'cleanup-out))
@@ -1072,7 +1072,7 @@
 	(returnable
 	  (parametrise ((parm 'outer-parm))
 	    (with-unwind-protection
-		(lambda ()
+		(lambda (why)
 		  (add-result 'cleanup-in)
 		  (add-result (parm))
 		  (add-result 'cleanup-out))
@@ -1094,7 +1094,7 @@
 	  (returnable
 	    (parametrise ((parm 'inner-parm))
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup-in)
 		    (add-result (parm))
 		    (add-result 'cleanup-out))
@@ -1123,7 +1123,7 @@
 		     E))
 	    (parametrise ((parm 'inner-parm))
 	      (with-unwind-protection
-		  (lambda ()
+		  (lambda (why)
 		    (add-result 'cleanup-in)
 		    (add-result (parm))
 		    (add-result 'cleanup-out))
