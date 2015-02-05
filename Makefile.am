@@ -99,6 +99,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-flonum-parser.texi			\
 	doc/libs-formations.texi			\
 	doc/libs-getopts.texi				\
+	doc/libs-checks.texi				\
 	doc/libs-gcc.texi				\
 	doc/libs-irregex.texi				\
 	doc/libs-knuth-morris-pratt.texi		\
