@@ -99,6 +99,8 @@
 
     ((with-unwind-protection)		with-unwind-protection-macro)
     ((unwind-protect)			unwind-protect-macro)
+    ((with-blocked-exceptions)		with-blocked-exceptions-macro)
+    ((with-current-dynamic-environment)	with-current-dynamic-environment-macro)
 
     ;; non-Scheme style syntaxes
     ((while)				while-macro)
@@ -3990,6 +3992,54 @@
 	"expected identifier as variable" expr-stx var-id)))
 
   #| end of module |# )
+
+
+;;;; module non-core-macro-transformer: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
+
+(define (with-blocked-exceptions-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's WITH-BLOCKED-EXCEPTIONS macros from
+  ;;the top-level  built in environment.  Expand  the contents of EXPR-STX;  return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?exception-retvals-maker ?thunk)
+     (bless
+      `(call/cc
+	   (lambda (reinstate-with-blocked-exceptions-continuation)
+	     (with-exception-handler
+		 (lambda (E)
+		   (call-with-values
+		       (lambda ()
+			 (,?exception-retvals-maker E))
+		     reinstate-with-blocked-exceptions-continuation))
+	       ,?thunk)))))
+    ))
+
+(define (with-current-dynamic-environment-macro expr-stx)
+  ;;Transformer  function used  to  expand Vicare's  WITH-CURRENT-DYNAMIC-ENVIRONMENT
+  ;;macros from the top-level built in environment.  Expand the contents of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?exception-retvals-maker ?thunk)
+     (bless
+      `(call/cc
+	   (lambda (return-thunk-with-packed-environment)
+	     ((call/cc
+		  (lambda (reinstate-target-environment-continuation)
+		    (return-thunk-with-packed-environment
+		     (lambda ()
+		       (call/cc
+			   (lambda (reinstate-thunk-call-continuation)
+			     (reinstate-target-environment-continuation
+			      (lambda ()
+				(call-with-values
+				    (lambda ()
+				      (with-blocked-exceptions
+					  ,?exception-retvals-maker
+					,?thunk))
+				  reinstate-thunk-call-continuation))))))))))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: OR, AND

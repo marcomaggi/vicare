@@ -295,6 +295,9 @@ Example:
 * iklib syntaxes control::      Additional control flow syntaxes.
 * iklib syntaxes loops::        Additional loop syntaxes.
 * iklib syntaxes returnable::   Early return from code blocks.
+* iklib syntaxes blocking::     Blocking raised exceptions.
+* iklib syntaxes dynenv::       Capturing the current dynamic
+                                environment.
 * iklib syntaxes integrable::   Integrable expressions and functions.
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
@@ -1384,6 +1387,107 @@ return values to the enclosing continuation.
 @result{} 1 2
 @end example
 @end deffn
+
+@c page
+@node iklib syntaxes blocking
+@subsection Blocking raised exceptions
+
+
+Sometimes we want to block raised exceptions, for example when we are
+already handling a previously raised exception.
+
+
+@deffn Syntax with-blocked-exceptions @meta{exception-retvals-maker} @meta{thunk}
+Evaluate @meta{thunk} and return its return values.  If @meta{thunk}
+raises an exception: apply the procedure @meta{exception-retvals-maker}
+to the raised object and return its return values.
+
+Exceptions raised by @meta{exception-retvals-maker} are @strong{not}
+blocked.
+@end deffn
+
+
+Usage examples:
+
+@example
+(import (vicare))
+
+(with-blocked-exceptions
+    (lambda (E)
+      (values E 1 2 3))
+  (lambda ()
+    (raise 99)))
+@result{} 99 1 2 3
+@end example
+
+@c page
+@node iklib syntaxes dynenv
+@subsection Capturing the current dynamic environment
+
+
+@deffn Syntax with-current-dynamic-environment @meta{exception-retvals-maker} @meta{thunk}
+Install and return a thunk that, wherever it is called, evaluates
+@meta{thunk} in the dynamic environment of the macro use and returns its
+return values.  If @meta{thunk} raises an exception: apply the procedure
+@meta{exception-retvals-maker} to the raised object and return its
+return values.
+
+Exceptions raised by @meta{exception-retvals-maker} are @strong{not}
+blocked.
+@end deffn
+
+
+Usage examples:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(define parm
+  (make-parameter #f))
+
+(with-result
+  (parametrise ((parm 'outer))
+    (let* ((counter 0)
+           (thunk   (parametrise ((parm 'inner))
+                      (with-current-dynamic-environment
+                          values
+                        (lambda ()
+                          (set! counter (+ 1 counter))
+                          (add-result (list 'inside-thunk (parm))))))))
+      (add-result (parm))
+      (add-result 'calling-thunk-1)
+      (thunk)
+      (add-result 'calling-thunk-2)
+      (thunk)
+      counter)))
+@result{} (2 (outer
+       calling-thunk-1 (inside-thunk inner)
+       calling-thunk-2 (inside-thunk inner)))
+
+(with-result
+  (parametrise ((parm 'outer))
+    (let* ((counter 0)
+           (thunk   (parametrise ((parm 'inner))
+                      (with-current-dynamic-environment
+                          values
+                        (lambda ()
+                          (set! counter (+ 1 counter))
+                          (add-result (list 'inside-thunk (parm)))
+                          (add-result 'raise-exception)
+                          (raise 123))))))
+      (add-result (parm))
+      (add-result 'calling-thunk-1)
+      (thunk)
+      (add-result 'calling-thunk-2)
+      (thunk)
+      counter)))
+@result{} (2 (outer
+       calling-thunk-1 (inside-thunk inner) raise-exception
+       calling-thunk-2 (inside-thunk inner) raise-exception))
+@end example
 
 @c page
 @node iklib syntaxes integrable

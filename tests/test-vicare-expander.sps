@@ -2940,6 +2940,81 @@
   #t)
 
 
+(parametrise ((check-test-name	'blocking-exceptions))
+
+  (check
+      (with-blocked-exceptions
+	  (lambda (E)
+	    (values E 1 2 3))
+	(lambda ()
+	  (raise 99)))
+    => 99 1 2 3)
+
+  (check	;exceptions fromt he handler are not blocked
+      (guard (E (else
+		 E))
+	(with-blocked-exceptions
+	    (lambda (E)
+	      (raise (list E 1 2 3)))
+	  (lambda ()
+	    (raise 99))))
+    => '(99 1 2 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'current-dynamic-environment))
+
+  (define parm
+    (make-parameter #f))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+	(parametrise ((parm 'outer))
+	  (let* ((counter 0)
+		 (thunk   (parametrise ((parm 'inner))
+			    (with-current-dynamic-environment
+				values
+			      (lambda ()
+				(set! counter (+ 1 counter))
+				(add-result (list 'inside-thunk (parm))))))))
+	    (add-result (parm))
+	    (add-result 'calling-thunk-1)
+	    (thunk)
+	    (add-result 'calling-thunk-2)
+	    (thunk)
+	    counter)))
+    => '(2 (outer
+	    calling-thunk-1 (inside-thunk inner)
+	    calling-thunk-2 (inside-thunk inner))))
+
+  (check	;raising exception
+      (with-result
+	(parametrise ((parm 'outer))
+	  (let* ((counter 0)
+		 (thunk   (parametrise ((parm 'inner))
+			    (with-current-dynamic-environment
+				values
+			      (lambda ()
+				(set! counter (+ 1 counter))
+				(add-result (list 'inside-thunk (parm)))
+				(add-result 'raise-exception)
+				(raise 123))))))
+	    (add-result (parm))
+	    (add-result 'calling-thunk-1)
+	    (thunk)
+	    (add-result 'calling-thunk-2)
+	    (thunk)
+	    counter)))
+    => '(2 (outer
+	    calling-thunk-1 (inside-thunk inner) raise-exception
+	    calling-thunk-2 (inside-thunk inner) raise-exception)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'try))
 
   (let ()	;with else clause

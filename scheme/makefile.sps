@@ -510,6 +510,8 @@
      (unwind-protect				(macro . unwind-protect))
      (with-unwind-protection			(macro . with-unwind-protection))
      (with-escape-handlers-stack		(macro . with-escape-handlers-stack))
+     (with-blocked-exceptions			(macro . with-blocked-exceptions))
+     (with-current-dynamic-environment		(macro . with-current-dynamic-environment))
 
      (with-implicits				(macro . with-implicits))
      (include					(macro . include))
@@ -2514,6 +2516,9 @@
     (run-escape-handlers)
     (%run-escape-handlers)
     (run-unwind-protection-cleanup-upon-exit?)
+;;;
+    (with-blocked-exceptions			v $language)
+    (with-current-dynamic-environment		v $language)
 ;;;
     (set-predicate-procedure-argument-validation! v $language)
     (set-predicate-return-value-validation!	v $language)
