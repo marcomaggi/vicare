@@ -96,11 +96,14 @@
   ;;values.
   ;;
   (import COROUTINE-CONTINUATIONS-QUEUE)
-  (call/cc
-      (lambda (reenter)
-	(enqueue! reenter)
-	(thunk)
-	((dequeue!)))))
+  (import (only (psyntax system $all)
+		run-unwind-protection-cleanup-upon-exit?))
+  (parametrise ((run-unwind-protection-cleanup-upon-exit? #f))
+    (call/cc
+	(lambda (reenter)
+	  (enqueue! reenter)
+	  (thunk)
+	  ((dequeue!))))))
 
 (define (yield)
   ;;Register  the current  continuation as  coroutine, then  run the  next coroutine.
