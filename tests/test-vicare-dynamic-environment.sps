@@ -23,7 +23,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare checks))
 
@@ -35,6 +35,118 @@
 
 (define parm
   (make-parameter #f))
+
+
+(parametrise ((check-test-name	'basics))
+
+  (check	;exiting from the dynamic extent by returning
+      (with-result
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'in-guard))
+	    (lambda ()
+	      (add-result 'body)
+	      1)
+	    (lambda ()
+	      (add-result 'out-guard))))
+    => '(1 (in-guard body out-guard)))
+
+  (check	;exiting from the dynamic extent by escaping
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (dynamic-wind
+		  (lambda ()
+		    (add-result 'in-guard))
+		  (lambda ()
+		    (add-result 'body-in)
+		    (escape 2)
+		    (add-result 'body-out)
+		    1)
+		  (lambda ()
+		    (add-result 'out-guard))))))
+    => '(2 (in-guard body-in out-guard)))
+
+;;; --------------------------------------------------------------------
+;;; example of state in the dynamic environment
+
+  (internal-body
+
+    (define var)
+
+    (define (log id)
+      (add-result (list id var))
+      (++ var))
+
+    (define (doit id init)
+      (set! var init)
+      (do ((i 0 (+ 1 i)))
+	  ((= i 5))
+	(log id)))
+
+    (check
+	(with-result
+	  (doit 'one  0)
+	  1)
+      => '(1 ((one 0)
+	      (one 1)
+	      (one 2)
+	      (one 3)
+	      (one 4))))
+
+    #f)
+
+  (internal-body
+    (import (vicare language-extensions coroutines))
+
+    (define var)
+
+    (define (log id)
+      (add-result (list id var))
+      (++ var))
+
+    (define (doit id init)
+      (define local-var)
+      (coroutine
+	  (lambda ()
+	    (dynamic-wind
+		(lambda ()
+		  (set! var local-var))
+		(lambda ()
+		  (set! var init)
+		  (do ((i 0 (+ 1 i)))
+		      ((= i 5))
+		    (log id)
+		    (yield)))
+		(lambda ()
+		  (set! local-var var))))))
+
+    (check
+	(with-result
+	  (doit 'one  0)
+	  (finish-coroutines)
+	  1)
+      => '(1 ((one 0)
+	      (one 1)
+	      (one 2)
+	      (one 3)
+	      (one 4))))
+
+    (check
+	(with-result
+	  (doit 'one  0)
+	  (doit 'two 10)
+	  (finish-coroutines)
+	  1)
+      => '(1 ((one 0) (two 10)
+	      (one 1) (two 11)
+	      (one 2) (two 12)
+	      (one 3) (two 13)
+	      (one 4) (two 14))))
+
+    #f)
+
+  #t)
 
 
 (parametrise ((check-test-name	'exception-handlers))
