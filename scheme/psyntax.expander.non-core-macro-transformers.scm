@@ -3168,7 +3168,7 @@
 ;;
 ;;but:  ?BODY  might  mutate  the  dynamic  environment;  all  the  ?TEST  and  ?EXPR
 ;;expressions must be evaluated  in the dynamic environment of the  use of GUARD; the
-;;RAISE-CONTINUABLE in the  ELSE clause must be evaluated the  dynamic environemnt of
+;;RAISE-CONTINUABLE in the  ELSE clause must be evaluated the  dynamic environment of
 ;;the ?BODY.
 ;;
 ;;We must remember that, when using:
