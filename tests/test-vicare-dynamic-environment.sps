@@ -5,7 +5,8 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;
+;;;	This test  file is  a collection  of code samples  that exercise  the dynamic
+;;;	environment facilities.  It is meant for both testing and documentation.
 ;;;
 ;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -185,6 +186,106 @@
   #t)
 
 
+(parametrise ((check-test-name	'dynamic-wind))
+
+  ;;Enter and exit the dynamic extent by simple call and return.
+  ;;
+  (check
+      (with-result
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'in-guard))
+	    (lambda ()
+	      (add-result 'thunk)
+	      1)
+	    (lambda ()
+	      (add-result 'out-guard))))
+    => '(1 (in-guard thunk out-guard)))
+
+  ;;Exiting by calling an escape function.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (dynamic-wind
+		  (lambda ()
+		    (add-result 'in-guard))
+		  (lambda ()
+		    (add-result 'thunk-in)
+		    (escape 2)
+		    (add-result 'thunk-out)
+		    1)
+		  (lambda ()
+		    (add-result 'out-guard))))))
+    => '(2 (in-guard thunk-in out-guard)))
+
+  ;;Aborting a dynamic extent by raising an exception.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'handler)
+		    (escape E))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'in-guard))
+		      (lambda ()
+			(add-result 'thunk-in)
+			(raise 2)
+			(add-result 'thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'out-guard))))))))
+    => '(2 (in-guard thunk-in handler out-guard)))
+
+  ;;Entering and exiting with coroutines.
+  ;;
+  (check
+      (with-result
+	(coroutine
+	    (lambda ()
+	      (dynamic-wind
+		  (lambda ()
+		    (add-result '(1 in-guard)))
+		  (lambda ()
+		    (add-result '(1.1 thunk))
+		    (yield)
+		    (add-result '(1.2 thunk))
+		    (yield)
+		    (add-result '(1.3 thunk)))
+		  (lambda ()
+		    (add-result '(1 out-guard))))))
+	(coroutine
+	    (lambda ()
+	      (dynamic-wind
+		  (lambda ()
+		    (add-result '(2 in-guard)))
+		  (lambda ()
+		    (add-result '(2.1 thunk))
+		    (yield)
+		    (add-result '(2.2 thunk))
+		    (yield)
+		    (add-result '(2.3 thunk)))
+		  (lambda ()
+		    (add-result '(2 out-guard))))))
+
+	(finish-coroutines)
+	1)
+    => '(1 ((1 in-guard) (1.1 thunk) (1 out-guard)
+	    (2 in-guard) (2.1 thunk) (2 out-guard)
+	    (1 in-guard) (1.2 thunk) (1 out-guard)
+	    (2 in-guard) (2.2 thunk) (2 out-guard)
+	    (1 in-guard) (1.3 thunk) (1 out-guard)
+	    (2 in-guard) (2.3 thunk) (2 out-guard))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'exception-handlers))
 
   ;;The handler  is called in the  dynamic environment of  the thunk, so that  it can
@@ -333,6 +434,40 @@
 	    calling-thunk-2 (inside-thunk inner) raise-exception)))
 
   #f)
+
+
+(parametrise ((check-test-name	'coroutines))
+
+  ;;Parameters and coroutines.
+  ;;
+  (internal-body
+    (define parm
+      (make-parameter #f))
+
+    (define (doit name init)
+      (parametrise ((parm init))
+	(coroutine
+	    (lambda ()
+	      (dotimes 5
+		(add-result (list name (parm)))
+		(parm (++ (parm)))
+		(yield))))))
+
+    (check
+	(with-result
+	  (doit 'one  0)
+	  (doit 'two 10)
+	  (finish-coroutines)
+	  1)
+      => '(1 ((one 0) (two 10)
+	      (one 1) (two 11)
+	      (one 2) (two 12)
+	      (one 3) (two 13)
+	      (one 4) (two 14))))
+
+    #f)
+
+  #t)
 
 
 ;;;; done
