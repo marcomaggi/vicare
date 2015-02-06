@@ -336,21 +336,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/simple-match.sls
 CLEANFILES += lib/vicare/language-extensions/simple-match.fasl
 
-lib/vicare/language-extensions/coroutines.fasl: \
-		lib/vicare/language-extensions/coroutines.sls \
-		lib/vicare/unsafe/operations.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_coroutines_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_coroutines_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_coroutines_fasl_DATA = lib/vicare/language-extensions/coroutines.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_coroutines_sls_DATA = lib/vicare/language-extensions/coroutines.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/coroutines.sls
-CLEANFILES += lib/vicare/language-extensions/coroutines.fasl
-
 lib/vicare/language-extensions/keywords.fasl: \
 		lib/vicare/language-extensions/keywords.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -603,6 +588,7 @@ CLEANFILES += lib/vicare/language-extensions/makers.fasl
 
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.sls \
+		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -614,6 +600,48 @@ dist_lib_vicare_build_tools_automake_sls_DATA = lib/vicare/build-tools/automake.
 endif
 EXTRA_DIST += lib/vicare/build-tools/automake.sls
 CLEANFILES += lib/vicare/build-tools/automake.fasl
+
+lib/vicare/posix.fasl: \
+		lib/vicare/posix.sls \
+		lib/vicare/language-extensions/syntaxes.fasl \
+		lib/vicare/platform/constants.fasl \
+		lib/vicare/arguments/validation.fasl \
+		lib/vicare/arguments/general-c-buffers.fasl \
+		lib/vicare/unsafe/capi.fasl \
+		lib/vicare/unsafe/operations.fasl \
+		lib/vicare/platform/words.fasl \
+		lib/vicare/language-extensions/cond-expand.fasl \
+		lib/vicare/containers/weak-hashtables.fasl \
+		lib/vicare/platform/features.fasl \
+		lib/vicare/language-extensions/cond-expand/helpers.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_posix_fasldir = $(bundledlibsdir)/vicare
+lib_vicare_posix_slsdir  = $(bundledlibsdir)/vicare
+nodist_lib_vicare_posix_fasl_DATA = lib/vicare/posix.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_posix_sls_DATA = lib/vicare/posix.sls
+endif
+EXTRA_DIST += lib/vicare/posix.sls
+CLEANFILES += lib/vicare/posix.fasl
+
+lib/vicare/containers/weak-hashtables.fasl: \
+		lib/vicare/containers/weak-hashtables.sls \
+		lib/vicare/unsafe/operations.fasl \
+		lib/vicare/language-extensions/syntaxes.fasl \
+		lib/vicare/arguments/validation.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_containers_weak_hashtables_fasldir = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_weak_hashtables_slsdir  = $(bundledlibsdir)/vicare/containers
+nodist_lib_vicare_containers_weak_hashtables_fasl_DATA = lib/vicare/containers/weak-hashtables.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_containers_weak_hashtables_sls_DATA = lib/vicare/containers/weak-hashtables.sls
+endif
+EXTRA_DIST += lib/vicare/containers/weak-hashtables.sls
+CLEANFILES += lib/vicare/containers/weak-hashtables.fasl
 
 lib/vicare/checks.fasl: \
 		lib/vicare/checks.sls \
@@ -935,23 +963,6 @@ dist_lib_vicare_containers_bytevectors_sls_DATA = lib/vicare/containers/bytevect
 endif
 EXTRA_DIST += lib/vicare/containers/bytevectors.sls
 CLEANFILES += lib/vicare/containers/bytevectors.fasl
-
-lib/vicare/containers/weak-hashtables.fasl: \
-		lib/vicare/containers/weak-hashtables.sls \
-		lib/vicare/unsafe/operations.fasl \
-		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/arguments/validation.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_containers_weak_hashtables_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_weak_hashtables_slsdir  = $(bundledlibsdir)/vicare/containers
-nodist_lib_vicare_containers_weak_hashtables_fasl_DATA = lib/vicare/containers/weak-hashtables.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_weak_hashtables_sls_DATA = lib/vicare/containers/weak-hashtables.sls
-endif
-EXTRA_DIST += lib/vicare/containers/weak-hashtables.sls
-CLEANFILES += lib/vicare/containers/weak-hashtables.fasl
 
 lib/vicare/containers/object-properties.fasl: \
 		lib/vicare/containers/object-properties.sls \
@@ -1612,33 +1623,6 @@ dist_lib_vicare_iconv_sls_DATA = lib/vicare/iconv.sls
 endif
 EXTRA_DIST += lib/vicare/iconv.sls
 CLEANFILES += lib/vicare/iconv.fasl
-endif
-
-lib/vicare/posix.fasl: \
-		lib/vicare/posix.sls \
-		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/platform/constants.fasl \
-		lib/vicare/arguments/validation.fasl \
-		lib/vicare/arguments/general-c-buffers.fasl \
-		lib/vicare/unsafe/capi.fasl \
-		lib/vicare/unsafe/operations.fasl \
-		lib/vicare/platform/words.fasl \
-		lib/vicare/language-extensions/cond-expand.fasl \
-		lib/vicare/containers/weak-hashtables.fasl \
-		lib/vicare/platform/features.fasl \
-		lib/vicare/language-extensions/cond-expand/helpers.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-if WANT_POSIX
-lib_vicare_posix_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_posix_slsdir  = $(bundledlibsdir)/vicare
-nodist_lib_vicare_posix_fasl_DATA = lib/vicare/posix.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_sls_DATA = lib/vicare/posix.sls
-endif
-EXTRA_DIST += lib/vicare/posix.sls
-CLEANFILES += lib/vicare/posix.fasl
 endif
 
 lib/vicare/posix/pid-files.fasl: \

@@ -2,8 +2,8 @@
 ;;
 ;;This script should be run from the build directory with a command line similar to:
 ;;
-;;	./vicare -b vicare.boot							\
-;;	   -L $(top_srcdir)/lib -L $(builddir)/lib				\
+;;   $ ./vicare -b vicare.boot							\
+;;	   --source-path $PWD/../lib --source-path $PWD/lib			\
 ;;	   --print-loaded-libraries --library-locator source			\
 ;;         --r6rs-script $(top_srcdir)/scripts/build-makefile-rules.sps		\
 ;;         --									\

@@ -69,7 +69,6 @@
      (vicare language-extensions syntaxes)
      (vicare language-extensions amb)
      (vicare language-extensions simple-match)
-     (vicare language-extensions coroutines)
      (vicare language-extensions keywords)
      (vicare language-extensions sentinels)
      (vicare language-extensions namespaces)

@@ -15,7 +15,7 @@
 ;;;     "$(top_srcdir)/lib"  of  the  distribution  package;  this  limitation  makes
 ;;;     pathname processing so much simpler...
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -40,7 +40,7 @@
     include-install-rules)
   (import (vicare)
     (prefix (vicare libraries) libs.)
-    (prefix (vicare language-extensions posix) px.))
+    (prefix (vicare posix) px.))
 
 
 ;;;; configuration parameters
@@ -108,6 +108,15 @@
 (module (strip-source-file-prefix
 	 strip-lib-prefix)
 
+  (define pwd
+    (px.getcwd/string))
+
+  (define pwd/lib
+    (px.realpath/string (string-append pwd "/lib")))
+
+  (define pwd/../lib
+    (px.realpath/string (string-append pwd "/../lib")))
+
   (define* (strip-source-file-prefix {pathname string?})
     ;;Given  a source  file pathname:  if it  starts with  "../lib" or  "./lib" or  a
     ;;directory in the  source search path: strip such prefix  and return the result;
@@ -116,8 +125,23 @@
     (define pathname^
       (cond ((%string-prefix? "../lib" pathname)
 	     (%deprefix "../lib" pathname))
+
 	    ((%string-prefix? "./lib" pathname)
 	     (%deprefix "../lib" pathname))
+
+	    ((%string-prefix? "lib" pathname)
+	     (%deprefix "lib" pathname))
+
+	    ((%string-prefix? pwd/lib pathname)
+	     (%deprefix pwd/lib pathname))
+
+	    ((%string-prefix? pwd/../lib pathname)
+	     (%deprefix pwd/../lib pathname))
+
+	    ;;This must be the last among the ones starting with pwd.
+	    ((%string-prefix? pwd pathname)
+	     (%deprefix pwd pathname))
+
 	    (else
 	     (let loop ((dirs (libs.library-source-search-path)))
 	       (cond ((null? dirs)
@@ -211,6 +235,11 @@
       (let ((source-pathname (string-append "lib/" (strip-source-file-prefix (libs.library-source-file-name lib))))
 	    ;;Remember that the stem+extension starts with a slash!!!
 	    (binary-pathname (libs.directory+library-stem->library-binary-pathname "lib" (libs.library-reference->filename-stem libref))))
+(debug-print __who__
+	     (libs.library-source-file-name lib)
+	     (strip-source-file-prefix (libs.library-source-file-name lib))
+	     source-pathname
+	     binary-pathname)
 	(unless (hashtable-ref ALREADY-PROCESSED-TABLE source-pathname #f)
 	  (fprintf stderr "processing: ~a\n" source-pathname)
 	  (%build-compilation-recipe target/dependencies-list binary-pathname source-pathname)
@@ -256,6 +285,10 @@
     (let ((fasl-stem (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ binary-pathname))
 	  (sls-stem  (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ source-pathname))
 	  (noinst    (if (include-install-rules) "" "noinst_")))
+
+(debug-print __who__
+	     source-pathname sls-stem
+	     binary-pathname fasl-stem)
 
       ;;Generate the opening Automake conditional directives.
       (when (conditionals)
