@@ -3414,6 +3414,10 @@
 		  (lambda ()
 		    (with-exception-handler
 			(lambda (,raised-obj-id)
+			  ;;If we  raise an exception from  a DYNAMIC-WIND's in-guard
+			  ;;or out-guard while trying to  call the cleanups: we reset
+			  ;;it to avoid leaving it true.
+			  (run-unwind-protection-cleanup-upon-exit? #f)
 			  (let ((,?variable ,raised-obj-id))
 			    ,(gen-clauses raised-obj-id reinstate-guard-continuation-id ?clause*)))
 		      (lambda ()
