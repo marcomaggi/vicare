@@ -25,7 +25,8 @@
 
 #!vicare
 (import (vicare)
-  (vicare checks))
+  (vicare checks)
+  (vicare language-extensions coroutines))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: dynamic environment\n")
@@ -35,6 +36,14 @@
 
 (define parm
   (make-parameter #f))
+
+(define-syntax dotimes
+  (syntax-rules ()
+    ((_ ?count . ?body)
+     (do ((i 0 (+ 1 i)))
+	 ((= i ?count))
+       . ?body))
+    ))
 
 
 (parametrise ((check-test-name	'basics))
@@ -74,34 +83,31 @@
 
     (define var)
 
-    (define (log id)
+    (define (step id)
       (add-result (list id var))
       (++ var))
 
     (define (doit id init)
       (set! var init)
-      (do ((i 0 (+ 1 i)))
-	  ((= i 5))
-	(log id)))
+      (dotimes 5
+	(step id)))
 
     (check
 	(with-result
-	  (doit 'one  0)
+	  (doit 'single 0)
 	  1)
-      => '(1 ((one 0)
-	      (one 1)
-	      (one 2)
-	      (one 3)
-	      (one 4))))
+      => '(1 ((single 0)
+	      (single 1)
+	      (single 2)
+	      (single 3)
+	      (single 4))))
 
     #f)
 
   (internal-body
-    (import (vicare language-extensions coroutines))
-
     (define var)
 
-    (define (log id)
+    (define (step id)
       (add-result (list id var))
       (++ var))
 
@@ -114,9 +120,8 @@
 		  (set! var local-var))
 		(lambda ()
 		  (set! var init)
-		  (do ((i 0 (+ 1 i)))
-		      ((= i 5))
-		    (log id)
+		  (dotimes 5
+		    (step id)
 		    (yield)))
 		(lambda ()
 		  (set! local-var var))))))
@@ -143,6 +148,37 @@
 	      (one 2) (two 12)
 	      (one 3) (two 13)
 	      (one 4) (two 14))))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; the current exception handler in coroutines
+
+  (internal-body
+
+    (define (doit name init)
+      (define X init)
+      (coroutine
+	  (lambda ()
+	    (with-exception-handler
+		(lambda (E)
+		  (++ X))
+	      (lambda ()
+		(dotimes 5
+		  (add-result (list name (raise-continuable (void))))
+		  (yield)))))))
+
+    (check
+	(with-result
+	  (doit 'one 0)
+	  (doit 'two 10)
+	  (finish-coroutines)
+	  1)
+      => '(1 ((one 1) (two 11)
+	      (one 2) (two 12)
+	      (one 3) (two 13)
+	      (one 4) (two 14)
+	      (one 5) (two 15))))
 
     #f)
 
@@ -307,4 +343,5 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
+;; eval: (put 'dotimes 'scheme-indent-function 1)
 ;; End:
