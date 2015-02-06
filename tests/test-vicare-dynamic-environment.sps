@@ -308,6 +308,66 @@
 			   inner-thunk-in
 			   inner-out-guard outer-thunk-out outer-out-guard)))
 
+;;; --------------------------------------------------------------------
+;;; raising exceptions from in-guard and out-guard
+
+  (check	;raise exception from in-guard
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (escape E))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'in-guard)
+			(raise 1))
+		      (lambda ()
+			(add-result 'thunk))
+		      (lambda ()
+			(add-result 'out-guard))))))))
+    => '(1 (in-guard)))
+
+  (check	;raise exception from out-guard
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (escape E))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'in-guard))
+		      (lambda ()
+			(add-result 'thunk))
+		      (lambda ()
+			(add-result 'out-guard)
+			(raise 1))))))))
+    => '(1 (in-guard thunk out-guard)))
+
+  (check	;raise exception from thunk then from in-guard
+      (with-result
+	(define count 0)
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result (list 'handler E))
+		    (escape E))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'in-guard))
+		      (lambda ()
+			(add-result 'thunk)
+			(raise 1))
+		      (lambda ()
+			(add-result 'out-guard)
+			(raise 2))))))))
+    => '(2 (in-guard thunk (handler 1) out-guard (handler 2))))
+
   #t)
 
 

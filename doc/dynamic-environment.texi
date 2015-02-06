@@ -14,6 +14,7 @@ the meaning as defined by @rnrs{6}.
                                 the dynamic environment.
 * dynamic environment extent::  The dynamic extent of a function call.
 * dynamic environment guard::   On the implementation of @syntax{guard}.
+* dynamic environment except::  More cases of exception handling.
 @end menu
 
 @c page
@@ -715,6 +716,97 @@ follows:
 we jump in @syntax{guard}'s exception handler dynamic environment then
 immediately jump out in the @syntax{guard}'s clause expression dynamic
 environment.
+
+@c page
+@node dynamic environment except
+@appendixsec More cases of exception handling
+
+
+Let's imagine the following prelude for all the examples in this
+section:
+
+@example
+#!vicare
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+@end example
+
+This is what happens when we raise an exception from the in--guard thunk
+of a @func{dynamic-wind}:
+
+@example
+(with-result
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard)
+                  (raise 1))
+                (lambda ()
+                  (add-result 'thunk))
+                (lambda ()
+                  (add-result 'out-guard))))))))
+@result{} (1 (in-guard))
+@end example
+
+This is what happens when we raise an exception from the out--guard
+thunk of a @func{dynamic-wind}:
+
+@example
+(with-result
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard))
+                (lambda ()
+                  (add-result 'thunk))
+                (lambda ()
+                  (add-result 'out-guard)
+                  (raise 1))))))))
+@result{} (1 (in-guard thunk out-guard))
+@end example
+
+This is what happens when we raise an exception from the thunk of a
+@func{dynamic-wind} and the from the out--guard of the same:
+
+@example
+(with-result
+  (define count 0)
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (add-result (list 'handler E))
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard))
+                (lambda ()
+                  (add-result 'thunk)
+                  (raise 1))
+                (lambda ()
+                  (add-result 'out-guard)
+                  (raise 2))))))))
+@result{} (2 (in-guard
+       thunk     (handler 1)
+       out-guard (handler 2)))
+@end example
+
+@noindent
+the first exception is forgotten when @code{escape} attempts to exit the
+dynamic extent of the thunk.
 
 
 @c Local Variables:
