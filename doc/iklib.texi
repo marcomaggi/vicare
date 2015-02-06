@@ -45,6 +45,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib syntaxes::              Additional syntaxes.
 * iklib unwind-protect::        The unwind--protection mechanism.
 * iklib compensations::         Compensation stacks.
+* iklib coroutines::            Running coroutines.
 * iklib conditions::            Additional condition types.
 * iklib reader::                Extensions to the reader.
 * iklib expander::              Interface to the expander.
@@ -3916,8 +3917,7 @@ The following sample code finishes with the given return values and
 lines printed:
 
 @example
-(import (vicare)
-  (vicare language-extensions coroutines))
+(import (vicare))
 
 (define (print template . args)
   (apply fprintf (current-error-port) template args)
@@ -4458,6 +4458,296 @@ compensations stack.
 
 @defun push-compensation-thunk @var{thunk}
 Push the given thunk on the current compensations stack.
+@end defun
+
+@c page
+@node iklib coroutines
+@section Running coroutines
+
+
+@value{PRJNAME} implements coroutines on top of Scheme continuations.
+The implementation is a simple queue of escape functions: whenever
+coroutine @var{A} yields control to the ``next'' coroutine, it enqueues
+an escape function to its current continuation and causes the next
+escape function to be invoked.
+
+For discussions about other implementations of coroutines and
+continuations see @vicareref{HFWCoro, references}.
+
+@menu
+* iklib coroutines examples::   Usage examples for coroutines.
+* iklib coroutines api::        Programming interface to coroutines.
+@end menu
+
+@c page
+@node iklib coroutines examples
+@subsection Usage examples for coroutines
+
+
+Coroutines are created by the function @func{coroutine}; a coroutine in
+execution can yield control to the next coroutine with the function
+@func{yield}.  It is possible to enter a loop that runs all the
+coroutines until all of them are finished with the function
+@func{finish-coroutines}.
+
+All the examples in this section are to be considered as Scheme programs
+after the prelude:
+
+@example
+#!r6rs
+(import (vicare))
+
+(set-port-buffer-mode! (current-output-port)
+                       (buffer-mode line))
+@end example
+
+@noindent
+which allows the intertwining of coroutines to be seen by displaying
+strings on the current output port.
+
+@c ------------------------------------------------------------
+
+@subsubheading Two coroutines
+
+The following example runs two coroutines and waits for them to finish:
+
+@example
+(coroutine
+    (lambda ()
+      (display "one 1\n")
+      (yield)
+      (display "one 2\n")
+      (yield)
+      (display "one 3\n")))
+
+(coroutine
+    (lambda ()
+      (display "two 1\n")
+      (yield)
+      (display "two 2\n")
+      (yield)
+      (display "two 3\n")))
+
+(finish-coroutines)
+@end example
+
+@noindent
+the output is:
+
+@example
+one 1
+two 1
+one 2
+two 2
+one 3
+two 3
+@end example
+
+We see that to exit a coroutine we just return from its start function.
+
+@c ------------------------------------------------------------
+
+@subsubheading The main routine and a subroutine
+
+We can always consider the ordinary control flow of a program as a
+coroutine, the @dfn{main routine}; so the following program produces
+output similar to the one above:
+
+@example
+(coroutine
+    (lambda ()
+      (display "sub 1\n")
+      (yield)
+      (display "sub 2\n")
+      (yield)
+      (display "sub 3\n")))
+
+;;This runs in the main routine.
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+
+(finish-coroutines)
+@end example
+
+@noindent
+the output is:
+
+@example
+sub 1
+main 1
+sub 2
+main 2
+sub 3
+main 3
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Main routine alone
+
+It is perfectly all right to call @func{yield} and
+@func{finish-coroutines} from the main routine even when there are no
+subroutines:
+
+@example
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+(finish-coroutines)
+@end example
+
+@noindent
+the output of this program is just:
+
+@example
+main 1
+main 2
+main 3
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Finishing coroutines
+
+It is possible to call @func{finish-coroutines} from any coroutine, but
+we must be careful because if we let the main routine exit before all
+the routines are finished some computation will not take place.  In the
+following program the subroutine has more steps than the main routine:
+
+@example
+(coroutine
+    (lambda ()
+      (display "sub 1\n")
+      (yield)
+      (display "sub 2\n")
+      (yield)
+      (display "sub 3\n")
+      (yield)
+      (display "sub 4\n")
+      (yield)
+      (display "sub 5\n")
+      (finish-coroutines)))
+
+;; This runs in the main routine.
+(display "main 1\n")
+(yield)
+(display "main 2\n")
+(yield)
+(display "main 3\n")
+@end example
+
+@noindent
+and its output is:
+
+@example
+sub 1
+main 1
+sub 2
+main 2
+sub 3
+main 3
+@end example
+
+@noindent
+we see that @samp{sub 4} and @samp{sub 5} are not displayed.
+
+@c ------------------------------------------------------------
+
+@subsubheading Finish coroutines as exit hook
+
+It can be useful to register @func{finish-coroutines} as exit hook, so
+that upon exiting the process all the pending coroutines are correctly
+terminated.
+
+@example
+(coroutine
+    (lambda ()
+      (display "one 1\n")
+      (yield)
+      (display "one 2\n")
+      (yield)
+      (display "one 3\n")))
+
+(coroutine
+    (lambda ()
+      (display "two 1\n")
+      (yield)
+      (display "two 2\n")
+      (yield)
+      (display "two 3\n")))
+
+(exit-hooks (cons finish-coroutines (exit-hooks)))
+(exit)
+@end example
+
+@c page
+@node iklib coroutines api
+@subsection Programming interface to coroutines
+
+
+@defun coroutine @var{thunk}
+Create a new coroutine having @var{thunk} as function and enter it;
+return unspecified values.
+@end defun
+
+
+@defun yield
+Register the current continuation as coroutine, then run the next
+coroutine; return unspecified values.
+@end defun
+
+
+@defun finish-coroutines
+@defunx finish-coroutines @var{exit-loop?}
+Loop running the next coroutine until there are no more; return
+unspecified values.
+
+When the argument @var{exit-loop?} is used: it must be a thunk.  Before
+entering the next coroutine @var{exit-loop?} is called: if it returns
+non-false the loop exits, if it returns @false{} the loop continues.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+
+@deffn Syntax parallel @metao{thunk} @meta{thunk} @dots{}
+Evaluate the given thunks each in its own coroutine.  Return unspecified
+values when all the coroutines are finished.
+@end deffn
+
+
+@deffn Syntax monitor @meta{max-coroutines-count} @meta{thunk}
+Allow only a maximum number of coroutines to concurrently enter the
+evaluation of @meta{thunk}.
+
+The argument @meta{max-coroutines-count} must be an expression
+evaluating to a positive integer representing the maximum number of
+coroutines.  It is evaluated only once.
+
+The argument @meta{thunk} must be an expression evaluating to a thunk.
+It is evaluated only once.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Debugging utilities
+
+
+@defun reset-coroutines!
+Reset the internal state of the coroutine mechanism, discarding all the
+enqueued coroutines.  This function should not be used.
+@end defun
+
+
+@defun dump-coroutines
+Print, on the current error port, a symbolic expression listing the
+currently enqueued coroutine continuation procedures.  This is strictly
+for debugging purposes.
 @end defun
 
 @c page

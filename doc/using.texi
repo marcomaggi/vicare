@@ -596,7 +596,6 @@ libraries to group related libraries together.  For example,
 
 @example
 (vicare language-extensions amb)
-(vicare language-extensions coroutines))
 (vicare language-extensions infix))
 ...
 @end example

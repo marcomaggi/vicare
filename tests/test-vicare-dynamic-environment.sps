@@ -26,8 +26,7 @@
 
 #!vicare
 (import (vicare)
-  (vicare checks)
-  (vicare language-extensions coroutines))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare: dynamic environment\n")

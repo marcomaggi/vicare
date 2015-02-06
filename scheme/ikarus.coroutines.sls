@@ -1,4 +1,3 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: coroutines library
@@ -26,13 +25,18 @@
 
 
 #!vicare
-(library (vicare language-extensions coroutines)
+(library (ikarus coroutines)
   (export
     coroutine yield finish-coroutines
     reset-coroutines! dump-coroutines
-    parallel monitor)
-  (import (vicare)
-    (vicare unsafe operations))
+    ;;This is for internal use.
+    do-monitor)
+  (import (except (vicare)
+		  coroutine yield finish-coroutines
+		  reset-coroutines! dump-coroutines)
+    (only (ikarus.exceptions)
+	  run-unwind-protection-cleanup-upon-exit?)
+    (vicare system $pairs))
 
 
 (module COROUTINE-CONTINUATIONS-QUEUE
@@ -96,8 +100,6 @@
   ;;values.
   ;;
   (import COROUTINE-CONTINUATIONS-QUEUE)
-  (import (only (psyntax system $all)
-		run-unwind-protection-cleanup-upon-exit?))
   (parametrise ((run-unwind-protection-cleanup-upon-exit? #f))
     (call/cc
 	(lambda (reenter)
@@ -131,27 +133,9 @@
      (finish-coroutines exit-loop?))))
 
 
-;;;; parallel evaluation
-
-(define-syntax parallel
-  (syntax-rules ()
-    ((_ ?thunk0 ?thunk ...)
-     (let ((counter 0))
-       (begin
-	 (++ counter)
-	 (coroutine (lambda () (?thunk0) (-- counter))))
-       (begin
-	 (++ counter)
-	 (coroutine (lambda () (?thunk)  (-- counter))))
-       ...
-       (finish-coroutines (lambda ()
-			    (zero? counter)))))
-    ))
-
-
 ;;;; monitor
 
-(module (monitor)
+(module (do-monitor)
 
   (define-record-type sem
     (fields (mutable concurrent-coroutines-counter)
@@ -226,16 +210,6 @@
 	  (body-thunk)
 	(sem-release sem))))
 
-  (define-syntax monitor
-    ;;Allow only ?CONCURRENT-COROUTINES-MAXIMUM to concurrently enter the monitor.
-    ;;
-    (lambda (stx)
-      (syntax-case stx ()
-	((_ ?concurrent-coroutines-maximum ?thunk)
-	 (with-syntax (((KEY) (generate-temporaries '(sem-key))))
-	   #`(do-monitor (quote KEY) ?concurrent-coroutines-maximum ?thunk)))
-	)))
-
 ;;; --------------------------------------------------------------------
 
   (define (%concurrent-coroutines-maximum? obj)
@@ -244,9 +218,13 @@
 
   #| end of module: MONITOR |# )
 
+
 
 ;;;; done
 
 #| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; coding: utf-8-unix
+;; End:

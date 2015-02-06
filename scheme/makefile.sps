@@ -337,6 +337,7 @@
     "ikarus.syntax-utilities.sls"
     "ikarus.environment-inquiry.sls"
     "ikarus.object-utilities.sls"
+    "ikarus.coroutines.sls"
     "ikarus.main.sls"
     ))
 
@@ -521,6 +522,9 @@
      (until					(macro . until))
      (for					(macro . for))
      (returnable				(macro . returnable))
+;;;
+     (parallel					(macro . parallel))
+     (monitor					(macro . monitor))
 ;;;
      (infix					(macro . infix))
      (++					(macro . pre-incr))
@@ -2686,6 +2690,19 @@
     (vicare-built-with-srfi-enabled		v $language)
 
     (vicare-built-with-arguments-validation-enabled	v $language)
+
+;;; --------------------------------------------------------------------
+;;; coroutines
+
+    (coroutine					v $language)
+    (yield					v $language)
+    (finish-coroutines				v $language)
+    (reset-coroutines!				v $language)
+    (dump-coroutines				v $language)
+    (parallel					v $language)
+    (monitor					v $language)
+    ;;This is for internal use.
+    (do-monitor)
 
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions

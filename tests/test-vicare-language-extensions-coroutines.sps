@@ -26,7 +26,6 @@
 
 #!r6rs
 (import (vicare)
-  (vicare language-extensions coroutines)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

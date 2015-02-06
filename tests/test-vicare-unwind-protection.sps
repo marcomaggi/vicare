@@ -977,8 +977,6 @@
 
 (parametrise ((check-test-name	'coroutines))
 
-  (import (vicare language-extensions coroutines))
-
   (define (print template . args)
     (apply fprintf (current-error-port) template args)
     (yield))

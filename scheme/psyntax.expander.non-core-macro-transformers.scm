@@ -118,6 +118,10 @@
     ((compensate)			compensate-macro)
     ((push-compensation)		push-compensation-macro)
 
+    ;; coroutines
+    ((parallel)				parallel-macro)
+    ((monitor)				monitor-macro)
+
     ((pre-incr)				pre-incr-macro)
     ((pre-decr)				pre-decr-macro)
     ((post-incr)			post-incr-macro)
@@ -2026,6 +2030,45 @@
 	     )))
        (bless
 	`(begin0 (begin ,?alloc0 . ,alloc*) ,free))))
+    ))
+
+
+;;;; module non-core-macro-transformer: PARALLEL, MONITOR
+
+(define (parallel-macro expr-stx)
+  ;;Transformer function used  to expand Vicare's PARALLEL macros  from the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?thunk0 ?thunk* ...)
+     (let ((counter (gensym "counter")))
+       (bless
+	`(let ((,counter 0))
+	   (begin
+	     (set! ,counter (add1 ,counter))
+	     (coroutine (lambda () (?thunk0) (set! ,counter (sub1 ,counter)))))
+	   ,@(map (lambda (thunk)
+		    `(begin
+		       (set! ,counter (add1 ,counter))
+		       (coroutine (lambda () (,thunk)  (set! ,counter (sub1 ,counter))))))
+	       ?thunk*)
+	   (finish-coroutines (lambda ()
+				(zero? ,counter)))))))
+    ))
+
+(define (monitor-macro expr-stx)
+  ;;Transformer function  used to expand  Vicare's MONITOR macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  ;;Allow only ?CONCURRENT-COROUTINES-MAXIMUM to concurrently enter the monitor.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?concurrent-coroutines-maximum ?thunk)
+     (let ((KEY (gensym)))
+       (bless
+	`(do-monitor (quote ,KEY) ,?concurrent-coroutines-maximum ,?thunk))))
     ))
 
 

@@ -312,6 +312,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.command-line.sls				\
 	scheme/ikarus.conditions.sls				\
 	scheme/ikarus.control.sls				\
+	scheme/ikarus.coroutines.sls				\
 	scheme/ikarus.debugger.sls				\
 	scheme/ikarus.emergency.sls				\
 	scheme/ikarus.enumerations.sls				\

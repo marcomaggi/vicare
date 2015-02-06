@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus exceptions)
+(library (ikarus.exceptions)
   (export
     with-exception-handler
     raise		raise-continuable
