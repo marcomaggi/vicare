@@ -2047,7 +2047,7 @@
 	`(let ((,counter 0))
 	   (begin
 	     (set! ,counter (add1 ,counter))
-	     (coroutine (lambda () (?thunk0) (set! ,counter (sub1 ,counter)))))
+	     (coroutine (lambda () (,?thunk0) (set! ,counter (sub1 ,counter)))))
 	   ,@(map (lambda (thunk)
 		    `(begin
 		       (set! ,counter (add1 ,counter))
