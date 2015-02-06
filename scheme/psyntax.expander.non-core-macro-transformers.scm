@@ -3175,7 +3175,7 @@
 ;;
 ;;   (with-exception-handler ?handler ?thunk)
 ;;
-;;the ?handler procedure is evaluated in the dynamic environment of the ?THUNK, minus
+;;the ?HANDLER procedure is evaluated in the dynamic environment of the ?THUNK, minus
 ;;the exception  handler itself.  So, in  pseudo-code, a syntax use  with ELSE clause
 ;;must be expanded as follows:
 ;;
