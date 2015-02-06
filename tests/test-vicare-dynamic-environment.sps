@@ -283,6 +283,32 @@
 	    (1 in-guard) (1.3 thunk) (1 out-guard)
 	    (2 in-guard) (2.3 thunk) (2 out-guard))))
 
+  (check
+      (with-result
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer-in-guard))
+	    (lambda ()
+	      (add-result 'outer-thunk-in)
+	      (call/cc
+		  (lambda (escape)
+		    (dynamic-wind
+			(lambda ()
+			  (add-result 'inner-in-guard))
+			(lambda ()
+			  (add-result 'inner-thunk-in)
+			  (escape)
+			  (add-result 'inner-thunk-out))
+			(lambda ()
+			  (add-result 'inner-out-guard)))))
+	      (add-result 'outer-thunk-out)
+	      1)
+	    (lambda ()
+	      (add-result 'outer-out-guard))))
+    => '(1 (outer-in-guard outer-thunk-in inner-in-guard
+			   inner-thunk-in
+			   inner-out-guard outer-thunk-out outer-out-guard)))
+
   #t)
 
 
