@@ -13,6 +13,7 @@ the meaning as defined by @rnrs{6}.
 * dynamic environment parms::   Parameters: the archetype of state in
                                 the dynamic environment.
 * dynamic environment extent::  The dynamic extent of a function call.
+* dynamic environment guard::   On the implementation of @syntax{guard}.
 @end menu
 
 @c page
@@ -487,6 +488,233 @@ a function call without a normal return: such extent will be reentered
 later and continue to a normal return.
 @end itemize
 
+@c page
+!@node dynamic environment guard
+@appendixsec On the implementation of @syntax{guard}
+
+
+@value{PRJNAME}'s implementation of the @syntax{guard} syntax is really
+sophisticated because it has to deal with both the dynamic environment
+requirements of @rnrs{6} and the unwind protection mechanism defined by
+@value{PRJNAME} itself.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec About the dynamic environment
+
+In a syntax use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+if the @meta{body} raises an exception: one of the clauses will
+certainly be executed because there is an @clause{else} clause.  The
+@meta{body} might mutate the dynamic environment; all the @meta{test}
+and @meta{expr} expressions must be evaluated in the dynamic environment
+of the use of @syntax{guard}.
+
+In a syntax use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+if all the @meta{test} expressions evaluate to false: we must re--raise
+the exception using @func{raise-continuable}; so the syntax is
+``almost'' equivalent to:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   (raise-continuable E)))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+but: @meta{body} might mutate the dynamic environment; all the
+@meta{test} and @meta{expr} expressions must be evaluated in the dynamic
+environment of the use of @syntax{guard}; the @func{raise-continuable}
+in the @clause{else} clause must be evaluated the dynamic environment of
+the @meta{body}.
+
+We must remember that, when using:
+
+@example
+(with-exception-handler @meta{handler} @meta{thunk})
+@end example
+
+@noindent
+the @meta{handler} procedure is evaluated in the dynamic environment of
+the @meta{thunk}, minus the exception handler itself.  So, in
+pseudo--code, a syntax use with @clause{else} clause must be expanded as
+follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (reinstate-guard-continuation
+            (cond (@metao{test} @metao{expr})
+                  (@metai{test} @metai{expr})
+                  (else   @metaii{expr}))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+@noindent
+and, also in pseudo--code, a syntax use without @syntax{else} clause
+must be expanded as follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (save-exception-handler-continuation
+            (reinstate-guard-continuation
+             (cond (@metao{test} @metao{expr})
+                   (@metai{test} @metai{expr})
+                   (else
+                    (reinstate-exception-handler-continuation
+                      (raise-continuable E)))))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+@noindent
+notice how, in the exception handler, we have to jump out and in the
+dynamic environment of the exception handler itself.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec About the unwind--protection mechanism
+
+Let's focus on unwind proteciton in the case of raised exception.  When
+using:
+
+@example
+(with-unwind-protection @meta{cleanup} @meta{thunk})
+@end example
+
+@noindent
+the @meta{cleanup} is associated to the dynamic extent of the call to
+@meta{thunk}: when the dynamic extent is terminated (as defined by
+@value{PRJNAME}) the @meta{cleanup} is called.
+
+@value{PRJNAME} defines as termination event of a @syntax{guard}'s
+@meta{body} the execution of a @syntax{guard}'s clause that does not
+re--raise the exception.  For a @syntax{guard} use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+we can imagine the pseudo--code:
+
+@example
+(guard (E (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+          (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+          (else   (run-unwind-protection-cleanups) @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+and for a @syntax{guard} use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+we can imagine the pseudo--code:
+
+@example
+(guard (E (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+          (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+          (else   (raise-continuable E)))
+  @metao{body} @meta{body} ...)
+@end example
+
+By doing things this way: an exception raised by an @meta{expr} does not
+impede the execution of the cleanups.  If a @meta{test} raises an
+exception the cleanups will not be run, and there is nothing we can do
+about it; @meta{test} expressions are usually calls to predicates that
+recognise the condition type of @code{E}, so the risk of error is
+reduced.
+
+So, in pseudo--code, a syntax use with @clause{else} clause must be
+expanded as follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (reinstate-guard-continuation
+            (cond (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+                  (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+                  (else   (run-unwind-protection-cleanups) @metaii{expr}))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+@noindent
+and, also in pseudo--code, a syntax use without @clause{else} clause
+must be expanded as follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (save-exception-handler-continuation
+            (reinstate-guard-continuation
+             (cond (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+                   (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+                   (else   (reinstate-exception-handler-continuation
+                            (raise-continuable E)))))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+But how is @func{run-unwind-protection-cleanups} implemented?  To cause
+the cleanups to be called we must cause an exit from the dynamic extent
+of the @meta{thunk}s.  This is a sophisticated operation implemented as
+follows:
+
+@example
+(define (run-unwind-protection-cleanups)
+  (run-unwind-protection-cleanup-upon-exit? #t)
+  (save-clause-expression-continuation
+   (reinstate-exception-handler-continuation
+    (reinstate-clause-expression-continuation))))
+@end example
+
+@noindent
+we jump in @syntax{guard}'s exception handler dynamic environment then
+immediately jump out in the @syntax{guard}'s clause expression dynamic
+environment.
 
 
 @c Local Variables:
