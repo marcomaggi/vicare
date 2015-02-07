@@ -1200,6 +1200,670 @@
   #t)
 
 
+(parametrise ((check-test-name	'exceptions-from-guards))
+
+;;;What  happens when  we  raise an  exception  from the  in-guard  and out-guard  of
+;;;DYNAMIC-WIND?
+
+  (check	;no exceptions raised
+    (with-result
+
+      (define (inner)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'inner/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'inner/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'inner/inner-in-guard))
+		      (lambda ()
+			(add-result 'inner/thunk))
+		      (lambda ()
+			(add-result 'inner/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'inner/outer-out-guard))))
+
+      (define (middle)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'middle/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'middle/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'middle/inner-in-guard))
+		      (lambda ()
+			(add-result 'middle/thunk-in)
+			(inner)
+			(add-result 'middle/thunk-out))
+		      (lambda ()
+			(add-result 'middle/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'middle/outer-out-guard))))
+
+      (define (outer)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'outer/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'outer/inner-in-guard))
+		      (lambda ()
+			(add-result 'outer/thunk-in)
+			(middle)
+			(add-result 'outer/thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'outer/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'outer/outer-out-guard))))
+
+      (outer))
+    => '(1 (outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/thunk-in
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    middle/thunk-in
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+	    inner/thunk
+	    inner/inner-out-guard
+	    inner/***cleanup***
+	    inner/outer-out-guard
+	    middle/thunk-out
+	    middle/inner-out-guard
+	    middle/***cleanup***
+	    middle/outer-out-guard
+	    outer/thunk-out
+	    outer/inner-out-guard
+	    outer/***cleanup***
+	    outer/outer-out-guard)))
+
+;;; --------------------------------------------------------------------
+;;; raise exception from inner thunk
+
+  (check
+    (with-result
+
+      (define (inner)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'inner/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'inner/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'inner/inner-in-guard))
+		      (lambda ()
+			(add-result 'inner/thunk-in/raise)
+			(raise 2)
+			(add-result 'inner/thunk-out))
+		      (lambda ()
+			(add-result 'inner/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'inner/outer-out-guard))))
+
+      (define (middle)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'middle/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'middle/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'middle/inner-in-guard))
+		      (lambda ()
+			(add-result 'middle/thunk-in)
+			(inner)
+			(add-result 'middle/thunk-out))
+		      (lambda ()
+			(add-result 'middle/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'middle/outer-out-guard))))
+
+      (define (outer)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'outer/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'outer/inner-in-guard))
+		      (lambda ()
+			(add-result 'outer/thunk-in)
+			(middle)
+			(add-result 'outer/thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'outer/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'outer/outer-out-guard))))
+
+      (guard (E ((begin
+		   (add-result 'guard-test)
+		   #t)
+		 (add-result 'guard-expr)
+		 E))
+	(outer)))
+    => '(2 (outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/thunk-in
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    middle/thunk-in
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+
+	    inner/thunk-in/raise
+
+	    inner/inner-out-guard
+	    inner/outer-out-guard
+	    middle/inner-out-guard
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/outer-out-guard
+
+	    guard-test
+
+	    outer/outer-in-guard
+	    outer/inner-in-guard
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+
+	    inner/inner-out-guard
+	    inner/***cleanup***
+	    inner/outer-out-guard
+	    middle/inner-out-guard
+	    middle/***cleanup***
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/***cleanup***
+	    outer/outer-out-guard
+
+	    guard-expr)))
+
+;;; --------------------------------------------------------------------
+;;; raise exception from middle/inner-out-guard
+
+  (check
+    (with-result
+
+      (define (inner)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'inner/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'inner/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'inner/inner-in-guard))
+		      (lambda ()
+			(add-result 'inner/thunk))
+		      (lambda ()
+			(add-result 'inner/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'inner/outer-out-guard))))
+
+      (define (middle)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'middle/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'middle/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'middle/inner-in-guard))
+		      (lambda ()
+			(add-result 'middle/thunk-in)
+			(inner)
+			(add-result 'middle/thunk-out))
+		      (lambda ()
+			(add-result 'middle/inner-out-guard/raise)
+			(raise 2))))))
+	    (lambda ()
+	      (add-result 'middle/outer-out-guard))))
+
+      (define (outer)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'outer/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'outer/inner-in-guard))
+		      (lambda ()
+			(add-result 'outer/thunk-in)
+			(middle)
+			(add-result 'outer/thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'outer/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'outer/outer-out-guard))))
+
+      (guard (E ((begin
+		   (add-result 'guard-test)
+		   #t)
+		 (add-result 'guard-expr)
+		 E))
+	(outer)))
+    => '(2 (outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/thunk-in
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    middle/thunk-in
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+	    inner/thunk
+	    inner/inner-out-guard
+	    inner/***cleanup***
+	    inner/outer-out-guard
+	    middle/thunk-out
+
+	    middle/inner-out-guard/raise
+
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/outer-out-guard
+
+	    guard-test
+
+	    outer/outer-in-guard
+	    outer/inner-in-guard
+	    middle/outer-in-guard
+	    middle/***cleanup***
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/***cleanup***
+	    outer/outer-out-guard
+
+	    guard-expr)))
+
+;;; --------------------------------------------------------------------
+;;; raise exception from middle/outer-out-guard
+
+  (check
+    (with-result
+
+      (define (inner)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'inner/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'inner/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'inner/inner-in-guard))
+		      (lambda ()
+			(add-result 'inner/thunk))
+		      (lambda ()
+			(add-result 'inner/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'inner/outer-out-guard))))
+
+      (define (middle)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'middle/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'middle/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'middle/inner-in-guard))
+		      (lambda ()
+			(add-result 'middle/thunk-in)
+			(inner)
+			(add-result 'middle/thunk-out))
+		      (lambda ()
+			(add-result 'middle/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'middle/outer-out-guard/raise)
+	      (raise 2))))
+
+      (define (outer)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'outer/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'outer/inner-in-guard))
+		      (lambda ()
+			(add-result 'outer/thunk-in)
+			(middle)
+			(add-result 'outer/thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'outer/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'outer/outer-out-guard))))
+
+      (guard (E ((begin
+		   (add-result 'guard-test)
+		   #t)
+		 (add-result 'guard-expr)
+		 E))
+	(outer)))
+    => '(2 (outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/thunk-in
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    middle/thunk-in
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+	    inner/thunk
+	    inner/inner-out-guard
+	    inner/***cleanup***
+	    inner/outer-out-guard
+	    middle/thunk-out
+	    middle/inner-out-guard
+	    middle/***cleanup***
+
+	    middle/outer-out-guard/raise
+
+	    outer/inner-out-guard
+	    outer/outer-out-guard
+
+	    guard-test
+
+	    outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/inner-out-guard
+	    outer/***cleanup***
+	    outer/outer-out-guard
+
+	    guard-expr)))
+
+;;; --------------------------------------------------------------------
+;;; raise exception from inner/thunk and then from middle/inner-out-guard
+
+  ;;The inner/cleanup is never called.
+  ;;
+  (check
+    (with-result
+
+      (define (inner)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'inner/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'inner/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'inner/inner-in-guard))
+		      (lambda ()
+			(add-result 'inner/thunk-in/raise)
+			(raise 2)
+			(add-result 'inner/thunk-out))
+		      (lambda ()
+			(add-result 'inner/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'inner/outer-out-guard))))
+
+      (define (middle)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'middle/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'middle/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'middle/inner-in-guard))
+		      (lambda ()
+			(add-result 'middle/thunk-in)
+			(inner)
+			(add-result 'middle/thunk-out))
+		      (lambda ()
+			(add-result 'middle/inner-out-guard/raise)
+			(raise 3))))))
+	    (lambda ()
+	      (add-result 'middle/outer-out-guard))))
+
+      (define (outer)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'outer/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'outer/inner-in-guard))
+		      (lambda ()
+			(add-result 'outer/thunk-in)
+			(middle)
+			(add-result 'outer/thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'outer/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'outer/outer-out-guard))))
+
+      (guard (E ((begin
+		   (add-result 'guard-test)
+		   #t)
+		 (add-result 'guard-expr)
+		 E))
+	(outer)))
+    => '(3 (outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/thunk-in
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    middle/thunk-in
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+
+	    inner/thunk-in/raise
+
+	    inner/inner-out-guard
+	    inner/outer-out-guard
+
+	    middle/inner-out-guard/raise
+
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/outer-out-guard
+
+	    guard-test
+
+	    outer/outer-in-guard
+	    outer/inner-in-guard
+	    middle/outer-in-guard
+	    middle/***cleanup***
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/***cleanup***
+	    outer/outer-out-guard
+	    guard-expr)))
+
+;;; --------------------------------------------------------------------
+;;; raise exception from inner/thunk and then from middle/inner-out-guard 2nd time
+
+  ;;All the cleanups are called.
+  ;;
+  (check 'this
+    (with-result
+
+      (define (inner)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'inner/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'inner/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'inner/inner-in-guard))
+		      (lambda ()
+			(add-result 'inner/thunk-in/raise)
+			(raise 2)
+			(add-result 'inner/thunk-out))
+		      (lambda ()
+			(add-result 'inner/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'inner/outer-out-guard))))
+
+      (define (middle)
+	(define counter 0)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'middle/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'middle/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'middle/inner-in-guard))
+		      (lambda ()
+			(add-result 'middle/thunk-in)
+			(inner)
+			(add-result 'middle/thunk-out))
+		      (lambda ()
+			(add-result 'middle/inner-out-guard/raise)
+			(++ counter)
+			(when (= 2 counter)
+			  (raise 3)))))))
+	    (lambda ()
+	      (add-result 'middle/outer-out-guard))))
+
+      (define (outer)
+	(dynamic-wind
+	    (lambda ()
+	      (add-result 'outer/outer-in-guard))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'outer/***cleanup***))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'outer/inner-in-guard))
+		      (lambda ()
+			(add-result 'outer/thunk-in)
+			(middle)
+			(add-result 'outer/thunk-out)
+			1)
+		      (lambda ()
+			(add-result 'outer/inner-out-guard))))))
+	    (lambda ()
+	      (add-result 'outer/outer-out-guard))))
+
+      (guard (E ((begin
+		   (add-result 'guard-test)
+		   #t)
+		 (add-result 'guard-expr)
+		 E))
+	(outer)))
+    => '(3 (outer/outer-in-guard
+	    outer/inner-in-guard
+	    outer/thunk-in
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    middle/thunk-in
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+	    inner/thunk-in/raise
+	    inner/inner-out-guard
+	    inner/outer-out-guard
+
+	    middle/inner-out-guard/raise
+
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/outer-out-guard
+
+	    guard-test
+
+	    outer/outer-in-guard
+	    outer/inner-in-guard
+	    middle/outer-in-guard
+	    middle/inner-in-guard
+	    inner/outer-in-guard
+	    inner/inner-in-guard
+	    inner/inner-out-guard
+	    inner/***cleanup***
+	    inner/outer-out-guard
+
+	    middle/inner-out-guard/raise
+
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/outer-out-guard
+	    guard-test
+	    outer/outer-in-guard
+	    outer/inner-in-guard
+	    middle/outer-in-guard
+	    middle/***cleanup***
+	    middle/outer-out-guard
+	    outer/inner-out-guard
+	    outer/***cleanup***
+	    outer/outer-out-guard
+
+	    guard-expr)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -3226,6 +3226,11 @@ release resources, like input/output ports and database connections.
 @ref{resources, Allocating and releasing resources}, for an overview of
 resource management under @value{PRJNAME}.
 
+@quotation
+@strong{NOTE} The unwind protection mechanism may misbehave in some
+cases; @ref{iklib unwind-protect problems}, for details.
+@end quotation
+
 @menu
 * iklib unwind-protect intro::       Introduction to the unwind
                                      protection mechanism.
@@ -3244,6 +3249,7 @@ resource management under @value{PRJNAME}.
 * iklib unwind-protect reenter::     Handling reentering continuations.
 * iklib unwind-protect dyn-env::     Clean-up thunks and the dynamic
                                      environment.
+* iklib unwind-protect problems::    Known problems.
 @end menu
 
 @c page
@@ -4181,6 +4187,25 @@ Changing the environment inside @meta{thunk} does not affect
 @result{} (2 (thunk-in inner-parm
        cleanup-in outer-parm cleanup-out))
 @end example
+
+@c page
+@node iklib unwind-protect problems
+@subsection Known problems
+
+
+The unwind protection mechanism may misbehave in some cases.
+Specifically the clean--up procedure may not be called in the following
+cases:
+
+@itemize
+@item
+An exception is raised by a thunk and, while handling it, a second
+exception is raised.
+
+@item
+An exception is raised by the in--guard or out--guard thunks of a call
+to @func{dynamic-wind}.
+@end itemize
 
 @c page
 @node iklib compensations
