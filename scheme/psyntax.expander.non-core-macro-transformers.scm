@@ -96,6 +96,8 @@
     ((set-cons!)			set-cons!-macro)
 
     ((with-escape-handlers-stack)	with-escape-handlers-stack-macro)
+    ((default-with-escape-handler)	default-with-escape-handler-macro)
+    ((default-run-escape-handlers)	default-run-escape-handlers-macro)
 
     ((with-unwind-protection)		with-unwind-protection-macro)
     ((unwind-protect)			unwind-protect-macro)
@@ -1774,6 +1776,28 @@
 				      (unless (null? escape-handlers)
 					(%run-escape-handlers escape-handlers))))))
 	   ,?body . ,?body*))))
+    ))
+
+(define (default-with-escape-handler-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  DEFAULT-WITH-ESCAPE-HANDLER macros
+  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
+  ;;a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?handler ?body)
+     (bless
+      `(,?body)))
+    ))
+
+(define (default-run-escape-handlers-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  DEFAULT-RUN-ESCAPE-HANDLERS macros
+  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
+  ;;a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_)
+     (bless
+      `(,void)))
     ))
 
 
