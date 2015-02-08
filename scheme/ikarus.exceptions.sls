@@ -21,7 +21,7 @@
     raise		raise-continuable
     error		warning
     assertion-violation	die
-    %run-escape-handlers
+    run-escape-handler-thunks
     run-unwind-protection-cleanup-upon-exit?)
   (import (except (vicare)
 		  with-exception-handler
@@ -95,11 +95,13 @@
   #| end of module |# )
 
 
-(define (%run-escape-handlers handlers)
+(define (run-escape-handler-thunks handlers)
   (for-each (lambda (handler)
-	      (guard (E (else
-			 (void)))
-		(handler)))
+	      (call/cc
+		  (lambda (escape)
+		    (with-exception-handler
+			escape
+		      handler))))
     handlers))
 
 (define run-unwind-protection-cleanup-upon-exit?

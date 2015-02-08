@@ -1774,7 +1774,7 @@
 	      (run-escape-handlers (syntax-rules ()
 				     ((_)
 				      (unless (null? escape-handlers)
-					(%run-escape-handlers escape-handlers))))))
+					(run-escape-handler-thunks escape-handlers))))))
 	   ,?body . ,?body*))))
     ))
 

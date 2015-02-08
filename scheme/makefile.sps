@@ -2525,7 +2525,7 @@
     ;;NOTE These "escape handlers" bindings must  be exported only by (psyntax system
     ;;$all).  With  the exception of:
     ;;
-    ;;   %RUN-ESCAPE-HANDLERS
+    ;;   RUN-ESCAPE-HANDLER-THUNKS
     ;;   RUN-UNWIND-PROTECTION-CLEANUP-UPON-EXIT?
     ;;
     ;;which are  really private, the  other bindings  could be exported  by (vicare).
@@ -2537,7 +2537,7 @@
     (run-escape-handlers)
     (default-with-escape-handler)
     (default-run-escape-handlers)
-    (%run-escape-handlers)
+    (run-escape-handler-thunks)
     (run-unwind-protection-cleanup-upon-exit?)
 ;;;
     (with-blocked-exceptions			v $language)
