@@ -449,6 +449,12 @@
   #t)
 
 
+(parametrise ((check-test-name	'suspend-and-resume))
+
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

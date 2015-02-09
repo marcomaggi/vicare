@@ -126,25 +126,28 @@
   (%coroutine-uid))
 
 
+(define (%enqueue-coroutine thunk)
+  (import COROUTINE-CONTINUATIONS-QUEUE)
+  (call/cc
+      (lambda (reenter)
+	(enqueue! reenter)
+	(thunk)
+	((dequeue!)))))
+
 (define (coroutine thunk)
   ;;Create a new coroutine having THUNK as function and enter it.  Return unspecified
   ;;values.
   ;;
-  (import COROUTINE-CONTINUATIONS-QUEUE)
   (parametrise
       ((run-unwind-protection-cleanup-upon-exit? #f)
        (%coroutine-uid                           (gensym "coroutine-uid")))
-    (call/cc
-	(lambda (reenter)
-	  (enqueue! reenter)
-	  (thunk)
-	  ((dequeue!))))))
+    (%enqueue-coroutine thunk)))
 
 (define (yield)
   ;;Register  the current  continuation as  coroutine, then  run the  next coroutine.
   ;;Return unspecified values.
   ;;
-  (coroutine void))
+  (%enqueue-coroutine void))
 
 (case-define finish-coroutines
   (()
