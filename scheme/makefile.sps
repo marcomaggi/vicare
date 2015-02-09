@@ -2716,7 +2716,7 @@
     (coroutine					v $language)
     (yield					v $language)
     (finish-coroutines				v $language)
-    (coroutine-uid				v $language)
+    (current-coroutine-uid			v $language)
     (coroutine-uid?				v $language)
     (suspend-coroutine				v $language)
     (resume-coroutine				v $language)

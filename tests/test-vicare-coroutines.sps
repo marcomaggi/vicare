@@ -417,31 +417,31 @@
 	    (unwind-protect
 		(begin
 		  (set! a 1.1)
-		  (print "unwind-protect sub 1.1: ~a ~s\n" a (coroutine-uid))
+		  (print "unwind-protect sub 1.1: ~a ~s\n" a (current-coroutine-uid))
 		  (set! a 1.2)
-		  (print "unwind-protect sub 1.2: ~a ~s\n" a (coroutine-uid))
+		  (print "unwind-protect sub 1.2: ~a ~s\n" a (current-coroutine-uid))
 		  (set! a 1.3)
-		  (print "unwind-protect sub 1.3: ~a ~s\n" a (coroutine-uid)))
+		  (print "unwind-protect sub 1.3: ~a ~s\n" a (current-coroutine-uid)))
 	      (set! a 1.4)))
 	  (lambda ()
 	    (unwind-protect
 		(begin
 		  (set! b 2.1)
-		  (print "unwind-protect sub 2.1: ~a ~s\n" b (coroutine-uid))
+		  (print "unwind-protect sub 2.1: ~a ~s\n" b (current-coroutine-uid))
 		  (set! b 2.2)
-		  (print "unwind-protect sub 2.2: ~a ~s\n" b (coroutine-uid))
+		  (print "unwind-protect sub 2.2: ~a ~s\n" b (current-coroutine-uid))
 		  (set! b 2.3)
-		  (print "unwind-protect sub 2.3: ~a ~s\n" b (coroutine-uid)))
+		  (print "unwind-protect sub 2.3: ~a ~s\n" b (current-coroutine-uid)))
 	      (set! b 2.4)))
 	  (lambda ()
 	    (unwind-protect
 		(begin
 		  (set! c 3.1)
-		  (print "unwind-protect sub 3.1: ~a ~s\n" c (coroutine-uid))
+		  (print "unwind-protect sub 3.1: ~a ~s\n" c (current-coroutine-uid))
 		  (set! c 3.2)
-		  (print "unwind-protect sub 3.2: ~a ~s\n" c (coroutine-uid))
+		  (print "unwind-protect sub 3.2: ~a ~s\n" c (current-coroutine-uid))
 		  (set! c 3.3)
-		  (print "unwind-protect sub 3.3: ~a ~s\n" c (coroutine-uid)))
+		  (print "unwind-protect sub 3.3: ~a ~s\n" c (current-coroutine-uid)))
 	      (set! c 3.4))))
 	(values a b c))
     => 1.4 2.4 3.4)
@@ -466,7 +466,7 @@
 
 	(coroutine
 	    (lambda ()
-	      (set! one (coroutine-uid))
+	      (set! one (current-coroutine-uid))
 	      (log-action one enter)
 	      (yield)
 	      (log-action one suspending)

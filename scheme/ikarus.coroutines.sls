@@ -28,14 +28,14 @@
 (library (ikarus coroutines)
   (export
     coroutine yield finish-coroutines
-    coroutine-uid coroutine-uid?
+    current-coroutine-uid coroutine-uid?
     suspend-coroutine resume-coroutine suspended-coroutine?
     reset-coroutines! dump-coroutines
     ;;This is for internal use.
     do-monitor)
   (import (except (vicare)
 		  coroutine yield finish-coroutines
-		  coroutine-uid coroutine-uid?
+		  current-coroutine-uid coroutine-uid?
 		  suspend-coroutine resume-coroutine suspended-coroutine?
 		  reset-coroutines! dump-coroutines)
     (only (ikarus.exceptions)
@@ -118,16 +118,16 @@
 
 ;;;; unique identifier
 
-(define %coroutine-uid
+(define %current-coroutine-uid
   (make-parameter (expand-time-gensym "main-coroutine-uid")))
 
-(define (coroutine-uid)
+(define (current-coroutine-uid)
   ;;Return a gensym acting as unique identifier for the current coroutine.
   ;;
   ;;We do not want to expose the parameter in the public API: it must be immutable in
   ;;the user code.
   ;;
-  (%coroutine-uid))
+  (%current-coroutine-uid))
 
 (define (coroutine-uid? obj)
   (and (symbol? obj)
@@ -187,7 +187,7 @@
   (set-symbol-value! uid (make-<coroutine-state>))
   (parametrise
       ((run-unwind-protection-cleanup-upon-exit? #f)
-       (%coroutine-uid                           uid))
+       (%current-coroutine-uid                           uid))
     (%enqueue-coroutine thunk)))
 
 (define (yield)
@@ -230,12 +230,12 @@
   ;;enqueue the current continuation to be reinstated later.
   ;;
   (import COROUTINE-CONTINUATIONS-QUEUE)
-  (let ((state (%coroutine-state (coroutine-uid))))
+  (let ((state (%coroutine-state (current-coroutine-uid))))
     (cond ((<coroutine-state>-reinstate-procedure state)
 	   => (lambda (reinstate)
 		(assertion-violation __who__
 		  "attempt to suspend an already suspended coroutine"
-		  (coroutine-uid))))
+		  (current-coroutine-uid))))
 	  (else
 	   (call/cc
 	       (lambda (escape)
