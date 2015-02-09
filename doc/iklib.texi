@@ -4737,6 +4737,11 @@ entering the next coroutine @var{exit-loop?} is called: if it returns
 non-false the loop exits, if it returns @false{} the loop continues.
 @end defun
 
+
+@defun coroutine-uid
+Return a gensym acting as unique identifier for the current coroutine.
+@end defun
+
 @c ------------------------------------------------------------------------
 
 

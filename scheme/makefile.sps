@@ -2715,6 +2715,7 @@
 
     (coroutine					v $language)
     (yield					v $language)
+    (coroutine-uid				v $language)
     (finish-coroutines				v $language)
     (reset-coroutines!				v $language)
     (dump-coroutines				v $language)

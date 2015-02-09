@@ -402,6 +402,53 @@
   #t)
 
 
+(parametrise ((check-test-name	'uid))
+
+  (define (print template . args)
+    (apply fprintf (current-error-port) template args)
+    (yield))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((a #f) (b #f) (c #f))
+	(parallel
+	  (lambda ()
+	    (unwind-protect
+		(begin
+		  (set! a 1.1)
+		  (print "unwind-protect sub 1.1: ~a ~s\n" a (coroutine-uid))
+		  (set! a 1.2)
+		  (print "unwind-protect sub 1.2: ~a ~s\n" a (coroutine-uid))
+		  (set! a 1.3)
+		  (print "unwind-protect sub 1.3: ~a ~s\n" a (coroutine-uid)))
+	      (set! a 1.4)))
+	  (lambda ()
+	    (unwind-protect
+		(begin
+		  (set! b 2.1)
+		  (print "unwind-protect sub 2.1: ~a ~s\n" b (coroutine-uid))
+		  (set! b 2.2)
+		  (print "unwind-protect sub 2.2: ~a ~s\n" b (coroutine-uid))
+		  (set! b 2.3)
+		  (print "unwind-protect sub 2.3: ~a ~s\n" b (coroutine-uid)))
+	      (set! b 2.4)))
+	  (lambda ()
+	    (unwind-protect
+		(begin
+		  (set! c 3.1)
+		  (print "unwind-protect sub 3.1: ~a ~s\n" c (coroutine-uid))
+		  (set! c 3.2)
+		  (print "unwind-protect sub 3.2: ~a ~s\n" c (coroutine-uid))
+		  (set! c 3.3)
+		  (print "unwind-protect sub 3.3: ~a ~s\n" c (coroutine-uid)))
+	      (set! c 3.4))))
+	(values a b c))
+    => 1.4 2.4 3.4)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -27,16 +27,33 @@
 #!vicare
 (library (ikarus coroutines)
   (export
-    coroutine yield finish-coroutines
+    coroutine yield finish-coroutines coroutine-uid
     reset-coroutines! dump-coroutines
     ;;This is for internal use.
     do-monitor)
   (import (except (vicare)
-		  coroutine yield finish-coroutines
+		  coroutine yield finish-coroutines coroutine-uid
 		  reset-coroutines! dump-coroutines)
     (only (ikarus.exceptions)
 	  run-unwind-protection-cleanup-upon-exit?)
     (vicare system $pairs))
+
+
+;;;; helpers
+
+(define-syntax (expand-time-gensym stx)
+  (syntax-case stx ()
+    ((_ ?template)
+     (let* ((tmp (syntax->datum #'?template))
+	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	    (str (apply string-append tmp (map (lambda (N)
+						 (string-append "." (number->string N)))
+					    fxs)))
+	    (sym (gensym str)))
+       (with-syntax
+	   ((SYM (datum->syntax #'here sym)))
+	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	 #'(quote SYM))))))
 
 
 (module COROUTINE-CONTINUATIONS-QUEUE
@@ -95,12 +112,28 @@
   (import COROUTINE-CONTINUATIONS-QUEUE))
 
 
+;;;; unique identifier
+
+(define %coroutine-uid
+  (make-parameter (expand-time-gensym "main-coroutine-uid")))
+
+(define (coroutine-uid)
+  ;;Return a gensym acting as unique identifier for the current coroutine.
+  ;;
+  ;;We do not want to expose the parameter in the public API: it must be immutable in
+  ;;the user code.
+  ;;
+  (%coroutine-uid))
+
+
 (define (coroutine thunk)
   ;;Create a new coroutine having THUNK as function and enter it.  Return unspecified
   ;;values.
   ;;
   (import COROUTINE-CONTINUATIONS-QUEUE)
-  (parametrise ((run-unwind-protection-cleanup-upon-exit? #f))
+  (parametrise
+      ((run-unwind-protection-cleanup-upon-exit? #f)
+       (%coroutine-uid                           (gensym "coroutine-uid")))
     (call/cc
 	(lambda (reenter)
 	  (enqueue! reenter)
