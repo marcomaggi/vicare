@@ -27,12 +27,16 @@
 #!vicare
 (library (ikarus coroutines)
   (export
-    coroutine yield finish-coroutines coroutine-uid
+    coroutine yield finish-coroutines
+    coroutine-uid coroutine-uid?
+    suspend-coroutine resume-coroutine suspended-coroutine?
     reset-coroutines! dump-coroutines
     ;;This is for internal use.
     do-monitor)
   (import (except (vicare)
-		  coroutine yield finish-coroutines coroutine-uid
+		  coroutine yield finish-coroutines
+		  coroutine-uid coroutine-uid?
+		  suspend-coroutine resume-coroutine suspended-coroutine?
 		  reset-coroutines! dump-coroutines)
     (only (ikarus.exceptions)
 	  run-unwind-protection-cleanup-upon-exit?)
@@ -125,7 +129,48 @@
   ;;
   (%coroutine-uid))
 
+(define (coroutine-uid? obj)
+  (and (symbol? obj)
+       (symbol-bound? obj)
+       (<coroutine-state>? (symbol-value obj))))
+
 
+;;;; coroutine state
+
+(define-record-type <coroutine-state>
+  (nongenerative vicare:coroutine:<coroutine-state>)
+  (fields (mutable reinstate-procedure)
+		;False or a procedure that reinstates the coroutine continuation.  It
+		;is used when suspending a coroutine.
+	  #| end of FIELDS |# )
+  (protocol
+   (lambda (make-record)
+     (lambda ()
+       (let ((reinstate-procedure #f))
+	 (make-record reinstate-procedure)))))
+  #| end of DEFINE-RECORD-TYPE |# )
+
+(define* (coroutine-state {uid symbol?})
+  ;;Given a coroutine UID: return the associated state procedure.
+  ;;
+  (if (symbol-bound? uid)
+      (let ((state (%coroutine-state uid)))
+	(if (<coroutine-state>? state)
+	    state
+	  (procedure-argument-violation __who__
+	    "expected a coroutine UID symbol as argument" uid)))
+    (procedure-argument-violation __who__
+      "expected bound symbol as coroutine UID" uid)))
+
+(define-syntax-rule (%coroutine-state ?uid)
+  ;;Given a  coroutine UID:  return the  associated state  procedure.  ?UID  is *not*
+  ;;validated as UID.
+  ;;
+  (symbol-value ?uid))
+
+
+;;;; basic operations
+
 (define (%enqueue-coroutine thunk)
   (import COROUTINE-CONTINUATIONS-QUEUE)
   (call/cc
@@ -138,9 +183,11 @@
   ;;Create a new coroutine having THUNK as function and enter it.  Return unspecified
   ;;values.
   ;;
+  (define uid (gensym "coroutine-uid"))
+  (set-symbol-value! uid (make-<coroutine-state>))
   (parametrise
       ((run-unwind-protection-cleanup-upon-exit? #f)
-       (%coroutine-uid                           (gensym "coroutine-uid")))
+       (%coroutine-uid                           uid))
     (%enqueue-coroutine thunk)))
 
 (define (yield)
@@ -167,6 +214,45 @@
 	       (exit-loop?))
      (yield)
      (finish-coroutines exit-loop?))))
+
+
+;;;; suspending and resuming
+
+(define* (suspended-coroutine? {uid coroutine-uid?})
+  ;;Return true if UID is the unique identifier of a suspended coroutine.
+  ;;
+  (let ((state (%coroutine-state uid)))
+    (and (<coroutine-state>-reinstate-procedure state)
+	 #t)))
+
+(define (suspend-coroutine)
+  ;;Suspend the current  coroutine.  Yield control to the next  coroutine, but do not
+  ;;enqueue the current continuation to be reinstated later.
+  ;;
+  (import COROUTINE-CONTINUATIONS-QUEUE)
+  (let ((state (%coroutine-state (coroutine-uid))))
+    (cond ((<coroutine-state>-reinstate-procedure state)
+	   => (lambda (reinstate)
+		(assertion-violation __who__
+		  "attempt to suspend an already suspended coroutine"
+		  (coroutine-uid))))
+	  (else
+	   (call/cc
+	       (lambda (escape)
+		 (<coroutine-state>-reinstate-procedure-set! state escape)
+		 ((dequeue!))))))))
+
+(define* (resume-coroutine {uid coroutine-uid?})
+  ;;Resume a previously suspended coroutine.
+  ;;
+  (let ((state (%coroutine-state uid)))
+    (cond ((<coroutine-state>-reinstate-procedure state)
+	   => (lambda (reinstate)
+		(<coroutine-state>-reinstate-procedure-set! state #f)
+		(%enqueue-coroutine reinstate)))
+	  (else
+	   (assertion-violation __who__
+	     "attempt to resume a non-suspended coroutine" uid)))))
 
 
 ;;;; monitor

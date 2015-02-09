@@ -451,6 +451,48 @@
 
 (parametrise ((check-test-name	'suspend-and-resume))
 
+  (define (print template . args)
+    (apply fprintf (current-error-port) template args)
+    (yield))
+
+  (define-syntax-rule (log-action ?id ?action . ?args)
+    (add-result (list (quote ?id) (quote ?action) . ?args)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+	(define one)
+
+	(coroutine
+	    (lambda ()
+	      (set! one (coroutine-uid))
+	      (log-action one enter)
+	      (yield)
+	      (log-action one suspending)
+	      (suspend-coroutine)
+	      (log-action one resumed)
+	      (log-action one done)))
+
+	(coroutine
+	    (lambda ()
+	      (log-action two enter)
+	      (yield)
+	      (log-action two suspended? (suspended-coroutine? one))
+	      (log-action two resuming-other)
+	      (resume-coroutine one)
+	      (log-action two done)))
+
+	(finish-coroutines)
+	#t)
+    => '(#t ((one enter)
+	     (two enter)
+	     (one suspending)
+	     (two suspended? #t)
+	     (two resuming-other)
+	     (one resumed)
+	     (one done)
+	     (two done))))
 
   #t)
 

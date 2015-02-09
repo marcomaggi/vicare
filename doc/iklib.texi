@@ -4491,17 +4491,21 @@ Push the given thunk on the current compensations stack.
 
 
 @value{PRJNAME} implements coroutines on top of Scheme continuations.
-The implementation is a simple queue of escape functions: whenever
-coroutine @var{A} yields control to the ``next'' coroutine, it enqueues
-an escape function to its current continuation and causes the next
-escape function to be invoked.
+The implementation is a simple queue of escape procedures: whenever
+coroutine yields control to the ``next'' coroutine, it enqueues an
+escape function to its current continuation and causes the next escape
+procedure to be invoked.
 
 For discussions about other implementations of coroutines and
 continuations see @vicareref{HFWCoro, references}.
 
 @menu
 * iklib coroutines examples::   Usage examples for coroutines.
-* iklib coroutines api::        Programming interface to coroutines.
+* iklib coroutines basic::      Basic coroutine operations.
+* iklib coroutines uid::        Coroutine unique identifiers.
+* iklib coroutines suspend::    Suspending and resuming coroutines.
+* iklib coroutines syntaxes::   Utility syntaxes for coroutines.
+* iklib coroutines debug::      Debugging utilities for coroutines.
 @end menu
 
 @c page
@@ -4711,8 +4715,8 @@ terminated.
 @end example
 
 @c page
-@node iklib coroutines api
-@subsection Programming interface to coroutines
+n@node iklib coroutines basic
+@subsection Basic coroutine operations
 
 
 @defun coroutine @var{thunk}
@@ -4737,12 +4741,50 @@ entering the next coroutine @var{exit-loop?} is called: if it returns
 non-false the loop exits, if it returns @false{} the loop continues.
 @end defun
 
+@c page
+@node iklib coroutines uid
+@subsection Coroutine unique identifiers
+
 
 @defun coroutine-uid
 Return a gensym acting as unique identifier for the current coroutine.
+This symbol is bound to an internal data structure.
 @end defun
 
-@c ------------------------------------------------------------------------
+
+@defun coroutine-uid? @var{obj}
+Return @true{} if @var{obj} is a unique coroutine identifier; otherwise
+return @false{}.
+@end defun
+
+@c page
+@node iklib coroutines suspend
+@subsection Suspending and resuming coroutines
+
+
+@defun suspend-coroutine
+Suspend the current coroutine by yielding control to the next one.  The
+continuation of the current coroutine is @strong{not} enqueued to be
+reinstated later.
+@end defun
+
+
+@defun resume-coroutine @var{uid}
+Given the unique identifier of a suspended coroutine: resume it by
+enqueueing the current continuation and yielding control to the
+suspended coroutine.
+@end defun
+
+
+@defun suspended-coroutine? @var{uid}
+Return @true{} if @var{uid} is the unique identifier of a suspended
+coroutine; otherwise return @false{}.  It is an error if @var{uid} is
+not the @uid{} of a coroutine.
+@end defun
+
+@c page
+@node iklib coroutines syntaxes
+@subsection Utility syntaxes for coroutines
 
 
 @deffn Syntax parallel @metao{thunk} @meta{thunk} @dots{}
@@ -4763,9 +4805,9 @@ The argument @meta{thunk} must be an expression evaluating to a thunk.
 It is evaluated only once.
 @end deffn
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Debugging utilities
+@c page
+@node iklib coroutines debug
+@subsection Debugging utilities for coroutines
 
 
 @defun reset-coroutines!
