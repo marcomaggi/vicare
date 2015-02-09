@@ -677,6 +677,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-collect.sps					\
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-conditions.sps				\
+	tests/test-vicare-coroutines.sps				\
 	tests/test-vicare-enumerations.sps				\
 	tests/test-vicare-environment-inquiry.sps			\
 	tests/test-vicare-equality.sps					\
@@ -793,7 +794,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-callables.sps		\
 	tests/test-vicare-language-extensions-comparisons.sps		\
 	tests/test-vicare-language-extensions-cond-expand.sps		\
-	tests/test-vicare-language-extensions-coroutines.sps		\
 	tests/test-vicare-language-extensions-custom-ports.sps		\
 	tests/test-vicare-language-extensions-hooks.sps			\
 	tests/test-vicare-language-extensions-identifier-substitutions.sps	\
