@@ -4377,7 +4377,7 @@ recognised and registered by the application as soon as it is notified
 by @func{select}.
 
 The socket option @code{SO_OOBINLINE} allows the @oob{} byte to be
-places in the ordinary data @fifo{} buffer, so that it can be
+placed in the ordinary data @fifo{} buffer, so that it can be
 transparently consumed by a call to @func{read} or @func{recv} without
 the @code{MSG_OOB} flag.
 
