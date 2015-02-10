@@ -1106,14 +1106,18 @@
 ;;;; process termination status
 
 (define (waitpid pid options)
-  (define who 'waitpid)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((pid	pid)
        (fixnum	options))
     (let ((rv (capi.posix-waitpid pid options)))
-      (if ($fx< rv 0)
-	  (%raise-errno-error who rv pid options)
-	rv))))
+      (cond ((not rv)
+	     ;;The flag WNOHANG was used in OPTIONS and no child has exited.
+	     rv)
+	    (($fx< rv 0)
+	     (%raise-errno-error __who__ rv pid options))
+	    (else
+	     ;;Return a fixnum representing the exit status.
+	     rv)))))
 
 (define (wait)
   (define who 'wait)

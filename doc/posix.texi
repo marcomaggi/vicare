@@ -1214,12 +1214,26 @@ Beware to neither change the current working directory nor change the
 @defun waitpid @var{pid} @var{options}
 Interface to the C function @cfunc{waitpid}, @glibcref{Process
 Completion, waitpid}.  Request status informations on a process or group
-of processes knowing the identifier.  If successful return a fixnum
-representing the status; if an error occurs: an exception is raised.
+of processes knowing the identifier.
 
 The fixnum @var{pid} selects the target of the request; the fixnum
 @var{options} must be the logical OR (@func{fxior}) of platform specific
 constants specifying how to wait for the availability of the status.
+
+Upon returning behave as follows:
+
+@itemize
+@item
+If successful and a child process it was waiting for exited: return a
+fixnum representing the status.
+
+@item
+If the flag @code{WNOHANG} was used in @var{options} and @strong{no}
+child process it was waiting for exited: return @false{}.
+
+@item
+If an error occurs: an exception is raised.
+@end itemize
 @end defun
 
 
