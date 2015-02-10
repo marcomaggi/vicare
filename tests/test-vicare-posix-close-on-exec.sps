@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -70,10 +70,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check	;setting, closing all
+  (check	;setting, flushing, closing all
       (with-compensations
 	(receive (inp oup)
 	    (make-binary-ports)
+	  (px.flush-ports-in-close-on-exec-mode)
 	  (px.close-ports-in-close-on-exec-mode)
 	  (list (port-closed? inp)
 		(port-closed? oup))))

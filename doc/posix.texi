@@ -384,6 +384,24 @@ raised.
 @end defun
 
 
+When forking a process we must remember about input/output ports:
+
+@enumerate
+@item
+Before forking, in the parent process we should call
+@func{flush-ports-in-close-on-exec-mode}; @ref{posix fd device,
+flush-ports-in-close-on-exec-mode}, for details.
+
+@item
+After forking, in the child process we should call
+@func{close-ports-in-close-on-exec-mode}; @ref{posix fd device,
+close-ports-in-close-on-exec-mode}, for details.
+@end enumerate
+
+@noindent
+we must also remember that some file descriptors are marked to be
+``closed on exec''.
+
 Here is a simple example of forking a process:
 
 @example
@@ -2676,6 +2694,12 @@ otherwise.
 
 @defun close-ports-in-close-on-exec-mode
 Close all the ports registered to be in close--on--exec mode.
+@end defun
+
+
+@defun flush-ports-in-close-on-exec-mode
+Flush the output buffer of all the output ports registered to be in
+close--on--exec mode.
 @end defun
 
 @c page

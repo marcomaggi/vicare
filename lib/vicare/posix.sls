@@ -204,6 +204,7 @@
     ;; close-on-exec ports
     port-set-close-on-exec-mode!	port-unset-close-on-exec-mode!
     port-in-close-on-exec-mode?		close-ports-in-close-on-exec-mode
+    flush-ports-in-close-on-exec-mode
 
     ;; memory-mapped input/output
     mmap				munmap
@@ -2472,7 +2473,8 @@
 (module (port-set-close-on-exec-mode!
 	 port-unset-close-on-exec-mode!
 	 port-in-close-on-exec-mode?
-	 close-ports-in-close-on-exec-mode)
+	 close-ports-in-close-on-exec-mode
+	 flush-ports-in-close-on-exec-mode)
   (import (vicare containers weak-hashtables))
 
   (define-constant TABLE
@@ -2517,6 +2519,13 @@
   (define (close-ports-in-close-on-exec-mode)
     (vector-for-each close-port (weak-hashtable-keys TABLE))
     (weak-hashtable-clear! TABLE))
+
+  (define (flush-ports-in-close-on-exec-mode)
+    (vector-for-each (lambda (P)
+		       (unless (port-closed? P)
+			 (when (output-port? P)
+			   (flush-output-port P))))
+      (weak-hashtable-keys TABLE)))
 
   #| end of module |# )
 
