@@ -1037,7 +1037,8 @@ functions are successful: they do not return.
 
 @quotation
 @strong{NOTE} For a clean subprocess execution: before executing the
-command we must call @func{close-ports-in-close-on-exec-mode}.
+command we must call @func{close-ports-in-close-on-exec-mode}.  All the
+@code{exec*} functions below perform this call automatically.
 @end quotation
 
 
