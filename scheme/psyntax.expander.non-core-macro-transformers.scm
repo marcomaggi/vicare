@@ -121,7 +121,7 @@
     ((push-compensation)		push-compensation-macro)
 
     ;; coroutines
-    ((parallel)				parallel-macro)
+    ((concurrently)			concurrently-macro)
     ((monitor)				monitor-macro)
 
     ((pre-incr)				pre-incr-macro)
@@ -2057,12 +2057,12 @@
     ))
 
 
-;;;; module non-core-macro-transformer: PARALLEL, MONITOR
+;;;; module non-core-macro-transformer: CONCURRENTLY, MONITOR
 
-(define (parallel-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's PARALLEL macros  from the top-level
-  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
-  ;;that must be further expanded.
+(define (concurrently-macro expr-stx)
+  ;;Transformer  function  used  to  expand Vicare's  CONCURRENTLY  macros  from  the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?thunk0 ?thunk* ...)

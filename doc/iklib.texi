@@ -3933,7 +3933,7 @@ lines printed:
 (define b #f)
 (define c #f)
 
-(parallel
+(concurrently
   (lambda ()
     (unwind-protect
         (begin
@@ -4787,7 +4787,7 @@ not the @uid{} of a coroutine.
 @subsection Utility syntaxes for coroutines
 
 
-@deffn Syntax parallel @metao{thunk} @meta{thunk} @dots{}
+@deffn Syntax concurrently @metao{thunk} @meta{thunk} @dots{}
 Evaluate the given thunks each in its own coroutine.  Return unspecified
 values when all the coroutines are finished.
 @end deffn

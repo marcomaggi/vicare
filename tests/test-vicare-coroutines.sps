@@ -226,7 +226,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'parallel))
+(parametrise ((check-test-name	'concurrently))
 
   (define (print template . args)
     (apply fprintf (current-error-port) template args)
@@ -244,7 +244,7 @@
     (print "sub ~a.~a\n" N M))
 
 ;;; --------------------------------------------------------------------
-;;; no parallel
+;;; no concurrently
 
   (check
       (let ((a #f) (b #f) (c #f))
@@ -274,7 +274,7 @@
 
   (check
       (let ((a #f) (b #f) (c #f))
-	(parallel
+	(concurrently
 	  (lambda ()
 	    (print "sub 1.1\n")
 	    (print "sub 1.2\n")
@@ -297,7 +297,7 @@
 
   (check
       (let ((a #f) (b #f) (c #f))
-	(parallel
+	(concurrently
 	  (lambda ()
 	    (job 1 1)
 	    (set! a #t))
@@ -339,7 +339,7 @@
 
   (check
       (let ((a #f) (b #f) (c #f))
-	(parallel
+	(concurrently
 	  (lambda ()
 	    (monitor-job 1 1)
 	    (set! a #t))
@@ -365,7 +365,7 @@
 
   (check
       (let ((a #f) (b #f) (c #f))
-	(parallel
+	(concurrently
 	  (lambda ()
 	    (unwind-protect
 		(begin
@@ -412,7 +412,7 @@
 
   (check
       (let ((a #f) (b #f) (c #f))
-	(parallel
+	(concurrently
 	  (lambda ()
 	    (unwind-protect
 		(begin

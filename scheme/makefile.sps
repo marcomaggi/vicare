@@ -540,7 +540,7 @@
     (for					(macro . for))
     (returnable					(macro . returnable))
 ;;;
-    (parallel					(macro . parallel))
+    (concurrently				(macro . concurrently))
     (monitor					(macro . monitor))
 ;;;
     (infix					(macro . infix))
@@ -2723,7 +2723,7 @@
     (suspended-coroutine?			v $language)
     (reset-coroutines!				v $language)
     (dump-coroutines				v $language)
-    (parallel					v $language)
+    (concurrently				v $language)
     (monitor					v $language)
     ;;This is for internal use.
     (do-monitor)

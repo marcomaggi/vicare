@@ -985,7 +985,7 @@
 
   (check
       (let ((a #f) (b #f) (c #f))
-	(parallel
+	(concurrently
 	  (lambda ()
 	    (unwind-protect
 		(begin
