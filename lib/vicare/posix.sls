@@ -2516,16 +2516,45 @@
 	((port	port))
       (weak-hashtable-contains? TABLE port)))
 
-  (define (close-ports-in-close-on-exec-mode)
-    (vector-for-each close-port (weak-hashtable-keys TABLE))
-    (weak-hashtable-clear! TABLE))
+  (case-define close-ports-in-close-on-exec-mode
+    (()
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (close-port P))))
+       (weak-hashtable-keys TABLE))
+     (weak-hashtable-clear! TABLE))
+    ((error-handler)
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (with-exception-handler
+				  error-handler
+				(lambda ()
+				  (close-port P))))))
+       (weak-hashtable-keys TABLE))
+     (weak-hashtable-clear! TABLE)))
 
-  (define (flush-ports-in-close-on-exec-mode)
-    (vector-for-each (lambda (P)
-		       (unless (port-closed? P)
-			 (when (output-port? P)
-			   (flush-output-port P))))
-      (weak-hashtable-keys TABLE)))
+  (case-define flush-ports-in-close-on-exec-mode
+    (()
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (unless (port-closed? P)
+				(when (output-port? P)
+				  (flush-output-port P))))))
+       (weak-hashtable-keys TABLE)))
+    ((error-handler)
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (with-exception-handler
+				  error-handler
+				(lambda ()
+				  (unless (port-closed? P)
+				    (when (output-port? P)
+				      (flush-output-port P))))))))
+       (weak-hashtable-keys TABLE))))
 
   #| end of module |# )
 

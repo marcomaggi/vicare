@@ -2693,13 +2693,41 @@ otherwise.
 
 
 @defun close-ports-in-close-on-exec-mode
-Close all the ports registered to be in close--on--exec mode.
+@defunx close-ports-in-close-on-exec-mode @var{error-handler}
+Close all the ports registered to be in close--on--exec mode.  Each port
+is closed by applying @func{close-port} to it.
+
+@itemize
+@item
+When called with no arguments: if @func{close-port} raises an exception,
+the exception is blocked and discarded.
+
+@item
+When called with one argument: the procedure @var{error-handler} is
+installed as error handler before applying @func{close-port} to the
+port; if @var{error-handler} raises an exception, the exception is
+blocked and discarded.
+@end itemize
 @end defun
 
 
 @defun flush-ports-in-close-on-exec-mode
+@defunx flush-ports-in-close-on-exec-mode @var{error-handler}
 Flush the output buffer of all the output ports registered to be in
-close--on--exec mode.
+close--on--exec mode.  Each port is processed by applying
+@func{flush-output-port} to it.
+
+@itemize
+@item
+When called with no arguments: if @func{flush-output-port} raises an
+exception, the exception is blocked and discarded.
+
+@item
+When called with one argument: the procedure @var{error-handler} is
+installed as error handler before applying @func{flush-output-port} to
+the port; if @var{error-handler} raises an exception, the exception is
+blocked and discarded.
+@end itemize
 @end defun
 
 @c page
