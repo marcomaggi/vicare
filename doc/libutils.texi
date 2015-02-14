@@ -23,7 +23,8 @@ in the boot image.  It is suggested to import it using the prefix
 * libutils loading::            Loading libraries.
 * libutils locating::           Locating libraries.
 * libutils file-system::        Locating libraries on the file system.
-* libutils compiling::          Compiling libraries and programs.
+* libutils compiling::          Compiling libraries.
+* libutils programs::           Handling programs.
 * libutils include::            Loading include files.
 @end menu
 
@@ -1243,8 +1244,8 @@ associated to the port (or equivalent).
 
 The function @func{default-library-loader} is the default value of the
 parameter @func{current-library-loader}, which is used to intern
-libraries (@pxref{libutils loading, default-library-loader}).  Such
-default procedure makes use of the function referenced by the parameter
+libraries; @ref{libutils loading, default-library-loader}.  Such default
+procedure makes use of the function referenced by the parameter
 @func{current-library-locator} to find libraries in some external
 repository.
 
@@ -1258,26 +1259,6 @@ reference.  The selected locator function must accept as single argument
 a @rnrs{6} library reference and it must return a thunk as single value.
 @end deffn
 
-
-The parameter is meant to be used as in the following pseudo--code:
-
-@example
-(let loop
-    ((next-locator-search ((current-library-locator) libref)))
-  (receive (rv further-locator-search)
-      (next-locator-search)
-    (cond ((binary-port?  rv)
-           (read-validate-intern-binary-library))
-          ((textual-port? rv)
-           (read-validate-intern-source-library))
-          ((and (boolean? rv) rv)
-           (library-already-interned))
-          ((not rv)
-           (no-matching-library-was-found))
-          (else
-           (assertion-violation __who__
-             "invalid return values from library locator" rv)))))
-@end example
 
 When invoked, the returned thunk must return two values:
 
@@ -1338,6 +1319,30 @@ When a thunk is returned as second value: it must have the same @api{}
 of the thunk returned by the locator function; the possibility to
 continue the search allows the caller to reject a library if it does not
 meet some additional constraint.
+
+The parameter is meant to be used as in the following pseudo--code:
+
+@example
+(let loop
+    ((next-locator-search ((current-library-locator) libref)))
+  (receive (rv further-locator-search)
+      (next-locator-search)
+    (cond ((binary-port?  rv)
+           (read-validate-intern-binary-library rv
+              (lambda ()
+                (loop further-locator-search))))
+          ((textual-port? rv)
+           (read-validate-intern-source-library rv
+              (lambda ()
+                (loop further-locator-search))))
+          ((and (boolean? rv) rv)
+           (library-already-interned))
+          ((not rv)
+           (no-matching-library-was-found))
+          (else
+           (assertion-violation __who__
+             "invalid return values from library locator" rv)))))
+@end example
 
 Usually the locator function visits the host file system in search of a
 file whose pathname matches the given library reference; other
@@ -1461,16 +1466,6 @@ leading dot included.  This parameter is initialised to:
 @c page
 @node libutils file-system pathnames
 @subsection Library file pathnames
-
-
-@menu
-* libutils file-system pathnames library::  Library pathnames.
-* libutils file-system pathnames program::  Program pathnames.
-@end menu
-
-@c page
-@node libutils file-system pathnames library
-@subsubsection Library pathnames
 
 
 The following bindings are exported by the library @library{vicare
@@ -1602,41 +1597,6 @@ itself with the binary library extension appended.
 (library-source-pathname->library-binary-tail-pathname
    "a/b/c.ciao")
 @result{} "a/b/c.ciao.fasl"
-@end example
-@end defun
-
-@c page
-@node libutils file-system pathnames program
-@subsubsection Program pathnames
-
-
-The following bindings are exported by the library @library{vicare
-libraries}.
-
-
-@defun program-source-pathname->program-binary-pathname @var{source-pathname}
-Given a string representing the pathname of a Scheme program: build and
-return the pathname of the corresponding compiled program.
-
-If @var{source-pathname} has file extension @code{.sps}: strip such
-extension; otherwise append the extension @code{.fasl}.
-
-@example
-(program-source-pathname->program-binary-pathname
-   "demo.sps")
-@result{} "demo"
-
-(program-source-pathname->program-binary-pathname
-   "tests/demo.sps")
-@result{} "tests/demo"
-
-(program-source-pathname->program-binary-pathname
-   "demo.ciao")
-@result{} "demo.ciao.fasl"
-
-(program-source-pathname->program-binary-pathname
-   "tests/demo.ciao")
-@result{} "tests/demo.ciao.fasl"
 @end example
 @end defun
 
@@ -2003,7 +1963,7 @@ and @false{}.
 
 @c page
 @node libutils compiling
-@section Compiling libraries and programs
+@section Compiling libraries
 
 
 @menu
@@ -2099,6 +2059,41 @@ While @value{EXECUTABLE} is running: we can modify at will the content
 of @func{compiled-libraries-store-directory}.
 @end enumerate
 @end deffn
+
+@c page
+@node libutils programs
+@section Handling programs
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun program-source-pathname->program-binary-pathname @var{source-pathname}
+Given a string representing the pathname of a Scheme program: build and
+return the pathname of the corresponding compiled program.
+
+If @var{source-pathname} has file extension @code{.sps}: strip such
+extension; otherwise append the extension @code{.fasl}.
+
+@example
+(program-source-pathname->program-binary-pathname
+   "demo.sps")
+@result{} "demo"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.sps")
+@result{} "tests/demo"
+
+(program-source-pathname->program-binary-pathname
+   "demo.ciao")
+@result{} "demo.ciao.fasl"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.ciao")
+@result{} "tests/demo.ciao.fasl"
+@end example
+@end defun
 
 @c page
 @node libutils include

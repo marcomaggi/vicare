@@ -1250,23 +1250,7 @@
 (define current-library-locator
   ;;Hold a function  used to locate a  library from its R6RS  library reference.  The
   ;;selected locator function must accept as single argument a R6RS library reference
-  ;;and it must return a thunk as single value.  The parameter is meant to be used as
-  ;;in the following pseudo-code:
-  ;;
-  ;;   (let loop ((next-locator-search ((current-library-locator) libref)))
-  ;;     (receive (rv further-locator-search)
-  ;;         (next-locator-search)
-  ;;       (cond ((binary-port?  rv)
-  ;;              (read-validate-intern-binary-library))
-  ;;             ((textual-port? rv)
-  ;;              (read-validate-intern-source-library))
-  ;;             ((and (boolean? rv) rv)
-  ;;              (library-already-interned))
-  ;;             ((not rv)
-  ;;              (no-matching-library-was-found))
-  ;;             (else
-  ;;              (assertion-violation __who__
-  ;;                "invalid return values from library locator" rv)))))
+  ;;and it must return a thunk as single value.
   ;;
   ;;When invoked, the returned thunk must return two values:
   ;;
@@ -1302,8 +1286,28 @@
   ;;
   ;;When a thunk is returned as second value:  it must have the same API of the thunk
   ;;returned by the  locator function; the possibility to continue  the search allows
-  ;;the caller to  reject a library if  it does not meet  some additional constraint;
-  ;;for example: if its version number does not conform to LIBREF.
+  ;;the caller to reject a library if it does not meet some additional constraint.
+  ;;
+  ;;The parameter is meant to be used as in the following pseudo-code:
+  ;;
+  ;;   (let loop ((next-locator-search ((current-library-locator) libref)))
+  ;;     (receive (rv further-locator-search)
+  ;;         (next-locator-search)
+  ;;       (cond ((binary-port?  rv)
+  ;;              (read-validate-intern-binary-library rv
+  ;;                  (lambda ()
+  ;;                    (loop further-locator-search))))
+  ;;             ((textual-port? rv)
+  ;;              (read-validate-intern-source-library rv
+  ;;                  (lambda ()
+  ;;                    (loop further-locator-search))))
+  ;;             ((and (boolean? rv) rv)
+  ;;              (library-already-interned))
+  ;;             ((not rv)
+  ;;              (no-matching-library-was-found))
+  ;;             (else
+  ;;              (assertion-violation __who__
+  ;;                "invalid return values from library locator" rv)))))
   ;;
   (make-parameter
       run-time-library-locator
