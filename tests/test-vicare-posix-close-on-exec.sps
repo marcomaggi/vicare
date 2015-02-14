@@ -96,6 +96,119 @@
   #t)
 
 
+(parametrise ((check-test-name		'errors)
+	      (string-port-buffer-size	16))
+
+  (define (trace template . args)
+    (when #t
+      (apply fprintf (current-error-port) template args)))
+
+  (define error-on-write
+    (make-parameter #f))
+
+  (define (make-test-port)
+    ;;Create a port that wraps the one created by OPEN-STRING-OUTPUT-PORT.
+    ;;
+    (receive (subport extract)
+	(open-string-output-port)
+
+      (define (write! src.str src.start count)
+	(trace "writing ~a chars\n" count)
+	(when (error-on-write)
+	  (error __who__ "error writing characters" count))
+	(do ((i 0 (+ 1 i)))
+	    ((= i count)
+	     count)
+	  (put-char subport (string-ref src.str (+ i src.start)))))
+
+      (define (get-position)
+	(port-position subport))
+
+      (define (set-position! new-position)
+	(set-port-position! subport new-position))
+
+      (define (close)
+	#f)
+
+      (values (make-custom-textual-output-port
+	       "*test-port*" write! get-position set-position! close)
+	      extract)))
+
+  (define-constant the-string-len
+    (* 4 (string-port-buffer-size)))
+
+  (define-constant the-string
+    (make-string the-string-len #\A))
+
+;;; --------------------------------------------------------------------
+
+  (check	;no error, no close-on-exec
+      (let-values (((port extract) (make-test-port)))
+	(trace "writing ~a chars\n" the-string-len)
+	(display the-string port)
+	(trace "flushing output\n")
+	(flush-output-port port)
+	(trace "closing\n")
+	(close-port port)
+	(receive-and-return (rv)
+	    (extract)
+	  (trace "full contents: ~s\n" rv)))
+    => the-string)
+
+  (check	;no error, close-on-exec
+      (let-values (((port extract) (make-test-port)))
+	(px.port-set-close-on-exec-mode! port)
+	(trace "writing ~a chars\n" the-string-len)
+	(display the-string port)
+	(trace "flushing output\n")
+	(px.flush-ports-in-close-on-exec-mode (lambda (E)
+						(debug-print E)))
+	(trace "closing\n")
+	(px.close-ports-in-close-on-exec-mode port)
+	(receive-and-return (rv)
+	    (extract)
+	  (trace "full contents: ~s\n" rv)))
+    => the-string)
+
+  (check	;error on flushing, close-on-exec
+      (with-result
+	(let-values (((port extract) (make-test-port)))
+	  (px.port-set-close-on-exec-mode! port)
+	  (trace "writing ~a chars\n" the-string-len)
+	  (add-result 'writing)
+	  (display the-string port)
+	  (trace "flushing output\n")
+	  (add-result 'flushing)
+	  (parametrise ((error-on-write #t))
+	    (px.flush-ports-in-close-on-exec-mode (lambda (E)
+						    (trace "flush exception: ~s\n" E))))
+	  (trace "closing\n")
+	  (add-result 'closing)
+	  (px.close-ports-in-close-on-exec-mode port)
+	  (receive-and-return (rv)
+	      (string-length (extract))
+	    (trace "full contents: ~s\n" rv))))
+    => `(,(- the-string-len (string-port-buffer-size)) (writing flushing closing)))
+
+  (check	;error on closing, close-on-exec
+      (with-result
+	(let-values (((port extract) (make-test-port)))
+	  (px.port-set-close-on-exec-mode! port)
+	  (trace "writing ~a chars\n" the-string-len)
+	  (add-result 'writing)
+	  (display the-string port)
+	  (trace "closing\n")
+	  (add-result 'closing)
+	  (parametrise ((error-on-write #t))
+	    (px.close-ports-in-close-on-exec-mode port))
+	  (receive-and-return (rv)
+	      (string-length (extract))
+	    (trace "full contents: ~s\n" rv))))
+    => `(,(- the-string-len (string-port-buffer-size)) (writing closing)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
