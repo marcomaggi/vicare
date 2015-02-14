@@ -117,6 +117,7 @@
     ;; compensations
     ((with-compensations)		with-compensations-macro)
     ((with-compensations/on-error)	with-compensations/on-error-macro)
+    ((with-compensation-handler)	with-compensation-handler-macro)
     ((compensate)			compensate-macro)
     ((push-compensation)		push-compensation-macro)
 
@@ -2020,6 +2021,19 @@
     ((_ ?release0 ?release* ...)
      (bless
       `(push-compensation-thunk (lambda () ,?release0 ,@?release*))))
+    ))
+
+(define (with-compensation-handler-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATION-HANDLER  macros
+  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
+  ;;a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?release-thunk ?alloc-thunk)
+     (bless
+      `(begin0
+	   (,?alloc-thunk)
+	 (push-compensation-thunk ,?release-thunk))))
     ))
 
 (define (compensate-macro expr-stx)

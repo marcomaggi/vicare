@@ -557,6 +557,7 @@
 ;;;
     (with-compensations				(macro . with-compensations))
     (with-compensations/on-error		(macro . with-compensations/on-error))
+    (with-compensation-handler			(macro . with-compensation-handler))
     (compensate					(macro . compensate))
     (push-compensation				(macro . push-compensation))
 ;;;
@@ -2576,6 +2577,7 @@
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
+    (with-compensation-handler			v $language)
     (compensate					v $language)
     (with					v $language)
     (push-compensation				v $language)

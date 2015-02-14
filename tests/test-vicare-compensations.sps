@@ -7,7 +7,7 @@
 ;;;
 ;;;	This test file was originally part of Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2008-2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2010, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -52,6 +52,19 @@
 	   (with
 	    (add-result 'free)))
 	 #t))
+    => `(#t (alloc free)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (with-compensations
+	 (with-compensation-handler
+	     (lambda ()
+	       (add-result 'free))
+	   (lambda ()
+	     (add-result 'alloc)
+	     #t))))
     => `(#t (alloc free)))
 
   #t)
