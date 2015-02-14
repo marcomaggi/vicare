@@ -2735,6 +2735,12 @@ blocked and discarded.
 @subsection Duplicating file descriptors
 
 
+The functions @func{dup} and @func{dup2} are often used to prepare the
+standard file descriptors of a child process right after a @func{fork}
+call; @ref{posix process fork, Creating a subprocess}, for details about
+this usage.
+
+
 @defun dup @var{fd}
 Interface to the C function @cfunc{dup}, @glibcref{Duplicating
 Descriptors, dup}.  Duplicate the file descriptor @var{fd}.  If
