@@ -2616,9 +2616,14 @@ successful return a fixnum representing the return value of
 @cfunc{ioctl}, else raise an exception.
 @end defun
 
-@c ------------------------------------------------------------
+@menu
+* posix fd device blocking::    Non-blocking mode.
+* posix fd device cloexec::     Close-on-exec mode.
+@end menu
 
-@subsubheading File descriptors in non--blocking mode
+@c page
+@node posix fd device blocking
+@subsubsection File descriptors in non--blocking mode
 
 
 @defun fd-set-non-blocking-mode! @var{fd}
@@ -2638,7 +2643,109 @@ non--blocking mode, @false{} otherwise.  If an error occurs: raise an
 exception.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node posix fd device cloexec
+@subsubsection Close--on--exec mode
+
+
+On @posix{} platforms, right after a @func{fork} call: the parent and child will
+share all the input/output file descriptors that are open at the time of the
+@func{fork} call.  This is problematic.
+
+Let's see what happens with the following program in which we open a file, fork the
+process then close the file in both the parent and child:
+
+@lisp
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define (parent-proc child-pid)
+  (px.waitpid child-pid 0)
+  (close-output-port port)
+  (exit 0))
+
+(define (child-thunk)
+  (close-output-port port)
+  (exit 0))
+
+(define port
+  (parametrise ((output-file-buffer-size 8))
+    (open-file-output-port "demo.txt"
+			   (file-options no-fail)
+			   (buffer-mode block)
+			   (native-transcoder))))
+
+(put-string port "0123456789ABCDEF")
+
+(px.fork parent-proc child-thunk)
+@end lisp
+
+@noindent
+the output @var{port} has a buffer of @code{8} characters and the string written to
+it is @code{16} characters long; the call to @func{put-string} immediately flushes
+the first @code{8} characters and leaves the rest in the output buffer.  The
+@func{fork} call causes the output buffer and its contents to be duplicated, so, when
+we close the port, the two buffers are flushed to the same file.  The resulting file
+contents are:
+
+@example
+0123456789ABCDEF89ABCDEF
+@end example
+
+@noindent
+which is not what we want.
+
+@posix{} has a partial solution for this problem: to configure file
+descriptors as @emph{close--on--exec}; @value{PRJNAME} extends this to
+propose a partial solution: to configure ports as
+@emph{close--on--exec}.  Notice that it is close--on--@strong{exec}, not
+close--on--@strong{fork}.  So we can try to address this problem by:
+
+@enumerate
+@item
+Registering ports to be in close--on--exec mode.
+
+@item
+Before calling @func{fork}: flush the ports in close--on--exec mode.
+
+@item
+In the child process: close the ports in close--on--exec mode, to free allocated file
+descriptors.
+@end enumerate
+
+Here is the example above modified to do so:
+
+@lisp
+#!vicare
+(import (vicare)
+  (prefix (vicare posix) px.))
+
+(define (parent-proc child-pid)
+  (px.waitpid child-pid 0)
+  (close-output-port port)
+  (exit 0))
+
+(define (child-thunk)
+  (px.close-ports-in-close-on-exec-mode)
+  (exit 0))
+
+(define port
+  (parametrise ((output-file-buffer-size 8))
+    (open-file-output-port "demo.txt"
+                           (file-options no-fail)
+                           (buffer-mode block)
+                           (native-transcoder))))
+
+(px.port-set-close-on-exec-mode! port)
+
+(put-string port "0123456789ABCDEF")
+
+(px.flush-ports-in-close-on-exec-mode)
+(px.fork parent-proc child-thunk)
+@end lisp
+
+@c ------------------------------------------------------------------------
 
 @subsubheading File descriptors in close--on--exec mode
 
