@@ -523,6 +523,7 @@
 
     (unwind-protect				(macro . unwind-protect))
     (with-unwind-protection			(macro . with-unwind-protection))
+    (with-unwind-handler			(macro . with-unwind-protection))
 
     (with-escape-handlers-stack			(macro . with-escape-handlers-stack))
     (default-with-escape-handler		(macro . default-with-escape-handler))
@@ -2523,6 +2524,7 @@
 ;;;
     (unwind-protect				v $language)
     (with-unwind-protection			v $language)
+    (with-unwind-handler			v $language)
     ;;NOTE These "escape handlers" bindings must  be exported only by (psyntax system
     ;;$all).  With  the exception of:
     ;;

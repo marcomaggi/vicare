@@ -133,7 +133,7 @@
       (with-result
 	(receive-and-return (flag)
 	    #f
-	  (with-unwind-protection
+	  (with-unwind-handler
 	      (lambda (why)
 		(add-result 'cleanup)
 		(set! flag #t))
