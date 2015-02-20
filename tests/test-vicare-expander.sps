@@ -3165,6 +3165,18 @@
 	a)
     => 111)
 
+  (check	;no exception
+      (with-result
+	(try
+	    (add-result 'body)
+	  (catch E
+	    ((&error)	(add-result 'catch-error))
+	    ((&warning)	(add-result 'catch-warning))
+	    (else	(add-result 'catch-else)))
+	  (finally
+	   (add-result 'finally))))
+    => '(body (body finally)))
+
   (check	;with exception
       (let ((a 1))
 	(try
@@ -3177,6 +3189,20 @@
 	   (set! a (+ a 100))))
 	a)
     => 111)
+
+  (check	;with exception
+      (with-result
+	(try
+	    (begin
+	      (add-result 'body)
+	      (raise (make-warning)))
+	  (catch E
+	    ((&error)	(add-result 'catch-error))
+	    ((&warning)	(add-result 'catch-warning))
+	    (else	(add-result 'catch-else)))
+	  (finally
+	   (add-result 'finally))))
+    => '(catch-warning (body catch-warning finally)))
 
   #t)
 

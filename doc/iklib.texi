@@ -1860,7 +1860,7 @@ When @code{<>} or @code{_} is used in place of both @meta{expr} and
 The syntax @func{try} can be used to handle raised exceptions in
 addition to the @rnrs{6}--defined syntaxes @func{with-exception-handler}
 and @func{guard}.  The syntax is basically a wrapper for @func{guard}
-from @rsixlibrary{exceptions}; @ref{guard}, for details.
+from @rsixlibrary{exceptions} (@pxref{guard}).
 
 
 @deffn Syntax try @meta{body} @meta{catch-clauses}
@@ -1906,8 +1906,11 @@ unwind-protection mechanism}.
 
 The following expansions take place:
 
+@itemize
+@item
+No else, no finally.
+
 @example
-;;No else, no finally.
 (try
    @meta{body}
   (catch @meta{var}
@@ -1926,8 +1929,11 @@ The following expansions take place:
               ...)
       @meta{body})
 @end example
+
+@item
+Else, no finally.
+
 @example
-;;Else, no finally.
 (try
    @meta{body}
   (catch @meta{var}
@@ -1954,8 +1960,11 @@ The following expansions take place:
                ...))
       @meta{body})
 @end example
+
+@item
+Finally, no else.
+
 @example
-;;Finally, no else.
 (try
    @meta{body}
   (catch @meta{var}
@@ -1963,23 +1972,28 @@ The following expansions take place:
      @metao{tag-body}
      @meta{tag-body}
      ...)
+    ...)
+  (finally
+    @metao{finally-body}
+    @meta{finally-body}
     ...))
-@expansion{} (guard (@meta{var}
-              ((or (is-a? @meta{var} @metao{tag})
-                   (is-a? @meta{var} @meta{tag})
-                   ...)
-               @metao{tag-body}
-               @meta{tag-body}
-               ...)
-              ...)
-      (with-unwind-protection
-          (lambda (dummy)
-            @metao{finally-body}
-            @meta{finally-body}
-            ...)
-        (lambda ()
-          @meta{body})))
+@expansion{} (with-unwind-protection
+        (lambda (dummy)
+          @metao{finally-body}
+          @meta{finally-body}
+          ...)
+      (lambda ()
+        (guard (@meta{var}
+                ((or (is-a? @meta{var} @metao{tag})
+                     (is-a? @meta{var} @meta{tag})
+                     ...)
+                 @metao{tag-body}
+                 @meta{tag-body}
+                 ...)
+                ...)
+            @meta{body})))
 @end example
+@end itemize
 @end deffn
 
 
@@ -2020,6 +2034,34 @@ Some usage examples without the @clause{finally} clause:
         (raise 123)))
 @result{} 123
 @end example
+
+Evaluation order tracking for @clause{finally} clauses:
+
+@lisp
+(with-result
+  (try
+      (add-result 'body)
+    (catch E
+      ((&error)   (add-result 'catch-error))
+      ((&warning) (add-result 'catch-warning))
+      (else       (add-result 'catch-else)))
+    (finally
+     (add-result 'finally))))
+@result{} (body (body finally))
+
+(with-result
+  (try
+      (begin
+        (add-result 'body)
+        (raise (make-warning)))
+    (catch E
+      ((&error)   (add-result 'catch-error))
+      ((&warning) (add-result 'catch-warning))
+      (else       (add-result 'catch-else)))
+    (finally
+     (add-result 'finally))))
+@result{} (catch-warning (body catch-warning finally))
+@end lisp
 
 @c page
 @node iklib syntaxes splice1st

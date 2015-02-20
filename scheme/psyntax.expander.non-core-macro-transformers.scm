@@ -4040,11 +4040,11 @@
 	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*)))
 	       (why           (gensym)))
 	   (bless
-	    `(guard (,?var . ,GUARD-CLAUSE*)
-	       (with-unwind-protection
-		   (lambda (,why)
-		     ,?finally-body0 . ,?finally-body*)
-		 (lambda ()
+	    `(with-unwind-protection
+		 (lambda (,why)
+		   ,?finally-body0 . ,?finally-body*)
+	       (lambda ()
+		 (guard (,?var . ,GUARD-CLAUSE*)
 		   ,?body)))))))
 
       ;;Only catch, no finally.
