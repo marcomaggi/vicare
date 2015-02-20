@@ -3218,17 +3218,25 @@ human friendly; some preprocessing and a specialised printer are needed.
 @section The unwind--protection mechanism
 
 
-The unwind--protection allows operations to be performed synchronously
-with respect to the dynamic extent of a call to thunk; the mechanism is
+Unwind--protection allows operations to be performed synchronously with
+respect to the dynamic extent of a call to thunk; the mechanism is
 sophisticated because there are multiple, sophisticated ways to exit the
 dynamic extent of a function call.  The typical application is to
 release resources, like input/output ports and database connections.
 @ref{resources, Allocating and releasing resources}, for an overview of
 resource management under @value{PRJNAME}.
 
+To understand the unwind--protection mechanism we must understand the
+concepts ``dynamic extent of a function call'' and ``dynamic
+environment''.  @ref{scheme basic dynamic extent, Dynamic extent and the
+dynamic environment}, for the meaning as defined by @rnrs{6}.
+@ref{dynamic environment, Notes on the dynamic environment}, for further
+explanations and examples.
+
 @quotation
 @strong{NOTE} The unwind protection mechanism may misbehave in some
-cases; @ref{iklib unwind-protect problems}, for details.
+cases, so do not trust it blindly (@pxref{iklib unwind-protect
+problems}).
 @end quotation
 
 @menu
@@ -3257,18 +3265,19 @@ cases; @ref{iklib unwind-protect problems}, for details.
 @subsection Introduction to the unwind--protection mechanism
 
 
-The syntax @syntax{with-unwind-protection} implements the core
-mechanism; @syntax{unwind-protect} offers a syntax similar to the one of
-the Common Lisp macro with the same name.  The former is meant to be
-used as follows:
+The syntax @syntax{with-unwind-handler} implements the core mechanism;
+@syntax{with-unwind-protection} is an alias for it.
+@syntax{unwind-protect} offers a syntax similar to the one of the Common
+Lisp macro with the same name.  The former is meant to be used as
+follows:
 
 @example
 #!vicare
 (import (vicare))
 
 (let ((port (open-file-output-port "file.ext")))
-  (with-unwind-protection
-      (lambda (dummy)
+  (with-unwind-handler
+      (lambda (why)
         (close-output-port port))
     (lambda ()
       (put-bytevector port '#ve(ascii "ciao")))))
@@ -3292,22 +3301,163 @@ and the latter as follows:
 first we allocate a resource (in this case the @var{port}); then we use
 it in the body forms; finally we release it in the clean--up forms.
 
+When using the mechanism:
+
+@itemize
+@item
+We have to decide if we trust our code not to raise exceptions while evaluating the
+in--guard and out--guard thunks of @func{dynamic-wind} calls.  These would be nasty
+errors, because the dynamic environment would get corrupted and recovering correctly
+might be impossible; so we must @strong{really} write and debug such in--guard and
+out--guard thunks with care.
+
+@item
+We have to decide if we trust our code not to raise a second exception while serving
+a first exception in an error handler.  Raising a continuable exception is fine only
+if we actually continue.  Exceptions while handling exceptions are a hard problem to
+solve in every language; the rough solution is to block exceptions raised by
+exception handlers:
+
+@lisp
+(with-exception-handler
+    (lambda (E)
+      (with-blocked-exceptions
+        (lambda ()
+          (handle E))))
+  (lambda ()
+    (do-something-useful)))
+@end lisp
+
+@noindent
+but it is not very satisfying.  Another possibility is:
+
+@lisp
+(define-condition-type &originally-raised
+    &condition
+  make-originally-raised-condition
+  originally-raised-condition?
+  (object originally-raised-object))
+
+(with-exception-handler
+    (lambda (E)
+      (with-exception-handler
+          (lambda (X)
+            (raise-continuable
+              (condition X
+                (make-originally-raised-condition E))))
+        (lambda ()
+          (handle E))))
+  (lambda ()
+    (do-something-useful)))
+@end lisp
+@end itemize
+
+If the bodacious answer to both the decisions is ``We trust'': we can nest at will
+uses of @syntax{with-unwind-protection}:
+
+@lisp
+(define (outer)
+  (with-unwind-protection
+      (lambda (why)
+        (outer-unwind-handler))
+    (lambda ()
+      (do-something-useful)
+      (inner))))
+
+(define (inner)
+  (with-unwind-protection
+      (lambda (why)
+        (inner-unwind-handler))
+    (lambda ()
+      (do-some-other-useful-thing))))
+
+(outer)
+@end lisp
+
+@noindent
+@strong{beware}: unwind handlers are evaluated in the dynamic environment of the use
+of @syntax{with-unwind-protection}.
+
+Otherwise we must avoid error handlers to cause the execution flow to
+cross an unwind protection boundary; we can do it by using compensations
+and the standard @syntax{guard} syntax:
+
+@lisp
+(define (outer)
+  (push-compensation-thunk
+    (lambda ()
+      (outer-unwind-handler)))
+  (do-something-useful)
+  (inner))
+
+(define (inner)
+  (push-compensation-thunk
+    (lambda ()
+      (inner-unwind-handler)))
+  (do-some-other-useful-thing))
+
+(with-compensations
+  (with-blocked-exceptions
+    (lambda ()
+      (guard (E ((type-one-error? E)
+                 (handle E))
+                (else
+                 (do-something-dammit!!!)))
+        (outer)))))
+@end lisp
+
+@noindent
+or by using the compensations and the @syntax{try} syntax defined by
+@value{PRJNAME}:
+
+@lisp
+(define (outer)
+  (push-compensation-thunk
+    (lambda ()
+      (outer-unwind-handler)))
+  (do-something-useful)
+  (inner))
+
+(define (inner)
+  (push-compensation-thunk
+    (lambda ()
+      (inner-unwind-handler)))
+  (do-some-other-useful-thing))
+
+(with-compensations
+  (with-blocked-exceptions
+    (lambda ()
+      (try
+          (outer)
+        (catch E
+          ((&type-one)
+           (handle E))
+          (else
+           (do-something-dammit!!!)))))))
+@end lisp
+
+@noindent
+@strong{beware}: compensation handlers are evaluated in the dynamic environment of
+the use of @syntax{with-compensations}.
+
 @c page
 @node iklib unwind-protect syntaxes
 @subsection Unwind--protection syntaxes
 
 
-@deffn Syntax with-unwind-protection @meta{cleanup} @meta{thunk}
-Call @meta{thunk} and then, when the dynamic extent of the call
-@strong{terminates}, call the procedure @meta{cleanup}.  When
-@meta{thunk} performs a normal return: the return values of @meta{thunk}
-become the return values of @func{with-unwind-protection}.
+@deffn Syntax with-unwind-handler @meta{unwind-handler} @meta{thunk}
+@deffnx Syntax with-unwind-protection @meta{unwind-handler} @meta{thunk}
+These two syntaxes are aliases.  Call @meta{thunk} and then, when the
+dynamic extent of the call @strong{terminates}, call the procedure
+@meta{unwind-handler}.  When @meta{thunk} performs a normal return: the
+return values of @meta{thunk} become the return values of
+@func{with-unwind-handler}.
 
-The argument @meta{cleanup} comes before the argument @meta{thunk} for
-uniformity with @func{with-exception-handler}, @ref{stdlib exceptions
-exceptions, with-exception-handler}.  When called: @meta{cleanup} is
-applied to a Scheme symbol representing the cause of the call:
-@samp{return}, @samp{escape}, @samp{exception}.
+When called: @meta{unwind-handler} is applied to a Scheme symbol
+representing the cause of the call: @samp{return}, @samp{escape},
+@samp{exception}.  The argument @meta{unwind-handler} comes before the
+argument @meta{thunk} for uniformity with @func{with-exception-handler},
+@ref{stdlib exceptions exceptions, with-exception-handler}.
 
 Notice that a function tail--call in @meta{thunk} is @strong{not} a
 tail--call for @syntax{with-unwind-protection}.
@@ -3330,57 +3480,54 @@ syntax similar to that of Common Lisp's macro.  It is expanded to:
 @subsection On the meaning of dynamic extent termination
 
 
-The concept of dynamic extent termination is defined by
+The concept of dynamic extent @dfn{termination} is defined by
 @value{PRJNAME}'s unwind--protection mechanism and it is not a @rnrs{6}
-concept.
-
-To understand the unwind--protection mechanism we must understand the
-concepts ``dynamic extent of a function call'' and ``dynamic
-environment''.  @ref{scheme basic dynamic extent, Dynamic extent and the
-dynamic environment}, for the meaning as defined by @rnrs{6}.
-@ref{dynamic environment, Notes on the dynamic environment}, for further
-explanations and examples.
-
-The procedure @meta{cleanup} is called when the dynamic extent of the
-invocation of @meta{thunk} terminates; dynamic extent
-@strong{termination} is different from dynamic extent @strong{exiting}
-as determined by @func{dynamic-wind}, @ref{dynamic-wind}.  When the
-execution flow exits the dynamic extent of a function call: such extent
-might also terminate, but not all the exits are also terminations.
-
-In this discussion, we consider the syntax use:
+concept.  In this discussion, we consider the syntax use:
 
 @example
-(with-unwind-protection @meta{cleanup} @meta{thunk})
+(with-unwind-protection @meta{unwind-handler} @meta{thunk})
 @end example
 
 @noindent
-the dynamic extent of a call to @meta{thunk} @strong{is} terminated, and
-so @meta{cleanup} @strong{is} invoked, when:
+the procedure @meta{unwind-handler} is called when the dynamic extent of
+the invocation of @meta{thunk} terminates; dynamic extent
+@strong{termination} is different from dynamic extent @strong{exiting}
+as determined by @func{dynamic-wind} (@pxref{dynamic-wind}).  When the
+execution flow exits the dynamic extent of a function call: such extent
+might also terminate, but not all the exits are also terminations.
+
+The dynamic extent of a call to @meta{thunk} @strong{is} terminated, and
+so @meta{unwind-handler} @strong{is} invoked, when:
 
 @itemize
 @item
-@meta{thunk} performs a normal return.  @meta{cleanup} is applied to the
-symbol @samp{return}.
+@meta{thunk} performs a normal return.  @meta{unwind-handler} is applied
+to the symbol @samp{return}.
 
 @item
 @meta{thunk} raises a continuable or non--continuable exception that is
 intercepted by a use of @syntax{guard}, but only when a clause of
-@syntax{guard} has a test expression returning non--false.  This is what
-happens:
+@syntax{guard} has a test expression returning non--false.
+
+@lisp
+(guard (E (@meta{test} @meta{expr}))
+  (with-unwind-handler @meta{unwind-handler} @meta{thunk}))
+@end lisp
+
+This is what happens:
 
 @enumerate
 @item
-The clause's test expression is evaluated in the dynamic environment of
-the use of @syntax{guard} and it returns non--false.
+The clause's @meta{test} expression is evaluated in the dynamic
+environment of the use of @syntax{guard} and it returns non--false.
 
 @item
-The @meta{cleanup} is called in the dynamic environment of the use of
-@syntax{with-unwind-protection} and its return values discarded.
-@meta{cleanup} is applied to the symbol @samp{exception}.
+@meta{unwind-handler} is applied to the symbol @samp{exception}, in the
+dynamic environment of the use of @syntax{with-unwind-protection}, and
+its return values discarded.
 
 @item
-The clause's expression is evaluated in the dynamic environment of the
+The clause's @meta{expr} is evaluated in the dynamic environment of the
 use of @syntax{guard} and its return values are returned to the
 continuation of @syntax{guard}.
 @end enumerate
@@ -3389,8 +3536,8 @@ continuation of @syntax{guard}.
 @meta{thunk} executes a use of the fluid syntaxes @syntax{break},
 @syntax{continue} or @syntax{return}, as defined by the library
 @library{vicare}, to escape from a form that encloses an
-unwind--protection syntax.  @meta{cleanup} is applied to the symbol
-@samp{escape}.
+unwind--protection syntax.  @meta{unwind-handler} is applied to the
+symbol @samp{escape}.
 
 As bound by the loop syntaxes @syntax{while}, @syntax{until}, @dots{}
 and the syntax @syntax{returnable}: these fluid syntaxes reinstate a
@@ -3403,7 +3550,7 @@ in an unwind--protection form.
 @c ------------------------------------------------------------------------
 
 The dynamic extent of a call to @meta{thunk} is @strong{not} terminated,
-and so @meta{cleanup} is @strong{not} invoked, when:
+and so @meta{unwind-handler} is @strong{not} invoked, when:
 
 @itemize
 @item
@@ -3441,19 +3588,18 @@ extent will be reentered later and continue to termination.
 @item
 If the dynamic extent of @meta{thunk} is terminated and an attempt to
 reenter @meta{thunk} is performed: an exception is raised with compound
-condition object containing a @condition{non-reinstatable} component,
-@ref{&non-reinstatable}.
+condition object containing a @condition{non-reinstatable} component
+(@pxref{&non-reinstatable}).
 
 @item
-If the call to @meta{thunk} raises an exception and the consequent call
-to @meta{cleanup} raises an exception: the clean--up operation may fail
-(and, for example, leave the resource unreleased and in an incorrect
-state).
+Obviously, if a call to @meta{unwind-handler} raises an exception: the
+clean--up operations performed by @meta{unwind-handler} may fail, in
+whole or in part, possibly leaving behind unreleased resources.
 
 @item
 If the call to @meta{thunk} raises an exception and a use of
 @syntax{guard} intercepts it: if a test expression in a clause of
-@syntax{guard} raises an exception, the @meta{cleanup} may not be
+@syntax{guard} raises an exception, the @meta{unwind-handler} may not be
 called.
 
 While it is possible to @func{raise} any object: it is better to always
@@ -3461,6 +3607,11 @@ raise a condition object (possibly compound), so that the test
 expressions in @syntax{guard} uses can just be condition object type
 predicates; such predicates never raise exceptions.
 @end itemize
+
+@c ------------------------------------------------------------------------
+
+If @meta{unwind-handler} raises an exception: such exception is blocked
+and discarded.
 
 @c page
 @node iklib unwind-protect except 1
