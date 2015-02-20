@@ -3250,7 +3250,7 @@ problems}).
 * iklib unwind-protect except 2::    Raising continuable exceptions
                                      from the thunk.
 * iklib unwind-protect except 3::    Raising exceptions from the
-                                     clean--up forms.
+                                     unwind handler.
 * iklib unwind-protect loops::       Use with loop syntaxes.
 * iklib unwind-protect returnable::  Use with returnable bodies.
 * iklib unwind-protect coroutines::  Use with coroutines.
@@ -3619,7 +3619,7 @@ and discarded.
 
 
 A non--continuable exception is raised with @func{raise}, which can be
-applied any object; the argument to @func{raise} becomes the ``raised
+applied to any object; the argument to @func{raise} becomes the ``raised
 object''.  The purpose of raising a non--continuable exception is to
 cause the application of a function, the current exception handler, to
 the raised object; the exception handler is called in the dynamic
@@ -3640,8 +3640,7 @@ shows the basic mechanism:
 (call/cc
     (lambda (escape)
       (with-exception-handler
-          (lambda (E)
-            (escape E))
+          escape
         (lambda ()
           (raise 1)))))
 @result{} 1
@@ -3649,7 +3648,8 @@ shows the basic mechanism:
 
 @noindent
 Reinstating a continuation to jump out of the exception handler is what
-the @syntax{guard} syntax does when it handles an exception.
+the standard @syntax{guard} syntax does when it handles an exception;
+@syntax{guard} does more than this.
 
 @item
 Raise the exception again, causing the invocation of the upper level
@@ -3679,7 +3679,7 @@ exception handler.  The following example shows the basic mechanism:
 This is @strong{not} the correct way of interfacing with the
 unwind--protection mechanism.  In the following example we see that
 escaping from the exception handler skips the call to the
-@meta{cleanup}.
+@meta{unwind-handler}.
 
 @example
 (import (vicare)
@@ -3715,8 +3715,8 @@ mechanism.
 In the following example: the @meta{thunk} raises a non--continuable
 exception, which is catched by the @syntax{else} clause of a
 @syntax{guard} use; this is equivalent to escaping from an exception
-handler, but it does evaluate the @meta{cleanup}.  We can see the forms
-evaluation order.
+handler, but it does evaluate the @meta{unwind-handler}.  We can see the
+forms evaluation order.
 
 @example
 #!vicare
@@ -3867,8 +3867,8 @@ the dynamic environment is restored.
 The continuation of the outer @syntax{guard} clause is reinstated, the
 the dynamic extent of the call to @meta{thunk} is exited: the dynamic
 environment unwinds.  While unwinding: the @meta{thunk} is found
-terminated and the @meta{cleanup} is called in the dynamic environment
-of the @syntax{with-unwind-protection} use.
+terminated and the @meta{unwind-handler} is called in the dynamic
+environment of the @syntax{with-unwind-protection} use.
 
 @item outer-guard-expr
 The clause expression of the outer @syntax{guard} is evaluated in the
@@ -3899,10 +3899,11 @@ exception.  This example shows the basic mechanism:
 The handling of a continuable exception can be the same of the handling
 of a non--continuable exception; in addition the exception handler is
 allowed to return.  In the latter case the dynamic extent of the call to
-the thunk is @strong{not} exited, so the @meta{cleanup} is not called.
+@meta{thunk} is @strong{not} exited, so @meta{unwind-handler} is not
+called.
 
-The following example shows what happens when we raise a continuable
-exception from the @meta{thunk}.
+The following example shows what happens when @meta{thunk} raises a
+continuable exception:
 
 @example
 (import (vicare)
@@ -3929,7 +3930,7 @@ exception from the @meta{thunk}.
 
 @c page
 @node iklib unwind-protect except 3
-@subsection Raising exceptions from the clean--up forms
+@subsection Raising exceptions from the unwind handler
 
 
 When a thunk raises an exception and the current exception handler
@@ -3953,10 +3954,10 @@ example shows the mechanism.
 @result{} 2
 @end example
 
-What happens if the @meta{cleanup} raises an exception?  It was decided
-that such exceptions are to be blocked and discarded; @meta{cleanup}
-thunks have to take care of themselves, handling their own errors.  The
-following example shows the mechanism.
+What happens if @meta{unwind-handler} raises an exception?  It was
+decided that such exceptions are to be blocked and discarded;
+@meta{unwind-handler} procedures have to take care of themselves,
+handling their own errors.  The following example shows the mechanism.
 
 @example
 (import (vicare)
@@ -3994,7 +3995,7 @@ have to remember that @syntax{break} and @syntax{continue} are
 implemented by escaping continuations.
 
 This example shows breaking out of a @syntax{while} syntax; the body and
-the clean--up are evaluated only once; @func{exit} is never called.
+the unwind handler are evaluated only once; @func{exit} is never called.
 
 @example
 #!vicare
@@ -4014,8 +4015,8 @@ y @result{} #t
 @end example
 
 This example shows using @syntax{continue} in a @syntax{while} syntax;
-the body and the clean--up are evaluated @math{3} times; @func{exit} is
-never called.
+the body and the unwind handler are evaluated @math{3} times;
+@func{exit} is never called.
 
 @example
 #!vicare
@@ -4042,7 +4043,7 @@ y @result{} 3
 The unwind--protection mechanism has special integration with the
 @syntax{returnable} syntax defined by @library{vicare}; if an
 unwind--protection syntax is used in the body of @syntax{returnable} and
-@syntax{return} is used in the body forms: the cleanup forms are
+@syntax{return} is used in the body forms: the unwind handler is
 evaluated correctly.  We have to remember that @syntax{return} is
 implemented by an escaping continuation.
 
@@ -4068,7 +4069,7 @@ y @result{} #t
 Using the unwind--protection mechanism with coroutines is fine;
 coroutines use @func{yield} to save the current continuation, give
 control to the next coroutine and come back later; this mechanism does
-not cause the @meta{cleanup} evaluation.
+not cause the @meta{unwind-handler} evaluation.
 
 The following sample code finishes with the given return values and
 lines printed:
@@ -4134,21 +4135,23 @@ lines printed:
 @subsection Handling reentering continuations
 
 
-After the @meta{cleanup} is called: we do @strong{not} want the
+After the @meta{unwind-handler} is called: we do @strong{not} want the
 execution flow to reenter the @meta{thunk} in the same dynamic extent.
 After the dynamic extent of a call to @meta{thunk} terminates, and the
-@meta{cleanup} is called: we are forbidden to reenter the @meta{thunk};
-if we try to reenter: an exception of type @condition{non-reinstatable}
-is raised.
+@meta{unwind-handler} is called: we are forbidden to reenter the
+@meta{thunk}; if we try to reenter: an exception of type
+@condition{non-reinstatable} is raised.
 
 The first problem with reentering is that the code in the @meta{thunk}
 expects invariants in the state of the process that are no longer true;
-for example: if the @meta{cleanup} closes an input/output port, the
+for example: if @meta{unwind-handler} closes an input/output port, the
 @meta{thunk} still expects it to be open.
 
 Reentering might happen, for example, when using the @syntax{amb}
 operator in the @meta{thunk}, @libsref{amb, McCarthy's @syntax{amb}
-operator}.  This means we cannot use @syntax{amb} in a @meta{thunk}.
+operator}.  This means we must be careful to use @syntax{amb} in a
+@meta{thunk} only when the whole search never crosses the unwind
+protection contour.
 
 The following example shows how calling an escape procedure created in
 the @meta{thunk} of a @syntax{with-unwind-protection} causes the
@@ -4199,17 +4202,17 @@ exception handler.
 
 @noindent
 the typical example of values from the dynamic environment is
-parameters, which indeed are implemented on top of @func{dynamic-wind};
-@ref{iklib parameters}, for details.  When using the unwind--protection
+parameters, which indeed are implemented on top of @func{dynamic-wind}
+(@pxref{iklib parameters}).  When using the unwind--protection
 mechanism:
 
 @example
-(with-unwind-protection @meta{cleanup} @meta{thunk})
+(with-unwind-protection @meta{unwind-handler} @meta{thunk})
 @end example
 
 @noindent
-the procedure @meta{cleanup} is called in the dynamic environment of the
-use of @syntax{with-unwind-protection}.
+the procedure @meta{unwind-handler} is called in the dynamic environment
+of the use of @syntax{with-unwind-protection}.
 
 For example, when escaping from @meta{thunk} with @syntax{return}:
 
@@ -4243,7 +4246,7 @@ For example, when escaping from @meta{thunk} with @syntax{return}:
 
 @noindent
 we see that, even though @syntax{return} reinstates the continuation of
-@syntax{returnable}: @meta{cleanup} gathers the parameter value from
+@syntax{returnable}: @meta{unwind-handler} gathers the parameter value from
 inside the use of @syntax{returnable}.
 
 Even more descriptive is the case of raising an exception from
@@ -4288,12 +4291,12 @@ Even more descriptive is the case of raising an exception from
 @end example
 
 @noindent
-both @meta{thunk} and @meta{cleanup} gather the inner value, while the
-test and expression of the @syntax{guard} clause gather the outer value,
-even though the execution order is intermixed.
+both @meta{thunk} and @meta{unwind-handler} gather the inner value,
+while the test and expression of the @syntax{guard} clause gather the
+outer value, even though the execution order is intermixed.
 
 Changing the environment inside @meta{thunk} does not affect
-@meta{cleanup}:
+@meta{unwind-handler}:
 
 @example
 (import (vicare)
@@ -4345,7 +4348,7 @@ Changing the environment inside @meta{thunk} does not affect
 
 
 The unwind protection mechanism may misbehave in some cases.
-Specifically the clean--up procedure may not be called in the following
+Specifically the unwind handler may not be called in the following
 cases:
 
 @itemize
