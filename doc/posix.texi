@@ -3411,7 +3411,8 @@ Accessors for the fields of @code{struct-addrinfo}.
 @end defun
 
 
-@defun getaddrinfo @var{node} @var{service} @var{hints}
+@defun getaddrinfo @var{node} @var{service}
+@defunx getaddrinfo @var{node} @var{service} @var{hints}
 Interface to the C function @cfunc{getaddrinfo}, see the manual page
 @code{getaddrinfo(3)}.  Given the strings or bytevectors @var{node} and
 @var{service} identifying an Internet host and a service, build a list
@@ -3419,15 +3420,15 @@ of @code{struct-addrinfo} instances representing addresses to which
 sockets can be bound or connected.
 
 Both @var{node} and @var{service} can be false, in which case the
-corresponding arguments handed to the C function are @code{NULL}.
-@var{hints} must be an instance of @code{struct-addrinfo} used to select
-matching hosts.
+corresponding arguments handed to the C function are @code{NULL}.  The
+optional argument @var{hints} must be @false{} or an instance of
+@code{struct-addrinfo} used to select matching hosts.
 
 If successful: return the list of data structures, else raise an
 exception.
 
 @example
-(px.getaddrinfo "github.com" "smtp" #f)
+(px.getaddrinfo "github.com" "smtp")
 @result{} (#["struct-addrinfo"
         ai_flags=40             ai_family=AF_INET
         ai_socktype=SOCK_DGRAM  ai_protocol=17
