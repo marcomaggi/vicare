@@ -1737,7 +1737,7 @@
 
   ;;All the cleanups are called.
   ;;
-  (check 'this
+  (check
     (with-result
 
       (define (inner)
