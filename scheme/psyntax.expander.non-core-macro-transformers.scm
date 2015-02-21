@@ -2031,9 +2031,9 @@
   (syntax-match expr-stx ()
     ((_ ?release-thunk ?alloc-thunk)
      (bless
-      `(begin0
-	   (,?alloc-thunk)
-	 (push-compensation-thunk ,?release-thunk))))
+      `(begin
+	 (push-compensation-thunk ,?release-thunk)
+	 (,?alloc-thunk))))
     ))
 
 (define (compensate-macro expr-stx)

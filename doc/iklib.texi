@@ -4664,17 +4664,18 @@ and removed from the stack.
 
 
 @deffn Syntax with-compensation-handler @meta{release-thunk} @meta{alloc-thunk}
-Evaluate @meta{alloc-thunk} and, if no error occurs, push
-@meta{release-thunk} on the current compensations stack.  Return the
-results of evaluating @meta{alloc-thunk}.
+First push @meta{release-thunk} on the current compensations stack,
+@strong{then} evaluate @meta{alloc-thunk}.  Return the results of
+evaluating @meta{alloc-thunk}.
 @end deffn
 
 
 @deffn Syntax compensate @metao{alloc} @meta{alloc} @dots{} (with @metao{release} @meta{release} @dots{})
 @deffnx {Auxiliary Fluid Syntax} with
-Evaluate all the @meta{alloc} expressions and, if no error occurs, push
-a thunk holding the @meta{release} forms on the current compensations
-stack.  Return the result of the last @meta{alloc} expression.
+First evaluate all the @meta{alloc} expressions then, @strong{only} if
+they perform a normal return: push one thunk holding all the
+@meta{release} forms on the current compensations stack.  Return the
+result of the last @meta{alloc} expression.
 @end deffn
 
 
