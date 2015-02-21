@@ -744,6 +744,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-pointers.sps					\
 	tests/test-vicare-promises.sps					\
 	tests/test-vicare-time.sps					\
+	tests/test-vicare-try.sps					\
 	tests/test-vicare-ratnums.sps					\
 	tests/test-vicare-reader.sps					\
 	tests/test-vicare-records-procedural.sps			\

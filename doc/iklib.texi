@@ -1864,7 +1864,8 @@ from @rsixlibrary{exceptions} (@pxref{guard}).
 
 
 @deffn Syntax try @meta{body} @meta{catch-clauses}
-@deffnx Syntax try @meta{body}  @meta{catch-clauses} @meta{finally-clause}
+@deffnx Syntax try @meta{body} @meta{catch-clauses} @meta{finally-clause}
+@deffnx Syntax try @meta{body} @meta{finally-clause}
 @deffnx {Auxiliary Syntax} catch
 @deffnx {Auxiliary Syntax} finally
 @deffnx {Auxiliary Syntax} else
@@ -1992,6 +1993,25 @@ Finally, no else.
                  ...)
                 ...)
             @meta{body})))
+@end example
+
+@item
+Finally, no catch.
+
+@example
+(try
+    @meta{body}
+  (finally
+    @metao{finally-body}
+    @meta{finally-body}
+    ...))
+@expansion{} (with-unwind-protection
+        (lambda (dummy)
+          @metao{finally-body}
+          @meta{finally-body}
+          ...)
+      (lambda ()
+        @meta{body}))
 @end example
 @end itemize
 @end deffn

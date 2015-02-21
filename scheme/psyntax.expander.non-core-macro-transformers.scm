@@ -4053,7 +4053,17 @@
 	 (validate-variable expr-stx ?var)
 	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
 	   (bless
-	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))))
+	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))
+
+      ((_ ?body (finally ?finally-body0 ?finally-body* ...))
+       (let ((why (gensym)))
+	 (bless
+	  `(with-unwind-protection
+	       (lambda (,why)
+		 ,?finally-body0 . ,?finally-body*)
+	     (lambda ()
+	       ,?body)))))
+      ))
 
   (define (parse-multiple-catch-clauses expr-stx var-id clauses-stx)
     (syntax-match clauses-stx (else)
