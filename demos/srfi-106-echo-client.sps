@@ -29,7 +29,7 @@
 
 (define client-socket
   (srfi.make-client-socket "localhost" "8080"
-    (srfi.address-family inet inet6)
+    (srfi.address-family inet)
     (srfi.socket-domain stream)
     (srfi.address-info v4mapped addrconfig)
     (srfi.ip-protocol ip)))
