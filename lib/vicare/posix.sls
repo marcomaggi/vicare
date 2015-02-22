@@ -3505,7 +3505,7 @@
 
 (case-define getaddrinfo
   ((node service)
-   (getaddrinfo node service))
+   (getaddrinfo node service #f))
   ((node service hints)
    (define who 'getaddrinfo)
    (with-arguments-validation (who)
