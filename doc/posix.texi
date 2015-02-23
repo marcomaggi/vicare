@@ -7539,7 +7539,7 @@ sent.
 
 
 @defun close-logging
-Close the current log port unless it is the current error port or the
+Close the current log port unless it is the console error port or the
 configured log file pathname is a single dash; return unspecified
 values.
 
