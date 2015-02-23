@@ -110,9 +110,7 @@
 
 (module GLOBAL-OPTIONS-CONTAINER
   (<global-options>
-   &invalid-global-option-value
-   &invalid-command-line-argument
-   raise-invalid-command-line-argument)
+   &invalid-global-option-value)
 
   (define-record-type <global-options>
     (fields (mutable server-interface)
@@ -196,17 +194,6 @@
 		(make-message-condition (apply format template args))
 		(make-invalid-global-option-value-condition))))
 
-  (define-condition-type &invalid-command-line-argument
-      &error
-    make-invalid-command-line-argument-condition
-    condition-invalid-command-line-argument?)
-
-  (define (raise-invalid-command-line-argument who template . args)
-    (raise
-     (condition (make-who-condition who)
-		(make-message-condition (apply format template args))
-		(make-invalid-command-line-argument-condition))))
-
 ;;; --------------------------------------------------------------------
 ;;; helpers
 
@@ -232,7 +219,8 @@
 ;;;; command line arguments parsing
 
 (module COMMAND-LINE-ARGS
-  (parse-command-line-arguments)
+  (parse-command-line-arguments
+   &invalid-command-line-argument)
   (import (srfi :37 args-fold)
     GLOBAL-OPTIONS-CONTAINER)
 
@@ -377,7 +365,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n")
      ))
 
 ;;; --------------------------------------------------------------------
-;;; helper functions
+;;; error stuff
 
   (define (invalid-option-value option value)
     (raise-invalid-command-line-argument __module_who__
@@ -386,6 +374,18 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n")
   (define (unrecognised-option-proc option name arg seed)
     (raise-invalid-command-line-argument __module_who__
       "unknown command line option: ~a" name))
+
+  (define-condition-type &invalid-command-line-argument
+      &error
+    make-invalid-command-line-argument-condition
+    condition-invalid-command-line-argument?)
+
+  (define (raise-invalid-command-line-argument who template . args)
+    (raise
+     (condition (make-who-condition who)
+		(make-message-condition (apply format template args))
+		(make-invalid-command-line-argument-condition))))
+
 
   #| end of module: COMMAND-LINE-ARGS |# )
 
@@ -401,6 +401,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n")
 	 &invalid-global-option-value
 	 &invalid-command-line-argument)
   (import GLOBAL-OPTIONS-CONTAINER)
+  (module (&invalid-command-line-argument)
+    (import COMMAND-LINE-ARGS))
+
 
   ;;An  instance of  record  type "<global-options>"  holding  global server  options
   ;;configured from the command line.
