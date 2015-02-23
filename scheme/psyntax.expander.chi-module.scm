@@ -839,8 +839,12 @@
 
 	((?arg.tag . ?rest-arg*.tag)
 	 (if (null? rand*.psi)
-	     (%error-more-arguments-than-operands input-form.stx
-						  (+ count (length arg*.tag)) count)
+	     (let ((number-of-mandatory-args (if (list? arg*.tag)
+						 (length arg*.tag)
+					       (receive (proper tail)
+						   (improper-list->list-and-rest arg*.tag)
+						 (length proper)))))
+	       (%error-more-arguments-than-operands input-form.stx (+ count number-of-mandatory-args) count))
 	   (let* ((rand.psi               (car rand*.psi))
 		  (rand.retvals-signature (psi-retvals-signature rand.psi))
 		  (rand.signature-tags    (retvals-signature-tags rand.retvals-signature)))
