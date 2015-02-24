@@ -6,7 +6,21 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	This is a demo script acting similarly to the classic "telnet" unix program.
+;;;	This is a demo script acting  similarly to the classic "telnet" unix program.
+;;;	We can compile it with:
+;;;
+;;;        $ vicare -o connect -c connect.sps
+;;;
+;;;     To connect to "localhost" port 8080 we do:
+;;;
+;;;        $ connect localhost 8080
+;;;
+;;;     then we  start typing; there  is no  prompt; we tap  ^D to exit  the process.
+;;;     See:
+;;;
+;;;        $ connect --help
+;;;
+;;;     for the list of options.
 ;;;
 ;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
