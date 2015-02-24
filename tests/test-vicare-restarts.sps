@@ -1,6 +1,6 @@
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: demo for Common Lisp's restarts
+;;;Contents: demo for Scheme-flavored Common Lisp's restarts
 ;;;Date: Tue Feb 24, 2015
 ;;;
 ;;;Abstract
@@ -35,18 +35,42 @@
 ;;;; implementation
 
 (define-syntax handlers-case
+  ;;Basically  behaves  like  R6RS's GUARD  syntax.   Install  condition
+  ;;handlers and in case a  condition is signaled: terminate the dynamic
+  ;;extent of the ?BODY forms.
+  ;;
+  ;;Every  ?CONDITION is  meant to  be  an identifier  usable as  second
+  ;;argument to IS-A?, for example condition type identifiers.
+  ;;
+  ;;Every  ?HANDLER must  be  an expression  evaluating  to a  procedure
+  ;;accepting a single  argument.  The return value  of ?HANDLER becomes
+  ;;the return value of HANDLERS-CASE.
+  ;;
   (syntax-rules ()
     ((_ () ?body0 ?body ...)
      (begin ?body0 ?body ...))
     ((_ ((?condition0 ?handler0) (?condition ?handler) ...)
 	?body0 ?body ...)
      (guard (E ((is-a? E ?condition0) (?handler0 E))
-	       ((is-a? E ?condition)  (?handler E))
+	       ((is-a? E ?condition)  (?handler  E))
 	       ...)
        ?body0 ?body ...))
     ))
 
 (define-syntax handlers-bind
+  ;;Not  quite  like   R6RS's  WITH-EXCEPTION-HANDLER  syntax.   Install
+  ;;condition handlers and  in case a condition is  signaled: select one
+  ;;of them in the dynamic extent of the ?BODY forms.
+  ;;
+  ;;Every  ?CONDITION is  meant to  be  an identifier  usable as  second
+  ;;argument to IS-A?, for example condition type identifiers.
+  ;;
+  ;;Every  ?HANDLER must  be  an expression  evaluating  to a  procedure
+  ;;accepting  a single  argument.  If  a ?HANDLER  accepts to  handle a
+  ;;condition: it must perform a non-local exit, for example by invoking
+  ;;a restart.  If a ?HANDLER returns: it means it refuses to handle the
+  ;;condition and an upper level handler is searched.
+  ;;
   (syntax-rules ()
     ((_ () ?body0 ?body ...)
      (begin ?body0 ?body ...))
@@ -67,55 +91,109 @@
 	 find-restart
 	 invoke-restart)
 
-  ;;The  object  signaled  by  SIGNAL.  This  parameter  exists  because
-  ;;INVOKE-RESTART needs to retrieve the signaled value
-  ;;
-  (define signaled-object
-    (make-parameter #f))
+  (module (installed-restart-point
+	   installed-restart-point.signaled-object
+	   installed-restart-point.restart-proc
+	   installed-restart-point.restart-handlers
+	   make-<restart-point>)
 
-  (define restart-proc
-    (make-parameter
-	(lambda args
-	  (assertion-violation 'restart-proc
-	    "invalid call to restart procedure \
-             outside RESTART-CASE environment"))))
+    (define-record-type <restart-point>
+      (nongenerative)
+      (fields (mutable signaled-object)
+		;The object  signaled by  SIGNAL.  It is  meant to  be a
+		;condition object.
+	      (immutable restart-proc)
+		;The escape procedure to be applied to the return values
+		;of  a  restart  handler  to  jump  back  to  a  use  of
+		;RESTART-CASE.
+	      (immutable restart-handlers)
+		;List  of alists  managed as  a stack  of alists.   Each
+		;alist represents the restart  handlers installed by the
+		;expansion of a single RESTART-CASE use.
+	      #| end of FIELDS |# )
+      (protocol
+       (lambda (make-record)
+	 (lambda (restart-proc handlers-alist)
+	   (make-record #f restart-proc handlers-alist))))
+      #| end of DEFINE-RECORD-TYPE |# )
 
-  ;;List of  alists managed, in the  dynamic environment, as a  stack of
-  ;;alists.  Each alist represents the restarts defined by the expansion
-  ;;of a single RESTART-CASE.
-  ;;
-  (define restarts
-    (make-parameter '()))
+    (define (default-restart-proc . args)
+      (assertion-violation 'restart-proc
+	"invalid call to restart procedure \
+       outside RESTART-CASE environment"))
 
-  (define (signal C)
-    (signaled-object C)
+    (define installed-restart-point
+      (make-parameter (make-<restart-point> default-restart-proc '())))
+
+    (define-syntax installed-restart-point.signaled-object
+      (syntax-rules ()
+	((_)
+	 (<restart-point>-signaled-object      (installed-restart-point)))
+	((_ ?obj)
+	 (<restart-point>-signaled-object-set! (installed-restart-point) ?obj))
+	))
+
+    (define-syntax-rule (installed-restart-point.restart-proc)
+      (<restart-point>-restart-proc (installed-restart-point)))
+
+    (define-syntax-rule (installed-restart-point.restart-handlers)
+      (<restart-point>-restart-handlers (installed-restart-point)))
+
+    #| end of module |# )
+
+;;;
+
+  (define* (signal {C condition?})
+    ;;Signal a condition.
+    ;;
+    (installed-restart-point.signaled-object C)
     (raise-continuable C))
 
   (define-syntax restart-case
+    ;;Every ?KEY  must be a symbol  representing the name of  a restart.
+    ;;The same ?KEY can be used in nested uses of RESTART-CASE.
+    ;;
+    ;;Every ?HANDLER  must be  an expression  evaluating to  a procedure
+    ;;accepting a single argument.  The return values of ?HANDLER become
+    ;;the return values of RESTART-CASE.
+    ;;
     (syntax-rules ()
       ((_ ?body)
        ?body)
       ((_ ?body (?key0 ?handler0) (?key ?handler) ...)
        (call/cc
-	   (lambda (escape)
+	   (lambda (restart-proc)
 	     (parametrise
-		 ((signaled-object #f)
-		  (restart-proc    escape)
-		  (restarts `(((?key0 . ,?handler0)
-			       (?key  . ,?handler)
-			       ...)
-			      . ,(restarts))))
+		 ((installed-restart-point
+		   (make-<restart-point> restart-proc
+		     `(((?key0 . ,?handler0)
+			(?key  . ,?handler)
+			...)
+		       . ,(installed-restart-point.restart-handlers)))))
 	       ?body))))
       ))
 
   (define* (find-restart {key symbol?})
+    ;;Search  the current  dynamic  environment for  the innest  restart
+    ;;handler  associated to  KEY.  If  a handler  is found:  return its
+    ;;procedure; otherwise return #f.
+    ;;
     (exists (lambda (alist)
 	      (cond ((assq key alist)
 		     => cdr)
 		    (else #f)))
-      (restarts)))
+      (installed-restart-point.restart-handlers)))
 
   (define (invoke-restart key/handler)
+    ;;Given a symbol representing the  name of a restart handler: search
+    ;;the  associated handler  in  the current  dynamic environment  and
+    ;;apply it to the signaled condition object.
+    ;;
+    ;;Given a  procedure being the  restart handler itself: apply  it to
+    ;;the signaled condition object
+    ;;
+    (define (%call-restart-handler handler)
+      ((installed-restart-point.restart-proc) (handler (installed-restart-point.signaled-object))))
     (cond ((symbol? key/handler)
 	   (cond ((find-restart key/handler)
 		  => %call-restart-handler)
@@ -127,10 +205,8 @@
 	   (%call-restart-handler key/handler))
 	  (else
 	   (procedure-argument-violation __who__
-	     "expected restart value as argument" key/handler))))
-
-  (define (%call-restart-handler handler)
-    ((restart-proc) (handler (signaled-object))))
+	     "expected restart name or procedure as argument"
+	     key/handler))))
 
   #| end of module |# )
 
@@ -207,6 +283,21 @@
 
 
 (parametrise ((check-test-name	'handlers-bind))
+
+  (check	;no condition
+      (with-result
+	(handlers-case
+	    ((&error   (lambda (E)
+			 (add-result 'error-handler)
+			 1))
+	     (&warning (lambda (E)
+			 (add-result 'warning-handler)
+			 2)))
+	  (add-result 'body)
+	  1))
+    => '(1 (body)))
+
+;;; --------------------------------------------------------------------
 
   (check	;escaping from handler
       (with-result
@@ -423,7 +514,8 @@
 ;; Local Variables:
 ;; fill-column: 72
 ;; coding: utf-8-unix
-;; eval: (put 'handlers-case	'scheme-indent-function 1)
-;; eval: (put 'handlers-bind	'scheme-indent-function 1)
-;; eval: (put 'restart-case	'scheme-indent-function 1)
+;; eval: (put 'handlers-case		'scheme-indent-function 1)
+;; eval: (put 'handlers-bind		'scheme-indent-function 1)
+;; eval: (put 'restart-case		'scheme-indent-function 1)
+;; eval: (put 'make-<restart-point>	'scheme-indent-function 1)
 ;; End:
