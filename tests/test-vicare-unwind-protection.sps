@@ -1202,8 +1202,131 @@
 
 (parametrise ((check-test-name	'exceptions-from-guards))
 
+  ;;Raising an exception from an exception handler: the unwind handler is called, but
+  ;;the original exception is lost.
+  ;;
+  (check
+      (with-result
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
+	  (with-exception-handler
+	      (lambda (E)
+		(add-result 'exception-handler)
+		(raise 2))
+	    (lambda ()
+	      (with-unwind-protection
+		  (lambda (why)
+		    (add-result 'unwind-handler))
+		(lambda ()
+		  (dynamic-wind
+		      (lambda ()
+			(add-result 'in-guard))
+		      (lambda ()
+			(add-result 'thunk-in)
+			(raise 1)
+			(add-result 'thunk-out))
+		      (lambda ()
+			(add-result 'out-guard)))))))))
+    => '(2 (in-guard
+	    thunk-in
+	    exception-handler
+	    out-guard
+	    in-guard out-guard unwind-handler
+	    guard-else)))
+
+  ;;Raising exception  from GUARD's test:  the unwind handler  is NOT called  and the
+  ;;original exception is lost.
+  ;;
+  (check
+      (with-result
+	(guard (E (else
+		   (add-result 'outer-guard-else)
+		   E))
+	  (guard (E ((begin
+		       (add-result 'inner-guard-test)
+		       (raise 2))
+		     E))
+	    (with-unwind-protection
+		(lambda (why)
+		  (add-result 'unwind-handler))
+	      (lambda ()
+		(dynamic-wind
+		    (lambda ()
+		      (add-result 'in-guard))
+		    (lambda ()
+		      (add-result 'thunk-in)
+		      (raise 1)
+		      (add-result 'thunk-out))
+		    (lambda ()
+		      (add-result 'out-guard))))))))
+    => '(2 (in-guard
+	    thunk-in
+	    out-guard
+	    inner-guard-test
+	    outer-guard-else)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'exceptions-from-guards))
+
 ;;;What  happens when  we  raise an  exception  from the  in-guard  and out-guard  of
 ;;;DYNAMIC-WIND?
+
+  (check	;no error in guard thunks
+      (with-result
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
+	  (dynamic-wind
+	      (lambda ()
+		(add-result 'in-guard))
+	      (lambda ()
+		(with-unwind-handler
+		    (lambda (E)
+		      (add-result 'unwind-handler))
+		  (lambda ()
+		    (add-result 'thunk-in)
+		    (raise 1))))
+	      (lambda ()
+		(add-result 'out-guard)))))
+    => '(1 (in-guard
+	    thunk-in
+	    out-guard
+	    in-guard unwind-handler out-guard
+	    guard-else)))
+
+  (check	;error in guard thunks
+      (with-result
+	(guard (E (else
+		   (add-result 'guard-else)
+		   E))
+	  (dynamic-wind
+	      (let ((flag #f))
+		(lambda ()
+		  (cond (flag
+			 (add-result 'in-guard/raise)
+			 (raise 2))
+			(else
+			 (set! flag #t)
+			 (add-result 'in-guard)))))
+	      (lambda ()
+		(with-unwind-handler
+		    (lambda (E)
+		      (add-result 'unwind-handler))
+		  (lambda ()
+		    (add-result 'thunk-in)
+		    (raise 1))))
+	      (lambda ()
+		(add-result 'out-guard)))))
+    => '(2 (in-guard
+	    thunk-in
+	    out-guard
+	    in-guard/raise
+	    guard-else)))
+
+;;; --------------------------------------------------------------------
 
   (check	;no exceptions raised
     (with-result
