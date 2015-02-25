@@ -62,7 +62,19 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
+  (check	;else clause
+      (with-result
+	(let ((flag #f))
+	  (ensure flag
+	      (by
+	       (add-result 'by))
+	    (else-by
+	     (add-result 'else-by-1))
+	    (else
+	     (add-result 'else)))))
+    => '((by else-by-1 else)))
+
+  (check	;no else clause, success
       (with-result
 	(let ((flag #f))
 	  (ensure flag
@@ -74,6 +86,49 @@
 	     (add-result 'else-by-2)
 	     (set! flag #t)))))
     => '((by else-by-1 else-by-2)))
+
+  (check	;no else clause, failure
+      (with-result
+	(try
+	    (let ((flag #f))
+	      (ensure flag
+		  (by
+		   (add-result 'by))
+		(else-by
+		 (add-result 'else-by-1))
+		(else-by
+		 (add-result 'else-by-2))))
+	  (catch E
+	    ((&ensure)
+	     (add-result 'catch-ensure)
+	     #t)
+	    (else
+	     (add-result 'catch-else)
+	     E))))
+    => '(#t (by else-by-1 else-by-2 catch-ensure)))
+
+;;; --------------------------------------------------------------------
+
+  (check	;exception from clauses
+      (with-result
+	(try
+	    (let ((flag #f))
+	      (ensure flag
+		  (by
+		   (add-result 'by))
+		(else-by
+		 (add-result 'else-by-1)
+		 (raise 123))
+		(else-by
+		 (add-result 'else-by-2))))
+	  (catch E
+	    ((&ensure)
+	     (add-result 'catch-ensure)
+	     #t)
+	    (else
+	     (add-result 'catch-else)
+	     E))))
+    => '(123 (by else-by-1 catch-else)))
 
   #t)
 

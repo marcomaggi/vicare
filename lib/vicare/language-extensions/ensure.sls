@@ -26,7 +26,7 @@
 
 #!r6rs
 (library (vicare language-extensions ensure)
-  (export ensure by else-by
+  (export ensure by else-by else
 	  &ensure make-ensure-error ensure-error?)
   (import (vicare))
 
@@ -43,38 +43,45 @@
   (define-auxiliary-syntaxes by else-by)
 
   (define-syntax* (ensure stx)
-    (define (%process-clauses test-id clause*)
-      (syntax-case clause* (else-by)
+
+    (define (main stx)
+      (syntax-case stx (by else-by)
+	((_ ?test
+	    (by ?body-by0 ?body-by ...)
+	    . ?else-clauses)
+	 (with-syntax
+	     (((TEST) (generate-temporaries '(#f))))
+	   #`(let ((TEST (lambda () ?test)))
+	       (if (TEST)
+		   (values)
+		 (begin
+		   ?body-by0 ?body-by ...
+		   #,(%process-else-clauses #'TEST #'?else-clauses))))))
+	))
+
+    (define (%process-else-clauses test-id clause*)
+      (syntax-case clause* (else-by else)
 	(()
 	 #`(if (#,test-id)
 	       (values)
 	     (raise-ensure-error)))
 
-	(((else-by ?body-else0 ?body-else ...) . ?rest)
+	(((else ?body0 ?body ...))
+	 #`(if (#,test-id)
+	       (values)
+	     (begin ?body0 ?body ... (values))))
+
+	(((else-by ?body0 ?body ...) . ?rest)
 	 #`(if (#,test-id)
 	       (values)
 	     (begin
-	       ?body-else0 ?body-else ...
-	       #,(%process-clauses test-id #'?rest))))
+	       ?body0 ?body ...
+	       #,(%process-else-clauses test-id #'?rest))))
 
 	(_
 	 (synner "invalid syntax in ELSE-BY clauses" clause*))))
-    (syntax-case stx (by else-by)
-      ((_ ?test
-	  (by ?body-by0 ?body-by ...)
-	  (else-by ?body-else0 ?body-else ...)
-	  ...)
-       (with-syntax
-	   (((TEST) (generate-temporaries '(#f))))
-	 #`(let ((TEST (lambda () ?test)))
-	     (if (TEST)
-		 (values)
-	       (begin
-		 ?body-by0 ?body-by ...
-		 #,(%process-clauses #'TEST
-				     #'((else-by ?body-else0 ?body-else ...)
-					...)))))))
-      ))
+
+    (main stx))
 
   #| end of LIBRARY |# )
 
