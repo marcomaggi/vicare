@@ -5253,6 +5253,7 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions procarg::    Procedure argument violations.
 * iklib conditions exprret::    Expression return value violations.
 * iklib conditions non-reinst:: Non-reinstatable continuations.
+* iklib conditions misc::       Miscellaneous primitives.
 @end menu
 
 @c page
@@ -5452,6 +5453,28 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object with components: @condition{who},
 @condition{message}, @condition{irritants},
 @condition{non-reinstatable}.
+@end defun
+
+@c page
+@node iklib conditions misc
+@subsection Miscellaneous primitives
+
+
+@defun compound-condition? @var{obj}
+Return @true{} if @var{obj} is a compound condition object; otherwise
+return @false{}.
+
+@lisp
+(compound-condition? (make-error))
+@result{} #f
+
+(compound-condition? (condition (make-error)
+                                (make-warning)))
+@result{} #t
+
+(compound-condition? "ciao")
+@result{} #f
+@end lisp
 @end defun
 
 @c page

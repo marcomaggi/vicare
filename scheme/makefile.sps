@@ -2025,6 +2025,7 @@
     (utf32->string				v r bv)
     (print-condition				v $language)
     (condition?					v r co)
+    (compound-condition?			v $language)
     (&assertion					v r co)
     (assertion-violation?			v r co)
     (&condition					v r co)
