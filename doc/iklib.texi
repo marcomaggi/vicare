@@ -8255,14 +8255,19 @@ expands to the definition of the following bindings:
 
 @table @code
 @item color
-A syntax binding internally referencig the struct type descriptor as
-returned by @func{make-struct-type} applied to the name of the structure
-and the list of fields.  Additionally, when this identifier is used in
-reference position it evaluates to a constructor function:
+When the identifier representing the record type name is used in macro
+keyword position with the syntax:
 
 @example
-(color 1 2 3)           @result{} #["color" 1 2 3]
-(apply color 1 '(2 3))  @result{} #["color" 1 2 3]
+(@meta{name} (@meta{expr} ...))
+@end example
+
+@noindent
+the form is expanded to the application of the constructor to the
+results of evaluating the @meta{expr} arguments:
+
+@example
+(color (1 2 3)) @result{} #["color" 1 2 3]
 @end example
 
 @item make-color @var{red} @var{green} @var{blue}
@@ -8662,18 +8667,22 @@ unsafe accessor and mutator identifiers out of libraries.
 Defined by @rnrs{6}.  Define a new @rnrs{6} record type; @ref{stdlib
 records syntactic layer, define-record-type}.
 
-Additionally, as Vicare extension, when this identifier is used in
-reference position it evaluates to a constructor function as defined by
-the default constructor:
+Additionally, as Vicare extension, when the identifier representing the
+record type name is used in macro keyword position with the syntax:
+
+@example
+(@meta{name} (@meta{expr} ...))
+@end example
+
+@noindent
+the form is expanded to the application of the default constructor to
+the results of evaluating the @meta{expr} arguments:
 
 @example
 (define-record-type color
   (fields red green blue))
 
-(color 1 2 3)
-@result{} #[r6rs-record: color red=1 green=2 blue=3]
-
-(apply color 1 '(2 3))
+(color (1 2 3))
 @result{} #[r6rs-record: color red=1 green=2 blue=3]
 @end example
 @end deffn
