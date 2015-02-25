@@ -33,56 +33,145 @@
 (check-display "*** testing Vicare: dynamic environment, Common Lisp's restarts\n")
 
 
-;;;; implementation
+;;;; implementation of HANDLERS-CASE
 
-(define-syntax handlers-case
+(define-syntax* (handlers-case stx)
   ;;Basically behaves  like R6RS's GUARD  syntax.  Install condition handlers  and in
   ;;case a condition is signaled: terminate the dynamic extent of the ?BODY forms.
   ;;
-  ;;Every ?CONDITION is meant to be an identifier usable as second argument to IS-A?,
-  ;;for example condition type identifiers.
+  ;;Every  ?TYPESPEC is  meant to  be a  non-empty proper  list of  identifiers, each
+  ;;usable as second argument to CONDITION-IS-A?.
   ;;
   ;;Every ?HANDLER must be an expression evaluating to a procedure accepting a single
   ;;argument.   The   return  value   of  ?HANDLER  becomes   the  return   value  of
   ;;HANDLERS-CASE.
   ;;
-  (syntax-rules ()
-    ((_ () ?body0 ?body ...)
-     (begin ?body0 ?body ...))
-    ((_ ((?condition0 ?handler0) (?condition ?handler) ...)
-	?body0 ?body ...)
-     (guard (E ((is-a? E ?condition0) (?handler0 E))
-	       ((is-a? E ?condition)  (?handler  E))
-	       ...)
-       ?body0 ?body ...))
-    ))
+  (define (main stx)
+    (syntax-case stx ()
+      ((_ () ?body0 ?body ...)
+       #'(begin ?body0 ?body ...))
 
-(define-syntax handlers-bind
+      ((_ (?clause0 ?clause ...) ?body0 ?body ...)
+       (let ((guarded-expr (with-syntax
+			       (((VAR) (generate-temporaries '(E))))
+			     (with-syntax
+				 (((CLAUSE0 CLAUSE ...)
+				   (%process-clauses #'VAR #'(?clause0 ?clause ...))))
+			       #'(guard (VAR CLAUSE0 CLAUSE ...)
+				   ?body0 ?body ...)))))
+	 (if no-error-expr
+	     #`(call-with-values
+		   (lambda () #,guarded-expr)
+		 #,no-error-expr)
+	   guarded-expr)))
+      ))
+
+  (define no-error-expr #f)
+
+  (define (%process-clauses var clause*)
+    (syntax-case clause* ()
+      (()
+       '())
+
+      (((?no-error ?handler) . ?rest)
+       (let ((X #'?no-error))
+	 (and (identifier? X)
+	      (eq? ':no-error (syntax->datum X))))
+       (if no-error-expr
+	   (synner "invalid multiple definition of :no-error clause"
+		   #'(?no-error ?handler))
+	 (begin
+	   (set! no-error-expr #'?handler)
+	   (%process-clauses var #'?rest))))
+
+      (((?typespec ?handler) . ?rest)
+       (cons #`(#,(%process-typespec var #'?typespec) (?handler #,var))
+	     (%process-clauses var #'?rest)))
+
+      ((?clause . ?rest)
+       (synner "invalid clause" #'?clause))))
+
+  (define (%process-typespec var spec)
+    (syntax-case spec ()
+      (?condition
+       (identifier? #'?condition)
+       #`(condition-is-a? #,var ?condition))
+
+      ((?condition0 ?condition ...)
+       (all-identifiers? (syntax->list #'(?condition0 ?condition ...)))
+       #`(or (condition-is-a? #,var ?condition0)
+	     (condition-is-a? #,var ?condition)
+	     ...))
+      (_
+       (synner "invalid typespec syntax" spec))))
+
+  (main stx))
+
+
+;;;; implementation of HANDLERS-BIND
+
+(define-syntax* (handlers-bind stx)
   ;;Not quite like R6RS's  WITH-EXCEPTION-HANDLER syntax.  Install condition handlers
   ;;and in case a condition is signaled: select  one of them in the dynamic extent of
   ;;the ?BODY forms.
   ;;
-  ;;Every ?CONDITION is meant to be an identifier usable as second argument to IS-A?,
-  ;;for example condition type identifiers.
+  ;;Every  ?TYPESPEC is  meant to  be a  non-empty proper  list of  identifiers, each
+  ;;usable as second argument to CONDITION-IS-A?.
   ;;
   ;;Every ?HANDLER must be an expression evaluating to a procedure accepting a single
   ;;argument.   If a  ?HANDLER  accepts to  handle  a condition:  it  must perform  a
   ;;non-local exit,  for example by  invoking a restart.   If a ?HANDLER  returns: it
   ;;means it refuses to handle the condition and an upper level handler is searched.
   ;;
-  (syntax-rules ()
-    ((_ () ?body0 ?body ...)
-     (begin ?body0 ?body ...))
-    ((_ ((?condition ?handler) ...) ?body0 ?body ...)
-     (with-exception-handler
-	 (lambda (E)
-	   (cond ((is-a? E ?condition) (?handler E))
-		 ...)
-	   ;;If we  are here either no  ?CONDITION matched E or  a ?HANDLER returned.
-	   ;;Let's search for another handler in the uplevel dynamic environment.
-	   (raise-continuable E))
-       (lambda () ?body0 ?body ...)))
-    ))
+  (define (main stx)
+    (syntax-case stx ()
+      ((_ () ?body0 ?body ...)
+       #'(begin ?body0 ?body ...))
+
+      ((_ ((?typespec ?handler) ...) ?body0 ?body ...)
+       (with-syntax
+	   (((VAR) (generate-temporaries '(E))))
+	 (with-syntax
+	     (((PRED ...) (%process-typespecs #'VAR #'(?typespec ...))))
+	   #'(with-exception-handler
+		 (lambda (VAR)
+		   (cond (PRED (?handler VAR))
+			 ...)
+		   ;;If  we are  here either  no ?TYPESPEC  matched E  or a  ?HANDLER
+		   ;;returned.   Let's  search for  another  handler  in the  uplevel
+		   ;;dynamic environment.
+		   (raise-continuable VAR))
+	       (lambda () ?body0 ?body ...)))))
+      ))
+
+  (define (%process-typespecs var spec*)
+    (syntax-case spec* ()
+      (()
+       '())
+      ((?typespec . ?rest)
+       (identifier? #'?typespec)
+       (cons #`(condition-is-a? #,var ?typespec)
+	     (%process-typespecs       var #'?rest)))
+      ((?typespec . ?rest)
+       (cons (%process-single-typespec var #'?typespec)
+	     (%process-typespecs       var #'?rest)))
+      ))
+
+  (define (%process-single-typespec var spec)
+    (syntax-case spec ()
+      ((?condition0 ?condition ...)
+       (all-identifiers? (syntax->list #'(?condition0 ?condition ...)))
+       #`(or (condition-is-a? #,var ?condition0)
+	     (condition-is-a? #,var ?condition)
+	     ...))
+      (_
+       (synner "invalid typespec syntax" spec))
+      ))
+
+  (main stx))
+
+
+;;;; restarts
 
 (module (signal
 	 restart-case
@@ -235,9 +324,25 @@
 	  1))
     => '(1 (body)))
 
+  (check	;no condition, :no-error clause
+      (with-result
+	(handlers-case
+	    ((&error    (lambda (E)
+			  (add-result 'error-handler)
+			  1))
+	     (:no-error (lambda (X)
+			  (add-result 'no-error)
+			  (* 10 X)))
+	     (&warning  (lambda (E)
+			  (add-result 'warning-handler)
+			  2)))
+	  (add-result 'body)
+	  1))
+    => '(10 (body no-error)))
+
 ;;; --------------------------------------------------------------------
 
-  (internal-body
+  (internal-body	;signaled condition
 
     (define (doit C)
       (with-result
@@ -262,6 +367,32 @@
 
     #| end of body |# )
 
+  ;;Signaled condition, multiple types in single clause.
+  ;;
+  (internal-body
+
+    (define (doit C)
+      (with-result
+	(handlers-case
+	    (((&error &warning) (lambda (E)
+				  (add-result 'handler)
+				  1)))
+	  (add-result 'body-begin)
+	  (signal C)
+	  (add-result 'body-normal-return))))
+
+    (check
+	(doit (make-error))
+      => '(1 (body-begin handler)))
+
+    (check
+	(doit (make-warning))
+      => '(1 (body-begin handler)))
+
+    #| end of body |# )
+
+  ;;Signaled condition, nested HANDLERS-CASE uses.
+  ;;
   (internal-body
 
     (define (doit C)
@@ -287,6 +418,8 @@
       => '(2 (body-begin warning-handler)))
 
     #| end of body |# )
+
+;;; --------------------------------------------------------------------
 
   #t)
 
@@ -317,12 +450,30 @@
 			     (add-result 'error-handler)
 			     (escape 2))))
 		(add-result 'body-begin)
-		(raise (make-error))
+		(signal (make-error))
 		(add-result 'body-return)
 		1))))
     => '(2 (body-begin error-handler)))
 
-  (check	;returning from handler
+  ;;Multiple condition identifiers in the same clause.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (handlers-bind
+		  (((&warning &error) (lambda (E)
+					(add-result 'handler)
+					(escape 2))))
+		(add-result 'body-begin)
+		(signal (make-error))
+		(add-result 'body-return)
+		1))))
+    => '(2 (body-begin handler)))
+
+  ;;Nested HANDLERS-BIND uses, returning from handler.
+  ;;
+  (check
       (with-result
 	(call/cc
 	    (lambda (escape)
