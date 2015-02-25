@@ -797,6 +797,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-comparisons.sps		\
 	tests/test-vicare-language-extensions-cond-expand.sps		\
 	tests/test-vicare-language-extensions-custom-ports.sps		\
+	tests/test-vicare-language-extensions-ensure.sps		\
 	tests/test-vicare-language-extensions-hooks.sps			\
 	tests/test-vicare-language-extensions-identifier-substitutions.sps	\
 	tests/test-vicare-language-extensions-keywords.sps		\

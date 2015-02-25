@@ -235,11 +235,6 @@
       (let ((source-pathname (string-append "lib/" (strip-source-file-prefix (libs.library-source-file-name lib))))
 	    ;;Remember that the stem+extension starts with a slash!!!
 	    (binary-pathname (libs.directory+library-stem->library-binary-pathname "lib" (libs.library-reference->filename-stem libref))))
-(debug-print __who__
-	     (libs.library-source-file-name lib)
-	     (strip-source-file-prefix (libs.library-source-file-name lib))
-	     source-pathname
-	     binary-pathname)
 	(unless (hashtable-ref ALREADY-PROCESSED-TABLE source-pathname #f)
 	  (fprintf stderr "processing: ~a\n" source-pathname)
 	  (%build-compilation-recipe target/dependencies-list binary-pathname source-pathname)
@@ -285,10 +280,6 @@
     (let ((fasl-stem (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ binary-pathname))
 	  (sls-stem  (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ source-pathname))
 	  (noinst    (if (include-install-rules) "" "noinst_")))
-
-(debug-print __who__
-	     source-pathname sls-stem
-	     binary-pathname fasl-stem)
 
       ;;Generate the opening Automake conditional directives.
       (when (conditionals)
