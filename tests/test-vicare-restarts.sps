@@ -297,7 +297,20 @@
 ;;;
 
   (define* (signal {C condition?})
-    ;;Signal a condition.
+    ;;Signal  a condition  by raising  it  with RAISE-CONTINUABLE.   Perform what  is
+    ;;needed to handle the restarts protocol.
+    ;;
+    ;;NOTE As  defined by Common Lisp:  SIGNAL should return if  no handler accepting
+    ;;the condition is  found.  In this implementation this normal  return will *not*
+    ;;happen by default.  To implement such behaviour  we have to wrap the whole code
+    ;;in a form like this:
+    ;;
+    ;;   (with-exception-handler
+    ;;        (lambda (E) (values))
+    ;;     (lambda () ?body0 ?body ...))
+    ;;
+    ;;with this outer  exception handler any unhandled exception  will return; notice
+    ;;that it will also return to normal calls to RAISE-CONTINUABLE.
     ;;
     (installed-restart-point.signaled-object C)
     (raise-continuable C))
