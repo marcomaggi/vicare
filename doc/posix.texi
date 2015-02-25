@@ -6471,7 +6471,6 @@ semaphore structure in the shared memory.
   (prefix (vicare posix) px.)
   (vicare platform constants)
   (only (vicare language-extensions syntaxes)
-        unwind-protect
         callet))
 
 (define shm.pathname
