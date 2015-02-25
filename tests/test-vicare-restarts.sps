@@ -36,15 +36,45 @@
 ;;;; implementation of HANDLERS-CASE
 
 (define-syntax* (handlers-case stx)
-  ;;Basically behaves  like R6RS's GUARD  syntax.  Install condition handlers  and in
-  ;;case a condition is signaled: terminate the dynamic extent of the ?BODY forms.
+  ;;Evaluate body forms in a dynamic  environment in which new exception handlers are
+  ;;installed;   it  is   capable   of  handling   exceptions   raised  with   RAISE,
+  ;;RAISE-CONTINUABLE and SIGNAL.  Basically behave like R6RS's GUARD syntax.
+  ;;
+  ;;The syntax is:
+  ;;
+  ;;   (handlers-case (?clause ...) ?body0 ?body ...)
+  ;;
+  ;;   ?clause = (?typespec ?condition-handler)
+  ;;           | (:no-error ?no-error-handler)
   ;;
   ;;Every  ?TYPESPEC is  meant to  be a  non-empty proper  list of  identifiers, each
   ;;usable as second argument to CONDITION-IS-A?.
   ;;
-  ;;Every ?HANDLER must be an expression evaluating to a procedure accepting a single
-  ;;argument.   The   return  value   of  ?HANDLER  becomes   the  return   value  of
-  ;;HANDLERS-CASE.
+  ;;Every  ?HANDLER must  be  an expression  evaluating to  a  procedure accepting  a
+  ;;condition  object as  single  argument; the  condition object  can  be simple  or
+  ;;compound.
+  ;;
+  ;;In the no-error clause: ":no-error"  must be the actual symbol; ?NO-ERROR-HANDLER
+  ;;must be an  expression evaluating to a  procedure.
+  ;;
+  ;;If the body performs a normal return:
+  ;;
+  ;;* If the  ":no-error" clause is missing:  the values returned by  the body become
+  ;;  the values returned by HANDLERS-CASE.
+  ;;
+  ;;*  If the  ":no-error"  clause  is present:  the  procedure ?NO-ERROR-HANDLER  is
+  ;;  applied  to the returned values;  the return values of  such application become
+  ;;  the return values of HANDLERS-CASE.
+  ;;
+  ;;If an  exception is raised  (in Common Lisp jargon:  a condition is  signaled): a
+  ;;condition  handler matching  the raised  object is  searched in  the sequence  of
+  ;;clauses, left-to-right:
+  ;;
+  ;;* If a clause matches: the dynamic extent of the body is terminated, the ?HANDLER
+  ;;  is  applied to  the raised  object and  the return  values of  such application
+  ;;  become the return values of HANDLERS-CASE.
+  ;;
+  ;;* If no clause matches: the raised object is re-raised with RAISE-CONTINUABLE.
   ;;
   (define (main stx)
     (syntax-case stx ()
@@ -111,17 +141,48 @@
 ;;;; implementation of HANDLERS-BIND
 
 (define-syntax* (handlers-bind stx)
-  ;;Not quite like R6RS's  WITH-EXCEPTION-HANDLER syntax.  Install condition handlers
-  ;;and in case a condition is signaled: select  one of them in the dynamic extent of
-  ;;the ?BODY forms.
+  ;;Evaluate body forms in a dynamic  environment in which new exception handlers are
+  ;;installed;   it  is   capable   of  handling   exceptions   raised  with   RAISE,
+  ;;RAISE-CONTINUABLE  and  SIGNAL.   Not quite  like  R6RS's  WITH-EXCEPTION-HANDLER
+  ;;syntax.
+  ;;
+  ;;The syntax is:
+  ;;
+  ;;   (handlers-bind (?clause ...) ?body0 ?body ...)
+  ;;
+  ;;   ?clause = (?typespec ?condition-handler)
   ;;
   ;;Every  ?TYPESPEC is  meant to  be a  non-empty proper  list of  identifiers, each
   ;;usable as second argument to CONDITION-IS-A?.
   ;;
-  ;;Every ?HANDLER must be an expression evaluating to a procedure accepting a single
-  ;;argument.   If a  ?HANDLER  accepts to  handle  a condition:  it  must perform  a
-  ;;non-local exit,  for example by  invoking a restart.   If a ?HANDLER  returns: it
-  ;;means it refuses to handle the condition and an upper level handler is searched.
+  ;;Every  ?HANDLER must  be  an expression  evaluating to  a  procedure accepting  a
+  ;;condition  object as  single  argument; the  condition object  can  be simple  or
+  ;;compound.
+  ;;
+  ;;If the body performs a normal return:  the values returned by the body become the
+  ;;values returned by HANDLERS-BIND.
+  ;;
+  ;;If an  exception is raised  (in Common Lisp jargon:  a condition is  signaled): a
+  ;;condition  handler matching  the raised  object is  searched in  the sequence  of
+  ;;clauses, left-to-right:
+  ;;
+  ;;* If  a clause  matches: its  ?HANDLER is applied  to the  raised object  and the
+  ;;  return values of such application become the return values of HANDLERS-BIND.
+  ;;
+  ;;* If no clause matches: the raised object is re-raised with RAISE-CONTINUABLE.
+  ;;
+  ;;The handlers are called with a  continuation whose dynamic environment is that of
+  ;;the call to RAISE, RAISE-CONTINUABLE or  SIGNAL that raised the exception; except
+  ;;that  the  current  exception  handler  is   the  one  that  was  in  place  when
+  ;;HANDLERS-BIND was evaluated.
+  ;;
+  ;;When a ?HANDLER is applied to the raised condition object:
+  ;;
+  ;;* If it  accepts to handle the  condition: it must perform a  non-local exit, for
+  ;;  example by invoking a restart.
+  ;;
+  ;;* If  it declines to handle  the condition: it  must perform a normal  return; in
+  ;;  this case the raised object is re-raised using RAISE-CONTINUABLE.
   ;;
   (define (main stx)
     (syntax-case stx ()
@@ -135,8 +196,9 @@
 	     (((PRED ...) (%process-typespecs #'VAR #'(?typespec ...))))
 	   #'(with-exception-handler
 		 (lambda (VAR)
-		   (cond (PRED (?handler VAR))
-			 ...)
+		   (when PRED
+		     (?handler VAR))
+		   ...
 		   ;;If  we are  here either  no ?TYPESPEC  matched E  or a  ?HANDLER
 		   ;;returned.   Let's  search for  another  handler  in the  uplevel
 		   ;;dynamic environment.
@@ -441,7 +503,10 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check	;escaping from handler
+  ;;Escaping  from  handler,  which is  the  normal  way  of  accepting to  handle  a
+  ;;condition.
+  ;;
+  (check
       (with-result
 	(call/cc
 	    (lambda (escape)
@@ -454,6 +519,26 @@
 		(add-result 'body-return)
 		1))))
     => '(2 (body-begin error-handler)))
+
+  ;;The first handler declines to handle a raised exception, the second one accepts.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (handlers-bind
+		  ((&warning (lambda (E)
+			       ;;By returning this handler declines.
+			       (add-result 'warning-handler)))
+		   (&error   (lambda (E)
+			       (add-result 'error-handler)
+			       (escape 2))))
+		(add-result 'body-begin)
+		(raise (condition (make-error)
+				  (make-warning)))
+		(add-result 'body-return)
+		1))))
+    => '(2 (body-begin warning-handler error-handler)))
 
   ;;Multiple condition identifiers in the same clause.
   ;;
@@ -483,8 +568,8 @@
 			     (escape 2))))
 		(handlers-bind
 		    ((&error (lambda (E)
-			       ;;By  returning this  handler refuses  to
-			       ;;handle this condition.
+			       ;;By returning  this handler  declines to  handle this
+			       ;;condition.
 			       (add-result 'inner-error-handler))))
 		  (add-result 'body-begin)
 		  (raise (make-error))
