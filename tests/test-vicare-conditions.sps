@@ -48,6 +48,38 @@
       (compound-condition? "ciao")
     => #f)
 
+;;; --------------------------------------------------------------------
+
+  (check
+      (condition-and-rtd? (make-error) (record-type-descriptor &error))
+    => #t)
+
+  (check
+      (condition-and-rtd? (condition (make-error)
+				     (make-warning))
+			  (record-type-descriptor &error))
+    => #t)
+
+  (check
+      (condition-and-rtd? "ciao" (record-type-descriptor &error))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (condition-is-a? (make-error) &error)
+    => #t)
+
+  (check
+      (condition-is-a? (condition (make-error)
+				  (make-warning))
+		       &error)
+    => #t)
+
+  (check
+      (condition-is-a? "ciao" &error)
+    => #f)
+
   #t)
 
 

@@ -1230,6 +1230,8 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
+    (only (vicare)
+	  fluid-let-syntax)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
     (psyntax.library-manager)

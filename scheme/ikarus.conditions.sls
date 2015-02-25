@@ -17,7 +17,7 @@
 
 (library (ikarus conditions)
   (export
-    condition? compound-condition?
+    condition? compound-condition? condition-and-rtd?
     simple-conditions condition-predicate
     condition condition-accessor print-condition
 
@@ -108,7 +108,7 @@
     non-reinstatable-violation)
   (import (except (vicare)
 		  define-condition-type
-		  condition? compound-condition?
+		  condition? compound-condition? condition-and-rtd?
 		  simple-conditions
 		  condition condition-predicate condition-accessor
 		  print-condition
@@ -220,7 +220,7 @@
   (assertion-violation who "expected output port as argument" obj))
 
 
-;;;; data types
+;;;; data types and some predicates
 
 (define-record-type &condition
   (nongenerative))
@@ -237,7 +237,6 @@
   (sealed #t)
   (opaque #f))
 
-
 (define (condition? x)
   ;;Defined  by  R6RS.   Return  #t  if  X is  a  (simple  or  compound)
   ;;condition, otherwise return #f.
@@ -245,6 +244,23 @@
   (or (&condition? x)
       (compound-condition? x)))
 
+(define (condition-and-rtd? obj rtd)
+  (fluid-let-syntax
+      ((__who__ (identifier-syntax 'condition-and-rtd?)))
+    (with-arguments-validation (__who__)
+	((rtd          rtd)
+	 (rtd-subtype  rtd))
+      (let ((p? (record-predicate rtd)))
+	(cond ((compound-condition? obj)
+	       (let loop ((ls (compound-condition-components obj)))
+		 (and (pair? ls)
+		      (or (p? ($car ls))
+			  (loop ($cdr ls))))))
+	      ((&condition? obj)
+	       (p? obj))
+	      (else #f))))))
+
+
 (define condition
   ;;Defined by R6RS.   Return a condition object with  the components of
   ;;the condition arguments  as its components, in the  same order.  The

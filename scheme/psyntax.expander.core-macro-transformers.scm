@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -66,6 +66,7 @@
 
     ((type-descriptor)				type-descriptor-transformer)
     ((is-a?)					is-a?-transformer)
+    ((condition-is-a?)				condition-is-a?-transformer)
     ((slot-ref)					slot-ref-transformer)
     ((slot-set!)				slot-set!-transformer)
 
@@ -1719,30 +1720,43 @@
     ))
 
 
-;;;; module core-macro-transformer: IS-A?
+;;;; module core-macro-transformer: IS-A?, CONDITION-IS-A?
 
 (define (is-a?-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand Vicare's IS-A?  syntaxes  from the top-level
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
-    (identifier-syntax 'is-a?))
-  (syntax-match input-form.stx ()
-    ((_ ?jolly ?tag)
-     (and (tag-identifier? ?tag)
-	  (jolly-id? ?jolly))
-     (let ((spec (identifier-object-type-spec ?tag)))
-       (chi-expr (object-type-spec-pred-stx spec)
-		 lexenv.run lexenv.expand)))
+  (fluid-let-syntax ((__who__ (identifier-syntax 'is-a?)))
+    (syntax-match input-form.stx ()
+      ((_ ?jolly ?tag)
+       (and (tag-identifier? ?tag)
+	    (jolly-id? ?jolly))
+       (let ((spec (identifier-object-type-spec ?tag)))
+	 (chi-expr (object-type-spec-pred-stx spec)
+		   lexenv.run lexenv.expand)))
 
-    ((_ ?expr ?tag)
-     (tag-identifier? ?tag)
-     (let ((spec (identifier-object-type-spec ?tag)))
+      ((_ ?expr ?tag)
+       (tag-identifier? ?tag)
+       (let ((spec (identifier-object-type-spec ?tag)))
+	 (chi-expr (bless
+		    `(,(object-type-spec-pred-stx spec) ,?expr))
+		   lexenv.run lexenv.expand)))
+      )))
+
+(define (condition-is-a?-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand Vicare's CONDITION-IS-A?   syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (fluid-let-syntax ((__who__ (identifier-syntax 'condition-is-a?)))
+    (syntax-match input-form.stx ()
+      ((_ ?expr ?tag)
+       (tag-identifier? ?tag)
        (chi-expr (bless
-		  `(,(object-type-spec-pred-stx spec) ,?expr))
-		 lexenv.run lexenv.expand)))
-    ))
+		  `(condition-and-rtd? ,?expr (record-type-descriptor ,?tag)))
+		 lexenv.run lexenv.expand))
+      )))
 
 
 ;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!
