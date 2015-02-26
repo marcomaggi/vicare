@@ -2619,7 +2619,8 @@
      (identifier? ?who)
      (bless
       `(define ,?who
-	 (case-lambda ,?cl-clause . ,?cl-clause*))))
+	 (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
+	   (case-lambda ,?cl-clause . ,?cl-clause*)))))
     ))
 
 
@@ -2704,7 +2705,9 @@
 	((_ ?who ?expr)
 	 (identifier? ?who)
 	 (bless
-	  `(define ,?who ,?expr)))
+	  `(define ,?who
+	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
+	       ,?expr))))
 
 	((_ ?who)
 	 (identifier? ?who)
@@ -2758,10 +2761,11 @@
 	 (identifier? ?who)
 	 (bless
 	  `(define ,?who
-	     (case-lambda
-	      ,@(map (lambda (?clause)
-		       (%generate-case-define-form ?who ?clause %synner))
-		  (cons ?clause0 ?clause*))))))
+	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
+	       (case-lambda
+		,@(map (lambda (?clause)
+			 (%generate-case-define-form ?who ?clause %synner))
+		    (cons ?clause0 ?clause*)))))))
 	))
 
     (define (%generate-case-define-form ?who ?clause synner)
