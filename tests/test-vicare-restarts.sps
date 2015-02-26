@@ -15,7 +15,7 @@
 ;;;	  is not implemented.
 ;;;
 ;;;     *  Not  all  the  facilities   are  implemented;  among  the  missing  ones:
-;;;       RESTART-BIND, WITH-SIMPLE-RESTART, IGNORE-ERRORS.
+;;;       RESTART-BIND, WITH-SIMPLE-RESTART, IGNORE-ERRORS, COMPUTE-RESTARTS.
 ;;;
 ;;;     To understand what is going on here, we should read Common Lisp's Hyper Spec:
 ;;;
@@ -348,12 +348,26 @@
 	 restart-case
 	 find-restart
 	 invoke-restart
+	 restart-name
 	 ;;
 	 use-value
 	 store-value
 	 continue-restart
 	 abort-restart)
   (import RESTARTS-INTERNAL-STATE)
+
+  ;;The restart object required by Common Lisp.
+  ;;
+  (define-record-type <restart>
+    (nongenerative vicare:restarts:<restart>)
+    (fields (immutable name restart-name)
+	    (immutable proc)))
+
+  (define (%make-restarts-alist-entry restart-point-proc restart-name restart-proc)
+    (cons restart-name
+	  (make-<restart> restart-name
+			  (lambda args
+			    (restart-point-proc (apply restart-proc args))))))
 
   ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
   ;;WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION  to   distinguish  between  signaled
@@ -395,6 +409,9 @@
 	   (lambda (C)
 	     (if (signal-condition? C)
 		 ;;SIGNAL will return zero values.
+		 ;;
+		 ;;NOTE IIUC Common  Lisp wants this to return "nil",  which (in this
+		 ;;context) would be #f in Scheme (most likely).
 		 (values)
 	       (raise-continuable C)))
 	 (lambda () ?body0 ?body ...)))
@@ -418,8 +435,8 @@
 	       ((installed-restart-point (make-restart-point '())))
 	     ?body))
 
-	((_ ?body (?key0 ?handler0) (?key ?handler) ...)
-	 (let ((keys (syntax->datum #'(?key0 ?key ...))))
+	((_ ?body (?key ?handler) ...)
+	 (let ((keys (syntax->datum #'(?key ...))))
 	   (cond ((%all-symbols? keys)
 		  => (lambda (obj)
 		       (synner "expected symbol as restart name" obj)))
@@ -431,10 +448,7 @@
 			(lambda (restart-point-proc)
 			  (parametrise
 			      ((installed-restart-point (make-restart-point
-							 `((?key0 . ,(lambda args
-								       (restart-point-proc (apply ?handler0 args))))
-							   (?key  . ,(lambda args
-								       (restart-point-proc (apply ?handler  args))))
+							 `(,(%make-restarts-alist-entry restart-point-proc (quote ?key) ?handler)
 							   ...))))
 			    ?body)))))))
 	))
@@ -462,7 +476,7 @@
 
   (define* (find-restart {key symbol?})
     ;;Search  the  current  dynamic  environment   for  the  innest  restart  handler
-    ;;associated to  KEY.  If  a handler  is found:  return its  procedure; otherwise
+    ;;associated to KEY.  If a handler is found: return its restart object; otherwise
     ;;return #f.
     ;;
     (exists (lambda (alist)
@@ -484,14 +498,14 @@
     ;;
     (cond ((symbol? restart-designator)
 	   (cond ((find-restart restart-designator)
-		  => (lambda (restart-proc)
-		       (apply restart-proc rest)))
+		  => (lambda (restart)
+		       (apply (<restart>-proc restart) rest)))
 		 (else
 		  (raise-undefined-restart-error __who__
 		    "attempt to invoke non-existent restart"
 		    restart-designator))))
-	  ((procedure? restart-designator)
-	   (apply restart-designator rest))
+	  ((is-a? restart-designator <restart>)
+	   (apply (<restart>-proc restart-designator) rest))
 	  (else
 	   (procedure-argument-violation __who__
 	     "expected restart name or restart procedure as argument"
@@ -504,8 +518,8 @@
     ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
     ;;
     (cond ((find-restart 'use-value)
-	   => (lambda (handler)
-		(handler obj)))
+	   => (lambda (restart)
+		((<restart>-proc restart) obj)))
 	  (else #f)))
 
   (define (store-value obj)
@@ -513,8 +527,8 @@
     ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
     ;;
     (cond ((find-restart 'store-value)
-	   => (lambda (handler)
-		(handler obj)))
+	   => (lambda (restart)
+		((<restart>-proc restart) obj)))
 	  (else #f)))
 
   (define (continue-restart)
@@ -525,8 +539,8 @@
     ;;is already bound.
     ;;
     (cond ((find-restart 'continue)
-	   => (lambda (handler)
-		(handler)))
+	   => (lambda (restart)
+		((<restart>-proc restart))))
 	  (else #f)))
 
   (define (abort-restart)
@@ -537,8 +551,8 @@
     ;;so it is left unbound.
     ;;
     (cond ((find-restart 'abort)
-	   => (lambda (handler)
-		(handler)))
+	   => (lambda (restart)
+		((<restart>-proc restart))))
 	  (else
 	   (signal-restarts-control-error __who__
 	     "call to ABORT restart but no handler is defined"))))
