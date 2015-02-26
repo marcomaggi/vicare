@@ -235,7 +235,31 @@
 
 ;;;; restarts
 
+;;Base type of al the error conditions associated to the restarts mechanism.
+;;
+(define-condition-type &restarts-error
+    &error
+  make-restarts-condition
+  restarts-condition?)
+
+;;To be used to tag an exception as "attempt to used an undefined restart".
+;;
+(define-condition-type &undefined-restart-error
+    &restarts-error
+  make-undefined-restart-error
+  undefined-restart-error?)
+
+(define (raise-undefined-restart-error who message . irritants)
+  (raise
+   (condition (make-undefined-restart-error)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
 (module (signal
+	 with-return-to-signal-on-unhandled-exception
 	 restart-case
 	 find-restart
 	 invoke-restart
@@ -243,6 +267,7 @@
 
   (module (installed-restart-point
 	   installed-restart-point.signaled-object
+	   installed-restart-point.signaled-object-set!
 	   installed-restart-point.restart-proc
 	   installed-restart-point.restart-handlers
 	   make-restart-point)
@@ -269,7 +294,7 @@
     (define (default-restart-proc . args)
       (assertion-violation 'restart-proc
 	"invalid call to restart procedure \
-       outside RESTART-CASE environment"))
+         outside RESTART-CASE environment"))
 
     (define installed-restart-point
       (make-parameter (make-<restart-point> default-restart-proc '())))
@@ -278,13 +303,11 @@
       (make-<restart-point> restart-proc
 	(cons handlers-alist (installed-restart-point.restart-handlers))))
 
-    (define-syntax installed-restart-point.signaled-object
-      (syntax-rules ()
-	((_)
-	 (<restart-point>-signaled-object      (installed-restart-point)))
-	((_ ?obj)
-	 (<restart-point>-signaled-object-set! (installed-restart-point) ?obj))
-	))
+    (define-syntax-rule (installed-restart-point.signaled-object)
+      (<restart-point>-signaled-object (installed-restart-point)))
+
+    (define-syntax-rule (installed-restart-point.signaled-object-set! ?obj)
+      (<restart-point>-signaled-object-set! (installed-restart-point) ?obj))
 
     (define-syntax-rule (installed-restart-point.restart-proc)
       (<restart-point>-restart-proc (installed-restart-point)))
@@ -296,24 +319,50 @@
 
 ;;;
 
+  ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
+  ;;WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION  to   distinguish  between  signaled
+  ;;conditions  and  exceptions  raised  by  a non-SIGNAL  invokation  of  RAISE  and
+  ;;RAISE-CONTINUABLE.
+  ;;
+  (define-condition-type &signal
+      &condition
+    make-signal-condition
+    signal-condition?)
+
+  ;;Condition object of type "&signal" which  is always added to the condition raised
+  ;;by  SIGNAL.   Only  one  needs  to  be instantiated.   It  exists  to  allow  the
+  ;;implementation  of  WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION which  needs  to
+  ;;distinguish between  signaled conditions  and exceptions  raised by  a non-SIGNAL
+  ;;invokation of RAISE and RAISE-CONTINUABLE.
+  ;;
+  (define-constant SIGNAL-CONDITION
+    (make-signal-condition))
+
   (define* (signal {C condition?})
     ;;Signal  a condition  by raising  it  with RAISE-CONTINUABLE.   Perform what  is
     ;;needed to handle the restarts protocol.
     ;;
-    ;;NOTE As  defined by Common Lisp:  SIGNAL should return if  no handler accepting
-    ;;the condition is  found.  In this implementation this normal  return will *not*
+    ;;As defined  by Common Lisp:  SIGNAL should return  if no handler  accepting the
+    ;;condition  is found.   In this  implementation  this normal  return will  *not*
     ;;happen by default.  To implement such behaviour  we have to wrap the whole code
     ;;in a form like this:
     ;;
-    ;;   (with-exception-handler
-    ;;        (lambda (E) (values))
-    ;;     (lambda () ?body0 ?body ...))
+    ;;   (with-return-to-signal-on-unhandled-exception
+    ;;     ?body0 ?body ...)
     ;;
-    ;;with this outer  exception handler any unhandled exception  will return; notice
-    ;;that it will also return to normal calls to RAISE-CONTINUABLE.
-    ;;
-    (installed-restart-point.signaled-object C)
-    (raise-continuable C))
+    (installed-restart-point.signaled-object-set! C)
+    (raise-continuable (condition C SIGNAL-CONDITION)))
+
+  (define-syntax with-return-to-signal-on-unhandled-exception
+    (syntax-rules ()
+      ((_ ?body0 ?body ...)
+       (with-exception-handler
+	   (lambda (C)
+	     (if (signal-condition? C)
+		 (values)
+	       (raise-continuable C)))
+	 (lambda () ?body0 ?body ...)))
+      ))
 
   (define-syntax restart-case
     ;;Install restart handlers in the  current dynamic environment, then evaluate the
@@ -366,7 +415,7 @@
 	   (cond ((find-restart key/handler)
 		  => %call-restart-handler)
 		 (else
-		  (error __who__
+		  (raise-undefined-restart-error __who__
 		    "attempt to invoke non-existent restart"
 		    key/handler))))
 	  ((procedure? key/handler)
@@ -593,21 +642,95 @@
   #t)
 
 
-(parametrise ((check-test-name	'restarts))
+(parametrise ((check-test-name	'restarts-finding-and-invoking))
 
+;;;searching
+
+  ;;Search an UNdefined restart.
+  ;;
   (check
       (find-restart 'alpha)
     => #f)
 
-  (check	;no condition
+  ;;Search an UNdefined restart.
+  ;;
+  (check
       (restart-case
-	  123
+	  (find-restart 'beta)
 	(alpha (lambda (E)
 		 (add-result 'restart-alpha))))
-    => 123)
+    => #f)
+
+  ;;Search an UNdefined restart.
+  ;;
+  (check
+      (restart-case
+	  (find-restart 'gamma)
+	(alpha (lambda (E)
+		 (add-result 'restart-alpha)))
+	(beta  (lambda (E)
+		 (add-result 'restart-beta)))
+	(delta (lambda (E)
+		 (add-result 'restart-delta))))
+    => #f)
 
 ;;; --------------------------------------------------------------------
+;;; invoking
 
+  ;;Invoke an UNdefined restart.
+  ;;
+  (check
+      (try
+	  (invoke-restart 'alpha)
+	(catch E
+	  ((&undefined-restart-error)
+	   1)
+	  (else E)))
+    => 1)
+
+  ;;Find then invoke a restart in two steps.  Invoking a restart is a non-local exit.
+  ;;
+  (check
+      (with-result
+	(restart-case
+	    (begin
+	      (add-result 'body-in)
+	      (let ((restart (find-restart 'alpha)))
+		(add-result 'body-invoking)
+		(begin0
+		    (invoke-restart restart)
+		  (add-result 'body-out)
+		  1)))
+	  (alpha (lambda (E)
+		   (add-result 'restart-alpha)
+		   2))))
+    => '(2 (body-in body-invoking restart-alpha)))
+
+  ;;Find and invoke  a restart in a  single step.  Invoking a restart  is a non-local
+  ;;exit.
+  ;;
+  (check
+      (with-result
+	(restart-case
+	    (begin
+	      (add-result 'body-in)
+	      (begin0
+		  (invoke-restart 'alpha)
+		(add-result 'body-out)
+		1))
+	  (alpha (lambda (E)
+		   (add-result 'restart-alpha)
+		   2))))
+    => '(2 (body-in restart-alpha)))
+
+  #f)
+
+
+(parametrise ((check-test-name	'restarts-and-handlers-bind))
+
+  ;;Nested  RESTART-CASE and  HANDLERS-BIND.   Signal a  condition,  call a  handler,
+  ;;invoke a restart.
+  ;;
   (internal-body
 
     (define (restarts-outside/handlers-inside C)
@@ -620,8 +743,7 @@
 			     (add-result 'error-handler-return)))
 		 (&warning (lambda (E)
 			     (add-result 'warning-handler-begin)
-			     (let ((handler (find-restart 'beta)))
-			       (invoke-restart handler))
+			     (invoke-restart 'beta)
 			     (add-result 'warning-handler-return))))
 	      (begin
 		(add-result 'body-begin)
@@ -644,7 +766,11 @@
 
     #| end of body |# )
 
+  ;;Nested  RESTART-CASE and  HANDLERS-BIND.   Signal a  condition,  call a  handler,
+  ;;invoke a restart.
+  ;;
   (internal-body
+
     (define (restarts-inside/handlers-outside C)
       (with-result
 	(handlers-bind
@@ -654,9 +780,8 @@
 			 (add-result 'error-handler-return)))
 	     (&warning (lambda (E)
 			 (add-result 'warning-handler-begin)
-			 (let ((handler (find-restart 'beta)))
-			   (invoke-restart handler))
-			 (add-result 'warning-handler-begin))))
+			 (invoke-restart 'beta)
+			 (add-result 'warning-handler-return))))
 	  (restart-case
 	      (begin
 		(add-result 'body-begin)
@@ -679,18 +804,23 @@
 
     #| end of body |# )
 
+  ;;Nested  RESTART-CASE and  HANDLERS-BIND.   Signal a  condition,  call a  handler,
+  ;;invoke a restart.
+  ;;
   (internal-body
+
     (define (restarts-inside/nested-handlers C)
       (with-result
 	(handlers-bind
 	    ((&error   (lambda (E)
-			 (add-result 'error-handler)
-			 (invoke-restart 'alpha))))
+			 (add-result 'error-handler-begin)
+			 (invoke-restart 'alpha)
+			 (add-result 'error-handler-return))))
 	  (handlers-bind
 	      ((&warning (lambda (E)
-			   (add-result 'warning-handler)
-			   (let ((handler (find-restart 'beta)))
-			     (invoke-restart handler)))))
+			   (add-result 'warning-handler-begin)
+			   (invoke-restart 'beta)
+			   (add-result 'warning-handler-return))))
 	    (restart-case
 		(begin
 		  (add-result 'body-begin)
@@ -705,14 +835,17 @@
 
     (check
 	(restarts-inside/nested-handlers (make-error))
-      => '(1 (body-begin error-handler restart-alpha)))
+      => '(1 (body-begin error-handler-begin restart-alpha)))
 
     (check
 	(restarts-inside/nested-handlers (make-warning))
-      => '(2 (body-begin warning-handler restart-beta)))
+      => '(2 (body-begin warning-handler-begin restart-beta)))
 
     #| end of LET |# )
 
+  ;;Nested  RESTART-CASE and  HANDLERS-BIND.   Signal a  condition,  call a  handler,
+  ;;invoke a restart.
+  ;;
   (internal-body
 
     (define (nested-restarts/handlers-outside C)
@@ -749,12 +882,17 @@
 
     #| end of body |# )
 
-  (check	;normal return in handler
+  ;;Nested  RESTART-CASE  and HANDLERS-BIND.   Signal  a  condition, call  the  first
+  ;;handler, the first handler declines, call  the second handler, invoke a USE-VALUE
+  ;;restart.
+  ;;
+  (check
       (with-result
 	(handlers-bind
 	    ((&message (lambda (E)
-			 (add-result 'outer-message-handler)
-			 (invoke-restart 'use-value))))
+			 (add-result 'outer-message-handler-begin)
+			 (invoke-restart 'use-value)
+			 (add-result 'outer-message-handler-return))))
 	  (handlers-bind
 	      ((&message (lambda (E)
 			   ;;By returning  this handler refuses  to handle
@@ -770,10 +908,13 @@
 			   (condition-message value)))))))
     => '("ciao" (body-begin
 		 inner-message-handler
-		 outer-message-handler
+		 outer-message-handler-begin
 		 use-value-restart)))
 
-;;; --------------------------------------------------------------------
+  #f)
+
+
+(parametrise ((check-test-name	'restarts-and-use-value))
 
   (check	;locally defined use-value
       (restart-case
@@ -785,7 +926,7 @@
 		     (condition-message value))))
     => "ciao")
 
-  (check	;predefined use-value handler
+  (check	;predefined use-value
       (condition-message
        (restart-case
 	   (handlers-bind
@@ -799,6 +940,96 @@
   #f)
 
 
+(parametrise ((check-test-name	'restarts-and-declining-handlers))
+
+  ;;No handlers installed.  Signal a condition and cause SIGNAL to return.
+  ;;
+  (check
+      (with-result
+	(with-return-to-signal-on-unhandled-exception
+	  (add-result 'body-in)
+	  (signal (make-error))
+	  (add-result 'body-out)
+	  1))
+    => '(1 (body-in body-out)))
+
+  ;;No handlers installed.  Raise an exception  with the standard RAISE and show that
+  ;;it goes through the "return to signal" syntax.
+  ;;
+  (check
+      (with-result
+	(try
+	    (with-return-to-signal-on-unhandled-exception
+	      (add-result 'body-in)
+	      (raise (make-error))
+	      (add-result 'body-out)
+	      1)
+	  (catch E
+	    ((&error)
+	     (add-result 'catch-error)
+	     2))))
+    => '(2 (body-in catch-error)))
+
+  ;;No handlers  installed.  Raise an  exception with the  standard RAISE-CONTINUABLE
+  ;;and show that it goes through the "return to signal" syntax.
+  ;;
+  (check
+      (with-result
+	(try
+	    (with-return-to-signal-on-unhandled-exception
+	      (add-result 'body-in)
+	      (raise-continuable (make-error))
+	      (add-result 'body-out)
+	      1)
+	  (catch E
+	    ((&error)
+	     (add-result 'catch-error)
+	     2))))
+    => '(2 (body-in catch-error)))
+
+  ;;No handlers  installed.  Raise an  exception with the  standard RAISE-CONTINUABLE
+  ;;and show that it goes through the "return to signal" syntax.
+  ;;
+  (check
+      (with-result
+	(with-exception-handler
+	    (lambda (E)
+	      (add-result 'exception-handler))
+	  (lambda ()
+	    (with-return-to-signal-on-unhandled-exception
+	      (add-result 'body-in)
+	      (raise-continuable (make-error))
+	      (add-result 'body-out)
+	      1))))
+    => '(1 (body-in exception-handler body-out)))
+
+;;; --------------------------------------------------------------------
+
+  ;;Nested  RESTART-CASE  and HANDLERS-BIND.   Signal  a  condition, call  the  first
+  ;;handler, the first handler declines, call  the second handler, the second handler
+  ;;declines, SIGNAL returns.
+  ;;
+  (check
+      (with-result
+	(with-return-to-signal-on-unhandled-exception
+	  (handlers-bind
+	      ((&error (lambda (E)
+			 ;;By returning, this handler declines to handle the condition.
+			 (add-result 'outer-error-handler))))
+	    (handlers-bind
+		((&error (lambda (E)
+			   ;;By  returning,   this  handler  declines  to   handle  the
+			   ;;condition.
+			   (add-result 'inner-error-handler))))
+	      (add-result 'body-in)
+	      (signal (make-error))
+	      (add-result 'body-out)
+	      1))))
+    => '(1 (body-in inner-error-handler outer-error-handler body-out)))
+
+  #f)
+
+
 ;;;; done
 
 (check-report)
@@ -806,9 +1037,11 @@
 ;;; end of file
 ;; Local Variables:
 ;; coding: utf-8-unix
-;; eval: (put 'handlers-case		'scheme-indent-function 1)
-;; eval: (put 'handlers-bind		'scheme-indent-function 1)
-;; eval: (put 'restart-case		'scheme-indent-function 1)
-;; eval: (put 'make-restart-point	'scheme-indent-function 1)
-;; eval: (put 'make-<restart-point>	'scheme-indent-function 1)
+;; eval: (put 'handlers-case			'scheme-indent-function 1)
+;; eval: (put 'handlers-bind			'scheme-indent-function 1)
+;; eval: (put 'restart-case			'scheme-indent-function 1)
+;; eval: (put 'raise-undefined-restart-error	'scheme-indent-function 1)
+;; eval: (put 'make-restart-point		'scheme-indent-function 1)
+;; eval: (put 'make-<restart-point>		'scheme-indent-function 1)
+;; eval: (put 'with-return-to-signal-on-unhandled-exception 'scheme-indent-function 0)
 ;; End:
