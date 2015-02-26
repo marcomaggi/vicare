@@ -5,9 +5,24 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	This is officially one more test  file for the dynamic environment.  Actually
-;;;	it is a demo script for  Scheme-flavored Common Lisp's condition handlers and
-;;;	restart handlers.
+;;;	Demo script for Scheme-flavored Common  Lisp's condition handlers and restart
+;;;	handlers.  Not everything is implemented:
+;;;
+;;;     * There is no integration with the debugger.
+;;;
+;;;	* The predefined restart callers USE-VALUE, STORE-VALUE, CONTINUE, ABORT have
+;;;	  no optional second argument.   The predefined restart caller MUFFLE-WARNING
+;;;	  is not implemented.
+;;;
+;;;     *  Not  all   the  facilities  are  implemented;  among   the  missing  ones:
+;;;       WITH-SIMPLE-RESTART.
+;;;
+;;;     To understand what is going on here, we should read Common Lisp's Hyper Spec:
+;;;
+;;;	9.1 Condition System Concepts -
+;;;     <http://www.cs.cmu.edu/Groups/AI/html/hyperspec/HyperSpec/Body/sec_9-1.htm>
+;;;
+;;;
 ;;;
 ;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -1186,6 +1201,53 @@
     => '(#f (body-begin body-return)))
 
 ;;; --------------------------------------------------------------------
+;;; STORE-VALUE/USE-VALUE
+
+  ;;Adapted example from Common Lisp's Hyper Spec.
+  ;;
+  (internal-body
+
+    (define-condition-type &unbound-symbol-error
+	&error
+      make-unbound-symbol-error
+      unbound-symbol-error?)
+
+    (define* (careful-symbol-value {sym symbol?})
+      (restart-case
+	  (if (symbol-bound? sym)
+	      (symbol-value sym)
+	    (signal (make-unbound-symbol-error)))
+	(use-value   (lambda (obj) obj))
+	(store-value (lambda (obj)
+		       (set-symbol-value! sym obj)
+		       obj))))
+
+    (check
+	(let ((sym (gensym)))
+	  (set-symbol-value! sym 1)
+	  (careful-symbol-value sym))
+      => 1)
+
+    (check
+	(let ((sym (gensym)))
+	  (handlers-bind
+	      ((&unbound-symbol-error (lambda (E)
+					(use-value 1))))
+	    (careful-symbol-value sym)))
+      => 1)
+
+    (check
+	(let ((sym (gensym)))
+	  (handlers-bind
+	      ((&unbound-symbol-error (lambda (E)
+					(store-value 1))))
+	    (values (careful-symbol-value sym)
+		    (careful-symbol-value sym))))
+      => 1 1)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
 ;;; CONTINUE
 
   ;;Signal condition, call a handler, call a CONTINUE restart.
@@ -1353,6 +1415,7 @@
   ;;     (void)
   ;;   (alpha (lambda (E) 1))
   ;;   (alpha (lambda (E) 2)))
+
 
   #f)
 
