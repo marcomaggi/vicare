@@ -10,12 +10,8 @@
 ;;;
 ;;;     * There is no integration with the debugger.
 ;;;
-;;;	* The predefined restart callers USE-VALUE, STORE-VALUE, CONTINUE, ABORT have
-;;;	  no optional second argument.   The predefined restart caller MUFFLE-WARNING
-;;;	  is not implemented.
-;;;
-;;;     *  Not  all  the  facilities   are  implemented;  among  the  missing  ones:
-;;;       RESTART-BIND, WITH-SIMPLE-RESTART, IGNORE-ERRORS.
+;;;     * Some facilities are not  implemented; among the missing ones: RESTART-BIND,
+;;;       WITH-SIMPLE-RESTART, IGNORE-ERRORS, MUFFLE-WARNING.
 ;;;
 ;;;     To understand what is going on here, we should read Common Lisp's Hyper Spec:
 ;;;
