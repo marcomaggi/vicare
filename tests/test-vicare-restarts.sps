@@ -312,16 +312,12 @@
 
 (module RESTARTS-INTERNAL-STATE
   (installed-restart-point
-   installed-restart-point.signaled-object
-   installed-restart-point.signaled-object-set!
    installed-restart-point.restart-handlers
    make-restart-point)
 
   (define-record-type <restart-point>
     (nongenerative vicare:restarts:<restart-point>)
-    (fields (mutable signaled-object)
-		;The condition object signaled by SIGNAL.
-	    (immutable restart-handlers)
+    (fields (immutable restart-handlers)
 		;List of alists managed as a  stack of alists.  Each alist represents
 		;the  restart  handlers  installed  by  the  expansion  of  a  single
 		;RESTART-CASE use.
@@ -329,7 +325,7 @@
     (protocol
      (lambda (make-record)
        (lambda (handlers-alist)
-	 (make-record #f handlers-alist))))
+	 (make-record handlers-alist))))
     #| end of DEFINE-RECORD-TYPE |# )
 
   (define installed-restart-point
@@ -338,12 +334,6 @@
   (define (make-restart-point handlers-alist)
     (make-<restart-point> (cons handlers-alist
 				(installed-restart-point.restart-handlers))))
-
-  (define-syntax-rule (installed-restart-point.signaled-object)
-    (<restart-point>-signaled-object (installed-restart-point)))
-
-  (define-syntax-rule (installed-restart-point.signaled-object-set! ?obj)
-    (<restart-point>-signaled-object-set! (installed-restart-point) ?obj))
 
   (define-syntax-rule (installed-restart-point.restart-handlers)
     (<restart-point>-restart-handlers (installed-restart-point)))
@@ -396,7 +386,6 @@
     ;;   (with-return-to-signal-on-unhandled-exception
     ;;     ?body0 ?body ...)
     ;;
-    (installed-restart-point.signaled-object-set! C)
     (raise-continuable (condition C SIGNAL-CONDITION)))
 
   (define-syntax with-return-to-signal-on-unhandled-exception
