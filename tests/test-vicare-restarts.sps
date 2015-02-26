@@ -68,7 +68,8 @@
   ;;compound.
   ;;
   ;;In the no-error clause: ":no-error"  must be the actual symbol; ?NO-ERROR-HANDLER
-  ;;must be an  expression evaluating to a  procedure.
+  ;;must be an expression evaluating to a procedure.  The optional ":no-error" clause
+  ;;can be present only if it is the last one.
   ;;
   ;;If the body performs a normal return:
   ;;
@@ -120,14 +121,15 @@
       (()
        '())
 
-      (((?no-error ?handler) . ?rest)
+      ;;The no-error clause can be present only if it is the last one.
+      (((?no-error ?handler))
        (%no-error-spec? #'?no-error)
        (if no-error-expr
 	   (synner "invalid multiple definition of :no-error clause"
 		   #'(?no-error ?handler))
 	 (begin
 	   (set! no-error-expr #'?handler)
-	   (%process-clauses var #'?rest))))
+	   '())))
 
       (((?typespec ?handler) . ?rest)
        (cons #`(#,(%process-typespec var #'?typespec) (?handler #,var))
@@ -576,12 +578,12 @@
 	    ((&error    (lambda (E)
 			  (add-result 'error-handler)
 			  1))
-	     (:no-error (lambda (X)
-			  (add-result 'no-error)
-			  (* 10 X)))
 	     (&warning  (lambda (E)
 			  (add-result 'warning-handler)
-			  2)))
+			  2))
+	     (:no-error (lambda (X)
+			  (add-result 'no-error)
+			  (* 10 X))))
 	  (add-result 'body)
 	  1))
     => '(10 (body no-error)))
