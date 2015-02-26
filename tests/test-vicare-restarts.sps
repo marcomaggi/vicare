@@ -242,25 +242,9 @@
   make-restarts-condition
   restarts-condition?)
 
-;;;
+;;; --------------------------------------------------------------------
 
-;;To be used to tag an exception as "attempt to used an undefined restart".
-;;
-(define-condition-type &undefined-restart-error
-    &restarts-error
-  make-undefined-restart-error
-  undefined-restart-error?)
-
-(define (raise-undefined-restart-error who message . irritants)
-  (raise
-   (condition (make-undefined-restart-error)
-	      (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants))))
-
-;;;
-
-;;To be used to tag an exception as "attempt to used an undefined restart".
+;;To be used to tag an exception as "internal error in the restarts mechanism".
 ;;
 (define-condition-type &restart-internal-error
     &restarts-error
@@ -270,6 +254,38 @@
 (define (raise-restart-internal-error who message . irritants)
   (raise
    (condition (make-restart-internal-error)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
+;;To be used to tag an exception as "internal error in the restarts mechanism".
+;;
+(define-condition-type &restarts-control-error
+    &restarts-error
+  make-restarts-control-error
+  restarts-control-error?)
+
+(define (signal-restarts-control-error who message . irritants)
+  (signal
+   (condition (make-restarts-control-error)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
+
+;;; --------------------------------------------------------------------
+
+;;To be used to tag an exception as "attempt to use an undefined restart".
+;;
+(define-condition-type &undefined-restart-error
+    &restarts-control-error
+  make-undefined-restart-error
+  undefined-restart-error?)
+
+(define (raise-undefined-restart-error who message . irritants)
+  (raise
+   (condition (make-undefined-restart-error)
 	      (make-who-condition who)
 	      (make-message-condition message)
 	      (make-irritants-condition irritants))))
@@ -335,7 +351,11 @@
 	 with-return-to-signal-on-unhandled-exception
 	 restart-case
 	 find-restart
-	 invoke-restart)
+	 invoke-restart
+	 ;;
+	 use-value
+	 continue-restart
+	 abort-restart)
   (import RESTARTS-INTERNAL-STATE)
 
   ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
@@ -378,6 +398,7 @@
        (with-exception-handler
 	   (lambda (C)
 	     (if (signal-condition? C)
+		 ;;SIGNAL will return zero values.
 		 (values)
 	       (raise-continuable C)))
 	 (lambda () ?body0 ?body ...)))
@@ -397,7 +418,11 @@
     (define (main stx)
       (syntax-case stx ()
 	((_ ?body)
-	 #'?body)
+	 #'(call/cc
+	       (lambda (restart-proc)
+		 (parametrise
+		     ((installed-restart-point (make-restart-point restart-proc '())))
+		   ?body))))
 
 	((_ ?body (?key0 ?handler0) (?key ?handler) ...)
 	 (let ((keys (syntax->datum #'(?key0 ?key ...))))
@@ -475,15 +500,44 @@
 	     "expected restart name or procedure as argument"
 	     key/handler))))
 
+;;; special restart callers
+
+  (define (use-value obj)
+    ;;If a  "use-value" restart is  installed in  the dynamic environment:  apply its
+    ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
+    ;;
+    (cond ((find-restart 'use-value)
+	   => (lambda (handler)
+		((installed-restart-point.restart-proc) (handler obj))))
+	  (else #f)))
+
+  (define (continue-restart)
+    ;;If a  "continue" restart is  installed in  the dynamic environment:  invoke its
+    ;;handler; otherwise return #f (without performing a non-local exit).
+    ;;
+    ;;NOTE Under Common  Lisp: this is simply called CONTINUE;  under Vicare CONTINUE
+    ;;is already bound.
+    ;;
+    (cond ((find-restart 'continue)
+	   => (lambda (handler)
+		((installed-restart-point.restart-proc) (handler))))
+	  (else #f)))
+
+  (define (abort-restart)
+    ;;If  an "abort"  restart is  installed in  the dynamic  environment: invoke  its
+    ;;handler; otherwise raise a "&restarts-control-error".
+    ;;
+    ;;Under Common Lisp: this is simply called  ABORT; this is quite a common action,
+    ;;so it is left unbound.
+    ;;
+    (cond ((find-restart 'abort)
+	   => (lambda (handler)
+		((installed-restart-point.restart-proc) (handler))))
+	  (else
+	   (signal-restarts-control-error __who__
+	     "call to ABORT restart but no handler is defined"))))
+
   #| end of module |# )
-
-
-;;;; restarts: auxiliary definitions
-
-(define (use-value X)
-  ;;Restart handler usually associated to the key USE-VALUE.
-  ;;
-  X)
 
 
 (parametrise ((check-test-name	'handlers-case))
@@ -936,15 +990,14 @@
     #| end of body |# )
 
   ;;Nested  RESTART-CASE  and HANDLERS-BIND.   Signal  a  condition, call  the  first
-  ;;handler, the first handler declines, call  the second handler, invoke a USE-VALUE
-  ;;restart.
+  ;;handler, the first handler declines, call the second handler, invoke a restart.
   ;;
   (check
       (with-result
 	(handlers-bind
 	    ((&message (lambda (E)
 			 (add-result 'outer-message-handler-begin)
-			 (invoke-restart 'use-value)
+			 (invoke-restart 'alpha)
 			 (add-result 'outer-message-handler-return))))
 	  (handlers-bind
 	      ((&message (lambda (E)
@@ -956,39 +1009,13 @@
 		  (add-result 'body-begin)
 		  (signal (make-message-condition "ciao"))
 		  (add-result 'body-return))
-	      (use-value (lambda (value)
-			   (add-result 'use-value-restart)
-			   (condition-message value)))))))
+	      (alpha (lambda (E)
+		       (add-result 'alpha-restart)
+		       (condition-message E)))))))
     => '("ciao" (body-begin
 		 inner-message-handler
 		 outer-message-handler-begin
-		 use-value-restart)))
-
-  #f)
-
-
-(parametrise ((check-test-name	'restarts-and-use-value))
-
-  (check	;locally defined use-value
-      (restart-case
-	  (handlers-bind
-	      ((&message (lambda (E)
-			   (invoke-restart 'use-value))))
-	    (signal (make-message-condition "ciao")))
-	(use-value (lambda (value)
-		     (condition-message value))))
-    => "ciao")
-
-  (check	;predefined use-value
-      (condition-message
-       (restart-case
-	   (handlers-bind
-	       ((&message (lambda (E)
-			    (add-result 'message-handler)
-			    (invoke-restart 'use-value))))
-	     (signal (make-message-condition "ciao")))
-	 (use-value use-value)))
-    => "ciao")
+		 alpha-restart)))
 
   #f)
 
@@ -1083,6 +1110,157 @@
   #f)
 
 
+(parametrise ((check-test-name	'special-restarts))
+
+;;; USE-VALUE
+
+  ;;Signal condition, call a handler, call a USE-VALUE restart.
+  ;;
+  (check
+      (with-result
+	(handlers-bind
+	    ((&error (lambda (E)
+		       (add-result 'error-handler-begin)
+		       (use-value "ciao")
+		       (add-result 'error-handler-return))))
+	  (restart-case
+	      (begin
+		(add-result 'body-begin)
+		(signal (make-error))
+		(add-result 'body-return))
+	    (use-value (lambda (value)
+			 (add-result 'restart-use-value)
+			 value)))))
+    => '("ciao" (body-begin error-handler-begin restart-use-value)))
+
+;;; --------------------------------------------------------------------
+;;; CONTINUE
+
+  ;;Signal condition, call a handler, call a CONTINUE restart.
+  ;;
+  (check
+      (with-result
+	(handlers-bind
+	    ((&error (lambda (E)
+		       (add-result 'error-handler-begin)
+		       (continue-restart)
+		       (add-result 'error-handler-return))))
+	  (restart-case
+	      (begin
+		(add-result 'body-begin)
+		(signal (make-error))
+		(add-result 'body-return))
+	    (continue (lambda ()
+			(add-result 'restart-continue)
+			2)))))
+    => '(2 (body-begin error-handler-begin restart-continue)))
+
+  ;;Call a CONTINUE restart, no CONTINUE handler is defined.
+  ;;
+  (check
+      (with-result
+	(try
+	    (restart-case
+		(begin
+		  (add-result 'body-begin)
+		  (begin0
+		      (continue-restart)
+		    (add-result 'body-return))))
+	  (catch E
+	    ((&restarts-control-error)
+	     (add-result 'catch-control-error)
+	     2)
+	    (else
+	     (print-condition E)
+	     3))))
+    => '(#f (body-begin body-return)))
+
+  ;;Signal condition, call  the inner handler, call an CONTINUE  restart, no CONTINUE
+  ;;handler is defined, call the outer handler, return.
+  ;;
+  (check
+      (with-result
+	(with-return-to-signal-on-unhandled-exception
+	  (handlers-bind
+	      ((&error (lambda (E)
+			 (add-result 'outer-error-handler))))
+	    (handlers-bind
+		((&error (lambda (E)
+			   (add-result 'inner-error-handler-begin)
+			   (continue-restart)
+			   (add-result 'inner-error-handler-return))))
+	      (add-result 'body-begin)
+	      (signal (make-error))
+	      (add-result 'body-return)
+	      1))))
+    => '(1 (body-begin
+	    inner-error-handler-begin
+	    inner-error-handler-return
+	    outer-error-handler
+	    body-return)))
+
+;;; --------------------------------------------------------------------
+;;; ABORT
+
+  ;;Signal condition, call a handler, call an ABORT restart.
+  ;;
+  (check
+      (with-result
+	(handlers-bind
+	    ((&error (lambda (E)
+		       (add-result 'error-handler-begin)
+		       (abort-restart)
+		       (add-result 'error-handler-return))))
+	  (restart-case
+	      (begin
+		(add-result 'body-begin)
+		(signal (make-error))
+		(add-result 'body-return))
+	    (abort (lambda ()
+		     (add-result 'restart-abort)
+		     2)))))
+    => '(2 (body-begin error-handler-begin restart-abort)))
+
+  ;;Call an ABORT restart, no ABORT handler is defined.
+  ;;
+  (check
+      (with-result
+	(try
+	    (begin
+	      (add-result 'body-begin)
+	      (abort-restart)
+	      (add-result 'body-return))
+	  (catch E
+	    ((&restarts-control-error)
+	     (add-result 'catch-control-error)
+	     2)
+	    (else E))))
+    => '(2 (body-begin catch-control-error)))
+
+  ;;Signal condition,  call a  handler, call  an ABORT restart,  no ABORT  handler is
+  ;;defined.
+  ;;
+  (check
+      (with-result
+	(try
+	    (handlers-bind
+		((&error (lambda (E)
+			   (add-result 'error-handler-begin)
+			   (abort-restart)
+			   (add-result 'error-handler-return))))
+	      (add-result 'body-begin)
+	      (signal (make-error))
+	      (add-result 'body-return))
+	  (catch E
+	    ((&restarts-control-error)
+	     (add-result 'catch-control-error)
+	     2)
+	    (else E))))
+    => '(2 (body-begin error-handler-begin catch-control-error)))
+
+  #f)
+
+
 (parametrise ((check-test-name	'misc))
 
   ;;Syntax error: non-symbol object as restart name.
@@ -1114,6 +1292,7 @@
 ;; eval: (put 'restart-case			'scheme-indent-function 1)
 ;; eval: (put 'raise-undefined-restart-error	'scheme-indent-function 1)
 ;; eval: (put 'raise-restart-internal-error	'scheme-indent-function 1)
+;; eval: (put 'signal-restarts-control-error	'scheme-indent-function 1)
 ;; eval: (put 'make-restart-point		'scheme-indent-function 1)
 ;; eval: (put 'make-<restart-point>		'scheme-indent-function 1)
 ;; eval: (put 'with-return-to-signal-on-unhandled-exception 'scheme-indent-function 0)
