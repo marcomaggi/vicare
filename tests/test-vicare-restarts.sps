@@ -15,7 +15,7 @@
 ;;;	  is not implemented.
 ;;;
 ;;;     *  Not  all  the  facilities   are  implemented;  among  the  missing  ones:
-;;;       RESTART-BIND, WITH-SIMPLE-RESTART, IGNORE-ERRORS, COMPUTE-RESTARTS.
+;;;       RESTART-BIND, WITH-SIMPLE-RESTART, IGNORE-ERRORS.
 ;;;
 ;;;     To understand what is going on here, we should read Common Lisp's Hyper Spec:
 ;;;
@@ -346,9 +346,11 @@
 (module (signal
 	 with-return-to-signal-on-unhandled-exception
 	 restart-case
+	 with-condition-restarts
 	 find-restart
 	 invoke-restart
 	 restart-name
+	 compute-restarts
 	 ;;
 	 use-value
 	 store-value
@@ -429,11 +431,19 @@
     ;;RESTART-CASE.
     ;;
     (define (main stx)
-      (syntax-case stx ()
+      (syntax-case stx (signal)
 	((_ ?body)
 	 #'(parametrise
 	       ((installed-restart-point (make-restart-point '())))
 	     ?body))
+
+	((_ (signal ?obj) (?key ?handler) ...)
+	 #'(let ((C ?obj))
+	     (restart-case (with-condition-restarts C
+			     (list (find-restart (quote ?key))
+				   ...)
+			     (signal C))
+	       (?key ?handler) ...)))
 
 	((_ ?body (?key ?handler) ...)
 	 (let ((keys (syntax->datum #'(?key ...))))
@@ -474,16 +484,67 @@
 
     (main stx))
 
-  (define* (find-restart {key symbol?})
+  ;;List  of  alists  representing  the  associations  between  restart  objects  and
+  ;;condition objects.
+  ;;
+  (define restarts.conditions
+    (make-parameter '()))
+
+  (define-syntax (with-condition-restarts stx)
+    (syntax-case stx ()
+      ((_ ?condition-form ?restarts-form ?body0 ?body ...)
+       #'(let ((C ?condition-form)
+	       (R ?restarts-form))
+	   (parametrise ((restarts.conditions (cons (map (lambda (restart)
+							   (cons restart C))
+						      R)
+						    (restarts.conditions))))
+	     ?body0 ?body ...)))
+      ))
+
+  (define* (associated-condition-match? {C condition?} {R <restart>?})
+    ;;Return true if  the condition object C  is associated to the  restart object R;
+    ;;otherwise return false.
+    ;;
+    (exists (lambda (alist)
+	      (exists (lambda (restart.condition)
+			(and (eq? R (car restart.condition))
+			     (let ((K (simple-conditions (cdr restart.condition))))
+			       (exists (lambda (C^)
+					  (exists (lambda (K^)
+						    (eq? C^ K^))
+					    K))
+				 (simple-conditions C)))))
+		alist))
+      (restarts.conditions)))
+
+;;;
+
+  (case-define* find-restart
     ;;Search  the  current  dynamic  environment   for  the  innest  restart  handler
     ;;associated to KEY.  If a handler is found: return its restart object; otherwise
     ;;return #f.
     ;;
-    (exists (lambda (alist)
-	      (cond ((assq key alist)
-		     => cdr)
-		    (else #f)))
-      (installed-restart-point.restart-handlers)))
+    (({key symbol?})
+     (exists (lambda (alist)
+	       (cond ((assq key alist)
+		      => cdr)
+		     (else #f)))
+       (installed-restart-point.restart-handlers)))
+    (({key symbol?} cnd)
+     (cond ((not cnd)
+	    (find-restart key))
+	   ((condition? cnd)
+	    (exists (lambda (alist)
+		      (exists (lambda (name.restart)
+				(and (eq? key (car name.restart))
+				     (not (associated-condition-match? cnd (cdr name.restart)))
+				     (cdr name.restart)))
+			alist))
+	      (installed-restart-point.restart-handlers)))
+	   (else
+	    (procedure-argument-violation __who__
+	      "expected false or condition object as second argument" cnd)))))
 
   (define (invoke-restart restart-designator . rest)
     ;;Given  a restart  designator:  search  the associated  handler  in the  current
@@ -511,51 +572,87 @@
 	     "expected restart name or restart procedure as argument"
 	     restart-designator))))
 
+  (define (compute-restarts)
+    (fold-right (lambda (alist knil)
+		  (append (map cdr alist) knil))
+      '()
+      (installed-restart-point.restart-handlers)))
+
 ;;; special restart callers
 
-  (define (use-value obj)
-    ;;If a  "use-value" restart is  installed in  the dynamic environment:  apply its
-    ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
+  (define-syntax define-restart-caller-0
+    ;;Define a restart invocation function whose restart handler accepts 0 arguments.
     ;;
-    (cond ((find-restart 'use-value)
-	   => (lambda (restart)
-		((<restart>-proc restart) obj)))
-	  (else #f)))
+    (syntax-rules ()
+      ((_ ?who ?restart-name ?not-found-form)
+       (case-define ?who
+	 (()
+	  (?who #f))
+	 ((cnd)
+	  (cond ((find-restart '?restart-name cnd)
+		 => (lambda (restart)
+		      ((<restart>-proc restart))))
+		(else ?not-found-form)))))
+      ))
 
-  (define (store-value obj)
-    ;;If a "store-value"  restart is installed in the dynamic  environment: apply its
-    ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
+  (define-syntax define-restart-caller-1
+    ;;Define a restart invocation function whose restart handler accepts 1 argument.
     ;;
-    (cond ((find-restart 'store-value)
-	   => (lambda (restart)
-		((<restart>-proc restart) obj)))
-	  (else #f)))
+    (syntax-rules ()
+      ((_ ?who ?restart-name ?not-found-form)
+       (case-define ?who
+	 ((obj)
+	  (?who obj #f))
+	 ((obj cnd)
+	  (cond ((find-restart '?restart-name cnd)
+		 => (lambda (restart)
+		      ((<restart>-proc restart) obj)))
+		(else ?not-found-form)))))
+      ))
 
-  (define (continue-restart)
-    ;;If a  "continue" restart is  installed in  the dynamic environment:  invoke its
-    ;;handler; otherwise return #f (without performing a non-local exit).
-    ;;
-    ;;NOTE Under Common  Lisp: this is simply called CONTINUE;  under Vicare CONTINUE
-    ;;is already bound.
-    ;;
-    (cond ((find-restart 'continue)
-	   => (lambda (restart)
-		((<restart>-proc restart))))
-	  (else #f)))
+  ;;If a  "use-value" restart is  installed in  the dynamic environment:  apply its
+  ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
+  ;;
+  ;;If  the optional  argument  CND is  a condition  object:  select the  innermost
+  ;;matching restart that  is *not* associated with such condition  object.  If CND
+  ;;is missing or #f: just select the innermost installed restart.
+  ;;
+  (define-restart-caller-1 use-value use-value #f)
 
-  (define (abort-restart)
-    ;;If  an "abort"  restart is  installed in  the dynamic  environment: invoke  its
-    ;;handler; otherwise raise a "&restarts-control-error".
-    ;;
-    ;;Under Common Lisp: this is simply called  ABORT; this is quite a common action,
-    ;;so it is left unbound.
-    ;;
-    (cond ((find-restart 'abort)
-	   => (lambda (restart)
-		((<restart>-proc restart))))
-	  (else
-	   (signal-restarts-control-error __who__
-	     "call to ABORT restart but no handler is defined"))))
+  ;;If a "store-value"  restart is installed in the dynamic  environment: apply its
+  ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
+  ;;
+  ;;If  the optional  argument  CND is  a condition  object:  select the  innermost
+  ;;matching restart that  is *not* associated with such condition  object.  If CND
+  ;;is missing or #f: just select the innermost installed restart.
+  ;;
+  (define-restart-caller-1 store-value store-value #f)
+
+  ;;If a  "continue" restart is  installed in  the dynamic environment:  invoke its
+  ;;handler; otherwise return #f (without performing a non-local exit).
+  ;;
+  ;;If  the optional  argument  CND is  a condition  object:  select the  innermost
+  ;;matching restart that  is *not* associated with such condition  object.  If CND
+  ;;is missing or #f: just select the innermost installed restart.
+  ;;
+  ;;NOTE Under Common  Lisp: this is simply called CONTINUE;  under Vicare CONTINUE
+  ;;is already bound.
+  ;;
+  (define-restart-caller-0 continue-restart continue #f)
+
+  ;;If  an "abort"  restart is  installed in  the dynamic  environment: invoke  its
+  ;;handler; otherwise raise a "&restarts-control-error".
+  ;;
+  ;;If  the optional  argument  CND is  a condition  object:  select the  innermost
+  ;;matching restart that  is *not* associated with such condition  object.  If CND
+  ;;is missing or #f: just select the innermost installed restart.
+  ;;
+  ;;NOTE Under  Common Lisp: this  is simply called ABORT;  this is quite  a common
+  ;;action, so it is left unbound.
+  ;;
+  (define-restart-caller-0 abort-restart abort
+    (signal-restarts-control-error __who__
+      "call to ABORT restart but no handler is defined"))
 
   #| end of module |# )
 
@@ -1131,6 +1228,48 @@
   #f)
 
 
+(parametrise ((check-test-name	'compute-restarts))
+
+  (check
+      (compute-restarts)
+    => '())
+
+  (check
+      (map restart-name
+	(restart-case
+	    (compute-restarts)
+	  (alpha void)
+	  (beta  void)))
+    => '(alpha beta))
+
+  (check
+      (map restart-name
+	(restart-case
+	    (restart-case
+		(compute-restarts)
+	      (alpha void)
+	      (beta  void))
+	  (delta void)
+	  (gamma void)))
+    => '(alpha beta delta gamma))
+
+  (check
+      (map restart-name
+	(restart-case
+	    (restart-case
+		(restart-case
+		    (compute-restarts)
+		  (alpha void)
+		  (beta  void))
+	      (delta void)
+	      (gamma void))
+	  (chi void)
+	  (xi  void)))
+    => '(alpha beta delta gamma chi xi))
+
+  #t)
+
+
 (parametrise ((check-test-name	'special-restarts))
 
 ;;; USE-VALUE
@@ -1396,6 +1535,120 @@
   #f)
 
 
+(parametrise ((check-test-name	'restarts-conditions-association))
+
+  ;;FIND-RESTART without condition argument.
+  ;;
+  (check
+      (with-result
+	(define C
+	  (make-error))
+	(restart-case
+	    (with-condition-restarts C
+	      (list (find-restart 'alpha)
+		    (find-restart 'beta))
+	      (invoke-restart (find-restart 'alpha)))
+	  (alpha (lambda ()
+		   (add-result 'alpha)
+		   1))
+	  (beta  (lambda ()
+		   (add-result 'beta)
+		   2))))
+    => '(1 (alpha)))
+
+  ;;FIND-RESTART with condition argument, no restart without association.
+  ;;
+  (internal-body
+
+    (define (doit restart-name)
+      (with-result
+	(define C
+	  (make-error))
+	(restart-case
+	    (with-condition-restarts C
+	      (list (find-restart 'alpha)
+		    (find-restart 'beta))
+	      (find-restart restart-name C))
+	  (alpha (lambda ()
+		   (add-result 'alpha)
+		   1))
+	  (beta  (lambda ()
+		   (add-result 'beta)
+		   2)))))
+
+    (check
+	(doit 'alpha)
+      => '(#f ()))
+
+    (check
+	(doit 'beta)
+      => '(#f ()))
+
+    #| end of INTERNAL-BODY |# )
+
+  ;;FIND-RESTART with condition argument, outer restart without association.
+  ;;
+  (internal-body
+
+    (define (doit restart-name)
+      (with-result
+	(define C
+	  (make-error))
+	(restart-case
+	    (restart-case
+		(with-condition-restarts C
+		  (list (find-restart 'alpha)
+			(find-restart 'beta))
+		  (invoke-restart (find-restart restart-name C)))
+	      (alpha (lambda ()
+		       (add-result 'inner-alpha)
+		       1))
+	      (beta  (lambda ()
+		       (add-result 'inner-beta)
+		       2)))
+	  (alpha (lambda ()
+		   (add-result 'outer-alpha)
+		   3))
+	  (beta  (lambda ()
+		   (add-result 'outer-beta)
+		   4)))))
+
+    (check
+	(doit 'alpha)
+      => '(3 (outer-alpha)))
+
+    (check
+	(doit 'beta)
+      => '(4 (outer-beta)))
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+	(handler-bind
+	    ((&error (lambda (E)
+		       ;;Invoke the "use-case"  restart that is not  associated to E,
+		       ;;which is the signaled object.
+		       (add-result 'error-handler)
+		       (use-value 1 E))))
+	  (restart-case
+	      (restart-case
+		  (signal (make-error))
+		;;This one *is* associated to the signaled object.
+		(use-value (lambda (obj)
+			     (add-result 'associated-use-value)
+			     2)))
+	    ;;This is *not* associated to the raised object.
+	    (use-value (lambda (obj)
+			 (add-result 'not-associated-use-value)
+			 3)))))
+    => '(3 (error-handler not-associated-use-value)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'misc))
 
   ;;Syntax error: non-symbol object as restart name.
@@ -1425,8 +1678,10 @@
 ;; eval: (put 'handler-case			'scheme-indent-function 1)
 ;; eval: (put 'handler-bind			'scheme-indent-function 1)
 ;; eval: (put 'restart-case			'scheme-indent-function 1)
+;; eval: (put 'with-condition-restarts		'scheme-indent-function 1)
 ;; eval: (put 'raise-undefined-restart-error	'scheme-indent-function 1)
 ;; eval: (put 'raise-restart-internal-error	'scheme-indent-function 1)
 ;; eval: (put 'signal-restarts-control-error	'scheme-indent-function 1)
+;; eval: (put '<restart>-associated-condition-set! 'scheme-indent-function 1)
 ;; eval: (put 'with-return-to-signal-on-unhandled-exception 'scheme-indent-function 0)
 ;; End:
