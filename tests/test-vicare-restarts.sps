@@ -1,11 +1,11 @@
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: demo for Scheme-flavored Common Lisp's restarts
+;;;Contents: demo for Scheme-flavoured Common Lisp's restarts
 ;;;Date: Tue Feb 24, 2015
 ;;;
 ;;;Abstract
 ;;;
-;;;	Demo script for Scheme-flavored Common  Lisp's condition handlers and restart
+;;;	Demo script for Scheme-flavoured Common Lisp's condition handlers and restart
 ;;;	handlers.  Not everything is implemented:
 ;;;
 ;;;     * There is no integration with the debugger.
