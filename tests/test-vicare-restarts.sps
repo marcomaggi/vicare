@@ -354,6 +354,7 @@
 	 invoke-restart
 	 ;;
 	 use-value
+	 store-value
 	 continue-restart
 	 abort-restart)
   (import RESTARTS-INTERNAL-STATE)
@@ -507,6 +508,15 @@
     ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
     ;;
     (cond ((find-restart 'use-value)
+	   => (lambda (handler)
+		((installed-restart-point.restart-proc) (handler obj))))
+	  (else #f)))
+
+  (define (store-value obj)
+    ;;If a "store-value"  restart is installed in the dynamic  environment: apply its
+    ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
+    ;;
+    (cond ((find-restart 'store-value)
 	   => (lambda (handler)
 		((installed-restart-point.restart-proc) (handler obj))))
 	  (else #f)))
@@ -1133,6 +1143,48 @@
 			 value)))))
     => '("ciao" (body-begin error-handler-begin restart-use-value)))
 
+  ;;Call a USE-VALUE restart, no USE-VALUE handler is defined.
+  ;;
+  (check
+      (with-result
+	(add-result 'body-begin)
+	(begin0
+	    (use-value 1)
+	  (add-result 'body-return)))
+    => '(#f (body-begin body-return)))
+
+;;; --------------------------------------------------------------------
+;;; STORE-VALUE
+
+  ;;Signal condition, call a handler, call a STORE-VALUE restart.
+  ;;
+  (check
+      (with-result
+	(handlers-bind
+	    ((&error (lambda (E)
+		       (add-result 'error-handler-begin)
+		       (store-value "ciao")
+		       (add-result 'error-handler-return))))
+	  (restart-case
+	      (begin
+		(add-result 'body-begin)
+		(signal (make-error))
+		(add-result 'body-return))
+	    (store-value (lambda (value)
+			   (add-result 'restart-store-value)
+			   value)))))
+    => '("ciao" (body-begin error-handler-begin restart-store-value)))
+
+  ;;Call a STORE-VALUE restart, no STORE-VALUE handler is defined.
+  ;;
+  (check
+      (with-result
+	(add-result 'body-begin)
+	(begin0
+	    (store-value 1)
+	  (add-result 'body-return)))
+    => '(#f (body-begin body-return)))
+
 ;;; --------------------------------------------------------------------
 ;;; CONTINUE
 
@@ -1154,6 +1206,31 @@
 			(add-result 'restart-continue)
 			2)))))
     => '(2 (body-begin error-handler-begin restart-continue)))
+
+  ;;CONTINUE example derived from Common Lisp's Hyper Spec.
+  ;;
+  (check
+      (internal-body
+
+	(define (real-sqrt n)
+	  (when (negative? n)
+	    (set! n (- n))
+	    (restart-case
+		(signal (make-error))
+	      (continue (lambda ()
+			  (add-result 'continue-restart)))))
+	  (sqrt n))
+
+	(with-result
+	  (handlers-bind
+	      ((&error (lambda (E)
+			 (add-result 'error-handler)
+			 (continue-restart))))
+	    (add-result 'body-enter)
+	    (begin0
+		(real-sqrt -9)
+	      (add-result 'body-return)))))
+    => '(3 (body-enter error-handler continue-restart body-return)))
 
   ;;Call a CONTINUE restart, no CONTINUE handler is defined.
   ;;
