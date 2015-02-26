@@ -327,6 +327,9 @@
     (fields (immutable name restart-name)
 	    (immutable proc)))
 
+  ;;List  of alists  representing the  currently installed  restart handlers.   Every
+  ;;alist represents the restarts installed by a single use of RESTART-CASE.
+  ;;
   (define restart-handlers
     (make-parameter '()))
 
