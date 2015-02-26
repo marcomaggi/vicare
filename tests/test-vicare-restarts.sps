@@ -233,7 +233,7 @@
   (main stx))
 
 
-;;;; restarts
+;;;; restarts: condition objects and errors
 
 ;;Base type of al the error conditions associated to the restarts mechanism.
 ;;
@@ -241,6 +241,8 @@
     &error
   make-restarts-condition
   restarts-condition?)
+
+;;;
 
 ;;To be used to tag an exception as "attempt to used an undefined restart".
 ;;
@@ -256,68 +258,85 @@
 	      (make-message-condition message)
 	      (make-irritants-condition irritants))))
 
-;;; --------------------------------------------------------------------
+;;;
+
+;;To be used to tag an exception as "attempt to used an undefined restart".
+;;
+(define-condition-type &restart-internal-error
+    &restarts-error
+  make-restart-internal-error
+  restart-internal-error?)
+
+(define (raise-restart-internal-error who message . irritants)
+  (raise
+   (condition (make-restart-internal-error)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
+
+
+;;;; restarts: internal state
+
+(module RESTARTS-INTERNAL-STATE
+  (installed-restart-point
+   installed-restart-point.signaled-object
+   installed-restart-point.signaled-object-set!
+   installed-restart-point.restart-proc
+   installed-restart-point.restart-handlers
+   make-restart-point)
+
+  (define-record-type <restart-point>
+    (nongenerative vicare:restarts:<restart-point>)
+    (fields (mutable signaled-object)
+		;The condition object signaled by SIGNAL.
+	    (immutable restart-proc)
+		;The escape procedure to be applied to the return values of a restart
+		;handler to jump back to a use of RESTART-CASE.
+	    (immutable restart-handlers)
+		;List of alists managed as a  stack of alists.  Each alist represents
+		;the  restart  handlers  installed  by  the  expansion  of  a  single
+		;RESTART-CASE use.
+	    #| end of FIELDS |# )
+    (protocol
+     (lambda (make-record)
+       (lambda (restart-proc handlers-alist)
+	 (make-record #f restart-proc handlers-alist))))
+    #| end of DEFINE-RECORD-TYPE |# )
+
+  (define (default-restart-proc . args)
+    (raise-restart-internal-error __who__
+      "invalid call to restart procedure outside RESTART-CASE environment"))
+
+  (define installed-restart-point
+    (make-parameter (make-<restart-point> default-restart-proc '())))
+
+  (define (make-restart-point restart-proc handlers-alist)
+    (make-<restart-point> restart-proc
+      (cons handlers-alist (installed-restart-point.restart-handlers))))
+
+  (define-syntax-rule (installed-restart-point.signaled-object)
+    (<restart-point>-signaled-object (installed-restart-point)))
+
+  (define-syntax-rule (installed-restart-point.signaled-object-set! ?obj)
+    (<restart-point>-signaled-object-set! (installed-restart-point) ?obj))
+
+  (define-syntax-rule (installed-restart-point.restart-proc)
+    (<restart-point>-restart-proc (installed-restart-point)))
+
+  (define-syntax-rule (installed-restart-point.restart-handlers)
+    (<restart-point>-restart-handlers (installed-restart-point)))
+
+  #| end of module |# )
+
+
+;;;; restarts: public interface
 
 (module (signal
 	 with-return-to-signal-on-unhandled-exception
 	 restart-case
 	 find-restart
-	 invoke-restart
-	 use-value)
-
-  (module (installed-restart-point
-	   installed-restart-point.signaled-object
-	   installed-restart-point.signaled-object-set!
-	   installed-restart-point.restart-proc
-	   installed-restart-point.restart-handlers
-	   make-restart-point)
-
-    (define-record-type <restart-point>
-      (nongenerative)
-      (fields (mutable signaled-object)
-		;The  object signaled  by  SIGNAL.  It  is meant  to  be a  condition
-		;object.
-	      (immutable restart-proc)
-		;The escape procedure to be applied to the return values of a restart
-		;handler to jump back to a use of RESTART-CASE.
-	      (immutable restart-handlers)
-		;List of alists managed as a  stack of alists.  Each alist represents
-		;the  restart  handlers  installed  by  the  expansion  of  a  single
-		;RESTART-CASE use.
-	      #| end of FIELDS |# )
-      (protocol
-       (lambda (make-record)
-	 (lambda (restart-proc handlers-alist)
-	   (make-record #f restart-proc handlers-alist))))
-      #| end of DEFINE-RECORD-TYPE |# )
-
-    (define (default-restart-proc . args)
-      (assertion-violation 'restart-proc
-	"invalid call to restart procedure \
-         outside RESTART-CASE environment"))
-
-    (define installed-restart-point
-      (make-parameter (make-<restart-point> default-restart-proc '())))
-
-    (define (make-restart-point restart-proc handlers-alist)
-      (make-<restart-point> restart-proc
-	(cons handlers-alist (installed-restart-point.restart-handlers))))
-
-    (define-syntax-rule (installed-restart-point.signaled-object)
-      (<restart-point>-signaled-object (installed-restart-point)))
-
-    (define-syntax-rule (installed-restart-point.signaled-object-set! ?obj)
-      (<restart-point>-signaled-object-set! (installed-restart-point) ?obj))
-
-    (define-syntax-rule (installed-restart-point.restart-proc)
-      (<restart-point>-restart-proc (installed-restart-point)))
-
-    (define-syntax-rule (installed-restart-point.restart-handlers)
-      (<restart-point>-restart-handlers (installed-restart-point)))
-
-    #| end of module |# )
-
-;;;
+	 invoke-restart)
+  (import RESTARTS-INTERNAL-STATE)
 
   ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
   ;;WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION  to   distinguish  between  signaled
@@ -364,30 +383,61 @@
 	 (lambda () ?body0 ?body ...)))
       ))
 
-  (define-syntax restart-case
+  (define-syntax* (restart-case stx)
     ;;Install restart handlers in the  current dynamic environment, then evaluate the
     ;;?BODY form.
     ;;
-    ;;Every ?KEY must be a symbol representing  the name of a restart.  The same ?KEY
+    ;;Every ?KEY must be  a symbol representing the name of a  restart; the same ?KEY
     ;;can be used in nested uses of RESTART-CASE.
     ;;
     ;;Every ?HANDLER  must be  an expression  evaluating to  a procedure  accepting a
     ;;single argument.   The return values  of ?HANDLER  become the return  values of
     ;;RESTART-CASE.
     ;;
-    (syntax-rules ()
-      ((_ ?body)
-       ?body)
-      ((_ ?body (?key0 ?handler0) (?key ?handler) ...)
-       (call/cc
-	   (lambda (restart-proc)
-	     (parametrise
-		 ((installed-restart-point (make-restart-point restart-proc
-					     `((?key0 . ,?handler0)
-					       (?key  . ,?handler)
-					       ...))))
-	       ?body))))
-      ))
+    (define (main stx)
+      (syntax-case stx ()
+	((_ ?body)
+	 #'?body)
+
+	((_ ?body (?key0 ?handler0) (?key ?handler) ...)
+	 (let ((keys (syntax->datum #'(?key0 ?key ...))))
+	   (cond ((%all-symbols? keys)
+		  => (lambda (obj)
+		       (synner "expected symbol as restart name" obj)))
+		 ((%duplicate-symbols? keys)
+		  => (lambda (key)
+		       (synner "duplicate restart name" key)))
+		 (else
+		  #'(call/cc
+			(lambda (restart-proc)
+			  (parametrise
+			      ((installed-restart-point (make-restart-point restart-proc
+							  `((?key0 . ,?handler0)
+							    (?key  . ,?handler)
+							    ...))))
+			    ?body)))))))
+	))
+
+    (define (%all-symbols? keys)
+      (and (pair? keys)
+	   (if (symbol? (car keys))
+	       (%all-symbols? (cdr keys))
+	     (car keys))))
+
+    (define (%duplicate-symbols? keys)
+      (and (pair? keys)
+	   (let ((tail (cdr keys)))
+	     (let loop ((head (car keys))
+			(rest tail))
+	       (if (pair? rest)
+		   (let ((A (car rest))
+			 (D (cdr rest)))
+		     (if (eq? head A)
+			 head
+		       (loop head D)))
+		 (%duplicate-symbols? tail))))))
+
+    (main stx))
 
   (define* (find-restart {key symbol?})
     ;;Search  the  current  dynamic  environment   for  the  innest  restart  handler
@@ -425,12 +475,15 @@
 	     "expected restart name or procedure as argument"
 	     key/handler))))
 
-  (define (use-value X)
-    ;;Restart handler usually associated to the key USE-VALUE.
-    ;;
-    X)
-
   #| end of module |# )
+
+
+;;;; restarts: auxiliary definitions
+
+(define (use-value X)
+  ;;Restart handler usually associated to the key USE-VALUE.
+  ;;
+  X)
 
 
 (parametrise ((check-test-name	'handlers-case))
@@ -1030,6 +1083,25 @@
   #f)
 
 
+(parametrise ((check-test-name	'misc))
+
+  ;;Syntax error: non-symbol object as restart name.
+  ;;
+  ;; (restart-case
+  ;;     (void)
+  ;;   (alpha  (lambda (E) 1))
+  ;;   ("beta" (lambda (E) 2)))
+
+  ;;Syntax error: duplicate restart symbol.
+  ;;
+  ;; (restart-case
+  ;;     (void)
+  ;;   (alpha (lambda (E) 1))
+  ;;   (alpha (lambda (E) 2)))
+
+  #f)
+
+
 ;;;; done
 
 (check-report)
@@ -1041,6 +1113,7 @@
 ;; eval: (put 'handlers-bind			'scheme-indent-function 1)
 ;; eval: (put 'restart-case			'scheme-indent-function 1)
 ;; eval: (put 'raise-undefined-restart-error	'scheme-indent-function 1)
+;; eval: (put 'raise-restart-internal-error	'scheme-indent-function 1)
 ;; eval: (put 'make-restart-point		'scheme-indent-function 1)
 ;; eval: (put 'make-<restart-point>		'scheme-indent-function 1)
 ;; eval: (put 'with-return-to-signal-on-unhandled-exception 'scheme-indent-function 0)
