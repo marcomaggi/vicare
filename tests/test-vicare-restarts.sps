@@ -304,39 +304,6 @@
 	      (make-irritants-condition irritants))))
 
 
-;;;; restarts: internal state
-
-(module RESTARTS-INTERNAL-STATE
-  (installed-restart-point
-   installed-restart-point.restart-handlers
-   make-restart-point)
-
-  (define-record-type <restart-point>
-    (nongenerative vicare:restarts:<restart-point>)
-    (fields (immutable restart-handlers)
-		;List of alists managed as a  stack of alists.  Each alist represents
-		;the  restart  handlers  installed  by  the  expansion  of  a  single
-		;RESTART-CASE use.
-	    #| end of FIELDS |# )
-    (protocol
-     (lambda (make-record)
-       (lambda (handlers-alist)
-	 (make-record handlers-alist))))
-    #| end of DEFINE-RECORD-TYPE |# )
-
-  (define installed-restart-point
-    (make-parameter (make-<restart-point> '())))
-
-  (define (make-restart-point handlers-alist)
-    (make-<restart-point> (cons handlers-alist
-				(installed-restart-point.restart-handlers))))
-
-  (define-syntax-rule (installed-restart-point.restart-handlers)
-    (<restart-point>-restart-handlers (installed-restart-point)))
-
-  #| end of module |# )
-
-
 ;;;; restarts: public interface
 
 (module (signal
@@ -352,7 +319,6 @@
 	 store-value
 	 continue-restart
 	 abort-restart)
-  (import RESTARTS-INTERNAL-STATE)
 
   ;;The restart object required by Common Lisp.
   ;;
@@ -360,6 +326,9 @@
     (nongenerative vicare:restarts:<restart>)
     (fields (immutable name restart-name)
 	    (immutable proc)))
+
+  (define restart-handlers
+    (make-parameter '()))
 
   (define (%make-restarts-alist-entry restart-point-proc restart-name restart-proc)
     (cons restart-name
@@ -429,9 +398,7 @@
     (define (main stx)
       (syntax-case stx (signal)
 	((_ ?body)
-	 #'(parametrise
-	       ((installed-restart-point (make-restart-point '())))
-	     ?body))
+	 #' ?body)
 
 	((_ (signal ?obj) (?key ?handler) ...)
 	 #'(let ((C ?obj))
@@ -453,9 +420,9 @@
 		  #'(call/cc
 			(lambda (restart-point-proc)
 			  (parametrise
-			      ((installed-restart-point (make-restart-point
-							 `(,(%make-restarts-alist-entry restart-point-proc (quote ?key) ?handler)
-							   ...))))
+			      ((restart-handlers (cons `(,(%make-restarts-alist-entry restart-point-proc (quote ?key) ?handler)
+							 ...)
+						       (restart-handlers))))
 			    ?body)))))))
 	))
 
@@ -507,9 +474,9 @@
 			(and (eq? R (car restart.condition))
 			     (let ((K (simple-conditions (cdr restart.condition))))
 			       (exists (lambda (C^)
-					  (exists (lambda (K^)
-						    (eq? C^ K^))
-					    K))
+					 (exists (lambda (K^)
+						   (eq? C^ K^))
+					   K))
 				 (simple-conditions C)))))
 		alist))
       (restarts.conditions)))
@@ -526,7 +493,7 @@
 	       (cond ((assq key alist)
 		      => cdr)
 		     (else #f)))
-       (installed-restart-point.restart-handlers)))
+       (restart-handlers)))
     (({key symbol?} cnd)
      (cond ((not cnd)
 	    (find-restart key))
@@ -537,7 +504,7 @@
 				     (not (associated-condition-match? cnd (cdr name.restart)))
 				     (cdr name.restart)))
 			alist))
-	      (installed-restart-point.restart-handlers)))
+	      (restart-handlers)))
 	   (else
 	    (procedure-argument-violation __who__
 	      "expected false or condition object as second argument" cnd)))))
@@ -572,7 +539,7 @@
     (fold-right (lambda (alist knil)
 		  (append (map cdr alist) knil))
       '()
-      (installed-restart-point.restart-handlers)))
+      (restart-handlers)))
 
 ;;; special restart callers
 
