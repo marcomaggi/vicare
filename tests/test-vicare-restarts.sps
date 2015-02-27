@@ -337,7 +337,12 @@
     (cons restart-name
 	  (make-<restart> restart-name
 			  (lambda args
-			    (restart-point-proc (apply restart-proc args))))))
+			    (call-with-values
+				(lambda ()
+				  (apply restart-proc args))
+			      (lambda retvals
+				#;(run-unwind-protection-cleanup-upon-exit? #t)
+				(apply restart-point-proc retvals)))))))
 
   ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
   ;;WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION  to   distinguish  between  signaled
@@ -1013,6 +1018,22 @@
 		   (add-result 'restart-alpha)
 		   2))))
     => '(2 (body-in restart-alpha)))
+
+  ;;Find and invoke a restart in a single step.  Return multiple values.
+  ;;
+  (check
+      (with-result
+	(restart-case
+	    (begin
+	      (add-result 'body-in)
+	      (begin0
+		  (invoke-restart 'alpha 3)
+		(add-result 'body-out)
+		1))
+	  (alpha (lambda (obj)
+		   (add-result 'restart-alpha)
+		   (values 2 obj 4)))))
+    => '(2 3 4 (body-in restart-alpha)))
 
   #f)
 
