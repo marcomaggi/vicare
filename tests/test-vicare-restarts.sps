@@ -389,56 +389,65 @@
 
   (define-syntax* (restart-case stx)
     ;;Install restart handlers in the  current dynamic environment, then evaluate the
-    ;;?BODY form.
+    ;;body form.
     ;;
-    ;;Every ?KEY must be  a symbol representing the name of a  restart; the same ?KEY
-    ;;can be used in nested uses of RESTART-CASE.
+    ;;The syntax is:
     ;;
-    ;;Every ?HANDLER  must be  an expression  evaluating to  a procedure  accepting a
-    ;;single argument.   The return values  of ?HANDLER  become the return  values of
-    ;;RESTART-CASE.
+    ;;   (restart-case ?body (?clause ...))
+    ;;
+    ;;   ?clause = (?restart-name ?restart-handler)
+    ;;
+    ;;Every ?RESTART-NAME  must be a symbol  representing the name of  a restart; the
+    ;;same ?RESTART-NAME can be used in nested uses of RESTART-CASE.
+    ;;
+    ;;Every  ?RESTART-HANDLER  must  be  an  expression  evaluating  to  a  procedure
+    ;;accepting a single argument.  The  return values of ?RESTART-HANDLER become the
+    ;;return values of RESTART-CASE.
     ;;
     (define (main stx)
       (syntax-case stx (signal)
 	((_ ?body)
 	 #' ?body)
 
-	((_ (signal ?obj) (?key ?handler) ...)
+	((_ (signal ?obj) (?restart-name ?restart-handler) ...)
 	 #'(let ((C ?obj))
 	     (restart-case (with-condition-restarts C
-			     (list (find-restart (quote ?key))
+			     (list (find-restart (quote ?restart-name))
 				   ...)
 			     (signal C))
-	       (?key ?handler) ...)))
+	       (?restart-name ?restart-handler) ...)))
 
-	((_ ?body (?key ?handler) ...)
-	 (let ((keys (syntax->datum #'(?key ...))))
-	   (cond ((%all-symbols? keys)
+	((_ ?body (?restart-name ?restart-handler) ...)
+	 (let ((names (syntax->datum #'(?restart-name ...))))
+	   (cond ((%all-symbols? names)
 		  => (lambda (obj)
 		       (synner "expected symbol as restart name" obj)))
-		 ((%duplicate-symbols? keys)
-		  => (lambda (key)
-		       (synner "duplicate restart name" key)))
+		 ((%duplicate-symbols? names)
+		  => (lambda (name)
+		       (synner "duplicate restart name" name)))
 		 (else
 		  #'(call/cc
 			(lambda (restart-point-proc)
 			  (parametrise
-			      ((restart-handlers (cons `(,(%make-restarts-alist-entry restart-point-proc (quote ?key) ?handler)
-							 ...)
-						       (restart-handlers))))
+			      ((restart-handlers
+				(cons `(,(%make-restarts-alist-entry restart-point-proc
+								     (quote ?restart-name)
+								     ?restart-handler)
+					...)
+				      (restart-handlers))))
 			    ?body)))))))
 	))
 
-    (define (%all-symbols? keys)
-      (and (pair? keys)
-	   (if (symbol? (car keys))
-	       (%all-symbols? (cdr keys))
-	     (car keys))))
+    (define (%all-symbols? names)
+      (and (pair? names)
+	   (if (symbol? (car names))
+	       (%all-symbols? (cdr names))
+	     (car names))))
 
-    (define (%duplicate-symbols? keys)
-      (and (pair? keys)
-	   (let ((tail (cdr keys)))
-	     (let loop ((head (car keys))
+    (define (%duplicate-symbols? names)
+      (and (pair? names)
+	   (let ((tail (cdr names)))
+	     (let loop ((head (car names))
 			(rest tail))
 	       (if (pair? rest)
 		   (let ((A (car rest))
@@ -488,22 +497,22 @@
 
   (case-define* find-restart
     ;;Search  the  current  dynamic  environment   for  the  innest  restart  handler
-    ;;associated to KEY.  If a handler is found: return its restart object; otherwise
-    ;;return #f.
+    ;;associated  to  NAME.  If  a  handler  is  found:  return its  restart  object;
+    ;;otherwise return #f.
     ;;
-    (({key symbol?})
+    (({name symbol?})
      (exists (lambda (alist)
-	       (cond ((assq key alist)
+	       (cond ((assq name alist)
 		      => cdr)
 		     (else #f)))
        (restart-handlers)))
-    (({key symbol?} cnd)
+    (({name symbol?} cnd)
      (cond ((not cnd)
-	    (find-restart key))
+	    (find-restart name))
 	   ((condition? cnd)
 	    (exists (lambda (alist)
 		      (exists (lambda (name.restart)
-				(and (eq? key (car name.restart))
+				(and (eq? name (car name.restart))
 				     (not (associated-condition-match? cnd (cdr name.restart)))
 				     (cdr name.restart)))
 			alist))
@@ -544,9 +553,9 @@
       '()
       (restart-handlers)))
 
-;;; special restart callers
+;;; standardised restart functions
 
-  (define-syntax define-restart-caller-0
+  (define-syntax define-restart-function-0
     ;;Define a restart invocation function whose restart handler accepts 0 arguments.
     ;;
     (syntax-rules ()
@@ -561,7 +570,7 @@
 		(else ?not-found-form)))))
       ))
 
-  (define-syntax define-restart-caller-1
+  (define-syntax define-restart-function-1
     ;;Define a restart invocation function whose restart handler accepts 1 argument.
     ;;
     (syntax-rules ()
@@ -583,7 +592,7 @@
   ;;matching restart that  is *not* associated with such condition  object.  If CND
   ;;is missing or #f: just select the innermost installed restart.
   ;;
-  (define-restart-caller-1 use-value use-value #f)
+  (define-restart-function-1 use-value use-value #f)
 
   ;;If a "store-value"  restart is installed in the dynamic  environment: apply its
   ;;handler to OBJ; otherwise return #f (without performing a non-local exit).
@@ -592,7 +601,7 @@
   ;;matching restart that  is *not* associated with such condition  object.  If CND
   ;;is missing or #f: just select the innermost installed restart.
   ;;
-  (define-restart-caller-1 store-value store-value #f)
+  (define-restart-function-1 store-value store-value #f)
 
   ;;If a  "continue" restart is  installed in  the dynamic environment:  invoke its
   ;;handler; otherwise return #f (without performing a non-local exit).
@@ -604,7 +613,7 @@
   ;;NOTE Under Common  Lisp: this is simply called CONTINUE;  under Vicare CONTINUE
   ;;is already bound.
   ;;
-  (define-restart-caller-0 continue-restart continue #f)
+  (define-restart-function-0 continue-restart continue #f)
 
   ;;If  an "abort"  restart is  installed in  the dynamic  environment: invoke  its
   ;;handler; otherwise raise a "&restarts-control-error".
@@ -616,7 +625,7 @@
   ;;NOTE Under  Common Lisp: this  is simply called ABORT;  this is quite  a common
   ;;action, so it is left unbound.
   ;;
-  (define-restart-caller-0 abort-restart abort
+  (define-restart-function-0 abort-restart abort
     (signal-restarts-control-error __who__
       "call to ABORT restart but no handler is defined"))
 
@@ -734,6 +743,47 @@
     #| end of body |# )
 
 ;;; --------------------------------------------------------------------
+;;; unwind-protect
+
+  (internal-body
+
+    (define (doit C)
+      (with-result
+	(handler-case
+	    ((&error   (lambda (E)
+			 (add-result 'error-handler)
+			 1)))
+	  (with-unwind-handler
+	      (lambda (why)
+		(add-result 'outer-unwind-handler))
+	    (lambda ()
+	      (handler-case
+		  ((&warning (lambda (E)
+			       (add-result 'warning-handler)
+			       2)))
+		(with-unwind-handler
+		    (lambda (why)
+		      (add-result 'inner-unwind-handler))
+		  (lambda ()
+		    (add-result 'body-begin)
+		    (signal C)
+		    (add-result 'body-normal-return)))))))))
+
+    (check
+	(doit (make-error))
+      => '(1 (body-begin
+	      inner-unwind-handler
+	      outer-unwind-handler
+	      error-handler)))
+
+    (check
+	(doit (make-warning))
+      => '(2 (body-begin
+	      inner-unwind-handler
+	      warning-handler
+	      outer-unwind-handler)))
+
+    #| end of body |# )
 
   #t)
 
@@ -742,7 +792,7 @@
 
   (check	;no condition
       (with-result
-	(handler-case
+	(handler-bind
 	    ((&error   (lambda (E)
 			 (add-result 'error-handler)
 			 1))
@@ -828,6 +878,50 @@
 		  (add-result 'body-return)
 		  1)))))
     => '(2 (body-begin inner-error-handler outer-error-handler)))
+
+;;; --------------------------------------------------------------------
+;;; unwind-protect
+
+  (internal-body
+
+    (define (doit C)
+      (with-result
+	(returnable
+	  (handler-bind
+	      ((&error   (lambda (E)
+			   (add-result 'error-handler)
+			   (return 1))))
+	    (with-unwind-handler
+		(lambda (why)
+		  (add-result 'outer-unwind-handler))
+	      (lambda ()
+		(handler-bind
+		    ((&warning (lambda (E)
+				 (add-result 'warning-handler)
+				 (return 2))))
+		  (with-unwind-handler
+		      (lambda (why)
+			(add-result 'inner-unwind-handler))
+		    (lambda ()
+		      (add-result 'body-begin)
+		      (signal C)
+		      (add-result 'body-normal-return))))))))))
+
+    (check
+	(doit (make-error))
+      => '(1 (body-begin
+	      error-handler
+	      inner-unwind-handler
+	      outer-unwind-handler)))
+
+    (check
+	(doit (make-warning))
+      => '(2 (body-begin
+	      warning-handler
+	      inner-unwind-handler
+	      outer-unwind-handler)))
+
+    #| end of body |# )
 
   #t)
 
@@ -1236,7 +1330,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'special-restarts))
+(parametrise ((check-test-name	'standard-restart-functions))
 
 ;;; USE-VALUE
 
@@ -1613,6 +1707,67 @@
     => '(3 (error-handler not-associated-use-value)))
 
   #t)
+
+
+(parametrise ((check-test-name	'restarts-unwind-protect))
+
+  (check
+      (with-result
+	(restart-case
+	    (with-unwind-handler
+		(lambda (why)
+		  (add-result 'unwind-handler))
+	      (lambda ()
+		(add-result 'body-enter)
+		(invoke-restart 'alpha)
+		(add-result 'body-return)))
+	  (alpha (lambda ()
+		   (add-result 'restart-alpha)
+		   1))))
+    => '(1 (body-enter unwind-handler restart-alpha)))
+
+  #;(internal-body
+
+    (define (doit C)
+      (with-result
+	(returnable
+	  (handler-bind
+	      ((&error   (lambda (E)
+			   (add-result 'error-handler)
+			   (return 1))))
+	    (with-unwind-handler
+		(lambda (why)
+		  (add-result 'outer-unwind-handler))
+	      (lambda ()
+		(handler-bind
+		    ((&warning (lambda (E)
+				 (add-result 'warning-handler)
+				 (return 2))))
+		  (with-unwind-handler
+		      (lambda (why)
+			(add-result 'inner-unwind-handler))
+		    (lambda ()
+		      (add-result 'body-begin)
+		      (signal C)
+		      (add-result 'body-normal-return))))))))))
+
+    (check
+	(doit (make-error))
+      => '(1 (body-begin
+	      error-handler
+	      inner-unwind-handler
+	      outer-unwind-handler)))
+
+    (check
+	(doit (make-warning))
+      => '(2 (body-begin
+	      warning-handler
+	      inner-unwind-handler
+	      outer-unwind-handler)))
+
+    #| end of body |# )
+
+  #f)
 
 
 (parametrise ((check-test-name	'misc))
