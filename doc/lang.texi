@@ -21,6 +21,7 @@
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
+* restarts::                    Signaling conditions and restarts.
 @end menu
 
 @c page
@@ -3463,5 +3464,6 @@ the definition of the enumeration, no error is raised.
 @include libs-streams.texi
 @include libs-loops.texi
 @include libs-comparisons.texi
+@include libs-conditions-and-restarts.texi
 
 @c end of file

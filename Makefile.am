@@ -94,6 +94,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-cbuffers.texi				\
 	doc/libs-char-sets.texi				\
 	doc/libs-comparisons.texi			\
+	doc/libs-conditions-and-restarts.texi		\
 	doc/libs-debugging.texi				\
 	doc/libs-flonum-format.texi			\
 	doc/libs-flonum-parser.texi			\

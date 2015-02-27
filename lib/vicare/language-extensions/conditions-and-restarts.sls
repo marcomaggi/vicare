@@ -58,9 +58,7 @@
     abort-restart
 
     ;; condition types and error raisers
-    &restarts-error make-restarts-condition restarts-condition?
-    &restart-internal-error make-restart-internal-error restart-internal-error?
-    raise-restart-internal-error
+    &restarts-error make-restarts-error-condition restarts-error-condition?
     &restarts-control-error make-restarts-control-error restarts-control-error?
     signal-restarts-control-error
     &undefined-restart-error make-undefined-restart-error undefined-restart-error?
@@ -83,12 +81,12 @@
   ;;   ?clause = (?typespec ?condition-handler)
   ;;           | (:no-error ?no-error-handler)
   ;;
-  ;;Every  ?TYPESPEC is  meant to  be a  non-empty proper  list of  identifiers, each
-  ;;usable as second argument to CONDITION-IS-A?.
+  ;;Every  ?TYPESPEC is  meant to  be an  identifier or  a non-empty  proper list  of
+  ;;identifiers, each usable as second argument to CONDITION-IS-A?.
   ;;
-  ;;Every  ?HANDLER must  be  an expression  evaluating to  a  procedure accepting  a
-  ;;condition  object as  single  argument; the  condition object  can  be simple  or
-  ;;compound.
+  ;;Every  ?CONDITION-HANDLER  must  be  an  expression  evaluating  to  a  procedure
+  ;;accepting a  condition object  as single  argument; the  condition object  can be
+  ;;simple or compound.
   ;;
   ;;In the no-error clause: ":no-error"  must be the actual symbol; ?NO-ERROR-HANDLER
   ;;must be an expression evaluating to a procedure.  The optional ":no-error" clause
@@ -103,13 +101,13 @@
   ;;  applied  to the returned values;  the return values of  such application become
   ;;  the return values of HANDLER-CASE.
   ;;
-  ;;If an  exception is raised  (in Common Lisp jargon:  a condition is  signaled): a
+  ;;If an exception  is raised (in Common  Lisp jargon: a condition  is signalled): a
   ;;condition  handler matching  the raised  object is  searched in  the sequence  of
   ;;clauses, left-to-right:
   ;;
-  ;;* If a clause matches: the dynamic extent of the body is terminated, the ?HANDLER
-  ;;  is  applied to  the raised  object and  the return  values of  such application
-  ;;  become the return values of HANDLER-CASE.
+  ;;*  If a  clause  matches: the  dynamic  extent  of the  body  is terminated,  the
+  ;;  ?CONDITION-HANDLER  is applied to  the raised object  and the return  values of
+  ;;  such application become the return values of HANDLER-CASE.
   ;;
   ;;* If no clause matches: the raised object is re-raised with RAISE-CONTINUABLE.
   ;;
@@ -145,17 +143,17 @@
        '())
 
       ;;The no-error clause can be present only if it is the last one.
-      (((?no-error ?handler))
+      (((?no-error ?condition-handler))
        (%no-error-spec? #'?no-error)
        (if no-error-expr
 	   (synner "invalid multiple definition of :no-error clause"
-		   #'(?no-error ?handler))
+		   #'(?no-error ?condition-handler))
 	 (begin
-	   (set! no-error-expr #'?handler)
+	   (set! no-error-expr #'?condition-handler)
 	   '())))
 
-      (((?typespec ?handler) . ?rest)
-       (cons #`(#,(%process-typespec var #'?typespec) (?handler #,var))
+      (((?typespec ?condition-handler) . ?rest)
+       (cons #`(#,(%process-typespec var #'?typespec) (?condition-handler #,var))
 	     (%process-clauses var #'?rest)))
 
       ((?clause . ?rest)
@@ -182,7 +180,7 @@
   ;;Install a handler for conditions of  type "&error", then evaluate the body forms.
   ;;If the body performs a normal return:  its return values become the return values
   ;;of IGNORE-ERRORS.  If  the body signals a condition of  type "&error": two values
-  ;;are returned, false and the signaled condition object.
+  ;;are returned, false and the signalled condition object.
   ;;
   (syntax-rules ()
     ((_ ?body0 ?body ...)
@@ -197,7 +195,7 @@
   ;;Evaluate body forms in a dynamic  environment in which new exception handlers are
   ;;installed;   it  is   capable   of  handling   exceptions   raised  with   RAISE,
   ;;RAISE-CONTINUABLE  and  SIGNAL.   Not quite  like  R6RS's  WITH-EXCEPTION-HANDLER
-  ;;syntax.
+  ;;syntax, but similar.
   ;;
   ;;The syntax is:
   ;;
@@ -205,22 +203,21 @@
   ;;
   ;;   ?clause = (?typespec ?condition-handler)
   ;;
-  ;;Every  ?TYPESPEC is  meant to  be a  non-empty proper  list of  identifiers, each
-  ;;usable as second argument to CONDITION-IS-A?.
+  ;;Every  ?TYPESPEC is  meant to  be an  identifier or  a non-empty  proper list  of
+  ;;identifiers, each usable as second argument to CONDITION-IS-A?.
   ;;
-  ;;Every  ?HANDLER must  be  an expression  evaluating to  a  procedure accepting  a
-  ;;condition  object as  single  argument; the  condition object  can  be simple  or
-  ;;compound.
+  ;;Every  ?CONDITION-HANDLER  must  be  an  expression  evaluating  to  a  procedure
+  ;;accepting a  condition object  as single  argument; the  condition object  can be
+  ;;simple or compound.
   ;;
   ;;If the body performs a normal return:  the values returned by the body become the
   ;;values returned by HANDLER-BIND.
   ;;
-  ;;If an  exception is raised  (in Common Lisp jargon:  a condition is  signaled): a
+  ;;If an exception  is raised (in Common  Lisp jargon: a condition  is signalled): a
   ;;condition  handler matching  the raised  object is  searched in  the sequence  of
   ;;clauses, left-to-right:
   ;;
-  ;;* If  a clause  matches: its  ?HANDLER is applied  to the  raised object  and the
-  ;;  return values of such application become the return values of HANDLER-BIND.
+  ;;* If a clause matches: its ?CONDITION-HANDLER is applied to the raised object.
   ;;
   ;;* If no clause matches: the raised object is re-raised with RAISE-CONTINUABLE.
   ;;
@@ -229,20 +226,21 @@
   ;;that the current exception handler is the one that was in place when HANDLER-BIND
   ;;was evaluated.
   ;;
-  ;;When a ?HANDLER is applied to the raised condition object:
+  ;;When a ?CONDITION-HANDLER is applied to the raised condition object:
   ;;
   ;;* If it  accepts to handle the  condition: it must perform a  non-local exit, for
   ;;  example by invoking a restart.
   ;;
   ;;* If  it declines to handle  the condition: it  must perform a normal  return; in
-  ;;  this case the raised object is re-raised using RAISE-CONTINUABLE.
+  ;;  this case the returned values are discarded and the originally raised object is
+  ;;  re-raised using RAISE-CONTINUABLE.
   ;;
   (define (main stx)
     (syntax-case stx ()
       ((_ () ?body0 ?body ...)
        #'(begin ?body0 ?body ...))
 
-      ((_ ((?typespec ?handler) ...) ?body0 ?body ...)
+      ((_ ((?typespec ?condition-handler) ...) ?body0 ?body ...)
        (with-syntax
 	   (((VAR) (generate-temporaries '(E))))
 	 (with-syntax
@@ -250,11 +248,11 @@
 	   #'(with-exception-handler
 		 (lambda (VAR)
 		   (when PRED
-		     (?handler VAR))
+		     (?condition-handler VAR))
 		   ...
-		   ;;If  we are  here either  no ?TYPESPEC  matched E  or a  ?HANDLER
-		   ;;returned.   Let's  search for  another  handler  in the  uplevel
-		   ;;dynamic environment.
+		   ;;If   we  are   here  either   no  ?TYPESPEC   matched  E   or  a
+		   ;;?CONDITION-HANDLER returned.   Let's search for  another handler
+		   ;;in the uplevel dynamic environment.
 		   (raise-continuable VAR))
 	       (lambda () ?body0 ?body ...)))))
       ))
@@ -292,24 +290,8 @@
 ;;
 (define-condition-type &restarts-error
     &error
-  make-restarts-condition
-  restarts-condition?)
-
-;;; --------------------------------------------------------------------
-
-;;To be used to tag an exception as "internal error in the restarts mechanism".
-;;
-(define-condition-type &restart-internal-error
-    &restarts-error
-  make-restart-internal-error
-  restart-internal-error?)
-
-(define (raise-restart-internal-error who message . irritants)
-  (raise
-   (condition (make-restart-internal-error)
-	      (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants))))
+  make-restarts-error-condition
+  restarts-error-condition?)
 
 ;;; --------------------------------------------------------------------
 
@@ -388,7 +370,7 @@
       ))
 
   ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
-  ;;WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION  to   distinguish  between  signaled
+  ;;WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION  to  distinguish  between  signalled
   ;;conditions  and  exceptions  raised  by  a non-SIGNAL  invokation  of  RAISE  and
   ;;RAISE-CONTINUABLE.
   ;;
@@ -400,7 +382,7 @@
   ;;Condition object of type "&signal" which  is always added to the condition raised
   ;;by  SIGNAL.   Only  one  needs  to  be instantiated.   It  exists  to  allow  the
   ;;implementation  of  WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION which  needs  to
-  ;;distinguish between  signaled conditions  and exceptions  raised by  a non-SIGNAL
+  ;;distinguish between  signalled conditions and  exceptions raised by  a non-SIGNAL
   ;;invokation of RAISE and RAISE-CONTINUABLE.
   ;;
   (define-constant SIGNAL-CONDITION
@@ -451,11 +433,10 @@
   ;;Every ?RESTART-NAME  must be a symbol  representing the name of  a restart; the
   ;;same ?RESTART-NAME can be used in nested uses of RESTART-CASE.
   ;;
-  ;;Every  ?RESTART-HANDLER  must  be  an  expression  evaluating  to  a  procedure
-  ;;accepting  a  non-constrained  number  of  arguments.   The  return  values  of
-  ;;?RESTART-HANDLER become the  return values of RESTART-CASE.   When invoked: the
-  ;;?RESTART-HANDLER  is  called  in  the   dynamic  environment  of  the  call  to
-  ;;INVOKE-RESTART.
+  ;;Every ?RESTART-HANDLER must be an  expression evaluating to a procedure accepting
+  ;;a non-constrained  number of  arguments.  The  return values  of ?RESTART-HANDLER
+  ;;become the return  values of RESTART-CASE.  The ?RESTART-HANDLER  is evaluated in
+  ;;the dynamic environment of the call to INVOKE-RESTART that invoked the restart.
   ;;
   ;;As special case, if ?BODY is:
   ;;

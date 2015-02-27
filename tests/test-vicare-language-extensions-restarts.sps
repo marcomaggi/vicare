@@ -76,7 +76,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (internal-body	;signaled condition
+  (internal-body	;signalled condition
 
     (define (doit C)
       (with-result
@@ -101,7 +101,7 @@
 
     #| end of body |# )
 
-  ;;Signaled condition, multiple types in single clause.
+  ;;Signalled condition, multiple types in single clause.
   ;;
   (internal-body
 
@@ -125,7 +125,7 @@
 
     #| end of body |# )
 
-  ;;Signaled condition, nested HANDLER-CASE uses.
+  ;;Signalled condition, nested HANDLER-CASE uses.
   ;;
   (internal-body
 
@@ -210,7 +210,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (internal-body ;signaled condition
+  (internal-body ;signalled condition
 
     (define (doit C)
       (with-result
@@ -1159,13 +1159,13 @@
 	(handler-bind
 	    ((&error (lambda (E)
 		       ;;Invoke the "use-case"  restart that is not  associated to E,
-		       ;;which is the signaled object.
+		       ;;which is the signalled object.
 		       (add-result 'error-handler)
 		       (use-value 1 E))))
 	  (restart-case
 	      (restart-case
 		  (signal (make-error))
-		;;This one *is* associated to the signaled object.
+		;;This one *is* associated to the signalled object.
 		(use-value (lambda (obj)
 			     (add-result 'associated-use-value)
 			     2)))
