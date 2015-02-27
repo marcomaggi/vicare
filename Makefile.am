@@ -749,7 +749,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-reader.sps					\
 	tests/test-vicare-records-procedural.sps			\
 	tests/test-vicare-records-syntactic.sps				\
-	tests/test-vicare-restarts.sps					\
 	tests/test-vicare-round.sps					\
 	tests/test-vicare-string-to-number.sps				\
 	tests/test-vicare-strings.sps					\
@@ -804,6 +803,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-loops.sps			\
 	tests/test-vicare-language-extensions-makers.sps		\
 	tests/test-vicare-language-extensions-namespaces.sps		\
+	tests/test-vicare-language-extensions-restarts.sps		\
 	tests/test-vicare-language-extensions-sentinels.sps		\
 	tests/test-vicare-language-extensions-simple-match.sps		\
 	tests/test-vicare-language-extensions-streams.sps		\

@@ -85,6 +85,7 @@
      (vicare language-extensions identifier-substitutions)
      (vicare language-extensions makers)
      (vicare language-extensions ensure)
+     (vicare language-extensions conditions-and-restarts)
      #;(vicare language-extensions tags)
 
      (vicare build-tools automake)

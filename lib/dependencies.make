@@ -600,6 +600,20 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/ensure.sls
 CLEANFILES += lib/vicare/language-extensions/ensure.fasl
 
+lib/vicare/language-extensions/conditions-and-restarts.fasl: \
+		lib/vicare/language-extensions/conditions-and-restarts.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_conditions_and_restarts_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_conditions_and_restarts_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_conditions_and_restarts_fasl_DATA = lib/vicare/language-extensions/conditions-and-restarts.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_conditions_and_restarts_sls_DATA = lib/vicare/language-extensions/conditions-and-restarts.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/conditions-and-restarts.sls
+CLEANFILES += lib/vicare/language-extensions/conditions-and-restarts.fasl
+
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.sls \
 		lib/vicare/posix.fasl \
