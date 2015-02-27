@@ -1115,6 +1115,31 @@
 
     #| end of INTERNAL-BODY |# )
 
+  ;;Find a restart with condition object different from the raised one.
+  ;;
+  (check
+      (handler-bind
+	  ((&error (lambda (E)
+		     (invoke-restart (find-restart 'alpha (make-error))))))
+	(restart-case
+	    (signal (make-error))
+	  (alpha (lambda () 2))))
+    => 2)
+
+  ;;Find a restart with condition object different from the raised one.
+  ;;
+  (check
+      (handler-bind
+	  ((&error (lambda (E)
+		     (invoke-restart (find-restart 'alpha E)))))
+	(handler-bind
+	    ((&error (lambda (E)
+		       (signal (make-error)))))
+	  (restart-case
+	      (signal (make-error))
+	    (alpha (lambda () 2)))))
+    => 2)
+
   ;;FIND-RESTART with condition argument, outer restart without association.
   ;;
   (internal-body

@@ -352,7 +352,7 @@
     ;;   (with-return-to-signal-on-unhandled-exception
     ;;     ?body0 ?body ...)
     ;;
-    (raise-continuable (condition C SIGNAL-CONDITION)))
+    (raise-continuable (condition C (make-signal-condition))))
 
   (define-syntax with-return-to-signal-on-unhandled-exception
     (syntax-rules ()
@@ -378,15 +378,6 @@
       &condition
     make-signal-condition
     signal-condition?)
-
-  ;;Condition object of type "&signal" which  is always added to the condition raised
-  ;;by  SIGNAL.   Only  one  needs  to  be instantiated.   It  exists  to  allow  the
-  ;;implementation  of  WITH-RETURN-TO-SIGNAL-ON-UNHANDLED-EXCEPTION which  needs  to
-  ;;distinguish between  signalled conditions and  exceptions raised by  a non-SIGNAL
-  ;;invokation of RAISE and RAISE-CONTINUABLE.
-  ;;
-  (define-constant SIGNAL-CONDITION
-    (make-signal-condition))
 
   #| end of module |# )
 
