@@ -319,6 +319,8 @@
 	 store-value
 	 continue-restart
 	 abort-restart)
+  (import (only (psyntax system $all)
+		run-unwind-protection-cleanup-upon-exit?))
 
   ;;The restart object required by Common Lisp.
   ;;
@@ -341,7 +343,7 @@
 				(lambda ()
 				  (apply restart-proc args))
 			      (lambda retvals
-				#;(run-unwind-protection-cleanup-upon-exit? #t)
+				(run-unwind-protection-cleanup-upon-exit? #t)
 				(apply restart-point-proc retvals)))))))
 
   ;;Condition object to be added to every  condition raised by SIGNAL.  It is used by
@@ -438,16 +440,18 @@
 		  => (lambda (name)
 		       (synner "duplicate restart name" name)))
 		 (else
-		  #'(call/cc
-			(lambda (restart-point-proc)
-			  (parametrise
-			      ((restart-handlers
-				(cons `(,(%make-restarts-alist-entry restart-point-proc
-								     (quote ?restart-name)
-								     ?restart-handler)
-					...)
-				      (restart-handlers))))
-			    ?body)))))))
+		  #'(begin0
+			(call/cc
+			    (lambda (restart-point-proc)
+			      (parametrise
+				  ((restart-handlers
+				    (cons `(,(%make-restarts-alist-entry restart-point-proc
+									 (quote ?restart-name)
+									 ?restart-handler)
+					    ...)
+					  (restart-handlers))))
+				?body)))
+		      (run-unwind-protection-cleanup-upon-exit? #f))))))
 	))
 
     (define (%all-symbols? names)
@@ -1752,9 +1756,9 @@
 	  (alpha (lambda ()
 		   (add-result 'restart-alpha)
 		   1))))
-    => '(1 (body-enter unwind-handler restart-alpha)))
+    => '(1 (body-enter restart-alpha unwind-handler)))
 
-  #;(internal-body
+  (internal-body
 
     (define (doit C)
       (with-result
