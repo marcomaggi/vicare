@@ -401,8 +401,15 @@
     ;;same ?RESTART-NAME can be used in nested uses of RESTART-CASE.
     ;;
     ;;Every  ?RESTART-HANDLER  must  be  an  expression  evaluating  to  a  procedure
-    ;;accepting a single argument.  The  return values of ?RESTART-HANDLER become the
-    ;;return values of RESTART-CASE.
+    ;;accepting  a  non-constrained  number  of  arguments.   The  return  values  of
+    ;;?RESTART-HANDLER become the return values of RESTART-CASE.
+    ;;
+    ;;As special case, if ?BODY is:
+    ;;
+    ;;   (signal ?expr)
+    ;;
+    ;;the installed restarts  are associated to the condition object  returned by the
+    ;;evaluation of ?EXPR.
     ;;
     (define (main stx)
       (syntax-case stx (signal)
