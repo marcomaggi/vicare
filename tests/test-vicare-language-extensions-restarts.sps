@@ -1066,7 +1066,79 @@
 
 (parametrise ((check-test-name	'restarts-conditions-association))
 
-  ;;FIND-RESTART without condition argument.
+  ;;Install a  restart handler, establish  an association between a  condition object
+  ;;and the restart object, call FIND-RESTART with the condition argument, no restart
+  ;;objects without association found, FIND-RESTART returns false.
+  ;;
+  (check
+      (let ((C (make-error)))
+	(restart-case
+	    (with-condition-restarts C
+	      (list (find-restart 'alpha))
+	      (find-restart 'alpha C))
+	  ;;This is associated: it is skipped.
+	  (alpha (lambda () 1))))
+    => #f)
+
+  ;;Install  nested restart  handlers with  the same  name, establish  an association
+  ;;between a  condition object and  the innermost restart object,  call FIND-RESTART
+  ;;with the condition argument, invoke restart.
+  ;;
+  (check
+      (let ((C (make-error)))
+	(restart-case
+	    (restart-case
+		(with-condition-restarts C
+		  (list (find-restart 'alpha))
+		  (invoke-restart (find-restart 'alpha C)))
+	      ;;This is associated: it is skipped.
+	      (alpha (lambda () 1)))
+	  ;;This is not associated: it is selected.
+	  (alpha (lambda () 2))))
+    => 2)
+
+  ;;Install  a  condition  handler,  install  restart  a  handler  and  establish  an
+  ;;association between  the raised condition  object and the restart  object, search
+  ;;the restart, no matching restart without association, SIGNAL returns.
+  ;;
+  (check
+      (with-return-to-signal-on-unhandled-exception
+	(handler-bind
+	    ((&error (lambda (E)
+		       (cond ((find-restart 'alpha E)
+			      => invoke-restart)
+			     (else #f)))))
+	  (restart-case
+	      (signal (make-error))
+	    ;;This is associated: it is skipped.
+	    (alpha (lambda ()
+		     (add-result 'restart-alpha)
+		     1)))
+	  123))
+    => 123)
+
+  ;;Install a condition handler, install nested  restart handlers with the same name,
+  ;;establish an association between a  raised condition object and innermost restart
+  ;;object, invoke the restart, the outermost restart is selected.
+  ;;
+  (check
+      (handler-bind
+	  ((&error (lambda (E)
+		     (invoke-restart (find-restart 'alpha E)))))
+	(restart-case
+	    (restart-case
+		(signal (make-error))
+	      ;;This is associated: it is skipped.
+	      (alpha (lambda () 1)))
+	  ;;This is not associated: it is selected.
+	  (alpha (lambda () 2))))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  ;;Install restart handlers, establish an association between a condition object and
+  ;;the restart  handlers, call FIND-RESTART  without condition argument,  invoke the
+  ;;restart object.
   ;;
   (check
       (with-result

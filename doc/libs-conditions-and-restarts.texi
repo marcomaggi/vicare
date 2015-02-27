@@ -950,6 +950,84 @@ The body is evaluated.
 @end enumerate
 @end deffn
 
+
+Usage examples on associate conditions and restarts:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;Install a restart handler, establish an association between a
+;;condition object and the restart object, call FIND-RESTART
+;;with the condition argument, no restart objects without
+;;association found, FIND-RESTART returns false.
+;;
+(let ((C (make-error)))
+  (restart-case
+      (with-condition-restarts C
+        (list (find-restart 'alpha))
+        (find-restart 'alpha C))
+    ;;This is associated: it is skipped.
+    (alpha (lambda () 1))))
+@result{} #f
+
+;;Install nested restart handlers with the same name, establish
+;;an association between a condition object and the innermost
+;;restart object, call FIND-RESTART with the condition argument,
+;;invoke restart.
+;;
+(let ((C (make-error)))
+  (restart-case
+      (restart-case
+          (with-condition-restarts C
+            (list (find-restart 'alpha))
+            (invoke-restart (find-restart 'alpha C)))
+        ;;This is associated: it is skipped.
+        (alpha (lambda () 1)))
+    ;;This is not associated: it is selected.
+    (alpha (lambda () 2))))
+@result{} 2
+
+;;Install a condition handler, install restart a handler and
+;;establish an association between the raised condition object
+;;and the restart object, search the restart, no matching
+;;restart without association, SIGNAL returns.
+;;
+(with-return-to-signal-on-unhandled-exception
+  (handler-bind
+      ((&error (lambda (E)
+                 (cond ((find-restart 'alpha E)
+                        => invoke-restart)
+                       (else #f)))))
+    (restart-case
+        (signal (make-error))
+      ;;This is associated: it is skipped.
+      (alpha (lambda ()
+               (add-result 'restart-alpha)
+               1)))
+    123))
+@result{} 123
+
+;;Install a condition handler, install nested restart handlers
+;;with the same name, establish an association between a raised
+;;condition object and innermost restart object, invoke the
+;;restart, the outermost restart is selected.
+;;
+(handler-bind
+    ((&error (lambda (E)
+               (invoke-restart (find-restart 'alpha E)))))
+  (restart-case
+      (restart-case
+          (signal (make-error))
+        ;;This is associated: it is skipped.
+        (alpha (lambda () 1)))
+    ;;This is not associated: it is selected.
+    (alpha (lambda () 2))))
+@result{} 2
+@end example
+
 @c page
 @node restarts invoke
 @subsection Finding and invoking restarts
