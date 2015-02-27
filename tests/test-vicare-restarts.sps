@@ -409,7 +409,9 @@
     ;;
     ;;Every  ?RESTART-HANDLER  must  be  an  expression  evaluating  to  a  procedure
     ;;accepting  a  non-constrained  number  of  arguments.   The  return  values  of
-    ;;?RESTART-HANDLER become the return values of RESTART-CASE.
+    ;;?RESTART-HANDLER become the  return values of RESTART-CASE.   When invoked: the
+    ;;?RESTART-HANDLER  is  called  in  the   dynamic  environment  of  the  call  to
+    ;;INVOKE-RESTART.
     ;;
     ;;As special case, if ?BODY is:
     ;;
