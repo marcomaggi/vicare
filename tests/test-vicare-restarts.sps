@@ -11,7 +11,7 @@
 ;;;     * There is no integration with the debugger.
 ;;;
 ;;;     * Some facilities are not  implemented; among the missing ones: RESTART-BIND,
-;;;       WITH-SIMPLE-RESTART, IGNORE-ERRORS, MUFFLE-WARNING.
+;;;       WITH-SIMPLE-RESTART, MUFFLE-WARNING.
 ;;;
 ;;;     To understand what is going on here, we should read Common Lisp's Hyper Spec:
 ;;;
@@ -42,7 +42,7 @@
 (check-display "*** testing Vicare: dynamic environment, Common Lisp's restarts\n")
 
 
-;;;; implementation of HANDLER-CASE
+;;;; implementation of HANDLER-CASE, IGNORE-ERRORS
 
 (define-syntax* (handler-case stx)
   ;;Evaluate body forms in a dynamic  environment in which new exception handlers are
@@ -149,6 +149,20 @@
        (synner "invalid typespec syntax" spec))))
 
   (main stx))
+
+(define-syntax ignore-errors
+  ;;Install a handler for conditions of  type "&error", then evaluate the body forms.
+  ;;If the body performs a normal return:  its return values become the return values
+  ;;of IGNORE-ERRORS.  If  the body signals a condition of  type "&error": two values
+  ;;are returned, false and the signaled condition object.
+  ;;
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (handler-case
+	 ((&error (lambda (E)
+		    (values #f E))))
+       ?body0 ?body ...))
+    ))
 
 
 ;;;; implementation of HANDLER-BIND
@@ -804,6 +818,48 @@
     #| end of body |# )
 
   #t)
+
+
+(parametrise ((check-test-name	'ignore-errors))
+
+  (check	;no condition
+      (with-result
+	(ignore-errors
+	  (add-result 'body)
+	  1))
+    => '(1 (body)))
+
+;;; --------------------------------------------------------------------
+
+  (internal-body ;signaled condition
+
+    (define (doit C)
+      (with-result
+	(handler-case
+	    ((&error   (lambda (E)
+			 (add-result 'error-handler)
+			 1))
+	     (&warning (lambda (E)
+			 (add-result 'warning-handler)
+			 2)))
+	  (receive (A B)
+	      (ignore-errors
+		(add-result 'body-begin)
+		(signal C)
+		(add-result 'body-normal-return))
+	    (values A (and (error? B) 99))))))
+
+    (check
+	(doit (make-error))
+      => '(#f 99 (body-begin)))
+
+    (check
+	(doit (make-warning))
+      => '(2 (body-begin warning-handler)))
+
+    #| end of body |# )
+
+  #f)
 
 
 (parametrise ((check-test-name	'handler-bind))
@@ -1831,6 +1887,7 @@
 ;; Local Variables:
 ;; coding: utf-8-unix
 ;; eval: (put 'handler-case			'scheme-indent-function 1)
+;; eval: (put 'ignore-errors			'scheme-indent-function 0)
 ;; eval: (put 'handler-bind			'scheme-indent-function 1)
 ;; eval: (put 'restart-case			'scheme-indent-function 1)
 ;; eval: (put 'with-condition-restarts		'scheme-indent-function 1)
