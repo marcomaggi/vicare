@@ -241,7 +241,7 @@
   #f)
 
 
-(parametrise ((check-test-name	'handler-bind))
+(parametrise ((check-test-name	'handler-bind-basics))
 
   (check	;no condition
       (with-result
@@ -332,9 +332,73 @@
 		  1)))))
     => '(2 (body-begin inner-error-handler outer-error-handler)))
 
-;;; --------------------------------------------------------------------
-;;; unwind-protect
+  #t)
 
+
+(parametrise ((check-test-name	'handler-bind-and-unwind-protect))
+
+  ;;Use RETURN to perform a non-local exit from a condition handler.
+  ;;
+  (check
+      (with-result
+	(returnable
+	  (handler-bind
+	      ((&error (lambda (E)
+			 (add-result 'error-handler)
+			 (return 2))))
+	    (with-unwind-handler
+		(lambda (why)
+		  (add-result 'unwind-handler))
+	      (lambda ()
+		(add-result 'body-in)
+		(signal (make-error))
+		(add-result 'body-out)
+		1)))))
+    => '(2 (body-in error-handler unwind-handler)))
+
+  ;;Use BREAK to perform a non-local exit from a condition handler.
+  ;;
+  (check
+      (with-result
+	(while #t
+	  (handler-bind
+	      ((&error (lambda (E)
+			 (add-result 'error-handler)
+			 (break 2))))
+	    (with-unwind-handler
+		(lambda (why)
+		  (add-result 'unwind-handler))
+	      (lambda ()
+		(add-result 'body-in)
+		(signal (make-error))
+		(add-result 'body-out)
+		1)))))
+    => '(2 (body-in error-handler unwind-handler)))
+
+  ;;Use CONTINUE to perform a non-local exit from a condition handler.
+  ;;
+  (check
+      (with-result
+	(do
+	    (handler-bind
+		((&error (lambda (E)
+			   (add-result 'error-handler)
+			   (continue))))
+	      (with-unwind-handler
+		  (lambda (why)
+		    (add-result 'unwind-handler))
+		(lambda ()
+		  (add-result 'body-in)
+		  (signal (make-error))
+		  (add-result 'body-out))))
+	    (while #f))
+	1)
+    => '(1 (body-in error-handler unwind-handler)))
+
+;;; --------------------------------------------------------------------
+
+  ;;Use RETURN to perform a non-local exit from a condition handler.
+  ;;
   (internal-body
 
     (define (doit C)
