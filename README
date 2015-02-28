@@ -57,7 +57,7 @@ Marco Maggi <marco.maggi-ipsu@poste.it>
 2. License
 ----------
 
-Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by the Vicare contributors.
 
@@ -365,10 +365,6 @@ and as backup at:
 and at:
 
 	    <http://sourceforge.net/projects/vicare-scheme/>
-
-this project has a mailing list:
-
-	     <http://groups.google.com/group/vicare-users>
 
   The library Libffi can be found at:
 
