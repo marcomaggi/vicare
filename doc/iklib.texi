@@ -3320,6 +3320,7 @@ problems}).
 * iklib unwind-protect dyn-env::     Clean-up thunks and the dynamic
                                      environment.
 * iklib unwind-protect problems::    Known problems.
+* iklib unwind-protect call/cc::     Unwinding @func{call/cc}.
 @end menu
 
 @c page
@@ -4545,6 +4546,98 @@ In the following example an exception is raised from a
        in-guard/raise
        guard-else))
 @end example
+
+@c page
+@node iklib unwind-protect call/cc
+@subsection Unwinding @func{call/cc}
+
+
+We have seen that performing a raw escape from an exception handler
+skips calling the unwind handlers installed in the body:
+
+@lisp
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(with-result
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (add-result 'exception-handler)
+              (escape 2))
+          (lambda ()
+            (with-unwind-handler
+                (lambda (why)
+                  (add-result 'unwind-handler))
+              (lambda ()
+                (add-result 'body-in)
+                (raise 1))))))))
+@result{} (2 (body-in exception-handler))
+@end lisp
+
+@noindent
+this problem can be solved by using @func{unwinding-call/cc} rather than
+the standard @func{call/cc}.
+
+
+@defun unwinding-call/cc @var{receiver}
+Similar to @func{call/cc}, but calling the escape procedure causes the
+invocation of the unwind handlers installed in the dynamic environment
+up until the saved continuation is restored.
+
+@strong{NOTE} There is a limitation: the escape procedure produced by
+this primitive @strong{must} be called only from the dynamic extent of
+the call to @var{receiver}.  For example: generating an unwinding escape
+procedure in a coroutine and calling it from another coroutine leads to
+raising an exception of type @condition{non-reinstatable}.
+@end defun
+
+
+Usage examples:
+
+@lisp
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(with-result
+  (unwinding-call/cc
+      (lambda (escape)
+        (with-unwind-handler
+            (lambda (why)
+              (add-result 'unwind-handler))
+          (lambda ()
+            (add-result 'body-in)
+            (escape 1))))))
+@result{} (1 (body-in unwind-handler))
+
+(with-result
+  (unwinding-call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (add-result 'exception-handler)
+              (escape 2))
+          (lambda ()
+            (with-unwind-handler
+                (lambda (why)
+                  (add-result 'unwind-handler))
+              (lambda ()
+                (add-result 'body-in)
+                (raise 1))))))))
+@result{} (2 (body-in exception-handler unwind-handler))
+
+(let ((escape-proc #f))
+  (unwinding-call/cc
+      (lambda (escape)
+        (set! escape-proc escape)))
+  (escape-proc))
+@error{} &non-reinstatable
+@end lisp
 
 @c page
 @node iklib compensations

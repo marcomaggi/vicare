@@ -38,7 +38,7 @@
 		  current-coroutine-uid coroutine-uid?
 		  suspend-coroutine resume-coroutine suspended-coroutine?
 		  reset-coroutines! dump-coroutines)
-    (only (ikarus.exceptions)
+    (only (ikarus unwind-protection)
 	  run-unwind-protection-cleanup-upon-exit?)
     (vicare system $pairs))
 

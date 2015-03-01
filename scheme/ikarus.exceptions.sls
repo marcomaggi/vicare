@@ -20,9 +20,7 @@
     with-exception-handler
     raise		raise-continuable
     error		warning
-    assertion-violation	die
-    run-escape-handler-thunks
-    run-unwind-protection-cleanup-upon-exit?)
+    assertion-violation	die)
   (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
@@ -93,22 +91,6 @@
 	(string? obj)))
 
   #| end of module |# )
-
-
-(define (run-escape-handler-thunks handlers)
-  (for-each (lambda (handler)
-	      (call/cc
-		  (lambda (escape)
-		    (with-exception-handler
-			escape
-		      handler))))
-    handlers))
-
-(define run-unwind-protection-cleanup-upon-exit?
-  ;;This is used  in the interaction between the unwind-protection  mechanism and the
-  ;;GUARD syntax.
-  ;;
-  (make-parameter #f))
 
 
 ;;;; done

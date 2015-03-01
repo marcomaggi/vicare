@@ -63,10 +63,7 @@
     signal-restarts-control-error
     &undefined-restart-error make-undefined-restart-error undefined-restart-error?
     raise-undefined-restart-error)
-  (import (vicare)
-    ;;This is needed for integration with the unwind-protection mechanism.
-    (only (psyntax system $all)
-	  run-unwind-protection-cleanup-upon-exit?))
+  (import (vicare))
 
 
 (define-syntax* (handler-case stx)
@@ -408,7 +405,6 @@
 			      (lambda ()
 				(apply restart-proc args))
 			    (lambda retvals
-			      (run-unwind-protection-cleanup-upon-exit? #t)
 			      (apply restart-point-proc retvals)))))))
 
 (define-syntax* (restart-case stx)
@@ -459,7 +455,7 @@
 		     (synner "duplicate restart name" name)))
 	       (else
 		#'(begin0
-		      (call/cc
+		      (unwinding-call/cc
 			  (lambda (restart-point-proc)
 			    (parametrise
 				((restart-handlers
@@ -468,8 +464,7 @@
 								       ?restart-handler)
 					  ...)
 					(restart-handlers))))
-			      ?body)))
-		    (run-unwind-protection-cleanup-upon-exit? #f))))))
+			      ?body))))))))
       ))
 
   (define (%all-symbols? names)

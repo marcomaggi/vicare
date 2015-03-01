@@ -1139,6 +1139,74 @@
   #t)
 
 
+(parametrise ((check-test-name	'unwinding-escape))
+
+  ;;Standard CALL/CC behaviour: the unwind handler is not called.
+  ;;
+  (check
+      (with-result
+	(call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'exception-handler)
+		    (escape 2))
+		(lambda ()
+		  (with-unwind-handler
+		      (lambda (why)
+			(add-result 'unwind-handler))
+		    (lambda ()
+		      (add-result 'body-in)
+		      (raise 1))))))))
+    => '(2 (body-in exception-handler)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+	(unwinding-call/cc
+	    (lambda (escape)
+	      (with-unwind-handler
+		  (lambda (why)
+		    (add-result 'unwind-handler))
+		(lambda ()
+		  (add-result 'body-in)
+		  (escape 1))))))
+    => '(1 (body-in unwind-handler)))
+
+  (check
+      (with-result
+	(unwinding-call/cc
+	    (lambda (escape)
+	      (with-exception-handler
+		  (lambda (E)
+		    (add-result 'exception-handler)
+		    (escape 2))
+		(lambda ()
+		  (with-unwind-handler
+		      (lambda (why)
+			(add-result 'unwind-handler))
+		    (lambda ()
+		      (add-result 'body-in)
+		      (raise 1))))))))
+    => '(2 (body-in exception-handler unwind-handler)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((non-reinstatable-violation? E)
+		 #t)
+		(else E))
+	(let ((escape-proc #f))
+	  (unwinding-call/cc
+	      (lambda (escape)
+		(set! escape-proc escape)))
+	  (escape-proc)))
+    => #t)
+
+  #t)
+
+
 (parametrise ((check-test-name	'unwind-protect))
 
   (check

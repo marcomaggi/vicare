@@ -296,6 +296,7 @@
     "ikarus.numerics.bitwise.misc.sls"
     "ikarus.numerics.complex-numbers.sls"
     "ikarus.conditions.sls"
+    "ikarus.unwind-protection.sls"
     "ikarus.guardians.sls"
     "ikarus.symbol-table.sls"
     "ikarus.codecs.sls"
@@ -2546,6 +2547,7 @@
     (default-run-escape-handlers)
     (run-escape-handler-thunks)
     (run-unwind-protection-cleanup-upon-exit?)
+    (unwinding-call/cc				v $language)
 ;;;
     (with-blocked-exceptions			v $language)
     (with-current-dynamic-environment		v $language)

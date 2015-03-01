@@ -369,6 +369,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.timer.sls					\
 	scheme/ikarus.unicode-conversion.sls			\
 	scheme/ikarus.unicode.sls				\
+	scheme/ikarus.unwind-protection.sls			\
 	scheme/ikarus.vectors.sls				\
 	scheme/ikarus.writer.sls				\
 	\
