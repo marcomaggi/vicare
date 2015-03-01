@@ -108,9 +108,9 @@
     (define (doit C)
       (with-result
 	(handler-case
-	    (((&error &warning) (lambda (E)
-				  (add-result 'handler)
-				  1)))
+	    (((or &error &warning) (lambda (E)
+				     (add-result 'handler)
+				     1)))
 	  (add-result 'body-begin)
 	  (signal C)
 	  (add-result 'body-normal-return))))
@@ -302,9 +302,9 @@
 	(call/cc
 	    (lambda (escape)
 	      (handler-bind
-		  (((&warning &error) (lambda (E)
-					(add-result 'handler)
-					(escape 2))))
+		  (((or &warning &error) (lambda (E)
+					   (add-result 'handler)
+					   (escape 2))))
 		(add-result 'body-begin)
 		(signal (make-error))
 		(add-result 'body-return)

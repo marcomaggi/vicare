@@ -85,9 +85,26 @@ The arguments @meta{clause} must have one of the following syntaxes:
 (:no-error @meta{no-error-handler})
 @end example
 
-Every @meta{typespec} is meant to be an identifier or a non--empty
-proper list of identifiers, each usable as second argument to
-@syntax{condition-is-a?}.
+Every @meta{typespec} is meant to be a logic predicate with the format:
+
+@example
+@meta{typespec} = (@meta{tag})
+          | (and @metao{inner-pred} @meta{inner-pred} ...)
+          | (or  @metao{inner-pred} @meta{inner-pred} ...)
+          | (xor @metao{inner-pred} @meta{inner-pred} ...)
+          | (not @meta{inner-pred})
+
+@meta{inner-pred} = ?tag
+            | (and @metao{inner-pred} @meta{inner-pred} ...)
+            | (or  @metao{inner-pred} @meta{inner-pred} ...)
+            | (xor @metao{inner-pred} @meta{inner-pred} ...)
+            | (not @meta{inner-pred})
+@end example
+
+@noindent
+where: each @meta{tag} is an identifier usable as second argument to
+@syntax{condition-is-a?}; @syntax{and}, @syntax{or}, @syntax{xor},
+@syntax{not} are the identifiers exported by @library{vicare}.
 
 Every @meta{condition-handler} must be an expression evaluating to a
 procedure accepting a condition object as single argument; the condition
@@ -355,9 +372,26 @@ The arguments @meta{clause} must have the following syntax:
 (@meta{typespec} @meta{condition-handler})
 @end example
 
-Every @meta{typespec} is meant to be an identifier or a non--empty
-proper list of identifiers, each usable as second argument to
-@syntax{condition-is-a?}.
+Every @meta{typespec} is meant to be a logic predicate with the format:
+
+@example
+@meta{typespec} = (@meta{tag})
+          | (and @metao{inner-pred} @meta{inner-pred} ...)
+          | (or  @metao{inner-pred} @meta{inner-pred} ...)
+          | (xor @metao{inner-pred} @meta{inner-pred} ...)
+          | (not @meta{inner-pred})
+
+@meta{inner-pred} = ?tag
+            | (and @metao{inner-pred} @meta{inner-pred} ...)
+            | (or  @metao{inner-pred} @meta{inner-pred} ...)
+            | (xor @metao{inner-pred} @meta{inner-pred} ...)
+            | (not @meta{inner-pred})
+@end example
+
+@noindent
+where: each @meta{tag} is an identifier usable as second argument to
+@syntax{condition-is-a?}; @syntax{and}, @syntax{or}, @syntax{xor},
+@syntax{not} are the identifiers exported by @library{vicare}.
 
 Every @meta{condition-handler} must be an expression evaluating to a
 procedure accepting a condition object as single argument; the condition

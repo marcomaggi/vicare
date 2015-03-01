@@ -4075,18 +4075,30 @@
       ;;reraise the exception when there is no ELSE clause.
       (()
        '())
+
       ;;This branch  with the ELSE  clause must come first!!!   The ELSE
       ;;clause is valid only if it is the last.
       (((else ?else-body0 ?else-body ...))
        clauses-stx)
-      ((((?tag0 ?tag* ...) ?tag-body0 ?tag-body* ...) . ?other-clauses)
-       (all-identifiers? (cons ?tag0 ?tag*))
-       (cons `((or (condition-is-a? ,var-id ,?tag0)
-		   . ,(map (lambda (tag-id)
-			     `(condition-is-a? ,var-id ,tag-id))
-			?tag*))
-	       ,?tag-body0 . ,?tag-body*)
+
+      (((?pred ?tag-body0 ?tag-body* ...) . ?other-clauses)
+       (cons (cons* (syntax-match ?pred ()
+		      ((?tag)
+		       (identifier? ?tag)
+		       `(condition-is-a? ,var-id ,?tag))
+		      (_
+		       (parse-logic-predicate-syntax ?pred
+						     (lambda (tag-id)
+						       (syntax-match tag-id ()
+							 (?tag
+							  (identifier? ?tag)
+							  `(condition-is-a? ,var-id ,?tag))
+							 (else
+							  (syntax-violation __who__
+							    "expected identifier as condition type" tag-id)))))))
+		    ?tag-body0 ?tag-body*)
 	     (parse-multiple-catch-clauses expr-stx var-id ?other-clauses)))
+
       ((?clause . ?other-clauses)
        (syntax-violation __who__
 	 "invalid catch clause in try syntax" expr-stx ?clause))))

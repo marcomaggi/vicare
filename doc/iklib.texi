@@ -1886,13 +1886,33 @@ where @meta{var} must be an identifier and every @meta{catch-clause} has
 one of the forms:
 
 @example
-((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...)
+(@meta{pred} @metao{tag-body} @meta{tag-body} ...)
 (else @metao{else-body} @meta{else-body} ...)
 @end example
 
 @noindent
 where the optional @clause{else} clause must appear only once as last
-one.
+one.  The @meta{pred} argument must have one of the following recursive
+formats:
+
+@example
+@meta{pred} = (@meta{tag})
+      | (and @metao{inner-pred} @meta{inner-pred} ...)
+      | (or  @metao{inner-pred} @meta{inner-pred} ...)
+      | (xor @metao{inner-pred} @meta{inner-pred} ...)
+      | (not @meta{inner-pred})
+
+@meta{inner-pred} = @meta{tag}
+            | (and @metao{inner-pred} @meta{inner-pred} ...)
+            | (or  @metao{inner-pred} @meta{inner-pred} ...)
+            | (xor @metao{inner-pred} @meta{inner-pred} ...)
+            | (not @meta{inner-pred})
+@end example
+
+@noindent
+where: @meta{tag} is a condition object type identifier; @syntax{and},
+@syntax{or}, @syntax{xor}, @syntax{not} are the identifiers exported by
+@library{vicare}.
 
 The @meta{finally-clause} must have the format:
 
@@ -1915,15 +1935,13 @@ No else, no finally.
 (try
    @meta{body}
   (catch @meta{var}
-    ((@metao{tag} @meta{tag} ...)
+    ((@meta{tag})
      @metao{tag-body}
      @meta{tag-body}
      ...)
     ...))
 @expansion{} (guard (@meta{var}
-              ((or (condition-is-a? @meta{var} @metao{tag})
-                   (condition-is-a? @meta{var} @meta{tag})
-                   ...)
+              ((condition-is-a? @meta{var})
                @metao{tag-body}
                @meta{tag-body}
                ...)
@@ -1938,7 +1956,7 @@ Else, no finally.
 (try
    @meta{body}
   (catch @meta{var}
-    ((@metao{tag} @meta{tag} ...)
+    ((@meta{tag})
      @metao{tag-body}
      @meta{tag-body}
      ...)
@@ -1948,9 +1966,7 @@ Else, no finally.
      @meta{else-body}
      ...))
 @expansion{} (guard (@meta{var}
-              ((or (condition-is-a? @meta{var} @metao{tag})
-                   (condition-is-a? @meta{var} @meta{tag})
-                   ...)
+              ((condition-is-a? @meta{var} @metao{tag})
                @metao{tag-body}
                @meta{tag-body}
                ...)
@@ -1969,7 +1985,7 @@ Finally, no else.
 (try
    @meta{body}
   (catch @meta{var}
-    ((@metao{tag} @meta{tag} ...)
+    ((@meta{tag})
      @metao{tag-body}
      @meta{tag-body}
      ...)
@@ -1985,9 +2001,7 @@ Finally, no else.
           ...)
       (lambda ()
         (guard (@meta{var}
-                ((or (condition-is-a? @meta{var} @metao{tag})
-                     (condition-is-a? @meta{var} @meta{tag})
-                     ...)
+                ((condition-is-a? @meta{var} @metao{tag})
                  @metao{tag-body}
                  @meta{tag-body}
                  ...)

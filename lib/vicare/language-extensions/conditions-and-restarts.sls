@@ -78,8 +78,21 @@
   ;;   ?clause = (?typespec ?condition-handler)
   ;;           | (:no-error ?no-error-handler)
   ;;
-  ;;Every  ?TYPESPEC is  meant to  be an  identifier or  a non-empty  proper list  of
-  ;;identifiers, each usable as second argument to CONDITION-IS-A?.
+  ;;Every ?TYPESPEC is meant to be a logic predicate with the format:
+  ;;
+  ;;   ?typespec = (?tag)
+  ;;             | (and ?inner-pred0 ?inner-pred ...)
+  ;;             | (or  ?inner-pred0 ?inner-pred ...)
+  ;;             | (xor ?inner-pred0 ?inner-pred ...)
+  ;;             | (not ?inner-pred)
+  ;;
+  ;;   ?inner-pred = ?tag
+  ;;               | (and ?inner-pred0 ?inner-pred ...)
+  ;;               | (or  ?inner-pred0 ?inner-pred ...)
+  ;;               | (xor ?inner-pred0 ?inner-pred ...)
+  ;;               | (not ?inner-pred)
+  ;;
+  ;;where each ?TAG is an identifier usable as second argument to CONDITION-IS-A?.
   ;;
   ;;Every  ?CONDITION-HANDLER  must  be  an  expression  evaluating  to  a  procedure
   ;;accepting a  condition object  as single  argument; the  condition object  can be
@@ -157,18 +170,14 @@
        (synner "invalid clause" #'?clause))))
 
   (define (%process-typespec var spec)
-    (syntax-case spec ()
-      (?condition
-       (identifier? #'?condition)
-       #`(condition-is-a? #,var ?condition))
-
-      ((?condition0 ?condition ...)
-       (all-identifiers? (syntax->list #'(?condition0 ?condition ...)))
-       #`(or (condition-is-a? #,var ?condition0)
-	     (condition-is-a? #,var ?condition)
-	     ...))
-      (_
-       (synner "invalid typespec syntax" spec))))
+    (parse-logic-predicate-syntax spec
+				  (lambda (tag-id)
+				    (syntax-case tag-id ()
+				      (?tag
+				       (identifier? #'?tag)
+				       #`(condition-is-a? #,var ?tag))
+				      (_
+				       (synner "invalid typespec syntax" spec))))))
 
   (main stx))
 
@@ -200,8 +209,21 @@
   ;;
   ;;   ?clause = (?typespec ?condition-handler)
   ;;
-  ;;Every  ?TYPESPEC is  meant to  be an  identifier or  a non-empty  proper list  of
-  ;;identifiers, each usable as second argument to CONDITION-IS-A?.
+  ;;Every ?TYPESPEC is meant to be a logic predicate with the format:
+  ;;
+  ;;   ?typespec = (?tag)
+  ;;             | (and ?inner-pred0 ?inner-pred ...)
+  ;;             | (or  ?inner-pred0 ?inner-pred ...)
+  ;;             | (xor ?inner-pred0 ?inner-pred ...)
+  ;;             | (not ?inner-pred)
+  ;;
+  ;;   ?inner-pred = ?tag
+  ;;               | (and ?inner-pred0 ?inner-pred ...)
+  ;;               | (or  ?inner-pred0 ?inner-pred ...)
+  ;;               | (xor ?inner-pred0 ?inner-pred ...)
+  ;;               | (not ?inner-pred)
+  ;;
+  ;;where each ?TAG is an identifier usable as second argument to CONDITION-IS-A?.
   ;;
   ;;Every  ?CONDITION-HANDLER  must  be  an  expression  evaluating  to  a  procedure
   ;;accepting a  condition object  as single  argument; the  condition object  can be
@@ -268,15 +290,14 @@
       ))
 
   (define (%process-single-typespec var spec)
-    (syntax-case spec ()
-      ((?condition0 ?condition ...)
-       (all-identifiers? (syntax->list #'(?condition0 ?condition ...)))
-       #`(or (condition-is-a? #,var ?condition0)
-	     (condition-is-a? #,var ?condition)
-	     ...))
-      (_
-       (synner "invalid typespec syntax" spec))
-      ))
+    (parse-logic-predicate-syntax spec
+				  (lambda (tag-id)
+				    (syntax-case tag-id ()
+				      (?tag
+				       (identifier? #'?tag)
+				       #`(condition-is-a? #,var ?tag))
+				      (_
+				       (synner "invalid typespec syntax" spec))))))
 
   (main stx))
 
