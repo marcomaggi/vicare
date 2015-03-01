@@ -27,26 +27,15 @@
 (library (ikarus unwind-protection)
   (export
     unwinding-call/cc
-    run-escape-handler-thunks
     run-unwind-protection-cleanup-upon-exit?)
   (import (except (vicare)
 		  unwinding-call/cc
-		  run-escape-handler-thunks
 		  run-unwind-protection-cleanup-upon-exit?)
     ;;FIXME To be removed at the next boot image rotation.
     (only (ikarus conditions)
-	  make-non-reinstatable-violation))
+	  non-reinstatable-violation))
 
 
-(define (run-escape-handler-thunks handlers)
-  (for-each (lambda (handler)
-	      (call/cc
-		  (lambda (escape)
-		    (with-exception-handler
-			escape
-		      handler))))
-    handlers))
-
 (define run-unwind-protection-cleanup-upon-exit?
   ;;This is used  in the interaction between the unwind-protection  mechanism and the
   ;;GUARD syntax.
@@ -54,29 +43,42 @@
   (make-parameter #f))
 
 (define (unwinding-call/cc receiver)
+  ;;Performing  a raw  escape  from an  exception handler  skips  calling the  unwind
+  ;;handlers  installed   in  the  body;  this   problem  can  be  solved   by  using
+  ;;UNWINDING-CALL/CC rather than the standard CALL/CC.
+  ;;
+  ;;Similar to CALL/CC, but calling the escape procedure causes the invocation of the
+  ;;unwind  handlers  installed  in  the  dynamic  environment  up  until  the  saved
+  ;;continuation is restored.
+  ;;
+  ;;NOTE  There is  a limitation:  the escape  procedure produced  by this  primitive
+  ;;*must* be  called only  from the  dynamic extent  of the  call to  RECEIVER.  For
+  ;;example: generating an  unwinding escape procedure in a coroutine  and calling it
+  ;;from another coroutine leads to raising an exception of type "&non-reinstatable".
+  ;;
   (fluid-let-syntax ((__who__ (identifier-syntax 'unwinding-call/cc)))
-    (let ((inside? #f))
+    (let ((inside-dynamic-extent-of-receiver-call? #f))
       (dynamic-wind
 	  (lambda ()
-	    (set! inside? #t))
+	    (set! inside-dynamic-extent-of-receiver-call? #t))
 	  (lambda ()
 	    (begin0
 		(call/cc
 		    (lambda (escape)
 		      (receiver (lambda retvals
-				  (if inside?
+				  (if inside-dynamic-extent-of-receiver-call?
 				      (begin
-					(run-unwind-protection-cleanup-upon-exit? #t)
+					;;Yes, we  must really  set the  parameter to
+					;;the symbol "escape"; this symbol is used as
+					;;argument for the unwind handlers.
+					(run-unwind-protection-cleanup-upon-exit? 'escape)
 					(apply escape retvals))
-				    (raise
-				     (condition
-				      (make-non-reinstatable-violation)
-				      (make-who-condition __who__)
-				      (make-message-condition "unwinding escape procedure called outside \
-                                                               the dynamic extent of its receive function"))))))))
+				    (non-reinstatable-violation __who__
+				      "unwinding escape procedure called outside \
+                                       the dynamic extent of its receive function"))))))
 	      (run-unwind-protection-cleanup-upon-exit? #f)))
 	  (lambda ()
-	    (set! inside? #f))))))
+	    (set! inside-dynamic-extent-of-receiver-call? #f))))))
 
 
 ;;;; done

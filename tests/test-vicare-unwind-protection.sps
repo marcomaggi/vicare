@@ -1207,6 +1207,40 @@
   #t)
 
 
+(parametrise ((check-test-name	'unwind-handler-argument))
+
+  (check	;normal return
+      (with-result
+	(with-unwind-handler
+	    (lambda (why)
+	      (add-result why))
+	  (lambda () 1)))
+    => '(1 (return)))
+
+  (check	;unwinding escape
+      (with-result
+	(unwinding-call/cc
+	    (lambda (escape)
+	      (with-unwind-handler
+		  (lambda (why)
+		    (add-result why))
+		(lambda ()
+		  (escape 1))))))
+    => '(1 (escape)))
+
+  (check	;exception
+      (with-result
+	(guard (E (else E))
+	  (with-unwind-handler
+	      (lambda (why)
+		(add-result why))
+	    (lambda ()
+	      (raise 1)))))
+    => '(1 (exception)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'unwind-protect))
 
   (check

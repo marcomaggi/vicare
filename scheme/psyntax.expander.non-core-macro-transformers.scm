@@ -95,10 +95,6 @@
     ((with-implicits)			with-implicits-macro)
     ((set-cons!)			set-cons!-macro)
 
-    ((with-escape-handlers-stack)	with-escape-handlers-stack-macro)
-    ((default-with-escape-handler)	default-with-escape-handler-macro)
-    ((default-run-escape-handlers)	default-run-escape-handlers-macro)
-
     ((with-unwind-protection)		with-unwind-protection-macro)
     ((unwind-protect)			unwind-protect-macro)
     ((with-blocked-exceptions)		with-blocked-exceptions-macro)
@@ -1754,54 +1750,6 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-ESCAPE-HANDLERS-STACK
-
-(define (with-escape-handlers-stack-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  WITH-ESCAPE-HANDLERS-STACK macros
-  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
-  ;;a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?body . ?body*)
-     (bless
-      `(let ((escape-handlers '()))
-	 (fluid-let-syntax
-	     ((with-escape-handler (syntax-rules ()
-				     ((_ ??handler ??body)
-				      (begin
-					(set-cons! escape-handlers ??handler)
-					(??body)))
-				     ))
-	      (run-escape-handlers (syntax-rules ()
-				     ((_)
-				      (unless (null? escape-handlers)
-					(run-escape-handler-thunks escape-handlers))))))
-	   ,?body . ,?body*))))
-    ))
-
-(define (default-with-escape-handler-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  DEFAULT-WITH-ESCAPE-HANDLER macros
-  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
-  ;;a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?handler ?body)
-     (bless
-      `(,?body)))
-    ))
-
-(define (default-run-escape-handlers-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  DEFAULT-RUN-ESCAPE-HANDLERS macros
-  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
-  ;;a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_)
-     (bless
-      `(,void)))
-    ))
-
-
 ;;;; module non-core-macro-transformer: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
 
 (define (with-unwind-protection-macro expr-stx)
@@ -1810,21 +1758,17 @@
   ;;syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
-    ((_ ?cleanup ?thunk)
+    ((_ ?unwind-handler ?thunk)
      (let ((terminated?  (gensym))
 	   (normal-exit? (gensym))
-	   (escape-exit? (gensym))
 	   (why          (gensym))
 	   (escape       (gensym)))
        (bless
-	`(let (;;True if the dynamic extent of the call to THUNK is terminated.
+	`(let (	;;True if the dynamic extent of the call to THUNK is terminated.
 	       (,terminated?   #f)
 	       ;;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
 	       ;;performing a normal return.
-	       (,normal-exit?  #f)
-	       ;;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
-	       ;;calling an escape handler.
-	       (,escape-exit?  #f))
+	       (,normal-exit?  #f))
 	   (dynamic-wind
 	       (lambda ()
 		 (when ,terminated?
@@ -1832,17 +1776,24 @@
 		     "attempt to reenter thunk with terminated dynamic extent")))
 	       (lambda ()
 		 (begin0
-		     (with-escape-handler
-			 (lambda ()
-			   (set! ,escape-exit? #t))
-		       ,?thunk)
+		     (,?thunk)
 		   (set! ,normal-exit? #t)))
 	       (lambda ()
 		 (unless ,terminated? ;be safe
-		   (cond ((cond (,normal-exit?					'return)
-				(,escape-exit?					'escape)
-				((run-unwind-protection-cleanup-upon-exit?)	'exception)
-				(else						#f))
+		   (cond ((if ,normal-exit?
+			      'return
+			    ;;This parameter is set to:
+			    ;;
+			    ;;* The boolean #f if no unwind handler must be run.
+			    ;;
+			    ;;* The symbol "exception" if  the unwind handler must be
+			    ;;run because an exception has been raised and catched by
+			    ;;GUARD.
+			    ;;
+			    ;;* The symbol "escape" if the unwind handler must be run
+			    ;;because an unwinding escape procedure has been called.
+			    ;;
+			    (run-unwind-protection-cleanup-upon-exit?))
 			  => (lambda (,why)
 			       (set! ,terminated? #t)
 			       ;;We want to discard any exception raised by the cleanup thunk.
@@ -1851,7 +1802,7 @@
 				     (with-exception-handler
 					 ,escape
 				       (lambda ()
-					 (,?cleanup ,why)))))))))))))))
+					 (,?unwind-handler ,why)))))))))))))))
     ))
 
 (define (unwind-protect-macro expr-stx)
@@ -3417,7 +3368,7 @@
 ;;                           (reinstate-guard-continuation
 ;;                            (lambda ()
 ;;                              (define (run-unwind-protect-cleanups)
-;;                                (run-unwind-protection-cleanup-upon-exit? #t)
+;;                                (run-unwind-protection-cleanup-upon-exit? 'exception)
 ;;                                (call/cc
 ;;                                    (lambda (reinstate-clause-expression-continuation)
 ;;                                      (reinstate-exception-handler-continuation
@@ -3487,7 +3438,10 @@
 		     ;;the  dynamic  environment  of  the  exception  handler  to  be
 		     ;;reinstated, and the unwind-protection cleanups are called.
 		     ;;
-		     (run-unwind-protection-cleanup-upon-exit? #t)
+		     ;;Yes,  we  must   really  set  the  parameter   to  the  symbol
+		     ;;"exception"; this  symbol is used  as argument for  the unwind
+		     ;;handlers.
+		     (run-unwind-protection-cleanup-upon-exit? 'exception)
 		     (call/cc
 			 (lambda (,reinstate-clause-expression-continuation-id)
 			   (,reinstate-exception-handler-continuation-id
@@ -3826,7 +3780,7 @@
 
 ;;;; module non-core-macro-transformer: DO, WHILE, UNTIL, FOR
 
-(define (with-escape-handlers-wrap escape next-iteration body*)
+(define (with-escape-fluids escape next-iteration body*)
   ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
   ;;values  when given  zero arguments.   Returning  zero values  can be  meaningful,
   ;;example:
@@ -3843,16 +3797,12 @@
   `(fluid-let-syntax
        ((break    (syntax-rules ()
 		    ((_ . ?args)
-		     (begin
-		       (run-escape-handlers)
-		       (,escape . ?args)))
+		     (,escape . ?args))
 		    ))
 	(continue (syntax-rules ()
 		    ((_)
-		     (begin
-		       (run-escape-handlers)
-		       (,next-iteration #t))))))
-     (with-escape-handlers-stack . ,body*)))
+		     (,next-iteration #t)))))
+     . ,body*))
 
 (define (do-macro expr-stx)
   ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
@@ -3878,15 +3828,17 @@
     ;;
     ;;NOTE Using CONTINUE in the body causes a jump to the test.
     ((_ ?body (while ?test))
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (call/cc
-		   (lambda (next-iteration)
-		     ,(with-escape-handlers-wrap 'escape 'next-iteration (list ?body))))
-	       (when ,?test
-		 (loop)))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (unwinding-call/cc
+		     (lambda (,next-iteration)
+		       ,(with-escape-fluids escape next-iteration (list ?body))))
+		 (when ,?test
+		   (loop))))))))
 
     ;;This is an extended Vicare syntax.
     ;;
@@ -3895,15 +3847,17 @@
     ;;
     ;;NOTE Using CONTINUE in the body causes a jump to the test.
     ((_ ?body (until ?test))
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (call/cc
-		   (lambda (next-iteration)
-		     ,(with-escape-handlers-wrap 'escape 'next-iteration (list ?body))))
-	       (until ,?test
-		 (loop)))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (unwinding-call/cc
+		     (lambda (,next-iteration)
+		       ,(with-escape-fluids escape next-iteration (list ?body))))
+		 (until ,?test
+		   (loop))))))))
 
     ;;This is the R6RS syntax.
     ;;
@@ -3914,20 +3868,22 @@
 	?command* ...)
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
-	(bless
-	 `(call/cc
-	      (lambda (escape)
-		(letrec ((loop (lambda ,?var*
-				 (if (call/cc
-					 (lambda (next-iteration)
-					   (if ,?test
-					       #f
-					     ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?command* #t)))))
-				     (loop . ,?step*)
-				   ,(if (null? ?expr*)
-					'(void)
-				      `(begin . ,?expr*))))))
-		  (loop . ,?init*))))))
+	(let ((escape         (gensym "escape"))
+	      (next-iteration (gensym "next-iteration")))
+	  (bless
+	   `(unwinding-call/cc
+		(lambda (,escape)
+		  (letrec ((loop (lambda ,?var*
+				   (if (unwinding-call/cc
+					   (lambda (,next-iteration)
+					     (if ,?test
+						 #f
+					       ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+				       (loop . ,?step*)
+				     ,(if (null? ?expr*)
+					  '(void)
+					`(begin . ,?expr*))))))
+		    (loop . ,?init*)))))))
        ))
     ))
 
@@ -3943,16 +3899,18 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (if ,?test
-			       ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?body* #t))
-			     #f)))
-		 (loop)))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (when (unwinding-call/cc
+			   (lambda (,next-iteration)
+			     (if ,?test
+				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
+			       #f)))
+		   (loop))))))))
     ))
 
 (define (until-macro expr-stx)
@@ -3965,16 +3923,18 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (if ,?test
-			       #f
-			     ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?body* #t)))))
-		 (loop)))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (when (unwinding-call/cc
+			   (lambda (,next-iteration)
+			     (if ,?test
+				 #f
+			       ,(with-escape-fluids escape next-iteration `(,@?body* #t)))))
+		   (loop))))))))
     ))
 
 (define (for-macro expr-stx)
@@ -3989,18 +3949,20 @@
   ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     ,?init
-	     (let loop ()
-	       (when (call/cc
-			 (lambda (next-iteration)
-			   (if ,?test
-			       ,(with-escape-handlers-wrap 'escape 'next-iteration `(,@?body* #t))
-			     #f)))
-		 ,?incr
-		 (loop)))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       ,?init
+	       (let loop ()
+		 (when (unwinding-call/cc
+			   (lambda (,next-iteration)
+			     (if ,?test
+				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
+			       #f)))
+		   ,?incr
+		   (loop))))))))
     ))
 
 
@@ -4013,15 +3975,14 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (fluid-let-syntax ((return (syntax-rules ()
-					  ((_ . ?args)
-					   (begin
-					     (run-escape-handlers)
-					     (escape . ?args))))))
-	       (with-escape-handlers-stack ,?body0 . ,?body*))))))
+     (let ((escape (gensym "escape")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (fluid-let-syntax ((return (syntax-rules ()
+					    ((_ . ?args)
+					     (,escape . ?args)))))
+		 ,?body0 . ,?body*))))))
     ))
 
 

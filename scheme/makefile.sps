@@ -345,12 +345,6 @@
 
 ;;;; system macros
 
-(define label-of-with-escape-handler
-  (gensym "fluid-label.with-escape-handler"))
-
-(define label-of-run-escape-handlers
-  (gensym "fluid-label.run-escape-handlers"))
-
 (define ikarus-system-fluids
   `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
     (return					($fluid . ,(gensym "fluid-label.return")))
@@ -358,13 +352,25 @@
     (break					($fluid . ,(gensym "fluid-label.break")))
     (with					($fluid . ,(gensym "fluid-label.with")))
     (brace					($fluid . ,(gensym "fluid-label.brace")))
-    (<>						($fluid . ,(gensym "fluid-label.<>")))
-    (with-escape-handler			($fluid . ,label-of-with-escape-handler))
-    (run-escape-handlers			($fluid . ,label-of-run-escape-handlers))))
+    (<>						($fluid . ,(gensym "fluid-label.<>")))))
 
-(define ikarus-system-fluids-defaults
-  `((,label-of-with-escape-handler		(macro . default-with-escape-handler))
-    (,label-of-run-escape-handlers		(macro . run-escape-handlers))))
+;;At present there are no fluid syntaxes  with default binding defined by Vicare.  To
+;;define one for an imaginary fluid SPIFY, we should to this here:
+;;
+;;  (define label-of-spiffy
+;;    (gensym "fluid-label.spiffy"))
+;;
+;;  (define ikarus-system-fluids
+;;    `(...
+;;      (spiffy			($fluid . ,label-of-spiffy))
+;;      ...))
+;;
+;;  (define ikarus-system-fluids-defaults
+;;    `((,label-of-spiffy	(macro . default-for-spiffy))))
+;;
+;;then we must add an integrated non-core expander macro named DEFAULT-FOR-SPIFFY.
+;;
+(define ikarus-system-fluids-defaults '())
 
 (define ikarus-system-macros
   '((internal-define				(define))
@@ -526,10 +532,6 @@
     (unwind-protect				(macro . unwind-protect))
     (with-unwind-protection			(macro . with-unwind-protection))
     (with-unwind-handler			(macro . with-unwind-protection))
-
-    (with-escape-handlers-stack			(macro . with-escape-handlers-stack))
-    (default-with-escape-handler		(macro . default-with-escape-handler))
-    (default-run-escape-handlers		(macro . default-run-escape-handler))
 
     (with-blocked-exceptions			(macro . with-blocked-exceptions))
     (with-current-dynamic-environment		(macro . with-current-dynamic-environment))
@@ -2530,22 +2532,6 @@
     (unwind-protect				v $language)
     (with-unwind-protection			v $language)
     (with-unwind-handler			v $language)
-    ;;NOTE These "escape handlers" bindings must  be exported only by (psyntax system
-    ;;$all).  With  the exception of:
-    ;;
-    ;;   RUN-ESCAPE-HANDLER-THUNKS
-    ;;   RUN-UNWIND-PROTECTION-CLEANUP-UPON-EXIT?
-    ;;
-    ;;which are  really private, the  other bindings  could be exported  by (vicare).
-    ;;They are not because: to avoid a mess, the fluid bindings must not be redefined
-    ;;by the user code;  the unwind-protection mechanism may be not  yet stable to be
-    ;;exposed.  (Marco Maggi; Sat Jan 31, 2015)
-    (with-escape-handlers-stack)
-    (with-escape-handler)
-    (run-escape-handlers)
-    (default-with-escape-handler)
-    (default-run-escape-handlers)
-    (run-escape-handler-thunks)
     (run-unwind-protection-cleanup-upon-exit?)
     (unwinding-call/cc				v $language)
 ;;;
