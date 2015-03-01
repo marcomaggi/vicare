@@ -1129,6 +1129,7 @@
     free-identifier=?			bound-identifier=?
     identifier-bound?			print-identifier-info
     datum->syntax			syntax->datum
+    parse-logic-predicate-syntax
 
     ;; exception raisers
     syntax-violation			assertion-error
@@ -7469,6 +7470,47 @@
 		(when loc
 		  (set-symbol-value! loc proc))))
     macro*))
+
+
+;;;; miscellaneous
+
+(case-define parse-logic-predicate-syntax
+  ;;Given a  syntax object STX parse  it as logic predicate  expression with expected
+  ;;format:
+  ;;
+  ;;   STX = (and ?expr0 ?expr ...)
+  ;;       | (or  ?expr0 ?expr ...)
+  ;;       | (xor ?expr0 ?expr ...)
+  ;;       | (not ?expr)
+  ;;       | ?expr
+  ;;
+  ;;where  AND,  OR,  XOR, NOT  are  the  identifiers  exported  by (vicare).   If  a
+  ;;standalone ?EXPR is found: apply the  procedure TAIL-PROC to it gather its single
+  ;;return value; TAIL-PROC defaults to the identity function.
+  ;;
+  ;;Return  a syntax  object representing  the  logic predicate  with the  standalone
+  ;;expressions replaced by the return values of TAIL-PROC.
+  ;;
+  ((stx)
+   (parse-logic-predicate-syntax stx (lambda (stx) stx)))
+  ((stx tail-proc)
+   (define (recurse expr)
+     (parse-logic-predicate-syntax expr tail-proc))
+   (syntax-match stx (and or xor not)
+     ((and ?expr0 ?expr* ...)
+      (bless
+       `(and ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((or  ?expr0 ?expr* ...)
+      (bless
+       `(or  ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((xor ?expr0 ?expr* ...)
+      (bless
+       `(xor ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((not ?expr)
+      (bless
+       `(not ,(recurse ?expr))))
+     (else
+      (tail-proc stx)))))
 
 
 ;;;; done

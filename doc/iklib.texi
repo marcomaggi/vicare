@@ -6930,6 +6930,7 @@ expanding the body forms in which this syntax is used.  The given
 * iklib expander utils structs::  Generating identifiers for structs @api{}.
 * iklib expander utils pairs::    Pairs processing.
 * iklib expander utils vectors::  Vectors processing.
+* iklib expander utils special::  Special processors.
 * iklib expander utils unwrap::   Unwrapping syntax objects.
 * iklib expander utils inspect::  Inspecting syntax objects.
 * iklib expander utils compar::   Comparing syntax objects.
@@ -7398,6 +7399,69 @@ a proper list holding the individual item syntax objects.
   (vector #'display 123 #'write))
 @result{} #t
 @end example
+@end defun
+
+@c page
+@node iklib expander utils special
+@subsubsection Special processors
+
+
+@defun parse-logic-predicate-syntax @var{stx}
+@defunx parse-logic-predicate-syntax @var{stx} @var{tail-proc}
+Given a syntax object @var{stx} parse it as logic predicate expression
+with expected format:
+
+@example
+@var{stx} = (and @metao{expr} @meta{expr} ...)
+    | (or  @metao{expr} @meta{expr} ...)
+    | (xor @metao{expr} @meta{expr} ...)
+    | (not @meta{expr})
+    | @meta{expr}
+@end example
+
+@noindent
+where @syntax{and}, @syntax{or}, @syntax{xor}, @syntax{not} are the
+identifiers exported by @library{vicare}.  If a standalone @meta{expr}
+is found: apply the procedure @var{tail-proc} to it gather its single
+return value; @var{tail-proc} defaults to the identity function.
+
+Return a syntax object representing the logic predicate with the
+standalone expressions replaced by the return values of @var{tail-proc}.
+
+@lisp
+(define (tail-proc stx)
+  (syntax-case stx ()
+    ((?expr0 ?expr ...)
+     #`(or #,@@(map (lambda (expr)
+                     (parse-logic-predicate-syntax
+                        expr tail-proc))
+                (syntax->list #'(?expr0 ?expr ...)))))
+    (_
+     (list #'here stx))))
+
+(define-syntax-rule (doit ?input)
+  (parse-logic-predicate-syntax (syntax ?input) tail-proc))
+
+(doit (and 1 2))
+@result{} #'(and (here 1) (here 2))
+
+(doit (or 1 2))
+@result{} #'(or (here 1) (here 2))
+
+(doit (xor 1 2)
+@result{} #'(xor (here 1) (here 2))
+
+(doit (not 1))
+@result{} (not (here 1))
+
+(doit (and (xor (not 1) 2)
+           (or  (not 3) 4)))
+@result{} #'(and (xor (not (here 1)) (here 2))
+          (or  (not (here 3)) (here 4)))
+
+(doit (1 2))
+@result{} #'(or (here 1) (here 2))
+@end lisp
 @end defun
 
 @c page

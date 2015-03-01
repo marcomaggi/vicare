@@ -3064,6 +3064,7 @@
     (all-identifiers?				v $language)
 
     (syntax->vector				v $language)
+    (parse-logic-predicate-syntax		v $language)
     (syntax-unwrap				v $language)
     (syntax=?					v $language)
     (identifier=symbol?				v $language)

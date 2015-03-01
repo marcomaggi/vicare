@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -884,6 +884,55 @@
     (list (make-field-spec #'this "a" #t #'a-ref #'a-set)
 	  (make-field-spec #'this "b" #f #'b-ref #f)
 	  ))
+
+  #t)
+
+
+(parametrise ((check-test-name	'syntax-predicates))
+
+  (define (tail-proc stx)
+    (syntax-case stx ()
+      ((?expr0 ?expr ...)
+       #`(or #,@(map (lambda (expr)
+		       (parse-logic-predicate-syntax expr tail-proc))
+		  (syntax->list #'(?expr0 ?expr ...)))))
+      (_
+       (list #'here stx))))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?input ?expected)
+       (check
+	   (parse-logic-predicate-syntax (syntax ?input) tail-proc)
+	 (=> syntax=?)
+	 (syntax ?expected)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (and 1 2)
+	(and (here 1)
+	     (here 2)))
+
+  (doit (or 1 2)
+	(or (here 1)
+	    (here 2)))
+
+  (doit (xor 1 2)
+	(xor (here 1)
+	     (here 2)))
+
+  (doit (not 1)
+	(not (here 1)))
+
+  (doit (and (xor (not 1) 2)
+	     (or  (not 3) 4))
+	(and (xor (not (here 1)) (here 2))
+	     (or  (not (here 3)) (here 4))))
+
+  (doit (1 2)
+	(or (here 1)
+	    (here 2)))
 
   #t)
 
