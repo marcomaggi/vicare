@@ -1,5 +1,5 @@
 @node restarts
-@section Signaling conditions and restarts
+@section Signalling conditions and restarts
 
 
 @cindex Library @library{vicare language-extensions conditions-and-restarts}
@@ -27,7 +27,7 @@ Spec, Chapter 9.1 ``Condition System
 Concepts''@footnote{@url{http:/@//@/www.cs.cmu.edu/@/Groups/@/AI/@/html/@/hyperspec/@/HyperSpec/@/Body/@/sec_9-1.htm}}.
 
 @menu
-* restarts signal::             Signaling conditions.
+* restarts signal::             Signalling conditions.
 * restarts handler-case::       Catching signalled conditions.
 * restarts ignore-errors::      Ignoring signalled conditions of
                                 type @condition{error}.
@@ -42,7 +42,7 @@ Concepts''@footnote{@url{http:/@//@/www.cs.cmu.edu/@/Groups/@/AI/@/html/@/hypers
 
 @c page
 @node restarts signal
-@subsection Signaling conditions
+@subsection Signalling conditions
 
 
 @defun signal @var{cnd}
@@ -1098,9 +1098,9 @@ found: an exception is raised with condition object of type
 
 
 @defun compute-restarts
-Return a list of symbols representing the names of the restars currently
-installed in the dynamic environment.  The list is ordered: the
-innermost restarts come first, the outermost restarts come last.
+Return a list of symbols representing the names of the restarts
+currently installed in the dynamic environment.  The list is ordered:
+the innermost restarts come first, the outermost restarts come last.
 @end defun
 
 

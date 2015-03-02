@@ -3304,10 +3304,14 @@ resource management under @value{PRJNAME}.
 
 To understand the unwind--protection mechanism we must understand the
 concepts ``dynamic extent of a function call'' and ``dynamic
-environment''.  @ref{scheme basic dynamic extent, Dynamic extent and the
-dynamic environment}, for the meaning as defined by @rnrs{6}.
-@ref{dynamic environment, Notes on the dynamic environment}, for further
-explanations and examples.
+environment'' ad defined by @rnrs{6} (@pxref{scheme basic dynamic
+extent}).  @ref{dynamic environment, Notes on the dynamic environment}.
+
+The unwind--protection mechanism described here is used by
+@value{PRJNAME} in: the implementation of compensations (@pxref{iklib
+compensations}); the implementation of the syntax @syntax{try}
+(@pxref{iklib syntaxes try}); the implementation of condition handlers
+and restarts (@libsref{restarts, Signalling conditions and restarts}).
 
 @quotation
 @strong{NOTE} The unwind protection mechanism may misbehave in some
