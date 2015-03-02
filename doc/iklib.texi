@@ -4606,11 +4606,28 @@ Similar to @func{call/cc}, but calling the escape procedure causes the
 invocation of the unwind handlers installed in the dynamic environment
 up until the saved continuation is restored.
 
-@strong{NOTE} There is a limitation: the escape procedure produced by
-this primitive @strong{must} be called only from the dynamic extent of
-the call to @var{receiver}.  For example: generating an unwinding escape
-procedure in a coroutine and calling it from another coroutine leads to
-raising an exception of type @condition{non-reinstatable}.
+There are limitations:
+
+@itemize
+@item
+The escape procedure produced by this primitive @strong{must} be called
+only from the dynamic extent of the call to @var{receiver}.  For
+example: generating an unwinding escape procedure in a coroutine and
+calling it from another coroutine leads to raising an exception of type
+@condition{non-reinstatable}.
+
+@item
+The escape procedure produced by this primitive @strong{must} be called
+only once; an attempt to call it a second time leads to raising an
+exception of type @condition{non-reinstatable}.
+@end itemize
+
+@quotation
+@strong{NOTE} After some development iterations, the implementation of
+this primitive has taken a shape quite similar to the function
+@func{call/cc-escaping} proposed by Will Clinger in
+@url{http:/@//@/www.ccs.neu.edu/@/home/@/will/@/UWESC/@/uwesc.sch}.
+@end quotation
 @end defun
 
 
@@ -4649,11 +4666,26 @@ Usage examples:
                 (raise 1))))))))
 @result{} (2 (body-in exception-handler unwind-handler))
 
+;;Calling unwinding escape procedure from outside the
+;;dynamic extent of the call to the receiver.
+;;
 (let ((escape-proc #f))
   (unwinding-call/cc
       (lambda (escape)
         (set! escape-proc escape)))
   (escape-proc))
+@error{} &non-reinstatable
+
+;;Calling unwinding escape procedure twice.
+;;
+(let ((again-proc #f))
+  (unwinding-call/cc
+      (lambda (escape)
+        (call/cc
+            (lambda (again)
+              (set! again-proc again)))
+        (escape)))
+  (again-proc))
 @error{} &non-reinstatable
 @end lisp
 

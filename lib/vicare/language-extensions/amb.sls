@@ -170,20 +170,21 @@
 
   (define (%amb . thunks)
     (%amb-correctly-initialised?)
-    (returnable
-      (let next-choice ((thunks thunks))
-	(if (null? thunks)
-	    (amb)
-	  (parametrise ((%previous-fail-escape (%current-fail-escape)))
-	    (call/cc
-		(lambda (escape)
-		  (%current-fail-escape escape)
-		  (return (let ((result (($car thunks))))
-			    (if (promise? result)
-				(force result)
-			      result)))))
-	    (%current-fail-escape (%previous-fail-escape))
-	    (next-choice ($cdr thunks)))))))
+    (call/cc
+	(lambda (return)
+	  (let next-choice ((thunks thunks))
+	    (if (null? thunks)
+		(amb)
+	      (parametrise ((%previous-fail-escape (%current-fail-escape)))
+		(call/cc
+		    (lambda (escape)
+		      (%current-fail-escape escape)
+		      (return (let ((result (($car thunks))))
+				(if (promise? result)
+				    (force result)
+				  result)))))
+		(%current-fail-escape (%previous-fail-escape))
+		(next-choice ($cdr thunks))))))))
 
   #| end of module: AMB |# )
 
@@ -224,20 +225,21 @@
     (%amb-correctly-initialised?)
     (let* ((thunks.len  ($vector-length thunks))
 	   (order       (%make-order-vector thunks.len)))
-      (returnable
-	(let next-choice ((idx 0))
-	  (if ($fx= idx thunks.len)
-	      (amb)
-	    (parametrise ((%previous-fail-escape (%current-fail-escape)))
-	      (call/cc
-		  (lambda (escape)
-		    (%current-fail-escape escape)
-		    (return (let ((result (($vector-ref thunks ($vector-ref order idx)))))
-			      (if (promise? result)
-				  (force result)
-				result)))))
-	      (%current-fail-escape (%previous-fail-escape))
-	      (next-choice ($fxadd1 idx))))))))
+      (call/cc
+	  (lambda (return)
+	    (let next-choice ((idx 0))
+	      (if ($fx= idx thunks.len)
+		  (amb)
+		(parametrise ((%previous-fail-escape (%current-fail-escape)))
+		  (call/cc
+		      (lambda (escape)
+			(%current-fail-escape escape)
+			(return (let ((result (($vector-ref thunks ($vector-ref order idx)))))
+				  (if (promise? result)
+				      (force result)
+				    result)))))
+		  (%current-fail-escape (%previous-fail-escape))
+		  (next-choice ($fxadd1 idx)))))))))
 
   (define (%make-order-vector N)
     ;;Return a  vector of  length N  holding a  random permutation  of the
@@ -280,20 +282,21 @@
   (define (%amb-random thunks)
     (%amb-correctly-initialised?)
     (let ((thunks.len ($vector-length thunks)))
-      (returnable
-	(let next-choice ()
-	  (parametrise ((%previous-fail-escape (%current-fail-escape)))
-	    (call/cc
-		(lambda (escape)
-		  (%current-fail-escape escape)
-		  (return
-		   (let* ((idx    ((amb-random-fixnum-maker) thunks.len))
-			  (result (($vector-ref thunks idx))))
-		     (if (promise? result)
-			 (force result)
-		       result)))))
-	    (%current-fail-escape (%previous-fail-escape))
-	    (next-choice))))))
+      (call/cc
+	  (lambda (return)
+	    (let next-choice ()
+	      (parametrise ((%previous-fail-escape (%current-fail-escape)))
+		(call/cc
+		    (lambda (escape)
+		      (%current-fail-escape escape)
+		      (return
+		       (let* ((idx    ((amb-random-fixnum-maker) thunks.len))
+			      (result (($vector-ref thunks idx))))
+			 (if (promise? result)
+			     (force result)
+			   result)))))
+		(%current-fail-escape (%previous-fail-escape))
+		(next-choice)))))))
 
   #| end of module: AMB-RANDOM |# )
 
@@ -307,15 +310,16 @@
 	  (force result)
 	result)))
   (%amb-correctly-initialised?)
-  (returnable
-    (let next-choice ((result (generate-result)))
-      (parametrise ((%previous-fail-escape (%current-fail-escape)))
-	(call/cc
-	    (lambda (escape)
-	      (%current-fail-escape escape)
-	      (return result)))
-	(%current-fail-escape (%previous-fail-escape))
-	(next-choice (generate-result))))))
+  (call/cc
+      (lambda (return)
+	(let next-choice ((result (generate-result)))
+	  (parametrise ((%previous-fail-escape (%current-fail-escape)))
+	    (call/cc
+		(lambda (escape)
+		  (%current-fail-escape escape)
+		  (return result)))
+	    (%current-fail-escape (%previous-fail-escape))
+	    (next-choice (generate-result)))))))
 
 
 ;;;; done

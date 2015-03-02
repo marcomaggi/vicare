@@ -51,13 +51,24 @@
   ;;unwind  handlers  installed  in  the  dynamic  environment  up  until  the  saved
   ;;continuation is restored.
   ;;
-  ;;NOTE  There is  a limitation:  the escape  procedure produced  by this  primitive
-  ;;*must* be  called only  from the  dynamic extent  of the  call to  RECEIVER.  For
-  ;;example: generating an  unwinding escape procedure in a coroutine  and calling it
-  ;;from another coroutine leads to raising an exception of type "&non-reinstatable".
+  ;;There are limitations:
+  ;;
+  ;;* The escape procedure produced by this  primitive *must* be called only from the
+  ;;  dynamic extent  of the call to RECEIVER.  For  example: generating an unwinding
+  ;;  escape procedure in a coroutine and  calling it from another coroutine leads to
+  ;;  raising an exception of type "&non-reinstatable".
+  ;;
+  ;;* The escape procedure produced by this  primitive *must* be called only once; an
+  ;;   attempt to  call  it a  second  time leads  to raising  an  exception of  type
+  ;;  "&non-reinstatable".
+  ;;
+  ;;NOTE After some development iterations,  the implementation of this primitive has
+  ;;taken a  shape quite similar  to the  function CALL/CC-ESCAPING proposed  by Will
+  ;;Clinger in <http://www.ccs.neu.edu/home/will/UWESC/uwesc.sch>.
   ;;
   (fluid-let-syntax ((__who__ (identifier-syntax 'unwinding-call/cc)))
-    (let ((inside-dynamic-extent-of-receiver-call? #f))
+    (let ((inside-dynamic-extent-of-receiver-call? #f)
+	  (escape-procedure-already-called-once?   #f))
       (dynamic-wind
 	  (lambda ()
 	    (set! inside-dynamic-extent-of-receiver-call? #t))
@@ -67,15 +78,19 @@
 		    (lambda (escape)
 		      (receiver (lambda retvals
 				  (if inside-dynamic-extent-of-receiver-call?
-				      (begin
-					;;Yes, we  must really  set the  parameter to
-					;;the symbol "escape"; this symbol is used as
-					;;argument for the unwind handlers.
-					(run-unwind-protection-cleanup-upon-exit? 'escape)
-					(apply escape retvals))
+				      (if escape-procedure-already-called-once?
+					  (non-reinstatable-violation __who__
+					    "unwinding escape procedure called for the second time")
+					(begin
+					  ;;Yes, we must really  set the parameter to
+					  ;;the symbol "escape";  this symbol is used
+					  ;;as argument for the unwind handlers.
+					  (run-unwind-protection-cleanup-upon-exit? 'escape)
+					  (set! escape-procedure-already-called-once? #t)
+					  (apply escape retvals)))
 				    (non-reinstatable-violation __who__
 				      "unwinding escape procedure called outside \
-                                       the dynamic extent of its receive function"))))))
+                                       the dynamic extent of its receiver function"))))))
 	      (run-unwind-protection-cleanup-upon-exit? #f)))
 	  (lambda ()
 	    (set! inside-dynamic-extent-of-receiver-call? #f))))))

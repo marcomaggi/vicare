@@ -1162,7 +1162,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
+  (check	;escaping from the body of WITH-UNWIND-HANDLER
       (with-result
 	(unwinding-call/cc
 	    (lambda (escape)
@@ -1174,7 +1174,7 @@
 		  (escape 1))))))
     => '(1 (body-in unwind-handler)))
 
-  (check
+  (check	;escaping from an exception handler
       (with-result
 	(unwinding-call/cc
 	    (lambda (escape)
@@ -1193,8 +1193,12 @@
 
 ;;; --------------------------------------------------------------------
 
+  ;;Calling unwinding escape procedure from outside the dynamic extent of the call to
+  ;;the receiver.
+  ;;
   (check
       (guard (E ((non-reinstatable-violation? E)
+		 #;(print-condition E)
 		 #t)
 		(else E))
 	(let ((escape-proc #f))
@@ -1202,6 +1206,23 @@
 	      (lambda (escape)
 		(set! escape-proc escape)))
 	  (escape-proc)))
+    => #t)
+
+  ;;Calling unwinding escape procedure twice.
+  ;;
+  (check
+      (guard (E ((non-reinstatable-violation? E)
+		 #;(print-condition E)
+		 #t)
+		(else E))
+	(let ((again-proc #f))
+	  (unwinding-call/cc
+	      (lambda (escape)
+		(call/cc
+		    (lambda (again)
+		      (set! again-proc again)))
+		(escape)))
+	  (again-proc)))
     => #t)
 
   #t)
