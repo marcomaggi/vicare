@@ -1000,6 +1000,11 @@ all its dependency libraries.  Interned libraries are neither invoked
 nor visited; the invoke--time and visit--time depend upon the usage we
 make of them.
 
+In a @value{PRJNAME} process, there can be only one library with a given
+sequence of symbols in its name; if we have already loaded the library
+@library{a b (1)}, it is not possible to load a library @library{a b
+(2)}, because they have the sequence @library{a b} in common.
+
 The following bindings are exported by the library @library{vicare
 libraries}.
 
