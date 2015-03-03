@@ -100,6 +100,13 @@ to be dynamically loaded.
 
    $ make check
 
+  The Makefile is designed to allow parallel builds, so we can do:
+
+   $ make -j4 all && make -j4 check
+
+which,  on  a  4-core  CPU,   should  speed  up  building  and  checking
+significantly.
+
   By default  only compiled Scheme  libraries are installed;  to install
 also the source libraries we must configure with:
 
