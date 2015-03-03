@@ -1110,9 +1110,12 @@ to be used at the @repl{} when experimenting does not hurt.
 
 
 Libraries are interned using the functions @code{find-library-*},
-@ref{libutils interning, Interning libraries}.  All those functions load
-libraries through the procedure referenced by the parameter
-@func{current-library-loader}.
+@ref{libutils interning, Interning libraries}.  All those functions
+first search the internal collection, then load libraries through the
+procedure referenced by the parameter @func{current-library-loader}.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
 
 
 @deffn Parameter current-library-loader
@@ -1157,9 +1160,8 @@ binary library loader referenced by the parameter
 
 @subsubheading Interning source libraries
 
-
-Whatever function we set in the parameter @func{current-library-loader}
-can use the following @api{} to intern a source library.
+Any function we set in the parameter @func{current-library-loader} can
+use the following @api{} to intern a source library.
 
 
 @deffn Parameter current-source-library-loader
@@ -1208,9 +1210,8 @@ associated to the port (or equivalent).
 
 @subsubheading Interning binary libraries
 
-
-Whatever function we set in the parameter @func{current-library-loader}
-can use the following @api{} to intern a binary library.
+Any function we set in the parameter @func{current-library-loader} can
+use the following @api{} to intern a binary library.
 
 
 @deffn Parameter current-binary-library-loader
