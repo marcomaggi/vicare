@@ -430,9 +430,9 @@
 ;;;; locating library files in search paths
 
 (define* (default-library-source-search-path-scanner {libref library-reference?})
-  ;;Default  value for  the parameter  CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER.  Given  a
-  ;;R6RS library reference: scan "(library-source-search-path)" for the corresponding
-  ;;source file.
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER.
+  ;;Given  a  R6RS library  reference:  scan  "(library-source-search-path)" for  the
+  ;;corresponding source file.
   ;;
   ;;Return  2  values.   When  successful:  a string  representing  the  source  file
   ;;pathname; a thunk to be called to  continue the search from the next directory in
@@ -467,15 +467,28 @@
 		 (continue-thunk))))))))
 
 (define current-library-source-search-path-scanner
-  ;;Hold a  function used to convert  a R6RS library reference  into the
-  ;;corresponding source file pathname and  search for it in the library
-  ;;search path.
+  ;;Hold a function  used to convert a R6RS library  reference into the corresponding
+  ;;source file pathname and search for it in the library search path.
   ;;
-  ;;The referenced function must accept, as single value, a R6RS library
-  ;;reference and it must return  two values.  When successful: a string
-  ;;representing  the source  file pathname;  a  thunk to  be called  to
-  ;;continue  the search  from the  next directory  in the  search path.
-  ;;Otherwise return: false and false.
+  ;;The referenced  function must accept, as  single value, a R6RS  library reference
+  ;;and it must return two values.  When successful: a string representing the source
+  ;;file  pathname; a  thunk  to be  called  to  continue the  search  from the  next
+  ;;directory in the search path.  Otherwise return: false and false.
+  ;;
+  ;;This parameter can be used as follows:
+  ;;
+  ;;   (define scanner
+  ;;     (current-library-binary-search-path-scanner))
+  ;;
+  ;;   (let loop ((next-file-match (lambda ()
+  ;;                                 (scanner libref))))
+  ;;     (receive (pathname further-file-match)
+  ;;         (next-file-match)
+  ;;       (if pathname
+  ;;           (if (valid-library? pathname)
+  ;;               (use-the-library pathname)
+  ;;             (loop further-file-match))
+  ;;         (search-failed))))
   ;;
   (make-parameter
       default-library-source-search-path-scanner
@@ -485,9 +498,9 @@
 ;;; --------------------------------------------------------------------
 
 (define* (default-library-binary-search-path-scanner {libref library-reference?})
-  ;;Default  value for  the parameter  CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER.  Given  a
-  ;;R6RS library reference: scan "(library-binary-search-path)" for the corresponding
-  ;;FASL file.
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER.
+  ;;Given  a  R6RS library  reference:  scan  "(library-binary-search-path)" for  the
+  ;;corresponding FASL file.
   ;;
   ;;Return 2 values.  When successful: a  string representing the fasl file pathname;
   ;;a thunk to be called to continue the search from the next directory in the search
@@ -526,6 +539,21 @@
   ;;file  pathname; a  thunk  to be  called  to  continue the  search  from the  next
   ;;directory in the search path.  Otherwise return: false and false.
   ;;
+  ;;This parameter can be used as follows:
+  ;;
+  ;;   (define scanner
+  ;;     (current-library-binary-search-path-scanner))
+  ;;
+  ;;   (let loop ((next-file-match (lambda ()
+  ;;                                 (scanner libref))))
+  ;;     (receive (pathname further-file-match)
+  ;;         (next-file-match)
+  ;;       (if pathname
+  ;;           (if (valid-library? pathname)
+  ;;               (use-the-library pathname)
+  ;;             (loop further-file-match))
+  ;;         (search-failed))))
+  ;;
   (make-parameter
       default-library-binary-search-path-scanner
     (lambda* ({obj procedure?})
@@ -542,12 +570,14 @@
 
   (module (%source-search-start)
     ;;This function can be used to search for a source library file using the current
-    ;;source library locator  referenced by CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER, with
-    ;;the purpose of finding a library that matches a given R6RS library reference.
+    ;;source            library            locator           referenced            by
+    ;;CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER,  with  the  purpose  of  finding  a
+    ;;library that matches a given R6RS library reference.
     ;;
-    ;;The ragument  LIBREF must be a  R6RS library reference.  The  optional argument
+    ;;The argument  LIBREF must be a  R6RS library reference.  The  optional argument
     ;;FAIL-KONT must  be a thunk  to be called when  the search fails.   The argument
-    ;;OPTIONS must be a list of symbols; at present the supported options are:
+    ;;OPTIONS  must be  an enum-set  of type  LIBRARY-LOCATOR-OPTION; at  present the
+    ;;supported options are:
     ;;
     ;;   move-on-when-open-fails
     ;;
@@ -569,7 +599,7 @@
     ;;
     ;;   (let loop ((next-locator-search (%source-search-start
     ;;                                    '(a b (1 2))
-    ;;                                    '(move-on-when-open-fails)
+    ;;                                    (library-locator-options move-on-when-open-fails)
     ;;                                    (lambda ()
     ;;                                      (error #f "no match")))))
     ;;     (receive (port further-locator-match)
@@ -634,12 +664,14 @@
 
   (module (%binary-search-start)
     ;;This function can be used to search for a library binary file using the current
-    ;;binary library locator  referenced by CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER, with
-    ;;the purpose of finding a library that matches a given R6RS library reference.
+    ;;binary            library            locator           referenced            by
+    ;;CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER,  with  the  purpose  of  finding  a
+    ;;library that matches a given R6RS library reference.
     ;;
     ;;The argument  LIBREF must be a  R6RS library reference.  The  optional argument
     ;;FAIL-KONT must  be a thunk  to be called when  the search fails.   The argument
-    ;;OPTIONS must be a list of symbols; at present the supported options are:
+    ;;OPTIONS  must be  an enum-set  of type  LIBRARY-LOCATOR-OPTION; at  present the
+    ;;supported options are:
     ;;
     ;;   move-on-when-open-fails
     ;;
@@ -661,7 +693,7 @@
     ;;
     ;;   (let loop ((next-locator-search (%binary-search-start
     ;;                                    '(a b (1 2))
-    ;;                                    '(move-on-when-open-fails)
+    ;;                                    (library-locator-options move-on-when-open-fails)
     ;;                                    (lambda ()
     ;;                                      (error #f "no match")))))
     ;;     (receive (port further-locator-match)
@@ -741,53 +773,16 @@
 
 
 ;;;; locating source and binary libraries: run-time locator
-;;
-;;The reference scenario for the run-time library locator is this:
-;;
-;;1. We  install the package Vicare  Scheme, compiling bundled libraries  and putting
-;;   them in some system directory; the libraries might be installed with pathnames:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/posix.fasl
-;;
-;;2. We install additional packages, compiling distributed libraries and putting them
-;;   in some system directory; the libraries might be installed with pathnames:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/something.fasl
-;;
-;;3. We configure  the library binary search  path to make sure that  it includes the
-;;   system directory:
-;;
-;;      (library-binary-search-path)
-;;      => (... "/usr/local/lib/vicare-scheme" ...)
-;;
-;;4. We configure the  parameter CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER to reference the
-;;   default compiled library locator DEFAULT-LIBRARY-BINARY-SEARCH-PATH-SCANNER, which will
-;;   scan the search path in "(library-binary-search-path)".
-;;
-;;5. We compose a Scheme program "demo.sps" which imports the libraries:
-;;
-;;      (import (vicare)
-;;        (prefix (vicare posix) posix.)
-;;        (vicare something))
-;;      ---
-;;
-;;   and we execute it selecting the run-time library locator:
-;;
-;;      $ vicare --library-locator run-time --r6rs-script demo.sps
-;;
-;;   the command line option "--library-locator" will put RUN-TIME-LIBRARY-LOCATOR in
-;;   the parameter CURRENT-LIBRARY-LOCATOR.
-;;
+
 (define* (run-time-library-locator {libref library-reference?})
   ;;Possible value for the parameter  CURRENT-LIBRARY-LOCATOR; this function is meant
   ;;to be used to search for libraries when running an application.
   ;;
-  ;;Given a R6RS library reference and a list of search options: return a thunk to be
-  ;;used to start the search for a matching library.
-  ;;
-  ;;The returned thunk  scans the search path  for compiled libraries in  search of a
-  ;;matching binary file; if  a matching compiled library is not  found: it scans the
-  ;;search path for source libraries in search of a matching source file.
+  ;;Given a R6RS library reference: return a thunk to be used to start the search for
+  ;;a  matching library.   The  returned thunk  scans the  search  path for  compiled
+  ;;libraries in search of a matching binary  file; if a matching compiled library is
+  ;;not found: it scans the search path  for source libraries in search of a matching
+  ;;source file.
   ;;
   ;;When successful the returned thunk returns 2 values:
   ;;
@@ -809,143 +804,7 @@
 
 
 ;;;; locating source and binary libraries: compile-time locator
-;;
-;;The reference scenario for the run-time library locator is this:
-;;
-;;* We  have installed  the package  Vicare Scheme,  compiling bundled  libraries and
-;;  putting them  in some  system directory;  the libraries  might be  installed with
-;;  pathnames:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/posix.fasl
-;;
-;;*  We have  unpacked the  distribution tarball  of a  package providing  additional
-;;  Vicare libraries.  We have the source libraries under:
-;;
-;;      $(srcdir)/lib/vicare/this.sls
-;;      $(srcdir)/lib/vicare/that.sls
-;;
-;;  we want to compile them under the build directory:
-;;
-;;      $(builddir)/lib/vicare/this.fasl
-;;      $(builddir)/lib/vicare/that.fasl
-;;
-;;  and then install them in a system directory:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/this.fasl
-;;      /usr/local/lib/vicare-scheme/vicare/that.fasl
-;;
-;;  In the package's  building infrastructure (for example a Makefile  managed by the
-;;  GNU Autotools) we need to write  appropriate invocations of "vicare" to build the
-;;  libraries  locally  and  pick  the  appropriate  source  libraries  and  compiled
-;;  libraries.
-;;
-;;* It  may be that  the local  libraries need to  load libraries installed  from the
-;;  Vicare Scheme distribution, and also have local dependencies:
-;;
-;;      (library (vicare this)
-;;        (export)
-;;        (import (vicare)
-;;          (vicare that))
-;;        ---)
-;;
-;;      (library (vicare that)
-;;        (export)
-;;        (import (vicare)
-;;          (prefix (vicare posix) posix.))
-;;        ---)
-;;
-;;* It  may be that an  older version of the  package is already installed,  so there
-;;  already exist installed binary libraries:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/this.fasl
-;;      /usr/local/lib/vicare-scheme/vicare/that.fasl
-;;
-;;  we  want  the libraries  under  "$(builddir)/lib"  to  take precedence  over  the
-;;  libraries  under  "/usr/local/lib/vicare-scheme".  It  may  be  that there  exist
-;;  installed source libraries:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/this.sls
-;;      /usr/local/lib/vicare-scheme/vicare/that.sls
-;;
-;;  we want the libraries under "$(srcdir)/lib" to take precedence over the libraries
-;;  under "/usr/local/lib/vicare-scheme".
-;;
-;;At the Scheme level we want the following:
-;;
-;;*  Configure the  library  source search  path  to include  only  the local  source
-;;  directory:
-;;
-;;     (library-source-search-path)
-;;     => ("$(srcdir)/lib")
-;;
-;;* Configure the library binary search path to include the system directory:
-;;
-;;     (library-binary-search-path)
-;;     => (... "/usr/local/lib/vicare-scheme" ...)
-;;
-;;* Configure the store directory to reference the local build directory:
-;;
-;;     (compiled-libraries-store-directory)
-;;     => "$(builddir)/lib"
-;;
-;;* Configure the library binary file locator parameter:
-;;
-;;     (current-library-binary-search-path-scanner default-library-binary-search-path-scanner)
-;;
-;;  which will scan the search path in "(library-binary-search-path)".
-;;
-;;* Configure the library source file locator parameter:
-;;
-;;     (current-library-source-search-path-scanner default-library-source-search-path-scanner)
-;;
-;;  which will scan the search path in "(library-source-search-path)".
-;;
-;;* Configure the library locator parameter:
-;;
-;;     (current-library-locator compile-time-library-locator)
-;;
-;;  which implements the appropriate policy.
-;;
-;;To achieve the desired result, we have two options:
-;;
-;;1. For every library  to be compiled locally, we write in  the Makefile an explicit
-;;   dependency rule:
-;;
-;;      lib/vicare/that.fasl: lib/vicare/that.sls
-;;              VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH=; \
-;;              vicare --library-locator compile-time      \
-;;                 -F /usr/local/lib/vicare-scheme         \
-;;                 -L $(srcdir)/lib                        \
-;;                 --store-directory $(builddir)/lib       \
-;;                 -o $@ -c $<
-;;
-;;      lib/vicare/this.fasl: lib/vicare/this.sls lib/vicare/that.fasl
-;;              VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH; \
-;;              vicare --library-locator compile-time      \
-;;                 -F /usr/local/lib/vicare-scheme         \
-;;                 -L $(srcdir)/lib                        \
-;;                 --store-directory $(builddir)/lib       \
-;;                 -o $@ -c $<
-;;
-;;2. Write a script "compile-all.sps" that  imports at least the local libraries that
-;;   are leaves in the local package dependency tree:
-;;
-;;      (import (only (vicare that))
-;;              (only (vicare this)))
-;;
-;;   write a single Makefile rule that compiles  in the store all the dependencies of
-;;   the script:
-;;
-;;      .PHONY: vfasl
-;;
-;;      vfasl:
-;;              VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH; \
-;;              vicare --library-locator compile-time      \
-;;                 -F /usr/local/lib/vicare-scheme         \
-;;                 -L $(srcdir)/lib                        \
-;;                 --store-directory $(builddir)/lib       \
-;;                 --compile-dependencies compile-all.sps
-;;
+
 (module (compile-time-library-locator)
   (module (%open-source-library
 	   %open-binary-library
@@ -960,29 +819,29 @@
     ;;
     ;;Given a R6RS library  reference: return a thunk to be used  to start the search
     ;;for a matching library.  The search for source libraries is performed using the
-    ;;library source file locator in CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER.  The
+    ;;library source file scanner in CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER.  The
     ;;search  for compiled  libraries  is  performed using  the  library binary  file
-    ;;locator in CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER.
+    ;;scanner in CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER.
     ;;
     ;;The returned thunk does the following:
     ;;
-    ;;1. Ask the library source file locator for the next matching source file.
+    ;;1. Ask the library source file scanner for the next matching source file.
     ;;
     ;;2. If a matching source is found:  look for an already compiled library file in
     ;;   the COMPILED-LIBRARIES-STORE-DIRECTORY:
     ;;
-    ;;   2.1. If no compiled file exists or it exists but it is older than the source
-    ;;        file: accept the source file as matching.
+    ;;   2.1.  If  no compiled file exists or  it if exists but it is  older than the
+    ;;        source file: accept the source file as matching.
     ;;
     ;;   2.2. If a compiled file exists and  it is newer than the source file: accept
     ;;        the compiled file as matching.
     ;;
-    ;;   2.3. Return to the caller the matching file.
+    ;;   2.3. Return to the caller the matching file pathname.
     ;;
-    ;;   2.4. If the caller rejects the  binary file: return to the caller the source
-    ;;        file.
+    ;;   2.4. If  the caller rejects the  binary file pathname: return  to the caller
+    ;;        the source file pathname.
     ;;
-    ;;   2.5. If the caller rejects the source file: loop to 1
+    ;;   2.5. If the caller rejects the source file: loop to 1.
     ;;
     ;;3. If no source file exists: loop to 1.
     ;;
@@ -1107,123 +966,16 @@
 
 
 ;;;; locating source and binary libraries: source locator
-;;
-;;The reference scenario for the source library locator is this:
-;;
-;;* We  have installed  the package  Vicare Scheme,  compiling bundled  libraries and
-;;  putting them  in some  system directory;  the libraries  might be  installed with
-;;  pathnames:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/posix.fasl
-;;
-;;*  We have  unpacked the  distribution tarball  of a  package providing  additional
-;;  Vicare libraries.  We have the source libraries under:
-;;
-;;      $(srcdir)/lib/vicare/this.sls
-;;      $(srcdir)/lib/vicare/that.sls
-;;
-;;  we want to compile them under the build directory:
-;;
-;;      $(builddir)/lib/vicare/this.fasl
-;;      $(builddir)/lib/vicare/that.fasl
-;;
-;;  and then install them in a system directory:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/this.fasl
-;;      /usr/local/lib/vicare-scheme/vicare/that.fasl
-;;
-;;  In the package's  building infrastructure (for example a Makefile  managed by the
-;;  GNU Autotools) we need to write  appropriate invocations of "vicare" to build the
-;;  libraries  locally  and  pick  the  appropriate  source  libraries  and  compiled
-;;  libraries.
-;;
-;;  We want to automatically generate an include Makefile holding the compilation and
-;;  installation recipes correctly describing the dependencies among libraries.
-;;
-;;* It  may be that  the local  libraries need to  load libraries installed  from the
-;;  Vicare Scheme distribution, and also have local dependencies:
-;;
-;;      (library (vicare this)
-;;        (export)
-;;        (import (vicare)
-;;          (vicare that))
-;;        ---)
-;;
-;;      (library (vicare that)
-;;        (export)
-;;        (import (vicare)
-;;          (prefix (vicare posix) posix.))
-;;        ---)
-;;
-;;* It  may be that an  older version of the  package is already installed,  so there
-;;  already exist installed binary libraries:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/this.fasl
-;;      /usr/local/lib/vicare-scheme/vicare/that.fasl
-;;
-;;  we want the binary libraries  under "/usr/local/lib/vicare-scheme" to be ignored.
-;;  It may be that there exist installed source libraries:
-;;
-;;      /usr/local/lib/vicare-scheme/vicare/this.sls
-;;      /usr/local/lib/vicare-scheme/vicare/that.sls
-;;
-;;  we want  the source libraries under  "$(srcdir)/lib" to take precedence  over the
-;;  libraries under "/usr/local/lib/vicare-scheme".
-;;
-;;At the Scheme level we want the following:
-;;
-;;*  Configure the  library  source search  path  to include  only  the local  source
-;;  directory:
-;;
-;;     (library-source-search-path)
-;;     => ("$(srcdir)/lib")
-;;
-;;* Configure the library binary search path to include the system directory:
-;;
-;;     (library-binary-search-path)
-;;     => (... "/usr/local/lib/vicare-scheme" ...)
-;;
-;;* Configure the library binary file locator parameter:
-;;
-;;     (current-library-binary-search-path-scanner default-library-binary-search-path-scanner)
-;;
-;;  which will scan the search path in "(library-binary-search-path)".
-;;
-;;* Configure the library source file locator parameter:
-;;
-;;     (current-library-source-search-path-scanner default-library-source-search-path-scanner)
-;;
-;;  which will scan the search path in "(library-source-search-path)".
-;;
-;;* Configure the library locator parameter:
-;;
-;;     (current-library-locator source-library-locator)
-;;
-;;  which implements the appropriate policy.
-;;
-;;To achieve the desired result, in the Makefile we write rules as follows:
-;;
-;;   .PHONY: dependencies
-;;
-;;   dependencies:
-;;          vicare --library-locator source					\
-;;             -F /usr/local/lib/vicare-scheme					\
-;;             -L $(srcdir)/lib							\
-;;             --r6rs-script $(srcdir)/scripts/build-makefile-rules.sps --	\
-;;             $(slsdir)/libraries.scm >$(slsdir)/dependencies.make
-;;
+
 (define* (source-library-locator {libref library-reference?})
   ;;Possible value for the parameter  CURRENT-LIBRARY-LOCATOR; this function is meant
-  ;;to be  used to search  for source libraries only  first and for  binary libraries
-  ;;later.
+  ;;to be used to search for source libraries first and for binary libraries later.
   ;;
-  ;;Given a R6RS library reference and a list of search options: return a thunk to be
-  ;;used to start the search for a matching library.
-  ;;
-  ;;The  returned  thunk  uses  the  current source  library  locator  referenced  by
-  ;;CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER, with the purpose of finding a library
-  ;;file that matches a given R6RS library reference.  If no source library is found:
-  ;;the       current      binary       library      locator       referenced      by
+  ;;Given a R6RS library reference: return a thunk to be used to start the search for
+  ;;a matching library.   The returned thunk uses the current  source library scanner
+  ;;referenced  by CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER,  with  the purpose  of
+  ;;finding a library file that matches a given R6RS library reference.  If no source
+  ;;library   is  found:   the   current  binary   library   scanner  referenced   by
   ;;CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER is used.
   ;;
   ;;When successful the returned thunk returns 2 values:
