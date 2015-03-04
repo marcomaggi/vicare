@@ -1183,7 +1183,7 @@ return @false{}.
 
 @defun default-source-library-loader @var{libref} @var{textual-port}
 Default value for the parameter @func{current-source-library-loader}.
-Given a textual input:
+Given a textual input port:
 
 @enumerate
 @item
