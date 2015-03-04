@@ -2542,7 +2542,7 @@ name.  For example, if the store directory is @code{$(builddir)/lib} the
 source library:
 
 @example
-$(top_srcdir)/lib/vicare/posix.sls
+$(srcdir)/lib/vicare/posix.sls
 @end example
 
 @noindent

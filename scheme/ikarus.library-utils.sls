@@ -694,7 +694,7 @@
 ;;library stem, which is generated from the  library name.  For example, if the store
 ;;directory is "$(builddir)/lib" the source library:
 ;;
-;;   $(top_srcdir)/lib/vicare/posix.sls
+;;   $(srcdir)/lib/vicare/posix.sls
 ;;
 ;;is stored as:
 ;;
