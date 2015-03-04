@@ -34,7 +34,7 @@ Revision devel/a59ec3abedf0a80e07d011269ba9aeb134227e41
 Build 2013-04-13
 
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011-2013 Marco Maggi
+Copyright (c) 2011-2015 Marco Maggi
 
 vicare> (+ 2 2)
 4
@@ -107,7 +107,7 @@ serialised version of it in a file whose name is built from
 @cindex Command line option @option{--compile-dependencies}
 @cindex @option{--compile-dependencies}, command line option
 Load the @rnrs{6} program @var{IMPORTS-FILE}, compile all the libraries
-upon which it depends and store them in the FASL repository.
+upon which it depends and store them in the @fasl{} repository.
 @var{IMPORTS-FILE} itself is not evaluated.
 
 @item --compile-library @var{LIBFILE}
@@ -160,7 +160,7 @@ Disable loading of run--command files.
 @item --rcfile @var{FILE}
 @cindex Command line option @option{--rcfile}
 @cindex @option{--rcfile}, command line option
-Load and evaluate @var{FILE} as an @rnrs{6} program at startup, before
+Load and evaluate @var{FILE} as an @rnrs{6} program at start up, before
 loading libraries and running the main program.  This option can be used
 multiple times.
 
@@ -229,7 +229,7 @@ level.  @ref{iklib cafe} for more details.
 @cindex Command line option @option{--repl-on-sigint}
 @cindex @option{--repl-on-sigint}, command line option
 When this option is used an interprocess signal handler is registered at
-program startup to enter a debugging @repl{} whenever a @code{SIGINT}
+program start up to enter a debugging @repl{} whenever a @code{SIGINT}
 signal is received.
 
 @item --raw-repl
@@ -286,7 +286,7 @@ Disables the effect of @option{--print-loaded-libraries}.
 @item --debug-messages
 @cindex Command line option @option{--debug-messages}
 @cindex @option{--debug-messages}, command line option
-Be more verbose aboud undertaken actions.  This is for debugging
+Be more verbose about undertaken actions.  This is for debugging
 purposes.
 
 @item --no-debug-messages
@@ -343,7 +343,7 @@ algorithms}.  For details on the built--in library locators @api{}
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn off use of the source optimizer.
+Turn off use of the source optimiser.
 
 @item -O1
 @itemx -O2
@@ -821,8 +821,8 @@ directory pathname.  Such pathnames are prepended, in the given order,
 to @func{library-source-search-path}.
 
 @item
-While @value{RAWEXECUTABLE} is running: we can modify at will the content of
-@func{libary-path}.
+While @value{RAWEXECUTABLE} is running: we can modify at will the
+content of @func{library-path}.
 @end enumerate
 
 @c ------------------------------------------------------------
@@ -1137,7 +1137,7 @@ It is assumed that all the library's dependency libraries are available
 in binary format.
 
 @item
-The loaded library is serialized to a @fasl{} file in an explicitly
+The loaded library is serialised to a @fasl{} file in an explicitly
 selected output file or in the selected
 @func{compiled-library-store-directory}.
 @end itemize
@@ -1232,7 +1232,7 @@ using, for example, the @option{-j} option of @gnu{} Make.
 @end itemize
 
 To use this strategy effectively we need to write all the compilation
-commands, correctly tracking the dependencies; this is tedius, but there
+commands, correctly tracking the dependencies; this is tedious, but there
 are ways to automatically generate the needed commands.
 
 @c page
@@ -1256,7 +1256,7 @@ All the program's dependency libraries are loaded, compiled, and
 possibly invoked and visited.
 
 @item
-All the libraries loaded from a source file are serialized to @fasl{}
+All the libraries loaded from a source file are serialised to @fasl{}
 files in the selected @func{compiled-library-store-directory}; all the
 libraries loaded from a @fasl{} file are left untouched.
 @end itemize
