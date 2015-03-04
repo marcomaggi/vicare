@@ -1427,7 +1427,8 @@ Usually file extensions are the tail part of a file name: everything
 after the last dot character; if the file name has no dot character: the
 extension is the empty string.  @value{PRJNAME} extends this concept by
 defining as file extensions strings that must be appended to a library
-stem to build a library pathname.
+stem to build a library pathname (@pxref{libutils file-system pathnames}
+for details on library stems).
 
 Source library file extensions are basically:
 
@@ -1578,7 +1579,7 @@ recognised: return @var{source-pathname} itself.
 
 @defun library-source-pathname->library-binary-tail-pathname @var{source-pathname}
 Given a string representing the file pathname of a source library: strip
-the file extensions if it is equal to a supported @value{PRJNAME} file
+the file extension if it is equal to a supported @value{PRJNAME} file
 extension, append the binary library extension and return the result.
 If the file extension is not recognised: return @var{source-pathname}
 itself with the binary library extension appended.
@@ -1645,14 +1646,14 @@ as follows:
 @enumerate
 @item
 The parameter is initialised to a list of directory pathnames built at
-package configuration time, in this order:
+package configuration time; the list contains:
 
 @example
 $(libdir)/vicare-scheme
 @end example
 
 @noindent
-on 64-bit @gnu{}+Linux systems, these are usually:
+on 64-bit @gnu{}+Linux systems, it is usually:
 
 @example
 /usr/local/lib64/vicare-scheme
@@ -1676,10 +1677,10 @@ is parsed and the directories are pepended, in the given order, in
 @func{library-binary-search-path}.
 
 @item
-If the options @option{-L} and @option{--library-path} are present on
-the command line: their value is expected to be a string representing a
-directory pathname.  Such pathnames are prepended, in the given order,
-to @func{library-binary-search-path}.
+If the option @option{-L} or @option{--library-path} is present on the
+command line one or more time: every option's value is expected to be a
+string representing a directory pathname.  Such pathnames are prepended,
+in the given order, to @func{library-binary-search-path}.
 
 @item
 While @value{EXECUTABLE} is running: we can modify at will the content
@@ -1693,8 +1694,8 @@ of @func{library-binary-search-path}.
 Hold a list of strings representing relative or absolute directory
 pathnames; the strings must represent syntactically valid pathname
 specifications, but the directories might not exist.  The list is used
-as search path for source libraries stored in text files, iterating from
-head to tail.
+as search path for source libraries stored in text files (in @ascii{} or
+@utf{}-8 format), iterating from head to tail.
 
 Files in the source search path have pathnames formed by appending a
 source library file extension to the library stem and prepending a
@@ -1731,10 +1732,10 @@ is parsed and the directories are prepended, in the given order, to
 @func{library-source-search-path}.
 
 @item
-If the option @option{--source-path} is present on the command line:
-their value is expected to be a string representing a directory
-pathname.  Such pathnames are prepended, in the given order, to
-@func{library-source-search-path}.
+If the option @option{--source-path} is present on the command line one
+or more time: every option's value is expected to be a string
+representing a directory pathname.  Such pathnames are prepended, in the
+given order, to @func{library-source-search-path}.
 
 @item
 While @value{EXECUTABLE} is running: we can modify at will the content
