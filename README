@@ -355,23 +355,19 @@ C. Resources
 
 The latest version of this package can be downloaded from:
 
-	 <http://sourceforge.net/projects/vicare-scheme/files/>
+       <https://bitbucket.org/marcomaggi/vicare-scheme/downloads>
 
 the home page of the Vicare project is at:
 
-               <http://marcomaggi.github.com/vicare.html>
+	       <http://marcomaggi.github.io/vicare.html>
 
 development takes place at:
 
-                 <http://github.com/marcomaggi/vicare/>
+		 <http://github.com/marcomaggi/vicare/>
 
 and as backup at:
 
-		     <http://gitorious.org/vicare>
-
-and at:
-
-	    <http://sourceforge.net/projects/vicare-scheme/>
+	   <https://bitbucket.org/marcomaggi/vicare-scheme/>
 
   The library Libffi can be found at:
 

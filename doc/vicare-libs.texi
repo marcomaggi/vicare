@@ -103,7 +103,7 @@
 @set COPYRIGHT_YEARS            2010-2014
 
 
-@set TARBALLURL                 @url{http://sourceforge.net/projects/vicare-scheme/files/}
+@set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
 @set EXECUTABLE                 @command{vicare}
 @set RAWEXECUTABLE              vicare
