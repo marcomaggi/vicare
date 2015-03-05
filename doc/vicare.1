@@ -1,23 +1,23 @@
-.\" Copyright (C), 2014  Marco Maggi
+.\" Copyright (C), 2014, 2015  Marco Maggi
 .\" You may distribute this file under the terms of the GNU Free
 .\" Documentation License.
-.TH vicare 1 2014-02-12
+.TH vicare 1 2015-03-05
 .SH NAME
 vicare \- A compiler for R6RS Scheme
 .SH SYNOPSIS
 .sp
 .nf
 \fBvicare\fR \fI[<vicare opts>]\fR \fB\-\-r6rs-script\fR \fI<script> [\-\- [<program opts]]\fR
-\fBvicare\fR \fI[<vicare opts>]\fR \fB\-\-compile\-dependencies\fR \fI<script>\fR
+\fBvicare\fR \fI[<vicare opts>]\fR \fB\-\-binary-program\fR \fI<program> [\-\- [<program opts]]\fR
+\fBvicare\fR \fI[<vicare opts>]\fR \fB\-\-compile\fR \fI<infile>\fR \fB\-\-output\fR \fI<oufile>\fR
 .fi
 .sp
 .SH DESCRIPTION
 .PP
 Vicare Scheme is an R6RS compliant implementation of the programming
-language Scheme, aiming to become a native compiler producing single
-threaded programs running on Intel x86 32-bit and 64-bit processors; it
-is tested only on GNU+Linux, no official support for other platforms is
-present, but it should run on Mac OS X.
+language Scheme, a native compiler producing single threaded programs
+running on Intel x86 32-bit and 64-bit processors; it is meant to
+support POSIX platforms.
 
 .\" ------------------------------------------------------------
 
@@ -30,11 +30,23 @@ R6RS top\-level program and execute it.
 .RE
 
 .PP
-\fB\-\-compile\-dependencies\fR \fIscript\fR
+\fB\-\-binary\-program\fR \fIprogram\fR
 .RS 4
-Load the \fIscript\fR as an R6RS top\-level program, load all the
-imported libraries, compile them and write them as FASL files to the
-FASL repository.
+Start \fIVicare\fR in binary program mode.  Load the binary file
+\fIprogram\fR as a compiled R6RS top\-level program and execute it.
+.RE
+
+.PP
+\fB\-\-compile\fR \fIinfile\fR
+.RS 4
+Compile \fIinfile\fR as program or library, recognising it by the file
+extension \fB.sps\fR or \fB.sls\fR.
+.RE
+
+.PP
+\fB\-\-output\fR \fIoufile\fR
+.RS 4
+Select the output file pathname for compiling.
 .RE
 
 .PP
@@ -54,27 +66,17 @@ Display version informations then exit.
 .SH SOME CONFIGURATION OPTIONS
 .PP
 \fB\-L\fR \fIdirectory\fR,
-\fB\-\-search\-path\fR \fIdirectory\fR
+\fB\-\-library\-path\fR \fIdirectory\fR
 .RS 4
-Add \fIdirectory\fR to the search path for libraries and include files.
-This option can be used multiple times.
-.RE
-
-.PP
-\fB\-F\fR \fIdirectory\fR,
-\fB\-\-fasl\-path\fR \fIdirectory\fR
-.RS 4
-Add \fIdirectory\fR to the search path for precompiled FASL files.  This
+Add \fIdirectory\fR to the search path for binary libraries.  This
 option can be used multiple times.
 .RE
 
 .PP
-\fB\-\-fasl\-directory\fR \fIdirectory\fR
+\fB\-\-source\-path\fR \fIdirectory\fR
 .RS 4
-Select \fIdirectory\fR as top pathname under which FASL files are stored
-when libraries are compiled; \fIdirectory\fR must exist.  When used
-multiple times: the last one wins.  The selected directory is always
-prepended to the FASL search path.
+Add \fIdirectory\fR to the search path for source libraries and include
+files.  This option can be used multiple times.
 .RE
 
 .PP
@@ -101,22 +103,10 @@ The official documentation is distributed in Texinfo format; see the
 files \fBvicare-scheme\fR, \fBvicare-libs\fR, \fBnausicaa\fR,
 \fBmehve\fR.
 .PP
-The latest version of this package can be downloaded from:
-.PP
-.RS 4
-\%http://sourceforge.net/projects/vicare-scheme/files/
-.RE
-.PP
 The home page of the Vicare project is at:
 .PP
 .RS 4
-\%http://marcomaggi.github.com/vicare.html
-.RE
-.PP
-Development takes place at:
-.PP
-.RS 4
-\%http://github.com/marcomaggi/vicare/
+\%http://marcomaggi.github.io/vicare.html
 .RE
 
 .\" ------------------------------------------------------------
