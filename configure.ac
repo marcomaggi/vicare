@@ -1563,11 +1563,11 @@ AC_CONFIG_FILES([Makefile]
                 [scripts/binfmt-program-launcher.sh]
                 [scripts/scheme-script]
                 [src/vicare-platform.h]
-                [lib/vicare/platform/configuration.sls]
-                [lib/vicare/platform/constants.sls]
-                [lib/vicare/platform/errno.sls]
-                [lib/vicare/platform/words.sls]
-                [lib/nausicaa/uri/pathnames.sls])
+                [lib/vicare/platform/configuration.vicare.sls]
+                [lib/vicare/platform/constants.vicare.sls]
+                [lib/vicare/platform/errno.vicare.sls]
+                [lib/vicare/platform/words.vicare.sls]
+                [lib/nausicaa/uri/pathnames.vicare.sls])
 AC_OUTPUT
 
 ### end of file

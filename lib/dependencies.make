@@ -77,169 +77,169 @@ endif
 CLEANFILES += lib/vicare/platform/features.fasl
 
 lib/vicare/platform/utilities.fasl: \
-		lib/vicare/platform/utilities.sls \
+		lib/vicare/platform/utilities.vicare.sls \
 		lib/vicare/platform/constants.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_utilities_fasldir = $(bundledlibsdir)/vicare/platform
-lib_vicare_platform_utilities_slsdir  = $(bundledlibsdir)/vicare/platform
+lib_vicare_platform_utilities_vicare_slsdir  = $(bundledlibsdir)/vicare/platform
 nodist_lib_vicare_platform_utilities_fasl_DATA = lib/vicare/platform/utilities.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_platform_utilities_sls_DATA = lib/vicare/platform/utilities.sls
+dist_lib_vicare_platform_utilities_vicare_sls_DATA = lib/vicare/platform/utilities.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/platform/utilities.sls
+EXTRA_DIST += lib/vicare/platform/utilities.vicare.sls
 CLEANFILES += lib/vicare/platform/utilities.fasl
 
 lib/vicare/unsafe/capi.fasl: \
-		lib/vicare/unsafe/capi.sls \
+		lib/vicare/unsafe/capi.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_unsafe_capi_fasldir = $(bundledlibsdir)/vicare/unsafe
-lib_vicare_unsafe_capi_slsdir  = $(bundledlibsdir)/vicare/unsafe
+lib_vicare_unsafe_capi_vicare_slsdir  = $(bundledlibsdir)/vicare/unsafe
 nodist_lib_vicare_unsafe_capi_fasl_DATA = lib/vicare/unsafe/capi.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_unsafe_capi_sls_DATA = lib/vicare/unsafe/capi.sls
+dist_lib_vicare_unsafe_capi_vicare_sls_DATA = lib/vicare/unsafe/capi.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/unsafe/capi.sls
+EXTRA_DIST += lib/vicare/unsafe/capi.vicare.sls
 CLEANFILES += lib/vicare/unsafe/capi.fasl
 
 lib/vicare/unsafe/operations.fasl: \
-		lib/vicare/unsafe/operations.sls \
+		lib/vicare/unsafe/operations.vicare.sls \
 		lib/vicare/platform/configuration.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_unsafe_operations_fasldir = $(bundledlibsdir)/vicare/unsafe
-lib_vicare_unsafe_operations_slsdir  = $(bundledlibsdir)/vicare/unsafe
+lib_vicare_unsafe_operations_vicare_slsdir  = $(bundledlibsdir)/vicare/unsafe
 nodist_lib_vicare_unsafe_operations_fasl_DATA = lib/vicare/unsafe/operations.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_unsafe_operations_sls_DATA = lib/vicare/unsafe/operations.sls
+dist_lib_vicare_unsafe_operations_vicare_sls_DATA = lib/vicare/unsafe/operations.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/unsafe/operations.sls
+EXTRA_DIST += lib/vicare/unsafe/operations.vicare.sls
 CLEANFILES += lib/vicare/unsafe/operations.fasl
 
 lib/vicare/unsafe/unicode.fasl: \
-		lib/vicare/unsafe/unicode.sls \
+		lib/vicare/unsafe/unicode.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_unsafe_unicode_fasldir = $(bundledlibsdir)/vicare/unsafe
-lib_vicare_unsafe_unicode_slsdir  = $(bundledlibsdir)/vicare/unsafe
+lib_vicare_unsafe_unicode_vicare_slsdir  = $(bundledlibsdir)/vicare/unsafe
 nodist_lib_vicare_unsafe_unicode_fasl_DATA = lib/vicare/unsafe/unicode.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_unsafe_unicode_sls_DATA = lib/vicare/unsafe/unicode.sls
+dist_lib_vicare_unsafe_unicode_vicare_sls_DATA = lib/vicare/unsafe/unicode.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/unsafe/unicode.sls
+EXTRA_DIST += lib/vicare/unsafe/unicode.vicare.sls
 CLEANFILES += lib/vicare/unsafe/unicode.fasl
 
 lib/vicare/language-extensions/cond-expand.fasl: \
-		lib/vicare/language-extensions/cond-expand.sls \
+		lib/vicare/language-extensions/cond-expand.vicare.sls \
 		lib/vicare/language-extensions/cond-expand/registry.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_cond_expand_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_cond_expand_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_cond_expand_fasl_DATA = lib/vicare/language-extensions/cond-expand.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_sls_DATA = lib/vicare/language-extensions/cond-expand.sls
+dist_lib_vicare_language_extensions_cond_expand_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand.fasl
 
 lib/vicare/language-extensions/cond-expand/registry.fasl: \
-		lib/vicare/language-extensions/cond-expand/registry.sls \
+		lib/vicare/language-extensions/cond-expand/registry.vicare.sls \
 		lib/vicare/language-extensions/cond-expand/platform-features.fasl \
 		lib/vicare/language-extensions/cond-expand/configuration-features.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_registry_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_registry_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
+lib_vicare_language_extensions_cond_expand_registry_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
 nodist_lib_vicare_language_extensions_cond_expand_registry_fasl_DATA = lib/vicare/language-extensions/cond-expand/registry.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_registry_sls_DATA = lib/vicare/language-extensions/cond-expand/registry.sls
+dist_lib_vicare_language_extensions_cond_expand_registry_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/registry.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/registry.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand/registry.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/registry.fasl
 
 lib/vicare/language-extensions/cond-expand/platform-features.fasl: \
-		lib/vicare/language-extensions/cond-expand/platform-features.sls \
+		lib/vicare/language-extensions/cond-expand/platform-features.vicare.sls \
 		lib/vicare/language-extensions/cond-expand/OS-id-features.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_platform_features_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_platform_features_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
+lib_vicare_language_extensions_cond_expand_platform_features_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
 nodist_lib_vicare_language_extensions_cond_expand_platform_features_fasl_DATA = lib/vicare/language-extensions/cond-expand/platform-features.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_platform_features_sls_DATA = lib/vicare/language-extensions/cond-expand/platform-features.sls
+dist_lib_vicare_language_extensions_cond_expand_platform_features_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/platform-features.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/platform-features.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand/platform-features.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/platform-features.fasl
 
 lib/vicare/language-extensions/cond-expand/OS-id-features.fasl: \
-		lib/vicare/language-extensions/cond-expand/OS-id-features.sls \
+		lib/vicare/language-extensions/cond-expand/OS-id-features.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_OS_id_features_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_OS_id_features_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
+lib_vicare_language_extensions_cond_expand_OS_id_features_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
 nodist_lib_vicare_language_extensions_cond_expand_OS_id_features_fasl_DATA = lib/vicare/language-extensions/cond-expand/OS-id-features.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_OS_id_features_sls_DATA = lib/vicare/language-extensions/cond-expand/OS-id-features.sls
+dist_lib_vicare_language_extensions_cond_expand_OS_id_features_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/OS-id-features.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/OS-id-features.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand/OS-id-features.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/OS-id-features.fasl
 
 lib/vicare/language-extensions/cond-expand/configuration-features.fasl: \
-		lib/vicare/language-extensions/cond-expand/configuration-features.sls \
+		lib/vicare/language-extensions/cond-expand/configuration-features.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_configuration_features_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_configuration_features_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
+lib_vicare_language_extensions_cond_expand_configuration_features_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
 nodist_lib_vicare_language_extensions_cond_expand_configuration_features_fasl_DATA = lib/vicare/language-extensions/cond-expand/configuration-features.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_configuration_features_sls_DATA = lib/vicare/language-extensions/cond-expand/configuration-features.sls
+dist_lib_vicare_language_extensions_cond_expand_configuration_features_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/configuration-features.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/configuration-features.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand/configuration-features.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/configuration-features.fasl
 
 lib/vicare/language-extensions/cond-expand/feature-cond.fasl: \
-		lib/vicare/language-extensions/cond-expand/feature-cond.sls \
+		lib/vicare/language-extensions/cond-expand/feature-cond.vicare.sls \
 		lib/vicare/language-extensions/cond-expand/registry.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_feature_cond_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_feature_cond_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
+lib_vicare_language_extensions_cond_expand_feature_cond_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
 nodist_lib_vicare_language_extensions_cond_expand_feature_cond_fasl_DATA = lib/vicare/language-extensions/cond-expand/feature-cond.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_feature_cond_sls_DATA = lib/vicare/language-extensions/cond-expand/feature-cond.sls
+dist_lib_vicare_language_extensions_cond_expand_feature_cond_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/feature-cond.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/feature-cond.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand/feature-cond.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/feature-cond.fasl
 
 lib/vicare/language-extensions/cond-expand/helpers.fasl: \
-		lib/vicare/language-extensions/cond-expand/helpers.sls \
+		lib/vicare/language-extensions/cond-expand/helpers.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_helpers_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
-lib_vicare_language_extensions_cond_expand_helpers_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
+lib_vicare_language_extensions_cond_expand_helpers_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/cond-expand
 nodist_lib_vicare_language_extensions_cond_expand_helpers_fasl_DATA = lib/vicare/language-extensions/cond-expand/helpers.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_cond_expand_helpers_sls_DATA = lib/vicare/language-extensions/cond-expand/helpers.sls
+dist_lib_vicare_language_extensions_cond_expand_helpers_vicare_sls_DATA = lib/vicare/language-extensions/cond-expand/helpers.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/cond-expand/helpers.sls
+EXTRA_DIST += lib/vicare/language-extensions/cond-expand/helpers.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/cond-expand/helpers.fasl
 
 lib/vicare/arguments/validation.fasl: \
-		lib/vicare/arguments/validation.sls \
+		lib/vicare/arguments/validation.vicare.sls \
 		lib/vicare/platform/configuration.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/platform/words.fasl \
@@ -248,16 +248,16 @@ lib/vicare/arguments/validation.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_arguments_validation_fasldir = $(bundledlibsdir)/vicare/arguments
-lib_vicare_arguments_validation_slsdir  = $(bundledlibsdir)/vicare/arguments
+lib_vicare_arguments_validation_vicare_slsdir  = $(bundledlibsdir)/vicare/arguments
 nodist_lib_vicare_arguments_validation_fasl_DATA = lib/vicare/arguments/validation.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_arguments_validation_sls_DATA = lib/vicare/arguments/validation.sls
+dist_lib_vicare_arguments_validation_vicare_sls_DATA = lib/vicare/arguments/validation.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/arguments/validation.sls
+EXTRA_DIST += lib/vicare/arguments/validation.vicare.sls
 CLEANFILES += lib/vicare/arguments/validation.fasl
 
 lib/vicare/arguments/general-c-buffers.fasl: \
-		lib/vicare/arguments/general-c-buffers.sls \
+		lib/vicare/arguments/general-c-buffers.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
@@ -265,16 +265,16 @@ lib/vicare/arguments/general-c-buffers.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_arguments_general_c_buffers_fasldir = $(bundledlibsdir)/vicare/arguments
-lib_vicare_arguments_general_c_buffers_slsdir  = $(bundledlibsdir)/vicare/arguments
+lib_vicare_arguments_general_c_buffers_vicare_slsdir  = $(bundledlibsdir)/vicare/arguments
 nodist_lib_vicare_arguments_general_c_buffers_fasl_DATA = lib/vicare/arguments/general-c-buffers.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_arguments_general_c_buffers_sls_DATA = lib/vicare/arguments/general-c-buffers.sls
+dist_lib_vicare_arguments_general_c_buffers_vicare_sls_DATA = lib/vicare/arguments/general-c-buffers.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/arguments/general-c-buffers.sls
+EXTRA_DIST += lib/vicare/arguments/general-c-buffers.vicare.sls
 CLEANFILES += lib/vicare/arguments/general-c-buffers.fasl
 
 lib/vicare/language-extensions/syntaxes.fasl: \
-		lib/vicare/language-extensions/syntaxes.sls \
+		lib/vicare/language-extensions/syntaxes.vicare.sls \
 		lib/vicare/platform/configuration.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
@@ -283,162 +283,162 @@ lib/vicare/language-extensions/syntaxes.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_syntaxes_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_syntaxes_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_syntaxes_fasl_DATA = lib/vicare/language-extensions/syntaxes.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_syntaxes_sls_DATA = lib/vicare/language-extensions/syntaxes.sls
+dist_lib_vicare_language_extensions_syntaxes_vicare_sls_DATA = lib/vicare/language-extensions/syntaxes.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/syntaxes.sls
+EXTRA_DIST += lib/vicare/language-extensions/syntaxes.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/syntaxes.fasl
 
 lib/vicare/language-extensions/define-record-extended.fasl: \
-		lib/vicare/language-extensions/define-record-extended.sls \
+		lib/vicare/language-extensions/define-record-extended.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_define_record_extended_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_define_record_extended_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_define_record_extended_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_define_record_extended_fasl_DATA = lib/vicare/language-extensions/define-record-extended.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_define_record_extended_sls_DATA = lib/vicare/language-extensions/define-record-extended.sls
+dist_lib_vicare_language_extensions_define_record_extended_vicare_sls_DATA = lib/vicare/language-extensions/define-record-extended.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/define-record-extended.sls
+EXTRA_DIST += lib/vicare/language-extensions/define-record-extended.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/define-record-extended.fasl
 
 lib/vicare/language-extensions/amb.fasl: \
-		lib/vicare/language-extensions/amb.sls \
+		lib/vicare/language-extensions/amb.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_amb_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_amb_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_amb_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_amb_fasl_DATA = lib/vicare/language-extensions/amb.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_amb_sls_DATA = lib/vicare/language-extensions/amb.sls
+dist_lib_vicare_language_extensions_amb_vicare_sls_DATA = lib/vicare/language-extensions/amb.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/amb.sls
+EXTRA_DIST += lib/vicare/language-extensions/amb.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/amb.fasl
 
 lib/vicare/language-extensions/simple-match.fasl: \
-		lib/vicare/language-extensions/simple-match.sls \
+		lib/vicare/language-extensions/simple-match.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_simple_match_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_simple_match_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_simple_match_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_simple_match_fasl_DATA = lib/vicare/language-extensions/simple-match.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_simple_match_sls_DATA = lib/vicare/language-extensions/simple-match.sls
+dist_lib_vicare_language_extensions_simple_match_vicare_sls_DATA = lib/vicare/language-extensions/simple-match.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/simple-match.sls
+EXTRA_DIST += lib/vicare/language-extensions/simple-match.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/simple-match.fasl
 
 lib/vicare/language-extensions/keywords.fasl: \
-		lib/vicare/language-extensions/keywords.sls \
+		lib/vicare/language-extensions/keywords.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_keywords_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_keywords_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_keywords_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_keywords_fasl_DATA = lib/vicare/language-extensions/keywords.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_keywords_sls_DATA = lib/vicare/language-extensions/keywords.sls
+dist_lib_vicare_language_extensions_keywords_vicare_sls_DATA = lib/vicare/language-extensions/keywords.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/keywords.sls
+EXTRA_DIST += lib/vicare/language-extensions/keywords.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/keywords.fasl
 
 lib/vicare/language-extensions/sentinels.fasl: \
-		lib/vicare/language-extensions/sentinels.sls \
+		lib/vicare/language-extensions/sentinels.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_sentinels_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_sentinels_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_sentinels_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_sentinels_fasl_DATA = lib/vicare/language-extensions/sentinels.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_sentinels_sls_DATA = lib/vicare/language-extensions/sentinels.sls
+dist_lib_vicare_language_extensions_sentinels_vicare_sls_DATA = lib/vicare/language-extensions/sentinels.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/sentinels.sls
+EXTRA_DIST += lib/vicare/language-extensions/sentinels.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/sentinels.fasl
 
 lib/vicare/language-extensions/namespaces.fasl: \
-		lib/vicare/language-extensions/namespaces.sls \
+		lib/vicare/language-extensions/namespaces.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_namespaces_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_namespaces_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_namespaces_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_namespaces_fasl_DATA = lib/vicare/language-extensions/namespaces.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_namespaces_sls_DATA = lib/vicare/language-extensions/namespaces.sls
+dist_lib_vicare_language_extensions_namespaces_vicare_sls_DATA = lib/vicare/language-extensions/namespaces.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/namespaces.sls
+EXTRA_DIST += lib/vicare/language-extensions/namespaces.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/namespaces.fasl
 
 lib/vicare/language-extensions/custom-ports.fasl: \
-		lib/vicare/language-extensions/custom-ports.sls \
+		lib/vicare/language-extensions/custom-ports.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_custom_ports_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_custom_ports_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_custom_ports_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_custom_ports_fasl_DATA = lib/vicare/language-extensions/custom-ports.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_custom_ports_sls_DATA = lib/vicare/language-extensions/custom-ports.sls
+dist_lib_vicare_language_extensions_custom_ports_vicare_sls_DATA = lib/vicare/language-extensions/custom-ports.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/custom-ports.sls
+EXTRA_DIST += lib/vicare/language-extensions/custom-ports.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/custom-ports.fasl
 
 lib/vicare/language-extensions/variables.fasl: \
-		lib/vicare/language-extensions/variables.sls \
+		lib/vicare/language-extensions/variables.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_variables_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_variables_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_variables_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_variables_fasl_DATA = lib/vicare/language-extensions/variables.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_variables_sls_DATA = lib/vicare/language-extensions/variables.sls
+dist_lib_vicare_language_extensions_variables_vicare_sls_DATA = lib/vicare/language-extensions/variables.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/variables.sls
+EXTRA_DIST += lib/vicare/language-extensions/variables.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/variables.fasl
 
 lib/vicare/language-extensions/streams.fasl: \
-		lib/vicare/language-extensions/streams.sls \
+		lib/vicare/language-extensions/streams.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_streams_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_streams_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_streams_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_streams_fasl_DATA = lib/vicare/language-extensions/streams.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_streams_sls_DATA = lib/vicare/language-extensions/streams.sls
+dist_lib_vicare_language_extensions_streams_vicare_sls_DATA = lib/vicare/language-extensions/streams.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/streams.sls
+EXTRA_DIST += lib/vicare/language-extensions/streams.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/streams.fasl
 
 lib/vicare/language-extensions/loops.fasl: \
-		lib/vicare/language-extensions/loops.sls \
+		lib/vicare/language-extensions/loops.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_loops_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_loops_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_loops_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_loops_fasl_DATA = lib/vicare/language-extensions/loops.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_loops_sls_DATA = lib/vicare/language-extensions/loops.sls
+dist_lib_vicare_language_extensions_loops_vicare_sls_DATA = lib/vicare/language-extensions/loops.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/loops.sls
+EXTRA_DIST += lib/vicare/language-extensions/loops.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/loops.fasl
 
 lib/vicare/language-extensions/ascii-chars.fasl: \
-		lib/vicare/language-extensions/ascii-chars.sls \
+		lib/vicare/language-extensions/ascii-chars.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/ascii-chars/syntaxes.fasl \
@@ -446,191 +446,191 @@ lib/vicare/language-extensions/ascii-chars.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_ascii_chars_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_ascii_chars_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_ascii_chars_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_ascii_chars_fasl_DATA = lib/vicare/language-extensions/ascii-chars.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_ascii_chars_sls_DATA = lib/vicare/language-extensions/ascii-chars.sls
+dist_lib_vicare_language_extensions_ascii_chars_vicare_sls_DATA = lib/vicare/language-extensions/ascii-chars.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/ascii-chars.sls
+EXTRA_DIST += lib/vicare/language-extensions/ascii-chars.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/ascii-chars.fasl
 
 lib/vicare/language-extensions/ascii-chars/syntaxes.fasl: \
-		lib/vicare/language-extensions/ascii-chars/syntaxes.sls \
+		lib/vicare/language-extensions/ascii-chars/syntaxes.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_ascii_chars_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions/ascii-chars
-lib_vicare_language_extensions_ascii_chars_syntaxes_slsdir  = $(bundledlibsdir)/vicare/language-extensions/ascii-chars
+lib_vicare_language_extensions_ascii_chars_syntaxes_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions/ascii-chars
 nodist_lib_vicare_language_extensions_ascii_chars_syntaxes_fasl_DATA = lib/vicare/language-extensions/ascii-chars/syntaxes.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_ascii_chars_syntaxes_sls_DATA = lib/vicare/language-extensions/ascii-chars/syntaxes.sls
+dist_lib_vicare_language_extensions_ascii_chars_syntaxes_vicare_sls_DATA = lib/vicare/language-extensions/ascii-chars/syntaxes.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/ascii-chars/syntaxes.sls
+EXTRA_DIST += lib/vicare/language-extensions/ascii-chars/syntaxes.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/ascii-chars/syntaxes.fasl
 
 lib/vicare/language-extensions/comparisons.fasl: \
-		lib/vicare/language-extensions/comparisons.sls \
+		lib/vicare/language-extensions/comparisons.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_comparisons_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_comparisons_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_comparisons_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_comparisons_fasl_DATA = lib/vicare/language-extensions/comparisons.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_comparisons_sls_DATA = lib/vicare/language-extensions/comparisons.sls
+dist_lib_vicare_language_extensions_comparisons_vicare_sls_DATA = lib/vicare/language-extensions/comparisons.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/comparisons.sls
+EXTRA_DIST += lib/vicare/language-extensions/comparisons.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/comparisons.fasl
 
 lib/vicare/crypto/randomisations.fasl: \
-		lib/vicare/crypto/randomisations.sls \
+		lib/vicare/crypto/randomisations.vicare.sls \
 		lib/vicare/crypto/randomisations/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_fasldir = $(bundledlibsdir)/vicare/crypto
-lib_vicare_crypto_randomisations_slsdir  = $(bundledlibsdir)/vicare/crypto
+lib_vicare_crypto_randomisations_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto
 nodist_lib_vicare_crypto_randomisations_fasl_DATA = lib/vicare/crypto/randomisations.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_sls_DATA = lib/vicare/crypto/randomisations.sls
+dist_lib_vicare_crypto_randomisations_vicare_sls_DATA = lib/vicare/crypto/randomisations.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations.fasl
 
 lib/vicare/crypto/randomisations/low.fasl: \
-		lib/vicare/crypto/randomisations/low.sls \
+		lib/vicare/crypto/randomisations/low.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_low_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_low_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_low_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_low_fasl_DATA = lib/vicare/crypto/randomisations/low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_low_sls_DATA = lib/vicare/crypto/randomisations/low.sls
+dist_lib_vicare_crypto_randomisations_low_vicare_sls_DATA = lib/vicare/crypto/randomisations/low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/low.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/low.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/low.fasl
 
 lib/vicare/language-extensions/hooks.fasl: \
-		lib/vicare/language-extensions/hooks.sls \
+		lib/vicare/language-extensions/hooks.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_hooks_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_hooks_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_hooks_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_hooks_fasl_DATA = lib/vicare/language-extensions/hooks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_hooks_sls_DATA = lib/vicare/language-extensions/hooks.sls
+dist_lib_vicare_language_extensions_hooks_vicare_sls_DATA = lib/vicare/language-extensions/hooks.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/hooks.sls
+EXTRA_DIST += lib/vicare/language-extensions/hooks.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/hooks.fasl
 
 lib/vicare/language-extensions/callables.fasl: \
-		lib/vicare/language-extensions/callables.sls \
+		lib/vicare/language-extensions/callables.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_callables_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_callables_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_callables_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_callables_fasl_DATA = lib/vicare/language-extensions/callables.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_callables_sls_DATA = lib/vicare/language-extensions/callables.sls
+dist_lib_vicare_language_extensions_callables_vicare_sls_DATA = lib/vicare/language-extensions/callables.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/callables.sls
+EXTRA_DIST += lib/vicare/language-extensions/callables.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/callables.fasl
 
 lib/vicare/language-extensions/c-enumerations.fasl: \
-		lib/vicare/language-extensions/c-enumerations.sls \
+		lib/vicare/language-extensions/c-enumerations.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_c_enumerations_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_c_enumerations_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_c_enumerations_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_c_enumerations_fasl_DATA = lib/vicare/language-extensions/c-enumerations.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_c_enumerations_sls_DATA = lib/vicare/language-extensions/c-enumerations.sls
+dist_lib_vicare_language_extensions_c_enumerations_vicare_sls_DATA = lib/vicare/language-extensions/c-enumerations.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/c-enumerations.sls
+EXTRA_DIST += lib/vicare/language-extensions/c-enumerations.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/c-enumerations.fasl
 
 lib/vicare/language-extensions/identifier-substitutions.fasl: \
-		lib/vicare/language-extensions/identifier-substitutions.sls \
+		lib/vicare/language-extensions/identifier-substitutions.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_identifier_substitutions_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_identifier_substitutions_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_identifier_substitutions_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_identifier_substitutions_fasl_DATA = lib/vicare/language-extensions/identifier-substitutions.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_identifier_substitutions_sls_DATA = lib/vicare/language-extensions/identifier-substitutions.sls
+dist_lib_vicare_language_extensions_identifier_substitutions_vicare_sls_DATA = lib/vicare/language-extensions/identifier-substitutions.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/identifier-substitutions.sls
+EXTRA_DIST += lib/vicare/language-extensions/identifier-substitutions.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/identifier-substitutions.fasl
 
 lib/vicare/language-extensions/makers.fasl: \
-		lib/vicare/language-extensions/makers.sls \
+		lib/vicare/language-extensions/makers.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_makers_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_makers_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_makers_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_makers_fasl_DATA = lib/vicare/language-extensions/makers.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_makers_sls_DATA = lib/vicare/language-extensions/makers.sls
+dist_lib_vicare_language_extensions_makers_vicare_sls_DATA = lib/vicare/language-extensions/makers.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/makers.sls
+EXTRA_DIST += lib/vicare/language-extensions/makers.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/makers.fasl
 
 lib/vicare/language-extensions/ensure.fasl: \
-		lib/vicare/language-extensions/ensure.sls \
+		lib/vicare/language-extensions/ensure.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_ensure_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_ensure_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_ensure_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_ensure_fasl_DATA = lib/vicare/language-extensions/ensure.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_ensure_sls_DATA = lib/vicare/language-extensions/ensure.sls
+dist_lib_vicare_language_extensions_ensure_vicare_sls_DATA = lib/vicare/language-extensions/ensure.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/ensure.sls
+EXTRA_DIST += lib/vicare/language-extensions/ensure.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/ensure.fasl
 
 lib/vicare/language-extensions/conditions-and-restarts.fasl: \
-		lib/vicare/language-extensions/conditions-and-restarts.sls \
+		lib/vicare/language-extensions/conditions-and-restarts.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_conditions_and_restarts_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_conditions_and_restarts_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_conditions_and_restarts_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
 nodist_lib_vicare_language_extensions_conditions_and_restarts_fasl_DATA = lib/vicare/language-extensions/conditions-and-restarts.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_conditions_and_restarts_sls_DATA = lib/vicare/language-extensions/conditions-and-restarts.sls
+dist_lib_vicare_language_extensions_conditions_and_restarts_vicare_sls_DATA = lib/vicare/language-extensions/conditions-and-restarts.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/language-extensions/conditions-and-restarts.sls
+EXTRA_DIST += lib/vicare/language-extensions/conditions-and-restarts.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/conditions-and-restarts.fasl
 
 lib/vicare/build-tools/automake.fasl: \
-		lib/vicare/build-tools/automake.sls \
+		lib/vicare/build-tools/automake.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_build_tools_automake_fasldir = $(bundledlibsdir)/vicare/build-tools
-lib_vicare_build_tools_automake_slsdir  = $(bundledlibsdir)/vicare/build-tools
+lib_vicare_build_tools_automake_vicare_slsdir  = $(bundledlibsdir)/vicare/build-tools
 nodist_lib_vicare_build_tools_automake_fasl_DATA = lib/vicare/build-tools/automake.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_build_tools_automake_sls_DATA = lib/vicare/build-tools/automake.sls
+dist_lib_vicare_build_tools_automake_vicare_sls_DATA = lib/vicare/build-tools/automake.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/build-tools/automake.sls
+EXTRA_DIST += lib/vicare/build-tools/automake.vicare.sls
 CLEANFILES += lib/vicare/build-tools/automake.fasl
 
 lib/vicare/posix.fasl: \
-		lib/vicare/posix.sls \
+		lib/vicare/posix.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -646,16 +646,16 @@ lib/vicare/posix.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_posix_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_posix_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_posix_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_posix_fasl_DATA = lib/vicare/posix.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_sls_DATA = lib/vicare/posix.sls
+dist_lib_vicare_posix_vicare_sls_DATA = lib/vicare/posix.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix.sls
+EXTRA_DIST += lib/vicare/posix.vicare.sls
 CLEANFILES += lib/vicare/posix.fasl
 
 lib/vicare/containers/weak-hashtables.fasl: \
-		lib/vicare/containers/weak-hashtables.sls \
+		lib/vicare/containers/weak-hashtables.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -663,140 +663,140 @@ lib/vicare/containers/weak-hashtables.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_weak_hashtables_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_weak_hashtables_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_weak_hashtables_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_weak_hashtables_fasl_DATA = lib/vicare/containers/weak-hashtables.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_weak_hashtables_sls_DATA = lib/vicare/containers/weak-hashtables.sls
+dist_lib_vicare_containers_weak_hashtables_vicare_sls_DATA = lib/vicare/containers/weak-hashtables.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/weak-hashtables.sls
+EXTRA_DIST += lib/vicare/containers/weak-hashtables.vicare.sls
 CLEANFILES += lib/vicare/containers/weak-hashtables.fasl
 
 lib/vicare/checks.fasl: \
-		lib/vicare/checks.sls \
+		lib/vicare/checks.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_checks_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_checks_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_checks_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_checks_fasl_DATA = lib/vicare/checks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_checks_sls_DATA = lib/vicare/checks.sls
+dist_lib_vicare_checks_vicare_sls_DATA = lib/vicare/checks.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/checks.sls
+EXTRA_DIST += lib/vicare/checks.vicare.sls
 CLEANFILES += lib/vicare/checks.fasl
 
 lib/vicare/crypto/randomisations/blum-blum-shub.fasl: \
-		lib/vicare/crypto/randomisations/blum-blum-shub.sls \
+		lib/vicare/crypto/randomisations/blum-blum-shub.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_blum_blum_shub_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_blum_blum_shub_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_blum_blum_shub_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_blum_blum_shub_fasl_DATA = lib/vicare/crypto/randomisations/blum-blum-shub.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_blum_blum_shub_sls_DATA = lib/vicare/crypto/randomisations/blum-blum-shub.sls
+dist_lib_vicare_crypto_randomisations_blum_blum_shub_vicare_sls_DATA = lib/vicare/crypto/randomisations/blum-blum-shub.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/blum-blum-shub.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/blum-blum-shub.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/blum-blum-shub.fasl
 
 lib/vicare/crypto/randomisations/borosh.fasl: \
-		lib/vicare/crypto/randomisations/borosh.sls \
+		lib/vicare/crypto/randomisations/borosh.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_borosh_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_borosh_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_borosh_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_borosh_fasl_DATA = lib/vicare/crypto/randomisations/borosh.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_borosh_sls_DATA = lib/vicare/crypto/randomisations/borosh.sls
+dist_lib_vicare_crypto_randomisations_borosh_vicare_sls_DATA = lib/vicare/crypto/randomisations/borosh.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/borosh.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/borosh.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/borosh.fasl
 
 lib/vicare/crypto/randomisations/cmrg.fasl: \
-		lib/vicare/crypto/randomisations/cmrg.sls \
+		lib/vicare/crypto/randomisations/cmrg.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_cmrg_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_cmrg_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_cmrg_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_cmrg_fasl_DATA = lib/vicare/crypto/randomisations/cmrg.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_cmrg_sls_DATA = lib/vicare/crypto/randomisations/cmrg.sls
+dist_lib_vicare_crypto_randomisations_cmrg_vicare_sls_DATA = lib/vicare/crypto/randomisations/cmrg.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/cmrg.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/cmrg.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/cmrg.fasl
 
 lib/vicare/crypto/randomisations/distributions.fasl: \
-		lib/vicare/crypto/randomisations/distributions.sls \
+		lib/vicare/crypto/randomisations/distributions.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_distributions_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_distributions_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_distributions_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_distributions_fasl_DATA = lib/vicare/crypto/randomisations/distributions.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_distributions_sls_DATA = lib/vicare/crypto/randomisations/distributions.sls
+dist_lib_vicare_crypto_randomisations_distributions_vicare_sls_DATA = lib/vicare/crypto/randomisations/distributions.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/distributions.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/distributions.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/distributions.fasl
 
 lib/vicare/crypto/randomisations/lists.fasl: \
-		lib/vicare/crypto/randomisations/lists.sls \
+		lib/vicare/crypto/randomisations/lists.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_lists_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_lists_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_lists_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_lists_fasl_DATA = lib/vicare/crypto/randomisations/lists.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_lists_sls_DATA = lib/vicare/crypto/randomisations/lists.sls
+dist_lib_vicare_crypto_randomisations_lists_vicare_sls_DATA = lib/vicare/crypto/randomisations/lists.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/lists.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/lists.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/lists.fasl
 
 lib/vicare/crypto/randomisations/marsaglia.fasl: \
-		lib/vicare/crypto/randomisations/marsaglia.sls \
+		lib/vicare/crypto/randomisations/marsaglia.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_marsaglia_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_marsaglia_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_marsaglia_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_marsaglia_fasl_DATA = lib/vicare/crypto/randomisations/marsaglia.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_marsaglia_sls_DATA = lib/vicare/crypto/randomisations/marsaglia.sls
+dist_lib_vicare_crypto_randomisations_marsaglia_vicare_sls_DATA = lib/vicare/crypto/randomisations/marsaglia.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/marsaglia.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/marsaglia.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/marsaglia.fasl
 
 lib/vicare/crypto/randomisations/mersenne.fasl: \
-		lib/vicare/crypto/randomisations/mersenne.sls \
+		lib/vicare/crypto/randomisations/mersenne.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_mersenne_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_mersenne_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_mersenne_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_mersenne_fasl_DATA = lib/vicare/crypto/randomisations/mersenne.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_mersenne_sls_DATA = lib/vicare/crypto/randomisations/mersenne.sls
+dist_lib_vicare_crypto_randomisations_mersenne_vicare_sls_DATA = lib/vicare/crypto/randomisations/mersenne.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/mersenne.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/mersenne.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/mersenne.fasl
 
 lib/vicare/crypto/randomisations/strings.fasl: \
-		lib/vicare/crypto/randomisations/strings.sls \
+		lib/vicare/crypto/randomisations/strings.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/containers/strings/low.fasl \
 		lib/vicare/containers/strings.fasl \
@@ -804,90 +804,90 @@ lib/vicare/crypto/randomisations/strings.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_strings_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_strings_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_strings_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_strings_fasl_DATA = lib/vicare/crypto/randomisations/strings.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_strings_sls_DATA = lib/vicare/crypto/randomisations/strings.sls
+dist_lib_vicare_crypto_randomisations_strings_vicare_sls_DATA = lib/vicare/crypto/randomisations/strings.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/strings.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/strings.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/strings.fasl
 
 lib/vicare/containers/strings/low.fasl: \
-		lib/vicare/containers/strings/low.sls \
+		lib/vicare/containers/strings/low.vicare.sls \
 		lib/vicare/containers/char-sets.fasl \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_strings_low_fasldir = $(bundledlibsdir)/vicare/containers/strings
-lib_vicare_containers_strings_low_slsdir  = $(bundledlibsdir)/vicare/containers/strings
+lib_vicare_containers_strings_low_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/strings
 nodist_lib_vicare_containers_strings_low_fasl_DATA = lib/vicare/containers/strings/low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_strings_low_sls_DATA = lib/vicare/containers/strings/low.sls
+dist_lib_vicare_containers_strings_low_vicare_sls_DATA = lib/vicare/containers/strings/low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/strings/low.sls
+EXTRA_DIST += lib/vicare/containers/strings/low.vicare.sls
 CLEANFILES += lib/vicare/containers/strings/low.fasl
 
 lib/vicare/containers/char-sets.fasl: \
-		lib/vicare/containers/char-sets.sls \
+		lib/vicare/containers/char-sets.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_char_sets_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_char_sets_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_char_sets_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_char_sets_fasl_DATA = lib/vicare/containers/char-sets.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_char_sets_sls_DATA = lib/vicare/containers/char-sets.sls
+dist_lib_vicare_containers_char_sets_vicare_sls_DATA = lib/vicare/containers/char-sets.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/char-sets.sls
+EXTRA_DIST += lib/vicare/containers/char-sets.vicare.sls
 CLEANFILES += lib/vicare/containers/char-sets.fasl
 
 lib/vicare/containers/knuth-morris-pratt.fasl: \
-		lib/vicare/containers/knuth-morris-pratt.sls \
+		lib/vicare/containers/knuth-morris-pratt.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_knuth_morris_pratt_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_knuth_morris_pratt_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_knuth_morris_pratt_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_knuth_morris_pratt_fasl_DATA = lib/vicare/containers/knuth-morris-pratt.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_knuth_morris_pratt_sls_DATA = lib/vicare/containers/knuth-morris-pratt.sls
+dist_lib_vicare_containers_knuth_morris_pratt_vicare_sls_DATA = lib/vicare/containers/knuth-morris-pratt.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/knuth-morris-pratt.sls
+EXTRA_DIST += lib/vicare/containers/knuth-morris-pratt.vicare.sls
 CLEANFILES += lib/vicare/containers/knuth-morris-pratt.fasl
 
 lib/vicare/containers/strings.fasl: \
-		lib/vicare/containers/strings.sls \
+		lib/vicare/containers/strings.vicare.sls \
 		lib/vicare/containers/strings/low.fasl \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_strings_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_strings_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_strings_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_strings_fasl_DATA = lib/vicare/containers/strings.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_strings_sls_DATA = lib/vicare/containers/strings.sls
+dist_lib_vicare_containers_strings_vicare_sls_DATA = lib/vicare/containers/strings.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/strings.sls
+EXTRA_DIST += lib/vicare/containers/strings.vicare.sls
 CLEANFILES += lib/vicare/containers/strings.fasl
 
 lib/vicare/containers/auxiliary-syntaxes.fasl: \
-		lib/vicare/containers/auxiliary-syntaxes.sls \
+		lib/vicare/containers/auxiliary-syntaxes.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_auxiliary_syntaxes_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_auxiliary_syntaxes_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_auxiliary_syntaxes_fasl_DATA = lib/vicare/containers/auxiliary-syntaxes.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_auxiliary_syntaxes_sls_DATA = lib/vicare/containers/auxiliary-syntaxes.sls
+dist_lib_vicare_containers_auxiliary_syntaxes_vicare_sls_DATA = lib/vicare/containers/auxiliary-syntaxes.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/auxiliary-syntaxes.sls
+EXTRA_DIST += lib/vicare/containers/auxiliary-syntaxes.vicare.sls
 CLEANFILES += lib/vicare/containers/auxiliary-syntaxes.fasl
 
 lib/vicare/crypto/randomisations/vectors.fasl: \
-		lib/vicare/crypto/randomisations/vectors.sls \
+		lib/vicare/crypto/randomisations/vectors.vicare.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/containers/vectors/low.fasl \
 		lib/vicare/containers/vectors.fasl \
@@ -895,121 +895,121 @@ lib/vicare/crypto/randomisations/vectors.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_vectors_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
-lib_vicare_crypto_randomisations_vectors_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
+lib_vicare_crypto_randomisations_vectors_vicare_slsdir  = $(bundledlibsdir)/vicare/crypto/randomisations
 nodist_lib_vicare_crypto_randomisations_vectors_fasl_DATA = lib/vicare/crypto/randomisations/vectors.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_crypto_randomisations_vectors_sls_DATA = lib/vicare/crypto/randomisations/vectors.sls
+dist_lib_vicare_crypto_randomisations_vectors_vicare_sls_DATA = lib/vicare/crypto/randomisations/vectors.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/crypto/randomisations/vectors.sls
+EXTRA_DIST += lib/vicare/crypto/randomisations/vectors.vicare.sls
 CLEANFILES += lib/vicare/crypto/randomisations/vectors.fasl
 
 lib/vicare/containers/vectors/low.fasl: \
-		lib/vicare/containers/vectors/low.sls \
+		lib/vicare/containers/vectors/low.vicare.sls \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_vectors_low_fasldir = $(bundledlibsdir)/vicare/containers/vectors
-lib_vicare_containers_vectors_low_slsdir  = $(bundledlibsdir)/vicare/containers/vectors
+lib_vicare_containers_vectors_low_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/vectors
 nodist_lib_vicare_containers_vectors_low_fasl_DATA = lib/vicare/containers/vectors/low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_vectors_low_sls_DATA = lib/vicare/containers/vectors/low.sls
+dist_lib_vicare_containers_vectors_low_vicare_sls_DATA = lib/vicare/containers/vectors/low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/vectors/low.sls
+EXTRA_DIST += lib/vicare/containers/vectors/low.vicare.sls
 CLEANFILES += lib/vicare/containers/vectors/low.fasl
 
 lib/vicare/containers/vectors.fasl: \
-		lib/vicare/containers/vectors.sls \
+		lib/vicare/containers/vectors.vicare.sls \
 		lib/vicare/containers/vectors/low.fasl \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_vectors_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_vectors_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_vectors_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_vectors_fasl_DATA = lib/vicare/containers/vectors.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_vectors_sls_DATA = lib/vicare/containers/vectors.sls
+dist_lib_vicare_containers_vectors_vicare_sls_DATA = lib/vicare/containers/vectors.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/vectors.sls
+EXTRA_DIST += lib/vicare/containers/vectors.vicare.sls
 CLEANFILES += lib/vicare/containers/vectors.fasl
 
 lib/vicare/numerics/constants.fasl: \
-		lib/vicare/numerics/constants.sls \
+		lib/vicare/numerics/constants.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_numerics_constants_fasldir = $(bundledlibsdir)/vicare/numerics
-lib_vicare_numerics_constants_slsdir  = $(bundledlibsdir)/vicare/numerics
+lib_vicare_numerics_constants_vicare_slsdir  = $(bundledlibsdir)/vicare/numerics
 nodist_lib_vicare_numerics_constants_fasl_DATA = lib/vicare/numerics/constants.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_numerics_constants_sls_DATA = lib/vicare/numerics/constants.sls
+dist_lib_vicare_numerics_constants_vicare_sls_DATA = lib/vicare/numerics/constants.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/numerics/constants.sls
+EXTRA_DIST += lib/vicare/numerics/constants.vicare.sls
 CLEANFILES += lib/vicare/numerics/constants.fasl
 
 lib/vicare/numerics/flonum-parser.fasl: \
-		lib/vicare/numerics/flonum-parser.sls \
+		lib/vicare/numerics/flonum-parser.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_numerics_flonum_parser_fasldir = $(bundledlibsdir)/vicare/numerics
-lib_vicare_numerics_flonum_parser_slsdir  = $(bundledlibsdir)/vicare/numerics
+lib_vicare_numerics_flonum_parser_vicare_slsdir  = $(bundledlibsdir)/vicare/numerics
 nodist_lib_vicare_numerics_flonum_parser_fasl_DATA = lib/vicare/numerics/flonum-parser.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_numerics_flonum_parser_sls_DATA = lib/vicare/numerics/flonum-parser.sls
+dist_lib_vicare_numerics_flonum_parser_vicare_sls_DATA = lib/vicare/numerics/flonum-parser.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/numerics/flonum-parser.sls
+EXTRA_DIST += lib/vicare/numerics/flonum-parser.vicare.sls
 CLEANFILES += lib/vicare/numerics/flonum-parser.fasl
 
 lib/vicare/numerics/flonum-formatter.fasl: \
-		lib/vicare/numerics/flonum-formatter.sls \
+		lib/vicare/numerics/flonum-formatter.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_numerics_flonum_formatter_fasldir = $(bundledlibsdir)/vicare/numerics
-lib_vicare_numerics_flonum_formatter_slsdir  = $(bundledlibsdir)/vicare/numerics
+lib_vicare_numerics_flonum_formatter_vicare_slsdir  = $(bundledlibsdir)/vicare/numerics
 nodist_lib_vicare_numerics_flonum_formatter_fasl_DATA = lib/vicare/numerics/flonum-formatter.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_numerics_flonum_formatter_sls_DATA = lib/vicare/numerics/flonum-formatter.sls
+dist_lib_vicare_numerics_flonum_formatter_vicare_sls_DATA = lib/vicare/numerics/flonum-formatter.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/numerics/flonum-formatter.sls
+EXTRA_DIST += lib/vicare/numerics/flonum-formatter.vicare.sls
 CLEANFILES += lib/vicare/numerics/flonum-formatter.fasl
 
 lib/vicare/containers/bytevectors.fasl: \
-		lib/vicare/containers/bytevectors.sls \
+		lib/vicare/containers/bytevectors.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_bytevectors_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_bytevectors_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_bytevectors_fasl_DATA = lib/vicare/containers/bytevectors.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_sls_DATA = lib/vicare/containers/bytevectors.sls
+dist_lib_vicare_containers_bytevectors_vicare_sls_DATA = lib/vicare/containers/bytevectors.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors.fasl
 
 lib/vicare/containers/object-properties.fasl: \
-		lib/vicare/containers/object-properties.sls \
+		lib/vicare/containers/object-properties.vicare.sls \
 		lib/vicare/containers/weak-hashtables.fasl \
 		lib/vicare/language-extensions/sentinels.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_object_properties_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_object_properties_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_object_properties_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_object_properties_fasl_DATA = lib/vicare/containers/object-properties.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_object_properties_sls_DATA = lib/vicare/containers/object-properties.sls
+dist_lib_vicare_containers_object_properties_vicare_sls_DATA = lib/vicare/containers/object-properties.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/object-properties.sls
+EXTRA_DIST += lib/vicare/containers/object-properties.vicare.sls
 CLEANFILES += lib/vicare/containers/object-properties.fasl
 
 lib/vicare/containers/bytevector-compounds/core.fasl: \
-		lib/vicare/containers/bytevector-compounds/core.sls \
+		lib/vicare/containers/bytevector-compounds/core.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
@@ -1017,181 +1017,181 @@ lib/vicare/containers/bytevector-compounds/core.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevector_compounds_core_fasldir = $(bundledlibsdir)/vicare/containers/bytevector-compounds
-lib_vicare_containers_bytevector_compounds_core_slsdir  = $(bundledlibsdir)/vicare/containers/bytevector-compounds
+lib_vicare_containers_bytevector_compounds_core_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevector-compounds
 nodist_lib_vicare_containers_bytevector_compounds_core_fasl_DATA = lib/vicare/containers/bytevector-compounds/core.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevector_compounds_core_sls_DATA = lib/vicare/containers/bytevector-compounds/core.sls
+dist_lib_vicare_containers_bytevector_compounds_core_vicare_sls_DATA = lib/vicare/containers/bytevector-compounds/core.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevector-compounds/core.sls
+EXTRA_DIST += lib/vicare/containers/bytevector-compounds/core.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevector-compounds/core.fasl
 
 lib/vicare/containers/bytevector-compounds.fasl: \
-		lib/vicare/containers/bytevector-compounds.sls \
+		lib/vicare/containers/bytevector-compounds.vicare.sls \
 		lib/vicare/containers/bytevector-compounds/core.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevector_compounds_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_bytevector_compounds_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_bytevector_compounds_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_bytevector_compounds_fasl_DATA = lib/vicare/containers/bytevector-compounds.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevector_compounds_sls_DATA = lib/vicare/containers/bytevector-compounds.sls
+dist_lib_vicare_containers_bytevector_compounds_vicare_sls_DATA = lib/vicare/containers/bytevector-compounds.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevector-compounds.sls
+EXTRA_DIST += lib/vicare/containers/bytevector-compounds.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevector-compounds.fasl
 
 lib/vicare/containers/bytevector-compounds/unsafe.fasl: \
-		lib/vicare/containers/bytevector-compounds/unsafe.sls \
+		lib/vicare/containers/bytevector-compounds/unsafe.vicare.sls \
 		lib/vicare/containers/bytevector-compounds/core.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevector_compounds_unsafe_fasldir = $(bundledlibsdir)/vicare/containers/bytevector-compounds
-lib_vicare_containers_bytevector_compounds_unsafe_slsdir  = $(bundledlibsdir)/vicare/containers/bytevector-compounds
+lib_vicare_containers_bytevector_compounds_unsafe_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevector-compounds
 nodist_lib_vicare_containers_bytevector_compounds_unsafe_fasl_DATA = lib/vicare/containers/bytevector-compounds/unsafe.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevector_compounds_unsafe_sls_DATA = lib/vicare/containers/bytevector-compounds/unsafe.sls
+dist_lib_vicare_containers_bytevector_compounds_unsafe_vicare_sls_DATA = lib/vicare/containers/bytevector-compounds/unsafe.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevector-compounds/unsafe.sls
+EXTRA_DIST += lib/vicare/containers/bytevector-compounds/unsafe.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevector-compounds/unsafe.fasl
 
 lib/vicare/containers/char-sets/blocks.fasl: \
-		lib/vicare/containers/char-sets/blocks.sls \
+		lib/vicare/containers/char-sets/blocks.vicare.sls \
 		lib/vicare/containers/char-sets.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_char_sets_blocks_fasldir = $(bundledlibsdir)/vicare/containers/char-sets
-lib_vicare_containers_char_sets_blocks_slsdir  = $(bundledlibsdir)/vicare/containers/char-sets
+lib_vicare_containers_char_sets_blocks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/char-sets
 nodist_lib_vicare_containers_char_sets_blocks_fasl_DATA = lib/vicare/containers/char-sets/blocks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_char_sets_blocks_sls_DATA = lib/vicare/containers/char-sets/blocks.sls
+dist_lib_vicare_containers_char_sets_blocks_vicare_sls_DATA = lib/vicare/containers/char-sets/blocks.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/char-sets/blocks.sls
+EXTRA_DIST += lib/vicare/containers/char-sets/blocks.vicare.sls
 CLEANFILES += lib/vicare/containers/char-sets/blocks.fasl
 
 lib/vicare/containers/char-sets/categories.fasl: \
-		lib/vicare/containers/char-sets/categories.sls \
+		lib/vicare/containers/char-sets/categories.vicare.sls \
 		lib/vicare/containers/char-sets.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_char_sets_categories_fasldir = $(bundledlibsdir)/vicare/containers/char-sets
-lib_vicare_containers_char_sets_categories_slsdir  = $(bundledlibsdir)/vicare/containers/char-sets
+lib_vicare_containers_char_sets_categories_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/char-sets
 nodist_lib_vicare_containers_char_sets_categories_fasl_DATA = lib/vicare/containers/char-sets/categories.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_char_sets_categories_sls_DATA = lib/vicare/containers/char-sets/categories.sls
+dist_lib_vicare_containers_char_sets_categories_vicare_sls_DATA = lib/vicare/containers/char-sets/categories.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/char-sets/categories.sls
+EXTRA_DIST += lib/vicare/containers/char-sets/categories.vicare.sls
 CLEANFILES += lib/vicare/containers/char-sets/categories.fasl
 
 lib/vicare/containers/lists/stx.fasl: \
-		lib/vicare/containers/lists/stx.sls \
+		lib/vicare/containers/lists/stx.vicare.sls \
 		lib/vicare/containers/lists/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_lists_stx_fasldir = $(bundledlibsdir)/vicare/containers/lists
-lib_vicare_containers_lists_stx_slsdir  = $(bundledlibsdir)/vicare/containers/lists
+lib_vicare_containers_lists_stx_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/lists
 nodist_lib_vicare_containers_lists_stx_fasl_DATA = lib/vicare/containers/lists/stx.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_lists_stx_sls_DATA = lib/vicare/containers/lists/stx.sls
+dist_lib_vicare_containers_lists_stx_vicare_sls_DATA = lib/vicare/containers/lists/stx.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/lists/stx.sls
+EXTRA_DIST += lib/vicare/containers/lists/stx.vicare.sls
 CLEANFILES += lib/vicare/containers/lists/stx.fasl
 
 lib/vicare/containers/lists/low.fasl: \
-		lib/vicare/containers/lists/low.sls \
+		lib/vicare/containers/lists/low.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_lists_low_fasldir = $(bundledlibsdir)/vicare/containers/lists
-lib_vicare_containers_lists_low_slsdir  = $(bundledlibsdir)/vicare/containers/lists
+lib_vicare_containers_lists_low_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/lists
 nodist_lib_vicare_containers_lists_low_fasl_DATA = lib/vicare/containers/lists/low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_lists_low_sls_DATA = lib/vicare/containers/lists/low.sls
+dist_lib_vicare_containers_lists_low_vicare_sls_DATA = lib/vicare/containers/lists/low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/lists/low.sls
+EXTRA_DIST += lib/vicare/containers/lists/low.vicare.sls
 CLEANFILES += lib/vicare/containers/lists/low.fasl
 
 lib/vicare/containers/lists.fasl: \
-		lib/vicare/containers/lists.sls \
+		lib/vicare/containers/lists.vicare.sls \
 		lib/vicare/containers/lists/stx.fasl \
 		lib/vicare/containers/lists/low.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_lists_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_lists_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_lists_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_lists_fasl_DATA = lib/vicare/containers/lists.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_lists_sls_DATA = lib/vicare/containers/lists.sls
+dist_lib_vicare_containers_lists_vicare_sls_DATA = lib/vicare/containers/lists.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/lists.sls
+EXTRA_DIST += lib/vicare/containers/lists.vicare.sls
 CLEANFILES += lib/vicare/containers/lists.fasl
 
 lib/vicare/containers/strings/rabin-karp.fasl: \
-		lib/vicare/containers/strings/rabin-karp.sls \
+		lib/vicare/containers/strings/rabin-karp.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_strings_rabin_karp_fasldir = $(bundledlibsdir)/vicare/containers/strings
-lib_vicare_containers_strings_rabin_karp_slsdir  = $(bundledlibsdir)/vicare/containers/strings
+lib_vicare_containers_strings_rabin_karp_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/strings
 nodist_lib_vicare_containers_strings_rabin_karp_fasl_DATA = lib/vicare/containers/strings/rabin-karp.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_strings_rabin_karp_sls_DATA = lib/vicare/containers/strings/rabin-karp.sls
+dist_lib_vicare_containers_strings_rabin_karp_vicare_sls_DATA = lib/vicare/containers/strings/rabin-karp.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/strings/rabin-karp.sls
+EXTRA_DIST += lib/vicare/containers/strings/rabin-karp.vicare.sls
 CLEANFILES += lib/vicare/containers/strings/rabin-karp.fasl
 
 lib/vicare/containers/levenshtein.fasl: \
-		lib/vicare/containers/levenshtein.sls \
+		lib/vicare/containers/levenshtein.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_levenshtein_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_levenshtein_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_levenshtein_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_levenshtein_fasl_DATA = lib/vicare/containers/levenshtein.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_levenshtein_sls_DATA = lib/vicare/containers/levenshtein.sls
+dist_lib_vicare_containers_levenshtein_vicare_sls_DATA = lib/vicare/containers/levenshtein.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/levenshtein.sls
+EXTRA_DIST += lib/vicare/containers/levenshtein.vicare.sls
 CLEANFILES += lib/vicare/containers/levenshtein.fasl
 
 lib/vicare/containers/one-dimension-co.fasl: \
-		lib/vicare/containers/one-dimension-co.sls \
+		lib/vicare/containers/one-dimension-co.vicare.sls \
 		lib/vicare/containers/lists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_one_dimension_co_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_one_dimension_co_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_one_dimension_co_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_one_dimension_co_fasl_DATA = lib/vicare/containers/one-dimension-co.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_one_dimension_co_sls_DATA = lib/vicare/containers/one-dimension-co.sls
+dist_lib_vicare_containers_one_dimension_co_vicare_sls_DATA = lib/vicare/containers/one-dimension-co.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/one-dimension-co.sls
+EXTRA_DIST += lib/vicare/containers/one-dimension-co.vicare.sls
 CLEANFILES += lib/vicare/containers/one-dimension-co.fasl
 
 lib/vicare/containers/one-dimension-cc.fasl: \
-		lib/vicare/containers/one-dimension-cc.sls \
+		lib/vicare/containers/one-dimension-cc.vicare.sls \
 		lib/vicare/containers/lists.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_one_dimension_cc_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_one_dimension_cc_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_one_dimension_cc_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_one_dimension_cc_fasl_DATA = lib/vicare/containers/one-dimension-cc.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_one_dimension_cc_sls_DATA = lib/vicare/containers/one-dimension-cc.sls
+dist_lib_vicare_containers_one_dimension_cc_vicare_sls_DATA = lib/vicare/containers/one-dimension-cc.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/one-dimension-cc.sls
+EXTRA_DIST += lib/vicare/containers/one-dimension-cc.vicare.sls
 CLEANFILES += lib/vicare/containers/one-dimension-cc.fasl
 
 lib/vicare/containers/bytevectors/u8.fasl: \
-		lib/vicare/containers/bytevectors/u8.sls \
+		lib/vicare/containers/bytevectors/u8.vicare.sls \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/vicare/containers/bytevectors/u8low.fasl \
 		lib/vicare/containers/bytevectors/generic.fasl \
@@ -1200,16 +1200,16 @@ lib/vicare/containers/bytevectors/u8.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_u8_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
-lib_vicare_containers_bytevectors_u8_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
+lib_vicare_containers_bytevectors_u8_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
 nodist_lib_vicare_containers_bytevectors_u8_fasl_DATA = lib/vicare/containers/bytevectors/u8.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_u8_sls_DATA = lib/vicare/containers/bytevectors/u8.sls
+dist_lib_vicare_containers_bytevectors_u8_vicare_sls_DATA = lib/vicare/containers/bytevectors/u8.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors/u8.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors/u8.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors/u8.fasl
 
 lib/vicare/containers/bytevectors/u8low.fasl: \
-		lib/vicare/containers/bytevectors/u8low.sls \
+		lib/vicare/containers/bytevectors/u8low.vicare.sls \
 		lib/vicare/containers/bytevectors/generic-low.fasl \
 		lib/vicare/containers/char-sets.fasl \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
@@ -1217,46 +1217,46 @@ lib/vicare/containers/bytevectors/u8low.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_u8low_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
-lib_vicare_containers_bytevectors_u8low_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
+lib_vicare_containers_bytevectors_u8low_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
 nodist_lib_vicare_containers_bytevectors_u8low_fasl_DATA = lib/vicare/containers/bytevectors/u8low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_u8low_sls_DATA = lib/vicare/containers/bytevectors/u8low.sls
+dist_lib_vicare_containers_bytevectors_u8low_vicare_sls_DATA = lib/vicare/containers/bytevectors/u8low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors/u8low.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors/u8low.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors/u8low.fasl
 
 lib/vicare/containers/bytevectors/generic-low.fasl: \
-		lib/vicare/containers/bytevectors/generic-low.sls \
+		lib/vicare/containers/bytevectors/generic-low.vicare.sls \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_generic_low_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
-lib_vicare_containers_bytevectors_generic_low_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
+lib_vicare_containers_bytevectors_generic_low_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
 nodist_lib_vicare_containers_bytevectors_generic_low_fasl_DATA = lib/vicare/containers/bytevectors/generic-low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_generic_low_sls_DATA = lib/vicare/containers/bytevectors/generic-low.sls
+dist_lib_vicare_containers_bytevectors_generic_low_vicare_sls_DATA = lib/vicare/containers/bytevectors/generic-low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors/generic-low.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors/generic-low.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors/generic-low.fasl
 
 lib/vicare/containers/bytevectors/generic.fasl: \
-		lib/vicare/containers/bytevectors/generic.sls \
+		lib/vicare/containers/bytevectors/generic.vicare.sls \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_generic_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
-lib_vicare_containers_bytevectors_generic_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
+lib_vicare_containers_bytevectors_generic_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
 nodist_lib_vicare_containers_bytevectors_generic_fasl_DATA = lib/vicare/containers/bytevectors/generic.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_generic_sls_DATA = lib/vicare/containers/bytevectors/generic.sls
+dist_lib_vicare_containers_bytevectors_generic_vicare_sls_DATA = lib/vicare/containers/bytevectors/generic.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors/generic.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors/generic.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors/generic.fasl
 
 lib/vicare/containers/bytevectors/s8.fasl: \
-		lib/vicare/containers/bytevectors/s8.sls \
+		lib/vicare/containers/bytevectors/s8.vicare.sls \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/vicare/containers/bytevectors/s8low.fasl \
 		lib/vicare/containers/bytevectors/generic.fasl \
@@ -1265,16 +1265,16 @@ lib/vicare/containers/bytevectors/s8.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_s8_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
-lib_vicare_containers_bytevectors_s8_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
+lib_vicare_containers_bytevectors_s8_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
 nodist_lib_vicare_containers_bytevectors_s8_fasl_DATA = lib/vicare/containers/bytevectors/s8.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_s8_sls_DATA = lib/vicare/containers/bytevectors/s8.sls
+dist_lib_vicare_containers_bytevectors_s8_vicare_sls_DATA = lib/vicare/containers/bytevectors/s8.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors/s8.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors/s8.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors/s8.fasl
 
 lib/vicare/containers/bytevectors/s8low.fasl: \
-		lib/vicare/containers/bytevectors/s8low.sls \
+		lib/vicare/containers/bytevectors/s8low.vicare.sls \
 		lib/vicare/containers/bytevectors/generic-low.fasl \
 		lib/vicare/containers/char-sets.fasl \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
@@ -1282,64 +1282,64 @@ lib/vicare/containers/bytevectors/s8low.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_s8low_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
-lib_vicare_containers_bytevectors_s8low_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
+lib_vicare_containers_bytevectors_s8low_vicare_slsdir  = $(bundledlibsdir)/vicare/containers/bytevectors
 nodist_lib_vicare_containers_bytevectors_s8low_fasl_DATA = lib/vicare/containers/bytevectors/s8low.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_bytevectors_s8low_sls_DATA = lib/vicare/containers/bytevectors/s8low.sls
+dist_lib_vicare_containers_bytevectors_s8low_vicare_sls_DATA = lib/vicare/containers/bytevectors/s8low.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/bytevectors/s8low.sls
+EXTRA_DIST += lib/vicare/containers/bytevectors/s8low.vicare.sls
 CLEANFILES += lib/vicare/containers/bytevectors/s8low.fasl
 
 lib/vicare/containers/arrays.fasl: \
-		lib/vicare/containers/arrays.sls \
+		lib/vicare/containers/arrays.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_arrays_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_arrays_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_arrays_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_arrays_fasl_DATA = lib/vicare/containers/arrays.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_arrays_sls_DATA = lib/vicare/containers/arrays.sls
+dist_lib_vicare_containers_arrays_vicare_sls_DATA = lib/vicare/containers/arrays.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/arrays.sls
+EXTRA_DIST += lib/vicare/containers/arrays.vicare.sls
 CLEANFILES += lib/vicare/containers/arrays.fasl
 
 lib/vicare/containers/stacks.fasl: \
-		lib/vicare/containers/stacks.sls \
+		lib/vicare/containers/stacks.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_stacks_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_stacks_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_stacks_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_stacks_fasl_DATA = lib/vicare/containers/stacks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_stacks_sls_DATA = lib/vicare/containers/stacks.sls
+dist_lib_vicare_containers_stacks_vicare_sls_DATA = lib/vicare/containers/stacks.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/stacks.sls
+EXTRA_DIST += lib/vicare/containers/stacks.vicare.sls
 CLEANFILES += lib/vicare/containers/stacks.fasl
 
 lib/vicare/containers/queues.fasl: \
-		lib/vicare/containers/queues.sls \
+		lib/vicare/containers/queues.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_queues_fasldir = $(bundledlibsdir)/vicare/containers
-lib_vicare_containers_queues_slsdir  = $(bundledlibsdir)/vicare/containers
+lib_vicare_containers_queues_vicare_slsdir  = $(bundledlibsdir)/vicare/containers
 nodist_lib_vicare_containers_queues_fasl_DATA = lib/vicare/containers/queues.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_containers_queues_sls_DATA = lib/vicare/containers/queues.sls
+dist_lib_vicare_containers_queues_vicare_sls_DATA = lib/vicare/containers/queues.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/containers/queues.sls
+EXTRA_DIST += lib/vicare/containers/queues.vicare.sls
 CLEANFILES += lib/vicare/containers/queues.fasl
 
 lib/vicare/parser-tools/silex/lexer.fasl: \
-		lib/vicare/parser-tools/silex/lexer.sls \
+		lib/vicare/parser-tools/silex/lexer.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/code-lexer-driver.fasl \
 		lib/vicare/parser-tools/silex/tree-lexer-driver.fasl \
@@ -1348,77 +1348,77 @@ lib/vicare/parser-tools/silex/lexer.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_lexer_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_lexer_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_lexer_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_lexer_fasl_DATA = lib/vicare/parser-tools/silex/lexer.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_lexer_sls_DATA = lib/vicare/parser-tools/silex/lexer.sls
+dist_lib_vicare_parser_tools_silex_lexer_vicare_sls_DATA = lib/vicare/parser-tools/silex/lexer.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/lexer.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/lexer.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/lexer.fasl
 
 lib/vicare/parser-tools/silex/input-system.fasl: \
-		lib/vicare/parser-tools/silex/input-system.sls \
+		lib/vicare/parser-tools/silex/input-system.vicare.sls \
 		lib/vicare/language-extensions/makers.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_input_system_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_input_system_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_input_system_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_input_system_fasl_DATA = lib/vicare/parser-tools/silex/input-system.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_input_system_sls_DATA = lib/vicare/parser-tools/silex/input-system.sls
+dist_lib_vicare_parser_tools_silex_input_system_vicare_sls_DATA = lib/vicare/parser-tools/silex/input-system.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/input-system.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/input-system.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/input-system.fasl
 
 lib/vicare/parser-tools/silex/code-lexer-driver.fasl: \
-		lib/vicare/parser-tools/silex/code-lexer-driver.sls \
+		lib/vicare/parser-tools/silex/code-lexer-driver.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_code_lexer_driver_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_code_lexer_driver_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_code_lexer_driver_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_code_lexer_driver_fasl_DATA = lib/vicare/parser-tools/silex/code-lexer-driver.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_code_lexer_driver_sls_DATA = lib/vicare/parser-tools/silex/code-lexer-driver.sls
+dist_lib_vicare_parser_tools_silex_code_lexer_driver_vicare_sls_DATA = lib/vicare/parser-tools/silex/code-lexer-driver.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/code-lexer-driver.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/code-lexer-driver.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/code-lexer-driver.fasl
 
 lib/vicare/parser-tools/silex/tree-lexer-driver.fasl: \
-		lib/vicare/parser-tools/silex/tree-lexer-driver.sls \
+		lib/vicare/parser-tools/silex/tree-lexer-driver.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_tree_lexer_driver_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_tree_lexer_driver_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_tree_lexer_driver_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_tree_lexer_driver_fasl_DATA = lib/vicare/parser-tools/silex/tree-lexer-driver.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_tree_lexer_driver_sls_DATA = lib/vicare/parser-tools/silex/tree-lexer-driver.sls
+dist_lib_vicare_parser_tools_silex_tree_lexer_driver_vicare_sls_DATA = lib/vicare/parser-tools/silex/tree-lexer-driver.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/tree-lexer-driver.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/tree-lexer-driver.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/tree-lexer-driver.fasl
 
 lib/vicare/parser-tools/silex/char-lexer-driver.fasl: \
-		lib/vicare/parser-tools/silex/char-lexer-driver.sls \
+		lib/vicare/parser-tools/silex/char-lexer-driver.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/tree-lexer-driver.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_char_lexer_driver_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_char_lexer_driver_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_char_lexer_driver_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_char_lexer_driver_fasl_DATA = lib/vicare/parser-tools/silex/char-lexer-driver.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_char_lexer_driver_sls_DATA = lib/vicare/parser-tools/silex/char-lexer-driver.sls
+dist_lib_vicare_parser_tools_silex_char_lexer_driver_vicare_sls_DATA = lib/vicare/parser-tools/silex/char-lexer-driver.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/char-lexer-driver.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/char-lexer-driver.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/char-lexer-driver.fasl
 
 lib/vicare/parser-tools/silex.fasl: \
-		lib/vicare/parser-tools/silex.sls \
+		lib/vicare/parser-tools/silex.vicare.sls \
 		lib/vicare/parser-tools/silex/lexer.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		lib/vicare/parser-tools/silex/action-l.fasl \
@@ -1433,155 +1433,155 @@ lib/vicare/parser-tools/silex.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_fasldir = $(bundledlibsdir)/vicare/parser-tools
-lib_vicare_parser_tools_silex_slsdir  = $(bundledlibsdir)/vicare/parser-tools
+lib_vicare_parser_tools_silex_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools
 nodist_lib_vicare_parser_tools_silex_fasl_DATA = lib/vicare/parser-tools/silex.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_sls_DATA = lib/vicare/parser-tools/silex.sls
+dist_lib_vicare_parser_tools_silex_vicare_sls_DATA = lib/vicare/parser-tools/silex.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex.fasl
 
 lib/vicare/parser-tools/silex/semantic.fasl: \
-		lib/vicare/parser-tools/silex/semantic.sls \
+		lib/vicare/parser-tools/silex/semantic.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_semantic_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_semantic_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_semantic_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_semantic_fasl_DATA = lib/vicare/parser-tools/silex/semantic.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_semantic_sls_DATA = lib/vicare/parser-tools/silex/semantic.sls
+dist_lib_vicare_parser_tools_silex_semantic_vicare_sls_DATA = lib/vicare/parser-tools/silex/semantic.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/semantic.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/semantic.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/semantic.fasl
 
 lib/vicare/parser-tools/silex/action-l.fasl: \
-		lib/vicare/parser-tools/silex/action-l.sls \
+		lib/vicare/parser-tools/silex/action-l.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_action_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_action_l_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_action_l_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_action_l_fasl_DATA = lib/vicare/parser-tools/silex/action-l.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_action_l_sls_DATA = lib/vicare/parser-tools/silex/action-l.sls
+dist_lib_vicare_parser_tools_silex_action_l_vicare_sls_DATA = lib/vicare/parser-tools/silex/action-l.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/action-l.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/action-l.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/action-l.fasl
 
 lib/vicare/parser-tools/silex/class-l.fasl: \
-		lib/vicare/parser-tools/silex/class-l.sls \
+		lib/vicare/parser-tools/silex/class-l.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_class_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_class_l_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_class_l_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_class_l_fasl_DATA = lib/vicare/parser-tools/silex/class-l.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_class_l_sls_DATA = lib/vicare/parser-tools/silex/class-l.sls
+dist_lib_vicare_parser_tools_silex_class_l_vicare_sls_DATA = lib/vicare/parser-tools/silex/class-l.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/class-l.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/class-l.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/class-l.fasl
 
 lib/vicare/parser-tools/silex/macro-l.fasl: \
-		lib/vicare/parser-tools/silex/macro-l.sls \
+		lib/vicare/parser-tools/silex/macro-l.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_macro_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_macro_l_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_macro_l_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_macro_l_fasl_DATA = lib/vicare/parser-tools/silex/macro-l.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_macro_l_sls_DATA = lib/vicare/parser-tools/silex/macro-l.sls
+dist_lib_vicare_parser_tools_silex_macro_l_vicare_sls_DATA = lib/vicare/parser-tools/silex/macro-l.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/macro-l.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/macro-l.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/macro-l.fasl
 
 lib/vicare/parser-tools/silex/regexp-l.fasl: \
-		lib/vicare/parser-tools/silex/regexp-l.sls \
+		lib/vicare/parser-tools/silex/regexp-l.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_regexp_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_regexp_l_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_regexp_l_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_regexp_l_fasl_DATA = lib/vicare/parser-tools/silex/regexp-l.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_regexp_l_sls_DATA = lib/vicare/parser-tools/silex/regexp-l.sls
+dist_lib_vicare_parser_tools_silex_regexp_l_vicare_sls_DATA = lib/vicare/parser-tools/silex/regexp-l.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/regexp-l.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/regexp-l.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/regexp-l.fasl
 
 lib/vicare/parser-tools/silex/string-l.fasl: \
-		lib/vicare/parser-tools/silex/string-l.sls \
+		lib/vicare/parser-tools/silex/string-l.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_string_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_string_l_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_string_l_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_string_l_fasl_DATA = lib/vicare/parser-tools/silex/string-l.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_string_l_sls_DATA = lib/vicare/parser-tools/silex/string-l.sls
+dist_lib_vicare_parser_tools_silex_string_l_vicare_sls_DATA = lib/vicare/parser-tools/silex/string-l.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/string-l.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/string-l.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/string-l.fasl
 
 lib/vicare/parser-tools/silex/nested-comment-l.fasl: \
-		lib/vicare/parser-tools/silex/nested-comment-l.sls \
+		lib/vicare/parser-tools/silex/nested-comment-l.vicare.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_nested_comment_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_nested_comment_l_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_nested_comment_l_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_nested_comment_l_fasl_DATA = lib/vicare/parser-tools/silex/nested-comment-l.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_nested_comment_l_sls_DATA = lib/vicare/parser-tools/silex/nested-comment-l.sls
+dist_lib_vicare_parser_tools_silex_nested_comment_l_vicare_sls_DATA = lib/vicare/parser-tools/silex/nested-comment-l.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/nested-comment-l.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/nested-comment-l.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/nested-comment-l.fasl
 
 lib/vicare/parser-tools/silex/utilities.fasl: \
-		lib/vicare/parser-tools/silex/utilities.sls \
+		lib/vicare/parser-tools/silex/utilities.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_utilities_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
-lib_vicare_parser_tools_silex_utilities_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
+lib_vicare_parser_tools_silex_utilities_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools/silex
 nodist_lib_vicare_parser_tools_silex_utilities_fasl_DATA = lib/vicare/parser-tools/silex/utilities.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_silex_utilities_sls_DATA = lib/vicare/parser-tools/silex/utilities.sls
+dist_lib_vicare_parser_tools_silex_utilities_vicare_sls_DATA = lib/vicare/parser-tools/silex/utilities.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/silex/utilities.sls
+EXTRA_DIST += lib/vicare/parser-tools/silex/utilities.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/silex/utilities.fasl
 
 lib/vicare/parser-tools/unix-pathnames.fasl: \
-		lib/vicare/parser-tools/unix-pathnames.sls \
+		lib/vicare/parser-tools/unix-pathnames.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_unix_pathnames_fasldir = $(bundledlibsdir)/vicare/parser-tools
-lib_vicare_parser_tools_unix_pathnames_slsdir  = $(bundledlibsdir)/vicare/parser-tools
+lib_vicare_parser_tools_unix_pathnames_vicare_slsdir  = $(bundledlibsdir)/vicare/parser-tools
 nodist_lib_vicare_parser_tools_unix_pathnames_fasl_DATA = lib/vicare/parser-tools/unix-pathnames.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_tools_unix_pathnames_sls_DATA = lib/vicare/parser-tools/unix-pathnames.sls
+dist_lib_vicare_parser_tools_unix_pathnames_vicare_sls_DATA = lib/vicare/parser-tools/unix-pathnames.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-tools/unix-pathnames.sls
+EXTRA_DIST += lib/vicare/parser-tools/unix-pathnames.vicare.sls
 CLEANFILES += lib/vicare/parser-tools/unix-pathnames.fasl
 
 lib/vicare/net/channels.fasl: \
-		lib/vicare/net/channels.sls \
+		lib/vicare/net/channels.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -1589,33 +1589,33 @@ lib/vicare/net/channels.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_net_channels_fasldir = $(bundledlibsdir)/vicare/net
-lib_vicare_net_channels_slsdir  = $(bundledlibsdir)/vicare/net
+lib_vicare_net_channels_vicare_slsdir  = $(bundledlibsdir)/vicare/net
 nodist_lib_vicare_net_channels_fasl_DATA = lib/vicare/net/channels.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_net_channels_sls_DATA = lib/vicare/net/channels.sls
+dist_lib_vicare_net_channels_vicare_sls_DATA = lib/vicare/net/channels.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/net/channels.sls
+EXTRA_DIST += lib/vicare/net/channels.vicare.sls
 CLEANFILES += lib/vicare/net/channels.fasl
 
 lib/vicare/ffi.fasl: \
-		lib/vicare/ffi.sls \
+		lib/vicare/ffi.vicare.sls \
 		lib/vicare/platform/errno.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_LIBFFI
 lib_vicare_ffi_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_ffi_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_ffi_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_ffi_fasl_DATA = lib/vicare/ffi.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_ffi_sls_DATA = lib/vicare/ffi.sls
+dist_lib_vicare_ffi_vicare_sls_DATA = lib/vicare/ffi.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/ffi.sls
+EXTRA_DIST += lib/vicare/ffi.vicare.sls
 CLEANFILES += lib/vicare/ffi.fasl
 endif
 
 lib/vicare/ffi/foreign-pointer-wrapper.fasl: \
-		lib/vicare/ffi/foreign-pointer-wrapper.sls \
+		lib/vicare/ffi/foreign-pointer-wrapper.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -1624,17 +1624,17 @@ lib/vicare/ffi/foreign-pointer-wrapper.fasl: \
 
 if WANT_LIBFFI
 lib_vicare_ffi_foreign_pointer_wrapper_fasldir = $(bundledlibsdir)/vicare/ffi
-lib_vicare_ffi_foreign_pointer_wrapper_slsdir  = $(bundledlibsdir)/vicare/ffi
+lib_vicare_ffi_foreign_pointer_wrapper_vicare_slsdir  = $(bundledlibsdir)/vicare/ffi
 nodist_lib_vicare_ffi_foreign_pointer_wrapper_fasl_DATA = lib/vicare/ffi/foreign-pointer-wrapper.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_ffi_foreign_pointer_wrapper_sls_DATA = lib/vicare/ffi/foreign-pointer-wrapper.sls
+dist_lib_vicare_ffi_foreign_pointer_wrapper_vicare_sls_DATA = lib/vicare/ffi/foreign-pointer-wrapper.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/ffi/foreign-pointer-wrapper.sls
+EXTRA_DIST += lib/vicare/ffi/foreign-pointer-wrapper.vicare.sls
 CLEANFILES += lib/vicare/ffi/foreign-pointer-wrapper.fasl
 endif
 
 lib/vicare/iconv.fasl: \
-		lib/vicare/iconv.sls \
+		lib/vicare/iconv.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/unsafe/capi.fasl \
@@ -1644,34 +1644,34 @@ lib/vicare/iconv.fasl: \
 
 if WANT_LIBICONV
 lib_vicare_iconv_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_iconv_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_iconv_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_iconv_fasl_DATA = lib/vicare/iconv.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_iconv_sls_DATA = lib/vicare/iconv.sls
+dist_lib_vicare_iconv_vicare_sls_DATA = lib/vicare/iconv.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/iconv.sls
+EXTRA_DIST += lib/vicare/iconv.vicare.sls
 CLEANFILES += lib/vicare/iconv.fasl
 endif
 
 lib/vicare/posix/pid-files.fasl: \
-		lib/vicare/posix/pid-files.sls \
+		lib/vicare/posix/pid-files.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
 lib_vicare_posix_pid_files_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_pid_files_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_pid_files_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_pid_files_fasl_DATA = lib/vicare/posix/pid-files.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_pid_files_sls_DATA = lib/vicare/posix/pid-files.sls
+dist_lib_vicare_posix_pid_files_vicare_sls_DATA = lib/vicare/posix/pid-files.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/pid-files.sls
+EXTRA_DIST += lib/vicare/posix/pid-files.vicare.sls
 CLEANFILES += lib/vicare/posix/pid-files.fasl
 endif
 
 lib/vicare/posix/lock-pid-files.fasl: \
-		lib/vicare/posix/lock-pid-files.sls \
+		lib/vicare/posix/lock-pid-files.vicare.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -1680,17 +1680,17 @@ lib/vicare/posix/lock-pid-files.fasl: \
 
 if WANT_POSIX
 lib_vicare_posix_lock_pid_files_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_lock_pid_files_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_lock_pid_files_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_lock_pid_files_fasl_DATA = lib/vicare/posix/lock-pid-files.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_lock_pid_files_sls_DATA = lib/vicare/posix/lock-pid-files.sls
+dist_lib_vicare_posix_lock_pid_files_vicare_sls_DATA = lib/vicare/posix/lock-pid-files.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/lock-pid-files.sls
+EXTRA_DIST += lib/vicare/posix/lock-pid-files.vicare.sls
 CLEANFILES += lib/vicare/posix/lock-pid-files.fasl
 endif
 
 lib/vicare/posix/log-files.fasl: \
-		lib/vicare/posix/log-files.sls \
+		lib/vicare/posix/log-files.vicare.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
@@ -1698,17 +1698,17 @@ lib/vicare/posix/log-files.fasl: \
 
 if WANT_POSIX
 lib_vicare_posix_log_files_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_log_files_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_log_files_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_log_files_fasl_DATA = lib/vicare/posix/log-files.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_log_files_sls_DATA = lib/vicare/posix/log-files.sls
+dist_lib_vicare_posix_log_files_vicare_sls_DATA = lib/vicare/posix/log-files.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/log-files.sls
+EXTRA_DIST += lib/vicare/posix/log-files.vicare.sls
 CLEANFILES += lib/vicare/posix/log-files.fasl
 endif
 
 lib/vicare/posix/daemonisations.fasl: \
-		lib/vicare/posix/daemonisations.sls \
+		lib/vicare/posix/daemonisations.vicare.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/platform/constants.fasl \
 		$(FASL_PREREQUISITES)
@@ -1716,17 +1716,17 @@ lib/vicare/posix/daemonisations.fasl: \
 
 if WANT_POSIX
 lib_vicare_posix_daemonisations_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_daemonisations_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_daemonisations_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_daemonisations_fasl_DATA = lib/vicare/posix/daemonisations.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_daemonisations_sls_DATA = lib/vicare/posix/daemonisations.sls
+dist_lib_vicare_posix_daemonisations_vicare_sls_DATA = lib/vicare/posix/daemonisations.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/daemonisations.sls
+EXTRA_DIST += lib/vicare/posix/daemonisations.vicare.sls
 CLEANFILES += lib/vicare/posix/daemonisations.fasl
 endif
 
 lib/vicare/posix/simple-event-loop.fasl: \
-		lib/vicare/posix/simple-event-loop.sls \
+		lib/vicare/posix/simple-event-loop.vicare.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -1738,17 +1738,17 @@ lib/vicare/posix/simple-event-loop.fasl: \
 
 if WANT_POSIX
 lib_vicare_posix_simple_event_loop_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_simple_event_loop_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_simple_event_loop_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_simple_event_loop_fasl_DATA = lib/vicare/posix/simple-event-loop.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_simple_event_loop_sls_DATA = lib/vicare/posix/simple-event-loop.sls
+dist_lib_vicare_posix_simple_event_loop_vicare_sls_DATA = lib/vicare/posix/simple-event-loop.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/simple-event-loop.sls
+EXTRA_DIST += lib/vicare/posix/simple-event-loop.vicare.sls
 CLEANFILES += lib/vicare/posix/simple-event-loop.fasl
 endif
 
 lib/vicare/posix/tcp-server-sockets.fasl: \
-		lib/vicare/posix/tcp-server-sockets.sls \
+		lib/vicare/posix/tcp-server-sockets.vicare.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -1757,102 +1757,102 @@ lib/vicare/posix/tcp-server-sockets.fasl: \
 
 if WANT_POSIX
 lib_vicare_posix_tcp_server_sockets_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_tcp_server_sockets_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_tcp_server_sockets_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_tcp_server_sockets_fasl_DATA = lib/vicare/posix/tcp-server-sockets.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_tcp_server_sockets_sls_DATA = lib/vicare/posix/tcp-server-sockets.sls
+dist_lib_vicare_posix_tcp_server_sockets_vicare_sls_DATA = lib/vicare/posix/tcp-server-sockets.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/tcp-server-sockets.sls
+EXTRA_DIST += lib/vicare/posix/tcp-server-sockets.vicare.sls
 CLEANFILES += lib/vicare/posix/tcp-server-sockets.fasl
 endif
 
 lib/vicare/posix/sendmail.fasl: \
-		lib/vicare/posix/sendmail.sls \
+		lib/vicare/posix/sendmail.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
 lib_vicare_posix_sendmail_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_sendmail_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_sendmail_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_sendmail_fasl_DATA = lib/vicare/posix/sendmail.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_sendmail_sls_DATA = lib/vicare/posix/sendmail.sls
+dist_lib_vicare_posix_sendmail_vicare_sls_DATA = lib/vicare/posix/sendmail.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/sendmail.sls
+EXTRA_DIST += lib/vicare/posix/sendmail.vicare.sls
 CLEANFILES += lib/vicare/posix/sendmail.fasl
 endif
 
 lib/vicare/posix/mailx.fasl: \
-		lib/vicare/posix/mailx.sls \
+		lib/vicare/posix/mailx.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
 lib_vicare_posix_mailx_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_mailx_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_mailx_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_mailx_fasl_DATA = lib/vicare/posix/mailx.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_mailx_sls_DATA = lib/vicare/posix/mailx.sls
+dist_lib_vicare_posix_mailx_vicare_sls_DATA = lib/vicare/posix/mailx.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/mailx.sls
+EXTRA_DIST += lib/vicare/posix/mailx.vicare.sls
 CLEANFILES += lib/vicare/posix/mailx.fasl
 endif
 
 lib/vicare/posix/curl.fasl: \
-		lib/vicare/posix/curl.sls \
+		lib/vicare/posix/curl.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
 lib_vicare_posix_curl_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_curl_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_curl_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_curl_fasl_DATA = lib/vicare/posix/curl.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_curl_sls_DATA = lib/vicare/posix/curl.sls
+dist_lib_vicare_posix_curl_vicare_sls_DATA = lib/vicare/posix/curl.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/curl.sls
+EXTRA_DIST += lib/vicare/posix/curl.vicare.sls
 CLEANFILES += lib/vicare/posix/curl.fasl
 endif
 
 lib/vicare/posix/wget.fasl: \
-		lib/vicare/posix/wget.sls \
+		lib/vicare/posix/wget.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
 lib_vicare_posix_wget_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_wget_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_wget_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_wget_fasl_DATA = lib/vicare/posix/wget.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_wget_sls_DATA = lib/vicare/posix/wget.sls
+dist_lib_vicare_posix_wget_vicare_sls_DATA = lib/vicare/posix/wget.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/wget.sls
+EXTRA_DIST += lib/vicare/posix/wget.vicare.sls
 CLEANFILES += lib/vicare/posix/wget.fasl
 endif
 
 lib/vicare/posix/find.fasl: \
-		lib/vicare/posix/find.sls \
+		lib/vicare/posix/find.vicare.sls \
 		lib/vicare/posix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
 lib_vicare_posix_find_fasldir = $(bundledlibsdir)/vicare/posix
-lib_vicare_posix_find_slsdir  = $(bundledlibsdir)/vicare/posix
+lib_vicare_posix_find_vicare_slsdir  = $(bundledlibsdir)/vicare/posix
 nodist_lib_vicare_posix_find_fasl_DATA = lib/vicare/posix/find.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_posix_find_sls_DATA = lib/vicare/posix/find.sls
+dist_lib_vicare_posix_find_vicare_sls_DATA = lib/vicare/posix/find.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/posix/find.sls
+EXTRA_DIST += lib/vicare/posix/find.vicare.sls
 CLEANFILES += lib/vicare/posix/find.fasl
 endif
 
 lib/vicare/glibc.fasl: \
-		lib/vicare/glibc.sls \
+		lib/vicare/glibc.vicare.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/platform/constants.fasl \
@@ -1868,17 +1868,17 @@ lib/vicare/glibc.fasl: \
 
 if WANT_GLIBC
 lib_vicare_glibc_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_glibc_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_glibc_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_glibc_fasl_DATA = lib/vicare/glibc.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_glibc_sls_DATA = lib/vicare/glibc.sls
+dist_lib_vicare_glibc_vicare_sls_DATA = lib/vicare/glibc.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/glibc.sls
+EXTRA_DIST += lib/vicare/glibc.vicare.sls
 CLEANFILES += lib/vicare/glibc.fasl
 endif
 
 lib/vicare/gcc.fasl: \
-		lib/vicare/gcc.sls \
+		lib/vicare/gcc.vicare.sls \
 		lib/vicare/ffi.fasl \
 		lib/vicare/posix.fasl \
 		lib/vicare/glibc.fasl \
@@ -1891,19 +1891,19 @@ if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
 lib_vicare_gcc_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_gcc_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_gcc_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_gcc_fasl_DATA = lib/vicare/gcc.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_gcc_sls_DATA = lib/vicare/gcc.sls
+dist_lib_vicare_gcc_vicare_sls_DATA = lib/vicare/gcc.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/gcc.sls
+EXTRA_DIST += lib/vicare/gcc.vicare.sls
 CLEANFILES += lib/vicare/gcc.fasl
 endif
 endif
 endif
 
 lib/vicare/linux.fasl: \
-		lib/vicare/linux.sls \
+		lib/vicare/linux.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -1921,18 +1921,18 @@ lib/vicare/linux.fasl: \
 if WANT_POSIX
 if WANT_LINUX
 lib_vicare_linux_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_linux_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_linux_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_linux_fasl_DATA = lib/vicare/linux.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_linux_sls_DATA = lib/vicare/linux.sls
+dist_lib_vicare_linux_vicare_sls_DATA = lib/vicare/linux.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/linux.sls
+EXTRA_DIST += lib/vicare/linux.vicare.sls
 CLEANFILES += lib/vicare/linux.fasl
 endif
 endif
 
 lib/vicare/readline.fasl: \
-		lib/vicare/readline.sls \
+		lib/vicare/readline.vicare.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -1940,71 +1940,71 @@ lib/vicare/readline.fasl: \
 
 if WANT_READLINE
 lib_vicare_readline_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_readline_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_readline_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_readline_fasl_DATA = lib/vicare/readline.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_readline_sls_DATA = lib/vicare/readline.sls
+dist_lib_vicare_readline_vicare_sls_DATA = lib/vicare/readline.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/readline.sls
+EXTRA_DIST += lib/vicare/readline.vicare.sls
 CLEANFILES += lib/vicare/readline.fasl
 endif
 
 lib/vicare/assembler/inspection.fasl: \
-		lib/vicare/assembler/inspection.sls \
+		lib/vicare/assembler/inspection.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_assembler_inspection_fasldir = $(bundledlibsdir)/vicare/assembler
-lib_vicare_assembler_inspection_slsdir  = $(bundledlibsdir)/vicare/assembler
+lib_vicare_assembler_inspection_vicare_slsdir  = $(bundledlibsdir)/vicare/assembler
 nodist_lib_vicare_assembler_inspection_fasl_DATA = lib/vicare/assembler/inspection.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_assembler_inspection_sls_DATA = lib/vicare/assembler/inspection.sls
+dist_lib_vicare_assembler_inspection_vicare_sls_DATA = lib/vicare/assembler/inspection.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/assembler/inspection.sls
+EXTRA_DIST += lib/vicare/assembler/inspection.vicare.sls
 CLEANFILES += lib/vicare/assembler/inspection.fasl
 
 lib/vicare/debugging/compiler.fasl: \
-		lib/vicare/debugging/compiler.sls \
+		lib/vicare/debugging/compiler.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_debugging_compiler_fasldir = $(bundledlibsdir)/vicare/debugging
-lib_vicare_debugging_compiler_slsdir  = $(bundledlibsdir)/vicare/debugging
+lib_vicare_debugging_compiler_vicare_slsdir  = $(bundledlibsdir)/vicare/debugging
 nodist_lib_vicare_debugging_compiler_fasl_DATA = lib/vicare/debugging/compiler.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_debugging_compiler_sls_DATA = lib/vicare/debugging/compiler.sls
+dist_lib_vicare_debugging_compiler_vicare_sls_DATA = lib/vicare/debugging/compiler.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/debugging/compiler.sls
+EXTRA_DIST += lib/vicare/debugging/compiler.vicare.sls
 CLEANFILES += lib/vicare/debugging/compiler.fasl
 
 lib/vicare/parser-logic.fasl: \
-		lib/vicare/parser-logic.sls \
+		lib/vicare/parser-logic.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_logic_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_parser_logic_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_parser_logic_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_parser_logic_fasl_DATA = lib/vicare/parser-logic.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_parser_logic_sls_DATA = lib/vicare/parser-logic.sls
+dist_lib_vicare_parser_logic_vicare_sls_DATA = lib/vicare/parser-logic.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/parser-logic.sls
+EXTRA_DIST += lib/vicare/parser-logic.vicare.sls
 CLEANFILES += lib/vicare/parser-logic.fasl
 
 lib/vicare/irregex.fasl: \
-		lib/vicare/irregex.sls \
+		lib/vicare/irregex.vicare.sls \
 		lib/vicare/irregex/compat.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_irregex_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_irregex_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_irregex_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_irregex_fasl_DATA = lib/vicare/irregex.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_irregex_sls_DATA = lib/vicare/irregex.sls
+dist_lib_vicare_irregex_vicare_sls_DATA = lib/vicare/irregex.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/irregex.sls
+EXTRA_DIST += lib/vicare/irregex.vicare.sls
 CLEANFILES += lib/vicare/irregex.fasl
 
 lib/vicare/irregex/compat.fasl: \
@@ -2022,21 +2022,21 @@ EXTRA_DIST += lib/vicare/irregex/compat.vicare.sls
 CLEANFILES += lib/vicare/irregex/compat.fasl
 
 lib/vicare/pregexp.fasl: \
-		lib/vicare/pregexp.sls \
+		lib/vicare/pregexp.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_pregexp_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_pregexp_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_pregexp_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_pregexp_fasl_DATA = lib/vicare/pregexp.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_pregexp_sls_DATA = lib/vicare/pregexp.sls
+dist_lib_vicare_pregexp_vicare_sls_DATA = lib/vicare/pregexp.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/pregexp.sls
+EXTRA_DIST += lib/vicare/pregexp.vicare.sls
 CLEANFILES += lib/vicare/pregexp.fasl
 
 lib/vicare/getopts.fasl: \
-		lib/vicare/getopts.sls \
+		lib/vicare/getopts.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -2044,32 +2044,32 @@ lib/vicare/getopts.fasl: \
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_getopts_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_getopts_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_getopts_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_getopts_fasl_DATA = lib/vicare/getopts.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_getopts_sls_DATA = lib/vicare/getopts.sls
+dist_lib_vicare_getopts_vicare_sls_DATA = lib/vicare/getopts.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/getopts.sls
+EXTRA_DIST += lib/vicare/getopts.vicare.sls
 CLEANFILES += lib/vicare/getopts.fasl
 
 lib/vicare/formations.fasl: \
-		lib/vicare/formations.sls \
+		lib/vicare/formations.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_formations_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_formations_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_formations_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_formations_fasl_DATA = lib/vicare/formations.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_formations_sls_DATA = lib/vicare/formations.sls
+dist_lib_vicare_formations_vicare_sls_DATA = lib/vicare/formations.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/formations.sls
+EXTRA_DIST += lib/vicare/formations.vicare.sls
 CLEANFILES += lib/vicare/formations.fasl
 
 lib/vicare/cre2.fasl: \
-		lib/vicare/cre2.sls \
+		lib/vicare/cre2.vicare.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -2077,12 +2077,12 @@ lib/vicare/cre2.fasl: \
 
 if WANT_CRE2
 lib_vicare_cre2_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_cre2_slsdir  = $(bundledlibsdir)/vicare
+lib_vicare_cre2_vicare_slsdir  = $(bundledlibsdir)/vicare
 nodist_lib_vicare_cre2_fasl_DATA = lib/vicare/cre2.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_cre2_sls_DATA = lib/vicare/cre2.sls
+dist_lib_vicare_cre2_vicare_sls_DATA = lib/vicare/cre2.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/cre2.sls
+EXTRA_DIST += lib/vicare/cre2.vicare.sls
 CLEANFILES += lib/vicare/cre2.fasl
 endif
 
@@ -3482,23 +3482,23 @@ endif
 endif
 
 lib/nausicaa/language/auxiliary-syntaxes.fasl: \
-		lib/nausicaa/language/auxiliary-syntaxes.sls \
+		lib/nausicaa/language/auxiliary-syntaxes.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_auxiliary_syntaxes_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_auxiliary_syntaxes_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_auxiliary_syntaxes_fasl_DATA = lib/nausicaa/language/auxiliary-syntaxes.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_auxiliary_syntaxes_sls_DATA = lib/nausicaa/language/auxiliary-syntaxes.sls
+dist_lib_nausicaa_language_auxiliary_syntaxes_vicare_sls_DATA = lib/nausicaa/language/auxiliary-syntaxes.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/auxiliary-syntaxes.sls
+EXTRA_DIST += lib/nausicaa/language/auxiliary-syntaxes.vicare.sls
 CLEANFILES += lib/nausicaa/language/auxiliary-syntaxes.fasl
 endif
 
 lib/nausicaa/language/oopp.fasl: \
-		lib/nausicaa/language/oopp.sls \
+		lib/nausicaa/language/oopp.vicare.sls \
 		lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl \
 		lib/nausicaa/language/oopp/conditions.fasl \
 		lib/nausicaa/language/oopp/oopp-syntax-helpers.fasl \
@@ -3511,49 +3511,49 @@ lib/nausicaa/language/oopp.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_oopp_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_oopp_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_oopp_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_oopp_fasl_DATA = lib/nausicaa/language/oopp.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_oopp_sls_DATA = lib/nausicaa/language/oopp.sls
+dist_lib_nausicaa_language_oopp_vicare_sls_DATA = lib/nausicaa/language/oopp.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/oopp.sls
+EXTRA_DIST += lib/nausicaa/language/oopp.vicare.sls
 CLEANFILES += lib/nausicaa/language/oopp.fasl
 endif
 
 lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl: \
-		lib/nausicaa/language/oopp/auxiliary-syntaxes.sls \
+		lib/nausicaa/language/oopp/auxiliary-syntaxes.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_oopp_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/nausicaa/language/oopp
-lib_nausicaa_language_oopp_auxiliary_syntaxes_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
+lib_nausicaa_language_oopp_auxiliary_syntaxes_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
 nodist_lib_nausicaa_language_oopp_auxiliary_syntaxes_fasl_DATA = lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_oopp_auxiliary_syntaxes_sls_DATA = lib/nausicaa/language/oopp/auxiliary-syntaxes.sls
+dist_lib_nausicaa_language_oopp_auxiliary_syntaxes_vicare_sls_DATA = lib/nausicaa/language/oopp/auxiliary-syntaxes.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/oopp/auxiliary-syntaxes.sls
+EXTRA_DIST += lib/nausicaa/language/oopp/auxiliary-syntaxes.vicare.sls
 CLEANFILES += lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl
 endif
 
 lib/nausicaa/language/oopp/conditions.fasl: \
-		lib/nausicaa/language/oopp/conditions.sls \
+		lib/nausicaa/language/oopp/conditions.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_oopp_conditions_fasldir = $(bundledlibsdir)/nausicaa/language/oopp
-lib_nausicaa_language_oopp_conditions_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
+lib_nausicaa_language_oopp_conditions_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
 nodist_lib_nausicaa_language_oopp_conditions_fasl_DATA = lib/nausicaa/language/oopp/conditions.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_oopp_conditions_sls_DATA = lib/nausicaa/language/oopp/conditions.sls
+dist_lib_nausicaa_language_oopp_conditions_vicare_sls_DATA = lib/nausicaa/language/oopp/conditions.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/oopp/conditions.sls
+EXTRA_DIST += lib/nausicaa/language/oopp/conditions.vicare.sls
 CLEANFILES += lib/nausicaa/language/oopp/conditions.fasl
 endif
 
 lib/nausicaa/language/oopp/oopp-syntax-helpers.fasl: \
-		lib/nausicaa/language/oopp/oopp-syntax-helpers.sls \
+		lib/nausicaa/language/oopp/oopp-syntax-helpers.vicare.sls \
 		lib/nausicaa/language/oopp/configuration.fasl \
 		lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
@@ -3565,33 +3565,33 @@ lib/nausicaa/language/oopp/oopp-syntax-helpers.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_oopp_oopp_syntax_helpers_fasldir = $(bundledlibsdir)/nausicaa/language/oopp
-lib_nausicaa_language_oopp_oopp_syntax_helpers_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
+lib_nausicaa_language_oopp_oopp_syntax_helpers_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
 nodist_lib_nausicaa_language_oopp_oopp_syntax_helpers_fasl_DATA = lib/nausicaa/language/oopp/oopp-syntax-helpers.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_oopp_oopp_syntax_helpers_sls_DATA = lib/nausicaa/language/oopp/oopp-syntax-helpers.sls
+dist_lib_nausicaa_language_oopp_oopp_syntax_helpers_vicare_sls_DATA = lib/nausicaa/language/oopp/oopp-syntax-helpers.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/oopp/oopp-syntax-helpers.sls
+EXTRA_DIST += lib/nausicaa/language/oopp/oopp-syntax-helpers.vicare.sls
 CLEANFILES += lib/nausicaa/language/oopp/oopp-syntax-helpers.fasl
 endif
 
 lib/nausicaa/language/oopp/configuration.fasl: \
-		lib/nausicaa/language/oopp/configuration.sls \
+		lib/nausicaa/language/oopp/configuration.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_oopp_configuration_fasldir = $(bundledlibsdir)/nausicaa/language/oopp
-lib_nausicaa_language_oopp_configuration_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
+lib_nausicaa_language_oopp_configuration_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
 nodist_lib_nausicaa_language_oopp_configuration_fasl_DATA = lib/nausicaa/language/oopp/configuration.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_oopp_configuration_sls_DATA = lib/nausicaa/language/oopp/configuration.sls
+dist_lib_nausicaa_language_oopp_configuration_vicare_sls_DATA = lib/nausicaa/language/oopp/configuration.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/oopp/configuration.sls
+EXTRA_DIST += lib/nausicaa/language/oopp/configuration.vicare.sls
 CLEANFILES += lib/nausicaa/language/oopp/configuration.fasl
 endif
 
 lib/nausicaa/language/oopp/definition-parser-helpers.fasl: \
-		lib/nausicaa/language/oopp/definition-parser-helpers.sls \
+		lib/nausicaa/language/oopp/definition-parser-helpers.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/identifier-substitutions.fasl \
 		lib/nausicaa/language/oopp/configuration.fasl \
@@ -3602,17 +3602,17 @@ lib/nausicaa/language/oopp/definition-parser-helpers.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_oopp_definition_parser_helpers_fasldir = $(bundledlibsdir)/nausicaa/language/oopp
-lib_nausicaa_language_oopp_definition_parser_helpers_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
+lib_nausicaa_language_oopp_definition_parser_helpers_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/oopp
 nodist_lib_nausicaa_language_oopp_definition_parser_helpers_fasl_DATA = lib/nausicaa/language/oopp/definition-parser-helpers.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_oopp_definition_parser_helpers_sls_DATA = lib/nausicaa/language/oopp/definition-parser-helpers.sls
+dist_lib_nausicaa_language_oopp_definition_parser_helpers_vicare_sls_DATA = lib/nausicaa/language/oopp/definition-parser-helpers.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/oopp/definition-parser-helpers.sls
+EXTRA_DIST += lib/nausicaa/language/oopp/definition-parser-helpers.vicare.sls
 CLEANFILES += lib/nausicaa/language/oopp/definition-parser-helpers.fasl
 endif
 
 lib/nausicaa/language/multimethods.fasl: \
-		lib/nausicaa/language/multimethods.sls \
+		lib/nausicaa/language/multimethods.vicare.sls \
 		lib/nausicaa/language/multimethods/types.fasl \
 		lib/nausicaa/language/multimethods/methods-table.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
@@ -3622,34 +3622,34 @@ lib/nausicaa/language/multimethods.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_multimethods_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_multimethods_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_multimethods_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_multimethods_fasl_DATA = lib/nausicaa/language/multimethods.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_multimethods_sls_DATA = lib/nausicaa/language/multimethods.sls
+dist_lib_nausicaa_language_multimethods_vicare_sls_DATA = lib/nausicaa/language/multimethods.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/multimethods.sls
+EXTRA_DIST += lib/nausicaa/language/multimethods.vicare.sls
 CLEANFILES += lib/nausicaa/language/multimethods.fasl
 endif
 
 lib/nausicaa/language/multimethods/types.fasl: \
-		lib/nausicaa/language/multimethods/types.sls \
+		lib/nausicaa/language/multimethods/types.vicare.sls \
 		lib/nausicaa/language/oopp.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_multimethods_types_fasldir = $(bundledlibsdir)/nausicaa/language/multimethods
-lib_nausicaa_language_multimethods_types_slsdir  = $(bundledlibsdir)/nausicaa/language/multimethods
+lib_nausicaa_language_multimethods_types_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/multimethods
 nodist_lib_nausicaa_language_multimethods_types_fasl_DATA = lib/nausicaa/language/multimethods/types.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_multimethods_types_sls_DATA = lib/nausicaa/language/multimethods/types.sls
+dist_lib_nausicaa_language_multimethods_types_vicare_sls_DATA = lib/nausicaa/language/multimethods/types.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/multimethods/types.sls
+EXTRA_DIST += lib/nausicaa/language/multimethods/types.vicare.sls
 CLEANFILES += lib/nausicaa/language/multimethods/types.fasl
 endif
 
 lib/nausicaa/language/multimethods/methods-table.fasl: \
-		lib/nausicaa/language/multimethods/methods-table.sls \
+		lib/nausicaa/language/multimethods/methods-table.vicare.sls \
 		lib/nausicaa/language/symbols-tree.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -3657,49 +3657,49 @@ lib/nausicaa/language/multimethods/methods-table.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_multimethods_methods_table_fasldir = $(bundledlibsdir)/nausicaa/language/multimethods
-lib_nausicaa_language_multimethods_methods_table_slsdir  = $(bundledlibsdir)/nausicaa/language/multimethods
+lib_nausicaa_language_multimethods_methods_table_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/multimethods
 nodist_lib_nausicaa_language_multimethods_methods_table_fasl_DATA = lib/nausicaa/language/multimethods/methods-table.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_multimethods_methods_table_sls_DATA = lib/nausicaa/language/multimethods/methods-table.sls
+dist_lib_nausicaa_language_multimethods_methods_table_vicare_sls_DATA = lib/nausicaa/language/multimethods/methods-table.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/multimethods/methods-table.sls
+EXTRA_DIST += lib/nausicaa/language/multimethods/methods-table.vicare.sls
 CLEANFILES += lib/nausicaa/language/multimethods/methods-table.fasl
 endif
 
 lib/nausicaa/language/symbols-tree.fasl: \
-		lib/nausicaa/language/symbols-tree.sls \
+		lib/nausicaa/language/symbols-tree.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_symbols_tree_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_symbols_tree_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_symbols_tree_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_symbols_tree_fasl_DATA = lib/nausicaa/language/symbols-tree.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_symbols_tree_sls_DATA = lib/nausicaa/language/symbols-tree.sls
+dist_lib_nausicaa_language_symbols_tree_vicare_sls_DATA = lib/nausicaa/language/symbols-tree.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/symbols-tree.sls
+EXTRA_DIST += lib/nausicaa/language/symbols-tree.vicare.sls
 CLEANFILES += lib/nausicaa/language/symbols-tree.fasl
 endif
 
 lib/nausicaa/language/multimethods/auxiliary-syntaxes.fasl: \
-		lib/nausicaa/language/multimethods/auxiliary-syntaxes.sls \
+		lib/nausicaa/language/multimethods/auxiliary-syntaxes.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_language_multimethods_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/nausicaa/language/multimethods
-lib_nausicaa_language_multimethods_auxiliary_syntaxes_slsdir  = $(bundledlibsdir)/nausicaa/language/multimethods
+lib_nausicaa_language_multimethods_auxiliary_syntaxes_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language/multimethods
 nodist_lib_nausicaa_language_multimethods_auxiliary_syntaxes_fasl_DATA = lib/nausicaa/language/multimethods/auxiliary-syntaxes.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_multimethods_auxiliary_syntaxes_sls_DATA = lib/nausicaa/language/multimethods/auxiliary-syntaxes.sls
+dist_lib_nausicaa_language_multimethods_auxiliary_syntaxes_vicare_sls_DATA = lib/nausicaa/language/multimethods/auxiliary-syntaxes.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/multimethods/auxiliary-syntaxes.sls
+EXTRA_DIST += lib/nausicaa/language/multimethods/auxiliary-syntaxes.vicare.sls
 CLEANFILES += lib/nausicaa/language/multimethods/auxiliary-syntaxes.fasl
 endif
 
 lib/nausicaa/language/builtins.fasl: \
-		lib/nausicaa/language/builtins.sls \
+		lib/nausicaa/language/builtins.vicare.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/sentinels.fasl \
 		lib/vicare/containers/bytevectors.fasl \
@@ -3710,17 +3710,17 @@ lib/nausicaa/language/builtins.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_builtins_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_builtins_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_builtins_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_builtins_fasl_DATA = lib/nausicaa/language/builtins.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_builtins_sls_DATA = lib/nausicaa/language/builtins.sls
+dist_lib_nausicaa_language_builtins_vicare_sls_DATA = lib/nausicaa/language/builtins.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/builtins.sls
+EXTRA_DIST += lib/nausicaa/language/builtins.vicare.sls
 CLEANFILES += lib/nausicaa/language/builtins.fasl
 endif
 
 lib/nausicaa/language/conditions.fasl: \
-		lib/nausicaa/language/conditions.sls \
+		lib/nausicaa/language/conditions.vicare.sls \
 		lib/nausicaa/language/oopp.fasl \
 		lib/nausicaa/language/builtins.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
@@ -3729,17 +3729,17 @@ lib/nausicaa/language/conditions.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_conditions_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_conditions_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_conditions_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_conditions_fasl_DATA = lib/nausicaa/language/conditions.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_conditions_sls_DATA = lib/nausicaa/language/conditions.sls
+dist_lib_nausicaa_language_conditions_vicare_sls_DATA = lib/nausicaa/language/conditions.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/conditions.sls
+EXTRA_DIST += lib/nausicaa/language/conditions.vicare.sls
 CLEANFILES += lib/nausicaa/language/conditions.fasl
 endif
 
 lib/nausicaa/language/simple-match.fasl: \
-		lib/nausicaa/language/simple-match.sls \
+		lib/nausicaa/language/simple-match.vicare.sls \
 		lib/nausicaa/language/oopp.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -3747,17 +3747,17 @@ lib/nausicaa/language/simple-match.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_language_simple_match_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_simple_match_slsdir  = $(bundledlibsdir)/nausicaa/language
+lib_nausicaa_language_simple_match_vicare_slsdir  = $(bundledlibsdir)/nausicaa/language
 nodist_lib_nausicaa_language_simple_match_fasl_DATA = lib/nausicaa/language/simple-match.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_simple_match_sls_DATA = lib/nausicaa/language/simple-match.sls
+dist_lib_nausicaa_language_simple_match_vicare_sls_DATA = lib/nausicaa/language/simple-match.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/language/simple-match.sls
+EXTRA_DIST += lib/nausicaa/language/simple-match.vicare.sls
 CLEANFILES += lib/nausicaa/language/simple-match.fasl
 endif
 
 lib/nausicaa.fasl: \
-		lib/nausicaa.sls \
+		lib/nausicaa.vicare.sls \
 		lib/nausicaa/language/oopp.fasl \
 		lib/nausicaa/language/multimethods.fasl \
 		lib/nausicaa/language/builtins.fasl \
@@ -3770,17 +3770,17 @@ lib/nausicaa.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_fasldir = $(bundledlibsdir)/
-lib_nausicaa_slsdir  = $(bundledlibsdir)/
+lib_nausicaa_vicare_slsdir  = $(bundledlibsdir)/
 nodist_lib_nausicaa_fasl_DATA = lib/nausicaa.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_sls_DATA = lib/nausicaa.sls
+dist_lib_nausicaa_vicare_sls_DATA = lib/nausicaa.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa.sls
+EXTRA_DIST += lib/nausicaa.vicare.sls
 CLEANFILES += lib/nausicaa.fasl
 endif
 
 lib/nausicaa/containers/lists.fasl: \
-		lib/nausicaa/containers/lists.sls \
+		lib/nausicaa/containers/lists.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/lists.fasl \
 		$(FASL_PREREQUISITES)
@@ -3788,17 +3788,17 @@ lib/nausicaa/containers/lists.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_lists_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_lists_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_lists_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_lists_fasl_DATA = lib/nausicaa/containers/lists.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_lists_sls_DATA = lib/nausicaa/containers/lists.sls
+dist_lib_nausicaa_containers_lists_vicare_sls_DATA = lib/nausicaa/containers/lists.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/lists.sls
+EXTRA_DIST += lib/nausicaa/containers/lists.vicare.sls
 CLEANFILES += lib/nausicaa/containers/lists.fasl
 endif
 
 lib/nausicaa/containers/vectors.fasl: \
-		lib/nausicaa/containers/vectors.sls \
+		lib/nausicaa/containers/vectors.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/vectors.fasl \
 		$(FASL_PREREQUISITES)
@@ -3806,17 +3806,17 @@ lib/nausicaa/containers/vectors.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_vectors_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_vectors_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_vectors_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_vectors_fasl_DATA = lib/nausicaa/containers/vectors.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_vectors_sls_DATA = lib/nausicaa/containers/vectors.sls
+dist_lib_nausicaa_containers_vectors_vicare_sls_DATA = lib/nausicaa/containers/vectors.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/vectors.sls
+EXTRA_DIST += lib/nausicaa/containers/vectors.vicare.sls
 CLEANFILES += lib/nausicaa/containers/vectors.fasl
 endif
 
 lib/nausicaa/containers/strings.fasl: \
-		lib/nausicaa/containers/strings.sls \
+		lib/nausicaa/containers/strings.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/strings.fasl \
 		lib/vicare/containers/strings/low.fasl \
@@ -3825,17 +3825,17 @@ lib/nausicaa/containers/strings.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_strings_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_strings_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_strings_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_strings_fasl_DATA = lib/nausicaa/containers/strings.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_strings_sls_DATA = lib/nausicaa/containers/strings.sls
+dist_lib_nausicaa_containers_strings_vicare_sls_DATA = lib/nausicaa/containers/strings.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/strings.sls
+EXTRA_DIST += lib/nausicaa/containers/strings.vicare.sls
 CLEANFILES += lib/nausicaa/containers/strings.fasl
 endif
 
 lib/nausicaa/containers/arrays.fasl: \
-		lib/nausicaa/containers/arrays.sls \
+		lib/nausicaa/containers/arrays.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/strings.fasl \
 		lib/vicare/containers/lists.fasl \
@@ -3848,17 +3848,17 @@ lib/nausicaa/containers/arrays.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_arrays_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_arrays_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_arrays_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_arrays_fasl_DATA = lib/nausicaa/containers/arrays.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_arrays_sls_DATA = lib/nausicaa/containers/arrays.sls
+dist_lib_nausicaa_containers_arrays_vicare_sls_DATA = lib/nausicaa/containers/arrays.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/arrays.sls
+EXTRA_DIST += lib/nausicaa/containers/arrays.vicare.sls
 CLEANFILES += lib/nausicaa/containers/arrays.fasl
 endif
 
 lib/nausicaa/containers/stacks.fasl: \
-		lib/nausicaa/containers/stacks.sls \
+		lib/nausicaa/containers/stacks.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/stacks.fasl \
 		$(FASL_PREREQUISITES)
@@ -3866,17 +3866,17 @@ lib/nausicaa/containers/stacks.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_stacks_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_stacks_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_stacks_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_stacks_fasl_DATA = lib/nausicaa/containers/stacks.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_stacks_sls_DATA = lib/nausicaa/containers/stacks.sls
+dist_lib_nausicaa_containers_stacks_vicare_sls_DATA = lib/nausicaa/containers/stacks.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/stacks.sls
+EXTRA_DIST += lib/nausicaa/containers/stacks.vicare.sls
 CLEANFILES += lib/nausicaa/containers/stacks.fasl
 endif
 
 lib/nausicaa/containers/queues.fasl: \
-		lib/nausicaa/containers/queues.sls \
+		lib/nausicaa/containers/queues.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/queues.fasl \
 		$(FASL_PREREQUISITES)
@@ -3884,17 +3884,17 @@ lib/nausicaa/containers/queues.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_queues_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_queues_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_queues_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_queues_fasl_DATA = lib/nausicaa/containers/queues.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_queues_sls_DATA = lib/nausicaa/containers/queues.sls
+dist_lib_nausicaa_containers_queues_vicare_sls_DATA = lib/nausicaa/containers/queues.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/queues.sls
+EXTRA_DIST += lib/nausicaa/containers/queues.vicare.sls
 CLEANFILES += lib/nausicaa/containers/queues.fasl
 endif
 
 lib/nausicaa/containers/bitvectors.fasl: \
-		lib/nausicaa/containers/bitvectors.sls \
+		lib/nausicaa/containers/bitvectors.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/platform/words.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -3904,17 +3904,17 @@ lib/nausicaa/containers/bitvectors.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_bitvectors_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_bitvectors_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_bitvectors_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_bitvectors_fasl_DATA = lib/nausicaa/containers/bitvectors.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_bitvectors_sls_DATA = lib/nausicaa/containers/bitvectors.sls
+dist_lib_nausicaa_containers_bitvectors_vicare_sls_DATA = lib/nausicaa/containers/bitvectors.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/bitvectors.sls
+EXTRA_DIST += lib/nausicaa/containers/bitvectors.vicare.sls
 CLEANFILES += lib/nausicaa/containers/bitvectors.fasl
 endif
 
 lib/nausicaa/containers/iterators.fasl: \
-		lib/nausicaa/containers/iterators.sls \
+		lib/nausicaa/containers/iterators.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -3924,17 +3924,17 @@ lib/nausicaa/containers/iterators.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_containers_iterators_fasldir = $(bundledlibsdir)/nausicaa/containers
-lib_nausicaa_containers_iterators_slsdir  = $(bundledlibsdir)/nausicaa/containers
+lib_nausicaa_containers_iterators_vicare_slsdir  = $(bundledlibsdir)/nausicaa/containers
 nodist_lib_nausicaa_containers_iterators_fasl_DATA = lib/nausicaa/containers/iterators.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_containers_iterators_sls_DATA = lib/nausicaa/containers/iterators.sls
+dist_lib_nausicaa_containers_iterators_vicare_sls_DATA = lib/nausicaa/containers/iterators.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/containers/iterators.sls
+EXTRA_DIST += lib/nausicaa/containers/iterators.vicare.sls
 CLEANFILES += lib/nausicaa/containers/iterators.fasl
 endif
 
 lib/nausicaa/parser-tools/source-locations.fasl: \
-		lib/nausicaa/parser-tools/source-locations.sls \
+		lib/nausicaa/parser-tools/source-locations.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/arguments/validation.fasl \
@@ -3943,17 +3943,17 @@ lib/nausicaa/parser-tools/source-locations.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_source_locations_fasldir = $(bundledlibsdir)/nausicaa/parser-tools
-lib_nausicaa_parser_tools_source_locations_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
+lib_nausicaa_parser_tools_source_locations_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
 nodist_lib_nausicaa_parser_tools_source_locations_fasl_DATA = lib/nausicaa/parser-tools/source-locations.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_source_locations_sls_DATA = lib/nausicaa/parser-tools/source-locations.sls
+dist_lib_nausicaa_parser_tools_source_locations_vicare_sls_DATA = lib/nausicaa/parser-tools/source-locations.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/source-locations.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/source-locations.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/source-locations.fasl
 endif
 
 lib/nausicaa/parser-tools/lexical-tokens.fasl: \
-		lib/nausicaa/parser-tools/lexical-tokens.sls \
+		lib/nausicaa/parser-tools/lexical-tokens.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/vicare/language-extensions/makers.fasl \
@@ -3963,17 +3963,17 @@ lib/nausicaa/parser-tools/lexical-tokens.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_lexical_tokens_fasldir = $(bundledlibsdir)/nausicaa/parser-tools
-lib_nausicaa_parser_tools_lexical_tokens_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
+lib_nausicaa_parser_tools_lexical_tokens_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
 nodist_lib_nausicaa_parser_tools_lexical_tokens_fasl_DATA = lib/nausicaa/parser-tools/lexical-tokens.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_lexical_tokens_sls_DATA = lib/nausicaa/parser-tools/lexical-tokens.sls
+dist_lib_nausicaa_parser_tools_lexical_tokens_vicare_sls_DATA = lib/nausicaa/parser-tools/lexical-tokens.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/lexical-tokens.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/lexical-tokens.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/lexical-tokens.fasl
 endif
 
 lib/nausicaa/parser-tools/silex/default-error-handler.fasl: \
-		lib/nausicaa/parser-tools/silex/default-error-handler.sls \
+		lib/nausicaa/parser-tools/silex/default-error-handler.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
@@ -3982,17 +3982,17 @@ lib/nausicaa/parser-tools/silex/default-error-handler.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_silex_default_error_handler_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/silex
-lib_nausicaa_parser_tools_silex_default_error_handler_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/silex
+lib_nausicaa_parser_tools_silex_default_error_handler_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/silex
 nodist_lib_nausicaa_parser_tools_silex_default_error_handler_fasl_DATA = lib/nausicaa/parser-tools/silex/default-error-handler.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_silex_default_error_handler_sls_DATA = lib/nausicaa/parser-tools/silex/default-error-handler.sls
+dist_lib_nausicaa_parser_tools_silex_default_error_handler_vicare_sls_DATA = lib/nausicaa/parser-tools/silex/default-error-handler.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/silex/default-error-handler.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/silex/default-error-handler.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/silex/default-error-handler.fasl
 endif
 
 lib/nausicaa/parser-tools/lalr/lr-driver.fasl: \
-		lib/nausicaa/parser-tools/lalr/lr-driver.sls \
+		lib/nausicaa/parser-tools/lalr/lr-driver.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
@@ -4001,17 +4001,17 @@ lib/nausicaa/parser-tools/lalr/lr-driver.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_lalr_lr_driver_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/lalr
-lib_nausicaa_parser_tools_lalr_lr_driver_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/lalr
+lib_nausicaa_parser_tools_lalr_lr_driver_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/lalr
 nodist_lib_nausicaa_parser_tools_lalr_lr_driver_fasl_DATA = lib/nausicaa/parser-tools/lalr/lr-driver.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_lalr_lr_driver_sls_DATA = lib/nausicaa/parser-tools/lalr/lr-driver.sls
+dist_lib_nausicaa_parser_tools_lalr_lr_driver_vicare_sls_DATA = lib/nausicaa/parser-tools/lalr/lr-driver.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/lalr/lr-driver.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/lalr/lr-driver.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/lalr/lr-driver.fasl
 endif
 
 lib/nausicaa/parser-tools/lalr/glr-driver.fasl: \
-		lib/nausicaa/parser-tools/lalr/glr-driver.sls \
+		lib/nausicaa/parser-tools/lalr/glr-driver.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
@@ -4020,17 +4020,17 @@ lib/nausicaa/parser-tools/lalr/glr-driver.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_lalr_glr_driver_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/lalr
-lib_nausicaa_parser_tools_lalr_glr_driver_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/lalr
+lib_nausicaa_parser_tools_lalr_glr_driver_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/lalr
 nodist_lib_nausicaa_parser_tools_lalr_glr_driver_fasl_DATA = lib/nausicaa/parser-tools/lalr/glr-driver.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_lalr_glr_driver_sls_DATA = lib/nausicaa/parser-tools/lalr/glr-driver.sls
+dist_lib_nausicaa_parser_tools_lalr_glr_driver_vicare_sls_DATA = lib/nausicaa/parser-tools/lalr/glr-driver.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/lalr/glr-driver.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/lalr/glr-driver.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/lalr/glr-driver.fasl
 endif
 
 lib/nausicaa/parser-tools/lalr.fasl: \
-		lib/nausicaa/parser-tools/lalr.sls \
+		lib/nausicaa/parser-tools/lalr.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
@@ -4040,17 +4040,17 @@ lib/nausicaa/parser-tools/lalr.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_lalr_fasldir = $(bundledlibsdir)/nausicaa/parser-tools
-lib_nausicaa_parser_tools_lalr_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
+lib_nausicaa_parser_tools_lalr_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
 nodist_lib_nausicaa_parser_tools_lalr_fasl_DATA = lib/nausicaa/parser-tools/lalr.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_lalr_sls_DATA = lib/nausicaa/parser-tools/lalr.sls
+dist_lib_nausicaa_parser_tools_lalr_vicare_sls_DATA = lib/nausicaa/parser-tools/lalr.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/lalr.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/lalr.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/lalr.fasl
 endif
 
 lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl: \
-		lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls \
+		lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/nausicaa/parser-tools/silex/default-error-handler.fasl \
@@ -4061,17 +4061,17 @@ lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_ip_addresses_ipv4_address_lexer_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
-lib_nausicaa_parser_tools_ip_addresses_ipv4_address_lexer_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
+lib_nausicaa_parser_tools_ip_addresses_ipv4_address_lexer_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
 nodist_lib_nausicaa_parser_tools_ip_addresses_ipv4_address_lexer_fasl_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_ip_addresses_ipv4_address_lexer_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls
+dist_lib_nausicaa_parser_tools_ip_addresses_ipv4_address_lexer_vicare_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl
 endif
 
 lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl: \
-		lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls \
+		lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lalr/lr-driver.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
@@ -4081,17 +4081,17 @@ lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_ip_addresses_ipv4_address_parser_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
-lib_nausicaa_parser_tools_ip_addresses_ipv4_address_parser_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
+lib_nausicaa_parser_tools_ip_addresses_ipv4_address_parser_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
 nodist_lib_nausicaa_parser_tools_ip_addresses_ipv4_address_parser_fasl_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_ip_addresses_ipv4_address_parser_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls
+dist_lib_nausicaa_parser_tools_ip_addresses_ipv4_address_parser_vicare_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl
 endif
 
 lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl: \
-		lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls \
+		lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/nausicaa/parser-tools/silex/default-error-handler.fasl \
@@ -4102,17 +4102,17 @@ lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_ip_addresses_ipv6_address_lexer_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
-lib_nausicaa_parser_tools_ip_addresses_ipv6_address_lexer_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
+lib_nausicaa_parser_tools_ip_addresses_ipv6_address_lexer_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
 nodist_lib_nausicaa_parser_tools_ip_addresses_ipv6_address_lexer_fasl_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_ip_addresses_ipv6_address_lexer_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls
+dist_lib_nausicaa_parser_tools_ip_addresses_ipv6_address_lexer_vicare_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl
 endif
 
 lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl: \
-		lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls \
+		lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lalr/lr-driver.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
@@ -4122,17 +4122,17 @@ lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_ip_addresses_ipv6_address_parser_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
-lib_nausicaa_parser_tools_ip_addresses_ipv6_address_parser_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
+lib_nausicaa_parser_tools_ip_addresses_ipv6_address_parser_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/ip-addresses
 nodist_lib_nausicaa_parser_tools_ip_addresses_ipv6_address_parser_fasl_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_ip_addresses_ipv6_address_parser_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls
+dist_lib_nausicaa_parser_tools_ip_addresses_ipv6_address_parser_vicare_sls_DATA = lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl
 endif
 
 lib/nausicaa/parser-tools/ipv4-addresses.fasl: \
-		lib/nausicaa/parser-tools/ipv4-addresses.sls \
+		lib/nausicaa/parser-tools/ipv4-addresses.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl \
 		lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl \
@@ -4146,17 +4146,17 @@ lib/nausicaa/parser-tools/ipv4-addresses.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_ipv4_addresses_fasldir = $(bundledlibsdir)/nausicaa/parser-tools
-lib_nausicaa_parser_tools_ipv4_addresses_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
+lib_nausicaa_parser_tools_ipv4_addresses_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
 nodist_lib_nausicaa_parser_tools_ipv4_addresses_fasl_DATA = lib/nausicaa/parser-tools/ipv4-addresses.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_ipv4_addresses_sls_DATA = lib/nausicaa/parser-tools/ipv4-addresses.sls
+dist_lib_nausicaa_parser_tools_ipv4_addresses_vicare_sls_DATA = lib/nausicaa/parser-tools/ipv4-addresses.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/ipv4-addresses.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/ipv4-addresses.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/ipv4-addresses.fasl
 endif
 
 lib/nausicaa/parser-tools/ipv6-addresses.fasl: \
-		lib/nausicaa/parser-tools/ipv6-addresses.sls \
+		lib/nausicaa/parser-tools/ipv6-addresses.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl \
 		lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl \
@@ -4170,17 +4170,17 @@ lib/nausicaa/parser-tools/ipv6-addresses.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_ipv6_addresses_fasldir = $(bundledlibsdir)/nausicaa/parser-tools
-lib_nausicaa_parser_tools_ipv6_addresses_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
+lib_nausicaa_parser_tools_ipv6_addresses_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
 nodist_lib_nausicaa_parser_tools_ipv6_addresses_fasl_DATA = lib/nausicaa/parser-tools/ipv6-addresses.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_ipv6_addresses_sls_DATA = lib/nausicaa/parser-tools/ipv6-addresses.sls
+dist_lib_nausicaa_parser_tools_ipv6_addresses_vicare_sls_DATA = lib/nausicaa/parser-tools/ipv6-addresses.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/ipv6-addresses.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/ipv6-addresses.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/ipv6-addresses.fasl
 endif
 
 lib/nausicaa/parser-tools/uri.fasl: \
-		lib/nausicaa/parser-tools/uri.sls \
+		lib/nausicaa/parser-tools/uri.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/ipv4-addresses.fasl \
 		lib/nausicaa/parser-tools/ipv6-addresses.fasl \
@@ -4193,17 +4193,17 @@ lib/nausicaa/parser-tools/uri.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_uri_fasldir = $(bundledlibsdir)/nausicaa/parser-tools
-lib_nausicaa_parser_tools_uri_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
+lib_nausicaa_parser_tools_uri_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools
 nodist_lib_nausicaa_parser_tools_uri_fasl_DATA = lib/nausicaa/parser-tools/uri.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_uri_sls_DATA = lib/nausicaa/parser-tools/uri.sls
+dist_lib_nausicaa_parser_tools_uri_vicare_sls_DATA = lib/nausicaa/parser-tools/uri.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/uri.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/uri.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/uri.fasl
 endif
 
 lib/nausicaa/uri/ip.fasl: \
-		lib/nausicaa/uri/ip.sls \
+		lib/nausicaa/uri/ip.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/language-extensions/keywords.fasl \
 		lib/vicare/language-extensions/ascii-chars.fasl \
@@ -4213,17 +4213,17 @@ lib/nausicaa/uri/ip.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_uri_ip_fasldir = $(bundledlibsdir)/nausicaa/uri
-lib_nausicaa_uri_ip_slsdir  = $(bundledlibsdir)/nausicaa/uri
+lib_nausicaa_uri_ip_vicare_slsdir  = $(bundledlibsdir)/nausicaa/uri
 nodist_lib_nausicaa_uri_ip_fasl_DATA = lib/nausicaa/uri/ip.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_uri_ip_sls_DATA = lib/nausicaa/uri/ip.sls
+dist_lib_nausicaa_uri_ip_vicare_sls_DATA = lib/nausicaa/uri/ip.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/uri/ip.sls
+EXTRA_DIST += lib/nausicaa/uri/ip.vicare.sls
 CLEANFILES += lib/nausicaa/uri/ip.fasl
 endif
 
 lib/nausicaa/uri.fasl: \
-		lib/nausicaa/uri.sls \
+		lib/nausicaa/uri.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/unsafe/operations.fasl \
@@ -4234,17 +4234,17 @@ lib/nausicaa/uri.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_uri_fasldir = $(bundledlibsdir)/nausicaa
-lib_nausicaa_uri_slsdir  = $(bundledlibsdir)/nausicaa
+lib_nausicaa_uri_vicare_slsdir  = $(bundledlibsdir)/nausicaa
 nodist_lib_nausicaa_uri_fasl_DATA = lib/nausicaa/uri.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_uri_sls_DATA = lib/nausicaa/uri.sls
+dist_lib_nausicaa_uri_vicare_sls_DATA = lib/nausicaa/uri.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/uri.sls
+EXTRA_DIST += lib/nausicaa/uri.vicare.sls
 CLEANFILES += lib/nausicaa/uri.fasl
 endif
 
 lib/nausicaa/parser-tools/uri/utilities.fasl: \
-		lib/nausicaa/parser-tools/uri/utilities.sls \
+		lib/nausicaa/parser-tools/uri/utilities.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/uri.fasl \
 		lib/nausicaa/uri.fasl \
@@ -4253,17 +4253,17 @@ lib/nausicaa/parser-tools/uri/utilities.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_parser_tools_uri_utilities_fasldir = $(bundledlibsdir)/nausicaa/parser-tools/uri
-lib_nausicaa_parser_tools_uri_utilities_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/uri
+lib_nausicaa_parser_tools_uri_utilities_vicare_slsdir  = $(bundledlibsdir)/nausicaa/parser-tools/uri
 nodist_lib_nausicaa_parser_tools_uri_utilities_fasl_DATA = lib/nausicaa/parser-tools/uri/utilities.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_parser_tools_uri_utilities_sls_DATA = lib/nausicaa/parser-tools/uri/utilities.sls
+dist_lib_nausicaa_parser_tools_uri_utilities_vicare_sls_DATA = lib/nausicaa/parser-tools/uri/utilities.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/parser-tools/uri/utilities.sls
+EXTRA_DIST += lib/nausicaa/parser-tools/uri/utilities.vicare.sls
 CLEANFILES += lib/nausicaa/parser-tools/uri/utilities.fasl
 endif
 
 lib/nausicaa/uri/pathnames/abstract.fasl: \
-		lib/nausicaa/uri/pathnames/abstract.sls \
+		lib/nausicaa/uri/pathnames/abstract.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -4271,17 +4271,17 @@ lib/nausicaa/uri/pathnames/abstract.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_uri_pathnames_abstract_fasldir = $(bundledlibsdir)/nausicaa/uri/pathnames
-lib_nausicaa_uri_pathnames_abstract_slsdir  = $(bundledlibsdir)/nausicaa/uri/pathnames
+lib_nausicaa_uri_pathnames_abstract_vicare_slsdir  = $(bundledlibsdir)/nausicaa/uri/pathnames
 nodist_lib_nausicaa_uri_pathnames_abstract_fasl_DATA = lib/nausicaa/uri/pathnames/abstract.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_uri_pathnames_abstract_sls_DATA = lib/nausicaa/uri/pathnames/abstract.sls
+dist_lib_nausicaa_uri_pathnames_abstract_vicare_sls_DATA = lib/nausicaa/uri/pathnames/abstract.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/uri/pathnames/abstract.sls
+EXTRA_DIST += lib/nausicaa/uri/pathnames/abstract.vicare.sls
 CLEANFILES += lib/nausicaa/uri/pathnames/abstract.fasl
 endif
 
 lib/nausicaa/uri/pathnames/unix.fasl: \
-		lib/nausicaa/uri/pathnames/unix.sls \
+		lib/nausicaa/uri/pathnames/unix.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/nausicaa/uri/pathnames/abstract.fasl \
@@ -4291,12 +4291,12 @@ lib/nausicaa/uri/pathnames/unix.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_uri_pathnames_unix_fasldir = $(bundledlibsdir)/nausicaa/uri/pathnames
-lib_nausicaa_uri_pathnames_unix_slsdir  = $(bundledlibsdir)/nausicaa/uri/pathnames
+lib_nausicaa_uri_pathnames_unix_vicare_slsdir  = $(bundledlibsdir)/nausicaa/uri/pathnames
 nodist_lib_nausicaa_uri_pathnames_unix_fasl_DATA = lib/nausicaa/uri/pathnames/unix.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_uri_pathnames_unix_sls_DATA = lib/nausicaa/uri/pathnames/unix.sls
+dist_lib_nausicaa_uri_pathnames_unix_vicare_sls_DATA = lib/nausicaa/uri/pathnames/unix.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/uri/pathnames/unix.sls
+EXTRA_DIST += lib/nausicaa/uri/pathnames/unix.vicare.sls
 CLEANFILES += lib/nausicaa/uri/pathnames/unix.fasl
 endif
 
@@ -4317,7 +4317,7 @@ CLEANFILES += lib/nausicaa/uri/pathnames.fasl
 endif
 
 lib/nausicaa/mehve.fasl: \
-		lib/nausicaa/mehve.sls \
+		lib/nausicaa/mehve.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/nausicaa/mehve/language/numerics/predicates.fasl \
 		lib/nausicaa/mehve/language/numerics/arithmetics.fasl \
@@ -4329,17 +4329,17 @@ lib/nausicaa/mehve.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_mehve_fasldir = $(bundledlibsdir)/nausicaa
-lib_nausicaa_mehve_slsdir  = $(bundledlibsdir)/nausicaa
+lib_nausicaa_mehve_vicare_slsdir  = $(bundledlibsdir)/nausicaa
 nodist_lib_nausicaa_mehve_fasl_DATA = lib/nausicaa/mehve.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_sls_DATA = lib/nausicaa/mehve.sls
+dist_lib_nausicaa_mehve_vicare_sls_DATA = lib/nausicaa/mehve.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/mehve.sls
+EXTRA_DIST += lib/nausicaa/mehve.vicare.sls
 CLEANFILES += lib/nausicaa/mehve.fasl
 endif
 
 lib/nausicaa/mehve/language/numerics/predicates.fasl: \
-		lib/nausicaa/mehve/language/numerics/predicates.sls \
+		lib/nausicaa/mehve/language/numerics/predicates.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -4347,17 +4347,17 @@ lib/nausicaa/mehve/language/numerics/predicates.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_mehve_language_numerics_predicates_fasldir = $(bundledlibsdir)/nausicaa/mehve/language/numerics
-lib_nausicaa_mehve_language_numerics_predicates_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
+lib_nausicaa_mehve_language_numerics_predicates_vicare_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
 nodist_lib_nausicaa_mehve_language_numerics_predicates_fasl_DATA = lib/nausicaa/mehve/language/numerics/predicates.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_language_numerics_predicates_sls_DATA = lib/nausicaa/mehve/language/numerics/predicates.sls
+dist_lib_nausicaa_mehve_language_numerics_predicates_vicare_sls_DATA = lib/nausicaa/mehve/language/numerics/predicates.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/mehve/language/numerics/predicates.sls
+EXTRA_DIST += lib/nausicaa/mehve/language/numerics/predicates.vicare.sls
 CLEANFILES += lib/nausicaa/mehve/language/numerics/predicates.fasl
 endif
 
 lib/nausicaa/mehve/language/numerics/arithmetics.fasl: \
-		lib/nausicaa/mehve/language/numerics/arithmetics.sls \
+		lib/nausicaa/mehve/language/numerics/arithmetics.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -4365,17 +4365,17 @@ lib/nausicaa/mehve/language/numerics/arithmetics.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_mehve_language_numerics_arithmetics_fasldir = $(bundledlibsdir)/nausicaa/mehve/language/numerics
-lib_nausicaa_mehve_language_numerics_arithmetics_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
+lib_nausicaa_mehve_language_numerics_arithmetics_vicare_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
 nodist_lib_nausicaa_mehve_language_numerics_arithmetics_fasl_DATA = lib/nausicaa/mehve/language/numerics/arithmetics.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_language_numerics_arithmetics_sls_DATA = lib/nausicaa/mehve/language/numerics/arithmetics.sls
+dist_lib_nausicaa_mehve_language_numerics_arithmetics_vicare_sls_DATA = lib/nausicaa/mehve/language/numerics/arithmetics.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/mehve/language/numerics/arithmetics.sls
+EXTRA_DIST += lib/nausicaa/mehve/language/numerics/arithmetics.vicare.sls
 CLEANFILES += lib/nausicaa/mehve/language/numerics/arithmetics.fasl
 endif
 
 lib/nausicaa/mehve/language/numerics/parts.fasl: \
-		lib/nausicaa/mehve/language/numerics/parts.sls \
+		lib/nausicaa/mehve/language/numerics/parts.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -4383,17 +4383,17 @@ lib/nausicaa/mehve/language/numerics/parts.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_mehve_language_numerics_parts_fasldir = $(bundledlibsdir)/nausicaa/mehve/language/numerics
-lib_nausicaa_mehve_language_numerics_parts_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
+lib_nausicaa_mehve_language_numerics_parts_vicare_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
 nodist_lib_nausicaa_mehve_language_numerics_parts_fasl_DATA = lib/nausicaa/mehve/language/numerics/parts.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_language_numerics_parts_sls_DATA = lib/nausicaa/mehve/language/numerics/parts.sls
+dist_lib_nausicaa_mehve_language_numerics_parts_vicare_sls_DATA = lib/nausicaa/mehve/language/numerics/parts.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/mehve/language/numerics/parts.sls
+EXTRA_DIST += lib/nausicaa/mehve/language/numerics/parts.vicare.sls
 CLEANFILES += lib/nausicaa/mehve/language/numerics/parts.fasl
 endif
 
 lib/nausicaa/mehve/language/numerics/transcendental.fasl: \
-		lib/nausicaa/mehve/language/numerics/transcendental.sls \
+		lib/nausicaa/mehve/language/numerics/transcendental.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
@@ -4401,29 +4401,29 @@ lib/nausicaa/mehve/language/numerics/transcendental.fasl: \
 
 if WANT_NAUSICAA
 lib_nausicaa_mehve_language_numerics_transcendental_fasldir = $(bundledlibsdir)/nausicaa/mehve/language/numerics
-lib_nausicaa_mehve_language_numerics_transcendental_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
+lib_nausicaa_mehve_language_numerics_transcendental_vicare_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language/numerics
 nodist_lib_nausicaa_mehve_language_numerics_transcendental_fasl_DATA = lib/nausicaa/mehve/language/numerics/transcendental.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_language_numerics_transcendental_sls_DATA = lib/nausicaa/mehve/language/numerics/transcendental.sls
+dist_lib_nausicaa_mehve_language_numerics_transcendental_vicare_sls_DATA = lib/nausicaa/mehve/language/numerics/transcendental.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/mehve/language/numerics/transcendental.sls
+EXTRA_DIST += lib/nausicaa/mehve/language/numerics/transcendental.vicare.sls
 CLEANFILES += lib/nausicaa/mehve/language/numerics/transcendental.fasl
 endif
 
 lib/nausicaa/mehve/language/input-output.fasl: \
-		lib/nausicaa/mehve/language/input-output.sls \
+		lib/nausicaa/mehve/language/input-output.vicare.sls \
 		lib/nausicaa.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
 lib_nausicaa_mehve_language_input_output_fasldir = $(bundledlibsdir)/nausicaa/mehve/language
-lib_nausicaa_mehve_language_input_output_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language
+lib_nausicaa_mehve_language_input_output_vicare_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language
 nodist_lib_nausicaa_mehve_language_input_output_fasl_DATA = lib/nausicaa/mehve/language/input-output.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_language_input_output_sls_DATA = lib/nausicaa/mehve/language/input-output.sls
+dist_lib_nausicaa_mehve_language_input_output_vicare_sls_DATA = lib/nausicaa/mehve/language/input-output.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/mehve/language/input-output.sls
+EXTRA_DIST += lib/nausicaa/mehve/language/input-output.vicare.sls
 CLEANFILES += lib/nausicaa/mehve/language/input-output.fasl
 endif
 
