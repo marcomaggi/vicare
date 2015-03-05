@@ -1016,15 +1016,15 @@
 (parametrise ((check-test-name	'special-directories))
 
   (check
-      (parametrise ((compiled-libraries-store-directory	"/a/b"))
-	(library-name->library-binary-pathname-in-store-directory '(c d (1 2 3))))
+      (parametrise ((compiled-libraries-build-directory	"/a/b"))
+	(library-name->library-binary-pathname-in-build-directory '(c d (1 2 3))))
     => "/a/b/c/d.fasl")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (parametrise ((compiled-libraries-store-directory	"/a/b"))
-	(library-reference->library-binary-pathname-in-store-directory '(c d ((>= 2)))))
+      (parametrise ((compiled-libraries-build-directory	"/a/b"))
+	(library-reference->library-binary-pathname-in-build-directory '(c d ((>= 2)))))
     => "/a/b/c/d.fasl")
 
 ;;; --------------------------------------------------------------------

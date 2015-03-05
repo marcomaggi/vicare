@@ -1533,21 +1533,21 @@ return a source or binary library file pathname.
 @end defun
 
 
-@defun library-name->library-binary-pathname-in-store-directory @var{libname}
-@defunx library-reference->library-binary-pathname-in-store-directory @var{libref}
+@defun library-name->library-binary-pathname-in-build-directory @var{libname}
+@defunx library-reference->library-binary-pathname-in-build-directory @var{libref}
 Given a @rnrs{6} compliant library name or reference: build and return a
 string representing the pathname of a binary library in the current
 store directory.  The current store directory is the pathname currently
-referenced by the parameter @func{compiled-libraries-store-directory}.
+referenced by the parameter @func{compiled-libraries-build-directory}.
 
 @example
-(parametrise ((compiled-libraries-store-directory "/a/b"))
-   (library-name->library-binary-pathname-in-store-directory
+(parametrise ((compiled-libraries-build-directory "/a/b"))
+   (library-name->library-binary-pathname-in-build-directory
       '(c d (1 2 3))))
 @result{} "/a/b/c/d.fasl"
 
-(parametrise ((compiled-libraries-store-directory "/a/b"))
-   (library-reference->library-binary-pathname-in-store-directory
+(parametrise ((compiled-libraries-build-directory "/a/b"))
+   (library-reference->library-binary-pathname-in-build-directory
       '(c d ((>= 2)))))
 @result{} "/a/b/c/d.fasl"
 @end example
@@ -2040,8 +2040,8 @@ by the @gnu{} Autotools) we need to write appropriate invocations of
 appropriate source libraries and compiled libraries.
 
 @item
-It may be that the local libraries need to load installed libraries and
-also have local dependencies:
+It may be that the libraries in the source tree need to load installed
+libraries and also have local dependencies:
 
 @lisp
 (library (vicare this)
@@ -2107,7 +2107,7 @@ directory:
 Configure the store directory to reference the local build directory:
 
 @lisp
-(compiled-libraries-store-directory)
+(compiled-libraries-build-directory)
 @result{} "$(builddir)/lib
 @end lisp
 
@@ -2160,7 +2160,7 @@ lib/vicare/that.fasl: lib/vicare/that.sls
         vicare --library-locator compile-time              \
            --library-path    /usr/local/lib/vicare-scheme  \
            --source-path     $(srcdir)/lib                 \
-           --store-directory $(builddir)/lib               \
+           --build-directory $(builddir)/lib               \
            -o $@@ -c $<
 
 lib/vicare/this.fasl: lib/vicare/this.sls lib/vicare/that.fasl
@@ -2168,7 +2168,7 @@ lib/vicare/this.fasl: lib/vicare/this.sls lib/vicare/that.fasl
         vicare --library-locator compile-time              \
            --library-path    /usr/local/lib/vicare-scheme  \
            --source-path     $(srcdir)/lib                 \
-           --store-directory $(builddir)/lib               \
+           --build-directory $(builddir)/lib               \
            -o $@@ -c $<
 @end example
 
@@ -2196,7 +2196,7 @@ vfasl:
         vicare --library-locator compile-time              \
            --library-path    /usr/local/lib/vicare-scheme  \
            --source-path     $(srcdir)/lib                 \
-           --store-directory $(builddir)/lib               \
+           --build-directory $(builddir)/lib               \
            --compile-dependencies compile-all.sps
 @end example
 @end enumerate
@@ -2225,7 +2225,7 @@ Ask the library source file scanner for the next matching source file.
 
 @item
 If a matching source is found: look for an already compiled library file
-in the @func{compiled-libraries-store-directory}:
+in the @func{compiled-libraries-build-directory}:
 
 @enumerate a
 @item
@@ -2338,8 +2338,8 @@ the dependencies among libraries.  For this we need to load all the
 source libraries in the package's source tree.
 
 @item
-It may be that the local libraries need to load installed libraries and
-also have local dependencies:
+It may be that the libraries in the source tree need to load installed
+libraries and also have local dependencies:
 
 @lisp
 (library (vicare this)
@@ -2524,7 +2524,7 @@ The following bindings are exported by the library @library{vicare
 libraries}.
 
 
-@deffn Parameter compiled-libraries-store-directory
+@deffn Parameter compiled-libraries-build-directory
 Hold @false{} or a string representing the absolute or relative pathname
 of a directory; the string must represent a syntactically valid
 pathname, but the directory might not exist.  The store directory is
@@ -2556,15 +2556,15 @@ Such pathnames can be built as follows:
 
 @smallexample
 (define binary-pathname-0
-  (library-name->library-binary-pathname-in-store-directory
+  (library-name->library-binary-pathname-in-build-directory
     @meta{libname}))
 
 (define binary-pathname-1
-  (library-reference->library-binary-pathname-in-store-directory
+  (library-reference->library-binary-pathname-in-build-directory
     @meta{libref}))
 @end smallexample
 
-The value of the parameter @func{compiled-libraries-store-directory} is
+The value of the parameter @func{compiled-libraries-build-directory} is
 composed as follows:
 
 @enumerate
@@ -2580,15 +2580,15 @@ holding an valid directory pathname: select its value as parameter
 value; the directory itself might not exist.
 
 @item
-If the option @option{--store-directory} is present on the command line:
+If the option @option{--build-directory} is present on the command line:
 its value is expected to be a string representing a directory pathname,
 otherwise an error is raised; the directory itself might not exist.
 Such pathname becomes the value of
-@func{compiled-libraries-store-directory}.
+@func{compiled-libraries-build-directory}.
 
 @item
 While @value{EXECUTABLE} is running: we can modify at will the content
-of @func{compiled-libraries-store-directory}.
+of @func{compiled-libraries-build-directory}.
 @end enumerate
 @end deffn
 

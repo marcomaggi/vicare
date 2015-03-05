@@ -203,9 +203,9 @@ multiple times.
 Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
 multiple times.
 
-@item --store-directory @var{DIRECTORY}
-@cindex Command line option @option{--store-directory}
-@cindex @option{--store-directory}, command line option
+@item --build-directory @var{DIRECTORY}
+@cindex Command line option @option{--build-directory}
+@cindex @option{--build-directory}, command line option
 Select @var{DIRECTORY} as pathname under which compiled library files
 are temporarily stored before being installed.  When used multiple
 times: the last one wins.
@@ -1139,7 +1139,7 @@ in binary format.
 @item
 The loaded library is serialised to a @fasl{} file in an explicitly
 selected output file or in the selected
-@func{compiled-library-store-directory}.
+@func{compiled-library-build-directory}.
 @end itemize
 
 This execution mode is enabled by the command line option
@@ -1203,7 +1203,7 @@ one library at a time, explicitly selecting the output directory for
 
 @example
 vicare \
-  --store-directory $(builddir)/lib \
+  --build-directory $(builddir)/lib \
   --compile-library $(srcdir)/lib/alpha/beta.sls
 @end example
 
@@ -1212,7 +1212,7 @@ then, to compile @library{alpha gamma (1 2)}, we do:
 
 @example
 vicare \
-  --store-directory $(builddir)/lib \
+  --build-directory $(builddir)/lib \
   --fasl-path $(builddir)/lib \
   --compile-library $(srcdir)/lib/alpha/gamma.sls
 @end example
@@ -1257,7 +1257,7 @@ possibly invoked and visited.
 
 @item
 All the libraries loaded from a source file are serialised to @fasl{}
-files in the selected @func{compiled-library-store-directory}; all the
+files in the selected @func{compiled-library-build-directory}; all the
 libraries loaded from a @fasl{} file are left untouched.
 @end itemize
 
@@ -1308,7 +1308,7 @@ and we execute it as follows:
 @example
 vicare \
    --search-path $(srcdir)/lib \
-   --store-directory $(builddir)/lib \
+   --build-directory $(builddir)/lib \
    --compile-dependencies compile-all.sps
 @end example
 
@@ -1317,7 +1317,7 @@ If a selected library depends on the other selected library:
 appropriate binary formats.  If a selected library depends on other
 libraries, not explicitly selected by the script: @value{PRJNAME} will
 automatically take care of generating the appropriate binary formats and
-@fasl{} files in the selected @func{compiled-library-store-directory}.
+@fasl{} files in the selected @func{compiled-library-build-directory}.
 
 @c page
 @node using libraries examples

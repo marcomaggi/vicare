@@ -3163,15 +3163,15 @@
 
     (library-source-search-path				$libraries)
     (library-binary-search-path				$libraries)
-    (compiled-libraries-store-directory			$libraries)
+    (compiled-libraries-build-directory			$libraries)
 
     (library-extensions					$libraries)
     (library-name->filename-stem			$libraries)
     (library-reference->filename-stem			$libraries)
     (directory+library-stem->library-binary-pathname	$libraries)
     (directory+library-stem->library-source-pathname	$libraries)
-    (library-name->library-binary-pathname-in-store-directory			$libraries)
-    (library-reference->library-binary-pathname-in-store-directory		$libraries)
+    (library-name->library-binary-pathname-in-build-directory			$libraries)
+    (library-reference->library-binary-pathname-in-build-directory		$libraries)
     (library-source-pathname->library-stem-pathname				$libraries)
     (library-source-pathname->library-binary-tail-pathname			$libraries)
     (program-source-pathname->program-binary-pathname	$libraries)

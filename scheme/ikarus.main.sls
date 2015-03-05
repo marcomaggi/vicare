@@ -178,9 +178,9 @@
 		;Null or a  list of strings representing  directory names: additional
 		;locations in which to search for FASL files.
 
-   store-directory
+   build-directory
 		;False of a  string representing the initial value  for the parameter
-		;COMPILED-LIBRARIES-STORE-DIRECTORY.
+		;COMPILED-LIBRARIES-BUILD-DIRECTORY.
 
    more-file-extensions
 		;Turn on  search for more  library file extension  than ".vicare.sls"
@@ -237,7 +237,7 @@
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
 	      (CFG.LIBRARY-SOURCE-SEARCH-PATH	(%dot-id ".library-source-search-path"))
 	      (CFG.LIBRARY-BINARY-SEARCH-PATH	(%dot-id ".library-binary-search-path"))
-	      (CFG.STORE-DIRECTORY	(%dot-id ".store-directory"))
+	      (CFG.BUILD-DIRECTORY	(%dot-id ".build-directory"))
 	      (CFG.MORE-FILE-EXTENSIONS	(%dot-id ".more-file-extensions"))
 	      (CFG.RAW-REPL		(%dot-id ".raw-repl"))
 	      (CFG.OUTPUT-FILE		(%dot-id ".output-file")))
@@ -298,12 +298,12 @@
 		    ((set! _ ?val)
 		     (set-run-time-config-library-binary-search-path! ?cfg ?val))))
 
-		  (CFG.STORE-DIRECTORY
+		  (CFG.BUILD-DIRECTORY
 		   (identifier-syntax
 		    (_
-		     (run-time-config-store-directory ?cfg))
+		     (run-time-config-build-directory ?cfg))
 		    ((set! _ ?val)
-		     (set-run-time-config-store-directory! ?cfg ?val))))
+		     (set-run-time-config-build-directory! ?cfg ?val))))
 
 		  (CFG.MORE-FILE-EXTENSIONS
 		   (identifier-syntax
@@ -352,7 +352,7 @@
 			  #f		;no-greetings
 			  '()		;library-source-search-path
 			  '()		;library-binary-search-path
-			  #f		;store-directory
+			  #f		;build-directory
 			  #f		;more-file-extensions
 			  #f		;raw-repl
 			  #f		;output-file
@@ -588,11 +588,11 @@
 	       (run-time-config-library-binary-search-path-register! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
-	  ((%option= "--store-directory")
+	  ((%option= "--build-directory")
 	   (if (null? (cdr args))
-	       (%error-and-exit "--store-directory requires a directory name")
+	       (%error-and-exit "--build-directory requires a directory name")
 	     (begin
-	       (set-run-time-config-store-directory! cfg (cadr args))
+	       (set-run-time-config-build-directory! cfg (cadr args))
 	       (next-option (cddr args) k))))
 
 	  ((%option= "--prompt")
@@ -840,7 +840,7 @@ Other options:
         Add DIRECTORY to the FASL search path.  This option can  be used
         multiple times.
 
-   --store-directory DIRECTORY
+   --build-directory DIRECTORY
         Select  DIRECTORY as  pathname  under  which compiled  libraries
         files are temporarily stored  before being installed.  When used
         multiple times: the last one wins.
@@ -1358,7 +1358,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     ;;
     (libutils.init-search-paths-and-directories (reverse cfg.library-source-search-path)
 						(reverse cfg.library-binary-search-path)
-						cfg.store-directory
+						cfg.build-directory
 						cfg.more-file-extensions)
 
     ;;Initialise the command line arguments.

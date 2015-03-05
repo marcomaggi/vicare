@@ -554,7 +554,7 @@ VICARE_COMPILE_ENV	= \
 	LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
-			  --library-locator compile-time --store-directory $(fasldir)
+			  --library-locator compile-time --build-directory $(fasldir)
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
 
 FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
@@ -1257,11 +1257,11 @@ VICARE_COMPILED_TESTS_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
 VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
-		--store-directory $(fasldir)						\
+		--build-directory $(fasldir)						\
 		--print-loaded-libraries --compile-program
 VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
 		--library-path $(fasldir)						\
-		--store-directory $(fasldir)						\
+		--build-directory $(fasldir)						\
 		--print-loaded-libraries --binary-program
 VICARE_COMPILED_TESTS_ENV	= \
 	VICARE_SOURCE_PATH=$(VICARE_COMPILED_TESTS_SEARCH_PATH);   export VICARE_SOURCE_PATH;	\

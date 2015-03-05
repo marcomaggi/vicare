@@ -57,7 +57,7 @@
     current-library-binary-search-path-scanner
     default-library-source-search-path-scanner
     default-library-binary-search-path-scanner
-    compiled-libraries-store-directory
+    compiled-libraries-build-directory
     library-extensions
 
     ;; library pathnames
@@ -65,8 +65,8 @@
     library-reference->filename-stem
     directory+library-stem->library-binary-pathname
     directory+library-stem->library-source-pathname
-    library-name->library-binary-pathname-in-store-directory
-    library-reference->library-binary-pathname-in-store-directory
+    library-name->library-binary-pathname-in-build-directory
+    library-reference->library-binary-pathname-in-build-directory
     library-source-pathname->library-stem-pathname
     library-source-pathname->library-binary-tail-pathname
 
@@ -862,7 +862,7 @@
 
 ;;;; compiled libraries store directory
 ;;
-;;The  parameter  COMPILED-LIBRARIES-STORE-DIRECTORY  contains   false  or  a  string
+;;The  parameter  COMPILED-LIBRARIES-BUILD-DIRECTORY  contains   false  or  a  string
 ;;representing the absolute pathname of a directory.
 ;;
 ;;When the selected library locator is "compile-time": the store directory is used to
@@ -883,10 +883,10 @@
 ;;normalised to  its real pathname, otherwise  it is left  untouched and it may  be a
 ;;relative pathname.
 ;;
-(module (compiled-libraries-store-directory)
+(module (compiled-libraries-build-directory)
 
-  (define-constant DEFAULT-COMPILED-LIBRARIES-STORE-DIRECTORY
-    ;;Default  value  for   the  COMPILED-LIBRARIES-STORE-DIRECTORY  parameter.   The
+  (define-constant DEFAULT-COMPILED-LIBRARIES-BUILD-DIRECTORY
+    ;;Default  value  for   the  COMPILED-LIBRARIES-BUILD-DIRECTORY  parameter.   The
     ;;default value is built as follows:
     ;;
     ;;1.  If  the environment variable  VICARE_STORE_DIRECTORY is set and  holding an
@@ -896,16 +896,16 @@
     ;;
     (%get-directory-real-pathname-from-env "VICARE_STORE_DIRECTORY"))
 
-  (define compiled-libraries-store-directory
+  (define compiled-libraries-build-directory
     (make-parameter
-	DEFAULT-COMPILED-LIBRARIES-STORE-DIRECTORY
+	DEFAULT-COMPILED-LIBRARIES-BUILD-DIRECTORY
       (lambda* ({pathname posix.file-string-pathname?})
 	pathname)))
 
   #| end of module |# )
 
-(define* (call-with-compiled-libraries-store-directory proc)
-  (cond ((compiled-libraries-store-directory)
+(define* (call-with-compiled-libraries-build-directory proc)
+  (cond ((compiled-libraries-build-directory)
 	 => proc)
 	(else
 	 (error __who__ "compiled libraries store directory is not set"))))
@@ -915,7 +915,7 @@
 
 (define* (init-search-paths-and-directories library-source-search-path-directory*
 					    library-binary-search-path-directory*
-					    store-directory
+					    build-directory
 					    more-file-extensions?)
   ;;Initialise the search path for source libraries.
   ;;
@@ -963,18 +963,18 @@
 
 ;;; --------------------------------------------------------------------
 
-  (when store-directory
-    ;;A  pathname was  selected from  the command  line.  STORE-DIRECTORY  must be  a
+  (when build-directory
+    ;;A  pathname was  selected from  the command  line.  BUILD-DIRECTORY  must be  a
     ;;string representing the pathname of an existent directory.
-    (if (posix.file-string-pathname? store-directory)
-	(compiled-libraries-store-directory (if (posix.directory-exists? store-directory)
-						(posix.real-pathname store-directory)
-					      store-directory))
+    (if (posix.file-string-pathname? build-directory)
+	(compiled-libraries-build-directory (if (posix.directory-exists? build-directory)
+						(posix.real-pathname build-directory)
+					      build-directory))
       (raise
-       (condition (make-i/o-file-does-not-exist-error store-directory)
+       (condition (make-i/o-file-does-not-exist-error build-directory)
 		  (make-who-condition __who__)
 		  (make-message-condition "invalid compiled libraries store directory pathname")
-		  (make-irritants-condition (list store-directory))))))
+		  (make-irritants-condition (list build-directory))))))
 
   ;;Initialise the list of source library file extensions.
   ;;
@@ -1112,21 +1112,21 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (library-name->library-binary-pathname-in-store-directory {libname library-name?})
+(define* (library-name->library-binary-pathname-in-build-directory {libname library-name?})
   ;;Given an R6RS  compliant library name build and return  a string representing the
   ;;pathname of a binary library in the current store directory.
   ;;
-  (call-with-compiled-libraries-store-directory
-   (lambda (store-directory)
-     (directory+library-stem->library-binary-pathname store-directory (library-name->filename-stem libname)))))
+  (call-with-compiled-libraries-build-directory
+   (lambda (build-directory)
+     (directory+library-stem->library-binary-pathname build-directory (library-name->filename-stem libname)))))
 
-(define* (library-reference->library-binary-pathname-in-store-directory {libref library-reference?})
+(define* (library-reference->library-binary-pathname-in-build-directory {libref library-reference?})
   ;;Given an R6RS compliant library reference  build and return a string representing
   ;;the pathname of a binary library in the current store directory.
   ;;
-  (call-with-compiled-libraries-store-directory
-   (lambda (store-directory)
-     (directory+library-stem->library-binary-pathname store-directory (library-reference->filename-stem libref)))))
+  (call-with-compiled-libraries-build-directory
+   (lambda (build-directory)
+     (directory+library-stem->library-binary-pathname build-directory (library-reference->filename-stem libref)))))
 
 ;;; --------------------------------------------------------------------
 

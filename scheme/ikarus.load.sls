@@ -43,7 +43,7 @@
     run-compiled-program
     compile-source-library
     current-library-serialiser
-    current-library-store-directory-serialiser)
+    current-library-build-directory-serialiser)
   (import (except (vicare)
 		  load)
     (prefix (ikarus.posix)
@@ -659,7 +659,7 @@
     ;;1. Ask the library source file scanner for the next matching source file.
     ;;
     ;;2. If a matching source is found:  look for an already compiled library file in
-    ;;   the COMPILED-LIBRARIES-STORE-DIRECTORY:
+    ;;   the COMPILED-LIBRARIES-BUILD-DIRECTORY:
     ;;
     ;;   2.1.  If  no compiled file exists or  it if exists but it is  older than the
     ;;        source file: accept the source file as matching.
@@ -711,7 +711,7 @@
 	  ;;A matching source library was found in a local directory.
 	  (begin
 	    (print-library-debug-message "~a: found source: ~a" __module_who__ source-pathname)
-	    (let ((binary-pathname (library-reference->library-binary-pathname-in-store-directory libref)))
+	    (let ((binary-pathname (library-reference->library-binary-pathname-in-build-directory libref)))
 	      (print-library-debug-message "~a: checking binary: ~a" __module_who__ binary-pathname)
 	      (if (and (file-exists? binary-pathname)
 		       (receive-and-return (rv)
@@ -936,18 +936,18 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (default-library-store-directory-serialiser {lib libman.library?})
-  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-STORE-DIRECTORY-SERIALISER.
+(define* (default-library-build-directory-serialiser {lib libman.library?})
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-BUILD-DIRECTORY-SERIALISER.
   ;;Given aLIBRARY  object: serialise the compiled  library in a FASL  file under the
   ;;currently selected store directory.  Return unspecified values.  Serialisation is
   ;;performed  with the  library  serialiser procedure  referenced  by the  parameter
   ;;CURRENT-LIBRARY-SERIALISER.
   ;;
   (when (libman.library-loaded-from-source-file? lib)
-    (let ((binary-pathname (library-name->library-binary-pathname-in-store-directory (libman.library-name lib))))
+    (let ((binary-pathname (library-name->library-binary-pathname-in-build-directory (libman.library-name lib))))
       ((current-library-serialiser) lib binary-pathname))))
 
-(define current-library-store-directory-serialiser
+(define current-library-build-directory-serialiser
   ;;References a  function used to  serialise a compiled library  into a file  in the
   ;;currently selected store directory.
   ;;
@@ -959,7 +959,7 @@
   ;;loaded from a FASL file: nothing must happen.
   ;;
   (make-parameter
-      default-library-store-directory-serialiser
+      default-library-build-directory-serialiser
     (lambda* ({obj procedure?})
       obj)))
 
@@ -1140,8 +1140,8 @@
       (serialise-collected-libraries
        (lambda (source-pathname libname contents)
 	 (store-full-serialised-library-to-file
-	  (cond ((compiled-libraries-store-directory)
-		 (library-name->library-binary-pathname-in-store-directory libname))
+	  (cond ((compiled-libraries-build-directory)
+		 (library-name->library-binary-pathname-in-build-directory libname))
 		(else
 		 (error __who__
 		   "cannot determine a destination directory for compiled library files")))
@@ -1185,7 +1185,7 @@
     ;;binary library  is serialised  with the procedure  currently referenced  by the
     ;;parameter  CURRENT-LIBRARY-SERIALISER;  otherwise  it is  serialised  with  the
     ;;procedure       currently        referenced       by        the       parameter
-    ;;CURRENT-LIBRARY-STORE-DIRECTORY-SERIALISER.
+    ;;CURRENT-LIBRARY-BUILD-DIRECTORY-SERIALISER.
     ;;
     (cond ((let ((libsexp (%read-first-library-form-from-source-library-file __who__ source-pathname)))
 	     ;;We receive all these values, but we are interested only in the LIBNAME.
@@ -1200,7 +1200,7 @@
 	   => (lambda (lib)
 		(if binary-pathname
 		    ((current-library-serialiser) lib binary-pathname)
-		  ((current-library-store-directory-serialiser) lib))))
+		  ((current-library-build-directory-serialiser) lib))))
 	  (else
 	   (error __who__
 	     "unable to retrieve LIBRARY object after expanding and compiling source library"
