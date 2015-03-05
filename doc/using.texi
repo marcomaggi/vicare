@@ -48,13 +48,13 @@ the session.
 @section Command line arguments
 
 
-The synopsis of the @value{EXECUTABLE} program is as follows:
+The synopsis of the executable program @value{EXECUTABLE} is as follows:
 
 @smallexample
 @value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]              [-- [@var{PROGOPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script     FILE [-- [@var{PROGOPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program  FILE [-- [@var{PROGOPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program FILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGFILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM
@@ -93,14 +93,20 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 @cindex Command line option @option{--binary-program}
 @cindex @option{--binary-program}, command line option
 Start Vicare in compiled--program mode.  The @var{PROGRAM} file is
-handled as a serialised @rnrs{6} program: it is loaded and executed.
+handled as a serialised @rnrs{6} binary program: it is loaded and
+executed.
 
 @item --compile-program @var{PROGRAM}
 @cindex Command line option @option{--compile-program}
 @cindex @option{--compile-program}, command line option
 Load the source @rnrs{6} program @var{PROGRAM}, compile it and store a
-serialised version of it in a file whose name is built from
-@var{PROGRAM}.  @var{PROGRAM} itself is not evaluated.
+serialised version of it into an output file.  @var{PROGRAM} itself is
+not evaluated.
+
+If the option @option{--output} is used: its value is the pathname of
+the output file; otherwise the output file pathname is built from
+@var{PROGRAM} and the binary file is placed in the same directory of the
+source.
 
 If the option @option{--library-locator} is not used: using
 @option{--compile-program} will automatically select the compile--time
@@ -110,8 +116,8 @@ library locator.
 @cindex Command line option @option{--compile-dependencies}
 @cindex @option{--compile-dependencies}, command line option
 Load the @rnrs{6} program @var{IMPORTS-FILE}, compile all the libraries
-upon which it depends and store them in the @fasl{} repository.
-@var{IMPORTS-FILE} itself is not evaluated.
+upon which it depends and store them in the build directory selected by
+@option{--build-directory}.  @var{IMPORTS-FILE} itself is not evaluated.
 
 If the option @option{--library-locator} is not used: using
 @option{--compile-dependencies} will automatically select the
@@ -120,8 +126,12 @@ compile--time library locator.
 @item --compile-library @var{LIBFILE}
 @cindex Command line option @option{--compile-library}
 @cindex @option{--compile-library}, command line option
-Load the @rnrs{6} library source @var{LIBFILE}, compile it and save the
-result in the @fasl{} repository.
+Load the @rnrs{6} library source @var{LIBFILE}, compile it and serialise
+it in an output file.
+
+If the option @option{--output} is used: its value is the pathname of
+the output file; otherwise the output pathname is automatically
+generated under the build directory selected by @option{--build-directory}.
 
 If the option @option{--library-locator} is not used: using
 @option{--compile-library} will automatically select the compile--time
@@ -133,13 +143,10 @@ library locator.
 @cindex @option{-c}, command line option
 @cindex Command line option @option{--compile}
 @cindex @option{--compile}, command line option
-Load the selected @var{FILE}, recognise it as program or library by the
-file extension (@code{.sps} or @code{.sls}), compile it and store it as
-@fasl{} file.
-
-If the option @option{--library-locator} is not used: using
-@option{--compile-dependencies} will automatically select the
-compile--time library locator.
+Load the selected @var{FILE} and recognise it as program or library by
+the file extension (@code{.sps} or @code{.sls}); the behave as if the
+option @option{--compile-program} or @option{--compile-library} had been
+given.
 @end table
 
 When none of these options is given, but a standalone @var{PROGRAM}
@@ -198,16 +205,16 @@ output @fasl{} file name when compiling individual library files; output
 @cindex @option{-l}, command line option
 @cindex Command line option @option{--load-library}
 @cindex @option{--load-library}, command line option
-Load @var{libfile} expecting it to contain one or more @rnrs{6}
-libraries; after executing the RC files, load the libraries in the
-internal collection, but do not add them to any environment.  This
+Load the source file @var{libfile} expecting it to contain one or more
+@rnrs{6} libraries; after executing the RC files, load the libraries in
+the internal collection, but do not add them to any environment.  This
 option can be used multiple times.
 
 @item --source-path @var{DIRECTORY}
 @cindex Command line option @option{--source-path}
 @cindex @option{--source-path}, command line option
-Add @var{DIRECTORY} to the library search path.  This option can be used
-multiple times.
+Add @var{DIRECTORY} to the source libraries search path.  This option
+can be used multiple times.
 
 @item -L @var{DIRECTORY}
 @itemx --library-path @var{DIRECTORY}
@@ -215,8 +222,17 @@ multiple times.
 @cindex @option{--library-path}, command line option
 @cindex Command line option @option{-L}
 @cindex @option{-L}, command line option
-Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
-multiple times.
+Add @var{DIRECTORY} to the binary libraries search path.  This option
+can be used multiple times.
+
+@item --library-locator @var{NAME}
+@cindex Command line option @option{--library-locator}
+@cindex @option{--library-locator}, command line option
+Select a Scheme library locator.  @var{NAME} can be one among:
+@samp{run-time}, @samp{compile-time}, @samp{source}.  For details on
+searching libraries @ref{using libraries searching, Library search
+algorithms}.  For details on the built--in library locators @api{}
+@ref{libutils locating, Locating libraries}.
 
 @item --build-directory @var{DIRECTORY}
 @cindex Command line option @option{--build-directory}
@@ -262,8 +278,8 @@ interface is available.
 @cindex @option{-d}, command line option
 @cindex Command line option @option{-g}
 @cindex @option{-g}, command line option
-Turn on debugging mode.  With this unhandled exceptions in the program
-will result in starting the debugger, which allows stack trace
+Turn on debugging mode.  With this option: unhandled exceptions in the
+program will result in starting the debugger, which allows stack trace
 inspection.
 
 @item -nd
@@ -312,9 +328,9 @@ Disables the effect of @option{--debug-messages}.
 @item --report-errors-at-runtime
 @cindex Command line option @option{--report-errors-at-runtime}
 @cindex @option{--report-errors-at-runtime}, command line option
-When possible and meaningful: report errors at runtime rather than at
-compile time.  Runtime errors reporting is @rnrs{6} compliant.  The
-default is to raise errors at compile time.
+When possible and meaningful: report errors at run--time rather than at
+compile--time.  Run--time errors reporting is @rnrs{6} compliant.  The
+default is to raise errors at compile--time.
 
 @item --no-report-errors-at-runtime
 @cindex Command line option @option{--no-report-errors-at-runtime}
@@ -336,7 +352,7 @@ default.
 @item --descriptive-labels
 @cindex Command line option @option{--descriptive-labels}
 @cindex @option{--descriptive-labels}, command line option
-For debugging purposes: generate descriptive labels in expanded and
+For debugging purposes: generate descriptive labels in expanded code and
 assembly code.
 
 @item --no-descriptive-labels
@@ -345,15 +361,6 @@ assembly code.
 For debugging purposes: do not generate descriptive labels in expanded
 code and assembly code.  Disables the effect of
 @option{--descriptive-labels}.  This is the default.
-
-@item --library-locator @var{NAME}
-@cindex Command line option @option{--library-locator}
-@cindex @option{--library-locator}, command line option
-Select a Scheme library locator.  @var{NAME} can be one among:
-@samp{run-time}, @samp{compile-time}, @samp{source}. For details on
-searching libraries @ref{using libraries searching, Library search
-algorithms}.  For details on the built--in library locators @api{}
-@ref{libutils locating, Locating libraries}.
 
 @item -O0
 @cindex Command line option @option{-O}
@@ -372,15 +379,6 @@ Turn on various levels of compile optimisations.
 @cindex @option{--optimizer-passes-count}, command line option
 Specify how many passes to perform with the source optimizer.  Must be a
 positive fixnum.  Defaults to 1.
-
-@item --enable-open-mvcalls
-@itemx --disable-open-mvcalls
-@cindex Command line option @option{--enable-open-mvcalls}
-@cindex @option{--enable-open-mvcalls}, command line option
-@cindex Command line option @option{--disable-open-mvcalls}
-@cindex @option{--disable-open-mvcalls}, command line option
-Enable or disable inlining of calls to @func{call-with-values}.
-Defaults to disable.
 
 @item --print-assembly
 @cindex Command line option @option{--print-assembly}
