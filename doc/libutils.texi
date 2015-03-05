@@ -1882,7 +1882,7 @@ explicitly with the command line option @code{--library-locator
 run-time} or by setting the parameter @func{current-library-locator} to
 @func{run-time-library-locator}; it is meant to be used by an
 installation of @value{PRJNAME} to run applications.  The reference
-scenario for the run-time library locator is this:
+scenario for the run--time library locator is this:
 
 @enumerate
 @item
