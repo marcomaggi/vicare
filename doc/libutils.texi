@@ -1537,7 +1537,7 @@ return a source or binary library file pathname.
 @defunx library-reference->library-binary-pathname-in-build-directory @var{libref}
 Given a @rnrs{6} compliant library name or reference: build and return a
 string representing the pathname of a binary library in the current
-store directory.  The current store directory is the pathname currently
+build directory.  The current build directory is the pathname currently
 referenced by the parameter @func{compiled-libraries-build-directory}.
 
 @example
@@ -2104,7 +2104,7 @@ directory:
 @end lisp
 
 @item
-Configure the store directory to reference the local build directory:
+Configure the build directory to reference the local build directory:
 
 @lisp
 (compiled-libraries-build-directory)
@@ -2185,8 +2185,8 @@ libraries that are leaves in the local package dependency tree:
 @end lisp
 
 @noindent
-write a single Makefile rule that compiles in the store all the
-dependencies of the script:
+write a single Makefile rule that compiles in the build directory all
+the dependencies of the script:
 
 @example
 .PHONY: vfasl
@@ -2508,16 +2508,16 @@ and @false{}.
 
 
 @menu
-* libutils compiling special store::    The output store directory.
+* libutils compiling special build::  The build directory.
 @end menu
 
 @c page
-@node libutils compiling special store
-@subsubsection The output store directory
+@node libutils compiling special build
+@subsubsection The build directory
 
 
-@cindex Store directory
-@cindex Directory, output store
+@cindex Build directory
+@cindex Directory, build
 
 
 The following bindings are exported by the library @library{vicare
@@ -2527,18 +2527,18 @@ libraries}.
 @deffn Parameter compiled-libraries-build-directory
 Hold @false{} or a string representing the absolute or relative pathname
 of a directory; the string must represent a syntactically valid
-pathname, but the directory might not exist.  The store directory is
+pathname, but the directory might not exist.  The build directory is
 meant to be used when compiling libraries in the build directory of a
 source package for later installation.
 
 When the selected library locator is @code{compile-time}: the store
 directory is used to search for compiled libraries.  It is an error if
-the library locator is @code{compile-time} and no store directory is
+the library locator is @code{compile-time} and no build directory is
 selected.
 
-Under the store directory: @fasl{} files are stored with pathnames
+Under the build directory: @fasl{} files are stored with pathnames
 composed from the library stem, which is generated from the library
-name.  For example, if the store directory is @code{$(builddir)/lib} the
+name.  For example, if the build directory is @code{$(builddir)/lib} the
 source library:
 
 @example
