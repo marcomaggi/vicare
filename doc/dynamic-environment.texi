@@ -1,0 +1,815 @@
+@node dynamic environment
+@appendix Notes on the dynamic environment
+
+
+In this section we inspect, by examples, the concepts of ``dynamic
+environment'' and ``dynamic extent of a function call''.  @ref{scheme
+basic dynamic extent, Dynamic extent and the dynamic environment}, for
+the meaning as defined by @rnrs{6}.
+
+@menu
+* dynamic environment intro::   Introduction to the concept of dynamic
+                                environment.
+* dynamic environment parms::   Parameters: the archetype of state in
+                                the dynamic environment.
+* dynamic environment extent::  The dynamic extent of a function call.
+* dynamic environment guard::   On the implementation of @syntax{guard}.
+* dynamic environment except::  More cases of exception handling.
+@end menu
+
+@c page
+@node dynamic environment intro
+@appendixsec Introduction to the concept of dynamic environment
+
+
+The dynamic environment is a subset of the state of a @command{vicare}
+process that is maintained with the in--guard and out--guard thunks of
+@func{dynamic-wind}.
+
+Let's consider the following program prelude:
+
+@example
+#!vicare
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(define var)
+
+(define (step id)
+  (add-result (list id var))
+  (++ var))
+
+(define-syntax dotimes
+  (syntax-rules ()
+    ((_ ?count . ?body)
+     (do ((i 0 (+ 1 i)))
+         ((= i ?count))
+       . ?body))
+    ))
+@end example
+
+@noindent
+we can call the function @func{step} to access and mutate the current
+value of the variable @code{var}; @syntax{dotimes} is a simple macro
+that evaluates a body a number of times.  For example we can do:
+
+@example
+(define (doit id init)
+  (set! var init)
+  (dotimes 5
+    (step id)))
+
+(with-result
+  (doit 'single 0)
+  1)
+@result{} (1 ((single 0)
+       (single 1)
+       (single 2)
+       (single 3)
+       (single 4)))
+@end example
+
+@noindent
+this program does not define a dynamic environment.
+
+Now, with the same prelude, let's consider the following code making use
+of coroutines:
+
+@example
+(define (doit id init)
+  (define local-var)
+  (coroutine
+      (lambda ()
+        (dynamic-wind
+            (lambda ()
+              (set! var local-var))
+            (lambda ()
+              (set! var init)
+              (dotimes 5
+                (step id)
+                (yield)))
+            (lambda ()
+              (set! local-var var))))))
+
+(with-result
+  (doit 'one  0)
+  (doit 'two 10)
+  (finish-coroutines)
+  1)
+@result{} (1 ((one 0) (two 10)
+       (one 1) (two 11)
+       (one 2) (two 12)
+       (one 3) (two 13)
+       (one 4) (two 14)))
+@end example
+
+@noindent
+this program defines a dynamic environment:
+
+@itemize
+@item
+The in--guard thunk stores in @code{var} the local value
+@code{local-var}:
+
+@example
+(lambda ()
+  (set! var local-var))
+@end example
+
+@item
+The out--guard thunk saves in @code{local-var} the global value
+@code{var}:
+
+@example
+(lambda ()
+  (set! local-var var))
+@end example
+@end itemize
+
+@noindent
+this way the function @func{step} called by the body thunk of
+@func{dynamic-wind} accesses and mutates a variable @code{var} that
+holds a value ``private'' to the coroutine.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec The current exception handler
+
+The standard @func{with-exception-handler} uses the same mechanism to
+install in the dynamic environment the current exception handler.  The
+following program shows how @func{with-exception-handler} transparently
+installs as handler a closure for each coroutine:
+
+@example
+#!vicare
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(define-syntax dotimes
+  (syntax-rules ()
+    ((_ ?count . ?body)
+     (do ((i 0 (+ 1 i)))
+         ((= i ?count))
+       . ?body))
+    ))
+
+(define (doit name init)
+  (define X init)
+  (coroutine
+      (lambda ()
+        (with-exception-handler
+            (lambda (E)
+              (++ X))
+          (lambda ()
+            (dotimes 5
+              (add-result (list name
+                                (raise-continuable (void))))
+              (yield)))))))
+
+(with-result
+  (doit 'one 0)
+  (doit 'two 10)
+  (finish-coroutines)
+  1)
+@result{} (1 ((one 1) (two 11)
+       (one 2) (two 12)
+       (one 3) (two 13)
+       (one 4) (two 14)
+       (one 5) (two 15)))
+@end example
+
+@c page
+@node dynamic environment parms
+@appendixsec Parameters: the archetype of state in the dynamic environment
+
+
+Parameters are the perfect example of using the dynamic environment to
+define a state that is ``local'' to the dynamic extent of a function
+call; @ref{iklib parameters}, for details.
+
+The following example shows how in a call:
+
+@example
+(with-exception-handler @meta{handler} @meta{thunk})
+@end example
+
+@noindent
+the @meta{handler} is called in the dynamic environment of the call to
+@meta{thunk}, so that it can access the dynamic environment that
+contributed to cause the exception:
+
+@example
+(import (vicare))
+
+(define parm
+  (make-parameter #f))
+
+(parametrise ((parm 'outer-parm))
+  (with-exception-handler
+      (lambda (E)
+        (parm))
+    (lambda ()
+      (parametrise ((parm 'inner-parm))
+        (raise-continuable 2)))))
+@result{} inner-parm
+@end example
+
+The following example shows how @syntax{parametrise} causes the value of
+the parameter to be ``local'' to a coroutine:
+
+@example
+#!vicare
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(define-syntax dotimes
+  (syntax-rules ()
+    ((_ ?count . ?body)
+     (do ((i 0 (+ 1 i)))
+         ((= i ?count))
+       . ?body))
+    ))
+
+(define parm
+  (make-parameter #f))
+
+(define (doit name init)
+  (parametrise ((parm init))
+    (coroutine
+        (lambda ()
+          (dotimes 5
+            (add-result (list name (parm)))
+            (parm (++ (parm)))
+            (yield))))))
+
+(with-result
+   (doit 'one  0)
+   (doit 'two 10)
+   (finish-coroutines)
+   1)
+@result{} (1 ((one 0) (two 10)
+       (one 1) (two 11)
+       (one 2) (two 12)
+       (one 3) (two 13)
+       (one 4) (two 14)))
+@end example
+
+@c page
+@node dynamic environment extent
+@appendixsec The dynamic extent of a function call
+
+
+The dynamic environment is maintained by the standard function
+@func{dynamic-wind}, which has the arguments:
+
+@example
+(dynamic-wind @var{in-guard} @var{thunk} @var{out-guard})
+@end example
+
+@noindent
+the thunk @var{in-guard} is called every time the execution flow enters
+the dynamic extent of the call to @var{thunk}; the thunk @var{out-guard}
+is called every time the execution flow exits the dynamic extent of the
+call to @var{thunk}.
+
+When we call @func{dynamic-wind}: the @var{in-guard} and @var{out-guard}
+thunks are pushed on a stack referenced by an internal @value{PRJNAME}
+global variable.  Whenever we save the current continuation by calling
+@func{call/cc}: such internal stack is stored in the state of the
+created continuation.
+
+We always create the dynamic extent of a function call by calling the
+function; then, by saving continuations, we can enter and exit the
+dynamic extent any number of times.  Let's try to understand what this
+means.
+
+@itemize
+@item
+The simple way to enter and exit the dynamic extent of a call to
+@var{thunk} is the call and return:
+
+@example
+(import (vicare))
+
+(with-result
+  (dynamic-wind
+      (lambda ()
+        (add-result 'in-guard))
+      (lambda ()
+        (add-result 'thunk)
+        1)
+      (lambda ()
+        (add-result 'out-guard))))
+@result{} (1 (in-guard thunk out-guard))
+@end example
+
+@item
+A more sophisticated way to exit the dynamic extent is to call an escape
+procedure that reinstates a previously saved continuation:
+
+@example
+(import (vicare))
+
+(with-result
+  (call/cc
+      (lambda (escape)
+        (dynamic-wind
+            (lambda ()
+              (add-result 'in-guard))
+            (lambda ()
+              (add-result 'thunk-in)
+              (escape 2)
+              (add-result 'thunk-out)
+              1)
+            (lambda ()
+              (add-result 'out-guard))))))
+@result{} (2 (in-guard thunk-in out-guard))
+@end example
+
+@noindent
+in this example @var{thunk} is called but it never performs a normal
+function return.
+
+@item
+If we want to abort a dynamic extent by raising an exception: from the
+installed exception handler we must call an escape procedure that
+reinstates a previously saved continuation.
+
+@example
+(import (vicare))
+
+(with-result
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (add-result 'handler)
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard))
+                (lambda ()
+                  (add-result 'thunk-in)
+                  (raise 2)
+                  (add-result 'thunk-out)
+                  1)
+                (lambda ()
+                  (add-result 'out-guard))))))))
+@result{} (2 (in-guard thunk-in handler out-guard))
+@end example
+
+@item
+The coroutines infrastructure saves continuations to enter and exit
+dynamic extents any number of times, hiding the complexities.
+
+@example
+(import (vicare))
+
+(with-result
+  (coroutine
+      (lambda ()
+        (dynamic-wind
+            (lambda ()
+              (add-result '(1 in-guard)))
+            (lambda ()
+              (add-result '(1.1 thunk))
+              (yield)
+              (add-result '(1.2 thunk))
+              (yield)
+              (add-result '(1.3 thunk)))
+            (lambda ()
+              (add-result '(1 out-guard))))))
+
+  (coroutine
+      (lambda ()
+        (dynamic-wind
+            (lambda ()
+              (add-result '(2 in-guard)))
+            (lambda ()
+              (add-result '(2.1 thunk))
+              (yield)
+              (add-result '(2.2 thunk))
+              (yield)
+              (add-result '(2.3 thunk)))
+            (lambda ()
+              (add-result '(2 out-guard))))))
+
+  (finish-coroutines)
+  1)
+@result{} (1 ((1 in-guard) (1.1 thunk) (1 out-guard)
+       (2 in-guard) (2.1 thunk) (2 out-guard)
+       (1 in-guard) (1.2 thunk) (1 out-guard)
+       (2 in-guard) (2.2 thunk) (2 out-guard)
+       (1 in-guard) (1.3 thunk) (1 out-guard)
+       (2 in-guard) (2.3 thunk) (2 out-guard)))
+@end example
+
+@item
+When we invoke an escape procedure to reinstate a previously saved
+continuation: the out guards added internally are called up to the point
+where @func{call/cc} was called.
+
+@example
+(import (vicare))
+
+(with-result
+  (dynamic-wind
+      (lambda ()
+        (add-result 'outer-in-guard))
+      (lambda ()
+        (add-result 'outer-thunk-in)
+        (call/cc
+            (lambda (escape)
+              (dynamic-wind
+                  (lambda ()
+                    (add-result 'inner-in-guard))
+                  (lambda ()
+                    (add-result 'inner-thunk-in)
+                    (escape)
+                    (add-result 'inner-thunk-out))
+                  (lambda ()
+                    (add-result 'inner-out-guard)))))
+        (add-result 'outer-thunk-out)
+        1)
+      (lambda ()
+        (add-result 'outer-out-guard))))
+@result{} (1 (outer-in-guard outer-thunk-in inner-in-guard
+       inner-thunk-in
+       inner-out-guard outer-thunk-out outer-out-guard))
+@end example
+@end itemize
+
+About exiting from the dynamic extent of a function call, we must
+acknowledge that:
+
+@itemize
+@item
+The normal return from a function call exits its dynamic extent.
+
+@item
+Calling an escape procedure from within a function call to reinstate a
+continuation outside the function, exits the dynamic extent of the call.
+
+@example
+(define (fun escape)
+  (do-something)
+  (escape 123)
+  (do-something))
+
+(call/cc fun)
+@end example
+
+@item
+Raising a continuable or non--continuable exception from within a
+function call, by itself, does @strong{not} exit the dynamic extent of
+the call.
+
+@example
+(define (fun)
+  (do-something)
+  ;;Does not exit the dynamic extent of the call to FUN.
+  (raise 123))
+@end example
+
+@item
+Both the tests and expressions in the clauses of the standard syntax
+@syntax{guard} are executed outside the extent of the @syntax{guard}
+body.
+
+@item
+There is @strong{no} guarantee that: after exiting the dynamic extent of
+a function call without a normal return: such extent will be reentered
+later and continue to a normal return.
+@end itemize
+
+@c page
+!@node dynamic environment guard
+@appendixsec On the implementation of @syntax{guard}
+
+
+@value{PRJNAME}'s implementation of the @syntax{guard} syntax is really
+sophisticated because it has to deal with both the dynamic environment
+requirements of @rnrs{6} and the unwind protection mechanism defined by
+@value{PRJNAME} itself.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec About the dynamic environment
+
+In a syntax use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+if the @meta{body} raises an exception: one of the clauses will
+certainly be executed because there is an @clause{else} clause.  The
+@meta{body} might mutate the dynamic environment; all the @meta{test}
+and @meta{expr} expressions must be evaluated in the dynamic environment
+of the use of @syntax{guard}.
+
+In a syntax use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+if all the @meta{test} expressions evaluate to false: we must re--raise
+the exception using @func{raise-continuable}; so the syntax is
+``almost'' equivalent to:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   (raise-continuable E)))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+but: @meta{body} might mutate the dynamic environment; all the
+@meta{test} and @meta{expr} expressions must be evaluated in the dynamic
+environment of the use of @syntax{guard}; the @func{raise-continuable}
+in the @clause{else} clause must be evaluated the dynamic environment of
+the @meta{body}.
+
+We must remember that, when using:
+
+@example
+(with-exception-handler @meta{handler} @meta{thunk})
+@end example
+
+@noindent
+the @meta{handler} procedure is evaluated in the dynamic environment of
+the @meta{thunk}, minus the exception handler itself.  So, in
+pseudo--code, a syntax use with @clause{else} clause must be expanded as
+follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (reinstate-guard-continuation
+            (cond (@metao{test} @metao{expr})
+                  (@metai{test} @metai{expr})
+                  (else   @metaii{expr}))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+@noindent
+and, also in pseudo--code, a syntax use without @syntax{else} clause
+must be expanded as follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (save-exception-handler-continuation
+            (reinstate-guard-continuation
+             (cond (@metao{test} @metao{expr})
+                   (@metai{test} @metai{expr})
+                   (else
+                    (reinstate-exception-handler-continuation
+                      (raise-continuable E)))))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+@noindent
+notice how, in the exception handler, we have to jump out and in the
+dynamic environment of the exception handler itself.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec About the unwind--protection mechanism
+
+Let's focus on unwind proteciton in the case of raised exception.  When
+using:
+
+@example
+(with-unwind-protection @meta{cleanup} @meta{thunk})
+@end example
+
+@noindent
+the @meta{cleanup} is associated to the dynamic extent of the call to
+@meta{thunk}: when the dynamic extent is terminated (as defined by
+@value{PRJNAME}) the @meta{cleanup} is called.
+
+@value{PRJNAME} defines as termination event of a @syntax{guard}'s
+@meta{body} the execution of a @syntax{guard}'s clause that does not
+re--raise the exception.  For a @syntax{guard} use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+we can imagine the pseudo--code:
+
+@example
+(guard (E (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+          (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+          (else   (run-unwind-protection-cleanups) @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+and for a @syntax{guard} use like:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@end example
+
+@noindent
+we can imagine the pseudo--code:
+
+@example
+(guard (E (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+          (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+          (else   (raise-continuable E)))
+  @metao{body} @meta{body} ...)
+@end example
+
+By doing things this way: an exception raised by an @meta{expr} does not
+impede the execution of the cleanups.  If a @meta{test} raises an
+exception the cleanups will not be run, and there is nothing we can do
+about it; @meta{test} expressions are usually calls to predicates that
+recognise the condition type of @code{E}, so the risk of error is
+reduced.
+
+So, in pseudo--code, a syntax use with @clause{else} clause must be
+expanded as follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr})
+          (else   @metaii{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (reinstate-guard-continuation
+            (cond (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+                  (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+                  (else   (run-unwind-protection-cleanups) @metaii{expr}))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+@noindent
+and, also in pseudo--code, a syntax use without @clause{else} clause
+must be expanded as follows:
+
+@example
+(guard (E (@metao{test} @metao{expr})
+          (@metai{test} @metai{expr}))
+  @metao{body} @meta{body} ...)
+@expansion{} (save-guard-continuation
+     (with-exception-handler
+         (lambda (E)
+           (save-exception-handler-continuation
+            (reinstate-guard-continuation
+             (cond (@metao{test} (run-unwind-protection-cleanups) @metao{expr})
+                   (@metai{test} (run-unwind-protection-cleanups) @metai{expr})
+                   (else   (reinstate-exception-handler-continuation
+                            (raise-continuable E)))))))
+       (lambda () @metao{body} @meta{body} ...)))
+@end example
+
+But how is @func{run-unwind-protection-cleanups} implemented?  To cause
+the cleanups to be called we must cause an exit from the dynamic extent
+of the @meta{thunk}s.  This is a sophisticated operation implemented as
+follows:
+
+@example
+(define (run-unwind-protection-cleanups)
+  (run-unwind-protection-cleanup-upon-exit? #t)
+  (save-clause-expression-continuation
+   (reinstate-exception-handler-continuation
+    (reinstate-clause-expression-continuation))))
+@end example
+
+@noindent
+we jump in @syntax{guard}'s exception handler dynamic environment then
+immediately jump out in the @syntax{guard}'s clause expression dynamic
+environment.
+
+@c page
+@node dynamic environment except
+@appendixsec More cases of exception handling
+
+
+Let's imagine the following prelude for all the examples in this
+section:
+
+@example
+#!vicare
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+@end example
+
+This is what happens when we raise an exception from the in--guard thunk
+of a @func{dynamic-wind}:
+
+@example
+(with-result
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard)
+                  (raise 1))
+                (lambda ()
+                  (add-result 'thunk))
+                (lambda ()
+                  (add-result 'out-guard))))))))
+@result{} (1 (in-guard))
+@end example
+
+This is what happens when we raise an exception from the out--guard
+thunk of a @func{dynamic-wind}:
+
+@example
+(with-result
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard))
+                (lambda ()
+                  (add-result 'thunk))
+                (lambda ()
+                  (add-result 'out-guard)
+                  (raise 1))))))))
+@result{} (1 (in-guard thunk out-guard))
+@end example
+
+This is what happens when we raise an exception from the thunk of a
+@func{dynamic-wind} and the from the out--guard of the same:
+
+@example
+(with-result
+  (define count 0)
+  (call/cc
+      (lambda (escape)
+        (with-exception-handler
+            (lambda (E)
+              (add-result (list 'handler E))
+              (escape E))
+          (lambda ()
+            (dynamic-wind
+                (lambda ()
+                  (add-result 'in-guard))
+                (lambda ()
+                  (add-result 'thunk)
+                  (raise 1))
+                (lambda ()
+                  (add-result 'out-guard)
+                  (raise 2))))))))
+@result{} (2 (in-guard
+       thunk     (handler 1)
+       out-guard (handler 2)))
+@end example
+
+@noindent
+the first exception is forgotten when @code{escape} attempts to exit the
+dynamic extent of the thunk.
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme"
+@c End:

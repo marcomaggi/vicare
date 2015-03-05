@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -27,11 +27,12 @@
 (library (ikarus.options)
   (export
     verbose?
+    print-debug-messages?
+    print-loaded-libraries?
+
     debug-mode-enabled?
     drop-assertions?
-    verbose-about-libraries?
-    print-loaded-libraries
-    cache-compiled-libraries
+    report-errors-at-runtime
     strict-r6rs
     descriptive-labels
     ;; tagged language parameter options
@@ -74,10 +75,10 @@
     ))
 
 (define-boolean-option verbose?)
-(define-boolean-option verbose-about-libraries?)
 (define-boolean-option debug-mode-enabled?)
-(define-boolean-option print-loaded-libraries)
-(define-boolean-option cache-compiled-libraries)
+(define-boolean-option print-debug-messages?)
+(define-boolean-option print-loaded-libraries?)
+(define-boolean-option report-errors-at-runtime)
 
 
 ;;;; some parameter boolean options

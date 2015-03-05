@@ -232,6 +232,20 @@
   #t)
 
 
+(parametrise ((check-test-name	'conversion))
+
+  (check (fixnum->char 65)	=> #\A)
+  (check (fixnum->char 66)	=> #\B)
+
+  (check (char->fixnum #\A)	=> 65)
+  (check (char->fixnum #\B)	=> 66)
+
+  (check (fixnum->string 65)	=> "65")
+  (check (fixnum->string 66)	=> "66")
+
+  #t)
+
+
 (parametrise ((check-test-name	'unsafe))
 
   (check (fxnonpositive? 0)		=> #t)

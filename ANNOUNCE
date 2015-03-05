@@ -10,14 +10,13 @@ on  Intel x86  32-bit  and  64-bit processors.   It  is  tested only  on
 GNU+Linux;  it  should work  on  POSIX  platforms,  but not  on  Cygwin.
 "Vicare" is pronounced the etruscan way.
 
-  The latest version of this package can be downloaded from:
+  The latest release tarball of this package can be downloaded from:
 
-	 <http://sourceforge.net/projects/vicare-scheme/files/>
-
+       <https://bitbucket.org/marcomaggi/vicare-scheme/downloads>
 
 the home page of the Vicare project is at:
 
-               <http://marcomaggi.github.com/vicare.html>
+	       <http://marcomaggi.github.io/vicare.html>
 
 development takes place at:
 
@@ -25,21 +24,16 @@ development takes place at:
 
 and as backup at:
 
-		     <http://gitorious.org/vicare>
-
-and at:
-
-	    <http://sourceforge.net/projects/vicare-scheme/>
-
-this project has a mailing list:
-
-	     <http://groups.google.com/group/vicare-users>
+	   <https://bitbucket.org/marcomaggi/vicare-scheme/>
 
 
 Notes for revision 0.4d0
 ------------------------
 
-Lots of backwards incompatibilities... life is hard!
+This project  is no  more hosted  at SourceForge  and Gitorious.   It is
+still hosted at Github and newly hosted at Bitbucket.
+
+  Lots of backwards incompatibilities... life is hard!
 
 * The boot images have been rotated.
 
@@ -54,11 +48,14 @@ Lots of backwards incompatibilities... life is hard!
 
 * BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
   completely overhauled.  There are too  many changes to list them here,
-  but here the most important stuff:
+  we must  read the relevant documentation;  system environment variable
+  names and  command line  option names have  changed too  (sorry).  The
+  most important stuff:
 
   - Version numbers are supported.  If,  while scanning the search path,
     a  library is  loaded  and its  version number  does  not match  the
-    version reference: that library is discarded and the search goes on.
+    requested  version  reference: that  library  is  discarded and  the
+    search goes on.
 
   - The library (vicare) now has a version number; the full library name
     is:
@@ -94,8 +91,11 @@ Lots of backwards incompatibilities... life is hard!
 
        $(prefix)/lib64/vicare-scheme
 
-  See the documentation  node "using libraries".  Most  likely this code
-  needs to be ironed out.
+   - Caching of libraries compiled  on-the-fly (under "~/.vicare") is no
+     more supported.
+
+  See the  documentation nodes  "using libraries" and  "libutils".  Most
+  likely this code needs to be ironed out.
 
 * BACKWARDS INCOMPATIBILITY  The bindings that deal  with library names,
   library references, search paths and  related stuff have been moved to
@@ -485,6 +485,17 @@ Lots of backwards incompatibilities... life is hard!
 
 * BACKWARDS  INCOMPATIBILITY The  command line  options about  reporting
   errors at run-time or compile-time have been removed.
+
+* BACKWARDS  INCOMPATIBILITY  Removed  non-Scheme  style  syntaxes  from
+  (vicare):
+
+    begin-returnable
+    lambda-returnable
+    define-returnable
+
+  added:
+
+    returnable
 
 
 Notes for revision 0.3d7

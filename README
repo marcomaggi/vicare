@@ -57,7 +57,7 @@ Marco Maggi <marco.maggi-ipsu@poste.it>
 2. License
 ----------
 
-Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 Copyright (c) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 Modified by the Vicare contributors.
 
@@ -99,6 +99,13 @@ to be dynamically loaded.
   To run the test suite we do:
 
    $ make check
+
+  The Makefile is designed to allow parallel builds, so we can do:
+
+   $ make -j4 all && make -j4 check
+
+which,  on  a  4-core  CPU,   should  speed  up  building  and  checking
+significantly.
 
   By default  only compiled Scheme  libraries are installed;  to install
 also the source libraries we must configure with:
@@ -348,27 +355,19 @@ C. Resources
 
 The latest version of this package can be downloaded from:
 
-	 <http://sourceforge.net/projects/vicare-scheme/files/>
+       <https://bitbucket.org/marcomaggi/vicare-scheme/downloads>
 
 the home page of the Vicare project is at:
 
-               <http://marcomaggi.github.com/vicare.html>
+	       <http://marcomaggi.github.io/vicare.html>
 
 development takes place at:
 
-                 <http://github.com/marcomaggi/vicare/>
+		 <http://github.com/marcomaggi/vicare/>
 
 and as backup at:
 
-		     <http://gitorious.org/vicare>
-
-and at:
-
-	    <http://sourceforge.net/projects/vicare-scheme/>
-
-this project has a mailing list:
-
-	     <http://groups.google.com/group/vicare-users>
+	   <https://bitbucket.org/marcomaggi/vicare-scheme/>
 
   The library Libffi can be found at:
 

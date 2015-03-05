@@ -16,7 +16,7 @@
 ;;;	ontology".  This file contains a table  of core primitive properties for both
 ;;;	primitive functions and primitive operations.
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
@@ -6268,9 +6268,9 @@
 (declare-object-retriever standard-output-port	T:binary-output-port)
 (declare-object-retriever standard-error-port	T:binary-output-port)
 
-(declare-object-retriever console-input-port	T:textual-input-port)
-(declare-object-retriever console-output-port	T:textual-output-port)
-(declare-object-retriever console-error-port	T:textual-output-port)
+(declare-parameter console-input-port	T:textual-input-port)
+(declare-parameter console-output-port	T:textual-output-port)
+(declare-parameter console-error-port	T:textual-output-port)
 
 (declare-parameter print-graph			T:boolean)
 (declare-parameter print-unicode		T:boolean)

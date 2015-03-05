@@ -2978,6 +2978,7 @@ as described when it is called as a result of a call to @func{raise} or
 @end deffn
 
 
+@anchor{guard}
 @deffn Syntax guard (@meta{variable} @metai{cond-clause} @metaii{cond-clause} @dots{}) @meta{body}
 @deffnx {Auxiliary Syntax} {=>}
 @deffnx {Auxiliary Syntax} else

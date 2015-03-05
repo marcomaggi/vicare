@@ -20,17 +20,10 @@
 @node scheme overview
 @section Overview of Scheme
 
-@c originally this chapter was the "struct" file.
-
-This chapter gives an overview of Scheme's semantics.  The purpose of
-this overview is to explain enough about the basic concepts of the
-language to facilitate understanding of the subsequent chapters of the
-report, which are organized as a reference manual.  Consequently, this
-overview is neither a complete introduction to the language, nor precise
-in all respects, nor normative in any way.
 
 @menu
 * scheme overview intro::         Introduction.
+* scheme overview overview::      Overview.
 * scheme overview basic types::   Basic types.
 * scheme overview expressions::   Expressions.
 * scheme overview variables::     Variables and binding.
@@ -50,6 +43,142 @@ in all respects, nor normative in any way.
 @node scheme overview intro
 @subsection Introduction
 
+
+Programming languages should be designed not by piling feature on top of
+feature, but by removing the weaknesses and restrictions that make
+additional features appear necessary.  Scheme demonstrates that a very
+small number of rules for forming expressions, with no restrictions on
+how they are composed, suffice to form a practical and efficient
+programming language that is flexible enough to support most of the
+major programming paradigms in use today.
+
+Scheme was one of the first programming languages to incorporate
+first--class procedures as in the lambda calculus, thereby proving the
+usefulness of static scope rules and block structure in a dynamically
+typed language.
+
+Scheme was the first major dialect of Lisp to distinguish procedures
+from lambda expressions and symbols, to use a single lexical environment
+for all variables, and to evaluate the operator position of a procedure
+call in the same way as an operand position.
+
+By relying entirely on procedure calls to express iteration, Scheme
+emphasised the fact that tail--recursive procedure calls are essentially
+gotos that pass arguments.
+
+Scheme was the first widely used programming language to embrace
+first--class escape procedures, from which all previously known
+sequential control structures can be synthesised.
+
+A subsequent version of Scheme introduced the concept of exact and
+inexact number objects, an extension of Common Lisp's generic
+arithmetic.
+
+More recently, Scheme became the first programming language to support
+hygienic macros, which permit the syntax of a block--structured language
+to be extended in a consistent and reliable manner.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Guiding principles
+
+To help guide the standardisation effort, the @rnrs{6} editors have
+adopted a set of principles, presented below.  Like the Scheme language
+defined in Revised^5 Report on the Algorithmic Language Scheme, the
+language described in the @rnrs{6} report is intended to:
+
+@itemize
+@item
+allow programmers to read each other's code, and allow development of
+portable programs that can be executed in any conforming implementation
+of Scheme;
+
+@item
+derive its power from simplicity, a small number of generally useful
+core syntactic forms and procedures, and no unnecessary restrictions on
+how they are composed;
+
+@item
+allow programs to define new procedures and new hygienic syntactic
+forms;
+
+@item
+support the representation of program source code as data;
+
+@item
+make procedure calls powerful enough to express any form of sequential
+control, and allow programs to perform non--local control operations
+without the use of global program transformations;
+
+@item
+allow interesting, purely functional programs to run indefinitely
+without terminating or running out of memory on finite--memory machines;
+
+@item
+allow educators to use the language to teach programming effectively, at
+various levels and with a variety of pedagogical approaches;
+
+@item
+allow researchers to use the language to explore the design,
+implementation, and semantics of programming languages.
+@end itemize
+
+In addition, the @rnrs{6} report is intended to:
+
+@itemize
+@item
+allow programmers to create and distribute substantial programs and
+libraries, e.g., implementations of Scheme Requests for Implementation,
+that run without modification in a variety of Scheme implementations;
+
+@item
+support procedural, syntactic, and data abstraction more fully by
+allowing programs to define hygiene--bending and hygiene--breaking
+syntactic abstractions and new unique datatypes along with procedures
+and hygienic macros in any scope;
+
+@item
+allow programmers to rely on a level of automatic run--time type and
+bounds checking sufficient to ensure type safety;
+
+@item
+allow implementations to generate efficient code, without requiring
+programmers to use implementation--specific operators or declarations.
+@end itemize
+
+While it was possible to write portable programs in Scheme as described
+in Revised^5 Report on the Algorithmic Language Scheme, and indeed
+portable Scheme programs were written prior to the @rnrs{6} report, many
+Scheme programs were not, primarily because of the lack of substantial
+standardised libraries and the proliferation of implementation--specific
+language additions.
+
+In general, Scheme should include building blocks that allow a wide
+variety of libraries to be written, include commonly used user--level
+features to enhance portability and readability of library and
+application code, and exclude features that are less commonly used and
+easily implemented in separate libraries.
+
+The language described in the @rnrs{6} report is intended to also be
+backward compatible with programs written in Scheme as described in
+Revised^5 Report on the Algorithmic Language Scheme to the extent
+possible without compromising the above principles and future viability
+of the language.  With respect to future viability, the editors have
+operated under the assumption that many more Scheme programs will be
+written in the future than exist in the present, so the future programs
+are those with which we should be most concerned.
+
+@c page
+@node scheme overview overview
+@subsection Overview
+
+
+This chapter gives an overview of Scheme's semantics.  The purpose of
+this overview is to explain enough about the basic concepts of the
+language to facilitate understanding of the subsequent chapters of the
+report, which are organized as a reference manual.  Consequently, this
+overview is neither a complete introduction to the language, nor precise
+in all respects, nor normative in any way.
 
 Following Algol, Scheme is a statically scoped programming language.
 Each use of a variable is associated with a lexically apparent binding
@@ -2641,6 +2770,9 @@ imported into the library or defined within the library.
 @subsubsection Library names
 
 
+@cindex Library name, @clause{library} form
+
+
 A @meta{library-name} uniquely identifies a library within an
 implementation, and is globally visible in the @func{import} clauses of
 all other libraries within an implementation.  A @meta{library-name} has
@@ -2711,6 +2843,7 @@ where @meta{level} represents an exact integer object.
 As an @meta{import-level}, @func{run} is an abbreviation for @code{(meta
 0)}, and @func{expand} is an abbreviation for @code{(meta 1)}.
 
+@cindex Import set, @clause{library} form
 An @meta{import-set} names a set of bindings from another library and
 possibly specifies local names for the imported bindings.  It must be
 one of the following:
@@ -2724,6 +2857,7 @@ one of the following:
 (rename @meta{import-set} (@metai{identifier} @metaii{identifier}) ...)
 @end example
 
+@cindex Library reference, @clause{library} form
 A @meta{library-reference} identifies a library by its name and
 optionally by its version.  It has one of the following forms:
 

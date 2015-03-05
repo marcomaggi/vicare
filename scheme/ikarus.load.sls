@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Copyright (c) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under  the terms of  the GNU General  Public License version  3 as
@@ -18,495 +18,377 @@
 #!vicare
 (library (ikarus load)
   (export
-    compile-r6rs-script
-    run-serialized-r6rs-script
-    load-and-serialize-source-library
-    serialize-library-record
+    load
+
+    ;; stuff for (vicare libraries)
+    default-library-loader
+    current-source-library-loader
+    current-binary-library-loader
+
+    current-library-locator
     run-time-library-locator
     compile-time-library-locator
     source-library-locator
-    default-source-library-file-locator
-    default-binary-library-file-locator
-    load			load-r6rs-script
-    library-path		library-extensions
-    fasl-directory		fasl-path
-    fasl-search-path		fasl-stem+extension)
-  (import (except (vicare)
-		  fixnum-width
-		  greatest-fixnum
-		  least-fixnum
 
-		  load			load-r6rs-script
-		  library-path		library-extensions
-		  fasl-directory	fasl-path
-		  fasl-search-path	get-annotated-datum)
-    (prefix (only (ikarus.posix)
-		  file-string-pathname?
-		  directory-exists?
-		  getenv
-		  mkdir/parents
-		  split-pathname-root-and-tail
-		  real-pathname
-		  file-modification-time)
+    default-include-loader
+    default-include-file-locator
+    default-include-file-loader
+
+    current-include-file-locator
+    current-include-file-loader
+
+    ;; internal stuff
+    load-r6rs-script
+    compile-source-program
+    run-compiled-program
+    compile-source-library
+    current-library-serialiser
+    current-library-build-directory-serialiser)
+  (import (except (vicare)
+		  load)
+    (prefix (ikarus.posix)
 	    posix.)
     (only (ikarus.compiler)
 	  compile-core-expr)
     (only (vicare.foreign-libraries)
 	  retrieve-filename-foreign-libraries)
-    (only (psyntax.library-manager)
-	  library?
-	  library-name
-	  library-source-file-name
-	  find-library-by-name
-	  find-library-by-descriptor
-	  visit-library		invoke-library
-	  current-library-collection
-	  current-source-library-file-locator
-	  current-source-library-loader
-	  current-binary-library-file-locator
-	  current-binary-library-loader
-	  current-library-locator
-	  library-locator-options-no-raise-when-open-fails?
-	  failed-library-location-collector
-	  current-library-expander
-	  serialize-collected-libraries
-	  serialize-library
-	  current-source-library-loader-by-filename
-	  current-library-record-serializer
-	  current-include-file-locator
-	  current-include-file-loader
-	  source-code-location
-	  install-binary-library-and-its-dependencies)
+    (prefix (psyntax.library-manager) libman.)
     (only (psyntax.expander)
 	  expand-r6rs-top-level-make-evaluator
 	  expand-r6rs-top-level-make-compiler)
     (only (ikarus.reader)
-	  get-annotated-datum
 	  read-script-source-file
-	  read-library-source-port
-	  read-library-source-file)
-    (only (ikarus library-utils)
-	  library-reference?
-	  library-name?
-	  library-reference->identifiers
-	  conforming-library-name-and-library-reference?)
+	  read-library-source-port)
+    (ikarus library-utils)
     (only (ikarus fasl read)
 	  fasl-read-header
 	  fasl-read-object)
     (only (ikarus.fasl.write)
 	  fasl-write-header
-	  fasl-write-object)
-    (prefix (only (ikarus.options)
-		  verbose-about-libraries?
-		  print-loaded-libraries
-		  verbose?)
-	    options.)
-    (vicare arguments validation)
-    (vicare unsafe operations))
-
-  (include "ikarus.wordsize.scm" #t)
+	  fasl-write-object))
 
 
-;;;; arguments validation
+;;;; helpers and arguments validation
 
-(define (%non-empty-string? obj)
-  (and (string? obj)
-       (not (fxzero? (string-length obj)))))
-
-(define (false-or-file-string-pathname? S)
+(define (%false-or-file-string-pathname? S)
   (or (not S)
       (and (posix.file-string-pathname? S))))
 
-(define (search-path? obj)
-  (and (list? obj)
-       (for-all posix.file-string-pathname? obj)))
+;;; --------------------------------------------------------------------
 
-
-;;;; helpers
+(module (REJECT-KEY)
 
-(define-constant REJECT-KEY
-  (gensym))
+  (define-syntax (expand-time-gensym stx)
+    (syntax-case stx ()
+      ((_ ?template)
+       (let* ((tmp (syntax->datum #'?template))
+	      (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	      (str (apply string-append tmp (map (lambda (N)
+						   (string-append "." (number->string N)))
+					      fxs)))
+	      (sym (gensym str)))
+	 (with-syntax
+	     ((SYM (datum->syntax #'here sym)))
+	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	   #'(quote SYM))))))
 
-(define (%print-verbose-message message . format-args)
-  (when (options.verbose?)
-    (apply fprintf (current-error-port) message format-args)))
-
-(module (%log-library-debug-message)
-
-  (define-syntax %log-library-debug-message
-    (if (options.verbose-about-libraries?)
-	(syntax-rules ()
-	  ((_ ?template ?arg ...)
-	   (%logger ?template ?arg ...)))
-      (lambda (stx) #'(void))))
-
-  (define (%logger template . args)
-    (apply fprintf (current-error-port)
-	   (string-append "vicare ***: " template "\n")
-	   args))
+  (define-constant REJECT-KEY
+    (expand-time-gensym "library-reject-key-gensym"))
 
   #| end of module |# )
 
-
-;;;; converting library references to file names
+;;; --------------------------------------------------------------------
 
-(module LIBRARY-REFERENCE-TO-FILENAME-STEM
-  (library-reference->filename-stem)
-
-  (define* (library-reference->filename-stem {libref library-reference?})
-    ;;Convert  the non-empty  list of  identifiers from  a R6RS  library
-    ;;reference into  a string  representing the  corresponding relative
-    ;;file  pathname,  without extension  but  including  a leading  #\/
-    ;;character.  Examples:
-    ;;
-    ;;   (library-reference->filename-stem '(alpha beta gamma))
-    ;;   => "/alpha/beta/gamma"
-    ;;
-    ;;   (library-reference->filename-stem '(alpha beta main))
-    ;;   => "/alpha/beta/main_"
-    ;;
-    ;;notice how the component "main",  when appearing last, is "quoted"
-    ;;by appending an underscore.
-    ;;
-    ;;The  returned  value  can  be  used as  source  library  name,  by
-    ;;appending an extension  like ".sls", and as FASL  library name, by
-    ;;appending an extension like ".vicare-64-bit-fasl".
-    ;;
-    (define libref.ids
-      (library-reference->identifiers libref))
-    (receive (port extract)
-	(open-string-output-port)
-      (let next-component ((component		($car libref.ids))
-			   (ls			($cdr libref.ids))
-			   (first-component?	#t))
-	(write-char #\/ port)
-	(let ((component-name (symbol->string component)))
-	  (for-each (lambda (N)
-		      (let ((ch ($fixnum->char N)))
-			(if (or ($char<= #\a ch #\z)
-				($char<= #\A ch #\Z)
-				($char<= #\0 ch #\9)
-				($char=  ch #\.)
-				($char=  ch #\-)
-				($char=  ch #\+)
-				($char=  ch #\_))
-			    (write-char ch port)
-			  (receive (D M)
-			      (div-and-mod N 16)
-			    (write-char #\% port)
-			    (display-hex D port)
-			    (display-hex M port)))))
-	    (bytevector->u8-list (string->utf8 component-name)))
-	  (if (null? ls)
-	      (when (and (not first-component?)
-			 (main*? component-name))
-		(write-char #\_ port))
-	    (next-component ($car ls) ($cdr ls) #f))))
-      (extract)))
-
-  (define (display-hex N port)
-    (if ($fx<= 0 N 9)
-	(display N port)
-      (write-char ($fixnum->char ($fx+ ($char->fixnum #\a) ($fx- N 10))) port)))
-
-  (define (main*? component-name)
-    (and ($fx>= ($string-length component-name) 4)
-	 ($string= ($substring component-name 0 4) "main")
-	 (for-all (lambda (ch)
-		    ($char= ch #\_))
-	   (string->list ($substring component-name 4 ($string-length component-name))))))
-
-  #| end of module: LIBRARY-REFERENCE->FILENAME-STEM |# )
+(define failed-library-location-collector
+  ;;Hold a function that is used to register queried locations that failed to provide
+  ;;a requested library.   Such locations must be represented by  a printable object,
+  ;;for example a string.
+  ;;
+  ;;The  collector function  must  accept 1  or  0 arguments:  when  called with  one
+  ;;argument  it must  register  it as  location descriptor;  when  called with  zero
+  ;;arguments  it must  return  the registered  collection or  locations  as list  of
+  ;;objects.  The collector function can return unspecified values.
+  ;;
+  ;;For example, the collector function can be set to:
+  ;;
+  ;;   (let ((ell '()))
+  ;;     (case-lambda
+  ;;      (()
+  ;;       ell)
+  ;;      ((location)
+  ;;       (set! ell (cons location ell)))))
+  ;;
+  ;;and used  to collect  library file  names that where  tried but  do not  exist or
+  ;;failed to be opened.
+  ;;
+  (make-parameter
+      (case-lambda
+       (()
+	'())
+       ((origin)
+	(void)))
+    (lambda* ({obj procedure?})
+      obj)))
 
 
-;;;; converting source pathnames to binary pathnames
+;;;; built-in library locator options
 
-(module SOURCE-PATHNAME->BINARY-PATHNAME
-  (library-source-pathname->library-binary-pathname
-   program-source-pathname->program-binary-pathname)
+(define-enumeration library-locator-option
+  (move-on-when-open-fails
+		;If  attempting to  open a  file fails:  do not  raise an  exception,
+		;rather move on with the search.
+   )
+  library-locator-options)
 
-  (define* (library-source-pathname->library-binary-pathname {source-pathname posix.file-string-pathname?})
-    (define (%error ptn)
-      (assertion-violation __who__
-	"unable to build valid FASL file pathname from library source pathname"
-	source-pathname ptn))
-    (let ((ptn (cond ((%string-suffix? source-pathname ".vicare.sls")
-		      (%desuffix       source-pathname ".vicare.sls"))
-		     ((%string-suffix? source-pathname ".sls")
-		      (%desuffix       source-pathname ".sls"))
-		     ((%string-suffix? source-pathname ".vicare.ss")
-		      (%desuffix       source-pathname ".vicare.ss"))
-		     ((%string-suffix? source-pathname ".ss")
-		      (%desuffix       source-pathname ".ss"))
-		     ((%string-suffix? source-pathname ".vicare.scm")
-		      (%desuffix       source-pathname ".vicare.scm"))
-		     ((%string-suffix? source-pathname ".scm")
-		      (%desuffix       source-pathname ".scm"))
-		     (else
-		      source-pathname))))
-      (if (posix.file-string-pathname? ptn)
-	  (let ((binary-pathname (string-append (fasl-directory) "/" ptn ".fasl")))
-	    (if (posix.file-string-pathname? binary-pathname)
-		binary-pathname
-	      (%error binary-pathname)))
-	(%error ptn))))
+(define (library-locator-options-no-raise-when-open-fails? options)
+  (enum-set-member? 'move-on-when-open-fails options))
 
-  (define* (program-source-pathname->program-binary-pathname {source-pathname posix.file-string-pathname?})
-    (define (%error ptn)
-      (assertion-violation __who__
-	"unable to build valid FASL file pathname from program source pathname"
-	source-pathname ptn))
-    (let ((ptn (cond ((%string-suffix? source-pathname ".sps")
-		      (%desuffix       source-pathname ".sps"))
-		     (else
-		      source-pathname))))
-      (if (posix.file-string-pathname? ptn)
-	  (let ((binary-pathname ptn))
-	    (if (posix.file-string-pathname? binary-pathname)
-		binary-pathname
-	      (%error binary-pathname)))
-	(%error ptn))))
-
-  (define (%string-suffix? str suffix)
-    (let ((str.len    (string-length str))
-	  (suffix.len (string-length suffix)))
-      (and (fx< suffix.len str.len)
-	   (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
-
-  (define (%desuffix str suffix)
-    (substring str 0 (fx- (string-length str) (string-length suffix))))
-
-  #| end of module |# )
+(define-constant current-library-locator-options
+  (make-parameter
+      (library-locator-options move-on-when-open-fails)))
 
 
-;;;; locating serialized libraries stored in FASL files
+;;;; loading libraries from input ports
 
-(module (default-binary-library-file-locator
-	 fasl-search-path
-	 fasl-directory
-	 fasl-path
-	 fasl-stem+extension)
-  (import LIBRARY-REFERENCE-TO-FILENAME-STEM)
+(module (default-library-loader)
+  (define-syntax __module_who__
+    (identifier-syntax 'default-library-loader))
 
-  (define (%existent-directory-pathname? dir-pathname)
-    (and dir-pathname
-	 (not (string-empty? dir-pathname))
-	 (posix.directory-exists? dir-pathname)))
+  (define* (default-library-loader libref)
+    ;;Default value for  the parameter CURRENT-LIBRARY-LOADER.  Given  a R6RS library
+    ;;reference: attempt to locate the library in an external repository and load it;
+    ;;all the dependency libraries are interned.  Return unspecified values.
+    ;;
+    ;;This function  makes use of:  the library  locator referenced by  the parameter
+    ;;CURRENT-LIBRARY-LOCATOR; the source library  loader referenced by the parameter
+    ;;CURRENT-SOURCE-LIBRARY-LOADER;  the binary  library  loader  referenced by  the
+    ;;parameter CURRENT-BINARY-LIBRARY-LOADER.
+    ;;
+    ;;LIBREF must be a library reference as defined by R6RS:
+    ;;
+    ;;   (?identifier0 ?identifier ...)
+    ;;   (?identifier0 ?identifier ... ?version-reference)
+    ;;
+    (print-library-debug-message "~a: searching: ~a" __module_who__ libref)
+    (parametrise
+	;;For error reporting  purposes: collect all the library  locations that were
+	;;found by the library locator, but were rejected for some reason.
+	((failed-library-location-collector (let ((ell '()))
+					      (case-lambda
+					       (()
+						ell)
+					       ((location)
+						(set! ell (cons location ell)))))))
+      (let loop ((next-locator-search ((current-library-locator) libref)))
+	(receive (rv further-locator-search)
+	    (next-locator-search)
+	  (print-library-debug-message "~a: reading from: ~a" __module_who__ rv)
+	  (assert (or (input-port? rv) (boolean? rv)))
+	  (cond ((binary-port? rv)
+		 (%load-binary-library libref rv (lambda ()
+						   (loop further-locator-search))))
+		((textual-port? rv)
+		 (%load-source-library libref rv (lambda ()
+						   (loop further-locator-search))))
 
-  (define-constant FASL-EXTENSION
-    ;;The file extension of serialised FASL files.
-    ;;
-    ;;NOTE   In    previous   versions   there   were    2   extensions:
-    ;;".vicare-32bit-fasl" for 32-bit platforms and ".vicare-64bit-fasl"
-    ;;for 64-bit  platforms.  But  since version 0.4  there is  a single
-    ;;extension.  (Marco Maggi; Thu Feb 20, 2014)
-    ;;
-    ".fasl")
+		((and (boolean? rv) rv)
+		 ;;When the library locator returns  #t: it declares that the library
+		 ;;has  been loaded  and  it  is already  in  the interned  libraries
+		 ;;collection.  So let's try to retrieve it.
+		 (let ((lib (libman.find-library-in-collection-by-reference libref)))
+		   (if lib
+		       #t
+		     (loop further-locator-search))))
 
-  (define-constant DEFAULT-FASL-DIRECTORY
-    ;;Default  value  for  the   FASL-DIRECTORY  parameter;  it  is  the
-    ;;directory under which new FASL  files holding binary libraries are
-    ;;created when using the "compile dependencies" execution mode.
-    ;;
-    ;;It is initialised with with  the value of the environment variable
-    ;;VICARE_FASL_DIRECTORY, if  set and  holding an  existent pathname;
-    ;;otherwise it is initialised with the pathname:
-    ;;
-    ;;   ~/.vicare/precompiled
-    ;;
-    ;;if  it is  possible  to determine  the value  of  the user's  home
-    ;;directory;      otherwise      it      is      initialised      to:
-    ;;
-    ;;   /tmp/vicare/precompiled
-    ;;
-    (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
-      (if (%existent-directory-pathname? P)
-	  (posix.real-pathname P)
-	(let ((P (posix.getenv "HOME")))
-	  (if (%existent-directory-pathname? P)
-	      (string-append (posix.real-pathname P) "/.vicare/precompiled")
-	    "/tmp/vicare/precompiled")))))
+		((not rv)
+		 ;;No suitable library was found.
+		 (%file-locator-resolution-error libref
+						 (reverse ((failed-library-location-collector)))
+						 (cdr (libman.external-pending-libraries))))
 
-  (define fasl-directory
-    ;;The directory under which serialised FASL files must be saved.  It
-    ;;must  be  a  string  representing  the  pathname  of  an  existing
-    ;;directory; such  pathanme is normalised  upon storing it  into the
-    ;;parameter.  This value is prepended to source file names to obtain
-    ;;the pathname of a FASL file in a FASL repository.
-    ;;
-    ;;When this parameter is set to  the dot string: the FASL files will
-    ;;be stored  in the  current working  directory at  the time  of the
-    ;;parameter mutation.
-    ;;
-    (make-parameter DEFAULT-FASL-DIRECTORY
-      (lambda (P)
-	(define-constant __who__ 'fasl-directory)
-	(cond ((not (posix.file-string-pathname? P))
-	       (error __who__
-		 "expected string as destination FASL directory pathname" P))
-	      ((posix.directory-exists? P)
-	       (posix.real-pathname P))
-	      (else
-	       (error __who__ "attempt to set non-existent directory pathname" P))))))
+		(else
+		 (assertion-violation __module_who__
+		   "invalid return values from library locator"
+		   rv further-locator-search)))))))
 
-  (define fasl-search-path
-    ;;The search path  to in which to look for  FASL files.  Notice that
-    ;;we  do not  test for  directories existence:  a directory  may not
-    ;;exist at the time this search  path is initialised, but be created
-    ;;later.
+  (define (%load-binary-library libref port loop)
+    ;;A binary location was found.  We can read the binary library from PORT.
     ;;
-    (make-parameter
-	(let ()
-	  (module (target-os-uid
-		   scheme-lib-dir
-		   vicare-lib-dir)
-	    (include "ikarus.config.scm"))
-	  (case target-os-uid
-	    ((linux bsd darwin cygwin)
-	     (list scheme-lib-dir vicare-lib-dir))
+    (%print-loading-library port)
+    (cond ((unwind-protect
+	       ((current-binary-library-loader) libref port)
+	     (close-input-port port))
+	   ;;Success.  The  library and all  its dependencies have  been successfully
+	   ;;loaded and interned.
+	   => (lambda (libname)
+		(%print-loaded-library port)
+		#t))
+	  (else
+	   ;;Failure.  The  library read from  port has been  rejected; try to  go on
+	   ;;with the search.
+	   (%print-rejected-library port)
+	   (close-input-port port)
+	   (loop))))
+
+  (define (%load-source-library libref port loop)
+    ;;A source location  was found.  We can  read the source library  from PORT; we
+    ;;assume that applying the function PORT-ID to PORT will return the source file
+    ;;name.
+    ;;
+    (%print-loading-library port)
+    (cond ((unwind-protect
+	       ((current-source-library-loader) libref port)
+	     (close-input-port port))
+	   ;;Success.  The  library and all  its dependencies have  been successfully
+	   ;;loaded and interned.
+	   => (lambda (libname)
+		(%print-loaded-library port)
+		#t))
+	  ;;Failure.  The library read from port has been rejected; try to go on with
+	  ;;the search.
+	  (else
+	   (%print-rejected-library port)
+	   (close-input-port port)
+	   (loop))))
+
+  ;;Keep the library names aligned!!!
+  (define (%print-loading-library  port) (print-library-debug-message "loading:  ~a" (port-id port)))
+  (define (%print-loaded-library   port) (print-library-debug-message "loaded:   ~a" (port-id port)))
+  (define (%print-rejected-library port) (print-library-debug-message "rejected: ~a" (port-id port)))
+
+  (define (%file-locator-resolution-error libref failed-list pending-libraries)
+    (raise
+     (apply condition (make-error)
+  	    (make-who-condition 'expander)
+  	    (make-message-condition "cannot locate library")
+  	    (make-library-resolution-condition libref failed-list)
+  	    (map make-imported-from-condition pending-libraries))))
+
+  (define-condition-type &library-resolution
+      &condition
+    make-library-resolution-condition
+    library-resolution-condition?
+    (library condition-library)
+    (files condition-files))
+
+  (define-condition-type &imported-from
+      &condition
+    make-imported-from-condition
+    imported-from-condition?
+    (importing-library importing-library))
+
+  #| end of module: DEFAULT-LIBRARY-LOADER |# )
+
+(module ()
+  (libman.current-library-loader default-library-loader))
+
+
+;;;; interning libraries: source library loader
+
+(define* (default-source-library-loader {libref library-reference?} {port textual-input-port?})
+  ;;Default value  for the parameter CURRENT-SOURCE-LIBRARY-LOADER.   Given a textual
+  ;;input PORT:
+  ;;
+  ;;1. Read from it a LIBRARY symbolic expression.
+  ;;
+  ;;2. Verify that its version reference conforms to LIBREF.
+  ;;
+  ;;3. Using the expander procedure  referenced by CURRENT-LIBRARY-EXPANDER: load and
+  ;;intern all  its dependency  libraries; expand  it; compile it;  intern it  in the
+  ;;internal collection of libraries.
+  ;;
+  ;;If successful  return a  sexp representing  the R6RS library  name of  the loaded
+  ;;library; otherwise return false.
+  ;;
+  ;;We  assume that  applying  the function  PORT-ID  to PORT  will  return a  string
+  ;;representing a file name associated to the port (or equivalent).
+  ;;
+  (print-library-debug-message "~a: reading library from port: ~a" __who__ port)
+  (let ((source-pathname  (port-id port))
+	(libsexp          (read-library-source-port port)))
+    ;;If the library name extracted from LIBSEXP  does not conform to LIBREF: we make
+    ;;the expander raise  an exception with REJECT-KEY as raised  object; we catch it
+    ;;here and return false.
+    (define (%verify-libname libname)
+      (unless (conforming-library-name-and-library-reference? libname libref)
+	(raise REJECT-KEY)))
+    (guard (E ((eq? E REJECT-KEY)
+	       (print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
+	       #f))
+      (receive (uid libname . unused)
+	  ;;This  call to  the library  expander loads  and interns  all the  library
+	  ;;dependencies using FIND-LIBRARY-BY-REFERENCE.
+	  ((libman.current-library-expander) libsexp source-pathname %verify-libname)
+	(print-library-verbose-message "loaded library \"~a\" from: ~a" libname (port-id port))
+	libname))))
+
+(define current-source-library-loader
+  ;;Reference a function used to load a source library from a textual input port.
+  ;;
+  ;;The referenced  function must accept two  arguments: a R6RS library  reference, a
+  ;;textual input port from which the source library can be read.  It must: read from
+  ;;the port a LIBRARY symbolic expression;  verify that its library name conforms to
+  ;;the library reference;  load and intern all its dependency  libraries; expand it;
+  ;;compile it; intern it.
+  ;;
+  ;;If successful  the function  must return a  symbolic expression  representing the
+  ;;R6RS library name of the loaded library; otherwise return #f.
+  ;;
+  (make-parameter
+      default-source-library-loader
+    (lambda* ({obj procedure?})
+      obj)))
+
+
+;;;; interning libraries: binary library loader
+
+(define* (default-binary-library-loader {libref library-reference?} {port binary-input-port?})
+  ;;Default value  for the  parameter CURRENT-BINARY-LIBRARY-LOADER.  Given  a binary
+  ;;input PORT: read from it a  serialised library; verify that its version reference
+  ;;conforms to LIBREF; intern it (and all its dependency libraries).
+  ;;
+  ;;If successful  return a sexp representing  the R6RS library name  of the interned
+  ;;library; otherwise return false.
+  ;;
+  ;;We  assume that  applying  the function  PORT-ID  to PORT  will  return a  string
+  ;;representing a file name associated to the port (or equivalent).
+  ;;
+  (print-library-debug-message "~a: loading library from port: ~a" __who__ port)
+  (let ((binary-pathname (port-id port)))
+    ;;If the version  of the loaded library  does not conform to LIBREF:  we make the
+    ;;loader raise  an exception with REJECT-KEY  as raised object; we  catch it here
+    ;;and return false.
+    (define (%verify-libname libname)
+      (unless (conforming-library-name-and-library-reference? libname libref)
+	(raise REJECT-KEY)))
+    (guard (E ((eq? E REJECT-KEY)
+	       (print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
+	       #f))
+      (cond ((read-library-binary-port port libman.intern-binary-library-and-its-dependencies %verify-libname)
+	     => (lambda (libname)
+		  (print-library-verbose-message "loaded library \"~a\" from: ~a" libname (port-id port))
+		  libname))
 	    (else
-	     (error 'fasl-search-path
-	       "internal error: invalid target OS UID" target-os-uid))))
-      (lambda* ({P search-path?})
-	P)))
+	     (print-library-verbose-message
+	      "warning: not using FASL file ~s because invalid or compiled with a different instance of Vicare"
+	      binary-pathname)
+	     #f)))))
 
-  (define* (fasl-path {libref library-reference?})
-    ;;Given  a  R6RS  library  reference:  build  and  return  a  string
-    ;;representing  the  pathname   of  the  FASL  file   in  which  the
-    ;;corresponding binary library can be  stored.  The directory of the
-    ;;pathname is the current value of the parameter FASL-DIRECTORY.
-    ;;
-    (string-append (fasl-directory)
-		   (library-reference->filename-stem libref)
-		   FASL-EXTENSION))
-
-  (define* (fasl-stem+extension {libref library-reference?})
-    ;;Given  a  R6RS  library  reference:  build  and  return  a  string
-    ;;representing  the pathname  stem of  the  FASL file  in which  the
-    ;;corresponding  binary library  can  be stored.   The  "stem" is  a
-    ;;string  to append  to  a  directory pathname  to  obtain the  full
-    ;;pathname; for example, the stem of the library reference:
-    ;;
-    ;;   (alpha beta gamma (1 2 3))
-    ;;
-    ;;on a 64-bit platform is currently:
-    ;;
-    ;;   "/alpha/beta/gamma.vicare-64bit-fasl"
-    ;;
-    (string-append (library-reference->filename-stem libref)
-		   FASL-EXTENSION))
-
-  (define* (default-binary-library-file-locator {libref library-reference?})
-    ;;Default   value    for   the   CURRENT-BINARY-LIBRARY-FILE-LOCATOR
-    ;;parameter.  Given a R6RS library  reference: scan the FASL library
-    ;;search path for the corresponding FASL file.
-    ;;
-    ;;Return 2 values.  When successful:  a string representing the fasl
-    ;;file pathname;  a thunk to be  called to continue the  search from
-    ;;the next  directory in the  search path.  Otherwise  return: false
-    ;;and false.
-    ;;
-    (%log-library-debug-message "~a: locating binary library file for: ~a" __who__ libref)
-    (let loop ((stem.str     (library-reference->filename-stem libref))
-	       (directories  (fasl-search-path)))
-      (if (null? directories)
-	  ;;No suitable library file was found.
-	  (begin
-	    (%log-library-debug-message "~a: exhausted search path, no binary library file found for: ~a" __who__ libref)
-	    (values #f #f))
-	;;Check the  file existence  in the  current directory  with the
-	;;current  file  extension;  if  not found  try  the  next  file
-	;;extension.
-	(let* ((binary-pathname (string-append ($car directories)
-					       stem.str
-					       FASL-EXTENSION))
-	       (continue        (let ((dirs ($cdr directories)))
-				  (lambda ()
-				    (loop stem.str dirs)))))
-	  (%log-library-debug-message "~a: trying: ~a" __who__ binary-pathname)
-	  (if (file-exists? binary-pathname)
-	      (begin
-		(%log-library-debug-message "~a: found: ~a" __who__ binary-pathname)
-		(values binary-pathname continue))
-	    (begin
-	      ((failed-library-location-collector) binary-pathname)
-	      (%log-library-debug-message "~a: unexistent: ~a" __who__ binary-pathname)
-	      (continue)))))))
-
-  #| end of module |# )
-
-
-;;;; locating source libraries stored in files
-
-(module (default-source-library-file-locator
-	 library-path
-	 library-extensions)
-
-  (define library-path
-    ;;Hold a list of strings  representing directory pathnames being the
-    ;;search path.
-    ;;
-    (make-parameter
-	'()
-      (lambda* ({P search-path?})
-	P)))
-
-  (define library-extensions
-    ;;Hold a list of strings  representing file name extensions, leading
-    ;;dot included.
-    ;;
-    (make-parameter
-	'(".vicare.sls" ".sls")
-      (lambda (obj)
-	(define-constant __who__ 'library-extensions)
-	(with-arguments-validation (__who__)
-	    ((list-of-strings	obj))
-	  obj))))
-
-  (define* (default-source-library-file-locator {libref library-reference?})
-    ;;Default   value    for   the   CURRENT-SOURCE-LIBRARY-FILE-LOCATOR
-    ;;parameter.   Given  a  R6RS  library reference:  scan  the  source
-    ;;library search  path for the  corresponding file.
-    ;;
-    ;;Return 2 values.  When successful:  a string representing the fasl
-    ;;file pathname;  a thunk to be  called to continue the  search from
-    ;;the next  directory in the  search path.  Otherwise  return: false
-    ;;and false.
-    ;;
-    (%log-library-debug-message "~a: locating source library file for: ~a" __who__ libref)
-    (let loop ((tailname.str  (let ()
-				(import LIBRARY-REFERENCE-TO-FILENAME-STEM)
-				(library-reference->filename-stem libref)))
-	       (directories   (library-path))
-	       (extensions    (library-extensions)))
-      (cond ((null? directories)
-	     (%log-library-debug-message "~a: exhausted search path, no source library file found for: ~a" __who__ libref)
-	     (values #f #f))
-
-	    ((null? extensions)
-	     ;;No more extensions: try the  next directory in the search
-	     ;;path again with the full list of extensions.
-	     (loop tailname.str ($cdr directories) (library-extensions)))
-
-	    (else
-	     ;;Build the file  pathname with the next  directory and the
-	     ;;next  extension, then  check  the its  existence; if  not
-	     ;;found try the next file extension.
-	     (let* ((pathname (string-append ($car directories)
-					     tailname.str
-					     ($car extensions)))
-		    (continue (let ((exts  ($cdr extensions)))
-				(lambda ()
-				  (loop tailname.str directories exts)))))
-	       (if (file-exists? pathname)
-		   (begin
-		     (%log-library-debug-message "~a: found: ~a" __who__ pathname)
-		     (values pathname continue))
-		 (begin
-		   ((failed-library-location-collector) pathname)
-		   (continue))))))))
-
-  #| end of module: DEFAULT-SOURCE-LIBRARY-FILE-LOCATOR |# )
+(define current-binary-library-loader
+  ;;Reference a function used to load a binary library.
+  ;;
+  ;;The referenced  function must accept two  arguments: a R6RS library  reference, a
+  ;;binary input port from  which the serialised library can be  read.  It must: read
+  ;;from the port a serialised library; verify  that its library name conforms to the
+  ;;library reference; intern it along with all its dependency libraries.
+  ;;
+  ;;If successful  the function  must return a  symbolic expression  representing the
+  ;;R6RS library name of the interned library; otherwise return #f.
+  ;;
+  (make-parameter
+      default-binary-library-loader
+    (lambda* ({obj procedure?})
+      obj)))
 
 
 ;;;; locating source and binary libraries: utilities
@@ -518,39 +400,51 @@
    %open-binary-library)
 
   (module (%source-search-start)
-    ;;This function can  be used to visit the directories  in the source
-    ;;libraries  search path  and find  a  source file  matching a  R6RS
-    ;;library reference.
+    ;;This function can be used to search for a source library file using the current
+    ;;source            library            locator           referenced            by
+    ;;CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER,  with  the  purpose  of  finding  a
+    ;;library that matches a given R6RS library reference.
     ;;
-    ;;LIBREF  must be  a R6RS  library reference.   FAIL-KONT must  be a
-    ;;thunk to be called when the  search fails.  OPTIONS must be a list
-    ;;of symbols; at present the supported options are:
+    ;;The argument  LIBREF must be a  R6RS library reference.  The  optional argument
+    ;;FAIL-KONT must  be a thunk  to be called when  the search fails.   The argument
+    ;;OPTIONS  must be  an enum-set  of type  LIBRARY-LOCATOR-OPTION; at  present the
+    ;;supported options are:
     ;;
     ;;   move-on-when-open-fails
     ;;
-    ;;The return value is a thunk to call to start the search.  When the
-    ;;returned thunk  finds a matching  library source file,  it returns
-    ;;two values:
+    ;;The return  value is a thunk  to call to  start the search.  When  the returned
+    ;;thunk finds a matching library source file, it returns two values:
     ;;
-    ;;1. A textual input port from which the source library can be read;
-    ;;   it is  responsibility of the caller to close  the returned port
-    ;;   when no more needed.
+    ;;1.  A textual  input port  from which  the source  library can  be read;  it is
+    ;;   responsibility of the caller to close the returned port when no more needed.
     ;;
-    ;;2. A thunk to be called to continue the search.  This thunk allows
-    ;;    the caller  to  reject a  library  if it  does  not meet  some
-    ;;   additional constraint; for example:  if its version number does
-    ;;   not conform to LIBREF.
+    ;;2. A thunk to  be called to continue the search.  This  thunk allows the caller
+    ;;   to  reject a library  if it does not  meet some additional  constraints; for
+    ;;   example: if its version number does not conform to LIBREF.
     ;;
-    ;;When  no  matching library  is  found:  the returned  thunk  calls
-    ;;FAIL-KONT  and  returns  its   return  values;  the  default  fail
-    ;;continuation returns false and false.
+    ;;When  no matching  library is  found: the  returned thunk  calls FAIL-KONT  and
+    ;;returns  its return  values; the  default fail  continuation returns  false and
+    ;;false.
+    ;;
+    ;;Pseudo-code usage example:
+    ;;
+    ;;   (let loop ((next-locator-search (%source-search-start
+    ;;                                    '(a b (1 2))
+    ;;                                    (library-locator-options move-on-when-open-fails)
+    ;;                                    (lambda ()
+    ;;                                      (error #f "no match")))))
+    ;;     (receive (port further-locator-match)
+    ;;         (next-locator-search)
+    ;;       (if (validate-library-from-port port)
+    ;;           (success)
+    ;;         (loop further-locator-match))))
     ;;
     (case-define* %source-search-start
       (({libref library-reference?} options)
        (%source-search-start libref options (lambda ()
 					      (values #f #f))))
       (({libref library-reference?} options {fail-kont procedure?})
-       (let ((source-locator (current-source-library-file-locator)))
+       (let ((source-locator (current-library-source-search-path-scanner)))
 	 (lambda ()
 	   (%source-search-step options
 				(lambda ()
@@ -558,19 +452,30 @@
 				fail-kont)))))
 
     (define (%source-search-step options next-source-file-match search-fail-kont)
+      ;;If NEXT-SOURCE-FILE-MATCH  is successful we  expect: SOURCE-PATHNAME to  be a
+      ;;string representing the fasl file pathname; FURTHER-SOURCE-FILE-MATCH to be a
+      ;;thunk to  be called  to continue  the search.  Otherwise  they are  false and
+      ;;false.
       (receive (source-pathname further-source-file-match)
 	  (next-source-file-match)
 	(if source-pathname
+	    ;;The  source locator  found a  match: we  open the  file and  return the
+	    ;;results.
 	    (%handle-source-file-match options source-pathname
 				       (lambda ()
 					 (%source-search-step options further-source-file-match search-fail-kont)))
-	  (begin
-	    ((failed-library-location-collector) source-pathname)
-	    (search-fail-kont)))))
+	  ;;Either the  source locator  found no  match or we  have rejected  all the
+	  ;;matching libraries.  Tail-call the fail continuation.
+	  (search-fail-kont))))
 
     (define (%handle-source-file-match options source-pathname next-source-search-step)
+      ;;The source locator found a match: we  attempt to open the file and return the
+      ;;textual input port and a search-continuation thunk.
+      ;;
       (define (%continue)
-	;;If we are here it means the previous pathname was rejected.
+	;;If we  are here it means  the previous pathname was  rejected.  We register
+	;;the  pathname for  later  use  in error  messages,  then  we tail-call  the
+	;;search-continuation thunk.
 	((failed-library-location-collector) source-pathname)
 	(next-source-search-step))
       (values (with-exception-handler
@@ -589,39 +494,51 @@
 ;;; --------------------------------------------------------------------
 
   (module (%binary-search-start)
-    ;;This function can  be used to visit the directories  in the binary
-    ;;libraries search path and find a FASL file matching a R6RS library
-    ;;reference.
+    ;;This function can be used to search for a library binary file using the current
+    ;;binary            library            locator           referenced            by
+    ;;CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER,  with  the  purpose  of  finding  a
+    ;;library that matches a given R6RS library reference.
     ;;
-    ;;LIBREF  must be  a R6RS  library reference.   FAIL-KONT must  be a
-    ;;thunk to be called when the  search fails.  OPTIONS must be a list
-    ;;of symbols; at present the supported options are:
+    ;;The argument  LIBREF must be a  R6RS library reference.  The  optional argument
+    ;;FAIL-KONT must  be a thunk  to be called when  the search fails.   The argument
+    ;;OPTIONS  must be  an enum-set  of type  LIBRARY-LOCATOR-OPTION; at  present the
+    ;;supported options are:
     ;;
     ;;   move-on-when-open-fails
     ;;
-    ;;The return value is a thunk to call to start the search.  When the
-    ;;returned thunk finds a matching  library FASL file, it returns two
-    ;;values:
+    ;;The return  value is a thunk  to call to  start the search.  When  the returned
+    ;;thunk finds a matching library FASL file, it returns two values:
     ;;
-    ;;1. A binary input port from  which the binary library can be read;
-    ;;   it is  responsibility of the caller to close  the returned port
-    ;;   when no more needed.
+    ;;1.  A binary  input port  from which  the  binary library  can be  read; it  is
+    ;;   responsibility of the caller to close the returned port when no more needed.
     ;;
-    ;;2. A thunk to be called to continue the search.  This thunk allows
-    ;;    the caller  to  reject a  library  if it  does  not meet  some
-    ;;   additional constraint; for example:  if its version number does
-    ;;   not conform to LIBREF.
+    ;;2. A thunk to  be called to continue the search.  This  thunk allows the caller
+    ;;   to  reject a library  if it does not  meet some additional  constraints; for
+    ;;   example: if its version number does not conform to LIBREF.
     ;;
-    ;;When  no  matching library  is  found:  the returned  thunk  calls
-    ;;FAIL-KONT  and  returns  its   return  values;  the  default  fail
-    ;;continuation returns false and false.
+    ;;When  no matching  library is  found: the  returned thunk  calls FAIL-KONT  and
+    ;;returns  its return  values; the  default fail  continuation returns  false and
+    ;;false.
+    ;;
+    ;;Pseudo-code usage example:
+    ;;
+    ;;   (let loop ((next-locator-search (%binary-search-start
+    ;;                                    '(a b (1 2))
+    ;;                                    (library-locator-options move-on-when-open-fails)
+    ;;                                    (lambda ()
+    ;;                                      (error #f "no match")))))
+    ;;     (receive (port further-locator-match)
+    ;;         (next-locator-search)
+    ;;       (if (validate-library-from-port port)
+    ;;           (success)
+    ;;         (loop further-locator-match))))
     ;;
     (case-define* %binary-search-start
       (({libref library-reference?} options)
        (%binary-search-start libref options (lambda ()
 					      (values #f #f))))
       (({libref library-reference?} options {fail-kont procedure?})
-       (let ((binary-locator (current-binary-library-file-locator)))
+       (let ((binary-locator (current-library-binary-search-path-scanner)))
 	 (lambda ()
 	   (%binary-search-step options
 				(lambda ()
@@ -629,19 +546,30 @@
 				fail-kont)))))
 
     (define (%binary-search-step options next-binary-file-match search-fail-kont)
+      ;;If NEXT-BINARY-FILE-MATCH  is successful we  expect: BINARY-PATHNAME to  be a
+      ;;string representing the FASL file pathname; FURTHER-BINARY-FILE-MATCH to be a
+      ;;thunk to  be called  to continue  the search.  Otherwise  they are  false and
+      ;;false.
       (receive (binary-pathname further-binary-file-match)
 	  (next-binary-file-match)
 	(if binary-pathname
+	    ;;The  binary locator  found a  match: we  open the  file and  return the
+	    ;;results.
 	    (%handle-binary-file-match options binary-pathname
 				       (lambda ()
 					 (%binary-search-step options further-binary-file-match search-fail-kont)))
-	  (begin
-	    ((failed-library-location-collector) binary-pathname)
-	    (search-fail-kont)))))
+	  ;;Either the  binary locator  found no  match or we  have rejected  all the
+	  ;;matching libraries.  Tail-call the fail continuation.
+	  (search-fail-kont))))
 
     (define (%handle-binary-file-match options binary-pathname next-binary-search-step)
+      ;;The binary locator found a match: we  attempt to open the file and return the
+      ;;binary input port and a search-continuation thunk.
+      ;;
       (define (%continue)
-	;;If we are here it means the previous pathname was rejected.
+	;;If we  are here it means  the previous pathname was  rejected.  We register
+	;;the  pathname for  later  use  in error  messages,  then  we tail-call  the
+	;;search-continuation thunk.
 	((failed-library-location-collector) binary-pathname)
 	(next-binary-search-step))
       (values (with-exception-handler
@@ -677,156 +605,157 @@
 
 ;;;; locating source and binary libraries: run-time locator
 
-(define* (run-time-library-locator {libref library-reference?} options)
-  ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
-  ;;function is meant to be used to search for libraries when running an
-  ;;application.
+(define* (run-time-library-locator {libref library-reference?})
+  ;;Possible value for the parameter  CURRENT-LIBRARY-LOCATOR; this function is meant
+  ;;to be used to search for libraries when running an application.
   ;;
-  ;;Given a R6RS library reference and  a list of search options: return
-  ;;a thunk to be used to start the search for a matching library.
+  ;;Given a R6RS library reference: return a thunk to be used to start the search for
+  ;;a  matching library.   The  returned thunk  scans the  search  path for  compiled
+  ;;libraries in search of a matching binary  file; if a matching compiled library is
+  ;;not found: it scans the search path  for source libraries in search of a matching
+  ;;source file.
   ;;
-  ;;The returned  thunk scans  the search path  for binary  libraries in
-  ;;search of a  matching FASL library file; if a  binary library is not
-  ;;found: it scans the search path  for source libraries in search of a
-  ;;matching source library file.
+  ;;When successful the returned thunk returns 2 values:
   ;;
-  ;;OPTIONS must be a list of  symbols; at present the supported options
-  ;;are:
+  ;;1. An  input port from which  the library can be  read; if the port  is binary: a
+  ;;   compiled library can be read from it;  if the port is textual a source library
+  ;;   can be read from it.  It is responsibility of the caller to close the returned
+  ;;   port when no more needed.
   ;;
-  ;;   move-on-when-open-fails
+  ;;2. A thunk to be called to continue  the search.  This thunk allows the caller to
+  ;;   reject a library if it does not meet some additional constraints; for example:
+  ;;   if its version number does not conform to LIBREF.
   ;;
-  ;;When successful the returned thunk return 2 values:
-  ;;
-  ;;1. An input port from which the  library can be read; if the port is
-  ;;   binary: a  compiled library can be  read from it; if  the port is
-  ;;    textual  a   source  library  can  be  read  from   it.   It  is
-  ;;   responsibility of  the caller to close the returned  port when no
-  ;;   more needed.
-  ;;
-  ;;2. A thunk  to be called to continue the  search.  This thunk allows
-  ;;    the  caller  to reject  a  library  if  it  does not  meet  some
-  ;;   additional  constraint; for example:  if its version  number does
-  ;;   not conform to LIBREF.
-  ;;
-  ;;When no matching library is  found: the returned thunk returns false
-  ;;and false.
+  ;;When no matching library is found: the returned thunk returns false and false.
   ;;
   (import LIBRARY-LOCATOR-UTILS)
-  (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
-  (%binary-search-start libref options (%source-search-start libref options)))
+  (print-library-debug-message "~a: locating library for: ~a" __who__ libref)
+  (let ((options (current-library-locator-options)))
+    (%binary-search-start libref options (%source-search-start libref options))))
 
 
 ;;;; locating source and binary libraries: compile-time locator
 
 (module (compile-time-library-locator)
-  (import LIBRARY-LOCATOR-UTILS)
-  (define-constant __who__ 'compile-time-library-locator)
+  (module (%open-source-library
+	   %open-binary-library
+	   %binary-search-start)
+    (import LIBRARY-LOCATOR-UTILS))
+  (define-constant __module_who__ 'compile-time-library-locator)
 
-  (define* (compile-time-library-locator {libref library-reference?} options)
-    ;;Possible  value for  the  parameter CURRENT-LIBRARY-LOCATOR;  this
-    ;;function  is meant  to  be  used to  search  for  libraries to  be
-    ;;compiled for installation, for example by a package.
+  (define* (compile-time-library-locator {libref library-reference?})
+    ;;Possible  value for  the  parameter CURRENT-LIBRARY-LOCATOR;  this function  is
+    ;;meant to be used  to search for libraries to be  compiled for installation, for
+    ;;example by a package.
     ;;
-    ;;Given a R6RS library reference: return a thunk to be used to start
-    ;;the search for a matching library.
+    ;;Given a R6RS library  reference: return a thunk to be used  to start the search
+    ;;for a matching library.  The search for source libraries is performed using the
+    ;;library source file scanner in CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER.  The
+    ;;search  for compiled  libraries  is  performed using  the  library binary  file
+    ;;scanner in CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER.
     ;;
     ;;The returned thunk does the following:
     ;;
-    ;;1.  Scan the next directory  from the source libraries search path
-    ;;   for a source library whose name matches LIBREF.
+    ;;1. Ask the library source file scanner for the next matching source file.
     ;;
-    ;;2. If a  matching source is found: look in  the FASL-DIRECTORY for
-    ;;   an already compiled FASL file.
+    ;;2. If a matching source is found:  look for an already compiled library file in
+    ;;   the COMPILED-LIBRARIES-BUILD-DIRECTORY:
     ;;
-    ;;3. If the FASL file does not  exist or it is older than the source
-    ;;   file:  accept the source  file and  prepare as next  search the
-    ;;    search for  the source  file in  the next  directory from  the
-    ;;   search path.
+    ;;   2.1.  If  no compiled file exists or  it if exists but it is  older than the
+    ;;        source file: accept the source file as matching.
     ;;
-    ;;4. If the FASL  file exists and it is newer  than the source file:
-    ;;   accept  it and  prepare as  next search  the acceptance  of the
-    ;;   source file.
+    ;;   2.2. If a compiled file exists and  it is newer than the source file: accept
+    ;;        the compiled file as matching.
     ;;
-    ;;5.  If no  source file  exists: scan  the FASL  search path  for a
-    ;;   binary library.
+    ;;   2.3. Return to the caller the matching file pathname.
     ;;
-    ;;Remember  that the  FASL  file  can be  rejected  if  it has  been
-    ;;compiled by another boot image or it has the wrong library UID.
+    ;;   2.4. If  the caller rejects the  binary file pathname: return  to the caller
+    ;;        the source file pathname.
     ;;
-    ;;OPTIONS  must be  a  list  of symbols;  at  present the  supported
-    ;;options are:
+    ;;   2.5. If the caller rejects the source file: loop to 1.
     ;;
-    ;;   move-on-when-open-fails
+    ;;3. If no source file exists: loop to 1.
     ;;
-    ;;When successful (a source or binary file is accepted) the returned
+    ;;Remember  that the  binary file  can be  rejected if  it has  been compiled  by
+    ;;another boot image or it has the wrong library UID.
+    ;;
+    ;;When successful (a source or binary file matching LIBREF is found) the returned
     ;;thunk returns 2 values:
     ;;
-    ;;1. An input port  from which the library can be  read; if the port
-    ;;   is binary: a compiled library can  be read from it; if the port
-    ;;    is textual  a  source library  can  be read  from  it.  It  is
-    ;;   responsibility of the caller to close the returned port when no
-    ;;   more needed.
+    ;;1. An input port.   If the port is binary: a compiled library  can be read from
+    ;;   it.  If  the port is textual: a  source library can be read from  it.  It is
+    ;;   responsibility of the caller to close the returned port when no more needed.
     ;;
-    ;;   -  The boolean  true.  It  means the  library has  already been
-    ;;     loaded and installed in the collection.
+    ;;2. A thunk to  be called to continue the search.  This  thunk allows the caller
+    ;;   to  reject a  library if it  does not meet  some additional  constraint; for
+    ;;   example: if its version number does not conform to LIBREF.
     ;;
-    ;;2. A thunk to be called to continue the search.  This thunk allows
-    ;;    the caller  to  reject a  library  if it  does  not meet  some
-    ;;   additional constraint; for example:  if its version number does
-    ;;   not conform to LIBREF.
+    ;;When no matching library is found: the returned thunk returns false and false.
     ;;
-    ;;When  no matching  library is  found: the  returned thunk  returns
-    ;;false and false.
-    ;;
-    (import LIBRARY-LOCATOR-UTILS)
-    (%log-library-debug-message "~a: start search for library: ~a" __who__ libref)
-    (let ((source-locator (current-source-library-file-locator))
-	  (fail-kont      (%binary-search-start libref options)))
+    (print-library-debug-message "~a: start search for library: ~a" __who__ libref)
+    (let* ((options        (current-library-locator-options))
+	   (source-locator (current-library-source-search-path-scanner))
+	   (fail-kont      (%binary-search-start libref options)))
       (lambda ()
-	(%binary/source-search-step options libref
-				    (lambda ()
-				      (source-locator libref))
-				    fail-kont))))
+	(%locator-search-step options libref
+			      (lambda ()
+				(source-locator libref))
+			      fail-kont))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%binary/source-search-step options libref next-source-file-match search-fail-kont)
+  (define (%locator-search-step options libref next-source-file-match search-fail-kont)
     (receive (source-pathname further-source-file-match)
 	(next-source-file-match)
       (if source-pathname
+	  ;;A matching source library was found in a local directory.
 	  (begin
-	    (%log-library-debug-message "~a: found source: ~a" __who__ source-pathname)
-	    (let ((binary-pathname (fasl-path libref)))
-	      (%log-library-debug-message "~a: checking binary: ~a" __who__ binary-pathname)
+	    (print-library-debug-message "~a: found source: ~a" __module_who__ source-pathname)
+	    (let ((binary-pathname (library-reference->library-binary-pathname-in-build-directory libref)))
+	      (print-library-debug-message "~a: checking binary: ~a" __module_who__ binary-pathname)
 	      (if (and (file-exists? binary-pathname)
 		       (receive-and-return (rv)
 			   (< (posix.file-modification-time source-pathname)
 			      (posix.file-modification-time binary-pathname))
 			 (unless rv
-			   (%print-verbose-message "WARNING: not using fasl file ~s \
-                                                    because it is older \
-                                                    than the source file ~s\n"
-						   binary-pathname source-pathname))))
-		  ;;We  try the  binary  library first,  and the  source
-		  ;;library next.
+			   (print-library-verbose-message
+			    "warning: not using fasl file ~s because it is older than the source file ~s"
+			    binary-pathname source-pathname))))
+		  ;;The library binary file exists in  the store and it is newer than
+		  ;;the source  library.  We  try the binary  library first,  and the
+		  ;;source library next.
 		  (%handle-local-binary-file-match options libref binary-pathname source-pathname
 						   further-source-file-match search-fail-kont)
-		;;No  suitable binary  library, try  the source  library
+		;;No suitable  binary library in  the store.  Try the  source library
 		;;directly.
 		(begin
 		  ((failed-library-location-collector) binary-pathname)
 		  (%handle-source-file-match options libref source-pathname further-source-file-match search-fail-kont)))))
+	;;No matching source  library was found in local  directories.  Tail-call the
+	;;fail continuation to search for a compiled library installed under a system
+	;;directory.
 	(begin
-	  (%log-library-debug-message "~a: no source file for: ~a" __who__ libref)
+	  (print-library-debug-message "~a: no source file for: ~a" __module_who__ libref)
 	  (search-fail-kont)))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%handle-local-binary-file-match options libref binary-pathname source-pathname
 					   next-source-file-match search-fail-kont)
+    ;;This  function handles  the case:  a library  source file  matching LIBREF  was
+    ;;found; a library binary  file matching LIBREF was also found  in the store, and
+    ;;it is newer than the source library.
+    ;;
+    ;;First we try to open the binary library and return values to the caller; if the
+    ;;binary library is cannot be opened or  it is rejected, we default to the source
+    ;;library.
+    ;;
     (define (%continue)
+      ;;If we are here either opening the binary library failed or the binary library
+      ;;was rejected.  We go for the source library.
+      ;;
       ((failed-library-location-collector) binary-pathname)
-      (%log-library-debug-message "~a: rejected: ~a" __who__ binary-pathname)
+      (print-library-debug-message "~a: rejected: ~a" __module_who__ binary-pathname)
       (%handle-source-file-match options libref source-pathname next-source-file-match search-fail-kont))
     (values (with-exception-handler
 		(lambda (E)
@@ -836,16 +765,22 @@
 			(raise E))
 		    (raise E)))
 	      (lambda ()
-		(%log-library-debug-message "~a: opening: ~a" __who__ binary-pathname)
+		(print-library-debug-message "~a: opening: ~a" __module_who__ binary-pathname)
 		(%open-binary-library binary-pathname)))
 	    %continue))
 
   (define (%handle-source-file-match options libref source-pathname next-source-file-match search-fail-kont)
+    ;;This  function handles  the case:  a library  source file  matching LIBREF  was
+    ;;found; either  a library  binary file  matching LIBREF was  *not* found  in the
+    ;;store, or it was found but rejected.
+    ;;
     (define (%continue)
-      ;;If we are here it means the previous pathname was rejected.
+      ;;If we are here the source library  pathname has been rejected.  We move on to
+      ;;the next search result.
+      ;;
       ((failed-library-location-collector) source-pathname)
-      (%log-library-debug-message "~a: rejected: ~a" __who__ source-pathname)
-      (%binary/source-search-step options libref next-source-file-match search-fail-kont))
+      (print-library-debug-message "~a: rejected: ~a" __module_who__ source-pathname)
+      (%locator-search-step options libref next-source-file-match search-fail-kont))
     (values (with-exception-handler
 		(lambda (E)
 		  (if (i/o-error? E)
@@ -854,307 +789,439 @@
 			(raise E))
 		    (raise E)))
 	      (lambda ()
-		(%log-library-debug-message "~a: opening: ~a" __who__ source-pathname)
+		(print-library-debug-message "~a: opening: ~a" __module_who__ source-pathname)
 		(%open-source-library source-pathname)))
 	    %continue))
 
   #| end of module: COMPILE-TIME-LIBRARY-LOCATOR |# )
 
 
-;;;; locating source and binary libraries: source-only locator
+;;;; locating source and binary libraries: source locator
 
-(define* (source-library-locator {libref library-reference?} options)
-  ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
-  ;;function is  meant to be used  to search for source  libraries first
-  ;;and the for binary libraries.
+(define* (source-library-locator {libref library-reference?})
+  ;;Possible value for the parameter  CURRENT-LIBRARY-LOCATOR; this function is meant
+  ;;to be used to search for source libraries first and for binary libraries later.
   ;;
-  ;;Given a R6RS library reference and  a list of search options: return
-  ;;a thunk to be used to start the search for a matching library.
-  ;;
-  ;;The returned  thunk scans  the search path  for source  libraries in
-  ;;search of a matching source library file; if a source library is not
-  ;;found: it scans the search path  for binary libraries in search of a
-  ;;matching FASL library file.
-  ;;
-  ;;OPTIONS must be a list of  symbols; at present the supported options
-  ;;are:
-  ;;
-  ;;   move-on-when-open-fails
+  ;;Given a R6RS library reference: return a thunk to be used to start the search for
+  ;;a matching library.   The returned thunk uses the current  source library scanner
+  ;;referenced  by CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER,  with  the purpose  of
+  ;;finding a library file that matches a given R6RS library reference.  If no source
+  ;;library   is  found:   the   current  binary   library   scanner  referenced   by
+  ;;CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER is used.
   ;;
   ;;When successful the returned thunk returns 2 values:
   ;;
-  ;;1. An input port from which the  library can be read; if the port is
-  ;;   binary: a  compiled library can be  read from it; if  the port is
-  ;;    textual  a   source  library  can  be  read  from   it.   It  is
-  ;;   responsibility of  the caller to close the returned  port when no
-  ;;   more needed.
+  ;;1. An input  port.  If it is a  textual input port: a source library  can be read
+  ;;   from it.  If it is a binary input  port: a binary library can be read from it.
+  ;;   It  is responsibility of the  caller to close  the returned port when  no more
+  ;;   needed.
   ;;
-  ;;2. A thunk  to be called to continue the  search.  This thunk allows
-  ;;    the  caller  to reject  a  library  if  it  does not  meet  some
-  ;;   additional  constraint; for example:  if its version  number does
-  ;;   not conform to LIBREF.
+  ;;2. A thunk to be called to continue  the search.  This thunk allows the caller to
+  ;;   reject a library if it does  not meet some additional constraint; for example:
+  ;;   if its version number does not conform to LIBREF.
   ;;
-  ;;When no matching library is  found: the returned thunk returns false
-  ;;and false.
+  ;;When no matching library is found: the returned thunk returns false and false.
   ;;
   (import LIBRARY-LOCATOR-UTILS)
-  (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
-  (%source-search-start libref options (%binary-search-start libref options)))
+  (print-library-debug-message "~a: locating library for: ~a" __who__ libref)
+  (let ((options (current-library-locator-options)))
+    (%source-search-start libref options (%binary-search-start libref options))))
 
 
-;;;; loading libraries from source
+;;;; library locator selection
 
-(define* (default-source-library-loader {libref library-reference?} {port textual-input-port?})
-  ;;Default value fo the parameter CURRENT-SOURCE-LIBRARY-LOADER.  Given
-  ;;a textual  input PORT: read  from it a LIBRARY  symbolic expression;
-  ;;verify  that its  version  reference conforms  to  LIBREF; load  and
-  ;;install all its dependency libraries; expand it; compile it; install
-  ;;it.
+(define current-library-locator
+  ;;Hold a function  used to locate a  library from its R6RS  library reference.  The
+  ;;selected locator function must accept as single argument a R6RS library reference
+  ;;and it must return a thunk as single value.
   ;;
-  ;;If successful  return a sexp  representing the R6RS library  name of
-  ;;the loaded library; otherwise return false.
+  ;;When invoked, the returned thunk must return two values:
   ;;
-  ;;We assume that  applying the function PORT-ID to PORT  will return a
-  ;;string  representing  a  file  name   associated  to  the  port  (or
-  ;;equivalent).
+  ;;* When a matching source library is found:
   ;;
-  (%log-library-debug-message "~a: loading library from port: ~a" __who__ port)
-  (let ((source-pathname  (port-id port))
-	(library-sexp     (read-library-source-port port)))
-    ;;If the version  of the loaded library does not  conform to LIBREF:
-    ;;we make the expander raise  an exception with REJECT-KEY as raised
-    ;;object; we catch it here and return false.
-    (guard (E ((eq? E REJECT-KEY)
-	       (%log-library-debug-message "~a: rejected library from port: ~a" __who__ port)
-	       #f))
-      (receive (uid libname
-		    import-libdesc* visit-libdesc* invoke-libdesc*
-		    invoke-code visit-code
-		    export-subst export-env
-		    guard-code guard-libdesc*
-		    option*)
-	  ((current-library-expander) library-sexp source-pathname
-	   (lambda (libname)
-	     ;;We expect LIBNAME to be  the R6RS library name extracted from
-	     ;;LIBRARY-SEXP.
-	     (unless (conforming-library-name-and-library-reference? libname libref)
-	       (raise REJECT-KEY))))
-	libname))))
-
-
-;;;; loading libraries from serialised locations
-
-(define* (default-binary-library-loader {libref library-reference?} {port binary-input-port?})
-  ;;Default value fo the parameter CURRENT-BINARY-LIBRARY-LOADER.  Given
-  ;;a binary input PORT: read from  it a serialized library; verify that
-  ;;its version  reference conforms to  LIBREF; install it (and  all its
-  ;;dependency libraries).
+  ;;  1. A textual input port from which the library can be read.
   ;;
-  ;;If successful  return a sexp  representing the R6RS library  name of
-  ;;the installed library; otherwise return false.
+  ;;  2. A  thunk to be called to  continue the search in case the  source library is
+  ;;     rejected.
   ;;
-  ;;We assume that  applying the function PORT-ID to PORT  will return a
-  ;;string  representing  a  file  name   associated  to  the  port  (or
-  ;;equivalent).
+  ;;* When a matching binary library is found:
   ;;
+  ;;  1. A binary input port from which the library can be read.
   ;;
-  (define fasl-pathname (port-id port))
-  ;;If the version of the loaded  library does not conform to LIBREF: we
-  ;;make the loader raise an exception with REJECT-KEY as raised object;
-  ;;we catch it here and return false.
-  (%log-library-debug-message "~a: loading library from port: ~a" __who__ port)
-  (guard (E ((eq? E REJECT-KEY)
-	     (%log-library-debug-message "~a: rejected library from port: ~a" __who__ port)
-	     #f))
-    (let ((rv (load-serialized-library port install-binary-library-and-its-dependencies
-		(lambda (libname)
-		  ;;We  expect  LIBNAME  to  be the  R6RS  library  name
-		  ;;extracted from the serialized library.
-		  (unless (conforming-library-name-and-library-reference? libname libref)
-		    (raise REJECT-KEY))))))
-      (when rv
-	(assert (library-name? rv)))
-      (or rv
-	  (begin
-	    (%print-verbose-message "WARNING: not using fasl file ~s because invalid or \
-                                     compiled with a different instance of Vicare\n"
-				    fasl-pathname)
-	    #f)))))
+  ;;  2. A  thunk to be called to  continue the search in case the  binary library is
+  ;;     rejected.
+  ;;
+  ;;* When a matching library is found and interned by the thunk itself:
+  ;;
+  ;;  1. The boolean true.
+  ;;
+  ;;  2. A thunk to be called to continue the search in case the library is rejected.
+  ;;
+  ;;* When no matching library is found:
+  ;;
+  ;;  1. The boolean false.
+  ;;
+  ;;  2. The boolean false.
+  ;;
+  ;;When an input port is returned as first value: it is responsibility of the caller
+  ;;to  close  the returned  port  when  no more  needed;  the  thunk discharges  any
+  ;;responsibility.
+  ;;
+  ;;When a thunk is returned as second value:  it must have the same API of the thunk
+  ;;returned by the  locator function; the possibility to continue  the search allows
+  ;;the caller to reject a library if it does not meet some additional constraint.
+  ;;
+  ;;The parameter is meant to be used as in the following pseudo-code:
+  ;;
+  ;;   (let loop ((next-locator-search ((current-library-locator) libref)))
+  ;;     (receive (rv further-locator-search)
+  ;;         (next-locator-search)
+  ;;       (cond ((binary-port?  rv)
+  ;;              (read-validate-intern-binary-library rv
+  ;;                  (lambda ()
+  ;;                    (loop further-locator-search))))
+  ;;             ((textual-port? rv)
+  ;;              (read-validate-intern-source-library rv
+  ;;                  (lambda ()
+  ;;                    (loop further-locator-search))))
+  ;;             ((and (boolean? rv) rv)
+  ;;              (library-already-interned))
+  ;;             ((not rv)
+  ;;              (no-matching-library-was-found))
+  ;;             (else
+  ;;              (assertion-violation __who__
+  ;;                "invalid return values from library locator" rv)))))
+  ;;
+  (make-parameter
+      run-time-library-locator
+    (lambda* ({obj procedure?})
+      obj)))
 
 
-;;;; loading and storing precompiled library files
+;;;; serialising compiled library files
 
-(case-define* serialize-library-record
-  ;;This   function   is   the   default   value   for   the   parameter
-  ;;CURRENT-LIBRARY-RECORD-SERIALIZER.
+(define* (default-library-serialiser {lib libman.library?} {binary-pathname posix.file-string-pathname?})
+  ;;Default  value for  the  parameter CURRENT-LIBRARY-SERIALISER.   Given a  LIBRARY
+  ;;object: serialise  the compiled library  in a  given FASL file  pathname.  Return
+  ;;unspecified values.
   ;;
-  ;;Given an already installed LIBRARY  record and an optional FASL file
-  ;;pathname: serialize  the compiled  library in  a FASL  file.  Return
-  ;;unspecified  values.  Only  libraries loaded  form source  files are
-  ;;serialized:  if a  library  was  loaded from  a  FASL file:  nothing
-  ;;happens.   If a  FASL file  already exists  for the  library: it  is
-  ;;silently overwritten.
+  ;;Only libraries loaded  form source files are serialised, if  a library was loaded
+  ;;from  a FASL  file: nothing  happens.   If a  FASL  file already  exists for  the
+  ;;library: it is silently overwritten.
   ;;
-  ;;When  the binary  pathname is  not given  or it  is false:  a binary
-  ;;pathname is built from the source pathname FASL-DIRECTORY as prefix.
-  ;;
-  (({lib library?})
-   (serialize-library-record lib #f))
-  (({lib library?} {binary-pathname false-or-file-string-pathname?})
-   (cond ((library-source-file-name lib)
-	  => (lambda (source-pathname)
-	       (define binary-pathname^
-		 (or binary-pathname (let ()
-				       (import SOURCE-PATHNAME->BINARY-PATHNAME)
-				       (library-source-pathname->library-binary-pathname source-pathname))))
-	       (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
-	       (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
-	       (serialize-library lib
-				  (lambda (source-pathname libname contents)
-				    (store-serialized-library binary-pathname^ source-pathname
-							      libname contents))
-				  (lambda (core-expr)
-				    (compile-core-expr core-expr))))))))
+  (when (libman.library-loaded-from-source-file? lib)
+    (let ((source-pathname (libman.library-source-file-name lib)))
+      (print-library-verbose-message "serialising library: ~a" binary-pathname)
+      (serialise-library lib
+			 (lambda (source-pathname libname contents)
+			   (store-full-serialised-library-to-file binary-pathname source-pathname libname contents))
+			 (lambda (core-expr)
+			   (compile-core-expr core-expr))))))
 
-(module (load-serialized-library
-	 store-serialized-library)
+(define current-library-serialiser
+  ;;References a  function used to  serialise a compiled  library into a  gieven FASL
+  ;;file pathname.
+  ;;
+  ;;The referenced  function must accept 2  arguments: a LIBRARY object  and a string
+  ;;file pathname representing  the FASL pathname; it can  return unspecified values;
+  ;;if an error occurs it must raise an exception.
+  ;;
+  ;;Only libraries loaded form source files  must be serialised: if the given library
+  ;;was loaded from a binary file: nothing must happen.
+  ;;
+  (make-parameter
+      default-library-serialiser
+    (lambda* ({obj procedure?})
+      obj)))
 
-  (define-struct serialized-library
+;;; --------------------------------------------------------------------
+
+(define* (default-library-build-directory-serialiser {lib libman.library?})
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-BUILD-DIRECTORY-SERIALISER.
+  ;;Given aLIBRARY  object: serialise the compiled  library in a FASL  file under the
+  ;;currently selected store directory.  Return unspecified values.  Serialisation is
+  ;;performed  with the  library  serialiser procedure  referenced  by the  parameter
+  ;;CURRENT-LIBRARY-SERIALISER.
+  ;;
+  (when (libman.library-loaded-from-source-file? lib)
+    (let ((binary-pathname (library-name->library-binary-pathname-in-build-directory (libman.library-name lib))))
+      ((current-library-serialiser) lib binary-pathname))))
+
+(define current-library-build-directory-serialiser
+  ;;References a  function used to  serialise a compiled library  into a file  in the
+  ;;currently selected store directory.
+  ;;
+  ;;The referenced  function must accept 2  arguments: a LIBRARY object  and a string
+  ;;file pathname representing  the FASL pathname; it can  return unspecified values;
+  ;;if an error occurs it must raise an exception.
+  ;;
+  ;;Only libraries loaded form source files  are serialised: if the given library was
+  ;;loaded from a FASL file: nothing must happen.
+  ;;
+  (make-parameter
+      default-library-build-directory-serialiser
+    (lambda* ({obj procedure?})
+      obj)))
+
+;;; --------------------------------------------------------------------
+
+(define (serialise-collected-libraries serialise compile)
+  ;;Traverse the  current collection of libraries  and serialise the contents  of all
+  ;;the LIBRARY objects  that were loaded from source; to  "serialise" means to write
+  ;;the compiled contents in a FASL file.  Return unspecified values.
+  ;;
+  ;;SERIALISE must be a closure to be invoked as follows:
+  ;;
+  ;;   (serialise ?source-pathname ?libname ?contents)
+  ;;
+  ;;where: ?SOURCE-PATHNAME  must be  a string representing  the source  library file
+  ;;pathname; ?LIBNAME  must be a  symbolic expression representing a  R6RS compliant
+  ;;library name;  ?CONTENTS must  be a  value representing  the compiled  library as
+  ;;defined by the procedure SERIALISE-LIBRARY.
+  ;;
+  ;;COMPILE must be a closure to be invoked as follows:
+  ;;
+  ;;   (compile ?core-language-expression)
+  ;;
+  ;;where ?CORE-LANGUAGE-EXPRESSION  must be  a symbolic expression  representing the
+  ;;invoke, visit or guard code from the  library; the closure must compile the given
+  ;;core language  expression and return  a closure  object wrapping the  code object
+  ;;representing the init expression.
+  ;;
+  (for-each (lambda (lib)
+	      (serialise-library lib serialise compile))
+    ((libman.current-library-collection))))
+
+(define* (serialise-library {lib libman.library?} {serialise procedure?} {compile procedure?})
+  ;;Compile and serialise the given LIBRARY object.  Return unspecified values.
+  ;;
+  ;;SERIALISE must be a closure to be invoked as follows:
+  ;;
+  ;;   (serialise ?source-pathname ?libname ?contents)
+  ;;
+  ;;where: ?SOURCE-PATHNAME  must be  a string representing  the source  library file
+  ;;pathname; ?LIBNAME  must be a  symbolic expression representing a  R6RS compliant
+  ;;library name;  ?CONTENTS must  be a  value representing  the compiled  library as
+  ;;defined by this procedure.
+  ;;
+  ;;COMPILE must be a closure to be invoked as follows:
+  ;;
+  ;;   (compile ?core-language-expression)
+  ;;
+  ;;where ?CORE-LANGUAGE-EXPRESSION  must be  a symbolic expression  representing the
+  ;;invoke, visit or guard code from the  library; the closure must compile the given
+  ;;core language  expression and return  a closure  object wrapping the  code object
+  ;;representing the init expression.
+  ;;
+  (let ((libname         (libman.library-name lib))
+	(source-pathname (libman.library-source-file-name lib)))
+    (serialise source-pathname libname
+	       (list (libman.library-uid lib)
+		     libname
+		     (map libman.library-descriptor (libman.library-imp-lib* lib))
+		     (map libman.library-descriptor (libman.library-vis-lib* lib))
+		     (map libman.library-descriptor (libman.library-inv-lib* lib))
+		     (libman.library-export-subst lib)
+		     (libman.library-export-env lib)
+		     (compile (libman.library-visit-code lib))
+		     (compile (libman.library-invoke-code lib))
+		     (compile (libman.library-guard-code lib))
+		     (map libman.library-descriptor (libman.library-guard-lib* lib))
+		     (libman.library-visible? lib)
+		     (libman.library-option* lib)
+		     source-pathname))))
+
+;;; --------------------------------------------------------------------
+;;; reading and writing binary libraries in FASL files
+
+(module (read-library-binary-port
+	 store-full-serialised-library-to-port
+	 store-full-serialised-library-to-file)
+
+  (define-struct serialised-library
     (contents
-		;A list of values  representing a LIBRARY record holding
-		;precompiled  code.   For  details  on  the  format  see
-		;SERIALIZE-LIBRARY in "psyntax.library-manager.sls".
+		;A list of  values representing a LIBRARY  object holding precompiled
+		;code.   For   details  on   the  format  see   SERIALISE-LIBRARY  in
+		;"psyntax.library-manager.sls".
      ))
 
-  (define (load-serialized-library port success-kont verify-libname)
-    ;;Given a string representing the  existent pathname of a FASL file:
-    ;;load it looking for a precompiled library, then apply SUCCESS-KONT
-    ;;to the library contents.
+  (define* (read-library-binary-port {port binary-input-port?}
+				     {success-kont procedure?}
+				     {verify-libname procedure?})
+    ;;Given  a string  representing the  existent pathname  of a  FASL file:  load it
+    ;;looking for a full binary library serialisation, then apply SUCCESS-KONT to the
+    ;;library contents.
     ;;
-    ;;If successful: return the  result of the SUCCESS-KONT application.
-    ;;If the  file has invalid  contents: return false.  If  opening the
-    ;;file fails: return false.
+    ;;If successful: return the result of  the SUCCESS-KONT application.  If the file
+    ;;has invalid contents: return false.
     ;;
-    ;;VERIFY-LIBNAME must be a procedure accepting a single argument; it
-    ;;must verify that  the argument is a R6RS library  name and that it
-    ;;conforms to  some additional constraint (especially  the version);
-    ;;it must  raise an  exception if something  is wrong;  otherwise it
-    ;;should just return unspecified values.
+    ;;VERIFY-LIBNAME must be a procedure accepting  a single argument; it must verify
+    ;;that  the  argument is  a  R6RS  library name  and  that  it conforms  to  some
+    ;;additional constraint (especially  the version); it must raise  an exception if
+    ;;something is wrong; otherwise it should just return unspecified values.
     ;;
     (let ((libname (fasl-read-object port)))
       (verify-libname libname)
       (let ((x (fasl-read-object port)))
-	(and (serialized-library? x)
-	     (apply success-kont (serialized-library-contents x))))))
+	(and (serialised-library? x)
+	     (apply success-kont (serialised-library-contents x))))))
 
-  (define (store-serialized-library fasl-pathname source-pathname libname contents)
-    ;;Given the  FASL pathname of  a compiled library to  be serialized:
-    ;;store the CONTENTS into it, creating  a new file or overwriting an
-    ;;existing one.  Return unspecified values.
+  (define* (store-full-serialised-library-to-port {port binary-output-port?}
+						  {source-pathname posix.file-string-pathname?}
+						  {libname library-name?}
+						  contents)
+    ;;Given a  binary output port:  store the CONTENTS  of a serialised  full library
+    ;;into it.  Return unspecified values.
     ;;
-    ;;FASL-PATHNAME must  be a string  representing the pathname  of the
-    ;;binary library FASL file.
-    ;;
-    ;;SOURCE-PATHNAME must be a string  representing the pathname of the
-    ;;source library file (or equivalent).
+    ;;SOURCE-PATHNAME  must be  a  string  representing the  pathname  of the  source
+    ;;library file (or equivalent).
     ;;
     ;;LIBNAME must be a R6RS library name.
     ;;
-    ;;CONTENTS must  be a list  of values representing a  LIBRARY record
-    ;;holding precompiled  code.  See the function  SERIALIZE-LIBRARY in
+    ;;CONTENTS  must be  a  list  of values  representing  a  LIBRARY object  holding
+    ;;precompiled     code.      See     the    function     SERIALISE-LIBRARY     in
     ;;"psyntax.library-manager.sls" for details on the format.
     ;;
-    (%print-verbose-message "serializing ~a ..." fasl-pathname)
+    (fasl-write-header port)
+    (fasl-write-object libname port)
+    (fasl-write-object (make-serialised-library contents) port
+		       (retrieve-filename-foreign-libraries source-pathname)))
+
+  (define* (store-full-serialised-library-to-file {binary-pathname posix.file-string-pathname?}
+						  {source-pathname posix.file-string-pathname?}
+						  {libname library-name?}
+						  contents)
+    ;;Given  the FASL  pathname of  a compiled  library to  be serialised:  store the
+    ;;CONTENTS into it,  creating a new file or overwriting  an existing one.  Return
+    ;;unspecified values.
+    ;;
+    ;;BINARY-PATHNAME  must be  a  string  representing the  pathname  of the  binary
+    ;;library FASL file.
+    ;;
+    ;;SOURCE-PATHNAME  must be  a  string  representing the  pathname  of the  source
+    ;;library file (or equivalent).
+    ;;
+    ;;LIBNAME must be a R6RS library name.
+    ;;
+    ;;CONTENTS  must be  a  list  of values  representing  a  LIBRARY object  holding
+    ;;precompiled     code.      See     the    function     SERIALISE-LIBRARY     in
+    ;;"psyntax.library-manager.sls" for details on the format.
+    ;;
+    (print-library-verbose-message "serialising ~a ..." binary-pathname)
     (receive (dir name)
-	(posix.split-pathname-root-and-tail fasl-pathname)
+	(posix.split-pathname-root-and-tail binary-pathname)
       (unless (string-empty? dir)
 	(posix.mkdir/parents dir #o755)))
-    (let ((port (open-file-output-port fasl-pathname (file-options no-fail))))
+    (let ((port (open-file-output-port binary-pathname (file-options no-fail))))
       (unwind-protect
-	  (begin
-	    (fasl-write-header port)
-	    (fasl-write-object libname port)
-	    (fasl-write-object (make-serialized-library contents) port
-			       (retrieve-filename-foreign-libraries source-pathname)))
+	  (store-full-serialised-library-to-port port source-pathname libname contents)
 	(close-output-port port)))
-    (%print-verbose-message " done\n"))
+    (print-library-verbose-message "library serialisation done"))
 
   #| end of module |# )
 
 
 ;;;; loading source programs
 
-(define* (load-r6rs-script {file-pathname posix.file-string-pathname?} serialize? run?)
-  ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
-  ;;representing a file  pathname, expecting an R6RS program  or an R6RS
-  ;;library and compile it.
+(define* (load-r6rs-script {file-pathname posix.file-string-pathname?} serialise? run?)
+  ;;Load source code  from FILE-PATHNAME, which must be a  string representing a file
+  ;;pathname, expecting an R6RS program or an R6RS library and compile it.
   ;;
-  ;;If  SERIALIZE? is  true: the  libraries  needed by  the program  are
-  ;;compiled, serialized and saved in FASL files.
+  ;;If  SERIALISE?  is true:  the  libraries  needed  by  the program  are  compiled,
+  ;;serialised and saved in FASL files.
   ;;
   ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
-  (%log-library-debug-message "~a: loading R6RS script: ~a" __who__ file-pathname)
+  (print-library-verbose-message "~a: loading R6RS script: ~a" __who__ file-pathname)
   (let* ((prog  (read-script-source-file file-pathname))
-	 (thunk (parametrise ((source-code-location file-pathname))
+	 (thunk (parametrise ((libman.source-code-location file-pathname))
 		  (expand-r6rs-top-level-make-evaluator prog))))
-    (when serialize?
-      (serialize-collected-libraries (lambda (source-pathname libname contents)
-				       (store-serialized-library (fasl-path libname)
-								 source-pathname libname contents))
-				     (lambda (core-expr)
-				       (compile-core-expr core-expr))))
+    (when serialise?
+      (serialise-collected-libraries
+       (lambda (source-pathname libname contents)
+	 (store-full-serialised-library-to-file
+	  (cond ((compiled-libraries-build-directory)
+		 (library-name->library-binary-pathname-in-build-directory libname))
+		(else
+		 (error __who__
+		   "cannot determine a destination directory for compiled library files")))
+	  source-pathname libname contents))
+       (lambda (core-expr)
+	 (compile-core-expr core-expr))))
     (when run?
       (thunk))))
 
 (case-define* load
-  ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
-  ;;representing a  file pathname, expecting:  an R6RS program,  an R6RS
-  ;;library or just a list of forms.  Then transform the contents of the
-  ;;file in a list of symbolic  expressions; for each form in the source
-  ;;apply EVAL-PROC to the corresponding symbolic expression.
+  ;;Load source code  from FILE-PATHNAME, which must be a  string representing a file
+  ;;pathname, expecting: an  R6RS program, an R6RS  library or just a  list of forms.
+  ;;Then transform the  contents of the file  in a list of  symbolic expressions; for
+  ;;each form in the source apply EVAL-PROC to the corresponding symbolic expression.
   ;;
-  ;;When EVAL-PROC is not given: the  forms are evaluated in the current
+  ;;When  EVAL-PROC   is  not  given:  the   forms  are  evaluated  in   the  current
   ;;INTERACTION-ENVIRONMENT.
   ;;
   ((file-pathname)
    (load file-pathname (lambda (sexp)
 			 (eval sexp (interaction-environment)))))
   (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
-   (%log-library-debug-message "~a: loading script: ~a" __who__ file-pathname)
+   (print-library-verbose-message "~a: loading script: ~a" __who__ file-pathname)
    (let next-form ((ls (read-script-source-file file-pathname)))
      (unless (null? ls)
        (eval-proc (car ls))
        (next-form (cdr ls))))))
 
-(define* (load-and-serialize-source-library {source-pathname posix.file-string-pathname?}
-					    {binary-pathname false-or-file-string-pathname?})
-  ;;Load a source library filename, expand it, compile it, serialize it.
-  ;;Return unspecified values.
-  ;;
-  (define lib
-    (let* ((port          (let ()
-			    (import LIBRARY-LOCATOR-UTILS)
-			    (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
-			    (%print-verbose-message "loading library: ~a\n" source-pathname)
-			    (%open-source-library source-pathname)))
-	   (library-sexp  (read-library-source-port port)))
-      (receive (uid libname
-		    import-libdesc* visit-libdesc* invoke-libdesc*
-		    invoke-code visit-code
-		    export-subst export-env
-		    guard-code guard-libdesc*
-		    option*)
-	  ((current-library-expander) library-sexp source-pathname (lambda (libname) (void)))
-	(find-library-by-name libname))))
-  (when lib
-    (serialize-library-record lib binary-pathname)))
+
+;;;; compiling libraries
+
+(module (compile-source-library)
+
+  (define* (compile-source-library {source-pathname posix.file-string-pathname?}
+				   {binary-pathname %false-or-file-string-pathname?})
+    ;;Load the  first LIBRARY form from  the given file pathname;  expand it, compile
+    ;;it, serialise it.  Return unspecified values.
+    ;;
+    ;;The source library  is expanded with the procedure currently  referenced by the
+    ;;parameter  CURRENT-LIBRARY-EXPANDER.   If  the BINARY-PATHNAME  is  given:  the
+    ;;binary library  is serialised  with the procedure  currently referenced  by the
+    ;;parameter  CURRENT-LIBRARY-SERIALISER;  otherwise  it is  serialised  with  the
+    ;;procedure       currently        referenced       by        the       parameter
+    ;;CURRENT-LIBRARY-BUILD-DIRECTORY-SERIALISER.
+    ;;
+    (cond ((let ((libsexp (%read-first-library-form-from-source-library-file __who__ source-pathname)))
+	     ;;We receive all these values, but we are interested only in the LIBNAME.
+	     (receive (uid libname
+			   import-libdesc* visit-libdesc* invoke-libdesc*
+			   invoke-code visit-code
+			   export-subst export-env
+			   guard-code guard-libdesc*
+			   option*)
+		 ((libman.current-library-expander) libsexp source-pathname (lambda (libname) (void)))
+	       (libman.find-library-by-name libname)))
+	   => (lambda (lib)
+		(if binary-pathname
+		    ((current-library-serialiser) lib binary-pathname)
+		  ((current-library-build-directory-serialiser) lib))))
+	  (else
+	   (error __who__
+	     "unable to retrieve LIBRARY object after expanding and compiling source library"
+	     source-pathname))))
+
+  (define (%read-first-library-form-from-source-library-file who source-pathname)
+    (module (%open-source-library)
+      (import LIBRARY-LOCATOR-UTILS))
+    (print-library-verbose-message "~a: loading library: ~a" who source-pathname)
+    (let ((port (%open-source-library source-pathname)))
+      (unwind-protect
+	  (read-library-source-port port)
+	(close-input-port port))))
+
+  #| end of module |# )
 
 
 ;;;; compiling source programs to binary programs
 
-(module (compile-r6rs-script
-	 run-serialized-r6rs-script)
+(module (compile-source-program
+	 run-compiled-program)
 
   ;;NOTE To use  a struct type here looks  cool.  But, if in future we  want to allow
   ;;compiled programs to be independent from  specific boot image builds, we may need
@@ -1164,18 +1231,18 @@
   ;;
   ;;so the API would be:
   ;;
-  ;;   (define (make-serialized-program lib-descr* closure)
+  ;;   (define (make-serialised-program lib-descr* closure)
   ;;     (vector 'vicare-compiled-program lib-descr* closure))
   ;;
-  ;;   (define (serialized-program-lib-descr* prog)
+  ;;   (define (serialised-program-lib-descr* prog)
   ;;     (vector-ref prog 1))
   ;;
-  ;;   (define (serialized-program-closure prog)
+  ;;   (define (serialised-program-closure prog)
   ;;     (vector-ref prog 2))
   ;;
   ;;(Marco Maggi; Mon Dec 15, 2014)
   ;;
-  (define-struct serialized-program
+  (define-struct serialised-program
     (lib-descr*
 		;A   list  of   library  descriptors   representing  the
 		;libraries needed to run the program.
@@ -1184,78 +1251,72 @@
 		;evaluated after having invoked the required libraries.
      ))
 
-  (define* (compile-r6rs-script {source-filename %non-empty-string?}
-				{fasl-filename false-or-file-string-pathname?})
+  (define* (compile-source-program {source-filename posix.file-string-pathname?}
+				   {binary-filename %false-or-file-string-pathname?})
     ;;Read the  file referenced by  the pathname  SOURCE-FILENAME; expand it  as R6RS
     ;;program with Vicare extensions; compile  it; store the compiled result.  Return
     ;;unspecified results.
     ;;
-    ;;If FASL-FILENAME  is a valid file  pathname: the compiled program  is stored in
-    ;;the selected file, overwriting old file contents.  If FASL-FILENAME is false: a
-    ;;pathname  is  built   from  SOURCE-FILENAME  using  a   default  procedure.   I
-    ;;FASL-FILENAME is invalid: an exception is raised.
+    ;;If BINARY-FILENAME is a valid file  pathname: the compiled program is stored in
+    ;;the selected file, overwriting old file contents.  If BINARY-FILENAME is false:
+    ;;a  pathname  is built  from  SOURCE-FILENAME  using  a default  procedure.   If
+    ;;BINARY-FILENAME is invalid: an exception is raised.
     ;;
     (receive (lib-descr* thunk)
 	((expand-r6rs-top-level-make-compiler (read-script-source-file source-filename)))
-      (store-serialized-program source-filename lib-descr* thunk fasl-filename)))
+      (store-serialised-program source-filename lib-descr* thunk binary-filename)))
 
-  (define* (run-serialized-r6rs-script {fasl-filename %non-empty-string?})
+  (define* (run-compiled-program {binary-filename posix.file-string-pathname?})
     (receive (lib-descr* closure)
-	(load-serialized-program fasl-filename)
-      (map (lambda (descr)
-	     (cond ((find-library-by-descriptor descr)
-		    => (lambda (lib)
-			 #;(debug-print 'invoke-library lib)
-			 (invoke-library lib)))
-		   (else
-		    (error __who__
-		      "unable to load library required by program" descr))))
+	(load-serialised-program binary-filename)
+      (for-each (lambda (descr)
+		  (cond ((libman.find-library-by-descriptor descr)
+			 => (lambda (lib)
+			      (libman.invoke-library lib)))
+			(else
+			 (error __who__
+			   "unable to load library required by program" descr))))
 	lib-descr*)
       #;(debug-print 'running-thunk closure)
       (closure)))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (load-serialized-program {fasl-filename %non-empty-string?})
-    ;;Given the file name  of a serialized program: load it  and verify its contents.
+  (define* (load-serialised-program {binary-filename posix.file-string-pathname?})
+    ;;Given the file name  of a serialised program: load it  and verify its contents.
     ;;Return  2  values: a  list  of  library  descriptors representing  the  program
     ;;dependencies; a closure object (thunk) to be called to run the program.
     ;;
-    (cond ((not (posix.file-string-pathname? fasl-filename))
+    (cond ((not (posix.file-string-pathname? binary-filename))
 	   (%error-invalid-pathname __who__
-	     "invalid string as selected serialized program file" fasl-filename))
-	  ((not (file-exists? fasl-filename))
+	     "invalid string as selected serialised program file" binary-filename))
+	  ((not (file-exists? binary-filename))
 	   (%error-invalid-pathname __who__
-	     "selected serialized program file does not exist" fasl-filename))
+	     "selected serialised program file does not exist" binary-filename))
 	  (else
-	   (let ((x (let ((port (open-file-input-port fasl-filename)))
+	   (let ((x (let ((port (open-file-input-port binary-filename)))
 		      (unwind-protect
 			  (fasl-read port)
 			(close-input-port port)))))
-	     (if (serialized-program? x)
-		 (values (serialized-program-lib-descr* x)
-			 (serialized-program-closure    x))
+	     (if (serialised-program? x)
+		 (values (serialised-program-lib-descr* x)
+			 (serialised-program-closure    x))
 	       (error __who__
-		 "invalid contents in selected serialized program file"
-		 fasl-filename))))))
+		 "invalid contents in selected serialised program file"
+		 binary-filename))))))
 
-  (define* (store-serialized-program source-filename lib-descr* closure fasl-filename)
+  (define* (store-serialised-program source-filename lib-descr* closure binary-filename)
     ;;Given  the source  name of  an  R6RS script,  the list  of library  descriptors
     ;;required for its execution, a closure object  to be called to run it: write the
-    ;;serialized program FASL file.
+    ;;serialised program FASL file.
     ;;
-    (import SOURCE-PATHNAME->BINARY-PATHNAME)
-    (define-syntax-rule (%display ?thing)
-      (display ?thing (current-error-port)))
-    (let ((fasl-filename (%make-fasl-filename __who__ fasl-filename source-filename)))
-      (%display "serialising ")
-      (%display fasl-filename)
-      (%display " ... ")
+    (let ((binary-filename (%make-binary-filename __who__ binary-filename source-filename)))
+      (print-library-verbose-message "serialising ~a ... " binary-filename)
       (receive (dir name)
-	  (posix.split-pathname-root-and-tail fasl-filename)
+	  (posix.split-pathname-root-and-tail binary-filename)
 	(unless (string-empty? dir)
 	  (posix.mkdir/parents dir #o755)))
-      (let ((port (open-file-output-port fasl-filename
+      (let ((port (open-file-output-port binary-filename
 					 ;;FIXME To  be uncommented at the  next boot
 					 ;;image rotation.  (Marco Maggi; Mon Dec 15,
 					 ;;2014)
@@ -1264,23 +1325,22 @@
 					   (import (ikarus enumerations))
 					   (make-file-options '(no-fail executable))))))
 	(unwind-protect
-	    (fasl-write (make-serialized-program lib-descr* closure) port
+	    (fasl-write (make-serialised-program lib-descr* closure) port
 			(retrieve-filename-foreign-libraries source-filename))
 	  (close-output-port port)))
-      (%display "done\n")))
+      (print-library-verbose-message "done")))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-fasl-filename who fasl-filename source-filename)
-    (import SOURCE-PATHNAME->BINARY-PATHNAME)
-    (cond ((posix.file-string-pathname? fasl-filename)
-	   fasl-filename)
-	  ((not fasl-filename)
+  (define (%make-binary-filename who binary-filename source-filename)
+    (cond ((posix.file-string-pathname? binary-filename)
+	   binary-filename)
+	  ((not binary-filename)
 	   (program-source-pathname->program-binary-pathname source-filename))
 	  (else
 	   (%error-invalid-pathname who
-	     "invalid FASL filename for serialized program"
-	     fasl-filename))))
+	     "invalid FASL filename for serialised program"
+	     binary-filename))))
 
   (define (%error-invalid-pathname who message pathname)
     (raise
@@ -1294,35 +1354,87 @@
 
 ;;;; locating and loading include files
 
-(define (locate-include-file filename synner)
-  ;;Convert the string FILENAME into  the string pathname of an existing
-  ;;file; return the pathname.
+(define* (default-include-loader include-pathname verbose? synner)
+  ;;Default value for  the parameter CURRENT-INCLUDE-LOADER.  Search  an include file
+  ;;with  name  INCLUDE-PATHNAME.  When  successful  return  2 values:  the  absolute
+  ;;pathname from which  the file was loaded, a symbolic  expresison representing the
+  ;;file contents.  When  an error occurs: call the procedure  SYNNER, which is meant
+  ;;to raise an exception.
   ;;
-  (unless (and (string? filename)
-	       (not (fxzero? (string-length filename))))
-    (synner "file name must be a nonempty string" filename))
-  (if (char=? (string-ref filename 0) #\/)
-      ;;It is an absolute pathname.
-      (posix.real-pathname filename)
-    ;;It is a relative pathname.  Search the file in the library path.
-    (let loop ((ls (library-path)))
-      (if (null? ls)
-	  (synner "file does not exist in library path" filename)
-	(let ((ptn (string-append (car ls) "/" filename)))
-	  (if (file-exists? ptn)
-	      (posix.real-pathname ptn)
-	    (loop (cdr ls))))))))
+  ;;If  VERBOSE?  is  true:  display  verbose messages  on  the  current  error  port
+  ;;describing the including process.
+  ;;
+  ;;The include  file is  searched using  the procedure  referenced by  the parameter
+  ;;CURRENT-INCLUDE-FILE-LOCATOR.  The file is  loaded using the procedure referenced
+  ;;by the parameter CURRENT-INCLUDE-FILE-LOADER.
+  ;;
+  (unless (posix.file-string-pathname? include-pathname)
+    (synner "file name must be a non-empty string representing a valid pathname" include-pathname))
+  (when verbose?
+    (fprintf (current-error-port) "Vicare: searching include file: ~a\n" include-pathname))
+  (let ((include-pathname ((current-include-file-locator) include-pathname synner)))
+    (when verbose?
+      (fprintf (current-error-port) "Vicare: including file: ~a\n" include-pathname))
+    (values include-pathname ((current-include-file-loader) include-pathname synner))))
 
-(define (read-include-file pathname synner)
-  ;;Open the file PATHNAME, read all  the datums and return them.  If an
-  ;;error occurs call SYNNER.
+(module ()
+  (libman.current-include-loader default-include-loader))
+
+;;; --------------------------------------------------------------------
+
+(define* (default-include-file-locator include-pathname {synner procedure?})
+  ;;Default  value for  the parameter  CURRENT-INCLUDE-FILE-LOCATOR.  Given  a string
+  ;;INCLUDE-PATHNAME  which must  represent an  absolute or  relative file  pathname,
+  ;;convert it into the absolute pathname of an existing file, as string.  Return the
+  ;;absolute string pathname.
   ;;
-  ;;We expect the  returned contents to be a list  of annotated symbolic
-  ;;expressions.
+  ;;If INCLUDE-PATHNAME  is a relative pathname:  the file is searched  in the search
+  ;;path represented by LIBRARY-SOURCE-SEARCH-PATH,  by appending INCLUDE-PATHNAME to
+  ;;the directories in the search path.
+  ;;
+  ;;SYNNER must be a procedure used to raise an exception when an error occurs.
+  ;;
+  (unless (posix.file-string-pathname? include-pathname)
+    (synner "file name must be a non-empty string representing a valid pathname" include-pathname))
+  (if (posix.file-string-absolute-pathname? include-pathname)
+      ;;It is an absolute pathname.
+      (posix.real-pathname include-pathname)
+    ;;It is a relative pathname.  Search the file in the library source search path.
+    (let loop ((ls (library-source-search-path)))
+      (if (pair? ls)
+	  (let ((ptn (string-append (car ls) "/" include-pathname)))
+	    (if (file-exists? ptn)
+		(posix.real-pathname ptn)
+	      (loop (cdr ls))))
+	(synner "file does not exist in library source path" include-pathname)))))
+
+(define current-include-file-locator
+  ;;Hold a function used to convert an  include file name into the corresponding file
+  ;;pathname.  The referenced function must accept 3 arguments: a string representing
+  ;;the include  file name; a  boolean, true if the  process of loading  must display
+  ;;verbose messages  on the  current error  port; a synner  function used  to report
+  ;;errors.
+  ;;
+  ;;The synner function is called as:
+  ;;
+  ;;   (synner ?error-message ?irritants)
+  ;;
+  (make-parameter
+      default-include-file-locator
+    (lambda* ({obj procedure?})
+      obj)))
+
+;;; --------------------------------------------------------------------
+
+(define* (default-include-file-loader {include-pathname posix.file-string-pathname?} {synner procedure?})
+  ;;Default  value  for the  parameter  CURRENT-INCLUDE-FILE-LOADER.   Open the  file
+  ;;INCLUDE-PATHNAME, read all  the datums and return them.  If  an error occurs call
+  ;;SYNNER.  The returned  contents must be a list of  annotated symbolic expressions
+  ;;as returned by the reader.
   ;;
   (guard (E (else
-	     (synner (condition-message E) pathname)))
-    (let ((port (open-input-file pathname)))
+	     (synner (condition-message E) include-pathname)))
+    (let ((port (open-input-file include-pathname)))
       (unwind-protect
 	  (let recur ()
 	    (let ((datum (get-annotated-datum port)))
@@ -1331,22 +1443,22 @@
 		(cons datum (recur)))))
 	(close-input-port port)))))
 
+(define current-include-file-loader
+  ;;Hold  a function  used to  load an  include file.   The referenced  function must
+  ;;accept 2  arguments: a string  representing an  existent file pathname;  a synner
+  ;;function used to report errors.
+  ;;
+  ;;The synner function is called as:
+  ;;
+  ;;   (synner ?error-message ?irritants)
+  ;;
+  (make-parameter
+      default-include-file-loader
+    (lambda* ({obj procedure?})
+      obj)))
+
 
 ;;;; done
-
-;; #!vicare
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load before"))
-
-(current-source-library-file-locator	default-source-library-file-locator)
-(current-source-library-loader		default-source-library-loader)
-
-(current-binary-library-file-locator	default-binary-library-file-locator)
-(current-binary-library-loader		default-binary-library-loader)
-
-(current-library-record-serializer	serialize-library-record)
-
-(current-include-file-locator		locate-include-file)
-(current-include-file-loader		read-include-file)
 
 ;; #!vicare
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load after"))
@@ -1355,6 +1467,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'load-serialized-library	'scheme-indent-function 2)
-;; eval: (put '%error-invalid-pathname	'scheme-indent-function 1)
+;; eval: (put 'read-library-binary-port		'scheme-indent-function 2)
+;; eval: (put '%error-invalid-pathname		'scheme-indent-function 1)
 ;; End:

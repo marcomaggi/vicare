@@ -1129,6 +1129,7 @@
     free-identifier=?			bound-identifier=?
     identifier-bound?			print-identifier-info
     datum->syntax			syntax->datum
+    parse-logic-predicate-syntax
 
     ;; exception raisers
     syntax-violation			assertion-error
@@ -1230,6 +1231,8 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
+    (only (vicare)
+	  fluid-let-syntax)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
     (psyntax.library-manager)
@@ -1244,6 +1247,15 @@
 ;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Apr 12,
 ;;2014)
 (define syntax-error)
+
+(define-syntax commented-out
+  ;;Comment out a sequence of forms.  It allows us to comment out forms and still use
+  ;;the editor's autoindentation features in the commented out section.
+  ;;
+  (syntax-rules ()
+    ((_ . ?form)
+     (module ()))
+    ))
 
 ;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
 ;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
@@ -1611,10 +1623,9 @@
 		;from a set of import specifications as defined by R6RS.
 		;These labels are from the subst of the libraries.
    itc
-		;A collector  function (see MAKE-COLLECTOR)  holding the
-		;LIBRARY records representing  the libraries selected by
-		;the source IMPORT specifications.  These libraries have
-		;already been installed.
+		;A  collector  function  (see  MAKE-COLLECTOR)  holding  the  LIBRARY
+		;records  representing the  libraries selected  by the  source IMPORT
+		;specifications.  These libraries have already been interned.
    )
   (lambda (S port sub-printer)
     (display "#<environment>" port)))
@@ -1732,8 +1743,8 @@
   ;;
   (()
    (new-interaction-environment (base-of-interaction-library)))
-  ((libname)
-   (let* ((lib (find-library-by-name libname))
+  ((libref)
+   (let* ((lib (find-library-by-reference libref))
 	  (rib (export-subst->rib (library-export-subst lib))))
      (make-interaction-env rib '() '()))))
 
@@ -2223,10 +2234,9 @@
 ;;;; R6RS library expander
 
 (module (expand-library)
-  ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
-  ;;symbolic  expression representing  a LIBRARY  form to  core-form; it
-  ;;registers it  with the library  manager, in other words  it installs
-  ;;it.
+  ;;EXPAND-LIBRARY is the default library  expander; it expands a symbolic expression
+  ;;representing  a LIBRARY  form  to core-form;  it registers  it  with the  library
+  ;;manager, in other words it interns it.
   ;;
   ;;The argument LIBRARY-SEXP must be the symbolic expression:
   ;;
@@ -2407,13 +2417,13 @@
 	     ;;loaded and visited.
 	     (visit-code	(%build-visit-code macro* option*))
 	     (visible?		#t))
-	 (install-library uid libname
-			  import-libdesc* visit-libdesc* invoke-libdesc*
-			  export-subst export-env
-			  visit-proc invoke-proc
-			  visit-code invoke-code
-			  guard-code guard-libdesc*
-			  visible? filename option*)
+	 (intern-library uid libname
+			 import-libdesc* visit-libdesc* invoke-libdesc*
+			 export-subst export-env
+			 visit-proc invoke-proc
+			 visit-code invoke-code
+			 guard-code guard-libdesc*
+			 visible? filename option*)
 	 (values uid libname
 		 import-libdesc* visit-libdesc* invoke-libdesc*
 		 invoke-code visit-code
@@ -2582,9 +2592,9 @@
        (syntax-violation __who__ "malformed library" library-sexp))))
 
   (define (%validate-library-name libname verify-libname)
-    ;;Given a SYNTAX-MATCH expression argument LIBNAME which is meant to
-    ;;represent a R6RS library name: validate it and, if success, return
-    ;;it; otherwise raise ane exception.
+    ;;Given a SYNTAX-MATCH expression argument LIBNAME  which is meant to represent a
+    ;;R6RS  library name:  validate  it.  If  successful  return unspecified  values;
+    ;;otherwise raise an exception.
     ;;
     (receive (name* ver*)
 	(let recur ((sexp libname))
@@ -2606,7 +2616,8 @@
 	     (syntax-violation __who__ "invalid library name" libname))))
       (when (null? name*)
 	(syntax-violation __who__ "empty library name" libname)))
-    (verify-libname (syntax->datum libname)))
+    (verify-libname (syntax->datum libname))
+    (void))
 
   (define (%parse-library-options libopt*)
     (syntax-match libopt* ()
@@ -3410,10 +3421,9 @@
     (define-inline (%import-spec->export-subst import-spec)
       ;;Process the IMPORT-SPEC and return the corresponding subst.
       ;;
-      ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
-      ;;installed, if  not already  in the  library collection;  the raw
-      ;;subst from the library definition  is processed according to the
-      ;;rules in IMPORT-SPEC.
+      ;;The IMPORT-SPEC is  parsed; the specified library is loaded  and interned, if
+      ;;not  already in  the  library  collection; the  raw  subst  from the  library
+      ;;definition is processed according to the rules in IMPORT-SPEC.
       ;;
       ;;If an  error is found, including  library version non-conforming
       ;;to the library reference, an exception is raised.
@@ -3563,10 +3573,10 @@
 	  (%parse-library-reference libref)
 	(when (null? name)
 	  (%synner "empty library name" libref))
-	;;Search  for the  library first  in the  collection of  already
-	;;installed libraires, then on  the file system.  If successful:
-	;;LIB is an instance of LIBRARY struct.
-	(let ((lib (find-library-by-name (syntax->datum libref))))
+	;;Search  for  the  library  first  in the  collection  of  already  interned
+	;;libraires, then on  the file system.  If successful: LIB  is an instance of
+	;;LIBRARY struct.
+	(let ((lib (find-library-by-reference (syntax->datum libref))))
 	  (unless (version-conforms-to-reference? (library-name->version (library-name lib)))
 	    (%synner "library does not satisfy version specification" libref lib))
 	  ((imp-collector) lib)
@@ -6383,7 +6393,7 @@
   ;;   ((assq sym (or subst
   ;;                  (receive-and-return (S)
   ;;                      (library-export-subst
-  ;;                       (find-library-by-name '(psyntax system $all)))
+  ;;                       (find-library-by-reference '(psyntax system $all)))
   ;;                    (set! subst S))))
   ;;    => (lambda (name.label)
   ;;         (receive-and-return (id)
@@ -7501,6 +7511,47 @@
 		(when loc
 		  (set-symbol-value! loc proc))))
     macro*))
+
+
+;;;; miscellaneous
+
+(case-define parse-logic-predicate-syntax
+  ;;Given a  syntax object STX parse  it as logic predicate  expression with expected
+  ;;format:
+  ;;
+  ;;   STX = (and ?expr0 ?expr ...)
+  ;;       | (or  ?expr0 ?expr ...)
+  ;;       | (xor ?expr0 ?expr ...)
+  ;;       | (not ?expr)
+  ;;       | ?expr
+  ;;
+  ;;where  AND,  OR,  XOR, NOT  are  the  identifiers  exported  by (vicare).   If  a
+  ;;standalone ?EXPR is found: apply the  procedure TAIL-PROC to it gather its single
+  ;;return value; TAIL-PROC defaults to the identity function.
+  ;;
+  ;;Return  a syntax  object representing  the  logic predicate  with the  standalone
+  ;;expressions replaced by the return values of TAIL-PROC.
+  ;;
+  ((stx)
+   (parse-logic-predicate-syntax stx (lambda (stx) stx)))
+  ((stx tail-proc)
+   (define (recurse expr)
+     (parse-logic-predicate-syntax expr tail-proc))
+   (syntax-match stx (and or xor not)
+     ((and ?expr0 ?expr* ...)
+      (bless
+       `(and ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((or  ?expr0 ?expr* ...)
+      (bless
+       `(or  ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((xor ?expr0 ?expr* ...)
+      (bless
+       `(xor ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((not ?expr)
+      (bless
+       `(not ,(recurse ?expr))))
+     (else
+      (tail-proc stx)))))
 
 
 ;;;; done

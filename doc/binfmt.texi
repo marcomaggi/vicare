@@ -1,5 +1,5 @@
 @node binfmt
-@appendix Launching programs directly
+@appendix Launching programs directly on @gnu{}+Linux
 
 
 This appendix describes an optional feature of @value{PRJNAME}: source
@@ -34,20 +34,20 @@ option to the @command{configure} script.
 @cindex Binary executables, kernel support
 
 The common way of running a Scheme script, is to invoke the executable
-@command{vicare} using the option @option{--r6rs-script} to select the
+@value{EXECUTABLE} using the option @option{--r6rs-script} to select the
 pathname of the file:
 
 @example
-$ vicare --r6rs-script path/to/script.sps
+vicare --r6rs-script path/to/script.sps
 @end example
 
 @noindent
 to run a compiled Scheme program, we invoke the executable
-@command{vicare} using the option @option{--binary-program} to select
+@value{EXECUTABLE} using the option @option{--binary-program} to select
 the pathname of the file:
 
 @example
-$ vicare --binary-program path/to/program
+vicare --binary-program path/to/program
 @end example
 
 The features implemented in the @code{binfmt_misc} kernel module allow
@@ -72,14 +72,14 @@ For source scripts, we make the file executable and put as very first
 bytes the string @code{;;;!vicare}, then we just do:
 
 @example
-$ path/to/script.sps
+path/to/script.sps
 @end example
 
 @item
 For compiled programs, we make the file executable and just do:
 
 @example
-$ path/to/program
+path/to/program
 @end example
 @end itemize
 
@@ -228,7 +228,7 @@ inserting this code:
 
 @example
 if [ -x "$sysconfdir/rc.d/rc.vicare-scheme" ]; then
-   . "$sysconfdir/rc.d/rc.vicare-scheme"
+   "$sysconfdir/rc.d/rc.vicare-scheme"
 fi
 @end example
 
@@ -441,7 +441,7 @@ number of times: at each run it resets and reinitialises the
 configuration for Scheme programs.
 
 @item
-The @command{vicare} executable must be in @code{$(bindir)}, else we
+The @value{EXECUTABLE} executable must be in @code{$(bindir)}, else we
 must customise the @file{rc.vicare-scheme} script.
 @end enumerate
 

@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus exceptions)
+(library (ikarus.exceptions)
   (export
     with-exception-handler
     raise		raise-continuable
@@ -43,22 +43,24 @@
   (parameterize ((current-handlers (cons handler (current-handlers))))
     (proc2)))
 
-(define (raise-continuable x)
-  (let* ((handlers* (current-handlers))
-	 (handler   (car handlers*))
-	 (handlers* (cdr handlers*)))
-    (parameterize ((current-handlers handlers*))
-      (handler x))))
-
-(define (raise x)
-  (let* ((handlers* (current-handlers))
-	 (handler   (car handlers*))
-	 (tail*     (cdr handlers*)))
-    (parameterize ((current-handlers tail*))
-      (handler x)
-      (raise (condition
-	      (make-non-continuable-violation)
-	      (make-message-condition "handler returned from non-continuable exception"))))))
+(let-syntax
+    ((raise-machinery (syntax-rules ()
+			((_ ?exc . ?tail)
+			 (let* ((handler*      (current-handlers))
+				(head-handler  (car handler*))
+				(tail-handler* (cdr handler*)))
+			   (parameterize ((current-handlers tail-handler*))
+			     (head-handler ?exc)
+			     . ?tail)))
+			)))
+  (define (raise-continuable exc)
+    (raise-machinery exc))
+  (define (raise exc)
+    (raise-machinery exc
+		     (raise (condition
+			     (make-non-continuable-violation)
+			     (make-message-condition "handler returned from non-continuable exception")))))
+  #| end of LET-SYNTAX |# )
 
 
 (module (error assertion-violation warning die)
@@ -93,6 +95,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

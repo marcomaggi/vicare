@@ -4650,11 +4650,11 @@ s_code   p_data
    1st  2nd
 @end example
 
-Examples of foreign objects are: the C functions exported by the runtime
-program @command{vicare} to be called from Scheme; the C functions
-exported by the shared library when using an extension to Vicare with
-the model proposed by the Vicare/Template project (for example
-Vicare/SQLite).
+Examples of foreign objects are: the C functions exported by the
+executable program @value{EXECUTABLE} to be called from Scheme; the C
+functions exported by the shared library when using an extension to
+Vicare with the model proposed by the Vicare/Template project (for
+example Vicare/SQLite).
 
 @c page
 @node objects codes gc

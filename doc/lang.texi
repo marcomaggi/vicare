@@ -6,7 +6,6 @@
 * keywords::                    More facilities for keyword objects.
 * cond-expand::                 Feature based conditional expansion.
 * include::                     Including source files at expand time.
-* coroutines::                  Running coroutines.
 * amb::                         McCarthy's @func{amb} operator.
 * simple-match::                Simple destructuring match syntax.
 * sentinels::                   Sentinel values.
@@ -19,10 +18,11 @@
 * hooks::                       Running lists of functions.
 * callables::                   Callable objects.
 * c-enums::                     C language flags and flags combinations.
+* pipelines::                   Pipelining expressions.
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
-* pipelines::                   Pipelining expressions.
+* restarts::                    Signaling conditions and restarts.
 @end menu
 
 @c page
@@ -374,261 +374,6 @@ the pathname @var{filename}, which must be a string.  @var{identifier}
 must be a Scheme identifier and it is used to assign a lexical context
 to the sourced code.
 @end deffn
-
-@c page
-@node coroutines
-@section Running coroutines
-
-
-@cindex Library @library{vicare language-extensions coroutines}
-@cindex @library{vicare language-extensions coroutines}, library
-
-The library @library{vicare language-extensions coroutines} implements
-coroutines on top of Scheme continuations.  The implementation is a
-simple queue of escape functions: whenever coroutine @var{A} yields
-control to the ``next'' coroutine, it enqueues an escape function to its
-current continuation and causes the next escape function to be invoked.
-
-For discussions about other implementations of coroutines and
-continuations see @vicareref{HFWCoro, references}.
-
-@menu
-* coroutines examples::         Usage examples for coroutines.
-* coroutines api::              Programming interface to coroutines.
-@end menu
-
-@c page
-@node coroutines examples
-@subsection Usage examples for coroutines
-
-
-Coroutines are created by the function @func{coroutine}; a coroutine in
-execution can yield control to the next coroutine with the function
-@func{yield}.  It is possible to enter a loop that runs all the
-coroutines until all of them are finished with the function
-@func{finish-coroutines}.
-
-All the examples in this section are to be considered as Scheme programs
-after the prelude:
-
-@example
-#!r6rs
-(import (vicare)
-  (vicare language-extensions coroutines))
-
-(set-port-buffer-mode! (current-output-port)
-                       (buffer-mode line))
-@end example
-
-@noindent
-which allows the intertwining of coroutines to be seen by displaying
-strings on the current output port.
-
-@c ------------------------------------------------------------
-
-@subsubheading Two coroutines
-
-The following example runs two coroutines and waits for them to finish:
-
-@example
-(coroutine
-    (lambda ()
-      (display "one 1\n")
-      (yield)
-      (display "one 2\n")
-      (yield)
-      (display "one 3\n")))
-
-(coroutine
-    (lambda ()
-      (display "two 1\n")
-      (yield)
-      (display "two 2\n")
-      (yield)
-      (display "two 3\n")))
-
-(finish-coroutines)
-@end example
-
-@noindent
-the output is:
-
-@example
-one 1
-two 1
-one 2
-two 2
-one 3
-two 3
-@end example
-
-We see that to exit a coroutine we just return from its start function.
-
-@c ------------------------------------------------------------
-
-@subsubheading The main routine and a subroutine
-
-We can always consider the ordinary control flow of a program as a
-coroutine, the @dfn{main routine}; so the following program produces
-output similar to the one above:
-
-@example
-(coroutine
-    (lambda ()
-      (display "sub 1\n")
-      (yield)
-      (display "sub 2\n")
-      (yield)
-      (display "sub 3\n")))
-
-;;This runs in the main routine.
-(display "main 1\n")
-(yield)
-(display "main 2\n")
-(yield)
-(display "main 3\n")
-
-(finish-coroutines)
-@end example
-
-@noindent
-the output is:
-
-@example
-sub 1
-main 1
-sub 2
-main 2
-sub 3
-main 3
-@end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Main routine alone
-
-It is perfectly all right to call @func{yield} and
-@func{finish-coroutines} from the main routine even when there are no
-subroutines:
-
-@example
-(display "main 1\n")
-(yield)
-(display "main 2\n")
-(yield)
-(display "main 3\n")
-(finish-coroutines)
-@end example
-
-@noindent
-the output of this program is just:
-
-@example
-main 1
-main 2
-main 3
-@end example
-
-@c ------------------------------------------------------------
-
-@subsubheading Finishing coroutines
-
-It is possible to call @func{finish-coroutines} from any coroutine, but
-we must be careful because if we let the main routine exit before all
-the routines are finished some computation will not take place.  In the
-following program the subroutine has more steps than the main routine:
-
-@example
-(coroutine
-    (lambda ()
-      (display "sub 1\n")
-      (yield)
-      (display "sub 2\n")
-      (yield)
-      (display "sub 3\n")
-      (yield)
-      (display "sub 4\n")
-      (yield)
-      (display "sub 5\n")
-      (finish-coroutines)))
-
-;; This runs in the main routine.
-(display "main 1\n")
-(yield)
-(display "main 2\n")
-(yield)
-(display "main 3\n")
-@end example
-
-@noindent
-and its output is:
-
-@example
-sub 1
-main 1
-sub 2
-main 2
-sub 3
-main 3
-@end example
-
-@noindent
-we see that @samp{sub 4} and @samp{sub 5} are not displayed.
-
-@c ------------------------------------------------------------
-
-@subsubheading Finish coroutines as exit hook
-
-It can be useful to register @func{finish-coroutines} as exit hook, so
-that upon exiting the process all the pending coroutines are correctly
-terminated.
-
-@example
-(coroutine
-    (lambda ()
-      (display "one 1\n")
-      (yield)
-      (display "one 2\n")
-      (yield)
-      (display "one 3\n")))
-
-(coroutine
-    (lambda ()
-      (display "two 1\n")
-      (yield)
-      (display "two 2\n")
-      (yield)
-      (display "two 3\n")))
-
-(exit-hooks (cons finish-coroutines (exit-hooks)))
-(exit)
-@end example
-
-@c page
-@node coroutines api
-@subsection Programming interface to coroutines
-
-
-The following bindings are exported by the library @library{vicare
-language-extensions coroutines}.
-
-
-@defun coroutine @var{thunk}
-Create a new coroutine having @var{thunk} as function and enter it;
-return unspecified values.
-@end defun
-
-
-@defun yield
-Register the current continuation as coroutine, then run the next
-coroutine; return unspecified values.
-@end defun
-
-
-@defun finish-coroutines
-Loop running the next coroutine until there are no more; return
-unspecified values.
-@end defun
 
 @c page
 @node amb
@@ -2958,10 +2703,10 @@ one port is read from the other port.
 
 Forking a @value{PRJNAME} process does @strong{not} allow the use of
 port pairs to communicate between processes; it is rather possible to
-use port pairs to communicate among coroutines, @ref{coroutines, Running
-coroutines}.  To communicate between processes we have to use the
-@posix{} library and create pipes (@pxref{posix fd pipe, pipe}) or
-socket pairs (@pxref{posix socket socket, socketpair}).
+use port pairs to communicate among coroutines, @vicareref{iklib
+coroutines, Running coroutines}.  To communicate between processes we
+have to use the @posix{} library and create pipes (@pxref{posix fd pipe,
+pipe}) or socket pairs (@pxref{posix socket socket, socketpair}).
 
 The following bindings are exported by the library @library{vicare
 language-extensions custom-ports}.
@@ -3717,12 +3462,6 @@ the definition of the enumeration, no error is raised.
 @end deffn
 
 @c page
-
-@include libs-streams.texi
-@include libs-loops.texi
-@include libs-comparisons.texi
-
-@c page
 @node pipelines
 @section Pipelining expressions
 
@@ -3808,5 +3547,12 @@ Examples:
   (cons* a3 b3 rest3))
 @result{} (1000 2000 3000 4000)
 @end example
+
+@c page
+
+@include libs-streams.texi
+@include libs-loops.texi
+@include libs-comparisons.texi
+@include libs-conditions-and-restarts.texi
 
 @c end of file

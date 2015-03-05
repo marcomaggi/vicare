@@ -255,7 +255,7 @@ ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
    object if  the table exists and  S_SYM is present,  else return false
    object. */
 {
-  fprintf(stderr, "removing gensym\n");
+  /* fprintf(stderr, "removing gensym\n"); */
   ikptr gensym_table = pcb->gensym_table;
   if (0 == gensym_table) {
     /* no symbol table */

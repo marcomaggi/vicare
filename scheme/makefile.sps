@@ -171,9 +171,9 @@
 ;;;; prelude
 
 #!vicare
-;;NOTE  Libraries imported  here are  installed  in the  internal library  collection
+;;NOTE  Libraries imported  here  are  interned in  the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
-;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
+;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
   (prefix (only (ikarus.options)
 		verbose?)
@@ -349,6 +349,7 @@
     "ikarus.numerics.bitwise.misc.sls"
     "ikarus.numerics.complex-numbers.sls"
     "ikarus.conditions.sls"
+    "ikarus.unwind-protection.sls"
     "ikarus.guardians.sls"
     "ikarus.symbol-table.sls"
     "ikarus.codecs.sls"
@@ -394,337 +395,371 @@
     "ikarus.syntax-utilities.sls"
     "ikarus.environment-inquiry.sls"
     "ikarus.object-utilities.sls"
+    "ikarus.coroutines.sls"
     "ikarus.main.sls"
     ))
 
 
+;;;; system macros
+
+(define-constant VICARE-SYSTEM-FLUIDS
+  `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
+    (return					($fluid . ,(gensym "fluid-label.return")))
+    (continue					($fluid . ,(gensym "fluid-label.continue")))
+    (break					($fluid . ,(gensym "fluid-label.break")))
+    (with					($fluid . ,(gensym "fluid-label.with")))
+    (brace					($fluid . ,(gensym "fluid-label.brace")))
+    (<>						($fluid . ,(gensym "fluid-label.<>")))))
+
+;;At present there are no fluid syntaxes  with default binding defined by Vicare.  To
+;;define one for an imaginary fluid SPIFY, we should to this here:
+;;
+;;  (define-constant label-of-spiffy
+;;    (gensym "fluid-label.spiffy"))
+;;
+;;  (define-constant VICARE-SYSTEM-FLUIDS
+;;    `(...
+;;      (spiffy			($fluid . ,label-of-spiffy))
+;;      ...))
+;;
+;;  (define-constant VICARE-SYSTEM-FLUIDS-DEFAULTS
+;;    `((,label-of-spiffy	(macro . default-for-spiffy))))
+;;
+;;then we must add an integrated non-core expander macro named DEFAULT-FOR-SPIFFY.
+;;
+(define-constant VICARE-SYSTEM-FLUIDS-DEFAULTS '())
+
 (define-constant VICARE-SYSTEM-MACROS
-  (append
-   `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
-     (return					($fluid . ,(gensym "fluid-label.return")))
-     (continue					($fluid . ,(gensym "fluid-label.continue")))
-     (break					($fluid . ,(gensym "fluid-label.break")))
-     (with					($fluid . ,(gensym "fluid-label.with")))
-     (brace					($fluid . ,(gensym "fluid-label.brace")))
-     (<>					($fluid . ,(gensym "fluid-label.<>"))))
-   '((internal-define				(define))
-     (define-syntax				(define-syntax))
-     (define-alias				(define-alias))
-     (define-fluid-syntax			(define-fluid-syntax))
-     (define-fluid-override			(define-fluid-override))
-     (module					(module))
-     (library					(library))
-     (begin					(begin))
-     (import					(import))
-     (export					(export))
-     (set!					(set!))
-     (let-syntax				(let-syntax))
-     (letrec-syntax				(letrec-syntax))
-     (stale-when				(stale-when))
-     (begin-for-syntax				(begin-for-syntax))
-     (eval-for-expand				(begin-for-syntax))
-     (foreign-call				(core-macro . foreign-call))
-     (quote					(core-macro . quote))
-     (syntax-case				(core-macro . syntax-case))
-     (syntax					(core-macro . syntax))
-     (let					(core-macro . let))
-     (letrec					(core-macro . letrec))
-     (letrec*					(core-macro . letrec*))
-     (if					(core-macro . if))
-     (lambda						(core-macro . lambda))
-     (case-lambda				(core-macro . case-lambda))
-     (internal-lambda				(core-macro . internal-lambda))
-     (internal-case-lambda			(core-macro . internal-case-lambda))
-     (internal-body				(core-macro . internal-body))
-     (fluid-let-syntax				(core-macro . fluid-let-syntax))
-     (struct-type-descriptor			(core-macro . struct-type-descriptor))
-     (struct-type-and-struct?			(core-macro . struct-type-and-struct?))
-     (struct-type-field-ref			(core-macro . struct-type-field-ref))
-     (struct-type-field-set!			(core-macro . struct-type-field-set!))
-     ($struct-type-field-ref			(core-macro . $struct-type-field-ref))
-     ($struct-type-field-set!			(core-macro . $struct-type-field-set!))
-     (record-type-descriptor			(core-macro . record-type-descriptor))
-     (record-constructor-descriptor		(core-macro . record-constructor-descriptor))
-     (record-type-field-set!			(core-macro . record-type-field-set!))
-     (record-type-field-ref			(core-macro . record-type-field-ref))
-     ($record-type-field-set!			(core-macro . $record-type-field-set!))
-     ($record-type-field-ref			(core-macro . $record-type-field-ref))
-     (type-descriptor				(core-macro . type-descriptor))
-     (is-a?					(core-macro . is-a?))
-     (slot-ref					(core-macro . slot-ref))
-     (slot-set!					(core-macro . slot-set!))
-     (tag-predicate				(core-macro . tag-predicate))
-     (tag-procedure-argument-validator		(core-macro . tag-procedure-argument-validator))
-     (tag-return-value-validator		(core-macro . tag-return-value-validator))
-     (tag-assert				(core-macro . tag-assert))
-     (tag-assert-and-return			(core-macro . tag-assert-and-return))
-     (tag-accessor				(core-macro . tag-accessor))
-     (tag-mutator				(core-macro . tag-mutator))
-     (tag-getter				(core-macro . tag-getter))
-     (tag-setter				(core-macro . tag-setter))
-     (tag-dispatch				(core-macro . tag-dispatch))
-     (tag-cast					(core-macro . tag-cast))
-     (tag-unsafe-cast				(core-macro . tag-unsafe-cast))
-     (type-of					(core-macro . type-of))
-     (expansion-of				(core-macro . expansion-of))
-     (visit-code-of				(core-macro . visit-code-of))
-     (optimisation-of				(core-macro . optimisation-of))
-     (optimisation-and-core-type-inference-of	(core-macro . optimisation-and-core-type-inference-of))
-     (assembly-of				(core-macro . assembly-of))
-     (splice-first-expand			(core-macro . splice-first-expand))
-     (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
-     (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
-     (__file__					(macro! . __file__))
-     (__line__					(macro! . __line__))
-     (stdin					(macro! . stdin))
-     (stdout					(macro! . stdout))
-     (stderr					(macro! . stderr))
-     (let-values				(macro . let-values))
-     (let*-values				(macro . let*-values))
-     (values->list				(macro . values->list))
-     (define-struct				(macro . define-struct))
-     (case					(macro . case))
-     (case-identifiers				(macro . case-identifiers))
-     (syntax-rules				(macro . syntax-rules))
-     (quasiquote				(macro . quasiquote))
-     (quasisyntax				(macro . quasisyntax))
-     (with-syntax				(macro . with-syntax))
-     (identifier-syntax				(macro . identifier-syntax))
-     (parameterize				(macro . parameterize))
-     (parameterise				(macro . parameterize))
-     (parametrise				(macro . parameterize))
-     (define-syntax-parameter			(macro . define-syntax-parameter))
-     (syntax-parametrise			(macro . syntax-parametrise))
-     (syntax-parameterise			(macro . syntax-parametrise))
-     (syntax-parameterize			(macro . syntax-parametrise))
-     (when					(macro . when))
-     (unless					(macro . unless))
-     (let*					(macro . let*))
-     (cond					(macro . cond))
-     (do					(macro . do))
-     (and					(macro . and))
-     (or					(macro . or))
-     (time					(macro . time))
-     (delay					(macro . delay))
-     (endianness				(macro . endianness))
-     (assert					(macro . assert))
-     (...					(macro . ...))
-     (=>					(macro . =>))
-     (else					(macro . else))
-     (_						(macro . _))
-     (unquote					(macro . unquote))
-     (unquote-splicing				(macro . unquote-splicing))
-     (unsyntax					(macro . unsyntax))
-     (unsyntax-splicing				(macro . unsyntax-splicing))
-     (let*-syntax				(macro . let*-syntax))
-     (let-constants				(macro . let-constants))
-     (let*-constants				(macro . let*-constants))
-     (letrec-constants				(macro . letrec-constants))
-     (letrec*-constants				(macro . letrec*-constants))
-     (trace-lambda				(macro . trace-lambda))
-     (trace-let					(macro . trace-let))
-     (trace-define				(macro . trace-define))
-     (trace-define-syntax			(macro . trace-define-syntax))
-     (trace-let-syntax				(macro . trace-let-syntax))
-     (trace-letrec-syntax			(macro . trace-letrec-syntax))
-     (guard					(macro . guard))
-     (eol-style					(macro . eol-style))
-     (buffer-mode				(macro . buffer-mode))
-     (file-options				(macro . file-options))
-     (expander-options				(macro . expander-options))
-     (compiler-options				(macro . compiler-options))
-     (error-handling-mode			(macro . error-handling-mode))
-     (fields					(macro . fields))
-     (mutable					(macro . mutable))
-     (immutable					(macro . immutable))
-     (parent					(macro . parent))
-     (protocol					(macro . protocol))
-     (sealed					(macro . sealed))
-     (opaque					(macro . opaque ))
-     (nongenerative				(macro . nongenerative))
-     (parent-rtd				(macro . parent-rtd))
-     (define-record-type			(macro . define-record-type))
-     (record-type-and-record?			(macro . record-type-and-record?))
-     (define-enumeration			(macro . define-enumeration))
-     (define-condition-type			(macro . define-condition-type))
+  '((internal-define				(define))
+    (define-syntax				(define-syntax))
+    (define-alias				(define-alias))
+    (define-fluid-syntax			(define-fluid-syntax))
+    (define-fluid-override			(define-fluid-override))
+    (module					(module))
+    (library					(library))
+    (begin					(begin))
+    (import					(import))
+    (export					(export))
+    (set!					(set!))
+    (let-syntax					(let-syntax))
+    (letrec-syntax				(letrec-syntax))
+    (stale-when					(stale-when))
+    (begin-for-syntax				(begin-for-syntax))
+    (eval-for-expand				(begin-for-syntax))
+    (foreign-call				(core-macro . foreign-call))
+    (quote					(core-macro . quote))
+    (syntax-case				(core-macro . syntax-case))
+    (syntax					(core-macro . syntax))
+    (let					(core-macro . let))
+    (letrec					(core-macro . letrec))
+    (letrec*					(core-macro . letrec*))
+    (if						(core-macro . if))
+    (lambda						(core-macro . lambda))
+    (case-lambda				(core-macro . case-lambda))
+    (internal-lambda				(core-macro . internal-lambda))
+    (internal-case-lambda			(core-macro . internal-case-lambda))
+    (internal-body				(core-macro . internal-body))
+    (fluid-let-syntax				(core-macro . fluid-let-syntax))
+    (struct-type-descriptor			(core-macro . struct-type-descriptor))
+    (struct-type-and-struct?			(core-macro . struct-type-and-struct?))
+    (struct-type-field-ref			(core-macro . struct-type-field-ref))
+    (struct-type-field-set!			(core-macro . struct-type-field-set!))
+    ($struct-type-field-ref			(core-macro . $struct-type-field-ref))
+    ($struct-type-field-set!			(core-macro . $struct-type-field-set!))
+    (record-type-descriptor			(core-macro . record-type-descriptor))
+    (record-constructor-descriptor		(core-macro . record-constructor-descriptor))
+    (record-type-field-set!			(core-macro . record-type-field-set!))
+    (record-type-field-ref			(core-macro . record-type-field-ref))
+    ($record-type-field-set!			(core-macro . $record-type-field-set!))
+    ($record-type-field-ref			(core-macro . $record-type-field-ref))
+    (type-descriptor				(core-macro . type-descriptor))
+    (is-a?					(core-macro . is-a?))
+    (condition-is-a?				(core-macro . condition-is-a?))
+    (slot-ref					(core-macro . slot-ref))
+    (slot-set!					(core-macro . slot-set!))
+    (tag-predicate				(core-macro . tag-predicate))
+    (tag-procedure-argument-validator		(core-macro . tag-procedure-argument-validator))
+    (tag-return-value-validator			(core-macro . tag-return-value-validator))
+    (tag-assert					(core-macro . tag-assert))
+    (tag-assert-and-return			(core-macro . tag-assert-and-return))
+    (tag-accessor				(core-macro . tag-accessor))
+    (tag-mutator				(core-macro . tag-mutator))
+    (tag-getter					(core-macro . tag-getter))
+    (tag-setter					(core-macro . tag-setter))
+    (tag-dispatch				(core-macro . tag-dispatch))
+    (tag-cast					(core-macro . tag-cast))
+    (tag-unsafe-cast				(core-macro . tag-unsafe-cast))
+    (type-of					(core-macro . type-of))
+    (expansion-of				(core-macro . expansion-of))
+    (visit-code-of				(core-macro . visit-code-of))
+    (optimisation-of				(core-macro . optimisation-of))
+    (assembly-of				(core-macro . assembly-of))
+    (splice-first-expand			(core-macro . splice-first-expand))
+    (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
+    (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
+    (__file__					(macro! . __file__))
+    (__line__					(macro! . __line__))
+    (let-values					(macro . let-values))
+    (let*-values				(macro . let*-values))
+    (values->list				(macro . values->list))
+    (define-struct				(macro . define-struct))
+    (case					(macro . case))
+    (case-identifiers				(macro . case-identifiers))
+    (syntax-rules				(macro . syntax-rules))
+    (quasiquote					(macro . quasiquote))
+    (quasisyntax				(macro . quasisyntax))
+    (with-syntax				(macro . with-syntax))
+    (identifier-syntax				(macro . identifier-syntax))
+    (parameterize				(macro . parameterize))
+    (parameterise				(macro . parameterize))
+    (parametrise				(macro . parameterize))
+    (define-syntax-parameter			(macro . define-syntax-parameter))
+    (syntax-parametrise				(macro . syntax-parametrise))
+    (syntax-parameterise			(macro . syntax-parametrise))
+    (syntax-parameterize			(macro . syntax-parametrise))
+    (when					(macro . when))
+    (unless					(macro . unless))
+    (let*					(macro . let*))
+    (cond					(macro . cond))
+    (do						(macro . do))
+    (and					(macro . and))
+    (or						(macro . or))
+    (time					(macro . time))
+    (delay					(macro . delay))
+    (endianness					(macro . endianness))
+    (assert					(macro . assert))
+    (...					(macro . ...))
+    (=>						(macro . =>))
+    (else					(macro . else))
+    (_						(macro . _))
+    (unquote					(macro . unquote))
+    (unquote-splicing				(macro . unquote-splicing))
+    (unsyntax					(macro . unsyntax))
+    (unsyntax-splicing				(macro . unsyntax-splicing))
+    (let*-syntax				(macro . let*-syntax))
+    (let-constants				(macro . let-constants))
+    (let*-constants				(macro . let*-constants))
+    (letrec-constants				(macro . letrec-constants))
+    (letrec*-constants				(macro . letrec*-constants))
+    (trace-lambda				(macro . trace-lambda))
+    (trace-let					(macro . trace-let))
+    (trace-define				(macro . trace-define))
+    (trace-define-syntax			(macro . trace-define-syntax))
+    (trace-let-syntax				(macro . trace-let-syntax))
+    (trace-letrec-syntax			(macro . trace-letrec-syntax))
+    (guard					(macro . guard))
+    (eol-style					(macro . eol-style))
+    (buffer-mode				(macro . buffer-mode))
+    (file-options				(macro . file-options))
+    (error-handling-mode			(macro . error-handling-mode))
+    (expander-options				(macro . expander-options))
+    (compiler-options				(macro . compiler-options))
+    (fields					(macro . fields))
+    (mutable					(macro . mutable))
+    (immutable					(macro . immutable))
+    (parent					(macro . parent))
+    (protocol					(macro . protocol))
+    (sealed					(macro . sealed))
+    (opaque					(macro . opaque ))
+    (nongenerative				(macro . nongenerative))
+    (parent-rtd					(macro . parent-rtd))
+    (define-record-type				(macro . define-record-type))
+    (record-type-and-record?			(macro . record-type-and-record?))
+    (define-enumeration				(macro . define-enumeration))
+    (define-condition-type			(macro . define-condition-type))
 ;;;
-     (define					(macro . exported-define))
-     (define-auxiliary-syntaxes			(macro . define-auxiliary-syntaxes))
-     (define-syntax*				(macro . define-syntax*))
-     (case-define				(macro . case-define))
-     (define*					(macro . define*))
-     (case-define*				(macro . case-define*))
-     (lambda*					(macro . lambda*))
-     (case-lambda*				(macro . case-lambda*))
-     (define-integrable				(macro . define-integrable))
-     (define-inline				(macro . define-inline))
-     (define-constant				(macro . define-constant))
-     (define-inline-constant			(macro . define-inline-constant))
-     (define-values				(macro . define-values))
-     (define-constant-values			(macro . define-constant-values))
-     (define-syntax-rule			(macro . define-syntax-rule))
-     (receive					(macro . receive))
-     (receive-and-return			(macro . receive-and-return))
-     (begin0					(macro . begin0))
-     (xor					(macro . xor))
-     (unwind-protect				(macro . unwind-protect))
-     (with-implicits				(macro . with-implicits))
-     (include					(macro . include))
-     (set-cons!					(macro . set-cons!))
+    (define					(macro . exported-define))
+    (define-auxiliary-syntaxes			(macro . define-auxiliary-syntaxes))
+    (define-syntax*				(macro . define-syntax*))
+    (case-define				(macro . case-define))
+    (define*					(macro . define*))
+    (case-define*				(macro . case-define*))
+    (lambda*					(macro . lambda*))
+    (case-lambda*				(macro . case-lambda*))
+    (define-integrable				(macro . define-integrable))
+    (define-inline				(macro . define-inline))
+    (define-constant				(macro . define-constant))
+    (define-inline-constant			(macro . define-inline-constant))
+    (define-values				(macro . define-values))
+    (define-constant-values			(macro . define-constant-values))
+    (define-syntax-rule				(macro . define-syntax-rule))
+    (receive					(macro . receive))
+    (receive-and-return				(macro . receive-and-return))
+    (begin0					(macro . begin0))
+    (xor					(macro . xor))
+
+    (stdin					(macro . stdin))
+    (stdout					(macro . stdout))
+    (stderr					(macro . stderr))
+
+    (unwind-protect				(macro . unwind-protect))
+    (with-unwind-protection			(macro . with-unwind-protection))
+    (with-unwind-handler			(macro . with-unwind-protection))
+
+    (with-blocked-exceptions			(macro . with-blocked-exceptions))
+    (with-current-dynamic-environment		(macro . with-current-dynamic-environment))
+
+    (with-implicits				(macro . with-implicits))
+    (include					(macro . include))
+    (set-cons!					(macro . set-cons!))
 ;;;
-     (while					(macro . while))
-     (until					(macro . until))
-     (for					(macro . for))
-     (define-returnable				(macro . define-returnable))
-     (lambda-returnable				(macro . lambda-returnable))
-     (begin-returnable				(macro . begin-returnable))
+    (while					(macro . while))
+    (until					(macro . until))
+    (for					(macro . for))
+    (returnable					(macro . returnable))
 ;;;
-     (infix					(macro . infix))
-     (++					(macro . pre-incr))
-     (--					(macro . pre-decr))
-     (pre-incr!					(macro . pre-incr))
-     (pre-decr!					(macro . pre-decr))
-     (post-incr!				(macro . post-incr))
-     (post-decr!				(macro . post-decr))
+    (concurrently				(macro . concurrently))
+    (monitor					(macro . monitor))
 ;;;
-     (try					(macro . try))
-     (catch					(macro . catch))
-     (finally					(macro . finally))
+    (infix					(macro . infix))
+    (++						(macro . pre-incr))
+    (--						(macro . pre-decr))
+    (pre-incr!					(macro . pre-incr))
+    (pre-decr!					(macro . pre-decr))
+    (post-incr!					(macro . post-incr))
+    (post-decr!					(macro . post-decr))
 ;;;
-     (with-compensations			(macro . with-compensations))
-     (with-compensations/on-error		(macro . with-compensations/on-error))
-     (compensate				(macro . compensate))
-     (push-compensation				(macro . push-compensation))
+    (try					(macro . try))
+    (catch					(macro . catch))
+    (finally					(macro . finally))
 ;;;
-     (define-type-spec				(macro . define-type-spec))
-     (define-callable-spec			(macro . define-callable-spec))
+    (with-compensations				(macro . with-compensations))
+    (with-compensations/on-error		(macro . with-compensations/on-error))
+    (with-compensation-handler			(macro . with-compensation-handler))
+    (compensate					(macro . compensate))
+    (push-compensation				(macro . push-compensation))
 ;;;
-     (&condition				($core-rtd . (&condition-rtd
+    (define-type-spec				(macro . define-type-spec))
+    (define-callable-spec			(macro . define-callable-spec))
+;;;
+    (&condition					($core-rtd . (&condition-rtd
 							      &condition-rcd)))
-     (&message					($core-rtd . (&message-rtd
+    (&message					($core-rtd . (&message-rtd
 							      &message-rcd)))
-     (&warning					($core-rtd . (&warning-rtd
+    (&warning					($core-rtd . (&warning-rtd
 							      &warning-rcd)))
-     (&serious					($core-rtd . (&serious-rtd
+    (&serious					($core-rtd . (&serious-rtd
 							      &serious-rcd)))
-     (&error					($core-rtd . (&error-rtd
+    (&error					($core-rtd . (&error-rtd
 							      &error-rcd)))
-     (&violation				($core-rtd . (&violation-rtd
+    (&violation					($core-rtd . (&violation-rtd
 							      &violation-rcd)))
-     (&assertion				($core-rtd . (&assertion-rtd
+    (&assertion					($core-rtd . (&assertion-rtd
 							      &assertion-rcd)))
-     (&irritants				($core-rtd . (&irritants-rtd
+    (&irritants					($core-rtd . (&irritants-rtd
 							      &irritants-rcd)))
-     (&who					($core-rtd . (&who-rtd
+    (&who					($core-rtd . (&who-rtd
 							      &who-rcd)))
-     (&non-continuable				($core-rtd . (&non-continuable-rtd
+    (&non-continuable				($core-rtd . (&non-continuable-rtd
 							      &non-continuable-rcd)))
-     (&implementation-restriction		($core-rtd . (&implementation-restriction-rtd
+    (&implementation-restriction		($core-rtd . (&implementation-restriction-rtd
 							      &implementation-restriction-rcd)))
-     (&lexical					($core-rtd . (&lexical-rtd
+    (&lexical					($core-rtd . (&lexical-rtd
 							      &lexical-rcd)))
-     (&syntax					($core-rtd . (&syntax-rtd
+    (&syntax					($core-rtd . (&syntax-rtd
 							      &syntax-rcd)))
-     (&undefined				($core-rtd . (&undefined-rtd
+    (&undefined					($core-rtd . (&undefined-rtd
 							      &undefined-rcd)))
-     (&i/o					($core-rtd . (&i/o-rtd
+    (&i/o					($core-rtd . (&i/o-rtd
 							      &i/o-rcd)))
-     (&i/o-read					($core-rtd . (&i/o-read-rtd
+    (&i/o-read					($core-rtd . (&i/o-read-rtd
 							      &i/o-read-rcd)))
-     (&i/o-write				($core-rtd . (&i/o-write-rtd
+    (&i/o-write					($core-rtd . (&i/o-write-rtd
 							      &i/o-write-rcd)))
-     (&i/o-invalid-position			($core-rtd . (&i/o-invalid-position-rtd
+    (&i/o-invalid-position			($core-rtd . (&i/o-invalid-position-rtd
 							      &i/o-invalid-position-rcd)))
-     (&i/o-filename				($core-rtd . (&i/o-filename-rtd
+    (&i/o-filename				($core-rtd . (&i/o-filename-rtd
 							      &i/o-filename-rcd)))
-     (&i/o-file-protection			($core-rtd . (&i/o-file-protection-rtd
+    (&i/o-file-protection			($core-rtd . (&i/o-file-protection-rtd
 							      &i/o-file-protection-rcd)))
-     (&i/o-file-is-read-only			($core-rtd . (&i/o-file-is-read-only-rtd
+    (&i/o-file-is-read-only			($core-rtd . (&i/o-file-is-read-only-rtd
 							      &i/o-file-is-read-only-rcd)))
-     (&i/o-file-already-exists			($core-rtd . (&i/o-file-already-exists-rtd
+    (&i/o-file-already-exists			($core-rtd . (&i/o-file-already-exists-rtd
 							      &i/o-file-already-exists-rcd)))
-     (&i/o-file-does-not-exist			($core-rtd . (&i/o-file-does-not-exist-rtd
+    (&i/o-file-does-not-exist			($core-rtd . (&i/o-file-does-not-exist-rtd
 							      &i/o-file-does-not-exist-rcd)))
-     (&i/o-port					($core-rtd . (&i/o-port-rtd
+    (&i/o-port					($core-rtd . (&i/o-port-rtd
 							      &i/o-port-rcd)))
-     (&i/o-decoding				($core-rtd . (&i/o-decoding-rtd
+    (&i/o-decoding				($core-rtd . (&i/o-decoding-rtd
 							      &i/o-decoding-rcd)))
-     (&i/o-encoding				($core-rtd . (&i/o-encoding-rtd
+    (&i/o-encoding				($core-rtd . (&i/o-encoding-rtd
 							      &i/o-encoding-rcd)))
-     (&i/o-eagain				($core-rtd . (&i/o-eagain-rtd
+    (&i/o-eagain				($core-rtd . (&i/o-eagain-rtd
 							      &i/o-eagain-rcd)))
-     (&errno					($core-rtd . (&errno-rtd
+    (&errno					($core-rtd . (&errno-rtd
 							      &errno-rcd)))
-     (&out-of-memory-error			($core-rtd . (&out-of-memory-error-rtd
+    (&out-of-memory-error			($core-rtd . (&out-of-memory-error-rtd
 							      &out-of-memory-error-rcd)))
-     (&h_errno					($core-rtd . (&h_errno-rtd
+    (&h_errno					($core-rtd . (&h_errno-rtd
 							      &h_errno-rcd)))
-     (&no-infinities				($core-rtd . (&no-infinities-rtd
+    (&no-infinities				($core-rtd . (&no-infinities-rtd
 							      &no-infinities-rcd)))
-     (&no-nans					($core-rtd . (&no-nans-rtd
+    (&no-nans					($core-rtd . (&no-nans-rtd
 							      &no-nans-rcd)))
-     (&interrupted				($core-rtd . (&interrupted-rtd
+    (&interrupted				($core-rtd . (&interrupted-rtd
 							      &interrupted-rcd)))
-     (&source-position				($core-rtd . (&source-position-rtd
+    (&source-position				($core-rtd . (&source-position-rtd
 							      &source-position-rcd)))
-     (&procedure-argument-violation		($core-rtd . (&procedure-argument-violation-rtd
+    (&procedure-argument-violation		($core-rtd . (&procedure-argument-violation-rtd
 							      &procedure-argument-violation-rcd)))
-     (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
+    (&expression-return-value-violation		($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
+    (&non-reinstatable				($core-rtd . (&non-reinstatable-rtd
+							      &non-reinstatable-rcd)))
 ;;;
-     (<top>					(macro . <top>))
-     (<void>					(macro . <void>))
-     (<boolean>					(macro . <boolean>))
-     (<char>					(macro . <char>))
-     (<symbol>					(macro . <symbol>))
-     (<keyword>					(macro . <keyword>))
-     (<pointer>					(macro . <pointer>))
-     (<transcoder>				(macro . <transcoder>))
-     (<procedure>				(macro . <procedure>))
-     (<predicate>				(macro . <predicate>))
+    (<top>					(macro . <top>))
+    (<void>					(macro . <void>))
+    (<boolean>					(macro . <boolean>))
+    (<char>					(macro . <char>))
+    (<symbol>					(macro . <symbol>))
+    (<keyword>					(macro . <keyword>))
+    (<pointer>					(macro . <pointer>))
+    (<transcoder>				(macro . <transcoder>))
+    (<procedure>				(macro . <procedure>))
+    (<predicate>				(macro . <predicate>))
 
-     (<fixnum>					(macro . <fixnum>))
-     (<flonum>					(macro . <ratnum>))
-     (<ratnum>					(macro . <ratnum>))
-     (<bignum>					(macro . <bignum>))
-     (<compnum>					(macro . <compnum>))
-     (<cflonum>					(macro . <cflonum>))
-     (<rational-valued>				(macro . <rational-valued>))
-     (<rational>				(macro . <rational>))
-     (<integer-valued>				(macro . <integer-valued>))
-     (<integer>					(macro . <integer>))
-     (<exact-integer>				(macro . <exact-integer>))
-     (<real-valued>				(macro . <real-valued>))
-     (<real>					(macro . <real>))
-     (<complex>					(macro . <complex>))
-     (<number>					(macro . <number>))
+    (<fixnum>					(macro . <fixnum>))
+    (<flonum>					(macro . <ratnum>))
+    (<ratnum>					(macro . <ratnum>))
+    (<bignum>					(macro . <bignum>))
+    (<compnum>					(macro . <compnum>))
+    (<cflonum>					(macro . <cflonum>))
+    (<rational-valued>				(macro . <rational-valued>))
+    (<rational>					(macro . <rational>))
+    (<integer-valued>				(macro . <integer-valued>))
+    (<integer>					(macro . <integer>))
+    (<exact-integer>				(macro . <exact-integer>))
+    (<real-valued>				(macro . <real-valued>))
+    (<real>					(macro . <real>))
+    (<complex>					(macro . <complex>))
+    (<number>					(macro . <number>))
 
-     (<string>					(macro . <string>))
-     (<vector>					(macro . <vector>))
-     (<pair>					(macro . <pair>))
-     (<list>					(macro . <list>))
-     (<bytevector>				(macro . <bytevector>))
-     (<hashtable>				(macro . <hashtable>))
-     (<record>					(macro . <record>))
-     (<record-type-descriptor>			(macro . <record-type-descriptor>))
-     (<struct>					(macro . <struct>))
-     (<struct-type-descriptor>			(macro . <struct-type-descriptor>))
-     (<condition>				(macro . <condition>))
+    (<string>					(macro . <string>))
+    (<vector>					(macro . <vector>))
+    (<pair>					(macro . <pair>))
+    (<list>					(macro . <list>))
+    (<bytevector>				(macro . <bytevector>))
+    (<hashtable>				(macro . <hashtable>))
+    (<record>					(macro . <record>))
+    (<record-type-descriptor>			(macro . <record-type-descriptor>))
+    (<struct>					(macro . <struct>))
+    (<struct-type-descriptor>			(macro . <struct-type-descriptor>))
+    (<condition>				(macro . <condition>))
 
-     (<port>					(macro . <port>))
-     (<input-port>				(macro . <input-port>))
-     (<output-port>				(macro . <output-port>))
-     (<input/output-port>			(macro . <input/output-port>))
-     (<textual-port>				(macro . <textual-port>))
-     (<binary-port>				(macro . <binary-port>))
-     (<textual-input-port>			(macro . <textual-input-port>))
-     (<textual-output-port>			(macro . <textual-output-port>))
-     (<textual-input/output-port>		(macro . <textual-input/output-port>))
-     (<binary-input-port>			(macro . <binary-input-port>))
-     (<binary-output-port>			(macro . <binary-output-port>))
-     (<binary-input/output-port>		(macro . <binary-input/output-port>))
+    (<port>					(macro . <port>))
+    (<input-port>				(macro . <input-port>))
+    (<output-port>				(macro . <output-port>))
+    (<input/output-port>			(macro . <input/output-port>))
+    (<textual-port>				(macro . <textual-port>))
+    (<binary-port>				(macro . <binary-port>))
+    (<textual-input-port>			(macro . <textual-input-port>))
+    (<textual-output-port>			(macro . <textual-output-port>))
+    (<textual-input/output-port>		(macro . <textual-input/output-port>))
+    (<binary-input-port>			(macro . <binary-input-port>))
+    (<binary-output-port>			(macro . <binary-output-port>))
+    (<binary-input/output-port>			(macro . <binary-input/output-port>))
 
-     )))
+    ))
 
 
 (define-constant LIBRARY-LEGEND
@@ -737,7 +772,7 @@
   ;;REQUIRED?  boolean.
   ;;
   ;;The  libraries  marked  as  VISIBLE?   are listed  by  default  by  the  function
-  ;;INSTALLED-LIBRARIES.
+  ;;INTERNED-LIBRARIES.
   ;;
   ;;The libraries  marked as REQUIRED?   are required to build  a new boot  image, so
   ;;they must be already  implemented by the old boot image;  for each library marked
@@ -822,12 +857,20 @@
 
 
 (define-constant IDENTIFIER->LIBRARY-MAP
-  ;;Map  all the  identifiers of  exported  bindings (and  more) to  the
-  ;;libraries   exporting   them,  using   the   nicknames  defined   by
-  ;;LIBRARY-LEGEND.
+  ;;Map  all  the identifiers  of  exported  bindings  (and  more) to  the  libraries
+  ;;exporting them, using  the nicknames defined by LIBRARY-LEGEND each  entry in the
+  ;;list has the format:
   ;;
-  ;;Notice that  the map includes  LIBRARY, IMPORT and EXPORT  which are
-  ;;not bindings.
+  ;;   (?binding . ?library*)
+  ;;
+  ;;where:  ?BINDING is  a  symbol representing  the binding  name;  ?library* is  a,
+  ;;possibly  empty, proper  list representing  a  list of  library nicknames.   Each
+  ;;binding is  exported by  the given  libraries and also  by the  library "(psyntax
+  ;;system  $all)"; when  ?LIBRARY* is  null:  the binding  is exported  only by  the
+  ;;library "(psyntax system $all)".
+  ;;
+  ;;Notice that  the map includes LIBRARY,  IMPORT and EXPORT which  are both special
+  ;;forms and bindings.
   ;;
   '((import					v $language)
     (export					v $language)
@@ -835,6 +878,7 @@
     (splice-first-expand			v $language)
     (type-descriptor				v $language)
     (is-a?					v $language)
+    (condition-is-a?				v $language)
     (slot-ref					v $language)
     (slot-set!					v $language)
     (struct-type-descriptor			v $language)
@@ -901,6 +945,8 @@
     (fxlogor					v $language)
     (fxlognot					v $language)
     (fixnum->string				v $language)
+    (fixnum->char				v $language)
+    (char->fixnum				v $language)
     (string->flonum				v $language)
     (flonum->string				v $language)
     (always-true				v $language)
@@ -1038,8 +1084,6 @@
     (apropos					v $language)
     (current-primitive-locations		$boot)
     (current-library-collection			$boot)
-    (library-name				$boot $libraries)
-    (find-library-by-name			$boot $libraries)
 
 ;;; ------------------------------------------------------------
 ;;; symbols stuff
@@ -2051,6 +2095,8 @@
     (utf32->string				v r bv)
     (print-condition				v $language)
     (condition?					v r co)
+    (compound-condition?			v $language)
+    (condition-and-rtd?				v $language)
     (&assertion					v r co)
     (assertion-violation?			v r co)
     (&condition					v r co)
@@ -2231,6 +2277,10 @@
     (procedure-argument-violation?		v $language)
     (&expression-return-value-violation		v $language)
     (expression-return-value-violation?		v $language)
+    (&non-reinstatable				v $language)
+    (make-non-reinstatable-violation		v $language)
+    (non-reinstatable-violation?		v $language)
+    (non-reinstatable-violation			v $language)
     (lookahead-char				v r ip)
     (lookahead-u8				v r ip)
     (lookahead-two-u8				v $language)
@@ -2548,10 +2598,18 @@
     (receive-and-return				v $language)
     (begin0					v $language)
     (xor					v $language)
-    (unwind-protect				v $language)
     (with-implicits				v $language)
     (include					v $language)
     (set-cons!					v $language)
+;;;
+    (unwind-protect				v $language)
+    (with-unwind-protection			v $language)
+    (with-unwind-handler			v $language)
+    (run-unwind-protection-cleanup-upon-exit?)
+    (unwinding-call/cc				v $language)
+;;;
+    (with-blocked-exceptions			v $language)
+    (with-current-dynamic-environment		v $language)
 ;;;
     (set-predicate-procedure-argument-validation! v $language)
     (set-predicate-return-value-validation!	v $language)
@@ -2572,9 +2630,7 @@
     (while					v $language)
     (until					v $language)
     (for					v $language)
-    (define-returnable				v $language)
-    (lambda-returnable				v $language)
-    (begin-returnable				v $language)
+    (returnable					v $language)
     (try					v $language)
     (catch					v $language)
     (finally					v $language)
@@ -2588,6 +2644,7 @@
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)
+    (with-compensation-handler			v $language)
     (compensate					v $language)
     (with					v $language)
     (push-compensation				v $language)
@@ -2723,6 +2780,24 @@
     (vicare-built-with-arguments-validation-enabled	v $language)
 
 ;;; --------------------------------------------------------------------
+;;; coroutines
+
+    (coroutine					v $language)
+    (yield					v $language)
+    (finish-coroutines				v $language)
+    (current-coroutine-uid			v $language)
+    (coroutine-uid?				v $language)
+    (suspend-coroutine				v $language)
+    (resume-coroutine				v $language)
+    (suspended-coroutine?			v $language)
+    (reset-coroutines!				v $language)
+    (dump-coroutines				v $language)
+    (concurrently				v $language)
+    (monitor					v $language)
+    ;;This is for internal use.
+    (do-monitor)
+
+;;; --------------------------------------------------------------------
 ;;; POSIX functions
 
     (strerror					v $language $posix)
@@ -2737,9 +2812,16 @@
     (file-bytevector-pathname?			$posix)
     (file-absolute-pathname?			$posix)
     (file-relative-pathname?			$posix)
+    (file-string-absolute-pathname?		$posix)
+    (file-string-relative-pathname?		$posix)
+    (file-bytevector-absolute-pathname?		$posix)
+    (file-bytevector-relative-pathname?		$posix)
     (file-colon-search-path?			$posix)
     (file-string-colon-search-path?		$posix)
     (file-bytevector-colon-search-path?		$posix)
+    (list-of-pathnames?				$posix)
+    (list-of-string-pathnames?			$posix)
+    (list-of-bytevector-pathnames?		$posix)
     (file-modification-time			$posix)
     (split-pathname-root-and-tail		$posix)
     (search-file-in-environment-path		$posix)
@@ -3041,6 +3123,7 @@
     (all-identifiers?				v $language)
 
     (syntax->vector				v $language)
+    (parse-logic-predicate-syntax		v $language)
     (syntax-unwrap				v $language)
     (syntax=?					v $language)
     (identifier=symbol?				v $language)
@@ -3107,11 +3190,11 @@
 ;;; --------------------------------------------------------------------
 ;;; library infrastructure
 
+    (current-library-expander				$libraries)
+
     (library?						$libraries)
     (library-uid					$libraries)
-;;; These are exported above.
-;;; (library-name					$libraries)
-;;; (find-library-by-name				$libraries)
+    (library-name					$libraries $boot)
     (library-imp-lib*					$libraries)
     (library-vis-lib*					$libraries)
     (library-inv-lib*					$libraries)
@@ -3126,24 +3209,62 @@
     (library-visible?					$libraries)
     (library-source-file-name				$libraries)
     (library-option*					$libraries)
+    (library-loaded-from-source-file?			$libraries)
+    (library-loaded-from-binary-file?			$libraries)
+    (library-descriptor					$libraries)
+    (library-descriptor?				$libraries)
+    (library-descriptor-uid				$libraries)
+    (library-descriptor-name				$libraries)
 
-    (library-path					$libraries)
+    (find-library-by-name				$libraries $boot)
+    (find-library-by-reference				$libraries $boot)
+    (find-library-by-descriptor				$libraries)
+    (find-library-in-collection-by-predicate		$libraries)
+    (find-library-in-collection-by-name			$libraries)
+    (find-library-in-collection-by-reference		$libraries)
+    (find-library-in-collection-by-descriptor		$libraries)
+
+    (interned-libraries					$libraries)
+    (unintern-library					$libraries)
+    (visit-library					$libraries)
+    (invoke-library					$libraries)
+
+    (current-library-loader				$libraries)
+    (default-library-loader				$libraries)
+    (current-source-library-loader			$libraries)
+    (current-binary-library-loader			$libraries)
+
+    (library-source-search-path				$libraries)
+    (library-binary-search-path				$libraries)
+    (compiled-libraries-build-directory			$libraries)
+
     (library-extensions					$libraries)
-    (fasl-directory					$libraries)
-    (fasl-search-path					$libraries)
-    (fasl-path						$libraries)
-    (fasl-stem+extension				$libraries)
+    (library-name->filename-stem			$libraries)
+    (library-reference->filename-stem			$libraries)
+    (directory+library-stem->library-binary-pathname	$libraries)
+    (directory+library-stem->library-source-pathname	$libraries)
+    (library-name->library-binary-pathname-in-build-directory			$libraries)
+    (library-reference->library-binary-pathname-in-build-directory		$libraries)
+    (library-source-pathname->library-stem-pathname				$libraries)
+    (library-source-pathname->library-binary-tail-pathname			$libraries)
+    (program-source-pathname->program-binary-pathname	$libraries)
 
     (current-library-locator				$libraries)
     (run-time-library-locator				$libraries)
     (compile-time-library-locator			$libraries)
     (source-library-locator				$libraries)
-    (current-source-library-file-locator		$libraries)
-    (current-binary-library-file-locator		$libraries)
-    (default-source-library-file-locator		$libraries)
-    (default-binary-library-file-locator		$libraries)
-    (installed-libraries				$libraries)
-    (uninstall-library					$libraries)
+
+    (current-library-source-search-path-scanner		$libraries)
+    (current-library-binary-search-path-scanner		$libraries)
+    (default-library-source-search-path-scanner		$libraries)
+    (default-library-binary-search-path-scanner		$libraries)
+
+    (current-include-loader				$libraries)
+    (default-include-loader				$libraries)
+    (default-include-file-locator			$libraries)
+    (default-include-file-loader			$libraries)
+    (current-include-file-locator			$libraries)
+    (current-include-file-loader			$libraries)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
@@ -4035,9 +4156,7 @@
 
 ;;;; built-in object types utilities
 
-    ;;Remember that bindings that have  no library listed here are still
-    ;;exported by the library "(psyntax system $all)".
-
+    ;;These are exported only by "(psyntax system $all)".
     (procedure-argument-validation-with-predicate)
     (return-value-validation-with-predicate)
     (any->symbol)
@@ -4063,7 +4182,7 @@
   ;;The  initial value  is a  list  of LIBRARY  structures  built by  adding all  the
   ;;libraries  in LIBRARY-LEGEND  which are  marked as  REQUIRED?.  Notice  that such
   ;;structures  are built  by FIND-LIBRARY-BY-NAME,  which means  that the  libraries
-  ;;marked as  REQUIRED?  must be  already installed in  the boot image  running this
+  ;;marked as  REQUIRED?  must  be already  interned in the  boot image  running this
   ;;program.
   ;;
   ;;To add  a REQUIRED? library  to a boot  image: first we have  to add an  entry to
@@ -4305,7 +4424,9 @@
     ;;
     (define-constant __who__ 'make-system-data)
     (define-syntax-rule (macro-identifier? x)
-      (and (assq x VICARE-SYSTEM-MACROS) #t))
+      (and (or (assq x VICARE-SYSTEM-MACROS)
+	       (assq x VICARE-SYSTEM-FLUIDS))
+	   #t))
     (define-syntax-rule (procedure-identifier? x)
       (not (macro-identifier? x)))
     (let ((export-subst-clt    (make-collection))
@@ -4321,7 +4442,7 @@
       ;;   (?built-in-macro-name	(?built-in-macro-name))
       ;;   (?core-macro-name		(core-macro	. ?core-macro-name))
       ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
-      ;;   (?fluid-macro-name		($fluid		. $fluid-macro-name))
+      ;;   (?fluid-macro-name		($fluid		. ?fluid-macro-name))
       ;;   (?condition-type-name	($core-rtd	. (?condition-rtd ?condition-rcd)))
       ;;
       ;;We accumulate  in the subst  and env collections the  associations name/label
@@ -4333,6 +4454,18 @@
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
+	    (export-env-clt   (cons label binding)))))
+      (each-for VICARE-SYSTEM-FLUIDS
+	(lambda (entry)
+	  (let* ((name		(car  entry))
+		 (binding	(cadr entry))
+		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
+	    (export-subst-clt (cons name label))
+	    (export-env-clt   (cons label binding)))))
+      (each-for VICARE-SYSTEM-FLUIDS-DEFAULTS
+	(lambda (entry)
+	  (let* ((label		(car  entry))
+		 (binding	(cadr entry)))
 	    (export-env-clt   (cons label binding)))))
       ;;For every  exported primitive function  we expect an  entry to be  present in
       ;;EXPORT-ENV with the format:
@@ -4417,7 +4550,7 @@
       ;;  appropriate  function.  This way  the compile  can retrieve the  loc gensym
       ;;  from the primitive function symbol name.
       ;;
-      ;;* Installs all the libraries composing the boot image.
+      ;;* Interns all the libraries composing the boot image.
       ;;
       ;;Return 2 values: the library name and the library invoke-code.
       ;;
@@ -4431,7 +4564,7 @@
 		       system-value-gensym
 		       system-label-gensym)
 	     (only (psyntax.library-manager)
-		   install-library)
+		   intern-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
 	     ;;These   gensyms   are   fresh    ones   generated   by   the   library
@@ -4456,9 +4589,9 @@
 	       (lambda (func-name.lab)
 	   	 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
 	     ',export-subst)
-	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
+	   ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
-		    (build-install-library-form legend-entry export-subst export-env))
+		    (build-intern-library-form legend-entry export-subst export-env))
 	       LIBRARY-LEGEND)))
 
       ;;Logging this  symbolic expression  gives some insight  about what  happens at
@@ -4472,8 +4605,8 @@
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
-    (define (build-install-library-form legend-entry export-subst export-env)
-      ;;Return a sexp representing a call to the function INSTALL-LIBRARY.
+    (define (build-intern-library-form legend-entry export-subst export-env)
+      ;;Return a sexp representing a call to the function INTERN-LIBRARY.
       ;;
       ;;Each entry from the LIBRARY-LEGEND has the format:
       ;;
@@ -4503,13 +4636,13 @@
 	     (option*		'()))
 	;;Datums embedded in this symbolic expression are quoted to allow the sexp to
 	;;be handed to EVAL (I guess; Marco Maggi, Aug 26, 2011).
-	`(install-library ',id
-			  (quote ,(append fullname (list version)))
-			  '() ;; import-libs
-			  '() ;; visit-libs
-			  '() ;; invoke-libs
-			  ',subst ',env void void '#f '#f '#f '() ',visible?
-			  (quote ,source-file-name) (quote ,option*))))
+	`(intern-library ',id
+			 (quote ,(append fullname (list version)))
+			 '()  ;; import-libs
+			 '()  ;; visit-libs
+			 '()  ;; invoke-libs
+			 ',subst ',env void void '#f '#f '#f '() ',visible?
+			 (quote ,source-file-name) (quote ,option*))))
 
     (define (get-export-subset nickname export-subst)
       ;;Given the alist of substitutions EXPORT-SUBST, build and return the subset of
@@ -4544,7 +4677,7 @@
   (define (boot-library-expand library-sexp)
     ;;This function  is used to expand  the libraries composing the  boot image.  The
     ;;LIBRARY form in the given symbolic expression is fully expanded and the library
-    ;;is installed in the internal collection.
+    ;;is interned in the internal collection.
     ;;
     ;;When bootstrapping  the system: the visit-code  is not (and cannot  be) used in
     ;;the "next" system, so we drop it.

@@ -60,14 +60,13 @@
     compiler.core-expr->assembly-code	compiler.compile-core-expr
 
     ;; runtime options
-    option.verbose-about-libraries?
     option.debug-mode-enabled?
     option.drop-assertions?
     option.strict-r6rs
     option.enable-arguments-validation?
     option.descriptive-labels
-    option.print-loaded-libraries
-    option.cache-compiled-libraries
+    option.print-loaded-libraries?
+    option.print-debug-messages?
     option.tagged-language.rhs-tag-propagation?
     option.tagged-language.datums-as-operators?
     option.tagged-language.setter-forms?
@@ -96,9 +95,10 @@
     ;; error handlers
     library-version-mismatch-warning
     library-stale-warning
+    print-expander-warning-message
     procedure-argument-violation
     warning
-    print-expander-warning-message
+    library-debug-message
 
     ;; system stuff
     file-modification-time
@@ -145,13 +145,12 @@
 	    compiler.)
     (prefix (rename (only (ikarus.options)
 			  verbose?
-			  verbose-about-libraries?
 			  debug-mode-enabled?
 			  drop-assertions?
 			  strict-r6rs
 			  descriptive-labels
-			  print-loaded-libraries
-			  cache-compiled-libraries
+			  print-loaded-libraries?
+			  print-debug-messages?
 			  tagged-language.rhs-tag-propagation?
 			  tagged-language.datums-as-operators?
 			  tagged-language.setter-forms?
@@ -201,6 +200,16 @@
       (display "vicare: expander warning: " P)
       (apply fprintf P template args)
       (newline P))))
+
+(define (library-debug-message template . args)
+  (when (option.print-debug-messages?)
+    ;;We do not want an exception from the I/O layer to ruin things.
+    (guard (E (else (void)))
+      (let ((P (current-error-port)))
+	(apply fprintf P (string-append "vicare: " template "\n") args)
+	(flush-output-port P)))))
+
+;;; --------------------------------------------------------------------
 
 (define-syntax define-record
   (syntax-rules ()

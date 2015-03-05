@@ -103,7 +103,7 @@
 @set COPYRIGHT_YEARS            2010-2014
 
 
-@set TARBALLURL                 @url{http://sourceforge.net/projects/vicare-scheme/files/}
+@set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
 @set EXECUTABLE                 @command{vicare}
 @set RAWEXECUTABLE              vicare
@@ -210,6 +210,7 @@ Trademarks used herein are the property of their respective owners.
 * flonum parser::               Parsing flonums.
 * debugging::                   Debugging facilities.
 * getopts::                     Parsing command line arguments.
+* checks::                      Lightweight testing.
 
 Networking libraires
 
@@ -283,6 +284,7 @@ External documents
 @include libs-flonum-parser.texi
 @include libs-debugging.texi
 @include libs-getopts.texi
+@include libs-checks.texi
 
 @include libs-net-channels.texi
 

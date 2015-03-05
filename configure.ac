@@ -156,6 +156,12 @@ VICARE_ENABLE_OPTION([INSTALL_SOURCES],[sources-installation],[no],
 AM_CONDITIONAL([WANT_INSTALL_SOURCES],
   [test "x$vicare_enable_INSTALL_SOURCES" = xyes])
 
+VICARE_ENABLE_OPTION([INSTALL_SCHEME_SCRIPT],[scheme-script],[no],
+  [whether install scheme-script program],
+  [enable installation of scheme-script])
+AM_CONDITIONAL([WANT_INSTALL_SCHEME_SCRIPT],
+  [test "x$vicare_enable_INSTALL_SCHEME_SCRIPT" = xyes])
+
 dnl --------------------------------------------------------------------
 
 VICARE_ENABLE_OPTION([BINFMT],[binfmt],[no],
@@ -1573,12 +1579,13 @@ AC_CONFIG_FILES([Makefile]
                 [scripts/rc.vicare-scheme]
                 [scripts/binfmt-script-launcher.sh]
                 [scripts/binfmt-program-launcher.sh]
+                [scripts/scheme-script]
                 [src/vicare-platform.h]
-                [lib/vicare/platform/configuration.sls]
-                [lib/vicare/platform/constants.sls]
-                [lib/vicare/platform/errno.sls]
-                [lib/vicare/platform/words.sls]
-                [lib/nausicaa/uri/pathnames.sls])
+                [lib/vicare/platform/configuration.vicare.sls]
+                [lib/vicare/platform/constants.vicare.sls]
+                [lib/vicare/platform/errno.vicare.sls]
+                [lib/vicare/platform/words.vicare.sls]
+                [lib/nausicaa/uri/pathnames.vicare.sls])
 AC_OUTPUT
 
 ### end of file

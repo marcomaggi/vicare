@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -119,22 +119,22 @@
   ;;must go to the current error port.  Otherwise open a log file.
   ;;
   (when (logging-enabled?)
-    (if (string=? "-" (log-pathname))
-	(log-port (current-error-port))
-      (let ((size (if (file-exists? (log-pathname))
-		      (px.file-size (log-pathname))
-		    0)))
-	(when (log-pathname)
-	  (log-port (open-file-output-port (log-pathname)
-					   (file-options no-fail no-truncate)
-					   (buffer-mode line)
-					   (native-transcoder)))
-	  (with-compensations/on-error
-	    ;;Close the port if setting the position fails.
-	    (push-compensation
-	     (close-port (log-port)))
-	    (set-port-position! (log-port) size))))))
-  (void))
+    (let ((ptn (log-pathname)))
+      (when (string? ptn)
+	(log-port (if (string=? "-" ptn)
+		      (current-error-port)
+		    (let ((size (if (file-exists? ptn)
+				    (px.file-size ptn)
+				  0)))
+		      (receive-and-return (port)
+			  (open-file-output-port (log-pathname)
+						 (file-options no-fail no-truncate)
+						 (buffer-mode line)
+						 (native-transcoder))
+			(with-compensations/on-error
+			  ;;Close the port if setting the position fails.
+			  (push-compensation (close-port port))
+			  (set-port-position! port size))))))))))
 
 (define (close-logging)
   ;;Close  the log  port unless  it is  the current  error port;  return
@@ -144,9 +144,8 @@
   (when (and (log-port)
 	     (not (string=? "-" (log-pathname)))
 	     (not (equal? (log-port)
-			  (current-error-port))))
-    (close-port (log-port)))
-  (void))
+			  (console-error-port))))
+    (close-port (log-port))))
 
 
 ;;;; logging

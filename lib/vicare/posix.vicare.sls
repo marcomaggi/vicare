@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -158,7 +158,10 @@
 	       posix.file-bytevector-pathname?
 	       posix.file-colon-search-path?
 	       posix.file-string-colon-search-path?
-	       posix.file-bytevector-colon-search-path?)
+	       posix.file-bytevector-colon-search-path?
+	       posix.list-of-pathnames?
+	       posix.list-of-string-pathnames?
+	       posix.list-of-bytevector-pathnames?)
 	      posix.)
 
     ;; file descriptors
@@ -182,6 +185,15 @@
     truncate				ftruncate
     lockf
 
+    after-fork/prepare-child-file-descriptors
+    after-fork/prepare-child-binary-input/output-ports
+    after-fork/prepare-child-textual-input/output-ports
+    after-fork/prepare-parent-binary-input/output-ports
+    after-fork/prepare-parent-textual-input/output-ports
+    fork-with-fds
+    fork-with-binary-ports
+    fork-with-textual-ports
+
     sizeof-fd-set			make-fd-set-bytevector
     make-fd-set-pointer			make-fd-set-memory-block
     FD_ZERO				FD_SET
@@ -192,6 +204,7 @@
     ;; close-on-exec ports
     port-set-close-on-exec-mode!	port-unset-close-on-exec-mode!
     port-in-close-on-exec-mode?		close-ports-in-close-on-exec-mode
+    flush-ports-in-close-on-exec-mode
 
     ;; memory-mapped input/output
     mmap				munmap
@@ -415,8 +428,7 @@
     file-descriptor.vicare-arguments-validation
     file-descriptor/false.vicare-arguments-validation
     network-port-number.vicare-arguments-validation
-    network-port-number/false.vicare-arguments-validation
-    )
+    network-port-number/false.vicare-arguments-validation)
   (import (except (vicare)
 		  strerror
 		  remove		time
@@ -440,7 +452,10 @@
 		  file-bytevector-pathname?
 		  file-colon-search-path?
 		  file-string-colon-search-path?
-		  file-bytevector-colon-search-path?)
+		  file-bytevector-colon-search-path?
+		  list-of-pathnames?
+		  list-of-string-pathnames?
+		  list-of-bytevector-pathnames?)
 	    posix.)
     (vicare language-extensions syntaxes)
     (vicare platform constants)
@@ -1039,19 +1054,24 @@
   (execv filename argv))
 
 (define (execv filename argv)
-  (define who 'execv)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((pathname	filename)
        (list-of-strings	argv))
     (close-ports-in-close-on-exec-mode)
     (with-pathnames ((filename.bv filename))
       (let ((rv (capi.posix-execv filename.bv (map string->utf8 argv))))
 	(if ($fx< rv 0)
-	    (%raise-errno-error who rv filename argv)
+	    (%raise-errno-error __who__ rv filename argv)
 	  rv)))))
 
-(define (execle filename argv . env)
-  (execve filename argv env))
+(define (execle filename argv0 arg . args)
+  (let loop ((argv (list argv0))
+	     (arg  arg)
+	     (args args))
+    (if (pair? args)
+	(loop (cons arg argv) (car args) (cdr args))
+      ;;If we are here: ARG is the environment.
+      (execve filename (reverse argv) arg))))
 
 (define (execve filename argv env)
   (define who 'execve)
@@ -1087,14 +1107,18 @@
 ;;;; process termination status
 
 (define (waitpid pid options)
-  (define who 'waitpid)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((pid	pid)
        (fixnum	options))
     (let ((rv (capi.posix-waitpid pid options)))
-      (if ($fx< rv 0)
-	  (%raise-errno-error who rv pid options)
-	rv))))
+      (cond ((not rv)
+	     ;;The flag WNOHANG was used in OPTIONS and no child has exited.
+	     rv)
+	    (($fx< rv 0)
+	     (%raise-errno-error __who__ rv pid options))
+	    (else
+	     ;;Return a fixnum representing the exit status.
+	     rv)))))
 
 (define (wait)
   (define who 'wait)
@@ -2230,12 +2254,227 @@
 	(%raise-errno-error who rv fd cmd len)))))
 
 
+;;;; handling file descriptors after fork
+
+(define (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+  ;;To  be called  in the  child  process, after  a  fork operation,  to replace  the
+  ;;standard  file  descriptors  0,  1,  2 with  the  file  descriptors  CHILD-STDIN,
+  ;;CHILD-STDOUT,   CHILD-STDERR.   When   successful:  return   unspecified  values;
+  ;;otherwise raise an exception.
+  ;;
+  ;;Perform the following operations:
+  ;;
+  ;;1.   Flush  the  standard  output   ports  returned  by  CONSOLE-OUTPUT-PORT  and
+  ;;CONSOLE-ERROR-PORT.
+  ;;
+  ;;2. Close the standard file descriptors 0, 1, 2.
+  ;;
+  ;;3.   Duplicate the  file descriptors  CHILD-STDIN, CHILD-STDOUT,  CHILD-STDERR so
+  ;;that they become new standard file descriptors 0, 1, 2.
+  ;;
+  ;;4.  Close the file descriptors CHILD-STDIN, CHILD-STDOUT, CHILD-STDERR.
+  ;;
+  ;;Notice that:
+  ;;
+  ;;* All the ports that, before this call, were wrapping the old file descriptors 0,
+  ;;1, 2 after this call will wrap the new file descriptors 0, 1, 2.
+  ;;
+  ;;* It  is responsibility  of the  caller, before the  call to  fork, to  flush the
+  ;;output ports  wrapping the standard file  descriptors, like the ones  returned by
+  ;;STANDARD-OUTPUT-PORT,          STANDARD-ERROR-PORT,          CONSOLE-OUTPUT-PORT,
+  ;;CONSOLE-ERROR-PORT.
+  ;;
+  (begin	;setup stdin
+    (close 0)
+    (dup2  child-stdin 0)
+    (close child-stdin))
+  (begin	;setup stdout
+    (close 1)
+    (dup2  child-stdout 1)
+    (close child-stdout))
+  (begin	;setup stderr
+    (close 2)
+    (dup2  child-stderr 2)
+    (close child-stderr)))
+
+(define (after-fork/prepare-child-binary-input/output-ports)
+  ;;To be  called in  the child  process, after  a fork  operation and  after calling
+  ;;AFTER-FORK/PREPARE-CHILD-FILE-DESCRIPTORS  to  prepare  binary input  and  output
+  ;;ports wrapping the standard file descriptors.  Return 3 values:
+  ;;
+  ;;1. Binary input port reading from the standard file descriptor 0.  It is the port
+  ;;returned by STANDARD-INPUT-PORT.
+  ;;
+  ;;2. Binary input port  writing to the standard file descriptor 1.   It is the port
+  ;;returned by STANDARD-OUTPUT-PORT.
+  ;;
+  ;;3. Binary input port  writing to the standard file descriptor 2.   It is the port
+  ;;returned by STANDARD-ERROR-PORT.
+  ;;
+  (values (standard-input-port)
+	  (standard-output-port)
+	  (standard-error-port)))
+
+(define (after-fork/prepare-child-textual-input/output-ports)
+  ;;To be  called in  the child  process, after  a fork  operation and  after calling
+  ;;AFTER-FORK/PREPARE-CHILD-FILE-DESCRIPTORS  to prepare  textual  input and  output
+  ;;ports wrapping the standard file descriptors.  New textual input and output ports
+  ;;are   built   and   selected    as   values   returned   by   CONSOLE-INPUT-PORT,
+  ;;CONSOLE-OUTPUT-PORT and CONSOLE-ERROR-PORT, we must use these functions to access
+  ;;the new ports.  Return unspecified values.
+  ;;
+  ;;It is  responsibility of the caller  to set the new  ports as top values  for the
+  ;;parameters CURRENT-INPUT-PORT, CURRENT-OUTPUT-PORT, CURRENT-ERROR-PORT.
+  ;;
+  (console-input-port
+   (make-textual-file-descriptor-input-port  0 "*stdin*"  (native-transcoder)))
+  (console-output-port
+   (make-textual-file-descriptor-output-port 1 "*stdout*" (native-transcoder)))
+  (console-error-port
+   (make-textual-file-descriptor-output-port 2 "*stderr*" (native-transcoder)))
+  (void))
+
+;;; --------------------------------------------------------------------
+
+(define (after-fork/prepare-parent-binary-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
+  ;;To be  called in the  parent to build  Scheme input/output ports  around standard
+  ;;file descriptors for the child process.  Return 3 values:
+  ;;
+  ;;1. Binary output port  that writes in the stdin of the  child.  Closing this port
+  ;;will also close the underlying file descriptor.
+  ;;
+  ;;2. Binary input port that reads from  the stdout of the child.  Closing this port
+  ;;will also close the underlying file descriptor.
+  ;;
+  ;;3. Binary input port that reads from  the stderr of the child.  Closing this port
+  ;;will also close the underlying file descriptor.
+  ;;
+  (values
+   ;;Output port that writes in the stdin of the child.
+   (make-binary-file-descriptor-output-port parent->child-stdin  "*child-stdin*")
+   ;;Input port that reads from the stdout of the child.
+   (make-binary-file-descriptor-input-port  parent<-child-stdout "*child-stdout*")
+   ;;Input port that reads from the stderr of the child.
+   (make-binary-file-descriptor-input-port  parent<-child-stderr "*child-stderr*")))
+
+(define (after-fork/prepare-parent-textual-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
+  ;;To be  called in the  parent to build  Scheme input/output ports  around standard
+  ;;file descriptors for the child process.  Return 3 values:
+  ;;
+  ;;1. Textual output port that writes in  the stdin of the child.  Closing this port
+  ;;will also close the underlying file descriptor.
+  ;;
+  ;;2. Textual input port that reads from the stdout of the child.  Closing this port
+  ;;will also close the underlying file descriptor.
+  ;;
+  ;;3. Textual input port that reads from the stderr of the child.  Closing this port
+  ;;will also close the underlying file descriptor.
+  ;;
+  (values
+   ;;Output port that writes in the stdin of the child.
+   (make-textual-file-descriptor-output-port parent->child-stdin  "*child-stdin*"  (native-transcoder))
+   ;;Input port that reads from the stdout of the child.
+   (make-textual-file-descriptor-input-port  parent<-child-stdout "*child-stdout*" (native-transcoder))
+   ;;Input port that reads from the stderr of the child.
+   (make-textual-file-descriptor-input-port  parent<-child-stderr "*child-stderr*" (native-transcoder))))
+
+
+;;;; advanced fork wrappers
+
+(define (fork-with-fds parent-proc child-thunk)
+  ;;Wrapper for FORK that  sets up the file descriptor pipes  to communicate with the
+  ;;child process.
+  ;;
+  (let-values
+      (((child-stdin          parent->child-stdin) (pipe))
+       ((parent<-child-stdout child-stdout)        (pipe))
+       ((parent<-child-stderr child-stderr)        (pipe)))
+    (flush-output-port (console-output-port))
+    (flush-output-port (console-error-port))
+    (fork
+     (lambda (child-pid)
+       (close child-stdin)
+       (close child-stdout)
+       (close child-stderr)
+       (parent-proc child-pid parent->child-stdin parent<-child-stdout parent<-child-stderr))
+     (lambda ()
+       (guard (E (else
+		  (print-condition E)
+		  (exit 1)))
+	 (close parent->child-stdin)
+	 (close parent<-child-stdout)
+	 (close parent<-child-stderr)
+	 (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	 (child-thunk))))))
+
+(define (fork-with-binary-ports parent-proc child-thunk)
+  ;;Wrapper for FORK that  sets up the file descriptor pipes  to communicate with the
+  ;;child process.  The  standard file descriptors are wrapped into  binary input and
+  ;;output ports.
+  ;;
+  (let-values
+      (((child-stdin          parent->child-stdin) (pipe))
+       ((parent<-child-stdout child-stdout)        (pipe))
+       ((parent<-child-stderr child-stderr)        (pipe)))
+    (flush-output-port (console-output-port))
+    (flush-output-port (console-error-port))
+    (fork
+     (lambda (child-pid)
+       (close child-stdin)
+       (close child-stdout)
+       (close child-stderr)
+       (receive (stdin-port stdout-port stderr-port)
+	   (after-fork/prepare-parent-binary-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
+	 (parent-proc child-pid stdin-port stdout-port stderr-port)))
+     (lambda ()
+       (guard (E (else
+		  (print-condition E)
+		  (exit 1)))
+	 (close parent->child-stdin)
+	 (close parent<-child-stdout)
+	 (close parent<-child-stderr)
+	 (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	 (after-fork/prepare-child-binary-input/output-ports)
+	 (child-thunk))))))
+
+(define (fork-with-textual-ports parent-proc child-thunk)
+  ;;Wrapper for FORK that  sets up the file descriptor pipes  to communicate with the
+  ;;child process.  The standard file descriptors  are wrapped into textual input and
+  ;;output ports.
+  ;;
+  (let-values
+      (((child-stdin          parent->child-stdin) (pipe))
+       ((parent<-child-stdout child-stdout)        (pipe))
+       ((parent<-child-stderr child-stderr)        (pipe)))
+    (flush-output-port (console-output-port))
+    (flush-output-port (console-error-port))
+    (fork
+     (lambda (child-pid)
+       (close child-stdin)
+       (close child-stdout)
+       (close child-stderr)
+       (receive (stdin-port stdout-port stderr-port)
+	   (after-fork/prepare-parent-textual-input/output-ports parent->child-stdin parent<-child-stdout parent<-child-stderr)
+	 (parent-proc child-pid stdin-port stdout-port stderr-port)))
+     (lambda ()
+       (guard (E (else
+		  (print-condition E)
+		  (exit 1)))
+	 (close parent->child-stdin)
+	 (close parent<-child-stdout)
+	 (close parent<-child-stderr)
+	 (after-fork/prepare-child-file-descriptors child-stdin child-stdout child-stderr)
+	 (after-fork/prepare-child-textual-input/output-ports)
+	 (child-thunk))))))
+
+
 ;;;; ports and "close on exec" status
 
 (module (port-set-close-on-exec-mode!
 	 port-unset-close-on-exec-mode!
 	 port-in-close-on-exec-mode?
-	 close-ports-in-close-on-exec-mode)
+	 close-ports-in-close-on-exec-mode
+	 flush-ports-in-close-on-exec-mode)
   (import (vicare containers weak-hashtables))
 
   (define-constant TABLE
@@ -2277,9 +2516,45 @@
 	((port	port))
       (weak-hashtable-contains? TABLE port)))
 
-  (define (close-ports-in-close-on-exec-mode)
-    (vector-for-each close-port (weak-hashtable-keys TABLE))
-    (weak-hashtable-clear! TABLE))
+  (case-define close-ports-in-close-on-exec-mode
+    (()
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (close-port P))))
+       (weak-hashtable-keys TABLE))
+     (weak-hashtable-clear! TABLE))
+    ((error-handler)
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (with-exception-handler
+				  error-handler
+				(lambda ()
+				  (close-port P))))))
+       (weak-hashtable-keys TABLE))
+     (weak-hashtable-clear! TABLE)))
+
+  (case-define flush-ports-in-close-on-exec-mode
+    (()
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (unless (port-closed? P)
+				(when (output-port? P)
+				  (flush-output-port P))))))
+       (weak-hashtable-keys TABLE)))
+    ((error-handler)
+     (vector-for-each (lambda (P)
+			(with-blocked-exceptions
+			    (lambda ()
+			      (with-exception-handler
+				  error-handler
+				(lambda ()
+				  (unless (port-closed? P)
+				    (when (output-port? P)
+				      (flush-output-port P))))))))
+       (weak-hashtable-keys TABLE))))
 
   #| end of module |# )
 
@@ -3228,22 +3503,26 @@
 				    (%display #f)))
   (%display "]"))
 
-(define (getaddrinfo node service hints)
-  (define who 'getaddrinfo)
-  (with-arguments-validation (who)
-      ((string/bytevector/false	node)
-       (string/bytevector/false	service)
-       (addrinfo/false		hints))
-    (with-bytevectors/or-false ((node.bv	node)
-				(service.bv	service))
-      (let ((rv (capi.posix-getaddrinfo (type-descriptor struct-addrinfo)
-					node.bv service.bv hints)))
-	(if (fixnum? rv)
-	    (raise
-	     (condition (make-who-condition who)
-			(make-message-condition (gai-strerror rv))
-			(make-irritants-condition (list node service hints))))
-	  rv)))))
+(case-define getaddrinfo
+  ((node service)
+   (getaddrinfo node service #f))
+  ((node service hints)
+   (define who 'getaddrinfo)
+   (with-arguments-validation (who)
+       ((string/bytevector/false	node)
+	(string/bytevector/false	service)
+	(addrinfo/false			hints))
+     (with-bytevectors/or-false
+	 ((node.bv	node)
+	  (service.bv	service))
+       (let ((rv (capi.posix-getaddrinfo (type-descriptor struct-addrinfo)
+					 node.bv service.bv hints)))
+	 (if (fixnum? rv)
+	     (raise
+	      (condition (make-who-condition who)
+			 (make-message-condition (gai-strerror rv))
+			 (make-irritants-condition (list node service hints))))
+	   rv))))))
 
 (define (gai-strerror code)
   (define who 'gai-strerror)

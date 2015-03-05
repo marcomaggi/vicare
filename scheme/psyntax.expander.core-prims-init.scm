@@ -2168,10 +2168,10 @@
   ;; library-source-file-name
   ;; library-option*
 
-  ;; library-path
+  ;; library-source-search-path
   ;; library-extensions
   ;; fasl-directory
-  ;; fasl-search-path
+  ;; library-binary-search-path
   ;; fasl-path
   ;; fasl-stem+extension
 

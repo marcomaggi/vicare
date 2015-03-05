@@ -1,4 +1,4 @@
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby granted, free of charge, to any person obtaining
@@ -92,17 +92,19 @@
     ((define-syntax-rule)		define-syntax-rule-macro)
     ((define-auxiliary-syntaxes)	define-auxiliary-syntaxes-macro)
     ((define-syntax*)			define-syntax*-macro)
-    ((unwind-protect)			unwind-protect-macro)
     ((with-implicits)			with-implicits-macro)
     ((set-cons!)			set-cons!-macro)
+
+    ((with-unwind-protection)		with-unwind-protection-macro)
+    ((unwind-protect)			unwind-protect-macro)
+    ((with-blocked-exceptions)		with-blocked-exceptions-macro)
+    ((with-current-dynamic-environment)	with-current-dynamic-environment-macro)
 
     ;; non-Scheme style syntaxes
     ((while)				while-macro)
     ((until)				until-macro)
     ((for)				for-macro)
-    ((define-returnable)		define-returnable-macro)
-    ((lambda-returnable)		lambda-returnable-macro)
-    ((begin-returnable)			begin-returnable-macro)
+    ((returnable)			returnable-macro)
     ((try)				try-macro)
 
     ((parameterize)			parameterize-macro)
@@ -111,8 +113,13 @@
     ;; compensations
     ((with-compensations)		with-compensations-macro)
     ((with-compensations/on-error)	with-compensations/on-error-macro)
+    ((with-compensation-handler)	with-compensation-handler-macro)
     ((compensate)			compensate-macro)
     ((push-compensation)		push-compensation-macro)
+
+    ;; coroutines
+    ((concurrently)			concurrently-macro)
+    ((monitor)				monitor-macro)
 
     ((pre-incr)				pre-incr-macro)
     ((pre-decr)				pre-decr-macro)
@@ -1784,29 +1791,79 @@
     ))
 
 
-;;;; module non-core-macro-transformer: UNWIND-PROTECT
+;;;; module non-core-macro-transformer: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
+
+(define (with-unwind-protection-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  WITH-UNWIND-PROTECTION macros from
+  ;;the top-level  built in environment.  Expand  the contents of EXPR-STX;  return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?unwind-handler ?thunk)
+     (let ((terminated?  (gensym))
+	   (normal-exit? (gensym))
+	   (why          (gensym))
+	   (escape       (gensym)))
+       (bless
+	`(let (	;;True if the dynamic extent of the call to THUNK is terminated.
+	       (,terminated?   #f)
+	       ;;True  if the  dynamic extent  of the  call to  ?THUNK was  exited by
+	       ;;performing a normal return.
+	       (,normal-exit?  #f))
+	   (dynamic-wind
+	       (lambda ()
+		 (when ,terminated?
+		   (non-reinstatable-violation 'with-unwind-protection
+		     "attempt to reenter thunk with terminated dynamic extent")))
+	       (lambda ()
+		 (begin0
+		     (,?thunk)
+		   (set! ,normal-exit? #t)))
+	       (lambda ()
+		 (unless ,terminated? ;be safe
+		   (cond ((if ,normal-exit?
+			      'return
+			    ;;This parameter is set to:
+			    ;;
+			    ;;* The boolean #f if no unwind handler must be run.
+			    ;;
+			    ;;* The symbol "exception" if  the unwind handler must be
+			    ;;run because an exception has been raised and catched by
+			    ;;GUARD.
+			    ;;
+			    ;;* The symbol "escape" if the unwind handler must be run
+			    ;;because an unwinding escape procedure has been called.
+			    ;;
+			    (run-unwind-protection-cleanup-upon-exit?))
+			  => (lambda (,why)
+			       (set! ,terminated? #t)
+			       ;;We want to discard any exception raised by the cleanup thunk.
+			       (call/cc
+				   (lambda (,escape)
+				     (with-exception-handler
+					 ,escape
+				       (lambda ()
+					 (,?unwind-handler ,why)))))))))))))))
+    ))
 
 (define (unwind-protect-macro expr-stx)
-  ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;Transformer  function used  to  expand Vicare's  UNWIND-PROTECT  macros from  the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
   ;;
-  ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where we  do not
-  ;;make the body return continuations to  the caller and then come back
-  ;;again and again, calling CLEANUP multiple times.
+  ;;Not a  general UNWIND-PROTECT  mechanism for  Scheme, but fine  when we  do *not*
+  ;;create  continuations that  reenter the  ?BODY  again after  having executed  the
+  ;;?CLEANUP forms once.
+  ;;
+  ;;NOTE This implementation works fine with coroutines.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body ?cleanup0 ?cleanup* ...)
-     (bless
-      `(let ((cleanup (lambda () ,?cleanup0 ,@?cleanup*)))
-	 (with-exception-handler
-	     (lambda (E)
-	       (cleanup)
-	       (raise E))
-	   (lambda ()
-	     (begin0
-	       ,?body
-	       (cleanup)))))))
+     (let ((why (gensym)))
+       (bless
+	`(with-unwind-protection
+	     (lambda (,why) ,?cleanup0 . ,?cleanup*)
+	   (lambda () ,?body)))))
     ))
 
 
@@ -1900,10 +1957,17 @@
     ;;
     (syntax-match expr-stx ()
       ((_ ?body0 ?body* ...)
-       (bless
-	`(let ,(%make-store-binding)
-	   (parametrise ((compensations store))
-	     ,(%make-with-exception-handler ?body0 ?body*)))))
+       (let ((store (gensym))
+	     (why   (gensym)))
+	 (bless
+	  `(let ,(%make-store-binding store)
+	     (parametrise ((compensations ,store))
+	       (with-unwind-protection
+		   (lambda (,why)
+		     (when (eq? ,why 'exception)
+		       (run-compensations-store ,store)))
+		 (lambda ()
+		   ,?body0 . ,?body*)))))))
       ))
 
   (define (with-compensations-macro expr-stx)
@@ -1914,39 +1978,29 @@
     ;;
     (syntax-match expr-stx ()
       ((_ ?body0 ?body* ...)
-       (bless
-	`(let ,(%make-store-binding)
-	   (parametrise ((compensations store))
-	     (begin0
-	       ,(%make-with-exception-handler ?body0 ?body*)
-	       ;;Better  run  the  cleanup   compensations  out  of  the
-	       ;;WITH-EXCEPTION-HANDLER.
-	       (run-compensations-store store))))))
+       (let ((store (gensym))
+	     (why   (gensym)))
+	 (bless
+	  `(let ,(%make-store-binding store)
+	     (parametrise ((compensations ,store))
+	       (with-unwind-protection
+		   (lambda (,why)
+		     (run-compensations-store ,store))
+		 (lambda ()
+		   ,?body0 . ,?body*)))))))
       ))
 
-  (define (%make-store-binding)
-    '((store (let ((stack '()))
-	       (case-lambda
-		(()
-		 stack)
-		((false/thunk)
-		 (if false/thunk
-		     (set! stack (cons false/thunk stack))
-		   (set! stack '()))))))))
-
-  (define (%make-with-exception-handler body0 body*)
-    ;;We really have to close the handler upon the STORE function, it is
-    ;;wrong to access the COMPENSATIONS parameter from the handler.  The
-    ;;dynamic environment  is synchronised with continuations:  when the
-    ;;handler is called by  RAISE or RAISE-CONTINUABLE, the continuation
-    ;;is the one of the RAISE or RAISE-CONTINUABLE forms.
-    ;;
-    `(with-exception-handler
-	 (lambda (E)
-	   (run-compensations-store store)
-	   (raise E))
-       (lambda ()
-	 ,body0 ,@body*)))
+  (define (%make-store-binding store)
+    (let ((stack        (gensym))
+	  (false/thunk  (gensym)))
+      `((,store (let ((,stack '()))
+		  (case-lambda
+		   (()
+		    ,stack)
+		   ((,false/thunk)
+		    (if ,false/thunk
+			(set! ,stack (cons ,false/thunk ,stack))
+		      (set! ,stack '())))))))))
 
   #| end of module |# )
 
@@ -1959,6 +2013,19 @@
     ((_ ?release0 ?release* ...)
      (bless
       `(push-compensation-thunk (lambda () ,?release0 ,@?release*))))
+    ))
+
+(define (with-compensation-handler-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATION-HANDLER  macros
+  ;;from the top-level built in environment.  Expand the contents of EXPR-STX; return
+  ;;a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?release-thunk ?alloc-thunk)
+     (bless
+      `(begin
+	 (push-compensation-thunk ,?release-thunk)
+	 (,?alloc-thunk))))
     ))
 
 (define (compensate-macro expr-stx)
@@ -1993,6 +2060,45 @@
 	     )))
        (bless
 	`(begin0 (begin ,?alloc0 . ,alloc*) ,free))))
+    ))
+
+
+;;;; module non-core-macro-transformer: CONCURRENTLY, MONITOR
+
+(define (concurrently-macro expr-stx)
+  ;;Transformer  function  used  to  expand Vicare's  CONCURRENTLY  macros  from  the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?thunk0 ?thunk* ...)
+     (let ((counter (gensym "counter")))
+       (bless
+	`(let ((,counter 0))
+	   (begin
+	     (set! ,counter (add1 ,counter))
+	     (coroutine (lambda () (,?thunk0) (set! ,counter (sub1 ,counter)))))
+	   ,@(map (lambda (thunk)
+		    `(begin
+		       (set! ,counter (add1 ,counter))
+		       (coroutine (lambda () (,thunk)  (set! ,counter (sub1 ,counter))))))
+	       ?thunk*)
+	   (finish-coroutines (lambda ()
+				(zero? ,counter)))))))
+    ))
+
+(define (monitor-macro expr-stx)
+  ;;Transformer function  used to expand  Vicare's MONITOR macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  ;;Allow only ?CONCURRENT-COROUTINES-MAXIMUM to concurrently enter the monitor.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?concurrent-coroutines-maximum ?thunk)
+     (let ((KEY (gensym)))
+       (bless
+	`(do-monitor (quote ,KEY) ,?concurrent-coroutines-maximum ,?thunk))))
     ))
 
 
@@ -2505,7 +2611,8 @@
      (identifier? ?who)
      (bless
       `(define ,?who
-	 (case-lambda ,?cl-clause . ,?cl-clause*))))
+	 (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
+	   (case-lambda ,?cl-clause . ,?cl-clause*)))))
     ))
 
 
@@ -2590,7 +2697,9 @@
 	((_ ?who ?expr)
 	 (identifier? ?who)
 	 (bless
-	  `(define ,?who ,?expr)))
+	  `(define ,?who
+	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
+	       ,?expr))))
 
 	((_ ?who)
 	 (identifier? ?who)
@@ -2644,10 +2753,11 @@
 	 (identifier? ?who)
 	 (bless
 	  `(define ,?who
-	     (case-lambda
-	      ,@(map (lambda (?clause)
-		       (%generate-case-define-form ?who ?clause %synner))
-		  (cons ?clause0 ?clause*))))))
+	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
+	       (case-lambda
+		,@(map (lambda (?clause)
+			 (%generate-case-define-form ?who ?clause %synner))
+		    (cons ?clause0 ?clause*)))))))
 	))
 
     (define (%generate-case-define-form ?who ?clause synner)
@@ -3096,117 +3206,479 @@
 
 
 ;;;; module non-core-macro-transformer: GUARD
-
+;;
+;;Vicare's implementation of the GUARD syntax  is really sophisticated because it has
+;;to  deal with  both the  dynamic environment  requirements of  R6RS and  the unwind
+;;protection mechanism defined  by Vicare.  For a through explanation  we should read
+;;the documentation  in Texinfo  format, both  the one of  GUARD and  the one  of the
+;;unwind protection mechanism.
+;;
+;;
+;;About the dynamic environment
+;;-----------------------------
+;;
+;;In a syntax use like:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1)
+;;             (else   ?expr2))
+;;     ?body0 ?body ...)
+;;
+;;if the  ?BODY raises an  exception: one of the  clauses will certainly  be executed
+;;because there is  an ELSE clause.  The ?BODY might  mutate the dynamic environment;
+;;all the ?TEST and ?EXPR expressions must be evaluated in the dynamic environment of
+;;the use of GUARD.
+;;
+;;In a syntax use like:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1))
+;;     ?body0 ?body ...)
+;;
+;;if all  the ?TEST  expressions evaluate  to false: we  must re-raise  the exception
+;;using RAISE-CONTINUABLE; so the syntax is "almost" equivalent to:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1)
+;;             (else   (raise-continuable E)))
+;;     ?body0 ?body ...)
+;;
+;;but:  ?BODY  might  mutate  the  dynamic  environment;  all  the  ?TEST  and  ?EXPR
+;;expressions must be evaluated  in the dynamic environment of the  use of GUARD; the
+;;RAISE-CONTINUABLE in the  ELSE clause must be evaluated the  dynamic environment of
+;;the ?BODY.
+;;
+;;We must remember that, when using:
+;;
+;;   (with-exception-handler ?handler ?thunk)
+;;
+;;the ?HANDLER procedure is evaluated in the dynamic environment of the ?THUNK, minus
+;;the exception  handler itself.  So, in  pseudo-code, a syntax use  with ELSE clause
+;;must be expanded as follows:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1)
+;;             (else   ?expr2))
+;;     ?body0 ?body ...)
+;;   ==> (save-guard-continuation
+;;        (with-exception-handler
+;;            (lambda (E)
+;;              (reinstate-guard-continuation
+;;               (cond (?test0 ?expr0)
+;;                     (?test1 ?expr1)
+;;                     (else   ?expr2))))
+;;          (lambda () ?body0 ?body ...)))
+;;
+;;and, also  in pseudo-code,  a syntax use  without ELSE clause  must be  expanded as
+;;follows:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1))
+;;     ?body0 ?body ...)
+;;   ==> (save-guard-continuation
+;;        (with-exception-handler
+;;            (lambda (E)
+;;              (save-exception-handler-continuation
+;;               (reinstate-guard-continuation
+;;                (cond (?test0 ?expr0)
+;;                      (?test1 ?expr1)
+;;                      (else   (reinstate-exception-handler-continuation
+;;                               (raise-continuable E)))))))
+;;          (lambda () ?body0 ?body ...)))
+;;
+;;notice  how, in  the exception  handler, we  have to  jump out  and in  the dynamic
+;;environment of the exception handler itself.
+;;
+;;
+;;About the unwind-protection mechanism
+;;-------------------------------------
+;;
+;;There is some serious shit going on here to support the unwind-protection mechanism
+;;as  defined by  Vicare; let's  focus  on unwind-proteciton  in the  case of  raised
+;;exception.  When using:
+;;
+;;   (with-unwind-protection ?cleanup ?thunk)
+;;
+;;the ?CLEANUP is  associated to the dynamic  extent of the call to  ?THUNK: when the
+;;dynamic extent is terminated (as defined by Vicare) the ?CLEANUP is called.  If the
+;;value  RUN-UNWIND-PROTECTION-CLEANUP-UPON-EXIT?   is set  to  true  and the  dynamic
+;;extent of a call  to ?THUNK is exited: the dynamic  extent is considered terminated
+;;and ?CLEANUP is called.
+;;
+;;Vicare defines as termination  event of a GUARD's ?body the  execution of a GUARD's
+;;clause that does not re-raise the exception.  For a GUARD use like:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1)
+;;             (else   ?expr2))
+;;     ?body0 ?body ...)
+;;
+;;we can imagine the pseudo-code:
+;;
+;;   (guard (E (?test0 (run-unwind-protection-cleanups) ?expr0)
+;;             (?test1 (run-unwind-protection-cleanups) ?expr1)
+;;             (else   (run-unwind-protection-cleanups) ?expr2))
+;;     ?body0 ?body ...)
+;;
+;;and for a GUARD use like:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1))
+;;     ?body0 ?body ...)
+;;
+;;we can imagine the pseudo-code:
+;;
+;;   (guard (E (?test0 (run-unwind-protection-cleanups) ?expr0)
+;;             (?test1 (run-unwind-protection-cleanups) ?expr1)
+;;             (else   (raise-continuable E)))
+;;     ?body0 ?body ...)
+;;
+;;By doing  things this  way: an  exception raised by  an ?EXPR  does not  impede the
+;;execution of the cleanups.  If a ?TEST raises an exception the cleanups will not be
+;;run, and there is  nothing we can do about it; ?TEST  expressions are usually calls
+;;to predicates  that recognise  the condition  type of E,  so the  risk of  error is
+;;reduced.
+;;
+;;So, in pseudo-code, a syntax use with ELSE clause must be expanded as follows:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1)
+;;             (else   ?expr2))
+;;     ?body0 ?body ...)
+;;   ==> (save-guard-continuation
+;;        (with-exception-handler
+;;            (lambda (E)
+;;              (reinstate-guard-continuation
+;;               (cond (?test0 (run-unwind-protection-cleanups) ?expr0)
+;;                     (?test1 (run-unwind-protection-cleanups) ?expr1)
+;;                     (else   (run-unwind-protection-cleanups) ?expr2))))
+;;          (lambda () ?body0 ?body ...)))
+;;
+;;and, also  in pseudo-code,  a syntax use  without ELSE clause  must be  expanded as
+;;follows:
+;;
+;;   (guard (E (?test0 ?expr0)
+;;             (?test1 ?expr1))
+;;     ?body0 ?body ...)
+;;   ==> (save-guard-continuation
+;;        (with-exception-handler
+;;            (lambda (E)
+;;              (save-exception-handler-continuation
+;;               (reinstate-guard-continuation
+;;                (cond (?test0 (run-unwind-protection-cleanups) ?expr0)
+;;                      (?test1 (run-unwind-protection-cleanups) ?expr1)
+;;                      (else   (reinstate-exception-handler-continuation
+;;                               (raise-continuable E)))))))
+;;          (lambda () ?body0 ?body ...)))
+;;
+;;But how is RUN-UNWIND-PROTECTION-CLEANUPS implemented?  To cause the cleanups to be
+;;called we must set to  true the value RUN-UNWIND-PROTECTION-CLEANUP-UPON-EXIT?, then
+;;cause  an  exit  from  the  dynamic  extent  of  the  ?THUNKs.   The  latter  is  a
+;;sophisticated operation implemented as follows:
+;;
+;;   (define (run-unwind-protection-cleanups)
+;;     (run-unwind-protection-cleanup-upon-exit? #t)
+;;     (save-clause-expression-continuation
+;;      (reinstate-exception-handler-continuation
+;;       (reinstate-clause-expression-continuation))))
+;;
+;;we jump in GUARD's exception handler  dynamic environment then immediately jump out
+;;in the GUARD's clause expression dynamic environment.  Fucking weird...
+;;
+;;
+;;Expansion example: GUARD with no ELSE clause
+;;--------------------------------------------
+;;
+;;A syntax without else clause like looks like this:
+;;
+;;   (guard (E
+;;           (?test0 ?expr0)
+;;           (?test1 ?expr1)))
+;;     ?body0 ?body ...)
+;;
+;;is expanded to:
+;;
+;;   ((call/cc
+;;        (lambda (reinstate-guard-continuation)
+;;          (lambda ()
+;;            (with-exception-handler
+;;                (lambda (raised-obj)
+;;                  (let ((E raised-obj))
+;;                    ((call/cc
+;;                         (lambda (reinstate-exception-handler-continuation)
+;;                           (reinstate-guard-continuation
+;;                            (lambda ()
+;;                              (define (run-unwind-protect-cleanups)
+;;                                (run-unwind-protection-cleanup-upon-exit? 'exception)
+;;                                (call/cc
+;;                                    (lambda (reinstate-clause-expression-continuation)
+;;                                      (reinstate-exception-handler-continuation
+;;                                       (lambda ()
+;;                                         (reinstate-clause-expression-continuation)))))
+;;                                (run-unwind-protection-cleanup-upon-exit? #f))
+;;                              (if ?test0
+;;                                  (begin
+;;                                    (run-unwind-protect-cleanups)
+;;                                    ?expr0)
+;;                                (if ?test1
+;;                                    (begin
+;;                                      (run-unwind-protect-cleanups)
+;;                                      ?expr1)
+;;                                  (reinstate-exception-handler-continuation
+;;                                   (lambda ()
+;;                                     (raise-continuable raised-obj))))))))))))
+;;              (lambda ()
+;;                ?body0 ?body ...))))))
+;;
 (module (guard-macro)
 
   (define (guard-macro x)
-    ;;Transformer function  used to  expand R6RS  GUARD macros  from the
-    ;;top-level built in environment.   Expand the contents of EXPR-STX;
-    ;;return a syntax object that must be further expanded.
-    ;;
-    ;;A syntax without else clause like:
-    ;;
-    ;;   (guard (E
-    ;;           (?test0 ?expr0)
-    ;;           (?test1 ?expr1)))
-    ;;     ?body0 ?body ...)
-    ;;
-    ;;is expanded to:
-    ;;
-    ;;   ((call/cc
-    ;;        (lambda (outerk)
-    ;;          (lambda ()
-    ;;            (with-exception-handler
-    ;; 	              (lambda (raised-obj)
-    ;; 	                (let ((E raised-obj))
-    ;;                    ((call/cc
-    ;; 		               (lambda (raisek)
-    ;; 		                 (outerk (lambda ()
-    ;; 	                                   (if ?test0
-    ;; 	                                       ?expr0
-    ;;                  	             (if ?test1
-    ;; 	                                         ?expr1
-    ;; 	                                       (raisek (lambda ()
-    ;;                                                   (raise-continuable raised-obj))))))))))))
-    ;;              (lambda ()
-    ;; 	              ?body0 ?body ...))))))
+    ;;Transformer function used to expand R6RS  GUARD macros from the top-level built
+    ;;in environment.  Expand  the contents of EXPR-STX; return a  syntax object that
+    ;;must be further expanded.
     ;;
     (syntax-match x ()
       ((_ (?variable ?clause* ...) ?body ?body* ...)
        (identifier? ?variable)
-       (let ((outerk-id     (gensym))
-	     (raised-obj-id (gensym)))
+       (let ((reinstate-guard-continuation-id  (gensym "reinstate-guard-continuation-id"))
+	     (raised-obj-id                    (gensym "raised-obj")))
 	 (bless
 	  `((call/cc
-		(lambda (,outerk-id)
+		(lambda (,reinstate-guard-continuation-id)
 		  (lambda ()
 		    (with-exception-handler
 			(lambda (,raised-obj-id)
+			  ;;If we  raise an exception from  a DYNAMIC-WIND's in-guard
+			  ;;or out-guard while trying to  call the cleanups: we reset
+			  ;;it to avoid leaving it true.
+			  (run-unwind-protection-cleanup-upon-exit? #f)
 			  (let ((,?variable ,raised-obj-id))
-			    ,(gen-clauses raised-obj-id outerk-id ?clause*)))
+			    ,(gen-clauses raised-obj-id reinstate-guard-continuation-id ?clause*)))
 		      (lambda ()
-			,?body . ,?body*))))))
-	  )))
+			,?body . ,?body*)))))))))
       ))
 
-  (define (gen-clauses raised-obj-id outerk-id clause*)
+  (module (gen-clauses)
 
-    (define (%process-single-cond-clause clause kont-code-stx)
+    (define (gen-clauses raised-obj-id reinstate-guard-continuation-id clause*)
+      (define run-unwind-protect-cleanups-id               (gensym "run-unwind-protect-cleanups"))
+      (define reinstate-clause-expression-continuation-id  (gensym "reinstate-clause-expression-continuation"))
+      (receive (code-stx reinstate-exception-handler-continuation-id)
+	  (%process-multi-cond-clauses raised-obj-id clause* run-unwind-protect-cleanups-id)
+	`((call/cc
+	      (lambda (,reinstate-exception-handler-continuation-id)
+		(,reinstate-guard-continuation-id
+		 (lambda ()
+		   (define (,run-unwind-protect-cleanups-id)
+		     ;;If we are  here: a test in the clauses  returned non-false and
+		     ;;the execution  flow is at  the beginning of  the corresponding
+		     ;;clause expression.
+		     ;;
+		     ;;Reinstate the  continuation of  the guard's  exception handler
+		     ;;and then immediately reinstate this continuation.  This causes
+		     ;;the  dynamic  environment  of  the  exception  handler  to  be
+		     ;;reinstated, and the unwind-protection cleanups are called.
+		     ;;
+		     ;;Yes,  we  must   really  set  the  parameter   to  the  symbol
+		     ;;"exception"; this  symbol is used  as argument for  the unwind
+		     ;;handlers.
+		     (run-unwind-protection-cleanup-upon-exit? 'exception)
+		     (call/cc
+			 (lambda (,reinstate-clause-expression-continuation-id)
+			   (,reinstate-exception-handler-continuation-id
+			    (lambda ()
+			      (,reinstate-clause-expression-continuation-id)))))
+		     (run-unwind-protection-cleanup-upon-exit? #f))
+		   ,code-stx)))))))
+
+    (define (%process-multi-cond-clauses raised-obj-id clause* run-unwind-protect-cleanups-id)
+      (syntax-match clause* (else)
+	;;There is  no ELSE clause: insert  code that reinstates the  continuation of
+	;;the exception handler introduced by GUARD and re-raises the exception.
+	(()
+	 (let ((reinstate-exception-handler-continuation-id (gensym "reinstate-exception-handler-continuation")))
+	   (values `(,reinstate-exception-handler-continuation-id
+		     (lambda ()
+		       (raise-continuable ,raised-obj-id)))
+		   reinstate-exception-handler-continuation-id)))
+
+	;;There is  an ELSE  clause: no need  to jump back  to the  exception handler
+	;;introduced by GUARD.
+	(((else ?else-body ?else-body* ...))
+	 (let ((reinstate-exception-handler-continuation-id (gensym "reinstate-exception-handler-continuation")))
+	   (values `(begin
+		      (,run-unwind-protect-cleanups-id)
+		      ,?else-body . ,?else-body*)
+		   reinstate-exception-handler-continuation-id)))
+
+	((?clause . ?clause*)
+	 (receive (code-stx reinstate-exception-handler-continuation-id)
+	     (%process-multi-cond-clauses raised-obj-id ?clause* run-unwind-protect-cleanups-id)
+	   (values (%process-single-cond-clause ?clause code-stx run-unwind-protect-cleanups-id)
+		   reinstate-exception-handler-continuation-id)))
+
+	(others
+	 (stx-error others "invalid guard clause"))))
+
+    (define (%process-single-cond-clause clause kont-code-stx run-unwind-protect-cleanups-id)
       (syntax-match clause (=>)
 	((?test => ?proc)
 	 (let ((t (gensym)))
 	   `(let ((,t ,?test))
 	      (if ,t
-		  (,?proc ,t)
+		  (begin
+		    (,run-unwind-protect-cleanups-id)
+		    (,?proc ,t))
 		,kont-code-stx))))
 
 	((?test)
 	 (let ((t (gensym)))
 	   `(let ((,t ,?test))
-	      (if ,t ,t ,kont-code-stx))))
+	      (if ,t
+		  (begin
+		    (,run-unwind-protect-cleanups-id)
+		    ,t)
+		,kont-code-stx))))
 
 	((?test ?expr ?expr* ...)
 	 `(if ,?test
-	      (begin ,?expr . ,?expr*)
+	      (begin
+		(,run-unwind-protect-cleanups-id)
+		,?expr . ,?expr*)
 	    ,kont-code-stx))
 
 	(_
 	 (stx-error clause "invalid guard clause"))))
 
-    (define (%process-multi-cond-clauses clause*)
-      (syntax-match clause* (else)
-	;;There is no ELSE clause: introduce the raise continuation that
-	;;rethrows the exception.
-	(()
-	 (let ((raisek (gensym)))
-	   (values `(,raisek (lambda ()
-			       (raise-continuable ,raised-obj-id)))
-		   raisek)))
-
-	;;There  is an  ELSE  clause:  no need  to  introduce the  raise
-	;;continuation.
-	(((else ?else-body ?else-body* ...))
-	 (values `(begin ,?else-body . ,?else-body*)
-		 #f))
-
-	((?clause . ?clause*)
-	 (receive (code-stx raisek)
-	     (%process-multi-cond-clauses ?clause*)
-	   (values (%process-single-cond-clause ?clause code-stx)
-		   raisek)))
-
-	(others
-	 (stx-error others "invalid guard clause"))))
-
-    (receive (code-stx raisek)
-	(%process-multi-cond-clauses clause*)
-      (if raisek
-	  `((call/cc
-		(lambda (,raisek)
-		  (,outerk-id (lambda () ,code-stx)))))
-	`(,outerk-id (lambda () ,code-stx)))))
+    #| end of module: GEN-CLAUSES |# )
 
   #| end of module: GUARD-MACRO |# )
+
+;;; --------------------------------------------------------------------
+
+;;NOTE The  one below is  the old  GUARD implementation.  It  worked fine but  had no
+;;integration  with  the  unwind-protection  mechanism.   I am  keeping  it  here  as
+;;reference.  Sue me.  (Marco Maggi; Mon Feb 2, 2015)
+;;
+(commented-out
+ (module (guard-macro)
+
+   (define (guard-macro x)
+     ;;Transformer function used to expand R6RS GUARD macros from the top-level built
+     ;;in environment.  Expand the contents of  EXPR-STX; return a syntax object that
+     ;;must be further expanded.
+     ;;
+     ;;NOTE If we need to reraise the continuation because no GUARD clause handles it
+     ;;(and  there is  no  ELSE clause):  we  must  reraise it  in  the same  dynamic
+     ;;environment  of the  ?BODY  minus  the exception  handler  installed by  GUARD
+     ;;itself.  So,  to reraise the exception,  GUARD must jump back  in reevaluating
+     ;;the in-guards of the DYNAMIC-WINDs.
+     ;;
+     ;;A syntax without else clause like:
+     ;;
+     ;;   (guard (E
+     ;;           (?test0 ?expr0)
+     ;;           (?test1 ?expr1)))
+     ;;     ?body0 ?body ...)
+     ;;
+     ;;is expanded to:
+     ;;
+     ;;   ((call/cc
+     ;;        (lambda (outerk)
+     ;;          (lambda ()
+     ;;            (with-exception-handler
+     ;;                (lambda (raised-obj)
+     ;;                  (let ((E raised-obj))
+     ;;                    ((call/cc
+     ;;                         (lambda (return-to-exception-handler-k)
+     ;;                           (outerk (lambda ()
+     ;;                                     (if ?test0
+     ;;                                         ?expr0
+     ;;                                       (if ?test1
+     ;;                                           ?expr1
+     ;;                                         (return-to-exception-handler-k
+     ;;                                           (lambda ()
+     ;;                                             (raise-continuable raised-obj))))))))))))
+     ;;              (lambda ()
+     ;;                ?body0 ?body ...))))))
+     ;;
+     (syntax-match x ()
+       ((_ (?variable ?clause* ...) ?body ?body* ...)
+	(identifier? ?variable)
+	(let ((outerk-id     (gensym))
+	      (raised-obj-id (gensym)))
+	  (bless
+	   `((call/cc
+		 (lambda (,outerk-id)
+		   (lambda ()
+		     (with-exception-handler
+			 (lambda (,raised-obj-id)
+			   (let ((,?variable ,raised-obj-id))
+			     ,(gen-clauses raised-obj-id outerk-id ?clause*)))
+		       (lambda ()
+			 ,?body . ,?body*))))))
+	   )))
+       ))
+
+   (define (gen-clauses raised-obj-id outerk-id clause*)
+
+     (define (%process-single-cond-clause clause kont-code-stx)
+       (syntax-match clause (=>)
+	 ((?test => ?proc)
+	  (let ((t (gensym)))
+	    `(let ((,t ,?test))
+	       (if ,t
+		   (,?proc ,t)
+		 ,kont-code-stx))))
+
+	 ((?test)
+	  (let ((t (gensym)))
+	    `(let ((,t ,?test))
+	       (if ,t ,t ,kont-code-stx))))
+
+	 ((?test ?expr ?expr* ...)
+	  `(if ,?test
+	       (begin ,?expr . ,?expr*)
+	     ,kont-code-stx))
+
+	 (_
+	  (stx-error clause "invalid guard clause"))))
+
+     (define (%process-multi-cond-clauses clause*)
+       (syntax-match clause* (else)
+	 ;;There is no ELSE clause: introduce the raise continuation that
+	 ;;rethrows the exception.
+	 (()
+	  (let ((return-to-exception-handler-k (gensym)))
+	    (values `(,return-to-exception-handler-k
+		      (lambda ()
+			(raise-continuable ,raised-obj-id)))
+		    return-to-exception-handler-k)))
+
+	 ;;There  is an  ELSE  clause:  no need  to  introduce the  raise
+	 ;;continuation.
+	 (((else ?else-body ?else-body* ...))
+	  (values `(begin ,?else-body . ,?else-body*)
+		  #f))
+
+	 ((?clause . ?clause*)
+	  (receive (code-stx return-to-exception-handler-k)
+	      (%process-multi-cond-clauses ?clause*)
+	    (values (%process-single-cond-clause ?clause code-stx)
+		    return-to-exception-handler-k)))
+
+	 (others
+	  (stx-error others "invalid guard clause"))))
+
+     (receive (code-stx return-to-exception-handler-k)
+	 (%process-multi-cond-clauses clause*)
+       (if return-to-exception-handler-k
+	   `((call/cc
+		 (lambda (,return-to-exception-handler-k)
+		   (,outerk-id (lambda () ,code-stx)))))
+	 `(,outerk-id (lambda () ,code-stx)))))
+
+   #| end of module: GUARD-MACRO |# ))
 
 
 ;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
@@ -3347,12 +3819,36 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DO
+;;;; module non-core-macro-transformer: DO, WHILE, UNTIL, FOR
+
+(define (with-escape-fluids escape next-iteration body*)
+  ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
+  ;;values  when given  zero arguments.   Returning  zero values  can be  meaningful,
+  ;;example:
+  ;;
+  ;;   (receive args
+  ;;       (values)
+  ;;     args)
+  ;;   => ()
+  ;;
+  ;;so we  do not want  force "(break)"  to return a  single value like  #<void> just
+  ;;because it  is faster to  return one value rather  than return 0  values.  (Marco
+  ;;Maggi; Sat Jan 31, 2015)
+  ;;
+  `(fluid-let-syntax
+       ((break    (syntax-rules ()
+		    ((_ . ?args)
+		     (,escape . ?args))
+		    ))
+	(continue (syntax-rules ()
+		    ((_)
+		     (,next-iteration #t)))))
+     . ,body*))
 
 (define (do-macro expr-stx)
-  ;;Transformer  function  used  to  expand  R6RS  DO  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
+  ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (define (%normalise-binding binding-stx)
     (syntax-match binding-stx ()
@@ -3364,145 +3860,170 @@
        `(,?var ,?init ,?step))
       (_
        (stx-error expr-stx "invalid binding"))))
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (while until)
+
+    ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ;;
+    ;;NOTE Using CONTINUE in the body causes a jump to the test.
+    ((_ ?body (while ?test))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (unwinding-call/cc
+		     (lambda (,next-iteration)
+		       ,(with-escape-fluids escape next-iteration (list ?body))))
+		 (when ,?test
+		   (loop))))))))
+
+    ;;This is an extended Vicare syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+    ;;
+    ;;NOTE Using CONTINUE in the body causes a jump to the test.
+    ((_ ?body (until ?test))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (unwinding-call/cc
+		     (lambda (,next-iteration)
+		       ,(with-escape-fluids escape next-iteration (list ?body))))
+		 (until ,?test
+		   (loop))))))))
+
+    ;;This is the R6RS syntax.
+    ;;
+    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
-	(receive (id* tag*)
-	    (parse-list-of-tagged-bindings ?var* expr-stx)
+	(let ((escape         (gensym "escape"))
+	      (next-iteration (gensym "next-iteration")))
 	  (bless
-	   `(letrec ((loop (lambda ,?var*
-			     (if ,?test
-				 ;;If ?EXPR* is  null: make sure there
-				 ;;is  at  least   one  expression  in
-				 ;;BEGIN.
-				 (begin (if #f #f) . ,?expr*)
-			       (begin
-				 ,@?command*
-				 (loop . ,?step*))))))
-	      (loop . ,?init*)))))
+	   `(unwinding-call/cc
+		(lambda (,escape)
+		  (letrec ((loop (lambda ,?var*
+				   (if (unwinding-call/cc
+					   (lambda (,next-iteration)
+					     (if ,?test
+						 #f
+					       ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+				       (loop . ,?step*)
+				     ,(if (null? ?expr*)
+					  '(void)
+					`(begin . ,?expr*))))))
+		    (loop . ,?init*)))))))
        ))
     ))
 
-
-;;;; module non-core-macro-transformer: WHILE, UNTIL, FOR
+;;; --------------------------------------------------------------------
 
 (define (while-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's WHILE  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer  function used  to expand  Vicare's WHILE  macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin ,@?body* (loop))
-		   (escape))))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (when (unwinding-call/cc
+			   (lambda (,next-iteration)
+			     (if ,?test
+				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
+			       #f)))
+		   (loop))))))))
     ))
 
 (define (until-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's UNTIL  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer  function used  to expand  Vicare's UNTIL  macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (escape)
-		   (begin ,@?body* (loop)))))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let loop ()
+		 (when (unwinding-call/cc
+			   (lambda (,next-iteration)
+			     (if ,?test
+				 #f
+			       ,(with-escape-fluids escape next-iteration `(,@?body* #t)))))
+		   (loop))))))))
     ))
 
 (define (for-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's  FOR macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand Vicare's  FOR macros from the top-level built
+  ;;in environment.   Expand the contents  of EXPR-STX;  return a syntax  object that
+  ;;must be further expanded.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+  ;;
+  ;;NOTE The CONTINUE must skip the rest of the body and jump to the increment.
   ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     ,?init
-	     (let loop ()
-	       (fluid-let-syntax ((break    (syntax-rules ()
-					      ((_ . ?args)
-					       (escape . ?args))))
-				  (continue (lambda (stx) #'(loop))))
-		 (if ,?test
-		     (begin
-		       ,@?body* ,?incr
-		       (loop))
-		   (escape))))))))
+     (let ((escape         (gensym "escape"))
+	   (next-iteration (gensym "next-iteration")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       ,?init
+	       (let loop ()
+		 (when (unwinding-call/cc
+			   (lambda (,next-iteration)
+			     (if ,?test
+				 ,(with-escape-fluids escape next-iteration `(,@?body* #t))
+			       #f)))
+		   ,?incr
+		   (loop))))))))
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-RETURNABLE, LAMBDA-RETURNABLE
+;;;; module non-core-macro-transformer: RETURNABLE
 
-(define (define-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?name . ?formals) ?body0 ?body* ...)
-     (bless
-      `(define (,?name . ,?formals)
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (lambda-returnable-macro expr-stx)
-  ;;Transformer  function  used  to  expand  Vicare's  LAMBDA-RETURNABLE
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?body0 ?body* ...)
-     (bless
-      `(lambda ,?formals
-	 (call/cc
-	     (lambda (escape)
-	       (fluid-let-syntax ((return (syntax-rules ()
-					    ((_ . ?args)
-					     (escape . ?args)))))
-		 ,?body0 . ,?body*))))))
-    ))
-
-(define (begin-returnable-macro expr-stx)
-  ;;Transformer function used to expand Vicare's BEGIN-RETURNABLE macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+(define (returnable-macro expr-stx)
+  ;;Transformer function used to expand Vicare's RETURNABLE macros from the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
-     (bless
-      `(call/cc
-	   (lambda (escape)
-	     (fluid-let-syntax ((return (syntax-rules ()
-					  ((_ . ?args)
-					   (escape . ?args)))))
-	       ,?body0 . ,?body*)))))
+     (let ((escape (gensym "escape")))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (fluid-let-syntax ((return (syntax-rules ()
+					    ((_ . ?args)
+					     (,escape . ?args)))))
+		 ,?body0 . ,?body*))))))
     ))
 
 
@@ -3522,11 +4043,15 @@
       ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...) (finally ?finally-body0 ?finally-body* ...))
        (begin
 	 (validate-variable expr-stx ?var)
-	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
+	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*)))
+	       (why           (gensym)))
 	   (bless
-	    `(with-compensations
-	       (push-compensation ,?finally-body0 . ,?finally-body*)
-	       (guard (,?var . ,GUARD-CLAUSE*) ,?body))))))
+	    `(with-unwind-protection
+		 (lambda (,why)
+		   ,?finally-body0 . ,?finally-body*)
+	       (lambda ()
+		 (guard (,?var . ,GUARD-CLAUSE*)
+		   ,?body)))))))
 
       ;;Only catch, no finally.
       ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...))
@@ -3534,7 +4059,17 @@
 	 (validate-variable expr-stx ?var)
 	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
 	   (bless
-	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))))
+	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))
+
+      ((_ ?body (finally ?finally-body0 ?finally-body* ...))
+       (let ((why (gensym)))
+	 (bless
+	  `(with-unwind-protection
+	       (lambda (,why)
+		 ,?finally-body0 . ,?finally-body*)
+	     (lambda ()
+	       ,?body)))))
+      ))
 
   (define (parse-multiple-catch-clauses expr-stx var-id clauses-stx)
     (syntax-match clauses-stx (else)
@@ -3542,18 +4077,30 @@
       ;;reraise the exception when there is no ELSE clause.
       (()
        '())
+
       ;;This branch  with the ELSE  clause must come first!!!   The ELSE
       ;;clause is valid only if it is the last.
       (((else ?else-body0 ?else-body ...))
        clauses-stx)
-      ((((?tag0 ?tag* ...) ?tag-body0 ?tag-body* ...) . ?other-clauses)
-       (all-identifiers? (cons ?tag0 ?tag*))
-       (cons `((or (is-a? ,var-id ,?tag0)
-		   . ,(map (lambda (tag-id)
-			     `(is-a? ,var-id ,tag-id))
-			?tag*))
-	       ,?tag-body0 . ,?tag-body*)
+
+      (((?pred ?tag-body0 ?tag-body* ...) . ?other-clauses)
+       (cons (cons* (syntax-match ?pred ()
+		      ((?tag)
+		       (identifier? ?tag)
+		       `(condition-is-a? ,var-id ,?tag))
+		      (_
+		       (parse-logic-predicate-syntax ?pred
+						     (lambda (tag-id)
+						       (syntax-match tag-id ()
+							 (?tag
+							  (identifier? ?tag)
+							  `(condition-is-a? ,var-id ,?tag))
+							 (else
+							  (syntax-violation __who__
+							    "expected identifier as condition type" tag-id)))))))
+		    ?tag-body0 ?tag-body*)
 	     (parse-multiple-catch-clauses expr-stx var-id ?other-clauses)))
+
       ((?clause . ?other-clauses)
        (syntax-violation __who__
 	 "invalid catch clause in try syntax" expr-stx ?clause))))
@@ -3564,6 +4111,61 @@
 	"expected identifier as variable" expr-stx var-id)))
 
   #| end of module |# )
+
+
+;;;; module non-core-macro-transformer: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
+
+(define (with-blocked-exceptions-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's WITH-BLOCKED-EXCEPTIONS macros from
+  ;;the top-level  built in environment.  Expand  the contents of EXPR-STX;  return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?exception-retvals-maker ?thunk)
+     (bless
+      `(call/cc
+	   (lambda (reinstate-with-blocked-exceptions-continuation)
+	     (with-exception-handler
+		 (lambda (E)
+		   (call-with-values
+		       (lambda ()
+			 (,?exception-retvals-maker E))
+		     reinstate-with-blocked-exceptions-continuation))
+	       ,?thunk)))))
+    ((_ ?thunk)
+     (bless
+      `(call/cc
+	   (lambda (reinstate-with-blocked-exceptions-continuation)
+	     (with-exception-handler
+		 reinstate-with-blocked-exceptions-continuation
+	       ,?thunk)))))
+    ))
+
+(define (with-current-dynamic-environment-macro expr-stx)
+  ;;Transformer  function used  to  expand Vicare's  WITH-CURRENT-DYNAMIC-ENVIRONMENT
+  ;;macros from the top-level built in environment.  Expand the contents of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?exception-retvals-maker ?thunk)
+     (bless
+      `(call/cc
+	   (lambda (return-thunk-with-packed-environment)
+	     ((call/cc
+		  (lambda (reinstate-target-environment-continuation)
+		    (return-thunk-with-packed-environment
+		     (lambda ()
+		       (call/cc
+			   (lambda (reinstate-thunk-call-continuation)
+			     (reinstate-target-environment-continuation
+			      (lambda ()
+				(call-with-values
+				    (lambda ()
+				      (with-blocked-exceptions
+					  ,?exception-retvals-maker
+					,?thunk))
+				  reinstate-thunk-call-continuation))))))))))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: OR, AND
@@ -4317,10 +4919,7 @@
     (unless (string? filename.str)
       (stx-error filename-stx "expected string as include file pathname"))
     (receive (pathname contents)
-	;;FIXME Why in  fuck I cannot use the  parameter here?!?  (Marco
-	;;Maggi; Tue Feb 11, 2014)
-	(default-include-loader #;(current-include-loader)
-	  filename.str verbose? synner)
+	((current-include-loader) filename.str verbose? synner)
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (internal-body

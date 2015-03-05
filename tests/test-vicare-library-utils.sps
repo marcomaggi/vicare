@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -961,6 +961,96 @@
     => #f)
 
   #f)
+
+
+(parametrise ((check-test-name	'library-pathname-stems))
+
+  (check
+      (library-name->filename-stem '(alpha beta gamma (1 2 3)))
+    => "/alpha/beta/gamma")
+
+  (check
+      (library-name->filename-stem '(alpha beta main (1 2 3)))
+    => "/alpha/beta/main_")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (library-reference->filename-stem '(alpha beta gamma ((>= 3))))
+    => "/alpha/beta/gamma")
+
+  (check
+      (library-reference->filename-stem '(alpha beta main ((>= 3))))
+    => "/alpha/beta/main_")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (directory+library-stem->library-source-pathname "a/b/c" "/d/e")
+    => "a/b/c/d/e.sls")
+
+  (check
+      (directory+library-stem->library-binary-pathname "a/b/c" "/d/e")
+    => "a/b/c/d/e.fasl")
+
+;;; --------------------------------------------------------------------
+
+  (check (library-source-pathname->library-stem-pathname "a/b/c.sls")		=> "a/b/c")
+  (check (library-source-pathname->library-stem-pathname "a/b/c.vicare.sls")	=> "a/b/c")
+  (check (library-source-pathname->library-stem-pathname "a/b/c.scm")		=> "a/b/c")
+  (check (library-source-pathname->library-stem-pathname "a/b/c.ss")		=> "a/b/c")
+  (check (library-source-pathname->library-stem-pathname "a/b/c.ciao")		=> "a/b/c.ciao")
+
+
+;;; --------------------------------------------------------------------
+
+  (check (library-source-pathname->library-binary-tail-pathname "a/b/c.sls")		=> "a/b/c.fasl")
+  (check (library-source-pathname->library-binary-tail-pathname "a/b/c.vicare.sls")	=> "a/b/c.fasl")
+  (check (library-source-pathname->library-binary-tail-pathname "a/b/c.scm")		=> "a/b/c.fasl")
+  (check (library-source-pathname->library-binary-tail-pathname "a/b/c.ss")		=> "a/b/c.fasl")
+  (check (library-source-pathname->library-binary-tail-pathname "a/b/c.ciao")		=> "a/b/c.ciao.fasl")
+
+  #t)
+
+
+(parametrise ((check-test-name	'special-directories))
+
+  (check
+      (parametrise ((compiled-libraries-build-directory	"/a/b"))
+	(library-name->library-binary-pathname-in-build-directory '(c d (1 2 3))))
+    => "/a/b/c/d.fasl")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (parametrise ((compiled-libraries-build-directory	"/a/b"))
+	(library-reference->library-binary-pathname-in-build-directory '(c d ((>= 2)))))
+    => "/a/b/c/d.fasl")
+
+;;; --------------------------------------------------------------------
+
+  #t)
+
+
+(parametrise ((check-test-name	'program-pathnames))
+
+  (check
+      (program-source-pathname->program-binary-pathname "demo.sps")
+    => "demo")
+
+  (check
+      (program-source-pathname->program-binary-pathname "tests/demo.sps")
+    => "tests/demo")
+
+  (check
+      (program-source-pathname->program-binary-pathname "demo.ciao")
+    => "demo.ciao.fasl")
+
+  (check
+      (program-source-pathname->program-binary-pathname "tests/demo.ciao")
+    => "tests/demo.ciao.fasl")
+
+  #t)
 
 
 ;;;; done

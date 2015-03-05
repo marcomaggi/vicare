@@ -1,16 +1,14 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: augmented Scheme language around (rnrs)
-;;;Date: Wed May 23, 2012
+;;;Contents: augmented Scheme language around (nausicaa)
+;;;Date: Thu Nov 28, 2013
 ;;;
 ;;;Abstract
 ;;;
-;;;	This  is a  compound  library re-exporting  bindings from  other
-;;;	libraries.   It   defines  the  (nausicaa   oopp)  language:  an
-;;;	augmented (rnrs) language.
 ;;;
-;;;Copyright (c) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;
+;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +26,8 @@
 
 
 #!vicare
-(library (nausicaa (0 4))
+(library (nausicaa mehve (0 4))
+  (options visit-upon-loading)
   (export
 
 ;;;; (rnrs base (6))
@@ -743,7 +742,7 @@
     atanh
     base64->bytevector
     begin0
-    begin-returnable
+    returnable
     bignum?
     bignum->bytevector
     break
@@ -847,7 +846,6 @@
     define-inline
     define-inline-constant
     define-integrable
-    define-returnable
     define-struct
     define-syntax-rule
     define-syntax*
@@ -984,7 +982,6 @@
     keyword?
     keyword-hash
     keyword->symbol
-    lambda-returnable
     last-pair
     library
     load
@@ -1579,24 +1576,23 @@
 
 ;;;; bindings from (nausicaa language oopp)
 
-    (rename
-     (set!/tags				set!)
-     (define/tags			define)
-     (define-values/tags		define-values)
-     (begin/tags			begin)
-     (lambda/tags			lambda)
-     (let/tags				let)
-     (let*/tags				let*)
-     (letrec/tags			letrec)
-     (letrec*/tags			letrec*)
-     (let-values/tags			let-values)
-     (let*-values/tags			let*-values)
-     (receive/tags			receive)
-     (receive-and-return/tags		receive-and-return)
-     (do/tags				do)
-     (do*/tags				do*)
-     (case-lambda/tags			case-lambda)
-     (case-define/tags			case-define))
+    set!
+    define
+    define-values
+    begin
+    lambda
+    let
+    let*
+    letrec
+    letrec*
+    let-values
+    let*-values
+    receive
+    receive-and-return
+    do
+    do*
+    case-lambda
+    case-define
 
     define-label		define-class		define-mixin
     make-from-fields		is-a?
@@ -1605,7 +1601,6 @@
 
     define/tags			define-values/tags
     lambda/tags			case-lambda/tags
-    case-define/tags
     with-tags
     let/tags			let*/tags
     letrec/tags			letrec*/tags
@@ -1771,64 +1766,41 @@
 )
 
 
-  (import (for (except (vicare (0 4))
-		       define-condition-type
-		       try finally catch
-		       is-a? slot-ref slot-set!
+  (import (for (except (nausicaa (0 4))
+		       ;; redefined by numeric predicates
+		       = < > <= >=
+		       zero? positive? negative? non-negative? non-positive?
+		       odd? even?
+		       finite? infinite? nan?
 
-		       ;; redefined from (rnrs conditions (6))
-		       &condition
-		       &warning
-		       &serious
-		       &error
-		       &violation
-		       &assertion
-		       &irritants
-		       &who
-		       &message
-		       &non-continuable
-		       &implementation-restriction
-		       &lexical
-		       &syntax
-		       &undefined
-		       &procedure-argument-violation
-		       &expression-return-value-violation
+		       ;; redefined by arithmetics
+		       + - * / abs
+		       div div0 mod mod0
+		       div-and-mod div0-and-mod0
 
-		       ;; redefined from (rnrs arithmetic flonums (6))
-		       &no-infinities
-		       &no-nans
+		       ;; redefined by transcendental
+		       expt sqrt cbrt square cube exp log
+		       sin cos tan asin acos atan
+		       sinh cosh tanh asinh acosh atanh
 
-		       ;; redefined from (rnrs io ports (6))
-		       &i/o
-		       &i/o-read
-		       &i/o-write
-		       &i/o-port
-		       &i/o-encoding
-		       &i/o-decoding
-		       &i/o-invalid-position
-		       &i/o-filename
-		       &i/o-file-protection
-		       &i/o-file-is-read-only
-		       &i/o-file-already-exists
-		       &i/o-file-does-not-exist
+		       ;; redefined by parts
+		       numerator denominator rationalize sign
+		       floor ceiling truncate round
+		       real-part imag-part magnitude angle
+		       make-rectangular make-polar complex-conjugate
 
-		       ;; redefined from (vicare)
-		       &errno
-		       &h_errno
-		       &i/o-eagain
-		       &out-of-memory-error)
+		       ;; redefined by input/output
+		       display write)
 	    expand run)
-    (for (except (nausicaa language oopp (0 4))
-		 &tagged-binding-violation
-		 make-tagged-binding-violation
-		 tagged-binding-violation?)
-      expand run)
-    (for (nausicaa language multimethods (0 4))		expand run)
-    (for (nausicaa language builtins (0 4))		expand run)
-    (for (nausicaa language conditions (0 4))		expand run)
-    (for (nausicaa language simple-match (0 4))		expand run)
-    (for (vicare language-extensions namespaces)	expand run)
-    (for (vicare language-extensions sentinels)		expand run)
-    ))
+    (for (nausicaa mehve language numerics predicates (0 4))		expand run)
+    (for (nausicaa mehve language numerics arithmetics (0 4))		expand run)
+    (for (nausicaa mehve language numerics parts (0 4))			expand run)
+    (for (nausicaa mehve language numerics transcendental (0 4))	expand run)
+    (for (nausicaa mehve language input-output (0 4))			expand run))
+
+
+;;;; done
+
+)
 
 ;;; end of file

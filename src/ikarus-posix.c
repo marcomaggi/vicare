@@ -9,7 +9,7 @@
 	functions in this module,  see the official Vicare documentation
 	in Texinfo format.
 
-  Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -367,11 +367,17 @@ ikptr
 ikrt_posix_waitpid (ikptr s_pid, ikptr s_options, ikpcb * pcb)
 {
 #ifdef HAVE_WAITPID
-  int	status;
+  int	status  = 0;
+  int	options = IK_UNFIX(s_options);
   pid_t rv;
   errno	 = 0;
-  rv	 = waitpid(IK_NUM_TO_PID(s_pid), &status, IK_UNFIX(s_options));
-  return (0 <= rv)? ika_integer_from_int(pcb, status) : ik_errno_to_code();
+  rv	 = waitpid(IK_NUM_TO_PID(s_pid), &status, options);
+  if ((0 == rv) && (WNOHANG == (WNOHANG & options))) {
+    /* No child process exited. */
+    return IK_FALSE;
+  } else {
+    return (0 <= rv)? ika_integer_from_int(pcb, status) : ik_errno_to_code();
+  }
 #else
   feature_failure(__func__);
 #endif

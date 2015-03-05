@@ -674,25 +674,26 @@
   ;;at the very beginning of a file.
   ;;
   (parameterize ((shared-library-loading-enabled? #t))
-    (let* ((port	(open-file-input-port filename))
-	   (sharp-bang?	(let-values (((octet1 octet2)
-				      ;;If  an error  happens  here PORT
-				      ;;will  be   closed  by  the  port
-				      ;;guardian.
-				      (lookahead-two-u8 port)))
-			  (and (= octet1 CHAR-FIXNUM-SHARP)
-			       (= octet2 CHAR-FIXNUM-BANG))))
-	   (port	(transcoded-port port (native-transcoder))))
-      (define-inline (%next-datum)
-	($get-annotated-datum port))
+    (let ((port (open-file-input-port filename)))
       (unwind-protect
-	  (begin
-	    (when sharp-bang?
-	      (read-and-discard-up-to-and-including-line-ending port))
-	    (let read-next-datum ((obj (%next-datum)))
-	      (if (eof-object? obj)
-		  '()
-		(cons obj (read-next-datum (%next-datum))))))
+	  (let* ((sharp-bang? (receive (octet1 octet2)
+				  ;;If an  error happens here  PORT will be  closed by
+				  ;;the port guardian.
+				  (lookahead-two-u8 port)
+				(and (= octet1 CHAR-FIXNUM-SHARP)
+				     (= octet2 CHAR-FIXNUM-BANG))))
+		 (tport	      (transcoded-port port (native-transcoder))))
+	    (define-syntax-rule (%next-datum)
+	      ($get-annotated-datum tport))
+	    (unwind-protect
+		(begin
+		  (when sharp-bang?
+		    (read-and-discard-up-to-and-including-line-ending tport))
+		  (let read-next-datum ((obj (%next-datum)))
+		    (if (eof-object? obj)
+			'()
+		      (cons obj (read-next-datum (%next-datum))))))
+	      (close-input-port tport)))
 	(close-input-port port)))))
 
 

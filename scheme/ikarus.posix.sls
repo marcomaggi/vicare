@@ -35,9 +35,16 @@
     file-bytevector-pathname?
     file-absolute-pathname?
     file-relative-pathname?
+    file-string-absolute-pathname?
+    file-string-relative-pathname?
+    file-bytevector-absolute-pathname?
+    file-bytevector-relative-pathname?
     file-colon-search-path?
     file-string-colon-search-path?
     file-bytevector-colon-search-path?
+    list-of-pathnames?
+    list-of-string-pathnames?
+    list-of-bytevector-pathnames?
 
     ;; file attributes
     file-modification-time
@@ -81,9 +88,16 @@
 		  file-bytevector-pathname?
 		  file-absolute-pathname?
 		  file-relative-pathname?
+		  file-string-absolute-pathname?
+		  file-string-relative-pathname?
+		  file-bytevector-absolute-pathname?
+		  file-bytevector-relative-pathname?
 		  file-colon-search-path?
 		  file-string-colon-search-path?
 		  file-bytevector-colon-search-path?
+		  list-of-pathnames?
+		  list-of-string-pathnames?
+		  list-of-bytevector-pathnames?
 
 		  ;; file attributes
 		  file-modification-time
@@ -479,7 +493,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (file-absolute-pathname? pathname)
+(define* (file-absolute-pathname? {pathname file-pathname?})
   ;;The argument PATHNAME must be a  string or bytevector.  Return #t if
   ;;PATHNAME starts  with a "/"  character, which  means it is  valid as
   ;;Unix-style absolute pathname; otherwise return #f.
@@ -487,16 +501,19 @@
   ;;This function only acts upon  its argument, never accessing the file
   ;;system.
   ;;
-  (define who 'file-absolute-pathname?)
-  (with-arguments-validation (who)
-      ((file-pathname	pathname))
-    ($file-absolute-pathname? pathname)))
+  ($file-absolute-pathname? pathname))
+
+(define* (file-string-absolute-pathname? {pathname file-string-pathname?})
+  ($file-absolute-pathname? pathname))
+
+(define* (file-bytevector-absolute-pathname? {pathname file-bytevector-pathname?})
+  ($file-absolute-pathname? pathname))
 
 (define ($file-absolute-pathname? pathname)
   (with-pathnames ((pathname.bv pathname))
     ($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname.bv 0))))
 
-(define (file-relative-pathname? pathname)
+(define* (file-relative-pathname? {pathname file-pathname?})
   ;;The argument PATHNAME must be a  string or bytevector.  Return #t if
   ;;PATHNAME does  not start  with a  "/" character,  which means  it is
   ;;valid as Unix-style relative pathname; otherwise return #f.
@@ -504,10 +521,13 @@
   ;;This function only acts upon  its argument, never accessing the file
   ;;system.
   ;;
-  (define who 'file-relative-pathname?)
-  (with-arguments-validation (who)
-      ((file-pathname	pathname))
-    ($file-relative-pathname? pathname)))
+  ($file-relative-pathname? pathname))
+
+(define* (file-string-relative-pathname? {pathname file-string-pathname?})
+  ($file-relative-pathname? pathname))
+
+(define* (file-bytevector-relative-pathname? {pathname file-bytevector-pathname?})
+  ($file-relative-pathname? pathname))
 
 (define ($file-relative-pathname? pathname)
   (with-pathnames ((pathname.bv pathname))
@@ -723,6 +743,20 @@
 	    (loop ($cdr dirs)))))))
 
   #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define (list-of-pathnames? obj)
+  (and (list? obj)
+       (for-all file-pathname? obj)))
+
+(define (list-of-string-pathnames? obj)
+  (and (list? obj)
+       (for-all file-string-pathname? obj)))
+
+(define (list-of-bytevector-pathnames? obj)
+  (and (list? obj)
+       (for-all file-string-pathname? obj)))
 
 ;;; --------------------------------------------------------------------
 

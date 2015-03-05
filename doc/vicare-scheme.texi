@@ -100,10 +100,10 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2010-2014
+@set COPYRIGHT_YEARS            2010-2015
 
 
-@set TARBALLURL                 @url{http://sourceforge.net/projects/vicare-scheme/files/}
+@set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
 @set EXECUTABLE                 @command{vicare}
 @set RAWEXECUTABLE              vicare
@@ -129,7 +129,7 @@ from:
 @noindent
 the home page of the project is at:
 
-@center @url{http://marcomaggi.github.com/vicare.html}
+@center @url{http://marcomaggi.github.io/vicare.html}
 
 @noindent
 development takes place at:
@@ -139,12 +139,7 @@ development takes place at:
 @noindent
 and, as a backup, at:
 
-@center @url{http://gitorious.org/vicare}
-
-@noindent
-and at:
-
-@center @url{http://sourceforge.net/projects/vicare-scheme/}
+@center @url{https://bitbucket.org/marcomaggi/vicare-scheme/}
 
 @noindent
 Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
@@ -247,6 +242,8 @@ Appendices
 * missing::                     Missing Features.
 * building::                    Building infrastructure.
 * credits::                     Credits for this document.
+* dynamic environment::         Notes on the dynamic environment.
+* resources::                   Allocating and releasing resources.
 * unicode::                     On Unicode and @utf{} encodings.
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
@@ -297,6 +294,8 @@ External documents
 @include missing.texi
 @include building.texi
 @include credits.texi
+@include dynamic-environment.texi
+@include resources.texi
 @include unicode.texi
 @include fasl.texi
 @include shmem.texi
