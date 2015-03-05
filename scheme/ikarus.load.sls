@@ -18,11 +18,7 @@
 #!vicare
 (library (ikarus load)
   (export
-    compile-source-program
-    run-compiled-program
-    compile-source-library
     load
-    load-r6rs-script
 
     ;; stuff for (vicare libraries)
     default-library-loader
@@ -41,16 +37,15 @@
     current-include-file-locator
     current-include-file-loader
 
+    ;; internal stuff
+    load-r6rs-script
+    compile-source-program
+    run-compiled-program
+    compile-source-library
     current-library-serialiser
     current-library-store-directory-serialiser)
   (import (except (vicare)
-		  fixnum-width
-		  greatest-fixnum
-		  least-fixnum
-
-		  load					load-r6rs-script
-		  library-source-search-path		library-extensions
-		  library-binary-search-path		get-annotated-datum)
+		  load)
     (prefix (ikarus.posix)
 	    posix.)
     (only (ikarus.compiler)
@@ -62,7 +57,6 @@
 	  expand-r6rs-top-level-make-evaluator
 	  expand-r6rs-top-level-make-compiler)
     (only (ikarus.reader)
-	  get-annotated-datum
 	  read-script-source-file
 	  read-library-source-port)
     (ikarus library-utils)
@@ -71,14 +65,7 @@
 	  fasl-read-object)
     (only (ikarus.fasl.write)
 	  fasl-write-header
-	  fasl-write-object)
-    (prefix (only (ikarus.options)
-		  print-loaded-libraries?
-		  print-debug-messages?
-		  verbose?)
-	    option.))
-
-  (include "ikarus.wordsize.scm" #t)
+	  fasl-write-object))
 
 
 ;;;; helpers and arguments validation
@@ -295,7 +282,8 @@
 (module ()
   (libman.current-library-loader default-library-loader))
 
-;;; --------------------------------------------------------------------
+
+;;;; interning libraries: source library loader
 
 (define* (default-source-library-loader {libref library-reference?} {port textual-input-port?})
   ;;Default value  for the parameter CURRENT-SOURCE-LIBRARY-LOADER.   Given a textual
@@ -351,7 +339,8 @@
     (lambda* ({obj procedure?})
       obj)))
 
-;;; --------------------------------------------------------------------
+
+;;;; interning libraries: binary library loader
 
 (define* (default-binary-library-loader {libref library-reference?} {port binary-input-port?})
   ;;Default value  for the  parameter CURRENT-BINARY-LIBRARY-LOADER.  Given  a binary
@@ -839,7 +828,7 @@
     (%source-search-start libref options (%binary-search-start libref options))))
 
 
-;;;; parameters
+;;;; library locator selection
 
 (define current-library-locator
   ;;Hold a function  used to locate a  library from its R6RS  library reference.  The
