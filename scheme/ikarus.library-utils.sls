@@ -53,6 +53,10 @@
     ;; search paths and special directories
     library-source-search-path
     library-binary-search-path
+    current-library-source-search-path-scanner
+    current-library-binary-search-path-scanner
+    default-library-source-search-path-scanner
+    default-library-binary-search-path-scanner
     compiled-libraries-store-directory
     library-extensions
 
@@ -67,8 +71,16 @@
     library-source-pathname->library-binary-tail-pathname
 
     ;; program pathnames construction
-    program-source-pathname->program-binary-pathname)
+    program-source-pathname->program-binary-pathname
+
+    ;; for internal use
+    print-library-verbose-message
+    print-library-debug-message)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Thu Mar 5, 2015)
+		  with-blocked-exceptions
+
 		  ;; library names and version numbers
 		  library-name?
 		  library-version-numbers?		library-version-number?
@@ -91,7 +103,12 @@
 		  conforming-library-name-and-library-reference?)
     (prefix (ikarus.posix) posix.)
     (vicare unsafe operations)
-    (vicare language-extensions simple-match))
+    (vicare language-extensions simple-match)
+    (prefix (only (ikarus.options)
+		  print-loaded-libraries?
+		  print-debug-messages?
+		  verbose?)
+	    option.))
 
 
 ;;;; helpers
@@ -137,6 +154,43 @@
   ;;  (%string-desuffix "ciao mamma" "ciao ")	=> "mamma"
   ;;
   (substring str 0 (fx- (string-length str) (string-length suffix))))
+
+;;; --------------------------------------------------------------------
+
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Thu  Mar 5,
+;;2015)
+;;
+(define-syntax with-blocked-exceptions
+  (syntax-rules ()
+    ((_ ?thunk)
+     (call/cc
+	 (lambda (reinstate-with-blocked-exceptions-continuation)
+	   (with-exception-handler
+	       reinstate-with-blocked-exceptions-continuation
+	     ?thunk))))
+    ))
+
+
+;;;; printing messages
+
+(define (print-library-verbose-message template . args)
+  (when (option.print-loaded-libraries?)
+    ;;We do not want an exception from the I/O layer to ruin things.
+    (with-blocked-exceptions
+	(lambda ()
+	  (let ((P (current-error-port)))
+	    (apply fprintf P (string-append "vicare: " template "\n") args)
+	    (flush-output-port P))))))
+
+(define (print-library-debug-message template . args)
+  (when (and (option.print-loaded-libraries?)
+	     (option.print-debug-messages?))
+    ;;We do not want an exception from the I/O layer to ruin things.
+    (with-blocked-exceptions
+	(lambda ()
+	  (let ((P (current-error-port)))
+	    (apply fprintf P (string-append "vicare: " template "\n") args)
+	    (flush-output-port P))))))
 
 
 ;;;; library and program file extensions
@@ -651,7 +705,7 @@
 	 (conforming-version-and-version-reference? libnam.version libref.version))))
 
 
-;;;; source libraries search path
+;;;; source libraries search path, locating library files in search paths
 ;;
 ;;The search path in  which to look for source library files.   The parameter must be
 ;;set to  a, possibly empty, list  of non-empty strings representing  valid directory
@@ -665,8 +719,72 @@
     (lambda* ({P posix.list-of-string-pathnames?})
       P)))
 
+(define* (default-library-source-search-path-scanner {libref library-reference?})
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-SOURCE-SEARCH-PATH-SCANNER.
+  ;;Given  a  R6RS library  reference:  scan  "(library-source-search-path)" for  the
+  ;;corresponding source file.
+  ;;
+  ;;Return  2  values.   When  successful:  a string  representing  the  source  file
+  ;;pathname; a thunk to be called to  continue the search from the next directory in
+  ;;the search path.  Otherwise return: false and false.
+  ;;
+  (print-library-debug-message "~a: locating source library file for: ~a" __who__ libref)
+  (let loop ((stem        (library-reference->filename-stem libref))
+	     (directories (library-source-search-path))
+	     (extensions  (library-extensions)))
+    (cond ((null? directories)
+	   ;;No more directories in the search path.
+	   (print-library-debug-message "~a: exhausted search path, no source library file found for: ~a" __who__ libref)
+	   (values #f #f))
+
+	  ((null? extensions)
+	   ;;No more extensions: try the next directory in the search path again with
+	   ;;the full list of extensions.
+	   (loop stem (cdr directories) (library-extensions)))
+
+	  (else
+	   ;;Build the file pathname with the  next directory and the next extension,
+	   ;;then check its existence; if not found try the next file extension.
+	   (let* ((source-pathname (string-append (car directories) stem (car extensions)))
+		  (continue-thunk  (lambda ()
+				     (loop stem directories (cdr extensions)))))
+	     (if (file-exists? source-pathname)
+		 (let ((source-pathname (posix.real-pathname source-pathname)))
+		   (print-library-debug-message "~a: found: ~a" __who__ source-pathname)
+		   (values source-pathname continue-thunk))
+	       (continue-thunk)))))))
+
+(define current-library-source-search-path-scanner
+  ;;Hold a function  used to convert a R6RS library  reference into the corresponding
+  ;;source file pathname and search for it in the library search path.
+  ;;
+  ;;The referenced  function must accept, as  single value, a R6RS  library reference
+  ;;and it must return two values.  When successful: a string representing the source
+  ;;file  pathname; a  thunk  to be  called  to  continue the  search  from the  next
+  ;;directory in the search path.  Otherwise return: false and false.
+  ;;
+  ;;This parameter can be used as follows:
+  ;;
+  ;;   (define scanner
+  ;;     (current-library-binary-search-path-scanner))
+  ;;
+  ;;   (let loop ((next-file-match (lambda ()
+  ;;                                 (scanner libref))))
+  ;;     (receive (pathname further-file-match)
+  ;;         (next-file-match)
+  ;;       (if pathname
+  ;;           (if (valid-library? pathname)
+  ;;               (use-the-library pathname)
+  ;;             (loop further-file-match))
+  ;;         (search-failed))))
+  ;;
+  (make-parameter
+      default-library-source-search-path-scanner
+    (lambda* ({obj procedure?})
+      obj)))
+
 
-;;;; compiled libraries search path
+;;;; compiled libraries search path, locating library files in search paths
 ;;
 ;;The search  path in  which to look  for compiled library  files (FASL  files).  The
 ;;parameter must be set to a,  possibly empty, list of non-empty strings representing
@@ -679,6 +797,67 @@
   (make-parameter '()
     (lambda* ({P posix.list-of-string-pathnames?})
       P)))
+
+(define* (default-library-binary-search-path-scanner {libref library-reference?})
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-BINARY-SEARCH-PATH-SCANNER.
+  ;;Given  a  R6RS library  reference:  scan  "(library-binary-search-path)" for  the
+  ;;corresponding FASL file.
+  ;;
+  ;;Return 2 values.  When successful: a  string representing the fasl file pathname;
+  ;;a thunk to be called to continue the search from the next directory in the search
+  ;;path.  Otherwise return: false and false.
+  ;;
+  (print-library-debug-message "~a: locating binary library file for: ~a" __who__ libref)
+  (let loop ((stem        (library-reference->filename-stem libref))
+	     (directories (library-binary-search-path)))
+    (if (pair? directories)
+	;;Check file existence in the first directory from the list and prepare thunk
+	;;continue the search in the other directories.
+	(let* ((binary-pathname (directory+library-stem->library-binary-pathname (car directories) stem))
+	       (continue-thunk  (lambda ()
+				  (loop stem (cdr directories)))))
+	  (print-library-debug-message "~a: trying: ~a" __who__ binary-pathname)
+	  (if (file-exists? binary-pathname)
+	      (let ((binary-pathname (posix.real-pathname binary-pathname)))
+		(print-library-debug-message "~a: found: ~a" __who__ binary-pathname)
+		(values binary-pathname continue-thunk))
+	    (begin
+	      (print-library-debug-message "~a: unexistent: ~a" __who__ binary-pathname)
+	      (continue-thunk))))
+      ;;No suitable library file was found.
+      (begin
+	(print-library-debug-message "~a: exhausted search path, no binary library file found for: ~a" __who__ libref)
+	(values #f #f)))))
+
+(define current-library-binary-search-path-scanner
+  ;;Hold a function  used to convert a R6RS library  reference into the corresponding
+  ;;compiled library  file pathname  in the  search path  specified by  the parameter
+  ;;LIBRARY-BINARY-SEARCH-PATH.
+  ;;
+  ;;The referenced  function must accept, as  single value, a R6RS  library reference
+  ;;and it must  return two values.  When successful: a  string representing the FASL
+  ;;file  pathname; a  thunk  to be  called  to  continue the  search  from the  next
+  ;;directory in the search path.  Otherwise return: false and false.
+  ;;
+  ;;This parameter can be used as follows:
+  ;;
+  ;;   (define scanner
+  ;;     (current-library-binary-search-path-scanner))
+  ;;
+  ;;   (let loop ((next-file-match (lambda ()
+  ;;                                 (scanner libref))))
+  ;;     (receive (pathname further-file-match)
+  ;;         (next-file-match)
+  ;;       (if pathname
+  ;;           (if (valid-library? pathname)
+  ;;               (use-the-library pathname)
+  ;;             (loop further-file-match))
+  ;;         (search-failed))))
+  ;;
+  (make-parameter
+      default-library-binary-search-path-scanner
+    (lambda* ({obj procedure?})
+      obj)))
 
 
 ;;;; compiled libraries store directory
