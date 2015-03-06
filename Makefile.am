@@ -134,6 +134,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-boxes.texi				\
 	doc/srfi-case-lambda.texi			\
 	doc/srfi-char-sets.texi				\
+	doc/srfi-comparators.texi			\
 	doc/srfi-compare-procedures.texi		\
 	doc/srfi-cond-expand.texi			\
 	doc/srfi-eager-comp.texi			\

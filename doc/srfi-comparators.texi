@@ -1,0 +1,44 @@
+@node srfi comparators
+@section @ansrfi{114} comparators
+
+
+@cindex @ansrfi{114} boxes
+@cindex @library{srfi :114}, library
+@cindex @library{srfi :114 boxes}, library
+@cindex Library @library{srfi :114}
+@cindex Library @library{srfi :114 boxes}
+
+
+The library @library{srfi :114} is by John Cowan as the reference
+implementation for @ansrfi{114}; see:
+
+@center @url{http://srfi.schemers.org/srfi-114/srfi-114.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi comparators abstract::   Abstract.
+* srfi comparators rationale::  Rationale.
+* srfi comparators copyright::  Copyright.
+@end menu
+
+@c page
+@node srfi comparators abstract
+@subsection Abstract
+
+@c page
+@node srfi comparators rationale
+@subsection Rationale
+
+@c page
+@node srfi comparators copyright
+@subsection Copyright
+
+
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:
