@@ -154,6 +154,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-rec.texi				\
 	doc/srfi-receive.texi				\
 	doc/srfi-records.texi				\
+	doc/srfi-sets-and-bags.texi			\
 	doc/srfi-shared-structures.texi			\
 	doc/srfi-specialize-procedures.texi		\
 	doc/srfi-streams.texi				\

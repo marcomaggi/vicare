@@ -1,0 +1,793 @@
+@node srfi sets-and-bags
+@section @ansrfi{113} sets and bags
+
+
+@cindex @ansrfi{113} boxes
+@cindex @library{srfi :113}, library
+@cindex @library{srfi :113 boxes}, library
+@cindex Library @library{srfi :113}
+@cindex Library @library{srfi :113 boxes}
+
+
+The library @library{srfi :113} is by John Cowan as the reference
+implementation for @ansrfi{113}; see:
+
+@center @url{http://srfi.schemers.org/srfi-113/srfi-113.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi sets-and-bags abstract::   Abstract.
+* srfi sets-and-bags rationale::  Rationale.
+* srfi sets-and-bags intro::      Introduction.
+* srfi sets-and-bags set::        Set procedures.
+* srfi sets-and-bags bag::        Bag procedures.
+* srfi sets-and-bags compar::     Comparators.
+* srfi sets-and-bags copyright::  Copyright.
+@end menu
+
+@c page
+@node srfi sets-and-bags abstract
+@subsection Abstract
+
+
+Sets and bags (also known as multisets) are unordered collections that
+can contain any Scheme object.  Sets enforce the constraint that no two
+elements can be the same in the sense of the set's associated equality
+predicate; bags do not.
+
+@c page
+@node srfi sets-and-bags rationale
+@subsection Rationale
+
+
+Sets are a standard part of the libraries of many high--level
+programming languages, including Smalltalk, Java, and C++.  Racket
+provides general sets similar to those of this proposal, though with
+fewer procedures, and there is a Chicken egg called @code{sets}
+(unfortunately undocumented), which provides a minimal set of
+procedures.  @ansrfi{1} also provides a list--based implementation of
+sets.
+
+Bags are useful for counting anything from a fixed set of possibilities,
+e.g. the number of each type of error in a log file or the number of
+uses of each word in a lexicon drawn from a body of documents.  Although
+other data structures can serve the same purpose, using bags clearly
+expresses the programmer's intent and allows for optimization.
+
+Insofar as possible, the names in this @srfi{} are harmonized with the
+names used for ordered collections (lists, strings, vectors, and
+bytevectors) in Scheme.  However, @code{size} is used instead of
+@code{length} to express the number of elements in a collection, because
+@code{length} implies order.
+
+It's possible to use the general sets of this @srfi{} to contain
+characters, but the use of @ansrfi{14} is recommended instead.  The
+names and facilities in this @srfi{} are harmonized with @ansrfi{14},
+except that @ansrfi{14} does not contain analogues of the
+@func{set-search!}, @func{set>?}, @func{set<=?}, @func{set>=?},
+@func{set-remove}, or @func{set-partition} procedures.
+
+Sets and bags do not have a lexical syntax representation.  It's
+possible to use @ansrfi{108} quasi--literal constructors to create them
+in code, but this @srfi{} does not standardize how that is done.
+
+The interface to general sets and bags depends on @ansrfi{114}
+comparators, despite that @srfi{} having a higher number than this one
+for hysterical raisins.  Comparators conveniently package the equality
+predicate of the set with the hash function or comparison procedure
+needed to implement the set efficiently.
+
+@c page
+@node srfi sets-and-bags intro
+@subsection Introduction
+
+
+Sets and bags are mutually disjoint, and disjoint from other types of
+Scheme objects.
+
+It is an error for any procedure defined in this @srfi{} to be invoked
+on sets or bags with distinct comparators (in the sense of @func{eq?}).
+
+It is an error to mutate any object while it is contained in a set or
+bag.
+
+It is an error to add an object to a set or bag which does not satisfy
+the type test predicate of the comparator.
+
+It is an error to add or remove an object for a set or a bag while
+iterating over it.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Linear update
+
+The procedures of this @srfi{}, by default, are ``pure functional'':
+they do not alter their parameters.  However, this @srfi{} also defines
+``linear--update'' procedures, all of whose names end in @code{!}.  They
+have hybrid pure--functional/side--effecting semantics: they are
+allowed, but not required, to side--effect one of their parameters in
+order to construct their result.  An implementation may legally
+implement these procedures as pure, side--effect--free functions, or it
+may implement them using side effects, depending upon the details of
+what is the most efficient or simple to implement in terms of the
+underlying representation.
+
+It is an error to rely upon these procedures working by side effect. For
+example, this is not guaranteed to work:
+
+@lisp
+(let* ((set1 (set 'a 'b 'c))      ; set1 = @{a,b,c@}.
+       (set2 (set-adjoin! set1 'd)))   ; Add d to @{a,b,c@}.
+  set1) ; Could be either @{a,b,c@} or @{a,b,c,d@}.
+@end lisp
+
+However, this is well--defined:
+
+@lisp
+(let ((set1 (set 'a 'b 'c)))
+  (set-adjoin! set1 'd)) ; Add d to @{a,b,c@}.
+@end lisp
+
+So clients of these procedures write in a functional style, but must
+additionally be sure that, when the procedure is called, there are no
+other live pointers to the potentially--modified character set (hence
+the term ``linear update'').
+
+There are two benefits to this convention:
+
+@itemize
+@item
+Implementations are free to provide the most efficient possible
+implementation, either functional or side--effecting.
+
+@item
+Programmers may nonetheless continue to assume that sets are purely
+functional data structures: they may be reliably shared without needing
+to be copied, uniquified, and so forth.
+@end itemize
+
+In practice, these procedures are most useful for efficiently
+constructing sets and bags in a side--effecting manner, in some limited
+local context, before passing the character set outside the local
+construction scope to be used in a functional manner.
+
+Scheme provides no assistance in checking the linearity of the
+potentially side--effected parameters passed to these functions: there's
+no linear type checker or run--time mechanism for detecting violations.
+
+Note that if an implementation uses no side effects at all, it is
+allowed to return existing sets and bags rather than newly allocated
+ones, even where this @srfi{} explicitly says otherwise.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator restrictions
+
+Implementations of this @srfi{} are allowed to place restrictions on the
+comparators that the procedures accept.  In particular, an
+implementation may require comparators to provide a comparison
+procedure.  Alternatively, an implementation may require comparators to
+provide a hash function, unless the equality predicate of the comparator
+is @func{eq?}, @func{eqv?}, @func{equal?}, @func{string=?}, or
+@func{string-ci=?}.  Implementations must not require the provision of
+both a comparison procedure and a hash function.
+
+@c page
+@node srfi sets-and-bags set
+@subsection Set procedures
+
+
+@menu
+* srfi sets-and-bags set constr::  Constructors.
+* srfi sets-and-bags set preds::   Predicates.
+* srfi sets-and-bags set access::  Accessors.
+* srfi sets-and-bags set update::  Updaters.
+* srfi sets-and-bags set whole::   The whole set.
+* srfi sets-and-bags set map::     Mapping and folding.
+* srfi sets-and-bags set copy::    Copying and conversion.
+* srfi sets-and-bags set subsets:: Subsets.
+* srfi sets-and-bags set theory::  Set theory operations.
+@end menu
+
+@c page
+@node srfi sets-and-bags set constr
+@subsubsection Constructors
+
+
+@defun set @var{comparator} @var{element} @dots{}
+Return a newly allocated empty set.  @var{comparator} is a @ansrfi{114}
+comparator, which is used to control and distinguish the elements of the
+set.  The @var{element}s are used to initialize the set.
+@end defun
+
+
+@defun set-unfold @var{comparator} @var{stop?} @var{mapper} @var{successor} @var{seed}
+Create a newly allocated set as if by @func{set} using @var{comparator}.
+If the result of applying the predicate @var{stop?} to @var{seed} is
+true, return the set.  Otherwise, apply the procedure @var{mapper} to
+@var{seed}.  The value that @var{mapper} returns is added to the set.
+Then get a new seed by applying the procedure @var{successor} to
+@var{seed}, and repeat this algorithm.
+@end defun
+
+@c page
+@node srfi sets-and-bags set preds
+@subsubsection Predicates
+
+
+@defun set? @var{obj}
+Return @true{} if @var{obj} is a set; return @false{} otherwise.
+@end defun
+
+
+@defun set-contains? @var{set} @var{element}
+Returns @true{} if @var{element} is a member of set and @false{}
+otherwise.
+@end defun
+
+
+@defun set-empty? @var{set}
+Return @true{} if @var{set} has no elements and @false{} otherwise.
+@end defun
+
+
+@defun set-disjoint? set1 set2)
+Return @true{} if @vari{set} and @varii{set} have no elements in common;
+return @false{} otherwise.
+@end defun
+
+@c page
+@node srfi sets-and-bags set access
+@subsubsection Accessors
+
+
+@defun set-member @var{set} @var{element} @var{default}
+Return the element of @var{set} that is equal, in the sense of set's
+equality predicate, to @var{element}.  If @var{element} is not a member
+of @var{set}: return @var{default}.
+@end defun
+
+
+@defun set-element-comparator @var{set}
+Return the comparator used to compare the elements of @var{set}.
+@end defun
+
+@c page
+@node srfi sets-and-bags set update
+@subsubsection Updaters
+
+
+@defun set-adjoin @var{set} @var{element} @dots{}
+Return a newly allocated set that uses the same comparator as @var{set}
+and contains all the values of @var{set}, and in addition each
+@var{element} unless it is already equal (in the sense of the
+comparator) to one of the existing or newly added members.
+
+It is an error to add an @var{element} for which the type test procedure
+of the comparator does not return @true{}.
+@end defun
+
+
+@defun set-adjoin! @var{set} @var{element} @dots{}
+Like @func{set-adjoin} but it is permitted to mutate and return
+@var{set} rather than allocating a new set.
+@end defun
+
+
+@defun set-replace @var{set} @var{element}
+Return a newly allocated set that uses the same comparator as @var{set}
+and contains all the values of @var{set} except that: if @var{element}
+is equal (in the sense of @var{set}'s comparator) to an existing member
+of @var{set}, then that member is omitted and replaced by @var{element}.
+If there is no such member in @var{set}, then @var{set} is returned
+unchanged.
+@end defun
+
+
+@defun set-replace! @var{set} @var{element}
+Like @func{set-replace} but it is permitted to mutate and return
+@var{set} rather than allocating a new set.
+@end defun
+
+
+@defun set-delete @var{set} @var{element} @dots{}
+Return a newly allocated set containing all the values of @var{set}
+except for any that are equal (in the sense of @var{set}'s comparator)
+to one or more of the @var{element}s.  Any @var{element} that is not
+equal to some member of @var{set} is ignored.
+@end defun
+
+
+@defun set-delete! @var{set} @var{element} @dots{}
+Like @func{set-delete} but it is permitted to mutate and return
+@var{set} rather than allocating a new set.
+@end defun
+
+
+@defun set-delete-all @var{set} @var{element-list}
+@defunx set-delete-all! @var{set} @var{element-list}
+Like @func{set-delete} and @func{set-delete!} but accept a single
+argument which is a list of elements to be deleted.
+@end defun
+
+
+@defun set-search! @var{set} @var{element} @var{failure} @var{success}
+The @var{set} is searched for @var{element}.
+
+@itemize
+@item
+If @var{element} is @strong{not} found: the procedure @var{failure} is
+tail--called with two continuation arguments, @var{insert} and
+@var{ignore}, and it is expected to tail--call one of them.
+
+@item
+If @var{element} @strong{is} found: the procedure @var{success} is
+tail--called with the matching element of @var{set} and two
+continuations, @var{update} and @var{remove}, and it is expected to
+tail--call one of them.
+@end itemize
+
+The effects of the continuations are as follows (where @var{obj} is any
+Scheme object):
+
+@itemize
+@item
+Invoking @code{(@var{insert} @var{obj})} causes @var{element} to be
+inserted into @var{set}.
+
+@item
+Invoking @code{(@var{ignore} @var{obj})} causes @var{set} to remain
+unchanged.
+
+@item
+Invoking @code{(@var{update} @var{new-element} @var{obj})} causes
+@var{new-element} to be inserted into @var{set} in place of
+@var{element}.
+
+@item
+Invoking @code{(@var{remove} @var{obj})} causes the matching element of
+@var{set} to be removed from it.
+@end itemize
+
+In all cases, two values are returned: the possibly updated @var{set}
+and @var{obj}.
+@end defun
+
+@c page
+@node srfi sets-and-bags set whole
+@subsubsection The whole set
+
+
+@defun set-size @var{set}
+Return the number of elements in @var{set} as an exact integer.
+@end defun
+
+
+@defun set-find @var{predicate} @var{set} @var{failure}
+Return an arbitrarily chosen element of @var{set} that satisfies
+@var{predicate}, or the result of invoking @var{failure} with no
+arguments if there is none.
+@end defun
+
+
+@defun set-count @var{predicate} @var{set}
+Return the number of elements of @var{set} that satisfy @var{predicate}
+as an exact integer.
+@end defun
+
+
+@defun set-any? @var{predicate} @var{set}
+Return @true{} if at least one element of set @var{satisfies} predicate,
+or @false{} otherwise.
+
+@quotation
+@strong{NOTE} This differs from the @ansrfi{1} analogue because it does
+not return an element of the set.
+@end quotation
+@end defun
+
+
+@defun set-every? @var{predicate} @var{set}
+Return @true{} if every element of @var{set} satisfies @var{predicate},
+or @false{} otherwise.
+
+@quotation
+@strong{NOTE} This differs from the @ansrfi{1} analogue because it does
+not return an element of the set.
+@end quotation
+@end defun
+
+@c page
+@node srfi sets-and-bags set map
+@subsubsection Mapping and folding
+
+
+@defun set-map @var{comparator} @var{proc} @var{set}
+Apply @var{proc} to each element of @var{set} in arbitrary order and
+return a newly allocated set, created as if by @code{(set
+@var{comparator})}, which contains the results of the applications.  For
+example:
+
+@lisp
+(set-map string-ci-comparator
+         symbol->string
+         (set eq? 'foo 'bar 'baz))
+@equiv{} (set string-ci-comparator "foo" "bar" "baz")
+@end lisp
+
+Note that, when @var{proc} defines a mapping that is not @math{1:1},
+some of the mapped objects may be equivalent in the sense of
+comparator's equality predicate, and in this case duplicate elements are
+omitted as in the set constructor.  For example:
+
+@lisp
+(set-map (lambda (x)
+           (quotient x 2))
+         integer-comparator
+         (set integer-comparator 1 2 3 4 5))
+@equiv{} (set integer-comparator 0 1 2)
+@end lisp
+
+If the elements are the same in the sense of @func{eqv?}, it is
+unpredictable which one will be preserved in the result.
+@end defun
+
+
+@defun set-for-each @var{proc} @var{set}
+Apply @var{proc} to @var{set} in arbitrary order, discarding the
+returned values.  Return an unspecified result.
+@end defun
+
+
+@defun set-fold @var{proc} @var{nil} @var{set}
+Invoke @var{proc} on each member of @var{set} in arbitrary order,
+passing the result of the previous invocation as a second argument.  For
+the first invocation, @var{nil} is used as the second argument.  Return
+the result of the last invocation, or @var{nil} if there was no
+invocation.
+@end defun
+
+
+@defun set-filter @var{predicate} @var{set}
+Return a newly allocated set with the same comparator as @var{set},
+containing just the elements of @var{set} that satisfy @var{predicate}.
+@end defun
+
+
+@defun set-filter! @var{predicate} @var{set}
+Like @func{set-filter} but it is permitted to mutate and return
+@var{set} rather than allocating a new set.
+@end defun
+
+
+@defun set-remove @var{predicate} @var{set}
+Return a newly allocated set with the same comparator as @var{set},
+containing just the elements of set that do @strong{not} satisfy
+@var{predicate}.
+@end defun
+
+
+@defun set-remove! @var{predicate} @var{set}
+Like @func{set-remove} but it is permitted to mutate and return
+@var{set} rather than allocating a new set.
+@end defun
+
+
+@defun set-partition @var{predicate} @var{set}
+Return two values:
+
+@enumerate
+@item
+A newly allocated set, with the same comparator as @var{set}, that
+contains just the elements of set that @strong{do} satisfy
+@var{predicate}.
+
+@item
+A newly allocated set, with the same comparator as @var{set}, that
+contains just the elements of set that @strong{do not} satisfy
+@var{predicate}.
+@end enumerate
+@end defun
+
+
+@defun set-partition! predicate set
+Like @func{set-remove} but it is permitted to mutate and return
+@var{set} rather than allocating a new set.
+@end defun
+
+@c page
+@node srfi sets-and-bags set copy
+@subsubsection Copying and conversion
+
+
+@defun set-copy @var{set}
+Return a newly allocated set containing the elements of @var{set} and
+using the same comparator.
+@end defun
+
+
+@defun set->list @var{set}
+Return a newly allocated list containing the members of @var{set} in
+unspecified order.
+@end defun
+
+
+@defun list->set @var{comparator} @var{list}
+Return a newly allocated set, created as if by @func{set} using
+@var{comparator}, that contains the elements of @var{list}.  Duplicate
+elements (in the sense of the equality predicate) are omitted.
+@end defun
+
+
+@defun list->set! @var{set} @var{list}
+Return a set that contains the elements of both @var{set} and
+@var{list}.  Duplicate elements (in the sense of the equality predicate)
+are omitted.
+@end defun
+
+@c page
+@node srfi sets-and-bags set subsets
+@subsubsection Subsets
+
+
+@quotation
+@strong{NOTE} The following three predicates do not obey the trichotomy
+law and therefore do not constitute a total order on sets.
+@end quotation
+
+
+@defun set=? @varo{set} @var{set} @dots{}
+Return @true{} if each @var{set} contains the same elements.
+@end defun
+
+
+@defun set<? @varo{set} @var{set} @dots{}
+Return @true{} if each @var{set} other than the last is a proper subset
+of the following @var{set}; return @false{} otherwise.
+@end defun
+
+
+@defun set>? @varo{set} @var{set} @dots{}
+Return @true{} if each @var{set} other than the last is a proper
+superset of the following @var{set}; return @false{} otherwise.
+@end defun
+
+
+@defun set<=? @varo{set} @var{set} @dots{}
+Return @true{} if each @var{set} other than the last is a subset of the
+following @var{set}; return @false{} otherwise.
+@end defun
+
+
+@defun set>=? @varo{set} @var{set} @dots{}
+Return @true{} if each @var{set} other than the last is a superset of
+the following @var{set}; return @false{} otherwise.
+@end defun
+
+@c page
+@node srfi sets-and-bags set theory
+@subsubsection Set theory operations
+
+
+@defun set-union @varo{set} @var{set} @dots{}
+@defunx set-intersection @varo{set} @var{set} @dots{}
+@defunx set-difference @varo{set} @var{set} @dots{}
+@defunx set-xor @vari{set} @varii{set}
+Return a newly allocated set that is the union, intersection, asymmetric
+difference, or symmetric difference of the @var{set} arguments.
+
+Asymmetric difference is extended to more than two sets by taking the
+difference between the first set and the union of the others.  Symmetric
+difference is not extended beyond two sets.  Elements in the result set
+are drawn from the first set in which they appear.
+@end defun
+
+
+@defun set-union! @varo{set} @var{set} @dots{}
+@defunx set-intersection! @varo{set} @var{set} @dots{}
+@defunx set-difference! @varo{set} @var{set} @dots{}
+@defunx set-xor! @vari{set} @varii{set}
+Linear update procedures returning a set that is the union,
+intersection, asymmetric difference, or symmetric difference of the
+@var{set} arguments.
+
+Asymmetric difference is extended to more than two sets by taking the
+difference between the first set and the union of the others.  Symmetric
+difference is not extended beyond two sets.  Elements in the result set
+are drawn from the first set in which they appear.
+@end defun
+
+@c page
+@node srfi sets-and-bags bag
+@subsection Bag procedures
+
+
+Bags are like sets, but can contain the same object more than once.
+However, if two elements that are the same in the sense of the equality
+predicate, but not in the sense of @func{eqv?}, are both included, it is
+not guaranteed that they will remain distinct when retrieved from the
+bag.  It is an error for a single procedure to be invoked on bags with
+different comparators.
+
+The procedures for creating and manipulating bags are the same as those
+for sets, except that @code{set} is replaced by @code{bag} in their
+names, and that adjoining an element to a bag is effective even if the
+bag already contains the element.  If two elements in a bag are the same
+in the sense of the bag's comparator, the implementation may in fact
+store just one of them.
+
+The @func{bag-union}, @func{bag-intersection}, @func{bag-difference},
+and @func{bag-xor} procedures (and their linear update analogues) behave
+as follows when both bags contain elements that are equal in the sense
+of the bags' comparator:
+
+@table @func
+@item bag-union
+The number of equal elements in the result is the largest number of
+equal elements in any of the original bags.
+
+@item bag-intersection
+The number of equal elements in the result is the smallest number of
+equal elements in any of the original bags.
+
+@item bag-difference
+The number of equal elements in the result is the number of equal
+elements in the first bag, minus the number of elements in the other
+bags (but not less than zero).
+
+@item bag-xor
+The number of equal elements in the result is the absolute value of the
+difference between the number of equal elements in the first and second
+bags.
+@end table
+
+@menu
+* srfi sets-and-bags bag more::  Additional bag procedures.
+@end menu
+
+@c page
+@node srfi sets-and-bags bag more
+@subsubsection Additional bag procedures
+
+
+@defun bag-sum @varo{bag} @var{bag} @dots{}
+Return a newly allocated bag containing all the unique elements in all
+the @var{bag} arguments, such that the count of each unique element in
+the result is equal to the sum of the counts of that element in the
+arguments.  It differs from @func{bag-union} by treating identical
+elements as potentially distinct rather than attempting to match them
+up.
+@end defun
+
+
+@defun bag-sum! @varo{bag} @var{bag} @dots{}
+Like @func{bag-sum} but it is permitted to mutate and return @var{bag}
+rather than allocating a new set.
+@end defun
+
+
+@defun bag-product @var{N} @var{bag}
+Return a newly allocated bag containing all the unique elements in
+@var{bag}, where the count of each unique element in the bag is equal to
+the count of that element in @var{bag} multiplied by @var{N}.
+@end defun
+
+
+@defun bag-product! n bag)
+Like @func{bag-product} but it is permitted to mutate and return
+@var{bag} rather than allocating a new set.
+@end defun
+
+
+@defun bag-unique-size @var{bag}
+Return the number of unique elements of @var{bag}.
+@end defun
+
+
+@defun bag-element-count @var{bag} @var{element}
+Return an exact integer representing the number of times that
+@var{element} appears in @var{bag}.
+@end defun
+
+
+@defun bag-for-each-unique @var{proc} @var{bag}
+Apply @var{proc} to each unique element of @var{bag} in arbitrary order,
+passing the element and the number of times it occurs in @var{bag}, and
+discarding the returned values.  Return an unspecified result.
+@end defun
+
+
+@defun bag-fold-unique @var{proc} @var{nil} @var{bag}
+Invoke @var{proc} on each unique element of @var{bag} in arbitrary
+order, passing the number of occurrences as a second argument and the
+result of the previous invocation as a third argument.  For the first
+invocation: @var{nil} is used as the third argument.  Return the result
+of the last invocation.
+@end defun
+
+
+@defun bag-increment! @var{bag} @var{element} @var{count}
+@defunx bag-decrement! @var{bag} @var{element} @var{count}
+Linear update procedures that return a bag with the same elements as
+@var{bag}, but with the element count of @var{element} in bag increased
+or decreased by the exact integer @var{count} (but not less than zero).
+@end defun
+
+
+@defun bag->set @var{bag}
+Return a newly allocated set containing the unique elements (in the
+sense of the equality predicate) of @var{bag}.
+@end defun
+
+
+@defun set->bag @var{set}
+Return a newly allocated bag containing the elements of @var{set}.
+@end defun
+
+
+@defun set->bag! @var{bag} @var{set}
+return a bag containing the elements of both @var{bag} and @var{set}.
+In all cases, the comparator of the result is the same as the comparator
+of the argument or arguments.
+@end defun
+
+
+
+@defun bag->alist @var{bag}
+Return a newly allocated alist whose keys are the unique elements of
+@var{bag} and whose values are the number of occurrences of each
+element.
+@end defun
+
+
+@defun alist->bag @var{comparator} @var{alist}
+Return a newly allocated bag based on @var{comparator}, where the keys
+of @var{alist} specify the elements and the corresponding values of
+@var{alist} specify how many times they occur.
+@end defun
+
+@c page
+@node srfi sets-and-bags compar
+@subsection Comparators
+
+
+@defun set-comparator
+@defunx bag-comparator
+Comparators used to compare sets or bags, and allow sets of sets, bags
+of sets, etc.  These comparators do not provide comparison procedures,
+as there is no ordering between sets or bags.  It is an error to compare
+sets or bags with different element comparators.
+@end defun
+
+@c page
+@node srfi sets-and-bags copyright
+@subsection Copyright
+
+
+Copyright @copyright{} John Cowan 2013.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:
