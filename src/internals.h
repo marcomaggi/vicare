@@ -9,7 +9,7 @@
 	definitions  in this  file are  duplicated in  "vicare.h", which
 	defines the public API.
 
-  Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -555,8 +555,13 @@ typedef unsigned int		ik_uint;
 typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
 
-/* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
-typedef ik_ulong		ikptr;
+#if   (4 == SIZEOF_VOID_P)
+typedef uint32_t		ikptr;
+#elif (8 == SIZEOF_VOID_P)
+typedef uint64_t		ikptr;
+#else
+typedef unsigned long		ikptr;
+#endif
 
 /* Node  in a  simply linked  list.  Used  to store  pointers to  memory
    blocks of size IK_PAGESIZE.  */

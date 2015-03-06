@@ -10,7 +10,7 @@
 	"internals.h", which defines  the internal API; some definitions
 	are modified to keep them opaque to external code.
 
-  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -135,8 +135,13 @@ typedef unsigned int		ik_uint;
 typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
 
-/* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
-typedef ik_ulong		ikptr;
+#if   (4 == SIZEOF_VOID_P)
+typedef uint32_t		ikptr;
+#elif (8 == SIZEOF_VOID_P)
+typedef uint64_t		ikptr;
+#else
+typedef uintptr_t		ikptr;
+#endif
 
 typedef struct ikpcb {
   ikptr		dummy0;		/* ikptr allocation_pointer; */

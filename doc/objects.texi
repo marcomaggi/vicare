@@ -127,19 +127,20 @@ heap: pairs, bytevectors, closures, strings.
 
 @deftp {Object Reference} ikptr
 An immediate built in object or a reference to a built in object;
-implemented as an @code{unsigned long int} it is meant to be the size of
-a machine word.  The definition assumes that:
+it is defined as follows:
 
 @itemize
 @item
-On 32-bit platforms, @code{unsigned long int} is a 32-bit value.
+On platforms having pointers @code{void *} of size 32-bit: it is defined
+as alias for @code{uint32_t}.
 
 @item
-On 64-bit platforms, @code{unsigned long int} is a 64-bit value.
+On platforms having pointers @code{void *} of size 64-bit: it is defined
+as alias for @code{uint64_t}.
 
 @item
-The type @code{unsigned long int} is big enough to hold a pointer for
-the underlying platform.
+On other platforms: it is defined as alias for @code{unsigned long
+int}.  This should never happen.
 @end itemize
 @end deftp
 
