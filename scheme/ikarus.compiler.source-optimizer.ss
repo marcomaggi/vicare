@@ -375,10 +375,9 @@
     ;;instance  representing  recordized  code;   due  to  the  possible
     ;;optimizations: the type of the returned instance is not known.
     ;;
-    ;;If the binding represented by LHS has been created but it is never
-    ;;referenced in its region: assigning it is useless, because the new
-    ;;value  is never  used; so  we just  include the  RHS for  its side
-    ;;effects.  For example:
+    ;;If LHS  represents a local  binding and it is  never referenced in  its region:
+    ;;assigning  it is  useless, because  the new  value is  never used;  so we  just
+    ;;include the RHS for its side effects.  For example:
     ;;
     ;;   (let ((?lhs (some-value)))
     ;;     (set! ?lhs ?rhs)
@@ -390,8 +389,12 @@
     ;;     ?rhs
     ;;     #t)
     ;;
+    ;;Assignments to  global bindings cannot  be removed  because we must  assume the
+    ;;bindings are exported or used by macros.
+    ;;
     (mkseq (let ((lhs.copy (%lookup lhs env)))
-	     (if (not (prelex-source-referenced? lhs))
+	     (if (and (not (prelex-source-referenced? lhs))
+		      (not (prelex-global-location    lhs)))
 		 (E rhs 'e env ec sc)
 	       (begin
 		 (decrement sc 1)
