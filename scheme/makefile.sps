@@ -3196,6 +3196,9 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
 
+    (core-expr->optimized-code			$compiler)
+    (core-expr->assembly-code			$compiler)
+
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
     ($optimize-cp				$compiler)
