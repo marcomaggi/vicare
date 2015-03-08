@@ -5,7 +5,11 @@
 ;;;
 ;;;Abstract
 ;;;
+;;;	There is no test suite in  the reference implementation.  So this program has
+;;;	been written specifically for Vicare.
 ;;;
+;;;     NOTE It is  unlikely that I have gotten everything  right.  (Marco Maggi; Sun
+;;;     Mar 8, 2015)
 ;;;
 ;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -32,12 +36,42 @@
 (check-display "*** testing Vicare libraries: SRFI 114, comparators\n")
 
 
-(parametrise ((check-test-name	'base))
+(parametrise ((check-test-name	'predicates))
 
   (check
-      (let ()
-        #f)
+      (comparator? 123)
     => #f)
+
+  (check-for-true (comparator? default-comparator))
+  (check-for-true (comparator? boolean-comparator))
+  (check-for-true (comparator? char-comparator))
+  (check-for-true (comparator? char-ci-comparator))
+  (check-for-true (comparator? string-comparator))
+  (check-for-true (comparator? string-ci-comparator))
+  (check-for-true (comparator? symbol-comparator))
+
+  (check-for-true (comparator? exact-integer-comparator))
+  (check-for-true (comparator? integer-comparator))
+  (check-for-true (comparator? rational-comparator))
+  (check-for-true (comparator? real-comparator))
+  (check-for-true (comparator? complex-comparator))
+  (check-for-true (comparator? number-comparator))
+  (check-for-true (comparator? pair-comparator))
+  (check-for-true (comparator? list-comparator))
+  (check-for-true (comparator? vector-comparator))
+  (check-for-true (comparator? bytevector-comparator))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (comparator-comparison-procedure? default-comparator)
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (comparator-hash-function? default-comparator)
+    => #t)
 
   #t)
 

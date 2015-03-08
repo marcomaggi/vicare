@@ -52,6 +52,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib shared::                Shared structures graph notation.
 * iklib environment::           Environments.
 * iklib cafe::                  Cafe.
+* iklib procedures::            Procedures.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
@@ -8479,6 +8480,22 @@ expression, then the error message is printed to the error--port and the
 operations of the cafe resume as normal.
 
 To exit from a cafe we can write the @eof{} object.
+@end defun
+
+@c page
+@node iklib procedures
+@section Procedures
+
+
+@defun procedure-annotation @var{proc}
+Return the annotation of the procedure @var{proc}; return @false{} if
+@var{proc} has no annotation.
+
+@example
+(define (a) 1)
+(procedure-annotation a)
+@result{} (#@{a |w$qfI9a4N>aIi$P5|@} . #f)
+@end example
 @end defun
 
 @c page
