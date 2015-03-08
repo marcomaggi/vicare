@@ -2,11 +2,11 @@
 @section @ansrfi{113} sets and bags
 
 
-@cindex @ansrfi{113} boxes
+@cindex @ansrfi{113} sets-and-bags
 @cindex @library{srfi :113}, library
-@cindex @library{srfi :113 boxes}, library
+@cindex @library{srfi :113 sets-and-bags}, library
 @cindex Library @library{srfi :113}
-@cindex Library @library{srfi :113 boxes}
+@cindex Library @library{srfi :113 sets-and-bags}
 
 
 The library @library{srfi :113} is by John Cowan as the reference

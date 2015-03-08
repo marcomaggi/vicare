@@ -2,11 +2,11 @@
 @section @ansrfi{114} comparators
 
 
-@cindex @ansrfi{114} boxes
+@cindex @ansrfi{114} comparators
 @cindex @library{srfi :114}, library
-@cindex @library{srfi :114 boxes}, library
+@cindex @library{srfi :114 comparators}, library
 @cindex Library @library{srfi :114}
-@cindex Library @library{srfi :114 boxes}
+@cindex Library @library{srfi :114 comparators}
 
 
 The library @library{srfi :114} is by John Cowan as the reference
