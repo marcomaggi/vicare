@@ -889,7 +889,9 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	tests/test-srfi-98-os-environment-variables.sps			\
 	tests/test-srfi-101-functional-pairs.sps			\
 	tests/test-srfi-111-boxes.sps					\
-	tests/test-srfi-112-environment-inquiry.sps
+	tests/test-srfi-112-environment-inquiry.sps			\
+	tests/test-srfi-113-sets-and-bags.sps				\
+	tests/test-srfi-114-comparators.sps
 
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	tests/test-srfi-106-socket.sps
