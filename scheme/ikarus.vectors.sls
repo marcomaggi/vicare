@@ -23,6 +23,7 @@
     vector-ref		vector-set!
     vector->list	list->vector
     vector-map		vector-for-each
+    vector-find
     vector-for-all	vector-exists
     vector-fill!	vector-append
     vector-copy		vector-copy!
@@ -42,6 +43,7 @@
 		  vector-ref		vector-set!
 		  vector->list		list->vector
 		  vector-map		vector-for-each
+		  vector-find
 		  vector-for-all	vector-exists
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!
@@ -494,6 +496,17 @@
    ))
 
 
+(define* (vector-find {proc procedure?} {vec vector?})
+  (define-constant LEN
+    (vector-length vec))
+  (let loop ((i 0))
+    (if (fx=? i LEN)
+	#f
+      (let ((rv (vector-ref vec i)))
+	(if (proc rv)
+	    rv
+	  (loop (fxadd1 i)))))))
+
 (define-syntax define-vector-iterator
   (syntax-rules ()
     ((_ ?name ?combine)

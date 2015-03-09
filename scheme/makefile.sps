@@ -1718,6 +1718,7 @@
     (vector-map					v r ba)
     (vector-for-all				v $language)
     (vector-exists				v $language)
+    (vector-find				v $language)
     (vector-ref					v r ba se)
     (vector-set!				v r ba se)
     (subvector					v $language)

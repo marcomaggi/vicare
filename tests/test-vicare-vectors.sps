@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -925,6 +925,8 @@
       (vector-for-all < '#(1 2 4) '#(2 3 4))
     => #f)
 
+;;;
+
   (check
       (vector-exists even? '#(3 1 4 1 5 9))
     => #t)
@@ -948,6 +950,20 @@
 
   (check
       (vector-exists > '#(1 2 3) '#(2 3 4))
+    => #f)
+
+;;;
+
+  (check
+      (vector-find even? '#(3 1 4 1 5 9))
+    => 4)
+
+  (check
+      (vector-find even? '#(3 1 1 5 9))
+    => #f)
+
+  (check
+      (vector-find even? '#())
     => #f)
 
 ;;; --------------------------------------------------------------------

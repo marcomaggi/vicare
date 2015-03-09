@@ -10263,8 +10263,27 @@ are filled with @var{fill}.  When not used: @var{fill} defaults to
 @end defun
 
 
-@deffn Procedure vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
-@deffnx Procedure vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+@defun vector-find @var{proc} @var{vec}
+@var{proc} should accept one argument and return a single value.
+@var{proc} should not mutate @var{vec}.  @func{vector-find} applies
+@var{proc} to the elements of @var{vec} in order.  If @var{proc} returns
+a true value for an element, @func{vector-find} immediately returns that
+element.  If @var{proc} returns @false{} for all elements of the vector,
+@func{vector-find} returns @false{}.  @var{proc} is always called in the
+same dynamic environment as @func{vector-find} itself.
+
+@example
+(vector-find even? '#(3 1 4 1 5 9))
+@result{} 4
+
+(vector-find even? '#(3 1 5 1 5 9))
+@result{} #f
+@end example
+@end defun
+
+
+@defun vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+@defunx vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
 The @var{vec}s should all have the same length, and @var{proc} should
 accept @math{N} arguments and return a single value.  @var{proc} should
 not mutate the @var{vec} arguments.
@@ -10282,6 +10301,18 @@ If @var{proc} returns @false{} on any set of elements,
 of @var{proc}.  If the @var{vec}s are all empty, @func{vector-for-all}
 returns @true{}.
 
+@lisp
+(vector-for-all even? '#())             @result{} #t
+(vector-for-all even? '#(3 1 4 1 5 9))  @result{} #f
+(vector-for-all even? '#(2 4 14))       @result{} #t
+(vector-for-all (lambda (n)
+                  (and (even? n) n))
+                '#(2 4 14))
+@result{} 14
+(vector-for-all < '#(1 2 3) '#(2 3 4))  @result{} #t
+(vector-for-all < '#(1 2 4) '#(2 3 4))  @result{} #f
+@end lisp
+
 For natural numbers @math{i = 0, 1, @dots{}}, the @func{vector-exists}
 procedure applies @var{proc} successively to arguments @math{x_i^1
 @dots{} x_i^n}, where @math{x_i^j} is the @math{i}-th element of
@@ -10295,9 +10326,21 @@ If @var{proc} returns a true value on any set of elements,
 of @var{proc}.  If the @var{vec}s are all empty, @func{vector-exists}
 returns @false{}.
 
+@lisp
+(vector-exists even? '#(3 1 4 1 5 9))   @result{} #t
+(vector-exists even? '#(3 1 1 5 9))     @result{} #f
+(vector-exists even? '#())              @result{} #f
+(vector-exists (lambda (n)
+                 (and (even? n) n))
+               '#(2 1 4 14))
+@result{} 2
+(vector-exists < '#(1 2 4) '#(2 3 4))   @result{} #t
+(vector-exists > '#(1 2 3) '#(2 3 4))   @result{} #f
+@end lisp
+
 @var{proc} is always called in the same dynamic environment as
 @func{vector-for-all} or, respectively, @func{vector-exists} itself.
-@end deffn
+@end defun
 
 @c page
 @node iklib symbols
