@@ -66,7 +66,9 @@
     in-open-interval? in-closed-interval? in-open-closed-interval?
     in-closed-open-interval?
     ;;
-    comparator-min comparator-max)
+    comparator-min comparator-max
+
+    comparator-register-default!)
   (import (srfi :114 comparators)))
 
 ;;; end of file

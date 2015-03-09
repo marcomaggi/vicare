@@ -73,7 +73,9 @@
     in-open-interval? in-closed-interval? in-open-closed-interval?
     in-closed-open-interval?
     ;;
-    comparator-min comparator-max)
+    comparator-min comparator-max
+
+    comparator-register-default!)
   (import (vicare))
 
 
@@ -253,7 +255,7 @@
 
 ;;;; the default comparator
 
-(module (default-comparator default-hash-function)
+(module (default-comparator default-hash-function comparator-register-default!)
 
   (define unknown-object-comparator
     ;;The unknown-object comparator, used as a fallback to everything else
