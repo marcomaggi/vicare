@@ -925,7 +925,30 @@
       (vector-for-all < '#(1 2 4) '#(2 3 4))
     => #f)
 
-;;;
+;;; --------------------------------------------------------------------
+;;; unsafe for-all
+
+  (check
+      ($vector-for-all1 even? '#())
+    => #t)
+
+  (check
+      ($vector-for-all1 even? '#(3 1 4 1 5 9))
+    => #f)
+
+  (check
+      ($vector-for-all1 even? '#(2 4 14))
+    => #t)
+
+  (check
+      ($vector-for-all1 (lambda (n) (and (even? n) n))
+			'#(2 4 14))
+    => 14)
+
+  #t)
+
+
+(parametrise ((check-test-name	'exists))
 
   (check
       (vector-exists even? '#(3 1 4 1 5 9))
@@ -952,40 +975,6 @@
       (vector-exists > '#(1 2 3) '#(2 3 4))
     => #f)
 
-;;;
-
-  (check
-      (vector-find even? '#(3 1 4 1 5 9))
-    => 4)
-
-  (check
-      (vector-find even? '#(3 1 1 5 9))
-    => #f)
-
-  (check
-      (vector-find even? '#())
-    => #f)
-
-;;; --------------------------------------------------------------------
-;;; unsafe for-all
-
-  (check
-      ($vector-for-all1 even? '#())
-    => #t)
-
-  (check
-      ($vector-for-all1 even? '#(3 1 4 1 5 9))
-    => #f)
-
-  (check
-      ($vector-for-all1 even? '#(2 4 14))
-    => #t)
-
-  (check
-      ($vector-for-all1 (lambda (n) (and (even? n) n))
-			'#(2 4 14))
-    => 14)
-
 ;;; --------------------------------------------------------------------
 ;;; unsafe exists
 
@@ -1005,6 +994,86 @@
       ($vector-exists1 (lambda (n) (and (even? n) n))
 		       '#(2 1 4 14))
     => 2)
+
+  #t)
+
+
+(parametrise ((check-test-name	'find))
+
+  (check
+      (vector-find even? '#(3 1 4 1 5 9))
+    => 4)
+
+  (check
+      (vector-find even? '#(3 1 1 5 9))
+    => #f)
+
+  (check
+      (vector-find even? '#())
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fold-left))
+
+  (check
+      (vector-fold-left (lambda (nil x) (cons x nil))
+	'()
+	'#(#\a #\b #\c #\d))
+    => '(#\d #\c #\b #\a))
+
+  (check
+      (vector-fold-left (lambda (nil x y) (cons (cons x y) nil))
+	'()
+	'#(#\a #\b #\c #\d)
+	'#(#\A #\B #\C #\D))
+    => '((#\d . #\D)
+	 (#\c . #\C)
+	 (#\b . #\B)
+	 (#\a . #\A)))
+
+  (check
+      (vector-fold-left (lambda (nil x) (cons x nil))
+	'()
+	'#())
+    => '())
+
+  (check
+      (vector-fold-left (lambda (count c)
+			  (if (char-upper-case? c)
+			      (+ count 1)
+			    count))
+	0
+	'#(#\A #\B #\C #\d #\e #\f #\G #\H #\i))
+    => 5)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fold-right))
+
+  (check
+      (vector-fold-right (lambda (x nil) (cons x nil))
+	'()
+	'#(#\a #\b #\c #\d))
+    => '(#\a #\b #\c #\d))
+
+  (check
+      (vector-fold-right (lambda (x y nil) (cons (cons x y) nil))
+	'()
+	'#(#\a #\b #\c #\d)
+	'#(#\A #\B #\C #\D))
+    => '((#\a . #\A)
+	 (#\b . #\B)
+	 (#\c . #\C)
+	 (#\d . #\D)))
+
+  (check
+      (vector-fold-right (lambda (x nil) (cons x nil))
+	'()
+	'#())
+    => '())
 
   #t)
 

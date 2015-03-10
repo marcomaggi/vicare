@@ -15,6 +15,118 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;copyright notices for the implementations of:
+;;;
+;;;   vector-fold-left
+;;;   vector-fold-right
+;;;
+;;;Copyright (c) 2008-2010, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008 Derick Eddington
+;;;
+;;;Taylor Campbell wrote this code; he places it in the public domain.
+;;;Modified by Derick Eddington to be included into an R6RS library.
+;;;Modified by Marco Maggi to be included in Nausicaa.
+;;;
+;;;Permission is hereby granted, free of charge, to any person obtaining
+;;;a  copy of  this  software and  associated  documentation files  (the
+;;;"Software"), to  deal in the Software  without restriction, including
+;;;without limitation  the rights to use, copy,  modify, merge, publish,
+;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
+;;;permit persons to whom the Software is furnished to do so, subject to
+;;;the following conditions:
+;;;
+;;;The  above  copyright notice  and  this  permission  notice shall  be
+;;;included in all copies or substantial portions of the Software.
+;;;
+;;;Except  as  contained  in  this  notice, the  name(s)  of  the  above
+;;;copyright holders  shall not be  used in advertising or  otherwise to
+;;;promote  the sale,  use or  other dealings  in this  Software without
+;;;prior written authorization.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
+;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
+;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
+;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
+;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
+;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
+;;;SOFTWARE.
+
+;;;Many  functions  are  derived  from  the SRFI  13  (strings  library)
+;;;reference implementation.  Its copyright notices are below.
+;;;
+;;;Olin Shivers 7/2000
+;;;
+;;;Copyright (c) 1988-1994 Massachusetts Institute of Technology.
+;;;Copyright (c) 1998, 1999, 2000 Olin Shivers.  All rights reserved.
+;;;
+;;;MIT Scheme copyright terms
+;;;==========================
+;;;
+;;;This   material  was  developed   by  the   Scheme  project   at  the
+;;;Massachusetts  Institute  of  Technology,  Department  of  Electrical
+;;;Engineering and Computer Science.  Permission to copy and modify this
+;;;software, to redistribute either  the original software or a modified
+;;;version, and to use this software for any purpose is granted, subject
+;;;to the following restrictions and understandings.
+;;;
+;;;1. Any copy made of  this software must include this copyright notice
+;;;   in full.
+;;;
+;;;2. Users  of this software  agree to make  their best efforts  (a) to
+;;;   return to  the MIT Scheme  project any improvements  or extensions
+;;;   that they make, so that  these may be included in future releases;
+;;;   and (b) to inform MIT of noteworthy uses of this software.
+;;;
+;;;3.  All materials  developed  as a  consequence  of the  use of  this
+;;;   software shall  duly acknowledge such use, in  accordance with the
+;;;   usual standards of acknowledging credit in academic research.
+;;;
+;;;4. MIT has made no  warrantee or representation that the operation of
+;;;   this software will  be error-free, and MIT is  under no obligation
+;;;   to  provide  any  services,  by  way of  maintenance,  update,  or
+;;;   otherwise.
+;;;
+;;;5. In  conjunction  with  products  arising  from  the  use  of  this
+;;;   material, there shall  be no use of the  name of the Massachusetts
+;;;   Institute  of Technology  nor  of any  adaptation  thereof in  any
+;;;   advertising,  promotional,  or   sales  literature  without  prior
+;;;   written consent from MIT in each case.
+;;;
+;;;Scsh copyright terms
+;;;====================
+;;;
+;;;All rights reserved.
+;;;
+;;;Redistribution and  use in source  and binary forms, with  or without
+;;;modification,  are permitted provided  that the  following conditions
+;;;are met:
+;;;
+;;;1.  Redistributions of source  code must  retain the  above copyright
+;;;   notice, this list of conditions and the following disclaimer.
+;;;
+;;;2. Redistributions in binary  form must reproduce the above copyright
+;;;   notice, this  list of conditions  and the following  disclaimer in
+;;;   the  documentation  and/or   other  materials  provided  with  the
+;;;   distribution.
+;;;
+;;;3. The  name of  the authors may  not be  used to endorse  or promote
+;;;   products derived from this software without specific prior written
+;;;   permission.
+;;;
+;;;THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
+;;;IMPLIED  WARRANTIES,  INCLUDING,  BUT  NOT LIMITED  TO,  THE  IMPLIED
+;;;WARRANTIES OF  MERCHANTABILITY AND  FITNESS FOR A  PARTICULAR PURPOSE
+;;;ARE  DISCLAIMED.  IN NO  EVENT SHALL  THE AUTHORS  BE LIABLE  FOR ANY
+;;;DIRECT,  INDIRECT, INCIDENTAL,  SPECIAL, EXEMPLARY,  OR CONSEQUENTIAL
+;;;DAMAGES  (INCLUDING, BUT  NOT LIMITED  TO, PROCUREMENT  OF SUBSTITUTE
+;;;GOODS  OR  SERVICES; LOSS  OF  USE,  DATA,  OR PROFITS;  OR  BUSINESS
+;;;INTERRUPTION) HOWEVER CAUSED AND  ON ANY THEORY OF LIABILITY, WHETHER
+;;;IN  CONTRACT,  STRICT LIABILITY,  OR  TORT  (INCLUDING NEGLIGENCE  OR
+;;;OTHERWISE) ARISING IN  ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN
+;;;IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 (library (ikarus vectors)
   (export
     make-vector		vector
@@ -25,6 +137,7 @@
     vector-map		vector-for-each
     vector-find
     vector-for-all	vector-exists
+    vector-fold-left	vector-fold-right
     vector-fill!	vector-append
     vector-copy		vector-copy!
     vector-resize
@@ -45,6 +158,7 @@
 		  vector-map		vector-for-each
 		  vector-find
 		  vector-for-all	vector-exists
+		  vector-fold-left	vector-fold-right
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!
 		  vector-resize)
@@ -496,6 +610,8 @@
    ))
 
 
+;;;; iterations
+
 (define* (vector-find {proc procedure?} {vec vector?})
   (define-constant LEN
     (vector-length vec))
@@ -553,6 +669,108 @@
 
 (define-vector-iterator vector-for-all and)
 (define-vector-iterator vector-exists  or)
+
+
+;;;; folding
+
+(module (vector-fold-left vector-fold-right)
+
+  (case-define* vector-fold-left
+    (({combine procedure?} knil {vec vector?})
+     (define-constant LEN
+       (vector-length vec))
+     (if (fxzero? LEN)
+	 knil
+       (let loop ((i     0)
+		  (imax  (fxsub1 LEN))
+		  (state knil))
+	 (define-syntax-rule (doit ?idx)
+	   (combine state (vector-ref vec ?idx)))
+	 (if (fx=? i imax)
+	     ;;Tail-call as last COMBINE application.
+	     (doit i)
+	   (loop (fxadd1 i) imax (doit i))))))
+
+    (({combine procedure?} knil vec0 . vectors)
+     (define vector* (cons vec0 vectors))
+     (%assert-vectors-of-equal-length __who__ vector*)
+     (let ((len (vector-length vec0)))
+       (if (fxzero? len)
+	   knil
+	 (let loop ((i     0)
+		    (imax  (fxsub1 len))
+		    (state knil))
+	   (define-syntax-rule (doit ?idx)
+	     (apply combine (%state+elements ?idx state vector*)))
+	   (if (fx=? i imax)
+	       ;;Tail-call as last COMBINE application.
+	       (doit i)
+	     (loop (fxadd1 i) imax (doit i))))))))
+
+  (case-define* vector-fold-right
+    (({combine procedure?} knil {vec vector?})
+     (define-constant LEN
+       (vector-length vec))
+     (if (fxzero? LEN)
+	 knil
+       (let loop ((i     (fxsub1 LEN))
+		  (imin  0)
+		  (state knil))
+	 (define-syntax-rule (doit ?idx)
+	   (combine (vector-ref vec ?idx) state))
+	 (if (fx=? i imin)
+	     ;;Tail-call as last COMBINE application.
+	     (doit i)
+	   (loop (fxsub1 i) imin (doit i))))))
+
+    (({combine procedure?} knil vec0 . vectors)
+     (define vector* (cons vec0 vectors))
+     (%assert-vectors-of-equal-length __who__ vector*)
+     (let ((len (vector-length vec0)))
+       (if (fxzero? len)
+	   knil
+	 (let loop ((i     (fxsub1 len))
+		    (imin  0)
+		    (state knil))
+	   (define-syntax-rule (doit ?idx)
+	     (apply combine (%elements+state ?idx state vector*)))
+	   (if (fx=? i imin)
+	       ;;Tail-call as last COMBINE application.
+	       (doit i)
+	     (loop (fxsub1 i) imin (doit i))))))))
+
+  (define (%state+elements i knil vector*)
+    ;;Extract the elements at index I from each vector in the list VECTOR* and return
+    ;;the elements in a list with KNIL as first item.
+    (cons knil (map (lambda (vec)
+		      (vector-ref vec i))
+		 vector*)))
+
+  (define (%elements+state i knil vectors)
+    ;;Extract the elements at index I from each vector in the list VECTORS and return
+    ;;the elements in a list with KNIL as last item.
+    (reverse (cons knil
+		   (fold-left (lambda (knil vec) (cons (vector-ref vec i) knil))
+		     '() vectors))))
+
+  (define (%assert-vectors-of-equal-length proc-name vector*)
+    (unless (case (length vector*)
+	      ((0) #f)
+	      ((1) #t)
+	      ((2)
+	       (let ((A (car  vector*))
+		     (B (cadr vector*)))
+		 (and (vector? A)
+		      (vector? B)
+		      (fx=? (vector-length A)
+			    (vector-length B)))))
+	      (else
+	       (and (for-all vector? vector*)
+		    (apply = (map = (vector-length vector*))))))
+      (procedure-argument-violation proc-name
+	"expected vectors of equal length" vector*)))
+
+  #| end of module |# )
 
 
 (define vector-append

@@ -1,5 +1,5 @@
 ;;;
-;;;Copyright (c) 2008-2010 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2010, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2008 Derick Eddington
 ;;;
 ;;;Taylor Campbell wrote this code; he places it in the public domain.
@@ -692,7 +692,7 @@
 
 ;;;; folding functions, equal length of list arguments
 
-;;*NOTE* aboud LEFT and RIGHT: It would  be a mess to merge the left and
+;;*NOTE* about LEFT and RIGHT: It would  be a mess to merge the left and
 ;;right folds, because of the way the index "i" needs to be computed and
 ;;tested.  It is possible, but at  what confusion cost in the code?  Too
 ;;much, IMO (Marco Maggi, Thu Jul 9, 2009).
@@ -733,10 +733,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (vector-fold-left combine knil vec0 . vectors)
-  (apply %vector-fold-left 'vector-fold-left
-	 (lambda (state len-bool) len-bool) ;test function
-	 combine knil vec0 vectors))
+;;Starting with (vicare (0 4)) this is exported by (vicare).
+;;
+;; (define (vector-fold-left combine knil vec0 . vectors)
+;;   (apply %vector-fold-left 'vector-fold-left
+;; 	 (lambda (state len-bool) len-bool) ;test function
+;; 	 combine knil vec0 vectors))
 
 (define (vector-and-fold-left combine knil vec0 . vectors)
   (apply %vector-fold-left 'vector-and-fold-left
@@ -750,10 +752,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (vector-fold-right combine knil vec0 . vectors)
-  (apply %vector-fold-right 'vector-fold-right
-	 (lambda (state len-bool) len-bool) ;test function
-	 combine knil vec0 vectors))
+;;Starting with (vicare (0 4)) this is exported by (vicare).
+;;
+;; (define (vector-fold-right combine knil vec0 . vectors)
+;;   (apply %vector-fold-right 'vector-fold-right
+;; 	 (lambda (state len-bool) len-bool) ;test function
+;; 	 combine knil vec0 vectors))
 
 (define (vector-and-fold-right combine knil vec0 . vectors)
   (apply %vector-fold-right 'vector-and-fold-right

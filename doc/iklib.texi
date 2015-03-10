@@ -10342,6 +10342,46 @@ returns @false{}.
 @func{vector-for-all} or, respectively, @func{vector-exists} itself.
 @end defun
 
+
+@deffn Function vector-fold-left @var{combine} @var{knil} @varo{vec} @var{vec} @dots{}
+@deffnx Function vector-fold-right @var{combine} @var{knil} @varo{vec} @var{vec} @dots{}
+Fold the function @var{combine} over the vector arguments, which must
+have the same length.  The return value is the return value of the last
+evaluated call to @var{combine}; if all the vector arguments are empty,
+the return value is @var{knil}.
+
+The left--folding variant iterate @var{combine} left--to--right over
+each element of equal index in all the vectors; @var{combine} is applied
+as:
+
+@example
+(@var{combine} @var{state}
+  (vector-ref @varo{vec} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···)
+@end example
+
+@noindent
+where @var{state} is the current state value, and it is the
+@strong{first} argument; the current state value begins with @var{knil},
+and becomes whatever @var{combine} returned at the respective iteration.
+
+The right--folding variant iterate @var{combine} right--to--left over
+each element of equal index in all the vectors; @var{combine} is applied
+as:
+
+@example
+(@var{combine}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···
+  @var{state})
+@end example
+
+@noindent
+in which @var{state} is the @strong{last} argument.
+@end deffn
+
 @c page
 @node iklib symbols
 @section Additional symbol functions
