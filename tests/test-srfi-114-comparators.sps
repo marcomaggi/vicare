@@ -166,6 +166,77 @@
   (doit vector-comparator '#(1 2) '#(3 4))
   (doit bytevector-comparator '#vu8(1 2) '#vu8(3 4))
 
+;;; --------------------------------------------------------------------
+;;; pair comparison
+
+  (let ((cmp (comparator-comparison-procedure pair-comparator)))
+    (check (cmp '(1 . 2) '(1 . 2)) =>  0)
+    (check (cmp '(1 . 2) '(1 . 3)) => -1) ;2 < 3
+    (check (cmp '(1 . 4) '(1 . 3)) => +1) ;4 > 3
+    (check (cmp '(1 . 0) '(2 . 0)) => -1)
+    (check (cmp '(3 . 0) '(2 . 0)) => +1)
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; list comparison
+
+  (let ((cmp (comparator-comparison-procedure list-comparator)))
+    (check (cmp '(1 2) '(1 2)) =>  0)
+    (check (cmp '(1 2) '(1 3)) => -1) ;2 < 3
+    (check (cmp '(1 4) '(1 3)) => +1) ;4 > 3
+    (check (cmp '(1 0) '(2 0)) => -1)
+    (check (cmp '(3 0) '(2 0)) => +1)
+
+    (check (cmp '() '())	=> 0)
+    (check (cmp '() '(1))	=> -1)
+    (check (cmp '(1) '())	=> +1)
+
+    ;;If first items are equal: compare the CADRs.  Here one of the CADRs is null.
+    (check (cmp '(1 2) '(1))	=> +1)
+    (check (cmp '(1)   '(1 2))	=> -1)
+
+    ;;Lists  of  different length,  but  it  does not  matter  because  the CARs  are
+    ;;non-equal.
+    (check (cmp '(1 2) '(2))	=> -1)
+    (check (cmp '(2)   '(1 2))	=> +1)
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; vector comparison
+
+  (let ((cmp (comparator-comparison-procedure vector-comparator)))
+    (check (cmp '#()  '#())	=>  0)
+    (check (cmp '#(1) '#())	=>  +1)
+    (check (cmp '#()  '#(1))	=>  -1)
+
+    (check (cmp '#(1 2) '#(1 2)) =>  0)
+    (check (cmp '#(1 2) '#(1 3)) => -1) ;2 < 3
+    (check (cmp '#(1 4) '#(1 3)) => +1) ;4 > 3
+    (check (cmp '#(1 0) '#(2 0)) => -1)
+    (check (cmp '#(3 0) '#(2 0)) => +1)
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; bytevector comparison
+
+  (let ((cmp (comparator-comparison-procedure bytevector-comparator)))
+    (check (cmp '#vu8()  '#vu8())	=>  0)
+    (check (cmp '#vu8(1) '#vu8())	=>  +1)
+    (check (cmp '#vu8()  '#vu8(1))	=>  -1)
+
+    (check (cmp '#vu8(1 2) '#vu8(1 2)) =>  0)
+    (check (cmp '#vu8(1 2) '#vu8(1 3)) => -1) ;2 < 3
+    (check (cmp '#vu8(1 4) '#vu8(1 3)) => +1) ;4 > 3
+    (check (cmp '#vu8(1 0) '#vu8(2 0)) => -1)
+    (check (cmp '#vu8(3 0) '#vu8(2 0)) => +1)
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'default))
+
+
   #t)
 
 

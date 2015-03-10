@@ -167,14 +167,14 @@ Compare booleans using the total order @code{#f < #t}.
 
 @defvr Constant char-comparator
 Compare characters using the total order implied by @func{char<?}.  On
-@rnrs{6} and @rnrs{7} systems, this is Unicode codepoint order.
+@rnrs{6} and @rnrs{7} systems, this is Unicode code point order.
 @end defvr
 
 
 @defvr Constant char-ci-comparator
-Compare characters using the total order implied by @func{char-ci<?}  On
-@rnrs{6} and @rnrs{7} systems, this is Unicode codepoint order after the
-characters have been folded to lower case.
+Compare characters using the total order implied by @func{char-ci<?}.
+On @rnrs{6} and @rnrs{7} systems, this is Unicode code point order after
+the characters have been folded to lower case.
 @end defvr
 
 
@@ -195,7 +195,7 @@ Compare symbols using the total order implied by applying
 @func{symbol->string} to the symbols and comparing them using the total
 order implied by @func{string<?}.  It is not a requirement that the hash
 function of @func{symbol-comparator} be consistent with the hash
-function of @func{string-comparator}, however.
+function of @func{string-comparator}.
 @end defvr
 
 
@@ -260,9 +260,12 @@ until a pair of unequal elements is found, in which case the result is
 the result of that comparison.  If all elements are equal, the arguments
 are equal.
 
-If the implementation does not support bytevectors,
-@func{bytevector-comparator} has a type testing procedure that always
-returns @false{}.
+@quotation
+@strong{NOTE} @value{PRJNAME} supports bytevectors, other Scheme
+implementations might not support them.  If the implementation does not
+support bytevectors, @func{bytevector-comparator} has a type testing
+procedure that always returns @false{}.
+@end quotation
 @end defvr
 
 @c page
@@ -278,11 +281,39 @@ subject to the following conditions:
 
 @itemize
 @item
-The following ordering between types must hold: the empty list precedes
-pairs, which precede booleans, which precede characters, which precede
-strings, which precede symbols, which precede numbers, which precede
-vectors, which precede bytevectors, which precede all other
-objects.  This ordering is compatible with @ansrfi{67}.
+The following ordering between types must hold:
+
+@enumerate
+@item
+the empty list precedes pairs,
+
+@item
+which precede booleans,
+
+@item
+which precede characters,
+
+@item
+which precede strings,
+
+@item
+which precede symbols,
+
+@item
+which precede numbers,
+
+@item
+which precede vectors,
+
+@item
+which precede bytevectors,
+
+@item
+which precede all other objects.
+@end enumerate
+
+@noindent
+this ordering is compatible with @ansrfi{67}.
 
 @item
 When applied to pairs, booleans, characters, strings, symbols, numbers,

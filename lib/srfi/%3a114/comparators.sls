@@ -79,6 +79,27 @@
   (import (vicare))
 
 
+;;;; helpers
+
+(define-syntax define-predefined-comparator
+  ;;Define a comparator through a constructor function that caches its result.  It is
+  ;;to be used to retrieve the predefined comparators.
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?build-form)
+     (begin
+       (define-syntax ?who
+	 (identifier-syntax (builder)))
+       (define builder
+	 (let ((C #f))
+	   (lambda ()
+	     (or C (receive-and-return (rv)
+		       ?build-form
+		     (set! C rv))))))
+       #| end of BEGIN |# ))
+    ))
+
+
 ;;; comparison syntaxes
 
 ;; Arithmetic if
@@ -263,7 +284,7 @@
 
 (module (default-comparator default-hash-function comparator-register-default!)
 
-  (define unknown-object-comparator
+  (define-constant unknown-object-comparator
     ;;The unknown-object comparator, used as a fallback to everything else
     ;;
     (make-comparator (lambda (obj) #t)
@@ -402,7 +423,7 @@
 	  (dispatch-equality a-type a b)
 	#f)))
 
-  (define default-comparator
+  (define-predefined-comparator default-comparator
     (make-comparator #t
 		     default-equality
 		     default-comparison
@@ -534,17 +555,18 @@
 (define (boolean-hash obj)
   (if obj 1 0))
 
-(define boolean-comparator
+(define-predefined-comparator boolean-comparator
   (make-comparator boolean? boolean=? boolean-comparison boolean-hash))
 
 ;;; --------------------------------------------------------------------
 
-(define char-comparison (make-comparison=/< char=? char<?))
+(define char-comparison
+  (make-comparison=/< char=? char<?))
 
 (define (char-hash obj)
   (abs (char->integer obj)))
 
-(define char-comparator
+(define-predefined-comparator char-comparator
   (make-comparator char? char=? char-comparison char-hash))
 
 ;;; --------------------------------------------------------------------
@@ -560,22 +582,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define string-comparison
-  (make-comparison=/< string=? string<?))
-
-(define string-ci-comparison
-  (make-comparison=/< string-ci=? string-ci<?))
-
-;;; --------------------------------------------------------------------
-
-(define (symbol<? a b)
-  (string<? (symbol->string a) (symbol->string b)))
-
-(define symbol-comparison
-  (make-comparison=/< symbol=? symbol<?))
-
-;;; --------------------------------------------------------------------
-
 (define (real-comparison a b)
   ;;Comparison procedure for real numbers only.
   ;;
@@ -588,7 +594,7 @@
   ;;
   (let ((real-result (real-comparison (real-part a)
 				      (real-part b))))
-    (if (= real-result 0)
+    (if (zero? real-result)
 	(real-comparison (imag-part a)
 			 (imag-part b))
       real-result)))
@@ -596,33 +602,26 @@
 (define (number-hash obj)
   (exact (round (magnitude obj))))
 
-(define number-comparator
+(define-predefined-comparator number-comparator
   (make-comparator number? = complex-comparison number-hash))
 
-(define complex-comparator
+(define-predefined-comparator complex-comparator
   (make-comparator complex? = complex-comparison number-hash))
 
-(define real-comparator
+(define-predefined-comparator real-comparator
   (make-comparator real? = real-comparison number-hash))
 
-(define rational-comparator
+(define-predefined-comparator rational-comparator
   (make-comparator rational? = real-comparison number-hash))
 
-(define integer-comparator
+(define-predefined-comparator integer-comparator
   (make-comparator integer? = real-comparison number-hash))
 
-(define exact-integer-comparator
+(define-predefined-comparator exact-integer-comparator
   (make-comparator exact-integer? = real-comparison number-hash))
 
 ;;; --------------------------------------------------------------------
 ;;; inexact real comparator
-
-(define (inexact-real? obj)
-  ;;Test procedure for inexact reals.
-  ;;
-  (and (number?  obj)
-       (inexact? obj)
-       (real?    obj)))
 
 (define (rounded-to x epsilon rounding)
   ;;Return a number appropriately rounded to EPSILON.
@@ -639,50 +638,64 @@
 	 (error __who__
 	   "invalid rounding specification" rounding))))))
 
-(define (nan-comparison nan-handling which other)
-  ;;Return result of comparing a NaN with a non-NaN.
+(module (make-inexact-real-comparison)
+
+  (define (make-inexact-real-comparison epsilon rounding nan-handling)
+    (lambda (a b)
+      (let ((a-nan? (nan? a))
+	    (b-nan? (nan? b)))
+	(cond ((and a-nan? b-nan?)
+	       0)
+	      (a-nan?
+	       (nan-comparison nan-handling 'a-nan b))
+	      (b-nan?
+	       (nan-comparison nan-handling 'b-nan a))
+	      (else
+	       (real-comparison (rounded-to a epsilon rounding)
+				(rounded-to b epsilon rounding)))))))
+
+  (define (nan-comparison nan-handling which other)
+    ;;Return result of comparing a NaN with a non-NaN.
+    ;;
+    (if (procedure? nan-handling)
+	(nan-handling other)
+      (case nan-handling
+	((error)
+	 (error __who__
+	   "attempt to compare NaN with non-NaN" nan-handling which other))
+	((min)
+	 (if (eq? which 'a-nan) -1 1))
+	((max)
+	 (if (eq? which 'a-nan) 1 -1))
+	(else
+	 (error __who__
+	   "invalid nan-handling specification" nan-handling)))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (make-inexact-real-comparator)
+  ;;Under Vicare only flonums are inexact and real.
   ;;
-  (if (procedure? nan-handling)
-      (nan-handling other)
-    (case nan-handling
-      ((error)
-       (error __who__
-	 "attempt to compare NaN with non-NaN" nan-handling which other))
-      ((min)
-       (if (eq? which 'a-nan) -1 1))
-      ((max)
-       (if (eq? which 'a-nan) 1 -1))
-      (else
-       (error __who__
-	 "invalid nan-handling specification" nan-handling)))))
+  (define (make-inexact-real-comparator epsilon rounding nan-handling)
+    (make-comparator flonum?
+		     #t
+		     (make-inexact-real-comparison epsilon rounding nan-handling)
+		     (make-inexact-real-hash       epsilon rounding)))
 
-(define (make-inexact-real-comparison epsilon rounding nan-handling)
-  (lambda (a b)
-    (let ((a-nan? (nan? a))
-	  (b-nan? (nan? b)))
-      (cond ((and a-nan? b-nan?)
-	     0)
-	    (a-nan?
-	     (nan-comparison nan-handling 'a-nan b))
-	    (b-nan?
-	     (nan-comparison nan-handling 'b-nan a))
-	    (else
-	     (real-comparison (rounded-to a epsilon rounding)
-			      (rounded-to b epsilon rounding)))))))
+  (define (make-inexact-real-hash epsilon rounding)
+    ;;Return 0 for NaN, number-hash otherwise.
+    ;;
+    (lambda (obj)
+      (if (nan? obj)
+	  0
+	(flonum-hash (rounded-to obj epsilon rounding)))))
 
-(define (make-inexact-real-hash epsilon rounding)
-  ;;Return 0 for NaN, number-hash otherwise.
-  ;;
-  (lambda (obj)
-    (if (nan? obj)
-	0
-      (number-hash (rounded-to obj epsilon rounding)))))
+  (define (flonum-hash obj)
+    (exact (round (abs obj))))
 
-(define (make-inexact-real-comparator epsilon rounding nan-handling)
-  (make-comparator inexact-real?
-		   #t
-		   (make-inexact-real-comparison epsilon rounding nan-handling)
-		   (make-inexact-real-hash       epsilon rounding)))
+  #| end of module |# )
 
 
 ;;;; standard comparators and comparator constructors: sequence comparator constructors and comparators
@@ -700,16 +713,23 @@
   ;;Make a comparison procedure that works listwise.
   ;;
   (letrec ((proc (lambda (a b)
-		   (let ((a-null? (null? a))
-			 (b-null? (null? b)))
-		     (cond ((and a-null? b-null?)	0)
-			   (a-null?			-1)
-			   (b-null?			+1)
-			   (else
-			    (let ((result (comparison (car a) (car b))))
-			      (if (= result 0)
-				  (proc (cdr a) (cdr b))
-				result))))))))
+		   ;;Here we know that A and B are proper lists (including null).
+		   ;;
+		   (cond ((pair? a)
+			  (if (pair? b)
+			      ;;A is pair B is pair.
+			      (let ((result (comparison (car a) (car b))))
+				(if (zero? result)
+				    (proc (cdr a) (cdr b))
+				  result))
+			    ;;A is pair B is null.
+			    +1))
+			 ((null? b)
+			  ;;A is null B is null.
+			  0)
+			 (else
+			  ;;A is null B is pair.
+			  -1)))))
     proc))
 
 (define (make-listwise-hash hash null? car cdr)
@@ -726,49 +746,64 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-vectorwise-comparison comparison length ref)
+(define (make-vectorwise-comparison vec-compar vec-length vec-ref)
   ;;Make a comparison procedure that works vectorwise.
   ;;
+  ;;NOTE We know that, under Vicare, vectors and bytevectors have length in the range
+  ;;of fixnums.  This function is meant to work on general vector-like objects, which
+  ;;might be  non-vectors and  non-bytevectors.  So  we cannot  use the  FX functions
+  ;;here, we have to use the general: =, <, add1, sub1, zero?.
+  ;;
   (lambda (a b)
-    (let* ((a-length (length a))
-           (b-length (length b))
-           (last-index (- a-length 1)))
-      (cond ((< a-length b-length)	-1)
-	    ((> a-length b-length)	+1)
+    (let ((a.length   (vec-length a))
+	  (b.length   (vec-length b)))
+      (cond ((< a.length b.length)	-1)
+	    ((> a.length b.length)	+1)
+	    ;;The lengths are equal.
+	    ((zero? a.length)
+	     ;;If we are here: it means both the vectors are empty.
+	     0)
 	    (else
-	     (call/cc
-		 (lambda (return)
-		   (let loop ((index 0))
-		     (let ((result (comparison (ref a index)
-					       (ref b index))))
-		       (if (zero? result)
-			   (if (= index last-index)
-			       0
-			     (loop (add1 index)))
-			 result))))))))))
+	     ;;If we  are here:  it means the  vectors have the  same length  and are
+	     ;;non-empty.
+	     (let ((last-index (sub1 a.length)))
+	       (let loop ((index 0))
+		 (let ((result (vec-compar (vec-ref a index)
+					   (vec-ref b index))))
+		   (if (zero? result)
+		       (if (= index last-index)
+			   0
+			 (loop (add1 index)))
+		     result)))))))))
 
-(define (make-vectorwise-hash hash length ref)
+(define (make-vectorwise-hash item-hash vec-length vec-ref)
   ;;Make a hash function that works vectorwise.
   ;;
   (lambda (obj)
-    (let loop ((index   (- (length obj) 1))
+    (let loop ((index   (sub1 (vec-length obj)))
 	       (result  5381))
-      (if (= index 0)
+      (if (zero? index)
 	  result
         (let* ((prod (modulo (* result 33)
 			     LIMIT))
-               (sum  (modulo (+ prod (hash (ref obj index)))
+               (sum  (modulo (+ prod (item-hash (vec-ref obj index)))
 			     LIMIT)))
           (loop (sub1 index) sum))))))
 
 ;;; --------------------------------------------------------------------
+
+(define string-comparison
+  (make-comparison=/< string=? string<?))
+
+(define string-ci-comparison
+  (make-comparison=/< string-ci=? string-ci<?))
 
 ;;Already defined by R6RS.
 ;;
 ;; (define string-hash
 ;;   (make-vectorwise-hash char-hash string-length string-ref))
 
-(define string-comparator
+(define-predefined-comparator string-comparator
   (make-comparator string? string=? string-comparison string-hash))
 
 ;;Already defined by R6RS.
@@ -776,17 +811,24 @@
 ;; (define (string-ci-hash obj)
 ;;   (string-hash (string-foldcase obj)))
 
-(define string-ci-comparator
+(define-predefined-comparator string-ci-comparator
   (make-comparator string? string-ci=? string-ci-comparison string-ci-hash))
 
 ;;; --------------------------------------------------------------------
+
+(define (symbol<? a b)
+  (string<? (symbol->string a)
+	    (symbol->string b)))
+
+(define symbol-comparison
+  (make-comparison=/< symbol=? symbol<?))
 
 ;;Already defined by R6RS.
 ;;
 ;; (define (symbol-hash obj)
 ;;   (string-hash (symbol->string obj)))
 
-(define symbol-comparator
+(define-predefined-comparator symbol-comparator
   (make-comparator symbol? symbol=? symbol-comparison symbol-hash))
 
 ;;; --------------------------------------------------------------------
@@ -797,11 +839,11 @@
 		   (make-listwise-comparison (comparator-comparison-procedure comparator) null? car cdr)
 		   (make-listwise-hash       (comparator-hash-function        comparator) null? car cdr)))
 
-(define (make-vectorwise-comparator test comparator length ref)
+(define (make-vectorwise-comparator test comparator vec-length vec-ref)
   (make-comparator test
 		   #t
-		   (make-vectorwise-comparison (comparator-comparison-procedure comparator) length ref)
-		   (make-vectorwise-hash       (comparator-hash-function        comparator) length ref)))
+		   (make-vectorwise-comparison (comparator-comparison-procedure comparator) vec-length vec-ref)
+		   (make-vectorwise-hash       (comparator-hash-function        comparator) vec-length vec-ref)))
 
 ;;; --------------------------------------------------------------------
 
@@ -811,7 +853,7 @@
 				  (pair? obj)))
 			    comparator null? car cdr))
 
-(define list-comparator
+(define-predefined-comparator list-comparator
   (make-list-comparator default-comparator))
 
 ;;; --------------------------------------------------------------------
@@ -819,7 +861,7 @@
 (define (make-vector-comparator comparator)
   (make-vectorwise-comparator vector? comparator vector-length vector-ref))
 
-(define vector-comparator
+(define-predefined-comparator vector-comparator
   (make-vector-comparator default-comparator))
 
 (define vector-comparison
@@ -833,7 +875,7 @@
 (define (make-bytevector-comparator comparator)
   (make-vectorwise-comparator bytevector? comparator bytevector-length bytevector-u8-ref))
 
-(define bytevector-comparator
+(define-predefined-comparator bytevector-comparator
   (make-bytevector-comparator default-comparator))
 
 (define bytevector-comparison
@@ -875,20 +917,20 @@
 
 (define (make-pair-hash car-comparator cdr-comparator)
   (lambda (obj)
-    (+
-     (comparator-hash car-comparator (car obj))
-     (comparator-hash cdr-comparator (cdr obj)))))
+    (+ (comparator-hash car-comparator (car obj))
+       (comparator-hash cdr-comparator (cdr obj)))))
 
 (define (make-pair-comparator car-comparator cdr-comparator)
-  (make-comparator
-   pair?
-   #t
-   (make-pair-comparison car-comparator cdr-comparator)
-   (make-pair-hash car-comparator cdr-comparator)))
+  (make-comparator pair?
+		   #t
+		   (make-pair-comparison car-comparator cdr-comparator)
+		   (make-pair-hash car-comparator cdr-comparator)))
 
-(define pair-comparator
+(define-predefined-comparator pair-comparator
   (make-pair-comparator default-comparator default-comparator))
-(define pair-hash (comparator-hash-function pair-comparator))
+
+(define pair-hash
+  (comparator-hash-function pair-comparator))
 
 ;;; --------------------------------------------------------------------
 
@@ -905,7 +947,7 @@
       (let* ((a-type (improper-list-type a))
 	     (b-type (improper-list-type b))
 	     (result (real-comparison a-type b-type)))
-        (cond ((not (= result 0))
+        (cond ((not (zero? result))
 	       result)
 	      ((null? a)
 	       0)
