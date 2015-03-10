@@ -162,21 +162,27 @@
   (protocol
    (lambda (make-record)
      (lambda (type-test equality comparison hash)
-       (make-record (if (eq? type-test #t)
-			(lambda (x) #t)
-		      type-test)
-		    (if (eq? equality  #t)
-			(lambda (x y)
-			  (eqv? (comparison x y) 0))
-		      equality)
-		    (or comparison
-			(lambda (x y)
-			  (error 'comparator "comparison not supported")))
-		    (or hash
-			(lambda (x y)
-			  (error 'comparator "hashing not supported")))
-		    (if comparison #t #f)
-		    (if hash #t #f)))))
+       (define cmp
+	 (make-record (if (eq? type-test #t)
+			  (lambda (x) #t)
+			type-test)
+		      (if (eq? equality  #t)
+			  (lambda (x y)
+			    (eqv? (comparison x y) 0))
+			equality)
+		      (or comparison
+			  (lambda (x y)
+			    (error 'anonymous-comparator
+			      "comparison not supported by this comparator"
+			      cmp)))
+		      (or hash
+			  (lambda (x y)
+			    (error 'anonymous-comparator
+			      "hashing not supported by this comparator"
+			      cmp)))
+		      (if comparison #t #f)
+		      (if hash       #t #f)))
+       cmp)))
   #| end of DEFINE-RECORD-TYPE |# )
 
 
@@ -588,7 +594,7 @@
       real-result)))
 
 (define (number-hash obj)
-  (exact (abs obj)))
+  (exact (round (magnitude obj))))
 
 (define number-comparator
   (make-comparator number? = complex-comparison number-hash))

@@ -67,7 +67,7 @@ implementation can make use of whatever procedures are available and
 useful to it.
 
 This @srfi{} could not have been written without the work of Sebastian
-Egner and Jens Axel Søgaard on @ansrfi{67}; much of the credit for this
+Egner and Jens Axel Soegaard on @ansrfi{67}; much of the credit for this
 @srfi{} is due to them, but none of the blame.  In addition, many of the
 design decisions of this @srfi{} are copied from @ansrfi{67}'s design
 rationale.
@@ -81,37 +81,35 @@ A comparator is an object of a disjoint type.  It is a bundle of
 procedures that are useful for comparing two objects either for equality
 or for ordering.  There are four procedures in the bundle:
 
-@itemize
-@item
-The type test predicate returns @true{} if its argument has the correct
-type to be passed as an argument to the other three procedures, and
-@false{} otherwise.
+@table @strong
+@item Type test predicate
+It returns @true{} if its argument has the correct type to be passed as
+an argument to the other three procedures, and @false{} otherwise.
 
-@item
-The equality predicate returns @true{} if the two objects are the same
-in the sense of the comparator, and @false{} otherwise.  It is the
-programmer's responsibility to ensure that it is reflexive, symmetric,
-transitive, and can handle any arguments that satisfy the type test
-predicate.
+@item Equality predicate
+It returns @true{} if the two objects are the same in the sense of the
+comparator, and @false{} otherwise.  It is the programmer's
+responsibility to ensure that it is reflexive, symmetric, transitive,
+and can handle any arguments that satisfy the type test predicate.
 
-@item
-The comparison procedure returns @code{-1}, @code{0}, or @code{+1} if
-the first object precedes the second, is equal to the second, or follows
-the second, respectively, in a total order defined by the comparator.
-It is the programmer's responsibility to ensure that it is reflexive,
-weakly antisymmetric, transitive, can handle any arguments that satisfy
-the type test predicate, and returns @code{0} if and only if the
-equality predicate returns @true{}.  Comparison procedures are
-compatible with the @emph{compare procedures} of @ansrfi{67}; see
-@ansrfi{67} for the rationale for adopting this return convention.
+@item Comparison procedure
+It returns @code{-1}, @code{0}, or @code{+1} if the first object
+precedes the second, is equal to the second, or follows the second,
+respectively, in a total order defined by the comparator.  It is the
+programmer's responsibility to ensure that it is reflexive, weakly
+antisymmetric, transitive, can handle any arguments that satisfy the
+type test predicate, and returns @code{0} if and only if the equality
+predicate returns @true{}.  Comparison procedures are compatible with
+the @emph{compare procedures} of @ansrfi{67}; see @ansrfi{67} for the
+rationale for adopting this return convention.
 
-@item
-The hash function takes one argument, and returns an exact non--negative
-integer.  It is the programmer's responsibility to ensure that it can
-handle any argument that satisfies the type test predicate, and that it
-returns the same value on two objects if the equality predicate says
-they are the same (but not necessarily the converse).
-@end itemize
+@item Hash function
+It takes one argument, and returns an exact non--negative integer.  It
+is the programmer's responsibility to ensure that it can handle any
+argument that satisfies the type test predicate, and that it returns the
+same value on two objects if the equality predicate says they are the
+same (but not necessarily the converse).
+@end table
 
 It is also the programmer's responsibility to ensure that all four
 procedures provide the same result whenever they are applied to the same
@@ -126,7 +124,7 @@ collector can move objects in memory.
 
 
 The comparator objects defined in this @srfi{} are not applicable to
-circular structure or to NaNs or objects containing them.  Attempts to
+circular structures or to NaNs or objects containing them.  Attempts to
 pass any such objects to any procedure defined here, or to any procedure
 that is part of a comparator defined here, is an error except as
 otherwise noted.
@@ -162,51 +160,51 @@ procedures of @ansrfi{67}.  They all provide appropriate hash functions
 as well.
 
 
-@defun boolean-comparator
+@defvr Constant boolean-comparator
 Compare booleans using the total order @code{#f < #t}.
-@end defun
+@end defvr
 
 
-@defun char-comparator
+@defvr Constant char-comparator
 Compare characters using the total order implied by @func{char<?}.  On
 @rnrs{6} and @rnrs{7} systems, this is Unicode codepoint order.
-@end defun
+@end defvr
 
 
-@defun char-ci-comparator
+@defvr Constant char-ci-comparator
 Compare characters using the total order implied by @func{char-ci<?}  On
 @rnrs{6} and @rnrs{7} systems, this is Unicode codepoint order after the
 characters have been folded to lower case.
-@end defun
+@end defvr
 
 
-@defun string-comparator
+@defvr Constant string-comparator
 Compare strings using the total order implied by @func{string<?}.  Note
 that this order is implementation--dependent.
-@end defun
+@end defvr
 
 
-@defun string-ci-comparator
+@defvr Constant string-ci-comparator
 Compare strings using the total order implied by @func{string-ci<?}.
 Note that this order is implementation--dependent.
-@end defun
+@end defvr
 
 
-@defun symbol-comparator
+@defvr Constant symbol-comparator
 Compare symbols using the total order implied by applying
 @func{symbol->string} to the symbols and comparing them using the total
 order implied by @func{string<?}.  It is not a requirement that the hash
 function of @func{symbol-comparator} be consistent with the hash
 function of @func{string-comparator}, however.
-@end defun
+@end defvr
 
 
-@defun exact-integer-comparator
-@defunx integer-comparator
-@defunx rational-comparator
-@defunx real-comparator
-@defunx complex-comparator
-@defunx number-comparator
+@defvr Constant exact-integer-comparator
+@defvrx Constant integer-comparator
+@defvrx Constant rational-comparator
+@defvrx Constant real-comparator
+@defvrx Constant complex-comparator
+@defvrx Constant number-comparator
 These comparators compare exact integers, integers, rational numbers,
 real numbers, complex numbers, and any numbers using the total order
 implied by @func{<}.
@@ -223,18 +221,18 @@ least--surprising ordering is defined: if the real parts are @func{<} or
 @func{>}, so are the numbers; otherwise, the numbers are ordered by
 their imaginary parts.  This can still produce surprising results if one
 real part is exact and the other is inexact.
-@end defun
+@end defvr
 
 
-@defun pair-comparator
+@defvr Constant pair-comparator
 Compare pairs using @func{default-comparator}  on their cars.
 If the cars are not equal, that value is returned.  If they are equal,
 @func{default-comparator} is used on their cdrs and that value is
 returned.
-@end defun
+@end defvr
 
 
-@defun list-comparator
+@defvr Constant list-comparator
 Compare lists lexicographically, as follows:
 
 @itemize
@@ -250,11 +248,11 @@ are not equal when compared using @func{default-comparator} ,
 then the result is the result of that comparison.  Otherwise, the cdrs
 are compared using @func{list-comparator}.
 @end itemize
-@end defun
+@end defvr
 
 
-@defun vector-comparator
-@defunx bytevector-comparator
+@defvr Constant vector-comparator
+@defvrx Constant bytevector-comparator
 Compare vectors and bytevectors by comparing their lengths.  A shorter
 argument is always less than a longer one.  If the lengths are equal,
 then each element is compared in turn using @func{default-comparator}
@@ -265,7 +263,7 @@ are equal.
 If the implementation does not support bytevectors,
 @func{bytevector-comparator} has a type testing procedure that always
 returns @false{}.
-@end defun
+@end defvr
 
 @c page
 @node srfi comparators default
@@ -288,7 +286,7 @@ objects.  This ordering is compatible with @ansrfi{67}.
 
 @item
 When applied to pairs, booleans, characters, strings, symbols, numbers,
-vectors, or bytevectors, its behavior must be the same as
+vectors, or bytevectors, its behaviour must be the same as
 @func{pair-comparator}, @func{boolean-comparator},
 @func{character-comparator}, @func{string-comparator},
 @func{symbol-comparator}, @func{number-comparator},
@@ -524,7 +522,7 @@ unexpected storage leaks.
 @defunx equal-comparator
 The equality predicates of these comparators are @func{eq?},
 @func{eqv?}, and @func{equal?}  respectively.  When their comparison
-procedures are applied to non--equal objects, their behavior is
+procedures are applied to non--equal objects, their behaviour is
 implementation--defined.  The type test predicates always return
 @true{}.
 

@@ -44,7 +44,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (srfi :113 sets-and-bags)
   (export
     ;;
@@ -115,109 +115,147 @@
   (make-hashtable (comparator-hash-function      comparator)
 		  (comparator-equality-predicate comparator)))
 
-(define (hashtable-for-each proc hash-table)
-  (vector-for-each proc (hashtable-entries hash-table)))
+(define* (hashtable-for-each {proc procedure?} {T hashtable?})
+  (vector-for-each proc (hashtable-entries T)))
+
+(define* (hashtable-fold-entries {proc procedure?} nil {T hashtable?})
+  (receive (keys vals)
+      (hashtable-entries T)
+    (vector-fold-left proc nil keys vals)))
+
+(define (max-one n multi?)
+  ;;Upper-bound N by one if MULTI? is false.
+  ;;
+  ;;   (max-one -3 #f)	=> -3
+  ;;   (max-one -2 #f)	=> -2
+  ;;   (max-one -1 #f)	=> -1
+  ;;   (max-one  0 #f)	=>  0
+  ;;   (max-one +1 #f)	=> +1
+  ;;   (max-one +2 #f)	=> +1
+  ;;   (max-one +3 #f)	=> +1
+  ;;
+  (cond (multi?		n)
+	((> n 1)	1)
+	(else		n)))
 
 
-;;;; record definition and core typing/checking procedures
+;;;; record definition and core typing
 
 (define-record-type (sob %make-sob sob?)
   (fields (immutable hash-table)
 	  (immutable comparator)
-	  (immutable multi?)))
+	  (immutable multi?))
+  (protocol
+   (lambda (make-record)
+     (lambda* ({hash-table hashtable?} {comparator comparator?} multi?)
+       (make-record hash-table comparator (and multi? #t)))))
+  #| end of DEFINE-RECORD-TYPE |# )
 
-(define (set? obj) (and (sob? obj) (not (sob-multi? obj))))
+(define (set? obj)
+  (and (sob? obj)
+       (not (sob-multi? obj))))
 
-(define (bag? obj) (and (sob? obj) (sob-multi? obj)))
+(define (bag? obj)
+  (and (sob? obj)
+       (sob-multi? obj)))
 
-(define (check-set obj) (if (not (set? obj)) (error "not a set" obj)))
+
+;;;; procedure arguments validation
 
-(define (check-bag obj) (if (not (bag? obj)) (error "not a bag" obj)))
+(module (%list-of-sets?
+	 %list-of-bags?)
 
-;; These procedures verify that not only are their arguments all sets
-;; or all bags as the case may be, but also share the same comparator.
+  (define (%list-of-sets? obj)
+    (and (pair? obj)
+	 (for-all set? obj)
+	 (%sob-check-comparators obj)))
 
-(define (check-all-sets list)
-  (for-each (lambda (obj) (check-set obj)) list)
-  (sob-check-comparators list))
+  (define (%list-of-bags? obj)
+    (and (list? obj)
+	 (for-all bag? obj)
+	 (%sob-check-comparators obj)))
 
-(define (check-all-bags list)
-  (for-each (lambda (obj) (check-bag obj)) list)
-  (sob-check-comparators list))
+  (define (%sob-check-comparators sobs)
+    ;;Given a  proper list of SOB  objects: return true if  all the SOBs have  the same
+    ;;comparator according to EQ?.
+    ;;
+    (when (pair? sobs)
+      (let ((first-compar (sob-comparator (car sobs))))
+	(for-each
+	    (lambda (sob)
+	      (eq? first-compar (sob-comparator sob)))
+	  (cdr sobs)))))
 
-(define (sob-check-comparators list)
-  (if (not (null? list))
-      (for-each
-	  (lambda (sob)
-	    (check-same-comparator (car list) sob))
-        (cdr list))))
+  #| end of module |# )
 
-;; This procedure is used directly when there are exactly two arguments.
+(define (%check-same-comparator who sob1 sob2)
+  (unless (eq? (sob-comparator sob1)
+	       (sob-comparator sob2))
+    (procedure-argument-violation who
+      "expected SOB objects with equal comparator" sob1 sob2)))
 
-(define (check-same-comparator a b)
-  (if (not (eq? (sob-comparator a) (sob-comparator b)))
-      (error "different comparators" a b)))
-
-;; This procedure defends against inserting an element
-;; into a sob that violates its constructor, since
-;; typical hash-table implementations don't check for us.
-
-(define (check-element sob element)
+(define (%check-element sob element)
+  ;;This procedure defends against inserting an  ELEMENT into a SOB that violates its
+  ;;constructor, since typical hashtable implementations don't check for us.
+  ;;
   (comparator-check-type (sob-comparator sob) element))
 
-;;; Constructors
-
-;; Construct an arbitrary empty sob out of nothing.
+
+;;;; constructors
 
 (define (make-sob comparator multi?)
+  ;;Construct an arbitrary empty SOB out of nothing.
+  ;;
   (%make-sob (make-hash-table/comparator comparator) comparator multi?))
 
-;; Copy a sob, sharing the constructor.
-
 (define (sob-copy sob)
+  ;;Copy a SOB, sharing the constructor.
+  ;;
   (%make-sob (hashtable-copy (sob-hash-table sob) #t)
 	     (sob-comparator sob)
 	     (sob-multi? sob)))
 
-(define (set-copy set)
-  (check-set set)
+(define* (set-copy {set set?})
   (sob-copy set))
 
-(define (bag-copy bag)
-  (check-bag bag)
+(define* (bag-copy {bag bag?})
   (sob-copy bag))
 
-;; Construct an empty sob that shares the constructor of an existing sob.
-
 (define (sob-empty-copy sob)
+  ;;Construct an empty sob that shares the constructor of an existing sob.
+  ;;
   (make-sob (sob-comparator sob) (sob-multi? sob)))
 
-;; Construct a set or a bag and insert elements into it.  These are the
-;; simplest external constructors.
+(define* (set {comparator comparator?} . elements)
+  ;;Construct a set and insert elements into it.
+  ;;
+  (receive-and-return (result)
+      (make-sob comparator #f)
+    (for-each (lambda (x)
+		(sob-increment! result x 1))
+      elements)))
 
-(define (set comparator . elements)
-  (let ((result (make-sob comparator #f)))
-    (for-each (lambda (x) (sob-increment! result x 1)) elements)
-    result))
+(define* (bag {comparator comparator?} . elements)
+  ;;Construct a set and insert elements into it.
+  ;;
+  (receive-and-return (result)
+      (make-sob comparator #t)
+    (for-each (lambda (x)
+		(sob-increment! result x 1))
+      elements)))
 
-(define (bag comparator . elements)
-  (let ((result (make-sob comparator #t)))
-    (for-each (lambda (x) (sob-increment! result x 1)) elements)
-    result))
-
-;; The fundamental (as opposed to simplest) constructor: unfold the
-;; results of iterating a function as a set.  In line with SRFI 1,
-;; we provide an opportunity to map the sequence of seeds through a
-;; mapper function.
-
-(define (sob-unfold stop? mapper successor seed comparator multi?)
-  (let ((result (make-sob comparator multi?)))
+(define* (sob-unfold {stop? procedure?} {mapper procedure?} {successor procedure?}
+		     seed {comparator comparator?} multi?)
+  ;;The  fundamental (as  opposed to  simplest)  constructor: unfold  the results  of
+  ;;iterating a function as a set.  In line with SRFI 1, we provide an opportunity to
+  ;;map the sequence of seeds through a mapper function.
+  ;;
+  (receive-and-return (result)
+      (make-sob comparator multi?)
     (let loop ((seed seed))
-      (if (stop? seed)
-          result
-	(begin
-	  (sob-increment! result (mapper seed) 1)
-	  (loop (successor seed)))))))
+      (unless (stop? seed)
+	(sob-increment! result (mapper seed) 1)
+	(loop (successor seed))))))
 
 (define (set-unfold continue? mapper successor seed comparator)
   (sob-unfold continue? mapper successor seed comparator #f))
@@ -225,104 +263,86 @@
 (define (bag-unfold continue? mapper successor seed comparator)
   (sob-unfold continue? mapper successor seed comparator #t))
 
-;;; Predicates
-
-;; Just a wrapper of hashtable-contains?.
+
+;;;; predicates
 
 (define (sob-contains? sob member)
   (hashtable-contains? (sob-hash-table sob) member))
 
-(define (set-contains? set member)
-  (check-set set)
+(define* (set-contains? {set set?} member)
   (sob-contains? set member))
 
-(define (bag-contains? bag member)
-  (check-bag bag)
+(define* (bag-contains? {bag bag?} member)
   (sob-contains? bag member))
 
-;; A sob is empty if its size is 0.
-
 (define (sob-empty? sob)
+  ;;A SOB is empty if its size is 0.
+  ;;
   (zero? (hashtable-size (sob-hash-table sob))))
 
-(define (set-empty? set)
-  (check-set set)
+(define* (set-empty? {set set?})
   (sob-empty? set))
 
-(define (bag-empty? bag)
-  (check-bag bag)
+(define* (bag-empty? {bag bag?})
   (sob-empty? bag))
 
-;; Two sobs are disjoint if, when looping through one, we can't find
-;; any of its elements in the other.  We have to try both ways:
-;; sob-half-disjoint checks just one direction for simplicity.
+(define (sob-half-disjoint? A B)
+  ;;Two SOBs  are disjoint if,  when looping  through one, we  can't find any  of its
+  ;;elements in the other.  We have  to try both ways: SOB-HALF-DISJOINT? checks just
+  ;;one direction for simplicity.
+  ;;
+  (let ((HB (sob-hash-table B)))
+    (not (vector-for-all (lambda (key)
+			   (hashtable-contains? HB key))
+	   (hashtable-keys (sob-hash-table A))))))
 
-(define (sob-half-disjoint? a b)
-  (let ((ha (sob-hash-table a))
-        (hb (sob-hash-table b)))
-    (call/cc
-	(lambda (return)
-	  (hashtable-for-each
-	   (lambda (key val) (if (hashtable-contains? hb key) (return #f)))
-	   ha)
-	  #t))))
+(define* (set-disjoint? {a set?} {b set?})
+  (%check-same-comparator __who__ a b)
+  (and (sob-half-disjoint? a b)
+       (sob-half-disjoint? b a)))
 
-(define (set-disjoint? a b)
-  (check-set a)
-  (check-set b)
-  (check-same-comparator a b)
-  (and (sob-half-disjoint? a b) (sob-half-disjoint? b a)))
+(define* (bag-disjoint? {a set?} {b set?})
+  (%check-same-comparator __who__ a b)
+  (and (sob-half-disjoint? a b)
+       (sob-half-disjoint? b a)))
 
-(define (bag-disjoint? a b)
-  (check-bag a)
-  (check-bag b)
-  (check-same-comparator a b)
-  (and (sob-half-disjoint? a b) (sob-half-disjoint? b a)))
-
-;; Accessors
-
-;; If two objects are indistinguishable by the comparator's
-;; equality procedure, only one of them will be represented in the sob.
-;; This procedure lets us find out which one it is; it will return
-;; the value stored in the sob that is equal to the element.
-;; Note that we have to search the whole hash table item by item.
-;; The default is returned if there is no such element.
+
+;;;; accessors
 
 (define (sob-member sob element default)
-  (define (same? a b) (=? (sob-comparator sob) a b))
-  (call/cc
-      (lambda (return)
-	(hashtable-for-each
-	 (lambda (key val) (if (same? key element) (return key)))
-	 (sob-hash-table sob))
-	default)))
+  ;;If two objects are indistinguishable by the comparator's equality procedure, only
+  ;;one of  them will be  represented in  the SOB.  This  procedure lets us  find out
+  ;;which one it is; it will return the value  stored in the SOB that is equal to the
+  ;;element.  Note  that we  have to search  the whole hashtable  item by  item.  The
+  ;;DEFAULT is returned if there is no such element.
+  ;;
+  (define-constant COMPAR
+    (sob-comparator sob))
+  (or (vector-find (lambda (key)
+		     (=? COMPAR key element))
+	(hashtable-keys (sob-hash-table sob)))
+      default))
 
-(define (set-member set element default)
-  (check-set set)
+(define* (set-member {set set?} element default)
   (sob-member set element default))
 
-(define (bag-member bag element default)
-  (check-bag bag)
+(define* (bag-member {bag bag?} element default)
   (sob-member bag element default))
 
-;; Retrieve the comparator.
-
-(define (set-element-comparator set)
-  (check-set set)
+(define* (set-element-comparator {set set?})
   (sob-comparator set))
 
-(define (bag-element-comparator bag)
-  (check-bag bag)
+(define* (bag-element-comparator {bag bag?})
   (sob-comparator bag))
 
-
-;; Updaters (pure functional and linear update)
-
-;; The primitive operation for adding an element to a sob.
-;; There are a few cases where we bypass this for efficiency.
+
+;;;; updaters (pure functional and linear update)
 
 (define (sob-increment! sob element count)
-  (check-element sob element)
+  ;;Primitive operation to add  an element to a SOB.  There are a  few cases where we
+  ;;bypass this for efficiency.
+  ;;
+  (%check-element sob element)
   (hashtable-update! (sob-hash-table sob)
 		     element
 		     (if (sob-multi? sob)
@@ -330,28 +350,27 @@
 		       (lambda (value) 1))
 		     0))
 
-;; The primitive operation for removing an element from a sob.  Note this
-;; procedure is incomplete: it allows the count of an element to drop below 1.
-;; Therefore, whenever it is used it is necessary to call sob-cleanup!
-;; to fix things up.  This is done because it is unsafe to remove an
-;; object from a hash table while iterating through it.
-
 (define (sob-decrement! sob element count)
+  ;;Primitive operation  to remove  an element  from a SOB.   Note this  procedure is
+  ;;incomplete:  it allows  the count  of  an element  to drop  below 1.   Therefore,
+  ;;whenever it is used it is necessary to call SOB-CLEANUP!  to fix things up.  This
+  ;;is done because it is unsafe to remove an object from a hashtable while iterating
+  ;;through it.
+  ;;
   (hashtable-update! (sob-hash-table sob)
 		     element
 		     (lambda (value)
 		       (- value count))
 		     0))
 
-;; This is the cleanup procedure, which happens in two passes: it
-;; iterates through the sob, deciding which elements to remove (those
-;; with non-positive counts), and collecting them in a list.  When the
-;; iteration is done, it is safe to remove the elements using the list,
-;; because we are no longer iterating over the hash table.  It returns
-;; its argument, because it is often tail-called at the end of some
-;; procedure that wants to return the clean sob.
-
 (define (sob-cleanup! sob)
+  ;;This is the  cleanup procedure, which happens in two  passes: it iterates through
+  ;;the SOB, deciding which elements to  remove (those with non-positive counts), and
+  ;;collecting them in a list.  When the iteration  is done, it is safe to remove the
+  ;;elements using the list, because we are  no longer iterating over the hash table.
+  ;;It returns  its argument,  because it  is often  tail-called at  the end  of some
+  ;;procedure that wants to return the clean sob.
+  ;;
   (let ((ht (sob-hash-table sob)))
     (for-each (lambda (key)
 		(hashtable-delete! ht key))
@@ -359,162 +378,143 @@
     sob))
 
 (define (nonpositive-keys ht)
-  (let ((result '()))
-    (hashtable-for-each
-     (lambda (key value)
-       (when (<= value 0)
-	 (set! result (cons key result))))
-     ht)
-    result))
+  (hashtable-fold-entries
+      (lambda (nil key val)
+	(if (non-negative? val)
+	    (cons key nil)
+	  nil))
+    '()
+    ht))
 
-;; We expose these for bags but not sets.
-
-(define (bag-increment! bag element count)
-  (check-bag bag)
+(define* (bag-increment! {bag bag?} element {count non-negative-exact-integer?})
   (sob-increment! bag element count)
   bag)
 
-(define (bag-decrement! bag element count)
-  (check-bag bag)
+(define* (bag-decrement! {bag bag?} element {count non-negative-exact-integer?})
   (sob-decrement! bag element count)
   (sob-cleanup! bag)
   bag)
 
-;; The primitive operation to add elements from a list.  We expose
-;; this two ways: with a list argument and with multiple arguments.
+;;;
 
 (define (sob-adjoin-all! sob elements)
+  ;;The primitive operation  to add elements from  a list.  We expose  this two ways:
+  ;;with a list argument and with multiple arguments.
+  ;;
   (for-each
       (lambda (elem)
 	(sob-increment! sob elem 1))
     elements))
 
-(define (set-adjoin! set . elements)
-  (check-set set)
+(define* (set-adjoin! {set set?} . elements)
   (sob-adjoin-all! set elements)
   set)
 
-(define (bag-adjoin! bag . elements)
-  (check-bag bag)
+(define* (bag-adjoin! {bag bag?} . elements)
   (sob-adjoin-all! bag elements)
   bag)
 
+;;;
 
-;; These versions copy the set or bag before adjoining.
+(define* (set-adjoin {set set?} . elements)
+  (receive-and-return (result)
+      (sob-copy set)
+    (sob-adjoin-all! result elements)))
 
-(define (set-adjoin set . elements)
-  (check-set set)
-  (let ((result (sob-copy set)))
-    (sob-adjoin-all! result elements)
-    result))
+(define* (bag-adjoin {bag bag?} . elements)
+  (receive-and-return (result)
+      (sob-copy bag)
+    (sob-adjoin-all! result elements)))
 
-(define (bag-adjoin bag . elements)
-  (check-bag bag)
-  (let ((result (sob-copy bag)))
-    (sob-adjoin-all! result elements)
-    result))
-
-;; Given an element which resides in a set, this makes sure that the
-;; specified element is represented by the form given.  Thus if a
-;; sob contains 2 and the equality predicate is =, then calling
-;; (sob-replace! sob 2.0) will replace the 2 with 2.0.  Does nothing
-;; if there is no such element in the sob.
+;;;
 
 (define (sob-replace! sob element)
-  (let* ((comparator (sob-comparator sob))
-         (= (comparator-equality-predicate comparator))
-         (ht (sob-hash-table sob)))
+  ;;Given an  element which  resides in  a set,  this makes  sure that  the specified
+  ;;element is  represented by  the form  given.  Thus if  a sob  contains 2  and the
+  ;;equality predicate is "=", then calling:
+  ;;
+  ;;   (sob-replace! sob 2.0)
+  ;;
+  ;;will replace  the 2 with 2.0.   Does nothing if there  is no such element  in the
+  ;;SOB.
+  ;;
+  (let ((comparator (sob-comparator sob)))
     (comparator-check-type comparator element)
-    (call/cc
-	(lambda (return)
-	  (hashtable-for-each
-	   (lambda (key value)
-	     (when (= key element)
-	       (hashtable-delete! ht key)
-	       (hashtable-set! ht element value)
-	       (return sob)))
-	   ht)
-	  sob))))
+    (let ((element=  (comparator-equality-predicate comparator))
+	  (T         (sob-hash-table sob)))
+      (cond ((vector-find (lambda (key)
+			    (element= key element))
+	       (hashtable-keys T))
+	     => (lambda (key)
+		  (hashtable-update! T element values (void))))))))
 
-(define (set-replace! set element)
-  (check-set set)
+(define* (set-replace! {set set?} element)
   (sob-replace! set element)
   set)
 
-(define (bag-replace! bag element)
-  (check-bag bag)
+(define* (bag-replace! {bag set?} element)
   (sob-replace! bag element)
   bag)
 
-;; Non-destructive versions that copy the set first.  Yes, a little
-;; bit inefficient because it copies the element to be replaced before
-;; actually replacing it.
+(define* (set-replace {set set?} element)
+  (receive-and-return (result)
+      (sob-copy set)
+    (sob-replace! result element)))
 
-(define (set-replace set element)
-  (check-set set)
-  (let ((result (sob-copy set)))
-    (sob-replace! result element)
-    result))
+(define* (bag-replace {bag bag?} element)
+  (receive-and-return (result)
+      (sob-copy bag)
+    (sob-replace! result element)))
 
-(define (bag-replace bag element)
-  (check-bag bag)
-  (let ((result (sob-copy bag)))
-    (sob-replace! result element)
-    result))
-
-;; The primitive operation to delete elemnets from a list.
-;; Like sob-adjoin-all!, this is exposed two ways.  It calls
-;; sob-cleanup! itself, so its callers don't need to (though it is safe
-;; to do so.)
+;;;
 
 (define (sob-delete-all! sob elements)
-  (for-each (lambda (element) (sob-decrement! sob element 1)) elements)
+  ;;The primitive  operation to delete  elements from a list.   Like SOB-ADJOIN-ALL!,
+  ;;this is  exposed two ways.  It  calls SOB-CLEANUP!  itself, so  its callers don't
+  ;;need to (though it is safe to do so.)
+  ;;
+  (for-each (lambda (element)
+	      (sob-decrement! sob element 1))
+    elements)
   (sob-cleanup! sob)
   sob)
 
-(define (set-delete! set . elements)
-  (check-set set)
+(define* (set-delete! {set set?} . elements)
   (sob-delete-all! set elements))
 
-(define (bag-delete! bag . elements)
-  (check-bag bag)
+(define* (bag-delete! {bag bag?} . elements)
   (sob-delete-all! bag elements))
 
-(define (set-delete-all! set elements)
-  (check-set set)
+(define* (set-delete-all! {set set?} {elements list?})
   (sob-delete-all! set elements))
 
-(define (bag-delete-all! bag elements)
-  (check-bag bag)
+(define* (bag-delete-all! {bag bag?} {elements list?})
   (sob-delete-all! bag elements))
 
-;; Non-destructive version copy first; this is inefficient.
-
-(define (set-delete set . elements)
-  (check-set set)
+(define* (set-delete {set set?} . elements)
   (sob-delete-all! (sob-copy set) elements))
 
-(define (bag-delete bag . elements)
-  (check-bag bag)
+(define* (bag-delete {bag bag?} . elements)
   (sob-delete-all! (sob-copy bag) elements))
 
-(define (set-delete-all set elements)
-  (check-set set)
+(define* (set-delete-all {set set?} {elements list?})
   (sob-delete-all! (sob-copy set) elements))
 
-(define (bag-delete-all bag elements)
-  (check-bag bag)
+(define* (bag-delete-all {bag bag?} {elements list?})
   (sob-delete-all! (sob-copy bag) elements))
 
-;; Flag used by sob-search! to represent a missing object.
+;;;
 
-(define missing (string-copy "missing"))
-
-;; Searches and then dispatches to user-defined procedures on failure
-;; and success, which in turn should reinvoke a procedure to take some
-;; action on the set (insert, ignore, replace, or remove).
+;;Flag used by SOB-SEARCH! to represent a missing object.  We need a unique object.
+;;
+(define-constant MISSING
+  (string))
 
 (define (sob-search! sob element failure success)
+  ;;Searches and then  dispatches to user-defined procedures on  failure and success,
+  ;;which in turn should reinvoke a procedure to take some action on the set (insert,
+  ;;ignore, replace, or remove).
+  ;;
   (define (insert obj)
     (sob-increment! sob element 1)
     (values sob obj))
@@ -527,832 +527,863 @@
   (define (remove obj)
     (sob-decrement! sob element 1)
     (values (sob-cleanup! sob) obj))
-  (let ((true-element (sob-member sob element missing)))
-    (if (eq? true-element missing)
+  (let ((true-element (sob-member sob element MISSING)))
+    (if (eq? true-element MISSING)
 	(failure insert ignore)
       (success true-element update remove))))
 
-(define (set-search! set element failure success)
-  (check-set set)
+(define* (set-search! {set set?} element {failure procedure?} {success procedure?})
   (sob-search! set element failure success))
 
-(define (bag-search! bag element failure success)
-  (check-bag bag)
+(define* (bag-search! {bag bag?} element {failure procedure?} {success procedure?})
   (sob-search! bag element failure success))
 
-;; Return the size of a sob.  If it's a set, we can just use the
-;; number of associations in the hash table, but if it's a bag, we
-;; have to add up the counts.
+
+;;;
 
 (define (sob-size sob)
+  ;;Return  the size  of  a SOB.   If it's  a  set, we  can  just use  the number  of
+  ;;associations in the hashtable, but if it's a bag, we have to add up the counts.
+  ;;
   (if (sob-multi? sob)
-      (let ((result 0))
+      (receive-and-return (result)
+	  0
 	(hashtable-for-each (lambda (elem count)
 			      (set! result (+ count result)))
-			    (sob-hash-table sob))
-	result)
+	  (sob-hash-table sob)))
     (hashtable-size (sob-hash-table sob))))
 
-(define (set-size set)
-  (check-set set)
+(define* (set-size {set set?})
   (sob-size set))
 
-(define (bag-size bag)
-  (check-bag bag)
+(define* (bag-size {bag bag?})
   (sob-size bag))
 
-;; Search a sob to find something that matches a predicate.  You don't
-;; know which element you will get, so this is not as useful as finding
-;; an element in a list or other ordered container.  If it's not there,
-;; call the failure thunk.
+;;;
 
 (define (sob-find pred sob failure)
-  (call/cc
-      (lambda (return)
-	(hashtable-for-each
-	 (lambda (key value)
-	   (if (pred key) (return key)))
-	 (sob-hash-table sob))
-	(failure))))
+  ;;Search a  SOB to find  something that matches a  predicate PRED.  You  don't know
+  ;;which element you will  get, so this is not as useful as  finding an element in a
+  ;;list or other ordered container.  If it's not there, tail-call the FAILURE thunk.
+  ;;
+  (or (vector-find pred
+	(hashtable-keys (sob-hash-table sob)))
+      (failure)))
 
-(define (set-find pred set failure)
-  (check-set set)
+(define* (set-find {pred procedure?} {set set?} {failure procedure?})
   (sob-find pred set failure))
 
-(define (bag-find pred bag failure)
-  (check-bag bag)
+(define* (bag-find {pred procedure?} {set set?} {failure procedure?})
   (sob-find pred bag failure))
 
-;; Count the number of elements in the sob that satisfy the predicate.
-;; This is a special case of folding.
+;;;
 
 (define (sob-count pred sob)
-  (sob-fold
-   (lambda (elem total) (if (pred elem) (+ total 1) total))
-   0
-   sob))
+  ;;Count the number  of elements in the  sob that satisfy the predicate.   This is a
+  ;;special case of folding.
+  ;;
+  (sob-fold (lambda (elem total)
+	      (if (pred elem)
+		  (add1 total)
+		total))
+	    0 sob))
 
-(define (set-count pred set)
-  (check-set set)
+(define* (set-count {pred procedure?} {set set?})
   (sob-count pred set))
 
-(define (bag-count pred bag)
-  (check-bag bag)
+(define* (bag-count {pred procedure?} {bag bag?})
   (sob-count pred bag))
 
-;; Check if any of the elements in a sob satisfy a predicate.  Breaks out
-;; early (with call/cc) if a success is found.
+;;;
 
 (define (sob-any? pred sob)
-  (call/cc
-      (lambda (return)
-	(hashtable-for-each
-	 (lambda (elem value) (if (pred elem) (return #t)))
-	 (sob-hash-table sob))
-	#f)))
+  ;;Check if  any of the  elements in  a sob satisfy  a predicate.  Breaks  out early
+  ;;(with call/cc) if a success is found.
+  ;;
+  (vector-find pred
+    (hashtable-keys (sob-hash-table sob))))
 
-(define (set-any? pred set)
-  (check-set set)
+(define* (set-any? {pred procedure?} {set set?})
   (sob-any? pred set))
 
-(define (bag-any? pred bag)
-  (check-bag bag)
+(define* (bag-any? {pred procedure?} {bag bag?})
   (sob-any? pred bag))
 
-;; Analogous to set-any?.  Breaks out early if a failure is found.
+;;;
 
 (define (sob-every? pred sob)
-  (call/cc
-      (lambda (return)
-	(hashtable-for-each
-	 (lambda (elem value) (if (not (pred elem)) (return #f)))
-	 (sob-hash-table sob))
-	#t)))
+  ;;Analogous to set-any?.  Breaks out early if a failure is found.
+  ;;
+  (vector-for-all pred
+    (hashtable-keys (sob-hash-table sob))))
 
-(define (set-every? pred set)
-  (check-set set)
+(define* (set-every? {pred procedure?} {set set?})
   (sob-every? pred set))
 
-(define (bag-every? pred bag)
-  (check-bag bag)
+(define* (bag-every? {pred procedure?} {bag bag?})
   (sob-every? pred bag))
 
-
-;;; Mapping and folding
-
-;; A utility for iterating a command n times.  This is used by sob-for-each
-;; to execute a procedure over the repeated elements in a bag.  Because
-;; of the representation of sets, it works for them too.
+
+;;;; mapping and folding
 
 (define (do-n-times cmd n)
+  ;;A utility  for iterating  a command  N times.   This is  used by  SOB-FOR-EACH to
+  ;;execute  a  procedure over  the  repeated  elements in  a  bag.   Because of  the
+  ;;representation of sets, it works for them too.
+  ;;
   (let loop ((n n))
-    (when (> n 0)
+    (when (positive? n)
       (cmd)
-      (loop (- n 1)))))
-
-;; Basic iterator over a sob.
+      (loop (sub1 n)))))
 
 (define (sob-for-each proc sob)
-  (hashtable-for-each
-   (lambda (key value) (do-n-times (lambda () (proc key)) value))
-   (sob-hash-table sob)))
+  ;;Basic iterator over a sob.
+  ;;
+  (hashtable-for-each (lambda (key value)
+			(do-n-times (lambda ()
+				      (proc key))
+				    value))
+    (sob-hash-table sob)))
 
-(define (set-for-each proc set)
-  (check-set set)
+(define* (set-for-each {proc procedure?} {set set?})
   (sob-for-each proc set))
 
-(define (bag-for-each proc bag)
-  (check-bag bag)
+(define* (bag-for-each {proc procedure?} {bag bag?})
   (sob-for-each proc bag))
 
-;; Fundamental mapping operator.  We map over the associations directly,
-;; because each instance of an element in a bag will be treated identically
-;; anyway; we insert them all at once with sob-increment!.
+;;;
 
 (define (sob-map proc comparator sob)
-  (let ((result (make-sob comparator (sob-multi? sob))))
-    (hashtable-for-each
-     (lambda (key value) (sob-increment! result (proc key) value))
-     (sob-hash-table sob))
-    result))
+  ;;Fundamental mapping  operator.  We  map over  the associations  directly, because
+  ;;each instance  of an  element in  a bag  will be  treated identically  anyway; we
+  ;;insert them all at once with SOB-INCREMENT!.
+  ;;
+  (receive-and-return (result)
+      (make-sob comparator (sob-multi? sob))
+    (hashtable-for-each (lambda (key value)
+			  (sob-increment! result (proc key) value))
+      (sob-hash-table sob))))
 
-(define (set-map comparator proc set)
-  (check-set set)
+(define* (set-map {comparator comparator?} {proc procedure?} {set set?})
   (sob-map comparator proc set))
 
-(define (bag-map comparator proc bag)
-  (check-bag bag)
+(define* (bag-map {comparator comparator?} {proc procedure?} {bag bag?})
   (sob-map comparator proc bag))
 
-;; The fundamental deconstructor.  Note that there are no left vs. right
-;; folds because there is no order.  Each element in a bag is fed into
-;; the fold separately.
+;;;
 
 (define (sob-fold proc nil sob)
-  (let ((result nil))
-    (sob-for-each
-     (lambda (elem) (set! result (proc elem result)))
-     sob)
-    result))
+  ;;The  fundamental deconstructor.   Note that  there are  no left  vs. right  folds
+  ;;because  there  is no  order.   Each  element  in a  bag  is  fed into  the  fold
+  ;;separately.
+  ;;
+  (receive-and-return (result)
+      nil
+    (sob-for-each (lambda (elem)
+		    (set! result (proc elem result)))
+		  sob)))
 
-(define (set-fold proc nil set)
-  (check-set set)
+(define* (set-fold {proc procedure?} nil {set set?})
   (sob-fold proc nil set))
 
-(define (bag-fold proc nil bag)
-  (check-bag bag)
+(define* (bag-fold {proc procedure?} nil {bag bag?})
   (sob-fold proc nil bag))
 
-;; Process every element and copy the ones that satisfy the predicate.
-;; Identical elements are processed all at once.  This is used for both
-;; filter and remove.
+;;;
 
 (define (sob-filter pred sob)
-  (let ((result (sob-empty-copy sob)))
-    (hashtable-for-each
-     (lambda (key value)
-       (if (pred key) (sob-increment! result key value)))
-     (sob-hash-table sob))
-    result))
+  ;;Process every  element and copy the  ones that satisfy the  predicate.  Identical
+  ;;elements are processed all at once.  This is used for both filter and remove.
+  ;;
+  (receive-and-return (result)
+      (sob-empty-copy sob)
+    (hashtable-for-each (lambda (key value)
+			  (if (pred key)
+			      (sob-increment! result key value)))
+      (sob-hash-table sob))))
 
-(define (set-filter pred set)
-  (check-set set)
+(define* (set-filter {pred procedure?} {set set?})
   (sob-filter pred set))
 
-(define (bag-filter pred bag)
-  (check-bag bag)
+(define* (bag-filter {pred procedure?} {bag bag?})
   (sob-filter pred bag))
 
-(define (set-remove pred set)
-  (check-set set)
-  (sob-filter (lambda (x) (not (pred x))) set))
+(define* (set-remove {pred procedure?} {set set?})
+  (sob-filter (lambda (x)
+		(not (pred x)))
+	      set))
 
-(define (bag-remove pred bag)
-  (check-bag bag)
-  (sob-filter (lambda (x) (not (pred x))) bag))
+(define* (bag-remove {pred procedure?} {bag bag?})
+  (sob-filter (lambda (x)
+		(not (pred x)))
+	      bag))
 
-;; Process each element and remove those that don't satisfy the filter.
-;; This does its own cleanup, and is used for both filter! and remove!.
+;;;
 
 (define (sob-filter! pred sob)
-  (hashtable-for-each
-   (lambda (key value)
-     (if (not (pred key)) (sob-decrement! sob key value)))
-   (sob-hash-table sob))
+  ;;Process each element  and remove those that don't satisfy  the filter.  This does
+  ;;its own cleanup, and is used for both filter! and remove!.
+  ;;
+  (hashtable-for-each (lambda (key value)
+			(if (not (pred key))
+			    (sob-decrement! sob key value)))
+    (sob-hash-table sob))
   (sob-cleanup! sob))
 
-(define (set-filter! pred set)
-  (check-set set)
+(define* (set-filter! {pred procedure?} {set set?})
   (sob-filter! pred set))
 
-(define (bag-filter! pred bag)
-  (check-bag bag)
+(define* (bag-filter! {pred procedure?} {bag bag?})
   (sob-filter! pred bag))
 
-(define (set-remove! pred set)
-  (check-set set)
-  (sob-filter! (lambda (x) (not (pred x))) set))
+(define* (set-remove! {pred procedure?} {set set?})
+  (sob-filter! (lambda (x)
+		 (not (pred x)))
+	       set))
 
-(define (bag-remove! pred bag)
-  (check-bag bag)
-  (sob-filter! (lambda (x) (not (pred x))) bag))
+(define* (bag-remove! {pred procedure?} {bag bag?})
+  (sob-filter! (lambda (x)
+		 (not (pred x)))
+	       bag))
 
-;; Create two sobs and copy the elements that satisfy the predicate into
-;; one of them, all others into the other.  This is more efficient than
-;; filtering and removing separately.
+;;;
 
 (define (sob-partition pred sob)
+  ;;Create two  sobs and  copy the elements  that satisfy the  predicate into  one of
+  ;;them,  all others  into the  other.  This  is more  efficient than  filtering and
+  ;;removing separately.
+  ;;
   (let ((res1 (sob-empty-copy sob))
         (res2 (sob-empty-copy sob)))
-    (hashtable-for-each
-     (lambda (key value)
-       (if (pred key)
-	   (sob-increment! res1 key value)
-	 (sob-increment! res2 key value)))
-     (sob-hash-table sob))
+    (hashtable-for-each (lambda (key value)
+			  (if (pred key)
+			      (sob-increment! res1 key value)
+			    (sob-increment! res2 key value)))
+      (sob-hash-table sob))
     (values res1 res2)))
 
-(define (set-partition pred set)
-  (check-set set)
+(define* (set-partition {pred procedure?} {set set?})
   (sob-partition pred set))
 
-(define (bag-partition pred bag)
-  (check-bag bag)
+(define* (bag-partition {pred procedure?} {bag bag?})
   (sob-partition pred bag))
 
-;; Create a sob and iterate through the given sob.  Anything that satisfies
-;; the predicate is left alone; anything that doesn't is removed from the
-;; given sob and added to the new sob.
+;;;
 
 (define (sob-partition! pred sob)
+  ;;Create a  sob and  iterate through  the given sob.   Anything that  satisfies the
+  ;;predicate is left alone; anything that doesn't  is removed from the given sob and
+  ;;added to the new sob.
+  ;;
   (let ((result (sob-empty-copy sob)))
     (hashtable-for-each
-     (lambda (key value)
-       (if (not (pred key))
-	   (begin
-	     (sob-decrement! sob key value)
-	     (sob-increment! result key value))))
-     (sob-hash-table sob))
+	(lambda (key value)
+	  (unless (pred key)
+	    (sob-decrement! sob    key value)
+	    (sob-increment! result key value)))
+      (sob-hash-table sob))
     (values (sob-cleanup! sob) result)))
 
-(define (set-partition! pred set)
-  (check-set set)
+(define* (set-partition! {pred procedure?} {set set?})
   (sob-partition! pred set))
 
-(define (bag-partition! pred bag)
-  (check-bag bag)
+(define* (bag-partition! {pred procedure?} {bag bag?})
   (sob-partition! pred bag))
 
-
-;;; Copying and conversion
-
-;;; Convert a sob to a list; a special case of sob-fold.
+
+;;;; copying and conversion
 
 (define (sob->list sob)
-  (sob-fold (lambda (elem list) (cons elem list)) '() sob))
+  ;;Convert a sob to a list; a special case of sob-fold.
+  ;;
+  (sob-fold (lambda (elem list)
+	      (cons elem list))
+	    '() sob))
 
-(define (set->list set)
-  (check-set set)
+(define* (set->list {set set?})
   (sob->list set))
 
-(define (bag->list bag)
-  (check-bag bag)
+(define* (bag->list {bag set?})
   (sob->list bag))
 
-;; Convert a list to a sob.  Probably could be done using unfold, but
-;; since sobs are mutable anyway, it's just as easy to add the elements
-;; by side effect.
+;;;
 
 (define (list->sob! sob list)
-  (for-each (lambda (elem) (sob-increment! sob elem 1)) list)
+  ;;Convert a list to a sob.  Probably could be done using unfold, but since sobs are
+  ;;mutable anyway, it's just as easy to add the elements by side effect.
+  ;;
+  (for-each (lambda (elem)
+	      (sob-increment! sob elem 1))
+    list)
   sob)
 
-(define (list->set comparator list)
+(define* (list->set {comparator comparator?} {list list?})
   (list->sob! (make-sob comparator #f) list))
 
-(define (list->bag comparator list)
+(define* (list->bag {comparator comparator?} {list list?})
   (list->sob! (make-sob comparator #t) list))
 
-(define (list->set! set list)
-  (check-set set)
+(define* (list->set! {set set?} {list list?})
   (list->sob! set list))
 
-(define (list->bag! bag list)
-  (check-bag bag)
+(define* (list->bag! {bag bag?} {list list?})
   (list->sob! bag list))
 
-
-;;; Subsets
-
-;; All of these procedures follow the same pattern.  The
-;; sob<op>? procedures are case-lambdas that reduce the multi-argument
-;; case to the two-argument case.  As usual, the set<op>? and
-;; bag<op>? procedures are trivial layers over the sob<op>? procedure.
-;; The dyadic-sob<op>? procedures are where it gets interesting, so see
-;; the comments on them.
-
-(define sob=?
-  (case-lambda
-   ((sob) #t)
-   ((sob1 sob2) (dyadic-sob=? sob1 sob2))
-   ((sob1 sob2 . sobs)
-    (and (dyadic-sob=? sob1 sob2)
-	 (apply sob=? sob2 sobs)))))
-
-(define (set=? . sets)
-  (check-all-sets sets)
-  (apply sob=? sets))
-
-(define (bag=? . bags)
-  (check-all-bags bags)
-  (apply sob=? bags))
-
-;; First we check that there are the same number of entries in the
-;; hashtables of the two sobs; if that's not true, they can't be equal.
-;; Then we check that for each key, the values are the same (where
-;; being absent counts as a value of 0).  If any values aren't equal,
-;; again they can't be equal.
-
-(define (dyadic-sob=? sob1 sob2)
-  (call/cc
-      (lambda (return)
-	(let ((ht1 (sob-hash-table sob1))
-	      (ht2 (sob-hash-table sob2)))
-	  (if (not (= (hashtable-size ht1)
-		      (hashtable-size ht2)))
-	      (return #f))
-	  (hashtable-for-each (lambda (key value)
-				(if (not (= value (hashtable-ref ht2 key 0)))
-				    (return #f)))
-			      ht1))
-	#t)))
-
-(define sob<=?
-  (case-lambda
-   ((sob) #t)
-   ((sob1 sob2) (dyadic-sob<=? sob1 sob2))
-   ((sob1 sob2 . sobs)
-    (and (dyadic-sob<=? sob1 sob2)
-	 (apply sob<=? sob2 sobs)))))
-
-(define (set<=? . sets)
-  (check-all-sets sets)
-  (apply sob<=? sets))
-
-(define (bag<=? . bags)
-  (check-all-bags bags)
-  (apply sob<=? bags))
-
-;; This is analogous to dyadic-sob=?, except that we have to check
-;; both sobs to make sure each value is <= in order to be sure
-;; that we've traversed all the elements in either sob.
-
-(define (dyadic-sob<=? sob1 sob2)
-  (call/cc
-      (lambda (return)
-	(let ((ht1 (sob-hash-table sob1))
-	      (ht2 (sob-hash-table sob2)))
-	  (if (not (<= (hashtable-size ht1)
-		       (hashtable-size ht2)))
-	      (return #f))
-	  (hashtable-for-each
-	   (lambda (key value)
-	     (if (not (<= value (hashtable-ref ht2 key 0)))
-		 (return #f)))
-	   ht1))
-	#t)))
-
-(define sob>?
-  (case-lambda
-   ((sob) #t)
-   ((sob1 sob2) (dyadic-sob>? sob1 sob2))
-   ((sob1 sob2 . sobs)
-    (and (dyadic-sob>? sob1 sob2)
-	 (apply sob>? sob2 sobs)))))
-
-(define (set>? . sets)
-  (check-all-sets sets)
-  (apply sob>? sets))
-
-(define (bag>? . bags)
-  (check-all-bags bags)
-  (apply sob>? bags))
-
-;; > is the negation of <=.  Note that this is only true at the dyadic
-;; level; we can't just replace sob>? with a negation of sob<=?.
-
-(define (dyadic-sob>? sob1 sob2)
-  (not (dyadic-sob<=? sob1 sob2)))
-
-(define sob<?
-  (case-lambda
-   ((sob) #t)
-   ((sob1 sob2) (dyadic-sob<? sob1 sob2))
-   ((sob1 sob2 . sobs)
-    (and (dyadic-sob<? sob1 sob2)
-	 (apply sob<? sob2 sobs)))))
-
-(define (set<? . sets)
-  (check-all-sets sets)
-  (apply sob<? sets))
-
-(define (bag<? . bags)
-  (check-all-bags bags)
-  (apply sob<? bags))
-
-;; < is the inverse of >.  Again, this is only true dyadically.
-
-(define (dyadic-sob<? sob1 sob2)
-  (dyadic-sob>? sob2 sob1))
-
-(define sob>=?
-  (case-lambda
-   ((sob) #t)
-   ((sob1 sob2) (dyadic-sob>=? sob1 sob2))
-   ((sob1 sob2 . sobs)
-    (and (dyadic-sob>=? sob1 sob2)
-	 (apply sob>=? sob2 sobs)))))
-
-(define (set>=? . sets)
-  (check-all-sets sets)
-  (apply sob>=? sets))
-
-(define (bag>=? . bags)
-  (check-all-bags bags)
-  (apply sob>=? bags))
-
-;; Finally, >= is the negation of <.  Good thing we have tail recursion.
-
-(define (dyadic-sob>=? sob1 sob2)
-  (not (dyadic-sob<? sob1 sob2)))
-
-
-;;; Set theory operations
-
-;; A trivial helper function which upper-bounds n by one if multi? is false.
-
-(define (max-one n multi?)
-  (if multi? n (if (> n 1) 1 n)))
-
-;; The logic of union, intersection, difference, and sum is the same: the
-;; sob-* and sob-*! procedures do the reduction to the dyadic-sob-*!
-;; procedures.  The difference is that the sob-* procedures allocate
-;; an empty copy of the first sob to accumulate the results in, whereas
-;; the sob-*!  procedures work directly in the first sob.
-
-;; Note that there is no set-sum, as it is the same as set-union.
-
-(define (sob-union sob1 sob2 . sobs)
-  (let ((result (sob-empty-copy sob1)))
-    (dyadic-sob-union! result sob1 sob2)
-    (for-each
-	(lambda (sob) (dyadic-sob-union! result result sob))
-      sobs)
-    result))
-
-;; For union, we take the max of the counts of each element found
-;; in either sob and put that in the result.  On the pass through
-;; sob2, we know that the intersection is already accounted for,
-;; so we just copy over things that aren't in sob1.
-
-(define (dyadic-sob-union! result sob1 sob2)
-  (let ((sob1-ht (sob-hash-table sob1))
-        (sob2-ht (sob-hash-table sob2))
-        (result-ht (sob-hash-table result)))
-    (hashtable-for-each
-     (lambda (key value1)
-       (let ((value2 (hashtable-ref sob2-ht key 0)))
-	 (hashtable-set! result-ht key (max value1 value2))))
-     sob1-ht)
-    (hashtable-for-each
-     (lambda (key value2)
-       (let ((value1 (hashtable-ref sob1-ht key 0)))
-	 (if (= value1 0)
-	     (hashtable-set! result-ht key value2))))
-     sob2-ht)))
-
-(define (set-union . sets)
-  (check-all-sets sets)
-  (apply sob-union sets))
-
-(define (bag-union . bags)
-  (check-all-bags bags)
-  (apply sob-union bags))
-
-(define (sob-union! sob1 sob2 . sobs)
-  (dyadic-sob-union! sob1 sob1 sob2)
-  (for-each
-      (lambda (sob) (dyadic-sob-union! sob1 sob1 sob))
-    sobs)
-  sob1)
-
-(define (set-union! . sets)
-  (check-all-sets sets)
-  (apply sob-union! sets))
-
-(define (bag-union! . bags)
-  (check-all-bags bags)
-  (apply sob-union! bags))
-
-(define (sob-intersection sob1 sob2 . sobs)
-  (let ((result (sob-empty-copy sob1)))
-    (dyadic-sob-intersection! result sob1 sob2)
-    (for-each
-	(lambda (sob) (dyadic-sob-intersection! result result sob))
-      sobs)
-    (sob-cleanup! result)))
-
-;; For intersection, we compute the min of the counts of each element.
-;; We only have to scan sob1.  We clean up the result when we are
-;; done, in case it is the same as sob1.
-
-(define (dyadic-sob-intersection! result sob1 sob2)
-  (let ((sob1-ht (sob-hash-table sob1))
-        (sob2-ht (sob-hash-table sob2))
-        (result-ht (sob-hash-table result)))
-    (hashtable-for-each
-     (lambda (key value1)
-       (let ((value2 (hashtable-ref sob2-ht key 0)))
-	 (hashtable-set! result-ht key (min value1 value2))))
-     sob1-ht)))
-
-(define (set-intersection . sets)
-  (check-all-sets sets)
-  (apply sob-intersection sets))
-
-(define (bag-intersection . bags)
-  (check-all-bags bags)
-  (apply sob-intersection bags))
-
-(define (sob-intersection! sob1 sob2 . sobs)
-  (dyadic-sob-intersection! sob1 sob1 sob2)
-  (for-each
-      (lambda (sob) (dyadic-sob-intersection! sob1 sob1 sob))
-    sobs)
-  (sob-cleanup! sob1))
-
-(define (set-intersection! . sets)
-  (check-all-sets sets)
-  (apply sob-intersection! sets))
-
-(define (bag-intersection! . bags)
-  (check-all-bags bags)
-  (apply sob-intersection! bags))
-
-(define (sob-difference sob1 sob2 . sobs)
-  (let ((result (sob-empty-copy sob1)))
-    (dyadic-sob-difference! result sob1 sob2)
-    (for-each
-	(lambda (sob) (dyadic-sob-difference! result result sob))
-      sobs)
-    (sob-cleanup! result)))
-
-;; For difference, we use (big surprise) the numeric difference, bounded
-;; by zero.  We only need to scan sob1, but we clean up the result in
-;; case it is the same as sob1.
-
-(define (dyadic-sob-difference! result sob1 sob2)
-  (let ((sob1-ht (sob-hash-table sob1))
-        (sob2-ht (sob-hash-table sob2))
-        (result-ht (sob-hash-table result)))
-    (hashtable-for-each
-     (lambda (key value1)
-       (let ((value2 (hashtable-ref sob2-ht key 0)))
-	 (hashtable-set! result-ht key (- value1 value2))))
-     sob1-ht)))
-
-(define (set-difference . sets)
-  (check-all-sets sets)
-  (apply sob-difference sets))
-
-(define (bag-difference . bags)
-  (check-all-bags bags)
-  (apply sob-difference bags))
-
-(define (sob-difference! sob1 sob2 . sobs)
-  (dyadic-sob-difference! sob1 sob1 sob2)
-  (for-each
-      (lambda (sob) (dyadic-sob-difference! sob1 sob1 sob))
-    sobs)
-  (sob-cleanup! sob1))
-
-(define (set-difference! . sets)
-  (check-all-sets sets)
-  (apply sob-difference! sets))
-
-(define (bag-difference! . bags)
-  (check-all-bags bags)
-  (apply sob-difference! bags))
-
-(define (sob-sum sob1 sob2 . sobs)
-  (let ((result (sob-empty-copy sob1)))
-    (dyadic-sob-sum! result sob1 sob2)
-    (for-each
-	(lambda (sob) (dyadic-sob-sum! result result sob))
-      sobs)
-    result))
-
-;; Sum is just like union, except that we take the sum rather than the max.
-
-(define (dyadic-sob-sum! result sob1 sob2)
-  (let ((sob1-ht (sob-hash-table sob1))
-        (sob2-ht (sob-hash-table sob2))
-        (result-ht (sob-hash-table result)))
-    (hashtable-for-each
-     (lambda (key value1)
-       (let ((value2 (hashtable-ref sob2-ht key 0)))
-	 (hashtable-set! result-ht key (+ value1 value2))))
-     sob1-ht)
-    (hashtable-for-each
-     (lambda (key value2)
-       (let ((value1 (hashtable-ref sob1-ht key 0)))
-	 (if (= value1 0)
-	     (hashtable-set! result-ht key value2))))
-     sob2-ht)))
-
-
-;; Sum is defined for bags only; for sets, it is the same as union.
-
-(define (bag-sum . bags)
-  (check-all-bags bags)
-  (apply sob-sum bags))
-
-(define (sob-sum! sob1 sob2 . sobs)
-  (dyadic-sob-sum! sob1 sob1 sob2)
-  (for-each
-      (lambda (sob) (dyadic-sob-sum! sob1 sob1 sob))
-    sobs)
-  sob1)
-
-(define (bag-sum! . bags)
-  (check-all-bags bags)
-  (apply sob-sum! bags))
-
-;; For xor exactly two arguments are required, so the above structures are
-;; not necessary.  This version accepts a result sob and computes the
-;; absolute difference between the counts in the first sob and the
-;; corresponding counts in the second.
-
-;; We start by copying the entries in the second sob but not the first
-;; into the first.  Then we scan the first sob, computing the absolute
-;; difference of the values and writing them back into the first sob.
-;; It's essential to scan the second sob first, as we are not going to
-;; damage it in the process.  (Hat tip: Sam Tobin-Hochstadt.)
-
-(define (sob-xor! result sob1 sob2)
-  (let ((sob1-ht (sob-hash-table sob1))
-        (sob2-ht (sob-hash-table sob2))
-        (result-ht (sob-hash-table result)))
-    (hashtable-for-each
-     (lambda (key value2)
-       (let ((value1 (hashtable-ref sob1-ht key 0)))
-	 (if (= value1 0)
-	     (hashtable-set! result-ht key value2))))
-     sob2-ht)
-    (hashtable-for-each
-     (lambda (key value1)
-       (let ((value2 (hashtable-ref sob2-ht key 0)))
-	 (hashtable-set! result-ht key (abs (- value1 value2)))))
-     sob1-ht)
-    (sob-cleanup! result)))
-
-(define (set-xor set1 set2)
-  (check-set set1)
-  (check-set set2)
-  (check-same-comparator set1 set2)
-  (sob-xor! (sob-empty-copy set1) set1 set2))
-
-(define (bag-xor bag1 bag2)
-  (check-bag bag1)
-  (check-bag bag2)
-  (check-same-comparator bag1 bag2)
-  (sob-xor! (sob-empty-copy bag1) bag1 bag2))
-
-(define (set-xor! set1 set2)
-  (check-set set1)
-  (check-set set2)
-  (check-same-comparator set1 set2)
-  (sob-xor! set1 set1 set2))
-
-(define (bag-xor! bag1 bag2)
-  (check-bag bag1)
-  (check-bag bag2)
-  (check-same-comparator bag1 bag2)
-  (sob-xor! bag1 bag1 bag2))
-
-
-;;; A few bag-specific procedures
-
-(define (sob-product! result sob n)
-  (let ((rht (sob-hash-table result)))
-    (hashtable-for-each
-     (lambda (elem count) (hashtable-set! rht elem (* count n)))
-     (sob-hash-table sob))
-    result))
-
-(define (valid-n n)
-  (and (integer? n) (exact? n) (positive? n)))
-
-(define (bag-product bag n)
-  (check-bag bag)
-  (valid-n n)
-  (sob-product! (sob-empty-copy bag) bag n))
-
-(define (bag-product! bag n)
-  (check-bag bag)
-  (valid-n n)
-  (sob-product! bag bag n))
-
-(define (bag-unique-size bag)
-  (check-bag bag)
+
+;;;; subsets
+
+(define-syntax define-subset-proc
+  (syntax-rules ()
+    ((_ ?who ?dyadic-who ?arg-pred ?arg-list-pred)
+     (case-define* ?who
+       (({sob ?arg-pred})
+	#t)
+       (({sob1 ?arg-pred} {sob2 ?arg-pred})
+	(?dyadic-who sob1 sob2))
+       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred})
+	(and (?dyadic-who sob1 sob2)
+	     (?dyadic-who sob2 sob3)))
+       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} {sob4 ?arg-pred} . {sobs ?arg-list-pred})
+	(and (?dyadic-who sob1 sob2)
+	     (?dyadic-who sob2 sob3)
+	     (apply ?who sob3 sob4 sobs)))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(module (set=? bag=?)
+
+  (define-subset-proc set=? dyadic-sob=? set? %list-of-sets?)
+  (define-subset-proc bag=? dyadic-sob=? bag? %list-of-bags?)
+
+  (define (dyadic-sob=? sob1 sob2)
+    ;;First we check that  there are the same number of entries  in the hashtables of
+    ;;the two sobs; if that's not true, they  can't be equal.  Then we check that for
+    ;;each key, the values are the same (where  being absent counts as a value of 0).
+    ;;If any values aren't equal, again they can't be equal.
+    ;;
+    (let ((ht1 (sob-hash-table sob1))
+	  (ht2 (sob-hash-table sob2)))
+      (and (= (hashtable-size ht1)
+	      (hashtable-size ht2))
+	   (receive (keys1 vals1)
+	       (hashtable-entries ht1)
+	     (vector-for-all (lambda (key1 val1)
+			       (= val1 (hashtable-ref ht2 key1 0)))
+	       keys1 vals1)))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module SET-LESS-THAN/EQUAL-TO
+  (set<=? bag<=? dyadic-sob<=?)
+
+  (define-subset-proc set<=? dyadic-sob<=? set? %list-of-sets?)
+  (define-subset-proc bag<=? dyadic-sob<=? bag? %list-of-bags?)
+
+  (define (dyadic-sob<=? sob1 sob2)
+    ;;Every key in SOB1's hashtable must be a key in SOB2's hashtable.
+    ;;
+    (let ((ht1 (sob-hash-table sob1))
+	  (ht2 (sob-hash-table sob2)))
+      (and (<= (hashtable-size ht1)
+	       (hashtable-size ht2))
+	   (receive (keys1 vals1)
+	       (hashtable-entries ht1)
+	     (vector-for-all (lambda (key1 val1)
+			       (<= val1 (hashtable-ref ht2 key1 0)))
+	       keys1 vals1)))))
+
+  #| end of module |# )
+
+(module (set<=? bag<=?)
+  (import SET-LESS-THAN/EQUAL-TO))
+
+;;; --------------------------------------------------------------------
+
+(module SET-GREATER-THAN
+  (set>? bag>? dyadic-sob>?)
+  (module (dyadic-sob<=?)
+    (import SET-LESS-THAN/EQUAL-TO))
+
+  (define-subset-proc set>? dyadic-sob>? set? %list-of-sets?)
+  (define-subset-proc bag>? dyadic-sob>? bag? %list-of-bags?)
+
+  (define (dyadic-sob>? sob1 sob2)
+    ;;This is the negation  of <=.  Note that this is only true  at the dyadic level;
+    ;;we can't just replace SOB>? with a negation of SOB<=?.
+    ;;
+    (not (dyadic-sob<=? sob1 sob2)))
+
+  #| end of module |# )
+
+(module (set>? bag>?)
+  (import SET-GREATER-THAN))
+
+;;; --------------------------------------------------------------------
+
+(module SET-LESS-THAN
+  (set<? bag<? dyadic-sob<?)
+  (module (dyadic-sob>?)
+    (import SET-GREATER-THAN))
+
+  (define-subset-proc set<? dyadic-sob<? set? %list-of-sets?)
+  (define-subset-proc bag<? dyadic-sob<? bag? %list-of-bags?)
+
+  (define (dyadic-sob<? sob1 sob2)
+    ;;This is the inverse of >.  Note that  this is only true at the dyadic level; we
+    ;;can't just replace SOB<? with the inverse of SOB>?.
+    ;;
+    (dyadic-sob>? sob2 sob1))
+
+  #| end of module |# )
+
+(module (set<? bag<?)
+  (import SET-LESS-THAN))
+
+;;; --------------------------------------------------------------------
+
+(module (set>=? bag>=?)
+  (module (dyadic-sob<?)
+    (import SET-LESS-THAN))
+
+  (define-subset-proc set>=? dyadic-sob>=? set? %list-of-sets?)
+  (define-subset-proc bag>=? dyadic-sob>=? bag? %list-of-bags?)
+
+  (define (dyadic-sob>=? sob1 sob2)
+    ;;This is the negation of <.  Note that this is only true at the dyadic level; we
+    ;;can't just replace SOB>=? with the negation of SOB<?.
+    ;;
+    (not (dyadic-sob<? sob1 sob2)))
+
+  #| end of module |# )
+
+
+;;;; set theory operations
+;;
+;;The logic of  union, intersection, difference, and  sum is the same:  the SOB-* and
+;;SOB-*!   procedures  do  the  reduction  to  the  DYADIC-SOB-*!   procedures.   The
+;;difference is that the SOB-* procedures allocate  an empty copy of the first SOB to
+;;accumulate the  results in,  whereas the  SOB-*!  procedures  work directly  in the
+;;first SOB.
+;;
+;;Note that there is no SET-SUM, as it is the same as SET-UNION.
+;;
+
+(define-syntax define-set-theory-proc
+  (syntax-rules ()
+    ((_ ?who ?sob-who ?arg-pred ?arg-list-pred)
+     (case-define* ?who
+       (({sob ?arg-pred})
+	(?sob-who sob))
+       (({sob1 ?arg-pred} {sob2 ?arg-pred})
+	(?sob-who sob1 sob2))
+       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} . {sobs ?arg-list-pred})
+	(?sob-who sob1 sob2 sob3 sobs))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(module (set-union bag-union set-union! bag-union!)
+
+  (define-set-theory-proc set-union sob-union set? %list-of-sets?)
+  (define-set-theory-proc bag-union sob-union bag? %list-of-bags?)
+
+  (define-set-theory-proc set-union! sob-union! set? %list-of-sets?)
+  (define-set-theory-proc bag-union! sob-union! bag? %list-of-bags?)
+
+  (case-define sob-union
+    ((sob)
+     (sob-copy sob))
+    ((sob1 sob2)
+     (receive-and-return (result)
+	 (sob-empty-copy sob1)
+       (dyadic-sob-union! result sob1 sob2)))
+    ((sob1 sob2 sob3 sobs)
+     (receive-and-return (result)
+	 (sob-empty-copy sob1)
+       (dyadic-sob-union! result sob1 sob2)
+       (for-each
+	   (lambda (sob)
+	     (dyadic-sob-union! result result sob))
+	 (cons sob3 sobs)))))
+
+  (case-define sob-union!
+    ((sob)
+     sob)
+    ((sob1 sob2)
+     (dyadic-sob-union! sob1 sob1 sob2)
+     sob1)
+    ((sob1 sob2 sob3 sobs)
+     (dyadic-sob-union! sob1 sob1 sob2)
+     (for-each
+	 (lambda (sob)
+	   (dyadic-sob-union! sob1 sob1 sob))
+       (cons sob3 sobs))
+     sob1))
+
+  (define (dyadic-sob-union! result sob1 sob2)
+    ;;For union, we take  the max of the counts of each element  found in either SOBs
+    ;;and  put that  in the  result.  On  the  pass through  SOB2, we  know that  the
+    ;;intersection is already accounted for, so  we just copy over things that aren't
+    ;;in SOB1.
+    ;;
+    (let ((T1 (sob-hash-table sob1))
+	  (T2 (sob-hash-table sob2))
+	  (T  (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (key value1)
+	    (hashtable-set! T key (max value1 (hashtable-ref T2 key 0))))
+	T1)
+      (hashtable-for-each
+	  (lambda (key value2)
+	    (when (zero? (hashtable-ref T1 key 0))
+	      (hashtable-set! T key value2)))
+	T2)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (set-intersection bag-intersection set-intersection! bag-intersection!)
+
+  (define-set-theory-proc set-intersection sob-intersection set? %list-of-sets?)
+  (define-set-theory-proc bag-intersection sob-intersection bag? %list-of-bags?)
+
+  (define-set-theory-proc set-intersection! sob-intersection! set? %list-of-sets?)
+  (define-set-theory-proc bag-intersection! sob-intersection! bag? %list-of-bags?)
+
+  (case-define sob-intersection
+    ((sob)
+     (sob-copy sob))
+    ((sob1 sob2)
+     (let ((result (sob-empty-copy sob1)))
+       (dyadic-sob-intersection! result sob1 sob2)
+       ;;This returns RESULT.
+       (sob-cleanup! result)))
+    ((sob1 sob2 sob3 sobs)
+     (let ((result (sob-empty-copy sob1)))
+       (dyadic-sob-intersection! result sob1 sob2)
+       (for-each
+	   (lambda (sob) (dyadic-sob-intersection! result result sob))
+	 (cons sob3 sobs))
+       ;;This returns RESULT.
+       (sob-cleanup! result))))
+
+  (case-define sob-intersection!
+    ((sob)
+     sob)
+    ((sob1 sob2)
+     (dyadic-sob-intersection! sob1 sob1 sob2)
+     ;;This returns SOB1.
+     (sob-cleanup! sob1))
+    ((sob1 sob2 sob3 sobs)
+     (dyadic-sob-intersection! sob1 sob1 sob2)
+     (for-each
+	 (lambda (sob)
+	   (dyadic-sob-intersection! sob1 sob1 sob))
+       (cons sob3 sobs))
+     ;;This returns SOB1.
+     (sob-cleanup! sob1)))
+
+  (define (dyadic-sob-intersection! result sob1 sob2)
+    ;;For intersection, we  compute the min of  the counts of each  element.  We only
+    ;;have to scan SOB1.  We clean up the result  when we are done, in case it is the
+    ;;same as SOB1.
+    ;;
+    (let ((T1 (sob-hash-table sob1))
+	  (T2 (sob-hash-table sob2))
+	  (T  (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (key value1)
+	    (hashtable-set! T key (min value1 (hashtable-ref T2 key 0))))
+	T1)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (set-difference bag-difference set-difference! bag-difference!)
+
+  (define-set-theory-proc set-difference sob-difference set? %list-of-sets?)
+  (define-set-theory-proc bag-difference sob-difference bag? %list-of-bags?)
+
+  (define-set-theory-proc set-difference! sob-difference! set? %list-of-sets?)
+  (define-set-theory-proc bag-difference! sob-difference! bag? %list-of-bags?)
+
+  (case-define sob-difference
+    ((sob)
+     (sob-copy sob))
+    ((sob1 sob2)
+     (let ((result (sob-empty-copy sob1)))
+       (dyadic-sob-difference! result sob1 sob2)
+       ;;This returns RESULT.
+       (sob-cleanup! result)))
+    ((sob1 sob2 sob3 sobs)
+     (let ((result (sob-empty-copy sob1)))
+       (dyadic-sob-difference! result sob1 sob2)
+       (for-each
+	   (lambda (sob) (dyadic-sob-difference! result result sob))
+	 (cons sob3 sobs))
+       ;;This returns RESULT.
+       (sob-cleanup! result))))
+
+  (case-define sob-difference!
+    ((sob)
+     sob)
+    ((sob1 sob2)
+     (dyadic-sob-difference! sob1 sob1 sob2)
+     ;;This returns SOB1.
+     (sob-cleanup! sob1))
+    ((sob1 sob2 sob3 . sobs)
+     (dyadic-sob-difference! sob1 sob1 sob2)
+     (for-each
+	 (lambda (sob) (dyadic-sob-difference! sob1 sob1 sob))
+       sobs)
+     ;;This returns SOB1.
+     (sob-cleanup! sob1)))
+
+  (define (dyadic-sob-difference! result sob1 sob2)
+    ;;For difference, we use (big surprise)  the numeric difference, bounded by zero.
+    ;;We only need to scan SOB1, but we clean up the result in case it is the same as
+    ;;SOB1.
+    ;;
+    (let ((sob1-ht (sob-hash-table sob1))
+	  (sob2-ht (sob-hash-table sob2))
+	  (result-ht (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (key value1)
+	    (let ((value2 (hashtable-ref sob2-ht key 0)))
+	      (hashtable-set! result-ht key (- value1 value2))))
+	sob1-ht)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (bag-sum bag-sum!)
+  ;;Sum is defined for bags only; for sets, it is the same as union.
+
+  (define-set-theory-proc bag-sum  sob-sum  bag? %list-of-bags?)
+  (define-set-theory-proc bag-sum! sob-sum! bag? %list-of-bags?)
+
+  (case-define sob-sum
+    ((sob)
+     (sob-copy sob))
+    ((sob1 sob2)
+     (receive-and-return (result)
+	 (sob-empty-copy sob1)
+       (dyadic-sob-sum! result sob1 sob2)))
+    ((sob1 sob2 sob3 . sobs)
+     (receive-and-return (result)
+	 (sob-empty-copy sob1)
+       (dyadic-sob-sum! result sob1 sob2)
+       (for-each
+	   (lambda (sob)
+	     (dyadic-sob-sum! result result sob))
+	 (cons sob3 sobs)))))
+
+  (case-define sob-sum!
+    ((sob)
+     sob)
+    ((sob1 sob2)
+     (dyadic-sob-sum! sob1 sob1 sob2)
+     sob1)
+    ((sob1 sob2 sob3 . sobs)
+     (dyadic-sob-sum! sob1 sob1 sob2)
+     (for-each
+	 (lambda (sob)
+	   (dyadic-sob-sum! sob1 sob1 sob))
+       (cons sob3 sobs))
+     sob1))
+
+  (define (dyadic-sob-sum! result sob1 sob2)
+    ;;Sum is just like union, except that we take the sum rather than the max.
+    ;;
+    (let ((T1 (sob-hash-table sob1))
+	  (T2 (sob-hash-table sob2))
+	  (T  (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (key value1)
+	    (hashtable-set! T key (+ value1 (hashtable-ref T2 key 0))))
+	T1)
+      (hashtable-for-each
+	  (lambda (key value2)
+	    (when (zero? (hashtable-ref T1 key 0))
+	      (hashtable-set! T key value2)))
+	T2)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (set-xor bag-xor set-xor! bag-xor!)
+
+  (define-syntax define-xor-proc
+    (syntax-rules ()
+      ((_ ?who ?sob-who ?arg-pred)
+       (define* (?who {sob1 ?arg-pred} {sob2 ?arg-pred})
+	 (%check-same-comparator __who__ sob1 sob2)
+	 (?sob-who sob1 sob2)))
+      ))
+
+  (define-syntax define-xor-proc!
+    (syntax-rules ()
+      ((_ ?who ?sob-who ?arg-pred)
+       (define* (?who {sob1 ?arg-pred} {sob2 ?arg-pred})
+	 (%check-same-comparator __who__ sob1 sob2)
+	 (?sob-who sob1 sob1 sob2)))
+      ))
+
+  (define-xor-proc set-xor sob-xor set?)
+  (define-xor-proc bag-xor sob-xor bag?)
+
+  (define-xor-proc! set-xor! sob-xor! set?)
+  (define-xor-proc! bag-xor! sob-xor! bag?)
+
+  (define (sob-xor sob1 sob2)
+    (sob-xor! (sob-empty-copy sob1) sob1 sob2))
+
+  (define (sob-xor! result sob1 sob2)
+    ;;For XOR  exactly two arguments  are required, so  the above structures  are not
+    ;;necessary.   This  version accepts  a  result  SOB  and computes  the  absolute
+    ;;difference between the counts in the  first SOB and the corresponding counts in
+    ;;the second.
+    ;;
+    ;;We start by  copying the entries in the  second SOB but not the  first into the
+    ;;first.  Then  we scan the first  SOB, computing the absolute  difference of the
+    ;;values and writing  them back into the  first SOB.  It's essential  to scan the
+    ;;second SOB first, as  we are not going to damage it in  the process.  (Hat tip:
+    ;;Sam Tobin-Hochstadt.)
+    ;;
+    (let ((T1 (sob-hash-table sob1))
+	  (T2 (sob-hash-table sob2))
+	  (T (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (key value2)
+	    (when (zero? (hashtable-ref T1 key 0))
+	      (hashtable-set! T key value2)))
+	T2)
+      (hashtable-for-each
+	  (lambda (key value1)
+	    (hashtable-set! T key (abs (- value1 (hashtable-ref T2 key 0)))))
+	T1)
+      ;;This returns RESULT.
+      (sob-cleanup! result)))
+
+  #| end of module |# )
+
+
+;;;; bag-specific procedures
+
+(module (bag-product bag-product!)
+
+  (define* (bag-product {bag bag?} {n non-negative-exact-integer?})
+    (sob-product! (sob-empty-copy bag) bag n))
+
+  (define* (bag-product! {bag bag?} {n non-negative-exact-integer?})
+    (sob-product! bag bag n))
+
+  (define (sob-product! result sob n)
+    (let ((rht (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (elem count)
+	    (hashtable-set! rht elem (* count n)))
+	(sob-hash-table sob))
+      result))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define* (bag-unique-size {bag bag?})
   (hashtable-size (sob-hash-table bag)))
 
-(define (bag-element-count bag elem)
-  (check-bag bag)
+(define* (bag-element-count {bag bag?} elem)
   (hashtable-ref (sob-hash-table bag) elem 0))
 
-(define (bag-for-each-unique proc bag)
-  (check-bag bag)
+(define* (bag-for-each-unique {proc procedure?} {bag bag?})
   (hashtable-for-each
-   (lambda (key value) (proc key value))
-   (sob-hash-table bag)))
+      proc
+    (sob-hash-table bag)))
 
-(define (bag-fold-unique proc nil bag)
-  (check-bag bag)
-  (let ((result nil))
+(define* (bag-fold-unique {proc procedure?} nil {bag bag?})
+  (receive-and-return (result)
+      nil
     (hashtable-for-each
-     (lambda (elem count) (set! result (proc elem count result)))
-     (sob-hash-table bag))
-    result))
+	(lambda (elem count)
+	  (set! result (proc elem count result)))
+      (sob-hash-table bag))))
 
-(define (bag->set bag)
-  (check-bag bag)
-  (let ((result (make-sob (sob-comparator bag) #f)))
-    (hashtable-for-each
-     (lambda (key value) (sob-increment! result key value))
-     (sob-hash-table bag))
-    result))
+;;; --------------------------------------------------------------------
 
-(define (set->bag set)
-  (check-set set)
-  (let ((result (make-sob (sob-comparator set) #t)))
-    (hashtable-for-each
-     (lambda (key value) (sob-increment! result key value))
-     (sob-hash-table set))
-    result))
+(define* (bag->set {bag bag?})
+  (hashtable-fold-entries
+      (lambda (nil key value)
+	(sob-increment! nil key value)
+	nil)
+    (make-sob (sob-comparator bag) #f)
+    (sob-hash-table bag)))
 
-(define (set->bag! bag set)
-  (check-bag bag)
-  (check-set set)
-  (check-same-comparator set bag)
-  (hashtable-for-each
-   (lambda (key value) (sob-increment! bag key value))
-   (sob-hash-table set))
-  bag)
+(define* (set->bag {set set?})
+  (hashtable-fold-entries
+      (lambda (nil key val)
+	(sob-increment! nil key val)
+	nil)
+    (make-sob (sob-comparator set) #t)
+    (sob-hash-table set)))
 
-(define (bag->alist bag)
-  (check-bag bag)
+(define* (set->bag! {bag bag?} {set set?})
+  (%check-same-comparator __who__ set bag)
+  (hashtable-fold-entries
+      (lambda (nil key value)
+	(sob-increment! nil key value))
+    bag
+    (sob-hash-table set)))
+
+;;; --------------------------------------------------------------------
+
+(define* (bag->alist {bag bag?})
   (bag-fold-unique
-   (lambda (elem count list) (cons (cons elem count) list))
-   '()
-   bag))
+      (lambda (elem count list)
+	(cons (cons elem count) list))
+    '()
+    bag))
 
-(define (alist->bag comparator alist)
-  (let* ((result (bag comparator))
-         (ht (sob-hash-table result)))
-    (for-each
-	(lambda (assoc)
-	  (let ((element (car assoc)))
-	    (if (not (hashtable-contains? ht element))
-		(sob-increment! result element (cdr assoc)))))
-      alist)
-    result))
-
-;;; Comparators
-
-;; Hash over sobs
-(define (sob-hash sob)
-  (let* ((ht (sob-hash-table sob))
-         (hash (comparator-hash-function (sob-comparator sob))))
-    (sob-fold
-     (lambda (element result) (+ (hash element) (* result 33)))
-     5381
-     sob)))
+(define* (alist->bag {comparator comparator?} alist)
+  (receive-and-return (result)
+      (bag comparator)
+    (let ((T (sob-hash-table result)))
+      (for-each
+	  (lambda (key.val)
+	    (let ((element (car key.val)))
+	      (unless (hashtable-contains? T element)
+		(sob-increment! result element (cdr key.val)))))
+	alist))))
 
 
 ;;;; set and bag comparator
 
-(define set-comparator
-  (make-comparator set? set=? #f sob-hash))
+(module (set-comparator bag-comparator)
 
-(define bag-comparator
-  (make-comparator bag? bag=? #f sob-hash))
+  (define (sob-hash sob)
+    (let ((hash (comparator-hash-function (sob-comparator sob))))
+      (sob-fold (lambda (element result)
+		  (+ (hash element) (* result 33)))
+		5381
+		sob)))
 
-(module ()
+  (define set-comparator
+    (make-comparator set? set=? #f sob-hash))
+
+  (define bag-comparator
+    (make-comparator bag? bag=? #f sob-hash))
+
   ;;Register above comparators for use by DEFAULT-COMPARATOR.
-  ;;
   (comparator-register-default! set-comparator)
   (comparator-register-default! bag-comparator)
+
   #| end of module |# )
 
 
@@ -1364,4 +1395,7 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
+;; eval: (put 'hashtable-for-each	'scheme-indent-function 1)
+;; eval: (put 'hashtable-fold-entries	'scheme-indent-function 1)
+;; eval: (put 'bag-fold-unique		'scheme-indent-function 1)
 ;; End:
