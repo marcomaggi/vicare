@@ -7,7 +7,5 @@ PATH=~/bin:${PATH}
 git my-backup-push-local
 git my-log-commit-dir
 
-./scripts/make-last-revision
-
 ### end of file
 

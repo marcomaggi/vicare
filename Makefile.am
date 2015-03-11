@@ -3,7 +3,6 @@
 ACLOCAL_AMFLAGS		= -I meta/autotools
 EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
-			  scripts/make-last-revision			\
 			  meta/autotools/config.rpath
 
 slsdir			= $(srcdir)/lib
@@ -212,7 +211,7 @@ VICARE_NEW_EXECUTABLE	= $(builddir)/vicare
 
 AM_CPPFLAGS	= -I $(srcdir)/src -I $(builddir)/src
 AM_CFLAGS	= -Wall
-EXTRA_DIST	+= src/last-revision.h src/vicare-platform.h.in
+EXTRA_DIST	+= src/vicare-platform.h.in
 
 bin_PROGRAMS	= vicare
 vicare_SOURCES	= \
@@ -241,7 +240,6 @@ vicare_SOURCES	= \
 	src/ikarus-linux.c		\
 	src/ikarus-readline.c		\
 	src/ikarus-debugging.c		\
-	src/last-revision.h		\
 	src/internals.h
 
 nodist_vicare_SOURCES	= bootfileloc.h
@@ -250,19 +248,15 @@ include_HEADERS		= src/vicare.h src/vicare-platform.h
 
 ikarus.$(OBJEXT) ikarus-main.$(OBJEXT): bootfileloc.h
 
-MAINTAINERCLEANFILES	+= $(srcdir)/src/last-revision.h
 CLEANFILES		+= bootfileloc.h
 
-BUILT_SOURCES		+= $(srcdir)/src/last-revision.h bootfileloc.h
+BUILT_SOURCES		+= bootfileloc.h
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
 bootfileloc.h:
 	echo '#define BOOTFILE "$(pkglibdir)/vicare.boot"' >$@
 	echo '#define EXEFILE "$(bindir)/vicare"' >>$@
-
-$(srcdir)/src/last-revision.h:
-	echo '#define LAST_REVISION "no-branch/no-commit"' >$@
 
 # List of flags to link libraries with the "vicare" executable.
 vicare_LDADD		=
