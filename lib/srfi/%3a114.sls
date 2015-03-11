@@ -68,7 +68,13 @@
     ;;
     comparator-min comparator-max
 
-    comparator-register-default!)
+    comparator-register-default!
+
+    ;; condition objects
+    &comparator-error make-comparator-error comparator-error?
+    &comparator-type-error make-comparator-type-error comparator-type-error?
+    comparator-type-error.comparator comparator-type-error.object
+    raise-comparator-type-error)
   (import (srfi :114 comparators)))
 
 ;;; end of file

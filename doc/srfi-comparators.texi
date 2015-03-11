@@ -9,13 +9,15 @@
 @cindex Library @library{srfi :114 comparators}
 
 
-The library @library{srfi :114} is by John Cowan as the reference
-implementation for @ansrfi{114}; see:
+The libraries @library{srfi :114} and @library{srfi :114 comparators}
+are derived from the reference implementation of @ansrfi{114} by John
+Cowan; see:
 
 @center @url{http://srfi.schemers.org/srfi-114/srfi-114.html}
 
 @noindent
-for more details.
+for more details.  @library{srfi :114} and @library{srfi :114
+comparators} export the same bindings.
 
 @menu
 * srfi comparators abstract::     Abstract.
@@ -35,6 +37,7 @@ for more details.
                                   constructors.
 * srfi comparators ternary::      Interval comparison predicates.
 * srfi comparators minmax::       Min/max comparison procedures.
+* srfi comparators conditions::   Condition object types.
 * srfi comparators copyright::    Copyright.
 @end menu
 
@@ -162,33 +165,180 @@ as well.
 
 @defvr Constant boolean-comparator
 Compare booleans using the total order @code{#f < #t}.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C boolean-comparator)
+
+(comparator-test-type C #f)     @result{} #t
+(comparator-test-type C #t)     @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C #f)    @result{} #t
+(comparator-check-type C #t)    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C #f #f)     @result{} #t
+(comparator-equal? C #f #t)     @result{} #f
+
+(comparator-compare C #f #f)    @result{} 0
+(comparator-compare C #f #t)    @result{} -1
+(comparator-compare C #t #f)    @result{} +1
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant char-comparator
 Compare characters using the total order implied by @func{char<?}.  On
 @rnrs{6} and @rnrs{7} systems, this is Unicode code point order.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C char-comparator)
+
+(comparator-test-type C #\a)    @result{} #t
+(comparator-test-type C #\b)    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C #\a)   @result{} #t
+(comparator-check-type C #\b)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C #\a #\a)   @result{} #t
+(comparator-equal? C #\a #\b)   @result{} #f
+
+(comparator-compare C #\a #\a)  @result{} 0
+(comparator-compare C #\a #\b)  @result{} -1
+(comparator-compare C #\b #\a)  @result{} +1
+
+(comparator-hash C #\a)         @result{} 97
+(comparator-hash C #\b)         @result{} 98
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant char-ci-comparator
 Compare characters using the total order implied by @func{char-ci<?}.
 On @rnrs{6} and @rnrs{7} systems, this is Unicode code point order after
 the characters have been folded to lower case.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C char-ci-comparator)
+
+(comparator-test-type C #\A)    @result{} #t
+(comparator-test-type C #\b)    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C #\A)   @result{} #t
+(comparator-check-type C #\b)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C #\A #\A)   @result{} #t
+(comparator-equal? C #\A #\b)   @result{} #f
+
+(comparator-compare C #\A #\A)  @result{} 0
+(comparator-compare C #\A #\b)  @result{} -1
+(comparator-compare C #\b #\A)  @result{} +1
+
+(comparator-hash C #\A)         @result{} 97
+(comparator-hash C #\b)         @result{} 98
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant string-comparator
 Compare strings using the total order implied by @func{string<?}.  Note
 that this order is implementation--dependent.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C string-comparator)
+
+(comparator-test-type C "a")    @result{} #t
+(comparator-test-type C "b")    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C "a")   @result{} #t
+(comparator-check-type C "b")   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C "a" "a")   @result{} #t
+(comparator-equal? C "a" "b")   @result{} #f
+
+(comparator-compare C "a" "a")  @result{} 0
+(comparator-compare C "a" "b")  @result{} -1
+(comparator-compare C "b" "a")  @result{} +1
+
+(comparator-hash C "a")         @result{} 1798195
+(comparator-hash C "b")         @result{} 36222037
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant string-ci-comparator
 Compare strings using the total order implied by @func{string-ci<?}.
 Note that this order is implementation--dependent.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C string-ci-comparator)
+
+(comparator-test-type C "A")    @result{} #t
+(comparator-test-type C "b")    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C "A")   @result{} #t
+(comparator-check-type C "b")   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C "A" "A")   @result{} #t
+(comparator-equal? C "A" "b")   @result{} #f
+
+(comparator-compare C "A" "A")  @result{} 0
+(comparator-compare C "A" "b")  @result{} -1
+(comparator-compare C "b" "A")  @result{} +1
+
+(comparator-hash C "A")         @result{} 1798195
+(comparator-hash C "b")         @result{} 36222037
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant symbol-comparator
 Compare symbols using the total order implied by applying
@@ -196,8 +346,38 @@ Compare symbols using the total order implied by applying
 order implied by @func{string<?}.  It is not a requirement that the hash
 function of @func{symbol-comparator} be consistent with the hash
 function of @func{string-comparator}.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C string-comparator)
+
+(comparator-test-type C 'a)     @result{} #t
+(comparator-test-type C 'b)     @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C 'a)    @result{} #t
+(comparator-check-type C 'b)    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C 'a 'a)     @result{} #t
+(comparator-equal? C 'a 'b)     @result{} #f
+
+(comparator-compare C 'a 'a)    @result{} 0
+(comparator-compare C 'a 'b)    @result{} -1
+(comparator-compare C 'b 'a)    @result{} +1
+
+(comparator-hash C 'a)          @result{} 1798195
+(comparator-hash C 'b)          @result{} 36222037
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant exact-integer-comparator
 @defvrx Constant integer-comparator
@@ -221,16 +401,76 @@ least--surprising ordering is defined: if the real parts are @func{<} or
 @func{>}, so are the numbers; otherwise, the numbers are ordered by
 their imaginary parts.  This can still produce surprising results if one
 real part is exact and the other is inexact.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C exact-integer-comparator)
+
+(comparator-test-type C 1)      @result{} #t
+(comparator-test-type C 2)      @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C 1)     @result{} #t
+(comparator-check-type C 2)     @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C 1 1)       @result{} #t
+(comparator-equal? C 1 2)       @result{} #f
+
+(comparator-compare C 1 1)      @result{} 0
+(comparator-compare C 1 2)      @result{} -1
+(comparator-compare C 2 1)      @result{} +1
+
+(comparator-hash C 1)           @result{} 1
+(comparator-hash C 2)           @result{} 2
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant pair-comparator
 Compare pairs using @func{default-comparator}  on their cars.
 If the cars are not equal, that value is returned.  If they are equal,
 @func{default-comparator} is used on their cdrs and that value is
 returned.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C pair-comparator)
+
+(comparator-test-type C '(1 . 2))       @result{} #t
+(comparator-test-type C '(3 . 4))       @result{} #t
+(comparator-test-type C 123)            @result{} #f
+
+(comparator-check-type C '(1 . 2))      @result{} #t
+(comparator-check-type C '(3 . 4))      @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C '(1 . 2) '(1 . 2)) @result{} #t
+(comparator-equal? C '(1 . 2) '(3 . 4)) @result{} #f
+
+(comparator-compare C '(1 . 2) '(1 . 2)) @result{} 0
+(comparator-compare C '(1 . 2) '(3 . 4)) @result{} -1
+(comparator-compare C '(3 . 4) '(1 . 2)) @result{} +1
+
+(comparator-hash C '(1 . 2))            @result{} 3
+(comparator-hash C '(3 . 4))            @result{} 7
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant list-comparator
 Compare lists lexicographically, as follows:
@@ -248,8 +488,38 @@ are not equal when compared using @func{default-comparator} ,
 then the result is the result of that comparison.  Otherwise, the cdrs
 are compared using @func{list-comparator}.
 @end itemize
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C list-comparator)
+
+(comparator-test-type C '(1 2))         @result{} #t
+(comparator-test-type C '(3 4))         @result{} #t
+(comparator-test-type C 123)            @result{} #f
+
+(comparator-check-type C '(1 2))        @result{} #t
+(comparator-check-type C '(3 4))        @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C '(1 2) '(1 2))     @result{} #t
+(comparator-equal? C '(1 2) '(3 4))     @result{} #f
+
+(comparator-compare C '(1 2) '(1 2))    @result{} 0
+(comparator-compare C '(1 2) '(3 4))    @result{} -1
+(comparator-compare C '(3 4) '(1 2))    @result{} +1
+
+(comparator-hash C '(1 2))              @result{} 617064
+(comparator-hash C '(3 4))              @result{} 617132
+@end lisp
 @end defvr
 
+@c ------------------------------------------------------------------------
 
 @defvr Constant vector-comparator
 @defvrx Constant bytevector-comparator
@@ -266,6 +536,35 @@ implementations might not support them.  If the implementation does not
 support bytevectors, @func{bytevector-comparator} has a type testing
 procedure that always returns @false{}.
 @end quotation
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C vector-comparator)
+
+(comparator-test-type C '#(1 2))        @result{} #t
+(comparator-test-type C '#(3 4))        @result{} #t
+(comparator-test-type C 123)            @result{} #f
+
+(comparator-check-type C '#(1 2))       @result{} #t
+(comparator-check-type C '#(3 4))       @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C '#(1 2) '#(1 2))   @result{} #t
+(comparator-equal? C '#(1 2) '#(3 4))   @result{} #f
+
+(comparator-compare C '#(1 2) '#(1 2))  @result{} 0
+(comparator-compare C '#(1 2) '#(3 4))  @result{} -1
+(comparator-compare C '#(3 4) '#(1 2))  @result{} +1
+
+(comparator-hash C '#(1 2))             @result{} 177575
+(comparator-hash C '#(3 4))             @result{} 177577
+@end lisp
 @end defvr
 
 @c page
@@ -810,6 +1109,79 @@ by this proposal in order to avoid an otherwise unnecessary
 implementation dependency.  They are easily provided by a sorting
 package that makes use of comparators.
 @end quotation
+@end defun
+
+@c page
+@node srfi comparators conditions
+@subsection Condition object types
+
+
+As @value{PRJNAME} extension the following condition objects are
+defined.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator error
+
+@deftp {Condition Object Type} &comparator-error
+Used to signal an error while using a comparator's facilities.  It is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-comparator-error @var{compar} @var{obj}
+Build and return a new condition object of type
+@condition{comparator-error}.
+@end defun
+
+
+@defun comparator-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-error}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator type error
+
+@deftp {Condition Object Type} &comparator-type-error
+Used to signal an attempt to use the facilities of a comparator with an
+object that does not satisfy the comparator's type predicate.  It is
+derived from @condition{comparator-error}.  It has two fields:
+
+@table @code
+@item comparator
+The comparator object.
+
+@item object
+The object with which the comparator was used.
+@end table
+@end deftp
+
+
+@defun make-comparator-type-error @var{compar} @var{obj}
+Build and return a new condition object of type
+@condition{comparator-type-error}.
+@end defun
+
+
+@defun comparator-type-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-type-error}; otherwise return @false{}.
+@end defun
+
+
+@deffn {Condition Object Accessor} comparator-type-error.comparator @var{cond}
+@deffnx {Condition Object Accessor} comparator-type-error.object @var{cond}
+Accessors for the fields of condition objects of type
+@condition{comparator-type-error}.
+@end deffn
+
+
+@defun raise-comparator-type-error @var{who} @var{message} @var{comparator} @var{object}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{comparator-type-error}, @condition{irritants}.
 @end defun
 
 @c page

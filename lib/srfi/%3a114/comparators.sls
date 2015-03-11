@@ -29,7 +29,7 @@
 ;;
 
 
-#!r6rs
+#!vicare
 (library (srfi :114 comparators)
   (export
     ;;
@@ -75,7 +75,13 @@
     ;;
     comparator-min comparator-max
 
-    comparator-register-default!)
+    comparator-register-default!
+
+    ;; condition objects
+    &comparator-error make-comparator-error comparator-error?
+    &comparator-type-error make-comparator-type-error comparator-type-error?
+    comparator-type-error.comparator comparator-type-error.object
+    raise-comparator-type-error)
   (import (vicare))
 
 
@@ -98,6 +104,30 @@
 		     (set! C rv))))))
        #| end of BEGIN |# ))
     ))
+
+
+;;;; condition object types
+
+(define-condition-type &comparator-error
+    &error
+  make-comparator-error
+  comparator-error?)
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &comparator-type-error
+    &comparator-error
+  make-comparator-type-error
+  comparator-type-error?
+  (comparator	comparator-type-error.comparator)
+  (object	comparator-type-error.object))
+
+(define* (raise-comparator-type-error who message {comparator comparator?} object)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition (list comparator object))
+	      (make-comparator-type-error comparator object))))
 
 
 ;;; comparison syntaxes
@@ -214,13 +244,17 @@
   ;;
   ((comparator-type-test-procedure comparator) obj))
 
+;;; --------------------------------------------------------------------
+
 (define (comparator-check-type comparator obj)
   ;;Invoke the test type and throw an error if it fails.
   ;;
   (if (comparator-test-type comparator obj)
       #t
-    (error __who__
+    (raise-comparator-type-error __who__
       "comparator type check failed" comparator obj)))
+
+;;; --------------------------------------------------------------------
 
 (define (comparator-equal? comparator obj1 obj2)
   ;;Invoke the equality predicate.
@@ -709,40 +743,37 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-listwise-comparison comparison null? car cdr)
+(define (make-listwise-comparison comparison list-null? list-car list-cdr)
   ;;Make a comparison procedure that works listwise.
   ;;
   (letrec ((proc (lambda (a b)
-		   ;;Here we know that A and B are proper lists (including null).
+		   ;;A  and  B are  list-like  objects  that  can be  accessed  with:
+		   ;;LIST-NULL?,  LIST-CAR,  LIST-CDR.   Notice   that  there  is  no
+		   ;;LIST-PAIR? predicate.
 		   ;;
-		   (cond ((pair? a)
-			  (if (pair? b)
-			      ;;A is pair B is pair.
-			      (let ((result (comparison (car a) (car b))))
-				(if (zero? result)
-				    (proc (cdr a) (cdr b))
-				  result))
-			    ;;A is pair B is null.
-			    +1))
-			 ((null? b)
-			  ;;A is null B is null.
-			  0)
-			 (else
-			  ;;A is null B is pair.
-			  -1)))))
+		   (let ((a.null? (list-null? a))
+			 (b.null? (list-null? b)))
+		     (cond ((and a.null? b.null?)	0)
+			   (a.null?			-1)
+			   (b.null?			+1)
+			   (else
+			    (let ((result (comparison (list-car a) (list-car b))))
+			      (if (zero? result)
+				  (proc (list-cdr a) (list-cdr b))
+				result))))))))
     proc))
 
-(define (make-listwise-hash hash null? car cdr)
+(define (make-listwise-hash element-hash list-null? list-car list-cdr)
   ;;Make a hash function that works listwise.
   ;;
   (lambda (obj)
     (let loop ((obj    obj)
 	       (result 5381))
-      (if (null? obj)
-	  0
+      (if (list-null? obj)
+	  result
         (let* ((prod (modulo (* result 33) LIMIT))
-               (sum (+ prod (hash (car obj)))))
-          (loop (cdr obj) sum))))))
+               (sum  (+ prod (element-hash (list-car obj)))))
+          (loop (list-cdr obj) sum))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1210,4 +1241,5 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
+;; eval: (put 'raise-comparator-type-error	'scheme-indent-function 1)
 ;; End:
