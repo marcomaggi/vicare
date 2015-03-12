@@ -36,15 +36,6 @@
 (check-display "*** testing Vicare libraries: SRFI 114, comparators\n")
 
 
-;;;; helpers
-
-(define-struct a-struct
-  (a b c))
-
-(define-record-type a-record
-  (fields a b c))
-
-
 (parametrise ((check-test-name	'predicates))
 
   (check
@@ -596,6 +587,109 @@
   (check-for-true (non-negative-exact-integer? (comparator-hash C (void))))
   (check-for-true (non-negative-exact-integer? (comparator-hash C (eof-object))))
   (check-for-true (non-negative-exact-integer? (comparator-hash C (would-block-object))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'default-with-custom))
+
+  (define C default-comparator)
+
+  (define-struct a-struct
+    (a b c))
+
+  (define-record-type a-record
+    (fields a b c))
+
+  (define (a-struct-comparison a b)
+    (cond ((struct=? a b)
+	   0)
+	  ((< (a-struct-a a)
+	      (a-struct-a b))
+	   -1)
+	  (else +1)))
+
+  (define (a-record-comparison a b)
+    (cond ((record=? a b)
+	   0)
+	  ((< (a-record-a a)
+	      (a-record-a b))
+	   -1)
+	  (else +1)))
+
+  (define a-struct-comparator
+    (make-comparator a-struct?
+		     struct=?
+		     a-struct-comparison
+		     struct-hash))
+
+  (define a-record-comparator
+    (make-comparator a-record?
+		     record=?
+		     a-record-comparison
+		     record-hash))
+
+  (comparator-register-default! a-struct-comparator)
+  (comparator-register-default! a-record-comparator)
+
+;;; --------------------------------------------------------------------
+;;; type test
+
+  (check-for-true  (comparator-test-type C (make-a-struct 1 2 3)))
+  (check-for-true  (comparator-test-type C (make-a-record 1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; type check
+
+  (check-for-true  (comparator-check-type C (make-a-struct 1 2 3)))
+  (check-for-true  (comparator-check-type C (make-a-record 1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; equality
+
+  (let ((P (make-a-struct 1 2 3))
+	(Q (make-a-struct 1 2 3))
+	(R (make-a-struct 1 2 9)))
+    (check-for-true  (comparator-equal? C P P))
+    (check-for-true  (comparator-equal? C P Q))
+    (check-for-false (comparator-equal? C P R)))
+
+  (let ((P (make-a-record 1 2 3))
+	(Q (make-a-record 1 2 3))
+	(R (make-a-record 1 2 9)))
+    (check-for-true  (comparator-equal? C P P))
+    (check-for-true  (comparator-equal? C P Q))
+    (check-for-false (comparator-equal? C P R)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+  (let ((P (make-a-struct +1 2 3))
+	(Q (make-a-struct -1 2 3))
+	(R (make-a-struct +2 2 9)))
+    (check (comparator-compare C P P)	=> 0)
+    (check (comparator-compare C P Q)	=> +1)
+    (check (comparator-compare C P R)	=> -1))
+
+  (let ((P (make-a-record +1 2 3))
+	(Q (make-a-record -1 2 3))
+	(R (make-a-record +2 2 9)))
+    (check (comparator-compare C P P)	=> 0)
+    (check (comparator-compare C P Q)	=> +1)
+    (check (comparator-compare C P R)	=> -1))
+
+;;; --------------------------------------------------------------------
+;;; hash function
+
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (make-a-struct 1 2 3))))
+
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (make-a-record 1 2 3))))
+
+  (when #f
+    (debug-print (comparator-hash C (make-a-struct 99 2 3))
+		 (comparator-hash C (make-a-record 99 2 3))))
 
   #t)
 

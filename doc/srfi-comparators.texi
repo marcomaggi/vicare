@@ -662,6 +662,126 @@ mentioned above.
 @end itemize
 @end defun
 
+
+@defun comparator-register-default! @var{comparator}
+Register a new @var{comparator} for use by the default comparator.
+
+Extent the default comparator to understand objects that satisfy the
+type test of the registered @var{comparator}, and to apply it when
+comparing two objects that satisfy that type test.  Such objects are
+said to belong to the ``registered types'', whereas all the objects
+other than the ones supported by default belong to the ``unregistered
+types''.  When dealing with objects of unregistered types, the default
+comparator makes them compare equal and hash to @code{0}, a safe but
+fairly useless default.
+
+The effect of comparing two objects of different registered types is
+only partly predictable, as it depends on the order in which
+@func{comparator-register-default!} is called.  However, the normal
+guarantees of the default comparator still apply.  In addition, every
+object of a registered type compares less than all objects of
+unregistered types.
+@end defun
+
+
+Here is an example of registering comparators for @value{PRJNAME}
+structs and @rnrs{6} records (notice that @func{struct-hash} and
+@func{record-hash} are very poor hash functions):
+
+@lisp
+(import (vicare)
+  (srfi :114))
+
+(define C default-comparator)
+
+(define-struct a-struct
+  (a b c))
+
+(define-record-type a-record
+  (fields a b c))
+
+(define (a-struct-comparison a b)
+  (cond ((struct=? a b)
+         0)
+        ((< (a-struct-a a)
+            (a-struct-a b))
+         -1)
+        (else +1)))
+
+(define (a-record-comparison a b)
+  (cond ((record=? a b)
+         0)
+        ((< (a-record-a a)
+            (a-record-a b))
+         -1)
+        (else +1)))
+
+(define a-struct-comparator
+  (make-comparator a-struct?
+                   struct=?
+                   a-struct-comparison
+                   struct-hash))
+
+(define a-record-comparator
+  (make-comparator a-record?
+                   record=?
+                   a-record-comparison
+                   record-hash))
+
+(comparator-register-default! a-struct-comparator)
+(comparator-register-default! a-record-comparator)
+
+;;; type test
+
+(comparator-test-type C (make-a-struct 1 2 3))  @result{} #t
+(comparator-test-type C (make-a-record 1 2 3))  @result{} #t
+
+;;; type check
+
+(comparator-check-type C (make-a-struct 1 2 3)) @result{} #t
+(comparator-check-type C (make-a-record 1 2 3)) @result{} #t
+
+;;; equality
+
+(let ((P (make-a-struct 1 2 3))
+      (Q (make-a-struct 1 2 3))
+      (R (make-a-struct 1 2 9)))
+  (comparator-equal? C P P)     @result{} #t
+  (comparator-equal? C P Q)     @result{} #t
+  (comparator-equal? C P R))    @result{} #f
+
+(let ((P (make-a-record 1 2 3))
+      (Q (make-a-record 1 2 3))
+      (R (make-a-record 1 2 9)))
+  (comparator-equal? C P P)     @result{} #t
+  (comparator-equal? C P Q)     @result{} #t
+  (comparator-equal? C P R))    @result{} #f
+
+;;; comparison
+
+(let ((P (make-a-struct +1 2 3))
+      (Q (make-a-struct -1 2 3))
+      (R (make-a-struct +2 2 9)))
+  (comparator-compare C P P)   @result{} 0
+  (comparator-compare C P Q)   @result{} +1
+  (comparator-compare C P R))  @result{} -1
+
+(let ((P (make-a-record +1 2 3))
+      (Q (make-a-record -1 2 3))
+      (R (make-a-record +2 2 9)))
+  (comparator-compare C P P)   @result{} 0
+  (comparator-compare C P Q)   @result{} +1
+  (comparator-compare C P R))  @result{} -1
+
+;;; hash function
+
+(comparator-hash C (make-a-struct 1 2 3))
+@result{} 1
+
+(comparator-hash C (make-a-record 1 2 3))
+@result{} 1
+@end lisp
+
 @c page
 @node srfi comparators constructors
 @subsection Comparator constructors
