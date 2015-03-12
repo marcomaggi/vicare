@@ -168,13 +168,13 @@
 
     ;; Tests from Alan Watson:
     (test (eqv? (equal? (make-tag) (make-tag)) (eqv? (make-tag) (make-tag)))
-          #t)
+          #f)
     (test (eqv? (equal? (make-otag) (make-otag)) (eqv? (make-otag) (make-otag)))
-          #t)
+          #f)
     (test (eqv? (equal? (make-stag) (make-stag)) (eqv? (make-stag) (make-stag)))
-          #t)
+          #f)
     (test (eqv? (equal? (make-ostag) (make-ostag)) (eqv? (make-ostag) (make-ostag)))
-          #t)
+          #f)
     (test (let ([t (make-tag)])
             (eqv? (equal? t t) (eqv? t t)))
           #t)

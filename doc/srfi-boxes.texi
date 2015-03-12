@@ -118,11 +118,9 @@ not otherwise, and while they must be @func{equal?} if they are
 @func{eqv?}, the converse is implementation--dependent.
 
 @quotation
-@strong{For Vicare:} two boxes holding the same object are @func{eqv?}
-even if they are produced by different calls to @func{box}.  Vicare's
-behaviour is @strong{not} compliant with this specification.
+@strong{For Vicare:} two boxes produced by distinct call to @func{box}
+and holding the same object are @func{equal?} but not @func{eqv?}.
 @end quotation
-
 
 @c ------------------------------------------------------------
 

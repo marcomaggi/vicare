@@ -1066,6 +1066,23 @@
      (record=? P Q)))
 
 ;;; --------------------------------------------------------------------
+;;; STRUCT=? works on records
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (struct=? P P)))
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (struct=? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (struct=? P Q)))
+
+;;; --------------------------------------------------------------------
 
   (check-for-true
    (let ((P (make-<alpha> 1 2 3)))
@@ -1087,7 +1104,7 @@
    (let ((P (make-<alpha> 1 2 3)))
      (eqv? P P)))
 
-  (check-for-true
+  (check-for-false
    (let ((P (make-<alpha> 1 2 3))
 	 (Q (make-<alpha> 1 2 3)))
      (eqv? P Q)))

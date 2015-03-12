@@ -457,7 +457,7 @@
    (let ((P (make-alpha 1 2 3)))
      (eqv? P P)))
 
-  (check-for-true
+  (check-for-false
    (let ((P (make-alpha 1 2 3))
 	 (Q (make-alpha 1 2 3)))
      (eqv? P Q)))
