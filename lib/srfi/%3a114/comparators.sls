@@ -127,6 +127,14 @@
 	      (make-irritants-condition (list comparator object))
 	      (make-comparator-type-error comparator object))))
 
+(define* (raise-comparator-argument-type-error who message {comparator comparator?} object)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition (list comparator object))
+	      (make-procedure-argument-violation)
+	      (make-comparator-type-error comparator object))))
+
 
 ;;; comparison syntaxes
 
@@ -210,63 +218,89 @@
 	  (immutable hash?		comparator-hash-function?))
   (protocol
    (lambda (make-record)
-     (lambda (type-test equality comparison hash)
-       (define cmp
-	 (make-record (if (eq? type-test #t)
-			  (lambda (x) #t)
-			type-test)
-		      (if (eq? equality  #t)
-			  (lambda (x y)
-			    (eqv? (comparison x y) 0))
-			equality)
-		      (or comparison
-			  (lambda (x y)
-			    (error 'anonymous-comparator
-			      "comparison not supported by this comparator"
-			      cmp)))
-		      (or hash
-			  (lambda (x y)
-			    (error 'anonymous-comparator
-			      "hashing not supported by this comparator"
-			      cmp)))
-		      (if comparison #t #f)
-		      (if hash       #t #f)))
-       cmp)))
+     (lambda (type-test equality compare hash)
+       (fluid-let-syntax ((__who__ (identifier-syntax 'comparator)))
+	 (letrec ((cmp (make-record (cond ((eq? type-test #t)
+					   (lambda (x) #t))
+					  ((procedure? type-test)
+					   type-test)
+					  (else
+					   (procedure-argument-violation __who__
+					     "expected procedure or #t as TYPE-TEST argument"
+					     type-test)))
+				    (cond ((eq? equality #t)
+					   (lambda (x y)
+					     (eqv? (compare x y) 0)))
+					  ((procedure? equality)
+					   equality)
+					  (else
+					   (procedure-argument-violation __who__
+					     "expected procedure or #t as EQUALITY argument"
+					     equality)))
+				    (cond ((not compare)
+					   (lambda (x y)
+					     (error 'anonymous-comparator
+					       "compare not supported by this comparator"
+					       cmp)))
+					  ((procedure? compare)
+					   compare)
+					  (else
+					   (procedure-argument-violation __who__
+					     "expected procedure or #t as COMPARE argument"
+					     equality)))
+				    (cond ((not hash)
+					   (lambda (x y)
+					     (error 'anonymous-comparator
+					       "hashing not supported by this comparator"
+					       cmp)))
+					  ((procedure? hash)
+					   hash)
+					  (else
+					   (procedure-argument-violation __who__
+					     "expected procedure or #t as HASH argument"
+					     hash)))
+				    (if compare #t #f)
+				    (if hash    #t #f))))
+	   cmp)))))
   #| end of DEFINE-RECORD-TYPE |# )
 
 
 ;;;; primitive applicators
 
-(define (comparator-test-type comparator obj)
+(define* (comparator-test-type {comparator comparator?} obj)
   ;;Invoke the test type.
   ;;
   ((comparator-type-test-procedure comparator) obj))
 
-;;; --------------------------------------------------------------------
+(case-define* comparator-check-type
+  (({comparator comparator?} obj who)
+   ;;Invoke the test type and throw an error if it fails.
+   ;;
+   (if (comparator-test-type comparator obj)
+       #t
+     (raise-comparator-argument-type-error who
+       "comparator type check failed" comparator obj)))
+  ((comparator obj)
+   (comparator-check-type comparator obj __who__)))
 
-(define (comparator-check-type comparator obj)
-  ;;Invoke the test type and throw an error if it fails.
-  ;;
-  (if (comparator-test-type comparator obj)
-      #t
-    (raise-comparator-type-error __who__
-      "comparator type check failed" comparator obj)))
-
-;;; --------------------------------------------------------------------
-
-(define (comparator-equal? comparator obj1 obj2)
+(define* (comparator-equal? {comparator comparator?} obj1 obj2)
   ;;Invoke the equality predicate.
   ;;
+  (comparator-check-type comparator obj1 __who__)
+  (comparator-check-type comparator obj2 __who__)
   ((comparator-equality-predicate comparator) obj1 obj2))
 
-(define (comparator-compare comparator obj1 obj2)
+(define* (comparator-compare {comparator comparator?} obj1 obj2)
   ;;Invoke the comparison procedure.
   ;;
+  (comparator-check-type comparator obj1 __who__)
+  (comparator-check-type comparator obj2 __who__)
   ((comparator-comparison-procedure comparator) obj1 obj2))
 
-(define (comparator-hash comparator obj)
+(define* (comparator-hash {comparator comparator?} obj)
   ;;Invoke the hash function.
   ;;
+  (comparator-check-type comparator obj __who__)
   ((comparator-hash-function comparator) obj))
 
 
@@ -275,37 +309,37 @@
 ;;These construct comparison procedures based on comparison predicates.
 ;;
 
-(define (make-comparison< <)
+(define* (make-comparison< {< procedure?})
   (lambda (a b)
     (cond ((< a b)	-1)
 	  ((< b a)	+1)
 	  (else		0))))
 
-(define (make-comparison> >)
+(define* (make-comparison> {> procedure?})
   (lambda (a b)
     (cond ((> a b)	+1)
 	  ((> b a)	-1)
 	  (else		0))))
 
-(define (make-comparison<= <=)
+(define* (make-comparison<= {<= procedure?})
   (lambda (a b)
     (if (<= a b)
 	(if (<= b a) 0 -1)
       1)))
 
-(define (make-comparison>= >=)
+(define* (make-comparison>= {>= procedure?})
   (lambda (a b)
     (if (>= a b)
 	(if (>= b a) 0 1)
       -1)))
 
-(define (make-comparison=/< = <)
+(define* (make-comparison=/< {= procedure?} {< procedure?})
   (lambda (a b)
     (cond ((= a b)	0)
 	  ((< a b)	-1)
 	  (else		+1))))
 
-(define (make-comparison=/> = >)
+(define* (make-comparison=/> {= procedure?} {> procedure?})
   (lambda (a b)
     (cond ((= a b)	0)
 	  ((> a b)	+1)
@@ -331,7 +365,7 @@
   (define *registered-comparators*
     (list unknown-object-comparator))
 
-  (define (comparator-register-default! comparator)
+  (define* (comparator-register-default! {comparator comparator?})
     ;;Register a new comparator for use by the default comparator.
     ;;
     ;;This is intended for other  sample implementations to register their comparator
@@ -480,55 +514,63 @@
 
 ;;;; comparison predicate constructors
 
-(define (make= comparator)
+(define* (make= {comparator comparator?})
   (lambda args (apply =? comparator args)))
 
-(define (make< comparator)
+(define* (make< {comparator comparator?})
   (lambda args (apply <? comparator args)))
 
-(define (make> comparator)
+(define* (make> {comparator comparator?})
   (lambda args (apply >? comparator args)))
 
-(define (make<= comparator)
+(define* (make<= {comparator comparator?})
   (lambda args (apply <=? comparator args)))
 
-(define (make>= comparator)
+(define* (make>= {comparator comparator?})
   (lambda args (apply >=? comparator args)))
 
 
 ;;;; interval (ternary) comparison predicates
 
-(define in-open-interval?
-  (case-lambda
-   ((comparator a b c)
-    (and (<? comparator a b)
-	 (<? comparator b c)))
-   ((a b c)
-    (in-open-interval? default-comparator a b c))))
+(case-define* in-open-interval?
+  (({K comparator?} a b c)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (comparator-check-type K c __who__)
+   (and (<? K a b)
+	(<? K b c)))
+  ((a b c)
+   (in-open-interval? default-comparator a b c)))
 
-(define in-closed-interval?
-  (case-lambda
-   ((comparator a b c)
-    (and (<=? comparator a b)
-	 (<=? comparator b c)))
-   ((a b c)
-    (in-closed-interval? default-comparator a b c))))
+(case-define* in-closed-interval?
+  (({K comparator?} a b c)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (comparator-check-type K c __who__)
+   (and (<=? K a b)
+	(<=? K b c)))
+  ((a b c)
+   (in-closed-interval? default-comparator a b c)))
 
-(define in-open-closed-interval?
-  (case-lambda
-   ((comparator a b c)
-    (and (<? comparator a b)
-	 (<=? comparator b c)))
-   ((a b c)
-    (in-open-interval? default-comparator a b c))))
+(case-define* in-open-closed-interval?
+  (({K comparator?} a b c)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (comparator-check-type K c __who__)
+   (and (<?  K a b)
+	(<=? K b c)))
+  ((a b c)
+   (in-open-interval? default-comparator a b c)))
 
-(define in-closed-open-interval?
-  (case-lambda
-   ((comparator a b c)
-    (and (<=? comparator a b)
-	 (<? comparator b c)))
-   ((a b c)
-    (in-open-interval? default-comparator a b c))))
+(case-define* in-closed-open-interval?
+  (({K comparator?} a b c)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (comparator-check-type K c __who__)
+   (and (<=? K a b)
+	(<?  K b c)))
+  ((a b c)
+   (in-open-interval? default-comparator a b c)))
 
 
 ;;;; comparison predicates
@@ -1267,5 +1309,6 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
-;; eval: (put 'raise-comparator-type-error	'scheme-indent-function 1)
+;; eval: (put 'raise-comparator-type-error		'scheme-indent-function 1)
+;; eval: (put 'raise-comparator-argument-type-error	'scheme-indent-function 1)
 ;; End:

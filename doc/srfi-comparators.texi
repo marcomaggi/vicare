@@ -1034,8 +1034,14 @@ return what it returns.
 
 
 @defun comparator-check-type @var{comparator} @var{obj}
+@defunx comparator-check-type @var{comparator} @var{obj} @var{who}
 Invoke the type test predicate of @var{comparator} on @var{obj} and
 return @true{} if it returns @true{} and signals an error otherwise.
+
+As a @value{PRJNAME} extension: the optional argument @var{who} must be
+compatible with the argument of @func{make-who-condition} and it is used
+to raise a descriptive exception when @var{obj} does not match the
+comparator.
 @end defun
 
 
@@ -1319,6 +1325,14 @@ Accessors for the fields of condition objects of type
 Raise a non--continuable exception with compound condition object of
 types: @condition{who}, @condition{message},
 @condition{comparator-type-error}, @condition{irritants}.
+@end defun
+
+
+@defun raise-comparator-argument-type-error @var{who} @var{message} @var{comparator} @var{object}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{comparator-type-error}, @condition{irritants},
+@condition{procedure-argument-violation}.
 @end defun
 
 @c page
