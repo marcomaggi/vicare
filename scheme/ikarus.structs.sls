@@ -378,20 +378,18 @@
       ((index	i stru))
     ($struct-set! stru i v)))
 
-(define (struct=? obj1 obj2)
+(define* (struct=? {obj1 struct?} {obj2 struct?})
   ;;Return true if OBJ1 and OBJ2  are two structures having the same STD
   ;;and equal field values according to EQV?.
   ;;
-  (and (struct? obj1)
-       (struct? obj2)
-       (let ((std1 ($struct-rtd obj1)))
-	 (and (eq? std1 ($struct-rtd obj2))
-	      (let ((len ($std-length std1)))
-		(let loop ((i 0))
-		  (or ($fx= i len)
-		      (and (eqv? ($struct-ref obj1 i)
-				 ($struct-ref obj2 i))
-			   (loop ($fxadd1 i))))))))))
+  (let ((std1 ($struct-rtd obj1)))
+    (and (eq? std1 ($struct-rtd obj2))
+	 (let ((len ($std-length std1)))
+	   (let loop ((i 0))
+	     (or ($fx= i len)
+		 (and (eqv? ($struct-ref obj1 i)
+			    ($struct-ref obj2 i))
+		      (loop ($fxadd1 i)))))))))
 
 ;;; --------------------------------------------------------------------
 
