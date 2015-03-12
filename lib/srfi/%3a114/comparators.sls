@@ -119,6 +119,10 @@
      (procedure-argument-violation who
        "invalid nan-handling specification" nan-handling))))
 
+(define (%list-of-comparators? obj)
+  (and (list? obj)
+       (for-all comparator? obj)))
+
 
 ;;;; condition object types
 
@@ -1164,7 +1168,7 @@
 
 ;;;; comparators constructed from other comparators
 
-(define (make-reverse-comparator comparator)
+(define* (make-reverse-comparator {comparator comparator?})
   ;;Reverse the sense of the comparator.
   ;;
   (make-comparator (comparator-type-test-procedure comparator)
@@ -1179,7 +1183,7 @@
   (module (make-selecting-comparator)
     ;;Selecting comparator: finds the first one that type-tests
     ;;
-    (define (make-selecting-comparator . comparators)
+    (define* (make-selecting-comparator . {comparators %list-of-comparators?})
       (make-comparator (selected-type-test             comparators)
 		       (selected-equality-predicate    comparators)
 		       (selected-comparison-procedure  comparators)
@@ -1216,7 +1220,7 @@
 
   (module (make-refining-comparator)
 
-    (define (make-refining-comparator . comparators)
+    (define* (make-refining-comparator . {comparators %list-of-comparators?})
       (make-comparator (refined-type-test            comparators)
 		       (refined-equality-predicate   comparators)
 		       (refined-comparison-procedure comparators)
@@ -1238,7 +1242,7 @@
 		  (loop (matching-comparator a comparators) #f)
 		#f)
 	    (if first?
-		(error __who__ "no comparator can be selected" a b)
+		(error 'anonymous-refining-comparator "no comparator can be selected" a b)
 	      #t)))))
 
     (define (refined-comparison-procedure comparators)
@@ -1251,7 +1255,7 @@
 		    (loop (matching-comparator a comparators) #f)
 		  result))
 	    (if first?
-		(error __who__ "no comparator can be selected" a b)
+		(error 'anonymous-refining-comparator "no comparator can be selected" a b)
 	      0)))))
 
     (define (refined-hash-function comparators)
@@ -1261,7 +1265,7 @@
 	  (if (null? comparators)
 	      (if last-comparator
 		  (comparator-hash last-comparator obj)
-		(error __who__ "no comparator can be selected" obj))
+		(error 'anonymous-refining-comparator "no comparator can be selected" obj))
 	    (if (comparator-test-type (car comparators) obj)
 		(loop (cdr comparators)
 		      (car comparators))
