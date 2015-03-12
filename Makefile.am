@@ -689,6 +689,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-flonum-base.sps				\
 	tests/test-vicare-flonum-formatter.sps				\
 	tests/test-vicare-flonum-parser.sps				\
+	tests/test-vicare-hashtables.sps				\
 	tests/test-vicare-infix.sps					\
 	tests/test-vicare-io.sps					\
 	tests/test-vicare-letrec-syntax.sps				\

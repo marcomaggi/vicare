@@ -98,9 +98,11 @@ strings_eqp (ikptr str1, ikptr str2)
 ikptr
 ikrt_bytevector_hash (ikptr bv)
 {
+#undef LIMIT
+#define LIMIT	32
   long		len  = IK_BYTEVECTOR_LENGTH(bv);
   uint8_t *	data = IK_BYTEVECTOR_DATA_UINT8P(bv);
-  int		h    = len;
+  int		h    = (len < LIMIT)? len : LIMIT;
   uint8_t *	last = data + len;
   /* one-at-a-time */
   while (data < last) {

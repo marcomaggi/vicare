@@ -10092,13 +10092,6 @@ the resulting bytevector.  It is an error if the sum of the bytevector
 lengths is not in the range of the maximum bytevector length.
 @end defun
 
-
-@defun bytevector-hash @var{bytevector}
-Return an integer hash value for @var{bytevector}, based on its current
-contents.  This hash function is suitable for use with
-@func{bytevector=?} as an equivalence function.
-@end defun
-
 @c page
 @node iklib strings
 @section Additional string functions
@@ -11302,6 +11295,72 @@ Return @true{} if @var{obj} is an enumeration set object, else return
 
 @defun string-ci-hash @var{str}
 Case--insensitive hash function for strings.
+@end defun
+
+
+@defun bytevector-hash @var{bytevector}
+Return an integer hash value for @var{bytevector}, based on its current
+contents.  This hash function is suitable for use with
+@func{bytevector=?} as an equivalence function.
+@end defun
+
+
+@defun char-hash @var{ch}
+@defunx char-ci-hash @var{ch}
+Hash function for characters.  @func{char-ci-hash} first applies
+@func{char-foldcase} to @var{ch}.
+@end defun
+
+
+@defun boolean-hash @var{bool}
+Hash function for booleans.
+@end defun
+
+
+@defun fixnum-hash @var{fx}
+Hash function for fixnums.
+@end defun
+
+
+@defun exact-integer-hash @var{N}
+Hash function for exact integers, fixnums and bignums.
+@end defun
+
+
+@defun flonum-hash @var{fl}
+Hash function for flonums.
+@end defun
+
+
+@defun number-hash @var{Z}
+Hash function for number objects.
+@end defun
+
+
+@defun struct-hash @var{stru}
+Hash function for @value{PRJNAME} structs.  This is a very low quality
+hash function.
+@end defun
+
+
+@defun record-hash @var{reco}
+Hash function for @rnrs{6} records.  This is a very low quality hash
+function.
+@end defun
+
+
+@defun void-hash @var{obj}
+@defunx eof-object-hash @var{obj}
+@defunx would-block-hash @var{obj}
+Ignore @var{obj} and return a non--negative exact integer representing
+the hash value for @code{(void)}, @code{(eof-object)} and
+@code{(would-block-object)}.
+@end defun
+
+
+@defun object-hash @var{obj}
+Hash function for any Scheme object.  For some object types: this is a
+very low quality hash function.
 @end defun
 
 @c page

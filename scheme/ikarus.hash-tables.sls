@@ -40,6 +40,13 @@
     string-hash			string-ci-hash
     symbol-hash			bytevector-hash
     equal-hash
+    fixnum-hash			exact-integer-hash
+    flonum-hash			number-hash
+    char-hash			char-ci-hash
+    boolean-hash		void-hash
+    eof-object-hash		would-block-hash
+    struct-hash			record-hash
+    object-hash
 
     ;; unsafe operations
     $string-hash		$string-ci-hash
@@ -64,10 +71,24 @@
 	    hashtable-hash-function
 	    string-hash			string-ci-hash
 	    symbol-hash			bytevector-hash
-	    equal-hash)
+	    equal-hash
+	    fixnum-hash			exact-integer-hash
+	    flonum-hash			number-hash
+	    char-hash			char-ci-hash
+	    boolean-hash		void-hash
+	    eof-object-hash		would-block-hash
+	    struct-hash			record-hash
+	    object-hash)
     ;;This import spec must be the  last, else rebuilding the boot image
     ;;may fail.  (Marco Maggi; Sat Feb  9, 2013)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    (vicare system $chars)
+    (vicare system $fx)
+    (vicare system $bignums)
+    (vicare system $flonums)
+    (vicare system $ratnums)
+    (vicare system $compnums)
+    (vicare system $numerics))
 
 
 ;;;; arguments validation
@@ -188,7 +209,7 @@
 	      (get-hashed h x (hashf x))))
 	((and (eq? eqv? (hasht-equivf h))
 	      (number? x))
-	 (get-hashed h x (%number-hash x)))
+	 (get-hashed h x (number-hash x)))
 	(else
 	 (let ((pv (pointer-value x))
 	       (vec (hasht-vec h)))
@@ -249,7 +270,7 @@
 	      (put-hashed h x v (hashf x))))
 	((and (eq? eqv? (hasht-equivf h))
 	      (number? x))
-	 (put-hashed h x v (%number-hash x)))
+	 (put-hashed h x v (number-hash x)))
 	(else
 	 (let ((pv  (pointer-value x))
 	       (vec (hasht-vec h)))
@@ -313,7 +334,7 @@
 	(else
 	 (enlarge-hashtable h (lambda (x)
 				(if (number? x)
-				    (%number-hash x)
+				    (number-hash x)
 				  (pointer-value x)))))))
 
 (define (init-vec v i n)
@@ -646,24 +667,165 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (fixnum-hash {fx fixnum?})
+  ($fixnum-hash fx))
+
+(define ($fixnum-hash fx)
+  ($abs-fixnum fx))
+
+;;; --------------------------------------------------------------------
+
+(define* (exact-integer-hash {N exact-integer?})
+  (if (fixnum? N)
+      ($fixnum-hash N)
+    ($bignum-hash N)))
+
+(define ($bignum-hash N)
+  (foreign-call "ikrt_bignum_hash" N))
+
+;;; --------------------------------------------------------------------
+
+(define* (flonum-hash {fl flonum?})
+  ($flonum-hash fl))
+
+(define* ($flonum-hash fl)
+  (foreign-call "ikrt_flonum_hash" fl))
+
+;;The one below is another possible implementation.  (Marco Maggi; Thu Mar 12, 2015)
+;;
+;; (define* ($flonum-hash fl)
+;;   (let ((R ($fixnum-hash fl)))
+;;     (cond (($flonum-rational? R)
+;; 	   ($flonum->exact ($flround R)))
+;; 	  (($flnan? R)
+;; 	   0)
+;; 	  (($flinfinite? R)
+;; 	   +1)
+;; 	  (else
+;; 	   (assertion-violation __who__
+;; 	     "invalid absolute value from flonum" fl R)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (number-hash Z)
+  (cond ((fixnum? Z)
+	 ($fixnum-hash Z))
+	((flonum? Z)
+	 ($flonum-hash Z))
+	((bignum? Z)
+	 ($bignum-hash Z))
+	((ratnum? Z)
+	 (fxxor (number-hash ($ratnum-n Z))
+		(number-hash ($ratnum-d Z))))
+	((cflonum? Z)
+	 (fxxor ($flonum-hash ($cflonum-real Z))
+		($flonum-hash ($cflonum-imag Z))))
+	((compnum? Z)
+	 (fxxor (number-hash ($compnum-real Z))
+		(number-hash ($compnum-imag Z))))
+	(else
+	 (procedure-argument-violation __who__
+	   "expected number object" Z))))
+
+;;; --------------------------------------------------------------------
+
+(define* (char-hash {ch char?})
+  ($char-hash ch))
+
+(define ($char-hash ch)
+  ($fixnum-hash ($char->fixnum ch)))
+
+;;; --------------------------------------------------------------------
+
+(define* (char-ci-hash {ch char?})
+  ($char-ci-hash ch))
+
+(define ($char-ci-hash ch)
+  ($fixnum-hash ($char->fixnum (char-foldcase ch))))
+
+;;; --------------------------------------------------------------------
+
+(define* (struct-hash {stru struct?})
+  ($struct-hash stru))
+
+(define ($struct-hash stru)
+  (if (zero? (struct-length stru))
+      (symbol-hash (struct-type-symbol (struct-rtd stru)))
+    (object-hash (struct-ref stru 0))))
+
+;;; --------------------------------------------------------------------
+
+(define* (record-hash {rec record?})
+  ($record-hash rec))
+
+(define ($record-hash rec)
+  (let ((rtd (record-rtd rec)))
+    (if (zero? (vector-length (record-type-field-names rtd)))
+	(let ((uid (record-type-uid rtd)))
+	  (if uid
+	      (symbol-hash uid)
+	    0))
+      (object-hash (struct-ref rec 0)))))
+
+;;; --------------------------------------------------------------------
+
+(define (void-hash obj)
+  0)
+
+(define (eof-object-hash obj)
+  1)
+
+(define (would-block-hash obj)
+  2)
+
+;;; --------------------------------------------------------------------
+
+(define* (boolean-hash {obj boolean?})
+  ($boolean-hash obj))
+
+(define ($boolean-hash obj)
+  (if obj 1 0))
+
+;;; --------------------------------------------------------------------
+
+(define (object-hash obj)
+  (cond ((string? obj)
+	 ($string-hash obj))
+	((symbol? obj)
+	 ($symbol-hash obj))
+	((bytevector? obj)
+	 ($bytevector-hash obj))
+	((fixnum? obj)
+	 ($fixnum-hash obj))
+	((flonum? obj)
+	 ($flonum-hash obj))
+	((bignum? obj)
+	 ($bignum-hash obj))
+	((number? obj)
+	 (number-hash obj))
+	((char? obj)
+	 ($char-hash obj))
+	((boolean? obj)
+	 ($boolean-hash obj))
+	((record? obj)
+	 ($record-hash obj))
+	((struct? obj)
+	 ($struct-hash obj))
+	((eq? obj (void))
+	 (void-hash obj))
+	((eof-object? obj)
+	 (eof-object-hash obj))
+	((would-block-object? obj)
+	 (would-block-hash obj))
+	(else
+	 (equal-hash obj))))
+
+;;; --------------------------------------------------------------------
+
 (define (equal-hash s)
   (string-hash (call-with-string-output-port
 		   (lambda (port)
 		     (write s port)))))
-
-(define (%number-hash x)
-  (cond ((fixnum? x)
-	 x)
-	((flonum? x)
-	 (foreign-call "ikrt_flonum_hash" x))
-	((bignum? x)
-	 (foreign-call "ikrt_bignum_hash" x))
-	((ratnum? x)
-	 (fxxor (%number-hash (numerator x))
-		(%number-hash (denominator x))))
-	(else
-	 (fxxor (%number-hash (real-part x))
-		(%number-hash (imag-part x))))))
 
 
 ;;;; done
