@@ -38,6 +38,8 @@
     ((cond)				cond-macro)
     ((do)				do-macro)
     ((do*)				do*-macro)
+    ((dolist)				dolist-macro)
+    ((dotimes)				dotimes-macro)
     ((or)				or-macro)
     ((and)				and-macro)
     ((let*)				let*-macro)
@@ -3779,7 +3781,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DO, WHILE, UNTIL, FOR
+;;;; module non-core-macro-transformer: DO, DO*, WHILE, UNTIL, FOR
 
 (define (with-escape-fluids escape next-iteration body*)
   ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
@@ -3950,6 +3952,58 @@
 					 '(void)
 				       `(begin . ,?expr*))))))
 		   (loop))))))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (dolist-macro expr-stx)
+  ;;Transformer function used to expand Vicare DOLIST macros from the top-level built
+  ;;in environment; we  also support extended Vicare syntax.  Expand  the contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?var ?list-form)              ?body0 ?body* ...)
+     (let ((ell (gensym)))
+       (bless
+	`(let ((,?var '()))
+	   (do ((,ell ,?list-form (cdr ,ell)))
+	       ((null? ,ell))
+	     (set! ,?var (car ,ell))
+	     ,?body0 . ,?body*)))))
+    ((_ (?var ?list-form ?result-form) ?body0 ?body* ...)
+     (let ((ell (gensym)))
+       (bless
+	`(let ((,?var '()))
+	   (do ((,ell ,?list-form (cdr ,ell)))
+	       ((null? ,ell)
+		,?result-form)
+	     (set! ,?var (car ,ell))
+	     ,?body0 . ,?body*)))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (dotimes-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare DOTIMES  macros from  the top-level
+  ;;built  in  environment; we  also  support  extended  Vicare syntax.   Expand  the
+  ;;contents of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?var ?count-form)              ?body0 ?body* ...)
+     (let ((max-var (gensym)))
+       (bless
+	`(let ((,max-var ,?count-form))
+	   (do ((,?var 0 (add1 ,?var)))
+	       ((>= ,?var ,max-var))
+	     ,?body0 . ,?body*)))))
+    ((_ (?var ?count-form ?result-form) ?body0 ?body* ...)
+     (let ((max-var (gensym)))
+       (bless
+	`(let ((,max-var ,?count-form))
+	   (do ((,?var 0 (add1 ,?var)))
+	       ((>= ,?var ,max-var)
+		,?result-form)
+	     ,?body0 . ,?body*)))))
     ))
 
 ;;; --------------------------------------------------------------------

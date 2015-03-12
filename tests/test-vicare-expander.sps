@@ -1171,8 +1171,6 @@
 
 (parametrise ((check-test-name	'do*))
 
-;;; standard do
-
   (check
       (with-result
 	(do* ((i 5 (+ -1 i)))
@@ -1230,6 +1228,46 @@
 	    (continue))
 	  (add-result i)))
     => '(5 (0 1 2 4)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'dolist))
+
+  (check
+      (with-result
+	(dolist (A '(1 2 3))
+	  (add-result A)))
+    => `(,(void) (1 2 3)))
+
+  (check
+      (with-result
+	(dolist (A '(1 2 3) A)
+	  (add-result A)))
+    => '(3 (1 2 3)))
+
+  (check
+      (with-result
+	(dolist (A '() A)
+	  (add-result A)))
+    => `(() ()))
+
+  #t)
+
+
+(parametrise ((check-test-name	'dotimes))
+
+  (check
+      (with-result
+	(dotimes (i 3)
+	  (add-result i)))
+    => `(,(void) (0 1 2)))
+
+  (check
+      (with-result
+	(dotimes (i 3 i)
+	  (add-result i)))
+    => '(3 (0 1 2)))
 
   #t)
 

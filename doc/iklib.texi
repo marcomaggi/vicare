@@ -1113,12 +1113,14 @@ behaviour is undefined.
 
 
 @menu
-* iklib syntaxes loops while::  Iterating with the @syntax{while} syntax.
-* iklib syntaxes loops until::  Iterating with the @syntax{until} syntax.
-* iklib syntaxes loops for::    Iterating with the @syntax{for} syntax.
-* iklib syntaxes loops do::     Iterating with the @syntax{do} syntax.
-* iklib syntaxes loops do*::    Iterating with the @syntax{do*} syntax.
-* iklib syntaxes loops fluids:: Fluid bindings for loop syntaxes.
+* iklib syntaxes loops while::    Iterating with the @syntax{while} syntax.
+* iklib syntaxes loops until::    Iterating with the @syntax{until} syntax.
+* iklib syntaxes loops for::      Iterating with the @syntax{for} syntax.
+* iklib syntaxes loops do::       Iterating with the @syntax{do} syntax.
+* iklib syntaxes loops do*::      Iterating with the @syntax{do*} syntax.
+* iklib syntaxes loops dolist::   Iterating with the @syntax{dolist} syntax.
+* iklib syntaxes loops dotimes::  Iterating with the @syntax{dotimes} syntax.
+* iklib syntaxes loops fluids::   Fluid bindings for loop syntaxes.
 @end menu
 
 @c page
@@ -1285,6 +1287,48 @@ This is like the standard @syntax{do} (@pxref{stdlib control, do}), but
 the bindings and steppings are performed sequentially rather than in
 unspecified order.  This syntax meant to be similar to the Common Lisp
 syntax of the same name.
+@end deffn
+
+@c page
+@node iklib syntaxes loops dolist
+@subsubsection Iterating with the @syntax{dolist} syntax
+
+
+@deffn Syntax dolist (@meta{var} @meta{list-expr}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax dolist (@meta{var} @meta{list-expr} @meta{result-expr}) @metao{body} @meta{body} @dots{}
+Iterate of the list returned by @meta{list-expr} binding, at each
+iteration, the next item from the list to @meta{var}; evaluate the
+@meta{body} forms in the region of the binding.
+
+If @meta{result-expr} is present: it is evaluated, in the region of
+@meta{var}, to produce the return values.  If @meta{result-expr} is not
+present: the return values are unspecified.
+
+If @meta{list-expr} returns null and @meta{result-expr} is present: when
+@meta{result-expr} is evaluated, @meta{var} is bound to null.
+
+This syntax meant to be similar to the Common Lisp syntax of the same
+name.
+@end deffn
+
+@c page
+@node iklib syntaxes loops dotimes
+@subsubsection Iterating with the @syntax{dotimes} syntax
+
+
+@deffn Syntax dotimes (@meta{var} @meta{count-expr}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax dotimes (@meta{var} @meta{count-expr} @meta{result-expr}) @metao{body} @meta{body} @dots{}
+Iterate over exact integers from zero to the return value of
+@meta{count-expr}, which must return a non--negative exact integer; at
+each iteration: the next integer is bound to @meta{var}; evaluate the
+@meta{body} forms in the region of the binding.
+
+If @meta{result-expr} is present: it is evaluated, in the region of
+@meta{var}, to produce the return values.  If @meta{result-expr} is not
+present: the return values are unspecified.
+
+This syntax meant to be similar to the Common Lisp syntax of the same
+name.
 @end deffn
 
 @c page
