@@ -8962,7 +8962,8 @@ Store @var{value} in the field at @var{index} in the data structure
 
 @defun struct=? @vari{obj} @varii{obj}
 Return true if @vari{obj} and @varii{obj} are two structures having the
-same @rtd{} and equal field values according to @func{eqv?}.
+same @rtd{} and equal field values according to @func{eqv?}.  Note that
+this function also works when applied to @rnrs{6} records.
 @end defun
 
 
@@ -9422,6 +9423,12 @@ The current implementation is the following:
 
 
 The following bindings are exported by the library @library{vicare}.
+
+
+@defun record=? @vari{record} @varii{record}
+Return true if @vari{record} and @varii{record} are two @rnrs{6} records
+having the same @rtd{} and equal field values according to @func{eqv?}.
+@end defun
 
 
 @defun record-reset @var{record}

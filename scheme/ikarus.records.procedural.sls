@@ -35,7 +35,8 @@
 
     ;; extension utility functions, non-R6RS
     rtd-subtype?			print-r6rs-record-instance
-    record-reset			record-and-rtd?
+    record-reset			record=?
+    record-and-rtd?
     record-destructor-set!		record-destructor)
   (import (except (vicare)
 		  ;; bindings for (rnrs records procedural (6))
@@ -55,7 +56,8 @@
 
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				print-r6rs-record-instance
-		  record-reset				record-and-rtd?
+		  record-reset				record=?
+		  record-and-rtd?
 		  record-destructor-set!		record-destructor)
     (vicare system $structs)
     (vicare system $symbols)
@@ -1133,6 +1135,19 @@
 				  ($<rtd>-total-fields-number prtd))
 			      0))))
      (%display "]"))))
+
+(define* (record=? {obj1 record?} {obj2 record?})
+  ;;Return true if OBJ1  and OBJ2 are two R6RS records having the  same RTD and equal
+  ;;field values according to EQV?.
+  ;;
+  (let ((rtd1 ($struct-rtd obj1)))
+    (and (eq? rtd1 ($struct-rtd obj2))
+	 (let ((len ($vector-length ($<rtd>-fields rtd1))))
+	   (let loop ((i 0))
+	     (or ($fx= i len)
+		 (and (eqv? ($struct-ref obj1 i)
+			    ($struct-ref obj2 i))
+		      (loop ($fxadd1 i)))))))))
 
 (define* (record-reset {x record?})
   ;;Reset to #f all the fields of a structure.

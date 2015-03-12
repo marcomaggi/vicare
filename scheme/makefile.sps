@@ -2423,6 +2423,7 @@
     (record-destructor				v $language)
     (record-guardian-logger			v $language)
     (record-guardian-log			v $language)
+    (record=?					v $language)
     (record-reset				v $language)
     (record-and-rtd?				v $language)
     (record-accessor				v r rp)
