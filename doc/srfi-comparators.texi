@@ -584,7 +584,8 @@ The following ordering between types must hold:
 
 @enumerate
 @item
-the empty list precedes pairs,
+the empty list precedes pairs, with proper lists preceding improper
+lists,
 
 @item
 which precede booleans,
@@ -606,6 +607,22 @@ which precede vectors,
 
 @item
 which precede bytevectors,
+
+@item
+which precede the @code{(void)} object (this is a @value{PRJNAME}
+extension),
+
+@item
+which precede the @code{(eof-object)} object (this is a @value{PRJNAME}
+extension),
+
+@item
+which precede the @code{(would-block-object)} object (this is a
+@value{PRJNAME} extension),
+
+@item
+which precede the @value{PRJNAME} struct objects and @rnrs{6} record
+objects (this is a @value{PRJNAME} extension),
 
 @item
 which precede all other objects.

@@ -36,6 +36,15 @@
 (check-display "*** testing Vicare libraries: SRFI 114, comparators\n")
 
 
+;;;; helpers
+
+(define-struct a-struct
+  (a b c))
+
+(define-record-type a-record
+  (fields a b c))
+
+
 (parametrise ((check-test-name	'predicates))
 
   (check
@@ -145,8 +154,6 @@
       ))
 
 ;;; --------------------------------------------------------------------
-
-  (doit default-comparator #f #t)
 
   (doit boolean-comparator #f #t)
   (doit char-comparator #\a #\b)
@@ -272,8 +279,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (doit default-comparator #f #t)
-
   (doit boolean-comparator #f #t)
   (doit char-comparator #\a #\b)
   (doit char-ci-comparator #\A #\b)
@@ -361,8 +366,236 @@
   #t)
 
 
-(parametrise ((check-test-name	'default))
+(parametrise ((check-test-name	'default-with-accessors))
 
+  (define C default-comparator)
+
+;;; --------------------------------------------------------------------
+;;; type test
+
+  (check-for-true  ((comparator-type-test-procedure C) #t))
+  (check-for-true  ((comparator-type-test-procedure C) #f))
+  (check-for-true  ((comparator-type-test-procedure C) '()))
+  (check-for-true  ((comparator-type-test-procedure C) '(1 . 2)))
+  (check-for-true  ((comparator-type-test-procedure C) '(1 2)))
+  (check-for-true  ((comparator-type-test-procedure C) '#(1 2)))
+  (check-for-true  ((comparator-type-test-procedure C) '#vu8(1 2)))
+  (check-for-true  ((comparator-type-test-procedure C) "12"))
+
+;;; --------------------------------------------------------------------
+;;; equality
+
+  (check-for-false
+   ((comparator-equality-predicate C) '() '(1 . 2)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+  (check ((comparator-comparison-procedure C) #t #t)		=> 0)
+  (check ((comparator-comparison-procedure C) #f #t)		=> -1)
+  (check ((comparator-comparison-procedure C) #t #f)		=> +1)
+
+;;; --------------------------------------------------------------------
+;;; hash functions
+
+  (check-for-true
+   (non-negative-exact-integer? ((comparator-hash-function C) #f)))
+  (check-for-true
+   (non-negative-exact-integer? ((comparator-hash-function C) #t)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'default-with-applicators))
+
+  (define C default-comparator)
+
+;;; --------------------------------------------------------------------
+;;; type test
+
+  (check-for-true  (comparator-test-type C #t))
+  (check-for-true  (comparator-test-type C #f))
+  (check-for-true  (comparator-test-type C '()))
+  (check-for-true  (comparator-test-type C '(1 . 2)))
+  (check-for-true  (comparator-test-type C '(1 2)))
+  (check-for-true  (comparator-test-type C '#(1 2)))
+  (check-for-true  (comparator-test-type C '#vu8(1 2)))
+  (check-for-true  (comparator-test-type C #\a))
+  (check-for-true  (comparator-test-type C "12"))
+
+  (check-for-true  (comparator-test-type C 12))
+  (check-for-true  (comparator-test-type C 1.2))
+  (check-for-true  (comparator-test-type C 1/2))
+  (check-for-true  (comparator-test-type C 1+2i))
+  (check-for-true  (comparator-test-type C 1.0+2i))
+  (check-for-true  (comparator-test-type C 1+2.0i))
+  (check-for-true  (comparator-test-type C 1.0+2.0i))
+  (check-for-true  (comparator-test-type C +nan.0))
+  (check-for-true  (comparator-test-type C +inf.0))
+  (check-for-true  (comparator-test-type C -inf.0))
+
+  (check-for-true  (comparator-test-type C (least-fixnum)))
+  (check-for-true  (comparator-test-type C (greatest-fixnum)))
+  (check-for-true  (comparator-test-type C (least-positive-bignum)))
+  (check-for-true  (comparator-test-type C (greatest-negative-bignum)))
+
+  (check-for-true  (comparator-test-type C (void)))
+  (check-for-true  (comparator-test-type C (eof-object)))
+  (check-for-true  (comparator-test-type C (would-block-object)))
+
+;;; --------------------------------------------------------------------
+;;; type check
+
+  (check-for-true  (comparator-check-type C #t))
+  (check-for-true  (comparator-check-type C #f))
+  (check-for-true  (comparator-check-type C '()))
+  (check-for-true  (comparator-check-type C '(1 . 2)))
+  (check-for-true  (comparator-check-type C '(1 2)))
+  (check-for-true  (comparator-check-type C '#(1 2)))
+  (check-for-true  (comparator-check-type C '#vu8(1 2)))
+  (check-for-true  (comparator-check-type C #\a))
+  (check-for-true  (comparator-check-type C "12"))
+
+  (check-for-true  (comparator-check-type C 12))
+  (check-for-true  (comparator-check-type C 1.2))
+  (check-for-true  (comparator-check-type C 1/2))
+  (check-for-true  (comparator-check-type C 1+2i))
+  (check-for-true  (comparator-check-type C 1.0+2i))
+  (check-for-true  (comparator-check-type C 1+2.0i))
+  (check-for-true  (comparator-check-type C 1.0+2.0i))
+  (check-for-true  (comparator-check-type C +nan.0))
+  (check-for-true  (comparator-check-type C +inf.0))
+  (check-for-true  (comparator-check-type C -inf.0))
+
+  (check-for-true  (comparator-check-type C (least-fixnum)))
+  (check-for-true  (comparator-check-type C (greatest-fixnum)))
+  (check-for-true  (comparator-check-type C (least-positive-bignum)))
+  (check-for-true  (comparator-check-type C (greatest-negative-bignum)))
+
+  (check-for-true  (comparator-check-type C (void)))
+  (check-for-true  (comparator-check-type C (eof-object)))
+  (check-for-true  (comparator-check-type C (would-block-object)))
+
+;;; --------------------------------------------------------------------
+;;; equality
+
+  (check-for-true  (comparator-equal? C '() '()))
+
+  (check-for-false (comparator-equal? C '() #t))
+  (check-for-false (comparator-equal? C '() #f))
+  (check-for-false (comparator-equal? C '() '(1 . 2)))
+  (check-for-false (comparator-equal? C '() '(1 2)))
+  (check-for-false (comparator-equal? C '() '#(1 2)))
+  (check-for-false (comparator-equal? C '() '#vu8(1 2)))
+  (check-for-false (comparator-equal? C '() #\a))
+  (check-for-false (comparator-equal? C '() "12"))
+
+  (check-for-false (comparator-equal? C '() 12))
+  (check-for-false (comparator-equal? C '() 1.2))
+  (check-for-false (comparator-equal? C '() 1/2))
+  (check-for-false (comparator-equal? C '() 1+2i))
+  (check-for-false (comparator-equal? C '() 1.0+2i))
+  (check-for-false (comparator-equal? C '() 1+2.0i))
+  (check-for-false (comparator-equal? C '() 1.0+2.0i))
+  (check-for-false (comparator-equal? C '() +nan.0))
+  (check-for-false (comparator-equal? C '() +inf.0))
+  (check-for-false (comparator-equal? C '() -inf.0))
+
+  (check-for-false (comparator-equal? C '() (least-fixnum)))
+  (check-for-false (comparator-equal? C '() (greatest-fixnum)))
+  (check-for-false (comparator-equal? C '() (least-positive-bignum)))
+  (check-for-false (comparator-equal? C '() (greatest-negative-bignum)))
+
+  (check-for-false (comparator-equal? C '() (void)))
+  (check-for-false (comparator-equal? C '() (eof-object)))
+  (check-for-false (comparator-equal? C '() (would-block-object)))
+
+  (check-for-true (comparator-equal? C (void) (void)))
+  (check-for-true (comparator-equal? C (eof-object) (eof-object)))
+  (check-for-true (comparator-equal? C (would-block-object) (would-block-object)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+  (check (comparator-compare C '()	'())		=> 0)
+  (check (comparator-compare C '()	'(1 . 2))	=> -1)
+  (check (comparator-compare C '(1 . 2)	'())		=> +1)
+
+  (check (comparator-compare C '()	'())		=> 0)
+  (check (comparator-compare C '()	'(1 2))		=> -1)
+  (check (comparator-compare C '(1 2)	'())		=> +1)
+
+  (check (comparator-compare C '(1 2)	'(1 . 2))	=> -1)
+  (check (comparator-compare C '(1 . 2)	'(1 2))		=> +1)
+
+  ;;Proper lists precede improper lists.
+  (check (comparator-compare C '(1 2 3)	  '(1 2 . 3))	=> -1)
+  (check (comparator-compare C '(1 2 . 3) '(1 2 3))	=> +1)
+
+  (check (comparator-compare C '(1 . 2)	#t)		=> -1)
+  (check (comparator-compare C '(1 . 2)	#f)		=> -1)
+  (check (comparator-compare C #t	'(1 . 2))	=> +1)
+  (check (comparator-compare C #f	'(1 . 2))	=> +1)
+
+  (check (comparator-compare C #t	#\a)		=> -1)
+  (check (comparator-compare C #\a	#t)		=> +1)
+
+  (check (comparator-compare C #\a	"A")		=> -1)
+  (check (comparator-compare C "A"	#\a)		=> +1)
+
+  (check (comparator-compare C "A"	'b)		=> -1)
+  (check (comparator-compare C 'b	"A")		=> +1)
+
+  (check (comparator-compare C 'b	1)		=> -1)
+  (check (comparator-compare C 1	'b)		=> +1)
+
+  (check (comparator-compare C 1	'#(1))		=> -1)
+  (check (comparator-compare C '#(1)	1)		=> +1)
+
+  (check (comparator-compare C '#(1)	'#vu8(1))	=> -1)
+  (check (comparator-compare C '#vu8(1)	'#(1))		=> +1)
+
+  (check (comparator-compare C '#vu8(1)	(void))		=> -1)
+  (check (comparator-compare C (void)	'#vu8(1))	=> +1)
+
+  (check (comparator-compare C (void)		(eof-object))	=> -1)
+  (check (comparator-compare C (eof-object)	(void))		=> +1)
+
+  (check (comparator-compare C (eof-object)		(would-block-object))	=> -1)
+  (check (comparator-compare C (would-block-object)	(eof-object))		=> +1)
+
+;;; --------------------------------------------------------------------
+;;; hash function
+
+  (check-for-true (non-negative-exact-integer? (comparator-hash C #t)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C #f)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C '())))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C '(1 . 2))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C '(1 2))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C '#(1 2))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C '#vu8(1 2))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C #\a)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C "ab")))
+
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 12)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 1.2)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 1/2)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 1+2i)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 1.0+2i)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 1+2.0i)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C 1.0+2.0i)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C +nan.0)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C +inf.0)))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C -inf.0)))
+
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (least-fixnum))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (greatest-fixnum))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (least-positive-bignum))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (greatest-negative-bignum))))
+
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (void))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (eof-object))))
+  (check-for-true (non-negative-exact-integer? (comparator-hash C (would-block-object))))
 
   #t)
 
