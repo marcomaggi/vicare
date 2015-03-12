@@ -1049,6 +1049,8 @@
   (define-record-type <alpha>
     (fields a b c))
 
+;;; --------------------------------------------------------------------
+
   (check-for-true
    (let ((P (make-<alpha> 1 2 3)))
      (record=? P P)))
@@ -1062,6 +1064,38 @@
    (let ((P (make-<alpha> 1 2 3))
 	 (Q (make-<alpha> 1 2 9)))
      (record=? P Q)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (equal? P P)))
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (equal? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (equal? P Q)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (eqv? P P)))
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (eqv? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (eqv? P Q)))
 
   #t)
 
