@@ -1047,49 +1047,49 @@
 
   (check
       (with-result
-       (do ((i 5 (+ -1 i)))
-	   ((zero? i)
-	    'done)
-	 (add-result i)))
+	(do ((i 5 (+ -1 i)))
+	    ((zero? i)
+	     'done)
+	  (add-result i)))
     => '(done (5 4 3 2 1)))
 
   (check	;binding with no step
       (with-result
-       (do ((j 123)
-	    (i 5 (+ -1 i)))
-	   ((zero? i)
-	    j)
-	 (add-result i)))
+	(do ((j 123)
+	     (i 5 (+ -1 i)))
+	    ((zero? i)
+	     j)
+	  (add-result i)))
     => '(123 (5 4 3 2 1)))
 
   (check	;break
       (with-result
-       (do ((i 0 (+ 1 i)))
-	   ((= i 5)
-	    i)
-	 (add-result i)
-	 (when (= i 3)
-	   (break 123))))
+	(do ((i 0 (+ 1 i)))
+	    ((= i 5)
+	     i)
+	  (add-result i)
+	  (when (= i 3)
+	    (break 123))))
     => '(123 (0 1 2 3)))
 
   (check	;break
       (with-result
-       (do ((i 0 (+ 1 i)))
-	   ((= i 5)
-	    i)
-	 (add-result i)
-	 (when (= i 3)
-	   (break 123))))
+	(do ((i 0 (+ 1 i)))
+	    ((= i 5)
+	     i)
+	  (add-result i)
+	  (when (= i 3)
+	    (break 123))))
     => '(123 (0 1 2 3)))
 
   (check	;continue
       (with-result
-       (do ((i 0 (+ 1 i)))
-	   ((= i 5)
-	    i)
-	 (when (= i 3)
-	   (continue))
-	 (add-result i)))
+	(do ((i 0 (+ 1 i)))
+	    ((= i 5)
+	     i)
+	  (when (= i 3)
+	    (continue))
+	  (add-result i)))
     => '(5 (0 1 2 4)))
 
 ;;; --------------------------------------------------------------------
@@ -1097,36 +1097,36 @@
 
   (check
       (with-result
-       (define i 5)
-       (do
-	   (begin
-	     (add-result i)
-	     (set! i (+ -1 i)))
-	   (while (positive? i))))
+	(define i 5)
+	(do
+	    (begin
+	      (add-result i)
+	      (set! i (+ -1 i)))
+	    (while (positive? i))))
     => `(,(void) (5 4 3 2 1)))
 
   (check 	;continue
       (with-result
-       (define i 5)
-       (do
-	   (begin
-	     (set! i (+ -1 i))
-	     (when (= i 3)
-	       (continue))
-	     (add-result i))
-	   (while (positive? i))))
+	(define i 5)
+	(do
+	    (begin
+	      (set! i (+ -1 i))
+	      (when (= i 3)
+		(continue))
+	      (add-result i))
+	    (while (positive? i))))
     => `(,(void) (4 2 1 0)))
 
   (check	;break
       (with-result
-       (define i 5)
-       (do
-	   (begin
-	     (set! i (+ -1 i))
-	     (when (= i 2)
-	       (break))
-	     (add-result i))
-	   (while (positive? i))))
+	(define i 5)
+	(do
+	    (begin
+	      (set! i (+ -1 i))
+	      (when (= i 2)
+		(break))
+	      (add-result i))
+	    (while (positive? i))))
     => '((4 3)))
 
 ;;; --------------------------------------------------------------------
@@ -1134,37 +1134,102 @@
 
   (check
       (with-result
-       (define i 5)
-       (do
-	   (begin
-	     (add-result i)
-	     (set! i (+ -1 i)))
-	   (until (zero? i))))
+	(define i 5)
+	(do
+	    (begin
+	      (add-result i)
+	      (set! i (+ -1 i)))
+	    (until (zero? i))))
     => `(,(void) (5 4 3 2 1)))
 
   (check	;continue
       (with-result
-       (define i 5)
-       (do
-	   (begin
-	     (set! i (+ -1 i))
-	     (when (= i 3)
-	       (continue))
-	     (add-result i))
-	   (until (zero? i))))
+	(define i 5)
+	(do
+	    (begin
+	      (set! i (+ -1 i))
+	      (when (= i 3)
+		(continue))
+	      (add-result i))
+	    (until (zero? i))))
     => `(,(void) (4 2 1 0)))
 
   (check	;break
       (with-result
-       (define i 5)
-       (do
-	   (begin
-	     (set! i (+ -1 i))
-	     (when (= i 2)
-	       (break))
-	     (add-result i))
-	   (until (zero? i))))
+	(define i 5)
+	(do
+	    (begin
+	      (set! i (+ -1 i))
+	      (when (= i 2)
+		(break))
+	      (add-result i))
+	    (until (zero? i))))
     => '((4 3)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'do*))
+
+;;; standard do
+
+  (check
+      (with-result
+	(do* ((i 5 (+ -1 i)))
+	    ((zero? i)
+	     'done)
+	  (add-result i)))
+    => '(done (5 4 3 2 1)))
+
+  (check	;binding with no step
+      (with-result
+	(do* ((j 123)
+	      (i 5 (+ -1 i)))
+	    ((zero? i)
+	     j)
+	  (add-result i)))
+    => '(123 (5 4 3 2 1)))
+
+  (check	;sequential bindings
+      (with-result
+	(do* ((i 0 (add1 i))
+	      (j (* 10 i) (* 10 i)))
+	    ((= 3 i)
+	     (vector i j))
+	  (add-result (vector i j))))
+    => '(#(3 30) (#(0 0)
+		  #(1 10)
+		  #(2 20))))
+
+  (check	;break
+      (with-result
+	(do* ((i 0 (+ 1 i)))
+	    ((= i 5)
+	     i)
+	  (add-result i)
+	  (when (= i 3)
+	    (break 123))))
+    => '(123 (0 1 2 3)))
+
+  (check	;break
+      (with-result
+	(do* ((i 0 (+ 1 i)))
+	    ((= i 5)
+	     i)
+	  (add-result i)
+	  (when (= i 3)
+	    (break 123))))
+    => '(123 (0 1 2 3)))
+
+  (check	;continue
+      (with-result
+	(do* ((i 0 (+ 1 i)))
+	    ((= i 5)
+	     i)
+	  (when (= i 3)
+	    (continue))
+	  (add-result i)))
+    => '(5 (0 1 2 4)))
 
   #t)
 

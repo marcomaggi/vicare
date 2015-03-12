@@ -37,6 +37,7 @@
     ((define-condition-type)		define-condition-type-macro)
     ((cond)				cond-macro)
     ((do)				do-macro)
+    ((do*)				do*-macro)
     ((or)				or-macro)
     ((and)				and-macro)
     ((let*)				let*-macro)
@@ -3804,6 +3805,8 @@
 		     (,next-iteration #t)))))
      . ,body*))
 
+;;; --------------------------------------------------------------------
+
 (define (do-macro expr-stx)
   ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
   ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
@@ -3885,6 +3888,68 @@
 					`(begin . ,?expr*))))))
 		    (loop . ,?init*)))))))
        ))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (do*-macro expr-stx)
+  ;;Transformer function used to expand Vicare DO* macros from the top-level built in
+  ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  ;;This is meant to be similar to the Common Lisp syntax of the same name.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+  ;;
+  (define (%make-init-binding binding-stx)
+    (syntax-match binding-stx ()
+      ((?var ?init)
+       (receive (id tag)
+	   (parse-tagged-identifier-syntax ?var)
+	 binding-stx))
+      ((?var ?init ?step)
+       (receive (id tag)
+	   (parse-tagged-identifier-syntax ?var)
+	 (list ?var ?init)))
+      (_
+       (stx-error expr-stx "invalid binding"))))
+  (define (%make-step-update binding-stx knil)
+    (syntax-match binding-stx ()
+      ((?var ?init)
+       knil)
+      ((?var ?init ?step)
+       (receive (id tag)
+	   (parse-tagged-identifier-syntax ?var)
+	 (cons `(set! ,id ,?step)
+	       knil)))
+      (_
+       (stx-error expr-stx "invalid binding"))))
+  (syntax-match expr-stx ()
+    ((_ (?binding* ...)
+	(?test ?expr* ...)
+	?command* ...)
+     (let* ((escape         (gensym "escape"))
+	    (next-iteration (gensym "next-iteration"))
+	    (init-binding*  (map %make-init-binding ?binding*))
+	    (step-update*   (fold-right %make-step-update '() ?binding*)))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let* ,init-binding*
+		 (letrec ((loop (lambda ()
+				  (if (unwinding-call/cc
+					  (lambda (,next-iteration)
+					    (if ,?test
+						#f
+					      ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+				      (begin
+					,@step-update*
+					(loop))
+				    ,(if (null? ?expr*)
+					 '(void)
+				       `(begin . ,?expr*))))))
+		   (loop))))))))
     ))
 
 ;;; --------------------------------------------------------------------

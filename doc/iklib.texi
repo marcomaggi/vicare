@@ -1117,6 +1117,7 @@ behaviour is undefined.
 * iklib syntaxes loops until::  Iterating with the @syntax{until} syntax.
 * iklib syntaxes loops for::    Iterating with the @syntax{for} syntax.
 * iklib syntaxes loops do::     Iterating with the @syntax{do} syntax.
+* iklib syntaxes loops do*::    Iterating with the @syntax{do*} syntax.
 * iklib syntaxes loops fluids:: Fluid bindings for loop syntaxes.
 @end menu
 
@@ -1272,6 +1273,18 @@ Using the syntax @syntax{break} in the body causes immediate escaping
 out of the loop; if arguments are given to @syntax{break}: they become
 the return values of the syntax.
 @end itemize
+@end deffn
+
+@c page
+@node iklib syntaxes loops do*
+@subsubsection Iterating with the @syntax{do*} syntax
+
+
+@deffn Syntax do* ((@metai{variable} @metai{init} @metai{step}) @dots{}) (@meta{test} @meta{expression} @dots{}) @meta{command} @dots{}
+This is like the standard @syntax{do} (@pxref{stdlib control, do}), but
+the bindings and steppings are performed sequentially rather than in
+unspecified order.  This syntax meant to be similar to the Common Lisp
+syntax of the same name.
 @end deffn
 
 @c page
