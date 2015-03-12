@@ -743,6 +743,18 @@ result.
 @subsubheading Predicates
 
 
+@deffn {Unsafe Operation} $flnan? @var{fl}
+Return @true{} if the operand is a representation of not--a--number;
+otherwise return @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flinfinite? @var{fl}
+Return @true{} if the operand is a representation of infinity:
+@code{+inf.0} or @code{-inf.0}; otherwise return @false{}.
+@end deffn
+
+
 @deffn {Unsafe Operation} $flzero? @var{fl}
 Return true if the operand is zero.  Notice that the return value will
 be true for both @code{+0.0} or @code{-0.0}.
