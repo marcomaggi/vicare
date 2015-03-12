@@ -103,6 +103,22 @@
        #| end of BEGIN |# ))
     ))
 
+(define (%validate-rounding-argument who rounding)
+  (case rounding
+    ((round ceiling floor truncate)
+     (void))
+    (else
+     (procedure-argument-violation who
+       "invalid rounding specification" rounding))))
+
+(define (%validate-nan-handling-argument who nan-handling)
+  (case nan-handling
+    ((error min max)
+     (void))
+    (else
+     (procedure-argument-violation who
+       "invalid nan-handling specification" nan-handling))))
+
 
 ;;;; condition object types
 
@@ -575,61 +591,139 @@
 
 ;;;; comparison predicates
 
-(define (=? comparator a b . objs)
-  (if (comparator-equal? comparator a b)
-      (if (null? objs)
-	  #t
-	(apply =? comparator b objs))
+(define* (=? {K comparator?} a b . objs)
+  (comparator-check-type K a __who__)
+  (comparator-check-type K b __who__)
+  (for-each (lambda (x)
+	      (comparator-check-type K x __who__))
+    objs)
+  (%unsafe-=? K a b objs))
+
+(define (%unsafe-=? K a b objs)
+  (if (comparator-equal? K a b)
+      (if (pair? objs)
+	  (%unsafe-=? K b (car objs) (cdr objs))
+	#t)
     #f))
 
-(define (<? comparator a b . objs)
-  (if (eqv? (comparator-compare comparator a b) -1)
-      (if (null? objs)
-	  #t
-	(apply <? comparator b objs))
+;;; --------------------------------------------------------------------
+
+(define* (<? {K comparator?} a b . objs)
+  (comparator-check-type K a __who__)
+  (comparator-check-type K b __who__)
+  (for-each (lambda (x)
+	      (comparator-check-type K x __who__))
+    objs)
+  (%unsafe-<? K a b objs))
+
+(define (%unsafe-<? K a b objs)
+  (if (fx=? -1 (comparator-compare K a b))
+      (if (pair? objs)
+	  (%unsafe-<? K b (car objs) (cdr objs))
+	#t)
     #f))
 
-(define (>? comparator a b . objs)
-  (if (eqv? (comparator-compare comparator a b) 1)
-      (if (null? objs)
-	  #t
-	(apply >? comparator b objs))
+;;; --------------------------------------------------------------------
+
+(define* (>? {K comparator?} a b . objs)
+  (comparator-check-type K a __who__)
+  (comparator-check-type K b __who__)
+  (for-each (lambda (x)
+	      (comparator-check-type K x __who__))
+    objs)
+  (%unsafe->? K a b objs))
+
+(define (%unsafe->? K a b objs)
+  (if (fx=? +1 (comparator-compare K a b))
+      (if (pair? objs)
+	  (%unsafe->? K b (car objs) (cdr objs))
+	#t)
     #f))
 
-(define (<=? comparator a b . objs)
-  (if (not (eqv? (comparator-compare comparator a b) 1))
-      (if (null? objs)
-	  #t
-	(apply <=? comparator b objs))
+;;; --------------------------------------------------------------------
+
+(define* (<=? {K comparator?} a b . objs)
+  (comparator-check-type K a __who__)
+  (comparator-check-type K b __who__)
+  (for-each (lambda (x)
+	      (comparator-check-type K x __who__))
+    objs)
+  (%unsafe-<=? K a b objs))
+
+(define (%unsafe-<=? K a b objs)
+  (if (not (fx=? +1 (comparator-compare K a b)))
+      (if (pair? objs)
+	  (%unsafe-<=? K b (car objs) (cdr objs))
+	#t)
     #f))
 
-(define (>=? comparator a b . objs)
-  (if (not (eqv? (comparator-compare comparator a b) -1))
-      (if (null? objs)
-	  #t
-	(apply >=? comparator b objs))
+;;; --------------------------------------------------------------------
+
+(define* (>=? {K comparator?} a b . objs)
+  (comparator-check-type K a __who__)
+  (comparator-check-type K b __who__)
+  (for-each (lambda (x)
+	      (comparator-check-type K x __who__))
+    objs)
+  (%unsafe->=? K a b objs))
+
+(define (%unsafe->=? K a b objs)
+  (if (not (fx=? -1 (comparator-compare K a b)))
+      (if (pair? objs)
+	  (%unsafe->=? K b (car objs) (cdr objs))
+	#t)
     #f))
 
 
 ;;; minimum and maximum comparison predicate
 
-(define comparator-min
-  (case-lambda
-   ((comparator a)
-    a)
-   ((comparator a b)
-    (if (<? comparator a b) a b))
-   ((comparator a b . objs)
-    (comparator-min comparator a (apply comparator-min comparator b objs)))))
+(case-define* comparator-min
+  (({K comparator?} a)
+   (comparator-check-type K a __who__)
+   a)
+  (({K comparator?} a b)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (%dyadic-comparator-min K a b))
+  (({K comparator?} a b . objs)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (for-each (lambda (x)
+	       (comparator-check-type K x __who__))
+     objs)
+   (%dyadic-comparator-min K a
+			   (let recur ((objs (cons b objs)))
+			     (if (pair? (cdr objs))
+				 (%dyadic-comparator-min K (car objs) (recur (cdr objs)))
+			       (car objs))))))
 
-(define comparator-max
-  (case-lambda
-   ((comparator a)
-    a)
-   ((comparator a b)
-    (if (>? comparator a b) a b))
-   ((comparator a b . objs)
-    (comparator-max comparator a (apply comparator-max comparator b objs)))))
+(define (%dyadic-comparator-min K a b)
+  (if (%unsafe-<? K a b '()) a b))
+
+;;; --------------------------------------------------------------------
+
+(case-define* comparator-max
+  (({K comparator?} a)
+   (comparator-check-type K a __who__)
+   a)
+  (({K comparator?} a b)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (if (>? K a b) a b))
+  (({K comparator?} a b . objs)
+   (comparator-check-type K a __who__)
+   (comparator-check-type K b __who__)
+   (for-each (lambda (x)
+	       (comparator-check-type K x __who__))
+     objs)
+   (%dyadic-comparator-max K a
+			   (let recur ((objs (cons b objs)))
+			     (if (pair? (cdr objs))
+				 (%dyadic-comparator-max K (car objs) (recur (cdr objs)))
+			       (car objs))))))
+
+(define (%dyadic-comparator-max K a b)
+  (if (%unsafe->? K a b '()) a b))
 
 
 ;;;; standard comparators and comparator constructors: standard atomic comparators
@@ -640,11 +734,6 @@
 	(b		-1)
 	(else		0)))
 
-;;Already defined by (vicare).
-;;
-;; (define (boolean-hash obj)
-;;   (if obj 1 0))
-
 (define-predefined-comparator boolean-comparator
   (make-comparator boolean? boolean=? boolean-comparison boolean-hash))
 
@@ -653,11 +742,6 @@
 (define char-comparison
   (make-comparison=/< char=? char<?))
 
-;;Already defined by (vicare).
-;;
-;; (define (char-hash obj)
-;;   (abs (char->integer obj)))
-
 (define-predefined-comparator char-comparator
   (make-comparator char? char=? char-comparison char-hash))
 
@@ -665,11 +749,6 @@
 
 (define char-ci-comparison
   (make-comparison=/< char-ci=? char-ci<?))
-
-;;Already defined by (vicare).
-;;
-;; (define (char-ci-hash obj)
-;;   (abs (char->integer (char-foldcase obj))))
 
 (define char-ci-comparator
   (make-comparator char? char-ci=? char-ci-comparison char-ci-hash))
@@ -692,20 +771,6 @@
 	(real-comparison (imag-part a)
 			 (imag-part b))
       real-result)))
-
-;;Already defined by (vicare).
-;;
-;; (define (number-hash obj)
-;;   (let ((R (magnitude obj)))
-;;     (cond ((rational? R)
-;; 	   (exact (round R)))
-;; 	  ((nan? R)
-;; 	   0)
-;; 	  ((infinite? R)
-;; 	   (if (flpositive? R) +1 +2))
-;; 	  (else
-;; 	   (assertion-violation __who__
-;; 	     "internal error while computing hash value for number" obj)))))
 
 (define-predefined-comparator number-comparator
   (make-comparator number? = complex-comparison number-hash))
@@ -740,12 +805,14 @@
 	((floor)	(floor    quo))
 	((truncate)	(truncate quo))
 	(else
-	 (error __who__
+	 (procedure-argument-violation __who__
 	   "invalid rounding specification" rounding))))))
 
 (module (make-inexact-real-comparison)
 
   (define (make-inexact-real-comparison epsilon rounding nan-handling)
+    (%validate-rounding-argument     __who__ rounding)
+    (%validate-nan-handling-argument __who__ nan-handling)
     (lambda (a b)
       (let ((a-nan? (nan? a))
 	    (b-nan? (nan? b)))
@@ -769,11 +836,11 @@
 	 (error __who__
 	   "attempt to compare NaN with non-NaN" nan-handling which other))
 	((min)
-	 (if (eq? which 'a-nan) -1 1))
+	 (if (eq? which 'a-nan) -1 +1))
 	((max)
-	 (if (eq? which 'a-nan) 1 -1))
+	 (if (eq? which 'a-nan) +1 -1))
 	(else
-	 (error __who__
+	 (procedure-argument-violation __who__
 	   "invalid nan-handling specification" nan-handling)))))
 
   #| end of module |# )
@@ -784,6 +851,8 @@
   ;;Under Vicare only flonums are inexact and real.
   ;;
   (define (make-inexact-real-comparator epsilon rounding nan-handling)
+    (%validate-rounding-argument     __who__ rounding)
+    (%validate-nan-handling-argument __who__ nan-handling)
     (make-comparator flonum?
 		     #t
 		     (make-inexact-real-comparison epsilon rounding nan-handling)
@@ -793,9 +862,7 @@
     ;;Return 0 for NaN, number-hash otherwise.
     ;;
     (lambda (obj)
-      (if (nan? obj)
-	  0
-	(flonum-hash (rounded-to obj epsilon rounding)))))
+      (flonum-hash (rounded-to obj epsilon rounding))))
 
   #| end of module |# )
 
@@ -811,7 +878,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-listwise-comparison comparison list-null? list-car list-cdr)
+(define* (make-listwise-comparison {comparison procedure?} {list-null? procedure?}
+				   {list-car procedure?} {list-cdr procedure?})
   ;;Make a comparison procedure that works listwise.
   ;;
   (letrec ((proc (lambda (a b)
@@ -831,7 +899,8 @@
 				result))))))))
     proc))
 
-(define (make-listwise-hash element-hash list-null? list-car list-cdr)
+(define* (make-listwise-hash {element-hash procedure?} {list-null? procedure?}
+			     {list-car procedure?} {list-cdr procedure?})
   ;;Make a hash function that works listwise.
   ;;
   (lambda (obj)
@@ -845,7 +914,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-vectorwise-comparison vec-compar vec-length vec-ref)
+(define* (make-vectorwise-comparison {vec-compar procedure?} {vec-length procedure?}
+				     {vec-ref procedure?})
   ;;Make a comparison procedure that works vectorwise.
   ;;
   ;;NOTE We know that, under Vicare, vectors and bytevectors have length in the range
@@ -875,7 +945,7 @@
 			 (loop (add1 index)))
 		     result)))))))))
 
-(define (make-vectorwise-hash item-hash vec-length vec-ref)
+(define* (make-vectorwise-hash {item-hash procedure?} {vec-length procedure?} {vec-ref procedure?})
   ;;Make a hash function that works vectorwise.
   ;;
   (lambda (obj)
@@ -897,18 +967,8 @@
 (define string-ci-comparison
   (make-comparison=/< string-ci=? string-ci<?))
 
-;;Already defined by R6RS.
-;;
-;; (define string-hash
-;;   (make-vectorwise-hash char-hash string-length string-ref))
-
 (define-predefined-comparator string-comparator
   (make-comparator string? string=? string-comparison string-hash))
-
-;;Already defined by R6RS.
-;;
-;; (define (string-ci-hash obj)
-;;   (string-hash (string-foldcase obj)))
 
 (define-predefined-comparator string-ci-comparator
   (make-comparator string? string-ci=? string-ci-comparison string-ci-hash))
@@ -922,43 +982,40 @@
 (define symbol-comparison
   (make-comparison=/< symbol=? symbol<?))
 
-;;Already defined by R6RS.
-;;
-;; (define (symbol-hash obj)
-;;   (string-hash (symbol->string obj)))
-
 (define-predefined-comparator symbol-comparator
   (make-comparator symbol? symbol=? symbol-comparison symbol-hash))
 
 ;;; --------------------------------------------------------------------
 
-(define (make-listwise-comparator test comparator null? car cdr)
+(define* (make-listwise-comparator {test procedure?} {K comparator?}
+				   {null? procedure?} {car procedure?} {cdr procedure?})
   (make-comparator test
 		   #t
-		   (make-listwise-comparison (comparator-comparison-procedure comparator) null? car cdr)
-		   (make-listwise-hash       (comparator-hash-function        comparator) null? car cdr)))
+		   (make-listwise-comparison (comparator-comparison-procedure K) null? car cdr)
+		   (make-listwise-hash       (comparator-hash-function        K) null? car cdr)))
 
-(define (make-vectorwise-comparator test comparator vec-length vec-ref)
+(define* (make-vectorwise-comparator {test procedure?} {K comparator?}
+				     {vec-length procedure?} {vec-ref procedure?})
   (make-comparator test
 		   #t
-		   (make-vectorwise-comparison (comparator-comparison-procedure comparator) vec-length vec-ref)
-		   (make-vectorwise-hash       (comparator-hash-function        comparator) vec-length vec-ref)))
+		   (make-vectorwise-comparison (comparator-comparison-procedure K) vec-length vec-ref)
+		   (make-vectorwise-hash       (comparator-hash-function        K) vec-length vec-ref)))
 
 ;;; --------------------------------------------------------------------
 
-(define (make-list-comparator comparator)
+(define* (make-list-comparator {K comparator?})
   (make-listwise-comparator (lambda (obj)
 			      (or (null? obj)
 				  (pair? obj)))
-			    comparator null? car cdr))
+			    K null? car cdr))
 
 (define-predefined-comparator list-comparator
   (make-list-comparator default-comparator))
 
 ;;; --------------------------------------------------------------------
 
-(define (make-vector-comparator comparator)
-  (make-vectorwise-comparator vector? comparator vector-length vector-ref))
+(define* (make-vector-comparator {K comparator?})
+  (make-vectorwise-comparator vector? K vector-length vector-ref))
 
 (define-predefined-comparator vector-comparator
   (make-vector-comparator default-comparator))
@@ -971,8 +1028,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (make-bytevector-comparator comparator)
-  (make-vectorwise-comparator bytevector? comparator bytevector-length bytevector-u8-ref))
+(define* (make-bytevector-comparator {K comparator?})
+  (make-vectorwise-comparator bytevector? K bytevector-length bytevector-u8-ref))
 
 (define-predefined-comparator bytevector-comparator
   (make-bytevector-comparator default-comparator))
@@ -980,50 +1037,53 @@
 (define bytevector-comparison
   (comparator-comparison-procedure bytevector-comparator))
 
-;;Already defined by Vicare.
-;;
-;; (define bytevector-hash
-;;   (comparator-hash-function bytevector-comparator))
-
 ;;; --------------------------------------------------------------------
 ;;; pair comparator constructors
 
-(define (make-car-comparator comparator)
+(define* (make-car-comparator {K comparator?})
   (make-comparator pair?
 		   #t
-		   (lambda (a b)
-		     (comparator-compare comparator (car a) (car b)))
-		   (lambda (obj)
-		     (comparator-hash-function comparator))))
+		   (let ((compare (comparator-comparison-procedure K)))
+		     (lambda (a b)
+		       (compare (car a) (car b))))
+		   (let ((hash (comparator-hash-function K)))
+		     (lambda (obj)
+		       (hash (car obj))))))
 
-(define (make-cdr-comparator comparator)
+(define* (make-cdr-comparator {K comparator?})
   (make-comparator pair?
 		   #t
-		   (lambda (a b)
-		     (comparator-compare comparator (cdr a) (cdr b)))
-		   (lambda (obj)
-		     (comparator-hash comparator obj))))
+		   (let ((compare (comparator-comparison-procedure K)))
+		     (lambda (a b)
+		       (compare (cdr a) (cdr b))))
+		   (let ((hash (comparator-hash-function K)))
+		     (lambda (obj)
+		       (hash (cdr obj))))))
 
-(define (make-pair-comparison car-comparator cdr-comparator)
-  (lambda (a b)
-    (let ((result (comparator-compare car-comparator (car a) (car b))))
-      (if (zero? result)
-	  (comparator-compare cdr-comparator (cdr a) (cdr b))
-        result))))
+(define* (make-pair-comparison {car-K comparator?} {cdr-K comparator?})
+  (let ((car-compare (comparator-comparison-procedure car-K))
+	(cdr-compare (comparator-comparison-procedure cdr-K)))
+    (lambda (a b)
+      (let ((result (car-compare (car a) (car b))))
+	(if (zero? result)
+	    (cdr-compare (cdr a) (cdr b))
+	  result)))))
 
 (define pair-comparison
   (make-pair-comparison default-comparator default-comparator))
 
-(define (make-pair-hash car-comparator cdr-comparator)
-  (lambda (obj)
-    (+ (comparator-hash car-comparator (car obj))
-       (comparator-hash cdr-comparator (cdr obj)))))
+(define* (make-pair-hash {car-K comparator?} {cdr-K comparator?})
+  (let ((car-hash (comparator-hash-function car-K))
+	(cdr-hash (comparator-hash-function cdr-K)))
+    (lambda (obj)
+      (+ (car-hash (car obj))
+	 (cdr-hash (cdr obj))))))
 
-(define (make-pair-comparator car-comparator cdr-comparator)
+(define* (make-pair-comparator {car-K comparator?} {cdr-K comparator?})
   (make-comparator pair?
 		   #t
-		   (make-pair-comparison car-comparator cdr-comparator)
-		   (make-pair-hash car-comparator cdr-comparator)))
+		   (make-pair-comparison car-K cdr-K)
+		   (make-pair-hash       car-K cdr-K)))
 
 (define-predefined-comparator pair-comparator
   (make-pair-comparator default-comparator default-comparator))
@@ -1033,43 +1093,49 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (improper-list-type obj)
-  ;;Compute type index for inexact list comparisons.
-  ;;
-  (cond ((null? obj)	0)
-	((pair? obj)	1)
-	(else		2)))
+(module (make-improper-list-comparison)
 
-(define (make-improper-list-comparison comparator)
-  (let ((pair-comparison (make-pair-comparison comparator comparator)))
-    (lambda (a b)
-      (let* ((a-type (improper-list-type a))
-	     (b-type (improper-list-type b))
-	     (result (real-comparison a-type b-type)))
-        (cond ((not (zero? result))
-	       result)
-	      ((null? a)
-	       0)
-	      ((pair? a)
-	       (pair-comparison a b))
-	      (else
-	       (comparator-compare comparator a b)))))))
+  (define* (make-improper-list-comparison {K comparator?})
+    (let ((pair-compare (make-pair-comparison K K))
+	  (item-compare (comparator-comparison-procedure K)))
+      (lambda (a b)
+	(let* ((a-type (improper-list-type a))
+	       (b-type (improper-list-type b))
+	       (result (real-comparison a-type b-type)))
+	  (cond ((not (zero? result))
+		 result)
+		((pair? a)
+		 (pair-compare a b))
+		((null? a)
+		 0)
+		(else
+		 (item-compare a b)))))))
 
-(define (make-improper-list-hash comparator)
-  (lambda (obj)
-    (cond ((null? obj)
-	   0)
-	  ((pair? obj)
-	   (+ (comparator-hash comparator (car obj))
-	      (comparator-hash comparator (cdr obj))))
-	  (else
-	   (comparator-hash comparator obj)))))
+  (define (improper-list-type obj)
+    ;;Compute type index for inexact list comparisons.
+    ;;
+    (cond ((null? obj)	0)
+	  ((pair? obj)	1)
+	  (else		2)))
 
-(define (make-improper-list-comparator comparator)
+  #| end of module |# )
+
+(define* (make-improper-list-hash {K comparator?})
+  (let ((hash (comparator-hash-function K)))
+    (lambda (obj)
+      (cond ((pair? obj)
+	     (+ (hash (car obj))
+		(hash (cdr obj))))
+	    ((null? obj)
+	     0)
+	    (else
+	     (hash obj))))))
+
+(define* (make-improper-list-comparator {K comparator?})
   (make-comparator #t
 		   #t
-		   (make-improper-list-comparison comparator)
-		   (make-improper-list-hash       comparator)))
+		   (make-improper-list-comparison K)
+		   (make-improper-list-hash       K)))
 
 
 ;;;; wrapped equality predicates
@@ -1077,19 +1143,19 @@
 ;;These comparators don't have comparison functions.
 ;;
 
-(define eq-comparator
+(define-predefined-comparator eq-comparator
   (make-comparator #t
 		   eq?
 		   #f
 		   default-hash-function))
 
-(define eqv-comparator
+(define-predefined-comparator eqv-comparator
   (make-comparator #t
 		   eqv?
 		   #f
 		   default-hash-function))
 
-(define equal-comparator
+(define-predefined-comparator equal-comparator
   (make-comparator #t
 		   equal?
 		   #f
