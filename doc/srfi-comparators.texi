@@ -793,6 +793,17 @@ appropriate hash functions as well.  Note that comparator constructors
 are allowed to cache their results: they need not return a newly
 allocated object, since comparators are purely functional.
 
+@menu
+* srfi comparators constructors general::  General comparators.
+* srfi comparators constructors real::     Inexact real comparators.
+* srfi comparators constructors misc::     Miscellaneous comparators.
+@end menu
+
+@c page
+@node srfi comparators constructors general
+@subsubsection General comparators
+
+
 @defun make-comparator @var{type-test} @var{equality} @var{compare} @var{hash}
 Return a comparator which bundles the @var{type-test}, @var{equality},
 @var{compare}, and @var{hash} procedures provided.  As a convenience,
@@ -816,15 +827,29 @@ these cases.
 @end itemize
 @end defun
 
+@c page
+@node srfi comparators constructors real
+@subsubsection Inexact real comparators
+
 
 @defun make-inexact-real-comparator @var{epsilon} @var{rounding} @var{nan-handling}
 Return a comparator that compares inexact real numbers including NaNs as
 follows: if after rounding to the nearest @var{epsilon} they are the
 same, they compare equal; otherwise they compare as specified by
-@func{<}.  The direction of rounding is specified by the @var{rounding}
-argument, which is either a procedure accepting two arguments (the
-number and @var{epsilon}), or else one of the symbols @code{floor},
-@code{ceiling}, @code{truncate}, or @code{round}.
+@func{<}.
+
+The direction of rounding is specified by the @var{rounding} argument,
+which is either a procedure accepting two arguments (the number and
+@var{epsilon}), or else one of the symbols @code{floor}, @code{ceiling},
+@code{truncate}, or @code{round}.
+
+The value of @var{epsilon} is used by the generated comparator only if
+@var{rounding} is a procedure: it is ignored if @var{rounding} is a
+symbol.  When @var{epsilon} is not @false{} and @var{rounding} is a
+symbol: this function raises a @strong{continuable} exception with
+compound condition object of types:
+@condition{inexact-real-comparator-with-unused-epsilon},
+@condition{who}, @condition{message}, @condition{irritants}.
 
 The argument @var{nan-handling} specifies how to compare NaN arguments
 to non--NaN arguments.
@@ -842,12 +867,190 @@ If it is the symbol @code{max}: NaN values follow all other values.
 
 @item
 If it is the symbol @code{error}: an error is signalled if a NaN value
-is compared.
+is compared by raising a non--continuable exception with compound
+condition object of types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{comparator-nan-comparison-error}.
 
 @item
 If both arguments are NaNs: they always compare as equal.
 @end itemize
 @end defun
+
+
+Here is an example of comparator using the @code{round} rounding mode:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-inexact-real-comparator #f 'round 'error))
+
+;; type test
+(comparator-test-type C 1.2)    @result{} #t
+(comparator-test-type C "ciao") @result{} #f
+(comparator-test-type C 1+2i)   @result{} #f
+
+;; type check
+(comparator-check-type C 1.2)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else #f)))
+@result{} #t
+
+;; comparison
+(comparator-compare C 1.2 1.2)          @result{}  0
+(comparator-compare C 1.0 2.0)          @result{} -1
+(comparator-compare C 2.0 1.0)          @result{} +1
+
+(comparator-compare C +inf.0 +inf.0)    @result{} 0
+(comparator-compare C -inf.0 -inf.0)    @result{} 0
+(comparator-compare C -inf.0 +inf.0)    @result{} -1
+(comparator-compare C +inf.0 -inf.0)    @result{} +1
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(try
+    (comparator-compare C +nan.0 1.0)
+  (catch E
+    ((&comparator-nan-comparison-error)
+     #t)
+    (else E)))
+@result{} #t
+(try
+    (comparator-compare C 1.0 +nan.0)
+  (catch E
+    ((&comparator-nan-comparison-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison with rounding
+(comparator-compare C 1.04 1.0) @result{} 0
+(comparator-compare C 0.96 1.0) @result{} 0
+
+;; hash
+(= (comparator-hash C 1.0) (comparator-hash C 1.04))      @result{} #t
+(= (comparator-hash C 1.0) (comparator-hash C 0.96))      @result{} #t
+(non-negative-exact-integer? (comparator-hash C +inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C -inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C +nan.0))  @result{} #t
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+Here is an example of comparator that rounds to the nearest @math{0.1}
+and uses the @code{min} policy to compare @code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define* (round-to-epsilon @{R flonum?@} @{epsilon flonum?@})
+  (infix round(R / epsilon) * epsilon))
+
+(define-constant C
+  (make-inexact-real-comparator 0.1 round-to-epsilon 'min))
+
+;; rounding to
+(round-to-epsilon 1.0   0.1)    @result{} 1.0
+(round-to-epsilon 1.05  0.1)    @result{} 1.0
+(round-to-epsilon 0.951 0.1)    @result{} 1.0
+(round-to-epsilon 0.949 0.1)    @result{} 0.9
+
+;; type test
+(comparator-test-type C 1.2)    @result{} #t
+(comparator-test-type C +inf.0) @result{} #t
+(comparator-test-type C -inf.0) @result{} #t
+(comparator-test-type C -nan.0) @result{} #t
+(comparator-test-type C "ciao") @result{} #f
+(comparator-test-type C 1+2i)   @result{} #f
+
+;; type check
+(comparator-check-type C 1.2)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C 1.2 1.2)          @result{} 0
+(comparator-compare C 1.0 2.0)          @result{} -1
+(comparator-compare C 2.0 1.0)          @result{} +1
+
+(comparator-compare C +inf.0 +inf.0)    @result{} 0
+(comparator-compare C -inf.0 -inf.0)    @result{} 0
+(comparator-compare C -inf.0 +inf.0)    @result{} -1
+(comparator-compare C +inf.0 -inf.0)    @result{} +1
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(comparator-compare C +nan.0 1.0)       @result{} -1
+(comparator-compare C 1.0 +nan.0)       @result{} +1
+
+;; comparison with rounding
+(comparator-compare C 1.04  1.0)        @result{} 0
+(comparator-compare C 0.96  1.0)        @result{} 0
+(comparator-compare C 0.951 1.0)        @result{} 0
+(comparator-compare C 0.949 1.0)        @result{} -1
+(comparator-compare C 0.949 0.9)        @result{} 0
+
+;; hash
+(= (comparator-hash C 1.0)  (comparator-hash C 1.04))     @result{} #t
+(= (comparator-hash C 1.0)  (comparator-hash C 0.96))     @result{} #t
+(= (comparator-hash C 1.0)  (comparator-hash C 0.951))    @result{} #t
+(= (comparator-hash C 1.04) (comparator-hash C 0.951))    @result{} #t
+(non-negative-exact-integer? (comparator-hash C +inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C -inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C +nan.0))  @result{} #t
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+Here is an example of comparator using the @code{max} policy to compare
+@code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-inexact-real-comparator #f 'round 'max))
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(comparator-compare C +nan.0 1.0)       @result{} +1
+(comparator-compare C 1.0 +nan.0)       @result{} -1
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+Here is an example of comparator using a procedure as policy to compare
+@code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define (nan-comparison other-R)
+  ;;NaN is equal to any number.
+  ;;
+  0)
+
+(define-constant C
+  (make-inexact-real-comparator #f 'round nan-comparison))
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(comparator-compare C +nan.0 +1.0)      @result{} 0
+(comparator-compare C +1.0   +nan.0)    @result{} 0
+@end lisp
+
+@c page
+@node srfi comparators constructors misc
+@subsubsection Miscellaneous comparators
 
 
 @defun make-list-comparator @var{element-comparator}
@@ -1333,6 +1536,90 @@ Raise a non--continuable exception with compound condition object of
 types: @condition{who}, @condition{message},
 @condition{comparator-type-error}, @condition{irritants},
 @condition{procedure-argument-violation}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Not--a--number comparison error
+
+@deftp {Condition Object Type} &comparator-nan-comparison-error
+Used to signal an invalid comparison in which one of the operands is
+@code{+nan.0}.  It is derived from @condition{comparator-error}.
+
+It has the following fields:
+
+@table @code
+@item comparator
+The comparator object that was used for the comparison.
+@end table
+@end deftp
+
+
+@defun make-comparator-nan-comparison-error-condition @var{comparator}
+Build and return a new condition object of type
+@condition{comparator-nan-comparison-error}.
+@end defun
+
+
+@defun condition-comparator-nan-comparison-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-nan-comparison-error}; otherwise return @false{}.
+@end defun
+
+
+@defun comparator-nan-comparison-error.comparator @var{cnd}
+Accessor for the field of condition objects of type
+@condition{comparator-nan-comparison-error}.
+@end defun
+
+
+@defun raise-comparator-nan-comparison-error @var{who} @var{message} @var{comparator}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message}, @condition{irritants},
+@condition{comparator-nan-comparison-error}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator error
+
+@deftp {Condition Object Type} &inexact-real-comparator-with-ignored-epsilon
+Used to signal that a non-false @var{epsilon} argument was used with a
+symbolic @var{rounding} argument in the call to
+@func{make-inexact-real-comparator}: in this case @var{epsilon} is
+ignored.
+
+It has the following fields:
+
+@table @code
+@item epsilon
+The @var{epsilon} argument.
+
+@item rounding
+The @var{rounding} argument.  A symbol among: @code{floor},
+@code{ceiling}, @code{truncate}, @code{round}.
+@end table
+@end deftp
+
+
+@defun make-inexact-real-comparator-with-ignored-epsilon-condition @var{epsilon} @var{rounding}
+Build and return a condition object of type
+@condition{inexact-real-comparator-with-ignored-epsilon}.  It is derived
+from @condition{warning}.
+@end defun
+
+
+@defun condition-inexact-real-comparator-with-ignored-epsilon? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{inexact-real-comparator-with-ignored-epsilon}; otherwise
+return @false{}.
+@end defun
+
+
+@defun inexact-real-comparator-with-ignored-epsilon.epsilon @var{cnd}
+@defunx inexact-real-comparator-with-ignored-epsilon.rounding @var{cnd}
+Field accessors for condition object of type
+@condition{inexact-real-comparator-with-ignored-epsilon}.
 @end defun
 
 @c page

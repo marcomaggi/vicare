@@ -72,9 +72,22 @@
 
     ;; condition objects
     &comparator-error make-comparator-error comparator-error?
+
     &comparator-type-error make-comparator-type-error comparator-type-error?
     comparator-type-error.comparator comparator-type-error.object
-    raise-comparator-type-error)
+    raise-comparator-type-error
+
+    &comparator-nan-comparison-error
+    make-comparator-nan-comparison-error-condition
+    condition-comparator-nan-comparison-error?
+    comparator-nan-comparison-error.comparator
+    raise-comparator-nan-comparison-error
+
+    &inexact-real-comparator-with-ignored-epsilon
+    make-inexact-real-comparator-with-ignored-epsilon-condition
+    condition-inexact-real-comparator-with-ignored-epsilon?
+    inexact-real-comparator-with-ignored-epsilon.epsilon
+    inexact-real-comparator-with-ignored-epsilon.rounding)
   (import (srfi :114 comparators)))
 
 ;;; end of file

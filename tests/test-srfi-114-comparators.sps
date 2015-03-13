@@ -27,7 +27,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare checks)
   (srfi :114))
@@ -690,6 +690,209 @@
   (when #f
     (debug-print (comparator-hash C (make-a-struct 99 2 3))
 		 (comparator-hash C (make-a-record 99 2 3))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'inexact-real-comparator))
+
+  (internal-body
+
+    (define-constant C
+      (let ((epsilon		0.1)
+	    (rounding		'round)
+	    (nan-handling	'error))
+	(make-inexact-real-comparator epsilon rounding nan-handling)))
+
+    ;; type test
+    (check-for-true  (comparator-test-type C 1.2))
+    (check-for-true  (comparator-test-type C +inf.0))
+    (check-for-true  (comparator-test-type C -inf.0))
+    (check-for-true  (comparator-test-type C -nan.0))
+    (check-for-false (comparator-test-type C "ciao"))
+    (check-for-false (comparator-test-type C 1+2i))
+
+    ;; type check
+    (check-for-true  (comparator-check-type C 1.2))
+    (check-for-true
+     (try
+	 (comparator-check-type C (void))
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E))))
+
+    ;; comparison
+    (check (comparator-compare C 1.2 1.2)	=> 0)
+    (check (comparator-compare C 1.0 2.0)	=> -1)
+    (check (comparator-compare C 2.0 1.0)	=> +1)
+
+    (check (comparator-compare C +inf.0 +inf.0)	=> 0)
+    (check (comparator-compare C -inf.0 -inf.0)	=> 0)
+    (check (comparator-compare C -inf.0 +inf.0)	=> -1)
+    (check (comparator-compare C +inf.0 -inf.0)	=> +1)
+
+    (check (comparator-compare C +nan.0 +nan.0)	=> 0)
+    (check-for-true
+     (try
+	 (comparator-compare C +nan.0 1.0)
+       (catch E
+	 ((&comparator-nan-comparison-error)
+	  #t)
+	 (else E))))
+    (check-for-true
+     (try
+	 (comparator-compare C 1.0 +nan.0)
+       (catch E
+	 ((&comparator-nan-comparison-error)
+	  #t)
+	 (else E))))
+
+    ;; comparison with rounding
+    (check (comparator-compare C 1.04 1.0)	=> 0)
+    (check (comparator-compare C 0.96 1.0)	=> 0)
+
+    ;; hash
+    (check-for-true
+     (= (comparator-hash C 1.0) (comparator-hash C 1.04)))
+    (check-for-true
+     (= (comparator-hash C 1.0) (comparator-hash C 0.96)))
+    (check-for-true
+     (non-negative-exact-integer? (comparator-hash C +inf.0)))
+    (check-for-true
+     (non-negative-exact-integer? (comparator-hash C -inf.0)))
+    (check-for-true
+     (non-negative-exact-integer? (comparator-hash C +nan.0)))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (internal-body
+
+    (define* (round-to-epsilon {R flonum?} {epsilon flonum?})
+      (infix round(R / epsilon) * epsilon))
+
+    (define-constant C
+      (let ((epsilon		0.1)
+	    (rounding		round-to-epsilon)
+	    (nan-handling	'min))
+	(make-inexact-real-comparator epsilon rounding nan-handling)))
+
+    ;; rounding to
+    (check (round-to-epsilon 1.0   0.1)	=> 1.0)
+    (check (round-to-epsilon 1.05  0.1)	=> 1.0)
+    (check (round-to-epsilon 0.951 0.1)	=> 1.0)
+    (check (round-to-epsilon 0.949 0.1)	=> 0.9)
+
+    ;; type test
+    (check-for-true  (comparator-test-type C 1.2))
+    (check-for-true  (comparator-test-type C +inf.0))
+    (check-for-true  (comparator-test-type C -inf.0))
+    (check-for-true  (comparator-test-type C -nan.0))
+    (check-for-false (comparator-test-type C "ciao"))
+    (check-for-false (comparator-test-type C 1+2i))
+
+    ;; type check
+    (check-for-true  (comparator-check-type C 1.2))
+    (check-for-true
+     (try
+	 (comparator-check-type C (void))
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else #f))))
+
+    ;; comparison
+    (check (comparator-compare C 1.2 1.2)	=> 0)
+    (check (comparator-compare C 1.0 2.0)	=> -1)
+    (check (comparator-compare C 2.0 1.0)	=> +1)
+
+    (check (comparator-compare C +inf.0 +inf.0)	=> 0)
+    (check (comparator-compare C -inf.0 -inf.0)	=> 0)
+    (check (comparator-compare C -inf.0 +inf.0)	=> -1)
+    (check (comparator-compare C +inf.0 -inf.0)	=> +1)
+
+    (check (comparator-compare C +nan.0 +nan.0)	=> 0)
+    (check (comparator-compare C +nan.0 1.0)	=> -1)
+    (check (comparator-compare C 1.0 +nan.0)	=> +1)
+
+    ;; comparison with rounding
+    (check (comparator-compare C 1.04  1.0)	=> 0)
+    (check (comparator-compare C 0.96  1.0)	=> 0)
+    (check (comparator-compare C 0.951 1.0)	=> 0)
+
+    (check (comparator-compare C 0.949 1.0)	=> -1)
+    (check (comparator-compare C 0.949 0.9)	=> 0)
+
+    ;; hash
+    (check-for-true
+     (= (comparator-hash C 1.0)
+	(comparator-hash C 1.04)))
+    (check-for-true
+     (= (comparator-hash C 1.0)
+	(comparator-hash C 0.96)))
+    (check-for-true
+     (= (comparator-hash C 1.0)
+	(comparator-hash C 0.951)))
+    (check-for-true
+     (= (comparator-hash C 1.04)
+	(comparator-hash C 0.951)))
+    (check-for-true
+     (non-negative-exact-integer? (comparator-hash C +inf.0)))
+    (check-for-true
+     (non-negative-exact-integer? (comparator-hash C -inf.0)))
+    (check-for-true
+     (non-negative-exact-integer? (comparator-hash C +nan.0)))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; NaN policy to "min"
+
+  (internal-body
+
+    (define-constant C
+      (make-inexact-real-comparator #f 'round 'min))
+
+    (check (comparator-compare C +nan.0 +nan.0)	=> 0)
+    (check (comparator-compare C +nan.0 1.0)	=> -1)
+    (check (comparator-compare C 1.0 +nan.0)	=> +1)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; NaN policy to "max"
+
+  (internal-body
+
+    (define-constant C
+      (make-inexact-real-comparator #f 'round 'max))
+
+    (check (comparator-compare C +nan.0 +nan.0)	=> 0)
+    (check (comparator-compare C +nan.0 1.0)	=> +1)
+    (check (comparator-compare C 1.0 +nan.0)	=> -1)
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; NaN policy to procedure
+
+  (internal-body
+
+    (define (nan-comparison other-R)
+      ;;NaN is equal to any number.
+      ;;
+      0)
+
+    (define-constant C
+      (make-inexact-real-comparator #f 'round nan-comparison))
+
+    (check (comparator-compare C +nan.0 +nan.0)	=> 0)
+    (check (comparator-compare C +nan.0 +1.0)	=> 0)
+    (check (comparator-compare C +1.0   +nan.0)	=> 0)
+
+    #f)
 
   #t)
 

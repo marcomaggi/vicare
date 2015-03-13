@@ -77,9 +77,22 @@
     ;;
     ;; condition objects
     &comparator-error make-comparator-error comparator-error?
+
     &comparator-type-error make-comparator-type-error comparator-type-error?
     comparator-type-error.comparator comparator-type-error.object
-    raise-comparator-type-error)
+    raise-comparator-type-error
+
+    &comparator-nan-comparison-error
+    make-comparator-nan-comparison-error-condition
+    condition-comparator-nan-comparison-error?
+    comparator-nan-comparison-error.comparator
+    raise-comparator-nan-comparison-error
+
+    &inexact-real-comparator-with-ignored-epsilon
+    make-inexact-real-comparator-with-ignored-epsilon-condition
+    condition-inexact-real-comparator-with-ignored-epsilon?
+    inexact-real-comparator-with-ignored-epsilon.epsilon
+    inexact-real-comparator-with-ignored-epsilon.rounding)
   (import (vicare))
 
 
@@ -102,22 +115,6 @@
 		     (set! C rv))))))
        #| end of BEGIN |# ))
     ))
-
-(define (%validate-rounding-argument who rounding)
-  (case rounding
-    ((round ceiling floor truncate)
-     (void))
-    (else
-     (procedure-argument-violation who
-       "invalid rounding specification" rounding))))
-
-(define (%validate-nan-handling-argument who nan-handling)
-  (case nan-handling
-    ((error min max)
-     (void))
-    (else
-     (procedure-argument-violation who
-       "invalid nan-handling specification" nan-handling))))
 
 (define (%list-of-comparators? obj)
   (and (list? obj)
@@ -154,6 +151,37 @@
 	      (make-irritants-condition (list comparator object))
 	      (make-procedure-argument-violation)
 	      (make-comparator-type-error comparator object))))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &comparator-nan-comparison-error
+    &comparator-error
+  make-comparator-nan-comparison-error-condition
+  condition-comparator-nan-comparison-error?
+  (comparator	comparator-nan-comparison-error.comparator))
+
+(define* (raise-comparator-nan-comparison-error who message {comparator comparator?} . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-comparator-nan-comparison-error-condition comparator))))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &inexact-real-comparator-with-ignored-epsilon
+    &warning
+  make-inexact-real-comparator-with-ignored-epsilon-condition
+  condition-inexact-real-comparator-with-ignored-epsilon?
+  (epsilon	inexact-real-comparator-with-ignored-epsilon.epsilon)
+  (rounding	inexact-real-comparator-with-ignored-epsilon.rounding))
+
+(define* (raise-inexact-real-comparator-with-ignored-epsilon who epsilon rounding)
+  (raise-continuable
+   (condition (make-who-condition who)
+	      (make-message-condition "ignored non-false EPSILON argument used with symbolic ROUNDING argument")
+	      (make-irritants-condition (list epsilon rounding))
+	      (make-inexact-real-comparator-with-ignored-epsilon-condition epsilon rounding))))
 
 
 ;;; comparison syntaxes
@@ -795,61 +823,6 @@
   (make-comparator exact-integer? = real-comparison number-hash))
 
 ;;; --------------------------------------------------------------------
-;;; inexact real comparator
-
-(define (rounded-to x epsilon rounding)
-  ;;Return a number appropriately rounded to EPSILON.
-  ;;
-  (let ((quo (/ x epsilon)))
-    (if (procedure? rounding)
-	(rounding x epsilon)
-      (case rounding
-	((round)	(round    quo))
-	((ceiling)	(ceiling  quo))
-	((floor)	(floor    quo))
-	((truncate)	(truncate quo))
-	(else
-	 (procedure-argument-violation __who__
-	   "invalid rounding specification" rounding))))))
-
-(module (make-inexact-real-comparison)
-
-  (define (make-inexact-real-comparison epsilon rounding nan-handling)
-    (%validate-rounding-argument     __who__ rounding)
-    (%validate-nan-handling-argument __who__ nan-handling)
-    (lambda (a b)
-      (let ((a-nan? (nan? a))
-	    (b-nan? (nan? b)))
-	(cond ((and a-nan? b-nan?)
-	       0)
-	      (a-nan?
-	       (nan-comparison nan-handling 'a-nan b))
-	      (b-nan?
-	       (nan-comparison nan-handling 'b-nan a))
-	      (else
-	       (real-comparison (rounded-to a epsilon rounding)
-				(rounded-to b epsilon rounding)))))))
-
-  (define (nan-comparison nan-handling which other)
-    ;;Return result of comparing a NaN with a non-NaN.
-    ;;
-    (if (procedure? nan-handling)
-	(nan-handling other)
-      (case nan-handling
-	((error)
-	 (error __who__
-	   "attempt to compare NaN with non-NaN" nan-handling which other))
-	((min)
-	 (if (eq? which 'a-nan) -1 +1))
-	((max)
-	 (if (eq? which 'a-nan) +1 -1))
-	(else
-	 (procedure-argument-violation __who__
-	   "invalid nan-handling specification" nan-handling)))))
-
-  #| end of module |# )
-
-;;; --------------------------------------------------------------------
 
 (module (make-inexact-real-comparator)
   ;;Under Vicare only flonums are inexact and real.
@@ -857,16 +830,94 @@
   (define (make-inexact-real-comparator epsilon rounding nan-handling)
     (%validate-rounding-argument     __who__ rounding)
     (%validate-nan-handling-argument __who__ nan-handling)
-    (make-comparator flonum?
-		     #t
-		     (make-inexact-real-comparison epsilon rounding nan-handling)
-		     (make-inexact-real-hash       epsilon rounding)))
+    (%validate-epsilon-and-rounding-arguments __who__ epsilon rounding)
+    (letrec ((K (make-comparator flonum?
+				 #t
+				 (make-inexact-real-comparison epsilon rounding nan-handling (lambda () K))
+				 (make-inexact-real-hash       epsilon rounding))))
+      K))
 
   (define (make-inexact-real-hash epsilon rounding)
     ;;Return 0 for NaN, number-hash otherwise.
     ;;
     (lambda (obj)
       (flonum-hash (rounded-to obj epsilon rounding))))
+
+  (module (make-inexact-real-comparison)
+
+    (define (make-inexact-real-comparison epsilon rounding nan-handling comparator-getter)
+      (%validate-rounding-argument     __who__ rounding)
+      (%validate-nan-handling-argument __who__ nan-handling)
+      (lambda (a b)
+	(let ((a.nan? (flnan? a))
+	      (b.nan? (flnan? b)))
+	  (cond ((and a.nan? b.nan?)
+		 0)
+		(a.nan?
+		 (nan-comparison nan-handling 'a.nan b comparator-getter))
+		(b.nan?
+		 (nan-comparison nan-handling 'b.nan a comparator-getter))
+		(else
+		 (real-comparison (rounded-to a epsilon rounding)
+				  (rounded-to b epsilon rounding)))))))
+
+    (define (nan-comparison nan-handling which other comparator-getter)
+      ;;Return result of comparing a NaN with a non-NaN.
+      ;;
+      (if (procedure? nan-handling)
+	  (nan-handling other)
+	(case nan-handling
+	  ((error)
+	   (raise-comparator-nan-comparison-error __who__
+	     "attempt to compare NaN with non-NaN"
+	     (comparator-getter) nan-handling which other))
+	  ((min)
+	   (if (eq? which 'a.nan) -1 +1))
+	  ((max)
+	   (if (eq? which 'a.nan) +1 -1))
+	  (else
+	   (procedure-argument-violation __who__
+	     "invalid nan-handling specification" nan-handling)))))
+
+    #| end of module |# )
+
+  (define (rounded-to x epsilon rounding)
+    ;;Return a number appropriately rounded to EPSILON.
+    ;;
+    (let ((quo (/ x epsilon)))
+      (if (procedure? rounding)
+	  (rounding x epsilon)
+	(case rounding
+	  ((round)	(round    quo))
+	  ((ceiling)	(ceiling  quo))
+	  ((floor)	(floor    quo))
+	  ((truncate)	(truncate quo))
+	  (else
+	   (procedure-argument-violation __who__
+	     "invalid rounding specification" rounding))))))
+
+  (define (%validate-rounding-argument who rounding)
+    (unless (procedure? rounding)
+      (case rounding
+	((round ceiling floor truncate)
+	 (void))
+	(else
+	 (procedure-argument-violation who
+	   "invalid rounding specification" rounding)))))
+
+  (define (%validate-nan-handling-argument who nan-handling)
+    (unless (procedure? nan-handling)
+      (case nan-handling
+	((error min max)
+	 (void))
+	(else
+	 (procedure-argument-violation who
+	   "invalid nan-handling specification" nan-handling)))))
+
+  (define (%validate-epsilon-and-rounding-arguments who epsilon rounding)
+    (when (and epsilon
+	       (symbol? rounding))
+      (raise-inexact-real-comparator-with-ignored-epsilon who epsilon rounding)))
 
   #| end of module |# )
 
@@ -1400,4 +1451,6 @@
 ;; coding: utf-8
 ;; eval: (put 'raise-comparator-type-error		'scheme-indent-function 1)
 ;; eval: (put 'raise-comparator-argument-type-error	'scheme-indent-function 1)
+;; eval: (put 'raise-comparator-nan-comparison-error	'scheme-indent-function 1)
+;; eval: (put 'raise-inexact-real-comparator-with-ignored-epsilon	'scheme-indent-function 1)
 ;; End:
