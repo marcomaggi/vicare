@@ -48,8 +48,9 @@
     ;;
     eq-comparator eqv-comparator equal-comparator
     ;;
-    comparator-type-test-procedure comparator-equality-predicate
-    comparator-comparison-procedure comparator-hash-function
+    comparator-type-test-procedure comparator-check-type-procedure
+    comparator-equality-predicate comparator-comparison-procedure
+    comparator-hash-function
     ;;
     comparator-test-type comparator-check-type comparator-equal?
     comparator-compare comparator-hash
@@ -74,7 +75,7 @@
     &comparator-error make-comparator-error comparator-error?
 
     &comparator-type-error make-comparator-type-error comparator-type-error?
-    comparator-type-error.comparator comparator-type-error.object
+    comparator-type-error.comparator comparator-type-error.objects
     raise-comparator-type-error
 
     &comparator-nan-comparison-error

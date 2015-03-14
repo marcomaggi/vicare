@@ -55,8 +55,9 @@
     ;;
     eq-comparator eqv-comparator equal-comparator
     ;;
-    comparator-type-test-procedure comparator-equality-predicate
-    comparator-comparison-procedure comparator-hash-function
+    comparator-type-test-procedure comparator-check-type-procedure
+    comparator-equality-predicate comparator-comparison-procedure
+    comparator-hash-function
     ;;
     comparator-test-type comparator-check-type comparator-equal?
     comparator-compare comparator-hash
@@ -79,7 +80,7 @@
     &comparator-error make-comparator-error comparator-error?
 
     &comparator-type-error make-comparator-type-error comparator-type-error?
-    comparator-type-error.comparator comparator-type-error.object
+    comparator-type-error.comparator comparator-type-error.objects
     raise-comparator-type-error
 
     &comparator-nan-comparison-error
@@ -135,22 +136,22 @@
   make-comparator-type-error
   comparator-type-error?
   (comparator	comparator-type-error.comparator)
-  (object	comparator-type-error.object))
+  (objects	comparator-type-error.objects))
 
-(define* (raise-comparator-type-error who message {comparator comparator?} object)
+(define* (raise-comparator-type-error who message {comparator comparator?} . objects)
   (raise
    (condition (make-who-condition who)
 	      (make-message-condition message)
-	      (make-irritants-condition (list comparator object))
-	      (make-comparator-type-error comparator object))))
+	      (make-irritants-condition (cons comparator objects))
+	      (make-comparator-type-error comparator objects))))
 
-(define* (raise-comparator-argument-type-error who message {comparator comparator?} object)
+(define* (raise-comparator-argument-type-error who message {comparator comparator?} . objects)
   (raise
    (condition (make-who-condition who)
 	      (make-message-condition message)
-	      (make-irritants-condition (list comparator object))
+	      (make-irritants-condition (cons comparator objects))
 	      (make-procedure-argument-violation)
-	      (make-comparator-type-error comparator object))))
+	      (make-comparator-type-error comparator objects))))
 
 ;;; --------------------------------------------------------------------
 
@@ -311,6 +312,20 @@
 				    (if hash    #t #f))))
 	   cmp)))))
   #| end of DEFINE-RECORD-TYPE |# )
+
+(define* (comparator-check-type-procedure {K comparator?})
+  (let ((test-type (comparator-type-test-procedure K)))
+    (letrec ((check-type (case-lambda
+			  ;;Invoke the test type and throw an error if it fails.
+			  ;;
+			  ((obj who)
+			   (if (test-type obj)
+			       #t
+			     (raise-comparator-argument-type-error who
+			       "comparator type check failed" K obj)))
+			  ((obj)
+			   (check-type obj #f)))))
+      check-type)))
 
 
 ;;;; primitive applicators
@@ -1303,35 +1318,43 @@
     ;;Selecting comparator: finds the first one that type-tests
     ;;
     (define* (make-selecting-comparator . {comparators %list-of-comparators?})
-      (make-comparator (selected-type-test             comparators)
-		       (selected-equality-predicate    comparators)
-		       (selected-comparison-procedure  comparators)
-		       (selected-hash-function         comparators)))
+      (letrec ((C (let ((get-C (lambda () C)))
+		    (make-comparator (selected-type-test             comparators)
+				     (selected-equality-predicate    comparators get-C)
+				     (selected-comparison-procedure  comparators get-C)
+				     (selected-hash-function         comparators get-C)))))
+	C))
 
-    (define (selected-type-test . comparators)
+    (define (selected-type-test comparators)
       (lambda (obj)
 	(if (matching-comparator obj comparators) #t #f)))
 
-    (define (selected-equality-predicate comparators)
+    (define (selected-equality-predicate comparators get-C)
       (lambda (a b)
 	(let ((comparator (matching-comparator a comparators)))
 	  (if comparator
 	      (comparator-equal? comparator a b)
-	    (error 'anonymous-selecting-comparator "no comparator can be selected" a b)))))
+	    (raise-comparator-type-error 'anonymous-selecting-comparator
+	      "no comparator can be selected"
+	      (get-C) a b)))))
 
-    (define (selected-comparison-procedure comparators)
+    (define (selected-comparison-procedure comparators get-C)
       (lambda (a b)
 	(let ((comparator (matching-comparator a comparators)))
 	  (if comparator
 	      (comparator-compare comparator a b)
-	    (error 'anonymous-selecting-comparator "no comparator can be selected" a b)))))
+	    (raise-comparator-type-error 'anonymous-selecting-comparator
+	      "no comparator can be selected"
+	      (get-C) a b)))))
 
-    (define (selected-hash-function comparators)
+    (define (selected-hash-function comparators get-C)
       (lambda (obj)
 	(let ((comparator (matching-comparator obj comparators)))
 	  (if comparator
 	      (comparator-hash comparator obj)
-	    (error 'anonymous-selecting-comparator "no comparator can be selected" obj)))))
+	    (raise-comparator-type-error 'anonymous-selecting-comparator
+	      "no comparator can be selected"
+	      (get-C) obj)))))
 
     #| end of module |# )
 
@@ -1396,11 +1419,9 @@
 ;;; --------------------------------------------------------------------
 
   (define (matching-comparator obj comparators)
-    (cond ((null? comparators)
-	   #f)
-	  ((comparator-test-type (car comparators) obj)
-	   (car comparators))
-	  (else
+    (and (pair? comparators)
+	 (if (comparator-test-type (car comparators) obj)
+	     (car comparators)
 	   (matching-comparator obj (cdr comparators)))))
 
   #| end of module |# )

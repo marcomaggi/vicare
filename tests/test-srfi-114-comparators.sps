@@ -1201,6 +1201,95 @@
   #t)
 
 
+(parametrise ((check-test-name	'selecting-comparator))
+
+  (define-constant C
+    (make-selecting-comparator boolean-comparator
+			       exact-integer-comparator
+			       string-comparator))
+
+  ;; type test
+  (let ((test-type (comparator-type-test-procedure C)))
+    (check-for-true  (test-type #t))
+    (check-for-true  (test-type #f))
+    (check-for-true  (test-type 1))
+    (check-for-true  (test-type "ciao"))
+    (check-for-false (test-type '(1 . 2)))
+    (check-for-false (test-type 2.0))
+    (check-for-false (test-type 1+2i)))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type #t))
+    (check-for-true (check-type #f))
+    (check-for-true (check-type 1))
+    (check-for-true (check-type "ciao"))
+    (check-for-true
+     (try
+	 (comparator-check-type C (void))
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (check (compare #t #t)	=> 0)
+    (check (compare #t #f)	=> +1)
+    (check (compare #f #t)	=> -1)
+
+    (check (compare 1 1)	=> 0)
+    (check (compare 2 1)	=> +1)
+    (check (compare 1 2)	=> -1)
+
+    (check (compare "1" "1")	=> 0)
+    (check (compare "2" "1")	=> +1)
+    (check (compare "1" "2")	=> -1)
+
+    (check-for-true
+     (try
+	 (compare #t 1)
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E))))
+    (check-for-true
+     (try
+	 (compare #t "ciao")
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E))))
+    (check-for-true
+     (try
+	 (compare 1 "ciao")
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash #t)))
+    (check-for-true
+     (non-negative-exact-integer? (hash #f)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1)))
+    (check-for-true
+     (non-negative-exact-integer? (hash "ciao")))
+
+    (check-for-true
+     (try
+	 (hash 1+2i)
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
