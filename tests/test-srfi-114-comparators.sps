@@ -938,6 +938,74 @@
   #t)
 
 
+(parametrise ((check-test-name	'improper-list-comparator))
+
+  (module (C)
+
+    (define element-compare
+      (let ((compare (comparator-comparison-procedure exact-integer-comparator)))
+	(lambda (A B)
+	  (if (pair? A)
+	      (begin
+		(assert (pair? B))
+		(let ((rv (compare (car A) (car B))))
+		  (if (zero? rv)
+		      (comparator-compare C (cdr A) (cdr B))
+		    rv)))
+	    (compare A B)))))
+
+    (define-constant E
+      (make-comparator #t #t
+		       element-compare
+		       (comparator-hash-function default-comparator)))
+
+    (define-constant C
+      (make-improper-list-comparator E))
+
+    #| end of module |# )
+
+  ;; type test
+  (check-for-true (comparator-test-type C '()))
+  (check-for-true (comparator-test-type C '(1 2)))
+  (check-for-true (comparator-test-type C '(1 2 . 3)))
+  (check-for-true (comparator-test-type C '(1 2.0)))
+  (check-for-true (comparator-test-type C "ciao"))
+  (check-for-true (comparator-test-type C '(1+2i)))
+
+  ;; type check
+  (check-for-true (comparator-check-type C '(1 2)))
+  (check-for-true (comparator-check-type C (void)))
+
+  ;; comparison
+  (check (comparator-compare C '(1 2) '(1 2))	=> 0)
+  (check (comparator-compare C '(1 2) '(1 3))	=> -1)
+  (check (comparator-compare C '(1 3) '(1 2))	=> +1)
+
+  (check (comparator-compare C '()    '())	=> 0)
+  (check (comparator-compare C '()    '(1 2))	=> -1)
+  (check (comparator-compare C '(1 2) '())	=> +1)
+
+  (check (comparator-compare C '(1 2 . 3) '(1 2 . 3))	=> 0)
+  (check (comparator-compare C '(1 2 . 3) '(1 2 . 4))	=> -1)
+  (check (comparator-compare C '(1 2 . 4) '(1 2 . 3))	=> +1)
+
+  (check (comparator-compare C '(1 2 9 . 3) '(1 2 9 . 3))	=> 0)
+  (check (comparator-compare C '(1 2 9 . 3) '(1 2 9 . 4))	=> -1)
+  (check (comparator-compare C '(1 2 9 . 4) '(1 2 9 . 3))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '())))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '(1 2))))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '(1 2 . 3))))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C "ciao")))
+
+  #t)
+
+
 (parametrise ((check-test-name	'vector-comparator))
 
   (define-constant C

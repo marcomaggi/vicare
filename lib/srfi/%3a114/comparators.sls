@@ -1209,49 +1209,56 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (make-improper-list-comparison)
+(module (make-improper-list-comparator)
 
-  (define* (make-improper-list-comparison {K comparator?})
-    (let ((pair-compare (make-pair-comparison K K))
-	  (item-compare (comparator-comparison-procedure K)))
-      (lambda (a b)
-	(let* ((a-type (improper-list-type a))
-	       (b-type (improper-list-type b))
-	       (result (real-comparison a-type b-type)))
-	  (cond ((not (zero? result))
-		 result)
-		((pair? a)
-		 (pair-compare a b))
-		((null? a)
-		 0)
-		(else
-		 (item-compare a b)))))))
+  (define* (make-improper-list-comparator {K comparator?})
+    (make-comparator #t
+		     #t
+		     (make-improper-list-comparison K)
+		     (make-improper-list-hash       K)))
 
-  (define (improper-list-type obj)
-    ;;Compute type index for inexact list comparisons.
-    ;;
-    (cond ((null? obj)	0)
-	  ((pair? obj)	1)
-	  (else		2)))
+  (module (make-improper-list-comparison)
+
+    (define* (make-improper-list-comparison {K comparator?})
+      (let ((pair-compare (make-pair-comparison K K))
+	    (item-compare (comparator-comparison-procedure K)))
+	(lambda (a b)
+	  ;;A.TYPE and B.TYPE are the indexes of the object types.
+	  (let* ((a.type (improper-list-type a))
+		 (b.type (improper-list-type b))
+		 (result (real-comparison a.type b.type)))
+	    (if (zero? result)
+		;;A and B have the same type index; they are: both pairs, both nulls,
+		;;both some other object.
+		(cond ((pair? a)
+		       (pair-compare a b))
+		      ((null? a)
+		       0)
+		      (else
+		       (item-compare a b)))
+	      result)))))
+
+    (define (improper-list-type obj)
+      ;;Compute type index for inexact list comparisons.
+      ;;
+      (cond ((null? obj)	0)
+	    ((pair? obj)	1)
+	    (else		2)))
+
+    #| end of module |# )
+
+  (define* (make-improper-list-hash {K comparator?})
+    (let ((hash (comparator-hash-function K)))
+      (lambda (obj)
+	(cond ((pair? obj)
+	       (+ (hash (car obj))
+		  (hash (cdr obj))))
+	      ((null? obj)
+	       0)
+	      (else
+	       (hash obj))))))
 
   #| end of module |# )
-
-(define* (make-improper-list-hash {K comparator?})
-  (let ((hash (comparator-hash-function K)))
-    (lambda (obj)
-      (cond ((pair? obj)
-	     (+ (hash (car obj))
-		(hash (cdr obj))))
-	    ((null? obj)
-	     0)
-	    (else
-	     (hash obj))))))
-
-(define* (make-improper-list-comparator {K comparator?})
-  (make-comparator #t
-		   #t
-		   (make-improper-list-comparison K)
-		   (make-improper-list-hash       K)))
 
 
 ;;;; wrapped equality predicates
