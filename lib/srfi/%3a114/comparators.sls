@@ -933,89 +933,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (make-listwise-comparison {comparison procedure?} {list-null? procedure?}
-				   {list-car procedure?} {list-cdr procedure?})
-  ;;Make a comparison procedure that works listwise.
-  ;;
-  (letrec ((proc (lambda (a b)
-		   ;;A  and  B are  list-like  objects  that  can be  accessed  with:
-		   ;;LIST-NULL?,  LIST-CAR,  LIST-CDR.   Notice   that  there  is  no
-		   ;;LIST-PAIR? predicate.
-		   ;;
-		   (let ((a.null? (list-null? a))
-			 (b.null? (list-null? b)))
-		     (cond ((and a.null? b.null?)	0)
-			   (a.null?			-1)
-			   (b.null?			+1)
-			   (else
-			    (let ((result (comparison (list-car a) (list-car b))))
-			      (if (zero? result)
-				  (proc (list-cdr a) (list-cdr b))
-				result))))))))
-    proc))
-
-(define* (make-listwise-hash {element-hash procedure?} {list-null? procedure?}
-			     {list-car procedure?} {list-cdr procedure?})
-  ;;Make a hash function that works listwise.
-  ;;
-  (lambda (obj)
-    (let loop ((obj    obj)
-	       (result 5381))
-      (if (list-null? obj)
-	  result
-        (let* ((prod (modulo (* result 33) LIMIT))
-               (sum  (+ prod (element-hash (list-car obj)))))
-          (loop (list-cdr obj) sum))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (make-vectorwise-comparison {vec-compar procedure?} {vec-length procedure?}
-				     {vec-ref procedure?})
-  ;;Make a comparison procedure that works vectorwise.
-  ;;
-  ;;NOTE We know that, under Vicare, vectors and bytevectors have length in the range
-  ;;of fixnums.  This function is meant to work on general vector-like objects, which
-  ;;might be  non-vectors and  non-bytevectors.  So  we cannot  use the  FX functions
-  ;;here, we have to use the general: =, <, add1, sub1, zero?.
-  ;;
-  (lambda (a b)
-    (let ((a.length   (vec-length a))
-	  (b.length   (vec-length b)))
-      (cond ((< a.length b.length)	-1)
-	    ((> a.length b.length)	+1)
-	    ;;The lengths are equal.
-	    ((zero? a.length)
-	     ;;If we are here: it means both the vectors are empty.
-	     0)
-	    (else
-	     ;;If we  are here:  it means the  vectors have the  same length  and are
-	     ;;non-empty.
-	     (let ((last-index (sub1 a.length)))
-	       (let loop ((index 0))
-		 (let ((result (vec-compar (vec-ref a index)
-					   (vec-ref b index))))
-		   (if (zero? result)
-		       (if (= index last-index)
-			   0
-			 (loop (add1 index)))
-		     result)))))))))
-
-(define* (make-vectorwise-hash {item-hash procedure?} {vec-length procedure?} {vec-ref procedure?})
-  ;;Make a hash function that works vectorwise.
-  ;;
-  (lambda (obj)
-    (let loop ((index   (sub1 (vec-length obj)))
-	       (result  5381))
-      (if (zero? index)
-	  result
-        (let* ((prod (modulo (* result 33)
-			     LIMIT))
-               (sum  (modulo (+ prod (item-hash (vec-ref obj index)))
-			     LIMIT)))
-          (loop (sub1 index) sum))))))
-
-;;; --------------------------------------------------------------------
-
 (define string-comparison
   (make-comparison=/< string=? string<?))
 
@@ -1042,27 +959,123 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (make-listwise-comparator {test procedure?} {K comparator?}
-				   {null? procedure?} {car procedure?} {cdr procedure?})
-  (make-comparator test
-		   #t
-		   (make-listwise-comparison (comparator-comparison-procedure K) null? car cdr)
-		   (make-listwise-hash       (comparator-hash-function        K) null? car cdr)))
+(module (make-listwise-comparator)
 
-(define* (make-vectorwise-comparator {test procedure?} {K comparator?}
-				     {vec-length procedure?} {vec-ref procedure?})
-  (make-comparator test
-		   #t
-		   (make-vectorwise-comparison (comparator-comparison-procedure K) vec-length vec-ref)
-		   (make-vectorwise-hash       (comparator-hash-function        K) vec-length vec-ref)))
+  (define* (make-listwise-comparator {test procedure?} {K comparator?}
+				     {null? procedure?} {car procedure?} {cdr procedure?})
+    (make-comparator test
+		     #t
+		     (make-listwise-comparison (comparator-comparison-procedure K) null? car cdr)
+		     (make-listwise-hash       (comparator-hash-function        K) null? car cdr)))
+
+  (define* (make-listwise-comparison {comparison procedure?} {list-null? procedure?}
+				     {list-car procedure?} {list-cdr procedure?})
+    ;;Make a comparison procedure that works listwise.
+    ;;
+    (letrec ((proc (lambda (a b)
+		     ;;A  and B  are list-like  objects  that can  be accessed  with:
+		     ;;LIST-NULL?,  LIST-CAR,  LIST-CDR.   Notice that  there  is  no
+		     ;;LIST-PAIR? predicate.
+		     ;;
+		     (let ((a.null? (list-null? a))
+			   (b.null? (list-null? b)))
+		       (cond ((and a.null? b.null?)	0)
+			     (a.null?			-1)
+			     (b.null?			+1)
+			     (else
+			      (let ((result (comparison (list-car a) (list-car b))))
+				(if (zero? result)
+				    (proc (list-cdr a) (list-cdr b))
+				  result))))))))
+      proc))
+
+  (define* (make-listwise-hash {element-hash procedure?} {list-null? procedure?}
+			       {list-car procedure?} {list-cdr procedure?})
+    ;;Make a hash function that works listwise.
+    ;;
+    (lambda (obj)
+      (let loop ((obj    obj)
+		 (result 5381))
+	(if (list-null? obj)
+	    result
+	  (let* ((prod (modulo (* result 33) LIMIT))
+		 (sum  (+ prod (element-hash (list-car obj)))))
+	    (loop (list-cdr obj) sum))))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (make-vectorwise-comparator)
+
+  (define* (make-vectorwise-comparator {test procedure?} {K comparator?}
+				       {vec-length procedure?} {vec-ref procedure?})
+    (make-comparator test
+		     #t
+		     (make-vectorwise-comparison (comparator-comparison-procedure K) vec-length vec-ref)
+		     (make-vectorwise-hash       (comparator-hash-function        K) vec-length vec-ref)))
+
+  (define* (make-vectorwise-comparison {vec-compar procedure?} {vec-length procedure?}
+				       {vec-ref procedure?})
+    ;;Make a comparison procedure that works vectorwise.
+    ;;
+    ;;NOTE We  know that, under  Vicare, vectors and  bytevectors have length  in the
+    ;;range  of fixnums.   This  function is  meant to  work  on general  vector-like
+    ;;objects, which might be non-vectors and  non-bytevectors.  So we cannot use the
+    ;;FX functions here, we have to use the general: =, <, add1, sub1, zero?.
+    ;;
+    (lambda (a b)
+      (let ((a.length   (vec-length a))
+	    (b.length   (vec-length b)))
+	(cond ((< a.length b.length)	-1)
+	      ((> a.length b.length)	+1)
+	      ;;The lengths are equal.
+	      ((zero? a.length)
+	       ;;If we are here: it means both the vectors are empty.
+	       0)
+	      (else
+	       ;;If we are  here: it means the  vectors have the same  length and are
+	       ;;non-empty.
+	       (let ((last-index (sub1 a.length)))
+		 (let loop ((index 0))
+		   (let ((result (vec-compar (vec-ref a index)
+					     (vec-ref b index))))
+		     (if (zero? result)
+			 (if (= index last-index)
+			     0
+			   (loop (add1 index)))
+		       result)))))))))
+
+  (define* (make-vectorwise-hash {item-hash procedure?} {vec-length procedure?} {vec-ref procedure?})
+    ;;Make a hash function that works vectorwise.
+    ;;
+    (lambda (obj)
+      (let ((len (vec-length obj)))
+	(if (fxzero? len)
+	    0
+	  (let loop ((index   (sub1 len))
+		     (result  5381))
+	    (if (zero? index)
+		result
+	      (let* ((prod (modulo (* result 33)
+				   LIMIT))
+		     (sum  (modulo (+ prod (item-hash (vec-ref obj index)))
+				   LIMIT)))
+		(loop (sub1 index) sum))))))))
+
+  #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
 (define* (make-list-comparator {K comparator?})
-  (make-listwise-comparator (lambda (obj)
-			      (or (null? obj)
-				  (pair? obj)))
-			    K null? car cdr))
+  (define element-test-proc
+    (comparator-type-test-procedure K))
+  (define (test-proc obj)
+    (if (pair? obj)
+	(and (element-test-proc (car obj))
+	     (test-proc (cdr obj)))
+      (null? obj)))
+  (make-listwise-comparator test-proc K null? car cdr))
 
 (define-predefined-comparator list-comparator
   (make-list-comparator default-comparator))
@@ -1070,7 +1083,12 @@
 ;;; --------------------------------------------------------------------
 
 (define* (make-vector-comparator {K comparator?})
-  (make-vectorwise-comparator vector? K vector-length vector-ref))
+  (define element-test-proc
+    (comparator-type-test-procedure K))
+  (define (test-proc obj)
+    (and (vector? obj)
+	 (vector-for-all element-test-proc obj)))
+  (make-vectorwise-comparator test-proc K vector-length vector-ref))
 
 (define-predefined-comparator vector-comparator
   (make-vector-comparator default-comparator))
@@ -1083,8 +1101,25 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (make-bytevector-comparator {K comparator?})
-  (make-vectorwise-comparator bytevector? K bytevector-length bytevector-u8-ref))
+(module (make-bytevector-comparator)
+
+  (define* (make-bytevector-comparator {K comparator?})
+    (define element-test-proc
+      (comparator-type-test-procedure K))
+    (define (test-proc obj)
+      (and (bytevector? obj)
+	   (%bytevector-for-all-u8 element-test-proc obj)))
+    (make-vectorwise-comparator test-proc K bytevector-length bytevector-u8-ref))
+
+  (define (%bytevector-for-all-u8 proc bv)
+    (let loop ((i   0)
+	       (len (bytevector-length bv)))
+      (if (fx<? i len)
+	  (and (proc (bytevector-u8-ref bv i))
+	       (loop (fxadd1 i) len))
+	#t)))
+
+  #| end of module |# )
 
 (define-predefined-comparator bytevector-comparator
   (make-bytevector-comparator default-comparator))
@@ -1135,7 +1170,15 @@
 	 (cdr-hash (cdr obj))))))
 
 (define* (make-pair-comparator {car-K comparator?} {cdr-K comparator?})
-  (make-comparator pair?
+  (define car-test-proc
+    (comparator-type-test-procedure car-K))
+  (define cdr-test-proc
+    (comparator-type-test-procedure cdr-K))
+  (define (test-proc obj)
+    (and (pair? obj)
+	 (car-test-proc (car obj))
+	 (cdr-test-proc (cdr obj))))
+  (make-comparator test-proc
 		   #t
 		   (make-pair-comparison car-K cdr-K)
 		   (make-pair-hash       car-K cdr-K)))

@@ -897,6 +897,172 @@
   #t)
 
 
+(parametrise ((check-test-name	'list-comparator))
+
+  (define-constant C
+    (make-list-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C '()))
+  (check-for-true  (comparator-test-type C '(1 2)))
+  (check-for-false (comparator-test-type C '(1 2 . 3)))
+  (check-for-false (comparator-test-type C '(1 2.0)))
+  (check-for-false (comparator-test-type C "ciao"))
+  (check-for-false (comparator-test-type C '(1+2i)))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C '(1 2)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C '(1 2) '(1 2))	=> 0)
+  (check (comparator-compare C '(1 2) '(1 3))	=> -1)
+  (check (comparator-compare C '(1 3) '(1 2))	=> +1)
+
+  (check (comparator-compare C '()    '())	=> 0)
+  (check (comparator-compare C '()    '(1 2))	=> -1)
+  (check (comparator-compare C '(1 2) '())	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '())))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '(1 2))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'vector-comparator))
+
+  (define-constant C
+    (make-vector-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C '#()))
+  (check-for-true  (comparator-test-type C '#(1 2)))
+  (check-for-false (comparator-test-type C '#(1 2.0)))
+  (check-for-false (comparator-test-type C "ciao"))
+  (check-for-false (comparator-test-type C '#(1+2i)))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C '#(1 2)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C '#(1 2) '#(1 2))	=> 0)
+  (check (comparator-compare C '#(1 2) '#(1 3))	=> -1)
+  (check (comparator-compare C '#(1 3) '#(1 2))	=> +1)
+
+  (check (comparator-compare C '#()    '#())	=> 0)
+  (check (comparator-compare C '#()    '#(1 2))	=> -1)
+  (check (comparator-compare C '#(1 2) '#())	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '#())))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '#(1 2))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-comparator))
+
+  (define-constant E
+    (make-comparator (lambda (element)
+		       (or (= 1 element)
+			   (zero? element)))
+		     fx=?
+		     (lambda (a b)
+		       (cond ((fx=? a b)	0)
+			     ((fx<? a b)	-1)
+			     (else		+1)))
+		     fixnum-hash))
+
+  (define-constant C
+    (make-bytevector-comparator E))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C '#vu8()))
+  (check-for-true  (comparator-test-type C '#vu8(1 0)))
+  (check-for-false (comparator-test-type C '#vu8(1 2)))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C '#vu8(1 0)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C '#vu8(1 0) '#vu8(1 0))	=> 0)
+  (check (comparator-compare C '#vu8(1 0) '#vu8(1 1))	=> -1)
+  (check (comparator-compare C '#vu8(1 1) '#vu8(1 0))	=> +1)
+
+  (check (comparator-compare C '#vu8()    '#vu8())	=> 0)
+  (check (comparator-compare C '#vu8()    '#vu8(1 0))	=> -1)
+  (check (comparator-compare C '#vu8(1 0) '#vu8())	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '#vu8())))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '#vu8(1 0))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'pair-comparator))
+
+  (define-constant C
+    (make-pair-comparator exact-integer-comparator
+			  real-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C '(1 . 2.0)))
+  (check-for-true  (comparator-test-type C '(1 . 2.0)))
+  (check-for-false (comparator-test-type C '()))
+  (check-for-false (comparator-test-type C '(1 . 2+1i)))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C '(1 . 2.0)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C '(1 . 2.0) '(1 . 2.0))	=> 0)
+  (check (comparator-compare C '(1 . 2.0) '(1 . 3))	=> -1)
+  (check (comparator-compare C '(1 . 3)   '(1 . 2.0))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '(1 . 2.0))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

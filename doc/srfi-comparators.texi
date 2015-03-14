@@ -796,6 +796,7 @@ allocated object, since comparators are purely functional.
 @menu
 * srfi comparators constructors general::  General comparators.
 * srfi comparators constructors real::     Inexact real comparators.
+* srfi comparators constructors compound:: Compound comparators.
 * srfi comparators constructors misc::     Miscellaneous comparators.
 @end menu
 
@@ -877,7 +878,8 @@ If both arguments are NaNs: they always compare as equal.
 @end defun
 
 
-Here is an example of comparator using the @code{round} rounding mode:
+Here is an example of comparator using the @code{round} rounding mode
+and the @code{error} policy to compare @code{+nan.0}:
 
 @lisp
 #!vicare
@@ -1049,24 +1051,164 @@ Here is an example of comparator using a procedure as policy to compare
 @end lisp
 
 @c page
-@node srfi comparators constructors misc
-@subsubsection Miscellaneous comparators
+@node srfi comparators constructors compound
+@subsubsection Compound comparators
 
 
 @defun make-list-comparator @var{element-comparator}
-@defunx make-vector-comparator @var{element-comparator}
-@defunx make-bytevector-comparator @var{element-comparator}
-These procedures return comparators which compare two lists, vectors, or
-bytevectors in the same way as @func{list-comparator},
-@func{vector-comparator}, and @func{bytevector-comparator} respectively,
-but using @var{element-comparator} rather than
+Build and return a comparator object behaving like
+@func{list-comparator} but using @var{element-comparator} rather than
 @func{default-comparator}.
 
-If the implementation does not support bytevectors, the result of
-invoking @func{make-bytevector-comparator} is a comparator whose type
-testing procedure always returns @false{}.
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-list-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '())            @result{} #t
+(comparator-test-type C '(1 2))         @result{} #t
+(comparator-test-type C '(1 2 . 3))     @result{} #f
+(comparator-test-type C '(1 2.0))       @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+(comparator-test-type C '(1+2i))        @result{} #f
+
+;; type check
+(comparator-check-type C '(1 2))        @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(1 2) '(1 2))   @result{} 0)
+(comparator-compare C '(1 2) '(1 3))   @result{} -1
+(comparator-compare C '(1 3) '(1 2))   @result{} +1
+
+(comparator-compare C '()    '())      @result{} 0
+(comparator-compare C '()    '(1 2))   @result{} -1
+(comparator-compare C '(1 2) '())      @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+  (comparator-hash C '()))    @result{} #t
+(non-negative-exact-integer?
+  (comparator-hash C '(1 2))) @result{} #t
+@end lisp
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@defun make-vector-comparator @var{element-comparator}
+Build and return a comparator object behaving like
+@func{vector-comparator} but using @var{element-comparator} rather than
+@func{default-comparator}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-vector-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '#())           @result{} #t
+(comparator-test-type C '#(1 2))        @result{} #t
+(comparator-test-type C '#(1 2.0))      @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+(comparator-test-type C '#(1+2i)        @result{} #f
+
+;; type check
+(comparator-check-type C '#(1 2))       @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '#(1 2) '#(1 2))  @result{} 0
+(comparator-compare C '#(1 2) '#(1 3))  @result{} -1
+(comparator-compare C '#(1 3) '#(1 2))  @result{} +1
+
+(comparator-compare C '#()    '#())     @result{} 0
+(comparator-compare C '#()    '#(1 2))  @result{} -1
+(comparator-compare C '#(1 2) '#())     @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+  (comparator-hash C '#())))    @result{} #t
+(non-negative-exact-integer?
+  (comparator-hash C '#(1 2)))  @result{} #t
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun make-bytevector-comparator @var{element-comparator}
+Build and return a comparator object behaving like
+@func{bytevector-comparator} but using @var{element-comparator} rather
+than @func{default-comparator}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant E
+  (make-comparator (lambda (element)
+                     (or (= 1 element)
+                         (zero? element)))
+                   fx=?
+                   (lambda (a b)
+                     (cond ((fx=? a b)   0)
+                           ((fx<? a b)  -1)
+                           (else        +1)))
+                   fixnum-hash))
+
+(define-constant C
+  (make-bytevector-comparator E))
+
+;; type test
+(comparator-test-type C '#vu8())        @result{} #t
+(comparator-test-type C '#vu8(1 0))     @result{} #t
+(comparator-test-type C '#vu8(1 2))     @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '#vu8(1 0))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '#vu8(1 0) '#vu8(1 0))   @result{} 0
+(comparator-compare C '#vu8(1 0) '#vu8(1 1))   @result{} -1
+(comparator-compare C '#vu8(1 1) '#vu8(1 0))   @result{} +1
+
+(comparator-compare C '#vu8()    '#vu8())      @result{} 0
+(comparator-compare C '#vu8()    '#vu8(1 0))   @result{} -1
+(comparator-compare C '#vu8(1 0) '#vu8())      @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+  (comparator-hash C '#vu8()))    @result{} #t
+(non-negative-exact-integer?
+  (comparator-hash C '#vu8(1 0))) @result{} #t
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------------------
 
 @defun make-listwise-comparator @var{type-test} @var{element-comparator} @var{empty?} @var{head} @var{tail}
 Return a comparator which compares two objects that satisfy
@@ -1083,6 +1225,7 @@ procedure to determine the length of the object, and the @var{ref}
 procedure to access a particular element.
 @end defun
 
+@c ------------------------------------------------------------------------
 
 @defun make-car-comparator @var{comparator}
 Return a comparator that compares pairs on their cars alone using
@@ -1100,6 +1243,41 @@ Return a comparator that compares pairs on their cdrs alone using
 Return a comparator that compares pairs first on their cars using
 @var{car-comparator}.  If the cars are equal: it compares the cdrs using
 @var{cdr-comparator}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-pair-comparator exact-integer-comparator
+                        real-comparator))
+
+;; type test
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '())            @result{} #f
+(comparator-test-type C '(1 . 2+1i))    @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '(1 . 2.0))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(1 . 2.0) '(1 . 2.0))   @result{} 0
+(comparator-compare C '(1 . 2.0) '(1 . 3))     @result{} -1
+(comparator-compare C '(1 . 3)   '(1 . 2.0))   @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+   (comparator-hash C '(1 . 2.0)))      @result{} #t
+@end lisp
 @end defun
 
 
@@ -1114,6 +1292,10 @@ are compared as if with:
 
 All other objects are compared using @var{element-comparator}.
 @end defun
+
+@c page
+@node srfi comparators constructors misc
+@subsubsection Miscellaneous comparators
 
 
 @defun make-selecting-comparator @varo{comparator} @var{comparator} @dots{}
