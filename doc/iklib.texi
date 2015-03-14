@@ -10770,6 +10770,16 @@ Return @true{} if @var{fx} is, respectively, non--positive or
 non--negative; else return @false{}.
 @end defun
 
+
+@defun positive-fixnum? @var{obj}
+@defunx negative-fixnum? @var{obj}
+@defunx non-positive-fixnum? @var{obj}
+@defunx non-negative-fixnum? @var{obj}
+Return @true{} if @var{obj} is a fixnum respectively: positive,
+negative, non--positive, non--negative; otherwise return @false{}.  If
+@var{obj} is not a fixnum: return @false{}.
+@end defun
+
 @c page
 @node iklib flonums
 @section Additional functions on flonums

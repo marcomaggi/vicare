@@ -1803,6 +1803,10 @@
     (fxnegative?				v r fx)
     (fxnonpositive?				v $language)
     (fxnonnegative?				v $language)
+    (positive-fixnum?				v $language)
+    (negative-fixnum?				v $language)
+    (non-negative-fixnum?			v $language)
+    (non-positive-fixnum?			v $language)
     (fixnum->flonum				v r fl)
 ;;;
     (bignum-positive?				v $language)
