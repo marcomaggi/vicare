@@ -1173,6 +1173,8 @@ typedef uint32_t	ikchar;
 #define IK_CHAR_TO_INTEGER(X) \
   ((ik_ulong)(((ikptr)(X)) >> char_shift))
 
+#define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
+
 #define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
 
 
@@ -1191,9 +1193,10 @@ typedef uint32_t	ikchar;
 #define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr)(X)))
 #define IK_STRING_LENGTH_FX(STR)	IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR32(STR,IDX)		(((ikchar*)(((long)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr)(STR)) + off_string_data))[IDX])
 
-#define IK_STRING_DATA_VOIDP(STR)	((void*)(((long)(STR)) + off_string_data))
+#define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr)(STR)) + off_string_data))
+#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr)(STR)) + off_string_data))
 
 ik_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
 ik_decl ikptr ika_string_from_cstring	(ikpcb * pcb, const char * cstr);

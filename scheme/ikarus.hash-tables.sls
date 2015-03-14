@@ -107,6 +107,11 @@
   (hasht-mutable? obj)
   (procedure-argument-violation who "expected mutable hash table as argument" obj))
 
+(define (%boolean-or-non-negative-fixnum? obj)
+  (or (boolean? obj)
+      (and (fixnum? obj)
+	   (fxnonnegative? obj))))
+
 
 ;;;; data structure
 
@@ -624,25 +629,35 @@
 
 ;;;; hash functions
 
-(define (string-hash s)
-  (define who 'string-hash)
-  (with-arguments-validation (who)
-      ((string	s))
-    ($string-hash s)))
+(case-define* string-hash
+  ;;Defined by Vicare.
+  ;;
+  (({bv string?})
+   ($string-hash bv #f))
+  (({bv string?} {max-len %boolean-or-non-negative-fixnum?})
+   ($string-hash bv max-len)))
 
-(define ($string-hash s)
-  (foreign-call "ikrt_string_hash" s))
+(case-define $string-hash
+  ((s)
+   (foreign-call "ikrt_string_hash" s #f))
+  ((s max-len)
+   (foreign-call "ikrt_string_hash" s max-len)))
 
 ;;; --------------------------------------------------------------------
 
-(define (string-ci-hash s)
-  (define who 'string-ci-hash)
-  (with-arguments-validation (who)
-      ((string	s))
-    ($string-ci-hash s)))
+(case-define* string-ci-hash
+  ;;Defined by Vicare.
+  ;;
+  (({bv string?})
+   ($string-ci-hash bv #f))
+  (({bv string?} {max-len %boolean-or-non-negative-fixnum?})
+   ($string-ci-hash bv max-len)))
 
-(define ($string-ci-hash s)
-  (foreign-call "ikrt_string_hash" (string-foldcase s)))
+(case-define $string-ci-hash
+  ((s)
+   (foreign-call "ikrt_string_hash" (string-foldcase s) #f))
+  ((s max-len)
+   (foreign-call "ikrt_string_hash" (string-foldcase s) max-len)))
 
 ;;; --------------------------------------------------------------------
 
@@ -657,13 +672,19 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (bytevector-hash {bv bytevector?})
+(case-define* bytevector-hash
   ;;Defined by Vicare.
   ;;
-  ($bytevector-hash bv))
+  (({bv bytevector?})
+   ($bytevector-hash bv #f))
+  (({bv bytevector?} {max-len %boolean-or-non-negative-fixnum?})
+   ($bytevector-hash bv max-len)))
 
-(define ($bytevector-hash s)
-  (foreign-call "ikrt_bytevector_hash" s))
+(case-define $bytevector-hash
+  ((bv)
+   (foreign-call "ikrt_bytevector_hash" bv #f))
+  ((bv max-len)
+   (foreign-call "ikrt_bytevector_hash" bv max-len)))
 
 ;;; --------------------------------------------------------------------
 
@@ -690,20 +711,6 @@
 
 (define* ($flonum-hash fl)
   (foreign-call "ikrt_flonum_hash" fl))
-
-;;The one below is another possible implementation.  (Marco Maggi; Thu Mar 12, 2015)
-;;
-;; (define* ($flonum-hash fl)
-;;   (let ((R ($fixnum-hash fl)))
-;;     (cond (($flonum-rational? R)
-;; 	   ($flonum->exact ($flround R)))
-;; 	  (($flnan? R)
-;; 	   0)
-;; 	  (($flinfinite? R)
-;; 	   +1)
-;; 	  (else
-;; 	   (assertion-violation __who__
-;; 	     "invalid absolute value from flonum" fl R)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -790,11 +797,11 @@
 
 (define (object-hash obj)
   (cond ((string? obj)
-	 ($string-hash obj))
+	 ($string-hash obj #f))
 	((symbol? obj)
 	 ($symbol-hash obj))
 	((bytevector? obj)
-	 ($bytevector-hash obj))
+	 ($bytevector-hash obj #f))
 	((fixnum? obj)
 	 ($fixnum-hash obj))
 	((flonum? obj)

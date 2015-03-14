@@ -2602,6 +2602,12 @@ into a string.
 @end deftypefn
 
 
+@deftypefn {Preprocessor Macro} {uint32_t} IK_CHAR32_TO_INTEGER (ikchar @var{ch})
+Given a 32-bit value representing a Scheme character: untag it and
+return a 32-bit value representing the Unicode code point.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} {unsigned long} IK_UNICODE_FROM_ASCII (char @var{ch})
 Return an unsigned integer representing the Unicode code point
 corresponding to the given @ascii{} character.
@@ -2783,6 +2789,18 @@ ikchar  ch;
 IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
 ch = IK_CHAR32(s_str, idx);
 @end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_STRING_DATA_VOIDP (ikptr @var{str})
+Given a tagged reference to string object @var{str}, return a pointer to
+the first byte in the data area.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {ikchar *} IK_STRING_DATA_IKCHARP (ikptr @var{str})
+Given a tagged reference to string object @var{str}, return a pointer to
+the first Scheme character in the data area.
 @end deftypefn
 
 @c ------------------------------------------------------------

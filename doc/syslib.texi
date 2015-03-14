@@ -5803,16 +5803,45 @@ system hashtables}.
 
 
 @deffn {Unsafe Operation} $string-hash @var{string}
+@deffnx {Unsafe Operation} $string-hash @var{string} @var{max-len}
 Return an integer hash value for @var{string}, based on its current
 contents.  This hash function is suitable for use with @func{string=?}
 as an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of characters to use to compute the hash value, starting from the
+beginning of @var{string}.  If the length of @var{string} is greater
+than @var{max-len}: only the first @var{max-len} characters are used.
+If the length of @var{string} is less than or equal to @var{max-len}:
+all the bytes in @var{string} are used.
+
+@item
+When @var{max-len} is @false{} or not used: if the length of
+@var{string} is greater than @math{64} characters, only the first
+@math{64} bytes are used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{string} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of
+characters @math{N} less than the string length: applications
+@strong{must not} assume that two strings having the first @math{N}
+characters equal will have the same hash value.
 @end deffn
 
 
 @deffn {Unsafe Operation} $string-ci-hash @var{string}
+@deffnx {Unsafe Operation} $string-ci-hash @var{string} @var{max-len}
 Return an integer hash value for @var{string} based on its current
 contents, ignoring case.  This hash function is suitable for use with
 @func{string-ci=?} as an equivalence function.
+
+The optional argument @var{max-len} is used as in @func{$string-hash}.
 @end deffn
 
 
@@ -5822,9 +5851,35 @@ Return an integer hash value for @var{symbol}.
 
 
 @deffn {Unsafe Operation} $bytevector-hash @var{bytevector}
+@deffnx {Unsafe Operation} $bytevector-hash @var{bytevector} @var{max-len}
 Return an integer hash value for @var{bytevector}, based on its current
 contents.  This hash function is suitable for use with
 @func{bytevector=?} as an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of bytes to use to compute the hash value, starting from the beginning
+of @var{bv}.  If the length of @var{bv} is greater than @var{max-len}:
+only the first @var{max-len} bytes are used.  If the length of @var{bv}
+is less than or equal to @var{max-len}: all the bytes in @var{bv} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of @var{bv}
+is greater than @math{256} bytes, only the first @math{256} bytes are
+used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{bv} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of bytes
+@math{N} less than the bytevector length: applications @strong{must not}
+assume that two bytevectors having the first @math{N} bytes equal will
+have the same hash value.
 @end deffn
 
 @c page

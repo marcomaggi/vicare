@@ -11298,10 +11298,37 @@ Case--insensitive hash function for strings.
 @end defun
 
 
-@defun bytevector-hash @var{bytevector}
-Return an integer hash value for @var{bytevector}, based on its current
-contents.  This hash function is suitable for use with
+@defun bytevector-hash @var{bv}
+@defunx bytevector-hash @var{bv} @var{max-len}
+Return a non--negative fixnum representing the hash value for @var{bv},
+based on its current contents.  When creating hash tables using
+bytevectors as keys: this hash function is suitable for use with
 @func{bytevector=?} as an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of bytes to use to compute the hash value, starting from the beginning
+of @var{bv}.  If the length of @var{bv} is greater than @var{max-len}:
+only the first @var{max-len} bytes are used.  If the length of @var{bv}
+is less than or equal to @var{max-len}: all the bytes in @var{bv} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of @var{bv}
+is greater than @math{256} bytes, only the first @math{256} bytes are
+used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{bv} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of bytes
+@math{N} less than the bytevector length: applications @strong{must not}
+assume that two bytevectors having the first @math{N} bytes equal will
+have the same hash value.
 @end defun
 
 
