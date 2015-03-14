@@ -1290,6 +1290,90 @@
   #t)
 
 
+(parametrise ((check-test-name	'refining-comparator))
+
+  (define* (round-to-epsilon {R flonum?} {epsilon flonum?})
+    (infix round(R / epsilon) * epsilon))
+
+  (define-constant C
+    (make-refining-comparator
+     (make-inexact-real-comparator 0.1   round-to-epsilon 'error)
+     (make-inexact-real-comparator 0.01  round-to-epsilon 'error)
+     (make-inexact-real-comparator 0.001 round-to-epsilon 'error)))
+
+  ;; (check (round-to-epsilon 1.05   0.1)		=> 1.0)
+  ;; (check (round-to-epsilon 1.05   0.01)		=> 1.05)
+  ;; (check (round-to-epsilon 1.05   0.001)	=> 1.05)
+
+  ;; (check (round-to-epsilon 1.005  0.1)		=> 1.0)
+  ;; (check (round-to-epsilon 1.005  0.01)		=> 1.0)
+  ;; (check (round-to-epsilon 1.005  0.001)	=> 1.005)
+
+  ;; (check (round-to-epsilon 1.0005 0.1)		=> 1.0)
+  ;; (check (round-to-epsilon 1.0005 0.01)		=> 1.0)
+  ;; (check (round-to-epsilon 1.0005 0.001)	=> 1.0)
+
+  ;; type test
+  (let ((test-type (comparator-type-test-procedure C)))
+    (check-for-true  (test-type 1.1))
+    (check-for-false (test-type 1))
+    (check-for-false (test-type "ciao")))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type 1.1))
+    (check-for-true
+     (try
+	 (comparator-check-type C 1)
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (check (compare 1. 1.)	=> 0)
+    (check (compare 2. 1.)	=> +1)
+    (check (compare 1. 2.)	=> -1)
+
+    ;;Equal according to the first comparator, different according to the second.
+    (check (compare 1.00 1.05)	=> -1)
+    (check (compare 1.05 1.00)	=> +1)
+
+    ;;Equal according to the first and second comparators, different according to the
+    ;;third.
+    (check (compare 1.0   1.005)	=> -1)
+    (check (compare 1.005 1.0)		=> +1)
+
+    ;;Equal according to the first, second and third comparators.
+    (check (compare 1.0 1.0005)	=> 0)
+    (check (compare 1.0005 1.0)	=> 0)
+
+    (check-for-true
+     (try
+    	 (compare 1 "ciao")
+       (catch E
+    	 ((&comparator-type-error)
+    	  #t)
+    	 (else E))))
+    #f)
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1.2)))
+
+    (check-for-true
+     (try
+	 (hash 1+2i)
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

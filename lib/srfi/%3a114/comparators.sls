@@ -1314,107 +1314,114 @@
 (module (make-selecting-comparator
 	 make-refining-comparator)
 
-  (module (make-selecting-comparator)
+  (define* (make-selecting-comparator {K comparator?} . {K* %list-of-comparators?})
     ;;Selecting comparator: finds the first one that type-tests
     ;;
-    (define* (make-selecting-comparator . {comparators %list-of-comparators?})
-      (letrec ((C (let ((get-C (lambda () C)))
-		    (make-comparator (selected-type-test             comparators)
-				     (selected-equality-predicate    comparators get-C)
-				     (selected-comparison-procedure  comparators get-C)
-				     (selected-hash-function         comparators get-C)))))
-	C))
+    (define comparators (cons K K*))
+    (letrec ((C (internal-body
+		  (define (selected-type-test)
+		    (lambda (obj)
+		      (if (matching-comparator obj comparators) #t #f)))
 
-    (define (selected-type-test comparators)
-      (lambda (obj)
-	(if (matching-comparator obj comparators) #t #f)))
+		  (define (selected-equality-predicate)
+		    (lambda (a b)
+		      (let ((comparator (matching-comparator-2 a b comparators)))
+			(if comparator
+			    (comparator-equal? comparator a b)
+			  (raise-comparator-type-error 'anonymous-selecting-comparator
+			    "no comparator can be selected"
+			    C a b)))))
 
-    (define (selected-equality-predicate comparators get-C)
-      (lambda (a b)
-	(let ((comparator (matching-comparator a comparators)))
-	  (if comparator
-	      (comparator-equal? comparator a b)
-	    (raise-comparator-type-error 'anonymous-selecting-comparator
-	      "no comparator can be selected"
-	      (get-C) a b)))))
+		  (define (selected-comparison-procedure)
+		    (lambda (a b)
+		      (let ((comparator (matching-comparator-2 a b comparators)))
+			(if comparator
+			    (comparator-compare comparator a b)
+			  (raise-comparator-type-error 'anonymous-selecting-comparator
+			    "no comparator can be selected"
+			    C a b)))))
 
-    (define (selected-comparison-procedure comparators get-C)
-      (lambda (a b)
-	(let ((comparator (matching-comparator a comparators)))
-	  (if comparator
-	      (comparator-compare comparator a b)
-	    (raise-comparator-type-error 'anonymous-selecting-comparator
-	      "no comparator can be selected"
-	      (get-C) a b)))))
+		  (define (selected-hash-function)
+		    (lambda (obj)
+		      (let ((comparator (matching-comparator obj comparators)))
+			(if comparator
+			    (comparator-hash comparator obj)
+			  (raise-comparator-type-error 'anonymous-selecting-comparator
+			    "no comparator can be selected"
+			    C obj)))))
 
-    (define (selected-hash-function comparators get-C)
-      (lambda (obj)
-	(let ((comparator (matching-comparator obj comparators)))
-	  (if comparator
-	      (comparator-hash comparator obj)
-	    (raise-comparator-type-error 'anonymous-selecting-comparator
-	      "no comparator can be selected"
-	      (get-C) obj)))))
-
-    #| end of module |# )
+		  (make-comparator (selected-type-test)
+				   (selected-equality-predicate)
+				   (selected-comparison-procedure)
+				   (selected-hash-function)))))
+      C))
 
 ;;; --------------------------------------------------------------------
 
-  (module (make-refining-comparator)
+  (define* (make-refining-comparator {K comparator?} . {K* %list-of-comparators?})
+    ;;Use all type-matching comparators until one is found that can discriminate.
+    ;;
+    (define comparators (cons K K*))
+    (letrec ((C (internal-body
+		  (define (refined-type-test)
+		    (lambda (obj)
+		      (if (matching-comparator obj comparators) #t #f)))
 
-    (define* (make-refining-comparator . {comparators %list-of-comparators?})
-      (make-comparator (refined-type-test            comparators)
-		       (refined-equality-predicate   comparators)
-		       (refined-comparison-procedure comparators)
-		       (refined-hash-function        comparators)))
+		  (define (refined-equality-predicate)
+		    (lambda (a b)
+		      (let loop ((comparators comparators)
+				 (first?      #t))
+			(cond ((matching-comparator-2 a b comparators)
+			       => (lambda (K)
+				    (if (comparator-equal? K a b)
+					(loop (cdr comparators) #f)
+				      #f)))
+			      (first?
+			       (raise-comparator-type-error 'anonymous-refining-comparator
+				 "no comparator can be selected"
+				 C a b))
+			      (else #t)))))
 
-    (define (refined-type-test . comparators)
-      (lambda (obj)
-	(if (matching-comparator obj comparators) #t #f)))
+		  (define (refined-comparison-procedure)
+		    (lambda (a b)
+		      (let loop ((comparators comparators)
+ 				 (first?      #t))
+			(cond ((matching-comparator-2 a b comparators)
+			       => (lambda (K)
+				    (let ((result (comparator-compare K a b)))
+				      (if (zero? result)
+					  (loop (cdr comparators) #f)
+					result))))
+			      (first?
+			       (raise-comparator-type-error 'anonymous-refining-comparator
+				 "no comparator can be selected"
+				 C a b))
+			      (else 0)))))
 
-    (define (refined-equality-predicate comparators)
-      ;;Refining comparator:  uses all type-matching  comparators until one  is found
-      ;;that can discriminate.
-      ;;
-      (lambda (a b)
-	(let loop ((comparator (matching-comparator a comparators))
-		   (first?     #t))
-	  (if comparator
-	      (if (comparator-equal? comparator a b)
-		  (loop (matching-comparator a comparators) #f)
-		#f)
-	    (if first?
-		(error 'anonymous-refining-comparator "no comparator can be selected" a b)
-	      #t)))))
+		  (define (refined-hash-function)
+		    (lambda (obj)
+		      ;;Use the hash function of the last matching comparator.
+		      ;;
+		      (let loop ((comparators      comparators)
+				 (last-comparator  #f))
+			(if (pair? comparators)
+			    (if (comparator-test-type (car comparators) obj)
+				;;This  comparator matches:  loop saving  it as  last
+				;;comparator that matched.
+				(loop (cdr comparators) (car comparators))
+			      ;;Loop discarding this comparator.
+			      (loop (cdr comparators) last-comparator))
+			  (if last-comparator
+			      (comparator-hash last-comparator obj)
+			    (raise-comparator-type-error 'anonymous-refining-comparator
+			      "no comparator can be selected"
+			      C obj))))))
 
-    (define (refined-comparison-procedure comparators)
-      (lambda (a b)
-	(let loop ((comparator (matching-comparator a comparators))
-		   (first?     #t))
-	  (if comparator
-	      (let ((result (comparator-compare comparator a b)))
-		(if (eqv? result 0)
-		    (loop (matching-comparator a comparators) #f)
-		  result))
-	    (if first?
-		(error 'anonymous-refining-comparator "no comparator can be selected" a b)
-	      0)))))
-
-    (define (refined-hash-function comparators)
-      (lambda (obj)
-	(let loop ((comparators      comparators)
-		   (last-comparator  #f))
-	  (if (null? comparators)
-	      (if last-comparator
-		  (comparator-hash last-comparator obj)
-		(error 'anonymous-refining-comparator "no comparator can be selected" obj))
-	    (if (comparator-test-type (car comparators) obj)
-		(loop (cdr comparators)
-		      (car comparators))
-	      (loop (cdr comparators)
-		    last-comparator))))))
-
-    #| end of module |# )
+		  (make-comparator (refined-type-test)
+				   (refined-equality-predicate)
+				   (refined-comparison-procedure)
+				   (refined-hash-function)))))
+      C))
 
 ;;; --------------------------------------------------------------------
 
@@ -1423,6 +1430,14 @@
 	 (if (comparator-test-type (car comparators) obj)
 	     (car comparators)
 	   (matching-comparator obj (cdr comparators)))))
+
+  (define (matching-comparator-2 obj1 obj2 comparators)
+    (and (pair? comparators)
+	 (let ((K (car comparators)))
+	   (if (and (comparator-test-type K obj1)
+		    (comparator-test-type K obj2))
+	       K
+	     (matching-comparator-2 obj1 obj2 (cdr comparators))))))
 
   #| end of module |# )
 

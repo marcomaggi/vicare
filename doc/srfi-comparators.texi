@@ -1563,27 +1563,104 @@ This procedure is analogous to the expression types
 @subsubsection Refining comparators
 
 
-@defun make-refining-comparator @varo{comparator} @varo{comparator} @dots{}
+@defun make-refining-comparator @varo{comparator} @var{comparator} @dots{}
 Return a comparator that makes use of the @var{comparator}s in the same
 way as @func{make-selecting-comparator}, except that its procedures can
 look past the first comparator whose type test predicate is satisfied.
-If the comparison procedure of that comparator returns zero, then the
-next comparator whose type test predicate is satisfied is tried in place
-of it until one returns a non--zero value.  If there are no more such
-comparators, then the comparison procedure returns zero.
+
+If the comparison procedure of the first comparator returns zero: the
+next comparator whose type test predicate is satisfied is tried, then
+the next and so on, until one returns a non--zero value.  If there are
+no more such comparators, then the comparison procedure returns zero.
 
 The equality predicate is defined in the same way.  If no type test
 predicate is satisfied, an error is signalled.
 
-The hash function of the result returns a value which depends, in an
-implementation--defined way, on the results of invoking the hash
-functions of the comparators whose type test predicates are satisfied on
-its argument.  In particular, it may depend solely on the first or last
-such hash function.  If no type test predicate is satisfied, an error is
-signalled.
+The hash function of the result returns a value computed using the last
+comparator in the given list for which the type test procedure returns
+true.
+
+@quotation
+According to the @srfi{}: the hash function of the result returns a
+value which depends, in an implementation--defined way, on the results
+of invoking the hash functions of the comparators whose type test
+predicates are satisfied on its argument.  In particular, it may depend
+solely on the first or last such hash function.  If no type test
+predicate is satisfied, an error is signalled.
+@end quotation
 
 This procedure is analogous to the expression type @func{refine-compare}
 from @ansrfi{67}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define* (round-to-epsilon @{R flonum?@} @{epsilon flonum?@})
+  (infix round(R / epsilon) * epsilon))
+
+(define-constant C
+  (make-refining-comparator
+   (make-inexact-real-comparator 0.1   round-to-epsilon 'error)
+   (make-inexact-real-comparator 0.01  round-to-epsilon 'error)
+   (make-inexact-real-comparator 0.001 round-to-epsilon 'error)))
+
+;; type test
+(let ((test-type (comparator-type-test-procedure C)))
+  (test-type 1.1)       @result{} #t
+  (test-type 1)         @result{} #f
+  (test-type "ciao"))   @result{} #f
+
+;; type check
+(let ((check-type (comparator-check-type-procedure C)))
+  (check-type 1.1)      @result{} #t
+  (try
+      (comparator-check-type C 1)
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; comparison
+(let ((compare (comparator-comparison-procedure C)))
+  (compare 1. 1.)       @result{} 0
+  (compare 2. 1.)       @result{} +1
+  (compare 1. 2.)       @result{} -1
+
+  ;;Equal according to the first comparator,
+  ;;different according to the second.
+  (compare 1.00 1.05)   @result{} -1
+  (compare 1.05 1.00)   @result{} +1
+
+  ;;Equal according to the first and second
+  ;;comparators, different according to the
+  ;;third.
+  (compare 1.0   1.005) @result{} -1
+  (compare 1.005 1.0)   @result{} +1
+
+  ;;Equal according to the first, second and
+  ;;third comparators.
+  (compare 1.0 1.0005)  @result{} 0
+  (compare 1.0005 1.0)  @result{} 0
+
+  (try
+      (compare 1 "ciao")
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; hash
+(let ((hash (comparator-hash-function C)))
+  (non-negative-exact-integer? (hash 1.2))      @result{} #t
+
+  (try
+      (hash 1+2i)
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+@end lisp
 @end defun
 
 @c page
