@@ -1131,7 +1131,12 @@
 ;;; pair comparator constructors
 
 (define* (make-car-comparator {K comparator?})
-  (make-comparator pair?
+  (define car-test-proc
+    (comparator-type-test-procedure K))
+  (define (test-proc obj)
+    (and (pair? obj)
+	 (car-test-proc (car obj))))
+  (make-comparator test-proc
 		   #t
 		   (let ((compare (comparator-comparison-procedure K)))
 		     (lambda (a b)
@@ -1141,7 +1146,12 @@
 		       (hash (car obj))))))
 
 (define* (make-cdr-comparator {K comparator?})
-  (make-comparator pair?
+  (define cdr-test-proc
+    (comparator-type-test-procedure K))
+  (define (test-proc obj)
+    (and (pair? obj)
+	 (cdr-test-proc (cdr obj))))
+  (make-comparator test-proc
 		   #t
 		   (let ((compare (comparator-comparison-procedure K)))
 		     (lambda (a b)
@@ -1149,6 +1159,8 @@
 		   (let ((hash (comparator-hash-function K)))
 		     (lambda (obj)
 		       (hash (cdr obj))))))
+
+;;; --------------------------------------------------------------------
 
 (define* (make-pair-comparison {car-K comparator?} {cdr-K comparator?})
   (let ((car-compare (comparator-comparison-procedure car-K))
@@ -1162,26 +1174,32 @@
 (define pair-comparison
   (make-pair-comparison default-comparator default-comparator))
 
-(define* (make-pair-hash {car-K comparator?} {cdr-K comparator?})
-  (let ((car-hash (comparator-hash-function car-K))
-	(cdr-hash (comparator-hash-function cdr-K)))
-    (lambda (obj)
-      (+ (car-hash (car obj))
-	 (cdr-hash (cdr obj))))))
+;;; --------------------------------------------------------------------
 
-(define* (make-pair-comparator {car-K comparator?} {cdr-K comparator?})
-  (define car-test-proc
-    (comparator-type-test-procedure car-K))
-  (define cdr-test-proc
-    (comparator-type-test-procedure cdr-K))
-  (define (test-proc obj)
-    (and (pair? obj)
-	 (car-test-proc (car obj))
-	 (cdr-test-proc (cdr obj))))
-  (make-comparator test-proc
-		   #t
-		   (make-pair-comparison car-K cdr-K)
-		   (make-pair-hash       car-K cdr-K)))
+(module (make-pair-comparator)
+
+  (define* (make-pair-comparator {car-K comparator?} {cdr-K comparator?})
+    (define car-test-proc
+      (comparator-type-test-procedure car-K))
+    (define cdr-test-proc
+      (comparator-type-test-procedure cdr-K))
+    (define (test-proc obj)
+      (and (pair? obj)
+	   (car-test-proc (car obj))
+	   (cdr-test-proc (cdr obj))))
+    (make-comparator test-proc
+		     #t
+		     (make-pair-comparison car-K cdr-K)
+		     (make-pair-hash       car-K cdr-K)))
+
+  (define* (make-pair-hash {car-K comparator?} {cdr-K comparator?})
+    (let ((car-hash (comparator-hash-function car-K))
+	  (cdr-hash (comparator-hash-function cdr-K)))
+      (lambda (obj)
+	(+ (car-hash (car obj))
+	   (cdr-hash (cdr obj))))))
+
+  #| end of module |# )
 
 (define-predefined-comparator pair-comparator
   (make-pair-comparator default-comparator default-comparator))

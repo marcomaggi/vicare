@@ -1063,6 +1063,76 @@
   #t)
 
 
+(parametrise ((check-test-name	'car-comparator))
+
+  (define-constant C
+    (make-car-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C '(1 . 2.0)))
+  (check-for-true  (comparator-test-type C '(1 . 2.0)))
+  (check-for-true  (comparator-test-type C '(1 . 2+1i)))
+  (check-for-false (comparator-test-type C '(2.0 . 1)))
+  (check-for-false (comparator-test-type C '()))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C '(1 . 2.0)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C '(1 . 2) '(1 . 3))	=> 0)
+  (check (comparator-compare C '(1 . 2) '(2 . 3))	=> -1)
+  (check (comparator-compare C '(2 . 2) '(1 . 2))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '(1 . 2.0))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'cdr-comparator))
+
+  (define-constant C
+    (make-cdr-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C '(2.0 . 1)))
+  (check-for-true  (comparator-test-type C '(2.0 . 1)))
+  (check-for-true  (comparator-test-type C '(2+1i . 1)))
+  (check-for-false (comparator-test-type C '(1 . 2.0)))
+  (check-for-false (comparator-test-type C '()))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C '(2.0 . 1)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C '(2 . 1) '(3 . 1))	=> 0)
+  (check (comparator-compare C '(2 . 1) '(3 . 2))	=> -1)
+  (check (comparator-compare C '(2 . 2) '(2 . 1))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C '(2.0 . 1))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

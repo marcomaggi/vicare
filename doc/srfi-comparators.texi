@@ -796,7 +796,10 @@ allocated object, since comparators are purely functional.
 @menu
 * srfi comparators constructors general::  General comparators.
 * srfi comparators constructors real::     Inexact real comparators.
-* srfi comparators constructors compound:: Compound comparators.
+* srfi comparators constructors list::     List comparators.
+* srfi comparators constructors vector::   Vector comparators.
+* srfi comparators constructors bytevec::  Bytevector comparators.
+* srfi comparators constructors pair::     Pair comparators.
 * srfi comparators constructors misc::     Miscellaneous comparators.
 @end menu
 
@@ -1051,8 +1054,8 @@ Here is an example of comparator using a procedure as policy to compare
 @end lisp
 
 @c page
-@node srfi comparators constructors compound
-@subsubsection Compound comparators
+@node srfi comparators constructors list
+@subsubsection List comparators
 
 
 @defun make-list-comparator @var{element-comparator}
@@ -1102,7 +1105,31 @@ Build and return a comparator object behaving like
 @end lisp
 @end defun
 
-@c ------------------------------------------------------------------------
+
+@defun make-listwise-comparator @var{type-test} @var{element-comparator} @var{empty?} @var{head} @var{tail}
+Return a comparator which compares two objects that satisfy
+@var{type-test} as if they were lists, using the @var{empty?} procedure
+to determine if an object is empty, and the @var{head} and @var{tail}
+procedures to access particular elements.
+@end defun
+
+
+@defun make-improper-list-comparator @var{element-comparator}
+Return a comparator that compares arbitrary objects as follows: the
+empty list precedes all pairs, which precede all other objects.  Pairs
+are compared as if with:
+
+@lisp
+(make-pair-comparator @var{element-comparator} @var{element-comparator})
+@end lisp
+
+All other objects are compared using @var{element-comparator}.
+@end defun
+
+@c page
+@node srfi comparators constructors vector
+@subsubsection Vector comparators
+
 
 @defun make-vector-comparator @var{element-comparator}
 Build and return a comparator object behaving like
@@ -1150,7 +1177,18 @@ Build and return a comparator object behaving like
 @end lisp
 @end defun
 
-@c ------------------------------------------------------------------------
+
+@defun make-vectorwise-comparator @var{type-test} @var{element-comparator} @var{length} @var{ref}
+Return a comparator which compares two objects that satisfy
+@var{type-test} as if they were vectors, using the @var{length}
+procedure to determine the length of the object, and the @var{ref}
+procedure to access a particular element.
+@end defun
+
+@c page
+@node srfi comparators constructors bytevec
+@subsubsection Bytevector comparators
+
 
 @defun make-bytevector-comparator @var{element-comparator}
 Build and return a comparator object behaving like
@@ -1208,41 +1246,16 @@ than @func{default-comparator}.
 @end lisp
 @end defun
 
-@c ------------------------------------------------------------------------
-
-@defun make-listwise-comparator @var{type-test} @var{element-comparator} @var{empty?} @var{head} @var{tail}
-Return a comparator which compares two objects that satisfy
-@var{type-test} as if they were lists, using the @var{empty?} procedure
-to determine if an object is empty, and the @var{head} and @var{tail}
-procedures to access particular elements.
-@end defun
-
-
-@defun make-vectorwise-comparator @var{type-test} @var{element-comparator} @var{length} @var{ref}
-Return a comparator which compares two objects that satisfy
-@var{type-test} as if they were vectors, using the @var{length}
-procedure to determine the length of the object, and the @var{ref}
-procedure to access a particular element.
-@end defun
-
-@c ------------------------------------------------------------------------
-
-@defun make-car-comparator @var{comparator}
-Return a comparator that compares pairs on their cars alone using
-@var{comparator}.
-@end defun
-
-
-@defun make-cdr-comparator @var{comparator}
-Return a comparator that compares pairs on their cdrs alone using
-@var{comparator}.
-@end defun
+@c page
+@node srfi comparators constructors pair
+@subsubsection Pair comparators
 
 
 @defun make-pair-comparator @var{car-comparator} @var{cdr-comparator}
 Return a comparator that compares pairs first on their cars using
 @var{car-comparator}.  If the cars are equal: it compares the cdrs using
-@var{cdr-comparator}.
+@var{cdr-comparator}.  The hash function makes use of both the car and
+the cdr.
 
 @lisp
 #!vicare
@@ -1280,17 +1293,88 @@ Return a comparator that compares pairs first on their cars using
 @end lisp
 @end defun
 
+@c ------------------------------------------------------------------------
 
-@defun make-improper-list-comparator @var{element-comparator}
-Return a comparator that compares arbitrary objects as follows: the
-empty list precedes all pairs, which precede all other objects.  Pairs
-are compared as if with:
+@defun make-car-comparator @var{comparator}
+Return a comparator that compares pairs on their cars alone using
+@var{comparator}.  The hash function makes use of the car only.
 
 @lisp
-(make-pair-comparator @var{element-comparator} @var{element-comparator})
-@end lisp
+#!vicare
+(import (vicare) (srfi :114))
 
-All other objects are compared using @var{element-comparator}.
+(define-constant C
+  (make-car-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '(1 . 2+1i))    @result{} #t
+(comparator-test-type C '(2.0 . 1))     @result{} #f
+(comparator-test-type C '())            @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '(1 . 2.0))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(1 . 2) '(1 . 3))        @result{} 0
+(comparator-compare C '(1 . 2) '(2 . 3))        @result{} -1
+(comparator-compare C '(2 . 2) '(1 . 2))        @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+   (comparator-hash C '(1 . 2.0)))      @result{} #t
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun make-cdr-comparator @var{comparator}
+Return a comparator that compares pairs on their cdrs alone using
+@var{comparator}.  The hash function makes use of the cdr only.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-cdr-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '(2.0 . 1))     @result{} #t
+(comparator-test-type C '(2.0 . 1))     @result{} #t
+(comparator-test-type C '(2+1i . 1))    @result{} #t
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '())            @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '(2.0 . 1))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(2 . 1) '(3 . 1))        @result{} 0
+(comparator-compare C '(2 . 1) '(3 . 2))        @result{} -1
+(comparator-compare C '(2 . 2) '(2 . 1))        @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+   (comparator-hash C '(2.0 . 1)))      @result{} #t
+@end lisp
 @end defun
 
 @c page
