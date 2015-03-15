@@ -379,15 +379,16 @@ function of @func{string-comparator}.
 
 @c ------------------------------------------------------------------------
 
-@defvr Constant exact-integer-comparator
+@defvr Constant fixnum-comparator
+@defvrx Constant exact-integer-comparator
 @defvrx Constant integer-comparator
 @defvrx Constant rational-comparator
 @defvrx Constant real-comparator
 @defvrx Constant complex-comparator
 @defvrx Constant number-comparator
-These comparators compare exact integers, integers, rational numbers,
-real numbers, complex numbers, and any numbers using the total order
-implied by @func{<}.
+These comparators compare fixnums, exact integers, integers, rational
+numbers, real numbers, complex numbers, and any numbers using the total
+order implied by @func{<}.
 
 They must be compatible with the @rnrs{5} numerical tower in the
 following sense: if @code{S} is a subtype of the numerical type @code{T}
@@ -401,6 +402,8 @@ least--surprising ordering is defined: if the real parts are @func{<} or
 @func{>}, so are the numbers; otherwise, the numbers are ordered by
 their imaginary parts.  This can still produce surprising results if one
 real part is exact and the other is inexact.
+
+@code{fixnum-comparator} is a @value{PRJNAME} extension.
 
 @lisp
 (import (vicare) (srfi :114))
@@ -802,7 +805,8 @@ allocated object, since comparators are purely functional.
 * srfi comparators constructors bytevec::  Bytevector comparators.
 * srfi comparators constructors select::   Selecting comparators.
 * srfi comparators constructors refine::   Refining comparators.
-* srfi comparators constructors misc::     Miscellaneous comparators.
+* srfi comparators constructors reverse::  Reverse comparators.
+* srfi comparators constructors debug::    Debug comparators.
 @end menu
 
 @c page
@@ -1664,8 +1668,8 @@ from @ansrfi{67}.
 @end defun
 
 @c page
-@node srfi comparators constructors misc
-@subsubsection Miscellaneous comparators
+@node srfi comparators constructors reverse
+@subsubsection Reverse comparators
 
 
 @defun make-reverse-comparator @var{comparator}
@@ -1674,6 +1678,47 @@ compare procedure returns @code{+1}, @code{0}, and @code{-1} instead of
 @code{-1}, @code{0}, and @code{+1} respectively.  This allows ordering
 in reverse.
 @end defun
+
+
+Here a usage example:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-reverse-comparator exact-integer-comparator))
+
+;; type test
+(let ((test-type (comparator-test-type-procedure C)))
+  (test-type 1)         @result{} #t
+  (test-type '())       @result{} #f
+  (test-type "ciao"))   @result{} #f
+
+;; type check
+(let ((check-type (comparator-check-type-procedure C)))
+  (check-type 1)        @result{} #t
+  (try
+      (check-type (void))
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; comparison
+(let ((compare (comparator-comparison-procedure C)))
+  (compare 1 1)         @result{} 0
+  (compare 1 2)         @result{} +1
+  (compare 2 1)         @result{} -1)
+
+;; hash
+(let ((hash (comparator-hash-function C)))
+  (non-negative-exact-integer? (hash 1)))       @result{} #t
+@end lisp
+
+@c page
+@node srfi comparators constructors debug
+@subsubsection Debug comparators
 
 
 @defun make-debug-comparator @var{comparator}
@@ -1712,11 +1757,13 @@ does so) and NaNs.
 
 
 @defun comparator-type-test-procedure @var{comparator}
+@defunx comparator-test-type-procedure @var{comparator}
 Return the type test predicate of @var{comparator}.
 @end defun
 
 
 @defun comparator-check-type-procedure @var{comparator}
+@defunx comparator-type-check-procedure @var{comparator}
 Return the type check procedure of @var{comparator}.  The returned
 procedure can be called with one or two arguments:
 

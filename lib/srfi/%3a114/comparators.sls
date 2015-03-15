@@ -38,6 +38,7 @@
     ;;
     boolean-comparator char-comparator char-ci-comparator
     string-comparator string-ci-comparator symbol-comparator
+    fixnum-comparator
     exact-integer-comparator integer-comparator rational-comparator
     real-comparator complex-comparator number-comparator
     pair-comparator list-comparator vector-comparator
@@ -55,9 +56,14 @@
     ;;
     eq-comparator eqv-comparator equal-comparator
     ;;
-    comparator-type-test-procedure comparator-check-type-procedure
-    comparator-equality-predicate comparator-comparison-procedure
-    comparator-hash-function
+    comparator-type-test-procedure
+    (rename (comparator-type-test-procedure
+	     comparator-test-type-procedure))
+    comparator-check-type-procedure
+    (rename (comparator-check-type-procedure
+	     comparator-type-check-procedure))
+    comparator-equality-predicate
+    comparator-comparison-procedure comparator-hash-function
     ;;
     comparator-test-type comparator-check-type comparator-equal?
     comparator-compare comparator-hash
@@ -802,6 +808,13 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (fixnum-comparison a b)
+  ;;Comparison procedure for fixnums only.
+  ;;
+  (cond ((fx<? a b)	-1)
+	((fx>? a b)	+1)
+	(else		0)))
+
 (define (real-comparison a b)
   ;;Comparison procedure for real numbers only.
   ;;
@@ -836,6 +849,9 @@
 
 (define-predefined-comparator exact-integer-comparator
   (make-comparator exact-integer? = real-comparison number-hash))
+
+(define-predefined-comparator fixnum-comparator
+  (make-comparator fixnum? fx=? fixnum-comparison fixnum-hash))
 
 ;;; --------------------------------------------------------------------
 

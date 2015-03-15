@@ -51,6 +51,7 @@
   (check-for-true (comparator? string-ci-comparator))
   (check-for-true (comparator? symbol-comparator))
 
+  (check-for-true (comparator? fixnum-comparator))
   (check-for-true (comparator? exact-integer-comparator))
   (check-for-true (comparator? integer-comparator))
   (check-for-true (comparator? rational-comparator))
@@ -77,6 +78,7 @@
   (check-for-true (comparator-comparison-procedure? string-ci-comparator))
   (check-for-true (comparator-comparison-procedure? symbol-comparator))
 
+  (check-for-true (comparator-comparison-procedure? fixnum-comparator))
   (check-for-true (comparator-comparison-procedure? exact-integer-comparator))
   (check-for-true (comparator-comparison-procedure? integer-comparator))
   (check-for-true (comparator-comparison-procedure? rational-comparator))
@@ -103,6 +105,7 @@
   (check-for-true (comparator-hash-function? string-ci-comparator))
   (check-for-true (comparator-hash-function? symbol-comparator))
 
+  (check-for-true (comparator-hash-function? fixnum-comparator))
   (check-for-true (comparator-hash-function? exact-integer-comparator))
   (check-for-true (comparator-hash-function? integer-comparator))
   (check-for-true (comparator-hash-function? rational-comparator))
@@ -153,7 +156,9 @@
   (doit string-ci-comparator "A" "b")
   (doit symbol-comparator 'a 'b)
 
+  (doit fixnum-comparator 1 2)
   (doit exact-integer-comparator 1 2)
+  (doit exact-integer-comparator (greatest-negative-bignum) (least-positive-bignum))
   (doit integer-comparator 1 2.0)
   (doit rational-comparator 1/3 2/3)
   (doit real-comparator 1.1 2.2)
@@ -277,7 +282,9 @@
   (doit string-ci-comparator "A" "b")
   (doit symbol-comparator 'a 'b)
 
+  (doit fixnum-comparator 1 2)
   (doit exact-integer-comparator 1 2)
+  (doit exact-integer-comparator (greatest-negative-bignum) (least-positive-bignum))
   (doit integer-comparator 1 2.0)
   (doit rational-comparator 1/3 2/3)
   (doit real-comparator 1.1 2.2)
@@ -1372,6 +1379,44 @@
 	 (else E)))))
 
   #t)
+
+
+(parametrise ((check-test-name	'reverse-comparator))
+
+  (define-constant C
+    (make-reverse-comparator exact-integer-comparator))
+
+  ;; type test
+  (let ((test-type (comparator-test-type-procedure C)))
+    (check-for-true  (test-type 1))
+    (check-for-false (test-type '()))
+    (check-for-false (test-type "ciao")))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type 1))
+    (check-for-true
+     (try
+	 (check-type (void))
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> +1)
+    (check (compare 2 1)	=> -1))
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1))))
+
+  #t)
+
+
 
 
 ;;;; done
