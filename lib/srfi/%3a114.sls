@@ -76,6 +76,12 @@
     ;; condition objects
     &comparator-error make-comparator-error comparator-error?
 
+    &unsupported-comparator-operation-error
+    make-unsupported-comparator-operation-error
+    unsupported-comparator-operation-error?
+    unsupported-comparator-operation-error.comparator
+    raise-unsupported-comparator-operation-error
+
     &comparator-type-error make-comparator-type-error comparator-type-error?
     comparator-type-error.comparator comparator-type-error.objects
     raise-comparator-type-error
@@ -90,7 +96,14 @@
     make-inexact-real-comparator-with-ignored-epsilon-condition
     condition-inexact-real-comparator-with-ignored-epsilon?
     inexact-real-comparator-with-ignored-epsilon.epsilon
-    inexact-real-comparator-with-ignored-epsilon.rounding)
+    inexact-real-comparator-with-ignored-epsilon.rounding
+
+    &comparator-debug-error
+    make-comparator-debug-error
+    comparator-debug-error?
+    comparator-debug-error.debug-comparator
+    comparator-debug-error.comparator
+    raise-comparator-debug-error)
   (import (srfi :114 comparators)))
 
 ;;; end of file

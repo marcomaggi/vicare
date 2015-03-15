@@ -1741,14 +1741,14 @@ unexpected storage leaks.
 @defunx eqv-comparator
 @defunx equal-comparator
 The equality predicates of these comparators are @func{eq?},
-@func{eqv?}, and @func{equal?}  respectively.  When their comparison
-procedures are applied to non--equal objects, their behaviour is
-implementation--defined.  The type test predicates always return
-@true{}.
+@func{eqv?}, and @func{equal?} respectively.
 
-These comparators accept circular structure (in the case of
-@func{equal-comparator}, provided the implementation's @func{equal?}
-does so) and NaNs.
+Comparison is @strong{not} supported by these comparators: when their
+comparison procedures are applied to any objects: an exception is raised
+with condition object of type
+@condition{unsupported-comparator-operation-error}.
+
+These comparators accept circular structures and @code{+nan.0} values.
 @end defun
 
 @c page
@@ -1963,11 +1963,11 @@ successor.
 @end defun
 
 
-@defun make=? @var{comparator}
-@defunx make<? @var{comparator}
-@defunx make>? @var{comparator}
-@defunx make<=? @var{comparator}
-@defunx make>=? @var{comparator}
+@defun make= @var{comparator}
+@defunx make< @var{comparator}
+@defunx make> @var{comparator}
+@defunx make<= @var{comparator}
+@defunx make>= @var{comparator}
 These procedures return predicates which, when applied to two or more
 arguments, return @true{} if comparing the arguments using the equality
 or comparison procedures of @var{comparator} shows that the objects bear
@@ -2061,6 +2061,49 @@ Build and return a new condition object of type
 @defun comparator-error? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
 @condition{comparator-error}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Unsupported operation error
+
+@deftp {Condition Object Type} &unsupported-comparator-operation-error
+Used to signal an attempt to use an unsupported operation.  It is
+derived from @condition{comparator-ertor}.
+
+It has the following fields:
+
+@table @code
+@item comparator
+The comparator that does not support the operation.
+@end table
+@end deftp
+
+
+@defun make-unsupported-comparator-operation-error @var{comparator}
+Build and return a new condition object of type
+@condition{unsupported-comparator-operation-error}.
+@end defun
+
+
+@defun unsupported-comparator-operation-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{unsupported-comparator-operation-error}; otherwise return
+@false{}.
+@end defun
+
+
+@defun unsupported-comparator-operation-error.comparator @var{cnd}
+Accessor for the field of condition objects of type
+@condition{unsupported-comparator-operation-error}.
+@end defun
+
+
+@defun raise-unsupported-comparator-operation-error @var{who} @var{message} @var{comparator} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{unsupported-comparator-operation-error},
+@condition{irritants}.
 @end defun
 
 @c ------------------------------------------------------------------------
@@ -2197,6 +2240,51 @@ return @false{}.
 @defunx inexact-real-comparator-with-ignored-epsilon.rounding @var{cnd}
 Field accessors for condition object of type
 @condition{inexact-real-comparator-with-ignored-epsilon}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Debug comparator error
+
+@deftp {Condition Object Type} &comparator-debug-error
+Used to signal errors raised by comparators returned by
+@func{make-debug-comparator}.  It is derived from
+@condition{comparator-error}.
+
+It has the following fields:
+
+@table @code
+@item debug-comparator
+The debug comparator that raised the error.
+
+@item comparator
+The comparator that violated the requirements.
+@end table
+@end deftp
+
+
+@defun make-comparator-debug-error @var{debug-comparator} @var{comparator}
+Build and return a new condition object of type
+@condition{comparator-debug-error}.
+@end defun
+
+
+@defun comparator-debug-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-debug-error}; otherwise return @false{}.
+@end defun
+
+
+@defun comparator-debug-error.debug-comparator @var{cnd}
+@defunx comparator-debug-error.comparator @var{cnd}
+Accessors for the fields of @condition{comparator-debug-error}.
+@end defun
+
+
+@defun raise-comparator-debug-error @var{who} @var{message} @var{debug-comparator} @var{comparator} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{comparator-debug-error}, @condition{irritants}.
 @end defun
 
 @c page

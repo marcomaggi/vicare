@@ -1416,7 +1416,416 @@
 
   #t)
 
+
+(parametrise ((check-test-name	'debug-comparator))
 
+  (define-constant C
+    (make-debug-comparator fixnum-comparator))
+
+  ;; type test
+  (let ((test-type (comparator-test-type-procedure C)))
+    (check-for-true  (test-type 1))
+    (check-for-false (test-type '()))
+    (check-for-false (test-type "ciao")))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type 1))
+    (check-for-true
+     (try
+	 (check-type (void))
+       (catch E
+	 ((&comparator-type-error)
+	  #t)
+	 (else E)))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1))
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'equal-comparator))
+
+  (define-constant C
+    equal-comparator)
+
+  ;; type test
+  (let ((test-type (comparator-test-type-procedure C)))
+    (check-for-true (test-type 1))
+    (check-for-true (test-type '()))
+    (check-for-true (test-type "ciao")))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type 1))
+    (check-for-true (check-type (void))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (try
+	(comparator-compare C 1 1)
+      (catch E
+	((&unsupported-comparator-operation-error)
+	 #t)
+	(else E))))
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1))))
+
+  #t)
+
+
+
+(parametrise ((check-test-name	'comparison-predicates))
+
+  (define-constant C fixnum-comparator)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (=? C 1 1))
+  (check-for-false (=? C 1 2))
+  (check-for-false (=? C 2 1))
+
+  (check-for-true  (=? C 1 1 1))
+  (check-for-false (=? C 1 2 3))
+  (check-for-false (=? C 2 1 3))
+  (check-for-false (=? C 3 2 1))
+  (check-for-false (=? C 1 3 2))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (<? C 1 1))
+  (check-for-true  (<? C 1 2))
+  (check-for-false (<? C 2 1))
+
+  (check-for-false (<? C 1 1 1))
+  (check-for-true  (<? C 1 2 3))
+  (check-for-false (<? C 2 1 3))
+  (check-for-false (<? C 3 2 1))
+  (check-for-false (<? C 1 3 2))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (>? C 1 1))
+  (check-for-false (>? C 1 2))
+  (check-for-true  (>? C 2 1))
+
+  (check-for-false (>? C 1 1 1))
+  (check-for-true  (>? C 3 2 1))
+  (check-for-false (>? C 1 2 3))
+  (check-for-false (>? C 2 1 3))
+  (check-for-false (>? C 1 3 2))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (<=? C 1 1))
+  (check-for-true  (<=? C 1 2))
+  (check-for-false (<=? C 2 1))
+
+  (check-for-true  (<=? C 1 1 1))
+  (check-for-true  (<=? C 1 2 3))
+  (check-for-false (<=? C 2 1 3))
+  (check-for-false (<=? C 3 2 1))
+  (check-for-false (<=? C 1 3 2))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (>=? C 1 1))
+  (check-for-false (>=? C 1 2))
+  (check-for-true  (>=? C 2 1))
+
+  (check-for-true  (>=? C 1 1 1))
+  (check-for-true  (>=? C 3 2 1))
+  (check-for-false (>=? C 1 2 3))
+  (check-for-false (>=? C 2 1 3))
+  (check-for-false (>=? C 1 3 2))
+
+;;; --------------------------------------------------------------------
+
+  (let ((fun=? (make= C)))
+    (check-for-true  (fun=? 1 1))
+    (check-for-false (fun=? 1 2))
+    (check-for-false (fun=? 2 1))
+
+    (check-for-true  (fun=? 1 1 1))
+    (check-for-false (fun=? 1 2 3))
+    (check-for-false (fun=? 2 1 3))
+    (check-for-false (fun=? 3 2 1))
+    (check-for-false (fun=? 1 3 2))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ((fun<? (make< C)))
+    (check-for-false (fun<? 1 1))
+    (check-for-true  (fun<? 1 2))
+    (check-for-false (fun<? 2 1))
+
+    (check-for-false (fun<? 1 1 1))
+    (check-for-true  (fun<? 1 2 3))
+    (check-for-false (fun<? 2 1 3))
+    (check-for-false (fun<? 3 2 1))
+    (check-for-false (fun<? 1 3 2))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ((fun>? (make> C)))
+    (check-for-false (fun>? 1 1))
+    (check-for-false (fun>? 1 2))
+    (check-for-true  (fun>? 2 1))
+
+    (check-for-false (fun>? 1 1 1))
+    (check-for-true  (fun>? 3 2 1))
+    (check-for-false (fun>? 1 2 3))
+    (check-for-false (fun>? 2 1 3))
+    (check-for-false (fun>? 1 3 2))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ((fun<=? (make<= C)))
+    (check-for-true  (fun<=? 1 1))
+    (check-for-true  (fun<=? 1 2))
+    (check-for-false (fun<=? 2 1))
+
+    (check-for-true  (fun<=? 1 1 1))
+    (check-for-true  (fun<=? 1 2 3))
+    (check-for-false (fun<=? 2 1 3))
+    (check-for-false (fun<=? 3 2 1))
+    (check-for-false (fun<=? 1 3 2))
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (let ((fun>=? (make>= C)))
+    (check-for-true  (fun>=? 1 1))
+    (check-for-false (fun>=? 1 2))
+    (check-for-true  (fun>=? 2 1))
+
+    (check-for-true  (fun>=? 1 1 1))
+    (check-for-true  (fun>=? 3 2 1))
+    (check-for-false (fun>=? 1 2 3))
+    (check-for-false (fun>=? 2 1 3))
+    (check-for-false (fun>=? 1 3 2))
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'comparison-procedure-constructors))
+
+  (let ((compare (make-comparison< fx<?)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1)
+    #f)
+
+  (let ((compare (make-comparison> fx>?)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1)
+    #f)
+
+  (let ((compare (make-comparison<= fx<=?)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1)
+    #f)
+
+  (let ((compare (make-comparison>= fx>=?)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1)
+    #f)
+
+  (let ((compare (make-comparison=/< fx=? fx<?)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1)
+    #f)
+
+  (let ((compare (make-comparison=/> fx=? fx>?)))
+    (check (compare 1 1)	=> 0)
+    (check (compare 1 2)	=> -1)
+    (check (compare 2 1)	=> +1)
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'ternary-comparison))
+
+  (define-constant C fixnum-comparator)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (in-open-interval? 1 2 3))
+  (check-for-false (in-open-interval? 1 1 3))
+  (check-for-false (in-open-interval? 1 3 3))
+
+  (check-for-false (in-open-interval? 1 0 3))
+  (check-for-false (in-open-interval? 1 0 3))
+  (check-for-false (in-open-interval? 1 0 3))
+
+  (check-for-false (in-open-interval? 1 9 3))
+  (check-for-false (in-open-interval? 1 9 3))
+  (check-for-false (in-open-interval? 1 9 3))
+
+  (check-for-true  (in-open-interval? C 1 2 3))
+  (check-for-false (in-open-interval? C 1 1 3))
+  (check-for-false (in-open-interval? C 1 3 3))
+
+  (check-for-false (in-open-interval? C 1 0 3))
+  (check-for-false (in-open-interval? C 1 0 3))
+  (check-for-false (in-open-interval? C 1 0 3))
+
+  (check-for-false (in-open-interval? C 1 9 3))
+  (check-for-false (in-open-interval? C 1 9 3))
+  (check-for-false (in-open-interval? C 1 9 3))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (in-closed-interval? 1 2 3))
+  (check-for-true  (in-closed-interval? 1 1 3))
+  (check-for-true  (in-closed-interval? 1 3 3))
+
+  (check-for-false (in-closed-interval? 1 0 3))
+  (check-for-false (in-closed-interval? 1 0 3))
+  (check-for-false (in-closed-interval? 1 0 3))
+
+  (check-for-false (in-closed-interval? 1 9 3))
+  (check-for-false (in-closed-interval? 1 9 3))
+  (check-for-false (in-closed-interval? 1 9 3))
+
+  (check-for-true  (in-closed-interval? C 1 2 3))
+  (check-for-true  (in-closed-interval? C 1 1 3))
+  (check-for-true  (in-closed-interval? C 1 3 3))
+
+  (check-for-false (in-closed-interval? C 1 0 3))
+  (check-for-false (in-closed-interval? C 1 0 3))
+  (check-for-false (in-closed-interval? C 1 0 3))
+
+  (check-for-false (in-closed-interval? C 1 9 3))
+  (check-for-false (in-closed-interval? C 1 9 3))
+  (check-for-false (in-closed-interval? C 1 9 3))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (in-open-closed-interval? 1 2 3))
+  (check-for-false (in-open-closed-interval? 1 1 3))
+  (check-for-true  (in-open-closed-interval? 1 3 3))
+
+  (check-for-false (in-open-closed-interval? 1 0 3))
+  (check-for-false (in-open-closed-interval? 1 0 3))
+  (check-for-false (in-open-closed-interval? 1 0 3))
+
+  (check-for-false (in-open-closed-interval? 1 9 3))
+  (check-for-false (in-open-closed-interval? 1 9 3))
+  (check-for-false (in-open-closed-interval? 1 9 3))
+
+  (check-for-true  (in-open-closed-interval? C 1 2 3))
+  (check-for-false (in-open-closed-interval? C 1 1 3))
+  (check-for-true  (in-open-closed-interval? C 1 3 3))
+
+  (check-for-false (in-open-closed-interval? C 1 0 3))
+  (check-for-false (in-open-closed-interval? C 1 0 3))
+  (check-for-false (in-open-closed-interval? C 1 0 3))
+
+  (check-for-false (in-open-closed-interval? C 1 9 3))
+  (check-for-false (in-open-closed-interval? C 1 9 3))
+  (check-for-false (in-open-closed-interval? C 1 9 3))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (in-closed-open-interval? 1 2 3))
+  (check-for-true  (in-closed-open-interval? 1 1 3))
+  (check-for-false (in-closed-open-interval? 1 3 3))
+
+  (check-for-false (in-closed-open-interval? 1 0 3))
+  (check-for-false (in-closed-open-interval? 1 0 3))
+  (check-for-false (in-closed-open-interval? 1 0 3))
+
+  (check-for-false (in-closed-open-interval? 1 9 3))
+  (check-for-false (in-closed-open-interval? 1 9 3))
+  (check-for-false (in-closed-open-interval? 1 9 3))
+
+  (check-for-true  (in-closed-open-interval? C 1 2 3))
+  (check-for-true  (in-closed-open-interval? C 1 1 3))
+  (check-for-false (in-closed-open-interval? C 1 3 3))
+
+  (check-for-false (in-closed-open-interval? C 1 0 3))
+  (check-for-false (in-closed-open-interval? C 1 0 3))
+  (check-for-false (in-closed-open-interval? C 1 0 3))
+
+  (check-for-false (in-closed-open-interval? C 1 9 3))
+  (check-for-false (in-closed-open-interval? C 1 9 3))
+  (check-for-false (in-closed-open-interval? C 1 9 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'comparison-syntax))
+
+  (define-constant C fixnum-comparator)
+
+  (define compare
+    (comparator-comparison-procedure C))
+
+;;; --------------------------------------------------------------------
+
+  (check (if3 (compare 1 1) 'less 'equal 'greater)	=> 'equal)
+  (check (if3 (compare 1 2) 'less 'equal 'greater)	=> 'less)
+  (check (if3 (compare 2 1) 'less 'equal 'greater)	=> 'greater)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (if=? (compare 1 1) #t #f))
+  (check-for-false (if=? (compare 1 2) #t #f))
+  (check-for-false (if=? (compare 2 1) #t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (if-not=? (compare 1 1) #f #t))
+  (check-for-false (if-not=? (compare 1 2) #f #t))
+  (check-for-false (if-not=? (compare 2 1) #f #t))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (if<? (compare 1 1) #t #f))
+  (check-for-true  (if<? (compare 1 2) #t #f))
+  (check-for-false (if<? (compare 2 1) #t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (if>? (compare 1 1) #t #f))
+  (check-for-false (if>? (compare 1 2) #t #f))
+  (check-for-true  (if>? (compare 2 1) #t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (if<=? (compare 1 1) #t #f))
+  (check-for-true  (if<=? (compare 1 2) #t #f))
+  (check-for-false (if<=? (compare 2 1) #t #f))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (if>=? (compare 1 1) #t #f))
+  (check-for-false (if>=? (compare 1 2) #t #f))
+  (check-for-true  (if>=? (compare 2 1) #t #f))
+
+  #t)
 
 
 ;;;; done

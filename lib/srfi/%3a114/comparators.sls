@@ -85,6 +85,12 @@
     ;; condition objects
     &comparator-error make-comparator-error comparator-error?
 
+    &unsupported-comparator-operation-error
+    make-unsupported-comparator-operation-error
+    unsupported-comparator-operation-error?
+    unsupported-comparator-operation-error.comparator
+    raise-unsupported-comparator-operation-error
+
     &comparator-type-error make-comparator-type-error comparator-type-error?
     comparator-type-error.comparator comparator-type-error.objects
     raise-comparator-type-error
@@ -99,7 +105,14 @@
     make-inexact-real-comparator-with-ignored-epsilon-condition
     condition-inexact-real-comparator-with-ignored-epsilon?
     inexact-real-comparator-with-ignored-epsilon.epsilon
-    inexact-real-comparator-with-ignored-epsilon.rounding)
+    inexact-real-comparator-with-ignored-epsilon.rounding
+
+    &comparator-debug-error
+    make-comparator-debug-error
+    comparator-debug-error?
+    comparator-debug-error.debug-comparator
+    comparator-debug-error.comparator
+    raise-comparator-debug-error)
   (import (vicare))
 
 
@@ -134,6 +147,21 @@
     &error
   make-comparator-error
   comparator-error?)
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &unsupported-comparator-operation-error
+    &comparator-error
+  make-unsupported-comparator-operation-error
+  unsupported-comparator-operation-error?
+  (comparator	unsupported-comparator-operation-error.comparator))
+
+(define* (raise-unsupported-comparator-operation-error who message {K comparator?} . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-unsupported-comparator-operation-error K))))
 
 ;;; --------------------------------------------------------------------
 
@@ -189,6 +217,22 @@
 	      (make-message-condition "ignored non-false EPSILON argument used with symbolic ROUNDING argument")
 	      (make-irritants-condition (list epsilon rounding))
 	      (make-inexact-real-comparator-with-ignored-epsilon-condition epsilon rounding))))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &comparator-debug-error
+    &comparator-error
+  make-comparator-debug-error
+  comparator-debug-error?
+  (debug-comparator	comparator-debug-error.debug-comparator)
+  (comparator		comparator-debug-error.comparator))
+
+(define* (raise-comparator-debug-error who message {debug-K comparator?} {K comparator?} . irritants)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (make-comparator-debug-error debug-K K))))
 
 
 ;;; comparison syntaxes
@@ -294,9 +338,10 @@
 					     equality)))
 				    (cond ((not compare)
 					   (lambda (x y)
-					     (error 'anonymous-comparator
-					       "compare not supported by this comparator"
-					       cmp)))
+					     (raise-unsupported-comparator-operation-error
+					      'anonymous-comparator
+					      "compare not supported by this comparator"
+					      cmp)))
 					  ((procedure? compare)
 					   compare)
 					  (else
@@ -305,9 +350,10 @@
 					     equality)))
 				    (cond ((not hash)
 					   (lambda (x y)
-					     (error 'anonymous-comparator
-					       "hashing not supported by this comparator"
-					       cmp)))
+					     (raise-unsupported-comparator-operation-error
+					      'anonymous-comparator
+					      "hashing not supported by this comparator"
+					      cmp)))
 					  ((procedure? hash)
 					   hash)
 					  (else
@@ -629,7 +675,7 @@
    (and (<?  K a b)
 	(<=? K b c)))
   ((a b c)
-   (in-open-interval? default-comparator a b c)))
+   (in-open-closed-interval? default-comparator a b c)))
 
 (case-define* in-closed-open-interval?
   (({K comparator?} a b c)
@@ -639,7 +685,7 @@
    (and (<=? K a b)
 	(<?  K b c)))
   ((a b c)
-   (in-open-interval? default-comparator a b c)))
+   (in-closed-open-interval? default-comparator a b c)))
 
 
 ;;;; comparison predicates
@@ -1462,101 +1508,212 @@
 
 (module (make-debug-comparator)
 
-  (define* (make-debug-comparator {comparator comparator?})
-    (let ((c #f) (c? #f))
-      (comparator-comparison-procedure? comparator)
-      (make-comparator
-       (comparator-type-test-procedure comparator)
-       (lambda (a b)
-	 (check-all comparator a b c c?)
-	 (when (not c?) (set! c a) (set! c? #t))
-	 (comparator-equal? comparator a b))
-       (if (comparator-comparison-procedure? comparator)
-	   (lambda (a b)
-	     (check-all comparator a b c c?)
-	     (when (not c?) (set! c b) (set! c? #t))
-	     (comparator-compare comparator a b))
-	 #f)
-       (if (comparator-hash-function? comparator)
-	   (lambda (obj)
-	     (let ((value (comparator-hash comparator obj)))
-	       (check-hash-value value)
-	       value))
-	 #f))))
+  (define* (make-debug-comparator {K comparator?})
+    (define obj3            #f)
+    (define obj3-available? #f)
+    (unless (comparator-comparison-procedure? K)
+      (raise
+       (condition (make-who-condition __who__)
+		  (make-message-condition "cannot debug comparator without comparison procedure")
+		  (make-irritants-condition (list K))
+		  (make-comparator-error))))
+    (letrec
+	((debug-K (internal-body
 
-  (define (debug-assert bool who what)
+		    (define equality
+		      (comparator-equality-predicate K))
+
+		    (define compare
+		      (comparator-comparison-procedure K))
+
+		    (define hash
+		      (comparator-hash-function K))
+
+		    (define (debug-equality obj1 obj2)
+		      (check-all debug-K K obj1 obj2 obj3 obj3-available?)
+		      (unless obj3-available?
+			(set! obj3 obj1)
+			(set! obj3-available? #t))
+		      (equality obj1 obj2))
+
+		    (define (debug-compare obj1 obj2)
+		      (check-all debug-K K obj1 obj2 obj3 obj3-available?)
+		      (unless obj3-available?
+			(set! obj3 obj2)
+			(set! obj3-available? #t))
+		      (compare obj1 obj2))
+
+		    (define debug-hash
+		      (and hash
+			   (lambda (obj)
+			     (receive-and-return (value)
+				 (hash obj)
+			       (check-hash-value debug-K K value)))))
+
+		    (make-comparator (comparator-type-test-procedure K)
+				     debug-equality
+				     debug-compare
+				     debug-hash))))
+      debug-K))
+
+;;; --------------------------------------------------------------------
+
+  (define (debug-assert who debug-K K bool operation failure-description . irritants)
     (unless bool
-      (error #f
-	(string-append (symbol->string what)
-		       " failure in "
-		       (symbol->string who)))))
+      (apply raise-comparator-debug-error who
+	     (string-append failure-description " failure in " operation)
+	     debug-K K irritants)))
 
-  (define (debug-deny bool who what)
-    (debug-assert (not bool) who what))
+  (define (debug-deny who debug-K K bool operation failure-description . irritants)
+    (apply debug-assert who debug-K K (not bool) operation failure-description irritants))
 
-  (define (check-type-test comparator a)
-    (debug-assert (comparator-test-type comparator a) 'type 'validity))
+;;; --------------------------------------------------------------------
 
-  (define (check-reflexive-equality comparator a)
-    (debug-assert (comparator-equal? comparator a a) 'equality 'reflexive))
+  (define (check-type-test debug-K K obj1)
+    (debug-assert __who__ debug-K K
+		  (comparator-test-type K obj1)
+		  "type" "validity"))
 
-  (define (check-reflexive-comparison comparator a)
-    (debug-assert (eqv? (comparator-compare comparator a a) 0) 'comparison 'reflexive))
+  (define (check-reflexive-equality debug-K K obj1)
+    (debug-assert __who__ debug-K K (comparator-equal? K obj1 obj1) "equality" "reflexive"))
 
-  (define (check-symmetric-equality comparator a b)
-    (when (comparator-equal? comparator a b)
-      (debug-assert (comparator-equal? comparator b a) 'equality 'symmetric))
-    (when (not (comparator-equal? comparator a b))
-      (debug-deny   (comparator-equal? comparator b a) 'equality 'symmetric)))
+  (define (check-reflexive-comparison debug-K K obj1)
+    (debug-assert __who__ debug-K K (zero? (comparator-compare K obj1 obj1)) "comparison" "reflexive"))
 
-  (define (check-asymmetric-comparison comparator a b)
-    (debug-assert (eqv? (comparator-compare comparator a b)
-			(- (comparator-compare comparator a b)))
-		  'comparison 'asymmetric))
+  (define (check-symmetric-equality debug-K K obj1 obj2)
+    (when (comparator-equal? K obj1 obj2)
+      (debug-assert __who__ debug-K K (comparator-equal? K obj2 obj1) "equality" "symmetric"))
+    (unless (comparator-equal? K obj1 obj2)
+      (debug-deny   __who__ debug-K K (comparator-equal? K obj2 obj1) "equality" "symmetric")))
 
-  (define (check-transitive-equality comparator a b c)
-    (and (comparator-equal? comparator a b)
-	 (comparator-equal? comparator b c)
-	 (debug-assert (comparator-equal? comparator a c) 'equality 'transitive))
-    (and (comparator-equal? comparator a b)
-	 (not (comparator-equal? comparator b c))
-	 (debug-deny (comparator-equal? comparator a c) 'equality 'transitive))
-    (and (not (comparator-equal? comparator a b))
-	 (comparator-equal? comparator b c)
-	 (debug-deny (comparator-equal? comparator a c) 'equality 'transitive)))
+  (define (check-asymmetric-comparison debug-K K obj1 obj2)
+    (debug-assert __who__ debug-K K
+		  (eqv? (comparator-compare K obj1 obj2)
+			(- (comparator-compare K obj2 obj1)))
+		  "comparison" "asymmetric"))
 
-  (define (check-transitive-comparison comparator a b c)
+  (define (check-transitive-equality debug-K K obj1 obj2 obj3)
+    ;;Tests:
+    ;;
+    ;;   (obj1 == obj2) && (obj2 == obj3) => (obj1 == obj3)
+    ;;
+    (and (comparator-equal? K obj1 obj2)
+	 (comparator-equal? K obj2 obj3)
+	 (debug-assert __who__ debug-K K (comparator-equal? K obj1 obj3)
+		       "equality: (obj1 == obj2) && (obj2 == obj3) => (obj1 == obj3)"
+		       "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj1 == obj2) && (obj2 != obj3) => (obj1 != obj3)
+    ;;
+    (and (comparator-equal?      K obj1 obj2)
+	 (not (comparator-equal? K obj2 obj3))
+	 (debug-deny __who__ debug-K K (not (comparator-equal? K obj1 obj3))
+		     "equality: (obj1 == obj2) && (obj2 != obj3) => (obj1 != obj3)"
+		     "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj1 != obj2) && (obj2 == obj3) => (obj1 != obj3)
+    ;;
+    (and (not (comparator-equal? K obj1 obj2))
+	 (comparator-equal?      K obj2 obj3)
+	 (debug-deny __who__ debug-K K
+		     (comparator-equal? K obj1 obj3)
+		     "equality: (obj1 != obj2) && (obj2 == obj3) => (obj1 != obj3)"
+		     "transitive" obj1 obj2 obj3)))
+
+  (define (check-transitive-comparison debug-K K obj1 obj2 obj3)
     (define-syntax-rule (<= ?x ?y)
-      (<=? comparator ?x ?y))
-    (and (<= b a) (<= a c) (debug-assert (<= b c) 'comparison 'transitive))
-    (and (<= c a) (<= a b) (debug-assert (<= c b) 'comparison 'transitive))
-    (and (<= a b) (<= b c) (debug-assert (<= a c) 'comparison 'transitive))
-    (and (<= c b) (<= b a) (debug-assert (<= c a) 'comparison 'transitive))
-    (and (<= a c) (<= c b) (debug-assert (<= a b) 'comparison 'transitive))
-    (and (<= b c) (<= c a) (debug-assert (<= b a) 'comparison 'transitive)))
+      (<=? K ?x ?y))
+    ;;Tests:
+    ;;
+    ;;   (obj1 <= obj2) && (obj2 <= obj3) => (obj1 <= obj3)
+    ;;
+    (and (<= obj1 obj2)
+	 (<= obj2 obj3)
+	 (debug-assert __who__ debug-K K (<= obj1 obj3)
+		       "comparison: (obj1 <= obj2) && (obj2 <= obj3) => (obj1 <= obj3)"
+		       "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj2 <= obj1) && (obj1 <= obj3) => (obj2 <= obj3)
+    ;;
+    (and (<= obj2 obj1)
+	 (<= obj1 obj3)
+	 (debug-assert __who__ debug-K K (<= obj2 obj3)
+		       "comparison: (obj2 <= obj1) && (obj1 <= obj3) => (obj2 <= obj3)"
+		       "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj3 <= obj1) && (obj1 <= obj2) => (obj3 <= obj2)
+    ;;
+    (and (<= obj3 obj1)
+	 (<= obj1 obj2)
+	 (debug-assert __who__ debug-K K (<= obj3 obj2)
+		       "comparison: (obj3 <= obj1) && (obj1 <= obj2) => (obj3 <= obj2)"
+		       "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj3 <= obj2) && (obj2 <= obj1) => (obj3 <= obj1)
+    ;;
+    (and (<= obj3 obj2)
+	 (<= obj2 obj1)
+	 (debug-assert __who__ debug-K K (<= obj3 obj1)
+		       "comparison: (obj3 <= obj2) && (obj2 <= obj1) => (obj3 <= obj1)"
+		       "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj1 <= obj3) && (obj3 <= obj2) => (obj1 <= obj2)
+    ;;
+    (and (<= obj1 obj3)
+	 (<= obj3 obj2)
+	 (debug-assert __who__ debug-K K (<= obj1 obj2)
+		       "comparison: (obj1 <= obj3) && (obj3 <= obj2) => (obj1 <= obj2)"
+		       "transitive" obj1 obj2 obj3))
+    ;;Tests:
+    ;;
+    ;;   (obj2 <= obj3) && (obj3 <= obj1) => (obj2 <= obj1)
+    ;;
+    (and (<= obj2 obj3)
+	 (<= obj3 obj1)
+	 (debug-assert __who__ debug-K K (<= obj2 obj1)
+		       "comparison: (obj2 <= obj3) && (obj3 <= obj1) => (obj2 <= obj1)"
+		       "transitive" obj1 obj2 obj3)))
 
-  (define (check-hash-value value)
-    (debug-assert (and (positive? value) (exact-integer? value))
-		  'validity 'hash-value))
+  (define (check-hash-value debug-K K value)
+    (debug-assert __who__ debug-K K
+		  (non-negative-exact-integer? value)
+		  "validity" "hash-value"))
 
-  (define (check-all comparator a b c c?)
-    (check-type-test comparator a)
-    (check-type-test comparator b)
-    (if c? (check-type-test comparator c))
-    (check-reflexive-equality comparator a)
-    (check-reflexive-equality comparator b)
-    (if c? (check-reflexive-equality comparator c))
-    (check-reflexive-comparison comparator a)
-    (check-reflexive-comparison comparator b)
-    (if c? (check-reflexive-comparison comparator c))
-    (check-symmetric-equality comparator a b)
-    (if c? (check-symmetric-equality comparator b c))
-    (if c? (check-symmetric-equality comparator a c))
-    (check-asymmetric-comparison comparator a b)
-    (if c? (check-asymmetric-comparison comparator b c))
-    (if c? (check-asymmetric-comparison comparator a c))
-    (if c? (check-transitive-equality comparator a b c))
-    (if c? (check-transitive-comparison comparator a b c)))
+;;; --------------------------------------------------------------------
+
+  (define (check-all debug-K K obj1 obj2 obj3 obj3-available?)
+    (check-type-test debug-K K obj1)
+    (check-type-test debug-K K obj2)
+    (when obj3-available?
+      (check-type-test			debug-K K obj3))
+    (check-reflexive-equality		debug-K K obj1)
+    (check-reflexive-equality		debug-K K obj2)
+    (when obj3-available?
+      (check-reflexive-equality		debug-K K obj3))
+    (check-reflexive-comparison		debug-K K obj1)
+    (check-reflexive-comparison		debug-K K obj2)
+    (when obj3-available?
+      (check-reflexive-comparison	debug-K K obj3))
+    (check-symmetric-equality		debug-K K obj1 obj2)
+    (when obj3-available?
+      (check-symmetric-equality		debug-K K obj2 obj3))
+    (when obj3-available?
+      (check-symmetric-equality		debug-K K obj1 obj3))
+    (check-asymmetric-comparison	debug-K K obj1 obj2)
+    (when obj3-available?
+      (check-asymmetric-comparison	debug-K K obj2 obj3))
+    (when obj3-available?
+      (check-asymmetric-comparison	debug-K K obj1 obj3))
+    (when obj3-available?
+      (check-transitive-equality	debug-K K obj1 obj2 obj3))
+    (when obj3-available?
+      (check-transitive-comparison	debug-K K obj1 obj2 obj3)))
 
   #| end of module |# )
 
@@ -1572,5 +1729,6 @@
 ;; eval: (put 'raise-comparator-type-error		'scheme-indent-function 1)
 ;; eval: (put 'raise-comparator-argument-type-error	'scheme-indent-function 1)
 ;; eval: (put 'raise-comparator-nan-comparison-error	'scheme-indent-function 1)
+;; eval: (put 'raise-comparator-debug-error		'scheme-indent-function 1)
 ;; eval: (put 'raise-inexact-real-comparator-with-ignored-epsilon	'scheme-indent-function 1)
 ;; End:
