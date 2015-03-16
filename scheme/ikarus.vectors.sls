@@ -625,7 +625,7 @@
 
 (define-syntax define-vector-iterator
   (syntax-rules ()
-    ((_ ?name ?combine)
+    ((_ ?name ?logic-combine)
      (define (?name proc vec . vectors)
        (define who '?name)
        (define (iterator-1 proc vec)
@@ -633,13 +633,13 @@
 	   (procedure-argument-violation who "not a vector" vec))
 	 (let ((len (vector-length vec)))
 	   (if (zero? len)
-	       (?combine) ;not PROC!!!
+	       (?logic-combine)
 	     (let ((len-1 (- len 1)))
 	       (let loop ((i 0))
 		 (if (= i len-1)
 		     (proc (vector-ref vec i)) ;tail call deciding the return value
-		   (?combine (proc (vector-ref vec i))
-			     (loop (+ 1 i)))))))))
+		   (?logic-combine (proc (vector-ref vec i))
+				   (loop (+ 1 i)))))))))
        (define (iterator-n proc vectors)
 	 ;;To be called with 2 or more vector arguments.
 	 ;;
@@ -653,16 +653,18 @@
 			      (= len (vector-length vec)))
 		     (cdr vectors))
 	     (procedure-argument-violation who "length mismatch" vectors))
-	   (let ((len-1 (- len 1)))
-	     (let loop ((i 0))
-	       (if (= i len-1)
-		   (apply proc (map (lambda (vec)
-				      (vector-ref vec i))
-				 vectors)) ;tail call deciding the return value
-		 (?combine (apply proc (map (lambda (vec)
-					      (vector-ref vec i))
-					 vectors))
-			   (loop (+ 1 i))))))))
+	   (if (zero? len)
+	       (?logic-combine)
+	     (let ((len-1 (- len 1)))
+	       (let loop ((i 0))
+		 (if (= i len-1)
+		     (apply proc (map (lambda (vec)
+					(vector-ref vec i))
+				   vectors)) ;tail call deciding the return value
+		   (?logic-combine (apply proc (map (lambda (vec)
+						      (vector-ref vec i))
+						 vectors))
+				   (loop (+ 1 i)))))))))
        (if (null? vectors)
 	   (iterator-1 proc vec)
 	 (iterator-n proc (cons vec vectors)))))))

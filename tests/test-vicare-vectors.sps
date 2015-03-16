@@ -917,6 +917,12 @@
 		      '#(2 4 14))
     => 14)
 
+;;;
+
+  (check
+      (vector-for-all < '#() '#())
+    => #t)
+
   (check
       (vector-for-all < '#(1 2 3) '#(2 3 4))
     => #t)
@@ -966,6 +972,12 @@
       (vector-exists (lambda (n) (and (even? n) n))
 	'#(2 1 4 14))
     => 2)
+
+;;;
+
+  (check
+      (vector-exists < '#() '#())
+    => #f)
 
   (check
       (vector-exists < '#(1 2 4) '#(2 3 4))
