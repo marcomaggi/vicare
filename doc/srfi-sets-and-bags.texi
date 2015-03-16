@@ -9,8 +9,8 @@
 @cindex Library @library{srfi :113 sets-and-bags}
 
 
-The library @library{srfi :113} is by John Cowan as the reference
-implementation for @ansrfi{113}; see:
+The libraries @library{srfi :113} and @library{srfi :113 sets-and-bags}
+are by John Cowan as the reference implementation for @ansrfi{113}; see:
 
 @center @url{http://srfi.schemers.org/srfi-113/srfi-113.html}
 

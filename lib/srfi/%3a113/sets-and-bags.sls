@@ -116,7 +116,9 @@
 		  (comparator-equality-predicate comparator)))
 
 (define* (hashtable-for-each {proc procedure?} {T hashtable?})
-  (vector-for-each proc (hashtable-entries T)))
+  (receive (keys vals)
+      (hashtable-entries T)
+    (vector-for-each proc keys vals)))
 
 (define* (hashtable-fold-entries {proc procedure?} nil {T hashtable?})
   (receive (keys vals)
@@ -301,7 +303,7 @@
   (and (sob-half-disjoint? a b)
        (sob-half-disjoint? b a)))
 
-(define* (bag-disjoint? {a set?} {b set?})
+(define* (bag-disjoint? {a bag?} {b bag?})
   (%check-same-comparator __who__ a b)
   (and (sob-half-disjoint? a b)
        (sob-half-disjoint? b a)))
@@ -452,7 +454,7 @@
   (sob-replace! set element)
   set)
 
-(define* (bag-replace! {bag set?} element)
+(define* (bag-replace! {bag bag?} element)
   (sob-replace! bag element)
   bag)
 
@@ -573,7 +575,7 @@
 (define* (set-find {pred procedure?} {set set?} {failure procedure?})
   (sob-find pred set failure))
 
-(define* (bag-find {pred procedure?} {set set?} {failure procedure?})
+(define* (bag-find {pred procedure?} {bag bag?} {failure procedure?})
   (sob-find pred bag failure))
 
 ;;;
@@ -653,7 +655,7 @@
 
 ;;;
 
-(define (sob-map proc comparator sob)
+(define (sob-map comparator proc sob)
   ;;Fundamental mapping  operator.  We  map over  the associations  directly, because
   ;;each instance  of an  element in  a bag  will be  treated identically  anyway; we
   ;;insert them all at once with SOB-INCREMENT!.
@@ -803,7 +805,7 @@
 (define* (set->list {set set?})
   (sob->list set))
 
-(define* (bag->list {bag set?})
+(define* (bag->list {bag bag?})
   (sob->list bag))
 
 ;;;
@@ -1066,7 +1068,8 @@
      (let ((result (sob-empty-copy sob1)))
        (dyadic-sob-intersection! result sob1 sob2)
        (for-each
-	   (lambda (sob) (dyadic-sob-intersection! result result sob))
+	   (lambda (sob)
+	     (dyadic-sob-intersection! result result sob))
 	 (cons sob3 sobs))
        ;;This returns RESULT.
        (sob-cleanup! result))))
@@ -1338,7 +1341,8 @@
   (%check-same-comparator __who__ set bag)
   (hashtable-fold-entries
       (lambda (nil key value)
-	(sob-increment! nil key value))
+	(sob-increment! nil key value)
+	nil)
     bag
     (sob-hash-table set)))
 
