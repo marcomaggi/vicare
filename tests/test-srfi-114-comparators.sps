@@ -1485,6 +1485,71 @@
 
   #t)
 
+
+(parametrise ((check-test-name	'eqv-comparator))
+
+  (define-constant C
+    eqv-comparator)
+
+  ;; type test
+  (let ((test-type (comparator-test-type-procedure C)))
+    (check-for-true (test-type 1))
+    (check-for-true (test-type '()))
+    (check-for-true (test-type "ciao")))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type 1))
+    (check-for-true (check-type (void))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (try
+	(comparator-compare C 1 1)
+      (catch E
+	((&unsupported-comparator-operation-error)
+	 #t)
+	(else E))))
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'eq-comparator))
+
+  (define-constant C
+    eq-comparator)
+
+  ;; type test
+  (let ((test-type (comparator-test-type-procedure C)))
+    (check-for-true (test-type 1))
+    (check-for-true (test-type '()))
+    (check-for-true (test-type "ciao")))
+
+  ;; type check
+  (let ((check-type (comparator-check-type-procedure C)))
+    (check-for-true (check-type 1))
+    (check-for-true (check-type (void))))
+
+  ;; comparison
+  (let ((compare (comparator-comparison-procedure C)))
+    (try
+	(comparator-compare C 1 1)
+      (catch E
+	((&unsupported-comparator-operation-error)
+	 #t)
+	(else E))))
+
+  ;; hash
+  (let ((hash (comparator-hash-function C)))
+    (check-for-true
+     (non-negative-exact-integer? (hash 1))))
+
+  #t)
 
 
 (parametrise ((check-test-name	'comparison-predicates))
@@ -1795,11 +1860,19 @@
   (check-for-false (if=? (compare 1 2) #t #f))
   (check-for-false (if=? (compare 2 1) #t #f))
 
+  (check (if=? (compare 1 1) #t)	=> #t)
+  (check (if=? (compare 1 2) #t)	=> (void))
+  (check (if=? (compare 2 1) #t)	=> (void))
+
 ;;; --------------------------------------------------------------------
 
   (check-for-true  (if-not=? (compare 1 1) #f #t))
   (check-for-false (if-not=? (compare 1 2) #f #t))
   (check-for-false (if-not=? (compare 2 1) #f #t))
+
+  (check (if-not=? (compare 1 1) #t)	=> (void))
+  (check (if-not=? (compare 1 2) #t)	=> #t)
+  (check (if-not=? (compare 2 1) #t)	=> #t)
 
 ;;; --------------------------------------------------------------------
 
@@ -1807,11 +1880,19 @@
   (check-for-true  (if<? (compare 1 2) #t #f))
   (check-for-false (if<? (compare 2 1) #t #f))
 
+  (check (if<? (compare 1 1) #t)	=> (void))
+  (check (if<? (compare 1 2) #t)	=> #t)
+  (check (if<? (compare 2 1) #t)	=> (void))
+
 ;;; --------------------------------------------------------------------
 
   (check-for-false (if>? (compare 1 1) #t #f))
   (check-for-false (if>? (compare 1 2) #t #f))
   (check-for-true  (if>? (compare 2 1) #t #f))
+
+  (check (if>? (compare 1 1) #t)	=> (void))
+  (check (if>? (compare 1 2) #t)	=> (void))
+  (check (if>? (compare 2 1) #t)	=> #t)
 
 ;;; --------------------------------------------------------------------
 
@@ -1819,11 +1900,90 @@
   (check-for-true  (if<=? (compare 1 2) #t #f))
   (check-for-false (if<=? (compare 2 1) #t #f))
 
+  (check (if<=? (compare 1 1) #t)	=> #t)
+  (check (if<=? (compare 1 2) #t)	=> #t)
+  (check (if<=? (compare 2 1) #t)	=> (void))
+
 ;;; --------------------------------------------------------------------
 
   (check-for-true  (if>=? (compare 1 1) #t #f))
   (check-for-false (if>=? (compare 1 2) #t #f))
   (check-for-true  (if>=? (compare 2 1) #t #f))
+
+  (check (if>=? (compare 1 1) #t)	=> #t)
+  (check (if>=? (compare 1 2) #t)	=> (void))
+  (check (if>=? (compare 2 1) #t)	=> #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'minmax))
+
+  (define-constant C fixnum-comparator)
+
+;;; --------------------------------------------------------------------
+
+  (check (comparator-min C 0)		=> 0)
+
+  (check (comparator-min C 0 0)		=> 0)
+  (check (comparator-min C 0 1)		=> 0)
+  (check (comparator-min C 1 0)		=> 0)
+
+  (check (comparator-min C 0 0 0)	=> 0)
+
+  (check (comparator-min C 0 1 1)	=> 0)
+  (check (comparator-min C 1 1 0)	=> 0)
+  (check (comparator-min C 1 0 1)	=> 0)
+
+  (check (comparator-min C 0 1 2)	=> 0)
+  (check (comparator-min C 1 2 0)	=> 0)
+  (check (comparator-min C 2 0 1)	=> 0)
+
+  (check (comparator-min C 0 1 2)	=> 0)
+  (check (comparator-min C 1 2 0)	=> 0)
+  (check (comparator-min C 2 0 1)	=> 0)
+
+  (check (comparator-min C 0 1 2 3)	=> 0)
+  (check (comparator-min C 1 2 3 0)	=> 0)
+  (check (comparator-min C 2 3 0 1)	=> 0)
+  (check (comparator-min C 3 0 1 2)	=> 0)
+
+  (check (comparator-min C 3 2 1 0)	=> 0)
+  (check (comparator-min C 2 1 0 3)	=> 0)
+  (check (comparator-min C 1 0 3 2)	=> 0)
+  (check (comparator-min C 0 3 2 1)	=> 0)
+
+;;; --------------------------------------------------------------------
+
+  (check (comparator-max C 0)		=> 0)
+
+  (check (comparator-max C 0 0)		=> 0)
+  (check (comparator-max C 0 1)		=> 1)
+  (check (comparator-max C 1 0)		=> 1)
+
+  (check (comparator-max C 0 0 0)	=> 0)
+
+  (check (comparator-max C 0 1 1)	=> 1)
+  (check (comparator-max C 1 1 0)	=> 1)
+  (check (comparator-max C 1 0 1)	=> 1)
+
+  (check (comparator-max C 0 1 2)	=> 2)
+  (check (comparator-max C 1 2 0)	=> 2)
+  (check (comparator-max C 2 0 1)	=> 2)
+
+  (check (comparator-max C 0 1 2)	=> 2)
+  (check (comparator-max C 1 2 0)	=> 2)
+  (check (comparator-max C 2 0 1)	=> 2)
+
+  (check (comparator-max C 0 1 2 3)	=> 3)
+  (check (comparator-max C 1 2 3 0)	=> 3)
+  (check (comparator-max C 2 3 0 1)	=> 3)
+  (check (comparator-max C 3 0 1 2)	=> 3)
+
+  (check (comparator-max C 3 2 1 0)	=> 3)
+  (check (comparator-max C 2 1 0 3)	=> 3)
+  (check (comparator-max C 1 0 3 2)	=> 3)
+  (check (comparator-max C 0 3 2 1)	=> 3)
 
   #t)
 

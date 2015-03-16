@@ -293,7 +293,7 @@
     ((if<=? ?expr ?lessequal ?greater)
      (if3 ?expr ?lessequal ?lessequal ?greater))
     ((if<=? ?expr ?lessequal)
-     (if>? ?expr ?lessequal (void)))
+     (if>? ?expr (void) ?lessequal))
     ))
 
 ;; If greater than or equal
@@ -776,53 +776,61 @@
 
 ;;; minimum and maximum comparison predicate
 
-(case-define* comparator-min
-  (({K comparator?} a)
-   (comparator-check-type K a __who__)
-   a)
-  (({K comparator?} a b)
-   (comparator-check-type K a __who__)
-   (comparator-check-type K b __who__)
-   (%dyadic-comparator-min K a b))
-  (({K comparator?} a b . objs)
-   (comparator-check-type K a __who__)
-   (comparator-check-type K b __who__)
-   (for-each (lambda (x)
-	       (comparator-check-type K x __who__))
-     objs)
-   (%dyadic-comparator-min K a
-			   (let recur ((objs (cons b objs)))
-			     (if (pair? (cdr objs))
-				 (%dyadic-comparator-min K (car objs) (recur (cdr objs)))
-			       (car objs))))))
+(module (comparator-min)
 
-(define (%dyadic-comparator-min K a b)
-  (if (%unsafe-<? K a b '()) a b))
+  (case-define* comparator-min
+    (({K comparator?} a)
+     (comparator-check-type K a __who__)
+     a)
+    (({K comparator?} a b)
+     (comparator-check-type K a __who__)
+     (comparator-check-type K b __who__)
+     (%dyadic-comparator-min K a b))
+    (({K comparator?} a b . objs)
+     (comparator-check-type K a __who__)
+     (comparator-check-type K b __who__)
+     (for-each (lambda (x)
+		 (comparator-check-type K x __who__))
+       objs)
+     (%dyadic-comparator-min K a
+			     (let recur ((objs (cons b objs)))
+			       (if (pair? (cdr objs))
+				   (%dyadic-comparator-min K (car objs) (recur (cdr objs)))
+				 (car objs))))))
+
+  (define (%dyadic-comparator-min K a b)
+    (if (%unsafe-<? K a b '()) a b))
+
+  #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
-(case-define* comparator-max
-  (({K comparator?} a)
-   (comparator-check-type K a __who__)
-   a)
-  (({K comparator?} a b)
-   (comparator-check-type K a __who__)
-   (comparator-check-type K b __who__)
-   (if (>? K a b) a b))
-  (({K comparator?} a b . objs)
-   (comparator-check-type K a __who__)
-   (comparator-check-type K b __who__)
-   (for-each (lambda (x)
-	       (comparator-check-type K x __who__))
-     objs)
-   (%dyadic-comparator-max K a
-			   (let recur ((objs (cons b objs)))
-			     (if (pair? (cdr objs))
-				 (%dyadic-comparator-max K (car objs) (recur (cdr objs)))
-			       (car objs))))))
+(module (comparator-max)
 
-(define (%dyadic-comparator-max K a b)
-  (if (%unsafe->? K a b '()) a b))
+  (case-define* comparator-max
+    (({K comparator?} a)
+     (comparator-check-type K a __who__)
+     a)
+    (({K comparator?} a b)
+     (comparator-check-type K a __who__)
+     (comparator-check-type K b __who__)
+     (if (>? K a b) a b))
+    (({K comparator?} a b . objs)
+     (comparator-check-type K a __who__)
+     (comparator-check-type K b __who__)
+     (for-each (lambda (x)
+		 (comparator-check-type K x __who__))
+       objs)
+     (%dyadic-comparator-max K a
+			     (let recur ((objs (cons b objs)))
+			       (if (pair? (cdr objs))
+				   (%dyadic-comparator-max K (car objs) (recur (cdr objs)))
+				 (car objs))))))
+
+  (define (%dyadic-comparator-max K a b)
+    (if (%unsafe->? K a b '()) a b))
+
+  #| end of module |# )
 
 
 ;;;; standard comparators and comparator constructors: standard atomic comparators
