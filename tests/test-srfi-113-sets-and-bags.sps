@@ -51,6 +51,8 @@
   (syntax-rules ()
     ((_ ?expected ?form)
      (check ?form (=> (current-test-comparator)) ?expected))
+    ((_ ?dummy ?expected ?form)
+     (check ?form (=> (current-test-comparator)) ?expected))
     ))
 
 (define-syntax test-assert
@@ -247,10 +249,9 @@
 	  (let ((abcd4 (set-copy abcd)))
 	    ;; don't test xor! effect
 	    (test none (set-xor! abcd4 other-abcd))
-;;;FIXME
-	    ;; (test "abcd smashed?" other-abcd abcd)
-	    ;; (test "efgh smashed?" other-efgh efgh)
-	    ;; (test "abgh smashed?" other-abgh abgh)
+	    (test "abcd smashed?" other-abcd abcd)
+	    (test "efgh smashed?" other-efgh efgh)
+	    (test "abgh smashed?" other-abgh abgh)
 	    )))))
   #f)
 
@@ -524,11 +525,10 @@
 	      (let ((ab3 (bag-copy ab)))
 		(bag-product! ab3 2)
 		(test abab ab3)
-;;;FIXME
-		;; (test "abcd smashed?" other-abcd abcd)
-		;; (test "abcd smashed?" other-abcd abcd)
-		;; (test "efgh smashed?" other-efgh efgh)
-		;; (test "abgh smashed?" other-abgh abgh)
+		(test "abcd smashed?" other-abcd abcd)
+		(test "abcd smashed?" other-abcd abcd)
+		(test "efgh smashed?" other-efgh efgh)
+		(test "abgh smashed?" other-abgh abgh)
 		)))))))
   #f)
 
