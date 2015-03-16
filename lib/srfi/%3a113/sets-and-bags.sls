@@ -165,7 +165,8 @@
 ;;;; procedure arguments validation
 
 (module (%list-of-sets?
-	 %list-of-bags?)
+	 %list-of-bags?
+	 %check-same-comparator)
 
   (define (%list-of-sets? obj)
     (and (pair? obj)
@@ -177,24 +178,28 @@
 	 (for-all bag? obj)
 	 (%sob-check-comparators obj)))
 
+  (case-define %check-same-comparator
+    ((who sob1 sob2)
+     (unless (eq? (sob-comparator sob1)
+		  (sob-comparator sob2))
+       (procedure-argument-violation who
+	 "expected SOB objects with equal comparator" sob1 sob2)))
+    ((who sob1 sob2 sob3 sobs)
+     (unless (%sob-check-comparators (cons* sob1 sob2 sob3 sobs))
+       (procedure-argument-violation who
+	 "expected SOB objects with equal comparator" sob1 sob2 sob3 sobs))))
+
   (define (%sob-check-comparators sobs)
     ;;Given a  proper list of SOB  objects: return true if  all the SOBs have  the same
     ;;comparator according to EQ?.
     ;;
     (when (pair? sobs)
       (let ((first-compar (sob-comparator (car sobs))))
-	(for-each
-	    (lambda (sob)
-	      (eq? first-compar (sob-comparator sob)))
+	(for-all (lambda (sob)
+		   (eq? first-compar (sob-comparator sob)))
 	  (cdr sobs)))))
 
   #| end of module |# )
-
-(define (%check-same-comparator who sob1 sob2)
-  (unless (eq? (sob-comparator sob1)
-	       (sob-comparator sob2))
-    (procedure-argument-violation who
-      "expected SOB objects with equal comparator" sob1 sob2)))
 
 (define (%check-element sob element)
   ;;This procedure defends against inserting an  ELEMENT into a SOB that violates its
@@ -382,7 +387,7 @@
 (define (nonpositive-keys ht)
   (hashtable-fold-entries
       (lambda (nil key val)
-	(if (non-negative? val)
+	(if (non-positive? val)
 	    (cons key nil)
 	  nil))
     '()
@@ -841,11 +846,14 @@
        (({sob ?arg-pred})
 	#t)
        (({sob1 ?arg-pred} {sob2 ?arg-pred})
+	(%check-same-comparator __who__ sob1 sob2)
 	(?dyadic-who sob1 sob2))
        (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred})
+	(%check-same-comparator __who__ sob1 sob2 sob3 '())
 	(and (?dyadic-who sob1 sob2)
 	     (?dyadic-who sob2 sob3)))
        (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} {sob4 ?arg-pred} . {sobs ?arg-list-pred})
+	(%check-same-comparator __who__ sob1 sob2 sob3 sobs)
 	(and (?dyadic-who sob1 sob2)
 	     (?dyadic-who sob2 sob3)
 	     (apply ?who sob3 sob4 sobs)))))
@@ -980,8 +988,10 @@
        (({sob ?arg-pred})
 	(?sob-who sob))
        (({sob1 ?arg-pred} {sob2 ?arg-pred})
+	(%check-same-comparator __who__ sob1 sob2)
 	(?sob-who sob1 sob2))
        (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} . {sobs ?arg-list-pred})
+	(%check-same-comparator __who__ sob1 sob2 sob3 sobs)
 	(?sob-who sob1 sob2 sob3 sobs))))
     ))
 
