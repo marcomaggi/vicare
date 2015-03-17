@@ -82,6 +82,8 @@
     ;;
     comparator-min comparator-max
     ;;
+    make-comparator-hashtable
+    ;;
     ;; condition objects
     &comparator-error make-comparator-error comparator-error?
 
@@ -1724,6 +1726,13 @@
       (check-transitive-comparison	debug-K K obj1 obj2 obj3)))
 
   #| end of module |# )
+
+
+;;;; miscellaneous
+
+(define* (make-comparator-hashtable {K comparator?})
+  (make-hashtable (comparator-hash-function      K)
+		  (comparator-equality-predicate K)))
 
 
 ;;;; done

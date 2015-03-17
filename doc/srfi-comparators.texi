@@ -37,6 +37,7 @@ comparators} export the same bindings.
                                   constructors.
 * srfi comparators ternary::      Interval comparison predicates.
 * srfi comparators minmax::       Min/max comparison procedures.
+* srfi comparators misc::         Miscellaneous procedures.
 * srfi comparators conditions::   Condition object types.
 * srfi comparators copyright::    Copyright.
 @end menu
@@ -2427,6 +2428,20 @@ Usage examples:
 (comparator-min C 1 0)         @result{} 0
 (comparator-min C 0 1 2)       @result{} 0
 @end lisp
+@end defun
+
+@c page
+@node srfi comparators misc
+@subsection Miscellaneous procedures
+
+
+@defun make-comparator-hashtable @var{comparator}
+Build and return a new hashtable using the equality predicate and hash
+function from @var{comparator}.
+
+@quotation
+@strong{NOTE} This is a @value{PRJNAME} extension.
+@end quotation
 @end defun
 
 @c page

@@ -107,18 +107,21 @@
 
 ;;;; helpers
 
-(define (make-hash-table/comparator comparator)
-  ;;Shim  to convert  from SRFI  69 to  the future  "intermediate hash  tables" SRFI.
-  ;;Unfortunately,  HASH-TABLE-FOLD is  incompatible between  the two  and so  is not
-  ;;usable.
-  ;;
-  (make-hashtable (comparator-hash-function      comparator)
-		  (comparator-equality-predicate comparator)))
-
 (define* (hashtable-for-each {proc procedure?} {T hashtable?})
   (receive (keys vals)
       (hashtable-entries T)
     (vector-for-each proc keys vals)))
+
+(define (hashtable-for-all pred table)
+  (vector-for-all pred (hashtable-keys table)))
+
+  (define (hashtable-for-all-entries proc table)
+    (receive (keys vals)
+	(hashtable-entries table)
+      (vector-for-all proc keys vals)))
+
+(define (hashtable-find pred table)
+  (vector-find pred (hashtable-keys table)))
 
 (define* (hashtable-fold-entries {proc procedure?} nil {T hashtable?})
   (receive (keys vals)
@@ -169,16 +172,32 @@
 	 %check-same-comparator)
 
   (define (%list-of-sets? obj)
+    ;;Used to validate rest arguments, as in:
+    ;;
+    ;;   (define* (operation . {args %list-of-sets?})
+    ;;     ---)
+    ;;
     (and (pair? obj)
 	 (for-all set? obj)
 	 (%sob-check-comparators obj)))
 
   (define (%list-of-bags? obj)
+    ;;Used to validate rest arguments, as in:
+    ;;
+    ;;   (define* (operation . {args %list-of-bags?})
+    ;;     ---)
+    ;;
     (and (list? obj)
 	 (for-all bag? obj)
 	 (%sob-check-comparators obj)))
 
   (case-define %check-same-comparator
+    ;;Used to validate SOB arguments, as in:
+    ;;
+    ;;   (define* (operation {set1 set?} {set2 set?} {set3 set?} . {sets %list-of-sets?})
+    ;;     (%check-same-comparator __who__ set1 set2 set3 sets)
+    ;;     ---)
+    ;;
     ((who sob1 sob2)
      (unless (eq? (sob-comparator sob1)
 		  (sob-comparator sob2))
@@ -201,11 +220,11 @@
 
   #| end of module |# )
 
-(define (%check-element sob element)
+(define (%check-element who sob element)
   ;;This procedure defends against inserting an  ELEMENT into a SOB that violates its
   ;;constructor, since typical hashtable implementations don't check for us.
   ;;
-  (comparator-check-type (sob-comparator sob) element))
+  (comparator-check-type (sob-comparator sob) element who))
 
 
 ;;;; constructors
@@ -213,7 +232,7 @@
 (define (make-sob comparator multi?)
   ;;Construct an arbitrary empty SOB out of nothing.
   ;;
-  (%make-sob (make-hash-table/comparator comparator) comparator multi?))
+  (%make-sob (make-comparator-hashtable comparator) comparator multi?))
 
 (define (sob-copy sob)
   ;;Copy a SOB, sharing the constructor.
@@ -239,7 +258,7 @@
   (receive-and-return (result)
       (make-sob comparator #f)
     (for-each (lambda (x)
-		(sob-increment! result x 1))
+		(sob-increment! __who__ result x 1))
       elements)))
 
 (define* (bag {comparator comparator?} . elements)
@@ -248,7 +267,7 @@
   (receive-and-return (result)
       (make-sob comparator #t)
     (for-each (lambda (x)
-		(sob-increment! result x 1))
+		(sob-increment! __who__ result x 1))
       elements)))
 
 (define* (sob-unfold {stop? procedure?} {mapper procedure?} {successor procedure?}
@@ -261,7 +280,7 @@
       (make-sob comparator multi?)
     (let loop ((seed seed))
       (unless (stop? seed)
-	(sob-increment! result (mapper seed) 1)
+	(sob-increment! __who__ result (mapper seed) 1)
 	(loop (successor seed))))))
 
 (define (set-unfold continue? mapper successor seed comparator)
@@ -345,11 +364,11 @@
 
 ;;;; updaters (pure functional and linear update)
 
-(define (sob-increment! sob element count)
+(define (sob-increment! who sob element count)
   ;;Primitive operation to add  an element to a SOB.  There are a  few cases where we
   ;;bypass this for efficiency.
   ;;
-  (%check-element sob element)
+  (%check-element who sob element)
   (hashtable-update! (sob-hash-table sob)
 		     element
 		     (if (sob-multi? sob)
@@ -357,69 +376,73 @@
 		       (lambda (value) 1))
 		     0))
 
-(define (sob-decrement! sob element count)
-  ;;Primitive operation  to remove  an element  from a SOB.   Note this  procedure is
-  ;;incomplete:  it allows  the count  of  an element  to drop  below 1.   Therefore,
-  ;;whenever it is used it is necessary to call SOB-CLEANUP!  to fix things up.  This
-  ;;is done because it is unsafe to remove an object from a hashtable while iterating
-  ;;through it.
+(define (sob-decrement! who sob element count)
+  ;;Primitive operation to remove an element from a SOB.
   ;;
+  ;;Note this  procedure is  incomplete: it allows  the count of  an element  to drop
+  ;;below 1.  Therefore, whenever it is used it is necessary to call SOB-CLEANUP!  to
+  ;;fix things  up.  This is  done because it  is unsafe to  remove an object  from a
+  ;;hashtable while iterating through it.
+  ;;
+  (%check-element who sob element)
   (hashtable-update! (sob-hash-table sob)
 		     element
 		     (lambda (value)
 		       (- value count))
 		     0))
 
-(define (sob-cleanup! sob)
-  ;;This is the  cleanup procedure, which happens in two  passes: it iterates through
-  ;;the SOB, deciding which elements to  remove (those with non-positive counts), and
-  ;;collecting them in a list.  When the iteration  is done, it is safe to remove the
-  ;;elements using the list, because we are  no longer iterating over the hash table.
-  ;;It returns  its argument,  because it  is often  tail-called at  the end  of some
-  ;;procedure that wants to return the clean sob.
-  ;;
-  (let ((ht (sob-hash-table sob)))
-    (for-each (lambda (key)
-		(hashtable-delete! ht key))
-      (nonpositive-keys ht))
-    sob))
+(module (sob-cleanup!)
 
-(define (nonpositive-keys ht)
-  (hashtable-fold-entries
-      (lambda (nil key val)
-	(if (non-positive? val)
-	    (cons key nil)
-	  nil))
-    '()
-    ht))
+  (define (sob-cleanup! sob)
+    ;;This is the cleanup procedure, which happens in two passes: it iterates through
+    ;;the SOB,  deciding which elements  to remove (those with  non-positive counts),
+    ;;and collecting  them in  a list.   When the iteration  is done,  it is  safe to
+    ;;remove the elements using the list, because we are no longer iterating over the
+    ;;hash table.   It returns its argument,  because it is often  tail-called at the
+    ;;end of some procedure that wants to return the clean SOB.
+    ;;
+    (let ((ht (sob-hash-table sob)))
+      (for-each (lambda (key)
+		  (hashtable-delete! ht key))
+	(%hashtable-keys-with-non-positive-value ht))
+      sob))
+
+  (define (%hashtable-keys-with-non-positive-value ht)
+    (hashtable-fold-entries
+	(lambda (nil key val)
+	  (if (non-positive? val)
+	      (cons key nil)
+	    nil))
+      '()
+      ht))
+
+  #| end of module |# )
 
 (define* (bag-increment! {bag bag?} element {count non-negative-exact-integer?})
-  (sob-increment! bag element count)
+  (sob-increment! __who__ bag element count)
   bag)
 
 (define* (bag-decrement! {bag bag?} element {count non-negative-exact-integer?})
-  (sob-decrement! bag element count)
-  (sob-cleanup! bag)
-  bag)
+  (sob-decrement! __who__ bag element count)
+  ;;This returns BAG.
+  (sob-cleanup! bag))
 
 ;;;
 
 (define (sob-adjoin-all! sob elements)
-  ;;The primitive operation  to add elements from  a list.  We expose  this two ways:
-  ;;with a list argument and with multiple arguments.
+  ;;The primitive operation to add elements from a list.  Return SOB itself.
   ;;
   (for-each
       (lambda (elem)
-	(sob-increment! sob elem 1))
-    elements))
+	(sob-increment! __who__ sob elem 1))
+    elements)
+  sob)
 
 (define* (set-adjoin! {set set?} . elements)
-  (sob-adjoin-all! set elements)
-  set)
+  (sob-adjoin-all! set elements))
 
 (define* (bag-adjoin! {bag bag?} . elements)
-  (sob-adjoin-all! bag elements)
-  bag)
+  (sob-adjoin-all! bag elements))
 
 ;;;
 
@@ -435,80 +458,77 @@
 
 ;;;
 
-(define (sob-replace! sob element)
+(define (sob-replace! who sob element)
   ;;Given an  element which  resides in  a set,  this makes  sure that  the specified
-  ;;element is  represented by  the form  given.  Thus if  a sob  contains 2  and the
+  ;;element is  represented by  the form  given.  Thus if  a SOB  contains 2  and the
   ;;equality predicate is "=", then calling:
   ;;
-  ;;   (sob-replace! sob 2.0)
+  ;;   (sob-replace! __who__ sob 2.0)
   ;;
   ;;will replace  the 2 with 2.0.   Does nothing if there  is no such element  in the
   ;;SOB.
   ;;
+  ;;Return SOB itself.
+  ;;
+  (%check-element who sob element)
   (let ((comparator (sob-comparator sob)))
-    (comparator-check-type comparator element)
     (let ((element=  (comparator-equality-predicate comparator))
 	  (T         (sob-hash-table sob)))
       (cond ((vector-find (lambda (key)
 			    (element= key element))
 	       (hashtable-keys T))
 	     => (lambda (key)
-		  (hashtable-update! T element values (void))))))))
+		  (hashtable-update! T element values (void)))))))
+  sob)
 
 (define* (set-replace! {set set?} element)
-  (sob-replace! set element)
-  set)
+  (sob-replace! __who__ set element))
 
 (define* (bag-replace! {bag bag?} element)
-  (sob-replace! bag element)
-  bag)
+  (sob-replace! __who__ bag element))
 
 (define* (set-replace {set set?} element)
-  (receive-and-return (result)
-      (sob-copy set)
-    (sob-replace! result element)))
+  (sob-replace! __who__ (sob-copy set) element))
 
 (define* (bag-replace {bag bag?} element)
-  (receive-and-return (result)
-      (sob-copy bag)
-    (sob-replace! result element)))
+  (sob-replace! __who__ (sob-copy bag) element))
 
 ;;;
 
-(define (sob-delete-all! sob elements)
+(define (sob-delete-all! who sob elements)
   ;;The primitive  operation to delete  elements from a list.   Like SOB-ADJOIN-ALL!,
   ;;this is  exposed two ways.  It  calls SOB-CLEANUP!  itself, so  its callers don't
-  ;;need to (though it is safe to do so.)
+  ;;need to (though it is safe to do so).  Return SOB itself.
   ;;
   (for-each (lambda (element)
-	      (sob-decrement! sob element 1))
+	      (sob-decrement! who sob element 1))
     elements)
-  (sob-cleanup! sob)
-  sob)
+  ;;This returns SOB.
+  (sob-cleanup! sob))
 
 (define* (set-delete! {set set?} . elements)
-  (sob-delete-all! set elements))
+  (sob-delete-all! __who__ set elements))
 
 (define* (bag-delete! {bag bag?} . elements)
-  (sob-delete-all! bag elements))
+  (sob-delete-all! __who__ bag elements))
 
 (define* (set-delete-all! {set set?} {elements list?})
-  (sob-delete-all! set elements))
+  (sob-delete-all! __who__ set elements))
 
 (define* (bag-delete-all! {bag bag?} {elements list?})
-  (sob-delete-all! bag elements))
+  (sob-delete-all! __who__ bag elements))
 
 (define* (set-delete {set set?} . elements)
-  (sob-delete-all! (sob-copy set) elements))
+  (sob-delete-all! __who__ (sob-copy set) elements))
 
 (define* (bag-delete {bag bag?} . elements)
-  (sob-delete-all! (sob-copy bag) elements))
+  (sob-delete-all! __who__ (sob-copy bag) elements))
 
 (define* (set-delete-all {set set?} {elements list?})
-  (sob-delete-all! (sob-copy set) elements))
+  (sob-delete-all! __who__ (sob-copy set) elements))
 
 (define* (bag-delete-all {bag bag?} {elements list?})
-  (sob-delete-all! (sob-copy bag) elements))
+  (sob-delete-all! __who__ (sob-copy bag) elements))
 
 ;;;
 
@@ -517,22 +537,22 @@
 (define-constant MISSING
   (string))
 
-(define (sob-search! sob element failure success)
+(define (sob-search! who sob element failure success)
   ;;Searches and then  dispatches to user-defined procedures on  failure and success,
   ;;which in turn should reinvoke a procedure to take some action on the set (insert,
   ;;ignore, replace, or remove).
   ;;
   (define (insert obj)
-    (sob-increment! sob element 1)
+    (sob-increment! who sob element 1)
     (values sob obj))
   (define (ignore obj)
     (values sob obj))
   (define (update new-elem obj)
-    (sob-decrement! sob element 1)
-    (sob-increment! sob new-elem 1)
+    (sob-decrement! who sob element 1)
+    (sob-increment! who sob new-elem 1)
     (values (sob-cleanup! sob) obj))
   (define (remove obj)
-    (sob-decrement! sob element 1)
+    (sob-decrement! who sob element 1)
     (values (sob-cleanup! sob) obj))
   (let ((true-element (sob-member sob element MISSING)))
     (if (eq? true-element MISSING)
@@ -540,10 +560,10 @@
       (success true-element update remove))))
 
 (define* (set-search! {set set?} element {failure procedure?} {success procedure?})
-  (sob-search! set element failure success))
+  (sob-search! __who__ set element failure success))
 
 (define* (bag-search! {bag bag?} element {failure procedure?} {success procedure?})
-  (sob-search! bag element failure success))
+  (sob-search! __who__ bag element failure success))
 
 
 ;;;
@@ -573,8 +593,7 @@
   ;;which element you will  get, so this is not as useful as  finding an element in a
   ;;list or other ordered container.  If it's not there, tail-call the FAILURE thunk.
   ;;
-  (or (vector-find pred
-	(hashtable-keys (sob-hash-table sob)))
+  (or (hashtable-find pred (sob-hash-table sob))
       (failure)))
 
 (define* (set-find {pred procedure?} {set set?} {failure procedure?})
@@ -603,12 +622,11 @@
 
 ;;;
 
-(define (sob-any? pred sob)
+(define-syntax-rule (sob-any? ?pred ?sob)
   ;;Check if  any of the  elements in  a sob satisfy  a predicate.  Breaks  out early
   ;;(with call/cc) if a success is found.
   ;;
-  (vector-find pred
-    (hashtable-keys (sob-hash-table sob))))
+  (hashtable-find ?pred (sob-hash-table ?sob)))
 
 (define* (set-any? {pred procedure?} {set set?})
   (sob-any? pred set))
@@ -618,11 +636,10 @@
 
 ;;;
 
-(define (sob-every? pred sob)
-  ;;Analogous to set-any?.  Breaks out early if a failure is found.
+(define-syntax-rule (sob-every? ?pred ?sob)
+  ;;Analogous to SET-ANY?.  Breaks out early if a failure is found.
   ;;
-  (vector-for-all pred
-    (hashtable-keys (sob-hash-table sob))))
+  (hashtable-for-all ?pred (sob-hash-table ?sob)))
 
 (define* (set-every? {pred procedure?} {set set?})
   (sob-every? pred set))
@@ -638,10 +655,9 @@
   ;;execute  a  procedure over  the  repeated  elements in  a  bag.   Because of  the
   ;;representation of sets, it works for them too.
   ;;
-  (let loop ((n n))
-    (when (positive? n)
-      (cmd)
-      (loop (sub1 n)))))
+  (when (positive? n)
+    (cmd)
+    (do-n-times cmd (sub1 n))))
 
 (define (sob-for-each proc sob)
   ;;Basic iterator over a sob.
@@ -668,7 +684,7 @@
   (receive-and-return (result)
       (make-sob comparator (sob-multi? sob))
     (hashtable-for-each (lambda (key value)
-			  (sob-increment! result (proc key) value))
+			  (sob-increment! __who__ result (proc key) value))
       (sob-hash-table sob))))
 
 (define* (set-map {comparator comparator?} {proc procedure?} {set set?})
@@ -705,8 +721,8 @@
   (receive-and-return (result)
       (sob-empty-copy sob)
     (hashtable-for-each (lambda (key value)
-			  (if (pred key)
-			      (sob-increment! result key value)))
+			  (when (pred key)
+			    (sob-increment! __who__ result key value)))
       (sob-hash-table sob))))
 
 (define* (set-filter {pred procedure?} {set set?})
@@ -732,9 +748,10 @@
   ;;its own cleanup, and is used for both filter! and remove!.
   ;;
   (hashtable-for-each (lambda (key value)
-			(if (not (pred key))
-			    (sob-decrement! sob key value)))
+			(unless (pred key)
+			  (sob-decrement! __who__ sob key value)))
     (sob-hash-table sob))
+  ;;This returns SOB.
   (sob-cleanup! sob))
 
 (define* (set-filter! {pred procedure?} {set set?})
@@ -764,8 +781,8 @@
         (res2 (sob-empty-copy sob)))
     (hashtable-for-each (lambda (key value)
 			  (if (pred key)
-			      (sob-increment! res1 key value)
-			    (sob-increment! res2 key value)))
+			      (sob-increment! __who__ res1 key value)
+			    (sob-increment! __who__ res2 key value)))
       (sob-hash-table sob))
     (values res1 res2)))
 
@@ -786,8 +803,8 @@
     (hashtable-for-each
 	(lambda (key value)
 	  (unless (pred key)
-	    (sob-decrement! sob    key value)
-	    (sob-increment! result key value)))
+	    (sob-decrement! __who__ sob    key value)
+	    (sob-increment! __who__ result key value)))
       (sob-hash-table sob))
     (values (sob-cleanup! sob) result)))
 
@@ -820,7 +837,7 @@
   ;;mutable anyway, it's just as easy to add the elements by side effect.
   ;;
   (for-each (lambda (elem)
-	      (sob-increment! sob elem 1))
+	      (sob-increment! __who__ sob elem 1))
     list)
   sob)
 
@@ -876,11 +893,9 @@
 	  (ht2 (sob-hash-table sob2)))
       (and (= (hashtable-size ht1)
 	      (hashtable-size ht2))
-	   (receive (keys1 vals1)
-	       (hashtable-entries ht1)
-	     (vector-for-all (lambda (key1 val1)
-			       (= val1 (hashtable-ref ht2 key1 0)))
-	       keys1 vals1)))))
+	   (hashtable-for-all-entries (lambda (key1 val1)
+					(= val1 (hashtable-ref ht2 key1 0)))
+				      ht1))))
 
   #| end of module |# )
 
@@ -899,11 +914,9 @@
 	  (ht2 (sob-hash-table sob2)))
       (and (<= (hashtable-size ht1)
 	       (hashtable-size ht2))
-	   (receive (keys1 vals1)
-	       (hashtable-entries ht1)
-	     (vector-for-all (lambda (key1 val1)
-			       (<= val1 (hashtable-ref ht2 key1 0)))
-	       keys1 vals1)))))
+	   (hashtable-for-all-entries (lambda (key1 val1)
+					(<= val1 (hashtable-ref ht2 key1 0)))
+				      ht1))))
 
   #| end of module |# )
 
@@ -1334,7 +1347,7 @@
 (define* (bag->set {bag bag?})
   (hashtable-fold-entries
       (lambda (nil key value)
-	(sob-increment! nil key value)
+	(sob-increment! __who__ nil key value)
 	nil)
     (make-sob (sob-comparator bag) #f)
     (sob-hash-table bag)))
@@ -1342,7 +1355,7 @@
 (define* (set->bag {set set?})
   (hashtable-fold-entries
       (lambda (nil key val)
-	(sob-increment! nil key val)
+	(sob-increment! __who__ nil key val)
 	nil)
     (make-sob (sob-comparator set) #t)
     (sob-hash-table set)))
@@ -1351,7 +1364,7 @@
   (%check-same-comparator __who__ set bag)
   (hashtable-fold-entries
       (lambda (nil key value)
-	(sob-increment! nil key value)
+	(sob-increment! __who__ nil key value)
 	nil)
     bag
     (sob-hash-table set)))
@@ -1373,7 +1386,7 @@
 	  (lambda (key.val)
 	    (let ((element (car key.val)))
 	      (unless (hashtable-contains? T element)
-		(sob-increment! result element (cdr key.val)))))
+		(sob-increment! __who__ result element (cdr key.val)))))
 	alist))))
 
 

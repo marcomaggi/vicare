@@ -3,8 +3,8 @@
 # Automatically built.
 
 EXTRA_DIST +=  \
-	lib/vicare/platform/configuration.sls.in \
 	lib/nausicaa/uri/pathnames.sls.in \
+	lib/vicare/platform/configuration.sls.in \
 	lib/vicare/platform/constants.sls.in \
 	lib/vicare/platform/errno.sls.in \
 	lib/vicare/platform/words.sls.in
@@ -3446,6 +3446,7 @@ endif
 
 lib/srfi/%3a113/sets-and-bags.fasl: \
 		lib/srfi/%3a113/sets-and-bags.sls \
+		lib/srfi/%3a114.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

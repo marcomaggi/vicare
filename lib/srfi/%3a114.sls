@@ -73,6 +73,8 @@
 
     comparator-register-default!
 
+    make-comparator-hashtable
+
     ;; condition objects
     &comparator-error make-comparator-error comparator-error?
 
