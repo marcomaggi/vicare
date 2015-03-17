@@ -115,10 +115,13 @@
 (define (hashtable-for-all pred table)
   (vector-for-all pred (hashtable-keys table)))
 
-  (define (hashtable-for-all-entries proc table)
-    (receive (keys vals)
-	(hashtable-entries table)
-      (vector-for-all proc keys vals)))
+(define (hashtable-exists pred table)
+  (vector-exists pred (hashtable-keys table)))
+
+(define (hashtable-for-all-entries proc table)
+  (receive (keys vals)
+      (hashtable-entries table)
+    (vector-for-all proc keys vals)))
 
 (define (hashtable-find pred table)
   (vector-find pred (hashtable-keys table)))
@@ -270,24 +273,23 @@
 		(sob-increment! __who__ result x 1))
       elements)))
 
-(define* (sob-unfold {stop? procedure?} {mapper procedure?} {successor procedure?}
-		     seed {comparator comparator?} multi?)
+(define (sob-unfold K stop? mapper successor seed multi?)
   ;;The  fundamental (as  opposed to  simplest)  constructor: unfold  the results  of
   ;;iterating a function as a set.  In line with SRFI 1, we provide an opportunity to
   ;;map the sequence of seeds through a mapper function.
   ;;
   (receive-and-return (result)
-      (make-sob comparator multi?)
+      (make-sob K multi?)
     (let loop ((seed seed))
       (unless (stop? seed)
 	(sob-increment! __who__ result (mapper seed) 1)
 	(loop (successor seed))))))
 
-(define (set-unfold continue? mapper successor seed comparator)
-  (sob-unfold continue? mapper successor seed comparator #f))
+(define* (set-unfold {K comparator?} {stop? procedure?} {mapper procedure?} {successor procedure?} seed)
+  (sob-unfold K stop? mapper successor seed #f))
 
-(define (bag-unfold continue? mapper successor seed comparator)
-  (sob-unfold continue? mapper successor seed comparator #t))
+(define* (bag-unfold {K comparator?} {stop? procedure?} {mapper procedure?} {successor procedure?} seed)
+  (sob-unfold K stop? mapper successor seed #t))
 
 
 ;;;; predicates
@@ -318,9 +320,9 @@
   ;;one direction for simplicity.
   ;;
   (let ((HB (sob-hash-table B)))
-    (not (vector-for-all (lambda (key)
-			   (hashtable-contains? HB key))
-	   (hashtable-keys (sob-hash-table A))))))
+    (not (hashtable-exists (lambda (key)
+			     (hashtable-contains? HB key))
+			   (sob-hash-table A)))))
 
 (define* (set-disjoint? {a set?} {b set?})
   (%check-same-comparator __who__ a b)

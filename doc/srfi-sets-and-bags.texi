@@ -15,89 +15,77 @@ are by John Cowan as the reference implementation for @ansrfi{113}; see:
 @center @url{http://srfi.schemers.org/srfi-113/srfi-113.html}
 
 @noindent
-for more details.
+for more details.  Sets and bags (also known as multisets) are unordered
+collections that can contain any Scheme object.  Elements in sets and
+bags are compared using the facilities of @ansrfi{114} (@pxref{srfi
+comparators, @ansrfi{114} comparators}).
 
 @menu
-* srfi sets-and-bags abstract::   Abstract.
-* srfi sets-and-bags rationale::  Rationale.
 * srfi sets-and-bags intro::      Introduction.
-* srfi sets-and-bags set::        Set procedures.
-* srfi sets-and-bags bag::        Bag procedures.
+* srfi sets-and-bags constr::     Constructors.
+* srfi sets-and-bags preds::      Predicates.
+* srfi sets-and-bags access::     Accessors.
+* srfi sets-and-bags update::     Updaters.
+* srfi sets-and-bags whole::      The whole set.
+* srfi sets-and-bags map::        Mapping and folding.
+* srfi sets-and-bags copy::       Copying and conversion.
+* srfi sets-and-bags subsets::    Subsets.
+* srfi sets-and-bags theory::     Set theory operations.
+* srfi sets-and-bags bag::        Bag-only procedures.
 * srfi sets-and-bags compar::     Comparators.
 * srfi sets-and-bags copyright::  Copyright.
 @end menu
-
-@c page
-@node srfi sets-and-bags abstract
-@subsection Abstract
-
-
-Sets and bags (also known as multisets) are unordered collections that
-can contain any Scheme object.  Sets enforce the constraint that no two
-elements can be the same in the sense of the set's associated equality
-predicate; bags do not.
-
-@c page
-@node srfi sets-and-bags rationale
-@subsection Rationale
-
-
-Sets are a standard part of the libraries of many high--level
-programming languages, including Smalltalk, Java, and C++.  Racket
-provides general sets similar to those of this proposal, though with
-fewer procedures, and there is a Chicken egg called @code{sets}
-(unfortunately undocumented), which provides a minimal set of
-procedures.  @ansrfi{1} also provides a list--based implementation of
-sets.
-
-Bags are useful for counting anything from a fixed set of possibilities,
-e.g. the number of each type of error in a log file or the number of
-uses of each word in a lexicon drawn from a body of documents.  Although
-other data structures can serve the same purpose, using bags clearly
-expresses the programmer's intent and allows for optimization.
-
-Insofar as possible, the names in this @srfi{} are harmonized with the
-names used for ordered collections (lists, strings, vectors, and
-bytevectors) in Scheme.  However, @code{size} is used instead of
-@code{length} to express the number of elements in a collection, because
-@code{length} implies order.
-
-It's possible to use the general sets of this @srfi{} to contain
-characters, but the use of @ansrfi{14} is recommended instead.  The
-names and facilities in this @srfi{} are harmonized with @ansrfi{14},
-except that @ansrfi{14} does not contain analogues of the
-@func{set-search!}, @func{set>?}, @func{set<=?}, @func{set>=?},
-@func{set-remove}, or @func{set-partition} procedures.
-
-Sets and bags do not have a lexical syntax representation.  It's
-possible to use @ansrfi{108} quasi--literal constructors to create them
-in code, but this @srfi{} does not standardize how that is done.
-
-The interface to general sets and bags depends on @ansrfi{114}
-comparators, despite that @srfi{} having a higher number than this one
-for hysterical raisins.  Comparators conveniently package the equality
-predicate of the set with the hash function or comparison procedure
-needed to implement the set efficiently.
 
 @c page
 @node srfi sets-and-bags intro
 @subsection Introduction
 
 
-Sets and bags are mutually disjoint, and disjoint from other types of
-Scheme objects.
+Sets and bags are mutually disjoint types; they are also disjoint from
+other types of Scheme objects.
 
-It is an error for any procedure defined in this @srfi{} to be invoked
-on sets or bags with distinct comparators (in the sense of @func{eq?}).
+@itemize
+@item
+Sets enforce the constraint that no two elements can be the same in the
+sense of the set's associated equality predicate.
 
+@item
+Bags are like sets, but can contain the same object more than once.
+However, if two elements that are the same in the sense of the equality
+predicate, but not in the sense of @func{eqv?}, are both included, it is
+not guaranteed that they will remain distinct when retrieved from the
+bag: if two elements in a bag are the same in the sense of the bag's
+comparator, the implementation may in fact store just one of them.
+@end itemize
+
+The procedures for creating and manipulating bags are the same as those
+for sets, except that @code{set} is replaced by @code{bag} in their
+names, and that adjoining an element to a bag is effective even if the
+bag already contains the element.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Constraints
+
+The @api{} defined by @library{srfi :113} imposes usage constraints:
+
+@itemize
+@item
+It is an error for any procedure to be invoked on sets or bags with
+distinct comparators (in the sense of @func{eq?}).
+
+@item
 It is an error to mutate any object while it is contained in a set or
 bag.
 
+@item
 It is an error to add an object to a set or bag which does not satisfy
 the type test predicate of the comparator.
 
-It is an error to add or remove an object for a set or a bag while
+@item
+It is an error to add or remove an object from a set or a bag while
 iterating over it.
+@end itemize
 
 @c ------------------------------------------------------------------------
 
@@ -118,7 +106,7 @@ It is an error to rely upon these procedures working by side effect. For
 example, this is not guaranteed to work:
 
 @lisp
-(let* ((set1 (set 'a 'b 'c))      ; set1 = @{a,b,c@}.
+(let* ((set1 (set 'a 'b 'c))           ; set1 = @{a,b,c@}.
        (set2 (set-adjoin! set1 'd)))   ; Add d to @{a,b,c@}.
   set1) ; Could be either @{a,b,c@} or @{a,b,c,d@}.
 @end lisp
@@ -175,72 +163,113 @@ is @func{eq?}, @func{eqv?}, @func{equal?}, @func{string=?}, or
 both a comparison procedure and a hash function.
 
 @c page
-@node srfi sets-and-bags set
-@subsection Set procedures
-
-
-@menu
-* srfi sets-and-bags set constr::  Constructors.
-* srfi sets-and-bags set preds::   Predicates.
-* srfi sets-and-bags set access::  Accessors.
-* srfi sets-and-bags set update::  Updaters.
-* srfi sets-and-bags set whole::   The whole set.
-* srfi sets-and-bags set map::     Mapping and folding.
-* srfi sets-and-bags set copy::    Copying and conversion.
-* srfi sets-and-bags set subsets:: Subsets.
-* srfi sets-and-bags set theory::  Set theory operations.
-@end menu
-
-@c page
-@node srfi sets-and-bags set constr
-@subsubsection Constructors
+@node srfi sets-and-bags constr
+@subsection Constructors
 
 
 @defun set @var{comparator} @var{element} @dots{}
+@defunx bag @var{comparator} @var{element} @dots{}
 Return a newly allocated empty set.  @var{comparator} is a @ansrfi{114}
 comparator, which is used to control and distinguish the elements of the
 set.  The @var{element}s are used to initialize the set.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(define S
+  (set fixnum-comparator 1 2 3))
+(values (set-contains? S 1)
+        (set-contains? S 2)
+        (set-contains? S 3)
+        (set-size S))
+@result{} #t #t #t 3
+
+(define B
+  (bag fixnum-comparator 1 2 3 2))
+(values (bag-contains? B 1)
+        (bag-contains? B 2)
+        (bag-contains? B 3)
+        (bag-size B))
+@result{} #t #t #t 4
+@end lisp
 @end defun
 
 
 @defun set-unfold @var{comparator} @var{stop?} @var{mapper} @var{successor} @var{seed}
-Create a newly allocated set as if by @func{set} using @var{comparator}.
-If the result of applying the predicate @var{stop?} to @var{seed} is
-true, return the set.  Otherwise, apply the procedure @var{mapper} to
-@var{seed}.  The value that @var{mapper} returns is added to the set.
-Then get a new seed by applying the procedure @var{successor} to
-@var{seed}, and repeat this algorithm.
+@defunx bag-unfold @var{comparator} @var{stop?} @var{mapper} @var{successor} @var{seed}
+Create a newly allocated set as if by @func{set} or @func{bag} using
+@var{comparator}.  If the result of applying the predicate @var{stop?}
+to @var{seed} is true, return the set.  Otherwise, apply the procedure
+@var{mapper} to @var{seed}.  The value that @var{mapper} returns is
+added to the set.  Then get a new seed by applying the procedure
+@var{successor} to @var{seed}, and repeat this algorithm.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(define (stop? seed)
+  (fx>? seed 3))
+
+(define (mapper seed)
+  (number->string seed))
+
+(define (successor seed)
+  (fxadd1 seed))
+
+(define S
+  (set-unfold string-comparator stop? mapper successor 1))
+
+(values (set-contains? S "1")
+        (set-contains? S "2")
+        (set-contains? S "3")
+        (set-size S)))
+@result{} #t #t #t 3
+
+(define B
+  (bag-unfold string-comparator stop? mapper successor 1))
+
+(values (bag-contains? B "1")
+        (bag-contains? B "2")
+        (bag-contains? B "3")
+        (bag-size B)))
+@result{} #t #t #t 3
+@end lisp
 @end defun
 
 @c page
-@node srfi sets-and-bags set preds
-@subsubsection Predicates
+@node srfi sets-and-bags preds
+@subsection Predicates
 
 
 @defun set? @var{obj}
-Return @true{} if @var{obj} is a set; return @false{} otherwise.
+@defunx bag? @var{obj}
+Return @true{} if @var{obj} is a set or bag; return @false{} otherwise.
 @end defun
 
 
 @defun set-contains? @var{set} @var{element}
-Returns @true{} if @var{element} is a member of set and @false{}
-otherwise.
+@defunx bag-contains? @var{bag} @var{element}
+Return @true{} if @var{element} is a member of @var{set} or @var{bag}
+and @false{} otherwise.
 @end defun
 
 
 @defun set-empty? @var{set}
-Return @true{} if @var{set} has no elements and @false{} otherwise.
+@defunx bag-empty? @var{bag}
+Return @true{} if @var{set} or @var{bag} has no elements and @false{}
+otherwise.
 @end defun
 
 
-@defun set-disjoint? set1 set2)
-Return @true{} if @vari{set} and @varii{set} have no elements in common;
-return @false{} otherwise.
+@defun set-disjoint? @vari{set} @varii{set}
+@defunx bag-disjoint? @vari{bag} @varii{bag}
+Return @true{} if @vari{set} and @varii{set}, or @vari{bag} and
+@varii{bag}, have no elements in common; return @false{} otherwise.
 @end defun
 
 @c page
-@node srfi sets-and-bags set access
-@subsubsection Accessors
+@node srfi sets-and-bags access
+@subsection Accessors
 
 
 @defun set-member @var{set} @var{element} @var{default}
@@ -255,8 +284,8 @@ Return the comparator used to compare the elements of @var{set}.
 @end defun
 
 @c page
-@node srfi sets-and-bags set update
-@subsubsection Updaters
+@node srfi sets-and-bags update
+@subsection Updaters
 
 
 @defun set-adjoin @var{set} @var{element} @dots{}
@@ -356,8 +385,8 @@ and @var{obj}.
 @end defun
 
 @c page
-@node srfi sets-and-bags set whole
-@subsubsection The whole set
+@node srfi sets-and-bags whole
+@subsection The whole set
 
 
 @defun set-size @var{set}
@@ -400,8 +429,8 @@ not return an element of the set.
 @end defun
 
 @c page
-@node srfi sets-and-bags set map
-@subsubsection Mapping and folding
+@node srfi sets-and-bags map
+@subsection Mapping and folding
 
 
 @defun set-map @var{comparator} @var{proc} @var{set}
@@ -498,8 +527,8 @@ Like @func{set-remove} but it is permitted to mutate and return
 @end defun
 
 @c page
-@node srfi sets-and-bags set copy
-@subsubsection Copying and conversion
+@node srfi sets-and-bags copy
+@subsection Copying and conversion
 
 
 @defun set-copy @var{set}
@@ -528,8 +557,8 @@ are omitted.
 @end defun
 
 @c page
-@node srfi sets-and-bags set subsets
-@subsubsection Subsets
+@node srfi sets-and-bags subsets
+@subsection Subsets
 
 
 @quotation
@@ -567,8 +596,8 @@ the following @var{set}; return @false{} otherwise.
 @end defun
 
 @c page
-@node srfi sets-and-bags set theory
-@subsubsection Set theory operations
+@node srfi sets-and-bags theory
+@subsection Set theory operations
 
 
 @defun set-union @varo{set} @var{set} @dots{}
@@ -601,22 +630,8 @@ are drawn from the first set in which they appear.
 
 @c page
 @node srfi sets-and-bags bag
-@subsection Bag procedures
+@subsection Bag--only procedures
 
-
-Bags are like sets, but can contain the same object more than once.
-However, if two elements that are the same in the sense of the equality
-predicate, but not in the sense of @func{eqv?}, are both included, it is
-not guaranteed that they will remain distinct when retrieved from the
-bag.  It is an error for a single procedure to be invoked on bags with
-different comparators.
-
-The procedures for creating and manipulating bags are the same as those
-for sets, except that @code{set} is replaced by @code{bag} in their
-names, and that adjoining an element to a bag is effective even if the
-bag already contains the element.  If two elements in a bag are the same
-in the sense of the bag's comparator, the implementation may in fact
-store just one of them.
 
 The @func{bag-union}, @func{bag-intersection}, @func{bag-difference},
 and @func{bag-xor} procedures (and their linear update analogues) behave

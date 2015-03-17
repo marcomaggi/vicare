@@ -135,11 +135,11 @@
   ;; nums is now {10, 20, 30, 40, 50}
   (test-assert
    (set=? nums (set-unfold
+		eqv-comparator
 		(lambda (i) (= i 0))
 		(lambda (i) (* i 10))
 		(lambda (i) (- i 1))
-		5
-		eqv-comparator)))
+		5)))
   (test '(a) (set->list (set eq-comparator 'a)))
   (set! syms2 (list->set eq-comparator '(e f)))
   ;; syms2 is now {e, f}
@@ -376,11 +376,11 @@
   ;; nums is now {10, 20, 30, 40, 50}
   (test-assert
    (bag=? nums (bag-unfold
+		eqv-comparator
 		(lambda (i) (= i 0))
 		(lambda (i) (* i 10))
 		(lambda (i) (- i 1))
-		5
-		eqv-comparator)))
+		5)))
   (test '(a) (bag->list (bag eq-comparator 'a)))
   (set! syms2 (list->bag eq-comparator '(e f)))
   ;; syms2 is now {e, f}
@@ -677,6 +677,124 @@
   (test-error (<? bag-comparator aa bb))
   (test-assert (not (=? default-comparator a aa)))
   #f)
+
+
+(parametrise ((check-test-name	'constructors))
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 2 3))
+	(values (set-contains? S 1)
+		(set-contains? S 2)
+		(set-contains? S 3)
+		(set-size S)))
+    => #t #t #t 3)
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 3 2))
+	(values (bag-contains? B 1)
+		(bag-contains? B 2)
+		(bag-contains? B 3)
+		(bag-size B)))
+    => #t #t #t 4)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define (stop? seed)
+	  (fx>? seed 3))
+
+	(define (mapper seed)
+	  (number->string seed))
+
+	(define (successor seed)
+	  (fxadd1 seed))
+
+	(define S
+	  (set-unfold string-comparator stop? mapper successor 1))
+
+	(values (set-contains? S "1")
+		(set-contains? S "2")
+		(set-contains? S "3")
+		(set-size S)))
+    => #t #t #t 3)
+
+  (check
+      (internal-body
+	(define (stop? seed)
+	  (fx>? seed 3))
+
+	(define (mapper seed)
+	  (number->string seed))
+
+	(define (successor seed)
+	  (fxadd1 seed))
+
+	(define B
+	  (bag-unfold string-comparator stop? mapper successor 1))
+
+	(values (bag-contains? B "1")
+		(bag-contains? B "2")
+		(bag-contains? B "3")
+		(bag-size B)))
+    => #t #t #t 3)
+
+  #t)
+
+
+(parametrise ((check-test-name	'predicates))
+
+  (check-for-true  (set? (set fixnum-comparator 1 2 3)))
+  (check-for-false (set? (bag fixnum-comparator 1 2 3)))
+  (check-for-false (set? "ciao"))
+
+  (check-for-true  (bag? (bag fixnum-comparator 1 2 3)))
+  (check-for-false (bag? (set fixnum-comparator 1 2 3)))
+  (check-for-false (bag? "ciao"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (set-contains? (set fixnum-comparator 1) 1))
+  (check-for-false (set-contains? (set fixnum-comparator 1) 2))
+  (check-for-false (set-contains? (set fixnum-comparator) 1))
+
+  (check-for-true  (bag-contains? (bag fixnum-comparator 1) 1))
+  (check-for-false (bag-contains? (bag fixnum-comparator 1) 2))
+  (check-for-false (bag-contains? (bag fixnum-comparator) 2))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false (set-empty? (set fixnum-comparator 1)))
+  (check-for-true  (set-empty? (set fixnum-comparator)))
+
+  (check-for-false (bag-empty? (bag fixnum-comparator 1)))
+  (check-for-true  (bag-empty? (bag fixnum-comparator)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (set-disjoint? (set fixnum-comparator)
+				  (set fixnum-comparator)))
+
+  (check-for-true  (set-disjoint? (set fixnum-comparator 1 2 3)
+				  (set fixnum-comparator 4 5 6)))
+
+  (check-for-false (set-disjoint? (set fixnum-comparator 1 2 3 4)
+				  (set fixnum-comparator 5 6 3 7)))
+
+  (check-for-true  (bag-disjoint? (bag fixnum-comparator)
+				  (bag fixnum-comparator)))
+
+  (check-for-true  (bag-disjoint? (bag fixnum-comparator 1 2 3)
+				  (bag fixnum-comparator 4 5 6)))
+
+  (check-for-false (bag-disjoint? (bag fixnum-comparator 1 2 3 4)
+				  (bag fixnum-comparator 5 6 3 7)))
+
+  #t)
 
 
 ;;;; done
