@@ -273,14 +273,18 @@ Return @true{} if @vari{set} and @varii{set}, or @vari{bag} and
 
 
 @defun set-member @var{set} @var{element} @var{default}
-Return the element of @var{set} that is equal, in the sense of set's
-equality predicate, to @var{element}.  If @var{element} is not a member
-of @var{set}: return @var{default}.
+@defunx bag-member @var{bag} @var{element} @var{default}
+Return the element of @var{set} or @var{bag} that is equal, in the sense
+of the comparator's equality predicate, to @var{element}.  If
+@var{element} is not a member of @var{set} or @var{bag}: return
+@var{default}.
 @end defun
 
 
 @defun set-element-comparator @var{set}
-Return the comparator used to compare the elements of @var{set}.
+@defunx bag-element-comparator @var{bag}
+Return the comparator used to compare the elements of @var{set} or
+@var{bag}.
 @end defun
 
 @c page
@@ -296,12 +300,95 @@ comparator) to one of the existing or newly added members.
 
 It is an error to add an @var{element} for which the type test procedure
 of the comparator does not return @true{}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (define S^
+    (set-adjoin S 4))
+  (list-sort fx<? (set->list S^)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (define S^
+    (set-adjoin S 2))
+  (list-sort fx<? (set->list S^)))
+@result{} (1 2 3)
+@end lisp
+@end defun
+
+
+@defun bag-adjoin @var{bag} @var{element} @dots{}
+Return a newly allocated bag that uses the same comparator as @var{bag}
+and contains all the values of @var{bag}, and in addition each
+@var{element}.
+
+It is an error to add an @var{element} for which the type test procedure
+of the comparator does not return @true{}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (define B^
+    (bag-adjoin B 4))
+  (list-sort fx<? (bag->list B^)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (define B^
+    (bag-adjoin B 2))
+  (list-sort fx<? (bag->list B^)))
+@result{} (1 2 2 3)
+@end lisp
 @end defun
 
 
 @defun set-adjoin! @var{set} @var{element} @dots{}
-Like @func{set-adjoin} but it is permitted to mutate and return
-@var{set} rather than allocating a new set.
+@defunx bag-adjoin! @var{bag} @var{element} @dots{}
+Like @func{set-adjoin} and @func{bag-adjoin} but they are permitted to
+mutate and return @var{set}/@var{bag} rather than allocating a new set.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (set-adjoin! S 4)
+  (list-sort fx<? (set->list S)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (set-adjoin! S 2)
+  (list-sort fx<? (set->list S)))
+@result{} (1 2 3)
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (bag-adjoin! B 4)
+  (list-sort fx<? (bag->list B)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (bag-adjoin! B 2)
+  (list-sort fx<? (bag->list B)))
+@result{} (1 2 2 3)
+@end lisp
 @end defun
 
 

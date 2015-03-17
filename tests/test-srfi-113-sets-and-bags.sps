@@ -797,6 +797,107 @@
   #t)
 
 
+(parametrise ((check-test-name	'predicates))
+
+  (check-for-true
+   (let ((str1 (string #\a #\b #\c))
+	 (str2 (string #\a #\b #\c)))
+     (let ((S (set string-comparator str1)))
+       (eq? str1 (set-member S str2 #f)))))
+
+  (check-for-true
+   (let ((str1 (string #\a #\b #\c))
+	 (str2 (string #\a #\b #\c)))
+     (let ((B (bag string-comparator str1)))
+       (eq? str1 (bag-member B str2 #f)))))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true (comparator? (set-element-comparator (set fixnum-comparator))))
+  (check-for-true (comparator? (bag-element-comparator (bag fixnum-comparator))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'update))
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 2 3))
+	(define S^
+	  (set-adjoin S 4))
+	(list-sort fx<? (set->list S^)))
+    => '(1 2 3 4))
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 2 3))
+	(define S^
+	  (set-adjoin S 2))
+	(list-sort fx<? (set->list S^)))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 3))
+	(define B^
+	  (bag-adjoin B 4))
+	(list-sort fx<? (bag->list B^)))
+    => '(1 2 3 4))
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 3))
+	(define B^
+	  (bag-adjoin B 2))
+	(list-sort fx<? (bag->list B^)))
+    => '(1 2 2 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 2 3))
+	(set-adjoin! S 4)
+	(list-sort fx<? (set->list S)))
+    => '(1 2 3 4))
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 2 3))
+	(set-adjoin! S 2)
+	(list-sort fx<? (set->list S)))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 3))
+	(bag-adjoin! B 4)
+	(list-sort fx<? (bag->list B)))
+    => '(1 2 3 4))
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 3))
+	(bag-adjoin! B 2)
+	(list-sort fx<? (bag->list B)))
+    => '(1 2 2 3))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
