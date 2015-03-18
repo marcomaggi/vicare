@@ -226,6 +226,73 @@
   #t)
 
 
+(parametrise ((check-test-name	'predicates))
+
+;;; hashtable-mutable?
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (hashtable-mutable? T)))
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (define T^
+       (hashtable-copy T #f))
+     (hashtable-mutable? T^)))
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (define T^
+       (hashtable-copy T #t))
+     (hashtable-mutable? T^)))
+
+;;; --------------------------------------------------------------------
+;;; mutable-hashtable?
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (mutable-hashtable? T)))
+
+  (check-for-false
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (define T^
+       (hashtable-copy T #f))
+     (mutable-hashtable? T^)))
+
+  (check-for-true
+   (internal-body
+     (define T
+       (make-eq-hashtable))
+     (define T^
+       (hashtable-copy T #t))
+     (mutable-hashtable? T^)))
+
+  (check-for-false (mutable-hashtable? 123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'deletion))
+
+  (check
+      (let ((T (make-eq-hashtable)))
+	(hashtable-set! T 'ciao 1)
+	(hashtable-delete! T 'ciao))
+    => 'ciao 1)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

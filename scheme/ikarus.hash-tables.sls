@@ -27,7 +27,7 @@
   (export
     make-eq-hashtable		make-eqv-hashtable
     make-hashtable
-    hashtable?			hashtable-mutable?
+    hashtable?			hashtable-mutable?	mutable-hashtable?
     hashtable-ref		hashtable-set!
     hashtable-size
     hashtable-delete!		hashtable-clear!
@@ -59,7 +59,7 @@
     (except (vicare)
 	    make-eq-hashtable		make-eqv-hashtable
 	    make-hashtable
-	    hashtable?			hashtable-mutable?
+	    hashtable?			hashtable-mutable?	mutable-hashtable?
 	    hashtable-ref		hashtable-set!
 	    hashtable-size
 	    hashtable-delete!		hashtable-clear!
@@ -250,9 +250,13 @@
       ($set-tcbucket-next! b #f)))
   (cond ((get-bucket h x)
 	 => (lambda (b)
-	      (unlink! h b)
-	      ;; don't forget the count.
-	      (set-hasht-count! h (- (hasht-count h) 1))))))
+	      (receive-and-return (key val)
+		  ;;Returning these values is a Vicare extension.
+		  (values ($tcbucket-key b)
+			  ($tcbucket-val b))
+		(unlink! h b)
+		;; don't forget the count.
+		(set-hasht-count! h (- (hasht-count h) 1)))))))
 
 (define (put-hash! h x v)
   (define (put-hashed h x v ih)
@@ -442,8 +446,7 @@
 
 ;;;; public interface: constructors and predicate
 
-(define (hashtable? x)
-  (hasht? x))
+(define hashtable? hasht?)
 
 (define make-eq-hashtable
   (case-lambda
@@ -565,18 +568,23 @@
        (procedure	proc))
     (update-hash! table key proc default)))
 
-(define (hashtable-delete! table key)
+(define* (hashtable-delete! {table mutable-hashtable?} key)
+  ;;Remove any association for KEY within TABLE;  if there is no association for KEY:
+  ;;do nothing.
+  ;;
+  ;;As Vicare extension:
+  ;;
+  ;;* If an  association is  found: return  two values,  the key  and value.
+  ;;
+  ;;* If no association is found: return two values, void and void.
+  ;;
   ;;FIXME: should shrink table if number of keys drops below:
   ;;
   ;;(sqrt (vector-length (hasht-vec h)))
   ;;
   ;;(Abdulaziz Ghuloum)
   ;;
-  (define who 'hashtable-delete!)
-  (with-arguments-validation (who)
-      ((hasht		table)
-       (mutable-hasht	table))
-    (del-hash table key)))
+  (del-hash table key))
 
 (define (hashtable-clear! table)
   (define who 'hashtable-clear!)
@@ -611,6 +619,10 @@
   (with-arguments-validation (who)
       ((hasht	table))
     (hasht-mutable? table)))
+
+(define (mutable-hashtable? obj)
+  (and (hashtable?     obj)
+       (hasht-mutable? obj)))
 
 ;;; --------------------------------------------------------------------
 

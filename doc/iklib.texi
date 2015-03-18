@@ -67,7 +67,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib flonums::               Additional functions on flonums.
 * iklib numerics::              Additional functions on numbers.
 * iklib enumerations::          Additional functions on enumerations.
-* iklib hashtables::            Additional functions on hashtables.
+* iklib hashtables::            Additional functions on hash tables.
 * iklib load::                  Loading source files.
 * iklib modules::               Local modules.
 * iklib libraries::             Local libraries.
@@ -9513,7 +9513,7 @@ keyword objects are equal if they have the same symbol.
 
 @defun keyword-hash @var{keyword}
 Return an exact integer suitable to be used as hash value for
-@var{keyword} used as key for hashtables.
+@var{keyword} used as key for hash tables.
 @end defun
 
 @c page
@@ -11300,7 +11300,29 @@ Return @true{} if @var{obj} is an enumeration set object, else return
 
 @c page
 @node iklib hashtables
-@section Additional functions on hashtables
+@section Additional functions on hash tables
+
+
+@menu
+* iklib hashtables pred::       Predicates on hash tables.
+* iklib hashtables hashfun::    Additional hash functions.
+@end menu
+
+@c page
+@node iklib hashtables pred
+@subsection Predicates on hash tables
+
+
+@defun mutable-hashtable? @var{obj}
+Return @true{} if @var{obj} is a hash table and it is mutable; return
+@false{} otherwise.  This function is different from the standard
+@func{hashtable-mutable?} because it does @strong{not} raise an error if
+@var{obj} is not a hash table.
+@end defun
+
+@c page
+@node iklib hashtables hashfun
+@subsection Additional hash functions
 
 
 @defun string-ci-hash @var{str}

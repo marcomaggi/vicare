@@ -8689,8 +8689,18 @@ returns unspecified values.
 
 
 @deffn Procedure {hashtable-delete!} @var{hashtable} @var{key}
-Remove any association for @var{key} within @var{hashtable} and returns
-unspecified values.
+Remove any association for @var{key} within @var{hashtable}; if there is
+no association for @var{key}: do nothing.
+
+As @value{PRJNAME} extension return two values:
+
+@itemize
+@item
+If an association is found: the original key and value.
+
+@item
+If no association is found: @code{(void)} and @code{(void)}.
+@end itemize
 @end deffn
 
 

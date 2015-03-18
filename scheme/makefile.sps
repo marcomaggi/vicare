@@ -2370,6 +2370,7 @@
     (hashtable-entries				v r ht)
     (hashtable-keys				v r ht)
     (hashtable-mutable?				v r ht)
+    (mutable-hashtable?				v $language)
     (hashtable-ref				v r ht)
     (hashtable-set!				v r ht)
     (hashtable-size				v r ht)
