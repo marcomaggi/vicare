@@ -160,33 +160,44 @@
   ($fxlogand ?hv ($fxsub1 ($vector-length ?buckets-vector))))
 
 (define (tc-pop tc)
+  ;;This function  might mutate the  pair TC,  which is a  TC field from  a hashtable
+  ;;struct.  If TC is empty: return false.  Otherwise pop and return its first entry.
+  ;;
   (let ((x ($car tc)))
     (if (eq? x ($cdr tc))
 	#f
-      (let ((v ($car x)))
+      (receive-and-return (v)
+	  ($car x)
 	($set-car! tc ($cdr x))
+	;;Clean the pair X so that it does not reference the TC anymore.
 	($set-car! x #f)
-	($set-cdr! x #f)
-	v))))
+	($set-cdr! x #f)))))
 
-;; assq-like lookup
-(define (direct-lookup x b)
-  (if (fixnum? b)
+(define (direct-lookup key buck)
+  ;;Used only with EQ? hash tables.  ASSQ-like lookup  of the key KEY in the chain of
+  ;;tcbuckets starting with BUCK.  If a matching entry is found: return its tcbucket;
+  ;;otherwise return false.
+  ;;
+  (if (fixnum? buck)
       #f
-    (if (eq? x ($tcbucket-key b))
-	b
-      (direct-lookup x ($tcbucket-next b)))))
+    (if (eq? key ($tcbucket-key buck))
+	buck
+      (direct-lookup key ($tcbucket-next buck)))))
 
-(define (rehash-lookup h tc x)
+(define (rehash-lookup H tc key)
+  ;;Used only with  EQ? hash tables.  H is the  hash table; TC is the tc  field of H;
+  ;;KEY is  the key.  If  a matching entry is  found: return its  tcbucket; otherwise
+  ;;return false.
+  ;;
   (cond ((tc-pop tc)
-	 => (lambda (b)
-	      (if (eq? ($tcbucket-next b) #f)
-		  (rehash-lookup h tc x)
+	 => (lambda (buck)
+	      (if (not ($tcbucket-next buck))
+		  (rehash-lookup H tc key)
 		(begin
-		  (re-add! h b)
-		  (if (eq? x ($tcbucket-key b))
-		      b
-		    (rehash-lookup h tc x))))))
+		  (re-add! H buck)
+		  (if (eq? key ($tcbucket-key buck))
+		      buck
+		    (rehash-lookup H tc key))))))
 	(else #f)))
 
 (define (get-bucket-index B)
@@ -226,31 +237,31 @@
 (define (re-add! H buck)
   ;;BUCK is the tcbucket representing the entry to be rehashed.
   ;;
-  (let ((buckets-vector (hasht-buckets-vector H)))
-    ;;First remove BUCK from its old place.
-    (let* ((next        ($tcbucket-next buck))
-	   ;;The index in the  buckes vector of the chain of  tcbuckets to which BUCK
-	   ;;belongs.
-	   (bucket-idx  (if (fixnum? next)
-			    next
-			  (get-bucket-index next)))
-	   ;;The first tcbucket in the chain of tcbuckets to which BUCK belongs.
-	   (fst         ($vector-ref buckets-vector bucket-idx)))
-      (if (eq? fst buck)
-	  ;;BUCK is the first of its chain.
-	  ($vector-set! buckets-vector bucket-idx next)
-	;;BUCK is not the first of its chain.
-	(replace! fst buck next)))
-    ;;Reset the tcbucket-tconc FIRST.
-    ($set-tcbucket-tconc! buck (hasht-tc H))
-    ;;Then add it to the new place.
-    (let* ((key ($tcbucket-key buck))
-	   (ih  (pointer-value key))
-	   (idx (hash-value->buckets-vector-index ih buckets-vector))
-	   (n   ($vector-ref buckets-vector idx)))
-      ($set-tcbucket-next! buck n)
-      ($vector-set! buckets-vector idx buck)
-      (void))))
+  (define buckets-vector
+    (hasht-buckets-vector H))
+  ;;First remove BUCK from its old place.
+  (let* ((next        ($tcbucket-next buck))
+	 ;;The index in the  buckes vector of the chain of  tcbuckets to which BUCK
+	 ;;belongs.
+	 (bucket-idx  (if (fixnum? next)
+			  next
+			(get-bucket-index next)))
+	 ;;The first tcbucket in the chain of tcbuckets to which BUCK belongs.
+	 (fst         ($vector-ref buckets-vector bucket-idx)))
+    (if (eq? fst buck)
+	;;BUCK is the first of its chain.
+	($vector-set! buckets-vector bucket-idx next)
+      ;;BUCK is not  the first of its  chain.  Remove BUCK from  the chain starting
+      ;;with FST.
+      (replace! fst buck next)))
+  ;;Then reset the tcbucket-tconc.
+  ($set-tcbucket-tconc! buck (hasht-tc H))
+  ;;Finally re-hash the key and prepend BUCK to its new chain.
+  (let ((idx (hash-value->buckets-vector-index (pointer-value ($tcbucket-key buck))
+					       buckets-vector)))
+    ($set-tcbucket-next! buck ($vector-ref buckets-vector idx))
+    ($vector-set! buckets-vector idx buck)
+    (void)))
 
 (define (get-bucket H x)
   (define (get-hashed H x ih)
