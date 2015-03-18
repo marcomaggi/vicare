@@ -506,30 +506,43 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (del-hash h x)
-  (define (unlink! h b)
-    (let ((vec (hasht-buckets-vector h))
-	  (next ($tcbucket-next b)))
-      ;; first remove it from its old place
-      (let ((idx (if (fixnum? next)
-		     next
-		   (get-bucket-index next))))
-	(let ((fst ($vector-ref vec idx)))
-	  (cond ((eq? fst b)
-		 ($vector-set! vec idx next))
-		(else
-		 (remove-tcbucket-from-chain! fst b next)))))
-      ;; set next to be #f, denoting, not in table
-      ($set-tcbucket-next! b #f)))
-  (cond ((get-bucket h x)
-	 => (lambda (b)
-	      (receive-and-return (key val)
-		  ;;Returning these values is a Vicare extension.
-		  (values ($tcbucket-key b)
-			  ($tcbucket-val b))
-		(unlink! h b)
-		;; don't forget the count.
-		(set-hasht-size! h (fxsub1 (hasht-size h))))))))
+(module (del-hash)
+
+  (define (del-hash H key)
+    ;;This is the implementation of the standard HASHTABLE-DELETE!
+    ;;
+    (cond ((get-bucket H key)
+	   => (lambda (B)
+		(receive-and-return (key val)
+		    ;;Returning these values is a Vicare extension.
+		    (values ($tcbucket-key B)
+			    ($tcbucket-val B))
+		  (unlink! H B)
+		  ;;Don't forget to update the number of entries.
+		  (set-hasht-size! H (fxsub1 (hasht-size H))))))
+	  (else
+	   (values (void) (void)))))
+
+  (define (unlink! H B)
+    (let ((vec  (hasht-buckets-vector H))
+	  (next ($tcbucket-next B)))
+      ;;First remove it from its old place.
+      (let* ((idx (if (fixnum? next)
+		      next
+		    (get-bucket-index next)))
+	     (fst ($vector-ref vec idx)))
+	(cond ((eq? fst B)
+	       ;;B is the first in the chain: fast path without calling a function.
+	       ($vector-set! vec idx next))
+	      (else
+	       ;;B  is not  the first  in  the chain:  slow  path, we  must call  the
+	       ;;function.
+	       (remove-tcbucket-from-chain! fst B next))))
+      ;;Now B is unlinked.   We set its NEXT field to #f, denoting  that it is not in
+      ;;any table.  Does this make the garbage collector operations a bit faster?
+      ($set-tcbucket-next! B #f)))
+
+  #| end of module: DEL-HASH |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -759,7 +772,7 @@
   ;;
   ;;FIXME: should shrink table if number of keys drops below:
   ;;
-  ;;(sqrt (vector-length (hasht-buckets-vector h)))
+  ;;   (sqrt (vector-length (hasht-buckets-vector h)))
   ;;
   ;;(Abdulaziz Ghuloum)
   ;;
