@@ -562,56 +562,65 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (get-keys h)
-  (let ((v (hasht-buckets-vector h))
-	(n (hasht-size h)))
-    (let ((kv (make-vector n)))
-      (let f ((i  ($fxsub1 n))
-	      (j  ($fxsub1 (vector-length v)))
-	      (kv kv)
-	      (v  v))
-	(cond (($fx= i -1)
-	       kv)
-	      (else
-	       (let ((b ($vector-ref v j)))
-		 (if (fixnum? b)
-		     (f i ($fxsub1 j) kv v)
-		   (f (let f ((i i) (b b) (kv kv))
-			($vector-set! kv i ($tcbucket-key b))
-			(let ((b ($tcbucket-next b))
-			      (i ($fxsub1 i)))
-			  (cond
-			   ((fixnum? b) i)
-			   (else (f i b kv)))))
-		      ($fxsub1 j) kv v)))))))))
+(define (get-keys H)
+  ;;This is the implementation of the standard HASHTABLE-KEYS.
+  ;;
+  (let* ((buckets-vector (hasht-buckets-vector H))
+	 (size           (hasht-size H))
+	 (keys-vec       (make-vector size)))
+    (let next-bucket ((i               ($fxsub1 size)) ;index for KEYS-VEC
+		      (j               ($fxsub1 ($vector-length buckets-vector))) ;index for BUCKETS-VECTOR
+		      (keys-vec        keys-vec)
+		      (buckets-vector  buckets-vector))
+      (if ($fx= i -1)
+	  keys-vec
+	(let ((B ($vector-ref buckets-vector j)))
+	  (if (fixnum? B)
+	      ;;The buckets vector slot at index J is empty.
+	      (next-bucket i ($fxsub1 j) keys-vec buckets-vector)
+	    ;;B is the first tcbucket in a chain.
+	    (next-bucket (let next-tcbucket ((i i) (B B) (keys-vec keys-vec))
+			   ($vector-set! keys-vec i ($tcbucket-key B))
+			   (let ((B.next ($tcbucket-next B))
+				 (i      ($fxsub1 i)))
+			     (if (fixnum? B.next)
+				 ;;No more tcbuckets in the chain.
+				 i
+			       ;;Still more tcbuckets in the chain.
+			       (next-tcbucket i B.next keys-vec))))
+			 ($fxsub1 j) keys-vec buckets-vector)))))))
 
 (define (get-entries table)
   ;;This is the implementation of HASHTABLE-ENTRIES as defined by R6RS.
   ;;
-  (let* ((buck-vec (hasht-buckets-vector   table))
-	 (N        (hasht-size  table))
-	 (keys-vec (make-vector N))
-	 (vals-vec (make-vector N)))
-    (let next-bucket ((i        ($fxsub1 N))
-		      (buck-idx ($fxsub1 ($vector-length buck-vec)))
-		      (keys-vec keys-vec)
-		      (vals-vec vals-vec)
-		      (buck-vec buck-vec))
+  (let* ((buckets-vector (hasht-buckets-vector table))
+	 (size           (hasht-size  table))
+	 (keys-vec       (make-vector size))
+	 (vals-vec       (make-vector size)))
+    (let next-bucket ((i              ($fxsub1 size)) ;index for KEYS-VEC and VALS-VEC
+		      (j              ($fxsub1 ($vector-length buckets-vector))) ;index for BUCKETS-VECTOR
+		      (keys-vec       keys-vec)
+		      (vals-vec       vals-vec)
+		      (buckets-vector buckets-vector))
       (if ($fx= i -1)
 	  (values keys-vec vals-vec)
-	(let ((b ($vector-ref buck-vec buck-idx)))
-	  (if (fixnum? b)
-	      (next-bucket i ($fxsub1 buck-idx) keys-vec vals-vec buck-vec)
-	    (next-bucket (let inner-loop ((i i) (b b) (keys-vec keys-vec) (vals-vec vals-vec))
-			   ($vector-set! keys-vec i ($tcbucket-key b))
-			   ($vector-set! vals-vec i ($tcbucket-val b))
-			   (let ((b ($tcbucket-next b))
-				 (i ($fxsub1 i)))
-			     (if (fixnum? b)
+	(let ((B ($vector-ref buckets-vector j)))
+	  (if (fixnum? B)
+	      ;;The buckets vector slot at index J is empty.
+	      (next-bucket i ($fxsub1 j) keys-vec vals-vec buckets-vector)
+	    ;;B is the first tcbucket in a chain.
+	    (next-bucket (let next-tcbucket ((i i) (B B) (keys-vec keys-vec) (vals-vec vals-vec))
+			   ($vector-set! keys-vec i ($tcbucket-key B))
+			   ($vector-set! vals-vec i ($tcbucket-val B))
+			   (let ((B.next ($tcbucket-next B))
+				 (i      ($fxsub1 i)))
+			     (if (fixnum? B.next)
+				 ;;No more tcbuckets in the chain.
 				 i
-			       (inner-loop i b keys-vec vals-vec))))
-			 ($fxsub1 buck-idx)
-			 keys-vec vals-vec buck-vec)))))))
+			       ;;Still more tcbuckets in the chain.
+			       (next-tcbucket i B.next keys-vec vals-vec))))
+			 ($fxsub1 j)
+			 keys-vec vals-vec buckets-vector)))))))
 
 ;;; --------------------------------------------------------------------
 
