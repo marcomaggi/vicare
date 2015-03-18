@@ -459,31 +459,44 @@
     ;; 				      (pointer-value key)))))))
 
     (module (enlarge-hashtable)
-
+      ;;To  enlarge the  hashtable: allocate  a new  buckets vector;  rehash all  the
+      ;;tcbuckets from the old  vector into the new one; replace  the old vector with
+      ;;the new one.
+      ;;
       (define (enlarge-hashtable H hashf)
 	(let* ((vec1     (hasht-buckets-vector H))
 	       (vec1.len ($vector-length vec1))
+	       ;;Double the size.
 	       (vec2.len ($fxsll vec1.len 1))
 	       (vec2     (make-new-buckets-vector vec2.len)))
+	  ;;Rehash all the tcbuckets from the old vector into the new one.
 	  (move-all vec1 0 vec1.len vec2 ($fxsub1 vec2.len) hashf)
+	  ;;Replace the old vector with the new one.
 	  (set-hasht-buckets-vector! H vec2)))
 
-      (define (move-all vec1 i imax vec2 mask hashf)
+      (define (move-all src.vec i imax dst.vec mask hashf)
 	(unless ($fx= i imax)
-	  (let ((B ($vector-ref vec1 i)))
+	  (let ((B ($vector-ref src.vec i)))
+	    ;;If the  slot at index  I is empty:  B is a  fixnum; otherwise B  is the
+	    ;;first tcbucket in a chain.
 	    (unless (fixnum? B)
-	      (insert-b B vec2 mask hashf))
-	    (move-all vec1 (fxadd1 i) imax vec2 mask hashf))))
+	      (rehash-chain B dst.vec mask hashf))
+	    ;;Recurse to process the next slot.
+	    (move-all src.vec (fxadd1 i) imax dst.vec mask hashf))))
 
-      (define (insert-b B vec mask hashf)
+      (define (rehash-chain B dst.vec mask hashf)
+	;;Rehash all the tcbuckets in the chain B.
+	;;
 	(let* ((key  ($tcbucket-key B))
 	       (ih   (hashf key))
 	       (idx  ($fxlogand ih mask))
 	       (next ($tcbucket-next B)))
-	  ($set-tcbucket-next! B ($vector-ref vec idx))
-	  ($vector-set! vec idx B)
+	  ;;Prepend B to the chain from slot IDX.
+	  ($set-tcbucket-next! B ($vector-ref dst.vec idx))
+	  ($vector-set! dst.vec idx B)
+	  ;;Recurse if there are more tcbuckets.
 	  (unless (fixnum? next)
-	    (insert-b next vec mask hashf))))
+	    (rehash-chain next dst.vec mask hashf))))
 
       #| end of module: ENLARGE-HASHTABLE |# )
 
