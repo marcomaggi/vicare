@@ -150,7 +150,7 @@
 
 ;;;; directly from Dybvig's paper
 ;;
-;;This code hash been modified in Vicare.
+;;This code has been modified in Vicare.
 ;;
 
 (define (make-empty-tc)
