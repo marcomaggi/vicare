@@ -106,7 +106,8 @@
 ;;;; data structure
 
 (define-struct hasht
-  (vec
+  (buckets-vector
+		;Scheme vector representing the tables' buckets vector.
    size
 		;Non-negative fixnum representing the number of entries in the table.
 		;Limiting this value to a fixnum is a constraint deriving from:
@@ -179,7 +180,7 @@
 	   (replace! n x y)))))
 
 (define (re-add! h b)
-  (let ((vec (hasht-vec h))
+  (let ((vec (hasht-buckets-vector h))
 	(next ($tcbucket-next b)))
     ;; first remove it from its old place
     (let ((idx
@@ -206,7 +207,7 @@
 (define (get-bucket h x)
   (define (get-hashed h x ih)
     (let ((equiv? (hasht-equivf h))
-	  (vec (hasht-vec h)))
+	  (vec (hasht-buckets-vector h)))
       (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
 	(let f ((b ($vector-ref vec idx)))
 	  (cond ((fixnum? b)
@@ -223,7 +224,7 @@
 	 (get-hashed h x (number-hash x)))
 	(else
 	 (let ((pv (pointer-value x))
-	       (vec (hasht-vec h)))
+	       (vec (hasht-buckets-vector h)))
 	   (let ((ih pv))
 	     (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
 	       (let ((b ($vector-ref vec idx)))
@@ -241,7 +242,7 @@
 
 (define (del-hash h x)
   (define (unlink! h b)
-    (let ((vec (hasht-vec h))
+    (let ((vec (hasht-buckets-vector h))
 	  (next ($tcbucket-next b)))
       ;; first remove it from its old place
       (let ((idx (if (fixnum? next)
@@ -267,7 +268,7 @@
 (define (put-hash! h x v)
   (define (put-hashed h x v ih)
     (let ((equiv? (hasht-equivf h))
-	  (vec (hasht-vec h)))
+	  (vec (hasht-buckets-vector h)))
       (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
 	(let f ((b ($vector-ref vec idx)))
 	  (cond ((fixnum? b)
@@ -288,17 +289,20 @@
 	 (put-hashed h x v (number-hash x)))
 	(else
 	 (let ((pv  (pointer-value x))
-	       (vec (hasht-vec h)))
+	       (vec (hasht-buckets-vector h)))
 	   (let ((ih pv))
 	     (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
 	       (let ((b ($vector-ref vec idx)))
-		 (cond ((or (direct-lookup x b) (rehash-lookup h (hasht-tc h) x))
+		 (cond ((or (direct-lookup x b)
+			    (rehash-lookup h (hasht-tc h) x))
 			=> (lambda (b)
 			     ($set-tcbucket-val! b v)
 			     (void)))
 		       (else
-			(let ((bucket ($make-tcbucket (hasht-tc h) x v
-						      ($vector-ref vec idx))))
+			(let ((bucket ($make-tcbucket (hasht-tc h)	       ;tconc
+						      x			       ;key
+						      v			       ;val
+						      ($vector-ref vec idx)))) ;next
 			  (if ($fx= (pointer-value x) pv)
 			      ($vector-set! vec idx bucket)
 			    (let* ((ih  (pointer-value x))
@@ -334,12 +338,12 @@
 	  (unless (fixnum? b)
 	    (insert-b b vec2 mask))
 	  (move-all vec1 (fxadd1 i) n vec2 mask))))
-    (let* ((vec1 (hasht-vec h))
+    (let* ((vec1 (hasht-buckets-vector h))
 	   (n1   ($vector-length vec1))
 	   (n2   ($fxsll n1 1))
 	   (vec2 (make-base-vec n2)))
       (move-all vec1 0 n1 vec2 ($fxsub1 n2))
-      (set-hasht-vec! h vec2)))
+      (set-hasht-buckets-vector! h vec2)))
   (cond ((hasht-hashf h)
 	 => (lambda (hashf)
 	      (enlarge-hashtable h hashf)))
@@ -363,7 +367,7 @@
   (init-vec (make-vector n) 0 n))
 
 (define (clear-hash! h)
-  (let ((v (hasht-vec h)))
+  (let ((v (hasht-buckets-vector h)))
     (init-vec v 0 (vector-length v)))
   (unless (hasht-hashf h)
     (set-hasht-tc! h (let ((x (cons #f #f)))
@@ -371,7 +375,7 @@
   (set-hasht-size! h 0))
 
 (define (get-keys h)
-  (let ((v (hasht-vec h))
+  (let ((v (hasht-buckets-vector h))
 	(n (hasht-size h)))
     (let ((kv (make-vector n)))
       (let f ((i  ($fxsub1 n))
@@ -393,32 +397,33 @@
 			   (else (f i b kv)))))
 		      ($fxsub1 j) kv v)))))))))
 
-(define (get-entries h)
-  (let ((v (hasht-vec h))
-	(n (hasht-size h)))
-    (let ((kv (make-vector n))
-	  (vv (make-vector n)))
-      (let f ((i  ($fxsub1 n))
-	      (j  ($fxsub1 (vector-length v)))
-	      (kv kv)
-	      (vv vv)
-	      (v  v))
-	(cond (($fx= i -1)
-	       (values kv vv))
-	      (else
-	       (let ((b ($vector-ref v j)))
-		 (if (fixnum? b)
-		     (f i ($fxsub1 j) kv vv v)
-		   (f (let f ((i i) (b b) (kv kv) (vv vv))
-			($vector-set! kv i ($tcbucket-key b))
-			($vector-set! vv i ($tcbucket-val b))
-			(let ((b ($tcbucket-next b))
-			      (i ($fxsub1 i)))
-			  (cond ((fixnum? b)
-				 i)
-				(else
-				 (f i b kv vv)))))
-		      ($fxsub1 j) kv vv v)))))))))
+(define (get-entries table)
+  ;;This is the implementation of HASHTABLE-ENTRIES as defined by R6RS.
+  ;;
+  (let* ((buck-vec (hasht-buckets-vector   table))
+	 (N        (hasht-size  table))
+	 (keys-vec (make-vector N))
+	 (vals-vec (make-vector N)))
+    (let next-bucket ((i        ($fxsub1 N))
+		      (buck-idx ($fxsub1 ($vector-length buck-vec)))
+		      (keys-vec keys-vec)
+		      (vals-vec vals-vec)
+		      (buck-vec buck-vec))
+      (if ($fx= i -1)
+	  (values keys-vec vals-vec)
+	(let ((b ($vector-ref buck-vec buck-idx)))
+	  (if (fixnum? b)
+	      (next-bucket i ($fxsub1 buck-idx) keys-vec vals-vec buck-vec)
+	    (next-bucket (let inner-loop ((i i) (b b) (keys-vec keys-vec) (vals-vec vals-vec))
+			   ($vector-set! keys-vec i ($tcbucket-key b))
+			   ($vector-set! vals-vec i ($tcbucket-val b))
+			   (let ((b ($tcbucket-next b))
+				 (i ($fxsub1 i)))
+			     (if (fixnum? b)
+				 i
+			       (inner-loop i b keys-vec vals-vec))))
+			 ($fxsub1 buck-idx)
+			 keys-vec vals-vec buck-vec)))))))
 
 (define (hasht-copy h mutable?)
   (define (dup-hasht h mutable? n)
@@ -426,7 +431,7 @@
 	   (tc (and (not hashf) (let ((x (cons #f #f))) (cons x x)))))
       (make-hasht (make-base-vec n) 0 tc mutable?
 		  hashf (hasht-equivf h) (hasht-hashf0 h))))
-  (let ((v (hasht-vec h))
+  (let ((v (hasht-buckets-vector h))
 	(n (hasht-size h)))
     (let ((r (dup-hasht h mutable? (vector-length v))))
       (let f ((i ($fxsub1 n))
@@ -575,7 +580,7 @@
   ;;
   ;;FIXME: should shrink table if number of keys drops below:
   ;;
-  ;;(sqrt (vector-length (hasht-vec h)))
+  ;;(sqrt (vector-length (hasht-buckets-vector h)))
   ;;
   ;;(Abdulaziz Ghuloum)
   ;;
