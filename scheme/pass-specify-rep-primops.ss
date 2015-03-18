@@ -367,7 +367,8 @@
     (nop)))
 
  (define-primop pointer-value unsafe
-   ;;FIXME What is this for?  (Marco Maggi; Oct 17, 2012)
+   ;;This is  used by  EQ? hashtables  to obtain  an exact  integer from
+   ;;references to objects that are meant to be compared with EQ?.
    ;;
    ((V x) (prm 'logand
 	       (prm 'srl (T x) (K 1))

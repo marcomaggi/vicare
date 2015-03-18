@@ -149,6 +149,15 @@
 
 
 ;;;; directly from Dybvig's paper
+;;
+;;This code hash been modified in Vicare.
+;;
+
+(define-syntax-rule (hash-value->buckets-vector-index ?hv ?buckets-vector)
+  ;;Convert the fixnum ?HV representing the hash value  of a key into an index in the
+  ;;buckets vector.
+  ;;
+  ($fxlogand ?hv ($fxsub1 ($vector-length ?buckets-vector))))
 
 (define (tc-pop tc)
   (let ((x ($car tc)))
@@ -180,47 +189,74 @@
 		    (rehash-lookup h tc x))))))
 	(else #f)))
 
-(define (get-bucket-index b)
-  (let ((next ($tcbucket-next b)))
+(define (get-bucket-index B)
+  ;;Given a  tcbucket B from a  chain: return a non-negative  fixnum representing the
+  ;;index of the bucket holding the chain.
+  ;;
+  (let ((next ($tcbucket-next B)))
     (if (fixnum? next)
 	next
       (get-bucket-index next))))
 
-(define (replace! lb x y)
-  (let ((n ($tcbucket-next lb)))
-    (cond ((eq? n x)
-	   ($set-tcbucket-next! lb y)
+(define (replace! leading-bucket x y)
+  ;;LEADING-BUCKET is the first tcbucket in a chain of tcbuckets.  X is a tcbucket in
+  ;;the chain.  Y is the  successor of X in the chain: either a  tcbucket if X is not
+  ;;the last, or  a fixnum if X is  the last (the fixnum represents the  index of the
+  ;;chain in the buckets vector).  Layout example:
+  ;;
+  ;;   buckets vector
+  ;;   --
+  ;;   |
+  ;;   --
+  ;;   | --> | leading-bucket | --> |other| --> | x | --> | y | --> ...
+  ;;   --
+  ;;   |
+  ;;   --
+  ;;
+  ;;Recursive  function.  Extract  X  from the  chain replacing  it  with Y.   Return
+  ;;unspecified values.
+  ;;
+  (let ((next ($tcbucket-next leading-bucket)))
+    (cond ((eq? next x)
+	   ($set-tcbucket-next! leading-bucket y)
 	   (void))
 	  (else
-	   (replace! n x y)))))
+	   (replace! next x y)))))
 
-(define (re-add! h buck)
-  (let ((buck-vec (hasht-buckets-vector h)))
-    ;; first remove it from its old place
-    (let* ((next ($tcbucket-next buck))
-	   (idx  (if (fixnum? next)
-		     next
-		   (get-bucket-index next)))
-	   (fst  ($vector-ref buck-vec idx)))
+(define (re-add! H buck)
+  ;;BUCK is the tcbucket representing the entry to be rehashed.
+  ;;
+  (let ((buckets-vector (hasht-buckets-vector H)))
+    ;;First remove BUCK from its old place.
+    (let* ((next        ($tcbucket-next buck))
+	   ;;The index in the  buckes vector of the chain of  tcbuckets to which BUCK
+	   ;;belongs.
+	   (bucket-idx  (if (fixnum? next)
+			    next
+			  (get-bucket-index next)))
+	   ;;The first tcbucket in the chain of tcbuckets to which BUCK belongs.
+	   (fst         ($vector-ref buckets-vector bucket-idx)))
       (if (eq? fst buck)
-	  ($vector-set! buck-vec idx next)
+	  ;;BUCK is the first of its chain.
+	  ($vector-set! buckets-vector bucket-idx next)
+	;;BUCK is not the first of its chain.
 	(replace! fst buck next)))
     ;;Reset the tcbucket-tconc FIRST.
-    ($set-tcbucket-tconc! buck (hasht-tc h))
+    ($set-tcbucket-tconc! buck (hasht-tc H))
     ;;Then add it to the new place.
-    (let* ((k   ($tcbucket-key buck))
-	   (ih  (pointer-value k))
-	   (idx ($fxlogand ih ($fxsub1 ($vector-length buck-vec))))
-	   (n   ($vector-ref buck-vec idx)))
+    (let* ((key ($tcbucket-key buck))
+	   (ih  (pointer-value key))
+	   (idx (hash-value->buckets-vector-index ih buckets-vector))
+	   (n   ($vector-ref buckets-vector idx)))
       ($set-tcbucket-next! buck n)
-      ($vector-set! buck-vec idx buck)
+      ($vector-set! buckets-vector idx buck)
       (void))))
 
-(define (get-bucket h x)
-  (define (get-hashed h x ih)
-    (let ((equiv? (hasht-equivf h))
-	  (vec (hasht-buckets-vector h)))
-      (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
+(define (get-bucket H x)
+  (define (get-hashed H x ih)
+    (let ((equiv? (hasht-equivf H))
+	  (vec (hasht-buckets-vector H)))
+      (let ((idx (hash-value->buckets-vector-index ih vec)))
 	(let f ((b ($vector-ref vec idx)))
 	  (cond ((fixnum? b)
 		 #f)
@@ -228,20 +264,25 @@
 		 b)
 		(else
 		 (f ($tcbucket-next b))))))))
-  (cond ((hasht-hashf h)
+  (cond ((hasht-hashf H)
+	 ;;The hashtable has user-supplied hash and equivalence functions.
 	 => (lambda (hashf)
-	      (get-hashed h x (hashf x))))
-	((and (eq? eqv? (hasht-equivf h))
+	      (get-hashed H x (hashf x))))
+	((and (eq? eqv? (hasht-equivf H))
 	      (number? x))
-	 (get-hashed h x (number-hash x)))
+	 ;;The hashtable has EQV? as equivalence function, it has NUMBER-HASH as hash
+	 ;;function.
+	 (get-hashed H x (number-hash x)))
 	(else
-	 (let ((pv (pointer-value x))
-	       (vec (hasht-buckets-vector h)))
+	 ;;The hashtable  has EQ?  as equivalence function,  it has  POINTER-VALUE as
+	 ;;hash function.
+	 (let ((pv  (pointer-value x))
+	       (vec (hasht-buckets-vector H)))
 	   (let ((ih pv))
-	     (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
+	     (let ((idx (hash-value->buckets-vector-index ih vec)))
 	       (let ((b ($vector-ref vec idx)))
 		 (or (direct-lookup x b)
-		     (rehash-lookup h (hasht-tc h) x)))))))))
+		     (rehash-lookup H (hasht-tc H) x)))))))))
 
 (define (get-hash h x v)
   (cond ((get-bucket h x)
@@ -281,7 +322,7 @@
   (define (put-hashed H x v ih)
     (let ((equiv? (hasht-equivf H))
 	  (vec (hasht-buckets-vector H)))
-      (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
+      (let ((idx (hash-value->buckets-vector-index ih vec)))
 	(let f ((b ($vector-ref vec idx)))
 	  (cond ((fixnum? b)
 		 ($vector-set! vec idx (vector x v ($vector-ref vec idx)))
@@ -303,7 +344,7 @@
 	 (let ((pv  (pointer-value x))
 	       (vec (hasht-buckets-vector H)))
 	   (let ((ih pv))
-	     (let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
+	     (let ((idx (hash-value->buckets-vector-index ih vec)))
 	       (let ((b ($vector-ref vec idx)))
 		 (cond ((or (direct-lookup x b)
 			    (rehash-lookup H (hasht-tc H) x))
@@ -320,7 +361,7 @@
 			  (if ($fx= (pointer-value x) pv)
 			      ($vector-set! vec idx bucket)
 			    (let* ((ih  (pointer-value x))
-				   (idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
+				   (idx (hash-value->buckets-vector-index ih vec)))
 			      ($set-tcbucket-next! bucket ($vector-ref vec idx))
 			      ($vector-set! vec idx bucket))))
 			(let ((ct (hasht-size H)))

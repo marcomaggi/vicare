@@ -11422,6 +11422,12 @@ Hash function for any Scheme object.  For some object types: this is a
 very low quality hash function.
 @end defun
 
+
+@defun pointer-value @var{obj}
+This is used by @func{eq?} hashtables to obtain a fixnum from references
+to objects that are meant to be compared with @func{eq?}.
+@end defun
+
 @c page
 @node iklib load
 @section Loading source files
