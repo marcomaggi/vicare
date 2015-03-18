@@ -159,35 +159,16 @@
   ;;
   ($fxlogand ?hv ($fxsub1 ($vector-length ?buckets-vector))))
 
-(define (tc-pop tc)
-  ;;This function  might mutate the  pair TC,  which is a  TC field from  a hashtable
-  ;;struct.  If TC is empty: return false.  Otherwise pop and return its first entry.
+(define (get-bucket-index B)
+  ;;Recursive  function.  Given  a tcbucket  B from  a chain:  return a  non-negative
+  ;;fixnum representing the index of the bucket holding the chain.
   ;;
-  (let ((A ($car tc)))
-    (if (eq? A ($cdr tc))
-	;;The pair TC has EQ? car and cdr: it is empty.
-	#f
-      ;;Before:
-      ;;           -------
-      ;;   TC --> | A | o-|--> ...
-      ;;           -------
-      ;;            |     -------      -------
-      ;;             --> | M | o-|--> | P | o-|--> ...
-      ;;                  -------      -------
-      ;;after:
-      ;;           -------
-      ;;   TC --> | A | D |--> ...
-      ;;           -------
-      ;;            |     -------
-      ;;             --> | P | Q | --> ...
-      ;;                  -------
-      ;;and return M.
-      (receive-and-return (v)
-	  ($car A)
-	($set-car! tc ($cdr A))
-	;;Clean the pair A so that it does not reference the TC anymore.
-	($set-car! A #f)
-	($set-cdr! A #f)))))
+  (let ((next ($tcbucket-next B)))
+    (if (fixnum? next)
+	next
+      (get-bucket-index next))))
+
+;;; --------------------------------------------------------------------
 
 (define (direct-lookup key buck)
   ;;Recursive function.  Used only with EQ? hash tables.  ASSQ-like lookup of the key
@@ -195,90 +176,121 @@
   ;;return its tcbucket; otherwise return false.
   ;;
   (cond ((fixnum? buck)
+	 ;;End of chain.
 	 #f)
 	((eq? key ($tcbucket-key buck))
+	 ;;Match found.
 	 buck)
 	(else
+	 ;;Try next.
 	 (direct-lookup key ($tcbucket-next buck)))))
 
-(define (rehash-lookup H tc key)
-  ;;Used only with  EQ? hash tables.  H is the  hash table; TC is the tc  field of H;
-  ;;KEY is  the key.  If  a matching entry is  found: return its  tcbucket; otherwise
-  ;;return false.
-  ;;
-  (cond ((tc-pop tc)
-	 => (lambda (buck)
-	      (if (not ($tcbucket-next buck))
-		  (rehash-lookup H tc key)
-		(begin
-		  (re-add! H buck)
-		  (if (eq? key ($tcbucket-key buck))
-		      buck
-		    (rehash-lookup H tc key))))))
-	(else #f)))
+(module (rehash-lookup)
 
-(define (get-bucket-index B)
-  ;;Given a  tcbucket B from a  chain: return a non-negative  fixnum representing the
-  ;;index of the bucket holding the chain.
-  ;;
-  (let ((next ($tcbucket-next B)))
-    (if (fixnum? next)
-	next
-      (get-bucket-index next))))
+  (define (rehash-lookup H tc key)
+    ;;Used only with EQ? hash tables.  H is the  hash table; TC is the tc field of H;
+    ;;KEY is the key.   If a matching entry is found:  return its tcbucket; otherwise
+    ;;return false.
+    ;;
+    (cond ((tc-pop tc)
+	   => (lambda (buck)
+		(if (not ($tcbucket-next buck))
+		    (rehash-lookup H tc key)
+		  (begin
+		    (re-add! H buck)
+		    (if (eq? key ($tcbucket-key buck))
+			buck
+		      (rehash-lookup H tc key))))))
+	  (else #f)))
 
-(define (replace! leading-bucket x y)
-  ;;LEADING-BUCKET is the first tcbucket in a chain of tcbuckets.  X is a tcbucket in
-  ;;the chain.  Y is the  successor of X in the chain: either a  tcbucket if X is not
-  ;;the last, or  a fixnum if X is  the last (the fixnum represents the  index of the
-  ;;chain in the buckets vector).  Layout example:
+  (define (tc-pop tc)
+    ;;This function might  mutate the pair TC,  which is a TC field  from a hashtable
+    ;;struct.  If  TC is  empty: return  false.  Otherwise pop  and return  its first
+    ;;entry.
+    ;;
+    (let ((A ($car tc)))
+      (if (eq? A ($cdr tc))
+	  ;;The pair TC has EQ? car and cdr: it is empty.
+	  #f
+	;;Before:
+	;;           -------
+	;;   TC --> | A | o-|--> ...
+	;;           -------
+	;;            |     -------      -------
+	;;             --> | M | o-|--> | P | o-|--> ...
+	;;                  -------      -------
+	;;after:
+	;;           -------
+	;;   TC --> | A | D |--> ...
+	;;           -------
+	;;            |     -------
+	;;             --> | P | Q | --> ...
+	;;                  -------
+	;;and return M.
+	(receive-and-return (v)
+	    ($car A)
+	  ($set-car! tc ($cdr A))
+	  ;;Clean the pair A so that it does not reference the TC anymore.
+	  ($set-car! A #f)
+	  ($set-cdr! A #f)))))
+
+  (define (re-add! H buck)
+    ;;BUCK is the tcbucket representing the entry to be rehashed.
+    ;;
+    (define buckets-vector
+      (hasht-buckets-vector H))
+    ;;First remove BUCK from its old place.
+    (let* ((next        ($tcbucket-next buck))
+	   ;;The index in the  buckes vector of the chain of  tcbuckets to which BUCK
+	   ;;belongs.
+	   (bucket-idx  (if (fixnum? next)
+			    next
+			  (get-bucket-index next)))
+	   ;;The first tcbucket in the chain of tcbuckets to which BUCK belongs.
+	   (fst         ($vector-ref buckets-vector bucket-idx)))
+      (if (eq? fst buck)
+	  ;;BUCK is the first of its chain.
+	  ($vector-set! buckets-vector bucket-idx next)
+	;;BUCK is not  the first of its  chain.  Remove BUCK from  the chain starting
+	;;with FST.
+	(remove-tcbucket-from-chain! fst buck next)))
+    ;;Then reset the tcbucket-tconc.
+    ($set-tcbucket-tconc! buck (hasht-tc H))
+    ;;Finally re-hash the key and prepend BUCK to its new chain.
+    (let ((idx (hash-value->buckets-vector-index (pointer-value ($tcbucket-key buck))
+						 buckets-vector)))
+      ($set-tcbucket-next! buck ($vector-ref buckets-vector idx))
+      ($vector-set! buckets-vector idx buck)
+      (void)))
+
+  #| end of module: REHASH-LOOKUP |# )
+
+;;; --------------------------------------------------------------------
+
+(define (remove-tcbucket-from-chain! leading-bucket B B.next)
+  ;;LEADING-BUCKET is the first tcbucket in a chain of tcbuckets.  B is a tcbucket in
+  ;;the chain.  B.NEXT is the successor of B  in the chain: either a tcbucket if B is
+  ;;not the last,  or a fixnum if B  is the last (the fixnum represents  the index of
+  ;;the chain in the buckets vector).  Layout example:
   ;;
   ;;   buckets vector
   ;;   --
   ;;   |
   ;;   --
-  ;;   | --> | leading-bucket | --> |other| --> | x | --> | y | --> ...
+  ;;   | --> | leading-bucket | --> |other| --> | B | --> | B.next | --> ...
   ;;   --
   ;;   |
   ;;   --
   ;;
-  ;;Recursive  function.  Extract  X  from the  chain replacing  it  with Y.   Return
+  ;;Recursive function.  Extract  B from the chain replacing it  with B.NEXT.  Return
   ;;unspecified values.
   ;;
-  (let ((next ($tcbucket-next leading-bucket)))
-    (cond ((eq? next x)
-	   ($set-tcbucket-next! leading-bucket y)
+  (let ((leading-bucket.next ($tcbucket-next leading-bucket)))
+    (cond ((eq? leading-bucket.next B)
+	   ($set-tcbucket-next! leading-bucket B.next)
 	   (void))
 	  (else
-	   (replace! next x y)))))
-
-(define (re-add! H buck)
-  ;;BUCK is the tcbucket representing the entry to be rehashed.
-  ;;
-  (define buckets-vector
-    (hasht-buckets-vector H))
-  ;;First remove BUCK from its old place.
-  (let* ((next        ($tcbucket-next buck))
-	 ;;The index in the  buckes vector of the chain of  tcbuckets to which BUCK
-	 ;;belongs.
-	 (bucket-idx  (if (fixnum? next)
-			  next
-			(get-bucket-index next)))
-	 ;;The first tcbucket in the chain of tcbuckets to which BUCK belongs.
-	 (fst         ($vector-ref buckets-vector bucket-idx)))
-    (if (eq? fst buck)
-	;;BUCK is the first of its chain.
-	($vector-set! buckets-vector bucket-idx next)
-      ;;BUCK is not  the first of its  chain.  Remove BUCK from  the chain starting
-      ;;with FST.
-      (replace! fst buck next)))
-  ;;Then reset the tcbucket-tconc.
-  ($set-tcbucket-tconc! buck (hasht-tc H))
-  ;;Finally re-hash the key and prepend BUCK to its new chain.
-  (let ((idx (hash-value->buckets-vector-index (pointer-value ($tcbucket-key buck))
-					       buckets-vector)))
-    ($set-tcbucket-next! buck ($vector-ref buckets-vector idx))
-    ($vector-set! buckets-vector idx buck)
-    (void)))
+	   (remove-tcbucket-from-chain! leading-bucket.next B B.next)))))
 
 (define (get-bucket H x)
   (define (get-hashed H x ih)
@@ -333,7 +345,7 @@
 	  (cond ((eq? fst b)
 		 ($vector-set! vec idx next))
 		(else
-		 (replace! fst b next)))))
+		 (remove-tcbucket-from-chain! fst b next)))))
       ;; set next to be #f, denoting, not in table
       ($set-tcbucket-next! b #f)))
   (cond ((get-bucket h x)
