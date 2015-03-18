@@ -624,40 +624,46 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (hasht-copy h mutable?)
-  (define (dup-hasht h mutable? n)
-    (let* ((hashf (hasht-hashf h))
+(module (hasht-copy)
+
+  (define (hasht-copy H.src mutable?)
+    (let* ((buckets-vector     (hasht-buckets-vector H.src))
+	   (number-of-buckets  ($vector-length buckets-vector))
+	   (number-of-entries  (hasht-size H.src))
+	   (H.dst (dup-hasht H.src mutable? number-of-buckets)))
+      (let next-bucket ((i              ($fxsub1 number-of-entries))
+			(j              ($fxsub1 number-of-buckets))
+			(H.dst          H.dst)
+			(buckets-vector buckets-vector))
+	(if ($fx= i -1)
+	    H.dst
+	  (next-bucket (let ((B ($vector-ref buckets-vector j)))
+			 (if (fixnum? B)
+			     ;;The slot in the buckets vector at index J is empty.
+			     i
+			   ;;B is the first tcbucket in a chain.
+			   (let next-tcbucket ((i i) (B B) (H.dst H.dst))
+			     (put-hash! H.dst ($tcbucket-key B) ($tcbucket-val B))
+			     (let ((B.next ($tcbucket-next B))
+				   (i      ($fxsub1 i)))
+			       (if (fixnum? B.next)
+				   i
+				 (next-tcbucket i B.next H.dst))))))
+		       ($fxsub1 j) H.dst buckets-vector)))))
+
+  (define (dup-hasht H.src mutable? number-of-buckets)
+    (let* ((hashf (hasht-hashf H.src))
 	   (tc    (and (not hashf)
 		       (make-empty-tc))))
-      (make-hasht (make-new-buckets-vector n) ;buckets-vector
-		  0			      ;size
-		  tc			      ;tc
-		  mutable?		      ;mutable?
-		  hashf			      ;validated hash function
-		  (hasht-equivf h)	      ;equivalence function
-		  (hasht-hashf0 h))))	      ;original hash function
-  (let ((v (hasht-buckets-vector h))
-	(n (hasht-size h)))
-    (let ((r (dup-hasht h mutable? (vector-length v))))
-      (let f ((i ($fxsub1 n))
-	      (j ($fxsub1 (vector-length v)))
-	      (r r)
-	      (v v))
-	(cond (($fx= i -1)
-	       r)
-	      (else
-	       (let ((b ($vector-ref v j)))
-		 (if (fixnum? b)
-		     (f i ($fxsub1 j) r v)
-		   (f (let f ((i i) (b b) (r r))
-			(put-hash! r ($tcbucket-key b) ($tcbucket-val b))
-			(let ((b ($tcbucket-next b))
-			      (i ($fxsub1 i)))
-			  (cond ((fixnum? b)
-				 i)
-				(else
-				 (f i b r)))))
-		      ($fxsub1 j) r v)))))))))
+      (make-hasht (make-new-buckets-vector number-of-buckets) ;buckets-vector
+		  0					      ;size
+		  tc					      ;tc
+		  mutable?				      ;mutable?
+		  hashf			  ;validated hash function
+		  (hasht-equivf H.src)    ;equivalence function
+		  (hasht-hashf0 H.src)))) ;original hash function
+
+  #| end of module: HASHT-COPY |# )
 
 
 ;;;; public interface: constructors and predicate
