@@ -126,10 +126,87 @@
 (define (hashtable-find pred table)
   (vector-find pred (hashtable-keys table)))
 
+(define (hashtable-find-entry pred table)
+  (hashtable-find (lambda (key)
+		    (pred key (hashtable-ref table key #f)))
+		  table))
+
 (define* (hashtable-fold-entries {proc procedure?} nil {T hashtable?})
   (receive (keys vals)
       (hashtable-entries T)
     (vector-fold-left proc nil keys vals)))
+
+(define (hashtable-replace-key! table old-key new-key)
+  ;;If OLD-KEY is  a key in TABLE: delete  the entry associated to OLD-KEY  and add a
+  ;;new entry  associated to  NEW-KEY having the  same value of  the old  one; return
+  ;;OLD-KEY.  If OLD-KEY is not a key in TABLE: do nothing and return false.
+  ;;
+  (let ((val (hashtable-ref table old-key (void))))
+    (if (eq? val (void))
+	#f
+      (begin
+	(hashtable-delete! table old-key)
+	(hashtable-set!    table new-key val)
+	old-key))))
+
+(define (hashtable-replace-key-representation! table new-key)
+  ;;Search an entry in TABLE associated with NEW-KEY:
+  ;;
+  ;;* If one is  found: delete it and add a new entry  associated to NEW-KEY with the
+  ;;  same value of the old one, then return the old key.
+  ;;
+  ;;* If none is found: do nothing and return false.
+  ;;
+  ;;It makes sense to call this function when the equality predicate of TABLE returns
+  ;;true when applied  to two values with different representation  but for which the
+  ;;hash function of TABLE returns the same value.
+  ;;
+  ;;For example, the following code replaces the key "ciao" with the key "CIAO":
+  ;;
+  ;;   (import (vicare))
+  ;;   (define T
+  ;;     (make-hashtable string-ci=? string-ci-hash))
+  ;;   (hashtable-set! T "ciao" 1)
+  ;;   (hashtable-replace-key-representation! T "CIAO")
+  ;;   (hashtable-ref T "CIAO" #f)
+  ;;   => 1
+  ;;
+  (define equiv
+    (hashtable-equivalence-function table))
+  (cond ((hashtable-find (lambda (old-key)
+			   (equiv old-key new-key))
+			 table)
+	 => (lambda (old-key)
+	      (hashtable-replace-key! table old-key new-key)))
+	(else #f)))
+
+(define (hashtable-find-and-replace-key! pred new-key table)
+  ;;Search an entry in TABLE whose key and value satisfy the predicate PRED:
+  ;;
+  ;;* If one is  found: delete it and add a new entry  associated to NEW-KEY with the
+  ;;  same value of the old one, then return the old key.
+  ;;
+  ;;* If none is found: do nothing and return false.
+  ;;
+  ;;For example, the following code replaces the key "ciao" with the key "CIAO":
+  ;;
+  ;;   (import (vicare))
+  ;;   (define T
+  ;;     (make-hashtable string=? string-hash))
+  ;;   (hashtable-set! T "ciao" 1)
+  ;;   (hashtable-find-and-replace-key!
+  ;;       (lambda (old-key val)
+  ;;         (string-ci=? "CIAO" old-key))
+  ;;     "CIAO" T)
+  ;;   (hashtable-ref T "CIAO" #f)
+  ;;   => 1
+  ;;
+  (cond ((hashtable-find-entry pred table)
+	 => (lambda (old-key)
+	      (hashtable-replace-key! table old-key new-key)))
+	(else #f)))
+
+;;; --------------------------------------------------------------------
 
 (define (max-one n multi?)
   ;;Upper-bound N by one if MULTI? is false.
@@ -460,7 +537,7 @@
 
 ;;;
 
-(define (sob-replace! who sob element)
+(define (sob-replace! who sob new-element)
   ;;Given an  element which  resides in  a set,  this makes  sure that  the specified
   ;;element is  represented by  the form  given.  Thus if  a SOB  contains 2  and the
   ;;equality predicate is "=", then calling:
@@ -472,15 +549,8 @@
   ;;
   ;;Return SOB itself.
   ;;
-  (%check-element who sob element)
-  (let ((comparator (sob-comparator sob)))
-    (let ((element=  (comparator-equality-predicate comparator))
-	  (T         (sob-hash-table sob)))
-      (cond ((vector-find (lambda (key)
-			    (element= key element))
-	       (hashtable-keys T))
-	     => (lambda (key)
-		  (hashtable-update! T element values (void)))))))
+  (%check-element who sob new-element)
+  (hashtable-replace-key-representation! (sob-hash-table sob) new-element)
   sob)
 
 (define* (set-replace! {set set?} element)

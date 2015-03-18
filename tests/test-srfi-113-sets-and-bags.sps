@@ -895,6 +895,34 @@
 	(list-sort fx<? (bag->list B)))
     => '(1 2 2 3))
 
+;;; --------------------------------------------------------------------
+;;; set-replace
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define S    (set string-comparator str1))
+	(define S^   (set-replace S str2))
+	(values (set-any? (lambda (elm)
+			    (eq? elm str1))
+			  S^)
+		(set-any? (lambda (elm)
+			    (eq? elm str2))
+			  S^)))
+    => #f "a")
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define S    (set real-comparator num1))
+	(define S^   (set-replace S num2))
+	(set-any? (lambda (elm)
+		    (= elm num1))
+		  S^))
+    => 2.0)
+
   #t)
 
 
