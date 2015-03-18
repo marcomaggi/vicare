@@ -109,6 +109,9 @@
       (and (fixnum? obj)
 	   (fxnonnegative? obj))))
 
+(define (%not-void? obj)
+  (not (eq? obj (void))))
+
 
 ;;;; data structure
 
@@ -521,36 +524,24 @@
 
 ;;;; public interface: accessors and mutators
 
-(define (hashtable-ref table key default)
-  (define who 'hashtable-ref)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (get-hash table key default)))
+(case-define* hashtable-ref
+  (({table hashtable?} key)
+   (get-hash table key (void)))
+  (({table hashtable?} key default)
+   (get-hash table key default)))
 
-(define (hashtable-set! table key val)
-  (define who 'hashtable-set!)
-  (with-arguments-validation (who)
-      ((hasht		table)
-       (mutable-hasht	table))
-    (put-hash! table key val)))
+(define* (hashtable-set! {table mutable-hashtable?} key {val %not-void?})
+  (put-hash! table key val))
 
 ;;; --------------------------------------------------------------------
 
-(define (hashtable-contains? table key)
-  (define who 'hashtable-contains?)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (in-hash? table key)))
+(define* (hashtable-contains? {table hashtable?} key)
+  (in-hash? table key))
 
 ;;; --------------------------------------------------------------------
 
-(define (hashtable-update! table key proc default)
-  (define who 'hashtable-update!)
-  (with-arguments-validation (who)
-      ((hasht		table)
-       (mutable-hasht	table)
-       (procedure	proc))
-    (update-hash! table key proc default)))
+(define* (hashtable-update! {table mutable-hashtable?} key {proc procedure?} {default %not-void?})
+  (update-hash! table key proc default))
 
 (define* (hashtable-delete! {table mutable-hashtable?} key)
   ;;Remove any association for KEY within TABLE;  if there is no association for KEY:
@@ -570,12 +561,8 @@
   ;;
   (del-hash table key))
 
-(define (hashtable-clear! table)
-  (define who 'hashtable-clear!)
-  (with-arguments-validation (who)
-      ((hasht		table)
-       (mutable-hasht	table))
-    (clear-hash! table)))
+(define* (hashtable-clear! {table mutable-hashtable?})
+  (clear-hash! table))
 
 
 ;;;; public interface: inspection
