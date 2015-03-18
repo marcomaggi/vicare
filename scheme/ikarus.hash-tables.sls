@@ -163,26 +163,43 @@
   ;;This function  might mutate the  pair TC,  which is a  TC field from  a hashtable
   ;;struct.  If TC is empty: return false.  Otherwise pop and return its first entry.
   ;;
-  (let ((x ($car tc)))
-    (if (eq? x ($cdr tc))
+  (let ((A ($car tc)))
+    (if (eq? A ($cdr tc))
+	;;The pair TC has EQ? car and cdr: it is empty.
 	#f
+      ;;Before:
+      ;;           -------
+      ;;   TC --> | A | o-|--> ...
+      ;;           -------
+      ;;            |     -------      -------
+      ;;             --> | M | o-|--> | P | o-|--> ...
+      ;;                  -------      -------
+      ;;after:
+      ;;           -------
+      ;;   TC --> | A | D |--> ...
+      ;;           -------
+      ;;            |     -------
+      ;;             --> | P | Q | --> ...
+      ;;                  -------
+      ;;and return M.
       (receive-and-return (v)
-	  ($car x)
-	($set-car! tc ($cdr x))
-	;;Clean the pair X so that it does not reference the TC anymore.
-	($set-car! x #f)
-	($set-cdr! x #f)))))
+	  ($car A)
+	($set-car! tc ($cdr A))
+	;;Clean the pair A so that it does not reference the TC anymore.
+	($set-car! A #f)
+	($set-cdr! A #f)))))
 
 (define (direct-lookup key buck)
-  ;;Used only with EQ? hash tables.  ASSQ-like lookup  of the key KEY in the chain of
-  ;;tcbuckets starting with BUCK.  If a matching entry is found: return its tcbucket;
-  ;;otherwise return false.
+  ;;Recursive function.  Used only with EQ? hash tables.  ASSQ-like lookup of the key
+  ;;KEY in the chain of tcbuckets starting  with BUCK.  If a matching entry is found:
+  ;;return its tcbucket; otherwise return false.
   ;;
-  (if (fixnum? buck)
-      #f
-    (if (eq? key ($tcbucket-key buck))
-	buck
-      (direct-lookup key ($tcbucket-next buck)))))
+  (cond ((fixnum? buck)
+	 #f)
+	((eq? key ($tcbucket-key buck))
+	 buck)
+	(else
+	 (direct-lookup key ($tcbucket-next buck)))))
 
 (define (rehash-lookup H tc key)
   ;;Used only with  EQ? hash tables.  H is the  hash table; TC is the tc  field of H;

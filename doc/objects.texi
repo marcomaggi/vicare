@@ -4285,10 +4285,16 @@ the memory layout of a tcbucket is as follows:
  tconc  key   val  next
 @end example
 
+@noindent
+references to tcbucket are tagged as vectors and reference a word tagged
+as pair.
+
 The meaning of a tcbucket's fields is as follows:
 
 @table @code
 @item tconc
+A pair.  It is a structure used to efficiently handle hash tables using
+@func{eq?} as equivalence function.
 
 @item key
 A Scheme object representing the key of the hash table entry.
