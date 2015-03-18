@@ -51,53 +51,50 @@
     ;; unsafe operations
     $string-hash		$string-ci-hash
     $symbol-hash		$bytevector-hash)
-  (import
-      (vicare system $pairs)
-    (vicare system $vectors)
-    (vicare system $tcbuckets)
-    (vicare system $fx)
-    (except (vicare)
-	    make-eq-hashtable		make-eqv-hashtable
-	    make-hashtable
-	    hashtable?			hashtable-mutable?	mutable-hashtable?
-	    hashtable-ref		hashtable-set!
-	    hashtable-size
-	    hashtable-delete!		hashtable-clear!
-	    hashtable-contains?
-	    hashtable-update!
-	    hashtable-keys		hashtable-entries
-	    hashtable-copy
-	    hashtable-equivalence-function
-	    hashtable-hash-function
-	    string-hash			string-ci-hash
-	    symbol-hash			bytevector-hash
-	    equal-hash
-	    fixnum-hash			exact-integer-hash
-	    flonum-hash			number-hash
-	    char-hash			char-ci-hash
-	    boolean-hash		void-hash
-	    eof-object-hash		would-block-hash
-	    struct-hash			record-hash
-	    object-hash)
+  (import (except (vicare)
+		  make-eq-hashtable		make-eqv-hashtable
+		  make-hashtable
+		  hashtable?			hashtable-mutable?	mutable-hashtable?
+		  hashtable-ref		hashtable-set!
+		  hashtable-size
+		  hashtable-delete!		hashtable-clear!
+		  hashtable-contains?
+		  hashtable-update!
+		  hashtable-keys		hashtable-entries
+		  hashtable-copy
+		  hashtable-equivalence-function
+		  hashtable-hash-function
+		  string-hash			string-ci-hash
+		  symbol-hash			bytevector-hash
+		  equal-hash
+		  fixnum-hash			exact-integer-hash
+		  flonum-hash			number-hash
+		  char-hash			char-ci-hash
+		  boolean-hash		void-hash
+		  eof-object-hash		would-block-hash
+		  struct-hash			record-hash
+		  object-hash)
     ;;This import spec must be the  last, else rebuilding the boot image
     ;;may fail.  (Marco Maggi; Sat Feb  9, 2013)
     (vicare arguments validation)
-    (vicare system $chars)
-    (vicare system $fx)
     (vicare system $bignums)
-    (vicare system $flonums)
-    (vicare system $ratnums)
+    (vicare system $chars)
     (vicare system $compnums)
-    (vicare system $numerics))
+    (vicare system $flonums)
+    (vicare system $fx)
+    (vicare system $numerics)
+    (vicare system $pairs)
+    (vicare system $ratnums)
+    (vicare system $tcbuckets)
+    (vicare system $vectors))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (initial-capacity who obj)
+(define (%initial-capacity? obj)
   (and (or (fixnum? obj)
 	   (bignum? obj))
-       (>= obj 0))
-  (procedure-argument-violation who "invalid initial hashtable capacity" obj))
+       (>= obj 0)))
 
 (define-argument-validation (hasht who obj)
   (hasht? obj)
@@ -448,47 +445,47 @@
 
 (define hashtable? hasht?)
 
-(define make-eq-hashtable
-  (case-lambda
-   (()
-    (let* ((x  (cons #f #f))
-	   (tc (cons x x)))
-      (make-hasht (make-base-vec 32) #;vec 0 #;count tc #;tc
-		  #t #;mutable? #f #;hashf eq? #;equivf #f #;hashf0 )))
-   ((cap)
-    (define who 'make-eq-hashtable)
-    (with-arguments-validation (who)
-	((initial-capacity	cap))
-      (make-eq-hashtable)))))
+(case-define* make-eq-hashtable
+  (()
+   (let* ((x  (cons #f #f))
+	  (tc (cons x x)))
+     (make-hasht (make-base-vec 32) ;vec
+		 0		    ;count
+		 tc		    ;tc
+		 #t		    ;mutable?
+		 #f		    ;hashf
+		 eq?		    ;equivf
+		 #f)))		    ;hashf0
+  (({cap %initial-capacity?})
+   (make-eq-hashtable)))
 
-(define make-eqv-hashtable
-  (case-lambda
-   (()
-    (let* ((x  (cons #f #f))
-	   (tc (cons x x)))
-      (make-hasht (make-base-vec 32) #;vec 0 #;count tc #;tc
-		  #t #;mutable? #f #;hashf eqv? #;equivf #f #;hashf0)))
-   ((cap)
-    (define who 'make-eqv-hashtable)
-    (with-arguments-validation (who)
-	((initial-capacity	cap))
-      (make-eqv-hashtable)))))
+(case-define* make-eqv-hashtable
+  (()
+   (let* ((x  (cons #f #f))
+	  (tc (cons x x)))
+     (make-hasht (make-base-vec 32) ;vec
+		 0		    ;count
+		 tc		    ;tc
+		 #t		    ;mutable?
+		 #f		    ;hashf
+		 eqv?		    ;equivf
+		 #f)))		    ;hashf0
+  (({cap %initial-capacity?})
+   (make-eqv-hashtable)))
 
 (module (make-hashtable)
 
-  (define make-hashtable
-    (case-lambda
-     ((hashf equivf)
-      (make-hashtable hashf equivf 0))
-     ((hashf equivf cap)
-      (define who 'make-hashtable)
-      (with-arguments-validation (who)
-	  ((procedure		hashf)
-	   (procedure		equivf)
-	   (initial-capacity	cap))
-	(make-hasht (make-base-vec 32) #;vec 0 #;count #f #;tc
-		    #t #;mutable? (%make-hashfun-wrapper hashf) #;hashf
-		    equivf #;equivf hashf #;hashf0)))))
+  (case-define* make-hashtable
+    (({hashf procedure?} {equivf procedure?})
+     (make-hasht (make-base-vec 32)	       ;vec
+		 0			       ;count
+		 #f			       ;tc
+		 #t			       ;mutable?
+		 (%make-hashfun-wrapper hashf) ;hashf
+		 equivf			       ;equivf
+		 hashf))		       ;hashf0
+    (({hashf procedure?} {equivf procedure?} {cap %initial-capacity?})
+     (make-hashtable hashf equivf)))
 
   (define (%make-hashfun-wrapper f)
     (if (or (eq? f symbol-hash)
@@ -497,42 +494,29 @@
 	    (eq? f equal-hash))
 	f
       (lambda (k)
-	(define who 'hashfunc-wrapper)
-	(let ((i (f k)))
-	  (with-arguments-validation (who)
-	      ((hash-result	i))
-	    i)))))
+	(fluid-let-syntax
+	    ((__who__ (identifier-syntax 'hashfunc-wrapper)))
+	  (receive-and-return (i)
+	      (f k)
+	    (unless (exact-integer? i)
+	      (procedure-argument-violation __who__
+		"invalid hash value from custom hash function"
+		i)))))))
 
-  (define-argument-validation (hash-result who obj)
-    (or (fixnum? obj)
-	(bignum? obj))
-    (procedure-argument-violation who "invalid return value from client hash function" obj))
-
-  #| end of module: make-hashtable |# )
+  #| end of module: MAKE-HASHTABLE |# )
 
 ;;; --------------------------------------------------------------------
 
-(module (hashtable-copy)
-
-  (define who 'hashtable-copy)
-
-  (define hashtable-copy
-    (case-lambda
-     ((table)
-      (with-arguments-validation (who)
-	  ((hasht	table))
-	(if (hasht-mutable? table)
-	    (hasht-copy table #f)
-	  table)))
-     ((table mutable?)
-      (with-arguments-validation (who)
-	  ((hasht	table))
-	(if (or mutable?
-		(hasht-mutable? table))
-	    (hasht-copy table (and mutable? #t))
-	  table)))))
-
-  #| end of module |# )
+(case-define* hashtable-copy
+  (({table hashtable?})
+   (if (hasht-mutable? table)
+       (hasht-copy table #f)
+     table))
+  (({table hashtable?} mutable?)
+   (if (or mutable?
+	   (hasht-mutable? table))
+       (hasht-copy table (and mutable? #t))
+     table)))
 
 
 ;;;; public interface: accessors and mutators
