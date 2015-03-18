@@ -4243,9 +4243,32 @@ Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
 
 
 A tcbucket is a fixed--length memory block referenced by machine words
-tagged as vectors.  A tcbucket is not a Scheme object like all the
-others; it is used only to store values in a hashtable: each tcbucket
-represents an entry in the table.
+tagged as vectors.  A tcbucket is used only to store values in a
+hashtable: each tcbucket represents an entry in the table.
+
+Tcbuckets are organised in chains, similarly to pairs in lists.  Hash
+tables are Scheme vectors whose elements are chains of tcbuckets:
+
+@example
+buckets vector
+--
+| 0
+--
+| --> |tcbucket| --> |tcbucket| --> 1
+--
+| 2
+--
+| --> |tcbucket| --> |tcbucket| --> |tcbucket| --> 3
+--
+| --> |tcbucket| --> 4
+--
+@end example
+
+@noindent
+If a buckets vector's slot is empty: it is set to a fixnum representing
+its own index in the vector.  Every chain of tcbuckets is a ``bucket''
+in traditional hash tables terminology.  When a new tcbucket is added to
+a bucket: it is prepended to the chain.
 
 References to tcbuckets have the following format:
 
@@ -4262,26 +4285,7 @@ the memory layout of a tcbucket is as follows:
  tconc  key   val  next
 @end example
 
-Tcbuckets are organised in chains, similarly to pairs in lists.  Hash
-tables are Scheme vectors whose elements are chains of tcbuckets:
-
-@example
-buckets vector
---
-| --> |tcbucket| --> |tcbucket|
---
-|
---
-| --> |tcbucket| --> |tcbucket| --> |tcbucket|
---
-| --> |tcbucket|
---
-@end example
-
-@noindent
-every chain of tcbuckets is a ``bucket''; when a new tcbuckets is added
-to a bucket: it is prepended to the chain.  The meaning of a tcbucket's
-fields is as follows:
+The meaning of a tcbucket's fields is as follows:
 
 @table @code
 @item tconc
@@ -4293,10 +4297,10 @@ A Scheme object representing the key of the hash table entry.
 A Scheme object representing the value of the hash table entry.
 
 @item next
-If this tcbucket is not the last in its chain: a reference to the next
-tcbucket in the chain.  If this tcbucket is the last in its chain: a
-non--negative fixnum representing the index of this chain in the table's
-buckets vector.
+If this tcbucket @strong{is not} the last in its chain: a reference to
+the next tcbucket in the chain.  If this tcbucket @strong{is} the last
+in its chain: a non--negative fixnum representing the index of this
+chain in the table's buckets vector.
 @end table
 
 For details on such objects, see the paper:
