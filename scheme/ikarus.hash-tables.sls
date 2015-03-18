@@ -118,19 +118,33 @@
 		;* The implementation  of Vicare, which defines vectors  as having at
 		;  most (greatest-fixnum) elements.
    tc
+		;If this is a EQ? or EQV? table: the boolean false.
+		;
+		;If  this table  has  a user-selected  equivalence  function: a  pair
+		;initialised as follows:
+		;
+		;   |---|---|
+		;     |   |
+		;      ---+---> (#f . #f)
 		;
    mutable?
 		;Boolean.   True if  values can  be added  to and  removed from  this
 		;hashtable; otherwise false.
    hashf
-		;The hash function  to be used to compute keys's  hash values.  It is
-		;the same  value of  the field  HASHF0 only  if it  is one  among the
-		;built-in hash functions,  otherwise it is a wrapper  for HASHF0 that
-		;validates the return value as exact integer.
+		;If this is a EQ? or EQV? table: the boolean false.
+		;
+		;the hash
+		;function to be  used to compute keys's hash values.   It is the same
+		;value of the field HASHF0 only if  it is one among the built-in hash
+		;functions, otherwise it  is a wrapper for HASHF0  that validates the
+		;return value as exact integer.
    equivf
 		;The equivalence function given to the constructor of this struct.
    hashf0
-		;The hash function given to the constructor of this struct.
+		;If this is a EQ? or EQV? table: the boolean false.
+		;
+		;If this  table has  a user-selected  equivalence function:  the hash
+		;function given to the constructor of this struct.
    ))
 
 
@@ -180,30 +194,27 @@
 	  (else
 	   (replace! n x y)))))
 
-(define (re-add! h b)
-  (let ((vec (hasht-buckets-vector h))
-	(next ($tcbucket-next b)))
+(define (re-add! h buck)
+  (let ((buck-vec (hasht-buckets-vector h)))
     ;; first remove it from its old place
-    (let ((idx
-	   (if (fixnum? next)
-	       next
-	     (get-bucket-index next))))
-      (let ((fst ($vector-ref vec idx)))
-	(cond
-	 ((eq? fst b)
-	  ($vector-set! vec idx next))
-	 (else
-	  (replace! fst b next)))))
-;;; reset the tcbucket-tconc FIRST
-    ($set-tcbucket-tconc! b (hasht-tc h))
-;;; then add it to the new place
-    (let ((k ($tcbucket-key b)))
-      (let ((ih (pointer-value k)))
-	(let ((idx ($fxlogand ih ($fxsub1 ($vector-length vec)))))
-	  (let ((n ($vector-ref vec idx)))
-	    ($set-tcbucket-next! b n)
-	    ($vector-set! vec idx b)
-	    (void)))))))
+    (let* ((next ($tcbucket-next buck))
+	   (idx  (if (fixnum? next)
+		     next
+		   (get-bucket-index next)))
+	   (fst  ($vector-ref buck-vec idx)))
+      (if (eq? fst buck)
+	  ($vector-set! buck-vec idx next)
+	(replace! fst buck next)))
+    ;;Reset the tcbucket-tconc FIRST.
+    ($set-tcbucket-tconc! buck (hasht-tc h))
+    ;;Then add it to the new place.
+    (let* ((k   ($tcbucket-key buck))
+	   (ih  (pointer-value k))
+	   (idx ($fxlogand ih ($fxsub1 ($vector-length buck-vec))))
+	   (n   ($vector-ref buck-vec idx)))
+      ($set-tcbucket-next! buck n)
+      ($vector-set! buck-vec idx buck)
+      (void))))
 
 (define (get-bucket h x)
   (define (get-hashed h x ih)
@@ -488,15 +499,14 @@
 
 (case-define* make-eqv-hashtable
   (()
-   (let* ((x  (cons #f #f))
-	  (tc (cons x x)))
-     (make-hasht (make-new-buckets-vector 32) ;buckets-vector
-		 0			      ;size
-		 tc			      ;tc
-		 #t			      ;mutable?
-		 #f			      ;hashf
-		 eqv?			      ;equivf
-		 #f)))			      ;hashf0
+   (make-hasht (make-new-buckets-vector 32) ;buckets-vector
+	       0			    ;size
+	       (let ((x (cons #f #f)))
+		 (cons x x)) ;tc
+	       #t	     ;mutable?
+	       #f	     ;hashf
+	       eqv?	     ;equivf
+	       #f))	     ;hashf0
   (({cap %initial-capacity?})
    (make-eqv-hashtable)))
 
