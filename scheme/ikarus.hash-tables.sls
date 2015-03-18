@@ -55,7 +55,7 @@
 		  make-eq-hashtable		make-eqv-hashtable
 		  make-hashtable
 		  hashtable?			hashtable-mutable?	mutable-hashtable?
-		  hashtable-ref		hashtable-set!
+		  hashtable-ref			hashtable-set!
 		  hashtable-size
 		  hashtable-delete!		hashtable-clear!
 		  hashtable-contains?
@@ -70,13 +70,10 @@
 		  fixnum-hash			exact-integer-hash
 		  flonum-hash			number-hash
 		  char-hash			char-ci-hash
-		  boolean-hash		void-hash
+		  boolean-hash			void-hash
 		  eof-object-hash		would-block-hash
 		  struct-hash			record-hash
 		  object-hash)
-    ;;This import spec must be the  last, else rebuilding the boot image
-    ;;may fail.  (Marco Maggi; Sat Feb  9, 2013)
-    (vicare arguments validation)
     (vicare system $bignums)
     (vicare system $chars)
     (vicare system $compnums)
@@ -89,20 +86,12 @@
     (vicare system $vectors))
 
 
-;;;; arguments validation
+;;;; helpers
 
 (define (%initial-capacity? obj)
   (and (or (fixnum? obj)
 	   (bignum? obj))
        (>= obj 0)))
-
-(define-argument-validation (hasht who obj)
-  (hasht? obj)
-  (procedure-argument-violation who "expected hash table as argument" obj))
-
-(define-argument-validation (mutable-hasht who obj)
-  (hasht-mutable? obj)
-  (procedure-argument-violation who "expected mutable hash table as argument" obj))
 
 (define (%boolean-or-non-negative-fixnum? obj)
   (or (boolean? obj)
@@ -567,29 +556,17 @@
 
 ;;;; public interface: inspection
 
-(define (hashtable-size table)
-  (define who 'hashtable-size)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (hasht-count table)))
+(define* (hashtable-size {table hashtable?})
+  (hasht-count table))
 
-(define (hashtable-entries table)
-  (define who 'hashtable-entries)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (get-entries table)))
+(define* (hashtable-entries {table hashtable?})
+  (get-entries table))
 
-(define (hashtable-keys table)
-  (define who 'hashtable-keys)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (get-keys table)))
+(define* (hashtable-keys {table hashtable?})
+  (get-keys table))
 
-(define (hashtable-mutable? table)
-  (define who 'hashtable-mutable?)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (hasht-mutable? table)))
+(define* (hashtable-mutable? {table hashtable?})
+  (hasht-mutable? table))
 
 (define (mutable-hashtable? obj)
   (and (hashtable?     obj)
@@ -597,17 +574,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (hashtable-equivalence-function table)
-  (define who 'hashtable-equivalence-function)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (hasht-equivf table)))
+(define* (hashtable-equivalence-function {table hashtable?})
+  (hasht-equivf table))
 
-(define (hashtable-hash-function table)
-  (define who 'hashtable-equivalence-function)
-  (with-arguments-validation (who)
-      ((hasht	table))
-    (hasht-hashf0 table)))
+(define* (hashtable-hash-function {table hashtable?})
+  (hasht-hashf0 table))
 
 
 ;;;; hash functions
@@ -644,14 +615,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (symbol-hash s)
-  (define who 'symbol-hash)
-  (with-arguments-validation (who)
-      ((symbol	s))
-    ($symbol-hash s)))
+(define* (symbol-hash {sym symbol?})
+  ($symbol-hash sym))
 
-(define ($symbol-hash s)
-  (foreign-call "ikrt_string_hash" (symbol->string s)))
+(define ($symbol-hash sym)
+  (foreign-call "ikrt_string_hash" (symbol->string sym)))
 
 ;;; --------------------------------------------------------------------
 
@@ -714,8 +682,7 @@
 	 (fxxor (number-hash ($compnum-real Z))
 		(number-hash ($compnum-imag Z))))
 	(else
-	 (procedure-argument-violation __who__
-	   "expected number object" Z))))
+	 (procedure-argument-violation __who__ "expected number object" Z))))
 
 ;;; --------------------------------------------------------------------
 
@@ -812,10 +779,10 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (equal-hash s)
+(define (equal-hash obj)
   (string-hash (call-with-string-output-port
 		   (lambda (port)
-		     (write s port)))))
+		     (write obj port)))))
 
 
 ;;;; done
@@ -823,6 +790,6 @@
 (set-rtd-printer! (type-descriptor hasht)	(lambda (x p wr)
 						  (display "#<hashtable>" p)))
 
-)
+#| end of library |# )
 
 ;;; end of file
