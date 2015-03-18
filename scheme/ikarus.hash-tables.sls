@@ -574,12 +574,12 @@
 		      (buckets-vector  buckets-vector))
       (if ($fx= i -1)
 	  keys-vec
-	(let ((B ($vector-ref buckets-vector j)))
-	  (if (fixnum? B)
-	      ;;The buckets vector slot at index J is empty.
-	      (next-bucket i ($fxsub1 j) keys-vec buckets-vector)
-	    ;;B is the first tcbucket in a chain.
-	    (next-bucket (let next-tcbucket ((i i) (B B) (keys-vec keys-vec))
+	(next-bucket (let ((B ($vector-ref buckets-vector j)))
+		       (if (fixnum? B)
+			   ;;The buckets vector slot at index J is empty.
+			   i
+			 ;;B is the first tcbucket in a chain.
+			 (let next-tcbucket ((i i) (B B) (keys-vec keys-vec))
 			   ($vector-set! keys-vec i ($tcbucket-key B))
 			   (let ((B.next ($tcbucket-next B))
 				 (i      ($fxsub1 i)))
@@ -587,14 +587,14 @@
 				 ;;No more tcbuckets in the chain.
 				 i
 			       ;;Still more tcbuckets in the chain.
-			       (next-tcbucket i B.next keys-vec))))
-			 ($fxsub1 j) keys-vec buckets-vector)))))))
+			       (next-tcbucket i B.next keys-vec))))))
+		     ($fxsub1 j) keys-vec buckets-vector)))))
 
-(define (get-entries table)
+(define (get-entries T)
   ;;This is the implementation of HASHTABLE-ENTRIES as defined by R6RS.
   ;;
-  (let* ((buckets-vector (hasht-buckets-vector table))
-	 (size           (hasht-size  table))
+  (let* ((buckets-vector (hasht-buckets-vector T))
+	 (size           (hasht-size  T))
 	 (keys-vec       (make-vector size))
 	 (vals-vec       (make-vector size)))
     (let next-bucket ((i              ($fxsub1 size)) ;index for KEYS-VEC and VALS-VEC
@@ -604,12 +604,12 @@
 		      (buckets-vector buckets-vector))
       (if ($fx= i -1)
 	  (values keys-vec vals-vec)
-	(let ((B ($vector-ref buckets-vector j)))
-	  (if (fixnum? B)
-	      ;;The buckets vector slot at index J is empty.
-	      (next-bucket i ($fxsub1 j) keys-vec vals-vec buckets-vector)
-	    ;;B is the first tcbucket in a chain.
-	    (next-bucket (let next-tcbucket ((i i) (B B) (keys-vec keys-vec) (vals-vec vals-vec))
+	(next-bucket (let ((B ($vector-ref buckets-vector j)))
+		       (if (fixnum? B)
+			   ;;The buckets vector slot at index J is empty.
+			   i
+			 ;;B is the first tcbucket in a chain.
+			 (let next-tcbucket ((i i) (B B) (keys-vec keys-vec) (vals-vec vals-vec))
 			   ($vector-set! keys-vec i ($tcbucket-key B))
 			   ($vector-set! vals-vec i ($tcbucket-val B))
 			   (let ((B.next ($tcbucket-next B))
@@ -618,9 +618,8 @@
 				 ;;No more tcbuckets in the chain.
 				 i
 			       ;;Still more tcbuckets in the chain.
-			       (next-tcbucket i B.next keys-vec vals-vec))))
-			 ($fxsub1 j)
-			 keys-vec vals-vec buckets-vector)))))))
+			       (next-tcbucket i B.next keys-vec vals-vec))))))
+		     ($fxsub1 j) keys-vec vals-vec buckets-vector)))))
 
 ;;; --------------------------------------------------------------------
 
