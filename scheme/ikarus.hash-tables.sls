@@ -153,11 +153,33 @@
 ;;This code hash been modified in Vicare.
 ;;
 
+(define (make-empty-tc)
+  (let ((x (cons #f #f)))
+    (cons x x)))
+
+;;; --------------------------------------------------------------------
+
+(define (make-new-buckets-vector n)
+  (init-buckets-vector (make-vector n) 0 n))
+
+(define (init-buckets-vector v i n)
+  ;;Set to I the slot of the vector V at index I; increment I by 1; recurse while I <
+  ;;N.
+  ;;
+  (if ($fx= i n)
+      v
+    (begin
+      ($vector-set! v i i)
+      (init-buckets-vector v (fxadd1 i) n))))
+
 (define-syntax-rule (hash-value->buckets-vector-index ?hv ?buckets-vector)
   ;;Convert the fixnum ?HV representing the hash value  of a key into an index in the
   ;;buckets vector.
   ;;
   ($fxlogand ?hv ($fxsub1 ($vector-length ?buckets-vector))))
+
+;;; --------------------------------------------------------------------
+;;; chains of tcbuckets
 
 (define (get-bucket-index B)
   ;;Recursive  function.  Given  a tcbucket  B from  a chain:  return a  non-negative
@@ -168,7 +190,33 @@
 	next
       (get-bucket-index next))))
 
+(define (remove-tcbucket-from-chain! leading-bucket B B.next)
+  ;;LEADING-BUCKET is the first tcbucket in a chain of tcbuckets.  B is a tcbucket in
+  ;;the chain.  B.NEXT is the successor of B  in the chain: either a tcbucket if B is
+  ;;not the last,  or a fixnum if B  is the last (the fixnum represents  the index of
+  ;;the chain in the buckets vector).  Layout example:
+  ;;
+  ;;   buckets vector
+  ;;   --
+  ;;   |
+  ;;   --
+  ;;   | --> | leading-bucket | --> |other| --> | B | --> | B.next | --> ...
+  ;;   --
+  ;;   |
+  ;;   --
+  ;;
+  ;;Recursive function.  Extract  B from the chain replacing it  with B.NEXT.  Return
+  ;;unspecified values.
+  ;;
+  (let ((leading-bucket.next ($tcbucket-next leading-bucket)))
+    (cond ((eq? leading-bucket.next B)
+	   ($set-tcbucket-next! leading-bucket B.next)
+	   (void))
+	  (else
+	   (remove-tcbucket-from-chain! leading-bucket.next B B.next)))))
+
 ;;; --------------------------------------------------------------------
+;;; searching in EQ? hash tables
 
 (define (direct-lookup key buck)
   ;;Recursive function.  Used only with EQ? hash tables.  ASSQ-like lookup of the key
@@ -266,31 +314,7 @@
   #| end of module: REHASH-LOOKUP |# )
 
 ;;; --------------------------------------------------------------------
-
-(define (remove-tcbucket-from-chain! leading-bucket B B.next)
-  ;;LEADING-BUCKET is the first tcbucket in a chain of tcbuckets.  B is a tcbucket in
-  ;;the chain.  B.NEXT is the successor of B  in the chain: either a tcbucket if B is
-  ;;not the last,  or a fixnum if B  is the last (the fixnum represents  the index of
-  ;;the chain in the buckets vector).  Layout example:
-  ;;
-  ;;   buckets vector
-  ;;   --
-  ;;   |
-  ;;   --
-  ;;   | --> | leading-bucket | --> |other| --> | B | --> | B.next | --> ...
-  ;;   --
-  ;;   |
-  ;;   --
-  ;;
-  ;;Recursive function.  Extract  B from the chain replacing it  with B.NEXT.  Return
-  ;;unspecified values.
-  ;;
-  (let ((leading-bucket.next ($tcbucket-next leading-bucket)))
-    (cond ((eq? leading-bucket.next B)
-	   ($set-tcbucket-next! leading-bucket B.next)
-	   (void))
-	  (else
-	   (remove-tcbucket-from-chain! leading-bucket.next B B.next)))))
+;;; general searching in tables
 
 (define (get-bucket H x)
   (define (get-hashed H x ih)
@@ -324,14 +348,112 @@
 		 (or (direct-lookup x b)
 		     (rehash-lookup H (hasht-tc H) x)))))))))
 
-(define (get-hash h x v)
-  (cond ((get-bucket h x)
-	 => (lambda (b)
-	      ($tcbucket-val b)))
-	(else v)))
+(define (get-hash table key default)
+  ;;This is the implementation of HASHTABLE-REF as defined by R6RS.
+  ;;
+  (cond ((get-bucket table key)
+	 => (lambda (B)
+	      ($tcbucket-val B)))
+	(else default)))
 
-(define (in-hash? h x)
-  (and (get-bucket h x) #t))
+(define (in-hash? table key)
+  ;;This is the implementation of HASHTABLE-CONTAINS? as defined by R6RS.
+  ;;
+  (and (get-bucket table key) #t))
+
+;;; --------------------------------------------------------------------
+
+(module (put-hash!)
+
+  (define (put-hash! H x v)
+    (define (put-hashed H x v ih)
+      (let ((equiv? (hasht-equivf H))
+	    (vec (hasht-buckets-vector H)))
+	(let ((idx (hash-value->buckets-vector-index ih vec)))
+	  (let f ((b ($vector-ref vec idx)))
+	    (cond ((fixnum? b)
+		   ($vector-set! vec idx (vector x v ($vector-ref vec idx)))
+		   (let ((ct (hasht-size H)))
+		     (set-hasht-size! H (fxadd1 ct))
+		     (when ($fx> ct ($vector-length vec))
+		       (enlarge-table H))))
+		  ((equiv? x ($tcbucket-key b))
+		   ($set-tcbucket-val! b v))
+		  (else
+		   (f ($tcbucket-next b))))))))
+    (cond ((hasht-hashf H)
+	   => (lambda (hashf)
+		(put-hashed H x v (hashf x))))
+	  ((and (eq? eqv? (hasht-equivf H))
+		(number? x))
+	   (put-hashed H x v (number-hash x)))
+	  (else
+	   (let ((pv  (pointer-value x))
+		 (vec (hasht-buckets-vector H)))
+	     (let ((ih pv))
+	       (let ((idx (hash-value->buckets-vector-index ih vec)))
+		 (let ((b ($vector-ref vec idx)))
+		   (cond ((or (direct-lookup x b)
+			      (rehash-lookup H (hasht-tc H) x))
+			  => (lambda (b)
+			       ($set-tcbucket-val! b v)
+			       (void)))
+			 (else
+			  ;;Prepend a new TCBUCKET in  the buckets vector slot at index
+			  ;;IDX.
+			  (let ((bucket ($make-tcbucket (hasht-tc H)	       ;tconc
+							x		       ;key
+							v		       ;val
+							($vector-ref vec idx)))) ;next
+			    (if ($fx= (pointer-value x) pv)
+				($vector-set! vec idx bucket)
+			      (let* ((ih  (pointer-value x))
+				     (idx (hash-value->buckets-vector-index ih vec)))
+				($set-tcbucket-next! bucket ($vector-ref vec idx))
+				($vector-set! vec idx bucket))))
+			  (let ((ct (hasht-size H)))
+			    (set-hasht-size! H (fxadd1 ct))
+			    (when ($fx> ct ($vector-length vec))
+			      (enlarge-table H))))))))))))
+
+  (define (enlarge-table h)
+    (define (enlarge-hashtable h hashf)
+      (define (insert-b b vec mask)
+	(let* ((x    ($tcbucket-key b))
+	       (ih   (hashf x))
+	       (idx  ($fxlogand ih mask))
+	       (next ($tcbucket-next b)))
+	  ($set-tcbucket-next! b ($vector-ref vec idx))
+	  ($vector-set! vec idx b)
+	  (unless (fixnum? next)
+	    (insert-b next vec mask))))
+      (define (move-all vec1 i n vec2 mask)
+	(unless ($fx= i n)
+	  (let ((b ($vector-ref vec1 i)))
+	    (unless (fixnum? b)
+	      (insert-b b vec2 mask))
+	    (move-all vec1 (fxadd1 i) n vec2 mask))))
+      (let* ((vec1 (hasht-buckets-vector h))
+	     (n1   ($vector-length vec1))
+	     (n2   ($fxsll n1 1))
+	     (vec2 (make-new-buckets-vector n2)))
+	(move-all vec1 0 n1 vec2 ($fxsub1 n2))
+	(set-hasht-buckets-vector! h vec2)))
+    (cond ((hasht-hashf h)
+	   => (lambda (hashf)
+		(enlarge-hashtable h hashf)))
+	  ((eq? eq? (hasht-equivf h))
+	   (enlarge-hashtable h (lambda (x)
+				  (pointer-value x))))
+	  (else
+	   (enlarge-hashtable h (lambda (x)
+				  (if (number? x)
+				      (number-hash x)
+				    (pointer-value x)))))))
+
+  #| end of module: PUT-HASH! |# )
+
+;;; --------------------------------------------------------------------
 
 (define (del-hash h x)
   (define (unlink! h b)
@@ -358,56 +480,7 @@
 		;; don't forget the count.
 		(set-hasht-size! h (fxsub1 (hasht-size h))))))))
 
-(define (put-hash! H x v)
-  (define (put-hashed H x v ih)
-    (let ((equiv? (hasht-equivf H))
-	  (vec (hasht-buckets-vector H)))
-      (let ((idx (hash-value->buckets-vector-index ih vec)))
-	(let f ((b ($vector-ref vec idx)))
-	  (cond ((fixnum? b)
-		 ($vector-set! vec idx (vector x v ($vector-ref vec idx)))
-		 (let ((ct (hasht-size H)))
-		   (set-hasht-size! H (fxadd1 ct))
-		   (when ($fx> ct ($vector-length vec))
-		     (enlarge-table H))))
-		((equiv? x ($tcbucket-key b))
-		 ($set-tcbucket-val! b v))
-		(else
-		 (f ($tcbucket-next b))))))))
-  (cond ((hasht-hashf H)
-	 => (lambda (hashf)
-	      (put-hashed H x v (hashf x))))
-	((and (eq? eqv? (hasht-equivf H))
-	      (number? x))
-	 (put-hashed H x v (number-hash x)))
-	(else
-	 (let ((pv  (pointer-value x))
-	       (vec (hasht-buckets-vector H)))
-	   (let ((ih pv))
-	     (let ((idx (hash-value->buckets-vector-index ih vec)))
-	       (let ((b ($vector-ref vec idx)))
-		 (cond ((or (direct-lookup x b)
-			    (rehash-lookup H (hasht-tc H) x))
-			=> (lambda (b)
-			     ($set-tcbucket-val! b v)
-			     (void)))
-		       (else
-			;;Prepend a new TCBUCKET in  the buckets vector slot at index
-			;;IDX.
-			(let ((bucket ($make-tcbucket (hasht-tc H)	       ;tconc
-						      x			       ;key
-						      v			       ;val
-						      ($vector-ref vec idx)))) ;next
-			  (if ($fx= (pointer-value x) pv)
-			      ($vector-set! vec idx bucket)
-			    (let* ((ih  (pointer-value x))
-				   (idx (hash-value->buckets-vector-index ih vec)))
-			      ($set-tcbucket-next! bucket ($vector-ref vec idx))
-			      ($vector-set! vec idx bucket))))
-			(let ((ct (hasht-size H)))
-			  (set-hasht-size! H (fxadd1 ct))
-			  (when ($fx> ct ($vector-length vec))
-			    (enlarge-table H))))))))))))
+;;; --------------------------------------------------------------------
 
 (define (update-hash! h x proc default)
   (cond ((get-bucket h x)
@@ -416,61 +489,14 @@
 	(else
 	 (put-hash! h x (proc default)))))
 
-(define (enlarge-table h)
-  (define (enlarge-hashtable h hashf)
-    (define (insert-b b vec mask)
-      (let* ((x    ($tcbucket-key b))
-	     (ih   (hashf x))
-	     (idx  ($fxlogand ih mask))
-	     (next ($tcbucket-next b)))
-	($set-tcbucket-next! b ($vector-ref vec idx))
-	($vector-set! vec idx b)
-	(unless (fixnum? next)
-	  (insert-b next vec mask))))
-    (define (move-all vec1 i n vec2 mask)
-      (unless ($fx= i n)
-	(let ((b ($vector-ref vec1 i)))
-	  (unless (fixnum? b)
-	    (insert-b b vec2 mask))
-	  (move-all vec1 (fxadd1 i) n vec2 mask))))
-    (let* ((vec1 (hasht-buckets-vector h))
-	   (n1   ($vector-length vec1))
-	   (n2   ($fxsll n1 1))
-	   (vec2 (make-new-buckets-vector n2)))
-      (move-all vec1 0 n1 vec2 ($fxsub1 n2))
-      (set-hasht-buckets-vector! h vec2)))
-  (cond ((hasht-hashf h)
-	 => (lambda (hashf)
-	      (enlarge-hashtable h hashf)))
-	((eq? eq? (hasht-equivf h))
-	 (enlarge-hashtable h (lambda (x)
-				(pointer-value x))))
-	(else
-	 (enlarge-hashtable h (lambda (x)
-				(if (number? x)
-				    (number-hash x)
-				  (pointer-value x)))))))
-
-(define (init-vec v i n)
-  ;;Set to I the slot of the vector V at index I; increment I by 1; recurse while I <
-  ;;N.
-  ;;
-  (if ($fx= i n)
-      v
-    (begin
-      ($vector-set! v i i)
-      (init-vec v (fxadd1 i) n))))
-
-(define (make-new-buckets-vector n)
-  (init-vec (make-vector n) 0 n))
-
 (define (clear-hash! h)
   (let ((v (hasht-buckets-vector h)))
-    (init-vec v 0 (vector-length v)))
+    (init-buckets-vector v 0 (vector-length v)))
   (unless (hasht-hashf h)
-    (set-hasht-tc! h (let ((x (cons #f #f)))
-		       (cons x x))))
+    (set-hasht-tc! h (make-empty-tc)))
   (set-hasht-size! h 0))
+
+;;; --------------------------------------------------------------------
 
 (define (get-keys h)
   (let ((v (hasht-buckets-vector h))
@@ -523,12 +549,13 @@
 			 ($fxsub1 buck-idx)
 			 keys-vec vals-vec buck-vec)))))))
 
+;;; --------------------------------------------------------------------
+
 (define (hasht-copy h mutable?)
   (define (dup-hasht h mutable? n)
     (let* ((hashf (hasht-hashf h))
 	   (tc    (and (not hashf)
-		       (let ((x (cons #f #f)))
-			 (cons x x)))))
+		       (make-empty-tc))))
       (make-hasht (make-new-buckets-vector n) ;buckets-vector
 		  0			      ;size
 		  tc			      ;tc
@@ -566,15 +593,13 @@
 
 (case-define* make-eq-hashtable
   (()
-   (let* ((x  (cons #f #f))
-	  (tc (cons x x)))
-     (make-hasht (make-new-buckets-vector 32) ;buckets-vector
-		 0			      ;size
-		 tc			      ;tc
-		 #t			      ;mutable?
-		 #f			      ;hashf
-		 eq?			      ;equivf
-		 #f)))			      ;hashf0
+   (make-hasht (make-new-buckets-vector 32) ;buckets-vector
+	       0			    ;size
+	       (make-empty-tc)		    ;tc
+	       #t			    ;mutable?
+	       #f			    ;hashf
+	       eq?			    ;equivf
+	       #f))			    ;hashf0
   (({cap %initial-capacity?})
    (make-eq-hashtable)))
 
@@ -582,12 +607,11 @@
   (()
    (make-hasht (make-new-buckets-vector 32) ;buckets-vector
 	       0			    ;size
-	       (let ((x (cons #f #f)))
-		 (cons x x)) ;tc
-	       #t	     ;mutable?
-	       #f	     ;hashf
-	       eqv?	     ;equivf
-	       #f))	     ;hashf0
+	       (make-empty-tc)		    ;tc
+	       #t			    ;mutable?
+	       #f			    ;hashf
+	       eqv?			    ;equivf
+	       #f))			    ;hashf0
   (({cap %initial-capacity?})
    (make-eqv-hashtable)))
 
