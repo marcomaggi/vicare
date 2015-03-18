@@ -316,37 +316,43 @@
 ;;; --------------------------------------------------------------------
 ;;; general searching in tables
 
-(define (get-bucket H x)
-  (define (get-hashed H x ih)
-    (let ((equiv? (hasht-equivf H))
-	  (vec (hasht-buckets-vector H)))
-      (let ((idx (hash-value->buckets-vector-index ih vec)))
-	(let f ((b ($vector-ref vec idx)))
-	  (cond ((fixnum? b)
-		 #f)
-		((equiv? x ($tcbucket-key b))
-		 b)
-		(else
-		 (f ($tcbucket-next b))))))))
-  (cond ((hasht-hashf H)
-	 ;;The hashtable has user-supplied hash and equivalence functions.
-	 => (lambda (hashf)
-	      (get-hashed H x (hashf x))))
-	((and (eq? eqv? (hasht-equivf H))
-	      (number? x))
-	 ;;The hashtable has EQV? as equivalence function, it has NUMBER-HASH as hash
-	 ;;function.
-	 (get-hashed H x (number-hash x)))
-	(else
-	 ;;The hashtable  has EQ?  as equivalence function,  it has  POINTER-VALUE as
-	 ;;hash function.
-	 (let ((pv  (pointer-value x))
-	       (vec (hasht-buckets-vector H)))
-	   (let ((ih pv))
-	     (let ((idx (hash-value->buckets-vector-index ih vec)))
-	       (let ((b ($vector-ref vec idx)))
-		 (or (direct-lookup x b)
-		     (rehash-lookup H (hasht-tc H) x)))))))))
+(module (get-bucket)
+
+  (define (get-bucket H key)
+    ;;Return the tcbucket associated to KEY in the table H.  Return false if there is
+    ;;no association.
+    ;;
+    (cond ((hasht-hashf H)
+	   ;;The hashtable has user-supplied hash and equivalence functions.
+	   => (lambda (hashf)
+		(get-hashed H key (hashf key))))
+	  ((and (eq? eqv? (hasht-equivf H))
+		(number? key))
+	   ;;The hashtable  has EQV? as  equivalence function, it has  NUMBER-HASH as
+	   ;;hash function.
+	   (get-hashed H key (number-hash key)))
+	  (else
+	   ;;The hashtable has EQ?  as  equivalence function, it has POINTER-VALUE as
+	   ;;hash function.
+	   (let ((vec (hasht-buckets-vector H)))
+	     (or (direct-lookup key ($vector-ref vec (hash-value->buckets-vector-index (pointer-value key) vec)))
+		 (rehash-lookup H (hasht-tc H) key))))))
+
+  (define (get-hashed H key ih)
+    ;;Used  for EQV?   hashtables and  for hashtables  having user-supplied  hash and
+    ;;equivalence functions.
+    ;;
+    (let next-tcbucket ((equiv? (hasht-equivf H))
+			(B      (let ((vec (hasht-buckets-vector H)))
+				  ($vector-ref vec (hash-value->buckets-vector-index ih vec)))))
+      (cond ((fixnum? B)
+	     #f)
+	    ((equiv? key ($tcbucket-key B))
+	     B)
+	    (else
+	     (next-tcbucket equiv? ($tcbucket-next B))))))
+
+  #| end of module: GET-BUCKET |# )
 
 (define (get-hash table key default)
   ;;This is the implementation of HASHTABLE-REF as defined by R6RS.
