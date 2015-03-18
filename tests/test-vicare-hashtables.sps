@@ -282,6 +282,62 @@
   #t)
 
 
+(parametrise ((check-test-name	'insertion))
+
+  ;;By inserting "many" entries we cause the table to be enlarged multiple times.
+  ;;
+  (define-constant DIM
+    1024)
+
+  (define-constant RESULT-KEY
+    (div DIM 2))
+
+;;; --------------------------------------------------------------------
+;;; table enlargement
+
+  (check	;EQ? hashtable, symbol keys
+      (let ((T (make-eq-hashtable)))
+	(do ((i 0 (add1 i)))
+	    ((= i DIM)
+	     (hashtable-ref T (string->symbol (number->string RESULT-KEY))))
+	  (hashtable-set! T (string->symbol (number->string i)) i)))
+    => RESULT-KEY)
+
+  (check	;EQV? hashtable, string keys
+      ;;We need to remember  that EQV? compares strings using EQ?.   So to retrieve a
+      ;;value we need to use the same key  used to insert it: the "same" according to
+      ;;EQ?.
+      (let ((T  (make-eqv-hashtable))
+	    (K  (let ((K (make-vector DIM)))
+		  (do ((i 0 (add1 i)))
+		      ((= i DIM)
+		       K)
+		    (vector-set! K i (number->string i))))))
+	(do ((i 0 (add1 i)))
+	    ((= i DIM)
+	     (hashtable-ref T (vector-ref K RESULT-KEY)))
+	  (hashtable-set! T (vector-ref K i) i)))
+    => RESULT-KEY)
+
+  (check	;EQV? hashtable, number keys
+      (let ((T (make-eqv-hashtable)))
+	(do ((i 0 (add1 i)))
+	    ((= i DIM)
+	     (hashtable-ref T RESULT-KEY))
+	  (hashtable-set! T i i)))
+    => RESULT-KEY)
+
+  (check	;custom hashtable, string keys
+      (let ((T (make-hashtable string-hash string=?)))
+	(do ((i 0 (add1 i)))
+	    ((= i DIM)
+	     (hashtable-ref T (number->string RESULT-KEY)))
+	  (hashtable-set! T (number->string i) i)))
+    => RESULT-KEY)
+
+  #t)
+
+
 (parametrise ((check-test-name	'deletion))
 
   (check
