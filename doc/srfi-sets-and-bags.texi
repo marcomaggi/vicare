@@ -402,9 +402,30 @@ unchanged.
 @end defun
 
 
+@defun bag-replace @var{bag} @var{element}
+Return a newly allocated bag that uses the same comparator as @var{bag}
+and contains all the values of @var{bag} except that: if @var{element}
+is equal (in the sense of @var{bag}'s comparator) to an existing member
+of @var{bag}, then that member is omitted and replaced by @var{element}.
+If there is no such member in @var{bag}, then @var{bag} is returned
+unchanged.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(define B  (bag real-comparator 1 2 2 3))
+(define B^ (bag-replace B 2.0))
+(list-sort < (bag->list B^)))
+@result{} (1 2.0 2.0 3)
+@end lisp
+@end defun
+
+
 @defun set-replace! @var{set} @var{element}
-Like @func{set-replace} but it is permitted to mutate and return
-@var{set} rather than allocating a new set.
+@defunx bag-replace! @var{bag} @var{element}
+Like @func{set-replace} and @func{bag-replace} but they are permitted to
+mutate and return @var{set} or @var{bag} rather than allocating a new
+set or bag.
 @end defun
 
 

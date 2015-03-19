@@ -7,8 +7,8 @@
 ;;;
 ;;;
 ;;;
+;;;Copyright (C) 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) John Cowan 2013.  All Rights Reserved.
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
 ;;;this software  and associated documentation  files (the ``Software''), to  deal in
@@ -821,6 +821,8 @@
 
 (parametrise ((check-test-name	'update))
 
+;;; set-adjoin
+
   (check
       (internal-body
 	(define S
@@ -840,6 +842,7 @@
     => '(1 2 3))
 
 ;;; --------------------------------------------------------------------
+;;; bag-adjoin
 
   (check
       (internal-body
@@ -860,6 +863,7 @@
     => '(1 2 2 3))
 
 ;;; --------------------------------------------------------------------
+;;; set-adjoin!
 
   (check
       (internal-body
@@ -878,6 +882,7 @@
     => '(1 2 3))
 
 ;;; --------------------------------------------------------------------
+;;; bag-adjoin!
 
   (check
       (internal-body
@@ -897,6 +902,13 @@
 
 ;;; --------------------------------------------------------------------
 ;;; set-replace
+
+  (check
+      (internal-body
+	(define S  (set fixnum-comparator))
+	(define S^ (set-replace S 1))
+	(eq? S S^))
+    => #f)
 
   (check
       (internal-body
@@ -922,6 +934,161 @@
 		    (= elm num1))
 		  S^))
     => 2.0)
+
+;;; --------------------------------------------------------------------
+;;; bag-replace
+
+  (check
+      (internal-body
+	(define B  (bag fixnum-comparator))
+	(define B^ (bag-replace B 1))
+	(eq? B B^))
+    => #f)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define B    (bag string-comparator str1))
+	(define B^   (bag-replace B str2))
+	(values (bag-any? (lambda (elm)
+			    (eq? elm str1))
+			  B^)
+		(bag-any? (lambda (elm)
+			    (eq? elm str2))
+			  B^)))
+    => #f "a")
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define B    (bag real-comparator num1))
+	(define B^   (bag-replace B num2))
+	(bag-any? (lambda (elm)
+		    (= elm num1))
+		  B^))
+    => 2.0)
+
+  (check
+      (internal-body
+	(define B  (bag real-comparator 1 2 2 3))
+	(define B^ (bag-replace B 2.0))
+	(list-sort < (bag->list B^)))
+    => '(1 2.0 2.0 3))
+
+;;; --------------------------------------------------------------------
+;;; set-replace!
+
+  (check
+      (internal-body
+	(define S  (set fixnum-comparator))
+	(define S^ (set-replace! S 1))
+	(eq? S S^))
+    => #t)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define S    (set string-comparator str1))
+	(define S^   (set-replace! S str2))
+	(values (set-any? (lambda (elm)
+			    (eq? elm str1))
+			  S^)
+		(set-any? (lambda (elm)
+			    (eq? elm str2))
+			  S^)))
+    => #f "a")
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define S    (set real-comparator num1))
+	(define S^   (set-replace! S num2))
+	(set-any? (lambda (elm)
+		    (= elm num1))
+		  S^))
+    => 2.0)
+
+;;; --------------------------------------------------------------------
+;;; bag-replace!
+
+  (check
+      (internal-body
+	(define B  (bag fixnum-comparator))
+	(define B^ (bag-replace! B 1))
+	(eq? B B^))
+    => #t)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define B    (bag string-comparator str1))
+	(define B^   (bag-replace! B str2))
+	(values (bag-any? (lambda (elm)
+			    (eq? elm str1))
+			  B^)
+		(bag-any? (lambda (elm)
+			    (eq? elm str2))
+			  B^)))
+    => #f "a")
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define B    (bag real-comparator num1))
+	(define B^   (bag-replace! B num2))
+	(bag-any? (lambda (elm)
+		    (= elm num1))
+		  B^))
+    => 2.0)
+
+  (check
+      (internal-body
+	(define B  (bag real-comparator 1 2 2 3))
+	(define B^ (bag-replace! B 2.0))
+	(list-sort < (bag->list B^)))
+    => '(1 2.0 2.0 3))
+
+;;; --------------------------------------------------------------------
+;;; set-delete
+
+  (check
+      (internal-body
+	(define S  (set fixnum-comparator))
+	(define S^ (set-delete S 1))
+	(eq? S S^))
+    => #f)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define S    (set string-comparator str1))
+	(define S^   (set-delete S str2))
+	(values (set-any? (lambda (elm)
+			    (eq? elm str1))
+			  S^)
+		(set-any? (lambda (elm)
+			    (eq? elm str2))
+			  S^)))
+    => #f #f)
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define S    (set real-comparator num1))
+	(define S^   (set-delete S num2))
+	(assert (fxzero? (comparator-compare real-comparator num1 num2)))
+	(set-any? (lambda (elm)
+		    (= elm num1))
+		  S^))
+    => #f)
 
   #t)
 

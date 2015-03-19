@@ -142,6 +142,20 @@
   (and (list? obj)
        (for-all comparator? obj)))
 
+(define (srfi-number-hash obj)
+  ;;This is different from NUMBER-HASH as defined by Vicare.  Here it must be that:
+  ;;
+  ;;  (srfi-number-hash 2) == (srfi-number-hash 2.0)
+  ;;
+  ;;We need the return  value to be an exact integer, so we  need a CEILING to forbid
+  ;;EXACT to generate a ratnum.
+  ;;
+  (let ((M (magnitude obj)))
+    (if (or (nan?      M)
+	    (infinite? M))
+	(flonum-hash M)
+      (exact (ceiling M)))))
+
 
 ;;;; condition object types
 
@@ -595,7 +609,7 @@
       ((3)	(char-hash		obj))
       ((4)	(string-hash		obj))
       ((5)	(symbol-hash		obj))
-      ((6)	(number-hash		obj))
+      ((6)	(srfi-number-hash	obj))
       ((7)	(vector-hash		obj))
       ((8)	(bytevector-hash	obj))
       ((9)	(void-hash		obj))
@@ -889,22 +903,22 @@
       real-result)))
 
 (define-predefined-comparator number-comparator
-  (make-comparator number? = complex-comparison number-hash))
+  (make-comparator number? = complex-comparison srfi-number-hash))
 
 (define-predefined-comparator complex-comparator
-  (make-comparator complex? = complex-comparison number-hash))
+  (make-comparator complex? = complex-comparison srfi-number-hash))
 
 (define-predefined-comparator real-comparator
-  (make-comparator real? = real-comparison number-hash))
+  (make-comparator real? = real-comparison srfi-number-hash))
 
 (define-predefined-comparator rational-comparator
-  (make-comparator rational? = real-comparison number-hash))
+  (make-comparator rational? = real-comparison srfi-number-hash))
 
 (define-predefined-comparator integer-comparator
-  (make-comparator integer? = real-comparison number-hash))
+  (make-comparator integer? = real-comparison srfi-number-hash))
 
 (define-predefined-comparator exact-integer-comparator
-  (make-comparator exact-integer? = real-comparison number-hash))
+  (make-comparator exact-integer? = real-comparison srfi-number-hash))
 
 (define-predefined-comparator fixnum-comparator
   (make-comparator fixnum? fx=? fixnum-comparison fixnum-hash))
@@ -925,8 +939,6 @@
       K))
 
   (define (make-inexact-real-hash epsilon rounding)
-    ;;Return 0 for NaN, number-hash otherwise.
-    ;;
     (lambda (obj)
       (flonum-hash (rounded-to obj epsilon rounding))))
 
