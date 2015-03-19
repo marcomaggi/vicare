@@ -470,9 +470,12 @@ set or bag.
 
 
 @defun set-delete-all @var{set} @var{element-list}
+@defunx bag-delete-all @var{bag} @var{element-list}
 @defunx set-delete-all! @var{set} @var{element-list}
-Like @func{set-delete} and @func{set-delete!} but accept a single
-argument which is a list of elements to be deleted.
+@defunx bag-delete-all! @var{bag} @var{element-list}
+Like @func{set-delete}, @func{bag-delete}, @func{set-delete!} and
+@func{bag-delete!} but accept a single argument which is a list of
+elements to be deleted.
 @end defun
 
 
