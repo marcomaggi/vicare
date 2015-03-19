@@ -742,44 +742,74 @@ Return a newly allocated set or bag with the same comparator as
 
 
 @defun set-filter! @var{predicate} @var{set}
-Like @func{set-filter} but it is permitted to mutate and return
-@var{set} rather than allocating a new set.
+@defunx bag-filter! @var{predicate} @var{bag}
+Like @func{set-filter} and @func{bag-filter} but they are permitted to
+mutate and return @var{set} or @var{bag} rather than allocating a new
+set or bag.
 @end defun
 
 
 @defun set-remove @var{predicate} @var{set}
-Return a newly allocated set with the same comparator as @var{set},
-containing just the elements of set that do @strong{not} satisfy
-@var{predicate}.
+@defunx bag-remove @var{predicate} @var{bag}
+Return a newly allocated set or bag with the same comparator as
+@var{set} or @var{bag}, containing just the elements that do
+@strong{not} satisfy @var{predicate}.
 @end defun
 
 
 @defun set-remove! @var{predicate} @var{set}
-Like @func{set-remove} but it is permitted to mutate and return
-@var{set} rather than allocating a new set.
+@defunx bag-remove! @var{predicate} @var{bag}
+Like @func{set-remove} and @func{bag-remove} but they are permitted to
+mutate and return @var{set} or @var{bag} rather than allocating a new
+set or bag.
 @end defun
 
 
 @defun set-partition @var{predicate} @var{set}
+@defunx bag-partition @var{predicate} @var{bag}
 Return two values:
 
 @enumerate
 @item
-A newly allocated set, with the same comparator as @var{set}, that
-contains just the elements of set that @strong{do} satisfy
+A newly allocated set or bag, with the same comparator as @var{set} or
+@var{bag}, that contains just the elements that @strong{do} satisfy
 @var{predicate}.
 
 @item
-A newly allocated set, with the same comparator as @var{set}, that
-contains just the elements of set that @strong{do not} satisfy
+A newly allocated set or bag, with the same comparator as @var{set} or
+@var{bag}, that contains just the elements that @strong{do not} satisfy
 @var{predicate}.
 @end enumerate
+
+Usage example:
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(receive (in out)
+    (set-partition (lambda (elm)
+                     (<= 2 elm))
+                   (set fixnum-comparator 1 2 2 3))
+  (values (set->list in  #t)
+          (set->list out #t)))
+@result{} (2 3) (1)
+
+(receive (in out)
+    (bag-partition (lambda (elm)
+                     (<= 2 elm))
+                   (bag fixnum-comparator 1 2 2 3))
+  (values (bag->list in  #t)
+          (bag->list out #t)))
+@result{} (2 2 3) (1)
+@end lisp
 @end defun
 
 
-@defun set-partition! predicate set
-Like @func{set-remove} but it is permitted to mutate and return
-@var{set} rather than allocating a new set.
+@defun set-partition! @var{predicate} @var{set}
+@defunx bag-partition! @var{predicate} @var{bag}
+Like @func{set-partition} and @func{bag-partition} but they are
+permitted to mutate and return @var{set} or @var{bag} rather than
+allocating a new set or bag.
 @end defun
 
 @c page
@@ -788,46 +818,88 @@ Like @func{set-remove} but it is permitted to mutate and return
 
 
 @defun set-copy @var{set}
-Return a newly allocated set containing the elements of @var{set} and
-using the same comparator.
+@defunx bag-copy @var{bag}
+Return a newly allocated set or bag containing the elements of @var{set}
+or @var{bag} and using the same comparator.
 @end defun
 
 
 @defun set->list @var{set}
+@defunx bag->list @var{bag}
 @defunx set->list @var{set} @var{compar}
-Return a newly allocated list containing the members of @var{set} in
-unspecified order.
+@defunx bag->list @var{bag} @var{compar}
+Return a newly allocated list containing the members of @var{set} or
+@var{bag} in unspecified order.
 
-As @value{PRJNAME} extension, if the @var{compar} is present:
+As @value{PRJNAME} extension, if the optional argument @var{compar} is
+present:
 
 @itemize
 @item
 If it is the boolean @false{}: the function behaves as if @var{compar}
-was not present.
+is not present.
 
 @item
 If it is the boolean @true{}: the resulting list is sorted using the
-standard @func{list->sort} and a comparison predicate from the @var{set}
-comparator, so that the lesser elements come first.
+standard @func{list-sort} and the comparison procedure from the
+@var{set} or @var{bag} comparator, so that the lesser elements come
+first.
 
 @item
-If it is a procedure: the resulting list is sorted using @var{compar} as
-comparison predicate.
+If it is a procedure: the resulting list is sorted using the standard
+@func{list-sort} and @var{compar} as comparison predicate.
 @end itemize
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(list-sort < (set->list (set fixnum-comparator 1 2 3)))
+@result{} (1 2 3)
+
+(set->list (set fixnum-comparator 1 2 3) #t)
+@result{} (1 2 3)
+
+(set->list (set fixnum-comparator 1 2 3) fx<?)
+@result{} (1 2 3)
+
+(set->list (set fixnum-comparator 1 2 3) fx>?)
+@result{} (3 2 1)
+
+;;;
+
+(list-sort < (bag->list (bag fixnum-comparator 1 2 2 3)))
+@result{} (1 2 2 3)
+
+(bag->list (bag fixnum-comparator 1 2 2 3) #t)
+@result{} (1 2 2 3)
+
+(bag->list (bag fixnum-comparator 1 2 2 3) fx<?)
+@result{} (1 2 2 3)
+
+(bag->list (bag fixnum-comparator 1 2 2 3) fx>?)
+@result{} (3 2 2 1)
+@end lisp
 @end defun
 
 
 @defun list->set @var{comparator} @var{list}
-Return a newly allocated set, created as if by @func{set} using
-@var{comparator}, that contains the elements of @var{list}.  Duplicate
-elements (in the sense of the equality predicate) are omitted.
+@defunx list->bag @var{comparator} @var{list}
+Return a newly allocated set or bag, created as if by @func{set} or
+@func{bag} using @var{comparator}, that contains the elements of
+@var{list}.  When building a set: duplicate elements (in the sense of
+the equality predicate) are omitted.
 @end defun
 
 
 @defun list->set! @var{set} @var{list}
-Return a set that contains the elements of both @var{set} and
-@var{list}.  Duplicate elements (in the sense of the equality predicate)
-are omitted.
+@defunx list->bag! @var{bag} @var{list}
+Return a set or bag that contains the elements of both @var{set} or
+@var{bag} and @var{list}, using the comparator of @var{set} or
+@var{bag}.  The functions are permitted to mutate @var{set} or @var{bag}
+and return it.  When building a set: duplicate elements (in the sense of
+the equality predicate) are omitted.
 @end defun
 
 @c page

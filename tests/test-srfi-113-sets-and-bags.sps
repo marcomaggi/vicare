@@ -1852,6 +1852,196 @@
        <)
     => '(2 2 3))
 
+;;; --------------------------------------------------------------------
+;;; set-filter!
+
+  (check
+      (set->list
+       (set-filter! (lambda (elm)
+		      (<= 2 elm))
+		    (set fixnum-comparator 1 2 3))
+       #t)
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-filter!
+
+  (check
+      (bag->list
+       (bag-filter! (lambda (elm)
+		      (<= 2 elm))
+		    (bag fixnum-comparator 1 2 2 3))
+       <)
+    => '(2 2 3))
+
+;;; --------------------------------------------------------------------
+;;; set-remove
+
+  (check
+      (set->list
+       (set-remove (lambda (elm)
+		     (<= 2 elm))
+		   (set fixnum-comparator 1 2 3))
+       #t)
+    => '(1))
+
+;;; --------------------------------------------------------------------
+;;; bag-remove
+
+  (check
+      (bag->list
+       (bag-remove (lambda (elm)
+		     (<= 2 elm))
+		   (bag fixnum-comparator 1 2 2 3))
+       #t)
+    => '(1))
+
+;;; --------------------------------------------------------------------
+;;; set-remove!
+
+  (check
+      (set->list
+       (set-remove! (lambda (elm)
+		      (<= 2 elm))
+		    (set fixnum-comparator 1 2 3))
+       #t)
+    => '(1))
+
+;;; --------------------------------------------------------------------
+;;; bag-remove!
+
+  (check
+      (bag->list
+       (bag-remove! (lambda (elm)
+		      (<= 2 elm))
+		    (bag fixnum-comparator 1 2 2 3))
+       #t)
+    => '(1))
+
+;;; --------------------------------------------------------------------
+;;; set-partition
+
+  (check
+      (receive (in out)
+	  (set-partition (lambda (elm)
+			   (<= 2 elm))
+			 (set fixnum-comparator 1 2 2 3))
+	(values (set->list in #t)
+		(set->list out #t)))
+    => '(2 3) '(1))
+
+;;; --------------------------------------------------------------------
+;;; set-partition
+
+  (check
+      (receive (in out)
+	  (bag-partition (lambda (elm)
+			   (<= 2 elm))
+			 (bag fixnum-comparator 1 2 2 3))
+	(values (bag->list in #t)
+		(bag->list out #t)))
+    => '(2 2 3) '(1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'copying))
+
+;;; set-copy
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2 3))
+	     (S2 (set-copy S1)))
+	(set=? S1 S2))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bag-copy
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2 3))
+	     (B2 (bag-copy B1)))
+	(bag=? B1 B2))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; set->list
+
+  (check
+      (list-sort < (set->list (set fixnum-comparator 1 2 3)))
+    => '(1 2 3))
+
+  (check
+      (set->list (set fixnum-comparator 1 2 3) #t)
+    => '(1 2 3))
+
+  (check
+      (set->list (set fixnum-comparator 1 2 3) fx<?)
+    => '(1 2 3))
+
+  (check
+      (set->list (set fixnum-comparator 1 2 3) fx>?)
+    => '(3 2 1))
+
+;;; --------------------------------------------------------------------
+;;; bag->list
+
+  (check
+      (list-sort < (bag->list (bag fixnum-comparator 1 2 2 3)))
+    => '(1 2 2 3))
+
+  (check
+      (bag->list (bag fixnum-comparator 1 2 2 3) #t)
+    => '(1 2 2 3))
+
+  (check
+      (bag->list (bag fixnum-comparator 1 2 2 3) fx<?)
+    => '(1 2 2 3))
+
+  (check
+      (bag->list (bag fixnum-comparator 1 2 2 3) fx>?)
+    => '(3 2 2 1))
+
+;;; --------------------------------------------------------------------
+;;; list->set
+
+  (check
+      (set->list (list->set fixnum-comparator '(1 2 3)) #t)
+    => '(1 2 3))
+
+  (check
+      (set->list (list->set fixnum-comparator '(1 2 2 3)) #t)
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; list->bag
+
+  (check
+      (bag->list (list->bag fixnum-comparator '(1 2 2 3)) #t)
+    => '(1 2 2 3))
+
+;;; --------------------------------------------------------------------
+;;; list->set!
+
+  (check
+      (set->list (list->set! (set fixnum-comparator 1 2 3) '(4 5 6)) #t)
+    => '(1 2 3 4 5 6))
+
+  (check
+      (set->list (list->set! (set fixnum-comparator 1 2 2 3) '(4 5 5 6)) #t)
+    => '(1 2 3 4 5 6))
+
+;;; --------------------------------------------------------------------
+;;; list->bag!
+
+  (check
+      (bag->list (list->bag! (bag fixnum-comparator 1 2 3) '(4 5 6)) #t)
+    => '(1 2 3 4 5 6))
+
+  (check
+      (bag->list (list->bag! (bag fixnum-comparator 1 2 2 3) '(4 5 5 6)) #t)
+    => '(1 2 2 3 4 5 5 6))
+
   #t)
 
 
