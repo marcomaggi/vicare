@@ -1737,6 +1737,102 @@
   #t)
 
 
+(parametrise ((check-test-name	'folding))
+
+;;; set-map
+
+  (check
+      (set-map string-ci-comparator
+	       symbol->string
+	       (set eq-comparator))
+    (=> set=?)
+    (set string-ci-comparator))
+
+  (check
+      (set-map string-ci-comparator
+	       symbol->string
+	       (set eq-comparator 'foo 'bar 'baz))
+    (=> set=?)
+    (set string-ci-comparator "foo" "bar" "baz"))
+
+  (check
+      (set-map integer-comparator
+	       (lambda (x)
+		 (quotient x 2))
+	       (set integer-comparator 1 2 3 4 5))
+    (=> set=?)
+    (set integer-comparator 0 1 2))
+
+;;; --------------------------------------------------------------------
+;;; bag-map
+
+  (check
+      (bag-map string-ci-comparator
+	       symbol->string
+	       (bag eq-comparator))
+    (=> bag=?)
+    (bag string-ci-comparator))
+
+  (check
+      (bag-map string-ci-comparator
+	       symbol->string
+	       (bag eq-comparator 'foo 'bar 'baz))
+    (=> bag=?)
+    (bag string-ci-comparator "foo" "bar" "baz"))
+
+  (check
+      (list-sort < (bag->list
+		    (bag-map integer-comparator
+			     (lambda (x)
+			       (quotient x 2))
+			     (bag integer-comparator 1 2 3 4 5))))
+    => '(0 1 1 2 2))
+
+;;; --------------------------------------------------------------------
+;;; set-for-each
+
+  (check
+      (list-sort < (receive-and-return (rv)
+		       '()
+		     (set-for-each (lambda (elm)
+				     (set-cons! rv elm))
+				   (set fixnum-comparator 1 2 3))))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-for-each
+
+  (check
+      (list-sort < (receive-and-return (rv)
+		       '()
+		     (bag-for-each (lambda (elm)
+				     (set-cons! rv elm))
+				   (bag fixnum-comparator 1 2 2 3))))
+    => '(1 2 2 3))
+
+;;; --------------------------------------------------------------------
+;;; set-fold
+
+  (check
+      (list-sort < (set-fold (lambda (elm knil)
+			       (cons elm knil))
+			     '()
+			     (set fixnum-comparator 1 2 3)))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-fold
+
+  (check
+      (list-sort < (bag-fold (lambda (elm knil)
+			       (cons elm knil))
+			     '()
+			     (bag fixnum-comparator 1 2 2 3)))
+    => '(1 2 2 3))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

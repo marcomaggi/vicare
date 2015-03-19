@@ -653,7 +653,7 @@ example:
 @lisp
 (set-map string-ci-comparator
          symbol->string
-         (set eq? 'foo 'bar 'baz))
+         (set eq-comparator 'foo 'bar 'baz))
 @equiv{} (set string-ci-comparator "foo" "bar" "baz")
 @end lisp
 
@@ -663,9 +663,9 @@ comparator's equality predicate, and in this case duplicate elements are
 omitted as in the set constructor.  For example:
 
 @lisp
-(set-map (lambda (x)
+(set-map integer-comparator
+         (lambda (x)
            (quotient x 2))
-         integer-comparator
          (set integer-comparator 1 2 3 4 5))
 @equiv{} (set integer-comparator 0 1 2)
 @end lisp
@@ -675,18 +675,61 @@ unpredictable which one will be preserved in the result.
 @end defun
 
 
+@defun bag-map @var{comparator} @var{proc} @var{bag}
+Apply @var{proc} to each element of @var{bag} in arbitrary order and
+return a newly allocated bag, created as if by @code{(bag
+@var{comparator})}, which contains the results of the applications.  For
+example:
+
+@lisp
+(bag-map string-ci-comparator
+         symbol->string
+         (bag eq-comparator 'foo 'bar 'baz))
+@equiv{} (bag string-ci-comparator "foo" "bar" "baz")
+
+(list-sort <
+  (bag->list
+    (bag-map integer-comparator
+             (lambda (x)
+               (quotient x 2))
+             (bag integer-comparator 1 2 3 4 5))))
+@result{} (0 1 1 2 2)
+@end lisp
+@end defun
+
+
 @defun set-for-each @var{proc} @var{set}
-Apply @var{proc} to @var{set} in arbitrary order, discarding the
-returned values.  Return an unspecified result.
+@defunx bag-for-each @var{proc} @var{bag}
+Apply @var{proc} to @var{set} or @var{bag} in arbitrary order,
+discarding the returned values.  Return unspecified results.
 @end defun
 
 
 @defun set-fold @var{proc} @var{nil} @var{set}
-Invoke @var{proc} on each member of @var{set} in arbitrary order,
-passing the result of the previous invocation as a second argument.  For
-the first invocation, @var{nil} is used as the second argument.  Return
-the result of the last invocation, or @var{nil} if there was no
-invocation.
+@defunx bag-fold @var{proc} @var{nil} @var{bag}
+Invoke @var{proc} on each member of @var{set} or @var{bag} in arbitrary
+order, passing the result of the previous invocation as a second
+argument.  For the first invocation, @var{nil} is used as the second
+argument.  Return the result of the last invocation, or @var{nil} if
+there was no invocation.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(list-sort <
+  (set-fold (lambda (elm nil)
+              (cons elm nil))
+              '()
+              (set fixnum-comparator 1 2 3)))
+@result{} (1 2 3)
+
+(list-sort <
+  (bag-fold (lambda (elm nil)
+              (cons elm nil))
+            '()
+            (bag fixnum-comparator 1 2 2 3)))
+@result{} (1 2 2 3)
+@end lisp
 @end defun
 
 
