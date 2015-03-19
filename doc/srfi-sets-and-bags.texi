@@ -914,31 +914,101 @@ law and therefore do not constitute a total order on sets.
 
 
 @defun set=? @varo{set} @var{set} @dots{}
-Return @true{} if each @var{set} contains the same elements.
+@defunx bag=? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag} contains the same
+elements.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag=? (bag fixnum-comparator 1 2 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #t
+
+(bag=? (bag fixnum-comparator 1 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #f
+@end lisp
 @end defun
 
 
 @defun set<? @varo{set} @var{set} @dots{}
-Return @true{} if each @var{set} other than the last is a proper subset
-of the following @var{set}; return @false{} otherwise.
+@defunx bag<? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+proper subset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag<? (bag fixnum-comparator 1 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #t
+
+(bag<? (bag fixnum-comparator 1 2 2 3)
+       (bag fixnum-comparator 1 2 3))
+@result{} #f
+@end lisp
 @end defun
 
 
 @defun set>? @varo{set} @var{set} @dots{}
-Return @true{} if each @var{set} other than the last is a proper
-superset of the following @var{set}; return @false{} otherwise.
+@defunx bag>? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+proper superset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag>? (bag fixnum-comparator 1 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #f
+
+(bag>? (bag fixnum-comparator 1 2 2 3)
+       (bag fixnum-comparator 1 2 3))
+@result{} #t
+@end lisp
 @end defun
 
 
 @defun set<=? @varo{set} @var{set} @dots{}
-Return @true{} if each @var{set} other than the last is a subset of the
-following @var{set}; return @false{} otherwise.
+@defunx bag<=? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+subset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag<=? (bag fixnum-comparator 1 2 3)
+        (bag fixnum-comparator 1 2 2 3))
+@result{} #t
+
+(bag<=? (bag fixnum-comparator 1 2 2 3)
+        (bag fixnum-comparator 1 2 3))
+@result{} #f
+@end lisp
 @end defun
 
 
 @defun set>=? @varo{set} @var{set} @dots{}
-Return @true{} if each @var{set} other than the last is a superset of
-the following @var{set}; return @false{} otherwise.
+@defunx bag>=? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+superset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag>=? (bag fixnum-comparator 1 2 3)
+        (bag fixnum-comparator 1 2 2 3))
+@result{} #f
+
+(bag>=? (bag fixnum-comparator 1 2 2 3)
+        (bag fixnum-comparator 1 2 3))
+@result{} #t
+@end lisp
 @end defun
 
 @c page

@@ -2045,6 +2045,344 @@
   #t)
 
 
+(parametrise ((check-test-name	'subsets))
+
+  (define-constant S0 (set fixnum-comparator))
+  (define-constant S1 (set fixnum-comparator 1))
+  (define-constant S2 (set fixnum-comparator 1 2))
+  (define-constant S3 (set fixnum-comparator 1 2 3))
+
+  (define-constant B0 (bag fixnum-comparator))
+  (define-constant B1 (bag fixnum-comparator 1))
+  (define-constant B2 (bag fixnum-comparator 1 2))
+  (define-constant B3 (bag fixnum-comparator 1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; set=?
+
+  (check-for-true (set=? S0))
+  (check-for-true (set=? S0 S0))
+  (check-for-true (set=? S0 S0 S0))
+  (check-for-true (set=? S0 S0 S0 S0))
+
+  (check-for-true (set=? S1))
+  (check-for-true (set=? S1 S1))
+  (check-for-true (set=? S1 S1 S1))
+  (check-for-true (set=? S1 S1 S1 S1))
+
+  (check-for-false (set=? S0 S1))
+  (check-for-false (set=? S0 S1 S0))
+  (check-for-false (set=? S0 S0 S1))
+  (check-for-false (set=? S0 S0 S1 S0))
+  (check-for-false (set=? S0 S0 S0 S1))
+
+  (check-for-false (set=? S3 S1))
+  (check-for-false (set=? S3 S1 S3))
+  (check-for-false (set=? S3 S3 S1))
+  (check-for-false (set=? S3 S3 S1 S3))
+  (check-for-false (set=? S3 S3 S3 S1))
+
+;;; --------------------------------------------------------------------
+;;; set<?
+
+  (check-for-true  (set<? S0))
+  (check-for-false (set<? S0 S0))
+  (check-for-false (set<? S0 S0 S0))
+  (check-for-false (set<? S0 S0 S0 S0))
+
+  (check-for-true  (set<? S1))
+  (check-for-false (set<? S1 S1))
+  (check-for-false (set<? S1 S1 S1))
+  (check-for-false (set<? S1 S1 S1 S1))
+
+  (check-for-true  (set<? S0 S1))
+  (check-for-false (set<? S0 S1 S0))
+  (check-for-false (set<? S0 S0 S1))
+  (check-for-false (set<? S0 S0 S1 S0))
+  (check-for-false (set<? S0 S0 S0 S1))
+
+  (check-for-false (set<? S3 S1))
+  (check-for-false (set<? S3 S1 S3))
+  (check-for-false (set<? S3 S3 S1))
+  (check-for-false (set<? S3 S3 S1 S3))
+  (check-for-false (set<? S3 S3 S3 S1))
+
+  (check-for-true  (set<? S1 S2))
+  (check-for-false (set<? S2 S1))
+
+  (check-for-true  (set<? S1 S2 S3))
+  (check-for-false (set<? S1 S3 S2))
+  (check-for-false (set<? S3 S1 S2))
+
+  (check-for-true  (set<? S0 S1 S2 S3))
+  (check-for-false (set<? S0 S1 S3 S2))
+  (check-for-false (set<? S0 S3 S1 S2))
+  (check-for-false (set<? S3 S0 S1 S2))
+
+;;; --------------------------------------------------------------------
+;;; set>?
+
+  (check-for-true  (set>? S0))
+  (check-for-false (set>? S0 S0))
+  (check-for-false (set>? S0 S0 S0))
+  (check-for-false (set>? S0 S0 S0 S0))
+
+  (check-for-true  (set>? S1))
+  (check-for-false (set>? S1 S1))
+  (check-for-false (set>? S1 S1 S1))
+  (check-for-false (set>? S1 S1 S1 S1))
+
+  (check-for-false (set>? S0 S1))
+  (check-for-false (set>? S0 S1 S0))
+  (check-for-false (set>? S0 S0 S1))
+  (check-for-false (set>? S0 S0 S1 S0))
+  (check-for-false (set>? S0 S0 S0 S1))
+
+  (check-for-true  (set>? S3 S1))
+  (check-for-false (set>? S3 S1 S3))
+  (check-for-false (set>? S3 S3 S1))
+  (check-for-false (set>? S3 S3 S1 S3))
+  (check-for-false (set>? S3 S3 S3 S1))
+
+  (check-for-true  (set>? S3 S2))
+  (check-for-false (set>? S2 S3))
+
+  (check-for-true  (set>? S3 S2 S1))
+  (check-for-false (set>? S3 S1 S2))
+  (check-for-false (set>? S1 S3 S2))
+
+  (check-for-true  (set>? S3 S2 S1 S0))
+  (check-for-false (set>? S3 S2 S0 S1))
+  (check-for-false (set>? S3 S0 S2 S1))
+  (check-for-false (set>? S0 S3 S2 S1))
+
+;;; --------------------------------------------------------------------
+;;; set<=?
+
+  (check-for-true (set<=? S0))
+  (check-for-true (set<=? S0 S0))
+  (check-for-true (set<=? S0 S0 S0))
+  (check-for-true (set<=? S0 S0 S0 S0))
+
+  (check-for-true (set<=? S1))
+  (check-for-true (set<=? S1 S1))
+  (check-for-true (set<=? S1 S1 S1))
+  (check-for-true (set<=? S1 S1 S1 S1))
+
+  (check-for-true  (set<=? S0 S1))
+  (check-for-false (set<=? S0 S1 S0))
+  (check-for-true  (set<=? S0 S0 S1))
+  (check-for-false (set<=? S0 S0 S1 S0))
+  (check-for-true  (set<=? S0 S0 S0 S1))
+
+  (check-for-false (set<=? S3 S1))
+  (check-for-false (set<=? S3 S1 S3))
+  (check-for-false (set<=? S3 S3 S1))
+  (check-for-false (set<=? S3 S3 S1 S3))
+  (check-for-false (set<=? S3 S3 S3 S1))
+
+;;; --------------------------------------------------------------------
+;;; set>=?
+
+  (check-for-true (set>=? S0))
+  (check-for-true (set>=? S0 S0))
+  (check-for-true (set>=? S0 S0 S0))
+  (check-for-true (set>=? S0 S0 S0 S0))
+
+  (check-for-true (set>=? S1))
+  (check-for-true (set>=? S1 S1))
+  (check-for-true (set>=? S1 S1 S1))
+  (check-for-true (set>=? S1 S1 S1 S1))
+
+  (check-for-false (set>=? S0 S1))
+  (check-for-false (set>=? S0 S1 S0))
+  (check-for-false (set>=? S0 S0 S1))
+  (check-for-false (set>=? S0 S0 S1 S0))
+  (check-for-false (set>=? S0 S0 S0 S1))
+
+  (check-for-true  (set>=? S3 S1))
+  (check-for-false (set>=? S3 S1 S3))
+  (check-for-true  (set>=? S3 S3 S1))
+  (check-for-false (set>=? S3 S3 S1 S3))
+  (check-for-true  (set>=? S3 S3 S3 S1))
+
+;;; --------------------------------------------------------------------
+;;; bag=?
+
+  (check-for-true (bag=? B0))
+  (check-for-true (bag=? B0 B0))
+  (check-for-true (bag=? B0 B0 B0))
+  (check-for-true (bag=? B0 B0 B0 B0))
+
+  (check-for-true (bag=? B1))
+  (check-for-true (bag=? B1 B1))
+  (check-for-true (bag=? B1 B1 B1))
+  (check-for-true (bag=? B1 B1 B1 B1))
+
+  (check-for-false (bag=? B0 B1))
+  (check-for-false (bag=? B0 B1 B0))
+  (check-for-false (bag=? B0 B0 B1))
+  (check-for-false (bag=? B0 B0 B1 B0))
+  (check-for-false (bag=? B0 B0 B0 B1))
+
+  (check-for-false (bag=? B3 B1))
+  (check-for-false (bag=? B3 B1 B3))
+  (check-for-false (bag=? B3 B3 B1))
+  (check-for-false (bag=? B3 B3 B1 B3))
+  (check-for-false (bag=? B3 B3 B3 B1))
+
+  (check-for-true  (bag=? (bag fixnum-comparator 1 2 2 3)
+			  (bag fixnum-comparator 1 2 2 3)))
+  (check-for-false (bag=? (bag fixnum-comparator 1 2 3)
+			  (bag fixnum-comparator 1 2 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; bag<?
+
+  (check-for-true  (bag<? B0))
+  (check-for-false (bag<? B0 B0))
+  (check-for-false (bag<? B0 B0 B0))
+  (check-for-false (bag<? B0 B0 B0 B0))
+
+  (check-for-true  (bag<? B1))
+  (check-for-false (bag<? B1 B1))
+  (check-for-false (bag<? B1 B1 B1))
+  (check-for-false (bag<? B1 B1 B1 B1))
+
+  (check-for-true  (bag<? B0 B1))
+  (check-for-false (bag<? B0 B1 B0))
+  (check-for-false (bag<? B0 B0 B1))
+  (check-for-false (bag<? B0 B0 B1 B0))
+  (check-for-false (bag<? B0 B0 B0 B1))
+
+  (check-for-false (bag<? B3 B1))
+  (check-for-false (bag<? B3 B1 B3))
+  (check-for-false (bag<? B3 B3 B1))
+  (check-for-false (bag<? B3 B3 B1 B3))
+  (check-for-false (bag<? B3 B3 B3 B1))
+
+  (check-for-true  (bag<? B1 B2))
+  (check-for-false (bag<? B2 B1))
+
+  (check-for-true  (bag<? B1 B2 B3))
+  (check-for-false (bag<? B1 B3 B2))
+  (check-for-false (bag<? B3 B1 B2))
+
+  (check-for-true  (bag<? B0 B1 B2 B3))
+  (check-for-false (bag<? B0 B1 B3 B2))
+  (check-for-false (bag<? B0 B3 B1 B2))
+  (check-for-false (bag<? B3 B0 B1 B2))
+
+  (check-for-true  (bag<? (bag fixnum-comparator 1 2 3)
+			  (bag fixnum-comparator 1 2 2 3)))
+  (check-for-false (bag<? (bag fixnum-comparator 1 2 2 3)
+			  (bag fixnum-comparator 1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; bag>?
+
+  (check-for-true  (bag>? B0))
+  (check-for-false (bag>? B0 B0))
+  (check-for-false (bag>? B0 B0 B0))
+  (check-for-false (bag>? B0 B0 B0 B0))
+
+  (check-for-true  (bag>? B1))
+  (check-for-false (bag>? B1 B1))
+  (check-for-false (bag>? B1 B1 B1))
+  (check-for-false (bag>? B1 B1 B1 B1))
+
+  (check-for-false (bag>? B0 B1))
+  (check-for-false (bag>? B0 B1 B0))
+  (check-for-false (bag>? B0 B0 B1))
+  (check-for-false (bag>? B0 B0 B1 B0))
+  (check-for-false (bag>? B0 B0 B0 B1))
+
+  (check-for-true  (bag>? B3 B1))
+  (check-for-false (bag>? B3 B1 B3))
+  (check-for-false (bag>? B3 B3 B1))
+  (check-for-false (bag>? B3 B3 B1 B3))
+  (check-for-false (bag>? B3 B3 B3 B1))
+
+  (check-for-true  (bag>? B3 B2))
+  (check-for-false (bag>? B2 B3))
+
+  (check-for-true  (bag>? B3 B2 B1))
+  (check-for-false (bag>? B3 B1 B2))
+  (check-for-false (bag>? B1 B3 B2))
+
+  (check-for-true  (bag>? B3 B2 B1 B0))
+  (check-for-false (bag>? B3 B2 B0 B1))
+  (check-for-false (bag>? B3 B0 B2 B1))
+  (check-for-false (bag>? B0 B3 B2 B1))
+
+  (check-for-false (bag>? (bag fixnum-comparator 1 2 3)
+			  (bag fixnum-comparator 1 2 2 3)))
+  (check-for-true  (bag>? (bag fixnum-comparator 1 2 2 3)
+			  (bag fixnum-comparator 1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; bag<=?
+
+  (check-for-true (bag<=? B0))
+  (check-for-true (bag<=? B0 B0))
+  (check-for-true (bag<=? B0 B0 B0))
+  (check-for-true (bag<=? B0 B0 B0 B0))
+
+  (check-for-true (bag<=? B1))
+  (check-for-true (bag<=? B1 B1))
+  (check-for-true (bag<=? B1 B1 B1))
+  (check-for-true (bag<=? B1 B1 B1 B1))
+
+  (check-for-true  (bag<=? B0 B1))
+  (check-for-false (bag<=? B0 B1 B0))
+  (check-for-true  (bag<=? B0 B0 B1))
+  (check-for-false (bag<=? B0 B0 B1 B0))
+  (check-for-true  (bag<=? B0 B0 B0 B1))
+
+  (check-for-false (bag<=? B3 B1))
+  (check-for-false (bag<=? B3 B1 B3))
+  (check-for-false (bag<=? B3 B3 B1))
+  (check-for-false (bag<=? B3 B3 B1 B3))
+  (check-for-false (bag<=? B3 B3 B3 B1))
+
+  (check-for-true  (bag<=? (bag fixnum-comparator 1 2 3)
+			   (bag fixnum-comparator 1 2 2 3)))
+  (check-for-false (bag<=? (bag fixnum-comparator 1 2 2 3)
+			   (bag fixnum-comparator 1 2 3)))
+
+;;; --------------------------------------------------------------------
+;;; bag>=?
+
+  (check-for-true (bag>=? B0))
+  (check-for-true (bag>=? B0 B0))
+  (check-for-true (bag>=? B0 B0 B0))
+  (check-for-true (bag>=? B0 B0 B0 B0))
+
+  (check-for-true (bag>=? B1))
+  (check-for-true (bag>=? B1 B1))
+  (check-for-true (bag>=? B1 B1 B1))
+  (check-for-true (bag>=? B1 B1 B1 B1))
+
+  (check-for-false (bag>=? B0 B1))
+  (check-for-false (bag>=? B0 B1 B0))
+  (check-for-false (bag>=? B0 B0 B1))
+  (check-for-false (bag>=? B0 B0 B1 B0))
+  (check-for-false (bag>=? B0 B0 B0 B1))
+
+  (check-for-true  (bag>=? B3 B1))
+  (check-for-false (bag>=? B3 B1 B3))
+  (check-for-true  (bag>=? B3 B3 B1))
+  (check-for-false (bag>=? B3 B3 B1 B3))
+  (check-for-true  (bag>=? B3 B3 B3 B1))
+
+  (check-for-false (bag>=? (bag fixnum-comparator 1 2 3)
+			   (bag fixnum-comparator 1 2 2 3)))
+  (check-for-true  (bag>=? (bag fixnum-comparator 1 2 2 3)
+			   (bag fixnum-comparator 1 2 3)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

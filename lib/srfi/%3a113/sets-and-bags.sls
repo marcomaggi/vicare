@@ -257,9 +257,10 @@
     ;;   (define* (operation . {args %list-of-sets?})
     ;;     ---)
     ;;
-    (and (pair? obj)
-	 (for-all set? obj)
-	 (%sob-check-comparators obj)))
+    (or (null? obj)
+	(and (list? obj)
+	     (for-all set? obj)
+	     (%sob-check-comparators obj))))
 
   (define (%list-of-bags? obj)
     ;;Used to validate rest arguments, as in:
@@ -267,9 +268,10 @@
     ;;   (define* (operation . {args %list-of-bags?})
     ;;     ---)
     ;;
-    (and (list? obj)
-	 (for-all bag? obj)
-	 (%sob-check-comparators obj)))
+    (or (null? obj)
+	(and (list? obj)
+	     (for-all bag? obj)
+	     (%sob-check-comparators obj))))
 
   (case-define %check-same-comparator
     ;;Used to validate SOB arguments, as in:
