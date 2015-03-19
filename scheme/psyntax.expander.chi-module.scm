@@ -698,7 +698,7 @@
   ;;and ?RATOR will evaluate to a closure object with tag identifier RATOR.TAG, which
   ;;is a sub-tag of "<procedure>".
   ;;
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax '%process-closure-object-application))
 
   (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
@@ -752,6 +752,11 @@
      %error-more-arguments-than-operands
      %error-mismatch-between-argument-tag-and-operand-retvals-signature)
 
+    (define-condition-type &wrong-number-of-arguments-error
+	&error
+      make-wrong-number-of-arguments-error-condition
+      wrong-number-of-arguments-error-condition?)
+
     (define-condition-type &expected-arguments-count
 	&condition
       make-expected-arguments-count-condition
@@ -777,27 +782,29 @@
       operand-retvals-signature-condition?
       (signature operand-retvals-signature))
 
-    (define (%error-more-operands-than-arguments input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object __who__
-	"more given operands than expected arguments"
+    (define (%error-more-operands-than-arguments who input-form.stx expected-arguments-count given-operands-count)
+      (%raise-compound-condition-object who
+	"while expanding, detected wrong number of operands in function application: more given operands than expected arguments"
 	input-form.stx
 	(condition
 	 (make-syntax-violation input-form.stx #f)
+	 (make-wrong-number-of-arguments-error-condition)
 	 (make-expected-arguments-count-condition expected-arguments-count)
 	 (make-given-operands-count-condition given-operands-count))))
 
-    (define (%error-more-arguments-than-operands input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object __who__
-	"more expected arguments than given operands"
+    (define (%error-more-arguments-than-operands who input-form.stx expected-arguments-count given-operands-count)
+      (%raise-compound-condition-object who
+	"while expanding, detected wrong number of operands in function application: more expected arguments than given operands"
 	input-form.stx
 	(condition
 	 (make-syntax-violation input-form.stx #f)
+	 (make-wrong-number-of-arguments-error-condition)
 	 (make-expected-arguments-count-condition expected-arguments-count)
 	 (make-given-operands-count-condition given-operands-count))))
 
-    (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx rand.stx
+    (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature who input-form.stx rand.stx
 										arg.idx arg.tag rand.retvals-signature)
-      (%raise-compound-condition-object __who__
+      (%raise-compound-condition-object who
 	"expand-time mismatch between expected argument tag and operand retvals signature"
 	input-form.stx
 	(condition
@@ -834,7 +841,7 @@
 	(()
 	 (if (null? rand*.psi)
 	     expand-time-match?
-	   (%error-more-operands-than-arguments input-form.stx
+	   (%error-more-operands-than-arguments 'chi-application input-form.stx
 						count (+ count (length rand*.psi)))))
 
 	((?arg.tag . ?rest-arg*.tag)
@@ -844,7 +851,7 @@
 					       (receive (proper tail)
 						   (improper-list->list-and-rest arg*.tag)
 						 (length proper)))))
-	       (%error-more-arguments-than-operands input-form.stx (+ count number-of-mandatory-args) count))
+	       (%error-more-arguments-than-operands 'chi-application input-form.stx (+ count number-of-mandatory-args) count))
 	   (let* ((rand.psi               (car rand*.psi))
 		  (rand.retvals-signature (psi-retvals-signature rand.psi))
 		  (rand.signature-tags    (retvals-signature-tags rand.retvals-signature)))
@@ -864,7 +871,8 @@
 		       (loop expand-time-match? ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
 		      (else
 		       ;;Argument and operand do *not* match at expand-time.
-		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
+		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
+											   input-form.stx
 											   (psi-stx rand.psi)
 											   count ?arg.tag
 											   rand.retvals-signature))))
@@ -881,13 +889,15 @@
 		  ;;
 		  ;;FIXME The  validity of this  rejection must be  verified.  (Marco
 		  ;;Maggi; Fri Apr 11, 2014)
-		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
+		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
+										      input-form.stx
 										      (psi-stx rand.psi)
 										      count ?arg.tag
 										      rand.retvals-signature)))
 	       (_
 		;;The operand returns multiple values for sure.
-		(%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
+		(%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
+										    input-form.stx
 										    (psi-stx rand.psi)
 										    count ?arg.tag
 										    rand.retvals-signature))
@@ -904,7 +914,7 @@
 
 	(_
 	 ;;This should never happen.
-	 (assertion-violation/internal-error __who__
+	 (assertion-violation/internal-error __module_who__
 	   "invalid closure object operator formals"
 	   input-form.stx rator.formals-signature))
 	)))
