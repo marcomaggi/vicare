@@ -922,7 +922,7 @@
 		(set-any? (lambda (elm)
 			    (eq? elm str2))
 			  S^)))
-    => #f "a")
+    => #f #t)
 
   (check
       (internal-body
@@ -933,7 +933,7 @@
 	(set-any? (lambda (elm)
 		    (= elm num1))
 		  S^))
-    => 2.0)
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; bag-replace
@@ -957,7 +957,7 @@
 		(bag-any? (lambda (elm)
 			    (eq? elm str2))
 			  B^)))
-    => #f "a")
+    => #f #t)
 
   (check
       (internal-body
@@ -965,9 +965,10 @@
 	(define num2 2.0)
 	(define B    (bag real-comparator num1))
 	(define B^   (bag-replace B num2))
-	(bag-any? (lambda (elm)
+	(bag-find (lambda (elm)
 		    (= elm num1))
-		  B^))
+		  B^
+		  void))
     => 2.0)
 
   (check
@@ -993,13 +994,13 @@
 	(define str2 (string #\a))
 	(define S    (set string-comparator str1))
 	(define S^   (set-replace! S str2))
-	(values (set-any? (lambda (elm)
+	(values (set-find (lambda (elm)
 			    (eq? elm str1))
 			  S^)
-		(set-any? (lambda (elm)
+		(set-find (lambda (elm)
 			    (eq? elm str2))
 			  S^)))
-    => #f "a")
+    => (void) "a")
 
   (check
       (internal-body
@@ -1007,7 +1008,7 @@
 	(define num2 2.0)
 	(define S    (set real-comparator num1))
 	(define S^   (set-replace! S num2))
-	(set-any? (lambda (elm)
+	(set-find (lambda (elm)
 		    (= elm num1))
 		  S^))
     => 2.0)
@@ -1028,13 +1029,13 @@
 	(define str2 (string #\a))
 	(define B    (bag string-comparator str1))
 	(define B^   (bag-replace! B str2))
-	(values (bag-any? (lambda (elm)
+	(values (bag-find (lambda (elm)
 			    (eq? elm str1))
 			  B^)
-		(bag-any? (lambda (elm)
+		(bag-find (lambda (elm)
 			    (eq? elm str2))
 			  B^)))
-    => #f "a")
+    => (void) "a")
 
   (check
       (internal-body
@@ -1042,7 +1043,7 @@
 	(define num2 2.0)
 	(define B    (bag real-comparator num1))
 	(define B^   (bag-replace! B num2))
-	(bag-any? (lambda (elm)
+	(bag-find (lambda (elm)
 		    (= elm num1))
 		  B^))
     => 2.0)
@@ -1523,6 +1524,215 @@
 	  (values (list-sort < (bag->list B^))
 		  obj)))
     => '(1 2 3 99) 'flag)
+
+  #t)
+
+
+(parametrise ((check-test-name	'whole))
+
+;;; set-size
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator))
+	(set-size S))
+    => 0)
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 2 3))
+	(set-size S))
+    => 3)
+
+;;; --------------------------------------------------------------------
+;;; bag-size
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator))
+	(bag-size B))
+    => 0)
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 3))
+	(bag-size B))
+    => 3)
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 2 2 3))
+	(bag-size B))
+    => 4)
+
+;;; --------------------------------------------------------------------
+;;; set-find
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator))
+	(set-find fxzero? S void))
+    => (void))
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 0 3))
+	(set-find fxzero? S void))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; bag-find
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator))
+	(bag-find fxzero? B void))
+    => (void))
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 0 3))
+	(bag-find fxzero? B void))
+    => 0)
+
+  (check
+      (internal-body
+	(define B
+	  (bag real-comparator 1 0 0.0 3))
+	(bag-find zero? B void))
+    => 0)
+
+;;; --------------------------------------------------------------------
+;;; set-count
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator))
+	(set-count fxzero? S))
+    => 0)
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 0 3))
+	(set-count fxzero? S))
+    => 1)
+
+;;; --------------------------------------------------------------------
+;;; bag-count
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator))
+	(bag-count fxzero? B))
+    => 0)
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 0 3))
+	(bag-count fxzero? B))
+    => 1)
+
+  (check
+      (internal-body
+	(define B
+	  (bag real-comparator 1 0 0.0 3))
+	(bag-count zero? B))
+    => 2)
+
+;;; --------------------------------------------------------------------
+;;; set-any?
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator))
+	(set-any? fxzero? S))
+    => #f)
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 1 0 3))
+	(set-any? fxzero? S))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bag-any?
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator))
+	(bag-any? fxzero? B))
+    => #f)
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 0 3))
+	(bag-any? fxzero? B))
+    => #t)
+
+  (check
+      (internal-body
+	(define B
+	  (bag real-comparator 1 0 0.0 3))
+	(bag-any? zero? B))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; set-every?
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator))
+	(set-every? fxzero? S))
+    => #t)
+
+  (check
+      (internal-body
+	(define S
+	  (set fixnum-comparator 0 1 2))
+	(set-every? fxnonnegative? S))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bag-every?
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator))
+	(bag-every? fxzero? B))
+    => #t)
+
+  (check
+      (internal-body
+	(define B
+	  (bag fixnum-comparator 1 0 3))
+	(bag-every? fxnonnegative? B))
+    => #t)
+
+  (check
+      (internal-body
+	(define B
+	  (bag real-comparator 1 0 0.0 3))
+	(bag-every? non-negative? B))
+    => #t)
 
   #t)
 

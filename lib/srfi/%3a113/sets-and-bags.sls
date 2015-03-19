@@ -668,11 +668,17 @@
   (or (hashtable-find pred (sob-hash-table sob))
       (failure)))
 
-(define* (set-find {pred procedure?} {set set?} {failure procedure?})
-  (sob-find pred set failure))
+(case-define* set-find
+  (({pred procedure?} {set set?})
+   (sob-find pred set void))
+  (({pred procedure?} {set set?} {failure procedure?})
+   (sob-find pred set failure)))
 
-(define* (bag-find {pred procedure?} {bag bag?} {failure procedure?})
-  (sob-find pred bag failure))
+(case-define* bag-find
+  (({pred procedure?} {bag bag?})
+   (sob-find pred bag void))
+  (({pred procedure?} {bag bag?} {failure procedure?})
+   (sob-find pred bag failure)))
 
 ;;;
 
@@ -698,7 +704,8 @@
   ;;Check if  any of the  elements in  a sob satisfy  a predicate.  Breaks  out early
   ;;(with call/cc) if a success is found.
   ;;
-  (hashtable-find ?pred (sob-hash-table ?sob)))
+  (and (hashtable-find ?pred (sob-hash-table ?sob))
+       #t))
 
 (define* (set-any? {pred procedure?} {set set?})
   (sob-any? pred set))

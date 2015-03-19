@@ -588,26 +588,37 @@ In all cases, two values are returned: the possibly updated @var{set} or
 
 
 @defun set-size @var{set}
-Return the number of elements in @var{set} as an exact integer.
+@defunx beg-size @var{bag}
+Return the number of elements in @var{set} or @var{bag} as an exact
+integer.
 @end defun
 
 
-@defun set-find @var{predicate} @var{set} @var{failure}
-Return an arbitrarily chosen element of @var{set} that satisfies
-@var{predicate}, or the result of invoking @var{failure} with no
-arguments if there is none.
+@defun set-find @var{predicate} @var{set}
+@defunx set-find @var{predicate} @var{set} @var{failure}
+@defunx bag-find @var{predicate} @var{bag}
+@defunx bag-find @var{predicate} @var{bag} @var{failure}
+Return an arbitrarily chosen element of @var{set} or @var{bag} that
+satisfies @var{predicate}, or the result of invoking @var{failure} with
+no arguments if there is none.
+
+As @value{PRJNAME} extension: when @var{failure} is missing, it defaults
+to @func{void}.
 @end defun
 
 
 @defun set-count @var{predicate} @var{set}
-Return the number of elements of @var{set} that satisfy @var{predicate}
-as an exact integer.
+@defunx bag-count @var{predicate} @var{bag}
+Return an an exact integer representing the number of elements of
+@var{set} or @var{bag} that satisfy @var{predicate}.
 @end defun
 
 
 @defun set-any? @var{predicate} @var{set}
-Return @true{} if at least one element of set @var{satisfies} predicate,
-or @false{} otherwise.
+@defunx bag-any? @var{predicate} @var{bag}
+Return @true{} if at least one element of @var{set} or @var{bag}
+satisfies @var{predicate}; otherwise return @false{}.  If the set or bag
+is empty: the return value is @false{}.
 
 @quotation
 @strong{NOTE} This differs from the @ansrfi{1} analogue because it does
@@ -617,8 +628,10 @@ not return an element of the set.
 
 
 @defun set-every? @var{predicate} @var{set}
-Return @true{} if every element of @var{set} satisfies @var{predicate},
-or @false{} otherwise.
+@defunx bag-every? @var{predicate} @var{bag}
+Return @true{} if every element of @var{set} or @var{bag} satisfies
+@var{predicate}; otherwise return @false{}.  If the set or bag is empty:
+the return value is @true{}.
 
 @quotation
 @strong{NOTE} This differs from the @ansrfi{1} analogue because it does
