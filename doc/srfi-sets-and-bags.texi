@@ -480,7 +480,8 @@ elements to be deleted.
 
 
 @defun set-search! @var{set} @var{element} @var{failure} @var{success}
-The @var{set} is searched for @var{element}.
+@defunx bag-search! @var{bag} @var{element} @var{failure} @var{success}
+The @var{set} or @var{bag} is searched for @var{element}.
 
 @itemize
 @item
@@ -501,24 +502,84 @@ Scheme object):
 @itemize
 @item
 Invoking @code{(@var{insert} @var{obj})} causes @var{element} to be
-inserted into @var{set}.
+inserted into @var{set} or @var{bag}.
 
 @item
-Invoking @code{(@var{ignore} @var{obj})} causes @var{set} to remain
-unchanged.
+Invoking @code{(@var{ignore} @var{obj})} causes @var{set} or @var{bag}
+to remain unchanged.
 
 @item
 Invoking @code{(@var{update} @var{new-element} @var{obj})} causes
-@var{new-element} to be inserted into @var{set} in place of
+@var{new-element} to be inserted into @var{set} or @var{bag} in place of
 @var{element}.
 
 @item
 Invoking @code{(@var{remove} @var{obj})} causes the matching element of
-@var{set} to be removed from it.
+@var{set} or @var{bag} to be removed from it.
 @end itemize
 
-In all cases, two values are returned: the possibly updated @var{set}
-and @var{obj}.
+In all cases, two values are returned: the possibly updated @var{set} or
+@var{bag} and @var{obj}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+;;success and update
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 2.0
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (error #f "wrong"))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (update 9 'flag)))
+    (list-sort < (set->list S^))        @result{} (1 3 9)
+    obj))                               @result{} flag
+
+;;success and remove
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 2.0
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (error #f "wrong"))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (remove 'flag)))
+    (list-sort < (set->list S^))        @result{} (1 3)
+    obj))                               @result{} flag
+
+;;failure and ignore
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 99
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (ignore 'flag))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (error #f "wrong")))
+    (list-sort < (set->list S^))        @result{} (1 2 3)
+    obj))                               @result{} flag
+
+;;failure and insert
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 99
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (insert 'flag))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (error #f "wrong")))
+    (list-sort < (set->list S^))        @result{} (1 2 3 99)
+    obj))                               @result{} flag
+@end lisp
 @end defun
 
 @c page

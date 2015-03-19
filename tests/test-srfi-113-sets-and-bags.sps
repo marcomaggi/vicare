@@ -1398,6 +1398,132 @@
 	(list-sort < (bag->list B^)))
     => '(1 2 3))
 
+;;; --------------------------------------------------------------------
+;;; set-search
+
+  (check	;success and update
+      (internal-body
+	(define S  (set real-comparator 1 2 3))
+	(receive (S^ obj)
+	    (set-search! S 2.0
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (error #f "wrong"))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (update 9 'flag)))
+	  (values (list-sort < (set->list S^))
+		  obj)))
+    => '(1 3 9) 'flag)
+
+  (check	;success and remove
+      (internal-body
+	(define S  (set real-comparator 1 2 3))
+	(receive (S^ obj)
+	    (set-search! S 2.0
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (error #f "wrong"))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (remove 'flag)))
+	  (values (list-sort < (set->list S^))
+		  obj)))
+    => '(1 3) 'flag)
+
+  (check	;failure and ignore
+      (internal-body
+	(define S  (set real-comparator 1 2 3))
+	(receive (S^ obj)
+	    (set-search! S 99
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (ignore 'flag))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (error #f "wrong")))
+	  (values (list-sort < (set->list S^))
+		  obj)))
+    => '(1 2 3) 'flag)
+
+  (check	;failure and insert
+      (internal-body
+	(define S  (set real-comparator 1 2 3))
+	(receive (S^ obj)
+	    (set-search! S 99
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (insert 'flag))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (error #f "wrong")))
+	  (values (list-sort < (set->list S^))
+		  obj)))
+    => '(1 2 3 99) 'flag)
+
+;;; --------------------------------------------------------------------
+;;; bag-search
+
+  (check	;success and update
+      (internal-body
+	(define B  (bag real-comparator 1 2 3))
+	(receive (B^ obj)
+	    (bag-search! B 2.0
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (error #f "wrong"))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (update 9 'flag)))
+	  (values (list-sort < (bag->list B^))
+		  obj)))
+    => '(1 3 9) 'flag)
+
+  (check	;success and remove
+      (internal-body
+	(define B  (bag real-comparator 1 2 3))
+	(receive (B^ obj)
+	    (bag-search! B 2.0
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (error #f "wrong"))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (remove 'flag)))
+	  (values (list-sort < (bag->list B^))
+		  obj)))
+    => '(1 3) 'flag)
+
+  (check	;failure and ignore
+      (internal-body
+	(define B  (bag real-comparator 1 2 3))
+	(receive (B^ obj)
+	    (bag-search! B 99
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (ignore 'flag))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (error #f "wrong")))
+	  (values (list-sort < (bag->list B^))
+		  obj)))
+    => '(1 2 3) 'flag)
+
+  (check	;failure and insert
+      (internal-body
+	(define B  (bag real-comparator 1 2 3))
+	(receive (B^ obj)
+	    (bag-search! B 99
+			 ;;failure proc
+			 (lambda (insert ignore)
+			   (insert 'flag))
+			 ;;success proc
+			 (lambda (true-element update remove)
+			   (error #f "wrong")))
+	  (values (list-sort < (bag->list B^))
+		  obj)))
+    => '(1 2 3 99) 'flag)
+
   #t)
 
 
