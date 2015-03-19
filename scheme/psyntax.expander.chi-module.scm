@@ -1199,7 +1199,7 @@
 ;;;; chi procedures: general operator application, nothing already expanded
 
 (module (chi-application)
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax (quote chi-application)))
 
   (define (chi-application input-form.stx lexenv.run lexenv.expand)
@@ -1319,7 +1319,7 @@
 				    rator.psi ?rand*)))
 
       (_
-       (syntax-violation/internal-error __who__
+       (syntax-violation/internal-error __module_who__
 	 "invalid application syntax" input-form.stx))))
 
   (define (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
@@ -1352,7 +1352,7 @@
 	     (chi-expr (cons ?nested-rator (append ?nested-rand* rand*.stx))
 		       lexenv.run lexenv.expand))
 	    (_
-	     (syntax-violation __who__
+	     (syntax-violation __module_who__
 	       "expected list as argument of splice-first-expand"
 	       input-form.stx rator.stx)))
 	(chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
@@ -1830,19 +1830,17 @@
       ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (let ((formals.stx (bless
 			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-	     (body*.stx   (cons (bless
-				 `(define-fluid-override __who__
-				    (identifier-syntax (quote ,?ctxt))))
-				?body-form*)))
+	     (body*.stx   (bless
+			   `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
+			       . ,?body-form*)))))
 	 (%expand input-form.stx lexenv.run lexenv.expand
 		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
 
       ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
        (let ((formals.stx ?fmls)
-	     (body*.stx   (cons (bless
-				 `(define-fluid-override __who__
-				    (identifier-syntax (quote ,?ctxt))))
-				?body-form*)))
+	     (body*.stx   (bless
+			   `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
+			       . ,?body-form*)))))
 	 (%expand input-form.stx lexenv.run lexenv.expand
 		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
       ))
