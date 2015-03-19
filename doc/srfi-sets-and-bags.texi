@@ -437,9 +437,35 @@ equal to some member of @var{set} is ignored.
 @end defun
 
 
+@defun bag-delete @var{bag} @var{element} @dots{}
+Return a newly allocated bag containing all the values of @var{bag}
+except for any that are equal (in the sense of @var{bag}'s comparator)
+to one or more of the @var{element}s.  Any @var{element} that is not
+equal to some member of @var{bag} is ignored.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define B  (bag fixnum-comparator 1 2 2 3))
+  (define B^ (bag-delete B 2))
+  (list-sort < (bag->list B^)))
+@result{} (1 2 3)
+
+(internal-body
+  (define B  (bag real-comparator 1 2 2 3))
+  (define B^ (bag-delete B 2.0))
+  (list-sort < (bag->list B^)))
+@result{} (1 2 3)
+@end lisp
+@end defun
+
+
 @defun set-delete! @var{set} @var{element} @dots{}
-Like @func{set-delete} but it is permitted to mutate and return
-@var{set} rather than allocating a new set.
+@defunx bag-delete! @var{bag} @var{element} @dots{}
+Like @func{set-delete} and @func{bag-delete} but they are permitted to
+mutate and return @var{set} and @var{bag} rather than allocating a new
+set or bag.
 @end defun
 
 

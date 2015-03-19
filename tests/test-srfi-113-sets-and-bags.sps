@@ -1090,6 +1090,142 @@
 		  S^))
     => #f)
 
+;;; --------------------------------------------------------------------
+;;; bag-delete
+
+  (check
+      (internal-body
+	(define B  (bag fixnum-comparator))
+	(define B^ (bag-delete B 1))
+	(eq? B B^))
+    => #f)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define B    (bag string-comparator str1))
+	(define B^   (bag-delete B str2))
+	(values (bag-any? (lambda (elm)
+			    (eq? elm str1))
+			  B^)
+		(bag-any? (lambda (elm)
+			    (eq? elm str2))
+			  B^)))
+    => #f #f)
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define B    (bag real-comparator num1))
+	(define B^   (bag-delete B num2))
+	(assert (fxzero? (comparator-compare real-comparator num1 num2)))
+	(bag-any? (lambda (elm)
+		    (= elm num1))
+		  B^))
+    => #f)
+
+  (check
+      (internal-body
+	(define B  (bag fixnum-comparator 1 2 2 3))
+	(define B^ (bag-delete B 2))
+	(list-sort < (bag->list B^)))
+    => '(1 2 3))
+
+  (check
+      (internal-body
+	(define B  (bag real-comparator 1 2 2 3))
+	(define B^ (bag-delete B 2.0))
+	(list-sort < (bag->list B^)))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; set-delete!
+
+  (check
+      (internal-body
+	(define S  (set fixnum-comparator))
+	(define S^ (set-delete! S 1))
+	(eq? S S^))
+    => #t)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define S    (set string-comparator str1))
+	(define S^   (set-delete! S str2))
+	(values (set-any? (lambda (elm)
+			    (eq? elm str1))
+			  S^)
+		(set-any? (lambda (elm)
+			    (eq? elm str2))
+			  S^)))
+    => #f #f)
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define S    (set real-comparator num1))
+	(define S^   (set-delete! S num2))
+	(assert (fxzero? (comparator-compare real-comparator num1 num2)))
+	(set-any? (lambda (elm)
+		    (= elm num1))
+		  S^))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; bag-delete!
+
+  (check
+      (internal-body
+	(define B  (bag fixnum-comparator))
+	(define B^ (bag-delete! B 1))
+	(eq? B B^))
+    => #t)
+
+  (check
+      (internal-body
+	(define str1 (string #\a))
+	(define str2 (string #\a))
+	(define B    (bag string-comparator str1))
+	(define B^   (bag-delete! B str2))
+	(values (bag-any? (lambda (elm)
+			    (eq? elm str1))
+			  B^)
+		(bag-any? (lambda (elm)
+			    (eq? elm str2))
+			  B^)))
+    => #f #f)
+
+  (check
+      (internal-body
+	(define num1 2)
+	(define num2 2.0)
+	(define B    (bag real-comparator num1))
+	(define B^   (bag-delete! B num2))
+	(assert (fxzero? (comparator-compare real-comparator num1 num2)))
+	(bag-any? (lambda (elm)
+		    (= elm num1))
+		  B^))
+    => #f)
+
+  (check
+      (internal-body
+	(define B  (bag fixnum-comparator 1 2 2 3))
+	(define B^ (bag-delete! B 2))
+	(list-sort < (bag->list B^)))
+    => '(1 2 3))
+
+  (check
+      (internal-body
+	(define B  (bag real-comparator 1 2 2 3))
+	(define B^ (bag-delete! B 2.0))
+	(list-sort < (bag->list B^)))
+    => '(1 2 3))
+
   #t)
 
 
