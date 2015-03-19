@@ -1027,6 +1027,16 @@ Asymmetric difference is extended to more than two sets by taking the
 difference between the first set and the union of the others.  Symmetric
 difference is not extended beyond two sets.  Elements in the result set
 are drawn from the first set in which they appear.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let* ((S1 (set fixnum-comparator 1 2))
+       (S2 (set fixnum-comparator 2 3))
+       (S  (set-difference S1 S2)))
+  (set->list S #t))
+@result{} (1)
+@end lisp
 @end defun
 
 
@@ -1034,25 +1044,26 @@ are drawn from the first set in which they appear.
 @defunx set-intersection! @varo{set} @var{set} @dots{}
 @defunx set-difference! @varo{set} @var{set} @dots{}
 @defunx set-xor! @vari{set} @varii{set}
-Linear update procedures returning a set that is the union,
-intersection, asymmetric difference, or symmetric difference of the
-@var{set} arguments.
-
-Asymmetric difference is extended to more than two sets by taking the
-difference between the first set and the union of the others.  Symmetric
-difference is not extended beyond two sets.  Elements in the result set
-are drawn from the first set in which they appear.
+Like @func{set-union!}, @func{set-intersection!},
+@func{set-difference!}, @func{set-xor!} but they are allowed to mutate
+@varo{set} and return it.
 @end defun
 
-@c page
-@node srfi sets-and-bags bag
-@subsection Bag--only procedures
 
+@defun bag-union @varo{bag} @var{bag} @dots{}
+@defunx bag-intersection @varo{bag} @var{bag} @dots{}
+@defunx bag-difference @varo{bag} @var{bag} @dots{}
+@defunx bag-xor @vari{bag} @varii{bag}
+Return a newly allocated bag that is the union, intersection, asymmetric
+difference, or symmetric difference of the @var{bag} arguments.
 
-The @func{bag-union}, @func{bag-intersection}, @func{bag-difference},
-and @func{bag-xor} procedures (and their linear update analogues) behave
-as follows when both bags contain elements that are equal in the sense
-of the bags' comparator:
+Asymmetric difference is extended to more than two bags by taking the
+difference between the first bag and the union of the others.  Symmetric
+difference is not extended beyond two bags.  Elements in the result bag
+are drawn from the first bag in which they appear.
+
+The procedures behave as follows when both bags contain elements that
+are equal in the sense of the bags' comparator:
 
 @table @func
 @item bag-union
@@ -1073,14 +1084,21 @@ The number of equal elements in the result is the absolute value of the
 difference between the number of equal elements in the first and second
 bags.
 @end table
+@end defun
 
-@menu
-* srfi sets-and-bags bag more::  Additional bag procedures.
-@end menu
+
+@defun bag-union! @varo{bag} @var{bag} @dots{}
+@defunx bag-intersection! @varo{bag} @var{bag} @dots{}
+@defunx bag-difference! @varo{bag} @var{bag} @dots{}
+@defunx bag-xor! @vari{bag} @varii{bag}
+Like @func{bag-union!}, @func{bag-intersection!},
+@func{bag-difference!}, @func{bag-xor!} but they are allowed to mutate
+@varo{bag} and return it.
+@end defun
 
 @c page
-@node srfi sets-and-bags bag more
-@subsubsection Additional bag procedures
+@node srfi sets-and-bags bag
+@subsection Bag--only procedures
 
 
 @defun bag-sum @varo{bag} @var{bag} @dots{}
@@ -1094,7 +1112,7 @@ up.
 
 
 @defun bag-sum! @varo{bag} @var{bag} @dots{}
-Like @func{bag-sum} but it is permitted to mutate and return @var{bag}
+Like @func{bag-sum} but it is permitted to mutate and return @varo{bag}
 rather than allocating a new set.
 @end defun
 
@@ -1106,7 +1124,7 @@ the count of that element in @var{bag} multiplied by @var{N}.
 @end defun
 
 
-@defun bag-product! n bag)
+@defun bag-product! @var{N} @var{bag}
 Like @func{bag-product} but it is permitted to mutate and return
 @var{bag} rather than allocating a new set.
 @end defun

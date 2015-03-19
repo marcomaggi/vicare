@@ -2383,6 +2383,601 @@
   #t)
 
 
+(parametrise ((check-test-name	'theory))
+
+  (define-constant S0 (set fixnum-comparator))
+  (define-constant S1 (set fixnum-comparator 1 2))
+  (define-constant S2 (set fixnum-comparator 2 3))
+  (define-constant S3 (set fixnum-comparator 3 4))
+
+  (define-constant B0 (bag fixnum-comparator))
+  (define-constant B1 (bag fixnum-comparator 1 2))
+  (define-constant B2 (bag fixnum-comparator 2 3))
+  (define-constant B3 (bag fixnum-comparator 3 4))
+
+;;; --------------------------------------------------------------------
+;;; set-union
+
+  (check
+      (let ((S (set-union S0)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let ((S (set-union S0 S1)))
+	(set->list S #t))
+    => '(1 2))
+
+  (check
+      (let ((S (set-union S0 S1 S2)))
+	(set->list S #t))
+    => '(1 2 3))
+
+  (check
+      (let ((S (set-union S1 S3)))
+	(set->list S #t))
+    => '(1 2 3 4))
+
+  (check
+      (let ((S (set-union S0 S1 S2 S3)))
+	(set->list S #t))
+    => '(1 2 3 4))
+
+;;; --------------------------------------------------------------------
+;;; set-union!
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S  (set-union! S0)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S1 (set fixnum-comparator 1 2))
+	     (S (set-union! S0 S1)))
+	(set->list S #t))
+    => '(1 2))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S3 (set fixnum-comparator 3 4))
+	     (S (set-union! S0 S1 S2)))
+	(set->list S #t))
+    => '(1 2 3))
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S3 (set fixnum-comparator 3 4))
+	     (S (set-union! S1 S3)))
+	(set->list S #t))
+    => '(1 2 3 4))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S3 (set fixnum-comparator 3 4))
+	     (S (set-union! S0 S1 S2 S3)))
+	(set->list S #t))
+    => '(1 2 3 4))
+
+;;; --------------------------------------------------------------------
+;;; set-intersection
+
+  ;;(debug-print (set->list S0 #t)
+  ;;  	       (set->list S1 #t)
+  ;; 	       (set->list S2 #t)
+  ;; 	       (set->list S3 #t))
+
+  (check
+      (let ((S (set-intersection S0)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let ((S (set-intersection S0 S1)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let ((S (set-intersection S0 S1 S2)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let ((S (set-intersection S1 S3)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let ((S (set-intersection S1 S2)))
+	(set->list S #t))
+    => '(2))
+
+;;; --------------------------------------------------------------------
+;;; set-intersection!
+
+  ;;(debug-print (set->list S0 #t)
+  ;;  	       (set->list S1 #t)
+  ;; 	       (set->list S2 #t)
+  ;; 	       (set->list S3 #t))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S (set-intersection! S0)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S1 (set fixnum-comparator 1 2))
+	     (S (set-intersection! S0 S1)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-intersection! S0 S1 S2)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S3 (set fixnum-comparator 3 4))
+	     (S (set-intersection! S1 S3)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-intersection! S1 S2)))
+	(set->list S #t))
+    => '(2))
+
+;;; --------------------------------------------------------------------
+;;; set-difference
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-difference S1 S2)))
+	(set->list S #t))
+    => '(1))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-difference S0 S2)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-difference S2 S0)))
+	(set->list S #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; set-difference!
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-difference! S1 S2)))
+	(set->list S #t))
+    => '(1))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-difference! S0 S2)))
+	(set->list S #t))
+    => '())
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-difference! S2 S0)))
+	(set->list S #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; set-xor
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-xor S1 S2)))
+	(set->list S #t))
+    => '(1 3))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-xor S0 S2)))
+	(set->list S #t))
+    => '(2 3))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-xor S2 S0)))
+	(set->list S #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; set-xor!
+
+  (check
+      (let* ((S1 (set fixnum-comparator 1 2))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-xor! S1 S2)))
+	(set->list S #t))
+    => '(1 3))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-xor! S0 S2)))
+	(set->list S #t))
+    => '(2 3))
+
+  (check
+      (let* ((S0 (set fixnum-comparator))
+	     (S2 (set fixnum-comparator 2 3))
+	     (S (set-xor! S2 S0)))
+	(set->list S #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-union
+
+  (check
+      (let ((B (bag-union B0)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let ((B (bag-union B0 B1)))
+	(bag->list B #t))
+    => '(1 2))
+
+  (check
+      (let ((B (bag-union B0 B1 B2)))
+	(bag->list B #t))
+    => '(1 2 3))
+
+  (check
+      (let ((B (bag-union B1 B3)))
+	(bag->list B #t))
+    => '(1 2 3 4))
+
+  (check
+      (let ((B (bag-union B0 B1 B2 B3)))
+	(bag->list B #t))
+    => '(1 2 3 4))
+
+;;; --------------------------------------------------------------------
+;;; bag-union!
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B  (bag-union! B0)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B1 (bag fixnum-comparator 1 2))
+	     (B (bag-union! B0 B1)))
+	(bag->list B #t))
+    => '(1 2))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B (bag-union! B0 B1 B2)))
+	(bag->list B #t))
+    => '(1 2 3))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B (bag-union! B1 B3)))
+	(bag->list B #t))
+    => '(1 2 3 4))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B (bag-union! B0 B1 B2 B3)))
+	(bag->list B #t))
+    => '(1 2 3 4))
+
+;;; --------------------------------------------------------------------
+;;; bag-intersection
+
+  ;;(debug-print (bag->list B0 #t)
+  ;;  	       (bag->list B1 #t)
+  ;; 	       (bag->list B2 #t)
+  ;; 	       (bag->list B3 #t))
+
+  (check
+      (let ((B (bag-intersection B0)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let ((B (bag-intersection B0 B1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let ((B (bag-intersection B0 B1 B2)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let ((B (bag-intersection B1 B3)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let ((B (bag-intersection B1 B2)))
+	(bag->list B #t))
+    => '(2))
+
+;;; --------------------------------------------------------------------
+;;; bag-intersection!
+
+  ;;(debug-print (bag->list B0 #t)
+  ;;  	       (bag->list B1 #t)
+  ;; 	       (bag->list B2 #t)
+  ;; 	       (bag->list B3 #t))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B (bag-intersection! B0)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B1 (bag fixnum-comparator 1 2))
+	     (B (bag-intersection! B0 B1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-intersection! B0 B1 B2)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B (bag-intersection! B1 B3)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-intersection! B1 B2)))
+	(bag->list B #t))
+    => '(2))
+
+;;; --------------------------------------------------------------------
+;;; bag-difference
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-difference B1 B2)))
+	(bag->list B #t))
+    => '(1))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-difference B0 B2)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-difference B2 B0)))
+	(bag->list B #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-difference!
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-difference! B1 B2)))
+	(bag->list B #t))
+    => '(1))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-difference! B0 B2)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-difference! B2 B0)))
+	(bag->list B #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-xor
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-xor B1 B2)))
+	(bag->list B #t))
+    => '(1 3))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-xor B0 B2)))
+	(bag->list B #t))
+    => '(2 3))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-xor B2 B0)))
+	(bag->list B #t))
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-xor!
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-xor! B1 B2)))
+	(bag->list B #t))
+    => '(1 3))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-xor! B0 B2)))
+	(bag->list B #t))
+    => '(2 3))
+
+  (check
+      (let* ((B0 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B (bag-xor! B2 B0)))
+	(bag->list B #t))
+    => '(2 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bag-only))
+
+;;; bag-sum
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B  (bag-sum B1)))
+	(bag->list B #t))
+    => '(1 2))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator))
+	     (B  (bag-sum B1 B2)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator))
+	     (B  (bag-sum B1 B2)))
+	(bag->list B #t))
+    => '(1 2))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B  (bag-sum B1 B2)))
+	(bag->list B #t))
+    => '(1 2 2 3))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B  (bag-sum B1 B2 B3)))
+	(bag->list B #t))
+    => '(1 2 2 3 3 4))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B4 (bag fixnum-comparator 4 5))
+	     (B  (bag-sum B1 B2 B3 B4)))
+	(bag->list B #t))
+    => '(1 2 2 3 3 4 4 5))
+
+;;; --------------------------------------------------------------------
+;;; bag-sum!
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B  (bag-sum! B1)))
+	(bag->list B #t))
+    => '(1 2))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator))
+	     (B2 (bag fixnum-comparator))
+	     (B  (bag-sum! B1 B2)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator))
+	     (B  (bag-sum! B1 B2)))
+	(bag->list B #t))
+    => '(1 2))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B  (bag-sum! B1 B2)))
+	(bag->list B #t))
+    => '(1 2 2 3))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B  (bag-sum! B1 B2 B3)))
+	(bag->list B #t))
+    => '(1 2 2 3 3 4))
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B2 (bag fixnum-comparator 2 3))
+	     (B3 (bag fixnum-comparator 3 4))
+	     (B4 (bag fixnum-comparator 4 5))
+	     (B  (bag-sum! B1 B2 B3 B4)))
+	(bag->list B #t))
+    => '(1 2 2 3 3 4 4 5))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

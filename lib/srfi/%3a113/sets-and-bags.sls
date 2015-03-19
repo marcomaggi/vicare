@@ -1302,7 +1302,7 @@
      (receive-and-return (result)
 	 (sob-empty-copy sob1)
        (dyadic-sob-sum! result sob1 sob2)))
-    ((sob1 sob2 sob3 . sobs)
+    ((sob1 sob2 sob3 sobs)
      (receive-and-return (result)
 	 (sob-empty-copy sob1)
        (dyadic-sob-sum! result sob1 sob2)
@@ -1317,7 +1317,7 @@
     ((sob1 sob2)
      (dyadic-sob-sum! sob1 sob1 sob2)
      sob1)
-    ((sob1 sob2 sob3 . sobs)
+    ((sob1 sob2 sob3 sobs)
      (dyadic-sob-sum! sob1 sob1 sob2)
      (for-each
 	 (lambda (sob)
@@ -1386,15 +1386,39 @@
     ;;
     (let ((T1 (sob-hash-table sob1))
 	  (T2 (sob-hash-table sob2))
-	  (T (sob-hash-table result)))
+	  (T  (sob-hash-table result)))
       (hashtable-for-each
-	  (lambda (key value2)
-	    (when (zero? (hashtable-ref T1 key 0))
-	      (hashtable-set! T key value2)))
+	  (lambda (key2 value2)
+	    ;;If KEY2 is not in T1: add it to the result.
+	    (when (zero? (hashtable-ref T1 key2 0))
+	      (hashtable-set! T key2 value2)))
 	T2)
       (hashtable-for-each
-	  (lambda (key value1)
-	    (hashtable-set! T key (abs (- value1 (hashtable-ref T2 key 0)))))
+	  (lambda (key1 value1)
+	    ;;Examples:
+	    ;;
+	    ;;  (let ((value1 1)
+	    ;;        (value2 0)
+	    ;;    (abs (- value1 value2))) => 1
+	    ;;
+	    ;;  (let ((value1 1)
+	    ;;        (value2 1)
+	    ;;    (abs (- value1 value2))) => 0
+	    ;;
+	    ;;  (let ((value1 3)
+	    ;;        (value2 1)
+	    ;;    (abs (- value1 value2))) => 2
+	    ;;
+	    ;;  (let ((value1 1)
+	    ;;        (value2 2)
+	    ;;    (abs (- value1 value2))) => 1
+	    ;;
+	    ;;  (let ((value1 1)
+	    ;;        (value2 4)
+	    ;;    (abs (- value1 value2))) => 3
+	    ;;
+	    (let ((value2 (hashtable-ref T2 key1 0)))
+	      (hashtable-set! T key1 (abs (- value1 value2)))))
 	T1)
       ;;This returns RESULT.
       (sob-cleanup! result)))
