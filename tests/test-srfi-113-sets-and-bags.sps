@@ -1830,6 +1830,28 @@
 			     (bag fixnum-comparator 1 2 2 3)))
     => '(1 2 2 3))
 
+;;; --------------------------------------------------------------------
+;;; set-filter
+
+  (check
+      (set->list
+       (set-filter (lambda (elm)
+		     (<= 2 elm))
+		   (set fixnum-comparator 1 2 3))
+       #t)
+    => '(2 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-filter
+
+  (check
+      (bag->list
+       (bag-filter (lambda (elm)
+		     (<= 2 elm))
+		   (bag fixnum-comparator 1 2 2 3))
+       <)
+    => '(2 2 3))
+
   #t)
 
 

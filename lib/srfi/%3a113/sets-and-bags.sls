@@ -896,18 +896,38 @@
 
 ;;;; copying and conversion
 
-(define (sob->list sob)
-  ;;Convert a sob to a list; a special case of sob-fold.
+(case-define sob->list
+  ;;Convert a sob to a list; a special case of SOB-FOLD.
   ;;
-  (sob-fold (lambda (elem list)
-	      (cons elem list))
-	    '() sob))
+  ((who sob)
+   (sob-fold cons '() sob))
+  ((who sob compar)
+   (cond ((not compar)
+	  (sob-fold cons '() sob))
+	 ((eq? #t compar)
+	  (let ((compar (comparator-comparison-procedure (sob-comparator sob))))
+	    (list-sort (lambda (x y)
+			 (= -1 (compar x y)))
+		       (sob-fold cons '() sob))))
+	 ((procedure? compar)
+	  (list-sort compar (sob-fold cons '() sob)))
+	 (else
+	  (procedure-argument-violation who
+	    "expected boolean or comparison procedure as compar argument"
+	    compar)))))
 
-(define* (set->list {set set?})
-  (sob->list set))
 
-(define* (bag->list {bag bag?})
-  (sob->list bag))
+(case-define* set->list
+  (({set set?})
+   (sob->list __who__ set))
+  (({set set?} compar)
+   (sob->list __who__ set compar)))
+
+(case-define* bag->list
+  (({bag bag?})
+   (sob->list __who__ bag))
+  (({bag bag?} compar)
+   (sob->list __who__ bag compar)))
 
 ;;;
 

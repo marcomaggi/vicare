@@ -734,8 +734,10 @@ there was no invocation.
 
 
 @defun set-filter @var{predicate} @var{set}
-Return a newly allocated set with the same comparator as @var{set},
-containing just the elements of @var{set} that satisfy @var{predicate}.
+@defunx bag-filter @var{predicate} @var{bag}
+Return a newly allocated set or bag with the same comparator as
+@var{set} or @var{bag}, containing just the elements of @var{set} or
+@var{bag} that satisfy @var{predicate}.
 @end defun
 
 
@@ -792,8 +794,26 @@ using the same comparator.
 
 
 @defun set->list @var{set}
+@defunx set->list @var{set} @var{compar}
 Return a newly allocated list containing the members of @var{set} in
 unspecified order.
+
+As @value{PRJNAME} extension, if the @var{compar} is present:
+
+@itemize
+@item
+If it is the boolean @false{}: the function behaves as if @var{compar}
+was not present.
+
+@item
+If it is the boolean @true{}: the resulting list is sorted using the
+standard @func{list->sort} and a comparison predicate from the @var{set}
+comparator, so that the lesser elements come first.
+
+@item
+If it is a procedure: the resulting list is sorted using @var{compar} as
+comparison predicate.
+@end itemize
 @end defun
 
 
