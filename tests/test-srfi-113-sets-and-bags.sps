@@ -3277,6 +3277,50 @@
   #t)
 
 
+(parametrise ((check-test-name	'comparator))
+
+;;; set-comparator
+
+  (check
+      (let ((S1 (set fixnum-comparator 1 2 3))
+	    (S2 (set fixnum-comparator 1 2 3)))
+	(comparator-equal? set-comparator S1 S2))
+    => #t)
+
+  (check
+      (let ((S1 (set fixnum-comparator 1 2 3))
+	    (S2 (set fixnum-comparator 1 2 3 4)))
+	(comparator-equal? set-comparator S1 S2))
+    => #f)
+
+  (check
+      (let ((S (set fixnum-comparator 1 2 3)))
+	(non-negative-exact-integer? (comparator-hash set-comparator S)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; bag-comparator
+
+  (check
+      (let ((B1 (bag fixnum-comparator 1 2 3))
+	    (B2 (bag fixnum-comparator 1 2 3)))
+	(comparator-equal? bag-comparator B1 B2))
+    => #t)
+
+  (check
+      (let ((B1 (bag fixnum-comparator 1 2 3))
+	    (B2 (bag fixnum-comparator 1 2 3 4)))
+	(comparator-equal? bag-comparator B1 B2))
+    => #f)
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2 3)))
+	(non-negative-exact-integer? (comparator-hash bag-comparator B)))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

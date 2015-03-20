@@ -1308,6 +1308,42 @@ Comparators used to compare sets or bags, and allow sets of sets, bags
 of sets, etc.  These comparators do not provide comparison procedures,
 as there is no ordering between sets or bags.  It is an error to compare
 sets or bags with different element comparators.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((S1 (set fixnum-comparator 1 2 3))
+      (S2 (set fixnum-comparator 1 2 3)))
+  (comparator-equal? set-comparator S1 S2))
+@result{} #t
+
+(let ((S1 (set fixnum-comparator 1 2 3))
+      (S2 (set fixnum-comparator 1 2 3 4)))
+  (comparator-equal? set-comparator S1 S2))
+@result{} #f
+
+(let ((S (set fixnum-comparator 1 2 3)))
+  (non-negative-exact-integer?
+    (comparator-hash set-comparator S)))
+@result{} #t
+
+;;;
+
+(let ((B1 (bag fixnum-comparator 1 2 3))
+      (B2 (bag fixnum-comparator 1 2 3)))
+  (comparator-equal? bag-comparator B1 B2))
+@result{} #t
+
+(let ((B1 (bag fixnum-comparator 1 2 3))
+      (B2 (bag fixnum-comparator 1 2 3 4)))
+  (comparator-equal? bag-comparator B1 B2))
+@result{} #f
+
+(let ((B (bag fixnum-comparator 1 2 3)))
+  (non-negative-exact-integer?
+    (comparator-hash bag-comparator B)))
+@result{} #t
+@end lisp
 @end defun
 
 @c page
