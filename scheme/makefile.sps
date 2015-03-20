@@ -277,12 +277,12 @@
     "ikarus.fixnums.sls"
     "ikarus.chars.sls"
     "ikarus.structs.sls"
+    "ikarus.vectors.sls"
     "ikarus.hash-tables.sls"
     "ikarus.records.procedural.sls"
     "ikarus.strings.sls"
     "ikarus.unicode-conversion.sls"
     "ikarus.symbols.sls"
-    "ikarus.vectors.sls"
     "ikarus.unicode.sls"
     "ikarus.string-to-number.sls"
     "ikarus.bignums.sls"
@@ -2381,6 +2381,18 @@
     (hashtable-hash-function			v r ht)
     (make-hashtable				v r ht)
     (hashtable-equivalence-function		v r ht)
+    (hashtable-for-each-key			v $language)
+    (hashtable-for-each-entry			v $language)
+    (hashtable-for-all-keys			v $language)
+    (hashtable-for-all-entries			v $language)
+    (hashtable-exists-key			v $language)
+    (hashtable-exists-entry			v $language)
+    (hashtable-find-key				v $language)
+    (hashtable-find-entry			v $language)
+    (hashtable-fold-keys			v $language)
+    (hashtable-fold-entries			v $language)
+    (hashtable->alist				v $language)
+    (alist->hashtable!				v $language)
     (equal-hash					v r ht)
     (string-hash				v r ht)
     (string-ci-hash				v r ht)

@@ -11305,6 +11305,7 @@ Return @true{} if @var{obj} is an enumeration set object, else return
 
 @menu
 * iklib hashtables pred::       Predicates on hash tables.
+* iklib hashtables iterators::  Hash table iterators.
 * iklib hashtables hashfun::    Additional hash functions.
 @end menu
 
@@ -11318,6 +11319,235 @@ Return @true{} if @var{obj} is a hash table and it is mutable; return
 @false{} otherwise.  This function is different from the standard
 @func{hashtable-mutable?} because it does @strong{not} raise an error if
 @var{obj} is not a hash table.
+@end defun
+
+@c page
+@node iklib hashtables iterators
+@subsection Hash table iterators
+
+
+Ghuloum and Dybvig explain in the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+@noindent
+why it is not possible to iterate a hash table by visiting the buckets:
+there's a problem with rehashing entries that are moved by the garbage
+collector.  The iterators always use @func{hashtable-keys} and
+@func{hashtable-entries}, which is slow and memory consuming, but it is
+safe.
+
+
+@defun hashtable-for-each-key @var{proc} @var{table}
+Apply @var{proc} to every key in table, in unspecified order, and
+discard the results.  It is implemented as follows:
+
+@lisp
+(vector-for-each proc (hashtable-keys table))
+@end lisp
+@end defun
+
+
+@defun hashtable-for-each-entry @var{proc} @var{table}
+Apply @var{proc} to every key and value in table, in unspecified order,
+and discard the results.  It is implemented as follows:
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-for-each proc keys vals))
+@end lisp
+@end defun
+
+
+@defun hashtable-for-all-keys @var{pred} @var{table}
+Apply @var{pred} to every key in @var{table}, in unspecified order,
+stopping at the first key for which @var{pred} returns @false{}.
+
+@itemize
+@item
+If @var{pred} returns non-false for every key: the return value is the
+return value of the last call to @var{pred}.
+
+@item
+If @var{pred} returns @false{} for a key: the return value is @false{}.
+@end itemize
+
+It is implemented as follows:
+
+@lisp
+(vector-for-all pred (hashtable-keys table))
+@end lisp
+@end defun
+
+
+@defun hashtable-for-all-entries @var{pred} @var{table}
+Apply @var{pred} to every key and value in @var{table}, in unspecified
+order, stopping at the first application for which @var{PRED} returns
+@false{}.
+
+@itemize
+@item
+If @var{pred} returns non--false for every key and value: the return
+value is the return value of the last call to @var{pred}.
+
+@item
+If @var{pred} returns @false{} for a key and value: the return value is
+@false{}.
+@end itemize
+
+It is implemented as follows:
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-for-all pred keys vals))
+@end lisp
+@end defun
+
+
+@defun hashtable-exists-key @var{proc} @var{table}
+Apply @var{proc} to every key in @var{table} in unspecified order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key: the return value is
+@false{}.
+
+@item
+If @var{proc} returns non--false for a key: the return value is the
+value returned by @var{proc}.
+@end itemize
+
+@lisp
+(vector-exists proc (hashtable-keys table)))
+@end lisp
+@end defun
+
+
+@defun hashtable-exists-entry @var{proc} @var{table}
+Apply @var{proc} to every key and value in @var{table} in unspecified
+order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key and value: the return value
+is @false{}.
+
+@item
+If @var{proc} returns non--false for a key and value: the return value
+is the value returned by @var{proc}.
+@end itemize
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-exists proc keys vals))
+@end lisp
+@end defun
+
+
+@defun hashtable-find-key @var{proc} @var{table}
+Apply @var{proc} to every key in @var{table} in unspecified order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key: the return value is
+@false{}.
+
+@item
+If @var{proc} returns non--false for a key: the return value is that
+key.
+@end itemize
+
+@lisp
+(vector-find pred (hashtable-keys table)))
+@end lisp
+@end defun
+
+
+@defun hashtable-find-entry @var{proc} @var{table}
+Apply @var{proc} to every key and value in @var{table} in unspecified
+order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key and value: the return value
+is @false{}.
+
+@item
+If @var{proc} returns non--false for a key and value: the return value
+is a pair having that key as car and that value as cdr.
+@end itemize
+@end defun
+
+
+@defun hashtable-fold-keys @var{proc} @var{nil} @var{table}
+Apply @var{proc} to every key in @var{table}, in unspecified order; the
+second argument of the first @var{proc} application is @var{nil}, then
+it is the return value of the previous application.  Return the return
+value of the last @var{proc} application.
+
+It is implemented as follows:
+
+@lisp
+(vector-fold-right proc nil (hashtable-keys table))
+@end lisp
+
+To build an list of keys we do:
+
+@lisp
+(hashtable-fold-keys
+    (lambda (key nil)
+      (cons key nil))
+  '() table)
+@end lisp
+@end defun
+
+
+@defun hashtable-fold-entries @var{proc} @var{nil} @var{table}
+Apply @var{proc} to every key and value in @var{table}, in unspecified
+order; the third argument of the first @var{proc} application is
+@var{nil}, then it is the return value of the previous application.
+Return the return value of the last @var{proc} application.
+
+It is implemented as follows:
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-fold-right proc nil keys vals))
+@end lisp
+
+To build an alist from a table we do:
+
+@lisp
+(hashtable-fold-entries
+    (lambda (key val nil)
+      (cons (cons key val) nil))
+  '() table)
+@end lisp
+@end defun
+
+
+@defun hashtable->alist @var{table}
+@defunx hashtable->alist @var{table} @var{compar}
+Build and return an alist holding the keys and values of @var{table}.
+This function is mostly useful for debugging.
+
+If the optional argument @var{compar} is the boolean @false{}: just
+return the alist; if it is a procedure: sort the resulting alist with
+the standard @func{list-sort} using @var{compar} as comparison predicate
+for the keys.
+@end defun
+
+
+@defun {alist->hashtable!} @var{table} @var{al}
+Fill @var{table} with the entries of the alist @var{al}.  Return
+@var{table} itself.
 @end defun
 
 @c page

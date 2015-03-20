@@ -49,6 +49,20 @@
     struct-hash			record-hash
     object-hash
 
+    ;; iterators
+    hashtable-for-each-key
+    hashtable-for-each-entry
+    hashtable-for-all-keys
+    hashtable-for-all-entries
+    hashtable-exists-key
+    hashtable-exists-entry
+    hashtable-find-key
+    hashtable-find-entry
+    hashtable-fold-keys
+    hashtable-fold-entries
+    hashtable->alist
+    alist->hashtable!
+
     ;; unsafe operations
     $string-hash		$string-ci-hash
     $symbol-hash		$bytevector-hash)
@@ -65,6 +79,20 @@
 		  hashtable-copy
 		  hashtable-equivalence-function
 		  hashtable-hash-function
+
+		  hashtable-for-each-key
+		  hashtable-for-each-entry
+		  hashtable-for-all-keys
+		  hashtable-for-all-entries
+		  hashtable-exists-key
+		  hashtable-exists-entry
+		  hashtable-find-key
+		  hashtable-find-entry
+		  hashtable-fold-keys
+		  hashtable-fold-entries
+		  hashtable->alist
+		  alist->hashtable!
+
 		  string-hash			string-ci-hash
 		  symbol-hash			bytevector-hash
 		  equal-hash
@@ -75,6 +103,11 @@
 		  eof-object-hash		would-block-hash
 		  struct-hash			record-hash
 		  object-hash)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 20,
+    ;;2015)
+    (only (ikarus vectors)
+	  vector-find
+	  vector-fold-right)
     (vicare system $bignums)
     (vicare system $chars)
     (vicare system $compnums)
@@ -1025,6 +1058,164 @@
   (string-hash (call-with-string-output-port
 		   (lambda (port)
 		     (write obj port)))))
+
+
+;;;; iterators
+;;
+;;Ghuloum and Dybvig  explain in the paper why  it is not possible to  iterate a hash
+;;table by  visiting the buckets: there's  a problem with rehashing  entries that are
+;;moved  by  the  garbage  collector.   So here  we  always  use  HASHTABLE-KEYS  and
+;;HASHTABLE-ENTRIES, which is slow and memory consuming, but it is safe.
+;;
+
+(define* (hashtable-for-each-key {proc procedure?} {table hashtable?})
+  ;;Apply PROC to every key in table, in unspecified order, and discard the results.
+  ;;
+  (vector-for-each proc (hashtable-keys table)))
+
+(define* (hashtable-for-each-entry {proc procedure?} {table hashtable?})
+  ;;Apply PROC to every key and value in table, in unspecified order, and discard the
+  ;;results.
+  ;;
+  (receive (keys vals)
+      (hashtable-entries table)
+    (vector-for-each proc keys vals)))
+
+;;; --------------------------------------------------------------------
+
+(define* (hashtable-for-all-keys {pred procedure?} {table hashtable?})
+  ;;Apply PRED to every key in TABLE, in unspecified order, stopping at the first key
+  ;;for which PRED returns false.
+  ;;
+  ;;* If PRED returns  non-false for every key: the return value  is the return value
+  ;;  of the last call to PRED.
+  ;;
+  ;;* If PRED returns false for a key: the return value is false.
+  ;;
+  (vector-for-all pred (hashtable-keys table)))
+
+(define* (hashtable-for-all-entries {pred procedure?} {table hashtable?})
+  ;;Apply PRED to every key and value in TABLE, in unspecified order, stopping at the
+  ;;first application for which PRED returns false.
+  ;;
+  ;;* If  PRED returns non-false  for every  key and value:  the return value  is the
+  ;;  return value of the last call to PRED.
+  ;;
+  ;;* If PRED returns false for a key and value: the return value is false.
+  ;;
+  (receive (keys vals)
+      (hashtable-entries table)
+    (vector-for-all pred keys vals)))
+
+;;; --------------------------------------------------------------------
+
+(define* (hashtable-exists-key {proc procedure?} {table hashtable?})
+  ;;Apply PROC to every key in TABLE in unspecified order.
+  ;;
+  ;;* If PROC returns false for every key: the return value is false.
+  ;;
+  ;;* If PROC returns non-false for a key:  the return value is the value returned by
+  ;;  PROC.
+  ;;
+  (vector-exists proc (hashtable-keys table)))
+
+(define* (hashtable-exists-entry {proc procedure?} {table hashtable?})
+  ;;Apply PROC to every key and value in TABLE in unspecified order.
+  ;;
+  ;;* If PROC returns false for every key and value: the return value is false.
+  ;;
+  ;;* If PROC  returns non-false for a key  and value: the return value  is the value
+  ;;  returned by PROC.
+  ;;
+  (receive (keys vals)
+      (hashtable-entries table)
+    (vector-exists proc keys vals)))
+
+;;; --------------------------------------------------------------------
+
+(define* (hashtable-find-key {proc procedure?} {table hashtable?})
+  ;;Apply PROC to every key in TABLE in unspecified order.
+  ;;
+  ;;* If PROC returns false for every key: the return value is false.
+  ;;
+  ;;* If PROC returns non-false for a key: the return value is that key.
+  ;;
+  (vector-find proc (hashtable-keys table)))
+
+(define* (hashtable-find-entry {proc procedure?} {table hashtable?})
+  ;;Apply PROC to every key and value in TABLE in unspecified order.
+  ;;
+  ;;* If PROC returns false for every key and value: the return value is false.
+  ;;
+  ;;* If  PROC returns  non-false for a  key and  value: the return  value is  a pair
+  ;;  having that key as car and that value as cdr.
+  ;;
+  (receive (keys vals)
+      (hashtable-entries table)
+    (let loop ((len (vector-length keys))
+	       (i   0))
+      (if (fx<? i len)
+	  (let ((K (vector-ref keys i))
+		(V (vector-ref vals i)))
+	    (if (proc K V)
+		(cons K V)
+	      (loop len (fxadd1 i))))
+	#f))))
+
+;;; --------------------------------------------------------------------
+
+(define* (hashtable-fold-keys {proc procedure?} nil {table hashtable?})
+  ;;Apply PROC to  every key in TABLE,  in unspecified order; the  second argument of
+  ;;the first PROC  application is NIL, then  it is the return value  of the previous
+  ;;application.  Return the return value of the last PROC application.
+  ;;
+  (vector-fold-right proc nil (hashtable-keys table)))
+
+(define* (hashtable-fold-entries {proc procedure?} nil {table hashtable?})
+  ;;Apply PROC  to every  key and  value in  TABLE, in  unspecified order;  the third
+  ;;argument of the first PROC application is NIL, then it is the return value of the
+  ;;previous application.  Return the return value of the last PROC application.
+  ;;
+  (receive (keys vals)
+      (hashtable-entries table)
+    (vector-fold-right proc nil keys vals)))
+
+;;; --------------------------------------------------------------------
+
+(define* (alist->hashtable! {table hashtable?} al)
+  ;;Fill TABLE with the entries of the alist AL.
+  ;;
+  (map (lambda (P)
+	 (hashtable-set! table (car P) (cdr P)))
+    al)
+  table)
+
+(case-define* hashtable->alist
+  ;;Build and return an alist holding the keys and values of TABLE.  This function is
+  ;;mostly useful for debugging.
+  ;;
+  ;;If the optional argument  COMPAR is the boolean #f: just return  the alist; if it
+  ;;is a procedure: sort the resulting alist with the standard LIST-SORT using COMPAR
+  ;;as comparison predicate for the keys.
+  ;;
+  (({table hashtable?})
+   (hashtable-fold-entries (lambda (key val nil)
+			     (cons (cons key val) nil))
+     '() table))
+  (({table hashtable?} compar)
+   (let ((al (hashtable-fold-entries (lambda (key val nil)
+				       (cons (cons key val) nil))
+	       '() table)))
+     (cond ((not compar)
+	    al)
+	   ((procedure? compar)
+	    (list-sort (lambda (x y)
+			 (compar (car x) (car y)))
+		       al))
+	   (else
+	    (procedure-argument-violation __who__
+	      "expected #f or procedure as COMPAR argument"
+	      compar))))))
 
 
 ;;;; done

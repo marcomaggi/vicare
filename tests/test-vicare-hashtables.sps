@@ -31,6 +31,16 @@
 (check-display "*** testing Vicare: hashtables\n")
 
 
+;;;; helpers
+
+(define (mktable-1)
+  (alist->hashtable! (make-eq-hashtable) '((a . 1) (b . 2) (c . 3))))
+
+(define (symbol<? s1 s2)
+  (string<? (symbol->string s1)
+	    (symbol->string s2)))
+
+
 (parametrise ((check-test-name	'hash-functions))
 
   (define-syntax doit
@@ -345,6 +355,163 @@
 	(hashtable-set! T 'ciao 1)
 	(hashtable-delete! T 'ciao))
     => 'ciao 1)
+
+  #t)
+
+
+(parametrise ((check-test-name	'for-each))
+
+  (check
+      (let ((T (mktable-1))
+	    (L '()))
+	(hashtable-for-each-key
+	    (lambda (key)
+	      (set-cons! L key))
+	  T)
+	(list-sort symbol<? L))
+    => '(a b c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (mktable-1))
+	    (L '()))
+	(hashtable-for-each-entry
+	    (lambda (key val)
+	      (set-cons! L (list key val)))
+	  T)
+	(list-sort (lambda (x y)
+		     (symbol<? (car x) (car y)))
+		   L))
+    => '((a 1) (b 2) (c 3)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'for-all))
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable-for-all-keys
+	    symbol?
+	  T))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable-for-all-entries
+	    (lambda (key val)
+	      (and (symbol? key)
+		   (fixnum? val)))
+	  T))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'exists))
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable-exists-key
+	    (lambda (key)
+	      (eq? key 'a))
+	  T))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable-exists-entry
+	    (lambda (key val)
+	      (and (eq?  key 'a)
+		   (fx=? val 1)))
+	  T))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'find))
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable-find-key
+	    (lambda (key)
+	      (eq? key 'a))
+	  T))
+    => 'a)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable-find-entry
+	    (lambda (key val)
+	      (and (eq?  key 'a)
+		   (fx=? val 1)))
+	  T))
+    => '(a . 1))
+
+  #t)
+
+
+(parametrise ((check-test-name	'fold))
+
+  (check
+      (let ((T (mktable-1)))
+	(list-sort symbol<?
+		   (hashtable-fold-keys
+		       cons
+		     '() T)))
+    => '(a b c))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (mktable-1)))
+	(list-sort (lambda (x y)
+		     (symbol<? (car x) (car y)))
+		   (hashtable-fold-entries
+		       (lambda (key val nil)
+			 (cons (cons key val) nil))
+		     '() T)))
+    => '((a . 1)
+	 (b . 2)
+	 (c . 3)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'conversion))
+
+  (check
+      (let ((T (mktable-1)))
+	(list-sort (lambda (x y)
+		     (symbol<? (car x) (car y)))
+		   (hashtable->alist T)))
+    => '((a . 1)
+	 (b . 2)
+	 (c . 3)))
+
+  (check
+      (let ((T (mktable-1)))
+	(list-sort (lambda (x y)
+		     (symbol<? (car x) (car y)))
+		   (hashtable->alist T #f)))
+    => '((a . 1)
+	 (b . 2)
+	 (c . 3)))
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable->alist T symbol<?))
+    => '((a . 1)
+	 (b . 2)
+	 (c . 3)))
 
   #t)
 

@@ -107,35 +107,6 @@
 
 ;;;; helpers
 
-(define* (hashtable-for-each {proc procedure?} {T hashtable?})
-  (receive (keys vals)
-      (hashtable-entries T)
-    (vector-for-each proc keys vals)))
-
-(define (hashtable-for-all pred table)
-  (vector-for-all pred (hashtable-keys table)))
-
-(define (hashtable-exists pred table)
-  (vector-exists pred (hashtable-keys table)))
-
-(define (hashtable-for-all-entries proc table)
-  (receive (keys vals)
-      (hashtable-entries table)
-    (vector-for-all proc keys vals)))
-
-(define (hashtable-find pred table)
-  (vector-find pred (hashtable-keys table)))
-
-(define (hashtable-find-entry pred table)
-  (hashtable-find (lambda (key)
-		    (pred key (hashtable-ref table key #f)))
-		  table))
-
-(define* (hashtable-fold-entries {proc procedure?} nil {T hashtable?})
-  (receive (keys vals)
-      (hashtable-entries T)
-    (vector-fold-right proc nil keys vals)))
-
 (define (hashtable-replace-key! table old-key new-key)
   ;;If OLD-KEY is  a key in TABLE: delete  the entry associated to OLD-KEY  and add a
   ;;new entry  associated to  NEW-KEY having the  same value of  the old  one; return
@@ -173,7 +144,7 @@
   ;;
   (define equiv
     (hashtable-equivalence-function table))
-  (cond ((hashtable-find (lambda (old-key)
+  (cond ((hashtable-find-key (lambda (old-key)
 			   (equiv old-key new-key))
 			 table)
 	 => (lambda (old-key)
@@ -201,7 +172,7 @@
   ;;   (hashtable-ref T "CIAO" #f)
   ;;   => 1
   ;;
-  (cond ((hashtable-find-entry pred table)
+  (cond ((hashtable-find-key pred table)
 	 => (lambda (old-key)
 	      (hashtable-replace-key! table old-key new-key)))
 	(else #f)))
@@ -399,9 +370,9 @@
   ;;one direction for simplicity.
   ;;
   (let ((HB (sob-hash-table B)))
-    (not (hashtable-exists (lambda (key)
-			     (hashtable-contains? HB key))
-			   (sob-hash-table A)))))
+    (not (hashtable-exists-key (lambda (key)
+				 (hashtable-contains? HB key))
+			       (sob-hash-table A)))))
 
 (define* (set-disjoint? {a set?} {b set?})
   (%check-same-comparator __who__ a b)
@@ -649,7 +620,7 @@
   (if (sob-multi? sob)
       (receive-and-return (result)
 	  0
-	(hashtable-for-each (lambda (elem count)
+	(hashtable-for-each-entry (lambda (elem count)
 			      (set! result (+ count result)))
 	  (sob-hash-table sob)))
     (hashtable-size (sob-hash-table sob))))
@@ -667,7 +638,7 @@
   ;;which element you will  get, so this is not as useful as  finding an element in a
   ;;list or other ordered container.  If it's not there, tail-call the FAILURE thunk.
   ;;
-  (or (hashtable-find pred (sob-hash-table sob))
+  (or (hashtable-find-key pred (sob-hash-table sob))
       (failure)))
 
 (case-define* set-find
@@ -706,7 +677,7 @@
   ;;Check if  any of the  elements in  a sob satisfy  a predicate.  Breaks  out early
   ;;(with call/cc) if a success is found.
   ;;
-  (and (hashtable-find ?pred (sob-hash-table ?sob))
+  (and (hashtable-find-key ?pred (sob-hash-table ?sob))
        #t))
 
 (define* (set-any? {pred procedure?} {set set?})
@@ -720,7 +691,7 @@
 (define-syntax-rule (sob-every? ?pred ?sob)
   ;;Analogous to SET-ANY?.  Breaks out early if a failure is found.
   ;;
-  (hashtable-for-all ?pred (sob-hash-table ?sob)))
+  (hashtable-for-all-keys ?pred (sob-hash-table ?sob)))
 
 (define* (set-every? {pred procedure?} {set set?})
   (sob-every? pred set))
@@ -743,7 +714,7 @@
 (define (sob-for-each proc sob)
   ;;Basic iterator over a sob.
   ;;
-  (hashtable-for-each (lambda (key value)
+  (hashtable-for-each-entry (lambda (key value)
 			(do-n-times (lambda ()
 				      (proc key))
 				    value))
@@ -764,7 +735,7 @@
   ;;
   (receive-and-return (result)
       (make-sob comparator (sob-multi? sob))
-    (hashtable-for-each (lambda (key value)
+    (hashtable-for-each-entry (lambda (key value)
 			  (sob-increment! __who__ result (proc key) value))
       (sob-hash-table sob))))
 
@@ -801,7 +772,7 @@
   ;;
   (receive-and-return (result)
       (sob-empty-copy sob)
-    (hashtable-for-each (lambda (key value)
+    (hashtable-for-each-entry (lambda (key value)
 			  (when (pred key)
 			    (sob-increment! __who__ result key value)))
       (sob-hash-table sob))))
@@ -828,7 +799,7 @@
   ;;Process each element  and remove those that don't satisfy  the filter.  This does
   ;;its own cleanup, and is used for both filter! and remove!.
   ;;
-  (hashtable-for-each (lambda (key value)
+  (hashtable-for-each-entry (lambda (key value)
 			(unless (pred key)
 			  (sob-decrement! __who__ sob key value)))
     (sob-hash-table sob))
@@ -860,7 +831,7 @@
   ;;
   (let ((res1 (sob-empty-copy sob))
         (res2 (sob-empty-copy sob)))
-    (hashtable-for-each (lambda (key value)
+    (hashtable-for-each-entry (lambda (key value)
 			  (if (pred key)
 			      (sob-increment! __who__ res1 key value)
 			    (sob-increment! __who__ res2 key value)))
@@ -881,7 +852,7 @@
   ;;added to the new sob.
   ;;
   (let ((result (sob-empty-copy sob)))
-    (hashtable-for-each
+    (hashtable-for-each-entry
 	(lambda (key value)
 	  (unless (pred key)
 	    (sob-decrement! __who__ sob    key value)
@@ -1158,11 +1129,11 @@
     (let ((T1 (sob-hash-table sob1))
 	  (T2 (sob-hash-table sob2))
 	  (T  (sob-hash-table result)))
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key value1)
 	    (hashtable-set! T key (max value1 (hashtable-ref T2 key 0))))
 	T1)
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key value2)
 	    (when (zero? (hashtable-ref T1 key 0))
 	      (hashtable-set! T key value2)))
@@ -1222,7 +1193,7 @@
     (let ((T1 (sob-hash-table sob1))
 	  (T2 (sob-hash-table sob2))
 	  (T  (sob-hash-table result)))
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key value1)
 	    (hashtable-set! T key (min value1 (hashtable-ref T2 key 0))))
 	T1)))
@@ -1279,7 +1250,7 @@
     (let ((sob1-ht (sob-hash-table sob1))
 	  (sob2-ht (sob-hash-table sob2))
 	  (result-ht (sob-hash-table result)))
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key value1)
 	    (let ((value2 (hashtable-ref sob2-ht key 0)))
 	      (hashtable-set! result-ht key (- value1 value2))))
@@ -1338,13 +1309,13 @@
     (let ((T1 (sob-hash-table sob1))
 	  (T2 (sob-hash-table sob2))
 	  (T  (sob-hash-table result)))
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key2 value2)
 	    ;;If KEY2 is not in T1: add it to the result.
 	    (when (zero? (hashtable-ref T1 key2 0))
 	      (hashtable-set! T key2 value2)))
 	T2)
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key1 value1)
 	    ;;Examples:
 	    ;;
@@ -1421,11 +1392,11 @@
     (let ((T1 (sob-hash-table sob1))
 	  (T2 (sob-hash-table sob2))
 	  (T  (sob-hash-table result)))
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key value1)
 	    (hashtable-set! T key (+ value1 (hashtable-ref T2 key 0))))
 	T1)
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (key value2)
 	    (when (zero? (hashtable-ref T1 key 0))
 	      (hashtable-set! T key value2)))
@@ -1445,7 +1416,7 @@
 
   (define (sob-product! result sob n)
     (let ((rht (sob-hash-table result)))
-      (hashtable-for-each
+      (hashtable-for-each-entry
 	  (lambda (elem count)
 	    (hashtable-set! rht elem (* count n)))
 	(sob-hash-table sob))
@@ -1462,7 +1433,7 @@
   (hashtable-ref (sob-hash-table bag) elem 0))
 
 (define* (bag-for-each-unique {proc procedure?} {bag bag?})
-  (hashtable-for-each
+  (hashtable-for-each-entry
       proc
     (sob-hash-table bag)))
 
@@ -1571,7 +1542,5 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
-;; eval: (put 'hashtable-for-each	'scheme-indent-function 1)
-;; eval: (put 'hashtable-fold-entries	'scheme-indent-function 1)
 ;; eval: (put 'bag-fold-unique		'scheme-indent-function 1)
 ;; End:
