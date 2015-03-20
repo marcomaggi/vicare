@@ -155,7 +155,7 @@
 		   (case type
 		     ((core-macro
 		       define define-syntax define-alias
-		       define-fluid-syntax define-fluid-override
+		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
 		       begin set! stale-when
 		       local-ctv global-ctv
@@ -589,13 +589,12 @@
 	 ((syntax)
 	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
-	 ((define define-syntax define-fluid-syntax define-fluid-override define-alias module import library)
+	 ((define define-syntax define-fluid-syntax define-alias module import library)
 	  (stx-error expr.stx (string-append
 			       (case type
 				 ((define)                 "a definition")
 				 ((define-syntax)          "a define-syntax")
 				 ((define-fluid-syntax)    "a define-fluid-syntax")
-				 ((define-fluid-override)  "a define-fluid-override")
 				 ((define-alias)           "a define-alias")
 				 ((module)                 "a module definition")
 				 ((library)                "a library definition")
@@ -2432,37 +2431,6 @@
 				(cons* entry1 entry2 lexenv.expand)
 				lex* qrhs* mod** kwd* export-spec* rib
 				mix? sd?)))))
-
-	      ((define-fluid-override)
-	       ;;The body form  is a core language  DEFINE-FLUID-OVERRIDE macro use.
-	       ;;We push new entries  on the LEXENV then recurse on  the rest of the
-	       ;;body.
-	       ;;
-	       ;;For  a  description of  how  to  re-bind  fluid syntaxes:  see  the
-	       ;;transformer for FLUID-LET-SYNTAX.
-	       ;;
-	       (receive (id rhs.stx)
-		   (%parse-define-syntax body-form.stx)
-		 (when (bound-id-member? id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
-		 (let* ((fluid-label (let* ((label    (or (id->label id)
-							  (stx-error id "unbound identifier")))
-					    (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
-				       (cond ((fluid-syntax-binding? binding)
-					      (fluid-syntax-binding-fluid-label binding))
-					     (else
-					      (stx-error id "not a fluid identifier")))))
-			(binding      (with-exception-handler/input-form
-					  rhs.stx
-					(%eval-macro-transformer
-					 (%expand-macro-transformer rhs.stx lexenv.expand)
-					 lexenv.run)))
-			(entry       (cons fluid-label binding)))
-		   (chi-body* (cdr body-form*.stx)
-			      (cons entry lexenv.run)
-			      (cons entry lexenv.expand)
-			      lex* qrhs* mod** kwd* export-spec* rib
-			      mix? sd?))))
 
 	      ((define-alias)
 	       ;;The body form is a core  language DEFINE-ALIAS macro use.  We add a

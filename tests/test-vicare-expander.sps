@@ -809,19 +809,6 @@
 	 ciao))
     => '("ciao" ("ciao" "ohayo" "hello")))
 
-  (check
-      (with-result
-       (let ()
-	 (define-fluid-syntax ciao
-	   (identifier-syntax "ciao"))
-	 (add-result ciao)
-	 (let ()
-	   (define-fluid-override ciao
-	     (identifier-syntax "hello"))
-	   (add-result ciao))
-	 ciao))
-    => '("ciao" ("ciao" "hello")))
-
   #t)
 
 

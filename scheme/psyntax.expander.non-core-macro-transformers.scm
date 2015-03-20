@@ -415,7 +415,7 @@
   ;;
   ;;FIXME There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17, 2014)
   ;;
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax 'case))
 
   (define (case-macro input-form.stx)
@@ -437,7 +437,7 @@
 			   (cons ?else-body0 ?else-body*)))
 
       (_
-       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
     (let ((expr.id (gensym "expr.id"))
@@ -500,7 +500,7 @@
 		   (loop (cdr entry*)))
 
 		  (else
-		   (syntax-violation __who__ "invalid datum type" input-form.stx datum))))))
+		   (syntax-violation __module_who__ "invalid datum type" input-form.stx datum))))))
       (values (map list closure*.id closure*.stx)
 	      (fold-left (lambda (knil clause)
 			   (if (null? clause)
@@ -532,7 +532,7 @@
 		 (cons closure.id  closure*.id)
 		 (cons entry*      entry**))))
       (_
-       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   (define (%process-single-clause input-form.stx clause.stx)
     (syntax-match clause.stx (=>)
@@ -564,7 +564,7 @@
 				  (cons (cons* ?datum closure.id #f) entries)))
 		     )))))
       (_
-       (syntax-violation __who__ "invalid clause syntax" input-form.stx clause.stx))))
+       (syntax-violation __module_who__ "invalid clause syntax" input-form.stx clause.stx))))
 
   (define (%make-datum-clause input-form.stx expr.id else.id pred.id compar.id entry*)
     (if (pair? entry*)
@@ -673,7 +673,7 @@
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax 'define-struct))
 
   (define (define-struct-macro input-form.stx)
@@ -839,7 +839,7 @@
 	     (values (cons ?name        field*.id)
 		     (cons (top-tag-id) field*.tag))))
 	  (_
-	   (syntax-violation __who__
+	   (syntax-violation __module_who__
 	     "invalid struct field specification syntax"
 	     input-form.stx (car field*.stx))))
       (values '() '())))
@@ -2304,7 +2304,7 @@
   ;;                 (c G.c) (d G.d) (e G.e))
   ;;             ?body0 ?body)))))
   ;;
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax 'let-values))
 
   (define (let-values-macro input-form.stx)
@@ -2361,12 +2361,12 @@
 			  ,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				  (cdr rhs*) standard-old* tagged-old* new*))))))
 		(?others
-		 (syntax-violation __who__ "malformed bindings" input-form.stx ?others))))))))
+		 (syntax-violation __module_who__ "malformed bindings" input-form.stx ?others))))))))
       ))
 
   (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* input-form.stx)
     (when (bound-id-member? standard-formal standard-old*)
-      (syntax-violation __who__ "duplicate binding" input-form.stx standard-formal))
+      (syntax-violation __module_who__ "duplicate binding" input-form.stx standard-formal))
     (let ((y (gensym (syntax->datum standard-formal))))
       (values y (cons standard-formal standard-old*) (cons tagged-formal tagged-old*) (cons y new*))))
 

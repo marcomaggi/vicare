@@ -594,7 +594,7 @@
   ;;
   ;;2..An object representing the LET-VALUES tagging signature.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax 'parse-tagged-formals-syntax))
 
   (case-define* parse-tagged-formals-syntax
@@ -630,7 +630,7 @@
 	 (unless (and (identifier? ?rest-id)
 		      (identifier? ?rest-tag)
 		      (tag-super-and-sub? (list-tag-id) ?rest-tag))
-	   (syntax-violation __who__
+	   (syntax-violation __module_who__
 	     "invalid rest argument specification" original-formals.stx (cons 'brace ?rest-id ?rest-tag)))
 	 (assert-tag-identifier? ?rest-tag)
 	 (receive-and-return (standard-formals.stx tags)
@@ -705,14 +705,14 @@
 	     (assert-tag-identifier? ?tag)
 	     (values (cons ?id standard-formals) (cons ?tag tags))))
 	  (else
-	   (syntax-violation __who__
+	   (syntax-violation __module_who__
 	     "invalid argument specification"
 	     (or input-form.stx original-formals.stx) arg-stx))))))
 
   (define (%validate-formals input-form.stx original-formals.stx standard-formals.stx)
     (cond ((duplicate-bound-formals? standard-formals.stx)
 	   => (lambda (duplicate-id)
-		(syntax-violation __who__
+		(syntax-violation __module_who__
 		  "duplicate identifiers in formals specification"
 		  (or input-form.stx original-formals.stx)
 		  duplicate-id)))))

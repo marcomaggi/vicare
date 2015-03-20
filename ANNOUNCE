@@ -421,9 +421,6 @@ still hosted at Github and newly hosted at Bitbucket.
     binary-output-port?			textual-output-port?
     binary-input/output-port?		textual-input/output-port?
 
-* Added  syntax  DEFINE-FLUID-OVERRIDE  to (vicare);  it  rebinds  fluid
-  syntaxes like FLUID-LET-SYNTAX.
-
 * Added identifier  syntaxes "__file__" and "__line__"  to (vicare); the
   former expands to a string  representing the source code location; the
   latter expands to a number representing the line number.

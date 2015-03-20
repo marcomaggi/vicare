@@ -88,7 +88,7 @@
       (let ((Q (list escape-func)))
 	(queue (cons Q Q)))))
 
-  (define (dequeue!)
+  (define* (dequeue!)
     (let ((Q (queue)))
       (if Q
 	  (let ((head ($car Q)))
@@ -225,7 +225,7 @@
     (and (<coroutine-state>-reinstate-procedure state)
 	 #t)))
 
-(define (suspend-coroutine)
+(define* (suspend-coroutine)
   ;;Suspend the current  coroutine.  Yield control to the next  coroutine, but do not
   ;;enqueue the current continuation to be reinstated later.
   ;;

@@ -496,16 +496,16 @@
     ;;R6RS; negative  indexes are handled as  counts from the end  o the
     ;;array.
     ;;
-    (define-fluid-override __who__ (identifier-syntax '%normalise-index))
-    (cond ((or ($fxzero? idx)
-	       (and ($fxpositive? idx)
-		    ($fx< idx (S $length))))
-	   idx)
-	  ((and ($fxnegative? idx)
-		($fx< ($fx- idx) (S $length)))
-	   ($fx+ idx (S $length)))
-	  (else
-	   (assertion-violation __who__ "array index out of range" idx))))
+    (fluid-let-syntax ((__who__ (identifier-syntax '%normalise-index)))
+      (cond ((or ($fxzero? idx)
+		 (and ($fxpositive? idx)
+		      ($fx< idx (S $length))))
+	     idx)
+	    ((and ($fxnegative? idx)
+		  ($fx< ($fx- idx) (S $length)))
+	     ($fx+ idx (S $length)))
+	    (else
+	     (assertion-violation __who__ "array index out of range" idx)))))
 
   (getter (lambda (stx the-tag)
 	    (syntax-case stx ()

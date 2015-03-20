@@ -164,8 +164,8 @@
   ;;before expanding or running the ?BODY.
   ;;
 
-  (define (%expand-rhs* input-form.stx lexenv.run lexenv.expand
-			lhs*.tag rhs*.stx)
+  (define* (%expand-rhs* input-form.stx lexenv.run lexenv.expand
+			 lhs*.tag rhs*.stx)
     ;;Expand  a  list  of  right-hand  sides  from  bindings  in  the  syntax  object
     ;;INPUT-FORM.STX; the context  of the expansion is described by  the given LEXENV
     ;;arguments.
@@ -420,7 +420,7 @@
   ;;want to use types  whenever possible, and this means to use  the DEFINE syntax to
   ;;define both a safe and an unsafe function.  (Marco Maggi; Sun Apr 27, 2014)
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'let))
 
   (define* (let-transformer input-form.stx lexenv.run lexenv.expand)
@@ -497,7 +497,7 @@
     ;;
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
-  (define (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
+  (define* (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
     (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -1068,7 +1068,7 @@
   ;;Notice that the parsing of the patterns is performed by CONVERT-PATTERN at expand
   ;;time and the actual pattern matching is performed by SYNTAX-DISPATCH at run time.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'syntax-case))
 
   (define (syntax-case-transformer input-form.stx lexenv.run lexenv.expand)
@@ -1385,7 +1385,7 @@
   ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
   ;;LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'predicate-procedure-argument-validation))
   (syntax-match input-form.stx ()
     ((_ ?id)
@@ -1403,7 +1403,7 @@
   ;;macros  from  the  top-level  built  in  environment.   Expand  the  contents  of
   ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'predicate-return-value-validation))
   (syntax-match input-form.stx ()
     ((_ ?id)
@@ -1431,7 +1431,7 @@
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return a PSI struct.
     ;;
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'struct-type-descriptor))
     (syntax-match input-form.stx ()
       ((_ ?type-id)
@@ -1447,7 +1447,7 @@
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return an PSI struct.
     ;;
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'struct-type-and-struct?))
     (syntax-match input-form.stx ()
       ((_ ?type-id ?stru)
@@ -1589,7 +1589,7 @@
     ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return a PSI struct.
     ;;
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'record-type-descriptor))
     (syntax-match input-form.stx ()
       ((_ ?type-name)
@@ -1605,7 +1605,7 @@
     ;;the  context  of  the  given  LEXENV;  return  an  expanded  language  symbolic
     ;;expression.
     ;;
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'record-constructor-descriptor))
     (syntax-match input-form.stx ()
       ((_ ?type-name)
@@ -1697,7 +1697,7 @@
   ;;
   ;;* An expand-time OBJECT-TYPE-SPEC instance.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'type-descriptor))
   (syntax-match input-form.stx ()
     ((_ ?type-id)
@@ -1766,7 +1766,7 @@
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'slot-ref))
   (syntax-match input-form.stx ()
     ((_ ?jolly ?field-name-id ?tag)
@@ -1811,7 +1811,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'slot-set!))
   (syntax-match input-form.stx ()
     ((_ ?jolly1 ?field-name-id ?tag ?jolly2)
@@ -1862,7 +1862,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-predicate))
   (syntax-match input-form.stx ()
     ((_ ?tag)
@@ -1878,7 +1878,7 @@
   ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
   ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-procedure-argument-validator))
   (syntax-match input-form.stx (<>)
     ((_ ?tag <>)
@@ -1899,7 +1899,7 @@
   ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
   ;;in the context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-return-value-validator))
   (syntax-match input-form.stx (<>)
     ((_ ?tag <>)
@@ -1924,7 +1924,7 @@
   ;;context of the given LEXENV; return a PSI struct.
   ;;
   (define (tag-assert-transformer input-form.stx lexenv.run lexenv.expand)
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'tag-assert))
     (syntax-match input-form.stx ()
       ((_ ?retvals-signature ?expr)
@@ -2072,7 +2072,7 @@
   ;;the context of the given LEXENV; return a PSI struct.
   ;;
   (define (tag-assert-and-return-transformer input-form.stx lexenv.run lexenv.expand)
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'tag-assert-and-return))
     (syntax-match input-form.stx ()
       ((_ ?retvals-signature ?expr)
@@ -2246,7 +2246,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-accessor))
   (syntax-match input-form.stx ()
     ((_ ?expr ?field-name-id)
@@ -2270,7 +2270,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-mutator))
   (syntax-match input-form.stx ()
     ((_ ?expr ?field-name-id ?new-value)
@@ -2297,7 +2297,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-getter))
   (define (%generate-output-form expr.stx keys.stx)
     (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
@@ -2324,7 +2324,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-setter))
   (define (%generate-output-form expr.stx keys.stx new-value.stx)
     (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
@@ -2354,7 +2354,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-dispatch))
   (syntax-match input-form.stx ()
     ((_ ?expr ?member ?arg* ...)
@@ -2381,7 +2381,7 @@
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-cast))
 
   (define (%retrieve-caster-maker target-tag)
@@ -2479,7 +2479,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-unsafe-cast))
   (syntax-match input-form.stx ()
     ((_ ?target-tag ?expr)
@@ -2526,7 +2526,7 @@
   ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
   ;;the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'type-of))
 
   (syntax-match input-form.stx ()
@@ -2547,7 +2547,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'expansion-of))
   (syntax-match input-form.stx ()
     ;;Special case to allow easy inspection of definitions.  We transform:
@@ -2597,7 +2597,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'visit-code-of))
   (syntax-match input-form.stx ()
     ((_ ?id)
@@ -2624,7 +2624,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimisation-of))
   (syntax-match input-form.stx ()
     ((_ ?expr)
@@ -2643,7 +2643,7 @@
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'assembly-of))
   (syntax-match input-form.stx ()
     ((_ ?expr)

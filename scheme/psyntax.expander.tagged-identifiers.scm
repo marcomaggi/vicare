@@ -322,7 +322,7 @@
 	    (loop ($object-type-spec-parent-spec spec)))))))
 
 (module (tag-identifier-dispatch)
-  (define-fluid-override __who__
+  (define-syntax __module_who__
     (identifier-syntax 'tag-identifier-dispatch))
 
   (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} {input-form.stx syntax-object?})
@@ -374,7 +374,7 @@
 	   (%try-parent-dispatcher))))
 
   (define (%error-invalid-tagged-syntax input-form.stx)
-    (syntax-violation __who__ "invalid tagged syntax" input-form.stx))
+    (syntax-violation __module_who__ "invalid tagged syntax" input-form.stx))
 
   #| end of module: TAG-DISPATCH |# )
 
