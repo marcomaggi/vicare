@@ -507,7 +507,7 @@
 	 ;;Generate unique variable names and labels for the LETREC bindings.
 	 (let ((lhs*.lex (map gensym-for-lexical-var lhs*.id))
 	       (lhs*.lab (map gensym-for-label       lhs*.id)))
-	   (map set-label-tag! lhs*.lab lhs*.tag)
+	   (map set-label-tag! lhs*.id lhs*.lab lhs*.tag)
 	   ;;Generate what  is needed  to create  a lexical contour:  a <RIB>  and an
 	   ;;extended lexical  environment in which  to evaluate both  the right-hand
 	   ;;sides and the body.

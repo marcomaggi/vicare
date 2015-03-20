@@ -607,20 +607,22 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-tag! {label symbol?} {tag tag-identifier?})
-  ;;Given a  syntactic binding LABEL:  add TAG  to its property  list as
-  ;;binding type  tagging.  This  tag should  represent the  object type
+(define* (set-label-tag! id {label symbol?} {tag tag-identifier?})
+  ;;Given a syntactic binding  LABEL associated to the identifier ID:  add TAG to its
+  ;;property list as binding type tagging.  This tag should represent the object type
   ;;referenced by the binding.
   ;;
   (cond (($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*)
 	 => (lambda (old-tag)
-	      (syntax-violation __who__
-		"label binding tag already defined" label old-tag tag)))
+	      (unless (free-identifier=? old-tag tag)
+		(assertion-violation __who__
+		  "label binding tag already defined (redefining a binding?)"
+		  id label old-tag tag))))
 	(($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
 	 => (lambda (spec)
 	      (assertion-violation __who__
 		"tag identifier cannot become a tagged identifier"
-		label spec tag)))
+		id label spec tag)))
 	(else
 	 ($putprop label *EXPAND-TIME-BINDING-TAG-COOKIE* tag))))
 
