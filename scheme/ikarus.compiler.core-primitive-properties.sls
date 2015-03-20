@@ -5720,8 +5720,10 @@
 (declare-core-primitive hashtable-ref
     (safe)
   (signatures
+   ((T:hashtable T:object	)	=> (T:object))
    ((T:hashtable T:object T:object)	=> (T:object)))
   (attributes
+   ((_ _)			effect-free)
    ((_ _ _)			effect-free)))
 
 (declare-core-primitive hashtable-set!
