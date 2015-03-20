@@ -3054,6 +3054,226 @@
 	(bag-element-count B 2))
     => 3)
 
+;;; --------------------------------------------------------------------
+;;; bag-for-each-unique
+
+  (check
+      (with-result
+	(let ((B (bag fixnum-comparator 1 2 3)))
+	  (bag-for-each-unique (lambda (elm count)
+				 (add-result (list elm count)))
+			       B)))
+    => `(,(void) ((1 1)
+		  (2 1)
+		  (3 1))))
+
+  (check
+      (with-result
+	(let ((B (bag fixnum-comparator 1 2 2 3 3 3)))
+	  (bag-for-each-unique (lambda (elm count)
+				 (add-result (list elm count)))
+			       B)))
+    => `(,(void) ((1 1)
+		  (2 2)
+		  (3 3))))
+
+;;; --------------------------------------------------------------------
+;;; bag-fold-unique
+
+  (check
+      (let ((B (bag fixnum-comparator)))
+	(bag-fold-unique (lambda (elm count knil)
+			   (cons (list elm count) knil))
+	  '()
+	  B))
+    => '())
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2 3)))
+	(bag-fold-unique (lambda (elm count knil)
+			   (cons (list elm count) knil))
+	  '()
+	  B))
+    => '((1 1)
+	 (2 1)
+	 (3 1)))
+
+  (check
+      (let ((B (bag fixnum-comparator 1 1 1 2 2 3)))
+	(bag-fold-unique (lambda (elm count knil)
+			   (cons (list elm count) knil))
+	  '()
+	  B))
+    => '((1 3)
+	 (2 2)
+	 (3 1)))
+
+;;; --------------------------------------------------------------------
+;;; bag-increment!
+
+  (check
+      (let* ((B (bag fixnum-comparator))
+	     (B (bag-increment! B 1 0)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B (bag fixnum-comparator))
+	     (B (bag-increment! B 1 1)))
+	(bag->list B #t))
+    => '(1))
+
+  (check
+      (let* ((B (bag fixnum-comparator))
+	     (B (bag-increment! B 1 3)))
+	(bag->list B #t))
+    => '(1 1 1))
+
+  (check
+      (let* ((B (bag fixnum-comparator 1 2 3))
+	     (B (bag-increment! B 2 0)))
+	(bag->list B #t))
+    => '(1 2 3))
+
+  (check
+      (let* ((B (bag fixnum-comparator 1 2 3))
+	     (B (bag-increment! B 3 4)))
+	(bag->list B #t))
+    => '(1 2 3 3 3 3 3))
+
+;;; --------------------------------------------------------------------
+;;; bag-decrement!
+
+  (check
+      (let* ((B (bag fixnum-comparator))
+	     (B (bag-decrement! B 1 0)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B (bag fixnum-comparator 1))
+	     (B (bag-decrement! B 1 0)))
+	(bag->list B #t))
+    => '(1))
+
+  (check
+      (let* ((B (bag fixnum-comparator 1))
+	     (B (bag-decrement! B 1 1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B (bag fixnum-comparator 1 2 2 3))
+	     (B (bag-decrement! B 2 0)))
+	(bag->list B #t))
+    => '(1 2 2 3))
+
+  (check
+      (let* ((B (bag fixnum-comparator 1 2 2 3))
+	     (B (bag-decrement! B 2 1)))
+	(bag->list B #t))
+    => '(1 2 3))
+
+  (check
+      (let* ((B (bag fixnum-comparator 1 2 2 3))
+	     (B (bag-decrement! B 2 2)))
+	(bag->list B #t))
+    => '(1 3))
+
+;;; --------------------------------------------------------------------
+;;; bag->set
+
+  (check
+      (let* ((B (bag fixnum-comparator 1 2 2 3))
+	     (S (bag->set B)))
+	(set->list S #t))
+    => '(1 2 3))
+
+  (check
+      (let* ((B (bag fixnum-comparator))
+	     (S (bag->set B)))
+	(set->list S #t))
+    => '())
+
+;;; --------------------------------------------------------------------
+;;; set->bag
+
+  (check
+      (let* ((S (set fixnum-comparator 1 2 3))
+	     (B (set->bag S)))
+	(bag->list B #t))
+    => '(1 2 3))
+
+  (check
+      (let* ((S (set fixnum-comparator))
+	     (B (set->bag S)))
+	(bag->list B #t))
+    => '())
+
+;;; --------------------------------------------------------------------
+;;; set->bag!
+
+  (check
+      (let* ((S (set fixnum-comparator))
+	     (B (bag fixnum-comparator))
+	     (B (set->bag! B S)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((S (set fixnum-comparator 1 2 3))
+	     (B (bag fixnum-comparator 4 5 6))
+	     (B (set->bag! B S)))
+	(bag->list B #t))
+    => '(1 2 3 4 5 6))
+
+  (check
+      (let* ((S (set fixnum-comparator 1 2 3))
+	     (B (bag fixnum-comparator 2 3 4))
+	     (B (set->bag! B S)))
+	(bag->list B #t))
+    => '(1 2 2 3 3 4))
+
+;;; --------------------------------------------------------------------
+;;; bag->alist
+
+  (check
+      (let ((B (bag fixnum-comparator)))
+	(bag->alist B))
+    => '())
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2 3)))
+	(bag->alist B #t))
+    => '((1 . 1)
+	 (2 . 1)
+	 (3 . 1)))
+
+  (check
+      (let ((B (bag fixnum-comparator 1 1 2 2 3 3)))
+	(bag->alist B fx<?))
+    => '((1 . 2)
+	 (2 . 2)
+	 (3 . 2)))
+
+;;; --------------------------------------------------------------------
+;;; alist->bag
+
+  (check
+      (let ((B (alist->bag fixnum-comparator '())))
+	(bag->alist B))
+    => '())
+
+  (check
+      (let ((B (alist->bag fixnum-comparator '((1 . 1) (2 . 1) (3 . 1)))))
+	(bag->alist B #t))
+    => '((1 . 1) (2 . 1) (3 . 1)))
+
+  (check
+      (let ((B (alist->bag fixnum-comparator '((1 . 2) (2 . 2) (3 . 2)))))
+	(bag->alist B fx<?))
+    => '((1 . 2) (2 . 2) (3 . 2)))
+
   #t)
 
 

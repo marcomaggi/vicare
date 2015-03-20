@@ -134,7 +134,7 @@
 (define* (hashtable-fold-entries {proc procedure?} nil {T hashtable?})
   (receive (keys vals)
       (hashtable-entries T)
-    (vector-fold-left proc nil keys vals)))
+    (vector-fold-right proc nil keys vals)))
 
 (define (hashtable-replace-key! table old-key new-key)
   ;;If OLD-KEY is  a key in TABLE: delete  the entry associated to OLD-KEY  and add a
@@ -490,7 +490,7 @@
 
   (define (%hashtable-keys-with-non-positive-value ht)
     (hashtable-fold-entries
-	(lambda (nil key val)
+	(lambda (key val nil)
 	  (if (non-positive? val)
 	      (cons key nil)
 	    nil))
@@ -1467,26 +1467,21 @@
     (sob-hash-table bag)))
 
 (define* (bag-fold-unique {proc procedure?} nil {bag bag?})
-  (receive-and-return (result)
-      nil
-    (hashtable-for-each
-	(lambda (elem count)
-	  (set! result (proc elem count result)))
-      (sob-hash-table bag))))
+  (hashtable-fold-entries proc nil (sob-hash-table bag)))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bag->set {bag bag?})
   (hashtable-fold-entries
-      (lambda (nil key value)
+      (lambda (key value nil)
 	(sob-increment! __who__ nil key value)
 	nil)
-    (make-sob (sob-comparator bag) #f)
+    (set (sob-comparator bag))
     (sob-hash-table bag)))
 
 (define* (set->bag {set set?})
   (hashtable-fold-entries
-      (lambda (nil key val)
+      (lambda (key val nil)
 	(sob-increment! __who__ nil key val)
 	nil)
     (make-sob (sob-comparator set) #t)
@@ -1495,7 +1490,7 @@
 (define* (set->bag! {bag bag?} {set set?})
   (%check-same-comparator __who__ set bag)
   (hashtable-fold-entries
-      (lambda (nil key value)
+      (lambda (key value nil)
 	(sob-increment! __who__ nil key value)
 	nil)
     bag
@@ -1503,12 +1498,34 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (bag->alist {bag bag?})
-  (bag-fold-unique
-      (lambda (elem count list)
-	(cons (cons elem count) list))
-    '()
-    bag))
+(case-define* bag->alist
+  (({bag bag?})
+   (bag-fold-unique
+       (lambda (elem count list)
+	 (cons (cons elem count) list))
+     '()
+     bag))
+  (({bag bag?} compar)
+   (let ((al (bag-fold-unique
+		 (lambda (elem count list)
+		   (cons (cons elem count) list))
+	       '()
+	       bag)))
+     (cond ((not compar)
+	    al)
+	   ((eq? compar #t)
+	    (let ((compar (comparator-comparison-procedure (sob-comparator bag))))
+	      (list-sort (lambda (x y)
+			   (= -1 (compar (car x) (car y))))
+			 al)))
+	   ((procedure? compar)
+	    (list-sort (lambda (x y)
+			 (compar (car x) (car y)))
+		       al))
+	   (else
+	    (procedure-argument-violation __who__
+	      "expected boolean or procedure as COMPAR argument"
+	      compar))))))
 
 (define* (alist->bag {comparator comparator?} alist)
   (receive-and-return (result)

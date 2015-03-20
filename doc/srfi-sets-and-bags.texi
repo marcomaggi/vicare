@@ -1183,6 +1183,24 @@ order, passing the number of occurrences as a second argument and the
 result of the previous invocation as a third argument.  For the first
 invocation: @var{nil} is used as the third argument.  Return the result
 of the last invocation.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((B (bag fixnum-comparator)))
+  (bag-fold-unique (lambda (elm count knil)
+                     (cons (list elm count) knil))
+    '()
+    B))
+@result{} '()
+
+(let ((B (bag fixnum-comparator 1 2 3)))
+  (bag-fold-unique (lambda (elm count knil)
+                     (cons (list elm count) knil))
+    '()
+    B))
+@result{} ((1 1) (2 1) (3 1))
+@end lisp
 @end defun
 
 
@@ -1214,9 +1232,44 @@ of the argument or arguments.
 
 
 @defun bag->alist @var{bag}
+@defunx bag->alist @var{bag} @var{compar}
 Return a newly allocated alist whose keys are the unique elements of
 @var{bag} and whose values are the number of occurrences of each
 element.
+
+As @value{PRJNAME} extension, if the optional argument @var{compar} is
+present:
+
+@itemize
+@item
+If it is the boolean @false{}: the function behaves as if @var{compar}
+is not present.
+
+@item
+If it is the boolean @true{}: the resulting alist is sorted using the
+standard @func{list-sort} and the comparison procedure from the
+@var{set} or @var{bag} comparator, so that the pairs with lesser cars
+come first.
+
+@item
+If it is a procedure: the resulting list is sorted using the standard
+@func{list-sort} and @var{compar} as comparison predicate, so that the
+pairs with lesser cars come first.
+@end itemize
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((B (bag fixnum-comparator 1 2 3)))
+  (bag->alist B #t))
+@result{} ((1 . 1) (2 . 1) (3 . 1))
+
+(let ((B (bag fixnum-comparator 1 1 2 2 3 3)))
+  (bag->alist B fx<?))
+@result{} ((1 . 2) (2 . 2) (3 . 2))
+@end lisp
 @end defun
 
 
@@ -1224,6 +1277,24 @@ element.
 Return a newly allocated bag based on @var{comparator}, where the keys
 of @var{alist} specify the elements and the corresponding values of
 @var{alist} specify how many times they occur.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((B (alist->bag fixnum-comparator '())))
+  (bag->alist B))
+@result{} ()
+
+(let ((B (alist->bag fixnum-comparator
+           '((1 . 1) (2 . 1) (3 . 1)))))
+  (bag->alist B #t))
+@result{} ((1 . 1) (2 . 1) (3 . 1))
+
+(let ((B (alist->bag fixnum-comparator
+           '((1 . 2) (2 . 2) (3 . 2)))))
+  (bag->alist B fx<?))
+@result{} ((1 . 2) (2 . 2) (3 . 2))
+@end lisp
 @end defun
 
 @c page
