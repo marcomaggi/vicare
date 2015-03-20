@@ -1028,7 +1028,7 @@
 ;;   begin				import
 ;;   export				set!
 ;;   stale-when				begin-for-syntax
-;;   eval-for-expand			define-fluid-override
+;;   eval-for-expand
 ;;
 ;;and those that can appear only in expression context only:
 ;;
@@ -1984,7 +1984,7 @@
 
 
 (module (expand-form-to-core-language)
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'expand-form-to-core-language))
 
   (define (expand-form-to-core-language expr env)
@@ -2024,7 +2024,7 @@
 		 (values expr.core (rtc))))))
 
 	  (else
-	   (assertion-violation __who__ "not an environment" env))))
+	   (assertion-violation __module_who__ "not an environment" env))))
 
   (define (%chi-interaction-expr expr.stx rib lexenv.run)
     (receive (trailing-init-form*.stx
@@ -2082,7 +2082,7 @@
 	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (psi-core-expr psi))))
 	    (else
-	     (assertion-violation __who__
+	     (assertion-violation __module_who__
 	       "invalid qualified RHS while expanding expression" qrhs)))))))
 
   #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
@@ -2151,6 +2151,9 @@
   (define-syntax __who__
     (identifier-syntax 'expand-top-level))
 
+  (define-syntax __module_who__
+    (identifier-syntax 'expand-top-level))
+
   (define (expand-top-level program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
     ;;level program, expand it.
@@ -2214,7 +2217,7 @@
 	   ((strict-r6rs)
 	    (cons sym (%parse-program-options ?other*)))
 	   (else
-	    (syntax-violation __who__
+	    (syntax-violation __module_who__
 	      "invalid program option" ?opt)))))
       ))
 

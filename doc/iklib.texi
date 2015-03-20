@@ -53,6 +53,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib environment::           Environments.
 * iklib eval::                  Extended code evaluation.
 * iklib cafe::                  Cafe.
+* iklib procedures::            Procedures.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
@@ -67,7 +68,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib flonums::               Additional functions on flonums.
 * iklib numerics::              Additional functions on numbers.
 * iklib enumerations::          Additional functions on enumerations.
-* iklib hashtables::            Additional functions on hashtables.
+* iklib hashtables::            Additional functions on hash tables.
 * iklib load::                  Loading source files.
 * iklib modules::               Local modules.
 * iklib libraries::             Local libraries.
@@ -1124,11 +1125,14 @@ behaviour is undefined.
 
 
 @menu
-* iklib syntaxes loops while::  Iterating with the @syntax{while} syntax.
-* iklib syntaxes loops until::  Iterating with the @syntax{until} syntax.
-* iklib syntaxes loops for::    Iterating with the @syntax{for} syntax.
-* iklib syntaxes loops do::     Iterating with the @syntax{do} syntax.
-* iklib syntaxes loops fluids:: Fluid bindings for loop syntaxes.
+* iklib syntaxes loops while::    Iterating with the @syntax{while} syntax.
+* iklib syntaxes loops until::    Iterating with the @syntax{until} syntax.
+* iklib syntaxes loops for::      Iterating with the @syntax{for} syntax.
+* iklib syntaxes loops do::       Iterating with the @syntax{do} syntax.
+* iklib syntaxes loops do*::      Iterating with the @syntax{do*} syntax.
+* iklib syntaxes loops dolist::   Iterating with the @syntax{dolist} syntax.
+* iklib syntaxes loops dotimes::  Iterating with the @syntax{dotimes} syntax.
+* iklib syntaxes loops fluids::   Fluid bindings for loop syntaxes.
 @end menu
 
 @c page
@@ -1283,6 +1287,60 @@ Using the syntax @syntax{break} in the body causes immediate escaping
 out of the loop; if arguments are given to @syntax{break}: they become
 the return values of the syntax.
 @end itemize
+@end deffn
+
+@c page
+@node iklib syntaxes loops do*
+@subsubsection Iterating with the @syntax{do*} syntax
+
+
+@deffn Syntax do* ((@metai{variable} @metai{init} @metai{step}) @dots{}) (@meta{test} @meta{expression} @dots{}) @meta{command} @dots{}
+This is like the standard @syntax{do} (@pxref{stdlib control, do}), but
+the bindings and steppings are performed sequentially rather than in
+unspecified order.  This syntax meant to be similar to the Common Lisp
+syntax of the same name.
+@end deffn
+
+@c page
+@node iklib syntaxes loops dolist
+@subsubsection Iterating with the @syntax{dolist} syntax
+
+
+@deffn Syntax dolist (@meta{var} @meta{list-expr}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax dolist (@meta{var} @meta{list-expr} @meta{result-expr}) @metao{body} @meta{body} @dots{}
+Iterate of the list returned by @meta{list-expr} binding, at each
+iteration, the next item from the list to @meta{var}; evaluate the
+@meta{body} forms in the region of the binding.
+
+If @meta{result-expr} is present: it is evaluated, in the region of
+@meta{var}, to produce the return values.  If @meta{result-expr} is not
+present: the return values are unspecified.
+
+If @meta{list-expr} returns null and @meta{result-expr} is present: when
+@meta{result-expr} is evaluated, @meta{var} is bound to null.
+
+This syntax meant to be similar to the Common Lisp syntax of the same
+name.
+@end deffn
+
+@c page
+@node iklib syntaxes loops dotimes
+@subsubsection Iterating with the @syntax{dotimes} syntax
+
+
+@deffn Syntax dotimes (@meta{var} @meta{count-expr}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax dotimes (@meta{var} @meta{count-expr} @meta{result-expr}) @metao{body} @meta{body} @dots{}
+Iterate over exact integers from zero to the return value of
+@meta{count-expr}, which must return a non--negative exact integer; at
+each iteration: the next integer is bound to @meta{var}; evaluate the
+@meta{body} forms in the region of the binding.
+
+If @meta{result-expr} is present: it is evaluated, in the region of
+@meta{var}, to produce the return values.  If @meta{result-expr} is not
+present: the return values are unspecified.
+
+This syntax meant to be similar to the Common Lisp syntax of the same
+name.
 @end deffn
 
 @c page
@@ -7004,7 +7062,7 @@ ciao    @result{} "ciao"
 @deffn Syntax define-fluid-syntax @meta{keyword} @meta{expr}
 Like @func{define-syntax} define a new syntax binding the transformer to
 @meta{keyword}, but mark @meta{keyword} as fluid so that later it can be
-rebound by @func{fluid-let-syntax} or @func{define-fluid-override}.
+rebound by @func{fluid-let-syntax}.
 @end deffn
 
 
@@ -7019,14 +7077,6 @@ There are two differences between @func{fluid-let-syntax} and
 @func{let-syntax}: @func{fluid-let-syntax} must appear in expression
 context only; the internal @meta{body} forms are @strong{not} spliced in
 the enclosing body.
-@end deffn
-
-
-@deffn Syntax define-fluid-override @meta{keyword} @meta{expr}
-Temporarily rebind the @meta{keyword} to a new transformer while
-expanding the body forms in which this syntax is used.  The given
-@meta{keyword} must be already bound to a fluid syntaxe defined by
-@func{define-fluid-syntax}.
 @end deffn
 
 @c page
@@ -8610,6 +8660,22 @@ A textual input port used by the cafe.
 @end deffn
 
 @c page
+@node iklib procedures
+@section Procedures
+
+
+@defun procedure-annotation @var{proc}
+Return the annotation of the procedure @var{proc}; return @false{} if
+@var{proc} has no annotation.
+
+@example
+(define (a) 1)
+(procedure-annotation a)
+@result{} (#@{a |w$qfI9a4N>aIi$P5|@} . #f)
+@end example
+@end defun
+
+@c page
 @node iklib structs
 @section Structures and type descriptors
 
@@ -9083,7 +9149,8 @@ Store @var{value} in the field at @var{index} in the data structure
 
 @defun struct=? @vari{obj} @varii{obj}
 Return true if @vari{obj} and @varii{obj} are two structures having the
-same @rtd{} and equal field values according to @func{eqv?}.
+same @rtd{} and equal field values according to @func{eqv?}.  Note that
+this function also works when applied to @rnrs{6} records.
 @end defun
 
 
@@ -9546,6 +9613,12 @@ The current implementation is the following:
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun record=? @vari{record} @varii{record}
+Return true if @vari{record} and @varii{record} are two @rnrs{6} records
+having the same @rtd{} and equal field values according to @func{eqv?}.
+@end defun
+
+
 @defun record-reset @var{record}
 Reset to void all the fields of a record, whatever its type.
 @end defun
@@ -9654,7 +9727,7 @@ keyword objects are equal if they have the same symbol.
 
 @defun keyword-hash @var{keyword}
 Return an exact integer suitable to be used as hash value for
-@var{keyword} used as key for hashtables.
+@var{keyword} used as key for hash tables.
 @end defun
 
 @c page
@@ -10307,13 +10380,6 @@ the resulting bytevector.  It is an error if the sum of the bytevector
 lengths is not in the range of the maximum bytevector length.
 @end defun
 
-
-@defun bytevector-hash @var{bytevector}
-Return an integer hash value for @var{bytevector}, based on its current
-contents.  This hash function is suitable for use with
-@func{bytevector=?} as an equivalence function.
-@end defun
-
 @c page
 @node iklib strings
 @section Additional string functions
@@ -10542,8 +10608,27 @@ are filled with @var{fill}.  When not used: @var{fill} defaults to
 @end defun
 
 
-@deffn Procedure vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
-@deffnx Procedure vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+@defun vector-find @var{proc} @var{vec}
+@var{proc} should accept one argument and return a single value.
+@var{proc} should not mutate @var{vec}.  @func{vector-find} applies
+@var{proc} to the elements of @var{vec} in order.  If @var{proc} returns
+a true value for an element, @func{vector-find} immediately returns that
+element.  If @var{proc} returns @false{} for all elements of the vector,
+@func{vector-find} returns @false{}.  @var{proc} is always called in the
+same dynamic environment as @func{vector-find} itself.
+
+@example
+(vector-find even? '#(3 1 4 1 5 9))
+@result{} 4
+
+(vector-find even? '#(3 1 5 1 5 9))
+@result{} #f
+@end example
+@end defun
+
+
+@defun vector-for-all @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
+@defunx vector-exists @var{proc} @vari{vec} @varii{vec} @dots{} @varn{vec}
 The @var{vec}s should all have the same length, and @var{proc} should
 accept @math{N} arguments and return a single value.  @var{proc} should
 not mutate the @var{vec} arguments.
@@ -10561,6 +10646,18 @@ If @var{proc} returns @false{} on any set of elements,
 of @var{proc}.  If the @var{vec}s are all empty, @func{vector-for-all}
 returns @true{}.
 
+@lisp
+(vector-for-all even? '#())             @result{} #t
+(vector-for-all even? '#(3 1 4 1 5 9))  @result{} #f
+(vector-for-all even? '#(2 4 14))       @result{} #t
+(vector-for-all (lambda (n)
+                  (and (even? n) n))
+                '#(2 4 14))
+@result{} 14
+(vector-for-all < '#(1 2 3) '#(2 3 4))  @result{} #t
+(vector-for-all < '#(1 2 4) '#(2 3 4))  @result{} #f
+@end lisp
+
 For natural numbers @math{i = 0, 1, @dots{}}, the @func{vector-exists}
 procedure applies @var{proc} successively to arguments @math{x_i^1
 @dots{} x_i^n}, where @math{x_i^j} is the @math{i}-th element of
@@ -10574,8 +10671,60 @@ If @var{proc} returns a true value on any set of elements,
 of @var{proc}.  If the @var{vec}s are all empty, @func{vector-exists}
 returns @false{}.
 
+@lisp
+(vector-exists even? '#(3 1 4 1 5 9))   @result{} #t
+(vector-exists even? '#(3 1 1 5 9))     @result{} #f
+(vector-exists even? '#())              @result{} #f
+(vector-exists (lambda (n)
+                 (and (even? n) n))
+               '#(2 1 4 14))
+@result{} 2
+(vector-exists < '#(1 2 4) '#(2 3 4))   @result{} #t
+(vector-exists > '#(1 2 3) '#(2 3 4))   @result{} #f
+@end lisp
+
 @var{proc} is always called in the same dynamic environment as
 @func{vector-for-all} or, respectively, @func{vector-exists} itself.
+@end defun
+
+
+@deffn Function vector-fold-left @var{combine} @var{knil} @varo{vec} @var{vec} @dots{}
+@deffnx Function vector-fold-right @var{combine} @var{knil} @varo{vec} @var{vec} @dots{}
+Fold the function @var{combine} over the vector arguments, which must
+have the same length.  The return value is the return value of the last
+evaluated call to @var{combine}; if all the vector arguments are empty,
+the return value is @var{knil}.
+
+The left--folding variant iterate @var{combine} left--to--right over
+each element of equal index in all the vectors; @var{combine} is applied
+as:
+
+@example
+(@var{combine} @var{state}
+  (vector-ref @varo{vec} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···)
+@end example
+
+@noindent
+where @var{state} is the current state value, and it is the
+@strong{first} argument; the current state value begins with @var{knil},
+and becomes whatever @var{combine} returned at the respective iteration.
+
+The right--folding variant iterate @var{combine} right--to--left over
+each element of equal index in all the vectors; @var{combine} is applied
+as:
+
+@example
+(@var{combine}
+  (vector-ref @var{vec0} @var{idx})
+  (vector-ref @var{vec}  @var{idx})
+  ···
+  @var{state})
+@end example
+
+@noindent
+in which @var{state} is the @strong{last} argument.
 @end deffn
 
 @c page
@@ -10893,6 +11042,16 @@ The following bindings are exported by the library @library{vicare}.
 @defunx fxnonnegative? @var{fx}
 Return @true{} if @var{fx} is, respectively, non--positive or
 non--negative; else return @false{}.
+@end defun
+
+
+@defun positive-fixnum? @var{obj}
+@defunx negative-fixnum? @var{obj}
+@defunx non-positive-fixnum? @var{obj}
+@defunx non-negative-fixnum? @var{obj}
+Return @true{} if @var{obj} is a fixnum respectively: positive,
+negative, non--positive, non--negative; otherwise return @false{}.  If
+@var{obj} is not a fixnum: return @false{}.
 @end defun
 
 @c page
@@ -11579,11 +11738,362 @@ Return @true{} if @var{obj} is an enumeration set object, else return
 
 @c page
 @node iklib hashtables
-@section Additional functions on hashtables
+@section Additional functions on hash tables
+
+
+@menu
+* iklib hashtables pred::       Predicates on hash tables.
+* iklib hashtables iterators::  Hash table iterators.
+* iklib hashtables hashfun::    Additional hash functions.
+@end menu
+
+@c page
+@node iklib hashtables pred
+@subsection Predicates on hash tables
+
+
+@defun mutable-hashtable? @var{obj}
+Return @true{} if @var{obj} is a hash table and it is mutable; return
+@false{} otherwise.  This function is different from the standard
+@func{hashtable-mutable?} because it does @strong{not} raise an error if
+@var{obj} is not a hash table.
+@end defun
+
+@c page
+@node iklib hashtables iterators
+@subsection Hash table iterators
+
+
+Ghuloum and Dybvig explain in the paper:
+
+@quotation
+Ghuloum, Dybvig.  ``Generation--Friendly Eq Hash Tables''.  Proceedings
+of the 2007 Workshop on Scheme and Functional Programming.
+@end quotation
+
+@noindent
+why it is not possible to iterate a hash table by visiting the buckets:
+there's a problem with rehashing entries that are moved by the garbage
+collector.  The iterators always use @func{hashtable-keys} and
+@func{hashtable-entries}, which is slow and memory consuming, but it is
+safe.
+
+
+@defun hashtable-for-each-key @var{proc} @var{table}
+Apply @var{proc} to every key in table, in unspecified order, and
+discard the results.  It is implemented as follows:
+
+@lisp
+(vector-for-each proc (hashtable-keys table))
+@end lisp
+@end defun
+
+
+@defun hashtable-for-each-entry @var{proc} @var{table}
+Apply @var{proc} to every key and value in table, in unspecified order,
+and discard the results.  It is implemented as follows:
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-for-each proc keys vals))
+@end lisp
+@end defun
+
+
+@defun hashtable-for-all-keys @var{pred} @var{table}
+Apply @var{pred} to every key in @var{table}, in unspecified order,
+stopping at the first key for which @var{pred} returns @false{}.
+
+@itemize
+@item
+If @var{pred} returns non-false for every key: the return value is the
+return value of the last call to @var{pred}.
+
+@item
+If @var{pred} returns @false{} for a key: the return value is @false{}.
+@end itemize
+
+It is implemented as follows:
+
+@lisp
+(vector-for-all pred (hashtable-keys table))
+@end lisp
+@end defun
+
+
+@defun hashtable-for-all-entries @var{pred} @var{table}
+Apply @var{pred} to every key and value in @var{table}, in unspecified
+order, stopping at the first application for which @var{PRED} returns
+@false{}.
+
+@itemize
+@item
+If @var{pred} returns non--false for every key and value: the return
+value is the return value of the last call to @var{pred}.
+
+@item
+If @var{pred} returns @false{} for a key and value: the return value is
+@false{}.
+@end itemize
+
+It is implemented as follows:
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-for-all pred keys vals))
+@end lisp
+@end defun
+
+
+@defun hashtable-exists-key @var{proc} @var{table}
+Apply @var{proc} to every key in @var{table} in unspecified order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key: the return value is
+@false{}.
+
+@item
+If @var{proc} returns non--false for a key: the return value is the
+value returned by @var{proc}.
+@end itemize
+
+@lisp
+(vector-exists proc (hashtable-keys table)))
+@end lisp
+@end defun
+
+
+@defun hashtable-exists-entry @var{proc} @var{table}
+Apply @var{proc} to every key and value in @var{table} in unspecified
+order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key and value: the return value
+is @false{}.
+
+@item
+If @var{proc} returns non--false for a key and value: the return value
+is the value returned by @var{proc}.
+@end itemize
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-exists proc keys vals))
+@end lisp
+@end defun
+
+
+@defun hashtable-find-key @var{proc} @var{table}
+Apply @var{proc} to every key in @var{table} in unspecified order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key: the return value is
+@false{}.
+
+@item
+If @var{proc} returns non--false for a key: the return value is that
+key.
+@end itemize
+
+@lisp
+(vector-find pred (hashtable-keys table)))
+@end lisp
+@end defun
+
+
+@defun hashtable-find-entry @var{proc} @var{table}
+Apply @var{proc} to every key and value in @var{table} in unspecified
+order.
+
+@itemize
+@item
+If @var{proc} returns @false{} for every key and value: the return value
+is @false{}.
+
+@item
+If @var{proc} returns non--false for a key and value: the return value
+is a pair having that key as car and that value as cdr.
+@end itemize
+@end defun
+
+
+@defun hashtable-fold-keys @var{proc} @var{nil} @var{table}
+Apply @var{proc} to every key in @var{table}, in unspecified order; the
+second argument of the first @var{proc} application is @var{nil}, then
+it is the return value of the previous application.  Return the return
+value of the last @var{proc} application.
+
+It is implemented as follows:
+
+@lisp
+(vector-fold-right proc nil (hashtable-keys table))
+@end lisp
+
+To build an list of keys we do:
+
+@lisp
+(hashtable-fold-keys
+    (lambda (key nil)
+      (cons key nil))
+  '() table)
+@end lisp
+@end defun
+
+
+@defun hashtable-fold-entries @var{proc} @var{nil} @var{table}
+Apply @var{proc} to every key and value in @var{table}, in unspecified
+order; the third argument of the first @var{proc} application is
+@var{nil}, then it is the return value of the previous application.
+Return the return value of the last @var{proc} application.
+
+It is implemented as follows:
+
+@lisp
+(receive (keys vals)
+    (hashtable-entries table)
+  (vector-fold-right proc nil keys vals))
+@end lisp
+
+To build an alist from a table we do:
+
+@lisp
+(hashtable-fold-entries
+    (lambda (key val nil)
+      (cons (cons key val) nil))
+  '() table)
+@end lisp
+@end defun
+
+
+@defun hashtable->alist @var{table}
+@defunx hashtable->alist @var{table} @var{compar}
+Build and return an alist holding the keys and values of @var{table}.
+This function is mostly useful for debugging.
+
+If the optional argument @var{compar} is the boolean @false{}: just
+return the alist; if it is a procedure: sort the resulting alist with
+the standard @func{list-sort} using @var{compar} as comparison predicate
+for the keys.
+@end defun
+
+
+@defun {alist->hashtable!} @var{table} @var{al}
+Fill @var{table} with the entries of the alist @var{al}.  Return
+@var{table} itself.
+@end defun
+
+@c page
+@node iklib hashtables hashfun
+@subsection Additional hash functions
 
 
 @defun string-ci-hash @var{str}
 Case--insensitive hash function for strings.
+@end defun
+
+
+@defun bytevector-hash @var{bv}
+@defunx bytevector-hash @var{bv} @var{max-len}
+Return a non--negative fixnum representing the hash value for @var{bv},
+based on its current contents.  When creating hash tables using
+bytevectors as keys: this hash function is suitable for use with
+@func{bytevector=?} as an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of bytes to use to compute the hash value, starting from the beginning
+of @var{bv}.  If the length of @var{bv} is greater than @var{max-len}:
+only the first @var{max-len} bytes are used.  If the length of @var{bv}
+is less than or equal to @var{max-len}: all the bytes in @var{bv} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of @var{bv}
+is greater than @math{256} bytes, only the first @math{256} bytes are
+used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{bv} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of bytes
+@math{N} less than the bytevector length: applications @strong{must not}
+assume that two bytevectors having the first @math{N} bytes equal will
+have the same hash value.
+@end defun
+
+
+@defun char-hash @var{ch}
+@defunx char-ci-hash @var{ch}
+Hash function for characters.  @func{char-ci-hash} first applies
+@func{char-foldcase} to @var{ch}.
+@end defun
+
+
+@defun boolean-hash @var{bool}
+Hash function for booleans.
+@end defun
+
+
+@defun fixnum-hash @var{fx}
+Hash function for fixnums.
+@end defun
+
+
+@defun exact-integer-hash @var{N}
+Hash function for exact integers, fixnums and bignums.
+@end defun
+
+
+@defun flonum-hash @var{fl}
+Hash function for flonums.
+@end defun
+
+
+@defun number-hash @var{Z}
+Hash function for number objects.
+@end defun
+
+
+@defun struct-hash @var{stru}
+Hash function for @value{PRJNAME} structs.  This is a very low quality
+hash function.
+@end defun
+
+
+@defun record-hash @var{reco}
+Hash function for @rnrs{6} records.  This is a very low quality hash
+function.
+@end defun
+
+
+@defun void-hash @var{obj}
+@defunx eof-object-hash @var{obj}
+@defunx would-block-hash @var{obj}
+Ignore @var{obj} and return a non--negative exact integer representing
+the hash value for @code{(void)}, @code{(eof-object)} and
+@code{(would-block-object)}.
+@end defun
+
+
+@defun object-hash @var{obj}
+Hash function for any Scheme object.  For some object types: this is a
+very low quality hash function.
+@end defun
+
+
+@defun pointer-value @var{obj}
+This is used by @func{eq?} hashtables to obtain a fixnum from references
+to objects that are meant to be compared with @func{eq?}.
 @end defun
 
 @c page

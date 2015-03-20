@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2011, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -853,24 +853,26 @@
 	 {path		<path/unspecified>}
 	 {query		<query/unspecified>}
 	 {fragment	<fragment/unspecified>})
-       (define-fluid-override __who__ (identifier-syntax 'make-<uri>))
-       (when (and (specified? userinfo)
-		  (unspecified? host))
-	 (procedure-argument-violation __who__
-	   "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
-	   userinfo))
-       (when (and (specified? port)
-		  (unspecified? host))
-	 (procedure-argument-violation __who__
-	   "invalid specification of \"port\" component when the \"host\" component is unspecified"
-	   port))
-       ((make-top)
-	scheme userinfo host port
-	(if (unspecified? path)
-	    (<path-empty> ())
-	  path)
-	query fragment
-	#f #;memoized-bytevector #f #;memoized-string ))))
+       (fluid-let-syntax ((__who__ (identifier-syntax 'make-<uri>)))
+	 (when (and (specified? userinfo)
+		    (unspecified? host))
+	   (procedure-argument-violation __who__
+	     "invalid specification of \"userinfo\" component when the \"host\" component is unspecified"
+	     userinfo))
+	 (when (and (specified? port)
+		    (unspecified? host))
+	   (procedure-argument-violation __who__
+	     "invalid specification of \"port\" component when the \"host\" component is unspecified"
+	     port))
+	 ((make-top)
+	  scheme userinfo host port
+	  (if (unspecified? path)
+	      (<path-empty> ())
+	    path)
+	  query fragment
+	  #f	#;memoized-bytevector
+	  #f	#;memoized-string
+	  )))))
 
   (fields (immutable {scheme <scheme>}))
 		;An  instance of  "<scheme>".  A  "scheme" component  is

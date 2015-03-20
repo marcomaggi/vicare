@@ -714,12 +714,6 @@
    ((64)
     (%display ", 64-bit")))
   (%newline)
-  ;;Print the git branch and HEAD commit checksum.
-  (let ((rev (foreign-call "ikrt_get_last_revision")))
-    (unless (zero? (bytevector-length rev))
-      (%display "Revision ")
-      (%display (ascii->string rev))
-      (%newline)))
   (%display "Build ")
   ;;This  LET-SYNTAX looks  weird, but  it  is to  take the  DATE-STRING
   ;;result at expansion-time rather than run-time.
@@ -728,7 +722,7 @@
   (%newline)
   (%display "
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011-2015 Marco Maggi\n\n"))
+Copyright (c) 2011-2015 Marco Maggi and contributors\n\n"))
 
 (define (print-version-screen)
   ;;Print the version screen.

@@ -232,7 +232,9 @@
      (srfi :101 random-access-lists syntax)
      (srfi :101 random-access-lists equal)
      (srfi :111)
-     (srfi :112))
+     (srfi :112)
+     (srfi :113)
+     (srfi :114))
 
     ((WANT_SRFI WANT_POSIX)
      (srfi :106))

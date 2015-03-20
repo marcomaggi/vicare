@@ -84,8 +84,9 @@ $ cat test.sps
 (import (rnrs))
 (write (command-line))
 (newline)
+(flush-output-port (current-output-port))
 
-$ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
+$ @value{RAWEXECUTABLE} --r6rs-script test.sps -- hi there
 ("test.sps" "hi" "there")
 @end example
 
@@ -543,6 +544,7 @@ was at one time popular among very young North American children).
  (map pig-latin
      (cdr (command-line))))
 (newline)
+(flush-output-port (current-output-port))
 @end example
 
 Assuming we have stored the script in the file @file{demo.sps}, we can

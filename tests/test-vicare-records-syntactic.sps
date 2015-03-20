@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -1040,6 +1040,79 @@
       => '(19 29 39))
 
     (void))
+
+  #t)
+
+
+(parametrise ((check-test-name	'equality))
+
+  (define-record-type <alpha>
+    (fields a b c))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (record=? P P)))
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (record=? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (record=? P Q)))
+
+;;; --------------------------------------------------------------------
+;;; STRUCT=? works on records
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (struct=? P P)))
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (struct=? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (struct=? P Q)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (equal? P P)))
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (equal? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (equal? P Q)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-<alpha> 1 2 3)))
+     (eqv? P P)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 3)))
+     (eqv? P Q)))
+
+  (check-for-false
+   (let ((P (make-<alpha> 1 2 3))
+	 (Q (make-<alpha> 1 2 9)))
+     (eqv? P Q)))
 
   #t)
 

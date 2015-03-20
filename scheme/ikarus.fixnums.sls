@@ -18,107 +18,111 @@
 (library (ikarus fixnums)
   (export
     fxzero?
-    fxpositive?		fxnegative?
-    fxnonnegative?	fxnonpositive?
-    fxeven?		fxodd?
+    fxpositive?			fxnegative?
+    fxnonnegative?		fxnonpositive?
+    fxeven?			fxodd?
 
-    fxadd1		fxsub1
-    fx+			fx-
+    positive-fixnum?		negative-fixnum?
+    non-negative-fixnum?	non-positive-fixnum?
+
+    fxadd1			fxsub1
+    fx+				fx-
     fx*
-    fx+/carry		fx*/carry
+    fx+/carry			fx*/carry
     fx-/carry
-    fxdiv		fxmod
-    fxdiv0		fxmod0
-    fxdiv-and-mod	fxdiv0-and-mod0
-    fxquotient		fxremainder
-    fxmodulo		fxsign
+    fxdiv			fxmod
+    fxdiv0			fxmod0
+    fxdiv-and-mod		fxdiv0-and-mod0
+    fxquotient			fxremainder
+    fxmodulo			fxsign
     fxabs
 
-    fxlogor		fxlogand
-    fxlogxor		fxlognot
-    fxior		fxand
-    fxxor		fxnot
+    fxlogor			fxlogand
+    fxlogxor			fxlognot
+    fxior			fxand
+    fxxor			fxnot
     fxif
-    fxsll		fxsra
-    fxarithmetic-shift-left
-    fxarithmetic-shift-right
+    fxsll			fxsra
+    fxarithmetic-shift-left	fxarithmetic-shift-right
     fxarithmetic-shift
 
-    fx=			fx=?
-    fx!=		fx!=?
-    fx<			fx<?
-    fx<=		fx<=?
-    fx>			fx>?
-    fx>=		fx>=?
-    fxmin		fxmax
+    fx=				fx=?
+    fx!=			fx!=?
+    fx<				fx<?
+    fx<=			fx<=?
+    fx>				fx>?
+    fx>=			fx>=?
+    fxmin			fxmax
 
-    fixnum->char	char->fixnum
+    fixnum->char		char->fixnum
     fixnum->string
     fixnum-in-character-range?
 
 ;;; --------------------------------------------------------------------
 
-    $fxpositive?	$fxnegative?
-    $fxnonpositive?	$fxnonnegative?
-    $fxeven?		$fxodd?
-    $fxmodulo		$fxremainder
+    $fxpositive?		$fxnegative?
+    $fxnonpositive?		$fxnonnegative?
+    $fxeven?			$fxodd?
+    $fxmodulo			$fxremainder
     $fxsign
-    $fxmin		$fxmax
+    $fxmin			$fxmax
 
-    $fxdiv		$fxdiv0
-    $fxmod		$fxmod0
-    $fxdiv-and-mod	$fxdiv0-and-mod0
+    $fxdiv			$fxdiv0
+    $fxmod			$fxmod0
+    $fxdiv-and-mod		$fxdiv0-and-mod0
     $fxabs
 
     $fixnum->string
 
 ;;; --------------------------------------------------------------------
 
-    error@fx+		error@fx*
-    error@fx-		error@fxadd1
+    error@fx+			error@fx*
+    error@fx-			error@fxadd1
     error@fxsub1
     error@fxarithmetic-shift-left
     error@fxarithmetic-shift-right)
   (import (except (vicare)
 		  fxzero?
-		  fxpositive?		fxnegative?
-		  fxnonnegative?	fxnonpositive?
-		  fxeven?		fxodd?
+		  fxpositive?			fxnegative?
+		  fxnonnegative?		fxnonpositive?
+		  fxeven?			fxodd?
 
-		  fxquotient		fxremainder
-		  fxmodulo		fxsign
+		  positive-fixnum?		negative-fixnum?
+		  non-negative-fixnum?		non-positive-fixnum?
 
-		  fxadd1		fxsub1
-		  fx+			fx-
+		  fxquotient			fxremainder
+		  fxmodulo			fxsign
+
+		  fxadd1			fxsub1
+		  fx+				fx-
 		  fx*
-		  fx+/carry		fx*/carry
+		  fx+/carry			fx*/carry
 		  fx-/carry
-		  fxdiv			fxmod
-		  fxdiv0		fxmod0
-		  fxdiv-and-mod		fxdiv0-and-mod0
+		  fxdiv				fxmod
+		  fxdiv0			fxmod0
+		  fxdiv-and-mod			fxdiv0-and-mod0
 		  fxabs
 
-		  fxlogor		fxlogand
-		  fxlogxor		fxlognot
-		  fxsll			fxsra
+		  fxlogor			fxlogand
+		  fxlogxor			fxlognot
+		  fxsll				fxsra
 
-		  fx=			fx=?
-		  fx!=			fx!=?
-		  fx<			fx<?
-		  fx<=			fx<=?
-		  fx>			fx>?
-		  fx>=			fx>=?
-		  fxmin			fxmax
+		  fx=				fx=?
+		  fx!=				fx!=?
+		  fx<				fx<?
+		  fx<=				fx<=?
+		  fx>				fx>?
+		  fx>=				fx>=?
+		  fxmin				fxmax
 
-		  fxior			fxand
-		  fxxor			fxnot
+		  fxior				fxand
+		  fxxor				fxnot
 		  fxif
 
-		  fxarithmetic-shift-left
-		  fxarithmetic-shift-right
+		  fxarithmetic-shift-left	fxarithmetic-shift-right
 		  fxarithmetic-shift
 
-		  fixnum->char	char->fixnum
+		  fixnum->char			char->fixnum
 		  fixnum->string
 		  fixnum-in-character-range?)
     (prefix (only (vicare)
@@ -235,6 +239,24 @@
 (define-fx-operation/one fxnonnegative?	$fxnonnegative?)
 (define-fx-operation/one fxeven?	$fxeven?)
 (define-fx-operation/one fxodd?		$fxodd?)
+
+;;; --------------------------------------------------------------------
+
+(define (positive-fixnum? obj)
+  (and (fixnum?      obj)
+       ($fxpositive? obj)))
+
+(define (negative-fixnum? obj)
+  (and (fixnum?      obj)
+       ($fxnegative? obj)))
+
+(define (non-negative-fixnum? obj)
+  (and (fixnum?         obj)
+       ($fxnonnegative? obj)))
+
+(define (non-positive-fixnum? obj)
+  (and (fixnum?         obj)
+       ($fxnonpositive? obj)))
 
 
 ;;;; bitwise logic operations

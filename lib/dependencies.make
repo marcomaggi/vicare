@@ -3,8 +3,8 @@
 # Automatically built.
 
 EXTRA_DIST +=  \
-	lib/vicare/platform/configuration.sls.in \
 	lib/nausicaa/uri/pathnames.sls.in \
+	lib/vicare/platform/configuration.sls.in \
 	lib/vicare/platform/constants.sls.in \
 	lib/vicare/platform/errno.sls.in \
 	lib/vicare/platform/words.sls.in
@@ -3411,6 +3411,73 @@ dist_lib_srfi__3a112_environment_inquiry_sls_DATA = lib/srfi/%3a112/environment-
 endif
 EXTRA_DIST += lib/srfi/%3a112/environment-inquiry.sls
 CLEANFILES += lib/srfi/%3a112/environment-inquiry.fasl
+endif
+
+lib/srfi/%3a113.fasl: \
+		lib/srfi/%3a113.sls \
+		lib/srfi/%3a113/sets-and-bags.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a113_fasldir = $(bundledlibsdir)/srfi
+lib_srfi__3a113_slsdir  = $(bundledlibsdir)/srfi
+nodist_lib_srfi__3a113_fasl_DATA = lib/srfi/%3a113.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a113_sls_DATA = lib/srfi/%3a113.sls
+endif
+EXTRA_DIST += lib/srfi/%3a113.sls
+CLEANFILES += lib/srfi/%3a113.fasl
+endif
+
+lib/srfi/%3a113/sets-and-bags.fasl: \
+		lib/srfi/%3a113/sets-and-bags.sls \
+		lib/srfi/%3a114.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a113_sets_and_bags_fasldir = $(bundledlibsdir)/srfi/%3a113
+lib_srfi__3a113_sets_and_bags_slsdir  = $(bundledlibsdir)/srfi/%3a113
+nodist_lib_srfi__3a113_sets_and_bags_fasl_DATA = lib/srfi/%3a113/sets-and-bags.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a113_sets_and_bags_sls_DATA = lib/srfi/%3a113/sets-and-bags.sls
+endif
+EXTRA_DIST += lib/srfi/%3a113/sets-and-bags.sls
+CLEANFILES += lib/srfi/%3a113/sets-and-bags.fasl
+endif
+
+lib/srfi/%3a114.fasl: \
+		lib/srfi/%3a114.sls \
+		lib/srfi/%3a114/comparators.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a114_fasldir = $(bundledlibsdir)/srfi
+lib_srfi__3a114_slsdir  = $(bundledlibsdir)/srfi
+nodist_lib_srfi__3a114_fasl_DATA = lib/srfi/%3a114.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a114_sls_DATA = lib/srfi/%3a114.sls
+endif
+EXTRA_DIST += lib/srfi/%3a114.sls
+CLEANFILES += lib/srfi/%3a114.fasl
+endif
+
+lib/srfi/%3a114/comparators.fasl: \
+		lib/srfi/%3a114/comparators.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a114_comparators_fasldir = $(bundledlibsdir)/srfi/%3a114
+lib_srfi__3a114_comparators_slsdir  = $(bundledlibsdir)/srfi/%3a114
+nodist_lib_srfi__3a114_comparators_fasl_DATA = lib/srfi/%3a114/comparators.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a114_comparators_sls_DATA = lib/srfi/%3a114/comparators.sls
+endif
+EXTRA_DIST += lib/srfi/%3a114/comparators.sls
+CLEANFILES += lib/srfi/%3a114/comparators.fasl
 endif
 
 lib/srfi/%3a106.fasl: \

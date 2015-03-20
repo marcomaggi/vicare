@@ -1,5 +1,5 @@
 ;;;
-;;;Copyright (c) 2008-2010 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2010, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2008 Derick Eddington
 ;;;
 ;;;Taylor Campbell wrote this code; he places it in the public domain.
@@ -255,36 +255,6 @@
     ((_ 'or ?state ?len-bool)
      (or  ?state ?len-bool))))
 
-(define-syntax do*
-  ;;Like DO,  but binds  the iteration variables  like LET*  rather than
-  ;;like LET.   Notice the "quoting"  of the ellipsis in  the LET-SYNTAX
-  ;;expressions.
-  (syntax-rules ()
-    ((_ ((?var ?init ?step ...) ...)
-	(?test ?expr ...)
-	?form ...)
-     (let-syntax ((the-expr (syntax-rules ()
-			      ((_)
-			       (values))
-			      ((_ ?-expr0 ?-expr (... ...))
-			       (begin ?-expr0 ?-expr (... ...)))))
-		  (the-step (syntax-rules ()
-			      ((_ ?-var)
-			       ?-var)
-			      ((_ ?-var ?-step)
-			       ?-step)
-			      ((_ ?-var ?-step0 ?-step (... ...))
-			       (syntax-violation 'do*
-						 "invalid step specification"
-						 '(?-step0 ?-step (... ...)))))))
-       (let* ((?var ?init) ...)
-	 (let loop ((?var ?var) ...)
-	   (if ?test
-	       (the-expr ?expr ...)
-	     (begin
-	       ?form ...
-	       (loop (the-step ?var ?step ...) ...)))))))))
-
 
 ;;;; constructors
 
@@ -342,7 +312,7 @@
   (or (= start past)
       (let loop ((i start))
 	(let ((c (vector-ref vec i))
-	      (i1 (+ i 1)))
+	      (i1 (+ 1 i)))
 	  (if (= i1 past)
 	      (pred c)
 	    (and (pred c) (loop i1)))))))
@@ -352,7 +322,7 @@
 	 #f)
 	(else (let loop ((i start))
 		(let ((c (vector-ref vec i))
-		      (i1 (+ i 1)))
+		      (i1 (+ 1 i)))
 		  (if (= i1 past)
 		      (pred c)
 		    (or (pred c) (loop i1))))))))
@@ -570,13 +540,13 @@
   (let loop ((i start))
     (when (< i past)
       (proc (vector-ref vec i))
-      (loop (+ i 1)))))
+      (loop (+ 1 i)))))
 
 (define (%subvector-for-each/with-index proc vec start past)
   (let loop ((i start))
     (when (< i past)
       (proc i (vector-ref vec i))
-      (loop (+ i 1)))))
+      (loop (+ 1 i)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -584,7 +554,7 @@
   (let loop ((i start))
     (when (< i past)
       (proc i)
-      (loop (+ i 1)))))
+      (loop (+ 1 i)))))
 
 
 ;;;; mapping macros
@@ -692,7 +662,7 @@
 
 ;;;; folding functions, equal length of list arguments
 
-;;*NOTE* aboud LEFT and RIGHT: It would  be a mess to merge the left and
+;;*NOTE* about LEFT and RIGHT: It would  be a mess to merge the left and
 ;;right folds, because of the way the index "i" needs to be computed and
 ;;tested.  It is possible, but at  what confusion cost in the code?  Too
 ;;much, IMO (Marco Maggi, Thu Jul 9, 2009).
@@ -701,42 +671,48 @@
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i 0 (+ 1 i))
-	  (state knil (combine state (vector-ref vec i))))
+	  (state knil)
+	  (i 0 (+ 1 i)))
 	((%test state (= i len))
-	 state)))
+	 state)
+      (set! state (combine state (vector-ref vec i)))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (assert-vectors-of-equal-length proc-name vectors)
       (do* ((len (vector-length vec0))
-	    (i 0 (+ 1 i))
-	    (state knil (apply combine (%state+elements i state vectors))))
+	    (state knil)
+	    (i 0 (+ 1 i)))
 	  ((%test state (= i len))
-	   state))))))
+	   state)
+	(set! state (apply combine (%state+elements i state vectors))))))))
 
 (define %vector-fold-right
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i (- len 1) (- i 1))
-	  (state knil (combine (vector-ref vec i) state)))
+	  (state knil)
+	  (i (- len 1) (sub1 i)))
 	((%test state (= i -1))
-	 state)))
+	 state)
+      (set! state (combine (vector-ref vec i) state))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (assert-vectors-of-equal-length proc-name vectors)
       (do* ((len (vector-length vec0))
-	    (i (- len 1) (- i 1))
-	    (state knil (apply combine (%elements+state i state vectors))))
+	    (state knil)
+	    (i (- len 1) (sub1 i)))
 	  ((%test state (= i -1))
-	   state))))))
+	   state)
+	(set! state (apply combine (%elements+state i state vectors))))))))
 
 ;;; --------------------------------------------------------------------
 
-(define (vector-fold-left combine knil vec0 . vectors)
-  (apply %vector-fold-left 'vector-fold-left
-	 (lambda (state len-bool) len-bool) ;test function
-	 combine knil vec0 vectors))
+;;Starting with (vicare (0 4)) this is exported by (vicare).
+;;
+;; (define (vector-fold-left combine knil vec0 . vectors)
+;;   (apply %vector-fold-left 'vector-fold-left
+;; 	 (lambda (state len-bool) len-bool) ;test function
+;; 	 combine knil vec0 vectors))
 
 (define (vector-and-fold-left combine knil vec0 . vectors)
   (apply %vector-fold-left 'vector-and-fold-left
@@ -750,10 +726,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (vector-fold-right combine knil vec0 . vectors)
-  (apply %vector-fold-right 'vector-fold-right
-	 (lambda (state len-bool) len-bool) ;test function
-	 combine knil vec0 vectors))
+;;Starting with (vicare (0 4)) this is exported by (vicare).
+;;
+;; (define (vector-fold-right combine knil vec0 . vectors)
+;;   (apply %vector-fold-right 'vector-fold-right
+;; 	 (lambda (state len-bool) len-bool) ;test function
+;; 	 combine knil vec0 vectors))
 
 (define (vector-and-fold-right combine knil vec0 . vectors)
   (apply %vector-fold-right 'vector-and-fold-right
@@ -777,33 +755,37 @@
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i 0 (+ 1 i))
-	  (state knil (combine state (vector-ref vec i))))
+	  (state knil)
+	  (i 0 (+ 1 i)))
 	((%test state (= i len))
-	 state)))
+	 state)
+      (set! state (combine state (vector-ref vec i)))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (do* ((len (vectors-list-min-length vectors))
-	    (i 0 (+ 1 i))
-	    (state knil (apply combine (%state+elements i state vectors))))
+	    (state knil)
+	    (i 0 (+ 1 i)))
 	  ((%test state (= i len))
-	   state))))))
+	   state)
+	(set! state (apply combine (%state+elements i state vectors))))))))
 
 (define %vector-fold-right*
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i (- len 1) (- i 1))
-	  (state knil (combine (vector-ref vec i) state)))
+	  (state knil)
+	  (i (- len 1) (sub1 i)))
 	((%test state (= i -1))
-	 state)))
+	 state)
+      (set! state (combine (vector-ref vec i) state))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (do* ((len (vectors-list-min-length vectors))
-	    (i (- len 1) (- i 1))
-	    (state knil (apply combine (%elements+state i state vectors))))
+	    (state knil)
+	    (i (- len 1) (sub1 i)))
 	  ((%test state (= i -1))
-	   state))))))
+	   state)
+	(set! state (apply combine (%elements+state i state vectors))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -851,35 +833,39 @@
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i 0 (+ 1 i))
-	  (state knil (combine i state (vector-ref vec i))))
+	  (state knil)
+	  (i 0 (+ 1 i)))
 	((%test state (= i len))
-	 state)))
+	 state)
+      (set! state (combine i state (vector-ref vec i)))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (assert-vectors-of-equal-length proc-name vectors)
       (do* ((len (vector-length vec0))
-	    (i 0 (+ 1 i))
-	    (state knil (apply combine (%index+state+elements i state vectors))))
+	    (state knil)
+	    (i 0 (+ 1 i)))
 	  ((%test state (= i len))
-	   state))))))
+	   state)
+	(set! state (apply combine (%index+state+elements i state vectors))))))))
 
 (define %vector-fold-right/with-index
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i (- len 1) (- i 1))
-	  (state knil (combine i (vector-ref vec i) state)))
+	  (state knil)
+	  (i (- len 1) (sub1 i)))
 	((%test state (= i -1))
-	 state)))
+	 state)
+      (set! state (combine i (vector-ref vec i) state))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (assert-vectors-of-equal-length proc-name vectors)
       (do* ((len (vector-length vec0))
-	    (i (- len 1) (- i 1))
-	    (state knil (apply combine (%index+elements+state i state vectors))))
+	    (state knil)
+	    (i (- len 1) (sub1 i)))
 	  ((%test state (= i -1))
-	   state))))))
+	   state)
+	(set! state (apply combine (%index+elements+state i state vectors))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -927,33 +913,37 @@
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i 0 (+ 1 i))
-	  (state knil (combine i state (vector-ref vec i))))
+	  (state knil)
+	  (i 0 (+ 1 i)))
 	((%test state (= i len))
-	 state)))
+	 state)
+      (set! state (combine i state (vector-ref vec i)))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (do* ((len (vectors-list-min-length vectors))
-	    (i 0 (+ 1 i))
-	    (state knil (apply combine (%index+state+elements i state vectors))))
+	    (state knil)
+	    (i 0 (+ 1 i)))
 	  ((%test state (= i len))
-	   state))))))
+	   state)
+	(set! state (apply combine (%index+state+elements i state vectors))))))))
 
 (define %vector-fold-right*/with-index
   (case-lambda
    ((proc-name %test combine knil vec)
     (do* ((len (vector-length vec))
-	  (i (- len 1) (- i 1))
-	  (state knil (combine i (vector-ref vec i) state)))
+	  (state knil)
+	  (i (- len 1) (sub1 i)))
 	((%test state (= i -1))
-	 state)))
+	 state)
+      (set! state (combine i (vector-ref vec i) state))))
    ((proc-name %test combine knil vec0 . vectors)
     (let ((vectors (cons vec0 vectors)))
       (do* ((len (vectors-list-min-length vectors))
-	    (i (- len 1) (- i 1))
-	    (state knil (apply combine (%index+elements+state i state vectors))))
+	    (state knil)
+	    (i (- len 1) (sub1 i)))
 	  ((%test state (= i -1))
-	   state))))))
+	   state)
+	(set! state (apply combine (%index+elements+state i state vectors))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -996,14 +986,14 @@
   (let loop ((v knil)
 	     (i start))
     (if (< i past)
-	(loop (combine v (vector-ref vec i)) (+ i 1))
+	(loop (combine v (vector-ref vec i)) (+ 1 i))
       v)))
 
 (define (%subvector-fold-right combine knil vec start past)
   (let loop ((v knil)
 	     (i (- past 1)))
     (if (>= i start)
-	(loop (combine (vector-ref vec i) v) (- i 1))
+	(loop (combine (vector-ref vec i) v) (sub1 i))
       v)))
 
 
@@ -1023,12 +1013,13 @@
 						   (list vec0 V ...))
 		   (do* ((len (vector-length vec0))
 			 (i 0 (+ 1 i))
-			 (state knil (combine state
-					      (vector-ref vec0 i)
-					      (vector-ref V i)
-					      ...)))
+			 (state knil))
 		       ((%test/stx ?which state (= i len))
-			state)))))))))
+			state)
+		     (set! state (combine state
+					  (vector-ref vec0 i)
+					  (vector-ref V i)
+					  ...))))))))))
 
 (define-syntax vector-fold-left/stx
   (syntax-rules ()
@@ -1063,13 +1054,14 @@
 		   (assert-vectors-of-equal-length (quote ?syntax-name)
 						   (list vec0 V ...))
 		   (do* ((len (vector-length vec0))
-			 (i (- len 1) (- i 1))
-			 (state knil (combine (vector-ref vec0 i)
-					      (vector-ref V i)
-					      ...
-					      state)))
+			 (i (- len 1) (sub1 i))
+			 (state knil))
 		       ((%test/stx ?which state (= i -1))
-			state)))))))))
+			state)
+		     (set! state (combine (vector-ref vec0 i)
+					  (vector-ref V i)
+					  ...
+					  state))))))))))
 
 (define-syntax vector-fold-right/stx
   (syntax-rules ()
@@ -1103,12 +1095,13 @@
 		       ...)
 		   (do* ((len (vectors-list-min-length (list vec0 V ...)))
 			 (i 0 (+ 1 i))
-			 (state knil (combine state
-					      (vector-ref vec0 i)
-					      (vector-ref V i)
-					      ...)))
+			 (state knil))
 		       ((%test/stx ?which state (= i len))
-			state)))))))))
+			state)
+		     (set! state (combine state
+					  (vector-ref vec0 i)
+					  (vector-ref V i)
+					  ...))))))))))
 
 (define-syntax vector-fold-left*/stx
   (syntax-rules ()
@@ -1138,13 +1131,14 @@
 		       (V    ?vec)
 		       ...)
 		   (do* ((len (vectors-list-min-length (list vec0 V ...)))
-			 (i (- len 1) (- i 1))
-			 (state knil (combine (vector-ref vec0 i)
-					      (vector-ref V i)
-					      ...
-					      state)))
+			 (i (- len 1) (sub1 i))
+			 (state knil))
 		       ((%test/stx ?which state (= i -1))
-			state)))))))))
+			state)
+		     (set! state (combine (vector-ref vec0 i)
+					  (vector-ref V i)
+					  ...
+					  state))))))))))
 
 (define-syntax vector-fold-right*/stx
   (syntax-rules ()
@@ -1196,7 +1190,7 @@
 	      (if (< i chunk-len)
 		  (begin
 		    (vector-set! chunk i c)
-		    (loop2 (+ i 1) seed))
+		    (loop2 (+ 1 i) seed))
 
 		(let* ((nvalues2    (+ chunk-len nvalues))
 		       (chunk-len2  (min 4096 nvalues2))
@@ -1242,7 +1236,7 @@
 	    (let ((c     (seed->value seed))
 		  (seed  (make-seed seed)))
 	      (if (> i 0)
-		  (let ((i (- i 1)))
+		  (let ((i (sub1 i)))
 		    (vector-set! chunk i c)
 		    (loop2 i seed))
 
@@ -1286,8 +1280,8 @@
 
 (define (%vector-reverse-copy vec start past)
   (let ((result (make-vector (- past start))))
-    (do ((i (- past 1) (- i 1))
-	 (j 0 (+ j 1)))
+    (do ((i (- past 1) (sub1 i))
+	 (j 0 (+ 1 j)))
 	((< i start)
 	 result)
       (vector-set! result j (vector-ref vec i)))))
@@ -1361,7 +1355,7 @@
 		(not (item= (vector-ref vec1 i)
 				(vector-ref vec2 j))))
 	    (- i start1)
-	  (lp (+ i 1) (+ j 1)))))))
+	  (lp (+ 1 i) (+ 1 j)))))))
 
 (define (%vector-suffix-length item= vec1 start1 past1 vec2 start2 past2)
   ;;Find the length  of the common suffix.  It is  not required that the
@@ -1375,7 +1369,7 @@
 		(not (item= (vector-ref vec1 i)
 				(vector-ref vec2 j))))
 	    (- (- past1 i) 1)
-	  (lp (- i 1) (- j 1)))))))
+	  (lp (sub1 i) (sub1 j)))))))
 
 (define (%vector-prefix? item= vec1 start1 past1 vec2 start2 past2)
   (let ((len1 (- past1 start1)))
@@ -1398,28 +1392,28 @@
   (let loop ((i start))
     (and (< i past)
 	 (if (pred? (vector-ref vec i)) i
-	   (loop (+ i 1))))))
+	   (loop (+ 1 i))))))
 
 (define (%vector-index-right pred? vec start past)
   (let loop ((i (- past 1)))
     (and (>= i start)
 	 (if (pred? (vector-ref vec i)) i
-	   (loop (- i 1))))))
+	   (loop (sub1 i))))))
 
 (define (%vector-skip pred? vec start past)
   (let loop ((i start))
     (and (< i past)
-	 (if (pred? (vector-ref vec i)) (loop (+ i 1))
+	 (if (pred? (vector-ref vec i)) (loop (+ 1 i))
 	   i))))
 
 (define (%vector-skip-right pred? vec start past)
   (let loop ((i (- past 1)))
     (and (>= i start)
-	 (if (pred? (vector-ref vec i)) (loop (- i 1))
+	 (if (pred? (vector-ref vec i)) (loop (sub1 i))
 	   i))))
 
 (define (%vector-count pred? vec start past)
-  (do ((i start (+ i 1))
+  (do ((i start (+ 1 i))
        (count 0 (if (pred? (vector-ref vec i)) (+ count 1) count)))
       ((>= i past) count)))
 
@@ -1445,7 +1439,7 @@
 	 (ans-len (%subvector-fold-left (lambda (i c)
 					  (if (pred? c) i
 					    (begin (vector-set! temp i c)
-						   (+ i 1))))
+						   (+ 1 i))))
 					0 vec start past)))
     (if (= ans-len slen) temp (%vector-copy temp 0 ans-len))))
 
@@ -1455,7 +1449,7 @@
 	 (ans-len (%subvector-fold-left (lambda (i c)
 					  (if (pred? c)
 					      (begin (vector-set! temp i c)
-						     (+ i 1))
+						     (+ 1 i))
 					    i))
 					0 vec start past)))
     (if (= ans-len slen) temp (%vector-copy temp 0 ans-len))))
@@ -1518,8 +1512,8 @@
 (define (%vector-reverse str start past)
   (let* ((len (- past start))
 	 (result (make-vector len)))
-    (do ((i start (+ i 1))
-	 (j (- len 1) (- j 1)))
+    (do ((i start (+ 1 i))
+	 (j (- len 1) (sub1 j)))
 	((< j 0))
       (vector-set! result j (vector-ref str i)))
     result))
@@ -1534,8 +1528,8 @@
     result))
 
 (define (%vector-reverse! str start past)
-  (do ((i (- past 1) (- i 1))
-       (j start (+ j 1)))
+  (do ((i (- past 1) (sub1 i))
+       (j start (+ 1 j)))
       ((<= i j))
     (let ((ci (vector-ref str i)))
       (vector-set! str i (vector-ref str j))
@@ -1545,7 +1539,7 @@
 ;;;; mutating
 
 (define (%vector-fill*! fill-value str start past)
-  (do ((i (- past 1) (- i 1)))
+  (do ((i (- past 1) (sub1 i)))
       ((< i start))
     (vector-set! str i fill-value)))
 
@@ -1568,12 +1562,12 @@
       "not enough room in destination vector"))
   ;;We must handle correctly copying over the same vector.
   (if (> src-start dst-start)
-      (do ((i src-start (+ i 1))
-	   (j dst-start (+ j 1)))
+      (do ((i src-start (+ 1 i))
+	   (j dst-start (+ 1 j)))
 	  ((>= i src-past))
 	(vector-set! dst-vec j (vector-ref src-vec i)))
-    (do ((i (- src-past 1) (- i 1))
-	 (j (+ -1 dst-start (- src-past src-start)) (- j 1)))
+    (do ((i (- src-past 1) (sub1 i))
+	 (j (+ -1 dst-start (- src-past src-start)) (sub1 j)))
 	((< i src-start))
       (vector-set! dst-vec j (vector-ref src-vec i)))))
 
@@ -1590,8 +1584,8 @@
       (when (< src-start src-past)
 	(let* ((buffer (%vector-reverse-copy src-vec src-start src-past)))
 	  (%vector-copy! dst-vec dst-start buffer 0 (vector-length buffer))))
-    (do ((i (- src-past 1) (- i 1))
-	 (j dst-start (+ j 1)))
+    (do ((i (- src-past 1) (sub1 i))
+	 (j dst-start (+ 1 j)))
 	((< i src-start))
       (vector-set! dst-vec j (vector-ref src-vec i)))))
 
@@ -1601,7 +1595,7 @@
 (define (reverse-list->vector vlist)
   (let* ((len (length vlist))
 	 (s (make-vector len)))
-    (do ((i (- len 1) (- i 1))
+    (do ((i (- len 1) (sub1 i))
 	 (vlist vlist (cdr vlist)))
 	((not (pair? vlist)))
       (vector-set! s i (car vlist)))
@@ -1615,7 +1609,7 @@
       (loop (+ 1 i) (cons (vector-ref vec i) result)))))
 
 (define (%vector->list* str start past)
-  (do ((i (- past 1) (- i 1))
+  (do ((i (- past 1) (sub1 i))
        (result '() (cons (vector-ref str i) result)))
       ((< i start) result)))
 

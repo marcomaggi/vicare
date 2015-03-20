@@ -1,0 +1,2729 @@
+@node srfi comparators
+@section @ansrfi{114} comparators
+
+
+@cindex @ansrfi{114} comparators
+@cindex @library{srfi :114}, library
+@cindex @library{srfi :114 comparators}, library
+@cindex Library @library{srfi :114}
+@cindex Library @library{srfi :114 comparators}
+
+
+The libraries @library{srfi :114} and @library{srfi :114 comparators}
+are derived from the reference implementation of @ansrfi{114} by John
+Cowan; see:
+
+@center @url{http://srfi.schemers.org/srfi-114/srfi-114.html}
+
+@noindent
+for more details.  @library{srfi :114} and @library{srfi :114
+comparators} export the same bindings.
+
+@menu
+* srfi comparators abstract::     Abstract.
+* srfi comparators rationale::    Rationale.
+* srfi comparators definitions::  Definitions.
+* srfi comparators limitations::  Limitations.
+* srfi comparators predicates::   Predicates.
+* srfi comparators standard::     Standard comparators.
+* srfi comparators default::      The default comparator.
+* srfi comparators constructors:: Comparator constructors.
+* srfi comparators wrapped::      Wrapped equality predicates.
+* srfi comparators accessors::    Accessors.
+* srfi comparators applicators::  Primitive applicators.
+* srfi comparators compar proc::  Comparison procedure constructors.
+* srfi comparators syntax::       Comparison syntax.
+* srfi comparators compar pred::  Comparison predicates and predicate
+                                  constructors.
+* srfi comparators ternary::      Interval comparison predicates.
+* srfi comparators minmax::       Min/max comparison procedures.
+* srfi comparators misc::         Miscellaneous procedures.
+* srfi comparators conditions::   Condition object types.
+* srfi comparators copyright::    Copyright.
+@end menu
+
+@c page
+@node srfi comparators abstract
+@subsection Abstract
+
+
+This proposal is a rewrite of @ansrfi{67}, Compare Procedures, extending
+it from procedures that represent a total order to procedure bundles
+that represent one or more of a total order, an equality predicate, and
+a hash function.  By packaging these procedures together, along with a
+type test predicate, they can be treated as a single item for use in the
+implementation of data structures.
+
+@c page
+@node srfi comparators rationale
+@subsection Rationale
+
+
+The four procedures above have complex dependencies on one another, and
+it is inconvenient to have to pass them all to other procedures that
+might or might not make use of all of them.  For example, a set
+implementation naturally requires only an equality predicate, but if it
+is implemented using a hash table, an appropriate hash function is also
+required if the implementation does not provide one; alternatively, if
+it is implemented using a tree, a comparison procedure is required.  By
+passing a comparator rather than a bare equality predicate, the set
+implementation can make use of whatever procedures are available and
+useful to it.
+
+This @srfi{} could not have been written without the work of Sebastian
+Egner and Jens Axel Soegaard on @ansrfi{67}; much of the credit for this
+@srfi{} is due to them, but none of the blame.  In addition, many of the
+design decisions of this @srfi{} are copied from @ansrfi{67}'s design
+rationale.
+
+@c page
+@node srfi comparators definitions
+@subsection Definitions
+
+
+A comparator is an object of a disjoint type.  It is a bundle of
+procedures that are useful for comparing two objects either for equality
+or for ordering.  There are four procedures in the bundle:
+
+@table @strong
+@item Type test predicate
+It returns @true{} if its argument has the correct type to be passed as
+an argument to the other three procedures, and @false{} otherwise.
+
+@item Equality predicate
+It returns @true{} if the two objects are the same in the sense of the
+comparator, and @false{} otherwise.  It is the programmer's
+responsibility to ensure that it is reflexive, symmetric, transitive,
+and can handle any arguments that satisfy the type test predicate.
+
+@item Comparison procedure
+It returns @code{-1}, @code{0}, or @code{+1} if the first object
+precedes the second, is equal to the second, or follows the second,
+respectively, in a total order defined by the comparator.  It is the
+programmer's responsibility to ensure that it is reflexive, weakly
+antisymmetric, transitive, can handle any arguments that satisfy the
+type test predicate, and returns @code{0} if and only if the equality
+predicate returns @true{}.  Comparison procedures are compatible with
+the @emph{compare procedures} of @ansrfi{67}; see @ansrfi{67} for the
+rationale for adopting this return convention.
+
+@item Hash function
+It takes one argument, and returns an exact non--negative integer.  It
+is the programmer's responsibility to ensure that it can handle any
+argument that satisfies the type test predicate, and that it returns the
+same value on two objects if the equality predicate says they are the
+same (but not necessarily the converse).
+@end table
+
+It is also the programmer's responsibility to ensure that all four
+procedures provide the same result whenever they are applied to the same
+object(s) (in the sense of @func{eqv?}), unless the object(s) have been
+mutated since the last invocation.  In particular, they must not depend
+in any way on memory addresses in implementations where the garbage
+collector can move objects in memory.
+
+@c page
+@node srfi comparators limitations
+@subsection Limitations
+
+
+The comparator objects defined in this @srfi{} are not applicable to
+circular structures or to NaNs or objects containing them.  Attempts to
+pass any such objects to any procedure defined here, or to any procedure
+that is part of a comparator defined here, is an error except as
+otherwise noted.
+
+@c page
+@node srfi comparators predicates
+@subsection Predicates
+
+
+@defun comparator? @var{obj}
+Return @true{} if @var{obj} is a comparator; return @false{} otherwise.
+@end defun
+
+
+@defun comparator-comparison-procedure? @var{comparator}
+Return @true{} if @var{comparator} has a supplied comparison procedure;
+return @false{} otherwise.
+@end defun
+
+
+@defun comparator-hash-function? @var{comparator}
+Return @true{} if @var{comparator} has a supplied hash function; return
+@false{} otherwise.
+@end defun
+
+@c page
+@node srfi comparators standard
+@subsection Standard comparators
+
+
+The following comparators are analogous to the standard compare
+procedures of @ansrfi{67}.  They all provide appropriate hash functions
+as well.
+
+
+@defvr Constant boolean-comparator
+Compare booleans using the total order @code{#f < #t}.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C boolean-comparator)
+
+(comparator-test-type C #f)     @result{} #t
+(comparator-test-type C #t)     @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C #f)    @result{} #t
+(comparator-check-type C #t)    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C #f #f)     @result{} #t
+(comparator-equal? C #f #t)     @result{} #f
+
+(comparator-compare C #f #f)    @result{} 0
+(comparator-compare C #f #t)    @result{} -1
+(comparator-compare C #t #f)    @result{} +1
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant char-comparator
+Compare characters using the total order implied by @func{char<?}.  On
+@rnrs{6} and @rnrs{7} systems, this is Unicode code point order.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C char-comparator)
+
+(comparator-test-type C #\a)    @result{} #t
+(comparator-test-type C #\b)    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C #\a)   @result{} #t
+(comparator-check-type C #\b)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C #\a #\a)   @result{} #t
+(comparator-equal? C #\a #\b)   @result{} #f
+
+(comparator-compare C #\a #\a)  @result{} 0
+(comparator-compare C #\a #\b)  @result{} -1
+(comparator-compare C #\b #\a)  @result{} +1
+
+(comparator-hash C #\a)         @result{} 97
+(comparator-hash C #\b)         @result{} 98
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant char-ci-comparator
+Compare characters using the total order implied by @func{char-ci<?}.
+On @rnrs{6} and @rnrs{7} systems, this is Unicode code point order after
+the characters have been folded to lower case.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C char-ci-comparator)
+
+(comparator-test-type C #\A)    @result{} #t
+(comparator-test-type C #\b)    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C #\A)   @result{} #t
+(comparator-check-type C #\b)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C #\A #\A)   @result{} #t
+(comparator-equal? C #\A #\b)   @result{} #f
+
+(comparator-compare C #\A #\A)  @result{} 0
+(comparator-compare C #\A #\b)  @result{} -1
+(comparator-compare C #\b #\A)  @result{} +1
+
+(comparator-hash C #\A)         @result{} 97
+(comparator-hash C #\b)         @result{} 98
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant string-comparator
+Compare strings using the total order implied by @func{string<?}.  Note
+that this order is implementation--dependent.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C string-comparator)
+
+(comparator-test-type C "a")    @result{} #t
+(comparator-test-type C "b")    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C "a")   @result{} #t
+(comparator-check-type C "b")   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C "a" "a")   @result{} #t
+(comparator-equal? C "a" "b")   @result{} #f
+
+(comparator-compare C "a" "a")  @result{} 0
+(comparator-compare C "a" "b")  @result{} -1
+(comparator-compare C "b" "a")  @result{} +1
+
+(comparator-hash C "a")         @result{} 1798195
+(comparator-hash C "b")         @result{} 36222037
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant string-ci-comparator
+Compare strings using the total order implied by @func{string-ci<?}.
+Note that this order is implementation--dependent.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C string-ci-comparator)
+
+(comparator-test-type C "A")    @result{} #t
+(comparator-test-type C "b")    @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C "A")   @result{} #t
+(comparator-check-type C "b")   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C "A" "A")   @result{} #t
+(comparator-equal? C "A" "b")   @result{} #f
+
+(comparator-compare C "A" "A")  @result{} 0
+(comparator-compare C "A" "b")  @result{} -1
+(comparator-compare C "b" "A")  @result{} +1
+
+(comparator-hash C "A")         @result{} 1798195
+(comparator-hash C "b")         @result{} 36222037
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant symbol-comparator
+Compare symbols using the total order implied by applying
+@func{symbol->string} to the symbols and comparing them using the total
+order implied by @func{string<?}.  It is not a requirement that the hash
+function of @func{symbol-comparator} be consistent with the hash
+function of @func{string-comparator}.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C string-comparator)
+
+(comparator-test-type C 'a)     @result{} #t
+(comparator-test-type C 'b)     @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C 'a)    @result{} #t
+(comparator-check-type C 'b)    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C 'a 'a)     @result{} #t
+(comparator-equal? C 'a 'b)     @result{} #f
+
+(comparator-compare C 'a 'a)    @result{} 0
+(comparator-compare C 'a 'b)    @result{} -1
+(comparator-compare C 'b 'a)    @result{} +1
+
+(comparator-hash C 'a)          @result{} 1798195
+(comparator-hash C 'b)          @result{} 36222037
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant fixnum-comparator
+@defvrx Constant exact-integer-comparator
+@defvrx Constant integer-comparator
+@defvrx Constant rational-comparator
+@defvrx Constant real-comparator
+@defvrx Constant complex-comparator
+@defvrx Constant number-comparator
+These comparators compare fixnums, exact integers, integers, rational
+numbers, real numbers, complex numbers, and any numbers using the total
+order implied by @func{<}.
+
+They must be compatible with the @rnrs{5} numerical tower in the
+following sense: if @code{S} is a subtype of the numerical type @code{T}
+and the two objects are members of @code{S}, then the equality predicate
+and comparison procedures (but not necessarily the hash function) of
+@code{S-comparator} and @code{T-comparator} compute the same results on
+those objects.
+
+Since non--real numbers cannot be compared with @func{<}, the following
+least--surprising ordering is defined: if the real parts are @func{<} or
+@func{>}, so are the numbers; otherwise, the numbers are ordered by
+their imaginary parts.  This can still produce surprising results if one
+real part is exact and the other is inexact.
+
+@code{fixnum-comparator} is a @value{PRJNAME} extension.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C exact-integer-comparator)
+
+(comparator-test-type C 1)      @result{} #t
+(comparator-test-type C 2)      @result{} #t
+(comparator-test-type C 123)    @result{} #f
+
+(comparator-check-type C 1)     @result{} #t
+(comparator-check-type C 2)     @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C 1 1)       @result{} #t
+(comparator-equal? C 1 2)       @result{} #f
+
+(comparator-compare C 1 1)      @result{} 0
+(comparator-compare C 1 2)      @result{} -1
+(comparator-compare C 2 1)      @result{} +1
+
+(comparator-hash C 1)           @result{} 1
+(comparator-hash C 2)           @result{} 2
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant pair-comparator
+Compare pairs using @func{default-comparator}  on their cars.
+If the cars are not equal, that value is returned.  If they are equal,
+@func{default-comparator} is used on their cdrs and that value is
+returned.
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C pair-comparator)
+
+(comparator-test-type C '(1 . 2))       @result{} #t
+(comparator-test-type C '(3 . 4))       @result{} #t
+(comparator-test-type C 123)            @result{} #f
+
+(comparator-check-type C '(1 . 2))      @result{} #t
+(comparator-check-type C '(3 . 4))      @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C '(1 . 2) '(1 . 2)) @result{} #t
+(comparator-equal? C '(1 . 2) '(3 . 4)) @result{} #f
+
+(comparator-compare C '(1 . 2) '(1 . 2)) @result{} 0
+(comparator-compare C '(1 . 2) '(3 . 4)) @result{} -1
+(comparator-compare C '(3 . 4) '(1 . 2)) @result{} +1
+
+(comparator-hash C '(1 . 2))            @result{} 3
+(comparator-hash C '(3 . 4))            @result{} 7
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant list-comparator
+Compare lists lexicographically, as follows:
+
+@itemize
+@item
+The empty list compares equal to itself.
+
+@item
+The empty list compares less than any non--empty list.
+
+@item
+Two non--empty lists are compared by comparing their cars.  If the cars
+are not equal when compared using @func{default-comparator} ,
+then the result is the result of that comparison.  Otherwise, the cdrs
+are compared using @func{list-comparator}.
+@end itemize
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C list-comparator)
+
+(comparator-test-type C '(1 2))         @result{} #t
+(comparator-test-type C '(3 4))         @result{} #t
+(comparator-test-type C 123)            @result{} #f
+
+(comparator-check-type C '(1 2))        @result{} #t
+(comparator-check-type C '(3 4))        @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C '(1 2) '(1 2))     @result{} #t
+(comparator-equal? C '(1 2) '(3 4))     @result{} #f
+
+(comparator-compare C '(1 2) '(1 2))    @result{} 0
+(comparator-compare C '(1 2) '(3 4))    @result{} -1
+(comparator-compare C '(3 4) '(1 2))    @result{} +1
+
+(comparator-hash C '(1 2))              @result{} 617064
+(comparator-hash C '(3 4))              @result{} 617132
+@end lisp
+@end defvr
+
+@c ------------------------------------------------------------------------
+
+@defvr Constant vector-comparator
+@defvrx Constant bytevector-comparator
+Compare vectors and bytevectors by comparing their lengths.  A shorter
+argument is always less than a longer one.  If the lengths are equal,
+then each element is compared in turn using @func{default-comparator}
+until a pair of unequal elements is found, in which case the result is
+the result of that comparison.  If all elements are equal, the arguments
+are equal.
+
+@quotation
+@strong{NOTE} @value{PRJNAME} supports bytevectors, other Scheme
+implementations might not support them.  If the implementation does not
+support bytevectors, @func{bytevector-comparator} has a type testing
+procedure that always returns @false{}.
+@end quotation
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define C vector-comparator)
+
+(comparator-test-type C '#(1 2))        @result{} #t
+(comparator-test-type C '#(3 4))        @result{} #t
+(comparator-test-type C 123)            @result{} #f
+
+(comparator-check-type C '#(1 2))       @result{} #t
+(comparator-check-type C '#(3 4))       @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)   #t)
+    (else                       #f)))
+@result{} #t
+
+(comparator-equal? C '#(1 2) '#(1 2))   @result{} #t
+(comparator-equal? C '#(1 2) '#(3 4))   @result{} #f
+
+(comparator-compare C '#(1 2) '#(1 2))  @result{} 0
+(comparator-compare C '#(1 2) '#(3 4))  @result{} -1
+(comparator-compare C '#(3 4) '#(1 2))  @result{} +1
+
+(comparator-hash C '#(1 2))             @result{} 177575
+(comparator-hash C '#(3 4))             @result{} 177577
+@end lisp
+@end defvr
+
+@c page
+@node srfi comparators default
+@subsection The default comparator
+
+
+@defun default-comparator
+This is a comparator that accepts any two Scheme values (with the
+exceptions listed in the ``Limitations'' section, @ref{srfi comparators
+limitations}) and orders them in some implementation--defined way,
+subject to the following conditions:
+
+@itemize
+@item
+The following ordering between types must hold:
+
+@enumerate
+@item
+the empty list precedes pairs, with proper lists preceding improper
+lists,
+
+@item
+which precede booleans,
+
+@item
+which precede characters,
+
+@item
+which precede strings,
+
+@item
+which precede symbols,
+
+@item
+which precede numbers,
+
+@item
+which precede vectors,
+
+@item
+which precede bytevectors,
+
+@item
+which precede the @code{(void)} object (this is a @value{PRJNAME}
+extension),
+
+@item
+which precede the @code{(eof-object)} object (this is a @value{PRJNAME}
+extension),
+
+@item
+which precede the @code{(would-block-object)} object (this is a
+@value{PRJNAME} extension),
+
+@item
+which precede the @value{PRJNAME} struct objects and @rnrs{6} record
+objects (this is a @value{PRJNAME} extension),
+
+@item
+which precede all other objects.
+@end enumerate
+
+@noindent
+this ordering is compatible with @ansrfi{67}.
+
+@item
+When applied to pairs, booleans, characters, strings, symbols, numbers,
+vectors, or bytevectors, its behaviour must be the same as
+@func{pair-comparator}, @func{boolean-comparator},
+@func{character-comparator}, @func{string-comparator},
+@func{symbol-comparator}, @func{number-comparator},
+@func{vector-comparator}, and @func{bytevector-comparator} respectively.
+The same should be true when applied to an object or objects of a type
+for which a standard comparator is defined elsewhere.
+
+@item
+Given disjoint types @code{A} and @code{B}, one of three conditions must
+hold:
+
+@itemize -
+@item
+All objects of type @code{A} compare less than all objects of type
+@code{B}.
+
+@item
+All objects of type @code{A} compare greater than all objects of type
+@code{B}.
+
+@item
+All objects of either type @code{A} or type @code{B} compare equal to
+each other.  This is not permitted for any of the standard types
+mentioned above.
+@end itemize
+@end itemize
+@end defun
+
+
+@defun comparator-register-default! @var{comparator}
+Register a new @var{comparator} for use by the default comparator.
+
+Extent the default comparator to understand objects that satisfy the
+type test of the registered @var{comparator}, and to apply it when
+comparing two objects that satisfy that type test.  Such objects are
+said to belong to the ``registered types'', whereas all the objects
+other than the ones supported by default belong to the ``unregistered
+types''.  When dealing with objects of unregistered types, the default
+comparator makes them compare equal and hash to @code{0}, a safe but
+fairly useless default.
+
+The effect of comparing two objects of different registered types is
+only partly predictable, as it depends on the order in which
+@func{comparator-register-default!} is called.  However, the normal
+guarantees of the default comparator still apply.  In addition, every
+object of a registered type compares less than all objects of
+unregistered types.
+@end defun
+
+
+Here is an example of registering comparators for @value{PRJNAME}
+structs and @rnrs{6} records (notice that @func{struct-hash} and
+@func{record-hash} are very poor hash functions):
+
+@lisp
+(import (vicare)
+  (srfi :114))
+
+(define C default-comparator)
+
+(define-struct a-struct
+  (a b c))
+
+(define-record-type a-record
+  (fields a b c))
+
+(define (a-struct-comparison a b)
+  (cond ((struct=? a b)
+         0)
+        ((< (a-struct-a a)
+            (a-struct-a b))
+         -1)
+        (else +1)))
+
+(define (a-record-comparison a b)
+  (cond ((record=? a b)
+         0)
+        ((< (a-record-a a)
+            (a-record-a b))
+         -1)
+        (else +1)))
+
+(define a-struct-comparator
+  (make-comparator a-struct?
+                   struct=?
+                   a-struct-comparison
+                   struct-hash))
+
+(define a-record-comparator
+  (make-comparator a-record?
+                   record=?
+                   a-record-comparison
+                   record-hash))
+
+(comparator-register-default! a-struct-comparator)
+(comparator-register-default! a-record-comparator)
+
+;;; type test
+
+(comparator-test-type C (make-a-struct 1 2 3))  @result{} #t
+(comparator-test-type C (make-a-record 1 2 3))  @result{} #t
+
+;;; type check
+
+(comparator-check-type C (make-a-struct 1 2 3)) @result{} #t
+(comparator-check-type C (make-a-record 1 2 3)) @result{} #t
+
+;;; equality
+
+(let ((P (make-a-struct 1 2 3))
+      (Q (make-a-struct 1 2 3))
+      (R (make-a-struct 1 2 9)))
+  (comparator-equal? C P P)     @result{} #t
+  (comparator-equal? C P Q)     @result{} #t
+  (comparator-equal? C P R))    @result{} #f
+
+(let ((P (make-a-record 1 2 3))
+      (Q (make-a-record 1 2 3))
+      (R (make-a-record 1 2 9)))
+  (comparator-equal? C P P)     @result{} #t
+  (comparator-equal? C P Q)     @result{} #t
+  (comparator-equal? C P R))    @result{} #f
+
+;;; comparison
+
+(let ((P (make-a-struct +1 2 3))
+      (Q (make-a-struct -1 2 3))
+      (R (make-a-struct +2 2 9)))
+  (comparator-compare C P P)   @result{} 0
+  (comparator-compare C P Q)   @result{} +1
+  (comparator-compare C P R))  @result{} -1
+
+(let ((P (make-a-record +1 2 3))
+      (Q (make-a-record -1 2 3))
+      (R (make-a-record +2 2 9)))
+  (comparator-compare C P P)   @result{} 0
+  (comparator-compare C P Q)   @result{} +1
+  (comparator-compare C P R))  @result{} -1
+
+;;; hash function
+
+(comparator-hash C (make-a-struct 1 2 3))
+@result{} 1
+
+(comparator-hash C (make-a-record 1 2 3))
+@result{} 1
+@end lisp
+
+@c page
+@node srfi comparators constructors
+@subsection Comparator constructors
+
+
+Most of the following comparator constructors are close analogues of the
+standard compare procedures of @ansrfi{67}.  They all provide
+appropriate hash functions as well.  Note that comparator constructors
+are allowed to cache their results: they need not return a newly
+allocated object, since comparators are purely functional.
+
+@menu
+* srfi comparators constructors general::  General comparators.
+* srfi comparators constructors real::     Inexact real comparators.
+* srfi comparators constructors pair::     Pair comparators.
+* srfi comparators constructors list::     List comparators.
+* srfi comparators constructors vector::   Vector comparators.
+* srfi comparators constructors bytevec::  Bytevector comparators.
+* srfi comparators constructors select::   Selecting comparators.
+* srfi comparators constructors refine::   Refining comparators.
+* srfi comparators constructors reverse::  Reverse comparators.
+* srfi comparators constructors debug::    Debug comparators.
+@end menu
+
+@c page
+@node srfi comparators constructors general
+@subsubsection General comparators
+
+
+@defun make-comparator @var{type-test} @var{equality} @var{compare} @var{hash}
+Return a comparator which bundles the @var{type-test}, @var{equality},
+@var{compare}, and @var{hash} procedures provided.  As a convenience,
+the following additional values are accepted:
+
+@itemize
+@item
+If @var{type-test} is @true{}: a @var{type-test} procedure that accepts
+any arguments is provided.
+
+@item
+If @var{equality} is @true{}: an @var{equality} predicate is provided
+that returns @true{} if and only if @var{compare} returns @code{0}.
+
+@item
+If @var{compare} or @var{hash} is @false{}, a procedure is provided that
+signals an error on application.  The predicates
+@func{comparator-comparison-procedure?} and/or
+@func{comparator-hash-function?}, respectively, will return @false{} in
+these cases.
+@end itemize
+@end defun
+
+@c page
+@node srfi comparators constructors real
+@subsubsection Inexact real comparators
+
+
+@defun make-inexact-real-comparator @var{epsilon} @var{rounding} @var{nan-handling}
+Return a comparator that compares inexact real numbers including NaNs as
+follows: if after rounding to the nearest @var{epsilon} they are the
+same, they compare equal; otherwise they compare as specified by
+@func{<}.
+
+The direction of rounding is specified by the @var{rounding} argument,
+which is either a procedure accepting two arguments (the number and
+@var{epsilon}), or else one of the symbols @code{floor}, @code{ceiling},
+@code{truncate}, or @code{round}.
+
+The value of @var{epsilon} is used by the generated comparator only if
+@var{rounding} is a procedure: it is ignored if @var{rounding} is a
+symbol.  When @var{epsilon} is not @false{} and @var{rounding} is a
+symbol: this function raises a @strong{continuable} exception with
+compound condition object of types:
+@condition{inexact-real-comparator-with-unused-epsilon},
+@condition{who}, @condition{message}, @condition{irritants}.
+
+The argument @var{nan-handling} specifies how to compare NaN arguments
+to non--NaN arguments.
+
+@itemize
+@item
+If it is a procedure: the procedure is invoked on the other argument if
+either argument is a NaN.
+
+@item
+If it is the symbol @code{min}: NaN values precede all other values.
+
+@item
+If it is the symbol @code{max}: NaN values follow all other values.
+
+@item
+If it is the symbol @code{error}: an error is signalled if a NaN value
+is compared by raising a non--continuable exception with compound
+condition object of types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{comparator-nan-comparison-error}.
+
+@item
+If both arguments are NaNs: they always compare as equal.
+@end itemize
+@end defun
+
+
+Here is an example of comparator using the @code{round} rounding mode
+and the @code{error} policy to compare @code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-inexact-real-comparator #f 'round 'error))
+
+;; type test
+(comparator-test-type C 1.2)    @result{} #t
+(comparator-test-type C "ciao") @result{} #f
+(comparator-test-type C 1+2i)   @result{} #f
+
+;; type check
+(comparator-check-type C 1.2)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else #f)))
+@result{} #t
+
+;; comparison
+(comparator-compare C 1.2 1.2)          @result{}  0
+(comparator-compare C 1.0 2.0)          @result{} -1
+(comparator-compare C 2.0 1.0)          @result{} +1
+
+(comparator-compare C +inf.0 +inf.0)    @result{} 0
+(comparator-compare C -inf.0 -inf.0)    @result{} 0
+(comparator-compare C -inf.0 +inf.0)    @result{} -1
+(comparator-compare C +inf.0 -inf.0)    @result{} +1
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(try
+    (comparator-compare C +nan.0 1.0)
+  (catch E
+    ((&comparator-nan-comparison-error)
+     #t)
+    (else E)))
+@result{} #t
+(try
+    (comparator-compare C 1.0 +nan.0)
+  (catch E
+    ((&comparator-nan-comparison-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison with rounding
+(comparator-compare C 1.04 1.0) @result{} 0
+(comparator-compare C 0.96 1.0) @result{} 0
+
+;; hash
+(= (comparator-hash C 1.0) (comparator-hash C 1.04))      @result{} #t
+(= (comparator-hash C 1.0) (comparator-hash C 0.96))      @result{} #t
+(non-negative-exact-integer? (comparator-hash C +inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C -inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C +nan.0))  @result{} #t
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+Here is an example of comparator that rounds to the nearest @math{0.1}
+and uses the @code{min} policy to compare @code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define* (round-to-epsilon @{R flonum?@} @{epsilon flonum?@})
+  (infix round(R / epsilon) * epsilon))
+
+(define-constant C
+  (make-inexact-real-comparator 0.1 round-to-epsilon 'min))
+
+;; rounding to
+(round-to-epsilon 1.0   0.1)    @result{} 1.0
+(round-to-epsilon 1.05  0.1)    @result{} 1.0
+(round-to-epsilon 0.951 0.1)    @result{} 1.0
+(round-to-epsilon 0.949 0.1)    @result{} 0.9
+
+;; type test
+(comparator-test-type C 1.2)    @result{} #t
+(comparator-test-type C +inf.0) @result{} #t
+(comparator-test-type C -inf.0) @result{} #t
+(comparator-test-type C -nan.0) @result{} #t
+(comparator-test-type C "ciao") @result{} #f
+(comparator-test-type C 1+2i)   @result{} #f
+
+;; type check
+(comparator-check-type C 1.2)   @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C 1.2 1.2)          @result{} 0
+(comparator-compare C 1.0 2.0)          @result{} -1
+(comparator-compare C 2.0 1.0)          @result{} +1
+
+(comparator-compare C +inf.0 +inf.0)    @result{} 0
+(comparator-compare C -inf.0 -inf.0)    @result{} 0
+(comparator-compare C -inf.0 +inf.0)    @result{} -1
+(comparator-compare C +inf.0 -inf.0)    @result{} +1
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(comparator-compare C +nan.0 1.0)       @result{} -1
+(comparator-compare C 1.0 +nan.0)       @result{} +1
+
+;; comparison with rounding
+(comparator-compare C 1.04  1.0)        @result{} 0
+(comparator-compare C 0.96  1.0)        @result{} 0
+(comparator-compare C 0.951 1.0)        @result{} 0
+(comparator-compare C 0.949 1.0)        @result{} -1
+(comparator-compare C 0.949 0.9)        @result{} 0
+
+;; hash
+(= (comparator-hash C 1.0)  (comparator-hash C 1.04))     @result{} #t
+(= (comparator-hash C 1.0)  (comparator-hash C 0.96))     @result{} #t
+(= (comparator-hash C 1.0)  (comparator-hash C 0.951))    @result{} #t
+(= (comparator-hash C 1.04) (comparator-hash C 0.951))    @result{} #t
+(non-negative-exact-integer? (comparator-hash C +inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C -inf.0))  @result{} #t
+(non-negative-exact-integer? (comparator-hash C +nan.0))  @result{} #t
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+Here is an example of comparator using the @code{max} policy to compare
+@code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-inexact-real-comparator #f 'round 'max))
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(comparator-compare C +nan.0 1.0)       @result{} +1
+(comparator-compare C 1.0 +nan.0)       @result{} -1
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+Here is an example of comparator using a procedure as policy to compare
+@code{+nan.0}:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define (nan-comparison other-R)
+  ;;NaN is equal to any number.
+  ;;
+  0)
+
+(define-constant C
+  (make-inexact-real-comparator #f 'round nan-comparison))
+
+(comparator-compare C +nan.0 +nan.0)    @result{} 0
+(comparator-compare C +nan.0 +1.0)      @result{} 0
+(comparator-compare C +1.0   +nan.0)    @result{} 0
+@end lisp
+
+@c page
+@node srfi comparators constructors pair
+@subsubsection Pair comparators
+
+
+@defun make-pair-comparator @var{car-comparator} @var{cdr-comparator}
+Return a comparator that compares pairs first on their cars using
+@var{car-comparator}.  If the cars are equal: it compares the cdrs using
+@var{cdr-comparator}.  The hash function makes use of both the car and
+the cdr.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-pair-comparator exact-integer-comparator
+                        real-comparator))
+
+;; type test
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '())            @result{} #f
+(comparator-test-type C '(1 . 2+1i))    @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '(1 . 2.0))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(1 . 2.0) '(1 . 2.0))   @result{} 0
+(comparator-compare C '(1 . 2.0) '(1 . 3))     @result{} -1
+(comparator-compare C '(1 . 3)   '(1 . 2.0))   @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+   (comparator-hash C '(1 . 2.0)))      @result{} #t
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun make-car-comparator @var{comparator}
+Return a comparator that compares pairs on their cars alone using
+@var{comparator}.  The hash function makes use of the car only.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-car-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '(1 . 2+1i))    @result{} #t
+(comparator-test-type C '(2.0 . 1))     @result{} #f
+(comparator-test-type C '())            @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '(1 . 2.0))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(1 . 2) '(1 . 3))        @result{} 0
+(comparator-compare C '(1 . 2) '(2 . 3))        @result{} -1
+(comparator-compare C '(2 . 2) '(1 . 2))        @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+   (comparator-hash C '(1 . 2.0)))      @result{} #t
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun make-cdr-comparator @var{comparator}
+Return a comparator that compares pairs on their cdrs alone using
+@var{comparator}.  The hash function makes use of the cdr only.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-cdr-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '(2.0 . 1))     @result{} #t
+(comparator-test-type C '(2.0 . 1))     @result{} #t
+(comparator-test-type C '(2+1i . 1))    @result{} #t
+(comparator-test-type C '(1 . 2.0))     @result{} #t
+(comparator-test-type C '())            @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '(2.0 . 1))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(2 . 1) '(3 . 1))        @result{} 0
+(comparator-compare C '(2 . 1) '(3 . 2))        @result{} -1
+(comparator-compare C '(2 . 2) '(2 . 1))        @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+   (comparator-hash C '(2.0 . 1)))      @result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators constructors list
+@subsubsection List comparators
+
+
+@defun make-list-comparator @var{element-comparator}
+Build and return a comparator object behaving like
+@func{list-comparator} but using @var{element-comparator} rather than
+@func{default-comparator}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-list-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '())            @result{} #t
+(comparator-test-type C '(1 2))         @result{} #t
+(comparator-test-type C '(1 2 . 3))     @result{} #f
+(comparator-test-type C '(1 2.0))       @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+(comparator-test-type C '(1+2i))        @result{} #f
+
+;; type check
+(comparator-check-type C '(1 2))        @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '(1 2) '(1 2))   @result{} 0)
+(comparator-compare C '(1 2) '(1 3))   @result{} -1
+(comparator-compare C '(1 3) '(1 2))   @result{} +1
+
+(comparator-compare C '()    '())      @result{} 0
+(comparator-compare C '()    '(1 2))   @result{} -1
+(comparator-compare C '(1 2) '())      @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+  (comparator-hash C '()))    @result{} #t
+(non-negative-exact-integer?
+  (comparator-hash C '(1 2))) @result{} #t
+@end lisp
+@end defun
+
+
+@defun make-listwise-comparator @var{type-test} @var{element-comparator} @var{empty?} @var{head} @var{tail}
+Return a comparator which compares two objects that satisfy
+@var{type-test} as if they were lists, using the @var{empty?} procedure
+to determine if an object is empty, and the @var{head} and @var{tail}
+procedures to access particular elements.
+@end defun
+
+
+@defun make-improper-list-comparator @var{element-comparator}
+Return a comparator that compares arbitrary objects as follows: the
+empty list precedes all pairs, which precede all other objects.  Pairs
+are compared as if with:
+
+@lisp
+(make-pair-comparator @var{element-comparator} @var{element-comparator})
+@end lisp
+
+All other objects are compared using @var{element-comparator}.
+
+Notice that @var{element-comparator} is used only to compare elements
+and compute the hash value elements; it is @strong{not} used to validate
+the type of elements.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(module (C)
+
+  (define element-compare
+    (let ((compare (comparator-comparison-procedure
+                      exact-integer-comparator)))
+      (lambda (A B)
+        (if (pair? A)
+            (begin
+              (assert (pair? B))
+              (let ((rv (compare (car A) (car B))))
+                (if (zero? rv)
+                    (comparator-compare C (cdr A) (cdr B))
+                  rv)))
+          (compare A B)))))
+
+  (define-constant E
+    (make-comparator #t #t
+       element-compare
+       (comparator-hash-function default-comparator)))
+
+  (define-constant C
+    (make-improper-list-comparator E))
+
+  #| end of module |# )
+
+;; type test
+(comparator-test-type C '())            @result{} #t
+(comparator-test-type C '(1 2))         @result{} #t
+(comparator-test-type C '(1 2 . 3))     @result{} #t
+(comparator-test-type C '(1 2.0))       @result{} #t
+(comparator-test-type C "ciao")         @result{} #t
+(comparator-test-type C '(1+2i))        @result{} #t
+
+;; type check
+(comparator-check-type C '(1 2))        @result{} #t
+(comparator-check-type C (void))        @result{} #t
+
+;; comparison
+(comparator-compare C '(1 2) '(1 2))    @result{} 0
+(comparator-compare C '(1 2) '(1 3))    @result{} -1
+(comparator-compare C '(1 3) '(1 2))    @result{} +1
+
+(comparator-compare C '()    '())       @result{} 0
+(comparator-compare C '()    '(1 2))    @result{} -1
+(comparator-compare C '(1 2) '())       @result{} +1
+
+(comparator-compare C '(1 2 . 3) '(1 2 . 3))    @result{} 0
+(comparator-compare C '(1 2 . 3) '(1 2 . 4))    @result{} -1
+(comparator-compare C '(1 2 . 4) '(1 2 . 3))    @result{} +1
+
+(comparator-compare C '(1 2 9 . 3) '(1 2 9 . 3)) @result{} 0
+(comparator-compare C '(1 2 9 . 3) '(1 2 9 . 4)) @result{} -1
+(comparator-compare C '(1 2 9 . 4) '(1 2 9 . 3)) @result{} +1
+
+;; hash
+(non-negative-exact-integer? (comparator-hash C '()))        @result{} #t
+(non-negative-exact-integer? (comparator-hash C '(1 2)))     @result{} #t
+(non-negative-exact-integer? (comparator-hash C '(1 2 . 3))) @result{} #t
+(non-negative-exact-integer? (comparator-hash C "ciao"))     @result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators constructors vector
+@subsubsection Vector comparators
+
+
+@defun make-vector-comparator @var{element-comparator}
+Build and return a comparator object behaving like
+@func{vector-comparator} but using @var{element-comparator} rather than
+@func{default-comparator}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-vector-comparator exact-integer-comparator))
+
+;; type test
+(comparator-test-type C '#())           @result{} #t
+(comparator-test-type C '#(1 2))        @result{} #t
+(comparator-test-type C '#(1 2.0))      @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+(comparator-test-type C '#(1+2i)        @result{} #f
+
+;; type check
+(comparator-check-type C '#(1 2))       @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '#(1 2) '#(1 2))  @result{} 0
+(comparator-compare C '#(1 2) '#(1 3))  @result{} -1
+(comparator-compare C '#(1 3) '#(1 2))  @result{} +1
+
+(comparator-compare C '#()    '#())     @result{} 0
+(comparator-compare C '#()    '#(1 2))  @result{} -1
+(comparator-compare C '#(1 2) '#())     @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+  (comparator-hash C '#())))    @result{} #t
+(non-negative-exact-integer?
+  (comparator-hash C '#(1 2)))  @result{} #t
+@end lisp
+@end defun
+
+
+@defun make-vectorwise-comparator @var{type-test} @var{element-comparator} @var{length} @var{ref}
+Return a comparator which compares two objects that satisfy
+@var{type-test} as if they were vectors, using the @var{length}
+procedure to determine the length of the object, and the @var{ref}
+procedure to access a particular element.
+@end defun
+
+@c page
+@node srfi comparators constructors bytevec
+@subsubsection Bytevector comparators
+
+
+@defun make-bytevector-comparator @var{element-comparator}
+Build and return a comparator object behaving like
+@func{bytevector-comparator} but using @var{element-comparator} rather
+than @func{default-comparator}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant E
+  (make-comparator (lambda (element)
+                     (or (= 1 element)
+                         (zero? element)))
+                   fx=?
+                   (lambda (a b)
+                     (cond ((fx=? a b)   0)
+                           ((fx<? a b)  -1)
+                           (else        +1)))
+                   fixnum-hash))
+
+(define-constant C
+  (make-bytevector-comparator E))
+
+;; type test
+(comparator-test-type C '#vu8())        @result{} #t
+(comparator-test-type C '#vu8(1 0))     @result{} #t
+(comparator-test-type C '#vu8(1 2))     @result{} #f
+(comparator-test-type C "ciao")         @result{} #f
+
+;; type check
+(comparator-check-type C '#vu8(1 0))    @result{} #t
+(try
+    (comparator-check-type C (void))
+  (catch E
+    ((&comparator-type-error)
+     #t)
+    (else E)))
+@result{} #t
+
+;; comparison
+(comparator-compare C '#vu8(1 0) '#vu8(1 0))   @result{} 0
+(comparator-compare C '#vu8(1 0) '#vu8(1 1))   @result{} -1
+(comparator-compare C '#vu8(1 1) '#vu8(1 0))   @result{} +1
+
+(comparator-compare C '#vu8()    '#vu8())      @result{} 0
+(comparator-compare C '#vu8()    '#vu8(1 0))   @result{} -1
+(comparator-compare C '#vu8(1 0) '#vu8())      @result{} +1
+
+;; hash
+(non-negative-exact-integer?
+  (comparator-hash C '#vu8()))    @result{} #t
+(non-negative-exact-integer?
+  (comparator-hash C '#vu8(1 0))) @result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators constructors select
+@subsubsection Selecting comparators
+
+
+@defun make-selecting-comparator @varo{comparator} @var{comparator} @dots{}
+Return a comparator whose procedures make use of the @var{comparator}
+arguments as follows:
+
+@itemize
+@item
+The type test predicate passes its argument to the type test predicates
+of the @var{comparator}s in the sequence given.  If any of them returns
+@true{}: so does the type test predicate; otherwise, it returns
+@false{}.
+
+@item
+The arguments of the equality, compare, and hash functions are passed to
+the type test predicate of each comparator in sequence.  The first
+comparator whose type test predicate is satisfied on all the arguments
+is used when comparing those arguments.  All other comparators are
+ignored.  If no type test predicate is satisfied, an error is signalled.
+@end itemize
+
+This procedure is analogous to the expression types
+@func{select-compare} and @func{cond-compare} from @ansrfi{67}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-selecting-comparator boolean-comparator
+                             exact-integer-comparator
+                             string-comparator))
+
+;; type test
+(let ((test-type (comparator-type-test-procedure C)))
+  (test-type #t)        @result{} #t
+  (test-type #f)        @result{} #t
+  (test-type 1)         @result{} #t
+  (test-type "ciao")    @result{} #t
+  (test-type '(1 . 2))  @result{} #f
+  (test-type 2.0)       @result{} #f
+  (test-type 1+2i))     @result{} #f
+
+;; type check
+(let ((check-type (comparator-check-type-procedure C)))
+  (check-type #t)       @result{} #t
+  (check-type #f)       @result{} #t
+  (check-type 1)        @result{} #t
+  (check-type "ciao")   @result{} #t
+  (try
+      (comparator-check-type C (void))
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; comparison
+(let ((compare (comparator-comparison-procedure C)))
+  (compare #t #t)       @result{} 0
+  (compare #t #f)       @result{} +1
+  (compare #f #t)       @result{} -1
+
+  (compare 1 1)         @result{} 0
+  (compare 2 1)         @result{} +1
+  (compare 1 2)         @result{} -1
+
+  (compare "1" "1")     @result{} 0
+  (compare "2" "1")     @result{} +1
+  (compare "1" "2")     @result{} -1
+
+  (try
+      (compare #t 1)
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E)))        @result{} #t
+
+  (try
+      (compare #t "ciao")
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E)))        @result{} #t
+
+  (try
+      (compare 1 "ciao")
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; hash
+(let ((hash (comparator-hash-function C)))
+  (non-negative-exact-integer? (hash #t))       @result{} #t
+  (non-negative-exact-integer? (hash #f))       @result{} #t
+  (non-negative-exact-integer? (hash 1))        @result{} #t
+  (non-negative-exact-integer? (hash "ciao"))   @result{} #t
+
+  (try
+      (hash 1+2i)
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators constructors refine
+@subsubsection Refining comparators
+
+
+@defun make-refining-comparator @varo{comparator} @var{comparator} @dots{}
+Return a comparator that makes use of the @var{comparator}s in the same
+way as @func{make-selecting-comparator}, except that its procedures can
+look past the first comparator whose type test predicate is satisfied.
+
+If the comparison procedure of the first comparator returns zero: the
+next comparator whose type test predicate is satisfied is tried, then
+the next and so on, until one returns a non--zero value.  If there are
+no more such comparators, then the comparison procedure returns zero.
+
+The equality predicate is defined in the same way.  If no type test
+predicate is satisfied, an error is signalled.
+
+The hash function of the result returns a value computed using the last
+comparator in the given list for which the type test procedure returns
+true.
+
+@quotation
+According to the @srfi{}: the hash function of the result returns a
+value which depends, in an implementation--defined way, on the results
+of invoking the hash functions of the comparators whose type test
+predicates are satisfied on its argument.  In particular, it may depend
+solely on the first or last such hash function.  If no type test
+predicate is satisfied, an error is signalled.
+@end quotation
+
+This procedure is analogous to the expression type @func{refine-compare}
+from @ansrfi{67}.
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define* (round-to-epsilon @{R flonum?@} @{epsilon flonum?@})
+  (infix round(R / epsilon) * epsilon))
+
+(define-constant C
+  (make-refining-comparator
+   (make-inexact-real-comparator 0.1   round-to-epsilon 'error)
+   (make-inexact-real-comparator 0.01  round-to-epsilon 'error)
+   (make-inexact-real-comparator 0.001 round-to-epsilon 'error)))
+
+;; type test
+(let ((test-type (comparator-type-test-procedure C)))
+  (test-type 1.1)       @result{} #t
+  (test-type 1)         @result{} #f
+  (test-type "ciao"))   @result{} #f
+
+;; type check
+(let ((check-type (comparator-check-type-procedure C)))
+  (check-type 1.1)      @result{} #t
+  (try
+      (comparator-check-type C 1)
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; comparison
+(let ((compare (comparator-comparison-procedure C)))
+  (compare 1. 1.)       @result{} 0
+  (compare 2. 1.)       @result{} +1
+  (compare 1. 2.)       @result{} -1
+
+  ;;Equal according to the first comparator,
+  ;;different according to the second.
+  (compare 1.00 1.05)   @result{} -1
+  (compare 1.05 1.00)   @result{} +1
+
+  ;;Equal according to the first and second
+  ;;comparators, different according to the
+  ;;third.
+  (compare 1.0   1.005) @result{} -1
+  (compare 1.005 1.0)   @result{} +1
+
+  ;;Equal according to the first, second and
+  ;;third comparators.
+  (compare 1.0 1.0005)  @result{} 0
+  (compare 1.0005 1.0)  @result{} 0
+
+  (try
+      (compare 1 "ciao")
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; hash
+(let ((hash (comparator-hash-function C)))
+  (non-negative-exact-integer? (hash 1.2))      @result{} #t
+
+  (try
+      (hash 1+2i)
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators constructors reverse
+@subsubsection Reverse comparators
+
+
+@defun make-reverse-comparator @var{comparator}
+Return a comparator that behaves like @var{comparator}, except that the
+compare procedure returns @code{+1}, @code{0}, and @code{-1} instead of
+@code{-1}, @code{0}, and @code{+1} respectively.  This allows ordering
+in reverse.
+@end defun
+
+
+Here a usage example:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(define-constant C
+  (make-reverse-comparator exact-integer-comparator))
+
+;; type test
+(let ((test-type (comparator-test-type-procedure C)))
+  (test-type 1)         @result{} #t
+  (test-type '())       @result{} #f
+  (test-type "ciao"))   @result{} #f
+
+;; type check
+(let ((check-type (comparator-check-type-procedure C)))
+  (check-type 1)        @result{} #t
+  (try
+      (check-type (void))
+    (catch E
+      ((&comparator-type-error)
+       #t)
+      (else E))))       @result{} #t
+
+;; comparison
+(let ((compare (comparator-comparison-procedure C)))
+  (compare 1 1)         @result{} 0
+  (compare 1 2)         @result{} +1
+  (compare 2 1)         @result{} -1)
+
+;; hash
+(let ((hash (comparator-hash-function C)))
+  (non-negative-exact-integer? (hash 1)))       @result{} #t
+@end lisp
+
+@c page
+@node srfi comparators constructors debug
+@subsubsection Debug comparators
+
+
+@defun make-debug-comparator @var{comparator}
+Return a comparator that behaves exactly like @var{comparator}, except
+that whenever any of its procedures are invoked, it verifies all the
+programmer responsibilities (except stability), and an error is
+signalled if any of them are violated.  Because it requires three
+arguments, transitivity is not tested on the first call to a debug
+comparator; it is tested on all future calls using an arbitrarily chosen
+argument from the previous invocation.  Note that this may cause
+unexpected storage leaks.
+@end defun
+
+@c page
+@node srfi comparators wrapped
+@subsection Wrapped equality predicates
+
+
+@defun eq-comparator
+@defunx eqv-comparator
+@defunx equal-comparator
+The equality predicates of these comparators are @func{eq?},
+@func{eqv?}, and @func{equal?} respectively.
+
+Comparison is @strong{not} supported by these comparators: when their
+comparison procedures are applied to any objects: an exception is raised
+with condition object of type
+@condition{unsupported-comparator-operation-error}.
+
+These comparators accept circular structures and @code{+nan.0} values.
+@end defun
+
+@c page
+@node srfi comparators accessors
+@subsection Accessors
+
+
+@defun comparator-type-test-procedure @var{comparator}
+@defunx comparator-test-type-procedure @var{comparator}
+Return the type test predicate of @var{comparator}.
+@end defun
+
+
+@defun comparator-check-type-procedure @var{comparator}
+@defunx comparator-type-check-procedure @var{comparator}
+Return the type check procedure of @var{comparator}.  The returned
+procedure can be called with one or two arguments:
+
+@itemize
+@item
+When called with one argument @var{obj}: it invokes the type test
+predicate of @var{comparator} on @var{obj} and returns @true{} if it
+returns @true{}; otherwise it signals an error.
+
+@item
+When called with two arguments @var{obj} and @var{who}: it invokes the
+type test predicate of @var{comparator} on @var{obj} and returns @true{}
+if it returns @true{}; otherwise it signals an error.  The optional
+argument @var{who} must be compatible with the argument of
+@func{make-who-condition} and it is used to raise a descriptive
+exception when @var{obj} does not match the comparator.
+@end itemize
+
+@quotation
+@strong{NOTE} This procedure is a @value{PRJNAME} extension.
+@end quotation
+@end defun
+
+
+@defun comparator-equality-predicate @var{comparator}
+Return the equality predicate of @var{comparator}.
+@end defun
+
+
+@defun comparator-comparison-procedure @var{comparator}
+Return the comparison procedure of @var{comparator}.
+@end defun
+
+
+@defun comparator-hash-function @var{comparator}
+Return the hash function of @var{comparator}.
+@end defun
+
+@c page
+@node srfi comparators applicators
+@subsection Primitive applicators
+
+
+@defun comparator-test-type @var{comparator} @var{obj}
+Invoke the type test predicate of @var{comparator} on @var{obj} and
+return what it returns.
+@end defun
+
+
+@defun comparator-check-type @var{comparator} @var{obj}
+@defunx comparator-check-type @var{comparator} @var{obj} @var{who}
+Invoke the type test predicate of @var{comparator} on @var{obj} and
+return @true{} if it returns @true{}; otherwise signal an error.
+
+As a @value{PRJNAME} extension: the optional argument @var{who} must be
+compatible with the argument of @func{make-who-condition} and it is used
+to raise a descriptive exception when @var{obj} does not match the
+comparator.
+@end defun
+
+
+@defun comparator-equal? @var{comparator} @vari{obj} @varii{obj}
+Invoke the equality predicate of @var{comparator} on @vari{obj} and
+@varii{obj} and return what it returns.
+@end defun
+
+
+@defun comparator-compare @var{comparator} @vari{obj} @varii{obj}
+Invoke the comparison procedure of @var{comparator} on @vari{obj} and
+@varii{obj} and return what it returns.
+@end defun
+
+
+@defun comparator-hash @var{comparator} @var{obj}
+Invoke the hash function of @var{comparator} on @var{obj} and return
+what it returns.
+@end defun
+
+@c page
+@node srfi comparators compar proc
+@subsection Comparison procedure constructors
+
+
+@defun make-comparison< @var{lt-pred}
+@defunx make-comparison> @var{gt-pred}
+@defunx make-comparison<= @var{le-pred}
+@defunx make-comparison>= @var{ge-pred}
+@defunx make-comparison=/< @var{eq-pred} @var{lt-pred}
+@defunx make-comparison=/> @var{eq-pred} @var{gt-pred}
+These procedures return a comparison procedure, given a less--than
+predicate, a greater--than predicate, a less--than--or--equal--to
+predicate, a greater--than--or--equal--to predicate, or the combination
+of an equality predicate and either a less--than or a greater--than
+predicate.
+
+They are the same as the corresponding @ansrfi{67} @func{compare-by}
+procedures.  Note that they do not accept comparand arguments.
+@end defun
+
+
+Usage examples:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(let ((compare (make-comparison< fx<?)))
+  (compare 1 1)        @result{} 0
+  (compare 1 2)        @result{} -1
+  (compare 2 1))       @result{} +1
+
+(let ((compare (make-comparison> fx>?)))
+  (compare 1 1)        @result{} 0
+  (compare 1 2)        @result{} -1
+  (compare 2 1))       @result{} +1
+
+(let ((compare (make-comparison<= fx<=?)))
+  (compare 1 1)        @result{} 0
+  (compare 1 2)        @result{} -1
+  (compare 2 1))       @result{} +1
+
+(let ((compare (make-comparison>= fx>=?)))
+  (compare 1 1)        @result{} 0
+  (compare 1 2)        @result{} -1
+  (compare 2 1))       @result{} +1
+
+(let ((compare (make-comparison=/< fx=? fx<?)))
+  (compare 1 1)        @result{} 0
+  (compare 1 2)        @result{} -1
+  (compare 2 1))       @result{} +1
+
+(let ((compare (make-comparison=/> fx=? fx>?)))
+  (compare 1 1)        @result{} 0
+  (compare 1 2)        @result{} -1
+  (compare 2 1))       @result{} +1
+@end lisp
+
+@c page
+@node srfi comparators syntax
+@subsection Comparison syntax
+
+
+The following expression types allow the convenient use of comparison
+procedures.  They come directly from @ansrfi{67}.
+
+
+@deffn Syntax if3 @meta{expr} @meta{less} @meta{equal} @meta{greater}
+The expression @meta{expr} is evaluated; it will typically, but not
+necessarily, be a call on a comparison procedure.
+
+@itemize
+@item
+If the result is @code{-1}: @meta{less} is evaluated and its values are
+returned.
+
+@item
+If the result is @code{0}: @meta{equal} is evaluated and its values
+are returned.
+
+@item
+If the result is @code{+1}: @meta{greater} is evaluated and its values
+are returned.
+
+@item
+Otherwise an error is signalled.
+@end itemize
+
+Usage examples:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(if3 (compare 1 1) 'less 'equal 'greater)       @result{} equal
+(if3 (compare 1 2) 'less 'equal 'greater)       @result{} less
+(if3 (compare 2 1) 'less 'equal 'greater)       @result{} greater
+@end lisp
+@end deffn
+
+
+@deffn Syntax if=? @meta{expr} @meta{consequent}
+@deffnx Syntax if=? @meta{expr} @meta{consequent} @meta{alternate}
+@deffnx Syntax if<? @meta{expr} @meta{consequent}
+@deffnx Syntax if<? @meta{expr} @meta{consequent} @meta{alternate}
+@deffnx Syntax if>? @meta{expr} @meta{consequent}
+@deffnx Syntax if>? @meta{expr} @meta{consequent} @meta{alternate}
+@deffnx Syntax if<=? @meta{expr} @meta{consequent}
+@deffnx Syntax if<=? @meta{expr} @meta{consequent} @meta{alternate}
+@deffnx Syntax if>=? @meta{expr} @meta{consequent}
+@deffnx Syntax if>=? @meta{expr} @meta{consequent} @meta{alternate}
+@deffnx Syntax if-not=? @meta{expr} @meta{consequent}
+@deffnx Syntax if-not=? @meta{expr} @meta{consequent} @meta{alternate}
+The expression @meta{expr} is evaluated; it will typically, but not
+necessarily, be a call on a comparison procedure.
+
+@itemize
+@item
+It is an error if the return value of @meta{expr} is not @code{-1},
+@code{0}, or @code{+1}.
+
+@item
+If the return value @strong{is} consistent with the specified relation:
+@meta{consequent} is evaluated and its values are returned.
+
+@item
+If the return value @strong{it not} consistent with the specified
+relation:
+
+@itemize -
+If @meta{alternate} is present: it is evaluated and its values are
+returned.
+
+@item
+If @meta{alternate} is absent: an unspecified value is returned.
+@end itemize
+@end itemize
+
+Usage examples:
+
+@lisp
+#!vicare
+(import (vicare) (srfi :114))
+
+(if=? (compare 1 1) #t #f)      @result{} #t
+(if=? (compare 1 2) #t #f)      @result{} #f
+(if=? (compare 2 1) #t #f)      @result{} #f
+
+(if=? (compare 1 1) #t)         @result{} #t
+(if=? (compare 1 2) #t)         @result{} #<void>
+(if=? (compare 2 1) #t)         @result{} #<void>
+
+;;;
+
+(if-not=? (compare 1 1) #f #t)  @result{} #t
+(if-not=? (compare 1 2) #f #t)  @result{} #f
+(if-not=? (compare 2 1) #f #t)  @result{} #f
+
+(if-not=? (compare 1 1) #t)     @result{} #<void>
+(if-not=? (compare 1 2) #t)     @result{} #t
+(if-not=? (compare 2 1) #t)     @result{} #t
+
+;;;
+
+(if<? (compare 1 1) #t #f)      @result{} #f
+(if<? (compare 1 2) #t #f)      @result{} #t
+(if<? (compare 2 1) #t #f)      @result{} #f
+
+(if<? (compare 1 1) #t)         @result{} #<void>
+(if<? (compare 1 2) #t)         @result{} #t
+(if<? (compare 2 1) #t)         @result{} #<void>
+
+;;;
+
+(if>? (compare 1 1) #t #f)      @result{} #f
+(if>? (compare 1 2) #t #f)      @result{} #f
+(if>? (compare 2 1) #t #f)      @result{} #t
+
+(if>? (compare 1 1) #t)         @result{} #<void>
+(if>? (compare 1 2) #t)         @result{} #<void>
+(if>? (compare 2 1) #t)         @result{} #t
+
+;;;
+
+(if<=? (compare 1 1) #t #f)     @result{} #t
+(if<=? (compare 1 2) #t #f)     @result{} #t
+(if<=? (compare 2 1) #t #f)     @result{} #f
+
+(if<=? (compare 1 1) #t)        @result{} #t
+(if<=? (compare 1 2) #t)        @result{} #t
+(if<=? (compare 2 1) #t)        @result{} #<void>
+
+;;;
+
+(if>=? (compare 1 1) #t #f)     @result{} #t
+(if>=? (compare 1 2) #t #f)     @result{} #f
+(if>=? (compare 2 1) #t #f)     @result{} #t
+
+(if>=? (compare 1 1) #t)        @result{} #t
+(if>=? (compare 1 2) #t)        @result{} #<void>
+(if>=? (compare 2 1) #t)        @result{} #t
+@end lisp
+@end deffn
+
+@c page
+@node srfi comparators compar pred
+@subsection Comparison predicates and predicate constructors
+
+
+@defun =? @var{comparator} @vari{obj} @varii{obj} @variii{obj} @dots{}
+@defunx <? @var{comparator} @vari{obj} @varii{obj} @variii{obj} @dots{}
+@defunx >? @var{comparator} @vari{obj} @varii{obj} @variii{obj} @dots{}
+@defunx <=? @var{comparator} @vari{obj} @varii{obj} @variii{obj} @dots{}
+@defunx >=? @var{comparator} @vari{obj} @varii{obj} @variii{obj} @dots{}
+These procedures are analogous to the number, character, and string
+comparison predicates of Scheme.  They allow the convenient use of
+comparators in situations where the expression types are not usable.
+They are also analogous to the similarly named procedures of
+@ansrfi{67}, but handle arbitrary numbers of arguments, which in
+@ansrfi{67} requires the use of the variants whose names begin with
+@code{chain}.
+
+These procedures apply the comparison procedure of @var{comparator} to
+the objects as follows: if the specified relation returns @true{} for
+all @varj{obj} and @vark{obj} where @math{1 <= j < k <= N} and @math{N}
+is the number of objects, then the procedures return @true{}; otherwise
+return @false{}.
+
+The order in which the values are compared is unspecified.  Because the
+relations are transitive, it suffices to compare each object with its
+successor.
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define-constant C fixnum-comparator)
+
+;;;
+
+(=? C 1 1)      @result{} #t
+(=? C 1 2)      @result{} #f
+(=? C 2 1)      @result{} #f
+
+(=? C 1 1 1)    @result{} #t
+(=? C 1 2 3)    @result{} #f
+(=? C 2 1 3)    @result{} #f
+(=? C 3 2 1)    @result{} #f
+(=? C 1 3 2)    @result{} #f
+
+;;;
+
+(<? C 1 1)      @result{} #f
+(<? C 1 2)      @result{} #t
+(<? C 2 1)      @result{} #f
+
+(<? C 1 1 1)    @result{} #f
+(<? C 1 2 3)    @result{} #t
+(<? C 2 1 3)    @result{} #f
+(<? C 3 2 1)    @result{} #f
+(<? C 1 3 2)    @result{} #f
+
+;;;
+
+(>? C 1 1)      @result{} #f
+(>? C 1 2)      @result{} #f
+(>? C 2 1)      @result{} #t
+
+(>? C 1 1 1)    @result{} #f
+(>? C 3 2 1)    @result{} #t
+(>? C 1 2 3)    @result{} #f
+(>? C 2 1 3)    @result{} #f
+(>? C 1 3 2)    @result{} #f
+
+;;;
+
+(<=? C 1 1)     @result{} #t
+(<=? C 1 2)     @result{} #t
+(<=? C 2 1)     @result{} #f
+
+(<=? C 1 1 1)   @result{} #t
+(<=? C 1 2 3)   @result{} #t
+(<=? C 2 1 3)   @result{} #f
+(<=? C 3 2 1)   @result{} #f
+(<=? C 1 3 2)   @result{} #f
+
+;;;
+
+(>=? C 1 1)     @result{} #t
+(>=? C 1 2)     @result{} #f
+(>=? C 2 1)     @result{} #t
+
+(>=? C 1 1 1)   @result{} #t
+(>=? C 3 2 1)   @result{} #t
+(>=? C 1 2 3)   @result{} #f
+(>=? C 2 1 3)   @result{} #f
+(>=? C 1 3 2)   @result{} #f
+@end lisp
+@end defun
+
+
+@defun make= @var{comparator}
+@defunx make< @var{comparator}
+@defunx make> @var{comparator}
+@defunx make<= @var{comparator}
+@defunx make>= @var{comparator}
+These procedures return predicates which, when applied to two or more
+arguments, return @true{} if comparing the arguments using the equality
+or comparison procedures of @var{comparator} shows that the objects bear
+the specified relation to one another.  Such predicates can be used in
+contexts that do not understand or expect comparators.
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define-constant C fixnum-comparator)
+
+;;;
+
+(let ((fun=? (make= C)))
+  (fun=? 1 1)           @result{} #t
+  (fun=? 1 2)           @result{} #f
+  (fun=? 2 1)           @result{} #f
+
+  (fun=? 1 1 1)         @result{} #t
+  (fun=? 1 2 3)         @result{} #f
+  (fun=? 2 1 3)         @result{} #f
+  (fun=? 3 2 1)         @result{} #f
+  (fun=? 1 3 2))        @result{} #f
+
+;;;
+
+(let ((fun<? (make< C)))
+  (fun<? 1 1)           @result{} #f
+  (fun<? 1 2)           @result{} #t
+  (fun<? 2 1)           @result{} #f
+
+  (fun<? 1 1 1)         @result{} #f
+  (fun<? 1 2 3)         @result{} #t
+  (fun<? 2 1 3)         @result{} #f
+  (fun<? 3 2 1)         @result{} #f
+  (fun<? 1 3 2))        @result{} #f
+
+;;;
+
+(let ((fun>? (make> C)))
+  (fun>? 1 1)           @result{} #f
+  (fun>? 1 2)           @result{} #f
+  (fun>? 2 1)           @result{} #t
+
+  (fun>? 1 1 1)         @result{} #f
+  (fun>? 3 2 1)         @result{} #t
+  (fun>? 1 2 3)         @result{} #f
+  (fun>? 2 1 3)         @result{} #f
+  (fun>? 1 3 2))        @result{} #f
+
+;;;
+
+(let ((fun<=? (make<= C)))
+  (fun<=? 1 1)          @result{} #t
+  (fun<=? 1 2)          @result{} #t
+  (fun<=? 2 1)          @result{} #f
+
+  (fun<=? 1 1 1)        @result{} #t
+  (fun<=? 1 2 3)        @result{} #t
+  (fun<=? 2 1 3)        @result{} #f
+  (fun<=? 3 2 1)        @result{} #f
+  (fun<=? 1 3 2))       @result{} #f
+
+;;;
+
+(let ((fun>=? (make>= C)))
+  (fun>=? 1 1)          @result{} #t
+  (fun>=? 1 2)          @result{} #f
+  (fun>=? 2 1)          @result{} #t
+
+  (fun>=? 1 1 1)        @result{} #t
+  (fun>=? 3 2 1)        @result{} #t
+  (fun>=? 1 2 3)        @result{} #f
+  (fun>=? 2 1 3)        @result{} #f
+  (fun>=? 1 3 2))       @result{} #f
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators ternary
+@subsection Interval (ternary) comparison predicates
+
+
+These procedures return @true{} or @false{} depending on whether an
+object is contained in an open, closed, or half--open interval.  All
+comparisons are done in the sense of @var{comparator}, which is
+@func{default-comparator} if omitted.
+
+
+@defun in-open-interval? @vari{obj} @varii{obj} @variii{obj}
+@defunx in-open-interval? @var{comparator} @vari{obj} @varii{obj} @variii{obj}
+Return @true{} if @vari{obj} is less than @varii{obj}, which is less
+than @variii{obj}; otherwise return @false{}.
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define-constant C fixnum-comparator)
+
+(in-open-interval? 1 2 3)       @result{} #t
+(in-open-interval? 1 1 3)       @result{} #f
+(in-open-interval? 1 3 3)       @result{} #f
+
+(in-open-interval? 1 0 3)       @result{} #f
+(in-open-interval? 1 0 3)       @result{} #f
+(in-open-interval? 1 0 3)       @result{} #f
+
+(in-open-interval? 1 9 3)       @result{} #f
+(in-open-interval? 1 9 3)       @result{} #f
+(in-open-interval? 1 9 3)       @result{} #f
+
+(in-open-interval? C 1 2 3)     @result{} #t
+(in-open-interval? C 1 1 3)     @result{} #f
+(in-open-interval? C 1 3 3)     @result{} #f
+
+(in-open-interval? C 1 0 3)     @result{} #f
+(in-open-interval? C 1 0 3)     @result{} #f
+(in-open-interval? C 1 0 3)     @result{} #f
+
+(in-open-interval? C 1 9 3)     @result{} #f
+(in-open-interval? C 1 9 3)     @result{} #f
+(in-open-interval? C 1 9 3)     @result{} #f
+@end lisp
+@end defun
+
+
+@defun in-closed-interval? @vari{obj} @varii{obj} @variii{obj}
+@defunx in-closed-interval? @var{comparator} @vari{obj} @varii{obj} @variii{obj}
+Return @true{} if @vari{obj} is less than or equal to @varii{obj}, which
+is less than or equal to @variii{obj}; otherwise return @false{}.
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define-constant C fixnum-comparator)
+
+(in-closed-interval? 1 2 3)     @result{} #t
+(in-closed-interval? 1 1 3)     @result{} #t
+(in-closed-interval? 1 3 3)     @result{} #t
+
+(in-closed-interval? 1 0 3)     @result{} #f
+(in-closed-interval? 1 0 3)     @result{} #f
+(in-closed-interval? 1 0 3)     @result{} #f
+
+(in-closed-interval? 1 9 3)     @result{} #f
+(in-closed-interval? 1 9 3)     @result{} #f
+(in-closed-interval? 1 9 3)     @result{} #f
+
+(in-closed-interval? C 1 2 3)   @result{} #t
+(in-closed-interval? C 1 1 3)   @result{} #t
+(in-closed-interval? C 1 3 3)   @result{} #t
+
+(in-closed-interval? C 1 0 3)   @result{} #f
+(in-closed-interval? C 1 0 3)   @result{} #f
+(in-closed-interval? C 1 0 3)   @result{} #f
+
+(in-closed-interval? C 1 9 3)   @result{} #f
+(in-closed-interval? C 1 9 3)   @result{} #f
+(in-closed-interval? C 1 9 3)   @result{} #f
+@end lisp
+@end defun
+
+
+@defun in-open-closed-interval? @vari{obj} @varii{obj} @variii{obj}
+@defunx in-open-closed-interval? @var{comparator} @vari{obj} @varii{obj} @variii{obj}
+Return @true{} if @vari{obj} is less than @varii{obj}, which is less
+than or equal to @variii{obj}; otherwise return @false{}.
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define-constant C fixnum-comparator)
+
+(in-open-closed-interval? 1 2 3)        @result{} #t
+(in-open-closed-interval? 1 1 3)        @result{} #f
+(in-open-closed-interval? 1 3 3)        @result{} #t
+
+(in-open-closed-interval? 1 0 3)        @result{} #f
+(in-open-closed-interval? 1 0 3)        @result{} #f
+(in-open-closed-interval? 1 0 3)        @result{} #f
+
+(in-open-closed-interval? 1 9 3)        @result{} #f
+(in-open-closed-interval? 1 9 3)        @result{} #f
+(in-open-closed-interval? 1 9 3)        @result{} #f
+
+(in-open-closed-interval? C 1 2 3)      @result{} #t
+(in-open-closed-interval? C 1 1 3)      @result{} #f
+(in-open-closed-interval? C 1 3 3)      @result{} #t
+
+(in-open-closed-interval? C 1 0 3)      @result{} #f
+(in-open-closed-interval? C 1 0 3)      @result{} #f
+(in-open-closed-interval? C 1 0 3)      @result{} #f
+
+(in-open-closed-interval? C 1 9 3)      @result{} #f
+(in-open-closed-interval? C 1 9 3)      @result{} #f
+(in-open-closed-interval? C 1 9 3)      @result{} #f
+@end lisp
+@end defun
+
+
+@defun in-closed-open-interval? @vari{obj} @varii{obj} @variii{obj}
+@defunx in-closed-open-interval? @var{comparator} @vari{obj} @varii{obj} @variii{obj}
+Return @true{} if @vari{obj} is less than or equal to @varii{obj}, which
+is less than @variii{obj}; otherwise return @false{}.
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(define-constant C fixnum-comparator)
+
+(in-closed-open-interval? 1 2 3)        @result{} #t
+(in-closed-open-interval? 1 1 3)        @result{} #t
+(in-closed-open-interval? 1 3 3)        @result{} #f
+
+(in-closed-open-interval? 1 0 3)        @result{} #f
+(in-closed-open-interval? 1 0 3)        @result{} #f
+(in-closed-open-interval? 1 0 3)        @result{} #f
+
+(in-closed-open-interval? 1 9 3)        @result{} #f
+(in-closed-open-interval? 1 9 3)        @result{} #f
+(in-closed-open-interval? 1 9 3)        @result{} #f
+
+(in-closed-open-interval? C 1 2 3)      @result{} #t
+(in-closed-open-interval? C 1 1 3)      @result{} #t
+(in-closed-open-interval? C 1 3 3)      @result{} #f
+
+(in-closed-open-interval? C 1 0 3)      @result{} #f
+(in-closed-open-interval? C 1 0 3)      @result{} #f
+(in-closed-open-interval? C 1 0 3)      @result{} #f
+
+(in-closed-open-interval? C 1 9 3)      @result{} #f
+(in-closed-open-interval? C 1 9 3)      @result{} #f
+(in-closed-open-interval? C 1 9 3)      @result{} #f
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators minmax
+@subsection Min/max comparison procedures
+
+
+@defun comparator-min @var{comparator} @varo{obj} @vari{obj} @dots{}
+@defunx comparator-max @var{comparator} @varo{obj} @vari{obj} @dots{}
+Analogous to @func{min} and @func{max}.  Apply the comparison procedure
+of @var{comparator} to the arguments to find and return a minimal (or
+maximal) object.  The order in which the values are compared is
+unspecified.
+
+@quotation
+@strong{NOTE} The @ansrfi{67} procedures @func{pairwise-not=?} and
+@func{kth-largest} involve sorting their arguments, and are not provided
+by this proposal in order to avoid an otherwise unnecessary
+implementation dependency.  They are easily provided by a sorting
+package that makes use of comparators.
+@end quotation
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :114))
+
+(comparator-min C 0)           @result{} 0
+(comparator-min C 0 0)         @result{} 0
+(comparator-min C 0 1)         @result{} 0
+(comparator-min C 1 0)         @result{} 0
+(comparator-min C 0 1 2)       @result{} 0
+@end lisp
+@end defun
+
+@c page
+@node srfi comparators misc
+@subsection Miscellaneous procedures
+
+
+@defun make-comparator-hashtable @var{comparator}
+Build and return a new hashtable using the equality predicate and hash
+function from @var{comparator}.
+
+@quotation
+@strong{NOTE} This is a @value{PRJNAME} extension.
+@end quotation
+@end defun
+
+@c page
+@node srfi comparators conditions
+@subsection Condition object types
+
+
+As @value{PRJNAME} extension the following condition objects are
+defined.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator error
+
+@deftp {Condition Object Type} &comparator-error
+Used to signal an error while using a comparator's facilities.  It is
+derived from @condition{error}.
+@end deftp
+
+
+@defun make-comparator-error @var{compar} @var{obj}
+Build and return a new condition object of type
+@condition{comparator-error}.
+@end defun
+
+
+@defun comparator-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-error}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Unsupported operation error
+
+@deftp {Condition Object Type} &unsupported-comparator-operation-error
+Used to signal an attempt to use an unsupported operation.  It is
+derived from @condition{comparator-ertor}.
+
+It has the following fields:
+
+@table @code
+@item comparator
+The comparator that does not support the operation.
+@end table
+@end deftp
+
+
+@defun make-unsupported-comparator-operation-error @var{comparator}
+Build and return a new condition object of type
+@condition{unsupported-comparator-operation-error}.
+@end defun
+
+
+@defun unsupported-comparator-operation-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{unsupported-comparator-operation-error}; otherwise return
+@false{}.
+@end defun
+
+
+@defun unsupported-comparator-operation-error.comparator @var{cnd}
+Accessor for the field of condition objects of type
+@condition{unsupported-comparator-operation-error}.
+@end defun
+
+
+@defun raise-unsupported-comparator-operation-error @var{who} @var{message} @var{comparator} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{unsupported-comparator-operation-error},
+@condition{irritants}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator type error
+
+@deftp {Condition Object Type} &comparator-type-error
+Used to signal an attempt to use the facilities of a comparator with an
+object that does not satisfy the comparator's type predicate.  It is
+derived from @condition{comparator-error}.  It has two fields:
+
+@table @code
+@item comparator
+The comparator object.
+
+@item objects
+List of objects with which the comparator was used.
+@end table
+@end deftp
+
+
+@defun make-comparator-type-error @var{compar} @var{obj}
+Build and return a new condition object of type
+@condition{comparator-type-error}.
+@end defun
+
+
+@defun comparator-type-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-type-error}; otherwise return @false{}.
+@end defun
+
+
+@deffn {Condition Object Accessor} comparator-type-error.comparator @var{cond}
+@deffnx {Condition Object Accessor} comparator-type-error.objects @var{cond}
+Accessors for the fields of condition objects of type
+@condition{comparator-type-error}.
+@end deffn
+
+
+@defun raise-comparator-type-error @var{who} @var{message} @var{comparator} @var{object} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{comparator-type-error}, @condition{irritants}.
+@end defun
+
+
+@defun raise-comparator-argument-type-error @var{who} @var{message} @var{comparator} @var{object} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{comparator-type-error}, @condition{irritants},
+@condition{procedure-argument-violation}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Not--a--number comparison error
+
+@deftp {Condition Object Type} &comparator-nan-comparison-error
+Used to signal an invalid comparison in which one of the operands is
+@code{+nan.0}.  It is derived from @condition{comparator-error}.
+
+It has the following fields:
+
+@table @code
+@item comparator
+The comparator object that was used for the comparison.
+@end table
+@end deftp
+
+
+@defun make-comparator-nan-comparison-error-condition @var{comparator}
+Build and return a new condition object of type
+@condition{comparator-nan-comparison-error}.
+@end defun
+
+
+@defun condition-comparator-nan-comparison-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-nan-comparison-error}; otherwise return @false{}.
+@end defun
+
+
+@defun comparator-nan-comparison-error.comparator @var{cnd}
+Accessor for the field of condition objects of type
+@condition{comparator-nan-comparison-error}.
+@end defun
+
+
+@defun raise-comparator-nan-comparison-error @var{who} @var{message} @var{comparator}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message}, @condition{irritants},
+@condition{comparator-nan-comparison-error}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator error
+
+@deftp {Condition Object Type} &inexact-real-comparator-with-ignored-epsilon
+Used to signal that a non-false @var{epsilon} argument was used with a
+symbolic @var{rounding} argument in the call to
+@func{make-inexact-real-comparator}: in this case @var{epsilon} is
+ignored.
+
+It has the following fields:
+
+@table @code
+@item epsilon
+The @var{epsilon} argument.
+
+@item rounding
+The @var{rounding} argument.  A symbol among: @code{floor},
+@code{ceiling}, @code{truncate}, @code{round}.
+@end table
+@end deftp
+
+
+@defun make-inexact-real-comparator-with-ignored-epsilon-condition @var{epsilon} @var{rounding}
+Build and return a condition object of type
+@condition{inexact-real-comparator-with-ignored-epsilon}.  It is derived
+from @condition{warning}.
+@end defun
+
+
+@defun condition-inexact-real-comparator-with-ignored-epsilon? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{inexact-real-comparator-with-ignored-epsilon}; otherwise
+return @false{}.
+@end defun
+
+
+@defun inexact-real-comparator-with-ignored-epsilon.epsilon @var{cnd}
+@defunx inexact-real-comparator-with-ignored-epsilon.rounding @var{cnd}
+Field accessors for condition object of type
+@condition{inexact-real-comparator-with-ignored-epsilon}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Debug comparator error
+
+@deftp {Condition Object Type} &comparator-debug-error
+Used to signal errors raised by comparators returned by
+@func{make-debug-comparator}.  It is derived from
+@condition{comparator-error}.
+
+It has the following fields:
+
+@table @code
+@item debug-comparator
+The debug comparator that raised the error.
+
+@item comparator
+The comparator that violated the requirements.
+@end table
+@end deftp
+
+
+@defun make-comparator-debug-error @var{debug-comparator} @var{comparator}
+Build and return a new condition object of type
+@condition{comparator-debug-error}.
+@end defun
+
+
+@defun comparator-debug-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{comparator-debug-error}; otherwise return @false{}.
+@end defun
+
+
+@defun comparator-debug-error.debug-comparator @var{cnd}
+@defunx comparator-debug-error.comparator @var{cnd}
+Accessors for the fields of @condition{comparator-debug-error}.
+@end defun
+
+
+@defun raise-comparator-debug-error @var{who} @var{message} @var{debug-comparator} @var{comparator} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object of
+types: @condition{who}, @condition{message},
+@condition{comparator-debug-error}, @condition{irritants}.
+@end defun
+
+@c page
+@node srfi comparators copyright
+@subsection Copyright
+
+
+Copyright @copyright{} John Cowan 2013. All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

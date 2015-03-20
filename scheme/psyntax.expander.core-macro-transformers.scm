@@ -555,7 +555,8 @@
     ;;
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
-  (define (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
+  (define* (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
+    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the binding names are identifiers and without duplicates.

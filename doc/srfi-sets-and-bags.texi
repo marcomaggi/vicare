@@ -1,0 +1,1378 @@
+@node srfi sets-and-bags
+@section @ansrfi{113} sets and bags
+
+
+@cindex @ansrfi{113} sets-and-bags
+@cindex @library{srfi :113}, library
+@cindex @library{srfi :113 sets-and-bags}, library
+@cindex Library @library{srfi :113}
+@cindex Library @library{srfi :113 sets-and-bags}
+
+
+The libraries @library{srfi :113} and @library{srfi :113 sets-and-bags}
+are by John Cowan as the reference implementation for @ansrfi{113}; see:
+
+@center @url{http://srfi.schemers.org/srfi-113/srfi-113.html}
+
+@noindent
+for more details.  Sets and bags (also known as multisets) are unordered
+collections that can contain any Scheme object.  Elements in sets and
+bags are compared using the facilities of @ansrfi{114} (@pxref{srfi
+comparators, @ansrfi{114} comparators}).
+
+@menu
+* srfi sets-and-bags intro::      Introduction.
+* srfi sets-and-bags constr::     Constructors.
+* srfi sets-and-bags preds::      Predicates.
+* srfi sets-and-bags access::     Accessors.
+* srfi sets-and-bags update::     Updaters.
+* srfi sets-and-bags whole::      The whole set.
+* srfi sets-and-bags map::        Mapping and folding.
+* srfi sets-and-bags copy::       Copying and conversion.
+* srfi sets-and-bags subsets::    Subsets.
+* srfi sets-and-bags theory::     Set theory operations.
+* srfi sets-and-bags bag::        Bag-only procedures.
+* srfi sets-and-bags compar::     Comparators.
+* srfi sets-and-bags copyright::  Copyright.
+@end menu
+
+@c page
+@node srfi sets-and-bags intro
+@subsection Introduction
+
+
+Sets and bags are mutually disjoint types; they are also disjoint from
+other types of Scheme objects.
+
+@itemize
+@item
+Sets enforce the constraint that no two elements can be the same in the
+sense of the set's associated equality predicate.
+
+@item
+Bags are like sets, but can contain the same object more than once.
+However, if two elements that are the same in the sense of the equality
+predicate, but not in the sense of @func{eqv?}, are both included, it is
+not guaranteed that they will remain distinct when retrieved from the
+bag: if two elements in a bag are the same in the sense of the bag's
+comparator, the implementation may in fact store just one of them.
+@end itemize
+
+The procedures for creating and manipulating bags are the same as those
+for sets, except that @code{set} is replaced by @code{bag} in their
+names, and that adjoining an element to a bag is effective even if the
+bag already contains the element.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Constraints
+
+The @api{} defined by @library{srfi :113} imposes usage constraints:
+
+@itemize
+@item
+It is an error for any procedure to be invoked on sets or bags with
+distinct comparators (in the sense of @func{eq?}).
+
+@item
+It is an error to mutate any object while it is contained in a set or
+bag.
+
+@item
+It is an error to add an object to a set or bag which does not satisfy
+the type test predicate of the comparator.
+
+@item
+It is an error to add or remove an object from a set or a bag while
+iterating over it.
+@end itemize
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Linear update
+
+The procedures of this @srfi{}, by default, are ``pure functional'':
+they do not alter their parameters.  However, this @srfi{} also defines
+``linear--update'' procedures, all of whose names end in @code{!}.  They
+have hybrid pure--functional/side--effecting semantics: they are
+allowed, but not required, to side--effect one of their parameters in
+order to construct their result.  An implementation may legally
+implement these procedures as pure, side--effect--free functions, or it
+may implement them using side effects, depending upon the details of
+what is the most efficient or simple to implement in terms of the
+underlying representation.
+
+It is an error to rely upon these procedures working by side effect. For
+example, this is not guaranteed to work:
+
+@lisp
+(let* ((set1 (set 'a 'b 'c))           ; set1 = @{a,b,c@}.
+       (set2 (set-adjoin! set1 'd)))   ; Add d to @{a,b,c@}.
+  set1) ; Could be either @{a,b,c@} or @{a,b,c,d@}.
+@end lisp
+
+However, this is well--defined:
+
+@lisp
+(let ((set1 (set 'a 'b 'c)))
+  (set-adjoin! set1 'd)) ; Add d to @{a,b,c@}.
+@end lisp
+
+So clients of these procedures write in a functional style, but must
+additionally be sure that, when the procedure is called, there are no
+other live pointers to the potentially--modified character set (hence
+the term ``linear update'').
+
+There are two benefits to this convention:
+
+@itemize
+@item
+Implementations are free to provide the most efficient possible
+implementation, either functional or side--effecting.
+
+@item
+Programmers may nonetheless continue to assume that sets are purely
+functional data structures: they may be reliably shared without needing
+to be copied, uniquified, and so forth.
+@end itemize
+
+In practice, these procedures are most useful for efficiently
+constructing sets and bags in a side--effecting manner, in some limited
+local context, before passing the character set outside the local
+construction scope to be used in a functional manner.
+
+Scheme provides no assistance in checking the linearity of the
+potentially side--effected parameters passed to these functions: there's
+no linear type checker or run--time mechanism for detecting violations.
+
+Note that if an implementation uses no side effects at all, it is
+allowed to return existing sets and bags rather than newly allocated
+ones, even where this @srfi{} explicitly says otherwise.
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparator restrictions
+
+Implementations of this @srfi{} are allowed to place restrictions on the
+comparators that the procedures accept.  In particular, an
+implementation may require comparators to provide a comparison
+procedure.  Alternatively, an implementation may require comparators to
+provide a hash function, unless the equality predicate of the comparator
+is @func{eq?}, @func{eqv?}, @func{equal?}, @func{string=?}, or
+@func{string-ci=?}.  Implementations must not require the provision of
+both a comparison procedure and a hash function.
+
+@c page
+@node srfi sets-and-bags constr
+@subsection Constructors
+
+
+@defun set @var{comparator} @var{element} @dots{}
+@defunx bag @var{comparator} @var{element} @dots{}
+Return a newly allocated empty set.  @var{comparator} is a @ansrfi{114}
+comparator, which is used to control and distinguish the elements of the
+set.  The @var{element}s are used to initialize the set.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(define S
+  (set fixnum-comparator 1 2 3))
+(values (set-contains? S 1)
+        (set-contains? S 2)
+        (set-contains? S 3)
+        (set-size S))
+@result{} #t #t #t 3
+
+(define B
+  (bag fixnum-comparator 1 2 3 2))
+(values (bag-contains? B 1)
+        (bag-contains? B 2)
+        (bag-contains? B 3)
+        (bag-size B))
+@result{} #t #t #t 4
+@end lisp
+@end defun
+
+
+@defun set-unfold @var{comparator} @var{stop?} @var{mapper} @var{successor} @var{seed}
+@defunx bag-unfold @var{comparator} @var{stop?} @var{mapper} @var{successor} @var{seed}
+Create a newly allocated set as if by @func{set} or @func{bag} using
+@var{comparator}.  If the result of applying the predicate @var{stop?}
+to @var{seed} is true, return the set.  Otherwise, apply the procedure
+@var{mapper} to @var{seed}.  The value that @var{mapper} returns is
+added to the set.  Then get a new seed by applying the procedure
+@var{successor} to @var{seed}, and repeat this algorithm.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(define (stop? seed)
+  (fx>? seed 3))
+
+(define (mapper seed)
+  (number->string seed))
+
+(define (successor seed)
+  (fxadd1 seed))
+
+(define S
+  (set-unfold string-comparator stop? mapper successor 1))
+
+(values (set-contains? S "1")
+        (set-contains? S "2")
+        (set-contains? S "3")
+        (set-size S)))
+@result{} #t #t #t 3
+
+(define B
+  (bag-unfold string-comparator stop? mapper successor 1))
+
+(values (bag-contains? B "1")
+        (bag-contains? B "2")
+        (bag-contains? B "3")
+        (bag-size B)))
+@result{} #t #t #t 3
+@end lisp
+@end defun
+
+@c page
+@node srfi sets-and-bags preds
+@subsection Predicates
+
+
+@defun set? @var{obj}
+@defunx bag? @var{obj}
+Return @true{} if @var{obj} is a set or bag; return @false{} otherwise.
+@end defun
+
+
+@defun set-contains? @var{set} @var{element}
+@defunx bag-contains? @var{bag} @var{element}
+Return @true{} if @var{element} is a member of @var{set} or @var{bag}
+and @false{} otherwise.
+@end defun
+
+
+@defun set-empty? @var{set}
+@defunx bag-empty? @var{bag}
+Return @true{} if @var{set} or @var{bag} has no elements and @false{}
+otherwise.
+@end defun
+
+
+@defun set-disjoint? @vari{set} @varii{set}
+@defunx bag-disjoint? @vari{bag} @varii{bag}
+Return @true{} if @vari{set} and @varii{set}, or @vari{bag} and
+@varii{bag}, have no elements in common; return @false{} otherwise.
+@end defun
+
+@c page
+@node srfi sets-and-bags access
+@subsection Accessors
+
+
+@defun set-member @var{set} @var{element} @var{default}
+@defunx bag-member @var{bag} @var{element} @var{default}
+Return the element of @var{set} or @var{bag} that is equal, in the sense
+of the comparator's equality predicate, to @var{element}.  If
+@var{element} is not a member of @var{set} or @var{bag}: return
+@var{default}.
+@end defun
+
+
+@defun set-element-comparator @var{set}
+@defunx bag-element-comparator @var{bag}
+Return the comparator used to compare the elements of @var{set} or
+@var{bag}.
+@end defun
+
+@c page
+@node srfi sets-and-bags update
+@subsection Updaters
+
+
+@defun set-adjoin @var{set} @var{element} @dots{}
+Return a newly allocated set that uses the same comparator as @var{set}
+and contains all the values of @var{set}, and in addition each
+@var{element} unless it is already equal (in the sense of the
+comparator) to one of the existing or newly added members.
+
+It is an error to add an @var{element} for which the type test procedure
+of the comparator does not return @true{}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (define S^
+    (set-adjoin S 4))
+  (list-sort fx<? (set->list S^)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (define S^
+    (set-adjoin S 2))
+  (list-sort fx<? (set->list S^)))
+@result{} (1 2 3)
+@end lisp
+@end defun
+
+
+@defun bag-adjoin @var{bag} @var{element} @dots{}
+Return a newly allocated bag that uses the same comparator as @var{bag}
+and contains all the values of @var{bag}, and in addition each
+@var{element}.
+
+It is an error to add an @var{element} for which the type test procedure
+of the comparator does not return @true{}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (define B^
+    (bag-adjoin B 4))
+  (list-sort fx<? (bag->list B^)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (define B^
+    (bag-adjoin B 2))
+  (list-sort fx<? (bag->list B^)))
+@result{} (1 2 2 3)
+@end lisp
+@end defun
+
+
+@defun set-adjoin! @var{set} @var{element} @dots{}
+@defunx bag-adjoin! @var{bag} @var{element} @dots{}
+Like @func{set-adjoin} and @func{bag-adjoin} but they are permitted to
+mutate and return @var{set}/@var{bag} rather than allocating a new set.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (set-adjoin! S 4)
+  (list-sort fx<? (set->list S)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define S
+    (set fixnum-comparator 1 2 3))
+  (set-adjoin! S 2)
+  (list-sort fx<? (set->list S)))
+@result{} (1 2 3)
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (bag-adjoin! B 4)
+  (list-sort fx<? (bag->list B)))
+@result{} (1 2 3 4)
+
+(internal-body
+  (define B
+    (bag fixnum-comparator 1 2 3))
+  (bag-adjoin! B 2)
+  (list-sort fx<? (bag->list B)))
+@result{} (1 2 2 3)
+@end lisp
+@end defun
+
+
+@defun set-replace @var{set} @var{element}
+Return a newly allocated set that uses the same comparator as @var{set}
+and contains all the values of @var{set} except that: if @var{element}
+is equal (in the sense of @var{set}'s comparator) to an existing member
+of @var{set}, then that member is omitted and replaced by @var{element}.
+If there is no such member in @var{set}, then @var{set} is returned
+unchanged.
+@end defun
+
+
+@defun bag-replace @var{bag} @var{element}
+Return a newly allocated bag that uses the same comparator as @var{bag}
+and contains all the values of @var{bag} except that: if @var{element}
+is equal (in the sense of @var{bag}'s comparator) to an existing member
+of @var{bag}, then that member is omitted and replaced by @var{element}.
+If there is no such member in @var{bag}, then @var{bag} is returned
+unchanged.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(define B  (bag real-comparator 1 2 2 3))
+(define B^ (bag-replace B 2.0))
+(list-sort < (bag->list B^)))
+@result{} (1 2.0 2.0 3)
+@end lisp
+@end defun
+
+
+@defun set-replace! @var{set} @var{element}
+@defunx bag-replace! @var{bag} @var{element}
+Like @func{set-replace} and @func{bag-replace} but they are permitted to
+mutate and return @var{set} or @var{bag} rather than allocating a new
+set or bag.
+@end defun
+
+
+@defun set-delete @var{set} @var{element} @dots{}
+Return a newly allocated set containing all the values of @var{set}
+except for any that are equal (in the sense of @var{set}'s comparator)
+to one or more of the @var{element}s.  Any @var{element} that is not
+equal to some member of @var{set} is ignored.
+@end defun
+
+
+@defun bag-delete @var{bag} @var{element} @dots{}
+Return a newly allocated bag containing all the values of @var{bag}
+except for any that are equal (in the sense of @var{bag}'s comparator)
+to one or more of the @var{element}s.  Any @var{element} that is not
+equal to some member of @var{bag} is ignored.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(internal-body
+  (define B  (bag fixnum-comparator 1 2 2 3))
+  (define B^ (bag-delete B 2))
+  (list-sort < (bag->list B^)))
+@result{} (1 2 3)
+
+(internal-body
+  (define B  (bag real-comparator 1 2 2 3))
+  (define B^ (bag-delete B 2.0))
+  (list-sort < (bag->list B^)))
+@result{} (1 2 3)
+@end lisp
+@end defun
+
+
+@defun set-delete! @var{set} @var{element} @dots{}
+@defunx bag-delete! @var{bag} @var{element} @dots{}
+Like @func{set-delete} and @func{bag-delete} but they are permitted to
+mutate and return @var{set} and @var{bag} rather than allocating a new
+set or bag.
+@end defun
+
+
+@defun set-delete-all @var{set} @var{element-list}
+@defunx bag-delete-all @var{bag} @var{element-list}
+@defunx set-delete-all! @var{set} @var{element-list}
+@defunx bag-delete-all! @var{bag} @var{element-list}
+Like @func{set-delete}, @func{bag-delete}, @func{set-delete!} and
+@func{bag-delete!} but accept a single argument which is a list of
+elements to be deleted.
+@end defun
+
+
+@defun set-search! @var{set} @var{element} @var{failure} @var{success}
+@defunx bag-search! @var{bag} @var{element} @var{failure} @var{success}
+The @var{set} or @var{bag} is searched for @var{element}.
+
+@itemize
+@item
+If @var{element} is @strong{not} found: the procedure @var{failure} is
+tail--called with two continuation arguments, @var{insert} and
+@var{ignore}, and it is expected to tail--call one of them.
+
+@item
+If @var{element} @strong{is} found: the procedure @var{success} is
+tail--called with the matching element of @var{set} and two
+continuations, @var{update} and @var{remove}, and it is expected to
+tail--call one of them.
+@end itemize
+
+The effects of the continuations are as follows (where @var{obj} is any
+Scheme object):
+
+@itemize
+@item
+Invoking @code{(@var{insert} @var{obj})} causes @var{element} to be
+inserted into @var{set} or @var{bag}.
+
+@item
+Invoking @code{(@var{ignore} @var{obj})} causes @var{set} or @var{bag}
+to remain unchanged.
+
+@item
+Invoking @code{(@var{update} @var{new-element} @var{obj})} causes
+@var{new-element} to be inserted into @var{set} or @var{bag} in place of
+@var{element}.
+
+@item
+Invoking @code{(@var{remove} @var{obj})} causes the matching element of
+@var{set} or @var{bag} to be removed from it.
+@end itemize
+
+In all cases, two values are returned: the possibly updated @var{set} or
+@var{bag} and @var{obj}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+;;success and update
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 2.0
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (error #f "wrong"))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (update 9 'flag)))
+    (list-sort < (set->list S^))        @result{} (1 3 9)
+    obj))                               @result{} flag
+
+;;success and remove
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 2.0
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (error #f "wrong"))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (remove 'flag)))
+    (list-sort < (set->list S^))        @result{} (1 3)
+    obj))                               @result{} flag
+
+;;failure and ignore
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 99
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (ignore 'flag))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (error #f "wrong")))
+    (list-sort < (set->list S^))        @result{} (1 2 3)
+    obj))                               @result{} flag
+
+;;failure and insert
+(internal-body
+  (define S  (set real-comparator 1 2 3))
+  (receive (S^ obj)
+      (set-search! S 99
+                   ;;failure proc
+                   (lambda (insert ignore)
+                     (insert 'flag))
+                   ;;success proc
+                   (lambda (true-element update remove)
+                     (error #f "wrong")))
+    (list-sort < (set->list S^))        @result{} (1 2 3 99)
+    obj))                               @result{} flag
+@end lisp
+@end defun
+
+@c page
+@node srfi sets-and-bags whole
+@subsection The whole set
+
+
+@defun set-size @var{set}
+@defunx beg-size @var{bag}
+Return the number of elements in @var{set} or @var{bag} as an exact
+integer.
+@end defun
+
+
+@defun set-find @var{predicate} @var{set}
+@defunx set-find @var{predicate} @var{set} @var{failure}
+@defunx bag-find @var{predicate} @var{bag}
+@defunx bag-find @var{predicate} @var{bag} @var{failure}
+Return an arbitrarily chosen element of @var{set} or @var{bag} that
+satisfies @var{predicate}, or the result of invoking @var{failure} with
+no arguments if there is none.
+
+As @value{PRJNAME} extension: when @var{failure} is missing, it defaults
+to @func{void}.
+@end defun
+
+
+@defun set-count @var{predicate} @var{set}
+@defunx bag-count @var{predicate} @var{bag}
+Return an an exact integer representing the number of elements of
+@var{set} or @var{bag} that satisfy @var{predicate}.
+@end defun
+
+
+@defun set-any? @var{predicate} @var{set}
+@defunx bag-any? @var{predicate} @var{bag}
+Return @true{} if at least one element of @var{set} or @var{bag}
+satisfies @var{predicate}; otherwise return @false{}.  If the set or bag
+is empty: the return value is @false{}.
+
+@quotation
+@strong{NOTE} This differs from the @ansrfi{1} analogue because it does
+not return an element of the set.
+@end quotation
+@end defun
+
+
+@defun set-every? @var{predicate} @var{set}
+@defunx bag-every? @var{predicate} @var{bag}
+Return @true{} if every element of @var{set} or @var{bag} satisfies
+@var{predicate}; otherwise return @false{}.  If the set or bag is empty:
+the return value is @true{}.
+
+@quotation
+@strong{NOTE} This differs from the @ansrfi{1} analogue because it does
+not return an element of the set.
+@end quotation
+@end defun
+
+@c page
+@node srfi sets-and-bags map
+@subsection Mapping and folding
+
+
+@defun set-map @var{comparator} @var{proc} @var{set}
+Apply @var{proc} to each element of @var{set} in arbitrary order and
+return a newly allocated set, created as if by @code{(set
+@var{comparator})}, which contains the results of the applications.  For
+example:
+
+@lisp
+(set-map string-ci-comparator
+         symbol->string
+         (set eq-comparator 'foo 'bar 'baz))
+@equiv{} (set string-ci-comparator "foo" "bar" "baz")
+@end lisp
+
+Note that, when @var{proc} defines a mapping that is not @math{1:1},
+some of the mapped objects may be equivalent in the sense of
+comparator's equality predicate, and in this case duplicate elements are
+omitted as in the set constructor.  For example:
+
+@lisp
+(set-map integer-comparator
+         (lambda (x)
+           (quotient x 2))
+         (set integer-comparator 1 2 3 4 5))
+@equiv{} (set integer-comparator 0 1 2)
+@end lisp
+
+If the elements are the same in the sense of @func{eqv?}, it is
+unpredictable which one will be preserved in the result.
+@end defun
+
+
+@defun bag-map @var{comparator} @var{proc} @var{bag}
+Apply @var{proc} to each element of @var{bag} in arbitrary order and
+return a newly allocated bag, created as if by @code{(bag
+@var{comparator})}, which contains the results of the applications.  For
+example:
+
+@lisp
+(bag-map string-ci-comparator
+         symbol->string
+         (bag eq-comparator 'foo 'bar 'baz))
+@equiv{} (bag string-ci-comparator "foo" "bar" "baz")
+
+(list-sort <
+  (bag->list
+    (bag-map integer-comparator
+             (lambda (x)
+               (quotient x 2))
+             (bag integer-comparator 1 2 3 4 5))))
+@result{} (0 1 1 2 2)
+@end lisp
+@end defun
+
+
+@defun set-for-each @var{proc} @var{set}
+@defunx bag-for-each @var{proc} @var{bag}
+Apply @var{proc} to @var{set} or @var{bag} in arbitrary order,
+discarding the returned values.  Return unspecified results.
+@end defun
+
+
+@defun set-fold @var{proc} @var{nil} @var{set}
+@defunx bag-fold @var{proc} @var{nil} @var{bag}
+Invoke @var{proc} on each member of @var{set} or @var{bag} in arbitrary
+order, passing the result of the previous invocation as a second
+argument.  For the first invocation, @var{nil} is used as the second
+argument.  Return the result of the last invocation, or @var{nil} if
+there was no invocation.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(list-sort <
+  (set-fold (lambda (elm nil)
+              (cons elm nil))
+              '()
+              (set fixnum-comparator 1 2 3)))
+@result{} (1 2 3)
+
+(list-sort <
+  (bag-fold (lambda (elm nil)
+              (cons elm nil))
+            '()
+            (bag fixnum-comparator 1 2 2 3)))
+@result{} (1 2 2 3)
+@end lisp
+@end defun
+
+
+@defun set-filter @var{predicate} @var{set}
+@defunx bag-filter @var{predicate} @var{bag}
+Return a newly allocated set or bag with the same comparator as
+@var{set} or @var{bag}, containing just the elements of @var{set} or
+@var{bag} that satisfy @var{predicate}.
+@end defun
+
+
+@defun set-filter! @var{predicate} @var{set}
+@defunx bag-filter! @var{predicate} @var{bag}
+Like @func{set-filter} and @func{bag-filter} but they are permitted to
+mutate and return @var{set} or @var{bag} rather than allocating a new
+set or bag.
+@end defun
+
+
+@defun set-remove @var{predicate} @var{set}
+@defunx bag-remove @var{predicate} @var{bag}
+Return a newly allocated set or bag with the same comparator as
+@var{set} or @var{bag}, containing just the elements that do
+@strong{not} satisfy @var{predicate}.
+@end defun
+
+
+@defun set-remove! @var{predicate} @var{set}
+@defunx bag-remove! @var{predicate} @var{bag}
+Like @func{set-remove} and @func{bag-remove} but they are permitted to
+mutate and return @var{set} or @var{bag} rather than allocating a new
+set or bag.
+@end defun
+
+
+@defun set-partition @var{predicate} @var{set}
+@defunx bag-partition @var{predicate} @var{bag}
+Return two values:
+
+@enumerate
+@item
+A newly allocated set or bag, with the same comparator as @var{set} or
+@var{bag}, that contains just the elements that @strong{do} satisfy
+@var{predicate}.
+
+@item
+A newly allocated set or bag, with the same comparator as @var{set} or
+@var{bag}, that contains just the elements that @strong{do not} satisfy
+@var{predicate}.
+@end enumerate
+
+Usage example:
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(receive (in out)
+    (set-partition (lambda (elm)
+                     (<= 2 elm))
+                   (set fixnum-comparator 1 2 2 3))
+  (values (set->list in  #t)
+          (set->list out #t)))
+@result{} (2 3) (1)
+
+(receive (in out)
+    (bag-partition (lambda (elm)
+                     (<= 2 elm))
+                   (bag fixnum-comparator 1 2 2 3))
+  (values (bag->list in  #t)
+          (bag->list out #t)))
+@result{} (2 2 3) (1)
+@end lisp
+@end defun
+
+
+@defun set-partition! @var{predicate} @var{set}
+@defunx bag-partition! @var{predicate} @var{bag}
+Like @func{set-partition} and @func{bag-partition} but they are
+permitted to mutate and return @var{set} or @var{bag} rather than
+allocating a new set or bag.
+@end defun
+
+@c page
+@node srfi sets-and-bags copy
+@subsection Copying and conversion
+
+
+@defun set-copy @var{set}
+@defunx bag-copy @var{bag}
+Return a newly allocated set or bag containing the elements of @var{set}
+or @var{bag} and using the same comparator.
+@end defun
+
+
+@defun set->list @var{set}
+@defunx bag->list @var{bag}
+@defunx set->list @var{set} @var{compar}
+@defunx bag->list @var{bag} @var{compar}
+Return a newly allocated list containing the members of @var{set} or
+@var{bag} in unspecified order.
+
+As @value{PRJNAME} extension, if the optional argument @var{compar} is
+present:
+
+@itemize
+@item
+If it is the boolean @false{}: the function behaves as if @var{compar}
+is not present.
+
+@item
+If it is the boolean @true{}: the resulting list is sorted using the
+standard @func{list-sort} and the comparison procedure from the
+@var{set} or @var{bag} comparator, so that the lesser elements come
+first.
+
+@item
+If it is a procedure: the resulting list is sorted using the standard
+@func{list-sort} and @var{compar} as comparison predicate.
+@end itemize
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(list-sort < (set->list (set fixnum-comparator 1 2 3)))
+@result{} (1 2 3)
+
+(set->list (set fixnum-comparator 1 2 3) #t)
+@result{} (1 2 3)
+
+(set->list (set fixnum-comparator 1 2 3) fx<?)
+@result{} (1 2 3)
+
+(set->list (set fixnum-comparator 1 2 3) fx>?)
+@result{} (3 2 1)
+
+;;;
+
+(list-sort < (bag->list (bag fixnum-comparator 1 2 2 3)))
+@result{} (1 2 2 3)
+
+(bag->list (bag fixnum-comparator 1 2 2 3) #t)
+@result{} (1 2 2 3)
+
+(bag->list (bag fixnum-comparator 1 2 2 3) fx<?)
+@result{} (1 2 2 3)
+
+(bag->list (bag fixnum-comparator 1 2 2 3) fx>?)
+@result{} (3 2 2 1)
+@end lisp
+@end defun
+
+
+@defun list->set @var{comparator} @var{list}
+@defunx list->bag @var{comparator} @var{list}
+Return a newly allocated set or bag, created as if by @func{set} or
+@func{bag} using @var{comparator}, that contains the elements of
+@var{list}.  When building a set: duplicate elements (in the sense of
+the equality predicate) are omitted.
+@end defun
+
+
+@defun list->set! @var{set} @var{list}
+@defunx list->bag! @var{bag} @var{list}
+Return a set or bag that contains the elements of both @var{set} or
+@var{bag} and @var{list}, using the comparator of @var{set} or
+@var{bag}.  The functions are permitted to mutate @var{set} or @var{bag}
+and return it.  When building a set: duplicate elements (in the sense of
+the equality predicate) are omitted.
+@end defun
+
+@c page
+@node srfi sets-and-bags subsets
+@subsection Subsets
+
+
+@quotation
+@strong{NOTE} The following three predicates do not obey the trichotomy
+law and therefore do not constitute a total order on sets.
+@end quotation
+
+
+@defun set=? @varo{set} @var{set} @dots{}
+@defunx bag=? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag} contains the same
+elements.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag=? (bag fixnum-comparator 1 2 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #t
+
+(bag=? (bag fixnum-comparator 1 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #f
+@end lisp
+@end defun
+
+
+@defun set<? @varo{set} @var{set} @dots{}
+@defunx bag<? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+proper subset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag<? (bag fixnum-comparator 1 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #t
+
+(bag<? (bag fixnum-comparator 1 2 2 3)
+       (bag fixnum-comparator 1 2 3))
+@result{} #f
+@end lisp
+@end defun
+
+
+@defun set>? @varo{set} @var{set} @dots{}
+@defunx bag>? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+proper superset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag>? (bag fixnum-comparator 1 2 3)
+       (bag fixnum-comparator 1 2 2 3))
+@result{} #f
+
+(bag>? (bag fixnum-comparator 1 2 2 3)
+       (bag fixnum-comparator 1 2 3))
+@result{} #t
+@end lisp
+@end defun
+
+
+@defun set<=? @varo{set} @var{set} @dots{}
+@defunx bag<=? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+subset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag<=? (bag fixnum-comparator 1 2 3)
+        (bag fixnum-comparator 1 2 2 3))
+@result{} #t
+
+(bag<=? (bag fixnum-comparator 1 2 2 3)
+        (bag fixnum-comparator 1 2 3))
+@result{} #f
+@end lisp
+@end defun
+
+
+@defun set>=? @varo{set} @var{set} @dots{}
+@defunx bag>=? @varo{bag} @var{bag} @dots{}
+Return @true{} if each @var{set} or @var{bag}, other than the last, is a
+superset of the following @var{set} or @var{bag}; return @false{}
+otherwise.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(bag>=? (bag fixnum-comparator 1 2 3)
+        (bag fixnum-comparator 1 2 2 3))
+@result{} #f
+
+(bag>=? (bag fixnum-comparator 1 2 2 3)
+        (bag fixnum-comparator 1 2 3))
+@result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi sets-and-bags theory
+@subsection Set theory operations
+
+
+@defun set-union @varo{set} @var{set} @dots{}
+@defunx set-intersection @varo{set} @var{set} @dots{}
+@defunx set-difference @varo{set} @var{set} @dots{}
+@defunx set-xor @vari{set} @varii{set}
+Return a newly allocated set that is the union, intersection, asymmetric
+difference, or symmetric difference of the @var{set} arguments.
+
+Asymmetric difference is extended to more than two sets by taking the
+difference between the first set and the union of the others.  Symmetric
+difference is not extended beyond two sets.  Elements in the result set
+are drawn from the first set in which they appear.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let* ((S1 (set fixnum-comparator 1 2))
+       (S2 (set fixnum-comparator 2 3))
+       (S  (set-difference S1 S2)))
+  (set->list S #t))
+@result{} (1)
+@end lisp
+@end defun
+
+
+@defun set-union! @varo{set} @var{set} @dots{}
+@defunx set-intersection! @varo{set} @var{set} @dots{}
+@defunx set-difference! @varo{set} @var{set} @dots{}
+@defunx set-xor! @vari{set} @varii{set}
+Like @func{set-union!}, @func{set-intersection!},
+@func{set-difference!}, @func{set-xor!} but they are allowed to mutate
+@varo{set} and return it.
+@end defun
+
+
+@defun bag-union @varo{bag} @var{bag} @dots{}
+@defunx bag-intersection @varo{bag} @var{bag} @dots{}
+@defunx bag-difference @varo{bag} @var{bag} @dots{}
+@defunx bag-xor @vari{bag} @varii{bag}
+Return a newly allocated bag that is the union, intersection, asymmetric
+difference, or symmetric difference of the @var{bag} arguments.
+
+Asymmetric difference is extended to more than two bags by taking the
+difference between the first bag and the union of the others.  Symmetric
+difference is not extended beyond two bags.  Elements in the result bag
+are drawn from the first bag in which they appear.
+
+The procedures behave as follows when both bags contain elements that
+are equal in the sense of the bags' comparator:
+
+@table @func
+@item bag-union
+The number of equal elements in the result is the largest number of
+equal elements in any of the original bags.
+
+@item bag-intersection
+The number of equal elements in the result is the smallest number of
+equal elements in any of the original bags.
+
+@item bag-difference
+The number of equal elements in the result is the number of equal
+elements in the first bag, minus the number of elements in the other
+bags (but not less than zero).
+
+@item bag-xor
+The number of equal elements in the result is the absolute value of the
+difference between the number of equal elements in the first and second
+bags.
+@end table
+@end defun
+
+
+@defun bag-union! @varo{bag} @var{bag} @dots{}
+@defunx bag-intersection! @varo{bag} @var{bag} @dots{}
+@defunx bag-difference! @varo{bag} @var{bag} @dots{}
+@defunx bag-xor! @vari{bag} @varii{bag}
+Like @func{bag-union!}, @func{bag-intersection!},
+@func{bag-difference!}, @func{bag-xor!} but they are allowed to mutate
+@varo{bag} and return it.
+@end defun
+
+@c page
+@node srfi sets-and-bags bag
+@subsection Bag--only procedures
+
+
+@defun bag-sum @varo{bag} @var{bag} @dots{}
+Return a newly allocated bag containing all the unique elements in all
+the @var{bag} arguments, such that the count of each unique element in
+the result is equal to the sum of the counts of that element in the
+arguments.  It differs from @func{bag-union} by treating identical
+elements as potentially distinct rather than attempting to match them
+up.
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let* ((B1 (bag fixnum-comparator 1 2))
+       (B2 (bag fixnum-comparator 2 3))
+       (B3 (bag fixnum-comparator 3 4))
+       (B  (bag-sum B1 B2 B3)))
+  (bag->list B #t))
+@result{} (1 2 2 3 3 4)
+@end lisp
+@end defun
+
+
+@defun bag-sum! @varo{bag} @var{bag} @dots{}
+Like @func{bag-sum} but it is permitted to mutate and return @varo{bag}
+rather than allocating a new set.
+@end defun
+
+
+@defun bag-product @var{N} @var{bag}
+Return a newly allocated bag containing all the unique elements in
+@var{bag}, where the count of each unique element in the bag is equal to
+the count of that element in @var{bag} multiplied by @var{N}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let* ((B1 (bag fixnum-comparator 1 2))
+       (B  (bag-product 0 B1)))
+  (bag->list B #t))
+@result{} ()
+
+(let* ((B1 (bag fixnum-comparator))
+       (B  (bag-product 2 B1)))
+  (bag->list B #t))
+@result{} ()
+
+(let* ((B1 (bag fixnum-comparator 1 2))
+       (B  (bag-product 3 B1)))
+  (bag->list B #t))
+@result{} (1 1 1 2 2 2)
+@end lisp
+@end defun
+
+
+@defun bag-product! @var{N} @var{bag}
+Like @func{bag-product} but it is permitted to mutate and return
+@var{bag} rather than allocating a new set.
+@end defun
+
+
+@defun bag-unique-size @var{bag}
+Return the number of unique elements of @var{bag}.
+@end defun
+
+
+@defun bag-element-count @var{bag} @var{element}
+Return an exact integer representing the number of times that
+@var{element} appears in @var{bag}.
+@end defun
+
+
+@defun bag-for-each-unique @var{proc} @var{bag}
+Apply @var{proc} to each unique element of @var{bag} in arbitrary order,
+passing the element and the number of times it occurs in @var{bag}, and
+discarding the returned values.  Return an unspecified result.
+@end defun
+
+
+@defun bag-fold-unique @var{proc} @var{nil} @var{bag}
+Invoke @var{proc} on each unique element of @var{bag} in arbitrary
+order, passing the number of occurrences as a second argument and the
+result of the previous invocation as a third argument.  For the first
+invocation: @var{nil} is used as the third argument.  Return the result
+of the last invocation.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((B (bag fixnum-comparator)))
+  (bag-fold-unique (lambda (elm count knil)
+                     (cons (list elm count) knil))
+    '()
+    B))
+@result{} '()
+
+(let ((B (bag fixnum-comparator 1 2 3)))
+  (bag-fold-unique (lambda (elm count knil)
+                     (cons (list elm count) knil))
+    '()
+    B))
+@result{} ((1 1) (2 1) (3 1))
+@end lisp
+@end defun
+
+
+@defun bag-increment! @var{bag} @var{element} @var{count}
+@defunx bag-decrement! @var{bag} @var{element} @var{count}
+Linear update procedures that return a bag with the same elements as
+@var{bag}, but with the element count of @var{element} in bag increased
+or decreased by the exact integer @var{count} (but not less than zero).
+@end defun
+
+
+@defun bag->set @var{bag}
+Return a newly allocated set containing the unique elements (in the
+sense of the equality predicate) of @var{bag}.
+@end defun
+
+
+@defun set->bag @var{set}
+Return a newly allocated bag containing the elements of @var{set}.
+@end defun
+
+
+@defun set->bag! @var{bag} @var{set}
+return a bag containing the elements of both @var{bag} and @var{set}.
+In all cases, the comparator of the result is the same as the comparator
+of the argument or arguments.
+@end defun
+
+
+
+@defun bag->alist @var{bag}
+@defunx bag->alist @var{bag} @var{compar}
+Return a newly allocated alist whose keys are the unique elements of
+@var{bag} and whose values are the number of occurrences of each
+element.
+
+As @value{PRJNAME} extension, if the optional argument @var{compar} is
+present:
+
+@itemize
+@item
+If it is the boolean @false{}: the function behaves as if @var{compar}
+is not present.
+
+@item
+If it is the boolean @true{}: the resulting alist is sorted using the
+standard @func{list-sort} and the comparison procedure from the
+@var{set} or @var{bag} comparator, so that the pairs with lesser cars
+come first.
+
+@item
+If it is a procedure: the resulting list is sorted using the standard
+@func{list-sort} and @var{compar} as comparison predicate, so that the
+pairs with lesser cars come first.
+@end itemize
+
+Usage examples:
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((B (bag fixnum-comparator 1 2 3)))
+  (bag->alist B #t))
+@result{} ((1 . 1) (2 . 1) (3 . 1))
+
+(let ((B (bag fixnum-comparator 1 1 2 2 3 3)))
+  (bag->alist B fx<?))
+@result{} ((1 . 2) (2 . 2) (3 . 2))
+@end lisp
+@end defun
+
+
+@defun alist->bag @var{comparator} @var{alist}
+Return a newly allocated bag based on @var{comparator}, where the keys
+of @var{alist} specify the elements and the corresponding values of
+@var{alist} specify how many times they occur.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((B (alist->bag fixnum-comparator '())))
+  (bag->alist B))
+@result{} ()
+
+(let ((B (alist->bag fixnum-comparator
+           '((1 . 1) (2 . 1) (3 . 1)))))
+  (bag->alist B #t))
+@result{} ((1 . 1) (2 . 1) (3 . 1))
+
+(let ((B (alist->bag fixnum-comparator
+           '((1 . 2) (2 . 2) (3 . 2)))))
+  (bag->alist B fx<?))
+@result{} ((1 . 2) (2 . 2) (3 . 2))
+@end lisp
+@end defun
+
+@c page
+@node srfi sets-and-bags compar
+@subsection Comparators
+
+
+@defun set-comparator
+@defunx bag-comparator
+Comparators used to compare sets or bags, and allow sets of sets, bags
+of sets, etc.  These comparators do not provide comparison procedures,
+as there is no ordering between sets or bags.  It is an error to compare
+sets or bags with different element comparators.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let ((S1 (set fixnum-comparator 1 2 3))
+      (S2 (set fixnum-comparator 1 2 3)))
+  (comparator-equal? set-comparator S1 S2))
+@result{} #t
+
+(let ((S1 (set fixnum-comparator 1 2 3))
+      (S2 (set fixnum-comparator 1 2 3 4)))
+  (comparator-equal? set-comparator S1 S2))
+@result{} #f
+
+(let ((S (set fixnum-comparator 1 2 3)))
+  (non-negative-exact-integer?
+    (comparator-hash set-comparator S)))
+@result{} #t
+
+;;;
+
+(let ((B1 (bag fixnum-comparator 1 2 3))
+      (B2 (bag fixnum-comparator 1 2 3)))
+  (comparator-equal? bag-comparator B1 B2))
+@result{} #t
+
+(let ((B1 (bag fixnum-comparator 1 2 3))
+      (B2 (bag fixnum-comparator 1 2 3 4)))
+  (comparator-equal? bag-comparator B1 B2))
+@result{} #f
+
+(let ((B (bag fixnum-comparator 1 2 3)))
+  (non-negative-exact-integer?
+    (comparator-hash bag-comparator B)))
+@result{} #t
+@end lisp
+@end defun
+
+@c page
+@node srfi sets-and-bags copyright
+@subsection Copyright
+
+
+Copyright @copyright{} John Cowan 2013.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

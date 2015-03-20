@@ -414,9 +414,9 @@
     ;;representing recordized  code; due to  the possible optimizations: the  type of
     ;;the returned instance is not known.
     ;;
-    ;;If the binding represented  by LHS has been created but  it is never referenced
-    ;;in its region: assigning it is useless, because the new value is never used; so
-    ;;we just include the RHS for its side effects.  For example:
+    ;;If LHS  represents a local  binding and it is  never referenced in  its region:
+    ;;assigning  it is  useless, because  the new  value is  never used;  so we  just
+    ;;include the RHS for its side effects.  For example:
     ;;
     ;;   (let ((?lhs (some-value)))
     ;;     (set! ?lhs ?rhs)
@@ -456,8 +456,12 @@
     ;;not want to generate such code, so below we detect it and substitute the ASSIGN
     ;;with a void constant.
     ;;
+    ;;Assignments to  global bindings cannot  be removed  because we must  assume the
+    ;;bindings are exported or used by macros.
+    ;;
     (make-seq-discarding-useless
-     (if (not (prelex-source-referenced? lhs))
+     (if (and (not (prelex-source-referenced? lhs))
+	      (not (prelex-global-location    lhs)))
 	 (E rhs 'e env ec sc)
        (let ((lhs.copy (%lookup lhs env)))
 	 (decrement sc 1)

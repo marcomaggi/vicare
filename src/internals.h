@@ -9,7 +9,7 @@
 	definitions  in this  file are  duplicated in  "vicare.h", which
 	defines the public API.
 
-  Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -555,8 +555,13 @@ typedef unsigned int		ik_uint;
 typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
 
-/* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
-typedef ik_ulong		ikptr;
+#if   (4 == SIZEOF_VOID_P)
+typedef uint32_t		ikptr;
+#elif (8 == SIZEOF_VOID_P)
+typedef uint64_t		ikptr;
+#else
+typedef unsigned long		ikptr;
+#endif
 
 /* Node  in a  simply linked  list.  Used  to store  pointers to  memory
    blocks of size IK_PAGESIZE.  */
@@ -1168,6 +1173,8 @@ typedef uint32_t	ikchar;
 #define IK_CHAR_TO_INTEGER(X) \
   ((ik_ulong)(((ikptr)(X)) >> char_shift))
 
+#define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
+
 #define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
 
 
@@ -1186,9 +1193,10 @@ typedef uint32_t	ikchar;
 #define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr)(X)))
 #define IK_STRING_LENGTH_FX(STR)	IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR32(STR,IDX)		(((ikchar*)(((long)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr)(STR)) + off_string_data))[IDX])
 
-#define IK_STRING_DATA_VOIDP(STR)	((void*)(((long)(STR)) + off_string_data))
+#define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr)(STR)) + off_string_data))
+#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr)(STR)) + off_string_data))
 
 ik_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
 ik_decl ikptr ika_string_from_cstring	(ikpcb * pcb, const char * cstr);

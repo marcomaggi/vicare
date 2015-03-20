@@ -37,6 +37,9 @@
     ((define-condition-type)		define-condition-type-macro)
     ((cond)				cond-macro)
     ((do)				do-macro)
+    ((do*)				do*-macro)
+    ((dolist)				dolist-macro)
+    ((dotimes)				dotimes-macro)
     ((or)				or-macro)
     ((and)				and-macro)
     ((let*)				let*-macro)
@@ -422,7 +425,7 @@
   ;;
   ;;FIXME There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17, 2014)
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'case))
 
   (define (case-macro input-form.stx)
@@ -444,7 +447,7 @@
 			   (cons ?else-body0 ?else-body*)))
 
       (_
-       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
     (let ((expr.id (gensym "expr.id"))
@@ -511,7 +514,7 @@
 		   (loop (cdr entry*)))
 
 		  (else
-		   (syntax-violation __who__ "invalid datum type" input-form.stx datum))))))
+		   (syntax-violation __module_who__ "invalid datum type" input-form.stx datum))))))
       (values (map list closure*.id closure*.stx)
 	      (fold-left (lambda (knil clause)
 			   (if (null? clause)
@@ -544,7 +547,7 @@
 		 (cons closure.id  closure*.id)
 		 (cons entry*      entry**))))
       (_
-       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+       (syntax-violation __module_who__ "invalid syntax" input-form.stx))))
 
   (define (%process-single-clause input-form.stx clause.stx)
     (syntax-match clause.stx (=>)
@@ -576,7 +579,7 @@
 				  (cons (cons* ?datum closure.id #f) entries)))
 		     )))))
       (_
-       (syntax-violation __who__ "invalid clause syntax" input-form.stx clause.stx))))
+       (syntax-violation __module_who__ "invalid clause syntax" input-form.stx clause.stx))))
 
   (define (%make-datum-clause input-form.stx expr.id else.id pred.id compar.id entry*)
     (if (pair? entry*)
@@ -598,7 +601,7 @@
   (define (%make-null-clause input-form.stx expr.id entry*)
     (if (pair? entry*)
 	(if (<= 2 (length entry*))
-	    (syntax-violation __who__ "invalid datums, null is present multiple times" input-form.stx)
+	    (syntax-violation __module_who__ "invalid datums, null is present multiple times" input-form.stx)
 	  (bless
 	   `((null? ,expr.id)
 	     ,(let* ((entry      (car  entry*))
@@ -699,7 +702,7 @@
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'define-struct))
 
   (define (define-struct-macro input-form.stx)
@@ -877,7 +880,7 @@
 	     (values (cons ?name        field*.id)
 		     (cons (top-tag-id) field*.tag))))
 	  (_
-	   (syntax-violation __who__
+	   (syntax-violation __module_who__
 	     "invalid struct field specification syntax"
 	     input-form.stx (car field*.stx))))
       (values '() '())))
@@ -2342,7 +2345,7 @@
   ;;                 (c G.c) (d G.d) (e G.e))
   ;;             ?body0 ?body)))))
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'let-values))
 
   (define (let-values-macro input-form.stx)
@@ -2399,12 +2402,12 @@
 			  ,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
 				  (cdr rhs*) standard-old* tagged-old* new*))))))
 		(?others
-		 (syntax-violation __who__ "malformed bindings" input-form.stx ?others))))))))
+		 (syntax-violation __module_who__ "malformed bindings" input-form.stx ?others))))))))
       ))
 
   (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* input-form.stx)
     (when (bound-id-member? standard-formal standard-old*)
-      (syntax-violation __who__ "duplicate binding" input-form.stx standard-formal))
+      (syntax-violation __module_who__ "duplicate binding" input-form.stx standard-formal))
     (let ((y (gensym (syntax->datum standard-formal))))
       (values y (cons standard-formal standard-old*) (cons tagged-formal tagged-old*) (cons y new*))))
 
@@ -3819,7 +3822,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DO, WHILE, UNTIL, FOR
+;;;; module non-core-macro-transformer: DO, DO*, WHILE, UNTIL, FOR
 
 (define (with-escape-fluids escape next-iteration body*)
   ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
@@ -3844,6 +3847,8 @@
 		    ((_)
 		     (,next-iteration #t)))))
      . ,body*))
+
+;;; --------------------------------------------------------------------
 
 (define (do-macro expr-stx)
   ;;Transformer function  used to expand R6RS  DO macros from the  top-level built in
@@ -3926,6 +3931,120 @@
 					`(begin . ,?expr*))))))
 		    (loop . ,?init*)))))))
        ))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (do*-macro expr-stx)
+  ;;Transformer function used to expand Vicare DO* macros from the top-level built in
+  ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  ;;This is meant to be similar to the Common Lisp syntax of the same name.
+  ;;
+  ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
+  ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+  ;;
+  (define (%make-init-binding binding-stx)
+    (syntax-match binding-stx ()
+      ((?var ?init)
+       (receive (id tag)
+	   (parse-tagged-identifier-syntax ?var)
+	 binding-stx))
+      ((?var ?init ?step)
+       (receive (id tag)
+	   (parse-tagged-identifier-syntax ?var)
+	 (list ?var ?init)))
+      (_
+       (stx-error expr-stx "invalid binding"))))
+  (define (%make-step-update binding-stx knil)
+    (syntax-match binding-stx ()
+      ((?var ?init)
+       knil)
+      ((?var ?init ?step)
+       (receive (id tag)
+	   (parse-tagged-identifier-syntax ?var)
+	 (cons `(set! ,id ,?step)
+	       knil)))
+      (_
+       (stx-error expr-stx "invalid binding"))))
+  (syntax-match expr-stx ()
+    ((_ (?binding* ...)
+	(?test ?expr* ...)
+	?command* ...)
+     (let* ((escape         (gensym "escape"))
+	    (next-iteration (gensym "next-iteration"))
+	    (init-binding*  (map %make-init-binding ?binding*))
+	    (step-update*   (fold-right %make-step-update '() ?binding*)))
+       (bless
+	`(unwinding-call/cc
+	     (lambda (,escape)
+	       (let* ,init-binding*
+		 (letrec ((loop (lambda ()
+				  (if (unwinding-call/cc
+					  (lambda (,next-iteration)
+					    (if ,?test
+						#f
+					      ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+				      (begin
+					,@step-update*
+					(loop))
+				    ,(if (null? ?expr*)
+					 '(void)
+				       `(begin . ,?expr*))))))
+		   (loop))))))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (dolist-macro expr-stx)
+  ;;Transformer function used to expand Vicare DOLIST macros from the top-level built
+  ;;in environment; we  also support extended Vicare syntax.  Expand  the contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?var ?list-form)              ?body0 ?body* ...)
+     (let ((ell (gensym)))
+       (bless
+	`(let ((,?var '()))
+	   (do ((,ell ,?list-form (cdr ,ell)))
+	       ((null? ,ell))
+	     (set! ,?var (car ,ell))
+	     ,?body0 . ,?body*)))))
+    ((_ (?var ?list-form ?result-form) ?body0 ?body* ...)
+     (let ((ell (gensym)))
+       (bless
+	`(let ((,?var '()))
+	   (do ((,ell ,?list-form (cdr ,ell)))
+	       ((null? ,ell)
+		,?result-form)
+	     (set! ,?var (car ,ell))
+	     ,?body0 . ,?body*)))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (dotimes-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare DOTIMES  macros from  the top-level
+  ;;built  in  environment; we  also  support  extended  Vicare syntax.   Expand  the
+  ;;contents of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?var ?count-form)              ?body0 ?body* ...)
+     (let ((max-var (gensym)))
+       (bless
+	`(let ((,max-var ,?count-form))
+	   (do ((,?var 0 (add1 ,?var)))
+	       ((>= ,?var ,max-var))
+	     ,?body0 . ,?body*)))))
+    ((_ (?var ?count-form ?result-form) ?body0 ?body* ...)
+     (let ((max-var (gensym)))
+       (bless
+	`(let ((,max-var ,?count-form))
+	   (do ((,?var 0 (add1 ,?var)))
+	       ((>= ,?var ,max-var)
+		,?result-form)
+	     ,?body0 . ,?body*)))))
     ))
 
 ;;; --------------------------------------------------------------------

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -246,7 +246,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'unsafe))
+(parametrise ((check-test-name	'predicates))
 
   (check (fxnonpositive? 0)		=> #t)
   (check (fxnonpositive? +123)		=> #f)
@@ -255,6 +255,28 @@
   (check (fxnonnegative? 0)		=> #t)
   (check (fxnonnegative? +123)		=> #t)
   (check (fxnonnegative? -123)		=> #f)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (positive-fixnum? +123))
+  (check-for-false (positive-fixnum? 0))
+  (check-for-false (positive-fixnum? -123))
+  (check-for-false (positive-fixnum? "ciao"))
+
+  (check-for-true  (negative-fixnum? -123))
+  (check-for-false (negative-fixnum? 0))
+  (check-for-false (negative-fixnum? +123))
+  (check-for-false (negative-fixnum? "ciao"))
+
+  (check-for-true  (non-positive-fixnum? 0))
+  (check-for-true  (non-positive-fixnum? -123))
+  (check-for-false (non-positive-fixnum? +123))
+  (check-for-false (non-positive-fixnum? "ciao"))
+
+  (check-for-true  (non-negative-fixnum? 0))
+  (check-for-true  (non-negative-fixnum? +123))
+  (check-for-false (non-negative-fixnum? -123))
+  (check-for-false (non-negative-fixnum? "ciao"))
 
 ;;; --------------------------------------------------------------------
 

@@ -3,7 +3,6 @@
 ACLOCAL_AMFLAGS		= -I meta/autotools
 EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
-			  scripts/make-last-revision			\
 			  meta/autotools/config.rpath
 
 slsdir			= $(srcdir)/lib
@@ -135,6 +134,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-boxes.texi				\
 	doc/srfi-case-lambda.texi			\
 	doc/srfi-char-sets.texi				\
+	doc/srfi-comparators.texi			\
 	doc/srfi-compare-procedures.texi		\
 	doc/srfi-cond-expand.texi			\
 	doc/srfi-eager-comp.texi			\
@@ -155,6 +155,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-rec.texi				\
 	doc/srfi-receive.texi				\
 	doc/srfi-records.texi				\
+	doc/srfi-sets-and-bags.texi			\
 	doc/srfi-shared-structures.texi			\
 	doc/srfi-specialize-procedures.texi		\
 	doc/srfi-streams.texi				\
@@ -211,7 +212,7 @@ VICARE_NEW_EXECUTABLE	= $(builddir)/vicare
 
 AM_CPPFLAGS	= -I $(srcdir)/src -I $(builddir)/src
 AM_CFLAGS	= -Wall
-EXTRA_DIST	+= src/last-revision.h src/vicare-platform.h.in
+EXTRA_DIST	+= src/vicare-platform.h.in
 
 bin_PROGRAMS	= vicare
 vicare_SOURCES	= \
@@ -240,7 +241,6 @@ vicare_SOURCES	= \
 	src/ikarus-linux.c		\
 	src/ikarus-readline.c		\
 	src/ikarus-debugging.c		\
-	src/last-revision.h		\
 	src/internals.h
 
 nodist_vicare_SOURCES	= src/bootfileloc.h
@@ -249,19 +249,15 @@ include_HEADERS		= src/vicare.h src/vicare-platform.h
 
 src/ikarus.$(OBJEXT) src/ikarus-main.$(OBJEXT): src/bootfileloc.h
 
-MAINTAINERCLEANFILES	+= $(srcdir)/src/last-revision.h
 CLEANFILES		+= src/bootfileloc.h
 
-BUILT_SOURCES		+= $(srcdir)/src/last-revision.h src/bootfileloc.h
+BUILT_SOURCES		+= src/bootfileloc.h
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
 src/bootfileloc.h:
 	echo '#define BOOTFILE "$(pkglibdir)/vicare.boot"' >$@
 	echo '#define EXEFILE "$(bindir)/vicare"' >>$@
-
-$(srcdir)/src/last-revision.h:
-	echo '#define LAST_REVISION "no-branch/no-commit"' >$@
 
 # List of flags to link libraries with the "vicare" executable.
 vicare_LDADD		=
@@ -723,6 +719,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-flonum-base.sps				\
 	tests/test-vicare-flonum-formatter.sps				\
 	tests/test-vicare-flonum-parser.sps				\
+	tests/test-vicare-hashtables.sps				\
 	tests/test-vicare-infix.sps					\
 	tests/test-vicare-io.sps					\
 	tests/test-vicare-letrec-syntax.sps				\
@@ -918,7 +915,9 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	tests/test-srfi-98-os-environment-variables.sps			\
 	tests/test-srfi-101-functional-pairs.sps			\
 	tests/test-srfi-111-boxes.sps					\
-	tests/test-srfi-112-environment-inquiry.sps
+	tests/test-srfi-112-environment-inquiry.sps			\
+	tests/test-srfi-113-sets-and-bags.sps				\
+	tests/test-srfi-114-comparators.sps
 
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	tests/test-srfi-106-socket.sps

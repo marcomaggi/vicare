@@ -155,7 +155,7 @@
 		   (case type
 		     ((core-macro
 		       define define-syntax define-alias
-		       define-fluid-syntax define-fluid-override
+		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
 		       begin set! stale-when
 		       local-ctv global-ctv
@@ -589,13 +589,12 @@
 	 ((syntax)
 	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
-	 ((define define-syntax define-fluid-syntax define-fluid-override define-alias module import library)
+	 ((define define-syntax define-fluid-syntax define-alias module import library)
 	  (stx-error expr.stx (string-append
 			       (case type
 				 ((define)                 "a definition")
 				 ((define-syntax)          "a define-syntax")
 				 ((define-fluid-syntax)    "a define-fluid-syntax")
-				 ((define-fluid-override)  "a define-fluid-override")
 				 ((define-alias)           "a define-alias")
 				 ((module)                 "a module definition")
 				 ((library)                "a library definition")
@@ -698,7 +697,7 @@
   ;;and ?RATOR will evaluate to a closure object with tag identifier RATOR.TAG, which
   ;;is a sub-tag of "<procedure>".
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax '%process-closure-object-application))
 
   (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
@@ -757,6 +756,11 @@
      %error-more-arguments-than-operands
      %error-mismatch-between-argument-tag-and-operand-retvals-signature)
 
+    (define-condition-type &wrong-number-of-arguments-error
+	&error
+      make-wrong-number-of-arguments-error-condition
+      wrong-number-of-arguments-error-condition?)
+
     (define-condition-type &expected-arguments-count
 	&condition
       make-expected-arguments-count-condition
@@ -782,27 +786,29 @@
       operand-retvals-signature-condition?
       (signature operand-retvals-signature))
 
-    (define (%error-more-operands-than-arguments input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object __who__
-	"more given operands than expected arguments"
+    (define (%error-more-operands-than-arguments who input-form.stx expected-arguments-count given-operands-count)
+      (%raise-compound-condition-object who
+	"while expanding, detected wrong number of operands in function application: more given operands than expected arguments"
 	input-form.stx
 	(condition
 	 (make-syntax-violation input-form.stx #f)
+	 (make-wrong-number-of-arguments-error-condition)
 	 (make-expected-arguments-count-condition expected-arguments-count)
 	 (make-given-operands-count-condition given-operands-count))))
 
-    (define (%error-more-arguments-than-operands input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object __who__
-	"more expected arguments than given operands"
+    (define (%error-more-arguments-than-operands who input-form.stx expected-arguments-count given-operands-count)
+      (%raise-compound-condition-object who
+	"while expanding, detected wrong number of operands in function application: more expected arguments than given operands"
 	input-form.stx
 	(condition
 	 (make-syntax-violation input-form.stx #f)
+	 (make-wrong-number-of-arguments-error-condition)
 	 (make-expected-arguments-count-condition expected-arguments-count)
 	 (make-given-operands-count-condition given-operands-count))))
 
-    (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx rand.stx
+    (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature who input-form.stx rand.stx
 										arg.idx arg.tag rand.retvals-signature)
-      (%raise-compound-condition-object __who__
+      (%raise-compound-condition-object who
 	"expand-time mismatch between expected argument tag and operand retvals signature"
 	input-form.stx
 	(condition
@@ -839,7 +845,7 @@
 	(()
 	 (if (null? rand*.psi)
 	     expand-time-match?
-	   (%error-more-operands-than-arguments input-form.stx
+	   (%error-more-operands-than-arguments 'chi-application input-form.stx
 						count (+ count (length rand*.psi)))))
 
 	((?arg.tag . ?rest-arg*.tag)
@@ -849,7 +855,7 @@
 					       (receive (proper tail)
 						   (improper-list->list-and-rest arg*.tag)
 						 (length proper)))))
-	       (%error-more-arguments-than-operands input-form.stx (+ count number-of-mandatory-args) count))
+	       (%error-more-arguments-than-operands 'chi-application input-form.stx (+ count number-of-mandatory-args) count))
 	   (let* ((rand.psi               (car rand*.psi))
 		  (rand.retvals-signature (psi-retvals-signature rand.psi))
 		  (rand.signature-tags    (retvals-signature-tags rand.retvals-signature)))
@@ -869,7 +875,8 @@
 		       (loop expand-time-match? ?rest-arg*.tag (cdr rand*.psi) (fxadd1 count)))
 		      (else
 		       ;;Argument and operand do *not* match at expand-time.
-		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
+		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
+											   input-form.stx
 											   (psi-stx rand.psi)
 											   count ?arg.tag
 											   rand.retvals-signature))))
@@ -886,13 +893,15 @@
 		  ;;
 		  ;;FIXME The  validity of this  rejection must be  verified.  (Marco
 		  ;;Maggi; Fri Apr 11, 2014)
-		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
+		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
+										      input-form.stx
 										      (psi-stx rand.psi)
 										      count ?arg.tag
 										      rand.retvals-signature)))
 	       (_
 		;;The operand returns multiple values for sure.
-		(%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
+		(%error-mismatch-between-argument-tag-and-operand-retvals-signature 'chi-application
+										    input-form.stx
 										    (psi-stx rand.psi)
 										    count ?arg.tag
 										    rand.retvals-signature))
@@ -909,7 +918,7 @@
 
 	(_
 	 ;;This should never happen.
-	 (assertion-violation/internal-error __who__
+	 (assertion-violation/internal-error __module_who__
 	   "invalid closure object operator formals"
 	   input-form.stx rator.formals-signature))
 	)))
@@ -1194,7 +1203,7 @@
 ;;;; chi procedures: general operator application, nothing already expanded
 
 (module (chi-application)
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax (quote chi-application)))
 
   (define (chi-application input-form.stx lexenv.run lexenv.expand)
@@ -1314,7 +1323,7 @@
 				    rator.psi ?rand*)))
 
       (_
-       (syntax-violation/internal-error __who__
+       (syntax-violation/internal-error __module_who__
 	 "invalid application syntax" input-form.stx))))
 
   (define (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
@@ -1347,7 +1356,7 @@
 	     (chi-expr (cons ?nested-rator (append ?nested-rand* rand*.stx))
 		       lexenv.run lexenv.expand))
 	    (_
-	     (syntax-violation __who__
+	     (syntax-violation __module_who__
 	       "expected list as argument of splice-first-expand"
 	       input-form.stx rator.stx)))
 	(chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
@@ -1606,7 +1615,7 @@
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an instance  of "lambda-signature" representing the  tag signature for
-    ;;this  LAMBDA   clause;  a  PSI   struct  containint  the   language  expression
+    ;;this  LAMBDA   clause;  a  PSI   struct  containing  the   language  expression
     ;;representing the body of the clause.
     ;;
     ;;A LAMBDA or CASE-LAMBDA clause defines a lexical contour; so we build a new rib
@@ -1806,138 +1815,115 @@
 
 ;;;; chi procedures: function definitions and lambda syntaxes
 
-(module (chi-defun chi-lambda chi-case-lambda)
+(module (chi-defun)
+  (import CHI-LAMBDA-CLAUSES)
 
-  (module (chi-defun)
-    (import CHI-LAMBDA-CLAUSES)
-
-    (define (chi-defun input-form.stx lexenv.run lexenv.expand)
-      ;;Expand a syntax object representing a  INTERNAL-DEFINE syntax for the case of
-      ;;function definition.  Return an expanded language expression representing the
-      ;;expanded definition.
-      ;;
-      ;;The  returned expression  will be  coupled (by  the caller)  with an  already
-      ;;generated lex  gensym serving as  lexical variable  name; for this  reason we
-      ;;return a lambda core form rather than a define core form.
-      ;;
-      ;;NOTE This  function assumes the  INPUT-FORM.STX has already been  parsed, and
-      ;;the binding for ?WHO has already been added to LEXENV by the caller.
-      ;;
-      (syntax-match input-form.stx (brace)
-	((_ ?attributes ((brace ?who ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
-	 (let ((formals.stx (bless
-			     `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-	       (body*.stx   (%introduce-who-fluid-syntax ?who ?body-form*)))
-	   (%expand input-form.stx lexenv.run lexenv.expand
-		    (syntax->datum ?attributes) ?who formals.stx body*.stx)))
-
-	((_ ?attributes (?who . ?fmls) . ?body-form*)
-	 (let ((formals.stx ?fmls)
-	       (body*.stx   (%introduce-who-fluid-syntax ?who ?body-form*)))
-	   (%expand input-form.stx lexenv.run lexenv.expand
-		    (syntax->datum ?attributes) ?who formals.stx body*.stx)))
-	))
-
-    (define (%expand input-form.stx lexenv.run lexenv.expand
-		     attributes.sexp ctxt.id formals.stx body*.stx)
-      ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
-      ;;core language LAMBDA sexp's annotation.
-      (receive (formals.core lambda-signature body.psi)
-	  (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			      attributes.sexp formals.stx body*.stx)
-	;;FORMALS.CORE is composed of lex gensyms.
-	(make-psi input-form.stx
-		  (build-lambda (syntax-annotation ctxt.id)
-		    formals.core
-		    (psi-core-expr body.psi))
-		  (make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt.id) lambda-signature))))
-
-    #| end of module: CHI-DEFUN |# )
-
-;;; --------------------------------------------------------------------
-
-  (define* (chi-lambda input-form.stx lexenv.run lexenv.expand
-		       attributes.stx formals.stx body*.stx)
-    ;;Expand the contents of CASE syntax and return a "psi" struct.
+  (define (chi-defun input-form.stx lexenv.run lexenv.expand)
+    ;;Expand a  syntax object representing a  INTERNAL-DEFINE syntax for the  case of
+    ;;function definition.   Return an expanded language  expression representing the
+    ;;expanded definition.
     ;;
-    ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
+    ;;The  returned expression  will  be  coupled (by  the  caller)  with an  already
+    ;;generated  lex gensym  serving as  lexical variable  name; for  this reason  we
+    ;;return a lambda core form rather than a define core form.
     ;;
-    ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
+    ;;NOTE This function assumes the INPUT-FORM.STX  has already been parsed, and the
+    ;;binding for ?CTXT has already been added to LEXENV by the caller.
     ;;
-    ;;BODY*.STX is a list of syntax  objects representing the body expressions in the
-    ;;LAMBDA syntax.
-    ;;
-    (import CHI-LAMBDA-CLAUSES)
-    (define attributes.sexp (syntax->datum attributes.stx))
-    (receive (formals.lex lambda-signature body.psi)
+    (syntax-match input-form.stx (brace)
+      ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
+       (let ((formals.stx (bless
+			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
+	     (body*.stx   (bless
+			   `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
+			       . ,?body-form*)))))
+	 (%expand input-form.stx lexenv.run lexenv.expand
+		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
+
+      ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
+       (let ((formals.stx ?fmls)
+	     (body*.stx   (bless
+			   `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
+			       . ,?body-form*)))))
+	 (%expand input-form.stx lexenv.run lexenv.expand
+		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
+      ))
+
+  (define (%expand input-form.stx lexenv.run lexenv.expand
+		   attributes.sexp ctxt.id formals.stx body*.stx)
+    ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
+    ;;core language LAMBDA sexp's annotation.
+    (receive (formals.core lambda-signature body.psi)
 	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			    attributes.sexp formals.stx
-			    ;;FIXME Why  I cannot  wrap the body  here?  Right  now I
-			    ;;have no will  to investigate (Marco Maggi;  Wed Sep 24,
-			    ;;2014)
-			    ;;
-			    ;;(%introduce-who-fluid-syntax 'anonymous-lambda body*.stx)
-			    body*.stx)
+			    attributes.sexp formals.stx body*.stx)
+      ;;FORMALS.CORE is composed of lex gensyms.
       (make-psi input-form.stx
-		(build-lambda (syntax-annotation input-form.stx)
-		  formals.lex
+		(build-lambda (syntax-annotation ctxt.id)
+		  formals.core
 		  (psi-core-expr body.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
+		(make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt.id) lambda-signature))))
 
-  (define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-			    attributes.stx formals*.stx body**.stx)
-    ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
-    ;;
-    ;;INPUT-FORM.STX  is  a  syntax  object  representing  the  original  CASE-LAMBDA
-    ;;expression.
-    ;;
-    ;;FORMALS*.STX is  a list of  syntax objects whose items  are the formals  of the
-    ;;CASE-LAMBDA clauses.
-    ;;
-    ;;BODY**.STX  is a  list of  syntax objects  whose items  are the  bodies of  the
-    ;;CASE-LAMBDA clauses.
-    ;;
-    ;;Example, for the input form:
-    ;;
-    ;;   (case-lambda ((a b c) body1) ((d e f) body2))
-    ;;
-    ;;this function is invoked as:
-    ;;
-    ;;   (chi-case-lambda
-    ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
-    ;;    (list #'(a b c) #'(d e f))
-    ;;    (list #'(body1) #'(body2))
-    ;;    lexenv.run lexenv.expand)
-    ;;
-    (import CHI-LAMBDA-CLAUSES)
-    (define attributes.sexp (syntax->datum attributes.stx))
-    (receive (formals*.lex lambda-signature* body**.psi)
-	(%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-			     attributes.sexp formals*.stx
-			     ;;FIXME Why  I cannot  wrap the body  here?  Right  now I
-			     ;;have no will  to investigate (Marco Maggi;  Wed Sep 24,
-			     ;;2014)
-			     ;;
-			     ;; (map (lambda (body-form*.stx)
-			     ;; 	    (%introduce-who-fluid-syntax 'anonymous-lambda body-form*.stx))
-			     ;;   body**.stx)
-			     body**.stx)
-      (make-psi input-form.stx
-		(build-case-lambda (syntax-annotation input-form.stx)
-		  formals*.lex
-		  (map psi-core-expr body**.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
+  #| end of module: CHI-DEFUN |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%introduce-who-fluid-syntax who body-form*.stx)
-    ;;The body must be a list of forms.
-    ;;
-    (bless
-     `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,who))))
-	 (internal-body . ,body-form*.stx)))))
+(define* (chi-lambda input-form.stx lexenv.run lexenv.expand
+		     attributes.stx formals.stx body*.stx)
+  ;;Expand the contents of a LAMBDA syntax and return a "psi" struct.
+  ;;
+  ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
+  ;;
+  ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
+  ;;
+  ;;BODY*.STX is  a list of syntax  objects representing the body  expressions in the
+  ;;LAMBDA syntax.
+  ;;
+  (import CHI-LAMBDA-CLAUSES)
+  (define attributes.sexp (syntax->datum attributes.stx))
+  (receive (formals.lex lambda-signature body.psi)
+      (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			  attributes.sexp formals.stx body*.stx)
+    (make-psi input-form.stx
+	      (build-lambda (syntax-annotation input-form.stx)
+		formals.lex
+		(psi-core-expr body.psi))
+	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
 
-  #| end of module |# )
+(define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
+			  attributes.stx formals*.stx body**.stx)
+  ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
+  ;;
+  ;;INPUT-FORM.STX  is   a  syntax  object  representing   the  original  CASE-LAMBDA
+  ;;expression.
+  ;;
+  ;;FORMALS*.STX is  a list  of syntax  objects whose  items are  the formals  of the
+  ;;CASE-LAMBDA clauses.
+  ;;
+  ;;BODY**.STX  is a  list  of syntax  objects  whose  items are  the  bodies of  the
+  ;;CASE-LAMBDA clauses.
+  ;;
+  ;;Example, for the input form:
+  ;;
+  ;;   (case-lambda ((a b c) body1) ((d e f) body2))
+  ;;
+  ;;this function is invoked as:
+  ;;
+  ;;   (chi-case-lambda
+  ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
+  ;;    (list #'(a b c) #'(d e f))
+  ;;    (list #'(body1) #'(body2))
+  ;;    lexenv.run lexenv.expand)
+  ;;
+  (import CHI-LAMBDA-CLAUSES)
+  (define attributes.sexp (syntax->datum attributes.stx))
+  (receive (formals*.lex lambda-signature* body**.psi)
+      (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
+			   attributes.sexp formals*.stx body**.stx)
+    (make-psi input-form.stx
+	      (build-case-lambda (syntax-annotation input-form.stx)
+		formals*.lex
+		(map psi-core-expr body**.psi))
+	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
 
 
 ;;;; chi procedures: lexical bindings qualified right-hand sides
@@ -2450,37 +2436,6 @@
 				(cons* entry1 entry2 lexenv.expand)
 				lex* qrhs* mod** kwd* export-spec* rib
 				mix? sd?)))))
-
-	      ((define-fluid-override)
-	       ;;The body form  is a core language  DEFINE-FLUID-OVERRIDE macro use.
-	       ;;We push new entries  on the LEXENV then recurse on  the rest of the
-	       ;;body.
-	       ;;
-	       ;;For  a  description of  how  to  re-bind  fluid syntaxes:  see  the
-	       ;;transformer for FLUID-LET-SYNTAX.
-	       ;;
-	       (receive (id rhs.stx)
-		   (%parse-define-syntax body-form.stx)
-		 (when (bound-id-member? id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
-		 (let* ((fluid-label (let* ((label    (or (id->label id)
-							  (stx-error id "unbound identifier")))
-					    (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
-				       (cond ((fluid-syntax-binding? binding)
-					      (fluid-syntax-binding-fluid-label binding))
-					     (else
-					      (stx-error id "not a fluid identifier")))))
-			(binding      (with-exception-handler/input-form
-					  rhs.stx
-					(%eval-macro-transformer
-					 (%expand-macro-transformer rhs.stx lexenv.expand)
-					 lexenv.run)))
-			(entry       (cons fluid-label binding)))
-		   (chi-body* (cdr body-form*.stx)
-			      (cons entry lexenv.run)
-			      (cons entry lexenv.expand)
-			      lex* qrhs* mod** kwd* export-spec* rib
-			      mix? sd?))))
 
 	      ((define-alias)
 	       ;;The body form is a core  language DEFINE-ALIAS macro use.  We add a

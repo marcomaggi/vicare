@@ -1305,6 +1305,11 @@ and uses @func{eqv?} to compare other nodes.
 @end example
 
 @quotation
+@strong{NOTE} As @value{PRJNAME} extensions: structs are compared with
+@func{struct=?} and @rnrs{6} records are compared with @func{record=?}.
+@end quotation
+
+@quotation
 @strong{NOTE} The @func{equal?} procedure must always terminate, even if
 its arguments contain cycles.
 @end quotation

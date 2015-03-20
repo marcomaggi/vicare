@@ -222,8 +222,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax-rule (%compiler-internal-error ?message . ?irritants)
-  (compiler-internal-error __module_who__ __who__ ?message . ?irritants))
+(define-syntax-rule (%compiler-internal-error who ?message . ?irritants)
+  (compiler-internal-error __module_who__ who ?message . ?irritants))
 
 ;;; --------------------------------------------------------------------
 
@@ -248,7 +248,7 @@
 		    ((bottom-code)
 		     (fx+ size (%compute-code-size (cdr x))))
 		    (else
-		     (%compiler-internal-error
+		     (%compiler-internal-error __who__
 		       "unknown instruction" x)))))
     0
     octets-and-labels))
@@ -418,7 +418,7 @@
 		      ((bottom-code)
 		       (fx+ ac (%compute-reloc-vector-size (cdr x))))
 		      (else
-		       (%compiler-internal-error
+		       (%compiler-internal-error __who__
 			 "unknown instr" x)))))
       0
       octets-and-sexps))
@@ -427,11 +427,6 @@
 
 
 (module (convert-instructions local-label-gensym?)
-
-  (define-fluid-override __who__
-    (identifier-syntax 'convert-instructions))
-
-;;; --------------------------------------------------------------------
 
   ;;List  of symbols  representing  local labels.
   (define local-labels
@@ -451,7 +446,7 @@
     (parametrise ((local-labels (%uncover-local-labels '() assembly-sexp*)))
       (fold-right %convert-single-sexp '() assembly-sexp*)))
 
-  (define (%convert-single-sexp assembly-sexp accum)
+  (define* (%convert-single-sexp assembly-sexp accum)
     ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
     ;;(representing  machine  code  octets)  and  sexps;  prepend  the  list  to  the
     ;;accumulator  list   ACCUM;  return  the   new  accumulator  list.    We  expect
@@ -486,7 +481,7 @@
 		  (define-syntax-rule (%with-checked-args ?num-of-rand* ?body-form)
 		    (if (fx=? (length rand*) ?num-of-rand*)
 			?body-form
-		      (%error-incorrect-args assembly-sexp num-of-rand*)))
+		      (%error-incorrect-args __who__ assembly-sexp num-of-rand*)))
 		  (case num-of-rand*
 		    ((2)
 		     (%with-checked-args 2
@@ -528,7 +523,7 @@
 		     new-accum.tail)))
 
 	  (else
-	   (%compiler-internal-error
+	   (%compiler-internal-error __who__
 	     "unknown instruction" assembly-sexp))))
 
   (define (%extract-prefix old-accum new-accum)
@@ -552,11 +547,12 @@
 
   (define-entry-predicate bottom-code? bottom-code)
 
-  (define (%error-incorrect-args assembly-sexp expected-num-of-rand*)
-    (%compiler-internal-error
-      (string-append "wrong number of operands in Assembly symbolic expression, expected "
-		     (number->string expected-num-of-rand*))
-      assembly-sexp))
+  (define (%error-incorrect-args who assembly-sexp expected-num-of-rand*)
+    (fluid-let-syntax ((__who__ (identifier-syntax who)))
+      (%compiler-internal-error __who__
+	  (string-append "wrong number of operands in Assembly symbolic expression, expected "
+			 (number->string expected-num-of-rand*))
+	assembly-sexp)))
 
 ;;; --------------------------------------------------------------------
 
@@ -687,7 +683,7 @@
 		    (loop (cdr octets-and-sexps) idx reloc (cons (cdr entry) bot*)))
 
 		   (else
-		    (%compiler-internal-error "unknown entry in octets and sexps" entry))))))))
+		    (%compiler-internal-error __who__ "unknown entry in octets and sexps" entry))))))))
     (loop octets-and-sexps 0 '() '()))
 
   (define* (%set-code-word-as-fixnum! code idx {x fixnum?})
@@ -764,7 +760,7 @@
 
   (define* (%set-label-loc! x loc)
     (if (getprop x '*label-loc*)
-	(%compiler-internal-error "label is already defined" x)
+	(%compiler-internal-error __who__ "label is already defined" x)
       (putprop x '*label-loc* loc)))
 
   #| end of module: STORE-BINARY-CODE-IN-CODE-OBJECTS |# )
@@ -907,7 +903,7 @@
 	 (%error "invalid entry key while filling relocation vector" key)))))
 
   (define-syntax-rule (%error ?message . ?irritants)
-    (%compiler-internal-error ?message . ?irritants))
+    (%compiler-internal-error __who__ ?message . ?irritants))
 
   (define-syntax %store-first-word!
     ;;
@@ -923,7 +919,7 @@
 
   (define (%label-loc x)
     (or (getprop x '*label-loc*)
-	(%compiler-internal-error
+	(%compiler-internal-error __who__
 	  "undefined label" x)))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 9, 2012)
@@ -1055,7 +1051,7 @@
     (cond ((assq x REGISTER-MAPPING)
 	   => caddr)
 	  (else
-	   (%compiler-internal-error "expected symbol representing register name" x))))
+	   (%compiler-internal-error __who__ "expected symbol representing register name" x))))
 
   (define* (reg-requires-REX.R-prefix? x)
     ;;X must be a symbol representing the name of a CPU register.  Query the table of
@@ -1070,7 +1066,7 @@
     (cond ((assq x REGISTER-MAPPING)
 	   => cadddr)
 	  (else
-	   (%compiler-internal-error "expected symbol representing CPU register name" x))))
+	   (%compiler-internal-error __who__ "expected symbol representing CPU register name" x))))
 
   (define-constant REGISTER-MAPPING
 ;;;     reg  cls  idx  REX.R
@@ -1253,7 +1249,7 @@
 	   (%IMM/label n ac))
 
 	  (else
-	   (%compiler-internal-error "invalid" n))))
+	   (%compiler-internal-error __who__ "invalid" n))))
 
   (define* (IMM8 {n immediate-int?} ac)
     ;;Prepend to  the accumulator AC  a fixnum representing the  byte N, which  is an
@@ -1271,7 +1267,7 @@
 	    ((label? n)
 	     (%IMM/label n ac))
 	    (else
-	     (%compiler-internal-error "invalid" n))))))
+	     (%compiler-internal-error __who__ "invalid" n))))))
 
   (define (%IMM/label ival ac)
     (let* ((LN  (label-name ival))
@@ -1314,7 +1310,7 @@
 		  ac))
 
 	    (else
-	     (%compiler-internal-error "invalid" ival1 ival2))))
+	     (%compiler-internal-error __who__ "invalid" ival1 ival2))))
 
     (define-constant WORDSIZE-BITMASK
       ;;On 32-bit platforms: this is an exact integer of 32 bits set to 1.
@@ -1327,14 +1323,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (byte x)
+  (define* (byte x)
     ;;Expect X to be an expression evaluating to an exact integer; extract and return
     ;;the 8 least significant bits from the integer.
     ;;
     (if (or (fixnum? x)
 	    (bignum? x))
 	(bitwise-and x #xFF)
-      (%compiler-internal-error "expected byte operand" x)))
+      (%compiler-internal-error __who__ "expected byte operand" x)))
 
   (define-syntax-rule (word x)
     (cons 'word x))
@@ -1399,9 +1395,9 @@
     ;;GREEK-RHO_1, GREEK-RHO_2, GREEK-RHO_3 must be symbols representing CPU register names.
     ;;
     (cond ((eq? greek-rho_3 '%esp)
-	   (%compiler-internal-error "invalid src %esp"))
+	   (%compiler-internal-error __who__ "invalid src %esp"))
 	  ((eq? greek-rho_1 '%ebp)
-	   (%compiler-internal-error "invalid src %ebp"))
+	   (%compiler-internal-error __who__ "invalid src %ebp"))
 	  (else
 	   (cons* (byte (fxlogor 4                    (fxsll (register-index greek-rho_1) 3)))
 		  (byte (fxlogor (register-index greek-rho_2) (fxsll (register-index greek-rho_3) 3)))
@@ -1412,7 +1408,7 @@
   (define* (REX.R bits ac)
     (boot.case-word-size
      ((32)
-      (%compiler-internal-error "invalid use in 32-bit mode"))
+      (%compiler-internal-error __who__ "invalid use in 32-bit mode"))
      ((64)
       (cons (fxlogor #b01001000 bits) ac))))
 
@@ -1473,10 +1469,10 @@
 
 		   ((and (imm? rm.base)
 			 (imm? rm.offset))
-		    (%compiler-internal-error "not here 4"))
+		    (%compiler-internal-error __who__ "not here 4"))
 
 		   (else
-		    (%compiler-internal-error "unhandled" rm.base rm.offset)))
+		    (%compiler-internal-error __who__ "unhandled" rm.base rm.offset)))
 	   (cond ((and (imm?   rm.base)
 		       (reg32? rm.offset))
 		  (if (reg-requires-REX.R-prefix? rm.offset)
@@ -1493,10 +1489,10 @@
 		       (reg32? rm.offset))
 		  (cond ((reg-requires-REX.R-prefix? rm.base)
 			 (if (reg-requires-REX.R-prefix? rm.offset)
-			     (%compiler-internal-error "unhandled x1" rm.base rm.offset)
+			     (%compiler-internal-error __who__ "unhandled x1" rm.base rm.offset)
 			   (REX.R #b010 ac)))
 			((reg-requires-REX.R-prefix? rm.offset)
-			 (%compiler-internal-error "unhandled x3" rm.base rm.offset))
+			 (%compiler-internal-error __who__ "unhandled x3" rm.base rm.offset))
 			(else
 			 (REX.R 0 ac))))
 
@@ -1505,7 +1501,7 @@
 		  (REX.R 0 ac))
 
 		 (else
-		  (%compiler-internal-error "unhandled" rm.base rm.offset)))))
+		  (%compiler-internal-error __who__ "unhandled" rm.base rm.offset)))))
 	((reg)
 	 (let* ((bits 0)
 		(bits (if (reg-requires-REX.R-prefix? r)
@@ -1573,14 +1569,14 @@
 		   (imm? dst.offset))
 	      (ModRM 0 /d '/5 (IMM*2 dst.base dst.offset ac)))
 	     (else
-	      (%compiler-internal-error "invalid components in DISP operand" dst))))
+	      (%compiler-internal-error __who__ "invalid components in DISP operand" dst))))
       ((reg)
        (ModRM 3 /d dst ac))))
 
   (define* (jmp-pc-relative code0 code1 dst ac)
     (boot.case-word-size
      ((32)
-      (%compiler-internal-error "no pc-relative jumps in 32-bit mode"))
+      (%compiler-internal-error __who__ "no pc-relative jumps in 32-bit mode"))
      ((64)
       (let ((G (gensym "L_jump")))
 	(CODE code0
@@ -1617,7 +1613,7 @@
 	       ((mem) ?mem-body0 ?mem-body ...)
 	       ((reg) ?reg-body0 ?reg-body ...)
 	       (else
-		(%compiler-internal-error "invalid operand, expected register or DISP sexp" ?operand))))
+		(%compiler-internal-error __who__ "invalid operand, expected register or DISP sexp" ?operand))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -1632,7 +1628,7 @@
   ;;         ((imm? i)
   ;;          (CODE c (ModRM 2 d s (IMM i ac))))
   ;;         (else
-  ;;          (%compiler-internal-error "invalid i" i))))
+  ;;          (%compiler-internal-error __who__ "invalid i" i))))
 
   ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
   ;;
@@ -1777,7 +1773,7 @@
 		 ((?pred0 ?pred ...) ?body0 ?body ...)
 		 ...
 		 (else
-		  (%compiler-internal-error "invalid instruction operands"
+		  (%compiler-internal-error __who__ "invalid instruction operands"
 		    ASM-SEXP ?arg0 ?arg ...)))))
       ))
 
@@ -1804,9 +1800,9 @@
      ;;
      ;;FIXME Fixme what?  (Marco Maggi; Thu Nov  6, 2014)
      (match-operands (src dst)
-       ((imm? reg?)		(%compiler-internal-error "invalid operands" asm-sexp)) ;;;(CR  #xB8 dst (IMM32 src ac))
+       ((imm? reg?)		(%compiler-internal-error __who__ "invalid operands" asm-sexp)) ;;;(CR  #xB8 dst (IMM32 src ac))
        ((imm? disp?)		(CR*/no-rex #xC7 '/0 dst (IMM32 src ac)))
-       ((reg? reg?)		(%compiler-internal-error "invalid operands" asm-sexp)) ;;;(CR* #x89 src dst ac)
+       ((reg? reg?)		(%compiler-internal-error __who__ "invalid operands" asm-sexp)) ;;;(CR* #x89 src dst ac)
        ((reg? disp?)		(CR*/no-rex #x89 src dst ac))
        ((disp? reg?)		(boot.case-word-size
 				 ((32)	(CR*        #x8B dst src ac))

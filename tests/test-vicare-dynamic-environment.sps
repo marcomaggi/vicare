@@ -37,14 +37,6 @@
 (define parm
   (make-parameter #f))
 
-(define-syntax dotimes
-  (syntax-rules ()
-    ((_ ?count . ?body)
-     (do ((i 0 (+ 1 i)))
-	 ((= i ?count))
-       . ?body))
-    ))
-
 
 (parametrise ((check-test-name	'basics))
 
@@ -89,7 +81,7 @@
 
     (define (doit id init)
       (set! var init)
-      (dotimes 5
+      (dotimes (i 5)
 	(step id)))
 
     (check
@@ -120,7 +112,7 @@
 		  (set! var local-var))
 		(lambda ()
 		  (set! var init)
-		  (dotimes 5
+		  (dotimes (i 5)
 		    (step id)
 		    (yield)))
 		(lambda ()
@@ -164,7 +156,7 @@
 		(lambda (E)
 		  (++ X))
 	      (lambda ()
-		(dotimes 5
+		(dotimes (i 5)
 		  (add-result (list name (raise-continuable (void))))
 		  (yield)))))))
 
@@ -533,7 +525,7 @@
       (parametrise ((parm init))
 	(coroutine
 	    (lambda ()
-	      (dotimes 5
+	      (dotimes (i 5)
 		(add-result (list name (parm)))
 		(parm (++ (parm)))
 		(yield))))))
@@ -563,5 +555,4 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; coding: utf-8
-;; eval: (put 'dotimes 'scheme-indent-function 1)
 ;; End:

@@ -723,7 +723,8 @@
     (nop)))
 
  (define-core-primitive-operation pointer-value unsafe
-   ;;FIXME What is this for?  (Marco Maggi; Oct 17, 2012)
+   ;;This is  used by  EQ? hashtables  to obtain  an exact  integer from
+   ;;references to objects that are meant to be compared with EQ?.
    ;;
    ((V x) (asm 'logand
 	       (asm 'srl (V-simple-operand x) (K 1))

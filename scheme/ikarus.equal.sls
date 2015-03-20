@@ -128,6 +128,10 @@
 	 (and (keyword? y)
 	      ($keyword=? x y)
 	      k))
+	((struct? x)
+	 (and (struct? y)
+	      (struct=? x y)
+	      k))
 	(else	;chars, numbers, booleans, other non-compound value
 	 (and (eqv? x y) k))))
 
@@ -180,6 +184,10 @@
 	(and (keyword? y)
 	     ($keyword=? x y)
 	     k))
+       ((struct? x)
+	(and (struct? y)
+	     (struct=? x y)
+	     k))
        (else
 	(and (eqv? x y) k))))
     (define (fast? x y k)
@@ -216,6 +224,10 @@
 	 ((keyword? x)
 	  (and (keyword? y)
 	       ($keyword=? x y)
+	       k))
+	 ((struct? x)
+	  (and (struct? y)
+	       (struct=? x y)
 	       k))
 	 (else
 	  (and (eqv? x y)

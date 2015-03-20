@@ -330,12 +330,12 @@
     "ikarus.fixnums.sls"
     "ikarus.chars.sls"
     "ikarus.structs.sls"
+    "ikarus.vectors.sls"
     "ikarus.hash-tables.sls"
     "ikarus.records.procedural.sls"
     "ikarus.strings.sls"
     "ikarus.unicode-conversion.sls"
     "ikarus.symbols.sls"
-    "ikarus.vectors.sls"
     "ikarus.unicode.sls"
     "ikarus.string-to-number.sls"
     "ikarus.bignums.sls"
@@ -434,7 +434,6 @@
     (define-syntax				(define-syntax))
     (define-alias				(define-alias))
     (define-fluid-syntax			(define-fluid-syntax))
-    (define-fluid-override			(define-fluid-override))
     (module					(module))
     (library					(library))
     (begin					(begin))
@@ -522,6 +521,9 @@
     (let*					(macro . let*))
     (cond					(macro . cond))
     (do						(macro . do))
+    (do*					(macro . do*))
+    (dolist					(macro . dolist))
+    (dotimes					(macro . dotimes))
     (and					(macro . and))
     (or						(macro . or))
     (time					(macro . time))
@@ -1522,7 +1524,6 @@
     (define-syntax*				v $language)
     (define*					v $language)
     (define-fluid-syntax			v $language)
-    (define-fluid-override			v $language)
     (define-alias				v $language)
     (identifier-syntax				v r ba)
     (if						v r ba se ne)
@@ -1782,6 +1783,9 @@
     (vector-map					v r ba)
     (vector-for-all				v $language)
     (vector-exists				v $language)
+    (vector-find				v $language)
+    (vector-fold-left				v $language)
+    (vector-fold-right				v $language)
     (vector-ref					v r ba se)
     (vector-set!				v r ba se)
     (subvector					v $language)
@@ -1861,6 +1865,10 @@
     (fxnegative?				v r fx)
     (fxnonpositive?				v $language)
     (fxnonnegative?				v $language)
+    (positive-fixnum?				v $language)
+    (negative-fixnum?				v $language)
+    (non-negative-fixnum?			v $language)
+    (non-positive-fixnum?			v $language)
     (fixnum->flonum				v r fl)
 ;;;
     (bignum-positive?				v $language)
@@ -2149,6 +2157,9 @@
     (who-condition?				v r co)
     (case-lambda				v r ct)
     (do						v r ct se ne)
+    (do*					v $language)
+    (dolist					v $language)
+    (dotimes					v $language)
     (unless					v r ct)
     (when					v r ct)
     (define-enumeration				v r en)
@@ -2424,6 +2435,7 @@
     (hashtable-entries				v r ht)
     (hashtable-keys				v r ht)
     (hashtable-mutable?				v r ht)
+    (mutable-hashtable?				v $language)
     (hashtable-ref				v r ht)
     (hashtable-set!				v r ht)
     (hashtable-size				v r ht)
@@ -2434,11 +2446,36 @@
     (hashtable-hash-function			v r ht)
     (make-hashtable				v r ht)
     (hashtable-equivalence-function		v r ht)
+    (hashtable-for-each-key			v $language)
+    (hashtable-for-each-entry			v $language)
+    (hashtable-for-all-keys			v $language)
+    (hashtable-for-all-entries			v $language)
+    (hashtable-exists-key			v $language)
+    (hashtable-exists-entry			v $language)
+    (hashtable-find-key				v $language)
+    (hashtable-find-entry			v $language)
+    (hashtable-fold-keys			v $language)
+    (hashtable-fold-entries			v $language)
+    (hashtable->alist				v $language)
+    (alist->hashtable!				v $language)
     (equal-hash					v r ht)
     (string-hash				v r ht)
     (string-ci-hash				v r ht)
     (symbol-hash				v r ht)
     (bytevector-hash				v $language)
+    (fixnum-hash				v $language)
+    (exact-integer-hash				v $language)
+    (flonum-hash				v $language)
+    (number-hash				v $language)
+    (char-hash					v $language)
+    (char-ci-hash				v $language)
+    (boolean-hash				v $language)
+    (void-hash					v $language)
+    (eof-object-hash				v $language)
+    (would-block-hash				v $language)
+    (struct-hash				v $language)
+    (record-hash				v $language)
+    (object-hash				v $language)
     (list-sort					v r sr)
     (vector-sort				v r sr)
     (vector-sort!				v r sr)
@@ -2482,6 +2519,7 @@
     (record-destructor				v $language)
     (record-guardian-logger			v $language)
     (record-guardian-log			v $language)
+    (record=?					v $language)
     (record-reset				v $language)
     (record-object?				v $language)
     (record-and-rtd?				v $language)
