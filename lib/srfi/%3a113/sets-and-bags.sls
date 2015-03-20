@@ -1289,62 +1289,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (bag-sum bag-sum!)
-  ;;Sum is defined for bags only; for sets, it is the same as union.
-
-  (define-set-theory-proc bag-sum  sob-sum  bag? %list-of-bags?)
-  (define-set-theory-proc bag-sum! sob-sum! bag? %list-of-bags?)
-
-  (case-define sob-sum
-    ((sob)
-     (sob-copy sob))
-    ((sob1 sob2)
-     (receive-and-return (result)
-	 (sob-empty-copy sob1)
-       (dyadic-sob-sum! result sob1 sob2)))
-    ((sob1 sob2 sob3 sobs)
-     (receive-and-return (result)
-	 (sob-empty-copy sob1)
-       (dyadic-sob-sum! result sob1 sob2)
-       (for-each
-	   (lambda (sob)
-	     (dyadic-sob-sum! result result sob))
-	 (cons sob3 sobs)))))
-
-  (case-define sob-sum!
-    ((sob)
-     sob)
-    ((sob1 sob2)
-     (dyadic-sob-sum! sob1 sob1 sob2)
-     sob1)
-    ((sob1 sob2 sob3 sobs)
-     (dyadic-sob-sum! sob1 sob1 sob2)
-     (for-each
-	 (lambda (sob)
-	   (dyadic-sob-sum! sob1 sob1 sob))
-       (cons sob3 sobs))
-     sob1))
-
-  (define (dyadic-sob-sum! result sob1 sob2)
-    ;;Sum is just like union, except that we take the sum rather than the max.
-    ;;
-    (let ((T1 (sob-hash-table sob1))
-	  (T2 (sob-hash-table sob2))
-	  (T  (sob-hash-table result)))
-      (hashtable-for-each
-	  (lambda (key value1)
-	    (hashtable-set! T key (+ value1 (hashtable-ref T2 key 0))))
-	T1)
-      (hashtable-for-each
-	  (lambda (key value2)
-	    (when (zero? (hashtable-ref T1 key 0))
-	      (hashtable-set! T key value2)))
-	T2)))
-
-  #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
 (module (set-xor bag-xor set-xor! bag-xor!)
 
   (define-syntax define-xor-proc
@@ -1366,8 +1310,15 @@
   (define-xor-proc set-xor sob-xor set?)
   (define-xor-proc bag-xor sob-xor bag?)
 
-  (define-xor-proc! set-xor! sob-xor! set?)
-  (define-xor-proc! bag-xor! sob-xor! bag?)
+
+  ;;It should be this, according to the intentions of the reference implementation:
+  ;;
+  ;; (define-xor-proc! set-xor! sob-xor! set?)
+  ;; (define-xor-proc! bag-xor! sob-xor! bag?)
+  ;;
+  ;;but SOB-XOR! does not work correctly when RESULT and SOB1 are the same, so:
+  (define-xor-proc set-xor! sob-xor set?)
+  (define-xor-proc bag-xor! sob-xor bag?)
 
   (define (sob-xor sob1 sob2)
     (sob-xor! (sob-empty-copy sob1) sob1 sob2))
@@ -1428,12 +1379,68 @@
 
 ;;;; bag-specific procedures
 
+(module (bag-sum bag-sum!)
+  ;;Sum is defined for bags only; for sets, it is the same as union.
+
+  (define-set-theory-proc bag-sum  sob-sum  bag? %list-of-bags?)
+  (define-set-theory-proc bag-sum! sob-sum! bag? %list-of-bags?)
+
+  (case-define sob-sum
+    ((sob)
+     (sob-copy sob))
+    ((sob1 sob2)
+     (receive-and-return (result)
+	 (sob-empty-copy sob1)
+       (dyadic-sob-sum! result sob1 sob2)))
+    ((sob1 sob2 sob3 sobs)
+     (receive-and-return (result)
+	 (sob-empty-copy sob1)
+       (dyadic-sob-sum! result sob1 sob2)
+       (for-each
+	   (lambda (sob)
+	     (dyadic-sob-sum! result result sob))
+	 (cons sob3 sobs)))))
+
+  (case-define sob-sum!
+    ((sob)
+     sob)
+    ((sob1 sob2)
+     (dyadic-sob-sum! sob1 sob1 sob2)
+     sob1)
+    ((sob1 sob2 sob3 sobs)
+     (dyadic-sob-sum! sob1 sob1 sob2)
+     (for-each
+	 (lambda (sob)
+	   (dyadic-sob-sum! sob1 sob1 sob))
+       (cons sob3 sobs))
+     sob1))
+
+  (define (dyadic-sob-sum! result sob1 sob2)
+    ;;Sum is just like union, except that we take the sum rather than the max.
+    ;;
+    (let ((T1 (sob-hash-table sob1))
+	  (T2 (sob-hash-table sob2))
+	  (T  (sob-hash-table result)))
+      (hashtable-for-each
+	  (lambda (key value1)
+	    (hashtable-set! T key (+ value1 (hashtable-ref T2 key 0))))
+	T1)
+      (hashtable-for-each
+	  (lambda (key value2)
+	    (when (zero? (hashtable-ref T1 key 0))
+	      (hashtable-set! T key value2)))
+	T2)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
 (module (bag-product bag-product!)
 
-  (define* (bag-product {bag bag?} {n non-negative-exact-integer?})
+  (define* (bag-product {n non-negative-exact-integer?} {bag bag?})
     (sob-product! (sob-empty-copy bag) bag n))
 
-  (define* (bag-product! {bag bag?} {n non-negative-exact-integer?})
+  (define* (bag-product! {n non-negative-exact-integer?} {bag bag?})
     (sob-product! bag bag n))
 
   (define (sob-product! result sob n)

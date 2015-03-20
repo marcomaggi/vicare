@@ -521,9 +521,9 @@
 		  (ab2 (bag-copy ab)))
 	      (test abab (bag-sum! ab2 ab))
 	      (test abab ab2)
-	      (test abab (bag-product ab 2))
+	      (test abab (bag-product 2 ab))
 	      (let ((ab3 (bag-copy ab)))
-		(bag-product! ab3 2)
+		(bag-product! 2 ab3)
 		(test abab ab3)
 		(test "abcd smashed?" other-abcd abcd)
 		(test "abcd smashed?" other-abcd abcd)
@@ -655,11 +655,11 @@
   (define total (bag-sum abb aab))
   (test 3 (bag-count (lambda (x) (eqv? x 'a)) total))
   (test 3 (bag-count (lambda (x) (eqv? x 'b)) total))
-  (test 12 (bag-size (bag-product total 2)))
+  (test 12 (bag-size (bag-product 2 total)))
   (let ((bag1 (bag eqv-comparator 1)))
     (bag-sum! bag1 bag1)
     (test 2 (bag-size bag1))
-    (bag-product! bag1 2)
+    (bag-product! 2 bag1)
     (test 4 (bag-size bag1)))
   #f)
 
@@ -2974,6 +2974,85 @@
 	     (B  (bag-sum! B1 B2 B3 B4)))
 	(bag->list B #t))
     => '(1 2 2 3 3 4 4 5))
+
+;;; --------------------------------------------------------------------
+;;; bag-product
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B  (bag-product 0 B1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator))
+	     (B  (bag-product 2 B1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B  (bag-product 3 B1)))
+	(bag->list B #t))
+    => '(1 1 1 2 2 2))
+
+
+;;; --------------------------------------------------------------------
+;;; bag-product!
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B  (bag-product! 0 B1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator))
+	     (B  (bag-product! 2 B1)))
+	(bag->list B #t))
+    => '())
+
+  (check
+      (let* ((B1 (bag fixnum-comparator 1 2))
+	     (B  (bag-product! 3 B1)))
+	(bag->list B #t))
+    => '(1 1 1 2 2 2))
+
+;;; --------------------------------------------------------------------
+;;; bag-unique-size
+
+  (check
+      (let ((B (bag fixnum-comparator)))
+	(bag-unique-size B))
+    => 0)
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2)))
+	(bag-unique-size B))
+    => 2)
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2 2)))
+	(bag-unique-size B))
+    => 2)
+
+;;; --------------------------------------------------------------------
+;;; bag-element-count
+
+  (check
+      (let ((B (bag fixnum-comparator)))
+	(bag-element-count B 1))
+    => 0)
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2 3)))
+	(bag-element-count B 2))
+    => 1)
+
+  (check
+      (let ((B (bag fixnum-comparator 1 2 2 2 3)))
+	(bag-element-count B 2))
+    => 3)
 
   #t)
 

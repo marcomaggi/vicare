@@ -1108,6 +1108,16 @@ the result is equal to the sum of the counts of that element in the
 arguments.  It differs from @func{bag-union} by treating identical
 elements as potentially distinct rather than attempting to match them
 up.
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let* ((B1 (bag fixnum-comparator 1 2))
+       (B2 (bag fixnum-comparator 2 3))
+       (B3 (bag fixnum-comparator 3 4))
+       (B  (bag-sum B1 B2 B3)))
+  (bag->list B #t))
+@result{} (1 2 2 3 3 4)
+@end lisp
 @end defun
 
 
@@ -1121,6 +1131,25 @@ rather than allocating a new set.
 Return a newly allocated bag containing all the unique elements in
 @var{bag}, where the count of each unique element in the bag is equal to
 the count of that element in @var{bag} multiplied by @var{N}.
+
+@lisp
+(import (vicare) (srfi :113) (srfi :114))
+
+(let* ((B1 (bag fixnum-comparator 1 2))
+       (B  (bag-product 0 B1)))
+  (bag->list B #t))
+@result{} ()
+
+(let* ((B1 (bag fixnum-comparator))
+       (B  (bag-product 2 B1)))
+  (bag->list B #t))
+@result{} ()
+
+(let* ((B1 (bag fixnum-comparator 1 2))
+       (B  (bag-product 3 B1)))
+  (bag->list B #t))
+@result{} (1 1 1 2 2 2)
+@end lisp
 @end defun
 
 
