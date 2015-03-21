@@ -2379,6 +2379,8 @@
     (hashtable-hash-function			v r ht)
     (make-hashtable				v r ht)
     (hashtable-equivalence-function		v r ht)
+    (hashtable-map-keys				v $language)
+    (hashtable-map-entries			v $language)
     (hashtable-for-each-key			v $language)
     (hashtable-for-each-entry			v $language)
     (hashtable-for-all-keys			v $language)

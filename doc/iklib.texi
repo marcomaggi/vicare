@@ -11333,6 +11333,47 @@ collector.  The iterators always use @func{hashtable-keys} and
 safe.
 
 
+@defun hashtable-map-keys @var{proc} @var{table}
+Build and return a new hash table with the same hash function and
+equivalence function of @var{table}; add associations to the new table
+by applying @var{proc} to every key in @var{table}, in unspecified
+order, and using the returned value as association value.
+
+@lisp
+(let* ((A '((a . 1) (b . 2) (c . 3)))
+       (T (alist->hashtable! (make-eq-hashtable) A))
+       (M (hashtable-map-keys
+              (lambda (key) 123)
+            T)))
+  (hashtable->alist M (lambda (s1 s2)
+                        (string<? (symbol->string s1)
+                                  (symbol->string s2)))))
+@result{} ((a . 123) (b . 123) (c . 123))
+@end lisp
+@end defun
+
+
+@defun hashtable-map-entries @var{proc} @var{table}
+Build and return a new hash table with the same hash function and
+equivalence function of @var{table}; add associations to the new table
+by applying @var{proc} to every key and value in @var{table}, in
+unspecified order, and using the returned value as association value.
+
+@lisp
+(let* ((A '((a . 1) (b . 2) (c . 3)))
+       (T (alist->hashtable! (make-eq-hashtable) A))
+       (M (hashtable-map-entries
+              (lambda (key val)
+                (* 10 val))
+            T)))
+  (hashtable->alist M (lambda (s1 s2)
+                        (string<? (symbol->string s1)
+                                  (symbol->string s2)))))
+@result{} ((a . 10) (b . 20) (c . 30))
+@end lisp
+@end defun
+
+
 @defun hashtable-for-each-key @var{proc} @var{table}
 Apply @var{proc} to every key in table, in unspecified order, and
 discard the results.  It is implemented as follows:

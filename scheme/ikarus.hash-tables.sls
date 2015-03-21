@@ -50,6 +50,8 @@
     object-hash
 
     ;; iterators
+    hashtable-map-keys
+    hashtable-map-entries
     hashtable-for-each-key
     hashtable-for-each-entry
     hashtable-for-all-keys
@@ -80,6 +82,8 @@
 		  hashtable-equivalence-function
 		  hashtable-hash-function
 
+		  hashtable-map-keys
+		  hashtable-map-entries
 		  hashtable-for-each-key
 		  hashtable-for-each-entry
 		  hashtable-for-all-keys
@@ -656,7 +660,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (hasht-copy)
+(module (hasht-copy hasht-copy-skeleton)
 
   (define (hasht-copy H.src mutable?)
     (let* ((buckets-vector     (hasht-buckets-vector H.src))
@@ -682,6 +686,15 @@
 				   i
 				 (next-tcbucket i B.next H.dst))))))
 		       ($fxsub1 j) H.dst buckets-vector)))))
+
+  (define (hasht-copy-skeleton H.src mutable?)
+    ;;Duplicate  the skeleton  of a  hash  table and  return the  new table,  without
+    ;;copying the entries from the source to the dest.
+    ;;
+    (let* ((buckets-vector     (hasht-buckets-vector H.src))
+	   (number-of-buckets  ($vector-length buckets-vector))
+	   (number-of-entries  (hasht-size H.src)))
+      (dup-hasht H.src mutable? number-of-buckets)))
 
   (define (dup-hasht H.src mutable? number-of-buckets)
     (let* ((hashf (hasht-hashf H.src))
@@ -1067,6 +1080,34 @@
 ;;moved  by  the  garbage  collector.   So here  we  always  use  HASHTABLE-KEYS  and
 ;;HASHTABLE-ENTRIES, which is slow and memory consuming, but it is safe.
 ;;
+
+(define* (hashtable-map-keys {proc procedure?} {table hashtable?})
+  ;;Build and  return a  new hashtable  with the same  hash function  and equivalence
+  ;;function of TABLE;  add associations to the  new table by applying  PROC to every
+  ;;key in TABLE,  in unspecified order, and using the  returned value as association
+  ;;value.
+  ;;
+  (receive-and-return (table^)
+      (hasht-copy-skeleton table #t)
+    (vector-map (lambda (key)
+		  (hashtable-set! table^ key (proc key)))
+      (hashtable-keys table))))
+
+(define* (hashtable-map-entries {proc procedure?} {table hashtable?})
+  ;;Build and  return a  new hashtable  with the same  hash function  and equivalence
+  ;;function of TABLE;  add associations to the  new table by applying  PROC to every
+  ;;key and  value in TABLE,  in unspecified order, and  using the returned  value as
+  ;;association value.
+  ;;
+  (receive-and-return (table^)
+      (hasht-copy-skeleton table #t)
+    (receive (keys vals)
+	(hashtable-entries table)
+      (vector-map (lambda (key val)
+		    (hashtable-set! table^ key (proc key val)))
+	keys vals))))
+
+;;; --------------------------------------------------------------------
 
 (define* (hashtable-for-each-key {proc procedure?} {table hashtable?})
   ;;Apply PROC to every key in table, in unspecified order, and discard the results.
