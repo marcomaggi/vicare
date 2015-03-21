@@ -1046,10 +1046,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (symbol<? a b)
-  (string<? (symbol->string a)
-	    (symbol->string b)))
-
 (define symbol-comparison
   (make-comparison=/< symbol=? symbol<?))
 

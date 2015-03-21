@@ -25,6 +25,13 @@
     gensym gensym? gensym->unique-string gensym-prefix
     gensym-count print-gensym
 
+    ;; predicates
+    list-of-symbols?
+
+    ;;comparison
+    symbol<?			symbol<=?
+    symbol>?			symbol>=?
+
     ;; internal functions
     $unintern-gensym
 
@@ -56,6 +63,13 @@
 		  ;; generating symbols
 		  gensym gensym? gensym->unique-string gensym-prefix
 		  gensym-count print-gensym
+
+		  ;; predicates
+		  list-of-symbols?
+
+		  ;; comparison
+		  symbol<?			symbol<=?
+		  symbol>?			symbol>=?
 
 		  ;; object properties
 		  getprop putprop remprop property-list
@@ -161,6 +175,38 @@
       (if (or (boolean? x) (eq? x 'pretty))
 	  x
 	(procedure-argument-violation 'print-gensym "not in #t|#f|pretty" x)))))
+
+
+;;;; predicates
+
+(define (list-of-symbols? obj)
+  (if (pair? obj)
+      (and (symbol? (car obj))
+	   (list-of-symbols? (cdr obj)))
+    (null? obj)))
+
+
+;;;; comparison
+
+(let-syntax
+    ((define-symbol-comparison (syntax-rules ()
+				 ((_ ?who ?string-who)
+				  (case-define* ?who
+				    (({sym1 symbol?} {sym2 symbol?})
+				     (?string-who ($symbol->string sym1)
+						  ($symbol->string sym2)))
+				    (({sym1 symbol?} {sym2 symbol?} {sym3 symbol?} . {sym* list-of-symbols?})
+				     (apply ?string-who
+					    ($symbol->string sym1)
+					    ($symbol->string sym2)
+					    ($symbol->string sym3)
+					    (map $symbol->string sym*)))))
+				 )))
+  (define-symbol-comparison symbol<?  string<?)
+  (define-symbol-comparison symbol>?  string>?)
+  (define-symbol-comparison symbol<=? string<=?)
+  (define-symbol-comparison symbol>=? string>=?)
+  #| end of LET-SYNTAX |# )
 
 
 (define (unbound-object? x)

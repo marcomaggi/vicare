@@ -10437,12 +10437,43 @@ in which @var{state} is the @strong{last} argument.
 
 
 @menu
+* iklib symbols predicates::    Predicates about symbols.
+* iklib symbols comparison::    Comparing symbols.
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
 * iklib symbols values::        System values bound to symbols.
 * iklib symbols labels::        Retrieving syntactic binding labels.
 * iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
+
+@c page
+@node iklib symbols predicates
+@subsection Predicates about symbols
+
+
+@defun list-of-symbols? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of symbols;
+otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib symbols comparison
+@subsection Comparing symbols
+
+
+@deffn Procedure {symbol<?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffnx Procedure {symbol>?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffnx Procedure {symbol<=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffnx Procedure {symbol>=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+These procedures are the extensions to symbols of the corresponding
+orderings on strings.
+
+@example
+(symbol<? z a)          @result{} #t
+(symbol<? z zz)         @result{} #t
+(symbol<? z Z)          @result{} #f
+@end example
+@end deffn
 
 @c page
 @node iklib symbols value
