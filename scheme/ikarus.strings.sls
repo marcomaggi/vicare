@@ -826,66 +826,62 @@
 	   (%fill-strings dst.str str* ($fx+ dst.start len4))))))))
 
 
-(define (string-reverse-and-concatenate list-of-strings)
-  ;;Defined by  Vicare.  Reverse  the LIST-OF-STRINGS,  concatenate them
-  ;;and return the resulting  string.  It is an error if  the sum of the
-  ;;string lengths is not in the range of the maximum string length.
+(define* (string-reverse-and-concatenate {list-of-strings list-of-strings?})
+  ;;Defined by Vicare.  Reverse the  LIST-OF-STRINGS, concatenate them and return the
+  ;;resulting string.  It is an error if the  sum of the string lengths is not in the
+  ;;range of the maximum string length.
   ;;
-  (define who 'string-reverse-and-concatenate)
-  (with-arguments-validation (who)
-      ((list-of-strings	list-of-strings))
-    (let ((total-length ($string-total-length 0 list-of-strings)))
-      (with-dangerous-arguments-validation (who)
-	  ((total-length	total-length))
-	($string-reverse-and-concatenate total-length list-of-strings)))))
+  (let ((total-length ($string-total-length 0 list-of-strings)))
+    (assert-total-string-length total-length)
+    ($string-reverse-and-concatenate total-length list-of-strings)))
 
 (define ($string-total-length total-len list-of-strings)
-  ;;Given the LIST-OF-STRINGS: compute the  total length of the strings,
-  ;;add it  to TOTAL-LEN and return  the result.  If TOTAL-LEN  is zero:
-  ;;the returned value is the total length of the strings.  The returned
-  ;;value may or may not be in the range of the maximum string size.
+  ;;Given the  LIST-OF-STRINGS: compute the  total length of  the strings, add  it to
+  ;;TOTAL-LEN and return the result.  If TOTAL-LEN is zero: the returned value is the
+  ;;total length of the  strings.  The returned value may or may not  be in the range
+  ;;of the maximum string size.
   ;;
-  (if (null? list-of-strings)
-      total-len
-    ($string-total-length (+ total-len ($string-length ($car list-of-strings)))
-			      ($cdr list-of-strings))))
+  (if (pair? list-of-strings)
+      ($string-total-length (+ total-len ($string-length ($car list-of-strings)))
+			    ($cdr list-of-strings))
+    total-len))
 
 (define ($string-concatenate total-length list-of-strings)
-  ;;Concatenate the strings in  LIST-OF-STRINGS, return the result.  The
-  ;;resulting  string   must  have  length  TOTAL-LENGTH.    Assume  the
-  ;;arguments have been already validated.
+  ;;Concatenate the  strings in  LIST-OF-STRINGS, return  the result.   The resulting
+  ;;string must  have length  TOTAL-LENGTH.  Assume the  arguments have  been already
+  ;;validated.
   ;;
-  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
-  ;;the whole string must at maximum have a fixnum length.
+  ;;IMPLEMENTATION RESTRICTION  The strings must have  a fixnum length and  the whole
+  ;;string must at maximum have a fixnum length.
   ;;
-  (let loop ((dst.bv	($make-string total-length))
+  (let loop ((dst.str	($make-string total-length))
 	     (dst.start	0)
 	     (bvs	list-of-strings))
-    (if (null? bvs)
-	dst.bv
-      (let* ((src.bv   ($car bvs))
-	     (src.len  ($string-length src.bv)))
-	($string-copy!/count src.bv 0 dst.bv dst.start src.len)
-	(loop dst.bv ($fx+ dst.start src.len) ($cdr bvs))))))
+    (if (pair? bvs)
+	(let* ((src.str  ($car bvs))
+	       (src.len  ($string-length src.str)))
+	  ($string-copy!/count src.str 0 dst.str dst.start src.len)
+	  (loop dst.str ($fx+ dst.start src.len) ($cdr bvs)))
+      dst.str)))
 
 (define ($string-reverse-and-concatenate total-length list-of-strings)
-  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
-  ;;result.  The resulting string must have length TOTAL-LENGTH.  Assume
-  ;;the arguments have been already validated.
+  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the result.  The
+  ;;resulting string must  have length TOTAL-LENGTH.  Assume the  arguments have been
+  ;;already validated.
   ;;
-  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
-  ;;the whole string must at maximum have a fixnum length.
+  ;;IMPLEMENTATION RESTRICTION  The strings must have  a fixnum length and  the whole
+  ;;string must at maximum have a fixnum length.
   ;;
-  (let loop ((dst.bv	($make-string total-length))
+  (let loop ((dst.str	($make-string total-length))
 	     (dst.start	total-length)
 	     (bvs	list-of-strings))
-    (if (null? bvs)
-	dst.bv
-      (let* ((src.bv    ($car bvs))
-	     (src.len   ($string-length src.bv))
-	     (dst.start ($fx- dst.start src.len)))
-	($string-copy!/count src.bv 0 dst.bv dst.start src.len)
-	(loop dst.bv dst.start ($cdr bvs))))))
+    (if (pair? bvs)
+	(let* ((src.str   ($car bvs))
+	       (src.len   ($string-length src.str))
+	       (dst.start ($fx- dst.start src.len)))
+	  ($string-copy!/count src.str 0 dst.str dst.start src.len)
+	  (loop dst.str dst.start ($cdr bvs)))
+      dst.str)))
 
 
 (define string-for-each
