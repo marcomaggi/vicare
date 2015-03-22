@@ -157,10 +157,74 @@
 	  $string-fill!
 	  $string-copy!
 	  $string-copy!/count
-	  $substring))
+	  $substring)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 21,
+    ;;2015)
+    (only (ikarus fixnums)
+	  non-negative-fixnum?))
 
 
 ;;;; arguments validation
+
+(define string-index?	non-negative-fixnum?)
+(define string-length?	non-negative-fixnum?)
+
+(module (assert-index-for-string)
+
+  (define-syntax (assert-index-for-string stx)
+    (syntax-case stx ()
+      ((_ ?str ?idx)
+       (and (identifier? #'?str)
+	    (identifier? #'?idx))
+       #'(unless (%index-for-string ?str ?idx)
+	   (procedure-argument-violation __who__ "string index out of range" ?str ?idx)))
+      ))
+
+  (define (%index-for-string str idx)
+    ($fx< idx ($string-length str)))
+
+  #| end of module |# )
+
+(define-syntax (assert-total-length-for-string stx)
+  (syntax-case stx ()
+    ((_ ?len)
+     (identifier? #'?len)
+     #'(unless (string-length? ?len)
+	 (procedure-argument-violation __who__ "total string length out of range, expected fixnum" ?len)))
+    ))
+
+(define-syntax (assert-start-index-for-string stx)
+  (syntax-case stx ()
+    ((_ ?start ?len)
+     (and (identifier? #'?start)
+	  (identifier? #'?len))
+     #'(unless ($fx<= ?start ?len)
+	 (procedure-argument-violation __who__ "start index out of range" ?start ?len)))
+    ))
+
+(define-syntax (assert-end-index-for-string stx)
+  (syntax-case stx ()
+    ((_ ?end ?len)
+     (and (identifier? #'?end)
+	  (identifier? #'?len))
+     #'(unless ($fx<= ?end ?len)
+	 (procedure-argument-violation __who__ "end index out of range" ?end ?len)))
+    ))
+
+(define-syntax (assert-start/end-indexes-for-string stx)
+  (syntax-case stx ()
+    ((_ ?start ?end ?len)
+     (and (identifier? #'?start)
+	  (identifier? #'?end)
+	  (identifier? #'?len))
+     #'(begin
+	 (assert-start-index-for-string ?start ?len)
+	 (assert-end-index-for-string   ?end   ?len)
+	 (unless ($fx<= ?start ?end)
+	   (procedure-argument-violation __who__ "end index out of range" ?start ?end))))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-argument-validation (length who obj)
   (and (fixnum? obj) ($fx<= 0 obj))
@@ -250,287 +314,222 @@
 (define-inline ($ascii-chi? chi)
   ($fx<= #x00 chi #x7F))
 
-
-(define (string-length str)
-  ;;Defined by R6RS.   Return the number of characters  in the given STR
-  ;;as an exact integer object.
-  ;;
-  (define who 'string-length)
-  (with-arguments-validation (who)
-      ((string str))
-    ($string-length str)))
+(define (list-of-chars? obj)
+  (if (pair? obj)
+      (and (char? (car obj))
+	   (list-of-chars? (cdr obj)))
+    (null? obj)))
 
-(define (string-ref str idx)
-  ;;Defined by  R6RS.  IDX  must be  a valid index  of STR.   Return the
-  ;;character at offset IDX of STR using zero-origin indexing.
+(define (list-of-strings? obj)
+  (if (pair? obj)
+      (and (string? (car obj))
+	   (list-of-strings? (cdr obj)))
+    (null? obj)))
+
+
+(define* (string-length {str string?})
+  ;;Defined by R6RS.   Return the number of  characters in the given STR  as an exact
+  ;;integer object.
+  ;;
+  ($string-length str))
+
+(define* (string-ref {str string?} {idx string-index?})
+  ;;Defined by  R6RS.  IDX must  be a  valid index of  STR.  Return the  character at
+  ;;offset IDX of STR using zero-origin indexing.
   ;;
   ;;NOTE Implementors should make STRING-REF run in constant time.
   ;;
-  (define who 'string-ref)
-  (with-arguments-validation (who)
-      ((string			str)
-       (index-for-string	str idx))
-    ($string-ref str idx)))
+  (assert-index-for-string str idx)
+  ($string-ref str idx))
 
-(define (string-set! str idx ch)
-  ;;Defined by  R6RS.  IDX must  be a valid  index of STR.  Store  CH in
-  ;;element IDX of STR and return unspecified values.
+(define* (string-set! {str string?} {idx string-index?} {ch char?})
+  ;;Defined by R6RS.  IDX  must be a valid index of STR.  Store  CH in element IDX of
+  ;;STR and return unspecified values.
   ;;
-  ;;Passing an immutable string to STRING-SET! should cause an exception
-  ;;with condition type @condition{assertion} to be raised.
+  ;;Passing  an  immutable string  to  STRING-SET!  should  cause an  exception  with
+  ;;condition type @condition{assertion} to be raised.
   ;;
   ;;NOTE Implementors should make STRING-SET!  run in constant time.
   ;;
-  (define who 'string-set!)
-  (with-arguments-validation (who)
-      ((string			str)
-       (index-for-string	str idx)
-       (char			ch))
-    ($string-set! str idx ch)))
+  (assert-index-for-string str idx)
+  ($string-set! str idx ch))
 
 
-(define make-string
-  ;;Defined by R6RS.  Return a newly allocated string of length LEN.  If
-  ;;FILL is  given, then all elements  of the string  are initialized to
-  ;;FILL, otherwise the contents of the string are unspecified.
+;;;; constructors
+
+(case-define* make-string
+  ;;Defined by  R6RS.  Return  a newly allocated  string of length  LEN.  If  FILL is
+  ;;given, then  all elements of  the string are  initialized to FILL,  otherwise the
+  ;;contents of the string are unspecified.
   ;;
-  (case-lambda
-   ((len)
-    (make-string len #\x0))
-   ((len fill)
-    (define who 'make-string)
-    (with-arguments-validation (who)
-	((length len)
-	 (char   fill))
-      (let loop ((str ($make-string len))
-		 (idx 0)
-		 (len len))
-	(if ($fx= idx len)
-	    str
-	  (begin
-	    ($string-set! str idx fill)
-	    (loop str ($fxadd1 idx) len))))))))
+  (({len string-length?})
+   (make-string len #\x0))
+  (({len string-length} {fill char?})
+   (let loop ((str ($make-string len))
+	      (idx 0)
+	      (len len))
+     (if ($fx< idx len)
+	 (begin
+	   ($string-set! str idx fill)
+	   (loop str ($fxadd1 idx) len))
+       str))))
 
-(define string
-  ;;Defined by  R6RS.  Return a  newly allocated string composed  of the
-  ;;arguments.
+(case-define* string
+  ;;Defined by R6RS.  Return a newly allocated string composed of the arguments.
   ;;
-  (case-lambda
-   (()
-    ($make-string 0))
-   ((one)
-    (define who 'string)
-    (with-arguments-validation (who)
-	((char one))
-      (let ((str ($make-string 1)))
-	($string-set! str 0 one)
-	str)))
+  (()
+   ($make-string 0))
 
-   ((one two)
-    (define who 'string)
-    (with-arguments-validation (who)
-	((char one)
-	 (char two))
-      (let ((str ($make-string 2)))
-	($string-set! str 0 one)
-	($string-set! str 1 two)
-	str)))
+  (({one char?})
+   (receive-and-return (str)
+       ($make-string 1)
+     ($string-set! str 0 one)))
 
-   ((one two three)
-    (define who 'string)
-    (with-arguments-validation (who)
-	((char one)
-	 (char two)
-	 (char three))
-      (let ((str ($make-string 3)))
-	($string-set! str 0 one)
-	($string-set! str 1 two)
-	($string-set! str 2 three)
-	str)))
+  (({one char?} {two char?})
+   (receive-and-return (str)
+       ($make-string 2)
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)))
 
-   ((one two three four)
-    (define who 'string)
-    (with-arguments-validation (who)
-	((char one)
-	 (char two)
-	 (char three)
-	 (char four))
-      (let ((str ($make-string 4)))
-	($string-set! str 0 one)
-	($string-set! str 1 two)
-	($string-set! str 2 three)
-	($string-set! str 3 four)
-	str)))
+  (({one char?} {two char?} {three char?})
+   (receive-and-return (str)
+       ($make-string 3)
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)
+     ($string-set! str 2 three)))
 
-   ((one . chars)
-    (define who 'string)
-    (define (%length-and-validation chars len)
-      (if (null? chars)
-	  len
-	(let ((ch ($car chars)))
-	  (with-arguments-validation (who)
-	      ((char ch))
-	    (%length-and-validation ($cdr chars) ($fxadd1 len))))))
-    (let* ((chars (cons one chars))
-	   (len   (%length-and-validation chars 0)))
-      (with-arguments-validation (who)
-	  ((length len))
-	(let loop ((str   ($make-string len))
-		   (idx   0)
-		   (chars chars))
-	  (if (null? chars)
-	      str
-	    (begin
-	      ($string-set! str idx ($car chars))
-	      (loop str ($fxadd1 idx) ($cdr chars))))))))))
+  (({one char?} {two char?} {three char?} {four char?})
+   (receive-and-return (str)
+       ($make-string 4)
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)
+     ($string-set! str 2 three)
+     ($string-set! str 3 four)))
 
-(module ($string)
+  (({one char?} {two char?} {three char?} {four char?} {five char?} . {char* list-of-chars?})
+   (define len
+     (+ 5 (length char*)))
+   (assert-total-length-for-string len)
+   (let ((str ($make-string len)))
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)
+     ($string-set! str 2 three)
+     ($string-set! str 3 four)
+     ($string-set! str 4 five)
+     (let loop ((str   str)
+		(idx   0)
+		(char* char*))
+       (if (pair? char*)
+	   (begin
+	     ($string-set! str idx ($car char*))
+	     (loop str ($fxadd1 idx) ($cdr char*)))
+	 str)))))
 
-  (define $string
-    ;;Return a newly allocated string composed of the arguments.
-    ;;
-    (case-lambda
-     (()
-      ($make-string 0))
-     ((one)
-      (receive-and-return (str)
-	  ($make-string 1)
-	($string-set! str 0 one)))
+;;; --------------------------------------------------------------------
 
-     ((one two)
-      (receive-and-return (str)
-	  ($make-string 2)
-	($string-set! str 0 one)
-	($string-set! str 1 two)))
+(case-define* $string
+  ;;Defined by R6RS.  Return a newly allocated string composed of the arguments.
+  ;;
+  (()
+   ($make-string 0))
 
-     ((one two three)
-      (receive-and-return (str)
-	  ($make-string 3)
-	($string-set! str 0 one)
-	($string-set! str 1 two)
-	($string-set! str 2 three)))
+  ((one)
+   (receive-and-return (str)
+       ($make-string 1)
+     ($string-set! str 0 one)))
 
-     ((one two three four)
-      (receive-and-return (str)
-	  ($make-string 4)
-	($string-set! str 0 one)
-	($string-set! str 1 two)
-	($string-set! str 2 three)
-	($string-set! str 3 four)))
+  ((one two)
+   (receive-and-return (str)
+       ($make-string 2)
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)))
 
-     ((one two three four . chars)
-      (receive-and-return (str)
-	  ($make-string ($fx+ 4 ($length chars)))
-	($string-set! str 0 one)
-	($string-set! str 1 two)
-	($string-set! str 2 three)
-	($string-set! str 3 four)
-	(let recur ((i   4)
-		    (ell chars))
-	  (when (pair? ell)
-	    ($string-set! str i ($car ell))
-	    (recur ($fxadd1 i) ($cdr ell))))))
-     ))
+  ((one two three)
+   (receive-and-return (str)
+       ($make-string 3)
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)
+     ($string-set! str 2 three)))
 
-  (define ($length ell)
-    (let recur ((len 0)
-		(ell ell))
-      (if (pair? ell)
-	  (recur ($fxadd1 len) ($cdr ell))
-	len)))
+  ((one two three four)
+   (receive-and-return (str)
+       ($make-string 4)
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)
+     ($string-set! str 2 three)
+     ($string-set! str 3 four)))
 
+  ((one two three four five . char*)
+   (define len
+     (+ 5 (length char*)))
+   (let ((str ($make-string len)))
+     ($string-set! str 0 one)
+     ($string-set! str 1 two)
+     ($string-set! str 2 three)
+     ($string-set! str 3 four)
+     ($string-set! str 4 five)
+     (let loop ((str   str)
+		(idx   0)
+		(char* char*))
+       (if (pair? char*)
+	   (begin
+	     ($string-set! str idx ($car char*))
+	     (loop str ($fxadd1 idx) ($cdr char*)))
+	 str)))))
+
+
+(define* (substring {str string} {start string-index?} {end string-index?})
+  ;;Defined by R6RS.  STR  must be a string, and START and END  must be exact integer
+  ;;objects satisfying:
+  ;;
+  ;;   0 <= START <= END <= (string-length STR)
+  ;;
+  ;;Return a newly allocated string formed  from the characters of STR beginning with
+  ;;index START (inclusive) and ending with index END (exclusive).
+  ;;
+  (let ((len ($string-length str)))
+    (assert-start/end-indexes-for-string start end len)
+    ($substring str start end)))
+
+(define* (string-copy {str string?})
+  ;;Defined by R6RS.  Return a newly allocated copy of the given STR.
+  ;;
+  ($substring str 0 ($string-length str)))
+
+
+;;;; string comparison
+;;
+;;Defined by R6RS.   These procedures are the lexicographic extensions  to strings of
+;;the  corresponding  orderings  on  characters.    For  example,  STRING<?   is  the
+;;lexicographic ordering  on strings induced  by the ordering CHAR<?   on characters.
+;;If two strings  differ in length but are  the same up to the length  of the shorter
+;;string, the  shorter string  is considered  to be  lexicographically less  than the
+;;longer string.
+;;
+
+(let-syntax
+    ((define-string-comparison (syntax-rules ()
+				 ((_ ?who ?dyadic-who)
+				  (case-define* ?who
+				    (({str1 string?} {str2 string?})
+				     (?dyadic-who str1 str2))
+				    (({str1 string?} {str2 string?} {str3 string?} . {str* list-of-strings?})
+				     (and (?dyadic-who str1 str2)
+					  (?dyadic-who str2 str3)
+					  (let next-string ((S1   str3)
+							    (str* str*))
+					    (if (pair? str*)
+						(let ((S2 (car str*)))
+						  (and (?dyadic-who S1 S2)
+						       (next-string S2 (cdr str*))))
+					      #t))))))
+				 )))
+  (define-string-comparison string=?	$string=)
+  (define-string-comparison string<?	$dyadic-string<?)
+  (define-string-comparison string>?	$dyadic-string>?)
+  (define-string-comparison string<=?	$dyadic-string<=?)
+  (define-string-comparison string>=?	$dyadic-string>=?)
   #| end of module |# )
-
-
-(define (substring str start end)
-  ;;Defined by  R6RS.  STR must be a  string, and START and  END must be
-  ;;exact integer objects satisfying:
-  ;;
-  ;; 0 <= START <= END <= (string-length STR)
-  ;;
-  ;;Return a  newly allocated string  formed from the characters  of STR
-  ;;beginning  with index START  (inclusive) and  ending with  index END
-  ;;(exclusive).
-  ;;
-  (define who 'substring)
-  (with-arguments-validation (who)
-      ((string	str)
-       (index	start)
-       (index	end))
-    (let ((len ($string-length str)))
-      (with-arguments-validation (who)
-	  ((start-index-and-length	start len)
-	   (end-index-and-length	end   len)
-	   (start-and-end-indices	start end))
-	($substring str start end)))))
-
-(define (string-copy str)
-  ;;Defined  by  R6RS.  Return  a  newly  allocated  copy of  the  given
-  ;;STR.
-  ;;
-  (define who 'string-copy)
-  (with-arguments-validation (who)
-      ((string str))
-    (let ((end ($string-length str)))
-      ($substring str 0 end))))
-
-
-(define string=?
-  ;;Defined by R6RS.   Return #t if the strings are  the same length and
-  ;;contain the same characters in the same positions.  Otherwise return
-  ;;#f.
-  ;;
-  (case-lambda
-   ((str1 str2)
-    (define who 'string=?)
-    (with-arguments-validation (who)
-	((string  str1)
-	 (string  str2))
-      (or (eq? str1 str2)
-	  (let ((len ($string-length str1)))
-	    (and ($fx= len ($string-length str2))
-		 (%unsafe.two-strings=? str1 str2 0 len))))))
-   ((str1 str2 . strs)
-    (define who 'string=?)
-    (with-arguments-validation (who)
-	((string  str1)
-	 (string  str2))
-      (or (eq? str1 str2)
-	  (let ((str1.len ($string-length str1)))
-	    (and ($fx= str1.len ($string-length str2))
-		 (%unsafe.two-strings=? str1 str2 0 str1.len)
-		 (let next-string ((str1 str1)
-				   (strs strs)
-				   (len  str1.len))
-		   (or (null? strs)
-		       (let ((strN ($car strs)))
-			 (with-arguments-validation (who)
-			     ((string strN))
-			   (if ($fx= len ($string-length strN))
-			       (and (next-string str1 ($cdr strs) len)
-				    (%unsafe.two-strings=? str1 strN 0 len))
-			     (%check-strings-and-return-false who ($cdr strs))))))))))))
-   ))
-
-(define (%unsafe.two-strings=? str1 str2 index end)
-  ;;Unsafely compare  two strings from  INDEX included to  END excluded;
-  ;;return #t or #f.
-  ;;
-  (or ($fx= index end)
-      (and ($char= ($string-ref str1 index)
-			 ($string-ref str2 index))
-	   (%unsafe.two-strings=? str1 str2 ($fxadd1 index) end))))
-
-(define (%check-strings-and-return-false who strs)
-  ;;Verify that the list (already validated) STRS contains only strings;
-  ;;if successful return #f, else raise an assertion violation.
-  ;;
-  (if (null? strs)
-      #f
-    (let ((str ($car strs)))
-      (with-arguments-validation (who)
-	  ((string str))
-	(%check-strings-and-return-false who ($cdr strs))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -538,141 +537,77 @@
   (or (eq? str1 str2)
       (let ((len ($string-length str1)))
 	(and ($fx= len ($string-length str2))
-	     (%unsafe.two-strings=? str1 str2 0 len)))))
+	     (let loop ((idx  0)
+			(len  len))
+	       (or ($fx= idx len)
+		   (and ($char= ($string-ref str1 idx)
+				($string-ref str2 idx))
+			(loop ($fxadd1 idx) len))))))))
 
-
-;;;; string comparison
-;;
-;;Defined by R6RS.  These procedures are the lexicographic extensions to
-;;strings of  the corresponding  orderings on characters.   For example,
-;;STRING<?   is the  lexicographic ordering  on strings  induced  by the
-;;ordering CHAR<?  on characters.  If  two strings differ in  length but
-;;are  the same  up to  the length  of the  shorter string,  the shorter
-;;string  is considered  to be  lexicographically less  than  the longer
-;;string.
-;;
-
-(define (%string-cmp who cmp str1 strs)
-  ;;Subroutine of the comparison functions.
-  ;;
-  (with-arguments-validation (who)
-      ((string	str1))
-    (let next-string ((str1 str1)
-		      (strs strs))
-      (or (null? strs)
-	  (let ((str2 ($car strs)))
-	    (with-arguments-validation (who)
-		((string str2))
-	      (if (cmp str1 str2)
-		  (next-string str2 ($cdr strs))
-		(%check-strings-and-return-false who strs))))))))
-
-(define string<?
-  (case-lambda
-   ((str1 s2)
-    (define who 'string<?)
-    (with-arguments-validation (who)
-	((string str1)
-	 (string s2))
-      (%unsafe.string<? str1 s2)))
-   ((str . strs)
-    (%string-cmp 'string<? %unsafe.string<? str strs))))
-
-(define string<=?
-  (case-lambda
-   ((str1 s2)
-    (define who 'string<=?)
-    (with-arguments-validation (who)
-	((string str1)
-	 (string s2))
-      (%unsafe.string<=? str1 s2)))
-   ((str . strs)
-    (%string-cmp 'string<=? %unsafe.string<=? str strs))))
-
-(define string>?
-  (case-lambda
-   ((str1 s2)
-    (define who 'string>?)
-    (with-arguments-validation (who)
-	((string str1)
-	 (string s2))
-      (%unsafe.string>? str1 s2)))
-   ((str . strs)
-    (%string-cmp 'string>? %unsafe.string>? str strs))))
-
-(define string>=?
-  (case-lambda
-   ((str1 s2)
-    (define who 'string>=?)
-    (with-arguments-validation (who)
-	((string str1)
-	 (string s2))
-      (%unsafe.string>=? str1 s2)))
-   ((str . strs)
-    (%string-cmp 'string>=? %unsafe.string>=? str strs))))
-
-
-(define (%unsafe.string<? str1 str2)
-  (let ((len1 ($string-length str1))
-	(len2 ($string-length str2)))
-    (if ($fx< len1 len2)
+(define ($dyadic-string<? str1 str2)
+  (if (eq? str1 str2)
+      #f
+    (let ((len1 ($string-length str1))
+	  (len2 ($string-length str2)))
+      (if ($fx< len1 len2)
+	  (let next-char ((idx  0)
+			  (len1 len1)
+			  (str1 str1)
+			  (str2 str2))
+	    (or ($fx= idx len1)
+		(let ((ch1 ($string-ref str1 idx))
+		      (ch2 ($string-ref str2 idx)))
+		  (or ($char< ch1 ch2)
+		      (if ($char= ch1 ch2)
+			  (next-char ($fxadd1 idx) len1 str1 str2)
+			#f)))))
 	(let next-char ((idx  0)
-			(len1 len1)
+			(len2 len2)
 			(str1 str1)
 			(str2 str2))
-	  (or ($fx= idx len1)
+	  (if ($fx= idx len2)
+	      #f
+	    (let ((ch1 ($string-ref str1 idx))
+		  (ch2 ($string-ref str2 idx)))
+	      (or ($char< ch1 ch2)
+		  (if ($char= ch1 ch2)
+		      (next-char ($fxadd1 idx) len2 str1 str2)
+		    #f)))))))))
+
+(define ($dyadic-string<=? str1 str2)
+  (or (eq? str1 str2)
+      (let ((len1 ($string-length str1))
+	    (len2 ($string-length str2)))
+	(if ($fx<= len1 len2)
+	    (let next-char ((idx  0)
+			    (len1 len1)
+			    (str1 str1)
+			    (str2 str2))
+	      (or ($fx= idx len1)
+		  (let ((ch1 ($string-ref str1 idx))
+			(ch2 ($string-ref str2 idx)))
+		    (or ($char< ch1 ch2)
+			(if ($char= ch1 ch2)
+			    (next-char ($fxadd1 idx) len1 str1 str2)
+			  #f)))))
+	  (let next-char ((idx  0)
+			  (len2 len2)
+			  (str1 str1)
+			  (str2 str2))
+	    (if ($fx= idx len2)
+		#f
 	      (let ((ch1 ($string-ref str1 idx))
 		    (ch2 ($string-ref str2 idx)))
 		(or ($char< ch1 ch2)
 		    (if ($char= ch1 ch2)
-			(next-char ($fxadd1 idx) len1 str1 str2)
-		      #f)))))
-      (let next-char ((idx  0)
-		      (len2 len2)
-		      (str1 str1)
-		      (str2 str2))
-	(if ($fx= idx len2)
-	    #f
-	  (let ((ch1 ($string-ref str1 idx))
-		(ch2 ($string-ref str2 idx)))
-	    (or ($char< ch1 ch2)
-		(if ($char= ch1 ch2)
-		    (next-char ($fxadd1 idx) len2 str1 str2)
-		  #f))))))))
+			(next-char ($fxadd1 idx) len2 str1 str2)
+		      #f)))))))))
 
-(define (%unsafe.string<=? str1 str2)
-  (let ((len1 ($string-length str1))
-	(len2 ($string-length str2)))
-    (if ($fx<= len1 len2)
-	(let next-char ((idx  0)
-			(len1 len1)
-			(str1 str1)
-			(str2 str2))
-	  (or ($fx= idx len1)
-	      (let ((ch1 ($string-ref str1 idx))
-		    (ch2 ($string-ref str2 idx)))
-		(or ($char< ch1 ch2)
-		    (if ($char= ch1 ch2)
-			(next-char ($fxadd1 idx) len1 str1 str2)
-		      #f)))))
-      (let next-char ((idx  0)
-		      (len2 len2)
-		      (str1 str1)
-		      (str2 str2))
-	(if ($fx= idx len2)
-	    #f
-	  (let ((ch1 ($string-ref str1 idx))
-		(ch2 ($string-ref str2 idx)))
-	    (or ($char< ch1 ch2)
-		(if ($char= ch1 ch2)
-		    (next-char ($fxadd1 idx) len2 str1 str2)
-		  #f))))))))
+(define-syntax-rule ($dyadic-string>? str1 str2)
+  ($dyadic-string<? str2 str1))
 
-(define (%unsafe.string>? str1 str2)
-  (%unsafe.string<? str2 str1))
-
-(define (%unsafe.string>=? str1 str2)
-  (%unsafe.string<=? str2 str1))
+(define-syntax-rule ($dyadic-string>=? str1 str2)
+  ($dyadic-string<=? str2 str1))
 
 
 (define (string->list str)
@@ -1725,6 +1660,10 @@
 
 
 ;;;; done
+
+#!vicare
+(define dummy
+  (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.strings")))
 
 )
 
