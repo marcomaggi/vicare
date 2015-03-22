@@ -46,6 +46,12 @@
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
+    ;;2015)
+    (rename (only (vicare system $bytevectors)
+		  $bytevector-set!)
+	    ($bytevector-set!	$bytevector-u8-set!)
+	    ($bytevector-set!	$bytevector-s8-set!))
     (vicare language-extensions syntaxes)
     (prefix (vicare platform words) words.)
     (vicare unsafe operations))

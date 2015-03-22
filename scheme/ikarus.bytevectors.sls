@@ -111,6 +111,7 @@
     subbytevector-s8		subbytevector-s8/count
 
     ;; unsafe bindings, to be exported by (vicare system $bytevectors)
+    $bytevector-u8-set!		$bytevector-s8-set!
     $bytevector-empty?
     $bytevector=		$bytevector-total-length
     $bytevector-concatenate	$bytevector-reverse-and-concatenate
@@ -206,6 +207,20 @@
 		  subbytevector-u8	subbytevector-u8/count
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
+    (only (vicare system $bytevectors)
+	  $make-bytevector
+	  $bytevector-length
+	  $bytevector-s8-ref
+	  $bytevector-u8-ref
+	  $bytevector-set!
+	  $bytevector-ieee-double-native-ref
+	  $bytevector-ieee-double-native-set!
+	  $bytevector-ieee-double-nonnative-ref
+	  $bytevector-ieee-double-nonnative-set!
+	  $bytevector-ieee-single-native-ref
+	  $bytevector-ieee-single-native-set!
+	  $bytevector-ieee-single-nonnative-ref
+	  $bytevector-ieee-single-nonnative-set!)
     (except (vicare unsafe operations)
 	    $bytevector-copy
 	    $bytevector=
@@ -767,7 +782,7 @@
 			(dst.index	dst.start)
 			(src.past	($fx+ src.start byte-count)))
 	       (unless ($fx= src.index src.past)
-		 ($bytevector-u8-set! src dst.index ($bytevector-u8-ref src src.index))
+		 ($bytevector-set! src dst.index ($bytevector-u8-ref src src.index))
 		 (loop ($fxadd1 src.index) ($fxadd1 dst.index) src.past))))
 
 	    (($fx> dst.start src.start)
@@ -777,7 +792,7 @@
 	       (unless ($fx= src.index src.past)
 		 (let ((src.index ($fxsub1 src.index))
 		       (dst.index ($fxsub1 dst.index)))
-		   ($bytevector-u8-set! src dst.index ($bytevector-u8-ref src src.index))
+		   ($bytevector-set! src dst.index ($bytevector-u8-ref src src.index))
 		   (loop src.index dst.index src.past)))))
 
 	    #| If (= dst.start src.start) we need to do nothing. |# )
@@ -787,7 +802,7 @@
 	       (dst.index	dst.start)
 	       (src.past	($fx+ src.start byte-count)))
       (unless ($fx= src.index src.past)
-	($bytevector-u8-set! dst dst.index ($bytevector-u8-ref src src.index))
+	($bytevector-set! dst dst.index ($bytevector-u8-ref src src.index))
 	(loop ($fxadd1 src.index) ($fxadd1 dst.index) src.past)))))
 
 
@@ -825,7 +840,7 @@
        (src.index src.start ($fxadd1 src.index)))
       (($fx= dst.index dst.len)
        dst.bv)
-    ($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))))
+    ($bytevector-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))))
 
 ;;; --------------------------------------------------------------------
 
@@ -860,7 +875,7 @@
        (src.index src.start ($fxadd1 src.index)))
       (($fx= dst.index dst.len)
        dst.bv)
-    ($bytevector-s8-set! dst.bv dst.index ($bytevector-s8-ref src.bv src.index))))
+    ($bytevector-set! dst.bv dst.index ($bytevector-s8-ref src.bv src.index))))
 
 
 (define* (bytevector-append . {list-of-bytevectors list-of-bytevectors?})
@@ -948,12 +963,20 @@
 (define* (bytevector-s8-set! {bv bytevector?} {index bytevector-index?} {byte words.word-s8?})
   (preconditions __who__
     (bytevector-index-for-word8? bv index))
-  ($bytevector-s8-set! bv index byte))
+  ($bytevector-set! bv index byte))
 
 (define* (bytevector-u8-set! {bv bytevector?} {index bytevector-index?} {octet words.word-u8?})
   (preconditions __who__
     (bytevector-index-for-word8? bv index))
-  ($bytevector-u8-set! bv index octet))
+  ($bytevector-set! bv index octet))
+
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Sun Mar 22, 2015)
+(define ($bytevector-u8-set! bv idx val)
+  ($bytevector-set! bv idx val))
+
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Sun Mar 22, 2015)
+(define ($bytevector-s8-set! bv idx val)
+  ($bytevector-set! bv idx val))
 
 
 ;;;; 16-bit setters and getters
@@ -1282,14 +1305,14 @@
     y))
 
 (define ($bytevector-ieee-double-set!/big x i y)
-  ($bytevector-u8-set! x i          ($flonum-u8-ref y 0))
-  ($bytevector-u8-set! x ($fx+ i 1) ($flonum-u8-ref y 1))
-  ($bytevector-u8-set! x ($fx+ i 2) ($flonum-u8-ref y 2))
-  ($bytevector-u8-set! x ($fx+ i 3) ($flonum-u8-ref y 3))
-  ($bytevector-u8-set! x ($fx+ i 4) ($flonum-u8-ref y 4))
-  ($bytevector-u8-set! x ($fx+ i 5) ($flonum-u8-ref y 5))
-  ($bytevector-u8-set! x ($fx+ i 6) ($flonum-u8-ref y 6))
-  ($bytevector-u8-set! x ($fx+ i 7) ($flonum-u8-ref y 7)))
+  ($bytevector-set! x i          ($flonum-u8-ref y 0))
+  ($bytevector-set! x ($fx+ i 1) ($flonum-u8-ref y 1))
+  ($bytevector-set! x ($fx+ i 2) ($flonum-u8-ref y 2))
+  ($bytevector-set! x ($fx+ i 3) ($flonum-u8-ref y 3))
+  ($bytevector-set! x ($fx+ i 4) ($flonum-u8-ref y 4))
+  ($bytevector-set! x ($fx+ i 5) ($flonum-u8-ref y 5))
+  ($bytevector-set! x ($fx+ i 6) ($flonum-u8-ref y 6))
+  ($bytevector-set! x ($fx+ i 7) ($flonum-u8-ref y 7)))
 
 (define ($bytevector-ieee-double-ref/little x i)
   (let ((y ($make-flonum)))
@@ -1304,48 +1327,48 @@
     y))
 
 (define ($bytevector-ieee-double-set!/little x i y)
-  ($bytevector-u8-set! x i          ($flonum-u8-ref y 7))
-  ($bytevector-u8-set! x ($fx+ i 1) ($flonum-u8-ref y 6))
-  ($bytevector-u8-set! x ($fx+ i 2) ($flonum-u8-ref y 5))
-  ($bytevector-u8-set! x ($fx+ i 3) ($flonum-u8-ref y 4))
-  ($bytevector-u8-set! x ($fx+ i 4) ($flonum-u8-ref y 3))
-  ($bytevector-u8-set! x ($fx+ i 5) ($flonum-u8-ref y 2))
-  ($bytevector-u8-set! x ($fx+ i 6) ($flonum-u8-ref y 1))
-  ($bytevector-u8-set! x ($fx+ i 7) ($flonum-u8-ref y 0)))
+  ($bytevector-set! x i          ($flonum-u8-ref y 7))
+  ($bytevector-set! x ($fx+ i 1) ($flonum-u8-ref y 6))
+  ($bytevector-set! x ($fx+ i 2) ($flonum-u8-ref y 5))
+  ($bytevector-set! x ($fx+ i 3) ($flonum-u8-ref y 4))
+  ($bytevector-set! x ($fx+ i 4) ($flonum-u8-ref y 3))
+  ($bytevector-set! x ($fx+ i 5) ($flonum-u8-ref y 2))
+  ($bytevector-set! x ($fx+ i 6) ($flonum-u8-ref y 1))
+  ($bytevector-set! x ($fx+ i 7) ($flonum-u8-ref y 0)))
 
 ;;; --------------------------------------------------------------------
 
 (define ($bytevector-ieee-single-ref/little x i)
   (let ((bv (make-bytevector 4)))
-    ($bytevector-u8-set! bv 0 ($bytevector-u8-ref x i))
-    ($bytevector-u8-set! bv 1 ($bytevector-u8-ref x ($fx+ i 1)))
-    ($bytevector-u8-set! bv 2 ($bytevector-u8-ref x ($fx+ i 2)))
-    ($bytevector-u8-set! bv 3 ($bytevector-u8-ref x ($fx+ i 3)))
+    ($bytevector-set! bv 0 ($bytevector-u8-ref x i))
+    ($bytevector-set! bv 1 ($bytevector-u8-ref x ($fx+ i 1)))
+    ($bytevector-set! bv 2 ($bytevector-u8-ref x ($fx+ i 2)))
+    ($bytevector-set! bv 3 ($bytevector-u8-ref x ($fx+ i 3)))
     ($bytevector-ieee-single-native-ref bv 0)))
 
 (define ($bytevector-ieee-single-ref/big x i)
   (let ((bv (make-bytevector 4)))
-    ($bytevector-u8-set! bv 3 ($bytevector-u8-ref x i))
-    ($bytevector-u8-set! bv 2 ($bytevector-u8-ref x ($fx+ i 1)))
-    ($bytevector-u8-set! bv 1 ($bytevector-u8-ref x ($fx+ i 2)))
-    ($bytevector-u8-set! bv 0 ($bytevector-u8-ref x ($fx+ i 3)))
+    ($bytevector-set! bv 3 ($bytevector-u8-ref x i))
+    ($bytevector-set! bv 2 ($bytevector-u8-ref x ($fx+ i 1)))
+    ($bytevector-set! bv 1 ($bytevector-u8-ref x ($fx+ i 2)))
+    ($bytevector-set! bv 0 ($bytevector-u8-ref x ($fx+ i 3)))
     ($bytevector-ieee-single-native-ref bv 0)))
 
 (define ($bytevector-ieee-single-set!/little x i v)
   (let ((bv (make-bytevector 4)))
     ($bytevector-ieee-single-native-set! bv 0 v)
-    ($bytevector-u8-set! x i          ($bytevector-u8-ref bv 0))
-    ($bytevector-u8-set! x ($fx+ i 1) ($bytevector-u8-ref bv 1))
-    ($bytevector-u8-set! x ($fx+ i 2) ($bytevector-u8-ref bv 2))
-    ($bytevector-u8-set! x ($fx+ i 3) ($bytevector-u8-ref bv 3))))
+    ($bytevector-set! x i          ($bytevector-u8-ref bv 0))
+    ($bytevector-set! x ($fx+ i 1) ($bytevector-u8-ref bv 1))
+    ($bytevector-set! x ($fx+ i 2) ($bytevector-u8-ref bv 2))
+    ($bytevector-set! x ($fx+ i 3) ($bytevector-u8-ref bv 3))))
 
 (define ($bytevector-ieee-single-set!/big x i v)
   (let ((bv (make-bytevector 4)))
     ($bytevector-ieee-single-native-set! bv 0 v)
-    ($bytevector-u8-set! x i          ($bytevector-u8-ref bv 3))
-    ($bytevector-u8-set! x ($fx+ i 1) ($bytevector-u8-ref bv 2))
-    ($bytevector-u8-set! x ($fx+ i 2) ($bytevector-u8-ref bv 1))
-    ($bytevector-u8-set! x ($fx+ i 3) ($bytevector-u8-ref bv 0))))
+    ($bytevector-set! x i          ($bytevector-u8-ref bv 3))
+    ($bytevector-set! x ($fx+ i 1) ($bytevector-u8-ref bv 2))
+    ($bytevector-set! x ($fx+ i 2) ($bytevector-u8-ref bv 1))
+    ($bytevector-set! x ($fx+ i 3) ($bytevector-u8-ref bv 0))))
 
 
 ;;;; any integer getters, bytevector to any integer list conversion
@@ -1514,13 +1537,13 @@
     ((little)
      (let loop ((bv bv) (i0 idx) (i1 (fx+ idx word-size)) (n word))
        (unless ($fx= i0 i1)
-	 ($bytevector-u8-set! bv i0 (bitwise-and n 255))
+	 ($bytevector-set! bv i0 (bitwise-and n 255))
 	 (loop bv ($fx+ i0 1) i1 (sra n 8)))))
     ((big)
      (let loop ((bv bv) (i0 idx) (i1 (fx+ idx word-size)) (n word))
        (unless ($fx= i0 i1)
 	 (let ((i1 ($fxsub1 i1)))
-	   ($bytevector-u8-set! bv i1 (bitwise-and n 255))
+	   ($bytevector-set! bv i1 (bitwise-and n 255))
 	   (loop bv i0 i1 (sra n 8))))))))
 
 ;;; --------------------------------------------------------------------
@@ -1543,13 +1566,13 @@
     ((little)
      (let loop ((bv bv) (i0 idx) (i1 (fx+ idx word-size)) (n word))
        (unless ($fx= i0 i1)
-	 ($bytevector-u8-set! bv i0 (bitwise-and n 255))
+	 ($bytevector-set! bv i0 (bitwise-and n 255))
 	 (loop bv ($fxadd1 i0) i1 (sra n 8)))))
     ((big)
      (let loop ((bv bv) (i0 idx) (i1 (fx+ idx word-size)) (n word))
        (unless ($fx= i0 i1)
 	 (let ((i1 ($fx- i1 1)))
-	   ($bytevector-u8-set! bv i1 (bitwise-and n 255))
+	   ($bytevector-set! bv i1 (bitwise-and n 255))
 	   (loop bv i0 i1 (sra n 8))))))))
 
 
@@ -1653,7 +1676,7 @@
 	   (let ((c ($car ls)))
 	     (unless (?valid-number-pred c)
 	       (procedure-argument-violation (quote ?who) "not an octet" c))
-	     ($bytevector-u8-set! s i c)
+	     ($bytevector-set! s i c)
 	     (fill s ($fxadd1 i) (cdr ls)))))
 
        (let* ((n (race ls ls ls 0))
@@ -1661,9 +1684,9 @@
 	 (fill s 0 ls))))))
 
 (define-byte-list-to-bytevector u8-list->bytevector
-  vu8 words.word-u8? $bytevector-u8-set!)
+  vu8 words.word-u8? $bytevector-set!)
 (define-byte-list-to-bytevector s8-list->bytevector
-  vs8 words.word-s8? $bytevector-s8-set!)
+  vs8 words.word-s8? $bytevector-set!)
 
 ;;; --------------------------------------------------------------------
 

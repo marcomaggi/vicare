@@ -67,7 +67,12 @@
     $string<			$string>
     $string<=			$string>=
     $string-total-length
+    $substring
+    $string-copy		$string-copy!
     $string-concatenate		$string-reverse-and-concatenate
+    $string-copy!/count
+    $string-self-copy-forwards!	$string-self-copy-backwards!
+    $string-fill!
 
     $string->octets		$octets->string
     $octets-encoded-bytevector?	$octets-encoded-string?
@@ -154,13 +159,7 @@
 	  $string-set!)
     (only (vicare unsafe operations)
 	  $fx<=
-	  $fxincr!
-	  $string-self-copy-forwards!
-	  $string-self-copy-backwards!
-	  $string-fill!
-	  $string-copy!
-	  $string-copy!/count
-	  $substring)
+	  $fxincr!)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 21,
     ;;2015)
     (only (ikarus fixnums)
@@ -337,6 +336,10 @@
 	   (list-of-strings? (cdr obj)))
     (null? obj)))
 
+(define ($string-last-index str)
+  ;;To be called only if BV is not empty!!!
+  ($fxsub1 ($string-length str)))
+
 
 (define* (string-length {str string?})
   ;;Defined by R6RS.   Return the number of  characters in the given STR  as an exact
@@ -489,6 +492,8 @@
 	 str)))))
 
 
+;;;; copying
+
 (define* (substring {str string?} {start string-index?} {end string-index?})
   ;;Defined by R6RS.  STR  must be a string, and START and END  must be exact integer
   ;;objects satisfying:
@@ -502,6 +507,19 @@
     (assert-start/end-indexes-for-string start end len)
     ($substring str start end)))
 
+(define ($substring str start end)
+  ;;Return a  new string holding  characters from STR  from START (inclusive)  to END
+  ;;(exclusive).
+  ;;
+  (let ((dst.len ($fx- end start)))
+    (if ($fx< 0 dst.len)
+	(receive-and-return (dst.str)
+	    ($make-string dst.len)
+	  ($string-copy! str start dst.str 0 end))
+      (string))))
+
+;;; --------------------------------------------------------------------
+
 (define* (string-copy {str string?})
   ;;Defined by R6RS.  Return a newly allocated copy of the given STR.
   ;;
@@ -509,6 +527,72 @@
 
 (define ($string-copy str)
   ($substring str 0 ($string-length str)))
+
+;;; --------------------------------------------------------------------
+
+(define ($string-copy! src.str src.start
+		       dst.str dst.start
+		       src.end)
+  ;;Copy the characters of SRC.STR from  SRC.START inclusive to SRC.END exclusive, to
+  ;;DST.STR starting at DST.START inclusive.
+  ;;
+  (if ($fx= src.start src.end)
+      dst.str
+    (begin
+      ($string-set! dst.str dst.start ($string-ref src.str src.start))
+      ($string-copy! src.str ($fxadd1 src.start)
+		     dst.str ($fxadd1 dst.start)
+		     src.end))))
+
+;;; --------------------------------------------------------------------
+
+(define ($string-copy!/count src.str src.start dst.str dst.start count)
+  ;;Copy  COUNT   characters  from  SRC.STR   starting  at  SRC.START
+  ;;inclusive to DST.STR starting at DST.START inclusive.
+  ;;
+  (let ((src.end ($fx+ src.start count)))
+    ($string-copy! src.str src.start
+		   dst.str dst.start
+		   src.end)))
+
+(define ($string-self-copy-forwards! str src.start dst.start count)
+  ;;Copy  COUNT characters of  STR from  SRC.START inclusive  to STR
+  ;;itself starting at DST.START inclusive.  The copy happens forwards,
+  ;;so it is suitable for the case SRC.START > DST.START.
+  ;;
+  (let loop ((str	str)
+	     (src.start	src.start)
+	     (dst.start	dst.start)
+	     (src.end	($fx+ src.start count)))
+    (unless ($fx= src.start src.end)
+      ($string-set! str dst.start ($string-ref str src.start))
+      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+
+(define ($string-self-copy-backwards! str src.start dst.start count)
+  ;;Copy  COUNT characters of  STR from  SRC.START inclusive  to STR
+  ;;itself   starting  at  DST.START   inclusive.   The   copy  happens
+  ;;backwards, so it is suitable for the case SRC.START < DST.START.
+  ;;
+  (let loop ((str	str)
+	     (src.start	($fx+ src.start count))
+	     (dst.start	($fx+ dst.start count))
+	     (src.end	src.start))
+    (unless ($fx= src.start src.end)
+      (let ((src.start ($fxsub1 src.start))
+	    (dst.start ($fxsub1 dst.start)))
+	($string-set! str dst.start ($string-ref str src.start))
+	(loop str src.start dst.start src.end)))))
+
+(define ($string-fill! str index end fill)
+  ;;Fill the positions  in STR from INDEX inclusive  to END exclusive
+  ;;with FILL.
+  ;;
+  (let loop ((str str) (index index) (end end) (fill fill))
+    (if ($fx= index end)
+	str
+      (begin
+	($string-set! str index fill)
+	(loop str ($fxadd1 index) end fill)))))
 
 
 ;;;; string comparison
@@ -624,6 +708,8 @@
   ($string<= str2 str1))
 
 
+;;;; list conversion
+
 (define* (string->list {str string?})
   ;;Defined by R6RS.   Return a newly allocated  list of the characters  that make up
   ;;the given string.
@@ -636,7 +722,6 @@
       (let ((i ($fxsub1 i)))
 	(next-char str i (cons ($string-ref str i) ac))))))
 
-
 (define* (list->string ls)
   ;;Defined by R6RS.   Return a newly allocated string formed  from the characters in
   ;;LS.

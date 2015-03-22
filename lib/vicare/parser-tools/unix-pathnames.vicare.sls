@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -79,7 +79,14 @@
     raise-unix-pathname-normalisation-error)
   (import (except (vicare)
 		  append)
-    (vicare unsafe operations))
+    (only (vicare unsafe operations)
+	  $subbytevector-u8
+	  $fxincr!)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $strings)
+    (vicare system $bytevectors))
 
 
 ;;;; constants
@@ -114,7 +121,8 @@
   ;;pathname might contain any octet in the range [1, 255]; that is: any
   ;;byte with the exclusion of the zero.
   ;;
-  ($fx< 0 chi 256))
+  (and ($fx< 0 chi)
+       ($fx< chi 256)))
 
 (define-inline ($valid-chi-for-segment? chi)
   ;;Assuming  CHI  is a  fixnum:  return  true if  it  is  in the  range
@@ -123,8 +131,10 @@
   ;;[48, 255]; that is: any byte with  the exclusion of the zero and 47,
   ;;which represents the slash character in ASCII encoding.
   ;;
-  (or ($fx< 0         chi CHI-SLASH)
-      ($fx< CHI-SLASH chi 256)))
+  (or (and ($fx< 0 chi)
+	   ($fx< chi CHI-SLASH))
+      (and ($fx< CHI-SLASH chi)
+	   ($fx< chi 256))))
 
 ;;; --------------------------------------------------------------------
 
@@ -466,7 +476,7 @@
        ($bytevector-pathname? obj)))
 
 (define ($bytevector-pathname? obj)
-  (and ($bytevector-not-empty? obj)
+  (and (not ($bytevector-empty? obj))
        (let loop ((bv obj)
 		  (i  0))
 	 (cond (($fx= i ($bytevector-length bv))
@@ -481,7 +491,7 @@
        ($string-pathname? obj)))
 
 (define ($string-pathname? obj)
-  (and ($string-not-empty? obj)
+  (and (not ($string-empty? obj))
        (let loop ((obj obj)
 		  (i   0))
 	 (cond (($fx= i ($string-length obj))

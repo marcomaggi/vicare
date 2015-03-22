@@ -198,6 +198,9 @@
     (except (vicare unsafe operations)
 	    $string-copy!
 	    $string-fill!)
+    (except (vicare system $strings)
+	    $string-copy!
+	    $string-fill!)
     (only (vicare system $numerics)
 	  $min-fixnum-fixnum
 	  $add-number-fixnum))

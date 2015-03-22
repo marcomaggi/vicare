@@ -88,6 +88,7 @@
 	  $remprop
 	  $property-list)
     (vicare system $keywords)
+    (vicare system $strings)
     (vicare unsafe operations)
     (vicare language-extensions sentinels)
     (vicare containers bytevectors)

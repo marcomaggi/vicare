@@ -32,7 +32,7 @@
 ;;;        decreasing order of significance.
 ;;;
 ;;;
-;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -219,8 +219,6 @@
     $bytevector-u8-last-index
     $bytevector-u8-ref
     $bytevector-s8-ref
-    $bytevector-u8-set!
-    $bytevector-s8-set!
     $bytevector-ieee-double-native-ref
     $bytevector-ieee-double-native-set!
     $bytevector-ieee-single-native-ref
@@ -353,22 +351,12 @@
     $make-string
     $string-length
     $string-empty?
-    $string-not-empty?
-    $string-last-index
     $string-ref
     $string-set!
     $string=
     $string
     $uri-encoded-string?
     $percent-encoded-string?
-
-    $string-copy
-    $string-copy!
-    $string-copy!/count
-    $string-self-copy-forwards!
-    $string-self-copy-backwards!
-    $string-fill!
-    $substring
 
     $string-total-length
     $string-concatenate
@@ -469,10 +457,7 @@
     (vicare system $pairs)
     (vicare system $lists)
     (vicare system $vectors)
-    (rename (vicare system $bytevectors)
-	    ($bytevector-set!	$bytevector-set!)
-	    ($bytevector-set!	$bytevector-u8-set!)
-	    ($bytevector-set!	$bytevector-s8-set!))
+    (vicare system $bytevectors)
     (except (vicare system $chars)
 	    $char=
 	    $char<
@@ -1015,7 +1000,7 @@
 		    (index  ($fx+ 7 index))
 		    (end    index)
 		    (word   word))
-      ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+      ($bytevector-set! bv index (bitwise-and word #xFF))
       (unless ($fx= index end)
 	(next-byte bv ($fxsub1 index) end (sra word 8))))))
 
@@ -1038,7 +1023,7 @@
 		    (index  index)
 		    (end    ($fx+ 7 index))
 		    (word   word))
-      ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+      ($bytevector-set! bv index (bitwise-and word #xFF))
       (unless ($fx= index end)
 	(next-byte bv ($fxadd1 index) end (sra word 8))))))
 
@@ -1064,9 +1049,9 @@
 		    (end    index)
 		    (word   word))
       (if ($fx= index end)
-	  ($bytevector-s8-set! bv index (bitwise-and word #xFF))
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
 	(begin
-	  ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
 	  (next-byte bv ($fxsub1 index) end (sra word 8)))))))
 
 ;;; --------------------------------------------------------------------
@@ -1090,9 +1075,9 @@
 		    (end    ($fx+ 7 index))
 		    (word   word))
       (if ($fx= index end)
-	  ($bytevector-s8-set! bv index (bitwise-and word #xFF))
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
 	(begin
-	  ($bytevector-u8-set! bv index (bitwise-and word #xFF))
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
 	  (next-byte bv ($fxadd1 index) end (sra word 8)))))))
 
 ;;; --------------------------------------------------------------------
@@ -1150,7 +1135,7 @@
     (if ($fx= index end)
 	bv
       (begin
-	($bytevector-u8-set! bv index fill)
+	($bytevector-set! bv index fill)
 	(loop bv ($fxadd1 index) end fill)))))
 
 (define-inline ($bytevector-copy! ?src.bv ?src.start
@@ -1165,7 +1150,7 @@
     (if ($fx= src.start src.end)
 	dst.bv
       (begin
-	($bytevector-u8-set! dst.bv dst.start ($bytevector-u8-ref src.bv src.start))
+	($bytevector-set! dst.bv dst.start ($bytevector-u8-ref src.bv src.start))
 	(loop src.bv ($fxadd1 src.start)
 	      dst.bv ($fxadd1 dst.start)
 	      src.end)))))
@@ -1189,7 +1174,7 @@
 	     (dst.start	?dst.start)
 	     (src.end	($fx+ ?src.start ?count)))
     (unless ($fx= src.start src.end)
-      ($bytevector-u8-set! bv dst.start ($bytevector-u8-ref bv src.start))
+      ($bytevector-set! bv dst.start ($bytevector-u8-ref bv src.start))
       (loop bv ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
 
 (define-inline ($bytevector-self-copy-backwards! ?bv ?src.start ?dst.start ?count)
@@ -1204,7 +1189,7 @@
     (unless ($fx= src.start src.end)
       (let ((src.start ($fxsub1 src.start))
 	    (dst.start ($fxsub1 dst.start)))
-	($bytevector-u8-set! bv dst.start ($bytevector-u8-ref bv src.start))
+	($bytevector-set! bv dst.start ($bytevector-u8-ref bv src.start))
 	(loop bv src.start dst.start src.end)))))
 
 (define-inline ($subbytevector-u8 src.bv src.start src.end)
@@ -1214,103 +1199,7 @@
 	 (src.index src.start ($fxadd1 src.index)))
 	(($fx= dst.index dst.len)
 	 dst.bv)
-      ($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
-
-
-;;;; miscellaneous string operations
-
-;;Commented out because implemented by the boot image.
-;;
-;; (define-inline ($string-empty? vec)
-;;   ($fxzero? ($string-length vec)))
-
-(define-inline ($string-not-empty? ?bv)
-  (not ($string-empty? ?bv)))
-
-(define-inline ($string-last-index str)
-  ;;To be called only if BV is not empty!!!
-  ($fxsub1 ($string-length str)))
-
-(define-inline ($string-fill! ?str ?index ?end ?fill)
-  ;;Fill the positions  in ?STR from ?INDEX inclusive  to ?END exclusive
-  ;;with ?FILL.
-  ;;
-  (let loop ((str ?str) (index ?index) (end ?end) (fill ?fill))
-    (if ($fx= index end)
-	str
-      (begin
-	($string-set! str index fill)
-	(loop str ($fxadd1 index) end fill)))))
-
-(define-inline ($string-copy ?src.str)
-  (let* ((src.len ($string-length ?src.str))
-	 (dst.str ($make-string src.len)))
-    ($string-copy! ?src.str 0 dst.str 0 src.len)))
-
-(define-inline ($string-copy! ?src.str ?src.start
-			      ?dst.str ?dst.start
-			      ?src.end)
-  ;;Copy  the  characters  of  ?SRC.STR  from  ?SRC.START  inclusive  to
-  ;;?SRC.END exclusive, to ?DST.STR starting at ?DST.START inclusive.
-  ;;
-  (let loop ((src.str ?src.str) (src.start ?src.start)
-	     (dst.str ?dst.str) (dst.start ?dst.start)
-	     (src.end ?src.end))
-    (if ($fx= src.start src.end)
-	dst.str
-      (begin
-	($string-set! dst.str dst.start ($string-ref src.str src.start))
-	(loop src.str ($fxadd1 src.start)
-	      dst.str ($fxadd1 dst.start)
-	      src.end)))))
-
-(define-inline ($string-copy!/count ?src.str ?src.start ?dst.str ?dst.start ?count)
-  ;;Copy  ?COUNT   characters  from  ?SRC.STR   starting  at  ?SRC.START
-  ;;inclusive to ?DST.STR starting at ?DST.START inclusive.
-  ;;
-  (let ((src.end ($fx+ ?src.start ?count)))
-    ($string-copy! ?src.str ?src.start
-		   ?dst.str ?dst.start
-		   src.end)))
-
-(define-inline ($string-self-copy-forwards! ?str ?src.start ?dst.start ?count)
-  ;;Copy  ?COUNT characters of  ?STR from  ?SRC.START inclusive  to ?STR
-  ;;itself starting at ?DST.START inclusive.  The copy happens forwards,
-  ;;so it is suitable for the case ?SRC.START > ?DST.START.
-  ;;
-  (let loop ((str	?str)
-	     (src.start	?src.start)
-	     (dst.start	?dst.start)
-	     (src.end	($fx+ ?src.start ?count)))
-    (unless ($fx= src.start src.end)
-      ($string-set! str dst.start ($string-ref str src.start))
-      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
-
-(define-inline ($string-self-copy-backwards! ?str ?src.start ?dst.start ?count)
-  ;;Copy  ?COUNT characters of  ?STR from  ?SRC.START inclusive  to ?STR
-  ;;itself   starting  at  ?DST.START   inclusive.   The   copy  happens
-  ;;backwards, so it is suitable for the case ?SRC.START < ?DST.START.
-  ;;
-  (let loop ((str	?str)
-	     (src.start	($fx+ ?src.start ?count))
-	     (dst.start	($fx+ ?dst.start ?count))
-	     (src.end	?src.start))
-    (unless ($fx= src.start src.end)
-      (let ((src.start ($fxsub1 src.start))
-	    (dst.start ($fxsub1 dst.start)))
-	($string-set! str dst.start ($string-ref str src.start))
-	(loop str src.start dst.start src.end)))))
-
-(define-inline ($substring ?str ?start ?end)
-  ;;Return  a  new  string  holding  characters from  ?STR  from  ?START
-  ;;inclusive to ?END exclusive.
-  ;;
-  (let ((dst.len ($fx- ?end ?start)))
-    (if ($fx< 0 dst.len)
-	(let ((dst.str ($make-string dst.len)))
-	  ($string-copy! ?str ?start dst.str 0 ?end)
-	  dst.str)
-      "")))
+      ($bytevector-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
 
 
 ;;;; miscellaneous vector operations

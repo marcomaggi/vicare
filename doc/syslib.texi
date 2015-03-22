@@ -5511,6 +5511,9 @@ strings, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{ch} must be characters.  The following
 bindings are exported by the library @library{vicare system $strings}.
 
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Constructors
 
 @deffn {Unsafe Operation} $make-string @var{fx}
 Allocate a new string capable of holding @var{fx} characters and return
@@ -5523,48 +5526,45 @@ Allocate a new string and initialise it with the given characters.
 @end deffn
 
 
-@deffn {Unsafe Operation} $string-length @var{str}
-Return a fixnum representing the length of the operand.
-@end deffn
+@defun $string-copy @var{str}
+Build and return a newly allocated string holding the same characters of
+@var{str}.
+@end defun
 
 
-@deffn {Unsafe Operations} $string-empty? @var{str}
-Return @true{} if the string @var{str} is empty, otherwise return
-@false{}.
-@end deffn
+@defun {$string-copy!} @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{src.end}
+Copy the characters of @var{src.str} from @var{src.start} inclusive to
+@var{src.end} exclusive, to @var{dst.str} starting at @var{dst.start}
+inclusive.
+@end defun
 
 
-@deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
-Return the character at offset @var{fx} in @var{str}.
-@end deffn
+@defun $string-copy!/count @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
+Copy @var{count} characters from @var{src.str} starting at
+@var{src.start} inclusive to @var{dst.str} starting at @var{dst.start}
+inclusive.
+@end defun
 
 
-@deffn {Unsafe Operation} $string-set! @var{str} @var{fx} @var{ch}
-Store @var{ch} at index @var{fx} of @var{str}.
-@end deffn
+@defun $string-self-copy-forwards! @var{str} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} characters of @var{str} from @var{src.start} inclusive
+to @var{str} itself starting at @var{dst.start} inclusive.  The copy
+happens forwards, so it is suitable for the case @code{@var{src.start} >
+@var{dst.start}}.
+@end defun
 
 
-@deffn {Unsafe Operation} $string= @vari{str} @varii{str}
-Return @true{} if @vari{str} and @varii{str} represent the same string;
-otherwise return @false{}.
-@end deffn
-
-@deffn {Unsafe Operation} $string< @vari{str} @varii{str}
-@deffnx {Unsafe Operation} $string> @vari{str} @varii{str}
-@deffnx {Unsafe Operation} $string<= @vari{str} @varii{str}
-@deffnx {Unsafe Operation} $string>= @vari{str} @varii{str}
-Dyadic lexicographic comparison functions for strings.  Return @true{}
-if @vari{str} and @varii{str} compare as the name implies; otherwise
-return @false{}.
-@end deffn
+@defun $string-self-copy-backwards! @var{str} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} characters of @var{str} from @var{src.start} inclusive
+to @var{str} itself starting at @var{dst.start} inclusive.  The copy
+happens backwards, so it is suitable for the case @code{@var{src.start}
+< @var{dst.start}}.
+@end defun
 
 
-@defun $string-total-length @var{init-len} @var{strs}
-Given the list of strings @var{strs}: compute the total length of the
-strings, add it to @var{ini-len} and return the result.  If
-@var{init-len} is zero: the returned value is the total length of the
-strings in @var{strs}.  The returned value may or may not be in the
-range of the maximum string size.
+@defun $substring @var{str} @var{start} @var{end}
+Build and return a newly allocated string holding the range of character
+between @var{start} (inclusive) and @var{end} (exclusive).
 @end defun
 
 
@@ -5581,20 +5581,75 @@ the result.  The resulting string must have length @var{total-len}.
 Assume the arguments have been already validated.
 @end defun
 
+@c ------------------------------------------------------------------------
 
-@deffn {Unsafe Operation} $interned-strings
-Return a vector holding the currently interned strings.
+@unnumberedsubsec Accessors and mutators
+
+@deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
+Return the character at offset @var{fx} in @var{str}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fixnum->string @var{fx} @var{base}
-Return a string object representing @var{fx} in @var{base}.  @var{base}
-must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
+@deffn {Unsafe Operation} $string-set! @var{str} @var{fx} @var{ch}
+Store @var{ch} at index @var{fx} of @var{str}.
+@end deffn
+
+
+@defun $string-fill! @var{str} @var{start} @var{end} @var{fill}
+Fill the positions in @var{str} from @var{start} inclusive to @var{end}
+exclusive with @var{fill}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Inspection
+
+@deffn {Unsafe Operation} $string-length @var{str}
+Return a fixnum representing the length of the operand.
+@end deffn
+
+
+@defun $string-total-length @var{init-len} @var{strs}
+Given the list of strings @var{strs}: compute the total length of the
+strings, add it to @var{ini-len} and return the result.  If
+@var{init-len} is zero: the returned value is the total length of the
+strings in @var{strs}.  The returned value may or may not be in the
+range of the maximum string size.
+@end defun
+
+
+@deffn {Unsafe Operations} $string-empty? @var{str}
+Return @true{} if the string @var{str} is empty, otherwise return
+@false{}.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparison
+
+
+@deffn {Unsafe Operation} $string= @vari{str} @varii{str}
+Return @true{} if @vari{str} and @varii{str} represent the same string;
+otherwise return @false{}.
+@end deffn
+
+@deffn {Unsafe Operation} $string< @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string> @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string<= @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string>= @vari{str} @varii{str}
+Dyadic lexicographic comparison functions for strings.  Return @true{}
+if @vari{str} and @varii{str} compare as the name implies; otherwise
+return @false{}.
 @end deffn
 
 @c ------------------------------------------------------------
 
 @subsubheading Conversion function
+
+@deffn {Unsafe Operation} $fixnum->string @var{fx} @var{base}
+Return a string object representing @var{fx} in @var{base}.  @var{base}
+must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
+@end deffn
 
 
 @defun $string->latin1 @var{string}
@@ -5682,6 +5737,14 @@ If the characters in @var{string} are invalid: raise an exception; this
 validation is @strong{not} removed when arguments validation is
 disabled.
 @end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Miscellaneous functions
+
+@deffn {Unsafe Operation} $interned-strings
+Return a vector holding the currently interned strings.
+@end deffn
 
 @c page
 @node syslib ports

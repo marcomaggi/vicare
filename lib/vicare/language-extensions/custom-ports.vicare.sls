@@ -36,6 +36,7 @@
     open-textual-output-port-pair
     open-textual-input/output-port-pair)
   (import (vicare)
+    (vicare system $strings)
     (vicare unsafe operations))
 
 

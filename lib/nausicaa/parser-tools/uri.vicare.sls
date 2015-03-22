@@ -75,6 +75,7 @@
     (prefix (vicare language-extensions makers) mk.)
     (vicare unsafe operations)
     (vicare language-extensions ascii-chars)
+    (vicare system $strings)
     (vicare system $numerics)
     (vicare arguments validation))
 

@@ -648,8 +648,23 @@
 		  make-textual-socket-input/output-port*)
     (only (ikarus.options)
 	  strict-r6rs)
-    ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
-    ;;and $SET-PORT-* bindings.
+    (except (vicare system $strings)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun
+	    ;;Mar 22, 2015)
+	    $string-copy!/count
+	    $string-self-copy-forwards!	$string-self-copy-backwards!
+	    $string-fill!
+	    $substring)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
+    ;;2015)
+    (only (ikarus strings)
+	  $string-copy!/count
+	  $string-self-copy-forwards!	$string-self-copy-backwards!
+	  $string-fill!
+	  $substring)
+    (vicare system $bytevectors)
+    ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
+    ;;bindings.
     (vicare system $io)
     (prefix (only (vicare) port?) primop.)
     (vicare language-extensions syntaxes)
@@ -7170,7 +7185,7 @@
 		   (buffer.past		($fxadd1 buffer.index))
 		   (buffer.used-size	port.buffer.used-size))
 	      (debug-assert (<= buffer.index buffer.used-size))
-	      ($bytevector-u8-set! port.buffer buffer.index octet)
+	      ($bytevector-set! port.buffer buffer.index octet)
 	      (when ($fx= buffer.index buffer.used-size)
 		(set! port.buffer.used-size buffer.past))
 	      (set! port.buffer.index buffer.past))))
@@ -7456,7 +7471,7 @@
 		   (buffer.past		($fxadd1 buffer.offset)))
 	      (if ($fx<= buffer.past port.buffer.size)
 		  (begin
-		    ($bytevector-u8-set! port.buffer buffer.offset code-point)
+		    ($bytevector-set! port.buffer buffer.offset code-point)
 		    (set! port.buffer.index buffer.past)
 		    (when ($fx> buffer.past port.buffer.used-size)
 		      (set! port.buffer.used-size buffer.past)))
@@ -7477,7 +7492,7 @@
 	       (let* ((buffer.offset-octet0	port.buffer.index)
 		      (buffer.past		($fxadd1 buffer.offset-octet0)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7497,7 +7512,7 @@
 		      (buffer.offset-octet1	($fxadd1 buffer.offset-octet0))
 		      (buffer.past		($fxadd1 buffer.offset-octet1)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7520,7 +7535,7 @@
 		      (buffer.offset-octet2	($fxadd1 buffer.offset-octet1))
 		      (buffer.past		($fxadd1 buffer.offset-octet2)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7547,7 +7562,7 @@
 		      (buffer.offset-octet3	($fxadd1 buffer.offset-octet2))
 		      (buffer.past		($fxadd1 buffer.offset-octet3)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7618,7 +7633,7 @@
 	       (buffer.past	($fxadd1 buffer.offset)))
 	  (if ($fx<= buffer.past port.buffer.size)
 	      (begin
-		($bytevector-u8-set! port.buffer buffer.offset code-point)
+		($bytevector-set! port.buffer buffer.offset code-point)
 		(set! port.buffer.index buffer.past)
 		(when ($fx> buffer.past port.buffer.used-size)
 		  (set! port.buffer.used-size buffer.past)))
