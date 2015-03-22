@@ -36,10 +36,6 @@
 (define (mktable-1)
   (alist->hashtable! (make-eq-hashtable) '((a . 1) (b . 2) (c . 3))))
 
-(define (symbol<? s1 s2)
-  (string<? (symbol->string s1)
-	    (symbol->string s2)))
-
 
 (parametrise ((check-test-name	'hash-functions))
 
