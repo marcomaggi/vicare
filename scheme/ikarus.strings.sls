@@ -188,7 +188,7 @@
 
   #| end of module |# )
 
-(define-syntax (assert-total-length-for-string stx)
+(define-syntax (assert-total-string-length stx)
   (syntax-case stx ()
     ((_ ?len)
      (identifier? #'?len)
@@ -420,7 +420,7 @@
   (({one char?} {two char?} {three char?} {four char?} {five char?} . {char* list-of-chars?})
    (define len
      (+ 5 (length char*)))
-   (assert-total-length-for-string len)
+   (assert-total-string-length len)
    (let ((str ($make-string len)))
      ($string-set! str 0 one)
      ($string-set! str 1 two)
@@ -505,6 +505,9 @@
 (define* (string-copy {str string?})
   ;;Defined by R6RS.  Return a newly allocated copy of the given STR.
   ;;
+  ($string-copy str))
+
+(define ($string-copy str)
   ($substring str 0 ($string-length str)))
 
 
@@ -662,103 +665,80 @@
 	(fill s ($fxadd1 i) ($cdr ls)))))
 
   (let ((len (race ls ls ls 0)))
-    (assert-total-length-for-string len)
+    (assert-total-string-length len)
     (fill ($make-string len) 0 ls)))
 
 
-(define string-append
-  ;;Defined by  R6RS.  Return a newly allocated  string whose characters
-  ;;form the concatenation of the given strings.
+(case-define* string-append
+  ;;Defined  by R6RS.   Return a  newly allocated  string whose  characters form  the
+  ;;concatenation of the given strings.
   ;;
-  (case-lambda
-   (() "")
+  (()
+   ;;It must be a newly allocated string.
+   (string))
 
-   ((str)
-    (define who 'string-append)
-    (with-arguments-validation (who)
-	((string str))
-      str))
+  (({str string?})
+   ;;It must be a newly allocated string.
+   ($string-copy str))
 
-   ((str1 str2)
-    (define who 'string-append)
-    (with-arguments-validation (who)
-	((string str1)
-	 (string str2))
-      (let* ((len1	($string-length str1))
-	     (len2	($string-length str2))
-	     (dst.len	(+ len1 len2)))
-	(with-arguments-validation (who)
-	    ((length dst.len))
-	  (let ((dst.str ($make-string dst.len)))
-	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
-	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
-	    dst.str)))))
+  (({str1 string?} {str2 string?})
+   (let* ((len1		($string-length str1))
+	  (len2		($string-length str2))
+	  (dst.len	(+ len1 len2)))
+     (assert-total-string-length dst.len)
+     (receive-and-return (dst.str)
+	 ($make-string dst.len)
+       (%unsafe.string-copy! str1 0 dst.str 0    len1)
+       (%unsafe.string-copy! str2 0 dst.str len1 len2))))
 
-   ((str1 str2 str3)
-    (define who 'string-append)
-    (with-arguments-validation (who)
-	((string str1)
-	 (string str2)
-	 (string str3))
-      (let* ((len1	($string-length str1))
-	     (len2	($string-length str2))
-	     (len3	($string-length str3))
-	     (dst.len	(+ len1 len2 len3)))
-	(with-arguments-validation (who)
-	    ((length  dst.len))
-	  (let ((dst.str ($make-string dst.len)))
-	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
-	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
-	    (%unsafe.string-copy! str3 0 dst.str ($fx+ len1 len2) len3)
-	    dst.str)))))
+  (({str1 string?} {str2 string?} {str3 string?})
+   (let* ((len1		($string-length str1))
+	  (len2		($string-length str2))
+	  (len3		($string-length str3))
+	  (dst.len	(+ len1 len2 len3)))
+     (assert-total-string-length dst.len)
+     (receive-and-return (dst.str)
+	 ($make-string dst.len)
+       (%unsafe.string-copy! str1 0 dst.str 0    len1)
+       (%unsafe.string-copy! str2 0 dst.str len1 len2)
+       (%unsafe.string-copy! str3 0 dst.str ($fx+ len1 len2) len3))))
 
-   ((str1 str2 str3 str4)
-    (define who 'string-append)
-    (with-arguments-validation (who)
-	((string  str1)
-	 (string  str2)
-	 (string  str3)
-	 (string  str4))
-      (let* ((len1	($string-length str1))
-	     (len2	($string-length str2))
-	     (len3	($string-length str3))
-	     (len4	($string-length str4))
-	     (dst.len	(+ len1 len2 len3 len4)))
-	(with-arguments-validation (who)
-	    ((length  dst.len))
-	  (let ((dst.str ($make-string dst.len)))
-	    (%unsafe.string-copy! str1 0 dst.str 0    len1)
-	    (%unsafe.string-copy! str2 0 dst.str len1 len2)
-	    (let ((dst.start ($fx+ len1 len2)))
-	      (%unsafe.string-copy! str3 0 dst.str dst.start len3)
-	      (let ((dst.start ($fx+ dst.start len3)))
-		(%unsafe.string-copy! str4 0 dst.str dst.start len4)))
-	    dst.str)))))
+  (({str1 string?} {str2 string?} {str3 string?} {str4 string?} . {str* list-of-strings?})
 
-   ((str1 . strs)
-    (define who 'string-append)
-    (define (%length-and-validation strs len)
-      (if (null? strs)
-	  len
-	(let ((str ($car strs)))
-	  (with-arguments-validation (who)
-	      ((string str))
-	    (%length-and-validation ($cdr strs) (+ len ($string-length str)))))))
+   (define (%compute-total-string-length len str*)
+     (if (pair? str*)
+	 (%compute-total-string-length (+ len ($string-length (car str*)))
+				       (cdr str*))
+       len))
 
-    (define (%fill-strings dst.str strs dst.start)
-      (if (null? strs)
-	  dst.str
-	(let* ((src.str ($car strs))
-	       (src.len ($string-length src.str)))
-	  (begin
-	    ($string-copy! src.str 0 dst.str dst.start src.len)
-	    (%fill-strings dst.str ($cdr strs) ($fx+ dst.start src.len))))))
+   (define (%fill-strings dst.str str* dst.start)
+     (if (pair? str*)
+	 (let* ((src.str ($car str*))
+		(src.len ($string-length src.str)))
+	   (begin
+	     ($string-copy! src.str 0 dst.str dst.start src.len)
+	     (%fill-strings dst.str ($cdr str*) ($fx+ dst.start src.len))))
+       dst.str))
 
-    (let* ((strs    (cons str1 strs))
-           (dst.len (%length-and-validation strs 0)))
-      (with-arguments-validation (who)
-	  ((length dst.len))
-	(%fill-strings ($make-string dst.len) strs 0))))))
+   (let* ((len1		($string-length str1))
+	  (len2		($string-length str2))
+	  (len3		($string-length str3))
+	  (len4		($string-length str4))
+	  (dst.len	(%compute-total-string-length (+ len1 len2 len3 len4) str*)))
+     (assert-total-string-length dst.len)
+     (let ((dst.str ($make-string dst.len)))
+       ;;Append first string.
+       (%unsafe.string-copy! str1 0 dst.str 0    len1)
+       ;;Append second string.
+       (%unsafe.string-copy! str2 0 dst.str len1 len2)
+       ;;Append third string.
+       (let ((dst.start ($fx+ len1 len2)))
+	 (%unsafe.string-copy! str3 0 dst.str dst.start len3)
+	 ;;Append fourth string.
+	 (let ((dst.start ($fx+ dst.start len3)))
+	   (%unsafe.string-copy! str4 0 dst.str dst.start len4)
+	   ;;Append rest strings.
+	   (%fill-strings dst.str str* ($fx+ dst.start len4))))))))
 
 
 (define (string-reverse-and-concatenate list-of-strings)
