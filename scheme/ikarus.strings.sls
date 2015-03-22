@@ -227,6 +227,14 @@
 	   (procedure-argument-violation __who__ "end index out of range" ?start ?end))))
     ))
 
+(define-syntax (assert-char stx)
+  (syntax-case stx ()
+    ((_ ?ch)
+     (identifier? #'?ch)
+     #'(unless (char? ?ch)
+	 (procedure-argument-violation __who__ "expected character as argument" ?ch)))
+    ))
+
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (length who obj)
@@ -613,55 +621,49 @@
   ($string<= str2 str1))
 
 
-(define (string->list str)
-  ;;Defined by  R6RS.  Return a  newly allocated list of  the characters
-  ;;that make up the given string.
+(define* (string->list {str string?})
+  ;;Defined by R6RS.   Return a newly allocated  list of the characters  that make up
+  ;;the given string.
   ;;
-  (define who 'string->list)
-  (with-arguments-validation (who)
-      ((string str))
-    (let next-char ((str   str)
-		    (i   ($string-length str))
-		    (ac  '()))
-      (if ($fxzero? i)
-	  ac
-	(let ((i ($fxsub1 i)))
-	  (next-char str i (cons ($string-ref str i) ac)))))))
+  (let next-char ((str str)
+		  (i   ($string-length str))
+		  (ac  '()))
+    (if ($fxzero? i)
+	ac
+      (let ((i ($fxsub1 i)))
+	(next-char str i (cons ($string-ref str i) ac))))))
 
 
-(define (list->string ls)
-  ;;Defined by  R6RS.  Return a  newly allocated string formed  from the
-  ;;characters in LS.
+(define* (list->string ls)
+  ;;Defined by R6RS.   Return a newly allocated string formed  from the characters in
+  ;;LS.
   ;;
-  (define who 'list->string)
   (define (race h t ls n)
     (cond ((pair? h)
 	   (let ((h ($cdr h)))
 	     (if (pair? h)
 		 (if (not (eq? h t))
 		     (race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		   (procedure-argument-violation who "circular list is invalid as argument" ls))
+		   (procedure-argument-violation __who__ "circular list is invalid as argument" ls))
 	       (if (null? h)
 		   ($fx+ n 1)
-		 (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		 (procedure-argument-violation __who__ EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation __who__ EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
 
   (define (fill s i ls)
     (if (null? ls)
 	s
       (let ((c ($car ls)))
-	(with-arguments-validation (who)
-	    ((char c))
-	  ($string-set! s i c)
-	  (fill s ($fxadd1 i) ($cdr ls))))))
+	(assert-char c)
+	($string-set! s i c)
+	(fill s ($fxadd1 i) ($cdr ls)))))
 
   (let ((len (race ls ls ls 0)))
-    (with-arguments-validation (who)
-	((length len))
-      (fill ($make-string len) 0 ls))))
+    (assert-total-length-for-string len)
+    (fill ($make-string len) 0 ls)))
 
 
 (define string-append
