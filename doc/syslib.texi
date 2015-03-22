@@ -5549,6 +5549,15 @@ Return @true{} if @vari{str} and @varii{str} represent the same string;
 otherwise return @false{}.
 @end deffn
 
+@deffn {Unsafe Operation} $string< @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string> @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string<= @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string>= @vari{str} @varii{str}
+Dyadic lexicographic comparison functions for strings.  Return @true{}
+if @vari{str} and @varii{str} compare as the name implies; otherwise
+return @false{}.
+@end deffn
+
 
 @defun $string-total-length @var{init-len} @var{strs}
 Given the list of strings @var{strs}: compute the total length of the

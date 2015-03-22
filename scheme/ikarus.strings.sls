@@ -63,7 +63,10 @@
 
     ;; unsafe operations
     $string			$string-empty?
-    $string=			$string-total-length
+    $string=
+    $string<			$string>
+    $string<=			$string>=
+    $string-total-length
     $string-concatenate		$string-reverse-and-concatenate
 
     $string->octets		$octets->string
@@ -364,7 +367,7 @@
   ;;
   (({len string-length?})
    (make-string len #\x0))
-  (({len string-length} {fill char?})
+  (({len string-length?} {fill char?})
    (let loop ((str ($make-string len))
 	      (idx 0)
 	      (len len))
@@ -417,7 +420,7 @@
      ($string-set! str 3 four)
      ($string-set! str 4 five)
      (let loop ((str   str)
-		(idx   0)
+		(idx   5)
 		(char* char*))
        (if (pair? char*)
 	   (begin
@@ -469,7 +472,7 @@
      ($string-set! str 3 four)
      ($string-set! str 4 five)
      (let loop ((str   str)
-		(idx   0)
+		(idx   5)
 		(char* char*))
        (if (pair? char*)
 	   (begin
@@ -478,7 +481,7 @@
 	 str)))))
 
 
-(define* (substring {str string} {start string-index?} {end string-index?})
+(define* (substring {str string?} {start string-index?} {end string-index?})
   ;;Defined by R6RS.  STR  must be a string, and START and END  must be exact integer
   ;;objects satisfying:
   ;;
@@ -525,10 +528,10 @@
 					      #t))))))
 				 )))
   (define-string-comparison string=?	$string=)
-  (define-string-comparison string<?	$dyadic-string<?)
-  (define-string-comparison string>?	$dyadic-string>?)
-  (define-string-comparison string<=?	$dyadic-string<=?)
-  (define-string-comparison string>=?	$dyadic-string>=?)
+  (define-string-comparison string<?	$string<)
+  (define-string-comparison string>?	$string>)
+  (define-string-comparison string<=?	$string<=)
+  (define-string-comparison string>=?	$string>=)
   #| end of module |# )
 
 ;;; --------------------------------------------------------------------
@@ -544,7 +547,7 @@
 				($string-ref str2 idx))
 			(loop ($fxadd1 idx) len))))))))
 
-(define ($dyadic-string<? str1 str2)
+(define ($string< str1 str2)
   (if (eq? str1 str2)
       #f
     (let ((len1 ($string-length str1))
@@ -574,7 +577,7 @@
 		      (next-char ($fxadd1 idx) len2 str1 str2)
 		    #f)))))))))
 
-(define ($dyadic-string<=? str1 str2)
+(define ($string<= str1 str2)
   (or (eq? str1 str2)
       (let ((len1 ($string-length str1))
 	    (len2 ($string-length str2)))
@@ -603,11 +606,11 @@
 			(next-char ($fxadd1 idx) len2 str1 str2)
 		      #f)))))))))
 
-(define-syntax-rule ($dyadic-string>? str1 str2)
-  ($dyadic-string<? str2 str1))
+(define ($string> str1 str2)
+  ($string< str2 str1))
 
-(define-syntax-rule ($dyadic-string>=? str1 str2)
-  ($dyadic-string<=? str2 str1))
+(define ($string>= str1 str2)
+  ($string<= str2 str1))
 
 
 (define (string->list str)
@@ -1661,11 +1664,11 @@
 
 ;;;; done
 
-#!vicare
-(define dummy
-  (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.strings")))
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.strings")))
 
-)
+#| end of library |# )
 
 
 (library (vicare system strings)
