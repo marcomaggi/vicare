@@ -228,6 +228,11 @@
 	    $bytevector-concatenate
 	    $bytevector-reverse-and-concatenate
 	    $bytevector-empty?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus fixnums)
+	  positive-fixnum?
+	  non-negative-fixnum?)
     (vicare arguments validation))
 
 
@@ -352,8 +357,8 @@
 
 ;;;; preconditions syntax
 
-;;FIXME Should this  syntax be included in the  expander?  (Marco Maggi;
-;;Wed Dec 4, 2013)
+;;FIXME Should  this syntax be  included in the expander?   (Marco Maggi; Wed  Dec 4,
+;;2013)
 (define-syntax (preconditions stx)
   (module (vicare-built-with-arguments-validation-enabled)
     (module (arguments-validation)
@@ -370,8 +375,8 @@
 	 #'(unless (?predicate ?arg ...)
 	     (procedure-argument-violation ?who
 	       "failed precondition validation"
-	       ;;This way of composing the  "&irritants" is like the one
-	       ;;used by LAMBDA* and similar syntaxes.
+	       ;;This  way of  composing the  "&irritants" is  like the  one used  by
+	       ;;LAMBDA* and similar syntaxes.
 	       '(?predicate ?arg ...) ?arg ...))
        #'(void)))
 
@@ -541,61 +546,47 @@
 ;;;; validation predicates
 
 (define (list-of-bytevectors? obj)
-  ;;Defined by Vicare.  Return  true if OBJ is null or  a proper list of
-  ;;bytevectors; otherwise return false.
+  ;;Defined by Vicare.  Return  true if OBJ is null or a  proper list of bytevectors;
+  ;;otherwise return false.
   ;;
-  (or (null? obj)
-      (and (pair? obj)
-	   (bytevector? ($car obj))
-	   (list-of-bytevectors? ($cdr obj)))))
+  (if (pair? obj)
+      (and (bytevector? ($car obj))
+	   (list-of-bytevectors? ($cdr obj)))
+    (null? obj)))
 
-(define (bytevector-length? len)
-  ;;Defined by Vicare.  Return #t if  LEN is valid as bytevector length,
-  ;;otherwise return #f.
-  ;;
-  (and (fixnum? len)
-       ($fxnonnegative? len)))
+;;Defined  by Vicare.   Return #t  if LEN  is valid  as bytevector  length, otherwise
+;;return #f.
+(define bytevector-length? non-negative-fixnum?)
 
-(define (bytevector-index? obj)
-  ;;Defined by Vicare.   Return #t if OBJ is valid  as bytevector index;
-  ;;otherwise return #f.  OBJ must be further validated for the specific
-  ;;bytevector with which it is to be used.
-  ;;
-  (and (fixnum? obj)
-       ($fxnonnegative? obj)))
+;;Defined by Vicare.  Return #t if OBJ is valid as bytevector index; otherwise return
+;;#f.  OBJ must be further validated for  the specific bytevector with which it is to
+;;be used.
+(define bytevector-index? non-negative-fixnum?)
 
-(define (bytevector-word-size? obj)
-  ;;Defined by Vicare.  Return  true if OBJ is valid as  word size to be
-  ;;accessed  in a  bytevector;  otherwise return  false.   OBJ must  be
-  ;;further validated for a specific bytevector word start offset.
-  ;;
-  (and (fixnum? obj)
-       ($fxpositive? obj)))
+;;Defined by Vicare.   Return true if OBJ is  valid as word size to be  accessed in a
+;;bytevector; otherwise return  false.  OBJ must be further validated  for a specific
+;;bytevector word start offset.
+(define bytevector-word-size? positive-fixnum?)
 
-(define (bytevector-word-count? obj)
-  ;;Define  by Vicare.   Return #t  if OBJ  is valid  as word  count for
-  ;;bytevector items,  either a byte  count, 16-bit words  count, 32-bit
-  ;;words  count,  ...;  otherwise  return  #f.   OBJ  must  be  further
-  ;;validated for the specific bytevector and word size with which it is
-  ;;to be used.
-  ;;
-  (and (fixnum? obj)
-       ($fxnonnegative? obj)))
+;;Define by Vicare.   Return #t if OBJ  is valid as word count  for bytevector items,
+;;either a byte count, 16-bit words  count, 32-bit words count, ...; otherwise return
+;;#f.  OBJ must be  further validated for the specific bytevector  and word size with
+;;which it is to be used.
+(define bytevector-word-count?  non-negative-fixnum?)
 
 ;;; --------------------------------------------------------------------
 
 (define (bytevector-index-for-word? bv idx word-size-in-bytes)
-  ;;Defined by  Vicare.  Return true  if: BV is  a bytevector, IDX  is a
-  ;;non-negative  fixnum, WORD-SIZE-IN-BYTES  is a  non-negative fixnum,
-  ;;IDX  is a  valid index  in  BV to  reference  a word  whose size  is
-  ;;WORD-SIZE-IN-BYTES; otherwise return false.   This validation is for
-  ;;getter and setter indexes.
+  ;;Defined by  Vicare.  Return true  if: BV is a  bytevector, IDX is  a non-negative
+  ;;fixnum, WORD-SIZE-IN-BYTES is  a non-negative fixnum, IDX is a  valid index in BV
+  ;;to reference  a word  whose size is  WORD-SIZE-IN-BYTES; otherwise  return false.
+  ;;This validation is for getter and setter indexes.
   ;;
   (and (bytevector? bv)
        (bytevector-index? idx)
        (bytevector-word-size? word-size-in-bytes)
-       ;;We want this operation to return a boolean even if it overflows
-       ;;or underflows the range of fixnums.
+       ;;We  want  this  operation to  return  a  boolean  even  if it  overflows  or
+       ;;underflows the range of fixnums.
        (let ((end (- ($bytevector-length bv) word-size-in-bytes)))
 	 (and (fixnum? end)
 	      ($fx<= idx end)))))
@@ -615,13 +606,12 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-start-index-and-count-for-word? bv idx word-size-in-bytes count)
-  ;;Defined by  Vicare.  Return true  if: BV is  a bytevector, IDX  is a
-  ;;non-negative    fixnum,   COUNT    is    a   non-negative    fixnum,
-  ;;WORD-SIZE-IN-BYTES is a non-negative fixnum, IDX is a valid index in
-  ;;BV  to  reference  COUNT  words whose  size  is  WORD-SIZE-IN-BYTES;
-  ;;otherwise return  false.  Notice that if  COUNT is zero: it  is fine
-  ;;for IDX  to be equal  to the length of  BV.  This validation  is for
-  ;;getter and setter indexes.
+  ;;Defined by  Vicare.  Return true  if: BV is a  bytevector, IDX is  a non-negative
+  ;;fixnum,  COUNT is  a non-negative  fixnum, WORD-SIZE-IN-BYTES  is a  non-negative
+  ;;fixnum,  IDX is  a valid  index in  BV  to reference  COUNT words  whose size  is
+  ;;WORD-SIZE-IN-BYTES; otherwise return false.  Notice that  if COUNT is zero: it is
+  ;;fine for IDX to be equal to the  length of BV.  This validation is for getter and
+  ;;setter indexes.
   ;;
   (and (bytevector? bv)
        (bytevector-index? idx)
@@ -650,10 +640,9 @@
 ;;; --------------------------------------------------------------------
 
 (define (bytevector-start-past-indexes? bv start past)
-  ;;Defined by Vicare.   Return true if: BV is a  bytevector, START is a
-  ;;non-negative fixnum, PAST  is a non-negative fixnum,  START and PAST
-  ;;are  valid indexes  for a  range of  bytes in  BV; otherwise  return
-  ;;false.
+  ;;Defined by Vicare.  Return  true if: BV is a bytevector,  START is a non-negative
+  ;;fixnum, PAST  is a non-negative  fixnum, START and PAST  are valid indexes  for a
+  ;;range of bytes in BV; otherwise return false.
   ;;
   (and (bytevector? bv)
        (bytevector-index? start)
@@ -665,23 +654,21 @@
 ;;;; main bytevector handling functions
 
 (define (native-endianness)
-  ;;Defined   by  R6RS.    Return  the   endianness   symbol  associated
-  ;;implementation's   preferred  endianness   (usually   that  of   the
-  ;;underlying  machine  architecture).   This  may  be  any  endianness
-  ;;symbol, including a symbol other than "big" and "little".
+  ;;Defined  by  R6RS.   Return  the endianness  symbol  associated  implementation's
+  ;;preferred endianness (usually that of the underlying machine architecture).  This
+  ;;may be any endianness symbol, including a symbol other than "big" and "little".
   ;;
   (module (platform-endianness)
     (include "ikarus.config.ss" #t))
   platform-endianness)
 
 (case-define* make-bytevector
-  ;;Defined  by R6RS.   Return a  newly allocated  bytevector  of BV.LEN
-  ;;bytes.  If the FILL argument is missing, the initial contents of the
-  ;;returned  bytevector  are  unspecified.   If the  FILL  argument  is
-  ;;present, it must  be an exact integer object  in the interval [-128,
-  ;;255]  that  specifies  the  initial  value  for  the  bytes  of  the
-  ;;bytevector: if FILL  is positive, it is interpreted  as an octet; if
-  ;;it is negative, it is interpreted as a byte.
+  ;;Defined by  R6RS.  Return a newly  allocated bytevector of BV.LEN  bytes.  If the
+  ;;FILL argument  is missing, the  initial contents  of the returned  bytevector are
+  ;;unspecified.  If the FILL argument is present, it must be an exact integer object
+  ;;in the interval [-128, 255] that specifies the initial value for the bytes of the
+  ;;bytevector:  if FILL  is  positive, it  is  interpreted  as an  octet;  if it  is
+  ;;negative, it is interpreted as a byte.
   ;;
   (({bv.len bytevector-length?})
    ($make-bytevector bv.len))
@@ -689,25 +676,23 @@
    ($bytevector-fill! ($make-bytevector bv.len) 0 bv.len fill)))
 
 (define* (bytevector-fill! {bv bytevector?} {fill bytevector-byte-filler?})
-  ;;Defined by R6RS.  The FILL argument  is as in the description of the
-  ;;MAKE-BYTEVECTOR  procedure.  The BYTEVECTOR-FILL!   procedure stores
-  ;;FILL in every element of BV and returns unspecified values.
+  ;;Defined  by  R6RS.    The  FILL  argument  is  as  in   the  description  of  the
+  ;;MAKE-BYTEVECTOR procedure.  The BYTEVECTOR-FILL!   procedure stores FILL in every
+  ;;element of BV and returns unspecified values.
   ;;
   ($bytevector-fill! bv 0 ($bytevector-length bv) fill))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-length {bv bytevector?})
-  ;;Defined by R6RS.  Return, as  an exact integer object, the number of
-  ;;bytes in BV.
+  ;;Defined by R6RS.  Return, as an exact integer object, the number of bytes in BV.
   ;;
   ($bytevector-length bv))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-empty? {bv bytevector?})
-  ;;Defined by  Vicare.  Return  true if BV  is empty,  otherwise return
-  ;;false.
+  ;;Defined by Vicare.  Return true if BV is empty, otherwise return false.
   ;;
   ($bytevector-empty? bv))
 
@@ -717,9 +702,8 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector=? {bv1 bytevector?} {bv2 bytevector?})
-  ;;Defined by R6RS.   Return #t if BV1  and BV2 are equal;  that is, if
-  ;;they have the same length and  equal bytes at all valid indices.  It
-  ;;returns false otherwise.
+  ;;Defined by R6RS.  Return  #t if BV1 and BV2 are equal; that  is, if they have the
+  ;;same length and equal bytes at all valid indices.  It returns false otherwise.
   ;;
   ($bytevector= bv1 bv2))
 
@@ -751,9 +735,8 @@
 (define* (bytevector-copy! {src bytevector?} {src.start bytevector-index?}
 			   {dst bytevector?} {dst.start bytevector-index?}
 			   {byte-count bytevector-word-count?})
-  ;;Defined  by R6RS.   SRC  and DST  must  be bytevectors.   SRC.START,
-  ;;DST.START,  and BYTE-COUNT must  be non-negative  exact integer  objects that
-  ;;satisfy:
+  ;;Defined by  R6RS.  SRC and  DST must  be bytevectors.  SRC.START,  DST.START, and
+  ;;BYTE-COUNT must be non-negative exact integer objects that satisfy:
   ;;
   ;;   0 <= SRC.START <= SRC.START + BYTE-COUNT <= SRC.LEN
   ;;   0 <= DST.START <= DST.START + BYTE-COUNT <= DST.LEN
@@ -766,10 +749,9 @@
   ;;
   ;;to consecutive indices in DST starting at index DST.START.
   ;;
-  ;;This must  work even if  the memory regions  for the source  and the
-  ;;target overlap,  i.e., the  bytes at the  target location  after the
-  ;;copy must  be equal to the  bytes at the source  location before the
-  ;;copy.
+  ;;This must work even if the memory  regions for the source and the target overlap,
+  ;;i.e., the bytes at the target location after  the copy must be equal to the bytes
+  ;;at the source location before the copy.
   ;;
   ;;Return unspecified values.
   ;;
