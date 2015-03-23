@@ -1962,6 +1962,8 @@
     (bytevector-index-for-word16?		v $language)
     (bytevector-index-for-word32?		v $language)
     (bytevector-index-for-word64?		v $language)
+    (bytevector-index-for-single-flonum?	v $language)
+    (bytevector-index-for-double-flonum?	v $language)
     (bytevector-start-index-and-count-for-word?		v $language)
     (bytevector-start-index-and-count-for-word8?	v $language)
     (bytevector-start-index-and-count-for-word16?	v $language)

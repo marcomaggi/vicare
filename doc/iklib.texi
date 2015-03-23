@@ -10039,6 +10039,8 @@ validation is for getter and setter indexes.
 @defunx bytevector-index-for-word16? @var{bv} @var{idx}
 @defunx bytevector-index-for-word32? @var{bv} @var{idx}
 @defunx bytevector-index-for-word64? @var{bv} @var{idx}
+@defunx bytevector-index-for-single-flonum? @var{bv} @var{idx}
+@defunx bytevector-index-for-double-flonum? @var{bv} @var{idx}
 Specialised variants of @func{bytevector-index-for-word?} for a specific
 word size in bits.
 @end defun

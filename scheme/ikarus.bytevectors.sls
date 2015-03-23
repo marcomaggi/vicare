@@ -36,6 +36,8 @@
     bytevector-index-for-word16?
     bytevector-index-for-word32?
     bytevector-index-for-word64?
+    bytevector-index-for-single-flonum?
+    bytevector-index-for-double-flonum?
     bytevector-start-index-and-count-for-word?
     bytevector-start-index-and-count-for-word8?
     bytevector-start-index-and-count-for-word16?
@@ -134,6 +136,8 @@
 		  bytevector-index-for-word16?
 		  bytevector-index-for-word32?
 		  bytevector-index-for-word64?
+		  bytevector-index-for-single-flonum?
+		  bytevector-index-for-double-flonum?
 		  bytevector-start-index-and-count-for-word?
 		  bytevector-start-index-and-count-for-word8?
 		  bytevector-start-index-and-count-for-word16?
@@ -604,6 +608,12 @@
 (define (bytevector-index-for-word64? bv idx)
   (bytevector-index-for-word? bv idx 8))
 
+(define (bytevector-index-for-single-flonum? bv idx)
+  (bytevector-index-for-word? bv idx 4))
+
+(define (bytevector-index-for-double-flonum? bv idx)
+  (bytevector-index-for-word? bv idx 8))
+
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-start-index-and-count-for-word? bv idx word-size-in-bytes count)
@@ -650,6 +660,26 @@
        (bytevector-index? past)
        ($fx<= past ($bytevector-length bv))
        ($fx<= start past)))
+
+;;; --------------------------------------------------------------------
+
+(define (bytevector-index-aligned-to-2? idx)
+  ;;Return  true if  IDX is  a  fixnum exact  multiple of  2,  which can  be used  to
+  ;;reference 16-bit words in bytevectors.
+  ;;
+  (words.fixnum-aligned-to-2? idx))
+
+(define (bytevector-index-aligned-to-4? idx)
+  ;;Return  true if  IDX is  a  fixnum exact  multiple of  4,  which can  be used  to
+  ;;reference 32-bit words in bytevectors.
+  ;;
+  (words.fixnum-aligned-to-4? idx))
+
+(define (bytevector-index-aligned-to-8? idx)
+  ;;Return  true if  IDX is  a  fixnum exact  multiple of  8,  which can  be used  to
+  ;;reference 64-bit words in bytevectors.
+  ;;
+  (words.fixnum-aligned-to-8? idx))
 
 
 ;;;; main bytevector handling functions
@@ -792,9 +822,9 @@
 ;;;; subbytevectors, bytes
 
 (case-define* subbytevector-u8
-  ;;Defined by  Vicare.  Build and  return a new bytevector  holding the
-  ;;bytes in  SRC.BV from index  SRC.START (inclusive) to  index SRC.END
-  ;;(exclusive).  The start and end indexes must be such that:
+  ;;Defined by Vicare.  Build and return a new bytevector holding the bytes in SRC.BV
+  ;;from index SRC.START (inclusive) to index SRC.END (exclusive).  The start and end
+  ;;indexes must be such that:
   ;;
   ;;   0 <= SRC.START <= src.END <= (bytevector-length SRC.BV)
   ;;
@@ -805,11 +835,10 @@
      (bytevector-start-past-indexes? src.bv src.start src.end))
    (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start))))
 
-(define* (subbytevector-u8/count {src.bv bytevector?} {src.start bytevector-index?}
-				 {dst.len bytevector-length?})
-  ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
-  ;;DST.LEN bytes in SRC.BV from index SRC.START (inclusive).  The start
-  ;;index and the byte count must be such that:
+(define* (subbytevector-u8/count {src.bv bytevector?} {src.start bytevector-index?} {dst.len bytevector-length?})
+  ;;Defined by  Vicare.  Build and return  a new bytevector holding  DST.LEN bytes in
+  ;;SRC.BV from index SRC.START (inclusive).  The start index and the byte count must
+  ;;be such that:
   ;;
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
@@ -828,9 +857,9 @@
 ;;; --------------------------------------------------------------------
 
 (case-define* subbytevector-s8
-  ;;Defined by  Vicare.  Build and  return a new bytevector  holding the
-  ;;bytes in  SRC.BV from index  SRC.START (inclusive) to  index SRC.END
-  ;;(exclusive).  The start and end indexes must be such that:
+  ;;Defined by Vicare.  Build and return a new bytevector holding the bytes in SRC.BV
+  ;;from index SRC.START (inclusive) to index SRC.END (exclusive).  The start and end
+  ;;indexes must be such that:
   ;;
   ;;   0 <= SRC.START <= src.END <= (bytevector-length SRC.BV)
   ;;
@@ -842,9 +871,9 @@
    (%$subbytevector-s8/count src.bv src.start ($fx- src.end src.start))))
 
 (define* (subbytevector-s8/count {src.bv bytevector?} {src.start bytevector-index?} {dst.len bytevector-length?})
-  ;;Defined  by  Vicare.  Build  and  return  a  new bytevector  holding
-  ;;DST.LEN bytes in SRC.BV from index SRC.START (inclusive).  The start
-  ;;index and the byte count must be such that:
+  ;;Defined by  Vicare.  Build and return  a new bytevector holding  DST.LEN bytes in
+  ;;SRC.BV from index SRC.START (inclusive).  The start index and the byte count must
+  ;;be such that:
   ;;
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
@@ -957,12 +986,12 @@
 (define* (bytevector-s8-set! {bv bytevector?} {index bytevector-index?} {byte words.word-s8?})
   (preconditions __who__
     (bytevector-index-for-word8? bv index))
-  ($bytevector-set! bv index byte))
+  ($bytevector-s8-set! bv index byte))
 
 (define* (bytevector-u8-set! {bv bytevector?} {index bytevector-index?} {octet words.word-u8?})
   (preconditions __who__
     (bytevector-index-for-word8? bv index))
-  ($bytevector-set! bv index octet))
+  ($bytevector-u8-set! bv index octet))
 
 ;;FIXME This should be a proper primitive operation.  (Marco Maggi; Sun Mar 22, 2015)
 (define ($bytevector-u8-set! bv idx val)
@@ -1183,99 +1212,96 @@
 ;;;; double-precision flonum bytevector functions
 
 (define* (bytevector-ieee-double-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8))
-    (if (words.fixnum-aligned-to-8? index)
-	(case-endianness (__who__ endianness)
-	  ((little)
-	   ($bytevector-ieee-double-native-ref bv index))
-	  ((big)
-	   ($bytevector-ieee-double-nonnative-ref bv index)))
+  (preconditions __who__
+    (bytevector-index-for-double-flonum? bv index))
+  (if (words.fixnum-aligned-to-8? index)
       (case-endianness (__who__ endianness)
 	((little)
-	 ($bytevector-ieee-double-ref/little bv index))
+	 ($bytevector-ieee-double-native-ref    bv index))
 	((big)
-	 ($bytevector-ieee-double-ref/big bv index))))))
+	 ($bytevector-ieee-double-nonnative-ref bv index)))
+    (case-endianness (__who__ endianness)
+      ((little)
+       ($bytevector-ieee-double-ref/little bv index))
+      ((big)
+       ($bytevector-ieee-double-ref/big bv index)))))
 
-(define* (bytevector-ieee-double-set! {bv bytevector?} {index bytevector-index?}
-				      {X flonum?} endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8))
-    (if (words.fixnum-aligned-to-8? index)
-	(case-endianness (__who__ endianness)
-	  ((little)
-	   ($bytevector-ieee-double-native-set! bv index X))
-	  ((big)
-	   ($bytevector-ieee-double-nonnative-set! bv index X)))
-      (case endianness
+(define* (bytevector-ieee-double-set! {bv bytevector?} {index bytevector-index?} {X flonum?} endianness)
+  (preconditions __who__
+    (bytevector-index-for-double-flonum? bv index))
+  (if (words.fixnum-aligned-to-8? index)
+      (case-endianness (__who__ endianness)
 	((little)
-	 ($bytevector-ieee-double-set!/little bv index X))
+	 ($bytevector-ieee-double-native-set! bv index X))
 	((big)
-	 ($bytevector-ieee-double-set!/big bv index X))))))
+	 ($bytevector-ieee-double-nonnative-set! bv index X)))
+    (case endianness
+      ((little)
+       ($bytevector-ieee-double-set!/little bv index X))
+      ((big)
+       ($bytevector-ieee-double-set!/big bv index X)))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-ieee-double-native-ref {bv bytevector?} {index bytevector-index?})
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8)
-       (aligned-index-8	index))
-    ($bytevector-ieee-double-native-ref bv index)))
+  (preconditions __who__
+    (bytevector-index-for-double-flonum? bv index)
+    (bytevector-index-aligned-to-8? index))
+  ($bytevector-ieee-double-native-ref bv index))
 
-(define* (bytevector-ieee-double-native-set! {bv bytevector?} {index bytevector-index?}
-					     {X flonum?})
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 8)
-       (aligned-index-8	index))
-    ($bytevector-ieee-double-native-set! bv index X)))
+(define* (bytevector-ieee-double-native-set! {bv bytevector?} {index bytevector-index?} {X flonum?})
+  (preconditions __who__
+    (bytevector-index-for-double-flonum? bv index)
+    (bytevector-index-aligned-to-8? index))
+  ($bytevector-ieee-double-native-set! bv index X))
 
 
 ;;;; single-precision flonum bytevector functions
 
 (define* (bytevector-ieee-single-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4))
-    (if (words.fixnum-aligned-to-4? index)
-	(case-endianness (__who__ endianness)
-	  ((little)
-	   ($bytevector-ieee-single-native-ref bv index))
-	  ((big)
-	   ($bytevector-ieee-single-nonnative-ref bv index)))
+  (preconditions __who__
+    (bytevector-index-for-single-flonum? bv index))
+  (if (words.fixnum-aligned-to-4? index)
       (case-endianness (__who__ endianness)
 	((little)
-	 ($bytevector-ieee-single-ref/little bv index))
+	 ($bytevector-ieee-single-native-ref bv index))
 	((big)
-	 ($bytevector-ieee-single-ref/big bv index))))))
+	 ($bytevector-ieee-single-nonnative-ref bv index)))
+    (case-endianness (__who__ endianness)
+      ((little)
+       ($bytevector-ieee-single-ref/little bv index))
+      ((big)
+       ($bytevector-ieee-single-ref/big bv index)))))
 
 (define* (bytevector-ieee-single-set! {bv bytevector?} {index bytevector-index?}
 				      {X flonum?} endianness)
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4))
-    (if (words.fixnum-aligned-to-4? index)
-	(case-endianness (__who__ endianness)
-	  ((little)
-	   ($bytevector-ieee-single-native-set! bv index X))
-	  ((big)
-	   ($bytevector-ieee-single-nonnative-set! bv index X)))
+  (preconditions __who__
+    (bytevector-index-for-single-flonum? bv index))
+  (if (words.fixnum-aligned-to-4? index)
       (case-endianness (__who__ endianness)
 	((little)
-	 ($bytevector-ieee-single-set!/little bv index X))
+	 ($bytevector-ieee-single-native-set! bv index X))
 	((big)
-	 ($bytevector-ieee-single-set!/big bv index X))))))
+	 ($bytevector-ieee-single-nonnative-set! bv index X)))
+    (case-endianness (__who__ endianness)
+      ((little)
+       ($bytevector-ieee-single-set!/little bv index X))
+      ((big)
+       ($bytevector-ieee-single-set!/big bv index X)))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-ieee-single-native-ref {bv bytevector?} {index bytevector-index?})
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4)
-       (aligned-index-4	index))
-    ($bytevector-ieee-single-native-ref bv index)))
+  (preconditions __who__
+    (bytevector-index-for-single-flonum? bv index)
+    (bytevector-index-aligned-to-4? index))
+  ($bytevector-ieee-single-native-ref bv index))
 
-(define* (bytevector-ieee-single-native-set! {bv bytevector?} {index bytevector-index?}
-					     {X flonum?})
-  (with-arguments-validation (__who__)
-      ((index-for	index bv 4)
-       (aligned-index-4	index))
-    ($bytevector-ieee-single-native-set! bv index X)))
+(define* (bytevector-ieee-single-native-set! {bv bytevector?} {index bytevector-index?} {X flonum?})
+  (preconditions __who__
+    (bytevector-index-for-single-flonum? bv index)
+    (bytevector-index-aligned-to-4? index))
+  ($bytevector-ieee-single-native-set! bv index X))
 
 
 ;;;; unsafe flonum setters and getters
