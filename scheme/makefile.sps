@@ -1572,6 +1572,7 @@
     (char>=?					v r ba se)
     (char>?					v r ba se)
     (char?					v r ba se)
+    (list-of-chars?				v $language)
     (char-in-ascii-range?			v $language)
     (fixnum-in-character-range?			v $language)
 ;;
@@ -1682,6 +1683,7 @@
     (string>=?					v r ba se)
     (string>?					v r ba se)
     (string?					v r ba se)
+    (list-of-strings?				v $language)
     (substring					v r ba se)
     (string->latin1				v $language)
     (latin1->string				v $language)

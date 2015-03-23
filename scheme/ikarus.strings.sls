@@ -33,6 +33,8 @@
     string-reverse-and-concatenate
     uuid
 
+    list-of-strings?
+
     ;; Vicare specific
     string->octets		octets->string
     octets-encoded-bytevector?	octets-encoded-string?
@@ -113,6 +115,8 @@
 		  string-reverse-and-concatenate
 		  uuid
 
+		  list-of-strings?
+
 		  ;; Vicare specific
 		  string->octets		octets->string
 		  octets-encoded-bytevector?	octets-encoded-string?
@@ -162,6 +166,10 @@
     (only (vicare unsafe operations)
 	  $fx<=
 	  $fxincr!)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus chars)
+	  list-of-chars?)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 21,
     ;;2015)
     (only (ikarus fixnums)
@@ -326,12 +334,6 @@
 
 (define-inline ($ascii-chi? chi)
   ($fx<= #x00 chi #x7F))
-
-(define (list-of-chars? obj)
-  (if (pair? obj)
-      (and (char? (car obj))
-	   (list-of-chars? (cdr obj)))
-    (null? obj)))
 
 (define (list-of-strings? obj)
   (if (pair? obj)
