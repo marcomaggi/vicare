@@ -71,7 +71,8 @@
     $string-copy		$string-copy!
     $string-concatenate		$string-reverse-and-concatenate
     $string-copy!/count
-    $string-self-copy-forwards!	$string-self-copy-backwards!
+    $string-self-copy-forwards!/count
+    $string-self-copy-backwards!/count
     $string-fill!
 
     $string->octets		$octets->string
@@ -192,7 +193,7 @@
     ((_ ?len)
      (identifier? #'?len)
      #'(unless (string-length? ?len)
-	 (procedure-argument-violation __who__ "total string length out of range, expected fixnum" ?len)))
+	 (procedure-argument-violation __who__ "total resulting string length out of range, expected non-negative fixnum" ?len)))
     ))
 
 (define-syntax (assert-start-index-for-string stx)
@@ -226,12 +227,37 @@
 	   (procedure-argument-violation __who__ "end index out of range" ?start ?end))))
     ))
 
+(define-syntax (assert-start-index-and-count-for-string stx)
+  (syntax-case stx ()
+    ((_ ?str ?start ?count ?len)
+     (and (identifier? #'?start)
+	  (identifier? #'?count)
+	  (identifier? #'?len))
+     #'(begin
+	 (assert-start-index-for-string ?start ?len)
+	 (let ((end (+ ?start ?count)))
+	   (unless (string-index? end)
+	     (procedure-argument-violation __who__
+	       "count of characters out of range for string and start index" ?str ?start ?count)))))
+    ))
+
 (define-syntax (assert-char stx)
   (syntax-case stx ()
     ((_ ?ch)
      (identifier? #'?ch)
      #'(unless (char? ?ch)
 	 (procedure-argument-violation __who__ "expected character as argument" ?ch)))
+    ))
+
+(define-syntax (assert-equal-length-strings stx)
+  (syntax-case stx ()
+    ((_ ?str*)
+     #'(let* ((str* ?str*)
+	      (len* (map (lambda (S)
+			   ($string-length S))
+		      str*)))
+	 (unless (apply = len*)
+	   (procedure-argument-violation __who__ "expected strings with equal length" len* str*))))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -299,12 +325,6 @@
   (procedure-argument-violation who
     "expected only ASCII code points in argument"
     (integer->char code-point) arg))
-
-
-;;;; constants
-
-(define EXPECTED_PROPER_LIST_AS_ARGUMENT
-  "expected proper list as argument")
 
 
 ;;;; helpers
@@ -528,72 +548,6 @@
 (define ($string-copy str)
   ($substring str 0 ($string-length str)))
 
-;;; --------------------------------------------------------------------
-
-(define ($string-copy! src.str src.start
-		       dst.str dst.start
-		       src.end)
-  ;;Copy the characters of SRC.STR from  SRC.START inclusive to SRC.END exclusive, to
-  ;;DST.STR starting at DST.START inclusive.
-  ;;
-  (if ($fx= src.start src.end)
-      dst.str
-    (begin
-      ($string-set! dst.str dst.start ($string-ref src.str src.start))
-      ($string-copy! src.str ($fxadd1 src.start)
-		     dst.str ($fxadd1 dst.start)
-		     src.end))))
-
-;;; --------------------------------------------------------------------
-
-(define ($string-copy!/count src.str src.start dst.str dst.start count)
-  ;;Copy  COUNT   characters  from  SRC.STR   starting  at  SRC.START
-  ;;inclusive to DST.STR starting at DST.START inclusive.
-  ;;
-  (let ((src.end ($fx+ src.start count)))
-    ($string-copy! src.str src.start
-		   dst.str dst.start
-		   src.end)))
-
-(define ($string-self-copy-forwards! str src.start dst.start count)
-  ;;Copy  COUNT characters of  STR from  SRC.START inclusive  to STR
-  ;;itself starting at DST.START inclusive.  The copy happens forwards,
-  ;;so it is suitable for the case SRC.START > DST.START.
-  ;;
-  (let loop ((str	str)
-	     (src.start	src.start)
-	     (dst.start	dst.start)
-	     (src.end	($fx+ src.start count)))
-    (unless ($fx= src.start src.end)
-      ($string-set! str dst.start ($string-ref str src.start))
-      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
-
-(define ($string-self-copy-backwards! str src.start dst.start count)
-  ;;Copy  COUNT characters of  STR from  SRC.START inclusive  to STR
-  ;;itself   starting  at  DST.START   inclusive.   The   copy  happens
-  ;;backwards, so it is suitable for the case SRC.START < DST.START.
-  ;;
-  (let loop ((str	str)
-	     (src.start	($fx+ src.start count))
-	     (dst.start	($fx+ dst.start count))
-	     (src.end	src.start))
-    (unless ($fx= src.start src.end)
-      (let ((src.start ($fxsub1 src.start))
-	    (dst.start ($fxsub1 dst.start)))
-	($string-set! str dst.start ($string-ref str src.start))
-	(loop str src.start dst.start src.end)))))
-
-(define ($string-fill! str index end fill)
-  ;;Fill the positions  in STR from INDEX inclusive  to END exclusive
-  ;;with FILL.
-  ;;
-  (let loop ((str str) (index index) (end end) (fill fill))
-    (if ($fx= index end)
-	str
-      (begin
-	($string-set! str index fill)
-	(loop str ($fxadd1 index) end fill)))))
-
 
 ;;;; string comparison
 ;;
@@ -735,11 +689,11 @@
 		   (procedure-argument-violation __who__ "circular list is invalid as argument" ls))
 	       (if (null? h)
 		   ($fx+ n 1)
-		 (procedure-argument-violation __who__ EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
+		 (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
 	  ((null? h)
 	   n)
 	  (else
-	   (procedure-argument-violation __who__ EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+	   (procedure-argument-violation __who__ "expected proper list as argument" ls))))
 
   (define (fill s i ls)
     (if (null? ls)
@@ -884,140 +838,146 @@
       dst.str)))
 
 
-(define string-for-each
-  ;;Defined  by R6RS.  The  STRS must  all have  the same  length.  PROC
-  ;;should accept as many arguments as there are STRS.
+(case-define* string-for-each
+  ;;Defined by R6RS.  The STRS must all  have the same length.  PROC should accept as
+  ;;many arguments as there are STRS.
   ;;
-  ;;The  STRING-FOR-EACH  procedure  applies  PROC element-wise  to  the
-  ;;characters of the STRS for its side effects, in order from the first
-  ;;characters to the  last.  PROC is always called  in the same dynamic
-  ;;environment  as  STRING-FOR-EACH  itself.   The  return  values  are
-  ;;unspecified.
+  ;;The STRING-FOR-EACH procedure applies PROC  element-wise to the characters of the
+  ;;STRS for its side effects, in order  from the first characters to the last.  PROC
+  ;;is always called in the same  dynamic environment as STRING-FOR-EACH itself.  The
+  ;;return values are unspecified.
   ;;
   ;;Analogous to FOR-EACH.
   ;;
-  ;;Implementation responsibilities:  the implementation must  check the
-  ;;restrictions on @var{proc} to the extent performed by applying it as
-  ;;described.   An   implementation  may  check  whether   PROC  is  an
-  ;;appropriate argument before applying it.
+  ;;Implementation responsibilities:  the implementation must check  the restrictions
+  ;;on  @var{proc}  to  the  extent  performed  by  applying  it  as  described.   An
+  ;;implementation may check whether PROC  is an appropriate argument before applying
+  ;;it.
   ;;
-  (case-lambda
-   ((proc str)
-    (define who 'string-for-each)
-    (with-arguments-validation (who)
-	((procedure	proc)
-	 (string	str))
-      (let next-char ((proc		proc)
-		      (str		str)
-		      (str.index	0)
-		      (str.len		($string-length str)))
-	(unless ($fx= str.index str.len)
-	  (proc ($string-ref str str.index))
-	  (next-char proc str ($fxadd1 str.index) str.len)))))
+  (({proc procedure?} {str string?})
+   (let next-char ((str.index	0)
+		   (str.len	($string-length str)))
+     (unless ($fx= str.index str.len)
+       (proc ($string-ref str str.index))
+       (next-char ($fxadd1 str.index) str.len))))
 
-   ((proc str0 str1)
-    (define who 'string-for-each)
-    (with-arguments-validation (who)
-	((procedure	proc)
-	 (string	str0)
-	 (string	str1))
-      (let ((str.len ($string-length str0)))
-	(with-arguments-validation (who)
-	    ((has-length str1 str.len))
-	  (let next-char ((proc		proc)
-			  (str0		str0)
-			  (str1		str1)
-			  (str.index	0)
-			  (str.len	str.len))
-	    (unless ($fx= str.index str.len)
-	      (proc ($string-ref str0 str.index)
-		    ($string-ref str1 str.index))
-	      (next-char proc str0 str1 ($fxadd1 str.index) str.len)))))))
+  (({proc procedure?} {str0 string?} {str1 string?})
+   (assert-equal-length-strings (list str0 str1))
+   (let next-char ((str.index	0)
+		   (str.len	($string-length str0)))
+     (unless ($fx= str.index str.len)
+       (proc ($string-ref str0 str.index)
+	     ($string-ref str1 str.index))
+       (next-char ($fxadd1 str.index) str.len))))
 
-   ((proc str0 str1 . strs)
-    (define who 'string-for-each)
-    (with-arguments-validation (who)
-	((procedure	proc)
-	 (string	str0)
-	 (string	str1))
-      (let ((str.len ($string-length str0)))
-	(with-arguments-validation (who)
-	    ((has-length str1 str.len))
-
-	  ;; validate the rest strings
-	  (let next-string ((strs	strs)
-			    (str.len	str.len))
-	    (unless (null? strs)
-	      (let ((str ($car strs)))
-		(with-arguments-validation (who)
-		    ((string      str)
-		     (has-length  str str.len))
-		  (next-string ($cdr strs) str.len)))))
-
-	  ;; do the application
-	  (let next-char ((proc		proc)
-			  (str0		str0)
-			  (str1		str1)
-			  (strs		strs)
-			  (str.index	0)
-			  (str.len	str.len))
-	    (unless ($fx= str.index str.len)
-	      (apply proc
-		     ($string-ref str0 str.index)
-		     ($string-ref str1 str.index)
-		     (let next-string ((str.index str.index)
-				       (strs      strs))
-		       (if (null? strs)
-			   '()
-			 (cons ($string-ref ($car strs) str.index)
-			       (next-string str.index ($cdr strs))))))
-	      (next-char proc str0 str1 strs ($fxadd1 str.index) str.len)))
-	  ))))
-   ))
+  (({proc procedure?} {str0 string?} {str1 string?} {str2 string?} . {str* list-of-strings?})
+   (assert-equal-length-strings (cons* str0 str1 str2 str*))
+   (let next-char ((str*	str*)
+		   (str.index	0)
+		   (str.len	($string-length str0)))
+     (unless ($fx= str.index str.len)
+       (apply proc
+	      ($string-ref str0 str.index)
+	      ($string-ref str1 str.index)
+	      ($string-ref str2 str.index)
+	      (let next-string ((str.index str.index)
+				(str*      str*))
+		(if (pair? str*)
+		    (cons ($string-ref ($car str*) str.index)
+			  (next-string str.index ($cdr str*)))
+		  '())))
+       (next-char str* ($fxadd1 str.index) str.len)))))
 
 
-(define (string-fill! str fill)
-  ;;Defined by R6RS.   Store FILL in every element of  the given STR and
-  ;;return unspecified values.
+(define* (string-fill! {str string?} {fill char?})
+  ;;Defined by  R6RS.  Store FILL in  every element of  the given STR and  return STR
+  ;;itself.
   ;;
-  (define who 'string-fill!)
-  (with-arguments-validation (who)
-      ((string	str)
-       (char	fill))
-    (let ((len ($string-length str)))
-      ($string-fill! str 0 len fill))))
+  ($string-fill! str 0 ($string-length str) fill))
+
+(define ($string-fill! str index end fill)
+  ;;Fill  the positions  in STR  from  INDEX inclusive  to END  exclusive with  FILL.
+  ;;Return STR itself.
+  ;;
+  (if ($fx< index end)
+      (begin
+	($string-set! str index fill)
+	($string-fill! str ($fxadd1 index) end fill))
+    str))
 
 
-(define (string-copy! src.str src.start dst.str dst.start count)
-  ;;Defined by  Ikarus.  Copy COUNT characters from  SRC.STR starting at
-  ;;SRC.START  (inclusive)  to DST.STR  starting  at DST.START.   Return
-  ;;unspecified values.
+(define* (string-copy! {src.str string?} {src.start string-index?} {dst.str string?} {dst.start string-index?} {count non-negative-fixnum?})
+  ;;Defined  by Ikarus.   Copy COUNT  characters from  SRC.STR starting  at SRC.START
+  ;;(inclusive) to DST.STR starting at DST.START.  Return unspecified values.
   ;;
-  (define who 'string-copy!)
-  (with-arguments-validation (who)
-      ((string		src.str)
-       (string		dst.str)
-       (index		src.start)
-       (index		dst.start)
-       (count		count))
-    (let ((src.len ($string-length src.str))
-	  (dst.len ($string-length dst.str)))
-      (with-arguments-validation (who)
-	  ((start-index-and-length		src.start src.len)
-	   (start-index-and-length		dst.start dst.len)
-	   (start-index-and-count-and-length	src.start count src.len)
-	   (start-index-and-count-and-length	dst.start count dst.len))
-	(cond (($fxzero? count)
-	       (void))
-	      ((eq? src.str dst.str)
-	       (cond (($fx< dst.start src.start)
-		      ($string-self-copy-forwards!  src.str src.start dst.start count))
-		     (($fx> dst.start src.start)
-		      ($string-self-copy-backwards! src.str src.start dst.start count))
-		     (else (void))))
-	      (else
-	       (let ((src.end ($fx+ src.start count)))
-		 ($string-copy! src.str src.start dst.str dst.start src.end))))))))
+  (let ((src.len ($string-length src.str))
+	(dst.len ($string-length dst.str)))
+    (assert-start-index-and-count-for-string src.str src.start count src.len)
+    (assert-start-index-and-count-for-string dst.str dst.start count dst.len)
+    (cond (($fxzero? count)
+	   (void))
+	  ((eq? src.str dst.str)
+	   (cond (($fx< dst.start src.start)
+		  ($string-self-copy-forwards!/count  src.str src.start dst.start count))
+		 (($fx> dst.start src.start)
+		  ($string-self-copy-backwards!/count src.str src.start dst.start count))
+		 (else (void))))
+	  (else
+	   (let ((src.end ($fx+ src.start count)))
+	     ($string-copy! src.str src.start dst.str dst.start src.end))))))
+
+(define ($string-copy! src.str src.start
+		       dst.str dst.start
+		       src.end)
+  ;;Copy the characters of SRC.STR from  SRC.START inclusive to SRC.END exclusive, to
+  ;;DST.STR starting at DST.START inclusive.
+  ;;
+  (if ($fx= src.start src.end)
+      dst.str
+    (begin
+      ($string-set! dst.str dst.start ($string-ref src.str src.start))
+      ($string-copy! src.str ($fxadd1 src.start)
+		     dst.str ($fxadd1 dst.start)
+		     src.end))))
+
+;;; --------------------------------------------------------------------
+
+(define ($string-copy!/count src.str src.start dst.str dst.start count)
+  ;;Copy COUNT  characters from  SRC.STR starting at  SRC.START inclusive  to DST.STR
+  ;;starting at DST.START inclusive.
+  ;;
+  (let ((src.end ($fx+ src.start count)))
+    ($string-copy! src.str src.start
+		   dst.str dst.start
+		   src.end)))
+
+(define ($string-self-copy-forwards!/count str src.start dst.start count)
+  ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at
+  ;;DST.START inclusive.  The  copy happens forwards, so it is  suitable for the case
+  ;;SRC.START > DST.START.
+  ;;
+  (let loop ((str	str)
+	     (src.start	src.start)
+	     (dst.start	dst.start)
+	     (src.end	($fx+ src.start count)))
+    (unless ($fx= src.start src.end)
+      ($string-set! str dst.start ($string-ref str src.start))
+      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+
+(define ($string-self-copy-backwards!/count str src.start dst.start count)
+  ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at
+  ;;DST.START inclusive.  The copy happens backwards,  so it is suitable for the case
+  ;;SRC.START < DST.START.
+  ;;
+  (let loop ((str	str)
+	     (src.start	($fx+ src.start count))
+	     (dst.start	($fx+ dst.start count))
+	     (src.end	src.start))
+    (unless ($fx= src.start src.end)
+      (let ((src.start ($fxsub1 src.start))
+	    (dst.start ($fxsub1 dst.start)))
+	($string-set! str dst.start ($string-ref str src.start))
+	(loop str src.start dst.start src.end)))))
 
 
 (define (uuid)

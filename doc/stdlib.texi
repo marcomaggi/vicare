@@ -9333,8 +9333,8 @@ time.
 
 
 @deffn Procedure {string-fill!} @var{string} @var{char}
-Store @var{char} in every element of the given @var{string} and returns
-unspecified values.
+Store @var{char} in every element of the given @var{string}.  As
+@value{PRJNAME} extension: the return value is @var{string} itself.
 @end deffn
 
 

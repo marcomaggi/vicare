@@ -5546,7 +5546,7 @@ inclusive.
 @end defun
 
 
-@defun $string-self-copy-forwards! @var{str} @var{src.start} @var{dst.start} @var{count}
+@defun $string-self-copy-forwards!/count @var{str} @var{src.start} @var{dst.start} @var{count}
 Copy @var{count} characters of @var{str} from @var{src.start} inclusive
 to @var{str} itself starting at @var{dst.start} inclusive.  The copy
 happens forwards, so it is suitable for the case @code{@var{src.start} >
@@ -5554,7 +5554,7 @@ happens forwards, so it is suitable for the case @code{@var{src.start} >
 @end defun
 
 
-@defun $string-self-copy-backwards! @var{str} @var{src.start} @var{dst.start} @var{count}
+@defun $string-self-copy-backwards!/count @var{str} @var{src.start} @var{dst.start} @var{count}
 Copy @var{count} characters of @var{str} from @var{src.start} inclusive
 to @var{str} itself starting at @var{dst.start} inclusive.  The copy
 happens backwards, so it is suitable for the case @code{@var{src.start}

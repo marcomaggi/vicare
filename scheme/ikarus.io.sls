@@ -651,15 +651,15 @@
     (except (vicare system $strings)
 	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun
 	    ;;Mar 22, 2015)
+	    $string-copy!
 	    $string-copy!/count
-	    $string-self-copy-forwards!	$string-self-copy-backwards!
 	    $string-fill!
 	    $substring)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
     ;;2015)
     (only (ikarus strings)
+	  $string-copy!
 	  $string-copy!/count
-	  $string-self-copy-forwards!	$string-self-copy-backwards!
 	  $string-fill!
 	  $substring)
     (vicare system $bytevectors)
@@ -1773,7 +1773,7 @@
       (let* ((src.str   (car list-of-strings))
 	     (src.len   ($string-length src.str))
 	     (dst.start ($fx- dst.start src.len)))
-	($string-copy!/count src.str 0 dst.str dst.start src.len)
+	($string-copy! src.str 0 dst.str dst.start src.len)
 	(next-string dst.str (cdr list-of-strings) dst.start)))))
 
 
