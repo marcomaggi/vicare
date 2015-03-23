@@ -396,15 +396,14 @@
 
 ;;;; arguments validation
 
-(define-argument-validation (total-length who len)
-  (fixnum? len)
-  (%implementation-violation who
-    "total bytevector length exceeds the greatest fixnum" len))
-
-(define-argument-validation (byte-filler who fill)
-  (bytevector-byte-filler? fill)
-  (procedure-argument-violation who
-    "expected fixnum in range [-128, 255] as bytevector fill argument" fill))
+(define-syntax (assert-total-string-length stx)
+  (syntax-case stx ()
+    ((_ ?len)
+     (identifier? #'?len)
+     #'(unless (bytevector-length? ?len)
+	 (procedure-argument-violation __who__
+	   "total resulting bytevector length out of range, expected non-negative fixnum" ?len)))
+    ))
 
 ;;; --------------------------------------------------------------------
 
@@ -869,9 +868,8 @@
   ;;If no arguments are given: return the empty bytevector.
   ;;
   (let ((total-length ($bytevector-total-length 0 bv*)))
-    (with-dangerous-arguments-validation (__who__)
-	((total-length	total-length))
-      ($bytevector-concatenate total-length bv*))))
+    (assert-total-string-length total-length)
+    ($bytevector-concatenate total-length bv*)))
 
 ;;; --------------------------------------------------------------------
 
@@ -880,9 +878,8 @@
   ;;If no arguments are given: return the empty bytevector.
   ;;
   (let ((total-length ($bytevector-total-length 0 bv*)))
-    (with-dangerous-arguments-validation (__who__)
-	((total-length	total-length))
-      ($bytevector-concatenate total-length bv*))))
+    (assert-total-string-length total-length)
+    ($bytevector-concatenate total-length bv*)))
 
 (define ($bytevector-concatenate total-length bv*)
   ;;Concatenate the bytevectors in BV*,  return the result.  The resulting bytevector
@@ -909,9 +906,8 @@
   ;;range of the maximum bytevector length.
   ;;
   (let ((total-length ($bytevector-total-length 0 bv*)))
-    (with-dangerous-arguments-validation (__who__)
-	((total-length	total-length))
-      ($bytevector-reverse-and-concatenate total-length bv*))))
+    (assert-total-string-length total-length)
+    ($bytevector-reverse-and-concatenate total-length bv*)))
 
 (define ($bytevector-reverse-and-concatenate total-length bv*)
   ;;Reverse  BV*  and concatenate  its  bytevector  items;  return the  result.   The
