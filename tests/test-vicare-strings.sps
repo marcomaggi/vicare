@@ -1203,21 +1203,11 @@
 ;;; --------------------------------------------------------------------
 ;;; argument check
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->latin1 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string->latin1 123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(latin1->string 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (latin1->string 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -1226,7 +1216,7 @@
     => test-bytevector)
 
   (check
-      (guard (E ((assertion-violation? E)
+      (guard (E ((procedure-argument-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -1296,21 +1286,11 @@
 ;;; --------------------------------------------------------------------
 ;;; argument check
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->ascii 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string->ascii 123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(ascii->string 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (ascii->string 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -1319,7 +1299,7 @@
     => test-bytevector)
 
   (check
-      (guard (E ((assertion-violation? E)
+      (guard (E ((procedure-argument-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -1333,7 +1313,7 @@
     => test-string)
 
   (check
-      (guard (E ((assertion-violation? E)
+      (guard (E ((procedure-argument-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
