@@ -1669,6 +1669,7 @@
     (string-or-symbol->string			v $language)
     (string-or-symbol->symbol			v $language)
     (string-append				v r ba se)
+    (string-concatenate				v $language)
     (string-reverse-and-concatenate		v $language)
     (string-copy				v r ba se)
     (string-for-each				v r ba)

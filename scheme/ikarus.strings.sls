@@ -29,6 +29,7 @@
     string=?
     string<?			string<=?
     string>?			string>=?
+    string-concatenate
     string-reverse-and-concatenate
     uuid
 
@@ -108,6 +109,7 @@
 		  string=?
 		  string<?			string<=?
 		  string>?			string>=?
+		  string-concatenate
 		  string-reverse-and-concatenate
 		  uuid
 
@@ -828,28 +830,47 @@
 	   (%fill-strings dst.str str* ($fx+ dst.start len4))))))))
 
 
-(define* (string-reverse-and-concatenate {list-of-strings list-of-strings?})
-  ;;Defined by Vicare.  Reverse the  LIST-OF-STRINGS, concatenate them and return the
-  ;;resulting string.  It is an error if the  sum of the string lengths is not in the
-  ;;range of the maximum string length.
+;;; concatenating
+
+(define* (string-concatenate {str* list-of-strings?})
+  ;;Defined by Vicare.  Concatenate the STR*  and return the resulting string.  It is
+  ;;an error  if the sum  of the string  lengths is not in  the range of  the maximum
+  ;;string length.
   ;;
-  (let ((total-length ($string-total-length 0 list-of-strings)))
+  (let ((total-length ($string-total-length 0 str*)))
     (assert-total-string-length total-length)
-    ($string-reverse-and-concatenate total-length list-of-strings)))
+    ($string-concatenate total-length str*)))
 
-(define ($string-total-length total-len list-of-strings)
-  ;;Given the  LIST-OF-STRINGS: compute the  total length of  the strings, add  it to
-  ;;TOTAL-LEN and return the result.  If TOTAL-LEN is zero: the returned value is the
-  ;;total length of the  strings.  The returned value may or may not  be in the range
-  ;;of the maximum string size.
+(define ($string-concatenate total-length str*)
+  ;;Concatenate the  strings in STR*, return  the result.  The resulting  string must
+  ;;have length TOTAL-LENGTH.  Assume the arguments have been already validated.
   ;;
-  (if (pair? list-of-strings)
-      ($string-total-length (+ total-len ($string-length ($car list-of-strings)))
-			    ($cdr list-of-strings))
-    total-len))
+  ;;IMPLEMENTATION RESTRICTION  The strings must have  a fixnum length and  the whole
+  ;;string must at maximum have a fixnum length.
+  ;;
+  (let loop ((dst.str	($make-string total-length))
+	     (dst.start	0)
+	     (str*	str*))
+    (if (pair? str*)
+	(let* ((src.str  ($car str*))
+	       (src.len  ($string-length src.str)))
+	  ($string-copy!/count src.str 0 dst.str dst.start src.len)
+	  (loop dst.str ($fx+ dst.start src.len) ($cdr str*)))
+      dst.str)))
 
-(define ($string-concatenate total-length list-of-strings)
-  ;;Concatenate the  strings in  LIST-OF-STRINGS, return  the result.   The resulting
+;;; --------------------------------------------------------------------
+
+(define* (string-reverse-and-concatenate {str* list-of-strings?})
+  ;;Defined by Vicare.   Reverse the STR*, concatenate them and  return the resulting
+  ;;string.  It is an error  if the sum of the string lengths is  not in the range of
+  ;;the maximum string length.
+  ;;
+  (let ((total-length ($string-total-length 0 str*)))
+    (assert-total-string-length total-length)
+    ($string-reverse-and-concatenate total-length str*)))
+
+(define ($string-reverse-and-concatenate total-length str*)
+  ;;Reverse STR* and concatenate its string  items; return the result.  The resulting
   ;;string must  have length  TOTAL-LENGTH.  Assume the  arguments have  been already
   ;;validated.
   ;;
@@ -857,33 +878,28 @@
   ;;string must at maximum have a fixnum length.
   ;;
   (let loop ((dst.str	($make-string total-length))
-	     (dst.start	0)
-	     (bvs	list-of-strings))
-    (if (pair? bvs)
-	(let* ((src.str  ($car bvs))
-	       (src.len  ($string-length src.str)))
-	  ($string-copy!/count src.str 0 dst.str dst.start src.len)
-	  (loop dst.str ($fx+ dst.start src.len) ($cdr bvs)))
-      dst.str)))
-
-(define ($string-reverse-and-concatenate total-length list-of-strings)
-  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the result.  The
-  ;;resulting string must  have length TOTAL-LENGTH.  Assume the  arguments have been
-  ;;already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION  The strings must have  a fixnum length and  the whole
-  ;;string must at maximum have a fixnum length.
-  ;;
-  (let loop ((dst.str	($make-string total-length))
 	     (dst.start	total-length)
-	     (bvs	list-of-strings))
-    (if (pair? bvs)
-	(let* ((src.str   ($car bvs))
+	     (str*	str*))
+    (if (pair? str*)
+	(let* ((src.str   ($car str*))
 	       (src.len   ($string-length src.str))
 	       (dst.start ($fx- dst.start src.len)))
 	  ($string-copy!/count src.str 0 dst.str dst.start src.len)
-	  (loop dst.str dst.start ($cdr bvs)))
+	  (loop dst.str dst.start ($cdr str*)))
       dst.str)))
+
+;;; --------------------------------------------------------------------
+
+(define ($string-total-length total-len str*)
+  ;;Given the STR*: compute the total length  of the strings, add it to TOTAL-LEN and
+  ;;return the result.  If TOTAL-LEN is zero:  the returned value is the total length
+  ;;of the strings.  The returned value may or may not be in the range of the maximum
+  ;;string size.
+  ;;
+  (if (pair? str*)
+      ($string-total-length (+ total-len ($string-length ($car str*)))
+			    ($cdr str*))
+    total-len))
 
 
 (case-define* string-for-each
@@ -1230,99 +1246,77 @@
 
 ;;;; bytevectors to/from HEX strings
 
-(define (bytevector->hex bv)
-  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector
-  ;;representing the  ASCII HEX encoding  of the octets.   If successful
-  ;;return the encoded bytevector, else return #f.
+(define* (bytevector->hex {bv bytevector?})
+  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector representing
+  ;;the  ASCII  HEX  encoding  of  the octets.   If  successful  return  the  encoded
+  ;;bytevector, else return #f.
   ;;
-  ;;The length of the output bytevector is twice the length of the input
-  ;;bytevector.  An error  occurs if the output  bytevector length would
-  ;;exceed the maximum bytevector length (which is the greatest fixnum).
+  ;;The length of the output bytevector is  twice the length of the input bytevector.
+  ;;An  error  occurs if  the  output  bytevector  length  would exceed  the  maximum
+  ;;bytevector length (which is the greatest fixnum).
   ;;
-  (define who 'bytevector->hex)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    (foreign-call "ikrt_bytevector_to_hex" bv)))
+  (foreign-call "ikrt_bytevector_to_hex" bv))
 
-(define (hex->bytevector bv)
-  ;;Defined by Vicare.  Convert a  bytevector representing the ASCII HEX
-  ;;encoding  of octets  into  a bytevector  of  octets.  If  successful
-  ;;return the encoded bytevector, else return #f.
+(define* (hex->bytevector {bv bytevector?})
+  ;;Defined by Vicare.   Convert a bytevector representing the ASCII  HEX encoding of
+  ;;octets into a bytevector of octets.  If successful return the encoded bytevector,
+  ;;else return #f.
   ;;
-  ;;The length of the output bytevector  is half the length of the input
-  ;;bytevector.  An error  occurs if the input  bytevector holds invalid
-  ;;data.
+  ;;The length of the  output bytevector is half the length  of the input bytevector.
+  ;;An error occurs if the input bytevector holds invalid data.
   ;;
-  (define who 'hex->bytevector)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    (foreign-call "ikrt_bytevector_from_hex" bv)))
+  (foreign-call "ikrt_bytevector_from_hex" bv))
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector->string-hex bv)
-  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
-  ;;the HEX representation of the bytes.
+(define* (bytevector->string-hex {bv bytevector?})
+  ;;Defined  by Vicare.   Convert the  bytevector BV  into a  string holding  the HEX
+  ;;representation of the bytes.
   ;;
-  (define who 'bytevector->string-hex)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    (let ((rv (foreign-call "ikrt_bytevector_to_hex" bv)))
-      (and rv ($ascii->string rv)))))
+  (let ((rv (foreign-call "ikrt_bytevector_to_hex" bv)))
+    (and rv ($ascii->string rv))))
 
-(define (string-hex->bytevector S)
-  ;;Defined by Vicare.   Convert the string S into  a bytevector holding
-  ;;the byte representation of the HEX sequences.
+(define* (string-hex->bytevector {S string?})
+  ;;Defined  by Vicare.   Convert the  string S  into a  bytevector holding  the byte
+  ;;representation of the HEX sequences.
   ;;
-  (define who 'string-hex->bytevector)
-  (with-arguments-validation (who)
-      ((string	S))
-    (foreign-call "ikrt_bytevector_from_hex" ($string->ascii S))))
+  (foreign-call "ikrt_bytevector_from_hex" ($string->ascii S)))
 
 
 ;;;; bytevectors to/from BASE64 strings
 
-(define (bytevector->base64 bv)
-  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector
-  ;;representing the ASCII Base64 encoding of the octets.  If successful
-  ;;return the encoded bytevector, else return #f.
+(define* (bytevector->base64 {bv bytevector?})
+  ;;Defined by Vicare.  Convert a bytevector of octets into a bytevector representing
+  ;;the  ASCII Base64  encoding  of the  octets.  If  successful  return the  encoded
+  ;;bytevector, else return #f.
   ;;
-  ;;An error  occurs if  the output bytevector  length would  exceed the
-  ;;maximum bytevector length (which is the greatest fixnum).
+  ;;False  is returned  if  the output  bytevector length  would  exceed the  maximum
+  ;;bytevector length (which is the greatest fixnum).
   ;;
-  (define who 'bytevector->base64)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    ($bytevector->base64 bv)))
+  ($bytevector->base64 bv))
 
 (define ($bytevector->base64 bv)
   (foreign-call "ikrt_bytevector_to_base64" bv))
 
-(define (base64->bytevector bv)
-  ;;Defined  by Vicare.   Convert  a bytevector  representing the  ASCII
-  ;;Base64  encoding  of  octets  into   a  bytevector  of  octets.   If
-  ;;successful return the encoded bytevector, else return #f.
+(define* (base64->bytevector {bv bytevector?})
+  ;;Defined by Vicare.   Convert a bytevector representing the  ASCII Base64 encoding
+  ;;of  octets  into a  bytevector  of  octets.   If  successful return  the  encoded
+  ;;bytevector, else return #f.
   ;;
-  ;; An error occurs if the input bytevector holds invalid data.
+  ;;False is returned if the input bytevector holds invalid data.
   ;;
-  (define who 'base64->bytevector)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    ($base64->bytevector bv)))
+  ($base64->bytevector bv))
 
 (define ($base64->bytevector bv)
   (foreign-call "ikrt_bytevector_from_base64" bv))
 
 ;;; --------------------------------------------------------------------
 
-(define (bytevector->string-base64 bv)
-  ;;Defined by Vicare.  Convert the  bytevector BV into a string holding
-  ;;the Base64 representation of the bytes.
+(define* (bytevector->string-base64 {bv bytevector?})
+  ;;Defined by  Vicare.  Convert the bytevector  BV into a string  holding the Base64
+  ;;representation of the bytes.
   ;;
-  (define who 'bytevector->string-base64)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    ($bytevector->string-base64 bv)))
+  ($bytevector->string-base64 bv))
 
 (define ($bytevector->string-base64 bv)
   (let ((rv (foreign-call "ikrt_bytevector_to_base64" bv)))
@@ -1331,8 +1325,8 @@
 ;;; --------------------------------------------------------------------
 
 (define* (string-base64->bytevector {S string?})
-  ;;Defined by Vicare.   Convert the string S into  a bytevector holding
-  ;;the byte representation of the Base64 sequences.
+  ;;Defined  by Vicare.   Convert the  string S  into a  bytevector holding  the byte
+  ;;representation of the Base64 sequences.
   ;;
   ($string-base64->bytevector S))
 
@@ -1358,17 +1352,14 @@
 	 uri-encoded-bytevector?	$uri-encoded-bytevector?
 	 uri-encoded-string?		$uri-encoded-string?)
 
-  (define (uri-encode bv)
-    ;;Return   a  percent-encoded   bytevector  representation   of  the
-    ;;bytevector BV according to RFC 3986.
+  (define* (uri-encode {bv bytevector?})
+    ;;Return  a  percent-encoded  bytevector  representation  of  the  bytevector  BV
+    ;;according to RFC 3986.
     ;;
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+    ;;FIXME This could be made significantly faster,  but I have no will now.  (Marco
+    ;;Maggi; Tue Apr 9, 2013)
     ;;
-    (define who 'uri-encode)
-    (with-arguments-validation (who)
-	((bytevector	bv))
-      ($uri-encode bv)))
+    ($uri-encode bv))
 
   (define ($uri-encode bv)
     (receive (port getter)
@@ -1383,21 +1374,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (uri-decode bv)
+  (define* (uri-decode {bv bytevector?})
     ;;Percent-decode the given bytevector according to RFC 3986.
     ;;
-    (define who 'uri-decode)
-    (with-arguments-validation (who)
-	((bytevector	bv))
-      ($uri-decode bv)))
+    ($uri-decode bv))
 
-  (define ($uri-decode bv)
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+  (define* ($uri-decode bv)
+    ;;FIXME This could be made significantly faster,  but I have no will now.  (Marco
+    ;;Maggi; Tue Apr 9, 2013)
     ;;
-    (define who '$uri-decode)
-    (define (%percent-error ch)
-      (error who "invalid octet in percent-encoded bytevector, percent sequence" bv ch))
+    (define-syntax-rule (%percent-error ch)
+      (error __who__ "invalid octet in percent-encoded bytevector, percent sequence" bv ch))
     (receive (port getter)
 	(open-bytevector-output-port)
       (do ((buf (make-string 2))
@@ -1422,35 +1409,30 @@
 				     ($string-set! buf 1 ch)
 				   (%percent-error ch)))
 			       (string->number buf 16))
-			   (error who "incomplete percent sequence in percent-encoded bytevector" bv)))
+			   (error __who__ "incomplete percent sequence in percent-encoded bytevector" bv)))
 			(($is-unreserved? chi)
 			 chi)
 			(else
-			 (error who "invalid octet in percent-encoded bytevector" bv chi))))))))
+			 (error __who__ "invalid octet in percent-encoded bytevector" bv chi))))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (normalise-uri-encoding bv)
-    ;;Normalise  the given  percent-encoded bytevector;  chars that  are
-    ;;encoded  but  should  not  are  decoded.   Return  the  normalised
-    ;;bytevector, in  which percent-encoded characters are  displayed in
-    ;;upper case.
+  (define* (normalise-uri-encoding {bv bytevector?})
+    ;;Normalise  the given  percent-encoded bytevector;  chars that  are encoded  but
+    ;;should  not   are  decoded.   Return   the  normalised  bytevector,   in  which
+    ;;percent-encoded characters are displayed in upper case.
     ;;
-    ;;We  assume  that  BV  is composed  by  integers  corresponding  to
-    ;;characters in the valid range for URIs.
+    ;;We assume  that BV is composed  by integers corresponding to  characters in the
+    ;;valid range for URIs.
     ;;
-    (define who 'uri-normalise-encoded)
-    (with-arguments-validation (who)
-	((bytevector	bv))
-      ($normalise-uri-encoding bv)))
+    ($normalise-uri-encoding bv))
 
-  (define ($normalise-uri-encoding bv)
-    ;;FIXME This could be made significantly  faster, but I have no will
-    ;;now.  (Marco Maggi; Tue Apr 9, 2013)
+  (define* ($normalise-uri-encoding bv)
+    ;;FIXME This could be made significantly faster,  but I have no will now.  (Marco
+    ;;Maggi; Tue Apr 9, 2013)
     ;;
-    (define who '$uri-normalise-encoded)
-    (define (%percent-error ch)
-      (error who "invalid octet in percent-encoded bytevector, percent sequence" ch))
+    (define-syntax-rule (%percent-error ch)
+      (error __who__ "invalid octet in percent-encoded bytevector, percent sequence" ch))
     (receive (port getter)
 	(open-bytevector-output-port)
       (do ((buf ($make-string 2))
@@ -1477,22 +1459,19 @@
 			 (if ($is-unreserved? chi)
 			     (put-u8 port chi)
 			   (put-bytevector port ($vector-ref PERCENT-ENCODER-TABLE chi)))))
-		   (error who "incomplete percent sequence in percent-encoded bytevector" bv)))
+		   (error __who__ "incomplete percent sequence in percent-encoded bytevector" bv)))
 		(($is-unreserved? chi)
 		 (put-u8 port chi))
 		(else
-		 (error who "invalid octet in percent-encoded bytevector" bv chi)))))))
+		 (error __who__ "invalid octet in percent-encoded bytevector" bv chi)))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (uri-encoded-bytevector? bv)
-    ;;Return  true   if  the   argument  is   correctly  percent-encoded
-    ;;bytevector according to RFC 3986.
+  (define* (uri-encoded-bytevector? {bv bytevector?})
+    ;;Return true if  the argument is correctly  percent-encoded bytevector according
+    ;;to RFC 3986.
     ;;
-    (define who 'uri-encoded-bytevector?)
-    (with-arguments-validation (who)
-	((bytevector	bv))
-      ($uri-encoded-bytevector? bv)))
+    ($uri-encoded-bytevector? bv))
 
   (define ($uri-encoded-bytevector? bv)
     (let loop ((i 0))
@@ -1518,14 +1497,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (uri-encoded-string? str)
-    ;;Return true  if the  argument is correctly  percent-encoded string
-    ;;according to RFC 3986.
+  (define* (uri-encoded-string? {str string?})
+    ;;Return true  if the argument  is correctly percent-encoded string  according to
+    ;;RFC 3986.
     ;;
-    (define who 'uri-encoded-string?)
-    (with-arguments-validation (who)
-	((string	str))
-      ($uri-encoded-string? str)))
+    ($uri-encoded-string? str))
 
   (define ($uri-encoded-string? str)
     (define-syntax-rule ($string-chi-ref str i)

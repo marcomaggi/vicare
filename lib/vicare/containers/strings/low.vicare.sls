@@ -223,18 +223,20 @@
 
 ;;;; constructors
 
-(define (string-concatenate strings)
-  (let* ((total (do ((strings strings (cdr strings))
-		     (i 0 (+ i (string-length (car strings)))))
-		    ((not (pair? strings)) i)))
-	 (result (make-string total)))
-    (let lp ((i 0) (strings strings))
-      (if (pair? strings)
-	  (let* ((s (car strings))
-		 (slen (string-length s)))
-	    (%string-copy*! result i s 0 slen)
-	    (lp (+ i slen) (cdr strings)))))
-    result))
+;;This is already exported by (vicare).  (Marco Maggi; Mon Mar 23, 2015)
+;;
+;; (define (string-concatenate strings)
+;;   (let* ((total (do ((strings strings (cdr strings))
+;; 		     (i 0 (+ i (string-length (car strings)))))
+;; 		    ((not (pair? strings)) i)))
+;; 	 (result (make-string total)))
+;;     (let lp ((i 0) (strings strings))
+;;       (if (pair? strings)
+;; 	  (let* ((s (car strings))
+;; 		 (slen (string-length s)))
+;; 	    (%string-copy*! result i s 0 slen)
+;; 	    (lp (+ i slen) (cdr strings)))))
+;;     result))
 
 (define (%string-concatenate-reverse string-list final past)
   (let* ((len (let loop ((sum 0) (lis string-list))

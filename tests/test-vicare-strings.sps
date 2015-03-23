@@ -813,6 +813,47 @@
   #t)
 
 
+(parametrise ((check-test-name	'concatenate))
+
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (string-concatenate 123))
+
+  (check-procedure-arguments-violation
+   (string-concatenate '(123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-concatenate '())
+    => "")
+
+  (check
+      (string-concatenate '(""))
+    => "")
+
+  (check
+      (string-concatenate '("" ""))
+    => "")
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string-concatenate '("123"))
+    => "123")
+
+  (check
+      (string-concatenate '("123" "456"))
+    => "123456")
+
+  (check
+      (string-concatenate '("123" "456" "789"))
+    => "123456789")
+
+  #t)
+
+
 (parametrise ((check-test-name	'reverse-and-concatenate))
 
 ;;; arguments validation

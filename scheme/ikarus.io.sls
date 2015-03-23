@@ -1755,28 +1755,6 @@
 	(next-bytevector dst.bv (cdr list-of-bytevectors) dst.start)))))
 
 
-;;;; string helpers
-
-(define (%unsafe.string-reverse-and-concatenate who list-of-strings dst.len)
-  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
-  ;;result.  The  resulting list must  have length DST.LEN.   Assume the
-  ;;arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
-  ;;the whole string must at maximum have a fixnum length.
-  ;;
-  (let next-string ((dst.str ($make-string dst.len))
-		    (list-of-strings list-of-strings)
-		    (dst.start       dst.len))
-    (if (null? list-of-strings)
-	dst.str
-      (let* ((src.str   (car list-of-strings))
-	     (src.len   ($string-length src.str))
-	     (dst.start ($fx- dst.start src.len)))
-	($string-copy! src.str 0 dst.str dst.start src.len)
-	(next-string dst.str (cdr list-of-strings) dst.start)))))
-
-
 ;;;; dot notation macros for port structures
 
 (define-syntax with-port
@@ -3629,9 +3607,9 @@
 		   (set-cookie-dest! cookie '(0 . ())))
 		 (car output.strs))
 		(else
-		 (let ((str (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
-		   (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str))))
-		   str)))))
+		 (receive-and-return (str)
+		     ($string-reverse-and-concatenate output.len output.strs)
+		   (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str)))))))))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
       (define-inline (%serialise-device-and-reset! who)
@@ -3782,7 +3760,7 @@
 		 ;;The device has already been serialised.
 		 (car output.strs))
 		(else
-		 (%unsafe.string-reverse-and-concatenate who output.strs output.len))))))))
+		 ($string-reverse-and-concatenate output.len output.strs))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -5757,7 +5735,7 @@
 		     ;;Return EOF or would-block.
 		     count
 		   ;;Return the accumulated string.
-		   (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
+		   ($string-reverse-and-concatenate output.len output.strs)))
 		((would-block-object? count)
 		 (next-buffer-string output.len output.strs dst.len dst.str))
 		(($fx= count dst.len)
@@ -5767,9 +5745,8 @@
 				     ($make-string dst.len)))
 		(else
 		 ;;Some characters were read, but less than COUNT.
-		 (%unsafe.string-reverse-and-concatenate who
-		   (cons ($substring dst.str 0 count) output.strs)
-		   ($fx+ count output.len))))))))
+		 ($string-reverse-and-concatenate (fx+ count output.len)
+						  (cons ($substring dst.str 0 count) output.strs))))))))
 
   (define (get-string-some port)
     ;;Defined by Vicare.  Read from  the textual input PORT, blocking as
@@ -8891,5 +8868,4 @@
 ;;; eval: (put 'refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
-;;; eval: (put '%unsafe.string-reverse-and-concatenate		'scheme-indent-function 1)
 ;;; End:
