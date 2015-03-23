@@ -136,7 +136,6 @@
 		  uri-encoded-bytevector?	percent-encoded-bytevector?
 		  uri-encoded-string?		percent-encoded-string?
 		  #| end of except |# )
-    (vicare arguments validation)
     ;;NOTE  Let's try  to import  unsafe operations  only from  built-in
     ;;libraries, when  possible, avoiding the use  of external libraries
     ;;of macros.
@@ -309,72 +308,6 @@
 	   "expected only ASCII code points in argument"
 	   (integer->char ?code-point) ?bv)))
     ))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (length who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
-  (procedure-argument-violation who "expected non-negative fixnum as string length argument" obj))
-
-(define-argument-validation (total-length who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
-  (procedure-argument-violation who
-    "expected non-negative fixnum as total string length argument" obj))
-
-(define-argument-validation (has-length who str len)
-  ($fx= len ($string-length str))
-  (procedure-argument-violation who "length mismatch in argument strings" len str))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (index who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
-  (procedure-argument-violation who "expected non-negative fixnum as string index argument" obj))
-
-(define-argument-validation (start-index-and-length who start len)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx<= start len)
-  (procedure-argument-violation who "start index argument out of range for string" start len))
-
-(define-argument-validation (end-index-and-length who end len)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx<= end len)
-  (procedure-argument-violation who "end index argument out of range for string" end len))
-
-(define-argument-validation (start-and-end-indices who start end)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx<= start end)
-  (procedure-argument-violation who "start and end index arguments are in decreasing order" start end))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (count who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
-  (procedure-argument-violation who "expected non-negative fixnum as characters count argument" obj))
-
-(define-argument-validation (start-index-and-count-and-length who start count len)
-  ($fx<= ($fx+ start count) len)
-  (procedure-argument-violation who
-    (string-append "count argument out of range for string of length " (number->string len)
-		   " and start index " (number->string start))
-    count))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (latin1 who code-point arg)
-  ($latin1-chi? code-point)
-  (procedure-argument-violation who
-    "expected only Latin-1 code points in argument"
-    (integer->char code-point) arg))
-
-(define-argument-validation (ascii who code-point arg)
-  ($ascii-chi? code-point)
-  (procedure-argument-violation who
-    "expected only ASCII code points in argument"
-    (integer->char code-point) arg))
 
 
 ;;;; helpers
