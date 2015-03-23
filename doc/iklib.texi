@@ -10084,6 +10084,13 @@ arguments are given: return the empty bytevector.
 @end defun
 
 
+@defun bytevector-concatenate @var{bvs}
+Concatenate the list of bytevectors @var{bvs} and return the resulting
+bytevector.  It is an error if the sum of the bytevector lengths is not
+in the range of the maximum bytevector length.
+@end defun
+
+
 @defun bytevector-reverse-and-concatenate @var{bvs}
 Reverse the list of bytevectors @var{bvs}, concatenate them and return
 the resulting bytevector.  It is an error if the sum of the bytevector

@@ -2020,6 +2020,7 @@
     (subbytevector-s8				v $language)
     (subbytevector-s8/count			v $language)
     (bytevector-append				v $language)
+    (bytevector-concatenate			v $language)
     (bytevector-reverse-and-concatenate		v $language)
     (endianness					v r bv)
     (native-endianness				v r bv)

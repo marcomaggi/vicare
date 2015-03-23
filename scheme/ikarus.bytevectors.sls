@@ -24,6 +24,7 @@
     bytevector-copy!		bytevector-fill!
     bytevector-copy		bytevector-append
     bytevector=?		native-endianness
+    bytevector-concatenate
     bytevector-reverse-and-concatenate
 
     ;; validation predicates
@@ -122,6 +123,7 @@
 		  bytevector-copy!	bytevector-fill!
 		  bytevector-copy	bytevector-append
 		  bytevector=?		native-endianness
+		  bytevector-concatenate
 		  bytevector-reverse-and-concatenate
 
 		  list-of-bytevectors?
@@ -860,49 +862,38 @@
     ($bytevector-set! dst.bv dst.index ($bytevector-s8-ref src.bv src.index))))
 
 
-(define* (bytevector-append . {list-of-bytevectors list-of-bytevectors?})
-  ;;Defined by Vicare.  Concatenate  the bytevector arguments and return
-  ;;the result.  If no arguments are given: return the empty bytevector.
+;;;; appending and concatenating
+
+(define* (bytevector-append . {bv* list-of-bytevectors?})
+  ;;Defined by Vicare.   Concatenate the bytevector arguments and  return the result.
+  ;;If no arguments are given: return the empty bytevector.
   ;;
-  (let ((total-length ($bytevector-total-length 0 list-of-bytevectors)))
+  (let ((total-length ($bytevector-total-length 0 bv*)))
     (with-dangerous-arguments-validation (__who__)
 	((total-length	total-length))
-      ($bytevector-concatenate total-length list-of-bytevectors))))
+      ($bytevector-concatenate total-length bv*))))
 
-(define* (bytevector-reverse-and-concatenate {list-of-bytevectors list-of-bytevectors?})
-  ;;Defined  by Vicare.   Reverse  the LIST-OF-BYTEVECTORS,  concatenate
-  ;;them and return the resulting bytevector.  It is an error if the sum
-  ;;of  the bytevector  lengths  is  not in  the  range  of the  maximum
-  ;;bytevector length.
+;;; --------------------------------------------------------------------
+
+(define* (bytevector-concatenate {bv* list-of-bytevectors?})
+  ;;Defined by Vicare.   Concatenate the bytevector arguments and  return the result.
+  ;;If no arguments are given: return the empty bytevector.
   ;;
-  (let ((total-length ($bytevector-total-length 0 list-of-bytevectors)))
+  (let ((total-length ($bytevector-total-length 0 bv*)))
     (with-dangerous-arguments-validation (__who__)
 	((total-length	total-length))
-      ($bytevector-reverse-and-concatenate total-length list-of-bytevectors))))
+      ($bytevector-concatenate total-length bv*))))
 
-(define ($bytevector-total-length total-len list-of-bytevectors)
-  ;;Given  the  LIST-OF-BYTEVECTORS: compute  the  total  length of  the
-  ;;bytevectors,  add  it  to  TOTAL-LEN  and  return  the  result.   If
-  ;;TOTAL-LEN is  zero: the returned  value is  the total length  of the
-  ;;bytevectors.  The returned  value may or may not be  in the range of
-  ;;the maximum bytevector size.
+(define ($bytevector-concatenate total-length bv*)
+  ;;Concatenate the bytevectors in BV*,  return the result.  The resulting bytevector
+  ;;must have length TOTAL-LENGTH.  Assume the arguments have been already validated.
   ;;
-  (if (null? list-of-bytevectors)
-      total-len
-    ($bytevector-total-length (+ total-len ($bytevector-length ($car list-of-bytevectors)))
-			      ($cdr list-of-bytevectors))))
-
-(define ($bytevector-concatenate total-length list-of-bytevectors)
-  ;;Concatenate  the  bytevectors  in  LIST-OF-BYTEVECTORS,  return  the
-  ;;result.   The resulting  bytevector must  have length  TOTAL-LENGTH.
-  ;;Assume the arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
-  ;;and the whole bytevector must at maximum have a fixnum length.
+  ;;IMPLEMENTATION  RESTRICTION The  bytevectors must  have a  fixnum length  and the
+  ;;whole bytevector must at maximum have a fixnum length.
   ;;
   (let loop ((dst.bv	($make-bytevector total-length))
 	     (dst.start	0)
-	     (bvs	list-of-bytevectors))
+	     (bvs	bv*))
     (if (null? bvs)
 	dst.bv
       (let* ((src.bv   ($car bvs))
@@ -910,17 +901,29 @@
 	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
 	(loop dst.bv ($fx+ dst.start src.len) ($cdr bvs))))))
 
-(define ($bytevector-reverse-and-concatenate total-length list-of-bytevectors)
-  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
-  ;;return  the  result.   The  resulting bytevector  must  have  length
-  ;;TOTAL-LENGTH.  Assume the arguments have been already validated.
+;;; --------------------------------------------------------------------
+
+(define* (bytevector-reverse-and-concatenate {bv* list-of-bytevectors?})
+  ;;Defined by  Vicare.  Reverse the BV*,  concatenate them and return  the resulting
+  ;;bytevector.  It is  an error if the sum  of the bytevector lengths is  not in the
+  ;;range of the maximum bytevector length.
   ;;
-  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
-  ;;and the whole bytevector must at maximum have a fixnum length.
+  (let ((total-length ($bytevector-total-length 0 bv*)))
+    (with-dangerous-arguments-validation (__who__)
+	((total-length	total-length))
+      ($bytevector-reverse-and-concatenate total-length bv*))))
+
+(define ($bytevector-reverse-and-concatenate total-length bv*)
+  ;;Reverse  BV*  and concatenate  its  bytevector  items;  return the  result.   The
+  ;;resulting bytevector  must have length  TOTAL-LENGTH.  Assume the  arguments have
+  ;;been already validated.
+  ;;
+  ;;IMPLEMENTATION  RESTRICTION The  bytevectors must  have a  fixnum length  and the
+  ;;whole bytevector must at maximum have a fixnum length.
   ;;
   (let loop ((dst.bv	($make-bytevector total-length))
 	     (dst.start	total-length)
-	     (bvs	list-of-bytevectors))
+	     (bvs	bv*))
     (if (null? bvs)
 	dst.bv
       (let* ((src.bv    ($car bvs))
@@ -928,6 +931,19 @@
 	     (dst.start ($fx- dst.start src.len)))
 	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
 	(loop dst.bv dst.start ($cdr bvs))))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-total-length total-len bv*)
+  ;;Given the BV*: compute  the total length of the bytevectors,  add it to TOTAL-LEN
+  ;;and return  the result.  If  TOTAL-LEN is zero: the  returned value is  the total
+  ;;length of the bytevectors.  The returned value may  or may not be in the range of
+  ;;the maximum bytevector size.
+  ;;
+  (if (null? bv*)
+      total-len
+    ($bytevector-total-length (+ total-len ($bytevector-length ($car bv*)))
+			      ($cdr bv*))))
 
 
 ;;;; 8-bit setters and getters

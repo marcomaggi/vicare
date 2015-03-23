@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -766,7 +766,7 @@
 ;;; arguments validation
 
   (with-check-for-procedure-argument-validation
-      (bytevector-append (list-of-bytevectors? list-of-bytevectors))
+      (bytevector-append (list-of-bytevectors? bv*))
     (doit (bytevector-append 123) (123))
     (doit (bytevector-append '#vu8() 123) (#vu8() 123)))
 
@@ -817,12 +817,52 @@
   #t)
 
 
+(parametrise ((check-test-name	'concatenate))
+
+;;; arguments validation
+
+  (with-check-for-procedure-argument-validation
+      (bytevector-concatenate (list-of-bytevectors? bv*))
+    (doit (bytevector-concatenate 123) 123)
+    (doit (bytevector-concatenate '(123)) (123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-concatenate '())
+    => '#vu8())
+
+  (check
+      (bytevector-concatenate '(#vu8()))
+    => '#vu8())
+
+  (check
+      (bytevector-concatenate '(#vu8() #vu8()))
+    => '#vu8())
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector-concatenate '(#vu8(1 2 3)))
+    => '#vu8(1 2 3))
+
+  (check
+      (bytevector-concatenate '(#vu8(1 2 3) #vu8(4 5 6)))
+    => '#vu8(1 2 3 4 5 6))
+
+  (check
+      (bytevector-concatenate '(#vu8(1 2 3) #vu8(4 5 6) #vu8(7 8 9)))
+    => '#vu8(1 2 3 4 5 6 7 8 9))
+
+  #t)
+
+
 (parametrise ((check-test-name	'reverse-and-concatenate))
 
 ;;; arguments validation
 
   (with-check-for-procedure-argument-validation
-      (bytevector-reverse-and-concatenate (list-of-bytevectors? list-of-bytevectors))
+      (bytevector-reverse-and-concatenate (list-of-bytevectors? bv*))
     (doit (bytevector-reverse-and-concatenate 123) 123)
     (doit (bytevector-reverse-and-concatenate '(123)) (123)))
 

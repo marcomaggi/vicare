@@ -1732,29 +1732,6 @@
 	 "codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
 
 
-;;;; bytevector helpers
-
-(define (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors dst.len)
-  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
-  ;;return  the result.  The  resulting list  must have  length DST.LEN.
-  ;;Assume the arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
-  ;;and the whole bytevector must at maximum have a fixnum length.
-  ;;
-  (let next-bytevector ((dst.bv              ($make-bytevector dst.len))
-			(list-of-bytevectors list-of-bytevectors)
-			(dst.start           dst.len))
-    (if (null? list-of-bytevectors)
-	(begin
-	  dst.bv)
-      (let* ((src.bv    (car list-of-bytevectors))
-	     (src.len   ($bytevector-length src.bv))
-	     (dst.start ($fx- dst.start src.len)))
-	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
-	(next-bytevector dst.bv (cdr list-of-bytevectors) dst.start)))))
-
-
 ;;;; dot notation macros for port structures
 
 (define-syntax with-port
@@ -3384,13 +3361,12 @@
 		   ;;The device contains some bytes and the device needs
 		   ;;to be serialised: the  list of bytevectors contains
 		   ;;2 or more items.
-		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate
-			      who ($device-bvs D) ($device-len D))))
+		   (receive-and-return (bv)
+		       ($bytevector-reverse-and-concatenate ($device-len D) ($device-bvs D))
 		     ($set-cookie-dest! cookie
 					(if reset?
 					    (make-device 0 '())
-					  (make-device ($device-len D) (list bv))))
-		     bv)))))
+					  (make-device ($device-len D) (list bv)))))))))
 
 	(define (write! src.bv src.start count)
 	  ;;Write COUNT  octets from the bytevector  SRC.BV, starting at
@@ -4900,7 +4876,7 @@
 	  (%data-available-in-buffer port output.len remaining-count output.bvs
 				     retry-after-filling-buffer))
 	(define-inline (compose-output)
-	  (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
+	  ($bytevector-reverse-and-concatenate output.len output.bvs))
 	(maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at:    port.buffer.index)
 	  ;;The buffer was empty and  after attempting to refill it: EOF
@@ -4968,9 +4944,8 @@
 	(let ((output.bvs/after-consuming-buffer-bytes (cons bv output.bvs)))
 	  (if bytes-from-buffer-satisfy-the-request?
 	      ;;Compose output.
-	      (%unsafe.bytevector-reverse-and-concatenate who
-		output.bvs/after-consuming-buffer-bytes
-		output.len/after-consuming-buffer-bytes)
+	      ($bytevector-reverse-and-concatenate output.len/after-consuming-buffer-bytes
+						   output.bvs/after-consuming-buffer-bytes)
 	    (retry-after-filling-buffer output.len/after-consuming-buffer-bytes
 					output.bvs/after-consuming-buffer-bytes
 					($fx- remaining-count
@@ -5166,9 +5141,9 @@
        (with-port-having-bytevector-buffer (port)
 	 (let retry-after-filling-buffer ((output.len  0)
 					  (output.bvs  '()))
-	   (define-inline (compose-output)
-	     (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
-	   (define-inline (data-available)
+	   (define-syntax-rule (compose-output)
+	     ($bytevector-reverse-and-concatenate output.len output.bvs))
+	   (define-syntax-rule (data-available)
 	     (%data-available-in-buffer port output.len output.bvs
 					retry-after-filling-buffer))
 	   (maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -8867,5 +8842,4 @@
 ;;; eval: (put 'maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put 'refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-string-buffer-and-evaluate		'scheme-indent-function 1)
-;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
 ;;; End:
