@@ -9459,6 +9459,12 @@ Return @true{} if @var{obj} is a fixnum and its value is in one of the
 ranges acceptable by Unicode code points; otherwise return @false{}.
 @end defun
 
+
+@defun list-of-chars? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of chars; otherwise
+return @false{}.
+@end defun
+
 @c page
 @node iklib keywords
 @section Keyword objects
@@ -10089,13 +10095,34 @@ lengths is not in the range of the maximum bytevector length.
 @section Additional string functions
 
 
-The following bindings are exported by the library @library{vicare}.
+@menu
+* iklib strings predicates::    Predicates about strings.
+* iklib strings constructors::  Constructing new strings.
+* iklib strings conversion::    Converting between strings and
+                                other objects.
+* iklib strings misc::          Miscellaneous string operations.
+@end menu
+
+@c page
+@node iklib strings predicates
+@subsection Predicates about strings
+
+
+@defun list-of-strings? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of strings;
+otherwise return @false{}.
+@end defun
+
 
 
 @defun string-empty? @var{str}
 Return @true{} if the string @var{str} is empty, otherwise return
 @false{}.
 @end defun
+
+@c page
+@node iklib strings constructors
+@subsection Constructing new strings
 
 
 @defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
@@ -10117,6 +10144,10 @@ Reverse the list of strings @var{strs}, concatenate them and return the
 resulting string.  It is an error if the sum of the string lengths is
 not in the range of the maximum string length.
 @end defun
+
+@c page
+@node iklib strings conversion
+@subsection Converting between strings and other objects
 
 
 @defun string->octets @var{string}
@@ -10213,12 +10244,6 @@ an error occurs in the conversion: an exception is raised.
 @end defun
 
 
-@defun uuid
-Attempt to build a unique string and return it.  If an internal error
-occurs because of impossible generation: raise an error.
-@end defun
-
-
 @defun string->uri-encoding @var{str}
 @defunx string->percent-encoding @var{str}
 Convert the string @var{str} to its @utf{}-8 representation, then encode
@@ -10253,6 +10278,16 @@ new string object equal to its string name.
 @defun string-or-symbol->symbol @var{obj}
 If @var{obj} is a symbol return it; if it is a string return a symbol
 having it as string name.
+@end defun
+
+@c page
+@node iklib strings misc
+@subsection Miscellaneous string operations
+
+
+@defun uuid
+Attempt to build a unique string and return it.  If an internal error
+occurs because of impossible generation: raise an error.
 @end defun
 
 @c page
