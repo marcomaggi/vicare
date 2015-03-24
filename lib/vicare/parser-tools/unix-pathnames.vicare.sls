@@ -77,11 +77,7 @@
     unix-pathname-normalisation-error?
     raise-unix-pathname-parser-error
     raise-unix-pathname-normalisation-error)
-  (import (except (vicare)
-		  append)
-    (only (vicare unsafe operations)
-	  $subbytevector-u8
-	  $fxincr!)
+  (import (except (vicare) append)
     (vicare system $fx)
     (vicare system $pairs)
     (vicare system $chars)
@@ -114,6 +110,26 @@
 
 
 ;;;; helpers
+
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?op)
+     ($fxincr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxadd4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
+
+;;; --------------------------------------------------------------------
 
 (define-inline ($valid-chi-for-pathname? chi)
   ;;Assuming  CHI  is a  fixnum:  return  true if  it  is  in the  range

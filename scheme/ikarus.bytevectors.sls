@@ -19,18 +19,18 @@
 #!vicare
 (library (ikarus bytevectors)
   (export
-    make-bytevector		bytevector-length
+    make-bytevector				bytevector-length
     bytevector-empty?
-    bytevector-copy!		bytevector-fill!
-    bytevector-copy		bytevector-append
-    bytevector=?		native-endianness
+    bytevector-copy!				bytevector-fill!
+    bytevector-copy				bytevector-append
+    bytevector=?				native-endianness
     bytevector-concatenate
     bytevector-reverse-and-concatenate
 
     ;; validation predicates
     list-of-bytevectors?
-    bytevector-length?		bytevector-index?
-    bytevector-word-size?	bytevector-word-count?
+    bytevector-length?				bytevector-index?
+    bytevector-word-size?			bytevector-word-count?
     bytevector-index-for-word?
     bytevector-index-for-word8?
     bytevector-index-for-word16?
@@ -44,93 +44,135 @@
     bytevector-start-index-and-count-for-word32?
     bytevector-start-index-and-count-for-word64?
 
-    bytevector-s8-ref		bytevector-s8-set!
-    bytevector-u8-ref		bytevector-u8-set!
+    bytevector-s8-ref				bytevector-s8-set!
+    bytevector-u8-ref				bytevector-u8-set!
 
-    bytevector-u16-native-ref	bytevector-u16-native-set!
-    bytevector-s16-native-ref	bytevector-s16-native-set!
-    bytevector-u32-native-ref	bytevector-u32-native-set!
-    bytevector-s32-native-ref	bytevector-s32-native-set!
-    bytevector-u64-native-ref	bytevector-u64-native-set!
-    bytevector-s64-native-ref	bytevector-s64-native-set!
+    bytevector-u16-native-ref			bytevector-u16-native-set!
+    bytevector-s16-native-ref			bytevector-s16-native-set!
+    bytevector-u32-native-ref			bytevector-u32-native-set!
+    bytevector-s32-native-ref			bytevector-s32-native-set!
+    bytevector-u64-native-ref			bytevector-u64-native-set!
+    bytevector-s64-native-ref			bytevector-s64-native-set!
 
-    bytevector-u16-ref		bytevector-u16-set!
-    bytevector-s16-ref		bytevector-s16-set!
-    bytevector-u32-ref		bytevector-u32-set!
-    bytevector-s32-ref		bytevector-s32-set!
-    bytevector-u64-ref		bytevector-u64-set!
-    bytevector-s64-ref		bytevector-s64-set!
+    bytevector-u16-ref				bytevector-u16-set!
+    bytevector-s16-ref				bytevector-s16-set!
+    bytevector-u32-ref				bytevector-u32-set!
+    bytevector-s32-ref				bytevector-s32-set!
+    bytevector-u64-ref				bytevector-u64-set!
+    bytevector-s64-ref				bytevector-s64-set!
 
-    bytevector-uint-ref		bytevector-uint-set!
-    bytevector-sint-ref		bytevector-sint-set!
+    bytevector-uint-ref				bytevector-uint-set!
+    bytevector-sint-ref				bytevector-sint-set!
 
-    bytevector-ieee-double-native-ref bytevector-ieee-double-native-set!
-    bytevector-ieee-single-native-ref bytevector-ieee-single-native-set!
-    bytevector-ieee-double-ref	bytevector-ieee-double-set!
-    bytevector-ieee-single-ref	bytevector-ieee-single-set!
+    bytevector-ieee-double-native-ref		bytevector-ieee-double-native-set!
+    bytevector-ieee-single-native-ref		bytevector-ieee-single-native-set!
+    bytevector-ieee-double-ref			bytevector-ieee-double-set!
+    bytevector-ieee-single-ref			bytevector-ieee-single-set!
 
-    uint-list->bytevector	bytevector->uint-list
-    sint-list->bytevector	bytevector->sint-list
+    uint-list->bytevector			bytevector->uint-list
+    sint-list->bytevector			bytevector->sint-list
 
-    u8-list->bytevector		bytevector->u8-list
-    s8-list->bytevector		bytevector->s8-list
+    u8-list->bytevector				bytevector->u8-list
+    s8-list->bytevector				bytevector->s8-list
 
-    u16l-list->bytevector	bytevector->u16l-list
-    u16b-list->bytevector	bytevector->u16b-list
-    u16n-list->bytevector	bytevector->u16n-list
-    s16l-list->bytevector	bytevector->s16l-list
-    s16b-list->bytevector	bytevector->s16b-list
-    s16n-list->bytevector	bytevector->s16n-list
+    u16l-list->bytevector			bytevector->u16l-list
+    u16b-list->bytevector			bytevector->u16b-list
+    u16n-list->bytevector			bytevector->u16n-list
+    s16l-list->bytevector			bytevector->s16l-list
+    s16b-list->bytevector			bytevector->s16b-list
+    s16n-list->bytevector			bytevector->s16n-list
 
-    u32l-list->bytevector	bytevector->u32l-list
-    u32b-list->bytevector	bytevector->u32b-list
-    u32n-list->bytevector	bytevector->u32n-list
-    s32l-list->bytevector	bytevector->s32l-list
-    s32b-list->bytevector	bytevector->s32b-list
-    s32n-list->bytevector	bytevector->s32n-list
+    u32l-list->bytevector			bytevector->u32l-list
+    u32b-list->bytevector			bytevector->u32b-list
+    u32n-list->bytevector			bytevector->u32n-list
+    s32l-list->bytevector			bytevector->s32l-list
+    s32b-list->bytevector			bytevector->s32b-list
+    s32n-list->bytevector			bytevector->s32n-list
 
-    u64l-list->bytevector	bytevector->u64l-list
-    u64b-list->bytevector	bytevector->u64b-list
-    u64n-list->bytevector	bytevector->u64n-list
-    s64l-list->bytevector	bytevector->s64l-list
-    s64b-list->bytevector	bytevector->s64b-list
-    s64n-list->bytevector	bytevector->s64n-list
+    u64l-list->bytevector			bytevector->u64l-list
+    u64b-list->bytevector			bytevector->u64b-list
+    u64n-list->bytevector			bytevector->u64n-list
+    s64l-list->bytevector			bytevector->s64l-list
+    s64b-list->bytevector			bytevector->s64b-list
+    s64n-list->bytevector			bytevector->s64n-list
 
-    f4l-list->bytevector	bytevector->f4l-list
-    f4b-list->bytevector	bytevector->f4b-list
-    f4n-list->bytevector	bytevector->f4n-list
-    f8l-list->bytevector	bytevector->f8l-list
-    f8b-list->bytevector	bytevector->f8b-list
-    f8n-list->bytevector	bytevector->f8n-list
+    f4l-list->bytevector			bytevector->f4l-list
+    f4b-list->bytevector			bytevector->f4b-list
+    f4n-list->bytevector			bytevector->f4n-list
+    f8l-list->bytevector			bytevector->f8l-list
+    f8b-list->bytevector			bytevector->f8b-list
+    f8n-list->bytevector			bytevector->f8n-list
 
-    c4l-list->bytevector	bytevector->c4l-list
-    c4b-list->bytevector	bytevector->c4b-list
-    c4n-list->bytevector	bytevector->c4n-list
-    c8l-list->bytevector	bytevector->c8l-list
-    c8b-list->bytevector	bytevector->c8b-list
-    c8n-list->bytevector	bytevector->c8n-list
+    c4l-list->bytevector			bytevector->c4l-list
+    c4b-list->bytevector			bytevector->c4b-list
+    c4n-list->bytevector			bytevector->c4n-list
+    c8l-list->bytevector			bytevector->c8l-list
+    c8b-list->bytevector			bytevector->c8b-list
+    c8n-list->bytevector			bytevector->c8n-list
 
-    subbytevector-u8		subbytevector-u8/count
-    subbytevector-s8		subbytevector-s8/count
+    subbytevector-u8				subbytevector-u8/count
+    subbytevector-s8				subbytevector-s8/count
 
     ;; unsafe bindings, to be exported by (vicare system $bytevectors)
-    $bytevector-u8-set!		$bytevector-s8-set!
+    $bytevector-u8-set!				$bytevector-s8-set!
+
+    $bytevector-u16l-ref			$bytevector-u16l-set!
+    $bytevector-u16b-ref			$bytevector-u16b-set!
+    $bytevector-u16n-ref			$bytevector-u16n-set!
+    $bytevector-s16l-ref			$bytevector-s16l-set!
+    $bytevector-s16b-ref			$bytevector-s16b-set!
+    $bytevector-s16n-ref			$bytevector-s16n-set!
+    $bytevector-u16-ref				$bytevector-u16-set!
+    $bytevector-s16-ref				$bytevector-s16-set!
+
+    $bytevector-u32b-ref			$bytevector-u32b-set!
+    $bytevector-u32l-ref			$bytevector-u32l-set!
+    $bytevector-s32b-ref			$bytevector-s32b-set!
+    $bytevector-s32l-ref			$bytevector-s32l-set!
+    $bytevector-u32n-ref			$bytevector-u32n-set!
+    $bytevector-s32n-ref			$bytevector-s32n-set!
+    $bytevector-u32-ref				$bytevector-u32-set!
+    $bytevector-s32-ref				$bytevector-s32-set!
+
+    $bytevector-u64b-ref			$bytevector-u64b-set!
+    $bytevector-u64l-ref			$bytevector-u64l-set!
+    $bytevector-s64b-ref			$bytevector-s64b-set!
+    $bytevector-s64l-ref			$bytevector-s64l-set!
+    $bytevector-u64n-ref			$bytevector-u64n-set!
+    $bytevector-s64n-ref			$bytevector-s64n-set!
+    $bytevector-u64-ref				$bytevector-u64-set!
+    $bytevector-s64-ref				$bytevector-s64-set!
+
+    $bytevector-ieee-double-big-ref		$bytevector-ieee-double-big-set!
+    $bytevector-ieee-double-little-ref		$bytevector-ieee-double-little-set!
+    $bytevector-ieee-double-ref			$bytevector-ieee-double-set!
+
+    $bytevector-ieee-single-big-ref		$bytevector-ieee-single-big-set!
+    $bytevector-ieee-single-little-ref		$bytevector-ieee-single-little-set!
+    $bytevector-ieee-single-ref			$bytevector-ieee-single-set!
+
+    $subbytevector-u8				$subbytevector-u8/count
+    $subbytevector-s8				$subbytevector-s8/count
+
     $bytevector-empty?
-    $bytevector=		$bytevector-total-length
-    $bytevector-concatenate	$bytevector-reverse-and-concatenate
-    $bytevector-copy)
+    $bytevector=				$bytevector-total-length
+    $bytevector-copy				$bytevector-copy!
+    $bytevector-concatenate			$bytevector-reverse-and-concatenate
+    $bytevector-copy!/count
+    $bytevector-self-copy-forwards!/count	$bytevector-self-copy-backwards!/count
+    $bytevector-fill!)
   (import (except (vicare)
-		  make-bytevector	bytevector-length
+		  make-bytevector			bytevector-length
 		  bytevector-empty?
-		  bytevector-copy!	bytevector-fill!
-		  bytevector-copy	bytevector-append
-		  bytevector=?		native-endianness
+		  bytevector-copy!			bytevector-fill!
+		  bytevector-copy			bytevector-append
+		  bytevector=?				native-endianness
 		  bytevector-concatenate
 		  bytevector-reverse-and-concatenate
 
 		  list-of-bytevectors?
-		  bytevector-length?		bytevector-index?
-		  bytevector-word-size?		bytevector-word-count?
+		  bytevector-length?			bytevector-index?
+		  bytevector-word-size?			bytevector-word-count?
 		  bytevector-index-for-word?
 		  bytevector-index-for-word8?
 		  bytevector-index-for-word16?
@@ -144,75 +186,77 @@
 		  bytevector-start-index-and-count-for-word32?
 		  bytevector-start-index-and-count-for-word64?
 
-		  bytevector-s8-ref	bytevector-s8-set!
-		  bytevector-u8-ref	bytevector-u8-set!
+		  bytevector-s8-ref			bytevector-s8-set!
+		  bytevector-u8-ref			bytevector-u8-set!
 
-		  bytevector-u16-native-ref	bytevector-u16-native-set!
-		  bytevector-s16-native-ref	bytevector-s16-native-set!
-		  bytevector-u32-native-ref	bytevector-u32-native-set!
-		  bytevector-s32-native-ref	bytevector-s32-native-set!
-		  bytevector-u64-native-ref	bytevector-u64-native-set!
-		  bytevector-s64-native-ref	bytevector-s64-native-set!
+		  bytevector-u16-native-ref		bytevector-u16-native-set!
+		  bytevector-s16-native-ref		bytevector-s16-native-set!
+		  bytevector-u32-native-ref		bytevector-u32-native-set!
+		  bytevector-s32-native-ref		bytevector-s32-native-set!
+		  bytevector-u64-native-ref		bytevector-u64-native-set!
+		  bytevector-s64-native-ref		bytevector-s64-native-set!
 
-		  bytevector-u16-ref	bytevector-u16-set!
-		  bytevector-s16-ref	bytevector-s16-set!
-		  bytevector-u32-ref	bytevector-u32-set!
-		  bytevector-s32-ref	bytevector-s32-set!
-		  bytevector-u64-ref	bytevector-u64-set!
-		  bytevector-s64-ref	bytevector-s64-set!
+		  bytevector-u16-ref			bytevector-u16-set!
+		  bytevector-s16-ref			bytevector-s16-set!
+		  bytevector-u32-ref			bytevector-u32-set!
+		  bytevector-s32-ref			bytevector-s32-set!
+		  bytevector-u64-ref			bytevector-u64-set!
+		  bytevector-s64-ref			bytevector-s64-set!
 
-		  bytevector-uint-ref	bytevector-uint-set!
-		  bytevector-sint-ref	bytevector-sint-set!
+		  bytevector-uint-ref			bytevector-uint-set!
+		  bytevector-sint-ref			bytevector-sint-set!
 
-		  bytevector-ieee-double-native-ref bytevector-ieee-double-native-set!
-		  bytevector-ieee-single-native-ref bytevector-ieee-single-native-set!
-		  bytevector-ieee-double-ref	bytevector-ieee-double-set!
-		  bytevector-ieee-single-ref	bytevector-ieee-single-set!
+		  bytevector-ieee-double-native-ref	bytevector-ieee-double-native-set!
+		  bytevector-ieee-single-native-ref	bytevector-ieee-single-native-set!
+		  bytevector-ieee-double-ref		bytevector-ieee-double-set!
+		  bytevector-ieee-single-ref		bytevector-ieee-single-set!
 
-		  uint-list->bytevector	bytevector->uint-list
-		  sint-list->bytevector	bytevector->sint-list
+		  uint-list->bytevector			bytevector->uint-list
+		  sint-list->bytevector			bytevector->sint-list
 
-		  u8-list->bytevector	bytevector->u8-list
-		  s8-list->bytevector	bytevector->s8-list
+		  u8-list->bytevector			bytevector->u8-list
+		  s8-list->bytevector			bytevector->s8-list
 
-		  u16l-list->bytevector	bytevector->u16l-list
-		  u16b-list->bytevector	bytevector->u16b-list
-		  u16n-list->bytevector	bytevector->u16n-list
-		  s16l-list->bytevector	bytevector->s16l-list
-		  s16b-list->bytevector	bytevector->s16b-list
-		  s16n-list->bytevector	bytevector->s16n-list
+		  u16l-list->bytevector			bytevector->u16l-list
+		  u16b-list->bytevector			bytevector->u16b-list
+		  u16n-list->bytevector			bytevector->u16n-list
+		  s16l-list->bytevector			bytevector->s16l-list
+		  s16b-list->bytevector			bytevector->s16b-list
+		  s16n-list->bytevector			bytevector->s16n-list
 
-		  u32l-list->bytevector	bytevector->u32l-list
-		  u32b-list->bytevector	bytevector->u32b-list
-		  u32n-list->bytevector	bytevector->u32n-list
-		  s32l-list->bytevector	bytevector->s32l-list
-		  s32b-list->bytevector	bytevector->s32b-list
-		  s32n-list->bytevector	bytevector->s32n-list
+		  u32l-list->bytevector			bytevector->u32l-list
+		  u32b-list->bytevector			bytevector->u32b-list
+		  u32n-list->bytevector			bytevector->u32n-list
+		  s32l-list->bytevector			bytevector->s32l-list
+		  s32b-list->bytevector			bytevector->s32b-list
+		  s32n-list->bytevector			bytevector->s32n-list
 
-		  u64l-list->bytevector	bytevector->u64l-list
-		  u64b-list->bytevector	bytevector->u64b-list
-		  u64n-list->bytevector	bytevector->u64n-list
-		  s64l-list->bytevector	bytevector->s64l-list
-		  s64b-list->bytevector	bytevector->s64b-list
-		  s64n-list->bytevector	bytevector->s64n-list
+		  u64l-list->bytevector			bytevector->u64l-list
+		  u64b-list->bytevector			bytevector->u64b-list
+		  u64n-list->bytevector			bytevector->u64n-list
+		  s64l-list->bytevector			bytevector->s64l-list
+		  s64b-list->bytevector			bytevector->s64b-list
+		  s64n-list->bytevector			bytevector->s64n-list
 
-		  f4l-list->bytevector	bytevector->f4l-list
-		  f4b-list->bytevector	bytevector->f4b-list
-		  f4n-list->bytevector	bytevector->f4n-list
-		  f8l-list->bytevector	bytevector->f8l-list
-		  f8b-list->bytevector	bytevector->f8b-list
-		  f8n-list->bytevector	bytevector->f8n-list
+		  f4l-list->bytevector			bytevector->f4l-list
+		  f4b-list->bytevector			bytevector->f4b-list
+		  f4n-list->bytevector			bytevector->f4n-list
+		  f8l-list->bytevector			bytevector->f8l-list
+		  f8b-list->bytevector			bytevector->f8b-list
+		  f8n-list->bytevector			bytevector->f8n-list
 
-		  c4l-list->bytevector	bytevector->c4l-list
-		  c4b-list->bytevector	bytevector->c4b-list
-		  c4n-list->bytevector	bytevector->c4n-list
-		  c8l-list->bytevector	bytevector->c8l-list
-		  c8b-list->bytevector	bytevector->c8b-list
-		  c8n-list->bytevector	bytevector->c8n-list
+		  c4l-list->bytevector			bytevector->c4l-list
+		  c4b-list->bytevector			bytevector->c4b-list
+		  c4n-list->bytevector			bytevector->c4n-list
+		  c8l-list->bytevector			bytevector->c8l-list
+		  c8b-list->bytevector			bytevector->c8b-list
+		  c8n-list->bytevector			bytevector->c8n-list
 
-		  subbytevector-u8	subbytevector-u8/count
-		  subbytevector-s8	subbytevector-s8/count)
-    (prefix (vicare platform words) words.)
+		  subbytevector-u8			subbytevector-u8/count
+		  subbytevector-s8			subbytevector-s8/count)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $flonums)
     (only (vicare system $bytevectors)
 	  $make-bytevector
 	  $bytevector-length
@@ -227,19 +271,12 @@
 	  $bytevector-ieee-single-native-set!
 	  $bytevector-ieee-single-nonnative-ref
 	  $bytevector-ieee-single-nonnative-set!)
-    (except (vicare unsafe operations)
-	    $bytevector-copy
-	    $bytevector=
-	    $bytevector-total-length
-	    $bytevector-concatenate
-	    $bytevector-reverse-and-concatenate
-	    $bytevector-empty?)
+    (prefix (vicare platform words) words.)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
     ;;2015)
     (only (ikarus fixnums)
 	  positive-fixnum?
-	  non-negative-fixnum?)
-    (vicare arguments validation))
+	  non-negative-fixnum?))
 
 
 ;;;; helpers
@@ -254,6 +291,67 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-syntax (%case-endianness stx)
+  (module (platform-endianness)
+    (include "ikarus.config.ss" #t))
+  (syntax-case stx (big little)
+    ((_ ((big) ?big-stuff) ((little) ?little-stuff))
+     (case platform-endianness
+       ((big)		#'?big-stuff)
+       ((little)	#'?little-stuff)))
+    ))
+
+(define-syntax define-cased-accessor
+  (syntax-rules ()
+    ((_ ?who ?big-who ?little-who)
+     (define (?who bv index)
+       (%case-endianness
+	((big)		(?big-who     bv index))
+	((little)	(?little-who  bv index)))))
+    ))
+
+(define-syntax define-cased-mutator
+  (syntax-rules ()
+    ((_ ?who ?big-who ?little-who)
+     (define (?who bv index value)
+       (%case-endianness
+	((big)		(?big-who    bv index value))
+	((little)	(?little-who bv index value)))))
+    ))
+
+(define-syntax define-generic-cased-accessor
+  (syntax-rules ()
+    ((_ ?who ?big-who ?little-who ?native-who)
+     (define (?who bv index endianness)
+       (case endianness
+	 ((big)		(?big-who    bv index))
+	 ((little)	(?little-who bv index))
+	 (else		(?native-who bv index)))))
+    ))
+
+(define-syntax define-generic-cased-mutator
+  (syntax-rules ()
+    ((_ ?who ?big-who ?little-who ?native-who)
+     (define (?who bv index value endianness)
+       (case endianness
+	 ((big)		(?big-who    bv index value))
+	 ((little)	(?little-who bv index value))
+	 (else		(?native-who bv index value)))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax $fixnum-ior
+  (syntax-rules ()
+    ((_ ?op1)
+     ?op1)
+    ((_ ?op1 ?op2)
+     ($fxlogor ?op1 ?op2))
+    ((_ ?op1 ?op2 . ?ops)
+     ($fxlogor ?op1 ($fixnum-ior ?op2 . ?ops)))))
+
+;;; --------------------------------------------------------------------
+
 (define (bytevector-byte-filler? obj)
   ;;Return  #t if  OBJ  is valid  as byte  filler  for new  bytevectors;
   ;;otherwise return #f.
@@ -264,104 +362,104 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (bytevector-flonum-single-le-set! bv i x)
+(define (bytevector-flonum-single-le-set! bv i x)
   (bytevector-ieee-single-set! bv i x (endianness little)))
 
-(define-inline (bytevector-flonum-single-be-set! bv i x)
+(define (bytevector-flonum-single-be-set! bv i x)
   (bytevector-ieee-single-set! bv i x (endianness big)))
 
-(define-inline (bytevector-flonum-single-ne-set! bv i x)
+(define (bytevector-flonum-single-ne-set! bv i x)
   (bytevector-ieee-single-native-set! bv i x))
 
-(define-inline (bytevector-flonum-double-le-set! bv i x)
+(define (bytevector-flonum-double-le-set! bv i x)
   (bytevector-ieee-double-set! bv i x (endianness little)))
 
-(define-inline (bytevector-flonum-double-be-set! bv i x)
+(define (bytevector-flonum-double-be-set! bv i x)
   (bytevector-ieee-double-set! bv i x (endianness big)))
 
-(define-inline (bytevector-flonum-double-ne-set! bv i x)
+(define (bytevector-flonum-double-ne-set! bv i x)
   (bytevector-ieee-double-native-set! bv i x))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (bytevector-flonum-single-le-ref bv i)
+(define (bytevector-flonum-single-le-ref bv i)
   (bytevector-ieee-single-ref bv i (endianness little)))
 
-(define-inline (bytevector-flonum-single-be-ref bv i)
+(define (bytevector-flonum-single-be-ref bv i)
   (bytevector-ieee-single-ref bv i (endianness big)))
 
-(define-inline (bytevector-flonum-single-ne-ref bv i)
+(define (bytevector-flonum-single-ne-ref bv i)
   (bytevector-ieee-single-native-ref bv i))
 
-(define-inline (bytevector-flonum-double-le-ref bv i)
+(define (bytevector-flonum-double-le-ref bv i)
   (bytevector-ieee-double-ref bv i (endianness little)))
 
-(define-inline (bytevector-flonum-double-be-ref bv i)
+(define (bytevector-flonum-double-be-ref bv i)
   (bytevector-ieee-double-ref bv i (endianness big)))
 
-(define-inline (bytevector-flonum-double-ne-ref bv i)
+(define (bytevector-flonum-double-ne-ref bv i)
   (bytevector-ieee-double-native-ref bv i))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (bytevector-cflonum-single-le-set! bv i x)
+(define (bytevector-cflonum-single-le-set! bv i x)
   (bytevector-ieee-single-set! bv i          (real-part x) (endianness little))
   (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness little)))
 
-(define-inline (bytevector-cflonum-single-be-set! bv i x)
+(define (bytevector-cflonum-single-be-set! bv i x)
   (bytevector-ieee-single-set! bv i          (real-part x) (endianness big))
   (bytevector-ieee-single-set! bv ($fx+ 4 i) (imag-part x) (endianness big)))
 
-(define-inline (bytevector-cflonum-single-ne-set! bv i x)
+(define (bytevector-cflonum-single-ne-set! bv i x)
   (bytevector-ieee-single-native-set! bv i          (real-part x))
   (bytevector-ieee-single-native-set! bv ($fx+ 4 i) (imag-part x)))
 
-(define-inline (bytevector-cflonum-double-le-set! bv i x)
+(define (bytevector-cflonum-double-le-set! bv i x)
   (bytevector-ieee-double-set! bv i          (real-part x) (endianness little))
   (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness little)))
 
-(define-inline (bytevector-cflonum-double-be-set! bv i x)
+(define (bytevector-cflonum-double-be-set! bv i x)
   (bytevector-ieee-double-set! bv i          (real-part x) (endianness big))
   (bytevector-ieee-double-set! bv ($fx+ 8 i) (imag-part x) (endianness big)))
 
-(define-inline (bytevector-cflonum-double-ne-set! bv i x)
+(define (bytevector-cflonum-double-ne-set! bv i x)
   (bytevector-ieee-double-native-set! bv i          (real-part x))
   (bytevector-ieee-double-native-set! bv ($fx+ 8 i) (imag-part x)))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (bytevector-cflonum-single-le-ref bv i)
+(define (bytevector-cflonum-single-le-ref bv i)
   (make-rectangular
     (bytevector-ieee-single-ref bv i          (endianness little))
     (bytevector-ieee-single-ref bv ($fx+ 4 i) (endianness little))))
 
-(define-inline (bytevector-cflonum-single-be-ref bv i)
+(define (bytevector-cflonum-single-be-ref bv i)
   (make-rectangular
     (bytevector-ieee-single-ref bv i          (endianness big))
     (bytevector-ieee-single-ref bv ($fx+ 4 i) (endianness big))))
 
-(define-inline (bytevector-cflonum-single-ne-ref bv i)
+(define (bytevector-cflonum-single-ne-ref bv i)
   (make-rectangular
     (bytevector-ieee-single-native-ref bv i)
     (bytevector-ieee-single-native-ref bv ($fx+ 4 i))))
 
-(define-inline (bytevector-cflonum-double-le-ref bv i)
+(define (bytevector-cflonum-double-le-ref bv i)
   (make-rectangular
     (bytevector-ieee-double-ref bv i          (endianness little))
     (bytevector-ieee-double-ref bv ($fx+ 8 i) (endianness little))))
 
-(define-inline (bytevector-cflonum-double-be-ref bv i)
+(define (bytevector-cflonum-double-be-ref bv i)
   (make-rectangular
     (bytevector-ieee-double-ref bv i          (endianness big))
     (bytevector-ieee-double-ref bv ($fx+ 8 i) (endianness big))))
 
-(define-inline (bytevector-cflonum-double-ne-ref bv i)
+(define (bytevector-cflonum-double-ne-ref bv i)
   (make-rectangular
     (bytevector-ieee-double-native-ref bv i)
     (bytevector-ieee-double-native-ref bv ($fx+ 8 i))))
 
 
-;;;; preconditions syntax
+;;;; preconditions syntax and arguments validation
 
 ;;FIXME Should  this syntax be  included in the expander?   (Marco Maggi; Wed  Dec 4,
 ;;2013)
@@ -397,8 +495,7 @@
        #'(void)))
     ))
 
-
-;;;; arguments validation
+;;; --------------------------------------------------------------------
 
 (define-syntax (assert-total-string-length stx)
   (syntax-case stx ()
@@ -408,112 +505,6 @@
 	 (procedure-argument-violation __who__
 	   "total resulting bytevector length out of range, expected non-negative fixnum" ?len)))
     ))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (index-for who idx bv word-size-in-bytes)
-  ;;To be  used after INDEX  validation.  This validation is  for getter
-  ;;and setter indexes.  Valid scenarios:
-  ;;
-  ;;  |...|word
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                      ^index
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                  ^index
-  ;;
-  ;;the following are invalid scenarios:
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                      ^index = bv.len
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                    ^index = bv.len
-  ;;
-  ;;  | empty bytevector
-  ;;  ^index = bv.len = 0
-  ;;
-  ($fx<= idx ($fx- ($bytevector-length bv) word-size-in-bytes))
-  (procedure-argument-violation who
-    (string-append "index argument "			(number->string idx)
-		   " too big for bytevector length "	(number->string ($bytevector-length bv))
-		   " and word size "			(number->string word-size-in-bytes))
-    idx))
-
-(define-argument-validation (start-index-for who idx bv word-size-in-bytes)
-  ;;To be used after  START-INDEX validation.  Valid scenarios for start
-  ;;indexes:
-  ;;
-  ;;  |...|word
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                      ^start
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                  ^start
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                      ^start = bv.len
-  ;;
-  ;;  | empty bytevector
-  ;;  ^start = bv.len = 0
-  ;;
-  ;;the following is an invalid scenario:
-  ;;
-  ;;  |---|---|---|---|---|---|---|---|---| bytevector
-  ;;                                    ^start = bv.len
-  ;;
-  (let ((bv.len ($bytevector-length bv)))
-    (or ($fx=  idx bv.len)
-	($fx<= idx ($fx- bv.len word-size-in-bytes))))
-  (procedure-argument-violation who
-    (string-append "start index argument "		(number->string idx)
-		   " too big for bytevector length "	(number->string ($bytevector-length bv))
-		   " and word size "			(number->string word-size-in-bytes))
-    idx))
-
-(define-argument-validation (end-index-for who idx bv word-size-in-bytes)
-  ;;To  be used after  END-INDEX validation.   An end  index can  be any
-  ;;index less than or equal to the bytevector size; also in the case of
-  ;;empty bytevector.
-  ;;
-  ($fx<= idx ($bytevector-length bv))
-  (procedure-argument-violation who
-    (string-append "end index argument "		(number->string idx)
-		   " too big for bytevector length "	(number->string ($bytevector-length bv))
-		   " and word size "			(number->string word-size-in-bytes))
-    idx))
-
-(define-argument-validation (aligned-index-2 who idx)
-  (words.fixnum-aligned-to-2? idx)
-  (procedure-argument-violation who
-    "expected bytevector index aligned to multiple of 2 as argument" idx))
-
-(define-argument-validation (aligned-index-4 who idx)
-  (words.fixnum-aligned-to-4? idx)
-  (procedure-argument-violation who
-    "expected bytevector index aligned to multiple of 4 as argument" idx))
-
-(define-argument-validation (aligned-index-8 who idx)
-  (words.fixnum-aligned-to-8? idx)
-  (procedure-argument-violation who
-    "expected bytevector index aligned to multiple of 8 as argument" idx))
-
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (count who count)
-  (bytevector-word-count? count)
-  (procedure-argument-violation who
-    "expected non-negative fixnum as bytevector word count argument" count))
-
-(define-argument-validation (count-for who count bv bv.start word-size-in-bytes)
-  (let ((end ($fx+ bv.start ($fx* count word-size-in-bytes))))
-    ($fx<= end ($bytevector-length bv)))
-  (procedure-argument-violation who
-    (string-append "word count "			(number->string count)
-		   " too big for bytevector length "	(number->string ($bytevector-length bv))
-		   " start index "			(number->string bv.start)
-		   " and word size "			(number->string word-size-in-bytes))
-    count))
 
 
 ;;;; endianness dispatching
@@ -706,13 +697,6 @@
   (({bv.len bytevector-length?} {fill bytevector-byte-filler?})
    ($bytevector-fill! ($make-bytevector bv.len) 0 bv.len fill)))
 
-(define* (bytevector-fill! {bv bytevector?} {fill bytevector-byte-filler?})
-  ;;Defined  by  R6RS.    The  FILL  argument  is  as  in   the  description  of  the
-  ;;MAKE-BYTEVECTOR procedure.  The BYTEVECTOR-FILL!   procedure stores FILL in every
-  ;;element of BV and returns unspecified values.
-  ;;
-  ($bytevector-fill! bv 0 ($bytevector-length bv) fill))
-
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-length {bv bytevector?})
@@ -747,7 +731,8 @@
 			  ($bytevector-u8-ref bv2 i))
 		    (loop bv1 bv2 ($fxadd1 i) len)))))))
 
-;;; --------------------------------------------------------------------
+
+;;;; copying
 
 (define* (bytevector-copy {src.bv bytevector?})
   ;;Defined by R6RS.  Return a newly allocated copy of SRC.BV.
@@ -763,9 +748,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (bytevector-copy! {src bytevector?} {src.start bytevector-index?}
-			   {dst bytevector?} {dst.start bytevector-index?}
-			   {byte-count bytevector-word-count?})
+(define* (bytevector-copy! {src.bv bytevector?} {src.start bytevector-index?}
+			   {dst.bv bytevector?} {dst.start bytevector-index?}
+			   {byte-count non-negative-fixnum?})
   ;;Defined by  R6RS.  SRC and  DST must  be bytevectors.  SRC.START,  DST.START, and
   ;;BYTE-COUNT must be non-negative exact integer objects that satisfy:
   ;;
@@ -787,36 +772,119 @@
   ;;Return unspecified values.
   ;;
   (preconditions __who__
-   (bytevector-start-index-and-count-for-word8? src src.start byte-count)
-   (bytevector-start-index-and-count-for-word8? dst dst.start byte-count))
-  (if (eq? src dst)
-      (cond (($fx< dst.start src.start)
-	     (let loop ((src.index	src.start)
-			(dst.index	dst.start)
-			(src.past	($fx+ src.start byte-count)))
-	       (unless ($fx= src.index src.past)
-		 ($bytevector-set! src dst.index ($bytevector-u8-ref src src.index))
-		 (loop ($fxadd1 src.index) ($fxadd1 dst.index) src.past))))
+   (bytevector-start-index-and-count-for-word8? src.bv src.start byte-count)
+   (bytevector-start-index-and-count-for-word8? dst.bv dst.start byte-count))
+  ($bytevector-copy!/count src.bv src.start dst.bv dst.start byte-count))
 
-	    (($fx> dst.start src.start)
-	     (let loop ((src.index	($fx+ src.start byte-count))
-			(dst.index	($fx+ dst.start byte-count))
-			(src.past	src.start))
-	       (unless ($fx= src.index src.past)
-		 (let ((src.index ($fxsub1 src.index))
-		       (dst.index ($fxsub1 dst.index)))
-		   ($bytevector-set! src dst.index ($bytevector-u8-ref src src.index))
-		   (loop src.index dst.index src.past)))))
+;;; --------------------------------------------------------------------
 
-	    #| If (= dst.start src.start) we need to do nothing. |# )
+(define ($bytevector-copy! src.bv src.start dst.bv dst.start src.end)
+  ;;Copy the characters of SRC.BV from  SRC.START inclusive to SRC.END exclusive, to
+  ;;DST.BV starting at DST.START inclusive.
+  ;;
+  (cond (($fx= src.start src.end)
+	 (void))
+	((eq? src.bv dst.bv)
+	 (cond (($fx< dst.start src.start)
+		($bytevector-copy-forwards!  src.bv src.start dst.bv dst.start src.end))
+	       (($fx> dst.start src.start)
+		($bytevector-copy-backwards! src.bv src.start dst.bv dst.start src.end))
+	       (else (void))))
+	(else
+	 ($bytevector-copy-forwards!  src.bv src.start dst.bv dst.start src.end))))
 
-    ;;Source and dest are different bytevectors.
-    (let loop ((src.index	src.start)
-	       (dst.index	dst.start)
-	       (src.past	($fx+ src.start byte-count)))
-      (unless ($fx= src.index src.past)
-	($bytevector-set! dst dst.index ($bytevector-u8-ref src src.index))
-	(loop ($fxadd1 src.index) ($fxadd1 dst.index) src.past)))))
+(define ($bytevector-copy-forwards! src.bv src.start dst.bv dst.start src.end)
+  ;;Copy characters  of STR.BV  from SRC.START inclusive  to SRC.END  exclusive into
+  ;;DST.BV itself starting at DST.START inclusive.  The copy happens forwards, so if
+  ;;SRC.BV  and DST.BV  are the  same:  it is  suitable  for the  case SRC.START  >
+  ;;DST.START.
+  ;;
+  (unless ($fx= src.start src.end)
+    ($bytevector-set! dst.bv dst.start ($bytevector-u8-ref src.bv src.start))
+    ($bytevector-copy-forwards! src.bv ($fxadd1 src.start) dst.bv ($fxadd1 dst.start) src.end)))
+
+(define ($bytevector-copy-backwards! src.bv src.start dst.bv dst.start src.end)
+  ;;Copy characters  of STR.BV  from SRC.START inclusive  to SRC.END  exclusive into
+  ;;DST.BV itself starting  at DST.START inclusive.  The copy  happens backwards, so
+  ;;if SRC.BV  and DST.BV are  the same:  it is suitable  for the case  SRC.START <
+  ;;DST.START.
+  ;;
+  (define count ($fx- src.end src.start))
+  (let loop ((src.end   src.end)
+	     (dst.end	($fx+ dst.start count)))
+    (unless ($fx= src.start src.end)
+      (let ((src.end ($fxsub1 src.end))
+	    (dst.end ($fxsub1 dst.end)))
+	($bytevector-set! dst.bv dst.end ($bytevector-u8-ref src.bv src.end))
+	(loop src.end dst.end)))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-copy!/count src.bv src.start dst.bv dst.start count)
+  ;;Copy COUNT  characters from  SRC.BV starting at  SRC.START inclusive  to DST.BV
+  ;;starting at DST.START inclusive.
+  ;;
+  (cond (($fxzero? count)
+	 (void))
+	((eq? src.bv dst.bv)
+	 (cond (($fx< dst.start src.start)
+		($bytevector-self-copy-forwards!/count  src.bv src.start dst.start count))
+	       (($fx> dst.start src.start)
+		($bytevector-self-copy-backwards!/count src.bv src.start dst.start count))
+	       (else (void))))
+	(else
+	 (let ((src.end ($fx+ src.start count)))
+	   ($bytevector-copy-forwards! src.bv src.start dst.bv dst.start src.end)))))
+
+(define ($bytevector-self-copy-forwards!/count str src.start dst.start count)
+  ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at
+  ;;DST.START inclusive.  The  copy happens forwards, so it is  suitable for the case
+  ;;SRC.START > DST.START.
+  ;;
+  (let loop ((str	str)
+	     (src.start	src.start)
+	     (dst.start	dst.start)
+	     (src.end	($fx+ src.start count)))
+    (unless ($fx= src.start src.end)
+      ($bytevector-set! str dst.start ($bytevector-u8-ref str src.start))
+      (loop str ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
+
+(define ($bytevector-self-copy-backwards!/count str src.start dst.start count)
+  ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at
+  ;;DST.START inclusive.  The copy happens backwards,  so it is suitable for the case
+  ;;SRC.START < DST.START.
+  ;;
+  (let loop ((str	str)
+	     (src.start	($fx+ src.start count))
+	     (dst.start	($fx+ dst.start count))
+	     (src.end	src.start))
+    (unless ($fx= src.start src.end)
+      (let ((src.start ($fxsub1 src.start))
+	    (dst.start ($fxsub1 dst.start)))
+	($bytevector-set! str dst.start ($bytevector-u8-ref str src.start))
+	(loop str src.start dst.start src.end)))))
+
+
+
+
+
+;;;; filling
+
+(define* (bytevector-fill! {bv bytevector?} {fill bytevector-byte-filler?})
+  ;;Defined  by  R6RS.    The  FILL  argument  is  as  in   the  description  of  the
+  ;;MAKE-BYTEVECTOR procedure.  The BYTEVECTOR-FILL!   procedure stores FILL in every
+  ;;element of BV and returns unspecified values.
+  ;;
+  ($bytevector-fill! bv 0 ($bytevector-length bv) fill))
+
+(define ($bytevector-fill! bv index end fill)
+  ;;Fill the positions in BV from INDEX inclusive to END exclusive with FILL.
+  ;;
+  (if ($fx< index end)
+      (begin
+	($bytevector-set! bv index fill)
+	($bytevector-fill! bv ($fxadd1 index) end fill))
+    bv))
 
 
 ;;;; subbytevectors, bytes
@@ -829,11 +897,19 @@
   ;;   0 <= SRC.START <= src.END <= (bytevector-length SRC.BV)
   ;;
   (({src.bv bytevector?} src.start)
-   (subbytevector-u8 src.bv src.start ($bytevector-length src.bv)))
+   (let ((src.end ($bytevector-length src.bv)))
+     (preconditions __who__
+       (bytevector-start-past-indexes? src.bv src.start src.end))
+     ($subbytevector-u8 src.bv src.start src.end)))
   (({src.bv bytevector?} {src.start bytevector-index?} {src.end bytevector-index?})
    (preconditions __who__
      (bytevector-start-past-indexes? src.bv src.start src.end))
-   (%$subbytevector-u8/count src.bv src.start ($fx- src.end src.start))))
+   ($subbytevector-u8 src.bv src.start src.end)))
+
+(define ($subbytevector-u8 src.bv src.start src.end)
+  ($subbytevector-u8/count src.bv src.start (fx- src.end src.start)))
+
+;;; --------------------------------------------------------------------
 
 (define* (subbytevector-u8/count {src.bv bytevector?} {src.start bytevector-index?} {dst.len bytevector-length?})
   ;;Defined by  Vicare.  Build and return  a new bytevector holding  DST.LEN bytes in
@@ -844,15 +920,15 @@
   ;;
   (preconditions __who__
     (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
-  (%$subbytevector-u8/count src.bv src.start dst.len))
+  ($subbytevector-u8/count src.bv src.start dst.len))
 
-(define (%$subbytevector-u8/count src.bv src.start dst.len)
+(define ($subbytevector-u8/count src.bv src.start dst.len)
   (do ((dst.bv ($make-bytevector dst.len))
        (dst.index 0         ($fxadd1 dst.index))
        (src.index src.start ($fxadd1 src.index)))
       (($fx= dst.index dst.len)
        dst.bv)
-    ($bytevector-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))))
+    ($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index))))
 
 ;;; --------------------------------------------------------------------
 
@@ -864,11 +940,19 @@
   ;;   0 <= SRC.START <= src.END <= (bytevector-length SRC.BV)
   ;;
   (({src.bv bytevector?} src.start)
-   (subbytevector-s8 src.bv src.start ($bytevector-length src.bv)))
+   (let ((src.end ($bytevector-length src.bv)))
+     (preconditions __who__
+       (bytevector-start-past-indexes? src.bv src.start src.end))
+     ($subbytevector-s8 src.bv src.start src.end))>)
   (({src.bv bytevector?} {src.start bytevector-index?} {src.end bytevector-index?})
    (preconditions __who__
      (bytevector-start-past-indexes? src.bv src.start src.end))
-   (%$subbytevector-s8/count src.bv src.start ($fx- src.end src.start))))
+   ($subbytevector-s8 src.bv src.start src.end)))
+
+(define ($subbytevector-s8 src.bv src.start src.end)
+  ($subbytevector-s8/count src.bv src.start (fx- src.end src.start)))
+
+;;; --------------------------------------------------------------------
 
 (define* (subbytevector-s8/count {src.bv bytevector?} {src.start bytevector-index?} {dst.len bytevector-length?})
   ;;Defined by  Vicare.  Build and return  a new bytevector holding  DST.LEN bytes in
@@ -879,15 +963,15 @@
   ;;
   (preconditions __who__
     (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
-  (%$subbytevector-s8/count src.bv src.start dst.len))
+  ($subbytevector-s8/count src.bv src.start dst.len))
 
-(define (%$subbytevector-s8/count src.bv src.start dst.len)
+(define ($subbytevector-s8/count src.bv src.start dst.len)
   (do ((dst.bv ($make-bytevector dst.len))
        (dst.index 0         ($fxadd1 dst.index))
        (src.index src.start ($fxadd1 src.index)))
       (($fx= dst.index dst.len)
        dst.bv)
-    ($bytevector-set! dst.bv dst.index ($bytevector-s8-ref src.bv src.index))))
+    ($bytevector-s8-set! dst.bv dst.index ($bytevector-s8-ref src.bv src.index))))
 
 
 ;;;; appending and concatenating
@@ -992,6 +1076,8 @@
   (preconditions __who__
     (bytevector-index-for-word8? bv index))
   ($bytevector-u8-set! bv index octet))
+
+;;; --------------------------------------------------------------------
 
 ;;FIXME This should be a proper primitive operation.  (Marco Maggi; Sun Mar 22, 2015)
 (define ($bytevector-u8-set! bv idx val)
@@ -1222,9 +1308,9 @@
 	 ($bytevector-ieee-double-nonnative-ref bv index)))
     (case-endianness (__who__ endianness)
       ((little)
-       ($bytevector-ieee-double-ref/little bv index))
+       ($bytevector-ieee-double-little-ref bv index))
       ((big)
-       ($bytevector-ieee-double-ref/big bv index)))))
+       ($bytevector-ieee-double-big-ref bv index)))))
 
 (define* (bytevector-ieee-double-set! {bv bytevector?} {index bytevector-index?} {X flonum?} endianness)
   (preconditions __who__
@@ -1237,9 +1323,9 @@
 	 ($bytevector-ieee-double-nonnative-set! bv index X)))
     (case endianness
       ((little)
-       ($bytevector-ieee-double-set!/little bv index X))
+       ($bytevector-ieee-double-little-set! bv index X))
       ((big)
-       ($bytevector-ieee-double-set!/big bv index X)))))
+       ($bytevector-ieee-double-big-set! bv index X)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1269,9 +1355,9 @@
 	 ($bytevector-ieee-single-nonnative-ref bv index)))
     (case-endianness (__who__ endianness)
       ((little)
-       ($bytevector-ieee-single-ref/little bv index))
+       ($bytevector-ieee-single-little-ref bv index))
       ((big)
-       ($bytevector-ieee-single-ref/big bv index)))))
+       ($bytevector-ieee-single-big-ref bv index)))))
 
 (define* (bytevector-ieee-single-set! {bv bytevector?} {index bytevector-index?}
 				      {X flonum?} endianness)
@@ -1285,9 +1371,9 @@
 	 ($bytevector-ieee-single-nonnative-set! bv index X)))
     (case-endianness (__who__ endianness)
       ((little)
-       ($bytevector-ieee-single-set!/little bv index X))
+       ($bytevector-ieee-single-little-set! bv index X))
       ((big)
-       ($bytevector-ieee-single-set!/big bv index X)))))
+       ($bytevector-ieee-single-big-set! bv index X)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1304,16 +1390,411 @@
   ($bytevector-ieee-single-native-set! bv index X))
 
 
-;;;; unsafe flonum setters and getters
+;;;; unsafe 16-bit setters and getters
 ;;
-;;As defined  by IEEE  754: single-precision flonums  are 4  bytes long,
-;;double-precision  flonums  are 8  bytes  long.   Vicare's flonums  are
-;;double-precision.  On  big-endian platforms the order of  bytes is the
-;;same in a flonum data area and the bytevector.
+;;            |            | lowest memory | highest memory
+;; endianness |    word    | location      | location
+;; -----------+------------+---------------+--------------
+;;   little   |   #xHHLL   |     LL        |     HH
+;;    big     |   #xHHLL   |     HH        |     LL
+;;
+;;NOTE Remember that $BYTEVECTOR-SET! takes care  of storing in memory only the least
+;;significant byte of its value argument.
 ;;
 
-(define ($bytevector-ieee-double-ref/big x i)
-  (let ((y ($make-flonum)))
+(define ($bytevector-u16l-ref bv index)
+  ($fxlogor
+   ;; highest memory location -> most significant byte
+   ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
+   ;; lowest memory location -> least significant byte
+   ($bytevector-u8-ref bv index)))
+
+(define ($bytevector-u16l-set! bv index word)
+  ;; lowest memory location -> least significant byte
+  ($bytevector-set! bv index word)
+  ;; highest memory location -> most significant byte
+  ($bytevector-set! bv ($fxadd1 index) (fxsra word 8)))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-u16b-ref bv index)
+  ($fxlogor
+   ;; lowest memory location -> most significant byte
+   ($fxsll ($bytevector-u8-ref bv index) 8)
+   ;; highest memory location -> least significant byte
+   ($bytevector-u8-ref bv ($fxadd1 index))))
+
+(define ($bytevector-u16b-set! bv index word)
+  ;; lowest memory location -> most significant byte
+  ($bytevector-set! bv index ($fxsra word 8))
+  ;; highest memory location -> least significant byte
+  ($bytevector-set! bv ($fxadd1 index) word))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s16l-ref bv index)
+  ($fxlogor
+   ;; highest memory location -> most significant byte
+   ($fxsll ($bytevector-s8-ref bv ($fxadd1 index)) 8)
+   ;; lowest memory location -> least significant byte
+   ($bytevector-u8-ref bv index)))
+
+(define ($bytevector-s16l-set! bv index word)
+  ;; lowest memory location -> least significant byte
+  ($bytevector-set! bv index word)
+  ;; highest memory location -> most significant byte
+  ($bytevector-set! bv ($fxadd1 index) (fxsra word 8)))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s16b-ref bv index)
+  ($fxlogor
+   ;; lowest memory location -> most significant byte
+   ($fxsll ($bytevector-s8-ref bv index) 8)
+   ;; highest memory location -> least significant byte
+   ($bytevector-u8-ref bv ($fxadd1 index))))
+
+(define ($bytevector-s16b-set! bv index word)
+  ;; lowest memory location -> most significant byte
+  ($bytevector-set! bv index ($fxsra word 8))
+  ;; highest memory location -> least significant byte
+  ($bytevector-set! bv ($fxadd1 index) word))
+
+;;; --------------------------------------------------------------------
+
+(define-cased-accessor $bytevector-u16n-ref
+  $bytevector-u16b-ref
+  $bytevector-u16l-ref)
+
+(define-cased-mutator $bytevector-u16n-set!
+  $bytevector-u16b-set!
+  $bytevector-u16l-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-cased-accessor $bytevector-s16n-ref
+  $bytevector-s16b-ref
+  $bytevector-s16l-ref)
+
+(define-cased-mutator $bytevector-s16n-set!
+  $bytevector-s16b-set!
+  $bytevector-s16l-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-u16-ref
+  $bytevector-u16b-ref
+  $bytevector-u16l-ref
+  $bytevector-u16n-ref)
+
+(define-generic-cased-mutator $bytevector-u16-set!
+  $bytevector-u16b-set!
+  $bytevector-u16l-set!
+  $bytevector-u16n-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-s16-ref
+  $bytevector-s16b-ref
+  $bytevector-s16l-ref
+  $bytevector-s16n-ref)
+
+(define-generic-cased-mutator $bytevector-s16-set!
+  $bytevector-s16b-set!
+  $bytevector-s16l-set!
+  $bytevector-s16n-set!)
+
+
+;;;; unsafe 32-bit setters and getters
+;;
+;;                           lowest memory ------------> highest memory
+;; endianness |    word    | 1st byte | 2nd byte | 3rd byte | 4th byte
+;; -----------+------------+----------+----------+----------+----------
+;;   little   | #xAABBCCDD |   DD     |    CC    |    BB    |    AA
+;;    big     | #xAABBCCDD |   AA     |    BB    |    CC    |    DD
+;; bit offset |            |    0     |     8    |    16    |    24
+;;
+;;NOTE Remember that $BYTEVECTOR-SET! takes care  of storing in memory only the least
+;;significant byte of its value argument.
+;;
+
+(define ($bytevector-u32b-ref bv index)
+  (+ (sll ($bytevector-u8-ref bv index) 24)
+     ($fixnum-ior
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 16)
+      ($fxsll ($bytevector-u8-ref bv ($fx+ index 2))  8)
+      ($bytevector-u8-ref bv ($fx+ index 3)))))
+
+(define ($bytevector-u32b-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv index ($fxsra b 8))
+    ($bytevector-set! bv ($fxadd1 index) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fx+ index 2) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 3) b)))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-u32l-ref bv index)
+  (+ (sll ($bytevector-u8-ref bv ($fx+ index 3)) 24)
+     ($fixnum-ior
+      ($fxsll ($bytevector-u8-ref bv ($fx+ index 2)) 16)
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
+      ($bytevector-u8-ref bv index))))
+
+(define ($bytevector-u32l-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv ($fx+ index 3) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 2) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fxadd1 index) ($fxsra b 8))
+    ($bytevector-set! bv index b)))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s32b-ref bv index)
+  (+ (sll ($bytevector-s8-ref bv index) 24)
+     ($fixnum-ior
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index))   16)
+      ($fxsll ($bytevector-u8-ref bv ($fx+    index 2))  8)
+      ($bytevector-u8-ref bv ($fx+ index 3)))))
+
+(define ($bytevector-s32b-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv index ($fxsra b 8))
+    ($bytevector-set! bv ($fxadd1 index) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fx+ index 2) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 3) b)))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s32l-ref bv index)
+  (+ (sll ($bytevector-s8-ref bv ($fx+ index 3)) 24)
+     ($fixnum-ior
+      ($fxsll ($bytevector-u8-ref bv ($fx+    index 2)) 16)
+      ($fxsll ($bytevector-u8-ref bv ($fxadd1 index))    8)
+      ($bytevector-u8-ref bv index))))
+
+(define ($bytevector-s32l-set! bv index word)
+  (let ((b (sra word 16)))
+    ($bytevector-set! bv ($fx+ index 3) ($fxsra b 8))
+    ($bytevector-set! bv ($fx+ index 2) b))
+  (let ((b (bitwise-and word #xFFFF)))
+    ($bytevector-set! bv ($fxadd1 index) ($fxsra b 8))
+    ($bytevector-set! bv index b)))
+
+;;; --------------------------------------------------------------------
+
+(define-cased-accessor $bytevector-u32n-ref
+  $bytevector-u32b-ref
+  $bytevector-u32l-ref)
+
+(define-cased-mutator $bytevector-u32n-set!
+  $bytevector-u32b-set!
+  $bytevector-u32l-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-cased-accessor $bytevector-s32n-ref
+  $bytevector-s32b-ref
+  $bytevector-s32l-ref)
+
+(define-cased-mutator $bytevector-s32n-set!
+  $bytevector-s32b-set!
+  $bytevector-s32l-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-u32-ref
+  $bytevector-u32b-ref
+  $bytevector-u32l-ref
+  $bytevector-u32n-ref)
+
+(define-generic-cased-mutator $bytevector-u32-set!
+  $bytevector-u32b-set!
+  $bytevector-u32l-set!
+  $bytevector-u32n-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-s32-ref
+  $bytevector-s32b-ref
+  $bytevector-s32l-ref
+  $bytevector-s32n-ref)
+
+(define-generic-cased-mutator $bytevector-s32-set!
+  $bytevector-s32b-set!
+  $bytevector-s32l-set!
+  $bytevector-s32n-set!)
+
+
+;;;; unsafe 64-bit setters and getters
+;;
+;;                                      lowest memory ------------> highest memory
+;; endianness |         word        | 1st | 2nd | 3rd | 4th | 5th | 6th | 7th | 8th
+;; -----------+---------------------+-----+-----+-----+-----+-----+-----+-----+-----
+;;   little   | #xAABBCCDD EEFFGGHH | HH  | GG  | FF  | EE  | DD  | CC  | BB  | AA
+;;    big     | #xAABBCCDD EEFFGGHH | AA  | BB  | CC  | DD  | EE  | FF  | GG  | HH
+;; bit offset |                     |  0  |  8  | 16  | 24  | 32  | 40  | 48  | 56
+;;
+;;NOTE Remember that $BYTEVECTOR-SET! takes care  of storing in memory only the least
+;;significant byte of its value argument.
+;;
+
+(define ($bytevector-u64b-ref ?bv ?index)
+  (let ((index ?index))
+    (let next-byte ((bv     ?bv)
+		    (index  index)
+		    (end    ($fx+ index 7))
+		    (word   0))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxadd1 index) end (sll word 8)))))))
+
+(define ($bytevector-u64b-set! ?bv ?index ?word)
+  (let ((index  ?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  ($fx+ 7 index))
+		    (end    index)
+		    (word   word))
+      ($bytevector-set! bv index (bitwise-and word #xFF))
+      (unless ($fx= index end)
+	(next-byte bv ($fxsub1 index) end (sra word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-u64l-ref ?bv ?end)
+  (let ((end ?end))
+    (let next-byte ((bv     ?bv)
+		    (index  ($fx+ 7 end))
+		    (word   0))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxsub1 index) (sll word 8)))))))
+
+(define ($bytevector-u64l-set! ?bv ?index ?word)
+  (let ((index	?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  index)
+		    (end    ($fx+ 7 index))
+		    (word   word))
+      ($bytevector-set! bv index (bitwise-and word #xFF))
+      (unless ($fx= index end)
+	(next-byte bv ($fxadd1 index) end (sra word 8))))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s64b-ref ?bv ?index)
+  (let ((bv	?bv)
+	(index	?index))
+    (let next-byte ((bv     bv)
+		    (index  ($fxadd1 index))
+		    (end    ($fx+ index 7))
+		    (word   (sll ($bytevector-s8-ref bv index) 8)))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxadd1 index) end (sll word 8)))))))
+
+(define ($bytevector-s64b-set! ?bv ?index ?word)
+  (let ((index	?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  ($fx+ 7 index))
+		    (end    index)
+		    (word   word))
+      (if ($fx= index end)
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
+	(begin
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
+	  (next-byte bv ($fxsub1 index) end (sra word 8)))))))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s64l-ref ?bv ?end)
+  (let ((bv	?bv)
+	(end	?end))
+    (let next-byte ((bv     bv)
+		    (index  ($fx+ 6 end))
+		    (word   (sll ($bytevector-s8-ref bv ($fx+ 7 end)) 8)))
+      (let ((word (+ word ($bytevector-u8-ref bv index))))
+	(if ($fx= index end)
+	    word
+	  (next-byte bv ($fxsub1 index) (sll word 8)))))))
+
+(define ($bytevector-s64l-set! ?bv ?index ?word)
+  (let ((index	?index)
+	(word	?word))
+    (let next-byte ((bv     ?bv)
+		    (index  index)
+		    (end    ($fx+ 7 index))
+		    (word   word))
+      (if ($fx= index end)
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
+	(begin
+	  ($bytevector-set! bv index (bitwise-and word #xFF))
+	  (next-byte bv ($fxadd1 index) end (sra word 8)))))))
+
+;;; --------------------------------------------------------------------
+
+(define-cased-accessor $bytevector-u64n-ref
+  $bytevector-u64b-ref
+  $bytevector-u64l-ref)
+
+(define-cased-mutator $bytevector-u64n-set!
+  $bytevector-u64b-set!
+  $bytevector-u64l-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-cased-accessor $bytevector-s64n-ref
+  $bytevector-s64b-ref
+  $bytevector-s64l-ref)
+
+(define-cased-mutator $bytevector-s64n-set!
+  $bytevector-s64b-set!
+  $bytevector-s64l-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-u64-ref
+  $bytevector-u64b-ref
+  $bytevector-u64l-ref
+  $bytevector-u64n-ref)
+
+(define-generic-cased-mutator $bytevector-u64-set!
+  $bytevector-u64b-set!
+  $bytevector-u64l-set!
+  $bytevector-u64n-set!)
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-s64-ref
+  $bytevector-s64b-ref
+  $bytevector-s64l-ref
+  $bytevector-s64n-ref)
+
+(define-generic-cased-mutator $bytevector-s64-set!
+  $bytevector-s64b-set!
+  $bytevector-s64l-set!
+  $bytevector-s64n-set!)
+
+
+;;;; unsafe flonum setters and getters: double-precision IEEE flonums
+;;
+;;As defined by IEEE 754: single-precision flonums are 4 bytes long, double-precision
+;;flonums are  8 bytes long.   Vicare's flonums are double-precision.   On big-endian
+;;platforms the order of bytes is the same in a flonum data area and the bytevector.
+;;
+
+(define ($bytevector-ieee-double-big-ref x i)
+  (receive-and-return (y)
+      ($make-flonum)
     ($flonum-set! y 0 ($bytevector-u8-ref x i))
     ($flonum-set! y 1 ($bytevector-u8-ref x ($fx+ i 1)))
     ($flonum-set! y 2 ($bytevector-u8-ref x ($fx+ i 2)))
@@ -1321,10 +1802,9 @@
     ($flonum-set! y 4 ($bytevector-u8-ref x ($fx+ i 4)))
     ($flonum-set! y 5 ($bytevector-u8-ref x ($fx+ i 5)))
     ($flonum-set! y 6 ($bytevector-u8-ref x ($fx+ i 6)))
-    ($flonum-set! y 7 ($bytevector-u8-ref x ($fx+ i 7)))
-    y))
+    ($flonum-set! y 7 ($bytevector-u8-ref x ($fx+ i 7)))))
 
-(define ($bytevector-ieee-double-set!/big x i y)
+(define ($bytevector-ieee-double-big-set! x i y)
   ($bytevector-set! x i          ($flonum-u8-ref y 0))
   ($bytevector-set! x ($fx+ i 1) ($flonum-u8-ref y 1))
   ($bytevector-set! x ($fx+ i 2) ($flonum-u8-ref y 2))
@@ -1334,8 +1814,11 @@
   ($bytevector-set! x ($fx+ i 6) ($flonum-u8-ref y 6))
   ($bytevector-set! x ($fx+ i 7) ($flonum-u8-ref y 7)))
 
-(define ($bytevector-ieee-double-ref/little x i)
-  (let ((y ($make-flonum)))
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-ieee-double-little-ref x i)
+  (receive-and-return (y)
+      ($make-flonum)
     ($flonum-set! y 7 ($bytevector-u8-ref x i))
     ($flonum-set! y 6 ($bytevector-u8-ref x ($fx+ i 1)))
     ($flonum-set! y 5 ($bytevector-u8-ref x ($fx+ i 2)))
@@ -1343,10 +1826,9 @@
     ($flonum-set! y 3 ($bytevector-u8-ref x ($fx+ i 4)))
     ($flonum-set! y 2 ($bytevector-u8-ref x ($fx+ i 5)))
     ($flonum-set! y 1 ($bytevector-u8-ref x ($fx+ i 6)))
-    ($flonum-set! y 0 ($bytevector-u8-ref x ($fx+ i 7)))
-    y))
+    ($flonum-set! y 0 ($bytevector-u8-ref x ($fx+ i 7)))))
 
-(define ($bytevector-ieee-double-set!/little x i y)
+(define ($bytevector-ieee-double-little-set! x i y)
   ($bytevector-set! x i          ($flonum-u8-ref y 7))
   ($bytevector-set! x ($fx+ i 1) ($flonum-u8-ref y 6))
   ($bytevector-set! x ($fx+ i 2) ($flonum-u8-ref y 5))
@@ -1358,7 +1840,25 @@
 
 ;;; --------------------------------------------------------------------
 
-(define ($bytevector-ieee-single-ref/little x i)
+(define-generic-cased-accessor $bytevector-ieee-double-ref
+  $bytevector-ieee-double-big-ref
+  $bytevector-ieee-double-little-ref
+  $bytevector-ieee-double-native-ref)
+
+(define-generic-cased-mutator $bytevector-ieee-double-set!
+  $bytevector-ieee-double-big-set!
+  $bytevector-ieee-double-little-set!
+  $bytevector-ieee-double-native-set!)
+
+
+;;;; unsafe flonum setters and getters: single-precision IEEE flonums
+;;
+;;As defined by IEEE 754: single-precision flonums are 4 bytes long, double-precision
+;;flonums are  8 bytes long.   Vicare's flonums are double-precision.   On big-endian
+;;platforms the order of bytes is the same in a flonum data area and the bytevector.
+;;
+
+(define ($bytevector-ieee-single-little-ref x i)
   (let ((bv (make-bytevector 4)))
     ($bytevector-set! bv 0 ($bytevector-u8-ref x i))
     ($bytevector-set! bv 1 ($bytevector-u8-ref x ($fx+ i 1)))
@@ -1366,7 +1866,7 @@
     ($bytevector-set! bv 3 ($bytevector-u8-ref x ($fx+ i 3)))
     ($bytevector-ieee-single-native-ref bv 0)))
 
-(define ($bytevector-ieee-single-ref/big x i)
+(define ($bytevector-ieee-single-big-ref x i)
   (let ((bv (make-bytevector 4)))
     ($bytevector-set! bv 3 ($bytevector-u8-ref x i))
     ($bytevector-set! bv 2 ($bytevector-u8-ref x ($fx+ i 1)))
@@ -1374,7 +1874,9 @@
     ($bytevector-set! bv 0 ($bytevector-u8-ref x ($fx+ i 3)))
     ($bytevector-ieee-single-native-ref bv 0)))
 
-(define ($bytevector-ieee-single-set!/little x i v)
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-ieee-single-little-set! x i v)
   (let ((bv (make-bytevector 4)))
     ($bytevector-ieee-single-native-set! bv 0 v)
     ($bytevector-set! x i          ($bytevector-u8-ref bv 0))
@@ -1382,13 +1884,25 @@
     ($bytevector-set! x ($fx+ i 2) ($bytevector-u8-ref bv 2))
     ($bytevector-set! x ($fx+ i 3) ($bytevector-u8-ref bv 3))))
 
-(define ($bytevector-ieee-single-set!/big x i v)
+(define ($bytevector-ieee-single-big-set! x i v)
   (let ((bv (make-bytevector 4)))
     ($bytevector-ieee-single-native-set! bv 0 v)
     ($bytevector-set! x i          ($bytevector-u8-ref bv 3))
     ($bytevector-set! x ($fx+ i 1) ($bytevector-u8-ref bv 2))
     ($bytevector-set! x ($fx+ i 2) ($bytevector-u8-ref bv 1))
     ($bytevector-set! x ($fx+ i 3) ($bytevector-u8-ref bv 0))))
+
+;;; --------------------------------------------------------------------
+
+(define-generic-cased-accessor $bytevector-ieee-single-ref
+  $bytevector-ieee-single-big-ref
+  $bytevector-ieee-single-little-ref
+  $bytevector-ieee-single-native-ref)
+
+(define-generic-cased-mutator $bytevector-ieee-single-set!
+  $bytevector-ieee-single-big-set!
+  $bytevector-ieee-single-little-set!
+  $bytevector-ieee-single-native-set!)
 
 
 ;;;; any integer getters, bytevector to any integer list conversion
@@ -1489,16 +2003,16 @@
 ;;;
 
   (define* (bytevector-sint-ref {bv bytevector?} {idx.start bytevector-index?} endianness {size bytevector-word-size?})
-    (unless (bytevector-index-for-word? bv idx.start size)
-      (procedure-argument-violation __who__ "invalid index for word size" idx.start size))
+    (preconditions __who__
+      (bytevector-index-for-word? bv idx.start size))
     (let ((idx.past ($fx+ idx.start size)))
       (case-endianness (__who__ endianness)
 	((little)	(sref-little bv idx.start idx.past))
 	((big)		(sref-big    bv idx.start idx.past)))))
 
   (define* (bytevector-uint-ref {bv bytevector?} {idx.start bytevector-index?} endianness {size bytevector-word-size?})
-    (unless (bytevector-index-for-word? bv idx.start size)
-      (procedure-argument-violation __who__ "invalid index for word size" idx.start size))
+    (preconditions __who__
+      (bytevector-index-for-word? bv idx.start size))
     (let ((idx.past ($fx+ idx.start size)))
       (case-endianness (__who__ endianness)
 	((little)	(uref-little bv idx.start idx.past))
@@ -1545,9 +2059,8 @@
 				   {word non-negative-exact-integer?}
 				   endianness
 				   {word-size bytevector-word-size?} who)
-  (unless (bytevector-index-for-word? bv idx word-size)
-    (procedure-argument-violation who
-      "invalid index and size" idx word-size))
+  (preconditions __who__
+    (bytevector-index-for-word? bv idx word-size))
   (let ((nbits (bitwise-length word)))
     (when (< (* word-size 8) nbits)
       (procedure-argument-violation who
@@ -1574,9 +2087,8 @@
 (define* (bytevector-sint-set!/who {bv bytevector?} {idx bytevector-index?}
 				   {word exact-integer?} endianness
 				   {word-size bytevector-word-size?} who)
-  (unless (bytevector-index-for-word? bv idx word-size)
-    (procedure-argument-violation who
-      "invalid index and size" idx word-size))
+  (preconditions __who__
+    (bytevector-index-for-word? bv idx word-size))
   (let ((nbits (add1 (bitwise-length word))))
     (when (< (* word-size 8) nbits)
       (procedure-argument-violation who

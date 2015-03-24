@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2011, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -73,9 +73,13 @@
     ;; (prefix (nausicaa net addresses ipv4) net.)
     ;; (prefix (nausicaa net addresses ipv6) net.)
     (prefix (vicare language-extensions makers) mk.)
-    (vicare unsafe operations)
     (vicare language-extensions ascii-chars)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $chars)
     (vicare system $strings)
+    (vicare system $bytevectors)
+    (vicare system $vectors)
     (vicare system $numerics)
     (vicare arguments validation))
 
@@ -1820,7 +1824,7 @@
 	 ($fx= 46 ($bytevector-u8-ref bv 1))))
 
   (define ($segment? bv)
-    (and ($bytevector-not-empty? bv)
+    (and (not ($bytevector-empty? bv))
 	 (let loop ((bv bv)
 		    (i  0))
 	   (or ($fx= i ($bytevector-length bv))

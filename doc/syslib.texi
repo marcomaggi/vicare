@@ -5308,159 +5308,581 @@ as tail call.
 @cindex Library @library{vicare system $bytevectors}
 
 
-The arguments @var{bv} to these operations must be references to
-bytevectors, the arguments @var{fx} must be fixnums in the appropriate
-range, the arguments @var{fl} must be flonums.  The following bindings
-are exported by the library @library{vicare system $bytevectors}.
+The low--level bindings are exported by the library @library{vicare
+system $bytevectors}.
+
+@menu
+* syslib bytevectors constructors::  Constructors.
+* syslib bytevectors predicates::    Predicates.
+* syslib bytevectors inspection::    Inspection.
+* syslib bytevectors accessors::     Accessors and mutators.
+* syslib bytevectors copying::       Copying.
+* syslib bytevectors concatenating:: Concatenating.
+* syslib bytevectors encodings::     Encodings.
+@end menu
+
+@c page
+@node syslib bytevectors constructors
+@subsection Constructors
 
 
 @deffn {Unsafe Operation} $make-bytevector @var{fx}
 Allocate a new bytevector capable of holding @var{fx} bytes and return a
-reference to it.
+reference to it.  @var{fx} must be a non--negative fixnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bytevector-empty? @var{bytevector}
-Return @true{} if the bytevector @var{bytevector} has zero length,
-otherwise return @false{}.
+@defun $subbytevector-u8 @var{bv} @var{start} @var{end}
+@defunx $subbytevector-s8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding octets or bytes from the
+bytevector @var{bv} starting from index @var{start} inclusive to index
+@var{end} exclusive.
+@end defun
+
+
+@defun $subbytevector-u8/count @var{bv} @var{start} @var{count}
+@defunx $subbytevector-s8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} octets or bytes
+from the bytevector @var{bv} starting from index @var{start} inclusive.
+@end defun
+
+@c page
+@node syslib bytevectors predicates
+@subsection Predicates
+
+
+@deffn {Unsafe Operation} $bytevector-empty? @var{bv}
+Return @true{} if the bytevector @var{bv} has zero length, otherwise
+return @false{}.
 @end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-length @var{bv}
-Return a fixnum representing the number of bytes in the operand.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-u8-ref @var{bv} @var{fx}
-Return a fixnum representing the octet at offset @var{fx} in @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-s8-ref @var{bv} @var{fx}
-Return a fixnum representing the byte at offset @var{fx} in @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-set! @var{bv} @var{fx-index} @var{fx-value}
-Store the octet or byte @var{fx-value} at index @var{fx-index} of
-@var{bv}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Double--precision @ieee{} flonums
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-native-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-native-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Single--precision @ieee{} flonums
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-native-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-native-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Other unsafe operations
 
 
 @defun $bytevector= @vari{bv} @varii{bv}
-Return @true{} if the two arguments are equal.
+Return @true{} if the two bytevector arguments are equal.
 @end defun
 
-
-@defun $bytevector-total-length @var{init-len} @var{bvs}
-Given the list of bytevectors @var{bvs}: compute the total length of the
-bytevectors, add it to @var{ini-len} and return the result.  If
-@var{init-len} is zero: the returned value is the total length of the
-bytevectors in @var{bvs}.  The returned value may or may not be in the
-range of the maximum bytevector size.
-@end defun
+@c page
+@node syslib bytevectors accessors
+@subsection Accessors and mutators
 
 
-@defun $bytevector-concatenate @var{total-len} @var{bvs}
-Concatenate the bytevectors in the list @var{bvs}, return the result.
-The resulting bytevector must have length @var{total-len}.  Assume the
-arguments have been already validated.
-@end defun
+@menu
+* syslib bytevectors accessors 8-bit::   8-bit setters and getters.
+* syslib bytevectors accessors 16-bit::  16-bit setters and getters.
+* syslib bytevectors accessors 32-bit::  32-bit setters and getters.
+* syslib bytevectors accessors 64-bit::  64-bit setters and getters.
+* syslib bytevectors accessors single::  Single-precision @ieee{} flonum
+                                         setters and getters.
+* syslib bytevectors accessors double::  Double-precision @ieee{} flonum
+                                         setters and getters.
+@end menu
+
+@c page
+@node syslib bytevectors accessors 8-bit
+@subsubsection 8-bit setters and getters
 
 
-@defun $bytevector-reverse-and-concatenate @var{total-len} @var{bvs}
-Reverse the list of bytevectors @var{bvs} and concatenate its items;
-return the result.  The resulting bytevector must have length
-@var{total-len}.  Assume the arguments have been already validated.
-@end defun
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an index in
+the bytevector; @var{fx-val} is a fixnum representing a value to be
+stored in a bytevector.
 
 
-@defun $octets-encoded-bytevector? @var{bytevector}
-Always return @true{}.
-@end defun
+@deffn {Unsafe Operation} $bytevector-u8-ref @var{bv} @var{fx-idx}
+Return a fixnum representing the octet at offset @var{fx-idx} in
+@var{bv}.
+@end deffn
 
 
-@defun $ascii-encoded-bytevector? @var{bytevector}
-Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered an @ascii{} code point if:
+@deffn {Unsafe Operation} $bytevector-s8-ref @var{bv} @var{fx-idx}
+Return a fixnum representing the byte at offset @var{fx-idx} in
+@var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-set! @var{bv} @var{fx-idx} @var{fx-value}
+@deffnx {Unsafe Operation} $bytevector-u8-set! @var{bv} @var{fx-idx} @var{fx-value}
+@deffnx {Unsafe Operation} $bytevector-s8-set! @var{bv} @var{fx-idx} @var{fx-value}
+Store the octet or byte @var{fx-value} at index @var{fx-idx} of
+@var{bv}.
+@end deffn
+
+@c page
+@node syslib bytevectors accessors 16-bit
+@subsubsection 16-bit setters and getters
+
+
+About 16-bit words, we have to remember the following memory layouts:
 
 @example
-(<= #x00 chi #x7F)      @result{} #t
+           |            | lowest memory | highest memory
+endianness |    word    | location      | location
+-----------+------------+---------------+--------------
+  little   |   #xHHLL   |     LL        |     HH
+   big     |   #xHHLL   |     HH        |     LL
+@end example
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{fx-val} is a fixnum representing a value
+to be stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{2}.
+@end quotation
+
+
+@defun $bytevector-u16l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u16l-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for unsigned little--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-u16b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u16b-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for unsigned big--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-u16n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u16n-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for unsigned native--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-s16l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s16l-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for signed little--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-s16b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s16b-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for signed big--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-s16n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s16n-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for signed native--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-u16-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-u16-set! @var{bv} @var{fx-idx} @var{fx-val} @var{endianness}
+Setter and getter for unsigned 16-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+
+@defun $bytevector-s16-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-s16-set! @var{bv} @var{fx-idx} @var{fx-val} @var{endianness}
+Setter and getter for signed 16-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors 32-bit
+@subsubsection 32-bit setters and getters
+
+
+About 32-bit words, we have to remember the following memory layouts:
+
+@example
+                          lowest memory ------------> highest memory
+endianness |    word    | 1st byte | 2nd byte | 3rd byte | 4th byte
+-----------+------------+----------+----------+----------+----------
+  little   | #xAABBCCDD |   DD     |    CC    |    BB    |    AA
+   big     | #xAABBCCDD |   AA     |    BB    |    CC    |    DD
+bit offset |            |    0     |     8    |    16    |    24
+@end example
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{ei-val} is a fixnum or bignum representing
+a value to be stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{4}.
+@end quotation
+
+
+@defun $bytevector-u32l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u32l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned little--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-u32b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u32b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned big--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-u32n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u32n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned native--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-s32l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s32l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed little--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-s32b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s32b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed big--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-s32n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s32n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed native--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-u32-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-u32-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for unsigned 32-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+
+@defun $bytevector-s32-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-s32-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for signed 32-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors 64-bit
+@subsubsection 64-bit setters and getters
+
+
+About 64-bit words, we have to remember the following memory layouts:
+
+@example
+                                     lowest memory ------------> highest memory
+endianness |         word        | 1st | 2nd | 3rd | 4th | 5th | 6th | 7th | 8th
+-----------+---------------------+-----+-----+-----+-----+-----+-----+-----+-----
+  little   | #xAABBCCDD EEFFGGHH | HH  | GG  | FF  | EE  | DD  | CC  | BB  | AA
+   big     | #xAABBCCDD EEFFGGHH | AA  | BB  | CC  | DD  | EE  | FF  | GG  | HH
+bit offset |                     |  0  |  8  | 16  | 24  | 32  | 40  | 48  | 56
+@end example
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{ei-val} is a fixnum or bignum representing
+a value to be stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{8}.
+@end quotation
+
+
+@defun $bytevector-u64l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u64l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned little--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-u64b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u64b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned big--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-u64n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u64n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned native--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-s64l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s64l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed little--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-s64b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s64b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed big--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-s64n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s64n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed native--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-u64-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-u64-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for unsigned 64-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+
+@defun $bytevector-s64-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-s64-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for signed 64-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors single
+@subsubsection Single--precision @ieee{} flonum setters and getters
+
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{fl} is a flonum representing a value to be
+stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{4}.
+@end quotation
+
+
+@defun $bytevector-ieee-single-big-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-single-big-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under big
+endianness.
+@end defun
+
+
+@defun $bytevector-ieee-single-little-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-single-little-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under little
+endianness.
+@end defun
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-native-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-single-native-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under native
+endianness.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-single-nonnative-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under
+non--native endianness.
+@end deffn
+
+
+@defun $bytevector-ieee-single-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-ieee-single-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for single--precision @ieee{} flonums.
+@var{endianness} must be a symbol among: @samp{big}, @samp{little},
+@samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors double
+@subsubsection Double--precision @ieee{} flonum setters and getters
+
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{fl} is a flonum representing a value to be
+stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{8}.
+@end quotation
+
+
+@defun $bytevector-ieee-double-big-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-double-big-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under big
+endianness.
+@end defun
+
+
+@defun $bytevector-ieee-double-little-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-double-little-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under little
+endianness.
+@end defun
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-native-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-double-native-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under native
+endianness.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-double-nonnative-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under
+non--native endianness.
+@end deffn
+
+
+@defun $bytevector-ieee-double-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-ieee-double-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for double--precision @ieee{} flonums.
+@var{endianness} must be a symbol among: @samp{big}, @samp{little},
+@samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors inspection
+@subsection Inspection
+
+
+@deffn {Unsafe Operation} $bytevector-length @var{bv}
+Return a fixnum representing the number of bytes in the bytevector
+@var{bv}.
+@end deffn
+
+@c page
+@node syslib bytevectors copying
+@subsection Copying
+
+
+For these operations, the arguments have the following meaning:
+
+@table @var
+@item src.bv
+The source bytevector.
+
+@item src.start
+A non--negative fixnum representing the inclusive start index in the
+source bytevector @var{src.bv}.
+
+@item src.end
+A non--negative fixnum representing the exclusive end index in the
+source bytevector @var{src.bv}.
+
+@item dst.bv
+The destination bytevector.
+
+@item dst.start
+A non--negative fixnum representing the inclusive start index in the
+destination bytevector @var{dst.bv}.
+
+@item dst.end
+A non--negative fixnum representing the exclusive end index in the
+destination bytevector @var{src.bv}.
+@end table
+
+
+@defun $bytevector-copy @var{bv}
+Build and return a copy of the bytevector @var{bv}.
+@end defun
+
+
+@defun {$bytevector-copy!} @var{src.bv} @var{src.start} @var{dst.bv} @var{dst.start} @var{src.end}
+Copy the bytes of @var{src.bv} from @var{src.start} inclusive to
+@var{src.end} exclusive, to @var{dst.bv} starting at @var{dst.start}
+inclusive.
+@end defun
+
+
+@defun $bytevector-copy!/count @var{src.bv} @var{src.start} @var{dst.bv} @var{dst.start} @var{count}
+Copy @var{count} bytes from @var{src.bv} starting at @var{src.start}
+inclusive to @var{dst.bv} starting at @var{dst.start} inclusive.
+@end defun
+
+
+@defun $bytevector-self-copy-forwards!/count @var{bv} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} bytes of @var{bv} from @var{src.start} inclusive
+to @var{bv} itself starting at @var{dst.start} inclusive.  The copy
+happens forwards, so it is suitable for the case:
+
+@example
+@var{src.start} > @var{dst.start}
 @end example
 @end defun
 
 
-@defun $latin1-encoded-bytevector? @var{bytevector}
-Return @true{} if @var{bytevector} can be interpreted as a Latin1
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered a Latin1 code point if:
+@defun $bytevector-self-copy-backwards!/count @var{bv} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} bytes of @var{bv} from @var{src.start} inclusive
+to @var{bv} itself starting at @var{dst.start} inclusive.  The copy
+happens backwards, so it is suitable for the case:
 
 @example
-(or (<= #x20 chi #x7E)
-    (<= #xA0 chi #xFF))
+@var{src.start} < @var{dst.start}
+@end example
+@end defun
+
+@c page
+@node syslib bytevectors concatenating
+@subsection Concatenating
+
+
+@defun $bytevector-total-length @var{init-fx} @var{bvs}
+Given the list of bytevectors @var{bvs}: compute the total length of the
+bytevectors, add it to the fixnum @var{init-fx} and return the result.
+If @var{init-fx} is zero: the returned value is the total length of the
+bytevectors in @var{bvs}.  The returned value may or may not be in the
+range of the maximum bytevector size: it may or may not be a fixnum.
+@end defun
+
+
+@defun $bytevector-concatenate @var{total-len-fx} @var{bvs}
+Concatenate the bytevectors in the list @var{bvs}, return the result.
+The resulting bytevector must have length represented by the
+non--negative fixnum @var{total-len-fx}.
+@end defun
+
+
+@defun $bytevector-reverse-and-concatenate @var{total-len-fx} @var{bvs}
+Reverse the list of bytevectors @var{bvs} and concatenate its items;
+return the result.  The resulting bytevector must have length
+represented by the non--negative fixnum @var{total-len-fx}.
+@end defun
+
+@c page
+@node syslib bytevectors encodings
+@subsection Encodings
+
+
+@defun $octets-encoded-bytevector? @var{bv}
+Always return @true{}.
+@end defun
+
+
+@defun $ascii-encoded-bytevector? @var{bv}
+Return @true{} if @var{bv} can be interpreted as an @ascii{} encoded
+string, otherwise return @false{}.  An octet @var{chi} is considered an
+@ascii{} code point if:
+
+@example
+(<= #x00 @var{chi} #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun $latin1-encoded-bytevector? @var{bv}
+Return @true{} if @var{bv} can be interpreted as a Latin-1 encoded
+string, otherwise return @false{}.  An octet @var{chi} is considered a
+Latin1 code point if:
+
+@example
+(or (<= #x20 @var{chi} #x7E)
+    (<= #xA0 @var{chi} #xFF))
 @result{} #t
 @end example
 @end defun
 
 
-@defun $uri-encode @var{bytevector}
-@defunx $uri-decode @var{bytevector}
-Encode or decode a bytevector according to @rfc{} 3986 @uri{} percent
-encoding; return a bytevector.  All the octets are encoded except the
-ones having the following @ascii{} representation:
+@defun $uri-encode @var{bv}
+@defunx $uri-decode @var{bv}
+Encode or decode a bytevector @var{bv} according to @rfc{} 3986 @uri{}
+percent encoding; return a bytevector.  All the octets are encoded
+except the ones having the following @ascii{} representation:
 
 @example
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
@@ -5471,8 +5893,8 @@ abcdefghijklmnopqrstuvwxyz
 @end defun
 
 
-@defun $uri-normalise-encoding @var{bytevector}
-Given a bytevector encoded according to to @rfc{} 3986 @acronym{URI}
+@defun $uri-normalise-encoding @var{bv}
+Given a bytevector @var{bv} encoded according to to @rfc{} 3986 @uri{}
 percent encoding: return an encoded and normalised bytevector, octets
 that are encoded but should not are decoded.
 @end defun
@@ -5480,21 +5902,16 @@ that are encoded but should not are decoded.
 
 @defun $uri-encoded-bytevector? @var{bv}
 @defunx $percent-encoded-bytevector? @var{bv}
-Return @true{} if the argument is correctly percent--encoded bytevector
-according to @rfc{} 3986.
+Return @true{} if the argument is a correctly percent--encoded
+bytevector according to @rfc{} 3986.
 @end defun
 
 
-@defun $base64->bytevector @var{bytevector}
-@defunx $bytevector->base64 @var{bytevector}
+@defun $base64->bytevector @var{bv}
+@defunx $bytevector->base64 @var{bv}
 Convert to and from a Scheme bytevector containing octets and a Scheme
 bytevector containing the @ascii{} Base64 representation of the octets.
 If an error occurs in the conversion: the return value is @false{}.
-@end defun
-
-
-@defun $bytevector-copy @var{bytevector}
-Build and return a copy of @var{bytevector}.
 @end defun
 
 @c page

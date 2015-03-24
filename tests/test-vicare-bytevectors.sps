@@ -28,7 +28,7 @@
 #!vicare
 (import (except (vicare) catch)
   (prefix (vicare platform words) words.)
-  (vicare unsafe operations)
+  (vicare system $bytevectors)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -59,6 +59,17 @@
 					       => (quasiquote (?who (?validation-expr ?arg (... ...)))))
 					     ))))
 			 ?test0 ?test ...))))
+    ))
+
+(define-syntax check-argument-validation
+  (syntax-rules ()
+    ((_ ?body ?irritant0 ?irritant ...)
+     (check
+	 (guard (E ((procedure-argument-violation? E)
+		    (cdr (condition-irritants E)))
+		   (else E))
+	   ?body)
+       => (list ?irritant0 ?irritant ...)))
     ))
 
 
@@ -96,30 +107,29 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: length
 
-  (with-check-for-procedure-argument-validation
-      (make-bytevector (bytevector-length? bv.len))
-    ;;length is not an integer
-    (doit (make-bytevector #\a) #\a)
-    ;;length is not an exact integer
-    (doit (make-bytevector 1.0) 1.0)
-    ;;length is not a fixnum
-    (doit (make-bytevector (least-positive-bignum)) ,(least-positive-bignum))
-    ;;length is negative
-    (doit (make-bytevector -2) -2)
-    (void))
+  ;;length is not an integer
+  (check-argument-validation (make-bytevector #\a) #\a)
+
+  ;;length is not an exact integer
+  (check-argument-validation (make-bytevector 1.0) 1.0)
+
+  ;;length is not a fixnum
+  (check-argument-validation (make-bytevector (least-positive-bignum)) (least-positive-bignum))
+
+  ;;length is negative
+  (check-argument-validation (make-bytevector -2) -2)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: byte filler
 
-  (with-check-for-procedure-argument-validation
-      (make-bytevector (bytevector-byte-filler? fill))
-    ;;filler is not a fixnum
-    (doit (make-bytevector 3 #\a) #\a)
-    ;;filler is too positive
-    (doit (make-bytevector 2 256) 256)
-    ;;filler is too negative
-    (doit (make-bytevector 2 -129) -129)
-    (void))
+  ;;filler is not a fixnum
+  (check-argument-validation (make-bytevector 3 #\a) #\a)
+
+  ;;filler is too positive
+  (check-argument-validation (make-bytevector 2 256) 256)
+
+  ;;filler is too negative
+  (check-argument-validation (make-bytevector 2 -129) -129)
 
   #t)
 
@@ -147,23 +157,17 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-fill! (bytevector? bv))
-    (doit (bytevector-fill! #\a 1) #\a)
-    (void))
+  (check-argument-validation (bytevector-fill! #\a 1) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: byte filler
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-fill! (bytevector-byte-filler? fill))
-    ;;filler is not a fixnum
-    (doit (bytevector-fill! #vu8() #\a) #\a)
-    ;;filler is too positive
-    (doit (bytevector-fill! #vu8() 256) 256)
-    ;;filler is too negative
-    (doit (bytevector-fill! #vu8() -129) -129)
-    (void))
+  ;;filler is not a fixnum
+  (check-argument-validation (bytevector-fill! #vu8() #\a) #\a)
+  ;;filler is too positive
+  (check-argument-validation (bytevector-fill! #vu8() 256) 256)
+  ;;filler is too negative
+  (check-argument-validation (bytevector-fill! #vu8() -129) -129)
 
   #t)
 
@@ -188,10 +192,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-length (bytevector? bv))
-    (doit (bytevector-length #\a) #\a)
-    (void))
+  (check-argument-validation (bytevector-length #\a) #\a)
 
   #t)
 
@@ -209,10 +210,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-empty? (bytevector? bv))
-    (doit (bytevector-empty? #\a) #\a)
-    (void))
+  (check-argument-validation (bytevector-empty? #\a) #\a)
 
   #t)
 
@@ -268,15 +266,9 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector=? (bytevector? bv1))
-    (doit (bytevector=? #\a #vu8()) #\a)
-    (void))
+  (check-argument-validation (bytevector=? #\a #vu8()) #\a)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector=? (bytevector? bv2))
-    (doit (bytevector=? #vu8() #\a) #\a)
-    (void))
+  (check-argument-validation (bytevector=? #vu8() #\a) #\a)
 
   #t)
 
@@ -298,10 +290,7 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy (bytevector? src.bv))
-    (doit (bytevector-copy #\a) #\a)
-    (void))
+  (check-argument-validation (bytevector-copy #\a) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe operation
@@ -398,63 +387,43 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector? src))
-    (doit (bytevector-copy! #\a 0 #vu8() 0 1) #\a))
+  (check-argument-validation (bytevector-copy! #\a 0 #vu8() 0 1) #\a)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector? dst))
-    (doit (bytevector-copy! #vu8() 0 #\a 0 1) #\a))
+  (check-argument-validation (bytevector-copy! #vu8() 0 #\a 0 1) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: start index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-index? src.start))
-    ;;not a fixnum
-    (doit (bytevector-copy! #vu8() #\a #vu8() 0 1) #\a)
-    ;;too low
-    (doit (bytevector-copy! #vu8() -1 #vu8()  0 1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-copy! #vu8() #\a #vu8() 0 1) #\a)
+  (check-argument-validation (bytevector-copy! #vu8() -1 #vu8()  0 1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-start-index-and-count-for-word8? src src.start byte-count))
-    ;;too high
-    (doit (bytevector-copy! #vu8()     1 #vu8()    0 1) #vu8()     1 1)
-    (doit (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10 1))
+  ;;too high
+  (check-argument-validation (bytevector-copy! #vu8()     1 #vu8()    0 1) #vu8()     1 1)
+  (check-argument-validation (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-index? dst.start))
-    ;;not a fixnum
-    (doit (bytevector-copy! #vu8() 0 #vu8() #\b 1) #\b)
-    ;;too low
-    (doit (bytevector-copy! #vu8() 0 #vu8() -2 1) -2))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() #\b 1) #\b)
+  ;;too low
+  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() -2 1) -2)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-start-index-and-count-for-word8? dst dst.start byte-count))
-    ;;too high
-    (doit (bytevector-copy! #vu8(1)   0 #vu8()     2 1) #vu8()     2 1)
-    (doit (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) #vu8(1 2) 20 1))
+  ;;too high
+  (check-argument-validation (bytevector-copy! #vu8(1)   0 #vu8()     2 1) #vu8()     2 1)
+  (check-argument-validation (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) #vu8(1 2) 20 1)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: count
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-word-count? byte-count))
-    ;;not a fixnum
-    (doit (bytevector-copy! #vu8() 0 #vu8() 0 #\a) #\a)
-    ;;negative
-    (doit (bytevector-copy! #vu8() 0 #vu8() 0 -2)  -2)
-    (void))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() 0 #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() 0 -2)  -2)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-start-index-and-count-for-word8? src src.start byte-count))
-    ;;too big for source
-    (doit (bytevector-copy! #vu8(1 2) 0 #vu8() 0 3)  #vu8(1 2) 0 3))
+  ;;too big for source
+  (check-argument-validation (bytevector-copy! #vu8(1 2) 0 #vu8() 0 3)  #vu8(1 2) 0 3)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-copy! (bytevector-start-index-and-count-for-word8? dst dst.start byte-count))
-    ;;too big for dest
-    (doit (bytevector-copy! #vu8(1 2) 0 #vu8(1) 0 2)  #vu8(1) 0 2))
+  ;;too big for dest
+  (check-argument-validation (bytevector-copy! #vu8(1 2) 0 #vu8(1) 0 2)  #vu8(1) 0 2)
 
   #t)
 
@@ -463,43 +432,33 @@
 
 ;;; argument validation, bytevector
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8 (bytevector? src.bv))
-    (doit (subbytevector-u8 "ciao" 1) "ciao"))
+  (check-argument-validation (subbytevector-u8 "ciao" 1) "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8 (bytevector-index? src.start))
-    ;;start index not an integer
-    (doit (subbytevector-u8 '#vu8() #\a) #\a)
-    ;;start index not an exact integer
-    (doit (subbytevector-u8 '#vu8() 1.0) 1.0)
-    ;;start index is negative
-    (doit (subbytevector-u8 '#vu8() -1) -1))
+  ;;start index not an integer
+  (check-argument-validation (subbytevector-u8 '#vu8() #\a) '#vu8() #\a 0)
+  ;;start index not an exact integer
+  (check-argument-validation (subbytevector-u8 '#vu8() 1.0) '#vu8() 1.0 0)
+  ;;start index is negative
+  (check-argument-validation (subbytevector-u8 '#vu8() -1) ' #vu8() -1 0)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8 (bytevector-start-past-indexes? src.bv src.start src.end))
-    ;;start index too big
-    (doit (subbytevector-u8 '#vu8() 1) #vu8() 1 0))
+  ;;start index too big
+  (check-argument-validation (subbytevector-u8 '#vu8() 1) '#vu8() 1 0)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, end index
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8 (bytevector-index? src.end))
-    ;;end index not an integer
-    (doit (subbytevector-u8 '#vu8(1) 0 #\a) #\a)
-    ;;end index not an exact integer
-    (doit (subbytevector-u8 '#vu8(1) 0 1.0) 1.0)
-    ;;end index is negative
-    (doit (subbytevector-u8 '#vu8(1) 0 -1) -1))
+  ;;end index not an integer
+  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 #\a) #\a)
+  ;;end index not an exact integer
+  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 1.0) 1.0)
+  ;;end index is negative
+  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8 (bytevector-start-past-indexes? src.bv src.start src.end))
-    ;;end index too big
-    (doit (subbytevector-u8 '#vu8(1) 0 2) #vu8(1) 0 2))
+  ;;end index too big
+  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 2) #vu8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -538,44 +497,34 @@
 
 ;;; argument validation, bytevector
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8/count (bytevector? src.bv))
-    ;;argument is not a bytevector
-    (doit (subbytevector-u8/count "ciao" 1 1) "ciao"))
+  ;;argument is not a bytevector
+  (check-argument-validation (subbytevector-u8/count "ciao" 1 1) "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8/count (bytevector-index? src.start))
-    ;;start index not an integer
-    (doit (subbytevector-u8/count '#vu8() #\a 1) #\a)
-    ;;start index not an exact integer
-    (doit (subbytevector-u8/count '#vu8() 1.0 1) 1.0)
-    ;;start index is negative
-    (doit (subbytevector-u8/count '#vu8() -1 1) -1))
+  ;;start index not an integer
+  (check-argument-validation (subbytevector-u8/count '#vu8() #\a 1) #\a)
+  ;;start index not an exact integer
+  (check-argument-validation (subbytevector-u8/count '#vu8() 1.0 1) 1.0)
+  ;;start index is negative
+  (check-argument-validation (subbytevector-u8/count '#vu8() -1 1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8/count (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
-    ;;start index too big
-    (doit (subbytevector-u8/count '#vu8() 1 1) #vu8() 1 1))
+  ;;start index too big
+  (check-argument-validation (subbytevector-u8/count '#vu8() 1 1) #vu8() 1 1)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, word count
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8/count (bytevector-length? dst.len))
-    ;;word count not an integer
-    (doit (subbytevector-u8/count '#vu8(1) 0 #\a) #\a)
-    ;;word count not an exact integer
-    (doit (subbytevector-u8/count '#vu8(1) 0 1.0) 1.0)
-    ;;word count is negative
-    (doit (subbytevector-u8/count '#vu8(1) 0 -1) -1))
+  ;;word count not an integer
+  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 #\a) #\a)
+  ;;word count not an exact integer
+  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 1.0) 1.0)
+  ;;word count is negative
+  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-u8/count (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
-    ;;end index too big
-    (doit (subbytevector-u8/count '#vu8(1) 0 2) #vu8(1) 0 2))
+  ;;end index too big
+  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 2) #vu8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -614,43 +563,33 @@
 
 ;;; argument validation, bytevector
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8 (bytevector? src.bv))
-    (doit (subbytevector-s8 "ciao" 1) "ciao"))
+  (check-argument-validation (subbytevector-s8 "ciao" 1) "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8 (bytevector-index? src.start))
-    ;;start index not an integer
-    (doit (subbytevector-s8 '#vs8() #\a) #\a)
-    ;;start index not an exact integer
-    (doit (subbytevector-s8 '#vs8() 1.0) 1.0)
-    ;;start index is negative
-    (doit (subbytevector-s8 '#vs8() -1) -1))
+  ;;start index not an integer
+  (check-argument-validation (subbytevector-s8 '#vs8() #\a) '#vu8() #\a 0)
+  ;;start index not an exact integer
+  (check-argument-validation (subbytevector-s8 '#vs8() 1.0) '#vu8() 1.0 0)
+  ;;start index is negative
+  (check-argument-validation (subbytevector-s8 '#vs8() -1) '#vu8() -1 0)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8 (bytevector-start-past-indexes? src.bv src.start src.end))
-    ;;start index too big
-    (doit (subbytevector-s8 '#vs8() 1) #vs8() 1 0))
+  ;;start index too big
+  (check-argument-validation (subbytevector-s8 '#vs8() 1) #vs8() 1 0)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, end index
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8 (bytevector-index? src.end))
-    ;;end index not an integer
-    (doit (subbytevector-s8 '#vs8(1) 0 #\a) #\a)
-    ;;end index not an exact integer
-    (doit (subbytevector-s8 '#vs8(1) 0 1.0) 1.0)
-    ;;end index is negative
-    (doit (subbytevector-s8 '#vs8(1) 0 -1) -1))
+  ;;end index not an integer
+  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 #\a) #\a)
+  ;;end index not an exact integer
+  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 1.0) 1.0)
+  ;;end index is negative
+  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8 (bytevector-start-past-indexes? src.bv src.start src.end))
-    ;;end index too big
-    (doit (subbytevector-s8 '#vs8(1) 0 2) #vs8(1) 0 2))
+  ;;end index too big
+  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 2) #vs8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -689,44 +628,34 @@
 
 ;;; argument validation, bytevector
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8/count (bytevector? src.bv))
-    ;;argument is not a bytevector
-    (doit (subbytevector-s8/count "ciao" 1 1) "ciao"))
+  ;;argument is not a bytevector
+  (check-argument-validation (subbytevector-s8/count "ciao" 1 1) "ciao")
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, start index
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8/count (bytevector-index? src.start))
-    ;;start index not an integer
-    (doit (subbytevector-s8/count '#vs8() #\a 1) #\a)
-    ;;start index not an exact integer
-    (doit (subbytevector-s8/count '#vs8() 1.0 1) 1.0)
-    ;;start index is negative
-    (doit (subbytevector-s8/count '#vs8() -1 1) -1))
+  ;;start index not an integer
+  (check-argument-validation (subbytevector-s8/count '#vs8() #\a 1) #\a)
+  ;;start index not an exact integer
+  (check-argument-validation (subbytevector-s8/count '#vs8() 1.0 1) 1.0)
+  ;;start index is negative
+  (check-argument-validation (subbytevector-s8/count '#vs8() -1 1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8/count (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
-    ;;start index too big
-    (doit (subbytevector-s8/count '#vs8() 1 1) #vs8() 1 1))
+  ;;start index too big
+  (check-argument-validation (subbytevector-s8/count '#vs8() 1 1) #vs8() 1 1)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, word count
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8/count (bytevector-length? dst.len))
-    ;;word count not an integer
-    (doit (subbytevector-s8/count '#vs8(1) 0 #\a) #\a)
-    ;;word count not an exact integer
-    (doit (subbytevector-s8/count '#vs8(1) 0 1.0) 1.0)
-    ;;word count is negative
-    (doit (subbytevector-s8/count '#vs8(1) 0 -1) -1))
+  ;;word count not an integer
+  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 #\a) #\a)
+  ;;word count not an exact integer
+  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 1.0) 1.0)
+  ;;word count is negative
+  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (subbytevector-s8/count (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
-    ;;end index too big
-    (doit (subbytevector-s8/count '#vs8(1) 0 2) #vs8(1) 0 2))
+  ;;end index too big
+  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 2) #vs8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -765,10 +694,8 @@
 
 ;;; arguments validation
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-append (list-of-bytevectors? bv*))
-    (doit (bytevector-append 123) (123))
-    (doit (bytevector-append '#vu8() 123) (#vu8() 123)))
+  (check-argument-validation (bytevector-append 123) '(123))
+  (check-argument-validation (bytevector-append '#vu8() 123) '(#vu8() 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -821,10 +748,8 @@
 
 ;;; arguments validation
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-concatenate (list-of-bytevectors? bv*))
-    (doit (bytevector-concatenate 123) 123)
-    (doit (bytevector-concatenate '(123)) (123)))
+  (check-argument-validation (bytevector-concatenate 123) 123)
+  (check-argument-validation (bytevector-concatenate '(123)) '(123))
 
 ;;; --------------------------------------------------------------------
 
@@ -861,10 +786,8 @@
 
 ;;; arguments validation
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-reverse-and-concatenate (list-of-bytevectors? bv*))
-    (doit (bytevector-reverse-and-concatenate 123) 123)
-    (doit (bytevector-reverse-and-concatenate '(123)) (123)))
+  (check-argument-validation (bytevector-reverse-and-concatenate 123) 123)
+  (check-argument-validation (bytevector-reverse-and-concatenate '(123)) '(123))
 
 ;;; --------------------------------------------------------------------
 
@@ -899,9 +822,7 @@
 
 (parametrise ((check-test-name	'bytevector-hash))
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-hash (bytevector? bv))
-    (doit (bytevector-hash 123) 123))
+  (check-argument-validation (bytevector-hash 123) 123)
 
 ;;; --------------------------------------------------------------------
 
@@ -929,38 +850,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-set! (bytevector? bv))
-    (doit (bytevector-u8-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-u8-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u8-set! #vu8(1 2 3) #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-u8-set! #vu8(1 2 3) -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-set! (bytevector-index-for-word8? bv index))
-    ;;too high
-    (doit (bytevector-u8-set! #vu8(1 2 3) 4 2) #vu8(1 2 3) 4)
-    ;;too high
-    (doit (bytevector-u8-set! #vu8(1 2 3) 3 2) #vu8(1 2 3) 3))
+  ;;too high
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 4 2) '#vu8(1 2 3) 4)
+  ;;too high
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 3 2) '#vu8(1 2 3) 3)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-set! (words.word-u8? octet))
-    ;;not a fixnum
-    (doit (bytevector-u8-set! #vu8(1 2 3) 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)) ,(words.least-u8*))
-    ;;too high
-    (doit (bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)) ,(words.greatest-u8*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 1 (words.least-u8*)) (words.least-u8*))
+  ;;too high
+  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 1 (words.greatest-u8*)) (words.greatest-u8*))
 
   #t)
 
@@ -977,26 +890,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-ref (bytevector? bv))
-    (doit (bytevector-u8-ref #\a 1) #\a))
+  (check-argument-validation (bytevector-u8-ref #\a 1) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u8-ref #vu8(1 2 3) #\a) #\a)
-    ;;negative
-    (doit (bytevector-u8-ref #vu8(1 2 3) -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u8-ref (bytevector-index-for-word8? bv index))
-    ;;too high
-    (doit (bytevector-u8-ref #vu8(1 2 3) 4) #vu8(1 2 3) 4)
-    ;;too high
-    (doit (bytevector-u8-ref #vu8(1 2 3) 3) #vu8(1 2 3) 3))
+  ;;too high
+  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) 4) #vu8(1 2 3) 4)
+  ;;too high
+  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) 3) #vu8(1 2 3) 3)
 
   #t)
 
@@ -1014,38 +921,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-set! (bytevector? bv))
-    (doit (bytevector-s8-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-s8-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s8-set! #vs8(1 2 3) #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-s8-set! #vs8(1 2 3) -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-set! (bytevector-index-for-word8? bv index))
-    ;;too high
-    (doit (bytevector-s8-set! #vs8(1 2 3) 4 2) #vs8(1 2 3) 4)
-    ;;too high
-    (doit (bytevector-s8-set! #vs8(1 2 3) 3 2) #vs8(1 2 3) 3))
+  ;;too high
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 4 2) #vs8(1 2 3) 4)
+  ;;too high
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 3 2) #vs8(1 2 3) 3)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-set! (words.word-s8? byte))
-    ;;not a fixnum
-    (doit (bytevector-s8-set! #vs8(1 2 3) 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)) ,(words.least-s8*))
-    ;;too high
-    (doit (bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)) ,(words.greatest-s8*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 1 (words.least-s8*)) (words.least-s8*))
+  ;;too high
+  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 1 (words.greatest-s8*)) (words.greatest-s8*))
 
   #t)
 
@@ -1062,26 +961,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-ref (bytevector? bv))
-    (doit (bytevector-s8-ref #\a 1) #\a))
+  (check-argument-validation (bytevector-s8-ref #\a 1) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s8-ref #vs8(1 2 3) #\a) #\a)
-    ;;negative
-    (doit (bytevector-s8-ref #vs8(1 2 3) -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s8-ref (bytevector-index-for-word8? bv index))
-    ;;too high
-    (doit (bytevector-s8-ref #vs8(1 2 3) 4) #vs8(1 2 3) 4)
-    ;;too high
-    (doit (bytevector-s8-ref #vs8(1 2 3) 3) #vs8(1 2 3) 3))
+  ;;too high
+  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) 4) #vs8(1 2 3) 4)
+  ;;too high
+  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) 3) #vs8(1 2 3) 3)
 
   #t)
 
@@ -1133,38 +1026,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-set! (bytevector? bv))
-    (doit (bytevector-u16-set! #\a 1 2 (endianness little)) #\a))
+  (check-argument-validation (bytevector-u16-set! #\a 1 2 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) #\a 2 (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) #\a 2 (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-set! (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-set! (words.word-u16? word))
-    ;;not a fixnum
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 #\a (endianness little)) #\a)
-    ;;too low
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)) ,(words.least-u16*))
-    ;;too high
-    (doit (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)) ,(words.greatest-u16*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 #\a (endianness little)) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*) (endianness little)) (words.least-u16*))
+  ;;too high
+  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*) (endianness little)) (words.greatest-u16*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1216,26 +1101,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-ref (bytevector? bv))
-    (doit (bytevector-u16-ref #\a 1 (endianness little)) #\a))
+  (check-argument-validation (bytevector-u16-ref #\a 1 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-ref (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1267,43 +1146,33 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-set! (bytevector? bv))
-    (doit (bytevector-u16-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-u16-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-set! (words.fixnum-aligned-to-2? index))
-    ;;not aligned to 2
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1))
+  ;;not aligned to 2
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-set! (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-set! (words.word-u16? word))
-    ;;not a fixnum
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*)) ,(words.least-u16*))
-    ;;too high
-    (doit (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*)) ,(words.greatest-u16*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-u16*)) (words.least-u16*))
+  ;;too high
+  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-u16*)) (words.greatest-u16*))
 
   #t)
 
@@ -1325,31 +1194,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-ref (bytevector? bv))
-    (doit (bytevector-u16-native-ref #\a 1) #\a))
+  (check-argument-validation (bytevector-u16-native-ref #\a 1) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) #\a) #\a)
-    ;;negative
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-ref (words.fixnum-aligned-to-2? index))
-    ;;not aligned to 2
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) 1) 1))
+  ;;not aligned to 2
+  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u16-native-ref (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) (mult 3))
 
   #t)
 
@@ -1401,43 +1262,33 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector? bv))
-    (doit (bytevector-s16-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-s16-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (words.fixnum-aligned-to-2? index))
-    ;;not aligned to 2
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1))
+  ;;not aligned to 2
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (words.word-s16? word))
-    ;;not a fixnum
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) ,(words.least-s16*))
-    ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) ,(words.greatest-s16*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) (words.least-s16*))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) (words.greatest-s16*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1513,26 +1364,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-ref (bytevector? bv))
-    (doit (bytevector-s16-ref #\a 1 (endianness little)) #\a))
+  (check-argument-validation (bytevector-s16-ref #\a 1 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) #\a (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-ref (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1564,43 +1409,33 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector? bv))
-    (doit (bytevector-s16-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-s16-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (words.fixnum-aligned-to-2? index))
-    ;;not aligned to 2
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1))
+  ;;not aligned to 2
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-set! (words.word-s16? word))
-    ;;not a fixnum
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) ,(words.least-s16*))
-    ;;too high
-    (doit (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) ,(words.greatest-s16*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) (words.least-s16*))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) (words.greatest-s16*))
 
   #t)
 
@@ -1638,31 +1473,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-ref (bytevector? bv))
-    (doit (bytevector-s16-native-ref #\a 1) #\a))
+  (check-argument-validation (bytevector-s16-native-ref #\a 1) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) #\a) #\a)
-    ;;negative
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-ref (words.fixnum-aligned-to-2? index))
-    ;;not aligned to 2
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 1) 1))
+  ;;not aligned to 2
+  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s16-native-ref (bytevector-index-for-word16? bv index))
-    ;;too high
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) ,(mult 4))
-    ;;too high
-    (doit (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) ,(mult 3)))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) (mult 4))
+  ;;too high
+  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) (mult 3))
 
   #t)
 
@@ -1720,38 +1547,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-set! (bytevector? bv))
-    (doit (bytevector-u32-set! #\a 1 2 (endianness little)) #\a))
+  (check-argument-validation (bytevector-u32-set! #\a 1 2 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-u32-set! TEST-BV-1 -1 2 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 -1 2 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-set! (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-u32-set! TEST-BV-1 (mult 5) 2 (endianness little)) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-u32-set! TEST-BV-1 (mult 4) 2 (endianness little)) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 (mult 4) 2 (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-set! (words.word-u32? word))
-    ;;not a fixnum
-    (doit (bytevector-u32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
-    ;;too low
-    (doit (bytevector-u32-set! TEST-BV-1 1 (words.least-u32*) (endianness little)) ,(words.least-u32*))
-    ;;too high
-    (doit (bytevector-u32-set! TEST-BV-1 1 (words.greatest-u32*) (endianness little)) ,(words.greatest-u32*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 1 (words.least-u32*) (endianness little)) (words.least-u32*))
+  ;;too high
+  (check-argument-validation (bytevector-u32-set! TEST-BV-1 1 (words.greatest-u32*) (endianness little)) (words.greatest-u32*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1816,26 +1635,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-ref (bytevector? bv))
-    (doit (bytevector-u32-ref #\a 1 (endianness little)) #\a))
+  (check-argument-validation (bytevector-u32-ref #\a 1 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u32-ref TEST-BV-1 #\a (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-u32-ref TEST-BV-1 -1  (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u32-ref TEST-BV-1 #\a (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u32-ref TEST-BV-1 -1  (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-ref (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-u32-ref TEST-BV-1 (mult 5) (endianness little)) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-u32-ref TEST-BV-1 (mult 4) (endianness little)) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u32-ref TEST-BV-1 (mult 4) (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1868,43 +1681,33 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-set! (bytevector? bv))
-    (doit (bytevector-u32-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-u32-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u32-native-set! TEST-BV-1 #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-u32-native-set! TEST-BV-1 -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-set! (words.fixnum-aligned-to-4? index))
-    ;;not aligned
-    (doit (bytevector-u32-native-set! TEST-BV-1 1 0) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 0) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-set! (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-u32-native-set! TEST-BV-1 (mult 5) 2) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-u32-native-set! TEST-BV-1 (mult 4) 2) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 (mult 5) 2) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 (mult 4) 2) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-set! (words.word-u32? word))
-    ;;not a fixnum
-    (doit (bytevector-u32-native-set! TEST-BV-1 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-u32-native-set! TEST-BV-1 1 (words.least-u32*)) ,(words.least-u32*))
-    ;;too high
-    (doit (bytevector-u32-native-set! TEST-BV-1 1 (words.greatest-u32*)) ,(words.greatest-u32*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 (words.least-u32*)) (words.least-u32*))
+  ;;too high
+  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 (words.greatest-u32*)) (words.greatest-u32*))
 
   #t)
 
@@ -1929,31 +1732,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-ref (bytevector? bv))
-    (doit (bytevector-u32-native-ref #\a 0) #\a))
+  (check-argument-validation (bytevector-u32-native-ref #\a 0) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u32-native-ref TEST-BV-1 #\a) #\a)
-    ;;negative
-    (doit (bytevector-u32-native-ref TEST-BV-1 -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-ref (words.fixnum-aligned-to-4? index))
-    ;;not aligned
-    (doit (bytevector-u32-native-ref TEST-BV-1 1) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 1) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u32-native-ref (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-u32-native-ref TEST-BV-1 (mult 5)) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-u32-native-ref TEST-BV-1 (mult 4)) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 (mult 5)) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 (mult 4)) TEST-BV-1 (mult 4))
 
   #t)
 
@@ -2014,38 +1809,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-set! (bytevector? bv))
-    (doit (bytevector-s32-set! #\a 1 2 (endianness little)) #\a))
+  (check-argument-validation (bytevector-s32-set! #\a 1 2 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-s32-set! TEST-BV-1 -1 2 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 #\a 2 (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 -1 2 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-set! (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-s32-set! TEST-BV-1 (mult 5) 2 (endianness little)) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-s32-set! TEST-BV-1 (mult 4) 2 (endianness little)) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 (mult 4) 2 (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-set! (words.word-s32? word))
-    ;;not a fixnum
-    (doit (bytevector-s32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
-    ;;too low
-    (doit (bytevector-s32-set! TEST-BV-1 1 (words.least-s32*) (endianness little)) ,(words.least-s32*))
-    ;;too high
-    (doit (bytevector-s32-set! TEST-BV-1 1 (words.greatest-s32*) (endianness little)) ,(words.greatest-s32*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 1 #\a (endianness little)) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 1 (words.least-s32*) (endianness little)) (words.least-s32*))
+  ;;too high
+  (check-argument-validation (bytevector-s32-set! TEST-BV-1 1 (words.greatest-s32*) (endianness little)) (words.greatest-s32*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2128,26 +1915,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-ref (bytevector? bv))
-    (doit (bytevector-s32-ref #\a 1 (endianness little)) #\a))
+  (check-argument-validation (bytevector-s32-ref #\a 1 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s32-ref TEST-BV-1 #\a (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-s32-ref TEST-BV-1 -1  (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s32-ref TEST-BV-1 #\a (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s32-ref TEST-BV-1 -1  (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-ref (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-s32-ref TEST-BV-1 (mult 5) (endianness little)) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-s32-ref TEST-BV-1 (mult 4) (endianness little)) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s32-ref TEST-BV-1 (mult 4) (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2180,43 +1961,33 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-set! (bytevector? bv))
-    (doit (bytevector-s32-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-s32-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s32-native-set! TEST-BV-1 #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-s32-native-set! TEST-BV-1 -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-set! (words.fixnum-aligned-to-4? index))
-    ;;not aligned
-    (doit (bytevector-s32-native-set! TEST-BV-1 1 0) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 0) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-set! (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-s32-native-set! TEST-BV-1 (mult 5) 2) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-s32-native-set! TEST-BV-1 (mult 4) 2) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 (mult 5) 2) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 (mult 4) 2) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-set! (words.word-s32? word))
-    ;;not a fixnum
-    (doit (bytevector-s32-native-set! TEST-BV-1 1 #\a) #\a)
-    ;;too low
-    (doit (bytevector-s32-native-set! TEST-BV-1 1 (words.least-s32*)) ,(words.least-s32*))
-    ;;too high
-    (doit (bytevector-s32-native-set! TEST-BV-1 1 (words.greatest-s32*)) ,(words.greatest-s32*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 #\a) #\a)
+  ;;too low
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 (words.least-s32*)) (words.least-s32*))
+  ;;too high
+  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 (words.greatest-s32*)) (words.greatest-s32*))
 
   #t)
 
@@ -2257,31 +2028,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-ref (bytevector? bv))
-    (doit (bytevector-s32-native-ref #\a 0) #\a))
+  (check-argument-validation (bytevector-s32-native-ref #\a 0) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s32-native-ref TEST-BV-1 #\a) #\a)
-    ;;negative
-    (doit (bytevector-s32-native-ref TEST-BV-1 -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-ref (words.fixnum-aligned-to-4? index))
-    ;;not aligned
-    (doit (bytevector-s32-native-ref TEST-BV-1 1) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 1) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s32-native-ref (bytevector-index-for-word32? bv index))
-    ;;too high
-    (doit (bytevector-s32-native-ref TEST-BV-1 (mult 5)) ,TEST-BV-1 ,(mult 5))
-    ;;too high
-    (doit (bytevector-s32-native-ref TEST-BV-1 (mult 4)) ,TEST-BV-1 ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 (mult 5)) TEST-BV-1 (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 (mult 4)) TEST-BV-1 (mult 4))
 
   #t)
 
@@ -2388,40 +2151,32 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-set! (bytevector? bv))
-    (doit (bytevector-u64-set! #\a 1 2 (endianness little)) #\a))
+  (check-argument-validation (bytevector-u64-set! #\a 1 2 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u64-set! THE-BV #\a 2 (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-u64-set! THE-BV -1 2 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-set! THE-BV #\a 2 (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u64-set! THE-BV -1 2 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-set! (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-u64-set! THE-BV (mult 5) 2 (endianness little)) ,THE-BV ,(mult 5))
-    ;;too high
-    (doit (bytevector-u64-set! THE-BV (mult 4) 2 (endianness little)) ,THE-BV ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u64-set! THE-BV (mult 5) 2 (endianness little)) THE-BV (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u64-set! THE-BV (mult 4) 2 (endianness little)) THE-BV (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-set! (words.word-u64? word))
-    ;;not a fixnum
-    (doit (bytevector-u64-set! THE-BV 1 #\a (endianness little)) #\a)
-    ;;negative fixnum
-    (doit (bytevector-u64-set! THE-BV 1 -1 (endianness little))  -1)
-    ;;negative bignum
-    (doit (bytevector-u64-set! THE-BV 1 (words.least-u64*) (endianness little)) ,(words.least-u64*))
-    ;;too high
-    (doit (bytevector-u64-set! THE-BV 1 (words.greatest-u64*) (endianness little)) ,(words.greatest-u64*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-set! THE-BV 1 #\a (endianness little)) #\a)
+  ;;negative fixnum
+  (check-argument-validation (bytevector-u64-set! THE-BV 1 -1 (endianness little))  -1)
+  ;;negative bignum
+  (check-argument-validation (bytevector-u64-set! THE-BV 1 (words.least-u64*) (endianness little)) (words.least-u64*))
+  ;;too high
+  (check-argument-validation (bytevector-u64-set! THE-BV 1 (words.greatest-u64*) (endianness little)) (words.greatest-u64*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2490,26 +2245,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-ref (bytevector? bv))
-    (doit (bytevector-u64-ref #\a 1 (endianness little)) #\a))
+  (check-argument-validation (bytevector-u64-ref #\a 1 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u64-ref THE-BV-BE #\a (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-u64-ref THE-BV-BE -1  (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-ref THE-BV-BE #\a (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u64-ref THE-BV-BE -1  (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-ref (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-u64-ref THE-BV-BE (mult 5) (endianness little)) ,THE-BV-BE ,(mult 5))
-    ;;too high
-    (doit (bytevector-u64-ref THE-BV-BE (mult 4) (endianness little)) ,THE-BV-BE ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u64-ref THE-BV-BE (mult 4) (endianness little)) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2548,45 +2297,35 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-set! (bytevector? bv))
-    (doit (bytevector-u64-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-u64-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u64-native-set! THE-BV #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-u64-native-set! THE-BV -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-native-set! THE-BV #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u64-native-set! THE-BV -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-set! (words.fixnum-aligned-to-8? index))
-    ;;not aligned
-    (doit (bytevector-u64-native-set! THE-BV 1 2) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 2) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-set! (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-u64-native-set! THE-BV (mult 5) 2) ,THE-BV ,(mult 5))
-    ;;too high
-    (doit (bytevector-u64-native-set! THE-BV (mult 4) 2) ,THE-BV ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-set! THE-BV (mult 5) 2) THE-BV (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-set! THE-BV (mult 4) 2) THE-BV (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-set! (words.word-u64? word))
-    ;;not a fixnum
-    (doit (bytevector-u64-native-set! THE-BV 1 #\a) #\a)
-    ;;negative fixnum
-    (doit (bytevector-u64-native-set! THE-BV 1 -1)  -1)
-    ;;negative bignum
-    (doit (bytevector-u64-native-set! THE-BV 1 (words.least-u64*)) ,(words.least-u64*))
-    ;;too high
-    (doit (bytevector-u64-native-set! THE-BV 1 (words.greatest-u64*)) ,(words.greatest-u64*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 #\a) #\a)
+  ;;negative fixnum
+  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 -1)  -1)
+  ;;negative bignum
+  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 (words.least-u64*)) (words.least-u64*))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 (words.greatest-u64*)) (words.greatest-u64*))
 
   #t)
 
@@ -2625,31 +2364,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (bytevector? bv))
-    (doit (bytevector-u64-native-ref #\a 0) #\a))
+  (check-argument-validation (bytevector-u64-native-ref #\a 0) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
-    ;;negative
-    (doit (bytevector-u64-native-ref THE-BV-BE -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (words.fixnum-aligned-to-8? index))
-    ;;not aligned
-    (doit (bytevector-u64-native-ref THE-BV-BE 1) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE 1) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-u64-native-ref THE-BV-BE (mult 5)) ,THE-BV-BE ,(mult 5))
-    ;;too high
-    (doit (bytevector-u64-native-ref THE-BV-BE (mult 4)) ,THE-BV-BE ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 5)) THE-BV-BE (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 4)) THE-BV-BE (mult 4))
 
   #t)
 
@@ -2743,38 +2474,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-set! (bytevector? bv))
-    (doit (bytevector-s64-set! #\a 1 2 (endianness little)) #\a))
+  (check-argument-validation (bytevector-s64-set! #\a 1 2 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s64-set! THE-BV-BE #\a 2 (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-s64-set! THE-BV-BE -1 2 (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE #\a 2 (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE -1 2 (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-set! (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-s64-set! THE-BV-BE (mult 5) 2 (endianness little)) ,THE-BV-BE ,(mult 5))
-    ;;too high
-    (doit (bytevector-s64-set! THE-BV-BE (mult 4) 2 (endianness little)) ,THE-BV-BE ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE (mult 5) 2 (endianness little)) THE-BV-BE (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE (mult 4) 2 (endianness little)) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-set! (words.word-s64? word))
-    ;;not a fixnum
-    (doit (bytevector-s64-set! THE-BV-BE 1 #\a (endianness little)) #\a)
-    ;;negative bignum
-    (doit (bytevector-s64-set! THE-BV-BE 1 (words.least-s64*) (endianness little)) ,(words.least-s64*))
-    ;;too high
-    (doit (bytevector-s64-set! THE-BV-BE 1 (words.greatest-s64*) (endianness little)) ,(words.greatest-s64*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE 1 #\a (endianness little)) #\a)
+  ;;negative bignum
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE 1 (words.least-s64*) (endianness little)) (words.least-s64*))
+  ;;too high
+  (check-argument-validation (bytevector-s64-set! THE-BV-BE 1 (words.greatest-s64*) (endianness little)) (words.greatest-s64*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2843,26 +2566,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-ref (bytevector? bv))
-    (doit (bytevector-s64-ref #\a 1 (endianness little)) #\a))
+  (check-argument-validation (bytevector-s64-ref #\a 1 (endianness little)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s64-ref THE-BV-BE #\a (endianness little)) #\a)
-    ;;negative
-    (doit (bytevector-s64-ref THE-BV-BE -1  (endianness little)) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s64-ref THE-BV-BE #\a (endianness little)) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s64-ref THE-BV-BE -1  (endianness little)) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-ref (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-s64-ref THE-BV-BE (mult 5) (endianness little)) ,THE-BV-BE ,(mult 5))
-    ;;too high
-    (doit (bytevector-s64-ref THE-BV-BE (mult 4) (endianness little)) ,THE-BV-BE ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s64-ref THE-BV-BE (mult 4) (endianness little)) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2926,43 +2643,33 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-native-set! (bytevector? bv))
-    (doit (bytevector-s64-native-set! #\a 1 2) #\a))
+  (check-argument-validation (bytevector-s64-native-set! #\a 1 2) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-native-set! (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-s64-native-set! THE-BV-BE #\a 2) #\a)
-    ;;negative
-    (doit (bytevector-s64-native-set! THE-BV-BE -1 2) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE #\a 2) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE -1 2) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-native-set! (words.fixnum-aligned-to-8? index))
-    ;;not aligned
-    (doit (bytevector-s64-native-set! THE-BV-BE 1 2) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 2) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-native-set! (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-s64-native-set! THE-BV-BE (mult 5) 2) ,THE-BV-BE ,(mult 5))
-    ;;too high
-    (doit (bytevector-s64-native-set! THE-BV-BE (mult 4) 2) ,THE-BV-BE ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE (mult 5) 2) THE-BV-BE (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE (mult 4) 2) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-s64-native-set! (words.word-s64? word))
-    ;;not a fixnum
-    (doit (bytevector-s64-native-set! THE-BV-BE 1 #\a) #\a)
-    ;;negative bignum
-    (doit (bytevector-s64-native-set! THE-BV-BE 1 (words.least-s64*)) ,(words.least-s64*))
-    ;;too high
-    (doit (bytevector-s64-native-set! THE-BV-BE 1 (words.greatest-s64*)) ,(words.greatest-s64*)))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 #\a) #\a)
+  ;;negative bignum
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 (words.least-s64*)) (words.least-s64*))
+  ;;too high
+  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 (words.greatest-s64*)) (words.greatest-s64*))
 
   #t)
 
@@ -3001,31 +2708,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (bytevector? bv))
-    (doit (bytevector-u64-native-ref #\a 0) #\a))
+  (check-argument-validation (bytevector-u64-native-ref #\a 0) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (bytevector-index? index))
-    ;;not a fixnum
-    (doit (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
-    ;;negative
-    (doit (bytevector-u64-native-ref THE-BV-BE -1) -1))
+  ;;not a fixnum
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE #\a) #\a)
+  ;;negative
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE -1) -1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (words.fixnum-aligned-to-8? index))
-    ;;not aligned
-    (doit (bytevector-u64-native-ref THE-BV-BE 1) 1))
+  ;;not aligned
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE 1) 1)
 
-  (with-check-for-procedure-argument-validation
-      (bytevector-u64-native-ref (bytevector-index-for-word64? bv index))
-    ;;too high
-    (doit (bytevector-u64-native-ref THE-BV-BE (mult 5)) ,THE-BV-BE ,(mult 5))
-    ;;too high
-    (doit (bytevector-u64-native-ref THE-BV-BE (mult 4)) ,THE-BV-BE ,(mult 4)))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 5)) THE-BV-BE (mult 5))
+  ;;too high
+  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 4)) THE-BV-BE (mult 4))
 
   #t)
 

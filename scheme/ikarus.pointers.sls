@@ -304,6 +304,14 @@
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (vicare system $pointers)
 	  $pointer=)
+    (except (vicare system $bytevectors)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
+	    ;;Mar 23, 2015)
+	    $bytevector-copy!/count)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus bytevectors)
+	  $bytevector-copy!/count)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)

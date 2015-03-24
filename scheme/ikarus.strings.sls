@@ -233,7 +233,7 @@
 	 (assert-start-index-for-string ?start ?len)
 	 (assert-end-index-for-string   ?end   ?len)
 	 (unless ($fx<= ?start ?end)
-	   (procedure-argument-violation __who__ "end index out of range" ?start ?end))))
+	   (procedure-argument-violation __who__ "start index less than end index" ?start ?end))))
     ))
 
 (define-syntax (assert-start-index-and-count-for-string stx)
@@ -319,13 +319,6 @@
 
 
 ;;;; helpers
-
-(define (%unsafe.string-copy! src.str src.start
-			      dst.str dst.start
-			      src.end)
-  ($string-copy! src.str src.start
-		 dst.str dst.start
-		 src.end))
 
 (define-inline ($latin1-chi? chi)
   (or ($fx<= #x00 chi #x1F) ;these are the control characters
@@ -712,8 +705,8 @@
      (assert-total-string-length dst.len)
      (receive-and-return (dst.str)
 	 ($make-string dst.len)
-       (%unsafe.string-copy! str1 0 dst.str 0    len1)
-       (%unsafe.string-copy! str2 0 dst.str len1 len2))))
+       ($string-copy! str1 0 dst.str 0    len1)
+       ($string-copy! str2 0 dst.str len1 len2))))
 
   (({str1 string?} {str2 string?} {str3 string?})
    (let* ((len1		($string-length str1))
@@ -723,9 +716,9 @@
      (assert-total-string-length dst.len)
      (receive-and-return (dst.str)
 	 ($make-string dst.len)
-       (%unsafe.string-copy! str1 0 dst.str 0    len1)
-       (%unsafe.string-copy! str2 0 dst.str len1 len2)
-       (%unsafe.string-copy! str3 0 dst.str ($fx+ len1 len2) len3))))
+       ($string-copy! str1 0 dst.str 0    len1)
+       ($string-copy! str2 0 dst.str len1 len2)
+       ($string-copy! str3 0 dst.str ($fx+ len1 len2) len3))))
 
   (({str1 string?} {str2 string?} {str3 string?} {str4 string?} . {str* list-of-strings?})
 
@@ -752,15 +745,15 @@
      (assert-total-string-length dst.len)
      (let ((dst.str ($make-string dst.len)))
        ;;Append first string.
-       (%unsafe.string-copy! str1 0 dst.str 0    len1)
+       ($string-copy! str1 0 dst.str 0    len1)
        ;;Append second string.
-       (%unsafe.string-copy! str2 0 dst.str len1 len2)
+       ($string-copy! str2 0 dst.str len1 len2)
        ;;Append third string.
        (let ((dst.start ($fx+ len1 len2)))
-	 (%unsafe.string-copy! str3 0 dst.str dst.start len3)
+	 ($string-copy! str3 0 dst.str dst.start len3)
 	 ;;Append fourth string.
 	 (let ((dst.start ($fx+ dst.start len3)))
-	   (%unsafe.string-copy! str4 0 dst.str dst.start len4)
+	   ($string-copy! str4 0 dst.str dst.start len4)
 	   ;;Append rest strings.
 	   (%fill-strings dst.str str* ($fx+ dst.start len4))))))))
 
@@ -913,31 +906,49 @@
 	(dst.len ($string-length dst.str)))
     (assert-start-index-and-count-for-string src.str src.start count src.len)
     (assert-start-index-and-count-for-string dst.str dst.start count dst.len)
-    (cond (($fxzero? count)
-	   (void))
-	  ((eq? src.str dst.str)
-	   (cond (($fx< dst.start src.start)
-		  ($string-self-copy-forwards!/count  src.str src.start dst.start count))
-		 (($fx> dst.start src.start)
-		  ($string-self-copy-backwards!/count src.str src.start dst.start count))
-		 (else (void))))
-	  (else
-	   (let ((src.end ($fx+ src.start count)))
-	     ($string-copy! src.str src.start dst.str dst.start src.end))))))
+    ($string-copy!/count src.str src.start dst.str dst.start count)))
 
-(define ($string-copy! src.str src.start
-		       dst.str dst.start
-		       src.end)
+;;; --------------------------------------------------------------------
+
+(define ($string-copy! src.str src.start dst.str dst.start src.end)
   ;;Copy the characters of SRC.STR from  SRC.START inclusive to SRC.END exclusive, to
   ;;DST.STR starting at DST.START inclusive.
   ;;
-  (if ($fx= src.start src.end)
-      dst.str
-    (begin
-      ($string-set! dst.str dst.start ($string-ref src.str src.start))
-      ($string-copy! src.str ($fxadd1 src.start)
-		     dst.str ($fxadd1 dst.start)
-		     src.end))))
+  (cond (($fx= src.start src.end)
+	 (void))
+	((eq? src.str dst.str)
+	 (cond (($fx< dst.start src.start)
+		($string-copy-forwards!  src.str src.start dst.str dst.start src.end))
+	       (($fx> dst.start src.start)
+		($string-copy-backwards! src.str src.start dst.str dst.start src.end))
+	       (else (void))))
+	(else
+	 ($string-copy-forwards!  src.str src.start dst.str dst.start src.end))))
+
+(define ($string-copy-forwards! src.str src.start dst.str dst.start src.end)
+  ;;Copy characters  of STR.STR  from SRC.START inclusive  to SRC.END  exclusive into
+  ;;DST.STR itself starting at DST.START inclusive.  The copy happens forwards, so if
+  ;;SRC.STR  and DST.STR  are the  same:  it is  suitable  for the  case SRC.START  >
+  ;;DST.START.
+  ;;
+  (unless ($fx= src.start src.end)
+    ($string-set! dst.str dst.start ($string-ref src.str src.start))
+    ($string-copy-forwards! src.str ($fxadd1 src.start) dst.str ($fxadd1 dst.start) src.end)))
+
+(define ($string-copy-backwards! src.str src.start dst.str dst.start src.end)
+  ;;Copy characters  of STR.STR  from SRC.START inclusive  to SRC.END  exclusive into
+  ;;DST.STR itself starting  at DST.START inclusive.  The copy  happens backwards, so
+  ;;if SRC.STR  and DST.STR are  the same:  it is suitable  for the case  SRC.START <
+  ;;DST.START.
+  ;;
+  (define count ($fx- src.end src.start))
+  (let loop ((src.end   src.end)
+	     (dst.end	($fx+ dst.start count)))
+    (unless ($fx= src.start src.end)
+      (let ((src.end ($fxsub1 src.end))
+	    (dst.end ($fxsub1 dst.end)))
+	($string-set! dst.str dst.end ($string-ref src.str src.end))
+	(loop src.end dst.end)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -945,10 +956,17 @@
   ;;Copy COUNT  characters from  SRC.STR starting at  SRC.START inclusive  to DST.STR
   ;;starting at DST.START inclusive.
   ;;
-  (let ((src.end ($fx+ src.start count)))
-    ($string-copy! src.str src.start
-		   dst.str dst.start
-		   src.end)))
+  (cond (($fxzero? count)
+	 (void))
+	((eq? src.str dst.str)
+	 (cond (($fx< dst.start src.start)
+		($string-self-copy-forwards!/count  src.str src.start dst.start count))
+	       (($fx> dst.start src.start)
+		($string-self-copy-backwards!/count src.str src.start dst.start count))
+	       (else (void))))
+	(else
+	 (let ((src.end ($fx+ src.start count)))
+	   ($string-copy-forwards! src.str src.start dst.str dst.start src.end)))))
 
 (define ($string-self-copy-forwards!/count str src.start dst.start count)
   ;;Copy COUNT characters  of STR from SRC.START inclusive to  STR itself starting at

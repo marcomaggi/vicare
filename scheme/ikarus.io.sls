@@ -662,7 +662,22 @@
 	  $string-copy!/count
 	  $string-fill!
 	  $substring)
-    (vicare system $bytevectors)
+    (except (vicare system $bytevectors)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
+	    ;;Mar 23, 2015)
+	    $bytevector-copy!
+	    $bytevector-copy!/count
+	    $bytevector-fill!
+	    $bytevector-u16-set!	$bytevector-s16-set!
+	    $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus bytevectors)
+	  $bytevector-copy!
+	  $bytevector-copy!/count
+	  $bytevector-fill!
+	  $bytevector-u16-set!		$bytevector-s16-set!
+	  $bytevector-u16-ref		$bytevector-s16-ref)
     ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
     ;;bindings.
     (vicare system $io)
