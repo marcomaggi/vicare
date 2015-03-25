@@ -85,16 +85,41 @@
     ))
 
 (define-comparison char=?	$char=)
-(define-comparison char!=?	$char!=)
 (define-comparison char<?	$char<)
 (define-comparison char<=?	$char<=)
 (define-comparison char>?	$char>)
 (define-comparison char>=?	$char>=)
 
-;;FIXME This should  also be a true  primitive operation.  (Marco Maggi;  Wed Mar 25,
-;;2015)
-;;
+(case-define* char!=?
+  (({ch1 char?} {ch2 char?})
+   ($char!= ch1 ch2))
+
+  (({ch1 char?} {ch2 char?} {ch3 char?})
+   (and ($char!= ch1 ch2)
+	($char!= ch2 ch3)
+	($char!= ch3 ch1)))
+
+  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+   ;;We must compare every argument to all the other arguments.
+   (let outer-loop ((chX    ch1)
+		    (char*  (cons* ch2 ch3 ch4 char*)))
+     (let inner-loop ((chX    chX)
+		      (char^* char*))
+       (cond ((pair? char^*)
+	      (and ($char!= chX ($car char^*))
+		   (inner-loop chX ($cdr char^*))))
+	     ((pair? char*)
+	      (outer-loop (car char*) (cdr char*)))
+	     (else #t))))))
+
 (define ($char!= ch1 ch2)
+  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
+  ;;implementation must be changed to:
+  ;;
+  ;;   (import (prefix (vicare system $chars) sys.))
+  ;;   (sys.$char!= ch1 ch2)
+  ;;
+  ;;(Marco Maggi; Wed Mar 25, 2015)
   (not ($char= ch1 ch2)))
 
 

@@ -227,53 +227,36 @@
 
 (parametrise ((check-test-name	'char-not-equal))
 
-  (check
-      (char!=? #\a #\a)
-    => #f)
-
-  (check
-      (char!=? #\a #\b)
-    => #t)
+  (check-for-true	(char!=? #\A #\B))
+  (check-for-false	(char!=? #\A #\A))
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (char!=? #\a #\a #\a)
-    => #f)
-
-  (check
-      (char!=? #\a #\b #\b)
-    => #t)
-
-  (check
-      (char!=? #\b #\a #\b)
-    => #t)
-
-  (check
-      (char!=? #\b #\b #\a)
-    => #t)
+  (check-for-true	(char!=? #\A #\B #\C))
+  (check-for-false	(char!=? #\A #\A #\A))
+  (check-for-false	(char!=? #\A #\B #\B))
+  (check-for-false	(char!=? #\B #\A #\B))
+  (check-for-false	(char!=? #\B #\B #\A))
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (char!=? #\a #\a #\a #\a)
-    => #f)
+  (check-for-true	(char!=? #\A #\B #\C #\D))
 
-  (check
-      (char!=? #\a #\b #\b #\b)
-    => #t)
+  (check-for-false	(char!=? #\A #\A #\A #\A))
 
-  (check
-      (char!=? #\b #\a #\b #\b)
-    => #t)
+  (check-for-false	(char!=? #\A #\B #\B #\B))
+  (check-for-false	(char!=? #\B #\A #\B #\B))
+  (check-for-false	(char!=? #\B #\B #\A #\B))
+  (check-for-false	(char!=? #\B #\B #\B #\A))
 
-  (check
-      (char!=? #\b #\b #\a #\b)
-    => #t)
+  (check-for-false	(char!=? #\A #\A #\C #\D))
+  (check-for-false	(char!=? #\A #\B #\A #\D))
+  (check-for-false	(char!=? #\A #\B #\C #\A))
 
-  (check
-      (char!=? #\b #\b #\b #\a)
-    => #t)
+  (check-for-false	(char!=? #\A #\B #\B #\D))
+  (check-for-false	(char!=? #\A #\B #\C #\B))
+
+  (check-for-false	(char!=? #\A #\B #\C #\C))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 2 args
@@ -327,6 +310,124 @@
   (check
       (catch-procedure-argument-violation #f
 	(char!=? #\b #\b #\b 123))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'char-ci-not-equal))
+
+  (check-for-true	(char-ci!=? #\A #\B))
+  (check-for-false	(char-ci!=? #\A #\A))
+
+  (check-for-true	(char-ci!=? #\A #\b))
+  (check-for-false	(char-ci!=? #\A #\a))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(char-ci!=? #\A #\B #\C))
+  (check-for-false	(char-ci!=? #\A #\A #\A))
+  (check-for-false	(char-ci!=? #\A #\B #\B))
+  (check-for-false	(char-ci!=? #\B #\A #\B))
+  (check-for-false	(char-ci!=? #\B #\B #\A))
+
+  (check-for-true	(char-ci!=? #\a #\B #\C))
+  (check-for-false	(char-ci!=? #\A #\a #\A))
+  (check-for-false	(char-ci!=? #\A #\B #\b))
+  (check-for-false	(char-ci!=? #\b #\A #\B))
+  (check-for-false	(char-ci!=? #\B #\b #\a))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(char-ci!=? #\A #\B #\C #\D))
+
+  (check-for-false	(char-ci!=? #\A #\A #\A #\A))
+
+  (check-for-false	(char-ci!=? #\A #\B #\B #\B))
+  (check-for-false	(char-ci!=? #\B #\A #\B #\B))
+  (check-for-false	(char-ci!=? #\B #\B #\A #\B))
+  (check-for-false	(char-ci!=? #\B #\B #\B #\A))
+
+  (check-for-false	(char-ci!=? #\A #\A #\C #\D))
+  (check-for-false	(char-ci!=? #\A #\B #\A #\D))
+  (check-for-false	(char-ci!=? #\A #\B #\C #\A))
+
+  (check-for-false	(char-ci!=? #\A #\B #\B #\D))
+  (check-for-false	(char-ci!=? #\A #\B #\C #\B))
+
+  (check-for-false	(char-ci!=? #\A #\B #\C #\C))
+
+
+  (check-for-true	(char-ci!=? #\A #\b #\C #\d))
+
+  (check-for-false	(char-ci!=? #\A #\a #\a #\A))
+
+  (check-for-false	(char-ci!=? #\A #\B #\B #\b))
+  (check-for-false	(char-ci!=? #\b #\A #\B #\B))
+  (check-for-false	(char-ci!=? #\B #\b #\A #\B))
+  (check-for-false	(char-ci!=? #\B #\B #\b #\A))
+
+  (check-for-false	(char-ci!=? #\A #\a #\C #\D))
+  (check-for-false	(char-ci!=? #\A #\B #\a #\D))
+  (check-for-false	(char-ci!=? #\a #\B #\C #\A))
+
+  (check-for-false	(char-ci!=? #\A #\b #\b #\d))
+  (check-for-false	(char-ci!=? #\a #\B #\C #\B))
+
+  (check-for-false	(char-ci!=? #\A #\b #\c #\C))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: 2 args
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? 123 #\b))
+    => #t)
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? #\b 123))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: 3 args
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? 123 #\b #\b))
+    => #t)
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? #\b 123 #\b))
+    => #t)
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? #\b #\b 123))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation: 4 args
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? 123 #\b #\b #\b))
+    => #t)
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? #\b 123 #\b #\b))
+    => #t)
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? #\b #\b 123 #\b))
+    => #t)
+
+  (check
+      (catch-procedure-argument-violation #f
+	(char-ci!=? #\b #\b #\b 123))
     => #t)
 
   #t)

@@ -5349,7 +5349,7 @@ Evaluate to true if the operands are equal.
 
 
 @deffn {Unsafe Operation} $char!= @vari{ch} @varii{ch}
-Evaluate to false if the operands are equal.
+Evaluate to true if the operands are different.
 @end deffn
 
 
