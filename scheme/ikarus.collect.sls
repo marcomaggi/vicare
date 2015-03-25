@@ -17,7 +17,7 @@
 
 (library (ikarus collect)
   (export
-    do-overflow			do-overflow-words
+    do-overflow
     do-vararg-overflow		do-stack-overflow
     collect			collect-key
     post-gc-hooks
@@ -84,12 +84,6 @@
   ;;expects DO-OVERFLOW to return  a single value; if it returns 0,  2 or more values
   ;;very bad assembly-level errors will happen.  (Marco Maggi; Thu Apr 4, 2013)
   #t)
-
-(define (do-overflow-words number-of-words)
-  ;;Like  DO-OVERFLOW   but  make  room   for  NUMBER-OF-WORDS  words   (rather  than
-  ;;NUMBER-OF-WORDS bytes).
-  ;;
-  (do-overflow ($fxsll number-of-words 2)))
 
 (define do-vararg-overflow do-overflow)
 
