@@ -666,17 +666,30 @@ gc_finalize_guardians (gc_t* gc)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ik_collect_check (unsigned long req, ikpcb* pcb)
-/* Check if there  are REQ bytes already allocated and  available on the
-   heap; return #t if there are, run a GC and return #f otherwise. */
+ikrt_collect_check (ikptr s_number_of_words, ikpcb* pcb)
+/* Check  if there  are  S_NUMBER_OF_WORDS bytes  already allocated  and
+   available on the heap; return #t if there are, run a GC and return #f
+   otherwise.
+
+   About S_NUMBER_OF_WORDS, notice that: if we interpret it as a fixnum,
+   it represents the number of words; if we interpret it as a C language
+   unsigned integer, it represents the number of bytes. */
 {
-  long bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
-  if (bytes >= req) {
-    return IK_TRUE_OBJECT;
-  } else {
-    ik_collect(req, pcb);
-    return IK_FALSE_OBJECT;
+  long		bytes = ((long)pcb->allocation_redline) - ((long)pcb->allocation_pointer);
+  ikptr		rv    = IK_TRUE_OBJECT;
+  if (bytes < s_number_of_words) {
+    ik_collect(s_number_of_words, pcb);
+    rv = IK_FALSE_OBJECT;
   }
+  return rv;
+}
+
+/* FIXME This function is to be removed at the next boot image rotation.
+   (Marco Maggi; Wed Mar 25, 2015) */
+ikptr
+ik_collect_check (ikptr s_number_of_words, ikpcb* pcb)
+{
+  return ikrt_collect_check (s_number_of_words, pcb);
 }
 
 
