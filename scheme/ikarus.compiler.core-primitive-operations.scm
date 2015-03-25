@@ -481,19 +481,34 @@
      ;;Generate and return recordized code that validates, at run time, the arguments
      ;;as fixnums.
      ;;
-     (let*-values (((fx* others)  (partition %known-fixnum?     (cons a a*)))
-		   ((nfx* others) (partition %known-non-fixnum? others)))
-       (cond ((not (null? nfx*))
-	      (interrupt))
-	     ((null? others)
-	      (nop))
-	     (else
-	      (interrupt-unless
-	       (tag-test (%or* (V-simple-operand (car others))
-			       (cdr others))
-			 fx-mask fx-tag))))))
+     (receive (known-to-be-fixnum* not-known-to-be-fixnum*)
+	 (partition %known-fixnum? (cons a a*))
+       (receive (known-to-be-non-fixnum* having-unknown-type*)
+	   (partition %known-non-fixnum? not-known-to-be-fixnum*)
+	 (cond ((not (null? known-to-be-non-fixnum*))
+		(interrupt))
+	       ((null? having-unknown-type*)
+		(nop))
+	       (else
+		(interrupt-unless
+		 (tag-test (%or* (V-simple-operand (car having-unknown-type*))
+				 (cdr having-unknown-type*))
+			   fx-mask fx-tag)))))))
 
    (define (%or* a a*)
+     ;;Assume A has already been filtered through "V-simple-operand".
+     ;;
+     ;;Called as:
+     ;;
+     ;;   (%or* ?simple-fx1 (list ?fx2 ?fx3 ?fx4))
+     ;;
+     ;;returns:
+     ;;
+     ;;   (asm logor (asm logor (asm logor ?simple-fx1
+     ;;                                    (simple ?fx2))
+     ;;                         (simple ?fx3))
+     ;;              (simple ?fx4))
+     ;;
      (if (pair? a*)
 	 (%or* (asm 'logor a (V-simple-operand (car a*)))
 	       (cdr a*))
@@ -3486,10 +3501,6 @@
     (asm 'int+/overflow
 	 (V-simple-operand x)
 	 (V-simple-operand (K -1)))))
-
- ;; (define-core-primitive-operation $sub1-fixnum unsafe
- ;;   ((V x)
- ;;    (cogen-value-+ x (K -1))))
 
  (define-core-primitive-operation * safe
    ((V)
