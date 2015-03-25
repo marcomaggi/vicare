@@ -1571,7 +1571,6 @@
     ($debug)
     ($do-event)
     (do-overflow)
-    (do-overflow-words)
     (do-vararg-overflow)
     (collect					v $language)
     (collect-key				v $language)

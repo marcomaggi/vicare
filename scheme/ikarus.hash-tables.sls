@@ -112,16 +112,17 @@
     (only (ikarus vectors)
 	  vector-find
 	  vector-fold-right)
-    (vicare system $bignums)
-    (vicare system $chars)
-    (vicare system $compnums)
-    (vicare system $flonums)
     (vicare system $fx)
-    (vicare system $numerics)
-    (vicare system $pairs)
+    (vicare system $bignums)
     (vicare system $ratnums)
-    (vicare system $tcbuckets)
-    (vicare system $vectors))
+    (vicare system $flonums)
+    (vicare system $compnums)
+    (vicare system $numerics)
+    (vicare system $chars)
+    (vicare system $symbols)
+    (vicare system $pairs)
+    (vicare system $vectors)
+    (vicare system $tcbuckets))
 
 
 ;;;; helpers
@@ -907,7 +908,7 @@
   ($symbol-hash sym))
 
 (define ($symbol-hash sym)
-  (foreign-call "ikrt_string_hash" (symbol->string sym) #t))
+  (foreign-call "ikrt_string_hash" ($symbol->string sym) #t))
 
 ;;; --------------------------------------------------------------------
 

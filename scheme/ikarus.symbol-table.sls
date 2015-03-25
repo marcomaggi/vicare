@@ -37,6 +37,17 @@
 	    $string->symbol))
 
 
+;;;; helpers
+
+(define-syntax-rule (%compute-string-hash str)
+  ;;In this  module we  always compute  the hash value  of a  string using  the whole
+  ;;string; so the second argument is #t here.
+  ($string-hash str #t))
+
+(define-syntax-rule (%compute-symbol-hash sym)
+  (%compute-string-hash ($symbol->string sym)))
+
+
 ;;;; symbol table data structure
 
 ;;A SYMBOL-TABLE  structure is, in  practice, a hash table  holding weak
@@ -119,7 +130,8 @@
     (when (pair? x)
       (let ((sym ($car x)))
 	(intern-symbol! sym
-			($fxand (symbol-hash sym) (symbol-table-mask THE-SYMBOL-TABLE))
+			($fxand (%compute-symbol-hash sym)
+				(symbol-table-mask THE-SYMBOL-TABLE))
 			THE-SYMBOL-TABLE))
       (intern-car ($cdr x))))
   (vector-for-each intern-car (foreign-call "ikrt_get_symbol_table")))
@@ -159,7 +171,7 @@
     ;;Lookup the  symbol in the  symbol table:  if it is  already there,
     ;;return it; else create a new entry and return the new symbol.
     ;;
-    (let* ((idx ($fxand ($string-hash str)
+    (let* ((idx ($fxand (%compute-string-hash str)
 			(symbol-table-mask THE-SYMBOL-TABLE)))
 	   (list-of-interned-symbols ($vector-ref ($symbol-table-buckets THE-SYMBOL-TABLE) idx)))
       (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols)))
@@ -255,7 +267,7 @@
   ;;Remove the interned symbol SYM from TABLE.
   ;;
   (set-symbol-table-size! table ($fxsub1 (symbol-table-size table)))
-  (let ((idx ($fxand (symbol-hash sym) (symbol-table-mask table)))
+  (let ((idx ($fxand (%compute-symbol-hash sym) (symbol-table-mask table)))
 	(vec (symbol-table-buckets table)))
     (let ((ls ($vector-ref vec idx)))
       (if (eq? ($car ls) sym)
@@ -288,7 +300,7 @@
 		  (rest ($cdr p)))
 	      ;;Recycle this pair by setting its cdr to the value in the
 	      ;;vector.
-	      (let ((idx ($fxand (symbol-hash a) mask)))
+	      (let ((idx ($fxand (%compute-symbol-hash a) mask)))
 		($set-cdr! p ($vector-ref vec2 idx))
 		($vector-set! vec2 idx p))
 	      (insert rest))))

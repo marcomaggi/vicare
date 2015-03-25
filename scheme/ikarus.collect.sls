@@ -17,7 +17,7 @@
 
 (library (ikarus collect)
   (export
-    do-overflow			do-overflow-words
+    do-overflow
     do-vararg-overflow		do-stack-overflow
     collect			collect-key
     post-gc-hooks
@@ -55,41 +55,35 @@
           ls
 	(assertion-violation 'post-gc-hooks "not a list of procedures" ls)))))
 
-(define (do-post-gc ls n)
+(define (do-post-gc ls number-of-words)
   (let ((k0 (collect-key)))
     ;;Run the hook functions.
     (parameterize ((post-gc-hooks '()))
       ;;Run the post-gc hooks.
       (for-each (lambda (x) (x)) ls))
     (if (eq? k0 (collect-key))
-        (let ((was-enough? (foreign-call "ik_collect_check" n)))
+        (let ((was-enough? (foreign-call "ikrt_collect_check" number-of-words)))
           ;;Handlers ran  without GC but  there was not enough  space in
           ;;the nursery for the pending allocation.
           (unless was-enough?
-	    (do-post-gc ls n)))
+	    (do-post-gc ls number-of-words)))
       ;;Handlers did cause a GC, so, do the handlers again.
-      (do-post-gc ls n))))
+      (do-post-gc ls number-of-words))))
 
-(define (do-overflow n)
-  ;;This function is called whenever a Scheme function tries to allocate
-  ;;an object  on the heap and  the heap has  no enough room for  it.  A
-  ;;garbage collection is  run to reclaim some heap space  and we expect
-  ;;that, at return time, the heap has enough room to allocate N bytes.
+(define (do-overflow number-of-words)
+  ;;This function is called whenever a Scheme function tries to allocate an object on
+  ;;the heap and the heap has no enough  room for it.  A garbage collection is run to
+  ;;reclaim some heap space  and we expect that, at return time,  the heap has enough
+  ;;room to allocate NUMBER-OF-WORDS bytes.
   ;;
-  (foreign-call "ik_collect" n)
+  (foreign-call "ik_collect" number-of-words)
   (let ((ls (post-gc-hooks)))
     (unless (null? ls)
-      (do-post-gc ls n)))
-  ;;NOTE  Do *not*  remove  this.   The code  calling  this function  to
-  ;;reclaim heap space expects DO-OVERFLOW  to return a single value; if
-  ;;it returns 0,  2 or more values very bad  assembly-level errors will
-  ;;happen.  (Marco Maggi; Thu Apr 4, 2013)
+      (do-post-gc ls number-of-words)))
+  ;;NOTE Do *not* remove this.  The code  calling this function to reclaim heap space
+  ;;expects DO-OVERFLOW to return  a single value; if it returns 0,  2 or more values
+  ;;very bad assembly-level errors will happen.  (Marco Maggi; Thu Apr 4, 2013)
   #t)
-
-(define (do-overflow-words n)
-  ;;Like DO-OVERFLOW but make room for N words (rather thatn N bytes).
-  ;;
-  (do-overflow ($fxsll n 2)))
 
 (define do-vararg-overflow do-overflow)
 
