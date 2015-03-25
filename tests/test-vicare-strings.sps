@@ -1,6 +1,5 @@
-;;; -*- coding: utf-8-unix -*-
 ;;;
-;;;Part of: Vicare
+;;;Part of: Vicare Scheme
 ;;;Contents: tests for "ikarus.strings.ss"
 ;;;Date: Sat Oct 29, 2011
 ;;;
@@ -8,20 +7,19 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -37,15 +35,17 @@
 
 ;;;; syntax helpers
 
-(define-syntax catch
+(define-syntax check-procedure-arguments-violation
   (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
-	       (else E))
-       (begin . ?body)))))
+    ((_ ?body)
+     (check-for-true
+      (guard (E ((procedure-argument-violation? E)
+		 (when #f
+		   (check-pretty-print (condition-message E))
+		   (check-pretty-print (condition-irritants E)))
+		 #t)
+		(else E))
+	?body)))))
 
 
 (parametrise ((check-test-name	'string-length))
@@ -95,10 +95,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: string
 
-  (check
-      (catch #f
-	(string-ref 123 1))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-ref 123 1))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
@@ -131,15 +129,11 @@
   ;; 	(string-ref "" (+ 1 (greatest-fixnum))))
   ;;   => (list (+ 1 (greatest-fixnum))))
 
-  (check
-      (catch #f
-	(string-ref "" 0))
-    => '(0 ""))
+  (check-procedure-arguments-violation
+   (string-ref "" 0))
 
-  (check
-      (catch #f
-	(string-ref "abc" 10))
-    => '(10 "abc"))
+  (check-procedure-arguments-violation
+   (string-ref "abc" 10))
 
   #t)
 
@@ -167,38 +161,26 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: string
 
-  (check
-      (catch #f
-	(string-set! 123 1 #\a))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-set! 123 1 #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check
-      (catch #f
-	(string-set! (string #\a #\b #\c) #\a #\b))
-    => '(#\a "abc"))
+  (check-procedure-arguments-violation
+   (string-set! (string #\a #\b #\c) #\a #\b))
 
-  (check
-      (catch #f
-	(string-set! (string #\a #\b #\c) -1 #\a))
-    => '(-1 "abc"))
+  (check-procedure-arguments-violation
+   (string-set! (string #\a #\b #\c) -1 #\a))
 
-  (check
-      (catch #f
-	(string-set! (string #\a #\b #\c) (+ 1 (greatest-fixnum)) #\a))
-    => (list (+ 1 (greatest-fixnum)) "abc"))
+  (check-procedure-arguments-violation
+   (string-set! (string #\a #\b #\c) (+ 1 (greatest-fixnum)) #\a))
 
-  (check
-      (catch #f
-	(string-set! (string) 0 #\a))
-    => '(0 ""))
+  (check-procedure-arguments-violation
+   (string-set! (string) 0 #\a))
 
-  (check
-      (catch #f
-	(string-set! (string #\a #\b #\c) 10 #\9))
-    => `(10 "abc"))
+  (check-procedure-arguments-violation
+   (string-set! (string #\a #\b #\c) 10 #\9))
 
   #t)
 
@@ -234,28 +216,20 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: length
 
-  (check	;not a number
-      (catch #f
-	(make-string #t #\A))
-    => '(#t))
+  (check-procedure-arguments-violation	;not a number
+   (make-string #t #\A))
 
-  (check	;negative
-      (catch #f
-	(make-string -1 #\A))
-    => '(-1))
+  (check-procedure-arguments-violation
+   (make-string -1 #\A))
 
-  (check	;not a fixnum
-      (catch #f
-	(make-string (+ 1 (greatest-fixnum)) #\A))
-    => (list (+ 1 (greatest-fixnum))))
+  (check-procedure-arguments-violation
+   (make-string (+ 1 (greatest-fixnum)) #\A))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: character
 
-  (check	;not a character
-      (catch #f
-	(make-string 1 #t))
-    => '(#t))
+  (check-procedure-arguments-violation
+   (make-string 1 #t))
 
   #t)
 
@@ -285,35 +259,23 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(string 1))
-    => '(1))
+  (check-procedure-arguments-violation
+   (string 1))
 
-  (check
-      (catch #f
-	(string #\a 1))
-    => '(1))
+  (check-procedure-arguments-violation
+   (string #\a 1))
 
-  (check
-      (catch #f
-	(string #\a #\b 1))
-    => '(1))
+  (check-procedure-arguments-violation
+   (string #\a #\b 1))
 
-  (check
-      (catch #f
-	(string #\a #\b #\c 1))
-    => '(1))
+  (check-procedure-arguments-violation
+   (string #\a #\b #\c 1))
 
-  (check
-      (catch #f
-	(string #\a #\b #\c #\d 1))
-    => '(1))
+  (check-procedure-arguments-violation
+   (string #\a #\b #\c #\d 1))
 
-  (check
-      (catch #f
-	(string #\a #\b #\c #\d #\e 1))
-    => '(1))
+  (check-procedure-arguments-violation
+   (string #\a #\b #\c #\d #\e 1))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe operations
@@ -392,64 +354,44 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: string
 
-  (check
-      (catch #f
-	(substring 123 1 1))
-    => '(123))
+  (check-procedure-arguments-violation
+   (substring 123 1 1))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: start index
 
-  (check	;not a number
-      (catch #f
-	(substring "abcd" #t 1))
-    => '(#t))
+  (check-procedure-arguments-violation
+   (substring "abcd" #t 1))
 
-  (check	;negative
-      (catch #f
-	(substring "abcd" -1 1))
-    => '(-1))
+  (check-procedure-arguments-violation
+   (substring "abcd" -1 1))
 
-  (check	;not a fixnum
-      (catch #f
-	(substring "abcd" (+ 1 (greatest-fixnum)) 1))
-    => (list (+ 1 (greatest-fixnum))))
+  (check-procedure-arguments-violation
+   (substring "abcd" (+ 1 (greatest-fixnum)) 1))
 
-  (check	;too big for string
-      (catch #f
-	(substring "abcd" 5 6))
-    => '(5 4))
+  (check-procedure-arguments-violation
+   (substring "abcd" 5 6))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: end index
 
-  (check	;not a number
-      (catch #f
-	(substring "abcd" 1 #t))
-    => '(#t))
+  (check-procedure-arguments-violation
+   (substring "abcd" 1 #t))
 
-  (check	;negative
-      (catch #f
-	(substring "abcd" 1 -1))
-    => '(-1))
+  (check-procedure-arguments-violation
+   (substring "abcd" 1 -1))
 
-  (check	;not a fixnum
-      (catch #f
-	(substring "abcd" 1 (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum))))
+  (check-procedure-arguments-violation ; not a fixnum
+   (substring "abcd" 1 (+ 1 (greatest-fixnum))))
 
-  (check	;too big for string
-      (catch #f
-	(substring "abcd" 2 6))
-    => '(6 4))
+  (check-procedure-arguments-violation	;too big for string
+   (substring "abcd" 2 6))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: indexes
 
-  (check	;incorrect order
-      (catch #f
-	(substring "abcd" 2 1))
-    => '(2 1))
+  (check-procedure-arguments-violation	;incorrect order
+   (substring "abcd" 2 1))
 
   #t)
 
@@ -471,10 +413,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: string
 
-  (check
-      (catch #f
-	(string-copy 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-copy 123))
 
   #t)
 
@@ -552,20 +492,14 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(string=? 123 ""))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string=? 123 ""))
 
-  (check
-      (catch #f
-	(string=? "" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string=? "" 123))
 
-  (check
-      (catch #f
-	(string=? "" "" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string=? "" "" 123))
 
   #t)
 
@@ -665,65 +599,41 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(string<? 123 "abc"))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string<? 123 "abc"))
 
-  (check
-      (catch #f
-	(string<? "abc" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string<? "abc" 123))
 
-  (check
-      (catch #f
-	(string<? "abc" "def" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string<? "abc" "def" 123))
 
-  (check
-      (catch #f
-	(string<=? 123 "abc"))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string<=? 123 "abc"))
 
-  (check
-      (catch #f
-	(string<=? "abc" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string<=? "abc" 123))
 
-  (check
-      (catch #f
-	(string<=? "abc" "def" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string<=? "abc" "def" 123))
 
-  (check
-      (catch #f
-	(string>? 123 "abc"))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string>? 123 "abc"))
 
-  (check
-      (catch #f
-	(string>? "abc" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string>? "abc" 123))
 
-  (check
-      (catch #f
-	(string>? "abc" "def" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string>? "abc" "def" 123))
 
-  (check
-      (catch #f
-	(string>=? 123 "abc"))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string>=? 123 "abc"))
 
-  (check
-      (catch #f
-	(string>=? "abc" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string>=? "abc" 123))
 
-  (check
-      (catch #f
-	(string>=? "abc" "def" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string>=? "abc" "def" 123))
 
   #t)
 
@@ -745,10 +655,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(string->list 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string->list 123))
 
   #t)
 
@@ -770,36 +678,24 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;not a list
-      (catch #f
-	(list->string 123))
-    => '(123))
+  (check-procedure-arguments-violation	;not a list
+   (list->string 123))
 
-  (check	;not a list of chars
-      (catch #f
-	(list->string '(1)))
-    => '(1))
+  (check-procedure-arguments-violation	;not a list of chars
+   (list->string '(1)))
 
-  (check	;not a list of chars
-      (catch #f
-	(list->string '(#\a 1)))
-    => '(1))
+  (check-procedure-arguments-violation	;not a list of chars
+   (list->string '(#\a 1)))
 
-  (check	;not a proper list
-      (catch #f
-	(list->string '(#\a #\b . #\c)))
-    => '((#\a #\b . #\c)))
+  (check-procedure-arguments-violation	;not a proper list
+   (list->string '(#\a #\b . #\c)))
 
-  (check	;not a proper list
-      (catch #f
-	(list->string '(#\a . #\c)))
-    => '((#\a . #\c)))
+  (check-procedure-arguments-violation	;not a proper list
+   (list->string '(#\a . #\c)))
 
-  (let ((circ '#0=(#\a #\b #\c . #0#)))
-    (check	;circular list
-	(catch #f
-	  (list->string circ))
-      => (list circ)))
+  (check-procedure-arguments-violation	;circular list
+   (let ((circ '#0=(#\a #\b #\c . #0#)))
+     (list->string circ)))
 
   ;;This consumes too much memory on my small computer (Marco Maggi; Oct
   ;;30, 2011).
@@ -883,36 +779,64 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(string-append 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-append 123))
+
+  (check-procedure-arguments-violation
+   (string-append "a" 123))
+
+  (check-procedure-arguments-violation
+   (string-append "a" "b" 123))
+
+  (check-procedure-arguments-violation
+   (string-append "a" "b" "c" 123))
+
+  (check-procedure-arguments-violation
+   (string-append "a" "b" "c" "d" 123))
+
+  (check-procedure-arguments-violation
+   (string-append "a" "b" "c" "d" "e" 123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'concatenate))
+
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (string-concatenate 123))
+
+  (check-procedure-arguments-violation
+   (string-concatenate '(123)))
+
+;;; --------------------------------------------------------------------
 
   (check
-      (catch #f
-	(string-append "a" 123))
-    => '(123))
+      (string-concatenate '())
+    => "")
 
   (check
-      (catch #f
-	(string-append "a" "b" 123))
-    => '(123))
+      (string-concatenate '(""))
+    => "")
 
   (check
-      (catch #f
-	(string-append "a" "b" "c" 123))
-    => '(123))
+      (string-concatenate '("" ""))
+    => "")
+
+;;; --------------------------------------------------------------------
 
   (check
-      (catch #f
-	(string-append "a" "b" "c" "d" 123))
-    => '(123))
+      (string-concatenate '("123"))
+    => "123")
 
   (check
-      (catch #f
-	(string-append "a" "b" "c" "d" "e" 123))
-    => '(123))
+      (string-concatenate '("123" "456"))
+    => "123456")
 
+  (check
+      (string-concatenate '("123" "456" "789"))
+    => "123456789")
 
   #t)
 
@@ -921,13 +845,11 @@
 
 ;;; arguments validation
 
-  (check
-      (catch #f (string-reverse-and-concatenate 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-reverse-and-concatenate 123))
 
-  (check
-      (catch #f (string-reverse-and-concatenate '(123)))
-    => '((123)))
+  (check-procedure-arguments-violation
+   (string-reverse-and-concatenate '(123)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1036,43 +958,29 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: procedure
 
-  (check
-      (catch #f
-	(string-for-each 123 ""))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each 123 ""))
 
-  (check
-      (catch #f
-	(string-for-each 123 "" ""))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each 123 "" ""))
 
-  (check
-      (catch #f
-	(string-for-each 123 "" "" ""))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each 123 "" "" ""))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: strings
 
-  (check
-      (catch #f
-	(string-for-each values 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each values 123))
 
-  (check
-      (catch #f
-	(string-for-each values "" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each values "" 123))
 
-  (check
-      (catch #f
-	(string-for-each values "" "" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each values "" "" 123))
 
-  (check
-      (catch #f
-	(string-for-each values "" "" "" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-for-each values "" "" "" 123))
 
   #t)
 
@@ -1094,18 +1002,14 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: string
 
-  (check
-      (catch #f
-	(string-fill! 123 #\a))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-fill! 123 #\a))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: filler
 
-  (check
-      (catch #f
-	(string-fill! "" 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string-fill! "" 123))
 
   #t)
 
@@ -1327,21 +1231,11 @@
 ;;; --------------------------------------------------------------------
 ;;; argument check
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->latin1 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string->latin1 123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(latin1->string 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (latin1->string 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -1350,7 +1244,7 @@
     => test-bytevector)
 
   (check
-      (guard (E ((assertion-violation? E)
+      (guard (E ((procedure-argument-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -1420,21 +1314,11 @@
 ;;; --------------------------------------------------------------------
 ;;; argument check
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->ascii 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (string->ascii 123))
 
-  (check
-      (guard (E ((assertion-violation? E)
-;;;		 (check-pretty-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(ascii->string 123))
-    => '(123))
+  (check-procedure-arguments-violation
+   (ascii->string 123))
 
 ;;; --------------------------------------------------------------------
 
@@ -1443,7 +1327,7 @@
     => test-bytevector)
 
   (check
-      (guard (E ((assertion-violation? E)
+      (guard (E ((procedure-argument-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -1457,7 +1341,7 @@
     => test-string)
 
   (check
-      (guard (E ((assertion-violation? E)
+      (guard (E ((procedure-argument-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -2052,6 +1936,7 @@
 
 ;;; end of file
 ;;Local Variables:
+;;coding: utf-8-unix
 ;;eval: (put 'catch 'scheme-indent-function 1)
 ;;eval: (put 'catch-expand-time-type-mismatch 'scheme-indent-function 1)
 ;;End:

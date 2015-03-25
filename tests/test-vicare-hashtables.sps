@@ -36,10 +36,6 @@
 (define (mktable-1)
   (alist->hashtable! (make-eq-hashtable) '((a . 1) (b . 2) (c . 3))))
 
-(define (symbol<? s1 s2)
-  (string<? (symbol->string s1)
-	    (symbol->string s2)))
-
 
 (parametrise ((check-test-name	'hash-functions))
 
@@ -355,6 +351,49 @@
 	(hashtable-set! T 'ciao 1)
 	(hashtable-delete! T 'ciao))
     => 'ciao 1)
+
+  #t)
+
+
+(parametrise ((check-test-name	'map))
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable->alist
+	 (hashtable-map-keys
+	     (lambda (key) 123)
+	   T)
+	 symbol<?))
+    => '((a . 123) (b . 123) (c . 123)))
+
+  (check
+      (let* ((A '((a . 1) (b . 2) (c . 3)))
+	     (T (alist->hashtable! (make-eq-hashtable) A))
+	     (M (hashtable-map-keys (lambda (key) 123) T)))
+	(hashtable->alist M (lambda (s1 s2)
+			      (string<? (symbol->string s1)
+					(symbol->string s2)))))
+    => '((a . 123) (b . 123) (c . 123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((T (mktable-1)))
+	(hashtable->alist
+	 (hashtable-map-entries
+	     (lambda (key val) (* 10 val))
+	   T)
+	 symbol<?))
+    => '((a . 10) (b . 20) (c . 30)))
+
+  (check
+      (let* ((A '((a . 1) (b . 2) (c . 3)))
+	     (T (alist->hashtable! (make-eq-hashtable) A))
+	     (M (hashtable-map-entries (lambda (key val) (* 10 val)) T)))
+	(hashtable->alist M (lambda (s1 s2)
+			      (string<? (symbol->string s1)
+					(symbol->string s2)))))
+    => '((a . 10) (b . 20) (c . 30)))
 
   #t)
 

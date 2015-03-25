@@ -9681,6 +9681,12 @@ The arguments must be characters.  Return @false{} if the arguments are
 all equal, otherwise return @true{}.
 @end deffn
 
+
+@defun list-of-chars? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of chars; otherwise
+return @false{}.
+@end defun
+
 @c page
 @node iklib keywords
 @section Keyword objects
@@ -10329,6 +10335,8 @@ validation is for getter and setter indexes.
 @defunx bytevector-index-for-word16? @var{bv} @var{idx}
 @defunx bytevector-index-for-word32? @var{bv} @var{idx}
 @defunx bytevector-index-for-word64? @var{bv} @var{idx}
+@defunx bytevector-index-for-single-flonum? @var{bv} @var{idx}
+@defunx bytevector-index-for-double-flonum? @var{bv} @var{idx}
 Specialised variants of @func{bytevector-index-for-word?} for a specific
 word size in bits.
 @end defun
@@ -10374,6 +10382,13 @@ arguments are given: return the empty bytevector.
 @end defun
 
 
+@defun bytevector-concatenate @var{bvs}
+Concatenate the list of bytevectors @var{bvs} and return the resulting
+bytevector.  It is an error if the sum of the bytevector lengths is not
+in the range of the maximum bytevector length.
+@end defun
+
+
 @defun bytevector-reverse-and-concatenate @var{bvs}
 Reverse the list of bytevectors @var{bvs}, concatenate them and return
 the resulting bytevector.  It is an error if the sum of the bytevector
@@ -10385,13 +10400,34 @@ lengths is not in the range of the maximum bytevector length.
 @section Additional string functions
 
 
-The following bindings are exported by the library @library{vicare}.
+@menu
+* iklib strings predicates::    Predicates about strings.
+* iklib strings constructors::  Constructing new strings.
+* iklib strings conversion::    Converting between strings and
+                                other objects.
+* iklib strings misc::          Miscellaneous string operations.
+@end menu
+
+@c page
+@node iklib strings predicates
+@subsection Predicates about strings
+
+
+@defun list-of-strings? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of strings;
+otherwise return @false{}.
+@end defun
+
 
 
 @defun string-empty? @var{str}
 Return @true{} if the string @var{str} is empty, otherwise return
 @false{}.
 @end defun
+
+@c page
+@node iklib strings constructors
+@subsection Constructing new strings
 
 
 @defun string-copy! @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
@@ -10401,11 +10437,22 @@ Copy @var{count} characters from @var{src.str} starting at
 @end defun
 
 
+@defun string-concatenate @var{strs}
+Concatenate the list of strings @var{strs} and return the resulting
+string.  It is an error if the sum of the string lengths is not in the
+range of the maximum string length.
+@end defun
+
+
 @defun string-reverse-and-concatenate @var{strs}
 Reverse the list of strings @var{strs}, concatenate them and return the
 resulting string.  It is an error if the sum of the string lengths is
 not in the range of the maximum string length.
 @end defun
+
+@c page
+@node iklib strings conversion
+@subsection Converting between strings and other objects
 
 
 @defun string->octets @var{string}
@@ -10502,12 +10549,6 @@ an error occurs in the conversion: an exception is raised.
 @end defun
 
 
-@defun uuid
-Attempt to build a unique string and return it.  If an internal error
-occurs because of impossible generation: raise an error.
-@end defun
-
-
 @defun string->uri-encoding @var{str}
 @defunx string->percent-encoding @var{str}
 Convert the string @var{str} to its @utf{}-8 representation, then encode
@@ -10542,6 +10583,16 @@ new string object equal to its string name.
 @defun string-or-symbol->symbol @var{obj}
 If @var{obj} is a symbol return it; if it is a string return a symbol
 having it as string name.
+@end defun
+
+@c page
+@node iklib strings misc
+@subsection Miscellaneous string operations
+
+
+@defun uuid
+Attempt to build a unique string and return it.  If an internal error
+occurs because of impossible generation: raise an error.
 @end defun
 
 @c page
@@ -10733,12 +10784,43 @@ in which @var{state} is the @strong{last} argument.
 
 
 @menu
+* iklib symbols predicates::    Predicates about symbols.
+* iklib symbols comparison::    Comparing symbols.
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
 * iklib symbols values::        System values bound to symbols.
 * iklib symbols labels::        Retrieving syntactic binding labels.
 * iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
+
+@c page
+@node iklib symbols predicates
+@subsection Predicates about symbols
+
+
+@defun list-of-symbols? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of symbols;
+otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib symbols comparison
+@subsection Comparing symbols
+
+
+@deffn Procedure {symbol<?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffnx Procedure {symbol>?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffnx Procedure {symbol<=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffnx Procedure {symbol>=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+These procedures are the extensions to symbols of the corresponding
+orderings on strings.
+
+@example
+(symbol<? z a)          @result{} #t
+(symbol<? z zz)         @result{} #t
+(symbol<? z Z)          @result{} #f
+@end example
+@end deffn
 
 @c page
 @node iklib symbols value
@@ -11777,6 +11859,47 @@ there's a problem with rehashing entries that are moved by the garbage
 collector.  The iterators always use @func{hashtable-keys} and
 @func{hashtable-entries}, which is slow and memory consuming, but it is
 safe.
+
+
+@defun hashtable-map-keys @var{proc} @var{table}
+Build and return a new hash table with the same hash function and
+equivalence function of @var{table}; add associations to the new table
+by applying @var{proc} to every key in @var{table}, in unspecified
+order, and using the returned value as association value.
+
+@lisp
+(let* ((A '((a . 1) (b . 2) (c . 3)))
+       (T (alist->hashtable! (make-eq-hashtable) A))
+       (M (hashtable-map-keys
+              (lambda (key) 123)
+            T)))
+  (hashtable->alist M (lambda (s1 s2)
+                        (string<? (symbol->string s1)
+                                  (symbol->string s2)))))
+@result{} ((a . 123) (b . 123) (c . 123))
+@end lisp
+@end defun
+
+
+@defun hashtable-map-entries @var{proc} @var{table}
+Build and return a new hash table with the same hash function and
+equivalence function of @var{table}; add associations to the new table
+by applying @var{proc} to every key and value in @var{table}, in
+unspecified order, and using the returned value as association value.
+
+@lisp
+(let* ((A '((a . 1) (b . 2) (c . 3)))
+       (T (alist->hashtable! (make-eq-hashtable) A))
+       (M (hashtable-map-entries
+              (lambda (key val)
+                (* 10 val))
+            T)))
+  (hashtable->alist M (lambda (s1 s2)
+                        (string<? (symbol->string s1)
+                                  (symbol->string s2)))))
+@result{} ((a . 10) (b . 20) (c . 30))
+@end lisp
+@end defun
 
 
 @defun hashtable-for-each-key @var{proc} @var{table}

@@ -1673,7 +1673,7 @@
 			 body-form*.stx))))
 	   ;;Here  we  know that  the  formals  signature is  a  proper  list of  tag
 	   ;;identifiers with the same structure of FORMALS.STX.
-	   (map set-label-tag! lab* formals-signature.tags)
+	   (map set-label-tag! ?arg* lab* formals-signature.tags)
 	   (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
 	     (values lex* (%override-retvals-singature lambda-signature body.psi) body.psi))))
 
@@ -1706,8 +1706,8 @@
 			   body-form*.stx))))
 	     ;;Here we know  that the formals signature is an  improper list with the
 	     ;;same structure of FORMALS.STX.
-	     (map set-label-tag! lab* arg-tag*)
-	     (set-label-tag! rest-lab rest-tag)
+	     (map set-label-tag! ?arg* lab* arg-tag*)
+	     (set-label-tag! ?rest-arg rest-lab rest-tag)
 	     (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
 	       (values (append lex* rest-lex) ;yes, this builds an improper list
 		       (%override-retvals-singature lambda-signature body.psi)
@@ -2368,7 +2368,7 @@
 		     ;;
 		     (gen-define-label+lex id rib sd?)
 		   (extend-rib! rib id lab sd?)
-		   (set-label-tag! lab tag)
+		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
 			      (add-lexical-binding lab lex lexenv.run) lexenv.expand
 			      (cons lex lex*) (cons qrhs.stx qrhs*)

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -39,7 +39,7 @@
     &unix-pathname-parser-error
     &unix-pathname-normalisation-error)
   (import (nausicaa)
-    (vicare unsafe operations)
+    (vicare system $bytevectors)
     (nausicaa uri pathnames abstract)
     (prefix (vicare parser-tools unix-pathnames)
 	    uxptn.))

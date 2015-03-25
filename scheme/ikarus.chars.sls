@@ -21,27 +21,28 @@
     char=?			char!=?
     char<?			char<=?
     char>?			char>=?
-    char-in-ascii-range?
 
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
     ;;2014)
-    $char!=)
+    $char!=
+
+    char-in-ascii-range?	list-of-chars?)
   (import (except (vicare)
 		  char->integer		integer->char
 		  char=?		char!=?
 		  char<?		char<=?
 		  char>?		char>=?
-		  char-in-ascii-range?)
-    (vicare unsafe operations)
-    (vicare arguments validation))
+		  char-in-ascii-range?	list-of-chars?)
+    (vicare unsafe operations))
 
 
-;;;; arguments validation
+;;;; predicates
 
-(define-argument-validation (list-of-chars who obj)
-  (for-all char? obj)
-  (procedure-argument-violation who "expected character as argument"
-		       (exists (lambda (x) (and (not (char? x)) x)) obj)))
+(define (list-of-chars? obj)
+  (if (pair? obj)
+      (and (char? (car obj))
+	   (list-of-chars? (cdr obj)))
+    (null? obj)))
 
 
 (define* (integer->char {fx fixnum-in-character-range?})
@@ -62,89 +63,36 @@
 (define-syntax define-comparison
   (syntax-rules ()
     ((_ ?name ?unsafe-op)
-     (define ?name
-       (case-lambda
-	((ch1 ch2)
-	 (define who '?name)
-	 (with-arguments-validation (who)
-	     ((char  ch1)
-	      (char  ch2))
-	   (?unsafe-op ch1 ch2)))
+     (case-define* ?name
+       (({ch1 char?} {ch2 char?})
+	(?unsafe-op ch1 ch2))
 
-	((ch1 ch2 ch3)
-	 (define who '?name)
-	 (with-arguments-validation (who)
-	     ((char  ch1)
-	      (char  ch2)
-	      (char  ch3))
-	   (and (?unsafe-op ch1 ch2)
-		(?unsafe-op ch2 ch3))))
+       (({ch1 char?} {ch2 char?} {ch3 char?})
+	(and (?unsafe-op ch1 ch2)
+	     (?unsafe-op ch2 ch3)))
 
-	((ch1 . chars)
-	 (define who '?name)
-	 (with-arguments-validation (who)
-	     ((char  ch1))
-	   (let next-char ((ch1    ch1)
-			   (chars  chars))
-	     (if (null? chars)
-		 #t
-	       (let ((ch2 ($car chars)))
-		 (with-arguments-validation (who)
-		     ((char  ch2))
-		   (if (?unsafe-op ch1 ch2)
-		       (next-char ch2 ($cdr chars))
-		     (with-arguments-validation (who)
-			 ((list-of-chars ($cdr chars)))
-		       #f))))))))
-	))
-     )))
+       (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+	(and (?unsafe-op ch1 ch2)
+	     (?unsafe-op ch2 ch3)
+	     (?unsafe-op ch3 ch4)
+	     (let next-char ((chX    ch4)
+			     (char*  char*))
+	       (if (pair? char*)
+		   (let ((chY ($car char*)))
+		     (and (?unsafe-op chX chY)
+			  (next-char chY ($cdr char*))))
+		 #t))))))
+    ))
 
 (define-comparison char=?	$char=)
+(define-comparison char!=?	$char!=)
 (define-comparison char<?	$char<)
 (define-comparison char<=?	$char<=)
 (define-comparison char>?	$char>)
 (define-comparison char>=?	$char>=)
 
-;;; --------------------------------------------------------------------
-
-(define char!=?
-  (case-lambda
-   ((ch1 ch2)
-    (define who 'char!=?)
-    (with-arguments-validation (who)
-	((char  ch1)
-	 (char  ch2))
-      ($char!= ch1 ch2)))
-
-   ((ch1 ch2 ch3)
-    (define who 'char!=?)
-    (with-arguments-validation (who)
-	((char  ch1)
-	 (char  ch2)
-	 (char  ch3))
-      (or ($char!= ch1 ch2)
-	  ($char!= ch2 ch3))))
-
-   ((ch1 . chars)
-    (define who 'char!=?)
-    (with-arguments-validation (who)
-	((char  ch1))
-      (let next-char ((ch1    ch1)
-		      (chars  chars))
-	(if (null? chars)
-	    #f
-	  (let ((ch2 ($car chars)))
-	    (with-arguments-validation (who)
-		((char  ch2))
-	      (if ($char!= ch1 ch2)
-		  (with-arguments-validation (who)
-		      ((list-of-chars ($cdr chars)))
-		    #t)
-		(next-char ch2 ($cdr chars)))))))))
-   ))
-
-;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Nov 22,
-;;2014)
+;;FIXME This should  also be a true  primitive operation.  (Marco Maggi;  Wed Mar 25,
+;;2015)
 ;;
 (define ($char!= ch1 ch2)
   (not ($char= ch1 ch2)))
@@ -153,8 +101,8 @@
 ;;;; miscellaneous functions
 
 (define (char-in-ascii-range? obj)
-  ;;Defined by Vicare.  Return #t if  OBJ is a character and its Unicode
-  ;;code point is in the range [0, 127]; otherwise return #f.
+  ;;Defined by Vicare.  Return #t if OBJ is a character and its Unicode code point is
+  ;;in the range [0, 127]; otherwise return #f.
   ;;
   (and (char? obj)
        (let ((chi ($char->fixnum obj)))
@@ -164,7 +112,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 
 (library (vicare system chars)

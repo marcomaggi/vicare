@@ -70,6 +70,7 @@
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare unsafe operations)
+    (vicare system $bytevectors)
     (only (vicare system $numerics)
 	  $add-number-fixnum))
 

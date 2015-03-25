@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2011, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2011, 2013-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -73,7 +73,10 @@
     ip-address->bignum)
   (import (nausicaa)
     (prefix (vicare language-extensions makers) mk.)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $strings)
+    (vicare system $bytevectors)
     (vicare language-extensions ascii-chars)
     (nausicaa uri ip))
 
@@ -337,7 +340,7 @@
 
   (predicate
    (lambda (bv)
-     (and ($bytevector-not-empty? bv)
+     (and (not ($bytevector-empty? bv))
 	  (let loop ((bv bv)
 		     (i  0))
 	    (or ($fx= i ($bytevector-length bv))

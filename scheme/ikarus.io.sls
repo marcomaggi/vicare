@@ -662,8 +662,38 @@
 		  make-textual-socket-input/output-port*)
     (only (ikarus.options)
 	  strict-r6rs)
-    ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
-    ;;and $SET-PORT-* bindings.
+    (except (vicare system $strings)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun
+	    ;;Mar 22, 2015)
+	    $string-copy!
+	    $string-copy!/count
+	    $string-fill!
+	    $substring)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
+    ;;2015)
+    (only (ikarus strings)
+	  $string-copy!
+	  $string-copy!/count
+	  $string-fill!
+	  $substring)
+    (except (vicare system $bytevectors)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
+	    ;;Mar 23, 2015)
+	    $bytevector-copy!
+	    $bytevector-copy!/count
+	    $bytevector-fill!
+	    $bytevector-u16-set!	$bytevector-s16-set!
+	    $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus bytevectors)
+	  $bytevector-copy!
+	  $bytevector-copy!/count
+	  $bytevector-fill!
+	  $bytevector-u16-set!		$bytevector-s16-set!
+	  $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
+    ;;bindings.
     (vicare system $io)
     (prefix (only (vicare) port?) primop.)
     (vicare language-extensions syntaxes)
@@ -1729,51 +1759,6 @@
       (else
        (assertion-violation who
 	 "codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
-
-
-;;;; bytevector helpers
-
-(define (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors dst.len)
-  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
-  ;;return  the result.  The  resulting list  must have  length DST.LEN.
-  ;;Assume the arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
-  ;;and the whole bytevector must at maximum have a fixnum length.
-  ;;
-  (let next-bytevector ((dst.bv              ($make-bytevector dst.len))
-			(list-of-bytevectors list-of-bytevectors)
-			(dst.start           dst.len))
-    (if (null? list-of-bytevectors)
-	(begin
-	  dst.bv)
-      (let* ((src.bv    (car list-of-bytevectors))
-	     (src.len   ($bytevector-length src.bv))
-	     (dst.start ($fx- dst.start src.len)))
-	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
-	(next-bytevector dst.bv (cdr list-of-bytevectors) dst.start)))))
-
-
-;;;; string helpers
-
-(define (%unsafe.string-reverse-and-concatenate who list-of-strings dst.len)
-  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
-  ;;result.  The  resulting list must  have length DST.LEN.   Assume the
-  ;;arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
-  ;;the whole string must at maximum have a fixnum length.
-  ;;
-  (let next-string ((dst.str ($make-string dst.len))
-		    (list-of-strings list-of-strings)
-		    (dst.start       dst.len))
-    (if (null? list-of-strings)
-	dst.str
-      (let* ((src.str   (car list-of-strings))
-	     (src.len   ($string-length src.str))
-	     (dst.start ($fx- dst.start src.len)))
-	($string-copy!/count src.str 0 dst.str dst.start src.len)
-	(next-string dst.str (cdr list-of-strings) dst.start)))))
 
 
 ;;;; dot notation macros for port structures
@@ -3405,13 +3390,12 @@
 		   ;;The device contains some bytes and the device needs
 		   ;;to be serialised: the  list of bytevectors contains
 		   ;;2 or more items.
-		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate
-			      who ($device-bvs D) ($device-len D))))
+		   (receive-and-return (bv)
+		       ($bytevector-reverse-and-concatenate ($device-len D) ($device-bvs D))
 		     ($set-cookie-dest! cookie
 					(if reset?
 					    (make-device 0 '())
-					  (make-device ($device-len D) (list bv))))
-		     bv)))))
+					  (make-device ($device-len D) (list bv)))))))))
 
 	(define (write! src.bv src.start count)
 	  ;;Write COUNT  octets from the bytevector  SRC.BV, starting at
@@ -3628,9 +3612,9 @@
 		   (set-cookie-dest! cookie '(0 . ())))
 		 (car output.strs))
 		(else
-		 (let ((str (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
-		   (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str))))
-		   str)))))
+		 (receive-and-return (str)
+		     ($string-reverse-and-concatenate output.len output.strs)
+		   (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str)))))))))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
       (define-inline (%serialise-device-and-reset! who)
@@ -3780,7 +3764,7 @@
 		 ;;The device has already been serialised.
 		 (car output.strs))
 		(else
-		 (%unsafe.string-reverse-and-concatenate who output.strs output.len))))))))
+		 ($string-reverse-and-concatenate output.len output.strs))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4920,7 +4904,7 @@
 	  (%data-available-in-buffer port output.len remaining-count output.bvs
 				     retry-after-filling-buffer))
 	(define-inline (compose-output)
-	  (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
+	  ($bytevector-reverse-and-concatenate output.len output.bvs))
 	(maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at:    port.buffer.index)
 	  ;;The buffer was empty and  after attempting to refill it: EOF
@@ -4988,9 +4972,8 @@
 	(let ((output.bvs/after-consuming-buffer-bytes (cons bv output.bvs)))
 	  (if bytes-from-buffer-satisfy-the-request?
 	      ;;Compose output.
-	      (%unsafe.bytevector-reverse-and-concatenate who
-		output.bvs/after-consuming-buffer-bytes
-		output.len/after-consuming-buffer-bytes)
+	      ($bytevector-reverse-and-concatenate output.len/after-consuming-buffer-bytes
+						   output.bvs/after-consuming-buffer-bytes)
 	    (retry-after-filling-buffer output.len/after-consuming-buffer-bytes
 					output.bvs/after-consuming-buffer-bytes
 					($fx- remaining-count
@@ -5186,9 +5169,9 @@
        (with-port-having-bytevector-buffer (port)
 	 (let retry-after-filling-buffer ((output.len  0)
 					  (output.bvs  '()))
-	   (define-inline (compose-output)
-	     (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
-	   (define-inline (data-available)
+	   (define-syntax-rule (compose-output)
+	     ($bytevector-reverse-and-concatenate output.len output.bvs))
+	   (define-syntax-rule (data-available)
 	     (%data-available-in-buffer port output.len output.bvs
 					retry-after-filling-buffer))
 	   (maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -5755,7 +5738,7 @@
 		     ;;Return EOF or would-block.
 		     count
 		   ;;Return the accumulated string.
-		   (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
+		   ($string-reverse-and-concatenate output.len output.strs)))
 		((would-block-object? count)
 		 (next-buffer-string output.len output.strs dst.len dst.str))
 		(($fx= count dst.len)
@@ -5765,9 +5748,8 @@
 				     ($make-string dst.len)))
 		(else
 		 ;;Some characters were read, but less than COUNT.
-		 (%unsafe.string-reverse-and-concatenate who
-		   (cons ($substring dst.str 0 count) output.strs)
-		   ($fx+ count output.len))))))))
+		 ($string-reverse-and-concatenate (fx+ count output.len)
+						  (cons ($substring dst.str 0 count) output.strs))))))))
 
   (define (get-string-some port)
     ;;Defined by Vicare.  Read from  the textual input PORT, blocking as
@@ -7183,7 +7165,7 @@
 		   (buffer.past		($fxadd1 buffer.index))
 		   (buffer.used-size	port.buffer.used-size))
 	      (debug-assert (<= buffer.index buffer.used-size))
-	      ($bytevector-u8-set! port.buffer buffer.index octet)
+	      ($bytevector-set! port.buffer buffer.index octet)
 	      (when ($fx= buffer.index buffer.used-size)
 		(set! port.buffer.used-size buffer.past))
 	      (set! port.buffer.index buffer.past))))
@@ -7469,7 +7451,7 @@
 		   (buffer.past		($fxadd1 buffer.offset)))
 	      (if ($fx<= buffer.past port.buffer.size)
 		  (begin
-		    ($bytevector-u8-set! port.buffer buffer.offset code-point)
+		    ($bytevector-set! port.buffer buffer.offset code-point)
 		    (set! port.buffer.index buffer.past)
 		    (when ($fx> buffer.past port.buffer.used-size)
 		      (set! port.buffer.used-size buffer.past)))
@@ -7490,7 +7472,7 @@
 	       (let* ((buffer.offset-octet0	port.buffer.index)
 		      (buffer.past		($fxadd1 buffer.offset-octet0)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7510,7 +7492,7 @@
 		      (buffer.offset-octet1	($fxadd1 buffer.offset-octet0))
 		      (buffer.past		($fxadd1 buffer.offset-octet1)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7533,7 +7515,7 @@
 		      (buffer.offset-octet2	($fxadd1 buffer.offset-octet1))
 		      (buffer.past		($fxadd1 buffer.offset-octet2)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7560,7 +7542,7 @@
 		      (buffer.offset-octet3	($fxadd1 buffer.offset-octet2))
 		      (buffer.past		($fxadd1 buffer.offset-octet3)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7631,7 +7613,7 @@
 	       (buffer.past	($fxadd1 buffer.offset)))
 	  (if ($fx<= buffer.past port.buffer.size)
 	      (begin
-		($bytevector-u8-set! port.buffer buffer.offset code-point)
+		($bytevector-set! port.buffer buffer.offset code-point)
 		(set! port.buffer.index buffer.past)
 		(when ($fx> buffer.past port.buffer.used-size)
 		  (set! port.buffer.used-size buffer.past)))
@@ -8879,6 +8861,4 @@
 ;;; eval: (put 'maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put 'refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-string-buffer-and-evaluate		'scheme-indent-function 1)
-;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
-;;; eval: (put '%unsafe.string-reverse-and-concatenate		'scheme-indent-function 1)
 ;;; End:

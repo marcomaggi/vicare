@@ -3463,17 +3463,33 @@
    ((V x)
     (cogen-value-+ x (K 1))))
 
- (define-core-primitive-operation $add1-fixnum unsafe
+ (define-core-primitive-operation $add1-fixnum safe
    ((V x)
-    (cogen-value-+ x (K 1))))
+    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
+    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
+    ;;INT+/OVERFLOW).  (Marco Maggi; Wed Mar 25, 2015)
+    (interrupt)
+    (asm 'int+/overflow
+	 (V-simple-operand x)
+	 (V-simple-operand (K +1)))))
 
  (define-core-primitive-operation sub1 safe
    ((V x)
     (cogen-value-+ x (K -1))))
 
- (define-core-primitive-operation $sub1-fixnum unsafe
+ (define-core-primitive-operation $sub1-fixnum safe
    ((V x)
-    (cogen-value-+ x (K -1))))
+    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
+    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
+    ;;INT+/OVERFLOW).  (Marco Maggi; Wed Mar 25, 2015)
+    (interrupt)
+    (asm 'int+/overflow
+	 (V-simple-operand x)
+	 (V-simple-operand (K -1)))))
+
+ ;; (define-core-primitive-operation $sub1-fixnum unsafe
+ ;;   ((V x)
+ ;;    (cogen-value-+ x (K -1))))
 
  (define-core-primitive-operation * safe
    ((V)

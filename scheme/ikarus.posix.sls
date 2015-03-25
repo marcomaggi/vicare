@@ -127,6 +127,7 @@
     (vicare platform constants)
     (prefix (vicare unsafe capi)
 	    capi.)
+    (vicare system $bytevectors)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
@@ -876,7 +877,7 @@
 	   (src.index src.start ($fx+ 1 src.index)))
 	  (($fx= dst.index dst.len)
 	   dst.bv)
-	($bytevector-u8-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
+	($bytevector-set! dst.bv dst.index ($bytevector-u8-ref src.bv src.index)))))
 
   #| end of module |# )
 

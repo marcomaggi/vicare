@@ -151,32 +151,6 @@
 	      (hashtable-replace-key! table old-key new-key)))
 	(else #f)))
 
-(define (hashtable-find-and-replace-key! pred new-key table)
-  ;;Search an entry in TABLE whose key and value satisfy the predicate PRED:
-  ;;
-  ;;* If one is  found: delete it and add a new entry  associated to NEW-KEY with the
-  ;;  same value of the old one, then return the old key.
-  ;;
-  ;;* If none is found: do nothing and return false.
-  ;;
-  ;;For example, the following code replaces the key "ciao" with the key "CIAO":
-  ;;
-  ;;   (import (vicare))
-  ;;   (define T
-  ;;     (make-hashtable string=? string-hash))
-  ;;   (hashtable-set! T "ciao" 1)
-  ;;   (hashtable-find-and-replace-key!
-  ;;       (lambda (old-key val)
-  ;;         (string-ci=? "CIAO" old-key))
-  ;;     "CIAO" T)
-  ;;   (hashtable-ref T "CIAO" #f)
-  ;;   => 1
-  ;;
-  (cond ((hashtable-find-key pred table)
-	 => (lambda (old-key)
-	      (hashtable-replace-key! table old-key new-key)))
-	(else #f)))
-
 ;;; --------------------------------------------------------------------
 
 (define (max-one n multi?)

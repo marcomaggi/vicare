@@ -26,13 +26,19 @@
       Programming  Language  Design  and Implementation,  207-216,  June
       1993.
 
+* The implementation of the hash tables comes from:
+
+      Ghuloum,   Dybvig.    "Generation-Friendly    Eq   Hash   Tables".
+      Proceedings  of  the  2007   Workshop  on  Scheme  and  Functional
+      Programming.
+
 * Matthew Flatt distributed  the R6RS test suite embedded  in the Vicare
   distribution.  The tests are distributed  under the GNU GPL version 2,
   or any later version.
 
-* The included SRFI  libraries were ported to R6RS  by Derick Eddington;
-  see the files README.srfi and  LICENSE.srfi for details.  See also the
-  source files for the list of original SRFI authors.
+* Many of  the included  SRFI libraries  were ported  to R6RS  by Derick
+  Eddington;  see the  files README.srfi  and LICENSE.srfi  for details.
+  See also the source files for the list of original SRFI authors.
 
 * Andreas Rottmann: provided patch to implement getpid.
 
@@ -79,6 +85,12 @@
 * Fixes  for the  Texinfo documentation  where contributed  by Alexander
   Shpilkin <https://github.com/alex-shpilkin>.
 
+* After   some    development   iterations,   the    implementation   of
+  UNWINDING-CALL/CC, and  the unwind-protection  mechanism, has  taken a
+  shape quite similar to the  function CALL/CC-ESCAPING proposed by Will
+  Clinger in:
+
+     <http://www.ccs.neu.edu/home/will/UWESC/uwesc.sch>
 
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus

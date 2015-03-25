@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare unsafe operations)
+  (vicare system $strings)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

@@ -46,6 +46,53 @@
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
+    (only (vicare system $bytevectors)
+	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
+	  ;;Mar 22, 2015)
+	  $make-bytevector
+	  $bytevector-length
+	  $bytevector-s8-ref
+	  $bytevector-u8-ref
+	  $bytevector-set!
+	  $bytevector-ieee-double-native-ref
+	  $bytevector-ieee-double-native-set!
+	  $bytevector-ieee-double-nonnative-ref
+	  $bytevector-ieee-double-nonnative-set!
+	  $bytevector-ieee-single-native-ref
+	  $bytevector-ieee-single-native-set!
+	  $bytevector-ieee-single-nonnative-ref
+	  $bytevector-ieee-single-nonnative-set!)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
+    ;;2015)
+    (only (ikarus bytevectors)
+	  $bytevector-u8-set!			$bytevector-s8-set!
+
+	  $bytevector-u16l-ref			$bytevector-u16l-set!
+	  $bytevector-u16b-ref			$bytevector-u16b-set!
+	  $bytevector-u16n-ref			$bytevector-u16n-set!
+	  $bytevector-s16l-ref			$bytevector-s16l-set!
+	  $bytevector-s16b-ref			$bytevector-s16b-set!
+	  $bytevector-s16n-ref			$bytevector-s16n-set!
+	  $bytevector-u16-ref			$bytevector-u16-set!
+	  $bytevector-s16-ref			$bytevector-s16-set!
+
+	  $bytevector-u32b-ref			$bytevector-u32b-set!
+	  $bytevector-u32l-ref			$bytevector-u32l-set!
+	  $bytevector-s32b-ref			$bytevector-s32b-set!
+	  $bytevector-s32l-ref			$bytevector-s32l-set!
+	  $bytevector-u32n-ref			$bytevector-u32n-set!
+	  $bytevector-s32n-ref			$bytevector-s32n-set!
+	  $bytevector-u32-ref			$bytevector-u32-set!
+	  $bytevector-s32-ref			$bytevector-s32-set!
+
+	  $bytevector-u64b-ref			$bytevector-u64b-set!
+	  $bytevector-u64l-ref			$bytevector-u64l-set!
+	  $bytevector-s64b-ref			$bytevector-s64b-set!
+	  $bytevector-s64l-ref			$bytevector-s64l-set!
+	  $bytevector-u64n-ref			$bytevector-u64n-set!
+	  $bytevector-s64n-ref			$bytevector-s64n-set!
+	  $bytevector-u64-ref			$bytevector-u64-set!
+	  $bytevector-s64-ref			$bytevector-s64-set!)
     (vicare language-extensions syntaxes)
     (prefix (vicare platform words) words.)
     (vicare unsafe operations))

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -77,9 +77,12 @@
     unix-pathname-normalisation-error?
     raise-unix-pathname-parser-error
     raise-unix-pathname-normalisation-error)
-  (import (except (vicare)
-		  append)
-    (vicare unsafe operations))
+  (import (except (vicare) append)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $strings)
+    (vicare system $bytevectors))
 
 
 ;;;; constants
@@ -108,13 +111,34 @@
 
 ;;;; helpers
 
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?op)
+     ($fxincr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxadd4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define-inline ($valid-chi-for-pathname? chi)
   ;;Assuming  CHI  is a  fixnum:  return  true if  it  is  in the  range
   ;;acceptable  for an  ASCII  char part  of a  Unix  pathname.  A  Unix
   ;;pathname might contain any octet in the range [1, 255]; that is: any
   ;;byte with the exclusion of the zero.
   ;;
-  ($fx< 0 chi 256))
+  (and ($fx< 0 chi)
+       ($fx< chi 256)))
 
 (define-inline ($valid-chi-for-segment? chi)
   ;;Assuming  CHI  is a  fixnum:  return  true if  it  is  in the  range
@@ -123,8 +147,10 @@
   ;;[48, 255]; that is: any byte with  the exclusion of the zero and 47,
   ;;which represents the slash character in ASCII encoding.
   ;;
-  (or ($fx< 0         chi CHI-SLASH)
-      ($fx< CHI-SLASH chi 256)))
+  (or (and ($fx< 0 chi)
+	   ($fx< chi CHI-SLASH))
+      (and ($fx< CHI-SLASH chi)
+	   ($fx< chi 256))))
 
 ;;; --------------------------------------------------------------------
 
@@ -466,7 +492,7 @@
        ($bytevector-pathname? obj)))
 
 (define ($bytevector-pathname? obj)
-  (and ($bytevector-not-empty? obj)
+  (and (not ($bytevector-empty? obj))
        (let loop ((bv obj)
 		  (i  0))
 	 (cond (($fx= i ($bytevector-length bv))
@@ -481,7 +507,7 @@
        ($string-pathname? obj)))
 
 (define ($string-pathname? obj)
-  (and ($string-not-empty? obj)
+  (and (not ($string-empty? obj))
        (let loop ((obj obj)
 		  (i   0))
 	 (cond (($fx= i ($string-length obj))

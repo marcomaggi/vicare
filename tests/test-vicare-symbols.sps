@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -33,6 +33,196 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare symbols\n")
 
+
+;;;; syntax helpers
+
+(define-syntax catch-expand-time-type-mismatch
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((internal-body
+		  (import (prefix (vicare expander object-type-specs) typ.))
+		  (typ.expand-time-type-signature-violation? E))
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(syntax->datum (syntax-violation-subform E)))
+	       (else E))
+       (eval '(begin . ?body)
+	     (environment '(vicare)
+			  '(vicare system $strings)))))))
+
+
+(parametrise ((check-test-name	'symbol-cmp))
+
+  (check-for-false
+   (symbol<? 'abcd 'abcd))
+
+  (check-for-true
+   (symbol<? 'abc 'abcd))
+
+  (check-for-false
+   (symbol<? 'abcd 'abc))
+
+  (check-for-true
+   (symbol<? 'ABcd 'abcd))
+
+  (check-for-false
+   (symbol<? 'abcd 'ABcd))
+
+  (check-for-false
+   (symbol<? 'abcd 'a2cd))
+
+  (check-for-true
+   (symbol<? 'abc 'abcd 'abcde))
+
+  (check-for-false
+   (symbol<? 'abc 'abcde 'abcd))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (symbol<=? 'abcd 'abcd))
+
+  (check-for-true
+   (symbol<=? 'abc 'abcd))
+
+  (check-for-false
+   (symbol<=? 'abcd 'abc))
+
+  (check-for-true
+   (symbol<=? 'ABcd 'abcd))
+
+  (check-for-false
+   (symbol<=? 'abcd 'a2cd))
+
+  (check-for-true
+   (symbol<=? 'abc 'abcd 'abcde))
+
+  (check-for-false
+   (symbol<=? 'abc 'abcde 'abcd))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false
+   (symbol>? 'abcd 'abcd))
+
+  (check-for-true
+   (symbol>? 'abcd 'abc))
+
+  (check-for-false
+   (symbol>? 'abc 'abcd))
+
+  (check-for-false
+   (symbol>? 'ABcd 'abcd))
+
+  (check-for-true
+   (symbol>? 'abcd 'ABcd))
+
+  (check-for-false
+   (symbol>? 'a2cd 'abcd))
+
+  (check-for-true
+   (symbol>? 'abcde 'abcd 'abc))
+
+  (check-for-false
+   (symbol>? 'abcd 'abcde 'abc))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (symbol>=? 'abcd 'abcd))
+
+  (check-for-true
+   (symbol>=? 'abcd 'abc))
+
+  (check-for-false
+   (symbol>=? 'abc 'abcd))
+
+  (check-for-true
+   (symbol>=? 'abcd 'abcd))
+
+  (check-for-false
+   (symbol>=? 'a2cd 'abcd))
+
+  (check-for-true
+   (symbol>=? 'abcde 'abcd 'abc))
+
+  (check-for-false
+   (symbol>=? 'abcd 'abcde 'abc))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-for-procedure-argument-violation
+      (symbol<? 123 'abc)
+    => '(symbol<? ((symbol? sym1) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<? 'abc 123)
+    => '(symbol<? ((symbol? sym2) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<? 'abc 'def 123)
+    => '(symbol<? ((symbol? sym3) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<? 'abc 'def 'ghi 123)
+    => '(symbol<? ((list-of-symbols? sym*) (123))))
+
+;;;
+
+  (check-for-procedure-argument-violation
+      (symbol<=? 123 'abc)
+    => '(symbol<=? ((symbol? sym1) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<=? 'abc 123)
+    => '(symbol<=? ((symbol? sym2) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<=? 'abc 'def 123)
+    => '(symbol<=? ((symbol? sym3) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<=? 'abc 'def 'ghi 123)
+    => '(symbol<=? ((list-of-symbols? sym*) (123))))
+
+;;;
+
+  (check-for-procedure-argument-violation
+      (symbol>? 123 'abc)
+    => '(symbol>? ((symbol? sym1) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>? 'abc 123)
+    => '(symbol>? ((symbol? sym2) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>? 'abc 'def 123)
+    => '(symbol>? ((symbol? sym3) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>? 'abc 'def 'ghi 123)
+    => '(symbol>? ((list-of-symbols? sym*) (123))))
+
+;;;
+
+  (check-for-procedure-argument-violation
+      (symbol>=? 123 'abc)
+    => '(symbol>=? ((symbol? sym1) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>=? 'abc 123)
+    => '(symbol>=? ((symbol? sym2) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>=? 'abc 'def 123)
+    => '(symbol>=? ((symbol? sym3) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>=? 'abc 'def 'ghi 123)
+    => '(symbol>=? ((list-of-symbols? sym*) (123))))
+
+  #t)
 
 (parametrise ((check-test-name	'plists))
 

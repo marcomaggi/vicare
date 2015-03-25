@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -36,7 +36,9 @@
     open-textual-output-port-pair
     open-textual-input/output-port-pair)
   (import (vicare)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (vicare system $strings)
+    (vicare system $bytevectors))
 
 
 ;;;; input and output binary port pairs
