@@ -15,54 +15,52 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus exceptions)
+(library (ikarus.exceptions)
   (export
     with-exception-handler
     raise		raise-continuable
     error		warning
     assertion-violation	die)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
 		  error			warning
-		  assertion-violation	die)
-    (vicare arguments validation))
+		  assertion-violation	die))
 
 
-(define handlers
-  (make-parameter (list (lambda (x)
-			  (let ((port (console-error-port)))
-			    (display "*** Vicare: unhandled exception:\n" port)
-			    (print-condition x (console-error-port)))
-			  (when (serious-condition? x)
-			    (exit -1)))
-			(lambda args
-			  (exit -1)))))
+(define current-handlers
+  (make-parameter
+      (list (lambda (x)
+	      (let ((port (console-error-port)))
+		(display "*** Vicare: unhandled exception:\n" port)
+		(print-condition x (console-error-port)))
+	      (when (serious-condition? x)
+		(exit -1)))
+	    (lambda args
+	      (exit -1)))))
 
-(define (with-exception-handler handler proc2)
-  (define who 'with-exception-handler)
-  (with-arguments-validation (who)
-      ((procedure	handler)
-       (procedure	proc2))
-    (parameterize ((handlers (cons handler (handlers))))
-      (proc2))))
+(define* (with-exception-handler {handler procedure?} {proc2 procedure?})
+  (parameterize ((current-handlers (cons handler (current-handlers))))
+    (proc2)))
 
-(define (raise-continuable x)
-  (let* ((h* (handlers))
-	 (h  (car h*))
-	 (h* (cdr h*)))
-    (parameterize ((handlers h*))
-      (h x))))
-
-(define (raise x)
-  (let* ((h* (handlers))
-	 (h  (car h*))
-	 (h* (cdr h*)))
-    (parameterize ((handlers h*))
-      (h x)
-      (raise (condition
-	      (make-non-continuable-violation)
-	      (make-message-condition "handler returned from non-continuable exception"))))))
+(let-syntax
+    ((raise-machinery (syntax-rules ()
+			((_ ?exc . ?tail)
+			 (let* ((handler*      (current-handlers))
+				(head-handler  (car handler*))
+				(tail-handler* (cdr handler*)))
+			   (parameterize ((current-handlers tail-handler*))
+			     (head-handler ?exc)
+			     . ?tail)))
+			)))
+  (define (raise-continuable exc)
+    (raise-machinery exc))
+  (define (raise exc)
+    (raise-machinery exc
+		     (raise (condition
+			     (make-non-continuable-violation)
+			     (make-message-condition "handler returned from non-continuable exception")))))
+  #| end of LET-SYNTAX |# )
 
 
 (module (error assertion-violation warning die)
@@ -70,7 +68,7 @@
   (let-syntax ((define-raiser
 		 (syntax-rules ()
 		   ((_ ?who ?raiser ?make-main-condition)
-		    (define (?who who msg . irritants)
+		    (define* (?who {who false-or-string-or-symbol?} {msg string?} . irritants)
 		      (%raise-exception (quote ?who)
 					?raiser ?make-main-condition
 					who msg irritants))))))
@@ -80,27 +78,23 @@
     (define-raiser die			raise			make-assertion-violation))
 
   (define (%raise-exception caller-who raise* cond* who msg irritants)
-    (with-arguments-validation (caller-who)
-	((who-spec	who)
-	 (string	msg))
-      (raise* (condition (cond*)
-			 (if who
-			     (make-who-condition who)
-			   (condition))
-			 (make-message-condition   msg)
-			 (make-irritants-condition irritants)))))
+    (raise* (condition (cond*)
+		       (if who
+			   (make-who-condition who)
+			 (condition))
+		       (make-message-condition   msg)
+		       (make-irritants-condition irritants))))
 
-  (define-argument-validation (who-spec who obj)
+  (define (false-or-string-or-symbol? obj)
     (or (not obj)
 	(symbol? obj)
-	(string? obj))
-    (procedure-argument-violation who "expected false, symbol or string as value for &who" obj))
+	(string? obj)))
 
   #| end of module |# )
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

@@ -96,28 +96,28 @@ conventional starting position: line number @math{1}, column number
 @subsection Comparison methods
 
 
-@deftypemethod @aclass{source-location} @aclass{boolean} = (@var{L} @aclass{source-location})
+@deftypemethod @aclass{source-location} @aclass{boolean} = @{@var{L} @aclass{source-location}@}
 Compare the instance object with the given @var{L} object and return
 @true{} if they are both specified and have equal @code{offset} field;
 otherwise return @false{}.
 @end deftypemethod
 
 
-@deftypemethod @aclass{source-location} @aclass{boolean} < (@var{L} @aclass{source-location})
+@deftypemethod @aclass{source-location} @aclass{boolean} < @{@var{L} @aclass{source-location}@}
 Compare the instance object with the given @var{L} object and return
 @true{} if they are both specified and the instance has @code{offset}
 field less than the one of @var{L}; otherwise return @false{}.
 @end deftypemethod
 
 
-@deftypemethod @aclass{source-location} @aclass{boolean} > (@var{L} @aclass{source-location})
+@deftypemethod @aclass{source-location} @aclass{boolean} > @{@var{L} @aclass{source-location}@}
 Compare the instance object with the given @var{L} object and return
 @true{} if they are both specified and the instance has @code{offset}
 field greater than the one of @var{L}; otherwise return @false{}.
 @end deftypemethod
 
 
-@deftypemethod @aclass{source-location} @aclass{boolean} <= (@var{L} @aclass{source-location})
+@deftypemethod @aclass{source-location} @aclass{boolean} <= @{@var{L} @aclass{source-location}@}
 Compare the instance object with the given @var{L} object and return
 @true{} if they are both specified and the instance has @code{offset}
 field less than, or equal to, the one of @var{L}; otherwise return
@@ -125,7 +125,7 @@ field less than, or equal to, the one of @var{L}; otherwise return
 @end deftypemethod
 
 
-@deftypemethod @aclass{source-location} @aclass{boolean} >= (@var{L} @aclass{source-location})
+@deftypemethod @aclass{source-location} @aclass{boolean} >= @{@var{L} @aclass{source-location}@}
 Compare the instance object with the given @var{L} object and return
 @true{} if they are both specified and the instance has @code{offset}
 field greater than, or equal to, the one of @var{L}; otherwise return
@@ -137,8 +137,8 @@ field greater than, or equal to, the one of @var{L}; otherwise return
 @subsection Updating the location
 
 
-@deftypemethod @aclass{source-location} @aclass{source-location} update (@var{fx} @aclass{nonnegative-fixnum})
-@deftypemethodx @aclass{source-location} @aclass{source-location} update (@var{ch} @aclass{char})
+@deftypemethod @aclass{source-location} @aclass{source-location} update @{@var{fx} @aclass{nonnegative-fixnum}@}
+@deftypemethodx @aclass{source-location} @aclass{source-location} update @{@var{ch} @aclass{char}@}
 If the instance object is unspecified: return a @class{source-location}
 object in unspecified state; otherwise build and return a new
 @class{source-location} object representing a location past the one of
@@ -269,7 +269,7 @@ Return a string representation of @var{O}.  It makes use of the method
 The following code defines a hashable source location object:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa)
   (prefix (nausicaa parser-tools source-locations) sl.))
 

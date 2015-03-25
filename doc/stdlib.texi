@@ -1924,7 +1924,7 @@ definition and can appear anywhere any other @meta{definition} can
 appear.
 
 
-@deffn Syntax define-record-type @meta{name-spec} @arbno{@meta{record clause}}
+@deffn Syntax define-record-type @meta{name-spec} @arbno{@meta{record-clause}}
 @c @deffnx {Auxiliary Syntax} fields
 @c @deffnx {Auxiliary Syntax} mutable
 @c @deffnx {Auxiliary Syntax} immutable
@@ -2090,6 +2090,11 @@ generated every time a @func{define-record-type} form is evaluated:
   ((f #t) (f #f)))
 @result{} #f
 @end example
+
+@quotation
+@strong{NOTE} On @value{PRJNAME}: the @code{value} slot of the symbol
+object used as @meta{uid} holds the record--type descriptor object.
+@end quotation
 @end deffn
 
 
@@ -2957,6 +2962,7 @@ as described when it is called as a result of a call to @func{raise} or
 @end deffn
 
 
+@anchor{guard}
 @deffn Syntax guard (@meta{variable} @metai{cond-clause} @metaii{cond-clause} @dots{}) @meta{body}
 @deffnx {Auxiliary Syntax} {=>}
 @deffnx {Auxiliary Syntax} else
@@ -5437,8 +5443,12 @@ to the operating system that the program exited normally.
 If an argument is supplied, the @func{exit} procedure should translate
 the argument into an appropriate exit value for the operating system.
 If @var{obj} is @false{}, the exit is assumed to be abnormal.
-@end deffn
 
+@quotation
+@strong{NOTE} @value{PRJNAME} implements exit hooks that can be
+evaluated whenever @func{exit} is called; @ref{iklib misc, exit-hooks}.
+@end quotation
+@end deffn
 
 @c page
 @node stdlib arithmetic
@@ -8664,10 +8674,15 @@ integer object.
 @end deffn
 
 
-@deffn Procedure hashtable-ref @var{hashtable} @var{key} @var{default}
+@deffn Procedure hashtable-ref @var{hashtable} @var{key}
+@deffnx Procedure hashtable-ref @var{hashtable} @var{key} @var{default}
 Return the value in @var{hashtable} associated with @var{key}.  If
 @var{hashtable} does not contain an association for @var{key},
 @var{default} is returned.
+
+As @value{PRJNAME} extension: when @var{default} is not used, it
+defaults to @code{(void)}; the void value is to be used as sentinel
+value for hash tables.
 @end deffn
 
 
@@ -8675,12 +8690,27 @@ Return the value in @var{hashtable} associated with @var{key}.  If
 Change @var{hashtable} to associate @var{key} with @var{obj}, adding a
 new association or replacing any existing association for @var{key}, and
 returns unspecified values.
+
+As @value{PRJNAME} extension: if @var{obj} is @code{(void)} an exception
+is raised with condition object type
+@condition{procedure-argument-violation}; the void value is to be used
+as sentinel value for hash tables.
 @end deffn
 
 
 @deffn Procedure {hashtable-delete!} @var{hashtable} @var{key}
-Remove any association for @var{key} within @var{hashtable} and returns
-unspecified values.
+Remove any association for @var{key} within @var{hashtable}; if there is
+no association for @var{key}: do nothing.
+
+As @value{PRJNAME} extension return two values:
+
+@itemize
+@item
+If an association is found: the original key and value.
+
+@item
+If no association is found: @code{(void)} and @code{(void)}.
+@end itemize
 @end deffn
 
 
@@ -8806,16 +8836,45 @@ always terminate, even if its arguments contain cycles.
 
 
 @deffn Procedure string-hash @var{string}
+@deffnx Procedure string-hash @var{string} @var{max-len}
 Return an integer hash value for @var{string}, based on its current
 contents.  This hash function is suitable for use with @func{string=?}
 as an equivalence function.
+
+As @value{PRJNAME} extension:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of characters to use to compute the hash value, starting from the
+beginning of @var{string}.  If the length of @var{string} is greater
+than @var{max-len}: only the first @var{max-len} characters are used.
+If the length of @var{string} is less than or equal to @var{max-len}:
+all the bytes in @var{string} are used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of
+@var{string} is greater than @math{64} characters, only the first
+@math{64} bytes are used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{string} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of
+characters @math{N} less than the string length: applications
+@strong{must not} assume that two strings having the first @math{N}
+characters equal will have the same hash value.
 @end deffn
 
 
 @deffn Procedure string-ci-hash @var{string}
+@deffnx Procedure string-ci-hash @var{string} @var{max-len}
 Return an integer hash value for @var{string} based on its current
 contents, ignoring case.  This hash function is suitable for use with
 @func{string-ci=?} as an equivalence function.
+
+The optional argument @var{max-len} is used as in @func{string-hash}.
 @end deffn
 
 
@@ -9274,8 +9333,8 @@ time.
 
 
 @deffn Procedure {string-fill!} @var{string} @var{char}
-Store @var{char} in every element of the given @var{string} and returns
-unspecified values.
+Store @var{char} in every element of the given @var{string}.  As
+@value{PRJNAME} extension: the return value is @var{string} itself.
 @end deffn
 
 

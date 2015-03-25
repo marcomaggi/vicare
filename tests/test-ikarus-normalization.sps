@@ -27,8 +27,8 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
-  (ikarus-test-framework)
+(import (vicare)
+  (libtest ikarus-test-framework)
   (unicode-data)
   (vicare checks))
 

@@ -100,10 +100,10 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2010-2013
+@set COPYRIGHT_YEARS            2010-2015
 
 
-@set TARBALLURL                 @url{http://sourceforge.net/projects/vicare-scheme/files/}
+@set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
 @set REPOSITORYURL              @url{http://github.com/marcomaggi/vicare/}
 @set EXECUTABLE                 @command{vicare}
 @set RAWEXECUTABLE              vicare
@@ -117,9 +117,8 @@
 @noindent
 This document describes version @value{VERSION} of @value{PACKAGE}, an
 @rnrs{6} compliant native compiler for the Scheme language, producing
-single threaded programs running on Intel x86 32-bit processors, with
-experimental support for 64-bit machines.  @emph{Vicare} is pronounced
-the etruscan way.
+single threaded programs running on Intel x86 32-bit and 64-bit
+processors.  @emph{Vicare} is pronounced the etruscan way.
 
 The package, including its documentation, is distributed under the terms
 of the @gnu{} General Public License (@gpl{}) and can be downloaded
@@ -130,7 +129,7 @@ from:
 @noindent
 the home page of the project is at:
 
-@center @url{http://marcomaggi.github.com/vicare.html}
+@center @url{http://marcomaggi.github.io/vicare.html}
 
 @noindent
 development takes place at:
@@ -140,17 +139,7 @@ development takes place at:
 @noindent
 and, as a backup, at:
 
-@center @url{http://gitorious.org/vicare}
-
-@noindent
-and at:
-
-@center @url{http://sourceforge.net/projects/vicare-scheme/}
-
-@noindent
-this project has a mailing list:
-
-@center @url{http://groups.google.com/group/vicare-users}
+@center @url{https://bitbucket.org/marcomaggi/vicare-scheme/}
 
 @noindent
 Copyright @copyright{} @value{COPYRIGHT_YEARS} by Marco Maggi.@*
@@ -233,8 +222,11 @@ Trademarks used herein are the property of their respective owners.
 * baselib::                     Base library.
 * stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
+* libutils::                    Scheme libraries utility functions.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
+* tags::                        Tagged language.
+* obspec::                      Internals of tagged language.
 * capi::                        C language programming interface.
 
 Internals
@@ -243,16 +235,19 @@ Internals
 * debug int::                   Debug mode.
 * machinery::                   Introduction to execution machinery.
 * compiler::                    Wild notes on the compiler internals.
+* boot image::                  Anatomy of the boot image.
 
 Appendices
 
 * missing::                     Missing Features.
 * building::                    Building infrastructure.
 * credits::                     Credits for this document.
+* dynamic environment::         Notes on the dynamic environment.
+* resources::                   Allocating and releasing resources.
 * unicode::                     On Unicode and @utf{} encodings.
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
-* binfmt::                      Launching programs directly.
+* binfmt::                      Launching programs directly on @gnu{}+Linux.
 * Package License::             @gnu{} General Public License.
 * history::                     History.
 * references::                  Bibliography and references.
@@ -282,18 +277,24 @@ External documents
 @include baselib.texi
 @include stdlib.texi
 @include iklib.texi
+@include libutils.texi
 @include ffi.texi
 @include syslib.texi
+@include tags.texi
+@include obspec.texi
 @include capi.texi
 
 @include objects.texi
 @include debug.texi
 @include machinery.texi
 @include compiler.texi
+@include boot-image.texi
 
 @include missing.texi
 @include building.texi
 @include credits.texi
+@include dynamic-environment.texi
+@include resources.texi
 @include unicode.texi
 @include fasl.texi
 @include shmem.texi

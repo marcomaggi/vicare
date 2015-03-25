@@ -31,9 +31,9 @@
     boolean=?		symbol=?
     immediate?		code?
     transcoder?		weak-pair?
-    not)
+    not			bwp-object)
   (import
-    (except (ikarus)
+    (except (vicare)
 	    fixnum?		flonum?		bignum?
 	    ratnum?		compnum?	cflonum?
             number?		complex?	real?
@@ -49,21 +49,20 @@
 	    boolean=?		symbol=?
             immediate?		code?
             transcoder?		weak-pair?
-	    not)
-    (ikarus system $fx)
-    (ikarus system $flonums)
-    (ikarus system $compnums)
-    (ikarus system $pairs)
-    (ikarus system $chars)
-    (ikarus system $strings)
-    (ikarus system $vectors)
-    (only (ikarus system $pointers)
+	    not			bwp-object
+	    always-true		always-false)
+    (vicare system $fx)
+    (vicare system $flonums)
+    (vicare system $compnums)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $strings)
+    (vicare system $vectors)
+    (only (vicare system $pointers)
 	  $pointer=)
-    (ikarus system $foreign)
-    (only (vicare language-extensions syntaxes)
-	  cond-numeric-operand)
+    (vicare system $foreign)
     ;;These are the ones implemented as primitive operations.
-    (rename (only (ikarus)
+    (rename (only (vicare)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
                   eof-object? bwp-object?
 		  immediate? boolean? char? vector? string?
@@ -283,12 +282,15 @@
 (define (not x)
   (if x #f #t))
 
+(define (bwp-object)
+  (foreign-call "ikrt_bwp_object"))
+
 
 (define (eq? x y)
   (sys:eq? x y))
 
 (define (eqv? x y)
-  (import (ikarus))
+  (import (vicare))
   (cond ((eq? x y)
 	 #t)
 
@@ -335,10 +337,6 @@
 
 	((keyword? x)
 	 (and (keyword? y) (keyword=? x y)))
-
-	((struct? x)
-	 (and (struct? y)
-	      (struct=? x y)))
 
 	(else #f)))
 
@@ -389,6 +387,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.predicates")))
+
+#| end of library |# )
 
 ;;; end of file

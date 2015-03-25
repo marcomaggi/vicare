@@ -27,7 +27,7 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (vicare checks))
 
 (define case-fold-mapping

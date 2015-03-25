@@ -8,7 +8,7 @@
 ;;;
 ;;;	This test file was originally in Nausicaa.
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -62,7 +62,7 @@
 		     partition		remove		remp
 		     remq		remv)
 	     expand run)
-  (lists)
+  (libtest lists)
   (prefix (vicare) six.)
   (vicare unsafe operations)
   (vicare system $lists)
@@ -4989,51 +4989,51 @@ called with at least two arguments.
 ;;; --------------------------------------------------------------------
 
   (check
-      ($map1 even-value '())
+      (map1 even-value '())
     => '())
 
   (check
-      ($map1 even-value '(1 2 3 4))
+      (map1 even-value '(1 2 3 4))
     => '(#f 2 #f 4))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (with-result
-       ($for-each1 add-result '()))
+       (for-each1 add-result '()))
     => `(,(void) ()))
 
   (check
       (with-result
-       ($for-each1 add-result '(2 4 6)))
+       (for-each1 add-result '(2 4 6)))
     => `(,(void) (2 4 6)))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      ($for-all1 even-value '())
+      (for-all1 even-value '())
     => #t)
 
   (check
-      ($for-all1 even-value '(2 4 6))
+      (for-all1 even-value '(2 4 6))
     => 6)
 
   (check
-      ($for-all1 even-value '(2 4 3))
+      (for-all1 even-value '(2 4 3))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      ($exists1 even-value '())
+      (exists1 even-value '())
     => #f)
 
   (check
-      ($exists1 even-value '(1 2 3))
+      (exists1 even-value '(1 2 3))
     => 2)
 
   (check
-      ($exists1 even-value '(1 3 5))
+      (exists1 even-value '(1 3 5))
     => #f)
 
   #t)

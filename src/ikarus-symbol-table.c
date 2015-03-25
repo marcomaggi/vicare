@@ -58,32 +58,7 @@ ikrt_get_symbol_table (ikpcb* pcb)
 }
 
 
-static long
-compute_string_hash (ikptr str)
-/* one-at-a-time from http://burtleburtle.net/bob/hash/doobs.html */
-{
-  long  len  = IK_UNFIX(IK_REF(str, off_string_length));
-  int*  data = (int*)(str + off_string_data);
-  int   h    = len;
-  int*  last = data + len;
-  /* one-at-a-time */
-  while (data < last) {
-    int c = (*data >> 8);
-    h = h + c;
-    h = h + (h << 10);
-    h = h ^ (h >> 6);
-    data++;
-  }
-  h = h + (h << 3);
-  h = h ^ (h >> 11);
-  h = h + (h << 15);
-  return (h >= 0) ? h : (1 - h);
-}
-ikptr
-ikrt_string_hash (ikptr str)
-{
-  return (ikptr)(compute_string_hash(str) & (~ fx_mask));
-}
+
 static int
 strings_eqp (ikptr str1, ikptr str2)
 {
@@ -95,25 +70,90 @@ strings_eqp (ikptr str1, ikptr str2)
   } else
     return 0;
 }
-ikptr
-ikrt_bytevector_hash (ikptr bv)
+
+
+/* To compute the  hash value of strings and bytevectors  we use at most
+   these number of Scheme characters and bytes from the date area. */
+#undef  HASH_GENERATION_CHARS_LIMIT
+#define HASH_GENERATION_CHARS_LIMIT	64
+#undef  HASH_GENERATION_BYTES_LIMIT
+#define HASH_GENERATION_BYTES_LIMIT	256
+
+static ikptr
+compute_string_hash (ikptr str, ikptr s_max_len)
+/* one-at-a-time from http://burtleburtle.net/bob/hash/doobs.html */
 {
-  long		len  = IK_BYTEVECTOR_LENGTH(bv);
-  uint8_t *	data = IK_BYTEVECTOR_DATA_UINT8P(bv);
-  int		h    = len;
-  uint8_t *	last = data + len;
+  ikptr		len  = IK_UNFIX(IK_REF(str, off_string_length));
+  ikchar *	data = IK_STRING_DATA_IKCHARP(str);
+
+  /* With this initialisation: two strings of different length will have
+     different  hash value  even  when  they have  equal  chars used  to
+     compute the hash value. */
+  ikptr		H    = len;
+  /* We  expect  S_MAX_LEN to  be:  false,  true, an  already  validated
+     non-negative fixnum. */
+  ikptr		limit;
+  if (IK_FALSE == s_max_len) {
+    limit = HASH_GENERATION_CHARS_LIMIT;
+  } else if (IK_TRUE == s_max_len) {
+    limit = len;
+  } else {
+    limit = IK_UNFIX(s_max_len);
+  }
+  ikchar *	last  = data + ((len < limit)? len : limit);
   /* one-at-a-time */
   while (data < last) {
-    int c = (*data >> 8);
-    h = h + c;
-    h = h + (h << 10);
-    h = h ^ (h >> 6);
+    ikchar	c = IK_CHAR32_TO_INTEGER(*data);
+    H = H + c;
+    H = H + (H << 10);
+    H = H ^ (H >> 6);
     data++;
   }
-  h = h + (h << 3);
-  h = h ^ (h >> 11);
-  h = h + (h << 15);
-  return (((h >= 0) ? h : (1 - h)) & (~ fx_mask));
+  H = H + (H << 3);
+  H = H ^ (H >> 11);
+  H = H + (H << 15);
+  /* Make it positive. */
+  return ((H << 4) >> 4);
+}
+ikptr
+ikrt_string_hash (ikptr str, ikptr s_max_len, ikpcb * pcb)
+{
+  return IK_FIX(compute_string_hash(str, s_max_len));
+}
+ikptr
+ikrt_bytevector_hash (ikptr bv, ikptr s_max_len, ikpcb * pcb)
+{
+  ikptr		len  = IK_BYTEVECTOR_LENGTH(bv);
+  uint8_t *	data = IK_BYTEVECTOR_DATA_UINT8P(bv);
+  /* With this initialisation: two  bytevectors of different length will
+     have different hash  value even when they have equal  bytes used to
+     compute the hash value. */
+  ikptr		H    = len;
+  /* We  expect  S_MAX_LEN to  be:  false,  true, an  already  validated
+     non-negative fixnum. */
+  ikptr		limit;
+  if (IK_FALSE == s_max_len) {
+    limit = HASH_GENERATION_BYTES_LIMIT;
+  } else if (IK_TRUE == s_max_len) {
+    limit = len;
+  } else {
+    limit = IK_UNFIX(s_max_len);
+  }
+  uint8_t *	last  = data + ((len < limit)? len : limit);
+  /* one-at-a-time */
+  while (data < last) {
+    uint8_t	c = *data;
+    H = H + c;
+    H = H + (H << 10);
+    H = H ^ (H >> 6);
+    data++;
+  }
+  H = H + (H << 3);
+  H = H ^ (H >> 11);
+  H = H + (H << 15);
+  /* Make it positive. */
+  H = ((H << 4) >> 4);
+  return IK_FIX(H);
 }
 
 
@@ -121,13 +161,14 @@ static ikptr
 iku_make_symbol (ikptr s_pretty_string, ikptr s_unique_string, ikpcb* pcb)
 {
   ikptr s_sym = ik_unsafe_alloc(pcb, symbol_record_size) | record_tag;
-  /* There is no need to update  the dirty vector about "s_sym", because
-     all the values are older. */
+  /* There is no need to update the dirty vector about mutating "s_sym":
+     "s_sym" has  just been created,  so all the  values that go  in its
+     slots are older. */
   IK_REF(s_sym, -record_tag)               = symbol_tag;
   IK_REF(s_sym, off_symbol_record_string)  = s_pretty_string;
   IK_REF(s_sym, off_symbol_record_ustring) = s_unique_string;
   IK_REF(s_sym, off_symbol_record_value)   = IK_UNBOUND_OBJECT;
-  IK_REF(s_sym, off_symbol_record_proc)    = s_pretty_string;
+  IK_REF(s_sym, off_symbol_record_proc)    = IK_UNBOUND_OBJECT;
   IK_REF(s_sym, off_symbol_record_plist)   = IK_NULL_OBJECT;
   return s_sym;
 }
@@ -135,7 +176,7 @@ static ikptr
 intern_string (ikptr s_unique_string, ikptr s_symbol_table, ikpcb* pcb)
 /* Notice that all the memory allocations here are UNsafe. */
 {
-  int   hash_value    = compute_string_hash(s_unique_string);
+  int   hash_value    = compute_string_hash(s_unique_string, IK_TRUE);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
   ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
   { /* If a symbol having S_UNIQUE_STRING is already interned: return it
@@ -175,7 +216,7 @@ intern_unique_string (ikptr s_pretty_string, ikptr s_unique_string, ikptr s_symb
 
    Notice that all the memory allocations here are UNsafe. */
 {
-  int   hash_value    = compute_string_hash(s_unique_string);
+  int   hash_value    = compute_string_hash(s_unique_string, IK_TRUE);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(s_symbol_table) - 1);
   ikptr s_bucket_list = IK_ITEM(s_symbol_table, bucket_index);
   { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
@@ -220,7 +261,7 @@ ikrt_intern_gensym (ikptr s_sym, ikpcb* pcb)
     pcb->gensym_table = s_gensym_table = make_symbol_table(pcb);
   }
   ikptr s_unique_string = IK_REF(s_sym, off_symbol_record_ustring);
-  int   hash_value      = compute_string_hash(s_unique_string);
+  int   hash_value      = compute_string_hash(s_unique_string, IK_TRUE);
   int   bucket_index    = hash_value & (IK_VECTOR_LENGTH(s_gensym_table) - 1);
   ikptr s_bucket_list   = IK_ITEM(s_gensym_table, bucket_index);
   { /* If a  symbol having  S_UNIQUE_STRING is already  interned, return
@@ -254,7 +295,7 @@ ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
    object if  the table exists and  S_SYM is present,  else return false
    object. */
 {
-  fprintf(stderr, "removing gensym\n");
+  /* fprintf(stderr, "removing gensym\n"); */
   ikptr gensym_table = pcb->gensym_table;
   if (0 == gensym_table) {
     /* no symbol table */
@@ -264,7 +305,7 @@ ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
   if (IK_TAGOF(s_unique_string) != string_tag) {
     return IK_FALSE_OBJECT;
   }
-  int   hash_value    = compute_string_hash(s_unique_string);
+  int   hash_value    = compute_string_hash(s_unique_string, IK_TRUE);
   int   bucket_index  = hash_value & (IK_VECTOR_LENGTH(gensym_table) - 1);
 #if 0
   /* This  is the  original  Ikarus  code.  (Marco  Maggi;  Sun Mar  11,

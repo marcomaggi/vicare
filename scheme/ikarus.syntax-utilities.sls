@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -89,6 +89,7 @@
     syntax-clause-spec-max-number-of-arguments
     syntax-clause-spec-mutually-inclusive
     syntax-clause-spec-mutually-exclusive
+    syntax-clause-spec-custom-data
     syntax-clauses-single-spec
     syntax-clauses-validate-specs
     syntax-clauses-fold-specs)
@@ -153,6 +154,7 @@
 		  syntax-clause-spec-max-number-of-arguments
 		  syntax-clause-spec-mutually-inclusive
 		  syntax-clause-spec-mutually-exclusive
+		  syntax-clause-spec-custom-data
 		  syntax-clauses-single-spec
 		  syntax-clauses-validate-specs
 		  syntax-clauses-fold-specs)
@@ -832,48 +834,56 @@
 	  (immutable mutually-exclusive)
 		;A list  identifiers representing clauses  keywords that
 		;must not appear along with this one.
-	  )
+	  (immutable custom-data)
+		;Free field  available for the user.   It is initialised
+		;to false.
+	  #| end of fields |# )
   (protocol
    (lambda (make-record)
-     (lambda (keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive)
-       (define who 'syntax-clause-spec)
-       (define (count? obj)
-	 (and (real? obj) (<= 0 obj)))
-       (assert (identifier? keyword))
-       (assert (count? min-occur))
-       (assert (count? max-occur))
-       (assert (count? min-args))
-       (assert (count? max-args))
-       (assert (<= min-occur max-occur))
-       (assert (<= min-args max-args))
-       (assert (all-identifiers? mutually-inclusive))
-       (assert (all-identifiers? mutually-exclusive))
-       (cond ((identifier-memq keyword mutually-inclusive)
-	      => (lambda (pair)
-		   (assertion-violation who
-		     "syntax clause keyword used in its own list of mutually inclusive clauses"
-		     (car pair)))))
-       (cond ((identifier-memq keyword mutually-exclusive)
-	      => (lambda (pair)
-		   (assertion-violation who
-		     "syntax clause keyword used in its own list of mutually exclusive clauses"
-		     (car pair)))))
-       (let ((in-both (fold-left (lambda (knil inclusive)
-				   (cond ((identifier-memq inclusive mutually-exclusive)
-					  => (lambda (pair)
-					       (cons (car pair) knil)))
-					 (else
-					  knil)))
-			'()
-			mutually-inclusive)))
-	 (unless (null? in-both)
-	   (assertion-violation who
-	     "syntax clause includes the same keywords in both mutually inclusive and exclusive clauses"
-	     (reverse in-both))))
-       (make-record keyword
-		    min-occur max-occur
-		    min-args max-args
-		    mutually-inclusive mutually-exclusive)))))
+     (case-define constructor
+       ((keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive)
+	(constructor keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive #f))
+       ((keyword min-occur max-occur min-args max-args mutually-inclusive mutually-exclusive custom-data)
+	(define who 'syntax-clause-spec)
+	(define (count? obj)
+	  (and (real? obj) (<= 0 obj)))
+	(assert (identifier? keyword))
+	(assert (count? min-occur))
+	(assert (count? max-occur))
+	(assert (count? min-args))
+	(assert (count? max-args))
+	(assert (<= min-occur max-occur))
+	(assert (<= min-args max-args))
+	(assert (all-identifiers? mutually-inclusive))
+	(assert (all-identifiers? mutually-exclusive))
+	(cond ((identifier-memq keyword mutually-inclusive)
+	       => (lambda (pair)
+		    (assertion-violation who
+		      "syntax clause keyword used in its own list of mutually inclusive clauses"
+		      (car pair)))))
+	(cond ((identifier-memq keyword mutually-exclusive)
+	       => (lambda (pair)
+		    (assertion-violation who
+		      "syntax clause keyword used in its own list of mutually exclusive clauses"
+		      (car pair)))))
+	(let ((in-both (fold-left (lambda (knil inclusive)
+				    (cond ((identifier-memq inclusive mutually-exclusive)
+					   => (lambda (pair)
+						(cons (car pair) knil)))
+					  (else
+					   knil)))
+			 '()
+			 mutually-inclusive)))
+	  (unless (null? in-both)
+	    (assertion-violation who
+	      "syntax clause includes the same keywords in both mutually inclusive and exclusive clauses"
+	      (reverse in-both))))
+	(make-record keyword
+		     min-occur max-occur
+		     min-args max-args
+		     mutually-inclusive mutually-exclusive
+		     custom-data)))
+     constructor)))
 
 (define syntax-clauses-single-spec
   (case-lambda

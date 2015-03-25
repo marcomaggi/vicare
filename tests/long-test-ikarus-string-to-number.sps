@@ -29,8 +29,8 @@
 
 
 #!ikarus
-(import (ikarus)
-  (ikarus-test-framework)
+(import (vicare)
+  (libtest ikarus-test-framework)
   (vicare checks))
 
 (define (run-tests)

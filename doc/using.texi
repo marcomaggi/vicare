@@ -12,10 +12,10 @@ script.
 @menu
 * using interactive::           Interactive sessions.
 * using invoking::              Command line arguments.
-* using script::                Using @command{scheme-script}.
-* using libraries::             @rnrs{6} libraries.
+* using scripts::               Executing Scheme scripts.
+* using libraries::             @rnrs{6} libraries and extensions.
+* using programs::              Compiling Scheme programs.
 * using rlwrap::                Using @command{rlwrap}.
-* using binfmt::                Launching programs on Linux.
 @end menu
 
 @c page
@@ -33,7 +33,7 @@ Revision devel/a59ec3abedf0a80e07d011269ba9aeb134227e41
 Build 2013-04-13
 
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011-2013 Marco Maggi
+Copyright (c) 2011-2015 Marco Maggi
 
 vicare> (+ 2 2)
 4
@@ -48,26 +48,24 @@ the session.
 @section Command line arguments
 
 
-The synopsis of the @value{EXECUTABLE} program is as follows:
+The synopsis of the executable program @value{EXECUTABLE} is as follows:
 
 @smallexample
-@value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]              [-- [@var{PROGOPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script     FILE [-- [@var{PROGOPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --binary-program  FILE [-- [@var{PROGOPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGFILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile FILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM
 @end smallexample
 
 @noindent
-the @var{OPTIONS} are interpreted by @value{EXECUTABLE}, @var{PROGRAM
-OPTS} can be obtained using the @func{command-line} procedure in the
+the @var{OPTIONS} are interpreted by @value{EXECUTABLE}, @var{PROGOPTS}
+can be obtained using the @func{command-line} procedure in the
 @library{rnrs programs} library; when running the @repl{}: the first
 element of the returned list will be the string @samp{*interactive*},
 corresponding to the script name in @rnrs{6}--script mode.
-
-Some options cause code to be evaluated in the interaction environment:
-it initially contains all the bindings exported from the
-@library{ikarus} library.
 
 The @value{EXECUTABLE} executable recognises a few command line switches
 that influence how @value{PACKAGE} starts; the following are the main
@@ -86,47 +84,80 @@ $ cat test.sps
 (import (rnrs))
 (write (command-line))
 (newline)
+(flush-output-port (current-output-port))
 
-$ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
+$ @value{RAWEXECUTABLE} --r6rs-script test.sps -- hi there
 ("test.sps" "hi" "there")
 @end example
 
-@item --r6rs-repl @var{PROGRAM}
-@cindex Command line option @option{--r6rs-repl}
-@cindex @option{--r6rs-repl}, command line option
-Start Vicare in @rnrs{6}-script mode.  Act as if the
-@option{--r6rs-script} option had been used but, after the program
-execution, enter the @repl{} rather than exiting.  This allows
-inspection of bindings and state left behind by the program.
+@item --binary-program @var{PROGRAM}
+@cindex Command line option @option{--binary-program}
+@cindex @option{--binary-program}, command line option
+Start Vicare in compiled--program mode.  The @var{PROGRAM} file is
+handled as a serialised @rnrs{6} binary program: it is loaded and
+executed.
 
-@item --script @var{CODEFILE}
-@cindex Command line option @option{--script}
-@cindex @option{--script}, command line option
-Start Vicare in evaluation mode.  The @var{CODEFILE} is handled as a
-sequence of @rnrs{6} expressions: such expressions are used as first
-argument for @func{eval} under the interaction environment.  Example:
+@item --compile-program @var{PROGRAM}
+@cindex Command line option @option{--compile-program}
+@cindex @option{--compile-program}, command line option
+Load the source @rnrs{6} program @var{PROGRAM}, compile it and store a
+serialised version of it into an output file.  @var{PROGRAM} itself is
+not evaluated.
 
-@example
-$ cat test.sps
-(write (command-line))
-(newline)
+If the option @option{--output} is used: its value is the pathname of
+the output file; otherwise the output file pathname is built from
+@var{PROGRAM} and the binary file is placed in the same directory of the
+source.
 
-$ @value{RAWEXECUTABLE} --script test.sps hi there
-("test.sps" "hi" "there")
-@end example
+If the option @option{--library-locator} is not used: using
+@option{--compile-program} will automatically select the compile--time
+library locator.
 
 @item --compile-dependencies @var{IMPORTS-FILE}
 @cindex Command line option @option{--compile-dependencies}
 @cindex @option{--compile-dependencies}, command line option
 Load the @rnrs{6} program @var{IMPORTS-FILE}, compile all the libraries
-upon which it depends and store them in the FASL repository.
-@var{IMPORTS-FILE} itself is not evaluated.
+upon which it depends and store them in the build directory selected by
+@option{--build-directory}.  @var{IMPORTS-FILE} itself is not evaluated.
+
+If the option @option{--library-locator} is not used: using
+@option{--compile-dependencies} will automatically select the
+compile--time library locator.
+
+@item --compile-library @var{LIBFILE}
+@cindex Command line option @option{--compile-library}
+@cindex @option{--compile-library}, command line option
+Load the @rnrs{6} library source @var{LIBFILE}, compile it and serialise
+it in an output file.
+
+If the option @option{--output} is used: its value is the pathname of
+the output file; otherwise the output pathname is automatically
+generated under the build directory selected by @option{--build-directory}.
+
+If the option @option{--library-locator} is not used: using
+@option{--compile-library} will automatically select the compile--time
+library locator.
+
+@item -c @var{FILE}
+@itemx --compile @var{FILE}
+@cindex Command line option @option{-c}
+@cindex @option{-c}, command line option
+@cindex Command line option @option{--compile}
+@cindex @option{--compile}, command line option
+Load the selected @var{FILE} and recognise it as program or library by
+the file extension (@code{.sps} or @code{.sls}); the behave as if the
+option @option{--compile-program} or @option{--compile-library} had been
+given.
 @end table
 
 When none of these options is given, but a standalone @var{PROGRAM}
-argument is present on the command line: act as if the
-@option{--r6rs-script} option had been used with the given file name.
+argument is present on the command line: act as if the option
+@option{--r6rs-script} is present with the given file name.
+
 If no standalone @var{PROGRAM} argument is present: enter the @repl{}.
+When neither the option @option{--rcfile} nor the option
+@option{--no-rcfile} is used: before entering the @repl{}, the default
+run--command file @file{~/.vicarerc} is loaded.
 
 The rest of the command line arguments are recognised by the standard
 Scheme run time system.
@@ -152,9 +183,22 @@ Disable loading of run--command files.
 @item --rcfile @var{FILE}
 @cindex Command line option @option{--rcfile}
 @cindex @option{--rcfile}, command line option
-Load and evaluate @var{FILE} as an @rnrs{6} program at startup, before
-loading libraries, evaluating codes and running the main script.  This
-option can be used multiple times.
+Load and evaluate @var{FILE} as an @rnrs{6} program at start up, before
+loading libraries and running the main program.  This option can be used
+multiple times.
+
+When the execution mode is to enter the @repl{}: using this option
+disables loading the default file @file{~/.vicarerc}; only the selected
+@var{FILE} scripts are loaded.
+
+@item -o @var{OFILE}
+@itemx --output @var{OFILE}
+@cindex Command line option @option{--output}
+@cindex @option{--output}, command line option
+Select the pathname of an output file.  This selection has multiple
+purposes and it is ignored when irrelevant.  @var{OFILE} is used as:
+output @fasl{} file name when compiling individual library files; output
+@fasl{} file name when compiling program files.
 
 @item -l @var{LIBFILE}
 @itemx --load-library @var{LIBFILE}
@@ -162,59 +206,41 @@ option can be used multiple times.
 @cindex @option{-l}, command line option
 @cindex Command line option @option{--load-library}
 @cindex @option{--load-library}, command line option
-Load @var{libfile} expecting it to contain one or more @rnrs{6}
-libraries; after executing the RC files, load the libraries in the
-internal collection, but do not add them to any environment.  This
+Load the source file @var{libfile} expecting it to contain one or more
+@rnrs{6} libraries; after executing the RC files, load the libraries in
+the internal collection, but do not add them to any environment.  This
 option can be used multiple times.
 
-@item -f @var{CODEFILE}
-@itemx --eval-file @var{CODEFILE}
-@cindex Command line option @option{--eval-file}
-@cindex @option{--eval-file}, command line option
-@cindex Command line option @option{-f}
-@cindex @option{-f}, command line option
-Load @var{CODEFILE} expecting it to contain valid @rnrs{6} expressions;
-after instantiating the libraries hand the code to @func{eval} under the
-interaction environment.  Bindings left behind by this code are
-available if we enter the @repl{}.  This option can be used multiple
-times.
-
-@item -e @var{EXPRESSION}
-@itemx --eval-expr @var{EXPRESSION}
-@cindex Command line option @option{--eval-expr}
-@cindex @option{--eval-expr}, command line option
-@cindex Command line option @option{-e}
-@cindex @option{-e}, command line option
-After instantiating the libraries hand the @var{EXPRESSION} to
-@func{eval} under the interaction environment.  Bindings left behind by
-this code are available if we enter the @repl{}. This option can be used
-multiple times.
+@item --source-path @var{DIRECTORY}
+@cindex Command line option @option{--source-path}
+@cindex @option{--source-path}, command line option
+Add @var{DIRECTORY} to the source libraries search path.  This option
+can be used multiple times.
 
 @item -L @var{DIRECTORY}
-@itemx --search-path @var{DIRECTORY}
-@cindex Command line option @option{--search-path}
-@cindex @option{--search-path}, command line option
+@itemx --library-path @var{DIRECTORY}
+@cindex Command line option @option{--library-path}
+@cindex @option{--library-path}, command line option
 @cindex Command line option @option{-L}
 @cindex @option{-L}, command line option
-Add @var{DIRECTORY} to the library search path.  This option can be used
-multiple times.
+Add @var{DIRECTORY} to the binary libraries search path.  This option
+can be used multiple times.
 
-@item -F @var{DIRECTORY}
-@itemx --fasl-path @var{DIRECTORY}
-@cindex Command line option @option{--fasl-path}
-@cindex @option{--fasl-path}, command line option
-@cindex Command line option @option{-F}
-@cindex @option{-F}, command line option
-Add @var{DIRECTORY} to the @fasl{} search path.  This option can be used
-multiple times.
+@item --library-locator @var{NAME}
+@cindex Command line option @option{--library-locator}
+@cindex @option{--library-locator}, command line option
+Select a Scheme library locator.  @var{NAME} can be one among:
+@samp{run-time}, @samp{compile-time}, @samp{source}.  For details on
+searching libraries @ref{using libraries searching, Library search
+algorithms}.  For details on the built--in library locators @api{}
+@ref{libutils locating, Locating libraries}.
 
-@item --fasl-directory @var{DIRECTORY}
-@cindex Command line option @option{--fasl-directory}
-@cindex @option{--fasl-directory}, command line option
-Select @var{DIRECTORY} as top pathname under which @fasl{} files are
-stored when libraries are compiled; @var{DIRECTORY} must exist.  When
-used multiple times: the last one wins.  The selected directory is
-always prepended to the @fasl{} search path.
+@item --build-directory @var{DIRECTORY}
+@cindex Command line option @option{--build-directory}
+@cindex @option{--build-directory}, command line option
+Select @var{DIRECTORY} as pathname under which compiled library files
+are temporarily stored before being installed.  When used multiple
+times: the last one wins.
 
 @item --more-file-extensions
 @cindex Command line option @option{--more-file-extensions}
@@ -235,7 +261,7 @@ level.  @ref{iklib cafe} for more details.
 @cindex Command line option @option{--repl-on-sigint}
 @cindex @option{--repl-on-sigint}, command line option
 When this option is used an interprocess signal handler is registered at
-program startup to enter a debugging @repl{} whenever a @code{SIGINT}
+program start up to enter a debugging @repl{} whenever a @code{SIGINT}
 signal is received.
 
 @item --raw-repl
@@ -253,8 +279,8 @@ interface is available.
 @cindex @option{-d}, command line option
 @cindex Command line option @option{-g}
 @cindex @option{-g}, command line option
-Turn on debugging mode.  With this unhandled exceptions in the program
-will result in starting the debugger, which allows stack trace
+Turn on debugging mode.  With this option: unhandled exceptions in the
+program will result in starting the debugger, which allows stack trace
 inspection.
 
 @item -nd
@@ -265,23 +291,47 @@ inspection.
 @cindex @option{-nd}, command line option
 Turn off debugging mode.
 
+@item --gc-integrity-checks
+@cindex Command line option @option{--gc-integrity-checks}
+@cindex @option{--gc-integrity-checks}, command line option
+Enable garbage collection integrity checks.  This slows down the garbage
+collection.
+
+@item --no-gc-integrity-checks
+@cindex Command line option @option{--no-gc-integrity-checks}
+@cindex @option{--no-gc-integrity-checks}, command line option
+Disable garbage collection integrity checks.  This is the default.
+
 @item --print-loaded-libraries
 @cindex Command line option @option{--print-loaded-libraries}
 @cindex @option{--print-loaded-libraries}, command line option
 Whenever a library file is loaded print a message on the console error
-port.  This is for debugging purposes.
+port.  This is for debugging purposes.  When used together with
+@option{--debug-messages}: even more detailed messages are generated for
+library related actions.
 
 @item --no-print-loaded-libraries
 @cindex Command line option @option{--no-print-loaded-libraries}
 @cindex @option{--no-print-loaded-libraries}, command line option
 Disables the effect of @option{--print-loaded-libraries}.
 
+@item --debug-messages
+@cindex Command line option @option{--debug-messages}
+@cindex @option{--debug-messages}, command line option
+Be more verbose about undertaken actions.  This is for debugging
+purposes.
+
+@item --no-debug-messages
+@cindex Command line option @option{--no-debug-messages}
+@cindex @option{--no-debug-messages}, command line option
+Disables the effect of @option{--debug-messages}.
+
 @item --report-errors-at-runtime
 @cindex Command line option @option{--report-errors-at-runtime}
 @cindex @option{--report-errors-at-runtime}, command line option
-When possible and meaningful: report errors at runtime rather than at
-compile time.  Runtime errors reporting is @rnrs{6} compliant.  The
-default is to raise errors at compile time.
+When possible and meaningful: report errors at run--time rather than at
+compile--time.  Run--time errors reporting is @rnrs{6} compliant.  The
+default is to raise errors at compile--time.
 
 @item --no-report-errors-at-runtime
 @cindex Command line option @option{--no-report-errors-at-runtime}
@@ -300,10 +350,23 @@ Do not strictly follow @rnrs{6} specifications: enable @value{PRJNAME}
 extensions.  Disables the effect of @option{--strict-r6rs}.  This is the
 default.
 
+@item --descriptive-labels
+@cindex Command line option @option{--descriptive-labels}
+@cindex @option{--descriptive-labels}, command line option
+For debugging purposes: generate descriptive labels in expanded code and
+assembly code.
+
+@item --no-descriptive-labels
+@cindex Command line option @option{--no-descriptive-labels}
+@cindex @option{--no-descriptive-labels}, command line option
+For debugging purposes: do not generate descriptive labels in expanded
+code and assembly code.  Disables the effect of
+@option{--descriptive-labels}.  This is the default.
+
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn off use of the source optimizer.
+Turn off use of the source optimiser.
 
 @item -O1
 @itemx -O2
@@ -317,15 +380,6 @@ Turn on various levels of compile optimisations.
 @cindex @option{--optimizer-passes-count}, command line option
 Specify how many passes to perform with the source optimizer.  Must be a
 positive fixnum.  Defaults to 1.
-
-@item --enable-open-mvcalls
-@itemx --disable-open-mvcalls
-@cindex Command line option @option{--enable-open-mvcalls}
-@cindex @option{--enable-open-mvcalls}, command line option
-@cindex Command line option @option{--disable-open-mvcalls}
-@cindex @option{--disable-open-mvcalls}, command line option
-Enable or disable inlining of calls to @func{call-with-values}.
-Defaults to disable.
 
 @item --print-assembly
 @cindex Command line option @option{--print-assembly}
@@ -372,31 +426,55 @@ Display the help message then exit.
 @cindex @option{--}, command line option
 Mark the end of @value{EXECUTABLE} options; all the arguments after this
 marker can be obtained by calling the @func{command-line} procedure.
+
+@item -v
+@itemx --verbose
+@cindex Command line option @option{--verbose}
+@cindex @option{--verbose}, command line option
+@cindex Command line option @option{-v}
+@cindex @option{-v}, command line option
+Turn on verbose messages describing expander and compiler operations.
+
+@item --silent
+@cindex Command line option @option{--silent}
+@cindex @option{--silent}, command line option
+Turn off verbose messages describing compiler operations.
 @end table
 
-@cindex @env{VICARE_RC_FILES}
-If neither the @option{--no-rcfile} nor the @option{--rcfile} options
-are used: a list of run--command files is read from the environment
-variable @env{VICARE_RC_FILES}, which must contain a colon separated
-list of pathnames.  If the enviroment variable is empty or unset, by
-default the file @file{.vicarerc} is used searching it in the directory
-selected by the @env{HOME} environment variable.
-
 @c page
-@node using script
-@section Using @command{scheme-script}
+@node using scripts
+@section Executing Scheme scripts
 
 
 Scheme scripts can be executed using the following command:
 
 @example
-@value{RAWEXECUTABLE} @var{PROGRAM}
+@value{RAWEXECUTABLE} --r6rs-script @var{PROGRAM}
 @end example
 
 @noindent
-@value{PACKAGE} does @strong{not} follow the @rnrs{6} recommendations
-and does not install a wrapper program called @command{scheme-script} to
-avoid conflicts with other Scheme implementations.
+or the shorter:
+
+@example
+@value{RAWEXECUTABLE} @var{PROGRAM}
+@end example
+
+@value{PACKAGE} follows the @rnrs{6} recommendations to install a
+wrapper program called @command{scheme-script} only when the
+@command{configure} option @option{--enable-scheme-script} is used at
+package configuration time; this is to avoid conflicts with other Scheme
+implementations.  In this scenario, it is possible to execute Scheme
+scripts as follows:
+
+@example
+scheme-script @var{PROGRAM} [program options]
+@end example
+
+@noindent
+where the optional program options can be retrieved with
+@func{command-line}, @ref{stdlib programlib, command-line}.  When using
+@command{scheme-script} it is impossible to select command arguments to
+be passed to @value{PRJNAME} rather than to the script.
 
 Here is a sample script (Pig Latin---``Igpay Atinlay''---is a code that
 was at one time popular among very young North American children).
@@ -426,6 +504,7 @@ was at one time popular among very young North American children).
  (map pig-latin
      (cdr (command-line))))
 (newline)
+(flush-output-port (current-output-port))
 @end example
 
 Assuming we have stored the script in the file @file{demo.sps}, we can
@@ -464,7 +543,7 @@ If the first two bytes of a script represent the sequence @samp{#!} in
 @ascii{} encoding: the first line is discarded and not parsed as Scheme
 code.  This allows scripts on Unix systems to start with the command
 line needed to use them; notice that this will discard valid sharp--bang
-comments (like @code{#!r6rs}) if the are at the very beginning of a
+comments (like @code{#!r6rs}) if they are at the very beginning of a
 file.
 
 @item
@@ -477,18 +556,21 @@ executed.  The @code{.command} extension can be hidden from the
 
 @c page
 @node using libraries
-@section @rnrs{6} libraries
+@section @rnrs{6} libraries and extensions
 
 
-A library exports features that can be imported into programs; a library
-is named by a list, e.g., @library{yoyodyne
-block-transfer-computations}.  The core features of the language is
-provided in the library @library{rnrs}.
+A library exports features that can be imported into programs and other
+libraries; a library is named by a list of symbols, for example
+@library{nausicaa uri pathname}.  The core features of the @rnrs{6}
+language is provided in the library @library{rnrs}; the full
+@value{PRJNAME} features are provided by the library @library{vicare}.
 
 @menu
 * using libraries intro::       Introduction to @value{PRJNAME} libraries.
-* using libraries searching::   How @value{PRJNAME} finds libraries.
-* using libraries summary::     Library search summary.
+* using libraries filenames::   File names from library references.
+* using libraries paths::       Library search paths.
+* using libraries searching::   Library search algorithms.
+* using libraries compiling::   Compiling libraries in binary format.
 * using libraries examples::    Examples of libraries usage.
 @end menu
 
@@ -510,8 +592,11 @@ a library form, which might look like this:
 @end example
 
 @noindent
-notice the @func{import} clause; libraries have no predefined namespace,
-and therefore at least @library{rnrs} must be imported.
+notice the @func{import} clause.  No library is imported by default;
+therefore, if we want to write some general purpose code, we have to
+import at least one library that exports enough features to compose a
+programming language; there multiple libraries of this kind, for example
+@library{rnrs} and @library{vicare}.
 
 We can import @library{sample} into another library, a script, or a
 @value{PRJNAME} top--level session:
@@ -523,149 +608,103 @@ We can import @library{sample} into another library, a script, or a
 @end example
 
 Library names are lists, thus allowing the writer of one or more
-libraries to group related libraries together.  For example, as well as
-@library{yoyodyne block-transfer-computations}, we might also have
-@library{yoyodyne tardis navigation} and @library{yoyodyne tardis
-diagnostics}.  Leaving the parentheses off a single--component library
-name is a common error.
+libraries to group related libraries together.  For example,
+@value{PRJNAME} installs a whole hierarchy of libraries under
+@library{vicare language-extensions}:
+
+@example
+(vicare language-extensions amb)
+(vicare language-extensions conditions-and-restarts))
+...
+@end example
+
+@noindent
+@value{PRJNAME}'s own Scheme libraries are under the hierarchies:
+@library{vicare ---}, @library{srfi ---} and @library{nausicaa ---}.
+
+@value{PRJNAME}'s boot image and distributed libraries are installed in
+the directory:
+
+@example
+$(libdir)/vicare-scheme
+@end example
+
+@noindent
+on 32-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib/vicare-scheme
+@end example
+
+@noindent
+on 64-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib64/vicare-scheme
+@end example
+
+@noindent
+for example the library @library{vicare ffi} on 32-bit @gnu{}+Linux
+systems is installed as:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/ffi.fasl
+@end example
 
 @c page
-@node using libraries searching
-@subsection How @value{PRJNAME} finds libraries
+@node using libraries filenames
+@subsection File names from library references
 
 
-@findex library-path
+A library is a file with the same name as the last component of the
+library name.  For example, the library @library{sample} will correspond
+to a source file named @file{sample.vicare.sls} or @file{sample.sls} and
+a binary file named @file{sample.fasl} somewhere in the file system.
+The file extension @code{.sls} stands for ``Scheme Library Source'' and
+@code{.fasl} stands for ``FASt Loading''.
 
+@quotation
+@strong{NOTE} For source libraries written for @value{PRJNAME}: the file
+extension to be preferred is @code{.vicare.sls}.  For source libraries
+written for @rnrs{6} implementations: the file extension to be preferred
+is @code{.sls}.
+@end quotation
 
-In @value{PRJNAME}, a library is a file with the same name as the last
-component of the library name.  For example, the library
-@library{sample} will correspond to a file named @file{sample.sls}
-somewhere in the file system.  The file extension @code{.sls} stands for
-``Scheme library source''; although @value{PRJNAME} will also accept the
-extensions @code{.ss} and @code{.scm} when the command line option
-@option{--more-file-extensions} is used, these really indicate scripts
-rather than libraries.
-
-@value{PRJNAME} has a search algorithm for libraries that is similar to
-those used in other languages.  @value{PRJNAME}'s search path comprises
-a series of directories; when we try to import a library whose name
-contains just one component, @value{PRJNAME} will examine each directory
-in the search path for a file with a matching name.  Importing a library
-whose name is a list of components causes @value{PRJNAME} to match to a
-series of subdirectories with matching names.
+@quotation
+@strong{NOTE} @value{PRJNAME} will also accept the extensions @code{.ss}
+and @code{.scm} when the command line option
+@option{--more-file-extensions} is used.
+@end quotation
 
 Here is an example of each case:
 
 @itemize
 @item
-Importing @library{sample} causes @value{PRJNAME} to look in each
-directory on the path for a file named @file{sample.sls}.
+Importing @library{sample} causes @value{PRJNAME} to look for a binary
+file named @file{sample.fasl} and a source file named
+@file{sample.vicare.sls} or @file{sample.sls}.
 
 @item
-Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
-each directory on the path for a directory named @file{yoyodyne}, and
-within that a file named @file{sample.sls}.  The @func{library} form for
-this library must still specify the library name as @library{yoyodyne
-sample}, not @library{sample}.
+Importing @library{yoyodyne sample} causes @value{PRJNAME} to look for a
+directory named @file{yoyodyne}, and within that a binary file named
+@file{sample.fasl} and a source file named @file{sample.vicare.sls} or
+@file{sample.sls}.  The @func{library} form for this library must still
+specify the library name as @library{yoyodyne sample}, not
+@library{sample}.
 @end itemize
 
-@value{PRJNAME}'s own Scheme libraries and the boot image are installed
-in the directory:
+By default, @value{PRJNAME} attempts to import the library @library{a b
+c} in binary format as follows: build the file ``stem'' @code{/a/b/c}
+then append the string @code{.fasl} to the stem.  It attempts to import
+the library @library{a b c} from source as follows: build the file
+``stem'' @code{/a/b/c} then append each of the following strings to the
+stem: @code{.vicare.sls}, @code{.sls}.  Directories from the search
+paths are prepended to the file stem plus extension and searched on the
+file system, stopping at the first match.
 
-@example
-$(libdir)/vicare-scheme
-@end example
-
-@noindent
-for example on @gnu{}+Linux systems:
-
-@example
-/usr/local/lib/vicare-scheme
-@end example
-
-@noindent
-and are under the @library{vicare ---} and @library{srfi ---}
-hierarchies; for example the library @library{vicare ffi} on
-@gnu{}+Linux systems is installed as:
-
-@example
-/usr/local/lib/vicare-scheme/vicare/ffi.sls
-@end example
-
-User libraries that are meant to be usable by @value{PRJNAME} should be
-installed in the directory:
-
-@example
-$(libdir)/scheme/r6rs
-@end example
-
-@noindent
-on @gnu{}+Linux systems:
-
-@example
-/usr/local/lib/scheme/r6rs
-@end example
-
-@cindex @env{VICARE_LIBRARY_PATH}
-By default @value{PRJNAME} puts the following directories in the search
-path, in this order:
-
-@example
-$(libdir)/scheme/r6rs
-$(libdir)/vicare-scheme
-@end example
-
-@noindent
-on @gnu{}+Linux systems:
-
-@example
-/usr/local/lib/scheme/r6rs
-/usr/local/lib/vicare-scheme
-@end example
-
-@noindent
-other directories can be added to the search path in two ways: by
-modifying an environment variable, or by setting @value{PRJNAME}'s
-@func{library-path} parameter.  @value{PRJNAME} consults the environment
-variable @env{VICARE_LIBRARY_PATH} at the beginning of execution, and
-places each of the directories there into its search path.  The search
-path is then set to the value of the parameter @func{library-path},
-which can be updated as necessary.
-
-In the following example session: the user sets
-@env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
-@code{(library-path)}; a further directory is then set during the
-session:
-
-@example
-$ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
-$ echo $VICARE_LIBRARY_PATH
-/home/marco/scheme:/tmp/library
-$ @value{RAWEXECUTABLE}
-...
-
-> (library-path)
-("/home/marco/scheme"
- "/tmp/library"
- "/usr/local/lib/scheme/r6rs"
- "/usr/local/lib/vicare-scheme")
-> (library-path (cons "/opt/sw/extra-libraries" (library-path)))
-> (library-path)
-("/opt/sw/extra-libraries"
- "/home/marco/scheme"
- "/tmp/library"
- "/usr/local/lib/scheme/r6rs"
- "/usr/local/lib/vicare-scheme")
-@end example
-
-In programs intended to be distributed, we should resist the urge to set
-@code{(library-path)}, as the user's file hierarchies might not match
-ours; for most libraries, simply telling the user to install the library
-in one of the libraries on the search path is good enough.
-
-There are two refinements of the library search algorithm, which are
-performed when the @option{--more-file-extensions} command line option
-is used.
+There are two refinements of the library search algorithm for source
+libraries, which are performed when the @option{--more-file-extensions}
+command line option is used.
 
 @itemize
 @item
@@ -680,43 +719,22 @@ allows us to use a simpler technique where the main library is stored in
 @file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
 
 @item
-@value{PRJNAME} will also look in @file{lib/main.vicare.sls} before
-trying @file{lib/main.sls}.  This allows us to provide a
-@value{PRJNAME}--specific implementation as well as a generic
-implementation.
+When searching for source libraries: @value{PRJNAME} will also look in
+@file{lib/main.vicare.sls} before trying @file{lib/main.sls}; this
+allows us to provide a @value{PRJNAME}--specific implementation as well
+as a generic implementation.  When searching for binary libraries: only
+the file @file{lib/main.fasl} is searched.
 @end itemize
 
-@c page
-@node using libraries summary
-@subsection Library search algorithm summary
-
-
-By default, @value{PRJNAME} attempts to import the library @library{a b
-c} as follows, for each directory in the search path:
+When the the command line option @option{--more-file-extensions} is used
+and the library @library{a b c} is imported in source form:
 
 @enumerate
 @item
-Build the rootname @file{a/b/c}.
+The file ``stem'' is built: @code{/a/b/c}.
 
 @item
-Append each of the following strings to the rootname, in order, until a
-matching file is found:
-
-@example
-.vicare.sls
-.sls
-@end example
-@end enumerate
-
-When the the command line option @option{--more-file-extensions} is
-used, for each directory in the search path:
-
-@enumerate
-@item
-Build the rootname @file{a/b/c}.
-
-@item
-Append each of the following strings to the rootname, in order, until a
+Each of the following strings is appended to the stem, in order, until a
 matching file is found:
 
 @example
@@ -735,10 +753,11 @@ matching file is found:
 @end example
 @end enumerate
 
-If there is no match, then the import request is in error.
+@noindent
+if there is no match, then the import request fails.
 
 Whenever the library name component @code{main} appears as last and not
-unique component: when building the file rootname such component is
+unique component: when building the file stem such component is
 ``quoted'' by appending an underscore character; examples:
 
 @example
@@ -748,33 +767,315 @@ unique component: when building the file rootname such component is
 @end example
 
 @c page
+@node using libraries paths
+@subsection Library search paths
+
+
+@cindex Library source path
+@cindex Binary library source path
+@cindex Source library source path
+@cindex @fasl{} file source path
+@cindex @func{library-source-search-path}
+@cindex @func{library-binary-search-path}
+
+
+@value{PRJNAME} has a search algorithm for libraries that is similar to
+those used in other languages.  @value{PRJNAME}'s search path comprises
+a series of directories; when we try to import a library whose name
+contains just one component, @value{PRJNAME} will examine each directory
+in the search path for a file with a matching name.  Importing a library
+whose name is a list of components causes @value{PRJNAME} to look for a
+series of subdirectories with matching names.
+
+There are two search paths, one for binary libraries and one for source
+libraries:
+
+@itemize
+@item
+The source libraries search path is stored in the parameter
+@func{library-source-search-path}; @ref{libutils file-system paths,
+library-source-search-path}.
+
+@item
+The binary libraries search path is stored in the parameter
+@func{library-binary-search-path}; @ref{libutils file-system paths,
+library-binary-search-path}.
+@end itemize
+
+@noindent
+both these parameters are meant to contain lists of strings representing
+directory pathnames and can be updated as necessary.
+
+In programs intended to be distributed, we should resist the urge to set
+@func{library-binary-search-path} and @func{library-source-search-path},
+as the user's file hierarchies might not match ours; for most libraries,
+simply telling the user to install the files in one of the directories
+on the search path is good enough.
+
+@c page
+@node using libraries searching
+@subsection Library search algorithms
+
+
+In the typical scenario: packages compile source libraries in binary
+format and store them in @fasl{} files; then such @fasl{} files are
+installed in one of the directory referenced by the parameter
+@func{library-binary-search-path}; finally, when running an application,
+imported libraries are loaded in binary form from @fasl{} files.
+
+There are other situations.  For this reason @value{PRJNAME} implements
+``library locators'': different procedures to locate a library in the
+file system and other sources.  There are 3 predefined library locators:
+run--time, compile--time, source; the default is the run--time locator.
+@ref{libutils file-system locators, Library file locators}.
+
+@c page
+@node using libraries compiling
+@subsection Compiling libraries in binary format
+
+
+@menu
+* using libraries compiling lib::   Compiling a single library.
+* using libraries compiling deps::  Compiling all the dependencies.
+@end menu
+
+@c page
+@node using libraries compiling lib
+@subsubsection Compiling a single library
+
+
+This library compilation strategy is implemented by a proper execution
+mode of @value{PRJNAME} enabled by the command line option
+@option{--compile-library} of @value{EXECUTABLE}.  In this mode:
+
+@itemize
+@item
+The compile--time library locator is selected, @ref{using libraries
+searching, Compile--time libraries search}.
+
+@item
+A @rnrs{6} library is loaded from an explicitly selected source file,
+compiled, and possibly invoked and visited.
+
+@item
+It is assumed that all the library's dependency libraries are available
+in binary format.
+
+@item
+The loaded library is serialised to a @fasl{} file in an explicitly
+selected output file or in the selected
+@func{compiled-library-build-directory}.
+@end itemize
+
+Let's say we have the libraries:
+
+@example
+(alpha beta (1 0))
+(alpha gamma (1 2))
+@end example
+
+@noindent
+in the files:
+
+@example
+$(srcdir)/lib/alpha/beta.sls
+$(srcdir)/lib/alpha/gamma.sls
+@end example
+
+@noindent
+we want to compile them to:
+
+@example
+$(builddir)/lib/alpha/beta.fasl
+$(builddir)/lib/alpha/gamma.fasl
+@end example
+
+@noindent
+and @library{alpha gamma (1 2)} imports @library{alpha beta (1 0)}.  We
+have multiple options:
+
+@itemize
+@item
+We explicitly execute (in the correct order) the commands that compile
+one library at a time, explicitly selecting the source and binary file
+pathnames.  First, to compile @library{alpha beta (1 0)}, we do:
+
+@example
+vicare \
+  --compile-library $(srcdir)/lib/alpha/beta.sls \
+  --output $(builddir)/lib/alpha/beta.fasl
+@end example
+
+@noindent
+then, to compile @library{alpha gamma (1 2)}, we do:
+
+@example
+vicare \
+  --build-directory $(builddir)/lib \
+  --compile-library $(srcdir)/lib/alpha/gamma.sls \
+  --output $(builddir)/lib/alpha/gamma.fasl
+@end example
+
+@noindent
+when the option @option{--compile-library} is used and no library
+locator is explicitly selected with the option
+@option{--library-locator}: the compile-time library locator is
+automatically selected.
+
+@item
+We explicitly execute (in the correct order) the commands that compile
+one library at a time, explicitly selecting the build directory.  First,
+to compile @library{alpha beta (1 0)}, we do:
+
+@example
+vicare \
+  --build-directory $(builddir)/lib \
+  --compile-library $(srcdir)/lib/alpha/beta.sls
+@end example
+
+@noindent
+then, to compile @library{alpha gamma (1 2)}, we do:
+
+@example
+vicare \
+  --build-directory $(builddir)/lib \
+  --compile-library $(srcdir)/lib/alpha/gamma.sls
+@end example
+@end itemize
+
+This compilation strategy is useful when compiling a ``big'' number of
+libraries with a traditional @file{Makefile}:
+
+@itemize
+@item
+It allows compiling only libraries for which the source is newer than
+the binary.
+
+@item
+It allows running the compilation commands in parallel when possible,
+using, for example, the @option{-j} option of @gnu{} Make.
+@end itemize
+
+To use this strategy effectively we need to write all the compilation
+commands, correctly tracking the dependencies; this is tedious, but there
+are ways to automatically generate the needed commands.
+
+@c page
+@node using libraries compiling deps
+@subsubsection Compiling all the dependencies of a program
+
+
+This library compilation strategy is implemented by a proper execution
+mode of @value{PRJNAME} enabled by the command line option
+@option{--compile-dependencies} of @value{EXECUTABLE}; when using this
+mode the command line option @option{--output} is @strong{ignored}.  In
+this mode:
+
+@itemize
+@item
+The compile--time library locator is selected, @ref{using libraries
+searching, Compile--time libraries search}.
+
+@item
+A @rnrs{6} program is loaded from a file but @strong{not} executed.
+
+@item
+All the program's dependency libraries are loaded, compiled, and
+possibly invoked and visited.
+
+@item
+All the libraries loaded from a source file are serialised to @fasl{}
+files in the selected @func{compiled-library-build-directory}; all the
+libraries loaded from a @fasl{} file are left untouched.
+@end itemize
+
+Let's say we have the libraries:
+
+@example
+(alpha beta (1 0))
+(alpha gamma (1 2))
+@end example
+
+@noindent
+in the files:
+
+@example
+$(srcdir)/lib/alpha/beta.sls
+$(srcdir)/lib/alpha/gamma.sls
+@end example
+
+@noindent
+and we want to compile them to:
+
+@example
+$(builddir)/lib/alpha/beta.fasl
+$(builddir)/lib/alpha/gamma.fasl
+@end example
+
+@noindent
+we prepare a Scheme script for this purpose, containing the required
+@func{import} forms:
+
+@example
+;; compile-all.sps --
+;;
+
+(import (only (alpha beta))
+        (only (alpha beta)))
+
+;;; end of file
+@end example
+
+@noindent
+and we execute it as follows:
+
+@example
+vicare \
+   --source-path     $(srcdir)/lib   \
+   --build-directory $(builddir)/lib \
+   --compile-dependencies compile-all.sps
+@end example
+
+@noindent
+if the option @option{--library-locator} is not used: using
+@option{--compile-dependencies} will automatically select the
+compile--time library locator.
+
+If a selected library depends on the other selected library:
+@value{PRJNAME} will automatically take care of generating the
+appropriate binary formats.  If a selected library depends on other
+libraries, not explicitly selected by the script: @value{PRJNAME} will
+automatically take care of generating the appropriate binary formats and
+@fasl{} files in the selected @func{compiled-library-build-directory}.
+
+@c page
 @node using libraries examples
 @subsection Examples of library usage
 
 
-Consider a program using @func{pretty-print} procedure to format some
-code, and suppose further that pretty printing is just a nice add--on
-(e.g. using @file{write} suffices, but pretty--printing is @emph{just
-prettier}).
+Consider a program using the procedure @func{pretty-print} to format
+some code, and suppose further that pretty printing is just a nice
+add--on (e.g. using @file{write} suffices, but pretty--printing is
+@emph{just prettier}).
 
 @value{PRJNAME} exports a good pretty--printing facility in its
-@library{ikarus} library.  However, since @func{pretty-print} is not a
+@library{vicare} library.  However, since @func{pretty-print} is not a
 standard procedure, a program that uses it would be rendered unportable
 to other @rnrs{6} Scheme implementations.
 
-The programmer can put the @code{.vicare.*} extensions to use in this
+The programmer can put the @code{.vicare.sls} extension to use in this
 situation, by writing two versions of a @library{pretty-printing}
 library: one for use by @value{PRJNAME}, and one portable for other
 implementations.
 
 @example
-;; pretty-printing.vicare.ss --
+;; pretty-printing.vicare.sls --
 ;;
 ;; Can be used only by @value{PRJNAME} Scheme.
 
 (library (pretty-printing)
   (export pretty-print)
-  (import (only (ikarus) pretty-print)))
+  (import (only (vicare) pretty-print)))
 
 ;;; end of file
 @end example
@@ -796,6 +1097,96 @@ implementations.
 @end example
 
 @c page
+@node using programs
+@section Compiling Scheme programs
+
+
+@cindex @rnrs{6} programs
+@cindex Scheme programs
+@cindex Scheme scripts
+@cindex Compiling Scheme scripts
+@cindex Binary programs
+
+
+Scheme programs can be executed by @value{PRJNAME} from both source and
+binary formats.
+
+@itemize
+@item
+To run a Scheme script (a program in source form) we invoke the
+executable @value{EXECUTABLE} using the option @option{--r6rs-script} to
+select the pathname of the file:
+
+@example
+vicare --r6rs-script path/to/script.sps
+@end example
+
+@item
+To run a compiled Scheme program, we invoke the executable
+@value{EXECUTABLE} using the option @option{--binary-program} to select
+the pathname of the file:
+
+@example
+vicare --binary-program path/to/program
+@end example
+@end itemize
+
+On @gnu{}+Linux platforms it is possible to execute programs directly
+without explicitly invoking the executable, @ref{binfmt, Launching
+programs directly on @gnu{}+Linux}.
+
+To compile a source program into binary form, we can use the specific
+command line option @option{--compile-program} or the general command
+line option @option{--compile} (which can be abbreviated as
+@option{-c}).
+
+To compile @file{script.sps} into @file{script.fasl} we can do:
+
+@example
+vicare --compile-program script.sps --output script.fasl
+@end example
+
+@noindent
+the option @option{--compile} recognises input files with extension
+@code{.sps} as programs, so we can also do:
+
+@example
+vicare --compile script.sps --output script.fasl
+@end example
+
+@noindent
+or with short options:
+
+@example
+vicare -c script.sps -o script.fasl
+@end example
+
+There is no need to use the extension @code{.fasl} for binary programs,
+so it is recommended to just do:
+
+@example
+vicare -o script -c script.sps
+@end example
+
+@noindent
+or, even shorter:
+
+@example
+vicare -c script.sps
+@end example
+
+@noindent
+which will automatically build the output file name by stripping
+@code{.sps} from the input file name; the output file name is created in
+the same directory of the input file name.
+
+@quotation
+@strong{NOTE} If the option @option{--library-locator} is not used:
+using @option{--compile-program} or @option{--compile} will
+automatically select the compile--time library locator.
+@end quotation
+
+@c page
 @node using rlwrap
 @section Using @command{rlwrap}
 
@@ -804,9 +1195,9 @@ implementations.
 
 
 While @value{PRJNAME} comes with an interface to @gnu{} Readline or
-compatible library, the @repl{} interaction, as of version 0.2d9, offers
-only very basic editing capabilities.  For this reason it is suggested
-to use @command{rlwrap}:
+compatible library, the @repl{} interaction offers only very basic
+editing capabilities.  For this reason it is suggested to use
+@command{rlwrap}:
 
 @center @url{http://utopia.knoware.nl/~hlub/rlwrap/}
 
@@ -823,7 +1214,7 @@ to run @value{PRJNAME}'s @repl{} through this shell script:
 vicare_PROGRAM=$(type -p vicare)
 rlwrap_PROGRAM=$(type -p rlwrap)
 
-COMPLETIONS_FILE=/home/marco/.vicare_completions
+COMPLETIONS_FILE=~/.vicare_completions
 COMPLETIONS_OPTION=--file=$@{COMPLETIONS_FILE@}
 
 ## Data variables.
@@ -869,32 +1260,5 @@ exec "$@{rlwrap_PROGRAM@}"                    \
 
 ### end of file
 @end smallexample
-
-@c page
-@node using binfmt
-@section Launching programs on Linux
-
-
-When running @value{PRJNAME} on a @gnu{}+Linux system we can take
-advantage of the features offered by the @code{binfmt_misc} kernel
-module to launch directly executable programs without prefixing the
-program name with the @command{vicare} executable.
-
-It all comes down to this: after setting up the feature as explained in
-the appendix @ref{binfmt}, we write a file containing:
-
-@example
-;;;!vicare
-(import (only (program-library) main))
-(main)
-@end example
-
-@noindent
-where @library{program-library} is an installed library containing the
-application code and @func{main} is the function that starts the
-application.  If we enable executable permissions for the file and make
-sure that the first bytes in the file are the sequence
-@code{;;;!vicare}, we can configure the Linux kernel to start the
-program handing its command line to the executable @command{vicare}.
 
 @c end of file

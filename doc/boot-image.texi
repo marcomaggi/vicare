@@ -1,0 +1,42 @@
+@node boot image
+@chapter Anatomy of the boot image
+
+
+The boot image is for @value{PRJNAME} what the basic run--time system,
+the dynamic library linker and the C Standard library are for the C
+language.
+
+The boot image is a binary file in which the Scheme objects are
+serialised with the same format of @fasl{} files representing compiled
+libraries (@pxref{fasl}).  The source code of the boot image is a set of
+Scheme libraries as defined by @rnrs{6}, with @value{PRJNAME}
+extensions; its compiled and serialised representation has the layout:
+
+@example
+ header library header library header library header library ...
+|------|-------|------|-------|------|-------|------|-------|---
+@end example
+
+@noindent
+where:
+
+@itemize
+@item
+The @samp{header} is the @ascii{} string @code{#@@IK0}, followed by the
+@ascii{} character @code{1} on 32-bit platforms or the @ascii{}
+character @code{2} on 64-bit platforms; the end of fasl marker is
+@code{@@}.
+
+@item
+The @samp{library} is a contiguous sequence of serialised Scheme objects
+representing a compiled library.
+@end itemize
+
+
+
+
+@c end of file
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme.texi"
+@c End:

@@ -62,7 +62,7 @@
     make-enumeration
     enum-set?
     make-file-options)
-  (import (except (ikarus)
+  (import (except (vicare)
 ;;;		  define-enumeration
 		  enum-set->list
 		  enum-set-complement
@@ -411,7 +411,7 @@
 
 (define make-file-options
   ;;This constructor builds empty enum sets.
-  (enum-set-constructor (make-enumeration '(no-create no-fail no-truncate))))
+  (enum-set-constructor (make-enumeration '(no-create no-fail no-truncate executable))))
 
 
 ;;;; done

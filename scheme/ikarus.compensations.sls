@@ -8,7 +8,7 @@
 ;;;
 ;;;	This library was originally part of Nausicaa/Scheme.
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -32,7 +32,7 @@
     run-compensations
     run-compensations-store
     push-compensation-thunk)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  compensations
 		  run-compensations
 		  push-compensation-thunk))
@@ -75,8 +75,10 @@
 		 (store))))
       (for-each-in-order
 	  (lambda (closure)
-	    (guard (E (else #f))
-	      (closure)))
+	    ;;We want to block and discard exceptions raised by CLOSURE.
+	    (call/cc
+		(lambda (escape)
+		  (with-exception-handler escape closure))))
 	(store)))
     (store #f)
     (void))

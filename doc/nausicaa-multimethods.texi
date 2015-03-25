@@ -21,6 +21,14 @@ functions} may have qualified primary, before, after and around methods
 for each possible tuple of argument types; the methods are applied
 (composed) according to a defined protocol.
 
+@quotation
+@strong{NOTE} When writing a library implementing methods for Nausicaa
+multimethods: we must enable the option @code{visit-upon-loading} in the
+options clause of the @code{library} form; @vicareref{iklib syntaxes
+libraries, Extended @code{library} syntax}.  Without this option methods
+may not be registered properly.
+@end quotation
+
 @menu
 * multimethods examples::       Examples of method dispatching.
 * multimethods application::    How generic functions and methods
@@ -48,6 +56,7 @@ Let's examine this example which uses the generic functions definer
 builtins}:
 
 @example
+#!vicare
 (import (rnrs)
   (nausicaa language oopp)
   (nausicaa language multimethods)
@@ -78,8 +87,8 @@ so for the generic function:
 
 @example
 (define-generic doit (o))
-(define-method (doit (o <one>)) 'one)
-(define-method (doit (o <two>)) 'two)
+(define-method (doit @{o <one>@}) 'one)
+(define-method (doit @{o <two>@}) 'two)
 @end example
 
 @noindent
@@ -100,10 +109,10 @@ method:
 @example
 (define-generic fluff (o))
 
-(define-method (fluff (o <one>))
+(define-method (fluff @{o <one>@})
   'one)
 
-(define-method (fluff (o <two>))
+(define-method (fluff @{o <two>@})
   (cons 'two (call-next-method)))
 
 (define o (<c> ()))
@@ -135,13 +144,13 @@ arguments as follows:
 (define-generic fluff-2 (o p))
 (define-generic fluff-3 (o p rest))
 
-(define-method (fluff-1 (o <one>))
+(define-method (fluff-1 @{o <one>@})
   ---)
 
-(define-method (fluff-2 (o <one>) (p <two>))
+(define-method (fluff-2 @{o <one>@} @{p <two>@})
   ---)
 
-(define-method (fluff-3 (o <one>) (p <two>) rest)
+(define-method (fluff-3 @{o <one>@} @{p <two>@} rest)
   ---)
 @end example
 
@@ -493,7 +502,7 @@ useful.
 
 
 @deffn Syntax define-method (@meta{generic} @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define-method ((@meta{generic} @metao{tag} @meta{tag} @dots{}) @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define-method ((brace @meta{generic} @metao{tag} @meta{tag} @dots{}) @meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{qualifier} @meta{generic} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define-method @meta{generic} @meta{qualifier} (@meta{arg-spec} @dots{}) @metao{body} @meta{body} @dots{}
@@ -521,9 +530,11 @@ which this method specialises the generic function; an @meta{arg-spec}
 can be:
 
 @table @code
-@item (@meta{arg} @meta{tag})
-Where @meta{arg} is the formal name of the argument and @meta{tag} the
-(possibly conventional) type identifier of expected values.
+@item (brace @meta{arg} @meta{tag})
+Where @meta{arg} is the formal name of the argument, @meta{tag} the
+(possibly conventional) type identifier of expected values, @func{brace}
+is the identifier exported by @library{vicare} and reexported by
+@library{nausicaa language oopp}.
 
 @item @meta{arg}
 Where @meta{arg} is the formal name of the argument.  In this case the
@@ -544,7 +555,8 @@ The @meta{body} forms are enclosed in a @func{let-constants} syntax as
 follows:
 
 @example
-(let-constants ((__who__ (quote @meta{generic})))
+(fluid-let-syntax
+    ((__who__ (identifier-syntax (quote @meta{generic}))))
   @metao{body} @meta{body} @dots{})
 @end example
 
@@ -638,6 +650,7 @@ doing it results in method behaviour which is traditional in
 object--oriented systems.  For example, given the definitions:
 
 @example
+#!vicare
 (import (nausicaa))
 
 (define-class <alpha>
@@ -651,10 +664,10 @@ object--oriented systems.  For example, given the definitions:
 
 (define-generic doit (o arg))
 
-(define-method (doit (o <alpha>) arg)
+(define-method (doit @{o <alpha>@} arg)
   (list 'doit-alpha arg))
 
-(define-method (doit (o <beta>) arg)
+(define-method (doit @{o <beta>@} arg)
   (list 'doit-beta arg))
 @end example
 
@@ -662,11 +675,11 @@ object--oriented systems.  For example, given the definitions:
 we have:
 
 @example
-(let (((o <alpha>) (<alpha> (1))))
+(let ((@{o <alpha>@} (<alpha> (1))))
   (o doit 10))
 @result{} (doit-alpha 10)
 
-(let (((o <beta>) (<beta> (1 2))))
+(let ((@{o <beta>@} (<beta> (1 2))))
   (o doit 20))
 @result{} (doit-beta 20)
 @end example
@@ -675,7 +688,7 @@ we have:
 but also:
 
 @example
-(let (((o <alpha>) (<beta> (1 2))))
+(let ((@{o <alpha>@} (<beta> (1 2))))
   (o doit 30))
 @result{} (doit-beta 30)
 @end example
@@ -711,6 +724,7 @@ methods when we use the @code{reverse-before-methods} clause in
 @func{define-generic*}:
 
 @example
+#!vicare
 (import (nausicaa)
   (only (nausicaa checks)
         with-result add-result))
@@ -727,26 +741,26 @@ methods when we use the @code{reverse-before-methods} clause in
 (define-generic* doit (o arg)
   (reverse-before-methods #t))
 
-(define-method (doit (o <alpha>) arg)
+(define-method (doit @{o <alpha>@} arg)
   (list 'doit-alpha arg))
 
-(define-method (doit (o <beta>) arg)
+(define-method (doit @{o <beta>@} arg)
   (list 'doit-beta arg))
 
-(define-method doit :before ((o <alpha>) arg)
+(define-method doit :before (@{o <alpha>@} arg)
   (add-result 'before-alpha))
 
-(define-method doit :after ((o <alpha>) arg)
+(define-method doit :after (@{o <alpha>@} arg)
   (add-result 'after-alpha))
 
-(define-method doit :before ((o <beta>) arg)
+(define-method doit :before (@{o <beta>@} arg)
   (add-result 'before-beta))
 
-(define-method doit :after ((o <beta>) arg)
+(define-method doit :after (@{o <beta>@} arg)
   (add-result 'after-beta))
 
 (with-result
- (let (((o <alpha>) (make <beta> 1 2)))
+ (let ((@{o <alpha>@} (make <beta> 1 2)))
    (o.doit 30)))
 @result{} ((doit-beta 30)
     (before-alpha   ;this is the order of invocation

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2010, 2012-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -119,46 +119,60 @@
 ;; EXPT is right-associative
 (check (infix 10 expt 5 expt 3)	=> (expt 10 (expt 5 3)))
 
+(check (infix factorial(5))	=> 120)
+(check (infix 0 !)		=> 1)
+(check (infix 1 !)		=> 1)
+(check (infix 2 !)		=> 2)
+(check (infix 3 !)		=> (* 3 2 1))
+(check (infix 5 !)		=> 120)
+(check (infix 4 + 5 !)		=> (+ 4 120))
+(check (infix 2 * 3 !)		=> (* 2 (factorial 3)))
+(check (infix (2 * 3) !)	=> (factorial (* 2 3)))
+(check (infix 5 ! + 4)		=> (+ 4 120))
+(check (infix 5 ! * 4)		=> (* 4 120))
+(check (infix - 5 !)		=> -120)
+(check (infix + 5 !)		=> +120)
+
 ;;; --------------------------------------------------------------------
 
-(check (let ((N  10)) (infix incr! N))	=> 11)
-(check (let ((N  10)) (infix N incr!))	=> 10)
-(check (let ((N  10)) (infix decr! N))	=> 9)
-(check (let ((N  10)) (infix N decr!))	=> 10)
+(check (let ((N  10)) (infix ++ N))	=> 11)
+(check (let ((N  10)) (infix N ++))	=> 10)
+(check (let ((N  10)) (infix -- N))	=> 9)
+(check (let ((N  10)) (infix N --))	=> 10)
 
 (check
     (let ((x 10))
-      (let ((r (infix incr! x)))
+      (let ((r (infix ++ x)))
 	(list r x)))
   => '(11 11))
 
 (check
     (let ((x 10))
-      (let ((r (infix 2 + incr! x)))
+      (let ((r (infix 2 + ++ x)))
 	(list r x)))
   => '(13 11))
 
 (check
     (let ((x 10))
-      (let ((r (infix 2 + (incr! x))))
+      (let ((r (infix 2 + (++ x))))
 	(list r x)))
   => '(13 11))
 
 (check
     (let ((x 10))
-      (let ((r (infix x incr!)))
+      (let ((r (infix x ++)))
 	(list r x)))
   => '(10 11))
 
 (check
     (let ((x 10))
-      (let ((r (infix decr! x)))
+      (let ((r (infix -- x)))
 	(list r x)))
   => '(9 9))
 
 (check
     (let ((x 10))
-      (let ((r (infix x decr!)))
+      (let ((r (infix x --)))
 	(list r x)))
   => '(10 9))
 
@@ -213,6 +227,9 @@
 (check (infix 1 <= 3)		=> (<= 1 3))
 (check (infix 1 >= 3)		=> (>= 1 3))
 (check (infix 1 = 3)		=> (=  1 3))
+(check (infix 1 = 1)		=> (=  1 1))
+(check (infix 1 != 3)		=> (!= 1 3))
+(check (infix 1 != 1)		=> (!= 1 1))
 
 (check
     (infix 'a eq? 'a)
@@ -237,15 +254,15 @@
     (+ a b c))
 
   (check
-      (infix fun (1 2 3))
+      (infix fun (1, 2, 3))
     => (fun 1 2 3))
 
   (check
-      (infix fun(1 2 3))
+      (infix fun(1, 2, 3))
     => (fun 1 2 3))
 
   (check
-      (infix (fun (1 2 3)))
+      (infix (fun (1, 2, 3)))
     => (fun 1 2 3))
 
   #f)
@@ -256,7 +273,7 @@
 (check (infix cos (sin (1.1) + 4))	=> (cos (+ (sin 1.1) 4)))
 
 (check
-    (infix 1 + 23e-45 + 0.006789e2 * (4.113 + +23i) / sin (0.5) + atan (0.1 0.2))
+    (infix 1 + 23e-45 + 0.006789e2 * (4.113 + +23i) / sin (0.5) + atan (0.1, 0.2))
   => (+ (+ (+ 1 23e-45) (/ (* 0.006789e2 (+ 4.113 +23i)) (sin 0.5))) (atan 0.1 0.2)))
 
 
@@ -299,43 +316,6 @@
   #f)
 
 
-;;;; nested prefix expressions
-
-(check
-    (infix (begin
-	     (+ 1 2)))
-  => (+ 1 2))
-
-(check
-    (infix (begin
-	     (+ 1 2)
-	     (+ 3 4)))
-  => (+ 3 4))
-
-(check
-    (infix (begin
-	     (let ((a 3))
-	       (/ a 4))))
-  => (/ 3 4))
-
-(let ((a 3))
-  (check
-      (infix (begin
-	       (/ a 4)))
-    => (/ a 4)))
-
-(check (infix (begin 1) + 2 * 3)	=> (+ 1 (* 2 3)))
-(check (infix 1 - (begin 2) * 3)	=> (- 1 (* 2 3)))
-(check (infix 1 + 2 / (begin 3))	=> (+ 1 (/ 2 3)))
-
-(let ((a 1) (b 2) (c 3))
-  (check (infix (1 + a ? (begin
-			   (+ 2 b))
-		   : 3 + c - 4))
-    => (if (+ 1 a) (+ 2 b) (- (+ 3 c) 4)))
-  #f)
-
-
 ;;;; logic operators
 
 (check (infix 1 and 3)		=> 3)
@@ -350,13 +330,6 @@
 (check (infix not 3)		=> #f)
 (check (infix not #f)		=> #t)
 
-(check (infix 1 && 3)		=> 3)
-(check (infix 1 !! 3)		=> 1)
-(check (infix 1 ^^ 3)		=> #f)
-
-(check (infix ~~ 3)		=> #f)
-(check (infix ~~ #f)		=> #t)
-
 
 ;;;; bitwise operators
 
@@ -364,11 +337,6 @@
   (check
       (infix a & b)
     => (bitwise-and a b)))
-
-(let ((a #b0101) (b #b1101))
-  (check
-      (infix a ! b)
-    => (bitwise-ior a b)))
 
 (let ((a #b0111) (b #b1101))
   (check
@@ -440,22 +408,22 @@
 ;;; bitwise operators
 
 (let ((a #b0101) (b #b1111))
-  (check (infix a fx& b)	=> (fxand a b)))
+  (check (infix a fxand b)	=> (fxand a b)))
 
 (let ((a #b0101) (b #b1101))
-  (check (infix a fx! b)	=> (fxior a b)))
+  (check (infix a fxior b)	=> (fxior a b)))
 
 (let ((a #b0111) (b #b1101))
-  (check (infix a fx^ b)	=> (fxxor a b)))
+  (check (infix a fxxor b)	=> (fxxor a b)))
 
 (let ((a #b0101))
-  (check (infix fx~ a)	=> (fxnot a)))
+  (check (infix fxnot a)	=> (fxnot a)))
 
 (let ((a #b0111) (b 3))
-  (check (infix a fx<< b)	=> (fxarithmetic-shift-left a b)))
+  (check (infix a fxarithmetic-shift-left b)	=> (fxarithmetic-shift-left a b)))
 
 (let ((a #b01110000) (b 3))
-  (check (infix a fx>> b)	=> (fxarithmetic-shift-right a b)))
+  (check (infix a fxarithmetic-shift-right b)	=> (fxarithmetic-shift-right a b)))
 
 
 ;;;; flonums
@@ -583,25 +551,15 @@
 
 ;;; --------------------------------------------------------------------
 
-(check (infix 11 + 22 & 33)	=> (+ 11 (& 22 33)))
-(check (infix 11 - 22 & 33)	=> (- 11 (& 22 33)))
-(check (infix 22 & 33 + 11)	=> (+ (& 22 33) 11))
-(check (infix 22 & 33 - 11)	=> (- (& 22 33) 11))
+(check (infix 11 + 22 & 33)	=> (+ 11 (bitwise-and 22 33)))
+(check (infix 11 - 22 & 33)	=> (- 11 (bitwise-and 22 33)))
+(check (infix 22 & 33 + 11)	=> (+ (bitwise-and 22 33) 11))
+(check (infix 22 & 33 - 11)	=> (- (bitwise-and 22 33) 11))
 
-(check (infix 11 + 22 ! 33)	=> (+ 11 (! 22 33)))
-(check (infix 11 - 22 ! 33)	=> (- 11 (! 22 33)))
-(check (infix 22 ! 33 + 11)	=> (+ (! 22 33) 11))
-(check (infix 22 ! 33 - 11)	=> (- (! 22 33) 11))
-
-(check (infix 11 + 22 ^ 33)	=> (+ 11 (^ 22 33)))
-(check (infix 11 - 22 ^ 33)	=> (- 11 (^ 22 33)))
-(check (infix 22 ^ 33 + 11)	=> (+ (^ 22 33) 11))
-(check (infix 22 ^ 33 - 11)	=> (- (^ 22 33) 11))
-
-(check (infix 1 & 2 << 3)	=> (& 1 (<< 2 3)))
-(check (infix 1 ! 2 << 3)	=> (! 1 (<< 2 3)))
-(check (infix 2 << 3 & 1)	=> (& (<< 2 3) 1))
-(check (infix 2 << 3 ! 1)	=> (! (<< 2 3) 1))
+(check (infix 11 + 22 ^ 33)	=> (+ 11 (bitwise-xor 22 33)))
+(check (infix 11 - 22 ^ 33)	=> (- 11 (bitwise-xor 22 33)))
+(check (infix 22 ^ 33 + 11)	=> (+ (bitwise-xor 22 33) 11))
+(check (infix 22 ^ 33 - 11)	=> (- (bitwise-xor 22 33) 11))
 
 
 ;;;; done

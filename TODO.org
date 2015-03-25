@@ -8,45 +8,12 @@
 
 * Code known to be reviewed
 
-** ikarus.io.ss
+** ikarus.io.sls
 
    Solve all the FIXME issues
 
    If SET-PORT-POSITION!  fails it is  possible for the field POS of the
    cookie to become invalid.  Should the port be marked as corrupted?
-
-** list of Scheme files still to review
-
-   scheme/ikarus.debugger.ss
-
-   scheme/ikarus.collect.ss
-   scheme/ikarus.control.ss
-   scheme/ikarus.fasl.ss
-   scheme/ikarus.fasl.write.ss
-   scheme/ikarus.pretty-formats.ss
-   scheme/ikarus.pretty-print.ss
-   scheme/ikarus.sort.ss
-   scheme/ikarus.timer.ss
-   scheme/ikarus.unicode-conversion.ss
-   scheme/ikarus.unicode.ss
-   scheme/ikarus.writer.ss
-
-   scheme/ikarus.compiler.ss
-   scheme/ikarus.compiler.altcogen.ss
-   scheme/ikarus.compiler.ontology.ss
-   scheme/ikarus.compiler.optimize-letrec.ss
-   scheme/ikarus.compiler.source-optimizer.ss
-   scheme/ikarus.compiler.tag-annotation-analysis.ss
-   scheme/pass-specify-rep.ss
-   scheme/pass-specify-rep-primops.ss
-   scheme/ikarus.intel-assembler.ss
-
-   scheme/psyntax.builders.ss
-   scheme/psyntax.compat.ss
-   scheme/psyntax.config.ss
-   scheme/psyntax.expander.ss
-   scheme/psyntax.internal.ss
-   scheme/psyntax.library-manager.ss
 
 ** list of C code that must be reviewed
 
@@ -64,78 +31,10 @@
    stringification of a fixnum.   What if generating many symbols causes
    the counter to overflow the fixnums?
 
-* List of functions to be documented
-
-  Some of  these may  be internal functions  which must be  removed from
-  "makefile.sps".  Not  all the undocumented functions  are listed here,
-  only the ones known not to be documented.
-
-** low level
-
-   $flonum-sbe
-   $init-symbol-function!
-
-** ikarus.symbols.ss
-
-   gensym-count
-   top-level-value top-level-bound? set-top-level-value!
-   reset-symbol-proc! system-value system-value-gensym
-
 * List of functions to be tested
 
   The flonum getters  and setters in the bytevector  library should have
   tests in "test-vicare-bytevectors.sps".
-
-* Review and integration of SRFIs
-
-** TODO SRFI 0 cond-expand
-
-   Decide if loading a library should  add features to the registry only
-   in the  scope of  the loading code.   This would  require substantial
-   changes in SRFI-0.
-
-** DONE SRFI 1 lists
-** DONE SRFI 2 and let star
-** DONE SRFI 6 input and output string ports
-** DONE SRFI 8 receive
-** DONE SRFI 9 record types
-** DONE SRFI 11 let-values
-** DONE SRFI 13 strings
-** DONE SRFI 14 char-sets
-** DONE SRFI 16 case-lambda
-** DONE SRFI 19 time
-** DONE SRFI 23 error
-** TODO SRFI 25 multidimensional arrays
-
-   Review and cleanup of code.
-
-** DONE SRFI 26 cut
-** DONE SRFI 27 random-bits
-** DONE SRFI 28 basic format strings
-** DONE SRFI 31 rec
-** DONE SRFI 37 args-fold
-** DONE SRFI 38 shared structures
-** DONE SRFI 39 parameters
-
-** DONE SRFI 41 streams
-** DONE SRFI 42 eager comprehensions
-** DONE SRFI 43 vectors
-** DONE SRFI 45 lazy
-** DONE SRFI 48 intermediate format strings
-** DONE SRFI 61 cond
-** TODO SRFI 64 testing
-
-   Establish  a  way  to  coordinate  this SRFI  with  the  requests  of
-   Automake's  test  harness.   Add   a  section  in  the  documentation
-   explaining how to do it.
-
-** DONE SRFI 67 comparison procedures
-** DONE SRFI 69 basic hash tables
-** DONE SRFI 78 lightweight testing
-** DONE SRFI 98 OS environment variables
-** TODO SRFI 99 records
-
-   Tests are missing.
 
 * Documentation
 
@@ -145,21 +44,16 @@
 
 * Stuff to think about for the future
 
-** Introduce immutable datums
-
-   Strings  and  bytevectors  read   from  the  source  code  should  be
-   immutable.
-
-** Unique strings in compiled code
-
-   Equal strings read from different places in the source code should be
-   stored only once in the FASL file.
-
 ** glibc interesting functions
 
 *** asynchronous input/output
 
     Could it work with Vicare?
+
+** Introduce immutable datums
+
+   Strings  and  bytevectors  read   from  the  source  code  should  be
+   immutable.
 
 ** Linux interesting functions
 

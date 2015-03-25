@@ -1,0 +1,1638 @@
+@node restarts
+@section Signalling conditions and restarts
+
+
+@cindex Library @library{vicare language-extensions conditions-and-restarts}
+@cindex @library{vicare language-extensions conditions-and-restarts}, library
+
+
+The library @library{vicare language-extensions conditions-and-restarts}
+implements Scheme--flavoured Common Lisp's condition handlers and
+restart handlers.
+
+Not everything defined by Common Lisp is implemented:
+
+@itemize
+@item
+There is no integration with the debugger.
+
+@item
+Some facilities are not implemented.  Among the missing ones:
+@syntax{restart-bind}, @syntax{with-simple-restart},
+@func{muffle-warning}.
+@end itemize
+
+To understand what is going on here, we should read Common Lisp's Hyper
+Spec, Chapter 9.1 ``Condition System
+Concepts''@footnote{@url{http:/@//@/www.cs.cmu.edu/@/Groups/@/AI/@/html/@/hyperspec/@/HyperSpec/@/Body/@/sec_9-1.htm}}.
+
+@menu
+* restarts signal::             Signalling conditions.
+* restarts handler-case::       Catching signalled conditions.
+* restarts ignore-errors::      Ignoring signalled conditions of
+                                type @condition{error}.
+* restarts handler-bind::       Handling signalled conditions.
+* restarts restart-case::       Installing restart handlers.
+* restarts assoc::              Associating restarts to conditions.
+* restarts invoke::             Finding and invoking restarts.
+* restarts func::               Standardised restart functions.
+* restarts errors::             Detecting errors in the conditions
+                                and restarts mechanism.
+@end menu
+
+@c page
+@node restarts signal
+@subsection Signalling conditions
+
+
+@defun signal @var{cnd}
+Signal a condition by raising it with @func{raise-continuable}.  Perform
+what is needed to handle the restarts protocol.  @var{cnd} must be a
+condition object (simple or compound).
+
+As defined by Common Lisp: @func{signal} should return if no handler
+accepting the condition is found; in this implementation this normal
+return will @strong{not} happen by default.  To implement such behaviour
+we have to wrap the whole code in a form like this:
+
+@example
+(with-return-to-signal-on-unhandled-exception
+  @metao{body} @meta{body} @dots{})
+@end example
+@end defun
+
+
+@deffn Syntax with-return-to-signal-on-unhandled-exception @metao{body} @meta{body} @dots{}
+Do what is needed to allow @func{signal} to just return if all the
+installed condition handlers decline to handle the signalled condition.
+@end deffn
+
+@c page
+@node restarts handler-case
+@subsection Catching signalled conditions
+
+
+@deffn Syntax handler-case (@meta{clause} @dots{}) @metao{body} @meta{body} @dots{}
+Evaluate body forms in a dynamic environment in which new exception
+handlers are installed; it is capable of handling exceptions raised with
+@func{raise}, @func{raise-continuable} and @func{signal}.  Basically
+behave like @rnrs{6}'s @syntax{guard} syntax.
+
+The arguments @meta{clause} must have one of the following syntaxes:
+
+@example
+(@meta{typespec} @meta{condition-handler})
+(:no-error @meta{no-error-handler})
+@end example
+
+Every @meta{typespec} is meant to be a logic predicate with the format:
+
+@example
+@meta{typespec} = (@meta{tag})
+          | (and @metao{inner-pred} @meta{inner-pred} ...)
+          | (or  @metao{inner-pred} @meta{inner-pred} ...)
+          | (xor @metao{inner-pred} @meta{inner-pred} ...)
+          | (not @meta{inner-pred})
+
+@meta{inner-pred} = ?tag
+            | (and @metao{inner-pred} @meta{inner-pred} ...)
+            | (or  @metao{inner-pred} @meta{inner-pred} ...)
+            | (xor @metao{inner-pred} @meta{inner-pred} ...)
+            | (not @meta{inner-pred})
+@end example
+
+@noindent
+where: each @meta{tag} is an identifier usable as second argument to
+@syntax{condition-is-a?}; @syntax{and}, @syntax{or}, @syntax{xor},
+@syntax{not} are the identifiers exported by @library{vicare}.
+
+Every @meta{condition-handler} must be an expression evaluating to a
+procedure accepting a condition object as single argument; the condition
+object can be simple or compound.
+
+In the no--error clause: @code{:no-error} must be the actual symbol;
+@meta{no-error-handler} must be an expression evaluating to a procedure.
+The optional @code{:no-error} clause can be present only if it is the
+last one.
+
+If the body performs a normal return:
+
+@itemize
+@item
+If the @code{:no-error} clause is missing: the values returned by the
+body become the values returned by @syntax{handler-case}.
+
+@item
+If the @code{:no-error} clause is present: the procedure
+@meta{no-error-handler} is applied to the returned values; the return
+values of such application become the return values of
+@syntax{handler-case}.
+@end itemize
+
+If an exception is raised (in Common Lisp jargon: a condition is
+signalled): a condition handler matching the raised object is searched in
+the sequence of clauses, left--to--right:
+
+@itemize
+@item
+If a clause matches: the dynamic extent of the body is terminated, the
+@meta{condition-handler} is applied to the raised object and the return
+values of such application become the return values of
+@syntax{handler-case}.
+
+@item
+If no clause matches: the raised object is re--raised with
+@func{raise-continuable}.
+@end itemize
+@end deffn
+
+
+Usage examples:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;no condition
+(with-result
+  (handler-case
+      ((&error   (lambda (E)
+                   (add-result 'error-handler)
+                   1))
+       (&warning (lambda (E)
+                   (add-result 'warning-handler)
+                   2)))
+    (add-result 'body)
+    1))
+@result{} (1 (body))
+
+;;no condition, :no-error clause
+(with-result
+  (handler-case
+      ((&error    (lambda (E)
+                    (add-result 'error-handler)
+                    1))
+       (&warning  (lambda (E)
+                    (add-result 'warning-handler)
+                    2))
+       (:no-error (lambda (X)
+                    (add-result 'no-error)
+                    (* 10 X))))
+    (add-result 'body)
+    1))
+@result{} (10 (body no-error))
+
+;;;
+
+(internal-body        ;signalled condition
+
+  (define (doit C)
+    (with-result
+      (handler-case
+          ((&error   (lambda (E)
+                       (add-result 'error-handler)
+                       1))
+           (&warning (lambda (E)
+                       (add-result 'warning-handler)
+                       2)))
+        (add-result 'body-begin)
+        (signal C)
+        (add-result 'body-normal-return))))
+
+  (doit (make-error))
+  @result{} (1 (body-begin error-handler))
+
+  (doit (make-warning))
+  @result{} (2 (body-begin warning-handler))
+
+  #| end of body |# )
+
+;;Signalled condition, multiple types in single clause.
+;;
+(internal-body
+
+  (define (doit C)
+    (with-result
+      (handler-case
+          (((&error &warning) (lambda (E)
+                                (add-result 'handler)
+                                1)))
+        (add-result 'body-begin)
+        (signal C)
+        (add-result 'body-normal-return))))
+
+  (doit (make-error))
+  @result{} (1 (body-begin handler))
+
+  (doit (make-warning))
+  @result{} (1 (body-begin handler))
+
+  #| end of body |# )
+
+;;Signalled condition, nested HANDLER-CASE uses.
+;;
+(internal-body
+
+  (define (doit C)
+    (with-result
+      (handler-case
+          ((&error   (lambda (E)
+                       (add-result 'error-handler)
+                       1)))
+        (handler-case
+            ((&warning (lambda (E)
+                         (add-result 'warning-handler)
+                         2)))
+          (add-result 'body-begin)
+          (signal C)
+          (add-result 'body-normal-return)))))
+
+  (doit (make-error))
+  @result{} (1 (body-begin error-handler))
+
+  (doit (make-warning))
+  @result{} (2 (body-begin warning-handler))
+
+  #| end of body |# )
+
+(internal-body        ; unwind-protect
+
+  (define (doit C)
+    (with-result
+      (handler-case
+          ((&error   (lambda (E)
+                       (add-result 'error-handler)
+                       1)))
+        (with-unwind-handler
+            (lambda (why)
+              (add-result 'outer-unwind-handler))
+          (lambda ()
+            (handler-case
+                ((&warning (lambda (E)
+                             (add-result 'warning-handler)
+                             2)))
+              (with-unwind-handler
+                  (lambda (why)
+                    (add-result 'inner-unwind-handler))
+                (lambda ()
+                  (add-result 'body-begin)
+                  (signal C)
+                  (add-result 'body-normal-return)))))))))
+
+  (doit (make-error))
+  @result{} (1
+        (body-begin
+         inner-unwind-handler
+         outer-unwind-handler
+         error-handler))
+
+  (doit (make-warning))
+  @result{} (2
+        (body-begin
+         inner-unwind-handler
+         warning-handler
+         outer-unwind-handler))
+
+  #| end of body |# )
+@end example
+
+@c page
+@node restarts ignore-errors
+@subsection Ignoring signalled conditions of type @condition{error}
+
+
+@deffn Syntax ignore-errors @metao{body} @meta{body} @dots{}
+Install a handler for conditions of type @condition{error}, then
+evaluate the body forms; the handler is installed using
+@syntax{handler-case}.  If the body performs a normal return: its return
+values become the return values of @syntax{ignore-errors}.  If the body
+signals a condition of type @condition{error}: two values are returned,
+@false{} and the signalled condition object.
+@end deffn
+
+
+Usage examples:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;no condition
+(with-result
+  (ignore-errors
+    (add-result 'body)
+    1))
+@result{} (1 (body))
+
+(internal-body ;;signalled condition
+
+(define (doit C)
+  (with-result
+    (handler-case
+        ((&error   (lambda (E)
+                     (add-result 'error-handler)
+                     1))
+         (&warning (lambda (E)
+                     (add-result 'warning-handler)
+                     2)))
+      (receive (A B)
+          (ignore-errors
+            (add-result 'body-begin)
+            (signal C)
+            (add-result 'body-normal-return))
+        (values A (and (error? B) 99))))))
+
+  (doit (make-error))
+  @result{} (#f 99 (body-begin))
+
+  (doit (make-warning))
+  @result{} (2 (body-begin warning-handler))
+
+  #| end of body |# )
+@end example
+
+@c page
+@node restarts handler-bind
+@subsection Handling signalled conditions
+
+
+@deffn Syntax handler-bind (@meta{clause} @dots{}) @metao{body} @meta{body} @dots{}
+Evaluate body forms in a dynamic environment in which new exception
+handlers are installed; it is capable of handling exceptions raised with
+@func{raise}, @func{raise-continuable} and @func{signal}.  Not quite
+like @rnrs{6}'s @syntax{with-exception-handler} syntax, but similar.
+
+The arguments @meta{clause} must have the following syntax:
+
+@example
+(@meta{typespec} @meta{condition-handler})
+@end example
+
+Every @meta{typespec} is meant to be a logic predicate with the format:
+
+@example
+@meta{typespec} = (@meta{tag})
+          | (and @metao{inner-pred} @meta{inner-pred} ...)
+          | (or  @metao{inner-pred} @meta{inner-pred} ...)
+          | (xor @metao{inner-pred} @meta{inner-pred} ...)
+          | (not @meta{inner-pred})
+
+@meta{inner-pred} = ?tag
+            | (and @metao{inner-pred} @meta{inner-pred} ...)
+            | (or  @metao{inner-pred} @meta{inner-pred} ...)
+            | (xor @metao{inner-pred} @meta{inner-pred} ...)
+            | (not @meta{inner-pred})
+@end example
+
+@noindent
+where: each @meta{tag} is an identifier usable as second argument to
+@syntax{condition-is-a?}; @syntax{and}, @syntax{or}, @syntax{xor},
+@syntax{not} are the identifiers exported by @library{vicare}.
+
+Every @meta{condition-handler} must be an expression evaluating to a
+procedure accepting a condition object as single argument; the condition
+object can be simple or compound.
+
+If the body performs a normal return: the values returned by the body
+become the values returned by @syntax{handler-bind}.
+
+If an exception is raised (in Common Lisp jargon: a condition is
+signalled): a condition handler matching the raised object is searched
+in the sequence of clauses, left--to--right:
+
+@itemize
+@item
+If a clause matches: its @meta{condition-handler} is applied to the
+raised object.
+
+@item
+If no clause matches: the raised object is re--raised with
+@func{raise-continuable}.
+@end itemize
+
+The handlers are called with a continuation whose dynamic environment is
+that of the call to @func{raise}, @func{raise-continuable} or
+@func{signal} that raised the exception; except that the current
+exception handler is the one that was in place when
+@syntax{handler-bind} was evaluated.
+
+When a condition handler is applied to the raised condition object:
+
+@itemize
+@item
+If it accepts to handle the condition: it must perform a non--local
+exit, for example by invoking a restart.
+
+@item
+If it declines to handle the condition: it must perform a normal return;
+in this case the returned values are discarded and the originally raised
+object is re--raised using @func{raise-continuable}.
+@end itemize
+@end deffn
+
+
+Usage examples on handling raised conditions:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;no condition
+(with-result
+  (handler-bind
+      ((&error   (lambda (E)
+                   (add-result 'error-handler)
+                   1))
+       (&warning (lambda (E)
+                   (add-result 'warning-handler)
+                   2)))
+    (add-result 'body)
+    1))
+@result{} (1 (body))
+
+;;;
+
+;;Escaping from handler, which is the normal way of accepting
+;;to handle a condition.
+;;
+(with-result
+  (call/cc
+      (lambda (escape)
+        (handler-bind
+            ((&error (lambda (E)
+                       (add-result 'error-handler)
+                       (escape 2))))
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return)
+          1))))
+@result{} (2 (body-begin error-handler))
+
+;;The first handler declines to handle a raised exception,
+;;the second one accepts.
+;;
+(with-result
+  (call/cc
+      (lambda (escape)
+        (handler-bind
+            ((&warning (lambda (E)
+                         ;;By returning this handler declines.
+                         (add-result 'warning-handler)))
+             (&error   (lambda (E)
+                         (add-result 'error-handler)
+                         (escape 2))))
+          (add-result 'body-begin)
+          (raise (condition (make-error)
+                            (make-warning)))
+          (add-result 'body-return)
+          1))))
+@result{} (2 (body-begin warning-handler error-handler))
+
+;;Multiple condition identifiers in the same clause.
+;;
+(with-result
+  (call/cc
+      (lambda (escape)
+        (handler-bind
+            (((&warning &error) (lambda (E)
+                                  (add-result 'handler)
+                                  (escape 2))))
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return)
+          1))))
+@result{} (2 (body-begin handler))
+
+;;Nested HANDLER-BIND uses, returning from handler.
+;;
+(with-result
+  (call/cc
+      (lambda (escape)
+        (handler-bind
+            ((&error (lambda (E)
+                       (add-result 'outer-error-handler)
+                       (escape 2))))
+          (handler-bind
+              ((&error (lambda (E)
+                         (add-result 'inner-error-handler))))
+            (add-result 'body-begin)
+            (raise (make-error))
+            (add-result 'body-return)
+            1)))))
+@result{} (2 (body-begin inner-error-handler outer-error-handler))
+
+;;; unwind-protect
+
+(internal-body
+
+  (define (doit C)
+    (with-result
+      (returnable
+        (handler-bind
+            ((&error   (lambda (E)
+                         (add-result 'error-handler)
+                         (return 1))))
+          (with-unwind-handler
+              (lambda (why)
+                (add-result 'outer-unwind-handler))
+            (lambda ()
+              (handler-bind
+                  ((&warning (lambda (E)
+                               (add-result 'warning-handler)
+                               (return 2))))
+                (with-unwind-handler
+                    (lambda (why)
+                      (add-result 'inner-unwind-handler))
+                  (lambda ()
+                    (add-result 'body-begin)
+                    (signal C)
+                    (add-result 'body-normal-return))))))))))
+
+  (doit (make-error))
+  @result{} (1
+        (body-begin
+         error-handler
+         inner-unwind-handler
+         outer-unwind-handler))
+
+  (doit (make-warning))
+  @result{} (2
+        (body-begin
+         warning-handler
+         inner-unwind-handler
+         outer-unwind-handler))
+
+  #| end of body |# )
+@end example
+
+Usage examples on invoking restarts:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;Nested RESTART-CASE and HANDLER-BIND.  Signal a condition,
+;;call a handler, invoke a restart.
+;;
+(internal-body
+
+  (define (restarts-outside/handlers-inside C)
+    (with-result
+      (restart-case
+          (handler-bind
+              ((&error   (lambda (E)
+                           (add-result 'error-handler-begin)
+                           (invoke-restart 'alpha)
+                           (add-result 'error-handler-return)))
+               (&warning (lambda (E)
+                           (add-result 'warning-handler-begin)
+                           (invoke-restart 'beta)
+                           (add-result 'warning-handler-return))))
+            (begin
+              (add-result 'body-begin)
+              (signal C)
+              (add-result 'body-return)))
+        (alpha (lambda ()
+                 (add-result 'restart-alpha)
+                 1))
+        (beta  (lambda ()
+                 (add-result 'restart-beta)
+                 2)))))
+
+  (restarts-outside/handlers-inside (make-error))
+  @result{} (1 (body-begin error-handler-begin restart-alpha))
+
+  (restarts-outside/handlers-inside (make-warning))
+  @result{} (2 (body-begin warning-handler-begin restart-beta))
+
+  #| end of body |# )
+
+;;Nested RESTART-CASE and HANDLER-BIND.  Signal a condition,
+;;call a handler, invoke a restart.
+;;
+(internal-body
+
+  (define (restarts-inside/handlers-outside C)
+    (with-result
+      (handler-bind
+          ((&error   (lambda (E)
+                       (add-result 'error-handler-begin)
+                       (invoke-restart 'alpha)
+                       (add-result 'error-handler-return)))
+           (&warning (lambda (E)
+                       (add-result 'warning-handler-begin)
+                       (invoke-restart 'beta)
+                       (add-result 'warning-handler-return))))
+        (restart-case
+            (begin
+              (add-result 'body-begin)
+              (signal C)
+              (add-result 'body-return))
+          (alpha (lambda ()
+                   (add-result 'restart-alpha)
+                   1))
+          (beta  (lambda ()
+                   (add-result 'restart-beta)
+                   2))))))
+
+  (restarts-inside/handlers-outside (make-error))
+  @result{} (1 (body-begin error-handler-begin restart-alpha))
+
+  (restarts-inside/handlers-outside (make-warning))
+  @result{} (2 (body-begin warning-handler-begin restart-beta))
+
+  #| end of body |# )
+
+;;Nested RESTART-CASE and HANDLER-BIND.  Signal a condition,
+;;call a handler, invoke a restart.
+;;
+(internal-body
+
+  (define (restarts-inside/nested-handlers C)
+    (with-result
+      (handler-bind
+          ((&error   (lambda (E)
+                       (add-result 'error-handler-begin)
+                       (invoke-restart 'alpha)
+                       (add-result 'error-handler-return))))
+        (handler-bind
+            ((&warning (lambda (E)
+                         (add-result 'warning-handler-begin)
+                         (invoke-restart 'beta)
+                         (add-result 'warning-handler-return))))
+          (restart-case
+              (begin
+                (add-result 'body-begin)
+                (signal C)
+                (add-result 'body-return))
+            (alpha (lambda ()
+                     (add-result 'restart-alpha)
+                     1))
+            (beta  (lambda ()
+                     (add-result 'restart-beta)
+                     2)))))))
+
+  (restarts-inside/nested-handlers (make-error))
+  @result{} (1 (body-begin error-handler-begin restart-alpha))
+
+  (restarts-inside/nested-handlers (make-warning))
+  @result{} (2 (body-begin warning-handler-begin restart-beta))
+
+  #| end of LET |# )
+
+;;Nested RESTART-CASE and HANDLER-BIND.  Signal a condition,
+;;call a handler, invoke a restart.
+;;
+(internal-body
+
+  (define (nested-restarts/handlers-outside C)
+    (with-result
+      (handler-bind
+          ((&error   (lambda (E)
+                       (add-result 'error-handler)
+                       (invoke-restart 'alpha)))
+           (&warning (lambda (E)
+                       (add-result 'warning-handler)
+                       (cond ((find-restart 'beta)
+                              => (lambda (handler)
+                                   (invoke-restart handler)))))))
+        (restart-case
+            (restart-case
+                (begin
+                  (add-result 'body-begin)
+                  (signal C)
+                  (add-result 'body-return))
+              (alpha (lambda ()
+                       (add-result 'restart-alpha)
+                       1)))
+          (beta  (lambda ()
+                   (add-result 'restart-beta)
+                   2))))))
+
+  (nested-restarts/handlers-outside (make-error))
+  @result{} (1 (body-begin error-handler restart-alpha))
+
+  (nested-restarts/handlers-outside (make-warning))
+  @result{} (2 (body-begin warning-handler restart-beta))
+
+  #| end of body |# )
+
+;;Nested RESTART-CASE and HANDLER-BIND.  Signal a condition,
+;;call the first handler, the first handler declines, call
+;;the second handler, invoke a restart.
+;;
+(with-result
+  (handler-bind
+      ((&message (lambda (E)
+                   (add-result 'outer-message-handler-begin)
+                   (invoke-restart 'alpha E)
+                   (add-result 'outer-message-handler-return))))
+    (handler-bind
+        ((&message (lambda (E)
+                     (add-result 'inner-message-handler))))
+      (restart-case
+          (begin
+            (add-result 'body-begin)
+            (signal (make-message-condition "ciao"))
+            (add-result 'body-return))
+        (alpha (lambda (E)
+                 (add-result 'alpha-restart)
+                 (condition-message E)))))))
+@result{} ("ciao"
+      (body-begin
+       inner-message-handler
+       outer-message-handler-begin
+       alpha-restart))
+@end example
+
+@c page
+@node restarts restart-case
+@subsection Installing restart handlers
+
+
+@deffn Syntax restart-case @meta{body} (@meta{clause} @dots{})
+Install restart handlers in the current dynamic environment, then
+evaluate the body form.
+
+The arguments @meta{clause} must have the following syntax:
+
+@example
+(@meta{restart-name} @meta{restart-handler})
+@end example
+
+Every @meta{restart-name} must be a symbol representing the name of a
+restart; the same @meta{restart-name} can be used in nested uses of
+@syntax{restart-case}.
+
+Every @meta{restart-handler} must be an expression evaluating to a
+procedure accepting a non--constrained number of arguments.  The return
+values of @meta{restart-handler} become the return values of
+@syntax{restart-case}.  The @meta{restart-handler} is evaluated in the
+dynamic environment of the call to @func{invoke-restart} that invoked
+the restart.
+
+As special case, if @meta{body} is:
+
+@example
+(signal @meta{expr})
+@end example
+
+@noindent
+the installed restarts are associated to the condition object returned
+by the evaluation of @meta{expr}.
+@end deffn
+
+
+Usage examples on restarts and declining handlers:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;No handlers installed.  Signal a condition and
+;;cause SIGNAL to return.
+;;
+(with-result
+  (with-return-to-signal-on-unhandled-exception
+    (add-result 'body-in)
+    (signal (make-error))
+    (add-result 'body-out)
+    1))
+@result{} (1 (body-in body-out))
+
+;;No handlers installed.  Raise an exception with the
+;;standard RAISE and show that it goes through the
+;;"return to signal" syntax.
+;;
+(with-result
+  (try
+      (with-return-to-signal-on-unhandled-exception
+        (add-result 'body-in)
+        (raise (make-error))
+        (add-result 'body-out)
+        1)
+    (catch E
+      ((&error)
+       (add-result 'catch-error)
+       2))))
+@result{} (2 (body-in catch-error))
+
+;;No handlers installed.  Raise an exception with the
+;;standard RAISE-CONTINUABLE and show that it goes
+;;through the "return to signal" syntax.
+;;
+(with-result
+  (try
+      (with-return-to-signal-on-unhandled-exception
+        (add-result 'body-in)
+        (raise-continuable (make-error))
+        (add-result 'body-out)
+        1)
+    (catch E
+      ((&error)
+       (add-result 'catch-error)
+       2))))
+@result{} (2 (body-in catch-error))
+
+;;No handlers installed.  Raise an exception with the
+;;standard RAISE-CONTINUABLE and show that it goes
+;;through the "return to signal" syntax.
+;;
+(with-result
+  (with-exception-handler
+      (lambda (E)
+        (add-result 'exception-handler))
+    (lambda ()
+      (with-return-to-signal-on-unhandled-exception
+        (add-result 'body-in)
+        (raise-continuable (make-error))
+        (add-result 'body-out)
+        1))))
+@result{} (1 (body-in exception-handler body-out))
+
+;;;
+
+;;Nested RESTART-CASE and HANDLER-BIND.  Signal a condition,
+;;call the first handler, the first handler declines, call
+;;the second handler, the second handler declines, SIGNAL
+;;returns.
+;;
+(with-result
+  (with-return-to-signal-on-unhandled-exception
+    (handler-bind
+        ((&error (lambda (E)
+                   (add-result 'outer-error-handler))))
+      (handler-bind
+          ((&error (lambda (E)
+                     (add-result 'inner-error-handler))))
+        (add-result 'body-in)
+        (signal (make-error))
+        (add-result 'body-out)
+        1))))
+@result{} (1
+      (body-in
+       inner-error-handler
+       outer-error-handler
+       body-out))
+@end example
+
+Usage examples on the unwind--protection mechanism:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(with-result
+  (restart-case
+      (with-unwind-handler
+          (lambda (why)
+            (add-result 'unwind-handler))
+        (lambda ()
+          (add-result 'body-enter)
+          (invoke-restart 'alpha)
+          (add-result 'body-return)))
+    (alpha (lambda ()
+             (add-result 'restart-alpha)
+             1))))
+@result{} (1 (body-enter restart-alpha unwind-handler))
+
+(internal-body
+
+  (define (doit C)
+    (with-result
+      (returnable
+        (handler-bind
+            ((&error   (lambda (E)
+                         (add-result 'error-handler)
+                         (return 1))))
+          (with-unwind-handler
+              (lambda (why)
+                (add-result 'outer-unwind-handler))
+            (lambda ()
+              (handler-bind
+                  ((&warning (lambda (E)
+                               (add-result 'warning-handler)
+                               (return 2))))
+                (with-unwind-handler
+                    (lambda (why)
+                      (add-result 'inner-unwind-handler))
+                  (lambda ()
+                    (add-result 'body-begin)
+                    (signal C)
+                    (add-result 'body-normal-return))))))))))
+
+  (doit (make-error))
+  @result{} (1
+        (body-begin
+         error-handler
+         inner-unwind-handler
+         outer-unwind-handler))
+
+  (doit (make-warning))
+  @result{} (2
+        (body-begin
+         warning-handler
+         inner-unwind-handler
+         outer-unwind-handler))
+
+  #| end of body |# )
+@end example
+
+@c page
+@node restarts assoc
+@subsection Associating restarts to conditions
+
+
+@deffn Syntax with-condition-restarts @meta{condition-form} @meta{restarts-form} @metao{body} @meta{body} @dots{}
+Evaluate body forms in a dynamic environment in which some restart
+objects are associated to a condition object; in some special case it is
+implicitly used by @syntax{restart-case}.  If the body performs a normal
+return: the body return values become the return values of
+@syntax{with-condition-restarts}.
+
+This is the sequence of operations:
+
+@enumerate
+@item
+The expression @meta{condition-form} is evaluated: its single return
+value must be a condition object, simple or compound.
+
+@item
+The expression @meta{restarts-form} is evaluated: its single return
+value must be a list of restart objects, for example returned by
+@func{find-restart}.
+
+@item
+In the dynamic environment: every simple condition object returned by
+@meta{condition-form} is associated to every restart object returned by
+@meta{restarts-form}.
+
+@item
+The body is evaluated.
+@end enumerate
+@end deffn
+
+
+Usage examples on associate conditions and restarts:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;Install a restart handler, establish an association between a
+;;condition object and the restart object, call FIND-RESTART
+;;with the condition argument, no restart objects without
+;;association found, FIND-RESTART returns false.
+;;
+(let ((C (make-error)))
+  (restart-case
+      (with-condition-restarts C
+        (list (find-restart 'alpha))
+        (find-restart 'alpha C))
+    ;;This is associated: it is skipped.
+    (alpha (lambda () 1))))
+@result{} #f
+
+;;Install nested restart handlers with the same name, establish
+;;an association between a condition object and the innermost
+;;restart object, call FIND-RESTART with the condition argument,
+;;invoke restart.
+;;
+(let ((C (make-error)))
+  (restart-case
+      (restart-case
+          (with-condition-restarts C
+            (list (find-restart 'alpha))
+            (invoke-restart (find-restart 'alpha C)))
+        ;;This is associated: it is skipped.
+        (alpha (lambda () 1)))
+    ;;This is not associated: it is selected.
+    (alpha (lambda () 2))))
+@result{} 2
+
+;;Install a condition handler, install restart a handler and
+;;establish an association between the raised condition object
+;;and the restart object, search the restart, no matching
+;;restart without association, SIGNAL returns.
+;;
+(with-return-to-signal-on-unhandled-exception
+  (handler-bind
+      ((&error (lambda (E)
+                 (cond ((find-restart 'alpha E)
+                        => invoke-restart)
+                       (else #f)))))
+    (restart-case
+        (signal (make-error))
+      ;;This is associated: it is skipped.
+      (alpha (lambda ()
+               (add-result 'restart-alpha)
+               1)))
+    123))
+@result{} 123
+
+;;Install a condition handler, install nested restart handlers
+;;with the same name, establish an association between a raised
+;;condition object and innermost restart object, invoke the
+;;restart, the outermost restart is selected.
+;;
+(handler-bind
+    ((&error (lambda (E)
+               (invoke-restart (find-restart 'alpha E)))))
+  (restart-case
+      (restart-case
+          (signal (make-error))
+        ;;This is associated: it is skipped.
+        (alpha (lambda () 1)))
+    ;;This is not associated: it is selected.
+    (alpha (lambda () 2))))
+@result{} 2
+@end example
+
+@c page
+@node restarts invoke
+@subsection Finding and invoking restarts
+
+
+@defun find-restart @var{name}
+@defunx find-restart @var{name} @var{cnd}
+Search the current dynamic environment for the innermost restart handler
+associated to @var{name}, which must be a symbol.  If a handler is
+found: return its restart object; otherwise return @false{}.
+
+When the optional argument @var{cnd} is used and @var{cnd} is a
+condition object (simple or compound): among the installed restarts,
+return only the innermost that is @strong{not} associated to the
+condition object @var{cnd}.  When the optional argument @var{cnd} is
+used and @var{cnd} is @false{}: behave as if @var{cnd} was not used.
+@end defun
+
+
+@defun invoke-restart @var{restart-designator} . @var{rest}
+Given a restart designator: search the associated handler in the current
+dynamic environment and apply it to the given @var{rest} arguments.
+Return the return values of such application, if the called function
+returns.
+
+@var{restart-designator} can be either a symbol representing the name of
+the restart or the restart object itself (as returned by
+@func{find-restart}).
+
+If @var{restart-designator} is a symbol and no matching restart is
+found: an exception is raised with condition object of type
+@condition{undefined-restart-error}.
+@end defun
+
+
+@defun compute-restarts
+Return a list of symbols representing the names of the restarts
+currently installed in the dynamic environment.  The list is ordered:
+the innermost restarts come first, the outermost restarts come last.
+@end defun
+
+
+@defun restart-name @var{rst}
+Given a restart object: return a symbol representing its name.
+@end defun
+
+
+Examples about finding and invoking restarts:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;Search an UNdefined restart.
+;;
+(find-restart 'alpha)
+@result{} #f
+
+;;Search an UNdefined restart.
+;;
+(restart-case
+    (find-restart 'beta)
+  (alpha (lambda ()
+           (add-result 'restart-alpha))))
+@result{} #f
+
+;;Search an UNdefined restart.
+;;
+(restart-case
+    (find-restart 'gamma)
+  (alpha (lambda ()
+           (add-result 'restart-alpha)))
+  (beta  (lambda ()
+           (add-result 'restart-beta)))
+  (delta (lambda ()
+           (add-result 'restart-delta))))
+@result{} #f
+
+;;Invoke an UNdefined restart.
+;;
+(try
+    (invoke-restart 'alpha)
+  (catch E
+    ((&undefined-restart-error)
+     1)
+    (else E)))
+@result{} 1
+
+;;Find then invoke a restart in two steps.
+;;Invoking a restart is a non-local exit.
+;;
+(with-result
+  (restart-case
+      (begin
+        (add-result 'body-in)
+        (let ((restart (find-restart 'alpha)))
+          (add-result 'body-invoking)
+          (begin0
+              (invoke-restart restart)
+            (add-result 'body-out)
+            1)))
+    (alpha (lambda ()
+             (add-result 'restart-alpha)
+             2))))
+@result{} (2 (body-in body-invoking restart-alpha))
+
+;;Find and invoke a restart in a single step.
+;;Invoking a restart is a non-local exit.
+;;
+(with-result
+  (restart-case
+      (begin
+        (add-result 'body-in)
+        (begin0
+            (invoke-restart 'alpha)
+          (add-result 'body-out)
+          1))
+    (alpha (lambda ()
+             (add-result 'restart-alpha)
+             2))))
+@result{} (2 (body-in restart-alpha))
+@end example
+
+Usage examples on @func{compute-restarts}:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+(compute-restarts)
+@result{} ()
+
+(map restart-name
+  (restart-case
+      (compute-restarts)
+    (alpha void)
+    (beta  void)))
+@result{} (alpha beta)
+
+(map restart-name
+  (restart-case
+      (restart-case
+          (compute-restarts)
+        (alpha void)
+        (beta  void))
+    (delta void)
+    (gamma void)))
+@result{} (alpha beta delta gamma)
+
+(map restart-name
+  (restart-case
+      (restart-case
+          (restart-case
+              (compute-restarts)
+            (alpha void)
+            (beta  void))
+        (delta void)
+        (gamma void))
+    (chi void)
+    (xi  void)))
+@result{} (alpha beta delta gamma chi xi)
+@end example
+
+@c page
+@node restarts func
+@subsection Standardised restart functions
+
+
+@defun use-value @var{obj}
+@defunx use-value @var{obj} @var{cnd}
+If a restart named @code{use-value} is installed in the dynamic
+environment: apply its handler to @var{obj}; otherwise return @false{}
+(without performing a non--local exit).
+
+If the optional argument @var{cnd} is a condition object: select the
+innermost matching restart that is @strong{not} associated with such
+condition object.  If @var{cnd} is missing or @false{}: just select the
+innermost installed restart.
+@end defun
+
+
+@defun store-value @var{obj}
+@defunx store-value @var{obj} @var{cnd}
+If a restart named @code{store-value} is installed in the dynamic
+environment: apply its handler to @var{obj}; otherwise return @false{}
+(without performing a non--local exit).
+
+If the optional argument @var{cnd} is a condition object: select the
+innermost matching restart that is @strong{not} associated with such
+condition object.  If @var{cnd} is missing or @false{}: just select the
+innermost installed restart.
+@end defun
+
+
+@defun continue-restart
+@defunx continue-restart @var{cnd}
+If a restart named @code{continue} is installed in the dynamic
+environment: call its handler with no arguments; otherwise return
+@false{} (without performing a non--local exit).
+
+If the optional argument @var{cnd} is a condition object: select the
+innermost matching restart that is @strong{not} associated with such
+condition object.  If @var{cnd} is missing or @false{}: just select the
+innermost installed restart.
+
+@quotation
+@strong{NOTE} Under Common Lisp: this is simply called @func{continue};
+under @value{PRJNAME} @func{continue} is already bound.
+@end quotation
+@end defun
+
+
+@defun abort-restart
+@defunx abort-restart @var{cnd}
+If a restart named @code{abort} is installed in the dynamic environment:
+call its handler with no arguments; otherwise return @false{} (without
+performing a non--local exit).
+
+If the optional argument @var{cnd} is a condition object: select the
+innermost matching restart that is @strong{not} associated with such
+condition object.  If @var{cnd} is missing or @false{}: just select the
+innermost installed restart.
+
+@quotation
+@strong{NOTE} Under Common Lisp: this is simply called @func{abort};
+this is quite a common action, so it is left unbound.
+@end quotation
+@end defun
+
+
+Usage examples on restart functions:
+
+@example
+(import (vicare)
+  (only (vicare checks)
+        with-result
+        add-result))
+
+;;; use-value
+
+;;Signal condition, call a handler, call a USE-VALUE restart.
+;;
+(with-result
+  (handler-bind
+      ((&error (lambda (E)
+                 (add-result 'error-handler-begin)
+                 (use-value "ciao")
+                 (add-result 'error-handler-return))))
+    (restart-case
+        (begin
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return))
+      (use-value (lambda (value)
+                   (add-result 'restart-use-value)
+                   value)))))
+@result{} ("ciao"
+      (body-begin error-handler-begin restart-use-value))
+
+;;Call a USE-VALUE restart, no USE-VALUE handler is defined.
+;;
+(with-result
+  (add-result 'body-begin)
+  (begin0
+      (use-value 1)
+    (add-result 'body-return)))
+@result{} (#f (body-begin body-return))
+
+;;; store-value
+
+;;Signal condition, call a handler, call a STORE-VALUE restart.
+;;
+(with-result
+  (handler-bind
+      ((&error (lambda (E)
+                 (add-result 'error-handler-begin)
+                 (store-value "ciao")
+                 (add-result 'error-handler-return))))
+    (restart-case
+        (begin
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return))
+      (store-value (lambda (value)
+                     (add-result 'restart-store-value)
+                     value)))))
+@result{} ("ciao"
+      (body-begin error-handler-begin restart-store-value))
+
+;;Call a STORE-VALUE restart, no STORE-VALUE handler is defined.
+;;
+(with-result
+  (add-result 'body-begin)
+  (begin0
+      (store-value 1)
+    (add-result 'body-return)))
+@result{} (#f (body-begin body-return))
+
+;;; store-value/use-value
+
+;;Adapted example from Common Lisp's Hyper Spec.
+;;
+(internal-body
+
+  (define-condition-type &unbound-symbol-error
+      &error
+    make-unbound-symbol-error
+    unbound-symbol-error?)
+
+  (define* (careful-symbol-value sym)
+    (restart-case
+        (if (symbol-bound? sym)
+            (symbol-value sym)
+          (signal (make-unbound-symbol-error)))
+      (use-value   (lambda (obj) obj))
+      (store-value (lambda (obj)
+                     (set-symbol-value! sym obj)
+                     obj))))
+
+  (let ((sym (gensym)))
+    (set-symbol-value! sym 1)
+    (careful-symbol-value sym))
+  @result{} 1
+
+  (let ((sym (gensym)))
+    (handler-bind
+        ((&unbound-symbol-error (lambda (E)
+                                  (use-value 1))))
+      (careful-symbol-value sym)))
+  @result{} 1
+
+  (let ((sym (gensym)))
+    (handler-bind
+        ((&unbound-symbol-error (lambda (E)
+                                  (store-value 1))))
+      (values (careful-symbol-value sym)
+              (careful-symbol-value sym))))
+  @result{} 1 1
+
+  #| end of INTERNAL-BODY |# )
+
+;;; continue
+
+;;Signal condition, call a handler, call a CONTINUE restart.
+;;
+(with-result
+  (handler-bind
+      ((&error (lambda (E)
+                 (add-result 'error-handler-begin)
+                 (continue-restart)
+                 (add-result 'error-handler-return))))
+    (restart-case
+        (begin
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return))
+      (continue (lambda ()
+                  (add-result 'restart-continue)
+                  2)))))
+@result{} (2 (body-begin error-handler-begin restart-continue))
+
+;;CONTINUE example derived from Common Lisp's Hyper Spec.
+;;
+(internal-body
+
+  (define (real-sqrt n)
+    (when (negative? n)
+      (set! n (- n))
+      (restart-case
+          (signal (make-error))
+        (continue (lambda ()
+                    (add-result 'continue-restart)))))
+    (sqrt n))
+
+  (with-result
+    (handler-bind
+        ((&error (lambda (E)
+                   (add-result 'error-handler)
+                   (continue-restart))))
+      (add-result 'body-enter)
+      (begin0
+          (real-sqrt -9)
+        (add-result 'body-return)))))
+@result{} (3
+      (body-enter error-handler continue-restart body-return))
+
+;;Call a CONTINUE restart, no CONTINUE handler is defined.
+;;
+(with-result
+    (try
+        (restart-case
+            (begin
+              (add-result 'body-begin)
+              (begin0
+                  (continue-restart)
+                (add-result 'body-return))))
+      (catch E
+        ((&restarts-control-error)
+         (add-result 'catch-control-error)
+         2)
+        (else
+         (print-condition E)
+         3))))
+@result{} (#f (body-begin body-return))
+
+;;Signal condition, call  the inner handler, call an CONTINUE  restart, no CONTINUE
+;;handler is defined, call the outer handler, return.
+;;
+(with-result
+  (with-return-to-signal-on-unhandled-exception
+    (handler-bind
+        ((&error (lambda (E)
+                     (add-result 'outer-error-handler))))
+        (handler-bind
+            ((&error (lambda (E)
+                       (add-result 'inner-error-handler-begin)
+                       (continue-restart)
+                       (add-result 'inner-error-handler-return))))
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return)
+          1))))
+@result{} (1
+      (body-begin
+       inner-error-handler-begin
+       inner-error-handler-return
+       outer-error-handler
+       body-return))
+
+;;; abort
+
+;;Signal condition, call a handler, call an ABORT restart.
+;;
+(with-result
+  (handler-bind
+      ((&error (lambda (E)
+                 (add-result 'error-handler-begin)
+                 (abort-restart)
+                 (add-result 'error-handler-return))))
+    (restart-case
+        (begin
+          (add-result 'body-begin)
+          (signal (make-error))
+          (add-result 'body-return))
+      (abort (lambda ()
+               (add-result 'restart-abort)
+               2)))))
+@result{} (2 (body-begin error-handler-begin restart-abort))
+
+;;Call an ABORT restart, no ABORT handler is defined.
+;;
+(with-result
+  (try
+      (begin
+        (add-result 'body-begin)
+        (abort-restart)
+        (add-result 'body-return))
+    (catch E
+      ((&restarts-control-error)
+       (add-result 'catch-control-error)
+       2)
+      (else E))))
+@result{} (2 (body-begin catch-control-error))
+
+;;Signal condition, call a handler, call an ABORT restart,
+;;no ABORT handler is defined.
+;;
+(with-result
+  (try
+      (handler-bind
+          ((&error (lambda (E)
+                     (add-result 'error-handler-begin)
+                     (abort-restart)
+                     (add-result 'error-handler-return))))
+        (add-result 'body-begin)
+        (signal (make-error))
+        (add-result 'body-return))
+    (catch E
+      ((&restarts-control-error)
+       (add-result 'catch-control-error)
+       2)
+      (else E))))
+@result{} (2 (body-begin error-handler-begin catch-control-error))
+@end example
+
+@c page
+@node restarts errors
+@subsection Detecting errors in the conditions and restarts mechanism
+
+
+@unnumberedsubsec Base condition type
+
+@deftp {Condition Type} &restarts-error
+Base type of all the error conditions associated to the restarts
+mechanism.
+@end deftp
+
+
+@defun make-restarts-error
+Build and return a condition object of type @condition{restarts-error}.
+@end defun
+
+
+@defun restarts-error-condition? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{restarts-error}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Control error condition type
+
+@deftp {Condition Type} &restarts-control-error
+Type of error conditions associated to the restarts mechanism.  It is
+derived from @condition{restarts-error}.
+@end deftp
+
+
+@defun make-restarts-control-error
+Build and return a condition object of type
+@condition{restarts-control-error}.
+@end defun
+
+
+@defun restarts-control-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{restarts-control-error}; otherwise return @false{}.
+@end defun
+
+
+@defun signal-restarts-control-error @var{who} @var{message} @var{irritant} @dots{}
+Build a compound condition object with components:
+@condition{restarts-control-error}, @condition{who} @condition{message}
+@condition{irritants} and raise it using @func{signal}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Undefined restart error condition type
+
+@deftp {Condition Type} &undefined-restart-error
+Type of the error conditions raise when attempting to invoke an
+undefined restart.  It is derived from
+@condition{restarts-control-error}.
+@end deftp
+
+
+@defun make-undefined-restart-error
+Build and return a condition object of type
+@condition{undefined-restart-error}.
+@end defun
+
+
+@defun undefined-restart-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{undefined-restart-error}; otherwise return @false{}.
+@end defun
+
+
+@defun signal-undefined-restart-error @var{who} @var{message} @var{irritant} @dots{}
+Build a compound condition object with components:
+@condition{undefined-restart-error}, @condition{who} @condition{message}
+@condition{irritants} and raise it using @func{signal}.
+@end defun
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

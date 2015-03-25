@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (except (nausicaa)
+#!vicare
+(import (except (nausicaa (0 4))
 		define-condition-type
 		&warning)
   (prefix (only (rnrs)
@@ -78,7 +78,7 @@
       => '(1 2))
 
     (check
-	(let (((E &alpha) (make-alpha 1 2)))
+	(let (({E &alpha} (make-alpha 1 2)))
 	  (list (E a) (E b)))
       => '(1 2))
 
@@ -112,7 +112,7 @@
       => '(1 2 3 4))
 
     (check
-	(let (((E &beta) (make-beta 1 2 3 4)))
+	(let (({E &beta} (make-beta 1 2 3 4)))
 	  (list (E a) (E b)))
       => '(3 4))
 

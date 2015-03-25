@@ -27,7 +27,7 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (rnrs records inspection)
   (rnrs records procedural)
   (vicare checks))

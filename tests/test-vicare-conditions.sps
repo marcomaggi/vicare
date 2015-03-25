@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -31,6 +31,56 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: condition types\n")
+
+
+(parametrise ((check-test-name	'predicates))
+
+  (check
+      (compound-condition? (make-error))
+    => #f)
+
+  (check
+      (compound-condition? (condition (make-error)
+				      (make-warning)))
+    => #t)
+
+  (check
+      (compound-condition? "ciao")
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (condition-and-rtd? (make-error) (record-type-descriptor &error))
+    => #t)
+
+  (check
+      (condition-and-rtd? (condition (make-error)
+				     (make-warning))
+			  (record-type-descriptor &error))
+    => #t)
+
+  (check
+      (condition-and-rtd? "ciao" (record-type-descriptor &error))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (condition-is-a? (make-error) &error)
+    => #t)
+
+  (check
+      (condition-is-a? (condition (make-error)
+				  (make-warning))
+		       &error)
+    => #t)
+
+  (check
+      (condition-is-a? "ciao" &error)
+    => #f)
+
+  #t)
 
 
 (parametrise ((check-test-name	'procedure-argument-violation))

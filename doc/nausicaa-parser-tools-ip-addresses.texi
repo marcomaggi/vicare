@@ -268,13 +268,13 @@ used in Nausicaa's @oopp{} syntaxes.
 (define C
   (ip.&ipv4-address-parser-error ()))
 
-((ip.&ipv4-address-parser-error) C)
+(is-a? C ip.&ipv4-address-parser-error)
 @result{} #t
 
 (try
     (raise C)
   (catch E
-    (ip.&ipv4-address-parser-error
+    ((ip.&ipv4-address-parser-error)
      #t)
     (else #f)))
 @result{} #t
@@ -875,13 +875,13 @@ used in Nausicaa's @oopp{} syntaxes.
 (define C
   (ip.&ipv6-address-parser-error ()))
 
-((ip.&ipv6-address-parser-error) C)
+(is-a? C ip.&ipv6-address-parser-error)
 @result{} #t
 
 (try
     (raise C)
   (catch E
-    (ip.&ipv6-address-parser-error
+    ((ip.&ipv6-address-parser-error)
      #t)
     (else #f)))
 @result{} #t

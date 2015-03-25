@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   (prefix (nausicaa mehve language numerics parts) mehve.)
   (prefix (rnrs) rnrs.)
@@ -33,8 +33,6 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Mehve language: numerics part functions\n")
-
-(initialise-mehve)
 
 
 ;;;; helpers
@@ -68,20 +66,20 @@
 
 (parametrise ((check-test-name	'part-rationals))
 
-  (define-method (mehve.numerator (o <vector>))
+  (define-method (mehve.numerator {o <vector>})
     (o map numerator))
-  (define-method (mehve.numerator (o <spine>))
+  (define-method (mehve.numerator {o <spine>})
     (o map numerator))
 
-  (define-method (mehve.denominator (o <vector>))
+  (define-method (mehve.denominator {o <vector>})
     (o map denominator))
-  (define-method (mehve.denominator (o <spine>))
+  (define-method (mehve.denominator {o <spine>})
     (o map denominator))
 
-  (define-method (mehve.rationalize (a <vector>) (epsilon <real>))
+  (define-method (mehve.rationalize {a <vector>} {epsilon <real>})
     (a map (lambda (x)
 	     (rationalize x epsilon))))
-  (define-method (mehve.rationalize (a <spine>) (epsilon <real>))
+  (define-method (mehve.rationalize {a <spine>} {epsilon <real>})
     (a map (lambda (x)
 	     (rationalize x epsilon))))
 
@@ -114,24 +112,24 @@
 
 (parametrise ((check-test-name	'part-rounding))
 
-  (define-method (mehve.floor (o <vector>))
+  (define-method (mehve.floor {o <vector>})
     (o map floor))
-  (define-method (mehve.floor (o <spine>))
+  (define-method (mehve.floor {o <spine>})
     (o map floor))
 
-  (define-method (mehve.ceiling (o <vector>))
+  (define-method (mehve.ceiling {o <vector>})
     (o map ceiling))
-  (define-method (mehve.ceiling (o <spine>))
+  (define-method (mehve.ceiling {o <spine>})
     (o map ceiling))
 
-  (define-method (mehve.truncate (o <vector>))
+  (define-method (mehve.truncate {o <vector>})
     (o map truncate))
-  (define-method (mehve.truncate (o <spine>))
+  (define-method (mehve.truncate {o <spine>})
     (o map truncate))
 
-  (define-method (mehve.round (o <vector>))
+  (define-method (mehve.round {o <vector>})
     (o map round))
-  (define-method (mehve.round (o <spine>))
+  (define-method (mehve.round {o <spine>})
     (o map round))
 
 ;;; --------------------------------------------------------------------
@@ -165,34 +163,34 @@
 
 (parametrise ((check-test-name	'part-complex))
 
-  (define-method (mehve.real-part (o <vector>))
+  (define-method (mehve.real-part {o <vector>})
     (o map real-part))
-  (define-method (mehve.real-part (o <spine>))
+  (define-method (mehve.real-part {o <spine>})
     (o map real-part))
 
-  (define-method (mehve.imag-part (o <vector>))
+  (define-method (mehve.imag-part {o <vector>})
     (o map imag-part))
-  (define-method (mehve.imag-part (o <spine>))
+  (define-method (mehve.imag-part {o <spine>})
     (o map imag-part))
 
-  (define-method (mehve.magnitude (o <vector>))
+  (define-method (mehve.magnitude {o <vector>})
     (o map magnitude))
-  (define-method (mehve.magnitude (o <spine>))
+  (define-method (mehve.magnitude {o <spine>})
     (o map magnitude))
 
-  (define-method (mehve.angle (o <vector>))
+  (define-method (mehve.angle {o <vector>})
     (o map angle))
-  (define-method (mehve.angle (o <spine>))
+  (define-method (mehve.angle {o <spine>})
     (o map angle))
 
-  (define-method (mehve.make-rectangular (R <vector>) (I <vector>))
+  (define-method (mehve.make-rectangular {R <vector>} {I <vector>})
     (R map make-rectangular I))
-  (define-method (mehve.make-rectangular (R <spine>) (I <spine>))
+  (define-method (mehve.make-rectangular {R <spine>} {I <spine>})
     (R map make-rectangular I))
 
-  (define-method (mehve.make-polar (M <vector>) (A <vector>))
+  (define-method (mehve.make-polar {M <vector>} {A <vector>})
     (M map make-polar A))
-  (define-method (mehve.make-polar (M <spine>) (A <spine>))
+  (define-method (mehve.make-polar {M <spine>} {A <spine>})
     (M map make-polar A))
 
 ;;; --------------------------------------------------------------------

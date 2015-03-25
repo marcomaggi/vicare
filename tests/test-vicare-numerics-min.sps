@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (ikarus system $numerics)
+  (vicare system $numerics)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

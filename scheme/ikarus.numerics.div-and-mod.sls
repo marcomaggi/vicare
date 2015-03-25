@@ -25,7 +25,7 @@
     div			div0
     mod			mod0
     div-and-mod		div0-and-mod0)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  div			div0
 		  mod			mod0
 		  div-and-mod		div0-and-mod0)
@@ -34,8 +34,8 @@
 
 
 (module (div-and-mod*)
-  (import (ikarus system $fx)
-    (only (ikarus system $flonums)
+  (import (vicare system $fx)
+    (only (vicare system $flonums)
 	  $fl=)
     (ikarus flonums))
 
@@ -141,10 +141,10 @@
 
 (define (div n m)
   (define who 'div)
-  (import (ikarus system $fx))
+  (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
-      (case-fixnums m
+      (case m
 	((0)
 	 (assertion-violation who "division by 0"))
 	((-1)
@@ -168,10 +168,10 @@
 
 (define (mod n m)
   (define who 'mod)
-  (import (ikarus system $fx))
+  (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
-      (case-fixnums m
+      (case m
 	((0)
 	 (assertion-violation who "division by 0"))
 	((-1)
@@ -230,6 +230,9 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.div-and-mod"))
+
+#| end of library |# )
 
 ;;; end of file

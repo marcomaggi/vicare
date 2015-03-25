@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -38,19 +38,13 @@
 (define least-negative-fx
   (least-fixnum))
 
-(define least-positive-bn
-  (+ 1 greatest-positive-fx))
-
-(define greatest-negative-bn
-  (- least-negative-fx 1))
-
 
 (parametrise ((check-test-name	'positivity))
 
-  (check (positive? least-positive-bn)		=> #t)
-  (check (negative? least-positive-bn)		=> #f)
-  (check (positive? greatest-negative-bn)	=> #f)
-  (check (negative? greatest-negative-bn)	=> #t)
+  (check (positive? (least-positive-bignum))		=> #t)
+  (check (negative? (least-positive-bignum))		=> #f)
+  (check (positive? (greatest-negative-bignum))		=> #f)
+  (check (negative? (greatest-negative-bignum))		=> #t)
 
   (check-for-true  (positive-exact-integer? +123))
   (check-for-false (positive-exact-integer? -123))
@@ -93,11 +87,11 @@
   (check (non-negative? +1/2)		=> #t)
   (check (non-negative? -1/2)		=> #f)
 
-  (check (non-positive? least-positive-bn)	=> #f)
-  (check (non-negative? least-positive-bn)	=> #t)
+  (check (non-positive? (least-positive-bignum))	=> #f)
+  (check (non-negative? (least-positive-bignum))	=> #t)
 
-  (check (non-positive? greatest-negative-bn)	=> #t)
-  (check (non-negative? greatest-negative-bn)	=> #f)
+  (check (non-positive? (greatest-negative-bignum))	=> #t)
+  (check (non-negative? (greatest-negative-bignum))	=> #f)
 
 ;;; --------------------------------------------------------------------
 
@@ -119,8 +113,8 @@
 (parametrise ((check-test-name	'predicates))
 
   (check (exact-integer? 123)				=> #t)
-  (check (exact-integer? least-positive-bn)		=> #t)
-  (check (exact-integer? greatest-negative-bn)		=> #t)
+  (check (exact-integer? (least-positive-bignum))	=> #t)
+  (check (exact-integer? (greatest-negative-bignum))	=> #t)
   (check (exact-integer? 1.2)				=> #f)
   (check (exact-integer? 1+2i)				=> #f)
   (check (exact-integer? 1.+2.i)			=> #f)
@@ -159,6 +153,50 @@
 
   (check (bignum-even? (greatest-negative-bignum))	=> #f)
   (check (bignum-odd?  (greatest-negative-bignum))	=> #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'not-equal))
+
+  (check-for-false (!= 1))
+  (check-for-false (!= 1 1))
+  (check-for-false (!= 1 1 1 1))
+
+  (check-for-true (!= 1 2))
+  (check-for-true (!= 1 2 1))
+  (check-for-true (!= 1 1 2))
+  (check-for-true (!= 1 1 1 2))
+  (check-for-true (!= 1 2 1 1))
+
+  (check-for-false (!= 1. 1.))
+  (check-for-false (!= 1. 1. 1. 1.))
+
+  (check-for-true (!= 1. 2.))
+  (check-for-true (!= 1. 2. 1.))
+  (check-for-true (!= 1. 1. 2.))
+  (check-for-true (!= 1. 1. 1. 2.))
+  (check-for-true (!= 1. 2. 1. 1.))
+
+  (check-for-false (!= 1. 1))
+  (check-for-false (!= 1. 1. 1. 1))
+
+  (check-for-true (!= 1. 2))
+  (check-for-true (!= 1. 2 1.))
+  (check-for-true (!= 1. 1. 2))
+  (check-for-true (!= 1. 1. 1. 2))
+
+  (check-for-false (!= 1.0+2.0i 1.0+2.0i))
+  (check-for-true (!= 1.0+2.0i 1.0+3.0i))
+  (check-for-true (!= 1.0+2.0i 4.0+2.0i))
+
+  (check-for-false (!= 1+2i 1+2i))
+  (check-for-true (!= 1+2i 1+3i))
+  (check-for-true (!= 1+2i 4+2i))
+
+  (check-for-false (!= 1/5+2/7i 1/5+2/7i))
+  (check-for-true (!= 1/5+2/7i 1/5+3i))
+  (check-for-true (!= 1/5+2/7i 4+2/7i))
 
   #t)
 

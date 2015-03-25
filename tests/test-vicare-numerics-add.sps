@@ -27,10 +27,10 @@
 
 #!r6rs
 (import (vicare)
-  (numerics helpers)
-  (ikarus system $ratnums)
-  (ikarus system $compnums)
-  (ikarus system $numerics)
+  (libtest numerics-helpers)
+  (vicare system $ratnums)
+  (vicare system $compnums)
+  (vicare system $numerics)
   (vicare language-extensions syntaxes)
   (vicare checks))
 

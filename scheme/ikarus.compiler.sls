@@ -27,14 +27,15 @@
     current-primitive-locations
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
+    core-expr->optimized-code		core-expr->assembly-code
 
-    ;; these go in (ikarus system $compiler)
+    ;; these go in (vicare system $compiler)
+    optimize-level
     (rename
      ;; configuration parameters
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (optimize-cp				$optimize-cp)
-     (optimize-level				$optimize-level)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
      (perform-tag-analysis			$perform-tag-analysis)
      (cp0-effort-limit				$cp0-effort-limit)
@@ -77,41 +78,57 @@
 
      (unparse-recordized-code			$unparse-recordized-code)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
-  (import
-      (rnrs hashtables)
-    (only (ikarus system $codes)
+  (import (except (vicare)
+		  fixnum-width
+		  greatest-fixnum
+		  least-fixnum
+
+		  ;;We need a SYSTEM-VALUE procedure, but the correct one.  See below
+		  ;;the appropriately commented import spec.
+		  #;system-value
+
+		  return
+		  current-primitive-locations
+		  eval-core			current-core-eval
+		  compile-core-expr-to-port	compile-core-expr
+
+		  assembler-output
+		  optimizer-output
+		  tag-analysis-output
+
+		  cp0-effort-limit		cp0-size-limit
+		  current-letrec-pass		generate-debug-calls
+		  optimize-cp			optimize-level
+		  perform-tag-analysis		strip-source-info
+		  fasl-write)
+    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
+    ;;everything here using the system  libraries and not loading external libraries.
+    ;;(Marco Maggi; Fri May 23, 2014)
+    ;;
+    ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
+    ;;
+    ;;* During normal execution: this binding is the one from the boot image.
+    ;;
+    ;;* While building  a new boot image: this  binding is the one from  the old boot
+    ;;  image, *not* the one from loading "(ikarus.symbols)" in source form.
+    ;;
+    ;;We really need it this way for the use we do of such procedure.
+    (only (vicare) system-value)
+    ;;When building a new boot image: the hashtables libray this is loaded from the
+    ;;old boot image.
+    (rnrs hashtables)
+    (only (vicare system $codes)
 	  $code->closure)
-    (only (ikarus system $structs)
+    (only (vicare system $structs)
 	  $struct-ref $struct/rtd?)
-    (except (ikarus)
-	    fixnum-width
-	    greatest-fixnum
-	    least-fixnum
-
-	    return
-	    current-primitive-locations
-	    eval-core			current-core-eval
-	    compile-core-expr-to-port	compile-core-expr
-
-	    assembler-output
-	    optimizer-output
-	    tag-analysis-output
-
-	    cp0-effort-limit		cp0-size-limit
-	    current-letrec-pass		generate-debug-calls
-	    optimize-cp			optimize-level
-	    perform-tag-analysis	strip-source-info
-	    fasl-write)
-    ;;This needs to be loaded here so that it evaluates with the freshly
-    ;;loaded  "ikarus.config.ss",   including  the  correct   value  for
-    ;;WORDSIZE.
+    ;;When building a new boot image: the FASL write library is loaded from source.
+    ;;This needs to be loaded here so that it evaluates with the freshly loaded
+    ;;"ikarus.config.ss", including the correct value for WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
-    (ikarus.intel-assembler)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+    (ikarus.intel-assembler))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
   (module UNSAFE
     ;;Remember that this file defines the primitive operations.
@@ -121,7 +138,7 @@
 	  $fxlogand $fxlogor $fxlognot $fxsra $fxsll
 	  $fxzero?)
 
-    #;(ikarus system $pairs)
+    #;(vicare system $pairs)
     (begin
       (define $car car)
       (define $cdr cdr)
@@ -135,7 +152,7 @@
 	   (set-cdr! ?var ?val))))
       #| end of begin |# )
 
-    #;(ikarus system $fx)
+    #;(vicare system $fx)
     (begin
       (define $fxzero?	 fxzero?)
       (define $fx=	fx=?)
@@ -155,12 +172,12 @@
       (define ($fxsub1 x)
 	(fx- x 1))
       (define ($fxsra x count)
-	(import (prefix (ikarus system $fx) unsafe.))
+	(import (prefix (vicare system $fx) unsafe.))
 	(assert (fixnum? x))
 	(assert (fixnum? count))
 	(unsafe.$fxsra x count))
       (define ($fxsll x count)
-	(import (prefix (ikarus system $fx) unsafe.))
+	(import (prefix (vicare system $fx) unsafe.))
 	(assert (fixnum? x))
 	(assert (fixnum? count))
 	(unsafe.$fxsll x count))
@@ -203,16 +220,6 @@
 
 
 ;;;; helper syntaxes
-
-(define-inline (%debug-print ?obj)
-  (pretty-print ?obj (current-error-port)))
-
-(define-inline (%debug-write ?obj)
-  (begin
-    (write ?obj (current-error-port))
-    (newline (current-error-port))))
-
-;;; --------------------------------------------------------------------
 
 (define-inline ($caar x)	($car ($car x)))
 (define-inline ($cadr x)	($car ($cdr x)))
@@ -310,11 +317,11 @@
     (define (main stx)
       (syntax-case stx ()
 	((_ ?expr ?clause ...)
-	 (with-syntax ((BODY (%generate-body #'_ #'(?clause ...))))
+	 (with-syntax ((BODY (%generate-body #'(?clause ...))))
 	   #'(let ((v ?expr))
 	       BODY)))))
 
-    (define (%generate-body ctxt clauses-stx)
+    (define (%generate-body clauses-stx)
       (syntax-case clauses-stx (else)
         (()
 	 (with-syntax ((INPUT-FORM stx))
@@ -325,30 +332,49 @@
 
         ((((?struct-name ?field-name ...) ?body0 ?body ...) . ?other-clauses)
 	 (identifier? #'?struct-name)
-         (with-syntax ((RTD		#'(type-descriptor ?struct-name))
-                       ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
-		       (ALTERN		(%generate-body ctxt #'?other-clauses)))
+         (with-syntax
+	     ((RTD		#'(type-descriptor ?struct-name))
+	      ((FIELD-NAM ...)  (%filter-field-names #'(?field-name ...)))
+	      ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
+	      (ALTERN		(%generate-body #'?other-clauses)))
 	   #'(if ($struct/rtd? v RTD)
-		 (let ((?field-name ($struct-ref v FIELD-IDX))
+		 (let ((FIELD-NAM ($struct-ref v FIELD-IDX))
 		       ...)
 		   ?body0 ?body ...)
 	       ALTERN)))))
 
-    (define (%enumerate fields-stx next-field-idx)
-      ;;FIELDS-STX must be a syntax object holding a list of identifiers
-      ;;being  struct field  names.   NEXT-FIELD-IDX must  be a  fixnums
-      ;;representing the index of the first field in FIELDS-STX.
+    (define (%filter-field-names field*.stx)
+      ;;FIELD*.STX must be a syntax object holding a list of identifiers
+      ;;being  underscores  or  struct  field  names.   Filter  out  the
+      ;;underscores and  return a  list of identifiers  representing the
+      ;;true field names.
       ;;
-      ;;Return  a syntax  object holding  a  list of  fixnums being  the
-      ;;indexes of the fields in FIELDS-STX.
-      ;;
-      (syntax-case fields-stx ()
-        (() #'())
+      (syntax-case field*.stx ()
+        (() '())
         ((?field-name . ?other-names)
-         (with-syntax
-	     ((FIELD-IDX        next-field-idx)
-	      (OTHER-FIELD-IDXS (%enumerate #'?other-names (fxadd1 next-field-idx))))
-           #'(FIELD-IDX . OTHER-FIELD-IDXS)))))
+	 (eq? '_ (syntax->datum #'?field-name))
+	 (%filter-field-names #'?other-names))
+        ((?field-name . ?other-names)
+	 (cons #'?field-name (%filter-field-names #'?other-names)))
+	))
+
+    (define (%enumerate field*.stx next-field-idx)
+      ;;FIELD*.STX must be a syntax object holding a list of identifiers
+      ;;being underscores or struct field names.  NEXT-FIELD-IDX must be
+      ;;a  fixnum  representing   the  index  of  the   first  field  in
+      ;;FIELD*.STX.
+      ;;
+      ;;Return a list of fixnums  representing the indexes of the fields
+      ;;in FIELD*.STX, discarding the fixnums matching underscores.
+      ;;
+      (syntax-case field*.stx ()
+        (() '())
+        ((?field-name . ?other-names)
+	 (eq? '_ (syntax->datum #'?field-name))
+	 (%enumerate #'?other-names (fxadd1 next-field-idx)))
+        ((?field-name . ?other-names)
+	 (cons next-field-idx (%enumerate #'?other-names (fxadd1 next-field-idx))))
+	))
 
     (main stx)))
 
@@ -425,9 +451,6 @@
 
 ;;;; helper functions
 
-#;(define (dummy)
-  (display "here\n"))
-
 (define (remq1 x ls)
   ;;Scan the  list LS and  remove only the  first instance of  object X,
   ;;using EQ?  as  comparison function; return the  resulting list which
@@ -480,11 +503,11 @@
 (define current-core-eval
   (make-parameter (lambda (x)
 		    ((compile-core-expr x)))
-    (lambda (x)
-      (define who 'current-core-eval)
-      (with-arguments-validation (who)
-	  ((procedure	x))
-	x))))
+    (lambda (obj)
+      (if (procedure? obj)
+	  obj
+	(procedure-argument-violation 'current-core-eval
+	  "expected procedure as parameter value" obj)))))
 
 (define (eval-core x)
   ;;This  function is  used  to compile  fully  expanded R6RS  programs,
@@ -493,22 +516,49 @@
   ;;
   ((current-core-eval) x))
 
+
+;;;; mapping primitive symbol names to location gensyms
+
 (define current-primitive-locations
+  ;;Closure upon a function capable of  retrieving a core primitive's location gensym
+  ;;given its symbol name.   Notice that this is not a  parameter because: whenever a
+  ;;new procedure is set some initialisation must be performed.
+  ;;
   (let ((plocs (lambda (x) #f)))
-    (case-lambda
-     (()
-      plocs)
-     ((p)
-      (define who 'current-primitive-locations)
-      (with-arguments-validation (who)
-	  ((procedure	p))
-	(set! plocs p)
-	(refresh-cached-labels!))))))
+    (case-lambda*
+      (()
+       plocs)
+      (({p procedure?})
+       (set! plocs p)
+       (refresh-cached-labels!)))))
+
+(define* (primref->location-gensym {op symbol?})
+  ;;Given the symbol, which must be the  name of a primitive function exported by the
+  ;;boot image, return its associated location gensym.
+  ;;
+  ;;If the primitive is a procedure: the  location gensym has in both its "value" and
+  ;;"proc" slots a reference to the closure object implementing the primitive.
+  ;;
+  ;;If the  primitive is  a non-procedure  variable: the location  gensym has  in its
+  ;;"value" slot a reference to the actual Scheme object.
+  ;;
+  (cond (((current-primitive-locations) op)
+	 => (lambda (obj)
+	      (if (symbol? obj)
+		  obj
+		(expression-return-value-violation 'current-primitive-locations
+		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
+		  obj))))
+	(else
+	 (error __who__
+	   "*** Vicare error: primitive missing from makefile.sps" op))))
 
 
 (module (compile-core-expr-to-port
 	 compile-core-expr
-	 compile-core-expr->code)
+	 compile-core-expr->code
+	 core-expr->optimized-code
+	 core-expr->assembly-code)
   ;;The list of compiler passes is:
   ;;
   ;;   recordize
@@ -537,10 +587,11 @@
     (let ((code (compile-core-expr->code x)))
       ($code->closure code)))
 
-  (define who 'compile-core-expr->code)
-
-  (define (compile-core-expr->code p)
-    (let* ((p (recordize p))
+  (define (compile-core-expr->code core-language-sexp)
+    ;;This is *the*  commpiler function.  It transforms  a core language
+    ;;symbolic expression into a code object.
+    ;;
+    (let* ((p (recordize core-language-sexp))
 	   (p (parameterize ((open-mvcalls #f))
 		(optimize-direct-calls p)))
 	   (p (optimize-letrec p))
@@ -569,12 +620,47 @@
 	(let ((code* (assemble-sources thunk?-label ls*)))
 	  (car code*)))))
 
+  (define (core-expr->optimized-code core-language-sexp)
+    ;;This  is a  utility  function used  for  debugging and  inspection
+    ;;purposes; it is to be used to inspect the result of optimisation.
+    ;;
+    (let* ((p (recordize core-language-sexp))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (unparse-recordized-code/pretty p)))
+
+  (define (core-expr->assembly-code core-language-sexp)
+    ;;This  is a  utility  function used  for  debugging and  inspection
+    ;;purposes.  It  transforms a symbolic expression  representing core
+    ;;language  into  a  list  of sublists,  each  sublist  representing
+    ;;assembly language instructions for a code object.
+    ;;
+    (let* ((p (recordize core-language-sexp))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (let* ((p (rewrite-references-and-assignments p))
+	     (p (if (perform-tag-analysis)
+		    (introduce-tags p)
+		  p))
+	     (p (introduce-vars p))
+	     (p (sanitize-bindings p))
+	     (p (optimize-for-direct-jumps p))
+	     (p (insert-global-assignments p))
+	     (p (convert-closures p))
+	     (p (optimize-closures/lift-codes p))
+	     (ls* (alt-cogen p)))
+	#;(gensym-prefix "L")
+	ls*)))
+
   (define (thunk?-label x)
-    (if (closure? x)
-	(if (null? (closure-free* x))
-	    (code-loc-label (closure-code x))
-	  (error who "BUG: non-thunk escaped" x))
-      #f))
+    (and (closure? x)
+	 (if (null? (closure-free* x))
+	     (code-loc-label (closure-code x))
+	   (error #f "Vicare Scheme: internal error: non-thunk escaped" x))))
 
   (define (print-instr x)
     ;;Print  to   the  current   error  port  the   symbolic  expression
@@ -1200,28 +1286,28 @@
 
 ;;;; special struct makers
 
-(define mkfvar
-  ;;Maker function for structs of type FVAR.  It caches structures based
-  ;;on the values  of the argument, so that calling:
-  ;;
-  ;;   (mkfvar 123)
-  ;;
-  ;;always returns the same FVAR instance holding 123.
-  ;;
-  ;;FIXME Should  a hashtable be used  as cache?  (Marco Maggi;  Oct 10,
-  ;;2012)
-  ;;
-  (let ((cache '()))
-    (lambda (i)
-      (define who 'mkfvar)
-      (with-arguments-validation (who)
-	  ((fixnum	i))
-	(cond ((assv i cache)
-	       => cdr)
-	      (else
-	       (let ((fv (make-fvar i)))
-		 (set! cache (cons (cons i fv) cache))
-		 fv)))))))
+(module (mkfvar)
+
+  (define CACHE '())
+
+  (define* (mkfvar {i fixnum?})
+    ;;Maker function for structs of type FVAR.  It caches structures based on the
+    ;;values of the argument, so that calling:
+    ;;
+    ;;   (mkfvar 123)
+    ;;
+    ;;always returns the same FVAR instance holding 123.
+    ;;
+    ;;FIXME Should a hashtable be used as cache?  (Marco Maggi; Oct 10, 2012)
+    ;;
+    (cond ((assv i CACHE)
+	   => cdr)
+	  (else
+	   (receive-and-return (fv)
+	       (make-fvar i)
+	     (set! CACHE (cons (cons i fv) CACHE))))))
+
+  #| end of module: MKFVAR |# )
 
 (define (unique-var name)
   (make-var name #f #f #f #f #f #f #f #f #f #f))
@@ -1331,7 +1417,7 @@
 	   (error 'recordize "invalid core language expression" X))))
 
   (define-inline (%recordize-pair-sexp X ctxt)
-    (case-symbols ($car X)
+    (case ($car X)
 
       ;;Synopsis: (quote ?datum)
       ;;
@@ -1465,7 +1551,7 @@
       ;;
       ((case-lambda)
        (let ((clause* (E-clambda-clause* ($cdr X) ctxt)))
-	 (make-clambda (gensym) clause* #f #f
+	 (make-clambda (gensym "clambda") clause* #f #f
 		       (and (symbol? ctxt) ctxt))))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
@@ -1475,7 +1561,7 @@
       ((annotated-case-lambda)
        (let ((annotated-expr ($cadr X))
 	     (clause*        (E-clambda-clause* ($cddr X) ctxt)))
-	 (make-clambda (gensym) clause* #f #f
+	 (make-clambda (gensym "clambda") clause* #f #f
 		       (cons (and (symbol? ctxt) ctxt)
 			     ;;This  annotation  is excluded  only  when
 			     ;;building the boot image.
@@ -1529,30 +1615,26 @@
 
   (module (quoted-sym)
 
-    (define-argument-validation (quoted-sym who obj)
+    (define (quoted-sym? obj)
       (and (list? obj)
 	   ($fx= (length obj) 2)
 	   (eq? 'quote ($car obj))
-	   (symbol? ($cadr obj)))
-      (procedure-argument-violation who "expected quoted symbol sexp as argument" obj))
+	   (symbol? ($cadr obj))))
 
-    (define (quoted-sym x)
+    (define* (quoted-sym {x quoted-sym?})
       ;;Check that X has the format:
       ;;
       ;;  (quote ?symbol)
       ;;
       ;;and return ?SYMBOL.
       ;;
-      (define who 'quoted-sym)
-      (with-arguments-validation (who)
-	  ((quoted-sym	x))
-	($cadr x)))
+      ($cadr x))
 
     #| end of module: quoted-sym |# )
 
   (module (quoted-string)
 
-    (define-argument-validation (quoted-string who obj)
+    (define (quoted-string? obj)
       ;;Check that X has the format:
       ;;
       ;;  (quote ?string)
@@ -1560,20 +1642,16 @@
       (and (list? obj)
 	   ($fx= (length obj) 2)
 	   (eq? 'quote ($car obj))
-	   (string? ($cadr obj)))
-      (error who "expected quoted string sexp as argument" obj))
+	   (string? ($cadr obj))))
 
-    (define (quoted-string x)
+    (define* (quoted-string {x quoted-string?})
       ;;Check that X has the format:
       ;;
       ;;  (quote ?string)
       ;;
       ;;and return ?string.
       ;;
-      (define who 'quoted-string)
-      (with-arguments-validation (who)
-	  ((quoted-string	x))
-	($cadr x)))
+      ($cadr x))
 
     #| end of module: quoted-string |# )
 
@@ -1610,7 +1688,7 @@
 			;;a symbol or improper list.
 			(proper? (list? fml*)))
 		   (ungen-fml* fml*)
-		   (make-clambda-case (make-case-info (gensym) (properize fml*^) proper?)
+		   (make-clambda-case (make-case-info (gensym "clambda-case") (properize fml*^) proper?)
 				      body^)))))
 	clause*))
 
@@ -1659,36 +1737,46 @@
 		 make-funcall)
 	       func args ctxt)))
 
-    (define (%make-funcall-maker anno)
-      (let ((src/expr (make-constant (if (annotation? anno)
-					 (cons (annotation-source   anno)
-					       (annotation-stripped anno))
-				       (cons #f (syntax->datum anno))))))
-	(lambda (op rands)
-	  ;;Only non-operators get special  handling when debugging mode
-	  ;;is active.
-	  ;;
-	  (if (%operator? op)
-	      (make-funcall op rands)
-	    (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))))
+    (module (%make-funcall-maker)
 
-    (define (%operator? op)
-      ;;Evaluate to true if OP references a primitive operation exported
-      ;;by the boot image.
-      ;;
-      ;;The  SYSTEM-VALUE  call  below   will  fail  with  an  assertion
-      ;;violation  if NAME  is not  a  symbol associated  to a  function
-      ;;exported by the boot image.
-      ;;
-      ;;See the documentation of SYSTEM-VALUE for more details.
-      ;;
-      (struct-case op
-	((primref name)
-	 (guard (C ((assertion-violation? C)
-		    #t))
-	   (system-value name)
-	   #f))
-	(else #f)))
+      (define (%make-funcall-maker anno)
+	(let ((src/expr (make-constant (if (annotation? anno)
+					   (cons (annotation-source   anno)
+						 (annotation-stripped anno))
+					 (cons #f (syntax->datum anno))))))
+	  (lambda (op rands)
+	    ;;Only  non-core   primitives  get  special   handling  when
+	    ;;debugging mode is active.
+	    ;;
+	    (if (%core-primitive-reference? op)
+		(make-funcall op rands)
+	      (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))))
+
+      (define (%core-primitive-reference? op)
+	;;Evaluate to  true if  OP references  a lexical  core primitive
+	;;exported by the boot image.
+	;;
+	;;The  SYSTEM-VALUE  call  below  will fail  with  an  assertion
+	;;violation if NAME is not a symbol associated to a lexical core
+	;;primitive exported  by the boot image.   See the documentation
+	;;of SYSTEM-VALUE for more details.
+	;;
+	;;NOTE When  compiling a library: SYSTEM-VALUE  will return with
+	;;no exception  if OP is a  core primitive exported by  the boot
+	;;image.   When compiling  a new  boot image:  SYSTEM-VALUE will
+	;;return with no exception if OP is a core primitive exported by
+	;;the *old* boot image; so SYSTEM-VALUE must be the one exported
+	;;by the old boot image.
+	;;
+	(struct-case op
+	  ((primref name)
+	   (guard (C ((assertion-violation? C)
+		      #t))
+	     (system-value name)
+	     #f))
+	  (else #f)))
+
+      #| end of module: %MAKE-FUNCALL-MAKER |# )
 
     #| end of module: E-annotated-call |# )
 
@@ -1734,7 +1822,7 @@
 	  (mk-call op rand*))))
 
     (define (E-make-parameter mk-call args ctxt)
-      (case-fixnums (length args)
+      (case (length args)
 	((1)	;MAKE-PARAMETER called with one argument.
 	 (let ((val-expr	(car args))
 	       (t		(gensym 't))
@@ -1818,7 +1906,7 @@
 	;;Given a  sexp representing a  CASE-LAMBDA, return its  list of
 	;;clauses.  Return null if X is not a CASE-LAMBDA sexp.
 	(if (pair? x)
-	    (case-symbols ($car x)
+	    (case ($car x)
 	      ((case-lambda)
 	       ($cdr x))
 	      ((annotated-case-lambda)
@@ -1998,7 +2086,7 @@
 	 (try-inline clause* rand* (mk rator rand*)))
 
 	((primref op)
-	 (case-symbols op
+	 (case op
 	   ;;FIXME Here.  (Abdulaziz Ghuloum)
 	   ((call-with-values)
 	    (cond ((and (open-mvcalls)
@@ -2007,21 +2095,16 @@
 		   ;;
 		   ;;   (call-with-values ?producer ?consumer)
 		   ;;
-		   (let ((producer (inline ($car rand*) '()))
+		   (let ((producer (inline mk ($car rand*) '()))
 			 (consumer ($cadr rand*)))
 		     (cond ((single-value-consumer? consumer)
-			    (inline consumer (list producer)))
+			    (inline mk consumer (list producer)))
 			   ((and (valid-mv-consumer? consumer)
 				 (valid-mv-producer? producer))
 			    (make-mvcall producer consumer))
 			   (else
 			    (make-funcall rator rand*)))))
 		  (else
-		   ;;Here we do not know what the source code is, it could
-		   ;;be something like:
-		   ;;
-		   ;;   (apply call-with-values ?form)
-		   ;;
 		   (mk rator rand*))))
 	   ((debug-call)
 	    (inline (lambda (op^ rand*^)
@@ -2907,9 +2990,14 @@
 	  => (lambda (c)
 	       (%optimize c rator ($map/stx E-known rand*))))
 
-	 ;;Is RATOR the  low level APPLY operation?  In  this case: the
-	 ;;first  RAND*  should  be   a  struct  instance  representing
+	 ;;Is RATOR  the low level  APPLY operation?  In this  case: the
+	 ;;first  RAND*   should  be  a  struct   instance  representing
 	 ;;recordized code which will evaluate to a closure.
+	 ;;
+	 ;;$$APPLY  is used  only in  the body  of the  procedure APPLY,
+	 ;;after  having  validated the  first  arguments  as a  closure
+	 ;;objectt.   So  here we  are  sure  that "($car  rand*)"  will
+	 ;;evaluate to a closure object.
 	 ((and (primref? rator)
 	       (eq? (primref-name rator) '$$apply))
 	  (make-jmpcall (sl-apply-label)
@@ -3756,7 +3844,7 @@
 (define eof				#x5F)
 (define unbound				#x6F)
 (define void-object			#x7F)
-(define bwp-object			#x8F)
+(define BWP-OBJECT			#x8F)
 
 ;;; --------------------------------------------------------------------
 ;;; characters
@@ -3916,6 +4004,33 @@
 (define off-struct-rtd			(fx- disp-struct-rtd  vector-tag))
 (define off-struct-std			(fx- disp-struct-std  vector-tag))
 (define off-struct-data			(fx- disp-struct-data vector-tag))
+
+(define idx-std-std			0)
+(define idx-std-name			1)
+(define idx-std-length			2)
+(define idx-std-fields			3)
+(define idx-std-printer			4)
+(define idx-std-symbol			5)
+(define idx-std-destructor		6)
+
+;;Struct type descriptor fields.
+(define disp-std-rtd			idx-std-std)
+(define disp-std-std			idx-std-std)
+(define disp-std-name			(fx* wordsize idx-std-name))
+(define disp-std-length			(fx* wordsize idx-std-length))
+(define disp-std-fields			(fx* wordsize idx-std-fields))
+(define disp-std-printer		(fx* wordsize idx-std-printer))
+(define disp-std-symbol			(fx* wordsize idx-std-symbol))
+(define disp-std-destructor		(fx* wordsize idx-std-destructor))
+
+(define off-std-rtd			(fx- disp-std-rtd	 vector-tag))
+(define off-std-std			(fx- disp-std-std	 vector-tag))
+(define off-std-name			(fx- disp-std-name	 vector-tag))
+(define off-std-length			(fx- disp-std-length	 vector-tag))
+(define off-std-fields			(fx- disp-std-fields	 vector-tag))
+(define off-std-printer			(fx- disp-std-printer	 vector-tag))
+(define off-std-symbol			(fx- disp-std-symbol	 vector-tag))
+(define off-std-destructor		(fx- disp-std-destructor vector-tag))
 
 ;;; --------------------------------------------------------------------
 ;;; strings
@@ -4179,24 +4294,6 @@
 	 (<= least-signed-machine-word x greatest-signed-machine-word)))
 
   #| end od module |# )
-
-(define (primref->symbol op)
-  ;;Given the  symbol, which must  be the  name of a  primitive function
-  ;;exported by the boot image,
-  ;;
-  (define who 'primref->symbol)
-  (with-arguments-validation (who)
-      ((symbol	op))
-    (cond (((current-primitive-locations) op)
-	   => (lambda (x)
-		(with-arguments-validation (who)
-		    ((symbol	x))
-		  x)))
-	  (else
-	   (error who "*** Vicare error: primitive missing from makefile.sps" op)))))
-
-;;(define (primref-loc op)
-;;  (mem off-symbol-record-proc (obj (primref->symbol op))))
 
 
 ;;;; more assembly code helpers
@@ -4909,10 +5006,13 @@
       ;;Store on the  stack the incorrect number of  arguments as second
       ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
       (movl eax (mem (fx- (fx* 2 wordsize)) fpr))
-      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
-      ;;symbol  object  containing a  reference  to  the closure  object
-      ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
-      (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
+      ;;load it in the Closure Pointer Register (CPR).
+      ;;
+      ;;The "proc" slot  of such loc gensym contains a  reference to the
+      ;;closure object implementing $INCORRECT-ARGS-ERROR-HANDLER.
+      (movl (obj (primref->location-gensym '$incorrect-args-error-handler)) cpr)
       ;;Load in the Closure Pointer  Register a reference to the closure
       ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
       (movl (mem off-symbol-record-proc cpr) cpr)
@@ -4970,10 +5070,12 @@
      (definitions)
      (local-labels)
      (assembly
-      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
-      ;;symbol  object  containing a  reference  to  the closure  object
-      ;;implementing the function $MULTIPLE-VALUES-ERROR.
-      (movl (obj (primref->symbol '$multiple-values-error)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym associated to $MULTIPLE-VALUES-ERROR and load it
+      ;;in the Closure Pointer Register  (CPR).  The "proc" slot of such
+      ;;loc  gensym   contains  a   reference  to  the   closure  object
+      ;;implementing $MULTIPLE-VALUES-ERROR.
+      (movl (obj (primref->location-gensym '$multiple-values-error)) cpr)
       ;;Load in the Closure Pointer  Register a reference to the closure
       ;;object implementing the function $MULTIPLE-VALUES-ERROR.
       (movl (mem off-symbol-record-proc cpr) cpr)
@@ -5338,9 +5440,14 @@
       (label SL_nonprocedure)
       ;;Put on the stack the offending object.
       (movl cpr (mem (fx- wordsize) fpr))
-      ;;Retrieve the reference  of the error handler closure  and put it
-      ;;into CPR.
-      (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym  associated to $APPLY-NONPROCEDURE-ERROR-HANDLER
+      ;;and load it  in the Closure Pointer Register  (CPR).  The "proc"
+      ;;slot  of such  loc gensym  contains a  reference to  the closure
+      ;;object implementing $APPLY-NONPROCEDURE-ERROR-HANDLER.
+      (movl (obj (primref->location-gensym '$apply-nonprocedure-error-handler)) cpr)
+      ;;Load in the Closure Pointer  Register a reference to the closure
+      ;;object implementing $APPLY-NONPROCEDURE-ERROR-HANDLER.
       (movl (mem off-symbol-record-proc cpr) cpr)
       ;;Put in EAX the encoded number of arguments, which is 1.
       (movl (int (argc-convention 1)) eax)
@@ -5395,12 +5502,14 @@
       ;;Put on the stack the incorrect number of arguments as fixnum, as
       ;;second argument to $INCORRECT-ARGS-ERROR-HANDLER.
       (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
-      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
-      ;;symbol  object  containing a  reference  to  the closure  object
-      ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
-      (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
+      ;;load it in the Closure  Pointer Register (CPR).  The "proc" slot
+      ;;of such  loc gensym contains  a reference to the  closure object
+      ;;implementing $INCORRECT-ARGS-ERROR-HANDLER.
+      (movl (obj (primref->location-gensym '$incorrect-args-error-handler)) cpr)
       ;;Load in the Closure Pointer  Register a reference to the closure
-      ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
+      ;;object implementing $INCORRECT-ARGS-ERROR-HANDLER.
       (movl (mem off-symbol-record-proc cpr) cpr)
       ;;Load in  EAX the  encoded number  of arguments  for the  call to
       ;;$INCORRECT-ARGS-ERROR-HANDLER.
@@ -5633,8 +5742,8 @@
   ;;other values are not processed and are returned as they are.
   ;;
   (define who 'unparse-recordized-code/pretty)
-  (import (only (ikarus system $symbols)
-		$symbol-string))
+  ;; (import (only (vicare system $symbols)
+  ;; 		$symbol-string))
 
   (define (unparse-recordized-code/pretty x)
     ;;
@@ -5766,7 +5875,7 @@
 	       #;(error who "expected struct of type PRELEX or VAR" x)))))
 
       (define (%build-name x.name)
-	(let* ((name ($symbol-string x.name))
+	(let* ((name (symbol->string x.name))
 	       (N    (hashtable-ref T name 0)))
 	  (hashtable-set! T name (+ N 1))
 	  (let ((sym (string->symbol (string-append name "_" (number->string N)))))

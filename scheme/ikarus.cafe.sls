@@ -16,7 +16,7 @@
 
 (library (ikarus cafe)
   (export new-cafe waiter-prompt-string cafe-input-port)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  new-cafe
 		  waiter-prompt-string
 		  cafe-input-port)

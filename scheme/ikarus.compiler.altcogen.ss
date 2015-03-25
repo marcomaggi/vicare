@@ -945,7 +945,7 @@
 	   (VT x))
 
 	  ((primcall op rands)
-	   (case-symbols op
+	   (case op
 	     (($call-with-underflow-handler)
 	      ;;This  primitive  is  used  by  the  primitive  operation
 	      ;;$SEAL-FRAME-AND-CALL to  implement the heart  of CALL/CC
@@ -1261,10 +1261,16 @@
 	  (make-conditional (%test size)
 	      (make-primcall 'nop '())
 	    (make-primcall 'interrupt '()))
-	  (make-funcall (make-primcall 'mref
-			  (list (make-constant (make-object (primref->symbol 'do-overflow)))
-				(make-constant off-symbol-record-proc)))
-			(list size)))))
+	  (make-funcall
+	   ;;From the  relocation vector  of this code  object: retrieve
+	   ;;the  location   gensym  associated  to   DO-OVERFLOW,  then
+	   ;;retrieve the value of its  "proc" slot.  The "proc" slot of
+	   ;;such loc gensym contains a  reference to the closure object
+	   ;;implementing DO-OVERFLOW.
+	   (make-primcall 'mref
+	     (list (make-constant (make-object (primref->location-gensym 'do-overflow)))
+		   (make-constant off-symbol-record-proc)))
+	   (list size)))))
 
     (define (alloc-check/no-hooks size)
       (E (make-shortcut
@@ -1318,7 +1324,7 @@
        (make-conditional (P e0) (V d e1) (V d e2)))
 
       ((primcall op rands)
-       (case-symbols op
+       (case op
 
          ((alloc)
 	  ;;Allocate a Scheme object on  the heap.  First check if there
@@ -1463,7 +1469,7 @@
        (%do-bind lhs* rhs* (E e)))
 
       ((primcall op rands)
-       (case-symbols op
+       (case op
          ((mset bset mset32)
           (S* rands (lambda (s*)
 		      (make-asm-instr op (make-disp ($car s*) ($cadr s*))
@@ -1632,10 +1638,6 @@
 		;The list of elements in the set.
      ))
 
-  (define-argument-validation (set who obj)
-    (set? obj)
-    (procedure-argument-violation who "expected set as argument" obj))
-
 ;;; --------------------------------------------------------------------
 
   (define-inline (make-empty-set)
@@ -1644,34 +1646,22 @@
   (define (singleton x)
     (make-set (list x)))
 
-  (define (set-member? x S)
-    (define who 'set-member?)
-    (with-arguments-validation (who)
-	((set	S))
-      (memq x ($set-v S))))
+  (define* (set-member? x {S set?})
+    (memq x ($set-v S)))
 
-  (define (empty-set? S)
-    (define who 'empty-set?)
-    (with-arguments-validation (who)
-	((set	S))
-      (null? ($set-v S))))
+  (define* (empty-set? {S set?})
+    (null? ($set-v S)))
 
-  (define (set->list S)
-    (define who 'set->list)
-    (with-arguments-validation (who)
-	((set	S))
-      ($set-v S)))
+  (define* (set->list {S set?})
+    ($set-v S))
 
   (define (list->set ls)
     (make-set ls))
 
-  (define (set-add x S)
-    (define who 'set-add)
-    (with-arguments-validation (who)
-	((set	S))
-      (if (memq x ($set-v S))
-	  S
-	(make-set (cons x ($set-v S))))))
+  (define* (set-add x {S set?})
+    (if (memq x ($set-v S))
+	S
+      (make-set (cons x ($set-v S)))))
 
   (define ($remq x ell)
     ;;Remove X from the list ELL.
@@ -1683,20 +1673,13 @@
 	  (else
 	   (cons ($car ell) ($remq x ($cdr ell))))))
 
-  (define (set-rem x S)
-    (define who 'set-rem)
-    (with-arguments-validation (who)
-	((set	S))
-      (make-set ($remq x ($set-v S)))))
+  (define* (set-rem x {S set?})
+    (make-set ($remq x ($set-v S))))
 
   (module (set-difference)
 
-    (define (set-difference S1 S2)
-      (define who 'set-difference)
-      (with-arguments-validation (who)
-	  ((set		S1)
-	   (set		S2))
-	(make-set ($difference ($set-v S1) ($set-v S2)))))
+    (define* (set-difference {S1 set?} {S2 set?})
+      (make-set ($difference ($set-v S1) ($set-v S2))))
 
     (define ($difference ell1 ell2)
       ;;Remove from the list ELL1 all  the elements of the list ELL2.  Use
@@ -1711,12 +1694,8 @@
 
   (module (set-union)
 
-    (define (set-union S1 S2)
-      (define who 'set-union)
-      (with-arguments-validation (who)
-	  ((set		S1)
-	   (set		S2))
-	(make-set ($union ($set-v S1) ($set-v S2)))))
+    (define* (set-union {S1 set?} {S2 set?})
+      (make-set ($union ($set-v S1) ($set-v S2))))
 
     (define ($union S1 S2)
       (cond ((null? S1)
@@ -1794,47 +1773,41 @@
   (define (empty-set? S)
     (eqv? S 0))
 
-  (define (set-member? N SET)
-    (define who 'set-member?)
-    (with-arguments-validation (who)
-	((fixnum	N))
-      (let loop ((SET SET)
-		 (idx ($index-of N))
-		 (msk ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? SET)
-	       (if (fxeven? idx)
-		   (loop (car SET) (fxsra idx 1) msk)
-		 (loop (cdr SET) (fxsra idx 1) msk)))
-	      ((fxzero? idx)
-	       (fx= msk (fxlogand SET msk)))
-	      (else
-	       #f)))))
+  (define* (set-member? {N fixnum?} SET)
+    (let loop ((SET SET)
+	       (idx ($index-of N))
+	       (msk ($mask-of  N)))	;this never changes in the loop
+      (cond ((pair? SET)
+	     (if (fxeven? idx)
+		 (loop (car SET) (fxsra idx 1) msk)
+	       (loop (cdr SET) (fxsra idx 1) msk)))
+	    ((fxzero? idx)
+	     (fx= msk (fxlogand SET msk)))
+	    (else
+	     #f))))
 
-  (define (set-add N SET)
-    (define who 'set-add)
-    (with-arguments-validation (who)
-	((fixnum	N))
-      (let recur ((SET SET)
-		  (idx ($index-of N))
-		  (msk ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? SET)
-	       (if (fxeven? idx)
-		   (let* ((a0 (car SET))
-			  (a1 (recur a0 (fxsra idx 1) msk)))
-		     (if (eq? a0 a1)
-			 SET
-		       (cons a1 (cdr SET))))
-		 (let* ((d0 (cdr SET))
-			(d1 (recur d0 (fxsra idx 1) msk)))
-		   (if (eq? d0 d1)
+  (define* (set-add {N fixnum?} SET)
+    (let recur ((SET SET)
+		(idx ($index-of N))
+		(msk ($mask-of  N)))	;this never changes in the loop
+      (cond ((pair? SET)
+	     (if (fxeven? idx)
+		 (let* ((a0 (car SET))
+			(a1 (recur a0 (fxsra idx 1) msk)))
+		   (if (eq? a0 a1)
 		       SET
-		     (cons (car SET) d1)))))
-	      ((fxzero? idx)
-	       (fxlogor SET msk))
-	      (else
-	       (if (fxeven? idx)
-		   (cons (recur SET (fxsra idx 1) msk) 0)
-		 (cons SET (recur 0 (fxsra idx 1) msk))))))))
+		     (cons a1 (cdr SET))))
+	       (let* ((d0 (cdr SET))
+		      (d1 (recur d0 (fxsra idx 1) msk)))
+		 (if (eq? d0 d1)
+		     SET
+		   (cons (car SET) d1)))))
+	    ((fxzero? idx)
+	     (fxlogor SET msk))
+	    (else
+	     (if (fxeven? idx)
+		 (cons (recur SET (fxsra idx 1) msk) 0)
+	       (cons SET (recur 0 (fxsra idx 1) msk)))))))
 
   (define (cons^ A D)
     (if (and (eq? D 0)
@@ -1842,29 +1815,26 @@
         A
       (cons A D)))
 
-  (define (set-rem N SET)
-    (define who 'set-rem)
-    (with-arguments-validation (who)
-	((fixnum	N))
-      (let recur ((SET SET)
-		  (idx ($index-of N))
-		  (msk ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? SET)
-	       (if (fxeven? idx)
-		   (let* ((a0 (car SET))
-			  (a1 (recur a0 (fxsra idx 1) msk)))
-		     (if (eq? a0 a1)
-			 SET
-		       (cons^ a1 (cdr SET))))
-		 (let* ((d0 (cdr SET))
-			(d1 (recur d0 (fxsra idx 1) msk)))
-		   (if (eq? d0 d1)
+  (define* (set-rem {N fixnum?} SET)
+    (let recur ((SET SET)
+		(idx ($index-of N))
+		(msk ($mask-of  N)))	;this never changes in the loop
+      (cond ((pair? SET)
+	     (if (fxeven? idx)
+		 (let* ((a0 (car SET))
+			(a1 (recur a0 (fxsra idx 1) msk)))
+		   (if (eq? a0 a1)
 		       SET
-		     (cons^ (car SET) d1)))))
-	      ((fxzero? idx)
-	       (fxlogand SET (fxlognot msk)))
-	      (else
-	       SET)))))
+		     (cons^ a1 (cdr SET))))
+	       (let* ((d0 (cdr SET))
+		      (d1 (recur d0 (fxsra idx 1) msk)))
+		 (if (eq? d0 d1)
+		     SET
+		   (cons^ (car SET) d1)))))
+	    ((fxzero? idx)
+	     (fxlogand SET (fxlognot msk)))
+	    (else
+	     SET))))
 
   (module (set-union)
 
@@ -1932,20 +1902,16 @@
 
   (module (list->set)
 
-    (define (list->set ls)
-      (define who 'list->set)
-      (with-arguments-validation (who)
-	  ((list-of-fixnums	ls))
-	(let recur ((ls ls)
-		    (S  0))
-	  (if (null? ls)
-	      S
-	    (recur (cdr ls) (set-add (car ls) S))))))
+    (define* (list->set {ls list-of-fixnums?})
+      (let recur ((ls ls)
+		  (S  0))
+	(if (null? ls)
+	    S
+	  (recur (cdr ls) (set-add (car ls) S)))))
 
-    (define-argument-validation (list-of-fixnums who obj)
+    (define (list-of-fixnums? obj)
       (and (list? obj)
-	   (for-all fixnum? obj))
-      (procedure-argument-violation who "expected list of fixnums as argument" obj))
+	   (for-all fixnum? obj)))
 
     #| end of module: list->set |# )
 
@@ -2272,7 +2238,7 @@
   ;;
   (import IntegerSet)
   (import conflict-helpers)
-  (import (ikarus system $vectors))
+  (import (vicare system $vectors))
   (define who 'uncover-frame-conflicts)
 
   (define spill-set
@@ -2384,7 +2350,7 @@
             (union-nfvs ns1 ns2))))
 
       ((asm-instr op d s)
-       (case-symbols op
+       (case op
          ((move load8 load32)
           (cond ((reg? d)
 		 (cond ((not (mem-reg? d rs))
@@ -2581,7 +2547,7 @@
        (E body vs rs fs ns))
 
       ((primcall op args)
-       (case-symbols op
+       (case op
          ((nop fl:double->single fl:single->double)
 	  (values vs rs fs ns))
          ((interrupt incr/zero?)
@@ -2678,7 +2644,7 @@
             (union-nfvs ns1 ns2))))
 
       ((primcall op arg*)
-       (case-symbols op
+       (case op
          ((return indirect-jump direct-jump)
           (R* arg*
 	      (empty-var-set)
@@ -2708,7 +2674,7 @@
 (module (alt-cogen.assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
-  (import (only (ikarus system $vectors)
+  (import (only (vicare system $vectors)
 		$vector-ref
 		$vector-set!))
   (define who 'alt-cogen.assign-frame-sizes)
@@ -2835,7 +2801,7 @@
 	   (E-nframe vars live body))
 
 	  ((primcall op args)
-	   (case-symbols op
+	   (case op
 	     ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	      x)
 	     (else
@@ -2848,7 +2814,7 @@
 	   (error who "invalid effect" (unparse-recordized-code x)))))
 
       (define (E-asm-instr op d s)
-	(case-symbols op
+	(case op
 	  ((move load8 load32)
 	   ;;If  the   destination  equals  the  source:   convert  this
 	   ;;instruction into a NOP.
@@ -3181,7 +3147,7 @@
 	   (set-union (R* args) s))
 
 	  ((primcall op arg*)
-	   (case-symbols op
+	   (case op
 	     ((nop fl:single->double fl:double->single)
 	      s)
 	     ((interrupt incr/zero?)
@@ -3199,7 +3165,7 @@
 	   (error who "invalid effect" (unparse-recordized-code x)))))
 
       (define (E-asm-instr op d v s)
-	(case-symbols op
+	(case op
 	  ((move load32)
 	   (let ((s (set-rem d s)))
 	     (set-for-each (lambda (y)
@@ -3587,7 +3553,7 @@
 	     (E-asm-instr op a b x))
 
 	    ((primcall op rands)
-	     (case-symbols op
+	     (case op
 	       ((nop interrupt incr/zero? fl:single->double fl:double->single)
 		x)
 	       (else
@@ -3605,7 +3571,7 @@
 	     (error who "invalid effect" (unparse-recordized-code x)))))
 
 	(define (E-asm-instr op a b x)
-	  (case-symbols op
+	  (case op
 	    ((load8 load32)
 	     (%fix-address b (lambda (b)
 			       (if (or (register? a) (var? a))
@@ -4132,7 +4098,7 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  (let ((L_CALL (label (gensym))))
+  (let ((L_CALL (label (gensym "call_label"))))
     (define %adjust-frame-pointer-register
       (let ((FPR-DELTA (if (or (fxzero? frame-words-count)
 			       (fx=? frame-words-count 1))
@@ -4201,16 +4167,16 @@
   ;;The main  routine is built  by traversing the input  depth-first and
   ;;accumulating a list of assembly instructions; the error handlers are
   ;;appended to such accumulated list by storing a reference to the last
-  ;;pair  in  the  main  list into  the  parameter  EXCEPTIONS-CONC  and
-  ;;prepending to the tail error handler routines as follows:
+  ;;pair in  the main  list into the  parameter EXCEPTIONS-CONCATENATION
+  ;;and prepending to the tail error handler routines as follows:
   ;;
-  ;;  (let ((tail-pair (exceptions-conc)))
+  ;;  (let ((tail-pair (exceptions-concatenation)))
   ;;    (set-cdr! tail-pair (append ?error-handler-instructions
   ;;                                (cdr tail-pair))))
   ;;
   (define who 'alt-cogen.flatten-codes)
 
-  (define exceptions-conc
+  (define exceptions-concatenation
     (make-parameter #f))
 
   (define exception-label (make-parameter #f))
@@ -4242,9 +4208,9 @@
       ;;
       (struct-case x
 	((codes x.clambda* x.body)
-	 (cons (cons* 0 (label (gensym))
+	 (cons (cons* 0 (label (gensym "main_label"))
 		      (let ((accum (list '(nop))))
-			(parameterize ((exceptions-conc accum))
+			(parameterize ((exceptions-concatenation accum))
 			  (T x.body accum))))
 	       (map Clambda x.clambda*)))))
 
@@ -4279,7 +4245,7 @@
 		`(name ,name)
 		(label L)
 		(let ((accum (list '(nop))))
-		  (parameterize ((exceptions-conc accum))
+		  (parameterize ((exceptions-concatenation accum))
 		    (let recur ((case* case*))
 		      (if (null? case*)
 			  (cons `(jmp (label ,(sl-invalid-args-label))) accum)
@@ -4290,7 +4256,7 @@
       ;;Flatten the struct instance of  type CLAMBDA-CASE into a list of
       ;;assembly instructions  prepended to  the accumulator  ACCUM; the
       ;;error  handler  routines are  prepended  to  the tail  of  ACCUM
-      ;;referenced by EXCEPTIONS-CONC.
+      ;;referenced by EXCEPTIONS-CONCATENATION.
       ;;
       ;;The generated assembly code must  check if this CLAMBDA case has
       ;;a specification  of requested  arguments matching  the arguments
@@ -4336,7 +4302,7 @@
 	    ;;representing the  CPU register holding the  pointer to the
 	    ;;current  closure object,  and  whose cdr  is  the list  of
 	    ;;properized formals.
-	    (let ((next-case-entry-point-label (unique-label)))
+	    (let ((next-case-entry-point-label (unique-label "L_clambda_branch")))
 	      (cons* `(cmpl ,(argc-convention (if x.info.proper?
 						  (length (cdr x.info.args))
 						(length (cddr x.info.args))))
@@ -4417,10 +4383,10 @@
       ;;knowing  that  "fixnum  3"  will  be ignored  and  the  list  is
       ;;allocated on the heap.
       ;;
-      (define CONTINUE_LABEL	(unique-label))
-      (define DONE_LABEL	(unique-label))
-      (define CONS_LABEL	(unique-label))
-      (define LOOP_HEAD		(unique-label))
+      (define CONTINUE_LABEL	(unique-label "L_varargs_continue_"))
+      (define DONE_LABEL	(unique-label "L_varargs_done"))
+      (define CONS_LABEL	(unique-label "L_varargs_cons"))
+      (define LOOP_HEAD		(unique-label "L_varargs_loop_head"))
       (define mandatory-formals-count
 	(fxsub1 properized-formals-count))
       (define properized-formals-argc
@@ -4485,9 +4451,14 @@
        (movl ARGC-REGISTER (mem (fx* -2 wordsize) fpr))
        ;;DO-VARARG-OVERFLOW is called with one argument.
        (movl (int (argc-convention 1)) ARGC-REGISTER)
-       ;;Load into  CPR a reference  to the closure  object implementing
-       ;;DO-VARARG-OVERFLOW.
-       (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
+       ;;From the  relocation vector of  this code object:  retrieve the
+       ;;location gensym associated to DO-VARARG-OVERFLOW and load it in
+       ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
+       ;;loc  gensym   contains  a  reference  to   the  closure  object
+       ;;implementing DO-VARARG-OVERFLOW.
+       (movl (obj (primref->location-gensym 'do-vararg-overflow)) cpr)
+       ;;Load in the Closure Pointer Register a reference to the closure
+       ;;object implementing DO-VARARG-OVERFLOW.
        (movl (mem off-symbol-record-proc cpr) cpr)
        ;;When arriving here the Scheme stack is as follows:
        ;;
@@ -4587,14 +4558,14 @@
 
       ((conditional x.test x.conseq x.altern)
        (let ((label-for-true-predicate  #f)
-	     (label-for-false-predicate (unique-label)))
+	     (label-for-false-predicate (unique-label "L_false")))
          (P x.test label-for-true-predicate label-for-false-predicate
 	    (T x.conseq
 	       (cons label-for-false-predicate
 		     (T x.altern accum))))))
 
       ((primcall op rands)
-       (case-symbols op
+       (case op
 	 ((return)
 	  (cons '(ret) accum))
 
@@ -4628,7 +4599,7 @@
        ;;
        (let ((L (unique-interrupt-label)))
 	 (let* ((handler^ (cons L (T handler '())))
-		(tc       (exceptions-conc)))
+		(tc       (exceptions-concatenation)))
 	   (set-cdr! tc (append handler^ (cdr tc))))
          (parameterize ((exception-label L))
            (T body accum))))
@@ -4655,19 +4626,37 @@
 
 	((conditional x.test x.conseq x.altern)
 	 (cond ((interrupt? x.conseq)
-		(let ((L (or (exception-label)
-			     (error who "no exception label"))))
-		  (P x.test L #f (E x.altern accum))))
+		(let ((label-true  (or (exception-label)
+				      (error who "no exception label")))
+		      (label-false #f))
+		  (P x.test label-true label-false
+		     (E x.altern accum))))
 	       ((interrupt? x.altern)
-		(let ((L (or (exception-label)
-			     (error who "no exception label"))))
-		  (P x.test #f L (E x.conseq accum))))
+		(let ((label-true  #f)
+		      (label-false (or (exception-label)
+				       (error who "no exception label"))))
+		  (P x.test label-true label-false
+		     (E x.conseq accum))))
 	       (else
-		(let ((lf (unique-label))
-		      (le (unique-label)))
-		  (P x.test #f lf (E x.conseq (cons* `(jmp ,le)
-						     lf
-						     (E x.altern (cons le accum)))))))))
+		;;For  this conditional  case  we generate  code as  the
+		;;following pseudo-code shows:
+		;;
+		;;     x.test
+		;;   jump-if-false label_false
+		;;     x.conseq
+		;;     jmp label_end
+		;;   label_false:
+		;;     x.altern
+		;;   label_end:
+		;;     accum
+		;;
+		(let ((label-true  #f)
+		      (label-false (unique-label "L_false"))
+		      (label-end   (unique-label "L_end")))
+		  (P x.test label-true label-false
+		     (E x.conseq (cons* `(jmp ,label-end)
+					label-false
+					(E x.altern (cons label-end accum)))))))))
 
 	((ntcall target value args mask size)
 	 (E-ntcall target value args mask size accum))
@@ -4683,23 +4672,25 @@
 	 ;;
 	 ;;  (body-asm)
 	 ;;  ...
-	 ;;  (label L2)
+	 ;;  (jmp L_interrupt)
+	 ;;  ...
+	 ;;  (label L_return_from_interrupt)
 	 ;;
 	 ;;and  prepend to  the exception  routines the  flattened handler
 	 ;;instructions:
 	 ;;
-	 ;;  (label L)
+	 ;;  (label L_interrupt)
 	 ;;  (handler-asm)
 	 ;;  ...
-	 ;;  (jmp L2)
+	 ;;  (jmp L_return_from_interrupt)
 	 ;;
-	 (let ((L  (unique-interrupt-label))
-	       (L2 (unique-label)))
-	   (let* ((handler^ (cons L (E handler `((jmp ,L2)))))
-		  (tc       (exceptions-conc)))
+	 (let ((L_interrupt (unique-interrupt-label))
+	       (L_return    (unique-label "L_return_from_interrupt")))
+	   (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
+		  (tc       (exceptions-concatenation)))
 	     (set-cdr! tc (append handler^ (cdr tc))))
-	   (parameterize ((exception-label L))
-	     (E body (cons L2 accum)))))
+	   (parameterize ((exception-label L_interrupt))
+	     (E body (cons L_return accum)))))
 
 	(else
 	 (error who "invalid effect" (unparse-recordized-code x)))))
@@ -4727,7 +4718,7 @@
 		   accum))))
 
     (define (E-asm-instr op d s x accum)
-      (case-symbols op
+      (case op
 	((logand)
 	 (cons `(andl ,(R s) ,(R d)) accum))
 
@@ -4852,7 +4843,7 @@
 	 (error who "invalid instr" (unparse-recordized-code x)))))
 
     (define (E-primcall op rands x accum)
-      (case-symbols op
+      (case op
 	((nop)
 	 accum)
 
@@ -4900,10 +4891,14 @@
 ;;; --------------------------------------------------------------------
 
   (define (unique-interrupt-label)
-    (label (gensym "ERROR")))
+    (label (gensym "L_error_interrupt")))
 
-  (define (unique-label)
-    (label (gensym)))
+  (define unique-label
+    (case-lambda
+     (()
+      (label (gensym)))
+     ((name)
+      (label (gensym name)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4938,59 +4933,59 @@
 	((seq e0 e1)
 	 (E e0 (P e1 label-true label-false accum)))
 
-	((conditional e0 e1 e2)
-	 (P-conditional e0 e1 e2 label-true label-false accum))
+	((conditional x.test x.conseq x.altern)
+	 (P-conditional x.test x.conseq x.altern label-true label-false accum))
 
 	((asm-instr op a0 a1)
 	 (P-asm-instr op a0 a1 label-true label-false accum))
 
 	((shortcut body handler)
-	 (let ((L  (unique-interrupt-label))
-	       (lj (unique-label)))
+	 (let ((L_interrupt (unique-interrupt-label))
+	       (L_end       (unique-label "L_end")))
 	   (let ((accum (if (and label-true label-false)
 			    accum
-			  (cons lj accum))))
-	     (let* ((hand (cons L (P handler (or label-true lj) (or label-false lj) '())))
-		    (tc   (exceptions-conc)))
-	       (set-cdr! tc (append hand (cdr tc))))
-	     (parameterize ((exception-label L))
+			  (cons L_end accum))))
+	     (let* ((handler^ (cons L_interrupt (P handler (or label-true L_end) (or label-false L_end) '())))
+		    (tc       (exceptions-concatenation)))
+	       (set-cdr! tc (append handler^ (cdr tc))))
+	     (parameterize ((exception-label L_interrupt))
 	       (P body label-true label-false accum)))))
 
 	(else
 	 (error who "invalid pred" x))))
 
-    (define (P-conditional e0 e1 e2 label-true label-false accum)
-      (cond ((and (constant=? e1 #t)
-		  (constant=? e2 #f))
-	     (P e0 label-true label-false accum))
+    (define (P-conditional x.test x.conseq x.altern label-true label-false accum)
+      (cond ((and (constant=? x.conseq #t)
+		  (constant=? x.altern #f))
+	     (P x.test label-true label-false accum))
 
-	    ((and (constant=? e1 #f)
-		  (constant=? e2 #t))
-	     (P e0 label-false label-true accum))
+	    ((and (constant=? x.conseq #f)
+		  (constant=? x.altern #t))
+	     (P x.test label-false label-true accum))
 
 	    ((and label-true label-false)
-	     (let ((l (unique-label)))
-	       (P e0 #f l (P e1 label-true label-false
-			     (cons l (P e2 label-true label-false accum))))))
+	     (let ((l (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq label-true label-false
+				 (cons l (P x.altern label-true label-false accum))))))
 
 	    (label-true
-	     (let ((label-false (unique-label))
-		   (l (unique-label)))
-	       (P e0 #f l (P e1 label-true label-false
-			     (cons l (P e2 label-true #f (cons label-false accum)))))))
+	     (let ((label-false (unique-label "L_false"))
+		   (l           (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq label-true label-false
+				 (cons l (P x.altern label-true #f (cons label-false accum)))))))
 
 	    (label-false
-	     (let ((label-true (unique-label))
-		   (l  (unique-label)))
-	       (P e0 #f l (P e1 label-true label-false
-			     (cons l (P e2 #f label-false (cons label-true accum)))))))
+	     (let ((label-true (unique-label "L_true"))
+		   (l          (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq label-true label-false
+				 (cons l (P x.altern #f label-false (cons label-true accum)))))))
 
 	    (else
-	     (let ((label-false (unique-label))
-		   (l  (unique-label)))
-	       (P e0 #f l (P e1 #f #f
-			     (cons `(jmp ,label-false)
-				   (cons l (P e2 #f #f (cons label-false accum))))))))))
+	     (let ((label-false (unique-label "L_false"))
+		   (l           (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq #f #f
+				 (cons `(jmp ,label-false)
+				       (cons l (P x.altern #f #f (cons label-false accum))))))))))
 
     (module (P-asm-instr)
 
@@ -5000,7 +4995,7 @@
 	      (label-true
 	       (cmp op a0 a1 label-true accum))
 	      (label-false
-	       (cmp (notop op) a0 a1 label-false accum))
+	       (cmp (%select-negated-P-asm-instr op) a0 a1 label-false accum))
 	      (else
 	       accum)))
 
@@ -5026,7 +5021,7 @@
 	      (else
 	       (error who "invalid cmpops" a0 a1))))
 
-      (define (notop x)
+      (define (%select-negated-P-asm-instr x)
 	(cond ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
 			 (u< u>=) (u<= u>) (u> u<=) (u>= u<)
 			 (fl:= fl:o!=) (fl:!= fl:o=)
@@ -5034,7 +5029,7 @@
 			 (fl:> fl:o<=) (fl:>= fl:o<)))
 	       => cadr)
 	      (else
-	       (error who "invalid notop" x))))
+	       (error who "assembly instruction invalid in predicate context" x))))
 
       (define (jmpname x)
 	(cond ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)
@@ -5189,6 +5184,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; eval: (put 'make-primcall 'scheme-indent-function 1)
 ;; eval: (put 'assemble-sources 'scheme-indent-function 1)
 ;; eval: (put 'define-structure 'scheme-indent-function 1)

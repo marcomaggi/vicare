@@ -1,0 +1,2743 @@
+@node libutils
+@chapter Scheme libraries utility functions
+
+
+@cindex @library{vicare libraries}, library
+@cindex Library @library{vicare libraries}
+
+
+The library @library{vicare libraries} exports bindings to deal with the
+libraries infrastructure of @value{PRJNAME}; this library is integrated
+in the boot image.  It is suggested to import it using the prefix
+@samp{libs.}, as in
+
+@example
+(import (prefix (vicare libraries) libs.))
+@end example
+
+@menu
+* libutils names::              Library name utilities.
+* libutils refs::               Library reference utilities.
+* libutils libraries::          Library objects.
+* libutils interning::          Interning libraries.
+* libutils loading::            Loading libraries.
+* libutils locating::           Locating libraries.
+* libutils file-system::        Locating libraries on the file system.
+* libutils compiling::          Compiling libraries.
+* libutils programs::           Handling programs.
+* libutils include::            Loading include files.
+@end menu
+
+@c page
+@node libutils names
+@section Library name utilities
+
+
+Library names are defined by @rnrs{6} to be used in @clause{library}
+forms to uniquely identify a library; @ref{scheme library form names,
+Library names}.
+
+@menu
+* libutils names pred::         Library name predicates.
+* libutils names split::        Decomposing library names.
+* libutils names compar::       Library names comparison.
+@end menu
+
+@c page
+@node libutils names pred
+@subsection Library name predicates
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-name? @var{sexp}
+Return @true{} if @var{sexp} is a symbolic expressions compliant with
+the definition of @meta{library-name} according to @rnrs{6}.
+
+@example
+(library-name? '())                             @result{} #f
+(library-name? '(alpha))                        @result{} #t
+(library-name? '(alpha beta))                   @result{} #t
+(library-name? '(alpha beta gamma))             @result{} #t
+(library-name? '(alpha beta gamma ()))          @result{} #t
+(library-name? '(alpha beta gamma (1)))         @result{} #t
+(library-name? '(alpha beta gamma (1 2 3)))     @result{} #t
+(library-name? '(alpha 123 gamma))              @result{} #f
+(library-name? '(alpha beta gamma (1 ciao)))    @result{} #f
+@end example
+@end defun
+
+
+@defun library-version-numbers? @var{obj}
+Return @true{} if @var{obj} is a list of library version numbers
+according to @rnrs{6}, this includes @var{obj} being null.
+
+@example
+(library-version-numbers? '(1))         @result{} #t
+(library-version-numbers? '(1 2 3))     @result{} #t
+(library-version-numbers? '(1 -2 3))    @result{} #f
+(library-version-numbers? '(1 A 3))     @result{} #f
+@end example
+
+@quotation
+@strong{NOTE} According to @rnrs{6}: @var{obj} should be an exact
+integer, which means a finxum or bignum for @value{PRJNAME}.  This
+predicate accepts only fixnums because they are faster to handle and
+``big enough''.
+@end quotation
+@end defun
+
+
+@defun library-version-number? @var{obj}
+Return @true{} if @var{obj} is a single version number according to
+@rnrs{6}.
+@end defun
+
+@c page
+@node libutils names split
+@subsection Decomposing library names
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-name-decompose @var{obj}
+Scan @var{obj} validating it as a @meta{library-name} as specified by
+@rnrs{6}.  Return two values: the list of identifiers, the version
+specification.  The version can be null.  If @var{obj} is not a valid
+@meta{library-name}: return @false{} and @false{}.  The returned values
+may share structure with @var{obj}.
+
+@example
+(library-name-decompose '(alpha))
+@result{} (alpha) ()
+
+(library-name-decompose '(alpha beta))
+@result{} (alpha beta) ()
+
+(library-name-decompose '(alpha beta gamma))
+@result{} (alpha beta gamma) ()
+
+(library-name-decompose '(alpha beta gamma ()))
+@result{} (alpha beta gamma) ()
+
+(library-name-decompose '(alpha beta gamma (1)))
+@result{} (alpha beta gamma) (1)
+
+(library-name-decompose '(alpha beta gamma (1 2 3)))
+@result{} (alpha beta gamma) (1 2 3)
+
+(library-name-decompose '(alpha beta gamma (1 A 3)))
+@result{} #f #f
+
+(library-name-decompose '(alpha 1 gamma (1 2 3)))
+@result{} #f #f
+@end example
+@end defun
+
+
+@defun library-name->identifiers @var{sexp}
+Given a symbolic expression compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return the list of
+identifiers.  If @var{sexp} is not compliant return @false{}.
+
+@example
+(library-name->identifiers '(alpha))
+@result{} (alpha)
+
+(library-name->identifiers '(alpha beta))
+@result{} (alpha beta)
+
+(library-name->identifiers '(alpha beta gamma))
+@result{} (alpha beta gamma)
+
+(library-name->identifiers '(alpha beta gamma ()))
+@result{} (alpha beta gamma)
+
+(library-name->identifiers '(alpha beta gamma (1)))
+@result{} (alpha beta gamma)
+
+(library-name->identifiers '(alpha beta gamma (1 2 3)))
+@result{} (alpha beta gamma)
+@end example
+@end defun
+
+
+@defun library-name->version @var{sexp}
+Given a symbolic expression compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return the list of version
+numbers.  If @var{sexp} is not compliant return @false{}.
+
+@example
+(library-name->version '(alpha))
+@result{} ()
+
+(library-name->version '(alpha beta))
+@result{} ()
+
+(library-name->version '(alpha beta gamma))
+@result{} ()
+
+(library-name->version '(alpha beta gamma ()))
+@result{} ()
+
+(library-name->version '(alpha beta gamma (1)))
+@result{} (1)
+
+(library-name->version '(alpha beta gamma (1 2 3)))
+@result{} (1 2 3)
+@end example
+@end defun
+
+@c page
+@node libutils names compar
+@subsection Library names comparison
+
+
+The following functions can be used to sort library names according to
+the version number:
+
+@example
+(list-sort library-name<? '((x y (1 2))
+                            (x y (1 3))))
+@result{} ((x y (1 2))
+    (x y (1 3)))
+
+(list-sort library-name<? '((x y (1 4))
+                            (x y (1 2))
+                            (x y (2 1))
+                            (x y (1 3))))
+@result{} ((x y (1 2))
+    (x y (1 3))
+    (x y (1 4))
+    (x y (2 1)))
+@end example
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-name=? @vari{sexp} @varii{sexp}
+Given two symbolic expressions compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if they have
+the same list of identifiers and the same version numbers.
+@end defun
+
+
+@defun library-name<? @vari{sexp} @varii{sexp}
+Given two symbolic expressions compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if they have
+the same list of identifiers and the version of @vari{sexp} is less than
+the version of @varii{sexp}.
+@end defun
+
+
+@defun library-name<=? @vari{sexp} @varii{sexp}
+Given two symbolic expressions compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if they have
+the same list of identifiers and the version of @vari{sexp} is less than
+or equal to the version of @varii{sexp}.
+@end defun
+
+@c ------------------------------------------------------------
+
+@defun library-version=? @vari{vrs} @varii{vrs}
+Given two lists of version numbers compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if they have
+the same numbers.
+
+If one of the lists is longer and the elements up to the end of the
+shortest are equal: the lists are ``equal'' if the tail of the longest
+is made of zeros.
+
+Examples:
+
+@example
+(1 2 3) == (1 2 3)
+(1 2 3) != (1 2 3 4)
+(1 2 3) == (1 2 3 0 0 0)
+@end example
+@end defun
+
+
+@defun library-version<? @vari{vrs} @varii{vrs}
+Given two lists of version numbers compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if the version
+number represented by @vari{vrs} is less than the version number
+represented by @varii{vrs}.
+
+Comparison of digits stops at the first digit for which @func{<} or
+@func{>} return true.
+
+If one of the lists is longer and the elements up to the end of the
+shortest are equal: the lists are ``equal'' if the tail of the longest
+is made of zeros.
+
+Examples:
+
+@example
+(1 2 3) <  (4 2 3)
+(1 2 3) <  (1 4 3)
+(1 2 3) <  (1 2 4)
+(1 2 3) <  (1 2 3 4)
+(1 2 3) !< (1 2 3 0 0 0)
+@end example
+@end defun
+
+
+@defun library-version<=? @vari{vrs} @varii{vrs}
+Given two lists of version numbers compliant with the definition of
+@meta{library-name} according to @rnrs{6}: return @true{} if the version
+number represented by @vari{vrs} is less than or equal to the version
+number represented by @varii{vrs}.
+
+Comparison of digits stops at the first digit for which @func{<=}
+returns false.
+
+If one of the lists is longer and the elements up to the end of the
+shortest are equal: the lists are ``equal'' if the tail of the longest
+is made of zeros.
+
+Examples:
+
+@example
+(1 2 3) <= (1 2 3)
+(1 2 3) <= (4 2 3)
+(1 2 3) <= (1 4 3)
+(1 2 3) <= (1 2 4)
+(1 2 3) <= (1 2 3 4)
+(1 2 3 0) <= (1 2 3)
+@end example
+@end defun
+
+@c page
+@node libutils refs
+@section Library reference utilities
+
+
+Library references are defined by @rnrs{6} to be used in @clause{import}
+forms to select a dependency library; @ref{scheme library form import,
+The import specification}.
+
+@menu
+* libutils refs pred::          Library reference predicates.
+* libutils refs split::         Decomposing library references.
+* libutils refs compar::        Library references comparison.
+* libutils refs conform::       Conformity among library references
+                                and names.
+@end menu
+
+@c page
+@node libutils refs pred
+@subsection Library reference predicates
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-reference? @var{obj}
+Return @true{} if @var{obj} is a valid library reference as specified by
+@rnrs{6}.
+
+@example
+(library-reference? '())                        @result{} #f
+(library-reference? '(alpha))                   @result{} #t
+(library-reference? '(alpha beta gamma))        @result{} #t
+(library-reference? '(alpha beta gamma ()))     @result{} #t
+(library-reference? '(alpha beta gamma (1)))    @result{} #t
+(library-reference?
+    '(alpha beta (1
+                  (<= 2)
+                  (or 10 (and (>= 4)
+                              (<= 2))))))
+@result{} #t
+@end example
+@end defun
+
+
+@defun library-version-reference? @var{obj}
+Return @true{} if @var{obj} is a valid library version reference as
+specified by @rnrs{6}.
+
+@example
+(library-version-reference? '())                @result{} #t
+(library-version-reference? '(1))               @result{} #t
+(library-version-reference? '(1 2 3))           @result{} #t
+
+(library-version-reference? '(and))             @result{} #t
+(library-version-reference? '(and (1)))         @result{} #t
+(library-version-reference? '(and (1) (2)))     @result{} #t
+
+(library-version-reference? '(or))              @result{} #t
+(library-version-reference? '(or (1)))          @result{} #t
+(library-version-reference? '(or (1) (2)))      @result{} #t
+
+(library-version-reference? '(not))             @result{} #f
+(library-version-reference? '(not (1)))         @result{} #t
+
+(library-version-reference?
+   '(1
+     (<= 2)
+     (or 10
+         (and (<= 4)
+              (>= 2)))))
+@result{} #t
+@end example
+@end defun
+
+
+@defun library-sub-version-reference? @var{obj}
+Return @true{} if @var{obj} is a valid library sub--version reference as
+specified by @rnrs{6}.
+@end defun
+
+
+@defun library-sub-version? @var{obj}
+Return @true{} if @var{obj} is a @meta{sub-version} number according to
+@rnrs{6}.
+
+@quotation
+@strong{NOTE} According to @rnrs{6}: @var{obj} should be an exact
+non--negative integer, which means a non--negative finxum or bignum.
+@value{PRJNAME} accepts only fixnums because they are faster to handle
+and ``big enough''.
+@end quotation
+@end defun
+
+@c page
+@node libutils refs split
+@subsection Decomposing library references
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-reference-decompose @var{obj}
+Interpret @var{obj} as a symbolic expression representing a library
+reference as specified by @rnrs{6}.  Return two values: the list of
+identifiers, the version reference.  If @var{obj} is not a valid library
+reference: return @false{} and @false{}.
+
+@example
+(library-reference-decompose
+   '(alpha beta (1 (<= 2) (or 10 (and (>= 4) (>= 2))))))
+@result{} (alpha beta) (1 (<= 2) (or 10 (and (>= 4) (>= 2))))
+@end example
+@end defun
+
+
+@defun library-reference->identifiers @var{obj}
+If @var{obj} is a valid library reference as specified by @rnrs{6},
+return the list of identifiers; else return @false{}.
+@end defun
+
+
+@defun library-reference->version @var{obj}
+If @var{obj} is a valid library reference as specified by @rnrs{6},
+return the version reference; else return @false{}.
+@end defun
+
+@c page
+@node libutils refs compar
+@subsection Library references comparison
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-reference-identifiers=? @vari{reference} @varii{reference}
+Return @true{} if the arguments are library references having equal
+lists of identifiers; else return @false{}.
+@end defun
+
+@c page
+@node libutils refs conform
+@subsection Conformity among library references and names
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun conforming-sub-version-and-sub-version-reference? @var{sub-version} @var{sub-version-reference}
+Interpret @var{sub-version} as a sub--version number as specified by
+@rnrs{6} and @var{sub-version-reference} as a sub--version reference as
+specified by @rnrs{6}.  Return @true{} if the sub--version conforms to
+the sub--version reference; else return @false{}; if the arguments are
+invalid: raise an assertion violation.
+
+@example
+(conforming-sub-version-and-sub-version-reference?
+    1 1)
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 0)
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(<= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    2 '(<= 1))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    0 '(<= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(>= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    2 '(>= 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    0 '(>= 1))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(not 1))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(not 0))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 1 2))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 2 1))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 2 3))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(or 2 3 4))
+@result{} #f
+
+(conforming-sub-version-and-sub-version-reference?
+    4 '(or 2 3 4))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(and (>= 0) (<= 2)))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    0 '(and (>= 0) (<= 2)))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(and (>= 0) (<= 2) (not 3)))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    1 '(and (>= 0) (<= 2) (not 1)))
+@result{} #f
+
+
+(conforming-sub-version-and-sub-version-reference?
+    4 '(or (and (>= 0) (<= 2)) 4))
+@result{} #t
+
+(conforming-sub-version-and-sub-version-reference?
+    3 '(or (and (>= 0) (<= 2)) 4))
+@result{} #f
+@end example
+@end defun
+
+
+@defun conforming-version-and-version-reference? @vari{version} @varii{version-reference}
+Interpret @var{version} as a version symbolic expression as specified by
+@rnrs{6} and @var{version-reference} as a version reference symbolic
+expression as specified by @rnrs{6}.  Return @true{} if the version
+conforms to the version reference; else return @false{}; if the
+arguments are invalid: raise an assertion violation.
+
+@example
+(conforming-version-and-version-reference?
+    '() '())
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '())
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '() '(1))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '(1))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '(0))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((<= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(2) '((<= 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(0) '((<= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((>= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(2) '((>= 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(0) '((>= 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((not 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((not 0)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((or 1 2)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((or 2 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((or 2 3)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((or 2 3 4)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(4) '((or 2 3 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(5) '((or 2 (or 3 (or 4 (or 5))))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1 1 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and 1 (and 1 (and 1 (and 1))))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and (>= 0) (<= 2))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(0) '((and (>= 0) (<= 2))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(2) '((and (>= 0) (<= 2))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and (>= 0) (<= 2) (not 3))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1) '((and (>= 0) (<= 2) (not 1))))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1) '((or (and (>= 0) (<= 2)) 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(4) '((or (and (>= 0) (<= 2)) 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(3) '((or (and (>= 0) (<= 2)) 4)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(1 2 3))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(1 2 4))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 0) '(1 2))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 1) '(1 2))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(1 (>= 1) (not 1)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(1 (<= 1) (not 1)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(or (1 (<= 1) (not 1)) (1 (>= 1) (not 1))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(or (1 2 5) (1 2 10)))
+@result{} #f
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(and (1 (>= 1) (not 1)) (1 2 (not 5))))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3)
+    '(and (1 (<= 1) (not 1)) (1 2 (not 5))))
+@result{} #f)
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(not (1 5 4)))
+@result{} #t
+
+(conforming-version-and-version-reference?
+    '(1 2 3) '(not (1 2 3)))
+@result{} #f
+@end example
+@end defun
+
+
+@defun conforming-library-name-and-library-reference? @var{name} @var{reference}
+Interpret @var{name} as a library name symbolic expression as specified
+by @rnrs{6} and @var{reference} as a library reference symbolic
+expression as specified by @rnrs{6}.  Return @true{} if the name
+conforms to the reference; else return @false{}; if the arguments are
+invalid: raise an assertion violation.
+
+@example
+(conforming-library-name-and-library-reference?
+    '(a (1)) '(a (1)))
+@result{} #t
+
+(conforming-library-name-and-library-reference?
+    '(a (1)) '(a (0)))
+@result{} #f
+
+(conforming-library-name-and-library-reference?
+    '(a b c (1)) '(a b c (1)))
+@result{} #t
+
+(conforming-library-name-and-library-reference?
+    '(a b c (1)) '(a b c (0)))
+@result{} #f
+
+(conforming-library-name-and-library-reference?
+    '(a b c (1)) '(a z c (1)))
+@result{} #f
+@end example
+@end defun
+
+@c page
+@node libutils libraries
+@section Library objects
+
+
+Objects of type @objtype{library} are created when a source library is
+processed by the expander and when a binary library is loaded from a
+@fasl{} file; @objtype{library} is a disjoint type.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library? @var{obj}
+Return @true{} if @var{obj} is an object of type @objtype{library};
+otherwise return @false{}.
+@end defun
+
+
+@deffn {Accessor for @objtype{library}} library-uid @var{lib}
+Return a gensym uniquely identifying this interned library; it also
+identifies the corresponding serialised library.  This gensym is
+registered in:
+
+@itemize
+@item
+The @objtype{library} object created by a @value{EXECUTABLE} process at
+run--time.
+
+@item
+The binary file containing this library in compiled and serialised form.
+
+@item
+The binary files containing the compiled libraries that import this one.
+@end itemize
+
+Whenever a compiled library imports this one, the @uid{} stored in the
+binary file is compared to this field: if they are @func{eq?}  the
+compiled versions are in sync, otherwise the importing library must be
+recompiled.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-name @var{lib}
+A library name as defined by @rnrs{6}; it is the symbolic expression:
+
+@example
+(@metao{identifier} @meta{identifier} ...)
+(@metao{identifier} @meta{identifier} ... @meta{version})
+@end example
+
+@noindent
+where the @meta{identifier} are symbols and @meta{version} is a list of
+non--negative fixnums representing the version numbers.  Library names
+can be manipulated with appropriate functions, @ref{libutils names,
+Library name utilities}.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-imp-lib* @var{lib}
+The list of @objtype{library} objects selected by the @clause{import}
+clause in the source code of @var{lib}.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-vis-lib* @var{lib}
+The list of @objtype{library} objects selecting libraries needed by the
+visit code.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-inv-lib* @var{lib}
+The list of @objtype{library} objects selecting libraries needed by the
+invoke code.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
+A subst selecting the exported bindings from the @code{export-env}.  See
+the expander's code for details.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-export-env @var{lib}
+The @code{export-env} representing the top--level bindings defined by
+the library body.  See the expander's code for details.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-visit-state @var{lib}
+When set to a procedure: it is the thunk to call to compile and evaluate
+the visit code.  When set to something else: this library has been
+already visited.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-invoke-state @var{lib}
+When set to a procedure: it is the thunk to call to compile and evaluate
+the invoke code.  When set to something else: this library has been
+already invoked.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-visit-code @var{lib}
+When @var{lib} is created from source code: this field is a core
+language symbolic expression representing the visit code.  When
+@var{lib} is created from a binary file: this field is a thunk to
+evaluate to visit the library.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-invoke-code @var{lib}
+When @var{lib} is created from source code: this field is a core
+language symbolic expression representing the invoke code.  When
+@var{lib} is created from a binary file: this field is a thunk to
+evaluate to invoke the library.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-guard-code @var{lib}
+When @var{lib} is created from source code: this field is a core
+language symbolic expression representing the guard code.  When
+@var{lib} is created from a binary file: this field is a thunk to
+evaluate to run the @syntax{stale-when} composite test expression.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-guard-lib* @var{lib}
+The list of @objtype{library} objects selecting libraries needed by the
+@syntax{stale-when} composite test expression.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-visible? @var{lib}
+A boolean determining if the library is visible.  This attribute is used
+by @func{interned-libraries} to select libraries to report as interned.
+
+A library should be marked as visible if it is meant to be imported by
+client code in ``normal'' use; unsafe libraries in the hierarchy
+@library{vicare system ---)} should @strong{not} be visible.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-source-file-name @var{lib}
+The boolean @false{} or a string representing the pathname of the file
+from which the source code of the library was read.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-option* @var{lib}
+A symbolic expression holding library options.
+@end deffn
+
+
+@defun library-loaded-from-source-file? @var{lib}
+The argument @var{lib} must be a @objtype{library} object.  Return
+@true{} if @var{lib} was loaded from a source file; otherwise return
+@false{}.
+@end defun
+
+
+@defun library-loaded-from-binary-file? @var{lib}
+The argument @var{lib} must be a @objtype{library} object.  Return
+@true{} if @var{lib} was loaded from a binary file; otherwise return
+@false{}.
+@end defun
+
+
+@defun library-descriptor @var{lib}
+Given a @objtype{library} object return an object representing the
+library descriptor.  Library descriptors are uniquely associated to a
+compiled library.
+@end defun
+
+
+@defun library-descriptor? @var{obj}
+Return @true{} if @var{obj} is a library descriptor object; otherwise
+return @false{}.
+@end defun
+
+
+@defun library-descriptor-uid @var{libdescr}
+Given a library descriptor object return the @uid{}.
+@end defun
+
+
+@defun library-descriptor-name @var{libdescr}
+Given a library descriptor object return the @rnrs{6} library name.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Library operations
+
+
+@defun invoke-library @var{lib}
+Evaluate the invoke code of the @objtype{library} object @var{lib} and
+all its dependency libraries; return unspecified values.  If we apply
+this function to @var{lib} multiple times: the code is evaluated only
+the first time; subsequent applications do nothing.
+@end defun
+
+
+@defun visit-library @var{lib}
+Evaluate the visit code of the @objtype{library} object @var{lib} and
+all its dependency libraries; return unspecified values.  If we apply
+this function to @var{lib} multiple times: the code is evaluated only
+the first time; subsequent applications do nothing.
+@end defun
+
+@c page
+@node libutils interning
+@section Interning libraries
+
+
+When a library is loaded in source or binary form, it is ``interned'';
+to intern a library means to add it to an internal collection along with
+all its dependency libraries.  Interned libraries are neither invoked
+nor visited; the invoke--time and visit--time depend upon the usage we
+make of them.
+
+In a @value{PRJNAME} process, there can be only one library with a given
+sequence of symbols in its name; if we have already loaded the library
+@library{a b (1)}, it is not possible to load a library @library{a b
+(2)}, because they have the sequence @library{a b} in common.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun interned-libraries
+@defunx interned-libraries @var{all?}
+Return a list of @objtype{library} objects representing interned
+libraries.  If @var{all?}  is non--false: return all the interned
+libraries, else return only the visible ones.
+@end defun
+
+
+@defun find-library-by-name @var{libname}
+Given a @rnrs{6} library name: try to search and intern the
+corresponding library, if it is not already interned; when successful
+return the corresponding @objtype{library} object, otherwise raise an
+exception.
+
+First search for the library among the interned ones then, if not found,
+in an external libraries repository using the procedure referenced by
+the parameter @func{current-library-loader}.
+@end defun
+
+
+@defun find-library-by-reference @var{libref}
+Given a @rnrs{6} library reference: try to search and intern the
+corresponding library, if it is not already interned; when successful
+return the corresponding @objtype{library} object, otherwise raise an
+exception.
+
+First search for the library among the interned ones then, if not found,
+in an external libraries repository using the procedure referenced by
+the parameter @func{current-library-loader}.
+@end defun
+
+
+@defun find-library-by-descriptor @var{libdescr}
+Given a library descriptor, as generated by the function
+@func{library-descriptor} (@pxref{libutils libraries,
+library-descriptor}): try to search and intern the corresponding
+library, if it is not already interned; when successful return the
+corresponding @objtype{library} object, otherwise raise an exception.
+
+First search for the library among the interned ones then, if not found,
+in an external libraries repository using the procedure referenced by
+the parameter @func{current-library-loader}.
+@end defun
+
+
+@defun find-library-in-collection-by-predicate @var{pred}
+Visit the collection of interned libraries and return the first for
+which @var{pred} returns non--false.  If @var{pred} returns @false{} for
+all the interned libraries: return @false{}.
+
+@var{pred} must be a function accepting as single argument a
+@objtype{library} object.
+@end defun
+
+
+@defun find-library-in-collection-by-name @var{libname}
+Given a symbolic expression representing a @rnrs{6} library name: visit
+the collection of interned libraries and return the first
+@objtype{library} object having conforming library name identifiers.  If
+no matching library is found: return @false{}.
+@end defun
+
+
+@defun find-library-in-collection-by-reference @var{libref}
+Given a symbolic expression representing a @rnrs{6} library reference:
+visit the collection of interned libraries and return the first
+@objtype{library} object having conforming library name identifiers.  If
+no matching library is found: return @false{}.
+@end defun
+
+
+@defun find-library-in-collection-by-descriptor @var{libdescr}
+Given a library descriptor, as generated by the function
+@func{library-descriptor}: visit the collection of interned libraries
+and return the first @objtype{library} object having the same library
+@uid{}.  If no matching library is found: @strong{raise an exception}.
+@end defun
+
+
+@defun unintern-library @var{libname}
+@defunx unintern-library @var{libname} @var{err?}
+Interned libraries can be uninterned, either to free system resources or
+to allow reinterning from new files.
+
+This function uninterns a library given its @rnrs{6} library name.  If
+@var{err?} is non--false: if the library is not currently interned an
+exception is raised; otherwise nothing happens.  Return unspecified
+values.
+
+@quotation
+@strong{NOTE} The implementation of this function is incomplete.  It is
+to be used at the @repl{} when experimenting does not hurt.
+@end quotation
+@end defun
+
+@c page
+@node libutils loading
+@section Loading libraries
+
+
+Libraries are interned using the functions @code{find-library-*},
+@ref{libutils interning, Interning libraries}.  All those functions
+first search the internal collection, then load libraries through the
+procedure referenced by the parameter @func{current-library-loader}.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter current-library-loader
+Reference a function used to load a library, either source or binary,
+given a @rnrs{6} library reference; the referenced function must intern
+the library and all its dependencies.  The parameter is used as follows:
+
+@example
+((current-library-loader) @meta{libref})
+@end example
+
+The referenced function is meant to be called after we have checked that
+a compliant library is not already interned.  The referenced function is
+allowed to return unspecified values.
+@end deffn
+
+
+@defun default-library-loader @var{libref}
+Default value for the parameter @func{current-library-loader}.  Given a
+@rnrs{6} library reference: attempt to locate the library in an external
+repository and load it; all the dependency libraries are interned.
+Return unspecified values.
+
+This function makes use of: the library locator referenced by the
+parameter @func{current-library-locator}; the source library loader
+referenced by the parameter @func{current-source-library-loader}; the
+binary library loader referenced by the parameter
+@func{current-binary-library-loader}.
+
+@var{libref} must be a library reference as defined by @rnrs{6}:
+
+@example
+(@metao{identifier} @meta{identifier})
+(@metao{identifier} @meta{identifier} ... @meta{version-reference})
+@end example
+
+@noindent
+@ref{scheme library form import} for details on library references.
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Interning source libraries
+
+Any function we set in the parameter @func{current-library-loader} can
+use the following @api{} to intern a source library.
+
+
+@deffn Parameter current-source-library-loader
+Reference a function used to load a source library from a textual input
+port.
+
+The referenced function must accept two arguments: a @rnrs{6} library
+reference, a textual input port from which the source library can be
+read.  It must: read from the port a @clause{library} symbolic
+expression; verify that its library name conforms to the library
+reference; load and intern all its dependency libraries; expand it;
+compile it; intern it.
+
+If successful the function must return a symbolic expression
+representing the @rnrs{6} library name of the loaded library; otherwise
+return @false{}.
+@end deffn
+
+
+@defun default-source-library-loader @var{libref} @var{textual-port}
+Default value for the parameter @func{current-source-library-loader}.
+Given a textual input port:
+
+@enumerate
+@item
+Read from it a @clause{library} symbolic expression.
+
+@item
+Verify that its version reference conforms to @var{libref}.
+
+@item
+Using the expander procedure referenced by
+@func{current-library-expander}: load and intern all its dependency
+libraries; expand it; compile it; intern it.
+@end enumerate
+
+If successful return a symbolic expression representing the @rnrs{6}
+library name of the loaded library; otherwise return @false{}.
+
+This function assumes that applying the function @func{port-id} to
+@var{textual-port} will return a string representing a file name
+associated to the port (or equivalent).
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Interning binary libraries
+
+Any function we set in the parameter @func{current-library-loader} can
+use the following @api{} to intern a binary library.
+
+
+@deffn Parameter current-binary-library-loader
+Reference a function used to load a binary library.
+
+The referenced function must accept two arguments: a @rnrs{6} library
+reference, a binary input port from which the serialised library can be
+read.  It must: read from the port a serialised library; verify that its
+library name conforms to the library reference; intern it along with all
+its dependency libraries.
+
+If successful the function must return a symbolic expression
+representing the @rnrs{6} library name of the interned library;
+otherwise return @false{}.
+@end deffn
+
+
+@defun default-binary-library-loader @var{libref} @var{binary-port}
+Default value for the parameter @func{current-binary-library-loader}.
+Given a binary input port: read from it a serialised library; verify
+that its version reference conforms to @var{libref}; intern it along
+with all its dependency libraries.
+
+If successful return a symbolic expression representing the @rnrs{6}
+library name of the interned library; otherwise return @false{}.
+
+This function assumes that applying the function @func{port-id} to
+@var{binary-port} will return a string representing a file name
+associated to the port (or equivalent).
+@end defun
+
+@c page
+@node libutils locating
+@section Locating libraries
+
+
+The function @func{default-library-loader} is the default value of the
+parameter @func{current-library-loader}, which is used to intern
+libraries; @ref{libutils loading, default-library-loader}.  Such default
+procedure makes use of the function referenced by the parameter
+@func{current-library-locator} to find libraries in some external
+repository.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter current-library-locator
+Hold a function used to locate a library from its @rnrs{6} library
+reference.  The selected locator function must accept as single argument
+a @rnrs{6} library reference and it must return a thunk as single value.
+@end deffn
+
+
+When invoked, the returned thunk must return two values:
+
+@itemize
+@item
+When a matching source library is found:
+
+@enumerate
+@item
+A textual input port from which the library can be read.
+
+@item
+A thunk to be called to continue the search in case the source library
+is rejected.
+@end enumerate
+
+@item
+When a matching binary library is found:
+
+@enumerate
+@item
+A binary input port from which the library can be read.
+
+@item
+A thunk to be called to continue the search in case the binary library
+is rejected.
+@end enumerate
+
+@item
+When a matching library is found and interned by the thunk itself:
+
+@enumerate
+@item
+The boolean @true{}.
+
+@item
+A thunk to be called to continue the search in case the library is
+rejected.
+@end enumerate
+
+@item
+When no matching library is found:
+
+@enumerate
+@item
+The boolean @false{}.
+
+@item
+The boolean @false{}.
+@end enumerate
+@end itemize
+
+When an input port is returned as first value: it is responsibility of
+the caller to close the returned port when no more needed; the thunk
+discharges any responsibility.
+
+When a thunk is returned as second value: it must have the same @api{}
+of the thunk returned by the locator function; the possibility to
+continue the search allows the caller to reject a library if it does not
+meet some additional constraint.
+
+The parameter is meant to be used as in the following pseudo--code:
+
+@example
+(let loop
+    ((next-locator-search ((current-library-locator) libref)))
+  (receive (rv further-locator-search)
+      (next-locator-search)
+    (cond ((binary-port?  rv)
+           (read-validate-intern-binary-library rv
+              (lambda ()
+                (loop further-locator-search))))
+          ((textual-port? rv)
+           (read-validate-intern-source-library rv
+              (lambda ()
+                (loop further-locator-search))))
+          ((and (boolean? rv) rv)
+           (library-already-interned))
+          ((not rv)
+           (no-matching-library-was-found))
+          (else
+           (assertion-violation __who__
+             "invalid return values from library locator" rv)))))
+@end example
+
+Usually the locator function visits the host file system in search of a
+file whose pathname matches the given library reference; other
+possibilities are: programmatically fabricating the library on the spot;
+downloading the library from a remote site.
+
+@c page
+@node libutils file-system
+@section Locating libraries on the file system
+
+
+The library @library{vicare libraries} exports an @api{} to configure
+and extend the process of searching for library files in source or
+binary format.  Here is an overview of the ``finding libraries''
+process:
+
+@enumerate
+@item
+To use a library we must first intern it.  Libraries are interned by the
+functions @code{find-library-*} (@pxref{libutils interning, Interning
+libraries}), which make use of the parameter
+@func{current-library-loader}.
+
+@item
+The parameter @func{current-library-loader} references a function used
+to intern libraries given a @rnrs{6} library reference (@pxref{libutils
+loading, current-library-loader}).
+
+@item
+The function @func{default-library-loader} is the default value of the
+parameter @func{current-library-loader} (@pxref{libutils loading,
+default-library-loader}).
+
+@item
+The function @func{default-library-loader} makes use of the function
+referenced by the parameter @func{current-library-locator} to find
+libraries in some external repository (@pxref{libutils locating,
+current-library-locator}).
+
+@item
+The parameter @func{current-library-locator} is usually initialised to
+one of the functions:
+
+@example
+    run-time-library-locator
+compile-time-library-locator
+      source-library-locator
+@end example
+
+@noindent
+either by default, or by direct selection with the command line option
+@option{--library-locator} (@pxref{using invoking, library-locator}).
+
+@item
+The library locators @func{run-time-library-locator},
+@func{compile-time-library-locator} and @func{source-library-locator}
+search the file system for a library file pathname matching a specified
+@rnrs{6} library reference.
+@end enumerate
+
+@menu
+* libutils file-system extensions::     File extensions.
+* libutils file-system pathnames::      Library file pathnames.
+* libutils file-system paths::          Library search paths.
+* libutils file-system binary::         Scanning the compiled
+                                        libraries path.
+* libutils file-system source::         Scanning the source
+                                        libraries path.
+* libutils file-system locators::       Library file locators.
+@end menu
+
+@c page
+@node libutils file-system extensions
+@subsection File extensions
+
+
+Usually file extensions are the tail part of a file name: everything
+after the last dot character; if the file name has no dot character: the
+extension is the empty string.  @value{PRJNAME} extends this concept by
+defining as file extensions strings that must be appended to a library
+stem to build a library pathname (@pxref{libutils file-system pathnames}
+for details on library stems).
+
+Source library file extensions are basically:
+
+@example
+.vicare.sls
+.sls
+@end example
+
+@noindent
+and, usually, @code{.sls} is used.  If the command line option
+@option{--more-file-extensions} is used, the following extensions are
+also considered:
+
+@example
+/main.vicare.sls
+/main.sls
+/main.vicare.ss
+/main.ss
+/main.vicare.scm
+/main.scm
+.vicare.ss
+.ss
+.vicare.scm
+.scm
+@end example
+
+There is a single binary library file extension: @code{.fasl}.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter library-extensions
+Hold a list of strings representing source library file name extensions,
+leading dot included.  This parameter is initialised to:
+
+@example
+(".vicare.sls" ".sls")
+@end example
+@end deffn
+
+@c page
+@node libutils file-system pathnames
+@subsection Library file pathnames
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun library-name->filename-stem @var{libname}
+@defunx library-reference->filename-stem @var{libref}
+Convert the non--empty list of identifiers from a @rnrs{6} library name
+@var{libname} or reference @var{libref} into a string representing the
+corresponding relative file pathname, without extension but including a
+leading @code{#\/} character.  Examples:
+
+@example
+(library-name->filename-stem '(alpha beta gamma (1 2 3)))
+@result{} "/alpha/beta/gamma"
+
+(library-name->filename-stem '(alpha beta main (1 2 3)))
+@result{} "/alpha/beta/main_"
+
+(library-reference->filename-stem '(alpha beta gamma ((>= 3))))
+@result{} "/alpha/beta/gamma"
+
+(library-reference->filename-stem '(alpha beta main ((>= 3))))
+@result{} "/alpha/beta/main_"
+@end example
+
+@noindent
+notice how the component @samp{main}, when appearing last, is ``quoted''
+by appending an underscore.
+
+The returned value can be used as:
+
+@itemize
+@item
+Source library name, by appending an extension like @code{.sls}.
+
+@item
+Compiled library name, by appending an extension like @code{.fasl}.
+@end itemize
+@end defun
+
+
+@defun directory+library-stem->library-source-pathname @var{directory} @var{stem}
+@defunx directory+library-stem->library-binary-pathname @var{directory} @var{stem}
+Given a string directory pathname and a string library stem: build and
+return a source or binary library file pathname.
+
+@example
+(directory+library-stem->library-source-pathname "a/b/c" "/d/e")
+@result{} "a/b/c/d/e.sls"
+
+(directory+library-stem->library-binary-pathname "a/b/c" "/d/e")
+@result{} "a/b/c/d/e.fasl"
+@end example
+@end defun
+
+
+@defun library-name->library-binary-pathname-in-build-directory @var{libname}
+@defunx library-reference->library-binary-pathname-in-build-directory @var{libref}
+Given a @rnrs{6} compliant library name or reference: build and return a
+string representing the pathname of a binary library in the current
+build directory.  The current build directory is the pathname currently
+referenced by the parameter @func{compiled-libraries-build-directory}.
+
+@example
+(parametrise ((compiled-libraries-build-directory "/a/b"))
+   (library-name->library-binary-pathname-in-build-directory
+      '(c d (1 2 3))))
+@result{} "/a/b/c/d.fasl"
+
+(parametrise ((compiled-libraries-build-directory "/a/b"))
+   (library-reference->library-binary-pathname-in-build-directory
+      '(c d ((>= 2)))))
+@result{} "/a/b/c/d.fasl"
+@end example
+@end defun
+
+
+@defun library-source-pathname->library-stem-pathname @var{source-pathname}
+Given a string representing the file pathname of a source library: strip
+the file extensions if it is equal to a supported @value{PRJNAME} file
+extension and return the result.  If the file extension is not
+recognised: return @var{source-pathname} itself.
+
+@example
+(library-source-pathname->library-stem-pathname "a/b/c.sls")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.vicare.sls")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.scm")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.ss")
+@result{} "a/b/c"
+
+(library-source-pathname->library-stem-pathname "a/b/c.ciao")
+@result{} "a/b/c.ciao"
+@end example
+@end defun
+
+
+@defun library-source-pathname->library-binary-tail-pathname @var{source-pathname}
+Given a string representing the file pathname of a source library: strip
+the file extension if it is equal to a supported @value{PRJNAME} file
+extension, append the binary library extension and return the result.
+If the file extension is not recognised: return @var{source-pathname}
+itself with the binary library extension appended.
+
+@example
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.sls")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.vicare.sls")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.scm")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.ss")
+@result{} "a/b/c.fasl"
+
+(library-source-pathname->library-binary-tail-pathname
+   "a/b/c.ciao")
+@result{} "a/b/c.ciao.fasl"
+@end example
+@end defun
+
+@c page
+@node libutils file-system paths
+@subsection Library search paths
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter library-binary-search-path
+Hold a list of strings representing relative or absolute directory
+pathnames; the strings must represent syntactically valid pathname
+specifications, but the directories might not exist.  The list is used
+as search path for binary libraries serialised in @fasl{} files,
+iterating from head to tail.
+
+Files in the binary search path have pathnames formed by appending a
+binary library file extension to the library stem and prepending a
+directory from the search path to the result.  Such pathnames can be
+constructed as follows:
+
+@example
+(define dir-pathname
+  (car (library-binary-search-path)))
+
+(define libstem
+  (library-reference->filename-stem @meta{libref}))
+
+(define binary-pathname
+  (directory+library-stem->library-binary-pathname
+     dir-pathname libstem))
+@end example
+
+The value of the parameter @func{library-binary-search-path} is composed
+as follows:
+
+@enumerate
+@item
+The parameter is initialised to a list of directory pathnames built at
+package configuration time; the list contains:
+
+@example
+$(libdir)/vicare-scheme
+@end example
+
+@noindent
+on 64-bit @gnu{}+Linux systems, it is usually:
+
+@example
+/usr/local/lib64/vicare-scheme
+@end example
+
+@noindent
+and on 32-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib/vicare-scheme
+@end example
+
+@item
+@cindex @env{VICARE_LIBRARY_PATH}, system environment variable
+@cindex Environment variable @env{VICARE_LIBRARY_PATH}
+@cindex System environment variable @env{VICARE_LIBRARY_PATH}
+At the beginning of execution @value{PRJNAME} consults the environment
+variable @env{VICARE_LIBRARY_PATH}; when set, it is expected to hold a
+colon separated list of directory pathnames, in Unix--style.  The list
+is parsed and the directories are pepended, in the given order, in
+@func{library-binary-search-path}.
+
+@item
+If the option @option{-L} or @option{--library-path} is present on the
+command line one or more time: every option's value is expected to be a
+string representing a directory pathname.  Such pathnames are prepended,
+in the given order, to @func{library-binary-search-path}.
+
+@item
+While @value{EXECUTABLE} is running: we can modify at will the content
+of @func{library-binary-search-path}.
+@end enumerate
+@end deffn
+
+@c ------------------------------------------------------------
+
+@deffn Parameter library-source-search-path
+Hold a list of strings representing relative or absolute directory
+pathnames; the strings must represent syntactically valid pathname
+specifications, but the directories might not exist.  The list is used
+as search path for source libraries stored in text files (in @ascii{} or
+@utf{}-8 format), iterating from head to tail.
+
+Files in the source search path have pathnames formed by appending a
+source library file extension to the library stem and prepending a
+directory from the search path to the result.  Such pathnames can be
+constructed as follows:
+
+@example
+(define dir-pathname
+  (car (library-binary-search-path)))
+
+(define libstem
+  (library-name->filename-stem @meta{libname}))
+
+(define source-pathname
+  (directory+library-stem->library-source-pathname
+     dir-pathname libstem))
+@end example
+
+The value of the parameter @func{library-source-search-path} is composed
+as follows:
+
+@enumerate
+@item
+The parameter is initialised to the empty list.
+
+@item
+@cindex @env{VICARE_SOURCE_PATH}, system environment variable
+@cindex Environment variable @env{VICARE_SOURCE_PATH}
+@cindex System environment variable @env{VICARE_SOURCE_PATH}
+At the beginning of execution, @value{PRJNAME} consults the environment
+variable @env{VICARE_SOURCE_PATH}; when set, it is expected to hold a
+colon separated list of directory pathnames, in Unix--style.  The list
+is parsed and the directories are prepended, in the given order, to
+@func{library-source-search-path}.
+
+@item
+If the option @option{--source-path} is present on the command line one
+or more time: every option's value is expected to be a string
+representing a directory pathname.  Such pathnames are prepended, in the
+given order, to @func{library-source-search-path}.
+
+@item
+While @value{EXECUTABLE} is running: we can modify at will the content
+of @func{library-source-search-path}.
+@end enumerate
+@end deffn
+
+@c page
+@node libutils file-system binary
+@subsection Scanning the compiled libraries path
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter current-library-binary-search-path-scanner
+Hold a function used to convert a @rnrs{6} library reference into the
+corresponding compiled library file pathname in the search path
+specified by the parameter @func{library-binary-search-path}.
+
+The referenced function must accept, as single value, a @rnrs{6} library
+reference and it must return two values.  When successful: a string
+representing the @fasl{} file pathname; a thunk to be called to continue
+the search from the next directory in the search path.  When no matching
+library is found: it must return @false{} and @false{}.
+
+This parameter can be used as follows:
+
+@lisp
+(define scanner
+  (current-library-binary-search-path-scanner))
+
+(let loop ((next-file-match (lambda ()
+                              (scanner libref))))
+  (receive (pathname further-file-match)
+      (next-file-match)
+    (if pathname
+        (if (valid-library? pathname)
+            (use-the-library pathname)
+          (loop further-file-match))
+      (search-failed))))
+@end lisp
+@end deffn
+
+
+@defun default-library-binary-search-path-scanner @var{libref}
+Default value for the parameter
+@func{current-library-binary-search-path-scanner}.  Given a @rnrs{6}
+library reference: scan the search path specified by the parameter
+@func{library-binary-search-path} for the corresponding file.
+
+Return two values.  When successful: a string representing the file
+pathname; a thunk to be called to continue the search from the next
+directory in the search path.  When no matching library is found: return
+@false{} and @false{}.
+
+The file pathname is built using the stem returned by
+@func{library-reference->filename-stem}.  Notice that the file pathnames
+built by this function have no version number embedded in the pathname;
+if we want to search for a binary file with version number included: we
+must set the parameter @func{current-library-binary-search-path-scanner}
+to a different function.
+@end defun
+
+@c page
+@node libutils file-system source
+@subsection Scanning the source libraries path
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter current-library-source-search-path-scanner
+Hold a function used to convert a @rnrs{6} library reference into the
+corresponding source library file pathname in the search path specified
+by the parameter @func{library-source-search-path}.
+
+The referenced function must accept, as single value, a @rnrs{6} library
+reference and it must return two values.  When successful: a string
+representing the source file pathname; a thunk to be called to continue
+the search from the next directory in the search path.  Otherwise it
+must return @false{} and @false{}.
+
+This parameter can be used as follows:
+
+@lisp
+(define scanner
+  (current-library-source-search-path-scanner))
+
+(let loop ((next-file-match (lambda ()
+                              (scanner libref))))
+  (receive (pathname further-file-match)
+      (next-file-match)
+    (if pathname
+        (if (valid-library? pathname)
+            (use-the-library pathname)
+          (loop further-file-match))
+      (search-failed))))
+@end lisp
+@end deffn
+
+
+@defun default-library-source-search-path-scanner @var{libref}
+Default value for the parameter
+@func{current-library-source-search-path-scanner}.  Given a @rnrs{6}
+library reference: scan the source library search path for the
+corresponding file.
+
+Return two values.  When successful: a string representing the source
+file pathname; a thunk to be called to continue the search from the next
+directory in the search path.  Otherwise it must return @false{} and
+@false{}.
+
+The file pathname is built using the stem returned by
+@func{library-reference->filename-stem}.  Notice that the file pathnames
+built by this function have no version number embedded in the pathname;
+if we want to search for a source file with version number included: we
+must set the parameter @func{current-library-source-search-path-scanner}
+to a different function.
+@end defun
+
+@c page
+@node libutils file-system locators
+@subsection Library file locators
+
+
+@menu
+* libutils file-system locators run::     Run-time library file locator.
+* libutils file-system locators compile:: Compile-time library file locator.
+* libutils file-system locators source::  Source library file locator.
+@end menu
+
+@c page
+@node libutils file-system locators run
+@subsubsection Run--time library file locator
+
+
+The run--time library locator is the default; it can be selected
+explicitly with the command line option @code{--library-locator
+run-time} or by setting the parameter @func{current-library-locator} to
+@func{run-time-library-locator}; it is meant to be used by an
+installation of @value{PRJNAME} to run applications.  The reference
+scenario for the run--time library locator is this:
+
+@enumerate
+@item
+We install the package @value{PACKAGE}, compiling bundled libraries and
+putting them in some system directory; the libraries might be installed
+with pathnames like:
+
+@center @file{/usr/local/lib/vicare-scheme/vicare/posix.fasl}
+
+@item
+We install additional packages, compiling distributed libraries and
+putting them in some system directory; the libraries might be installed
+with pathnames like:
+
+@center @file{/usr/local/lib/vicare-scheme/vicare/something.fasl}
+
+@item
+We configure the library binary search path to make sure that it
+includes the system directory:
+
+@lisp
+(library-binary-search-path)
+@result{} (... "/usr/local/lib/vicare-scheme" ...)
+@end lisp
+
+@item
+We configure the library binary file scanner parameter:
+
+@lisp
+(current-library-binary-search-path-scanner
+   default-library-binary-search-path-scanner)
+@end lisp
+
+@noindent
+which will scan the search path returned by
+@code{(library-binary-search-path)}.
+
+@item
+We compose a Scheme program @file{demo.sps} which imports the libraries:
+
+@lisp
+(import (vicare)
+  (prefix (vicare posix) px.)
+  (vicare something))
+@end lisp
+
+@noindent
+and we execute it selecting the run--time library locator:
+
+@example
+$ vicare --library-locator run-time --r6rs-script demo.sps
+@end example
+
+@noindent
+the command line option @option{--library-locator} will put
+@func{run-time-library-locator} in the parameter
+@func{current-library-locator}.
+@end enumerate
+
+@noindent
+the result is that @value{PRJNAME} will search the binary libraries
+search path for library files.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun run-time-library-locator @var{libref}
+Possible value for the parameter @func{current-library-locator}; this
+function is meant to be used to search for libraries when running an
+application.
+
+Given a @rnrs{6} library reference: return a thunk to be used to start
+the search for a matching library.  The returned thunk scans the search
+path for compiled libraries in search of a matching binary file; if a
+matching compiled library is not found: it scans the search path for
+source libraries in search of a matching source file.
+
+When successful the returned thunk returns 2 values:
+
+@enumerate
+@item
+An input port from which the library can be read; if the port is binary:
+a compiled library can be read from it; if the port is textual a source
+library can be read from it.  It is responsibility of the caller to
+close the returned port when no more needed.
+
+@item
+A thunk to be called to continue the search.  This thunk allows the
+caller to reject a library if it does not meet some additional
+constraints; for example: if its version number does not conform to
+@var{libref}.
+@end enumerate
+
+When no matching library is found: the returned thunk returns @false{}
+and @false{}.
+@end defun
+
+@c page
+@node libutils file-system locators compile
+@subsubsection Compile--time library file locator
+
+
+The compile--time library locator must be selected explicitly with the
+command line option @code{--library-locator compile-time} or by setting
+the parameter @func{current-library-locator} to
+@func{compile-time-library-locator}; it is meant to be used from the
+build directory of a package while compiling libraries for development
+or future installation.  The reference scenario for the compile--time
+library locator is this:
+
+@enumerate
+@item
+We install the package @value{PACKAGE}, compiling bundled libraries and
+putting them in some system directory; the libraries might be installed
+with pathnames like:
+
+@center @file{/usr/local/lib/vicare-scheme/vicare/posix.fasl}
+
+@item
+We install additional packages, compiling distributed libraries and
+putting them in some system directory; the libraries might be installed
+with pathnames like:
+
+@center @file{/usr/local/lib/vicare-scheme/vicare/something.fasl}
+
+@item
+We unpack the distribution tarball of a package providing even more
+libraries.  We have the source libraries under:
+
+@example
+$(srcdir)/lib/vicare/this.sls
+$(srcdir)/lib/vicare/that.sls
+@end example
+
+@noindent
+we want to compile them under the build directory:
+
+@example
+$(builddir)/lib/vicare/this.fasl
+$(builddir)/lib/vicare/that.fasl
+@end example
+
+@noindent
+and then install them in a system directory:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/this.fasl
+/usr/local/lib/vicare-scheme/vicare/that.fasl
+@end example
+
+In the package's building infrastructure (for example a Makefile managed
+by the @gnu{} Autotools) we need to write appropriate invocations of
+@value{EXECUTABLE} to build the libraries locally and pick the
+appropriate source libraries and compiled libraries.
+
+@item
+It may be that the libraries in the source tree need to load installed
+libraries and also have local dependencies:
+
+@lisp
+(library (vicare this)
+  (export)
+  (import (vicare)
+    (vicare that))
+  ---)
+
+(library (vicare that)
+  (export)
+  (import (vicare)
+    (prefix (vicare posix) px.)
+    (vicare something))
+  ---)
+@end lisp
+
+@item
+It may be that an older version of the package is already installed, so
+there already exist installed binary libraries:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/this.fasl
+/usr/local/lib/vicare-scheme/vicare/that.fasl
+@end example
+
+@noindent
+we want the libraries under @code{$(builddir)/lib} to take precedence
+over the libraries under @file{/usr/@/local/@/lib/@/vicare-scheme}.  It
+may be that there exist installed source libraries:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/this.sls
+/usr/local/lib/vicare-scheme/vicare/that.sls
+@end example
+
+@noindent
+we want the libraries under @code{$(srcdir)/lib} to take precedence over
+the libraries under @file{/usr/@/local/@/lib/@/vicare-scheme}.
+@end enumerate
+
+At the Scheme level we want the following:
+
+@itemize
+@item
+Configure the library source search path to include only the local
+source directory:
+
+@lisp
+(library-source-search-path)
+@result{} ("$(srcdir)/lib")
+@end lisp
+
+@item
+Configure the library binary search path to include the system
+directory:
+
+@lisp
+(library-binary-search-path)
+@result{} (... "/usr/local/lib/vicare-scheme" ...)
+@end lisp
+
+@item
+Configure the build directory to reference the local build directory:
+
+@lisp
+(compiled-libraries-build-directory)
+@result{} "$(builddir)/lib
+@end lisp
+
+@item
+Configure the library binary file scanner parameter:
+
+@lisp
+(current-library-binary-search-path-scanner
+   default-library-binary-search-path-scanner)
+@end lisp
+
+@noindent
+which will scan the search path returned by
+@code{(library-binary-search-path)}.
+
+@item
+Configure the library source file scanner parameter:
+
+@lisp
+(current-library-source-search-path-scanner
+   default-library-source-search-path-scanner)
+@end lisp
+
+@noindent
+which will scan the search path returned by
+@code{(library-source-search-path)}.
+
+@item
+Configure the library locator parameter:
+
+@lisp
+(current-library-locator compile-time-library-locator)
+@end lisp
+
+@noindent
+which implements the appropriate policy.
+@end itemize
+
+Assuming Makefiles generated by @gnu{} Automake: to achieve the desired
+result, we have two options:
+
+@enumerate
+@item
+For every library to be compiled locally, we write in the Makefile an
+explicit dependency rule:
+
+@example
+lib/vicare/that.fasl: lib/vicare/that.sls
+        VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH;    \
+        vicare --library-locator compile-time              \
+           --library-path    /usr/local/lib/vicare-scheme  \
+           --source-path     $(srcdir)/lib                 \
+           --build-directory $(builddir)/lib               \
+           -o $@@ -c $<
+
+lib/vicare/this.fasl: lib/vicare/this.sls lib/vicare/that.fasl
+        VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH;    \
+        vicare --library-locator compile-time              \
+           --library-path    /usr/local/lib/vicare-scheme  \
+           --source-path     $(srcdir)/lib                 \
+           --build-directory $(builddir)/lib               \
+           -o $@@ -c $<
+@end example
+
+@noindent
+this is the solution to prefer, because it allows parallel builds.
+
+@item
+We write a script @file{compile-all.sps} that imports at least the local
+libraries that are leaves in the local package dependency tree:
+
+@lisp
+(import (only (vicare that))
+        (only (vicare this)))
+@end lisp
+
+@noindent
+write a single Makefile rule that compiles in the build directory all
+the dependencies of the script:
+
+@example
+.PHONY: vfasl
+
+vfasl:
+        VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH;    \
+        vicare --library-locator compile-time              \
+           --library-path    /usr/local/lib/vicare-scheme  \
+           --source-path     $(srcdir)/lib                 \
+           --build-directory $(builddir)/lib               \
+           --compile-dependencies compile-all.sps
+@end example
+@end enumerate
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun compile-time-library-locator @var{libref}
+Possible value for the parameter @func{current-library-locator}; this
+function is meant to be used to search for libraries to be compiled for
+installation.
+
+Given a @rnrs{6} library reference: return a thunk to be used to start
+the search for a matching library.  The search for source libraries is
+performed using the library source file scanner in
+@func{current-library-source-search-path-scanner}.  The search for
+compiled libraries is performed using the library binary file scanner in
+@func{current-library-binary-search-path-scanner}.
+
+The returned thunk does the following:
+
+@enumerate
+@item
+Ask the library source file scanner for the next matching source file.
+
+@item
+If a matching source is found: look for an already compiled library file
+in the @func{compiled-libraries-build-directory}:
+
+@enumerate a
+@item
+If no compiled file exists or it if exists but it is older than the
+source file: accept the source file as matching.
+
+@item
+If a compiled file exists and it is newer than the source file: accept
+the compiled file as matching.
+
+@item
+Return to the caller the matching file pathname.
+
+@item
+If the caller rejects the binary file pathname: return to the caller the
+source file pathname.
+
+@item
+If the caller rejects the source file: loop to 1.
+@end enumerate
+
+@item
+If no source file exists: loop to 1.
+@end enumerate
+
+Remember that the binary file can be rejected if it has been compiled by
+another boot image or it has the wrong library @uid{}.
+
+When successful (a source or binary file matching @var{libref} is found)
+the returned thunk returns 2 values:
+
+@enumerate
+@item
+An input port.  If the port is binary: a compiled library can be read
+from it.  If the port is textual: a source library can be read from it.
+It is responsibility of the caller to close the returned port when no
+more needed.
+
+@item
+A thunk to be called to continue the search.  This thunk allows the
+caller to reject a library if it does not meet some additional
+constraint; for example: if its version number does not conform to
+@var{libref}.
+@end enumerate
+
+When no matching library is found: the returned thunk returns @false{}
+and @false{}.
+@end defun
+
+@c page
+@node libutils file-system locators source
+@subsubsection Source library file locator
+
+
+The source library locator must be selected explicitly with the command
+line option @code{--library-locator source} or by setting the parameter
+@func{current-library-locator} to @func{source-library-locator}; it is
+meant to be used to search for source libraries first and then for
+compiled ones.  The reference scenario for the source library locator is
+this:
+
+@enumerate
+@item
+We install the package @value{PACKAGE}, compiling bundled libraries and
+putting them in some system directory; the libraries might be installed
+with pathnames like:
+
+@center @file{/usr/local/lib/vicare-scheme/vicare/posix.fasl}
+
+@item
+We install additional packages, compiling distributed libraries and
+putting them in some system directory; the libraries might be installed
+with pathnames like:
+
+@center @file{/usr/local/lib/vicare-scheme/vicare/something.fasl}
+
+@item
+We checkout the source tree of a package repository to develop even more
+libraries.  We have the source libraries under:
+
+@example
+$(srcdir)/lib/vicare/this.sls
+$(srcdir)/lib/vicare/that.sls
+@end example
+
+@noindent
+we want to compile them under the build directory:
+
+@example
+$(builddir)/lib/vicare/this.fasl
+$(builddir)/lib/vicare/that.fasl
+@end example
+
+@noindent
+and then install them in a system directory:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/this.fasl
+/usr/local/lib/vicare-scheme/vicare/that.fasl
+@end example
+
+In the package's building infrastructure (for example a Makefile managed
+by the @gnu{} Autotools) we need to write appropriate invocations of
+@value{EXECUTABLE} to build the libraries locally and pick the
+appropriate source libraries and compiled libraries.
+
+This is the gist: we want to automatically generate an include Makefile
+holding the compilation and installation recipes correctly describing
+the dependencies among libraries.  For this we need to load all the
+source libraries in the package's source tree.
+
+@item
+It may be that the libraries in the source tree need to load installed
+libraries and also have local dependencies:
+
+@lisp
+(library (vicare this)
+  (export)
+  (import (vicare)
+    (vicare that))
+  ---)
+
+(library (vicare that)
+  (export)
+  (import (vicare)
+    (prefix (vicare posix) px.)
+    (vicare something))
+  ---)
+@end lisp
+
+@item
+It may be that an older version of the package is already installed, so
+there already exist installed binary libraries:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/this.fasl
+/usr/local/lib/vicare-scheme/vicare/that.fasl
+@end example
+
+@noindent
+we want these installed libraries to be ignored.  It may be that there
+exist installed source libraries:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/this.sls
+/usr/local/lib/vicare-scheme/vicare/that.sls
+@end example
+
+@noindent
+we want the libraries under @code{$(srcdir)/lib} to take precedence over
+the libraries under @file{/usr/@/local/@/lib/@/vicare-scheme}.
+@end enumerate
+
+At the Scheme level we want the following:
+
+@itemize
+@item
+Configure the library source search path to include only the local
+source directory:
+
+@lisp
+(library-source-search-path)
+@result{} ("$(srcdir)/lib")
+@end lisp
+
+@item
+Configure the library binary search path to include the system
+directory:
+
+@lisp
+(library-binary-search-path)
+@result{} (... "/usr/local/lib/vicare-scheme" ...)
+@end lisp
+
+@item
+Configure the library binary file scanner parameter:
+
+@lisp
+(current-library-binary-search-path-scanner
+    default-library-binary-search-path-scanner)
+@end lisp
+
+@noindent
+which will scan the search path returned by
+@code{(library-binary-search-path)}.
+
+@item
+Configure the library source file scanner parameter:
+
+@lisp
+(current-library-source-search-path-scanner
+    default-library-source-search-path-scanner)
+@end lisp
+
+@noindent
+which will scan the search path returned by
+@code{(library-source-search-path)}.
+
+@item
+Configure the library locator parameter:
+
+@example
+(current-library-locator source-library-locator)
+@end example
+
+@noindent
+which implements the appropriate policy.
+@end itemize
+
+To achieve the desired result, in the Makefile we write rules as
+follows:
+
+@example
+.PHONY: dependencies
+
+DEPSCRIPT = $(srcdir)/scripts/build-makefile-rules.sps
+
+dependencies:
+        VICARE_SOURCE_PATH=; export VICARE_SOURCE_PATH; \
+        vicare --library-locator source                 \
+          --library-path /usr/local/lib/vicare-scheme   \
+          --source-path  $(srcdir)/lib                  \
+          --r6rs-script  $(DEPSCRIPT) --                \
+          $(slsdir)/libraries.scm >$(slsdir)/dependencies.make
+@end example
+
+@noindent
+where the executed Scheme script generates the Makefile rules
+automatically.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun source-library-locator @var{libref}
+Possible value for the parameter @func{current-library-locator}; this
+function is meant to be used to search for source libraries first and
+for binary libraries later.
+
+Given a @rnrs{6} library reference: return a thunk to be used to start
+the search for a matching library.  The returned thunk uses the current
+source library scanner referenced by
+@func{current-library-source-search-path-scanner}, with the purpose of
+finding a library file that matches a given @rnrs{6} library reference.
+If no source library is found: the current binary library scanner
+referenced by @func{current-library-binary-search-path-scanner} is used.
+
+When successful the returned thunk returns 2 values:
+
+@enumerate
+@item
+An input port.  If it is a textual input port: a source library can be
+read from it.  If it is a binary input port: a binary library can be
+read from it.  It is responsibility of the caller to close the returned
+port when no more needed.
+
+@item
+A thunk to be called to continue the search.  This thunk allows the
+caller to reject a library if it does not meet some additional
+constraint; for example: if its version number does not conform to
+@var{libref}.
+@end enumerate
+
+When no matching library is found: the returned thunk returns @false{}
+and @false{}.
+@end defun
+
+@c page
+@node libutils compiling
+@section Compiling libraries
+
+
+@menu
+* libutils compiling special::  Special directories.
+@end menu
+
+@c page
+@node libutils compiling special
+@subsection Special directories
+
+
+@menu
+* libutils compiling special build::  The build directory.
+@end menu
+
+@c page
+@node libutils compiling special build
+@subsubsection The build directory
+
+
+@cindex Build directory
+@cindex Directory, build
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter compiled-libraries-build-directory
+Hold @false{} or a string representing the absolute or relative pathname
+of a directory; the string must represent a syntactically valid
+pathname, but the directory might not exist.  The build directory is
+meant to be used when compiling libraries in the build directory of a
+source package for later installation.
+
+When the selected library locator is @code{compile-time}: the store
+directory is used to search for compiled libraries.  It is an error if
+the library locator is @code{compile-time} and no build directory is
+selected.
+
+Under the build directory: @fasl{} files are stored with pathnames
+composed from the library stem, which is generated from the library
+name.  For example, if the build directory is @code{$(builddir)/lib} the
+source library:
+
+@example
+$(srcdir)/lib/vicare/posix.sls
+@end example
+
+@noindent
+is stored as:
+
+@example
+$(builddir)/lib/vicare/posix.fasl
+@end example
+
+Such pathnames can be built as follows:
+
+@smallexample
+(define binary-pathname-0
+  (library-name->library-binary-pathname-in-build-directory
+    @meta{libname}))
+
+(define binary-pathname-1
+  (library-reference->library-binary-pathname-in-build-directory
+    @meta{libref}))
+@end smallexample
+
+The value of the parameter @func{compiled-libraries-build-directory} is
+composed as follows:
+
+@enumerate
+@item
+The parameter is initialised to @false{}.
+
+@item
+@cindex @env{VICARE_STORE_DIRECTORY}, system environment variable
+@cindex Environment variable @env{VICARE_STORE_DIRECTORY}
+@cindex System environment variable @env{VICARE_STORE_DIRECTORY}
+If the environment variable @env{VICARE_STORE_DIRECTORY} is set and
+holding an valid directory pathname: select its value as parameter
+value; the directory itself might not exist.
+
+@item
+If the option @option{--build-directory} is present on the command line:
+its value is expected to be a string representing a directory pathname,
+otherwise an error is raised; the directory itself might not exist.
+Such pathname becomes the value of
+@func{compiled-libraries-build-directory}.
+
+@item
+While @value{EXECUTABLE} is running: we can modify at will the content
+of @func{compiled-libraries-build-directory}.
+@end enumerate
+@end deffn
+
+@c page
+@node libutils programs
+@section Handling programs
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun program-source-pathname->program-binary-pathname @var{source-pathname}
+Given a string representing the pathname of a Scheme program: build and
+return the pathname of the corresponding compiled program.
+
+If @var{source-pathname} has file extension @code{.sps}: strip such
+extension; otherwise append the extension @code{.fasl}.
+
+@example
+(program-source-pathname->program-binary-pathname
+   "demo.sps")
+@result{} "demo"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.sps")
+@result{} "tests/demo"
+
+(program-source-pathname->program-binary-pathname
+   "demo.ciao")
+@result{} "demo.ciao.fasl"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.ciao")
+@result{} "tests/demo.ciao.fasl"
+@end example
+@end defun
+
+@c page
+@node libutils include
+@section Loading include files
+
+
+@cindex Include files
+@cindex Loading include files
+
+
+Include files are loaded by the syntax @syntax{include}; the syntax
+implementation makes use of the bindings described in this section.
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@deffn Parameter current-include-loader
+Hold a function used to load an include file.  The referenced function
+is called as follows:
+
+@example
+((current-include-loader) @meta{include-pathname} @meta{verbose} @meta{synner})
+@end example
+
+@noindent
+where: @meta{include-pathname} must be a string representing an absolute
+or relative pathname; @meta{verbose} can be any value; @meta{synner}
+must be a procedure used to raise an exception when an error occurs:
+
+@example
+(@meta{synner} @meta{message-string} @meta{irritants})
+@end example
+
+When successful, the referenced function must return two values: the
+absolute pathname from which the file was loaded, a symbolic expression
+representing the file contents (usually such expression is generated by
+the reader).  When an error occurs: call the procedure @meta{synner},
+which is meant to raise an exception.
+
+If @meta{verbose} is non--false: the referenced function must display
+verbose messages on the current error port describing the including
+process.
+@end deffn
+
+
+@defun default-include-loader @var{include-pathname} @var{verbose?} @var{synner}
+Default value for the parameter @func{current-include-loader}.  Search
+an include file with name @func{include-pathname}.  When successful
+return two values: the absolute pathname from which the file was loaded,
+a symbolic expresison representing the file contents.  When an error
+occurs: call the procedure @var{synner}, which is meant to raise an
+exception.
+
+If @var{verbose?}  is non--false: display verbose messages on the
+current error port describing the including process.
+
+The include file is searched using the procedure referenced by the
+parameter @func{current-include-file-locator}.  The file is loaded using
+the procedure referenced by the parameter
+@func{current-include-file-loader}.
+@end defun
+
+
+@deffn Parameter current-include-file-locator
+Hold a function used to convert an include file name into the
+corresponding file pathname.  The referenced function must accept three
+arguments: a string representing the include file name; a boolean, true
+if the process of loading must display verbose messages on the current
+error port; a synner function used to report errors.
+
+The synner function is called as:
+
+@example
+(synner @meta{error-message} @meta{irritants})
+@end example
+@end deffn
+
+
+@deffn Parameter current-include-file-loader
+Hold a function used to load an include file.  The referenced function
+must accept two arguments: a string representing an existent file
+pathname; a synner function used to report errors.
+
+The synner function is called as:
+
+@example
+(synner @meta{error-message} @meta{irritants})
+@end example
+@end deffn
+
+
+@defun default-include-file-locator @var{include-pathname} @var{synner}
+Default value for the parameter @func{current-include-file-locator}.
+Given a string @var{include-pathname}, which must represent an absolute
+or relative file pathname, convert it into the absolute pathname of an
+existing file, as string.  Return the absolute string pathname.
+
+If @var{include-pathname} is a relative pathname: the file is searched
+in the search path represented by @func{library-source-search-path}, by
+appending @var{include-pathname} to the directories in the search path.
+
+@var{synner} must be a procedure used to raise an exception when an
+error occurs.
+@end defun
+
+
+@defun default-include-file-loader @var{include-pathname} @var{synner}
+Default value for the parameter @func{current-include-file-loader}.
+Open the file @var{include-pathname}, read all the datums and return
+them.  If an error occurs call @var{synner}.  The returned contents must
+be a list of annotated symbolic expressions as generated by the reader.
+@end defun
+
+@c end of file

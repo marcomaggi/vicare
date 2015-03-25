@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (ikarus system $fx)
+  (vicare system $fx)
   (vicare language-extensions syntaxes)
   (only (vicare platform words)
 	case-word-size)
@@ -63,6 +63,17 @@
     => (case-word-size
 	((32)	30)
 	((64)	61)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'compar))
+
+  (check-for-true	(fx!=? 1 2))
+  (check-for-false	(fx!=? 1 1))
+
+  (check-for-true	(fx!= 1 2))
+  (check-for-false	(fx!= 1 1))
 
   #t)
 
@@ -221,7 +232,21 @@
   #t)
 
 
-(parametrise ((check-test-name	'unsafe))
+(parametrise ((check-test-name	'conversion))
+
+  (check (fixnum->char 65)	=> #\A)
+  (check (fixnum->char 66)	=> #\B)
+
+  (check (char->fixnum #\A)	=> 65)
+  (check (char->fixnum #\B)	=> 66)
+
+  (check (fixnum->string 65)	=> "65")
+  (check (fixnum->string 66)	=> "66")
+
+  #t)
+
+
+(parametrise ((check-test-name	'predicates))
 
   (check (fxnonpositive? 0)		=> #t)
   (check (fxnonpositive? +123)		=> #f)
@@ -230,6 +255,28 @@
   (check (fxnonnegative? 0)		=> #t)
   (check (fxnonnegative? +123)		=> #t)
   (check (fxnonnegative? -123)		=> #f)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (positive-fixnum? +123))
+  (check-for-false (positive-fixnum? 0))
+  (check-for-false (positive-fixnum? -123))
+  (check-for-false (positive-fixnum? "ciao"))
+
+  (check-for-true  (negative-fixnum? -123))
+  (check-for-false (negative-fixnum? 0))
+  (check-for-false (negative-fixnum? +123))
+  (check-for-false (negative-fixnum? "ciao"))
+
+  (check-for-true  (non-positive-fixnum? 0))
+  (check-for-true  (non-positive-fixnum? -123))
+  (check-for-false (non-positive-fixnum? +123))
+  (check-for-false (non-positive-fixnum? "ciao"))
+
+  (check-for-true  (non-negative-fixnum? 0))
+  (check-for-true  (non-negative-fixnum? +123))
+  (check-for-false (non-negative-fixnum? -123))
+  (check-for-false (non-negative-fixnum? "ciao"))
 
 ;;; --------------------------------------------------------------------
 

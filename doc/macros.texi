@@ -118,6 +118,10 @@ Revised^6 Report on the algorithmic language Scheme
 \NAME\
 @end macro
 
+@macro syntax{NAME}
+@code{\NAME\}
+@end macro
+
 @macro clause{NAME}
 @code{\NAME\}
 @end macro
@@ -414,6 +418,10 @@ Revised^6 Report on the algorithmic language Scheme
 
 @macro vicareref{NODE, TITLE}
 @ref{\NODE\,\TITLE\,\TITLE\,vicare-scheme}
+@end macro
+
+@macro vicarepref{NODE, TITLE}
+@pxref{\NODE\,\TITLE\,\TITLE\,vicare-scheme}
 @end macro
 
 @macro libsref{NODE, TITLE}

@@ -899,7 +899,8 @@ expression.
 
 The branch is chosen according to the following table:
 
-@multitable @columnfractions .33 .33 .33
+@multitable {@func{if-not=?}} {@math{C \in @{-1, +1@}}} {@math{C \in @{-1, +1@}}}
+@c @columnfractions .33 .33 .33
 @headitem
 @tab @meta{consequent}
 @tab @meta{alternate}

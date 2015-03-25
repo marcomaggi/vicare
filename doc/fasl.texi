@@ -176,14 +176,33 @@ the @samp{x} header:
 @enumerate
 @item
 An exact integer representing the number of bytes actually used in the
-data area of the code object.  On 32-bit platforms: a big endian 32-bit
-integer.  On 64-bit platforms: a sequence of two big endian 32-bit
-integers.
+data area of the code object; this is the number of bytes used by the
+executable machine code.
+
+@itemize
+@item
+On 32-bit platforms: a big endian 32-bit raw integer.
+
+@item
+On 64-bit platforms: a sequence of two big endian 32-bit raw integers;
+the first integer represents the least significant 32 bits, the second
+integer represents the most significant 32 bits.
+@end itemize
 
 @item
 An exact integer representing the number of free variables in the code.
-On 32-bit platforms: a big endian 32-bit integer.  On 64-bit platforms:
-a sequence of two big endian 32-bit integers.
+
+@itemize
+@item
+On 32-bit platforms: a big endian 32-bit integer representing the
+fixnum.
+
+@item
+On 64-bit platforms: a sequence of two big endian 32-bit integers
+representing the fixnum; the first integer represents the least
+significant 32 bits, the second integer represents the most significant
+32 bits.
+@end itemize
 
 @item
 A Scheme object representing the code annotation.
@@ -217,8 +236,7 @@ library file name.
 @appendixsec @fasl{} files @api{}
 
 
-The following bindings are exported by the libraries @library{ikarus}
-and @library{vicare}.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun fasl-write @var{obj} @var{port}
@@ -234,85 +252,6 @@ whenever the @fasl{} file is loaded, @ref{fasl foreign} for details.
 Read and return a serialised object from the binary input @var{port}.
 @end defun
 
-
-@deffn Parameter fasl-directory
-Holds a string representing the top directory under which @fasl{} files
-are stored when libraries are compiled.  The default value is determined
-as follows:
-
-@enumerate
-@item
-Check the value of the system environment variable
-@env{VICARE_FASL_DIRECTORY}: if set and its value exists as pathname,
-the value is selected.  Else move to the next step.
-
-@item
-Acquire the value of the system environment variable @env{HOME}: if set
-and its value exists as pathname, compose a directory pathname by
-appending to the value the string:
-
-@example
-/.vicare/precompiled
-@end example
-
-Else move to the next step.
-
-@item
-Set the parameter to the empty string.  This means that a library with
-pathname: @file{/@/usr/@/local/@/scheme/@/vicare/@/posix.sls}
-will be compiled to
-@file{/@/usr/@/local/@/scheme/@/vicare/@/posix.sls.vicare-32bit-fasl}
-@end enumerate
-
-New values for this parameter must be Scheme strings representing
-existing pathnames.  The pathnames are normalised to their real
-pathname, removing symbolic links and useless @code{..} components.
-
-The default value of this parameter can be overridden by the command
-line option @option{--fasl-directory}.
-@end deffn
-
-
-@defun fasl-path @var{filename}
-Given a source file name return the associated full @fasl{} file name
-using the current value of @func{fasl-directory}.  Return false if
-@func{fasl-directory} is unset (which should never happen).  It is an
-error if the file @var{filename} does not exist.
-@end defun
-
-
-@deffn Parameter fasl-search-path
-@cindex @env{VICARE_FASL_PATH}, environment variable
-@cindex Environment variable @env{VICARE_FASL_PATH}
-Holds a list of strings representing directory pathnames.  This search
-path is used to locate @fasl{} files when loading precompiled libraries.
-The default value is determined as follows:
-
-@enumerate
-@item
-Check the value of the system environment variable
-@env{VICARE_FASL_PATH}: if set the value is selected.  Else move to the
-next step.
-
-@item
-Acquire the value of the system environment variable @env{HOME}: if set
-and its value exists as pathname, compose a directory pathname by
-appending to the value the string:
-
-@example
-/.vicare/precompiled
-@end example
-
-@noindent
-the result is put into a list and becomes the default value.
-@end enumerate
-
-Additional directories can be prepended to the search path with the
-command line option @option{--fasl-path}.  If a @fasl{} target directory
-is selected with the option @option{--fasl-directory}: the selected
-directory is always prepended to the @fasl{} search path.
-@end deffn
-
 @c page
 @node fasl foreign
 @appendixsec Associating foreign libraries to @fasl{} files
@@ -321,21 +260,20 @@ directory is always prepended to the @fasl{} search path.
 @findex @func{foreign-call}
 
 
-The macro @func{foreign-call}, exported by the libraries
-@library{ikarus} and @library{vicare}, is expanded to compiled code
-which invokes a C function from the process image; the first argument to
-@func{foreign-call} is a string naming the C function.  Whenever the
-code is compiled, the C pointer to the named function is retrieved with
-a call to:
+The macro @func{foreign-call}, exported by the library @library{vicare},
+is expanded to compiled code which invokes a C function from the process
+image; the first argument to @func{foreign-call} is a string naming the
+C function.  Whenever the code is compiled, the C pointer to the named
+function is retrieved with a call to:
 
 @example
 dlsym(RTLD_DEFAULT, function_name);
 @end example
 
 @noindent
-so all the public functions from the running @command{vicare} executable
-are available and also all the functions from host's shared libraries
-loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
+so all the public functions from the running @value{EXECUTABLE}
+executable are available and also all the functions from host's shared
+libraries loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
 RTLD_GLOBAL}.
 
 It is possible to associate one or more host's shared libraries to a

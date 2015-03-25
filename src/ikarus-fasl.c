@@ -33,12 +33,22 @@
 #define RTLD_DEFAULT 0
 #endif
 
+#define BOOT_IMAGE_CODE_OBJECTS_GENERATION	IK_GC_GENERATION_NURSERY
+
+#define DEBUG_FASL	0
+
 typedef struct {
   char*		membase;
   char*		memp;
   char*		memq;
+
+  /* These  are the  "Allocation  Pointer" and  "End  Pointer" for  code
+     objects  allocation.  See  the  function "alloc_code_object()"  for
+     details  about   how  code   objects  from   the  boot   image  are
+     allocated. */
   ikptr		code_ap;
   ikptr		code_ep;
+
   ikptr*	marks;
   int		marks_size;
 } fasl_port;
@@ -49,11 +59,17 @@ typedef struct {
   ikptr		closure_size;
 } code_header;
 
-static ikptr ik_fasl_read(ikpcb* pcb, fasl_port* p);
-
-#define DEBUG_FASL	0
+/* ------------------------------------------------------------------ */
 
 static int	object_count = 0;
+
+/* ------------------------------------------------------------------ */
+
+static ikptr	fasl_read_super_code_object(ikpcb* pcb, fasl_port* p);
+static ikptr	do_read (ikpcb* pcb, fasl_port* p);
+static ikptr	alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p);
+static char	fasl_read_byte (fasl_port* p);
+static void	fasl_read_buf (fasl_port* p, void* buf, int n);
 
 
 void
@@ -66,33 +82,55 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
   fasl_port	p;
   if (DEBUG_FASL)
     ik_debug_message("loading boot image file: %s", fasl_file);
-  fd = open(fasl_file, O_RDONLY);
-  if (-1 == fd)
-    ik_abort("failed to open boot file \"%s\": %s", fasl_file, strerror(errno));
+
+  /* Open the boot image file. */
   {
-    struct stat buf;
-    int		err = fstat(fd, &buf);
-    if (err)
-      ik_abort("failed to stat \"%s\": %s", fasl_file, strerror(errno));
-    filesize = buf.st_size;
+    fd = open(fasl_file, O_RDONLY);
+    if (-1 == fd)
+      ik_abort("failed to open boot file \"%s\": %s", fasl_file, strerror(errno));
+    {
+      struct stat buf;
+      int		err = fstat(fd, &buf);
+      if (err)
+	ik_abort("failed to stat \"%s\": %s", fasl_file, strerror(errno));
+      filesize = buf.st_size;
+    }
   }
-  mapsize	= IK_MMAP_ALLOCATION_SIZE(filesize);
-  if (DEBUG_FASL)
-    ik_debug_message("boot image: filesize=%d, mapsize=%d, pagesize=%d", filesize, mapsize, IK_PAGESIZE);
-  mem		= mmap(0, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
-  if (MAP_FAILED == mem)
-    ik_abort("mapping failed for %s: %s", fasl_file, strerror(errno));
-  p.membase	= mem;	/* byte array in which to load the boot image */
-  p.memp	= mem;	/* pointer to the next byte to fill */
-  p.memq	= mem + filesize;	/* one-off end pointer */
-  p.marks	= 0;
-  p.marks_size	= 0;
+
+  /* Create  a memory  mapped buffer  from  which the  file is  actually
+     read. */
+  {
+    mapsize	= IK_MMAP_ALLOCATION_SIZE(filesize);
+    if (DEBUG_FASL)
+      ik_debug_message("boot image: filesize=%d, mapsize=%d, pagesize=%d", filesize, mapsize, IK_PAGESIZE);
+    mem		= mmap(0, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (MAP_FAILED == mem)
+      ik_abort("mapping failed for %s: %s", fasl_file, strerror(errno));
+  }
+
+  /* Iniitalise the FASL_PORT struct. */
+  {
+    p.membase		= mem;			/* base of the input buffer */
+    p.memp		= mem;			/* pointer to the next byte to read */
+    p.memq		= mem + filesize;	/* one-off end pointer */
+    p.marks		= 0;
+    p.marks_size	= 0;
+  }
+
+  /* Read  all the  objects  from  the memory  mapped  buffer.  Run  the
+     initialisation code. */
   while (p.memp < p.memq) {
+    ikptr	s_code;
     p.code_ap	= 0;
     p.code_ep	= 0;
-    if (DEBUG_FASL)
-      ik_debug_message("read boot image super-object (it must be a code object)");
-    ikptr v = ik_fasl_read(pcb, &p);
+
+    /* Read the next super object. */
+    {
+      if (DEBUG_FASL)
+	ik_debug_message("*** read boot image super code object");
+      s_code = fasl_read_super_code_object(pcb, &p);
+    }
+
     /* Clear table of  marks.  Every super-object in the  boot image has
        its own table. */
     if (p.marks_size) {
@@ -100,21 +138,30 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       p.marks = 0;
       p.marks_size = 0;
     }
+
+    /* Check if we have reached the end  of the boot image file.  At the
+       end: we unmap the mmap buffer used to read the file and close the
+       file descriptor. */
     if (p.memp == p.memq) {
+      int	err;
       if (DEBUG_FASL)
 	ik_debug_message("finished reading all the boot image");
-      int err = munmap(mem, mapsize);
+      err = munmap(mem, mapsize);
       if (err)
         ik_abort("failed to unmap fasl file: %s", strerror(errno));
       close(fd);
     }
+
+    /* Execute the initialisation code. */
     if (DEBUG_FASL)
-      ik_debug_message("executing boot image code object");
-    ikptr val = ik_exec_code(pcb, v, 0, 0);
-    if (val != IK_VOID_OBJECT) {
-      ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
-				  __func__, fasl_file);
-      ik_print(val);
+      ik_debug_message("executing boot image super code object init expressions");
+    {
+      ikptr s_retval = ik_exec_code(pcb, s_code, 0, 0);
+      if (IK_VOID_OBJECT != s_retval) {
+	ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
+				    __func__, fasl_file);
+	ik_print(s_retval);
+      }
     }
   }
   if (p.memp != p.memq)
@@ -123,176 +170,22 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
 
 
 static ikptr
-alloc_code (long int size, ikpcb* pcb, fasl_port* p)
+fasl_read_super_code_object (ikpcb* pcb, fasl_port* p)
 {
-  long		asize = IK_ALIGN(size);
-  ikptr		ap    = p->code_ap;
-  ikptr		nap   = ap + asize;
-  if (nap <= p->code_ep) {
-    p->code_ap = nap;
-    return ap;
-  } else if (asize < IK_PAGESIZE) {
-    ikptr	mem		= ik_mmap_code(IK_PAGESIZE, 0, pcb);
-    long	bytes_remaining = IK_PAGESIZE - asize;
-    long	previous_bytes	= ((ik_ulong)p->code_ep) - ((ik_ulong)ap);
-    if (bytes_remaining <= previous_bytes) {
-      return mem;
-    } else {
-      p->code_ap = mem+asize;
-      p->code_ep = mem+IK_PAGESIZE;
-      return mem;
-    }
-  } else {
-    long	asize = IK_ALIGN_TO_NEXT_PAGE(size);
-    ikptr	mem   = ik_mmap_code(asize, 0, pcb);
-    return mem;
-  }
+  char		buf[IK_FASL_HEADER_LEN];
+  ikptr		s_code;
+  /* First check the header. */
+  fasl_read_buf(p, buf, IK_FASL_HEADER_LEN);
+  if (0 != strncmp(buf, IK_FASL_HEADER, IK_FASL_HEADER_LEN))
+    ik_abort("invalid fasl header");
+  if (DEBUG_FASL) ik_debug_message("start reading boot image super code object");
+  s_code = do_read(pcb, p);
+  if (DEBUG_FASL) ik_debug_message("done reading boot image super code object");
+  return s_code;
 }
 
-
-void
-ik_relocate_code (ikptr p_code)
-/* Accept as  argument an *untagged*  pointer to a code  object; process
-   the code object's relocation vector.
-
-   This function called:
-
-   - whenever a code  object is allocated, in this  case CODE references
-     an allocated but still empty code object;
-
-   - whenever a  code object is read  from a FASL file;
-
-   - whenever a code object is created by the assembler. */
-{
-  /* The relocation vector. */
-  const ikptr s_reloc_vec = IK_REF(p_code, disp_code_reloc_vector);
-  /* The  number of  items in  the relocation  vector; it  can be  zero.
-     Remember  that the  fixnum representing  the number  of items  in a
-     vector, taken as "long", also represents the number of bytes in the
-     data area of the vector. */
-  const ikptr s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
-  /* The variable P_DATA is an  *untagged* pointer referencing the first
-     byte in the data area of the code object. */
-  const ikptr p_data = p_code + disp_code_data;
-  /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
-     word in the data area of the relocation vector RELOC_VEC. */
-  ikptr p_reloc_vec_cur  = s_reloc_vec + off_vector_data;
-  /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
-     right after the data area of the relocation vector VEC. */
-  const ikptr p_reloc_vec_end = p_reloc_vec_cur + s_reloc_vec_len;
-  /* If the relocation vector is empty: do nothing. */
-  while (p_reloc_vec_cur < p_reloc_vec_end) {
-    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
-    if (0 == first_record_bits)
-      ik_abort("invalid empty record in code object's relocation vector");
-    const long	reloc_record_tag = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
-    const long	disp_code_word   = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
-    switch (reloc_record_tag) {
-    case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
-      /* This record represents a vanilla object; this record is 2 words
-	 wide.  The second word contains the reference to the object (or
-	 the object itself if immediate). */
-      IK_REF(p_data, disp_code_word) = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
-      p_reloc_vec_cur += (2*wordsize);
-      break;
-    }
-    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
-      /* This record  represents a  displaced object;  this record  is 3
-	 words  wide.  The  second word  contains the  displacement, the
-	 third word contains the reference to the object. */
-      const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
-      const ikptr s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      IK_REF(p_data, disp_code_word) = s_obj + obj_off;
-      p_reloc_vec_cur += (3*wordsize);
-      break;
-    }
-    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
-      /* This record  represents a  jump label; this  record is  3 words
-	 wide. */
-      const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
-      const long obj               =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
-      const long displaced_object  = obj + obj_off;
-      const long next_word         = p_data + disp_code_word + 4;
-      const long relative_distance = displaced_object - next_word;
-#if 0
-      if (wordsize == 8) {
-        relative_distance += 4;
-      }
-#endif
-      /* FIXME Why  is the target  word an  "int" rather than  a "long"?
-	 (Marco Maggi; Oct 5, 2012) */
-      *((int*)(p_data + disp_code_word)) = relative_distance;
-      /* IK_REF(next_word, -wordsize) = relative_distance; */
-      p_reloc_vec_cur += (3*wordsize);
-      break;
-    }
-    case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
-      /* This record represents a foreign object; this record is 2 words
-	 wide.   We store  directly the  address of  the foreign  object
-	 (usually a C function) in the data area. */
-      ikptr	s_str	= IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
-      char *	name	= NULL;
-      if (IK_TAGOF(s_str) == bytevector_tag) {
-        name = IK_BYTEVECTOR_DATA_CHARP(s_str);
-      } else
-        ik_abort("foreign name is not a bytevector");
-      /* We call "dlerror()" here to  clean up possible previous errors.
-	 (Marco Maggi; Oct 4, 2012) */
-      dlerror();
-      void *	sym	= dlsym(RTLD_DEFAULT, name);
-      char *	err	= dlerror();
-      if (err)
-        ik_abort("dlsym() failed to find foreign name %s: %s", name, err);
-      IK_REF(p_data, disp_code_word) = (ikptr)sym;
-      p_reloc_vec_cur += (2*wordsize);
-      break;
-    }
-    default:
-      ik_abort("invalid first word in relocation vector's record: 0x%016lx (tag=%ld)",
-	       first_record_bits, reloc_record_tag);
-      break;
-    } /* end of switch() */
-  } /* end of while() */
-}
-
-
-static char
-fasl_read_byte (fasl_port* p)
-{
-  char	c = '\0';
-  if (p->memp < p->memq) {
-    c = *(p->memp);
-    p->memp++;
-  } else
-    ik_abort("%s: read beyond EOF", __func__);
-  return c;
-}
-static void
-fasl_read_buf (fasl_port* p, void* buf, int n)
-/* Read a block of bytes from a FASL port.  N is the number of bytes and
- * BUF a pointer to the buffer that will hold them.
- *
- * Bytes are read in "big endian"  order; for example the block from the
- * underlying device:
- *
- *                     DD CC BB AA
- *    head of file |--|--|--|--|--|--| tail of file
- *
- * is read as 32-bit integer as:
- *
- *    #xAABBCCDD
- *       ^     ^
- *       |     least significant
- *       |
- *       most significant
- */
-{
-  if ((p->memp+n) <= p->memq) {
-    memcpy(buf, p->memp, n);
-    p->memp += n;
-  } else
-    ik_abort("%s: read beyond EOF", __func__);
-}
+#undef DEBUG_FASL
+#define DEBUG_FASL	0
 
 
 static ikptr
@@ -337,20 +230,78 @@ do_read (ikpcb* pcb, fasl_port* p)
   }
   if (c == 'x') {	/* code object */
     if (DEBUG_FASL) ik_debug_message("open %d: code object", object_count++);
-    long	code_size   = 0;
-    ikptr	freevars    = IK_FIX(0);
-    ikptr	annotation  = IK_FALSE;
-    ikptr	p_code      = 0;
-    fasl_read_buf(p, &code_size, sizeof(long));
-    fasl_read_buf(p, &freevars,  sizeof(ikptr));
-    annotation = do_read(pcb, p);
-    if (DEBUG_FASL) ik_print(annotation);
-    p_code     = alloc_code(IK_ALIGN(code_size+disp_code_data), pcb, p);
+    /* A Scheme code object is stored in  a memory area whose size is an
+     * exact multiple of a Vicare page size.
+     *
+     * SCHEME_OBJECT_SIZE is  the number of  bytes actually used  by the
+     * Scheme object in the allocated memory region.
+     *
+     * BINARY_CODE_SIZE  is the  number of  bytes actually  used by  the
+     * memory area holding the executable machine code.
+     *
+     *      meta data        executable machine code          unused
+     *   |-------------|-----------------------------------|---------|
+     *
+     *   |.............| disp_code_data
+     *                 |...................................| binary_code_size
+     *   |.................................................| scheme_object_size
+     *   |...........................................................| allocated memory size
+     *
+     */
+    ik_ulong	scheme_object_size	= 0;
+    ik_ulong	binary_code_size	= 0;
+    ikptr	s_freevars		= IK_FIX(0);
+    ikptr	s_annotation		= IK_FALSE;
+    ikptr	p_code			= 0;
+    /* Read the binary code size. */
+    {
+      if (4 == wordsize) {
+	/* 32-bit platform.   The binary  code size  is serialised  as a
+	   big-endian raw unsigned 32-bit integer. */
+	uint32_t	full_binary_code_size = 0;
+	fasl_read_buf(p, &full_binary_code_size, sizeof(uint32_t));
+	binary_code_size = (ik_ulong) full_binary_code_size;
+      } else {
+	/* 64-bit platform.   The binary  code size  is serialised  as a
+	   sequence of 2 big-endian raw unsigned 32-bit integers. */
+	uint32_t	lo_binary_code_size = 0;
+	uint32_t	hi_binary_code_size = 0;
+	fasl_read_buf(p, &lo_binary_code_size, sizeof(uint32_t));
+	fasl_read_buf(p, &hi_binary_code_size, sizeof(uint32_t));
+	binary_code_size = (((ik_ulong) hi_binary_code_size) << 32) | ((ik_ulong) lo_binary_code_size);
+      }
+    }
+    /* Read the number of free variables. */
+    {
+      if (4 == wordsize) {
+	/* 32-bit platform.  The number  of free variables is serialised
+	   as  a big-endian  unsigned  32-bit  integer representing  the
+	   fixnum. */
+	uint32_t	full_freevars = 0;
+	fasl_read_buf(p, &full_freevars, sizeof(uint32_t));
+	s_freevars = (ikptr) full_freevars;
+      } else {
+	/* 64-bit platform.   The binary  code size  is serialised  as a
+	   sequence   of   2   big-endian   unsigned   32-bit   integers
+	   representing the fixnum. */
+	uint32_t	lo_freevars = 0;
+	uint32_t	hi_freevars = 0;
+	fasl_read_buf(p, &lo_freevars, sizeof(uint32_t));
+	fasl_read_buf(p, &hi_freevars, sizeof(uint32_t));
+	s_freevars = (((ikptr) hi_freevars) << 32) | ((ikptr) lo_freevars);
+      }
+    }
+    /* Read the annotation. */
+    s_annotation = do_read(pcb, p);
+    if (DEBUG_FASL) ik_print(s_annotation);
+    scheme_object_size = disp_code_data + binary_code_size;
+    p_code             = alloc_code_object(scheme_object_size, pcb, p);
     IK_REF(p_code, 0)			= code_tag;
-    IK_REF(p_code, disp_code_code_size)	= IK_FIX(code_size);
-    IK_REF(p_code, disp_code_freevars)	= freevars;
-    IK_REF(p_code, disp_code_annotation)= annotation;
-    fasl_read_buf(p, (void*)(disp_code_data+(long)p_code), code_size);
+    IK_REF(p_code, disp_code_code_size)	= IK_FIX(binary_code_size);
+    IK_REF(p_code, disp_code_freevars)	= s_freevars;
+    IK_REF(p_code, disp_code_annotation)= s_annotation;
+    IK_REF(p_code, disp_code_unused)    = IK_FIX(0);
+    fasl_read_buf(p, (void*)(disp_code_data+(long)p_code), binary_code_size);
     if (put_mark_index) {
       p->marks[put_mark_index] = p_code | vector_tag;
     }
@@ -477,7 +428,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     /* G is for gensym */
     ikptr pretty = do_read(pcb, p);
     ikptr unique = do_read(pcb, p);
-    ikptr sym = ikrt_strings_to_gensym(pretty, unique, pcb);
+    ikptr sym    = ikrt_strings_to_gensym(pretty, unique, pcb);
     if (put_mark_index) {
       p->marks[put_mark_index] = sym;
     }
@@ -750,18 +701,271 @@ do_read (ikpcb* pcb, fasl_port* p)
 
 
 static ikptr
-ik_fasl_read (ikpcb* pcb, fasl_port* p)
+alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p)
+/* Scheme code are of 2 categories:
+ *
+ * - Small code objects whose size fits  in a single Vicare page.  Small
+ *   code objects  are allocated  in the "current  code page":  a Vicare
+ *   page marked  as used "for code",  in which code objects  are stored
+ *   one after  the other, with  size aligned  to exact multiples  of 16
+ *   bytes:
+ *
+ *                         current code page
+ *     |..........................................................|
+ *
+ *       code object   code object   code object       free
+ *     |.............|.............|.............|++++++++++++++++|
+ *     |----------------------------------------------------------|--
+ *                                                ^                ^
+ *                                             code_ap          code_ep
+ *
+ *   the fields CODE_AP and CODE_EP  in the FASL_PORT reference the free
+ *   portion in the current code page.
+ *
+ * - Large  code objects  whose size  fits in  a sequence  of contiguous
+ *   Vicare pages.
+ *
+ *         page        page        page        page        page
+ *     |...........|...........|...........|...........|...........|
+ *
+ *                      large code object                     free
+ *     |---------------------------------------------------|+++++++|
+ *
+ *   the free room at the end of the sequence of pages is lost.
+ *
+ * SCHEME_OBJECT_SIZE is  the non-aligned number of  bytes actually used
+ * by the Scheme object in the allocated memory region.
+ *
+ * The ALIGNED_SCHEME_CODE_OBJECT_SIZE is an exact multiple of 16 bytes.
+ *
+ * NOTE When this function is called  to allocate a "super code object":
+ * the fields  CODE_AP and  CODE_EP in  the FASL_PORT  are set  to NULL.
+ * This  function behaves  correctly  in this  situation  and fills  the
+ * fields with appropriate values.
+ */
 {
-  ikptr		s_bootimage;
-  /* first check the header */
-  char buf[IK_FASL_HEADER_LEN];
-  fasl_read_buf(p, buf, IK_FASL_HEADER_LEN);
-  if (0 != strncmp(buf, IK_FASL_HEADER, IK_FASL_HEADER_LEN))
-    ik_abort("invalid fasl header");
-  if (DEBUG_FASL) ik_debug_message("start reading boot image object");
-  s_bootimage = do_read(pcb, p);
-  if (DEBUG_FASL) ik_debug_message("done reading boot image object");
-  return s_bootimage;
+  ik_ulong	aligned_scheme_code_object_size = IK_ALIGN(scheme_object_size);
+  ikptr		ap    = p->code_ap;
+  ikptr		nap   = ap + aligned_scheme_code_object_size;
+  if (0 && DEBUG_FASL)
+    ik_debug_message("code_ap = 0x%016lx, code_ep = 0x%016lx", p->code_ap, p->code_ep);
+  if (nap <= p->code_ep) {
+    /* This is a small code object: it fits into a single page.
+     *
+     * If we are  here: we have already allocated a  page for small code
+     * objects and  we are filling  it; this  code object fits  into the
+     * available space.  Before the allocation:
+     *
+     *     code object   code object   this new code object       free
+     *   |.............|.............|......................|++++++++++++++++|
+     *   |-------------------------------------------------------------------|-- page
+     *                                ^                                       ^
+     *                             code_ap                                  code_ep
+     *
+     * before the allocation:
+     *
+     *     code object   code object   this new code object       free
+     *   |.............|.............|......................|++++++++++++++++|
+     *   |-------------------------------------------------------------------|-- page
+     *                                                       ^                ^
+     *                                                  code_ap            code_ep
+     */
+    p->code_ap = nap;
+    return ap;
+  } else if (aligned_scheme_code_object_size < IK_PAGESIZE) {
+    /* This is a small code object: it fits into a single page.
+     *
+     * If we are here, either: CODE_AP  and CODE_EP are NULL, so we have
+     * to allocate a  new page for code objects; or  there is not enough
+     * room in  the page between  CODE_AP and  CODE_EP to store  the new
+     * code object.
+     *
+     * We allocate a new page marked  in the segments vector as used for
+     * code.
+     *
+     * After  the new  page allocation,  we might  have this  situation:
+     * CODE_AP and CODE_EP  still reference the old page  with free room
+     * in it; MEM references a new page with possible free room in it.
+     *
+     *     used by previous code objects    free
+     *   |-------------------------------|++++++++|-- old page
+     *                                    ^        ^
+     *                                 code_ap   code_ep
+     *
+     *     used by this new code object     free
+     *   |-------------------------------|++++++++|-- new page
+     *    ^                               ^
+     *   mem                mem + aligned_scheme_code_object_size
+     *
+     * Question: do we  adopt the new page as "current  code page" or do
+     * we leave the old page alone?   Answer: if there is more free room
+     * in the new  page than in the  old page, we adopt the  new page as
+     * "current code page".
+     */
+    ikptr	mem		= ik_mmap_code(IK_PAGESIZE, BOOT_IMAGE_CODE_OBJECTS_GENERATION, pcb);
+    ik_ulong	free_bytes_in_new_code_page = IK_PAGESIZE - aligned_scheme_code_object_size;
+    ik_ulong	free_bytes_in_old_code_page = ((ik_ulong)p->code_ep) - ((ik_ulong)ap);
+    if (free_bytes_in_new_code_page > free_bytes_in_old_code_page) {
+      p->code_ap = mem + aligned_scheme_code_object_size;
+      p->code_ep = mem + IK_PAGESIZE;
+    }
+    return mem;
+  } else {
+    /* This  is  a  large  code  object: it  fits  into  a  sequence  of
+     * contiguous pages.
+     *
+     * We allocate a new sequence of pages marked in the segments vector
+     * as  used for  code.  We  leave untouched  the page  referenced by
+     * CODE_AP  and CODE_EP  as  "current code  page"  for future  small
+     * objects allocations.
+     */
+    ik_ulong	aligned_scheme_code_object_size = IK_ALIGN_TO_NEXT_PAGE(scheme_object_size);
+    ikptr	mem   = ik_mmap_code(aligned_scheme_code_object_size, BOOT_IMAGE_CODE_OBJECTS_GENERATION, pcb);
+    return mem;
+  }
+}
+void
+ik_relocate_code (ikptr p_code)
+/* Accept as  argument an *untagged*  pointer to a code  object; process
+   the code object's relocation vector.
+
+   This function called:
+
+   - whenever a code  object is allocated, in this  case CODE references
+     an allocated but still empty code object;
+
+   - whenever a  code object is read  from a FASL file;
+
+   - whenever a code object is created by the assembler. */
+{
+  /* The relocation vector. */
+  const ikptr s_reloc_vec = IK_REF(p_code, disp_code_reloc_vector);
+  /* The  number of  items in  the relocation  vector; it  can be  zero.
+     Remember  that the  fixnum representing  the number  of items  in a
+     vector, taken as "long", also represents the number of bytes in the
+     data area of the vector. */
+  const ikptr s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
+  /* The variable P_DATA is an  *untagged* pointer referencing the first
+     byte in the data area of the code object. */
+  const ikptr p_data = p_code + disp_code_data;
+  /* The variable P_RELOC_VEC_CUR is an  *untagged* pointer to the first
+     word in the data area of the relocation vector RELOC_VEC. */
+  ikptr p_reloc_vec_cur  = s_reloc_vec + off_vector_data;
+  /* The variable P_RELOC_VEC_END  is an *untagged* pointer  to the word
+     right after the data area of the relocation vector VEC. */
+  const ikptr p_reloc_vec_end = p_reloc_vec_cur + s_reloc_vec_len;
+  /* If the relocation vector is empty: do nothing. */
+  while (p_reloc_vec_cur < p_reloc_vec_end) {
+    const long	first_record_bits = IK_UNFIX(IK_RELOC_RECORD_1ST(p_reloc_vec_cur));
+    if (0 == first_record_bits)
+      ik_abort("invalid empty record in code object's relocation vector");
+    const long	reloc_record_tag = IK_RELOC_RECORD_1ST_BITS_TAG(first_record_bits);
+    const long	disp_code_word   = IK_RELOC_RECORD_1ST_BITS_OFFSET(first_record_bits);
+    switch (reloc_record_tag) {
+    case IK_RELOC_RECORD_VANILLA_OBJECT_TAG: {
+      /* This record represents a vanilla object; this record is 2 words
+	 wide.  The second word contains the reference to the object (or
+	 the object itself if immediate). */
+      IK_REF(p_data, disp_code_word) = IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      p_reloc_vec_cur += (2*wordsize);
+      break;
+    }
+    case IK_RELOC_RECORD_DISPLACED_OBJECT_TAG: {
+      /* This record  represents a  displaced object;  this record  is 3
+	 words  wide.  The  second word  contains the  displacement, the
+	 third word contains the reference to the object. */
+      const long  obj_off = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const ikptr s_obj   =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      IK_REF(p_data, disp_code_word) = s_obj + obj_off;
+      p_reloc_vec_cur += (3*wordsize);
+      break;
+    }
+    case IK_RELOC_RECORD_JUMP_LABEL_TAG: {
+      /* This record  represents a  jump label; this  record is  3 words
+	 wide. */
+      const long obj_off           = IK_UNFIX(IK_RELOC_RECORD_2ND(p_reloc_vec_cur));
+      const long obj               =          IK_RELOC_RECORD_3RD(p_reloc_vec_cur);
+      const long displaced_object  = obj + obj_off;
+      const long next_word         = p_data + disp_code_word + 4;
+      const long relative_distance = displaced_object - next_word;
+#if 0
+      if (wordsize == 8) {
+        relative_distance += 4;
+      }
+#endif
+      /* FIXME Why  is the target  word an  "int" rather than  a "long"?
+	 (Marco Maggi; Oct 5, 2012) */
+      *((int*)(p_data + disp_code_word)) = relative_distance;
+      /* IK_REF(next_word, -wordsize) = relative_distance; */
+      p_reloc_vec_cur += (3*wordsize);
+      break;
+    }
+    case IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG: {
+      /* This record represents a foreign object; this record is 2 words
+	 wide.   We store  directly the  address of  the foreign  object
+	 (usually a C function) in the data area. */
+      ikptr	s_str	= IK_RELOC_RECORD_2ND(p_reloc_vec_cur);
+      char *	name	= NULL;
+      if (IK_TAGOF(s_str) == bytevector_tag) {
+        name = IK_BYTEVECTOR_DATA_CHARP(s_str);
+      } else
+        ik_abort("foreign name is not a bytevector");
+      /* We call "dlerror()" here to  clean up possible previous errors.
+	 (Marco Maggi; Oct 4, 2012) */
+      dlerror();
+      void *	sym	= dlsym(RTLD_DEFAULT, name);
+      char *	err	= dlerror();
+      if (err)
+        ik_abort("dlsym() failed to find foreign name %s: %s", name, err);
+      IK_REF(p_data, disp_code_word) = (ikptr)sym;
+      p_reloc_vec_cur += (2*wordsize);
+      break;
+    }
+    default:
+      ik_abort("invalid first word in relocation vector's record: 0x%016lx (tag=%ld)",
+	       first_record_bits, reloc_record_tag);
+      break;
+    } /* end of switch() */
+  } /* end of while() */
+}
+
+
+static char
+fasl_read_byte (fasl_port* p)
+{
+  char	c = '\0';
+  if (p->memp < p->memq) {
+    c = *(p->memp);
+    p->memp++;
+  } else
+    ik_abort("%s: attempt to read objects from boot image file beyond EOF", __func__);
+  return c;
+}
+static void
+fasl_read_buf (fasl_port* p, void* buf, int n)
+/* Read a block of bytes from a FASL port.  N is the number of bytes and
+ * BUF a pointer to the buffer that will hold them.
+ *
+ * Bytes are read in "big endian"  order; for example the block from the
+ * underlying device:
+ *
+ *                     DD CC BB AA
+ *    head of file |--|--|--|--|--|--| tail of file
+ *
+ * is read as 32-bit integer as:
+ *
+ *    #xAABBCCDD
+ *       ^     ^
+ *       |     least significant
+ *       |
+ *       most significant
+ */
+{
+  if ((p->memp+n) <= p->memq) {
+    memcpy(buf, p->memp, n);
+    p->memp += n;
+  } else
+    ik_abort("%s: attempt to read objects from boot image file beyond EOF", __func__);
 }
 
 /* end of file */

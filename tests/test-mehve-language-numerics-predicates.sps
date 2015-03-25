@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   (prefix (nausicaa mehve language numerics predicates) mehve.)
   (prefix (rnrs) rnrs.)
@@ -34,21 +34,19 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing mehve language, numeric predicates\n")
 
-(initialise-mehve)
-
 
 (parametrise ((check-test-name	'equality))
 
-  (define-method (mehve.equal-predicate-1 (o <vector>))
+  (define-method (mehve.equal-predicate-1 {o <vector>})
     (o for-all =))
 
-  (define-method (mehve.equal-predicate-2 (a <vector>) (b <vector>))
+  (define-method (mehve.equal-predicate-2 {a <vector>} {b <vector>})
     (a for-all = b))
 
-  (define-method (mehve.equal-predicate-1 (o <spine>))
+  (define-method (mehve.equal-predicate-1 {o <spine>})
     (o for-all =))
 
-  (define-method (mehve.equal-predicate-2 (a <spine>) (b <spine>))
+  (define-method (mehve.equal-predicate-2 {a <spine>} {b <spine>})
     (a for-all = b))
 
 ;;; --------------------------------------------------------------------
@@ -101,16 +99,16 @@
 
 (parametrise ((check-test-name	'less-than))
 
-  (define-method (mehve.less-than-predicate-1 (o <vector>))
+  (define-method (mehve.less-than-predicate-1 {o <vector>})
     (o for-all <))
 
-  (define-method (mehve.less-than-predicate-2 (a <vector>) (b <vector>))
+  (define-method (mehve.less-than-predicate-2 {a <vector>} {b <vector>})
     (a for-all < b))
 
-  (define-method (mehve.less-than-predicate-1 (o <spine>))
+  (define-method (mehve.less-than-predicate-1 {o <spine>})
     (o for-all <))
 
-  (define-method (mehve.less-than-predicate-2 (a <spine>) (b <spine>))
+  (define-method (mehve.less-than-predicate-2 {a <spine>} {b <spine>})
     (a for-all < b))
 
 ;;; --------------------------------------------------------------------
@@ -163,16 +161,16 @@
 
 (parametrise ((check-test-name	'greater-than))
 
-  (define-method (mehve.greater-than-predicate-1 (o <vector>))
+  (define-method (mehve.greater-than-predicate-1 {o <vector>})
     (o for-all >))
 
-  (define-method (mehve.greater-than-predicate-2 (a <vector>) (b <vector>))
+  (define-method (mehve.greater-than-predicate-2 {a <vector>} {b <vector>})
     (a for-all > b))
 
-  (define-method (mehve.greater-than-predicate-1 (o <spine>))
+  (define-method (mehve.greater-than-predicate-1 {o <spine>})
     (o for-all >))
 
-  (define-method (mehve.greater-than-predicate-2 (a <spine>) (b <spine>))
+  (define-method (mehve.greater-than-predicate-2 {a <spine>} {b <spine>})
     (a for-all > b))
 
 ;;; --------------------------------------------------------------------
@@ -225,16 +223,16 @@
 
 (parametrise ((check-test-name	'less-or-equal))
 
-  (define-method (mehve.less-than-or-equal-to-predicate-1 (o <vector>))
+  (define-method (mehve.less-than-or-equal-to-predicate-1 {o <vector>})
     (o for-all <=))
 
-  (define-method (mehve.less-than-or-equal-to-predicate-2 (a <vector>) (b <vector>))
+  (define-method (mehve.less-than-or-equal-to-predicate-2 {a <vector>} {b <vector>})
     (a for-all <= b))
 
-  (define-method (mehve.less-than-or-equal-to-predicate-1 (o <spine>))
+  (define-method (mehve.less-than-or-equal-to-predicate-1 {o <spine>})
     (o for-all <=))
 
-  (define-method (mehve.less-than-or-equal-to-predicate-2 (a <spine>) (b <spine>))
+  (define-method (mehve.less-than-or-equal-to-predicate-2 {a <spine>} {b <spine>})
     (a for-all <= b))
 
 ;;; --------------------------------------------------------------------
@@ -294,16 +292,16 @@
 
 (parametrise ((check-test-name	'greater-or-equal))
 
-  (define-method (mehve.greater-than-or-equal-to-predicate-1 (o <vector>))
+  (define-method (mehve.greater-than-or-equal-to-predicate-1 {o <vector>})
     (o for-all >=))
 
-  (define-method (mehve.greater-than-or-equal-to-predicate-2 (a <vector>) (b <vector>))
+  (define-method (mehve.greater-than-or-equal-to-predicate-2 {a <vector>} {b <vector>})
     (a for-all >= b))
 
-  (define-method (mehve.greater-than-or-equal-to-predicate-1 (o <spine>))
+  (define-method (mehve.greater-than-or-equal-to-predicate-1 {o <spine>})
     (o for-all >=))
 
-  (define-method (mehve.greater-than-or-equal-to-predicate-2 (a <spine>) (b <spine>))
+  (define-method (mehve.greater-than-or-equal-to-predicate-2 {a <spine>} {b <spine>})
     (a for-all >= b))
 
 ;;; --------------------------------------------------------------------
@@ -356,34 +354,34 @@
 
 (parametrise ((check-test-name	'sign))
 
-  (define-method (mehve.zero? (o <vector>))
+  (define-method (mehve.zero? {o <vector>})
     (o for-all zero?))
 
-  (define-method (mehve.zero? (o <spine>))
+  (define-method (mehve.zero? {o <spine>})
     (o for-all zero?))
 
-  (define-method (mehve.positive? (o <vector>))
+  (define-method (mehve.positive? {o <vector>})
     (o for-all positive?))
 
-  (define-method (mehve.positive? (o <spine>))
+  (define-method (mehve.positive? {o <spine>})
     (o for-all positive?))
 
-  (define-method (mehve.negative? (o <vector>))
+  (define-method (mehve.negative? {o <vector>})
     (o for-all negative?))
 
-  (define-method (mehve.negative? (o <spine>))
+  (define-method (mehve.negative? {o <spine>})
     (o for-all negative?))
 
-  (define-method (mehve.non-positive? (o <vector>))
+  (define-method (mehve.non-positive? {o <vector>})
     (o for-all non-positive?))
 
-  (define-method (mehve.non-positive? (o <spine>))
+  (define-method (mehve.non-positive? {o <spine>})
     (o for-all non-positive?))
 
-  (define-method (mehve.non-negative? (o <vector>))
+  (define-method (mehve.non-negative? {o <vector>})
     (o for-all non-negative?))
 
-  (define-method (mehve.non-negative? (o <spine>))
+  (define-method (mehve.non-negative? {o <spine>})
     (o for-all non-negative?))
 
 ;;; --------------------------------------------------------------------
@@ -456,16 +454,16 @@
 
 (parametrise ((check-test-name	'oddness))
 
-  (define-method (mehve.odd? (o <vector>))
+  (define-method (mehve.odd? {o <vector>})
     (o for-all odd?))
 
-  (define-method (mehve.odd? (o <spine>))
+  (define-method (mehve.odd? {o <spine>})
     (o for-all odd?))
 
-  (define-method (mehve.even? (o <vector>))
+  (define-method (mehve.even? {o <vector>})
     (o for-all even?))
 
-  (define-method (mehve.even? (o <spine>))
+  (define-method (mehve.even? {o <spine>})
     (o for-all even?))
 
 ;;; --------------------------------------------------------------------
@@ -493,22 +491,22 @@
 
 (parametrise ((check-test-name	'non-rational))
 
-  (define-method (mehve.finite? (o <vector>))
+  (define-method (mehve.finite? {o <vector>})
     (o for-all finite?))
 
-  (define-method (mehve.finite? (o <spine>))
+  (define-method (mehve.finite? {o <spine>})
     (o for-all finite?))
 
-  (define-method (mehve.infinite? (o <vector>))
+  (define-method (mehve.infinite? {o <vector>})
     (o exists infinite?))
 
-  (define-method (mehve.infinite? (o <spine>))
+  (define-method (mehve.infinite? {o <spine>})
     (o exists infinite?))
 
-  (define-method (mehve.nan? (o <vector>))
+  (define-method (mehve.nan? {o <vector>})
     (o exists nan?))
 
-  (define-method (mehve.nan? (o <spine>))
+  (define-method (mehve.nan? {o <spine>})
     (o exists nan?))
 
 ;;; --------------------------------------------------------------------

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,9 @@
 
 
 #!vicare
-(import (ikarus)
+(import (vicare)
+  (prefix (vicare unsafe operations)
+	  unsafe.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -35,13 +37,13 @@
 
 ;;;; syntax helpers
 
-(define-syntax catch
+(define-syntax catch-procedure-argument-violation
   (syntax-rules ()
     ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
+     (guard (E ((procedure-argument-violation? E)
 		(when print?
 		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
+		#t)
 	       (else E))
        (begin . ?body)))))
 
@@ -71,19 +73,19 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(integer->char #xD800))
-    => '(#xD800))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(integer->char #xDFFF))
-    => '(#xDFFF))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(integer->char #x11FFFF))
-    => '(#x11FFFF))
+    => #t)
 
   #t)
 
@@ -109,9 +111,9 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char->integer 123))
-    => '(123))
+    => #t)
 
   #t)
 
@@ -170,55 +172,55 @@
 ;;; arguments validation: 2 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 3 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? #\b #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 4 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? 123 #\b #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? #\b 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? #\b #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char=? #\b #\b #\b 123))
-    => '(123))
+    => #t)
 
   #t)
 
@@ -281,60 +283,60 @@
 ;;; arguments validation: 2 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 3 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 4 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? 123 #\b #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b #\a 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<? #\b #\b #\b 123))
-    => '(123))
+    => #t)
 
   #t)
 
@@ -397,60 +399,60 @@
 ;;; arguments validation: 2 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 3 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 4 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? 123 #\b #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b #\a 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char<=? #\b #\b #\b 123))
-    => '(123))
+    => #t)
 
   #t)
 
@@ -513,55 +515,55 @@
 ;;; arguments validation: 2 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 3 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? #\b #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 4 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? 123 #\b #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? #\b 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? #\b #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>? #\b #\b #\b 123))
-    => '(123))
+    => #t)
 
   #t)
 
@@ -624,55 +626,124 @@
 ;;; arguments validation: 2 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 3 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? #\b #\b 123))
-    => '(123))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: 4 args
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? 123 #\b #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? #\b 123 #\b #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? #\b #\b 123 #\b))
-    => '(123))
+    => #t)
 
   (check
-      (catch #f
+      (catch-procedure-argument-violation #f
 	(char>=? #\b #\b #\b 123))
-    => '(123))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe))
+
+  (check
+      (unsafe.$char= #\a #\a #\a)
+    => #t)
+
+  (check
+      (unsafe.$char= #\a #\b #\a)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char> #\a #\a)
+    => #f)
+
+  (check
+      (unsafe.$char> #\c #\b #\a)
+    => #t)
+
+  (check
+      (unsafe.$char> #\c #\b #\z)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char>= #\a #\a)
+    => #t)
+
+  (check
+      (unsafe.$char>= #\c #\b #\a)
+    => #t)
+
+  (check
+      (unsafe.$char>= #\c #\b #\z)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char< #\a #\a)
+    => #f)
+
+  (check
+      (unsafe.$char< #\a #\b #\c)
+    => #t)
+
+  (check
+      (unsafe.$char< #\c #\d #\a)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (unsafe.$char<= #\a #\a)
+    => #t)
+
+  (check
+      (unsafe.$char<= #\a #\b #\c)
+    => #t)
+
+  (check
+      (unsafe.$char<= #\b #\c #\a)
+    => #f)
 
   #t)
 
@@ -691,5 +762,5 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'catch 'scheme-indent-function 1)
+;;eval: (put 'catch-procedure-argument-violation 'scheme-indent-function 1)
 ;;End:

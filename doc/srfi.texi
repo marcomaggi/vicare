@@ -65,6 +65,8 @@ minor modification of the original documents by Marco Maggi.
 * srfi basic-socket::           @ansrfi{106} basic socket interface.
 * srfi boxes::                  @ansrfi{111} boxes.
 * srfi env-inquiry::            @ansrfi{112} environment inquiry.
+* srfi sets-and-bags::          @ansrfi{113} sets and bags.
+* srfi comparators::            @ansrfi{114} comparators.
 @end menu
 
 @c ------------------------------------------------------------
@@ -105,5 +107,7 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-basic-socket-interface.texi
 @include srfi-boxes.texi
 @include srfi-environment-inquiry.texi
+@include srfi-sets-and-bags.texi
+@include srfi-comparators.texi
 
 @c end of file

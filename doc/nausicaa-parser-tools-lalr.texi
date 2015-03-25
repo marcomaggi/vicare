@@ -1291,14 +1291,15 @@ may stop, depending on how the program deals with it.
 A simple error procedure raising an exception looks like this:
 
 @example
+#!vicare
 (define (error-handler message token)
   (error #f
     (if (not (is-a? token <lexical-token>))
         message
-      (let (((T <lexical-token>) token))
+      (let ((@{T <lexical-token>@} token))
         (if (T location unspecified?)
             message
-          (let (((P <source-location>) (T location)))
+          (let ((@{P <source-location>@} (T location)))
             (string-append
               message
               " line "   (if (P line)
@@ -1496,7 +1497,7 @@ the following preamble:
    (()
     (make-error-handler (lambda x x)))
    ((yycustom)
-    (lambda ((message <string>) (token lt.<lexical-token>))
+    (lambda (@{message <string>@} @{token lt.<lexical-token>@})
       (yycustom `(error-handler . ,(token value)))))))
 
 (define (doit . tokens)

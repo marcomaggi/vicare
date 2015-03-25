@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   (prefix (nausicaa mehve language input-output) mehve.)
   (vicare checks))
@@ -33,16 +33,14 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Mehve: input/output functions\n")
 
-(initialise-mehve)
-
 
 (parametrise ((check-test-name	'display))
 
-  (define-method (mehve.display-2 (o <vector>) (p <port>))
+  (define-method (mehve.display-2 {o <vector>} {p <port>})
     (o for-each (lambda (item)
 		  (display item p))))
 
-  (define-method (mehve.write-2 (o <vector>) (p <port>))
+  (define-method (mehve.write-2 {o <vector>} {p <port>})
     (o for-each (lambda (item)
 		  (write item p))))
 

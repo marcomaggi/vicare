@@ -48,7 +48,8 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
      continuation we want to go back to. */
   ikptr	s_kont;
   if (0 || DEBUG_EXEC) {
-    ik_debug_message_no_newline("%s: enter closure 0x%016lx, ", __func__, (long)s_closure);
+    ik_debug_message_no_newline("%s: enter closure 0x%016lx, code 0x%016lx, annotation: ",
+				__func__, (long)s_closure, (long) s_code);
     ik_fprint(stderr, IK_REF(s_code, off_code_annotation));
     fprintf(stderr, "\n");
   }

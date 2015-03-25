@@ -34,7 +34,7 @@
 ;;
 
 
-(library (psyntax builders)
+(library (psyntax.builders)
   (export
     build-lexical-assignment		build-global-reference
     build-application			build-conditional
@@ -44,11 +44,13 @@
     build-primref			build-foreign-call
     build-data				build-sequence
     build-void				build-letrec
-    build-letrec*			build-global-define
-    build-library-letrec*)
+    build-letrec*			#;build-global-define
+    build-library-letrec*
+
+    core-language->sexp)
   (import (rnrs)
-    (psyntax compat)
-    (psyntax config))
+    (psyntax.compat)
+    (psyntax.config))
 
 
 (define (build-void)
@@ -216,6 +218,92 @@
 					  (map (lambda (var loc)
 						 (build-global-assignment ae loc var))
 					    vars locs)))))))
+
+
+(module (core-language->sexp)
+  ;;Recursively convert  an expression in core  language (which contains
+  ;;syntax objects as annotations) into a readable symbolic expression.
+  ;;
+  ;;FIXME This should be improved.  (Marco Maggi; Mon Apr 7, 2014)
+  ;;
+  (define (core-language->sexp core)
+    (if (pair? core)
+	(case (car core)
+	  ((annotated-call)
+	   (map core-language->sexp (cddr core)))
+
+	  ((annotated-case-lambda)
+	   (%process-case-lambda (cddr core)))
+
+	  ((case-lambda)
+	   (%process-case-lambda (cdr core)))
+
+	  ((begin)
+	   `(begin
+	      ,@(map core-language->sexp (cdr core))))
+
+	  ((if)
+	   `(if ,(core-language->sexp (cadr core))
+		,(core-language->sexp (caddr core))
+	      ,(core-language->sexp (cadddr core))))
+
+	  ((set!)
+	   `(set! ,(cadr core) ,(core-language->sexp (caddr core))))
+
+	  ((define)
+	   `(define ,(cadr core) ,(core-language->sexp (caddr core))))
+
+	  ((lerec letrec*)
+	   ;;We expect CORE to have the format:
+	   ;;
+	   ;;   (letrec  ((?id ?expr) ...) ?body)
+	   ;;   (letrec* ((?id ?expr) ...) ?body)
+	   ;;
+	   (let ((bind*.core (cadr  core))
+		 (body.core  (caddr core)))
+	     (let ((bind*.sexp (map (lambda (bind)
+				      (let ((lex  (car  bind))
+					    (expr (cadr bind)))
+					(list lex (core-language->sexp expr))))
+				 bind*.core))
+		   (body.sexp  (core-language->sexp body.core)))
+	       (if (eq? 'letrec (car core))
+		   `(letrec ,bind*.sexp ,body.sexp)
+		 `(letrec* ,bind*.sexp ,body.sexp)))))
+
+	  (else
+	   (map core-language->sexp core)))
+      core))
+
+  (define (%process-case-lambda meat)
+    (let ((args*  (map car meat))
+	  (body** (map cdr meat)))
+      (if (= 1 (length args*))
+	  `(lambda ,(car args*)
+	     . ,(%process-lambda-body (car body**)))
+	`(case-lambda
+	  ,@(map cons args* (map %process-lambda-body body**))))))
+
+  (define (%process-lambda-body body*)
+    ;;If a LAMBDA body consists of a single BEGIN syntax:
+    ;;
+    ;;   (lambda ?formals (begin . ?body))
+    ;;
+    ;;we discard the BEGIN and keep the ?body:
+    ;;
+    ;;   (lambda ?formals . ?body)
+    ;;
+    (let ((body* (map core-language->sexp body*)))
+      (cond ((and (= 1 (length body*))
+		  (eq? 'begin (car body*)))
+	     (cdr body*))
+	    ((and (= 1 (length body*))
+		  (pair? (car body*))
+		  (eq? 'begin (caar body*)))
+	     (cdar body*))
+	    (else body*))))
+
+  #| end of module: CORE-LANGUAGE->SEXP |# )
 
 
 ;;;; done

@@ -17,16 +17,16 @@
 
 (library (ikarus writer)
   (export
-    write		display
-    put-datum		format
-    printf		fprintf
-    print-error
-    print-unicode	print-graph
+    write			display
+    put-datum			format
+    printf			fprintf
+    print-error			debug-print
+    print-unicode		print-graph
     printer-integer-radix
 
     ;;The following are not in "makefile.sps".
     traverse		traversal-helpers)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
@@ -34,17 +34,19 @@
 		  write			display
 		  put-datum		format
 		  printf		fprintf
-		  print-error
+		  print-error		debug-print
 		  print-unicode		print-graph
 		  printer-integer-radix)
-    (only (ikarus system $symbols)
+    (only (vicare system $symbols)
 	  $unbound-object?)
+    (only (vicare system $structs)
+	  $struct-rtd)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
 	  print-r6rs-record-instance))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 (define print-unicode
@@ -129,7 +131,7 @@
   (define (traverse-noop x h) (void))
   (define (traverse-struct x h)
     (define (traverse-vanilla-struct x h)
-      (let ((rtd (struct-type-descriptor x)))
+      (let ((rtd ($struct-rtd x)))
         (unless
 	    (and (record-type-descriptor? rtd)
 		 (record-type-opaque? rtd))
@@ -557,33 +559,33 @@
       (write-symbol-string (symbol->string x) p m)))
   (define (write-struct x p m h i)
     (define (write-vanilla-struct x p m h i)
-      (cond ((record-type-descriptor? (struct-type-descriptor x))
+      (cond ((record-type-descriptor? ($struct-rtd x))
 	     (print-r6rs-record-instance x p)
 	     i)
 	    ;;We do not handle opaque records specially.
-	    #;((let ((rtd (struct-type-descriptor x)))
-	    (and (record-type-descriptor? rtd)
-	    (record-type-opaque? rtd)))
-      (write-char* "#<unknown>" p)
-      i)
-      ((keyword? x)
-       (write-char #\# p)
-       (write-char #\: p)
-       (wr (struct-ref x 0) p m h i))
-      (else	;it is a Vicare's struct
-       (write-char #\# p)
-       (write-char #\[ p)
-       (let ((i (wr (struct-name x) p m h i)))
-	 (let ((n (struct-length x)))
-	   (let f ((idx 0) (i i))
-	     (cond
-	      ((fx= idx n)
-	       (write-char #\] p)
-	       i)
-	      (else
-	       (write-char #\space p)
-	       (f (fxadd1 idx)
-		  (wr (struct-ref x idx) p m h i))))))))))
+	    ;; ((let ((rtd ($struct-rtd x)))
+	    ;;    (and (record-type-descriptor? rtd)
+	    ;; 	    (record-type-opaque? rtd)))
+	    ;;  (write-char* "#<unknown>" p)
+	    ;;  i)
+	    ((keyword? x)
+	     (write-char #\# p)
+	     (write-char #\: p)
+	     (wr (struct-ref x 0) p m h i))
+	    (else ;it is a Vicare's struct
+	     (write-char #\# p)
+	     (write-char #\[ p)
+	     (let ((i (wr (struct-name x) p m h i)))
+	       (let ((n (struct-length x)))
+		 (let f ((idx 0) (i i))
+		   (cond
+		    ((fx= idx n)
+		     (write-char #\] p)
+		     i)
+		    (else
+		     (write-char #\space p)
+		     (f (fxadd1 idx)
+			(wr (struct-ref x idx) p m h i))))))))))
   (define (write-custom-struct out p m h i)
     (let ((i
 	   (let f ((cache (cdr out)))
@@ -856,6 +858,15 @@
     (die who "not a textual port" p))
   (when (port-closed? p)
     (die who "port is closed" p)))
+
+(define (debug-print . args)
+  ;;Print arguments for debugging purposes.
+  ;;
+  (pretty-print args (current-error-port))
+  (newline (current-error-port))
+  (newline (current-error-port))
+  (when (pair? args)
+    (car args)))
 
 
 ;;;; done

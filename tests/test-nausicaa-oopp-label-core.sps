@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,8 +25,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (rnrs eval)
   (vicare checks))
 
@@ -115,7 +115,7 @@
     (define (<alpha>-c o) 3)
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o c)))
       => '(#t 1 2 3))
 
@@ -133,7 +133,7 @@
     (define (<alpha>-c o) 3)
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o c)))
       => '(#t 1 2 3))
 
@@ -154,7 +154,7 @@
     (define (<alpha>-c o) 3)
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o c)))
       => '(#t 1 2 3))
 
@@ -168,7 +168,7 @@
       (method (c o) 3))
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o c)))
       => '(#t 1 2 3))
 
@@ -188,7 +188,7 @@
 	  ((_ ?obj) 3))))
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o c)))
       => '(#t 1 2 3))
 
@@ -252,7 +252,7 @@
       (list o key val))
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (set! (o (1)) 2))
       => '(#t 1 2))
 
@@ -271,7 +271,7 @@
       (list o key))
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (o (1)))
       => '(#t 1))
 
@@ -300,12 +300,12 @@
     (define (<beta>-z o) 99)
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o z)))
       => '(#t 1 2 88))
 
     (check
-	(let (((o <beta>) #t))
+	(let (({o <beta>} #t))
 	  (list o (o a) (o b) (o c) (o d) (o z)))
       => '(#t 1 2 3 4 99))
 
@@ -329,12 +329,12 @@
     (define (<beta>-z o) 99)
 
     (check
-	(let (((o <alpha>) #t))
+	(let (({o <alpha>} #t))
 	  (list o (o a) (o b) (o z)))
       => '(#t 1 2 88))
 
     (check
-	(let (((o <beta>) #t))
+	(let (({o <beta>} #t))
 	  (list o (o a) (o b) (o c) (o d) (o z)))
       => '(#t 1 2 3 4 99))
 
@@ -351,7 +351,7 @@
        (define (<alpha>-c o) 3)
 
        (check
-	   (let (((o <alpha>) #t))
+	   (let (({o <alpha>} #t))
 	     (list o (o a) (o b) (o c)))
 	 => '(#t 1 2 3))
 
@@ -372,13 +372,13 @@
     (define (<beta>-z o) 99)
 
     (check
-	(let (((o <alpha>) (<alpha> (1 2 3))))
+	(let (({o <alpha>} (<alpha> (1 2 3))))
 	  (list (o a) (o b) (o z)))
       => '(1 2 3))
 
     (check
-	(let* (((p <alpha>)	(<alpha> (1 2 -3)))
-	       ((o <beta>)	p))
+	(let* (({p <alpha>}	(<alpha> (1 2 -3)))
+	       ({o <beta>}	p))
 	  (list (o a) (o b) (o c) (o d) (o z)))
       => '(1 2 3 4 99))
 

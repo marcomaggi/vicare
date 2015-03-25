@@ -16,10 +16,11 @@
 
 (library (ikarus apply)
   (export apply)
-  (import (except (ikarus) apply)
+  (import (except (vicare) apply)
     (vicare unsafe operations)
     (vicare arguments validation)
-    (ikarus system $stack))
+    (only (vicare system $stack)
+	  $$apply))
 
 
 ;;;; constants
@@ -94,6 +95,12 @@
   ;;raise   an   "&implementation-restriction-violation",  so   we   use
   ;;"with-arguments-validation"   rather   than    the   predicates   of
   ;;CASE-DEFINE*.
+  ;;
+  ;;NOTE About "$$apply".   It is a special directive  for the compiler,
+  ;;which recognises the  symbol "$$apply" in the core  language.  It is
+  ;;not  a proper  primitive operation  implemented with  DEFINE-PRIMOP;
+  ;;rather  the  compiler  generates  assembly   code  to  jump  to  the
+  ;;predefined assembly routine "SL_apply".
   ;;
   ((f ls)
    (with-arguments-validation (who)

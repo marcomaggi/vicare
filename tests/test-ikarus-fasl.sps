@@ -28,8 +28,8 @@
 
 
 #!ikarus
-(import (ikarus)
-  (ikarus-test-framework)
+(import (vicare)
+  (libtest ikarus-test-framework)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

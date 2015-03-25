@@ -9,7 +9,7 @@
 	definitions  in this  file are  duplicated in  "vicare.h", which
 	defines the public API.
 
-  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -414,6 +414,8 @@
 
 #define IK_GUARDIANS_GENERATION_NUMBER	0
 #define IK_GC_GENERATION_COUNT		5  /* generations 0 (nursery), 1, 2, 3, 4 */
+#define IK_GC_GENERATION_NURSERY	0
+#define IK_GC_GENERATION_OLDEST		(IK_GC_GENERATION_COUNT - 1)
 
 /* The PCB's segments  vector is an array of 32-bit  words, each being a
  * bit field  representing the status  of an allocated memory  page.  We
@@ -464,7 +466,8 @@
 #define LARGE_OBJECT_TAG	0x00100000
 
 /* These are precomputed  full values for the 32-bit words  in the PCB's
-   segments vector.  Notice that "HOLE_MT" is zero. */
+   segments vector; the  suffix "_MT" stands for Main  Tag.  Notice that
+   "HOLE_MT" is zero. */
 #define HOLE_MT		(HOLE_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
 #define MAINHEAP_MT	(MAINHEAP_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
 #define MAINSTACK_MT	(MAINSTACK_TYPE	 | UNSCANNABLE_TAG | RETAIN_TAG)
@@ -557,8 +560,13 @@ typedef unsigned int		ik_uint;
 typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
 
-/* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
-typedef ik_ulong		ikptr;
+#if   (4 == SIZEOF_VOID_P)
+typedef uint32_t		ikptr;
+#elif (8 == SIZEOF_VOID_P)
+typedef uint64_t		ikptr;
+#else
+typedef unsigned long		ikptr;
+#endif
 
 /* Node  in a  simply linked  list.  Used  to store  pointers to  memory
    blocks of size IK_PAGESIZE.  */
@@ -981,7 +989,7 @@ typedef struct ikcont {
  ** ----------------------------------------------------------------- */
 
 ik_decl ikpcb *		ik_collect		(unsigned long, ikpcb*);
-ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char*);
+ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char * when_description);
 
 ik_private_decl void*	ik_malloc		(int);
 ik_private_decl void	ik_free			(void*, int);
@@ -1170,6 +1178,8 @@ typedef uint32_t	ikchar;
 #define IK_CHAR_TO_INTEGER(X) \
   ((ik_ulong)(((ikptr)(X)) >> char_shift))
 
+#define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
+
 #define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
 
 
@@ -1188,9 +1198,10 @@ typedef uint32_t	ikchar;
 #define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr)(X)))
 #define IK_STRING_LENGTH_FX(STR)	IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR32(STR,IDX)		(((ikchar*)(((long)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr)(STR)) + off_string_data))[IDX])
 
-#define IK_STRING_DATA_VOIDP(STR)	((void*)(((long)(STR)) + off_string_data))
+#define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr)(STR)) + off_string_data))
+#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr)(STR)) + off_string_data))
 
 ik_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
 ik_decl ikptr ika_string_from_cstring	(ikpcb * pcb, const char * cstr);

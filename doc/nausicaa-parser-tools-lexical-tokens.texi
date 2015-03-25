@@ -39,7 +39,7 @@ object with:
 
 @example
 (import (nausicaa)
-  (prefix (nausicaa parser-tools lexical-tokens)   lt.))
+  (prefix (nausicaa parser-tools lexical-tokens) lt.))
 
 (lt.<lexical-token>
    ((lt.category: 'NUMBER)

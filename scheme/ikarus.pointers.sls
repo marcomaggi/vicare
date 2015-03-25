@@ -24,7 +24,7 @@
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
-    pointer=?				pointer<>?
+    pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     set-pointer-null!
@@ -160,14 +160,14 @@
 
     array-set-c-size_t!			array-set-c-ssize_t!
     array-set-c-off_t!			array-set-c-ptrdiff_t!)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; pointer objects
 		  pointer?
 		  null-pointer				pointer-null?
 		  pointer->integer			integer->pointer
 		  pointer-clone				pointer-and-offset?
 		  pointer-diff				pointer-add
-		  pointer=?				pointer<>?
+		  pointer=?				pointer!=?
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
 		  set-pointer-null!
@@ -302,8 +302,16 @@
 
 		  array-set-c-size_t!			array-set-c-ssize_t!
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
-    (only (ikarus system $pointers)
+    (only (vicare system $pointers)
 	  $pointer=)
+    (except (vicare system $bytevectors)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
+	    ;;Mar 23, 2015)
+	    $bytevector-copy!/count)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus bytevectors)
+	  $bytevector-copy!/count)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
@@ -666,7 +674,7 @@
 		      (?pred ptr1 ptr2)))))))
 
   (define-pointer-comparison pointer=?		$pointer=)
-  (define-pointer-comparison pointer<>?		capi.ffi-pointer-neq)
+  (define-pointer-comparison pointer!=?		capi.ffi-pointer-neq)
   (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
   (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)
   (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)

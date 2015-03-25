@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (rnrs eval)
   (vicare checks)
   (prefix (libtest classes-lib) test.))
@@ -136,12 +136,12 @@
 ;;; --------------------------------------------------------------------
 
   (check	;single binding, with single tag
-      (let (((a <n>) 1))
+      (let (({a <n>} 1))
 	(list a (a neg)))
     => '(1 -1))
 
   (check	;multiple bindings, with single tag
-      (let (((a <n>) 1) ((b <n>) 2) ((c <n>) 3))
+      (let (({a <n>} 1) ({b <n>} 2) ({c <n>} 3))
 	(list a (a neg) b (b neg) c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
@@ -150,15 +150,15 @@
 
   (check	;duplicate identifier in untagged bindings
       (catch-syntax-violation #f
-	(%eval '(let (((a <n>) 1)
+	(%eval '(let (({a <n>} 1)
 		      (a 2))
 		  a)))
     => 'a)
 
   (check	;duplicate identifier in tagged bindings
       (catch-syntax-violation #f
-	(%eval '(let (((a <n>) 1)
-		      ((a <t>) 2))
+	(%eval '(let (({a <n>} 1)
+		      ({a <t>} 2))
 		  a)))
     => 'a)
 
@@ -179,23 +179,23 @@
       (denominator (<fraction>-number o)))
 
     (check
-	(let (((a <fraction>) (make-<fraction> 2/3))
-	      ((b <fraction>) (make-<fraction> 4/5)))
+	(let (({a <fraction>} (make-<fraction> 2/3))
+	      ({b <fraction>} (make-<fraction> 4/5)))
 	  (list (a numerator) (b denominator)))
       => '(2 5))
 
     #f)
 
   (check	;use the records from (libtest classes-lib)
-      (let (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+      (let (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
   (check	;use the records from (libtest classes-lib)
-      (let (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
-	    ((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
+      (let (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9)))
+	    ({s test.<beta>}  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
     => '(1 7 10 40))
 
@@ -213,15 +213,15 @@
 
   (check
       (let loop ((a 0)
-  		 ((b <integer>) 3))
+  		 ({b <integer>} 3))
   	(if (b zero?)
   	    a
   	  (loop (+ 1 a) (- b 1))))
     => 3)
 
   (check
-      (let loop (((A <integer>) 0)
-		 ((b <integer>) 3))
+      (let loop (({A <integer>} 0)
+		 ({b <integer>} 3))
 	(if (b zero?)
 	    (A odd?)
 	  (loop (+ 1 A) (- b 1))))
@@ -232,15 +232,15 @@
 
   (check	;duplicate identifier in untagged bindings
       (catch-syntax-violation #f
-	(%eval '(let loop (((a <n>) 1)
+	(%eval '(let loop (({a <n>} 1)
 			   (a 2))
 		  a)))
     => 'a)
 
   (check	;duplicate identifier in tagged bindings
       (catch-syntax-violation #f
-	(%eval '(let loop (((a <n>) 1)
-			   ((a <t>) 2))
+	(%eval '(let loop (({a <n>} 1)
+			   ({a <t>} 2))
 		  a)))
     => 'a)
 
@@ -258,21 +258,21 @@
 
       (check
 	  (catch-assertion #f
-	    (let (((o <alpha>) 1))
+	    (let (({o <alpha>} 1))
 	      (o a)))
         => '((expression: 1)
 	     (result: 1)))
 
       (check
 	  (catch-assertion #f
-	    (let (((o <alpha>) 1))
+	    (let (({o <alpha>} 1))
 	      (o a)))
         => '((expression: 1)
 	     (result: 1)))
 
       (check
 	  (catch-assertion #f
-	    (let (((o <alpha>) (<alpha> (1))))
+	    (let (({o <alpha>} (<alpha> (1))))
 	      (set! o 123)
 	      (o a)))
         => '((expression: 123)
@@ -316,14 +316,14 @@
 ;;; --------------------------------------------------------------------
 
   (check	;single binding, with single tag
-      (let* (((a <n>) 1))
+      (let* (({a <n>} 1))
 	(list a (a neg)))
     => '(1 -1))
 
   (check	;multiple bindings, with single tag
-      (let* (((a <n>) 1)
-	     ((b <n>) 2)
-	     ((c <n>) 3))
+      (let* (({a <n>} 1)
+	     ({b <n>} 2)
+	     ({c <n>} 3))
 	(list a (a neg) b (b neg) c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
@@ -352,29 +352,29 @@
       (denominator (<fraction>-number o)))
 
     (check
-	(let* (((a <fraction>) (make-<fraction> 2/3))
-	       ((b <fraction>) (make-<fraction> 4/5)))
+	(let* (({a <fraction>} (make-<fraction> 2/3))
+	       ({b <fraction>} (make-<fraction> 4/5)))
 	  (list (a numerator) (b denominator)))
       => '(2 5))
 
     (check
-	(let* (((a <fraction>) (make-<fraction> 2/3))
-	       ((b <fraction>) (make-<fraction> (/ (a numerator) 5))))
+	(let* (({a <fraction>} (make-<fraction> 2/3))
+	       ({b <fraction>} (make-<fraction> (/ (a numerator) 5))))
 	  (b number))
       => 2/5)
 
     #f)
 
   (check	;use the records from (libtest classes-lib)
-      (let* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+      (let* (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
   (check	;use the records from (libtest classes-lib)
-      (let* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
-	     ((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
+      (let* (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9)))
+	     ({s test.<beta>}  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
     => '(1 7 10 40))
 
@@ -385,7 +385,7 @@
 
   (check
       (let* ((a 1)
-	     ((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+	     ({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list a (r b)))
     => '(1 2))
 
@@ -403,14 +403,14 @@
 
     (check
 	(catch-assertion #f
-  	  (let* (((o <alpha>) 1))
+  	  (let* (({o <alpha>} 1))
   	    (o a)))
       => '((expression: 1)
 	   (result: 1)))
 
     (check
 	(catch-assertion #f
-  	  (let* (((o <alpha>) (<alpha> (1))))
+  	  (let* (({o <alpha>} (<alpha> (1))))
   	    (set! o (+ 1 2 3))
   	    (o a)))
       => '((expression: (+ 1 2 3))
@@ -454,14 +454,14 @@
 ;;; --------------------------------------------------------------------
 
   (check	;single binding, with single tag
-      (letrec (((a <n>) 1))
+      (letrec (({a <n>} 1))
 	(list a (a neg)))
     => '(1 -1))
 
   (check	;multiple bindings, with single tag
-      (letrec (((a <n>) 1)
-	       ((b <n>) 2)
-	       ((c <n>) 3))
+      (letrec (({a <n>} 1)
+	       ({b <n>} 2)
+	       ({c <n>} 3))
 	(list a (a neg) b (b neg) c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
@@ -491,8 +491,8 @@
       (denominator (<fraction>-number o)))
 
     (check
-	(letrec (((a <fraction>) (make-<fraction> 2/3))
-		 ((b <fraction>) (make-<fraction> 4/5)))
+	(letrec (({a <fraction>} (make-<fraction> 2/3))
+		 ({b <fraction>} (make-<fraction> 4/5)))
 	  (list (a numerator) (b denominator)))
       => '(2 5))
 
@@ -504,11 +504,11 @@
       (fields (immutable value)))
 
     (define-class <beta>
-      (fields (immutable (proc <procedure>))))
+      (fields (immutable {proc <procedure>})))
 
     (check
-	(letrec (((a <alpha>) (make-<alpha> 123))
-		 ((b <beta>)  (make-<beta> (lambda () (a value)))))
+	(letrec (({a <alpha>} (make-<alpha> 123))
+		 ({b <beta>}  (make-<beta> (lambda () (a value)))))
 	  ((b proc)))
       => 123)
 
@@ -518,17 +518,17 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (check
-	(letrec (((a <alpha>) (make-<alpha>
+	(letrec (({a <alpha>} (make-<alpha>
 			       1 (lambda ()
 				   (cons (a value) (b value)))))
-		 ((b <beta>)  (make-<beta>
+		 ({b <beta>}  (make-<beta>
 			       2 (lambda ()
 				   (cons (a value) (b value))))))
 	  (list ((a proc)) ((b proc))))
@@ -537,15 +537,15 @@
     #f)
 
   (check	;use the records from (libtest classes-lib)
-      (letrec (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+      (letrec (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
   (check	;use the records from (libtest classes-lib)
-      (letrec (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
-	       ((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
+      (letrec (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9)))
+	       ({s test.<beta>}  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
     => '(1 7 10 40))
 
@@ -556,7 +556,7 @@
 
   (check
       (letrec ((a 1)
-	       ((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+	       ({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list a (r b)))
     => '(1 2))
 
@@ -574,14 +574,14 @@
 
     (check
 	(catch-assertion #f
-  	  (letrec (((o <alpha>) 1))
+  	  (letrec (({o <alpha>} 1))
   	    (o a)))
       => '((expression: 1)
 	   (result: 1)))
 
     (check
 	(catch-assertion #f
-  	  (letrec (((o <alpha>) (<alpha> (1))))
+  	  (letrec (({o <alpha>} (<alpha> (1))))
   	    (set! o (+ 1 2 3))
   	    (o a)))
       => '((expression: (+ 1 2 3))
@@ -625,12 +625,12 @@
 ;;; --------------------------------------------------------------------
 
   (check	;single binding, with single tag
-      (letrec* (((a <n>) 1))
+      (letrec* (({a <n>} 1))
 	(list a (a neg)))
     => '(1 -1))
 
   (check	;multiple bindings, with single tag
-      (letrec* (((a <n>) 1) ((b <n>) 2) ((c <n>) 3))
+      (letrec* (({a <n>} 1) ({b <n>} 2) ({c <n>} 3))
 	(list a (a neg) b (b neg) c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
@@ -660,14 +660,14 @@
       (denominator (<fraction>-number o)))
 
     (check
-	(letrec* (((a <fraction>) (make-<fraction> 2/3))
-		  ((b <fraction>) (make-<fraction> 4/5)))
+	(letrec* (({a <fraction>} (make-<fraction> 2/3))
+		  ({b <fraction>} (make-<fraction> 4/5)))
 	  (list (a numerator) (b denominator)))
       => '(2 5))
 
     (check
-	(letrec* (((a <fraction>) (make-<fraction> 2/3))
-		  ((b <fraction>) (make-<fraction> (/ (a numerator) 5))))
+	(letrec* (({a <fraction>} (make-<fraction> 2/3))
+		  ({b <fraction>} (make-<fraction> (/ (a numerator) 5))))
 	  (b number))
       => 2/5)
 
@@ -677,16 +677,16 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (check
-	(letrec* (((a <alpha>) (make-<alpha>
+	(letrec* (({a <alpha>} (make-<alpha>
 				1 (lambda () (b value))))
-		  ((b <beta>)  (make-<beta>
+		  ({b <beta>}  (make-<beta>
 				2 (lambda () (a value)))))
 	  (list ((a proc)) ((b proc))))
       => '(2 1))
@@ -697,17 +697,17 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (check
-	(letrec* (((a <alpha>) (make-<alpha>
+	(letrec* (({a <alpha>} (make-<alpha>
 				1 (lambda ()
 				    (cons (a value) (b value)))))
-		  ((b <beta>)  (make-<beta>
+		  ({b <beta>}  (make-<beta>
 				2 (lambda ()
 				    (cons (a value) (b value))))))
 	  (list ((a proc)) ((b proc))))
@@ -719,35 +719,35 @@
 
     (define-class <alpha>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (define-class <beta>
       (fields (immutable value)
-	      (immutable (proc <procedure>))))
+	      (immutable {proc <procedure>})))
 
     (check
-	(letrec* (((a <alpha>) (make-<alpha>
+	(letrec* (({a <alpha>} (make-<alpha>
 				1 (lambda ()
 				    (cons (a value) (b value)))))
-		  ((b <beta>)  (make-<beta>
+		  ({b <beta>}  (make-<beta>
 				2 (lambda ()
 				    (cons (a value) (b value)))))
-		  ((c <top>)   (list ((a proc)) ((b proc)))))
+		  ({c <top>}   (list ((a proc)) ((b proc)))))
 	  c)
       => '((1 . 2) (1 . 2)))
 
     #f)
 
   (check	;use the records from (libtest classes-lib)
-      (letrec* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+      (letrec* (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list (r a) (r b) (r c)
 	      (r d) (r e) (r f)
 	      (r g) (r h) (r i)))
     => '(1 2 3 4 5 6 7 8 9))
 
   (check	;use the records from (libtest classes-lib)
-      (letrec* (((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9)))
-		((s test.<beta>)  (test.<beta>  (10 20 30 40 50 60))))
+      (letrec* (({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9)))
+		({s test.<beta>}  (test.<beta>  (10 20 30 40 50 60))))
 	(list (r a) (r g) (s a) (s d)))
     => '(1 7 10 40))
 
@@ -758,7 +758,7 @@
 
   (check
       (letrec* ((a 1)
-		((r test.<gamma>) (test.<gamma> (1 2 3 4 5 6 7 8 9))))
+		({r test.<gamma>} (test.<gamma> (1 2 3 4 5 6 7 8 9))))
 	(list a (r b)))
     => '(1 2))
 
@@ -776,14 +776,14 @@
 
     (check
 	(catch-assertion #f
-  	  (letrec* (((o <alpha>) 1))
+  	  (letrec* (({o <alpha>} 1))
   	    (o a)))
       => '((expression: 1)
 	   (result: 1)))
 
     (check
 	(catch-assertion #f
-  	  (letrec* (((o <alpha>) (<alpha> (1))))
+  	  (letrec* (({o <alpha>} (<alpha> (1))))
   	    (set! o (+ 1 2 3))
   	    (o a)))
       => '((expression: (+ 1 2 3))
@@ -873,59 +873,47 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check	;single binding, single id in parens, no tags
-      (let-values ((((a)) 1))
-	(list a))
-    => '(1))
-
-  (check	;single binding, multiple ids in parens, no tags
-      (let-values ((((a) (b) (c)) (values 1 2 3)))
-	(list a b c))
-    => '(1 2 3))
-
-;;; --------------------------------------------------------------------
-
   (check	;single binding, single id, single tag
-      (let-values ((((a <n>)) 1))
+      (let-values ((({a <n>}) 1))
 	(list a (a neg)))
     => '(1 -1))
 
   (check	;single binding, multiple ids, single tag
-      (let-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3)))
+      (let-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3)))
   	(list a (a neg)
 	      b (b neg)
 	      c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
   (check	;multiple bindings, single id, single tags
-      (let-values ((((a <n>)) 1)
-		   (((b <n>)) 2)
-		   (((c <n>)) 3))
+      (let-values ((({a <n>}) 1)
+		   (({b <n>}) 2)
+		   (({c <n>}) 3))
   	(list a (a neg)
 	      b (b neg)
 	      c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
   (check	;multiple bindings, multiple ids, with tags
-      (let-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3))
-		   (((d <n>) (e <n>) (f <n>)) (values 4 5 6))
-		   (((g <n>) (h <n>) (i <n>)) (values 7 8 9)))
+      (let-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3))
+		   (({d <n>} {e <n>} {f <n>}) (values 4 5 6))
+		   (({g <n>} {h <n>} {i <n>}) (values 7 8 9)))
   	(list a b c d e f g h i
 	      (a neg) (b neg) (c neg) (d neg) (e neg) (f neg) (g neg) (h neg) (i neg)))
     => '(1 2 3 4 5 6 7 8 9
 	   -1 -2 -3 -4 -5 -6 -7 -8 -9))
 
   (check	;mixed bindings, with tags
-      (let-values ((((a <n>))	1)
+      (let-values ((({a <n>})	1)
 		   ((d)		4)
-		   ((g (h <n>) i)	(values 7 8 9)))
+		   ((g {h <n>} i)	(values 7 8 9)))
   	(list a (a neg) d g h (h neg) i))
     => '(1 -1 4 7 8 -8 9))
 
   (check	;mixed bindings, with tags
-      (let-values ((((a <n>))		1)
+      (let-values ((({a <n>})		1)
 		   ((d)			4)
-		   (((g <n>) (h <n>) i)	(values 7 8 9)))
+		   (({g <n>} {h <n>} i)	(values 7 8 9)))
   	(list a (a neg) d g (g neg) h (h neg) i))
     => '(1 -1 4 7 -7 8 -8 9))
 
@@ -933,9 +921,9 @@
 
   (check	;multiple bindings, scope rules
       (let ((a 4) (b 5) (c 6))
-	(let-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3))
-		     (((d <n>) (e <n>) (f <n>)) (values a b c))
-		     (((g <n>) (h <n>) (i <n>)) (values 7 8 9)))
+	(let-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3))
+		     (({d <n>} {e <n>} {f <n>}) (values a b c))
+		     (({g <n>} {h <n>} {i <n>}) (values 7 8 9)))
 	  (list a b c d e f g h i
 		(a neg) (b neg) (c neg) (d neg) (e neg) (f neg) (g neg) (h neg) (i neg))))
     => '(1 2 3 4 5 6 7 8 9
@@ -957,7 +945,7 @@
 
   (check	;error, duplicate identifiers
       (catch-syntax-violation #f
-	(%eval '(let-values (((a (a <n>)) (values 1 2)))
+	(%eval '(let-values (((a {a <n>}) (values 1 2)))
 		  a)))
     => 'a)
 
@@ -1055,66 +1043,54 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check	;single binding, single id in parens, no tags
-      (let*-values ((((a)) 1))
-	(list a))
-    => '(1))
-
-  (check	;single binding, multiple ids in parens, no tags
-      (let*-values ((((a) (b) (c)) (values 1 2 3)))
-	(list a b c))
-    => '(1 2 3))
-
-;;; --------------------------------------------------------------------
-
   (check	;single binding, single id, single tag
-      (let*-values ((((a <n>)) 1))
+      (let*-values ((({a <n>}) 1))
 	(list a (a neg)))
     => '(1 -1))
 
   (check	;single binding, multiple ids, single tag
-      (let*-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3)))
+      (let*-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3)))
 	(list a (a neg)
 	      b (b neg)
 	      c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
   (check	;multiple bindings, single id, single tags
-      (let*-values ((((a <n>)) 1)
-		    (((b <n>)) 2)
-		    (((c <n>)) 3))
+      (let*-values ((({a <n>}) 1)
+		    (({b <n>}) 2)
+		    (({c <n>}) 3))
 	(list a (a neg)
 	      b (b neg)
 	      c (c neg)))
     => '(1 -1 2 -2 3 -3))
 
   (check	;multiple bindings, multiple ids, with tags
-      (let*-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3))
-		    (((d <n>) (e <n>) (f <n>)) (values 4 5 6))
-		    (((g <n>) (h <n>) (i <n>)) (values 7 8 9)))
+      (let*-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3))
+		    (({d <n>} {e <n>} {f <n>}) (values 4 5 6))
+		    (({g <n>} {h <n>} {i <n>}) (values 7 8 9)))
 	(list a b c d e f g h i
 	      (a neg) (b neg) (c neg) (d neg) (e neg) (f neg) (g neg) (h neg) (i neg)))
     => '(1 2 3 4 5 6 7 8 9
 	   -1 -2 -3 -4 -5 -6 -7 -8 -9))
 
   (check	;mixed bindings, with tags
-      (let*-values ((((a <n>))	1)
+      (let*-values ((({a <n>})	1)
 		    ((d)		4)
-		    ((g (h <n>) i)	(values 7 8 9)))
+		    ((g {h <n>} i)	(values 7 8 9)))
 	(list a (a neg) d g h (h neg) i))
     => '(1 -1 4 7 8 -8 9))
 
   (check	;mixed bindings, with tags
-      (let*-values ((((a <n>))			1)
+      (let*-values ((({a <n>})			1)
 		    ((d)			4)
-		    (((g <n>) (h <n>) i)	(values 7 8 9)))
+		    (({g <n>} {h <n>} i)	(values 7 8 9)))
 	(list a (a neg) d g (g neg) h (h neg) i))
     => '(1 -1 4 7 -7 8 -8 9))
 
   (check	;mixed bindings, with tags
-      (let*-values ((((a <n>))			1)
+      (let*-values ((({a <n>})			1)
 		    ((d)			4)
-		    ((g (h <n>) (i <n>))	(values 7 8 9)))
+		    ((g {h <n>} {i <n>})	(values 7 8 9)))
 	(list a (a neg) d g h (h neg) i (i neg)))
     => '(1 -1 4 7 8 -8 9 -9))
 
@@ -1122,9 +1098,9 @@
 
   (check	;multiple bindings, scope rules
       (let ((a 4) (b 5) (c 6))
-	(let*-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3))
-		      (((d <n>) (e <n>) (f <n>)) (values a b c))
-		      (((g <n>) (h <n>) (i <n>)) (values 7 8 9)))
+	(let*-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3))
+		      (({d <n>} {e <n>} {f <n>}) (values a b c))
+		      (({g <n>} {h <n>} {i <n>}) (values 7 8 9)))
 	  (list a b c d e f g h i
 		(a neg) (b neg) (c neg) (d neg) (e neg) (f neg) (g neg) (h neg) (i neg))))
     => '(1 2 3 1 2 3 7 8 9
@@ -1132,17 +1108,17 @@
 
   (check	;multiple bindings, scope rules
       (let ((a 4) (b 5) (c 6))
-	(let*-values ((((a <n>) (b <n>) (c <n>)) (values 1 2 3))
-		      (((d <n>) (e <n>) (f <n>)) (values (a neg) (b neg) (c neg)))
-		      (((g <n>) (h <n>) (i <n>)) (values 7 8 9)))
+	(let*-values ((({a <n>} {b <n>} {c <n>}) (values 1 2 3))
+		      (({d <n>} {e <n>} {f <n>}) (values (a neg) (b neg) (c neg)))
+		      (({g <n>} {h <n>} {i <n>}) (values 7 8 9)))
 	  (list a b c d e f g h i
 		(a neg) (b neg) (c neg) (d neg) (e neg) (f neg) (g neg) (h neg) (i neg))))
     => '(1 2 3 -1 -2 -3 7 8 9
 	   -1 -2 -3 1 2 3 -7 -8 -9))
 
   (check	;correct duplicate identifiers, no tags
-      (let*-values ((((a <n>)) 1)
-		    (((a <n>)) 2))
+      (let*-values ((({a <n>}) 1)
+		    (({a <n>}) 2))
 	a)
     => 2)
 
@@ -1162,7 +1138,7 @@
 
   (check	;error, duplicate identifiers
       (catch-syntax-violation #f
-	(%eval '(let*-values (((a (a <n>)) (values 1 2)))
+	(%eval '(let*-values (((a {a <n>}) (values 1 2)))
 		  a)))
     => 'a)
 
@@ -1179,13 +1155,13 @@
 
   (check
       (do ((a 0 (+ 1 a))
-	   ((b <integer>) 3 (- b 1)))
+	   ({b <integer>} 3 (- b 1)))
 	  ((b zero?) a))
     => 3)
 
   (check
-      (do (((a <integer>) 0 (+ 1 a))
-	   ((b <integer>) 3 (- b 1)))
+      (do (({a <integer>} 0 (+ 1 a))
+	   ({b <integer>} 3 (- b 1)))
 	  ((b zero?) (a odd?)))
     => #t)
 
@@ -1202,14 +1178,14 @@
 
   (check
       (do* ((a 0 (+ 1 a))
-	    ((b <integer>) 3 (- b 1)))
+	    ({b <integer>} 3 (- b 1)))
 	  ((b zero?)
 	   a))
     => 3)
 
   (check
-      (do* (((a <integer>) 0 (+ 1 a))
-	    ((b <integer>) 3 (- b 1)))
+      (do* (({a <integer>} 0 (+ 1 a))
+	    ({b <integer>} 3 (- b 1)))
 	  ((b zero?)
 	   (a odd?)))
     => #t)
@@ -1242,7 +1218,7 @@
 ;;; tagged
 
   (check
-      (receive ((a <number>) (b <number>) (c <number>))
+      (receive ({a <number>} {b <number>} {c <number>})
 	  (values 1 2 3)
 	(list (a string)
 	      (b string)
@@ -1250,13 +1226,7 @@
     => '("1" "2" "3"))
 
   (check
-      (receive #(args <list>)
-	  (values 1 2 3)
-	(args length))
-    => 3)
-
-  (check
-      (receive ((a <number>))
+      (receive ({a <number>})
 	  1
 	(a string))
     => "1")
@@ -1276,7 +1246,7 @@
       (call-with-values
 	  (lambda ()
 	    (values 1 2 3))
-	(lambda/tags #(args <list>)
+	(lambda/tags {args <list>}
 	  (args length)))
     => 3)
 
@@ -1315,7 +1285,7 @@
 
   (check
       (with-result
-       (let-values (((A B C) (receive-and-return ((a <number>) (b <number>) (c <number>))
+       (let-values (((A B C) (receive-and-return ({a <number>} {b <number>} {c <number>})
 				 (values 1 2 3)
 			       (add-result (list (a string)
 						 (b string)
@@ -1325,7 +1295,7 @@
 
   (check
       (with-result
-       (let-values (((A B C) (receive-and-return #(args <list>)
+       (let-values (((A B C) (receive-and-return {args <list>}
 				 (values 1 2 3)
 			       (add-result (args length)))))
 	 (vector A B C)))
@@ -1333,7 +1303,7 @@
 
   (check
       (with-result
-       (let ((A (receive-and-return ((a <number>))
+       (let ((A (receive-and-return ({a <number>})
 		    1
 		  (add-result (a string)))))
 	 A))
@@ -1382,14 +1352,14 @@
 
   (check
       (let ()
-	(define-values ((a <integer>))
+	(define-values ({a <integer>})
 	  123)
 	(list a (a positive?) (a negative?)))
     => '(123 #t #f))
 
   (check
       (let ()
-  	(define-values ((a <integer>) (b <string>) (c <pair>))
+  	(define-values ({a <integer>} {b <string>} {c <pair>})
   	  (values 123 "ciao" '(1 . 2)))
   	(list a (a odd?)
   	      b (b length)

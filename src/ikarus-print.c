@@ -66,6 +66,22 @@ ik_print_no_newline (ikptr x)
   print_object(stderr, x, 0);
 }
 
+ikptr
+ikrt_print_emergency (ikptr s_bv, ikpcb *pcb)
+{
+  fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_bv));
+  return IK_VOID;
+}
+
+ikptr
+ikrt_scheme_print (ikptr x, ikpcb * pcb)
+/* This can be called from Scheme. */
+{
+  print_object(stderr, x, 0);
+  fprintf(stderr, "\n");
+  return IK_VOID;
+}
+
 
 static void
 print_indentation (FILE* fh, int nested_level)
@@ -215,8 +231,23 @@ print_object (FILE* fh, ikptr x, int nested_level)
     }
     fprintf(fh, ")");
   }
+  else if (IK_FORWARD_PTR == x) {
+    fprintf(fh, "#<forward-ptr>");
+  }
+  else if (IK_EOF_OBJECT == x) {
+    fprintf(fh, "#<eof>");
+  }
+  else if (IK_VOID_OBJECT == x) {
+    fprintf(fh, "#<void>");
+  }
+  else if (IK_UNBOUND_OBJECT == x) {
+    fprintf(fh, "#<unbound-object>");
+  }
+  else if (IK_BWP_OBJECT == x) {
+    fprintf(fh, "#<bwp-object>");
+  }
   else {
-    fprintf(fh, "#<unknown>");
+    fprintf(fh, "#<unknown 0x%016lx>", x);
   }
 }
 

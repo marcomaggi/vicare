@@ -31,7 +31,7 @@
     string-foldcase string-titlecase  string-ci<? string-ci<=?
     string-ci=? string-ci>? string-ci>=? string-normalize-nfd
     string-normalize-nfkd string-normalize-nfc string-normalize-nfkc )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  unicode-printable-char?
 		  char-upcase char-downcase char-titlecase char-foldcase
 		  char-whitespace? char-lower-case? char-upper-case?
@@ -52,15 +52,15 @@
    string-ref string-set! string-length
    vector-ref vector-set! vector-length)
   (import
-    (rename (ikarus system $strings)
+    (rename (vicare system $strings)
       ($string-length string-length)
       ($string-ref    string-ref)
       ($string-set!   string-set!))
-    (rename (ikarus system $vectors)
+    (rename (vicare system $vectors)
       ($vector-length vector-length)
       ($vector-ref    vector-ref)
       ($vector-set!   vector-set!))
-    (rename (ikarus system $chars)
+    (rename (vicare system $chars)
       ($char->fixnum char->integer)
       ($fixnum->char integer->char)
       ($char< char<?)
@@ -68,7 +68,7 @@
       ($char= char=?)
       ($char> char>?)
       ($char>= char>=?))
-    (rename (ikarus system $fx)
+    (rename (vicare system $fx)
       ($fxzero?    fxzero?)
       ($fxsra    fxsra)
       ($fxsll    fxsll)

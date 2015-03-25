@@ -121,24 +121,24 @@ The following is an example definition for a simple left--to--right
 Scheme string iterator:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa)
   (nausicaa containers iterators))
 
 (define-class <simple-string-iterator>
   (parent <iterator>)
-  (fields (mutable (index <nonnegative-fixnum>)))
-  (virtual-fields (immutable (subject <string>)
-                             (lambda ((I <iterator>))
+  (fields (mutable @{index <nonnegative-fixnum>@}))
+  (virtual-fields (immutable @{subject <string>@}
+                             (lambda (@{I <iterator>@})
                                (I $subject))))
   (protocol (lambda (make-iterator)
-              (lambda ((subject <string>))
+              (lambda (@{subject <string>@})
                 ((make-iterator subject) 0)))))
 
-(define-method (iterator-more? (I <simple-string-iterator>))
-  (fx< (I index) (string-length (I subject))))
+(define-method (iterator-more? @{I <simple-string-iterator>@})
+  (fx< (I index) ((I subject) length)))
 
-(define-method (iterator-next (I <simple-string-iterator>))
+(define-method (iterator-next @{I <simple-string-iterator>@})
   (if (I more?)
       (receive-and-return (retval)
           (string-ref (I subject) (I index))
@@ -156,7 +156,7 @@ Scheme string iterator:
 (sentinel? (I current))                 @result{} #t
 
 (I subject)                             @result{} "ciao"
-(J subject length)                      @result{} 4
+((J subject) length)                    @result{} 4
 
 (I more?)                               @result{} #t
 (I next)                                @result{} #\c
@@ -175,7 +175,7 @@ Scheme string iterator:
 (try
     (I next)
   (catch E
-    (&stop-iteration     #t)
+    ((&stop-iteration)   #t)
     (else                E)))
 @result{} #t
 
@@ -183,7 +183,7 @@ Scheme string iterator:
 (try
     (I next)
   (catch E
-    (&stop-iteration    #t)
+    ((&stop-iteration)  #t)
     (else               E)))
 @result{} #t
 @end example
@@ -258,7 +258,7 @@ optional, when not used the stride defaults to @math{1}.
 Example:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa)
   (nausicaa containers iterators))
 

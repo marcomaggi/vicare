@@ -16,18 +16,19 @@
 
 (library (ikarus.apropos)
   (export apropos)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  apropos)
-    (only (psyntax library-manager)
-	  library-subst library-name)
+    (only (psyntax.library-manager)
+	  library-export-subst
+	  library-name-identifiers
+	  interned-libraries)
     (vicare unsafe operations))
 
 
 (define (apropos key)
-  ;;Defined by Ikarus.   Given a string or symbol  KEY, search among the
-  ;;internally installed libraries all  the exported bindings having KEY
-  ;;as substring of their name and print a report to the standard output
-  ;;port.
+  ;;Defined by  Ikarus.  Given a  string or symbol  KEY, search among  the internally
+  ;;interned libraries  all the exported  bindings having  KEY as substring  of their
+  ;;name and print a report to the standard output port.
   ;;
   (for-each (lambda (x)
 	      (display "*** in library ")
@@ -71,22 +72,22 @@
     (string<? (symbol->string s1)
 	      (symbol->string s2)))
   (fold-right (lambda (lib rest)
-		;;The  return  value of  LIBRARY-SUBST  is  the list  of
-		;;substitutions  for  the  identifiers exported  by  the
+		;;The return  value of LIBRARY-EXPORT-SUBST is  the list
+		;;of substitutions  for the identifiers exported  by the
 		;;library.
-		(let ((ls (filter matcher (library-subst lib))))
+		(let ((ls (filter matcher (library-export-subst lib))))
 		  (if (null? ls)
 		      rest
 		    (let ((ls (list-sort symbol<? (map car ls))))
-		      (cons (cons (library-name lib) ls) rest)))))
+		      (cons (cons (library-name-identifiers lib) ls) rest)))))
     '()
     (list-sort (lambda (lib1 lib2)
 		 ;;Compare the  components of a library  name (which are
 		 ;;symbols)  and   return  #t  if   LIB1's  symbols  are
 		 ;;lexicographically lesser than LIB2's symbols.
 		 ;;
-		 (let loop ((ls1 (library-name lib1))
-			    (ls2 (library-name lib2)))
+		 (let loop ((ls1 (library-name-identifiers lib1))
+			    (ls2 (library-name-identifiers lib2)))
 		   (and (pair? ls2)
 			(or (null? ls1)
 			    (let ((s1 (symbol->string ($car ls1)))
@@ -94,7 +95,7 @@
 			      (or (string<? s1 s2)
 				  (and (string=? s1 s2)
 				       (loop ($cdr ls1) ($cdr ls2)))))))))
-	       (installed-libraries))))
+	       (interned-libraries))))
 
 
 ;;;; done

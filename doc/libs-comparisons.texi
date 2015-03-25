@@ -740,7 +740,8 @@ the resulting value is the value of the conditional expression.
 
 The branch is chosen according to the following table:
 
-@multitable {@func{if-not=?}} {@meta{consequent}012} {@meta{alternate}0}
+@c @multitable {@func{if-not=?}} {@meta{consequent}012} {@meta{alternate}0}
+@multitable {@func{if-not=?}} {@math{C \in @{-1, +1@}}} {@math{C \in @{-1, +1@}}}
 @headitem @tab @meta{consequent} @tab @meta{alternate}
 @item @func{if=?} @tab @code{c = 0} @tab @code{c in @{-1, 1@}}
 @item @func{if<?} @tab @code{c = -1} @tab @code{c in @{0, 1@}}

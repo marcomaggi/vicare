@@ -10,7 +10,7 @@
 	"internals.h", which defines  the internal API; some definitions
 	are modified to keep them opaque to external code.
 
-  Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006-2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -135,8 +135,13 @@ typedef unsigned int		ik_uint;
 typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
 
-/* FIXME Should this be a "uintptr_t"? (Marco Maggi; Nov  6, 2011). */
-typedef ik_ulong		ikptr;
+#if   (4 == SIZEOF_VOID_P)
+typedef uint32_t		ikptr;
+#elif (8 == SIZEOF_VOID_P)
+typedef uint64_t		ikptr;
+#else
+typedef uintptr_t		ikptr;
+#endif
 
 typedef struct ikpcb {
   ikptr		dummy0;		/* ikptr allocation_pointer; */
@@ -303,6 +308,8 @@ typedef uint32_t	ikchar;
 #define IK_CHAR_TO_INTEGER(X) \
   ((ik_ulong)(((ikptr)(X)) >> char_shift))
 
+#define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
+
 #define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
 
 
@@ -321,9 +328,10 @@ typedef uint32_t	ikchar;
 #define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr)(X)))
 #define IK_STRING_LENGTH_FX(STR)	IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR32(STR,IDX)		(((ikchar*)(((long)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr)(STR)) + off_string_data))[IDX])
 
-#define IK_STRING_DATA_VOIDP(STR)	((void*)(((long)(STR)) + off_string_data))
+#define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr)(STR)) + off_string_data))
+#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr)(STR)) + off_string_data))
 
 ik_api_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
 ik_api_decl ikptr ika_string_from_cstring	(ikpcb * pcb, const char * cstr);

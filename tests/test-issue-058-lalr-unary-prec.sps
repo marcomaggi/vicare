@@ -9,7 +9,7 @@
 ;;;	Show error  when using the  "prec:" qualifier in  LALR generated
 ;;;	parsers.
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (prefix (nausicaa parser-tools lalr) lalr.)
   (prefix (nausicaa parser-tools lexical-tokens) lt.)
@@ -68,7 +68,7 @@
    (()
     (make-error-handler (lambda x x)))
    ((yycustom)
-    (lambda ((message <string>) (token lt.<lexical-token>))
+    (lambda ({message <string>} {token lt.<lexical-token>})
       (yycustom `(error-handler . ,(token value)))))))
 
 (define (doit . tokens)

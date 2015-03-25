@@ -86,21 +86,24 @@ parent defaults to @condition{condition}.
 
 
 @deffn {Auxiliary Syntax} fields @meta{field-spec} @dots{}
+@deffnx {Auxiliary Syntax} brace
 Specify the fields of the enclosing condition type definition.  All the
 @meta{field-spec} arguments must have one of the forms:
 
 @example
 @meta{field}
 (@meta{field} @meta{accessor})
-((@meta{field} @meta{tag}))
-((@meta{field} @meta{tag}) @meta{accessor})
+((brace @meta{field} @meta{tag}))
+((brace @meta{field} @meta{tag}) @meta{accessor})
 @end example
 
 @noindent
 in which: the identifier @meta{field} is the name of the field; the
 identifier @meta{accessor} is the name of the accessor of the field; the
 identifier @meta{tag} is the name of a label or class which tags the
-field.  This clause can be omitted and can be used at most once.
+field; @func{brace} is the identifier exported by @library{vicare} and
+reexported by @library{nausicaa language oopp}.  This clause can be
+omitted and can be used at most once.
 
 When the first form of @meta{field-spec} is used: for each field an
 accessor name is built as follows: the @samp{&} character is stripped
@@ -164,7 +167,7 @@ This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
 Every @meta{catch-clause} has one of the forms:
 
 @example
-(@meta{tag} @metao{tag-body} @meta{tag-body} @dots{})
+((@meta{tag}) @metao{tag-body} @meta{tag-body} @dots{})
 (else @metao{else-body} @meta{else-body} @dots{})
 @end example
 
@@ -178,7 +181,7 @@ clause, it will expand to:
 @example
 (guard (@meta{var}
         ((is-a? @meta{var} @meta{tag})
-         (with-tags ((@meta{var} @meta{tag}))
+         (with-tags ((brace @meta{var} @meta{tag}))
            @metao{tag-body}
            @meta{tag-body}
            ...))
@@ -192,7 +195,7 @@ and with the @clause{else} clause:
 @example
 (guard (@meta{var}
         ((is-a? @meta{var} @meta{tag})
-         (with-tags ((@meta{var} @meta{tag}))
+         (with-tags ((brace @meta{var} @meta{tag}))
            @metao{tag-body}
            @meta{tag-body}
            ...))
@@ -232,11 +235,12 @@ Label type for common condition types}) exists with the purpose of
 making it easy to access such compound conditions:
 
 @example
+#!vicare
 (import (nausicaa))
 
-(<common-conditions> C (<> ('ciao "ciao" '(ciao))))
+(define @{C <common-conditions>@}
+  (<> ('ciao "ciao" '(ciao))))
 
-((<common-conditions>) C)       @result{} #t
 (is-a? C <common-conditions>)   @result{} #t
 (C who)                         @result{} ciao
 (C message)                     @result{} "ciao"
@@ -251,9 +255,9 @@ condition object as follows:
 (try
      (raise (<common-conditions> ('ciao "ciao" '(ciao))))
   (catch E
-    (&assertion
+    ((&assertion)
      (exit 1))
-    (<common-conditions>
+    ((<common-conditions>)
      (E who))
     (else
      (raise E))))
@@ -288,9 +292,9 @@ and use @func{try} to catch it:
 (try
      (raise (&tuple ('ciao "ciao" '(ciao) 1 2 3)))
   (catch E
-    (&assertion
+    ((&assertion)
      (exit 1))
-    (<common-conditions>
+    ((<common-conditions>)
      (list (E who) (E a)))
     (else
      (raise E))))
@@ -306,8 +310,8 @@ the body and possibly the @clause{catch} clause have been evaluated:
   (try
       (set! a (+ a 10))
     (catch E
-      (&error     E)
-      (&warning   E)
+      ((&error)   E)
+      ((&warning) E)
       (else       E))
     (finally
      (set! a (+ a 100))))
@@ -319,8 +323,8 @@ the body and possibly the @clause{catch} clause have been evaluated:
   (try
       (raise (&warning ()))
     (catch E
-      (&error     E)
-      (&warning   (set! a (+ a 10)))
+      ((&error)   E)
+      ((&warning) (set! a (+ a 10)))
       (else       E))
     (finally
      (set! a (+ a 100))))

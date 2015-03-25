@@ -28,7 +28,7 @@
 
 
 #!vicare
-(import (ikarus)
+(import (vicare)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -557,7 +557,7 @@
   (check-for-true
    ((lambda (x) (= x 73))
     (let ((sz (- (* 10 4096) 8)))
-      (import (ikarus system $bytevectors))
+      (import (vicare system $bytevectors))
       (let ((bv (make-bytevector sz)))
 	(bytevector-u8-set! bv (- sz 1) 73)
 	(collect)

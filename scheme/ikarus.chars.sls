@@ -14,104 +14,70 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#!vicare
 (library (ikarus chars)
   (export
     char->integer		integer->char
     char=?
     char<?			char<=?
     char>?			char>=?
-    char-in-ascii-range?	fixnum-in-character-range?)
-  (import (except (ikarus)
+    char-in-ascii-range?	list-of-chars?)
+  (import (except (vicare)
 		  char->integer		integer->char
 		  char=?
 		  char<?		char<=?
 		  char>?		char>=?
-		  char-in-ascii-range?	fixnum-in-character-range?)
-    (vicare unsafe operations)
-    (vicare arguments validation))
+		  char-in-ascii-range?	list-of-chars?)
+    (vicare unsafe operations))
 
 
-;;;; arguments validation
+;;;; predicates
 
-(define-argument-validation (fixnum-in-range who obj)
-  (fixnum-in-character-range? obj)
-  (procedure-argument-violation who
-    "expected fixnum in range [0, #xD800) or (#xDFFF, #x10FFFF] as argument" obj))
-
-(define-argument-validation (list-of-chars who obj)
-  (for-all char? obj)
-  (procedure-argument-violation who "expected character as argument"
-		       (exists (lambda (x) (and (not (char? x)) x)) obj)))
+(define (list-of-chars? obj)
+  (if (pair? obj)
+      (and (char? (car obj))
+	   (list-of-chars? (cdr obj)))
+    (null? obj)))
 
 
-(define (integer->char N)
-  ;;Defined  by  R6RS.   N must  be  a  Unicode  scalar value,  i.e.,  a
-  ;;non-negative  exact integer  object  in [0,  #xD7FF] union  [#xE000,
-  ;;#x10FFFF].
+(define* (integer->char {fx fixnum-in-character-range?})
+  ;;Defined by R6RS.   N must be a  Unicode scalar value, i.e.,  a non-negative exact
+  ;;integer object in [0, #xD7FF] union [#xE000, #x10FFFF].
   ;;
-  ;;For a  Unicode scalar value N, INTEGER->CHAR  returns its associated
-  ;;character.
+  ;;For a Unicode scalar value N, INTEGER->CHAR returns its associated character.
   ;;
-  (define who 'integer->char)
-  (with-arguments-validation (who)
-      ((fixnum-in-range	N))
-    ($fixnum->char N)
-    #;(cond (($fx<= N #xD7FF)
-	   ($fixnum->char N))
-	  (($fx< N #xE000)
-	   (procedure-argument-violation who "integer does not have a unicode representation" N))
-	  (else ;(assert ($fx<= N #x10FFFF))
-	   ($fixnum->char N)))))
+  ($fixnum->char fx))
 
-(define (char->integer ch)
-  ;;Defined  by  R6RS.  Given  a  character,  CHAR->INTEGER returns  its
-  ;;Unicode scalar value as an exact integer object.
+(define* (char->integer {ch char?})
+  ;;Defined by  R6RS.  Given  a character, CHAR->INTEGER  returns its  Unicode scalar
+  ;;value as an exact integer object.
   ;;
-  (define who 'char->integer)
-  (with-arguments-validation (who)
-      ((char  ch))
-    ($char->fixnum ch)))
+  ($char->fixnum ch))
 
 
 (define-syntax define-comparison
   (syntax-rules ()
     ((_ ?name ?unsafe-op)
-     (define ?name
-       (case-lambda
-	((ch1 ch2)
-	 (define who '?name)
-	 (with-arguments-validation (who)
-	     ((char  ch1)
-	      (char  ch2))
-	   (?unsafe-op ch1 ch2)))
+     (case-define* ?name
+       (({ch1 char?} {ch2 char?})
+	(?unsafe-op ch1 ch2))
 
-	((ch1 ch2 ch3)
-	 (define who '?name)
-	 (with-arguments-validation (who)
-	     ((char  ch1)
-	      (char  ch2)
-	      (char  ch3))
-	   (and (?unsafe-op ch1 ch2)
-		(?unsafe-op ch2 ch3))))
+       (({ch1 char?} {ch2 char?} {ch3 char?})
+	(and (?unsafe-op ch1 ch2)
+	     (?unsafe-op ch2 ch3)))
 
-	((ch1 . chars)
-	 (define who '?name)
-	 (with-arguments-validation (who)
-	     ((char  ch1))
-	   (let next-char ((ch1    ch1)
-			   (chars  chars))
-	     (if (null? chars)
-		 #t
-	       (let ((ch2 ($car chars)))
-		 (with-arguments-validation (who)
-		     ((char  ch2))
-		   (if (?unsafe-op ch1 ch2)
-		       (next-char ch2 ($cdr chars))
-		     (with-arguments-validation (who)
-			 ((list-of-chars ($cdr chars)))
-		       #f))))))))
-	))
-     )))
+       (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+	(and (?unsafe-op ch1 ch2)
+	     (?unsafe-op ch2 ch3)
+	     (?unsafe-op ch3 ch4)
+	     (let next-char ((chX    ch4)
+			     (char*  char*))
+	       (if (pair? char*)
+		   (let ((chY ($car char*)))
+		     (and (?unsafe-op chX chY)
+			  (next-char chY ($cdr char*))))
+		 #t))))))
+    ))
 
 (define-comparison char=?	$char=)
 (define-comparison char<?	$char<)
@@ -123,34 +89,23 @@
 ;;;; miscellaneous functions
 
 (define (char-in-ascii-range? obj)
-  ;;Defined by Vicare.  Return #t if  OBJ is a character and its Unicode
-  ;;code point is in the range [0, 127]; otherwise return #f.
+  ;;Defined by Vicare.  Return #t if OBJ is a character and its Unicode code point is
+  ;;in the range [0, 127]; otherwise return #f.
   ;;
   (and (char? obj)
        (let ((chi ($char->fixnum obj)))
 	 (and ($fx>= chi 0)
 	      ($fx<= chi 127)))))
 
-(define (fixnum-in-character-range? obj)
-  ;;Defined by Vicare.  Return #t if OBJ is a fixnum and its value is in
-  ;;one  of the  ranges  acceptable by  Unicode  code points;  otherwise
-  ;;return #f.
-  ;;
-  (and (fixnum? obj)
-       (or (and ($fx>= obj 0)
-		($fx<  obj #xD800))
-	   (and ($fx>  obj #xDFFF)
-		($fx<= obj #x10FFFF)))))
-
 
 ;;;; done
 
-)
+#| end of library |# )
 
 
-(library (ikarus system chars)
+(library (vicare system chars)
   (export $char= $char->fixnum $fixnum->char)
-  (import (ikarus))
+  (import (vicare))
   (define $char=	char=?)
   (define $char->fixnum char->integer)
   (define $fixnum->char integer->char))

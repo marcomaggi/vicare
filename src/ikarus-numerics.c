@@ -2062,22 +2062,25 @@ ikrt_exact_bignum_sqrt(ikptr bn, ikpcb* pcb) {
 ikptr
 ikrt_flonum_hash(ikptr x /*, ikpcb* pcb */) {
   short* buf = (short*)(x+off_flonum_data);
-  return IK_FIX(((long)buf[0]) ^
-	     ((long)buf[1] << 3) ^
-	     ((long)buf[3] << 7) ^
-	     ((long)buf[2] << 11));
+  ikptr  H   = ((long)buf[0]) ^
+    ((long)buf[1] << 3) ^
+    ((long)buf[3] << 7) ^
+    ((long)buf[2] << 11);
+  /* Make it positive. */
+  return IK_FIX((H << 4) >> 4);
 }
 ikptr
 ikrt_bignum_hash(ikptr bn /*, ikpcb* pcb */) {
   ikptr first_word = IK_REF(bn, -vector_tag);
   long limb_count = IK_BNFST_LIMB_COUNT(first_word);
-  long h = (long)first_word;
+  long H = (long)first_word;
   mp_limb_t* dat = (mp_limb_t*)(bn+off_bignum_data);
   long i;
   for (i=0; i<limb_count; i++) {
-    h = (h^dat[i]) << 3;
+    H = (H^dat[i]) << 3;
   }
-  return IK_FIX(h);
+  /* Make it positive. */
+  return IK_FIX((H << 4) >> 4);
 }
 
 /* end of file */

@@ -15,131 +15,91 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus.code-objects)
   (export
-    make-code code-reloc-vector code-freevars
-    code-size code-ref code-set! set-code-reloc-vector!
-    set-code-annotation! procedure-annotation
-    make-annotation-indirect annotation-indirect?
+    make-code
+    code-reloc-vector		code-freevars
+    code-size			code-ref
+    code-set!			set-code-reloc-vector!
+    set-code-annotation!	procedure-annotation
+    make-annotation-indirect	annotation-indirect?
     code->thunk)
-  (import (except (ikarus)
-		  make-code code-reloc-vector code-freevars
-		  code-size code-ref code-set! set-code-reloc-vector!
-		  set-code-annotation! procedure-annotation)
-    (ikarus system $fx)
-    (ikarus system $codes)
-    (vicare arguments validation))
+  (import (except (vicare)
+		  make-code
+		  code-reloc-vector		code-freevars
+		  code-size			code-ref
+		  code-set!			set-code-reloc-vector!
+		  set-code-annotation!		procedure-annotation)
+    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
+    ;;everything here using the system  libraries and not loading external libraries.
+    ;;(Marco Maggi; Fri May 23, 2014)
+    (vicare system $fx)
+    (vicare system $codes)
+    (prefix (vicare platform words)
+	    words.))
 
 
 ;;;; helpers
 
-(define-inline ($fx-non-negative? X)
+(define ($fx-non-negative? X)
   (and (fixnum? X)
        ($fx>= X 0)))
 
-
-;;;; arguments validation
+(define (code-size? obj)
+  ($fx-non-negative? obj))
 
-(define-argument-validation (code-size who obj)
-  ($fx-non-negative? obj)
-  (procedure-argument-violation who "expected non-negative fixnum as code object size argument" obj))
+(define (number-of-freevars? obj)
+  ($fx-non-negative? obj))
 
-(define-argument-validation (number-of-freevars who obj)
-  ($fx-non-negative? obj)
-  (procedure-argument-violation who
-    "expected non-negative fixnum as number of free variables argument"
-    obj))
-
-(define-argument-validation (code who obj)
-  (code? obj)
-  (procedure-argument-violation who "expected code object as argument" obj))
-
-(define-argument-validation (code-index who code idx)
-  (and (fixnum? idx)
-       ($fx>= idx 0)
-       ($fx<  idx ($code-size code)))
-  (procedure-argument-violation who "expected valid fixnum code index argument" idx code))
-
-(define-argument-validation (no-freevars who code)
-  ;;We expect CODE to have been already validated as code object.
-  ;;
-  ($fxzero? ($code-freevars code))
-  (procedure-argument-violation who
-    "expected code object without free variables as argument"
-    code ($code-freevars code)))
+(define (code-with-no-freevars? code)
+  (and (code? code)
+       ($fxzero? ($code-freevars code))))
 
 
-(define (make-code code-size freevars)
-  (define who 'make-code)
-  (with-arguments-validation (who)
-      ((code-size		code-size)
-       (number-of-freevars	freevars))
-    (foreign-call "ikrt_make_code" code-size freevars '#())))
+(define* (make-code {code-size code-size?} {freevars number-of-freevars?})
+  (foreign-call "ikrt_make_code" code-size freevars '#()))
 
-(define (code-reloc-vector x)
-  (define who 'code-reloc-vector)
-  (with-arguments-validation (who)
-      ((code	x))
-    ($code-reloc-vector x)))
+(define* (code-reloc-vector {x code?})
+  ($code-reloc-vector x))
 
-(define (code-freevars x)
-  (define who 'code-freevars)
-  (with-arguments-validation (who)
-      ((code	x))
-    ($code-freevars x)))
+(define* (code-freevars {x code?})
+  ($code-freevars x))
 
-(define (code-size x)
-  (define who 'code-size)
-  (with-arguments-validation (who)
-      ((code	x))
-    ($code-size x)))
+(define* (code-size {x code?})
+  ($code-size x))
 
-(define (code-set! code idx octet)
-  (define who 'code-set!)
-  (with-arguments-validation (who)
-      ((code		code)
-       (code-index	code idx)
-       (octet		octet))
-    ($code-set! code idx octet)))
+(define* (code-set! {code code?} {idx fixnum?} {octet words.word-u8?})
+  (unless (and ($fx>= idx 0)
+	       ($fx<  idx ($code-size code)))
+    (procedure-argument-violation __who__
+      "expected valid fixnum code index argument" idx code))
+  ($code-set! code idx octet))
 
-(define (code-ref code idx)
-  (define who 'code-ref)
-  (with-arguments-validation (who)
-      ((code		code)
-       (code-index	code idx))
-    ($code-ref code idx)))
+(define* (code-ref {code code?} {idx fixnum?})
+  (unless (and ($fx>= idx 0)
+	       ($fx<  idx ($code-size code)))
+    (procedure-argument-violation __who__
+      "expected valid fixnum code index argument" idx code))
+  ($code-ref code idx))
 
-(define (set-code-reloc-vector! code vec)
-  (define who 'set-code-reloc-vector!)
-  (with-arguments-validation (who)
-      ((code	code)
-       (vector	vec))
-    (foreign-call "ikrt_set_code_reloc_vector" code vec)))
+(define* (set-code-reloc-vector! {code code?} {vec vector?})
+  (foreign-call "ikrt_set_code_reloc_vector" code vec))
 
-(define (set-code-annotation! code v)
-  (define who 'set-code-annotation!)
-  (with-arguments-validation (who)
-      ((code	code))
-    (foreign-call "ikrt_set_code_annotation" code v)))
+(define* (set-code-annotation! {code code?} v)
+  (foreign-call "ikrt_set_code_annotation" code v))
 
-(define (code->thunk code)
-  (define who 'code->thunk)
-  (with-arguments-validation (who)
-      ((code		code)
-       (no-freevars	code))
-    ($code->closure code)))
+(define* (code->thunk {code code-with-no-freevars?})
+  ($code->closure code))
 
 (define-struct annotation-indirect
   ())
 
-(define (procedure-annotation x)
-  (define who 'procedure-annotation)
-  (with-arguments-validation (who)
-      ((procedure	x))
-    (let ((ae ($code-annotation ($closure-code x))))
-      (if (annotation-indirect? ae)
-	  ($annotated-procedure-annotation x)
-	ae))))
+(define* (procedure-annotation {x procedure?})
+  (let ((ae ($code-annotation ($closure-code x))))
+    (if (annotation-indirect? ae)
+	($annotated-procedure-annotation x)
+      ae)))
 
 
 ;;;; done

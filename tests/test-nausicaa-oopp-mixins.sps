@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (rnrs eval)
   (vicare checks))
 
@@ -63,28 +63,12 @@
     ((_ ?form)
      (eval ?form test-environ))))
 
-(define (debug-pretty-print thing)
-  (pretty-print thing (current-error-port))
-  (flush-output-port (current-error-port)))
-
-(define (debug-write . args)
-  (for-each (lambda (thing)
-	      (write thing (current-error-port))
-	      (display #\space (current-error-port)))
-    args)
-  (newline (current-error-port))
-  (flush-output-port (current-error-port)))
-
-(define (debug-newline thing)
-  (newline (current-error-port))
-  (flush-output-port (current-error-port)))
-
 (define-syntax catch-syntax-violation
   (syntax-rules ()
     ((_ ?verbose . ?body)
      (guard (E ((syntax-violation? E)
 		(when ?verbose
-		  (debug-write (condition-message E)
+		  (debug-print (condition-message E)
 			       (syntax-violation-subform E)))
 		(syntax->datum (syntax-violation-subform E)))
 	       (else E))
@@ -95,7 +79,7 @@
     ((_ ?verbose . ?body)
      (guard (E ((assertion-violation? E)
 		(when ?verbose
-		  (debug-write (condition-message E)
+		  (debug-print (condition-message E)
 			       (condition-irritants E)))
 		(condition-irritants E))
 	       (else E))
@@ -107,7 +91,7 @@
   (let ()
     (define-mixin <stuff>
       (fields c)
-      (method (doit (o <stuff>))
+      (method (doit {o <stuff>})
 	(+ 1 (o c))))
 
     (define-class <base>
@@ -124,12 +108,12 @@
       (mixins <stuff>))
 
     (check
-	(let (((o <one>) (<one> (#;a 10 #;p 20 #;c 30))))
+	(let (({o <one>} (<one> (#;a 10 #;p 20 #;c 30))))
 	  (o doit))
       => 31)
 
     (check
-	(let (((o <two>) (<two> (#;a 10 #;q 20 #;c 30))))
+	(let (({o <two>} (<two> (#;a 10 #;q 20 #;c 30))))
 	  (o doit))
       => 31)
 
@@ -137,11 +121,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  #;(let ()	;mixin accessing the fields of the receiving class
+  (let ()	;mixin accessing the fields of the receiving class
 
     (define-mixin <stuff1>
       (fields c)
-      (method (doit (o <stuff1>))
+      (method (doit {o <stuff1>})
 	(+ (o a) (o c))))
 
     (define-class <alpha1>
@@ -149,7 +133,7 @@
       (mixins <stuff1>))
 
     (check
-	(let (((o <alpha1>) (<alpha1> (#;c 1 #;a 2))))
+	(let (({o <alpha1>} (<alpha1> (#;c 1 #;a 2))))
 	  (o doit))
       => 3)
 
@@ -162,7 +146,7 @@
 
   (define-mixin <stuff2>
     (virtual-fields (immutable c car))
-    (method (doit (o <stuff2>))
+    (method (doit {o <stuff2>})
       (+ 1 (o c))))
 
   (define-label <one2>
@@ -174,12 +158,12 @@
     (mixins <stuff2>))
 
   (check
-      (let (((o <one2>) '(10 . 20)))
+      (let (({o <one2>} '(10 . 20)))
         (o doit))
     => 11)
 
   (check
-      (let (((o <two2>) '(10 . 20)))
+      (let (({o <two2>} '(10 . 20)))
         (o doit))
     => 11)
 
@@ -190,7 +174,7 @@
 
   (define-mixin <stuff3>
     (fields second)
-    (method (doit (o <stuff3>))
+    (method (doit {o <stuff3>})
       (+ 1 (o second))))
 
   (define-mixin <other-stuff3>
@@ -204,12 +188,12 @@
     (mixins <stuff3> <other-stuff3>))
 
   (check
-      (let (((o <one3>) (<one3> (#;first 10 #;second 20 #;third 30))))
+      (let (({o <one3>} (<one3> (#;first 10 #;second 20 #;third 30))))
         (o doit))
     => 21)
 
   (check
-      (let (((o <one3>) (<one3> (#;first 10 #;second 20 #;third 30))))
+      (let (({o <one3>} (<one3> (#;first 10 #;second 20 #;third 30))))
         (list (o first) (o second) (o third)))
     => '(10 20 30))
 
@@ -220,7 +204,7 @@
 
   (define-mixin <stuff4>
     (fields c)
-    (method (doit (o <stuff4>))
+    (method (doit {o <stuff4>})
       (+ 1 (o c))))
 
   (define-mixin <other-stuff4>
@@ -235,12 +219,12 @@
     (mixins <other-stuff4>))
 
   (check
-      (let (((o <one4>) (<one4> (#;a 10 #;p 20 #;c 30))))
+      (let (({o <one4>} (<one4> (#;a 10 #;p 20 #;c 30))))
         (o doit))
     => 31)
 
   (check
-      (let (((o <one4>) (<one4> (#;a 10 #;p 20 #;c 30))))
+      (let (({o <one4>} (<one4> (#;a 10 #;p 20 #;c 30))))
         (list (o a) (o p) (o c)))
     => '(10 20 30))
 
@@ -254,9 +238,9 @@
     (define-syntax <sequence> (syntax-rules ()))
 
     (define-mixin <the-sequence>
-      (fields (subject <sequence>))
-      (method (get-first (o <the-sequence>))
-	(o subject[0])))
+      (fields {subject <sequence>})
+      (method (get-first {o <the-sequence>})
+	((o subject)[0])))
 
     (define-class <the-string>
       (mixins (<the-sequence>
@@ -267,13 +251,13 @@
 	       (<sequence>       <vector>))))
 
     (check
-	(let (((o <the-string>) (<the-string> ("ciao"))))
-	  (list (o subject length) (o get-first)))
+	(let (({o <the-string>} (<the-string> ("ciao"))))
+	  (list ((o subject) length) (o get-first)))
       => '(4 #\c))
 
     (check
-	(let (((o <the-vector>) (<the-vector> ((vector 'c 'i 'a 'o)))))
-	  (list (o subject length) (o get-first)))
+	(let (({o <the-vector>} (<the-vector> ((vector 'c 'i 'a 'o)))))
+	  (list ((o subject) length) (o get-first)))
       => '(4 c))
 
     #f)
@@ -313,8 +297,8 @@
 		    (mixins <beta12>)))))
     => 'A)
 
-  #;(check	;recursive mixin composition
-      (catch-syntax-violation #t
+  (check	;recursive mixin composition
+      (catch-syntax-violation #f
 	(%eval '(let ()
 		  (define-mixin <beta13>
 		    (fields A)
@@ -323,8 +307,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  #;(check	;same mixin multiple selection in class
-      (catch-syntax-violation #t
+  (check	;same mixin multiple selection in class
+      (catch-syntax-violation #f
 	(%eval '(let ()
 		  (define-mixin <beta14>
 		    (fields A))
@@ -332,14 +316,26 @@
 		    (mixins <beta14> <beta14>)))))
     => '<beta14>)
 
-  #;(check	;same mixin multiple selection in label
-      (catch-syntax-violation #t
+  (check	;same mixin multiple selection in label
+      (catch-syntax-violation #f
 	(%eval '(let ()
 		  (define-mixin <beta15>
 		    (fields A))
 		  (define-label <alpha15>
 		    (mixins <beta15> <beta15>)))))
     => '<beta15>)
+
+  (check	;same mixin multiple selection
+      (catch-syntax-violation #f
+	(%eval '(let ()
+		  (define-mixin <gamma16>
+		    (fields B))
+		  (define-mixin <beta16>
+		    (fields A)
+		    (mixins <gamma16>))
+		  (define-label <alpha16>
+		    (mixins <beta16> <gamma16>)))))
+    => '<gamma16>)
 
   #t)
 

@@ -27,8 +27,8 @@
 
 #!r6rs
 (import (vicare)
-  (numerics helpers)
-  (ikarus system $numerics)
+  (libtest numerics-helpers)
+  (vicare system $numerics)
   (vicare checks)
   (only (vicare platform words)
 	case-word-size))

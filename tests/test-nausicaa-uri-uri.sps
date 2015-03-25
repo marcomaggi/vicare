@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (prefix (nausicaa uri) uri.)
   (prefix (nausicaa parser-tools uri) uri.)
   (nausicaa parser-tools uri utilities)
@@ -46,13 +46,13 @@
 	(else
 	 (assertion-violation __who__ "expecting string or bytevector" obj))))
 
-(define (string->host-object (str <string>))
+(define (string->host-object {str <string>})
   (let ((port (open-bytevector-input-port (string->ascii str))))
     (receive (host.type host.ascii host.data)
 	(uri.parse-host port)
       (uri.make-host-object host.type host.ascii host.data))))
 
-(define (percent-encoded->host-object (bv <percent-encoded-bytevector>))
+(define (percent-encoded->host-object {bv <percent-encoded-bytevector>})
   (let ((port (open-bytevector-input-port bv)))
     (receive (host.type host.ascii host.data)
 	(uri.parse-host port)
@@ -68,17 +68,17 @@
     => '#ve(ascii "http:"))
 
   (check
-      (let (((O uri.<scheme>) '#ve(ascii "http")))
+      (let (({O uri.<scheme>} '#ve(ascii "http")))
         (O bytevector))
     => '#ve(ascii "http:"))
 
   (check
-      (let (((O uri.<scheme>) '#ve(ascii "http")))
+      (let (({O uri.<scheme>} '#ve(ascii "http")))
         (O string))
     => "http:")
 
   (check
-      (let (((O uri.<scheme>) '#ve(ascii "http")))
+      (let (({O uri.<scheme>} '#ve(ascii "http")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -86,17 +86,17 @@
     => '#ve(ascii "http:"))
 
   (check-for-true
-   (let (((O uri.<scheme>) '#ve(ascii "http")))
+   (let (({O uri.<scheme>} '#ve(ascii "http")))
      (fixnum? (O hash))))
 
 ;;; --------------------------------------------------------------------
 
   (check	;empty "scheme" is invalid
       (try
-	  (let (((O uri.<scheme>) '#vu8()))
+	  (let (({O uri.<scheme>} '#vu8()))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -113,37 +113,37 @@
     => '#ve(ascii "marco@"))
 
   (check
-      (let (((O uri.<userinfo>) '#vu8()))
+      (let (({O uri.<userinfo>} '#vu8()))
         (O bytevector))
     => '#ve(ascii "@"))
 
   (check
-      (let (((O uri.<userinfo>) '#vu8()))
+      (let (({O uri.<userinfo>} '#vu8()))
         (O string))
     => "@")
 
   (check
-      (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+      (let (({O uri.<userinfo>} '#ve(ascii "marco")))
         (O bytevector))
     => '#ve(ascii "marco@"))
 
   (check
-      (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+      (let (({O uri.<userinfo>} '#ve(ascii "marco")))
         (O string))
     => "marco@")
 
   (check
-      (let (((O uri.<userinfo>) '#ve(ascii "ci%3Fa%3Do")))
+      (let (({O uri.<userinfo>} '#ve(ascii "ci%3Fa%3Do")))
         (O bytevector))
     => '#ve(ascii "ci%3Fa%3Do@"))
 
   (check
-      (let (((O uri.<userinfo>) '#ve(ascii "ci%3Fa%3Do")))
+      (let (({O uri.<userinfo>} '#ve(ascii "ci%3Fa%3Do")))
         (O percent-decoded))
     => '#ve(ascii "ci?a=o"))
 
   (check
-      (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+      (let (({O uri.<userinfo>} '#ve(ascii "marco")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -151,17 +151,17 @@
     => '#ve(ascii "marco@"))
 
   (check-for-true
-   (let (((O uri.<userinfo>) '#ve(ascii "marco")))
+   (let (({O uri.<userinfo>} '#ve(ascii "marco")))
      (fixnum? (O hash))))
 
 ;;; --------------------------------------------------------------------
 
   (check
       (try
-	  (let (((O uri.<userinfo>) '#vu8(0)))
+	  (let (({O uri.<userinfo>} '#vu8(0)))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -172,37 +172,37 @@
 (parametrise ((check-test-name	'host/registered-name))
 
   (check	;empty host is fine
-      (let (((O uri.<host>) (string->host-object "")))
+      (let (({O uri.<host>} (string->host-object "")))
 	(O string))
     => "")
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "github.io")))
+      (let (({O uri.<host>} (string->host-object "github.io")))
 	(O string))
     => "github.io")
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+      (let (({O uri.<host>} (string->host-object "ci%3Fa%3Do")))
 	(O string))
     => "ci%3Fa%3Do")
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+      (let (({O uri.<host>} (string->host-object "ci%3Fa%3Do")))
 	(O bytevector))
     => '#ve(ascii "ci%3Fa%3Do"))
 
   (check	;member of <bytevector> through <ip-address>
-      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+      (let (({O uri.<host>} (string->host-object "ci%3Fa%3Do")))
         (percent-decode (O bytevector)))
     => '#ve(ascii "ci?a=o"))
 
   (check	;member of <host>
-      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+      (let (({O uri.<host>} (string->host-object "ci%3Fa%3Do")))
         (O bytevector))
     => '#ve(ascii "ci%3Fa%3Do"))
 
   (check	;member of <host>
-      (let (((O uri.<host>) (string->host-object "ci%3Fa%3Do")))
+      (let (({O uri.<host>} (string->host-object "ci%3Fa%3Do")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -215,27 +215,27 @@
 (parametrise ((check-test-name	'host/ipv4-address))
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+      (let (({O uri.<host>} (string->host-object "1.2.3.4")))
 	(O string))
     => "1.2.3.4")
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+      (let (({O uri.<host>} (string->host-object "1.2.3.4")))
 	(O bytevector))
     => '#ve(ascii "1.2.3.4"))
 
   (check	;member of <bytevector> through <ip-address>
-      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+      (let (({O uri.<host>} (string->host-object "1.2.3.4")))
 	(percent-decode (O bytevector)))
     => '#ve(ascii "1.2.3.4"))
 
   (check	;member of <host>
-      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+      (let (({O uri.<host>} (string->host-object "1.2.3.4")))
         (O bytevector))
     => '#ve(ascii "1.2.3.4"))
 
   (check	;member of <host>
-      (let (((O uri.<host>) (string->host-object "1.2.3.4")))
+      (let (({O uri.<host>} (string->host-object "1.2.3.4")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -248,17 +248,17 @@
 (parametrise ((check-test-name	'host/ipv6-address))
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "[1:2:3:4:5:6:7:8]")))
+      (let (({O uri.<host>} (string->host-object "[1:2:3:4:5:6:7:8]")))
 	(O string))
     => "[1:2:3:4:5:6:7:8]")
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "[1:2:3:4:5:6:7:8]")))
+      (let (({O uri.<host>} (string->host-object "[1:2:3:4:5:6:7:8]")))
 	(O bytevector))
     => '#ve(ascii "[1:2:3:4:5:6:7:8]"))
 
   (check	;member of <host>
-      (let (((O uri.<host>) (string->host-object "[1:2:3:4:5:6:7:8]")))
+      (let (({O uri.<host>} (string->host-object "[1:2:3:4:5:6:7:8]")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -271,17 +271,17 @@
 (parametrise ((check-test-name	'host/ipvfuture))
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "[v9.ciao]")))
+      (let (({O uri.<host>} (string->host-object "[v9.ciao]")))
 	(O string))
     => "[v9.ciao]")
 
   (check	;member of <ip-address>
-      (let (((O uri.<host>) (string->host-object "[v9.ciao]")))
+      (let (({O uri.<host>} (string->host-object "[v9.ciao]")))
 	(O bytevector))
     => '#ve(ascii "[v9.ciao]"))
 
   (check	;member of <host>
-      (let (((O uri.<host>) (string->host-object "[v9.ciao]")))
+      (let (({O uri.<host>} (string->host-object "[v9.ciao]")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -300,27 +300,27 @@
     => '#ve(ascii ":8080"))
 
   (check
-      (let (((O uri.<port-number>) 0))
+      (let (({O uri.<port-number>} 0))
         (O bytevector))
     => '#ve(ascii ":0"))
 
   (check
-      (let (((O uri.<port-number>) 0))
+      (let (({O uri.<port-number>} 0))
         (O string))
     => ":0")
 
   (check
-      (let (((O uri.<port-number>) 8080))
+      (let (({O uri.<port-number>} 8080))
         (O bytevector))
     => '#ve(ascii ":8080"))
 
   (check
-      (let (((O uri.<port-number>) 8080))
+      (let (({O uri.<port-number>} 8080))
         (O string))
     => ":8080")
 
   (check
-      (let (((O uri.<port-number>) 8080))
+      (let (({O uri.<port-number>} 8080))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -331,10 +331,10 @@
 
   (check
       (try
-	  (let (((O uri.<port-number>) "ciao"))
+	  (let (({O uri.<port-number>} "ciao"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -351,17 +351,17 @@
     => '#ve(ascii "image"))
 
   (check
-      (let (((O uri.<segment>) '#ve(ascii "image")))
+      (let (({O uri.<segment>} '#ve(ascii "image")))
         (O bytevector))
     => '#ve(ascii "image"))
 
   (check
-      (let (((O uri.<segment>) '#ve(ascii "image")))
+      (let (({O uri.<segment>} '#ve(ascii "image")))
         (O string))
     => "image")
 
   (check
-      (let (((O uri.<segment>) '#ve(ascii "image")))
+      (let (({O uri.<segment>} '#ve(ascii "image")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -372,20 +372,20 @@
 
   (check	;empty segments are invalid
       (try
-	  (let (((O uri.<segment>) '#vu8()))
+	  (let (({O uri.<segment>} '#vu8()))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
 
   (check	;invalid pct-encoded sequence
       (try
-	  (let (((O uri.<segment>) "ciao%Z"))
+	  (let (({O uri.<segment>} "ciao%Z"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -411,17 +411,17 @@
     => ELL)
 
   (check
-      (let (((O uri.<list-of-segments>) ELL))
+      (let (({O uri.<list-of-segments>} ELL))
         (O bytevector))
     => '#ve(ascii "home/marco/src/devel"))
 
   (check
-      (let (((O uri.<list-of-segments>) ELL))
+      (let (({O uri.<list-of-segments>} ELL))
         (O string))
     => "home/marco/src/devel")
 
   (check
-      (let (((O uri.<list-of-segments>) ELL))
+      (let (({O uri.<list-of-segments>} ELL))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -438,17 +438,17 @@
     => '())
 
   (check
-      (let (((O uri.<list-of-segments>) '()))
+      (let (({O uri.<list-of-segments>} '()))
         (O bytevector))
     => '#vu8())
 
   (check
-      (let (((O uri.<list-of-segments>) '()))
+      (let (({O uri.<list-of-segments>} '()))
         (O string))
     => "")
 
   (check
-      (let (((O uri.<list-of-segments>) '()))
+      (let (({O uri.<list-of-segments>} '()))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -459,10 +459,10 @@
 
   (check	;invalid pct-encoded sequence
       (try
-	  (let (((O uri.<list-of-segments>) '(#ve(ascii "ciao%Z"))))
+	  (let (({O uri.<list-of-segments>} '(#ve(ascii "ciao%Z"))))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -479,17 +479,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-empty> ())))
+      (let (({O uri.<path>} (uri.<path-empty> ())))
         (O bytevector))
     => '#vu8())
 
   (check
-      (let (((O uri.<path>) (uri.<path-empty> ())))
+      (let (({O uri.<path>} (uri.<path-empty> ())))
         (O string))
     => "")
 
   (check
-      (let (((O uri.<path>) (uri.<path-empty> ())))
+      (let (({O uri.<path>} (uri.<path-empty> ())))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -497,7 +497,7 @@
     => '#vu8())
 
   (check
-      (let (((O uri.<path>) (uri.<path-empty> ())))
+      (let (({O uri.<path>} (uri.<path-empty> ())))
         (O type))
     => 'path-empty)
 
@@ -522,17 +522,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+      (let (({O uri.<path>} (uri.<path-abempty> (ELL))))
         (O bytevector))
     => '#ve(ascii "/home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+      (let (({O uri.<path>} (uri.<path-abempty> (ELL))))
         (O string))
     => "/home/marco/src/devel")
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+      (let (({O uri.<path>} (uri.<path-abempty> (ELL))))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -540,7 +540,7 @@
     => '#ve(ascii "/home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> (ELL))))
+      (let (({O uri.<path>} (uri.<path-abempty> (ELL))))
         (O type))
     => 'path-abempty)
 
@@ -554,17 +554,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> ('()))))
+      (let (({O uri.<path>} (uri.<path-abempty> ('()))))
         (O bytevector))
     => '#ve(ascii "/"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> ('()))))
+      (let (({O uri.<path>} (uri.<path-abempty> ('()))))
         (O string))
     => "/")
 
   (check
-      (let (((O uri.<path>) (uri.<path-abempty> ('()))))
+      (let (({O uri.<path>} (uri.<path-abempty> ('()))))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -577,7 +577,7 @@
       (try
 	  (uri.<path-abempty> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -603,17 +603,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+      (let (({O uri.<path>} (uri.<path-absolute> (ELL))))
         (O bytevector))
     => '#ve(ascii "/home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+      (let (({O uri.<path>} (uri.<path-absolute> (ELL))))
         (O string))
     => "/home/marco/src/devel")
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+      (let (({O uri.<path>} (uri.<path-absolute> (ELL))))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -621,7 +621,7 @@
     => '#ve(ascii "/home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> (ELL))))
+      (let (({O uri.<path>} (uri.<path-absolute> (ELL))))
         (O type))
     => 'path-absolute)
 
@@ -635,17 +635,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> ('()))))
+      (let (({O uri.<path>} (uri.<path-absolute> ('()))))
         (O bytevector))
     => '#ve(ascii "/"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> ('()))))
+      (let (({O uri.<path>} (uri.<path-absolute> ('()))))
         (O string))
     => "/")
 
   (check
-      (let (((O uri.<path>) (uri.<path-absolute> ('()))))
+      (let (({O uri.<path>} (uri.<path-absolute> ('()))))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -658,7 +658,7 @@
       (try
 	  (uri.<path-absolute> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -684,17 +684,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+      (let (({O uri.<path>} (uri.<path-rootless> (ELL))))
         (O bytevector))
     => '#ve(ascii "home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+      (let (({O uri.<path>} (uri.<path-rootless> (ELL))))
         (O string))
     => "home/marco/src/devel")
 
   (check
-      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+      (let (({O uri.<path>} (uri.<path-rootless> (ELL))))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -702,7 +702,7 @@
     => '#ve(ascii "home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-rootless> (ELL))))
+      (let (({O uri.<path>} (uri.<path-rootless> (ELL))))
         (O type))
     => 'path-rootless)
 
@@ -712,7 +712,7 @@
       (try
 	  (uri.<path-rootless> ('()))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -721,7 +721,7 @@
       (try
 	  (uri.<path-rootless> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -747,17 +747,17 @@
     => #t)
 
   (check
-      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+      (let (({O uri.<path>} (uri.<path-noscheme> (ELL))))
         (O bytevector))
     => '#ve(ascii "home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+      (let (({O uri.<path>} (uri.<path-noscheme> (ELL))))
         (O string))
     => "home/marco/src/devel")
 
   (check
-      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+      (let (({O uri.<path>} (uri.<path-noscheme> (ELL))))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -765,7 +765,7 @@
     => '#ve(ascii "home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.<path-noscheme> (ELL))))
+      (let (({O uri.<path>} (uri.<path-noscheme> (ELL))))
         (O type))
     => 'path-noscheme)
 
@@ -775,7 +775,7 @@
       (try
 	  (uri.<path-noscheme> ('()))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -784,7 +784,7 @@
       (try
 	  (uri.<path-noscheme> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -804,40 +804,40 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((O uri.<path>) (uri.make-path-object 'path-empty '())))
+      (let (({O uri.<path>} (uri.make-path-object 'path-empty '())))
         (O bytevector))
     => '#vu8())
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((O uri.<path>) (uri.make-path-object 'path-abempty ELL)))
+      (let (({O uri.<path>} (uri.make-path-object 'path-abempty ELL)))
         (O bytevector))
     => '#ve(ascii "/home/marco/src/devel"))
 
   (check
-      (let (((O uri.<path>) (uri.make-path-object 'path-abempty '())))
+      (let (({O uri.<path>} (uri.make-path-object 'path-abempty '())))
         (O bytevector))
     => '#ve(ascii "/"))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((O uri.<path>) (uri.make-path-object 'path-absolute ELL)))
+      (let (({O uri.<path>} (uri.make-path-object 'path-absolute ELL)))
         (O bytevector))
     => '#ve(ascii "/home/marco/src/devel"))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((O uri.<path>) (uri.make-path-object 'path-rootless ELL)))
+      (let (({O uri.<path>} (uri.make-path-object 'path-rootless ELL)))
         (O bytevector))
     => '#ve(ascii "home/marco/src/devel"))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((O uri.<path>) (uri.make-path-object 'path-noscheme ELL)))
+      (let (({O uri.<path>} (uri.make-path-object 'path-noscheme ELL)))
         (O bytevector))
     => '#ve(ascii "home/marco/src/devel"))
 
@@ -853,27 +853,27 @@
     => '#ve(ascii "?image"))
 
   (check
-      (let (((O uri.<query>) '#vu8()))
+      (let (({O uri.<query>} '#vu8()))
         (O bytevector))
     => '#ve(ascii "?"))
 
   (check
-      (let (((O uri.<query>) '#vu8()))
+      (let (({O uri.<query>} '#vu8()))
         (O string))
     => "?")
 
   (check
-      (let (((O uri.<query>) '#ve(ascii "image")))
+      (let (({O uri.<query>} '#ve(ascii "image")))
         (O bytevector))
     => '#ve(ascii "?image"))
 
   (check
-      (let (((O uri.<query>) '#ve(ascii "image")))
+      (let (({O uri.<query>} '#ve(ascii "image")))
         (O string))
     => "?image")
 
   (check
-      (let (((O uri.<query>) '#ve(ascii "image")))
+      (let (({O uri.<query>} '#ve(ascii "image")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -884,10 +884,10 @@
 
   (check
       (try
-	  (let (((O uri.<query>) "ciao%Z"))
+	  (let (({O uri.<query>} "ciao%Z"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -904,27 +904,27 @@
     => '#ve(ascii "#image"))
 
   (check
-      (let (((O uri.<fragment>) '#vu8()))
+      (let (({O uri.<fragment>} '#vu8()))
         (O bytevector))
     => '#ve(ascii "#"))
 
   (check
-      (let (((O uri.<fragment>) '#vu8()))
+      (let (({O uri.<fragment>} '#vu8()))
         (O string))
     => "#")
 
   (check
-      (let (((O uri.<fragment>) '#ve(ascii "image")))
+      (let (({O uri.<fragment>} '#ve(ascii "image")))
         (O bytevector))
     => '#ve(ascii "#image"))
 
   (check
-      (let (((O uri.<fragment>) '#ve(ascii "image")))
+      (let (({O uri.<fragment>} '#ve(ascii "image")))
         (O string))
     => "#image")
 
   (check
-      (let (((O uri.<fragment>) '#ve(ascii "image")))
+      (let (({O uri.<fragment>} '#ve(ascii "image")))
 	(receive (port getter)
 	    (open-bytevector-output-port)
 	  (O put-bytevector port)
@@ -935,10 +935,10 @@
 
   (check
       (try
-	  (let (((O uri.<fragment>) "ciao%Z"))
+	  (let (({O uri.<fragment>} "ciao%Z"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -954,14 +954,14 @@
        (doit ?string ?string))
       ((_ ?input-string ?expected-string)
        (check
-	   (let (((o uri.<uri>) (string->uri ?input-string)))
+	   (let (({o uri.<uri>} (string->uri ?input-string)))
 	     (values (o string) (o bytevector)))
 	 => ?expected-string (string->ascii ?expected-string)))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  ;; (let (((O uri.<uri>) (string->uri "http:///?")))
+  ;; (let (({O uri.<uri>} (string->uri "http:///?")))
   ;;   (debug-print (O path) (O has-query?) (ascii->string (O query))
   ;; 		 (O string)))
 
@@ -1044,24 +1044,24 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o uri.<uri>) (string->uri "http://1.2.3.4/a/b/c")))
+      (let (({o uri.<uri>} (string->uri "http://1.2.3.4/a/b/c")))
 	(ascii->string (o hier-part)))
     => "//1.2.3.4")
 
   (check
-      (let (((o uri.<uri>) (string->uri "http:///a/b/c")))
+      (let (({o uri.<uri>} (string->uri "http:///a/b/c")))
 	(ascii->string (o hier-part)))
     => "//")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o uri.<uri>) (string->uri "http://1.2.3.4/a/b/c")))
+      (let (({o uri.<uri>} (string->uri "http://1.2.3.4/a/b/c")))
 	(ascii->string (o authority)))
     => "1.2.3.4")
 
   (check
-      (let (((o uri.<uri>) (string->uri "http:///a/b/c")))
+      (let (({o uri.<uri>} (string->uri "http:///a/b/c")))
 	(ascii->string (o authority)))
     => "")
 
@@ -1076,7 +1076,7 @@
        (doit ?string ?string))
       ((_ ?input-string ?expected-string)
        (check
-	   (let (((o uri.<relative-ref>) (string->relative-ref ?input-string)))
+	   (let (({o uri.<relative-ref>} (string->relative-ref ?input-string)))
 	     (values (o string) (o bytevector)))
 	 => ?expected-string (string->ascii ?expected-string)))
       ))
@@ -1139,24 +1139,24 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o uri.<relative-ref>) (string->relative-ref "//1.2.3.4/a/b/c")))
+      (let (({o uri.<relative-ref>} (string->relative-ref "//1.2.3.4/a/b/c")))
 	(ascii->string (o relative-part)))
     => "//1.2.3.4")
 
   (check
-      (let (((o uri.<relative-ref>) (string->relative-ref "///a/b/c")))
+      (let (({o uri.<relative-ref>} (string->relative-ref "///a/b/c")))
 	(ascii->string (o relative-part)))
     => "//")
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o uri.<relative-ref>) (string->relative-ref "//1.2.3.4/a/b/c")))
+      (let (({o uri.<relative-ref>} (string->relative-ref "//1.2.3.4/a/b/c")))
 	(ascii->string (o authority)))
     => "1.2.3.4")
 
   (check
-      (let (((o uri.<relative-ref>) (string->relative-ref "///a/b/c")))
+      (let (({o uri.<relative-ref>} (string->relative-ref "///a/b/c")))
 	(ascii->string (o authority)))
     => "")
 

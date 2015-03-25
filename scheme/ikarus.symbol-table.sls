@@ -14,22 +14,27 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!vicare
 (library (ikarus.symbol-table)
   (export
-    string->symbol
+    string->symbol			$string->symbol
     $initialize-symbol-table!
     (rename (%symbol-table-size		$symbol-table-size))
     $log-symbol-table-status)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)
-    (except (ikarus system $symbols)
+    (except (vicare system $symbols)
+	    $string->symbol
 	    $symbol-table-size
 	    $log-symbol-table-status)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (except (vicare unsafe operations)
+	    $symbol->string
+	    $string->symbol))
 
 
 ;;;; symbol table data structure
@@ -143,29 +148,31 @@
   (flush-output-port port))
 
 
-(define (string->symbol str)
-  ;;Defined by R6RS.  Return a symbol whose name is STR.
-  ;;
-  ;;Lookup  the symbol  in the  symbol table:  if it  is  already there,
-  ;;return it; else create a new entry and return the new symbol.
-  ;;
-  (define who 'string->symbol)
+(module (string->symbol $string->symbol)
+
+  (define* (string->symbol {str string?})
+    ;;Defined by R6RS.  Return a symbol whose name is STR.
+    ;;
+    ($string->symbol str))
+
+  (define ($string->symbol str)
+    ;;Lookup the  symbol in the  symbol table:  if it is  already there,
+    ;;return it; else create a new entry and return the new symbol.
+    ;;
+    (let* ((idx ($fxand ($string-hash str)
+			(symbol-table-mask THE-SYMBOL-TABLE)))
+	   (list-of-interned-symbols ($vector-ref ($symbol-table-buckets THE-SYMBOL-TABLE) idx)))
+      (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols)))
+
   (define (lookup str idx table ls)
     (if (null? ls)
 	(bleed-guardian (intern str idx table) table)
       (let ((interned-symbol ($car ls)))
-	;;FIXME  Can we  use $SYMBOL-STRING  rather  than SYMBOL->STRING
-	;;here?  (Marco Maggi; Oct 31, 2011)
-	(if (string=? str (symbol->string interned-symbol))
+	(if (string=? str ($symbol->string interned-symbol))
 	    (bleed-guardian interned-symbol table)
 	  (lookup str idx table ($cdr ls))))))
 
-  (with-arguments-validation (who)
-      ((string  str))
-    (let* ((idx ($fxand (string-hash str)
-			      (symbol-table-mask THE-SYMBOL-TABLE)))
-	   (list-of-interned-symbols ($vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
-      (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols))))
+  #| end of module |# )
 
 
 (define (intern str idx table)
@@ -294,6 +301,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbol-table")))
+
+#| end of library |# )
 
 ;;; end of file

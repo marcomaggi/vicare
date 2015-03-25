@@ -16,93 +16,100 @@
 
 
 (library (ikarus conditions)
-  (export condition? simple-conditions condition-predicate
-          condition condition-accessor print-condition
+  (export
+    condition? compound-condition? condition-and-rtd?
+    simple-conditions condition-predicate
+    condition condition-accessor print-condition
 
-          ;;; too much junk
-          make-message-condition message-condition?
-          condition-message make-warning warning?
-          make-serious-condition serious-condition? make-error
-          error? make-violation violation? make-assertion-violation
-          assertion-violation? make-irritants-condition
-          irritants-condition? condition-irritants
-          make-who-condition who-condition? condition-who
-          make-non-continuable-violation non-continuable-violation?
-          make-implementation-restriction-violation
-          implementation-restriction-violation?
-          make-lexical-violation lexical-violation?
-          make-syntax-violation syntax-violation?
-          syntax-violation-form syntax-violation-subform
-          make-undefined-violation undefined-violation?
-          make-i/o-error i/o-error? make-i/o-read-error
-          i/o-read-error? make-i/o-write-error i/o-write-error?
-          make-i/o-invalid-position-error
-          i/o-invalid-position-error? i/o-error-position
-          make-i/o-filename-error i/o-filename-error?
-          i/o-error-filename make-i/o-file-protection-error
-          i/o-file-protection-error? make-i/o-file-is-read-only-error
-          i/o-file-is-read-only-error?
-          make-i/o-file-already-exists-error
-          i/o-file-already-exists-error?
-          make-i/o-file-does-not-exist-error
-          i/o-file-does-not-exist-error? make-i/o-port-error
-          i/o-port-error? i/o-error-port make-i/o-decoding-error
-          i/o-decoding-error? make-i/o-encoding-error
-          i/o-encoding-error? i/o-encoding-error-char
-          no-infinities-violation? make-no-infinities-violation
-          no-nans-violation? make-no-nans-violation
-          interrupted-condition? make-interrupted-condition
-          make-source-position-condition source-position-condition?
-          source-position-port-id
-	  source-position-byte source-position-character
-	  source-position-line source-position-column
+    make-message-condition message-condition?
+    condition-message make-warning warning?
+    make-serious-condition serious-condition? make-error
+    error? make-violation violation? make-assertion-violation
+    assertion-violation? make-irritants-condition
+    irritants-condition? condition-irritants
+    make-who-condition who-condition? condition-who
+    make-non-continuable-violation non-continuable-violation?
+    make-implementation-restriction-violation
+    implementation-restriction-violation?
+    make-lexical-violation lexical-violation?
+    make-syntax-violation syntax-violation?
+    syntax-violation-form syntax-violation-subform
+    make-undefined-violation undefined-violation?
+    make-i/o-error i/o-error? make-i/o-read-error
+    i/o-read-error? make-i/o-write-error i/o-write-error?
+    make-i/o-invalid-position-error
+    i/o-invalid-position-error? i/o-error-position
+    make-i/o-filename-error i/o-filename-error?
+    i/o-error-filename make-i/o-file-protection-error
+    i/o-file-protection-error? make-i/o-file-is-read-only-error
+    i/o-file-is-read-only-error?
+    make-i/o-file-already-exists-error
+    i/o-file-already-exists-error?
+    make-i/o-file-does-not-exist-error
+    i/o-file-does-not-exist-error? make-i/o-port-error
+    i/o-port-error? i/o-error-port make-i/o-decoding-error
+    i/o-decoding-error? make-i/o-encoding-error
+    i/o-encoding-error? i/o-encoding-error-char
+    no-infinities-violation? make-no-infinities-violation
+    no-nans-violation? make-no-nans-violation
+    interrupted-condition? make-interrupted-condition
+    make-source-position-condition source-position-condition?
+    source-position-port-id
+    source-position-byte source-position-character
+    source-position-line source-position-column
 
-          &condition-rtd &condition-rcd &message-rtd &message-rcd
-          &warning-rtd &warning-rcd &serious-rtd &serious-rcd
-          &error-rtd &error-rcd &violation-rtd &violation-rcd
-          &assertion-rtd &assertion-rcd &irritants-rtd
-          &irritants-rcd &who-rtd &who-rcd &non-continuable-rtd
-          &non-continuable-rcd &implementation-restriction-rtd
-          &implementation-restriction-rcd &lexical-rtd &lexical-rcd
-          &syntax-rtd &syntax-rcd &undefined-rtd &undefined-rcd
-          &i/o-rtd &i/o-rcd &i/o-read-rtd &i/o-read-rcd
-          &i/o-write-rtd &i/o-write-rcd &i/o-invalid-position-rtd
-          &i/o-invalid-position-rcd &i/o-filename-rtd
-          &i/o-filename-rcd &i/o-file-protection-rtd
-          &i/o-file-protection-rcd &i/o-file-is-read-only-rtd
-          &i/o-file-is-read-only-rcd &i/o-file-already-exists-rtd
-          &i/o-file-already-exists-rcd &i/o-file-does-not-exist-rtd
-          &i/o-file-does-not-exist-rcd &i/o-port-rtd &i/o-port-rcd
-          &i/o-decoding-rtd &i/o-decoding-rcd &i/o-encoding-rtd
-          &i/o-encoding-rcd &no-infinities-rtd &no-infinities-rcd
-          &no-nans-rtd &no-nans-rcd
-          &interrupted-rtd &interrupted-rcd
-          &source-position-rtd &source-position-rcd
+    &condition-rtd &condition-rcd &message-rtd &message-rcd
+    &warning-rtd &warning-rcd &serious-rtd &serious-rcd
+    &error-rtd &error-rcd &violation-rtd &violation-rcd
+    &assertion-rtd &assertion-rcd &irritants-rtd
+    &irritants-rcd &who-rtd &who-rcd &non-continuable-rtd
+    &non-continuable-rcd &implementation-restriction-rtd
+    &implementation-restriction-rcd &lexical-rtd &lexical-rcd
+    &syntax-rtd &syntax-rcd &undefined-rtd &undefined-rcd
+    &i/o-rtd &i/o-rcd &i/o-read-rtd &i/o-read-rcd
+    &i/o-write-rtd &i/o-write-rcd &i/o-invalid-position-rtd
+    &i/o-invalid-position-rcd &i/o-filename-rtd
+    &i/o-filename-rcd &i/o-file-protection-rtd
+    &i/o-file-protection-rcd &i/o-file-is-read-only-rtd
+    &i/o-file-is-read-only-rcd &i/o-file-already-exists-rtd
+    &i/o-file-already-exists-rcd &i/o-file-does-not-exist-rtd
+    &i/o-file-does-not-exist-rcd &i/o-port-rtd &i/o-port-rcd
+    &i/o-decoding-rtd &i/o-decoding-rcd &i/o-encoding-rtd
+    &i/o-encoding-rcd &no-infinities-rtd &no-infinities-rcd
+    &no-nans-rtd &no-nans-rcd
+    &interrupted-rtd &interrupted-rcd
+    &source-position-rtd &source-position-rcd
 
-	  &i/o-eagain make-i/o-eagain i/o-eagain-error?
-	  &i/o-eagain-rtd &i/o-eagain-rcd
+    &i/o-eagain make-i/o-eagain i/o-eagain-error?
+    &i/o-eagain-rtd &i/o-eagain-rcd
 
-	  &errno &errno-rtd &errno-rcd
-	  make-errno-condition errno-condition? condition-errno
-	  &h_errno &h_errno-rtd &h_errno-rcd
-	  make-h_errno-condition h_errno-condition? condition-h_errno
+    &errno &errno-rtd &errno-rcd
+    make-errno-condition errno-condition? condition-errno
+    &h_errno &h_errno-rtd &h_errno-rcd
+    make-h_errno-condition h_errno-condition? condition-h_errno
 
-	  &procedure-argument-violation
-	  &procedure-argument-violation-rtd
-	  &procedure-argument-violation-rcd
-	  make-procedure-argument-violation
-	  procedure-argument-violation?
-	  procedure-argument-violation
+    &procedure-argument-violation
+    &procedure-argument-violation-rtd
+    &procedure-argument-violation-rcd
+    make-procedure-argument-violation
+    procedure-argument-violation?
+    procedure-argument-violation
 
-	  &expression-return-value-violation
-	  &expression-return-value-violation-rtd
-	  &expression-return-value-violation-rcd
-	  make-expression-return-value-violation
-	  expression-return-value-violation?
-	  expression-return-value-violation
-	  )
-  (import (except (ikarus)
-		  define-condition-type condition? simple-conditions
+    &expression-return-value-violation
+    &expression-return-value-violation-rtd
+    &expression-return-value-violation-rcd
+    make-expression-return-value-violation
+    expression-return-value-violation?
+    expression-return-value-violation
+
+    &non-reinstatable
+    make-non-reinstatable-violation
+    non-reinstatable-violation?
+    non-reinstatable-violation)
+  (import (except (vicare)
+		  define-condition-type
+		  condition? compound-condition? condition-and-rtd?
+		  simple-conditions
 		  condition condition-predicate condition-accessor
 		  print-condition
 
@@ -176,7 +183,14 @@
 		  &expression-return-value-violation-rcd
 		  make-expression-return-value-violation
 		  expression-return-value-violation?
-		  expression-return-value-violation)
+		  expression-return-value-violation
+
+		  &non-reinstatable
+		  &non-reinstatable-rtd
+		  &non-reinstatable-rcd
+		  make-non-reinstatable-violation
+		  non-reinstatable-violation?
+		  non-reinstatable-violation)
     (only (ikarus records procedural)
 	  rtd-subtype?)
     (vicare language-extensions syntaxes)
@@ -206,7 +220,7 @@
   (assertion-violation who "expected output port as argument" obj))
 
 
-;;;; data types
+;;;; data types and some predicates
 
 (define-record-type &condition
   (nongenerative))
@@ -223,7 +237,6 @@
   (sealed #t)
   (opaque #f))
 
-
 (define (condition? x)
   ;;Defined  by  R6RS.   Return  #t  if  X is  a  (simple  or  compound)
   ;;condition, otherwise return #f.
@@ -231,6 +244,23 @@
   (or (&condition? x)
       (compound-condition? x)))
 
+(define (condition-and-rtd? obj rtd)
+  (fluid-let-syntax
+      ((__who__ (identifier-syntax 'condition-and-rtd?)))
+    (with-arguments-validation (__who__)
+	((rtd          rtd)
+	 (rtd-subtype  rtd))
+      (let ((p? (record-predicate rtd)))
+	(cond ((compound-condition? obj)
+	       (let loop ((ls (compound-condition-components obj)))
+		 (and (pair? ls)
+		      (or (p? ($car ls))
+			  (loop ($cdr ls))))))
+	      ((&condition? obj)
+	       (p? obj))
+	      (else #f))))))
+
+
 (define condition
   ;;Defined by R6RS.   Return a condition object with  the components of
   ;;the condition arguments  as its components, in the  same order.  The
@@ -476,7 +506,7 @@
   (line		source-position-line)
   (column	source-position-column))
 
-;;; --------------------------------------------------------------------
+
 ;;; Vicare specific condition types
 
 (define-condition-type &i/o-eagain &i/o
@@ -490,6 +520,8 @@
   make-h_errno-condition h_errno-condition?
   (code		condition-h_errno))
 
+;;; --------------------------------------------------------------------
+
 (define-condition-type &procedure-argument-violation &assertion
   make-procedure-argument-violation procedure-argument-violation?)
 
@@ -500,6 +532,8 @@
 	      (make-irritants-condition irritants)
 	      (make-procedure-argument-violation))))
 
+;;; --------------------------------------------------------------------
+
 (define-condition-type &expression-return-value-violation &assertion
   make-expression-return-value-violation expression-return-value-violation?)
 
@@ -509,6 +543,20 @@
 	      (make-message-condition message)
 	      (make-irritants-condition irritants)
 	      (make-expression-return-value-violation))))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &non-reinstatable
+    &violation
+  make-non-reinstatable-violation
+  non-reinstatable-violation?)
+
+(define (non-reinstatable-violation who message . irritants)
+  (raise
+   (condition (make-non-reinstatable-violation)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
 
 
 ;;;; printing condition objects
@@ -535,8 +583,8 @@
 		       (display "   " port)
 		       (display i port)
 		       (display ". " port)
-		       (%print-simple-condition ($car ls) port)
-		       (loop ($cdr ls) ($fxadd1 i)))))))
+		       (%print-simple-condition (car ls) port)
+		       (loop (cdr ls) (fxadd1 i)))))))
 	     #;(flush-output-port port))
 	    (else
 	     (display " Non-condition object: " port)
@@ -557,10 +605,10 @@
 			    (cons (cons rtd (record-type-field-names rtd))
 				  accum))
 		    (remp (lambda (a)
-			    (zero? (vector-length ($cdr a))))
+			    (zero? (vector-length (cdr a))))
 		      accum))))
 	 (rf-len (fold-left (lambda (sum pair)
-			      (+ sum ($vector-length ($cdr pair))))
+			      (+ sum (vector-length (cdr pair))))
 		   0
 		   rf)
 		 #;(apply + (map vector-length (map cdr rf)))))
@@ -591,12 +639,15 @@
 		 ;; (begin
 		 ;;   (write ((record-accessor rtd i) x) port)
 		 ;;   (newline port))
-		 (loop ($fxadd1 i) rtd v))))
+		 (loop (fxadd1 i) rtd v))))
 	 rf)))))
 
 
 ;;;; done
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions"))
+
+#| end of library |# )
 
 ;;; end of file

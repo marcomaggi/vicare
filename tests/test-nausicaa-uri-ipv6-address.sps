@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (nausicaa uri ip)
   (nausicaa parser-tools ipv6-addresses)
   (prefix (vicare parser-tools silex lexer) lex.)
@@ -44,9 +44,9 @@
     (let* ((IS		(lex.make-IS (lex.string: string) (lex.counters: 'all)))
 	   (lexer	(lex.make-lexer ipv6-address-lexer-table IS))
 	   (out		'()))
-      (define (push-token! (T lt.<lexical-token>))
+      (define (push-token! {T lt.<lexical-token>})
 	(set-cons! out (cons (T category) (T value))))
-      (do (((token lt.<lexical-token>) (lexer) (lexer)))
+      (do (({token lt.<lexical-token>} (lexer) (lexer)))
 	  ((token special?)
 	   (push-token! token)
 	   (reverse out))
@@ -176,9 +176,9 @@
   (define (tokenise-address string)
     (let* ((lexer	(make-ipv6-address-lexer (string: string)))
 	   (out		'()))
-      (define (push-token! (T lt.<lexical-token>))
+      (define (push-token! {T lt.<lexical-token>})
 	(set-cons! out (cons (T category) (T value))))
-      (do (((token lt.<lexical-token>) (lexer) (lexer)))
+      (do (({token lt.<lexical-token>} (lexer) (lexer)))
 	  ((token special?)
 	   (push-token! token)
 	   (reverse out))
@@ -458,7 +458,7 @@
 			    (try
 				(parse-address ?string)
 			      (catch E
-				(&ipv6-address-parser-error
+				((&ipv6-address-parser-error)
 				 #t)
 				(else #f)))))))
     (check-it "1,")
@@ -604,7 +604,7 @@
 				(try
 				    (parse-ipv6-address ?string)
 				  (catch E
-				    (&ipv6-address-parser-error
+				    ((&ipv6-address-parser-error)
 				     #t)
 				    (else #f)))
 			      => #t)))))
@@ -698,7 +698,7 @@
 				(try
 				    (parse-ipv6-address-only ?string)
 				  (catch E
-				    (&ipv6-address-parser-error
+				    ((&ipv6-address-parser-error)
 				     #t)
 				    (else #f)))
 			      => #t)))))
@@ -799,7 +799,7 @@
 				(try
 				    (parse-ipv6-address-prefix ?string)
 				  (catch E
-				    (&ipv6-address-parser-error
+				    ((&ipv6-address-parser-error)
 				     #t)
 				    (else #f)))
 			      => #t)))))
@@ -937,87 +937,87 @@
 (parametrise ((check-test-name	'address-class))
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> (1 2 3 4 5 6 7 8))))
+      (let (({o <ipv6-address>} (<ipv6-address> (1 2 3 4 5 6 7 8))))
 	(list (o seventh) (o sixth)  (o fifth) (o fourth)
 	      (o third)   (o second) (o first) (o zeroth)))
     => '(1 2 3 4 5 6 7 8))
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
 	(list (o seventh) (o sixth)  (o fifth) (o fourth)
 	      (o third)   (o second) (o first) (o zeroth)))
     => '(1 2 3 4 5 6 7 8))
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3::7:8")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "1:2:3::7:8")))))
 	(list (o seventh) (o sixth) (o fifth) (o fourth)
 	      (o third) (o second) (o first) (o zeroth)))
     => '(1 2 3 0 0 0 7 8))
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
 	(o bignum))
     => #x00010002000300040005000600070008)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
 	(o string))
     => "[1:2:3:4:5:6:7:8]")
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "1:2:3:4:5:6:7:8")))))
 	(o bytevector))
     => '#ve(ascii "[1:2:3:4:5:6:7:8]"))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "::0")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "::0")))))
 	(o unspecified?))
     => #t)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "::1")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "::1")))))
 	(o unspecified?))
     => #f)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "::0")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "::0")))))
 	(o loopback?))
     => #f)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "::1")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "::1")))))
 	(o loopback?))
     => #t)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "FF00::")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "FF00::")))))
 	(o multicast?))
     => #t)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "::1")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "::1")))))
 	(o multicast?))
     => #f)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "FE80::")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "FE80::")))))
 	(o link-local-unicast?))
     => #t)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "::1")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "::1")))))
 	(o link-local-unicast?))
     => #f)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "FF80::")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "FF80::")))))
 	(o global-unicast?))
     => #f)
 
   (check
-      (let (((o <ipv6-address>) (<ipv6-address> ((parse-ipv6-address-only "1:2::")))))
+      (let (({o <ipv6-address>} (<ipv6-address> ((parse-ipv6-address-only "1:2::")))))
 	(o global-unicast?))
     => #t)
 
@@ -1027,7 +1027,7 @@
 (parametrise ((check-test-name	'prefix-class))
 
   (check
-      (let (((o <ipv6-address-prefix>) (receive (addr len)
+      (let (({o <ipv6-address-prefix>} (receive (addr len)
 					   (parse-ipv6-address-prefix "1:2:3:4::/55")
 					 (<ipv6-address-prefix> (len addr)))))
 	(list (o seventh) (o sixth) (o fifth) (o fourth)
@@ -1036,14 +1036,14 @@
     => '(1 2 3 4 0 0 0 0 55))
 
   (check
-      (let (((o <ipv6-address-prefix>) (receive (addr len)
+      (let (({o <ipv6-address-prefix>} (receive (addr len)
 					   (parse-ipv6-address-prefix "1:2:3:4::/50")
 					 (<ipv6-address-prefix> (len addr)))))
 	(values (o string) (o bytevector)))
     => "1:2:3:4:0:0:0:0/50" '#ve(ascii "1:2:3:4:0:0:0:0/50"))
 
   (check
-      (let (((o <ipv6-address-prefix>) (<ipv6-address-prefix> (50 1 2 3 4 5 6 7 8))))
+      (let (({o <ipv6-address-prefix>} (<ipv6-address-prefix> (50 1 2 3 4 5 6 7 8))))
 	(values (o string) (o bytevector)))
     => "1:2:3:4:5:6:7:8/50" '#ve(ascii "1:2:3:4:5:6:7:8/50"))
 

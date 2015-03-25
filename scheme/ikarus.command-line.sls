@@ -16,10 +16,10 @@
 
 (library (ikarus command-line)
   (export command-line-arguments command-line)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  command-line
 		  command-line-arguments)
-    (ikarus system $arg-list))
+    (vicare system $arg-list))
 
   (define (command-line)
     (command-line-arguments))

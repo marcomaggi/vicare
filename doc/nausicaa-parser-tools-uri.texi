@@ -207,13 +207,13 @@ This condition type can be used in Nausicaa's @oopp{} syntaxes.
 (define C
   (uri.&uri-parser-error (10)))
 
-((uri.&uri-parser-error) C)
+(is-a? C uri.&uri-parser-error)
 @result{} #t
 
 (try
     (raise C)
   (catch E
-    (uri.&uri-parser-error
+    ((uri.&uri-parser-error)
      #t)
     (else #f)))
 @result{} #t

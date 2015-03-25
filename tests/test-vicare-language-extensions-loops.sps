@@ -32,7 +32,8 @@
 
 #!r6rs
 (import (except (vicare)
-		read-line)
+		read-line
+		:)
   (vicare language-extensions loops)
   (vicare checks))
 
@@ -581,13 +582,13 @@
 
 ;;;; less artificial examples
 
-(define (factorial n) ; n * (n-1) * .. * 1 for n >= 0
+(define (%factorial n) ; n * (n-1) * .. * 1 for n >= 0
   (product-ec (:range k 2 (+ n 1)) k) )
 
-(check (factorial  0) => 1)
-(check (factorial  1) => 1)
-(check (factorial  3) => 6)
-(check (factorial  5) => 120)
+(check (%factorial  0) => 1)
+(check (%factorial  1) => 1)
+(check (%factorial  3) => 6)
+(check (%factorial  5) => 120)
 
 
 (define (eratosthenes n) ; primes in {2..n-1} for n >= 1

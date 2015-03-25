@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (rename (vicare)
+(import (rename (except (vicare) catch)
 		(make-record-type-descriptor make-record-type-descriptor*)
 		(make-record-constructor-descriptor make-record-constructor-descriptor*))
   (vicare language-extensions syntaxes)
@@ -639,7 +639,7 @@
 
 (parametrise ((check-test-name	'record-accessor))
 
-  (check
+  (check	;record accessor with index argument
       (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f)
@@ -647,9 +647,27 @@
 	     (rcd	(make-record-constructor-descriptor
 			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
 	     (builder	(record-constructor rcd))
-	     (get-a	(record-accessor rtd 0)))
-	(get-a (builder 1 2)))
-    => 1)
+	     (get-a	(record-accessor rtd 0))
+	     (get-b	(record-accessor rtd 1)))
+	(define R
+	  (builder 1 2))
+	(list (get-a R) (get-b R)))
+    => '(1 2))
+
+  (check	;record accessor constructor with symbol argument
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (mutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (builder	(record-constructor rcd))
+	     (get-a	(record-accessor rtd 'a))
+	     (get-b	(record-accessor rtd 'b)))
+	(define R
+	  (builder 1 2))
+	(list (get-a R) (get-b R)))
+    => '(1 2))
 
 ;;; --------------------------------------------------------------------
 ;;; errors
@@ -690,7 +708,7 @@
 
 (parametrise ((check-test-name	'record-mutator))
 
-  (check
+  (check	;mutator constructor with index argument
       (let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f)
@@ -699,11 +717,32 @@
 			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
 	     (builder	(record-constructor rcd))
 	     (get-a	(record-accessor rtd 0))
-	     (set-a	(record-mutator rtd 0)))
+	     (set-a	(record-mutator  rtd 0))
+	     (get-b	(record-accessor rtd 1))
+	     (set-b	(record-mutator  rtd 1)))
 	(let ((o (builder 1 2)))
-	  (set-a o 9)
-	  (get-a o)))
-    => 9)
+	  (set-a o 19)
+	  (set-b o 29)
+	  (list (get-a o) (get-b o))))
+    => '(19 29))
+
+  (check	;mutator constructor with symbol argument
+      (let* ((rtd	(make-record-type-descriptor
+			 (name: 'rtd-0) (parent: #f) (uid: #f)
+			 (sealed: #f) (opaque: #f)
+			 (fields: '#((mutable a) (mutable b)))))
+	     (rcd	(make-record-constructor-descriptor
+			 (rtd: rtd) (parent-rcd: #f) (protocol: #f)))
+	     (builder	(record-constructor rcd))
+	     (get-a	(record-accessor rtd 'a))
+	     (set-a	(record-mutator  rtd 'a))
+	     (get-b	(record-accessor rtd 'b))
+	     (set-b	(record-mutator  rtd 'b)))
+	(let ((o (builder 1 2)))
+	  (set-a o 19)
+	  (set-b o 29)
+	  (list (get-a o) (get-b o))))
+    => '(19 29))
 
 ;;; --------------------------------------------------------------------
 ;;; errors

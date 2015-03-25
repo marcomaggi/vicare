@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -391,6 +391,9 @@
     ;; predicates
     port? input-port? output-port? input/output-port?
     textual-port? binary-port?
+    binary-input-port?			textual-input-port?
+    binary-output-port?			textual-output-port?
+    binary-input/output-port?		textual-input/output-port?
     port-eof?
 
     ;; generic port functions
@@ -507,7 +510,7 @@
     make-textual-socket-output-port*
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
-  (import (except (ikarus)
+  (import (except (vicare)
 
 		  ;; would block object
 		  would-block-object			would-block-object?
@@ -524,6 +527,9 @@
 		  ;; predicates
 		  port? input-port? output-port? input/output-port?
 		  textual-port? binary-port?
+		  binary-input-port?			textual-input-port?
+		  binary-output-port?			textual-output-port?
+		  binary-input/output-port?		textual-input/output-port?
 		  port-eof?
 
 		  ;; generic port functions
@@ -640,12 +646,42 @@
 		  make-textual-socket-output-port*
 		  make-textual-socket-input/output-port
 		  make-textual-socket-input/output-port*)
-    (only (vicare options)
+    (only (ikarus.options)
 	  strict-r6rs)
-    ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
-    ;;and $SET-PORT-* bindings.
-    (ikarus system $io)
-    (prefix (only (ikarus) port?) primop.)
+    (except (vicare system $strings)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun
+	    ;;Mar 22, 2015)
+	    $string-copy!
+	    $string-copy!/count
+	    $string-fill!
+	    $substring)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 22,
+    ;;2015)
+    (only (ikarus strings)
+	  $string-copy!
+	  $string-copy!/count
+	  $string-fill!
+	  $substring)
+    (except (vicare system $bytevectors)
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
+	    ;;Mar 23, 2015)
+	    $bytevector-copy!
+	    $bytevector-copy!/count
+	    $bytevector-fill!
+	    $bytevector-u16-set!	$bytevector-s16-set!
+	    $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
+    ;;2015)
+    (only (ikarus bytevectors)
+	  $bytevector-copy!
+	  $bytevector-copy!/count
+	  $bytevector-fill!
+	  $bytevector-u16-set!		$bytevector-s16-set!
+	  $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
+    ;;bindings.
+    (vicare system $io)
+    (prefix (only (vicare) port?) primop.)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (prefix (vicare unsafe capi)
@@ -1026,7 +1062,7 @@
       (define (%unsupported-by-latin-1)
 	(assertion-violation who
 	  "EOL style conversion unsupported by Latin-1 codec" style))
-      (case-symbols style
+      (case style
 	((none)		0)
 	((lf)		EOL-LINEFEED-TAG)
 	((cr)		EOL-CARRIAGE-RETURN-TAG)
@@ -1523,6 +1559,16 @@
 	      (assertion-violation #f "unknown errno code" errno)))))
     ))
 
+(define-syntax ($case-fixnums stx)
+  (syntax-case stx (else)
+    ((_ ?id ((?fx) . ?body) ...)
+     (identifier? #'?id)
+     #'(cond (($fx= ?fx ?id) . ?body) ...))
+    ((_ ?id ((?fx) . ?body) ... (else . ?else-body))
+     (identifier? #'?id)
+     #'(cond (($fx= ?fx ?id) . ?body) ...  (else . ?else-body)))
+    ))
+
 
 ;;;; Byte Order Mark (BOM) parsing
 
@@ -1699,51 +1745,6 @@
       (else
        (assertion-violation who
 	 "codec not handled by BOM parser" (transcoder-codec port.transcoder))))))
-
-
-;;;; bytevector helpers
-
-(define (%unsafe.bytevector-reverse-and-concatenate who list-of-bytevectors dst.len)
-  ;;Reverse  LIST-OF-BYTEVECTORS and  concatenate its  bytevector items;
-  ;;return  the result.  The  resulting list  must have  length DST.LEN.
-  ;;Assume the arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The bytevectors must have a fixnum length
-  ;;and the whole bytevector must at maximum have a fixnum length.
-  ;;
-  (let next-bytevector ((dst.bv              ($make-bytevector dst.len))
-			(list-of-bytevectors list-of-bytevectors)
-			(dst.start           dst.len))
-    (if (null? list-of-bytevectors)
-	(begin
-	  dst.bv)
-      (let* ((src.bv    (car list-of-bytevectors))
-	     (src.len   ($bytevector-length src.bv))
-	     (dst.start ($fx- dst.start src.len)))
-	($bytevector-copy!/count src.bv 0 dst.bv dst.start src.len)
-	(next-bytevector dst.bv (cdr list-of-bytevectors) dst.start)))))
-
-
-;;;; string helpers
-
-(define (%unsafe.string-reverse-and-concatenate who list-of-strings dst.len)
-  ;;Reverse LIST-OF-STRINGS and concatenate its string items; return the
-  ;;result.  The  resulting list must  have length DST.LEN.   Assume the
-  ;;arguments have been already validated.
-  ;;
-  ;;IMPLEMENTATION RESTRICTION The strings must have a fixnum length and
-  ;;the whole string must at maximum have a fixnum length.
-  ;;
-  (let next-string ((dst.str ($make-string dst.len))
-		    (list-of-strings list-of-strings)
-		    (dst.start       dst.len))
-    (if (null? list-of-strings)
-	dst.str
-      (let* ((src.str   (car list-of-strings))
-	     (src.len   ($string-length src.str))
-	     (dst.start ($fx- dst.start src.len)))
-	($string-copy!/count src.str 0 dst.str dst.start src.len)
-	(next-string dst.str (cdr list-of-strings) dst.start)))))
 
 
 ;;;; dot notation macros for port structures
@@ -2231,6 +2232,34 @@
        (let ((flags ($port-tag x)))
 	 (or ($fx= ($fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
 	     ($fx= ($fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG)))))
+
+;;; --------------------------------------------------------------------
+
+(define (binary-input-port? obj)
+  (and (input-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-input-port? obj)
+  (and (input-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+(define (binary-output-port? obj)
+  (and (output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-output-port? obj)
+  (and (output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+(define (binary-input/output-port? obj)
+  (and (input/output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-input/output-port? obj)
+  (and (input/output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+;;; --------------------------------------------------------------------
 
 ;;The following predicates have to be used after the argument has
 ;;been validated as  port value.  They are *not*  affected by the
@@ -3347,13 +3376,12 @@
 		   ;;The device contains some bytes and the device needs
 		   ;;to be serialised: the  list of bytevectors contains
 		   ;;2 or more items.
-		   (let ((bv (%unsafe.bytevector-reverse-and-concatenate
-			      who ($device-bvs D) ($device-len D))))
+		   (receive-and-return (bv)
+		       ($bytevector-reverse-and-concatenate ($device-len D) ($device-bvs D))
 		     ($set-cookie-dest! cookie
 					(if reset?
 					    (make-device 0 '())
-					  (make-device ($device-len D) (list bv))))
-		     bv)))))
+					  (make-device ($device-len D) (list bv)))))))))
 
 	(define (write! src.bv src.start count)
 	  ;;Write COUNT  octets from the bytevector  SRC.BV, starting at
@@ -3570,9 +3598,9 @@
 		   (set-cookie-dest! cookie '(0 . ())))
 		 (car output.strs))
 		(else
-		 (let ((str (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
-		   (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str))))
-		   str)))))
+		 (receive-and-return (str)
+		     ($string-reverse-and-concatenate output.len output.strs)
+		   (set-cookie-dest! cookie (if reset? '(0 . ()) `(,output.len . (,str)))))))))
       (define-inline (%serialise-device! who)
 	(%%serialise-device! who #f))
       (define-inline (%serialise-device-and-reset! who)
@@ -3723,7 +3751,7 @@
 		 ;;The device has already been serialised.
 		 (car output.strs))
 		(else
-		 (%unsafe.string-reverse-and-concatenate who output.strs output.len))))))))
+		 ($string-reverse-and-concatenate output.len output.strs))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4863,7 +4891,7 @@
 	  (%data-available-in-buffer port output.len remaining-count output.bvs
 				     retry-after-filling-buffer))
 	(define-inline (compose-output)
-	  (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
+	  ($bytevector-reverse-and-concatenate output.len output.bvs))
 	(maybe-refill-bytevector-buffer-and-evaluate (port who)
 	  (data-is-needed-at:    port.buffer.index)
 	  ;;The buffer was empty and  after attempting to refill it: EOF
@@ -4931,9 +4959,8 @@
 	(let ((output.bvs/after-consuming-buffer-bytes (cons bv output.bvs)))
 	  (if bytes-from-buffer-satisfy-the-request?
 	      ;;Compose output.
-	      (%unsafe.bytevector-reverse-and-concatenate who
-		output.bvs/after-consuming-buffer-bytes
-		output.len/after-consuming-buffer-bytes)
+	      ($bytevector-reverse-and-concatenate output.len/after-consuming-buffer-bytes
+						   output.bvs/after-consuming-buffer-bytes)
 	    (retry-after-filling-buffer output.len/after-consuming-buffer-bytes
 					output.bvs/after-consuming-buffer-bytes
 					($fx- remaining-count
@@ -5129,9 +5156,9 @@
        (with-port-having-bytevector-buffer (port)
 	 (let retry-after-filling-buffer ((output.len  0)
 					  (output.bvs  '()))
-	   (define-inline (compose-output)
-	     (%unsafe.bytevector-reverse-and-concatenate who output.bvs output.len))
-	   (define-inline (data-available)
+	   (define-syntax-rule (compose-output)
+	     ($bytevector-reverse-and-concatenate output.len output.bvs))
+	   (define-syntax-rule (data-available)
 	     (%data-available-in-buffer port output.len output.bvs
 					retry-after-filling-buffer))
 	   (maybe-refill-bytevector-buffer-and-evaluate (port who)
@@ -5698,7 +5725,7 @@
 		     ;;Return EOF or would-block.
 		     count
 		   ;;Return the accumulated string.
-		   (%unsafe.string-reverse-and-concatenate who output.strs output.len)))
+		   ($string-reverse-and-concatenate output.len output.strs)))
 		((would-block-object? count)
 		 (next-buffer-string output.len output.strs dst.len dst.str))
 		(($fx= count dst.len)
@@ -5708,9 +5735,8 @@
 				     ($make-string dst.len)))
 		(else
 		 ;;Some characters were read, but less than COUNT.
-		 (%unsafe.string-reverse-and-concatenate who
-		   (cons ($substring dst.str 0 count) output.strs)
-		   ($fx+ count output.len))))))))
+		 ($string-reverse-and-concatenate (fx+ count output.len)
+						  (cons ($substring dst.str 0 count) output.strs))))))))
 
   (define (get-string-some port)
     ;;Defined by Vicare.  Read from  the textual input PORT, blocking as
@@ -5892,7 +5918,9 @@
 	   ;;object, else return the number of characters read.
 	   ((would-block-object? ch)
 	    (if (strict-r6rs)
-		(read-next-char)
+		;;In R6RS  mode we ignore the  would-block condition and
+		;;just insist reading with the same destination index.
+		(read-next-char dst.index)
 	      (if ($fx= dst.index dst.start)
 		  ;;Return the would-block object.
 		  ch
@@ -5929,7 +5957,10 @@
 	       ;;another character will be available.
 	       ((would-block-object? ch2)
 		(if (strict-r6rs)
-		    (read-next-char)
+		    ;;In R6RS  mode we ignore the  would-block condition
+		    ;;and just insist reading  with the same destination
+		    ;;index.
+		    (read-next-char dst.index)
 		  (if ($fx= dst.index dst.start)
 		      ;;Return the would-block object.
 		      ch
@@ -6921,7 +6952,7 @@
 		    (case mode
 		      ((ignore)
 		       ;;To ignore means jump to the next.
-		       (recurse))
+		       (recurse port.buffer.index))
 		      ((replace)
 		       #\xFFFD)
 		      ((raise)
@@ -7121,7 +7152,7 @@
 		   (buffer.past		($fxadd1 buffer.index))
 		   (buffer.used-size	port.buffer.used-size))
 	      (debug-assert (<= buffer.index buffer.used-size))
-	      ($bytevector-u8-set! port.buffer buffer.index octet)
+	      ($bytevector-set! port.buffer buffer.index octet)
 	      (when ($fx= buffer.index buffer.used-size)
 		(set! port.buffer.used-size buffer.past))
 	      (set! port.buffer.index buffer.past))))
@@ -7407,7 +7438,7 @@
 		   (buffer.past		($fxadd1 buffer.offset)))
 	      (if ($fx<= buffer.past port.buffer.size)
 		  (begin
-		    ($bytevector-u8-set! port.buffer buffer.offset code-point)
+		    ($bytevector-set! port.buffer buffer.offset code-point)
 		    (set! port.buffer.index buffer.past)
 		    (when ($fx> buffer.past port.buffer.used-size)
 		      (set! port.buffer.used-size buffer.past)))
@@ -7428,7 +7459,7 @@
 	       (let* ((buffer.offset-octet0	port.buffer.index)
 		      (buffer.past		($fxadd1 buffer.offset-octet0)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7448,7 +7479,7 @@
 		      (buffer.offset-octet1	($fxadd1 buffer.offset-octet0))
 		      (buffer.past		($fxadd1 buffer.offset-octet1)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7471,7 +7502,7 @@
 		      (buffer.offset-octet2	($fxadd1 buffer.offset-octet1))
 		      (buffer.past		($fxadd1 buffer.offset-octet2)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7498,7 +7529,7 @@
 		      (buffer.offset-octet3	($fxadd1 buffer.offset-octet2))
 		      (buffer.past		($fxadd1 buffer.offset-octet3)))
 		 (define-inline (%buffer-set! offset octet)
-		   ($bytevector-u8-set! port.buffer offset octet))
+		   ($bytevector-set! port.buffer offset octet))
 		 (if ($fx<= buffer.past port.buffer.size)
 		     (begin
 		       (%buffer-set! buffer.offset-octet0 octet0)
@@ -7569,7 +7600,7 @@
 	       (buffer.past	($fxadd1 buffer.offset)))
 	  (if ($fx<= buffer.past port.buffer.size)
 	      (begin
-		($bytevector-u8-set! port.buffer buffer.offset code-point)
+		($bytevector-set! port.buffer buffer.offset code-point)
 		(set! port.buffer.index buffer.past)
 		(when ($fx> buffer.past port.buffer.used-size)
 		  (set! port.buffer.used-size buffer.past)))
@@ -7791,9 +7822,10 @@
   ;;string FILENAME.  If an error occurs: raise an exception.
   ;;
   (let* ((opts (if (enum-set? file-options)
-		   ($fxior (if (enum-set-member? 'no-create   file-options) #b001 0)
-				  (if (enum-set-member? 'no-fail     file-options) #b010 0)
-				  (if (enum-set-member? 'no-truncate file-options) #b100 0))
+		   ($fxior (if (enum-set-member? 'no-create   file-options) #b0001 0)
+			   (if (enum-set-member? 'no-fail     file-options) #b0010 0)
+			   (if (enum-set-member? 'no-truncate file-options) #b0100 0)
+			   (if (enum-set-member? 'executable  file-options) #b1000 0))
 		 (assertion-violation who "file-options is not an enum set" file-options)))
 	 (fd (capi.platform-open-output-fd ((string->filename-func) filename) opts)))
     (if (fx< fd 0)
@@ -8664,10 +8696,9 @@
 ;;;; standard, console and current ports
 
 (define (standard-input-port)
-  ;;Defined by R6RS.  Return a new binary input port connected to
-  ;;standard input.  Whether  the port supports the PORT-POSITION
-  ;;and   SET-PORT-POSITION!     operations   is   implementation
-  ;;dependent.
+  ;;Defined by  R6RS.  Return a  new binary input  port connected to  standard input.
+  ;;Whether the port supports the PORT-POSITION and SET-PORT-POSITION!  operations is
+  ;;implementation dependent.
   ;;
   (let ((who		'standard-input-port)
 	(fd		0)
@@ -8679,31 +8710,29 @@
     (%file-descriptor->input-port fd attributes port-id buffer.size transcoder close who)))
 
 (define (standard-output-port)
-  ;;Defined by  R6RS.  Return a new binary  output port connected
-  ;;to  the  standard  output.   Whether the  port  supports  the
-  ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
-  ;;implementation dependent.
+  ;;Defined  by R6RS.   Return a  new binary  output port  connected to  the standard
+  ;;output.   Whether  the port  supports  the  PORT-POSITION and  SET-PORT-POSITION!
+  ;;operations is implementation dependent.
   ;;
   (%file-descriptor->output-port 1 0
 				 "*stdout*" (output-file-buffer-size) #f #f 'standard-output-port))
 
 (define (standard-error-port)
-  ;;Defined by  R6RS.  Return a new binary  output port connected
-  ;;to  the  standard  error.   Whether  the  port  supports  the
-  ;;PORT-POSITION    and   SET-PORT-POSITION!     operations   is
-  ;;implementation dependent.
+  ;;Defined  by R6RS.   Return a  new binary  output port  connected to  the standard
+  ;;error.   Whether  the  port  supports the  PORT-POSITION  and  SET-PORT-POSITION!
+  ;;operations is implementation dependent.
   ;;
   (%file-descriptor->output-port 2 0
 				 "*stderr*" (output-file-buffer-size) #f #f 'standard-error-port))
 
+;;; --------------------------------------------------------------------
+
 (define current-input-port
-  ;;Defined by  R6RS.  Return a  default textual port  for input.
-  ;;Normally,  this  default  port  is associated  with  standard
-  ;;input,   but  can   be  dynamically   reassigned   using  the
-  ;;WITH-INPUT-FROM-FILE procedure from  the (rnrs io simple (6))
-  ;;library.   The  port  may  or  may  not  have  an  associated
-  ;;transcoder;  if  it does,  the  transcoder is  implementation
-  ;;dependent.
+  ;;Defined  by R6RS.   Return  a default  textual port  for  input.  Normally,  this
+  ;;default port is associated with standard input, but can be dynamically reassigned
+  ;;using the WITH-INPUT-FROM-FILE  procedure from the (rnrs io  simple (6)) library.
+  ;;The port may or may not have an associated transcoder; if it does, the transcoder
+  ;;is implementation dependent.
   (make-parameter
       (transcoded-port (standard-input-port) (native-transcoder))
     (lambda (x)
@@ -8714,14 +8743,12 @@
 	x))))
 
 (define current-output-port
-  ;;Defined by  R6RS.  Hold the default textual  port for regular
-  ;;output.   Normally,  this  default  port is  associated  with
-  ;;standard output.
+  ;;Defined by  R6RS.  Hold the default  textual port for regular  output.  Normally,
+  ;;this default port is associated with standard output.
   ;;
-  ;;The  return value of  CURRENT-OUTPUT-PORT can  be dynamically
-  ;;reassigned using  the WITH-OUTPUT-TO-FILE procedure  from the
-  ;;(rnrs  io  simple (6))  library.   A  port  returned by  this
-  ;;procedure may or may not have an associated transcoder; if it
+  ;;The return value  of CURRENT-OUTPUT-PORT can be dynamically  reassigned using the
+  ;;WITH-OUTPUT-TO-FILE  procedure from  the (rnrs  io simple  (6)) library.   A port
+  ;;returned by this  procedure may or may  not have an associated  transcoder; if it
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
@@ -8734,20 +8761,18 @@
 	x))))
 
 (define current-error-port
-  ;;Defined  by R6RS.  Hold  the default  textual port  for error
-  ;;output.   Normally,  this  default  port is  associated  with
-  ;;standard error.
+  ;;Defined by R6RS.  Hold the default textual port for error output.  Normally, this
+  ;;default port is associated with standard error.
   ;;
-  ;;The  return value  of CURRENT-ERROR-PORT  can  be dynamically
-  ;;reassigned using  the WITH-OUTPUT-TO-FILE procedure  from the
-  ;;(rnrs  io  simple (6))  library.   A  port  returned by  this
-  ;;procedure may or may not have an associated transcoder; if it
+  ;;The return  value of CURRENT-ERROR-PORT  can be dynamically reassigned  using the
+  ;;WITH-OUTPUT-TO-FILE  procedure from  the (rnrs  io simple  (6)) library.   A port
+  ;;returned by this  procedure may or may  not have an associated  transcoder; if it
   ;;does, the transcoder is implementation dependent.
   ;;
   (make-parameter
-      (let ((port (transcoded-port (standard-error-port) (native-transcoder))))
-	(set-port-buffer-mode! port (buffer-mode line))
-	port)
+      (receive-and-return (port)
+	  (transcoded-port (standard-error-port) (native-transcoder))
+	(set-port-buffer-mode! port (buffer-mode line)))
     (lambda (x)
       (define who 'current-error-port)
       (with-arguments-validation (who)
@@ -8755,26 +8780,45 @@
 	   ($textual-port	x))
 	x))))
 
+;;; --------------------------------------------------------------------
+
 (define console-output-port
-  ;;Defined by Ikarus.  Return a default textual port for output;
-  ;;each call returns the same port.
+  ;;Defined by Ikarus.  Return the default  textual output port: the default value of
+  ;;the parameter CURRENT-OUTPUT-PORT; each call returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
   ;;
   (let ((port (current-output-port)))
-    (lambda () port)))
+    (case-lambda*
+     (() port)
+     (({P textual-output-port?})
+      (set! port P)))))
 
 (define console-error-port
-  ;;Defined by Ikarus.  Return  a default textual port for error;
-  ;;each call returns the same port.
+  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
+  ;;the parameter CURRENT-ERROR-PORT; each call  returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
   ;;
   (let ((port (current-error-port)))
-    (lambda () port)))
+    (case-lambda*
+     (() port)
+     (({P textual-output-port?})
+      (set! port P)))))
 
 (define console-input-port
-  ;;Defined by Ikarus.  Return  a default textual port for input;
-  ;;each call returns the same port.
+  ;;Defined by Ikarus.   Return the default textual error port:  the default value of
+  ;;the parameter CURRENT-INPUT-PORT; each call  returns the same port.  When applied
+  ;;to an argument:  the argument must be  a textual output port and  it replaces the
+  ;;old value; the old port is left untouched (it is not closed).
   ;;
   (let ((port (current-input-port)))
-    (lambda () port)))
+    (case-lambda*
+     (() port)
+     (({P textual-input-port?})
+      (set! port P)))))
+
+;;; --------------------------------------------------------------------
 
 (define stdin
   (console-input-port))
@@ -8790,12 +8834,11 @@
 
 (post-gc-hooks (cons %close-garbage-collected-ports (post-gc-hooks)))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;;; Local Variables:
 ;;; coding: utf-8-unix
-;;; fill-column: 72
 ;;; eval: (put 'case-errno				'scheme-indent-function 1)
 ;;; eval: (put 'with-port				'scheme-indent-function 1)
 ;;; eval: (put 'with-port-having-bytevector-buffer	'scheme-indent-function 1)
@@ -8814,6 +8857,4 @@
 ;;; eval: (put 'maybe-refill-bytevector-buffer-and-evaluate	'scheme-indent-function 1)
 ;;; eval: (put 'refill-string-buffer-and-evaluate		'scheme-indent-function 1)
 ;;; eval: (put 'maybe-refill-string-buffer-and-evaluate		'scheme-indent-function 1)
-;;; eval: (put '%unsafe.bytevector-reverse-and-concatenate	'scheme-indent-function 1)
-;;; eval: (put '%unsafe.string-reverse-and-concatenate		'scheme-indent-function 1)
 ;;; End:

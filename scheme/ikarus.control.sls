@@ -22,17 +22,16 @@
     dynamic-wind
     (rename (call/cc call-with-current-continuation))
     exit		exit-hooks)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  call/cf		call/cc
 		  call-with-current-continuation
 		  dynamic-wind
 		  exit			exit-hooks
 		  list-tail)
-    (ikarus system $stack)
-    (ikarus system $pairs)
-    (ikarus system $fx)
-    (vicare arguments validation)
-    #;(ikarus.emergency))
+    (vicare system $stack)
+    (vicare system $pairs)
+    (vicare system $fx)
+    (vicare arguments validation))
 
 
 ;;;; helpers
@@ -202,10 +201,8 @@
   ;;
   (if ($fp-at-base)
       (begin
-	#;(emergency-write "primitive-call/cf: stack at base")
 	(func ($current-frame)))
     (begin
-      #;(emergency-write "primitive-call/cf: freezing the stack")
       ($seal-frame-and-call func))))
 
 (define (call/cf func)

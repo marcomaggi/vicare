@@ -26,7 +26,7 @@
 
 
 (import (rnrs)
-  (only (ikarus) fxmodulo)
+  (only (vicare) fxmodulo)
   (rnrs r5rs)
   (vicare checks))
 

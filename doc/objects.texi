@@ -127,19 +127,20 @@ heap: pairs, bytevectors, closures, strings.
 
 @deftp {Object Reference} ikptr
 An immediate built in object or a reference to a built in object;
-implemented as an @code{unsigned long int} it is meant to be the size of
-a machine word.  The definition assumes that:
+it is defined as follows:
 
 @itemize
 @item
-On 32-bit platforms, @code{unsigned long int} is a 32-bit value.
+On platforms having pointers @code{void *} of size 32-bit: it is defined
+as alias for @code{uint32_t}.
 
 @item
-On 64-bit platforms, @code{unsigned long int} is a 64-bit value.
+On platforms having pointers @code{void *} of size 64-bit: it is defined
+as alias for @code{uint64_t}.
 
 @item
-The type @code{unsigned long int} is big enough to hold a pointer for
-the underlying platform.
+On other platforms: it is defined as alias for @code{unsigned long
+int}.  This should never happen.
 @end itemize
 @end deftp
 
@@ -284,6 +285,7 @@ unset.
 @defmacx IK_BWP
 Special machine word value stored in locations that used to hold weak
 references to values which have been already garbage collected.
+@samp{BWP} stands for ``broken weak pointer''.
 @end defmac
 
 
@@ -397,7 +399,7 @@ notice how @strong{none} of the tags for reference words is
 @code{#b111}, which is reserved for immediate values; also notice how
 @code{#b100} must @strong{not} be used as tag, because on 32-bit
 platforms it would match the fixnums with the least significant bit set
-to zero.
+to one.
 
 The vector tag is used to tag machine word references to multiple object
 types: vectors, bignums, structures, flonums, ratnums, compnums,
@@ -840,7 +842,7 @@ words.
 We can simulate the computation with:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (define sizeof-ikptr
   (make-parameter #f))
@@ -2600,6 +2602,12 @@ into a string.
 @end deftypefn
 
 
+@deftypefn {Preprocessor Macro} {uint32_t} IK_CHAR32_TO_INTEGER (ikchar @var{ch})
+Given a 32-bit value representing a Scheme character: untag it and
+return a 32-bit value representing the Unicode code point.
+@end deftypefn
+
+
 @deftypefn {Preprocessor Macro} {unsigned long} IK_UNICODE_FROM_ASCII (char @var{ch})
 Return an unsigned integer representing the Unicode code point
 corresponding to the given @ascii{} character.
@@ -2781,6 +2789,18 @@ ikchar  ch;
 IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
 ch = IK_CHAR32(s_str, idx);
 @end example
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {void *} IK_STRING_DATA_VOIDP (ikptr @var{str})
+Given a tagged reference to string object @var{str}, return a pointer to
+the first byte in the data area.
+@end deftypefn
+
+
+@deftypefn {Preprocessor Macro} {ikchar *} IK_STRING_DATA_IKCHARP (ikptr @var{str})
+Given a tagged reference to string object @var{str}, return a pointer to
+the first Scheme character in the data area.
 @end deftypefn
 
 @c ------------------------------------------------------------
@@ -4223,21 +4243,71 @@ Return @code{IK_TRUE_OBJECT} if @var{X} is a pointer object, else return
 
 
 A tcbucket is a fixed--length memory block referenced by machine words
-tagged as vectors.
+tagged as vectors.  A tcbucket is used only to store values in a
+hashtable: each tcbucket represents an entry in the table.
+
+Tcbuckets are organised in chains, similarly to pairs in lists.  Hash
+tables are Scheme vectors whose elements are chains of tcbuckets:
+
+@example
+buckets vector
+--
+| 0
+--
+| --> |tcbucket| --> |tcbucket| --> 1
+--
+| 2
+--
+| --> |tcbucket| --> |tcbucket| --> |tcbucket| --> 3
+--
+| --> |tcbucket| --> 4
+--
+@end example
+
+@noindent
+If a buckets vector's slot is empty: it is set to a fixnum representing
+its own index in the vector.  Every chain of tcbuckets is a ``bucket''
+in traditional hash tables terminology.  When a new tcbucket is added to
+a bucket: it is prepended to the chain.
+
+References to tcbuckets have the following format:
 
 @example
 |------------------------|-------------| reference to tcbucket
       heap pointer         vector tag
 @end example
 
-A tcbucket is not a Scheme object like all the others; it is used only
-to store values in a hashtable.  The memory layout of a tcbucket is as
-follows:
+@noindent
+the memory layout of a tcbucket is as follows:
 
 @example
 |-----|-----|-----|-----| tcbucket memory block
  tconc  key   val  next
 @end example
+
+@noindent
+references to tcbucket are tagged as vectors and reference a word tagged
+as pair.
+
+The meaning of a tcbucket's fields is as follows:
+
+@table @code
+@item tconc
+A pair.  It is a structure used to efficiently handle hash tables using
+@func{eq?} as equivalence function.
+
+@item key
+A Scheme object representing the key of the hash table entry.
+
+@item val
+A Scheme object representing the value of the hash table entry.
+
+@item next
+If this tcbucket @strong{is not} the last in its chain: a reference to
+the next tcbucket in the chain.  If this tcbucket @strong{is} the last
+in its chain: a non--negative fixnum representing the index of this
+chain in the table's buckets vector.
+@end table
 
 For details on such objects, see the paper:
 
@@ -4288,22 +4358,18 @@ host's processor.
 @subsection Memory layout of code objects
 
 
-A code object is a fixed length memory block, of variable size equal to
-a multiple of the host's page size, referenced by machine words tagged
-as vectors; the memory is allocated with @cfunc{mmap} and is given read,
-write and execution protection.  The memory layout of a code object is
-as follows:
+A code object is a memory block, of variable size, referenced by machine
+words tagged as vectors; the memory is allocated with @cfunc{mmap} and
+is given read, write and execution protection.  The layout of a code
+object is as follows:
 
 @example
-     page size          page size          page size
-|..................|..................|..................|
-|-----------|-----------------------------------|++++++++|
-  meta data                 data area             unused
+|-----------|-----------------------------------| code object
+  meta data                 data area
 @end example
 
 @noindent
-if the requested memory is less than the exact multiple of a page size,
-the last allocated bytes are unused and set to zero at allocation time.
+the data area is filled with executable machine code.
 
 The first machine word of a code memory block is tagged has code in its
 least significant bits and it has the most significant bits set to zero.
@@ -4318,6 +4384,50 @@ least significant bits and it has the most significant bits set to zero.
 
 @c ------------------------------------------------------------
 
+@subsubheading Boot image code objects
+
+Scheme code objects which are part of the boot image are of 2
+categories:
+
+@enumerate
+@item
+Small code objects whose size fits in a single Vicare page.  Small code
+objects are allocated in the ``current code page'' while the boot image
+is loaded: a Vicare page marked as used ``for code'', in which code
+objects are stored one after the other, with size aligned to exact
+multiples of 16 bytes:
+
+@example
+                    current code page
+|..........................................................|
+
+  code object   code object   code object       free
+|.............|.............|.............|++++++++++++++++|
+|----------------------------------------------------------|
+@end example
+
+@noindent
+the free room at the end of the sequence of code objects is lost.
+
+@item
+Large code objects whose size fits in a sequence of adjacent Vicare
+pages.
+
+@example
+    page        page        page        page        page
+|...........|...........|...........|...........|...........|
+
+                large code object                     free
+|---------------------------------------------------|+++++++|
+@end example
+
+@noindent
+the free room at the end of the sequence of pages is lost.  Large code
+objects are @strong{never} moved by the garbage collector.
+@end enumerate
+
+@c ------------------------------------------------------------
+
 @subsubheading Meta data in a code memory block
 
 The first words of a code memory block hold meta data:
@@ -4329,9 +4439,7 @@ object as code object.
 
 @item
 The second word contains a non--negative fixnum representing the number
-of used bytes in the allocated block; this is @strong{not} the number of
-allocated bytes (multiple of the page size), just the number of bytes
-actually used by meta data and binary code.
+of used bytes in the data area.
 
 @item
 The third word contains the reference to a Scheme vector used as
@@ -4339,7 +4447,7 @@ relocation vector.
 
 @item
 The fourth word contains a non--negative fixnum representing the number
-of free variables in the contained code.  If such values is zero: the
+of free variables in the contained code.  If such value is zero: the
 code is a thunk.
 
 @item
@@ -4514,11 +4622,11 @@ s_code   p_data
    1st  2nd
 @end example
 
-Examples of foreign objects are: the C functions exported by the runtime
-program @command{vicare} to be called from Scheme; the C functions
-exported by the shared library when using an extension to Vicare with
-the model proposed by the Vicare/Template project (for example
-Vicare/SQLite).
+Examples of foreign objects are: the C functions exported by the
+executable program @value{EXECUTABLE} to be called from Scheme; the C
+functions exported by the shared library when using an extension to
+Vicare with the model proposed by the Vicare/Template project (for
+example Vicare/SQLite).
 
 @c page
 @node objects codes gc
@@ -4567,7 +4675,7 @@ referenced by the closure's code.
 
 
 We can take a look at the free variables referenced by a closure with
-the facilities of the library @library{ikarus system $codes}.  In a
+the facilities of the library @library{vicare system $codes}.  In a
 normal application: we must @strong{not} mess with the internals of
 closure and code objects.
 
@@ -4578,7 +4686,7 @@ variables:
 @example
 #!r6rs
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 (define a 123)
 (define (f)
   a)
@@ -4592,7 +4700,7 @@ directly in the closure's slot:
 @example
 #!r6rs
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 (define f
   (let ((a 123))
     (lambda () a)))
@@ -4606,7 +4714,7 @@ when there are two such variables:
 @example
 #!r6rs
 (import (vicare)
-  (ikarus system $codes))
+  (vicare system $codes))
 
 (define f
   (let ((a 123)
@@ -4625,7 +4733,7 @@ referenced by the slots of the closures:
 @example
 #!r6rs
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 (define f #f)
 (define g #f)
 (let ((a 123))

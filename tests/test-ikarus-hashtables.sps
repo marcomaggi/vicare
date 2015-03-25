@@ -27,9 +27,9 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (rnrs hashtables)
-  (ikarus-test-framework)
+  (libtest ikarus-test-framework)
   (vicare checks))
 
 (define (run-tests) (test-hashtables))

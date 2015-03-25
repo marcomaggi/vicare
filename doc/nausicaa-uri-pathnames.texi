@@ -176,7 +176,7 @@ pathname-split}.
 @end defmethod
 
 
-@defmethod @aclass{pathname} prefix? (@var{ptn} @aclass{pathname})
+@defmethod @aclass{pathname} prefix? @{@var{ptn} @aclass{pathname}@}
 Return @true{} if the instance pathname is a prefix of @var{ptn},
 otherwise return @false{}.  This method is implemented by the
 multimethod @func{pathname-prefix?}, @ref{uri pathnames abstract
@@ -184,7 +184,7 @@ methods, pathname-prefix?}.
 @end defmethod
 
 
-@defmethod @aclass{pathname} suffix? (@var{ptn} @aclass{pathname})
+@defmethod @aclass{pathname} suffix? @{@var{ptn} @aclass{pathname}@}
 Return @true{} if the instance pathname is a suffix of @var{ptn},
 otherwise return @false{}.  This method is implemented by the
 multimethod @func{pathname-suffix?}, @ref{uri pathnames abstract
@@ -192,7 +192,7 @@ methods, pathname-suffix?}.
 @end defmethod
 
 
-@defmethod @aclass{pathname} prepend (@var{ptn} @aclass{pathname})
+@defmethod @aclass{pathname} prepend @{@var{ptn} @aclass{pathname}@}
 Return a new pathname object representing the instance pathname
 prepended to @var{ptn}.  This method is implemented by the multimethod
 @func{pathname-prepend}, @ref{uri pathnames abstract methods,
@@ -256,7 +256,7 @@ Constructor to be used by the derived classes' constructors.
 @subsubheading Methods
 
 
-@defmethod @aclass{pathname} append (@var{ptn} @aclass{pathname})
+@defmethod @aclass{pathname} append @{@var{ptn} @aclass{pathname}@}
 Return a new pathname object representing the instance pathname appended
 to @var{ptn}.  This method is implemented by the multimethod
 @func{pathname-append}, @ref{uri pathnames abstract methods,
@@ -353,8 +353,8 @@ the extension of the last segment replaced by @var{ext}.
 
 
 @deftypefn Multimethod @aclass{boolean} pathname=? @vari{ptn} @varii{ptn}
-@deftypefnx Multimethod @aclass{boolean} pathname=? (@vari{ptn} @aclass{absolute-pathname}) (@varii{ptn} @aclass{relative-pathname})
-@deftypefnx Multimethod @aclass{boolean} pathname=? (@vari{ptn} @aclass{relative-pathname}) (@varii{ptn} @aclass{absolute-pathname})
+@deftypefnx Multimethod @aclass{boolean} pathname=? @{@vari{ptn} @aclass{absolute-pathname}@} @{@varii{ptn} @aclass{relative-pathname}@}
+@deftypefnx Multimethod @aclass{boolean} pathname=? @{@vari{ptn} @aclass{relative-pathname}@} @{@varii{ptn} @aclass{absolute-pathname}@}
 Return @true{} if the pathname arguments are equal, otherwise return
 @false{}.  The two predefined implementations always return @false{}
 because, obviously, absolute pathnames cannot be equal to relative
@@ -514,8 +514,8 @@ instance pathname.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{absolute-unix-pathname} prefix? (@var{ptn} @aclass{absolute-unix-pathname})
-@defmethodx @aclass{absolute-unix-pathname} prefix? (@var{ptn} @aclass{relative-unix-pathname})
+@defmethod @aclass{absolute-unix-pathname} prefix? @{@var{ptn} @aclass{absolute-unix-pathname}@}
+@defmethodx @aclass{absolute-unix-pathname} prefix? @{@var{ptn} @aclass{relative-unix-pathname}@}
 Return @true{} if the instance pathname is a prefix of @var{ptn},
 otherwise return @false{}.  This method is implemented with the function
 @func{prefix?} defined by @library{vicare parser-tools unix-pathnames},
@@ -523,8 +523,8 @@ otherwise return @false{}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{absolute-unix-pathname} suffix? (@var{ptn} @aclass{absolute-unix-pathname})
-@defmethodx @aclass{absolute-unix-pathname} suffix? (@var{ptn} @aclass{relative-unix-pathname})
+@defmethod @aclass{absolute-unix-pathname} suffix? @{@var{ptn} @aclass{absolute-unix-pathname}@}
+@defmethodx @aclass{absolute-unix-pathname} suffix? @{@var{ptn} @aclass{relative-unix-pathname}@}
 Return @true{} if the instance pathname is a suffix of @var{ptn},
 otherwise return @false{}.  This method is implemented with the function
 @func{suffix?} defined by @library{vicare parser-tools unix-pathnames},
@@ -532,7 +532,7 @@ otherwise return @false{}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{absolute-unix-pathname} prepend (@var{ptn} @aclass{absolute-unix-pathname})
+@defmethod @aclass{absolute-unix-pathname} prepend @{@var{ptn} @aclass{absolute-unix-pathname}@}
 Return a new pathname object representing the instance pathname
 prepended to @var{ptn}.  This method is implemented with the function
 @func{prepend} defined by @library{vicare parser-tools unix-pathnames},
@@ -540,8 +540,8 @@ prepended to @var{ptn}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{absolute-unix-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@defmethodx @aclass{absolute-unix-pathname} replace-extension (@var{ext} @aclass{string})
+@defmethod @aclass{absolute-unix-pathname} replace-extension @{@var{ext} @aclass{bytevector}@}
+@defmethodx @aclass{absolute-unix-pathname} replace-extension @{@var{ext} @aclass{string}@}
 Return an @aclass{absolute-unix-pathname} object representing the
 instance pathname with the extension of the last segment replaced by
 @var{ext}.  This method is implemented with the function
@@ -636,8 +636,8 @@ instance pathname.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{relative-unix-pathname} prefix? (@var{ptn} @aclass{absolute-unix-pathname})
-@defmethodx @aclass{relative-unix-pathname} prefix? (@var{ptn} @aclass{relative-unix-pathname})
+@defmethod @aclass{relative-unix-pathname} prefix? @{@var{ptn} @aclass{absolute-unix-pathname}@}
+@defmethodx @aclass{relative-unix-pathname} prefix? @{@var{ptn} @aclass{relative-unix-pathname}@}
 Return @true{} if the instance pathname is a prefix of @var{ptn},
 otherwise return @false{}.  This method is implemented with the function
 @func{prefix?} defined by @library{vicare parser-tools unix-pathnames},
@@ -645,8 +645,8 @@ otherwise return @false{}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{relative-unix-pathname} suffix? (@var{ptn} @aclass{absolute-unix-pathname})
-@defmethodx @aclass{relative-unix-pathname} suffix? (@var{ptn} @aclass{relative-unix-pathname})
+@defmethod @aclass{relative-unix-pathname} suffix? @{@var{ptn} @aclass{absolute-unix-pathname}@}
+@defmethodx @aclass{relative-unix-pathname} suffix? @{@var{ptn} @aclass{relative-unix-pathname}@}
 Return @true{} if the instance pathname is a suffix of @var{ptn},
 otherwise return @false{}.  This method is implemented with the function
 @func{suffix?} defined by @library{vicare parser-tools unix-pathnames},
@@ -654,8 +654,8 @@ otherwise return @false{}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{relative-unix-pathname} prepend (@var{ptn} @aclass{absolute-unix-pathname})
-@defmethodx @aclass{relative-unix-pathname} prepend (@var{ptn} @aclass{relative-unix-pathname})
+@defmethod @aclass{relative-unix-pathname} prepend @{@var{ptn} @aclass{absolute-unix-pathname}@}
+@defmethodx @aclass{relative-unix-pathname} prepend @{@var{ptn} @aclass{relative-unix-pathname}@}
 Return a new pathname object representing the instance pathname
 prepended to @var{ptn}.  This method is implemented with the function
 @func{prepend} defined by @library{vicare parser-tools unix-pathnames},
@@ -663,8 +663,8 @@ prepended to @var{ptn}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{relative-unix-pathname} append (@var{ptn} @aclass{absolute-unix-pathname})
-@defmethodx @aclass{relative-unix-pathname} append (@var{ptn} @aclass{relative-unix-pathname})
+@defmethod @aclass{relative-unix-pathname} append @{@var{ptn} @aclass{absolute-unix-pathname}@}
+@defmethodx @aclass{relative-unix-pathname} append @{@var{ptn} @aclass{relative-unix-pathname}@}
 Return a new pathname object representing the instance pathname appended
 to @var{ptn}.  This method is implemented with the function
 @func{append} defined by @library{vicare parser-tools unix-pathnames},
@@ -672,8 +672,8 @@ to @var{ptn}.  This method is implemented with the function
 @end defmethod
 
 
-@defmethod @aclass{relative-unix-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@defmethodx @aclass{relative-unix-pathname} replace-extension (@var{ext} @aclass{string})
+@defmethod @aclass{relative-unix-pathname} replace-extension @{@var{ext} @aclass{bytevector}@}
+@defmethodx @aclass{relative-unix-pathname} replace-extension @{@var{ext} @aclass{string}@}
 Return a @aclass{relative-unix-pathname} object representing the
 instance pathname with the extension of the last segment replaced by
 @var{ext}.  This method is implemented with the function
@@ -691,8 +691,8 @@ The following bindings are exported by the library @library{nausicaa uri
 pathnames unix}.
 
 
-@deffn Multimethod pathname (@var{ptn} @aclass{string})
-@deffnx Multimethod pathname (@var{ptn} @aclass{bytevector})
+@deffn Multimethod pathname @{@var{ptn} @aclass{string}@}
+@deffnx Multimethod pathname @{@var{ptn} @aclass{bytevector}@}
 Build and return a new instance of @class{absolute-unix-pathname} or
 @class{relative-unix-pathname} from @var{ptn}, which must be a string or
 bytevector representing an absolute or relative Unix pathname according
@@ -702,8 +702,8 @@ unix-pathnames}.
 @end deffn
 
 
-@deffn Multimethod pathname=? (@vari{ptn} @aclass{absolute-unix-pathname}) (@varii{ptn} @aclass{absolute-unix-pathname})
-@deffnx Multimethod pathname=? (@vari{ptn} @aclass{relative-unix-pathname}) (@varii{ptn} @aclass{relative-unix-pathname})
+@deffn Multimethod pathname=? @{@vari{ptn} @aclass{absolute-unix-pathname}@} @{@varii{ptn} @aclass{absolute-unix-pathname}@}
+@deffnx Multimethod pathname=? @{@vari{ptn} @aclass{relative-unix-pathname}@} @{@varii{ptn} @aclass{relative-unix-pathname}@}
 Implementations for the multimethod @func{pathname=?} defined by
 @library{nausicaa uri pathnames abstract}.
 @end deffn
@@ -836,28 +836,28 @@ instance pathname.
 @end defmethod
 
 
-@defmethod @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{absolute-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
+@defmethod @aclass{absolute-native-pathname} prefix? @{@var{ptn} @aclass{absolute-native-pathname}@}
+@defmethodx @aclass{absolute-native-pathname} prefix? @{@var{ptn} @aclass{relative-native-pathname}@}
 Return @true{} if the instance pathname is a prefix of @var{ptn},
 otherwise return @false{}.
 @end defmethod
 
 
-@defmethod @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{absolute-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
+@defmethod @aclass{absolute-native-pathname} suffix? @{@var{ptn} @aclass{absolute-native-pathname}@}
+@defmethodx @aclass{absolute-native-pathname} suffix? @{@var{ptn} @aclass{relative-native-pathname}@}
 Return @true{} if the instance pathname is a suffix of @var{ptn},
 otherwise return @false{}.
 @end defmethod
 
 
-@defmethod @aclass{absolute-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
+@defmethod @aclass{absolute-native-pathname} prepend @{@var{ptn} @aclass{absolute-native-pathname}@}
 Return a new pathname object representing the instance pathname
 prepended to @var{ptn}.
 @end defmethod
 
 
-@defmethod @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@defmethodx @aclass{absolute-native-pathname} replace-extension (@var{ext} @aclass{string})
+@defmethod @aclass{absolute-native-pathname} replace-extension @{@var{ext} @aclass{bytevector}@}
+@defmethodx @aclass{absolute-native-pathname} replace-extension @{@var{ext} @aclass{string}@}
 Return an @aclass{absolute-native-pathname} object representing the
 instance pathname with the extension of the last segment replaced by
 @var{ext}.
@@ -931,36 +931,36 @@ instance pathname.
 @end defmethod
 
 
-@defmethod @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} prefix? (@var{ptn} @aclass{relative-native-pathname})
+@defmethod @aclass{relative-native-pathname} prefix? @{@var{ptn} @aclass{absolute-native-pathname}@}
+@defmethodx @aclass{relative-native-pathname} prefix? @{@var{ptn} @aclass{relative-native-pathname}@}
 Return @true{} if the instance pathname is a prefix of @var{ptn},
 otherwise return @false{}.
 @end defmethod
 
 
-@defmethod @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} suffix? (@var{ptn} @aclass{relative-native-pathname})
+@defmethod @aclass{relative-native-pathname} suffix? @{@var{ptn} @aclass{absolute-native-pathname}@}
+@defmethodx @aclass{relative-native-pathname} suffix? @{@var{ptn} @aclass{relative-native-pathname}@}
 Return @true{} if the instance pathname is a suffix of @var{ptn},
 otherwise return @false{}.
 @end defmethod
 
 
-@defmethod @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} prepend (@var{ptn} @aclass{relative-native-pathname})
+@defmethod @aclass{relative-native-pathname} prepend @{@var{ptn} @aclass{absolute-native-pathname}@}
+@defmethodx @aclass{relative-native-pathname} prepend @{@var{ptn} @aclass{relative-native-pathname}@}
 Return a new pathname object representing the instance pathname
 prepended to @var{ptn}.
 @end defmethod
 
 
-@defmethod @aclass{relative-native-pathname} append (@var{ptn} @aclass{absolute-native-pathname})
-@defmethodx @aclass{relative-native-pathname} append (@var{ptn} @aclass{relative-native-pathname})
+@defmethod @aclass{relative-native-pathname} append @{@var{ptn} @aclass{absolute-native-pathname}@}
+@defmethodx @aclass{relative-native-pathname} append @{@var{ptn} @aclass{relative-native-pathname}@}
 Return a new pathname object representing the instance pathname appended
 to @var{ptn}.
 @end defmethod
 
 
-@defmethod @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{bytevector})
-@defmethodx @aclass{relative-native-pathname} replace-extension (@var{ext} @aclass{string})
+@defmethod @aclass{relative-native-pathname} replace-extension @{@var{ext} @aclass{bytevector}@}
+@defmethodx @aclass{relative-native-pathname} replace-extension @{@var{ext} @aclass{string}@}
 Return a @aclass{relative-native-pathname} object representing the
 instance pathname with the extension of the last segment replaced by
 @var{ext}.
@@ -975,16 +975,16 @@ The following bindings are exported by the library @library{nausicaa uri
 pathnames}.
 
 
-@deffn Multimethod pathname (@var{ptn} @aclass{string})
-@deffnx Multimethod pathname (@var{ptn} @aclass{bytevector})
+@deffn Multimethod pathname @{@var{ptn} @aclass{string}@}
+@deffnx Multimethod pathname @{@var{ptn} @aclass{bytevector}@}
 Build and return a new instance of @class{absolute-native-pathname} or
 @class{relative-native-pathname} from @var{ptn}, which must be a string
 or bytevector representing an absolute or relative native pathname.
 @end deffn
 
 
-@deffn Multimethod pathname=? (@vari{ptn} @aclass{absolute-native-pathname}) (@varii{ptn} @aclass{absolute-native-pathname})
-@deffnx Multimethod pathname=? (@vari{ptn} @aclass{relative-native-pathname}) (@varii{ptn} @aclass{relative-native-pathname})
+@deffn Multimethod pathname=? @{@vari{ptn} @aclass{absolute-native-pathname}@} @{@varii{ptn} @aclass{absolute-native-pathname}@}
+@deffnx Multimethod pathname=? @{@vari{ptn} @aclass{relative-native-pathname}@} @{@varii{ptn} @aclass{relative-native-pathname}@}
 Implementations for the multimethod @func{pathname=?} defined by
 @library{nausicaa uri pathnames abstract}.
 @end deffn

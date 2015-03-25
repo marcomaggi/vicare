@@ -8,10 +8,11 @@ by the compiler; mostly they are defined in the source file
 
 They are unsafe because when acting upon wrong arguments will cause
 undefined behaviour (probably a crash).  They are also faster than the
-public interface exported by @library{ikarus} and @library{rnrs}.
+public interface exported by @library{vicare} and @library{rnrs}.
 
 @menu
 * syslib symbols::              Low level symbol operations.
+* syslib keywords::             Low level keyword operations.
 * syslib fixnums::              Low level fixnum operations.
 * syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
@@ -40,16 +41,13 @@ public interface exported by @library{ikarus} and @library{rnrs}.
 @section Low level symbol operations
 
 
-@cindex @library{ikarus system $symbols}, library
-@cindex Library @library{ikarus system $symbols}
 @cindex @library{vicare system $symbols}, library
 @cindex Library @library{vicare system $symbols}
 
 
 The arguments @var{sym} must be references to symbol blocks, the
 arguments @var{str} must be references to strings.  The following
-bindings are exported by the libraries @library{ikarus system $symbols}
-and @library{vicare system $symbols}.
+bindings are exported by the library @library{vicare system $symbols}.
 
 
 @deffn {Unsafe Operation} $make-symbol @var{str}
@@ -59,6 +57,16 @@ Allocate a new symbol block and initialise the @code{string} field with
 The @code{ustring} is initialised to the fixnum zero.  The @code{value}
 and @code{proc} fields are initialised to a special machine word value
 meaning ``unbound''.  The @code{plist} field is initialised to nil.
+@end deffn
+
+
+@deffn {Unsafe Operation} $string->symbol @var{str}
+Return an interned symbol having the string @var{str} as name.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol->string @var{sym}
+Return the string name of @var{sym}, generating one if needed.
 @end deffn
 
 
@@ -86,14 +94,22 @@ When @var{sym} is the unique identifier of a data structure type: the
 @code{value} field holds the @rtd{} of the data structure.
 
 @item
-Top level bindings in compiled Scheme code are represented by gensyms;
-the value of a top level binding is stored in the @code{value} field of
-a gensym memory block.
+When @var{sym} is a label gensym associated to a syntactic binding
+exported by the boot image: @code{value} holds the syntactic binding
+descriptor.
+
+@item
+When @var{sym} is a label gensym associated to a syntactic binding
+imported in the current lexical environment: @code{value} holds the
+syntactic binding descriptor.
+
+@item
+When @var{sym} is a fresh symbol returned by a call to @func{gensym}: we
+can use this field for any purpose we want.
 @end itemize
 
-Given the return value of @code{(gensym)}: we can use this field for any
-purpose we want.  Notice that this field is initialised to the unbound
-object, so we can test the value of a newly created symbols with:
+Notice that this field is initialised to the unbound object, so we can
+test the value of a newly created symbols with:
 
 @example
 ($unbound-object? ($symbol-value? @var{sym}))
@@ -119,7 +135,22 @@ Set both the fields @code{value} and @code{proc} of @var{sym} to
 @end deffn
 
 
-@deffn {Unsafe Operation} top-level-value @var{sym}
+@deffn {Low-level Operation} top-level-value @var{sym}
+Still to be documented.
+@end deffn
+
+
+@deffn {Low--level Operation} top-level-bound? @var{sym}
+Still to be documented.
+@end deffn
+
+
+@deffn {Low--level Operation} set-top-level-value! @var{sym} @var{value}
+Still to be documented.
+@end deffn
+
+
+@deffn {Low--level Operation} reset-symbol-proc! @var{symb}
 Still to be documented.
 @end deffn
 
@@ -143,7 +174,7 @@ Write to the current error port a description of the current symbol
 table status.  Example:
 
 @example
-vicare> (import (ikarus system $symbols))
+vicare> (import (vicare system $symbols))
 vicare> ($log-symbol-table-status)
 Vicare internal symbol table status:
         number of interned symbols: 2962
@@ -153,21 +184,88 @@ vicare>
 @end example
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Property lists
+
+
+@deffn {Unsafe Operation} $putprop @var{symbol} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
+
+If @var{key} is already set: the old entry is mutated to reference the
+new @var{value}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $getprop @var{symbol} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
+symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $remprop @var{symbol} @var{key}
+Remove property @var{key} from the list associated to @var{symbol}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $property-list @var{symbol}
+Return a new association list representing the property list of
+@var{symbol}.  The order of the entries is the same as the property
+creation order.
+@end deffn
+
+@c page
+@node syslib keywords
+@section Low level keyword operations
+
+
+@cindex @library{vicare system $keywords}, library
+@cindex Library @library{vicare system $keywords}
+
+
+The arguments @var{key} must be references to keyword objects, the
+arguments @var{symb} must be references to symbol objects.  The
+following bindings are exported by the library @library{vicare system
+$keywords}.
+
+
+@deffn {Unsafe Operation} $symbol->keyword @var{sym}
+@deffnx {Unsafe Operation} $keyword->symbol @var{key}
+Convert between a symbol and a keyword.
+@end deffn
+
+
+@deffn {Unsafe Operation} $keyword->string @var{key}
+Return the string representation of a keyword.
+@end deffn
+
+
+@deffn {Unsafe Operation} $keyword=? @vari{key} @varii{key}
+Return @true{} if the arguments are equal.  A keyword object is equal to
+itself; two distinct keyword objects are equal if they have the same
+symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $keyword-hash @var{keyword}
+Return an exact integer suitable to be used as hash value for
+@var{keyword} used as key for hashtables.
+@end deffn
+
 @c page
 @node syslib fixnums
 @section Low level fixnum operations
 
 
-@cindex @library{ikarus system $fx}, library
-@cindex Library @library{ikarus system $fx}
 @cindex @library{vicare system $fx}, library
 @cindex Library @library{vicare system $fx}
 
 
-The following bindings are exported by the libraries @library{ikarus
-system $fx} and @library{vicare system $fx}.  The arguments to these
-operations must be fixnums.  @ref{objects fixnums} for details on the
-representation of fixnums.
+The following bindings are exported by the library @library{vicare
+system $fx}.  The arguments to these operations must be fixnums.
+@ref{objects fixnums} for details on the representation of fixnums.
 
 @c ------------------------------------------------------------
 
@@ -287,7 +385,7 @@ Perform the number theoretic division.
 
 @example
 (import (rnrs)
-  (ikarus system $fx))
+  (vicare system $fx))
 
 ($fxmod +12 +12)        @result{} 0
 ($fxmod +12 -12)        @result{} 0
@@ -350,7 +448,7 @@ result of this operation can be a fixnum or bignum.
 
 @example
 (import (rnrs)
-  (ikarus system $fx))
+  (vicare system $fx))
 
 ($fxmodulo +12 +12)     @result{} 0
 ($fxmodulo +12 -12)     @result{} 0
@@ -500,16 +598,13 @@ Evaluate to a fixnum which can be used as hash value.
 @section Low level bignum operations
 
 
-@cindex @library{ikarus system $bignums}, library
-@cindex Library @library{ikarus system $bignums}
 @cindex @library{vicare system $bignums}, library
 @cindex Library @library{vicare system $bignums}
 
 
 The arguments @var{bn} to these operations must be bignums.  The
-following bindings are exported by the libraries @library{ikarus system
-$bignums} and @library{vicare system $bignums}.  @ref{iklib numerics}
-for more functions acting on bignums.
+following bindings are exported by the library @library{vicare system
+$bignums}.  @ref{iklib numerics} for more functions acting on bignums.
 
 
 @deffn {Unsafe Operation} $bignum-positive? @var{bn}
@@ -551,17 +646,14 @@ Return a flonum object representing @var{bn} as inexact number.
 @section Low level flonum operations
 
 
-@cindex @library{ikarus system $flonums}, library
-@cindex Library @library{ikarus system $flonums}
 @cindex @library{vicare system $flonums}, library
 @cindex Library @library{vicare system $flonums}
 
 
 The arguments @var{fl} to these operations must be flonums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
-by the libraries @library{ikarus system $flonums} and @library{vicare
-system $flonums}.  @ref{iklib numerics} for more functions acting on
-flonums.
+by the library @library{vicare system $flonums}.  @ref{iklib numerics}
+for more functions acting on flonums.
 
 
 @deffn {Unsafe Operation} $make-flonum
@@ -649,6 +741,18 @@ result.
 @c ------------------------------------------------------------
 
 @subsubheading Predicates
+
+
+@deffn {Unsafe Operation} $flnan? @var{fl}
+Return @true{} if the operand is a representation of not--a--number;
+otherwise return @false{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flinfinite? @var{fl}
+Return @true{} if the operand is a representation of infinity:
+@code{+inf.0} or @code{-inf.0}; otherwise return @false{}.
+@end deffn
 
 
 @deffn {Unsafe Operation} $flzero? @var{fl}
@@ -898,17 +1002,15 @@ Return the minimum between the operands.
 @section Low level ratnum operations
 
 
-@cindex @library{ikarus system $ratnums}, library
-@cindex Library @library{ikarus system $ratnums}
 @cindex @library{vicare system $ratnums}, library
 @cindex Library @library{vicare system $ratnums}
 
 
 The arguments @var{rat} to these operations must be ratnums, the
 arguments @var{num} and @var{den} must be references to either fixnums
-or bignums.  The following bindings are exported by the libraries
-@library{ikarus system $ratnums} and @library{ikarus system $ratnums}.
-@ref{iklib numerics} for more functions acting on ratnums.
+or bignums.  The following bindings are exported by the library
+@library{vicare system $ratnums}.  @ref{iklib numerics} for more
+functions acting on ratnums.
 
 
 @deffn {Unsafe Operation} $make-ratnum @var{num} @var{den}
@@ -971,17 +1073,15 @@ non--negative; otherwise return @false{}.
 @section Low level compnum operations
 
 
-@cindex @library{ikarus system $compnums}, library
-@cindex Library @library{ikarus system $compnums}
 @cindex @library{vicare system $compnums}, library
 @cindex Library @library{vicare system $compnums}
 
 
 The arguments @var{cn} to these operations must be compnums, the
 arguments @var{num} must be references to either fixnums, bignums or
-flonums.  The following bindings are exported by the libraries
-@library{ikarus system $compnums} and @library{vicare system $compnums}.
-@ref{iklib numerics} for more functions acting on compnums.
+flonums.  The following bindings are exported by the library
+@library{vicare system $compnums}.  @ref{iklib numerics} for more
+functions acting on compnums.
 
 
 @deffn {Unsafe Operation} $make-compnum @vari{num} @varii{num}
@@ -1017,17 +1117,14 @@ Return the inexact representation of a compnum as a cflonum.
 @section Low level cflonum operations
 
 
-@cindex @library{ikarus system $compnums}, library
-@cindex Library @library{ikarus system $compnums}
 @cindex @library{vicare system $compnums}, library
 @cindex Library @library{vicare system $compnums}
 
 
 The arguments @var{cmp} to these operations must be cflonums, the
 arguments @var{fl} must be references to flonums.  The following
-bindings are exported by the libraries @library{ikarus system $compnums}
-and @library{vicare system $compnums}.  @ref{iklib numerics} for more
-functions acting on cflonums.
+bindings are exported by the library @library{vicare system $compnums}.
+@ref{iklib numerics} for more functions acting on cflonums.
 
 
 @deffn {Unsafe Operation} $make-cflonum @vari{fl} @varii{fl}
@@ -1051,14 +1148,12 @@ Return the reference to the imaginary part.
 @section Low level numerics operations
 
 
-@cindex @library{ikarus system $numerics}, library
-@cindex Library @library{ikarus system $numerics}
 @cindex @library{vicare system $numerics}, library
 @cindex Library @library{vicare system $numerics}
 
 
-The libraries @library{ikarus system $numerics} and @library{vicare
-system $numerics} export bindings for low level operations on numbers.
+The library @library{vicare system $numerics} export bindings for low
+level operations on numbers.
 
 @menu
 * syslib numerics neg::         Numbers negation.
@@ -4909,8 +5004,6 @@ bignum @varii{bn}.
 @section Low level character operations
 
 
-@cindex @library{ikarus system $chars}, library
-@cindex Library @library{ikarus system $chars}
 @cindex @library{vicare system $chars}, library
 @cindex Library @library{vicare system $chars}
 
@@ -4918,8 +5011,7 @@ bignum @varii{bn}.
 The arguments @var{ch} to these operations must be characters, the
 arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
 not in the range @code{[#xD800, #xDFFF]}.  The following bindings are
-exported by the libraries @library{ikarus system $chars} and
-@library{vicare system $chars}.
+exported by the library @library{vicare system $chars}.
 
 
 @deffn {Unsafe Operation} $char= @vari{ch} @varii{ch}
@@ -4962,16 +5054,13 @@ Return a fixnum representing the code point of the operand.
 @section Low level pair operations
 
 
-@cindex @library{ikarus system $pairs}, library
-@cindex Library @library{ikarus system $pairs}
 @cindex @library{vicare system $pairs}, library
 @cindex Library @library{vicare system $pairs}
 
 
 The arguments @var{P} to these operations must be pairs.  The following
-bindings are exported by the libraries @library{ikarus system $pairs}
-and @library{vicare system $pairs}.  @ref{objects pairs} for details of
-pair representation.
+bindings are exported by the library @library{vicare system $pairs}.
+@ref{objects pairs} for details of pair representation.
 
 
 @deffn {Unsafe Operation} $car @var{P}
@@ -4998,10 +5087,12 @@ Store @var{value} in the cdr location of @var{P}.
 @section Low level list operations
 
 
-@cindex @library{ikarus system $lists}, library
-@cindex Library @library{ikarus system $lists}
 @cindex @library{vicare system $lists}, library
 @cindex Library @library{vicare system $lists}
+
+
+The following bindings are exported by the library @library{vicare
+system $lists}.
 
 
 @deffn {Unsafe Operation} $length @var{ell}
@@ -5009,41 +5100,11 @@ Assume @var{ell} is a proper list, null included: compute and return the
 length of @var{ell}.
 @end deffn
 
-
-@deffn {Unsafe Operation} $map1 @var{proc} @var{ell}
-Assume @var{ell} is a proper list, null included, and @var{proc} is a
-unary function: execute the same algorithm of @func{map} from
-@rsixlibrary{lists}, but use unsafe operations.
-@end deffn
-
-
-@deffn {Unsafe Operation} $for-each1 @var{proc} @var{ell}
-Assume @var{ell} is a proper list, null included, and @var{proc} is a
-unary function: execute the same algorithm of @func{for-each} from
-@rsixlibrary{lists}, but use unsafe operations.
-@end deffn
-
-
-@deffn {Unsafe Operation} $for-all1 @var{proc} @var{ell}
-Assume @var{ell} is a proper list, null included, and @var{proc} is a
-unary function: execute the same algorithm of @func{for-all} from
-@rsixlibrary{lists}, but use unsafe operations.
-@end deffn
-
-
-@deffn {Unsafe Operation} $exists1 @var{proc} @var{ell}
-Assume @var{ell} is a proper list, null included, and @var{proc} is a
-unary function: execute the same algorithm of @func{exists} from
-@rsixlibrary{lists}, but use unsafe operations.
-@end deffn
-
 @c page
 @node syslib structs
 @section Low level structure operations
 
 
-@cindex @library{ikarus system $structs}, library
-@cindex Library @library{ikarus system $structs}
 @cindex @library{vicare system $structs}, library
 @cindex Library @library{vicare system $structs}
 
@@ -5051,8 +5112,8 @@ unary function: execute the same algorithm of @func{exists} from
 The arguments @var{stru} to these operations must be references to data
 structures, the arguments @var{rtd} must be references to structure type
 descriptors, the arguments @var{fx} must be fixnums of appropriate
-value.  The following bindings are exported by the libraries
-@library{ikarus system $structs} and @library{vicare system $structs}.
+value.  The following bindings are exported by the library
+@library{vicare system $structs}.
 
 
 @deffn {Unsafe Operation} base-rtd
@@ -5076,10 +5137,11 @@ Allocate a new data structure of type @var{rtd} capable of holding
 @var{fx} words and return a reference to it.
 
 @quotation
-@strong{NOTE} This operation does @strong{not} initialise the field
-words, leaving them holding whatever is on the heap.  We must be careful
-not to trigger a garbage collection before those fields are initialised
-with valid values, else the behaviour is undefined.
+@strong{NOTE} This operation initialises only the @code{std} field,
+leaving all the other fields set to a machine word with all the bits set
+to @code{1}.  We must be careful not to trigger a garbage collection
+before those fields are initialised with valid values, else the
+behaviour is undefined.
 @end quotation
 @end deffn
 
@@ -5105,21 +5167,72 @@ many words as given @var{value} arguments and initialise the fields with
 such values.  Return a reference to the structure.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Operations on struct type descriptors
+
+
+@deffn {Unsafe Operation} $std-std @var{std}
+@deffnx {Unsafe Operation} $set-std-std! @var{std} @var{new-std}
+Given a struct type descriptor return its struct type descriptor or set
+a new type descriptor.
+@end deffn
+
+
+@deffn {Unsafe Operation} $std-name @var{std}
+@deffnx {Unsafe Operation} $set-std-name! @var{std} @var{new-name}
+Given a struct type descriptor return its name as a string or set a new
+name.
+@end deffn
+
+
+@deffn {Unsafe Operation} $std-length @var{std}
+@deffnx {Unsafe Operation} $set-std-length! @var{std} @var{new-len}
+Given a struct type descriptor return a non--negative fixnum
+representing the number of fields or set a new number of fields.
+@end deffn
+
+
+@deffn {Unsafe Operation} $std-fields @var{std}
+@deffnx {Unsafe Operation} $set-std-fields! @var{std} @var{fields}
+Given a struct type descriptor return a list of symbols representing the
+field names or set a new list of field names.
+@end deffn
+
+
+@deffn {Unsafe Operation} $std-printer @var{std}
+@deffnx {Unsafe Operation} $set-std-printer! @var{std} @var{new-printer}
+Given a struct type descriptor return its printer function or set a new
+printer function.
+@end deffn
+
+
+@deffn {Unsafe Operation} $std-symbol @var{std}
+@deffnx {Unsafe Operation} $set-std-symbol! @var{std} @var{new-uid}
+Given a struct type descriptor return its @uid{} symbol or set a new
+@uid{} symbol.  When setting a new struct @uid{} we must store the
+struct type descriptor in the @code{value} slot of the @uid{}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $std-destructor @var{std}
+@deffnx {Unsafe Operation} $set-std-destructor! @var{std} @var{new-destr}
+Given a struct type descriptor return @false{} or its destructor
+function or set a new destructor function.
+@end deffn
+
 @c page
 @node syslib vectors
 @section Low level vector operations
 
 
-@cindex @library{ikarus system $vectors}, library
-@cindex Library @library{ikarus system $vectors}
 @cindex @library{vicare system $vectors}, library
 @cindex Library @library{vicare system $vectors}
 
 
 The arguments @var{vec} to these operations must be fixnums, the
 arguments @var{fx} must be fixnums.  The following bindings are exported
-by the libraries @library{ikarus system $vectors} and @library{vicare
-system $vectors}.
+by the library @library{vicare system $vectors}.
 
 
 @deffn {Unsafe Operation} $make-vector @var{fx}
@@ -5191,166 +5304,585 @@ as tail call.
 @section Low level bytevector operations
 
 
-@cindex @library{ikarus system $bytevectors}, library
-@cindex Library @library{ikarus system $bytevectors}
 @cindex @library{vicare system $bytevectors}, library
 @cindex Library @library{vicare system $bytevectors}
 
 
-The arguments @var{bv} to these operations must be references to
-bytevectors, the arguments @var{fx} must be fixnums in the appropriate
-range, the arguments @var{fl} must be flonums.  The following bindings
-are exported by the libraries @library{ikarus system $bytevectors} and
-@library{vicare system $bytevectors}.
+The low--level bindings are exported by the library @library{vicare
+system $bytevectors}.
+
+@menu
+* syslib bytevectors constructors::  Constructors.
+* syslib bytevectors predicates::    Predicates.
+* syslib bytevectors inspection::    Inspection.
+* syslib bytevectors accessors::     Accessors and mutators.
+* syslib bytevectors copying::       Copying.
+* syslib bytevectors concatenating:: Concatenating.
+* syslib bytevectors encodings::     Encodings.
+@end menu
+
+@c page
+@node syslib bytevectors constructors
+@subsection Constructors
 
 
 @deffn {Unsafe Operation} $make-bytevector @var{fx}
 Allocate a new bytevector capable of holding @var{fx} bytes and return a
-reference to it.
+reference to it.  @var{fx} must be a non--negative fixnum.
 @end deffn
 
 
-@deffn {Unsafe Operation} $bytevector-empty? @var{bytevector}
-Return @true{} if the bytevector @var{bytevector} has zero length,
-otherwise return @false{}.
+@defun $subbytevector-u8 @var{bv} @var{start} @var{end}
+@defunx $subbytevector-s8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding octets or bytes from the
+bytevector @var{bv} starting from index @var{start} inclusive to index
+@var{end} exclusive.
+@end defun
+
+
+@defun $subbytevector-u8/count @var{bv} @var{start} @var{count}
+@defunx $subbytevector-s8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} octets or bytes
+from the bytevector @var{bv} starting from index @var{start} inclusive.
+@end defun
+
+@c page
+@node syslib bytevectors predicates
+@subsection Predicates
+
+
+@deffn {Unsafe Operation} $bytevector-empty? @var{bv}
+Return @true{} if the bytevector @var{bv} has zero length, otherwise
+return @false{}.
 @end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-length @var{bv}
-Return a fixnum representing the number of bytes in the operand.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-u8-ref @var{bv} @var{fx}
-Return a fixnum representing the octet at offset @var{fx} in @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-s8-ref @var{bv} @var{fx}
-Return a fixnum representing the byte at offset @var{fx} in @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-set! @var{bv} @var{fx-index} @var{fx-value}
-Store the octet or byte @var{fx-value} at index @var{fx-index} of
-@var{bv}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Double--precision @ieee{} flonums
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-native-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-native-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Single--precision @ieee{} flonums
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-native-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-native-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-ref @var{bv} @var{fx}
-Return a flonum representing the value at index @var{fx} of @var{bv}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-set! @var{bv} @var{fx} @var{fl}
-Store @var{fl} at index @var{fx} of @var{bv}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Other unsafe operations
 
 
 @defun $bytevector= @vari{bv} @varii{bv}
-Return @true{} if the two arguments are equal.
+Return @true{} if the two bytevector arguments are equal.
 @end defun
 
-
-@defun $bytevector-total-length @var{init-len} @var{bvs}
-Given the list of bytevectors @var{bvs}: compute the total length of the
-bytevectors, add it to @var{ini-len} and return the result.  If
-@var{init-len} is zero: the returned value is the total length of the
-bytevectors in @var{bvs}.  The returned value may or may not be in the
-range of the maximum bytevector size.
-@end defun
+@c page
+@node syslib bytevectors accessors
+@subsection Accessors and mutators
 
 
-@defun $bytevector-concatenate @var{total-len} @var{bvs}
-Concatenate the bytevectors in the list @var{bvs}, return the result.
-The resulting bytevector must have length @var{total-len}.  Assume the
-arguments have been already validated.
-@end defun
+@menu
+* syslib bytevectors accessors 8-bit::   8-bit setters and getters.
+* syslib bytevectors accessors 16-bit::  16-bit setters and getters.
+* syslib bytevectors accessors 32-bit::  32-bit setters and getters.
+* syslib bytevectors accessors 64-bit::  64-bit setters and getters.
+* syslib bytevectors accessors single::  Single-precision @ieee{} flonum
+                                         setters and getters.
+* syslib bytevectors accessors double::  Double-precision @ieee{} flonum
+                                         setters and getters.
+@end menu
+
+@c page
+@node syslib bytevectors accessors 8-bit
+@subsubsection 8-bit setters and getters
 
 
-@defun $bytevector-reverse-and-concatenate @var{total-len} @var{bvs}
-Reverse the list of bytevectors @var{bvs} and concatenate its items;
-return the result.  The resulting bytevector must have length
-@var{total-len}.  Assume the arguments have been already validated.
-@end defun
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an index in
+the bytevector; @var{fx-val} is a fixnum representing a value to be
+stored in a bytevector.
 
 
-@defun $octets-encoded-bytevector? @var{bytevector}
-Always return @true{}.
-@end defun
+@deffn {Unsafe Operation} $bytevector-u8-ref @var{bv} @var{fx-idx}
+Return a fixnum representing the octet at offset @var{fx-idx} in
+@var{bv}.
+@end deffn
 
 
-@defun $ascii-encoded-bytevector? @var{bytevector}
-Return @true{} if @var{bytevector} can be interpreted as an @ascii{}
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered an @ascii{} code point if:
+@deffn {Unsafe Operation} $bytevector-s8-ref @var{bv} @var{fx-idx}
+Return a fixnum representing the byte at offset @var{fx-idx} in
+@var{bv}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-set! @var{bv} @var{fx-idx} @var{fx-value}
+@deffnx {Unsafe Operation} $bytevector-u8-set! @var{bv} @var{fx-idx} @var{fx-value}
+@deffnx {Unsafe Operation} $bytevector-s8-set! @var{bv} @var{fx-idx} @var{fx-value}
+Store the octet or byte @var{fx-value} at index @var{fx-idx} of
+@var{bv}.
+@end deffn
+
+@c page
+@node syslib bytevectors accessors 16-bit
+@subsubsection 16-bit setters and getters
+
+
+About 16-bit words, we have to remember the following memory layouts:
 
 @example
-(<= #x00 chi #x7F)      @result{} #t
+           |            | lowest memory | highest memory
+endianness |    word    | location      | location
+-----------+------------+---------------+--------------
+  little   |   #xHHLL   |     LL        |     HH
+   big     |   #xHHLL   |     HH        |     LL
+@end example
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{fx-val} is a fixnum representing a value
+to be stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{2}.
+@end quotation
+
+
+@defun $bytevector-u16l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u16l-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for unsigned little--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-u16b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u16b-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for unsigned big--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-u16n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u16n-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for unsigned native--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-s16l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s16l-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for signed little--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-s16b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s16b-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for signed big--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-s16n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s16n-set! @var{bv} @var{fx-idx} @var{fx-val}
+Setter and getter for signed native--endian 16-bit words.
+@end defun
+
+
+@defun $bytevector-u16-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-u16-set! @var{bv} @var{fx-idx} @var{fx-val} @var{endianness}
+Setter and getter for unsigned 16-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+
+@defun $bytevector-s16-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-s16-set! @var{bv} @var{fx-idx} @var{fx-val} @var{endianness}
+Setter and getter for signed 16-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors 32-bit
+@subsubsection 32-bit setters and getters
+
+
+About 32-bit words, we have to remember the following memory layouts:
+
+@example
+                          lowest memory ------------> highest memory
+endianness |    word    | 1st byte | 2nd byte | 3rd byte | 4th byte
+-----------+------------+----------+----------+----------+----------
+  little   | #xAABBCCDD |   DD     |    CC    |    BB    |    AA
+   big     | #xAABBCCDD |   AA     |    BB    |    CC    |    DD
+bit offset |            |    0     |     8    |    16    |    24
+@end example
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{ei-val} is a fixnum or bignum representing
+a value to be stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{4}.
+@end quotation
+
+
+@defun $bytevector-u32l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u32l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned little--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-u32b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u32b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned big--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-u32n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u32n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned native--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-s32l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s32l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed little--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-s32b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s32b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed big--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-s32n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s32n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed native--endian 32-bit words.
+@end defun
+
+
+@defun $bytevector-u32-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-u32-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for unsigned 32-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+
+@defun $bytevector-s32-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-s32-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for signed 32-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors 64-bit
+@subsubsection 64-bit setters and getters
+
+
+About 64-bit words, we have to remember the following memory layouts:
+
+@example
+                                     lowest memory ------------> highest memory
+endianness |         word        | 1st | 2nd | 3rd | 4th | 5th | 6th | 7th | 8th
+-----------+---------------------+-----+-----+-----+-----+-----+-----+-----+-----
+  little   | #xAABBCCDD EEFFGGHH | HH  | GG  | FF  | EE  | DD  | CC  | BB  | AA
+   big     | #xAABBCCDD EEFFGGHH | AA  | BB  | CC  | DD  | EE  | FF  | GG  | HH
+bit offset |                     |  0  |  8  | 16  | 24  | 32  | 40  | 48  | 56
+@end example
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{ei-val} is a fixnum or bignum representing
+a value to be stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{8}.
+@end quotation
+
+
+@defun $bytevector-u64l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u64l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned little--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-u64b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u64b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned big--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-u64n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-u64n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for unsigned native--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-s64l-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s64l-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed little--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-s64b-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s64b-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed big--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-s64n-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-s64n-set! @var{bv} @var{fx-idx} @var{ei-val}
+Setter and getter for signed native--endian 64-bit words.
+@end defun
+
+
+@defun $bytevector-u64-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-u64-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for unsigned 64-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+
+@defun $bytevector-s64-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-s64-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for signed 64-bit words.  @var{endianness} must be a
+symbol among: @samp{big}, @samp{little}, @samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors single
+@subsubsection Single--precision @ieee{} flonum setters and getters
+
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{fl} is a flonum representing a value to be
+stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{4}.
+@end quotation
+
+
+@defun $bytevector-ieee-single-big-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-single-big-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under big
+endianness.
+@end defun
+
+
+@defun $bytevector-ieee-single-little-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-single-little-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under little
+endianness.
+@end defun
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-native-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-single-native-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under native
+endianness.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-single-nonnative-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-single-nonnative-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for single--precision @ieee{} flonums under
+non--native endianness.
+@end deffn
+
+
+@defun $bytevector-ieee-single-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-ieee-single-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for single--precision @ieee{} flonums.
+@var{endianness} must be a symbol among: @samp{big}, @samp{little},
+@samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors accessors double
+@subsubsection Double--precision @ieee{} flonum setters and getters
+
+
+For these operations: the argument @var{bv} is a bytevector object; the
+argument @var{fx-idx} is a non--negative fixnum representing an octet
+index in the bytevector; @var{fl} is a flonum representing a value to be
+stored in a bytevector.
+
+@quotation
+@strong{NOTE} For these operations: the index @var{fx-idx} does
+@strong{not} need to be aligned to a multiple of @math{8}.
+@end quotation
+
+
+@defun $bytevector-ieee-double-big-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-double-big-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under big
+endianness.
+@end defun
+
+
+@defun $bytevector-ieee-double-little-ref @var{bv} @var{fx-idx}
+@defunx $bytevector-ieee-double-little-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under little
+endianness.
+@end defun
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-native-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-double-native-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under native
+endianness.
+@end deffn
+
+
+@deffn {Unsafe Operation} $bytevector-ieee-double-nonnative-ref @var{bv} @var{fx-idx}
+@deffnx {Unsafe Operation} $bytevector-ieee-double-nonnative-set! @var{bv} @var{fx-idx} @var{fl}
+Setter and getter for double--precision @ieee{} flonums under
+non--native endianness.
+@end deffn
+
+
+@defun $bytevector-ieee-double-ref @var{bv} @var{fx-idx} @var{endianness}
+@defunx $bytevector-ieee-double-set! @var{bv} @var{fx-idx} @var{ei-val} @var{endianness}
+Setter and getter for double--precision @ieee{} flonums.
+@var{endianness} must be a symbol among: @samp{big}, @samp{little},
+@samp{native}.
+@end defun
+
+@c page
+@node syslib bytevectors inspection
+@subsection Inspection
+
+
+@deffn {Unsafe Operation} $bytevector-length @var{bv}
+Return a fixnum representing the number of bytes in the bytevector
+@var{bv}.
+@end deffn
+
+@c page
+@node syslib bytevectors copying
+@subsection Copying
+
+
+For these operations, the arguments have the following meaning:
+
+@table @var
+@item src.bv
+The source bytevector.
+
+@item src.start
+A non--negative fixnum representing the inclusive start index in the
+source bytevector @var{src.bv}.
+
+@item src.end
+A non--negative fixnum representing the exclusive end index in the
+source bytevector @var{src.bv}.
+
+@item dst.bv
+The destination bytevector.
+
+@item dst.start
+A non--negative fixnum representing the inclusive start index in the
+destination bytevector @var{dst.bv}.
+
+@item dst.end
+A non--negative fixnum representing the exclusive end index in the
+destination bytevector @var{src.bv}.
+@end table
+
+
+@defun $bytevector-copy @var{bv}
+Build and return a copy of the bytevector @var{bv}.
+@end defun
+
+
+@defun {$bytevector-copy!} @var{src.bv} @var{src.start} @var{dst.bv} @var{dst.start} @var{src.end}
+Copy the bytes of @var{src.bv} from @var{src.start} inclusive to
+@var{src.end} exclusive, to @var{dst.bv} starting at @var{dst.start}
+inclusive.
+@end defun
+
+
+@defun $bytevector-copy!/count @var{src.bv} @var{src.start} @var{dst.bv} @var{dst.start} @var{count}
+Copy @var{count} bytes from @var{src.bv} starting at @var{src.start}
+inclusive to @var{dst.bv} starting at @var{dst.start} inclusive.
+@end defun
+
+
+@defun $bytevector-self-copy-forwards!/count @var{bv} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} bytes of @var{bv} from @var{src.start} inclusive
+to @var{bv} itself starting at @var{dst.start} inclusive.  The copy
+happens forwards, so it is suitable for the case:
+
+@example
+@var{src.start} > @var{dst.start}
 @end example
 @end defun
 
 
-@defun $latin1-encoded-bytevector? @var{bytevector}
-Return @true{} if @var{bytevector} can be interpreted as a Latin1
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered a Latin1 code point if:
+@defun $bytevector-self-copy-backwards!/count @var{bv} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} bytes of @var{bv} from @var{src.start} inclusive
+to @var{bv} itself starting at @var{dst.start} inclusive.  The copy
+happens backwards, so it is suitable for the case:
 
 @example
-(or (<= #x20 chi #x7E)
-    (<= #xA0 chi #xFF))
+@var{src.start} < @var{dst.start}
+@end example
+@end defun
+
+@c page
+@node syslib bytevectors concatenating
+@subsection Concatenating
+
+
+@defun $bytevector-total-length @var{init-fx} @var{bvs}
+Given the list of bytevectors @var{bvs}: compute the total length of the
+bytevectors, add it to the fixnum @var{init-fx} and return the result.
+If @var{init-fx} is zero: the returned value is the total length of the
+bytevectors in @var{bvs}.  The returned value may or may not be in the
+range of the maximum bytevector size: it may or may not be a fixnum.
+@end defun
+
+
+@defun $bytevector-concatenate @var{total-len-fx} @var{bvs}
+Concatenate the bytevectors in the list @var{bvs}, return the result.
+The resulting bytevector must have length represented by the
+non--negative fixnum @var{total-len-fx}.
+@end defun
+
+
+@defun $bytevector-reverse-and-concatenate @var{total-len-fx} @var{bvs}
+Reverse the list of bytevectors @var{bvs} and concatenate its items;
+return the result.  The resulting bytevector must have length
+represented by the non--negative fixnum @var{total-len-fx}.
+@end defun
+
+@c page
+@node syslib bytevectors encodings
+@subsection Encodings
+
+
+@defun $octets-encoded-bytevector? @var{bv}
+Always return @true{}.
+@end defun
+
+
+@defun $ascii-encoded-bytevector? @var{bv}
+Return @true{} if @var{bv} can be interpreted as an @ascii{} encoded
+string, otherwise return @false{}.  An octet @var{chi} is considered an
+@ascii{} code point if:
+
+@example
+(<= #x00 @var{chi} #x7F)      @result{} #t
+@end example
+@end defun
+
+
+@defun $latin1-encoded-bytevector? @var{bv}
+Return @true{} if @var{bv} can be interpreted as a Latin-1 encoded
+string, otherwise return @false{}.  An octet @var{chi} is considered a
+Latin1 code point if:
+
+@example
+(or (<= #x20 @var{chi} #x7E)
+    (<= #xA0 @var{chi} #xFF))
 @result{} #t
 @end example
 @end defun
 
 
-@defun $uri-encode @var{bytevector}
-@defunx $uri-decode @var{bytevector}
-Encode or decode a bytevector according to @rfc{} 3986 @uri{} percent
-encoding; return a bytevector.  All the octets are encoded except the
-ones having the following @ascii{} representation:
+@defun $uri-encode @var{bv}
+@defunx $uri-decode @var{bv}
+Encode or decode a bytevector @var{bv} according to @rfc{} 3986 @uri{}
+percent encoding; return a bytevector.  All the octets are encoded
+except the ones having the following @ascii{} representation:
 
 @example
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
@@ -5361,8 +5893,8 @@ abcdefghijklmnopqrstuvwxyz
 @end defun
 
 
-@defun $uri-normalise-encoding @var{bytevector}
-Given a bytevector encoded according to to @rfc{} 3986 @acronym{URI}
+@defun $uri-normalise-encoding @var{bv}
+Given a bytevector @var{bv} encoded according to to @rfc{} 3986 @uri{}
 percent encoding: return an encoded and normalised bytevector, octets
 that are encoded but should not are decoded.
 @end defun
@@ -5370,21 +5902,16 @@ that are encoded but should not are decoded.
 
 @defun $uri-encoded-bytevector? @var{bv}
 @defunx $percent-encoded-bytevector? @var{bv}
-Return @true{} if the argument is correctly percent--encoded bytevector
-according to @rfc{} 3986.
+Return @true{} if the argument is a correctly percent--encoded
+bytevector according to @rfc{} 3986.
 @end defun
 
 
-@defun $base64->bytevector @var{bytevector}
-@defunx $bytevector->base64 @var{bytevector}
+@defun $base64->bytevector @var{bv}
+@defunx $bytevector->base64 @var{bv}
 Convert to and from a Scheme bytevector containing octets and a Scheme
 bytevector containing the @ascii{} Base64 representation of the octets.
 If an error occurs in the conversion: the return value is @false{}.
-@end defun
-
-
-@defun $bytevector-copy @var{bytevector}
-Build and return a copy of @var{bytevector}.
 @end defun
 
 @c page
@@ -5392,8 +5919,6 @@ Build and return a copy of @var{bytevector}.
 @section Low level string operations
 
 
-@cindex @library{ikarus system $strings}, library
-@cindex Library @library{ikarus system $strings}
 @cindex @library{vicare system $strings}, library
 @cindex Library @library{vicare system $strings}
 
@@ -5401,9 +5926,11 @@ Build and return a copy of @var{bytevector}.
 The arguments @var{str} to these operations must be references to
 strings, the arguments @var{fx} must be fixnums in the appropriate
 range, the arguments @var{ch} must be characters.  The following
-bindings are exported by the libraries @library{ikarus system $strings}
-and @library{vicare system $strings}.
+bindings are exported by the library @library{vicare system $strings}.
 
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Constructors
 
 @deffn {Unsafe Operation} $make-string @var{fx}
 Allocate a new string capable of holding @var{fx} characters and return
@@ -5416,39 +5943,45 @@ Allocate a new string and initialise it with the given characters.
 @end deffn
 
 
-@deffn {Unsafe Operation} $string-length @var{str}
-Return a fixnum representing the length of the operand.
-@end deffn
+@defun $string-copy @var{str}
+Build and return a newly allocated string holding the same characters of
+@var{str}.
+@end defun
 
 
-@deffn {Unsafe Operations} $string-empty? @var{str}
-Return @true{} if the string @var{str} is empty, otherwise return
-@false{}.
-@end deffn
+@defun {$string-copy!} @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{src.end}
+Copy the characters of @var{src.str} from @var{src.start} inclusive to
+@var{src.end} exclusive, to @var{dst.str} starting at @var{dst.start}
+inclusive.
+@end defun
 
 
-@deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
-Return the character at offset @var{fx} in @var{str}.
-@end deffn
+@defun $string-copy!/count @var{src.str} @var{src.start} @var{dst.str} @var{dst.start} @var{count}
+Copy @var{count} characters from @var{src.str} starting at
+@var{src.start} inclusive to @var{dst.str} starting at @var{dst.start}
+inclusive.
+@end defun
 
 
-@deffn {Unsafe Operation} $string-set! @var{str} @var{fx} @var{ch}
-Store @var{ch} at index @var{fx} of @var{str}.
-@end deffn
+@defun $string-self-copy-forwards!/count @var{str} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} characters of @var{str} from @var{src.start} inclusive
+to @var{str} itself starting at @var{dst.start} inclusive.  The copy
+happens forwards, so it is suitable for the case @code{@var{src.start} >
+@var{dst.start}}.
+@end defun
 
 
-@deffn {Unsafe Operation} $string= @vari{str} @varii{str}
-Return @true{} if @vari{str} and @varii{str} represent the same string;
-otherwise return @false{}.
-@end deffn
+@defun $string-self-copy-backwards!/count @var{str} @var{src.start} @var{dst.start} @var{count}
+Copy @var{count} characters of @var{str} from @var{src.start} inclusive
+to @var{str} itself starting at @var{dst.start} inclusive.  The copy
+happens backwards, so it is suitable for the case @code{@var{src.start}
+< @var{dst.start}}.
+@end defun
 
 
-@defun $string-total-length @var{init-len} @var{strs}
-Given the list of strings @var{strs}: compute the total length of the
-strings, add it to @var{ini-len} and return the result.  If
-@var{init-len} is zero: the returned value is the total length of the
-strings in @var{strs}.  The returned value may or may not be in the
-range of the maximum string size.
+@defun $substring @var{str} @var{start} @var{end}
+Build and return a newly allocated string holding the range of character
+between @var{start} (inclusive) and @var{end} (exclusive).
 @end defun
 
 
@@ -5465,20 +5998,75 @@ the result.  The resulting string must have length @var{total-len}.
 Assume the arguments have been already validated.
 @end defun
 
+@c ------------------------------------------------------------------------
 
-@deffn {Unsafe Operation} $interned-strings
-Return a vector holding the currently interned strings.
+@unnumberedsubsec Accessors and mutators
+
+@deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
+Return the character at offset @var{fx} in @var{str}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $fixnum->string @var{fx} @var{base}
-Return a string object representing @var{fx} in @var{base}.  @var{base}
-must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
+@deffn {Unsafe Operation} $string-set! @var{str} @var{fx} @var{ch}
+Store @var{ch} at index @var{fx} of @var{str}.
+@end deffn
+
+
+@defun $string-fill! @var{str} @var{start} @var{end} @var{fill}
+Fill the positions in @var{str} from @var{start} inclusive to @var{end}
+exclusive with @var{fill}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Inspection
+
+@deffn {Unsafe Operation} $string-length @var{str}
+Return a fixnum representing the length of the operand.
+@end deffn
+
+
+@defun $string-total-length @var{init-len} @var{strs}
+Given the list of strings @var{strs}: compute the total length of the
+strings, add it to @var{ini-len} and return the result.  If
+@var{init-len} is zero: the returned value is the total length of the
+strings in @var{strs}.  The returned value may or may not be in the
+range of the maximum string size.
+@end defun
+
+
+@deffn {Unsafe Operations} $string-empty? @var{str}
+Return @true{} if the string @var{str} is empty, otherwise return
+@false{}.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@unnumberedsubsec Comparison
+
+
+@deffn {Unsafe Operation} $string= @vari{str} @varii{str}
+Return @true{} if @vari{str} and @varii{str} represent the same string;
+otherwise return @false{}.
+@end deffn
+
+@deffn {Unsafe Operation} $string< @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string> @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string<= @vari{str} @varii{str}
+@deffnx {Unsafe Operation} $string>= @vari{str} @varii{str}
+Dyadic lexicographic comparison functions for strings.  Return @true{}
+if @vari{str} and @varii{str} compare as the name implies; otherwise
+return @false{}.
 @end deffn
 
 @c ------------------------------------------------------------
 
 @subsubheading Conversion function
+
+@deffn {Unsafe Operation} $fixnum->string @var{fx} @var{base}
+Return a string object representing @var{fx} in @var{base}.  @var{base}
+must be one among: @math{2}, @math{8}, @math{10}, @math{16}.
+@end deffn
 
 
 @defun $string->latin1 @var{string}
@@ -5567,19 +6155,25 @@ validation is @strong{not} removed when arguments validation is
 disabled.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Miscellaneous functions
+
+@deffn {Unsafe Operation} $interned-strings
+Return a vector holding the currently interned strings.
+@end deffn
+
 @c page
 @node syslib ports
 @section Low level port structures
 
 
-@cindex @library{ikarus system $io}, library
-@cindex Library @library{ikarus system $io}
 @cindex @library{vicare system $io}, library
 @cindex Library @library{vicare system $io}
 
 
-The following bindings are exported by the libraries @library{ikarus
-system $io} and @library{vicare system $io}.
+The following bindings are exported by the library @library{vicare
+system $io}.
 
 
 @defun port? @var{obj}
@@ -5639,16 +6233,14 @@ Mutator for the port attributes.
 @section Low level transcoder operations
 
 
-@cindex @library{ikarus system $transcoders}, library
-@cindex Library @library{ikarus system $transcoders}
 @cindex @library{vicare system $transcoders}, library
 @cindex Library @library{vicare system $transcoders}
 
 
 The arguments @var{tran} to these operations must be transcoders, the
 arguments @var{fx} must be fixnums in the appropriate range.  The
-following bindings are exported by the libraries @library{ikarus system
-$transcoders} and @library{vicare system $transcoders}.
+following bindings are exported by the library @library{vicare system
+$transcoders}.
 
 
 @deffn {Unsafe Operation} $data->transcoder @var{fx}
@@ -5666,15 +6258,13 @@ Extract the payload bits from a transcoder and return them as fixnum.
 @section Low level pointer operations
 
 
-@cindex @library{ikarus system $pointers}, library
-@cindex Library @library{ikarus system $pointers}
 @cindex @library{vicare system $pointers}, library
 @cindex Library @library{vicare system $pointers}
 
 
 In the following definitions the @var{ptr} arguments must be pointer
-objects.  The following bindings are exported by the libraries
-@library{ikarus system $pointers} and @library{vicare system $pointers}.
+objects.  The following bindings are exported by the library
+@library{vicare system $pointers}.
 
 
 @deffn {Primitive Operation} $pointer? @var{obj}
@@ -5693,27 +6283,54 @@ Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @section Low level hashtable objects operations
 
 
-@cindex @library{ikarus system hashtables}, library
-@cindex Library @library{ikarus system hashtables}
 @cindex @library{vicare system hashtables}, library
 @cindex Library @library{vicare system hashtables}
 
 
-The following bindings are exported by the libraries @library{ikarus
-system $hashtables} and @library{vicare system hashtables}.
+The following bindings are exported by the library @library{vicare
+system hashtables}.
 
 
 @deffn {Unsafe Operation} $string-hash @var{string}
+@deffnx {Unsafe Operation} $string-hash @var{string} @var{max-len}
 Return an integer hash value for @var{string}, based on its current
 contents.  This hash function is suitable for use with @func{string=?}
 as an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of characters to use to compute the hash value, starting from the
+beginning of @var{string}.  If the length of @var{string} is greater
+than @var{max-len}: only the first @var{max-len} characters are used.
+If the length of @var{string} is less than or equal to @var{max-len}:
+all the bytes in @var{string} are used.
+
+@item
+When @var{max-len} is @false{} or not used: if the length of
+@var{string} is greater than @math{64} characters, only the first
+@math{64} bytes are used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{string} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of
+characters @math{N} less than the string length: applications
+@strong{must not} assume that two strings having the first @math{N}
+characters equal will have the same hash value.
 @end deffn
 
 
 @deffn {Unsafe Operation} $string-ci-hash @var{string}
+@deffnx {Unsafe Operation} $string-ci-hash @var{string} @var{max-len}
 Return an integer hash value for @var{string} based on its current
 contents, ignoring case.  This hash function is suitable for use with
 @func{string-ci=?} as an equivalence function.
+
+The optional argument @var{max-len} is used as in @func{$string-hash}.
 @end deffn
 
 
@@ -5723,9 +6340,35 @@ Return an integer hash value for @var{symbol}.
 
 
 @deffn {Unsafe Operation} $bytevector-hash @var{bytevector}
+@deffnx {Unsafe Operation} $bytevector-hash @var{bytevector} @var{max-len}
 Return an integer hash value for @var{bytevector}, based on its current
 contents.  This hash function is suitable for use with
 @func{bytevector=?} as an equivalence function.
+
+About the @var{max-len} argument:
+
+@itemize
+@item
+When @var{max-len} is a non--negative fixnum: it is the maximum number
+of bytes to use to compute the hash value, starting from the beginning
+of @var{bv}.  If the length of @var{bv} is greater than @var{max-len}:
+only the first @var{max-len} bytes are used.  If the length of @var{bv}
+is less than or equal to @var{max-len}: all the bytes in @var{bv} are
+used.
+
+@item
+When @var{max-len} is @false{} or not present: if the length of @var{bv}
+is greater than @math{256} bytes, only the first @math{256} bytes are
+used to compute the hash.
+
+@item
+When @var{max-len} is @true{}: all the bytes in @var{bv} are used.
+@end itemize
+
+@strong{NOTE} When the hash value is computed using a number of bytes
+@math{N} less than the bytevector length: applications @strong{must not}
+assume that two bytevectors having the first @math{N} bytes equal will
+have the same hash value.
 @end deffn
 
 @c page
@@ -5733,15 +6376,13 @@ contents.  This hash function is suitable for use with
 @section Low level code objects operations
 
 
-@cindex @library{ikarus system $codes}, library
-@cindex Library @library{ikarus system $codes}
 @cindex @library{vicare system $codes}, library
 @cindex Library @library{vicare system $codes}
 
 
 In the following definitions: the @var{code} arguments must be code
-objects.  The following bindings are exported by the libraries
-@library{ikarus system $codes} and @library{vicare system $codes}.
+objects.  The following bindings are exported by the library
+@library{vicare system $codes}.
 
 
 @defun code? @var{obj}
@@ -5799,15 +6440,13 @@ Store @var{obj} in the annotation field of @var{code}.
 @section Low level closures operations
 
 
-@cindex @library{ikarus system $codes}, library
-@cindex Library @library{ikarus system $codes}
 @cindex @library{vicare system $codes}, library
 @cindex Library @library{vicare system $codes}
 
 
 In the following definitions the @var{closure} arguments must be closure
-objects.  The following bindings are exported by the @library{ikarus
-system $codes} and @library{vicare system $codes}.
+objects.  The following bindings are exported by the library
+@library{vicare system $codes}.
 
 
 @deffn {Primitive Operation} $closure-code @var{closure}
@@ -5834,7 +6473,7 @@ association of an arbitrary annotation object to a function.
 
 @example
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 
 (define (the-proc)
   123)
@@ -5866,18 +6505,15 @@ Given a closure object @var{clo} being an annotated procedure created by
 @section Interface to compiler passes
 
 
-@cindex @library{ikarus system $compiler}, library
-@cindex Library @library{ikarus system $compiler}
 @cindex @library{vicare system $compiler}, library
 @cindex Library @library{vicare system $compiler}
 
 
 @value{PRJNAME} is a compiler for the Scheme language; internally it
 implements a multitude of passes, each of which performing a
-transformation from Scheme code to executable binary code.  The
-libraries @library{ikarus system $compiler} and @library{vicare system
-$compiler} export one binding for each compiler pass, allowing
-inspection of the performed transformations.
+transformation from Scheme code to executable binary code.  The library
+@library{vicare system $compiler} export one binding for each compiler
+pass, allowing inspection of the performed transformations.
 
 The sequence in which the passes are performed @strong{cannot} be
 changed; they must be performed in the specified order.  The passes
@@ -5931,7 +6567,7 @@ Code generation passes
 @subsection Unparsing intermediate representations
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -5961,7 +6597,7 @@ exactly represent the input.
 @subsection The full transformation
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -5983,7 +6619,7 @@ system $compiler}.
 @subsection Optimisation for direct calls
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6021,7 +6657,7 @@ Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
 Workshop on Scheme and Functional Programming '09.
 @end quotation
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6099,7 +6735,7 @@ Inlining''.  Indiana University.  Computer Science Department.
 Technical Report No. 484.
 @end quotation
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6121,7 +6757,7 @@ more passes can do significant improvement.
 The following bindings are exported by the library @library{vicare}.
 
 
-@deffn Parameter $optimize-level
+@deffn Parameter optimize-level
 The optimization level; accepted values are the fixnums @code{0},
 @code{1}, @code{2}.  Defaults to @code{0}.
 
@@ -6150,7 +6786,7 @@ the optimizer enters specific subexpressions of the input.
 @subsection Rewriting references and assignments
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6163,7 +6799,7 @@ system $compiler}.
 @subsection Tagging known properties
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6181,7 +6817,7 @@ skipped.  Defaults to @true{}.
 @subsection Introducing storage locations
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6194,7 +6830,7 @@ system $compiler}.
 @subsection Sanitizing bindings
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6207,7 +6843,7 @@ system $compiler}.
 @subsection Optimisation for direct jumps
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6220,7 +6856,7 @@ system $compiler}.
 @subsection Inserting global assignments
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6233,7 +6869,7 @@ system $compiler}.
 @subsection Closure conversion
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6250,7 +6886,7 @@ To be documented.
 @subsection Cloaures optimization and codes lifting
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6263,7 +6899,7 @@ system $compiler}.
 @subsection Full assembly code generation
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6276,7 +6912,7 @@ system $compiler}.
 @subsection Binary code generation
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6288,7 +6924,7 @@ system $compiler}.
 @subsection Introducing primitive calls
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6300,7 +6936,7 @@ system $compiler}.
 @subsection Removing fixes
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6312,7 +6948,7 @@ system $compiler}.
 @subsection Inserting engine checks
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6324,7 +6960,7 @@ system $compiler}.
 @subsection Inserting stack overflow checks
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6336,7 +6972,7 @@ system $compiler}.
 @subsection Expanding primitive operations
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6348,7 +6984,7 @@ system $compiler}.
 @subsection Imposing calling convention and evaluation order
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6360,7 +6996,7 @@ system $compiler}.
 @subsection Assigning frame sizes
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6376,7 +7012,7 @@ For an introduction to register allocation see:
 
 @center @url{http://en.wikipedia.org/wiki/Register_allocation}
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
@@ -6388,7 +7024,7 @@ system $compiler}.
 @subsection Flattening codes
 
 
-The following bindings are exported by the library @library{ikarus
+The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 

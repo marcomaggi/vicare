@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -734,7 +734,9 @@
 
   ;; mismatched parentheses
   (read-and-lexical-violation "(1 2]"	no-irritants)
+  (read-and-lexical-violation "(1 2}"	no-irritants)
   (read-and-lexical-violation "[1 2)"	no-irritants)
+  (read-and-lexical-violation "[1 2}"	no-irritants)
 
 ;;; --------------------------------------------------------------------
 ;;; misplaced dots
@@ -745,6 +747,71 @@
   (read-and-lexical-violation "(1 . .)"	no-irritants)
 
   (read-and-lexical-violation "(1 . 2 3)"	(datum . 3))
+
+  #t)
+
+
+(parametrise ((check-test-name	'braces))
+
+  (define-syntax read-list-and-eof
+    (syntax-rules ()
+      ((_ ?input ?result)
+       (check
+	   (let* ((port (open-string-input-port ?input))
+		  (obj  (read port))
+		  (eof  (port-eof? port)))
+	     (list (list? obj) obj eof))
+	 => `(#t ?result #t)))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let* ((port (open-string-input-port "{}"))
+	     (obj  (read port))
+	     (eof  (port-eof? port)))
+	(list (list? obj) obj eof))
+    => `(#t (brace) #t))
+
+  (check
+      (let* ((port (open-string-input-port "{1 . 2}"))
+	     (obj  (read port))
+	     (eof  (port-eof? port)))
+	(list (pair? obj) obj eof))
+    => `(#t (brace 1 . 2) #t))
+
+  (check
+      (let* ((port (open-string-input-port "{1 2 . 3}"))
+	     (obj  (read port))
+	     (eof  (port-eof? port)))
+	(list (pair? obj) obj eof))
+    => `(#t (brace 1 2 . 3) #t))
+
+;;; --------------------------------------------------------------------
+
+  (read-list-and-eof "{1}"		(brace 1))
+  (read-list-and-eof "{1 2}"		(brace 1 2))
+  (read-list-and-eof "{1 2 3}"		(brace 1 2 3))
+
+  (read-list-and-eof "{#0=1 2 3}"	(brace 1 2 3))
+  (read-list-and-eof "{#0=1 2 #0#}"	(brace 1 2 1))
+  (read-list-and-eof "{#0#  2 #0=3}"	(brace 3 2 3))
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  ;; mismatched parentheses
+  (read-and-lexical-violation "{1 2]"	no-irritants)
+  (read-and-lexical-violation "{1 2)"	no-irritants)
+
+;;; --------------------------------------------------------------------
+;;; misplaced dots
+
+  (read-and-lexical-violation "{.}"	no-irritants)
+  (read-and-lexical-violation "{. 1}"	no-irritants)
+  (read-and-lexical-violation "{1 .}"	no-irritants)
+  (read-and-lexical-violation "{1 . .}"	no-irritants)
+
+  (read-and-lexical-violation "{1 . 2 3}"	(datum . 3))
 
   #t)
 

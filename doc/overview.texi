@@ -18,8 +18,8 @@ Scheme programming language; it is the creation of Abdulaziz Ghuloum.
 
 Vicare Scheme is an @rnrs{6} compliant fork of Ikarus Scheme, aiming at
 becoming a native compiler producing single threaded programs running on
-Intel x86 32-bit processors, with experimental support for 64-bit
-machines.  @emph{Vicare} is pronounced the etruscan way.
+Intel x86 32-bit and 64-bit processors.  @emph{Vicare} is pronounced the
+etruscan way.
 
 @menu
 * overview original::           Original Ikarus Scheme.
@@ -83,9 +83,8 @@ virtual address space could be used and unneeded memory is released back
 to the operating system.
 
 @item Supports many operating systems
-@value{PRJNAME} runs on @gnu{}+Linux, but it is possible to port it to
-the most popular and widely used operating systems for servers and
-personal computers.
+@value{PRJNAME} runs on @gnu{}+Linux; it should work on @posix{}
+platforms, but not on Cygwin.
 @end table
 
 @c page
@@ -461,11 +460,11 @@ no arguments; this performs two tasks:
 
 @enumerate
 @item
-It builds the @command{vicare} executable from the C files located in
+It builds the @value{EXECUTABLE} executable from the C files located in
 the @file{src} directory.
 
 @item
-It uses the @command{vicare} executable and the pre--built
+It uses the @value{EXECUTABLE} executable and the pre--built
 @file{ikarus.boot.orig} boot file to rebuild the Scheme boot image file
 @file{vicare.boot} from the Scheme sources located in the @file{scheme}
 directory.
@@ -498,7 +497,7 @@ hello, world!
 If we get the first @code{>} prompt, then @value{PRJNAME} was
 successfully installed on the system.  We may need to update the
 @env{PATH} variable in environment to contain the directory in which the
-@command{vicare} executable was installed.
+@value{EXECUTABLE} executable was installed.
 
 Finally, do @command{make clean} to get rid of executables, object
 files, and other build products in the @file{vicare-@var{n.n.n}}
@@ -654,7 +653,7 @@ following:
 same interface of a default protocol function.
 
 @item
-If @command{vicare} is run @strong{without} the option
+If @value{EXECUTABLE} is run @strong{without} the option
 @option{--strict-r6rs}: the syntax @func{define-record-type}
 automatically generates unsafe field accessor and mutator syntaxes; in
 the following example:

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,9 +26,9 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (vicare checks)
-  (ikarus system $structs))
+  (vicare system $structs))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)
@@ -99,10 +99,72 @@
   #t)
 
 
+(parametrise ((check-test-name	'definition-alternate))
+
+  (define-struct (color make-the-color the-color?)
+    (red green blue))
+
+  (check
+      (let ((S (make-the-color 1 2 3)))
+	(the-color? S))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (make-the-color 1 2 3)))
+	(list (color-red   S)
+	      (color-green S)
+	      (color-blue  S)))
+    => '(1 2 3))
+
+  (check
+      (let ((S (make-the-color 1 2 3)))
+	(set-color-red!   S 10)
+	(set-color-green! S 20)
+	(set-color-blue!  S 30)
+	(list (color-red   S)
+	      (color-green S)
+	      (color-blue  S)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (make-the-color 1 2 3)))
+	(list ($color-red   S)
+	      ($color-green S)
+	      ($color-blue  S)))
+    => '(1 2 3))
+
+  (check
+      (let ((S (make-the-color 1 2 3)))
+	($set-color-red!   S 10)
+	($set-color-green! S 20)
+	($set-color-blue!  S 30)
+	(list ($color-red   S)
+	      ($color-green S)
+	      ($color-blue  S)))
+    => '(10 20 30))
+
+  #t)
+
+
 (parametrise ((check-test-name	'rtd))
 
   (define color-rtd
     (make-struct-type "color" '(red green blue)))
+
+  (define-record-type r6rs-type
+    (fields a b c))
+
+  (check
+      (struct-type-descriptor? color-rtd)
+    => #t)
+
+  (check
+      (struct-type-descriptor? (record-type-descriptor r6rs-type))
+    => #f)
 
   (check
       (struct-type-name color-rtd)
@@ -121,17 +183,17 @@
   (check
       (catch #f
 	(struct-type-name 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-type-symbol 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-type-field-names 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   #t)
 
@@ -189,27 +251,38 @@
 	      (color-blue  S)))
     => '(10 20 30))
 
+  (check
+      (let ((S (make-color 1 2 3)))
+	((struct-field-accessor color-rtd 'red) S))
+    => 1)
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	((struct-field-mutator  color-rtd 'red) S 10)
+	((struct-field-accessor color-rtd 'red) S))
+    => 10)
+
 ;;; --------------------------------------------------------------------
 
   (check
       (catch #f
 	(struct-constructor 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-predicate 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-field-accessor 123 0))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-field-mutator 123 0))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
@@ -301,22 +374,22 @@
   (check
       (catch #f
 	(struct-length 123))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
 	(struct-name 123))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
 	(struct-set! 123 0 0))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
 	(struct-ref 123 0))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
@@ -341,6 +414,62 @@
   #t)
 
 
+(parametrise ((check-test-name	'equality))
+
+  (define-struct alpha
+    (a b c))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-alpha 1 2 3)))
+     (struct=? P P)))
+
+  (check-for-true
+   (let ((P (make-alpha 1 2 3))
+	 (Q (make-alpha 1 2 3)))
+     (struct=? P Q)))
+
+  (check-for-false
+   (let ((P (make-alpha 1 2 3))
+	 (Q (make-alpha 1 2 9)))
+     (struct=? P Q)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-alpha 1 2 3)))
+     (equal? P P)))
+
+  (check-for-true
+   (let ((P (make-alpha 1 2 3))
+	 (Q (make-alpha 1 2 3)))
+     (equal? P Q)))
+
+  (check-for-false
+   (let ((P (make-alpha 1 2 3))
+	 (Q (make-alpha 1 2 9)))
+     (equal? P Q)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (let ((P (make-alpha 1 2 3)))
+     (eqv? P P)))
+
+  (check-for-false
+   (let ((P (make-alpha 1 2 3))
+	 (Q (make-alpha 1 2 3)))
+     (eqv? P Q)))
+
+  (check-for-false
+   (let ((P (make-alpha 1 2 3))
+	 (Q (make-alpha 1 2 9)))
+     (eqv? P Q)))
+
+  #t)
+
+
 (parametrise ((check-test-name		'destructor)
 	      (struct-guardian-logger	(lambda (S E action)
 					  (check-pretty-print (list S E action)))))
@@ -348,34 +477,354 @@
   (define-struct alpha
     (a b c))
 
-  (set-rtd-destructor! (type-descriptor alpha)
-		       (lambda (S)
-			 (void)))
+  (define (alpha-destructor S)
+    (display "alpha-destructor\n" stderr)
+    (void))
+
+  (set-rtd-destructor! (type-descriptor alpha) alpha-destructor)
+
+  (debug-print ($std-destructor (type-descriptor alpha)))
 
   (check
       (parametrise ((struct-guardian-logger #t))
-	(let ((S (make-alpha 1 2 3)))
-	  (check-pretty-print S)
-	  (collect)))
+  	(let ((S (make-alpha 1 2 3)))
+  	  (check-pretty-print S)
+  	  (collect)))
     => (void))
 
   (check
       (let ((S (make-alpha 1 2 3)))
-	(check-pretty-print S)
-	(collect))
+  	(check-pretty-print S)
+  	(collect))
     => (void))
 
   (check
       (let ((S (make-alpha 1 2 3)))
-	(check-pretty-print S)
-	(collect))
+  	(check-pretty-print S)
+  	(collect))
     => (void))
 
   (collect))
 
 
+(parametrise ((check-test-name	'syntaxes))
+
+  (define-struct alpha
+    (a b c))
+
+  (define-struct beta
+    (a b c))
+
+;;; --------------------------------------------------------------------
+;;; type descriptor
+
+  (check
+      (struct-type-descriptor? (struct-type-descriptor alpha))
+    => #t)
+
+  (check
+      (struct-type-descriptor? (type-descriptor alpha))
+    => #t)
+
+  (check
+      (struct-type-descriptor? (struct-type-descriptor beta))
+    => #t)
+
+  (check
+      (struct-type-descriptor? (type-descriptor beta))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; predicate
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(struct-type-and-struct? alpha stru))
+    => #t)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(struct-type-and-struct? beta stru))
+    => #f)
+
+  (check
+      (struct-type-and-struct? beta 123)
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; safe accessors and mutators
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(list (struct-type-field-ref alpha a stru)
+	      (struct-type-field-ref alpha b stru)
+	      (struct-type-field-ref alpha c stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(struct-type-field-set! alpha a stru 10)
+	(struct-type-field-set! alpha b stru 20)
+	(struct-type-field-set! alpha c stru 30)
+	(list (struct-type-field-ref alpha a stru)
+	      (struct-type-field-ref alpha b stru)
+	      (struct-type-field-ref alpha c stru)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+;;; unsafe accessors and mutators
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(list ($struct-type-field-ref alpha a stru)
+	      ($struct-type-field-ref alpha b stru)
+	      ($struct-type-field-ref alpha c stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	($struct-type-field-set! alpha a stru 10)
+	($struct-type-field-set! alpha b stru 20)
+	($struct-type-field-set! alpha c stru 30)
+	(list ($struct-type-field-ref alpha a stru)
+	      ($struct-type-field-ref alpha b stru)
+	      ($struct-type-field-ref alpha c stru)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+;;; generic maker syntax
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	(alpha? stru))
+    => #t)
+
+  (check
+      (let ((stru (beta (1 2 3))))
+	(beta? stru))
+    => #t)
+
+  (check
+      (let ((stru (apply (alpha (...)) 1 '(2 3))))
+	(alpha? stru))
+    => #t)
+
+  (check
+      (let ((stru (apply (beta (...)) '(1 2 3))))
+	(beta? stru))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; generic predicate syntax
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(is-a? stru alpha))
+    => #t)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(is-a? stru beta))
+    => #f)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	((is-a? <> alpha) stru))
+    => #t)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	((is-a? _ alpha) stru))
+    => #t)
+
+  (check
+      (is-a? 123 alpha)
+    => #f)
+
+  (check
+      (is-a? 123 beta)
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; generic safe slot getter and setter
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	(slot-set! stru a alpha 19)
+	(slot-set! stru b alpha 29)
+	(slot-set! stru c alpha 39)
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
+    => '(19 29 39))
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	(list ((slot-ref <> a alpha) stru)
+	      ((slot-ref <> b alpha) stru)
+	      ((slot-ref <> c alpha) stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	((slot-set! <> a alpha <>) stru 19)
+	((slot-set! <> b alpha <>) stru 29)
+	((slot-set! <> c alpha <>) stru 39)
+	(list ((slot-ref <> a alpha) stru)
+	      ((slot-ref <> b alpha) stru)
+	      ((slot-ref <> c alpha) stru)))
+    => '(19 29 39))
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	(list ((slot-ref _ a alpha) stru)
+	      ((slot-ref _ b alpha) stru)
+	      ((slot-ref _ c alpha) stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (alpha (1 2 3))))
+	((slot-set! _ a alpha _) stru 19)
+	((slot-set! _ b alpha _) stru 29)
+	((slot-set! _ c alpha _) stru 39)
+	(list ((slot-ref _ a alpha) stru)
+	      ((slot-ref _ b alpha) stru)
+	      ((slot-ref _ c alpha) stru)))
+    => '(19 29 39))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe-std-operations))
+
+  (define-struct alpha
+    (a b c))
+
+  (define-struct beta
+    (a b c))
+
+  (define (the-beta-destructor S)
+    #t)
+
+  (module ()
+    (set-rtd-destructor! (struct-type-descriptor beta) the-beta-destructor))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($std-std (struct-type-descriptor alpha))
+    => (base-rtd))
+
+  (check
+      ($std-name (struct-type-descriptor alpha))
+    => "alpha")
+
+  (check
+      ($std-length (struct-type-descriptor alpha))
+    => 3)
+
+  (check
+      ($std-fields (struct-type-descriptor alpha))
+    => '(a b c))
+
+  (check
+      ($std-printer (struct-type-descriptor alpha))
+    => default-struct-printer)
+
+  (check
+      (gensym? ($std-symbol (struct-type-descriptor alpha)))
+    => #t)
+
+  (check
+      ($std-destructor (struct-type-descriptor alpha))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($std-std (struct-type-descriptor beta))
+    => (base-rtd))
+
+  (check
+      ($std-name (struct-type-descriptor beta))
+    => "beta")
+
+  (check
+      ($std-length (struct-type-descriptor beta))
+    => 3)
+
+  (check
+      ($std-fields (struct-type-descriptor beta))
+    => '(a b c))
+
+  (check
+      ($std-printer (struct-type-descriptor beta))
+    => default-struct-printer)
+
+  (check
+      (gensym? ($std-symbol (struct-type-descriptor beta)))
+    => #t)
+
+  (check
+      ($std-destructor (struct-type-descriptor beta))
+    => the-beta-destructor)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-name! std "ciao")
+	($std-name std))
+    => "ciao")
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-length! std 2)
+	($std-length std))
+    => 2)
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-fields! std '(A B))
+	($std-fields std))
+    => '(A B))
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (fun (lambda args (void))))
+	($set-std-printer! std fun)
+	(eq? fun ($std-printer std)))
+    => #t)
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (fun (lambda args (void))))
+	($set-std-destructor! std fun)
+	(eq? fun ($std-destructor std)))
+    => #t)
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (uid (gensym "uid")))
+	(set-symbol-value! uid std)
+	($set-std-symbol! std uid)
+	(values (eq? uid ($std-symbol std))
+		(eq? std (symbol-value uid))))
+    => #t #t)
+
+  #t)
+
+
 ;;;; done
 
+(collect)
 (check-report)
 
 ;;; end of file

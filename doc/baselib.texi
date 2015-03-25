@@ -1305,6 +1305,11 @@ and uses @func{eqv?} to compare other nodes.
 @end example
 
 @quotation
+@strong{NOTE} As @value{PRJNAME} extensions: structs are compared with
+@func{struct=?} and @rnrs{6} records are compared with @func{record=?}.
+@end quotation
+
+@quotation
 @strong{NOTE} The @func{equal?} procedure must always terminate, even if
 its arguments contain cycles.
 @end quotation
@@ -3571,6 +3576,7 @@ as @var{consumer} has returned.
 @end deffn
 
 
+@anchor{dynamic-wind}
 @deffn Procedure dynamic-wind @var{before} @var{thunk} @var{after}
 @var{before}, @var{thunk}, and @var{after} must be procedures, and each
 should accept zero arguments.  These procedures may return any number of

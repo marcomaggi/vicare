@@ -22,21 +22,20 @@
 ;;;SOFTWARE.
 
 
-(library (psyntax config)
+(library (psyntax.config)
   (export
-    if-wants-define-record	if-wants-define-struct
+    if-wants-define-record	#;if-wants-define-struct
     if-wants-case-lambda
     if-wants-letrec*		if-wants-global-defines
-    if-wants-library-letrec*
-    base-of-interaction-library
-    vector-append)
+    if-wants-library-letrec*	if-wants-descriptive-gensyms
+    base-of-interaction-library)
   (import (rnrs)
-    (only (ikarus)
-	  vector-append))
+    (only (psyntax.compat)
+	  option.descriptive-labels))
 
 
 (define (base-of-interaction-library)
-  '(ikarus))
+  '(vicare))
 
 (define-syntax define-option
   (syntax-rules ()
@@ -86,6 +85,17 @@
 (define-option if-wants-letrec*        #t)
 
 (define-option if-wants-library-letrec* #t)
+
+;;If true: generate gensyms with  descriptive names, which is slower but
+;;helps in debugging and understanding the code.
+;;
+(define-syntax if-wants-descriptive-gensyms
+  (syntax-rules ()
+    ((_ ?success-kont ?failure-kont)
+     (if (option.descriptive-labels)
+	 ?success-kont
+       ?failure-kont))
+    ))
 
 
 ;;;; done

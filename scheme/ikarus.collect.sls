@@ -28,7 +28,7 @@
     retrieve-to-avoid-collecting
     collection-avoidance-list
     purge-collection-avoidance-list)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  collect		collect-key
 		  post-gc-hooks
 
@@ -38,11 +38,10 @@
 		  retrieve-to-avoid-collecting
 		  collection-avoidance-list
 		  purge-collection-avoidance-list)
-    (ikarus system $fx)
-    (ikarus system $arg-list)
+    (vicare system $fx)
+    (vicare system $arg-list)
     (vicare language-extensions syntaxes)
-    (vicare arguments validation)
-    (ikarus.emergency))
+    (vicare arguments validation))
 
 
 (define post-gc-hooks
@@ -115,7 +114,7 @@
 (define (collect-key)
   (or ($collect-key)
       (begin
-        ($collect-key (gensym))
+        ($collect-key (gensym "collect-key"))
         (collect-key))))
 
 

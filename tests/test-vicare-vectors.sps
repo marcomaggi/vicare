@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (vicare checks)
   (vicare system $vectors))
 
@@ -917,37 +917,18 @@
 		      '#(2 4 14))
     => 14)
 
+;;;
+
+  (check
+      (vector-for-all < '#() '#())
+    => #t)
+
   (check
       (vector-for-all < '#(1 2 3) '#(2 3 4))
     => #t)
 
   (check
       (vector-for-all < '#(1 2 4) '#(2 3 4))
-    => #f)
-
-  (check
-      (vector-exists even? '#(3 1 4 1 5 9))
-    => #t)
-
-  (check
-      (vector-exists even? '#(3 1 1 5 9))
-    => #f)
-
-  (check
-      (vector-exists even? '#())
-    => #f)
-
-  (check
-      (vector-exists (lambda (n) (and (even? n) n))
-	'#(2 1 4 14))
-    => 2)
-
-  (check
-      (vector-exists < '#(1 2 4) '#(2 3 4))
-    => #t)
-
-  (check
-      (vector-exists > '#(1 2 3) '#(2 3 4))
     => #f)
 
 ;;; --------------------------------------------------------------------
@@ -970,6 +951,42 @@
 			'#(2 4 14))
     => 14)
 
+  #t)
+
+
+(parametrise ((check-test-name	'exists))
+
+  (check
+      (vector-exists even? '#(3 1 4 1 5 9))
+    => #t)
+
+  (check
+      (vector-exists even? '#(3 1 1 5 9))
+    => #f)
+
+  (check
+      (vector-exists even? '#())
+    => #f)
+
+  (check
+      (vector-exists (lambda (n) (and (even? n) n))
+	'#(2 1 4 14))
+    => 2)
+
+;;;
+
+  (check
+      (vector-exists < '#() '#())
+    => #f)
+
+  (check
+      (vector-exists < '#(1 2 4) '#(2 3 4))
+    => #t)
+
+  (check
+      (vector-exists > '#(1 2 3) '#(2 3 4))
+    => #f)
+
 ;;; --------------------------------------------------------------------
 ;;; unsafe exists
 
@@ -989,6 +1006,86 @@
       ($vector-exists1 (lambda (n) (and (even? n) n))
 		       '#(2 1 4 14))
     => 2)
+
+  #t)
+
+
+(parametrise ((check-test-name	'find))
+
+  (check
+      (vector-find even? '#(3 1 4 1 5 9))
+    => 4)
+
+  (check
+      (vector-find even? '#(3 1 1 5 9))
+    => #f)
+
+  (check
+      (vector-find even? '#())
+    => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fold-left))
+
+  (check
+      (vector-fold-left (lambda (nil x) (cons x nil))
+	'()
+	'#(#\a #\b #\c #\d))
+    => '(#\d #\c #\b #\a))
+
+  (check
+      (vector-fold-left (lambda (nil x y) (cons (cons x y) nil))
+	'()
+	'#(#\a #\b #\c #\d)
+	'#(#\A #\B #\C #\D))
+    => '((#\d . #\D)
+	 (#\c . #\C)
+	 (#\b . #\B)
+	 (#\a . #\A)))
+
+  (check
+      (vector-fold-left (lambda (nil x) (cons x nil))
+	'()
+	'#())
+    => '())
+
+  (check
+      (vector-fold-left (lambda (count c)
+			  (if (char-upper-case? c)
+			      (+ count 1)
+			    count))
+	0
+	'#(#\A #\B #\C #\d #\e #\f #\G #\H #\i))
+    => 5)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fold-right))
+
+  (check
+      (vector-fold-right (lambda (x nil) (cons x nil))
+	'()
+	'#(#\a #\b #\c #\d))
+    => '(#\a #\b #\c #\d))
+
+  (check
+      (vector-fold-right (lambda (x y nil) (cons (cons x y) nil))
+	'()
+	'#(#\a #\b #\c #\d)
+	'#(#\A #\B #\C #\D))
+    => '((#\a . #\A)
+	 (#\b . #\B)
+	 (#\c . #\C)
+	 (#\d . #\D)))
+
+  (check
+      (vector-fold-right (lambda (x nil) (cons x nil))
+	'()
+	'#())
+    => '())
 
   #t)
 

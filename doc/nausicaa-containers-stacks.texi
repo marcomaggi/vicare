@@ -94,7 +94,7 @@ Return an exact integer to be used as hashtable key for the
 instantiated as follows:
 
 @example
-(make-hashtable (lambda ((S <stack>))
+(make-hashtable (lambda (@{S <stack>@})
                   (S hash))
                 eq?)
 @end example

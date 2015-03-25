@@ -1,24 +1,20 @@
 @node binfmt
-@appendix Launching programs directly
+@appendix Launching programs directly on @gnu{}+Linux
 
 
-This appendix describes an optional feature of that activates Scheme
-programs execution through the mechanism of the @code{binfmt_misc} Linux
-kernel module; it is available only on Unix--like platforms running the
-Linux kernel.
-
-By default the installation of the required files is disabled; to enable
-it: at configuration time we must pass the @option{--enable-binfmt}
-option to the @command{configure} script.
-
-The mechanism allows to run Scheme programs without explicitly invoking
-the executable runtime program.  It is a generalisation of the mechanism
-that runs shell scripts whose file begins with @code{#!/bin/sh}.
+This appendix describes an optional feature of @value{PRJNAME}: source
+and binary Scheme programs execution through the mechanism of the
+@code{binfmt_misc} Linux kernel module; it is available only on
+Unix--like platforms running the Linux kernel.
 
 @quotation
 This appendix is derived from the original @code{binfmt_misc}
 documentation text file by Richard Guenther.
 @end quotation
+
+By default the installation of the required files is disabled; to enable
+it: at configuration time we must pass the @option{--enable-binfmt}
+option to the @command{configure} script.
 
 @menu
 * binfmt overview::             Overview of the mechanism.
@@ -37,15 +33,55 @@ documentation text file by Richard Guenther.
 @cindex Binary formats, kernel support
 @cindex Binary executables, kernel support
 
-This kernel feature allows us to invoke almost every program by simply
-typing its name in the shell.  This includes for example compiled Java,
-Python or Emacs programs, and of course Scheme programs.
+The common way of running a Scheme script, is to invoke the executable
+@value{EXECUTABLE} using the option @option{--r6rs-script} to select the
+pathname of the file:
 
-The feature is implemented in the @code{binfmt_misc} kernel module; it
-recognises the binary file type by matching some bytes at the beginning
-of the file with a magic byte sequence (masking out specified bits) we
-have supplied; it can also recognise a filename extension.
+@example
+vicare --r6rs-script path/to/script.sps
+@end example
 
+@noindent
+to run a compiled Scheme program, we invoke the executable
+@value{EXECUTABLE} using the option @option{--binary-program} to select
+the pathname of the file:
+
+@example
+vicare --binary-program path/to/program
+@end example
+
+The features implemented in the @code{binfmt_misc} kernel module allow
+us to invoke almost every program by simply typing its name in the
+shell, without explicitly invoking the executable program implementing
+the interpreter; this includes for example compiled Java, Python or
+Emacs programs, and of course Scheme programs; this mechanism is a
+generalisation of the mechanism that runs shell scripts whose file
+begins with @code{#!/bin/sh}.
+
+With proper configuration: the kernel recognises the binary file type by
+matching some bytes at the beginning of the file with a magic byte
+sequence (masking out specified bits) we have supplied; it can also
+recognise a filename extension.
+
+If we enable @value{PRJNAME} support for @code{binfmt_misc}, we can run
+Scheme programs as follows:
+
+@itemize
+@item
+For source scripts, we make the file executable and put as very first
+bytes the string @code{;;;!vicare}, then we just do:
+
+@example
+path/to/script.sps
+@end example
+
+@item
+For compiled programs, we make the file executable and just do:
+
+@example
+path/to/program
+@end example
+@end itemize
 
 @c page
 @node binfmt loading
@@ -81,8 +117,8 @@ mounted when booting the system.  We can freely mount and unmount this
 virtual file system with (as root):
 
 @example
-$ mount  /proc/sys/fs/binfmt_misc
-$ umount /proc/sys/fs/binfmt_misc
+# mount  /proc/sys/fs/binfmt_misc
+# umount /proc/sys/fs/binfmt_misc
 @end example
 
 @noindent
@@ -94,7 +130,7 @@ disabling the feature.
 @appendixsec The registry
 
 
-To actually register a new binary type, we have to set up a string like:
+To actually register a new binary type, we have to compose a string like:
 
 @example
 :name:type:offset:magic:mask:interpreter:
@@ -102,9 +138,9 @@ To actually register a new binary type, we have to set up a string like:
 
 @noindent
 and echo it to @file{/proc/sys/fs/binfmt_misc/register}.  We can choose
-the @code{:} character upon our needs and we can omit a field by simply
-using an empty string; for example if we omit the offset and the mask
-fields:
+the separator character @code{:} depending on our needs and we can omit
+a field by simply using an empty string; for example if we omit the
+offset and the mask fields:
 
 @example
 :name:type::magic::interpreter:
@@ -153,14 +189,14 @@ There are some restrictions:
 
 @itemize
 @item
-The whole @file{register} string may not exceed 255 characters.
+The whole @file{register} string must not exceed @math{255} characters.
 
 @item
 The magic must reside in the first @math{128} bytes of the file, i.e.
 @code{offset+size(magic)} has to be less than @math{128}.
 
 @item
-The interpreter string may not exceed @math{127} characters.
+The interpreter string must not exceed @math{127} characters.
 @end itemize
 
 @c page
@@ -168,28 +204,38 @@ The interpreter string may not exceed @math{127} characters.
 @appendixsec Using the mechanism
 
 
-We may want to add the binary formats in one of the shell scripts that
-are executed at system boot time.  For example, on a Slackware Linux
-system we can use @file{/etc/rc.d/rc.local}.
+When @code{binfmt_misc} support is enabled, the @value{PRJNAME} package
+installs a set of files automating almost everything:
 
-To do it we can add to the shell script a chunk of code like the
-following, which activates the mechanism for Scheme programs compiled
-with @value{PRJNAME}:
+@table @file
+@item $sysconfdir/rc.d/rc.vicare-scheme
+A shell script (@file{/bin/sh}) to be executed to enable or disable the
+feature.  Just running it enables @code{binfmt_misc} support.
+
+@item $libexecdir/vicare-scheme/binfmt-script-launcher.sh
+A shell script (@file{/bin/sh}) used as @code{interpreter} when running
+source scripts.
+
+@item $libexecdir/vicare-scheme/binfmt-program-launcher.sh
+A shell script (@file{/bin/sh}) used as @code{interpreter} when running
+compiled programs.
+@end table
+
+We might want to add the invocation of @file{rc.vicare-scheme} in one of
+the shell scripts that are executed at system boot time; for example, on
+a Slackware Linux system we can use @file{/etc/rc.d/rc.local} by
+inserting this code:
 
 @example
-if test -f /proc/sys/fs/binfmt_misc/register
-then
-  if test -f /proc/sys/fs/binfmt_misc/VICARE
-  then echo -1 >/proc/sys/fs/binfmt_misc/VICARE
-  fi
-  echo \
-   ':VICARE:M:0:;;;!vicare::/usr/local/bin/vicare:' \
-   >/proc/sys/fs/binfmt_misc/register
+if [ -x "$sysconfdir/rc.d/rc.vicare-scheme" ]; then
+   "$sysconfdir/rc.d/rc.vicare-scheme"
 fi
 @end example
 
-@noindent
-which does the following:
+The script @file{rc.vicare-scheme} implements @code{binfmt_misc} support
+by adding two records to the register: one for source scripts with name
+@code{VICARE_SCRIPTS} and one for compiled programs with name
+@code{VICARE_PROGRAMS}.  @file{rc.vicare-scheme} does the following:
 
 @enumerate
 @item
@@ -199,20 +245,22 @@ there, nothing happens.
 
 @item
 Remove the configuration from the registry if it is already there; this
-is done by testing the existence of the special file:
+is done by testing the existence of the special files:
 
 @example
-/proc/sys/fs/binfmt_misc/VICARE
+/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
+/proc/sys/fs/binfmt_misc/VICARE_PROGRAMS
 @end example
 
 @noindent
-echoing @code{-1} in it removes the @value{PRJNAME} record.
+echoing @code{-1} in them removes the records.
 
 @item
-echo the @value{PRJNAME} record into the registry with the following fields:
+Echo the records into the registry with the following fields for source
+scripts:
 
 @table @code
-@item VICARE
+@item VICARE_SCRIPTS
 It is the name of the special file representing the record in the
 registry.
 
@@ -225,13 +273,36 @@ The offset of the magic string into the file.
 @item ;;;!vicare
 The magic string itself.
 
-@item /usr/local/bin/vicare
-The full pathname to the @value{PRJNAME} runtime system executable.
+@item $libexecdir/vicare-scheme/binfmt-script-launcher.sh
+The full pathname to the source scripts launcher.
+@end table
+
+@noindent
+and the following fields for compiled programs:
+
+@table @code
+@item VICARE_PROGRAMS
+It is the name of the special file representing the record in the
+registry.
+
+@item M
+Activates first bytes recognition.
+
+@item 0
+The offset of the magic string into the file.
+
+@item #@@IK01
+@itemx #@@IK02
+The magic string itself.  One for 32-bit platforms the other for 64-bit
+platforms.
+
+@item $libexecdir/vicare-scheme/binfmt-script-launcher.sh
+The full pathname to the compiled programs launcher.
 @end table
 @end enumerate
 
-We see that the @code{mask} field is set to the empty string, that is:
-no mask is applied and @code{#!vicare} is matched literally.
+The @code{mask} field is set to the empty string, that is: no mask is
+applied and the @code{magic} is matched literally.
 
 We have to care about the order of added entries: entries added later
 are matched first.
@@ -288,18 +359,18 @@ operations.
 
 We can enable/disable recognition of a single binary format by echoing
 @code{0} or @code{1} to the format specific special file under
-@file{/proc/sys/fs/binfmt_misc}.  For example for @code{VICARE}, at the
-shell prompt and with superuser privileges, to enable:
+@file{/proc/sys/fs/binfmt_misc}.  For example for @code{VICARE_SCRIPTS},
+at the shell prompt and with superuser privileges, to enable:
 
 @example
-$ echo 1 >/proc/sys/fs/binfmt_misc/VICARE
+$ echo 1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent
 and to disable:
 
 @example
-$ echo 0 >/proc/sys/fs/binfmt_misc/VICARE
+$ echo 0 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent
@@ -307,18 +378,18 @@ disabled formats are @strong{not} removed from the internal table.
 
 Applying the command @command{cat} to the format's special file tells us
 the current status of that format and its configuration; for example for
-@code{VICARE}, at the shell prompt:
+@code{VICARE_SCRIPTS}, at the shell prompt:
 
 @example
-$ cat /proc/sys/fs/binfmt_misc/VICARE
+$ cat /proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 We can remove a specific format entry from the registry echoing
-@code{-1} to its special file; for @code{VICARE} at the shell prompt
-and with superuser privileges:
+@code{-1} to its special file; for @code{VICARE_SCRIPTS} at the shell
+prompt and with superuser privileges:
 
 @example
-$ echo -1 >/proc/sys/fs/binfmt_misc/VICARE
+$ echo -1 >/proc/sys/fs/binfmt_misc/VICARE_SCRIPTS
 @end example
 
 @noindent
@@ -330,14 +401,14 @@ distinct operations.
 @appendixsec Hints
 
 
-If we want to pass command line arguments to the runtime executable, we
-must write a wrapper script for it.  There is no way to embed the
-arguments in the registry record.
+If we want to pass command line arguments to the executable program
+implementing the interpreter, we must write a wrapper script for it;
+there is no way to embed the arguments in the registry record.
 
-The runtime must @strong{not} look in the @env{PATH} environment
-variable for the filename; the kernel passes it the full filename to
-use.  Using the @env{PATH} can cause unexpected behaviour and be a
-security hazard.
+The wrapper must @strong{not} look in the @env{PATH} environment
+variable for the actual interpreter filename; the kernel passes it the
+full filename to use.  Using @env{PATH} can cause unexpected behaviour
+and be a security hazard.
 
 @c page
 @node binfmt scheme
@@ -370,7 +441,7 @@ number of times: at each run it resets and reinitialises the
 configuration for Scheme programs.
 
 @item
-The @command{vicare} executable must be in @code{$(bindir)}, else we
+The @value{EXECUTABLE} executable must be in @code{$(bindir)}, else we
 must customise the @file{rc.vicare-scheme} script.
 @end enumerate
 

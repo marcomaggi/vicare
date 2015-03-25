@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (prefix (nausicaa parser-tools lexical-tokens)   lt.)
   (prefix (nausicaa parser-tools source-locations) sl.)
@@ -45,31 +45,31 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'category)
+      (let (({T lt.<lexical-token>} (lt.<lexical-token> ((lt.category: 'category)
 							 (lt.value:    'value)
 							 (lt.length:   5)))))
-	(list (T category) (T location unspecified?) (T value) (T length)))
+	(list (T category) ((T location) unspecified?) (T value) (T length)))
     => '(category #t value 5))
 
   (check
-      (let (((T lt.<lexical-token>) (lt.<lexical-token> ((lt.category: 'woppa)))))
-	(list (T category) (T location unspecified?) (T value) (T length)))
+      (let (({T lt.<lexical-token>} (lt.<lexical-token> ((lt.category: 'woppa)))))
+	(list (T category) ((T location) unspecified?) (T value) (T length)))
     => '(woppa #t #f 0))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexical-token>) (make-it 'category)))
+      (let (({T lt.<lexical-token>} (make-it 'category)))
 	(list (T special?) (T end-of-input?) (T lexer-error?)))
     => '(#f #f #f))
 
   (check
-      (let (((T lt.<lexical-token>) (make-it '*eoi*)))
+      (let (({T lt.<lexical-token>} (make-it '*eoi*)))
 	(list (T special?) (T end-of-input?) (T lexer-error?)))
     => '(#t #t #f))
 
   (check
-      (let (((T lt.<lexical-token>) (make-it '*lexer-error*)))
+      (let (({T lt.<lexical-token>} (make-it '*lexer-error*)))
 	(list (T special?) (T end-of-input?) (T lexer-error?)))
     => '(#t #f #t))
 
@@ -84,14 +84,14 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<end-of-input>) (lt.<end-of-input> ())))
-	(list (T category) (T location unspecified?) (T value) (T length)))
+      (let (({T lt.<end-of-input>} (lt.<end-of-input> ())))
+	(list (T category) ((T location) unspecified?) (T value) (T length)))
     => `(*eoi* #t ,(eof-object) 0))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<end-of-input>) (make-it)))
+      (let (({T lt.<end-of-input>} (make-it)))
 	(list (T special?) (T end-of-input?) (T lexer-error?)))
     => '(#t #t #f))
 
@@ -106,15 +106,15 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexer-error>) (lt.<lexer-error> ((lt.error-message: "darn!")))))
-	(list (T category) (T location unspecified?) (T value) (T length)
+      (let (({T lt.<lexer-error>} (lt.<lexer-error> ((lt.error-message: "darn!")))))
+	(list (T category) ((T location) unspecified?) (T value) (T length)
 	      (T message)))
     => `(*lexer-error* #t #f 0 "darn!"))
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (let (((T lt.<lexer-error>) (make-it)))
+      (let (({T lt.<lexer-error>} (make-it)))
 	(list (T special?) (T lexer-error?) (T end-of-input?)))
     => '(#t #t #f))
 
