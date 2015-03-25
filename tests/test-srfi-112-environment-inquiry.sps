@@ -37,7 +37,7 @@
 (parametrise ((check-test-name	'base))
 
   (when #t
-    (printf "implmentation name and version: ~s ~s\n"
+    (printf "implementation name and version: ~s ~s\n"
 	    (srfi.implementation-name)
 	    (srfi.implementation-version))
     (printf "CPU architecture: ~s, machine name: ~s\n"
