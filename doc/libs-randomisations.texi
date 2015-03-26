@@ -448,6 +448,7 @@ X < 1}.
 
 
 @deffn Parameter random-source-maker
+@cindex Parameter @func{random-source-maker}
 Hold a procedure that can be used to generate a new randomness source.
 It is initialised to @func{make-random-source/mrg32k3a}.  For example,
 it can be used as:
@@ -673,6 +674,7 @@ extracted from the cace vector.
 
 
 @deffn Parameter random-device-cache-length
+@cindex Parameter @func{random-device-cache-length}
 Device--based randomness sources cache read bytes into a bytevector of
 fixed size.  This parameter allows us to select the size at source
 construction time.  It is preset to @math{4096}.
