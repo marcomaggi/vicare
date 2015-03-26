@@ -930,7 +930,6 @@
     (gensym-count				v $language)
     (gensym-prefix				v $language)
     (make-parameter				v $language)
-    (call/cf					v $language)
     (print-error				v $language)
     (interrupt-handler				v $language)
     (engine-handler				v $language)
@@ -1640,6 +1639,9 @@
     (cddddr					v r ba se)
     (call-with-current-continuation		v r ba se)
     (call/cc					v r ba)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Thu Mar 26,
+    ;;2015)
+    (call/cf)
     (call-with-values				v r ba se)
     (ceiling					v r ba se)
 ;;
