@@ -474,7 +474,7 @@ ikarus.config.scm:
 # all the options are set in the script "makefile.sps".
 #
 $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.scm scheme/makefile.sps
-	$(VICARE_BOOT_ENV) $(GDB) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 ## --------------------------------------------------------------------
@@ -1238,22 +1238,22 @@ VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE_NEW_E
 
 test tests:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_TESTS); do echo "running test: $$f" ; $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_TESTS); do echo "running test: $$f"; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 long-test long-tests:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_LONG_TESTS); do echo "running test: $$f" ; $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_LONG_TESTS); do echo "running test: $$f"; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 foreign-test foreign-tests:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_FOREIGN_TESTS); do echo "running test: $$f" ; $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_FOREIGN_TESTS); do echo "running test: $$f"; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 demo demos:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_DEMOS); do echo "running demo: $$f" ; $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_DEMOS); do echo "running demo: $$f"; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 ## --------------------------------------------------------------------
