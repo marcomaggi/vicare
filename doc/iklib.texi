@@ -9744,6 +9744,80 @@ but it is meant to be faster.  It does not check for circular list; it
 processes the input list from head to tail (in order).
 @end defun
 
+
+@defun andmap @var{proc} @var{ell}
+@defunx andmap @var{proc} @vari{ell} @varii{ell}
+Iterate in order the list arguments, applying @var{proc} to the items in
+the lists, left to right.  If @var{proc} returns @false{}: @func{andmap}
+stops the iteration and returns false.  If @var{proc} returns a
+non--false value for all the items from the list arguments:
+@func{andmap} returns the result of the last @var{proc} application.  If
+all the list arguments are null: the return value is @true{}.
+
+When applied to two arguments: @var{proc} must be a function accepting a
+single argument and returning a single value; @var{ell} must be proper
+list (possibly empty).
+
+When applied to three arguments: @var{proc} must be a function accepting
+a two arguments and returning a single value; @vari{ell} and @varii{ell}
+must be proper lists of equal length (possibly empty).
+
+@example
+(andmap (lambda (x) x) '())
+@result{} #t
+
+(andmap (lambda (x) x) '(1 2 3))
+@result{} 3
+
+(andmap (lambda (x) x) '(1 #f 3))
+@result{} #f
+
+(andmap (lambda (x y) (and x y))
+        '() '())
+@result{} #t
+
+(andmap (lambda (x y) (and x y))
+        '(1 2) '(3 4))
+@result{} 4
+
+(andmap (lambda (x y) (and x y))
+        '(1 2) '(3 #f))
+@result{} #f
+@end example
+@end defun
+
+
+@defun ormap @var{proc} @var{ell}
+Iterate in order the list arguments, applying @var{proc} to the items in
+the list argument @var{ell}.  If @var{proc} returns non--false:
+@func{ormap} stops the iteration and returns the non--false value.  If
+@var{proc} returns @false{} for all the items in @var{ell}: @func{ormap}
+returns @false{}.  If @var{ell} is null: the return value is @false{}.
+
+@var{proc} must be a function accepting a single argument and returning
+a single value; @var{ell} must be proper list (possibly empty).
+
+@example
+(ormap (lambda (x) x) '())
+@result{} #f
+
+(ormap (lambda (x) x) '(#f #f #f))
+@result{} #f
+
+(ormap (lambda (x) x) '(#f 123 #f))
+@result{} 123
+
+(ormap (lambda (x) (or x 123)) '())
+@result{} #f
+
+(ormap (lambda (x) (or x 123)) '(1 2 3))
+@result{} 1
+
+(ormap (lambda (x) (or x 123)) '(#f #f 1))
+@result{} 123
+@end example
+@end defun
+
 @c page
 @node iklib bytevectors
 @section Additional bytevector functions
