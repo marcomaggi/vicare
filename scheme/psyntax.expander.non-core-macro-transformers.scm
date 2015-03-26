@@ -3963,22 +3963,20 @@
   ;;
   (syntax-match expr-stx ()
     ((_ (?var ?list-form)              ?body0 ?body* ...)
-     (let ((ell (gensym)))
-       (bless
-	`(let ((,?var '()))
-	   (do ((,ell ,?list-form (cdr ,ell)))
-	       ((null? ,ell))
-	     (set! ,?var (car ,ell))
-	     ,?body0 . ,?body*)))))
+     (bless
+      `(dolist (,?var ,?list-form (void))
+	 ,?body0 . ,?body*)))
     ((_ (?var ?list-form ?result-form) ?body0 ?body* ...)
-     (let ((ell (gensym)))
+     (let ((ell  (gensym "ell"))
+	   (loop (gensym "loop")))
        (bless
-	`(let ((,?var '()))
-	   (do ((,ell ,?list-form (cdr ,ell)))
-	       ((null? ,ell)
-		,?result-form)
-	     (set! ,?var (car ,ell))
-	     ,?body0 . ,?body*)))))
+	`(let ,loop ((,ell ,?list-form))
+	      (if (pair? ,ell)
+		  (let ((,?var (car ,ell)))
+		    ,?body0 ,@?body*
+		    (,loop (cdr ,ell)))
+		(let ((,?var '()))
+		  ,?result-form))))))
     ))
 
 ;;; --------------------------------------------------------------------
