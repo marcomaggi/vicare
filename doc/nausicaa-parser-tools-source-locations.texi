@@ -187,6 +187,7 @@ produce the next column counter's value.
 
 
 @deffn Parameter source-location-tab-function
+@cindex Parameter @func{source-location-tab-function}
 Hold a function used to produce the next column counter's value given
 the current column counter.  By default it is set to
 @func{source-location-tab-function/8chars}.
@@ -210,12 +211,14 @@ compute the return value.
 
 
 @deffn Parameter source-location-tab-table
+@cindex Parameter @func{source-location-tab-table}
 Hold a list of horizontal tabulation offsets, sorted in increasing
 order.  The default value is null.
 @end deffn
 
 
 @deffn Parameter source-location-honor-return
+@cindex Parameter @func{source-location-honor-return}
 Hold a boolean value which causes the @func{update} method to honor a
 @samp{#\return} character or not.
 @end deffn
@@ -232,6 +235,7 @@ source location.  This function always returns the same object.
 
 
 @deffn Parameter unspecified-source-location-string
+@cindex Parameter @func{unspecified-source-location-string}
 Contains a string representation for @class{source-location} objects
 representing an unspecified source location.  It is initialised to
 @samp{"no-source"}.
