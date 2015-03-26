@@ -85,29 +85,30 @@ compute_string_hash (ikptr str, ikptr s_max_len)
 {
   ikptr		len  = IK_UNFIX(IK_REF(str, off_string_length));
   ikchar *	data = IK_STRING_DATA_IKCHARP(str);
-
+  ikchar *	last;
   /* With this initialisation: two strings of different length will have
      different  hash value  even  when  they have  equal  chars used  to
      compute the hash value. */
   ikptr		H    = len;
   /* We  expect  S_MAX_LEN to  be:  false,  true, an  already  validated
      non-negative fixnum. */
-  ikptr		limit;
-  if (IK_FALSE == s_max_len) {
-    limit = HASH_GENERATION_CHARS_LIMIT;
-  } else if (IK_TRUE == s_max_len) {
-    limit = len;
-  } else {
-    limit = IK_UNFIX(s_max_len);
+  {
+    ikptr	limit;
+    if (IK_FALSE == s_max_len) {
+      limit = HASH_GENERATION_CHARS_LIMIT;
+    } else if (IK_TRUE == s_max_len) {
+      limit = len;
+    } else {
+      limit = IK_UNFIX(s_max_len);
+    }
+    last  = data + ((len < limit)? len : limit);
   }
-  ikchar *	last  = data + ((len < limit)? len : limit);
   /* one-at-a-time */
-  while (data < last) {
+  for (; data < last; ++data) {
     ikchar	c = IK_CHAR32_TO_INTEGER(*data);
     H = H + c;
     H = H + (H << 10);
     H = H ^ (H >> 6);
-    data++;
   }
   H = H + (H << 3);
   H = H ^ (H >> 11);
@@ -125,28 +126,30 @@ ikrt_bytevector_hash (ikptr bv, ikptr s_max_len, ikpcb * pcb)
 {
   ikptr		len  = IK_BYTEVECTOR_LENGTH(bv);
   uint8_t *	data = IK_BYTEVECTOR_DATA_UINT8P(bv);
+  uint8_t *	last;
   /* With this initialisation: two  bytevectors of different length will
      have different hash  value even when they have equal  bytes used to
      compute the hash value. */
   ikptr		H    = len;
   /* We  expect  S_MAX_LEN to  be:  false,  true, an  already  validated
      non-negative fixnum. */
-  ikptr		limit;
-  if (IK_FALSE == s_max_len) {
-    limit = HASH_GENERATION_BYTES_LIMIT;
-  } else if (IK_TRUE == s_max_len) {
-    limit = len;
-  } else {
-    limit = IK_UNFIX(s_max_len);
+  {
+    ikptr	limit;
+    if (IK_FALSE == s_max_len) {
+      limit = HASH_GENERATION_BYTES_LIMIT;
+    } else if (IK_TRUE == s_max_len) {
+      limit = len;
+    } else {
+      limit = IK_UNFIX(s_max_len);
+    }
+    last  = data + ((len < limit)? len : limit);
   }
-  uint8_t *	last  = data + ((len < limit)? len : limit);
   /* one-at-a-time */
-  while (data < last) {
+  for (; data < last; ++data) {
     uint8_t	c = *data;
     H = H + c;
     H = H + (H << 10);
     H = H ^ (H >> 6);
-    data++;
   }
   H = H + (H << 3);
   H = H ^ (H >> 11);
