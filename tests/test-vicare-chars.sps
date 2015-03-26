@@ -227,8 +227,13 @@
 
 (parametrise ((check-test-name	'char-not-equal))
 
+  ;;These should test the primitive operation.
   (check-for-true	(char!=? #\A #\B))
   (check-for-false	(char!=? #\A #\A))
+
+  ;;These should test the function rather than the primitive operation.
+  (check-for-true	(apply char!=? #\A '(#\B)))
+  (check-for-false	(apply char!=? #\A '(#\A)))
 
 ;;; --------------------------------------------------------------------
 

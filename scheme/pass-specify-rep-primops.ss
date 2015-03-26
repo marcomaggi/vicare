@@ -3494,6 +3494,7 @@
 				     (nop)))
 				  ))))
    (define-$char-comparison $char=	=)
+   (define-$char-comparison $char!=	!=)
    (define-$char-comparison $char<	<)
    (define-$char-comparison $char<=	<=)
    (define-$char-comparison $char>	>)
@@ -3507,6 +3508,20 @@
     (interrupt))
    ((P a . a*)
     (char-fold-p '= a a*))
+   ((E)
+    (interrupt))
+   ((E a . a*)
+    (assert-chars a a*)))
+
+ (define-primop char!=? safe
+   ((P)
+    (interrupt))
+   ((P a b)
+    (char-fold-p '!= a (list b)))
+   ;;The  case of  3  or  more arguments  *cannot*  be implemented  with
+   ;;CHAR-FOLD-P.
+   ((P a b c . rest*)
+    (interrupt))
    ((E)
     (interrupt))
    ((E a . a*)

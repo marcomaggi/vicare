@@ -1057,6 +1057,7 @@
 ;;;
     ($char?					$chars)
     ($char=					$chars)
+    ($char!=					$chars)
     ($char<					$chars)
     ($char>					$chars)
     ($char<=					$chars)
