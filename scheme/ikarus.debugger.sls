@@ -34,13 +34,17 @@
 
 		  display write newline printf
 		  pretty-print pretty-print* write-char
-		  print-condition)
+		  print-condition
+
+		  ;;FIXME To be  removed after the next boot  image rotation.  (Marco
+		  ;;Maggi; Wed Dec 10, 2014)
+		  call/cf)
     (prefix (only (vicare)
 		  display write newline printf
 		  pretty-print pretty-print* write-char
 		  print-condition)
 	    ikarus.)
-    (vicare language-extensions syntaxes)
+    (only (ikarus control) call/cf)
     (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe capi)
@@ -68,13 +72,6 @@
 (define (trace-expr x)
   (let ((x (trace-src/expr x)))
     (if (pair? x) (cdr x) #f)))
-
-
-;;;; arguments validation
-
-(define-argument-validation (ulong who obj)
-  (words.unsigned-long? obj)
-  (procedure-argument-violation who "expected exact integer representing unsigned long as argument" obj))
 
 
 ;;;; helpers
@@ -143,11 +140,8 @@
 
 ;;;; utilities
 
-(define (integer->machine-word int)
-  (define who 'integer->machine-word)
-  (with-arguments-validation (who)
-      ((ulong int))
-    (foreign-call "ikrt_integer_to_machine_word" int)))
+(define* (integer->machine-word {int words.unsigned-long?})
+  (foreign-call "ikrt_integer_to_machine_word" int))
 
 (define (machine-word->integer w)
   (foreign-call "ikrt_integer_from_machine_word" w))
@@ -156,8 +150,8 @@
 (define (stacked-call pre thunk post)
   (call/cf
    (lambda (cf)
-     ;;CF is  a continuation  object describing  the Scheme  stack frame
-     ;;right after CALL/CF has been called.
+     ;;CF is  a continuation  object describing  the Scheme  stack frame  right after
+     ;;CALL/CF has been called.
      (if (eq? cf (scell-cf *scell*))
 	 (thunk)
        (dynamic-wind
@@ -354,41 +348,46 @@
     (%printf "CALL FRAMES:\n")
     (for-each print-step ls)))
 
-(define (guarded-start proc)
-  (with-exception-handler
-      (lambda (con)
-        (define (enter-debugger con)
-          (define (help)
-            (%printf "Exception trapped by debugger.\n")
-            (print-condition con)
-            (%printf "~a\n"
-		    (string-append
-		     "[t] Trace. "
-		     "[r] Reraise exception. "
-		     "[c] Continue. "
-		     "[q] Quit. "
-		     "[?] Help. ")))
-          (help)
-          ((call/cc
-	       (lambda (k)
-		 (new-cafe
-		  (lambda (x)
-		    (case x
-		      ((R r) (k (lambda () (raise-continuable con))))
-		      ((Q q) (exit 99))
-		      ((T t) (print-all-traces))
-		      ((C c) (k void))
-		      ((?)   (help))
-		      (else (%printf "invalid option\n")))))
-		 void))))
-        (if (serious-condition? con)
-            (enter-debugger con)
-	  (raise-continuable con)))
-    proc))
+(module (guarded-start)
+
+  (define (guarded-start proc)
+    (with-exception-handler
+	(lambda (con)
+	  (if (serious-condition? con)
+	      (enter-debugger con)
+	    (raise-continuable con)))
+      proc))
+
+  (define (enter-debugger con)
+    (help con)
+    ((call/cc
+	 (lambda (k)
+	   (new-cafe
+	    (lambda (x)
+	      (case x
+		((R r) (k (lambda () (raise-continuable con))))
+		((Q q) (exit 99))
+		((T t) (print-all-traces))
+		((C c) (k void))
+		((?)   (help con))
+		(else (%printf "invalid option\n")))))
+	   void))))
+
+  (define (help con)
+    (%printf "Exception trapped by debugger.\n")
+    (print-condition con)
+    (%printf "~a\n"
+	     (string-append "[t] Trace. "
+			    "[r] Reraise exception. "
+			    "[c] Continue. "
+			    "[q] Quit. "
+			    "[?] Help. ")))
+
+  #| end of module: GUARDED-START |# )
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
