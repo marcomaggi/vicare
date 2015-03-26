@@ -386,7 +386,6 @@ CLEANFILES += lib/vicare/language-extensions/namespaces.fasl
 
 lib/vicare/language-extensions/custom-ports.fasl: \
 		lib/vicare/language-extensions/custom-ports.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -603,6 +602,20 @@ dist_lib_vicare_language_extensions_ensure_vicare_sls_DATA = lib/vicare/language
 endif
 EXTRA_DIST += lib/vicare/language-extensions/ensure.vicare.sls
 CLEANFILES += lib/vicare/language-extensions/ensure.fasl
+
+lib/vicare/language-extensions/pipelines.fasl: \
+		lib/vicare/language-extensions/pipelines.vicare.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_pipelines_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_pipelines_vicare_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_pipelines_fasl_DATA = lib/vicare/language-extensions/pipelines.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_pipelines_vicare_sls_DATA = lib/vicare/language-extensions/pipelines.vicare.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/pipelines.vicare.sls
+CLEANFILES += lib/vicare/language-extensions/pipelines.fasl
 
 lib/vicare/language-extensions/conditions-and-restarts.fasl: \
 		lib/vicare/language-extensions/conditions-and-restarts.vicare.sls \
@@ -1571,7 +1584,6 @@ CLEANFILES += lib/vicare/parser-tools/silex/utilities.fasl
 
 lib/vicare/parser-tools/unix-pathnames.fasl: \
 		lib/vicare/parser-tools/unix-pathnames.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -1586,7 +1598,6 @@ CLEANFILES += lib/vicare/parser-tools/unix-pathnames.fasl
 
 lib/vicare/net/channels.fasl: \
 		lib/vicare/net/channels.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		$(FASL_PREREQUISITES)
@@ -4256,7 +4267,6 @@ lib/nausicaa/parser-tools/uri.fasl: \
 		lib/nausicaa/parser-tools/ipv4-addresses.fasl \
 		lib/nausicaa/parser-tools/ipv6-addresses.fasl \
 		lib/vicare/language-extensions/makers.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
@@ -4297,7 +4307,6 @@ lib/nausicaa/uri.fasl: \
 		lib/nausicaa/uri.vicare.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/language-extensions/makers.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/nausicaa/uri/ip.fasl \
 		$(FASL_PREREQUISITES)
@@ -4354,7 +4363,6 @@ endif
 lib/nausicaa/uri/pathnames/unix.fasl: \
 		lib/nausicaa/uri/pathnames/unix.vicare.sls \
 		lib/nausicaa.fasl \
-		lib/vicare/unsafe/operations.fasl \
 		lib/nausicaa/uri/pathnames/abstract.fasl \
 		lib/vicare/parser-tools/unix-pathnames.fasl \
 		$(FASL_PREREQUISITES)

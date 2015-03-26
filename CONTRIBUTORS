@@ -92,6 +92,10 @@
 
      <http://www.ccs.neu.edu/home/will/UWESC/uwesc.sch>
 
+* The   original  version   of  the   macro  in   the  library   (vicare
+  language-extensions pipelines) was posted on comp.lang.scheme by Marko
+  Rauhamaa, thread "Pipeline macro" on Tue, 09 Sep 2014 01:00:47 +0300.
+
 ## ------------------------------------------------------------
 ## Below are the contributors of Ikarus
 

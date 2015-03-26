@@ -18,6 +18,7 @@
 * hooks::                       Running lists of functions.
 * callables::                   Callable objects.
 * c-enums::                     C language flags and flags combinations.
+* pipelines::                   Pipelining expressions.
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
@@ -510,6 +511,7 @@ fixnum generator referenced by @func{amb-random-fixnum-maker}.
 
 
 @deffn Parameter amb-random-fixnum-maker
+@cindex Parameter @func{amb-random-fixnum-maker}
 Hold a procedure accepting a fixnum as single argument: when applied to
 the fixnum @math{N} it must return a fixnum in the range @math{[0, N)}.
 It is initialised with @func{random} from the library @library{vicare},
@@ -3458,6 +3460,93 @@ the enumeration set is bound to @code{value->@meta{name}}.  If this
 function is applied to an integer holding bits outside the ones coded in
 the definition of the enumeration, no error is raised.
 @end deffn
+
+@c page
+@node pipelines
+@section Pipelining expressions
+
+
+@cindex @library{vicare language-extensions pipelines}, library
+@cindex Library @library{vicare language-extensions pipelines}
+
+
+The following bindings are exported by the library @library{vicare
+language-extensions pipelines}.
+
+
+@deffn Syntax pipeline @meta{producer} => @meta{formals} @meta{consumer} @dots{}
+@deffnx {Auxiliary Syntax} =>
+Allow a sequence of producer/consumer expressions to be written with
+simpler and less indented syntax.  The following expansions are
+implemented:
+
+@example
+(pipeline @meta{producer} => @meta{formals} @meta{consumer})
+@expansion{} (call-with-values
+        (lambda () @meta{producer})
+      (lambda @meta{formals} @meta{consumer}))
+
+(pipeline @meta{producer}
+  => @metao{formals}
+  @metao{consumer}
+  => @metai{formals}
+  @metai{consumer})
+@expansion{} (call-with-values
+        (lambda () @meta{producer})
+      (lambda @metao{formals}
+        (call-with-values
+            (lambda () @metao{consumer})
+          (lambda @metai{formals}
+            @metai{consumer}))))
+@end example
+
+The auxiliary syntax @func{=>} is the one exported by
+@rsixlibrary{base}.
+@end deffn
+
+
+Examples:
+
+@example
+(pipeline 1)
+@result{} 1
+
+(pipeline
+  1.2
+  => (x0)
+  (sin x0)
+  => (x1)
+  (cos x1)
+  => (x2)
+  (tan x2)
+  => (x3)
+  x3)
+@equiv{} (tan (cos (sin 1.2)))
+
+(pipeline
+  (values 1 2)
+  => (a0 b0)
+  (values (times10 a0) (times10 b0))
+  => (a1 b1)
+  (values (times10 a1) (times10 b1))
+  => (a2 b2)
+  (values (times10 a2) (times10 b2))
+  => (a3 b3)
+  (list a3 b3))
+@result{} (1000 2000)
+
+(pipeline
+  (values 1 2 3 4)
+  => (a0 b0 . rest0)
+  (apply values (times10 a0) (times10 b0) (map times10 rest0))
+  => (a1 b1 . rest1)
+  (apply values (times10 a1) (times10 b1) (map times10 rest1))
+  => (a2 b2 . rest2)
+  (apply values (times10 a2) (times10 b2) (map times10 rest2))
+  => (a3 b3 . rest3)
+  (cons* a3 b3 rest3))
+@result{} (1000 2000 3000 4000)
+@end example
 
 @c page
 
