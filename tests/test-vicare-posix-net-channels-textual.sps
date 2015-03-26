@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -38,11 +38,14 @@
 
 ;;;; helpers
 
+(define-constant TRAN
+  (make-transcoder (utf-8-codec) (eol-style none)))
+
 (define (make-socket-ports-and-channels)
   (receive (sock1 sock2)
       (px.socketpair AF_LOCAL SOCK_STREAM 0)
-    (let* ((port1 (make-textual-socket-input/output-port sock1 "sock1" (native-transcoder)))
-	   (port2 (make-textual-socket-input/output-port sock2 "sock2" (native-transcoder)))
+    (let* ((port1 (make-textual-socket-input/output-port sock1 "sock1" TRAN))
+	   (port2 (make-textual-socket-input/output-port sock2 "sock2" TRAN))
 	   (chan1 (chan.open-textual-input/output-channel port1 port1))
 	   (chan2 (chan.open-textual-input/output-channel port2 port2)))
       (push-compensation (close-port port1))
