@@ -72,6 +72,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/fasl.texi					\
 	doc/shmem.texi					\
 	doc/binfmt.texi					\
+	doc/notes.texi					\
 	doc/history.texi				\
 	doc/notes.texi					\
 	doc/references.texi
@@ -832,7 +833,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-loops.sps			\
 	tests/test-vicare-language-extensions-makers.sps		\
 	tests/test-vicare-language-extensions-namespaces.sps		\
-	tests/test-vicare-language-extensions-pipeline.sps		\
+	tests/test-vicare-language-extensions-pipelines.sps		\
 	tests/test-vicare-language-extensions-restarts.sps		\
 	tests/test-vicare-language-extensions-sentinels.sps		\
 	tests/test-vicare-language-extensions-simple-match.sps		\

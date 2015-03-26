@@ -167,52 +167,48 @@
 	 (assertion-violation who "not a valid error-handling mode" x))))
 
 
-(define make-transcoder
-  (case-lambda
-   ((codec eol-style handling-mode)
-    (define who 'make-transcoder)
-    ($data->transcoder (%unsafe.fxior (%error-handling-mode->fixnum handling-mode who)
-				      (%eol-style->fixnum	    eol-style     who)
-				      (%codec->fixnum		    codec         who))))
-   ((codec eol-style)
-    (make-transcoder codec eol-style 'replace))
-   ((codec)
-    (make-transcoder codec (native-eol-style) 'replace))))
+(case-define* make-transcoder
+  ((codec eol-style handling-mode)
+   ($data->transcoder (%unsafe.fxior (%error-handling-mode->fixnum handling-mode __who__)
+				     (%eol-style->fixnum	   eol-style     __who__)
+				     (%codec->fixnum		   codec         __who__))))
+  ((codec eol-style)
+   (make-transcoder codec eol-style 'replace))
+  ((codec)
+   (make-transcoder codec (native-eol-style) 'replace)))
 
 (define native-transcoder
-  (make-parameter (make-transcoder 'utf-8-codec (native-eol-style) 'replace)
+  (make-parameter
+      (make-transcoder 'utf-8-codec (native-eol-style) 'replace)
     (lambda (obj)
       (if (transcoder? obj)
 	  obj
 	(assertion-violation 'native-transcoder "expected transcoder value" obj)))))
 
-(define (transcoder-codec x)
-  (define who 'transcoder-codec)
-  (%assert-value-is-transcoder x who)
+(define* (transcoder-codec {x transcoder?})
   (let ((tag (unsafe.fxand ($transcoder->data x) codec-mask)))
     (or (%reverse-alist-lookup tag codec-alist)
-	(assertion-violation who "transcoder has no codec" x))))
+	(assertion-violation __who__ "transcoder has no codec" x))))
 
-(define (transcoder-eol-style x)
-  (define who 'transcoder-eol-style)
-  (%assert-value-is-transcoder x who)
+(define* (transcoder-eol-style {x transcoder?})
   (let ((tag (unsafe.fxand ($transcoder->data x) eol-style-mask)))
     (or (%reverse-alist-lookup tag eol-style-alist)
-	(assertion-violation who "transcoder has no eol-style" x))))
+	(assertion-violation __who__ "transcoder has no eol-style" x))))
 
-(define (transcoder-error-handling-mode x)
-  (define who 'transcoder-error-handling-mode)
-  (%assert-value-is-transcoder x who)
+(define* (transcoder-error-handling-mode {x transcoder?})
+  (%assert-value-is-transcoder x __who__)
   (let ((tag (unsafe.fxand ($transcoder->data x) error-handling-mode-mask)))
     (or (%reverse-alist-lookup tag error-handling-mode-alist)
-	(assertion-violation who "transcoder has no error-handling mode" x))))
+	(assertion-violation __who__ "transcoder has no error-handling mode" x))))
 
 (define (buffer-mode? x)
-  (and (memq x '(none line block)) #t))
+  (case x
+    ((none line block)	#t)
+    (else		#f)))
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

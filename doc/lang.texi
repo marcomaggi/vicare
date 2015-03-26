@@ -3466,12 +3466,12 @@ the definition of the enumeration, no error is raised.
 @section Pipelining expressions
 
 
-@cindex @library{vicare language-extensions pipeline}, library
-@cindex Library @library{vicare language-extensions pipeline}
+@cindex @library{vicare language-extensions pipelines}, library
+@cindex Library @library{vicare language-extensions pipelines}
 
 
 The following bindings are exported by the library @library{vicare
-language-extensions pipeline}.
+language-extensions pipelines}.
 
 
 @deffn Syntax pipeline @meta{producer} => @meta{formals} @meta{consumer} @dots{}

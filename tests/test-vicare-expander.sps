@@ -1231,7 +1231,16 @@
       (with-result
 	(dolist (A '(1 2 3) A)
 	  (add-result A)))
-    => '(3 (1 2 3)))
+    => '(() (1 2 3)))
+
+  (check
+      (with-result
+	(let ((rv #f))
+	(dolist (A '(1 2 3) rv)
+	  (add-result A)
+	  (when (even? A)
+	    (set! rv A)))))
+    => '(2 (1 2 3)))
 
   (check
       (with-result

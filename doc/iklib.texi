@@ -1321,6 +1321,33 @@ If @meta{list-expr} returns null and @meta{result-expr} is present: when
 
 This syntax meant to be similar to the Common Lisp syntax of the same
 name.
+
+@lisp
+(import (vicare) (vicare checks))
+
+(with-result
+  (dolist (A '(1 2 3))
+    (add-result A)))
+@result{} (#!void (1 2 3))
+
+(with-result
+  (dolist (A '(1 2 3) A)
+    (add-result A)))
+@result{} (() (1 2 3))
+
+(with-result
+  (let ((rv #f))
+    (dolist (A '(1 2 3) rv)
+      (add-result A)
+      (when (even? A)
+        (set! rv A)))))
+@result{} (2 (1 2 3))
+
+(with-result
+  (dolist (A '() A)
+    (add-result A)))
+@result{} (() ())
+@end lisp
 @end deffn
 
 @c page
@@ -5552,8 +5579,8 @@ Return true if @var{obj} is a condition object with type
 
 
 @defun source-position-port-id @var{spos}
-@defunx source-position-character @var{spos}
 @defunx source-position-byte @var{spos}
+@defunx source-position-character @var{spos}
 @defunx source-position-line @var{spos}
 @defunx source-position-column @var{spos}
 Accessors for the fields of condition objects of type
