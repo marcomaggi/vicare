@@ -18,11 +18,20 @@
   (export make-parameter)
   (import (except (vicare) make-parameter))
   (define make-parameter
+    ;;The  actual  implementation of  MAKE-PARAMETER  is  weirdly integrated  in  the
+    ;;compiler.  The forms below with format:
+    ;;
+    ;;   (make-parameter ?arg ...)
+    ;;
+    ;;are expanded by the compiler with the actual implementation.
+    ;;
     (let ()
       (import (vicare))
       (case-lambda
-        ((x guard) (make-parameter x guard))
-        ((x) (make-parameter x))))))
+        ((x guard)
+	 (make-parameter x guard))
+        ((x)
+	 (make-parameter x))))))
 
 (library (ikarus.pointer-value)
   (export pointer-value)
@@ -106,58 +115,6 @@
       (if (procedure? x)
 	  x
 	(assertion-violation 'engine-handler "not a procedure" x)))))
-
-
-;;;; commented out because unused
-;;
-;;These where  defined and exported  by the original Ikarus  code.  They
-;;appear to be unused.  (Marco Maggi; Nov  3, 2011)
-;;
-
-;; (define $debug
-;;   (lambda (x)
-;;     (foreign-call "ik_error" (cons "DEBUG" x))))
-
-;; (define $underflow-misaligned-error
-;;   (lambda ()
-;;     (foreign-call "ik_error" "misaligned")))
-
-;; (define car-error
-;;   (lambda (x)
-;;     (assertion-violation 'car "not a pair" x)))
-
-;; (define cdr-error
-;;   (lambda (x)
-;;     (assertion-violation 'cdr "not a pair" x)))
-
-;; (define fxadd1-error
-;;   (lambda (x)
-;;     (if (fixnum? x)
-;; 	(assertion-violation 'fxadd1 "overflow")
-;;       (assertion-violation 'fxadd1 "not a fixnum" x))))
-
-;; (define fxsub1-error
-;;   (lambda (x)
-;;     (if (fixnum? x)
-;; 	(assertion-violation 'fxsub1 "underflow")
-;;       (assertion-violation 'fxsub1 "not a fixnum" x))))
-
-;; (define cadr-error
-;;   (lambda (x)
-;;     (assertion-violation 'cadr "invalid list structure" x)))
-
-;; (define fx+-type-error
-;;   (lambda (x)
-;;     (assertion-violation 'fx+ "not a fixnum" x)))
-
-;; (define fx+-types-error
-;;   (lambda (x y)
-;;     (assertion-violation 'fx+ "not a fixnum"
-;; 	 (if (fixnum? x) y x))))
-
-;; (define fx+-overflow-error
-;;   (lambda (x y)
-;;     (assertion-violation 'fx+ "overflow")))
 
 
 ;;;; done
