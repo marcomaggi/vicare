@@ -473,7 +473,7 @@ ikarus.config.scm:
 # the command  line options selected  by AX_VFLAGS and  VFLAGS; rather
 # all the options are set in the script "makefile.sps".
 #
-$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.scm scheme/makefile.sps
+$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) ikarus.config.scm scheme/makefile.sps
 	$(VICARE_BOOT_ENV) $(GDB) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
@@ -481,7 +481,7 @@ $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.scm scheme/makefile
 
 .PHONY: boot-image-32-bit boot-image-64-bit
 
-boot-image-32-bit: vicare
+boot-image-32-bit:
 	echo '(define vicare-version "$(PACKAGE_VERSION)")'				>ikarus.config.scm
 	echo '(define vicare-lib-dir "$(pkglibdir)")'					>>ikarus.config.scm
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'				>>ikarus.config.scm
@@ -504,7 +504,7 @@ boot-image-32-bit: vicare
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
-boot-image-64-bit: vicare
+boot-image-64-bit:
 	echo '(define vicare-version "$(PACKAGE_VERSION)")'				>ikarus.config.scm
 	echo '(define vicare-lib-dir "$(pkglibdir)")'					>>ikarus.config.scm
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'				>>ikarus.config.scm
@@ -549,7 +549,7 @@ boot-image-64-bit: vicare
 #
 # but keep backups of the original one!!!
 #
-try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
+try-vicare-boot: $(VICARE_BOOT_SRCS) ikarus.config.ss
 	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
@@ -571,7 +571,7 @@ VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
 			  --library-locator compile-time --build-directory $(fasldir)
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
 
-FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
+FASL_PREREQUISITES	= $(VICARE_NEW_BOOT) vicare
 
 ## --------------------------------------------------------------------
 
