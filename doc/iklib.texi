@@ -5753,6 +5753,14 @@ condition object type.
 @end example
 @end deffn
 
+
+@defun print-condition @var{cnd}
+@defunx print-condition @var{cnd} @var{port}
+Print a human readable serialisation of a condition object to the given
+@var{port}, which must be a textual output port.  When not given:
+@var{port} defaults to the return value of @code{(console-error-port)}.
+@end defun
+
 @c page
 @node iklib reader
 @section Reader
