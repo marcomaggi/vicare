@@ -736,7 +736,7 @@
 	((integer? specifier) (test-match-nth 1 specifier))
 	((string? specifier) (test-match-name specifier))
 	(else
-	 (error "not a valid test specifier"))))
+	 (error #f "not a valid test specifier"))))
 
 (define-syntax test-skip
   (syntax-rules ()
