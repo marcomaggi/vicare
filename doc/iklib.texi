@@ -9460,6 +9460,18 @@ ranges acceptable by Unicode code points; otherwise return @false{}.
 @end defun
 
 
+@deffn Procedure {char!=?} @vari{char} @varii{char} @variii{char} @dots{}
+The arguments must be characters.  Return @true{} if the arguments are
+all different; otherwise return @false{}.
+@end deffn
+
+
+@deffn Procedure {char-ci!=?} @vari{char} @varii{char} @variii{char} @dots{}
+Like @func{char!=?} but operate on the case--folded versions of the
+arguments.
+@end deffn
+
+
 @defun list-of-chars? @var{obj}
 Return @true{} if @var{obj} is null or a proper list of chars; otherwise
 return @false{}.

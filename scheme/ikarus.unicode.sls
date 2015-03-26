@@ -27,7 +27,7 @@
     char-whitespace? char-lower-case? char-upper-case?
     char-title-case?  char-numeric?
     char-alphabetic? char-general-category char-ci<? char-ci<=?
-    char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
+    char-ci=? char-ci!=? char-ci>? char-ci>=? string-upcase string-downcase
     string-foldcase string-titlecase  string-ci<? string-ci<=?
     string-ci=? string-ci>? string-ci>=? string-normalize-nfd
     string-normalize-nfkd string-normalize-nfc string-normalize-nfkc )
@@ -37,10 +37,25 @@
 		  char-whitespace? char-lower-case? char-upper-case?
 		  char-title-case?  char-numeric?
 		  char-alphabetic? char-general-category char-ci<? char-ci<=?
-		  char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
+		  char-ci=? char-ci!=? char-ci>? char-ci>=? string-upcase string-downcase
 		  string-foldcase string-titlecase  string-ci<? string-ci<=?
 		  string-ci=? string-ci>? string-ci>=? string-normalize-nfd
-		  string-normalize-nfkd string-normalize-nfc string-normalize-nfkc))
+		  string-normalize-nfkd string-normalize-nfc string-normalize-nfkc
+
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sat Nov 22, 2014)
+		  char!=? list-of-chars?)
+    (vicare system $pairs)
+    (except (vicare system $chars)
+	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Wed Mar 25, 2015)
+	    $char!=)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
+    ;;2014)
+    (only (ikarus chars)
+	  list-of-chars?
+	  char!=?
+	  $char!=))
 
 
 
@@ -88,7 +103,7 @@
    char-whitespace? char-lower-case? char-upper-case?
    char-title-case?  char-numeric?
    char-alphabetic? char-general-category char-ci<? char-ci<=?
-   char-ci=? char-ci>? char-ci>=? string-upcase string-downcase
+   char-ci=? char-ci!=? char-ci>? char-ci>=? string-upcase string-downcase
    string-foldcase string-titlecase  string-ci<? string-ci<=?
    string-ci=? string-ci>? string-ci>=? string-normalize-nfd
    string-normalize-nfkd string-normalize-nfc string-normalize-nfkc)
@@ -164,6 +179,34 @@
 (define-char-cmp char-ci=? char=?)
 (define-char-cmp char-ci>? char>?)
 (define-char-cmp char-ci>=? char>=?)
+
+(case-define* char-ci!=?
+  (({ch1 char?} {ch2 char?})
+   ($char!= ($char-foldcase ch1) ($char-foldcase ch2)))
+
+  (({ch1 char?} {ch2 char?} {ch3 char?})
+   (let ((ch1 ($char-foldcase ch1))
+	 (ch2 ($char-foldcase ch2))
+	 (ch3 ($char-foldcase ch3)))
+     (and ($char!= ch1 ch2)
+	  ($char!= ch2 ch3)
+	  ($char!= ch3 ch1))))
+
+  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+   ;;We must compare every argument to all the other arguments.
+   (let outer-loop ((chX    ($char-foldcase ch1))
+		    (char*  (cons* ($char-foldcase ch2)
+				   ($char-foldcase ch3)
+				   ($char-foldcase ch4)
+				   (map $char-foldcase char*))))
+     (let inner-loop ((chX    chX)
+		      (char^* char*))
+       (cond ((pair? char^*)
+	      (and ($char!= chX ($car char^*))
+		   (inner-loop chX ($cdr char^*))))
+	     ((pair? char*)
+	      (outer-loop (car char*) (cdr char*)))
+	     (else #t))))))
 
 (define (handle-special str ac)
   (define (chars ac n)

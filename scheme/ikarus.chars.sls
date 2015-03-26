@@ -18,13 +18,18 @@
 (library (ikarus chars)
   (export
     char->integer		integer->char
-    char=?
+    char=?			char!=?
     char<?			char<=?
     char>?			char>=?
+
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
+    ;;2014)
+    $char!=
+
     char-in-ascii-range?	list-of-chars?)
   (import (except (vicare)
 		  char->integer		integer->char
-		  char=?
+		  char=?		char!=?
 		  char<?		char<=?
 		  char>?		char>=?
 		  char-in-ascii-range?	list-of-chars?)
@@ -84,6 +89,38 @@
 (define-comparison char<=?	$char<=)
 (define-comparison char>?	$char>)
 (define-comparison char>=?	$char>=)
+
+(case-define* char!=?
+  (({ch1 char?} {ch2 char?})
+   ($char!= ch1 ch2))
+
+  (({ch1 char?} {ch2 char?} {ch3 char?})
+   (and ($char!= ch1 ch2)
+	($char!= ch2 ch3)
+	($char!= ch3 ch1)))
+
+  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
+   ;;We must compare every argument to all the other arguments.
+   (let outer-loop ((chX    ch1)
+		    (char*  (cons* ch2 ch3 ch4 char*)))
+     (let inner-loop ((chX    chX)
+		      (char^* char*))
+       (cond ((pair? char^*)
+	      (and ($char!= chX ($car char^*))
+		   (inner-loop chX ($cdr char^*))))
+	     ((pair? char*)
+	      (outer-loop (car char*) (cdr char*)))
+	     (else #t))))))
+
+(define ($char!= ch1 ch2)
+  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
+  ;;implementation must be changed to:
+  ;;
+  ;;   (import (prefix (vicare system $chars) sys.))
+  ;;   (sys.$char!= ch1 ch2)
+  ;;
+  ;;(Marco Maggi; Wed Mar 25, 2015)
+  (not ($char= ch1 ch2)))
 
 
 ;;;; miscellaneous functions
