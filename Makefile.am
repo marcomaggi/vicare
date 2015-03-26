@@ -549,7 +549,7 @@ boot-image-64-bit:
 #
 # but keep backups of the original one!!!
 #
-try-vicare-boot: $(VICARE_BOOT_SRCS) ikarus.config.ss
+try-vicare-boot: $(VICARE_BOOT_SRCS) ikarus.config.scm
 	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
