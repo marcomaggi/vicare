@@ -420,7 +420,7 @@
   ;;  primitive as machine code.
   ;;
   ;;*  Primitive  operations.  There  exist  functions  that  the compiler  calls  to
-  ;;  integrate assembly instructions implemented the core primitive.
+  ;;  integrate assembly instructions implementing the core primitive.
   ;;
   ;;When the core primitive is used as argument as in:
   ;;
@@ -440,7 +440,10 @@
   ;;exception.
   ;;
   ;;Such exception-raising routines are the  ones below; they are called ERROR@?PRIM,
-  ;;where ?PRIM is the name of the core primitive.
+  ;;where ?PRIM is  the name of the  core primitive.  Notice that,  upon entering the
+  ;;routine, we do not  know which error triggered the call,  so we check everything:
+  ;;first we validate the  operands as fixnums, if they are it means  the error is an
+  ;;overflow.
   ;;
   (define (make-fx-error who)
     (case-lambda
