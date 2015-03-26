@@ -5778,15 +5778,23 @@ a variety of ways including:
 
 @itemize
 @item
+@cindex @code{#!eof}
 End--of--file marker, @code{#!eof}.
 
 @item
+@cindex @code{#!void}
+Void object, @code{#!void}.
+
+@item
+@cindex @code{#!would-block}
 Would--block object, @code{#!would-block}.
 
 @item
+@cindex @code{#!unbound}
 Unbound object, @code{#!unbound}.
 
 @item
+@cindex @code{#!bwp}
 @acronym{BWP} object, @code{#!bwp}.
 
 @item
