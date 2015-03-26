@@ -303,12 +303,20 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{SAX}
 @end macro
 
+@macro scc{}
+@acronym{SCC}
+@end macro
+
 @macro ssax{}
 @acronym{SSAX}
 @end macro
 
 @macro sxml{}
 @acronym{SXML}
+@end macro
+
+@macro wsd{}
+@acronym{WSD}
 @end macro
 
 @c page
