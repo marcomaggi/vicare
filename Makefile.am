@@ -72,6 +72,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/fasl.texi					\
 	doc/shmem.texi					\
 	doc/binfmt.texi					\
+	doc/notes.texi					\
 	doc/history.texi				\
 	doc/references.texi
 

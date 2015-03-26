@@ -248,6 +248,7 @@ Appendices
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
 * binfmt::                      Launching programs directly on @gnu{}+Linux.
+* notes::                       Miscellaneous notes on everything.
 * Package License::             @gnu{} General Public License.
 * history::                     History.
 * references::                  Bibliography and references.
@@ -299,6 +300,7 @@ External documents
 @include fasl.texi
 @include shmem.texi
 @include binfmt.texi
+@include notes.texi
 
 @include gpl-3.0.texi
 @include history.texi
