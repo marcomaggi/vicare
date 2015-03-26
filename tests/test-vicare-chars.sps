@@ -961,6 +961,11 @@
   (check (char-in-ascii-range? #\c)	=> #t)
   (check (char-in-ascii-range? #\x5555)	=> #f)
 
+;;; --------------------------------------------------------------------
+
+  (check-for-true	(unicode-printable-char? #\a))
+  (check-for-false	(unicode-printable-char? #\x00))
+
   #t)
 
 

@@ -9460,6 +9460,13 @@ ranges acceptable by Unicode code points; otherwise return @false{}.
 @end defun
 
 
+@defun unicode-printable-char? @var{ch}
+Return @true{} if @var{ch} is a character and it is printable; if
+@var{ch} is not printable: return @false{}; if @var{ch} is not a
+character: raise an exception.
+@end defun
+
+
 @deffn Procedure {char!=?} @vari{char} @varii{char} @variii{char} @dots{}
 The arguments must be characters.  Return @true{} if the arguments are
 all different; otherwise return @false{}.
