@@ -1238,22 +1238,22 @@ VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(VICARE_NEW_E
 
 test tests:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_TESTS); do $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_TESTS); do echo "running test: $$f" ; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 long-test long-tests:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_LONG_TESTS); do $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_LONG_TESTS); do echo "running test: $$f" ; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 foreign-test foreign-tests:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_FOREIGN_TESTS); do $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_FOREIGN_TESTS); do echo "running test: $$f" ; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 demo demos:
 	@echo
-	@for f in $(VICARE_TEST_SELECTED_DEMOS); do $(VICARE_TEST_RUN) $$f; done
+	@for f in $(VICARE_TEST_SELECTED_DEMOS); do echo "running demo: $$f" ; $(VICARE_TEST_RUN) $$f; done
 	@echo
 
 ## --------------------------------------------------------------------
