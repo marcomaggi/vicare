@@ -40,12 +40,14 @@ make-weak-hashtable}.
 
 
 @deffn Parameter object-property-initial-capacity
+@cindex Parameter @func{object-property-initial-capacity}
 An integer representing the suggested initial number of buckets in the
 hashtable.  The default value is @math{16}.
 @end deffn
 
 
 @deffn Parameter object-property-default-value
+@cindex Parameter @func{object-property-default-value}
 The value to return if the property is queried for an object that was
 not registered before.  The default value is the one bound to
 @code{sentinel} exported by @library{vicare language-extensions
