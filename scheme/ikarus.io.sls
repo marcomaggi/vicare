@@ -45,17 +45,19 @@
 ;;by the compiler.
 ;;
 ;;Constructor: $make-port ATTRS IDX SZ BUF TR ID READ WRITE GETP SETP CL COOKIE
-;;Aguments: IDX		- index in input/output buffer,
-;;	    SZ		- number of octets/chars used in the input/output buffer,
-;;          BUF		- input/output buffer,
-;;          TR		- transcoder
-;;          ID		- a Scheme string describing the underlying device
-;;          READ	- read procedure
-;;          WRITE	- write procedure
-;;          GETP	- get-position procedure
-;;          SETP	- set-position procedure
-;;          CL		- close procedure
-;;          COOKIE	- device, position, line and column tracking
+;;Arguments:
+;;	ATTRS	- attributes as fixnum
+;;	IDX	- index in input/output buffer,
+;;	SZ	- number of octets/chars used in the input/output buffer,
+;;      BUF	- input/output buffer,
+;;      TR	- a boolean or a transcoder object
+;;      ID	- a Scheme string describing the underlying device
+;;      READ	- read procedure
+;;      WRITE	- write procedure
+;;      GETP	- get-position procedure
+;;      SETP	- set-position procedure
+;;      CL	- close procedure
+;;      COOKIE	- device, position, line and column tracking
 ;;  Build a new port structure and return a Scheme value referencing it.
 ;;  Notice  that the  underlying  device is  not  among the  constructor
 ;;  arguments: it is  stored in the cookie and  implicitly referenced by
@@ -184,9 +186,23 @@
 ;;
 ;;Field name: transcoder
 ;;Field accessor: $port-transcoder PORT
-;;  A value  of disjoint type  returned by MAKE-TRANSCODER.   It encodes
-;;  the  Unicode  codec, the  end-of-line  conversion  sytle, the  error
-;;  handling modes for errors in the serialisation of characters.
+;;  A  boolean  (#t,  #f)  or  a value  of  disjoint  type  returned  by
+;;  MAKE-TRANSCODER.   It is  #f for  a  binary port.   It is  #t for  a
+;;  textual port having a string buffer.  It is a transcoder for textual
+;;  ports for which  a transcoder is explicitly selected  or selected by
+;;  default.
+;;
+;;  It is #t for the ports created by:
+;;
+;;	make-custom-textual-input-port
+;;	make-custom-textual-output-port
+;;	open-string-input-port
+;;	open-string-input-port/id
+;;	open-string-output-port
+;;
+;;  When a  transcoder: it  encodes the  Unicode codec,  the end-of-line
+;;  conversion  sytle,  the  error  handling modes  for  errors  in  the
+;;  serialisation of characters.
 ;;
 ;;Field name: id
 ;;Field accessor: $port-id
@@ -2721,7 +2737,7 @@
 	     ;;   ^       ^                             ^
 	     ;;   0     index                     used-size = size
 	     ;;
-	     (values))
+	     (void))
 	    (else
 	     ;;If  PORT does  not  support the  set  port position  (for
 	     ;;example:  it is  a  network socket),  we  just reset  the
@@ -2789,7 +2805,7 @@
 	     ;;   ^       ^                             ^
 	     ;;   0     index                     used-size = size
 	     ;;
-	     (values))
+	     (void))
 	    (else
 	     ;;If  PORT does  not  support the  set  port position  (for
 	     ;;example:  it is  a  netword socket),  we  just reset  the
@@ -3688,7 +3704,7 @@
 	     (buffer		($make-string (string-port-buffer-size))
 				#;(make-string (string-port-buffer-size) #\Z))
 	     (identifier	"*string-output-port*")
-	     (transcoder	#f)
+	     (transcoder	#t)
 	     (read!		#f)
 	     (get-position	#t)
 	     (close		#f))
@@ -3840,8 +3856,8 @@
   ;;
   (define who 'transcoded-port)
   (with-arguments-validation (who)
-      ((port				port)
-       (transcoder			transcoder)
+      ((port			port)
+       (transcoder		transcoder)
        ($binary-port		port)
        ($open-port		port)
        ($not-input/output-port	port))
@@ -7611,7 +7627,7 @@
       (%doit port ch code-point who)
     (case (transcoder-error-handling-mode (port-transcoder port))
       ((ignore)
-       (values))
+       (void))
       ((replace)
        (%doit port ch (char->integer #\?) who))
       ((raise)
