@@ -1163,7 +1163,12 @@ a procedure; it should accept one more argument than there are
 
 The @func{fold-left} procedure iterates the @var{combine} procedure over
 an accumulator value and the elements of the @var{list}s from left to
-right, starting with an accumulator value of @var{nil}.
+right, starting with an accumulator value of @var{nil}.  @var{combine}
+must have signature:
+
+@example
+(lambda (nil item0 item ...) . @meta{body})
+@end example
 
 More specifically, @func{fold-left} returns @var{nil} if the @var{list}s
 are empty.  If they are not empty, @var{combine} is first applied to
@@ -1223,7 +1228,12 @@ the @var{list} arguments.
 
 The @func{fold-right} procedure iterates the @var{combine} procedure
 over the elements of the @var{list}s from right to left and an
-accumulator value, starting with an accumulator value of @var{nil}.
+accumulator value, starting with an accumulator value of @var{nil};
+@var{combine} must have signature:
+
+@example
+(lambda (item0 item ... nil) . @meta{body})
+@end example
 
 More specifically, @func{fold-right} returns @var{nil} if the
 @var{list}s are empty.  If they are not empty, @var{combine} is first
@@ -1243,6 +1253,12 @@ returned.
 
 (fold-right cons '() '(1 2 3 4 5))
 @result{} (1 2 3 4 5)
+
+(fold-right (lambda (item knil)
+              (cons item knil))
+  '()
+  '(1 2 3 4))
+@result{} (1 2 3 4)
 
 (fold-right (lambda (x l)
               (if (odd? x) (cons x l) l))
@@ -3755,7 +3771,7 @@ This condition type could be defined by:
 
 This condition type describes an I/O error that occurred during an
 operation on a named file.  @var{filename} should be the name of the
-file.
+file, a Scheme string object.
 @end deffn
 
 
@@ -4137,7 +4153,7 @@ invalid encoding.
 
 @tindex &i/o-encoding
 @deffn {Condition Type} {&i/o-encoding}
-@deffnx Procedure {make-i/o-encoding-error} @var{pobj} @var{cobj}
+@deffnx Procedure {make-i/o-encoding-error} @var{port} @var{char}
 @deffnx Procedure {i/o-encoding-error?} @var{obj}
 @deffnx Procedure {i/o-encoding-error-char} @var{condition}
 This condition type could be defined by:
@@ -4151,7 +4167,7 @@ This condition type could be defined by:
 An exception with this type is raised when one of the operations for
 textual output to a port encounters a character that cannot be
 translated into bytes by the output direction of the port's transcoder.
-@var{cobj} is the character that could not be encoded.
+@var{char} is the character that could not be encoded.
 @end deffn
 
 
