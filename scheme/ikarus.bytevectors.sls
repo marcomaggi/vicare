@@ -293,7 +293,7 @@
 
 (define-syntax (%case-endianness stx)
   (module (platform-endianness)
-    (include "ikarus.config.ss" #t))
+    (include "ikarus.config.scm" #t))
   (syntax-case stx (big little)
     ((_ ((big) ?big-stuff) ((little) ?little-stuff))
      (case platform-endianness
@@ -466,7 +466,7 @@
 (define-syntax (preconditions stx)
   (module (vicare-built-with-arguments-validation-enabled)
     (module (arguments-validation)
-      (include "ikarus.config.ss" #t))
+      (include "ikarus.config.scm" #t))
     (define (vicare-built-with-arguments-validation-enabled)
       arguments-validation)
     #| end of module |# )
@@ -681,7 +681,7 @@
   ;;may be any endianness symbol, including a symbol other than "big" and "little".
   ;;
   (module (platform-endianness)
-    (include "ikarus.config.ss" #t))
+    (include "ikarus.config.scm" #t))
   platform-endianness)
 
 (case-define* make-bytevector

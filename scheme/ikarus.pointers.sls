@@ -325,7 +325,7 @@
 	    words.))
 
   (module (arguments-validation)
-    (include "ikarus.config.ss"))
+    (include "ikarus.config.scm"))
 
 
 ;;;; arguments validation

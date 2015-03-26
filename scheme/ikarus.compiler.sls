@@ -123,7 +123,7 @@
 	  $struct-ref $struct/rtd?)
     ;;When building a new boot image: the FASL write library is loaded from source.
     ;;This needs to be loaded here so that it evaluates with the freshly loaded
-    ;;"ikarus.config.ss", including the correct value for WORDSIZE.
+    ;;"ikarus.config.scm", including the correct value for WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler))

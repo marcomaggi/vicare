@@ -951,7 +951,7 @@
 		 (else '()))
 	   (let ()
 	     (module (target-os-uid vicare-lib-dir)
-	       (include "ikarus.config.ss"))
+	       (include "ikarus.config.scm"))
 	     (case target-os-uid
 	       ((linux bsd darwin cygwin)
 		(list vicare-lib-dir))

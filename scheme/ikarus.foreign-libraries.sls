@@ -79,7 +79,7 @@
   (define-inline (%make-libname-cygwin id)	(string-append id ".dll"))
   (define-inline (%make-libname-darwin id)	(string-append "lib" id ".dylib"))
   (module (target-os-uid)
-    (include "ikarus.config.ss"))
+    (include "ikarus.config.scm"))
   (let* ((libname	(case target-os-uid
 			  ((linux)	(%make-libname-unix   libid))
 			  ((bsd)	(%make-libname-bsd    libid))

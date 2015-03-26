@@ -184,7 +184,7 @@
 	   VICARE_BUILT_WITH_POSIX_ENABLED
 	   VICARE_BUILT_WITH_GLIBC_ENABLED
 	   VICARE_BUILT_WITH_LINUX_ENABLED)
-    (include "ikarus.config.ss" #t))
+    (include "ikarus.config.scm" #t))
   (define (vicare-built-with-arguments-validation-enabled)
     arguments-validation)
   (define (vicare-built-with-srfi-enabled)	VICARE_BUILT_WITH_SRFI_ENABLED)

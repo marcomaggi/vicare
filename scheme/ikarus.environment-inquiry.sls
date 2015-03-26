@@ -58,7 +58,7 @@
 
 		  host-info))
 
-  (include "ikarus.config.ss")
+  (include "ikarus.config.scm")
 
 
 ;;;; implementation
