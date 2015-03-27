@@ -22,18 +22,28 @@
     char<?			char<=?
     char>?			char>=?
 
+    chmax			chmin
+
+    char-in-ascii-range?	list-of-chars?
+
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
     ;;2014)
     $char!=
 
-    char-in-ascii-range?	list-of-chars?)
+
+    ;; unsafe operations for (vicare system $chars)
+    $chmax			$chmin)
   (import (except (vicare)
 		  char->integer		integer->char
 		  char=?		char!=?
 		  char<?		char<=?
 		  char>?		char>=?
+		  chmax			chmin
 		  char-in-ascii-range?	list-of-chars?)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (except (vicare system $chars)
+	    $chmax
+	    $chmin)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
 	  define-min/max-comparison
@@ -79,6 +89,22 @@
   ;;
   ;;(Marco Maggi; Wed Mar 25, 2015)
   (not ($char= ch1 ch2)))
+
+
+;;;; min max
+
+(define-min/max-comparison chmax $chmax char? list-of-chars?)
+(define-min/max-comparison chmin $chmin char? list-of-chars?)
+
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
+;;
+(define ($chmin ch1 ch2)
+  (if ($char< ch1 ch2) ch1 ch2))
+
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
+;;
+(define ($chmax ch1 ch2)
+  (if ($char< ch1 ch2) ch2 ch1))
 
 
 ;;;; miscellaneous functions

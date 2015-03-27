@@ -892,6 +892,37 @@
   #t)
 
 
+(parametrise ((check-test-name	'min-max))
+
+  (check (chmin #\A)			=> #\A)
+
+  (check (chmin #\a #\a)		=> #\a)
+  (check (chmin #\a #\b)		=> #\a)
+  (check (chmin #\b #\a)		=> #\a)
+
+  (check (chmin #\a #\b #\c)		=> #\a)
+
+  (check (chmin #\a #\b #\c #\d)	=> #\a)
+
+  (check (chmin #\a #\b #\c #\d #\e)	=> #\a)
+
+;;; --------------------------------------------------------------------
+
+  (check (chmax #\A)			=> #\A)
+
+  (check (chmax #\a #\a)		=> #\a)
+  (check (chmax #\a #\b)		=> #\b)
+  (check (chmax #\b #\a)		=> #\b)
+
+  (check (chmax #\a #\b #\c)		=> #\c)
+
+  (check (chmax #\a #\b #\c #\d)	=> #\d)
+
+  (check (chmax #\a #\b #\c #\d #\e)	=> #\e)
+
+  #t)
+
+
 (parametrise ((check-test-name	'unsafe))
 
   (check

@@ -5023,6 +5023,9 @@ arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
 not in the range @code{[#xD800, #xDFFF]}.  The following bindings are
 exported by the library @library{vicare system $chars}.
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
 
 @deffn {Unsafe Operation} $char= @vari{ch} @varii{ch}
 Evaluate to true if the operands are equal.
@@ -5054,6 +5057,15 @@ Evaluate to true if the @vari{ch} is greater than or equal to
 @varii{ch}.
 @end deffn
 
+
+@defun $chmin @vari{ch} @varii{ch}
+@defunx $chmax @vari{ch} @varii{ch}
+Return the minimum or maximum character among the arguments.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Conversion
 
 @deffn {Unsafe Operation} $fixnum->char @var{fx}
 Return a new character value whose code point equals @var{fx}.

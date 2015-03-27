@@ -1061,6 +1061,8 @@
     ($char>					$chars)
     ($char<=					$chars)
     ($char>=					$chars)
+    ($chmax					$chars)
+    ($chmin					$chars)
     ($char->fixnum				$chars)
     ($fixnum->char				$chars)
 ;;;
@@ -1654,6 +1656,8 @@
     (char>=?					v r ba se)
     (char>?					v r ba se)
     (char?					v r ba se)
+    (chmin					v $language)
+    (chmax					v $language)
     (list-of-chars?				v $language)
     (char-in-ascii-range?			v $language)
     (fixnum-in-character-range?			v $language)

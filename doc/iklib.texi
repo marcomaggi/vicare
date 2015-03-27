@@ -9493,6 +9493,15 @@ Return @true{} if @var{obj} is a promise object returned by
 
 The following bindings are exported by the library @library{vicare}.
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Predicates
+
+@defun list-of-chars? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of chars; otherwise
+return @false{}.
+@end defun
+
 
 @defun char-in-ascii-range? @var{obj}
 Evaluate to @true{} if @meta{obj} is a character and its Unicode code
@@ -9512,6 +9521,9 @@ Return @true{} if @var{ch} is a character and it is printable; if
 character: raise an exception.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
 
 @deffn Procedure {char!=?} @vari{char} @varii{char} @variii{char} @dots{}
 The arguments must be characters.  Return @true{} if the arguments are
@@ -9525,9 +9537,9 @@ arguments.
 @end deffn
 
 
-@defun list-of-chars? @var{obj}
-Return @true{} if @var{obj} is null or a proper list of chars; otherwise
-return @false{}.
+@defun chmin @varo{ch} @var{ch} @dots{}
+@defunx chmax @varo{ch} @var{ch} @dots{}
+Return the minimum or maximum character among the arguments.
 @end defun
 
 @c page
