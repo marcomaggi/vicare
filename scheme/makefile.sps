@@ -1905,6 +1905,7 @@
     (fxnegative?				v r fx)
     (fxnonpositive?				v $language)
     (fxnonnegative?				v $language)
+    (non-zero-fixnum?				v $language)
     (positive-fixnum?				v $language)
     (negative-fixnum?				v $language)
     (non-negative-fixnum?			v $language)

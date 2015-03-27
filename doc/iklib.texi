@@ -10950,6 +10950,12 @@ non--negative; else return @false{}.
 @end defun
 
 
+@defun non-zero-fixnum? @var{obj}
+Return @true{} if @var{obj} is a non--zero fixnum; otherwise return
+@false{}.  If @var{obj} is not a fixnum: return @false{}.
+@end defun
+
+
 @defun positive-fixnum? @var{obj}
 @defunx negative-fixnum? @var{obj}
 @defunx non-positive-fixnum? @var{obj}

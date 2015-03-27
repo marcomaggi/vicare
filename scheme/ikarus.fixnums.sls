@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus fixnums)
   (export
     list-of-fixnums?
@@ -24,6 +25,7 @@
     fxnonnegative?		fxnonpositive?
     fxeven?			fxodd?
 
+    non-zero-fixnum?
     positive-fixnum?		negative-fixnum?
     non-negative-fixnum?	non-positive-fixnum?
 
@@ -91,6 +93,7 @@
 		  fxnonnegative?		fxnonpositive?
 		  fxeven?			fxodd?
 
+		  non-zero-fixnum?
 		  positive-fixnum?		negative-fixnum?
 		  non-negative-fixnum?		non-positive-fixnum?
 
@@ -133,6 +136,7 @@
 		  fx+ fx* fx-)
 	    sys:)
     (except (vicare system $fx)
+	    $fx!=
 	    $fxpositive?	$fxnegative?
 	    $fxnonpositive?	$fxnonnegative?
 	    $fxeven?		$fxodd?
@@ -147,8 +151,11 @@
     (vicare system $chars)
     (vicare system $pairs)
     (vicare system $strings)
-    (vicare arguments validation)
-    (vicare language-extensions syntaxes))
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; helpers
@@ -163,68 +170,43 @@
 (define-syntax define-fx-operation/one
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((fixnum	x))
-	 (?unsafe-who x))))))
+     (define* (?safe-who {x fixnum?})
+       (?unsafe-who x)))))
 
 (define-syntax define-fx-operation/two
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x y)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((fixnum	x)
-	    (fixnum	y))
-	 (?unsafe-who x y))))))
+     (define* (?safe-who {x fixnum?} {y fixnum?})
+       (?unsafe-who x y)))))
 
 (define-syntax define-fx-operation/shift
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x y)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((fixnum		x)
-	    (fixnum-shift	y))
-	 (?unsafe-who x y))))))
-
-(define-argument-validation (fixnum-shift who obj)
-  (and (fixnum? obj)
-       ($fx<= 0 obj))
-  (procedure-argument-violation who "expected non-negative fixnum as shfit argument" obj))
+     (define* (?safe-who {x fixnum?} {y fixnum?})
+       (?unsafe-who x y)))))
 
 (define-syntax define-fx-operation/three
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x y z)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((fixnum	x)
-	    (fixnum	y)
-	    (fixnum	z))
-	 (?unsafe-who x y z))))))
+     (define* (?safe-who {x fixnum?} {y fixnum?} {z fixnum?})
+       (?unsafe-who x y z)))))
 
 (define-syntax define-fx-operation/div
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x y)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((fixnum		x)
-	    (non-zero-fixnum	y))
-	 (?unsafe-who x y))))))
+     (define* (?safe-who {x fixnum?} {y fixnum?})
+       (?unsafe-who x y)))))
 
 
 ;;;; predicates
 
 (define-list-of-type-predicate list-of-fixnums? fixnum?)
 
-(define (fxzero? x)
+(define* (fxzero? x)
   (cond ((eq? x 0)	#t)
 	((fixnum? x)	#f)
 	(else
-	 (procedure-argument-violation 'fxzero? "expected fixnum as argument" x))))
+	 (procedure-argument-violation __who__ "expected fixnum as argument" x))))
 
 (define ($fxpositive? N)	($fx> N 0))
 (define ($fxnegative? N)	($fx< N 0))
@@ -248,6 +230,11 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (non-zero-fixnum? fx)
+  (if (eq? 0 fx)
+      #f
+    (fixnum? fx)))
+
 (define (positive-fixnum? obj)
   (and (fixnum?      obj)
        ($fxpositive? obj)))
@@ -267,55 +254,39 @@
 
 ;;;; bitwise logic operations
 
-(define (fxlognot x)
-  (define who 'fxlognot)
-  (with-arguments-validation (who)
-      ((fixnum	x))
-    ($fxlognot x)))
+(define* (fxlognot {x fixnum?})
+  ($fxlognot x))
 
 (define fxnot fxlognot)
 
 (let-syntax
-    ((define-fxbitop
-       (syntax-rules ()
-	 ((_ ?who1 ?who2 ?unsafe-op ?identity)
-	  (module (?who1 ?who2)
-	    (define who (quote ?who1))
+    ((define-fxbitop (syntax-rules ()
+		       ((_ ?who1 ?who2 ?unsafe-op ?identity)
+			(begin
+			  (case-define* ?who1
+			    (({x fixnum?} {y fixnum?})
+			     (?unsafe-op x y))
 
-	    (define ?who1
-	      (case-lambda
-	       ((x y)
-		(with-arguments-validation (who)
-		    ((fixnum	x)
-		     (fixnum	y))
-		  (?unsafe-op x y)))
-	       ((x y . ls)
-		(with-arguments-validation (who)
-		    ((fixnum	x)
-		     (fixnum	y))
-		  (let loop ((a  (?unsafe-op x y))
-			     (ls ls))
-		    (if (pair? ls)
-			(let ((b ($car ls)))
-			  (with-arguments-validation (who)
-			      ((fixnum	b))
-			    (loop (?unsafe-op a b) ($cdr ls))))
-		      a))))
-	       ((x)
-		(with-arguments-validation (who)
-		    ((fixnum	x))
-		  x))
-	       (()
-		?identity)))
+			    (({x fixnum?} {y fixnum?} {z fixnum?} . {rest list-of-fixnums?})
+			     (let loop ((accum  (?unsafe-op (?unsafe-op x y) z))
+					(rest   rest))
+			       (if (pair? rest)
+				   (loop (?unsafe-op accum ($car rest))
+					 ($cdr rest))
+				 accum)))
 
-	    (define ?who2 ?who1)
+			    (({x fixnum?})
+			     x)
 
-	    #| end of module |# )
-	  ))))
+			    (()
+			     ?identity))
 
+			  (define ?who2 ?who1)))
+		       )))
   (define-fxbitop fxlogor	fxior		$fxlogor	 0)
   (define-fxbitop fxlogand	fxand		$fxlogand	-1)
-  (define-fxbitop fxlogxor	fxxor		$fxlogxor	 0))
+  (define-fxbitop fxlogxor	fxxor		$fxlogxor	 0)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; bitwise operations
@@ -331,310 +302,207 @@
 ;;; --------------------------------------------------------------------
 
 (define (fxarithmetic-shift-right x y)
+  ;;This is also a primitive operation.
   (import (vicare))
   (fxarithmetic-shift-right x y))
 
 (define (fxarithmetic-shift-left x y)
+  ;;This is also a primitive operation.
   (import (vicare))
   (fxarithmetic-shift-left x y))
 
-(module (fxarithmetic-shift)
-
-  (define (fxarithmetic-shift x y)
-    (import (vicare))
-    (define who 'fxarithmetic-shift)
-    (with-arguments-validation (who)
-	((fixnum	x)
-	 (fixnum	y))
-      (if ($fx>= y 0)
-	  (with-arguments-validation (who)
-	      ((positive-fixnum-shift-width	y))
-	    (let ((r ($fxsll x y)))
-	      (if ($fx= x ($fxsra r y))
-		  r
-		(%overflow-violation who x y))))
-	(with-arguments-validation (who)
-	    ((negative-fixnum-shift-width	y))
-	  ($fxsra x ($fx- 0 y))))))
-
-  (define-argument-validation (positive-fixnum-shift-width who obj)
-    ($fx< obj (fixnum-width))
-    (procedure-argument-violation who
-      "expected positive fixnum less than fixnum width as shift argument"
-      obj))
-
-  (define-argument-validation (negative-fixnum-shift-width who obj)
-    ($fx> obj (- (fixnum-width)))
-    (procedure-argument-violation who
-      "expected negative fixnum less than fixnum width as shift argument"
-      obj))
-
-  #| end of module: fxarithmetic-shift |# )
+(define* (fxarithmetic-shift {x fixnum?} {y fixnum?})
+  (if ($fxnonnegative? y)
+      (if ($fx< y (fixnum-width))
+	  (let ((r ($fxsll x y)))
+	    (if ($fx= x ($fxsra r y))
+		r
+	      (%overflow-violation __who__ x y)))
+	(procedure-argument-violation __who__
+	  "expected positive fixnum less than fixnum width as shift argument"
+	  y))
+    (if ($fx> y (- (fixnum-width)))
+	($fxsra x ($fx- 0 y))
+      (procedure-argument-violation __who__
+	"expected negative fixnum less than fixnum width as shift argument"
+	y))))
 
 ;;; --------------------------------------------------------------------
 
-(define (error@fxarithmetic-shift who x y)
-  (unless (fixnum? x)
-    (procedure-argument-violation who "not a fixnum" x))
-  (unless (fixnum? y)
-    (procedure-argument-violation who "not a fixnum" y))
-  (unless ($fx>= y 0)
-    (procedure-argument-violation who "negative shift not allowed" y))
-  (unless ($fx< y (fixnum-width))
-    (procedure-argument-violation who "shift is not less than fixnum-width" y))
-  (%overflow-violation who x y))
+(module (error@fxarithmetic-shift-left
+	 error@fxarithmetic-shift-right)
 
-(define (error@fxarithmetic-shift-left x y)
-  (error@fxarithmetic-shift 'arithmetic-shift-left x y))
+  (define (error@fxarithmetic-shift-left x y)
+    ;;Error function  called by the primitive  operation FXARITHMETIC-SHIFT-LEFT when
+    ;;it cannot compute the result.
+    ;;
+    (error@fxarithmetic-shift 'arithmetic-shift-left x y))
 
-(define (error@fxarithmetic-shift-right x y)
-  (error@fxarithmetic-shift 'arithmetic-shift-right x y))
+  (define (error@fxarithmetic-shift-right x y)
+    ;;Error function called by  the primitive operation FXARITHMETIC-SHIFT-RIGHT when
+    ;;it cannot compute the result.
+    ;;
+    (error@fxarithmetic-shift 'arithmetic-shift-right x y))
+
+  (define (error@fxarithmetic-shift who x y)
+    (unless (fixnum? x)
+      (procedure-argument-violation who "not a fixnum" x))
+    (unless (fixnum? y)
+      (procedure-argument-violation who "not a fixnum" y))
+    (unless ($fx>= y 0)
+      (procedure-argument-violation who "negative shift not allowed" y))
+    (unless ($fx< y (fixnum-width))
+      (procedure-argument-violation who "shift is not less than fixnum-width" y))
+    (%overflow-violation who x y))
+
+  #| end of module |# )
 
 
 ;;;; arithmetic operations
 
 (define (fx+ x y)
+  ;;This is also a primitive operation.
   (sys:fx+ x y))
 
 (define (fx* x y)
+  ;;This is also a primitive operation.
   (sys:fx* x y))
 
-(define fx-
-  (case-lambda
-   ((x y) (sys:fx- x y))
-   ((x)   (sys:fx- x))))
+(case-define fx-
+  ;;This is also a primitive operation.
+  ((x y) (sys:fx- x y))
+  ((x)   (sys:fx- x)))
 
-(define (fxadd1 n)
-  (import (vicare))
-  (fxadd1 n))
+(define* (fxadd1 {n fixnum?})
+  ;;This is also a primitive operation.
+  ($fxadd1 n))
 
-(define (fxsub1 n)
-  (import (vicare))
-  (fxsub1 n))
+(define* (fxsub1 {n fixnum?})
+  ;;This is also a primitive operation.
+  ($fxsub1 n))
 
 ;;; --------------------------------------------------------------------
 
-(module (error@fx+
-	 error@fx-
-	 error@fx*
-	 error@fxadd1
-	 error@fxsub1)
-  ;;Some core primitives are implemented both as:
-  ;;
-  ;;* Proper procedures.   There exists a loc gensym whose  "value" slot references a
-  ;;  closure  object, which in turn  references a code object  implementing the core
-  ;;  primitive as machine code.
-  ;;
-  ;;*  Primitive  operations.  There  exist  functions  that  the compiler  calls  to
-  ;;  integrate assembly instructions implementing the core primitive.
-  ;;
-  ;;When the core primitive is used as argument as in:
-  ;;
-  ;;   (map fx+ a* b*)
-  ;;
-  ;;the closure  object implementation is  used; when the  core primitive is  used as
-  ;;first subform of an application form as in:
-  ;;
-  ;;   (fx+ 1 2)
-  ;;
-  ;;the primitive operation is used.
-  ;;
-  ;;Let's  consider FX+.   When the  code object  implementation detects  overflow or
-  ;;underflow: it raises an exception.  When the primitive operation detects overflow
-  ;;or  underflow what  should  it do?   The answer  is:  every integrated  primitive
-  ;;operation  assembly code  will  jump to  the  same routine  which  will raise  an
-  ;;exception.
-  ;;
-  ;;Such exception-raising routines are the  ones below; they are called ERROR@?PRIM,
-  ;;where ?PRIM is  the name of the  core primitive.  Notice that,  upon entering the
-  ;;routine, we do not  know which error triggered the call,  so we check everything:
-  ;;first we validate the  operands as fixnums, if they are it means  the error is an
-  ;;overflow.
-  ;;
-  (define (make-fx-error who)
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((fixnum	x)
-	   (fixnum	y))
-	(%overflow-violation who x y)))
-     ((x)
-      (with-arguments-validation (who)
-	  ((fixnum	x))
-	(%overflow-violation who x)))))
+;;Some core primitives are implemented both as:
+;;
+;;* Proper  procedures.  There exists  a loc gensym  whose "value" slot  references a
+;;  closure object,  which in  turn references  a code  object implementing  the core
+;;  primitive as machine code.
+;;
+;;* Primitive operations.  There exist functions that the compiler calls to integrate
+;;  assembly instructions implementing the core primitive.
+;;
+;;When the core primitive is used as argument as in:
+;;
+;;   (map fx+ a* b*)
+;;
+;;the closure object implementation is used; when the core primitive is used as first
+;;subform of an application form as in:
+;;
+;;   (fx+ 1 2)
+;;
+;;the primitive operation is used.
+;;
+;;Let's  consider FX+.   When  the  code object  implementation  detects overflow  or
+;;underflow: it raises  an exception.  When the primitive  operation detects overflow
+;;or  underflow  what should  it  do?   The  answer  is: every  integrated  primitive
+;;operation  assembly  code  will jump  to  the  same  routine  which will  raise  an
+;;exception.
+;;
+;;Such exception-raising  routines are the  ones below; they are  called ERROR@?PRIM,
+;;where ?PRIM  is the  name of the  core primitive.  Notice  that, upon  entering the
+;;routine, we  do not know  which error triggered the  call, so we  check everything:
+;;first we  validate the operands as  fixnums, if they are  it means the error  is an
+;;overflow.
+;;
+(let-syntax
+    ((define-fx-error (syntax-rules ()
+			((_ ?error-who ?who)
+			 (case-define* ?error-who
+			   (({x fixnum?} {y fixnum?})
+			    (%overflow-violation (quote ?who) x y))
+			   (({x fixnum?})
+			    (%overflow-violation (quote ?who) x))))
+			)))
+  (define-fx-error error@fx+    fx+)
+  (define-fx-error error@fx-    fx-)
+  (define-fx-error error@fx*    fx*)
+  #| end of LET-SYNTAX |# )
 
-  (define error@fx+    (make-fx-error 'fx+))
-  (define error@fx-    (make-fx-error 'fx-))
-  (define error@fx*    (make-fx-error 'fx*))
-  (define error@fxadd1 (make-fx-error 'fxadd1))
-  (define error@fxsub1 (make-fx-error 'fxsub1))
-
-  #| end of module |# )
+(let-syntax
+    ((define-fx-error (syntax-rules ()
+			((_ ?error-who ?who)
+			 (define* (?error-who {x fixnum?})
+			   (%overflow-violation (quote ?who) x)))
+			)))
+  (define-fx-error error@fxadd1 fxadd1)
+  (define-fx-error error@fxsub1 fxsub1)
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; comparison predicates
 
-(define (%fxcmp-validate-rest who ls)
-  (if (pair? ls)
-      (with-arguments-validation (who)
-	  ((fixnum	($car ls)))
-	(%fxcmp-validate-rest who ($cdr ls)))
-    #f))
+(define-equality/sorting-predicate fx=?		$fx=	fixnum? list-of-fixnums?)
+(define-equality/sorting-predicate fx<?		$fx<	fixnum? list-of-fixnums?)
+(define-equality/sorting-predicate fx<=?	$fx<=	fixnum? list-of-fixnums?)
+(define-equality/sorting-predicate fx>?		$fx>	fixnum? list-of-fixnums?)
+(define-equality/sorting-predicate fx>=?	$fx>=	fixnum? list-of-fixnums?)
+(define-inequality-predicate       fx!=?	$fx!=	fixnum? list-of-fixnums?)
 
-(let-syntax
-    ((define-fxcmp
-       (syntax-rules ()
-	 ((_ ?who1 ?who2 $op)
-	  (module (?who1 ?who2)
-	    (define who (quote ?who1))
+(define ($fx!= fx1 fx2)
+  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
+  ;;implementation must be changed to:
+  ;;
+  ;;   (import (prefix (vicare system $fx) sys.))
+  ;;   (sys.$fx!= fx1 fx2)
+  ;;
+  ;;(Marco Maggi; Fri Mar 27, 2015)
+  (not ($fx= fx1 fx2)))
 
-	    (define ?who1
-	      (case-lambda
-	       ((x y)
-		(with-arguments-validation (who)
-		    ((fixnum	x)
-		     (fixnum	y))
-		  ($op x y)))
-
-	       ((x y . ls)
-		(with-arguments-validation (who)
-		    ((fixnum	x)
-		     (fixnum	y))
-		  (if ($op x y)
-		      (let loop ((x  y)
-				 (ls ls))
-			(if (pair? ls)
-			    (let ((y  ($car ls))
-				  (ls ($cdr ls)))
-			      (with-arguments-validation (who)
-				  ((fixnum	y))
-				(if ($op x y)
-				    (loop y ls)
-				  (%fxcmp-validate-rest 'who ls))))
-			  #t))
-		    (%fxcmp-validate-rest 'who ls))))
-
-	       ((x)
-		(with-arguments-validation (who)
-		    ((fixnum	x))
-		  #t))))
-
-	    (define ?who2 ?who1)
-
-	    #| end of module |# )
-	  ))))
-
-  (define ($fx!= fx1 fx2)
-    (not ($fx= fx1 fx2)))
-
-  (define-fxcmp fx=?	fx=	$fx=)
-  (define-fxcmp fx!=?	fx!=	$fx!=)
-  (define-fxcmp fx<?	fx<	$fx<)
-  (define-fxcmp fx<=?	fx<=	$fx<=)
-  (define-fxcmp fx>?	fx>	$fx>)
-  (define-fxcmp fx>=?	fx>=	$fx>=))
+(define fx=	fx=?)
+(define fx<	fx<?)
+(define fx<=	fx<=?)
+(define fx>	fx>?)
+(define fx>=	fx>=?)
+(define fx!=	fx!=?)
 
 
-;;;; comparison functions
+;;;; min max
 
-(module (fxmin $fxmin)
-  (define who 'fxmin)
+(define-min/max-comparison fxmax $fxmax fixnum? list-of-fixnums?)
+(define-min/max-comparison fxmin $fxmin fixnum? list-of-fixnums?)
 
-  (define ($fxmin x y)
-    (if ($fx< x y)
-	x
-      y))
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
+;;
+(define ($fxmin fx1 fx2)
+  (if ($fx< fx1 fx2) fx1 fx2))
 
-  (define fxmin
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((fixnum	x)
-	   (fixnum	y))
-	($fxmin x y)))
-
-     ((x y z . ls)
-      (with-arguments-validation (who)
-	  ((fixnum	x)
-	   (fixnum	y)
-	   (fixnum	z))
-	(let loop ((z  ($fxmin ($fxmin x y) z))
-		   (ls ls))
-	  (if (null? ls)
-	      z
-	    (let ((a ($car ls)))
-	      (with-arguments-validation (who)
-		  ((fixnum	a))
-		(loop ($fxmin a z) ($cdr ls))))))))
-
-     ((x)
-      (with-arguments-validation (who)
-	  ((fixnum	x))
-	x))))
-
-  #| end of module: fxmin |# )
-
-(module (fxmax $fxmax)
-  (define who 'fxmax)
-
-  (define ($fxmax x y)
-    (if ($fx> x y) x y))
-
-  (define fxmax
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((fixnum	x)
-	   (fixnum	y))
-	($fxmax x y)))
-
-     ((x y z . ls)
-      (with-arguments-validation (who)
-	  ((fixnum	x)
-	   (fixnum	y)
-	   (fixnum	z))
-	(let loop ((z  ($fxmax ($fxmax x y) z))
-		   (ls ls))
-	  (if (null? ls)
-	      z
-	    (let ((a ($car ls)))
-	      (with-arguments-validation (who)
-		  ((fixnum	a))
-		(loop ($fxmax a z) ($cdr ls))))))))
-
-     ((x)
-      (with-arguments-validation (who)
-	  ((fixnum	x))
-	x))))
-
-  #| end of module: fxmax |# )
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
+;;
+(define ($fxmax fx1 fx2)
+  (if ($fx< fx1 fx2) fx2 fx1))
 
 
-(define (fxquotient x y)
-  (define who 'fxquotient)
-  (with-arguments-validation (who)
-      ((fixnum		x)
-       (non-zero-fixnum	y))
-    (if (eq? y -1)
-	;;Remember  that  we cannot  simpy  use  $fx-  because if  X  is
-	;;(least-fixnum) the result will overflow.
-	(if (eq? x (least-fixnum))
-	    (%overflow-violation who x y)
-	  ($fx- x))
-      ($fxquotient x y))))
+(define* (fxquotient {x fixnum?} {y non-zero-fixnum?})
+  (if (eq? y -1)
+      ;;Remember that  we cannot simpy  use $fx- because  if X is  (least-fixnum) the
+      ;;result will overflow.
+      (if (eq? x (least-fixnum))
+	  (%overflow-violation __who__ x y)
+	($fx- x))
+    ($fxquotient x y)))
 
 (define-fx-operation/one fxabs		$fxabs)
 (define-fx-operation/div fxremainder	$fxremainder)
 (define-fx-operation/div fxmodulo	$fxmodulo)
 (define-fx-operation/one fxsign		$fxsign)
 
-(define ($fxabs x)
-  (define who '$fxabs)
+(define* ($fxabs x)
   (if ($fxnegative? x)
-      ;;Remember  that  we  cannot  simpy  use  $fx-  because  if  X  is
-      ;;(least-fixnum) the result will overflow.
+      ;;Remember that  we cannot simpy  use $fx- because  if X is  (least-fixnum) the
+      ;;result will overflow.
       (if ($fx= x (least-fixnum))
-	  (%overflow-violation who x)
+	  (%overflow-violation __who__ x)
 	($fx- x))
     x))
 
@@ -657,33 +525,31 @@
 	  (abs n2))))
 
 
-(define-syntax define-fx
-  (syntax-rules ()
-    ((_ (?who ?arg ...) ?body)
-     (define (?who ?arg ...)
-       (define who (quote ?who))
-       (with-arguments-validation (who)
-	   ((fixnum	?arg)
-	    ...)
-	 ?body)))))
+;;;; arithmetics with carry
 
-(define-fx (fx*/carry fx1 fx2 fx3)
-  (let ((s0 ($fx+ ($fx* fx1 fx2) fx3)))
-    (values
-     s0
-     (sra (+ (* fx1 fx2) (- fx3 s0)) (fixnum-width)))))
+(let-syntax
+    ((define-fx (syntax-rules ()
+		  ((_ (?who ?arg ...) ?body)
+		   (define* (?who {?arg fixnum?} ...)
+		     ?body))
+		  )))
 
-(define-fx (fx+/carry fx1 fx2 fx3)
-  (let ((s0 ($fx+ ($fx+ fx1 fx2) fx3)))
-    (values
-     s0
-     (sra (+ (+ fx1 fx2) (- fx3 s0)) (fixnum-width)))))
+  (define-fx (fx*/carry fx1 fx2 fx3)
+    (let ((s0 ($fx+ ($fx* fx1 fx2) fx3)))
+      (values s0
+	      (sra (+ (* fx1 fx2) (- fx3 s0)) (fixnum-width)))))
 
-(define-fx (fx-/carry fx1 fx2 fx3)
-  (let ((s0 ($fx- ($fx- fx1 fx2) fx3)))
-    (values
-     s0
-     (sra (- (- fx1 fx2) (+ s0 fx3)) (fixnum-width)))))
+  (define-fx (fx+/carry fx1 fx2 fx3)
+    (let ((s0 ($fx+ ($fx+ fx1 fx2) fx3)))
+      (values s0
+	      (sra (+ (+ fx1 fx2) (- fx3 s0)) (fixnum-width)))))
+
+  (define-fx (fx-/carry fx1 fx2 fx3)
+    (let ((s0 ($fx- ($fx- fx1 fx2) fx3)))
+      (values s0
+	      (sra (- (- fx1 fx2) (+ s0 fx3)) (fixnum-width)))))
+
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; conversion
@@ -704,26 +570,21 @@
 (define* (char->fixnum {ch char?})
   ($char->fixnum ch))
 
-(module (fixnum->string
-	 $fixnum->string)
-  (define who 'fixnum->string)
+(module (fixnum->string $fixnum->string)
 
-  (define fixnum->string
-    (case-lambda
-     ((x)
-      (with-arguments-validation (who)
-	  ((fixnum	x))
-	($fixnum->string x 10)))
-     ((x r)
-      (with-arguments-validation (who)
-	  ((fixnum	x))
-	(case r
-	  ((2)  ($fixnum->string x 2))
-	  ((8)  ($fixnum->string x 8))
-	  ((10) ($fixnum->string x 10))
-	  ((16) ($fixnum->string x 16))
-	  (else
-	   (procedure-argument-violation who "invalid radix" r)))))))
+  (case-define* fixnum->string
+    (({x fixnum?})
+     ($fixnum->string x 10))
+
+    (({x fixnum?} r)
+     (case r
+       ((2)  ($fixnum->string x 2))
+       ((8)  ($fixnum->string x 8))
+       ((10) ($fixnum->string x 10))
+       ((16) ($fixnum->string x 16))
+       (else
+	(procedure-argument-violation __who__
+	  "invalid radix, expected 2, 8, 10 or 16" r)))))
 
   (define ($fixnum->string x radix)
     (cond (($fxzero? x)
@@ -741,15 +602,14 @@
 	     str))))
 
   (define (f n i j radix)
+    (define-constant MAPPING-STRING "0123456789ABCDEF")
     (if ($fxzero? n)
 	(values (make-string i) j)
       (let* ((q ($fxquotient n radix))
-	     (c ($string-ref mapping-string ($fx- n ($fx* q radix)))))
+	     (c ($string-ref MAPPING-STRING ($fx- n ($fx* q radix)))))
 	(let-values (((str j) (f q ($fxadd1 i) j radix)))
 	  (string-set! str j c)
 	  (values str ($fxadd1 j))))))
-
-  (define mapping-string "0123456789ABCDEF")
 
   #| end of module: fixnum->string |# )
 
@@ -765,57 +625,43 @@
       ((define-div-proc
 	 (syntax-rules ()
 	   ((_ ?who $unsafe-op overflow-check?)
-	    (define (?who x y)
-	      (define who (quote ?who))
-	      (with-arguments-validation (who)
-		  ((fixnum		x)
-		   (non-zero-fixnum	y))
-		(if ($fx> y 0)
-		    ($unsafe-op x y)
-		  (if (and overflow-check? ($fx= y -1))
-		      (if ($fx= x (least-fixnum))
-			  (%error-result-not-fixnum who x y)
-			($unsafe-op x y))
-		    ($unsafe-op x y)))))
-	    ))))
+	    (define* (?who {x fixnum?} {y non-zero-fixnum?})
+	      (if ($fx> y 0)
+		  ($unsafe-op x y)
+		(if (and overflow-check? ($fx= y -1))
+		    (if ($fx= x (least-fixnum))
+			(%error-result-not-fixnum __who__ x y)
+		      ($unsafe-op x y))
+		  ($unsafe-op x y)))))
+	   )))
     (define-div-proc fxdiv $fxdiv #t)
     (define-div-proc fxmod $fxmod #f)
-    (define-div-proc fxdiv-and-mod $fxdiv-and-mod #t))
+    (define-div-proc fxdiv-and-mod $fxdiv-and-mod #t)
+    #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (fxdiv0-and-mod0 x y)
-    (define who 'fxdiv0-and-mod0)
-    (with-arguments-validation (who)
-	((fixnum		x)
-	 (non-zero-fixnum	y))
-      (%check-div-result-not-fixnum who x y)
-      (let-values (((d m) ($fxdiv0-and-mod0 x y)))
-	(with-arguments-validation (who)
-	    ((fixnum-representable	d)
-	     (fixnum-representable	m))
-	  (values d m)))))
+  (define* (fxdiv0-and-mod0 {x fixnum?} {y non-zero-fixnum?})
+    (%check-div-result-not-fixnum __who__ x y)
+    (receive-and-return (d m)
+	($fxdiv0-and-mod0 x y)
+      (unless (fixnum? d)
+	(%error-result-not-fixnum __who__ d))
+      (unless (fixnum? m)
+	(%error-result-not-fixnum __who__ m))))
 
-  (define (fxdiv0 x y)
-    (define who 'fxdiv0)
-    (with-arguments-validation (who)
-	((fixnum		x)
-	 (non-zero-fixnum	y))
-      (%check-div-result-not-fixnum who x y)
-      (let ((d ($fxdiv0 x y)))
-	(with-arguments-validation (who)
-	    ((fixnum-representable	d))
-	  d))))
+  (define* (fxdiv0 {x fixnum?} {y non-zero-fixnum?})
+    (%check-div-result-not-fixnum __who__ x y)
+    (receive-and-return (d)
+	($fxdiv0 x y)
+      (unless (fixnum? d)
+	(%error-result-not-fixnum __who__ d))))
 
-  (define (fxmod0 x y)
-    (define who 'fxmod0)
-    (with-arguments-validation (who)
-	((fixnum		x)
-	 (non-zero-fixnum	y))
-      (let ((d ($fxmod0 x y)))
-	(with-arguments-validation (who)
-	    ((fixnum-representable	d))
-	  d))))
+  (define* (fxmod0 {x fixnum?} {y non-zero-fixnum?})
+    (receive-and-return (d)
+	($fxmod0 x y)
+      (unless (fixnum? d)
+	(%error-result-not-fixnum __who__ d))))
 
 ;;; --------------------------------------------------------------------
 
@@ -900,10 +746,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-argument-validation (fixnum-representable who obj)
-    (fixnum? obj)
-    (%error-result-not-fixnum who obj))
-
   (define (%check-div-result-not-fixnum who x y)
     (when (and ($fx= y -1)
 	       ($fx= x (least-fixnum)))
@@ -921,7 +763,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 (library (ikarus fixnums unsafe)
   (export

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -28,7 +28,6 @@
 #!r6rs
 (import (vicare)
   (vicare system $fx)
-  (vicare language-extensions syntaxes)
   (only (vicare platform words)
 	case-word-size)
   (vicare checks))
@@ -257,6 +256,11 @@
   (check (fxnonnegative? -123)		=> #f)
 
 ;;; --------------------------------------------------------------------
+
+  (check-for-true  (non-zero-fixnum? +1))
+  (check-for-true  (non-zero-fixnum? -1))
+  (check-for-false (non-zero-fixnum? 0))
+  (check-for-false (non-zero-fixnum? "ciao"))
 
   (check-for-true  (positive-fixnum? +123))
   (check-for-false (positive-fixnum? 0))
