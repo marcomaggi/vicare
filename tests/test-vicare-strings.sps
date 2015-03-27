@@ -517,6 +517,104 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-inequal))
+
+  (check
+      (string!=? "" "")
+    => #f)
+
+  (check
+      (string!=? "" "" "")
+    => #f)
+
+  (check
+      (string!=? "a" "a")
+    => #f)
+
+  (check
+      (string!=? "a" "a" "a")
+    => #f)
+
+  (check
+      (string!=? "abc" "abc")
+    => #f)
+
+  (check
+      (string!=? "abc" "abc" "abc")
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string!=? "a" "")
+    => #t)
+
+  (check
+      (string!=? "" "a")
+    => #t)
+
+  (check
+      (string!=? "a" "" "")
+    => #f)
+
+  (check
+      (string!=? "" "a" "")
+    => #f)
+
+  (check
+      (string!=? "" "" "a")
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (string #\a #\b #\c)))
+	(string!=? S S))
+    => #f)
+
+  (check
+      (string!=? "abc" "def")
+    => #t)
+
+  (check
+      (string!=? "abc" "a")
+    => #t)
+
+  (check
+      (string!=? "a" "abc")
+    => #t)
+
+  (check
+      (string!=? "a" "abc" "abc")
+    => #f)
+
+  (check
+      (string!=? "abc" "a" "abc")
+    => #f)
+
+  (check
+      (string!=? "abc" "abc" "a")
+    => #f)
+
+  (check
+      (string!=? "abc" "def" "ghi")
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (string!=? 123 ""))
+
+  (check-procedure-arguments-violation
+   (string!=? "" 123))
+
+  (check-procedure-arguments-violation
+   (string!=? "" "" 123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'string-cmp))
 
   (check-for-false
@@ -647,6 +745,37 @@
 
   (check-procedure-arguments-violation
    (string>=? "abc" "def" 123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'min-max))
+
+  (check (strmin "A")			=> "A")
+
+  (check (strmin "a" "a")		=> "a")
+  (check (strmin "a" "b")		=> "a")
+  (check (strmin "b" "a")		=> "a")
+
+  (check (strmin "a" "b" "c")		=> "a")
+
+  (check (strmin "a" "b" "c" "d")	=> "a")
+
+  (check (strmin "a" "b" "c" "d" "e")	=> "a")
+
+;;; --------------------------------------------------------------------
+
+  (check (strmax "A")			=> "A")
+
+  (check (strmax "a" "a")		=> "a")
+  (check (strmax "a" "b")		=> "b")
+  (check (strmax "b" "a")		=> "b")
+
+  (check (strmax "a" "b" "c")		=> "c")
+
+  (check (strmax "a" "b" "c" "d")	=> "d")
+
+  (check (strmax "a" "b" "c" "d" "e")	=> "e")
 
   #t)
 

@@ -205,8 +205,8 @@
 	(and (?unsafe-who obj1 obj2)
 	     (?unsafe-who obj2 obj3)
 	     (?unsafe-who obj3 obj4)
-	     (let loop ((objX   obj4)
-			(obj*  (cdr obj*)))
+	     (let loop ((objX  obj4)
+			(obj*  obj*))
 	       (if (pair? obj*)
 		   (let ((objY (car obj*)))
 		     (and (?unsafe-who objX objY)
@@ -244,7 +244,10 @@
 			(inner-loop objX ($cdr obj^*))))
 		  ((pair? obj*)
 		   (outer-loop (car obj*) (cdr obj*)))
-		  (else #t)))))))
+		  (else #t)))))
+
+       (({obj1 ?type-pred})
+	#t)))
     ))
 
 

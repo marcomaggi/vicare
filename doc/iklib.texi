@@ -9525,13 +9525,13 @@ character: raise an exception.
 
 @subsubheading Comparison
 
-@deffn Procedure {char!=?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffn Procedure {char!=?} @varo{char} @var{char} @dots{}
 The arguments must be characters.  Return @true{} if the arguments are
 all different; otherwise return @false{}.
 @end deffn
 
 
-@deffn Procedure {char-ci!=?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffn Procedure {char-ci!=?} @varo{char} @dots{}
 Like @func{char!=?} but operate on the case--folded versions of the
 arguments.
 @end deffn
@@ -10258,6 +10258,7 @@ lengths is not in the range of the maximum bytevector length.
 @menu
 * iklib strings predicates::    Predicates about strings.
 * iklib strings constructors::  Constructing new strings.
+* iklib strings comparison::    Comparison functions.
 * iklib strings conversion::    Converting between strings and
                                 other objects.
 * iklib strings misc::          Miscellaneous string operations.
@@ -10302,6 +10303,23 @@ range of the maximum string length.
 Reverse the list of strings @var{strs}, concatenate them and return the
 resulting string.  It is an error if the sum of the string lengths is
 not in the range of the maximum string length.
+@end defun
+
+@c page
+@node iklib strings comparison
+@subsection Comparison functions
+
+
+@defun string!=? @varo{str} @var{str} @dots{}
+Return @true{} if all the string arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun strmax @varo{str} @var{str} @dots{}
+@defunx strmin @varo{str} @var{str} @dots{}
+Return the maximal or minimal string argument according to
+@func{string<?}.
 @end defun
 
 @c page
@@ -11083,7 +11101,7 @@ Notice the following behaviour with zero:
 
 @subsubheading Comparison
 
-@defun fl!=? @vari{fl} @varii{fl} @varii{fl} @dots{}
+@defun fl!=? @varo{fl} @var{fl} @dots{}
 Return @true{} if the operands are equal; else return @false{}.  The
 operands must be flonums, otherwise an exception is raised.
 @end defun

@@ -6077,6 +6077,13 @@ Return @true{} if @vari{str} and @varii{str} represent the same string;
 otherwise return @false{}.
 @end deffn
 
+
+@defun $string!=? @vari{str} @varii{str}
+Return @true{} if all the string arguments are different; otherwise
+return @false{}.
+@end defun
+
+
 @deffn {Unsafe Operation} $string< @vari{str} @varii{str}
 @deffnx {Unsafe Operation} $string> @vari{str} @varii{str}
 @deffnx {Unsafe Operation} $string<= @vari{str} @varii{str}
@@ -6085,6 +6092,13 @@ Dyadic lexicographic comparison functions for strings.  Return @true{}
 if @vari{str} and @varii{str} compare as the name implies; otherwise
 return @false{}.
 @end deffn
+
+
+@defun $strmax @vari{str} @varii{str}
+@defunx $strmin @vari{str} @varii{str}
+Return the maximal or minimal string argument according to
+@func{$string<}.
+@end defun
 
 @c ------------------------------------------------------------
 

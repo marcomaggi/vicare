@@ -64,6 +64,8 @@
 
 ;;; --------------------------------------------------------------------
 
+    $fx!=
+
     $fxpositive?		$fxnegative?
     $fxnonpositive?		$fxnonnegative?
     $fxeven?			$fxodd?
