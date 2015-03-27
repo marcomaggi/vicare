@@ -86,6 +86,7 @@
     flonum-parts	flonum-bytes
     bytevector->flonum	flonum->bytevector)
   (import (except (vicare)
+		  list-of-flonums?
 		  inexact->exact	exact		fixnum->flonum
 		  flzero?		flpositive?	flnegative?
 		  flzero?/positive	flzero?/negative
