@@ -10932,6 +10932,30 @@ syntactic binding identifiers.
 
 The following bindings are exported by the library @library{vicare}.
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Predicates
+
+
+@defun fxnonpositive? @var{fx}
+@defunx fxnonnegative? @var{fx}
+Return @true{} if @var{fx} is, respectively, non--positive or
+non--negative; else return @false{}.
+@end defun
+
+
+@defun positive-fixnum? @var{obj}
+@defunx negative-fixnum? @var{obj}
+@defunx non-positive-fixnum? @var{obj}
+@defunx non-negative-fixnum? @var{obj}
+Return @true{} if @var{obj} is a fixnum respectively: positive,
+negative, non--positive, non--negative; otherwise return @false{}.  If
+@var{obj} is not a fixnum: return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
 
 @defun fx!=? @vari{fx} @varii{fx}
 @defunx fx!= @vari{fx} @varii{fx}
@@ -10939,6 +10963,9 @@ Return @true{} if the arguments are different; otherwise return
 @false{}.  The arguments must be fixnums.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Arithmetics
 
 @defun fxadd1 @var{fx}
 @defunx fxsub1 @var{fx}
@@ -10961,6 +10988,9 @@ Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
 the sign of the fixnum @var{fx}.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Conversion
 
 @defun fixnum->char @var{fx}
 @defunx char->fixnum @var{ch}
@@ -10973,23 +11003,6 @@ Convert a fixnum to and from a character.
 Return a string representation of @var{fx}.  @var{base} must be one
 among @math{2}, @math{8}, @math{10}, @math{16}; when not given it
 defaults to @math{10}.
-@end defun
-
-
-@defun fxnonpositive? @var{fx}
-@defunx fxnonnegative? @var{fx}
-Return @true{} if @var{fx} is, respectively, non--positive or
-non--negative; else return @false{}.
-@end defun
-
-
-@defun positive-fixnum? @var{obj}
-@defunx negative-fixnum? @var{obj}
-@defunx non-positive-fixnum? @var{obj}
-@defunx non-negative-fixnum? @var{obj}
-Return @true{} if @var{obj} is a fixnum respectively: positive,
-negative, non--positive, non--negative; otherwise return @false{}.  If
-@var{obj} is not a fixnum: return @false{}.
 @end defun
 
 @c page
@@ -11014,6 +11027,32 @@ otherwise return @false{}.
 @defunx flnonnegative? @var{fl}
 Return @true{} if @var{fl} is, respectively, non--positive or
 non--negative; else return @false{}.
+@end defun
+
+
+@defun positive-flonum? @var{obj}
+@defunx negative-flonum? @var{obj}
+@defunx non-positive-flonum? @var{obj}
+@defunx non-negative-flonum? @var{obj}
+Return @true{} if @var{obj} is a flonum respectively: positive,
+negative, non--positive, non--negative; otherwise return @false{}.  If
+@var{obj} is not a flonum: return @false{}.
+
+Notice the following behaviour with zero:
+
+@lisp
+(positive-flonum? +0.0)         @result{} #f
+(positive-flonum? -0.0)         @result{} #f
+
+(negative-flonum? +0.0)         @result{} #f
+(negative-flonum? -0.0)         @result{} #f
+
+(non-positive-flonum? +0.0)     @result{} #f
+(non-positive-flonum? -0.0)     @result{} #t
+
+(non-negative-flonum? +0.0)     @result{} #t
+(non-negative-flonum? -0.0)     @result{} #f
+@end lisp
 @end defun
 
 @c ------------------------------------------------------------

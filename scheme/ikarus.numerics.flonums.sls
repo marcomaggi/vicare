@@ -34,6 +34,9 @@
 			$flonum-integer?
 			$flonum-rational?
 
+    positive-flonum?		negative-flonum?
+    non-negative-flonum?	non-positive-flonum?
+
     flround		$flround
     flfloor		$flfloor
     flceiling		$flceiling
@@ -87,6 +90,8 @@
 		  flzero?		flpositive?	flnegative?
 		  flzero?/positive	flzero?/negative
 		  flnonnegative?	flnonpositive?
+		  positive-flonum?	negative-flonum?
+		  non-negative-flonum?	non-positive-flonum?
 		  fleven?		flodd?		flround
 		  flfloor		flceiling	fltruncate
 		  flnumerator		fldenominator	flabs
@@ -430,6 +435,8 @@
   (and ($flzero? x)
        (not ($fxzero? ($fxlogand ($flonum-u8-ref x 0) 128)))))
 
+;;; --------------------------------------------------------------------
+
 (define-fl-operation/one flpositive?		$flpositive?)
 (define-fl-operation/one flnegative?		$flnegative?)
 (define-fl-operation/one flnonpositive?		$flnonpositive?)
@@ -455,6 +462,24 @@
 (define ($flnonnegative? x)
   (or ($flzero?/positive x)
       ($flpositive? x)))
+
+;;; --------------------------------------------------------------------
+
+(define (positive-flonum? obj)
+  (and (flonum?      obj)
+       ($flpositive? obj)))
+
+(define (negative-flonum? obj)
+  (and (flonum?      obj)
+       ($flnegative? obj)))
+
+(define (non-negative-flonum? obj)
+  (and (flonum?         obj)
+       ($flnonnegative? obj)))
+
+(define (non-positive-flonum? obj)
+  (and (flonum?         obj)
+       ($flnonpositive? obj)))
 
 ;;; --------------------------------------------------------------------
 
