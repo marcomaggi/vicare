@@ -10937,6 +10937,12 @@ The following bindings are exported by the library @library{vicare}.
 @subsubheading Predicates
 
 
+@defun list-of-fixnums? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of fixnums;
+otherwise return @false{}.
+@end defun
+
+
 @defun fxnonpositive? @var{fx}
 @defunx fxnonnegative? @var{fx}
 Return @true{} if @var{fx} is, respectively, non--positive or

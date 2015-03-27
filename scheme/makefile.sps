@@ -1856,6 +1856,7 @@
     (bitwise-reverse-bit-field			v r bw)
     (bitwise-rotate-bit-field			v r bw)
     (fixnum?					v r fx)
+    (list-of-fixnums?				v $language)
     (fixnum-width				v r fx)
     (least-fixnum				v r fx)
     (greatest-fixnum				v r fx)

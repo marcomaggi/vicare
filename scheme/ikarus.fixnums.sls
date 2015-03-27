@@ -17,6 +17,8 @@
 
 (library (ikarus fixnums)
   (export
+    list-of-fixnums?
+
     fxzero?
     fxpositive?			fxnegative?
     fxnonnegative?		fxnonpositive?
@@ -82,6 +84,8 @@
     error@fxarithmetic-shift-left
     error@fxarithmetic-shift-right)
   (import (except (vicare)
+		  list-of-fixnums?
+
 		  fxzero?
 		  fxpositive?			fxnegative?
 		  fxnonnegative?		fxnonpositive?
@@ -213,6 +217,8 @@
 
 
 ;;;; predicates
+
+(define-list-of-type-predicate list-of-fixnums? fixnum?)
 
 (define (fxzero? x)
   (cond ((eq? x 0)	#t)
