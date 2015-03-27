@@ -10262,7 +10262,6 @@ otherwise return @false{}.
 @end defun
 
 
-
 @defun string-empty? @var{str}
 Return @true{} if the string @var{str} is empty, otherwise return
 @false{}.
@@ -11003,6 +11002,12 @@ The following bindings are exported by the library @library{vicare}.
 @c ------------------------------------------------------------
 
 @subsubheading Predicates
+
+
+@defun list-of-flonums? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of flonums;
+otherwise return @false{}.
+@end defun
 
 
 @defun flnonpositive? @var{fl}
