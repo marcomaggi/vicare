@@ -2234,6 +2234,10 @@
    ((P x y)
     ($flcmp-aux 'fl:= x y)))
 
+ (define-primop $fl!= unsafe
+   ((P x y)
+    ($flcmp-aux 'fl:!= x y)))
+
  (define-primop $fl< unsafe
    ((P x y)
     ($flcmp-aux 'fl:< x y)))

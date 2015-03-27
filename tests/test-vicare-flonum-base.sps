@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -123,6 +123,26 @@
   (check (flnonnegative? -123.0)	=> #f)
 
   #t)
+
+
+(parametrise ((check-test-name	'comparison))
+
+  (check (fl!=? +1.0 +1.0)	=> #f)
+  (check (fl!=? +1.0 +2.0)	=> #t)
+  (check (fl!=? +2.0 +1.0)	=> #t)
+
+  ;;This function does *not* distinguish between +0.0  and -0.0.  And it is fine this
+  ;;way.
+  (check (fl!=? +0.0 +0.0)	=> #f)
+  (check (fl!=? -0.0 -0.0)	=> #f)
+  (check (fl!=? -0.0 +0.0)	=> #f)
+  (check (fl!=? +0.0 -0.0)	=> #f)
+
+  (check (fl!=? +3.0 +2.0 +1.0)	=> #t)
+  (check (fl!=? +1.0 +1.0 +1.0)	=> #f)
+  (check (fl!=? +1.0 +1.0 +1.0 +1.0)	=> #f)
+
+  #f)
 
 
 (parametrise ((check-test-name	'exactness))

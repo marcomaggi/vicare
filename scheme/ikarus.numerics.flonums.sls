@@ -17,6 +17,8 @@
 
 (library (ikarus flonums)
   (export
+    list-of-flonums?
+
     inexact->exact	exact		$flonum->exact
     fixnum->flonum
 
@@ -69,7 +71,7 @@
     flfinite?		$flfinite?
     flinfinite?		$flinfinite?
 
-    fl=?
+    fl=?		fl!=?		$fl!=
     fl<?		fl>?
     fl<=?		fl>=?
     fl+			fl-
@@ -97,7 +99,9 @@
 		  flsquare		flcube		flhypot
 		  flcbrt
 		  flinteger?		flnan?		flfinite?
-		  flinfinite?		fl=?		fl<?
+		  flinfinite?
+		  fl=?			fl!=?
+		  fl<?
 		  fl>?			fl<=?		fl>=?
 		  fl+			fl-		fl*
 		  fl/			flmax		flmin
@@ -154,11 +158,15 @@
 	    $flcube
 	    $flhypot
 	    $flmax
-	    $flmin)
-    (vicare arguments validation)
+	    $flmin
+	    $fl!=)
     (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand
-	  cond-exact-integer-operand))
+	  cond-exact-integer-operand
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; helpers
@@ -166,11 +174,8 @@
 (define-syntax define-fl-operation/one
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((flonum	x))
-	 (?unsafe-who x))))))
+     (define* (?safe-who {x flonum?})
+       (?unsafe-who x)))))
 
 (define-syntax define-fl-operation/one/forcall
   (syntax-rules ()
@@ -183,12 +188,8 @@
 (define-syntax define-fl-operation/two
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define (?safe-who x y)
-       (define who (quote ?safe-who))
-       (with-arguments-validation (who)
-	   ((flonum	x)
-	    (flonum	y))
-	 (?unsafe-who x y))))))
+     (define* (?safe-who {x flonum?} {y flonum?})
+       (?unsafe-who x y)))))
 
 (define-syntax define-fl-operation/two/forcall
   (syntax-rules ()
@@ -199,35 +200,38 @@
 	 (foreign-call ?foreign-who x y))))))
 
 
+;;;; predicates
+
+(define-list-of-type-predicate list-of-flonums? flonum?)
+
+
 ;;;; flonums parts
 
-(define (flonum-bytes x)
-  (define who 'flonum-bytes)
-  (with-arguments-validation (who)
-      ((flonum	x))
-    (values ($flonum-u8-ref x 0)
-	    ($flonum-u8-ref x 1)
-	    ($flonum-u8-ref x 2)
-	    ($flonum-u8-ref x 3)
-	    ($flonum-u8-ref x 4)
-	    ($flonum-u8-ref x 5)
-	    ($flonum-u8-ref x 6)
-	    ($flonum-u8-ref x 7))))
+(define* (flonum-bytes {x flonum?})
+  ($flonum-bytes x))
 
-(define (flonum-parts x)
-  (define who 'flonum-parts)
-  (with-arguments-validation (who)
-      ((flonum	x))
-    (let-values (((b0 b1 b2 b3 b4 b5 b6 b7) (flonum-bytes x)))
-      (values ($fxzero? ($fxlogand b0 128))
-	      (+ ($fxsll ($fxlogand b0 127) 4)
-		 ($fxsra b1 4))
-	      (+ (+ b7 ($fxsll b6 8) ($fxsll b5 16))
-		 (* (+ b4
-		       ($fxsll b3 8)
-		       ($fxsll b2 16)
-		       ($fxsll ($fxlogand b1 #b1111) 24))
-		    (expt 2 24)))))))
+(define ($flonum-bytes x)
+  (values ($flonum-u8-ref x 0)
+	  ($flonum-u8-ref x 1)
+	  ($flonum-u8-ref x 2)
+	  ($flonum-u8-ref x 3)
+	  ($flonum-u8-ref x 4)
+	  ($flonum-u8-ref x 5)
+	  ($flonum-u8-ref x 6)
+	  ($flonum-u8-ref x 7)))
+
+(define* (flonum-parts {x flonum?})
+  (receive (b0 b1 b2 b3 b4 b5 b6 b7)
+      ($flonum-bytes x)
+    (values ($fxzero? ($fxlogand b0 128))
+	    (+ ($fxsll ($fxlogand b0 127) 4)
+	       ($fxsra b1 4))
+	    (+ (+ b7 ($fxsll b6 8) ($fxsll b5 16))
+	       (* (+ b4
+		     ($fxsll b3 8)
+		     ($fxsll b2 16)
+		     ($fxsll ($fxlogand b1 #b1111) 24))
+		  (expt 2 24))))))
 
 
 ;;;; rounding
@@ -350,23 +354,21 @@
 (define-fl-operation/one fleven? $fleven?)
 (define-fl-operation/one flodd?  $flodd?)
 
-(define ($fleven? x)
-  (define who '$fleven?)
+(define* ($fleven? x)
   (let ((v ($flonum->exact x)))
     (cond-exact-integer-operand v
       ((fixnum?)	($fxeven? v))
       ((bignum?)	($bignum-even? v))
       (else
-       (assertion-violation who "not an integer flonum" x)))))
+       (assertion-violation __who__ "not an integer flonum" x)))))
 
-(define ($flodd? x)
-  (define who '$flodd?)
+(define* ($flodd? x)
   (let ((v ($flonum->exact x)))
     (cond-exact-integer-operand v
       ((fixnum?)	($fxodd? v))
       ((bignum?)	($bignum-odd? v))
       (else
-       (assertion-violation who "not an integer flonum" x)))))
+       (assertion-violation __who__ "not an integer flonum" x)))))
 
 
 ;;;; predicates
@@ -437,14 +439,14 @@
   ($fl> x +0.0))
 
 (define ($flnegative? x)
-  ($fl< x -0.0)
-  ;;Below  is an  old implementation  from Ikarus.   It does  not behave
-  ;;correctly when X = -0.0, which  should return #f.  (Marco Maggi; Sat
-  ;;Nov 17, 2012)
-  ;;
-  ;; (let ((b0 ($flonum-u8-ref x 0)))
-  ;;   ($fx> b0 127))
-  )
+  ($fl< x -0.0))
+;;NOTE Below is an old implementation from Ikarus.  It does not behave correctly when
+;;X = -0.0, which should return #f.  (Marco Maggi; Sat Nov 17, 2012)
+;;
+;;   (define ($flnegative? x)
+;;     (let ((b0 ($flonum-u8-ref x 0)))
+;;       ($fx> b0 127))
+;;
 
 (define ($flnonpositive? x)
   (or ($flzero?/negative x)
@@ -484,22 +486,19 @@
 
 ;;;; exactness
 
-(define (fixnum->flonum x)
-  (define who 'fixnum->flonum)
-  (with-arguments-validation (who)
-      ((fixnum	x))
-    ($fixnum->flonum x)))
+(define* (fixnum->flonum {x fixnum?})
+  ($fixnum->flonum x))
 
 (module (inexact->exact
 	 exact
 	 $flexact
 	 $cflexact)
 
-  (define (inexact->exact x)
-    ($exact x 'inexact->exact))
+  (define* (inexact->exact x)
+    ($exact x __who__))
 
-  (define (exact x)
-    ($exact x 'exact))
+  (define* (exact x)
+    ($exact x __who__))
 
   (define ($exact x who)
     (cond-numeric-operand x
@@ -510,20 +509,19 @@
       ((ratnum?)	x)
       ((compnum?)	x)
       (else
-       (assertion-violation who "expected number as argument" x))))
+       (procedure-argument-violation who "expected number as argument" x))))
 
-  (define ($flexact x)
+  (define* ($flexact x)
     (or ($flonum->exact x)
-	(%error-no-real-value '$flexact x)))
+	(%error-no-real-value __who__ x)))
 
-  (define ($cflexact x)
+  (define* ($cflexact x)
     (import (vicare system $compnums))
-    (define who '$cflexact)
-    (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value who x))
-		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value who x))))
+    (make-rectangular (or ($flonum->exact ($cflonum-real x)) (%error-no-real-value __who__ x))
+		      (or ($flonum->exact ($cflonum-imag x)) (%error-no-real-value __who__ x))))
 
   (define (%error-no-real-value who x)
-    (assertion-violation who "number has no real value" x))
+    (procedure-argument-violation who "number has no real value" x))
 
   #| end of module |# )
 
@@ -575,299 +573,87 @@
 
 ;;;; min max
 
-(module (flmax $flmax)
+(define-min/max-comparison flmax $flmax flonum? list-of-flonums?)
+(define-min/max-comparison flmin $flmin flonum? list-of-flonums?)
 
-  (define who 'flmax)
+(define ($flmax x y)
+  (cond (($flnan? x)	+nan.0)
+	(($flnan? y)	+nan.0)
+	(($fl< x y)	y)
+	(else		x)))
 
-  (define ($flmax x y)
-    (cond ((flnan? x)	+nan.0)
-	  ((flnan? y)	+nan.0)
-	  (($fl< x y)	y)
-	  (else		x)))
-
-  (define flmax
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($flmax x y)))
-     ((x y z . rest)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z))
-	(let loop ((a  ($flmax x y))
-		   (b  z)
-		   (ls rest))
-	  (with-arguments-validation (who)
-	      ((flonum	z))
-	    (if (null? ls)
-		($flmax a b)
-	      (loop ($flmax a b) ($car ls) ($cdr ls)))))))
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	x))))
-
-  #| end of module |# )
-
-(module (flmin $flmin)
-
-  (define ($flmin x y)
-    (cond ((flnan? x)	+nan.0)
-	  ((flnan? y)	+nan.0)
-	  (($fl< x y)	x)
-	  (else		y)))
-
-  (define who 'flmin)
-
-  (define flmin
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($flmin x y)))
-     ((x y z . rest)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	(let loop ((a  ($flmin x y))
-		   (b  z)
-		   (ls rest))
-	  (with-arguments-validation (who)
-	      ((flonum	z))
-	    (if (null? ls)
-		($flmin a b)
-	      (loop ($flmin a b) ($car ls) ($cdr ls)))))))
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	x))))
-
-  #| end of module |# )
+(define ($flmin x y)
+  (cond (($flnan? x)	+nan.0)
+	(($flnan? y)	+nan.0)
+	(($fl< x y)	x)
+	(else		y)))
 
 
 ;;;; comparison
 
-(let-syntax ((define-flcmp
-	       (syntax-rules ()
-		 ((_ fl<? $fl<)
-		  (module (fl<?)
-		    (define who (quote fl<?))
+(define-equality/sorting-predicate fl=?		$fl=	flonum? list-of-flonums?)
+(define-equality/sorting-predicate fl<?		$fl<	flonum? list-of-flonums?)
+(define-equality/sorting-predicate fl<=?	$fl<=	flonum? list-of-flonums?)
+(define-equality/sorting-predicate fl>?		$fl>	flonum? list-of-flonums?)
+(define-equality/sorting-predicate fl>=?	$fl>=	flonum? list-of-flonums?)
+(define-inequality-predicate       fl!=?	$fl!=	flonum? list-of-flonums?)
 
-		    (define fl<?
-		      (case-lambda
-		       ((x y)
-			(with-arguments-validation (who)
-			    ((flonum	x)
-			     (flonum	y))
-			  ($fl< x y)))
-
-		       ((x y z)
-			(with-arguments-validation (who)
-			    ((flonum	x)
-			     (flonum	y)
-			     (flonum	z))
-			  (and ($fl< x y)
-			       ($fl< y z))))
-
-		       ((x)
-			(or (flonum? x)
-			    (assertion-violation who "expected flonum as argument" x)))
-
-		       ((x y . rest)
-			(with-arguments-validation (who)
-			    ((flonum	x)
-			     (flonum	y))
-			  (if ($fl< x y)
-			      (let loop ((x  y)
-					 (y  (car rest))
-					 (ls (cdr rest)))
-				(with-arguments-validation (who)
-				    ((flonum	y))
-				  (if (null? ls)
-				      ($fl< x y)
-				    (if ($fl< x y)
-					(loop y ($car ls) ($cdr ls))
-				      (%validate-rest ($car ls) ($cdr ls))))))
-			    (%validate-rest (car rest) (cdr rest)))))
-		       ))
-
-		    (define (%validate-rest a ls)
-		      (with-arguments-validation (who)
-			  ((flonum	a))
-			(if (null? ls)
-			    #f
-			  (%validate-rest ($car ls) ($cdr ls)))))
-
-		    #| end of module |# )
-		  ))))
-  (define-flcmp fl=?	$fl=)
-  (define-flcmp fl<?	$fl<)
-  (define-flcmp fl<=?	$fl<=)
-  (define-flcmp fl>?	$fl>)
-  (define-flcmp fl>=?	$fl>=))
+(define ($fl!= fl1 fl2)
+  ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
+  ;;implementation must be changed to:
+  ;;
+  ;;   (import (prefix (vicare system $flonums) sys.))
+  ;;   (sys.$fl!= fl1 fl2)
+  ;;
+  ;;(Marco Maggi; Fri Mar 27, 2015)
+  (not ($fl= fl1 fl2)))
 
 
 ;;;; arithmetic
 
-(module (fl+)
+(let-syntax
+    ((define-arithmetic-operation
+       (syntax-rules ()
+	 ((_ ?who ?unary-unsafe-who ?binary-unsafe-who ?type-pred ?list-type-pred)
+	  (case-define* ?who
+	    (({x ?type-pred} {y ?type-pred})
+	     (?binary-unsafe-who x y))
 
-  (define who 'fl+)
+	    (({x ?type-pred} {y ?type-pred} {z ?type-pred})
+	     (?binary-unsafe-who (?binary-unsafe-who x y) z))
 
-  (define fl+
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($fl+ x y)))
-     ((x y z)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z))
-	($fl+ ($fl+ x y) z)))
-     ((x y z q . rest)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z)
-	   (flonum	q))
-	(let loop ((ac   ($fl+ ($fl+ ($fl+ x y) z) q))
-		   (rest rest))
-	  (if (null? rest)
-	      ac
-	    (let ((x ($car rest)))
-	      (with-arguments-validation (who)
-		  ((flonum	x))
-		(loop ($fl+ ac x) ($cdr rest))))))))
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	x))
-     (()
-      ;;We return always the same flonum object: is this bad?
-      0.0)))
+	    (({x ?type-pred} {y ?type-pred} {z ?type-pred} {w ?type-pred} . {rest ?list-type-pred})
+	     (let loop ((ac   (?binary-unsafe-who (?binary-unsafe-who (?binary-unsafe-who x y) z) w))
+			(rest rest))
+	       (if (pair? rest)
+		   (loop (?binary-unsafe-who ac (car rest))
+			 (cdr rest))
+		 ac)))
 
-  #| end of module |# )
+	    (({x ?type-pred})
+	     (?unary-unsafe-who x))
 
-(module (fl-)
+	    (()
+	     ;;We always return the same flonum object: is this bad?
+	     0.0)))
+	 )))
+  (define-arithmetic-operation fl+ $unary-fl+ $fl+ flonum? list-of-flonums?)
+  (define-arithmetic-operation fl- $unary-fl- $fl- flonum? list-of-flonums?)
+  (define-arithmetic-operation fl* $unary-fl* $fl* flonum? list-of-flonums?)
+  (define-arithmetic-operation fl/ $unary-fl/ $fl/ flonum? list-of-flonums?)
+  #| end of LET-SYNTAX |# )
 
-  (define who 'fl-)
+(define-syntax-rule ($unary-fl+ ?fl)
+  ?fl)
 
-  (define fl-
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($fl- x y)))
-     ((x y z)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z))
-	($fl- ($fl- x y) z)))
-     ((x y z q . rest)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z)
-	   (flonum	q))
-	(let loop ((ac   ($fl- ($fl- ($fl- x y) z) q))
-		   (rest rest))
-	  (if (null? rest)
-	      ac
-	    (let ((x ($car rest)))
-	      (with-arguments-validation (who)
-		  ((flonum	x))
-		(loop ($fl- ac x) ($cdr rest))))))))
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	($fl* -1.0 x)))))
+(define-syntax-rule ($unary-fl- ?fl)
+  ($fl- ?fl))
 
-  #| end of module |# )
+(define-syntax-rule ($unary-fl* ?fl)
+  ?fl)
 
-(module (fl*)
-  (define who 'fl*)
-
-  (define fl*
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($fl* x y)))
-     ((x y z)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z))
-	($fl* ($fl* x y) z)))
-     ((x y z q . rest)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z)
-	   (flonum	q))
-	(let loop ((ac   ($fl* ($fl* ($fl* x y) z) q))
-		   (rest rest))
-	  (if (null? rest)
-	      ac
-	    (let ((x ($car rest)))
-	      (with-arguments-validation (who)
-		  ((flonum	x))
-		(loop ($fl* ac x) ($cdr rest))))))))
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	x))
-     (()
-      ;;We return always the same flonum object: is this bad?
-      1.0)))
-
-  #| end of module |# )
-
-(module (fl/)
-  (define who 'fl/)
-
-  (define fl/
-    (case-lambda
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($fl/ x y)))
-     ((x y z)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z))
-	($fl/ ($fl/ x y) z)))
-     ((x y z q . rest)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y)
-	   (flonum	z)
-	   (flonum	q))
-	(let loop ((ac   ($fl/ ($fl/ ($fl/ x y) z) q))
-		   (rest rest))
-	  (if (null? rest)
-	      ac
-	    (let ((x ($car rest)))
-	      (with-arguments-validation (who)
-		  ((flonum	x))
-		(loop ($fl/ ac x) ($cdr rest))))))))
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	($fl/ 1.0 x)))))
-
-  #| end of module |# )
+(define-syntax-rule ($unary-fl/ ?fl)
+  ($fl/ 1.0 ?fl))
 
 
 ;;;; functions
@@ -885,29 +671,17 @@
 (define-fl-operation/one/forcall flasin $flasin "ikrt_fl_asin")
 (define-fl-operation/one/forcall flacos $flacos "ikrt_fl_acos")
 
-(module (flatan $flatan $flatan2)
+(case-define* flatan
+  (({x flonum?})
+   ($flatan x))
+  (({x flonum?} {y flonum?})
+   ($flatan2 x y)))
 
-  (define who 'flatan)
+(define ($flatan x)
+  (foreign-call "ikrt_fl_atan" x))
 
-  (define flatan
-    (case-lambda
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	($flatan x)))
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($flatan2 x y)))))
-
-  (define ($flatan x)
-    (foreign-call "ikrt_fl_atan" x))
-
-  (define ($flatan2 x y)
-    (foreign-call "ikrt_atan2" x y))
-
-  #| end of module |# )
+(define ($flatan2 x y)
+  (foreign-call "ikrt_atan2" x y))
 
 ;;; --------------------------------------------------------------------
 
@@ -933,30 +707,18 @@
 
 (define-fl-operation/one/forcall fllog1p $fllog1p "ikrt_fl_log1p")
 
-(module (fllog $fllog $fllog2)
+(case-define* fllog
+  (({x flonum?})
+   ($fllog x))
+  (({x flonum?} {y flonum?})
+   ($fllog2 x y)))
 
-  (define who 'fllog)
+(define ($fllog x)
+  (foreign-call "ikrt_fl_log" x))
 
-  (define fllog
-    (case-lambda
-     ((x)
-      (with-arguments-validation (who)
-	  ((flonum	x))
-	($fllog x)))
-     ((x y)
-      (with-arguments-validation (who)
-	  ((flonum	x)
-	   (flonum	y))
-	($fllog2 x y)))))
-
-  (define ($fllog x)
-    (foreign-call "ikrt_fl_log" x))
-
-  (define ($fllog2 x y)
-    ($fl/ (foreign-call "ikrt_fl_log" x)
-	  (foreign-call "ikrt_fl_log" y)))
-
-  #| end of module |# )
+(define ($fllog2 x y)
+  ($fl/ (foreign-call "ikrt_fl_log" x)
+	(foreign-call "ikrt_fl_log" y)))
 
 ;;; --------------------------------------------------------------------
 
@@ -988,17 +750,11 @@
 
 ;;;; debugging functions
 
-(define (flonum->bytevector flo)
-  (define who 'flonum->bytevector)
-  (with-arguments-validation (who)
-      ((flonum	flo))
-    (foreign-call "ikrt_debug_flonum_to_bytevector" flo)))
+(define* (flonum->bytevector {flo flonum?})
+  (foreign-call "ikrt_debug_flonum_to_bytevector" flo))
 
-(define (bytevector->flonum bv)
-  (define who 'bytevector->flonum)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    (foreign-call "ikrt_debug_flonum_from_bytevector" bv)))
+(define* (bytevector->flonum {bv bytevector?})
+  (foreign-call "ikrt_debug_flonum_from_bytevector" bv))
 
 
 ;;;; done

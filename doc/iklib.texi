@@ -11013,6 +11013,15 @@ non--negative; else return @false{}.
 
 @c ------------------------------------------------------------
 
+@subsubheading Comparison
+
+@defun fl!=? @vari{fl} @varii{fl} @varii{fl} @dots{}
+Return @true{} if the operands are equal; else return @false{}.  The
+operands must be flonums, otherwise an exception is raised.
+@end defun
+
+@c ------------------------------------------------------------
+
 @subsubheading String conversion
 
 
