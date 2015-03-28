@@ -751,31 +751,31 @@
 
 (parametrise ((check-test-name	'min-max))
 
-  (check (strmin "A")			=> "A")
+  (check (string-min "A")			=> "A")
 
-  (check (strmin "a" "a")		=> "a")
-  (check (strmin "a" "b")		=> "a")
-  (check (strmin "b" "a")		=> "a")
+  (check (string-min "a" "a")			=> "a")
+  (check (string-min "a" "b")			=> "a")
+  (check (string-min "b" "a")			=> "a")
 
-  (check (strmin "a" "b" "c")		=> "a")
+  (check (string-min "a" "b" "c")		=> "a")
 
-  (check (strmin "a" "b" "c" "d")	=> "a")
+  (check (string-min "a" "b" "c" "d")		=> "a")
 
-  (check (strmin "a" "b" "c" "d" "e")	=> "a")
+  (check (string-min "a" "b" "c" "d" "e")	=> "a")
 
 ;;; --------------------------------------------------------------------
 
-  (check (strmax "A")			=> "A")
+  (check (string-max "A")			=> "A")
 
-  (check (strmax "a" "a")		=> "a")
-  (check (strmax "a" "b")		=> "b")
-  (check (strmax "b" "a")		=> "b")
+  (check (string-max "a" "a")			=> "a")
+  (check (string-max "a" "b")			=> "b")
+  (check (string-max "b" "a")			=> "b")
 
-  (check (strmax "a" "b" "c")		=> "c")
+  (check (string-max "a" "b" "c")		=> "c")
 
-  (check (strmax "a" "b" "c" "d")	=> "d")
+  (check (string-max "a" "b" "c" "d")		=> "d")
 
-  (check (strmax "a" "b" "c" "d" "e")	=> "e")
+  (check (string-max "a" "b" "c" "d" "e")	=> "e")
 
   #t)
 

@@ -28,7 +28,7 @@
     bytevector?		string?		procedure?
     null?		pair?		symbol?
     eq?			eqv?
-    boolean=?		symbol=?
+    boolean=?
     immediate?		code?
     transcoder?		weak-pair?
     not			bwp-object)
@@ -46,7 +46,7 @@
 	    bytevector?		string?		procedure?
             null?		pair?		symbol?
 	    eq?			eqv?
-	    boolean=?		symbol=?
+	    boolean=?
             immediate?		code?
             transcoder?		weak-pair?
 	    not			bwp-object
@@ -381,7 +381,6 @@
 		 (if (pred? y) #f (err y)))
 	     (err x)))))))))
 
-(define-pred symbol=?  sys:symbol?  "expected symbol as argument")
 (define-pred boolean=? sys:boolean? "expected boolean as argument")
 
 

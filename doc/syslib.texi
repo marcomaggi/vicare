@@ -59,6 +59,38 @@ and @code{proc} fields are initialised to a special machine word value
 meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
+@defun $symbol= @vari{sym} @varii{sym}
+Return @true{} if the symbol arguments have equal pretty string name
+according to @func{$string=}; otherwise return @false{}.
+@end defun
+
+
+@defun $symbol!= @vari{sym} @varii{sym}
+Return @true{} if the symbol arguments have different pretty string name
+according to @func{$string!=}; otherwise return @false{}.
+@end defun
+
+
+@defun $symbol< @vari{sym} @varii{sym}
+@defunx $symbol> @vari{sym} @varii{sym}
+@defunx $symbol<= @vari{sym} @varii{sym}
+@defunx $symbol>= @vari{sym} @varii{sym}
+Return @true{} if the symbol arguments have pretty string names
+satisfying, respectively: @func{$string<}, @func{$string>},
+@func{$string<=}, @func{$string>=}; otherwise return @false{}.
+@end defun
+
+
+@defun $symbol-max @vari{sym} @varii{sym}
+@defunx $symbol-min @vari{sym} @varii{sym}
+Return the symbol argument having maximal or minimal pretty string name
+according to @func{$string-max} and @func{string-min}.
+@end defun
+
 
 @deffn {Unsafe Operation} $string->symbol @var{str}
 Return an interned symbol having the string @var{str} as name.
@@ -5957,7 +5989,7 @@ bindings are exported by the library @library{vicare system $strings}.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Constructors
+@subsubheading Constructors
 
 @deffn {Unsafe Operation} $make-string @var{fx}
 Allocate a new string capable of holding @var{fx} characters and return
@@ -6027,7 +6059,7 @@ Assume the arguments have been already validated.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Accessors and mutators
+@subsubheading Accessors and mutators
 
 @deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
 Return the character at offset @var{fx} in @var{str}.
@@ -6046,7 +6078,7 @@ exclusive with @var{fill}.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Inspection
+@subsubheading Inspection
 
 @deffn {Unsafe Operation} $string-length @var{str}
 Return a fixnum representing the length of the operand.
@@ -6069,7 +6101,7 @@ Return @true{} if the string @var{str} is empty, otherwise return
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Comparison
+@subsubheading Comparison
 
 
 @deffn {Unsafe Operation} $string= @vari{str} @varii{str}
@@ -6094,8 +6126,8 @@ return @false{}.
 @end deffn
 
 
-@defun $strmax @vari{str} @varii{str}
-@defunx $strmin @vari{str} @varii{str}
+@defun $string-max @vari{str} @varii{str}
+@defunx $string-min @vari{str} @varii{str}
 Return the maximal or minimal string argument according to
 @func{$string<}.
 @end defun

@@ -10316,8 +10316,8 @@ return @false{}.
 @end defun
 
 
-@defun strmax @varo{str} @var{str} @dots{}
-@defunx strmin @varo{str} @var{str} @dots{}
+@defun string-max @varo{str} @var{str} @dots{}
+@defunx string-min @varo{str} @var{str} @dots{}
 Return the maximal or minimal string argument according to
 @func{string<?}.
 @end defun
@@ -10693,6 +10693,19 @@ orderings on strings.
 (symbol<? z Z)          @result{} #f
 @end example
 @end deffn
+
+
+@defun symbol!=? @varo{str} @var{str} @dots{}
+Return @true{} if all the symbol arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun symbol-max @varo{str} @var{str} @dots{}
+@defunx symbol-min @varo{str} @var{str} @dots{}
+Return the maximal or minimal symbol argument according to
+@func{symbol<?}.
+@end defun
 
 @c page
 @node iklib symbols value

@@ -36,6 +36,18 @@
 
 ;;;; syntax helpers
 
+(define-syntax check-procedure-arguments-violation
+  (syntax-rules ()
+    ((_ ?body)
+     (check-for-true
+      (guard (E ((procedure-argument-violation? E)
+		 (when #f
+		   (check-pretty-print (condition-message E))
+		   (check-pretty-print (condition-irritants E)))
+		 #t)
+		(else E))
+	?body)))))
+
 (define-syntax catch-expand-time-type-mismatch
   (syntax-rules ()
     ((_ print? . ?body)
@@ -154,75 +166,214 @@
 
   (check-for-procedure-argument-violation
       (symbol<? 123 'abc)
-    => '(symbol<? ((symbol? sym1) 123)))
+    => '(symbol<? ((symbol? obj1) 123)))
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 123)
-    => '(symbol<? ((symbol? sym2) 123)))
+    => '(symbol<? ((symbol? obj2) 123)))
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 'def 123)
-    => '(symbol<? ((symbol? sym3) 123)))
+    => '(symbol<? ((symbol? obj3) 123)))
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 'def 'ghi 123)
-    => '(symbol<? ((list-of-symbols? sym*) (123))))
+    => '(symbol<? ((symbol? obj4) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<? 'abc 'def 'ghi 'lmn 123)
+    => '(symbol<? ((list-of-symbols? obj*) (123))))
 
 ;;;
 
   (check-for-procedure-argument-violation
       (symbol<=? 123 'abc)
-    => '(symbol<=? ((symbol? sym1) 123)))
+    => '(symbol<=? ((symbol? obj1) 123)))
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 123)
-    => '(symbol<=? ((symbol? sym2) 123)))
+    => '(symbol<=? ((symbol? obj2) 123)))
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 'def 123)
-    => '(symbol<=? ((symbol? sym3) 123)))
+    => '(symbol<=? ((symbol? obj3) 123)))
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 'def 'ghi 123)
-    => '(symbol<=? ((list-of-symbols? sym*) (123))))
+    => '(symbol<=? ((symbol? obj4) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol<=? 'abc 'def 'ghi 'lmn 123)
+    => '(symbol<=? ((list-of-symbols? obj*) (123))))
 
 ;;;
 
   (check-for-procedure-argument-violation
       (symbol>? 123 'abc)
-    => '(symbol>? ((symbol? sym1) 123)))
+    => '(symbol>? ((symbol? obj1) 123)))
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 123)
-    => '(symbol>? ((symbol? sym2) 123)))
+    => '(symbol>? ((symbol? obj2) 123)))
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 'def 123)
-    => '(symbol>? ((symbol? sym3) 123)))
+    => '(symbol>? ((symbol? obj3) 123)))
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 'def 'ghi 123)
-    => '(symbol>? ((list-of-symbols? sym*) (123))))
+    => '(symbol>? ((symbol? obj4) 123)))
 
+  (check-for-procedure-argument-violation
+      (symbol>? 'abc 'def 'ghi 'lmn 123)
+    => '(symbol>? ((list-of-symbols? obj*) (123))))
 ;;;
 
   (check-for-procedure-argument-violation
       (symbol>=? 123 'abc)
-    => '(symbol>=? ((symbol? sym1) 123)))
+    => '(symbol>=? ((symbol? obj1) 123)))
 
   (check-for-procedure-argument-violation
       (symbol>=? 'abc 123)
-    => '(symbol>=? ((symbol? sym2) 123)))
+    => '(symbol>=? ((symbol? obj2) 123)))
 
   (check-for-procedure-argument-violation
       (symbol>=? 'abc 'def 123)
-    => '(symbol>=? ((symbol? sym3) 123)))
+    => '(symbol>=? ((symbol? obj3) 123)))
 
   (check-for-procedure-argument-violation
       (symbol>=? 'abc 'def 'ghi 123)
-    => '(symbol>=? ((list-of-symbols? sym*) (123))))
+    => '(symbol>=? ((symbol? obj4) 123)))
+
+  (check-for-procedure-argument-violation
+      (symbol>=? 'abc 'def 'ghi 'lmn 123)
+    => '(symbol>=? ((list-of-symbols? obj*) (123))))
+  #t)
+
+
+(parametrise ((check-test-name	'symbol-inequal))
+
+  (check
+      (symbol!=? '\x00; '\x00;)
+    => #f)
+
+  (check
+      (symbol!=? '\x00; '\x00; '\x00;)
+    => #f)
+
+  (check
+      (symbol!=? 'a 'a)
+    => #f)
+
+  (check
+      (symbol!=? 'a 'a 'a)
+    => #f)
+
+  (check
+      (symbol!=? 'abc 'abc)
+    => #f)
+
+  (check
+      (symbol!=? 'abc 'abc 'abc)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (symbol!=? 'a '\x00;)
+    => #t)
+
+  (check
+      (symbol!=? '\x00; 'a)
+    => #t)
+
+  (check
+      (symbol!=? 'a '\x00; '\x00;)
+    => #f)
+
+  (check
+      (symbol!=? '\x00; 'a '\x00;)
+    => #f)
+
+  (check
+      (symbol!=? '\x00; '\x00; 'a)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (symbol!=? 'abc 'def)
+    => #t)
+
+  (check
+      (symbol!=? 'abc 'a)
+    => #t)
+
+  (check
+      (symbol!=? 'a 'abc)
+    => #t)
+
+  (check
+      (symbol!=? 'a 'abc 'abc)
+    => #f)
+
+  (check
+      (symbol!=? 'abc 'a 'abc)
+    => #f)
+
+  (check
+      (symbol!=? 'abc 'abc 'a)
+    => #f)
+
+  (check
+      (symbol!=? 'abc 'def 'ghi)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (symbol!=? 123 '\x00;))
+
+  (check-procedure-arguments-violation
+   (symbol!=? '\x00; 123))
+
+  (check-procedure-arguments-violation
+   (symbol!=? '\x00; '\x00; 123))
 
   #t)
+
+
+(parametrise ((check-test-name	'min-max))
+
+  (check (symbol-min 'A)		=> 'A)
+
+  (check (symbol-min 'a 'a)		=> 'a)
+  (check (symbol-min 'a 'b)		=> 'a)
+  (check (symbol-min 'b 'a)		=> 'a)
+
+  (check (symbol-min 'a 'b 'c)		=> 'a)
+
+  (check (symbol-min 'a 'b 'c 'd)	=> 'a)
+
+  (check (symbol-min 'a 'b 'c 'd 'e)	=> 'a)
+
+;;; --------------------------------------------------------------------
+
+  (check (symbol-max 'A)		=> 'A)
+
+  (check (symbol-max 'a 'a)		=> 'a)
+  (check (symbol-max 'a 'b)		=> 'b)
+  (check (symbol-max 'b 'a)		=> 'b)
+
+  (check (symbol-max 'a 'b 'c)		=> 'c)
+
+  (check (symbol-max 'a 'b 'c 'd)	=> 'd)
+
+  (check (symbol-max 'a 'b 'c 'd 'e)	=> 'e)
+
+  #t)
+
 
 (parametrise ((check-test-name	'plists))
 

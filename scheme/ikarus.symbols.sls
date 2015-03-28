@@ -29,8 +29,11 @@
     list-of-symbols?
 
     ;;comparison
+    symbol=?			symbol!=?
     symbol<?			symbol<=?
     symbol>?			symbol>=?
+
+    symbol-max			symbol-min
 
     ;; internal functions
     $unintern-gensym
@@ -46,6 +49,10 @@
     $symbol->string
     $getprop $putprop $remprop $property-list
 
+    $symbol=			$symbol!=
+    $symbol<			$symbol<=
+    $symbol>			$symbol>=
+    $symbol-max			$symbol-min
 
     ;; internals handling of symbols and special symbols
     unbound-object	unbound-object?
@@ -68,8 +75,10 @@
 		  list-of-symbols?
 
 		  ;; comparison
+		  symbol=?			symbol!=?
 		  symbol<?			symbol<=?
 		  symbol>?			symbol>=?
+		  symbol-max			symbol-min
 
 		  ;; object properties
 		  getprop putprop remprop property-list
@@ -95,18 +104,43 @@
     ;;external dependencies.  (Marco Maggi; Mon Apr 14, 2014)
     (vicare system $fx)
     (vicare system $pairs)
-    (vicare system $strings)
+    (except (vicare system $strings)
+	    ;;FIXME These excepts are to be  removed at the next boot image rotation.
+	    ;;(Marco Maggi; Sat Mar 28, 2015)
+	    $string=
+	    $string!=
+	    $string>
+	    $string<
+	    $string>=
+	    $string<=)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 28,
+    ;;2015)
+    (only (ikarus strings)
+	  $string=
+	  $string!=
+	  $string>
+	  $string<
+	  $string>=
+	  $string<=)
     (only (vicare system $numerics)
 	  $add1-integer)
     (except (vicare system $symbols)
-	    $symbol->string	$unintern-gensym
-	    $getprop		$putprop		$remprop
+	    $symbol->string
+	    $unintern-gensym
+	    $getprop
+	    $putprop
+	    $remprop
 	    $property-list
 	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri
 	    ;;May 23, 2014)
 	    system-value-gensym)
     (for (prefix (vicare) sys.)
-      expand))
+      expand)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; helpers
@@ -179,34 +213,53 @@
 
 ;;;; predicates
 
-(define (list-of-symbols? obj)
-  (if (pair? obj)
-      (and (symbol? (car obj))
-	   (list-of-symbols? (cdr obj)))
-    (null? obj)))
+(define-list-of-type-predicate list-of-symbols? symbol?)
 
 
 ;;;; comparison
 
-(let-syntax
-    ((define-symbol-comparison (syntax-rules ()
-				 ((_ ?who ?string-who)
-				  (case-define* ?who
-				    (({sym1 symbol?} {sym2 symbol?})
-				     (?string-who ($symbol->string sym1)
-						  ($symbol->string sym2)))
-				    (({sym1 symbol?} {sym2 symbol?} {sym3 symbol?} . {sym* list-of-symbols?})
-				     (apply ?string-who
-					    ($symbol->string sym1)
-					    ($symbol->string sym2)
-					    ($symbol->string sym3)
-					    (map $symbol->string sym*)))))
-				 )))
-  (define-symbol-comparison symbol<?  string<?)
-  (define-symbol-comparison symbol>?  string>?)
-  (define-symbol-comparison symbol<=? string<=?)
-  (define-symbol-comparison symbol>=? string>=?)
-  #| end of LET-SYNTAX |# )
+(define-equality/sorting-predicate symbol=?	$symbol=	symbol? list-of-symbols?)
+(define-equality/sorting-predicate symbol<?	$symbol<	symbol? list-of-symbols?)
+(define-equality/sorting-predicate symbol<=?	$symbol<=	symbol? list-of-symbols?)
+(define-equality/sorting-predicate symbol>?	$symbol>	symbol? list-of-symbols?)
+(define-equality/sorting-predicate symbol>=?	$symbol>=	symbol? list-of-symbols?)
+(define-inequality-predicate       symbol!=?	$symbol!=	symbol? list-of-symbols?)
+
+(define ($symbol= sym1 sym2)
+  ($string= ($symbol->string sym1)
+	    ($symbol->string sym2)))
+
+(define ($symbol!= sym1 sym2)
+  ($string!= ($symbol->string sym1)
+	     ($symbol->string sym2)))
+
+(define ($symbol< sym1 sym2)
+  ($string< ($symbol->string sym1)
+	    ($symbol->string sym2)))
+
+(define ($symbol> sym1 sym2)
+  ($string> ($symbol->string sym1)
+	    ($symbol->string sym2)))
+
+(define ($symbol<= sym1 sym2)
+  ($string<= ($symbol->string sym1)
+	     ($symbol->string sym2)))
+
+(define ($symbol>= sym1 sym2)
+  ($string>= ($symbol->string sym1)
+	     ($symbol->string sym2)))
+
+
+;;;; min max
+
+(define-min/max-comparison symbol-max $symbol-max symbol? list-of-symbols?)
+(define-min/max-comparison symbol-min $symbol-min symbol? list-of-symbols?)
+
+(define ($symbol-min str1 str2)
+  (if ($symbol< str1 str2) str1 str2))
+
+(define ($symbol-max str1 str2)
+  (if ($symbol< str1 str2) str2 str1))
 
 
 (define (unbound-object? x)

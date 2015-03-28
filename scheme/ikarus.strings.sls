@@ -29,7 +29,7 @@
     string=?			string!=?
     string<?			string<=?
     string>?			string>=?
-    strmin			strmax
+    string-min			string-max
     string-concatenate
     string-reverse-and-concatenate
     uuid
@@ -70,7 +70,7 @@
     $string=			$string!=
     $string<			$string>
     $string<=			$string>=
-    $strmin			$strmax
+    $string-min			$string-max
     $string-total-length
     $substring
     $string-copy		$string-copy!
@@ -113,7 +113,7 @@
 		  string=?			string!=?
 		  string<?			string<=?
 		  string>?			string>=?
-		  strmin			strmax
+		  string-min			string-max
 		  string-concatenate
 		  string-reverse-and-concatenate
 		  uuid
@@ -649,13 +649,13 @@
 
 ;;;; min max
 
-(define-min/max-comparison strmax $strmax string? list-of-strings?)
-(define-min/max-comparison strmin $strmin string? list-of-strings?)
+(define-min/max-comparison string-max $string-max string? list-of-strings?)
+(define-min/max-comparison string-min $string-min string? list-of-strings?)
 
-(define ($strmin str1 str2)
+(define ($string-min str1 str2)
   (if ($string< str1 str2) str1 str2))
 
-(define ($strmax str1 str2)
+(define ($string-max str1 str2)
   (if ($string< str1 str2) str2 str1))
 
 
