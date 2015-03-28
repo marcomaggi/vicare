@@ -28,7 +28,6 @@
     bytevector?		string?		procedure?
     null?		pair?		symbol?
     eq?			eqv?
-    boolean=?
     immediate?		code?
     transcoder?		weak-pair?
     not			bwp-object)
@@ -46,7 +45,6 @@
 	    bytevector?		string?		procedure?
             null?		pair?		symbol?
 	    eq?			eqv?
-	    boolean=?
             immediate?		code?
             transcoder?		weak-pair?
 	    not			bwp-object
@@ -339,49 +337,6 @@
 	 (and (keyword? y) (keyword=? x y)))
 
 	(else #f)))
-
-
-(define-syntax define-pred
-  (syntax-rules ()
-    ((_ name pred? msg)
-     (begin
-       (define (err x) (assertion-violation 'name msg x))
-       (define (g rest)
-	 (if (sys:pair? rest)
-	     (let ((a (car rest)))
-	       (if (pred? a)
-		   (g (cdr rest))
-		 (err a)))
-	   #f))
-       (define (f x rest)
-	 (if (sys:pair? rest)
-	     (let ((a (car rest)))
-	       (if (sys:eq? x a)
-		   (f x (cdr rest))
-		 (if (pred? a)
-		     (g (cdr rest))
-		   (err a))))
-	   #t))
-       (define name
-	 (case-lambda
-	  ((x y)
-	   (if (pred? x)
-	       (if (sys:eq? x y)
-		   #t
-		 (if (pred? y)
-		     #f
-		   (err y)))
-	     (err x)))
-	  ((x y z . rest)
-	   (if (pred? x)
-	       (if (sys:eq? x y)
-		   (if (sys:eq? x z)
-		       (f x rest)
-		     (if (pred? z) #f (err z)))
-		 (if (pred? y) #f (err y)))
-	     (err x)))))))))
-
-(define-pred boolean=? sys:boolean? "expected boolean as argument")
 
 
 ;;;; done

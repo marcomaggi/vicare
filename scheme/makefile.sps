@@ -271,6 +271,7 @@
     "ikarus.apply.sls"
     "ikarus.keywords.sls"
     "ikarus.predicates.sls"
+    "ikarus.booleans.sls"
     "ikarus.equal.sls"
     "ikarus.pairs.sls"
     "ikarus.lists.sls"
@@ -761,6 +762,9 @@
     ($fx		(vicare system $fx)			#f	#t)
     ($rat		(vicare system $ratnums)		#f	#t)
     ($comp		(vicare system $compnums)		#f	#t)
+    ;;FIXME To be made  required at the next boot image  rotation.  (Marco Maggi; Sat
+    ;;Mar 28, 2015)
+    ($bools		(vicare system $booleans)		#f	#f)
     ($symbols		(vicare system $symbols)		#f	#t)
     ($keywords		(vicare system $keywords)		#f	#t)
     ($structs		(vicare system $structs)		#f	#t)
@@ -1045,6 +1049,15 @@
 
 ;;; --------------------------------------------------------------------
 
+    ($boolean=					$bools)
+    ($boolean!=					$bools)
+    ($boolean<					$bools)
+    ($boolean>					$bools)
+    ($boolean<=					$bools)
+    ($boolean>=					$bools)
+    ($boolean-min				$bools)
+    ($boolean-max				$bools)
+;;;
     ($car					$pairs)
     ($cdr					$pairs)
     ($set-car!					$pairs)
@@ -1620,6 +1633,14 @@
     (assertion-error) ;empty?!?
     (assertion-violation			v r ba)
     (boolean=?					v r ba)
+    (boolean!=?					v $language)
+    (boolean<?					v $language)
+    (boolean>?					v $language)
+    (boolean<=?					v $language)
+    (boolean>=?					v $language)
+    (boolean-min				v $language)
+    (boolean-max				v $language)
+    (list-of-booleans?				v $language)
     (boolean?					v r ba se)
     (car					v r ba se)
     (cdr					v r ba se)

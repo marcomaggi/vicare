@@ -11,6 +11,7 @@ undefined behaviour (probably a crash).  They are also faster than the
 public interface exported by @library{vicare} and @library{rnrs}.
 
 @menu
+* syslib booleans::             Low level boolean operations.
 * syslib symbols::              Low level symbol operations.
 * syslib keywords::             Low level keyword operations.
 * syslib fixnums::              Low level fixnum operations.
@@ -35,6 +36,53 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib closures::             Low level closures operations.
 * syslib compiler::             Interface to compiler passes.
 @end menu
+
+@c page
+@node syslib booleans
+@section Low level boolean operations
+
+
+@cindex @library{vicare system $booleans}, library
+@cindex Library @library{vicare system $booleans}
+
+
+The arguments @var{bool} must be booleans.  The following bindings are
+exported by the library @library{vicare system booleans}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
+@defun {$boolean=} @vari{bool} @varii{bool}
+Return @true{} if the arguments are equal; otherwise return @false{}.
+@end defun
+
+
+@defun {$boolean!=} @vari{bool} @varii{bool}
+Return @true{} if the arguments are different; otherwise return
+@false{}.
+@end defun
+
+
+@deffn Procedure {$boolean<} @vari{bool} @varii{bool}
+@deffnx Procedure {$boolean>} @vari{bool} @varii{bool}
+@deffnx Procedure {$boolean<=} @vari{bool} @varii{bool}
+@deffnx Procedure {$boolean>=} @vari{bool} @varii{bool}
+Compare the boolean arguments according to the artificial comparison
+definition:
+
+@example
+#t == #t
+#f == #f
+#f <  #t
+@end example
+@end deffn
+
+
+@defun $boolean-min @vari{bool} @varii{bool}
+@defunx $boolean-max @vari{bool} @varii{bool}
+Return the minimal or maximal boolean among the arguments.
+@end defun
 
 @c page
 @node syslib symbols

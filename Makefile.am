@@ -345,6 +345,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.pointers.sls				\
 	scheme/ikarus.posix.sls					\
 	scheme/ikarus.predicates.sls				\
+	scheme/ikarus.booleans.sls				\
 	scheme/ikarus.pretty-formats.sls			\
 	scheme/ikarus.pretty-print.sls				\
 	scheme/ikarus.promises.sls				\
@@ -670,6 +671,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-ikarus-unicode.sps					\
 	\
 	tests/test-vicare-bignums.sps					\
+	tests/test-vicare-booleans.sps					\
 	tests/test-vicare-bytevectors.sps				\
 	tests/test-vicare-builtin-posix.sps				\
 	tests/test-vicare-chars.sps					\

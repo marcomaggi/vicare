@@ -56,6 +56,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
+* iklib booleans::              Additional boolean functions.
 * iklib characters::            Additional character functions.
 * iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
@@ -9484,6 +9485,52 @@ The following bindings are exported by the library @library{vicare}.
 @defun promise? @var{obj}
 Return @true{} if @var{obj} is a promise object returned by
 @func{delay}, else return @false{}.
+@end defun
+
+@c page
+@node iklib booleans
+@section Additional boolean functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Predicates
+
+@defun list-of-booleans? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of booleans;
+otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
+@defun {boolean!=?} @varo{bool} @var{bool} @dots{}
+The arguments must be booleans.  Return @true{} if the arguments are all
+different; otherwise return @false{}.
+@end defun
+
+
+@deffn Procedure {boolean<?} @varo{bool} @dots{}
+@deffnx Procedure {boolean>?} @varo{bool} @dots{}
+@deffnx Procedure {boolean<=?} @varo{bool} @dots{}
+@deffnx Procedure {boolean>=?} @varo{bool} @dots{}
+Compare the boolean arguments according to the artificial comparison
+definition:
+
+@example
+#t == #t
+#f == #f
+#f <  #t
+@end example
+@end deffn
+
+
+@defun boolean-min @varo{bool} @var{bool} @dots{}
+@defunx boolean-max @varo{bool} @var{bool} @dots{}
+Return the minimal or maximal boolean among the arguments.
 @end defun
 
 @c page
