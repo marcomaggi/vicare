@@ -137,10 +137,16 @@ typedef unsigned long long	ik_ullong;
 
 #if   (4 == SIZEOF_VOID_P)
 typedef uint32_t		ikptr;
+typedef int32_t			iksword_t;
+typedef uint32_t		ikuword_t;
 #elif (8 == SIZEOF_VOID_P)
 typedef uint64_t		ikptr;
+typedef int64_t			iksword_t;
+typedef uint64_t		ikuword_t;
 #else
-typedef uintptr_t		ikptr;
+typedef unsigned long		ikptr;
+typedef signed long		iksword_t;
+typedef unsigned long		ikuword_t;
 #endif
 
 typedef struct ikpcb {
