@@ -5421,6 +5421,7 @@ system $bytevectors}.
 @menu
 * syslib bytevectors constructors::  Constructors.
 * syslib bytevectors predicates::    Predicates.
+* syslib bytevectors comparison::    Comparison.
 * syslib bytevectors inspection::    Inspection.
 * syslib bytevectors accessors::     Accessors and mutators.
 * syslib bytevectors copying::       Copying.
@@ -5466,6 +5467,55 @@ return @false{}.
 
 @defun $bytevector= @vari{bv} @varii{bv}
 Return @true{} if the two bytevector arguments are equal.
+@end defun
+
+@c page
+@node syslib bytevectors comparison
+@subsection Comparison
+
+
+@defun $bytevector!=? @vari{bv} @varii{bv}
+Return @true{} if the bytevector arguments are equal, byte by byte;
+otherwise return @false{}.
+@end defun
+
+
+@defun $bytevector!=? @vari{bv} @varii{bv}
+Return @true{} if the bytevector arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun $bytevector-u8<? @vari{bv} @varii{bv}
+@defunx $bytevector-u8>? @vari{bv} @varii{bv}
+@defunx $bytevector-u8<=? @vari{bv} @varii{bv}
+@defunx $bytevector-u8>=? @vari{bv} @varii{bv}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on unsigned fixnums; the bytevectors are compared octet by
+octet.
+@end defun
+
+
+@defun $bytevector-s8<? @vari{bv} @varii{bv}
+@defunx $bytevector-s8>? @vari{bv} @varii{bv}
+@defunx $bytevector-s8<=? @vari{bv} @varii{bv}
+@defunx $bytevector-s8>=? @vari{bv} @varii{bv}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on signed fixnums; the bytevectors are compared byte by byte.
+@end defun
+
+
+@defun $bytevector-u8-max @vari{bv} @varii{bv}
+@defunx $bytevector-u8-min @vari{bv} @varii{bv}
+Return the maximal or minimal bytevector argument according to
+@func{$bytevector-u8<?}.
+@end defun
+
+
+@defun $bytevector-s8-max @vari{bv} @varii{bv}
+@defunx $bytevector-s8-min @vari{bv} @varii{bv}
+Return the maximal or minimal bytevector argument according to
+@func{$bytevector-s8<?}.
 @end defun
 
 @c page

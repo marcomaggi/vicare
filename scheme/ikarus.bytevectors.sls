@@ -23,9 +23,16 @@
     bytevector-empty?
     bytevector-copy!				bytevector-fill!
     bytevector-copy				bytevector-append
-    bytevector=?				native-endianness
-    bytevector-concatenate
-    bytevector-reverse-and-concatenate
+    native-endianness
+    bytevector-concatenate			bytevector-reverse-and-concatenate
+
+    bytevector=?				bytevector!=?
+    bytevector-u8<?				bytevector-u8>?
+    bytevector-u8<=?				bytevector-u8>=?
+    bytevector-u8-min				bytevector-u8-max
+    bytevector-s8<?				bytevector-s8>?
+    bytevector-s8<=?				bytevector-s8>=?
+    bytevector-s8-min				bytevector-s8-max
 
     ;; validation predicates
     list-of-bytevectors?
@@ -114,6 +121,14 @@
     subbytevector-s8				subbytevector-s8/count
 
     ;; unsafe bindings, to be exported by (vicare system $bytevectors)
+    $bytevector=				$bytevector!=
+    $bytevector-u8<				$bytevector-u8>
+    $bytevector-u8<=				$bytevector-u8>=
+    $bytevector-u8-min				$bytevector-u8-max
+    $bytevector-s8<				$bytevector-s8>
+    $bytevector-s8<=				$bytevector-s8>=
+    $bytevector-s8-min				$bytevector-s8-max
+
     $bytevector-u8-set!				$bytevector-s8-set!
 
     $bytevector-u16l-ref			$bytevector-u16l-set!
@@ -154,8 +169,7 @@
     $subbytevector-u8				$subbytevector-u8/count
     $subbytevector-s8				$subbytevector-s8/count
 
-    $bytevector-empty?
-    $bytevector=				$bytevector-total-length
+    $bytevector-empty?				$bytevector-total-length
     $bytevector-copy				$bytevector-copy!
     $bytevector-concatenate			$bytevector-reverse-and-concatenate
     $bytevector-copy!/count
@@ -166,9 +180,16 @@
 		  bytevector-empty?
 		  bytevector-copy!			bytevector-fill!
 		  bytevector-copy			bytevector-append
-		  bytevector=?				native-endianness
-		  bytevector-concatenate
-		  bytevector-reverse-and-concatenate
+		  native-endianness
+		  bytevector-concatenate		bytevector-reverse-and-concatenate
+
+		  bytevector=?				bytevector!=?
+		  bytevector-u8<?			bytevector-u8>?
+		  bytevector-u8<=?			bytevector-u8>=?
+		  bytevector-u8-min			bytevector-u8-max
+		  bytevector-s8<?			bytevector-s8>?
+		  bytevector-s8<=?			bytevector-s8>=?
+		  bytevector-s8-min			bytevector-s8-max
 
 		  list-of-bytevectors?
 		  bytevector-length?			bytevector-index?
@@ -276,7 +297,12 @@
     ;;2015)
     (only (ikarus fixnums)
 	  positive-fixnum?
-	  non-negative-fixnum?))
+	  non-negative-fixnum?)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; helpers
@@ -541,15 +567,6 @@
 
 ;;;; validation predicates
 
-(define (list-of-bytevectors? obj)
-  ;;Defined by Vicare.  Return  true if OBJ is null or a  proper list of bytevectors;
-  ;;otherwise return false.
-  ;;
-  (if (pair? obj)
-      (and (bytevector? ($car obj))
-	   (list-of-bytevectors? ($cdr obj)))
-    (null? obj)))
-
 ;;Defined  by Vicare.   Return #t  if LEN  is valid  as bytevector  length, otherwise
 ;;return #f.
 (define bytevector-length? non-negative-fixnum?)
@@ -673,6 +690,199 @@
   (words.fixnum-aligned-to-8? idx))
 
 
+;;;; predicates
+
+(define-list-of-type-predicate list-of-bytevectors? bytevector?)
+
+
+;;;; comparison
+
+(define-equality/sorting-predicate bytevector=?		$bytevector=	bytevector? list-of-bytevectors?)
+(define-inequality-predicate       bytevector!=?	$bytevector!=	bytevector? list-of-bytevectors?)
+
+(define-equality/sorting-predicate bytevector-u8<?	$bytevector-u8<		bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-u8<=?	$bytevector-u8<=	bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-u8>?	$bytevector-u8>		bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-u8>=?	$bytevector-u8>=	bytevector? list-of-bytevectors?)
+
+(define-equality/sorting-predicate bytevector-s8<?	$bytevector-s8<		bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-s8<=?	$bytevector-s8<=	bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-s8>?	$bytevector-s8>		bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-s8>=?	$bytevector-s8>=	bytevector? list-of-bytevectors?)
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector= bv1 bv2)
+  (or (eq? bv1 bv2)
+      (let ((bv1.len ($bytevector-length bv1)))
+	(and ($fx= bv1.len ($bytevector-length bv2))
+	     (let loop ((i 0) (len bv1.len))
+	       (or ($fx= i len)
+		   (and ($fx= ($bytevector-u8-ref bv1 i)
+			      ($bytevector-u8-ref bv2 i))
+			(loop ($fxadd1 i) len))))))))
+
+(define ($bytevector!= bv1 bv2)
+  (not ($bytevector= bv1 bv2)))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-u8< bv1 bv2)
+  (if (eq? bv1 bv2)
+      #f
+    (let ((len1 ($bytevector-length bv1))
+	  (len2 ($bytevector-length bv2)))
+      (if ($fx< len1 len2)
+	  (let next-octet ((idx  0)
+			   (len1 len1)
+			   (bv1 bv1)
+			   (bv2 bv2))
+	    (or ($fx= idx len1)
+		(let ((ch1 ($bytevector-u8-ref bv1 idx))
+		      (ch2 ($bytevector-u8-ref bv2 idx)))
+		  (or ($fx< ch1 ch2)
+		      (if ($fx= ch1 ch2)
+			  (next-octet ($fxadd1 idx) len1 bv1 bv2)
+			#f)))))
+	(let next-octet ((idx  0)
+			 (len2 len2)
+			 (bv1 bv1)
+			 (bv2 bv2))
+	  (if ($fx= idx len2)
+	      #f
+	    (let ((ch1 ($bytevector-u8-ref bv1 idx))
+		  (ch2 ($bytevector-u8-ref bv2 idx)))
+	      (or ($fx< ch1 ch2)
+		  (if ($fx= ch1 ch2)
+		      (next-octet ($fxadd1 idx) len2 bv1 bv2)
+		    #f)))))))))
+
+(define ($bytevector-u8<= bv1 bv2)
+  (or (eq? bv1 bv2)
+      (let ((len1 ($bytevector-length bv1))
+	    (len2 ($bytevector-length bv2)))
+	(if ($fx<= len1 len2)
+	    (let next-octet ((idx  0)
+			     (len1 len1)
+			     (bv1 bv1)
+			     (bv2 bv2))
+	      (or ($fx= idx len1)
+		  (let ((ch1 ($bytevector-u8-ref bv1 idx))
+			(ch2 ($bytevector-u8-ref bv2 idx)))
+		    (or ($fx< ch1 ch2)
+			(if ($fx= ch1 ch2)
+			    (next-octet ($fxadd1 idx) len1 bv1 bv2)
+			  #f)))))
+	  (let next-octet ((idx  0)
+			   (len2 len2)
+			   (bv1 bv1)
+			   (bv2 bv2))
+	    (if ($fx= idx len2)
+		#f
+	      (let ((ch1 ($bytevector-u8-ref bv1 idx))
+		    (ch2 ($bytevector-u8-ref bv2 idx)))
+		(or ($fx< ch1 ch2)
+		    (if ($fx= ch1 ch2)
+			(next-octet ($fxadd1 idx) len2 bv1 bv2)
+		      #f)))))))))
+
+(define ($bytevector-u8> bv1 bv2)
+  ($bytevector-u8< bv2 bv1))
+
+(define ($bytevector-u8>= bv1 bv2)
+  ($bytevector-u8<= bv2 bv1))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-s8< bv1 bv2)
+  (if (eq? bv1 bv2)
+      #f
+    (let ((len1 ($bytevector-length bv1))
+	  (len2 ($bytevector-length bv2)))
+      (if ($fx< len1 len2)
+	  (let next-byte ((idx  0)
+			  (len1 len1)
+			  (bv1 bv1)
+			  (bv2 bv2))
+	    (or ($fx= idx len1)
+		(let ((ch1 ($bytevector-s8-ref bv1 idx))
+		      (ch2 ($bytevector-s8-ref bv2 idx)))
+		  (or ($fx< ch1 ch2)
+		      (if ($fx= ch1 ch2)
+			  (next-byte ($fxadd1 idx) len1 bv1 bv2)
+			#f)))))
+	(let next-byte ((idx  0)
+			(len2 len2)
+			(bv1 bv1)
+			(bv2 bv2))
+	  (if ($fx= idx len2)
+	      #f
+	    (let ((ch1 ($bytevector-s8-ref bv1 idx))
+		  (ch2 ($bytevector-s8-ref bv2 idx)))
+	      (or ($fx< ch1 ch2)
+		  (if ($fx= ch1 ch2)
+		      (next-byte ($fxadd1 idx) len2 bv1 bv2)
+		    #f)))))))))
+
+(define ($bytevector-s8<= bv1 bv2)
+  (or (eq? bv1 bv2)
+      (let ((len1 ($bytevector-length bv1))
+	    (len2 ($bytevector-length bv2)))
+	(if ($fx<= len1 len2)
+	    (let next-byte ((idx  0)
+			    (len1 len1)
+			    (bv1 bv1)
+			    (bv2 bv2))
+	      (or ($fx= idx len1)
+		  (let ((ch1 ($bytevector-s8-ref bv1 idx))
+			(ch2 ($bytevector-s8-ref bv2 idx)))
+		    (or ($fx< ch1 ch2)
+			(if ($fx= ch1 ch2)
+			    (next-byte ($fxadd1 idx) len1 bv1 bv2)
+			  #f)))))
+	  (let next-byte ((idx  0)
+			  (len2 len2)
+			  (bv1 bv1)
+			  (bv2 bv2))
+	    (if ($fx= idx len2)
+		#f
+	      (let ((ch1 ($bytevector-s8-ref bv1 idx))
+		    (ch2 ($bytevector-s8-ref bv2 idx)))
+		(or ($fx< ch1 ch2)
+		    (if ($fx= ch1 ch2)
+			(next-byte ($fxadd1 idx) len2 bv1 bv2)
+		      #f)))))))))
+
+(define ($bytevector-s8> bv1 bv2)
+  ($bytevector-s8< bv2 bv1))
+
+(define ($bytevector-s8>= bv1 bv2)
+  ($bytevector-s8<= bv2 bv1))
+
+
+;;;; min max
+
+(define-min/max-comparison bytevector-u8-max $bytevector-u8-max bytevector? list-of-bytevectors?)
+(define-min/max-comparison bytevector-u8-min $bytevector-u8-min bytevector? list-of-bytevectors?)
+
+(define ($bytevector-u8-min bv1 bv2)
+  (if ($bytevector-u8< bv1 bv2) bv1 bv2))
+
+(define ($bytevector-u8-max bv1 bv2)
+  (if ($bytevector-u8< bv1 bv2) bv2 bv1))
+
+;;; --------------------------------------------------------------------
+
+(define-min/max-comparison bytevector-s8-max $bytevector-s8-max bytevector? list-of-bytevectors?)
+(define-min/max-comparison bytevector-s8-min $bytevector-s8-min bytevector? list-of-bytevectors?)
+
+(define ($bytevector-s8-min bv1 bv2)
+  (if ($bytevector-s8< bv1 bv2) bv1 bv2))
+
+(define ($bytevector-s8-max bv1 bv2)
+  (if ($bytevector-s8< bv1 bv2) bv2 bv1))
+
+
 ;;;; main bytevector handling functions
 
 (define (native-endianness)
@@ -713,23 +923,6 @@
 
 (define ($bytevector-empty? bv)
   ($fxzero? ($bytevector-length bv)))
-
-;;; --------------------------------------------------------------------
-
-(define* (bytevector=? {bv1 bytevector?} {bv2 bytevector?})
-  ;;Defined by R6RS.  Return  #t if BV1 and BV2 are equal; that  is, if they have the
-  ;;same length and equal bytes at all valid indices.  It returns false otherwise.
-  ;;
-  ($bytevector= bv1 bv2))
-
-(define ($bytevector= bv1 bv2)
-  (let ((bv1.len ($bytevector-length bv1)))
-    (and ($fx= bv1.len ($bytevector-length bv2))
-	 (let loop ((bv1 bv1) (bv2 bv2) (i 0) (len bv1.len))
-	   (or ($fx= i len)
-	       (and ($fx= ($bytevector-u8-ref bv1 i)
-			  ($bytevector-u8-ref bv2 i))
-		    (loop bv1 bv2 ($fxadd1 i) len)))))))
 
 
 ;;;; copying

@@ -9908,67 +9908,69 @@ interval @math{(0, @dots{}, 255)}.  A byte corresponds to its two's
 complement representation as an octet.
 
 @menu
-* iklib bytevectors sub::       Building subbytevectors.
-* iklib bytevectors conv::      Converting bytevectors.
-* iklib bytevectors valpred::   Validation predicates for bytevector.
-* iklib bytevectors generic::   Generic bytevector operations.
+* iklib bytevectors predicates::  Predicate functions.
+* iklib bytevectors comparison::  Comparing bytevectors.
+* iklib bytevectors conversion::  Converting bytevectors.
+* iklib bytevectors valpred::     Validation predicates for bytevector.
+* iklib bytevectors sub::         Building subbytevectors.
+* iklib bytevectors generic::     Generic bytevector operations.
 @end menu
 
 @c page
-@node iklib bytevectors sub
-@subsection Building subbytevectors
+@node iklib bytevectors predicates
+@subsection Predicate functions
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
-@defun subbytevector-u8 @var{bv} @var{start}
-@defunx subbytevector-u8 @var{bv} @var{start} @var{end}
-Build and return a new bytevector holding the bytes in @var{bv} from
-index @var{start} (inclusive) to index @var{end} (exclusive).  The start
-and end indexes must be such that:
-
-@example
-0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
-@end example
-@end defun
-
-
-@defun subbytevector-u8/count @var{bv} @var{start} @var{count}
-Build and return a new bytevector holding @var{count} bytes in @var{bv}
-from index @var{start} (inclusive).  The start index and the byte count
-must be such that:
-
-@example
-0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
-@end example
-@end defun
-
-
-@defun subbytevector-s8 @var{bv} @var{start}
-@defunx subbytevector-s8 @var{bv} @var{start} @var{end}
-Build and return a new bytevector holding the bytes in @var{bv} from
-index @var{start} (inclusive) to index @var{end} (exclusive).  The start
-and end indexes must be such that:
-
-@example
-0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
-@end example
-@end defun
-
-
-@defun subbytevector-s8/count @var{bv} @var{start} @var{count}
-Build and return a new bytevector holding @var{count} bytes in @var{bv}
-from index @var{start} (inclusive).  The start index and the byte count
-must be such that:
-
-@example
-0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
-@end example
+@defun list-of-bytevectors? @var{obj}
+Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
+return @false{}.
 @end defun
 
 @c page
-@node iklib bytevectors conv
+@node iklib bytevectors comparison
+@subsection Comparing bytevectors
+
+
+@defun bytevector!=? @varo{bv} @var{bv} @dots{}
+Return @true{} if all the bytevector arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@deffn Procedure {bytevector-u8<?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-u8>?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-u8<=?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-u8>=?} @varo{bv} @dots{}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on unsigned fixnums; the bytevectors are compared octet by
+octet.
+@end deffn
+
+
+@deffn Procedure {bytevector-s8<?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-s8>?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-s8<=?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-s8>=?} @varo{bv} @dots{}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on signed fixnums; the bytevectors are compared byte by byte.
+@end deffn
+
+
+@defun bytevector-u8-max @varo{bv} @var{bv} @dots{}
+@defunx bytevector-u8-min @varo{bv} @var{bv} @dots{}
+Return the maximal or minimal bytevector argument according to
+@func{bytevector-u8<?}.
+@end defun
+
+
+@defun bytevector-s8-max @varo{bv} @var{bv} @dots{}
+@defunx bytevector-s8-min @varo{bv} @var{bv} @dots{}
+Return the maximal or minimal bytevector argument according to
+@func{bytevector-s8<?}.
+@end defun
+
+@c page
+@node iklib bytevectors conversion
 @subsection Converting bytevectors
 
 
@@ -10189,12 +10191,6 @@ HEXDIG        = [0-9a-fA-F]
 @subsection Validation predicates for bytevector
 
 
-@defun list-of-bytevectors? @var{obj}
-Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
-return @false{}.
-@end defun
-
-
 @defun bytevector-length? @var{obj}
 Return @true{} if @var{obj} is valid as bytevector length: it is a
 non--negative fixnum; otherwise return @false{}.
@@ -10262,6 +10258,59 @@ of @var{bv}.  This validation is for getter and setter indexes.
 Specialised variants of
 @func{bytevector-start-index-and-count-for-word?} for a specific word
 size in bits.
+@end defun
+
+@c page
+@node iklib bytevectors sub
+@subsection Building subbytevectors
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun subbytevector-u8 @var{bv} @var{start}
+@defunx subbytevector-u8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-u8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8 @var{bv} @var{start}
+@defunx subbytevector-s8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
 @end defun
 
 @c page
@@ -10727,10 +10776,10 @@ otherwise return @false{}.
 @subsection Comparing symbols
 
 
-@deffn Procedure {symbol<?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
-@deffnx Procedure {symbol>?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
-@deffnx Procedure {symbol<=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
-@deffnx Procedure {symbol>=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffn Procedure {symbol<?} @varo{symbol} @dots{}
+@deffnx Procedure {symbol>?} @varo{symbol} @dots{}
+@deffnx Procedure {symbol<=?} @varo{symbol} @dots{}
+@deffnx Procedure {symbol>=?} @varo{symbol} @dots{}
 These procedures are the extensions to symbols of the corresponding
 orderings on strings.
 
@@ -10742,14 +10791,14 @@ orderings on strings.
 @end deffn
 
 
-@defun symbol!=? @varo{str} @var{str} @dots{}
+@defun symbol!=? @varo{bv} @var{bv} @dots{}
 Return @true{} if all the symbol arguments are different; otherwise
 return @false{}.
 @end defun
 
 
-@defun symbol-max @varo{str} @var{str} @dots{}
-@defunx symbol-min @varo{str} @var{str} @dots{}
+@defun symbol-max @varo{bv} @var{bv} @dots{}
+@defunx symbol-min @varo{bv} @var{bv} @dots{}
 Return the maximal or minimal symbol argument according to
 @func{symbol<?}.
 @end defun
