@@ -472,6 +472,10 @@
   (or (bytevector? obj)
       (string?     obj)))
 
+(define (pointer/memory-block? obj)
+  (or (pointer? obj)
+      (memory-block? obj)))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax (assert-pointer-and-offset stx)
@@ -482,6 +486,18 @@
      #'(unless (%pointer-and-offset? ?ptr ?delta)
 	 (procedure-argument-violation __who__
 	   "offset would cause pointer overflow or underflow" ?ptr ?delta)))
+    ))
+
+(define-syntax (assert-memory-and-ptrdiff stx)
+  (syntax-case stx ()
+    ((_ ?memory ?offset ?data-size)
+     (and (identifier? #'?memory)
+	  (identifier? #'?offset))
+     #'(unless (or (pointer? ?memory)
+		   (<= (+ ?offset ?data-size) (memory-block-size ?memory)))
+	 (procedure-argument-violation __who__
+	   "offset from pointer out of range for data size"
+	   ?memory ?offset ?data-size)))
     ))
 
 
@@ -700,85 +716,41 @@
 (let-syntax
     ((define-accessor (syntax-rules ()
 			((_ ?who ?accessor ?data-size)
-			 (define (?who memory offset)
-			   (define who '?who)
-			   (with-arguments-validation (who)
-			       ((pointer/memory-block	memory)
-				(ptrdiff_t		offset)
-				(memory/ptrdiff		memory offset ?data-size))
-			     (?accessor memory offset)))))))
-  (define-accessor pointer-ref-c-uint8
-    capi.ffi-pointer-ref-c-uint8 1)
-  (define-accessor pointer-ref-c-sint8
-    capi.ffi-pointer-ref-c-sint8 1)
-  (define-accessor pointer-ref-c-uint16
-    capi.ffi-pointer-ref-c-uint16 2)
-  (define-accessor pointer-ref-c-sint16
-    capi.ffi-pointer-ref-c-sint16 2)
-  (define-accessor pointer-ref-c-uint32
-    capi.ffi-pointer-ref-c-uint32 4)
-  (define-accessor pointer-ref-c-sint32
-    capi.ffi-pointer-ref-c-sint32 4)
-  (define-accessor pointer-ref-c-uint64
-    capi.ffi-pointer-ref-c-uint64 8)
-  (define-accessor pointer-ref-c-sint64
-    capi.ffi-pointer-ref-c-sint64 8)
+			 (define* (?who {memory pointer/memory-block?} {offset words.ptrdiff_t?})
+			   (assert-memory-and-ptrdiff memory offset ?data-size)
+			   (?accessor memory offset)))
+			)))
+  (define-accessor pointer-ref-c-uint8			capi.ffi-pointer-ref-c-uint8	      1)
+  (define-accessor pointer-ref-c-sint8			capi.ffi-pointer-ref-c-sint8	      1)
+  (define-accessor pointer-ref-c-uint16			capi.ffi-pointer-ref-c-uint16	      2)
+  (define-accessor pointer-ref-c-sint16			capi.ffi-pointer-ref-c-sint16	      2)
+  (define-accessor pointer-ref-c-uint32			capi.ffi-pointer-ref-c-uint32	      4)
+  (define-accessor pointer-ref-c-sint32			capi.ffi-pointer-ref-c-sint32	      4)
+  (define-accessor pointer-ref-c-uint64			capi.ffi-pointer-ref-c-uint64	      8)
+  (define-accessor pointer-ref-c-sint64			capi.ffi-pointer-ref-c-sint64	      8)
 
-  (define-accessor pointer-ref-c-float
-    capi.ffi-pointer-ref-c-float
-    words.SIZEOF_FLOAT)
-  (define-accessor pointer-ref-c-double
-    capi.ffi-pointer-ref-c-double
-    words.SIZEOF_DOUBLE)
-  (define-accessor pointer-ref-c-pointer
-    capi.ffi-pointer-ref-c-pointer
-    words.SIZEOF_POINTER)
+  (define-accessor pointer-ref-c-float			capi.ffi-pointer-ref-c-float		      words.SIZEOF_FLOAT)
+  (define-accessor pointer-ref-c-double			capi.ffi-pointer-ref-c-double		      words.SIZEOF_DOUBLE)
+  (define-accessor pointer-ref-c-pointer		capi.ffi-pointer-ref-c-pointer		      words.SIZEOF_POINTER)
 
-  (define-accessor pointer-ref-c-signed-char
-    capi.ffi-pointer-ref-c-signed-char
-    words.SIZEOF_CHAR)
-  (define-accessor pointer-ref-c-signed-short
-    capi.ffi-pointer-ref-c-signed-short
-    words.SIZEOF_SHORT)
-  (define-accessor pointer-ref-c-signed-int
-    capi.ffi-pointer-ref-c-signed-int
-    words.SIZEOF_INT)
-  (define-accessor pointer-ref-c-signed-long
-    capi.ffi-pointer-ref-c-signed-long
-    words.SIZEOF_LONG)
-  (define-accessor pointer-ref-c-signed-long-long
-    capi.ffi-pointer-ref-c-signed-long-long
-    words.SIZEOF_LONG_LONG)
+  (define-accessor pointer-ref-c-signed-char		capi.ffi-pointer-ref-c-signed-char	      words.SIZEOF_CHAR)
+  (define-accessor pointer-ref-c-signed-short		capi.ffi-pointer-ref-c-signed-short	      words.SIZEOF_SHORT)
+  (define-accessor pointer-ref-c-signed-int		capi.ffi-pointer-ref-c-signed-int	      words.SIZEOF_INT)
+  (define-accessor pointer-ref-c-signed-long		capi.ffi-pointer-ref-c-signed-long	      words.SIZEOF_LONG)
+  (define-accessor pointer-ref-c-signed-long-long	capi.ffi-pointer-ref-c-signed-long-long	      words.SIZEOF_LONG_LONG)
 
-  (define-accessor pointer-ref-c-unsigned-char
-    capi.ffi-pointer-ref-c-unsigned-char
-    words.SIZEOF_CHAR)
-  (define-accessor pointer-ref-c-unsigned-short
-    capi.ffi-pointer-ref-c-unsigned-short
-    words.SIZEOF_SHORT)
-  (define-accessor pointer-ref-c-unsigned-int
-    capi.ffi-pointer-ref-c-unsigned-int
-    words.SIZEOF_INT)
-  (define-accessor pointer-ref-c-unsigned-long
-    capi.ffi-pointer-ref-c-unsigned-long
-    words.SIZEOF_LONG)
-  (define-accessor pointer-ref-c-unsigned-long-long
-    capi.ffi-pointer-ref-c-unsigned-long-long
-    words.SIZEOF_LONG_LONG)
+  (define-accessor pointer-ref-c-unsigned-char		capi.ffi-pointer-ref-c-unsigned-char	      words.SIZEOF_CHAR)
+  (define-accessor pointer-ref-c-unsigned-short		capi.ffi-pointer-ref-c-unsigned-short	      words.SIZEOF_SHORT)
+  (define-accessor pointer-ref-c-unsigned-int		capi.ffi-pointer-ref-c-unsigned-int	      words.SIZEOF_INT)
+  (define-accessor pointer-ref-c-unsigned-long		capi.ffi-pointer-ref-c-unsigned-long	      words.SIZEOF_LONG)
+  (define-accessor pointer-ref-c-unsigned-long-long	capi.ffi-pointer-ref-c-unsigned-long-long     words.SIZEOF_LONG_LONG)
 
-  (define-accessor pointer-ref-c-size_t
-    capi.ffi-pointer-ref-c-size_t
-    words.SIZEOF_SIZE_T)
-  (define-accessor pointer-ref-c-ssize_t
-    capi.ffi-pointer-ref-c-ssize_t
-    words.SIZEOF_SSIZE_T)
-  (define-accessor pointer-ref-c-off_t
-    capi.ffi-pointer-ref-c-off_t
-    words.SIZEOF_OFF_T)
-  (define-accessor pointer-ref-c-ptrdiff_t
-    capi.ffi-pointer-ref-c-ptrdiff_t
-    words.SIZEOF_PTRDIFF_T)
-  )
+  (define-accessor pointer-ref-c-size_t			capi.ffi-pointer-ref-c-size_t		      words.SIZEOF_SIZE_T)
+  (define-accessor pointer-ref-c-ssize_t		capi.ffi-pointer-ref-c-ssize_t		      words.SIZEOF_SSIZE_T)
+  (define-accessor pointer-ref-c-off_t			capi.ffi-pointer-ref-c-off_t		      words.SIZEOF_OFF_T)
+  (define-accessor pointer-ref-c-ptrdiff_t		capi.ffi-pointer-ref-c-ptrdiff_t	      words.SIZEOF_PTRDIFF_T)
+
+  #| end of LET-SYNTAX |# )
 
 
 ;;;; pointer mutators
