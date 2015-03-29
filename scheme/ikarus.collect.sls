@@ -32,6 +32,10 @@
 		  collect		collect-key
 		  post-gc-hooks
 
+		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
+		  ;;rotation.  (Marco Maggi; Sun Mar 29, 2015)
+		  non-null-pointer?
+
 		  register-to-avoid-collecting
 		  forget-to-avoid-collecting
 		  replace-to-avoid-collecting
@@ -39,9 +43,14 @@
 		  collection-avoidance-list
 		  purge-collection-avoidance-list)
     (vicare system $fx)
-    (vicare system $arg-list)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+    (vicare system $arg-list))
+
+
+;;;; helpers
+
+(define (non-null-pointer? obj)
+  (and (pointer? obj)
+       (not (pointer-null? obj))))
 
 
 (define post-gc-hooks
@@ -124,23 +133,14 @@
 (define (register-to-avoid-collecting obj)
   (foreign-call "ik_register_to_avoid_collecting" obj))
 
-(define (forget-to-avoid-collecting ptr)
-  (define who 'forget-to-avoid-collecting)
-  (with-arguments-validation (who)
-      ((pointer	ptr))
-    (foreign-call "ik_forget_to_avoid_collecting" ptr)))
+(define* (forget-to-avoid-collecting {ptr pointer?})
+  (foreign-call "ik_forget_to_avoid_collecting" ptr))
 
-(define (replace-to-avoid-collecting ptr obj)
-  (define who 'replace-to-avoid-collecting)
-  (with-arguments-validation (who)
-      ((non-null-pointer	ptr))
-    (foreign-call "ik_replace_to_avoid_collecting" ptr obj)))
+(define* (replace-to-avoid-collecting {ptr non-null-pointer?} obj)
+  (foreign-call "ik_replace_to_avoid_collecting" ptr obj))
 
-(define (retrieve-to-avoid-collecting ptr)
-  (define who 'retrieve-to-avoid-collecting)
-  (with-arguments-validation (who)
-      ((pointer	ptr))
-    (foreign-call "ik_retrieve_to_avoid_collecting" ptr)))
+(define* (retrieve-to-avoid-collecting {ptr pointer?})
+  (foreign-call "ik_retrieve_to_avoid_collecting" ptr))
 
 (define (collection-avoidance-list)
   (foreign-call "ik_collection_avoidance_list"))
@@ -151,6 +151,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
