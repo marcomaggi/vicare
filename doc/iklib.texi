@@ -10776,10 +10776,10 @@ otherwise return @false{}.
 @subsection Comparing symbols
 
 
-@deffn Procedure {symbol<?} @varo{symbol} @dots{}
-@deffnx Procedure {symbol>?} @varo{symbol} @dots{}
-@deffnx Procedure {symbol<=?} @varo{symbol} @dots{}
-@deffnx Procedure {symbol>=?} @varo{symbol} @dots{}
+@deffn Procedure {symbol<?} @varo{sym} @dots{}
+@deffnx Procedure {symbol>?} @varo{sym} @dots{}
+@deffnx Procedure {symbol<=?} @varo{sym} @dots{}
+@deffnx Procedure {symbol>=?} @varo{sym} @dots{}
 These procedures are the extensions to symbols of the corresponding
 orderings on strings.
 
@@ -10791,14 +10791,14 @@ orderings on strings.
 @end deffn
 
 
-@defun symbol!=? @varo{bv} @var{bv} @dots{}
+@defun symbol!=? @varo{ptr} @var{ptr} @dots{}
 Return @true{} if all the symbol arguments are different; otherwise
 return @false{}.
 @end defun
 
 
-@defun symbol-max @varo{bv} @var{bv} @dots{}
-@defunx symbol-min @varo{bv} @var{bv} @dots{}
+@defun symbol-max @varo{ptr} @var{ptr} @dots{}
+@defunx symbol-min @varo{ptr} @var{ptr} @dots{}
 Return the maximal or minimal symbol argument according to
 @func{symbol<?}.
 @end defun
@@ -14953,8 +14953,15 @@ group and others.  @manpage{umask, Set file mode creation mask}.
 @section Handling pointer objects
 
 
+Pointer objects are a disjoint type identified by the @func{pointer?}
+predicate.
+
 @menu
-* iklib pointers objects::      Handling pointer values.
+* iklib pointers cons::         Constructors.
+* iklib pointers pred::         Predicates.
+* iklib pointers compar::       Comparison.
+* iklib pointers conv::         Conversion.
+* iklib pointers misc::         Miscellaneous operations.
 * iklib pointers poke::         Poking values.
 * iklib pointers peek::         Peeking values.
 * iklib arrays poke::           Poking values into arrays.
@@ -14962,12 +14969,67 @@ group and others.  @manpage{umask, Set file mode creation mask}.
 @end menu
 
 @c page
-@node iklib pointers objects
-@subsection Handling pointer values
+@node iklib pointers cons
+@subsection Constructors
 
 
-Pointer objects are a disjoint type identified by the @func{pointer?}
-predicate.  When applied to pointer objects:
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
+
+
+@defun null-pointer
+Return a newly allocated pointer object representing @cnull{}.
+@end defun
+
+
+@defun pointer-clone @var{ptr}
+Return a new pointer object being a copy of @var{ptr}.  This is useful
+when we need a pointer that might be reset to another value in the
+future.
+@end defun
+
+@c page
+@node iklib pointers pred
+@subsection Predicates
+
+
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
+
+
+@defun pointer? @var{obj}
+Return @true{} if @var{obj} is a pointer object, return @false{}
+otherwise.
+@end defun
+
+
+@defun pointer-null? @var{obj}
+Return @true{} if @var{obj} is a pointer object and it represents
+@cnull{}; otherwise return @false{}.  If @var{obj} is not a pointer:
+return @false{}.
+@end defun
+
+
+@defun pointer-non-null? @var{obj}
+Return @true{} if @var{obj} is a pointer object and it is not @cnull{};
+otherwise return @false{}.  If @var{obj} is not a pointer: return
+@false{}.
+@end defun
+
+
+@defun pointer-and-offset? @var{ptr} @var{diff}
+Return true if the exact integer @var{diff} can be added to @var{ptr}
+without causing a pointer overflow or underflow.
+@end defun
+
+@c page
+@node iklib pointers compar
+@subsection Comparison
+
+
+When applied to pointer objects:
 
 @itemize
 @item
@@ -14988,10 +15050,35 @@ and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
-@defun pointer? @var{obj}
-Return @true{} if @var{obj} is a pointer object, return @false{}
-otherwise.
+@defun {pointer=?} @varo{ptr} @dots{}
+@defunx {pointer<?} @varo{ptr} @dots{}
+@defunx {pointer>?} @varo{ptr} @dots{}
+@defunx {pointer<=?} @varo{ptr} @dots{}
+@defunx {pointer>=?} @varo{ptr} @dots{}
+Compare the pointer arguments as indicated by the name.
 @end defun
+
+
+@defun pointer!=? @varo{ptr} @var{ptr} @dots{}
+Return @true{} if all the pointer arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun pointer-max @varo{ptr} @var{ptr} @dots{}
+@defunx pointer-min @varo{ptr} @var{ptr} @dots{}
+Return the maximal or minimal pointer argument according to
+@func{pointer<?}.
+@end defun
+
+@c page
+@node iklib pointers conv
+@subsection Conversion
+
+
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun pointer->integer @var{pointer}
@@ -15013,15 +15100,14 @@ platforms.  It is guaranteed that:
 points to the same address as @var{p}.
 @end defun
 
+@c page
+@node iklib pointers misc
+@subsection Miscellaneous operations
 
-@defun null-pointer
-Return a newly allocated pointer object representing @cnull{}.
-@end defun
 
-
-@defun pointer-null? @var{obj}
-Return true if @var{obj} is a pointer object and it represents @cnull{}.
-@end defun
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun set-pointer-null! @var{pointer}
@@ -15047,30 +15133,6 @@ Return a new pointer object holding the memory reference resulting from
 adding @var{diff}, which must be an exact integer, to @var{ptr}.  If the
 addition would cause an overflow or underflow in machine words: raise an
 assertion violation.
-@end defun
-
-
-@defun pointer-and-offset? @var{ptr} @var{diff}
-Return true if the exact integer @var{diff} can be added to @var{ptr}
-without causing a pointer overflow or underflow.
-@end defun
-
-
-@defun pointer=? @vari{ptr} @varii{ptr}
-@defunx pointer!=? @vari{ptr} @varii{ptr}
-@defunx pointer<? @vari{ptr} @varii{ptr}
-@defunx pointer>? @vari{ptr} @varii{ptr}
-@defunx pointer<=? @vari{ptr} @varii{ptr}
-@defunx pointer>=? @vari{ptr} @varii{ptr}
-Comparison functions for pointers.  Return @true{} if the arguments
-satisfy the predicate, else return @false{}.
-@end defun
-
-
-@defun pointer-clone @var{pointer}
-Return a new pointer object being a copy of @var{pointer}.  This is
-useful when we need a pointer that might be reset to another value in
-the future.
 @end defun
 
 @c page

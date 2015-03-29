@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008,2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -20,14 +20,15 @@
 
     ;; pointer objects
     pointer?
-    null-pointer			pointer-null?
+    null-pointer			set-pointer-null!
+    pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
     pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
-    set-pointer-null!
+    pointer-min				pointer-max
 
     ;; memory blocks
     memory-block?			memory-block?/non-null
@@ -159,18 +160,29 @@
     array-set-c-pointer!
 
     array-set-c-size_t!			array-set-c-ssize_t!
-    array-set-c-off_t!			array-set-c-ptrdiff_t!)
+    array-set-c-off_t!			array-set-c-ptrdiff_t!
+
+    ;; bindings or (vicare system $pointers)
+    $pointer!=
+    $pointer<				$pointer>
+    $pointer<=				$pointer>=
+    $pointer-min			$pointer-max)
   (import (except (vicare)
+		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
+		  ;;rotation.  (Marco Maggi; Sun Mar 29, 2015)
+		  non-negative-fixnum?
+
 		  ;; pointer objects
 		  pointer?
-		  null-pointer				pointer-null?
+		  null-pointer				set-pointer-null!
+		  pointer-null?				pointer-non-null?
 		  pointer->integer			integer->pointer
 		  pointer-clone				pointer-and-offset?
 		  pointer-diff				pointer-add
 		  pointer=?				pointer!=?
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
-		  set-pointer-null!
+		  pointer-min				pointer-max
 
 		  ;; memory blocks
 		  make-memory-block			make-memory-block/guarded
@@ -303,6 +315,7 @@
 		  array-set-c-size_t!			array-set-c-ssize_t!
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (vicare system $pointers)
+	  $pointer?
 	  $pointer=)
     (except (vicare system $bytevectors)
 	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
@@ -312,6 +325,10 @@
     ;;2015)
     (only (ikarus bytevectors)
 	  $bytevector-copy!/count)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 29,
+    ;;2015)
+    (only (ikarus fixnums)
+	  non-negative-fixnum?)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
@@ -322,7 +339,12 @@
     (prefix (vicare unsafe capi)
 	    capi.)
     (prefix (vicare platform words)
-	    words.))
+	    words.)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
   (module (arguments-validation)
     (include "ikarus.config.scm"))
@@ -440,17 +462,36 @@
     count))
 
 
+;;;; validation predicates and assertions
+
+(define (errno-value? obj)
+  (or (boolean? obj)
+      (non-negative-fixnum? obj)))
+
+(define (pathname? obj)
+  (or (bytevector? obj)
+      (string?     obj)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (assert-pointer-and-offset stx)
+  (syntax-case stx ()
+    ((_ ?ptr ?delta)
+     (and (identifier? #'?ptr)
+	  (identifier? #'?delta))
+     #'(unless (%pointer-and-offset? ?ptr ?delta)
+	 (procedure-argument-violation __who__
+	   "offset would cause pointer overflow or underflow" ?ptr ?delta)))
+    ))
+
+
 ;;;; errno interface
 
-(define errno
-  (case-lambda
-   (()
-    (foreign-call "ikrt_last_errno"))
-   ((errno)
-    (define who 'errno)
-    (with-arguments-validation (who)
-	((errno  errno))
-      (foreign-call "ikrt_set_errno" errno)))))
+(case-define* errno
+  (()
+   (foreign-call "ikrt_last_errno"))
+  (({errno errno-value?})
+   (foreign-call "ikrt_set_errno" errno)))
 
 
 ;;;; memory blocks
@@ -459,12 +500,11 @@
   (pointer
 		;Pointer object referencing a block of raw memory.
    size
-		;Exact integer  representing the number of  bytes in the
-		;memory block.  It must be in  the range of a C language
-		;type "size_t".
+		;Exact integer representing the number  of bytes in the memory block.
+		;It must be in the range of a C language type "size_t".
    owner?
-		;Boolean, if true  the block of memory  must be released
-		;whenever this structure instance is garbage collected.
+		;Boolean, if true the block of  memory must be released whenever this
+		;structure instance is garbage collected.
    ))
 
 (define (%struct-memory-block-printer S port sub-printer)
@@ -476,8 +516,6 @@
   (%display " owner?=")		(%display ($memory-block-owner?  S))
   (%display "]"))
 
-;;; --------------------------------------------------------------------
-
 (define (%memory-block-destructor S)
   (when ($memory-block-owner? S)
     ;;Remember that FREE will mutate to NULL the pointer.
@@ -485,27 +523,22 @@
     ($set-memory-block-pointer! S (void))
     ($set-memory-block-size!    S (void))))
 
+(module ()
+  (set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
+  (set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor))
+
 ;;; --------------------------------------------------------------------
 
-(define (%make-memory-block pointer size)
-  ;;Wrapper for  the constructor  MAKE-MEMORY-BLOCK which  validates the
-  ;;arguments.
+(define* (%make-memory-block {pointer pointer?} {size words.size_t?})
+  ;;Wrapper for the constructor MAKE-MEMORY-BLOCK which validates the arguments.
   ;;
-  (define who 'make-memory-block)
-  (with-arguments-validation (who)
-      ((pointer	pointer)
-       (size_t	size))
-    (make-memory-block pointer size #f)))
+  (make-memory-block pointer size #f))
 
 (define (null-memory-block)
   (make-memory-block (null-pointer) 0 #f))
 
-(define (make-memory-block/guarded pointer size)
-  (define who 'make-memory-block/guarded)
-  (with-arguments-validation (who)
-      ((pointer	pointer)
-       (size_t	size))
-    (make-memory-block pointer size #t)))
+(define* (make-memory-block/guarded {pointer pointer?} {size words.size_t?})
+  (make-memory-block pointer size #t))
 
 (define (memory-block?/non-null obj)
   (and (memory-block? obj)
@@ -514,14 +547,11 @@
 (define (%memory-block-pointer obj)
   (pointer-clone (memory-block-pointer obj)))
 
-(define (memory-block-reset B)
-  (define who 'memory-block-reset)
-  (with-arguments-validation (who)
-      ((memory-block	B))
-    (%memory-block-destructor B)
-    ($set-memory-block-pointer! B (null-pointer))
-    ($set-memory-block-size!    B 0)
-    ($set-memory-block-owner?!  B #f)))
+(define* (memory-block-reset {B memory-block?})
+  (%memory-block-destructor B)
+  ($set-memory-block-pointer! B (null-pointer))
+  ($set-memory-block-size!    B 0)
+  ($set-memory-block-owner?!  B #f))
 
 
 ;;; shared libraries interface
@@ -530,41 +560,28 @@
   (let ((p (capi.ffi-dlerror)))
     (and p (ascii->string p))))
 
-(define dlopen
-  (case-lambda
-   (()
-    (capi.ffi-dlopen #f #f #f))
-   ((libname)
-    (dlopen libname #f #f))
-   ((libname lazy? global?)
-    (define who 'dlopen)
-    (with-arguments-validation (who)
-	((pathname  libname))
-      (with-pathnames ((libname.bv libname))
-	(capi.ffi-dlopen libname.bv lazy? global?))))))
+(case-define* dlopen
+  (()
+   (capi.ffi-dlopen #f #f #f))
+  ((libname)
+   (dlopen libname #f #f))
+  (({libname pathname?} lazy? global?)
+   (with-pathnames ((libname.bv libname))
+     (capi.ffi-dlopen libname.bv lazy? global?))))
 
-(define (dlclose ptr)
-  (define who 'dlclose)
-  (with-arguments-validation (who)
-      ((pointer  ptr))
-    (capi.ffi-dlclose ptr)))
+(define* (dlclose {ptr pointer?})
+  (capi.ffi-dlclose ptr))
 
-(define (dlsym handle name)
-  (define who 'dlsym)
-  (with-arguments-validation (who)
-      ((pointer  handle)
-       (string   name))
-    (capi.ffi-dlsym handle (string->ascii name))))
+(define* (dlsym {handle pointer?} {name string?})
+  (capi.ffi-dlsym handle (string->ascii name)))
 
 
 ;;; pointer manipulation procedures
 
+(define-list-of-type-predicate list-of-pointers? pointer?)
+
 (define (pointer? obj)
-  ;;FIXME Why  in hell do I have  to keep this function  rather than use
-  ;;the  $FIXNUM?   primitive   operation  exported  by  (ikarus  system
-  ;;$pointers)? (Marco Maggi; Nov 30, 2011)
-  ;;
-  (capi.ffi-pointer? obj))
+  ($pointer? obj))
 
 (define (null-pointer)
   (capi.ffi-fixnum->pointer 0))
@@ -572,44 +589,32 @@
 (define (pointer-null? obj)
   (and (pointer? obj) (capi.ffi-pointer-null? obj)))
 
-(define (set-pointer-null! ptr)
-  (define who 'set-pointer-null!)
-  (with-arguments-validation (who)
-      ((pointer ptr))
-    (capi.ffi-set-pointer-null! ptr)))
+(define* (set-pointer-null! {ptr pointer?})
+  (capi.ffi-set-pointer-null! ptr))
+
+(define (pointer-non-null? obj)
+  (and (pointer? obj)
+       (not (capi.ffi-pointer-null? obj))))
 
 ;;; --------------------------------------------------------------------
 
-(define (integer->pointer x)
-  (define who 'integer->pointer)
-  (with-arguments-validation (who)
-      ((machine-word  x))
-    (if (fixnum? x)
-	(capi.ffi-fixnum->pointer x)
-      (capi.ffi-bignum->pointer x))))
+(define* (integer->pointer {x words.machine-word?})
+  (if (fixnum? x)
+      (capi.ffi-fixnum->pointer x)
+    (capi.ffi-bignum->pointer x)))
 
-(define (pointer->integer x)
-  (define who 'pointer->integer)
-  (with-arguments-validation (who)
-      ((pointer	x))
-    (capi.ffi-pointer->integer x)))
+(define* (pointer->integer {x pointer?})
+  (capi.ffi-pointer->integer x))
 
 ;;; --------------------------------------------------------------------
 
-(define (pointer-clone obj)
-  (define who 'pointer-clone)
-  (with-arguments-validation (who)
-      ((pointer	obj))
-    (capi.ffi-pointer-clone obj)))
+(define* (pointer-clone {ptr pointer?})
+  (capi.ffi-pointer-clone ptr))
 
 ;;; --------------------------------------------------------------------
 
-(define (pointer-and-offset? pointer offset)
-  (define who 'pointer-and-offset?)
-  (with-arguments-validation (who)
-      ((pointer		pointer)
-       (exact-integer	offset))
-    (%pointer-and-offset? pointer offset)))
+(define* (pointer-and-offset? {ptr pointer?} {offset exact-integer?})
+  (%pointer-and-offset? ptr offset))
 
 (define (%pointer-and-offset? pointer offset)
   (cond ((zero? offset)
@@ -634,51 +639,60 @@
 	 (<= offset (- (words.greatest-c-pointer)
 		       (capi.ffi-pointer->integer pointer))))))
 
-(define (pointer-add ptr delta)
-  (define who 'pointer-add)
-  (with-arguments-validation (who)
-      ((pointer			ptr)
-       (ptrdiff_t		delta)
-       (pointer-and-offset	ptr delta))
-    (let ((rv (capi.ffi-pointer-add ptr delta)))
-      (or rv
-	  (procedure-argument-violation who
-	    "requested pointer arithmetic operation would cause \
-             machine word overflow or underflow"
-	    ptr delta)))))
+(define* (pointer-add {ptr pointer?} {delta words.ptrdiff_t?})
+  (assert-pointer-and-offset ptr delta)
+  (let ((rv (capi.ffi-pointer-add ptr delta)))
+    (or rv
+	(procedure-argument-violation __who__
+	  "requested pointer arithmetic operation would cause machine word overflow or underflow"
+	  ptr delta))))
 
-(define (pointer-diff ptr1 ptr2)
-  (define who 'pointer-diff)
-  (with-arguments-validation (who)
-      ((pointer  ptr1)
-       (pointer  ptr2))
-    ;;Implemented  at the  Scheme level  because converting  pointers to
-    ;;Scheme exact  integer objects  is the simplest  and safest  way to
-    ;;correctly handle the full range of possible pointer values.
-    (- (capi.ffi-pointer->integer ptr1)
-       (capi.ffi-pointer->integer ptr2))))
+(define* (pointer-diff {ptr1 pointer?} {ptr2 pointer?})
+  ;;Implemented  at the  Scheme level  because  converting pointers  to Scheme  exact
+  ;;integer objects is the simplest and safest way to correctly handle the full range
+  ;;of possible pointer values.
+  (- (capi.ffi-pointer->integer ptr1)
+     (capi.ffi-pointer->integer ptr2)))
 
 (define (pointer+ ptr off)
   (integer->pointer (+ (pointer->integer ptr) off)))
 
-;;; --------------------------------------------------------------------
+
+;;;; comparison
 
-(let-syntax ((define-pointer-comparison
-	       (syntax-rules ()
-		 ((_ ?who ?pred)
-		  (define (?who ptr1 ptr2)
-		    (define who '?who)
-		    (with-arguments-validation (who)
-			((pointer ptr1)
-			 (pointer ptr2))
-		      (?pred ptr1 ptr2)))))))
+(define-equality/sorting-predicate pointer=?	$pointer=	pointer? list-of-pointers?)
+(define-equality/sorting-predicate pointer<?	$pointer<	pointer? list-of-pointers?)
+(define-equality/sorting-predicate pointer<=?	$pointer<=	pointer? list-of-pointers?)
+(define-equality/sorting-predicate pointer>?	$pointer>	pointer? list-of-pointers?)
+(define-equality/sorting-predicate pointer>=?	$pointer>=	pointer? list-of-pointers?)
+(define-inequality-predicate       pointer!=?	$pointer!=	pointer? list-of-pointers?)
 
-  (define-pointer-comparison pointer=?		$pointer=)
-  (define-pointer-comparison pointer!=?		capi.ffi-pointer-neq)
-  (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
-  (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)
-  (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)
-  (define-pointer-comparison pointer>=?		capi.ffi-pointer-ge))
+(define ($pointer!= ptr1 ptr2)
+  (capi.ffi-pointer-neq ptr1 ptr2))
+
+(define ($pointer< ptr1 ptr2)
+  (capi.ffi-pointer-lt ptr1 ptr2))
+
+(define ($pointer> ptr1 ptr2)
+  (capi.ffi-pointer-gt ptr1 ptr2))
+
+(define ($pointer<= ptr1 ptr2)
+  (capi.ffi-pointer-le ptr1 ptr2))
+
+(define ($pointer>= ptr1 ptr2)
+  (capi.ffi-pointer-ge ptr1 ptr2))
+
+
+;;;; min max
+
+(define-min/max-comparison pointer-max $pointer-max pointer? list-of-pointers?)
+(define-min/max-comparison pointer-min $pointer-min pointer? list-of-pointers?)
+
+(define ($pointer-min str1 str2)
+  (if ($pointer< str1 str2) str1 str2))
+
+(define ($pointer-max str1 str2)
+  (if ($pointer< str1 str2) str2 str1))
 
 
 ;;;; pointer accessors
@@ -1939,12 +1953,10 @@
 
 ;;;; done
 
-(set-rtd-printer!	(type-descriptor memory-block)	%struct-memory-block-printer)
-(set-rtd-destructor!	(type-descriptor memory-block)	%memory-block-destructor)
 
 (post-gc-hooks (cons %free-allocated-memory (post-gc-hooks)))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

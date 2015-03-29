@@ -6437,17 +6437,48 @@ In the following definitions the @var{ptr} arguments must be pointer
 objects.  The following bindings are exported by the library
 @library{vicare system $pointers}.
 
+@c ------------------------------------------------------------------------
+
+@subsubheading predicates
+
 
 @deffn {Primitive Operation} $pointer? @var{obj}
 Return @true{} if @var{obj} is a reference to a pointer memory block,
 else return @false{}.
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
 
 @deffn {Unsafe Operation} $pointer= @vari{ptr} @varii{ptr}
 Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @false{}.
 @end deffn
+
+
+@defun $pointer!=? @vari{ptr} @varii{ptr}
+Return @true{} if all the pointer arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@deffn {Unsafe Operation} $pointer< @vari{ptr} @varii{ptr}
+@deffnx {Unsafe Operation} $pointer> @vari{ptr} @varii{ptr}
+@deffnx {Unsafe Operation} $pointer<= @vari{ptr} @varii{ptr}
+@deffnx {Unsafe Operation} $pointer>= @vari{ptr} @varii{ptr}
+Dyadic lexicographic comparison functions for pointers.  Return @true{}
+if @vari{ptr} and @varii{ptr} compare as the name implies; otherwise
+return @false{}.
+@end deffn
+
+
+@defun $pointer-max @vari{ptr} @varii{ptr}
+@defunx $pointer-min @vari{ptr} @varii{ptr}
+Return the maximal or minimal pointer argument according to
+@func{$pointer<}.
+@end defun
 
 @c page
 @node syslib hashtables

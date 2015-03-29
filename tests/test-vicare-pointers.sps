@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -92,7 +92,7 @@
   (check	;error, integer too big
       (catch #f
 	(integer->pointer (+ 10 (words.greatest-machine-word))))
-    => (list (+ 10 (words.greatest-machine-word))))
+    => (list '(words.machine-word? x) (+ 10 (words.greatest-machine-word))))
 
 ;;; --------------------------------------------------------------------
 
