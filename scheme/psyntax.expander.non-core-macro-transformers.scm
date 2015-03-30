@@ -4929,18 +4929,20 @@
     ((_ (brace ?name ?tag) ?expr)
      (and (identifier? ?name)
 	  (tag-identifier? ?tag))
-     (bless
-      `(begin
-	 (define (brace ghost ?tag) ,?expr)
-	 (define-syntax ,?name
-	   (identifier-syntax ghost)))))
+     (let ((ghost (gensym (syntax->datum ?name))))
+       (bless
+	`(begin
+	   (define (brace ,ghost ?tag) ,?expr)
+	   (define-syntax ,?name
+	     (identifier-syntax ,ghost))))))
     ((_ ?name ?expr)
      (identifier? ?name)
-     (bless
-      `(begin
-	 (define ghost ,?expr)
-	 (define-syntax ,?name
-	   (identifier-syntax ghost)))))
+     (let ((ghost (gensym (syntax->datum ?name))))
+       (bless
+	`(begin
+	   (define ,ghost ,?expr)
+	   (define-syntax ,?name
+	     (identifier-syntax ,ghost))))))
     ))
 
 (define (define-inline-constant-macro expr-stx)
