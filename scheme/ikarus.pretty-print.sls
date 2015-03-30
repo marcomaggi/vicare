@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#!r6rs
+#!vicare
 (library (ikarus pretty-print)
   (export
     pretty-print		pretty-print*
@@ -24,11 +24,19 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
+		  ;;FIXME  This  except  must  be  removed at  the  next  boot  image
+		  ;;rotation.  (Marco Maggi; Mon Mar 30, 2015)
+		  non-negative-fixnum?
+
 		  pretty-print			pretty-print*
 		  pretty-width
 
 		  debug-print-enabled?
 		  debug-print			debug-print*)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 30,
+    ;;2015)
+    (only (ikarus fixnums)
+	  non-negative-fixnum?)
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)
@@ -37,9 +45,7 @@
     (only (ikarus records procedural)
 	  print-r6rs-record-instance)
     (only (vicare system $structs)
-	  $struct-rtd)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+	  $struct-rtd))
 
 
 (define (map1ltr f ls)
@@ -51,11 +57,11 @@
 
 (define pretty-width
   (make-parameter 60
-    (lambda (x)
-      (define who 'pretty-width)
-      (with-arguments-validation (who)
-	  ((positive-exact-integer	x))
-	x))))
+    (lambda (obj)
+      (if (positive-exact-integer? obj)
+	  obj
+	(procedure-argument-violation 'pretty-width
+	  "expected positive fixnum or bignum as parameter value" obj)))))
 
 (define (pretty-indent)
   1)
@@ -630,29 +636,21 @@
     (traverse x h)
     (output (boxify x h) port start-column ending-newline?)))
 
-(define pretty-print
-  (case-lambda
-   ((x)
-    (pretty x (current-output-port) 0 #t))
-   ((x port)
-    (define who 'pretty-print)
-    (with-arguments-validation (who)
-	((output-port port))
-      (pretty x port 0 #t)))))
+(case-define* pretty-print
+  ((x)
+   (pretty x (current-output-port) 0 #t))
+  ((x {port textual-output-port?})
+   (pretty x port 0 #t)))
 
-(define (pretty-print* x port start-column ending-newline?)
-  (define who 'pretty-print*)
-  (with-arguments-validation (who)
-      ((output-port		port)
-       (non-negative-fixnum	start-column))
-    (pretty x port start-column ending-newline?)))
+(define* (pretty-print* x {port textual-output-port?} {start-column non-negative-fixnum?} ending-newline?)
+  (pretty x port start-column ending-newline?))
 
 (define (debug-print . args)
   ;;Print arguments for debugging purposes.
   ;;
   (pretty-print args (current-error-port))
   (newline (current-error-port))
-  (newline (current-error-port)))
+  (flush-output-port (current-error-port)))
 
 (define debug-print-enabled?
   (make-parameter #f
