@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -509,8 +509,8 @@
 
   (let-syntax ((test (make-test + $add-bignum-compnum)))
     (test VBN1 10+20i 1152921504606846986+20i)
-    (test VBN1 1.0+20.0i 1.152921504606847e+18+20.0i)
-    (test VBN1 10.0+2.0i 1.152921504606847e+18+2.0i)
+    (test VBN1 1+20.0i 1152921504606846977+20.0i)
+    (test VBN1 10+2.0i 1152921504606846986+2.0i)
     (test VBN1 1/2+20i 2305843009213693953/2+20i)
     (test VBN1 10+2/3i 1152921504606846986+2/3i)
     (test VBN1 (make-rectangular VBN2 20) 2305843009213694051+20i)
@@ -713,8 +713,8 @@
 
   (let-syntax ((test (make-inexact-test + $add-ratnum-compnum)))
     (test VRN01 10+20i 1231/123+20i)
-    (test VRN01 1.0+20.0i 1.008130081300813+20.0i)
-    (test VRN01 10.0+2.0i 10.008130081300813+2.0i)
+    (test VRN01 1+20.0i 124/123+20.0i)
+    (test VRN01 10+2.0i 1231/123+2.0i)
     (test VRN01 1/2+20i 125/246+20i)
     (test VRN01 10+2/3i 1231/123+2/3i)
     (test VRN01 (make-rectangular VRN02 20) 0+20i)
@@ -897,8 +897,8 @@
 
   (let-syntax ((test (make-inexact-test + $add-flonum-compnum)))
     (test FL1 10+20i 10.0+20.0i)
-    (test FL1 1.0+20.0i 1.0+20.0i)
-    (test FL1 10.0+2.0i 10.0+2.0i)
+    (test FL1 1+20.0i 1.0+20.0i)
+    (test FL1 10+2.0i 10.0+2.0i)
     (test FL1 1/2+20i 0.5+20.0i)
     (test FL1 10+2/3i 10.0+2/3i)
     (test FL1 (make-rectangular VBN2 20) 1.152921504606847e+18+20.0i)
@@ -1081,8 +1081,8 @@
 
   (let-syntax ((test (make-inexact-test + $add-cflonum-compnum)))
     (test CFL01 10+20i 10.0+20.0i)
-    (test CFL01 1.0+20.0i 1.0+20.0i)
-    (test CFL01 10.0+2.0i 10.0+2.0i)
+    (test CFL01 1+20.0i 1.0+20.0i)
+    (test CFL01 10+2.0i 10.0+2.0i)
     (test CFL01 1/2+20i 0.5+20.0i)
     (test CFL01 10+2/3i 10.0+0.6666666666666666i)
     (test CFL01 (make-rectangular VBN2 20) 1.152921504606847e+18+20.0i)
