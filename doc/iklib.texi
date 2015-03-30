@@ -14945,6 +14945,19 @@ informations on the internals of @var{port}.
 @end defun
 
 
+@defun reset-input-port! @var{input-port}
+@defunx reset-output-port! @var{output-port}
+Reset to empty the port buffer; return unspecified values.  These
+procedures should be used to attempt an error recovery, only when the
+port's underlying device is stateless, for example at the @repl{}.
+@end defun
+
+
+@defun make-file-options @var{symbol} ...
+Return an enumeration set as defined by @func{file-options}.
+@end defun
+
+
 @deffn Syntax file-options @meta{file-options-symbol} @dots{}
 As defined by @rnrs{6}: return a file--options object that encapsulates
 the specified options.  Each @meta{file-options-symbol} must be a
