@@ -79,6 +79,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib timing::                Timing.
 * iklib gc::                    Interfacing with garbage collection.
 * iklib guardians::             Guardians and garbage collection.
+* iklib engines::               Engines.
 * iklib io::                    Input/output library.
 * iklib pointers::              Handling pointer objects.
 * iklib memory::                Memory management.
@@ -11597,6 +11598,11 @@ Return the cube of @var{num}: @var{num} times @var{num} times @var{num}.
 @end defun
 
 
+@defun cbrt @var{num}
+Return the cubic root of @var{num}.
+@end defun
+
+
 @defun quotient @vari{N} @varii{N}
 @defunx remainder @vari{N} @varii{N}
 @defunx quotient+remainder @vari{N} @varii{N}
@@ -13850,6 +13856,22 @@ example in the previous section):
  (cons run-block-guardian
   (post-gc-hooks)))
 @end example
+@end deffn
+
+@c page
+@node iklib engines
+@section Engines
+
+
+@deffn Parameter interrupt-handler
+@cindex Parameter @func{interrupt-handler}
+Still undocumented.
+@end deffn
+
+
+@deffn Parameter engine-handler
+@cindex Parameter @func{engine-handler}
+Still undocumented.
 @end deffn
 
 @c page
