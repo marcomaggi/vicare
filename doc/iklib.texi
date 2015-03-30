@@ -8578,6 +8578,18 @@ operations of the cafe resume as normal.
 To exit from a cafe we can write the @eof{} object.
 @end defun
 
+
+@deffn Parameter waiter-prompt-string
+@cindex Parameter @func{waiter-prompt-string}
+The string used as prompt for cafe.
+@end deffn
+
+
+@deffn Parameter cafe-input-port
+@cindex Parameter @func{cafe-input-port}
+A textual input port used by the cafe.
+@end deffn
+
 @c page
 @node iklib procedures
 @section Procedures
