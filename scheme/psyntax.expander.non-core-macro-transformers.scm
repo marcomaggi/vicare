@@ -677,14 +677,23 @@
     (identifier-syntax 'define-struct))
 
   (define (define-struct-macro input-form.stx)
-    (syntax-match input-form.stx ()
+    (syntax-match input-form.stx (nongenerative)
       ((_ (?name ?maker ?predicate) (?field* ...))
-       (%build-output-form input-form.stx ?name ?maker ?predicate ?field*))
+       (%build-output-form input-form.stx ?name ?maker ?predicate ?field* #f))
+
       ((_ ?name (?field* ...))
-       (%build-output-form input-form.stx ?name #f #f ?field*))
+       (%build-output-form input-form.stx ?name #f     #f         ?field* #f))
+
+      ((_ (?name ?maker ?predicate) (?field* ...) (nongenerative ?uid))
+       (identifier? ?uid)
+       (%build-output-form input-form.stx ?name ?maker ?predicate ?field* ?uid))
+
+      ((_ ?name (?field* ...) (nongenerative ?uid))
+       (identifier? ?uid)
+       (%build-output-form input-form.stx ?name #f     #f         ?field* ?uid))
       ))
 
-  (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx)
+  (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
     (let* ((string->id (lambda (str)
 			 ($datum->syntax type.id (string->symbol str))))
 	   (type.sym   (identifier->symbol type.id))
@@ -696,7 +705,10 @@
 	     (field*.arg     (map (lambda (id tag)
 				    `(brace ,id ,tag))
 			       field*.sym field*.tag))
-	     (rtd            ($datum->syntax type.id (make-struct-type type.str field*.sym)))
+	     (uid            (if uid
+				 (identifier->symbol uid)
+			       (gensym type.str)))
+	     (rtd            ($datum->syntax type.id (make-struct-type type.str field*.sym uid)))
 	     (constructor.id (or maker.id     (string->id (string-append "make-" type.str))))
 	     (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
 	     (field*.idx     (enumerate field*.stx)))
