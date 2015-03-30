@@ -1,4 +1,4 @@
-@node iklib
+e@node iklib
 @chapter Language extensions
 
 
@@ -8799,7 +8799,7 @@ It can be used as @var{printer} argument in calls to
 @cindex Parameter @func{default-struct-printer-details}
 When set to true: @func{default-struct-printer} will produce a detailed
 description of the structure; otherwise only minimum informations are
-included.  This parameter is inisialised to @false{}.
+included.  This parameter is initialised to @false{}.
 @end deffn
 
 @c ------------------------------------------------------------
@@ -13887,6 +13887,7 @@ The following bindings are exported by the library @library{vicare}.
 @deffn Parameter string->filename-func
 @deffnx Parameter string->pathname-func
 @cindex Parameter @func{string->filename-func}
+@cindex Parameter @func{string->pathname-func}
 In @value{PRJNAME} the string--to--filename conversion is performed by
 the function returned by @func{string->filename-func}, which defaults to
 @func{string->utf8}.
@@ -13896,6 +13897,7 @@ the function returned by @func{string->filename-func}, which defaults to
 @deffn Parameter filename->string-func
 @deffnx Parameter pathname->string-func
 @cindex Parameter @func{filename->string-func}
+@cindex Parameter @func{pathname->string-func}
 In @value{PRJNAME} the filename--to--string conversion is performed by
 the function returned by @func{filename->string-func}, which defaults to
 @func{utf8->string}.
@@ -14584,16 +14586,6 @@ a fixnum representing the second octet.
 @end defun
 
 
-@deffn Parameter current-input-port
-@deffnx Parameter current-output-port
-@deffnx Parameter current-error-port
-@cindex Parameter @func{current-input-port}
-@cindex Parameter @func{current-output-port}
-@cindex Parameter @func{current-error-port}
-These are like defined by @rnrs{6}, but in addition they are parameters.
-@end deffn
-
-
 @defun console-input-port
 @defunx console-input-port @var{textual-input-port}
 Return the default textual input port: the default value of the
@@ -14694,6 +14686,30 @@ Socket ports do @strong{not} support port position operations.
 
 
 The following bindings are exported by the @library{vicare} library.
+
+
+@deffn Parameter current-input-port
+@cindex Parameter @func{current-input-port}
+As defined by @rnrs{6}: return a default textual port for input.
+@value{PRJNAME} extends its definition to allow selecting a new textual
+input port.
+@end deffn
+
+
+@deffn Parameter current-output-port
+@cindex Parameter @func{current-output-port}
+As defined by @rnrs{6}: return a default textual port for output.
+@value{PRJNAME} extends its definition to allow selecting a new textual
+output port.
+@end deffn
+
+
+@deffn Parameter current-error-port
+@cindex Parameter @func{current-error-port}
+As defined by @rnrs{6}: return a default textual port for error messages
+output.  @value{PRJNAME} extends its definition to allow selecting a new
+textual output port.
+@end deffn
 
 
 @defun textual-input-port? @var{obj}
@@ -14821,7 +14837,37 @@ If characters become available, @func{get-string-some} returns a freshly
 allocated string containing the initial available characters (at least
 one), and it updates @var{port} to point just past these characters.
 
-If no input characters are available: the EOF object is returned.
+If no input characters are available: the @eof{} object is returned.
+@end defun
+
+
+@defun with-input-from-string @var{string} @var{thunk}
+@var{thunk} must be a procedure and it must accept zero arguments.
+@var{string} must be a Scheme string.
+
+The @var{string} is used as argument for @func{open-string-input-port};
+during the dynamic extent of the call to @var{thunk}, the obtained port
+is made the value returned by @func{current-input-port}; the previous
+default value is reinstated when the dynamic extent is exited.
+
+When @var{thunk} returns, the port is closed automatically.  The values
+returned by @var{thunk} are returned.
+
+If, after @var{thunk} has returned, an escape procedure is used to
+reenter the dynamic extent of the call to @var{thunk}: the behaviour is
+unspecified.
+@end defun
+
+
+@defun with-output-to-string @var{thunk}
+Create a textual output port that accumulates the characters written to
+it, set it as the current output port and call @var{thunk} with no
+arguments.  The port is the current output port only for the extent of
+the call to @var{thunk}.
+
+Whenever @var{thunk} returns, a string consisting of all of the port's
+accumulated characters (regardless of the port's current position) is
+returned and the port is closed.
 @end defun
 
 @c page
