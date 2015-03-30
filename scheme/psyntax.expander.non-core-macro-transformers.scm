@@ -4957,10 +4957,12 @@
       `(define-syntax ,?name
 	 (let ((const ,?expr))
 	   (lambda (stx)
-	     (syntax-case stx ()
-	       (?id
-		(identifier? #'?id)
-		#`(quote #,const))))))))
+	     (if (identifier? stx)
+		 ;;By  using DATUM->SYNTAX  we avoid  the  "raw symbol  in output  of
+		 ;;macro" error whenever the CONST is a symbol or contains a symbol.
+		 #`(quote #,(datum->syntax stx const))
+	       (syntax-violation (quote ?name)
+		 "invalid use of identifier syntax" stx (syntax ?name))))))))
     ))
 
 (define (define-inline-macro expr-stx)
