@@ -93,9 +93,40 @@ Return the minimal or maximal boolean among the arguments.
 @cindex Library @library{vicare system $symbols}
 
 
-The arguments @var{sym} must be references to symbol blocks, the
-arguments @var{str} must be references to strings.  The following
-bindings are exported by the library @library{vicare system $symbols}.
+The bindings documented in this section are exported by the library
+@library{vicare system $symbols}.  For all the bindings: the arguments
+@var{sym} must be references to symbol objects; the arguments @var{str}
+must be references to string objects.
+
+@menu
+* syslib symbols accessors::    Symbol accessors and mutators.
+* syslib symbols constructors:: Symbol constructors.
+* syslib symbols comparison::   Comparison functions.
+* syslib symbols conversion::   Conversion functions.
+* syslib symbols plists::       Property lists.
+* syslib symbols value::        Values associated to symbols.
+* syslib symbols table::        The symbol table.
+@end menu
+
+@c page
+@node syslib symbols accessors
+@subsection Symbol accessors and mutators
+
+
+@deffn {Unsafe Operation} $symbol-string @var{sym}
+@deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
+Accessors for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
+@deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
+Mutators for the fields of @var{sym}.
+@end deffn
+
+@c page
+@node syslib symbols constructors
+@subsection Symbol constructors
 
 
 @deffn {Unsafe Operation} $make-symbol @var{str}
@@ -107,9 +138,10 @@ and @code{proc} fields are initialised to a special machine word value
 meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @end deffn
 
-@c ------------------------------------------------------------------------
+@c page
+@node syslib symbols comparison
+@subsection Comparison functions
 
-@subsubheading Comparison
 
 @defun $symbol= @vari{sym} @varii{sym}
 Return @true{} if the symbol arguments have equal pretty string name
@@ -139,6 +171,10 @@ Return the symbol argument having maximal or minimal pretty string name
 according to @func{$string-max} and @func{string-min}.
 @end defun
 
+@c page
+@node syslib symbols conversion
+@subsection Conversion functions
+
 
 @deffn {Unsafe Operation} $string->symbol @var{str}
 Return an interned symbol having the string @var{str} as name.
@@ -149,19 +185,47 @@ Return an interned symbol having the string @var{str} as name.
 Return the string name of @var{sym}, generating one if needed.
 @end deffn
 
-
-@deffn {Unsafe Operation} $symbol-string @var{sym}
-@deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
-@deffnx {Unsafe Operation} $symbol-plist @var{sym}
-Accessors for the fields of @var{sym}.
-@end deffn
+@c page
+@node syslib symbols plists
+@subsection Property lists
 
 
-@deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
-@deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
+@deffn {Unsafe Operation} $symbol-plist @var{sym}
 @deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
-Mutators for the fields of @var{sym}.
+Accessor and mutator for the field @code{plist} of symbol objects.
 @end deffn
+
+
+@deffn {Unsafe Operation} $putprop @var{symbol} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
+
+If @var{key} is already set: the old entry is mutated to reference the
+new @var{value}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $getprop @var{symbol} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
+symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $remprop @var{symbol} @var{key}
+Remove property @var{key} from the list associated to @var{symbol}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $property-list @var{symbol}
+Return a new association list representing the property list of
+@var{symbol}.  The order of the entries is the same as the property
+creation order.
+@end deffn
+
+@c page
+@node syslib symbols value
+@subsection Values associated to symbols
 
 
 @deffn {Unsafe Operation} $symbol-value @var{sym}
@@ -215,29 +279,14 @@ Set both the fields @code{value} and @code{proc} of @var{sym} to
 @end deffn
 
 
-@deffn {Low-level Operation} top-level-value @var{sym}
-Still to be documented.
-@end deffn
-
-
-@deffn {Low--level Operation} top-level-bound? @var{sym}
-Still to be documented.
-@end deffn
-
-
-@deffn {Low--level Operation} set-top-level-value! @var{sym} @var{value}
-Still to be documented.
-@end deffn
-
-
-@deffn {Low--level Operation} reset-symbol-proc! @var{symb}
-Still to be documented.
-@end deffn
-
-
 @deffn {Unsafe Operation} $init-symbol-function! @var{sym} @var{proc}
 Still to be documented.
 @end deffn
+
+
+@c page
+@node syslib symbols table
+@subsection The symbol table
 
 
 The following bindings are related to the symbol table collecting
@@ -263,38 +312,6 @@ Vicare internal symbol table status:
 vicare>
 @end example
 @end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Property lists
-
-
-@deffn {Unsafe Operation} $putprop @var{symbol} @var{key} @var{value}
-Add a new property @var{key} with @var{value} to the property list of
-@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
-
-If @var{key} is already set: the old entry is mutated to reference the
-new @var{value}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $getprop @var{symbol} @var{key}
-Return the value of the property @var{key} in the property list of
-@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
-symbol.
-@end deffn
-
-
-@deffn {Unsafe Operation} $remprop @var{symbol} @var{key}
-Remove property @var{key} from the list associated to @var{symbol}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $property-list @var{symbol}
-Return a new association list representing the property list of
-@var{symbol}.  The order of the entries is the same as the property
-creation order.
-@end deffn
 
 @c page
 @node syslib keywords

@@ -10780,7 +10780,7 @@ in which @var{state} is the @strong{last} argument.
 * iklib symbols comparison::    Comparing symbols.
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
-* iklib symbols values::        System values bound to symbols.
+* iklib symbols system::        System values bound to symbols.
 * iklib symbols labels::        Retrieving syntactic binding labels.
 * iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
@@ -10832,7 +10832,7 @@ Return the maximal or minimal symbol argument according to
 @subsection Symbol values
 
 
-Under Vicare, Scheme symbols are data structures having a field
+Under @value{PRJNAME}, Scheme symbols are data structures having a field
 @code{value} initialised, at symbol construction time, to the built--in
 value @samp{#<unbound-object>}; this field has multiple purposes:
 
@@ -10848,7 +10848,7 @@ When the symbol is the unique identifier of a @rnrs{6} record type:
 
 @item
 When the symbol is the ``public name'' of a core primitive defined by
-@value{PRJNAME}, for example @func{display} or @func{+}: we have to
+@value{PRJNAME} (for example @func{display} or @func{+}): we have to
 assume that @code{value} holds a Scheme object for internal use by
 @value{PRJNAME}.
 
@@ -10863,9 +10863,9 @@ imported in the current lexical environment: @code{value} holds the
 syntactic binding descriptor.
 
 @item
-When the symbol is a storage location gensym associated to a lexical
-syntactic binding: @code{value} holds the current value of the lexical
-variable.
+When the symbol is a storage location gensym (loc gensym) associated to
+a lexical syntactic binding: @code{value} holds the current value of the
+lexical variable.
 
 @item
 When the symbol is a fresh symbol returned by a call to @func{gensym}:
@@ -10878,6 +10878,117 @@ case the ability to associate a value with a symbol can be quite useful
 in building some form of associative array with distributed storage.
 
 The following bindings are exported by the library @library{vicare}.
+
+
+@defun top-level-value @var{loc}
+Expect the argument to be a loc gensym associated to a binding; extract
+the value from the slot @code{value} of the symbol object and return it.
+If the value is the unbound object: raise an exception.
+
+This is both a primitive function and a core primitive operation.
+
+@quotation
+@strong{NOTE} In binary code, this function has a specific purpose: to
+retrieve the value of a binding defined in a previously evaluated
+expression in the context of an interaction environment; we have to know
+the internals of the expander to understand it.  Let's say we are
+evaluating expressions at the @repl{}; first we do:
+
+@example
+vicare> (define a 1)
+@end example
+
+@noindent
+the expander creates a new top level binding in the interaction
+environment; such interaction environment bindings are special in that
+they have a single gensym to serve both as lex gensym and loc gensym;
+the expander transforms the input form into the core language form:
+
+@example
+(set! lex.a 1)
+@end example
+
+@noindent
+where @code{lex.a} is both the lex gensym and the loc gensym associated
+to the binding; the compiler transforms the core language expression
+into:
+
+@example
+($init-symbol-value! lex.a 1)
+@end example
+
+@noindent
+which, compiled and evaluated, will store the value in the @code{value}
+field of the gensym @code{lex.a}.
+
+Later we do:
+
+@example
+vicare> a
+@end example
+
+@noindent
+the expander finds the binding in the interaction environment and
+transforms the variable reference into the core language expression:
+
+@example
+lex.a
+@end example
+
+@noindent
+the compiler then transforms the core language variable reference into:
+
+@example
+(top-level-value 'lex.a)
+@end example
+
+@noindent
+which, compiled and evaluated, will return the binding's value.
+
+The same processing happens when we evaluate multiple expressions with
+@func{eval} in the context of the same interaction environment.
+@end quotation
+@end defun
+
+
+@defun top-level-bound? @var{loc}
+Return @true{} if the symbol object @var{loc} has a proper value in its
+@code{value} field; return @false{} if the field @code{value} is set to
+the unbound object.
+@end defun
+
+
+@defun set-top-level-value! @var{loc} @var{value}
+This function can be used to set a new object in a @var{loc} gensym, so
+that it can be later retrieved by @func{top-level-value}.
+@end defun
+
+
+@defun reset-symbol-proc! @var{sym}
+@var{sym} is meant to be a location gensym.  If the value currently in
+the field @code{value} of @var{sym} is a closure object: store such
+value also in the field @code{proc} of @var{sym}X.
+
+@quotation
+@strong{NOTE} Whenever binary code performs a call to a global closure
+object, it does the following:
+
+@itemize
+@item
+From the relocation vector of the current code object: retrieve the loc
+gensym of the procedure to call.
+
+@item
+From the loc gensym: extract the value of the @code{proc} slot, which is
+meant to be a closure object.  This is done by accessing the gensym
+object with a low--level assembly instruction, @strong{not} by using the
+primitive operation @func{$symbol-proc}.
+
+@item
+Actually call the closure object.
+@end itemize
+@end quotation
+@end defun
 
 
 @defun set-symbol-value! @var{sym} @var{value}
@@ -10961,7 +11072,7 @@ creation order.
 @end defun
 
 @c page
-@node iklib symbols values
+@node iklib symbols system
 @subsection System values bound to symbols
 
 

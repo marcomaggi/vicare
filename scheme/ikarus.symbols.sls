@@ -268,21 +268,71 @@
 (define (unbound-object)
   (foreign-call "ikrt_unbound_object"))
 
-(define* (top-level-value {x symbol?})
+(define* (top-level-value {loc symbol?})
+  ;;Expect the argument to be a loc gensym associated to a binding; extract the value
+  ;;from the slot  "value" of the symbol object  and return it.  If the  value is the
+  ;;unbound object: raise an exception.
+  ;;
+  ;;NOTE This primitive function is also implemented as primitive operation!!!
+  ;;
+  ;;This function has a specific purpose: to  retrieve the value of a binding defined
+  ;;in  a  previously   evaluated  expression  in  the  context   of  an  interaction
+  ;;environment; we  have to  know the  internals of the  expander to  understand it.
+  ;;Let's say we are evaluating expressions at the REPL; first we do:
+  ;;
+  ;;   vicare> (define a 1)
+  ;;
+  ;;the expander creates a new top level binding in the interaction environment; such
+  ;;interaction environment bindings are special in that they have a single gensym to
+  ;;serve both as lex  gensym and loc gensym; the expander  transforms the input form
+  ;;into the core language form:
+  ;;
+  ;;   (set! lex.a 1)
+  ;;
+  ;;where  "lex.a" is  both the  lex  gensym and  the  loc gensym  associated to  the
+  ;;binding; the compiler transforms the core language expression into:
+  ;;
+  ;;   ($init-symbol-value! lex.a 1)
+  ;;
+  ;;which, compiled and evaluated,  will store the value in the  "value" field of the
+  ;;gensym "lex.a".
+  ;;
+  ;;Later we do:
+  ;;
+  ;;   vicare> a
+  ;;
+  ;;the expander finds the binding in  the interaction environment and transforms the
+  ;;variable reference into the core language expression:
+  ;;
+  ;;   lex.a
+  ;;
+  ;;the compiler then transforms the core language variable reference into:
+  ;;
+  ;;   (top-level-value 'lex.a)
+  ;;
+  ;;which compiled and evaluated will return the binding's value.
+  ;;
+  ;;The same  processing happens when we  evaluate multiple expressions with  EVAL in
+  ;;the context of the same interaction environment.
+  ;;
   (receive-and-return (v)
-      ($symbol-value x)
+      ($symbol-value loc)
     (when ($unbound-object? v)
       (raise
        (condition (make-undefined-violation)
 		  (make-who-condition 'eval)
 		  (make-message-condition "unbound variable")
-		  (make-irritants-condition (list (string->symbol (symbol->string x)))))))))
+		  (make-irritants-condition (list (string->symbol (symbol->string loc)))))))))
+
+(define* (set-top-level-value! {loc symbol?} v)
+  ;;This function can be used to set a new  object in a loc gensym, so that it can be
+  ;;later retrieved by  TOP-LEVEL-VALUE.  This function exists  for completeness, but
+  ;;it is not really used by the compiler.
+  ;;
+  ($set-symbol-value! loc v))
 
 (define* (top-level-bound? {x symbol?})
   (not ($unbound-object? ($symbol-value x))))
-
-(define* (set-top-level-value! {x symbol?} v)
-  ($set-symbol-value! x v))
 
 (define* (symbol-value {x symbol?})
   (receive-and-return (obj)
@@ -307,7 +357,7 @@
 			      ($symbol-value x) args)))))
 
 (define* (reset-symbol-proc! {x symbol?})
-  ;;X is meant to be a location gensym.  If the value currently in the field "value"
+  ;;X is meant to be a location gensym.   If the value currently in the field "value"
   ;;of X is a closure object: store such value also in the field "proc" of X.
   ;;
   ;;NOTE Whenever binary code performs a call to a global closure object, it does the
@@ -317,7 +367,8 @@
   ;;  of the procedure to call.
   ;;
   ;;* From the loc gensym: extract the value of the "proc" slot, which is meant to be
-  ;;  a closure object.
+  ;;  a closure object.  This is done by accessing the gensym object with a low-level
+  ;;  assembly instruction, *not* by using the primitive operation $SYMBOL-PROC.
   ;;
   ;;* Actually call the closure object.
   ;;
