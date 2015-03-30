@@ -3875,7 +3875,31 @@
     ($sign-bignum				$numerics)
     ($sign-flonum				$numerics)
     ($sign-ratnum				$numerics)
-;;;
+
+    ($numerator-fixnum				$numerics)
+    ($numerator-bignum				$numerics)
+    ($numerator-flonum				$numerics)
+    ($numerator-ratnum				$numerics)
+
+    ($denominator-fixnum			$numerics)
+    ($denominator-bignum			$numerics)
+    ($denominator-flonum			$numerics)
+    ($denominator-ratnum			$numerics)
+
+    ($exact-fixnum				$numerics)
+    ($exact-bignum				$numerics)
+    ($exact-flonum				$numerics)
+    ($exact-ratnum				$numerics)
+    ($exact-compnum				$numerics)
+    ($exact-cflonum				$numerics)
+
+    ($inexact-fixnum				$numerics)
+    ($inexact-bignum				$numerics)
+    ($inexact-flonum				$numerics)
+    ($inexact-ratnum				$numerics)
+    ($inexact-compnum				$numerics)
+    ($inexact-cflonum				$numerics)
+
     ($expt-number-fixnum			$numerics)
 
     ($expt-number-zero-fixnum			$numerics)
@@ -4088,6 +4112,26 @@
     ($bitwise-xor-fixnum-bignum			$numerics)
     ($bitwise-xor-bignum-fixnum			$numerics)
     ($bitwise-xor-bignum-bignum			$numerics)
+
+    ($floor-fixnum				$numerics)
+    ($floor-bignum				$numerics)
+    ($floor-ratnum				$numerics)
+    ($floor-flonum				$numerics)
+
+    ($ceiling-fixnum				$numerics)
+    ($ceiling-bignum				$numerics)
+    ($ceiling-ratnum				$numerics)
+    ($ceiling-flonum				$numerics)
+
+    ($truncate-fixnum				$numerics)
+    ($truncate-bignum				$numerics)
+    ($truncate-ratnum				$numerics)
+    ($truncate-flonum				$numerics)
+
+    ($round-fixnum				$numerics)
+    ($round-bignum				$numerics)
+    ($round-ratnum				$numerics)
+    ($round-flonum				$numerics)
 
 ;;; --------------------------------------------------------------------
 ;;; (vicare system $hashtables)

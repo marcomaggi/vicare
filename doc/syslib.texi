@@ -1266,6 +1266,10 @@ level operations on numbers.
 * syslib numerics min::         Minimum between numbers.
 * syslib numerics abs::         Absolute value of real numbers.
 * syslib numerics sign::        Sign of real numbers.
+* syslib numerics numerator::   Numerator of real numbers.
+* syslib numerics denominator:: Denominator of real numbers.
+* syslib numerics exact::       Conversion to exact number.
+* syslib numerics inexact::     Conversion to inexact number.
 * syslib numerics expt::        Raising numbers to power.
 * syslib numerics sqrt::        Square root of numbers.
 * syslib numerics cbrt::        Cubic root of numbers.
@@ -1290,6 +1294,10 @@ level operations on numbers.
 * syslib numerics bitand::      Bitwise logic and.
 * syslib numerics bitior::      Bitwise logic inclusive or.
 * syslib numerics bitxor::      Bitwise logic exclusive or.
+* syslib numerics floor::       Floor rounding.
+* syslib numerics ceiling::     Ceiling rounding.
+* syslib numerics truncate::    Truncate rounding.
+* syslib numerics round::       Round rounding.
 @end menu
 
 @c page
@@ -3771,6 +3779,129 @@ represent zero.
 @end deffn
 
 @c page
+@node syslib numerics numerator
+@subsection Numerator of real numbers
+
+
+@deffn {Unsafe Operation} $numerator-fixnum @var{fx}
+This is an identity function: return @var{fx} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $numerator-bignum @var{bn}
+This is an identity function: return @var{bn} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $numerator-flonum @var{fl}
+Return the numerator of @var{fl} as flonum.  This is an alias for
+@func{$flnumerator}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $numerator-ratnum @var{rt}
+Return the numerator of @var{rt}: a fixnum or bignum.
+@end deffn
+
+@c page
+@node syslib numerics denominator
+@subsection Denominator of real numbers
+
+
+@deffn {Unsafe Operation} $denominator-fixnum @var{fx}
+Always return the fixnum @code{1}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $denominator-bignum @var{bn}
+Always return the fixnum @code{1}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $denominator-flonum @var{fl}
+Return the denominator of @var{fl} as flonum.  This is an alias for
+@func{$fldenominator}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $denominator-ratnum @var{rt}
+Return the denominator of @var{rt}: a positive fixnum or bignum.
+@end deffn
+
+@c page
+@node syslib numerics exact
+@subsection Conversion to exact number
+
+
+@deffn {Unsafe Operation} $exact-fixnum @var{fx}
+This is an identity function: always return @var{fx}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-bignum @var{bn}
+This is an identity function: always return @var{bn}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-flonum @var{fl}
+If @var{fl} is an integer flonum: return the corresponding exact
+integer, a fixnum or bignum.  Otherwise raise an exception.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-ratnum @var{rt}
+This is an identity function: always return @var{rt}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-compnum @var{cn}
+Attempt to convert the compnum @var{cn} into the corresponding exact
+compnum.  If either the real or the imaginary parts are not integers:
+raise an exception.
+@end deffn
+
+
+@deffn {Unsafe Operation} $exact-cflonum @var{cfl}
+Attempt to convert the cflonum @var{cfl} into the corresponding exact
+compnum.  If either the real or the imaginary parts are not integers:
+raise an exception.
+@end deffn
+
+@c page
+@node syslib numerics inexact
+@subsection Conversion to inexact number
+
+
+@deffn {Unsafe Operation} $inexact-fixnum @var{fx}
+Convert the fixnum @var{fx} into the corresponding flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-bignum @var{bn}
+Convert the bignum @var{bn} into the corresponding flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-flonum @var{fl}
+This is an identity function: always return @var{fl}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-ratnum @var{rt}
+Convert the ratnum @var{rt} into the corresponding flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-compnum @var{cn}
+Convert the compnum @var{cn} into the corresponding cflonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $inexact-cflonum @var{cfl}
+This is an identity function: always return @var{cfl}.
+@end deffn
+
+@c page
 @node syslib numerics expt
 @subsection Raising numbers to power
 
@@ -5087,6 +5218,110 @@ fixnum @var{fx}.
 @deffn {Unsafe Operation} $bitwise-xor-bignum-bignum @vari{bn} @varii{bn}
 Apply the bitwise exclusive OR operation to the bignum @vari{bn} and the
 bignum @varii{bn}.
+@end deffn
+
+@c page
+@node syslib numerics floor
+@subsection Floor rounding
+
+
+@deffn {Unsafe Operation} $floor-fixnum @var{FX}
+Rounding as defined by @func{floor}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $floor-bignum @var{BN}
+Rounding as defined by @func{floor}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $floor-flonum @var{FL}
+Rounding as defined by @func{floor}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $floor-ratnum @var{RN}
+Rounding as defined by @func{floor}.  Return an exact integer.
+@end deffn
+
+@c page
+@node syslib numerics ceiling
+@subsection Ceiling rounding
+
+
+@deffn {Unsafe Operation} $ceiling-fixnum @var{FX}
+Rounding as defined by @func{ceiling}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ceiling-bignum @var{BN}
+Rounding as defined by @func{ceiling}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ceiling-flonum @var{FL}
+Rounding as defined by @func{ceiling}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $ceiling-ratnum @var{RN}
+Rounding as defined by @func{ceiling}.  Return an exact integer.
+@end deffn
+
+@c page
+@node syslib numerics truncate
+@subsection Truncate rounding
+
+
+@deffn {Unsafe Operation} $truncate-fixnum @var{FX}
+Rounding as defined by @func{truncate}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $truncate-bignum @var{BN}
+Rounding as defined by @func{truncate}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $truncate-flonum @var{FL}
+Rounding as defined by @func{truncate}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $truncate-ratnum @var{RN}
+Rounding as defined by @func{truncate}.  Return an exact integer.
+@end deffn
+
+@c page
+@node syslib numerics round
+@subsection Round rounding
+
+
+@deffn {Unsafe Operation} $round-fixnum @var{FX}
+Rounding as defined by @func{round}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $round-bignum @var{BN}
+Rounding as defined by @func{round}.  This is an identity function,
+returning @var{N} itself.
+@end deffn
+
+
+@deffn {Unsafe Operation} $round-flonum @var{FL}
+Rounding as defined by @func{round}.  Return a flonum.
+@end deffn
+
+
+@deffn {Unsafe Operation} $round-ratnum @var{RN}
+Rounding as defined by @func{round}.  Return an exact integer.
 @end deffn
 
 @c page
