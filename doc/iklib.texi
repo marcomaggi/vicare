@@ -16173,7 +16173,7 @@ garbage collector whenever the returned pointer is garbage collected.
 
 @defun bytevector->cstring* @var{bv}
 @defunx bytevector->guarded-cstring* @var{bv}
-Like @func{bytevector->cstring*} and @func{bytevector->guarded-cstring},
+Like @func{bytevector->cstring} and @func{bytevector->guarded-cstring},
 but if allocation fails raise a non--continuable exception with
 components: @condition{who}, @condition{message},
 @condition{out-of-memory-error}.
@@ -16310,8 +16310,8 @@ raise a non--continuable exception with components: @condition{who},
 @defunx bytevectors->guarded-argv @var{list-of-bytevectors}
 Given a list of bytevectors: convert them into @asciiz{} strings and
 build a @cnull{} terminated array of C pointers referencing the strings.
-Return a pointer to the array.  The strings and the array are stored in
-a single memory block.
+The strings and the array are stored in a single memory block.  If
+successful return the pointer object, otherwise return @false{}.
 
 Memory allocated by @func{bytevectors->argv} must be explicitly released
 by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is
@@ -16751,6 +16751,7 @@ Return a random fixnum object between zero (included) and @var{fx}
 
 
 @deffn Parameter exit-hooks
+@cindex Parameter @func{exit-hooks}
 Contains null or a list of thunks to be evaluated by @func{exit}
 whenever the process is normally terminated.  Any exception raised by
 the thunks is catched and discarded.  To add an exit hook:
