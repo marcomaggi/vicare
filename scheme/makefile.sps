@@ -532,6 +532,10 @@
     (begin0					(macro . begin0))
     (xor					(macro . xor))
 
+    (stdin					(macro . stdin))
+    (stdout					(macro . stdout))
+    (stderr					(macro . stderr))
+
     (unwind-protect				(macro . unwind-protect))
     (with-unwind-protection			(macro . with-unwind-protection))
     (with-unwind-handler			(macro . with-unwind-protection))
