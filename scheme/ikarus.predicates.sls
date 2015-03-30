@@ -14,6 +14,7 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus predicates)
   (export
     fixnum?		flonum?		bignum?
@@ -23,7 +24,7 @@
     inexact?		exact-integer?
     finite?		infinite?	nan?
     real-valued?	rational-valued? integer-valued?
-    eof-object?		bwp-object?
+    eof-object?		bwp-object?	void-object?
     boolean?		char?		vector?
     bytevector?		string?		procedure?
     null?		pair?		symbol?
@@ -31,24 +32,22 @@
     immediate?		code?
     transcoder?		weak-pair?
     not			bwp-object)
-  (import
-    (except (vicare)
-	    fixnum?		flonum?		bignum?
-	    ratnum?		compnum?	cflonum?
-            number?		complex?	real?
-            rational?		integer?	exact?
-	    inexact?		exact-integer?
-	    finite?		infinite?	nan?
-	    real-valued?	rational-valued? integer-valued?
-	    eof-object?		bwp-object?
-	    boolean?		char?		vector?
-	    bytevector?		string?		procedure?
-            null?		pair?		symbol?
-	    eq?			eqv?
-            immediate?		code?
-            transcoder?		weak-pair?
-	    not			bwp-object
-	    always-true		always-false)
+  (import (except (vicare)
+		  fixnum?		flonum?			bignum?
+		  ratnum?		compnum?		cflonum?
+		  number?		complex?		real?
+		  rational?		integer?		exact?
+		  inexact?		exact-integer?
+		  finite?		infinite?		nan?
+		  real-valued?		rational-valued?	integer-valued?
+		  eof-object?		bwp-object?		void-object?
+		  boolean?		char?			vector?
+		  bytevector?		string?			procedure?
+		  null?			pair?			symbol?
+		  eq?			eqv?
+		  immediate?		code?
+		  transcoder?		weak-pair?
+		  not			bwp-object)
     (vicare system $fx)
     (vicare system $flonums)
     (vicare system $compnums)
@@ -62,7 +61,7 @@
     ;;These are the ones implemented as primitive operations.
     (rename (only (vicare)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
-                  eof-object? bwp-object?
+                  eof-object? bwp-object? #;void-object?
 		  immediate? boolean? char? vector? string?
                   bytevector? procedure? null? pair? symbol? code? eq?
                   transcoder?)
@@ -86,7 +85,11 @@
             (string?		sys:string?)
             (symbol?		sys:symbol?)
             (transcoder?	sys:transcoder?)
-            (vector?		sys:vector?)))
+            (vector?		sys:vector?)
+	    ;;FIXME  To be  uncommented at  the next  boot image  rotation, when  the
+	    ;;primitive operation is implemented.  (Marco Maggi; Mon Mar 30, 2015)
+	    #;(void-object?	sys:void-object?)
+	    ))
 
 
 ;;;; object type predicates
@@ -260,6 +263,13 @@
 
 (define (boolean?    x) (sys:boolean?    x))
 (define (bwp-object? x) (sys:bwp-object? x))
+;;FIXME This implementation must be removed at the next boot image rotation, when the
+;;primitive operation is implemented.  (Marco Maggi; Mon Mar 30, 2015)
+(define (void-object? x) (eq? x (void)))
+;;FIXME This implementation  must be used at  the next boot image  rotation, when the
+;;primitive operation is implemented.  (Marco Maggi; Mon Mar 30, 2015)
+;;
+;;(define (void-object? x) (sys:void-object? x))
 (define (bytevector? x) (sys:bytevector? x))
 (define (char?       x) (sys:char?       x))
 (define (code?       x) (sys:code?       x))

@@ -142,7 +142,7 @@
       (%make-object-type-spec (list (id->label tag-id)) tag-id pred-id
 			      #f #f #f  #f #f  #f #f #f)))
 
-  (%basic '<void>		'<top>		'void?)
+  (%basic '<void>		'<top>		'void-object?)
   (%basic '<procedure>		'<top>		'procedure?)
   (%basic '<boolean>		'<top>		'boolean?)
 

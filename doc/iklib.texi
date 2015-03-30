@@ -16649,6 +16649,12 @@ return a meaningful value.
 @end defun
 
 
+@defun void-object? @var{obj}
+Return @true{} if @var{obj} is the void value; otherwise return
+@false{}.
+@end defun
+
+
 @defun always-true @var{arg} @dots{}
 @defunx always-false @var{arg} @dots{}
 Always return @true{} or @false{}, ignoring the arguments.
