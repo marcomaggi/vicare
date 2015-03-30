@@ -8568,11 +8568,11 @@ Every time a new cafe is started, the prompt is changed to reflect the
 depth of the current cafe (i.e. how many eof objects is takes to exit
 the outermost cafe).
 
-When the readline interface is not used, input and output performed by
-the cafe can be changed by the @func{console-input-port} and
-@func{console-output-port} parameters; when readline support is
-available and used, the @repl{} input is performed through a readline
-input port.
+When the readline interface is @strong{not} used: input is performed
+from the port returned by @func{console-input-port}; output is performed
+through the port returned by @func{console-output-port)}.  When readline
+support is available and used: the @repl{} input is performed through a
+readline input port.
 
 If an error occurs during reading, evaluating, or printing an
 expression, then the error message is printed to the error--port and the
