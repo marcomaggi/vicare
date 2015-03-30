@@ -13502,6 +13502,13 @@ second represents the statistics after @var{thunk} evaluation.
 @end defun
 
 
+@deffn Parameter verbose-timer
+@cindex Parameter @func{verbose-timer}
+When set to non--false: print more informations as result of
+@func{time-it} and @func{time-and-gather}.
+@end deffn
+
+
 @defun stats? @var{obj}
 Return true if @var{obj} is an object of type @code{stats}.
 @end defun
