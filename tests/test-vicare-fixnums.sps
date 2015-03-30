@@ -228,6 +228,29 @@
   (check ($fxmodulo -12 +20)	=> +8)
   (check ($fxmodulo -12 -20)	=> -12)
 
+;;; --------------------------------------------------------------------
+
+  (check (fxquotient  13 4)	=>  3)
+  (check (fxmodulo    13 4)	=>  1)
+  (check (fxremainder 13 4)	=>  1)
+
+  (check (fxquotient  -13 4)	=>  -3)
+  (check (fxmodulo    -13 4)	=>  3)
+  (check (fxremainder -13 4)	=>  -1)
+
+  (check (fxquotient  13 -4)	=>  -3)
+  (check (fxmodulo    13 -4)	=>  -3)
+  (check (fxremainder 13 -4)	=>  1)
+
+  (check (fxquotient  -13 -4)	=>  3)
+  (check (fxmodulo    -13 -4)	=>  -1)
+  (check (fxremainder -13 -4)	=>  -1)
+
+  (check-for-true (= +13 (+ (* +4 (fxquotient  +13 +4)) (fxremainder +13 +4))))
+  (check-for-true (= +13 (+ (* -4 (fxquotient  +13 -4)) (fxremainder +13 -4))))
+  (check-for-true (= -13 (+ (* +4 (fxquotient  -13 +4)) (fxremainder -13 +4))))
+  (check-for-true (= -13 (+ (* -4 (fxquotient  -13 -4)) (fxremainder -13 -4))))
+
   #t)
 
 

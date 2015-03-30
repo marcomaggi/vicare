@@ -10832,8 +10832,19 @@ value @samp{#<unbound-object>}; this field has multiple purposes:
 
 @itemize
 @item
-When the symbol is the unique identifier of a data structure type:
-@code{value} holds the @rtd{} of the data structure.
+When the symbol is the unique identifier of a @value{PRJNAME} data
+structure type: @code{value} holds the struct--type descriptor of the
+data structure.
+
+@item
+When the symbol is the unique identifier of a @rnrs{6} record type:
+@code{value} holds the type--descriptor of the record.
+
+@item
+When the symbol is the ``public name'' of a core primitive defined by
+@value{PRJNAME}, for example @func{display} or @func{+}: we have to
+assume that @code{value} holds a Scheme object for internal use by
+@value{PRJNAME}.
 
 @item
 When the symbol is a label gensym associated to a syntactic binding
@@ -10854,6 +10865,11 @@ variable.
 When the symbol is a fresh symbol returned by a call to @func{gensym}:
 we can use @code{value} for any purpose we want.
 @end itemize
+
+In practise, we should never use the @code{value} field of symbols
+unless they are gensyms we are using for a specific purpose, in which
+case the ability to associate a value with a symbol can be quite useful
+in building some form of associative array with distributed storage.
 
 The following bindings are exported by the library @library{vicare}.
 
@@ -11087,11 +11103,17 @@ syntactic binding identifiers.
 @section Additional functions on fixnums
 
 
-The following bindings are exported by the library @library{vicare}.
+@menu
+* iklib fixnums predicates::    Predicates.
+* iklib fixnums comparison::    Comparison functions.
+* iklib fixnums arithmetics::   Arithmetics.
+* iklib fixnums bitwise::       Bitwise functions.
+* iklib fixnums conversion::    Conversion functions.
+@end menu
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Predicates
+@c page
+@node iklib fixnums predicates
+@subsection Predicates
 
 
 @defun list-of-fixnums? @var{obj}
@@ -11122,19 +11144,31 @@ negative, non--positive, non--negative; otherwise return @false{}.  If
 @var{obj} is not a fixnum: return @false{}.
 @end defun
 
-@c ------------------------------------------------------------------------
+@c page
+@node iklib fixnums comparison
+@subsection Comparison functions
 
-@subsubheading Comparison
 
-@defun fx!=? @vari{fx} @varii{fx}
-@defunx fx!= @vari{fx} @varii{fx}
-Return @true{} if the arguments are different; otherwise return
+@defun fx= @vari{fx} @var{fx} @dots{}
+@defunx fx< @vari{fx} @var{fx} @dots{}
+@defunx fx> @vari{fx} @var{fx} @dots{}
+@defunx fx<= @vari{fx} @var{fx} @dots{}
+@defunx fx>= @vari{fx} @var{fx} @dots{}
+Aliases for @func{fx=?}, @func{fx<?}, @func{fx>?}, @func{fx<=?},
+@func{fx>=?}.
+@end defun
+
+
+@defun fx!=? @varo{fx} @var{fx} @dots{}
+@defunx fx!= @varo{fx} @var{fx} @dots{}
+Return @true{} if all the arguments are different; otherwise return
 @false{}.  The arguments must be fixnums.
 @end defun
 
-@c ------------------------------------------------------------------------
+@c page
+@node iklib fixnums arithmetics
+@subsection Arithmetics
 
-@subsubheading Arithmetics
 
 @defun fxadd1 @var{fx}
 @defunx fxsub1 @var{fx}
@@ -11157,9 +11191,84 @@ Return one of the fixnums @code{+1}, @code{-1}, @code{0} representing
 the sign of the fixnum @var{fx}.
 @end defun
 
-@c ------------------------------------------------------------------------
 
-@subsubheading Conversion
+@deffn Procedure fxquotient @vari{fx} @varii{fx}
+@deffnx Procedure fxremainder @vari{fx} @varii{fx}
+@deffnx Procedure fxmodulo @vari{fx} @varii{fx}
+These procedures implement number--theoretic (integer) division on
+fixnum arguments.  @varii{fx} must be non--zero.  All three procedures
+return fixnum objects.  If @vari{fx}/@varii{fx} is an integer object:
+
+@example
+(fxquotient  @vari{fx} @varii{fx})  @result{} @vari{fx}/@varii{fx}
+(fxremainder @vari{fx} @varii{fx})  @result{} 0
+(fxmodulo    @vari{fx} @varii{fx})  @result{} 0
+@end example
+
+If @vari{fx}/@varii{fx} is not an integer object:
+
+@example
+(fxquotient  @vari{fx} @varii{fx})  @result{} @var{n_q}
+(fxremainder @vari{fx} @varii{fx})  @result{} @var{n_r}
+(fxmodulo    @vari{fx} @varii{fx})  @result{} @var{n_m}
+@end example
+
+@noindent
+where @var{n_q} is @vari{fx}/@varii{fx} rounded towards zero,
+
+@example
+0 < |@var{n_r}| < |@varii{fx}|
+0 < |@var{n_m}| < |@varii{fx}|
+@end example
+
+@noindent
+@var{n_r} and @var{n_m} differ from @vari{fx} by a multiple of @varii{fx},
+@var{n_r} has the same sign as @vari{fx}, and @var{n_m} has the same sign
+as @varii{fx}.
+
+Consequently, for integer objects @vari{fx} and @varii{fx} with @varii{fx}
+not equal to @math{0},
+
+@example
+(= @vari{fx} (+ (* @varii{fx} (fxquotient  @vari{fx} @varii{fx}))
+                 (fxremainder @vari{fx} @varii{fx})))
+@result{} #t
+@end example
+
+@noindent
+provided all number object involved in that computation are exact.
+
+@example
+(fxmodulo 13 4)           @result{}  1
+(fxremainder 13 4)        @result{}  1
+
+(fxmodulo -13 4)          @result{}  3
+(fxremainder -13 4)       @result{}  -1
+
+(fxmodulo 13 -4)          @result{}  -3
+(fxremainder 13 -4)       @result{}  1
+
+(fxmodulo -13 -4)         @result{}  -1
+(fxremainder -13 -4)      @result{}  -1
+@end example
+@end deffn
+
+@c page
+@node iklib fixnums bitwise
+@subsection Bitwise functions
+
+
+@defun fxlognot @var{fx}
+@defunx fxlogor @vari{fx} @varii{fx}
+@defunx fxlogand @vari{fx} @varii{fx}
+@defunx fxlogxor @vari{fx} @varii{fx}
+Aliases for @func{fxnot}, @func{fxior}, @func{fxand}, @func{fxxor}.
+@end defun
+
+@c page
+@node iklib fixnums conversion
+@subsection Conversion functions
+
 
 @defun fixnum->char @var{fx}
 @defunx char->fixnum @var{ch}
@@ -12958,6 +13067,11 @@ not extend beyond the specified number.  Very long symbols, for
 examples, cannot be split into multiple lines and may force the printer
 to go beyond the value of @func{pretty-width}.
 @end deffn
+
+
+@defun pretty-format @var{obj}
+Still undocumented.
+@end defun
 
 
 @defun debug-print . @var{args}
