@@ -43,6 +43,7 @@
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
+	  record-object?
 	  print-r6rs-record-instance)
     (only (vicare system $structs)
 	  $struct-rtd))
@@ -283,34 +284,35 @@
 	       (and (pair? x)
 		    (not (graphed? x))
 		    (f (cdr x)))))))
+
   (define (boxify-struct x)
     (define (boxify-vanilla-struct x)
-      (cond
-       ((record-type-descriptor? ($struct-rtd x))
-	(call-with-string-output-port
-	    (lambda (port)
-	      (print-r6rs-record-instance x port))))
-       ;;We do *not* handle opaque records specially.
-       ;; ((let ((rtd ($struct-rtd x)))
-       ;; 	  (and (record-type-descriptor? rtd)
-       ;; 	       (record-type-opaque? rtd)))
-       ;; 	"#<unknown>")
-       ((keyword? x)
-	(string-append "#:" (symbol->string (keyword->symbol x))))
-       (else
-	(let* ((name (boxify (struct-name x)))
-	       (ls
-		(let ((n (struct-length x)))
-		  (let f ((i 0))
-		    (cond
-		     ((fx= i n) '())
-		     (else
-		      (let ((a (boxify (struct-ref x i))))
-			(cons a (f (+ i 1)))))))))
-	       (ls (cons name ls))
-	       (len (fold-left (lambda (ac s) (+ 1 ac (box-length s)))
-		      -1 ls)))
-	  (conc "#[" (make-fbox len ls #f) "]")))))
+      (cond ((record-object? x) #;(record-type-descriptor? ($struct-rtd x))
+	     (call-with-string-output-port
+		 (lambda (port)
+		   (print-r6rs-record-instance x port))))
+	    ;;We do *not* handle opaque records specially.
+	    ;; ((let ((rtd ($struct-rtd x)))
+	    ;; 	  (and (record-type-descriptor? rtd)
+	    ;; 	       (record-type-opaque? rtd)))
+	    ;; 	"#<unknown>")
+	    ((keyword? x)
+	     (string-append "#:" (symbol->string (keyword->symbol x))))
+	    (else
+	     (let* ((name (boxify (struct-name x)))
+		    (ls   (let ((n (struct-length x)))
+			    (let f ((i 0))
+			      (cond ((fx= i n)
+				     '())
+				    (else
+				     (let ((a (boxify (struct-ref x i))))
+				       (cons a (f (+ i 1)))))))))
+		    (ls   (cons name ls))
+		    (len   (fold-left
+			       (lambda (ac s)
+				 (+ 1 ac (box-length s)))
+			     -1 ls)))
+	       (conc "#[" (make-fbox len ls #f) "]")))))
 
     (define (boxify-custom-struct out)
       (import traversal-helpers)
