@@ -21,12 +21,14 @@
     ;; bindings for (rnrs records procedural (6))
     make-record-type-descriptor		make-record-constructor-descriptor
     (rename (<rtd>? record-type-descriptor?))
+    (rename (<rcd>? record-constructor-descriptor?))
     record-constructor			record-predicate
     record-accessor			record-mutator
     unsafe-record-accessor		unsafe-record-mutator
 
     ;; bindings for (rnrs records inspection (6))
-    record?				record-rtd
+    record?				record-object?
+    record-rtd
     record-type-name			record-type-parent
     record-type-uid			record-type-generative?
     record-type-sealed?			record-type-opaque?
@@ -476,7 +478,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record who obj)
-  (%record-object? obj)
+  (record-object? obj)
   (procedure-argument-violation who ERROR-MESSAGE-EXPECTED-RECORD obj))
 
 (define-argument-validation (non-opaque-record who obj)
@@ -553,13 +555,12 @@
 
 ;;;; record instance inspection
 
-(define-inline (%record-object? ?obj)
-  ;;Return #t if  OBJ is a record, else return #f.   Does not care about
-  ;;the opaqueness of the record type.
+(define (record-object? obj)
+  ;;Return #t if OBJ is a record, else return #f.  Does not care about the opaqueness
+  ;;of the record type.
   ;;
-  (let ((obj ?obj))
-    (and ($struct? obj)
-	 (<rtd>? ($struct-rtd obj)))))
+  (and ($struct? obj)
+       (<rtd>? ($struct-rtd obj))))
 
 (define (record? x)
   ;;Defined by R6RS.   Return #t if OBJ is a record  and its record type
