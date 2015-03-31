@@ -950,6 +950,9 @@
   #| end of module: MAKE-RECORD-TYPE-DESCRIPTOR |# )
 
 
+(define* (record-constructor {rcd record-constructor-descriptor?})
+  ($<rcd>-builder rcd))
+
 (module (make-record-constructor-descriptor)
   (module (record-being-built %the-builder %make-default-protocol)
     (import RECORD-INITIALISERS RECORD-BUILDER RECORD-DEFAULT-PROTOCOL))
@@ -1042,10 +1045,6 @@
   #| end of module |# )
 
 
-(define* (record-constructor {rcd <rcd>?})
-  ($<rcd>-builder rcd))
-
-
 ;;;; record accessors and mutators
 ;;
 ;;We have to remember that, given the definitions:
@@ -1077,39 +1076,35 @@
 	 unsafe-record-mutator)
 
   (case-define* record-accessor
-    ;;Return a function being the  safe accessor for field INDEX/NAME of
-    ;;RTD.
+    ;;Return a function being the safe accessor for field INDEX/NAME of RTD.
     ;;
-    (({rtd <rtd>?} index/name)
+    (({rtd record-type-descriptor?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-accessor #t #t))
-    (({rtd <rtd>?} index/name accessor-who)
+    (({rtd record-type-descriptor?} index/name accessor-who)
      (%record-actor __who__ rtd index/name accessor-who #t #t)))
 
   (case-define* unsafe-record-accessor
-    ;;Return a function  being the unsafe accessor  for field INDEX/NAME
-    ;;of RTD.
+    ;;Return a function being the unsafe accessor for field INDEX/NAME of RTD.
     ;;
-    (({rtd <rtd>?} index/name)
+    (({rtd record-type-descriptor?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-accessor #t #f))
-    (({rtd <rtd>?} index/name accessor-who)
+    (({rtd record-type-descriptor?} index/name accessor-who)
      (%record-actor __who__ rtd index/name accessor-who #t #f)))
 
   (case-define* record-mutator
-    ;;Return a function  being the safe mutator for  field INDEX/NAME of
-    ;;RTD.
+    ;;Return a function being the safe mutator for field INDEX/NAME of RTD.
     ;;
-    (({rtd <rtd>?} index/name)
+    (({rtd record-type-descriptor?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-mutator #f #t))
-    (({rtd <rtd>?} index/name mutator-who)
+    (({rtd record-type-descriptor?} index/name mutator-who)
      (%record-actor __who__ rtd index/name mutator-who #f #t)))
 
   (case-define* unsafe-record-mutator
-    ;;Return a function being the unsafe mutator for field INDEX/NAME of
-    ;;RTD.
+    ;;Return a function being the unsafe mutator for field INDEX/NAME of RTD.
     ;;
-    (({rtd <rtd>?} index/name)
+    (({rtd record-type-descriptor?} index/name)
      (%record-actor __who__ rtd index/name 'a-record-mutator #f #f))
-    (({rtd <rtd>?} index/name mutator-who)
+    (({rtd record-type-descriptor?} index/name mutator-who)
      (%record-actor __who__ rtd index/name mutator-who #f #f)))
 
   (define (%record-actor who rtd index/name actor-who accessor? safe?)
@@ -1195,7 +1190,7 @@
   #| end of module |# )
 
 
-(define* (record-predicate {rtd <rtd>?})
+(define* (record-predicate {rtd record-type-descriptor?})
   ;;Return a function being the predicate for RTD.
   ;;
   (lambda (record)
@@ -1203,15 +1198,15 @@
 	 ($record-and-rtd? record rtd))))
 
 (define (record-and-rtd? record rtd)
-  ;;Vicare extension.  Return  #t if RECORD is a record  instance of RTD
-  ;;or a record instance of a subtype of RTD.
+  ;;Vicare extension.  Return  #t if RECORD is  a record instance of RTD  or a record
+  ;;instance of a subtype of RTD.
   (and ($struct? record)
-       (<rtd>? rtd)
+       (record-type-descriptor? rtd)
        ($record-and-rtd? record rtd)))
 
 (define ($record-and-rtd? record rtd)
-  ;;We must verify that RECORD is actually a record instance of RTD or a
-  ;;record instance of a subtype of RTD.
+  ;;We must  verify that  RECORD is  actually a record  instance of  RTD or  a record
+  ;;instance of a subtype of RTD.
   ;;
   (let ((rtd^ ($struct-rtd record)))
     (or (eq? rtd rtd^)
@@ -1224,7 +1219,7 @@
 
 ;;;; non-R6RS extensions
 
-(define* (rtd-subtype? {rtd <rtd>?} {prtd <rtd>?})
+(define* (rtd-subtype? {rtd record-type-descriptor?} {prtd record-type-descriptor?})
   ;;Return true if PRTD is a parent of RTD or they are equal.
   ;;
   (or (eq? rtd prtd)
@@ -1292,13 +1287,13 @@
 
 ;;;; non-R6RS extensions: record destructor
 
-(define* (record-destructor-set! {rtd <rtd>?} {func procedure?})
-  ;;Store a  function as  destructor in  a R6RS  record-type descriptor.
-  ;;Return unspecified values.
+(define* (record-destructor-set! {rtd record-type-descriptor?} {func procedure?})
+  ;;Store  a  function  as  destructor  in a  R6RS  record-type  descriptor.   Return
+  ;;unspecified values.
   ;;
   ($set-<rtd>-destructor! rtd func))
 
-(define* (record-destructor {rtd <rtd>?})
+(define* (record-destructor {rtd record-type-descriptor?})
   ;;Return the value of the destructor field in RTD: #f or a function.
   ;;
   ($<rtd>-destructor rtd))
