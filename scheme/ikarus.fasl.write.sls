@@ -19,7 +19,8 @@
   (export
     fasl-write
     fasl-write-header
-    fasl-write-object)
+    fasl-write-object
+    writing-boot-image?)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -54,6 +55,9 @@
 ;;;; helpers
 
 (define who 'fasl-write)
+
+(define writing-boot-image?
+  (make-parameter #f))
 
 (define fxshift
   (boot.case-word-size
@@ -560,12 +564,24 @@
 ;;; --------------------------------------------------------------------
 
 	((struct? x)
-	 (if (record-type-descriptor? x)
-	     (%write-r6rs-record-type-descriptor x next-mark)
-	   (let ((rtd ($struct-rtd x)))
-	     (if (eq? rtd (base-rtd))
-		 (%write-struct-type-descriptor x next-mark)
-	       (%write-struct-instance x rtd next-mark)))))
+	 (cond ((record-type-descriptor? x)
+		(if (writing-boot-image?)
+		    (assertion-violation who
+		      "invalid R6RS record-type descriptor as boot image object" x)
+		  (%write-r6rs-record-type-descriptor x next-mark)))
+	       ;;FIXME To  be uncommented  at the next  boot image  rotation.  (Marco
+	       ;;Maggi; Wed Sep 24, 2014)
+	       ;;
+	       ;; ((record-object? x)
+	       ;; 	(if (writing-boot-image?)
+	       ;; 	    (assertion-violation who
+	       ;; 	      "invalid R6RS record as boot image object" x)
+	       ;; 	  (%write-struct-instance x next-mark)))
+	       (else
+		(let ((rtd ($struct-rtd x)))
+		  (if (eq? rtd (base-rtd))
+		      (%write-struct-type-descriptor x next-mark)
+		    (%write-struct-instance x rtd next-mark))))))
 
 ;;; --------------------------------------------------------------------
 

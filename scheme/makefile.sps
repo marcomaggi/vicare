@@ -180,7 +180,12 @@
   (prefix (only (psyntax system $bootstrap)
 		current-library-collection
 		find-library-by-name)
-	  bootstrap.))
+	  bootstrap.)
+  (prefix (only (ikarus.fasl.write)
+		writing-boot-image?)
+	  fasl-write.))
+
+(fasl-write.writing-boot-image? #t)
 
 (compiler.optimize-level 2)
 (compiler.$perform-tag-analysis #t)
