@@ -126,7 +126,14 @@
     ;;"ikarus.config.scm", including the correct value for WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
-    (ikarus.intel-assembler))
+    (only (ikarus.intel-assembler)
+	  assemble-sources
+	  code-entry-adjustment)
+    (prefix (only (ikarus.options)
+		  strict-r6rs
+		  descriptive-labels
+		  verbose?)
+	    option.))
 
   (include "ikarus.wordsize.scm" #t)
 
@@ -451,6 +458,13 @@
 
 ;;;; helper functions
 
+(define (print-compiler-warning-message template . args)
+  (when (option.verbose?)
+    (let ((P (current-error-port)))
+      (display "vicare: compiler warning: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
 (define (remq1 x ls)
   ;;Scan the  list LS and  remove only the  first instance of  object X,
   ;;using EQ?  as  comparison function; return the  resulting list which
@@ -591,45 +605,49 @@
     ;;This is *the*  commpiler function.  It transforms  a core language
     ;;symbolic expression into a code object.
     ;;
-    (let* ((p (recordize core-language-sexp))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (when (optimizer-output)
-	(pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
-      (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-tag-analysis)
-		    (introduce-tags p)
-		  p))
-	     (p (introduce-vars p))
-	     (p (sanitize-bindings p))
-	     (p (optimize-for-direct-jumps p))
-	     (p (insert-global-assignments p))
-	     (p (convert-closures p))
-	     (p (optimize-closures/lift-codes p))
-	     (ls* (alt-cogen p)))
-	(when (assembler-output)
-	  ;;Print nicely the assembly labels.
-	  (parameterize ((gensym-prefix "L")
-			 (print-gensym  #f))
-	    (for-each (lambda (ls)
-			(newline (current-error-port))
-			($for-each/stx print-instr ls))
-	      ls*)))
-	(let ((code* (assemble-sources thunk?-label ls*)))
-	  (car code*)))))
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (parameterize ((open-mvcalls #f))
+		    (optimize-direct-calls p)))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p)))
+	  (when (optimizer-output)
+	    (pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
+	  (let* ((p (rewrite-references-and-assignments p))
+		 (p (if (perform-tag-analysis)
+			(introduce-tags p)
+		      p))
+		 (p (introduce-vars p))
+		 (p (sanitize-bindings p))
+		 (p (optimize-for-direct-jumps p))
+		 (p (insert-global-assignments p))
+		 (p (convert-closures p))
+		 (p (optimize-closures/lift-codes p))
+		 (ls* (alt-cogen p)))
+	    (when (assembler-output)
+	      ;;Print nicely the assembly labels.
+	      (parameterize ((gensym-prefix "L")
+			     (print-gensym  #f))
+		(for-each (lambda (ls)
+			    (newline (current-error-port))
+			    ($for-each/stx print-instr ls))
+		  ls*)))
+	    (let ((code* (assemble-sources thunk?-label ls*)))
+	      (car code*)))))))
 
   (define (core-expr->optimized-code core-language-sexp)
     ;;This  is a  utility  function used  for  debugging and  inspection
     ;;purposes; it is to be used to inspect the result of optimisation.
     ;;
-    (let* ((p (recordize core-language-sexp))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (unparse-recordized-code/pretty p)))
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (parameterize ((open-mvcalls #f))
+		    (optimize-direct-calls p)))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p)))
+	  (unparse-recordized-code/pretty p)))))
 
   (define (core-expr->assembly-code core-language-sexp)
     ;;This  is a  utility  function used  for  debugging and  inspection
@@ -637,30 +655,65 @@
     ;;language  into  a  list  of sublists,  each  sublist  representing
     ;;assembly language instructions for a code object.
     ;;
-    (let* ((p (recordize core-language-sexp))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-tag-analysis)
-		    (introduce-tags p)
-		  p))
-	     (p (introduce-vars p))
-	     (p (sanitize-bindings p))
-	     (p (optimize-for-direct-jumps p))
-	     (p (insert-global-assignments p))
-	     (p (convert-closures p))
-	     (p (optimize-closures/lift-codes p))
-	     (ls* (alt-cogen p)))
-	#;(gensym-prefix "L")
-	ls*)))
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (parameterize ((open-mvcalls #f))
+		    (optimize-direct-calls p)))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p)))
+	  (let* ((p (rewrite-references-and-assignments p))
+		 (p (if (perform-tag-analysis)
+			(introduce-tags p)
+		      p))
+		 (p (introduce-vars p))
+		 (p (sanitize-bindings p))
+		 (p (optimize-for-direct-jumps p))
+		 (p (insert-global-assignments p))
+		 (p (convert-closures p))
+		 (p (optimize-closures/lift-codes p))
+		 (ls* (alt-cogen p)))
+	    #;(gensym-prefix "L")
+	    ls*)))))
+
+;;; --------------------------------------------------------------------
 
   (define (thunk?-label x)
     (and (closure? x)
 	 (if (null? (closure-free* x))
 	     (code-loc-label (closure-code x))
 	   (error #f "Vicare Scheme: internal error: non-thunk escaped" x))))
+
+  (define (%parse-compilation-options core-language-sexp kont)
+    ;;Parse  the given  core language  expression; extract  the optional  compilation
+    ;;options  and the  body;  apply KONT  to  the body  in  the dynamic  environment
+    ;;configured by the options.
+    ;;
+    ;;If the input expression selects compilation options, it has the format:
+    ;;
+    ;;   (with-compilation-options (?option ...) ?body)
+    ;;
+    ;;and we want to  apply KONT to the body; otherwise it is  a normal core language
+    ;;expression.
+    ;;
+    ;;NOTE We  have to remember  that the CORE-LANGUAGE-SEXP may  not be a  pair, for
+    ;;example:
+    ;;
+    ;;   (eval 123     (environment '(vicare)))
+    ;;   (eval display (environment '(vicare)))
+    ;;
+    ;;will generate perfectly valid, non-pair, core language expressions.
+    ;;
+    (if (and (pair? core-language-sexp)
+	     (eq? 'with-compilation-options (car core-language-sexp)))
+	(let ((option* (cadr  core-language-sexp))
+	      (body    (caddr core-language-sexp)))
+	  (parametrise ((option.strict-r6rs (or (memq 'strict-r6rs option*)
+						(option.strict-r6rs))))
+	    (when (option.strict-r6rs)
+	      (print-compiler-warning-message "enabling compiler's strict R6RS support"))
+	    (kont body)))
+      (kont core-language-sexp)))
 
   (define (print-instr x)
     ;;Print  to   the  current   error  port  the   symbolic  expression
@@ -5994,5 +6047,6 @@
 ;; eval: (put 'assemble-sources 'scheme-indent-function 1)
 ;; eval: (put 'define-structure 'scheme-indent-function 1)
 ;; eval: (put 'make-conditional 'scheme-indent-function 2)
+;; eval: (put '%parse-compilation-options	'scheme-indent-function 1)
 ;; eval: (put 'struct-case 'scheme-indent-function 1)
 ;; End:

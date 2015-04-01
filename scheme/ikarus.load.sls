@@ -1149,7 +1149,7 @@
        (lambda (core-expr)
 	 (compile-core-expr core-expr))))
     (when run?
-      (print-library-verbose-message "~a: runnin R6RS script: ~a" __who__ file-pathname)
+      (print-library-verbose-message "~a: running R6RS script: ~a" __who__ file-pathname)
       (thunk))))
 
 (case-define* load
