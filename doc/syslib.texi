@@ -747,10 +747,30 @@ Return a flonum object representing @var{bn} as inexact number.
 @cindex Library @library{vicare system $flonums}
 
 
-The arguments @var{fl} to these operations must be flonums, the
-arguments @var{fx} must be fixnums.  The following bindings are exported
-by the library @library{vicare system $flonums}.  @ref{iklib numerics}
-for more functions acting on flonums.
+For all the low level operations, the arguments @var{fl} to these
+operations must be flonums, the arguments @var{fx} must be fixnums.  The
+bindings documented here are exported by the library @library{vicare
+system $flonums}.  @ref{iklib numerics} for more functions acting on
+flonums.
+
+@menu
+* syslib flonums constr::       Flonum constructors.
+* syslib flonums inspect::      Binary representation inspection.
+* syslib flonums arithmetic::   Arithmetic operations.
+* syslib flonums conversion::   Exactness and conversion.
+* syslib flonums predicates::   Predicates.
+* syslib flonums comparison::   Comparison functions.
+* syslib flonums rounding::     Rounding function.
+* syslib flonums parts::        Parts function.
+* syslib flonums trigon::       Trigonometric operations.
+* syslib flonums hyperbol::     Hyperbolic functions.
+* syslib flonums log::          Exponentials and logarithms.
+* syslib flonums power::        Power operations.
+@end menu
+
+@c page
+@node syslib flonums constr
+@subsection Flonum constructors
 
 
 @deffn {Unsafe Operation} $make-flonum
@@ -758,9 +778,9 @@ Allocate a new flonum memory block and return a reference to it.  Does
 not initialise the data area.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Binary representation inspection
+@c page
+@node syslib flonums inspect
+@subsection Binary representation inspection
 
 
 @deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
@@ -792,9 +812,9 @@ Return a fixnum@dots{} Still undocumented, read the code look at the
 format of @ieee{} double precision flonums.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Arithmetic operations
+@c page
+@node syslib flonums arithmetic
+@subsection Arithmetic operations
 
 
 @deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
@@ -820,9 +840,9 @@ the operands and return the result.
 Implement the number--theoretic integer divisions.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Exactness and conversion
+@c page
+@node syslib flonums conversion
+@subsection Exactness and conversion
 
 
 @deffn {Unsafe Operation} $flonum->exact @var{fl}
@@ -835,9 +855,9 @@ Convert the fixnum operand into a flonum and return a reference to the
 result.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Predicates
+@c page
+@node syslib flonums predicates
+@subsection Predicates
 
 
 @deffn {Unsafe Operation} $flnan? @var{fl}
@@ -918,9 +938,19 @@ Return true if the operand is rational.  All the flonums are rational
 with the exception of infinities and not--a--number.
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node syslib flonums comparison
+@subsection Comparison functions
 
-@subsubheading Comparison
+
+@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
+Perform comparison operations
+@end deffn
+
 
 @deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl}
 Return true if the operands are equal; otherwise return @false{}.  This
@@ -928,9 +958,19 @@ operation does @strong{not} distinguish between @code{+0.0} and
 @code{-0.0}.
 @end deffn
 
-@c ------------------------------------------------------------
 
-@subsubheading Rounding
+@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
+Return the maximum between the operands.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
+Return the minimum between the operands.
+@end deffn
+
+@c page
+@node syslib flonums rounding
+@subsection Rounding function
 
 
 @deffn {Unsafe Operation} $flround @var{fl}
@@ -954,9 +994,9 @@ Return the integral flonum closest to the operand whose absolute value
 is not larger than the absolute value of the operand itself.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Parts
+@c page
+@node syslib flonums parts
+@subsection Parts function
 
 
 @deffn {Unsafe Operation} $flnumerator @var{fl}
@@ -969,9 +1009,10 @@ Return the numerator or denominator of the operand.
 Return the absolute value of the operand.
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node syslib flonums trigon
+@subsection Trigonometric operations
 
-@subsubheading Trigonometric operations
 
 
 @deffn {Unsafe Operation} $flsin @var{fl}
@@ -996,9 +1037,9 @@ Return an equivalent of:
 @end example
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Hyperbolic functions
+@c page
+@node syslib flonums hyperbol
+@subsection Hyperbolic functions
 
 
 @defun $flsinh @var{fl}
@@ -1014,9 +1055,9 @@ Compute the hyperbolic functions.  Return flonum objects.
 Compute the inverse hyperbolic functions.  Return flonum objects.
 @end defun
 
-@c ------------------------------------------------------------
-
-@subsubheading Exponentials and logarithms
+@c page
+@node syslib flonums log
+@subsection Exponentials and logarithms
 
 
 @deffn {Unsafe Operation} $flcbrt @var{fl}
@@ -1057,9 +1098,9 @@ Compute the Euclidean distance function: @math{\sqrt(X*X+Y*Y)}.
 @glibcref{Exponents and Logarithms, hypot}.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Power operations
+@c page
+@node syslib flonums power
+@subsection Power operations
 
 
 @deffn {Unsafe Operation} $flexpt @vari{fl} @varii{fl}
@@ -1079,29 +1120,6 @@ Return the square of @var{fl}: @var{fl} times @var{fl}.
 
 @deffn {Unsafe Operation} $flcube @var{fl}
 Return the cube of @var{fl}: @var{fl} times @var{fl} times @var{fl}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Comparison operations
-
-
-@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
-Perform comparison operations
-@end deffn
-
-
-@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
-Return the maximum between the operands.
-@end deffn
-
-
-@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
-Return the minimum between the operands.
 @end deffn
 
 @c page
