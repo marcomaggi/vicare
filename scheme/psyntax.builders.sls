@@ -40,12 +40,14 @@
     build-application			build-conditional
     build-lexical-reference		build-global-assignment
     build-global-definition		build-lambda
-    build-case-lambda			#;build-let
+    build-case-lambda			build-let
     build-primref			build-foreign-call
     build-data				build-sequence
     build-void				build-letrec
     build-letrec*			#;build-global-define
     build-library-letrec*
+
+    build-with-compilation-options
 
     core-language->sexp)
   (import (rnrs)
@@ -53,8 +55,21 @@
     (psyntax.config))
 
 
+(define (build-with-compilation-options library-option* body)
+  (let ((compilation-option* (filter (lambda (sym)
+				       (case sym
+					 ((strict-r6rs)	#t)
+					 (else		#f)))
+			       library-option*)))
+    (if (null? compilation-option*)
+	body
+      `(with-compilation-options ,compilation-option* ,body))))
+
+
 (define (build-void)
-  '((primitive void)))
+  (build-data #f (void)))
+;; (define (build-void)
+;;   '((primitive void)))
 
 (define (build-global-define x)
   (if-wants-global-defines
@@ -149,14 +164,19 @@
 
 
 (define (build-let ae lhs* rhs* body)
-  ;;Transform a LET syntax into the appliction of a LAMBDA function:
+  ;;Transform a standard LET syntax into a core language LET syntax.
   ;;
-  ;;  (let ((?lhs ?rhs) ...) . ?body)
-  ;;  --> ((lambda (?lhs ...) . ?body) ?rhs ...)
+  ;;HISTORICAL NOTE In the original Ikarus  code, the implementation of this function
+  ;;was:
   ;;
-  ;;This is used only when building LETREC* and CASE-LAMBDA.
+  ;;  (build-application ae (build-lambda ae lhs* body) rhs*)
   ;;
-  (build-application ae (build-lambda ae lhs* body) rhs*))
+  ;;I discarded  it because generating  a function application looks  suboptimal; the
+  ;;source code optimiser is perfectly capable of processing LET core language forms.
+  ;;With the old  implementation: the function application was converted  back into a
+  ;;LET-like form.  (Marco Maggi; Fri Aug 22, 2014)
+  ;;
+  `(let ,(map list lhs* rhs*) ,body))
 
 (define-syntax build-primref
   (syntax-rules ()
@@ -178,11 +198,13 @@
   ;;Given a list of expressions to be evaluated in sequence wrap it in a
   ;;BEGIN syntax.  Discard useless void expressions.
   ;;
-  (let ((the-void (build-void)))
+  (let ((the-void1 (build-void))
+	(the-void2 '(funcall (primitive void))))
     (let loop ((exps exps))
       (cond ((null? (cdr exps))
 	     (car exps))
-	    ((equal? (car exps) the-void)
+	    ((or (equal? (car exps) the-void1)
+		 (equal? (car exps) the-void2))
 	     (loop (cdr exps)))
 	    (else
 	     `(begin ,@exps))))))
