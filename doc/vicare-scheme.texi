@@ -247,7 +247,6 @@ Appendices
 * unicode::                     On Unicode and @utf{} encodings.
 * fasl::                        Handling @fasl{} files.
 * shmem::                       Interprocess shared memory.
-* binfmt::                      Launching programs directly.
 * binfmt::                      Launching programs directly on @gnu{}+Linux.
 * notes::                       Miscellaneous notes on everything.
 * Package License::             @gnu{} General Public License.
