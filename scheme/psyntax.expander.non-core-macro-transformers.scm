@@ -5318,7 +5318,10 @@
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
-	 (memq (identifier->symbol opt-stx) '(strict-r6rs))))
+	 (case (identifier->symbol opt-stx)
+	   ((strict-r6rs tagged-language)
+	    #t)
+	   (else #f))))
   (syntax-match expr-stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)

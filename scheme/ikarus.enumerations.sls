@@ -419,7 +419,7 @@
 
 (define make-expander-options
   ;;This constructor builds empty enum sets.
-  (enum-set-constructor (make-enumeration '(strict-r6rs))))
+  (enum-set-constructor (make-enumeration '(strict-r6rs tagged-language))))
 
 (define make-compiler-options
   ;;This constructor builds empty enum sets.

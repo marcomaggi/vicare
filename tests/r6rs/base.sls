@@ -19,7 +19,7 @@
 #!r6rs
 
 (library (r6rs base)
-#;  (options strict-r6rs)
+  (options strict-r6rs)
   (export run-base-tests)
   (import (rnrs)
           (r6rs test))
