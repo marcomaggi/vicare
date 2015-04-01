@@ -8597,7 +8597,6 @@ report errors at run--time, rather than at expand--time.
 
 @item tagged-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
-@end defvr
 @end table
 @end deffn
 
