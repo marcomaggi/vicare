@@ -1,4 +1,4 @@
-e@node iklib
+@node iklib
 @chapter Language extensions
 
 
@@ -314,8 +314,8 @@ Example:
 * iklib syntaxes slots::        Slot getter and setter syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
-* iklib syntaxes increments::   Incrementing and decrementing.
 * iklib syntaxes infix::        Infix to prefix transformer.
+* iklib syntaxes increments::   Incrementing and decrementing.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
@@ -3854,7 +3854,7 @@ exception handler.  The following example shows the basic mechanism:
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Handling exceptions by escaping
+@subsubheading Handling exceptions by escaping
 
 This is @strong{not} the correct way of interfacing with the
 unwind--protection mechanism.  In the following example we see that
@@ -3887,7 +3887,7 @@ escaping from the exception handler skips the call to the
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Handling exceptions with @syntax{guard}
+@subsubheading Handling exceptions with @syntax{guard}
 
 This is the correct way of interfacing with the unwind--protection
 mechanism.
@@ -4543,7 +4543,7 @@ to @func{dynamic-wind}.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Raising exceptions from an exception handler
+@subsubheading Raising exceptions from an exception handler
 
 In the following example an exception is raised by an exception handler:
 the unwind handler is called, but the original exception is lost.
@@ -4586,7 +4586,7 @@ the unwind handler is called, but the original exception is lost.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Raising exceptions from a @syntax{guard}'s test
+@subsubheading Raising exceptions from a @syntax{guard}'s test
 
 In the following example an exception is raised from a @syntax{guard}'s
 test expression: the unwind handler is @strong{not} called and the
@@ -4628,7 +4628,7 @@ original exception is lost.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Raising exceptions from @func{dynamic-wind} guards
+@subsubheading Raising exceptions from @func{dynamic-wind} guards
 
 In the following example an exception is raised from a
 @func{dynamic-wind}'s in--guard thunk: the unwind handler is
@@ -5305,7 +5305,7 @@ terminated.
 @end example
 
 @c page
-n@node iklib coroutines basic
+@node iklib coroutines basic
 @subsection Basic coroutine operations
 
 

@@ -2454,7 +2454,7 @@ defined.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Comparator error
+@subsubheading Comparator error
 
 @deftp {Condition Object Type} &comparator-error
 Used to signal an error while using a comparator's facilities.  It is
@@ -2475,7 +2475,7 @@ Return @true{} if @var{obj} is a condition object of type
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Unsupported operation error
+@subsubheading Unsupported operation error
 
 @deftp {Condition Object Type} &unsupported-comparator-operation-error
 Used to signal an attempt to use an unsupported operation.  It is
@@ -2518,7 +2518,7 @@ types: @condition{who}, @condition{message},
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Comparator type error
+@subsubheading Comparator type error
 
 @deftp {Condition Object Type} &comparator-type-error
 Used to signal an attempt to use the facilities of a comparator with an
@@ -2570,7 +2570,7 @@ types: @condition{who}, @condition{message},
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Not--a--number comparison error
+@subsubheading Not--a--number comparison error
 
 @deftp {Condition Object Type} &comparator-nan-comparison-error
 Used to signal an invalid comparison in which one of the operands is
@@ -2611,7 +2611,7 @@ types: @condition{who}, @condition{message}, @condition{irritants},
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Comparator error
+@subsubheading Comparator error
 
 @deftp {Condition Object Type} &inexact-real-comparator-with-ignored-epsilon
 Used to signal that a non-false @var{epsilon} argument was used with a
@@ -2654,7 +2654,7 @@ Field accessors for condition object of type
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Debug comparator error
+@subsubheading Debug comparator error
 
 @deftp {Condition Object Type} &comparator-debug-error
 Used to signal errors raised by comparators returned by

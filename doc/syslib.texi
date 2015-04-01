@@ -5793,6 +5793,16 @@ Return the maximal or minimal bytevector argument according to
 @end defun
 
 @c page
+@node syslib bytevectors inspection
+@subsection Inspection
+
+
+@deffn {Unsafe Operation} $bytevector-length @var{bv}
+Return a fixnum representing the number of bytes in the bytevector
+@var{bv}.
+@end deffn
+
+@c page
 @node syslib bytevectors accessors
 @subsection Accessors and mutators
 
@@ -6166,16 +6176,6 @@ Setter and getter for double--precision @ieee{} flonums.
 @var{endianness} must be a symbol among: @samp{big}, @samp{little},
 @samp{native}.
 @end defun
-
-@c page
-@node syslib bytevectors inspection
-@subsection Inspection
-
-
-@deffn {Unsafe Operation} $bytevector-length @var{bv}
-Return a fixnum representing the number of bytes in the bytevector
-@var{bv}.
-@end deffn
 
 @c page
 @node syslib bytevectors copying

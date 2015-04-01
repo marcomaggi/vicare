@@ -490,7 +490,7 @@ later and continue to a normal return.
 @end itemize
 
 @c page
-!@node dynamic environment guard
+@node dynamic environment guard
 @appendixsec On the implementation of @syntax{guard}
 
 
