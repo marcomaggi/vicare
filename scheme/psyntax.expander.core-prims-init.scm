@@ -458,7 +458,11 @@
   ;; $fxlogor
   ;; $fxlognot
   ;; $fxlogand
-  ;; $fx+
+
+  (let ((P (C $fx+)))
+    (register-lambda-signature P (S (list (C <fixnum>))
+				    (list (C <fixnum>) (C <fixnum>)))))
+
   ;; $fx*
   ;; $fx-
   ;; $fxinthash
@@ -1545,9 +1549,18 @@
   ;; open-input-file
   ;; open-output-file
   ;; peek-char
-  ;; read
+
+  (let ((P (C read)))
+    (register-lambda-signature P (make-clambda-compound (list (S (list (C <top>)) '())
+							      (S (list (C <top>))
+								 (list (C <textual-input-port>)))))))
+
   ;; read-char
-  ;; write
+
+  (let ((P (C write)))
+    (register-lambda-signature P (make-clambda-compound (list (S (list (C <top>)) (list (C <top>)))
+							      (S (list (C <top>)) (list (C <top>) (C <textual-input-port>)))))))
+
   ;; write-char
   ;; call-with-input-file
   ;; call-with-output-file
