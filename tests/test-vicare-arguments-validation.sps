@@ -31,8 +31,8 @@
   (vicare arguments validation)
   (prefix (vicare arguments validation)
 	  args.)
-  #;(prefix (vicare posix) px.)
   (vicare checks))
+(options strict-r6rs)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare arguments validation library\n")
@@ -69,7 +69,9 @@
 			  '(vicare language-extensions syntaxes)
 			  '(vicare arguments validation)
 			  '(prefix (vicare arguments validation)
-				   args.)))))))
+				   args.))
+	     (expander-options strict-r6rs)
+	     (compiler-options strict-r6rs))))))
 
 
 (define-syntax doit
@@ -92,40 +94,40 @@
 
   ;;These  tests can  be run  only when  the library  (vicare posix)  is
   ;;available.
-  #;(begin
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #t)
+  ;; (begin
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #t)
 
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #f)
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #f)
 
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #t)
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #t)
 
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #f)
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #f)
 
-    (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
+  ;; (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
 
   #f)
 
@@ -1362,7 +1364,7 @@
 
   (check
       (doit #f non-empty-string 123)
-    => 123)
+    => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; non-empty-string/false
@@ -1383,7 +1385,7 @@
 
   (check
       (doit #f non-empty-string/false 123)
-    => 123)
+    => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; index-for-string

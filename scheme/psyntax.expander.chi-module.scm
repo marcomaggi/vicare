@@ -714,21 +714,26 @@
 
   (define (%process-lambda-application input-form.stx lexenv.run lexenv.expand
 				       rator.lambda-signature rator.psi rand*.psi)
-    (if (%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
-							rator.psi rand*.psi)
-	;;The signatures do match.
-	(let ((rator.stx (psi-stx rator.psi)))
-	  (cond ((identifier? rator.stx)
-		 (cond ((identifier-unsafe-variant rator.stx)
-			=> (lambda (unsafe-rator.stx)
-			     (let ((unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-			       (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi))))
-		       (else
-			(%build-core-expression input-form.stx rator.psi rand*.psi))))
-	      (else
-	       (%build-core-expression input-form.stx rator.psi rand*.psi))))
-      ;;The signatures do not match, but we rely on run-time checking.
-      (%build-core-expression input-form.stx rator.psi rand*.psi)))
+    (cond ((option.strict-r6rs)
+	   ;;We rely on run-time checking.
+	   (%build-core-expression input-form.stx rator.psi rand*.psi))
+	  ((%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
+							   rator.psi rand*.psi)
+	   ;;The signatures do match.
+	   (let ((rator.stx (psi-stx rator.psi)))
+	     (cond ((identifier? rator.stx)
+		    (cond ((identifier-unsafe-variant rator.stx)
+			   => (lambda (unsafe-rator.stx)
+				(let ((unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
+				  (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi))))
+			  (else
+			   (%build-core-expression input-form.stx rator.psi rand*.psi))))
+		   (else
+		    (%build-core-expression input-form.stx rator.psi rand*.psi)))))
+	  (else
+	   ;;It is not possible to validate the signatures at expand-time; we rely on
+	   ;;run-time checking.
+	   (%build-core-expression input-form.stx rator.psi rand*.psi))))
 
   (define (%process-clambda-application input-form.stx rator.callable rator.psi rand*.psi)
     ;;FIXME Insert here  something special for CLAMBDA-COMPOUNDs.   (Marco Maggi; Thu
@@ -856,7 +861,7 @@
 		  (rand.signature-tags    (retvals-signature-tags rand.retvals-signature)))
 	     (syntax-match rand.signature-tags ()
 	       ((?rand.tag)
-		;;Single return value: good, this is what we want.
+		;;Single return value from operand: good, this is what we want.
 		(cond ((top-tag-id? ?rand.tag)
 		       ;;The  argument expression  returns a  single "<top>"  object;
 		       ;;this  is  what  happens   with  standard  (untagged)  Scheme
@@ -1610,7 +1615,7 @@
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an instance  of "lambda-signature" representing the  tag signature for
-    ;;this  LAMBDA   clause;  a  PSI   struct  containint  the   language  expression
+    ;;this  LAMBDA   clause;  a  PSI   struct  containing  the   language  expression
     ;;representing the body of the clause.
     ;;
     ;;A LAMBDA or CASE-LAMBDA clause defines a lexical contour; so we build a new rib
@@ -1864,7 +1869,7 @@
 
 (define* (chi-lambda input-form.stx lexenv.run lexenv.expand
 		     attributes.stx formals.stx body*.stx)
-  ;;Expand the contents of CASE syntax and return a "psi" struct.
+  ;;Expand the contents of a LAMBDA syntax and return a "psi" struct.
   ;;
   ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
   ;;
@@ -2119,7 +2124,7 @@
     (define rtc
       (make-collector))
     (parametrise ((inv-collector rtc)
-		  (vis-collector (lambda (x) (values))))
+		  (vis-collector (lambda (x) (void))))
       (receive (empty
 		lexenv.expand^ lexenv.super^
 		lex* qrhs* module-init** kwd* export-spec*)
@@ -2651,7 +2656,7 @@
       ;;NOTE The following special case matches fine:
       ;;
       ;;   (internal-define ?attributes ({ciao})
-      ;;     (values))
+      ;;     (void))
       ;;
       ;;NOTE We explicitly decide not to rely  on RHS tag propagation to properly tag
       ;;the defined identifier ?WHO.  We could have considered:

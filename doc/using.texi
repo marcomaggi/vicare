@@ -291,6 +291,18 @@ inspection.
 @cindex @option{-nd}, command line option
 Turn off debugging mode.
 
+@item --drop-assertions
+@cindex Command line option @option{--drop-assertions}
+@cindex @option{--drop-assertions}, command line option
+Expand uses of the @func{assert} macro into just the expression,
+dropping the assertion.
+
+@item --no-drop-assertions
+@cindex Command line option @option{--no-drop-assertions}
+@cindex @option{--no-drop-assertions}, command line option
+Expand uses of the @func{assert} macro as full assertions.  This is the
+default.
+
 @item --gc-integrity-checks
 @cindex Command line option @option{--gc-integrity-checks}
 @cindex @option{--gc-integrity-checks}, command line option

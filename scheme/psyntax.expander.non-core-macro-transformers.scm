@@ -142,11 +142,10 @@
      (lambda (x)
        (%allowed-symbol-macro x '(none line block))))
 
-    ((endianness)
-     endianness-macro)
-
-    ((file-options)
-     file-options-macro)
+    ((endianness)			endianness-macro)
+    ((file-options)			file-options-macro)
+    ((expander-options)			expander-options-macro)
+    ((compiler-options)			compiler-options-macro)
 
     ((... => _
 	  else unquote unquote-splicing
@@ -5283,17 +5282,20 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?expr)
-     (let ((pos (or (expression-position expr-stx)
-		    (expression-position ?expr))))
-       (bless
-	(if (source-position-condition? pos)
+     (if (option.drop-assertions?)
+	 ?expr
+       (let ((pos (or (expression-position expr-stx)
+		      (expression-position ?expr))))
+	 (bless
+	  (if (source-position-condition? pos)
+	      `(or ,?expr
+		   (assertion-error
+		    ',?expr ,(source-position-port-id pos)
+		    ,(source-position-byte pos) ,(source-position-character pos)
+		    ,(source-position-line pos) ,(source-position-column    pos)))
 	    `(or ,?expr
-		 (assertion-error
-		  ',?expr ,(source-position-port-id pos)
-		  ,(source-position-byte pos) ,(source-position-character pos)
-		  ,(source-position-line pos) ,(source-position-column    pos)))
-	  `(or ,?expr
-	       (assertion-error ',?expr "unknown source" #f #f #f #f))))))))
+		 (assertion-error ',?expr "unknown source" #f #f #f #f)))))))
+    ))
 
 (define (file-options-macro expr-stx)
   ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
@@ -5308,6 +5310,34 @@
      (for-all valid-option? ?opt*)
      (bless
       `(make-file-options ',?opt*)))))
+
+(define (expander-options-macro expr-stx)
+  ;;Transformer  for   the  EXPANDER-OPTIONS   macro.   File  options   selection  is
+  ;;implemented  as an  enumeration type  whose constructor  is MAKE-EXPANDER-OPTIONS
+  ;;from the boot environment.
+  ;;
+  (define (valid-option? opt-stx)
+    (and (identifier? opt-stx)
+	 (memq (identifier->symbol opt-stx) '(strict-r6rs))))
+  (syntax-match expr-stx ()
+    ((_ ?opt* ...)
+     (for-all valid-option? ?opt*)
+     (bless
+      `(make-expander-options ',?opt*)))))
+
+(define (compiler-options-macro expr-stx)
+  ;;Transformer  for   the  COMPILER-OPTIONS   macro.   File  options   selection  is
+  ;;implemented  as an  enumeration type  whose constructor  is MAKE-COMPILER-OPTIONS
+  ;;from the boot environment.
+  ;;
+  (define (valid-option? opt-stx)
+    (and (identifier? opt-stx)
+	 (memq (identifier->symbol opt-stx) '(strict-r6rs))))
+  (syntax-match expr-stx ()
+    ((_ ?opt* ...)
+     (for-all valid-option? ?opt*)
+     (bless
+      `(make-compiler-options ',?opt*)))))
 
 (define (endianness-macro expr-stx)
   ;;Transformer of  ENDIANNESS.  Support  the symbols:  "big", "little",

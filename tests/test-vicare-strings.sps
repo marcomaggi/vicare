@@ -27,6 +27,7 @@
 (import (except (vicare) catch)
   (vicare system $strings)
   (vicare checks))
+(options strict-r6rs)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare string functions\n")

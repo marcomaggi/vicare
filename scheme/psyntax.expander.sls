@@ -1368,6 +1368,12 @@
 		  (option.tagged-language.setter-forms?        (option.tagged-language?)))
       . ?body)))
 
+(define-syntax-rule (with-option-strict-r6rs ?enabled? . ?body)
+  ;;We want to  enable "strict R6RS" if  it is requested with the  OPTIONS library or
+  ;;program clause, but not disable it if the option is not used.
+  (parametrise ((option.strict-r6rs (or ?enabled? (option.strict-r6rs))))
+    . ?body))
+
 
 ;;;; library records collectors
 
@@ -1956,18 +1962,25 @@
   #| end of module |# )
 
 
-(define* (eval x env)
-  ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
-  ;;expand the  expression, invoke  its invoke-required  libraries and
-  ;;evaluate  its  expanded  core  form.  Return  the  result  of  the
-  ;;expansion.
-  ;;
-  (unless (environment? env)
-    (error __who__ "not an environment" env))
-  (receive (x invoke-req*)
-      (expand-form-to-core-language x env)
-    (for-each invoke-library invoke-req*)
-    (compiler.eval-core (expanded->core x))))
+(case-define* eval
+  ((x {env environment?})
+   ;;This  is  R6RS's eval.   Take  an  expression  and  an environment:  expand  the
+   ;;expression, invoke its invoke-required libraries  and evaluate its expanded core
+   ;;form.  Return the result of the expansion.
+   ;;
+   (eval x env #f #f))
+  ((x {env environment?} expander-options compiler-options)
+   ;;This is the Vicare extension.
+   ;;
+   (receive (x invoke-req*)
+       (parametrise ((option.strict-r6rs (and expander-options
+					      (enum-set-member? 'strict-r6rs expander-options))))
+	 (expand-form-to-core-language x env))
+     ;;Here we use the expander and compiler options from the libraries.
+     (for-each invoke-library invoke-req*)
+     (parametrise ((option.strict-r6rs (and compiler-options
+					    (enum-set-member? 'strict-r6rs compiler-options))))
+       (compiler.eval-core (expanded->core x))))))
 
 
 (module (expand-form-to-core-language)
@@ -2083,7 +2096,7 @@
     ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
     ;;struct representing the environment after the program execution.
     ;;
-    (receive (lib* invoke-code macro* export-subst export-env)
+    (receive (lib* invoke-code macro* export-subst export-env option*)
 	(expand-top-level program-form*)
       (lambda ()
 	;;Make  sure  that the  code  of  all  the needed  libraries  is
@@ -2140,18 +2153,24 @@
     (identifier-syntax 'expand-top-level))
 
   (define (expand-top-level program-form*)
-    ;;Given a list of  SYNTAX-MATCH expression arguments representing an
-    ;;R6RS top level program, expand it.
+    ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
+    ;;level program, expand it.
     ;;
     (receive (import-spec* option* body*)
 	(%parse-top-level-program program-form*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	  (let ((option* (%parse-program-options option*)))
-	    (with-tagged-language (memq 'tagged-language option*)
-	      (let ()
-		(import CORE-BODY-EXPANDER)
-		(core-body-expander 'all import-spec* body* #t))))
-	(values invoke-lib* invoke-code macro* export-subst export-env))))
+	  (let ((option* (%parse-program-options option*))
+		(mixed-definitions-and-expressions? #t))
+	    (import CORE-BODY-EXPANDER)
+	    (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
+				%verbose-messages-thunk))
+	(values invoke-lib* invoke-code macro* export-subst export-env option*))))
+
+  (define (%verbose-messages-thunk)
+    (when (option.tagged-language?)
+      (print-expander-warning-message "enabling tagged language support for program"))
+    (when (option.strict-r6rs)
+      (print-expander-warning-message "enabling expander's strict R6RS support for program")))
 
   (define (%parse-top-level-program program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
@@ -2177,11 +2196,11 @@
 
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
-       (syntax-violation 'expander
+       (syntax-violation __module_who__
 	 "invalid syntax of top-level program" (syntax-car program-form*)))
 
       (_
-       (assertion-violation 'expander
+       (assertion-violation __module_who__
 	 "top-level program is missing an (import ---) clause"))))
 
   (define (%parse-program-options option*)
@@ -2193,6 +2212,8 @@
 	 (case sym
 	   ((tagged-language)
 	    (cons sym (%parse-program-options ?other*)))
+	   ((strict-r6rs)
+	    (cons sym (%parse-program-options ?other*)))
 	   (else
 	    (syntax-violation __module_who__
 	      "invalid program option" ?opt)))))
@@ -2201,13 +2222,14 @@
   #| end of module: EXPAND-TOP-LEVEL |# )
 
 (define (expand-top-level->sexp sexp)
-  (receive (invoke-lib* invoke-code macro* export-subst export-env)
+  (receive (invoke-lib* invoke-code macro* export-subst export-env option*)
       (expand-top-level sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
       (macro*		. ,macro*)
       (export-subst	. ,export-subst)
-      (export-env	. ,export-env))))
+      (export-env	. ,export-env)
+      (option*		. ,option*))))
 
 
 ;;;; R6RS library expander
@@ -2391,10 +2413,10 @@
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc	(lambda ()
 				  (compiler.eval-core (expanded->core invoke-code))))
-	     ;;This visit  code is compiled and  stored in FASL files;  the resulting
-	     ;;code objects  are the  ones evaluated whenever  a compiled  library is
+	     ;;This visit code is compiled and  stored in FASL files; the resulting
+	     ;;code objects are  the ones evaluated whenever a  compiled library is
 	     ;;loaded and visited.
-	     (visit-code	(%build-visit-code macro*))
+	     (visit-code	(%build-visit-code macro* option*))
 	     (visible?		#t))
 	 (intern-library uid libname
 			 import-libdesc* visit-libdesc* invoke-libdesc*
@@ -2410,7 +2432,7 @@
 		 guard-code guard-libdesc*
 		 option*)))))
 
-  (define (%build-visit-code macro*)
+  (define (%build-visit-code macro* option*)
     ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
     ;;definitions in the  core language: the visit code; code  evaluated whenever the
     ;;library  is visited;  each  library is  visited  only once  the  first time  an
@@ -2446,16 +2468,17 @@
     ;;
     (if (null? macro*)
 	(build-void)
-      (build-sequence no-source
-	(map (lambda (entry)
-	       (let ((loc (car entry)))
-		 (if loc
-		     (let ((rhs.core (cddr entry)))
-		       (build-global-assignment no-source
-			 loc rhs.core))
-		   (let ((expr.core (cdr entry)))
-		     expr.core))))
-	  macro*))))
+      (build-with-compilation-options option*
+        (build-sequence no-source
+	  (map (lambda (entry)
+		 (let ((loc (car entry)))
+		   (if loc
+		       (let ((rhs.core (cddr entry)))
+			 (build-global-assignment no-source
+			   loc rhs.core))
+		     (let ((expr.core (cdr entry)))
+		       expr.core))))
+	    macro*)))))
 
   #| end of module: EXPAND-LIBRARY |# )
 
@@ -2503,22 +2526,30 @@
     (receive (libname export-spec* import-spec* body* libopt*)
 	(%parse-library library-sexp)
       (%validate-library-name libname verify-libname)
-      (let* ((option*    (%parse-library-options libopt*))
-	     (stale-clt  (%make-stale-collector)))
+      (let* ((libname.sexp  (syntax->datum libname))
+	     (option*       (%parse-library-options libopt*))
+	     (stale-clt     (%make-stale-collector)))
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	    (parametrise ((stale-when-collector    stale-clt))
-	      (with-tagged-language (memq 'tagged-language option*)
-		(let ((mixed-definitions-and-expressions? #f))
-		  (import CORE-BODY-EXPANDER)
-		  (core-body-expander export-spec* import-spec* body*
-				      mixed-definitions-and-expressions?))))
+	      (let ((mixed-definitions-and-expressions? #f))
+		(import CORE-BODY-EXPANDER)
+		(core-body-expander export-spec* import-spec* option* body*
+				    mixed-definitions-and-expressions?
+				    (%make-verbose-messages-thunk libname.sexp))))
 	  (receive (guard-code guard-lib*)
 	      (stale-clt)
-	    (values (syntax->datum libname)
+	    (values libname.sexp
 		    import-lib* invoke-lib* visit-lib*
 		    invoke-code macro* export-subst
 		    export-env guard-code guard-lib*
 		    option*))))))
+
+  (define (%make-verbose-messages-thunk libname.sexp)
+    (lambda ()
+      (when (option.tagged-language?)
+	(print-expander-warning-message "enabling tagged language support for library: ~a" libname.sexp))
+      (when (option.strict-r6rs)
+	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
@@ -2599,6 +2630,8 @@
 	   ((visit-upon-loading)
 	    (cons sym (%parse-library-options ?other*)))
 	   ((tagged-language)
+	    (cons sym (%parse-library-options ?other*)))
+	   ((strict-r6rs)
 	    (cons sym (%parse-library-options ?other*)))
 	   (else
 	    (syntax-violation __who__
@@ -2733,7 +2766,8 @@
   ;;       (lab.var2 global       . loc.lex.var2)
   ;;       (lab.mac  global-macro . loc.lab.mac))
   ;;
-  (define (core-body-expander export-spec* import-spec* body-sexp* mixed-definitions-and-expressions?)
+  (define (core-body-expander export-spec* import-spec* option* body-sexp* mixed-definitions-and-expressions?
+			      verbose-messages-thunk)
     (define itc (make-collector))
     (parametrise ((imp-collector      itc)
 		  (top-level-context  #f))
@@ -2741,61 +2775,66 @@
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap x)
 	(make-<stx> x TOP-MARK* (list rib) '()))
-      (let ((body-stx*	(map wrap body-sexp*))
-	    (rtc	(make-collector))
-	    (vtc	(make-collector)))
-	(parametrise ((inv-collector  rtc)
-		      (vis-collector  vtc))
-	  ;;INIT*.STX  is  a  list  of   syntax  objects  representing  the  trailing
-	  ;;non-definition forms  from the body  of the library  and the body  of the
-	  ;;internal modules.
-	  ;;
-	  ;;LEX*  is a  list of  left-hand-side  lex gensyms  to be  used in  binding
-	  ;;definitions  when building  core  language symbolic  expressions for  the
-	  ;;glocal DEFINE forms in the library.  There is a lex gensym for every item
-	  ;;in QRHS*.
-	  ;;
-	  ;;QRHS* is a list of qualified right-hand sides representing the right-hand
-	  ;;side expressions in the DEFINE forms from the body of the library.
-	  ;;
-	  ;;INTERNAL-EXPORT*  is  a list  of  identifiers  exported through  internal
-	  ;;EXPORT  syntaxes rather  than the  export spec  at the  beginning of  the
-	  ;;library.
-	  ;;
-	  (receive (init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
-	      (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
-	    (receive (export-name* export-id*)
-		(%parse-all-export-specs export-spec* internal-export* wrap rib)
-	      (seal-rib! rib)
-	      ;;RHS*.PSI is a  list of PSI structs containing  core language symbolic
-	      ;;expressions representing the DEFINE right-hand sides.
+      (with-tagged-language (memq 'tagged-language option*)
+	(with-option-strict-r6rs (memq 'strict-r6rs option*)
+	  (verbose-messages-thunk)
+	  (let ((body-stx*	(map wrap body-sexp*))
+		(rtc	(make-collector))
+		(vtc	(make-collector)))
+	    (parametrise ((inv-collector  rtc)
+			  (vis-collector  vtc))
+	      ;;INIT*.STX  is a  list  of syntax  objects  representing the  trailing
+	      ;;non-definition forms from the body of the library and the body of the
+	      ;;internal modules.
 	      ;;
-	      ;;INIT*.PSI is a list of  PSI structs containing core language symbolic
-	      ;;expressions representing the trailing init forms.
+	      ;;LEX* is  a list of left-hand-side  lex gensyms to be  used in binding
+	      ;;definitions when building core  language symbolic expressions for the
+	      ;;glocal DEFINE forms in the library.   There is a lex gensym for every
+	      ;;item in QRHS*.
 	      ;;
-	      ;;We want order here?  Yes.  We  expand first the definitions, then the
-	      ;;init forms;  so that  tag identifiers  have been  put where  they are
-	      ;;needed.
-	      (let* ((rhs*.psi  (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
-		     (init*.psi (chi-expr* init*.stx lexenv.run lexenv.expand)))
-		;;QUESTION Why do we unseal the rib  if we do not use it anymore?  Is
-		;;it an  additional check of  its internal integrity?   (Marco Maggi;
-		;;Sun Mar 23, 2014)
-		(unseal-rib! rib)
-		(let ((loc*          (map gensym-for-storage-location lex*))
-		      (export-subst  (%make-export-subst export-name* export-id*)))
-		  (receive (export-env macro*)
-		      (%make-export-env/macro* lex* loc* lexenv.run)
-		    (%validate-exports export-spec* export-subst export-env)
-		    (let ((invoke-code (build-library-letrec* no-source
-					 mixed-definitions-and-expressions?
-					 lex* loc* (map psi-core-expr rhs*.psi)
-					 (if (null? init*.psi)
-					     (build-void)
-					   (build-sequence no-source
-					     (map psi-core-expr init*.psi))))))
-		      (values (itc) (rtc) (vtc)
-			      invoke-code macro* export-subst export-env)))))))))))
+	      ;;QRHS*  is  a list  of  qualified  right-hand sides  representing  the
+	      ;;right-hand side expressions in the DEFINE  forms from the body of the
+	      ;;library.
+	      ;;
+	      ;;INTERNAL-EXPORT* is  a list of identifiers  exported through internal
+	      ;;EXPORT syntaxes rather  than the export spec at the  beginning of the
+	      ;;library.
+	      ;;
+	      (receive (init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
+		  (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
+		(receive (export-name* export-id*)
+		    (%parse-all-export-specs export-spec* internal-export* wrap rib)
+		  (seal-rib! rib)
+		  ;;RHS*.PSI  is  a list  of  PSI  structs containing  core  language
+		  ;;symbolic expressions representing the DEFINE right-hand sides.
+		  ;;
+		  ;;INIT*.PSI  is a  list  of PSI  structs  containing core  language
+		  ;;symbolic expressions representing the trailing init forms.
+		  ;;
+		  ;;We want order here?  Yes.   We expand first the definitions, then
+		  ;;the init forms; so that tag  identifiers have been put where they
+		  ;;are needed.
+		  (let* ((rhs*.psi  (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
+			 (init*.psi (chi-expr* init*.stx lexenv.run lexenv.expand)))
+		    ;;QUESTION Why do we unseal the rib  if we do not use it anymore?
+		    ;;Is it  an additional check  of its internal  integrity?  (Marco
+		    ;;Maggi; Sun Mar 23, 2014)
+		    (unseal-rib! rib)
+		    (let ((loc*          (map gensym-for-storage-location lex*))
+			  (export-subst  (%make-export-subst export-name* export-id*)))
+		      (receive (export-env macro*)
+			  (%make-export-env/macro* lex* loc* lexenv.run)
+			(%validate-exports export-spec* export-subst export-env)
+			(let ((invoke-code (build-with-compilation-options option*
+					     (build-library-letrec* no-source
+					       mixed-definitions-and-expressions?
+					       lex* loc* (map psi-core-expr rhs*.psi)
+					       (if (null? init*.psi)
+						   (build-void)
+						 (build-sequence no-source
+						   (map psi-core-expr init*.psi)))))))
+			  (values (itc) (rtc) (vtc)
+				  invoke-code macro* export-subst export-env)))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -6501,7 +6540,7 @@
   ;;
   (let* ((rtc (make-collector))
 	 (rhs-expr.psi (parametrise ((inv-collector rtc)
-				     (vis-collector (lambda (x) (values))))
+				     (vis-collector (lambda (x) (void))))
 			 (chi-expr rhs-expr.stx lexenv.expand lexenv.expand))))
     ;;We invoke all the libraries needed to evaluate the right-hand side.
     (for-each
@@ -6597,7 +6636,7 @@
 			     (else
 			      (%synner "not an identifier" ?last)))))
        (cond ((null? ?id*)
-	      (values))
+	      (void))
 	     ((not (identifier? (car ?id*)))
 	      (%synner "not an identifier" (car ?id*)))
 	     (else
@@ -7518,14 +7557,22 @@
 
 ;;;; done
 
+;; #!vicare
+;; (import (only (vicare) foreign-call))
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander before"))
+
 ;;Register the expander with the library manager.
 (current-library-expander expand-library)
+
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander after"))
+;; (void)
 
 #| end of library |# )
 
 ;;; end of file
 ;;Local Variables:
 ;;fill-column: 85
+;;eval: (put 'build-with-compilation-options	'scheme-indent-function 1)
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
@@ -7544,4 +7591,5 @@
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;eval: (put 'with-tagged-language		'scheme-indent-function 1)
+;;eval: (put 'with-option-strict-r6rs		'scheme-indent-function 1)
 ;;End:

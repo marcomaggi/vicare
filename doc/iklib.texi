@@ -51,6 +51,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib expander::              Interface to the expander.
 * iklib shared::                Shared structures graph notation.
 * iklib environment::           Environments.
+* iklib eval::                  Extended code evaluation.
 * iklib cafe::                  Cafe.
 * iklib procedures::            Procedures.
 * iklib structs::               Structures and type descriptors.
@@ -382,6 +383,11 @@ methods to Nausicaa's multimethods.
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
+
+@defvr {Library Option} strict-r6rs
+Turn on strict support for @rnrs{6} language.
+@end defvr
+
 @c page
 @node iklib syntaxes programs
 @subsection Extended program syntax
@@ -404,8 +410,13 @@ Turn on the tagged language extensions, @ref{tags, Tagged language}.
 where each @meta{option} is a symbolic expression.
 
 
-@defvr {Library Option} tagged-language
+@defvr {Program Option} tagged-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
+@end defvr
+
+
+@defvr {Program Option} strict-r6rs
+Turn on strict support for @rnrs{6} language.
 @end defvr
 
 @c page
@@ -6561,7 +6572,7 @@ the @code{guard-code} is:
 
 @defun expand-top-level @var{sexp}
 Expand an @rnrs{6} program whose symbolic expression is @var{sexp}.
-Return @math{5} values:
+Return @math{6} values:
 
 @table @var
 @item invoke-lib*
@@ -6579,6 +6590,10 @@ A subst representing the top--level bindings.
 
 @item export-env
 A list representing the bindings exported by the program.
+
+@item option*
+A list of symbols representing the options enabled for this program;
+@ref{iklib syntaxes programs} for details.
 @end table
 @end defun
 
@@ -6592,6 +6607,7 @@ alist with the following symbols as keys:
 invoke-lib* invoke-code
 macro*
 export-subst export-env
+option*
 @end example
 @end defun
 
@@ -8551,6 +8567,56 @@ return false and false.
 (environment-binding 'display (environment '(vicare)))
 @result{} #@{g870 |/1tY778AJ%G&f2UX|@} (core-prim . display)
 @end example
+@end defun
+
+@c page
+@node iklib eval
+@section Extended code evaluation
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun eval @var{sexp} @var{environment}
+@defunx eval @var{sexp} @var{environment} @var{expander-options} @var{compiler-options}
+Extension of @func{eval} as defined by @rnrs{6}.  The arguments
+@var{expander-options} and @var{compiler-options} must be @false{} or
+enumeration sets as returned by @func{expander-options} and
+@func{compiler-options}.
+@end defun
+
+
+@deffn Syntax expander-options @meta{symbol} @dots{}
+Return an enumeration set to be used as argument to @func{eval}.
+Supported @meta{symbol} options are:
+
+@table @code
+@item strict-r6rs
+Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
+report errors at run--time, rather than at expand--time.
+@end table
+@end deffn
+
+
+@deffn Syntax compiler-options @meta{symbol} @dots{}
+Return an enumeration set to be used as argument to @func{eval}.
+Supported @meta{symbol} options are:
+
+@table @code
+@item strict-r6rs
+Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
+report errors at run--time, rather than at compile--time.
+@end table
+@end deffn
+
+
+@defun make-expander-options @var{symbol} @dots{}
+Return an enumeration set as defined by @func{expander-options}.
+@end defun
+
+
+@defun make-compiler-options @var{symbol} @dots{}
+Return an enumeration set as defined by @func{compiler-options}.
 @end defun
 
 @c page

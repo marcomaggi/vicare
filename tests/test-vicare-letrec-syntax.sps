@@ -27,8 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare checks)
-  (vicare system $compiler))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare LETREC and LETREC* syntaxes\n")
@@ -74,7 +73,7 @@
   (check-syntax-violation 123
     (letrec* ((ciao (lambda (x)
 		      (when x
-			(ciao))
+			(ciao 1))
 		      123))
 	      (b    (ciao #f)))
       b))

@@ -51,7 +51,16 @@
 		  record-guardian-logger
 		  record-guardian-log)
     (prefix (ikarus startup) config.)
-    (prefix (ikarus.options) option.)
+    (prefix (only (ikarus.options)
+		  verbose?
+		  debug-mode-enabled?
+		  drop-assertions?
+		  descriptive-labels
+		  print-loaded-libraries?
+		  print-debug-messages?
+		  report-errors-at-runtime?
+		  strict-r6rs)
+	    option.)
     (prefix (only (ikarus.compiler)
 		  optimize-level
 		  $generate-debug-calls
@@ -474,6 +483,12 @@
 	   (option.debug-mode-enabled? #f)
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #f))))
 
+	  ((%option= "--drop-assertions")
+	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #t))))
+
+	  ((%option= "--no-drop-assertions")
+	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #f))))
+
 	  ((%option= "--gc-integrity-checks")
 	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
 
@@ -527,11 +542,11 @@
 	   (next-option (cdr args) k))
 
 	  ((%option= "--report-errors-at-runtime")
-	   (option.report-errors-at-runtime #t)
+	   (option.report-errors-at-runtime? #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-report-errors-at-runtime")
-	   (option.report-errors-at-runtime #f)
+	   (option.report-errors-at-runtime? #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--strict-r6rs")
@@ -866,6 +881,14 @@ Other options:
    -nd
    --no-debug
         Turn off debugging mode.
+
+   --drop-assertions
+        Expand uses  of  the  ASSERT  macro  into  just  the  expression,
+        dropping the assertion.
+
+   --no-drop-assertions
+        Expand uses of the ASSERT macro as full assertions.  This  is the
+        default.
 
    --gc-integrity-checks
         Enable garbage collection integrity checks.  This slows down the

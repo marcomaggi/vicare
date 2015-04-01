@@ -28,6 +28,7 @@
 #!r6rs
 (import (vicare)
   (vicare checks))
+(options strict-r6rs)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare enumerations\n")
@@ -50,7 +51,9 @@
 ;;;			  (syntax-violation-form E)
 			  (syntax->datum (syntax-violation-subform E))))
 		   (else E))
-	   (eval (quote ?body) environment-for-syntax-errors))
+	   (eval (quote ?body) environment-for-syntax-errors
+		 (expander-options strict-r6rs)
+		 (compiler-options strict-r6rs)))
        (=> syntax=?) ?result))))
 
 (define-syntax check-assertion-violation
@@ -61,7 +64,9 @@
 		    (cons (condition-message E)
 			  (condition-irritants E)))
 		   (else E))
-	   (eval (quote ?body) environment-for-assertion-errors))
+	   (eval (quote ?body) environment-for-assertion-errors
+		 (expander-options strict-r6rs)
+		 (compiler-options strict-r6rs)))
        => ?result))))
 
 

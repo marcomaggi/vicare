@@ -60,6 +60,7 @@
 
     ;; runtime options
     option.debug-mode-enabled?
+    option.drop-assertions?
     option.strict-r6rs
     option.enable-arguments-validation?
     option.descriptive-labels
@@ -93,6 +94,7 @@
     ;; error handlers
     library-version-mismatch-warning
     library-stale-warning
+    print-expander-warning-message
     procedure-argument-violation
     warning
     library-debug-message
@@ -139,8 +141,21 @@
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler.)
-    (prefix (rename (ikarus.options)
-		    (vicare-built-with-arguments-validation-enabled enable-arguments-validation?))
+    (prefix (rename (only (ikarus.options)
+			  verbose?
+			  debug-mode-enabled?
+			  drop-assertions?
+			  strict-r6rs
+			  descriptive-labels
+			  print-loaded-libraries?
+			  print-debug-messages?
+			  tagged-language.rhs-tag-propagation?
+			  tagged-language.datums-as-operators?
+			  tagged-language.setter-forms?
+			  tagged-language?
+			  vicare-built-with-arguments-validation-enabled)
+		    (vicare-built-with-arguments-validation-enabled
+		     enable-arguments-validation?))
 	    option.)
     (ikarus library-utils)
     (only (ikarus.posix)
@@ -168,18 +183,21 @@
 
 
 (define (library-version-mismatch-warning name depname filename)
-  (when (option.verbose?)
-    (fprintf (current-error-port)
-	     "*** Vicare warning: library ~s has an inconsistent dependency \
-              on library ~s; file ~s will be recompiled from source.\n"
-	     name depname filename)))
+  (print-expander-warning-message "library ~s has an inconsistent dependency \
+                                   on library ~s; file ~s will be recompiled from source."
+				  name depname filename))
 
 (define (library-stale-warning name filename)
+  (print-expander-warning-message "library ~s is stale; file ~s will be \
+                                   recompiled from source."
+				  name filename))
+
+(define (print-expander-warning-message template . args)
   (when (option.verbose?)
-    (fprintf (current-error-port)
-	     "*** Vicare warning: library ~s is stale; file ~s will be \
-              recompiled from source.\n"
-	     name filename)))
+    (let ((P (current-error-port)))
+      (display "vicare: expander warning: " P)
+      (apply fprintf P template args)
+      (newline P))))
 
 (define (library-debug-message template . args)
   (when (option.print-debug-messages?)

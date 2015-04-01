@@ -503,6 +503,8 @@
     (buffer-mode				(macro . buffer-mode))
     (file-options				(macro . file-options))
     (error-handling-mode			(macro . error-handling-mode))
+    (expander-options				(macro . expander-options))
+    (compiler-options				(macro . compiler-options))
     (fields					(macro . fields))
     (mutable					(macro . mutable))
     (immutable					(macro . immutable))
@@ -858,6 +860,8 @@
     (assembly-of				v $language)
     (enable-tagged-language			v $language)
     (disable-tagged-language			v $language)
+    (expander-options				v $language)
+    (compiler-options				v $language)
     (trace-lambda				v $language)
     (trace-let					v $language)
     (trace-define				v $language)
@@ -2745,6 +2749,8 @@
     ($transcoder->data				$transc)
     ($data->transcoder				$transc)
     (make-file-options				v $language)
+    (make-expander-options			v $language)
+    (make-compiler-options			v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; special list functions
