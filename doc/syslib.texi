@@ -1413,7 +1413,8 @@ bignum or ratnum.  A fixnum or bignum is returned when the numerator of
 
 
 @deffn {Unsafe Operation} $inv-compnum @var{cn}
-Compute the inverse of a compnum and return the result as a compnum.
+Compute the inverse of a compnum and return the result as a compnum or
+cflonum.
 @end deffn
 
 
@@ -1662,7 +1663,8 @@ Add a ratnum with a flonum and return the result as a flonum.
 
 
 @deffn {Unsafe Operation} $add-ratnum-ratnum @vari{rt} @varii{rt}
-Add a ratnum with a ratnum and return the result as a ratnum.
+Add a ratnum with a ratnum and return the result as a fixnum, bignum or
+ratnum.
 @end deffn
 
 
@@ -1696,7 +1698,8 @@ Add a compnum with a ratnum and return the result as a compnum.
 
 
 @deffn {Unsafe Operation} $add-compnum-compnum @vari{cn} @varii{cn}
-Add a compnum with a compnum and return the result as a compnum.
+Add a compnum with a compnum and return the result as a number (not
+necessarily a compnum).
 @end deffn
 
 
@@ -1979,7 +1982,8 @@ Subtract a compnum with a ratnum and return the result as a compnum.
 
 
 @deffn {Unsafe Operation} $sub-compnum-compnum @vari{cn} @varii{cn}
-Subtract a compnum with a compnum and return the result as a compnum.
+Subtract a compnum with a compnum and return the result as a number (not
+necessarily a compnum).
 @end deffn
 
 
@@ -4501,7 +4505,7 @@ cflonum.
 
 @deffn {Unsafe Operation} $log-bignum @var{bn}
 Compute the natural logarithm of @var{fl}; return an inexact number
-object.  cflonum.
+object.
 @end deffn
 
 
@@ -6455,7 +6459,7 @@ Return a fixnum representing the length of the operand.
 
 @defun $string-total-length @var{init-len} @var{strs}
 Given the list of strings @var{strs}: compute the total length of the
-strings, add it to @var{ini-len} and return the result.  If
+strings, add it to @var{init-len} and return the result.  If
 @var{init-len} is zero: the returned value is the total length of the
 strings in @var{strs}.  The returned value may or may not be in the
 range of the maximum string size.
