@@ -6713,16 +6713,6 @@ objects.  The following bindings are exported by the library
 
 @c ------------------------------------------------------------------------
 
-@subsubheading predicates
-
-
-@deffn {Primitive Operation} $pointer? @var{obj}
-Return @true{} if @var{obj} is a reference to a pointer memory block,
-else return @false{}.
-@end deffn
-
-@c ------------------------------------------------------------------------
-
 @subsubheading Comparison
 
 

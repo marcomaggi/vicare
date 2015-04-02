@@ -4378,12 +4378,6 @@
    ((E x)
     (nop)))
 
- (define-primop $pointer? safe
-   ((P x)
-    (sec-tag-test (T x) vector-mask vector-tag #f pointer-tag))
-   ((E x)
-    (nop)))
-
  (define-primop $pointer= unsafe
    ((V x y)
     ;;FIXME This is a predicate but a forcall is currently not supported

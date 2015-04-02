@@ -1500,7 +1500,6 @@
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
-    ($pointer?					$pointers)
     ($pointer=					$pointers)
     ($pointer!=					$pointers)
     ($pointer<					$pointers)
