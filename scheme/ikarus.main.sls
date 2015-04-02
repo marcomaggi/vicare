@@ -62,7 +62,6 @@
 		  descriptive-labels
 		  print-loaded-libraries?
 		  print-debug-messages?
-		  report-errors-at-runtime?
 		  strict-r6rs)
 	    option.)
     (prefix (only (ikarus.compiler)
@@ -547,14 +546,6 @@
 	   (option.verbose? #f)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--report-errors-at-runtime")
-	   (option.report-errors-at-runtime? #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-report-errors-at-runtime")
-	   (option.report-errors-at-runtime? #f)
-	   (next-option (cdr args) k))
-
 	  ((%option= "--strict-r6rs")
 	   (option.strict-r6rs #t)
 	   (next-option (cdr args) k))
@@ -917,14 +908,6 @@ Other options:
 
    --no-debug-messages
         Disables the effect of --debug-messages.
-
-   --report-errors-at-runtime
-        When possible  and meaningful:  report errors at  runtime rather
-        than  at  compile  time.    Runtime  errors  reporting  is  R6RS
-        compliant.  The default is to raise errors at compile time.
-
-   --no-report-errors-at-runtime
-        Disables the effect of --report-errors-at-runtime.
 
    --strict-r6rs
         Strictly follow R6RS specifications: disable Vicare extensions.
