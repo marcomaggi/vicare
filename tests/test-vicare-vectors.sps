@@ -63,13 +63,10 @@
 
 ;;; --------------------------------------------------------------------
 
-  ;;This is commented out because it is a compile-time error with the default command
-  ;;line options.
-  ;;
-  ;; (check
-  ;;     (catch #f
-  ;; 	(vector-length 123))
-  ;;   => '(123))
+  (check
+      (catch #f
+	(vector-length 123))
+    => '(123))
 
 ;;; --------------------------------------------------------------------
 
