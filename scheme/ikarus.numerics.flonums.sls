@@ -134,9 +134,6 @@
 	    $flnan?
 	    $flonum-integer?
 	    $flonum-rational?
-	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri
-	    ;;Nov 14, 2014)
-	    $fl!=
 	    $flround
 	    $flfloor
 	    $flceiling
