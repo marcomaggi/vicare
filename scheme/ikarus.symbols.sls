@@ -320,7 +320,7 @@
     (when ($unbound-object? v)
       (raise
        (condition (make-undefined-violation)
-		  (make-who-condition 'eval)
+		  (make-who-condition 'top-level-value)
 		  (make-message-condition "unbound variable")
 		  (make-irritants-condition (list (string->symbol (symbol->string loc)))))))))
 
