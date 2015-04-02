@@ -87,6 +87,7 @@
     ((expansion-of)				expansion-of-transformer)
     ((visit-code-of)				visit-code-of-transformer)
     ((optimisation-of)				optimisation-of-transformer)
+    ((optimisation-and-core-type-inference-of)	optimisation-and-core-type-inference-of-transformer)
     ((assembly-of)				assembly-of-transformer)
 
     (else
@@ -2631,6 +2632,25 @@
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->optimized-code expr.core)))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   expr.sexp)
+		 (make-retvals-signature-single-top))))
+    ))
+
+(define (optimisation-and-core-type-inference-of-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer        function         used        to         expand        Vicare's
+  ;;OPTIMISATION-AND-CORE-TYPE-INFERENCE-OF  syntaxes  from  the top-level  built  in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return a PSI struct.
+  ;;
+  (define-syntax __who__
+    (identifier-syntax 'optimisation-and-core-type-inference-of))
+  (syntax-match input-form.stx ()
+    ((_ ?expr)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)

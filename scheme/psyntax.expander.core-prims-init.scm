@@ -2211,7 +2211,7 @@
   ;; $optimize-letrec
   ;; $source-optimize
   ;; $rewrite-references-and-assignments
-  ;; $introduce-tags
+  ;; $core-type-inference
   ;; $introduce-vars
   ;; $sanitize-bindings
   ;; $optimize-for-direct-jumps

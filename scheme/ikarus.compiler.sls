@@ -28,56 +28,56 @@
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
     core-expr->optimized-code		core-expr->assembly-code
+    core-expr->optimisation-and-core-type-inference-code
 
     ;; these go in (vicare system $compiler)
     optimize-level
-    (rename
-     ;; configuration parameters
-     (current-letrec-pass			$current-letrec-pass)
-     (check-for-illegal-letrec			$check-for-illegal-letrec)
-     (optimize-cp				$optimize-cp)
-     (source-optimizer-passes-count		$source-optimizer-passes-count)
-     (perform-tag-analysis			$perform-tag-analysis)
-     (cp0-effort-limit				$cp0-effort-limit)
-     (cp0-size-limit				$cp0-size-limit)
-     (strip-source-info				$strip-source-info)
-     (generate-debug-calls			$generate-debug-calls)
-     (open-mvcalls				$open-mvcalls)
 
-     ;; middle pass inspection
-     (assembler-output				$assembler-output)
-     (optimizer-output				$optimizer-output)
-     (tag-analysis-output			$tag-analysis-output)
+    ;; configuration parameters
+    current-letrec-pass
+    check-for-illegal-letrec
+    source-optimizer-passes-count
+    perform-core-type-inference
+    perform-unsafe-primrefs-introduction
+    cp0-effort-limit
+    cp0-size-limit
+    strip-source-info
+    generate-debug-calls
+    open-mvcalls
 
-     (compile-core-expr->code			$compile-core-expr->code)
-     (recordize					$recordize)
-     (optimize-direct-calls			$optimize-direct-calls)
-     (optimize-letrec				$optimize-letrec)
-     (source-optimize				$source-optimize)
-     (rewrite-references-and-assignments	$rewrite-references-and-assignments)
-     (introduce-tags				$introduce-tags)
-     (introduce-vars				$introduce-vars)
-     (sanitize-bindings				$sanitize-bindings)
-     (optimize-for-direct-jumps			$optimize-for-direct-jumps)
-     (insert-global-assignments			$insert-global-assignments)
-     (convert-closures				$convert-closures)
-     (optimize-closures/lift-codes		$optimize-closures/lift-codes)
-     (alt-cogen					$alt-cogen)
-     (assemble-sources				$assemble-sources)
+    ;; middle pass inspection
+    assembler-output
+    optimizer-output
+    tag-analysis-output
 
-     (alt-cogen.introduce-primcalls		$introduce-primcalls)
-     (alt-cogen.eliminate-fix			$eliminate-fix)
-     (alt-cogen.insert-engine-checks		$insert-engine-checks)
-     (alt-cogen.insert-stack-overflow-check	$insert-stack-overflow-check)
-     (alt-cogen.specify-representation		$specify-representation)
-     (alt-cogen.impose-calling-convention/evaluation-order
-      $impose-calling-convention/evaluation-order)
-     (alt-cogen.assign-frame-sizes		$assign-frame-sizes)
-     (alt-cogen.color-by-chaitin		$color-by-chaitin)
-     (alt-cogen.flatten-codes			$flatten-codes)
+    compile-core-expr->code
+    recordize
+    optimize-direct-calls
+    optimize-letrec
+    source-optimize
+    rewrite-references-and-assignments
+    core-type-inference
+    introduce-vars
+    sanitize-bindings
+    optimize-for-direct-jumps
+    insert-global-assignments
+    convert-closures
+    optimize-closures/lift-codes
+    alt-cogen
+    assemble-sources
 
-     (unparse-recordized-code			$unparse-recordized-code)
-     (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
+    alt-cogen.introduce-primcalls
+    alt-cogen.eliminate-fix
+    alt-cogen.insert-engine-checks
+    alt-cogen.insert-stack-overflow-check
+    alt-cogen.specify-representation
+    alt-cogen.impose-calling-convention/evaluation-order
+    alt-cogen.assign-frame-sizes
+    alt-cogen.color-by-chaitin
+    alt-cogen.flatten-codes
+
+    unparse-recordized-code
+    unparse-recordized-code/pretty)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -98,8 +98,9 @@
 
 		  cp0-effort-limit		cp0-size-limit
 		  current-letrec-pass		generate-debug-calls
-		  optimize-cp			optimize-level
-		  perform-tag-analysis		strip-source-info
+		  optimize-level
+		  perform-core-type-inference	perform-unsafe-primrefs-introduction
+		  strip-source-info
 		  fasl-write)
     ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
     ;;everything here using the system  libraries and not loading external libraries.
@@ -211,16 +212,22 @@
   ;;
   (make-parameter #f))
 
+(define perform-core-type-inference
+  ;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
+  ;;
+  (make-parameter #t))
+
+(define perform-unsafe-primrefs-introduction
+  ;;When true: the  pass INTRODUCE-UNSAFE-PRIMREFS is performed, else  it is skipped.
+  ;;It makes sense to perform such compiler  pass only if we have first performed the
+  ;;core type inference.
+  (make-parameter #t))
+
 (define optimize-cp
   (make-parameter #t))
 
 (define optimizer-output
   (make-parameter #f))
-
-(define perform-tag-analysis
-  ;;When true the pass INTRODUCE-TAGS is performed, else it is skipped.
-  ;;
-  (make-parameter #t))
 
 (define assembler-output
   (make-parameter #f))
@@ -572,6 +579,7 @@
 	 compile-core-expr
 	 compile-core-expr->code
 	 core-expr->optimized-code
+	 core-expr->optimisation-and-core-type-inference-code
 	 core-expr->assembly-code)
   ;;The list of compiler passes is:
   ;;
@@ -580,7 +588,7 @@
   ;;   optimize-letrec
   ;;   source-optimize
   ;;   rewrite-references-and-assignments
-  ;;   introduce-tags (optional)
+  ;;   core-type-inference (optional)
   ;;   introduce-vars
   ;;   sanitize-bindings
   ;;   optimize-for-direct-jumps
@@ -615,8 +623,8 @@
 	  (when (optimizer-output)
 	    (pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
 	  (let* ((p (rewrite-references-and-assignments p))
-		 (p (if (perform-tag-analysis)
-			(introduce-tags p)
+		 (p (if (perform-core-type-inference)
+			(core-type-inference p)
 		      p))
 		 (p (introduce-vars p))
 		 (p (sanitize-bindings p))
@@ -649,6 +657,27 @@
 	       (p (source-optimize p)))
 	  (unparse-recordized-code/pretty p)))))
 
+  (define (core-expr->optimisation-and-core-type-inference-code core-language-sexp)
+    ;;This is a utility function used for debugging and inspection purposes; it is to
+    ;;be used to inspect the result of optimisation.
+    ;;
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (optimize-direct-calls p))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p))
+	       (p (rewrite-references-and-assignments p))
+	       (p (if (perform-core-type-inference)
+	       	      (core-type-inference p)
+	       	    p))
+	       ;; (p (if (and (perform-core-type-inference)
+	       ;; 		   (perform-unsafe-primrefs-introduction))
+	       ;; 	      (introduce-unsafe-primrefs p)
+	       ;; 	    p))
+	       )
+	  (unparse-recordized-code/pretty p)))))
+
   (define (core-expr->assembly-code core-language-sexp)
     ;;This  is a  utility  function used  for  debugging and  inspection
     ;;purposes.  It  transforms a symbolic expression  representing core
@@ -663,8 +692,8 @@
 	       (p (optimize-letrec p))
 	       (p (source-optimize p)))
 	  (let* ((p (rewrite-references-and-assignments p))
-		 (p (if (perform-tag-analysis)
-			(introduce-tags p)
+		 (p (if (perform-core-type-inference)
+			(core-type-inference p)
 		      p))
 		 (p (introduce-vars p))
 		 (p (sanitize-bindings p))

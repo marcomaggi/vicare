@@ -181,7 +181,6 @@
 
     (()
      (vicare assembler inspection)
-     (vicare debugging compiler)
      (vicare parser-logic)
 
      (vicare irregex)

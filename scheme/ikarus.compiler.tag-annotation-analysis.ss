@@ -17,8 +17,8 @@
 
 (include "ikarus.compiler.ontology.ss" #t)
 
-(module (introduce-tags tag-analysis-output)
-  (define who 'introduce-tags)
+(module (core-type-inference tag-analysis-output)
+  (define who 'core-type-inference)
 
   (define tag-analysis-output
     (make-parameter #f))
@@ -26,7 +26,7 @@
   (define-inline-constant EMPTY-ENV
     '())
 
-  (define (introduce-tags x)
+  (define (core-type-inference x)
     (let-values (((x env t) (V x EMPTY-ENV)))
       (when (tag-analysis-output)
 	(pretty-print (unparse-recordized-code/pretty x)))
@@ -551,6 +551,6 @@
 
 ;;;; done
 
-#| end of module: introduce-tags |# )
+#| end of module: core-type-inference |# )
 
 ;;; end of file

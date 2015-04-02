@@ -739,7 +739,6 @@
     array-set-c-unsigned-long-long!
     array-set-c-unsigned-short!
     asinh
-    assembler-output
     atanh
     base64->bytevector
     begin0
@@ -1046,7 +1045,6 @@
     non-positive?
     null-memory-block
     null-pointer
-    optimizer-output
     ormap
 ;;;Redefined by (nausicaa language conditions).
 ;;;

@@ -56,6 +56,7 @@
 
     ;; compiler related operations
     compiler.eval-core			compiler.core-expr->optimized-code
+    compiler.core-expr->optimisation-and-core-type-inference-code
     compiler.core-expr->assembly-code	compiler.compile-core-expr
 
     ;; runtime options
@@ -138,6 +139,7 @@
 		  eval-core
 		  compile-core-expr
 		  core-expr->optimized-code
+		  core-expr->optimisation-and-core-type-inference-code
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler.)
