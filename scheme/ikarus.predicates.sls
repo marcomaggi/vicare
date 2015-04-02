@@ -68,9 +68,6 @@
             (bignum?		sys:bignum?)
             (boolean?		sys:boolean?)
             (bwp-object?	sys:bwp-object?)
-	    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi;
-	    ;;Tue Sep 30, 2014)
-	    #;(void-object?	sys:void-object?)
             (bytevector?	sys:bytevector?)
             (cflonum?		sys:cflonum?)
             (char?		sys:char?)
