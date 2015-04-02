@@ -488,12 +488,6 @@
 	   (option.debug-mode-enabled? #f)
 	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
 
-	  ((%option= "--drop-assertions")
-	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #t))))
-
-	  ((%option= "--no-drop-assertions")
-	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #f))))
-
 	  ((%option= "--check-compiler-pass-preconditions")
 	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #t))))
 
