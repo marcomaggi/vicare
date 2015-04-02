@@ -69,7 +69,6 @@
 		  $generate-debug-calls
 		  $assembler-output
 		  $optimizer-output
-		  $open-mvcalls
 		  $source-optimizer-passes-count)
 	    compiler.)
     (prefix (only (ikarus.debugger)
@@ -664,12 +663,6 @@
 	  ((%option= "-O0")
 	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 0))))
 
-	  ((%option= "--enable-open-mvcalls")
-	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #t))))
-
-	  ((%option= "--disable-open-mvcalls")
-	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #f))))
-
 ;;; --------------------------------------------------------------------
 ;;; program options
 
@@ -941,11 +934,6 @@ Other options:
    --optimizer-passes-count COUNT
         Specify how  many passes to  perform with the  source optimizer.
         Must be a positive fixnum.  Defaults to 1.
-
-   --enable-open-mvcalls
-   --disable-open-mvcalls
-        Enable  or  disable  inlining   of  calls  to  CALL-WITH-VALUES.
-        Defaults to disable.
 
    --print-assembly
         Print  to  the  current  error port  the  assembly  instructions
