@@ -316,6 +316,7 @@
     "ikarus.foreign-libraries.sls"
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
+    "ikarus.foldable.sls"
     "ikarus.intel-assembler.sls"
     "ikarus.fasl.write.sls"
     "ikarus.fasl.read.sls"
@@ -1062,7 +1063,16 @@
     (system-id-gensym				v)
 
 ;;; --------------------------------------------------------------------
+;;; foldable primitives
 
+    (foldable-cons)
+    (foldable-list)
+    (foldable-vector)
+    (foldable-string)
+    (foldable-list->vector)
+    (foldable-append)
+
+;;; --------------------------------------------------------------------
     ($boolean=					$bools)
     ($boolean!=					$bools)
     ($boolean<					$bools)

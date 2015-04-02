@@ -4529,17 +4529,17 @@
 	 (_
 	  (syntax-match ?dy ()
 	    (()
-	     (%application 'list x))
+	     (%application 'foldable-list x))
 	    (_
-	     (%application 'cons x y))
+	     (%application 'foldable-cons x y))
 	    ))
 	 ))
 
       ((list ?stuff ...)
-       (%application* 'list x ?stuff))
+       (%application* 'foldable-list x ?stuff))
 
       (_
-       (%application 'cons x y))
+       (%application 'foldable-cons x y))
       ))
 
   (define (%quasiappend x y)
@@ -4560,7 +4560,7 @@
 	    ((null? (cdr ls))
 	     (car ls))
 	    (else
-	     (%application* 'append ls)))))
+	     (%application* 'foldable-append ls)))))
 
   (define (%quasivector x)
     (let ((pat-x x))
@@ -4571,7 +4571,7 @@
   	(_
   	 (let loop ((x x)
   		    (k (lambda (ls)
-  			 (%application* 'vector ls))))
+  			 (%application* 'foldable-vector ls))))
   	   (syntax-match x (list cons quote)
   	     ((quote (x* ...))
   	      (k (map (lambda (x) (%application 'quote x)) x*)))
@@ -4584,7 +4584,7 @@
   			(k (cons x ls)))))
 
   	     (_
-  	      (%application 'list->vector pat-x))
+  	      (%application 'foldable-list->vector pat-x))
   	     )))
   	)))
 
