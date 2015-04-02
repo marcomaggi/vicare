@@ -1462,7 +1462,7 @@
 ;;;; done
 
 ;; #!vicare
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load"))
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load after"))
 
 #| end of library |# )
 
