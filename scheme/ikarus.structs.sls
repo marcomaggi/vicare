@@ -70,7 +70,6 @@
 		  struct-rtd			struct-type-descriptor
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
-    (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (vicare system $structs)
     (only (vicare system $symbols)
@@ -87,16 +86,28 @@
 	   (symbol? ($car obj))
 	   (list-of-symbols? ($cdr obj)))))
 
-(define-argument-validation (struct-of-type who struct std)
-  ($struct/rtd? struct std)
-  (procedure-argument-violation who "not a data structure of correct type" struct std))
+(define-syntax (assert-struct-of-type stx)
+  (syntax-case stx ()
+    ((_ ?struct ?std)
+     (and (identifier? #'?struct)
+	  (identifier? #'?std))
+     #'(unless ($struct/rtd? ?struct ?std)
+	 (procedure-argument-violation __who__
+	   "not a data structure of correct type" ?struct ?std)))
+    ))
 
-(define-argument-validation (index who index struct)
-  (and (fixnum? index)
-       ($fx>= index 0)
-       ($fx<  index ($std-length ($struct-rtd struct))))
-  (procedure-argument-violation who
-    "expected fixnum in range for structure field as index argument" index struct))
+(define-syntax (assert-field-index-for-struct stx)
+  (syntax-case stx ()
+    ((_ ?index ?struct)
+     (and (identifier? #'?index)
+	  (identifier? #'?struct))
+     #'(unless (and (fixnum? ?index)
+		    ($fx>= ?index 0)
+		    ($fx<  ?index ($std-length ($struct-rtd ?struct))))
+	 (procedure-argument-violation __who__
+	   "expected fixnum in range for structure field as ?index argument"
+	   ?index ?struct)))
+    ))
 
 
 ;;;; low level RTD operations
@@ -275,8 +286,9 @@
     ;;
     (let ((field-idx (%field-index index/name std __who__)))
       (lambda (x)
-	(with-arguments-validation (__who__)
-	    ((struct-of-type x std))
+	(fluid-let-syntax
+	    ((__who__ (identifier-syntax 'anonymous-struct-accessor)))
+	  (assert-struct-of-type x std)
 	  ($struct-ref x field-idx)))))
 
   (define* (struct-field-mutator {std struct-type-descriptor?} index/name)
@@ -285,8 +297,9 @@
     ;;
     (let ((field-idx (%field-index index/name std __who__)))
       (lambda (x v)
-	(with-arguments-validation (__who__)
-	    ((struct-of-type x std))
+	(fluid-let-syntax
+	    ((__who__ (identifier-syntax 'anonymous-struct-mutator)))
+	  (assert-struct-of-type x std)
 	  ($struct-set! x field-idx v)))))
 
   (define (%field-index index/name std who)
@@ -367,16 +380,14 @@
 (define* (struct-ref {stru struct?} i)
   ;;Return the value of field at index I in the data structure stru.
   ;;
-  (with-arguments-validation (__who__)
-      ((index	i stru))
-    ($struct-ref stru i)))
+  (assert-field-index-for-struct i stru)
+  ($struct-ref stru i))
 
 (define* (struct-set! {stru struct?} i v)
   ;;Store V in the field at index I in the data structure X.
   ;;
-  (with-arguments-validation (__who__)
-      ((index	i stru))
-    ($struct-set! stru i v)))
+  (assert-field-index-for-struct i stru)
+  ($struct-set! stru i v))
 
 (define* (struct=? {obj1 struct?} {obj2 struct?})
   ;;Return true if OBJ1 and OBJ2  are two structures having the same STD

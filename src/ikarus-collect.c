@@ -300,6 +300,11 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
 ikpcb *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
+  return ik_collect_gen(mem_req, IK_FALSE, pcb);
+}
+ikpcb *
+ik_collect_gen (ik_ulong mem_req, ikptr s_requested_generation, ikpcb* pcb)
+{
   static const uint32_t NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
     (4 << META_DIRTY_SHIFT) | 1 | NEW_GEN_TAG,
     (2 << META_DIRTY_SHIFT) | 2 | NEW_GEN_TAG,
@@ -333,7 +338,9 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
   bzero(&gc, sizeof(gc_t));
   gc.pcb		= pcb;
   gc.segment_vector	= pcb->segment_vector;
-  gc.collect_gen	= collection_id_to_gen(pcb->collection_id);
+  gc.collect_gen	= (IK_FALSE == s_requested_generation)? \
+    collection_id_to_gen(pcb->collection_id) : IK_UNFIX(s_requested_generation);
+  assert((0 <= gc.collect_gen) && (gc.collect_gen <= 4));
   gc.collect_gen_tag	= NEXT_GEN_TAG[gc.collect_gen];
   pcb->collection_id++;
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))

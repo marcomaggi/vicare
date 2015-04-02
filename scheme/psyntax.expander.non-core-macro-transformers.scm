@@ -142,11 +142,10 @@
      (lambda (x)
        (%allowed-symbol-macro x '(none line block))))
 
-    ((endianness)
-     endianness-macro)
-
-    ((file-options)
-     file-options-macro)
+    ((endianness)			endianness-macro)
+    ((file-options)			file-options-macro)
+    ((expander-options)			expander-options-macro)
+    ((compiler-options)			compiler-options-macro)
 
     ((expander-options)
      expander-options-macro)
@@ -711,7 +710,7 @@
        (%build-output-form input-form.stx ?name ?maker ?predicate ?field* #f))
 
       ((_ ?name (?field* ...))
-       (%build-output-form input-form.stx ?name #f #f ?field* #f))
+       (%build-output-form input-form.stx ?name #f     #f         ?field* #f))
 
       ((_ (?name ?maker ?predicate) (?field* ...) (nongenerative ?uid))
        (identifier? ?uid)
@@ -719,7 +718,7 @@
 
       ((_ ?name (?field* ...) (nongenerative ?uid))
        (identifier? ?uid)
-       (%build-output-form input-form.stx ?name #f #f ?field* ?uid))
+       (%build-output-form input-form.stx ?name #f     #f         ?field* ?uid))
       ))
 
   (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
@@ -4297,8 +4296,7 @@
 
     ((_ ?expr ?expr* ...)
      (bless
-      (let recur ((e  ?expr)
-		  (e* ?expr*))
+      (let recur ((e  ?expr) (e* ?expr*))
 	(if (null? e*)
 	    e
 	  `(let ((t ,e))
@@ -4937,18 +4935,20 @@
     ((_ (brace ?name ?tag) ?expr)
      (and (identifier? ?name)
 	  (tag-identifier? ?tag))
-     (bless
-      `(begin
-	 (define (brace ghost ?tag) ,?expr)
-	 (define-syntax ,?name
-	   (identifier-syntax ghost)))))
+     (let ((ghost (gensym (syntax->datum ?name))))
+       (bless
+	`(begin
+	   (define (brace ,ghost ?tag) ,?expr)
+	   (define-syntax ,?name
+	     (identifier-syntax ,ghost))))))
     ((_ ?name ?expr)
      (identifier? ?name)
-     (bless
-      `(begin
-	 (define ghost ,?expr)
-	 (define-syntax ,?name
-	   (identifier-syntax ghost)))))
+     (let ((ghost (gensym (syntax->datum ?name))))
+       (bless
+	`(begin
+	   (define ,ghost ,?expr)
+	   (define-syntax ,?name
+	     (identifier-syntax ,ghost))))))
     ))
 
 (define (define-inline-constant-macro expr-stx)
@@ -5301,7 +5301,8 @@
 		    ,(source-position-byte pos) ,(source-position-character pos)
 		    ,(source-position-line pos) ,(source-position-column    pos)))
 	    `(or ,?expr
-		 (assertion-error ',?expr "unknown source" #f #f #f #f)))))))))
+		 (assertion-error ',?expr "unknown source" #f #f #f #f)))))))
+    ))
 
 (define (file-options-macro expr-stx)
   ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
@@ -5324,7 +5325,10 @@
   ;;
   (define (valid-option? opt-stx)
     (and (identifier? opt-stx)
-	 (memq (identifier->symbol opt-stx) '(strict-r6rs))))
+	 (case (identifier->symbol opt-stx)
+	   ((strict-r6rs tagged-language)
+	    #t)
+	   (else #f))))
   (syntax-match expr-stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)

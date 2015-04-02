@@ -26,9 +26,10 @@
     string-append		string-for-each
     string-copy			string-copy!
     string-fill!
-    string=?
+    string=?			string!=?
     string<?			string<=?
     string>?			string>=?
+    string-min			string-max
     string-concatenate
     string-reverse-and-concatenate
     uuid
@@ -66,9 +67,10 @@
 
     ;; unsafe operations
     $string			$string-empty?
-    $string=
+    $string=			$string!=
     $string<			$string>
     $string<=			$string>=
+    $string-min			$string-max
     $string-total-length
     $substring
     $string-copy		$string-copy!
@@ -108,9 +110,10 @@
 		  string-append			string-for-each
 		  string-copy			string-copy!
 		  string-fill!
-		  string=?
+		  string=?			string!=?
 		  string<?			string<=?
 		  string>?			string>=?
+		  string-min			string-max
 		  string-concatenate
 		  string-reverse-and-concatenate
 		  uuid
@@ -140,17 +143,31 @@
 		  uri-encoded-bytevector?	percent-encoded-bytevector?
 		  uri-encoded-string?		percent-encoded-string?
 		  #| end of except |# )
-    ;;NOTE  Let's try  to import  unsafe operations  only from  built-in
-    ;;libraries, when  possible, avoiding the use  of external libraries
-    ;;of macros.
+    ;;NOTE Let's try  to import unsafe operations only from  built-in libraries, when
+    ;;possible, avoiding the use of external libraries of macros.
     (except (vicare system $fx)
-	    $fx<=)
+	    $fx<=
+	    ;;FIXME This  except must  be removed  at the  next boot  image rotation.
+	    ;;(Marco Maggi; Fri Mar 27, 2015)
+	    $fx!=)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 27,
+    ;;2015)
+    (only (ikarus fixnums)
+	  $fx!=)
     (vicare system $pairs)
     (only (vicare system $chars)
 	  $char=
 	  $char<
 	  $char->fixnum
-	  $fixnum->char)
+	  $fixnum->char
+	  ;;FIXME This  is to be  included at the  next boot image  rotation.  (Marco
+	  ;;Maggi; Fri Mar 27, 2015)
+	  #;$char!=
+	  )
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri Mar 27,
+    ;;2015)
+    (only (ikarus chars)
+	  $char!=)
     (only (vicare system $vectors)
 	  $vector-ref)
     (only (vicare system $bytevectors)
@@ -173,7 +190,12 @@
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Mar 21,
     ;;2015)
     (only (ikarus fixnums)
-	  non-negative-fixnum?))
+	  non-negative-fixnum?)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; arguments validation
@@ -328,15 +350,14 @@
 (define-inline ($ascii-chi? chi)
   ($fx<= #x00 chi #x7F))
 
-(define (list-of-strings? obj)
-  (if (pair? obj)
-      (and (string? (car obj))
-	   (list-of-strings? (cdr obj)))
-    (null? obj)))
-
 (define ($string-last-index str)
   ;;To be called only if BV is not empty!!!
   ($fxsub1 ($string-length str)))
+
+
+;;;; predicates
+
+(define-list-of-type-predicate list-of-strings? string?)
 
 
 (define* (string-length {str string?})
@@ -537,29 +558,12 @@
 ;;longer string.
 ;;
 
-(let-syntax
-    ((define-string-comparison (syntax-rules ()
-				 ((_ ?who ?dyadic-who)
-				  (case-define* ?who
-				    (({str1 string?} {str2 string?})
-				     (?dyadic-who str1 str2))
-				    (({str1 string?} {str2 string?} {str3 string?} . {str* list-of-strings?})
-				     (and (?dyadic-who str1 str2)
-					  (?dyadic-who str2 str3)
-					  (let next-string ((S1   str3)
-							    (str* str*))
-					    (if (pair? str*)
-						(let ((S2 (car str*)))
-						  (and (?dyadic-who S1 S2)
-						       (next-string S2 (cdr str*))))
-					      #t))))))
-				 )))
-  (define-string-comparison string=?	$string=)
-  (define-string-comparison string<?	$string<)
-  (define-string-comparison string>?	$string>)
-  (define-string-comparison string<=?	$string<=)
-  (define-string-comparison string>=?	$string>=)
-  #| end of module |# )
+(define-equality/sorting-predicate string=?	$string=	string? list-of-strings?)
+(define-equality/sorting-predicate string<?	$string<	string? list-of-strings?)
+(define-equality/sorting-predicate string<=?	$string<=	string? list-of-strings?)
+(define-equality/sorting-predicate string>?	$string>	string? list-of-strings?)
+(define-equality/sorting-predicate string>=?	$string>=	string? list-of-strings?)
+(define-inequality-predicate       string!=?	$string!=	string? list-of-strings?)
 
 ;;; --------------------------------------------------------------------
 
@@ -567,12 +571,14 @@
   (or (eq? str1 str2)
       (let ((len ($string-length str1)))
 	(and ($fx= len ($string-length str2))
-	     (let loop ((idx  0)
-			(len  len))
+	     (let loop ((idx  0) (len  len))
 	       (or ($fx= idx len)
 		   (and ($char= ($string-ref str1 idx)
 				($string-ref str2 idx))
 			(loop ($fxadd1 idx) len))))))))
+
+(define ($string!= str1 str2)
+  (not ($string= str1 str2)))
 
 (define ($string< str1 str2)
   (if (eq? str1 str2)
@@ -638,6 +644,18 @@
 
 (define ($string>= str1 str2)
   ($string<= str2 str1))
+
+
+;;;; min max
+
+(define-min/max-comparison string-max $string-max string? list-of-strings?)
+(define-min/max-comparison string-min $string-min string? list-of-strings?)
+
+(define ($string-min str1 str2)
+  (if ($string< str1 str2) str1 str2))
+
+(define ($string-max str1 str2)
+  (if ($string< str1 str2) str2 str1))
 
 
 ;;;; list conversion

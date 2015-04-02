@@ -562,10 +562,16 @@ typedef unsigned long long	ik_ullong;
 
 #if   (4 == SIZEOF_VOID_P)
 typedef uint32_t		ikptr;
+typedef int32_t			iksword_t;
+typedef uint32_t		ikuword_t;
 #elif (8 == SIZEOF_VOID_P)
 typedef uint64_t		ikptr;
+typedef int64_t			iksword_t;
+typedef uint64_t		ikuword_t;
 #else
 typedef unsigned long		ikptr;
+typedef signed long		iksword_t;
+typedef unsigned long		ikuword_t;
 #endif
 
 /* Node  in a  simply linked  list.  Used  to store  pointers to  memory
@@ -988,7 +994,8 @@ typedef struct ikcont {
  ** Internal function prototypes.
  ** ----------------------------------------------------------------- */
 
-ik_decl ikpcb *		ik_collect		(unsigned long, ikpcb*);
+ik_decl ikpcb *		ik_collect		(unsigned long requested_memory, ikpcb* pcb);
+ik_decl ikpcb *		ik_collect_gen		(unsigned long requested_memory, ikptr s_requested_generation, ikpcb* pcb);
 ik_private_decl void	ik_verify_integrity	(ikpcb* pcb, char * when_description);
 
 ik_private_decl void*	ik_malloc		(int);

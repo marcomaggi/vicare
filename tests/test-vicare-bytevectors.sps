@@ -72,6 +72,18 @@
        => (list ?irritant0 ?irritant ...)))
     ))
 
+(define-syntax check-procedure-arguments-violation
+  (syntax-rules ()
+    ((_ ?body)
+     (check-for-true
+      (guard (E ((procedure-argument-violation? E)
+		 (when #f
+		   (check-pretty-print (condition-message E))
+		   (check-pretty-print (condition-irritants E)))
+		 #t)
+		(else E))
+	?body)))))
+
 
 ;;;; helpers
 
@@ -269,6 +281,269 @@
   (check-argument-validation (bytevector=? #\a #vu8()) #\a)
 
   (check-argument-validation (bytevector=? #vu8() #\a) #\a)
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-unequal))
+
+  (check
+      (bytevector!=? '#vu8() '#vu8())
+    => #f)
+
+  (check
+      (bytevector!=? '#vu8() '#vu8() '#vu8())
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "a") '#ve(ascii "a"))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "a") '#ve(ascii "a") '#ve(ascii "a"))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "abc"))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "abc") '#ve(ascii "abc"))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (bytevector!=? '#ve(ascii "a") '#vu8())
+    => #t)
+
+  (check
+      (bytevector!=? '#vu8() '#ve(ascii "a"))
+    => #t)
+
+  (check
+      (bytevector!=? '#ve(ascii "a") '#vu8() '#vu8())
+    => #f)
+
+  (check
+      (bytevector!=? '#vu8() '#ve(ascii "a") '#vu8())
+    => #f)
+
+  (check
+      (bytevector!=? '#vu8() '#vu8() '#ve(ascii "a"))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (u8-list->bytevector '(1 2 3))))
+	(bytevector!=? S S))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "def"))
+    => #t)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "a"))
+    => #t)
+
+  (check
+      (bytevector!=? '#ve(ascii "a") '#ve(ascii "abc"))
+    => #t)
+
+  (check
+      (bytevector!=? '#ve(ascii "a") '#ve(ascii "abc") '#ve(ascii "abc"))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "a") '#ve(ascii "abc"))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "abc") '#ve(ascii "a"))
+    => #f)
+
+  (check
+      (bytevector!=? '#ve(ascii "abc") '#ve(ascii "def") '#ve(ascii "ghi"))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (bytevector!=? 123 '#vu8()))
+
+  (check-procedure-arguments-violation
+   (bytevector!=? '#vu8() 123))
+
+  (check-procedure-arguments-violation
+   (bytevector!=? '#vu8() '#vu8() 123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'bytevector-u8-cmp))
+
+  (check-for-false
+   (bytevector-u8<? '#ve(ascii "abcd") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8<? '#ve(ascii "abc") '#ve(ascii "abcd")))
+
+  (check-for-false
+   (bytevector-u8<? '#ve(ascii "abcd") '#ve(ascii "abc")))
+
+  (check-for-true
+   (bytevector-u8<? '#ve(ascii "ABcd") '#ve(ascii "abcd")))
+
+  (check-for-false
+   (bytevector-u8<? '#ve(ascii "abcd") '#ve(ascii "a2cd")))
+
+  (check-for-true
+   (bytevector-u8<? '#ve(ascii "abc") '#ve(ascii "abcd") '#ve(ascii "abcde")))
+
+  (check-for-false
+   (bytevector-u8<? '#ve(ascii "abc") '#ve(ascii "abcde") '#ve(ascii "abcd")))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (bytevector-u8<=? '#ve(ascii "abcd") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8<=? '#ve(ascii "abc") '#ve(ascii "abcd")))
+
+  (check-for-false
+   (bytevector-u8<=? '#ve(ascii "abcd") '#ve(ascii "abc")))
+
+  (check-for-true
+   (bytevector-u8<=? '#ve(ascii "abcd") '#ve(ascii "abcd")))
+
+  (check-for-false
+   (bytevector-u8<=? '#ve(ascii "abcd") '#ve(ascii "a2cd")))
+
+  (check-for-true
+   (bytevector-u8<=? '#ve(ascii "abc") '#ve(ascii "abcd") '#ve(ascii "abcde")))
+
+  (check-for-false
+   (bytevector-u8<=? '#ve(ascii "abc") '#ve(ascii "abcde") '#ve(ascii "abcd")))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false
+   (bytevector-u8>? '#ve(ascii "abcd") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8>? '#ve(ascii "abcd") '#ve(ascii "abc")))
+
+  (check-for-false
+   (bytevector-u8>? '#ve(ascii "abc") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8>? '#ve(ascii "abcd") '#ve(ascii "ABcd")))
+
+  (check-for-false
+   (bytevector-u8>? '#ve(ascii "a2cd") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8>? '#ve(ascii "abcde") '#ve(ascii "abcd") '#ve(ascii "abc")))
+
+  (check-for-false
+   (bytevector-u8>? '#ve(ascii "abcd") '#ve(ascii "abcde") '#ve(ascii "abc")))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (bytevector-u8>=? '#ve(ascii "abcd") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8>=? '#ve(ascii "abcd") '#ve(ascii "abc")))
+
+  (check-for-false
+   (bytevector-u8>=? '#ve(ascii "abc") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8>=? '#ve(ascii "abcd") '#ve(ascii "abcd")))
+
+  (check-for-false
+   (bytevector-u8>=? '#ve(ascii "a2cd") '#ve(ascii "abcd")))
+
+  (check-for-true
+   (bytevector-u8>=? '#ve(ascii "abcde") '#ve(ascii "abcd") '#ve(ascii "abc")))
+
+  (check-for-false
+   (bytevector-u8>=? '#ve(ascii "abcd") '#ve(ascii "abcde") '#ve(ascii "abc")))
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (bytevector-u8<? 123 '#ve(ascii "abc")))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8<? '#ve(ascii "abc") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8<? '#ve(ascii "abc") '#ve(ascii "def") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8<=? 123 '#ve(ascii "abc")))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8<=? '#ve(ascii "abc") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8<=? '#ve(ascii "abc") '#ve(ascii "def") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8>? 123 '#ve(ascii "abc")))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8>? '#ve(ascii "abc") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8>? '#ve(ascii "abc") '#ve(ascii "def") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8>=? 123 '#ve(ascii "abc")))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8>=? '#ve(ascii "abc") 123))
+
+  (check-procedure-arguments-violation
+   (bytevector-u8>=? '#ve(ascii "abc") '#ve(ascii "def") 123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'min-max))
+
+  (check (bytevector-u8-min '#ve(ascii "a"))				      => '#ve(ascii "a"))
+
+  (check (bytevector-u8-min '#ve(ascii "a") '#ve(ascii "a"))				      => '#ve(ascii "a"))
+  (check (bytevector-u8-min '#ve(ascii "a") '#ve(ascii "b"))				      => '#ve(ascii "a"))
+  (check (bytevector-u8-min '#ve(ascii "b") '#ve(ascii "a"))				      => '#ve(ascii "a"))
+
+  (check (bytevector-u8-min '#ve(ascii "a") '#ve(ascii "b") '#ve(ascii "c"))		      => '#ve(ascii "a"))
+
+  (check (bytevector-u8-min '#ve(ascii "a") '#ve(ascii "b") '#ve(ascii "c") '#ve(ascii "d"))  => '#ve(ascii "a"))
+
+  (check (bytevector-u8-min '#ve(ascii "a") '#ve(ascii "b") '#ve(ascii "c") '#ve(ascii "d") '#ve(ascii "e"))	=> '#ve(ascii "a"))
+
+;;; --------------------------------------------------------------------
+
+  (check (bytevector-u8-max '#ve(ascii "a"))			=> '#ve(ascii "a"))
+
+  (check (bytevector-u8-max '#ve(ascii "a") '#ve(ascii "a"))			=> '#ve(ascii "a"))
+  (check (bytevector-u8-max '#ve(ascii "a") '#ve(ascii "b"))			=> '#ve(ascii "b"))
+  (check (bytevector-u8-max '#ve(ascii "b") '#ve(ascii "a"))			=> '#ve(ascii "b"))
+
+  (check (bytevector-u8-max '#ve(ascii "a") '#ve(ascii "b") '#ve(ascii "c"))		=> '#ve(ascii "c"))
+
+  (check (bytevector-u8-max '#ve(ascii "a") '#ve(ascii "b") '#ve(ascii "c") '#ve(ascii "d"))		=> '#ve(ascii "d"))
+
+  (check (bytevector-u8-max '#ve(ascii "a") '#ve(ascii "b") '#ve(ascii "c") '#ve(ascii "d") '#ve(ascii "e"))	=> '#ve(ascii "e"))
 
   #t)
 

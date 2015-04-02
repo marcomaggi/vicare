@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -687,21 +687,29 @@
 
 (define-syntax signed (syntax-rules ()))
 (define-syntax unsigned (syntax-rules ()))
-(let-syntax ((define-predicate (syntax-rules (signed unsigned)
-				 ((_ ?who ?data-size unsigned)
-				  (define-inline (?who N)
-				    (case-data-size ?data-size
-				      ((1)	(word-u8?  N))
-				      ((2)	(word-u16? N))
-				      ((4)	(word-u32? N))
-				      ((8)	(word-u64? N)))))
-				 ((_ ?who ?data-size signed)
-				  (define-inline (?who N)
-				    (case-data-size ?data-size
-				      ((1)	(word-s8?  N))
-				      ((2)	(word-s16? N))
-				      ((4)	(word-s32? N))
-				      ((8)	(word-s64? N))))))))
+(let-syntax
+    ((define-predicate (syntax-rules (signed unsigned)
+			 ((_ ?who ?data-size unsigned)
+			  (define-syntax (?who stx)
+			    (syntax-case stx ()
+			      ((_ ?N)
+			       (case-data-size ?data-size
+				 ((1)	#'(word-u8?  ?N))
+				 ((2)	#'(word-u16? ?N))
+				 ((4)	#'(word-u32? ?N))
+				 ((8)	#'(word-u64? ?N))))
+			      )))
+			 ((_ ?who ?data-size signed)
+			  (define-syntax (?who stx)
+			    (syntax-case stx ()
+			      ((_ ?N)
+			       (case-data-size ?data-size
+				 ((1)	#'(word-s8?  ?N))
+				 ((2)	#'(word-s16? ?N))
+				 ((4)	#'(word-s32? ?N))
+				 ((8)	#'(word-s64? ?N))))
+			      )))
+			 )))
 
   (define-predicate unsigned-char?		@SIZEOF_CHAR@		unsigned)
   (define-predicate unsigned-short?		@SIZEOF_SHORT@		unsigned)

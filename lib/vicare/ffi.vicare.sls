@@ -58,14 +58,14 @@
 
     ;; pointer values
     pointer?
-    null-pointer			pointer-null?
+    null-pointer			set-pointer-null!
+    pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
     pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
-    set-pointer-null!
 
     ;; memory blocks
     make-memory-block			make-memory-block/guarded

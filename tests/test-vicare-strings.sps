@@ -502,6 +502,104 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-inequal))
+
+  (check
+      (string!=? "" "")
+    => #f)
+
+  (check
+      (string!=? "" "" "")
+    => #f)
+
+  (check
+      (string!=? "a" "a")
+    => #f)
+
+  (check
+      (string!=? "a" "a" "a")
+    => #f)
+
+  (check
+      (string!=? "abc" "abc")
+    => #f)
+
+  (check
+      (string!=? "abc" "abc" "abc")
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (string!=? "a" "")
+    => #t)
+
+  (check
+      (string!=? "" "a")
+    => #t)
+
+  (check
+      (string!=? "a" "" "")
+    => #f)
+
+  (check
+      (string!=? "" "a" "")
+    => #f)
+
+  (check
+      (string!=? "" "" "a")
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((S (string #\a #\b #\c)))
+	(string!=? S S))
+    => #f)
+
+  (check
+      (string!=? "abc" "def")
+    => #t)
+
+  (check
+      (string!=? "abc" "a")
+    => #t)
+
+  (check
+      (string!=? "a" "abc")
+    => #t)
+
+  (check
+      (string!=? "a" "abc" "abc")
+    => #f)
+
+  (check
+      (string!=? "abc" "a" "abc")
+    => #f)
+
+  (check
+      (string!=? "abc" "abc" "a")
+    => #f)
+
+  (check
+      (string!=? "abc" "def" "ghi")
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; arguments validation
+
+  (check-procedure-arguments-violation
+   (string!=? 123 ""))
+
+  (check-procedure-arguments-violation
+   (string!=? "" 123))
+
+  (check-procedure-arguments-violation
+   (string!=? "" "" 123))
+
+  #t)
+
+
 (parametrise ((check-test-name	'string-cmp))
 
   (check-for-false
@@ -632,6 +730,37 @@
 
   (check-procedure-arguments-violation
    (string>=? "abc" "def" 123))
+
+  #t)
+
+
+(parametrise ((check-test-name	'min-max))
+
+  (check (string-min "A")			=> "A")
+
+  (check (string-min "a" "a")			=> "a")
+  (check (string-min "a" "b")			=> "a")
+  (check (string-min "b" "a")			=> "a")
+
+  (check (string-min "a" "b" "c")		=> "a")
+
+  (check (string-min "a" "b" "c" "d")		=> "a")
+
+  (check (string-min "a" "b" "c" "d" "e")	=> "a")
+
+;;; --------------------------------------------------------------------
+
+  (check (string-max "A")			=> "A")
+
+  (check (string-max "a" "a")			=> "a")
+  (check (string-max "a" "b")			=> "b")
+  (check (string-max "b" "a")			=> "b")
+
+  (check (string-max "a" "b" "c")		=> "c")
+
+  (check (string-max "a" "b" "c" "d")		=> "d")
+
+  (check (string-max "a" "b" "c" "d" "e")	=> "e")
 
   #t)
 

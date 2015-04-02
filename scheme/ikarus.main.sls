@@ -50,21 +50,19 @@
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log
-		  expand-top-level
 
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Wed Dec 10, 2014)
+		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
+		  ;;rotation.  (Marco Maggi; Wed Apr 1, 2015)
 		  cafe-input-port)
-    (prefix (ikarus startup)
-	    config.)
+    (prefix (ikarus startup) config.)
     (prefix (only (ikarus.options)
 		  verbose?
 		  debug-mode-enabled?
 		  drop-assertions?
+		  descriptive-labels
 		  print-loaded-libraries?
 		  print-debug-messages?
-		  strict-r6rs
-		  descriptive-labels)
+		  strict-r6rs)
 	    option.)
     (prefix (only (ikarus.compiler)
 		  optimize-level
@@ -104,8 +102,8 @@
     (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Wed Dec 10,
-    ;;2014)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Apr 1,
+    ;;2015)
     (only (ikarus cafe)
 	  cafe-input-port)
     (prefix (only (ikarus.readline)
@@ -501,6 +499,12 @@
 
 	  ((%option= "--no-check-compiler-pass-preconditions")
 	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #f))))
+
+	  ((%option= "--drop-assertions")
+	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #t))))
+
+	  ((%option= "--no-drop-assertions")
+	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #f))))
 
 	  ((%option= "--gc-integrity-checks")
 	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
@@ -917,14 +921,6 @@ Other options:
 
    --no-debug-messages
         Disables the effect of --debug-messages.
-
-   --report-errors-at-runtime
-        When possible  and meaningful:  report errors at  runtime rather
-        than  at  compile  time.    Runtime  errors  reporting  is  R6RS
-        compliant.  The default is to raise errors at compile time.
-
-   --no-report-errors-at-runtime
-        Disables the effect of --report-errors-at-runtime.
 
    --strict-r6rs
         Strictly follow R6RS specifications: disable Vicare extensions.

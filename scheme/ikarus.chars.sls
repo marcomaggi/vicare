@@ -22,27 +22,38 @@
     char<?			char<=?
     char>?			char>=?
 
+    chmax			chmin
+
+    char-in-ascii-range?	list-of-chars?
+
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Nov 22,
     ;;2014)
     $char!=
 
-    char-in-ascii-range?	list-of-chars?)
+
+    ;; unsafe operations for (vicare system $chars)
+    $chmax			$chmin)
   (import (except (vicare)
 		  char->integer		integer->char
 		  char=?		char!=?
 		  char<?		char<=?
 		  char>?		char>=?
+		  chmax			chmin
 		  char-in-ascii-range?	list-of-chars?)
-    (vicare unsafe operations))
+    (vicare system $fx)
+    (except (vicare system $chars)
+	    $chmax
+	    $chmin)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate))
 
 
 ;;;; predicates
 
-(define (list-of-chars? obj)
-  (if (pair? obj)
-      (and (char? (car obj))
-	   (list-of-chars? (cdr obj)))
-    (null? obj)))
+(define-list-of-type-predicate list-of-chars? char?)
 
 
 (define* (integer->char {fx fixnum-in-character-range?})
@@ -60,57 +71,14 @@
   ($char->fixnum ch))
 
 
-(define-syntax define-comparison
-  (syntax-rules ()
-    ((_ ?name ?unsafe-op)
-     (case-define* ?name
-       (({ch1 char?} {ch2 char?})
-	(?unsafe-op ch1 ch2))
+;;;; comparison
 
-       (({ch1 char?} {ch2 char?} {ch3 char?})
-	(and (?unsafe-op ch1 ch2)
-	     (?unsafe-op ch2 ch3)))
-
-       (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
-	(and (?unsafe-op ch1 ch2)
-	     (?unsafe-op ch2 ch3)
-	     (?unsafe-op ch3 ch4)
-	     (let next-char ((chX    ch4)
-			     (char*  char*))
-	       (if (pair? char*)
-		   (let ((chY ($car char*)))
-		     (and (?unsafe-op chX chY)
-			  (next-char chY ($cdr char*))))
-		 #t))))))
-    ))
-
-(define-comparison char=?	$char=)
-(define-comparison char<?	$char<)
-(define-comparison char<=?	$char<=)
-(define-comparison char>?	$char>)
-(define-comparison char>=?	$char>=)
-
-(case-define* char!=?
-  (({ch1 char?} {ch2 char?})
-   ($char!= ch1 ch2))
-
-  (({ch1 char?} {ch2 char?} {ch3 char?})
-   (and ($char!= ch1 ch2)
-	($char!= ch2 ch3)
-	($char!= ch3 ch1)))
-
-  (({ch1 char?} {ch2 char?} {ch3 char?} {ch4 char?} . {char* list-of-chars?})
-   ;;We must compare every argument to all the other arguments.
-   (let outer-loop ((chX    ch1)
-		    (char*  (cons* ch2 ch3 ch4 char*)))
-     (let inner-loop ((chX    chX)
-		      (char^* char*))
-       (cond ((pair? char^*)
-	      (and ($char!= chX ($car char^*))
-		   (inner-loop chX ($cdr char^*))))
-	     ((pair? char*)
-	      (outer-loop (car char*) (cdr char*)))
-	     (else #t))))))
+(define-equality/sorting-predicate char=?	$char=	char? list-of-chars?)
+(define-equality/sorting-predicate char<?	$char<	char? list-of-chars?)
+(define-equality/sorting-predicate char<=?	$char<=	char? list-of-chars?)
+(define-equality/sorting-predicate char>?	$char>	char? list-of-chars?)
+(define-equality/sorting-predicate char>=?	$char>=	char? list-of-chars?)
+(define-inequality-predicate       char!=?	$char!=	char? list-of-chars?)
 
 (define ($char!= ch1 ch2)
   ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
@@ -121,6 +89,22 @@
   ;;
   ;;(Marco Maggi; Wed Mar 25, 2015)
   (not ($char= ch1 ch2)))
+
+
+;;;; min max
+
+(define-min/max-comparison chmax $chmax char? list-of-chars?)
+(define-min/max-comparison chmin $chmin char? list-of-chars?)
+
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
+;;
+(define ($chmin ch1 ch2)
+  (if ($char< ch1 ch2) ch1 ch2))
+
+;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
+;;
+(define ($chmax ch1 ch2)
+  (if ($char< ch1 ch2) ch2 ch1))
 
 
 ;;;; miscellaneous functions

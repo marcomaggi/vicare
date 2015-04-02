@@ -45,7 +45,6 @@
 		  print-condition)
 	    ikarus.)
     (only (ikarus control) call/cf)
-    (vicare language-extensions syntaxes)
     (prefix (vicare platform words)
 	    words.)
     (prefix (vicare unsafe capi)
@@ -73,13 +72,6 @@
 (define (trace-expr x)
   (let ((x (trace-src/expr x)))
     (if (pair? x) (cdr x) #f)))
-
-
-;;;; arguments validation
-
-(define-argument-validation (ulong who obj)
-  (words.unsigned-long? obj)
-  (procedure-argument-violation who "expected exact integer representing unsigned long as argument" obj))
 
 
 ;;;; helpers
@@ -148,11 +140,8 @@
 
 ;;;; utilities
 
-(define (integer->machine-word int)
-  (define who 'integer->machine-word)
-  (with-arguments-validation (who)
-      ((ulong int))
-    (foreign-call "ikrt_integer_to_machine_word" int)))
+(define* (integer->machine-word {int words.unsigned-long?})
+  (foreign-call "ikrt_integer_to_machine_word" int))
 
 (define (machine-word->integer w)
   (foreign-call "ikrt_integer_from_machine_word" w))
@@ -161,8 +150,8 @@
 (define (stacked-call pre thunk post)
   (call/cf
    (lambda (cf)
-     ;;CF is  a continuation  object describing  the Scheme  stack frame
-     ;;right after CALL/CF has been called.
+     ;;CF is  a continuation  object describing  the Scheme  stack frame  right after
+     ;;CALL/CF has been called.
      (if (eq? cf (scell-cf *scell*))
 	 (thunk)
        (dynamic-wind
@@ -399,6 +388,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -37,6 +37,16 @@
 
 
 ;;;; syntax helpers
+
+(define-syntax catch-argument-validation
+  (syntax-rules ()
+    ((_ print? . ?body)
+     (guard (E ((procedure-argument-violation? E)
+		(when print?
+		  (check-pretty-print (condition-message E)))
+		(cdr (condition-irritants E)))
+	       (else E))
+       (begin . ?body)))))
 
 (define-syntax catch
   (syntax-rules ()
@@ -198,14 +208,14 @@
 ;;; errors, wrong UID
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: "ciao")
 	 (sealed: #f) (opaque: #f) (fields: '#())))
     => '("ciao"))
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #t)
 	 (sealed: #f) (opaque: #f) (fields: '#())))
@@ -215,7 +225,7 @@
 ;;; errors, wrong sealed
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: "ciao") (opaque: #f) (fields: '#())))
@@ -225,7 +235,7 @@
 ;;; errors, wrong opaque
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: "ciao") (fields: '#())))
@@ -235,42 +245,42 @@
 ;;; errors, wrong fields
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: #f) (fields: '())))
     => '(()))
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: #f) (fields: '#(a))))
     => '(#(a)))
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: #f) (fields: '#((a b c)))))
     => '(#((a b c))))
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: #f) (fields: '#((mutable 123)))))
     => '(#((mutable 123))))
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: #f) (fields: '#((ciao ciao)))))
     => '(#((ciao ciao))))
 
   (check
-      (catch #f
+      (catch-argument-validation #f
 	(make-record-type-descriptor
 	 (name: 'a-name) (parent: #f) (uid: #f)
 	 (sealed: #f) (opaque: #f) (fields: '#((mutable a) (immutable 1)))))
@@ -466,7 +476,7 @@
 ;;; error, rtd argument
 
   (check	;not an rtd
-      (catch #f
+      (catch-argument-validation #f
 	(let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#()))))
@@ -478,7 +488,7 @@
 ;;; error, rcd argument
 
   (check	;not an rcd
-      (catch #f
+      (catch-argument-validation #f
 	(let* ((prtd	(make-record-type-descriptor
 			 (name: 'parent) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#())))
@@ -524,7 +534,7 @@
 ;;; error, protocol argument
 
   (check	;not a function
-      (catch #f
+      (catch-argument-validation #f
 	(let* ((rtd	(make-record-type-descriptor
 			 (name: 'rtd-0) (parent: #f) (uid: #f)
 			 (sealed: #f) (opaque: #f) (fields: '#()))))
@@ -825,5 +835,6 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'catch 'scheme-indent-function 1)
+;;eval: (put 'catch			'scheme-indent-function 1)
+;;eval: (put 'catch-argument-validation	'scheme-indent-function 1)
 ;;End:

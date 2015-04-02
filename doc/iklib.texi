@@ -57,6 +57,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib structs::               Structures and type descriptors.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
+* iklib booleans::              Additional boolean functions.
 * iklib characters::            Additional character functions.
 * iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
@@ -169,6 +170,7 @@ The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Parameter command-line-arguments
+@cindex Parameter @func{command-line-arguments}
 Hold the value returned by @func{command-line} as defined by @rnrs{6}.
 It is initialised to the actual command line arguments from the
 @value{PRJNAME} process execution.
@@ -312,8 +314,8 @@ Example:
 * iklib syntaxes slots::        Slot getter and setter syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
-* iklib syntaxes increments::   Incrementing and decrementing.
 * iklib syntaxes infix::        Infix to prefix transformer.
+* iklib syntaxes increments::   Incrementing and decrementing.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
@@ -408,12 +410,12 @@ Turn on strict support for @rnrs{6} language.
 where each @meta{option} is a symbolic expression.
 
 
-@defvr {Library Option} tagged-language
+@defvr {Program Option} tagged-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
 
-@defvr {Library Option} strict-r6rs
+@defvr {Program Option} strict-r6rs
 Turn on strict support for @rnrs{6} language.
 @end defvr
 
@@ -3885,7 +3887,7 @@ exception handler.  The following example shows the basic mechanism:
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Handling exceptions by escaping
+@subsubheading Handling exceptions by escaping
 
 This is @strong{not} the correct way of interfacing with the
 unwind--protection mechanism.  In the following example we see that
@@ -3918,7 +3920,7 @@ escaping from the exception handler skips the call to the
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Handling exceptions with @syntax{guard}
+@subsubheading Handling exceptions with @syntax{guard}
 
 This is the correct way of interfacing with the unwind--protection
 mechanism.
@@ -4574,7 +4576,7 @@ to @func{dynamic-wind}.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Raising exceptions from an exception handler
+@subsubheading Raising exceptions from an exception handler
 
 In the following example an exception is raised by an exception handler:
 the unwind handler is called, but the original exception is lost.
@@ -4617,7 +4619,7 @@ the unwind handler is called, but the original exception is lost.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Raising exceptions from a @syntax{guard}'s test
+@subsubheading Raising exceptions from a @syntax{guard}'s test
 
 In the following example an exception is raised from a @syntax{guard}'s
 test expression: the unwind handler is @strong{not} called and the
@@ -4659,7 +4661,7 @@ original exception is lost.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Raising exceptions from @func{dynamic-wind} guards
+@subsubheading Raising exceptions from @func{dynamic-wind} guards
 
 In the following example an exception is raised from a
 @func{dynamic-wind}'s in--guard thunk: the unwind handler is
@@ -5336,7 +5338,7 @@ terminated.
 @end example
 
 @c page
-n@node iklib coroutines basic
+@node iklib coroutines basic
 @subsection Basic coroutine operations
 
 
@@ -5797,6 +5799,14 @@ condition object type.
 @result{} #f
 @end example
 @end deffn
+
+
+@defun print-condition @var{cnd}
+@defunx print-condition @var{cnd} @var{port}
+Print a human readable serialisation of a condition object to the given
+@var{port}, which must be a textual output port.  When not given:
+@var{port} defaults to the return value of @code{(console-error-port)}.
+@end defun
 
 @c page
 @node iklib reader
@@ -7146,7 +7156,7 @@ a string error message and the optional second argument being a subform;
   (syntax-case stx ()
     (pattern body)
     (_
-     (synner "invalid syntax" #f))))
+     (synner "invalid syntax"))))
 @end example
 
 @c page
@@ -7745,7 +7755,7 @@ a string error message and the optional second argument being a subform;
   (syntax-case stx ()
     (pattern body)
     (_
-     (synner "invalid syntax" #f))))
+     (synner "invalid syntax"))))
 @end example
 
 @c page
@@ -8617,6 +8627,10 @@ Supported @meta{symbol} options are:
 @item strict-r6rs
 Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at expand--time.
+
+
+@item tagged-language
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end table
 @end deffn
 
@@ -8678,11 +8692,13 @@ To exit from a cafe we can write the @eof{} object.
 
 
 @deffn Parameter waiter-prompt-string
+@cindex Parameter @func{waiter-prompt-string}
 The string used as prompt for cafe.
 @end deffn
 
 
 @deffn Parameter cafe-input-port
+@cindex Parameter @func{cafe-input-port}
 A textual input port used by the cafe.
 @end deffn
 
@@ -8829,9 +8845,9 @@ symbols representing the field names.
 
 The optional @var{uid} argument must be a symbol uniquely identifying
 this type; when not supplied, a symbol is automatically generated.  The
-@func{$symbol-value} field of @var{uid} is set to the newly created
-@rtd{}; if @var{uid} already has a symbol value: such value must be a
-struct descriptor equal to the newly created @rtd{}.
+@code{value} field of the symbol object @var{uid} is set to the newly
+created @rtd{}; if @var{uid} already has a symbol value: such value must
+be a struct descriptor equal to the newly created @rtd{}.
 
 The use of a @var{uid} allows us to define a unique struct type in
 different libraries without sharing the definition by importing
@@ -8877,7 +8893,7 @@ but, by specifying a @var{uid}, we can also do:
   (define-struct color
     (red green blue)
     (nongenerative the-color))
-  (make-color 1 2 3))
+  (display (color-red C)))
 @end example
 
 @noindent
@@ -9677,11 +9693,66 @@ Return @true{} if @var{obj} is a promise object returned by
 @end defun
 
 @c page
+@node iklib booleans
+@section Additional boolean functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Predicates
+
+@defun list-of-booleans? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of booleans;
+otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
+@defun {boolean!=?} @varo{bool} @var{bool} @dots{}
+The arguments must be booleans.  Return @true{} if the arguments are all
+different; otherwise return @false{}.
+@end defun
+
+
+@deffn Procedure {boolean<?} @varo{bool} @dots{}
+@deffnx Procedure {boolean>?} @varo{bool} @dots{}
+@deffnx Procedure {boolean<=?} @varo{bool} @dots{}
+@deffnx Procedure {boolean>=?} @varo{bool} @dots{}
+Compare the boolean arguments according to the artificial comparison
+definition:
+
+@example
+#t == #t
+#f == #f
+#f <  #t
+@end example
+@end deffn
+
+
+@defun boolean-min @varo{bool} @var{bool} @dots{}
+@defunx boolean-max @varo{bool} @var{bool} @dots{}
+Return the minimal or maximal boolean among the arguments.
+@end defun
+
+@c page
 @node iklib characters
 @section Additional character functions
 
 
 The following bindings are exported by the library @library{vicare}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Predicates
+
+@defun list-of-chars? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of chars; otherwise
+return @false{}.
+@end defun
 
 
 @defun char-in-ascii-range? @var{obj}
@@ -9702,22 +9773,25 @@ Return @true{} if @var{ch} is a character and it is printable; if
 character: raise an exception.
 @end defun
 
+@c ------------------------------------------------------------------------
 
-@deffn Procedure {char!=?} @vari{char} @varii{char} @variii{char} @dots{}
+@subsubheading Comparison
+
+@deffn Procedure {char!=?} @varo{char} @var{char} @dots{}
 The arguments must be characters.  Return @true{} if the arguments are
 all different; otherwise return @false{}.
 @end deffn
 
 
-@deffn Procedure {char-ci!=?} @vari{char} @varii{char} @variii{char} @dots{}
+@deffn Procedure {char-ci!=?} @varo{char} @dots{}
 Like @func{char!=?} but operate on the case--folded versions of the
 arguments.
 @end deffn
 
 
-@defun list-of-chars? @var{obj}
-Return @true{} if @var{obj} is null or a proper list of chars; otherwise
-return @false{}.
+@defun chmin @varo{ch} @var{ch} @dots{}
+@defunx chmax @varo{ch} @var{ch} @dots{}
+Return the minimum or maximum character among the arguments.
 @end defun
 
 @c page
@@ -10039,67 +10113,69 @@ interval @math{(0, @dots{}, 255)}.  A byte corresponds to its two's
 complement representation as an octet.
 
 @menu
-* iklib bytevectors sub::       Building subbytevectors.
-* iklib bytevectors conv::      Converting bytevectors.
-* iklib bytevectors valpred::   Validation predicates for bytevector.
-* iklib bytevectors generic::   Generic bytevector operations.
+* iklib bytevectors predicates::  Predicate functions.
+* iklib bytevectors comparison::  Comparing bytevectors.
+* iklib bytevectors conversion::  Converting bytevectors.
+* iklib bytevectors valpred::     Validation predicates for bytevector.
+* iklib bytevectors sub::         Building subbytevectors.
+* iklib bytevectors generic::     Generic bytevector operations.
 @end menu
 
 @c page
-@node iklib bytevectors sub
-@subsection Building subbytevectors
+@node iklib bytevectors predicates
+@subsection Predicate functions
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
-@defun subbytevector-u8 @var{bv} @var{start}
-@defunx subbytevector-u8 @var{bv} @var{start} @var{end}
-Build and return a new bytevector holding the bytes in @var{bv} from
-index @var{start} (inclusive) to index @var{end} (exclusive).  The start
-and end indexes must be such that:
-
-@example
-0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
-@end example
-@end defun
-
-
-@defun subbytevector-u8/count @var{bv} @var{start} @var{count}
-Build and return a new bytevector holding @var{count} bytes in @var{bv}
-from index @var{start} (inclusive).  The start index and the byte count
-must be such that:
-
-@example
-0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
-@end example
-@end defun
-
-
-@defun subbytevector-s8 @var{bv} @var{start}
-@defunx subbytevector-s8 @var{bv} @var{start} @var{end}
-Build and return a new bytevector holding the bytes in @var{bv} from
-index @var{start} (inclusive) to index @var{end} (exclusive).  The start
-and end indexes must be such that:
-
-@example
-0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
-@end example
-@end defun
-
-
-@defun subbytevector-s8/count @var{bv} @var{start} @var{count}
-Build and return a new bytevector holding @var{count} bytes in @var{bv}
-from index @var{start} (inclusive).  The start index and the byte count
-must be such that:
-
-@example
-0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
-@end example
+@defun list-of-bytevectors? @var{obj}
+Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
+return @false{}.
 @end defun
 
 @c page
-@node iklib bytevectors conv
+@node iklib bytevectors comparison
+@subsection Comparing bytevectors
+
+
+@defun bytevector!=? @varo{bv} @var{bv} @dots{}
+Return @true{} if all the bytevector arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@deffn Procedure {bytevector-u8<?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-u8>?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-u8<=?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-u8>=?} @varo{bv} @dots{}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on unsigned fixnums; the bytevectors are compared octet by
+octet.
+@end deffn
+
+
+@deffn Procedure {bytevector-s8<?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-s8>?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-s8<=?} @varo{bv} @dots{}
+@deffnx Procedure {bytevector-s8>=?} @varo{bv} @dots{}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on signed fixnums; the bytevectors are compared byte by byte.
+@end deffn
+
+
+@defun bytevector-u8-max @varo{bv} @var{bv} @dots{}
+@defunx bytevector-u8-min @varo{bv} @var{bv} @dots{}
+Return the maximal or minimal bytevector argument according to
+@func{bytevector-u8<?}.
+@end defun
+
+
+@defun bytevector-s8-max @varo{bv} @var{bv} @dots{}
+@defunx bytevector-s8-min @varo{bv} @var{bv} @dots{}
+Return the maximal or minimal bytevector argument according to
+@func{bytevector-s8<?}.
+@end defun
+
+@c page
+@node iklib bytevectors conversion
 @subsection Converting bytevectors
 
 
@@ -10320,12 +10396,6 @@ HEXDIG        = [0-9a-fA-F]
 @subsection Validation predicates for bytevector
 
 
-@defun list-of-bytevectors? @var{obj}
-Return @true{} if OBJ is null or a proper list of bytevectors; otherwise
-return @false{}.
-@end defun
-
-
 @defun bytevector-length? @var{obj}
 Return @true{} if @var{obj} is valid as bytevector length: it is a
 non--negative fixnum; otherwise return @false{}.
@@ -10396,6 +10466,59 @@ size in bits.
 @end defun
 
 @c page
+@node iklib bytevectors sub
+@subsection Building subbytevectors
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun subbytevector-u8 @var{bv} @var{start}
+@defunx subbytevector-u8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-u8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8 @var{bv} @var{start}
+@defunx subbytevector-s8 @var{bv} @var{start} @var{end}
+Build and return a new bytevector holding the bytes in @var{bv} from
+index @var{start} (inclusive) to index @var{end} (exclusive).  The start
+and end indexes must be such that:
+
+@example
+0 <= @var{start} <= @var{end} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+
+@defun subbytevector-s8/count @var{bv} @var{start} @var{count}
+Build and return a new bytevector holding @var{count} bytes in @var{bv}
+from index @var{start} (inclusive).  The start index and the byte count
+must be such that:
+
+@example
+0 <= @var{start} <= @var{start} + @var{count} <= (bytevector-length @var{bv})
+@end example
+@end defun
+
+@c page
 @node iklib bytevectors generic
 @subsection Generic bytevector operations
 
@@ -10436,6 +10559,7 @@ lengths is not in the range of the maximum bytevector length.
 @menu
 * iklib strings predicates::    Predicates about strings.
 * iklib strings constructors::  Constructing new strings.
+* iklib strings comparison::    Comparison functions.
 * iklib strings conversion::    Converting between strings and
                                 other objects.
 * iklib strings misc::          Miscellaneous string operations.
@@ -10450,7 +10574,6 @@ lengths is not in the range of the maximum bytevector length.
 Return @true{} if @var{obj} is null or a proper list of strings;
 otherwise return @false{}.
 @end defun
-
 
 
 @defun string-empty? @var{str}
@@ -10481,6 +10604,23 @@ range of the maximum string length.
 Reverse the list of strings @var{strs}, concatenate them and return the
 resulting string.  It is an error if the sum of the string lengths is
 not in the range of the maximum string length.
+@end defun
+
+@c page
+@node iklib strings comparison
+@subsection Comparison functions
+
+
+@defun string!=? @varo{str} @var{str} @dots{}
+Return @true{} if all the string arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun string-max @varo{str} @var{str} @dots{}
+@defunx string-min @varo{str} @var{str} @dots{}
+Return the maximal or minimal string argument according to
+@func{string<?}.
 @end defun
 
 @c page
@@ -10821,7 +10961,7 @@ in which @var{state} is the @strong{last} argument.
 * iklib symbols comparison::    Comparing symbols.
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
-* iklib symbols values::        System values bound to symbols.
+* iklib symbols system::        System values bound to symbols.
 * iklib symbols labels::        Retrieving syntactic binding labels.
 * iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
@@ -10841,10 +10981,10 @@ otherwise return @false{}.
 @subsection Comparing symbols
 
 
-@deffn Procedure {symbol<?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
-@deffnx Procedure {symbol>?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
-@deffnx Procedure {symbol<=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
-@deffnx Procedure {symbol>=?} @vari{symbol} @varii{symbol} @variii{symbol} @dots{}
+@deffn Procedure {symbol<?} @varo{sym} @dots{}
+@deffnx Procedure {symbol>?} @varo{sym} @dots{}
+@deffnx Procedure {symbol<=?} @varo{sym} @dots{}
+@deffnx Procedure {symbol>=?} @varo{sym} @dots{}
 These procedures are the extensions to symbols of the corresponding
 orderings on strings.
 
@@ -10855,28 +10995,41 @@ orderings on strings.
 @end example
 @end deffn
 
+
+@defun symbol!=? @varo{ptr} @var{ptr} @dots{}
+Return @true{} if all the symbol arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun symbol-max @varo{ptr} @var{ptr} @dots{}
+@defunx symbol-min @varo{ptr} @var{ptr} @dots{}
+Return the maximal or minimal symbol argument according to
+@func{symbol<?}.
+@end defun
+
 @c page
 @node iklib symbols value
 @subsection Symbol values
 
 
-Under Vicare, Scheme symbols are data structures having a field
+Under @value{PRJNAME}, Scheme symbols are data structures having a field
 @code{value} initialised, at symbol construction time, to the built--in
 value @samp{#<unbound-object>}; this field has multiple purposes:
 
 @itemize
 @item
 When the symbol is the unique identifier of a @value{PRJNAME} data
-structure type: @code{value} holds the type-descriptor of the data
-structure.
+structure type: @code{value} holds the struct--type descriptor of the
+data structure.
 
 @item
 When the symbol is the unique identifier of a @rnrs{6} record type:
-@code{value} holds the type-descriptor of the record.
+@code{value} holds the type--descriptor of the record.
 
 @item
 When the symbol is the ``public name'' of a core primitive defined by
-@value{PRJNAME}, for example @func{display} or @func{+}: we have to
+@value{PRJNAME} (for example @func{display} or @func{+}): we have to
 assume that @code{value} holds a Scheme object for internal use by
 @value{PRJNAME}.
 
@@ -10891,9 +11044,9 @@ imported in the current lexical environment: @code{value} holds the
 syntactic binding descriptor.
 
 @item
-When the symbol is a storage location gensym associated to a lexical
-syntactic binding: @code{value} holds the current value of the lexical
-variable.
+When the symbol is a storage location gensym (loc gensym) associated to
+a lexical syntactic binding: @code{value} holds the current value of the
+lexical variable.
 
 @item
 When the symbol is a fresh symbol returned by a call to @func{gensym}:
@@ -10906,6 +11059,117 @@ case the ability to associate a value with a symbol can be quite useful
 in building some form of associative array with distributed storage.
 
 The following bindings are exported by the library @library{vicare}.
+
+
+@defun top-level-value @var{loc}
+Expect the argument to be a loc gensym associated to a binding; extract
+the value from the slot @code{value} of the symbol object and return it.
+If the value is the unbound object: raise an exception.
+
+This is both a primitive function and a core primitive operation.
+
+@quotation
+@strong{NOTE} In binary code, this function has a specific purpose: to
+retrieve the value of a binding defined in a previously evaluated
+expression in the context of an interaction environment; we have to know
+the internals of the expander to understand it.  Let's say we are
+evaluating expressions at the @repl{}; first we do:
+
+@example
+vicare> (define a 1)
+@end example
+
+@noindent
+the expander creates a new top level binding in the interaction
+environment; such interaction environment bindings are special in that
+they have a single gensym to serve both as lex gensym and loc gensym;
+the expander transforms the input form into the core language form:
+
+@example
+(set! lex.a 1)
+@end example
+
+@noindent
+where @code{lex.a} is both the lex gensym and the loc gensym associated
+to the binding; the compiler transforms the core language expression
+into:
+
+@example
+($init-symbol-value! lex.a 1)
+@end example
+
+@noindent
+which, compiled and evaluated, will store the value in the @code{value}
+field of the gensym @code{lex.a}.
+
+Later we do:
+
+@example
+vicare> a
+@end example
+
+@noindent
+the expander finds the binding in the interaction environment and
+transforms the variable reference into the core language expression:
+
+@example
+lex.a
+@end example
+
+@noindent
+the compiler then transforms the core language variable reference into:
+
+@example
+(top-level-value 'lex.a)
+@end example
+
+@noindent
+which, compiled and evaluated, will return the binding's value.
+
+The same processing happens when we evaluate multiple expressions with
+@func{eval} in the context of the same interaction environment.
+@end quotation
+@end defun
+
+
+@defun top-level-bound? @var{loc}
+Return @true{} if the symbol object @var{loc} has a proper value in its
+@code{value} field; return @false{} if the field @code{value} is set to
+the unbound object.
+@end defun
+
+
+@defun set-top-level-value! @var{loc} @var{value}
+This function can be used to set a new object in a @var{loc} gensym, so
+that it can be later retrieved by @func{top-level-value}.
+@end defun
+
+
+@defun reset-symbol-proc! @var{sym}
+@var{sym} is meant to be a location gensym.  If the value currently in
+the field @code{value} of @var{sym} is a closure object: store such
+value also in the field @code{proc} of @var{sym}X.
+
+@quotation
+@strong{NOTE} Whenever binary code performs a call to a global closure
+object, it does the following:
+
+@itemize
+@item
+From the relocation vector of the current code object: retrieve the loc
+gensym of the procedure to call.
+
+@item
+From the loc gensym: extract the value of the @code{proc} slot, which is
+meant to be a closure object.  This is done by accessing the gensym
+object with a low--level assembly instruction, @strong{not} by using the
+primitive operation @func{$symbol-proc}.
+
+@item
+Actually call the closure object.
+@end itemize
+@end quotation
+@end defun
 
 
 @defun set-symbol-value! @var{sym} @var{value}
@@ -10989,7 +11253,7 @@ creation order.
 @end defun
 
 @c page
-@node iklib symbols values
+@node iklib symbols system
 @subsection System values bound to symbols
 
 
@@ -11140,7 +11404,7 @@ syntactic binding identifiers.
 @menu
 * iklib fixnums predicates::    Predicate functions.
 * iklib fixnums comparison::    Comparison functions.
-* iklib fixnums arithmetics::   Arithmetics functions.
+* iklib fixnums arithmetics::   Arithmetics.
 * iklib fixnums bitwise::       Bitwise functions.
 * iklib fixnums conversion::    Conversion functions.
 @end menu
@@ -11153,10 +11417,22 @@ syntactic binding identifiers.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun list-of-fixnums? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of fixnums;
+otherwise return @false{}.
+@end defun
+
+
 @defun fxnonpositive? @var{fx}
 @defunx fxnonnegative? @var{fx}
 Return @true{} if @var{fx} is, respectively, non--positive or
 non--negative; else return @false{}.
+@end defun
+
+
+@defun non-zero-fixnum? @var{obj}
+Return @true{} if @var{obj} is a non--zero fixnum; otherwise return
+@false{}.  If @var{obj} is not a fixnum: return @false{}.
 @end defun
 
 
@@ -11177,13 +11453,6 @@ negative, non--positive, non--negative; otherwise return @false{}.  If
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun fx!=? @vari{fx} @varii{fx}
-@defunx fx!= @vari{fx} @varii{fx}
-Return @true{} if the arguments are different; otherwise return
-@false{}.  The arguments must be fixnums.
-@end defun
-
-
 @defun fx= @vari{fx} @var{fx} @dots{}
 @defunx fx< @vari{fx} @var{fx} @dots{}
 @defunx fx> @vari{fx} @var{fx} @dots{}
@@ -11191,6 +11460,13 @@ Return @true{} if the arguments are different; otherwise return
 @defunx fx>= @vari{fx} @var{fx} @dots{}
 Aliases for @func{fx=?}, @func{fx<?}, @func{fx>?}, @func{fx<=?},
 @func{fx>=?}.
+@end defun
+
+
+@defun fx!=? @varo{fx} @var{fx} @dots{}
+@defunx fx!= @varo{fx} @var{fx} @dots{}
+Return @true{} if all the arguments are different; otherwise return
+@false{}.  The arguments must be fixnums.
 @end defun
 
 @c page
@@ -11231,17 +11507,17 @@ fixnum arguments.  @varii{fx} must be non--zero.  All three procedures
 return fixnum objects.  If @vari{fx}/@varii{fx} is an integer object:
 
 @example
-(quotient @vari{fx} @varii{fx})   @result{} @vari{fx}/@varii{fx}
-(remainder @vari{fx} @varii{fx})  @result{} 0
-(modulo @vari{fx} @varii{fx})     @result{} 0
+(fxquotient  @vari{fx} @varii{fx})  @result{} @vari{fx}/@varii{fx}
+(fxremainder @vari{fx} @varii{fx})  @result{} 0
+(fxmodulo    @vari{fx} @varii{fx})  @result{} 0
 @end example
 
 If @vari{fx}/@varii{fx} is not an integer object:
 
 @example
-(quotient @vari{fx} @varii{fx})   @result{} @var{n_q}
-(remainder @vari{fx} @varii{fx})  @result{} @var{n_r}
-(modulo @vari{fx} @varii{fx})     @result{} @var{n_m}
+(fxquotient  @vari{fx} @varii{fx})  @result{} @var{n_q}
+(fxremainder @vari{fx} @varii{fx})  @result{} @var{n_r}
+(fxmodulo    @vari{fx} @varii{fx})  @result{} @var{n_m}
 @end example
 
 @noindent
@@ -11258,11 +11534,11 @@ where @var{n_q} is @vari{fx}/@varii{fx} rounded towards zero,
 as @varii{fx}.
 
 Consequently, for integer objects @vari{fx} and @varii{fx} with @varii{fx}
-not equal to 0,
+not equal to @math{0},
 
 @example
-(= @vari{fx} (+ (* @varii{fx} (quotient @vari{fx} @varii{fx}))
-               (remainder @vari{fx} @varii{fx})))
+(= @vari{fx} (+ (* @varii{fx} (fxquotient  @vari{fx} @varii{fx}))
+                 (fxremainder @vari{fx} @varii{fx})))
 @result{} #t
 @end example
 
@@ -11306,6 +11582,7 @@ Aliases for @func{fxnot}, @func{fxior}, @func{fxand}, @func{fxxor}.
 
 The following bindings are exported by the library @library{vicare}.
 
+
 @defun fixnum->char @var{fx}
 @defunx char->fixnum @var{ch}
 Convert a fixnum to and from a character.
@@ -11330,10 +11607,51 @@ The following bindings are exported by the library @library{vicare}.
 @subsubheading Predicates
 
 
+@defun list-of-flonums? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of flonums;
+otherwise return @false{}.
+@end defun
+
+
 @defun flnonpositive? @var{fl}
 @defunx flnonnegative? @var{fl}
 Return @true{} if @var{fl} is, respectively, non--positive or
 non--negative; else return @false{}.
+@end defun
+
+
+@defun positive-flonum? @var{obj}
+@defunx negative-flonum? @var{obj}
+@defunx non-positive-flonum? @var{obj}
+@defunx non-negative-flonum? @var{obj}
+Return @true{} if @var{obj} is a flonum respectively: positive,
+negative, non--positive, non--negative; otherwise return @false{}.  If
+@var{obj} is not a flonum: return @false{}.
+
+Notice the following behaviour with zero:
+
+@lisp
+(positive-flonum? +0.0)         @result{} #f
+(positive-flonum? -0.0)         @result{} #f
+
+(negative-flonum? +0.0)         @result{} #f
+(negative-flonum? -0.0)         @result{} #f
+
+(non-positive-flonum? +0.0)     @result{} #f
+(non-positive-flonum? -0.0)     @result{} #t
+
+(non-negative-flonum? +0.0)     @result{} #t
+(non-negative-flonum? -0.0)     @result{} #f
+@end lisp
+@end defun
+
+@c ------------------------------------------------------------
+
+@subsubheading Comparison
+
+@defun fl!=? @varo{fl} @var{fl} @dots{}
+Return @true{} if the operands are equal; else return @false{}.  The
+operands must be flonums, otherwise an exception is raised.
 @end defun
 
 @c ------------------------------------------------------------
@@ -13507,6 +13825,7 @@ second represents the statistics after @var{thunk} evaluation.
 
 
 @deffn Parameter verbose-timer
+@cindex Parameter @func{verbose-timer}
 When set to non--false: print more informations as result of
 @func{time-it} and @func{time-and-gather}.
 @end deffn
@@ -13599,9 +13918,16 @@ Return the garbage collection bytes major field of @var{stats}.
 
 
 @defun collect
+@defunx collect @var{requested-generation}
 Run the garbage collector.  If post--garbage collection hooks are
 registered, they are run.  This binding is exported by the library
 @library{vicare}.
+
+The optional argument @var{requested-generation} represents the oldest
+objects generation to collect: when @false{} the generation is
+determined internally; when a fixnum between @code{0} inclusive and
+@code{4} inclusive the fixnum represents the generation, where @code{0}
+is the youngest generation and @code{4} is the oldest generation.
 @end defun
 
 @c ------------------------------------------------------------
@@ -14846,7 +15172,7 @@ output port.
 @deffn Parameter current-error-port
 @cindex Parameter @func{current-error-port}
 As defined by @rnrs{6}: return a default textual port for error messages
-ouptut.  @value{PRJNAME} extends its definition to allow selecting a new
+output.  @value{PRJNAME} extends its definition to allow selecting a new
 textual output port.
 @end deffn
 
@@ -14976,7 +15302,37 @@ If characters become available, @func{get-string-some} returns a freshly
 allocated string containing the initial available characters (at least
 one), and it updates @var{port} to point just past these characters.
 
-If no input characters are available: the EOF object is returned.
+If no input characters are available: the @eof{} object is returned.
+@end defun
+
+
+@defun with-input-from-string @var{string} @var{thunk}
+@var{thunk} must be a procedure and it must accept zero arguments.
+@var{string} must be a Scheme string.
+
+The @var{string} is used as argument for @func{open-string-input-port};
+during the dynamic extent of the call to @var{thunk}, the obtained port
+is made the value returned by @func{current-input-port}; the previous
+default value is reinstated when the dynamic extent is exited.
+
+When @var{thunk} returns, the port is closed automatically.  The values
+returned by @var{thunk} are returned.
+
+If, after @var{thunk} has returned, an escape procedure is used to
+reenter the dynamic extent of the call to @var{thunk}: the behaviour is
+unspecified.
+@end defun
+
+
+@defun with-output-to-string @var{thunk}
+Create a textual output port that accumulates the characters written to
+it, set it as the current output port and call @var{thunk} with no
+arguments.  The port is the current output port only for the extent of
+the call to @var{thunk}.
+
+Whenever @var{thunk} returns, a string consisting of all of the port's
+accumulated characters (regardless of the port's current position) is
+returned and the port is closed.
 @end defun
 
 
@@ -15187,8 +15543,15 @@ group and others.  @manpage{umask, Set file mode creation mask}.
 @section Handling pointer objects
 
 
+Pointer objects are a disjoint type identified by the @func{pointer?}
+predicate.
+
 @menu
-* iklib pointers objects::      Handling pointer values.
+* iklib pointers cons::         Constructors.
+* iklib pointers pred::         Predicates.
+* iklib pointers compar::       Comparison.
+* iklib pointers conv::         Conversion.
+* iklib pointers misc::         Miscellaneous operations.
 * iklib pointers poke::         Poking values.
 * iklib pointers peek::         Peeking values.
 * iklib arrays poke::           Poking values into arrays.
@@ -15196,12 +15559,67 @@ group and others.  @manpage{umask, Set file mode creation mask}.
 @end menu
 
 @c page
-@node iklib pointers objects
-@subsection Handling pointer values
+@node iklib pointers cons
+@subsection Constructors
 
 
-Pointer objects are a disjoint type identified by the @func{pointer?}
-predicate.  When applied to pointer objects:
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
+
+
+@defun null-pointer
+Return a newly allocated pointer object representing @cnull{}.
+@end defun
+
+
+@defun pointer-clone @var{ptr}
+Return a new pointer object being a copy of @var{ptr}.  This is useful
+when we need a pointer that might be reset to another value in the
+future.
+@end defun
+
+@c page
+@node iklib pointers pred
+@subsection Predicates
+
+
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
+
+
+@defun pointer? @var{obj}
+Return @true{} if @var{obj} is a pointer object, return @false{}
+otherwise.
+@end defun
+
+
+@defun pointer-null? @var{obj}
+Return @true{} if @var{obj} is a pointer object and it represents
+@cnull{}; otherwise return @false{}.  If @var{obj} is not a pointer:
+return @false{}.
+@end defun
+
+
+@defun pointer-non-null? @var{obj}
+Return @true{} if @var{obj} is a pointer object and it is not @cnull{};
+otherwise return @false{}.  If @var{obj} is not a pointer: return
+@false{}.
+@end defun
+
+
+@defun pointer-and-offset? @var{ptr} @var{diff}
+Return true if the exact integer @var{diff} can be added to @var{ptr}
+without causing a pointer overflow or underflow.
+@end defun
+
+@c page
+@node iklib pointers compar
+@subsection Comparison
+
+
+When applied to pointer objects:
 
 @itemize
 @item
@@ -15222,10 +15640,35 @@ and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
-@defun pointer? @var{obj}
-Return @true{} if @var{obj} is a pointer object, return @false{}
-otherwise.
+@defun {pointer=?} @varo{ptr} @dots{}
+@defunx {pointer<?} @varo{ptr} @dots{}
+@defunx {pointer>?} @varo{ptr} @dots{}
+@defunx {pointer<=?} @varo{ptr} @dots{}
+@defunx {pointer>=?} @varo{ptr} @dots{}
+Compare the pointer arguments as indicated by the name.
 @end defun
+
+
+@defun pointer!=? @varo{ptr} @var{ptr} @dots{}
+Return @true{} if all the pointer arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun pointer-max @varo{ptr} @var{ptr} @dots{}
+@defunx pointer-min @varo{ptr} @var{ptr} @dots{}
+Return the maximal or minimal pointer argument according to
+@func{pointer<?}.
+@end defun
+
+@c page
+@node iklib pointers conv
+@subsection Conversion
+
+
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun pointer->integer @var{pointer}
@@ -15247,15 +15690,14 @@ platforms.  It is guaranteed that:
 points to the same address as @var{p}.
 @end defun
 
+@c page
+@node iklib pointers misc
+@subsection Miscellaneous operations
 
-@defun null-pointer
-Return a newly allocated pointer object representing @cnull{}.
-@end defun
 
-
-@defun pointer-null? @var{obj}
-Return true if @var{obj} is a pointer object and it represents @cnull{}.
-@end defun
+The following bindings are exported by the libraries @library{vicare}
+and @library{vicare system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun set-pointer-null! @var{pointer}
@@ -15281,30 +15723,6 @@ Return a new pointer object holding the memory reference resulting from
 adding @var{diff}, which must be an exact integer, to @var{ptr}.  If the
 addition would cause an overflow or underflow in machine words: raise an
 assertion violation.
-@end defun
-
-
-@defun pointer-and-offset? @var{ptr} @var{diff}
-Return true if the exact integer @var{diff} can be added to @var{ptr}
-without causing a pointer overflow or underflow.
-@end defun
-
-
-@defun pointer=? @vari{ptr} @varii{ptr}
-@defunx pointer!=? @vari{ptr} @varii{ptr}
-@defunx pointer<? @vari{ptr} @varii{ptr}
-@defunx pointer>? @vari{ptr} @varii{ptr}
-@defunx pointer<=? @vari{ptr} @varii{ptr}
-@defunx pointer>=? @vari{ptr} @varii{ptr}
-Comparison functions for pointers.  Return @true{} if the arguments
-satisfy the predicate, else return @false{}.
-@end defun
-
-
-@defun pointer-clone @var{pointer}
-Return a new pointer object being a copy of @var{pointer}.  This is
-useful when we need a pointer that might be reset to another value in
-the future.
 @end defun
 
 @c page
@@ -16470,9 +16888,8 @@ raise a non--continuable exception with components: @condition{who},
 @defunx bytevectors->guarded-argv @var{list-of-bytevectors}
 Given a list of bytevectors: convert them into @asciiz{} strings and
 build a @cnull{} terminated array of C pointers referencing the strings.
-Return a pointer to the array.  The strings and the array are stored in
-a single memory block.  If successful return the pointer object,
-otherwise return @false{}.
+The strings and the array are stored in a single memory block.  If
+successful return the pointer object, otherwise return @false{}.
 
 Memory allocated by @func{bytevectors->argv} must be explicitly released
 by @func{free}; memory allocated by @func{bytevectors->guarded-argv} is

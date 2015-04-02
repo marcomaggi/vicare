@@ -1362,7 +1362,7 @@
   #| end of module |# )
 
 (define-syntax-rule (with-tagged-language ?enabled? . ?body)
-  (parametrise ((option.tagged-language? ?enabled?))
+  (parametrise ((option.tagged-language? (or ?enabled? (option.tagged-language?))))
     (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
 		  (option.tagged-language.datums-as-operators? (option.tagged-language?))
 		  (option.tagged-language.setter-forms?        (option.tagged-language?)))
@@ -1973,8 +1973,11 @@
    ;;This is the Vicare extension.
    ;;
    (receive (x invoke-req*)
-       (parametrise ((option.strict-r6rs (and expander-options
-					      (enum-set-member? 'strict-r6rs expander-options))))
+       (parametrise
+	   ;;Here we  want to override  the value  of the parameters  STRICT-R6RS and
+	   ;;TAGGED-LANGUAGE?.
+	   ((option.strict-r6rs       (and expander-options (enum-set-member? 'strict-r6rs expander-options)))
+	    (option.tagged-language?  (and expander-options (enum-set-member? 'strict-r6rs expander-options))))
 	 (expand-form-to-core-language x env))
      ;;Here we use the expander and compiler options from the libraries.
      (for-each invoke-library invoke-req*)
@@ -2148,9 +2151,6 @@
 ;;;; R6RS program expander
 
 (module (expand-top-level)
-  (define-syntax __who__
-    (identifier-syntax 'expand-top-level))
-
   (define-syntax __module_who__
     (identifier-syntax 'expand-top-level))
 
@@ -2198,11 +2198,11 @@
 
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
-       (syntax-violation __who__
+       (syntax-violation __module_who__
 	 "invalid syntax of top-level program" (syntax-car program-form*)))
 
       (_
-       (assertion-violation __who__
+       (assertion-violation __module_who__
 	 "top-level program is missing an (import ---) clause"))))
 
   (define (%parse-program-options option*)

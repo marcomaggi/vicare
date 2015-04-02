@@ -186,7 +186,6 @@
 ;;
 ;;Field name: transcoder
 ;;Field accessor: $port-transcoder PORT
-;;
 ;;  A  boolean  (#t,  #f)  or  a value  of  disjoint  type  returned  by
 ;;  MAKE-TRANSCODER.   It is  #f for  a  binary port.   It is  #t for  a
 ;;  textual port having a string buffer.  It is a transcoder for textual
@@ -8830,8 +8829,6 @@
      (() port)
      (({P textual-input-port?})
       (set! port P)))))
-
-;;; --------------------------------------------------------------------
 
 
 ;;;; done

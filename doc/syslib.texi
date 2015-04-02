@@ -11,6 +11,7 @@ undefined behaviour (probably a crash).  They are also faster than the
 public interface exported by @library{vicare} and @library{rnrs}.
 
 @menu
+* syslib booleans::             Low level boolean operations.
 * syslib symbols::              Low level symbol operations.
 * syslib keywords::             Low level keyword operations.
 * syslib fixnums::              Low level fixnum operations.
@@ -36,6 +37,53 @@ public interface exported by @library{vicare} and @library{rnrs}.
 @end menu
 
 @c page
+@node syslib booleans
+@section Low level boolean operations
+
+
+@cindex @library{vicare system $booleans}, library
+@cindex Library @library{vicare system $booleans}
+
+
+The arguments @var{bool} must be booleans.  The following bindings are
+exported by the library @library{vicare system booleans}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
+@defun {$boolean=} @vari{bool} @varii{bool}
+Return @true{} if the arguments are equal; otherwise return @false{}.
+@end defun
+
+
+@defun {$boolean!=} @vari{bool} @varii{bool}
+Return @true{} if the arguments are different; otherwise return
+@false{}.
+@end defun
+
+
+@deffn Procedure {$boolean<} @vari{bool} @varii{bool}
+@deffnx Procedure {$boolean>} @vari{bool} @varii{bool}
+@deffnx Procedure {$boolean<=} @vari{bool} @varii{bool}
+@deffnx Procedure {$boolean>=} @vari{bool} @varii{bool}
+Compare the boolean arguments according to the artificial comparison
+definition:
+
+@example
+#t == #t
+#f == #f
+#f <  #t
+@end example
+@end deffn
+
+
+@defun $boolean-min @vari{bool} @varii{bool}
+@defunx $boolean-max @vari{bool} @varii{bool}
+Return the minimal or maximal boolean among the arguments.
+@end defun
+
+@c page
 @node syslib symbols
 @section Low level symbol operations
 
@@ -44,9 +92,40 @@ public interface exported by @library{vicare} and @library{rnrs}.
 @cindex Library @library{vicare system $symbols}
 
 
-The arguments @var{sym} must be references to symbol blocks, the
-arguments @var{str} must be references to strings.  The following
-bindings are exported by the library @library{vicare system $symbols}.
+The bindings documented in this section are exported by the library
+@library{vicare system $symbols}.  For all the bindings: the arguments
+@var{sym} must be references to symbol objects; the arguments @var{str}
+must be references to string objects.
+
+@menu
+* syslib symbols accessors::    Symbol accessors and mutators.
+* syslib symbols constructors:: Symbol constructors.
+* syslib symbols comparison::   Comparison functions.
+* syslib symbols conversion::   Conversion functions.
+* syslib symbols plists::       Property lists.
+* syslib symbols value::        Values associated to symbols.
+* syslib symbols table::        The symbol table.
+@end menu
+
+@c page
+@node syslib symbols accessors
+@subsection Symbol accessors and mutators
+
+
+@deffn {Unsafe Operation} $symbol-string @var{sym}
+@deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
+Accessors for the fields of @var{sym}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
+@deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
+Mutators for the fields of @var{sym}.
+@end deffn
+
+@c page
+@node syslib symbols constructors
+@subsection Symbol constructors
 
 
 @deffn {Unsafe Operation} $make-symbol @var{str}
@@ -58,6 +137,43 @@ and @code{proc} fields are initialised to a special machine word value
 meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @end deffn
 
+@c page
+@node syslib symbols comparison
+@subsection Comparison functions
+
+
+@defun $symbol= @vari{sym} @varii{sym}
+Return @true{} if the symbol arguments have equal pretty string name
+according to @func{$string=}; otherwise return @false{}.
+@end defun
+
+
+@defun $symbol!= @vari{sym} @varii{sym}
+Return @true{} if the symbol arguments have different pretty string name
+according to @func{$string!=}; otherwise return @false{}.
+@end defun
+
+
+@defun $symbol< @vari{sym} @varii{sym}
+@defunx $symbol> @vari{sym} @varii{sym}
+@defunx $symbol<= @vari{sym} @varii{sym}
+@defunx $symbol>= @vari{sym} @varii{sym}
+Return @true{} if the symbol arguments have pretty string names
+satisfying, respectively: @func{$string<}, @func{$string>},
+@func{$string<=}, @func{$string>=}; otherwise return @false{}.
+@end defun
+
+
+@defun $symbol-max @vari{sym} @varii{sym}
+@defunx $symbol-min @vari{sym} @varii{sym}
+Return the symbol argument having maximal or minimal pretty string name
+according to @func{$string-max} and @func{string-min}.
+@end defun
+
+@c page
+@node syslib symbols conversion
+@subsection Conversion functions
+
 
 @deffn {Unsafe Operation} $string->symbol @var{str}
 Return an interned symbol having the string @var{str} as name.
@@ -68,19 +184,47 @@ Return an interned symbol having the string @var{str} as name.
 Return the string name of @var{sym}, generating one if needed.
 @end deffn
 
-
-@deffn {Unsafe Operation} $symbol-string @var{sym}
-@deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
-@deffnx {Unsafe Operation} $symbol-plist @var{sym}
-Accessors for the fields of @var{sym}.
-@end deffn
+@c page
+@node syslib symbols plists
+@subsection Property lists
 
 
-@deffn {Unsafe Operation} $set-symbol-string! @var{sym} @var{str}
-@deffnx {Unsafe Operation} $set-symbol-unique-string! @var{sym} @var{str}
+@deffn {Unsafe Operation} $symbol-plist @var{sym}
 @deffnx {Unsafe Operation} $set-symbol-plist! @var{sym} @var{ell}
-Mutators for the fields of @var{sym}.
+Accessor and mutator for the field @code{plist} of symbol objects.
 @end deffn
+
+
+@deffn {Unsafe Operation} $putprop @var{symbol} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
+
+If @var{key} is already set: the old entry is mutated to reference the
+new @var{value}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $getprop @var{symbol} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
+symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $remprop @var{symbol} @var{key}
+Remove property @var{key} from the list associated to @var{symbol}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $property-list @var{symbol}
+Return a new association list representing the property list of
+@var{symbol}.  The order of the entries is the same as the property
+creation order.
+@end deffn
+
+@c page
+@node syslib symbols value
+@subsection Values associated to symbols
 
 
 @deffn {Unsafe Operation} $symbol-value @var{sym}
@@ -134,97 +278,13 @@ Set both the fields @code{value} and @code{proc} of @var{sym} to
 @end deffn
 
 
-@deffn {Low-level Operation} top-level-value @var{loc}
-Expect the argument to be a loc gensym associated to a binding; extract
-the value from the slot @code{value} of the symbol object and return it.
-If the value is the unbound object: raise an exception.
-
-This primitive function is also implemented as primitive operation.
-
-This function has a specific purpose: to retrieve the value of a binding
-defined in a previously evaluated expression in the context of an
-interaction environment; we have to know the internals of the expander
-to understand it.  Let's say we are evaluating expressions at the
-@repl{}; first we do:
-
-@example
-vicare> (define a 1)
-@end example
-
-@noindent
-the expander creates a new top level binding in the interaction
-environment; such interaction environment bindings are special in that
-they have a single gensym to serve both as lex gensym and loc gensym;
-the expander transforms the input form into the core language form:
-
-@example
-(set! lex.a 1)
-@end example
-
-@noindent
-where @code{lex.a} is both the lex gensym and the loc gensym associated
-to the binding; the compiler transforms the core language expression
-into:
-
-@example
-($init-symbol-value! lex.a 1)
-@end example
-
-@noindent
-which, compiled and evaluated, will store the value in the @code{value}
-field of the gensym @code{lex.a}.
-
-Later we do:
-
-@example
-vicare> a
-@end example
-
-@noindent
-the expander finds the binding in the interaction environment and
-transforms the variable reference into the core language expression:
-
-@example
-lex.a
-@end example
-
-@noindent
-the compiler then transforms the core language variable reference into:
-
-@example
-(top-level-value 'lex.a)
-@end example
-
-@noindent
-which, compiled and evaluated, will return the binding's value.
-
-The same processing happens when we evaluate multiple expressions with
-EVAL in the context of the same interaction environment.
-@end deffn
-
-
-@deffn {Low--level Operation} top-level-bound? @var{loc}
-Return @true{} if the symbol object @var{loc} has a proper value in its
-@code{value} field; return @false{} if the field @code{value} is set to
-the unbound object.
-@end deffn
-
-
-@deffn {Low--level Operation} set-top-level-value! @var{loc} @var{value}
-This function can be used to set a new object in a @var{loc} gensym, so
-that it can be later retrieved by @func{top-level-value}.  This function
-exists for completeness, but it is not really used by the compiler.
-@end deffn
-
-
-@deffn {Low--level Operation} reset-symbol-proc! @var{symb}
-Still to be documented.
-@end deffn
-
-
 @deffn {Unsafe Operation} $init-symbol-function! @var{sym} @var{proc}
 Still to be documented.
 @end deffn
+
+@c page
+@node syslib symbols table
+@subsection The symbol table
 
 
 The following bindings are related to the symbol table collecting
@@ -250,38 +310,6 @@ Vicare internal symbol table status:
 vicare>
 @end example
 @end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Property lists
-
-
-@deffn {Unsafe Operation} $putprop @var{symbol} @var{key} @var{value}
-Add a new property @var{key} with @var{value} to the property list of
-@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
-
-If @var{key} is already set: the old entry is mutated to reference the
-new @var{value}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $getprop @var{symbol} @var{key}
-Return the value of the property @var{key} in the property list of
-@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
-symbol.
-@end deffn
-
-
-@deffn {Unsafe Operation} $remprop @var{symbol} @var{key}
-Remove property @var{key} from the list associated to @var{symbol}.
-@end deffn
-
-
-@deffn {Unsafe Operation} $property-list @var{symbol}
-Return a new association list representing the property list of
-@var{symbol}.  The order of the entries is the same as the property
-creation order.
-@end deffn
 
 @c page
 @node syslib keywords
@@ -717,10 +745,30 @@ Return a flonum object representing @var{bn} as inexact number.
 @cindex Library @library{vicare system $flonums}
 
 
-The arguments @var{fl} to these operations must be flonums, the
-arguments @var{fx} must be fixnums.  The following bindings are exported
-by the library @library{vicare system $flonums}.  @ref{iklib numerics}
-for more functions acting on flonums.
+For all the low level operations, the arguments @var{fl} to these
+operations must be flonums, the arguments @var{fx} must be fixnums.  The
+bindings documented here are exported by the library @library{vicare
+system $flonums}.  @ref{iklib numerics} for more functions acting on
+flonums.
+
+@menu
+* syslib flonums constr::       Flonum constructors.
+* syslib flonums inspect::      Binary representation inspection.
+* syslib flonums arithmetic::   Arithmetic operations.
+* syslib flonums conversion::   Exactness and conversion.
+* syslib flonums predicates::   Predicates.
+* syslib flonums comparison::   Comparison functions.
+* syslib flonums rounding::     Rounding function.
+* syslib flonums parts::        Parts function.
+* syslib flonums trigon::       Trigonometric operations.
+* syslib flonums hyperbol::     Hyperbolic functions.
+* syslib flonums log::          Exponentials and logarithms.
+* syslib flonums power::        Power operations.
+@end menu
+
+@c page
+@node syslib flonums constr
+@subsection Flonum constructors
 
 
 @deffn {Unsafe Operation} $make-flonum
@@ -728,9 +776,9 @@ Allocate a new flonum memory block and return a reference to it.  Does
 not initialise the data area.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Binary representation inspection
+@c page
+@node syslib flonums inspect
+@subsection Binary representation inspection
 
 
 @deffn {Unsafe Operation} $flonum-u8-ref @var{fl} @var{fx}
@@ -762,9 +810,9 @@ Return a fixnum@dots{} Still undocumented, read the code look at the
 format of @ieee{} double precision flonums.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Arithmetic operations
+@c page
+@node syslib flonums arithmetic
+@subsection Arithmetic operations
 
 
 @deffn {Unsafe Operation} $fl+ @vari{fl} @varii{fl}
@@ -790,9 +838,9 @@ the operands and return the result.
 Implement the number--theoretic integer divisions.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Exactness and conversion
+@c page
+@node syslib flonums conversion
+@subsection Exactness and conversion
 
 
 @deffn {Unsafe Operation} $flonum->exact @var{fl}
@@ -805,21 +853,9 @@ Convert the fixnum operand into a flonum and return a reference to the
 result.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Comparison
-
-
-@deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl}
-Return true if the operands are equal; otherwise return @false{}.  This
-operation does @strong{not} distinguish between @code{+0.0} and
-@code{-0.0}.
-@end deffn
-
-
-@c ------------------------------------------------------------
-
-@subsubheading Predicates
+@c page
+@node syslib flonums predicates
+@subsection Predicates
 
 
 @deffn {Unsafe Operation} $flnan? @var{fl}
@@ -900,21 +936,39 @@ Return true if the operand is rational.  All the flonums are rational
 with the exception of infinities and not--a--number.
 @end deffn
 
+@c page
+@node syslib flonums comparison
+@subsection Comparison functions
 
-@deffn {Unsafe Operation} $flinfinite? @var{fl}
-Return true if the operand is infinite.  This means @samp{+inf.0} or
-@samp{-inf.0}.
+
+@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
+@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
+Perform comparison operations
 @end deffn
 
 
-@deffn {Unsafe Operation} $flnan? @var{fl}
-Return true if the operand is not--a--number.  This means @samp{+nan.0}
-or @samp{-nan.0} (which are the same semantic value).
+@deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl}
+Return true if the operands are equal; otherwise return @false{}.  This
+operation does @strong{not} distinguish between @code{+0.0} and
+@code{-0.0}.
 @end deffn
 
-@c ------------------------------------------------------------
 
-@subsubheading Rounding
+@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
+Return the maximum between the operands.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
+Return the minimum between the operands.
+@end deffn
+
+@c page
+@node syslib flonums rounding
+@subsection Rounding function
 
 
 @deffn {Unsafe Operation} $flround @var{fl}
@@ -938,9 +992,9 @@ Return the integral flonum closest to the operand whose absolute value
 is not larger than the absolute value of the operand itself.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Parts
+@c page
+@node syslib flonums parts
+@subsection Parts function
 
 
 @deffn {Unsafe Operation} $flnumerator @var{fl}
@@ -953,9 +1007,10 @@ Return the numerator or denominator of the operand.
 Return the absolute value of the operand.
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node syslib flonums trigon
+@subsection Trigonometric operations
 
-@subsubheading Trigonometric operations
 
 
 @deffn {Unsafe Operation} $flsin @var{fl}
@@ -980,9 +1035,9 @@ Return an equivalent of:
 @end example
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Hyperbolic functions
+@c page
+@node syslib flonums hyperbol
+@subsection Hyperbolic functions
 
 
 @defun $flsinh @var{fl}
@@ -998,9 +1053,9 @@ Compute the hyperbolic functions.  Return flonum objects.
 Compute the inverse hyperbolic functions.  Return flonum objects.
 @end defun
 
-@c ------------------------------------------------------------
-
-@subsubheading Exponentials and logarithms
+@c page
+@node syslib flonums log
+@subsection Exponentials and logarithms
 
 
 @deffn {Unsafe Operation} $flcbrt @var{fl}
@@ -1041,9 +1096,9 @@ Compute the Euclidean distance function: @math{\sqrt(X*X+Y*Y)}.
 @glibcref{Exponents and Logarithms, hypot}.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@subsubheading Power operations
+@c page
+@node syslib flonums power
+@subsection Power operations
 
 
 @deffn {Unsafe Operation} $flexpt @vari{fl} @varii{fl}
@@ -1063,29 +1118,6 @@ Return the square of @var{fl}: @var{fl} times @var{fl}.
 
 @deffn {Unsafe Operation} $flcube @var{fl}
 Return the cube of @var{fl}: @var{fl} times @var{fl} times @var{fl}.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@subsubheading Comparison operations
-
-
-@deffn {Unsafe Operation} $fl= @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl< @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl<= @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl> @vari{fl} @varii{fl}
-@deffnx {Unsafe Operation} $fl>= @vari{fl} @varii{fl}
-Perform comparison operations
-@end deffn
-
-
-@deffn {Unsafe Operation} $flmax @vari{fl} @varii{fl}
-Return the maximum between the operands.
-@end deffn
-
-
-@deffn {Unsafe Operation} $flmin @vari{fl} @varii{fl}
-Return the minimum between the operands.
 @end deffn
 
 @c page
@@ -5342,6 +5374,9 @@ arguments @var{fx} must be fixnums in the range @code{[0, #x10FFFF]} but
 not in the range @code{[#xD800, #xDFFF]}.  The following bindings are
 exported by the library @library{vicare system $chars}.
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
 
 @deffn {Unsafe Operation} $char= @vari{ch} @varii{ch}
 Evaluate to true if the operands are equal.
@@ -5373,6 +5408,15 @@ Evaluate to true if the @vari{ch} is greater than or equal to
 @varii{ch}.
 @end deffn
 
+
+@defun $chmin @vari{ch} @varii{ch}
+@defunx $chmax @vari{ch} @varii{ch}
+Return the minimum or maximum character among the arguments.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Conversion
 
 @deffn {Unsafe Operation} $fixnum->char @var{fx}
 Return a new character value whose code point equals @var{fx}.
@@ -5648,6 +5692,7 @@ system $bytevectors}.
 @menu
 * syslib bytevectors constructors::  Constructors.
 * syslib bytevectors predicates::    Predicates.
+* syslib bytevectors comparison::    Comparison.
 * syslib bytevectors inspection::    Inspection.
 * syslib bytevectors accessors::     Accessors and mutators.
 * syslib bytevectors copying::       Copying.
@@ -5694,6 +5739,65 @@ return @false{}.
 @defun $bytevector= @vari{bv} @varii{bv}
 Return @true{} if the two bytevector arguments are equal.
 @end defun
+
+@c page
+@node syslib bytevectors comparison
+@subsection Comparison
+
+
+@defun $bytevector!=? @vari{bv} @varii{bv}
+Return @true{} if the bytevector arguments are equal, byte by byte;
+otherwise return @false{}.
+@end defun
+
+
+@defun $bytevector!=? @vari{bv} @varii{bv}
+Return @true{} if the bytevector arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@defun $bytevector-u8<? @vari{bv} @varii{bv}
+@defunx $bytevector-u8>? @vari{bv} @varii{bv}
+@defunx $bytevector-u8<=? @vari{bv} @varii{bv}
+@defunx $bytevector-u8>=? @vari{bv} @varii{bv}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on unsigned fixnums; the bytevectors are compared octet by
+octet.
+@end defun
+
+
+@defun $bytevector-s8<? @vari{bv} @varii{bv}
+@defunx $bytevector-s8>? @vari{bv} @varii{bv}
+@defunx $bytevector-s8<=? @vari{bv} @varii{bv}
+@defunx $bytevector-s8>=? @vari{bv} @varii{bv}
+These procedures are the extensions to bytevectors of the corresponding
+orderings on signed fixnums; the bytevectors are compared byte by byte.
+@end defun
+
+
+@defun $bytevector-u8-max @vari{bv} @varii{bv}
+@defunx $bytevector-u8-min @vari{bv} @varii{bv}
+Return the maximal or minimal bytevector argument according to
+@func{$bytevector-u8<?}.
+@end defun
+
+
+@defun $bytevector-s8-max @vari{bv} @varii{bv}
+@defunx $bytevector-s8-min @vari{bv} @varii{bv}
+Return the maximal or minimal bytevector argument according to
+@func{$bytevector-s8<?}.
+@end defun
+
+@c page
+@node syslib bytevectors inspection
+@subsection Inspection
+
+
+@deffn {Unsafe Operation} $bytevector-length @var{bv}
+Return a fixnum representing the number of bytes in the bytevector
+@var{bv}.
+@end deffn
 
 @c page
 @node syslib bytevectors accessors
@@ -6071,16 +6175,6 @@ Setter and getter for double--precision @ieee{} flonums.
 @end defun
 
 @c page
-@node syslib bytevectors inspection
-@subsection Inspection
-
-
-@deffn {Unsafe Operation} $bytevector-length @var{bv}
-Return a fixnum representing the number of bytes in the bytevector
-@var{bv}.
-@end deffn
-
-@c page
 @node syslib bytevectors copying
 @subsection Copying
 
@@ -6264,7 +6358,7 @@ bindings are exported by the library @library{vicare system $strings}.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Constructors
+@subsubheading Constructors
 
 @deffn {Unsafe Operation} $make-string @var{fx}
 Allocate a new string capable of holding @var{fx} characters and return
@@ -6334,7 +6428,7 @@ Assume the arguments have been already validated.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Accessors and mutators
+@subsubheading Accessors and mutators
 
 @deffn {Unsafe Operation} $string-ref @var{str} @var{fx}
 Return the character at offset @var{fx} in @var{str}.
@@ -6353,7 +6447,7 @@ exclusive with @var{fill}.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Inspection
+@subsubheading Inspection
 
 @deffn {Unsafe Operation} $string-length @var{str}
 Return a fixnum representing the length of the operand.
@@ -6376,13 +6470,20 @@ Return @true{} if the string @var{str} is empty, otherwise return
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Comparison
+@subsubheading Comparison
 
 
 @deffn {Unsafe Operation} $string= @vari{str} @varii{str}
 Return @true{} if @vari{str} and @varii{str} represent the same string;
 otherwise return @false{}.
 @end deffn
+
+
+@defun $string!=? @vari{str} @varii{str}
+Return @true{} if all the string arguments are different; otherwise
+return @false{}.
+@end defun
+
 
 @deffn {Unsafe Operation} $string< @vari{str} @varii{str}
 @deffnx {Unsafe Operation} $string> @vari{str} @varii{str}
@@ -6392,6 +6493,13 @@ Dyadic lexicographic comparison functions for strings.  Return @true{}
 if @vari{str} and @varii{str} compare as the name implies; otherwise
 return @false{}.
 @end deffn
+
+
+@defun $string-max @vari{str} @varii{str}
+@defunx $string-min @vari{str} @varii{str}
+Return the maximal or minimal string argument according to
+@func{$string<}.
+@end defun
 
 @c ------------------------------------------------------------
 
@@ -6600,17 +6708,48 @@ In the following definitions the @var{ptr} arguments must be pointer
 objects.  The following bindings are exported by the library
 @library{vicare system $pointers}.
 
+@c ------------------------------------------------------------------------
+
+@subsubheading predicates
+
 
 @deffn {Primitive Operation} $pointer? @var{obj}
 Return @true{} if @var{obj} is a reference to a pointer memory block,
 else return @false{}.
 @end deffn
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Comparison
+
 
 @deffn {Unsafe Operation} $pointer= @vari{ptr} @varii{ptr}
 Return @true{} if @vari{ptr} and @varii{ptr} are equal, else return
 @false{}.
 @end deffn
+
+
+@defun $pointer!=? @vari{ptr} @varii{ptr}
+Return @true{} if all the pointer arguments are different; otherwise
+return @false{}.
+@end defun
+
+
+@deffn {Unsafe Operation} $pointer< @vari{ptr} @varii{ptr}
+@deffnx {Unsafe Operation} $pointer> @vari{ptr} @varii{ptr}
+@deffnx {Unsafe Operation} $pointer<= @vari{ptr} @varii{ptr}
+@deffnx {Unsafe Operation} $pointer>= @vari{ptr} @varii{ptr}
+Dyadic lexicographic comparison functions for pointers.  Return @true{}
+if @vari{ptr} and @varii{ptr} compare as the name implies; otherwise
+return @false{}.
+@end deffn
+
+
+@defun $pointer-max @vari{ptr} @varii{ptr}
+@defunx $pointer-min @vari{ptr} @varii{ptr}
+Return the maximal or minimal pointer argument according to
+@func{$pointer<}.
+@end defun
 
 @c page
 @node syslib hashtables

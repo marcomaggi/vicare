@@ -65,7 +65,7 @@ bag already contains the element.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Constraints
+@subsubheading Constraints
 
 The @api{} defined by @library{srfi :113} imposes usage constraints:
 
@@ -89,7 +89,7 @@ iterating over it.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Linear update
+@subsubheading Linear update
 
 The procedures of this @srfi{}, by default, are ``pure functional'':
 they do not alter their parameters.  However, this @srfi{} also defines
@@ -151,7 +151,7 @@ ones, even where this @srfi{} explicitly says otherwise.
 
 @c ------------------------------------------------------------------------
 
-@unnumberedsubsec Comparator restrictions
+@subsubheading Comparator restrictions
 
 Implementations of this @srfi{} are allowed to place restrictions on the
 comparators that the procedures accept.  In particular, an

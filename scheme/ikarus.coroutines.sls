@@ -40,6 +40,8 @@
 		  reset-coroutines! dump-coroutines)
     (only (ikarus unwind-protection)
 	  run-unwind-protection-cleanup-upon-exit?)
+    (only (ikarus cafe)
+	  cafe-nested-depth)
     (vicare system $pairs))
 
 
@@ -186,8 +188,9 @@
   (define uid (gensym "coroutine-uid"))
   (set-symbol-value! uid (make-<coroutine-state>))
   (parametrise
-      ((run-unwind-protection-cleanup-upon-exit? #f)
-       (%current-coroutine-uid                           uid))
+      ((run-unwind-protection-cleanup-upon-exit?	#f)
+       (%current-coroutine-uid				uid)
+       (cafe-nested-depth				(cafe-nested-depth)))
     (%enqueue-coroutine thunk)))
 
 (define (yield)

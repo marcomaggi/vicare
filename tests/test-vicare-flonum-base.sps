@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -121,6 +121,32 @@
   (check (flnonnegative? -0.0)		=> #f)
   (check (flnonnegative? +123.0)	=> #t)
   (check (flnonnegative? -123.0)	=> #f)
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true  (positive-flonum? +123.0))
+  (check-for-false (positive-flonum? +0.0))
+  (check-for-false (positive-flonum? -0.0))
+  (check-for-false (positive-flonum? -123.0))
+  (check-for-false (positive-flonum? "ciao"))
+
+  (check-for-true  (negative-flonum? -123.0))
+  (check-for-false (negative-flonum? +0.0))
+  (check-for-false (negative-flonum? -0.0))
+  (check-for-false (negative-flonum? +123.0))
+  (check-for-false (negative-flonum? "ciao"))
+
+  (check-for-false (non-positive-flonum? +0.0))
+  (check-for-true  (non-positive-flonum? -0.0))
+  (check-for-true  (non-positive-flonum? -123.0))
+  (check-for-false (non-positive-flonum? +123.0))
+  (check-for-false (non-positive-flonum? "ciao"))
+
+  (check-for-true  (non-negative-flonum? +0.0))
+  (check-for-false (non-negative-flonum? -0.0))
+  (check-for-true  (non-negative-flonum? +123.0))
+  (check-for-false (non-negative-flonum? -123.0))
+  (check-for-false (non-negative-flonum? "ciao"))
 
   #t)
 

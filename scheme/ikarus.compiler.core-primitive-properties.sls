@@ -4890,9 +4890,9 @@
 	 (declare-core-primitive ?who
 	     (safe)
 	   (signatures
-	    ((T:bytevector T:non-negative-fixnum)	=> (T:boolean)))
+	    ((T:bytevector T:non-negative-fixnum T:non-negative-fixnum)	=> (T:boolean)))
 	   (attributes
-	    ((_ _)		foldable effect-free result-true))))
+	    ((_ _ _)		foldable effect-free result-true))))
 	)))
   (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word?)
   (declare-bytevector-releated-fixnum-predicate bytevector-start-index-and-count-for-word8?)

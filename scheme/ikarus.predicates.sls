@@ -14,6 +14,7 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 (library (ikarus predicates)
   (export
     fixnum?		flonum?		bignum?
@@ -28,7 +29,6 @@
     bytevector?		string?		procedure?
     null?		pair?		symbol?
     eq?			eqv?
-    boolean=?		symbol=?
     immediate?		code?
     transcoder?		weak-pair?
     not			bwp-object)
@@ -45,11 +45,9 @@
 		  bytevector?		string?			procedure?
 		  null?			pair?			symbol?
 		  eq?			eqv?
-		  boolean=?		symbol=?
 		  immediate?		code?
 		  transcoder?		weak-pair?
-		  not			bwp-object
-		  always-true		always-false)
+		  not			bwp-object)
     (vicare system $fx)
     (vicare system $flonums)
     (vicare system $compnums)
@@ -90,7 +88,11 @@
             (string?		sys:string?)
             (symbol?		sys:symbol?)
             (transcoder?	sys:transcoder?)
-            (vector?		sys:vector?)))
+            (vector?		sys:vector?)
+	    ;;FIXME  To be  uncommented at  the next  boot image  rotation, when  the
+	    ;;primitive operation is implemented.  (Marco Maggi; Mon Mar 30, 2015)
+	    #;(void-object?	sys:void-object?)
+	    ))
 
 
 ;;;; object type predicates
@@ -264,9 +266,13 @@
 
 (define (boolean?    x) (sys:boolean?    x))
 (define (bwp-object? x) (sys:bwp-object? x))
-(define (void-object? x)
-  #;(sys:void-object? x)
-  (eq? x (void)))
+;;FIXME This implementation must be removed at the next boot image rotation, when the
+;;primitive operation is implemented.  (Marco Maggi; Mon Mar 30, 2015)
+(define (void-object? x) (eq? x (void)))
+;;FIXME This implementation  must be used at  the next boot image  rotation, when the
+;;primitive operation is implemented.  (Marco Maggi; Mon Mar 30, 2015)
+;;
+;;(define (void-object? x) (sys:void-object? x))
 (define (bytevector? x) (sys:bytevector? x))
 (define (char?       x) (sys:char?       x))
 (define (code?       x) (sys:code?       x))
@@ -344,50 +350,6 @@
 	 (and (keyword? y) (keyword=? x y)))
 
 	(else #f)))
-
-
-(define-syntax define-pred
-  (syntax-rules ()
-    ((_ name pred? msg)
-     (begin
-       (define (err x) (assertion-violation 'name msg x))
-       (define (g rest)
-	 (if (sys:pair? rest)
-	     (let ((a (car rest)))
-	       (if (pred? a)
-		   (g (cdr rest))
-		 (err a)))
-	   #f))
-       (define (f x rest)
-	 (if (sys:pair? rest)
-	     (let ((a (car rest)))
-	       (if (sys:eq? x a)
-		   (f x (cdr rest))
-		 (if (pred? a)
-		     (g (cdr rest))
-		   (err a))))
-	   #t))
-       (define name
-	 (case-lambda
-	  ((x y)
-	   (if (pred? x)
-	       (if (sys:eq? x y)
-		   #t
-		 (if (pred? y)
-		     #f
-		   (err y)))
-	     (err x)))
-	  ((x y z . rest)
-	   (if (pred? x)
-	       (if (sys:eq? x y)
-		   (if (sys:eq? x z)
-		       (f x rest)
-		     (if (pred? z) #f (err z)))
-		 (if (pred? y) #f (err y)))
-	     (err x)))))))))
-
-(define-pred symbol=?  sys:symbol?  "expected symbol as argument")
-(define-pred boolean=? sys:boolean? "expected boolean as argument")
 
 
 ;;;; done

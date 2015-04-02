@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -95,6 +95,110 @@
 	      (the-green X)
 	      (the-blue  X)))
     => '(10 20 30))
+
+  #t)
+
+
+(parametrise ((check-test-name	'protocol))
+
+  ;;Record-type without parent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b c)
+	  (protocol
+	   (lambda (alpha-initialiser)
+	     (lambda (a b c)
+	       (receive-and-return (R)
+		   (alpha-initialiser a b c)
+		 (assert (alpha? R)))))))
+
+	(let ((R (make-alpha 1 2 3)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (alpha-c R))))
+    => 1 2 3)
+
+  ;;Record-type with single parent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b c)
+	  (protocol
+	   (lambda (alpha-initialiser)
+	     (lambda (a b c)
+	       (receive-and-return (R)
+		   (alpha-initialiser a b c)
+		 (assert (alpha? R)))))))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f)
+	  (protocol
+	   (lambda (alpha-maker)
+	     (lambda (a b c d e f)
+	       (receive-and-return (R)
+		   ((alpha-maker a b c) d e f)
+		 (assert (beta? R)))))))
+
+	(let ((R (make-beta 1 2 3 4 5 6)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (alpha-c R)
+		  (beta-d R)
+		  (beta-e R)
+		  (beta-f R))))
+    => 1 2 3 4 5 6)
+
+  ;;Record-type with double parent.
+  ;;
+  (check
+      (internal-body
+
+	(define-record-type alpha
+	  (fields a b c)
+	  (protocol
+	   (lambda (alpha-initialiser)
+	     (lambda (a b c)
+	       (receive-and-return (R)
+		   (alpha-initialiser a b c)
+		 (assert (alpha? R)))))))
+
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f)
+	  (protocol
+	   (lambda (alpha-maker)
+	     (lambda (a b c d e f)
+	       (receive-and-return (R)
+		   ((alpha-maker a b c) d e f)
+		 (assert (beta? R)))))))
+
+	(define-record-type gamma
+	  (parent beta)
+	  (fields g h i)
+	  (protocol
+	   (lambda (beta-maker)
+	     (lambda (a b c d e f g h i)
+	       (receive-and-return (R)
+		   ((beta-maker a b c d e f) g h i)
+		 (assert (gamma? R)))))))
+
+	(let ((R (make-gamma 1 2 3 4 5 6 7 8 9)))
+	  (values (alpha-a R)
+		  (alpha-b R)
+		  (alpha-c R)
+		  (beta-d R)
+		  (beta-e R)
+		  (beta-f R)
+		  (gamma-g R)
+		  (gamma-h R)
+		  (gamma-i R))))
+    => 1 2 3 4 5 6 7 8 9)
 
   #t)
 
@@ -1226,6 +1330,7 @@
 
 ;;;; done
 
+(collect 4)
 (check-report)
 
 ;;; end of file

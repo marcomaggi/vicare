@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#!r6rs
+#!vicare
 (library (ikarus pretty-print)
   (export
     pretty-print		pretty-print*
@@ -24,22 +24,29 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
+		  ;;FIXME  This  except  must  be  removed at  the  next  boot  image
+		  ;;rotation.  (Marco Maggi; Mon Mar 30, 2015)
+		  non-negative-fixnum?
+
 		  pretty-print			pretty-print*
 		  pretty-width
 
 		  debug-print-enabled?
 		  debug-print			debug-print*)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 30,
+    ;;2015)
+    (only (ikarus fixnums)
+	  non-negative-fixnum?)
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
+	  record-object?
 	  print-r6rs-record-instance)
     (only (vicare system $structs)
-	  $struct-rtd)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+	  $struct-rtd))
 
 
 (define (map1ltr f ls)
@@ -51,11 +58,11 @@
 
 (define pretty-width
   (make-parameter 60
-    (lambda (x)
-      (define who 'pretty-width)
-      (with-arguments-validation (who)
-	  ((positive-exact-integer	x))
-	x))))
+    (lambda (obj)
+      (if (positive-exact-integer? obj)
+	  obj
+	(procedure-argument-violation 'pretty-width
+	  "expected positive fixnum or bignum as parameter value" obj)))))
 
 (define (pretty-indent)
   1)
@@ -277,34 +284,35 @@
 	       (and (pair? x)
 		    (not (graphed? x))
 		    (f (cdr x)))))))
+
   (define (boxify-struct x)
     (define (boxify-vanilla-struct x)
-      (cond
-       ((record-type-descriptor? ($struct-rtd x))
-	(call-with-string-output-port
-	    (lambda (port)
-	      (print-r6rs-record-instance x port))))
-       ;;We do *not* handle opaque records specially.
-       ;; ((let ((rtd ($struct-rtd x)))
-       ;; 	  (and (record-type-descriptor? rtd)
-       ;; 	       (record-type-opaque? rtd)))
-       ;; 	"#<unknown>")
-       ((keyword? x)
-	(string-append "#:" (symbol->string (keyword->symbol x))))
-       (else
-	(let* ((name (boxify (struct-name x)))
-	       (ls
-		(let ((n (struct-length x)))
-		  (let f ((i 0))
-		    (cond
-		     ((fx= i n) '())
-		     (else
-		      (let ((a (boxify (struct-ref x i))))
-			(cons a (f (+ i 1)))))))))
-	       (ls (cons name ls))
-	       (len (fold-left (lambda (ac s) (+ 1 ac (box-length s)))
-		      -1 ls)))
-	  (conc "#[" (make-fbox len ls #f) "]")))))
+      (cond ((record-object? x) #;(record-type-descriptor? ($struct-rtd x))
+	     (call-with-string-output-port
+		 (lambda (port)
+		   (print-r6rs-record-instance x port))))
+	    ;;We do *not* handle opaque records specially.
+	    ;; ((let ((rtd ($struct-rtd x)))
+	    ;; 	  (and (record-type-descriptor? rtd)
+	    ;; 	       (record-type-opaque? rtd)))
+	    ;; 	"#<unknown>")
+	    ((keyword? x)
+	     (string-append "#:" (symbol->string (keyword->symbol x))))
+	    (else
+	     (let* ((name (boxify (struct-name x)))
+		    (ls   (let ((n (struct-length x)))
+			    (let f ((i 0))
+			      (cond ((fx= i n)
+				     '())
+				    (else
+				     (let ((a (boxify (struct-ref x i))))
+				       (cons a (f (+ i 1)))))))))
+		    (ls   (cons name ls))
+		    (len   (fold-left
+			       (lambda (ac s)
+				 (+ 1 ac (box-length s)))
+			     -1 ls)))
+	       (conc "#[" (make-fbox len ls #f) "]")))))
 
     (define (boxify-custom-struct out)
       (import traversal-helpers)
@@ -630,28 +638,19 @@
     (traverse x h)
     (output (boxify x h) port start-column ending-newline?)))
 
-(define pretty-print
-  (case-lambda
-   ((x)
-    (pretty x (current-output-port) 0 #t))
-   ((x port)
-    (define who 'pretty-print)
-    (with-arguments-validation (who)
-	((output-port port))
-      (pretty x port 0 #t)))))
+(case-define* pretty-print
+  ((x)
+   (pretty x (current-output-port) 0 #t))
+  ((x {port textual-output-port?})
+   (pretty x port 0 #t)))
 
-(define (pretty-print* x port start-column ending-newline?)
-  (define who 'pretty-print*)
-  (with-arguments-validation (who)
-      ((output-port		port)
-       (non-negative-fixnum	start-column))
-    (pretty x port start-column ending-newline?)))
+(define* (pretty-print* x {port textual-output-port?} {start-column non-negative-fixnum?} ending-newline?)
+  (pretty x port start-column ending-newline?))
 
 (define (debug-print . args)
   ;;Print arguments for debugging purposes.
   ;;
   (pretty-print args (current-error-port))
-  (newline (current-error-port))
   (newline (current-error-port))
   (flush-output-port (current-error-port)))
 
