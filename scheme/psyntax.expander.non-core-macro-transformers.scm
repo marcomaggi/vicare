@@ -4581,7 +4581,7 @@
   			 (%application* 'foldable-vector ls))))
   	   (syntax-match x (list cons quote)
   	     ((quote (x* ...))
-  	      (k (map (lambda (x) (%application 'foldable-quote x)) x*)))
+  	      (k (map (lambda (x) (%application 'quote x)) x*)))
 
   	     ((list x* ...)
   	      (k x*))
