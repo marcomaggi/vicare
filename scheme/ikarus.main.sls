@@ -67,6 +67,7 @@
     (prefix (only (ikarus.compiler)
 		  optimize-level
 		  generate-debug-calls
+		  check-compiler-pass-preconditions
 		  assembler-output
 		  optimizer-output
 		  source-optimizer-passes-count)
@@ -487,6 +488,12 @@
 	   (option.debug-mode-enabled? #f)
 	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
 
+	  ((%option= "--check-compiler-pass-preconditions")
+	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #t))))
+
+	  ((%option= "--no-check-compiler-pass-preconditions")
+	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #f))))
+
 	  ((%option= "--drop-assertions")
 	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #t))))
 
@@ -880,6 +887,13 @@ Other options:
         Expand uses of the ASSERT macro as full assertions.  This  is the
         default.
 
+   --check-compiler-pass-preconditions
+        Enable internal validation compiler passes.
+
+   --no-check-compiler-pass-preconditions
+        Disable  internal   validation   compiler  passes.  This  is  the
+        default.
+
    --gc-integrity-checks
         Enable garbage collection integrity checks.  This slows down the
         garbage collection.
@@ -970,19 +984,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (flush-output-port (current-output-port)))
 
 
-;;;; code evaluation driver
-
-(define-syntax doit
-  (syntax-rules ()
-    ((_ ?body0 ?body ...)
-     (start (lambda () ?body0 ?body ...)))))
-
-(define (start proc)
-  (if (compiler.generate-debug-calls)
-      (debugger.guarded-start proc)
-    (proc)))
-
-
 ;;;; before-the-main-action code evaluation procedures
 
 (define (load-rc-files-as-r6rs-scripts cfg)
@@ -1036,6 +1037,19 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 				    ((psyntax.current-library-expander) library-form)))
 			(read-source-file source-filename)))
 	    cfg.load-libraries))))
+
+
+;;;; code evaluation driver
+
+(define-syntax doit
+  (syntax-rules ()
+    ((_ ?body0 ?body ...)
+     (start (lambda () ?body0 ?body ...)))))
+
+(define (start proc)
+  (if (compiler.generate-debug-calls)
+      (debugger.guarded-start proc)
+    (proc)))
 
 
 ;;;; main action procedures

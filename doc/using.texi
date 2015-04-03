@@ -294,14 +294,42 @@ Turn off debugging mode.
 @item --drop-assertions
 @cindex Command line option @option{--drop-assertions}
 @cindex @option{--drop-assertions}, command line option
-Expand uses of the @func{assert} macro into just the expression,
-dropping the assertion.
+When used: causes every @syntax{assert} macro to be expanded into its
+expression, dropping the assertions.  Specifically:
+
+@example
+(assert @meta{expr})
+@end example
+
+@noindent
+is expanded into:
+
+@example
+@meta{expr}
+@end example
+
+@noindent
+so that side effects in @meta{expr} are performed and the resulting
+value is returned.  The default is to include the full assertion.
 
 @item --no-drop-assertions
 @cindex Command line option @option{--no-drop-assertions}
 @cindex @option{--no-drop-assertions}, command line option
-Expand uses of the @func{assert} macro as full assertions.  This is the
-default.
+Expand uses of the @syntax{assert} syntax as full assertions.  This is
+the default.
+
+@item --check-compiler-pass-preconditions
+@cindex Command line option @option{--check-compiler-pass-preconditions}
+@cindex @option{--check-compiler-pass-preconditions}, command line option
+Enable performing additional compiler passes to validate generated code.
+To be used when debugging @value{PRJNAME}'s compiler.  The default is
+@strong{not} to perform such compiler passes.
+
+@item --no-check-compiler-pass-preconditions
+@cindex Command line option @option{--no-check-compiler-pass-preconditions}
+@cindex @option{--no-check-compiler-pass-preconditions}, command line option
+Disable performing additional compiler passes to validate generated
+code.  To be used when debugging @value{PRJNAME}'s compiler.
 
 @item --gc-integrity-checks
 @cindex Command line option @option{--gc-integrity-checks}
@@ -366,14 +394,15 @@ code and assembly code.  Disables the effect of
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn off use of the source optimiser.
+Disable the of the compiler's source optimiser.
 
 @item -O1
 @itemx -O2
 @itemx -O3
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn on various levels of compile optimisations.
+Enable the use of the compiler's source optimiser at various levels.
+The default optimisation level is equivalent to @code{-O2}.
 
 @item --optimizer-passes-count @var{COUNT}
 @cindex Command line option @option{--optimizer-passes-count}

@@ -249,7 +249,7 @@
 ;;someone has  to remember to set  it to #f; but  it is not bad  if it is set  to #t,
 ;;because it only affects bulding the boot image.  (Marco Maggi; Wed Oct 29, 2014)
 ;;
-;;(compiler.check-compiler-pass-preconditions #t)
+(compiler.check-compiler-pass-preconditions #t)
 
 ;;NOTE  This is  for debugging  purposes: it  causes the  compiler to  generate human
 ;;readable labels.  Generating  descriptive labels is slower, so this  is usually set

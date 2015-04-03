@@ -43,6 +43,7 @@
     cp0-size-limit
     strip-source-info
     generate-debug-calls
+    check-compiler-pass-preconditions
     (rename (option.descriptive-labels descriptive-labels))
     open-mvcalls
 
@@ -226,6 +227,14 @@
 
 (define optimize-cp
   (make-parameter #t))
+
+(define check-compiler-pass-preconditions
+  ;;When true:  perform additional  compiler code-validation  passes to  validate the
+  ;;recordised code between true compiler passes.
+  ;;
+  (make-parameter #f
+    (lambda (obj)
+      (and obj #t))))
 
 (define optimizer-output
   (make-parameter #f))
