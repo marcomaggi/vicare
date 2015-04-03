@@ -2187,54 +2187,6 @@
   ;; uninstall-library
 
 ;;; --------------------------------------------------------------------
-;;; compiler stuff
-
-  ;; $current-letrec-pass
-  ;; $check-for-illegal-letrec
-  ;; $optimize-cp
-  ;; $optimize-level
-  ;; $source-optimizer-passes-count
-  ;; $perform-tag-analysis
-  ;; $cp0-size-limit
-  ;; $cp0-effort-limit
-  ;; $strip-source-info
-  ;; $generate-debug-calls
-  ;; $open-mvcalls
-
-  ;; $tag-analysis-output
-  ;; $assembler-output
-  ;; $optimizer-output
-
-  ;; $compile-core-expr->code
-  ;; $recordize
-  ;; $optimize-direct-calls
-  ;; $optimize-letrec
-  ;; $source-optimize
-  ;; $rewrite-references-and-assignments
-  ;; $core-type-inference
-  ;; $introduce-vars
-  ;; $sanitize-bindings
-  ;; $optimize-for-direct-jumps
-  ;; $insert-global-assignments
-  ;; $convert-closures
-  ;; $optimize-closures/lift-codes
-  ;; $alt-cogen
-  ;; $assemble-sources
-
-  ;; $introduce-primcalls
-  ;; $eliminate-fix
-  ;; $insert-engine-checks
-  ;; $insert-stack-overflow-check
-  ;; $specify-representation
-  ;; $impose-calling-convention/evaluation-order
-  ;; $assign-frame-sizes
-  ;; $color-by-chaitin
-  ;; $flatten-codes
-
-  ;; $unparse-recordized-code
-  ;; $unparse-recordized-code/pretty
-
-;;; --------------------------------------------------------------------
 
   ;; $compnum->cflonum
 
