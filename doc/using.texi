@@ -294,7 +294,7 @@ Turn off debugging mode.
 @item --drop-assertions
 @cindex Command line option @option{--drop-assertions}
 @cindex @option{--drop-assertions}, command line option
-When used: causes every @func{assert} macro to be expanded into its
+When used: causes every @syntax{assert} macro to be expanded into its
 expression, dropping the assertions.  Specifically:
 
 @example
@@ -315,7 +315,8 @@ value is returned.  The default is to include the full assertion.
 @item --no-drop-assertions
 @cindex Command line option @option{--no-drop-assertions}
 @cindex @option{--no-drop-assertions}, command line option
-Include the full assertions described by @func{assert} macros.
+Expand uses of the @syntax{assert} syntax as full assertions.  This is
+the default.
 
 @item --check-compiler-pass-preconditions
 @cindex Command line option @option{--check-compiler-pass-preconditions}

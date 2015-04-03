@@ -318,7 +318,6 @@
 		  array-set-c-size_t!			array-set-c-ssize_t!
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
     (only (vicare system $pointers)
-	  $pointer?
 	  $pointer=)
     (except (vicare system $bytevectors)
 	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon
@@ -523,6 +522,7 @@
 (define-list-of-type-predicate list-of-pointers? pointer?)
 
 (define (pointer? obj)
+  ;;This is also a primitive operation.
   (import (prefix (only (vicare) pointer?) sys:))
   (sys:pointer? obj))
 

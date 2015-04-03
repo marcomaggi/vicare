@@ -493,6 +493,7 @@
     (expansion-of				(core-macro . expansion-of))
     (visit-code-of				(core-macro . visit-code-of))
     (optimisation-of				(core-macro . optimisation-of))
+    (optimisation-and-core-type-inference-of	(core-macro . optimisation-and-core-type-inference-of))
     (assembly-of				(core-macro . assembly-of))
     (splice-first-expand			(core-macro . splice-first-expand))
     (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
@@ -770,8 +771,8 @@
   ;;built boot image.  If a library is  listed here: after building and loading a new
   ;;boot image, it is possible to IMPORT such library.
   ;;
-  ;;The legend mapp full library specifications  to nicknames: for example "v" is the
-  ;;nickname  of "(vicare)".   Additionlly tag  each library  with a  VISIBLE? and  a
+  ;;The legend maps full library specifications  to nicknames: for example "v" is the
+  ;;nickname of  "(vicare)".  Additionally  tag each  library with  a VISIBLE?  and a
   ;;REQUIRED?  boolean.
   ;;
   ;;The  libraries  marked  as  VISIBLE?   are listed  by  default  by  the  function
