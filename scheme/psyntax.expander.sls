@@ -2151,6 +2151,7 @@
 ;;;; R6RS program expander
 
 (module (expand-top-level)
+
   (define-syntax __module_who__
     (identifier-syntax 'expand-top-level))
 
