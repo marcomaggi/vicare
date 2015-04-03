@@ -244,19 +244,19 @@ vicare_SOURCES	= \
 	src/ikarus-debugging.c		\
 	src/internals.h
 
-nodist_vicare_SOURCES	= src/bootfileloc.h
+nodist_vicare_SOURCES	= bootfileloc.h
 vicare_DEPENDENCIES	= src/vicare.h
 include_HEADERS		= src/vicare.h src/vicare-platform.h
 
-src/ikarus.$(OBJEXT) src/ikarus-main.$(OBJEXT): src/bootfileloc.h
+ikarus.$(OBJEXT) ikarus-main.$(OBJEXT): bootfileloc.h
 
-CLEANFILES		+= src/bootfileloc.h
+CLEANFILES		+= bootfileloc.h
 
-BUILT_SOURCES		+= src/bootfileloc.h
+BUILT_SOURCES		+= bootfileloc.h
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
-src/bootfileloc.h:
+bootfileloc.h:
 	echo '#define BOOTFILE "$(pkglibdir)/vicare.boot"' >$@
 	echo '#define EXEFILE "$(bindir)/vicare"' >>$@
 
