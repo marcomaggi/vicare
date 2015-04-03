@@ -97,7 +97,7 @@
 ;;operation.    Then,  in   this   makefile,   we  add   an   entry   to  the   table
 ;;IDENTIFIER->LIBRARY-MAP as follows:
 ;;
-;;   (define identifier->library-map
+;;   (define IDENTIFIER->LIBRARY-MAP
 ;;     '(($swirl-pair		$pairs)
 ;;       ---))
 ;;
@@ -144,14 +144,14 @@
 ;;operation.   Then, in  this makefile,  we add  an  entry at  the end  of the  table
 ;;LIBRARY-LEGEND as follows:
 ;;
-;;   (define library-legend
+;;   (define LIBRARY-LEGEND
 ;;     '(---
 ;;       ($spiffy  (ikarus system $spiffy)  #t	#f))
 ;;
 ;;marking the library as visible but not required.  Then we add an entry to the table
 ;;IDENTIFIER->LIBRARY-MAP as follows:
 ;;
-;;   (define identifier->library-map
+;;   (define IDENTIFIER->LIBRARY-MAP
 ;;     '(($swirl $spiffy)
 ;;       ---))
 ;;
@@ -175,6 +175,9 @@
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
+  (prefix (only (ikarus.options)
+		verbose?)
+	  option.)
   (prefix (ikarus.compiler) compiler.)
   #;(only (psyntax.expander) expand-library)
   (prefix (only (psyntax system $bootstrap)
@@ -185,9 +188,51 @@
 		writing-boot-image?)
 	  fasl-write.))
 
+(module (BOOT-IMAGE-MAJOR-VERSION BOOT-IMAGE-MINOR-VERSION)
+  (include "ikarus.config.scm" #t))
+
+
+;;;; configuration inspection
+
+;;Print some platform-specific  constants to make sure that we  are building with the
+;;correct configuration.
+;;
+(begin
+  (module (config.wordsize
+	   config.fixnum-width
+	   config.greatest-fixnum
+	   config.least-fixnum)
+    (define-syntax-rule (config.wordsize)
+      wordsize)
+    (define-syntax-rule (config.fixnum-width)
+      (fixnum-width))
+    (define-syntax-rule (config.greatest-fixnum)
+      (greatest-fixnum))
+    (define-syntax-rule (config.least-fixnum)
+      (least-fixnum))
+    (include "ikarus.wordsize.scm"))
+  (fprintf (current-error-port) "wordsize:        ~a\n" (config.wordsize))
+  (fprintf (current-error-port) "fixnum width:    ~a\n" (config.fixnum-width))
+  (fprintf (current-error-port) "greatest fixnum: ~a\n" (config.greatest-fixnum))
+  (fprintf (current-error-port) "least fixnum:    ~a\n" (config.least-fixnum)))
+
+
+;;;; parameters configuration
+
+(define-constant BOOT-FILE-NAME
+  "vicare.boot")
+
+(define-constant BOOT-IMAGE-FILES-SOURCE-DIR
+  (or (getenv "VICARE_SRC_DIR") "."))
+
+(define verbose-output? #t)
+
+;;; --------------------------------------------------------------------
+
+(option.verbose? #t)
+
 (fasl-write.writing-boot-image? #t)
 
-(compiler.optimize-level 2)
 (compiler.perform-core-type-inference #t)
 (pretty-width 160)
 ((pretty-format 'fix)
@@ -197,23 +242,25 @@
 
 ;;NOTE This turns off some debug mode features  that cannot be used in the boot image
 ;;because it would become too big.  (Marco Maggi; Wed Apr 2, 2014)
+;;
 (compiler.generate-debug-calls #f)
+
+;;NOTE This  can be #t  while developing and  #f in distributed  tarballs.  Obviously
+;;someone has  to remember to set  it to #f; but  it is not bad  if it is set  to #t,
+;;because it only affects bulding the boot image.  (Marco Maggi; Wed Oct 29, 2014)
+;;
+;;(compiler.check-compiler-pass-preconditions #t)
+
+;;NOTE  This is  for debugging  purposes: it  causes the  compiler to  generate human
+;;readable labels.  Generating  descriptive labels is slower, so this  is usually set
+;;to false.  (Marco Maggi; Sun Nov 16, 2014)
+;;
+(compiler.descriptive-labels #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
 ;;;; helpers
-
-(define BOOT-IMAGE-MAJOR-VERSION 0)
-(define BOOT-IMAGE-MINOR-VERSION 4)
-
-(define boot-file-name
-  "vicare.boot")
-
-(define src-dir
-  (or (getenv "VICARE_SRC_DIR") "."))
-
-(define verbose-output? #t)
 
 (define-syntax each-for
   (syntax-rules ()
@@ -250,7 +297,7 @@
 	(flush-output-port port))))))
 
 
-(define scheme-library-files
+(define-constant SCHEME-LIBRARY-FILES
   ;;Listed in the order in which they're loaded.
   ;;
   ;;Loading  of  the boot  file  may  segfault if  a  library  is loaded  before  its
@@ -352,7 +399,7 @@
 
 ;;;; system macros
 
-(define ikarus-system-fluids
+(define-constant VICARE-SYSTEM-FLUIDS
   `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
     (return					($fluid . ,(gensym "fluid-label.return")))
     (continue					($fluid . ,(gensym "fluid-label.continue")))
@@ -364,22 +411,22 @@
 ;;At present there are no fluid syntaxes  with default binding defined by Vicare.  To
 ;;define one for an imaginary fluid SPIFY, we should to this here:
 ;;
-;;  (define label-of-spiffy
+;;  (define-constant label-of-spiffy
 ;;    (gensym "fluid-label.spiffy"))
 ;;
-;;  (define ikarus-system-fluids
+;;  (define-constant VICARE-SYSTEM-FLUIDS
 ;;    `(...
 ;;      (spiffy			($fluid . ,label-of-spiffy))
 ;;      ...))
 ;;
-;;  (define ikarus-system-fluids-defaults
+;;  (define-constant VICARE-SYSTEM-FLUIDS-DEFAULTS
 ;;    `((,label-of-spiffy	(macro . default-for-spiffy))))
 ;;
 ;;then we must add an integrated non-core expander macro named DEFAULT-FOR-SPIFFY.
 ;;
-(define ikarus-system-fluids-defaults '())
+(define-constant VICARE-SYSTEM-FLUIDS-DEFAULTS '())
 
-(define ikarus-system-macros
+(define-constant VICARE-SYSTEM-MACROS
   '((internal-define				(define))
     (define-syntax				(define-syntax))
     (define-alias				(define-alias))
@@ -715,13 +762,13 @@
     ))
 
 
-(define library-legend
+(define-constant LIBRARY-LEGEND
   ;;The library legend  lists all the library  that will be implemented  by the newly
   ;;built boot image.  If a library is  listed here: after building and loading a new
   ;;boot image, it is possible to IMPORT such library.
   ;;
-  ;;The legend mapp full library specifications  to nicknames: for example "v" is the
-  ;;nickname  of "(vicare)".   Additionlly tag  each library  with a  VISIBLE? and  a
+  ;;The legend maps full library specifications  to nicknames: for example "v" is the
+  ;;nickname of  "(vicare)".  Additionally  tag each  library with  a VISIBLE?  and a
   ;;REQUIRED?  boolean.
   ;;
   ;;The  libraries  marked  as  VISIBLE?   are listed  by  default  by  the  function
@@ -812,7 +859,7 @@
     ))
 
 
-(define identifier->library-map
+(define-constant IDENTIFIER->LIBRARY-MAP
   ;;Map  all  the identifiers  of  exported  bindings  (and  more) to  the  libraries
   ;;exporting them, using the nicknames defined  by LIBRARY-LEGEND; each entry in the
   ;;list has the format:
@@ -3456,52 +3503,52 @@
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff
 
-    (core-expr->optimized-code			$compiler)
-    (core-expr->assembly-code			$compiler)
+    (core-expr->optimized-code				$compiler)
+    (core-expr->assembly-code				$compiler)
 
-    (current-letrec-pass			$compiler)
-    (check-for-illegal-letrec			$compiler)
-    (optimize-cp				$compiler)
-    (optimize-level				$compiler)
-    (source-optimizer-passes-count		$compiler)
-    (perform-tag-analysis			$compiler)
-    (cp0-size-limit				$compiler)
-    (cp0-effort-limit				$compiler)
-    (strip-source-info				$compiler)
-    (generate-debug-calls			$compiler)
+    (current-letrec-pass				$compiler)
+    (check-for-illegal-letrec				$compiler)
+    (optimize-cp					$compiler)
+    (optimize-level					$compiler)
+    (source-optimizer-passes-count			$compiler)
+    (perform-tag-analysis				$compiler)
+    (cp0-size-limit					$compiler)
+    (cp0-effort-limit					$compiler)
+    (strip-source-info					$compiler)
+    (generate-debug-calls				$compiler)
 
-    (tag-analysis-output			$compiler)
-    (assembler-output				$compiler)
-    (optimizer-output				$compiler)
+    (tag-analysis-output				$compiler)
+    (assembler-output					$compiler)
+    (optimizer-output					$compiler)
 
-    (compile-core-expr->code			$compiler)
-    (recordize					$compiler)
-    (optimize-direct-calls			$compiler)
-    (optimize-letrec				$compiler)
-    (source-optimize				$compiler)
-    (rewrite-references-and-assignments		$compiler)
-    (core-type-inference			$compiler)
-    (introduce-vars				$compiler)
-    (sanitize-bindings				$compiler)
-    (optimize-for-direct-jumps			$compiler)
-    (insert-global-assignments			$compiler)
-    (convert-closures				$compiler)
-    (optimize-closures/lift-codes		$compiler)
-    (alt-cogen					$compiler)
-    (assemble-sources				$compiler)
+    (compile-core-expr->code				$compiler)
+    (recordize						$compiler)
+    (optimize-direct-calls				$compiler)
+    (optimize-letrec					$compiler)
+    (source-optimize					$compiler)
+    (rewrite-references-and-assignments			$compiler)
+    (core-type-inference				$compiler)
+    (introduce-vars					$compiler)
+    (sanitize-bindings					$compiler)
+    (optimize-for-direct-jumps				$compiler)
+    (insert-global-assignments				$compiler)
+    (convert-closures					$compiler)
+    (optimize-closures/lift-codes			$compiler)
+    (alt-cogen						$compiler)
+    (assemble-sources					$compiler)
 
-    (alt-cogen.introduce-primcalls		$compiler)
-    (alt-cogen.eliminate-fix			$compiler)
-    (alt-cogen.insert-engine-checks		$compiler)
-    (alt-cogen.insert-stack-overflow-check	$compiler)
-    (alt-cogen.specify-representation		$compiler)
+    (alt-cogen.introduce-primcalls			$compiler)
+    (alt-cogen.eliminate-fix				$compiler)
+    (alt-cogen.insert-engine-checks			$compiler)
+    (alt-cogen.insert-stack-overflow-check		$compiler)
+    (alt-cogen.specify-representation			$compiler)
     (alt-cogen.impose-calling-convention/evaluation-order $compiler)
-    (alt-cogen.assign-frame-sizes		$compiler)
-    (alt-cogen.color-by-chaitin			$compiler)
-    (alt-cogen.flatten-codes			$compiler)
+    (alt-cogen.assign-frame-sizes			$compiler)
+    (alt-cogen.color-by-chaitin				$compiler)
+    (alt-cogen.flatten-codes				$compiler)
 
-    (unparse-recordized-code			$compiler)
-    (unparse-recordized-code/pretty		$compiler)
+    (unparse-recordized-code				$compiler)
+    (unparse-recordized-code/pretty			$compiler)
 
 ;;; --------------------------------------------------------------------
 
@@ -4365,7 +4412,7 @@
   ;;image which will have the new library as REQUIRED?.
   ;;
   (let ((list-of-library-records
-	 (let next-library-entry ((entries library-legend))
+	 (let next-library-entry ((entries LIBRARY-LEGEND))
 	   (define required?	cadddr)
 	   (define library-name	cadr)
 	   (cond ((null? entries)
@@ -4390,7 +4437,8 @@
   ;;
   (define (expand-all files)
     ;;Expand all the libraries in FILES, which must be a list of strings representing
-    ;;file pathnames under the directory referenced by SRC-DIR.  Return 3 values:
+    ;;file pathnames  under the directory referenced  by BOOT-IMAGE-FILES-SOURCE-DIR.
+    ;;Return 3 values:
     ;;
     ;;1. The list of library specifications.
     ;;
@@ -4438,7 +4486,7 @@
 		  (debug-printf " ~s\n" file)
 		  ;;For  each library  in the  file apply  the closure  for its  side
 		  ;;effects.
-		  (load (string-append src-dir "/" file)
+		  (load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
 			(lambda (library-sexp)
 			  (receive (name code subst env)
 			      (boot-library-expand library-sexp)
@@ -4597,8 +4645,8 @@
     ;;
     (define-constant __who__ 'make-system-data)
     (define-syntax-rule (macro-identifier? x)
-      (and (or (assq x ikarus-system-macros)
-	       (assq x ikarus-system-fluids))
+      (and (or (assq x VICARE-SYSTEM-MACROS)
+	       (assq x VICARE-SYSTEM-FLUIDS))
 	   #t))
     (define-syntax-rule (procedure-identifier? x)
       (not (macro-identifier? x)))
@@ -4621,21 +4669,21 @@
       ;;We accumulate  in the subst  and env collections the  associations name/label
       ;;and label/binding
       ;;
-      (each-for ikarus-system-macros
+      (each-for VICARE-SYSTEM-MACROS
 	(lambda (entry)
 	  (let* ((name		(car  entry))
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
 	    (export-env-clt   (cons label binding)))))
-      (each-for ikarus-system-fluids
+      (each-for VICARE-SYSTEM-FLUIDS
 	(lambda (entry)
 	  (let* ((name		(car  entry))
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
 	    (export-env-clt   (cons label binding)))))
-      (each-for ikarus-system-fluids-defaults
+      (each-for VICARE-SYSTEM-FLUIDS-DEFAULTS
 	(lambda (entry)
 	  (let* ((label		(car  entry))
 		 (binding	(cadr entry)))
@@ -4657,7 +4705,7 @@
       ;;
       ;;   (?prim-name . ?loc)
       ;;
-      (each-for (map car identifier->library-map)
+      (each-for (map car IDENTIFIER->LIBRARY-MAP)
 	(lambda (prim-name)
 	  (when (procedure-identifier? prim-name)
 	    (cond ((assq prim-name (export-subst-clt))
@@ -4765,7 +4813,7 @@
 	   ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
 		    (build-intern-library-form legend-entry export-subst export-env))
-	       library-legend)))
+	       LIBRARY-LEGEND)))
 
       ;;Logging this  symbolic expression  gives some insight  about what  happens at
       ;;boot image initialisation time.
@@ -4827,7 +4875,7 @@
 	    '()
 	  (let ((x (car ls)))
 	    (let ((name (car x)))
-	      (cond ((assq name identifier->library-map)
+	      (cond ((assq name IDENTIFIER->LIBRARY-MAP)
 		     => (lambda (q)
 			  (if (memq nickname (cdr q))
 			      (cons x (loop (cdr ls)))
@@ -4888,10 +4936,10 @@
 ;;
 (for-each (lambda (x)
 	    (for-each (lambda (x)
-			(unless (assq x library-legend)
-			  (error 'identifier->library-map "not in the libraries list" x)))
+			(unless (assq x LIBRARY-LEGEND)
+			  (error 'IDENTIFIER->LIBRARY-MAP "not in the libraries list" x)))
 	      (cdr x)))
-  identifier->library-map)
+  IDENTIFIER->LIBRARY-MAP)
 
 ;;Perform the bootstrap process generating the boot image.
 ;;
@@ -4901,7 +4949,7 @@
 	(time-it "macro expansion"
 	  (lambda ()
 	    (parameterize ((bootstrap.current-library-collection bootstrap-collection))
-	      (expand-all scheme-library-files))))
+	      (expand-all SCHEME-LIBRARY-FILES))))
       ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
       ;;we must register  in the state of  the compiler a closure  capable of mapping
       ;;lexical-primitive symbol-names to their location gensyms.  The loc gensyms of
@@ -4917,7 +4965,7 @@
 		(error 'bootstrap
 		  "no location gensym found for boot image lexical primitive"
 		  primitive-name.sym)))))
-      (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
+      (let ((port (open-file-output-port BOOT-FILE-NAME (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")

@@ -418,13 +418,14 @@ bootexec_DATA		= $(VICARE_NEW_BOOT)
 
 BOOT_SEARCH_PATH	= $(srcdir)/scheme:$(builddir)/scheme:$(slsdir):$(fasldir):$(builddir)
 VICARE_PREBUILT_BOOT	= $(srcdir)/boot/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
-
 VICARE_BOOT_ENV		= \
 	VICARE_SRC_DIR=$(srcdir)/scheme;		export VICARE_SRC_DIR;		\
 	VICARE_BUILD_DIR=$(builddir)/scheme;		export VICARE_BUILD_DIR;	\
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_SOURCE_PATH=$(BOOT_SEARCH_PATH);		export VICARE_SOURCE_PATH;
-VICARE_BOOT_FLAGS	= --print-loaded-libraries --no-rcfile --library-locator source --r6rs-script
+VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
+			  --print-loaded-libraries --no-rcfile --library-locator source	\
+			  --r6rs-script
 
 CLEANFILES		+= ikarus.config.scm $(VICARE_NEW_BOOT)
 
@@ -433,22 +434,24 @@ CLEANFILES		+= ikarus.config.scm $(VICARE_NEW_BOOT)
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
 ikarus.config.scm:
-	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
-	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
-	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>$@
-	echo '(define (host-info) "$(target)")' >>$@
-	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))' >>$@
-	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))' >>$@
+	echo '(define vicare-version "$(PACKAGE_VERSION)")'			>$@
+	echo '(define vicare-lib-dir "$(pkglibdir)")'				>>$@
+	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'			>>$@
+	echo '(define (host-info) "$(target)")'					>>$@
+	echo '(define target-os-uid (quote $(VICARE_TARGET_OS_UID)))'		>>$@
+	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))'			>>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
-	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))' >>$@
-	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>$@
-	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>$@
-	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>$@
-	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>$@
-	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))' >>$@
-	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>$@
-	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>$@
-	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>$@
+	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'	>>$@
+	echo '(define bootfile "$(pkglibdir)/vicare.boot")'			>>$@
+	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'	>>$@
+	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'	>>$@
+	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))'	      >>$@
+	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))'	      >>$@
+	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))'	      >>$@
+	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))'     >>$@
+	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))'	      >>$@
+	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))'	      >>$@
+	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))'	      >>$@
 
 # To  create the  new boot  image we  use a  prebuilt boot  image; the
 # environment variable names are  hardcoded in the prebuilt boot image
@@ -480,6 +483,8 @@ boot-image-32-bit: vicare
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.scm
@@ -501,6 +506,8 @@ boot-image-64-bit: vicare
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.scm
@@ -556,7 +563,7 @@ VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
 			  --library-locator compile-time --build-directory $(fasldir)
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
 
-FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
+FASL_PREREQUISITES	= $(VICARE_NEW_BOOT) vicare
 
 ## --------------------------------------------------------------------
 
@@ -622,7 +629,7 @@ ip-address-tables:
 #page
 #### running the test suite: test files
 
-VICARE_SCHEME_CORE_TESTS	= \
+VICARE_SCHEME_R6RS_TESTS	= \
 	tests/test-r6rs-arithmetic-bitwise.sps				\
 	tests/test-r6rs-arithmetic-fixnums.sps				\
 	tests/test-r6rs-arithmetic-flonums.sps				\
@@ -647,8 +654,9 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-r6rs-records-syntactic.sps				\
 	tests/test-r6rs-sorting.sps					\
 	tests/test-r6rs-syntax-case.sps					\
-	tests/test-r6rs-unicode.sps					\
-	\
+	tests/test-r6rs-unicode.sps
+
+VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-ikarus-bignum-to-flonum.sps				\
 	tests/test-ikarus-bitwise.sps					\
 	tests/test-ikarus-bytevectors.sps				\
@@ -1065,6 +1073,7 @@ EXTRA_DIST	+= \
 	tests/demo-find.sps				\
 	tests/demo-parallel-process.sps			\
 	\
+	$(VICARE_SCHEME_R6RS_TESTS)			\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\
 	$(VICARE_SCHEME_SRFI_TESTS)			\
@@ -1080,7 +1089,7 @@ EXTRA_DIST	+= \
 #page
 #### interface for "make check": selecting test programs
 
-TESTS		= $(VICARE_SCHEME_CORE_TESTS)
+TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS)
 XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps tests/test-issue-070.sps
 
 if WANT_SRFI

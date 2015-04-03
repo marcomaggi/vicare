@@ -24,6 +24,11 @@ LT_INIT([shared disable-static])
 AC_LANG([C])
 AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 
+AS_VAR_SET(BOOT_IMAGE_MAJOR_VERSION,[0])
+AS_VAR_SET(BOOT_IMAGE_MINOR_VERSION,[4])
+AC_SUBST(BOOT_IMAGE_MAJOR_VERSION)
+AC_SUBST(BOOT_IMAGE_MINOR_VERSION)
+
 #page
 #### additional configuration command line options
 
@@ -43,6 +48,17 @@ AC_DEFINE([IK_PROTECT_FROM_STACK_OVERFLOW],[1],
 #
 AS_VAR_SET(AX_VFLAGS,["-O2 --verbose --no-rcfile"])
 AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS)])
+
+# Command  line  options  for  the executable  "vicare".   The  variable
+# AX_BOOT_VFLAGS   is   for   options  preselected   by   the   building
+# infrastructure.  The variable BOOT_VFLAGS is for user options selected
+# on the command line of "configure" and "make", for example:
+#
+#    $ make BOOT_VFLAGS="--no-drop-assertions"
+#
+# These flags are used to build the boot image.
+AS_VAR_SET(AX_BOOT_VFLAGS,["--print-loaded-libraries --no-debug --no-rcfile --library-locator source -O2"])
+AS_VAR_SET_IF(BOOT_VFLAGS,,[AS_VAR_SET(BOOT_VFLAGS)])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
   [whether debugging features are included in compiled Scheme libraries],
@@ -1555,6 +1571,8 @@ AC_SUBST([BINFMT_PROGRAM_MAGIC])
 
 AC_SUBST([AX_VFLAGS])
 AC_SUBST([VFLAGS])
+AC_SUBST([AX_BOOT_VFLAGS])
+AC_SUBST([BOOT_VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile]

@@ -43,6 +43,7 @@
     cp0-size-limit
     strip-source-info
     generate-debug-calls
+    (rename (option.descriptive-labels descriptive-labels))
     open-mvcalls
 
     ;; middle pass inspection
