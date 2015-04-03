@@ -282,6 +282,7 @@ Set both the fields @code{value} and @code{proc} of @var{sym} to
 Still to be documented.
 @end deffn
 
+
 @c page
 @node syslib symbols table
 @subsection The symbol table
@@ -1986,7 +1987,8 @@ necessarily a compnum).
 
 
 @deffn {Unsafe Operation} $sub-compnum-flonum @var{cn} @var{fl}
-Subtract a compnum with a flonum and return the result as a complex.
+Subtract a compnum with a flonum and return the result as a compnum or
+cflonum.
 @end deffn
 
 

@@ -8628,7 +8628,6 @@ Supported @meta{symbol} options are:
 Adhere more strictly to the behaviour defined by @rnrs{6}.  For example:
 report errors at run--time, rather than at expand--time.
 
-
 @item tagged-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end table
@@ -11402,7 +11401,7 @@ syntactic binding identifiers.
 
 
 @menu
-* iklib fixnums predicates::    Predicate functions.
+* iklib fixnums predicates::    Predicates.
 * iklib fixnums comparison::    Comparison functions.
 * iklib fixnums arithmetics::   Arithmetics.
 * iklib fixnums bitwise::       Bitwise functions.
@@ -11411,10 +11410,7 @@ syntactic binding identifiers.
 
 @c page
 @node iklib fixnums predicates
-@subsection Predicate functions
-
-
-The following bindings are exported by the library @library{vicare}.
+@subsection Predicates
 
 
 @defun list-of-fixnums? @var{obj}
@@ -11450,9 +11446,6 @@ negative, non--positive, non--negative; otherwise return @false{}.  If
 @subsection Comparison functions
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
 @defun fx= @vari{fx} @var{fx} @dots{}
 @defunx fx< @vari{fx} @var{fx} @dots{}
 @defunx fx> @vari{fx} @var{fx} @dots{}
@@ -11471,10 +11464,7 @@ Return @true{} if all the arguments are different; otherwise return
 
 @c page
 @node iklib fixnums arithmetics
-@subsection Arithmetics functions
-
-
-The following bindings are exported by the library @library{vicare}.
+@subsection Arithmetics
 
 
 @defun fxadd1 @var{fx}
@@ -11565,9 +11555,6 @@ provided all number object involved in that computation are exact.
 @subsection Bitwise functions
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
 @defun fxlognot @var{fx}
 @defunx fxlogor @vari{fx} @varii{fx}
 @defunx fxlogand @vari{fx} @varii{fx}
@@ -11580,13 +11567,11 @@ Aliases for @func{fxnot}, @func{fxior}, @func{fxand}, @func{fxxor}.
 @subsection Conversion functions
 
 
-The following bindings are exported by the library @library{vicare}.
-
-
 @defun fixnum->char @var{fx}
 @defunx char->fixnum @var{ch}
 Convert a fixnum to and from a character.
 @end defun
+
 
 @defun fixnum->string @var{fx}
 @defunx fixnum->string @var{fx} @var{base}
@@ -11650,16 +11635,6 @@ Notice the following behaviour with zero:
 @subsubheading Comparison
 
 @defun fl!=? @varo{fl} @var{fl} @dots{}
-Return @true{} if the operands are equal; else return @false{}.  The
-operands must be flonums, otherwise an exception is raised.
-@end defun
-
-@c ------------------------------------------------------------
-
-@subsubheading Comparison
-
-
-@defun fl!=? @vari{fl} @varii{fl} @varii{fl} @dots{}
 Return @true{} if the operands are equal; else return @false{}.  The
 operands must be flonums, otherwise an exception is raised.
 @end defun
@@ -15090,12 +15065,12 @@ be used as top value for the parameter @func{current-error-port}.
 @end defun
 
 
-@deffn {Identifier Syntax} stdin
-@deffnx {Identifier Syntax} stdout
-@deffnx {Identifier Syntax} stderr
-Expand into, respectively: @code{(console-input-port)},
-@code{(console-output-port)}, @code{(console-error-port)}.
-@end deffn
+@defvr Constant stdin
+@defvrx Constant stdout
+@defvrx Constant stderr
+Bound to the values returned by @func{console-input-port},
+@func{console-output-port}, @func{console-error-port} respectively.
+@end defvr
 
 
 @defun make-binary-file-descriptor-input-port @var{fd} @var{identifier}
@@ -15321,35 +15296,6 @@ returned by @var{thunk} are returned.
 If, after @var{thunk} has returned, an escape procedure is used to
 reenter the dynamic extent of the call to @var{thunk}: the behaviour is
 unspecified.
-@end defun
-
-
-@defun with-output-to-string @var{thunk}
-Create a textual output port that accumulates the characters written to
-it, set it as the current output port and call @var{thunk} with no
-arguments.  The port is the current output port only for the extent of
-the call to @var{thunk}.
-
-Whenever @var{thunk} returns, a string consisting of all of the port's
-accumulated characters (regardless of the port's current position) is
-returned and the port is closed.
-@end defun
-
-
-@defun with-input-from-string @var{string} @var{thunk}
-@var{thunk} must be a procedure and it must accept zero arguments; it is
-called with no arguments.  @var{string} must be a Scheme string.
-
-The @var{string} is used as argument for @func{open-string-input-port};
-during the dynamic extent of the call to @var{thunk}, the obtained port
-is made the value returned by procedure @func{current-input-port}; the
-previous default value is reinstated when the dynamic extent is exited.
-
-When @var{thunk} returns, the port is closed automatically.  The values
-returned by @var{thunk} are returned.
-
-If an escape procedure is used to escape back into the call to
-@var{thunk} after @var{thunk} is returned, the behavior is unspecified.
 @end defun
 
 
@@ -16758,6 +16704,14 @@ components: @condition{who}, @condition{message},
 @end defun
 
 
+@defun cstring->bytevector @var{pointer}
+@defunx cstring->bytevector @var{pointer} @var{count}
+Convert between an @asciiz{} string and a Scheme bytevector.  When used,
+@var{count} must be a fixnum representing the number of bytes to include
+in the bytevector.
+@end defun
+
+
 @defun string->cstring @var{str}
 @defunx string->guarded-cstring @var{str}
 Convert from a Scheme string to an @asciiz{} string.  If successful
@@ -16770,22 +16724,6 @@ Memory allocated by @func{string->cstring} must be explicitly
 released by @func{free}; memory allocated by
 @func{string->guarded-cstring} is automatically released by the
 garbage collector whenever the returned pointer is garbage collected.
-@end defun
-
-
-@defun string->cstring* @var{str}
-@defunx string->guarded-cstring* @var{str}
-Like @func{string->cstring} and @func{string->guarded-cstring}, but if
-allocation fails raise a non--continuable exception with components:
-@condition{who}, @condition{message}, @condition{out-of-memory-error}.
-@end defun
-
-
-@defun cstring->bytevector @var{pointer}
-@defunx cstring->bytevector @var{pointer} @var{count}
-Convert between an @asciiz{} string and a Scheme bytevector.  When used,
-@var{count} must be a fixnum representing the number of bytes to include
-in the bytevector.
 @end defun
 
 
@@ -16803,6 +16741,14 @@ consecutive zero bytes, starting at even offset.
 Like @func{cstring16->bytevector}, but convert the result to a Scheme
 string assuming the specified byte order (native, little endian, big
 endian).
+@end defun
+
+
+@defun string->cstring* @var{str}
+@defunx string->guarded-cstring* @var{str}
+Like @func{string->cstring} and @func{string->guarded-cstring}, but if
+allocation fails raise a non--continuable exception with components:
+@condition{who}, @condition{message}, @condition{out-of-memory-error}.
 @end defun
 
 
@@ -17342,11 +17288,5 @@ the thunks is catched and discarded.  To add an exit hook:
                   (exit-hooks)))
 @end example
 @end deffn
-
-
-@defun procedure-annotation @var{proc}
-Given a procedure argument return its annotation from the implementation
-code object.
-@end defun
 
 @c end of file
