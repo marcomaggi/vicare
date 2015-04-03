@@ -147,12 +147,6 @@
     ((expander-options)			expander-options-macro)
     ((compiler-options)			compiler-options-macro)
 
-    ((expander-options)
-     expander-options-macro)
-
-    ((compiler-options)
-     compiler-options-macro)
-
     ((... => _
 	  else unquote unquote-splicing
 	  unsyntax unsyntax-splicing
@@ -4315,8 +4309,7 @@
 
     ((_ ?expr ?expr* ...)
      (bless
-      (let recur ((e  ?expr)
-		  (e* ?expr*))
+      (let recur ((e ?expr) (e* ?expr*))
 	(if (null? e*)
 	    e
 	  `(if ,e
