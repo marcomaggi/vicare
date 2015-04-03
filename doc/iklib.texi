@@ -3359,6 +3359,39 @@ vicare> (print-gensym #f)
 vicare> (optimisation-of (+ 1 2))
 $1 = 3
 @end example
+
+@quotation
+@strong{NOTE} The level of optimisation of source code is configured by
+the @option{-O} options; @option{-O0} turns off the source optimiser.
+The default is equivalent to @option{-O2}.
+@end quotation
+@end deffn
+
+
+@deffn Syntax optimisation-and-core-type-inference-of @meta{expr}
+Like @func{optimisation-of}, but in addition perform some compiler
+passes to introduce core type inference.
+
+Example session:
+
+@example
+(optimisation-and-core-type-inference-of
+  (let ((x (read)))
+    (when (fixnum? x)
+      (gcd x 2))))
+@result{} (let ((x_0 (read)))
+     (if (fixnum? x_0)
+         ($gcd-fixnum-fixnum
+            (known x_0
+              (T:fixnum T:non-false T:exact-real T:real
+               T:exact-integer T:exact T:number T:immediate
+               T:object))
+            (known (constant 2)
+              (T:fixnum T:positive T:non-false T:exact-real
+               T:real T:exact-integer T:exact T:number
+               T:immediate T:object)))
+         (constant #<void>)))
+@end example
 @end deffn
 
 @c page
