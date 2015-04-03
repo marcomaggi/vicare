@@ -40,7 +40,6 @@
 		  stats-gc-real-secs		stats-gc-real-usecs
 		  stats-bytes-minor		stats-bytes-major))
 
-
 
 (define-record-type stats
   ;;Do not  change the order  of the fields!!!  It  must match the  implementation of
