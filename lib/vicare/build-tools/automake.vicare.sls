@@ -236,7 +236,7 @@
 	    ;;Remember that the stem+extension starts with a slash!!!
 	    (binary-pathname (libs.directory+library-stem->library-binary-pathname "lib" (libs.library-reference->filename-stem libref))))
 	(unless (hashtable-ref ALREADY-PROCESSED-TABLE source-pathname #f)
-	  (fprintf (stderr) "processing: ~a\n" source-pathname)
+	  (fprintf stderr "processing: ~a\n" source-pathname)
 	  (%build-compilation-recipe target/dependencies-list binary-pathname source-pathname)
 	  (%build-installation-stuff binary-pathname source-pathname)
 	  (hashtable-set! ALREADY-PROCESSED-TABLE source-pathname #t)
