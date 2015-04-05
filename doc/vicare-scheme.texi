@@ -233,6 +233,7 @@ Internals
 
 * objects::                     Built in Scheme objects.
 * debug int::                   Debug mode.
+* expander::                    Expander internals.
 * machinery::                   Introduction to execution machinery.
 * compiler::                    Wild notes on the compiler internals.
 * boot image::                  Anatomy of the boot image.
@@ -287,6 +288,7 @@ External documents
 
 @include objects.texi
 @include debug.texi
+@include expander.texi
 @include machinery.texi
 @include compiler.texi
 @include boot-image.texi
