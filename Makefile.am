@@ -59,6 +59,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/capi.texi					\
 	doc/objects.texi				\
 	doc/debug.texi					\
+	doc/expander.texi				\
 	doc/machinery.texi				\
 	doc/compiler.texi				\
 	doc/boot-image.texi				\
