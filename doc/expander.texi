@@ -2,15 +2,653 @@
 @chapter Expander internals
 
 
+@value{PRJNAME}'s expander is a development of the expander library
+@code{psyntax} written by Abdulaziz Ghuloum and Kent Dybvig and released
+to the public under a very liberal license.  @ref{references expander}
+for the bibliography on the expansion process.
+
 @menu
-* expander introduction::       Introduction to the expansion process.
+* expander intro::              Introduction to the expansion process.
 @end menu
 
 @c page
-@node expander introduction
+@node expander intro
 @section Introduction to the expansion process
 
 
+While discussing the expander operations, we will always refer to source
+code in the form of libraries.  @rnrs{6} also defines top level
+programs; however, under @value{PRJNAME}:
+
+@itemize
+@item
+The process of expanding programs is almost equal to the process of
+expanding libraries.  The differences are: a program does not export
+syntactic bindings; the top level body of a program intermixes
+definitions and expressions, while the top level body of a library
+separates definitions and expressions.
+
+@item
+The result of expanding a library is equal to the result of expanding a
+program.
+
+@item
+The output of the expander is the input of the compiler, and such input
+is equal when compiling a library and when compiling a program.
+@end itemize
+
+@noindent
+so if we understand how libraries are expanded, we also understand how
+programs are expanded.
+
+@menu
+* expander intro times::        Evaluation times.
+* expander intro bindings::     Syntactic bindings.
+* expander intro lex::          Lexical variables, labels,
+                                location gensyms.
+@end menu
+
+@c page
+@node expander intro times
+@subsection Evaluation times
+
+
+Throughout the code there are several references to different code
+evaluation times.  The following library from @bibref{exp1} allows us to
+explore what those times mean.
+
+@lisp
+(library (times-demo)
+  (export
+    call-time invoke-time expand-time visit-time compile-time)
+  (import (vicare)
+    (prefix (srfi :19) srfi.))
+
+  (define call-time
+    (lambda ()
+      (receive-and-return (S)
+          (srfi.date->string (srfi.current-date))
+        (printf "call time: ~a\n" S))))
+
+  (define invoke-time
+    (let ((t (receive-and-return (S)
+                 (srfi.date->string (srfi.current-date))
+               (printf "invoke time: ~a\n" S))))
+      (lambda () t)))
+
+  (define-syntax expand-time
+    (lambda (stx)
+      (receive-and-return (S)
+          (srfi.date->string (srfi.current-date))
+        (printf "expand time: ~a\n" S))))
+
+  (define-syntax visit-time
+    (let ((t (receive-and-return (S)
+                 (srfi.date->string (srfi.current-date))
+               (printf "visit time: ~a\n" S))))
+      (lambda (stx) t)))
+
+  (define-syntax compile-time
+    (lambda (stx)
+      (let-syntax ((t (lambda (stx)
+                        (receive-and-return (S)
+                            (srfi.date->string (srfi.current-date))
+                          (printf "compile time: ~a\n" S)))))
+        (t))))
+
+  #| end of library |# )
+@end lisp
+
+@c page
+@node expander intro bindings
+@subsection Syntactic bindings
+
+
+@cindex Initial environment, definition of
+@cindex Syntactic bindings, definition of
+@cindex Lexical bindings, definition of
+@cindex Syntactic bindings, definition of
+@cindex Top level bindings, definition of
+@cindex Local bindings, definition of
+
+@cindex Definition of initial environment
+@cindex Definition of syntactic bindings
+@cindex Definition of lexical bindings
+@cindex Definition of syntactic bindings
+@cindex Definition of top level bindings
+@cindex Definition of local bindings
+
+@cindex bindings, syntactic
+
+
+A syntactic binding is an association between an identifier and the
+result of evaluating an expression; there are different kinds:
+
+@table @dfn
+@item language syntax bindings
+Basic syntactic forms built into the language.  They are
+@syntax{lambda}, @syntax{define}, @syntax{let} and similar,
+@syntax{define-syntax}, @syntax{letrec-syntax}, @syntax{if},
+@syntax{and}, @syntax{or} and all the rest.
+
+@item variable bindings
+Associations between identifiers and expressions evaluated at run--time.
+They are established by @syntax{define}, @syntax{let}, @syntax{letrec}
+and similar.
+
+@item keyword bindings
+Associations between identifiers and expressions evaluated at
+expand--time.  The identifiers in this role are called @dfn{syntactic
+keywords} (not to be confused with keyword objects).  Keyword bindings
+are also named @dfn{macros} or just @dfn{syntaxes}.
+@end table
+
+@noindent
+we see that language syntax bindings are like keyword bindings built
+into the language.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Identifiers in binding position and reference position
+
+Let's consider the following syntactic form:
+
+@lisp
+(let ((a 1))
+  a)
+@end lisp
+
+@noindent
+the @syntax{let} syntax defines a variable binding whose name is
+@samp{a}; a variable binding is an association between a name and the
+result of evaluating an expression at run--time.
+
+Let's consider the following form:
+
+@lisp
+(let-syntax ((a (identifier-syntax 1)))
+  a)
+@end lisp
+
+@noindent
+@syntax{let-syntax} defines a keyword binding whose name is @samp{a}; a
+keyword binding is an association between a name and the result of
+evaluating an expression at expand--time.
+
+The identifiers @samp{a} in the first argument of @syntax{let} and
+@syntax{let-syntax} are in @dfn{binding position}; the identifiers in
+the bodies of @syntax{let} and @syntax{let-syntax} are in @dfn{reference
+position}.  The identifier in reference position is a reference to the
+identifier in binding position: we say that the identifier in reference
+position is ``captured'' by the identifier in binding position.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Lexical environment
+
+The expansion process proceeds from the outer forms to the inner forms.
+Given the syntactic form:
+
+@lisp
+(let ((a 1))
+  (let ((b 2))
+    (+ a b)))
+@end lisp
+
+@noindent
+first the outer @syntax{let} is processed and the syntactic binding for
+@samp{a} is established; then the inner @syntax{let} is processed and
+the syntactic binding for @samp{b} is established; finally the
+expression @code{(+ a b)} is processed.
+
+The region of the syntactic binding @samp{a} is the inner @syntax{let}
+form; notice that the binding for @samp{a} is not visible in the
+right--hand side of its definition.  The region of the syntactic binding
+@samp{b} is the internal expression.
+
+During the expansion process: syntactic bindings are added to an
+internal data structure that collects the associations, keeping track of
+nested regions of visibility: the @dfn{lexical environment}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Initial environment, top level bindings, local bindings
+
+Let's consider the following library:
+
+@lisp
+(library (demo)
+  (export)
+  (import (rnrs (6)))
+
+  (define var 1)
+
+  (define (fun a)
+    (let ((b 2))
+      (let-syntax ((c (identifier-syntax 3)))
+        (display (+ a b c))
+        (newline))))
+
+  (define-syntax syn
+    (syntax-rules ()
+      ((_ ?obj)
+       (display ?obj))))
+
+  (import (prefix (vicare posix) px.))
+  (display (px.getenv "PATH"))
+  (newline)
+
+  #| end of library |# )
+@end lisp
+
+@noindent
+we introduce the definitions:
+
+@table @dfn
+@item initial lexical environment
+The syntactic bindings imported by the @clause{import} clause of the
+@clause{library} form and by the @syntax{import} syntax in the body of
+the library, constitute the initial lexical environment for the
+expansion process of the library.
+
+In the example: the initial environment is the set of bindings exported
+by the libraries @library{rnrs (6)} and @library{vicare posix}.
+
+@quotation
+@strong{NOTE} An @syntax{import} syntax that appears in an internal body
+as in:
+
+@lisp
+(lambda ()
+  (import (srfi :19))
+  (do-something))
+@end lisp
+
+@noindent
+does @strong{not} add bindings to the initial environment: it adds them
+to the local lexical environment.
+@end quotation
+
+@item top level syntactic bindings
+Syntactic bindings defined in the body of the library with
+@syntax{define} and @syntax{define-syntax}; the ones defined by
+@syntax{define} are variable bindings, the ones defined by
+@syntax{define-syntax} are keyword bindings.
+
+Top level bindings are visible in the whole library body: their region
+is the whole body.  Top level bindings have indefinite extent: their
+values are never garbage collected, they exists for the whole life of
+the @value{EXECUTABLE} process.
+
+In the example: @samp{var} and @samp{fun} are top level variables;
+@samp{syn} is a top level keyword.
+
+Every identifier in reference position that is not captured by a
+syntactic binding definition in the library itself must be captured by a
+binding in the initial environment; otherwise an exception is raised
+with condition object of type @condition{undefined}.
+
+@item local syntactic bindings
+Syntactic bindings defined by a syntax that limits their region of
+visibility to a subform of the library body.  Bindings defined by
+@syntax{let} and similar syntaxes are local variable bindings, as well
+as those defined by @syntax{define} in an internal body.  Bindings
+defined by @syntax{let-syntax} and similar syntaxes are local keyword
+bindings, as well as those defined by @syntax{define-syntax} in an
+internal body.
+
+In the example: @samp{a} and @samp{b} are local variable bindings;
+@samp{c} is a local keyword binding.
+@end table
+
+@c page
+@node expander intro lex
+@subsection Lexical variables, labels, location gensyms
+
+
+Let's consider the library:
+
+@lisp
+(library (demo)
+  (export this)
+  (import (rnrs (6)))
+  (define this 8)
+  (define that 9)
+  (let ((a 1))
+    (let ((a 2))
+      (list a this that))))
+@end lisp
+
+@noindent
+and concentrate on the body:
+
+@lisp
+(define this 8)
+(define that 9)
+(let ((a 1))
+  (let ((a 2))
+    (list a this that)))
+@end lisp
+
+This code defines 4 syntactic bindings: @samp{this} and @samp{that} as
+top level variable bindings, of which @samp{this} is also exported;
+outer @samp{a} as local variable binding; inner @samp{a} as local
+variable binding.
+
+The purpose of the expansion process is to transform the input code into
+output code expressed in the core language.  After the expansion
+process, every syntactic binding is renamed so that its name is unique
+in the whole library body.  For example, we can imagine this
+pseudo--code:
+
+@lisp
+(define lex.this 8)
+(define lex.that 9)
+(let ((lex.a.1 1))
+  (let ((lex.a.2 2))
+    ((primitive list) lex.a.2 lex.this lex.that)))
+@end lisp
+
+@noindent
+notice that the original identifier @func{list}, in reference position,
+has been replaced by the symbolic expression @code{(primitive list)}
+because it is captured by the core primitive binding of the initial
+lexical environment.  The code undergoes the following lexical variable
+name substitutions:
+
+@multitable {original name} {lexical variable name}
+@headitem original name @tab lexical variable name
+@item this @tab lex.this
+@item that  @tab lex.that
+@item outer a @tab lex.a.1
+@item inner a @tab lex.a.2
+@end multitable
+
+@noindent
+where the @code{lex.*} symbols are gensyms; such gensyms are named
+@dfn{lexical gensyms} or @dfn{lex gensyms}.  They uniquely identify a
+syntactic binding established in the library.
+
+Renaming bindings is one of the core purposes of the expansion process;
+it is performed while visiting the source code as a tree in
+breadth--first order.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Lexical contours and ribs
+
+To distinguish among different bindings with the same name (like the two
+local bindings both named @samp{a} in the example) we must distinguish
+among different @dfn{lexical contours}: different regions of visibility
+for a set of syntactic bindings.
+
+Every @syntax{let} syntax defines a new lexical contour; lexical
+contours can be nested by nesting @syntax{let} syntaxes; the library
+body is a lexical contour itself.
+
+@quotation
+@strong{NOTE} For simplicity, here we ignore the fact that @syntax{let},
+in truth, defines 2 lexical contours: one for the bindings established
+by its first argument and one for the internal definitions.  In the
+example there are no internal definitions, so the internal contour is
+not used.
+@end quotation
+
+@float Figure,fix:expander-intro-1
+@example
+ -------------------------------------------------
+| (define this 8)              ;top-level contour |
+| (define that 9)                                 |
+| (let ((a 1))                                    |
+|  -----------------------------------------      |
+| |                            ;contour 1   |     |
+| | (let ((a 2))                            |     |
+| |  -------------------------------------  |     |
+| | |                          ;contour 2 | |     |
+| | | (list a this that)                  | |     |
+| |  -------------------------------------  |     |
+| |   )                                     |     |
+|  -----------------------------------------      |
+|   )                                             |
+ -------------------------------------------------
+@end example
+@caption{Picture of lexical contours.}
+@end float
+
+An @func{eq?}-unique object is assigned to each lexical contour; such
+objects are called @dfn{marks}.  In practise each syntactic binding is
+associated to the mark representing its visibility region.  So the
+original code is accompanied by the associations:
+
+@multitable {original name} {lexical contour mark}
+@headitem original name @tab lexical contour mark
+@item this @tab top-mark
+@item that @tab top-mark
+@item outer a @tab 1-mark
+@item inner a @tab 2-mark
+@end multitable
+
+@noindent
+which are registered in a component of the lexical environment: a record
+of type @objtype{<rib>}.  Every lexical contour is described by a rib;
+the rib for the top level contour holds the associations:
+
+@multitable {original name} {lexical contour mark}
+@headitem original name @tab lexical contour mark
+@item this @tab top-mark
+@item that @tab top-mark
+@end multitable
+
+@noindent
+the rib of the outer @syntax{let} holds the associations:
+
+@multitable {original name} {lexical contour mark}
+@headitem original name @tab lexical contour mark
+@item outer a @tab 1-mark
+@end multitable
+
+@noindent
+the rib of the inner @syntax{let} holds the associations:
+
+@multitable {original name} {lexical contour mark}
+@headitem original name @tab lexical contour mark
+@item inner a @tab 2-mark
+@end multitable
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Syntax objects and syntax identifiers
+
+While the code is being visited by the expander: data structures called
+@dfn{syntax objects} are created to keep track of the lexical contours.
+
+@enumerate
+@item
+At first, the whole code is in a syntax object referencing the top rib
+structure:
+
+@example
+#<syntax-object
+   expr=(begin
+          (define this 8)
+          (define that 9)
+          (let ((a 1))
+            (let ((a 2))
+              (list a this that))))
+   rib=#<<rib> mark=top-mark>>
+@end example
+
+@noindent
+syntactic bindings established in this contour will get the top-mark;
+expressions in the right--hand sides of binding definitions are expanded
+in the context of the top-mark.
+
+@item
+After the outer contour has been processed, the outer @syntax{let} is in
+a syntax object:
+
+@example
+#<syntax-object
+   expr=(let ((a 1))
+          (let ((a 2))
+            (list a this that)))
+   rib=#<<rib> mark=1-mark>>
+@end example
+
+@noindent
+syntactic bindings established in this contour will get the 1-mark;
+expressions in the right--hand sides of binding definitions are expanded
+in the context of the top-mark.
+
+@item
+After the outer @syntax{let} has been processed, the inner @syntax{let}
+is in a syntax object:
+
+@example
+#<syntax-object
+   expr=(let ((a 2))
+          (list a this that))
+   rib=#<<rib> mark=2-mark>>
+@end example
+
+@noindent
+syntactic bindings established in this contour will get the 2-mark;
+expressions in the right--hand sides of binding definitions are expanded
+in the context of the 1-mark.
+
+@item
+After the inner @syntax{let} has been processed, the expression is in a
+syntax object:
+
+@example
+#<syntax-object
+   expr=(list a this that)
+   rib=#<<rib> mark=2-mark>>
+@end example
+
+@noindent
+the expression is expanded in the context of the 2-mark.
+@end enumerate
+
+A syntax object having a syntactic binding name as source code
+expression is called @dfn{syntactic identifiers}; an identifier is a
+data structure holding the mark of its visibility region/lexical contour
+among its fields.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Label gensyms and ribs
+
+An @func{eq?}-unique object is assigned to each syntactic binding: a
+gensym indicated as @dfn{label gensym} or just @dfn{label}; such
+associations are also stored in the rib representing a lexical contour:
+
+@multitable {original name} {lexical contour mark} {label}
+@headitem original name @tab lexical contour mark @tab label
+@item this     @tab top-mark  @tab lab.this
+@item that     @tab top-mark  @tab lab.that
+@item outer a  @tab 1-mark    @tab lab.a.1
+@item inner a  @tab 2-mark    @tab lab.a.2
+@end multitable
+
+@noindent
+where the symbols @code{lab.*} are gensyms.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Lexical variable gensyms and the @var{lexenv}
+
+The fact that the lex gensyms in the expanded code are syntactic
+bindings representing variables is registered in a portion of the
+lexical environment indicated as @var{lexenv}.  So the expanded code is
+accompanied by the association:
+
+@multitable {lab.that} {lexical variables}
+@headitem label @tab lexical variables
+@item lab.this  @tab lex.this
+@item lab.that  @tab lex.that
+@item lab.a.1   @tab lex.a.1
+@item lab.a.2   @tab lex.a.2
+@end multitable
+
+Notice that, after the expansion: the original names of the internal
+bindings (those defined by @syntax{let}) do not matter anymore; the
+original names of the non--exported top level bindings do not matter
+anymore; only the original name of the exported top level bindings is
+still important.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Storage location gensyms and @var{export-env}
+
+About the value of syntactic bindings:
+
+@itemize
+@item
+The value of local variables goes on the Scheme stack and it exists only
+while the code is being evaluated.
+
+@item
+The value of local keywords goes on the Scheme stack and it exists only
+while the code is being expanded.
+
+@item
+The value of top level bindings must be stored in some persistent
+location, because it must exist for the whole time the library is loaded
+in a running @value{PRJNAME} process.
+@end itemize
+
+But where is a top level binding value stored?  The answer is: gensyms
+are created for the sole purpose of acting as storage locations for top
+level bindings; such gensyms are indicated as @dfn{location gensyms} or
+@dfn{loc gensyms}.  Under @value{PRJNAME}, symbols are data structures
+having a @code{value} slot: such slot has @func{symbol-value} as
+accessor and @func{set-symbol-value!} as mutator and it is used as
+storage location.
+
+So the expanded code is accompanied by the following association:
+
+@multitable {lab-this} {location gensym}
+@headitem label @tab location gensym
+@item lab.this  @tab loc.this
+@item lab.that  @tab loc.that
+@end multitable
+
+@noindent
+where the @code{loc.*} symbols are gensyms.  To represent the
+association between the top level binding labels (both the exported ones
+and the non--exported ones) and their storage location gensyms, the
+expander builds a data structure indicated as @var{export-env}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Exported bindings and @var{export-subst}
+
+Not all the top level syntactic bindings are exported by a library.  To
+list those that are, a data structure is built and indicated as
+@var{export-subst}; such data structure associates the external name of
+exported bindings to their label gensym.  For the example library, the
+@var{export-subst} represents the association:
+
+@multitable {lab.this} {external name}
+@headitem label @tab external name
+@item lab.this  @tab this
+@end multitable
+
+If the @clause{export} clause of the @clause{library} form renames a
+binding as in:
+
+@example
+(export (rename this external-this))
+@end example
+
+@noindent
+then the @var{export-subst} represents the association:
+
+@multitable {lab.this} {external name}
+@headitem label @tab external name
+@item lab.this  @tab external-this
+@end multitable
 
 
 @c Local Variables:

@@ -109,9 +109,9 @@ There are multiple documents we can study to get a better understanding
 of the expander's code.  Most likely the top document is:
 
 @quotation
-[1] Abdulaziz Ghuloum.  ``Implicit Phasing for Library Dependencies''.
-Ph.D. thesis.  Department of Computer Science, Indiana University.
-December 2008.
+[exp1] Abdulaziz Ghuloum.  ``Implicit Phasing for Library
+Dependencies''.  Ph.D. thesis.  Department of Computer Science, Indiana
+University.  December 2008.
 @end quotation
 
 @noindent
@@ -119,21 +119,22 @@ from the very author of the expander library; it is quite long.  Here
 are some papers on @syntax{syntax-case} macros and @rnrs{6} libraries:
 
 @quotation
-[2] R.  Kent Dybvig.  ``Writing Hygienic Macros in Scheme with
+[exp2] R.  Kent Dybvig.  ``Writing Hygienic Macros in Scheme with
 Syntax-Case''.  Department of Computer Science, Indiana University.
 Technical Report 356.  June 1992.
 @end quotation
 
 @quotation
-[3] Abdulaziz Ghuloum, R.  Kent Dybvig.  ``Implicit Phasing for @rnrs{6}
-Libraries''.  Department of Computer Science, Indiana University.
+[exp3] Abdulaziz Ghuloum, R.  Kent Dybvig.  ``Implicit Phasing for
+@rnrs{6} Libraries''.  Department of Computer Science, Indiana
+University.
 @end quotation
 
 @noindent
 and the very paper that introduced hygienic macros:
 
 @quotation
-[4] Eugene Kohlbecker, Daniel P. Friedman, Matthias Felleisen, Bruce
+[exp4] Eugene Kohlbecker, Daniel P. Friedman, Matthias Felleisen, Bruce
 aDuba.  ``Hygienic Macro Expansion''.  Department of Computer Science,
 Indiana University.  1986.
 @end quotation
@@ -142,7 +143,7 @@ Here is another long document covering muliple components of this Scheme
 implementation:
 
 @quotation
-[5] Oscar Waddell.  ``Extending the Scope of Syntactic Abstraction''.
+[exp5] Oscar Waddell.  ``Extending the Scope of Syntactic Abstraction''.
 Ph.D. thesis.  Department of Computer Science, Indiana University.
 August 1999.
 @end quotation
@@ -151,7 +152,7 @@ A discussion of syntax parameters as implemented in Racket is in the
 paper:
 
 @quotation
-[6] Eli Barzilay, Ryan Culpepper, Matthew Flatt.  ``Keeping it clean
+[exp6] Eli Barzilay, Ryan Culpepper, Matthew Flatt.  ``Keeping it clean
 with syntax parameters''.  2011.
 @end quotation
 

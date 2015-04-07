@@ -417,7 +417,7 @@ Revised^6 Report on the algorithmic language Scheme
 @c @end macro
 
 @macro bibref{TAG}
-@code{[\TAG\]}
+@cite{[\TAG\]}
 @end macro
 
 @macro autoconfref{NODE, TITLE}
