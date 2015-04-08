@@ -544,4 +544,18 @@ Revised^6 Report on the algorithmic language Scheme
 @var{\THING\j}
 @end macro
 
+@c ------------------------------------------------------------------------
+
+@macro lexenv{}
+@sc{lexenv}
+@end macro
+
+@macro ExportEnv{}
+@sc{export-env}
+@end macro
+
+@macro ExportSubst{}
+@sc{export-subst}
+@end macro
+
 @c end of file
