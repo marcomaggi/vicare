@@ -672,7 +672,9 @@ then the @ExportSubst{} represents the association:
 
 @menu
 * expander lexenv boot::        The boot image component.
+* expander lexenv lexenv::      The @lexenv{} component.
 * expander lexenv fluids::      How fluid syntaxes work.
+* expander lexenv synonyms::    How synonym syntaxes work.
 @end menu
 
 @c page
@@ -978,6 +980,403 @@ Some of the fluid syntaxes are: @syntax{__who__}, @syntax{return},
 @end table
 
 @c page
+@node expander lexenv lexenv
+@subsection The @lexenv{} component
+
+
+A @lexenv{} is an alist managed somewhat like a stack; while the
+expansion proceeds, visiting the code in breadth--first order: the
+@lexenv{} is updated by pushing new entries on the stack.  Each entry is
+a pair, list or improper list and maps a label gensym to its associated
+syntactic binding descriptor.
+
+A @lexenv{} entry has the following format:
+
+@example
+(@meta{label} . @meta{syntactic-binding-descriptor})
+@end example
+
+@noindent
+where: @meta{label} is a label gensym uniquely associated to a syntactic
+binding; @meta{syntactic-binding-descriptor} is a syntactic binding
+descriptor.
+
+A syntactic binding descriptor is a pair with the following format:
+
+@example
+(@meta{binding-type} . @meta{binding-value})
+@end example
+
+@noindent
+where @meta{binding-type} is a symbol and the format of
+@meta{binding-value} depends on the binding type.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Top level or local variable bindings
+
+A syntactic binding representing a variable binding, as created by
+@syntax{let} and similar syntaxes, @syntax{lambda}, @syntax{case-lambda}
+or @syntax{define}, has descriptor with format:
+
+@example
+(lexical . (@meta{lexvar} . @meta{mutated}))
+@end example
+
+@noindent
+where: @meta{lexvar} is a lexical gensym representing the name of the
+lexical variable binding in the expanded code; @meta{mutated} is a
+boolean, true if somewhere in the code the value of this binding is
+mutated.
+
+We want to keep track of mutated variables because we do not want to
+export from a library a mutable variable.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Imported variable bindings
+
+A syntactic binding representing a variable binding imported from
+another library has descriptor with format:
+
+@example
+(global . (@meta{library} . @meta{loc}))
+@end example
+
+@noindent
+where: @meta{library} represents the library from which the binding is
+exported; @meta{loc} is the storage location gensym containing the
+variable's value in its @code{value} field.
+
+When the variable is defined by an imported library: @meta{library} is a
+record of type @objtype{library}.  When the variable was defined by a
+previous @repl{} expression: @meta{library} is the symbol
+@samp{*interaction*}.
+
+Labels associated to these imported bindings have the list representing
+the binding itself stored in their "value" fields.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Top level or local non--identifier macro
+
+A syntactic binding representing a keyword binding with non--variable
+transformer defined by the code being expanded has descriptor with
+format:
+
+@example
+(local-macro . (@meta{transformer} . @meta{expanded-expr}))
+@end example
+
+@noindent
+where: @meta{transformer} is a function implementing the macro
+transformer; @meta{expanded-expr} is the expression in fully expanded
+code representing the right--hand side of the syntax definition.
+@meta{transformer} is the result of compiling and evaluating
+@meta{expanded-expr}.
+
+For every top level binding of this type, the following symbolic
+expression is added to the visit code of the library being expanded:
+
+@example
+(set! @meta{loc} @meta{expanded-code})
+@end example
+
+@noindent
+where @meta{loc} is the storage location gensym of the macro.
+
+These syntactic bindings are established by @syntax{define-syntax},
+@syntax{let-syntax} and similar, when their right--hand side evaluates
+to a function.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Top level or local identifier macro
+
+A syntactic binding representing a keyword binding with variable
+transformer defined by the code being expanded has descriptor with
+format:
+
+@example
+(local-macro! . (@meta{transformer} . @meta{expanded-expr}))
+@end example
+
+@noindent
+where: @meta{transformer} is a function implementing the macro
+transformer; @meta{expanded-expr} is the expression in fully expanded
+code representing the right--hand side of the syntax definition.
+@meta{transformer} is the result of compiling and evaluating
+@meta{expanded-expr}.
+
+For every top level binding of this type, the following symbolic
+expression is added to the visit code of the library being expanded:
+
+@example
+(set! @meta{loc} @meta{expanded-code})
+@end example
+
+@noindent
+where @meta{loc} is the storage location gensym of the macro.
+
+These syntactic bindings are established by @syntax{define-syntax},
+@syntax{let-syntax} and similar, when their right--hand side evaluates
+to the return value of @func{make-variable-transformer}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Imported non--identifier macro
+
+A syntactic binding representing a keyword binding with a non--variable
+transformer defined by code in an imported library has descriptor with
+format:
+
+@example
+(global-macro . (@meta{library} . @meta{loc}))
+@end example
+
+@noindent
+where: @meta{library} is a record of type @objtype{library} describing
+the library from which the macro is exported; @meta{loc} is the storage
+location gensym containing the transformer function in its @code{value}
+field.
+
+Label gensyms associated to these imported bindings have the list
+representing the binding descriptor itself stored in their @code{value}
+field.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Imported identifier macro
+
+A syntactic binding representing a keyword binding with variable
+transformer defined by code in an imported library has descriptor with
+format:
+
+@example
+(global-macro! . (@meta{library} . @meta{loc}))
+@end example
+
+@noindent
+where: @meta{library} is a record of type @objtype{library} describing
+the library from which the macro is exported; @meta{loc} is the storage
+location gensym containing the transformer function in its @code{value}
+field.
+
+Label gensyms associated to these imported bindings have the list
+representing the binding descriptor itself stored in their @code{value}
+field.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Top level or local compile--time value
+
+A syntactic binding representing a keyword binding associated to a
+compile--time value defined by the code being expanded has descriptor
+with format:
+
+@example
+(local-ctv . (@meta{object} . @meta{expanded-expr}))
+@end example
+
+@noindent
+where: @meta{object} is the actual value computed at expand time;
+@meta{expanded-expr} is the result of fully expanding the right--hand
+side of the syntax definition.  @meta{object} is the result of compiling
+and evaluating @meta{expanded-expr}.
+
+For every top level binding of this type, the following symbolic
+expression is added to the visit code of the library being expanded:
+
+@example
+(set! @meta{loc} @meta{expanded-code})
+@end example
+
+@noindent
+where @meta{loc} is the storage location gensym of the macro.
+
+These syntactic bindings are established by @syntax{define-syntax},
+@syntax{let-syntax} and similar, when their right--hand side evaluates
+to the return value of @func{make-compile-time-value}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Imported compile--time value
+
+A syntactic binding representing a keyword binding associated to a
+compile-time value imported from another library has descriptor with
+format:
+
+@example
+(global-ctv . (@meta{library} . @meta{loc}))
+@end example
+
+@noindent
+where: @meta{library} is a record of type @objtype{library} describing
+the library from which the binding is imported; @meta{loc} is the gensym
+containing the actual object in its @code{value} field.
+
+Label gensyms associated to these imported bindings have the list
+representing the binding descriptor itself stored in their @code{value}
+field.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Module interface
+
+A syntactic binding representing a keyword binding associated to the
+interface of a @syntax{module} syntax defined by the code being expanded
+has descriptor with format:
+
+@example
+($module . @meta{module-interface})
+@end example
+
+@noindent
+where @meta{module-interface} is a record of type
+@objtype{module-interface}.
+
+Syntactic bindings of this type are established by uses of the syntax
+@syntax{module}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Pattern variable
+
+A syntactic binding representing a keyword binding associated to a
+pattern variable, as created by @syntax{syntax-case} and
+@syntax{syntax-rules}, in the body of the library being expanded has
+descriptor with format:
+
+@example
+(syntax . (@meta{name} . @meta{level}))
+@end example
+
+@noindent
+where: @meta{name} is the symbol representing the name of the pattern
+variable; @meta{level} is a non--negative exact integer representing the
+ellipsis nesting level.
+
+The @syntax{syntax-case} patterns below will generate the displayed
+syntactic binding descriptors:
+
+@example
+?a                      ->  (syntax . (?a . 0))
+(?a)                    ->  (syntax . (?a . 0))
+(((?a)))                ->  (syntax . (?a . 0))
+(?a ...)                ->  (syntax . (?a . 1))
+((?a) ...)              ->  (syntax . (?a . 1))
+((((?a))) ...)          ->  (syntax . (?a . 1))
+((?a ...) ...)          ->  (syntax . (?a . 2))
+(((?a ...) ...) ...)    ->  (syntax . (?a . 3))
+@end example
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Top level or local struct descriptor
+
+A syntactic binding representing a keyword binding associated to a
+@value{PRJNAME}'s struct--type descriptor defined by the code being
+expanded has descriptor with format:
+
+@example
+($rtd . @meta{type-descriptor-struct})
+@end example
+
+@noindent
+where @meta{type-descriptor-struct} is a struct representing the
+struct--type descriptor.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Top level or local @rnrs{6} record--type name
+
+A syntactic binding representing a keyword binding associated to a
+@rnrs{6}'s record--type name defined by the code being expanded has
+descriptor with one of the formats:
+
+@example
+($rtd . (@meta{rtd-name} @meta{rcd-name}))
+($rtd . (@meta{rtd-name} @meta{rcd-name} . @meta{spec}))
+@end example
+
+@noindent
+where: @meta{rtd-name} is the identifier to which the record--type
+descriptor is bound; @meta{rcd-name} is the identifier to which the
+default record--constructor descriptor is bound; @meta{spec} is an
+instance of record type @objtype{r6rs-record-type-spec}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Fluid syntax
+
+A syntactic binding representing a keyword binding associated to a fluid
+syntax has the format:
+
+@example
+($fluid . @meta{fluid-label})
+@end example
+
+@noindent
+where @meta{fluid-label} is the label gensym associated to the fluid
+syntax.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Synonym syntax
+
+A syntactic binding descriptor representing a keyword binding associated
+to a synonym syntax has the format:
+
+@example
+($synonym . @meta{synonym-label})
+@end example
+
+@noindent
+where @meta{synonym-label} is the label gensym associated to the synonym
+syntax.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading @syntax{begin-for-syntax} code
+
+Each use of @syntax{begin-for-syntax} generates visit code that must be
+added to compiled libraries.  Whenever a @syntax{begin-for-syntax} use
+is expanded the following entry is pushed on the @lexenv{}:
+
+@example
+(@meta{unused-label} . (begin-for-syntax . @meta{visit-code}))
+@end example
+
+@noindent
+where: @meta{unused-label} is a dummy label gensym which not bound in
+the current rib; @meta{visit-code} is a full core language expression
+representing the expanded contents of the @syntax{begin-for-syntax} use.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading displaced lexical
+
+These lists have a format similar to a @lexenv{} entry representing a
+syntactic binding, but they are used to represent a failed search into a
+@lexenv{}.
+
+The following special value represents an unbound label:
+
+@example
+(displaced-lexical . #f)
+@end example
+
+@noindent
+this is an ``identifier out of context'' error.
+
+The following special value represents the result of a lexical
+environment query with invalid label value (not a symbol):
+
+@example
+(displaced-lexical . ())
+@end example
+
+@c page
 @node expander lexenv fluids
 @subsection How fluid syntaxes work
 
@@ -1075,6 +1474,32 @@ Such half--defined fluid syntaxes are fully usable as auxiliary syntaxes
 and can be redefined with @syntax{fluid-let-syntax}.  There are
 @strong{no} transformer functions for @syntax{return}, @syntax{break},
 @syntax{continue} and similar syntaxes.
+
+@c page
+@node expander lexenv synonyms
+@subsection How synonym syntaxes work
+
+
+When an synonym syntax binding is established:
+
+@lisp
+(define-syntax @meta{lhs} (make-synonym-transformer @meta{id}))
+@end lisp
+
+@noindent
+an identifier @meta{lhs} is associated to a main label @meta{label} in
+the current rib; an entry is pushed on the @lexenv{}:
+
+@example
+(@meta{label} . ($synonym . @meta{synonym-label}))
+@end example
+
+@noindent
+where @meta{synonym-label} is the label bound to the identifier
+@meta{id}.  Given the identifier @meta{lhs}: we can retrieve the
+associated @meta{label} and so the @meta{synonym-label}; then we can
+``follow through'' @meta{synonym-label} to retrieve the actual binding
+descriptor associated to @meta{id}.
 
 
 @c Local Variables:
