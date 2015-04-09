@@ -739,7 +739,7 @@
     ;;
     (let ((lab (gensym sym)))
       (values (make-<stx> sym TOP-MARK*
-			  (list (make-<rib> (list sym) TOP-MARK** (list lab) #f))
+			  (list (make-rib (list sym) TOP-MARK** (list lab) #f))
 			  '())
 	      lab)))
 

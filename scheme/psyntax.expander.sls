@@ -400,7 +400,10 @@
 	    (<stx>-expr		syntax-object-expression)
 	    (<stx>-mark*	syntax-object-marks)
 	    (<stx>-rib*		syntax-object-ribs)
-	    (<stx>-ae*		syntax-object-source-objects)))
+	    (<stx>-ae*		syntax-object-source-objects))
+
+    ;; bindings for (vicare expander)
+    current-inferior-lexenv)
   (import (except (rnrs)
 		  eval
 		  environment		environment?
@@ -811,7 +814,7 @@
 
 (define-record interaction-env
   (rib
-		;The top <RIB>  structure for the evaluation  of code in
+		;The top RIB  structure for the evaluation  of code in
 		;this environment.  It maps bound identifiers to labels.
    lexenv
 		;The LEXENV for both run  time and expand time.  It maps
@@ -836,7 +839,7 @@
   (cond ((env? x)
 	 (vector->list ($env-names x)))
 	((interaction-env? x)
-	 (map values ($<rib>-name* ($interaction-env-rib x))))
+	 (map values ($rib-name* ($interaction-env-rib x))))
 	(else
 	 (assertion-violation __who__ "not an environment" x))))
 
@@ -2023,7 +2026,7 @@
 
   (define (%process-import-specs-build-top-level-rib import-spec*)
     ;;Parse the import  specifications from a library's IMPORT clause  or a program's
-    ;;standalone  IMPORT  syntax;  build  and return  the  top-level  "<rib>"  struct
+    ;;standalone  IMPORT  syntax;  build  and return  the  top-level  "rib"  struct
     ;;defining the top-level environment.
     ;;
     (import PARSE-IMPORT-SPEC)
@@ -2098,7 +2101,7 @@
 	       (stx-error export-id "cannot export unbound identifier"))))
       export-name* export-id*))
 
-  (module (%make-export-env/macro*)
+  (define (%make-export-env/macro* lex* loc* lexenv.run)
     ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an EXPORT-ENV entry,
     ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or compile-time
     ;;value: accumulate the MACRO* alist.
@@ -2113,147 +2116,147 @@
     ;;LOC*  must  be a  list  of  storage location  gensyms  for  the global  lexical
     ;;variables: there must be a loc in LOC* for every lex in LEX*.
     ;;
-    (define (%make-export-env/macro* lex* loc* lexenv.run)
-      (let loop ((lexenv.run		lexenv.run)
-		 (export-env		'())
-		 (macro*		'()))
-	(if (null? lexenv.run)
-	    (values export-env macro*)
-	  (let* ((entry    (car lexenv.run))
-		 (label    (lexenv-entry-label entry))
-		 (binding  (lexenv-entry-binding-descriptor entry)))
-	    (case (syntactic-binding-type binding)
-	      ((lexical)
-	       ;;This  binding is  a  lexical  variable.  When  we  import a  lexical
-	       ;;binding from another library, we must see such entry as "global".
-	       ;;
-	       ;;The entry from the LEXENV looks like this:
-	       ;;
-	       ;;   (?label . (lexical . (?lexvar . ?mutable)))
-	       ;;
-	       ;;Add to the EXPORT-ENV an entry like:
-	       ;;
-	       ;;   (?label ?type . ?loc)
-	       ;;
-	       ;;where ?TYPE is  the symbol "mutable" or the  symbol "global"; notice
-	       ;;that the entries of type "mutable" are forbidden to be exported.
-	       ;;
-	       (let* ((bind-val  (syntactic-binding-value binding))
-		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
-		      (type      (if (lexical-var-mutated? bind-val)
-				     'mutable
-				   'global)))
-		 (loop (cdr lexenv.run)
-		       (cons (cons* label type loc) export-env)
-		       macro*)))
-
-	      ((local-macro)
-	       ;;When we define a binding for a non-identifier syntax: the local code
-	       ;;sees it as  "local-macro".  If we export such  binding: the importer
-	       ;;must see it as a "global-macro".
-	       ;;
-	       ;;The entry from the LEXENV looks like this:
-	       ;;
-	       ;;   (?label . (local-macro . (?transformer . ?expanded-expr)))
-	       ;;
-	       ;;Add to the EXPORT-ENV an entry like:
-	       ;;
-	       ;;   (?label global-macro . ?loc)
-	       ;;
-	       ;;and to the MACRO* an entry like:
-	       ;;
-	       ;;   (?loc . (?transformer . ?expanded-expr))
-	       ;;
-	       (let ((loc (gensym-for-storage-location label)))
-		 (loop (cdr lexenv.run)
-		       (cons (cons* label 'global-macro loc) export-env)
-		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
-
-	      ((local-macro!)
-	       ;;When we  define a binding for  an identifier syntax: the  local code
-	       ;;sees it as "local-macro!".  If  we export such binding: the importer
-	       ;;must see it as a "global-macro!".
-	       ;;
-	       ;;The entry from the LEXENV looks like this:
-	       ;;
-	       ;;   (?label . (local-macro! . (?transformer . ?expanded-expr)))
-	       ;;
-	       ;;Add to the EXPORT-ENV an entry like:
-	       ;;
-	       ;;   (?label global-macro . ?loc)
-	       ;;
-	       ;;and to the MACRO* an entry like:
-	       ;;
-	       ;;   (?loc . (?transformer . ?expanded-expr))
-	       ;;
-	       (let ((loc (gensym-for-storage-location label)))
-		 (loop (cdr lexenv.run)
-		       (cons (cons* label 'global-macro! loc) export-env)
-		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
-
-	      ((local-ctv)
-	       ;;When we define  a binding for a compile-time value  (CTV): the local
-	       ;;code  sees  it as  "local-ctv".   If  we  export such  binding:  the
-	       ;;importer must see it as a "global-ctv".
-	       ;;
-	       ;;The entry from the LEXENV looks like this:
-	       ;;
-	       ;;   (?label . (local-ctv . (?object . ?expanded-expr)))
-	       ;;
-	       ;;Add to the EXPORT-ENV an entry like:
-	       ;;
-	       ;;   (?label global-ctv . ?loc)
-	       ;;
-	       ;;and to the MACRO* an entry like:
-	       ;;
-	       ;;   (?loc . (?object . ?expanded-expr))
-	       ;;
-	       (let ((loc (gensym-for-storage-location label)))
-		 (loop (cdr lexenv.run)
-		       (cons (cons* label 'global-ctv loc) export-env)
-		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
-
-	      (($rtd $module $fluid $synonym)
-	       ;;Just  add the  entry "as  is" from  the lexical  environment to  the
-	       ;;EXPORT-ENV.
-	       ;;
+    (let loop ((lexenv.run	lexenv.run)
+	       (export-env	'())
+	       (macro*		'()))
+      (if (null? lexenv.run)
+	  (values export-env macro*)
+	(let* ((entry    (car lexenv.run))
+	       (label    (lexenv-entry-label entry))
+	       (binding  (lexenv-entry-binding-descriptor entry)))
+	  (case (syntactic-binding-type binding)
+	    ((lexical)
+	     ;;This binding is a lexical variable.   When we import a lexical binding
+	     ;;from another library, we must see such entry as "global".
+	     ;;
+	     ;;The entry from the LEXENV looks like this:
+	     ;;
+	     ;;   (?label . (lexical . (?lexvar . ?mutable)))
+	     ;;
+	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;
+	     ;;   (?label . (?type . ?lex/loc))
+	     ;;
+	     ;;where: ?TYPE is the symbol  "mutable" or the symbol "global"; ?lex/loc
+	     ;;is the loc gensym of the variable, used as lex gensym and loc gensym.
+	     ;;
+	     ;;NOTE The entries of type "mutable"  are forbidden to be exported.  The
+	     ;;error will be raised later.
+	     ;;
+	     (let* ((bind-val  (syntactic-binding-value binding))
+		    ;;Search for LEXICAL-GENSYM  in the list LEX*:  when found return
+		    ;;the corresponding gensym from  LOC*.  LEXICAL-GENSYM must be an
+		    ;;item in LEX*.
+		    (loc       (let lookup ((lexical-gensym  (lexical-var bind-val))
+					    (lex*            lex*)
+					    (loc*            loc*))
+				 (if (pair? lex*)
+				     (if (eq? lexical-gensym (car lex*))
+					 (car loc*)
+				       (lookup lexical-gensym (cdr lex*) (cdr loc*)))
+				   (assertion-violation 'make-export-env/lookup "internal error"))))
+		    (type      (if (lexical-var-mutated? bind-val)
+				   'mutable
+				 'global)))
 	       (loop (cdr lexenv.run)
-		     (cons entry export-env)
-		     macro*))
+		     (cons (cons* label type loc) export-env)
+		     macro*)))
 
-	      ((begin-for-syntax)
-	       ;;This entry is the result of expanding BEGIN-FOR-SYNTAX macro use; we
-	       ;;want this code to be part of the visit code.
-	       ;;
-	       ;;The entry from the LEXENV looks like this:
-	       ;;
-	       ;;   (?label . (begin-for-syntax . ?expanded-expr))
-	       ;;
-	       ;;add to the MACRO* an entry like:
-	       ;;
-	       ;;   (#f . ?expanded-expr)
-	       ;;
+	    ((local-macro)
+	     ;;When we define  a binding for a non-identifier syntax:  the local code
+	     ;;sees it  as "local-macro".   If we export  such binding:  the importer
+	     ;;must see it as a "global-macro".
+	     ;;
+	     ;;The entry from the LEXENV looks like this:
+	     ;;
+	     ;;   (?label . (local-macro . (?transformer . ?expanded-expr)))
+	     ;;
+	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;
+	     ;;   (?label global-macro . ?loc)
+	     ;;
+	     ;;and to the MACRO* an entry like:
+	     ;;
+	     ;;   (?loc . (?transformer . ?expanded-expr))
+	     ;;
+	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
-		     export-env
-		     (cons (cons #f (syntactic-binding-value binding)) macro*)))
+		     (cons (cons* label 'global-macro loc) export-env)
+		     (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
-	      (else
-	       (assertion-violation 'core-body-expander
-		 "BUG: do not know how to export"
-		 (syntactic-binding-type  binding)
-		 (syntactic-binding-value binding))))))))
+	    ((local-macro!)
+	     ;;When we define a binding for an identifier syntax: the local code sees
+	     ;;it as  "local-macro!".  If we  export such binding: the  importer must
+	     ;;see it as a "global-macro!".
+	     ;;
+	     ;;The entry from the LEXENV looks like this:
+	     ;;
+	     ;;   (?label . (local-macro! . (?transformer . ?expanded-expr)))
+	     ;;
+	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;
+	     ;;   (?label global-macro . ?loc)
+	     ;;
+	     ;;and to the MACRO* an entry like:
+	     ;;
+	     ;;   (?loc . (?transformer . ?expanded-expr))
+	     ;;
+	     (let ((loc (gensym-for-storage-location label)))
+	       (loop (cdr lexenv.run)
+		     (cons (cons* label 'global-macro! loc) export-env)
+		     (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
-    (define (%lookup lexical-gensym lex* loc*)
-      ;;Search  for  LEXICAL-GENSYM   in  the  list  LEX*:  when   found  return  the
-      ;;corresponding gensym from LOC*.  LEXICAL-GENSYM must be an item in LEX*.
-      ;;
-      (if (pair? lex*)
-	  (if (eq? lexical-gensym (car lex*))
-	      (car loc*)
-	    (%lookup lexical-gensym (cdr lex*) (cdr loc*)))
-	(assertion-violation 'lookup-make-export "BUG")))
+	    ((local-ctv)
+	     ;;When we  define a binding  for a  compile-time value (CTV):  the local
+	     ;;code sees it as "local-ctv".  If  we export such binding: the importer
+	     ;;must see it as a "global-ctv".
+	     ;;
+	     ;;The entry from the LEXENV looks like this:
+	     ;;
+	     ;;   (?label . (local-ctv . (?object . ?expanded-expr)))
+	     ;;
+	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;
+	     ;;   (?label . (global-ctv . ?loc))
+	     ;;
+	     ;;and to the MACRO* an entry like:
+	     ;;
+	     ;;   (?loc . (?object . ?expanded-expr))
+	     ;;
+	     (let ((loc (gensym-for-storage-location label)))
+	       (loop (cdr lexenv.run)
+		     (cons (cons* label 'global-ctv loc) export-env)
+		     (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
-    #| end of module: %MAKE-EXPORT-ENV/MACRO* |# )
+	    (($rtd $module $fluid $synonym)
+	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
+	     ;;EXPORT-ENV.
+	     ;;
+	     (loop (cdr lexenv.run)
+		   (cons entry export-env)
+		   macro*))
+
+	    ((begin-for-syntax)
+	     ;;This entry is  the result of expanding BEGIN-FOR-SYNTAX  macro use; we
+	     ;;want this code to be part of the visit code.
+	     ;;
+	     ;;The entry from the LEXENV looks like this:
+	     ;;
+	     ;;   (?label . (begin-for-syntax . ?expanded-expr))
+	     ;;
+	     ;;add to the MACRO* an entry like:
+	     ;;
+	     ;;   (#f . ?expanded-expr)
+	     ;;
+	     (loop (cdr lexenv.run)
+		   export-env
+		   (cons (cons #f (syntactic-binding-value binding)) macro*)))
+
+	    (else
+	     (assertion-violation 'core-body-expander
+	       "internal error: do not know how to export"
+	       (syntactic-binding-type  binding)
+	       (syntactic-binding-value binding))))))))
 
   (define (%validate-exports export-spec* export-subst export-env)
     ;;We want to forbid code like the following:
@@ -2273,8 +2276,7 @@
       (for-each (lambda (subst)
 		  (cond ((assq (export-subst-entry-label subst) export-env)
 			 => (lambda (entry)
-			      (when (eq? 'mutable (syntactic-binding-type
-						   (lexenv-entry-binding-descriptor entry)))
+			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry-binding-descriptor entry)))
 				(syntax-violation 'export
 				  "attempt to export mutated variable"
 				  (export-subst-entry-name subst)))))))
@@ -2487,7 +2489,7 @@
   ;;
   ;;4. Check for name conflicts between imported bindings.
   ;;
-  ;;Return 2  values which can  be used to build  a new top  level <RIB>
+  ;;Return 2  values which can  be used to build  a new top  level RIB
   ;;record:
   ;;
   ;;1. NAME-VEC, a vector of  symbols representing the external names of
@@ -3557,15 +3559,15 @@
   (make-<stx> sym TOP-MARK* '() '()))
 
 (define* (top-marked-symbols {rib rib?})
-  ;;Scan the <rib> RIB and return a list of symbols representing binding
+  ;;Scan the rib RIB and return a list of symbols representing binding
   ;;names and having the top mark.
   ;;
   (receive (sym* mark**)
       ;;If RIB is sealed the fields  hold vectors, else they hold lists;
       ;;we want lists here.
-      (let ((sym*   ($<rib>-name*  rib))
-	    (mark** ($<rib>-mark** rib)))
-	(if ($<rib>-sealed/freq rib)
+      (let ((sym*   ($rib-name*  rib))
+	    (mark** ($rib-mark** rib)))
+	(if ($rib-sealed/freq rib)
 	    (values (vector->list sym*)
 		    (vector->list mark**))
 	  (values sym* mark**)))
@@ -3582,7 +3584,7 @@
 
 ;;;; rib record type definition
 ;;
-;;A  <RIB> is  a  record constructed  at every  lexical  contour in  the
+;;A  RIB is  a  record constructed  at every  lexical  contour in  the
 ;;program to  hold informations about  the variables introduced  in that
 ;;contour; "lexical contours" are, for example, LET and similar syntaxes
 ;;that can introduce bindings.
@@ -3595,18 +3597,18 @@
 ;;Sealing ribs
 ;;------------
 ;;
-;;A non-empty  <RIB> can be sealed  once all bindings are  inserted.  To
-;;seal a <RIB>, we convert the lists NAME*, MARK** and LABEL* to vectors
+;;A non-empty  RIB can be sealed  once all bindings are  inserted.  To
+;;seal a RIB, we convert the lists NAME*, MARK** and LABEL* to vectors
 ;;and insert a frequency vector in the SEALED/FREQ field.  The frequency
 ;;vector is a Scheme vector of exact integers.
 ;;
-;;The  frequency vector  is an  optimization  that allows  the <RIB>  to
+;;The  frequency vector  is an  optimization  that allows  the RIB  to
 ;;reorganize itself by  bubbling frequently used mappings to  the top of
-;;the <RIB>.   This is possible because  the order in  which the binding
-;;tuples appear in a <RIB> does not matter.
+;;the RIB.   This is possible because  the order in  which the binding
+;;tuples appear in a RIB does not matter.
 ;;
 ;;The vector is  maintained in non-descending order  and an identifier's
-;;entry in the <RIB> is incremented at every access.  If an identifier's
+;;entry in the RIB is incremented at every access.  If an identifier's
 ;;frequency  exceeds the  preceeding one,  the identifier's  position is
 ;;promoted  to the  top of  its  class (or  the bottom  of the  previous
 ;;class).
@@ -3641,19 +3643,19 @@
 ;;   label*      = #(lab.a   lab.b)
 ;;   sealed/freq = #(2       1)
 ;;
-(define-record (<rib> make-<rib> rib?)
+(define-record (rib make-rib rib?)
   (name*
 		;List of symbols representing the original binding names
 		;in the source code.
 		;
-		;When the  <RIB> is sealed:  the list is converted  to a
+		;When the  RIB is sealed:  the list is converted  to a
 		;vector.
 
    mark**
 		;List of sublists of marks;  there is a sublist of marks
 		;for every item in NAME*.
 		;
-		;When the  <RIB> is sealed:  the list is converted  to a
+		;When the  RIB is sealed:  the list is converted  to a
 		;vector.
 
    label*
@@ -3661,13 +3663,13 @@
 		;syntactic bindings; there  is a label for  each item in
 		;NAME*.
 		;
-		;When the  <RIB> is sealed:  the list is converted  to a
+		;When the  RIB is sealed:  the list is converted  to a
 		;vector.
 
    sealed/freq
 		;False or  vector of  exact integers.  When  false: this
-		;<RIB> is extensible, that is  new bindings can be added
-		;to it.  When a vector: this <RIB> is selaed.
+		;RIB is extensible, that is  new bindings can be added
+		;to it.  When a vector: this RIB is selaed.
 		;
 		;See  below  the  code  section "sealing  ribs"  for  an
 		;explanation of the frequency vector.
@@ -3680,10 +3682,10 @@
     (define-syntax-rule (%pretty-print ?thing)
       (pretty-print* ?thing port 0 #f))
     (%display "#<rib")
-    (%display " name*=")	(%pretty-print (<rib>-name*  S))
-    (%display " mark**=")	(%pretty-print (<rib>-mark** S))
-    (%display " label*=")	(%pretty-print (<rib>-label* S))
-    (%display " sealed/freq=")	(%pretty-print (<rib>-sealed/freq S))
+    (%display " name*=")	(%pretty-print (rib-name*  S))
+    (%display " mark**=")	(%pretty-print (rib-mark** S))
+    (%display " label*=")	(%pretty-print (rib-label* S))
+    (%display " sealed/freq=")	(%pretty-print (rib-sealed/freq S))
     (%display ">")))
 
 (define (false-or-rib? obj)
@@ -3695,7 +3697,7 @@
        (for-all rib? obj)))
 
 (define-inline (make-empty-rib)
-  ;;Build and return a new empty <RIB> record.
+  ;;Build and return a new empty RIB record.
   ;;
   ;;Empty ribs are used to represent freshly created lexical contours in
   ;;which no initial bindings are defined.  For example, internal bodies
@@ -3724,10 +3726,10 @@
   ;;
   ;;   (extend-rib! rib id label shadowing-definitions?)
   ;;
-  (make-<rib> '() '() '() #f))
+  (make-rib '() '() '() #f))
 
 (define (make-filled-rib id* label*)
-  ;;Build and return a new <RIB> record initialised with bindings having
+  ;;Build and return a new RIB record initialised with bindings having
   ;;ID*  as   original  identifiers  and  LABEL*   as  associated  label
   ;;gensyms.
   ;;
@@ -3753,10 +3755,10 @@
   (let ((name*        (map identifier->symbol id*))
 	(mark**       (map <stx>-mark* id*))
 	(sealed/freq  #f))
-    (make-<rib> name* mark** label* sealed/freq)))
+    (make-rib name* mark** label* sealed/freq)))
 
 (define* (make-top-rib name-vec label-vec)
-  ;;Build  and  return a  new  <rib>  record initialised  with  bindings
+  ;;Build  and  return a  new  rib  record initialised  with  bindings
   ;;imported  from a  set  or IMPORT  specifications  or an  environment
   ;;record.
   ;;
@@ -3800,7 +3802,7 @@
       name-vec label-vec)))
 
 (define (export-subst->rib export-subst)
-  ;;Build  and  return  a  new  <RIB>  structure  initialised  with  the  entries  of
+  ;;Build  and  return  a  new  RIB  structure  initialised  with  the  entries  of
   ;;EXPORT-SUBST.
   ;;
   ;;An  EXPORT-SUBST  selects the  exported  bindings  among the  syntactic  bindings
@@ -3817,14 +3819,14 @@
 	      (cons TOP-MARK*                  mark**)
 	      (cons ($cdr ($car export-subst)) label*))
       (let ((sealed/freq #f))
-	(make-<rib> name* mark** label* sealed/freq)))))
+	(make-rib name* mark** label* sealed/freq)))))
 
 (module (extend-rib!)
-  ;;A <RIB> can be extensible, or sealed.  Adding an identifier-to-label
-  ;;mapping to  an extensible <RIB>  is achieved by prepending  items to
+  ;;A RIB can be extensible, or sealed.  Adding an identifier-to-label
+  ;;mapping to  an extensible RIB  is achieved by prepending  items to
   ;;the field lists.
   ;;
-  ;;For example, an empty extensible <RIB> has fields:
+  ;;For example, an empty extensible RIB has fields:
   ;;
   ;;   name*  = ()
   ;;   mark** = ()
@@ -3852,20 +3854,20 @@
   ;;     (define b 2)
   ;;     (list a b))
   ;;
-  ;;when starting  to process the LAMBDA  internal body: a new  <RIB> is
+  ;;when starting  to process the LAMBDA  internal body: a new  RIB is
   ;;created  and  is  added  to   the  metadata  of  the  syntax  object
   ;;representing  the  body itself;  when  each  internal definition  is
   ;;encountered,  a new  entry for  the  identifier is  added (via  side
-  ;;effect) to the <RIB>:
+  ;;effect) to the RIB:
   ;;
   ;;   name*  = (b       a)
   ;;   mark** = ((top)   (top))
   ;;   label* = (lab.b   lab.a)
   ;;
-  ;;That the order in which the  binding tuples appear in the <RIB> does
+  ;;That the order in which the  binding tuples appear in the RIB does
   ;;not matter:  two tuples are different  when both the symbol  and the
   ;;marks are different and  it is an error to add twice  a tuple to the
-  ;;same <RIB>.
+  ;;same RIB.
   ;;
   ;;However, it  is possible to  redefine a  binding.  Let's say  we are
   ;;evaluating    forms   read    from    the    REPL:   the    argument
@@ -3889,14 +3891,14 @@
   ;;we see that the label has changed.
   ;;
   (define* (extend-rib! {rib rib?} {id identifier?} label shadowing-definitions?)
-    (when ($<rib>-sealed/freq rib)
+    (when ($rib-sealed/freq rib)
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
     (let ((id.sym      (identifier->symbol id))
 	  (id.mark*    ($<stx>-mark*  id))
-	  (rib.name*   ($<rib>-name*  rib))
-	  (rib.mark**  ($<rib>-mark** rib))
-	  (rib.label*  ($<rib>-label* rib)))
+	  (rib.name*   ($rib-name*  rib))
+	  (rib.mark**  ($rib-mark** rib))
+	  (rib.label*  ($rib-label* rib)))
       (cond ((%find-binding-with-same-marks id.sym id.mark* rib.name* rib.mark** rib.label*)
 	     ;;A binding for ID already  exists in this lexical contour.
 	     ;;For example, in an internal body we have:
@@ -3920,9 +3922,9 @@
 	    (else
 	     ;;No binding exists for ID  in this lexical contour: create
 	     ;;a new one.
-	     ($set-<rib>-name*!  rib (cons id.sym   rib.name*))
-	     ($set-<rib>-mark**! rib (cons id.mark* rib.mark**))
-	     ($set-<rib>-label*! rib (cons label    rib.label*))))))
+	     ($set-rib-name*!  rib (cons id.sym   rib.name*))
+	     ($set-rib-mark**! rib (cons id.mark* rib.mark**))
+	     ($set-rib-label*! rib (cons label    rib.label*))))))
 
   (define-syntax-rule (%find-binding-with-same-marks id.sym id.mark*
 						     rib.name* rib.mark** rib.label*)
@@ -3946,20 +3948,20 @@
   #| end of module: EXTEND-RIB! |# )
 
 (define* (seal-rib! {rib rib?})
-  (let ((name* ($<rib>-name* rib)))
+  (let ((name* ($rib-name* rib)))
     (unless (null? name*) ;only seal if RIB is not empty
       (let ((name* (list->vector name*)))
-	($set-<rib>-name*!       rib name*)
-	($set-<rib>-mark**!      rib (list->vector ($<rib>-mark** rib)))
-	($set-<rib>-label*!      rib (list->vector ($<rib>-label* rib)))
-	($set-<rib>-sealed/freq! rib (make-vector (vector-length name*) 0))))))
+	($set-rib-name*!       rib name*)
+	($set-rib-mark**!      rib (list->vector ($rib-mark** rib)))
+	($set-rib-label*!      rib (list->vector ($rib-label* rib)))
+	($set-rib-sealed/freq! rib (make-vector (vector-length name*) 0))))))
 
 (define* (unseal-rib! {rib rib?})
-  (when ($<rib>-sealed/freq rib)
-    ($set-<rib>-sealed/freq! rib #f)
-    ($set-<rib>-name*!       rib (vector->list ($<rib>-name*  rib)))
-    ($set-<rib>-mark**!      rib (vector->list ($<rib>-mark** rib)))
-    ($set-<rib>-label*!      rib (vector->list ($<rib>-label* rib)))))
+  (when ($rib-sealed/freq rib)
+    ($set-rib-sealed/freq! rib #f)
+    ($set-rib-name*!       rib (vector->list ($rib-name*  rib)))
+    ($set-rib-mark**!      rib (vector->list ($rib-mark** rib)))
+    ($set-rib-label*!      rib (vector->list ($rib-label* rib)))))
 
 
 ;;;; syntax object type definition
@@ -3992,7 +3994,7 @@
 ;;datum, but let's not worry now).
 ;;
 ;;Syntax objects have, in addition  to the EXPR, a ribs-and-shifts field
-;;RIB*: it is a list where each  element is either a <rib> or the symbol
+;;RIB*: it is a list where each  element is either a rib or the symbol
 ;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
 ;;contour of the program in order  to capture the bindings introduced in
 ;;that contour.
@@ -4010,8 +4012,8 @@
 		;Null or  a proper list  of marks, including  the symbol
 		;"top".
    rib*
-		;Null or  a proper  list of  <rib> instances  or "shift"
-		;symbols.   Every  <rib>  represents  a  nested  lexical
+		;Null or  a proper  list of  rib instances  or "shift"
+		;symbols.   Every  rib  represents  a  nested  lexical
 		;contour; a  "shift" represents the return  from a macro
 		;transformer application.
 		;
@@ -4107,7 +4109,7 @@
   ;;MARK* must be  null or a proper list of  marks, including the symbol
   ;;"top".
   ;;
-  ;;RIB* must  be null or a  proper list of <rib>  instances and "shift"
+  ;;RIB* must  be null or a  proper list of rib  instances and "shift"
   ;;symbols.
   ;;
   ;;AE* must be  null or a proper list of  annotated expressions: syntax
@@ -4135,7 +4137,7 @@
   ;;procedure introduces a  lexical contour in the  context of EXPR-STX,
   ;;for example when we enter a LET syntax.
   ;;
-  ;;RIB must be an instance of <RIB>.
+  ;;RIB must be an instance of RIB.
   ;;
   ;;EXPR-STX can be a raw sexp, an instance of <STX> or a wrapped syntax
   ;;object.
@@ -4240,14 +4242,14 @@
 	       (let ((rib ($car rib*)))
 		 (define (next-search)
 		   (search ($cdr rib*) mark*))
-		 (if ($<rib>-sealed/freq rib)
+		 (if ($rib-sealed/freq rib)
 		     (%search-in-sealed-rib rib sym mark* next-search)
 		   (%search-in-rib rib sym mark* next-search))))))))
 
   (define-inline (%search-in-rib rib sym mark* next-search)
-    (let loop ((name*   ($<rib>-name*  rib))
-	       (mark**  ($<rib>-mark** rib))
-	       (label*  ($<rib>-label* rib)))
+    (let loop ((name*   ($rib-name*  rib))
+	       (mark**  ($rib-mark** rib))
+	       (label*  ($rib-label* rib)))
       (cond ((null? name*)
 	     (next-search))
 	    ((and (eq? ($car name*) sym)
@@ -4259,21 +4261,21 @@
   (module (%search-in-sealed-rib)
 
     (define (%search-in-sealed-rib rib sym mark* next-search)
-      (define name* ($<rib>-name* rib))
+      (define name* ($rib-name* rib))
       (let loop ((i       0)
 		 (rib.len ($vector-length name*)))
 	(cond (($fx= i rib.len)
 	       (next-search))
 	      ((and (eq? ($vector-ref name* i) sym)
-		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
+		    (same-marks? mark* ($vector-ref ($rib-mark** rib) i)))
 	       (receive-and-return (label)
-		   ($vector-ref ($<rib>-label* rib) i)
+		   ($vector-ref ($rib-label* rib) i)
 		 (%increment-rib-frequency! rib i)))
 	      (else
 	       (loop ($fxadd1 i) rib.len)))))
 
     (define (%increment-rib-frequency! rib idx)
-      (let* ((freq* (<rib>-sealed/freq rib))
+      (let* ((freq* (rib-sealed/freq rib))
 	     (freq  (vector-ref freq* idx))
 	     (i     (let loop ((i idx))
 		      (if (zero? i)
@@ -4284,9 +4286,9 @@
 			    i))))))
 	($vector-set! freq* i (+ freq 1))
 	(unless (= i idx)
-	  (let ((name*  (<rib>-name*  rib))
-		(mark** (<rib>-mark** rib))
-		(label* (<rib>-label* rib)))
+	  (let ((name*  (rib-name*  rib))
+		(mark** (rib-mark** rib))
+		(label* (rib-label* rib)))
 	    (let-syntax ((%vector-swap (syntax-rules ()
 					 ((_ ?vec ?idx1 ?idx2)
 					  (let ((V ($vector-ref ?vec ?idx1)))
@@ -4594,7 +4596,7 @@
     ;;
     ;;MARK is either the anti-mark or a new mark.
     ;;
-    ;;RIB can be #f (when MARK is the anti-mark) or an instance of <rib>
+    ;;RIB can be #f (when MARK is the anti-mark) or an instance of rib
     ;;(when MARK is a new mark).
     ;;
     ;;EXPR is either  the input form of a macro  transformer call or the
@@ -4827,7 +4829,7 @@
     ;;ID  must  be an  identifier  representing  the  name of  a  DEFINE
     ;;binding.
     ;;
-    ;;RIB  must be  the <RIB>  describing the  lexical contour  in which
+    ;;RIB  must be  the RIB  describing the  lexical contour  in which
     ;;DEFINE is present.
     ;;
     ;;SHADOWING-DEFINITION?  must  be a boolean,  true if it is  fine to
@@ -4884,7 +4886,7 @@
     ;;ID must be an identifier  representing the name of a DEFINE-SYNTAX
     ;;binding.
     ;;
-    ;;RIB  must be  the <RIB>  describing the  lexical contour  in which
+    ;;RIB  must be  the RIB  describing the  lexical contour  in which
     ;;DEFINE-SYNTAX is present.
     ;;
     ;;SHADOWING-DEFINITION?  must  be a boolean,  true if it is  fine to
@@ -4904,9 +4906,9 @@
   (define (%gen-top-level-label id rib)
     (let ((sym   (identifier->symbol id))
 	  (mark* (<stx>-mark* id))
-	  (sym*  (<rib>-name* rib)))
-      (cond ((and (memq sym (<rib>-name* rib))
-		  (%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
+	  (sym*  (rib-name* rib)))
+      (cond ((and (memq sym (rib-name* rib))
+		  (%find sym mark* sym* (rib-mark** rib) (rib-label* rib)))
 	     => (lambda (label)
 		  ;;If we are here RIB  contains a binding that captures
 		  ;;ID and LABEL is its label.
@@ -5137,6 +5139,9 @@
       (lambda () '())
     (lambda* ({obj procedure?})
       obj)))
+
+(define (current-inferior-lexenv)
+  ((current-run-lexenv)))
 
 (define* (syntax-parameter-value {id identifier?})
   (let ((label (id->label id)))
@@ -5581,7 +5586,7 @@
   ;;    => (lambda (name.label)
   ;;         (receive-and-return (id)
   ;;             (make-<stx> (car name.label) TOP-MARK*
-  ;;                         (list (make-<rib> (list (car name.label))
+  ;;                         (list (make-rib (list (car name.label))
   ;;                                           TOP-MARK**
   ;;                                           (list (cdr name.label))
   ;;                                           #f))
@@ -5595,12 +5600,12 @@
       (getprop sym '*vicare-scheme-temporary-variable-id*)
       (cond ((system-label sym)
 	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
-	     ;;with a proper "<rib>" and  the binding's label.  Such bound identifier
+	     ;;with a proper "rib" and  the binding's label.  Such bound identifier
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
 		      (make-<stx> sym TOP-MARK*
-				  (list (make-<rib> (list sym)
+				  (list (make-rib (list sym)
 						    TOP-MARK**
 						    (list label)
 						    #f))
@@ -5626,12 +5631,12 @@
   (or (getprop sym system-id-gensym)
       (cond ((system-label sym)
 	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
-	     ;;with a proper "<rib>" and  the binding's label.  Such bound identifier
+	     ;;with a proper "rib" and  the binding's label.  Such bound identifier
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
 		      (make-<stx> sym TOP-MARK*
-				  (list (make-<rib> (list sym)
+				  (list (make-rib (list sym)
 						    TOP-MARK**
 						    (list label)
 						    #f))

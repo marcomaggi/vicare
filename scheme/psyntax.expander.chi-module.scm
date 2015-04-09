@@ -251,7 +251,7 @@
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "<rib>".
+    ;;RIB is false or a struct of type "rib".
     ;;
     (%do-macro-call (let ()
 		      (import NON-CORE-MACRO-TRANSFORMER)
@@ -279,7 +279,7 @@
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "<rib>".
+    ;;RIB is false or a struct of type "rib".
     ;;
     (%do-macro-call (car bind-val) input-form-stx lexenv.run rib))
 
@@ -304,7 +304,7 @@
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "<rib>".
+    ;;RIB is false or a struct of type "rib".
     ;;
     (let ((lib (car bind-val))
 	  (loc (cdr bind-val)))

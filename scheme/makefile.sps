@@ -856,6 +856,7 @@
     ;;(Marco Maggi; Mon Apr 14, 2014)
     ($type-specs	(vicare expander object-type-specs)	#t	#f)
     ($expander-tags	(vicare expander tags)			#t	#f)
+    ($expander		(vicare expander)			#t	#f)
     ))
 
 
@@ -1012,6 +1013,7 @@
     (expand-library->sexp			v $language)
     (expand-top-level				v $language)
     (expand-top-level->sexp			v $language)
+    (current-inferior-lexenv			$expander)
 ;;;
     (environment?				v $language)
     (environment-symbols			v $language)
