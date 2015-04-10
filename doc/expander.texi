@@ -692,36 +692,39 @@ syntactic binding descriptors.  The components are:
 Objects of type @objtype{rib} that map syntactic identifiers to label
 gensyms, keeping track of lexical contours.
 
-@item Boot image syntactic bindings
-A set of label gensyms referencing the syntactic binding descriptors,
-one for each syntactic binding established by the boot image.
+@item Primitive syntactic binding's labels
+A set of label gensyms associated to the syntactic bindings established
+by the boot image; each label references its syntactic binding's
+descriptor.
 
-@item Imported syntactic bindings
-A set of label gensyms referencing the syntactic binding descriptors,
-one for each syntactic binding imported from libraries.  The boot image
-syntactic bindings are a subset of the imported syntactic bindings.
+@item Imported syntactic binding's labels
+A set of label gensyms associated to the syntactic bindings established
+by imported libraries; each label references its syntactic binding's
+descriptor.  The boot image's syntactic bindings are a subset of the
+imported syntactic bindings.
 
-@item Library syntactic bindings, @lexenv{}
-An association list mapping label gensyms to syntactic binding
-descriptors; an association exists for each syntactic binding
-established by the code being expanded.
+@item Internal syntactic binding's labels, @lexenv{}
+A set of label gensyms associated to the syntactic bindings established
+by the library being expanded; these labels are used as keys in an
+association list mapping labels to their syntactic binding's
+descriptor.  This alist is called @lexenv{}.
 @end table
 
 @menu
-* expander lexenv descriptors:: Syntactic binding descriptors.
-* expander lexenv boot::        The boot image component.
-* expander lexenv imported::    The imported bindings component.
-* expander lexenv lexenv::      The @lexenv{} component.
+* expander lexenv descriptors:: Syntactic binding's descriptors.
+* expander lexenv primitive::   Primitive syntactic bindings.
+* expander lexenv imported::    Imported syntactic bindings.
+* expander lexenv internal::    Internal syntactic bindings.
 * expander lexenv fluids::      How fluid syntaxes work.
 * expander lexenv synonyms::    How synonym syntaxes work.
 @end menu
 
 @c page
 @node expander lexenv descriptors
-@subsection Syntactic binding descriptors
+@subsection Syntactic binding's descriptors
 
 
-A syntactic binding descriptor is a pair with the following format:
+A syntactic binding's descriptor is a pair with the format:
 
 @example
 (@meta{binding-type} . @meta{binding-value})
@@ -739,15 +742,15 @@ library import export module begin set!
 let-syntax letrec-syntax stale-when
 begin-for-syntax begin-for-syntax
 
-core-macro macro core-prim $core-rtd $fluid
+core-macro macro core-prim $core-rtd
 
 global global-macro global-macro! global-ctv
 
 lexical local-macro local-macro! local-ctv
-syntax $module $rtd $synonym
+syntax $fluid $module $rtd $synonym
 @end example
 
-Every syntactic bindings has a unique label gensym associated to it;
+Every syntactic binding has a unique label gensym associated to it;
 during the expansion process, no matter the current lexical context,
 given a label gensym we can retrieve the associated binding descriptor.
 
@@ -755,8 +758,8 @@ Under @value{PRJNAME}, symbol objects are data structures with a slot
 named @code{value}, accessor @func{symbol-value} and mutator
 @func{set-symbol-value!}.  This slot is usually initialised to the
 built--in object returned by @code{(unbound-object)}; we can inspect the
-state of the slot with @func{symbol-bound?}.  The expander make use of
-this slot for label gensyms:
+state of the slot with @func{symbol-bound?}.  The expander makes use of
+this slot in label gensyms:
 
 @itemize
 @item
@@ -765,45 +768,53 @@ by the boot image, have the binding descriptor referenced by the
 @code{value} slot of their label gensym.
 
 @item
-Syntactic bindings established in the body of the library being
-expanded, have the association between label gensyms and binding
-descriptors stored in the @lexenv{} component of the lexical
-environment.  The @code{value} slot of these gensyms is set to the
-return value of @code{(unbound-object)}.
+Syntactic bindings established by the library being expanded, have the
+association between label gensyms and binding descriptors stored in the
+@lexenv{} component of the lexical environment.  The @code{value} slot
+of these gensyms is set to the return value of @code{(unbound-object)}.
 @end itemize
 
 Given a label gensym we can determine if it is associated to an imported
 syntactic binding by inspecting its @code{value} slot: if
-@func{symbol-bound?} applied to it returns @true{}, the binding is
-imported; otherwise it was established by the code being expanded.
+@func{symbol-bound?} applied to the label returns @true{}, the binding
+is imported; otherwise it was established by the code being expanded.
 
 @c page
-@node expander lexenv boot
-@subsection The boot image component
+@node expander lexenv primitive
+@subsection Primitive syntactic bindings
 
 
 @cindex Library @library{psyntax system $all}
 @cindex @library{psyntax system $all}, library
 
 
-The syntactic bindings exported by the boot image are all those exported
-by the library @library{psyntax system $all}; this is an internal
-library that should not be used for normal operations.  Partitions of
-these bindings are also exported by the library @library{vicare} and all
-those in the hierarchies @library{vicare ---} and @library{rnrs ---}.
+The syntactic bindings established by the boot image are all those
+exported by the library @library{psyntax system $all}; this is an
+internal library that should not be used for normal operations.
+Partitions of these bindings are also exported by the library
+@library{vicare} and all those in the hierarchies @library{vicare ---}
+and @library{rnrs ---}.
 
-The syntactic bindings exported by the boot image have descriptors
+The syntactic bindings established by the boot image have descriptors
 defined in, and only in, the file @file{makefile.sps} in
 @value{PRJNAME}'s source code tree.  Every boot image syntactic binding
 has a label gensym associated to it: the binding's descriptor is stored
 in the @code{value} slot of the label.
 
-When a library is imported in a lexical context: the exported names of
-imported bindings are associated to their label gensyms in the current
-@objtype{rib} object.
+@c ------------------------------------------------------------------------
 
-We can easily inspect the boot image syntactic binding descriptors;
-first let's create a lexical environment object with the system library:
+@subsubheading Inspecting binding descriptors
+
+We must remember that a syntactic binding's descriptor is a pair with
+format:
+
+@example
+(@meta{binding-type} . @meta{binding-value})
+@end example
+
+@noindent
+first let's create an @objtype{environment} object with the system
+library:
 
 @lisp
 (define env (environment '(psyntax system $all)))
@@ -826,9 +837,9 @@ descriptor              @result{} (core-prim . display)
 @end lisp
 
 @noindent
-in the binding descriptor pair: the @meta{binding-type} is the symbol
-@samp{core-prim} and the @meta{binding-value} is the symbol
-@samp{display}, which is the public name of the primitive function.
+in the descriptor: @meta{binding-type} is the symbol @samp{core-prim}
+and @meta{binding-value} is the symbol @samp{display}, which is the
+public name of the primitive function.
 
 @item
 Core primitive syntax @syntax{lambda}:
@@ -843,9 +854,9 @@ descriptor              @result{} (core-macro . lambda)
 @end lisp
 
 @noindent
-in the binding descriptor pair: the @meta{binding-type} is the symbol
-@samp{core-macro} and the @meta{binding-value} is the symbol
-@samp{lambda}, which is the public name of the primitive syntax.
+in the descriptor: @meta{binding-type} is the symbol @samp{core-macro}
+and @meta{binding-value} is the symbol @samp{lambda}, which is the
+public name of the primitive syntax.
 
 @item
 Non--core primitive syntax @syntax{let}:
@@ -860,9 +871,9 @@ descriptor              @result{} (macro . let)
 @end lisp
 
 @noindent
-in the binding descriptor pair: the @meta{binding-type} is the symbol
-@samp{macro} and the @meta{binding-value} is the symbol @samp{let},
-which is the public name of the primitive syntax.
+in the descriptor: @meta{binding-type} is the symbol @samp{macro} and
+@meta{binding-value} is the symbol @samp{let}, which is the public name
+of the primitive syntax.
 
 @item
 Condition object type @condition{condition}, which is implemented as
@@ -872,16 +883,16 @@ Condition object type @condition{condition}, which is implemented as
 (define-values (label descriptor)
   (environment-binding '&condition env))
 descriptor
-@result{} ($core-rtd &condition-rtd &condition-rcd)
+@result{} ($core-rtd . (&condition-rtd &condition-rcd))
 (symbol-value label)
-@result{} ($core-rtd &condition-rtd &condition-rcd)
+@result{} ($core-rtd . (&condition-rtd &condition-rcd))
 (eq? descriptor (symbol-value label))
 @result{} #t
 @end lisp
 
 @noindent
-in the binding descriptor pair: the @meta{binding-type} is the symbol
-@samp{$core-rtd} and the @meta{binding-value} is the list:
+in the descriptor: @meta{binding-type} is the symbol @samp{$core-rtd}
+and @meta{binding-value} is the list:
 
 @example
 (&condition-rtd &condition-rcd)
@@ -903,10 +914,33 @@ we can further inspect @code{&condition-rtd} and @code{&condition-rcd}:
 @end lisp
 @end itemize
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Public names and labels
+
 If we know the public name of a primitive syntactic binding
 (@func{display}, @syntax{lambda}, @syntax{let}, @condition{condition},
-@dots{}) we can retrieve the binding's label; given the label we can
-retrieve the binding descriptor.
+@dots{}) we can retrieve the binding's label using @func{system-label}
+(@pxref{iklib symbols labels}) and given the label we can retrieve the
+binding descriptor using @func{symbol-value} (@pxref{iklib symbols
+value}).  Examples:
+
+@lisp
+(symbol-value (system-label 'display))
+@result{} (core-prim . display)
+
+(symbol-value (system-label 'lambda))
+@result{} (core-macro . lambda)
+
+(symbol-value (system-label 'let))
+@result{} (core-macro . let)
+
+(symbol-value (system-label '&condition))
+@result{} ($core-rtd &condition-rtd &condition-rcd)
+
+(symbol-value (system-label '__who__))
+@result{} ($fluid . fluid-label.__who__)
+@end lisp
 
 For core primitive functions, record--type descriptors and
 record--constructor descriptors:
@@ -938,7 +972,7 @@ the public name.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Integrated syntax
+@subsubheading Primitive binding: integrated syntax
 
 Some syntaxes are built into the expander and do not even have an
 internal transformer function.  A syntactic binding representing an
@@ -961,7 +995,7 @@ Some of these core language syntaxes are: @syntax{define-syntax},
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Core macro
+@subsubheading Primitive binding: core macro
 
 A syntactic binding representing a core syntax with transformer function
 implemented by the expander has descriptor with format:
@@ -987,7 +1021,7 @@ other syntaxes.  Some of these syntaxes are: @syntax{quote},
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Non--core macro
+@subsubheading Primitive binding: non--core macro
 
 A binding representing a non--core syntax with transformer function
 implemented by the expander has descriptor with format:
@@ -1009,13 +1043,13 @@ other syntaxes.  Some of these syntaxes are:
 @example
 define-struct define-record-type define-condition-type
 define-enumeration
-do or and xor
+or and xor
 cond case
 let* let-values let*-values syntax-rules
 quasiquote quasisyntax with-syntax identifier-syntax
 let*-syntax
 define-syntax-rule define-auxiliary-syntaxes define-syntax*
-when unless while until for returnable
+do when unless while until for returnable
 case-define define* case-define* lambda* case-lambda*
 define-values receive receive-and-return begin0
 include
@@ -1024,10 +1058,12 @@ assert try with-unwind-protection guard
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Core primitive
+@subsubheading Primitive binding: core primitive
 
-A syntactic binding representing a core primitive function or core
-primitive operation has descriptor with format:
+A syntactic binding representing a core primitive function, or core
+primitive operation, or core primitive record--type descriptor, or core
+primitive record--constructor descriptor has syntactic binding's
+descriptor with format:
 
 @example
 (core-prim . @meta{name})
@@ -1035,12 +1071,11 @@ primitive operation has descriptor with format:
 
 @noindent
 where @meta{name} is a symbol representing the public name of the core
-primitive.  These core primitives are all the primitive functions, the
-record--type descriptors, the record--constructor descriptors.
+primitive.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Core record--type name
+@subsubheading Primitive binding: core record--type name
 
 A syntactic binding representing @rnrs{6}'s record--type name defined by
 the boot image has descriptor with format:
@@ -1061,18 +1096,18 @@ condition object types.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Fluid syntax
+@subsubheading Primitive binding: fluid syntax
 
 A syntactic binding representing a fluid syntax defined by the boot
 image has descriptor with format:
 
 @example
-($fluid . @meta{fluid-main-label})
+($fluid . @meta{fluid-label})
 @end example
 
 @noindent
-where @meta{fluid-main-label} is the label gensym of the fluid syntax;
-@ref{expander lexenv fluids, How fluid syntaxes work}.
+where @meta{fluid-label} is a further label gensym used to redefine the
+keyword binding; @ref{expander lexenv fluids, How fluid syntaxes work}.
 
 Some of the fluid syntaxes are: @syntax{__who__}, @syntax{return},
 @syntax{continue}, @syntax{break}, @syntax{with}, @syntax{brace},
@@ -1080,11 +1115,11 @@ Some of the fluid syntaxes are: @syntax{__who__}, @syntax{return},
 
 @c page
 @node expander lexenv imported
-@subsection The imported bindings component
+@subsection Imported syntactic bindings
 
 
-The data describing syntactic bindings exported by a library is stored
-in a @objtype{library} object:
+The data describing syntactic bindings established by a library is
+stored in a @objtype{library} object:
 
 @itemize
 @item
@@ -1095,13 +1130,13 @@ imported name equals the exported name and it is taken from the
 whose entries have format:
 
 @example
-(@meta{name} . @meta{label})
+(@meta{exported-name} . @meta{label})
 @end example
 
 @item
 The syntactic binding's descriptors are taken from the @code{export-env}
 field of the @objtype{library} object.  The @code{export-env} maps label
-gensyms to the binding descriptors; it is an alist whose entries have
+gensyms to their binding descriptors; it is an alist whose entries have
 format:
 
 @example
@@ -1120,7 +1155,18 @@ associated to their label gensyms in the @objtype{rib} object
 representing the current lexical context.
 @end itemize
 
-We can easily inspect the imported syntactic binding's descriptors;
+@c ------------------------------------------------------------------------
+
+@subsubheading Inspecting binding descriptors
+
+We must remember that a syntactic binding's descriptor is a pair with
+format:
+
+@example
+(@meta{binding-type} . @meta{binding-value})
+@end example
+
+@noindent
 first let's create a library:
 
 @lisp
@@ -1131,8 +1177,8 @@ first let's create a library:
 @end lisp
 
 @noindent
-then let's create a lexical environment object with the @library{demo}
-library:
+then let's create an @objtype{environment} object with the
+@library{demo} library:
 
 @lisp
 (define env (environment '(demo)))
@@ -1164,7 +1210,7 @@ descriptor
 @end lisp
 
 @noindent
-where @code{lex/loc.var} is both the label gensym and the storage
+where @code{lex/loc.var} is both the lexical gensym and the storage
 location gensym of the exported variable; we can also import the library
 and try to expand some code:
 
@@ -1177,7 +1223,7 @@ and try to expand some code:
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported variable bindings
+@subsubheading Imported binding: variable
 
 A syntactic binding representing an imported variable binding has
 descriptor with format:
@@ -1200,7 +1246,7 @@ a previous expression, @meta{library} is the symbol
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported non--identifier macro
+@subsubheading Imported binding: non--identifier macro
 
 A syntactic binding representing an imported keyword binding with a
 non--variable transformer has descriptor with format:
@@ -1221,7 +1267,7 @@ of evaluating their right--hand side expression is a function.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported identifier macro
+@subsubheading Imported binding: identifier macro
 
 A syntactic binding representing an imported keyword binding with
 variable transformer has descriptor with format:
@@ -1243,7 +1289,7 @@ call to @func{make-variable-transformer}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported compile--time value
+@subsubheading Imported binding: compile--time value
 
 A syntactic binding representing an imported keyword binding associated
 to a compile-time value has descriptor with format:
@@ -1265,7 +1311,7 @@ call to @func{make-compile-time-value}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported struct descriptor
+@subsubheading Imported binding: struct--type name
 
 A syntactic binding representing an imported keyword binding associated
 to a @value{PRJNAME}'s struct--type name has descriptor with format:
@@ -1280,7 +1326,7 @@ struct--type descriptor.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported @rnrs{6} record--type name
+@subsubheading Imported binding: @rnrs{6} record--type name
 
 A syntactic binding representing a keyword binding imported from a
 library, but not established by the boot image, associated to a
@@ -1301,7 +1347,7 @@ identifier to which the default record--constructor descriptor is bound;
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported module interface
+@subsubheading Imported binding: module interface
 
 A syntactic binding representing an imported keyword binding associated
 to the interface of a @syntax{module} syntax has descriptor with format:
@@ -1319,7 +1365,7 @@ Syntactic bindings of this type are established by uses of the syntax
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Fluid syntax
+@subsubheading Imported binding: fluid syntax
 
 A syntactic binding representing an imported keyword binding associated
 to a fluid syntax has descriptor with format:
@@ -1329,16 +1375,15 @@ to a fluid syntax has descriptor with format:
 @end example
 
 @noindent
-where @meta{fluid-label} is the label gensym associated to the fluid
-syntax.
+where @meta{fluid-label} is a further label gensym used to redefine the
+keyword binding; @ref{expander lexenv fluids, How fluid syntaxes work}.
 
 Syntactic bindings of this type are established by uses of the syntax
-@syntax{define-fluid-syntax}; @ref{expander lexenv fluids, How fluid
-syntaxes work}.
+@syntax{define-fluid-syntax}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Synonym syntax
+@subsubheading Imported binding: synonym syntax
 
 A syntactic binding representing an imported keyword binding associated
 to a synonym syntax has descriptor with format:
@@ -1348,8 +1393,8 @@ to a synonym syntax has descriptor with format:
 @end example
 
 @noindent
-where @meta{synonym-label} is the label gensym associated to the synonym
-syntax.
+where @meta{synonym-label} is the label gensym associated to the aliased
+syntax; @ref{expander lexenv synonyms, How synonym syntaxes work}.
 
 Syntactic bindings of this type are established by
 @syntax{define-syntax}, @syntax{let-syntax} and similar when the result
@@ -1399,15 +1444,19 @@ bindings:
 
   (define-syntax synonym
     (make-synonym-transformer #'var))
+
   #| end of library |# )
 @end lisp
 
 @c page
-@node expander lexenv lexenv
-@subsection The @lexenv{} component
+@node expander lexenv internal
+@subsection Internal syntactic bindings
 
 
-@c DA RIVEDERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+The internal syntactic bindings are the ones established by the code
+being expanded, both at the top level and in a local context.  The
+association between their label gensyms and their descriptors is
+maintained in the @lexenv{}.
 
 A @lexenv{} is an alist managed somewhat like a stack; while the
 expansion proceeds, visiting the code in breadth--first order: the
@@ -1426,7 +1475,8 @@ descriptor.
 
 @defun current-inferior-lexenv
 Return an alist representing the current @lexenv{} used at the inferior
-expansion level.  It is to be used from the body of a macro transformer.
+expansion level; mutating the returned value leads to undefined
+behaviour.  It is to be used from the body of a macro transformer.
 
 As example, to just print the @lexenv{} we can do:
 
@@ -1459,11 +1509,16 @@ transformer function of @syntax{print-lexenv} fully expanded to the core
 language.
 @end defun
 
+Top level and local syntactic bindings are represented in the same way
+in the @lexenv{}; the difference between them is that top level
+syntactic bindings have the association between the source name and the
+label gensym stored in the top level @objtype{rib} object.
+
 @c ------------------------------------------------------------------------
 
-@subsubheading Top level or local variable bindings
+@subsubheading Internal binding: variables
 
-A syntactic binding representing a variable binding, as created by
+A syntactic binding representing a variable binding as created by
 @syntax{let} and similar syntaxes, @syntax{lambda}, @syntax{case-lambda}
 or @syntax{define}, has descriptor with format:
 
@@ -1482,11 +1537,10 @@ export from a library a mutable variable.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Top level or local non--identifier macro
+@subsubheading Internal binding: non--variable macro
 
 A syntactic binding representing a keyword binding with non--variable
-transformer defined by the code being expanded has descriptor with
-format:
+transformer has descriptor with format:
 
 @example
 (local-macro . (@meta{transformer} . @meta{expanded-expr}))
@@ -1515,11 +1569,10 @@ to a function.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Top level or local identifier macro
+@subsubheading Internal binding: variable macro
 
 A syntactic binding representing a keyword binding with variable
-transformer defined by the code being expanded has descriptor with
-format:
+transformer has descriptor with format:
 
 @example
 (local-macro! . (@meta{transformer} . @meta{expanded-expr}))
@@ -1548,11 +1601,10 @@ to the return value of @func{make-variable-transformer}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Top level or local compile--time value
+@subsubheading Internal binding: compile--time value
 
 A syntactic binding representing a keyword binding associated to a
-compile--time value defined by the code being expanded has descriptor
-with format:
+compile--time value has descriptor with format:
 
 @example
 (local-ctv . (@meta{object} . @meta{expanded-expr}))
@@ -1580,11 +1632,10 @@ to the return value of @func{make-compile-time-value}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Module interface
+@subsubheading Internal binding: module interface
 
 A syntactic binding representing a keyword binding associated to the
-interface of a @syntax{module} syntax defined by the code being expanded
-has descriptor with format:
+interface of a @syntax{module} syntax has descriptor with format:
 
 @example
 ($module . @meta{module-interface})
@@ -1599,12 +1650,11 @@ Syntactic bindings of this type are established by uses of the syntax
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Pattern variable
+@subsubheading Internal binding: pattern variable
 
 A syntactic binding representing a keyword binding associated to a
 pattern variable, as created by @syntax{syntax-case} and
-@syntax{syntax-rules}, in the body of the library being expanded has
-descriptor with format:
+@syntax{syntax-rules}, has descriptor with format:
 
 @example
 (syntax . (@meta{name} . @meta{level}))
@@ -1631,11 +1681,10 @@ syntactic binding descriptors:
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Top level or local struct descriptor
+@subsubheading Internal binding: struct--type name
 
 A syntactic binding representing a keyword binding associated to a
-@value{PRJNAME}'s struct--type descriptor defined by the code being
-expanded has descriptor with format:
+@value{PRJNAME}'s struct--type name has descriptor with format:
 
 @example
 ($rtd . @meta{type-descriptor-struct})
@@ -1645,13 +1694,15 @@ expanded has descriptor with format:
 where @meta{type-descriptor-struct} is a struct representing the
 struct--type descriptor.
 
+These bindings are established by uses of the syntax
+@syntax{define-struct}.
+
 @c ------------------------------------------------------------------------
 
-@subsubheading Top level or local @rnrs{6} record--type name
+@subsubheading Internal binding: @rnrs{6} record--type name
 
 A syntactic binding representing a keyword binding associated to a
-@rnrs{6}'s record--type name defined by the code being expanded has
-descriptor with one of the formats:
+@rnrs{6}'s record--type name has descriptor with one of the formats:
 
 @example
 ($rtd . (@meta{rtd-id} @meta{rcd-id}))
@@ -1665,12 +1716,15 @@ identifier to which the default record--constructor descriptor is bound;
 @meta{spec} is an instance of record type
 @objtype{r6rs-record-type-spec}.
 
+These bindings are established by uses of the syntax
+@syntax{define-record-type}, @syntax{define-condition-type} and similar.
+
 @c ------------------------------------------------------------------------
 
-@subsubheading Fluid syntax
+@subsubheading Internal binding: fluid syntax
 
 A syntactic binding representing a keyword binding associated to a fluid
-syntax has the format:
+syntax has descriptor with format:
 
 @example
 ($fluid . @meta{fluid-label})
@@ -1682,10 +1736,10 @@ syntax.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Synonym syntax
+@subsubheading Internal binding: synonym syntax
 
 A syntactic binding representing a keyword binding associated to a
-synonym syntax has the format:
+synonym syntax has descriptor with format:
 
 @example
 ($synonym . @meta{synonym-label})
@@ -1693,13 +1747,14 @@ synonym syntax has the format:
 
 @noindent
 where @meta{synonym-label} is the label gensym associated to the synonym
-syntax.
+syntax; @ref{expander lexenv synonyms, How synonym syntaxes work}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading @syntax{begin-for-syntax} code
+@subsubheading Internal binding: @syntax{begin-for-syntax} code
 
-Each use of @syntax{begin-for-syntax} generates visit code that must be
+Each use of @syntax{begin-for-syntax} generates expand--time code; when
+this code is defined at the top level: it must become visit code to be
 added to compiled libraries.  Whenever a @syntax{begin-for-syntax} use
 is expanded the following entry is pushed on the @lexenv{}:
 
@@ -1708,15 +1763,15 @@ is expanded the following entry is pushed on the @lexenv{}:
 @end example
 
 @noindent
-where: @meta{unused-label} is a dummy label gensym which not bound in
+where: @meta{unused-label} is a dummy label gensym which is not bound in
 the current rib; @meta{visit-code} is a full core language expression
 representing the expanded contents of the @syntax{begin-for-syntax} use.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading displaced lexical
+@subsubheading Displaced lexical bindings
 
-These lists have a format similar to a @lexenv{} entry representing a
+These pairs have a format similar to a @lexenv{} entry representing a
 syntactic binding, but they are used to represent a failed search into a
 @lexenv{}.
 
