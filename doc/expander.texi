@@ -30,6 +30,24 @@ syntactic binding names, it is suggested to import it with prefix
 @section Introduction to the expansion process
 
 
+First some notes on ``languages'' in @value{PRJNAME}'s jargon:
+
+@itemize
+@item
+The @dfn{expanded language} is a low level Scheme--like language which
+is the result of the expansion process: expanding a Scheme library or
+program means to transform the input language into a symbolic expression
+in the expanded language.
+
+@item
+The ``core language'' is a low level Scheme--like language which is the
+input recognised by the compiler.
+@end itemize
+
+@noindent
+at present the expanded language and the core language are equal, but
+this might change in the future.
+
 While discussing the expander operations, we will always refer to source
 code in the form of libraries.  @rnrs{6} also defines top level
 programs; however, under @value{PRJNAME}:
@@ -56,11 +74,105 @@ so if we understand how libraries are expanded, we also understand how
 programs are expanded.
 
 @menu
+* expander intro intro::        Core macros, non-core macros,
+                                user-defined macros.
 * expander intro times::        Evaluation times.
 * expander intro bindings::     Syntactic bindings.
 * expander intro lex::          Lexical variables, labels,
                                 location gensyms.
 @end menu
+
+@c page
+@node expander intro intro
+@subsection Core macros, non--core macros, user--defined macros
+
+
+@subsubheading Core macros
+
+These are basic syntaxes into which all the other macros are expanded;
+despite being called ``core'', they are neither part of the expanded
+language nor of the core language.  Core macros are split into three
+groups, those that can appear in definition context only:
+
+@example
+define             define-syntax
+define-alias       define-fluid-syntax
+module             library
+begin              import
+export             set!
+stale-when         begin-for-syntax
+eval-for-expand
+@end example
+
+@noindent
+and maybe others; those that can appear only in expression context only:
+
+@example
+foreign-call             quote
+syntax-case              syntax
+letrec                   letrec*
+if                       lambda
+case-lambda              fluid-let-syntax
+struct-type-descriptor   struct-type-and-struct?
+struct-type-field-ref    struct-type-field-set!
+$struct-type-field-ref   $struct-type-field-set!
+record-type-descriptor   record-constructor-descriptor
+record-type-field-set!   record-type-field-ref
+$record-type-field-set!  $record-type-field-ref
+type-descriptor          is-a?
+slot-ref                 slot-set!
+$slot-ref                $slot-set!
+splice-first-expand
+predicate-procedure-argument-validation
+predicate-return-value-validation
+@end example
+
+@noindent
+and maybe others; those that can appear in both definition context and
+expression context:
+
+@example
+let-syntax               letrec-syntax
+@end example
+
+The implementation of core macros that appear in definition context only
+is integrated in the function @func{chi-body*}.
+
+The implementation of core macros that appear in definition context only
+consists of proper transformer functions selected by the function
+@func{core-macro-transformer}.  Such transformers are applied to input
+forms by the function @func{chi-expr}.
+
+Macros that can appear in both definition context and expression context
+have double implementation: one in the function @func{chi-body*} and one
+in the function @func{chi-expr}.
+
+Core macros can introduce bindings by direct access to the lexical
+environment.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Non--core macros
+
+These are macros that expand themselves into uses of core macros; they
+have a proper transformer function accepting as single argument the
+input form syntax object and returning as single value the output form
+syntax object.  The only difference between a non--core macro and a
+user--defined macro is that the former is integrated in the expander.
+
+Non--core macro transformers are selected by the function
+@func{non-core-macro-transformer}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading User--defined macros
+
+These are macros defined by @syntax{define-syntax}, @syntax{let-syntax},
+@syntax{letrec-syntax}, @syntax{define-fluid-syntax} and their
+derivatives.  Such syntaxes expand themselves into uses of core or
+non--core macros.  Their transformer functions accept as single argument
+the input form syntax object and return as single value the output form
+syntax object.
 
 @c page
 @node expander intro times
