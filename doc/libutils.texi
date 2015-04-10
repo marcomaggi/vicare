@@ -795,6 +795,17 @@ Objects of type @objtype{library} are created when a source library is
 processed by the expander and when a binary library is loaded from a
 @fasl{} file; @objtype{library} is a disjoint type.
 
+@menu
+* libutils libraries typedef::       @objtype{library} object type.
+* libutils libraries export-env::    The @code{export-env} field.
+* libutils libraries ops::           Library operations.
+@end menu
+
+@c page
+@node libutils libraries typedef
+@subsection @objtype{library} object type
+
+
 The following bindings are exported by the library @library{vicare
 libraries}.
 
@@ -860,12 +871,6 @@ visit code.
 @deffn {Accessor for @objtype{library}} library-inv-lib* @var{lib}
 The list of @objtype{library} objects selecting libraries needed by the
 invoke code.
-@end deffn
-
-
-@deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
-A subst selecting the exported bindings from the @code{export-env}.  See
-the expander's code for details.
 @end deffn
 
 
@@ -976,9 +981,239 @@ Given a library descriptor object return the @uid{}.
 Given a library descriptor object return the @rnrs{6} library name.
 @end defun
 
-@c ------------------------------------------------------------
+@c page
+@node libutils libraries export-env
+@subsection The @code{export-env} field
 
-@subsubheading Library operations
+
+@deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
+Return the lexical environment exported by the @objtype{library} object
+@var{lib}.
+@end deffn
+
+
+The @code{export-env} is a data structure used to map the label gensyms
+of top level syntactic bindings defined by a library to the
+corresponding storage location gensyms.  ``Top level bindings'' does not
+mean ``exported bindings'': not all the entries in @code{export-env}
+represent exported bindings, it is the role of the @code{export-subst}
+to select the exported ones.
+
+An @code{export-env} is an alist whose entries have the format:
+
+@example
+(@meta{label} . @meta{export-descriptor})
+@end example
+
+@noindent
+and @meta{export-descriptor} has the format:
+
+@example
+(@meta{binding-type} . @meta{binding-value})
+@end example
+
+@noindent
+where: @meta{label} is the syntactic binding's label gensym;
+@meta{binding-type} is a symbol representing the syntactic binding's
+type; the format of @meta{binding-value} depends upon the type.
+
+The symbol @meta{binding-type} is one among:
+
+@table @code
+@item global
+Denotes a syntactic binding representing a variable binding which is
+never assigned in the code (it is initialised to a value and that value
+never changes).  The export descriptor has the format:
+
+@example
+(global . @meta{lex/loc})
+@end example
+
+@noindent
+where @meta{lex/loc} is a gensym acting both as lexical gensym and
+storage location gensym; after the library is invoked: the loc gensym
+holds the variable's value in its @code{value} slot (immutable).  This
+binding can be exported.
+
+@item mutable
+Denotes a syntactic binding representing a variable binding which is
+assigned somewhere in the code.  The export descriptor has the format:
+
+@example
+(mutable . @meta{lex/loc})
+@end example
+
+@noindent
+where @meta{lex/loc} is a gensym acting both as lexical gensym and
+storage location gensym; after the library is invoked: the loc gensym
+holds the variable's value in its @code{value} slot (mutable).  This
+binding @strong{cannot} be exported.
+
+@item global-macro
+Denotes a syntactic binding representing a non--variable macro.  The
+export descriptor has the format:
+
+@example
+(global-macro . @meta{loc})
+@end example
+
+@noindent
+where @meta{loc} is the storage location gensym; after the library has
+been visited: @meta{loc} holds the macro transformer in its @code{value}
+slot.  This binding can be exported.
+
+Syntactic bindings of this type are established by uses of
+@syntax{define-syntax}, @syntax{let-syntax} and similar when the result
+of evaluating the right--hand side expression is a function.
+
+@item global-macro!
+Denotes a syntactic binding representing a variable macro.  The export
+descriptor has the format:
+
+@example
+(global-macro! . @meta{loc})
+@end example
+
+@noindent
+where @meta{loc} is the storage location gensym; after the library has
+been visited: @meta{loc} holds the macro transformer in its @code{value}
+slot.  This binding can be exported.
+
+Syntactic bindings of this type are established by uses of
+@syntax{define-syntax}, @syntax{let-syntax} and similar when the result
+of evaluating the right--hand side expression is the return value of a
+call to @func{make-variable-transformer}.
+
+@item global-ctv
+Denotes a syntactic binding representing a compile-time value.  The
+export descriptor has the format:
+
+@example
+(global-ctv . @meta{loc})
+@end example
+
+@noindent
+where @meta{loc} is the storage location gensym; after the library has
+been visited: @meta{loc} holds the actual compile--time object.  This
+binding can be exported.
+
+Syntactic bindings of this type are established by
+@syntax{define-syntax}, @syntax{let-syntax} and similar when the result
+of evaluating their right--hand side expression is the return value of a
+call to @func{make-compile-time-value}.
+
+@item $rtd
+Denotes a syntactic binding representing a @value{PRJNAME}'s
+struct--type name or @rnrs{6} record--type name.  The export descriptor
+has one of the formats:
+
+@example
+($rtd . @meta{type-descriptor-struct})
+($rtd . (@meta{rtd-id} @meta{rcd-id}))
+($rtd . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+@end example
+
+@noindent
+where: @meta{type-descriptor-struct} is a struct representing the
+struct--type descriptor; @meta{rtd-id} is the syntactic identifier to
+which the record--type descriptor is bound; @meta{rcd-id} is the
+syntactic identifier to which the default record--constructor descriptor
+is bound; @meta{spec} is an instance of record type
+@objtype{r6rs-record-type-spec}.
+
+Syntactic bindings of this type are established by uses of the syntaxes
+@syntax{define-struct}, @syntax{define-record-type} and
+@syntax{define-condition-type}.
+
+@item $module
+Denotes a syntactic binding representing a module interface.  The export
+descriptor has format:
+
+@example
+($module . @meta{module-interface})
+@end example
+
+@noindent
+where @meta{module-interface} is a record of type
+@objtype{module-interface}.
+
+Syntactic bindings of this type are established by uses of the syntax
+@syntax{module}.
+
+@item $fluid
+Denotes a syntactic binding representing a fluid syntax.  The export
+descriptor has format:
+
+@example
+($fluid . @meta{fluid-label})
+@end example
+
+@noindent
+where @meta{fluid-label} is the label gensym associated to the fluid
+syntax.
+
+@item $synonym
+Denotes a syntactic binding representing a synonym syntax.  The export
+descriptor has format:
+
+@example
+($synonym . @meta{synonym-label})
+@end example
+
+@noindent
+where @meta{synonym-label} is the label gensym associated to the aliased
+syntax.
+@end table
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Example library
+
+We can toy with the @code{export-env} with the following program:
+
+@lisp
+(import (vicare)
+  (vicare libraries))
+
+(library (demo)
+  (options visit-upon-loading)
+  (export var macro var-macro macro-id
+          ctv color <color> modu fluid synonym alias)
+  (import (vicare))
+  (define var 1)
+  (define (fun) 2)
+  (define-syntax macro (lambda (stx) 3))
+  (define-syntax macro-id (identifier-syntax 4))
+  (define-syntax var-macro
+    (make-variable-transformer (lambda (stx) 5)))
+  (define-syntax ctv (make-compile-time-value 6))
+  (module modu (modu-var) (define modu-var 7))
+  (define-fluid-syntax fluid (lambda (stx) 8))
+  (define-syntax synonym (make-synonym-transformer #'var))
+  (define-alias alias var)
+  (define-struct color (red green blue))
+  (define-record-type <color> (fields red green blue))
+  (define mvar 9)
+  (set! mvar 10)
+  #| end of library |# )
+
+(define lib
+  (find-library-by-name '(demo)))
+
+(print-gensym #f)
+(pretty-print
+ (library-export-env lib))
+
+(flush-output-port (current-output-port))
+@end lisp
+
+@c page
+@node libutils libraries ops
+@subsection Library operations
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
 
 
 @defun invoke-library @var{lib}

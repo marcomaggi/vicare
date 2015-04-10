@@ -1746,7 +1746,7 @@ synonym syntax has descriptor with format:
 @end example
 
 @noindent
-where @meta{synonym-label} is the label gensym associated to the synonym
+where @meta{synonym-label} is the label gensym associated to the aliased
 syntax; @ref{expander lexenv synonyms, How synonym syntaxes work}.
 
 @c ------------------------------------------------------------------------
