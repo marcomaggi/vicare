@@ -377,6 +377,7 @@
     "psyntax.errors-and-conditions.sls"
     "psyntax.special-transformers.sls"
     "psyntax.lexical-environment.sls"
+    "psyntax.syntax-match.sls"
     "psyntax.expander.sls"
     "ikarus.apropos.sls"
     "ikarus.enumerations.sls"

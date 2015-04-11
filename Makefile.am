@@ -389,6 +389,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.errors-and-conditions.sls			\
 	scheme/psyntax.special-transformers.sls				\
 	scheme/psyntax.lexical-environment.sls				\
+	scheme/psyntax.syntax-match.sls					\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-manager.sls
 
