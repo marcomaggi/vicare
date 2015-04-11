@@ -386,6 +386,9 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.expander.core-macro-transformers.scm		\
 	scheme/psyntax.expander.non-core-macro-transformers.scm		\
 	scheme/psyntax.expander.infix-macro.scm				\
+	scheme/psyntax.errors-and-conditions.sls			\
+	scheme/psyntax.special-transformers.sls				\
+	scheme/psyntax.lexical-environment.sls				\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-manager.sls
 

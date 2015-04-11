@@ -123,7 +123,7 @@
      (identifier? expr.stx)
      (let ((label (id->label/intern ?id)))
        (unless label
-	 (%raise-unbound-error #f expr.stx ?id))
+	 (raise-unbound-error #f expr.stx ?id))
        (let* ((binding (label->syntactic-binding label lexenv))
 	      (type    (syntactic-binding-type binding)))
 	 (case type
@@ -168,7 +168,7 @@
 		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
-	    (%raise-unbound-error #f expr.stx ?car))))
+	    (raise-unbound-error #f expr.stx ?car))))
 
     ((?car . ?cdr)
      ;;Here we know that EXPR.STX has the format:
@@ -459,8 +459,9 @@
 		      (identifier-tag-retvals-signature expr.stx))))
 
 	 ((core-prim)
-	  ;;Core primitive (it  is either a procedure or a  constant).  We expect the
-	  ;;syntactic binding descriptor to be:
+	  ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
+	  ;;constant (like  then R6RS  record-type descriptor for  "&condition").  We
+	  ;;expect the syntactic binding descriptor to be:
 	  ;;
 	  ;;   (core-prim . ?prim-name)
 	  ;;
@@ -787,7 +788,7 @@
       (signature operand-retvals-signature))
 
     (define (%error-more-operands-than-arguments who input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object who
+      (raise-compound-condition-object who
 	"while expanding, detected wrong number of operands in function application: more given operands than expected arguments"
 	input-form.stx
 	(condition
@@ -797,7 +798,7 @@
 	 (make-given-operands-count-condition given-operands-count))))
 
     (define (%error-more-arguments-than-operands who input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object who
+      (raise-compound-condition-object who
 	"while expanding, detected wrong number of operands in function application: more expected arguments than given operands"
 	input-form.stx
 	(condition
@@ -808,7 +809,7 @@
 
     (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature who input-form.stx rand.stx
 										arg.idx arg.tag rand.retvals-signature)
-      (%raise-compound-condition-object who
+      (raise-compound-condition-object who
 	"expand-time mismatch between expected argument tag and operand retvals signature"
 	input-form.stx
 	(condition
@@ -2980,5 +2981,5 @@
 ;;mode: vicare
 ;;fill-column: 85
 ;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
-;;eval: (put '%raise-compound-condition-object	'scheme-indent-function 1)
+;;eval: (put 'raise-compound-condition-object	'scheme-indent-function 1)
 ;;End:

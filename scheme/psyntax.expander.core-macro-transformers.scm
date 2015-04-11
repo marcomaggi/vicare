@@ -1146,7 +1146,7 @@
 	   (define lexenv.run^
 	     ;;Push  a  pattern  variable  entry to  the  lexical  environment.   The
 	     ;;ellipsis nesting level is 0.
-	     (cons (cons label (make-binding 'syntax (cons lex 0)))
+	     (cons (cons label (make-syntactic-binding-descriptor 'syntax (cons lex 0)))
 		   lexenv.run))
 	   (define output-expr.core
 	     (%chi-expr.core output-expr^ lexenv.run^ lexenv.expand))
@@ -1299,7 +1299,7 @@
     (define bindings
       ;;For each pattern variable: a binding to be pushed on the lexical environment.
       (map (lambda (label name level)
-	     (cons label (make-binding 'syntax (cons name level))))
+	     (cons label (make-syntactic-binding-descriptor 'syntax (cons name level))))
 	labels names levels))
     (define expr.core
       ;;Expand the  expression in  a lexical environment  augmented with  the pattern
@@ -1546,7 +1546,7 @@
 		      (syntactic-binding-value binding)
 		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
 	  (else
-	   (%raise-unbound-error who input-form.stx type-id))))
+	   (raise-unbound-error who input-form.stx type-id))))
 
   (define (%field-name->field-idx who input-form.stx field-names field-id)
     ;;Given a list of symbols FIELD-NAMES  representing a struct's field names and an
@@ -1683,42 +1683,110 @@
 
 ;;;; module core-macro-transformer: TYPE-DESCRIPTOR
 
-(define (type-descriptor-transformer input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand TYPE-DESCRIPTOR syntaxes  from the top-level
-  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  ;;The result must be an expression evaluating to:
-  ;;
-  ;;* A Vicare  struct type descriptor if  the given identifier argument  is a struct
-  ;;  type name.
-  ;;
-  ;;* A R6RS record type descriptor if the given identifier argument is a record type
-  ;;  name.
-  ;;
-  ;;* An expand-time OBJECT-TYPE-SPEC instance.
-  ;;
-  (define-syntax __who__
-    (identifier-syntax 'type-descriptor))
-  (syntax-match input-form.stx ()
-    ((_ ?type-id)
-     (identifier? ?type-id)
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
-       ((r6rs-record-type)
-	(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(make-psi input-form.stx
-		  (build-data no-source
-		    (syntactic-binding-value binding))
-		  (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
-       ((object-type-spec)
-	(make-psi input-form.stx
-		  (build-data no-source
-		    (identifier-object-type-spec ?type-id))
-		  (make-retvals-signature-single-top)))
-       ))
-    ))
+(module (type-descriptor-transformer)
+
+  (define (type-descriptor-transformer input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand TYPE-DESCRIPTOR syntaxes from the top-level
+    ;;built in environment.   Expand the syntax object INPUT-FORM.STX  in the context
+    ;;of the given LEXENV; return a PSI struct.
+    ;;
+    ;;The result must be an expression evaluating to:
+    ;;
+    ;;* A Vicare struct type descriptor if  the given identifier argument is a struct
+    ;;  type name.
+    ;;
+    ;;* A R6RS  record type descriptor if  the given identifier argument  is a record
+    ;;  type name.
+    ;;
+    ;;* An expand-time OBJECT-TYPE-SPEC instance.
+    ;;
+    (define-syntax __who__
+      (identifier-syntax 'type-descriptor))
+    (syntax-match input-form.stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
+	 ((r6rs-record-type)
+	  (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
+		    lexenv.run lexenv.expand))
+	 ((vicare-struct-type)
+	  (make-psi input-form.stx
+		    (build-data no-source
+		      (syntactic-binding-value binding))
+		    (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
+	 ((object-type-spec)
+	  (make-psi input-form.stx
+		    (build-data no-source
+		      (identifier-object-type-spec ?type-id))
+		    (make-retvals-signature-single-top)))
+	 ))
+      ))
+
+  (define-auxiliary-syntaxes r6rs-record-type vicare-struct-type)
+
+  (define-syntax (case-object-type-binding stx)
+    ;;This syntax is meant to be used as follows:
+    ;;
+    ;;   (define-constant __who__ ...)
+    ;;   (syntax-match input-stx ()
+    ;;     ((_ ?type-id)
+    ;;      (identifier? ?type-id)
+    ;;      (case-object-type-binding __who__ input-stx ?type-id lexenv.run
+    ;;        ((r6rs-record-type)
+    ;;         ...)
+    ;;        ((vicare-struct-type)
+    ;;         ...)))
+    ;;     )
+    ;;
+    ;;where  ?TYPE-ID is  meant  to be  an  identifier bound  to  a R6RS  record-type
+    ;;descriptor or Vicare's struct-type descriptor.
+    ;;
+    (sys.syntax-case stx (r6rs-record-type vicare-struct-type object-type-spec)
+      ((_ (?who ?input-stx ?type-id ?lexenv)
+	  ((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
+	  ((vicare-struct-type)	?struct-body0 ?struct-body ...)
+	  ((type-spec-type)	?spec-body0   ?spec-body   ...))
+       (and (sys.identifier? (sys.syntax ?who))
+	    (sys.identifier? (sys.syntax ?expr-stx))
+	    (sys.identifier? (sys.syntax ?type-id))
+	    (sys.identifier? (sys.syntax ?lexenv)))
+       (sys.syntax
+	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
+	       (binding  (label->syntactic-binding label ?lexenv)))
+	  (cond ((r6rs-record-type-descriptor-binding? binding)
+		 ?r6rs-body0 ?r6rs-body ...)
+		((struct-type-descriptor-binding? binding)
+		 ?struct-body0 ?struct-body ...)
+		((identifier-object-type-spec ?type-id)
+		 ?spec-body0 ?spec-body ...)
+		(else
+		 (syntax-violation ?who
+		   "neither a struct type nor an R6RS record type nor a spec type"
+		   ?input-stx ?type-id))))))
+      ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
+	  ((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
+	  ((vicare-struct-type)	?struct-body0 ?struct-body ...)
+	  ((type-spec-type)	?spec-body0   ?spec-body   ...))
+       (and (sys.identifier? (sys.syntax ?who))
+	    (sys.identifier? (sys.syntax ?expr-stx))
+	    (sys.identifier? (sys.syntax ?type-id))
+	    (sys.identifier? (sys.syntax ?lexenv)))
+       (sys.syntax
+	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
+	       (?binding  (label->syntactic-binding label ?lexenv)))
+	  (cond ((r6rs-record-type-descriptor-binding? ?binding)
+		 ?r6rs-body0 ?r6rs-body ...)
+		((struct-type-descriptor-binding? ?binding)
+		 ?struct-body0 ?struct-body ...)
+		((identifier-object-type-spec ?type-id)
+		 ?spec-body0 ?spec-body ...)
+		(else
+		 (syntax-violation ?who
+		   "neither a struct type nor an R6RS record type"
+		   ?input-stx ?type-id))))))
+      ))
+
+  #| end of module |# )
 
 
 ;;;; module core-macro-transformer: IS-A?, CONDITION-IS-A?

@@ -23,6 +23,7 @@
     case-lambda*			lambda*
     define-record			define-auxiliary-syntaxes
     define-inline			define-syntax-rule
+    fluid-let-syntax
     unwind-protect
     receive				receive-and-return
     module				import
