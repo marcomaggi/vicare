@@ -4465,15 +4465,15 @@
 
 (parametrise ((check-test-name	'predicate-procedure-argument-validation))
 
-  (define (list-procedure-argument? who obj)
+  (define (assert-list-procedure-argument who obj)
     (if (list? obj)
 	obj
       (procedure-argument-violation who
 	"expected list object as argument" obj)))
 
   (begin-for-syntax
-    (set-predicate-procedure-argument-validation! #'list?
-      #'list-procedure-argument?))
+    (set-predicate-assertion-procedure-argument-validation! #'list?
+      #'assert-list-procedure-argument))
 
   (check
       ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
@@ -4492,15 +4492,15 @@
 
 (parametrise ((check-test-name	'predicate-return-value-validation))
 
-  (define (list-return-value? who obj)
+  (define (assert-list-return-value who obj)
     (if (list? obj)
 	obj
       (expression-return-value-violation who
 	"expected list object as return value" obj)))
 
   (begin-for-syntax
-    (set-predicate-return-value-validation! #'list?
-      #'list-return-value?))
+    (set-predicate-assertion-return-value-validation! #'list?
+      #'assert-list-return-value))
 
   (check
       ((predicate-return-value-validation list?) 'hey '(1 2 3))

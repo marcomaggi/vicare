@@ -3145,15 +3145,15 @@ As example, we can associate a procedure argument auxiliary function to
 @func{list?} as follows:
 
 @example
-(define (list-procedure-argument who obj)
+(define (assert-list-procedure-argument who obj)
   (if (list? obj)
       obj
     (procedure-argument-violation who
       "expected list object as argument" obj)))
 
 (begin-for-syntax
-  (set-predicate-procedure-argument-validation! #'list?
-    #'list-procedure-argument?))
+  (set-predicate-assertion-procedure-argument-validation! #'list?
+    #'assert-list-procedure-argument))
 
 ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
 @result{} (1 2 3)
@@ -3167,15 +3167,15 @@ and we can associate a return value auxiliary function to @func{list?}
 as follows:
 
 @example
-(define (list-return-value? who obj)
+(define (assert-list-return-value who obj)
   (if (list? obj)
       obj
     (expression-return-value-violation who
       "expected list object as argument" obj)))
 
 (begin-for-syntax
-  (set-predicate-return-value-validation! #'list?
-    #'list-return-value?))
+  (set-predicate-assertion-return-value-validation! #'list?
+    #'assert-list-return-value?))
 
 ((predicate-return-value-validation list?) 'hey '(1 2 3))
 @result{} (1 2 3)
@@ -3185,12 +3185,16 @@ as follows:
 @end example
 
 
-@defun set-predicate-procedure-argument-validation! @var{pred-id} @var{valid-stx}
-Specify that the predicate identifier @var{pred-id} is associated to the
-procedure argument validation function resulting from the expansion and
-evaluation of the syntax object @var{valid-stx}.  @var{valid-stx} is
-stored as syntax object and it is expanded and evaluated at each use of
-the validation function.
+@defun set-predicate-assertion-procedure-argument-validation! @var{pred-id} @var{valid-stx}
+@defunx predicate-assertion-procedure-argument-validation @var{pred-id}
+Setter and getter for assertion procedure associated to a predicate
+function.
+
+The setter specifies that the predicate identifier @var{pred-id} is
+associated to the procedure argument validation function resulting from
+the expansion and evaluation of the syntax object @var{valid-stx}.
+@var{valid-stx} is stored as syntax object and it is expanded and
+evaluated at each use of the validation function.
 @end defun
 
 
@@ -3201,12 +3205,16 @@ function is available: raise a syntax violation.
 @end deffn
 
 
-@defun set-predicate-return-value-validation! @var{pred-id} @var{valid-stx}
-Specify that the predicate identifier @var{pred-id} is associated to the
-return value validation function resulting from the evaluation of the
-expansion and evaluation of the syntax object @var{valid-stx}.
-@var{valid-stx} is stored as syntax object and it is expanded and
-evaluated at each use of the validation function.
+@defun set-predicate-assertion-return-value-validation! @var{pred-id} @var{valid-stx}
+@defunx predicate-assertion-return-value-validation @var{pred-id}
+Setter and getter for assertion procedure associated to a predicate
+function.
+
+The setter specifies that the predicate identifier @var{pred-id} is
+associated to the return value validation function resulting from the
+evaluation of the expansion and evaluation of the syntax object
+@var{valid-stx}.  @var{valid-stx} is stored as syntax object and it is
+expanded and evaluated at each use of the validation function.
 @end defun
 
 

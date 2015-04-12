@@ -376,9 +376,13 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.builders.sls					\
 	scheme/psyntax.compat.sls					\
 	scheme/psyntax.config.sls					\
+	scheme/psyntax.errors-and-conditions.sls			\
+	scheme/psyntax.special-transformers.sls				\
+	scheme/psyntax.lexical-environment.sls				\
+	scheme/psyntax.syntax-match.sls					\
+	scheme/psyntax.syntactic-binding-properties.sls			\
 	scheme/psyntax.expander.sls					\
 	scheme/psyntax.expander.chi-module.scm				\
-	scheme/psyntax.expander.syntactic-binding-properties.scm	\
 	scheme/psyntax.expander.tagged-identifiers.scm			\
 	scheme/psyntax.expander.signatures.scm				\
 	scheme/psyntax.expander.built-in-tags.scm			\
@@ -386,10 +390,6 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.expander.core-macro-transformers.scm		\
 	scheme/psyntax.expander.non-core-macro-transformers.scm		\
 	scheme/psyntax.expander.infix-macro.scm				\
-	scheme/psyntax.errors-and-conditions.sls			\
-	scheme/psyntax.special-transformers.sls				\
-	scheme/psyntax.lexical-environment.sls				\
-	scheme/psyntax.syntax-match.sls					\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-manager.sls
 

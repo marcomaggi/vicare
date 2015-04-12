@@ -103,16 +103,6 @@
     ;;SYNTAX-CASE subroutines
     syntax-dispatch			ellipsis-map
 
-    ;;syntactic binding properties
-    syntactic-binding-putprop
-    syntactic-binding-getprop
-    syntactic-binding-remprop
-    syntactic-binding-property-list
-
-    set-identifier-unsafe-variant!
-    set-predicate-procedure-argument-validation!
-    set-predicate-return-value-validation!
-
     ;; expand-time object type specs: type specification
     make-object-type-spec			object-type-spec?
     object-type-spec-parent-spec
@@ -205,6 +195,7 @@
     (psyntax.special-transformers)
     (psyntax.lexical-environment)
     (psyntax.syntax-match)
+    (psyntax.syntactic-binding-properties)
     (psyntax.library-manager)
     (psyntax.builders)
     (psyntax.compat)
@@ -2702,7 +2693,6 @@
 
 ;;;; various identifiers modules
 
-(include "psyntax.expander.syntactic-binding-properties.scm" #t)
 (include "psyntax.expander.tagged-identifiers.scm" #t)
 (include "psyntax.expander.signatures.scm" #t)
 (module (initialise-type-spec-for-built-in-object-types

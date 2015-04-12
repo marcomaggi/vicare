@@ -378,6 +378,7 @@
     "psyntax.special-transformers.sls"
     "psyntax.lexical-environment.sls"
     "psyntax.syntax-match.sls"
+    "psyntax.syntactic-binding-properties.sls"
     "psyntax.expander.sls"
     "ikarus.apropos.sls"
     "ikarus.enumerations.sls"
@@ -2849,8 +2850,10 @@
     (with-blocked-exceptions			v $language)
     (with-current-dynamic-environment		v $language)
 ;;;
-    (set-predicate-procedure-argument-validation! v $language)
-    (set-predicate-return-value-validation!	v $language)
+    (set-predicate-assertion-procedure-argument-validation!	v $language)
+    (predicate-assertion-procedure-argument-validation		v $language)
+    (set-predicate-assertion-return-value-validation!		v $language)
+    (predicate-assertion-return-value-validation		v $language)
     (predicate-procedure-argument-validation	v $language)
     (predicate-return-value-validation		v $language)
 ;;;

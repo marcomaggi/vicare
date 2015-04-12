@@ -1392,8 +1392,7 @@
     ((_ ?id)
      (identifier? ?id)
      (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(syntactic-binding-getprop ?id
-			  *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)))
+			(predicate-assertion-procedure-argument-validation ?id)))
 		     (else
 		      (stx-error input-form.stx "undefined procedure argument validation")))
 	       lexenv.run lexenv.expand))
@@ -1410,8 +1409,7 @@
     ((_ ?id)
      (identifier? ?id)
      (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(syntactic-binding-getprop ?id
-			  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)))
+			(predicate-assertion-return-value-validation ?id)))
 		     (else
 		      (stx-error input-form.stx "undefined return value validation")))
 	       lexenv.run lexenv.expand))
