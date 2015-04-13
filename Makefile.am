@@ -373,23 +373,23 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.vectors.sls				\
 	scheme/ikarus.writer.sls				\
 	\
-	scheme/psyntax.helpers.scm					\
-	scheme/psyntax.builders.sls					\
-	scheme/psyntax.compat.sls					\
-	scheme/psyntax.config.sls					\
-	scheme/psyntax.special-transformers.sls				\
-	scheme/psyntax.lexical-environment.sls				\
-	scheme/psyntax.syntax-match.sls					\
-	scheme/psyntax.syntactic-binding-properties.sls			\
-	scheme/psyntax.syntax-utilities.sls				\
-	scheme/psyntax.tag-and-tagged-identifiers.sls			\
-	scheme/psyntax.expander.sls					\
-	scheme/psyntax.expander.chi-module.scm				\
-	scheme/psyntax.expander.core-prims-init.scm			\
-	scheme/psyntax.expander.core-macro-transformers.scm		\
-	scheme/psyntax.expander.non-core-macro-transformers.scm		\
-	scheme/psyntax.expander.infix-macro.scm				\
-	scheme/psyntax.internal.sls					\
+	scheme/psyntax.helpers.scm				\
+	scheme/psyntax.builders.sls				\
+	scheme/psyntax.compat.sls				\
+	scheme/psyntax.config.sls				\
+	scheme/psyntax.special-transformers.sls			\
+	scheme/psyntax.lexical-environment.sls			\
+	scheme/psyntax.syntax-match.sls				\
+	scheme/psyntax.syntactic-binding-properties.sls		\
+	scheme/psyntax.syntax-utilities.sls			\
+	scheme/psyntax.tag-and-tagged-identifiers.sls		\
+	scheme/psyntax.core-primitives-properties.sls		\
+	scheme/psyntax.expander.sls				\
+	scheme/psyntax.expander.chi-module.scm			\
+	scheme/psyntax.expander.core-macro-transformers.scm	\
+	scheme/psyntax.expander.non-core-macro-transformers.scm	\
+	scheme/psyntax.expander.infix-macro.scm			\
+	scheme/psyntax.internal.sls				\
 	scheme/psyntax.library-manager.sls
 
 EXTRA_DIST += \

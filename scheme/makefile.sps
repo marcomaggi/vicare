@@ -380,6 +380,7 @@
     "psyntax.syntactic-binding-properties.sls"
     "psyntax.syntax-utilities.sls"
     "psyntax.tag-and-tagged-identifiers.sls"
+    "psyntax.core-primitives-properties.sls"
     "psyntax.expander.sls"
     "ikarus.apropos.sls"
     "ikarus.enumerations.sls"

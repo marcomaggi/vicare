@@ -190,6 +190,8 @@
     (psyntax.syntactic-binding-properties)
     (psyntax.syntax-utilities)
     (psyntax.tag-and-tagged-identifiers)
+    (only (psyntax.core-primitives-properties)
+	  initialise-core-prims-tagging)
     (psyntax.library-manager)
     (psyntax.builders)
     (psyntax.compat)
@@ -2463,12 +2465,6 @@
 	       id))))
       (procedure-argument-violation __who__
 	"unbound identifier" id))))
-
-
-;;;; various identifiers modules
-
-(module (initialise-core-prims-tagging)
-  (include "psyntax.expander.core-prims-init.scm" #t))
 
 
 ;;;; macro transformer modules
