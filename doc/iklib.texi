@@ -6359,13 +6359,20 @@ the character.
 @subsection Inspecting syntax objects
 
 
-Under @value{PRJNAME}, a syntax object is the instance of a data
+Under @value{PRJNAME}, a wrapped syntax object is the instance of a data
 structure.  The following bindings are exported by the library
 @library{vicare}.
 
 
 @defun syntax-object? @var{stx}
-Return @true{} if @var{stx} is a syntax object, else return @false{}.
+Return @true{} if @var{stx} is a wrapped or unwrapped syntax object;
+otherwise return @false{}.
+@end defun
+
+
+@defun wrapped-syntax-object? @var{stx}
+Return @true{} if @var{stx} is a wrapped syntax object; else return
+@false{}.
 @end defun
 
 
@@ -6373,8 +6380,8 @@ Return @true{} if @var{stx} is a syntax object, else return @false{}.
 @defunx syntax-object-marks @var{stx}
 @defunx syntax-object-ribs @var{stx}
 @defunx syntax-object-source-objects @var{stx}
-Field accessors for the syntax object structure type, to be used for
-debugging purposes.
+Field accessors for the wrapped syntax object structure type, to be used
+for debugging purposes.
 @end defun
 
 @c page

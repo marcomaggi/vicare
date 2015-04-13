@@ -4465,25 +4465,25 @@
       ((unquote p)
        (if (zero? nesting-level)
 	   p
-	 (%quasicons (%keyword 'unquote)
+	 (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote)
 		     (%quasi (list p) (sub1 nesting-level)))))
 
       (((unquote p ...) . q)
        (if (zero? nesting-level)
 	   (%quasicons* p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%keyword 'unquote)
+	 (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote)
 				 (%quasi p (sub1 nesting-level)))
 		     (%quasi q nesting-level))))
 
       (((unquote-splicing p ...) . q)
        (if (zero? nesting-level)
 	   (%quasiappend p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%keyword 'unquote-splicing)
+	 (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote-splicing)
 				 (%quasi p (sub1 nesting-level)))
 		     (%quasi q nesting-level))))
 
       ((quasiquote p)
-       (%quasicons (%keyword 'quasiquote)
+       (%quasicons (make-top-level-syntax-object/quoted-quoting 'quasiquote)
 		   (%quasi (list p) (add1 nesting-level))))
 
       ((p . q)
@@ -4507,14 +4507,14 @@
   	 ((unquote p ...)
   	  (if (zero? nesting-level)
   	      (%quasicons* p (%vector-quasi q nesting-level))
-  	    (%quasicons (%quasicons (%keyword 'unquote)
+  	    (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote)
   				    (%quasi p (sub1 nesting-level)))
   			(%vector-quasi q nesting-level))))
 
   	 ((unquote-splicing p ...)
   	  (if (zero? nesting-level)
   	      (%quasiappend p (%vector-quasi q nesting-level))
-  	    (%quasicons (%quasicons (%keyword 'unquote-splicing)
+  	    (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote-splicing)
   				    (%quasi p (sub1 nesting-level)))
   			(%vector-quasi q nesting-level))))
 
@@ -4526,18 +4526,6 @@
       (()
        (%application 'quote '()))
       ))
-
-  (define (%keyword key)
-    ;;Return a  top-marked syntax  object representing a  quoted symbol;
-    ;;the  symbol  being the  name  of  a  syntax  from the  boot  image
-    ;;EXPORT-ENV.  Expanding  and evaluating the returned  syntax object
-    ;;is equivalent to evaluating:
-    ;;
-    ;;   (quote key)
-    ;;
-    ;;where KEY is one of: quasiquote, unquote, unquote-splicing.
-    ;;
-    (list (core-prim-id 'quote) (mkstx key TOP-MARK* '() '())))
 
   (define-syntax %application
     ;;Expand to an expression which, when evaluated, results in a syntax

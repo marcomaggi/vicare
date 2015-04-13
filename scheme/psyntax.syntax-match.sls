@@ -37,7 +37,6 @@
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
     (prefix (rnrs syntax-case) sys.)
-    (psyntax.errors-and-conditions)
     (psyntax.lexical-environment)
     (psyntax.compat))
 

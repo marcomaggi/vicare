@@ -88,7 +88,7 @@
     make-compile-time-value		compile-time-value?
     compile-time-value-object		syntax-parameter-value
 
-    generate-temporaries		identifier?
+    identifier?
     free-identifier=?			bound-identifier=?
     identifier-bound?			print-identifier-info
     datum->syntax			syntax->datum
@@ -169,13 +169,6 @@
     initialise-type-spec-for-built-in-object-types
     initialise-core-prims-tagging
 
-    ;;The following are inspection functions for debugging purposes.
-    (rename (<stx>?		syntax-object?)
-	    (<stx>-expr		syntax-object-expression)
-	    (<stx>-mark*	syntax-object-marks)
-	    (<stx>-rib*		syntax-object-ribs)
-	    (<stx>-ae*		syntax-object-source-objects))
-
     ;; bindings for (vicare expander)
     current-inferior-lexenv)
   (import (except (rnrs)
@@ -191,11 +184,12 @@
 	  fluid-let-syntax)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
-    (psyntax.errors-and-conditions)
     (psyntax.special-transformers)
     (psyntax.lexical-environment)
     (psyntax.syntax-match)
     (psyntax.syntactic-binding-properties)
+    (psyntax.syntax-utilities)
+    (psyntax.tag-and-tagged-identifiers)
     (psyntax.library-manager)
     (psyntax.builders)
     (psyntax.compat)
@@ -209,101 +203,7 @@
 ;;2014)
 (define syntax-error)
 
-(define-syntax commented-out
-  ;;Comment out a sequence of forms.  It allows us to comment out forms and still use
-  ;;the editor's autoindentation features in the commented out section.
-  ;;
-  (syntax-rules ()
-    ((_ . ?form)
-     (module ()))
-    ))
-
-;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
-;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
-;;no annotated expression to be given.
-;;
-(define-syntax no-source
-  (lambda (x) #f))
-
-(define-syntax-rule (reverse-and-append ?item**)
-  (apply append (reverse ?item**)))
-
-(define (false-or-procedure? obj)
-  (or (not obj)
-      (procedure? obj)))
-
-(define (non-empty-list-of-symbols? obj)
-  (and (not (null? obj))
-       (list? obj)
-       (for-all symbol? obj)))
-
-(define (improper-list->list-and-rest ell)
-  (let loop ((ell   ell)
-	     (item* '()))
-    (syntax-match ell ()
-      ((?car . ?cdr)
-       (loop ?cdr (cons ?car item*)))
-      (()
-       (values (reverse item*) '()))
-      (_
-       (values (reverse item*) ell)))
-    ))
-
-(define* (proper-list->head-and-last ell)
-  (let loop ((ell   ell)
-	     (item* '()))
-    (syntax-match ell ()
-      (()
-       (assertion-violation __who__ "expected non-empty list" ell))
-      ((?last)
-       (values (reverse item*) ?last))
-      ((?car . ?cdr)
-       (loop ?cdr (cons ?car item*))))))
-
-(define* (proper-list->last-item ell)
-  (syntax-match ell ()
-    (()
-     (assertion-violation __who__ "expected non-empty list" ell))
-    ((?last)
-     ?last)
-    ((?car . ?cdr)
-     (proper-list->last-item ?cdr))
-    ))
-
-(define-syntax-rule (trace-define (?name . ?formals) . ?body)
-  (define (?name . ?formals)
-    (debug-print (quote ?name) 'arguments . ?formals)
-    (call-with-values
-	(lambda () . ?body)
-      (lambda retvals
-	(debug-print (quote ?name) 'retvals retvals)
-	(apply values retvals)))))
-
-(module ($map-in-order
-	 $map-in-order1)
-
-  (case-define $map-in-order
-    ((func ell)
-     ($map-in-order1 func ell))
-    ((func . ells)
-     (if (null? ells)
-	 '()
-       (let recur ((ells ells))
-	 (if (pair? ($car ells))
-	     (let* ((cars ($map-in-order1 $car ells))
-		    (cdrs ($map-in-order1 $cdr ells))
-		    (head (apply func cars)))
-	       (cons head (recur cdrs)))
-	   '())))))
-
-  (define-syntax-rule ($map-in-order1 ?func ?ell)
-    (let recur ((ell ?ell))
-      (if (pair? ell)
-	  (let ((head (?func ($car ell))))
-	    (cons head (recur ($cdr ell))))
-	ell)))
-
-  #| end of module |# )
+(include "psyntax.helpers.scm" #t)
 
 (define-syntax-rule (with-tagged-language ?enabled? . ?body)
   (parametrise ((option.tagged-language? (or ?enabled? (option.tagged-language?))))
@@ -2565,209 +2465,10 @@
 	"unbound identifier" id))))
 
 
-;;;; high-level syntax object utilities
-
-(define* (generate-temporaries list-stx)
-  (syntax-match list-stx ()
-    ((?item* ...)
-     (map (lambda (x)
-	    (make-<stx> (if (identifier? x)
-			    ;;If it is an identifier we do *not* want to use its name
-			    ;;as temporary name, because  it looks ugly and confusing
-			    ;;when  looking  at  the  result of  the  expansion  with
-			    ;;PRINT-GENSYM set to #f.
-			    (gensym 't)
-			  (let ((x (syntax->datum x)))
-			    (if (or (symbol? x)
-				    (string? x))
-				(gensym x)
-			      (gensym 't))))
-			TOP-MARK* '() '()))
-       ?item*))
-    (_
-     (assertion-violation __who__
-       "expected list or syntax object holding a list as argument" list-stx))))
-
-(module (syntax-pair?
-	 syntax-vector?
-	 syntax-null?)
-
-  (define (syntax-pair? x)
-    (syntax-kind? x pair?))
-
-  (define (syntax-vector? x)
-    (syntax-kind? x vector?))
-
-  (define (syntax-null? x)
-    (syntax-kind? x null?))
-
-  (define (syntax-kind? x pred?)
-    (cond ((<stx>? x)
-	   (syntax-kind? (<stx>-expr x) pred?))
-	  ((annotation? x)
-	   (syntax-kind? (annotation-expression x) pred?))
-	  (else
-	   (pred? x))))
-
-  #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-(define (syntax-list? x)
-  ;;FIXME Should terminate on cyclic input.  (Abdulaziz Ghuloum)
-  (or (syntax-null? x)
-      (and (syntax-pair? x)
-	   (syntax-list? (syntax-cdr x)))))
-
-(define* (syntax-car x)
-  (cond ((<stx>? x)
-	 (mkstx (syntax-car ($<stx>-expr x))
-		($<stx>-mark* x)
-		($<stx>-rib*  x)
-		($<stx>-ae*   x)))
-	((annotation? x)
-	 (syntax-car (annotation-expression x)))
-	((pair? x)
-	 ($car x))
-	(else
-	 (assertion-violation __who__ "not a pair" x))))
-
-(define* (syntax-cdr x)
-  (cond ((<stx>? x)
-	 (mkstx (syntax-cdr ($<stx>-expr x))
-		($<stx>-mark* x)
-		($<stx>-rib*  x)
-		($<stx>-ae*   x)))
-	((annotation? x)
-	 (syntax-cdr (annotation-expression x)))
-	((pair? x)
-	 ($cdr x))
-	(else
-	 (assertion-violation __who__ "not a pair" x))))
-
-(define* (syntax->list x)
-  (cond ((syntax-pair? x)
-	 (cons (syntax-car x)
-	       (syntax->list (syntax-cdr x))))
-	((syntax-null? x)
-	 '())
-	(else
-	 (assertion-violation __who__ "invalid argument" x))))
-
-(define* (syntax-vector->list x)
-  (cond ((<stx>? x)
-	 (let ((ls     (syntax-vector->list ($<stx>-expr x)))
-	       (mark*  ($<stx>-mark* x))
-	       (rib*   ($<stx>-rib*  x))
-	       (ae*    ($<stx>-ae*   x)))
-	   (map (lambda (x)
-		  (mkstx x mark* rib* ae*))
-	     ls)))
-	((annotation? x)
-	 (syntax-vector->list (annotation-expression x)))
-	((vector? x)
-	 (vector->list x))
-	(else
-	 (assertion-violation __who__ "not a syntax vector" x))))
-
-(define (syntax-unwrap stx)
-  ;;Given a syntax object STX  decompose it and return the corresponding
-  ;;S-expression holding datums and identifiers.  Take care of returning
-  ;;a proper  list when the  input is a  syntax object holding  a proper
-  ;;list.
-  ;;
-  (syntax-match stx ()
-    (()
-     '())
-    ((?car . ?cdr)
-     (cons (syntax-unwrap ?car)
-	   (syntax-unwrap ?cdr)))
-    (#(?item* ...)
-     (list->vector (syntax-unwrap ?item*)))
-    (?atom
-     (identifier? ?atom)
-     ?atom)
-    (?atom
-     (syntax->datum ?atom))))
-
-
 ;;;; various identifiers modules
 
-(include "psyntax.expander.tagged-identifiers.scm" #t)
-(include "psyntax.expander.signatures.scm" #t)
-(module (initialise-type-spec-for-built-in-object-types
-	 retvals-signature-of-datum
-	 procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
-	 list-tag-id			$list-tag-id?		list-tag-id?
-	 top-tag-id			$top-tag-id?		top-tag-id?
-	 boolean-tag-id			void-tag-id
-	 struct-tag-id			record-tag-id		predicate-tag-id)
-  (import (vicare))
-  (include "psyntax.expander.built-in-tags.scm" #t))
 (module (initialise-core-prims-tagging)
   (include "psyntax.expander.core-prims-init.scm" #t))
-
-
-;;;; identifiers from the built-in environment
-
-(define* (core-prim-id {sym symbol?})
-  ;;Take a symbol  and if it's in the library:
-  ;;
-  ;;   (psyntax system $all)
-  ;;
-  ;;create a fresh identifier that maps only the symbol to its label in that library.
-  ;;This function is similar to SCHEME-STX,  but it does not create fresh identifiers
-  ;;for non-core-primitive symbols.
-  ;;
-  (or (getprop sym system-id-gensym)
-      (cond ((system-label sym)
-	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
-	     ;;with a proper "rib" and  the binding's label.  Such bound identifier
-	     ;;will be captured by the entry in the top-level environment.
-	     => (lambda (label)
-		  (receive-and-return (id)
-		      (make-<stx> sym TOP-MARK*
-				  (list (make-rib (list sym)
-						    TOP-MARK**
-						    (list label)
-						    #f))
-				  '())
-		    (putprop sym system-id-gensym id))))
-	    (else
-	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
-
-(let-syntax
-    ((define-core-prim-id-retriever (syntax-rules ()
-				      ((_ ?who ?core-prim)
-				       (define ?who
-					 (let ((memoized-id #f))
-					   (lambda ()
-					     (or memoized-id
-						 (receive-and-return (id)
-						     (core-prim-id '?core-prim)
-						   (set! memoized-id id))))))))))
-  (define-core-prim-id-retriever underscore-id		_)
-  (define-core-prim-id-retriever ellipsis-id		...)
-  (define-core-prim-id-retriever place-holder-id	<>)
-  (define-core-prim-id-retriever procedure-pred-id	procedure?)
-  #| end of let-syntax |# )
-
-(define (underscore-id? id)
-  (and (identifier? id)
-       (free-id=? id (underscore-id))))
-
-(define (ellipsis-id? id)
-  (and (identifier? id)
-       (free-id=? id (ellipsis-id))))
-
-(define (place-holder-id? id)
-  (and (identifier? id)
-       (free-id=? id (place-holder-id))))
-
-(define (jolly-id? id)
-  (and (identifier? id)
-       (or (free-id=? id (underscore-id))
-	   (free-id=? id (place-holder-id)))))
 
 
 ;;;; macro transformer modules

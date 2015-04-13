@@ -374,11 +374,12 @@
     "psyntax.internal.sls"
     "psyntax.config.sls"
     "psyntax.builders.sls"
-    "psyntax.errors-and-conditions.sls"
     "psyntax.special-transformers.sls"
     "psyntax.lexical-environment.sls"
     "psyntax.syntax-match.sls"
     "psyntax.syntactic-binding-properties.sls"
+    "psyntax.syntax-utilities.sls"
+    "psyntax.tag-and-tagged-identifiers.sls"
     "psyntax.expander.sls"
     "ikarus.apropos.sls"
     "ikarus.enumerations.sls"
@@ -2756,6 +2757,7 @@
     (syntactic-binding-remprop			v $language)
     (syntactic-binding-property-list		v $language)
     (syntax-object?				v $language)
+    (wrapped-syntax-object?			v $language)
     (syntax-object-expression			v $language)
     (syntax-object-marks			v $language)
     (syntax-object-ribs				v $language)
