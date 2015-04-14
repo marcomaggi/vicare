@@ -77,6 +77,16 @@
 ;;;SOFTWARE.
 
 
+;;;; helpers
+
+(include "psyntax.helpers.scm" #t)
+(import (only (psyntax.syntax-utilities)
+	      syntax-unwrap
+	      parse-logic-predicate-syntax)
+  (only (psyntax.syntax-utilities)
+	generate-temporaries))
+
+
 ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
 ;;non-core macros to their macro transformers.
 ;;
@@ -2269,7 +2279,7 @@
 		       (append idn* (recur (cdr pat*))))))))
        (let ((formals (map car idn*)))
 	 (unless (standard-formals-syntax? formals)
-	   (%error-invalid-formals-syntax expr-stx formals)))
+	   (error-invalid-formals-syntax expr-stx formals)))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
 	  `(let ,(map list t* ?expr*)
@@ -3234,7 +3244,7 @@
 	       (bless
 		`(,who ,(map list ?lhs* rhs*)
 		       ,?body . ,?body*)))
-	   (%error-invalid-formals-syntax stx ?lhs*)))
+	   (error-invalid-formals-syntax stx ?lhs*)))
 	)))
 
   (define trace-let-syntax-macro

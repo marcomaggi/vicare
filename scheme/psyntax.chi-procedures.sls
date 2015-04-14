@@ -1,25 +1,87 @@
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+(library (psyntax.chi-procedures)
+  (export
+    make-psi
+    psi?			psi-stx
+    psi-core-expr		psi-retvals-signature
+    psi-application-retvals-signature
+    chi-expr			chi-expr*
+    chi-body*			chi-internal-body
+    chi-qrhs*			chi-defun
+    chi-lambda			chi-case-lambda
+    chi-application/psi-first-operand
+
+    SPLICE-FIRST-ENVELOPE)
+  (import (except (rnrs)
+		  eval
+		  environment		environment?
+		  null-environment	scheme-report-environment
+		  identifier?
+		  bound-identifier=?	free-identifier=?
+		  generate-temporaries
+		  datum->syntax		syntax->datum
+		  syntax-violation	make-variable-transformer)
+    (psyntax.compat)
+    (only (vicare)
+	  expand-library)
+    (psyntax.builders)
+    (psyntax.lexical-environment)
+    (psyntax.syntax-match)
+    (only (psyntax.import-spec-parser)
+	  parse-import-spec*)
+    (only (psyntax.syntax-utilities)
+	  syntax->list
+	  error-invalid-formals-syntax)
+    (only (psyntax.syntactic-binding-properties)
+	  identifier-unsafe-variant
+	  predicate-assertion-procedure-argument-validation
+	  predicate-assertion-return-value-validation)
+    (psyntax.library-collectors)
+    (psyntax.tag-and-tagged-identifiers)
+    (only (psyntax.special-transformers)
+	  variable-transformer?		variable-transformer-procedure
+	  synonym-transformer?		synonym-transformer-identifier
+	  compile-time-value?		compile-time-value-object)
+    (psyntax.library-manager)
+    (psyntax.internal))
+
+  (include "psyntax.helpers.scm" #t)
+
+
+;;The  "chi-*" functions  are the  ones visiting  syntax objects  and performing  the
+;;expansion process.
+;;
+
+
+(module SPLICE-FIRST-ENVELOPE
+  (make-splice-first-envelope
+   splice-first-envelope?
+   splice-first-envelope-form)
+
+  (define-record splice-first-envelope
+    (form))
+
+  #| end of module |# )
 
 
 ;;;; core expressions struct
@@ -229,6 +291,83 @@
     ((_ ?body0 ?body ...)
      (parametrise ((expanding-application-first-subform? #f))
        ?body0 ?body ...))))
+
+
+;;;; macro transformers helpers
+
+(define (%expand-macro-transformer rhs-expr.stx lexenv.expand)
+  ;;Given  a  syntax object  representing  the  right-hand  side  (RHS) of  a  syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX): expand it,  invoking libraries as needed, and  return the core
+  ;;language  sexp representing  the expression.   Usually the  return value  of this
+  ;;function is handed to %EVAL-MACRO-TRANSFORMER.
+  ;;
+  ;;For:
+  ;;
+  ;;   (define-syntax ?lhs ?rhs)
+  ;;
+  ;;this function is called as:
+  ;;
+  ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
+  ;;
+  ;;For:
+  ;;
+  ;;   (let-syntax ((?lhs ?rhs)) ?body0 ?body ...)
+  ;;
+  ;;this function is called as:
+  ;;
+  ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
+  ;;
+  (let* ((rtc (make-collector))
+	 (rhs-expr.psi (parametrise ((inv-collector rtc)
+				     (vis-collector (lambda (x) (void))))
+			 (chi-expr rhs-expr.stx lexenv.expand lexenv.expand))))
+    ;;We invoke all the libraries needed to evaluate the right-hand side.
+    (for-each
+	(let ((register-visited-library (vis-collector)))
+	  (lambda (lib)
+	    ;;LIB is a  record of type "library".  Here we  invoke the library, which
+	    ;;means  we evaluate  its run-time  code.  Then  we mark  the library  as
+	    ;;visited.
+	    (invoke-library lib)
+	    (register-visited-library lib)))
+      (rtc))
+    (psi-core-expr rhs-expr.psi)))
+
+(define (%eval-macro-transformer rhs-expr.core lexenv.run)
+  ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX):  evaluate it  and return  a proper  syntactic binding  for the
+  ;;resulting  object.  Usually  this  function is  applied to  the  return value  of
+  ;;%EXPAND-MACRO-TRANSFORMER.
+  ;;
+  ;;When the RHS of  a syntax definition is evaluated, the  returned object should be
+  ;;either:  a  syntax transformer  procedure;  an  identifier-syntax transformer;  a
+  ;;Vicare struct type  descriptor or an R6RS record type  descriptor; a compile-time
+  ;;value; a synonim transformer.  If the return  value is not of such type: we raise
+  ;;an assertion violation.
+  ;;
+  (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	      (compiler.eval-core (expanded->core rhs-expr.core)))))
+    (cond ((procedure? rv)
+	   (make-local-macro-binding rv rhs-expr.core))
+	  ((variable-transformer? rv)
+	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) rhs-expr.core))
+	  ((struct-or-record-type-descriptor-binding? rv)
+	   rv)
+	  ((compile-time-value? rv)
+	   (make-local-compile-time-value-binding (compile-time-value-object rv) rhs-expr.core))
+	  ((synonym-transformer? rv)
+	   (let ((id (synonym-transformer-identifier rv)))
+	     (make-synonym-syntax-binding (id->label/or-error 'expander id id))))
+	  (else
+	   (raise
+	    (condition
+	     (make-assertion-violation)
+	     (make-who-condition 'expand)
+	     (make-message-condition "invalid return value from syntax definition right-hand side")
+	     (make-syntax-definition-expanded-rhs-condition rhs-expr.core)
+	     (make-syntax-definition-expression-return-value-condition rv)))))))
 
 
 ;;;; chi procedures: macro calls
@@ -2809,9 +2948,7 @@
 	 ;;imported  bindings.   LABEL-VEC is  a  vector  of label  gensyms  uniquely
 	 ;;associated to the imported bindings.
 	 (receive (name-vec label-vec)
-	     (let ()
-	       (import PARSE-IMPORT-SPEC)
-	       (parse-import-spec* (syntax->datum ?imp*)))
+	     (parse-import-spec* (syntax->datum ?imp*))
 	   (values (vector-map (lambda (name)
 				 ($datum->syntax ?ctxt name))
 		     name-vec)
@@ -2975,10 +3112,24 @@
 	   => (lambda (c)
 		(c (psi-core-expr guard-expr.psi) (stc)))))))
 
+
+;;;; macro transformer modules
+
+(module NON-CORE-MACRO-TRANSFORMER
+  (non-core-macro-transformer)
+  (include "psyntax.expander.non-core-macro-transformers.scm" #t))
+
+(module CORE-MACRO-TRANSFORMER
+  (core-macro-transformer)
+  (include "psyntax.expander.core-macro-transformers.scm" #t))
+
+
+;;;; done
+
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:
-;;mode: vicare
 ;;fill-column: 85
 ;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
 ;;eval: (put 'raise-compound-condition-object	'scheme-indent-function 1)

@@ -22,6 +22,14 @@
 ;;;SOFTWARE.
 
 
+;;;; stuff
+
+(import (prefix (rnrs syntax-case) sys.)
+  (only (psyntax.syntax-utilities)
+	generate-temporaries))
+
+
+
 ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
 ;;non-core macros to their macro transformers.
 ;;
@@ -601,7 +609,7 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (unless (valid-bound-ids? ?lhs*)
-	 (%error-invalid-formals-syntax input-form.stx ?lhs*))
+	 (error-invalid-formals-syntax input-form.stx ?lhs*))
        (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
 	      (binding*     (map (lambda (rhs.stx)
 				   (with-exception-handler/input-form

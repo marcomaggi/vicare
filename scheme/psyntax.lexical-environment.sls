@@ -193,6 +193,7 @@
     free-identifier=?			free-id=?
     identifier-bound?			$identifier-bound?
     identifier->symbol
+    syntax-parameter-value
 
     ;; utilities for identifiers
     valid-bound-ids?
@@ -248,7 +249,11 @@
 
     ;; helpers
     expression-position
-    stx-error)
+    stx-error
+    current-run-lexenv
+
+    ;; bindings for (vicare expander)
+    current-inferior-lexenv)
   (import (except (rnrs)
 		  eval
 		  environment		environment?
@@ -2491,6 +2496,58 @@
     (if (symbol? sym)
 	sym
       (%error))))
+
+
+;;;; identifiers: syntax parameters
+
+(define current-run-lexenv
+  ;;This parameter holds  a function which is meant to  return the value
+  ;;of LEXENV.RUN while a macro is being expanded.
+  ;;
+  ;;The  default  value will  return  null,  which represents  an  empty
+  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
+  ;;mapping   label/binding  is   performed   only   in  the   top-level
+  ;;environment.
+  ;;
+  ;;Another possibility we could think of is to use as default value the
+  ;;function:
+  ;;
+  ;;   (lambda ()
+  ;;     (syntax-violation 'current-run-lexenv
+  ;; 	   "called outside the extent of a macro expansion"
+  ;; 	   '(current-run-lexenv)))
+  ;;
+  ;;However there are  cases where we actually want  the returned LEXENV
+  ;;to be null, for example: when evaluating the visit code of a library
+  ;;just loaded in  FASL form; such visit code might  need, for example,
+  ;;to access the  syntactic binding property lists, and it  would do it
+  ;;outside any macro expansion.
+  ;;
+  (make-parameter
+      (lambda () '())
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define (current-inferior-lexenv)
+  ((current-run-lexenv)))
+
+(define* (syntax-parameter-value {id identifier?})
+  (let ((label (id->label id)))
+    (if label
+	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
+	  (case (syntactic-binding-type binding)
+	    ((local-ctv)
+	     (local-compile-time-value-binding-object binding))
+
+	    ((global-ctv)
+	     (global-compile-time-value-binding-object binding))
+
+	    (else
+	     (procedure-argument-violation __who__
+	       "expected identifier bound to compile-time value"
+	       id))))
+      (procedure-argument-violation __who__
+	"unbound identifier" id))))
 
 
 ;;;; utilities for identifiers

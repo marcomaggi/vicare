@@ -384,8 +384,11 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.syntax-utilities.sls			\
 	scheme/psyntax.tag-and-tagged-identifiers.sls		\
 	scheme/psyntax.core-primitives-properties.sls		\
+	scheme/psyntax.library-collectors.sls			\
+	scheme/psyntax.import-spec-parser.sls			\
+	scheme/psyntax.export-spec-parser.sls			\
+	scheme/psyntax.chi-procedures.sls			\
 	scheme/psyntax.expander.sls				\
-	scheme/psyntax.expander.chi-module.scm			\
 	scheme/psyntax.expander.core-macro-transformers.scm	\
 	scheme/psyntax.expander.non-core-macro-transformers.scm	\
 	scheme/psyntax.expander.infix-macro.scm			\

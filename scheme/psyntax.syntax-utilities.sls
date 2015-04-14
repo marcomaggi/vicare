@@ -29,7 +29,10 @@
     syntax-car				syntax-cdr
     syntax->list
     syntax-vector?			syntax-vector->list
-    syntax-unwrap)
+    syntax-unwrap
+
+    parse-logic-predicate-syntax
+    error-invalid-formals-syntax)
   (import (except (rnrs)
 		  generate-temporaries)
     (psyntax.compat)
@@ -37,6 +40,8 @@
     (only (psyntax.lexical-environment)
 	  mkstx
 	  make-syntactic-identifier-for-temporary-variable
+	  bound-id-member?
+	  bless
 	  wrapped-syntax-object?
 	  syntax-object-expression
 	  syntax-object-marks
@@ -168,7 +173,102 @@
     (?atom
      (syntax->datum ?atom))))
 
+
+(case-define parse-logic-predicate-syntax
+  ;;Given a  syntax object STX parse  it as logic predicate  expression with expected
+  ;;format:
+  ;;
+  ;;   STX = (and ?expr0 ?expr ...)
+  ;;       | (or  ?expr0 ?expr ...)
+  ;;       | (xor ?expr0 ?expr ...)
+  ;;       | (not ?expr)
+  ;;       | ?expr
+  ;;
+  ;;where  AND,  OR,  XOR, NOT  are  the  identifiers  exported  by (vicare).   If  a
+  ;;standalone ?EXPR is found: apply the  procedure TAIL-PROC to it gather its single
+  ;;return value; TAIL-PROC defaults to the identity function.
+  ;;
+  ;;Return  a syntax  object representing  the  logic predicate  with the  standalone
+  ;;expressions replaced by the return values of TAIL-PROC.
+  ;;
+  ((stx)
+   (parse-logic-predicate-syntax stx (lambda (stx) stx)))
+  ((stx tail-proc)
+   (define (recurse expr)
+     (parse-logic-predicate-syntax expr tail-proc))
+   (syntax-match stx (and or xor not)
+     ((and ?expr0 ?expr* ...)
+      (bless
+       `(and ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((or  ?expr0 ?expr* ...)
+      (bless
+       `(or  ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((xor ?expr0 ?expr* ...)
+      (bless
+       `(xor ,@(map recurse (cons ?expr0 ?expr*)))))
+     ((not ?expr)
+      (bless
+       `(not ,(recurse ?expr))))
+     (else
+      (tail-proc stx)))))
 
+
+;;;; formals syntax validation
+
+(define (error-invalid-formals-syntax input-form-stx formals-stx)
+  ;;Raise an error for invalid formals of LAMBDA, CASE-LAMBDA, LET and similar.
+  ;;
+  ;;If no invalid  formals are found: return unspecified values,  else raise a syntax
+  ;;violation.  This function is called when  it has been already determined that the
+  ;;formals have something wrong.
+  ;;
+  ;;For a LAMBDA syntax:
+  ;;
+  ;;   (lambda ?formals . ?body)
+  ;;
+  ;;it is called as:
+  ;;
+  ;;   (error-invalid-formals-syntax
+  ;;      #'(lambda ?formals . ?body)
+  ;;      #'?formals)
+  ;;
+  ;;For a LET syntax:
+  ;;
+  ;;   (let ((?lhs* ?rhs*) ...) . ?body)
+  ;;
+  ;;it is called as:
+  ;;
+  ;;   (error-invalid-formals-syntax
+  ;;      #'(let ((?lhs* ?rhs*) ...) . ?body)
+  ;;      #'?lhs*)
+  ;;
+  ;;NOTE Invalid  LET-VALUES and LET*-VALUES  formals are processed by  this function
+  ;;indirectly;  LET-VALUES  and  LET*-VALUES  syntaxes are  first  transformed  into
+  ;;CALL-WITH-VALUES  syntaxes, then  it  is the  LAMBDA syntax  that  takes care  of
+  ;;formals validation.
+  ;;
+  (define (%synner message subform)
+    (syntax-violation #f message input-form-stx subform))
+  (syntax-match formals-stx ()
+    ((?id* ... . ?last)
+     (let recur ((?id* (cond ((identifier? ?last)
+			      (cons ?last ?id*))
+			     ((syntax-null? ?last)
+			      ?id*)
+			     (else
+			      (%synner "not an identifier" ?last)))))
+       (cond ((null? ?id*)
+	      (void))
+	     ((not (identifier? (car ?id*)))
+	      (%synner "not an identifier" (car ?id*)))
+	     (else
+	      (recur (cdr ?id*))
+	      (when (bound-id-member? (car ?id*)
+				      (cdr ?id*))
+		(%synner "duplicate binding" (car ?id*)))))))
+
+    (_
+     (%synner "malformed binding form" formals-stx))))
 
 
 ;;;; done
