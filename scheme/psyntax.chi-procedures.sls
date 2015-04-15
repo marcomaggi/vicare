@@ -62,6 +62,7 @@
 	  variable-transformer?		variable-transformer-procedure
 	  synonym-transformer?		synonym-transformer-identifier
 	  compile-time-value?		compile-time-value-object)
+    (psyntax.non-core-macro-transformers)
     (psyntax.library-manager)
     (psyntax.internal))
 
@@ -392,9 +393,7 @@
     ;;
     ;;RIB is false or a struct of type "rib".
     ;;
-    (%do-macro-call (let ()
-		      (import NON-CORE-MACRO-TRANSFORMER)
-		      (non-core-macro-transformer procname))
+    (%do-macro-call (non-core-macro-transformer procname)
 		    input-form-stx lexenv.run rib))
 
   (define* (chi-local-macro bind-val input-form-stx lexenv.run {rib false-or-rib?})
@@ -3115,13 +3114,9 @@
 
 ;;;; macro transformer modules
 
-(module NON-CORE-MACRO-TRANSFORMER
-  (non-core-macro-transformer)
-  (include "psyntax.expander.non-core-macro-transformers.scm" #t))
-
 (module CORE-MACRO-TRANSFORMER
   (core-macro-transformer)
-  (include "psyntax.expander.core-macro-transformers.scm" #t))
+  (include "psyntax.chi-procedures.core-macro-transformers.scm" #t))
 
 
 ;;;; done

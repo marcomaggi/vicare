@@ -1,99 +1,104 @@
 ;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 ;;;; copyright notice for the original code of the XOR macro
 ;;;
 ;;;Copyright (c) 2008 Derick Eddington
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation the  rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;Except  as  contained  in  this  notice, the  name(s)  of  the  above
-;;;copyright holders  shall not be  used in advertising or  otherwise to
-;;;promote  the sale,  use or  other dealings  in this  Software without
-;;;prior written authorization.
+;;;Except as  contained in this  notice, the name(s)  of the above  copyright holders
+;;;shall not be  used in advertising or  otherwise to promote the sale,  use or other
+;;;dealings in this Software without prior written authorization.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 ;;;;copyright notice for the original code of RECEIVE
 ;;;
 ;;;Copyright (C) John David Stone (1999). All Rights Reserved.
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT. IN  NO EVENT SHALL THE AUTHORS  OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO  EVENT SHALL THE  AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-;;;; helpers
+(library (psyntax.non-core-macro-transformers)
+  (export non-core-macro-transformer)
+  (import (except (rnrs)
+		  eval
+		  environment		environment?
+		  null-environment	scheme-report-environment
+		  identifier?
+		  bound-identifier=?	free-identifier=?
+		  generate-temporaries
+		  datum->syntax		syntax->datum
+		  syntax-violation	make-variable-transformer)
+    (psyntax.compat)
+    (only (psyntax.syntax-utilities)
+	  syntax-unwrap
+	  parse-logic-predicate-syntax)
+    (psyntax.lexical-environment)
+    (psyntax.syntax-match)
+    (only (psyntax.syntax-utilities)
+	  generate-temporaries
+	  parse-logic-predicate-syntax
+	  error-invalid-formals-syntax)
+    (psyntax.tag-and-tagged-identifiers)
+    (only (psyntax.library-manager)
+	  current-include-loader
+	  source-code-location))
 
-(include "psyntax.helpers.scm" #t)
-(import (only (psyntax.syntax-utilities)
-	      syntax-unwrap
-	      parse-logic-predicate-syntax)
-  (only (psyntax.syntax-utilities)
-	generate-temporaries))
+  (include "psyntax.helpers.scm" #t)
 
 
-;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
-;;non-core macros to their macro transformers.
-;;
-;;NOTE This  module is very  long, so it  is split into  multiple code
-;;pages.  (Marco Maggi; Sat Apr 27, 2013)
-;;
 (define* (non-core-macro-transformer {x symbol?})
+  ;;Map symbols representing non-core macros to their macro transformers.
+  ;;
   (case x
     ((exported-define)			exported-define-macro)
     ((define-struct)			define-struct-macro)
@@ -251,16 +256,16 @@
 
     ;;Expander tags.
     ((<top> <void>
-      <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
-      <procedure> <predicate>
-      <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
-      <rational-valued> <rational> <integer> <integer-valued>
-      <exact-integer> <real> <real-valued> <complex> <number>
-      <string> <vector> <pair> <list> <bytevector> <hashtable>
-      <record> <record-type-descriptor> <struct> <struct-type-descriptor> <condition>
-      <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
-      <textual-input-port> <textual-output-port> <textual-input/output-port>
-      <binary-input-port> <binary-output-port> <binary-input/output-port>)
+	    <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
+	    <procedure> <predicate>
+	    <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
+	    <rational-valued> <rational> <integer> <integer-valued>
+	    <exact-integer> <real> <real-valued> <complex> <number>
+	    <string> <vector> <pair> <list> <bytevector> <hashtable>
+	    <record> <record-type-descriptor> <struct> <struct-type-descriptor> <condition>
+	    <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
+	    <textual-input-port> <textual-output-port> <textual-input/output-port>
+	    <binary-input-port> <binary-output-port> <binary-input/output-port>)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of built-in tag keyword" expr-stx)))
 
@@ -268,7 +273,7 @@
      (assertion-violation/internal-error __who__ "unknown non-core macro name" x))))
 
 
-;;;; module non-core-macro-transformer: DEFINE
+;;;; non-core macro: DEFINE
 
 (module (exported-define-macro)
 
@@ -376,7 +381,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-AUXILIARY-SYNTAXES
+;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
 
 (define (define-auxiliary-syntaxes-macro expr-stx)
   ;;Transformer      function      used     to      expand      Vicare's
@@ -397,7 +402,7 @@
 	     ?id*))))))
 
 
-;;;; module non-core-macro-transformer: control structures macros
+;;;; non-core macro: control structures macros
 
 (define (when-macro expr-stx)
   (syntax-match expr-stx ()
@@ -410,7 +415,7 @@
      (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
 
-;;;; module non-core-macro-transformer: CASE
+;;;; non-core macro: CASE
 
 (module (case-macro)
   ;;Transformer function used to expand R6RS's CASE macros (with extensions) from the
@@ -693,7 +698,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: CASE-IDENTIFIERS
+;;;; non-core macro: CASE-IDENTIFIERS
 
 (module (case-identifiers-macro)
   (define-constant __who__
@@ -753,7 +758,7 @@
   #| end of module: CASE-IDENTIFIERS-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-STRUCT
+;;;; non-core macro: DEFINE-STRUCT
 
 (module (define-struct-macro)
   ;;Transformer  function  used to  expand  Vicare's  DEFINE-STRUCT macros  from  the
@@ -1024,14 +1029,14 @@
   #| end of module: DEFINE-STRUCT-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
+;;;; non-core macro: DEFINE-RECORD-TYPE
 
 (module (define-record-type-macro)
   ;;Transformer function used to expand R6RS's DEFINE-RECORD-TYPE macros
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (define-constant __who__ 'define-record-type)
+  (define-constant __module_who__ 'define-record-type)
 
   (define (define-record-type-macro input-form.stx)
     (syntax-match input-form.stx ()
@@ -1048,7 +1053,7 @@
       ((message)
        (synner message #f))
       ((message subform)
-       (syntax-violation __who__ message input-form.stx subform)))
+       (syntax-violation __module_who__ message input-form.stx subform)))
 
     (define-values (foo make-foo foo?)
       (%parse-full-name-spec namespec))
@@ -1698,15 +1703,19 @@
 	    ((?kwd . ?rest)
 	     (cond ((or (not (identifier? ?kwd))
 			(not (%free-id-member? ?kwd VALID-KEYWORDS)))
-		    (stx-error ?kwd "not a valid DEFINE-RECORD-TYPE keyword"))
+		    (syntax-violation __module_who__
+		      "not a valid DEFINE-RECORD-TYPE keyword"
+		      input-form.stx ?kwd))
 		   ((bound-id-member? ?kwd seen*)
-		    (syntax-violation __who__
+		    (syntax-violation __module_who__
 		      "invalid duplicate clause in DEFINE-RECORD-TYPE"
 		      input-form.stx ?kwd))
 		   (else
 		    (loop (cdr cls*) (cons ?kwd seen*)))))
 	    (?cls
-	     (stx-error ?cls "malformed define-record-type clause"))
+	     (syntax-violation __module_who__
+	       "malformed define-record-type clause"
+	       input-form.stx ?cls))
 	    ))))
 
     (define (%free-id-member? x ls)
@@ -1740,7 +1749,7 @@
   #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: RECORD-TYPE-AND-RECORD?
+;;;; non-core macro: RECORD-TYPE-AND-RECORD?
 
 (define (record-type-and-record?-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
@@ -1755,7 +1764,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE
+;;;; non-core macro: DEFINE-CONDITION-TYPE
 
 (define (define-condition-type-macro expr-stx)
   ;;Transformer  function  used  to  expand  R6RS  RECORD-CONDITION-TYPE
@@ -1800,7 +1809,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
+;;;; non-core macro: PARAMETERIZE and PARAMETRISE
 
 (define (parameterize-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's PARAMETERIZE  macros
@@ -1852,7 +1861,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
+;;;; non-core macro: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
 
 (define (with-unwind-protection-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  WITH-UNWIND-PROTECTION macros from
@@ -1928,7 +1937,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-IMPLICITS
+;;;; non-core macro: WITH-IMPLICITS
 
 (define (with-implicits-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
@@ -1991,7 +2000,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: SET-CONS!
+;;;; non-core macro: SET-CONS!
 
 (define (set-cons!-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
@@ -2005,7 +2014,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: compensations
+;;;; non-core macro: compensations
 
 (module (with-compensations/on-error-macro
 	 with-compensations-macro)
@@ -2124,7 +2133,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: CONCURRENTLY, MONITOR
+;;;; non-core macro: CONCURRENTLY, MONITOR
 
 (define (concurrently-macro expr-stx)
   ;;Transformer  function  used  to  expand Vicare's  CONCURRENTLY  macros  from  the
@@ -2163,7 +2172,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: SYNTAX-RULES, DEFINE-SYNTAX-RULE
+;;;; non-core macro: SYNTAX-RULES, DEFINE-SYNTAX-RULE
 
 (define (syntax-rules-macro expr-stx)
   ;;Transformer function  used to  expand R6RS SYNTAX-RULES  macros from
@@ -2207,7 +2216,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-SYNTAX*
+;;;; non-core macro: DEFINE-SYNTAX*
 
 (define (define-syntax*-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
@@ -2244,7 +2253,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-SYNTAX
+;;;; non-core macro: WITH-SYNTAX
 
 (define (with-syntax-macro expr-stx)
   ;;Transformer function used to expand R6RS WITH-SYNTAX macros from the
@@ -2297,7 +2306,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
+;;;; non-core macro: IDENTIFIER-SYNTAX
 
 (define (identifier-syntax-macro stx)
   ;;Transformer function  used to  expand R6RS  IDENTIFIER-SYNTAX macros
@@ -2339,7 +2348,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET*, TRACE-LET
+;;;; non-core macro: LET*, TRACE-LET
 
 (define (let*-macro expr-stx)
   ;;Transformer  function  used to  expand  R6RS  LET* macros  from  the
@@ -2378,7 +2387,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET-VALUES
+;;;; non-core macro: LET-VALUES
 
 (module (let-values-macro)
   ;;Transformer function  used to  expand R6RS LET-VALUES  macros from  the top-level
@@ -2482,7 +2491,7 @@
   #| end of module: LET-VALUES-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: LET*-VALUES
+;;;; non-core macro: LET*-VALUES
 
 (define (let*-values-macro expr-stx)
   ;;Transformer function used to expand R6RS LET*-VALUES macros from the
@@ -2521,7 +2530,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: VALUES->LIST-MACRO
+;;;; non-core macro: VALUES->LIST-MACRO
 
 (define (values->list-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's VALUES->LIST  macros
@@ -2536,7 +2545,7 @@
 	 list)))))
 
 
-;;;; module non-core-macro-transformer: LET*-SYNTAX
+;;;; non-core macro: LET*-SYNTAX
 
 (define (let*-syntax-macro expr-stx)
   ;;Transformer function used to expand Vicare's LET*-SYNTAX macros from
@@ -2562,7 +2571,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
+;;;; non-core macro: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
 
 (define (let-constants-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  LET-CONSTANTS macros
@@ -2660,7 +2669,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: CASE-DEFINE
+;;;; non-core macro: CASE-DEFINE
 
 (define (case-define-macro expr-stx)
   ;;Transformer function used to expand Vicare's CASE-DEFINE macros from
@@ -2677,7 +2686,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
+;;;; non-core macro: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
 
 (module (lambda*-macro
 	 define*-macro
@@ -3150,7 +3159,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
+;;;; non-core macro: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
 
 (define (trace-lambda-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's TRACE-LAMBDA  macros
@@ -3182,53 +3191,55 @@
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ (?who ?formal* ...) ?body ?body* ...)
-     (begin
-       ;;We parse the formals for validation purposes.
-       (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
-       (bless
-	`(define ,?who
-	   (make-traced-procedure ',?who
-				  (lambda ,?formal*
-				    ,?body . ,?body*))))))
+  (with-who trace-define
+    (syntax-match expr-stx ()
+      ((_ (?who ?formal* ...) ?body ?body* ...)
+       (begin
+	 ;;We parse the formals for validation purposes.
+	 (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
+	 (bless
+	  `(define ,?who
+	     (make-traced-procedure ',?who
+				    (lambda ,?formal*
+				      ,?body . ,?body*))))))
 
-    ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-     (begin
-       ;;We parse the formals for validation purposes.
-       (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
-       (bless
-	`(define ,?who
-	   (make-traced-procedure ',?who
-				  (lambda (,@?formal* . ,?rest-formal)
-				    ,?body . ,?body*))))))
+      ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
+       (begin
+	 ;;We parse the formals for validation purposes.
+	 (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
+	 (bless
+	  `(define ,?who
+	     (make-traced-procedure ',?who
+				    (lambda (,@?formal* . ,?rest-formal)
+				      ,?body . ,?body*))))))
 
-    ((_ ?who ?expr)
-     (if (identifier? ?who)
-	 (bless `(define ,?who
-		   (let ((v ,?expr))
-		     (if (procedure? v)
-			 (make-traced-procedure ',?who v)
-		       v))))
-       (stx-error expr-stx "invalid name")))
-    ))
+      ((_ ?who ?expr)
+       (if (identifier? ?who)
+	   (bless `(define ,?who
+		     (let ((v ,?expr))
+		       (if (procedure? v)
+			   (make-traced-procedure ',?who v)
+			 v))))
+	 (syntax-violation __who__ "invalid name" expr-stx)))
+      )))
 
 (define (trace-define-syntax-macro expr-stx)
   ;;Transformer  function used  to  expand Vicare's  TRACE-DEFINE-SYNTAX
   ;;macros from the top-level built in environment.  Expand the contents
   ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?who ?expr)
-     (if (identifier? ?who)
-	 (bless
-	  `(define-syntax ,?who
-	     (make-traced-macro ',?who ,?expr)))
-       (stx-error expr-stx "invalid name")))
-    ))
+  (with-who trace-define-syntax
+    (syntax-match expr-stx ()
+      ((_ ?who ?expr)
+       (if (identifier? ?who)
+	   (bless
+	    `(define-syntax ,?who
+	       (make-traced-macro ',?who ,?expr)))
+	 (syntax-violation __who__ "invalid name" expr-stx)))
+      )))
 
 
-;;;; module non-core-macro-transformer: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
+;;;; non-core macro: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
 
 (module (trace-let-syntax-macro
 	 trace-letrec-syntax-macro)
@@ -3266,7 +3277,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: GUARD
+;;;; non-core macro: GUARD
 ;;
 ;;Vicare's implementation of the GUARD syntax  is really sophisticated because it has
 ;;to  deal with  both the  dynamic environment  requirements of  R6RS and  the unwind
@@ -3493,6 +3504,9 @@
 ;;
 (module (guard-macro)
 
+  (define-syntax __module_who__
+    (identifier-syntax 'guard))
+
   (define (guard-macro x)
     ;;Transformer function used to expand R6RS  GUARD macros from the top-level built
     ;;in environment.  Expand  the contents of EXPR-STX; return a  syntax object that
@@ -3579,7 +3593,7 @@
 		   reinstate-exception-handler-continuation-id)))
 
 	(others
-	 (stx-error others "invalid guard clause"))))
+	 (syntax-violation __module_who__ "invalid guard clause" others))))
 
     (define (%process-single-cond-clause clause kont-code-stx run-unwind-protect-cleanups-id)
       (syntax-match clause (=>)
@@ -3609,7 +3623,7 @@
 	    ,kont-code-stx))
 
 	(_
-	 (stx-error clause "invalid guard clause"))))
+	 (syntax-violation __module_who__ "invalid guard clause" clause))))
 
     #| end of module: GEN-CLAUSES |# )
 
@@ -3703,7 +3717,7 @@
 	     ,kont-code-stx))
 
 	 (_
-	  (stx-error clause "invalid guard clause"))))
+	  (syntax-violation __module_who__ "invalid guard clause" clause))))
 
      (define (%process-multi-cond-clauses clause*)
        (syntax-match clause* (else)
@@ -3729,7 +3743,7 @@
 		    return-to-exception-handler-k)))
 
 	 (others
-	  (stx-error others "invalid guard clause"))))
+	  (syntax-violation __module_who__ "invalid guard clause" others))))
 
      (receive (code-stx return-to-exception-handler-k)
 	 (%process-multi-cond-clauses clause*)
@@ -3742,7 +3756,7 @@
    #| end of module: GUARD-MACRO |# ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
+;;;; non-core macro: DEFINE-ENUMERATION
 
 (define (define-enumeration-macro stx)
   ;;Transformer function  used to expand R6RS  DEFINE-ENUMERATION macros
@@ -3880,7 +3894,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DO, DO*, WHILE, UNTIL, FOR
+;;;; non-core macro: DO, DO*, WHILE, UNTIL, FOR
 
 (define (with-escape-fluids escape next-iteration body*)
   ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
@@ -3913,83 +3927,84 @@
   ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (define (%normalise-binding binding-stx)
-    (syntax-match binding-stx ()
-      ((?var ?init)
-       (receive (id tag)
-	   (parse-tagged-identifier-syntax ?var)
-	 `(,?var ,?init ,id)))
-      ((?var ?init ?step)
-       `(,?var ,?init ,?step))
-      (_
-       (stx-error expr-stx "invalid binding"))))
-  (syntax-match expr-stx (while until)
+  (with-who 'do
+    (define (%normalise-binding binding-stx)
+      (syntax-match binding-stx ()
+	((?var ?init)
+	 (receive (id tag)
+	     (parse-tagged-identifier-syntax ?var)
+	   `(,?var ,?init ,id)))
+	((?var ?init ?step)
+	 `(,?var ,?init ,?step))
+	(_
+	 (syntax-violation __who__ "invalid binding" expr-stx))))
+    (syntax-match expr-stx (while until)
 
-    ;;This is an extended Vicare syntax.
-    ;;
-    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-    ;;
-    ;;NOTE Using CONTINUE in the body causes a jump to the test.
-    ((_ ?body (while ?test))
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration")))
-       (bless
-	`(unwinding-call/cc
-	     (lambda (,escape)
-	       (let loop ()
-		 (unwinding-call/cc
-		     (lambda (,next-iteration)
-		       ,(with-escape-fluids escape next-iteration (list ?body))))
-		 (when ,?test
-		   (loop))))))))
+      ;;This is an extended Vicare syntax.
+      ;;
+      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+      ;;
+      ;;NOTE Using CONTINUE in the body causes a jump to the test.
+      ((_ ?body (while ?test))
+       (let ((escape         (gensym "escape"))
+	     (next-iteration (gensym "next-iteration")))
+	 (bless
+	  `(unwinding-call/cc
+	       (lambda (,escape)
+		 (let loop ()
+		   (unwinding-call/cc
+		       (lambda (,next-iteration)
+			 ,(with-escape-fluids escape next-iteration (list ?body))))
+		   (when ,?test
+		     (loop))))))))
 
-    ;;This is an extended Vicare syntax.
-    ;;
-    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-    ;;
-    ;;NOTE Using CONTINUE in the body causes a jump to the test.
-    ((_ ?body (until ?test))
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration")))
-       (bless
-	`(unwinding-call/cc
-	     (lambda (,escape)
-	       (let loop ()
-		 (unwinding-call/cc
-		     (lambda (,next-iteration)
-		       ,(with-escape-fluids escape next-iteration (list ?body))))
-		 (until ,?test
-		   (loop))))))))
+      ;;This is an extended Vicare syntax.
+      ;;
+      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+      ;;
+      ;;NOTE Using CONTINUE in the body causes a jump to the test.
+      ((_ ?body (until ?test))
+       (let ((escape         (gensym "escape"))
+	     (next-iteration (gensym "next-iteration")))
+	 (bless
+	  `(unwinding-call/cc
+	       (lambda (,escape)
+		 (let loop ()
+		   (unwinding-call/cc
+		       (lambda (,next-iteration)
+			 ,(with-escape-fluids escape next-iteration (list ?body))))
+		   (until ,?test
+		     (loop))))))))
 
-    ;;This is the R6RS syntax.
-    ;;
-    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-    ((_ (?binding* ...)
-	(?test ?expr* ...)
-	?command* ...)
-     (syntax-match (map %normalise-binding ?binding*) ()
-       (((?var* ?init* ?step*) ...)
-	(let ((escape         (gensym "escape"))
-	      (next-iteration (gensym "next-iteration")))
-	  (bless
-	   `(unwinding-call/cc
-		(lambda (,escape)
-		  (letrec ((loop (lambda ,?var*
-				   (if (unwinding-call/cc
-					   (lambda (,next-iteration)
-					     (if ,?test
-						 #f
-					       ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
-				       (loop . ,?step*)
-				     ,(if (null? ?expr*)
-					  '(void)
-					`(begin . ,?expr*))))))
-		    (loop . ,?init*)))))))
-       ))
-    ))
+      ;;This is the R6RS syntax.
+      ;;
+      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+      ((_ (?binding* ...)
+	  (?test ?expr* ...)
+	  ?command* ...)
+       (syntax-match (map %normalise-binding ?binding*) ()
+	 (((?var* ?init* ?step*) ...)
+	  (let ((escape         (gensym "escape"))
+		(next-iteration (gensym "next-iteration")))
+	    (bless
+	     `(unwinding-call/cc
+		  (lambda (,escape)
+		    (letrec ((loop (lambda ,?var*
+				     (if (unwinding-call/cc
+					     (lambda (,next-iteration)
+					       (if ,?test
+						   #f
+						 ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+					 (loop . ,?step*)
+				       ,(if (null? ?expr*)
+					    '(void)
+					  `(begin . ,?expr*))))))
+		      (loop . ,?init*)))))))
+	 ))
+      )))
 
 ;;; --------------------------------------------------------------------
 
@@ -4003,6 +4018,7 @@
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
+  (with-who 'do*
   (define (%make-init-binding binding-stx)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -4014,7 +4030,7 @@
 	   (parse-tagged-identifier-syntax ?var)
 	 (list ?var ?init)))
       (_
-       (stx-error expr-stx "invalid binding"))))
+       (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
   (define (%make-step-update binding-stx knil)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -4025,7 +4041,7 @@
 	 (cons `(set! ,id ,?step)
 	       knil)))
       (_
-       (stx-error expr-stx "invalid binding"))))
+       (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
   (syntax-match expr-stx ()
     ((_ (?binding* ...)
 	(?test ?expr* ...)
@@ -4051,7 +4067,7 @@
 					 '(void)
 				       `(begin . ,?expr*))))))
 		   (loop))))))))
-    ))
+    )))
 
 ;;; --------------------------------------------------------------------
 
@@ -4182,7 +4198,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RETURNABLE
+;;;; non-core macro: RETURNABLE
 
 (define (returnable-macro expr-stx)
   ;;Transformer function used to expand Vicare's RETURNABLE macros from the top-level
@@ -4202,7 +4218,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: TRY
+;;;; non-core macro: TRY
 
 (module (try-macro)
   (define-constant __who__ 'try)
@@ -4288,7 +4304,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
+;;;; non-core macro: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
 
 (define (with-blocked-exceptions-macro expr-stx)
   ;;Transformer function used to  expand Vicare's WITH-BLOCKED-EXCEPTIONS macros from
@@ -4343,7 +4359,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: OR, AND
+;;;; non-core macro: OR, AND
 
 (define (or-macro expr-stx)
   ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in
@@ -4383,64 +4399,65 @@
     ))
 
 
-;;;; module non-core-macro-transformer: COND
+;;;; non-core macro: COND
 
 (define (cond-macro expr-stx)
-  ;;Transformer  function  used to  expand  R6RS  COND macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand R6RS  COND macros from the top-level built in
+  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
+  ;;be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?cls ?cls* ...)
-     (bless
-      (let recur ((cls ?cls) (cls* ?cls*))
-	(if (null? cls*)
+  (with-who 'cond
+    (syntax-match expr-stx ()
+      ((_ ?cls ?cls* ...)
+       (bless
+	(let recur ((cls ?cls) (cls* ?cls*))
+	  (if (null? cls*)
+	      (syntax-match cls (else =>)
+		((else ?expr ?expr* ...)
+		 `(internal-body ,?expr . ,?expr*))
+
+		((?test => ?proc)
+		 `(let ((t ,?test))
+		    (if t
+			(,?proc t)
+		      (void))))
+
+		((?expr)
+		 `(or ,?expr (void)))
+
+		((?test ?expr* ...)
+		 `(if ,?test
+		      (internal-body . ,?expr*)
+		    (void)))
+
+		(_
+		 (syntax-violation __who__ "invalid last clause" expr-stx cls)))
+
 	    (syntax-match cls (else =>)
 	      ((else ?expr ?expr* ...)
-	       `(internal-body ,?expr . ,?expr*))
+	       (syntax-violation __who__ "incorrect position of keyword ELSE" expr-stx cls))
 
 	      ((?test => ?proc)
 	       `(let ((t ,?test))
 		  (if t
 		      (,?proc t)
-		    (void))))
+		    ,(recur (car cls*) (cdr cls*)))))
 
 	      ((?expr)
-	       `(or ,?expr (void)))
+	       `(or ,?expr
+		    ,(recur (car cls*) (cdr cls*))))
 
 	      ((?test ?expr* ...)
 	       `(if ,?test
 		    (internal-body . ,?expr*)
-		  (void)))
-
-	      (_
-	       (stx-error expr-stx "invalid last clause")))
-
-	  (syntax-match cls (else =>)
-	    ((else ?expr ?expr* ...)
-	     (stx-error expr-stx "incorrect position of keyword else"))
-
-	    ((?test => ?proc)
-	     `(let ((t ,?test))
-		(if t
-		    (,?proc t)
-		  ,(recur (car cls*) (cdr cls*)))))
-
-	    ((?expr)
-	     `(or ,?expr
 		  ,(recur (car cls*) (cdr cls*))))
 
-	    ((?test ?expr* ...)
-	     `(if ,?test
-		  (internal-body . ,?expr*)
-		,(recur (car cls*) (cdr cls*))))
-
-	    (_
-	     (stx-error expr-stx "invalid last clause")))))))
-    ))
+	      (_
+	       (syntax-violation __who__ "invalid last clause" expr-stx cls)))))))
+      )))
 
 
-;;;; module non-core-macro-transformer: QUASIQUOTE
+;;;; non-core macro: QUASIQUOTE
 
 (module (quasiquote-macro)
   ;;Transformer function used to expand  R6RS QUASIQUOTE macros from the
@@ -4644,7 +4661,7 @@
   #| end of module: QUASIQUOTE-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: QUASISYNTAX
+;;;; non-core macro: QUASISYNTAX
 
 (module (quasisyntax-macro)
   ;;Transformer function used to expand R6RS QUASISYNTAX macros from the
@@ -4664,6 +4681,9 @@
 	      (syntax ,v))))))
       ))
 
+  (define-syntax __module_who__
+    (identifier-syntax 'quasisyntax))
+
   (define (quasi p nesting-level)
     (syntax-match p (unsyntax unsyntax-splicing quasisyntax)
       ((unsyntax p)
@@ -4676,7 +4696,7 @@
 
       (unsyntax
        (zero? nesting-level)
-       (stx-error p "incorrect use of unsyntax"))
+       (syntax-violation __module_who__ "incorrect use of unsyntax" p))
 
       (((unsyntax p* ...) . q)
        (receive (lhs* rhs* q)
@@ -4711,7 +4731,7 @@
 
       (unsyntax-splicing
        (zero? nesting-level)
-       (stx-error p "incorrect use of unsyntax-splicing"))
+       (syntax-violation __module_who__ "incorrect use of unsyntax-splicing" p))
 
       ((quasisyntax p)
        (receive (lhs* rhs* p)
@@ -4738,7 +4758,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
+;;;; non-core macro: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
 
 (define (define-values-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
@@ -4874,7 +4894,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
+;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
 
 (define (receive-macro input-form.stx)
   ;;Transformer function  used to expand  Vicare's RECEIVE macros from  the top-level
@@ -4970,7 +4990,7 @@
   #| end of module: XOR-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-INLINE, DEFINE-CONSTANT
+;;;; non-core macro: DEFINE-INLINE, DEFINE-CONSTANT
 
 (define (define-constant-macro expr-stx)
   ;;Transformer function used to  expand Vicare's DEFINE-CONSTANT macros
@@ -5059,46 +5079,48 @@
     ))
 
 
-;;;; module non-core-macro-transformer: INCLUDE
+;;;; non-core macro: INCLUDE
 
-(module (include-macro)
-  ;;Transformer function used to expand Vicare's INCLUDE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define (include-macro expr-stx)
+  ;;Transformer function  used to expand  Vicare's INCLUDE macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
-  (define (include-macro expr-stx)
+  (with-who 'include
+    (define (main expr-stx)
+      (syntax-match expr-stx ()
+	((?context ?filename)
+	 (%include-file ?filename ?context #f %synner))
+	((?context ?filename #t)
+	 (%include-file ?filename ?context #t %synner))
+	))
+
+    (define (%include-file filename-stx context-id verbose? synner)
+      (define filename.str
+	(syntax->datum filename-stx))
+      (unless (string? filename.str)
+	(%synner "expected string as include file pathname" filename-stx))
+      (receive (pathname contents)
+	  ((current-include-loader) filename.str verbose? synner)
+	;;We expect CONTENTS to be null or a list of annotated datums.
+	(bless
+	 `(stale-when (internal-body
+			(import (only (vicare language-extensions posix)
+				      file-modification-time))
+			(or (not (file-exists? ,pathname))
+			    (> (file-modification-time ,pathname)
+			       ,(file-modification-time pathname))))
+	    . ,(map (lambda (item)
+		      (datum->syntax context-id item))
+		 contents)))))
+
     (define (%synner message subform)
-      (syntax-violation 'include message expr-stx subform))
-    (syntax-match expr-stx ()
-      ((?context ?filename)
-       (%include-file ?filename ?context #f %synner))
-      ((?context ?filename #t)
-       (%include-file ?filename ?context #t %synner))
-      ))
+      (syntax-violation __who__ message expr-stx subform))
 
-  (define (%include-file filename-stx context-id verbose? synner)
-    (define filename.str
-      (syntax->datum filename-stx))
-    (unless (string? filename.str)
-      (stx-error filename-stx "expected string as include file pathname"))
-    (receive (pathname contents)
-	((current-include-loader) filename.str verbose? synner)
-      ;;We expect CONTENTS to be null or a list of annotated datums.
-      (bless
-       `(stale-when (internal-body
-		      (import (only (vicare language-extensions posix)
-				    file-modification-time))
-		      (or (not (file-exists? ,pathname))
-			  (> (file-modification-time ,pathname)
-			     ,(file-modification-time pathname))))
-	  . ,(map (lambda (item)
-		    (datum->syntax context-id item))
-	       contents)))))
-
-  #| end of module: INCLUDE-MACRO |# )
+    (main expr-stx)))
 
 
-;;;; module non-core-macro-transformer: DEFINE-INTEGRABLE
+;;;; non-core macro: DEFINE-INTEGRABLE
 
 (define (define-integrable-macro expr-stx)
   ;;Transformer  function  used  to  expand  Vicare's  DEFINE-INTEGRABLE
@@ -5138,7 +5160,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
+;;;; non-core macro: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
 
 (define (define-syntax-parameter-macro expr-stx)
   ;;Transformer function used to expand Vicare's DEFINE-SYNTAX-PARAMETER
@@ -5170,7 +5192,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
+;;;; non-core macro: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
 
 (define (pre-incr-macro input-form.stx)
   ;;Transformer function used to expand  Vicare's PRE-INCR! macros from the top-level
@@ -5287,14 +5309,14 @@
     ))
 
 
-;;;; module non-core-macro-transformer: INFIX
+;;;; non-core macro: INFIX
 
 (module (infix-macro)
   (include "psyntax.expander.infix-macro.scm" #t)
   #| end of module: INFIX-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: miscellanea
+;;;; non-core macro: miscellanea
 
 (define (time-macro expr-stx)
   ;;Transformer function  used to expand  Vicare's TIME macros  from the
@@ -5426,9 +5448,10 @@
 
 ;;;; done
 
+#| end of library |# )
+
 ;;; end of file
 ;;Local Variables:
-;;mode: vicare
 ;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
@@ -5446,4 +5469,5 @@
 ;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'with-who				'scheme-indent-function 1)
 ;;End:

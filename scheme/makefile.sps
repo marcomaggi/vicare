@@ -384,6 +384,7 @@
     "psyntax.syntax-utilities.sls"
     "psyntax.tag-and-tagged-identifiers.sls"
     "psyntax.core-primitives-properties.sls"
+    "psyntax.non-core-macro-transformers.sls"
     "psyntax.chi-procedures.sls"
     "psyntax.expander.sls"
     "ikarus.apropos.sls"

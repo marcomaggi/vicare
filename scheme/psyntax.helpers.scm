@@ -37,6 +37,14 @@
 (define-syntax-rule (reverse-and-append ?item**)
   (apply append (reverse ?item**)))
 
+(define-syntax with-who
+  (syntax-rules ()
+    ((_ ?who ?body0 ?body ...)
+     (fluid-let-syntax ((__who__ (identifier-syntax (quote ?who)))) ?body0 ?body ...))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define (false-or-procedure? obj)
   (or (not obj)
       (procedure? obj)))
