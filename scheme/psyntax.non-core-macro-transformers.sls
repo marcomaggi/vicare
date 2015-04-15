@@ -5312,7 +5312,7 @@
 ;;;; non-core macro: INFIX
 
 (module (infix-macro)
-  (include "psyntax.expander.infix-macro.scm" #t)
+  (include "psyntax.non-core-macro-transformers.infix-macro.scm" #t)
   #| end of module: INFIX-MACRO |# )
 
 
