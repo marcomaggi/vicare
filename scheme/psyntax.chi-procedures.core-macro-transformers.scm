@@ -28,6 +28,23 @@
   (only (psyntax.syntax-utilities)
 	generate-temporaries))
 
+(define-syntax (define-core-transformer stx)
+  (sys.syntax-case stx ()
+    ((?kwd (?who ?input-form.stx ?lexenv.run ?lexenv.expand) ?body0 ?body ...)
+     (let ((who (sys.syntax->datum #'?who)))
+       (sys.with-syntax
+	   ((WHO    (sys.datum->syntax #'?kwd (string->symbol (string-append (symbol->string who) "-transformer"))))
+	    (SYNNER (sys.datum->syntax #'?kwd '%synner)))
+	 #'(define (WHO ?input-form.stx ?lexenv.run ?lexenv.expand)
+	     (let-syntax
+		 ((SYNNER (syntax-rules ()
+			    ((_ ?message)
+			     (sys.syntax-violation __who__ ?message ?input-form.stx))
+			    ((_ ?message ?subform)
+			     (sys.syntax-violation __who__ ?message ?input-form.stx ?subform))
+			    )))
+	       (with-who ?who ?body0 ?body ...))))))
+    ))
 
 
 ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
@@ -245,7 +262,7 @@
 
 ;;;; module core-macro-transformer: IF
 
-(define (if-transformer input-form.stx lexenv.run lexenv.expand)
+(define-core-transformer (if input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS  IF syntaxes from the top-level built in
   ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
   ;;LEXENV; return a PSI struct.
@@ -291,7 +308,7 @@
 
 ;;;; module core-macro-transformer: QUOTE
 
-(define (quote-transformer input-form.stx lexenv.run lexenv.expand)
+(define-core-transformer (quote input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS  QUOTE syntaxes from the top-level built
   ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
   ;;given LEXENV; return a PSI struct.
@@ -630,12 +647,15 @@
     ;;rebind the identifier.
     ;;
     (let* ((label    (or (id->label lhs)
-			 (stx-error lhs "unbound identifier")))
+			 (%synner "unbound identifier" lhs)))
 	   (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
       (cond ((fluid-syntax-binding? binding)
 	     (fluid-syntax-binding-fluid-label binding))
 	    (else
-	     (stx-error lhs "not a fluid identifier")))))
+	     (%synner "not a fluid identifier" lhs)))))
+
+  (define (%synner message subform)
+    (syntax-violation 'fluid-let-syntax message input-form.stx subform))
 
   (transformer input-form.stx))
 
@@ -819,6 +839,9 @@
 	   (make-psi use-stx code))))
       ))
 
+  (define-syntax __module_who__
+    (identifier-syntax 'syntax))
+
   (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
@@ -861,7 +884,7 @@
       ;;
       (?dots
        (ellipsis? ?dots)
-       (stx-error use-stx "misplaced ellipsis in syntax form"))
+       (syntax-violation __module_who__ "misplaced ellipsis in syntax form" use-stx))
 
       ;;Match a standalone  identifier.  ?ID can be: a reference  to pattern variable
       ;;created by SYNTAX-CASE; an identifier that  will be captured by some binding;
@@ -899,7 +922,7 @@
       ((?dots ?sub-template)
        (ellipsis? ?dots)
        (if vec?
-	   (stx-error use-stx "misplaced ellipsis in syntax form")
+	   (syntax-violation __module_who__ "misplaced ellipsis in syntax form" use-stx)
 	 (%gen-syntax use-stx ?sub-template lexenv maps (lambda (x) #f) #f)))
 
       ;;Match a template followed by ellipsis.
@@ -912,7 +935,7 @@
 			(receive (template^ maps)
 			    (%gen-syntax use-stx ?template lexenv (cons '() maps) ellipsis? #f)
 			  (if (null? (car maps))
-			      (stx-error use-stx "extra ellipsis in syntax form")
+			      (syntax-violation __module_who__ "extra ellipsis in syntax form" use-stx)
 			    (values (%gen-map template^ (car maps))
 				    (cdr maps)))))))
 	 (syntax-match rest.stx ()
@@ -925,7 +948,7 @@
 			  (receive (template^ maps)
 			      (kont (cons '() maps))
 			    (if (null? (car maps))
-				(stx-error use-stx "extra ellipsis in syntax form")
+				(syntax-violation __module_who__ "extra ellipsis in syntax form" use-stx)
 			      (values (%gen-mappend template^ (car maps))
 				      (cdr maps)))))))
 
@@ -969,7 +992,7 @@
     (if (zero? level)
 	(values var maps)
       (if (null? maps)
-	  (stx-error use-stx "missing ellipsis in syntax form")
+	  (syntax-violation __module_who__ "missing ellipsis in syntax form" use-stx)
 	(receive (outer-var outer-maps)
 	    (%gen-ref use-stx var (- level 1) (cdr maps))
 	  (cond ((assq outer-var (car maps))
@@ -1077,8 +1100,14 @@
   ;;Notice that the parsing of the patterns is performed by CONVERT-PATTERN at expand
   ;;time and the actual pattern matching is performed by SYNTAX-DISPATCH at run time.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'syntax-case))
+
+  (define-syntax stx-error
+    (syntax-rules ()
+      ((_ ?stx ?msg)
+       (syntax-violation __module_who__ ?msg ?stx))
+      ))
 
   (define (syntax-case-transformer input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
@@ -1340,13 +1369,13 @@
     (let find ((id* id*)
 	       (ok* '()))
       (if (null? id*)
-	  (stx-error e) ; shouldn't happen
+	  (stx-error e "syntax error") ; shouldn't happen
 	(if (identifier? (car id*))
 	    (if (bound-id-member? (car id*) ok*)
-		(syntax-violation __who__
+		(syntax-violation __module_who__
 		  (string-append "duplicate " description.str) (car id*))
 	      (find (cdr id*) (cons (car id*) ok*)))
-	  (syntax-violation __who__
+	  (syntax-violation __module_who__
 	    (string-append "invalid " description.str) (car id*))))))
 
   (define (%chi-expr.core expr.stx lexenv.run lexenv.expand)
@@ -1394,34 +1423,32 @@
   ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
   ;;LEXENV; return a PSI struct.
   ;;
-  (define-syntax __who__
-    (identifier-syntax 'predicate-procedure-argument-validation))
-  (syntax-match input-form.stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(predicate-assertion-procedure-argument-validation ?id)))
-		     (else
-		      (stx-error input-form.stx "undefined procedure argument validation")))
-	       lexenv.run lexenv.expand))
-    ))
+  (with-who predicate-procedure-argument-validation
+    (syntax-match input-form.stx ()
+      ((_ ?id)
+       (identifier? ?id)
+       (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			  (predicate-assertion-procedure-argument-validation ?id)))
+		       (else
+			(syntax-violation __who__ "undefined procedure argument validation" input-form.stx)))
+		 lexenv.run lexenv.expand))
+      )))
 
 (define (predicate-return-value-validation-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's PREDICATE-RETURN-VALUE-VALIDATION
   ;;macros  from  the  top-level  built  in  environment.   Expand  the  contents  of
   ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
-  (define-syntax __who__
-    (identifier-syntax 'predicate-return-value-validation))
-  (syntax-match input-form.stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(predicate-assertion-return-value-validation ?id)))
-		     (else
-		      (stx-error input-form.stx "undefined return value validation")))
-	       lexenv.run lexenv.expand))
-    ))
+  (with-who predicate-return-value-validation
+    (syntax-match input-form.stx ()
+      ((_ ?id)
+       (identifier? ?id)
+       (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			  (predicate-assertion-return-value-validation ?id)))
+		       (else
+			(syntax-violation __who__ "undefined return value validation" input-form.stx)))
+		 lexenv.run lexenv.expand))
+      )))
 
 
 ;;;; module core-macro-transformer: struct type descriptor, setter and getter

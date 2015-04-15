@@ -849,7 +849,7 @@
 
 (module CORE-LIBRARY-EXPANDER
   (core-library-expander)
-  (define-constant __who__ 'core-library-expander)
+  (define-constant __module_who__ 'core-library-expander)
 
   (define (core-library-expander library-sexp verify-libname)
     ;;Given a  SYNTAX-MATCH expression  argument representing  a LIBRARY
@@ -933,7 +933,7 @@
 	    (eq? (syntax->datum ?import)  'import))
        (values ?name* ?exp* ?imp* ?body* '()))
       (_
-       (syntax-violation __who__ "malformed library" library-sexp))))
+       (syntax-violation __module_who__ "malformed library" library-sexp))))
 
   (define (%validate-library-name libname verify-libname)
     ;;Given a SYNTAX-MATCH expression argument LIBNAME  which is meant to represent a
@@ -957,9 +957,9 @@
 	     (values '() '()))
 
 	    (_
-	     (syntax-violation __who__ "invalid library name" libname))))
+	     (syntax-violation __module_who__ "invalid library name" libname))))
       (when (null? name*)
-	(syntax-violation __who__ "empty library name" libname)))
+	(syntax-violation __module_who__ "empty library name" libname)))
     (verify-libname (syntax->datum libname))
     (void))
 
@@ -977,7 +977,7 @@
 	   ((strict-r6rs)
 	    (cons sym (%parse-library-options ?other*)))
 	   (else
-	    (syntax-violation __who__
+	    (syntax-violation __module_who__
 	      "invalid library option" ?opt)))))
       ))
 
@@ -1254,7 +1254,7 @@
 	   (let ((label (id->label export-id)))
 	     (if label
 		 (cons export-name label)
-	       (stx-error export-id "cannot export unbound identifier"))))
+	       (syntax-violation #f "cannot export unbound identifier" export-id))))
       export-name* export-id*))
 
   (define (%make-export-env/macro* lex* loc* lexenv.run)

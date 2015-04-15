@@ -41,6 +41,7 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
+    (prefix (rnrs syntax-case) sys.)
     (psyntax.compat)
     (only (vicare)
 	  expand-library)
@@ -72,6 +73,17 @@
 ;;The  "chi-*" functions  are the  ones visiting  syntax objects  and performing  the
 ;;expansion process.
 ;;
+
+
+;;;; helpers
+
+(define-syntax stx-error
+  (syntax-rules ()
+    ((_ ?stx ?msg)
+     (syntax-violation #f ?msg ?stx))
+    ((_ ?stx)
+     (syntax-violation #f "syntax error" ?stx))
+    ))
 
 
 (module SPLICE-FIRST-ENVELOPE
@@ -546,7 +558,7 @@
 
 (module (chi-expr)
 
-  (define (chi-expr expr.stx lexenv.run lexenv.expand)
+  (define* (chi-expr expr.stx lexenv.run lexenv.expand)
     ;;Expand a single expression form.  Return a PSI struct.
     ;;
     (%drop-splice-first-envelope-maybe
@@ -696,9 +708,9 @@
 	 ((let-syntax letrec-syntax)
 	  ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
 	  (syntax-match expr.stx ()
-	    ((_ ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
+	    ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
 	     (unless (valid-bound-ids? ?xlhs*)
-	       (stx-error expr.stx "invalid identifiers"))
+	       (syntax-violation __who__ "invalid identifiers" expr.stx))
 	     (let* ((xlab* (map gensym-for-label ?xlhs*))
 		    (xrib  (make-filled-rib ?xlhs* xlab*))
 		    (xb*   (map (lambda (x)
@@ -729,18 +741,19 @@
 	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
 	 ((define define-syntax define-fluid-syntax define-alias module import library)
-	  (stx-error expr.stx (string-append
-			       (case type
-				 ((define)                 "a definition")
-				 ((define-syntax)          "a define-syntax")
-				 ((define-fluid-syntax)    "a define-fluid-syntax")
-				 ((define-alias)           "a define-alias")
-				 ((module)                 "a module definition")
-				 ((library)                "a library definition")
-				 ((import)                 "an import declaration")
-				 ((export)                 "an export declaration")
-				 (else                     "a non-expression"))
-			       " was found where an expression was expected")))
+	  (stx-error expr.stx
+		     (string-append
+		      (case type
+			((define)                 "a definition")
+			((define-syntax)          "a define-syntax")
+			((define-fluid-syntax)    "a define-fluid-syntax")
+			((define-alias)           "a define-alias")
+			((module)                 "a module definition")
+			((library)                "a library definition")
+			((import)                 "an import declaration")
+			((export)                 "an export declaration")
+			(else                     "a non-expression"))
+		      " was found where an expression was expected")))
 
 	 ((mutable)
 	  ;;Variable in reference  position, whose binding is a  mutable variable; it
@@ -819,6 +832,12 @@
 	    (%drop-splice-first-envelope-maybe (chi-expr (splice-first-envelope-form expr) lexenv.run lexenv.expand)
 					       lexenv.run lexenv.expand))
 	expr.psi)))
+
+  (define-syntax stx-error
+    (syntax-rules ()
+      ((_ ?stx ?msg . ?args)
+       (syntax-violation __who__ ?msg ?stx . ?args))
+      ))
 
   #| end of module: CHI-EXPR |# )
 
@@ -1738,7 +1757,13 @@
 	     input-form.stx lhs.id)))
 
 	(else
-	 (stx-error input-form.stx)))))
+	 (stx-error input-form.stx "syntax error")))))
+
+  (define-syntax stx-error
+    (syntax-rules ()
+      ((_ ?stx ?msg)
+       (syntax-violation 'set! ?msg ?stx))
+      ))
 
   #| end of module: CHI-SET |# )
 
@@ -2367,7 +2392,7 @@
 		     mix-definitions-and-expressions?
 		     shadowing-definitions?))
       (when (null? trailing-expr-stx*^)
-	(stx-error body-form*.stx "no expression in body"))
+	(syntax-violation #f "no expression in body" body-form*.stx))
       ;;We want order here!   First the RHS then the inits, so that  tags are put in
       ;;place when the inits are expanded.
       (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
@@ -2493,7 +2518,7 @@
 	       (receive (id tag qrhs.stx)
 		   (%parse-define body-form.stx)
 		 (when (bound-id-member? id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
+		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
 		 (receive (lab lex)
 		     ;;About this call to GEN-DEFINE-LABEL+LEX notice that:
 		     ;;

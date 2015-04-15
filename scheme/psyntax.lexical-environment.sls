@@ -249,7 +249,6 @@
 
     ;; helpers
     expression-position
-    stx-error
     current-run-lexenv
 
     ;; bindings for (vicare expander)
@@ -1034,7 +1033,7 @@
   (define (%follow-through binding lexenv accum-labels)
     (let ((synonym-label (synonym-syntax-binding-synonym-label binding)))
       (if (memq synonym-label accum-labels)
-	  (stx-error #f "circular reference detected while resolving synonym transformers")
+	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
 	(label->syntactic-binding synonym-label lexenv (cons synonym-label accum-labels)))))
 
   #| end of module |# )
@@ -2589,7 +2588,7 @@
 	   #'?id
 	 (recur #'?rest (cons #'?id collected-id*))))
       (_
-       (stx-error standard-formals-stx "invalid formals")))))
+       (syntax-violation #f "invalid formals" standard-formals-stx)))))
 
 (define (bound-id-member? id id*)
   ;;Given  an identifier  ID  and a  list  of identifiers  ID*: return  #t  if ID  is
@@ -2620,18 +2619,6 @@
 
 
 ;;;; errors helpers
-
-(define-syntax stx-error
-  ;;Convenience wrapper for raising syntax violations.
-  ;;
-  (syntax-rules (quote)
-    ((_ ?expr-stx)
-     (syntax-violation #f "syntax error" ?expr-stx))
-    ((_ ?expr-stx ?msg)
-     (syntax-violation #f ?msg ?expr-stx))
-    ((_ ?expr-stx ?msg ?who)
-     (syntax-violation ?who ?msg ?expr-stx))
-    ))
 
 (define (retvals-signature? x)
   ;;FIXME This  is defined  here to  nothing to avoid  sharing contexts  between this
