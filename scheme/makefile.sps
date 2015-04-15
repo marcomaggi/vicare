@@ -600,6 +600,8 @@
     (begin0					(macro . begin0))
     (xor					(macro . xor))
 
+    (unsafe					(macro . unsafe))
+
     (stdin					(macro . stdin))
     (stdout					(macro . stdout))
     (stderr					(macro . stderr))
@@ -2865,6 +2867,10 @@
     (predicate-procedure-argument-validation	v $language)
     (predicate-return-value-validation		v $language)
 ;;;
+    (unsafe					v $language)
+    (set-identifier-unsafe-variant!		v $language)
+    (identifier-unsafe-variant			v $language)
+;;;
     (eval-for-expand				v $language)
     (begin-for-syntax				v $language)
 ;;;
@@ -4377,8 +4383,6 @@
     (set-label-tag!				$type-specs)
     (override-label-tag!			$type-specs)
     (label-tag					$type-specs)
-
-    (set-identifier-unsafe-variant!		$type-specs)
 
     (expand-time-type-signature-violation?			$type-specs)
     (expand-time-retvals-signature-violation?			$type-specs)

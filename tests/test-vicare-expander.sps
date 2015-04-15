@@ -4541,7 +4541,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'non-hygienic-identifier-syntaxes))
+(parametrise ((check-test-name	'internal-body))
 
   (check
       (with-result
@@ -4566,6 +4566,39 @@
 	(add-result b)
 	(+ a b)))
     => `(,(+ 1 2) (1 2)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'unsafe-variant))
+
+  (define* ({string-ref-fx fixnum?} {str string?} {idx fixnum?})
+    (add-result 'safe)
+    (char->fixnum (string-ref str idx)))
+
+  (define (~string-ref-fx str idx)
+    (add-result 'unsafe)
+    (char->fixnum (string-ref str idx)))
+
+  (begin-for-syntax
+    (set-identifier-unsafe-variant! #'string-ref-fx #'~string-ref-fx))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+	(apply string-ref-fx "ciao" 1 '()))
+    => `(,(char->fixnum #\i) (safe)))
+
+  (check	;substitution performed by the expander
+      (with-result
+	(string-ref-fx "ciao" 1))
+    => `(,(char->fixnum #\i) (unsafe)))
+
+  (check
+      (with-result
+	((unsafe string-ref-fx) "ciao" 1))
+    => `(,(char->fixnum #\i) (unsafe)))
 
   #t)
 

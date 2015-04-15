@@ -10,7 +10,6 @@ identifiers.
 * obspec parsers::              Parsing tagged syntaxes.
 * obspec bindings::             Tagged language binding properties.
 * obspec definition::           Object type specification.
-* obspec unsafe variants::      Unsafe binding variants.
 @end menu
 
 @c page
@@ -1781,118 +1780,6 @@ Build and return a new instance of @objtype{object-type-spec}.
 @defun object-type-spec? @var{obj}
 Return @true{} if @var{obj} is an instance of
 @objtype{object-type-spec}, otherwise return @false{}.
-@end defun
-
-@c page
-@node obspec unsafe variants
-@section Unsafe binding variants
-
-
-Whenever we apply a function to a tuple of arguments of which we know at
-compile--time the type is correct: we can avoid run--time arguments type
-validation; it would be ideal to replace the call to an
-argument--validating (safe) function with a call to a non--validating
-(unsafe) function.  This is what the expander does with unsafe variants.
-
-The @dfn{unsafe variant} of a function is a syntax object which,
-expanded by itself and evaluated, returns a function that does not
-validate the type of its arguments.  As example, the function:
-
-@example
-#!vicare
-(import (vicare))
-
-(define* (@{string-ref-fx fixnum?@} @{str string?@} @{idx fixnum?@})
-  (import (vicare system $chars)
-    (vicare system $strings))
-  (assert (and (fx<=? 0 idx)
-               (fx<?  idx (string-length str))))
-  ($char->fixnum ($string-ref str idx)))
-@end example
-
-@noindent
-can be split into:
-
-@example
-(define* (@{string-ref-fx fixnum?@} @{str string?@} @{idx fixnum?@})
-  ($string-ref-fx str idx))
-
-(define ($string-ref-fx str idx)
-  (import (vicare system $chars)
-    (vicare system $strings))
-  (assert (and (fx<=? 0 idx)
-               (fx<?  idx (string-length str))))
-  ($char->fixnum ($string-ref str idx)))
-@end example
-
-@noindent
-where the function @func{$string-ref-fx} is an unsafe implementation of
-@func{string-ref-fx}; in this case the syntax object:
-
-@example
-(syntax $string-ref-fx)
-@end example
-
-@noindent
-is the unsafe variant of @func{string-ref-fx}; the unsafe variants
-@api{} allows us to register this fact, for use by the expander, as
-follows:
-
-@example
-(begin-for-syntax
-  (import
-     (prefix (vicare expander object-type-specs) typ.))
-  (typ.set-identifier-unsafe-variant! #'string-ref-fx
-    #'$string-ref-fx))
-@end example
-
-All this infrastructure is automatically implemented by the expander
-when we use the tagged language and the built--in @func{define} syntax;
-the expander will use the prefix @samp{~} to generate the unsafe
-function name.  So it is enough for us to write:
-
-@example
-#!vicare
-(import (vicare))
-(option tagged-language)
-
-(define (@{string-ref-fx <fixnum>@} @{str <string>@} @{idx <fixnum>@})
-  (import (vicare system $chars)
-    (vicare system $strings))
-  (assert (and (fx<=? 0 idx)
-               (fx<?  idx (string-length str))))
-  ($char->fixnum ($string-ref str idx)))
-@end example
-
-@noindent
-whenever the expander finds:
-
-@example
-(string-ref-fx "ciao" 2)
-@end example
-
-@noindent
-it can validate the arguments and replace the form with:
-
-@example
-(~string-ref-fx "ciao" 2)
-@end example
-
-We still need to hand--write validations involving multiple arguments.
-
-
-@defun set-identifier-unsafe-variant! @meta{safe.id} @meta{unsafe.stx}
-Specify that the unsafe variant of the binding for the identifier
-@meta{safe.id} is the expression in the syntax object @meta{unsafe.stx}.
-@meta{unsafe.stx} is stored as syntax object and it is expanded and
-evaluated at each use of the unsafe variant.
-@end defun
-
-
-@defun identifier-unsafe-variant @var{safe.id}
-Return the syntax object registered as unsafe variant of the bound
-identifier @var{safe.id}; return @false{} if @var{safe.id} has no unsafe
-variant.
 @end defun
 
 @c end of file
