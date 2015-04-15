@@ -338,7 +338,7 @@
        (identifier? ?id)
        (cond ((bound-id-member? ?id literals)
 	      (values `#(free-id ,?id) pvars.levels))
-	     ((free-id=? ?id (scheme-stx '_))
+	     ((~free-identifier=? ?id (scheme-stx '_))
 	      (values '_ pvars.levels))
 	     (else
 	      ;;It is a pattern variable.
@@ -398,7 +398,7 @@
 
   (define (%free-identifier-and-symbol? x sym)
     (and (identifier? x)
-	 (free-id=? x (scheme-stx sym))))
+	 (~free-identifier=? x (scheme-stx sym))))
 
   #| end of module |# )
 
@@ -572,7 +572,7 @@
 	((free-id)
 	 (and (symbol? expr)
 	      (top-marked? mark*)
-	      (free-id=? (%make-syntax-object expr mark* rib* annotated-expr*)
+	      (~free-identifier=? (%make-syntax-object expr mark* rib* annotated-expr*)
 			 (vector-ref pattern 1))
 	      pvar*))
 
@@ -587,8 +587,8 @@
 	((scheme-id)
 	 (and (symbol? expr)
 	      (top-marked? mark*)
-	      (free-id=? (%make-syntax-object expr mark* rib* annotated-expr*)
-			 (scheme-stx (vector-ref pattern 1)))
+	      (~free-identifier=? (%make-syntax-object expr mark* rib* annotated-expr*)
+				  (scheme-stx (vector-ref pattern 1)))
 	      pvar*))
 
 	;;The pattern is:

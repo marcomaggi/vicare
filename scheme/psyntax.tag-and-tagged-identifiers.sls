@@ -598,7 +598,7 @@
   ;;otherwise return false.
   ;;
   (and (identifier? obj)
-       (lex.$identifier-bound? obj)
+       (lex.~identifier-bound? obj)
        (and ($identifier-object-type-spec obj)
 	    #t)))
 
@@ -607,7 +607,7 @@
   ;;it is a sub-tag of "<list>"; otherwise return false.
   ;;
   (and (identifier? obj)
-       (lex.$identifier-bound? obj)
+       (lex.~identifier-bound? obj)
        ($identifier-object-type-spec obj)
        (tag-super-and-sub? (list-tag-id) obj)
        #t))
@@ -636,12 +636,12 @@
     ($tag-super-and-sub? super-tag sub-tag))
 
   (define ($tag-super-and-sub? super-tag sub-tag)
-    (or (lex.free-id=? super-tag sub-tag)
-	(lex.free-id=? (top-tag-id) super-tag)
+    (or (lex.~free-identifier=? super-tag sub-tag)
+	(lex.~free-identifier=? (top-tag-id) super-tag)
 	(let ((pspec ($object-type-spec-parent-spec ($identifier-object-type-spec sub-tag))))
 	  (and pspec
 	       (let ((sub-ptag ($object-type-spec-type-id pspec)))
-		 (and (not (lex.free-id=? (top-tag-id) sub-ptag))
+		 (and (not (lex.~free-identifier=? (top-tag-id) sub-ptag))
 		      ($tag-super-and-sub? super-tag sub-ptag)))))))
 
   #| end of module |# )
@@ -672,9 +672,9 @@
   ;;
   ;;FIXME Once the object type spec representation has been stabilised: this function
   ;;must be rewritten  in a more efficient manner, comparing  symbols with EQ? rather
-  ;;than comparing identifiers with LEX.FREE-ID=?.  (Marco Maggi; Sat Apr 5, 2014)
+  ;;than comparing identifiers with LEX.~FREE-IDENTIFIER=?.  (Marco Maggi; Sat Apr 5, 2014)
   ;;
-  (if (or (lex.free-id=? tag1 tag2)
+  (if (or (lex.~free-identifier=? tag1 tag2)
 	  ($top-tag-id? tag1)
 	  ($top-tag-id? tag2))
       tag1
@@ -685,7 +685,7 @@
 	      ((let inner ((anc2 anc2))
 		 (cond ((null? anc2)
 			#f)
-		       ((lex.free-id=? ($car anc1) ($car anc2))
+		       ((lex.~free-identifier=? ($car anc1) ($car anc2))
 			($car anc1))
 		       (else
 			(inner ($cdr anc2))))))
@@ -1012,7 +1012,7 @@
 ;;
 ;;   (define (%caster-maker source.tag input-form.stx)
 ;;     (if source.tag
-;; 	(cond ((lex.free-id=? source.tag (S <string>))		(S string->object))
+;; 	(cond ((lex.~free-identifier=? source.tag (S <string>))		(S string->object))
 ;; 	      (else
 ;; 	       (syntax-violation __who__
 ;; 		 "invalid cast source object type" input-form.stx source.tag)))
@@ -1143,7 +1143,7 @@
 
     (define (%caster-maker source.tag input-form.stx)
       (if source.tag
-	  (cond ((lex.free-id=? source.tag (S <string>))		(S string->symbol))
+	  (cond ((lex.~free-identifier=? source.tag (S <string>))		(S string->symbol))
 		(else
 		 (syntax-violation __who__ "invalid cast source object type" input-form.stx source.tag)))
 	(S any->symbol)))
@@ -1448,23 +1448,23 @@
 
     (define (%caster-maker source-tag input-form.stx)
       (if source-tag
-	  (cond ((lex.free-id=? source-tag (S <symbol>))
+	  (cond ((lex.~free-identifier=? source-tag (S <symbol>))
 		 (S symbol->string))
-		((or (lex.free-id=? source-tag (S <fixnum>))
-		     (lex.free-id=? source-tag (S <flonum>))
-		     (lex.free-id=? source-tag (S <ratnum>))
-		     (lex.free-id=? source-tag (S <bignum>))
-		     (lex.free-id=? source-tag (S <compnum>))
-		     (lex.free-id=? source-tag (S <cflonum>))
-		     (lex.free-id=? source-tag (S <exact-integer>))
-		     (lex.free-id=? source-tag (S <integer-valued>))
-		     (lex.free-id=? source-tag (S <integer>))
-		     (lex.free-id=? source-tag (S <rational-valued>))
-		     (lex.free-id=? source-tag (S <rational>))
-		     (lex.free-id=? source-tag (S <real-valued>))
-		     (lex.free-id=? source-tag (S <real>))
-		     (lex.free-id=? source-tag (S <complex>))
-		     (lex.free-id=? source-tag (S <number>)))
+		((or (lex.~free-identifier=? source-tag (S <fixnum>))
+		     (lex.~free-identifier=? source-tag (S <flonum>))
+		     (lex.~free-identifier=? source-tag (S <ratnum>))
+		     (lex.~free-identifier=? source-tag (S <bignum>))
+		     (lex.~free-identifier=? source-tag (S <compnum>))
+		     (lex.~free-identifier=? source-tag (S <cflonum>))
+		     (lex.~free-identifier=? source-tag (S <exact-integer>))
+		     (lex.~free-identifier=? source-tag (S <integer-valued>))
+		     (lex.~free-identifier=? source-tag (S <integer>))
+		     (lex.~free-identifier=? source-tag (S <rational-valued>))
+		     (lex.~free-identifier=? source-tag (S <rational>))
+		     (lex.~free-identifier=? source-tag (S <real-valued>))
+		     (lex.~free-identifier=? source-tag (S <real>))
+		     (lex.~free-identifier=? source-tag (S <complex>))
+		     (lex.~free-identifier=? source-tag (S <number>)))
 		 (S number->string))
 		(else
 		 (syntax-violation __who__ "invalid cast source object type" input-form.stx source-tag)))
@@ -1826,13 +1826,13 @@
 ;;; --------------------------------------------------------------------
 
 (define ($procedure-tag-id? id)
-  (lex.free-id=? id (procedure-tag-id)))
+  (lex.~free-identifier=? id (procedure-tag-id)))
 
 (define ($list-tag-id? id)
-  (lex.free-id=? id (list-tag-id)))
+  (lex.~free-identifier=? id (list-tag-id)))
 
 (define ($top-tag-id? id)
-  (lex.free-id=? id (top-tag-id)))
+  (lex.~free-identifier=? id (top-tag-id)))
 
 ;;; --------------------------------------------------------------------
 

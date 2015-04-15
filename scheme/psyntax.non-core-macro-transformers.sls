@@ -787,7 +787,7 @@
 
   (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
     (let* ((string->id (lambda (str)
-			 ($datum->syntax type.id (string->symbol str))))
+			 (~datum->syntax type.id (string->symbol str))))
 	   (type.sym   (identifier->symbol type.id))
 	   (type.str   (symbol->string type.sym)))
       (define-values (field*.id field*.tag)
@@ -800,7 +800,7 @@
 	     (uid            (if uid
 				 (identifier->symbol uid)
 			       (gensym type.str)))
-	     (rtd            ($datum->syntax type.id (make-struct-type type.str field*.sym uid)))
+	     (rtd            (~datum->syntax type.id (make-struct-type type.str field*.sym uid)))
 	     (constructor.id (or maker.id     (string->id (string-append "make-" type.str))))
 	     (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
 	     (field*.idx     (enumerate field*.stx)))
@@ -1720,7 +1720,7 @@
 
     (define (%free-id-member? x ls)
       (and (pair? ls)
-	   (or (free-id=? x (car ls))
+	   (or (~free-identifier=? x (car ls))
 	       (%free-id-member? x (cdr ls)))))
 
     #| end of module: %VERIFY-CLAUSES |# )
@@ -1737,7 +1737,7 @@
 	(()
 	 #f)
 	(((?key . ?rest) . ?clause*)
-	 (if (free-id=? id ?key)
+	 (if (~free-identifier=? id ?key)
 	     `(,?key . ,?rest)
 	   (next id ?clause*))))))
 

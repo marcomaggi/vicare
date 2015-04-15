@@ -2635,8 +2635,8 @@
     ;;
     ((_ (?define . ?stuff))
      (and (identifier? ?define)
-	  (or (free-id=? ?define (core-prim-id 'define))
-	      (free-id=? ?define (core-prim-id 'define*))))
+	  (or (~free-identifier=? ?define (core-prim-id 'define))
+	      (~free-identifier=? ?define (core-prim-id 'define*))))
      (let* ((expr.stx `(,(core-prim-id 'internal-body)
 			(,?define . ,?stuff)
 			(,(core-prim-id 'void))))

@@ -148,7 +148,7 @@
     $<stx>-rib*				$set-<stx>-rib*!
     $<stx>-ae*				$set-<stx>-ae*!
     ribs-and-shifts?
-    datum->syntax			$datum->syntax
+    datum->syntax			~datum->syntax
     syntax->datum
     mkstx				push-lexical-contour
     syntax-annotation			strip
@@ -189,9 +189,9 @@
     ;; public interface: identifiers handling
     identifier?				false-or-identifier-bound?
     false-or-identifier?
-    bound-identifier=?			bound-id=?
-    free-identifier=?			free-id=?
-    identifier-bound?			$identifier-bound?
+    bound-identifier=?			~bound-identifier=?
+    free-identifier=?			~free-identifier=?
+    identifier-bound?			~identifier-bound?
     identifier->symbol
     syntax-parameter-value
 
@@ -776,14 +776,14 @@
   ;;
   (if-wants-descriptive-gensyms
       (cond ((identifier? seed)
-	     (gensym (string-append "lex." (symbol->string (identifier->symbol seed)))))
+	     (gensym (string-append "lex." (symbol->string (~identifier->symbol seed)))))
 	    ((symbol? seed)
 	     (gensym (string-append "lex." (symbol->string seed))))
 	    (else
 	     (assertion-violation __who__
 	       "expected symbol or identifier as argument" seed)))
     (cond ((identifier? seed)
-	   (gensym (symbol->string (identifier->symbol seed))))
+	   (gensym (symbol->string (~identifier->symbol seed))))
 	  ((symbol? seed)
 	   (gensym (symbol->string seed)))
 	  (else
@@ -801,7 +801,7 @@
 	(gensym "loc.anonymous"))
        ((seed)
 	(cond ((identifier? seed)
-	       (gensym (string-append "loc." (symbol->string (identifier->symbol seed)))))
+	       (gensym (string-append "loc." (symbol->string (~identifier->symbol seed)))))
 	      ((symbol? seed)
 	       (gensym (string-append "loc." (symbol->string seed))))
 	      ((string? seed)
@@ -815,7 +815,7 @@
       (gensym))
      ((seed)
       (cond ((identifier? seed)
-	     (gensym (symbol->string (identifier->symbol seed))))
+	     (gensym (symbol->string (~identifier->symbol seed))))
 	    ((symbol? seed)
 	     (gensym (symbol->string seed)))
 	    ((string? seed)
@@ -834,7 +834,7 @@
   ;;
   (if-wants-descriptive-gensyms
       (cond ((identifier? seed)
-	     (gensym (string-append "lab." (symbol->string (identifier->symbol seed)))))
+	     (gensym (string-append "lab." (symbol->string (~identifier->symbol seed)))))
 	    ((symbol? seed)
 	     (gensym (string-append "lab." (symbol->string seed))))
 	    ((string? seed)
@@ -1588,7 +1588,7 @@
 ;;themselves syntax objects (wrapped or unwrapped).
 ;;
 ;;We always maintain  the invariant that we  do not double wrap  syntax objects.  The
-;;only way to  get a doubly-wrapped syntax object is  by doing $DATUM->SYNTAX (above)
+;;only way to  get a doubly-wrapped syntax object is  by doing ~DATUM->SYNTAX (above)
 ;;where the  datum is  itself a  wrapped syntax  object (R6RS  may not  even consider
 ;;wrapped syntax objects as datum, but let's not worry now).
 ;;
@@ -1681,9 +1681,9 @@
 ;;; --------------------------------------------------------------------
 
 (define* (datum->syntax {id identifier?} datum)
-  ($datum->syntax id datum))
+  (~datum->syntax id datum))
 
-(define ($datum->syntax id datum)
+(define (~datum->syntax id datum)
   ;;Since all the identifier->label bindings  are encapsulated within the identifier,
   ;;converting  a datum  to  a syntax  object (non-hygienically)  is  done simply  by
   ;;creating an <stx> that has the same marks and ribs as the identifier.
@@ -1834,7 +1834,7 @@
     ;;with the  same sym  and marks.   If found  return the  label, else
     ;;return false.
     ;;
-    (let ((sym (identifier->symbol id)))
+    (let ((sym (~identifier->symbol id)))
       (let search ((rib*  ($<stx>-rib*  id))
 		   (mark* ($<stx>-mark* id)))
 	(cond ((null? rib*)
@@ -2408,20 +2408,20 @@
 
 (define (underscore-id? id)
   (and (identifier? id)
-       (free-id=? id (underscore-id))))
+       (~free-identifier=? id (underscore-id))))
 
 (define (ellipsis-id? id)
   (and (identifier? id)
-       (free-id=? id (ellipsis-id))))
+       (~free-identifier=? id (ellipsis-id))))
 
 (define (place-holder-id? id)
   (and (identifier? id)
-       (free-id=? id (place-holder-id))))
+       (~free-identifier=? id (place-holder-id))))
 
 (define (jolly-id? id)
   (and (identifier? id)
-       (or (free-id=? id (underscore-id))
-	   (free-id=? id (place-holder-id)))))
+       (or (~free-identifier=? id (underscore-id))
+	   (~free-identifier=? id (place-holder-id)))))
 
 
 ;;;; public interface: identifiers handling
@@ -2443,59 +2443,54 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bound-identifier=? {x identifier?} {y identifier?})
-  (bound-id=? x y))
+  (~bound-identifier=? x y))
 
-(define (bound-id=? id1 id2)
-  ;;Two identifiers  are BOUND-ID=? if they  have the same name  and the
+(define (~bound-identifier=? id1 id2)
+  ;;Two identifiers  are ~BOUND-IDENTIFIER=? if they  have the same name  and the
   ;;same set of marks.
   ;;
-  (and (eq? (identifier->symbol id1) (identifier->symbol id2))
+  (and (eq? (~identifier->symbol id1) (~identifier->symbol id2))
        (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
 
 (define* (free-identifier=? {x identifier?} {y identifier?})
-  (free-id=? x y))
+  (~free-identifier=? x y))
 
-(define (free-id=? id1 id2)
-  ;;Two identifiers are  FREE-ID=? if either both are bound  to the same
-  ;;label or if both are unbound and they have the same name.
+(define (~free-identifier=? id1 id2)
+  ;;Two identifiers are ~FREE-IDENTIFIER=? if either both are bound to the same label
+  ;;or if both are unbound and they have the same name.
   ;;
   (let ((t1 (id->label id1))
 	(t2 (id->label id2)))
     (if (or t1 t2)
 	(eq? t1 t2)
-      (eq? (identifier->symbol id1)
-	   (identifier->symbol id2)))))
+      (eq? (~identifier->symbol id1)
+	   (~identifier->symbol id2)))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (identifier-bound? {id identifier?})
-  ($identifier-bound? id))
+  (~identifier-bound? id))
 
-(define ($identifier-bound? id)
+(define (~identifier-bound? id)
   (and (id->label id) #t))
 
 (define (false-or-identifier-bound? id)
   (or (not id)
       (and (identifier? id)
-	   ($identifier-bound? id))))
+	   (~identifier-bound? id))))
 
 ;;; --------------------------------------------------------------------
 
-(define* (identifier->symbol x)
+(define* (identifier->symbol {x identifier?})
   ;;Given an identifier return its symbol expression.
   ;;
-  (define (%error)
-    (assertion-violation __who__
-      "expected identifier as argument" x))
-  (unless (<stx>? x)
-    (%error))
-  (let* ((expr ($<stx>-expr x))
-	 (sym  (if (annotation? expr)
-		   (annotation-stripped expr)
-		 expr)))
-    (if (symbol? sym)
-	sym
-      (%error))))
+  (~identifier->symbol x))
+
+(define (~identifier->symbol x)
+  (let ((expr ($<stx>-expr x)))
+    (if (annotation? expr)
+	(annotation-stripped expr)
+      expr)))
 
 
 ;;;; identifiers: syntax parameters
@@ -2554,7 +2549,7 @@
 
 (define (valid-bound-ids? id*)
   ;;Given a list return #t if it  is made of identifers none of which is
-  ;;BOUND-ID=? to another; else return #f.
+  ;;~BOUND-IDENTIFIER=? to another; else return #f.
   ;;
   ;;This function is called to validate  both list of LAMBDA formals and
   ;;list of LET binding identifiers.  The only guarantee about the input
@@ -2565,7 +2560,7 @@
 
 (define (distinct-bound-ids? id*)
   ;;Given a list of identifiers: return #t if none of the identifiers is
-  ;;BOUND-ID=? to another; else return #f.
+  ;;~BOUND-IDENTIFIER=? to another; else return #f.
   ;;
   (or (null? id*)
       (and (not (bound-id-member? ($car id*) ($cdr id*)))
@@ -2573,7 +2568,7 @@
 
 (define (duplicate-bound-formals? standard-formals-stx)
   ;;Given  a  syntax  object  representing a  list  of  UNtagged  LAMBDA
-  ;;formals:  return #f  if none  of the  identifiers is  BOUND-ID=?  to
+  ;;formals:  return #f  if none  of the  identifiers is  ~BOUND-IDENTIFIER=?  to
   ;;another; else return a duplicate identifier.
   ;;
   (let recur ((fmls          standard-formals-stx)
@@ -2597,11 +2592,11 @@
        (stx-error standard-formals-stx "invalid formals")))))
 
 (define (bound-id-member? id id*)
-  ;;Given an identifier  ID and a list of identifiers  ID*: return #t if
-  ;;ID is BOUND-ID=? to one of the identifiers in ID*; else return #f.
+  ;;Given  an identifier  ID  and a  list  of identifiers  ID*: return  #t  if ID  is
+  ;;~BOUND-IDENTIFIER=? to one of the identifiers in ID*; else return #f.
   ;;
   (and (pair? id*)
-       (or (bound-id=? id ($car id*))
+       (or (~bound-identifier=? id ($car id*))
 	   (bound-id-member? id ($cdr id*)))))
 
 (define* (identifier-append {ctxt identifier?} . str*)
@@ -2609,7 +2604,7 @@
   ;;identifiers STR*: concatenate all the items in STR*, with the result
   ;;build and return a new identifier in the same context of CTXT.
   ;;
-  ($datum->syntax ctxt
+  (~datum->syntax ctxt
 		  (string->symbol
 		   (apply string-append
 			  (map (lambda (x)

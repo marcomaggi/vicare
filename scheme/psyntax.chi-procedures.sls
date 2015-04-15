@@ -2949,7 +2949,7 @@
 	 (receive (name-vec label-vec)
 	     (parse-import-spec* (syntax->datum ?imp*))
 	   (values (vector-map (lambda (name)
-				 ($datum->syntax ?ctxt name))
+				 (~datum->syntax ?ctxt name))
 		     name-vec)
 		   label-vec)))
 	(_

@@ -24,7 +24,7 @@
   (import (rnrs)
     (psyntax.compat)
     (only (psyntax.lexical-environment)
-	  bound-id=?
+	  ~bound-identifier=?
 	  valid-bound-ids?)
     (psyntax.syntax-match))
 
@@ -38,7 +38,7 @@
   ;;2.  A  list of  identifiers  (syntax  objects  holding  a symbol  as  expression)
   ;;   representing the internal names of the exported bindings.
   ;;
-  ;;This function checks that none of  the identifiers is BOUND-ID=?  to another: the
+  ;;This function checks that none of  the identifiers is ~BOUND-IDENTIFIER=?  to another: the
   ;;library does not  export the same external *name* twice.   It is instead possible
   ;;to export  the same identifier  multiple times if  we give it  different external
   ;;names.
@@ -200,7 +200,7 @@
   (define (%find-bound=? x lhs* rhs*)
     (cond ((null? lhs*)
 	   #f)
-	  ((bound-id=? x (car lhs*))
+	  ((~bound-identifier=? x (car lhs*))
 	   (car rhs*))
 	  (else
 	   (%find-bound=? x (cdr lhs*) (cdr rhs*)))))
