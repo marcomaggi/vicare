@@ -157,10 +157,16 @@ ik_fasl_load (ikpcb* pcb, char* fasl_file)
       ik_debug_message("executing boot image super code object init expressions");
     {
       ikptr s_retval = ik_exec_code(pcb, s_code, 0, 0);
-      if (IK_VOID_OBJECT != s_retval) {
-	ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
-				    __func__, fasl_file);
-	ik_print(s_retval);
+      if (0) {
+	/* For some reason, at some point, someone introduced this check
+	   for  debugging purposes.   It  is not  really important  what
+	   return value comes from  running the init expression.  (Marco
+	   Maggi; Thu Apr 16, 2015) */
+	if (IK_VOID_OBJECT != s_retval) {
+	  ik_debug_message_no_newline("%s: code object from %s returned non-void value: ",
+				      __func__, fasl_file);
+	  ik_print(s_retval);
+	}
       }
     }
   }
