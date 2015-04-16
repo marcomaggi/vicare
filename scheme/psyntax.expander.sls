@@ -761,19 +761,14 @@
 	     ;;loaded and visited.
 	     (visit-code	(%build-visit-code macro* option*))
 	     (visible?		#t))
+	 ;;This call returns a "library" object.
 	 (intern-library uid libname
 			 import-libdesc* visit-libdesc* invoke-libdesc*
 			 export-subst export-env
 			 visit-proc invoke-proc
 			 visit-code invoke-code
 			 guard-code guard-libdesc*
-			 visible? filename option*)
-	 (values uid libname
-		 import-libdesc* visit-libdesc* invoke-libdesc*
-		 invoke-code visit-code
-		 export-subst export-env
-		 guard-code guard-libdesc*
-		 option*)))))
+			 visible? filename option*)))))
 
   (define (%build-visit-code macro* option*)
     ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
@@ -826,25 +821,19 @@
   #| end of module: EXPAND-LIBRARY |# )
 
 (define (expand-library->sexp libsexp)
-  (receive (uid libname
-	    import-libdesc* visit-libdesc* invoke-libdesc*
-	    invoke-code visit-code
-	    export-subst export-env
-	    guard-code guard-libdesc*
-	    option*)
-      (expand-library libsexp)
-    `((uid		. ,uid)
-      (libname		. ,libname)
-      (import-libdesc*	. ,import-libdesc*)
-      (visit-libdesc*	. ,visit-libdesc*)
-      (invoke-libdesc*	. ,invoke-libdesc*)
-      (invoke-code	. ,invoke-code)
-      (visit-code	. ,visit-code)
-      (export-subst	. ,export-subst)
-      (export-env	. ,export-env)
-      (guard-code	. ,guard-code)
-      (guard-libdesc*	. ,guard-libdesc*)
-      (option*		. ,option*))))
+  (let ((lib (expand-library libsexp)))
+    `((uid		. ,(library-uid           lib))
+      (libname		. ,(library-name          lib))
+      (import-libdesc*	. ,(map library-descriptor (library-imp-lib* lib)))
+      (visit-libdesc*	. ,(map library-descriptor (library-vis-lib* lib)))
+      (invoke-libdesc*	. ,(map library-descriptor (library-inv-lib* lib)))
+      (invoke-code	. ,(library-invoke-code   lib))
+      (visit-code	. ,(library-visit-code    lib))
+      (export-subst	. ,(library-export-subst  lib))
+      (export-env	. ,(library-export-env    lib))
+      (guard-code	. ,(library-guard-code    lib))
+      (guard-libdesc*	. ,(map library-descriptor (library-guard-lib* lib)))
+      (option*		. ,(library-option*       lib)))))
 
 
 (module CORE-LIBRARY-EXPANDER

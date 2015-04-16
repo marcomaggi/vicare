@@ -52,6 +52,8 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/exception-handlers-implementation.texi	\
 	doc/iklib.texi					\
 	doc/libutils.texi				\
+	doc/progutils.texi				\
+	doc/includes.texi				\
 	doc/ffi.texi					\
 	doc/syslib.texi					\
 	doc/tags.texi					\
@@ -713,6 +715,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-io.sps					\
 	tests/test-vicare-letrec-syntax.sps				\
 	tests/test-vicare-library-utils.sps				\
+	tests/test-vicare-program-utils.sps				\
 	tests/test-vicare-lists.sps					\
 	tests/test-vicare-log.sps					\
 	tests/test-vicare-numerics-generic.sps				\

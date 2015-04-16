@@ -43,7 +43,7 @@
     run-compiled-program
     compile-source-library
     current-library-serialiser
-    current-library-build-directory-serialiser)
+    current-library-serialiser-in-build-directory)
   (import (except (vicare)
 		  load)
     (prefix (ikarus.posix)
@@ -315,12 +315,12 @@
     (guard (E ((eq? E REJECT-KEY)
 	       (print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
 	       #f))
-      (receive (uid libname . unused)
-	  ;;This  call to  the library  expander loads  and interns  all the  library
-	  ;;dependencies using FIND-LIBRARY-BY-REFERENCE.
-	  ((libman.current-library-expander) libsexp source-pathname %verify-libname)
-	(print-library-verbose-message "loaded library \"~a\" from: ~a" libname (port-id port))
-	libname))))
+      ;;This  call  to  the  library  expander loads  and  interns  all  the  library
+      ;;dependencies using FIND-LIBRARY-BY-REFERENCE.
+      (let ((lib  ((libman.current-library-expander) libsexp source-pathname %verify-libname)))
+	(receive-and-return (name)
+	    (libman.library-name lib)
+	  (print-library-verbose-message "loaded library \"~a\" from: ~a" name (port-id port)))))))
 
 (define current-source-library-loader
   ;;Reference a function used to load a source library from a textual input port.
@@ -937,7 +937,7 @@
 ;;; --------------------------------------------------------------------
 
 (define* (default-library-build-directory-serialiser {lib libman.library?})
-  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-BUILD-DIRECTORY-SERIALISER.
+  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-SERIALISER-IN-BUILD-DIRECTORY.
   ;;Given aLIBRARY  object: serialise the compiled  library in a FASL  file under the
   ;;currently selected store directory.  Return unspecified values.  Serialisation is
   ;;performed  with the  library  serialiser procedure  referenced  by the  parameter
@@ -947,7 +947,7 @@
     (let ((binary-pathname (library-name->library-binary-pathname-in-build-directory (libman.library-name lib))))
       ((current-library-serialiser) lib binary-pathname))))
 
-(define current-library-build-directory-serialiser
+(define current-library-serialiser-in-build-directory
   ;;References a  function used to  serialise a compiled library  into a file  in the
   ;;currently selected store directory.
   ;;
@@ -1179,33 +1179,22 @@
   (define* (compile-source-library {source-pathname posix.file-string-pathname?}
 				   {binary-pathname %false-or-file-string-pathname?})
     ;;Load the  first LIBRARY form from  the given file pathname;  expand it, compile
-    ;;it, serialise it.  Return unspecified values.
+    ;;it, serialise  it.  When  successful: return  a "library"  object; if  an error
+    ;;occurs: raise an exception.
     ;;
     ;;The source library  is expanded with the procedure currently  referenced by the
     ;;parameter  CURRENT-LIBRARY-EXPANDER.   If  the BINARY-PATHNAME  is  given:  the
     ;;binary library  is serialised  with the procedure  currently referenced  by the
     ;;parameter  CURRENT-LIBRARY-SERIALISER;  otherwise  it is  serialised  with  the
     ;;procedure       currently        referenced       by        the       parameter
-    ;;CURRENT-LIBRARY-BUILD-DIRECTORY-SERIALISER.
+    ;;CURRENT-LIBRARY-SERIALISER-IN-BUILD-DIRECTORY.
     ;;
-    (cond ((let ((libsexp (%read-first-library-form-from-source-library-file __who__ source-pathname)))
-	     ;;We receive all these values, but we are interested only in the LIBNAME.
-	     (receive (uid libname
-			   import-libdesc* visit-libdesc* invoke-libdesc*
-			   invoke-code visit-code
-			   export-subst export-env
-			   guard-code guard-libdesc*
-			   option*)
-		 ((libman.current-library-expander) libsexp source-pathname (lambda (libname) (void)))
-	       (libman.find-library-by-name libname)))
-	   => (lambda (lib)
-		(if binary-pathname
-		    ((current-library-serialiser) lib binary-pathname)
-		  ((current-library-build-directory-serialiser) lib))))
-	  (else
-	   (error __who__
-	     "unable to retrieve LIBRARY object after expanding and compiling source library"
-	     source-pathname))))
+    (let ((libsexp (%read-first-library-form-from-source-library-file __who__ source-pathname)))
+      (receive-and-return (lib)
+	  ((libman.current-library-expander) libsexp source-pathname (lambda (libname) (void)))
+	(if binary-pathname
+	    ((current-library-serialiser) lib binary-pathname)
+	  ((current-library-serialiser-in-build-directory) lib)))))
 
   (define (%read-first-library-form-from-source-library-file who source-pathname)
     (module (%open-source-library)

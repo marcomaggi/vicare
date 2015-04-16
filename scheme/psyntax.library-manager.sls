@@ -1,4 +1,4 @@
-;;;Copyright (c) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -403,14 +403,8 @@
   ;;The current library  expander is used to expand LIBRARY  forms from source files.
   ;;The interface is as follows:
   ;;
-  ;;   (receive (uid libname
-  ;;             import-libdesc* visit-libdesc* invoke-libdesc*
-  ;;             invoke-code visit-code
-  ;;             export-subst export-env
-  ;;             guard-code guard-libdesc*
-  ;;             library-option*)
-  ;;       ((current-library-expander) ?libsexp ?source-pathname ?verify-libname)
-  ;;     ---)
+  ;;   (define lib
+  ;;     ((current-library-expander) ?libsexp ?source-pathname ?verify-libname))
   ;;
   ;;The argument ?LIBSEXP must be the symbolic expression:
   ;;
@@ -426,6 +420,8 @@
   ;;library name as argument; it is meant to perform some validation upon the library
   ;;name components (especially  the version) and raise an exception  if something is
   ;;wrong; otherwise it should just return.
+  ;;
+  ;;The returned value must be an object of type "library".
   ;;
   (make-parameter
       (lambda (library-sexp)
@@ -507,8 +503,9 @@
      ((current-library-collection)))))
 
 (module (intern-library)
-  ;;Build a  LIBRARY object and  intern it in  the internal collection  of libraries;
-  ;;return unspecified values.  The arguments are:
+  ;;Build a  LIBRARY object and  intern it in  the internal collection  of libraries.
+  ;;When successful:  return a "library"  object; otherwise raise an  exception.  The
+  ;;arguments are:
   ;;
   ;;UID -
   ;;   A gensym uniquely identifying this library.
@@ -589,10 +586,11 @@
 	  (guard-lib*	(map find-library-in-collection-by-descriptor guard-libdesc*)))
       (when (find-library-in-collection-by-name libname)
 	(assertion-violation __module_who__ "library is already interned" libname))
-      (let ((lib (make-library uid libname import-lib* visit-lib* invoke-lib*
-			       export-subst export-env visit-proc invoke-proc
-			       visit-code invoke-code guard-code guard-lib*
-			       visible? source-file-name library-option*)))
+      (receive-and-return (lib)
+	  (make-library uid libname import-lib* visit-lib* invoke-lib*
+			export-subst export-env visit-proc invoke-proc
+			visit-code invoke-code guard-code guard-lib*
+			visible? source-file-name library-option*)
 	(%intern-library-object lib)
 	(when (memq 'visit-upon-loading library-option*)
 	  (visit-library lib)))))
@@ -747,7 +745,8 @@
   (label-binding lab))
 
 (define* (invoke-library {lib library?})
-  ;;Evaluate the invoke code.
+  ;;Evaluate the invoke code of the  library LIB.  When successful return LIB itself;
+  ;;if an error occurs: raise an exception.
   ;;
   (let ((invoke (library-invoke-state lib)))
     (when (procedure? invoke)
@@ -758,10 +757,12 @@
 				       (assertion-violation __who__ "first invoke did not return" lib)))
       (library-debug-message "invoking: ~a" (library-name lib))
       (invoke)
-      (set-library-invoke-state! lib #t))))
+      (set-library-invoke-state! lib #t)))
+  lib)
 
 (define* (visit-library {lib library?})
-  ;;Evaluate the visit code.
+  ;;Evaluate the visit  code of the library LIB.  When  successful return LIB itself;
+  ;;if an error occurs: raise an exception.
   ;;
   (let ((visit (library-visit-state lib)))
     (when (procedure? visit)
@@ -772,7 +773,8 @@
 				      (assertion-violation __who__ "first visit did not return" lib)))
       (library-debug-message "visiting: ~a" (library-name lib))
       (visit)
-      (set-library-visit-state! lib #t))))
+      (set-library-visit-state! lib #t)))
+  lib)
 
 
 ;;;; done

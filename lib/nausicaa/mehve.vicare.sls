@@ -873,9 +873,6 @@
     non-negative-exact-integer?
     non-positive-exact-integer?
     exit-hooks
-    expand-form-to-core-language
-    expand-library
-    expand-top-level
     export
     f4b-list->bytevector
     f4l-list->bytevector

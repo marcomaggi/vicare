@@ -1,0 +1,179 @@
+@node progutils
+@chapter Scheme programs utilities
+
+
+@cindex Library @library{vicare programs}
+@cindex @library{vicare programs}, library
+
+
+The library @library{vicare programs} exports bindings to deal with the
+programs infrastructure of @value{PRJNAME}; this library is integrated
+in the boot image.  It is suggested to import it using the prefix
+@samp{progs.}, as in
+
+@example
+(import (prefix (vicare programs) progs.))
+@end example
+
+@menu
+* progutils pathanmes::         Processing file pathnames.
+* progutils expanding::         Expanding programs.
+@end menu
+
+@c page
+@node progutils pathanmes
+@section Processing file pathnames
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun program-source-pathname->program-binary-pathname @var{source-pathname}
+Given a string representing the pathname of a Scheme program: build and
+return the pathname of the corresponding compiled program.
+
+If @var{source-pathname} has file extension @code{.sps}: strip such
+extension; otherwise append the extension @code{.fasl}.
+
+@example
+(program-source-pathname->program-binary-pathname
+   "demo.sps")
+@result{} "demo"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.sps")
+@result{} "tests/demo"
+
+(program-source-pathname->program-binary-pathname
+   "demo.ciao")
+@result{} "demo.ciao.fasl"
+
+(program-source-pathname->program-binary-pathname
+   "tests/demo.ciao")
+@result{} "tests/demo.ciao.fasl"
+@end example
+@end defun
+
+@c page
+@node progutils expanding
+@section Expanding programs
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun expand-top-level @var{sexp}
+Expand an @rnrs{6} program whose symbolic expression is @var{sexp}.
+Return @math{6} values:
+
+@table @var
+@item invoke-lib*
+A list of @objtype{library} objects representing the libraries that need
+to be invoked to run the code.
+
+@item invoke-code
+The fully expanded code from the body of the program.
+
+@item macro*
+A list of sublists representing the macros defined in the program.
+
+@item export-subst
+A subst representing the top--level bindings.
+
+@item export-env
+A list representing the bindings exported by the program.
+
+@item option*
+A list of symbols representing the options enabled for this program;
+@ref{iklib syntaxes programs} for details.
+@end table
+@end defun
+
+
+@defun expand-top-level->sexp @var{sexp}
+This function is for debugging purposes.  Expand the program form
+@var{sexp} and return the return values of @func{expand-top-level} in an
+alist with the following symbols as keys:
+
+@example
+invoke-lib* invoke-code
+macro*
+export-subst export-env
+option*
+@end example
+@end defun
+
+
+We can toy with the program expander using the following code:
+
+@example
+#!r6rs
+(import (vicare)
+  (prefix (vicare programs) progs.))
+(print-gensym #f)
+(debug-print (progs.expand-top-level->sexp @meta{sexp}))
+@end example
+
+@noindent
+where @meta{sexp} is the program symbolic expression.  For example,
+expanding the program:
+
+@example
+(import (vicare))
+(define var 1)
+(define-syntax (mac stx)
+  2)
+(display var)
+@end example
+
+@noindent
+yields the @code{invoke-code}:
+
+@example
+(library-letrec*
+    ((lex.var   loc.lex.var   '1)
+     (lex.dummy loc.lex.dummy
+        (begin
+          (annotated-call (display var)
+             (primitive display) lex.var)
+          ((primitive void)))))
+  ((primitive void)))
+@end example
+
+@noindent
+the @code{macro*}:
+
+@example
+((loc.lab.mac #<procedure> . (annotated-case-lambda
+                                 (#'lambda (#'stx) #'2)
+                               ((lex.stx) '2))))
+@end example
+
+@noindent
+where the procedure is the result of compiling and evaluating the
+expanded code; the @code{export-subst} (with many entries removed):
+
+@example
+((flmod          . g2374)
+ (flonum->string . g990)
+ (flsquare       . g743)
+ ...
+ (var            . lab.var)
+ (mac            . lab.mac))
+@end example
+
+@noindent
+the @code{export-env}:
+
+@example
+((lab.var global       . loc.lex.var)
+ (lab.mac global-macro . loc.lab.mac))
+@end example
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme"
+@c End:

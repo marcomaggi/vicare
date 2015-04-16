@@ -222,7 +222,9 @@ Trademarks used herein are the property of their respective owners.
 * baselib::                     Base library.
 * stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
-* libutils::                    Scheme libraries utility functions.
+* libutils::                    Scheme libraries utilities.
+* progutils::                   Scheme programs utilities.
+* includes::                    Loading include files.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
 * tags::                        Tagged language.
@@ -280,6 +282,8 @@ External documents
 @include stdlib.texi
 @include iklib.texi
 @include libutils.texi
+@include progutils.texi
+@include includes.texi
 @include ffi.texi
 @include syslib.texi
 @include tags.texi

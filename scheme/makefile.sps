@@ -1,4 +1,4 @@
-;;;Ikarus Scheme -- A compiler for R6RS Scheme.
+;;;Vicare Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -863,6 +863,7 @@
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
     ($libraries		(vicare libraries)			#t	#t)
+    ($programs		(vicare programs)			#t	#f)
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
@@ -1022,12 +1023,6 @@
     (readline-enabled?				v $language)
     (readline					v $language)
     (make-readline-input-port			v $language)
-    (expand-form-to-core-language		v $language)
-    (expand-library				v $language)
-    (expand-library->sexp			v $language)
-    (expand-top-level				v $language)
-    (expand-top-level->sexp			v $language)
-    (current-inferior-lexenv			$expander)
 ;;;
     (environment?				v $language)
     (environment-symbols			v $language)
@@ -2848,7 +2843,6 @@
     (begin0					v $language)
     (xor					v $language)
     (with-implicits				v $language)
-    (include					v $language)
     (set-cons!					v $language)
 ;;;
     (unwind-protect				v $language)
@@ -3109,6 +3103,17 @@
     (os-version					v $language)
 
     (host-info					v $language)
+
+;;; --------------------------------------------------------------------
+;;; include files
+
+    (include					v $language)
+    (current-include-loader			v $language)
+    (default-include-loader			v $language)
+    (default-include-file-locator		v $language)
+    (default-include-file-loader		v $language)
+    (current-include-file-locator		v $language)
+    (current-include-file-loader		v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $foreign)
@@ -3448,6 +3453,8 @@
 ;;; library infrastructure
 
     (current-library-expander				$libraries)
+    (expand-library					$libraries)
+    (expand-library->sexp				$libraries)
 
     (library?						$libraries)
     (library-uid					$libraries)
@@ -3504,7 +3511,6 @@
     (library-reference->library-binary-pathname-in-build-directory		$libraries)
     (library-source-pathname->library-stem-pathname				$libraries)
     (library-source-pathname->library-binary-tail-pathname			$libraries)
-    (program-source-pathname->program-binary-pathname	$libraries)
 
     (current-library-locator				$libraries)
     (run-time-library-locator				$libraries)
@@ -3516,12 +3522,18 @@
     (default-library-source-search-path-scanner		$libraries)
     (default-library-binary-search-path-scanner		$libraries)
 
-    (current-include-loader				$libraries)
-    (default-include-loader				$libraries)
-    (default-include-file-locator			$libraries)
-    (default-include-file-loader			$libraries)
-    (current-include-file-locator			$libraries)
-    (current-include-file-loader			$libraries)
+;;; --------------------------------------------------------------------
+;;; programs
+
+    (program-source-pathname->program-binary-pathname	$programs)
+    (expand-top-level					$programs)
+    (expand-top-level->sexp				$programs)
+
+;;; --------------------------------------------------------------------
+;;; expander stuff
+
+    (expand-form-to-core-language			$expander)
+    (current-inferior-lexenv				$expander)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

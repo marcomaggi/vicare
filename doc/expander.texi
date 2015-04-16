@@ -23,6 +23,7 @@ syntactic binding names, it is suggested to import it with prefix
 @menu
 * expander intro::              Introduction to the expansion process.
 * expander lexenv::             The lexical environment.
+* expander utils::              Miscellaneous utilities.
 @end menu
 
 @c page
@@ -2028,6 +2029,60 @@ associated @meta{label} and so the @meta{synonym-label}; then we can
 ``follow through'' @meta{synonym-label} to retrieve the actual binding
 descriptor associated to @meta{id}.
 
+@c page
+@node expander utils
+@section Miscellaneous utilities
+
+
+@menu
+* expander utils expanding::    Expanding forms.
+@end menu
+
+@c page
+@node expander utils expanding
+@subsection Expanding forms
+
+
+The following bindings are exported by the library @library{vicare
+expander}.
+
+
+@defun expand-form-to-core-language @var{sexp} @var{env}
+Interface to the internal expression expander, it is the expansion
+engine used by @rnrs{6}'s @func{eval} function.
+
+@var{sexp} must be a symbolic expression representing a Scheme form;
+@var{env} must be an evaluation environment.
+
+Return two values: the result of the expansion as symbolic expression in
+the core language; a list of libraries that must be invoked before
+evaluating the returned expression.
+
+Example:
+
+@example
+(import (vicare)
+  (prefix (vicare expander) xp.))
+
+(receive (code libs)
+     (xp.expand-form-to-core-language
+        '(define (doit x)
+           (if (null? x)
+               #f
+             (doit (cdr x))))
+        (environment '(vicare)))
+  code)
+@result{} (set! loc.doit
+     (annotated-case-lambda doit
+       ((lex.x)
+        (if (annotated-call (null? x)
+              (primitive null?) lex.x)
+            '#f
+        (annotated-call (doit (cdr x))
+          loc.doit
+          (annotated-call (cdr x) (primitive cdr) lex.x))))))
+@end example
+@end defun
 
 @c Local Variables:
 @c mode: texinfo
