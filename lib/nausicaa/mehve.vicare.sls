@@ -1291,11 +1291,6 @@
     symbol-bound?
     symbol->keyword
     symbol-value
-    syntax-object?
-    syntax-object-expression
-    syntax-object-marks
-    syntax-object-source-objects
-    syntax-object-ribs
     tanh
     time
     time<=?

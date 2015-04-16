@@ -824,6 +824,7 @@ descriptor.  This alist is called @lexenv{}.
 @end table
 
 @menu
+* expander lexenv syntax::      Inspecting syntax objects.
 * expander lexenv descriptors:: Syntactic binding's descriptors.
 * expander lexenv primitive::   Primitive syntactic bindings.
 * expander lexenv imported::    Imported syntactic bindings.
@@ -831,6 +832,49 @@ descriptor.  This alist is called @lexenv{}.
 * expander lexenv fluids::      How fluid syntaxes work.
 * expander lexenv synonyms::    How synonym syntaxes work.
 @end menu
+
+@c page
+@node expander lexenv syntax
+@subsection Inspecting syntax objects
+
+
+Under @value{PRJNAME}:
+
+@itemize
+@item
+A @dfn{wrapped syntax object} is an object of type @objtype{stx}; this
+type is disjoint from other object types.
+
+@item
+An @dfn{unwrapped syntax object} is a compound object holding: nulls,
+pairs, vectors, numbers, strings, bytevectors, chars, booleans,
+keywords, would--block objects, unbound objects, @eof{} objects, broken
+weak pointer objects, objects of type @objtype{stx}.
+@end itemize
+
+A standalone symbol object cannot be part of an unwrapped syntax object.
+The following bindings are exported by the library @library{vicare
+expander}.
+
+
+@defun syntax-object? @var{stx}
+Return @true{} if @var{stx} is a wrapped or unwrapped syntax object;
+otherwise return @false{}.
+@end defun
+
+
+@defun stx? @var{stx}
+Return @true{} if @var{stx} is a wrapped syntax object; else return
+@false{}.
+@end defun
+
+
+@defun stx-expression @var{stx}
+@defunx stx-marks @var{stx}
+@defunx stx-ribs @var{stx}
+@defunx stx-source-objects @var{stx}
+Field accessors for objects of type @objtype{stx}.
+@end defun
 
 @c page
 @node expander lexenv descriptors

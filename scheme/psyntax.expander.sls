@@ -338,7 +338,7 @@
     ;;
     (cond ((env? env)
 	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	     (let ((expr.stx (make-<stx> expr TOP-MARK* (list rib) '()))
+	     (let ((expr.stx (make-stx expr TOP-MARK* (list rib) '()))
 		   (rtc      (make-collector))
 		   (vtc      (make-collector))
 		   (itc      (env-itc env)))
@@ -356,7 +356,7 @@
 	   (let ((rib         (interaction-env-rib env))
 		 (lexenv.run  (interaction-env-lexenv env))
 		 (rtc         (make-collector)))
-	     (let ((expr.stx (make-<stx> expr TOP-MARK* (list rib) '())))
+	     (let ((expr.stx (make-stx expr TOP-MARK* (list rib) '())))
 	       (receive (expr.core lexenv.run^)
 		   (parametrise ((top-level-context env)
 				 (inv-collector rtc)
@@ -1106,7 +1106,7 @@
       (define rib
 	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap x)
-	(make-<stx> x TOP-MARK* (list rib) '()))
+	(make-stx x TOP-MARK* (list rib) '()))
       (with-tagged-language (memq 'tagged-language option*)
 	(with-option-strict-r6rs (memq 'strict-r6rs option*)
 	  (verbose-messages-thunk)

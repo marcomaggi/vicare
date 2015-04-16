@@ -6442,7 +6442,6 @@ the character.
 
 
 @menu
-* iklib expander syntax::           Inspecting syntax objects.
 * iklib expander transformers::     Syntax transformers facilities.
 * iklib expander export specs::     Additional export specifications.
 * iklib expander import specs::     Additional import specifications.
@@ -6455,36 +6454,6 @@ the character.
 * iklib expander parameters::       Expand--time parameters.
 * iklib expander synonym::          Synonym transformers.
 @end menu
-
-@c page
-@node iklib expander syntax
-@subsection Inspecting syntax objects
-
-
-Under @value{PRJNAME}, a wrapped syntax object is the instance of a data
-structure.  The following bindings are exported by the library
-@library{vicare}.
-
-
-@defun syntax-object? @var{stx}
-Return @true{} if @var{stx} is a wrapped or unwrapped syntax object;
-otherwise return @false{}.
-@end defun
-
-
-@defun wrapped-syntax-object? @var{stx}
-Return @true{} if @var{stx} is a wrapped syntax object; else return
-@false{}.
-@end defun
-
-
-@defun syntax-object-expression @var{stx}
-@defunx syntax-object-marks @var{stx}
-@defunx syntax-object-ribs @var{stx}
-@defunx syntax-object-source-objects @var{stx}
-Field accessors for the wrapped syntax object structure type, to be used
-for debugging purposes.
-@end defun
 
 @c page
 @node iklib expander transformers

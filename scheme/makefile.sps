@@ -2759,12 +2759,6 @@
     (syntactic-binding-getprop			v $language)
     (syntactic-binding-remprop			v $language)
     (syntactic-binding-property-list		v $language)
-    (syntax-object?				v $language)
-    (wrapped-syntax-object?			v $language)
-    (syntax-object-expression			v $language)
-    (syntax-object-marks			v $language)
-    (syntax-object-ribs				v $language)
-    (syntax-object-source-objects		v $language)
     (char-alphabetic?				v r uc se)
     (char-ci<=?					v r uc se)
     (char-ci<?					v r uc se)
@@ -3531,6 +3525,13 @@
 
 ;;; --------------------------------------------------------------------
 ;;; expander stuff
+
+    (syntax-object?					$expander)
+    (stx?						$expander)
+    (stx-expression					$expander)
+    (stx-marks						$expander)
+    (stx-ribs						$expander)
+    (stx-source-objects					$expander)
 
     (expand-form-to-core-language			$expander)
     (current-inferior-lexenv				$expander)

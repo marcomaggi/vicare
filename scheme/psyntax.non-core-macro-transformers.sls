@@ -232,7 +232,7 @@
 
     ((__file__)
      (lambda (stx)
-       (let ((expr (<stx>-expr stx)))
+       (let ((expr (stx-expr stx)))
 	 (if (annotation? expr)
 	     (let ((pos (annotation-textual-position expr)))
 	       (if (source-position-condition? pos)
@@ -245,7 +245,7 @@
 
     ((__line__)
      (lambda (stx)
-       (let ((expr (<stx>-expr stx)))
+       (let ((expr (stx-expr stx)))
 	 (if (annotation? expr)
 	     (let ((pos (annotation-textual-position expr)))
 	       (if (source-position-condition? pos)
@@ -4522,7 +4522,7 @@
 		   (%quasi q nesting-level)))
 
       (#(x ...)
-       (not (<stx>? x))
+       (not (stx? x))
        (%quasivector (%vector-quasi x nesting-level)))
 
       (p

@@ -498,7 +498,7 @@
       ;;transformer.
       (let recur ((x output-form-expr))
 	;;Don't feed me cycles.
-	(unless (<stx>? x)
+	(unless (stx? x)
 	  (cond ((pair? x)
 		 (recur (car x))
 		 (recur (cdr x)))
@@ -580,14 +580,14 @@
 			     ;;for core macros we have to do it here.
 			     ;;
 			     ;;NOTE Unfortunately, I have  measured that wrapping the
-			     ;;input  form into  an additional  "<stx>" record  slows
+			     ;;input  form into  an additional  "stx" record  slows
 			     ;;down  the   expansion  in  a  significant   way;  when
 			     ;;rebuilding the full Vicare  source code, compiling the
 			     ;;libraries and  running the  test suite the  total time
 			     ;;can  be 25%  greater.  For  this reason  this step  is
 			     ;;performed only when debugging mode is enabled.  (Marco
 			     ;;Maggi; Wed Apr 2, 2014)
-			     (make-<stx> expr.stx '() '() (list expr.stx))
+			     (make-stx expr.stx '() '() (list expr.stx))
 			   expr.stx)
 			 lexenv.run lexenv.expand)))
 
@@ -3033,8 +3033,8 @@
 				      (lambda (id)
 					;;For every exported identifier there must be
 					;;a label already in the rib.
-					(or (id->label (make-<stx> (identifier->symbol id)
-								   (<stx>-mark* id)
+					(or (id->label (make-stx (identifier->symbol id)
+								   (stx-mark* id)
 								   (list module-rib)
 								   '()))
 					    (stx-error id "cannot find module export")))
@@ -3048,15 +3048,15 @@
 	      ;;lexical environment.
 	      (let* ((name-label (gensym-for-label 'module))
 		     (iface      (make-module-interface
-				  (car ($<stx>-mark* name))
+				  (car ($stx-mark* name))
 				  (vector-map
 				      (lambda (x)
 					;;This   is  a   syntax  object   holding  an
 					;;identifier.
 					(let ((rib* '())
 					      (ae*  '()))
-					  (make-<stx> ($<stx>-expr x)
-						      ($<stx>-mark* x)
+					  (make-stx ($stx-expr x)
+						      ($stx-mark* x)
 						      rib*
 						      ae*)))
 				    all-export-id*)
@@ -3095,7 +3095,7 @@
   (module (module-interface-exp-id*)
 
     (define (module-interface-exp-id* iface id-for-marks)
-      (let ((diff   (%diff-marks (<stx>-mark* id-for-marks)
+      (let ((diff   (%diff-marks (stx-mark* id-for-marks)
 				 (module-interface-first-mark iface)))
 	    (id-vec (module-interface-exp-id-vec iface)))
 	(if (null? diff)
@@ -3104,8 +3104,8 @@
 	      (lambda (x)
 		(let ((rib* '())
 		      (ae*  '()))
-		  (make-<stx> ($<stx>-expr x)
-			      (append diff ($<stx>-mark* x))
+		  (make-stx ($stx-expr x)
+			      (append diff ($stx-mark* x))
 			      rib*
 			      ae*)))
 	    id-vec))))
