@@ -32,7 +32,7 @@ in the boot image.  It is suggested to import it using the prefix
 @section Library name utilities
 
 
-Library names are defined by @rnrs{6} to be used in @clause{library}
+Library names are defined by @rnrs{6} to be used in @syntax{library}
 forms to uniquely identify a library; @ref{scheme library form names,
 Library names}.
 
@@ -1560,7 +1560,7 @@ port.
 
 The referenced function must accept two arguments: a @rnrs{6} library
 reference, a textual input port from which the source library can be
-read.  It must: read from the port a @clause{library} symbolic
+read.  It must: read from the port a @syntax{library} symbolic
 expression; verify that its library name conforms to the library
 reference; load and intern all its dependency libraries; expand it;
 compile it; intern it.
@@ -1577,7 +1577,7 @@ Given a textual input port:
 
 @enumerate
 @item
-Read from it a @clause{library} symbolic expression.
+Read from it a @syntax{library} symbolic expression.
 
 @item
 Verify that its version reference conforms to @var{libref}.

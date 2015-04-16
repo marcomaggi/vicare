@@ -388,7 +388,7 @@ we introduce the definitions:
 @table @dfn
 @item initial lexical environment
 The syntactic bindings imported by the @clause{import} clause of the
-@clause{library} form and by the @syntax{import} syntax in the body of
+@syntax{library} form and by the @syntax{import} syntax in the body of
 the library, constitute the initial lexical environment for the
 expansion process of the library.
 
@@ -776,7 +776,7 @@ exported bindings to their label gensym.  For the example library, the
 @item lab.this  @tab this
 @end multitable
 
-If the @clause{export} clause of the @clause{library} form renames a
+If the @clause{export} clause of the @syntax{library} form renames a
 binding as in:
 
 @example

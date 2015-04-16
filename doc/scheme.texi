@@ -2770,7 +2770,7 @@ imported into the library or defined within the library.
 @subsubsection Library names
 
 
-@cindex Library name, @clause{library} form
+@cindex Library name, @syntax{library} form
 
 
 A @meta{library-name} uniquely identifies a library within an
@@ -2843,7 +2843,7 @@ where @meta{level} represents an exact integer object.
 As an @meta{import-level}, @func{run} is an abbreviation for @code{(meta
 0)}, and @func{expand} is an abbreviation for @code{(meta 1)}.
 
-@cindex Import set, @clause{library} form
+@cindex Import set, @syntax{library} form
 An @meta{import-set} names a set of bindings from another library and
 possibly specifies local names for the imported bindings.  It must be
 one of the following:
@@ -2857,7 +2857,7 @@ one of the following:
 (rename @meta{import-set} (@metai{identifier} @metaii{identifier}) ...)
 @end example
 
-@cindex Library reference, @clause{library} form
+@cindex Library reference, @syntax{library} form
 A @meta{library-reference} identifies a library by its name and
 optionally by its version.  It has one of the following forms:
 
