@@ -1406,7 +1406,7 @@ We can toy with the library expander using the following code:
 @end example
 
 @noindent
-where @meta{sexp} is the @func{library} symbolic expression.  For
+where @meta{sexp} is the @syntax{library} symbolic expression.  For
 example, expanding the library:
 
 @example

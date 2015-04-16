@@ -292,7 +292,7 @@ Example:
 
 
 @menu
-* iklib syntaxes libraries::    Extended @code{library} syntax.
+* iklib syntaxes libraries::    Extended @syntax{library} syntax.
 * iklib syntaxes programs::     Extended program syntax.
 * iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
 * iklib syntaxes defines::      @func{define}-like additional syntaxes.
@@ -327,14 +327,14 @@ Example:
 
 @c page
 @node iklib syntaxes libraries
-@subsection Extended @code{library} syntax
+@subsection Extended @syntax{library} syntax
 
 
 @cindex @clause{options}, library clause
 @cindex Library clause @clause{options}
 
 
-@value{PRJNAME} extends the format of @code{library} forms by allowing
+@value{PRJNAME} extends the format of @syntax{library} forms by allowing
 an optional @clause{options} clause:
 
 @example
@@ -3068,8 +3068,8 @@ argument @var{id} is not a bound identifier.
 
 When writing a library making use of syntactic binding properties: we
 must enable the option @code{visit-upon-loading} in the options clause
-of the @code{library} form; @ref{iklib syntaxes libraries, Extended
-@code{library} syntax}.  Without this option properties may not be
+of the @syntax{library} form; @ref{iklib syntaxes libraries, Extended
+@syntax{library} syntax}.  Without this option properties may not be
 registered properly.
 
 
@@ -6790,7 +6790,7 @@ the function.
 
 @value{PRJNAME} allows the @func{export} syntax to appear at the top
 level of a library among the definitions, not only as third form of a
-@func{library} form.
+@syntax{library} form.
 
 
 @deffn Syntax export @meta{export-spec} ...
@@ -8350,7 +8350,7 @@ the list returned by @func{environment-symbols}.
 
 
 @defun environment-libraries @var{env}
-Return the list of @code{library} records representing the libraries
+Return the list of @objtype{library} records representing the libraries
 forming the non--interaction environment @var{env}.
 @end defun
 
@@ -12703,11 +12703,12 @@ access definitions in a module without explicitly using the
 
 
 @rnrs{6} defines libraries to be top--level symbolic expressions; the
-form @func{library} can appear only at the top--level; @ref{scheme
+form @syntax{library} can appear only at the top--level; @ref{scheme
 library form, Library form}.  @value{PRJNAME} extends the notion of
-libraries by having the library @library{vicare} export a @func{library}
-syntax; such syntax can be used anywhere a definition can be used and
-the defined library can be imported in its region of visibility.
+libraries by having the library @library{vicare} export a
+@syntax{library} syntax; such syntax can be used anywhere a definition
+can be used and the defined library can be imported in its region of
+visibility.
 
 The following is a perfectly valid Vicare program:
 

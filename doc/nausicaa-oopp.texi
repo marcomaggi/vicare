@@ -243,8 +243,8 @@ The following example defines a tag to handle immutable pair values:
 
 When writing a library implementing classes and labels for Nausicaa: we
 must enable the option @code{visit-upon-loading} in the options clause
-of the @code{library} form; @vicareref{iklib syntaxes libraries,
-Extended @code{library} syntax}.  Without this option the properties of
+of the @syntax{library} form; @vicareref{iklib syntaxes libraries,
+Extended @syntax{library} syntax}.  Without this option the properties of
 the type identifiers may not be defined properly.
 
 @c page
@@ -1292,8 +1292,8 @@ fields, methods, @oopp{} notation and simple construction protocol.
 @quotation
 @strong{NOTE} When writing a library implementing classes and labels for
 Nausicaa: we must enable the option @code{visit-upon-loading} in the
-options clause of the @code{library} form; @vicareref{iklib syntaxes
-libraries, Extended @code{library} syntax}.  Without this option the
+options clause of the @syntax{library} form; @vicareref{iklib syntaxes
+libraries, Extended @syntax{library} syntax}.  Without this option the
 properties of the type identifiers may not be defined properly.
 @end quotation
 
@@ -2984,8 +2984,8 @@ The resulting clauses are added to the enclosing definition.
 @quotation
 @strong{NOTE} When writing a library implementing mixins for Nausicaa:
 we must enable the option @code{visit-upon-loading} in the options
-clause of the @code{library} form; @vicareref{iklib syntaxes libraries,
-Extended @code{library} syntax}.  Without this option the properties of
+clause of the @syntax{library} form; @vicareref{iklib syntaxes libraries,
+Extended @syntax{library} syntax}.  Without this option the properties of
 the type identifiers may not be defined properly.
 @end quotation
 

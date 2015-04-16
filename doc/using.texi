@@ -717,8 +717,8 @@ file named @file{sample.fasl} and a source file named
 Importing @library{yoyodyne sample} causes @value{PRJNAME} to look for a
 directory named @file{yoyodyne}, and within that a binary file named
 @file{sample.fasl} and a source file named @file{sample.vicare.sls} or
-@file{sample.sls}.  The @func{library} form for this library must still
-specify the library name as @library{yoyodyne sample}, not
+@file{sample.sls}.  The @syntax{library} form for this library must
+still specify the library name as @library{yoyodyne sample}, not
 @library{sample}.
 @end itemize
 

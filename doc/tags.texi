@@ -153,7 +153,7 @@ inference.
 Tagged language extensions are @strong{off} by default.  To enable the
 extensions in libraries we have to use the @code{tagged-language} and
 @code{visit-upon-loading} options as follows (@pxref{iklib syntaxes
-libraries, Extended @code{library} syntax}):
+libraries, Extended @syntax{library} syntax}):
 
 @example
 (library (demo)

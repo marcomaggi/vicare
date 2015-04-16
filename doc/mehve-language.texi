@@ -31,9 +31,9 @@ generic functions.
 
 When writing a library implementing methods for Mehve multimethods: we
 must enable the option @code{visit-upon-loading} in the options clause
-of the @code{library} form; @vicareref{iklib syntaxes libraries,
-Extended @code{library} syntax}.  Without this option methods may not be
-registered properly.
+of the @syntax{library} form; @vicareref{iklib syntaxes libraries,
+Extended @syntax{library} syntax}.  Without this option methods may not
+be registered properly.
 
 @c page
 @node mehve multimethods

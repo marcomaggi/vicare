@@ -229,7 +229,7 @@ mutually exclusive with @clause{input-string:} and @clause{input-port:}.
 
 @deffn {Auxiliary Syntax} library-spec: @meta{library-name}
 Instruct @func{lex} to build the output as a proper Scheme library.
-This means a Scheme string is built, representing a @func{library} form.
+This means a Scheme string is built, representing a @syntax{library} form.
 The string may contain Scheme comments.  When this clause is not used
 the output is the raw table vector or a @func{define} form.
 
@@ -270,8 +270,8 @@ It is mandatory to use the clause @clause{table-name:} along with
 
 @deffn {Auxiliary Syntax} {library-language:} @meta{lang}
 Select @meta{lang} as language to use for the library; the language is
-the first import specification after @code{import} in the @code{library}
-form.  By default the language is @library{rnrs}.
+the first import specification after @code{import} in the
+@syntax{library} form.  By default the language is @library{rnrs}.
 @end deffn
 
 
@@ -304,7 +304,7 @@ between @meta{name} and the table vector.  @meta{name} can be a string or
 symbol, and it must represent a valid identifier.
 
 When this clause is used along with @clause{library-spec:}, the
-@func{library} form will export the identifier @meta{name}.
+@syntax{library} form will export the identifier @meta{name}.
 @end deffn
 
 
@@ -335,7 +335,7 @@ This clause is mutually exclusive with @clause{output-value:} and
 
 @deffn {Auxiliary Syntax} output-file: @meta{pathname}
 Instruct @func{lex} to save the output in a file with given pathname;
-this is especially useful when the output is a proper @func{library} or
+this is especially useful when the output is a proper @syntax{library} or
 @func{define} form.  @meta{pathname} must be an expression evaluating to
 a string representing the file pathname.
 
