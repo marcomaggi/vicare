@@ -824,7 +824,7 @@ descriptor.  This alist is called @lexenv{}.
 @end table
 
 @menu
-* expander lexenv syntax::      Inspecting syntax objects.
+* expander lexenv stx::         Wrapped and unwrapped syntax objects.
 * expander lexenv descriptors:: Syntactic binding's descriptors.
 * expander lexenv primitive::   Primitive syntactic bindings.
 * expander lexenv imported::    Imported syntactic bindings.
@@ -834,8 +834,8 @@ descriptor.  This alist is called @lexenv{}.
 @end menu
 
 @c page
-@node expander lexenv syntax
-@subsection Inspecting syntax objects
+@node expander lexenv stx
+@subsection Wrapped and unwrapped syntax objects
 
 
 Under @value{PRJNAME}, we adopt the following definitions:
@@ -849,12 +849,11 @@ A compound object holding: nulls, pairs, vectors, numbers, strings,
 bytevectors, chars, booleans, keywords, would--block objects, unbound
 objects, @eof{} objects, broken weak pointer objects, objects of type
 @objtype{stx}.
-
-A standalone symbol object @strong{cannot} be part of an unwrapped
-syntax object: an attempt to use an unwrapped syntax object holding a
-standalone symbol will, sooner or later, cause an exception to be
-raised.
 @end table
+
+An unwrapped symbol object @strong{cannot} be part of an unwrapped
+syntax object: an attempt to use an unwrapped syntax object holding an
+unwrapped symbol will, sooner or later, cause an exception to be raised.
 
 
 @deftp {Object Type} stx
@@ -872,22 +871,24 @@ of @objtype{annotation} objects returned by @func{get-annotated-datum}
 (@pxref{iklib reader fun}).
 
 @item mark*
-Null or a proper list of @func{eq?}--unique objects acting as lexical
-contour marks, including the symbol @samp{top}.  Each of these marks can
-be either a generated mark or an anti--mark.
+Null or a proper list of @func{eq?}--unique objects, including the
+symbol @samp{top}, used to distinguish between identifiers introduced by
+the source code and identifiers introduced by applications of macro
+transformers.  Each of these marks can be either a generated mark or an
+anti--mark.
 
-Two marks must be @func{eq?}--comparable, so we use empty strings as
-marks and @false{} as anti--mark: they are fast to be generated.
+Two marks must be @func{eq?}--comparable, so, by default, we use empty
+strings as marks and @false{} as anti--mark: their generation is fast.
 
 @item rib*
 Null or a proper list of @objtype{rib} objects or @code{shift} symbols.
 Every @objtype{rib} represents a nested lexical contour; a @code{shift}
 represents the return from a macro transformer application.
 
-A new @objtype{rib} is added to an @objtype{stx} at every lexical
-contour of the program, to allow syntactic identifiers in the expression
-of the @objtype{stx} to be captured by the bindings introduced in that
-contour.
+While expanding source code: upon entering a syntactic form representing
+a lexical contour, a new @objtype{rib} is added to the syntax object
+representing the syntactic form itself, to allow syntactic identifiers
+in the form to be captured by the bindings introduced in that contour.
 
 @item annotated-expr*
 Null or a proper list of annotated expressions: @false{} or input forms
@@ -896,12 +897,6 @@ transformations a form undergoes when it is processed as macro use.  The
 @false{} items are inserted when this instance is processed as input
 form of a macro call, but is later discarded.
 @end table
-
-The items in the fields @code{mark*} and @code{rib*} are not associated:
-the two lists can grow independently of each other.  But, considering
-the whole structure of nested @objtype{stx} instances: the items in all
-the @code{mark*} fields are associated to the items in all the
-@code{rib*} fields.
 @end deftp
 
 
