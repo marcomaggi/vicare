@@ -6394,46 +6394,72 @@ read: the next form read has case insensitive identifiers.  When
 @subsection Additional reader functions
 
 
+The Scheme source code reader allows us to annotate source code read
+from a textual input with informations about the position of an
+expression in the input.  For example:
+
+@lisp
+(import (vicare))
+
+(define port  (open-string-input-port "(list var)"))
+(define datum (get-annotated-datum port))
+(pretty-print datum)
+@print{} #[annotation
+        expression=#<omitted>
+        stripped=(list var)
+        textual-position=#[r6rs-record: &source-position
+                              port-id="*string-input-port*"
+                              byte=0
+                              character=0
+                              line=1
+                              column=1]]
+@end lisp
+
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun get-annotated-datum @var{port}
-Like @func{get-datum}, but rather than returning a datum return a
-hierarchy of @code{annotation} objects with the same hierarchy of the
-datum and embedding the datum itself.
-@end defun
+@deftp {Object type} annotation
+Disjoint object type representing source code read from a textual input
+port.  The source code expression is annotated with informations from
+its textual input.
+@end deftp
 
 
 @defun annotation? @var{obj}
-Return @true{} if @var{obj} is an @code{annotation} object, else return
+Return @true{} if @var{obj} is an @objtype{annotation} object, else return
 @false{}.
 @end defun
 
 
-@defun annotation-expression @var{ann}
-Accessor for the @code{expression} field of an @code{annotation} object.
+@defop {Field accessor} @objtype{annotation} annotation-expression @var{ann}
 Return a list, vector, identifier, what--have--you that may contain
 further annotations.
-@end defun
+@end defop
 
 
-@defun annotation-stripped @var{ann}
-Accessor for the @code{stripped} field of an @code{annotation} object.
-The same symbolic expression of the @code{expression} field with no
-annotations.
-@end defun
+@defop {Field accessor} @objtype{annotation} annotation-stripped @var{ann}
+Return the same symbolic expression of the @code{expression} field with
+no annotations.
+@end defop
 
 
-@defun annotation-textual-position @var{ann}
-Accessor for the @code{textual-position} field of an @code{annotation}
-object.  A condition object of type @condition{source-position}
+@defop {Field accessor} @objtype{annotation} annotation-textual-position @var{ann}
+Return a condition object of type @condition{source-position}
 representing the position of the expression in the source code.
-@end defun
+@end defop
 
 
-@defun annotation-source @var{ann}
-A pair whose car is the port identifier and whose cdr is the offset of
-the character.
+@defop {Field accessor} @objtype{annotation} annotation-source @var{ann}
+Return a pair whose car is the port identifier and whose cdr is the
+offset of the first character of the source expression in the textual
+input.
+@end defop
+
+
+@defun get-annotated-datum @var{port}
+Like @func{get-datum}, but rather than returning a datum return a
+hierarchy of @objtype{annotation} objects with the same hierarchy of the
+datum and embedding the datum itself.
 @end defun
 
 @c page
