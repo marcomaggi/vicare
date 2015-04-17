@@ -1147,23 +1147,35 @@
   ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
   ;;and having the top mark.
   ;;
-  ;;If RIB  is sealed the fields  hold vectors, else  they hold lists; we  want lists
-  ;;here.
-  (define sym*    (if ($rib-sealed/freq rib)
-		      (vector->list ($rib-name* rib))
-		    ($rib-name*  rib)))
-  (define mark**  (if ($rib-sealed/freq rib)
-		      (vector->list ($rib-mark** rib))
-		    ($rib-mark** rib)))
-  (let recur ((sym*   sym*)
-	      (mark** mark**))
-    (cond ((null? sym*)
-	   '())
-	  ((equal? ($car mark**) TOP-MARK*)
-	   (cons ($car sym*)
-		 (recur ($cdr sym*) ($cdr mark**))))
-	  (else
-	   (recur ($cdr sym*) ($cdr mark**))))))
+  (define (%top-marks? obj)
+    ;;Return true if OBJ is equal to TOP-MARK*.
+    ;;
+    (and (pair? obj)
+	 (eq? 'top ($car obj))
+	 (null? ($cdr obj))))
+  (let ((name*  ($rib-name*  rib))
+	(mark** ($rib-mark** rib)))
+    (if ($rib-sealed/freq rib)
+	;;Here NAME* and MARK** are vectors.
+	(let recur ((i    0)
+		    (imax ($vector-length name*)))
+	  (define-syntax-rule (%recursion)
+	    (recur ($fxadd1 i) imax))
+	  (if ($fx< i imax)
+	      (if (%top-marks? ($vector-ref mark** i))
+		  (cons ($vector-ref name* i) (%recursion))
+		(%recursion))
+	    '()))
+      ;;Here NAME* and MARK** are lists.
+      (let recur ((name*  name*)
+		  (mark** mark**))
+	(define-syntax-rule (%recursion)
+	  (recur ($cdr name*) ($cdr mark**)))
+	(if (pair? name*)
+	    (if (%top-marks? ($car mark**))
+		(cons ($car name*) (%recursion))
+	      (%recursion))
+	  '())))))
 
 
 ;;;; rib record type definition
