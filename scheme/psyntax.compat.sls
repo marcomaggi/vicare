@@ -29,6 +29,7 @@
     module				import
     begin0				define-values
     include
+    define-list-of-type-predicate
 
     __who__				brace
 
@@ -212,6 +213,21 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (set-label-binding! label binding)
+  (set-symbol-value! label binding))
+
+(define (label-binding label)
+  (and (symbol-bound? label) (symbol-value label)))
+
+(define (remove-location x)
+  ($unintern-gensym x))
+
+(define (expander-option.integrate-special-list-functions?)
+  (fx>=? 3 (compiler.optimize-level)))
+
+
+;;;; syntax helpers
+
 (define-syntax define-record
   (syntax-rules ()
     ((_ (?name ?maker ?pred) (?field* ...) ?printer)
@@ -230,17 +246,15 @@
      (define-struct ?name (?field* ...)))
     ))
 
-(define (set-label-binding! label binding)
-  (set-symbol-value! label binding))
-
-(define (label-binding label)
-  (and (symbol-bound? label) (symbol-value label)))
-
-(define (remove-location x)
-  ($unintern-gensym x))
-
-(define (expander-option.integrate-special-list-functions?)
-  (fx>=? 3 (compiler.optimize-level)))
+(define-syntax define-list-of-type-predicate
+  (syntax-rules ()
+    ((_ ?who ?type-pred)
+     (define (?who obj)
+       (if (pair? obj)
+	   (and (?type-pred (car obj))
+		(?who (cdr obj)))
+	 (null? obj))))
+    ))
 
 
 ;;;; done

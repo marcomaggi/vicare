@@ -105,7 +105,6 @@
     label->syntactic-binding/no-indirection
 
     ;; marks of lexical contours
-    list-of-marks?
     top-marked?
     symbol->top-marked-identifier
     top-marked-symbols
@@ -137,7 +136,6 @@
     make-stx
     stx-expr				stx-mark*
     stx-rib*				stx-annotated-expr*
-    ribs-and-shifts?
     datum->syntax			~datum->syntax
     syntax->datum
     push-lexical-contour
@@ -1094,10 +1092,10 @@
 
 ;;;; marks of lexical contours
 
-(define generate-new-mark
+(define-syntax-rule (generate-new-mark)
   ;;Generate a new unique mark.  We want a new string for every function
   ;;call.
-  string)
+  (string))
 ;;The version below is useful for debugging.
 ;;
 ;; (define generate-new-mark
@@ -1118,14 +1116,12 @@
 (define-syntax-rule (anti-mark? ?obj)
   (not ?obj))
 
-(define (list-of-marks? obj)
-  (if (pair? obj)
-      (and (let ((item (car obj)))
-	     (or (top-mark? obj)
-		 (lexical-contour-mark? obj)
-		 (anti-mark? obj)))
-	   (list-of-marks? (cdr obj)))
-    (null? obj)))
+(define (mark? obj)
+  (or (top-mark? obj)
+      (lexical-contour-mark? obj)
+      (anti-mark? obj)))
+
+(define-list-of-type-predicate list-of-marks? mark?)
 
 ;;The body of a library, when it is first processed, gets this set of marks...
 ;;
@@ -1288,9 +1284,13 @@
   (or (not obj)
       (rib? obj)))
 
-(define (list-of-ribs? obj)
-  (and (list? obj)
-       (for-all rib? obj)))
+(define-list-of-type-predicate list-of-ribs? rib?)
+
+(define (rib-or-shift? obj)
+  (or (rib? obj)
+      (eq? obj 'shift)))
+
+(define-list-of-type-predicate list-of-ribs-and-shifts? rib-or-shift?)
 
 
 ;;;; rib operations
@@ -1404,22 +1404,27 @@
       name-vec label-vec)))
 
 (define (export-subst->rib export-subst)
-  ;;Build  and  return  a  new  RIB  structure  initialised  with  the  entries  of
-  ;;EXPORT-SUBST.
+  ;;Build  and  return   a  new  RIB  structure  initialised  with   the  entries  of
+  ;;EXPORT-SUBST, which is meant to come from a library object.
   ;;
   ;;An  EXPORT-SUBST  selects the  exported  bindings  among the  syntactic  bindings
-  ;;defined at  the top-level of a  library; it is  an alist whose keys  are external
-  ;;symbol names of the bindings and whose values are the associated label gensyms.
+  ;;defined at  the top-level of a  LIBRARY form; it is  an alist whose keys  are the
+  ;;external symbol names  of the bindings and whose values  are the associated label
+  ;;gensyms.
   ;;
-  (let loop ((export-subst export-subst)
-	     (name*        '()) ;exported binding names
-	     (mark**       '())
-	     (label*       '()))
-    (if (pair? export-subst)
-	(loop ($cdr export-subst)
-	      (cons ($car ($car export-subst)) name*)
-	      (cons TOP-MARK*                  mark**)
-	      (cons ($cdr ($car export-subst)) label*))
+  ;;Being defined at  the top-level: every name  is associated to the  "top" mark, so
+  ;;its list of marks is TOP-MARK*.
+  ;;
+  (let loop ((nam.lab*  export-subst)
+	     (name*     '())
+	     (mark**    '())
+	     (label*    '()))
+    (if (pair? nam.lab*)
+	(let ((nam.lab ($car nam.lab*)))
+	  (loop ($cdr nam.lab*)
+		(cons ($car nam.lab) name*)
+		(cons TOP-MARK*      mark**)
+		(cons ($cdr nam.lab) label*)))
       (let ((sealed/freq #f))
 	(make-rib name* mark** label* sealed/freq)))))
 
@@ -1634,16 +1639,6 @@
 	(else
 	 (non-compound-sexp? obj))))
 
-(define (ribs-and-shifts? obj)
-  ;;Return true if OBJ is a valid value for the field RIB* of stx; otherwise return
-  ;;#f.
-  ;;
-  (and (list? obj)
-       (for-all (lambda (item)
-		  (or (rib? item)
-		      (eq? item 'shift)))
-	 obj)))
-
 ;;; --------------------------------------------------------------------
 
 (define* (datum->syntax {id identifier?} datum)
@@ -1693,7 +1688,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (mkstx expr-stx mark* {rib* ribs-and-shifts?} annotated-expr*)
+(define* (mkstx expr-stx mark* {rib* list-of-ribs-and-shifts?} annotated-expr*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
   ;;EXPR-STX can  be a  raw sexp,  an instance  of STX  or a  (partially) unwrapped
@@ -2052,7 +2047,7 @@
 	   (eq? ($car x) ($car y))
 	   (same-marks? ($cdr x) ($cdr y)))))
 
-(define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* ribs-and-shifts?} stx1.ae {stx2 stx?})
+(define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* list-of-ribs-and-shifts?} stx1.ae {stx2 stx?})
   ;;Join the given wraps with the  ones in STX2 and return the resulting
   ;;wraps; with "wraps" we mean the marks and ribs, with the addition of
   ;;the annotated  expressions for debugging purposes.   The scenario is
