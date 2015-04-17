@@ -105,11 +105,6 @@
     label->syntactic-binding/no-indirection
 
     ;; marks of lexical contours
-    gen-mark
-    anti-mark
-    anti-mark?
-    TOP-MARK*
-    TOP-MARK**
     list-of-marks?
     top-marked?
     symbol->top-marked-identifier
@@ -137,32 +132,20 @@
     export-subst->rib
 
     ;; syntax objects basics
-    stx
-    make-stx				stx?
-    stx-expr				set-stx-expr!
-    stx-mark*				set-stx-mark*!
-    stx-rib*				set-stx-rib*!
-    stx-ae*				set-stx-ae*!
-    $stx-expr				$set-stx-expr!
-    $stx-mark*			$set-stx-mark*!
-    $stx-rib*				$set-stx-rib*!
-    $stx-ae*				$set-stx-ae*!
+    syntax-object?			stx?
+    stx					mkstx
+    make-stx
+    stx-expr				stx-mark*
+    stx-rib*				stx-annotated-expr*
     ribs-and-shifts?
     datum->syntax			~datum->syntax
     syntax->datum
-    mkstx				push-lexical-contour
+    push-lexical-contour
     syntax-annotation			strip
     make-top-level-syntactic-identifier-from-symbol-and-label
     make-syntactic-identifier-for-temporary-variable
     make-top-level-syntax-object/quoted-quoting
-
-    syntax-object?
-    ;;The following are inspection functions for debugging purposes.
-    (rename (stx?		wrapped-syntax-object?)
-	    (stx-expr		syntax-object-expression)
-	    (stx-mark*	syntax-object-marks)
-	    (stx-rib*		syntax-object-ribs)
-	    (stx-ae*		syntax-object-source-objects))
+    wrap-expression
 
     ;; syntax objects: mapping identifiers to labels
     id->label
@@ -1111,13 +1094,13 @@
 
 ;;;; marks of lexical contours
 
-(define gen-mark
+(define generate-new-mark
   ;;Generate a new unique mark.  We want a new string for every function
   ;;call.
   string)
 ;;The version below is useful for debugging.
 ;;
-;; (define gen-mark
+;; (define generate-new-mark
 ;;   (let ((i 0))
 ;;     (lambda ()
 ;;       (set! i (+ i 1))
@@ -1125,25 +1108,32 @@
 
 ;;We use #f as the anti-mark.
 (define-constant anti-mark #f)
-(define anti-mark? not)
 
-;;The body of  a library, when it  is first processed, gets  this set of
-;;marks...
-(define-constant TOP-MARK*
-  '(top))
-(define-constant TOP-MARK**
-  '((top)))
+(define-syntax-rule (lexical-contour-mark? ?obj)
+  (string? ?obj))
+
+(define-syntax-rule (top-mark? ?obj)
+  (eq? ?obj 'top))
+
+(define-syntax-rule (anti-mark? ?obj)
+  (not ?obj))
 
 (define (list-of-marks? obj)
-  (and (list? obj)
-       (for-all (lambda (item)
-		  (or (eq? 'top obj) ;proper top mark
-		      (string? obj)  ;proper lexical contour mark
-		      (not obj)))    ;anti-mark
-	 obj)))
+  (if (pair? obj)
+      (and (let ((item (car obj)))
+	     (or (top-mark? obj)
+		 (lexical-contour-mark? obj)
+		 (anti-mark? obj)))
+	   (list-of-marks? (cdr obj)))
+    (null? obj)))
 
-;;... consequently, every  syntax object that has a "top"  symbol in its
-;;marks set was present in the program source.
+;;The body of a library, when it is first processed, gets this set of marks...
+;;
+(define-constant TOP-MARK*	'(top))
+(define-constant TOP-MARK**	'((top)))
+
+;;... consequently, every syntax object that has  a "top" symbol in its marks set was
+;;present in the program source.
 (define-syntax-rule (top-marked? mark*)
   (memq 'top mark*))
 
@@ -1154,28 +1144,26 @@
   (make-stx sym TOP-MARK* '() '()))
 
 (define* (top-marked-symbols {rib rib?})
-  ;;Scan the rib RIB and return a list of symbols representing binding
-  ;;names and having the top mark.
+  ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
+  ;;and having the top mark.
   ;;
-  (receive (sym* mark**)
-      ;;If RIB is sealed the fields  hold vectors, else they hold lists;
-      ;;we want lists here.
-      (let ((sym*   ($rib-name*  rib))
-	    (mark** ($rib-mark** rib)))
-	(if ($rib-sealed/freq rib)
-	    (values (vector->list sym*)
-		    (vector->list mark**))
-	  (values sym* mark**)))
-    (let recur ((sym*   sym*)
-		(mark** mark**))
-      (cond ((null? sym*)
-	     '())
-	    ((equal? ($car mark**) TOP-MARK*)
-	     (cons ($car sym*)
-		   (recur ($cdr sym*) ($cdr mark**))))
-	    (else
-	     (recur ($cdr sym*) ($cdr mark**)))))))
-
+  ;;If RIB  is sealed the fields  hold vectors, else  they hold lists; we  want lists
+  ;;here.
+  (define sym*    (if ($rib-sealed/freq rib)
+		      (vector->list ($rib-name* rib))
+		    ($rib-name*  rib)))
+  (define mark**  (if ($rib-sealed/freq rib)
+		      (vector->list ($rib-mark** rib))
+		    ($rib-mark** rib)))
+  (let recur ((sym*   sym*)
+	      (mark** mark**))
+    (cond ((null? sym*)
+	   '())
+	  ((equal? ($car mark**) TOP-MARK*)
+	   (cons ($car sym*)
+		 (recur ($cdr sym*) ($cdr mark**))))
+	  (else
+	   (recur ($cdr sym*) ($cdr mark**))))))
 
 
 ;;;; rib record type definition
@@ -1567,39 +1555,6 @@
 
 
 ;;;; syntax object type definition
-;;
-;;First,  let's look  at syntactic  identifiers, since  they're the  real reason  why
-;;syntax objects are here to begin with.  A syntactic identifier is an object of type
-;;STX whose EXPR is a symbol; in  addition to the symbol naming the identifier, the
-;;identifer has a list of marks and a list of ribs (and shifts).
-;;
-;;The idea  is that to get  the label of an  identifier, we look up  the identifier's
-;;ribs for a mapping with the same name and same marks (see SAME-MARKS? below).
-;;
-;;---
-;;
-;;A syntax object may be wrapped or unwrapped, so what does that mean exactly?
-;;
-;;A  "wrapped syntax  object"  is just  a  way of  saying it's  an  STX record.   All
-;;identifiers are STX records (with a symbol in their EXPR field); other objects such
-;;as pairs and vectors  may be wrapped or unwrapped.  A wrapped pair  is an STX whose
-;;EXPR  is a  pair.   An unwrapped  pair  is a  pair  whose car  and  cdr fields  are
-;;themselves syntax objects (wrapped or unwrapped).
-;;
-;;We always maintain  the invariant that we  do not double wrap  syntax objects.  The
-;;only way to  get a doubly-wrapped syntax object is  by doing ~DATUM->SYNTAX (above)
-;;where the  datum is  itself a  wrapped syntax  object (R6RS  may not  even consider
-;;wrapped syntax objects as datum, but let's not worry now).
-;;
-;;Syntax objects have, in addition to the EXPR, a ribs-and-shifts field RIB*: it is a
-;;list where each element is either a rib or the symbol "shift".  Normally, a new RIB
-;;is added to an STX at every lexical  contour of the program in order to capture the
-;;bindings introduced in that contour.
-;;
-;;The MARK* field of an  STX is a list of marks; each of these  marks can be either a
-;;generated mark  or an  antimark.  Two  marks must  be EQ?-comparable,  so we  use a
-;;string of  one char (we  assume that strings are  mutable in the  underlying Scheme
-;;implementation).
 
 (define-record stx
   (expr
@@ -1617,14 +1572,14 @@
 		;the whole structure of nested stx  instances: the items in all the
 		;MARK* fields  are associated to the  items in all the  RIB*, see the
 		;functions JOIN-WRAPS and ADD-MARK for details.
-   ae*
+   annotated-expr*
 		;List of annotated expressions: null or a proper list whose items are
 		;#f or input  forms of macro transformer calls.  It  is used to trace
 		;the transformations a  form undergoes when it is  processed as macro
 		;use.
 		;
-		;The #f  items are  inserted when  it this  instance is  processed as
-		;input form of a macro call, but are later discarded.
+		;The #f items  are inserted when this instance is  processed as input
+		;form of a macro call, but is later discarded.
    )
   (lambda (S port subwriter) ;record printer function
     (define-syntax-rule (%display ?thing)
@@ -1690,7 +1645,7 @@
   ;;We include also  the annotated expression from ID because,  when showing an error
   ;;trace, it helps to understand from where the returned object comes.
   ;;
-  (make-stx datum ($stx-mark* id) ($stx-rib* id) ($stx-ae* id)))
+  (make-stx datum ($stx-mark* id) ($stx-rib* id) ($stx-annotated-expr* id)))
 
 (define (syntax->datum S)
   (strip S '()))
@@ -1721,9 +1676,12 @@
        "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
        sym))))
 
+(define* (wrap-expression expr {rib rib?})
+  (make-stx expr TOP-MARK* (list rib) '()))
+
 ;;; --------------------------------------------------------------------
 
-(define* (mkstx expr-stx mark* {rib* ribs-and-shifts?} ae*)
+(define* (mkstx expr-stx mark* {rib* ribs-and-shifts?} annotated-expr*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
   ;;EXPR-STX can  be a  raw sexp,  an instance  of STX  or a  (partially) unwrapped
@@ -1733,7 +1691,7 @@
   ;;
   ;;RIB* must be null or a proper list of rib instances and "shift" symbols.
   ;;
-  ;;AE* must be null or a proper  list of annotated expressions: syntax objects being
+  ;;ANNOTATED-EXPR* must be null or a proper  list of annotated expressions: syntax objects being
   ;;input forms for macro transformer calls.
   ;;
   ;;When EXPR-STX is a raw sexp or  an unwrapped syntax object: just build and return
@@ -1744,10 +1702,10 @@
   ;;
   (if (and (stx? expr-stx)
 	   (not (top-marked? mark*)))
-      (receive (mark* rib* ae*)
-	  (join-wraps mark* rib* ae* expr-stx)
-	(make-stx (stx-expr expr-stx) mark* rib* ae*))
-    (make-stx expr-stx mark* rib* ae*)))
+      (receive (mark* rib* annotated-expr*)
+	  (join-wraps mark* rib* annotated-expr* expr-stx)
+	(make-stx (stx-expr expr-stx) mark* rib* annotated-expr*))
+    (make-stx expr-stx mark* rib* annotated-expr*)))
 
 (define* (push-lexical-contour {rib rib?} expr-stx)
   ;;Add  a rib  to a  syntax object  or expression  and return  the resulting  syntax
@@ -2104,7 +2062,7 @@
   (import WRAPS-UTILITIES)
   (let ((stx2.mark* ($stx-mark* stx2))
 	(stx2.rib*  ($stx-rib*  stx2))
-	(stx2.ae*   ($stx-ae*   stx2)))
+	(stx2.ae*   ($stx-annotated-expr*   stx2)))
     ;;If the first item in stx2.mark* is an anti-mark...
     (if (and (not (null? stx1.mark*))
 	     (not (null? stx2.mark*))
@@ -2119,8 +2077,19 @@
 	      (%merge-annotated-expr* stx1.ae stx2.ae*)))))
 
 (module ADD-MARK
-  (add-mark)
+  (add-new-mark
+   add-anti-mark)
   (import WRAPS-UTILITIES)
+
+  (define (add-anti-mark input-form-stx)
+    ;;Push an anti-mark on the input form of a macro use.
+    ;;
+    (add-mark anti-mark #f input-form-stx #f))
+
+  (define (add-new-mark rib output-form-expr input-form-stx)
+    ;;Push a new mark on the output form of a macro use.
+    ;;
+    (add-mark (generate-new-mark) rib output-form-expr input-form-stx))
 
   (define* (add-mark mark {rib false-or-rib?} expr ae)
     ;;Build and return a new syntax object wrapping EXPR and having MARK
@@ -2214,7 +2183,7 @@
 		    ;;recurse into its expression.
 		    (%recurse ($stx-expr expr)
 			      (append accum-rib* expr.rib*)
-			      (%merge-annotated-expr* ae* ($stx-ae* expr))))
+			      (%merge-annotated-expr* ae* ($stx-annotated-expr* expr))))
 
 		   ((eq? (car expr.mark*) anti-mark)
 		    ;;EXPR with non-empty MARK*  having the anti-mark as
@@ -2237,7 +2206,7 @@
 			   (result.rib* (cdr result.rib*)))
 		      (make-stx ($stx-expr expr) (cdr expr.mark*)
 				  result.rib*
-				  (%merge-annotated-expr* ae* ($stx-ae* expr)))))
+				  (%merge-annotated-expr* ae* ($stx-annotated-expr* expr)))))
 
 		   (else
 		    ;;EXPR with non-empty MARK*  having a proper mark as
@@ -2258,7 +2227,7 @@
 					  result.rib*)))
 		      (make-stx ($stx-expr expr) (cons new-mark expr.mark*)
 				  result.rib*
-				  (%merge-annotated-expr* ae* ($stx-ae* expr))))))))
+				  (%merge-annotated-expr* ae* ($stx-annotated-expr* expr))))))))
 
 	  ((symbol? expr)
 	   ;;A raw symbol is invalid.
@@ -2380,11 +2349,11 @@
 	     => (lambda (label)
 		  (receive-and-return (id)
 		      (make-stx sym TOP-MARK*
-				  (list (make-rib (list sym)
-						  TOP-MARK**
-						  (list label)
-						  #f))
-				  '())
+				(list (make-rib (list sym)
+						TOP-MARK**
+						(list label)
+						#f))
+				'())
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
@@ -2958,7 +2927,7 @@
       (cond ((stx? X)
 	     (apply condition
 		    (make-macro-expansion-trace X)
-		    (map loop (stx-ae* X))))
+		    (map loop (stx-annotated-expr* X))))
 	    ((annotation? X)
 	     ;;Here we  only want to wrap  X into an  "stx" object, we do  not care
 	     ;;about the context.  (Marco Maggi; Sat Apr 11, 2015)

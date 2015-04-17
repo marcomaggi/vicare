@@ -42,11 +42,11 @@
 	  make-syntactic-identifier-for-temporary-variable
 	  bound-id-member?
 	  bless
-	  wrapped-syntax-object?
-	  syntax-object-expression
-	  syntax-object-marks
-	  syntax-object-ribs
-	  syntax-object-source-objects))
+	  stx?
+	  stx-expr
+	  stx-mark*
+	  stx-rib*
+	  stx-annotated-expr*))
 
 
 ;;;; high-level syntax object utilities
@@ -85,8 +85,8 @@
     (syntax-kind? x null?))
 
   (define (syntax-kind? x pred?)
-    (cond ((wrapped-syntax-object? x)
-	   (syntax-kind? (syntax-object-expression x) pred?))
+    (cond ((stx? x)
+	   (syntax-kind? (stx-expr x) pred?))
 	  ((annotation? x)
 	   (syntax-kind? (annotation-expression x) pred?))
 	  (else
@@ -103,11 +103,11 @@
 	   (syntax-list? (syntax-cdr x)))))
 
 (define* (syntax-car x)
-  (cond ((wrapped-syntax-object? x)
-	 (mkstx (syntax-car (syntax-object-expression x))
-		(syntax-object-marks x)
-		(syntax-object-ribs  x)
-		(syntax-object-source-objects   x)))
+  (cond ((stx? x)
+	 (mkstx (syntax-car (stx-expr x))
+		(stx-mark* x)
+		(stx-rib*  x)
+		(stx-annotated-expr*   x)))
 	((annotation? x)
 	 (syntax-car (annotation-expression x)))
 	((pair? x)
@@ -116,11 +116,11 @@
 	 (assertion-violation __who__ "not a pair" x))))
 
 (define* (syntax-cdr x)
-  (cond ((wrapped-syntax-object? x)
-	 (mkstx (syntax-cdr (syntax-object-expression x))
-		(syntax-object-marks x)
-		(syntax-object-ribs  x)
-		(syntax-object-source-objects   x)))
+  (cond ((stx? x)
+	 (mkstx (syntax-cdr (stx-expr x))
+		(stx-mark* x)
+		(stx-rib*  x)
+		(stx-annotated-expr*   x)))
 	((annotation? x)
 	 (syntax-cdr (annotation-expression x)))
 	((pair? x)
@@ -138,11 +138,11 @@
 	 (assertion-violation __who__ "invalid argument" x))))
 
 (define* (syntax-vector->list x)
-  (cond ((wrapped-syntax-object? x)
-	 (let ((ls     (syntax-vector->list (syntax-object-expression x)))
-	       (mark*  (syntax-object-marks x))
-	       (rib*   (syntax-object-ribs  x))
-	       (ae*    (syntax-object-source-objects   x)))
+  (cond ((stx? x)
+	 (let ((ls     (syntax-vector->list (stx-expr x)))
+	       (mark*  (stx-mark* x))
+	       (rib*   (stx-rib*  x))
+	       (ae*    (stx-annotated-expr*   x)))
 	   (map (lambda (x)
 		  (mkstx x mark* rib* ae*))
 	     ls)))

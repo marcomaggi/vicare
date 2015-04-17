@@ -3528,10 +3528,10 @@
 
     (syntax-object?					$expander)
     (stx?						$expander)
-    (stx-expression					$expander)
-    (stx-marks						$expander)
-    (stx-ribs						$expander)
-    (stx-source-objects					$expander)
+    (stx-expr						$expander)
+    (stx-mark*						$expander)
+    (stx-rib*						$expander)
+    (stx-annotated-expr*				$expander)
 
     (expand-form-to-core-language			$expander)
     (current-inferior-lexenv				$expander)

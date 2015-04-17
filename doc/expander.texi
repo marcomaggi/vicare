@@ -838,21 +838,73 @@ descriptor.  This alist is called @lexenv{}.
 @subsection Inspecting syntax objects
 
 
-Under @value{PRJNAME}:
+Under @value{PRJNAME}, we adopt the following definitions:
 
-@itemize
-@item
-A @dfn{wrapped syntax object} is an object of type @objtype{stx}; this
-type is disjoint from other object types.
+@table @dfn
+@item Wrapped syntax object
+An object of type @objtype{stx}.
 
-@item
-An @dfn{unwrapped syntax object} is a compound object holding: nulls,
-pairs, vectors, numbers, strings, bytevectors, chars, booleans,
-keywords, would--block objects, unbound objects, @eof{} objects, broken
-weak pointer objects, objects of type @objtype{stx}.
-@end itemize
+@item Unwrapped syntax object
+A compound object holding: nulls, pairs, vectors, numbers, strings,
+bytevectors, chars, booleans, keywords, would--block objects, unbound
+objects, @eof{} objects, broken weak pointer objects, objects of type
+@objtype{stx}.
 
-A standalone symbol object cannot be part of an unwrapped syntax object.
+A standalone symbol object @strong{cannot} be part of an unwrapped
+syntax object: an attempt to use an unwrapped syntax object holding a
+standalone symbol will, sooner or later, cause an exception to be
+raised.
+@end table
+
+
+@deftp {Object Type} stx
+Disjoint object type representing wrapped syntax objects: source code
+expressions associated to meta data representing their lexical contour.
+
+Objects of type @objtype{stx} have the following fields:
+
+@table @code
+@item expr
+A symbolic expression representing source code, possibly annotated;
+these expressions are the ones produced by the Scheme source code
+reader.  They can be raw source code expressions or nested hierarchies
+of @objtype{annotation} objects returned by @func{get-annotated-datum}
+(@pxref{iklib reader fun}).
+
+@item mark*
+Null or a proper list of @func{eq?}--unique objects acting as lexical
+contour marks, including the symbol @samp{top}.  Each of these marks can
+be either a generated mark or an anti--mark.
+
+Two marks must be @func{eq?}--comparable, so we use empty strings as
+marks and @false{} as anti--mark: they are fast to be generated.
+
+@item rib*
+Null or a proper list of @objtype{rib} objects or @code{shift} symbols.
+Every @objtype{rib} represents a nested lexical contour; a @code{shift}
+represents the return from a macro transformer application.
+
+A new @objtype{rib} is added to an @objtype{stx} at every lexical
+contour of the program, to allow syntactic identifiers in the expression
+of the @objtype{stx} to be captured by the bindings introduced in that
+contour.
+
+@item annotated-expr*
+Null or a proper list of annotated expressions: @false{} or input forms
+of macro transformer calls.  This field is used to trace the
+transformations a form undergoes when it is processed as macro use.  The
+@false{} items are inserted when this instance is processed as input
+form of a macro call, but is later discarded.
+@end table
+
+The items in the fields @code{mark*} and @code{rib*} are not associated:
+the two lists can grow independently of each other.  But, considering
+the whole structure of nested @objtype{stx} instances: the items in all
+the @code{mark*} fields are associated to the items in all the
+@code{rib*} fields.
+@end deftp
+
+
 The following bindings are exported by the library @library{vicare
 expander}.
 
@@ -869,12 +921,117 @@ Return @true{} if @var{stx} is a wrapped syntax object; else return
 @end defun
 
 
-@defun stx-expression @var{stx}
-@defunx stx-marks @var{stx}
-@defunx stx-ribs @var{stx}
-@defunx stx-source-objects @var{stx}
-Field accessors for objects of type @objtype{stx}.
-@end defun
+@defop {Field accessor} @objtype{stx} stx-expr @var{stx}
+Return a symbolic expression, possibly annotated.
+@end defop
+
+
+@defop {Field accessor} @objtype{stx} stx-mark* @var{stx}
+Return null or a proper list of @func{eq?}--unique objects acting as
+lexical contour marks, including the symbol @samp{top}.
+@end defop
+
+
+@defop {Field accessor} @objtype{stx} stx-rib* @var{stx}
+Return null or a proper list of @objtype{rib} instances or @code{shift}
+symbols.
+@end defop
+
+
+@defop {Field accessor} @objtype{stx} stx-annotated-expr* @var{stx}
+Return null or a proper list of annotated expressions: @false{} or input
+forms of macro transformer calls.
+@end defop
+
+@c ------------------------------------------------------------------------
+
+@subsubheading What are syntax objects
+
+All the syntactic identifiers are @objtype{stx} objects with a symbol in
+their @code{expr} field; other objects such as pairs and vectors may be
+wrapped or unwrapped.  A wrapped pair is an @objtype{stx} whose
+@code{expr} field is a pair:
+
+@example
+(syntax (a . b))
+@end example
+
+@noindent
+an unwrapped pair is a pair whose car and cdr fields are themselves
+syntax objects (wrapped or unwrapped):
+
+@example
+((syntax a) . (syntax b))
+@end example
+
+It makes sense to associate lexical contour informations to syntactic
+identifiers, while associating them to datums is useless from the point
+of view of expanding source code.  For example, in the following code
+the identifiers @samp{var} belong to different lexical contours, and so
+have different meanings, while the datum @samp{123} is always the same
+in all the lexical contours:
+
+@lisp
+(let ((var 123))
+  (let ((var 123))
+    var))
+@end lisp
+
+We can create a syntax object holding a raw expression as follows:
+
+@lisp
+(import (vicare))
+(define X 1)
+(begin-for-syntax
+  (datum->syntax #'X 'ciao))
+@result{} #<syntactic-identifier expr=ciao mark*=(top)>
+@end lisp
+
+@noindent
+and we can create a syntax object holding an annotated expression as
+follows:
+
+@lisp
+(import (vicare))
+(define X 1)
+(begin-for-syntax
+  (let* ((port   (open-string-input-port "(list X)"))
+         (datum  (get-annotated-datum port))
+         (stx    (datum->syntax #'X datum)))
+    datum
+    @result{} #[annotation
+             expression=#<omitted>
+             stripped=(list X)
+             textual-position=#[r6rs-record: &source-position
+                                   port-id="*string-input-port*"
+                                   byte=0
+                                   character=0
+                                   line=1
+                                   column=1]]
+    stx)
+    @result{} #<syntax
+             expr=(list X)
+             mark*=(top)
+             line=1 column=1 source=*string-input-port*>
+@end lisp
+
+@noindent
+we can unwrap a syntax object by using @syntax{syntax-case}:
+
+@lisp
+(import (vicare))
+(define X 1)
+(begin-for-syntax
+  (let* ((port   (open-string-input-port "(list X)"))
+         (datum  (get-annotated-datum port))
+         (stx    (datum->syntax #'X datum))
+         (stx    (syntax-case stx ()
+                   ((?head ?tail)
+                    (list #'?head #'?tail)))))
+    stx)
+@result{} (#<syntactic-identifier expr=list mark*=(top)>
+    #<syntactic-identifier expr=X mark*=(top)>)
+@end lisp
 
 @c page
 @node expander lexenv descriptors

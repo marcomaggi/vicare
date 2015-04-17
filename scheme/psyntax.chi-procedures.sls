@@ -483,9 +483,7 @@
       ;;We parametrise here because we can never know which transformer, for example,
       ;;will query the syntactic binding properties.
       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(let ((output-form-expr (transformer
-				 ;;Put the anti-mark on the input form.
-				 (add-mark anti-mark #f input-form-stx #f))))
+	(let ((output-form-expr (transformer (add-anti-mark input-form-stx))))
 	  ;;If  the  transformer returns  a  function:  we  must apply  the  returned
 	  ;;function  to a  function acting  as compile-time  value retriever.   Such
 	  ;;application must return a value as a transformer would do.
@@ -494,6 +492,7 @@
 	    (%return output-form-expr)))))
 
     (define (%return output-form-expr)
+      (import ADD-MARK)
       ;;Check  that there  are no  raw symbols  in the  value returned  by the  macro
       ;;transformer.
       (let recur ((x output-form-expr))
@@ -512,7 +511,7 @@
       ;;in the input form: this new mark  will be annihilated by the anti-mark we put
       ;;before.  For all the identifiers introduced by the transformer: this new mark
       ;;will stay there.
-      (add-mark (gen-mark) rib output-form-expr input-form-stx))
+      (add-new-mark rib output-form-expr input-form-stx))
 
     (define (%ctv-retriever id)
       ;;This is  the compile-time  values retriever  function.  Given  an identifier:
@@ -3048,15 +3047,15 @@
 	      ;;lexical environment.
 	      (let* ((name-label (gensym-for-label 'module))
 		     (iface      (make-module-interface
-				  (car ($stx-mark* name))
+				  (car (stx-mark* name))
 				  (vector-map
 				      (lambda (x)
 					;;This   is  a   syntax  object   holding  an
 					;;identifier.
 					(let ((rib* '())
 					      (ae*  '()))
-					  (make-stx ($stx-expr x)
-						      ($stx-mark* x)
+					  (make-stx (stx-expr x)
+						      (stx-mark* x)
 						      rib*
 						      ae*)))
 				    all-export-id*)
@@ -3104,8 +3103,8 @@
 	      (lambda (x)
 		(let ((rib* '())
 		      (ae*  '()))
-		  (make-stx ($stx-expr x)
-			      (append diff ($stx-mark* x))
+		  (make-stx (stx-expr x)
+			      (append diff (stx-mark* x))
 			      rib*
 			      ae*)))
 	    id-vec))))
