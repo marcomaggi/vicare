@@ -573,7 +573,7 @@
 	 (and (symbol? expr)
 	      (top-marked? mark*)
 	      (~free-identifier=? (%make-syntax-object expr mark* rib* annotated-expr*)
-			 (vector-ref pattern 1))
+				  (vector-ref pattern 1))
 	      pvar*))
 
 	;;The pattern is:
@@ -623,7 +623,7 @@
 	;;
 	((atom)
 	 (and (equal? (vector-ref pattern 1)
-		      (strip expr mark*))
+		      (syntax-object-strip-annotations expr mark*))
 	      pvar*))
 
 	;;The pattern is:

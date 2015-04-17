@@ -139,7 +139,7 @@
     datum->syntax			~datum->syntax
     syntax->datum
     push-lexical-contour
-    syntax-annotation			strip
+    syntax-annotation			syntax-object-strip-annotations
     make-top-level-syntactic-identifier-from-symbol-and-label
     make-syntactic-identifier-for-temporary-variable
     make-top-level-syntax-object/quoted-quoting
@@ -1655,7 +1655,7 @@
   (make-stx datum ($stx-mark* id) ($stx-rib* id) ($stx-annotated-expr* id)))
 
 (define (syntax->datum S)
-  (strip S '()))
+  (syntax-object-strip-annotations S '()))
 
 (define (make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
   (wrap-expression sym (make-top-rib-from-symbols-and-labels (list sym) (list lab))))
@@ -1721,8 +1721,7 @@
   ;;
   ;;RIB must be an instance of RIB.
   ;;
-  ;;EXPR-STX can be a raw sexp, an instance of STX or a wrapped syntax
-  ;;object.
+  ;;EXPR-STX can be a raw sexp, an instance of STX or a wrapped syntax object.
   ;;
   ;;This function prepares a computation that will be lazily performed later; the RIB
   ;;will be pushed  on the stack of  ribs in every identifier in  the fully unwrapped
@@ -1739,25 +1738,30 @@
 
 ;;; --------------------------------------------------------------------
 
-(module (strip)
-  ;;STRIP is used to remove the wrap of  a syntax object.  It takes an stx's expr and
-  ;;marks.  If the marks contain a top-mark, then the expr is returned.
-  ;;
-  (define (strip x m*)
-    (if (top-marked? m*)
-	(if (or (annotation? x)
-		(and (pair? x)
-		     (annotation? ($car x)))
-		(and (vector? x)
-		     (not ($vector-empty? x))
-		     (annotation? ($vector-ref x 0))))
-	    ;;TODO Ask Kent  why this is a  sufficient test.  (Abdulaziz
-	    ;;Ghuloum)
-	    (%strip-annotations x)
-	  x)
-      (let f ((x x))
+(module (syntax-object-strip-annotations)
+
+  (define (syntax-object-strip-annotations expr mark*)
+    ;;Remove  the wrap  of a  syntax object.   EXPR  and MARK*  are meant  to be  the
+    ;;expression and associated marks of a  wrapped or unwrapped syntax object.  This
+    ;;function is also the implementation of SYNTAX->DATUM.
+    ;;
+    ;;NOTE This function assumes that: if  MARK* contains the symbol "top", then EXPR
+    ;;is a raw  symbolic expression or an annotated symbolic  expression; that is: it
+    ;;is not a syntax object.
+    ;;
+    (if (top-marked? mark*)
+	(if (or (annotation? expr)
+		(and (pair? expr)
+		     (annotation? ($car expr)))
+		(and (vector? expr)
+		     (not ($vector-empty? expr))
+		     (annotation? ($vector-ref expr 0))))
+	    ;;TODO Ask Kent why this is a sufficient test.  (Abdulaziz Ghuloum)
+	    (%strip-annotations expr)
+	  expr)
+      (let f ((x expr))
 	(cond ((stx? x)
-	       (strip ($stx-expr x) ($stx-mark* x)))
+	       (syntax-object-strip-annotations ($stx-expr x) ($stx-mark* x)))
 	      ((annotation? x)
 	       (annotation-stripped x))
 	      ((pair? x)
@@ -1785,7 +1789,7 @@
 	   (annotation-stripped x))
 	  (else x)))
 
-  #| end of module: STRIP |# )
+  #| end of module: SYNTAX-OBJECT-STRIP-ANNOTATIONS |# )
 
 
 ;;;; syntax objects: mapping identifiers to labels
