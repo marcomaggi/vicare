@@ -812,7 +812,6 @@
 		    lexenv.run lexenv.expand))
 
 	 (else
-	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr.stx '()))
 	  (stx-error expr.stx "invalid expression"))))
      lexenv.run lexenv.expand))
 

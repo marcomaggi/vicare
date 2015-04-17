@@ -1658,8 +1658,7 @@
   (strip S '()))
 
 (define (make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
-  (let ((rib (make-top-rib-from-symbols-and-labels (list sym) (list lab))))
-    (make-stx sym TOP-MARK* (list rib) '())))
+  (wrap-expression sym (make-top-rib-from-symbols-and-labels (list sym) (list lab))))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
   ;;Build and return a  new top marked syntactic identifier to  be used for temporary
@@ -1677,7 +1676,7 @@
   ;;
   (case sym
     ((quasiquote unquote unquote-splicing)
-     (list (core-prim-id 'quote) (mkstx sym TOP-MARK* '() '())))
+     (list (core-prim-id 'quote) (make-stx sym TOP-MARK* '() '())))
     (else
      (syntax-violation __who__
        "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
@@ -1691,20 +1690,20 @@
 (define* (mkstx expr-stx mark* {rib* list-of-ribs-and-shifts?} annotated-expr*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
-  ;;EXPR-STX can  be a  raw sexp,  an instance  of STX  or a  (partially) unwrapped
-  ;;syntax object.
+  ;;EXPR-STX can be a raw sexp, an  instance of STX or a (partially) unwrapped syntax
+  ;;object.
   ;;
   ;;MARK* must be null or a proper list of marks, including the symbol "top".
   ;;
   ;;RIB* must be null or a proper list of rib instances and "shift" symbols.
   ;;
-  ;;ANNOTATED-EXPR* must be null or a proper  list of annotated expressions: syntax objects being
-  ;;input forms for macro transformer calls.
+  ;;ANNOTATED-EXPR* must  be null or a  proper list of annotated  expressions: syntax
+  ;;objects being input forms for macro transformer calls.
   ;;
   ;;When EXPR-STX is a raw sexp or  an unwrapped syntax object: just build and return
   ;;a new syntax object with the lexical context described by the given arguments.
   ;;
-  ;;When EXPR-STX is a stx instance: join the wraps from EXPR-STX with given wraps,
+  ;;When EXPR-STX is a  stx instance: join the wraps from  EXPR-STX with given wraps,
   ;;making sure that marks and anti-marks and corresponding shifts cancel properly.
   ;;
   (if (and (stx? expr-stx)
