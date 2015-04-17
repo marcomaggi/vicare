@@ -34,6 +34,7 @@
     drop-assertions?
     strict-r6rs
     descriptive-labels
+    descriptive-marks
     ;; tagged language parameter options
     tagged-language.rhs-tag-propagation?
     tagged-language.datums-as-operators?
@@ -162,6 +163,11 @@
 ;;expander's bindings.  It is used by the compiler and the expander.
 ;;
 (define-parameter-boolean-option descriptive-labels)
+
+;;Turn  on  generation of  descriptive  marks  in the  expander.   It  is useful  for
+;;debugging purposes.
+;;
+(define-parameter-boolean-option descriptive-marks)
 
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:

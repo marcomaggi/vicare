@@ -60,6 +60,7 @@
 		  debug-mode-enabled?
 		  drop-assertions?
 		  descriptive-labels
+		  descriptive-marks
 		  print-loaded-libraries?
 		  print-debug-messages?
 		  strict-r6rs)
@@ -568,6 +569,14 @@
 	   (option.descriptive-labels #f)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--descriptive-marks")
+	   (option.descriptive-marks #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-descriptive-marks")
+	   (option.descriptive-marks #f)
+	   (next-option (cdr args) k))
+
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -932,6 +941,13 @@ Other options:
         For debugging  purposes: do  not generate descriptive  labels in
         expanded  code  and  assembly code.  Disables   the   effect  of
         --descriptive-labels.  This is the default.
+
+   --descriptive-marks
+        For debugging purposes: generate descriptive marks.
+
+   --no-descriptive-marks
+        For debugging purposes: do not generate descriptive marks.  This
+        is the default.
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,

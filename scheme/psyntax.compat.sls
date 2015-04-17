@@ -67,6 +67,7 @@
     option.strict-r6rs
     option.enable-arguments-validation?
     option.descriptive-labels
+    option.descriptive-marks
     option.print-loaded-libraries?
     option.print-debug-messages?
     option.tagged-language.rhs-tag-propagation?
@@ -151,6 +152,7 @@
 			  drop-assertions?
 			  strict-r6rs
 			  descriptive-labels
+			  descriptive-marks
 			  print-loaded-libraries?
 			  print-debug-messages?
 			  tagged-language.rhs-tag-propagation?

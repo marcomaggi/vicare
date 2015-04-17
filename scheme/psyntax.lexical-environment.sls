@@ -1092,17 +1092,32 @@
 
 ;;;; marks of lexical contours
 
-(define-syntax-rule (generate-new-mark)
-  ;;Generate a new unique mark.  We want a new string for every function
-  ;;call.
-  (string))
-;;The version below is useful for debugging.
-;;
-;; (define generate-new-mark
-;;   (let ((i 0))
-;;     (lambda ()
-;;       (set! i (+ i 1))
-;;       (string-append "m." (number->string i)))))
+(define-syntax define-mark-generator
+  (lambda (stx)
+    (sys.syntax-case stx ()
+      ((?kwd)
+       (with-syntax
+	   ((WHO (sys.datum->syntax (sys.syntax ?kwd) 'generate-new-mark)))
+	 (if (option.descriptive-marks)
+	     (begin
+	       (fprintf (current-error-port) "vicare: enabled descriptive marks generation\n")
+	       (sys.syntax
+		(define WHO
+		  ;;Generate a new  unique mark.  We want a new  string for every function
+		  ;;call.
+		  (let ((i 0))
+		    (lambda ()
+		      (set! i (+ i 1))
+		      (string-append "mark." (number->string i)))))))
+	   (begin
+	     (fprintf (current-error-port) "vicare: enabled non-descriptive marks generation\n")
+	     (sys.syntax
+	      (define-syntax-rule (WHO)
+		;;Generate a  new unique mark.   We want a  new string for  every function
+		;;call.
+		(string)))))))
+      )))
+(define-mark-generator)
 
 ;;We use #f as the anti-mark.
 (define-constant anti-mark #f)
@@ -1969,11 +1984,11 @@
 ;;(e.g. inserted  by the macro transformer)  would have no anti-mark  and, therefore,
 ;;the mark would stick to them.
 ;;
-;;Every time  a mark  is pushed  to an  stx-mark* list,  a corresponding  'shift is
-;;pushed to the stx-rib* list.  Every time a mark is cancelled by an anti-mark, the
+;;Every time a mark is pushed to an STX-MARK* list, a corresponding "shift" symbol is
+;;pushed to the STX-RIB*  list.  Every time a mark is cancelled  by an anti-mark, the
 ;;corresponding shifts are also cancelled.
 
-;;The procedure  join-wraps, here,  is used to  compute the new  MARK* and  RIB* that
+;;The procedure  JOIN-WRAPS, here,  is used to  compute the new  MARK* and  RIB* that
 ;;would result when the m1* and s1* are added to an stx's MARK* and RIB*.
 ;;
 ;;The only tricky part  here is that e may have an anti-mark  that should cancel with
