@@ -59,9 +59,6 @@
     syntactic-binding-descriptor.type
     syntactic-binding-descriptor.value
 
-    core-primitive-binding?
-    core-primitive-binding-symbol
-
     lexical-var-binding-descriptor-value.lex-name
     lexical-var-binding-descriptor-value.assigned?
     set-lexical-mutable!
@@ -444,12 +441,31 @@
 ;;; --------------------------------------------------------------------
 ;;; core primitive bindings
 
-(define (core-primitive-binding? binding)
-  (and (pair? binding)
-       (eq? 'core-prim (syntactic-binding-descriptor.type binding))))
-
-(define-syntax-rule (core-primitive-binding-symbol ?binding)
-  (cdr ?binding))
+;;NOTE Commented out because unused.  Kept here for reference.  (Marco Maggi; Sat Apr
+;;18, 2015)
+;;
+;; (define (make-syntactic-binding-descriptor/core-primitive public-name)
+;;   ;;Build and  return a syntactic  binding descriptor representing a  core primitive.
+;;   ;;PUBLIC-NAME must be a symbol representing the public name of the primitive.
+;;   ;;
+;;   ;;The returned descriptor has format:
+;;   ;;
+;;   ;;   (core-primt . ?public-name)
+;;   ;;
+;;   (make-syntactic-binding-descriptor core-prim public-name))
+;;
+;; (define (core-primitive-binding? obj)
+;;   ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor representing  a  core
+;;   ;;primitive; otherwise return false.
+;;   ;;
+;;   (and (pair? obj)
+;;        (eq? 'core-prim (syntactic-binding-descriptor.type obj))))
+;;
+;; (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
+;;   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
+;;   ;;public name symbol.
+;;   ;;
+;;   (cdr ?descriptor))
 
 ;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
