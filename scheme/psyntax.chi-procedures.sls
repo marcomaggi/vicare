@@ -85,6 +85,23 @@
      (syntax-violation #f "syntax error" ?stx))
     ))
 
+(define-syntax with-exception-handler/input-form
+  ;;This macro is typically used as follows:
+  ;;
+  ;;   (with-exception-handler/input-form
+  ;;       input-form.stx
+  ;;     (eval-macro-transformer
+  ;;        (expand-macro-transformer input-form.stx lexenv.expand)
+  ;;        lexenv.run))
+  ;;
+  (syntax-rules ()
+    ((_ ?input-form . ?body)
+     (with-exception-handler
+	 (lambda (E)
+	   (raise (condition E (make-macro-use-input-form-condition ?input-form))))
+       (lambda () . ?body)))
+    ))
+
 
 (module SPLICE-FIRST-ENVELOPE
   (make-splice-first-envelope
@@ -200,7 +217,7 @@
        (unless label
 	 (raise-unbound-error #f expr.stx ?id))
        (let* ((binding (label->syntactic-binding label lexenv))
-	      (type    (syntactic-binding-type binding)))
+	      (type    (syntactic-binding-descriptor.type binding)))
 	 (case type
 	   ((core-prim
 	     lexical global mutable
@@ -208,7 +225,7 @@
 	     import export library $module syntax
 	     local-ctv global-ctv
 	     displaced-lexical)
-	    (values type (syntactic-binding-value binding) ?id))
+	    (values type (syntactic-binding-descriptor.value binding) ?id))
 	   (else
 	    ;;This will cause an error to be raised later.
 	    (values 'other #f #f))))))
@@ -226,7 +243,7 @@
      (cond ((id->label/intern ?car)
 	    => (lambda (label)
 		 (let* ((binding (label->syntactic-binding label lexenv))
-			(type    (syntactic-binding-type binding)))
+			(type    (syntactic-binding-descriptor.type binding)))
 		   (case type
 		     ((core-macro
 		       define define-syntax define-alias
@@ -236,9 +253,9 @@
 		       local-ctv global-ctv
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module)
-		      (values type (syntactic-binding-value binding) ?car))
+		      (values type (syntactic-binding-descriptor.value binding) ?car))
 		     (($rtd)
-		      (values 'tag-maker-application (syntactic-binding-value binding) ?car))
+		      (values 'tag-maker-application (syntactic-binding-descriptor.value binding) ?car))
 		     (else
 		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
 		      (values 'call #f #f))))))
@@ -308,12 +325,12 @@
 
 ;;;; macro transformers helpers
 
-(define (%expand-macro-transformer rhs-expr.stx lexenv.expand)
+(define (expand-macro-transformer rhs-expr.stx lexenv.expand)
   ;;Given  a  syntax object  representing  the  right-hand  side  (RHS) of  a  syntax
   ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
   ;;FLUID-LET-SYNTAX): expand it,  invoking libraries as needed, and  return the core
   ;;language  sexp representing  the expression.   Usually the  return value  of this
-  ;;function is handed to %EVAL-MACRO-TRANSFORMER.
+  ;;function is handed to EVAL-MACRO-TRANSFORMER.
   ;;
   ;;For:
   ;;
@@ -321,7 +338,7 @@
   ;;
   ;;this function is called as:
   ;;
-  ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
+  ;;   (expand-macro-transformer #'?rhs lexenv.expand)
   ;;
   ;;For:
   ;;
@@ -329,7 +346,7 @@
   ;;
   ;;this function is called as:
   ;;
-  ;;   (%expand-macro-transformer #'?rhs lexenv.expand)
+  ;;   (expand-macro-transformer #'?rhs lexenv.expand)
   ;;
   (let* ((rtc (make-collector))
 	 (rhs-expr.psi (parametrise ((inv-collector rtc)
@@ -347,12 +364,12 @@
       (rtc))
     (psi-core-expr rhs-expr.psi)))
 
-(define (%eval-macro-transformer rhs-expr.core lexenv.run)
+(define* (eval-macro-transformer rhs-expr.core lexenv.run)
   ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
   ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
   ;;FLUID-LET-SYNTAX):  evaluate it  and return  a proper  syntactic binding  for the
   ;;resulting  object.  Usually  this  function is  applied to  the  return value  of
-  ;;%EXPAND-MACRO-TRANSFORMER.
+  ;;EXPAND-MACRO-TRANSFORMER.
   ;;
   ;;When the RHS of  a syntax definition is evaluated, the  returned object should be
   ;;either:  a  syntax transformer  procedure;  an  identifier-syntax transformer;  a
@@ -363,21 +380,20 @@
   (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	      (compiler.eval-core (expanded->core rhs-expr.core)))))
     (cond ((procedure? rv)
-	   (make-local-macro-binding rv rhs-expr.core))
+	   (make-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
 	  ((variable-transformer? rv)
-	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) rhs-expr.core))
+	   (make-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
 	  ((struct-or-record-type-descriptor-binding? rv)
 	   rv)
 	  ((compile-time-value? rv)
-	   (make-local-compile-time-value-binding (compile-time-value-object rv) rhs-expr.core))
+	   (make-binding-descriptor/local-macro/compile-time-value (compile-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
-	   (let ((id (synonym-transformer-identifier rv)))
-	     (make-synonym-syntax-binding (id->label/or-error 'expander id id))))
+	   (make-binding-descriptor/local-global-macro/synonym-syntax (synonym-transformer-identifier rv)))
 	  (else
 	   (raise
 	    (condition
 	     (make-assertion-violation)
-	     (make-who-condition 'expand)
+	     (make-who-condition __who__)
 	     (make-message-condition "invalid return value from syntax definition right-hand side")
 	     (make-syntax-definition-expanded-rhs-condition rhs-expr.core)
 	     (make-syntax-definition-expression-return-value-condition rv)))))))
@@ -521,7 +537,7 @@
       (unless (identifier? id)
 	(assertion-violation 'rho "not an identifier" id))
       (let ((binding (label->syntactic-binding (id->label id) lexenv.run)))
-	(case (syntactic-binding-type binding)
+	(case (syntactic-binding-descriptor.type binding)
 	  ;;The given identifier is bound to  a local compile-time value.  The actual
 	  ;;object is stored in the binding itself.
 	  ((local-ctv)
@@ -634,7 +650,7 @@
 	 ((lexical)
 	  ;;Reference to lexical variable; this means EXPR.STX is an identifier.
 	  (make-psi expr.stx
-		    (let ((lex (lexical-var bind-val)))
+		    (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
 		      (build-lexical-reference no-source lex))
 		    (identifier-tag-retvals-signature expr.stx)))
 
@@ -718,8 +734,8 @@
 						   (push-lexical-contour xrib x))))
 				    (with-exception-handler/input-form
 					in-form
-				      (%eval-macro-transformer
-				       (%expand-macro-transformer in-form lexenv.expand)
+				      (eval-macro-transformer
+				       (expand-macro-transformer in-form lexenv.expand)
 				       lexenv.run))))
 			     ?xrhs*)))
 	       (let ((body*.psi (chi-expr* (map (lambda (x)
@@ -1698,7 +1714,7 @@
 				   lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
-		       (lexical-var bind-val)
+		       (lexical-var-binding-descriptor-value.lex-name bind-val)
 		       (psi-core-expr rhs.psi))
 		     (make-retvals-signature-single-top))))
 
@@ -2550,13 +2566,13 @@
 		 (let ((lab      (gen-define-syntax-label id rib sd?))
 		       (rhs.core (with-exception-handler/input-form
 				     rhs.stx
-				   (%expand-macro-transformer rhs.stx lexenv.expand))))
+				   (expand-macro-transformer rhs.stx lexenv.expand))))
 		   ;;First map  the identifier to  the label, creating  the binding;
 		   ;;then evaluate the macro transformer.
 		   (extend-rib! rib id lab sd?)
 		   (let ((entry (cons lab (with-exception-handler/input-form
 					      rhs.stx
-					    (%eval-macro-transformer rhs.core lexenv.run)))))
+					    (eval-macro-transformer rhs.core lexenv.run)))))
 		     (chi-body* (cdr body-form*.stx)
 				(cons entry lexenv.run)
 				(cons entry lexenv.expand)
@@ -2578,16 +2594,16 @@
 			(flab     (gen-define-syntax-label id rib sd?))
 			(rhs.core (with-exception-handler/input-form
 				      rhs.stx
-				    (%expand-macro-transformer rhs.stx lexenv.expand))))
+				    (expand-macro-transformer rhs.stx lexenv.expand))))
 		   ;;First map  the identifier to  the label,  so that it  is bound;
 		   ;;then evaluate the macro transformer.
 		   (extend-rib! rib id lab sd?)
 		   (let* ((binding  (with-exception-handler/input-form
 					rhs.stx
-				      (%eval-macro-transformer rhs.core lexenv.run)))
+				      (eval-macro-transformer rhs.core lexenv.run)))
 			  ;;This LEXENV entry represents the definition of the fluid
 			  ;;syntax.
-			  (entry1   (cons lab (make-fluid-syntax-binding flab)))
+			  (entry1   (cons lab (make-binding-descriptor/local-global-macro/fluid-syntax flab)))
 			  ;;This LEXENV entry represents  the current binding of the
 			  ;;fluid  syntax;   the  binding  descriptor  is   of  type
 			  ;;LOCAL-MACRO, LOCAL-MACRO!  or  LOCAL-CTV.  Other entries
@@ -2645,8 +2661,8 @@
 							 (push-lexical-contour xrib x))))
 					  (with-exception-handler/input-form
 					      in-form
-					    (%eval-macro-transformer
-					     (%expand-macro-transformer in-form lexenv.expand)
+					    (eval-macro-transformer
+					     (expand-macro-transformer in-form lexenv.expand)
 					     lexenv.run))))
 				   ?xrhs*)))
 		    (chi-body*
@@ -3059,7 +3075,7 @@
 						      ae*)))
 				    all-export-id*)
 				  all-export-lab*))
-		     (binding    (make-module-binding iface))
+		     (binding    (make-binding-descriptor/local-global-macro/module-interface iface))
 		     (entry      (cons name-label binding)))
 		(values lex* qrhs*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.

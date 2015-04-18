@@ -635,9 +635,8 @@
 	      (binding*     (map (lambda (rhs.stx)
 				   (with-exception-handler/input-form
 				       rhs.stx
-				     (%eval-macro-transformer
-				      (%expand-macro-transformer rhs.stx lexenv.expand)
-				      lexenv.run)))
+				     (eval-macro-transformer (expand-macro-transformer rhs.stx lexenv.expand)
+							     lexenv.run)))
 			      ?rhs*))
 	      (entry*       (map cons fluid-label* binding*)))
 	 (chi-internal-body (cons ?body ?body*)
@@ -898,7 +897,7 @@
 	 (if (pattern-variable-binding? binding)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
-		 (let* ((name.level  (syntactic-binding-value binding))
+		 (let* ((name.level  (syntactic-binding-descriptor.value binding))
 			(name        (car name.level))
 			(level       (cdr name.level)))
 		   (%gen-ref use-stx name level maps))
@@ -1182,9 +1181,9 @@
 		 (make-filled-rib (list ?pattern) (list label))
 	       ?output-expr))
 	   (define lexenv.run^
-	     ;;Push  a  pattern  variable  entry to  the  lexical  environment.   The
-	     ;;ellipsis nesting level is 0.
-	     (cons (cons label (make-syntactic-binding-descriptor 'syntax (cons lex 0)))
+	     ;;Push a  pattern variable  entry to the  lexenv.  The  ellipsis nesting
+	     ;;level is 0.
+	     (cons (cons label (make-binding-descriptor/pattern-variable lex 0))
 		   lexenv.run))
 	   (define output-expr.core
 	     (%chi-expr.core output-expr^ lexenv.run^ lexenv.expand))
@@ -1337,7 +1336,7 @@
     (define bindings
       ;;For each pattern variable: a binding to be pushed on the lexical environment.
       (map (lambda (label name level)
-	     (cons label (make-syntactic-binding-descriptor 'syntax (cons name level))))
+	     (cons label (make-binding-descriptor/pattern-variable name level)))
 	labels names levels))
     (define expr.core
       ;;Expand the  expression in  a lexical environment  augmented with  the pattern
@@ -1571,7 +1570,7 @@
 	   => (lambda (label)
 		(let ((binding (label->syntactic-binding label lexenv.run)))
 		  (if (struct-type-descriptor-binding? binding)
-		      (syntactic-binding-value binding)
+		      (syntactic-binding-descriptor.value binding)
 		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
 	  (else
 	   (raise-unbound-error who input-form.stx type-id))))
@@ -1708,7 +1707,7 @@
 	 ((vicare-struct-type)
 	  (make-psi input-form.stx
 		    (build-data no-source
-		      (syntactic-binding-value binding))
+		      (syntactic-binding-descriptor.value binding))
 		    (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
 	 ((object-type-spec)
 	  (make-psi input-form.stx
@@ -2626,9 +2625,9 @@
      (identifier? ?id)
      (let* ((label               (id->label/or-error __who__ input-form.stx ?id))
 	    (binding-descriptor  (label->syntactic-binding label lexenv.run))
-	    (binding-value       (case (syntactic-binding-type binding-descriptor)
+	    (binding-value       (case (syntactic-binding-descriptor.type binding-descriptor)
 				   ((local-macro local-macro!)
-				    (syntactic-binding-value binding-descriptor))
+				    (syntactic-binding-descriptor.value binding-descriptor))
 				   (else
 				    (%synner "expected identifier of local macro" ?id)))))
        (make-psi input-form.stx

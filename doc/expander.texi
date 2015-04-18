@@ -1832,16 +1832,16 @@ A syntactic binding representing a variable binding as created by
 or @syntax{define}, has descriptor with format:
 
 @example
-(lexical . (@meta{lexvar} . @meta{mutated}))
+(lexical . (@meta{lexvar} . @meta{assigned}))
 @end example
 
 @noindent
 where: @meta{lexvar} is a lexical gensym representing the name of the
-lexical variable binding in the expanded code; @meta{mutated} is a
-boolean, true if somewhere in the code the value of this binding is
-mutated.
+lexical variable binding in the expanded code; @meta{assigned} is a
+boolean, true if somewhere in the code the variable is assigned (that
+is: its value is mutated).
 
-We want to keep track of mutated variables because we do not want to
+We want to keep track of assigned variables because we do not want to
 export from a library a mutable variable.
 
 @c ------------------------------------------------------------------------
@@ -1970,9 +1970,9 @@ pattern variable, as created by @syntax{syntax-case} and
 @end example
 
 @noindent
-where: @meta{name} is the symbol representing the name of the pattern
-variable; @meta{level} is a non--negative exact integer representing the
-ellipsis nesting level.
+where: @meta{name} is the lexical gensym representing the name of the
+pattern variable; @meta{level} is a non--negative exact integer
+representing the ellipsis nesting level.
 
 The @syntax{syntax-case} patterns below will generate the displayed
 syntactic binding descriptors:

@@ -56,19 +56,21 @@
     ;; LEXENV entries and syntactic binding descriptors
     lexenv-entry.label
     lexenv-entry.binding-descriptor
-    make-syntactic-binding-descriptor
-    syntactic-binding-type
-    syntactic-binding-value
+    syntactic-binding-descriptor.type
+    syntactic-binding-descriptor.value
+
     core-primitive-binding?
     core-primitive-binding-symbol
-    make-lexical-var-binding
-    lexical-var
-    lexical-var-mutated?
+
+    lexical-var-binding-descriptor-value.lex-name
+    lexical-var-binding-descriptor-value.assigned?
     set-lexical-mutable!
     add-lexical-binding
     add-lexical-bindings
-    make-local-macro-binding
-    make-local-identifier-macro-binding
+
+    make-binding-descriptor/local-macro/non-variable-transformer
+    make-binding-descriptor/local-macro/variable-transformer
+
     make-struct-or-record-type-descriptor-binding
     struct-or-record-type-descriptor-binding?
     struct-type-descriptor-binding?
@@ -87,17 +89,23 @@
     r6rs-record-type-descriptor-bindval-rcd
     r6rs-record-type-descriptor-bindval-spec
     R6RS-RECORD-TYPE-SPEC
-    make-fluid-syntax-binding
+
+    make-binding-descriptor/local-global-macro/fluid-syntax
     fluid-syntax-binding?
     fluid-syntax-binding-fluid-label
-    make-synonym-syntax-binding
+
+    make-binding-descriptor/local-global-macro/synonym-syntax
     synonym-syntax-binding?
     synonym-syntax-binding-synonym-label
-    make-local-compile-time-value-binding
+
+    make-binding-descriptor/local-macro/compile-time-value
     local-compile-time-value-binding?
     local-compile-time-value-binding-object
     global-compile-time-value-binding-object
-    make-module-binding
+
+    make-binding-descriptor/local-global-macro/module-interface
+
+    make-binding-descriptor/pattern-variable
     pattern-variable-binding?
 
     ;; lexical environment utilities
@@ -200,7 +208,7 @@
     retvals-signature-condition-signature
 
     &macro-use-input-form-condition
-    ;;%make-macro-use-input-form-condition
+    make-macro-use-input-form-condition
     macro-use-input-form-condition?
     condition-macro-use-input-form
 
@@ -218,14 +226,12 @@
     expand-time-retvals-signature-violation-expected-signature
     expand-time-retvals-signature-violation-returned-signature
 
-    with-exception-handler/input-form
     assertion-error
     syntax-violation/internal-error
     assertion-violation/internal-error
     syntax-violation
     expand-time-retvals-signature-violation
     raise-unbound-error
-    make-macro-use-input-form-condition
     raise-compound-condition-object
 
     ;; helpers
@@ -420,25 +426,27 @@
 ;;
 (define lexenv-entry.binding-descriptor cdr)
 
-;;Build and return a new syntactic binding descriptor.
-;;
 (define-syntax-rule (make-syntactic-binding-descriptor ?bind-type ?bind-val)
-  (cons ?bind-type ?bind-val))
+  ;;Build and return a new syntactic binding descriptor.
+  ;;
+  (cons (quote ?bind-type) ?bind-val))
 
-;;Given a syntactic binding descriptor, return its type: a symbol.
-;;
-(define syntactic-binding-type car)
+(define-syntax-rule (syntactic-binding-descriptor.type ?binding-descriptor)
+  ;;Given a syntactic binding descriptor, return its type: a symbol.
+  ;;
+  (car ?binding-descriptor))
 
-;;Given a syntactic binding descriptor, return its value: a pair.
-;;
-(define syntactic-binding-value cdr)
+(define-syntax-rule (syntactic-binding-descriptor.value ?binding-descriptor)
+  ;;Given a syntactic binding descriptor, return its value: a pair.
+  ;;
+  (cdr ?binding-descriptor))
 
 ;;; --------------------------------------------------------------------
 ;;; core primitive bindings
 
 (define (core-primitive-binding? binding)
   (and (pair? binding)
-       (eq? 'core-prim (syntactic-binding-type binding))))
+       (eq? 'core-prim (syntactic-binding-descriptor.type binding))))
 
 (define-syntax-rule (core-primitive-binding-symbol ?binding)
   (cdr ?binding))
@@ -446,23 +454,60 @@
 ;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
 
-(define (make-lexical-var-binding lex)
-  ;;Build  and  return a  syntactic  binding  representing an  immutated
-  ;;lexical variable.  LEX  must be a symbol representing the  name of a
-  ;;lexical variable in the expanded language forms.
+(define (make-binding-descriptor/lexical-var lex-name)
+  ;;Build and return  a syntactic binding descriptor representing  a constant lexical
+  ;;variable;  this variable  is never  assigned  in the  code.  LEX-NAME  must be  a
+  ;;lexical  gensym representing  the  name of  a lexical  variable  in the  expanded
+  ;;language forms.
   ;;
-  (cons* 'lexical lex #f))
+  ;;The returned descriptor has format:
+  ;;
+  ;;   (lexical . (?lex-name . #f))
+  ;;
+  (make-syntactic-binding-descriptor lexical (cons lex-name #f)))
 
-;;Accessors for the value in a lexical variable binding.
-;;
-(define lexical-var		car)
-(define lexical-var-mutated?	cdr)
+(define (lexical-var-binding-descriptor? descriptor)
+  (and (pair? descriptor)
+       (eq? 'lexical (syntactic-binding-descriptor.type descriptor))))
+
+(define-syntax-rule (lexical-var-binding-descriptor-value.lex-name ?descriptor-value)
+  ;;Accessor  for  the lexical  gensym  in  a  lexical variable's  syntactic  binding
+  ;;descriptor's value.
+  ;;
+  ;;A syntactic binding representing a lexical variable has descriptor with format:
+  ;;
+  ;;   (lexical . ?descriptor-value)
+  ;;
+  ;;where ?DESCRIPTOR-VALUE has format:
+  ;;
+  ;;  (?lex-name . ?mutable)
+  ;;
+  ;;this macro returns  the ?LEX-NAME, a lexical gensym representing  the variable in
+  ;;the expanded code.
+  ;;
+  (car ?descriptor-value))
+
+(define-syntax-rule (lexical-var-binding-descriptor-value.assigned? ?descriptor-value)
+  ;;Accessor  for  assigned  boolean  in   a  lexical  variable's  syntactic  binding
+  ;;descriptor's value.
+  ;;
+  ;;A syntactic binding representing a lexical variable has descriptor with format:
+  ;;
+  ;;   (lexical . ?descriptor-value)
+  ;;
+  ;;where ?DESCRIPTOR-VALUE has format:
+  ;;
+  ;;  (?lex-name . ?assigned)
+  ;;
+  ;;this macro returns the  ?ASSIGNED value, which is a boolean:  true if the lexical
+  ;;variable is assigned at least once in the code, otherwise false.
+  ;;
+  (cdr ?descriptor-value))
 
 (define (set-lexical-mutable! bind-val)
-  ;;Mutator  for the  ?MUTATED  boolean in  a  lexical variable  binding
-  ;;value.  This  function must  be applied to  the ?BINDING-VALUE  of a
-  ;;lexical variable LEXENV  entry to signal that somewhere  in the code
-  ;;this variable is mutated.
+  ;;Mutator  for the  ?MUTATED boolean  in a  lexical variable  binding value.   This
+  ;;function must be applied to the ?BINDING-VALUE of a lexical variable LEXENV entry
+  ;;to signal that somewhere in the code this variable is mutated.
   ;;
   (set-cdr! bind-val #t))
 
@@ -474,7 +519,7 @@
   ;;representing the name of a lexical variable in the expanded language
   ;;forms.
   ;;
-  (cons (cons label (make-lexical-var-binding lex))
+  (cons (cons label (make-binding-descriptor/lexical-var lex))
 	lexenv))
 
 (define (add-lexical-bindings label* lex* lexenv)
@@ -493,34 +538,34 @@
 ;;; --------------------------------------------------------------------
 ;;; local macro with non-variable transformer bindings
 
-(define (make-local-macro-binding transformer expanded-expr)
-  (cons* 'local-macro transformer expanded-expr))
+(define (make-binding-descriptor/local-macro/non-variable-transformer transformer expanded-expr)
+  (make-syntactic-binding-descriptor local-macro (cons transformer expanded-expr)))
 
 ;;; --------------------------------------------------------------------
 ;;; local macro with variable transformer bindings
 
-(define (make-local-identifier-macro-binding transformer expanded-expr)
-  (cons* 'local-macro! transformer expanded-expr))
+(define (make-binding-descriptor/local-macro/variable-transformer transformer expanded-expr)
+  (make-syntactic-binding-descriptor local-macro! (cons transformer expanded-expr)))
 
 ;;; --------------------------------------------------------------------
 ;;; struct/record type descriptor bindings
 
 (define-syntax-rule (make-struct-or-record-type-descriptor-binding ?bind-val)
-  (cons '$rtd ?bind-val))
+  (make-syntactic-binding-descriptor $rtd ?bind-val))
 
 (define (struct-or-record-type-descriptor-binding? binding)
   (and (pair? binding)
-       (eq? '$rtd (syntactic-binding-type binding))))
+       (eq? '$rtd (syntactic-binding-descriptor.type binding))))
 
 ;;; --------------------------------------------------------------------
 ;;; Vicare struct type descriptor bindings
 
 (define (struct-type-descriptor-binding? binding)
   (and (struct-or-record-type-descriptor-binding? binding)
-       (struct-type-descriptor-bindval? (syntactic-binding-value binding))))
+       (struct-type-descriptor-bindval? (syntactic-binding-descriptor.value binding))))
 
 (define-syntax-rule (struct-type-descriptor-binding-std ?binding)
-  (struct-type-descriptor-bindval-std (syntactic-binding-value ?binding)))
+  (struct-type-descriptor-bindval-std (syntactic-binding-descriptor.value ?binding)))
 
 (define-syntax-rule (struct-type-descriptor-bindval? ?bind-val)
   (struct-type-descriptor? ?bind-val))
@@ -533,25 +578,25 @@
 
 (define (core-rtd-binding? binding)
   (and (pair? binding)
-       (eq? '$core-rtd (syntactic-binding-type binding))))
+       (eq? '$core-rtd (syntactic-binding-descriptor.type binding))))
 
 ;;;
 
 (define (r6rs-record-type-descriptor-binding? binding)
   (and (struct-or-record-type-descriptor-binding? binding)
-       (pair? (syntactic-binding-value binding))))
+       (pair? (syntactic-binding-descriptor.value binding))))
 
 (define-syntax-rule (make-r6rs-record-type-descriptor-binding ?rtd-id ?rcd-id ?spec)
-  (cons '$rtd (make-r6rs-record-type-descriptor-bindval ?rtd-id ?rcd-id ?spec)))
+  (make-syntactic-binding-descriptor $rtd (make-r6rs-record-type-descriptor-bindval ?rtd-id ?rcd-id ?spec)))
 
 (define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding)
-  (r6rs-record-type-descriptor-bindval-rtd (syntactic-binding-value ?binding)))
+  (r6rs-record-type-descriptor-bindval-rtd (syntactic-binding-descriptor.value ?binding)))
 
 (define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding)
-  (r6rs-record-type-descriptor-bindval-rcd (syntactic-binding-value ?binding)))
+  (r6rs-record-type-descriptor-bindval-rcd (syntactic-binding-descriptor.value ?binding)))
 
 (define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding)
-  (r6rs-record-type-descriptor-bindval-spec (syntactic-binding-value ?binding)))
+  (r6rs-record-type-descriptor-bindval-spec (syntactic-binding-descriptor.value ?binding)))
 
 ;;;
 
@@ -640,70 +685,133 @@
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
 
-(define-syntax-rule (make-fluid-syntax-binding ?label)
-  (cons '$fluid ?label))
+(define-syntax-rule (make-binding-descriptor/local-global-macro/fluid-syntax ?fluid-label)
+  ;;Build and returnn a syntactic binding descriptor representing a fluid syntax; the
+  ;;descriptor can be used to represent both a local and imported syntactic binding.
+  ;;
+  ;;?FLUID-LABEL is the label gensym that can  be used to redefine the binding.  With
+  ;;the definition:
+  ;;
+  ;;   (define-fluid-syntax syn ?transformer)
+  ;;
+  ;;the identifier #'SRC  is bound to a  ?LABEL in the current rib  and the following
+  ;;entry is pushed on the lexenv:
+  ;;
+  ;;   (?label . ?fluid-descriptor)
+  ;;
+  ;;where ?FLUID-DESCRIPTOR is the value returned by this macro; it has the format:
+  ;;
+  ;;   ($fluid . ?fluid-label)
+  ;;
+  ;;Another entry is pushed on the lexenv:
+  ;;
+  ;;   (?fluid-label . ?transformer-descriptor)
+  ;;
+  ;;representing the current macro transformer.
+  ;;
+  (make-syntactic-binding-descriptor $fluid ?fluid-label))
 
 (define (fluid-syntax-binding? binding)
   (and (pair? binding)
-       (eq? '$fluid (syntactic-binding-type binding))))
+       (eq? '$fluid (syntactic-binding-descriptor.type binding))))
 
 (define-syntax-rule (fluid-syntax-binding-fluid-label ?binding)
-  (syntactic-binding-value ?binding))
+  (syntactic-binding-descriptor.value ?binding))
 
 ;;; --------------------------------------------------------------------
 ;;; rename bindings
 
-(define-syntax-rule (make-synonym-syntax-binding ?label)
-  (cons '$synonym ?label))
+(define (make-binding-descriptor/local-global-macro/synonym-syntax src-id)
+  ;;Build  a  syntactic  binding  descriptor   representing  a  synonym  syntax;  the
+  ;;descriptor can be used to represent  both a local and imported syntactic binding.
+  ;;When successful return the descriptor; if an error occurs: raise an exception.
+  ;;
+  ;;SRC-ID is the identifier implementing the synonym.  With the definitions:
+  ;;
+  ;;   (define src 123)
+  ;;   (define-syntax syn
+  ;;     (make-synonym-transformer #'src))
+  ;;
+  ;;the argument SRC-ID is the identifier #'SRC.
+  ;;
+  ;;We build and return a descriptor with format:
+  ;;
+  ;;   ($synonym . ?label)
+  ;;
+  ;;where ?LABEL is the label gensym associated to SRC-ID.
+  ;;
+  (make-syntactic-binding-descriptor $synonym (id->label/or-error 'expander src-id src-id)))
 
 (define (synonym-syntax-binding? binding)
   (and (pair? binding)
-       (eq? '$synonym (syntactic-binding-type binding))))
+       (eq? '$synonym (syntactic-binding-descriptor.type binding))))
 
 (define-syntax-rule (synonym-syntax-binding-synonym-label ?binding)
-  (syntactic-binding-value ?binding))
+  (syntactic-binding-descriptor.value ?binding))
 
 ;;; --------------------------------------------------------------------
 ;;; compile-time values bindings
 
-(define (make-local-compile-time-value-binding obj expanded-expr)
-  ;;Given as arguments:  the actual object computed  from a compile-time
-  ;;expression  and  a  core  language sexp  representing  the  original
-  ;;expression already expanded, build and return a syntax binding.
+(define (make-binding-descriptor/local-macro/compile-time-value obj expanded-expr)
+  ;;Build a  syntactic binding  descriptor representing  a local  compile-time value.
   ;;
-  (cons* 'local-ctv obj expanded-expr))
+  ;;OBJ  must  be  the  actual   object  computed  from  a  compile-time  expression.
+  ;;EXPANDED-EXPR  must be  the core  language expression  representing the  original
+  ;;right-hand side already expanded.
+  ;;
+  ;;Given the definition:
+  ;;
+  ;;   (define-syntax ctv
+  ;;      (make-compile-time-value ?expr))
+  ;;
+  ;;the  argument OBJ  is the  return value  of expanding  and evaluating  ?EXPR; the
+  ;;argument EXPANDED-EXPR  is the result of  expanding the whole right-hand  side of
+  ;;the DEFINE-SYNTAX form.
+  ;;
+  (make-syntactic-binding-descriptor local-ctv (cons obj expanded-expr)))
 
 (define (local-compile-time-value-binding? binding)
-  ;;Given a binding object: return  true if it represents a compile-time
-  ;;value; otherwise return false.
+  ;;Given  a syntactic  binding  descriptor: return  true if  it  represents a  local
+  ;;compile-time value; otherwise return false.
   ;;
   (and (pair? binding)
-       (eq? 'local-ctv (syntactic-binding-type binding))))
+       (eq? 'local-ctv (syntactic-binding-descriptor.type binding))))
 
-(define local-compile-time-value-binding-object
-  ;;Given a binding representing a  local compile time value: return the
-  ;;actual compile-time object.
+(define-syntax-rule (local-compile-time-value-binding-object ?descriptor)
+  ;;Given a  syntactic binding  descriptor representing a  local compile  time value:
+  ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
-  cadr)
+  ;;   (local-ctv . (?obj . ?expanded-expr))
+  ;;
+  ;;and we want to return ?OBJ.
+  ;;
+  (cadr ?descriptor))
 
 (define (global-compile-time-value-binding-object binding)
-  ;;BINDING must be a syntactic binding descriptor with format:
+  ;;Given a syntactic binding descriptor representing an imported compile time value:
+  ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
   ;;   (global-ctv . (?library . ?loc))
   ;;
+  ;;where: ?LIBRARY is either an object of type "library" describing the library from
+  ;;which the  binding is  imported or  the symbol "*interaction*";  ?LOC is  the log
+  ;;gensym containing the actual object in its VALUE slot (but only after the library
+  ;;has been visited).
+  ;;
   (let ((lib (cadr binding))
 	(loc (cddr binding)))
-    ;;If this global binding use is the first time a binding from LIB is
-    ;;used: visit the library.
+    ;;If this global binding use is the first  time a binding from LIB is used: visit
+    ;;the library.   This makes  sure that  the actual  object is  stored in  the loc
+    ;;gensym.
     (unless (eq? lib '*interaction*)
       (visit-library lib))
     ;;FIXME The following form should really be just:
     ;;
     ;;   (symbol-value loc)
     ;;
-    ;;because the value  in LOC should be the  actual compile-time value
-    ;;object.  Instead  there is at least  a case in which  the value in
-    ;;LOC is the full compile-time value:
+    ;;because  the value  in  LOC should  be the  actual  compile-time value  object.
+    ;;Instead  there is  at least  a  case in  which the  value  in LOC  is the  full
+    ;;compile-time value:
     ;;
     ;;   (ctv . ?obj)
     ;;
@@ -721,11 +829,10 @@
     ;;     (lambda (ctv-retriever) (ctv-retriever #'obj)))
     ;;   (doit)
     ;;
-    ;;the expansion  of "(doit)" fails  with an error because  the value
-    ;;returned  by  the  transformer  is  the  CTV  special  value.   We
-    ;;circumvent this problem  by testing below the nature  of the value
-    ;;in LOC, but it is just  a temporary workaround.  (Marco Maggi; Sun
-    ;;Jan 19, 2014)
+    ;;the expansion of "(doit)" fails with an error because the value returned by the
+    ;;transformer is  the CTV special value.   We circumvent this problem  by testing
+    ;;below the nature  of the value in  LOC, but it is just  a temporary workaround.
+    ;;(Marco Maggi; Sun Jan 19, 2014)
     ;;
     (let ((ctv (symbol-value loc)))
       (if (compile-time-value? ctv)
@@ -735,15 +842,45 @@
 ;;; --------------------------------------------------------------------
 ;;; module bindings
 
-(define (make-module-binding iface)
-  (cons '$module iface))
+(define (make-binding-descriptor/local-global-macro/module-interface iface)
+  ;;Build and return a syntactic  binding descriptor representing a module interface;
+  ;;the  descriptor can  be used  to represent  both a  local and  imported syntactic
+  ;;binding.
+  ;;
+  ;;Given the definition:
+  ;;
+  ;;   (module ?name (?export ...) . ?body)
+  ;;
+  ;;the argument IFACE is an object of type "module-interface" representing the ?NAME
+  ;;identifier and  the lexical  context of  the syntactic  bindings exported  by the
+  ;;module.
+  ;;
+  (make-syntactic-binding-descriptor $module iface))
 
 ;;; --------------------------------------------------------------------
 ;;; pattern variable bindings
 
-(define (pattern-variable-binding? binding)
-  (and (pair? binding)
-       (eq? 'syntax (syntactic-binding-type binding))))
+(define (make-binding-descriptor/pattern-variable name ellipsis-nesting-level)
+  ;;Build and return a syntactic  binding descriptor representing a pattern variable.
+  ;;The descriptor can be used only to represent  a local binding: there is no way to
+  ;;export a pattern variable binding.
+  ;;
+  ;;The  argument NAME  is the  source name  of the  pattern variable.   The argument
+  ;;ELLIPSIS-NESTING-LEVEL is a non-negative fixnum representing the ellipsis nesting
+  ;;level of the pattern variable in the pattern definition.
+  ;;
+  ;;The returned descriptor as format:
+  ;;
+  ;;   (syntax . (?name . ?ellipsis-nesting-level))
+  ;;
+  (make-syntactic-binding-descriptor syntax (cons name ellipsis-nesting-level)))
+
+(define (pattern-variable-binding? obj)
+  ;;Return  true if  OBJ is  a syntactic  binding descriptor  representing a  pattern
+  ;;variable; otherwise return false.
+  ;;
+  (and (pair? obj)
+       (eq? 'syntax (syntactic-binding-descriptor.type obj))))
 
 
 ;;;; label gensym, lexical variable gensyms, storage location gensyms
@@ -1060,7 +1197,7 @@
 	 => (lambda (binding)
 	      (if (core-rtd-binding? binding)
 		  (make-struct-or-record-type-descriptor-binding
-		   (map bless (syntactic-binding-value binding)))
+		   (map bless (syntactic-binding-descriptor.value binding)))
 		binding)))
 
 	;;Search the given LEXENV.
@@ -1079,7 +1216,7 @@
 			  ;;remember that  for interaction environments:
 			  ;;we  reuse  the  storage location  gensym  as
 			  ;;lexical gensym.
-			  (make-lexical-var-binding (cdr lab.loc/lex))))
+			  (make-binding-descriptor/lexical-var (cdr lab.loc/lex))))
 		    (else
 		     ;;Unbound label.
 		     '(displaced-lexical . #f)))))
@@ -2523,7 +2660,7 @@
   (let ((label (id->label id)))
     (if label
 	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
-	  (case (syntactic-binding-type binding)
+	  (case (syntactic-binding-descriptor.type binding)
 	    ((local-ctv)
 	     (local-compile-time-value-binding-object binding))
 
@@ -2716,23 +2853,6 @@
 
 
 ;;;; exception raising functions
-
-(define-syntax with-exception-handler/input-form
-  ;;This macro is typically used as follows:
-  ;;
-  ;;   (with-exception-handler/input-form
-  ;;       input-form.stx
-  ;;     (%eval-macro-transformer
-  ;;        (%expand-macro-transformer input-form.stx lexenv.expand)
-  ;;        lexenv.run))
-  ;;
-  (syntax-rules ()
-    ((_ ?input-form . ?body)
-     (with-exception-handler
-	 (lambda (E)
-	   (raise (condition E (make-macro-use-input-form-condition ?input-form))))
-       (lambda () . ?body)))
-    ))
 
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset

@@ -1269,7 +1269,7 @@
 	(let* ((entry    (car lexenv.run))
 	       (label    (lexenv-entry.label entry))
 	       (binding  (lexenv-entry.binding-descriptor entry)))
-	  (case (syntactic-binding-type binding)
+	  (case (syntactic-binding-descriptor.type binding)
 	    ((lexical)
 	     ;;This binding is a lexical variable.   When we import a lexical binding
 	     ;;from another library, we must see such entry as "global".
@@ -1288,11 +1288,11 @@
 	     ;;NOTE The entries of type "mutable"  are forbidden to be exported.  The
 	     ;;error will be raised later.
 	     ;;
-	     (let* ((bind-val  (syntactic-binding-value binding))
+	     (let* ((bind-val  (syntactic-binding-descriptor.value binding))
 		    ;;Search for LEXICAL-GENSYM  in the list LEX*:  when found return
 		    ;;the corresponding gensym from  LOC*.  LEXICAL-GENSYM must be an
 		    ;;item in LEX*.
-		    (loc       (let lookup ((lexical-gensym  (lexical-var bind-val))
+		    (loc       (let lookup ((lexical-gensym  (lexical-var-binding-descriptor-value.lex-name bind-val))
 					    (lex*            lex*)
 					    (loc*            loc*))
 				 (if (pair? lex*)
@@ -1300,7 +1300,7 @@
 					 (car loc*)
 				       (lookup lexical-gensym (cdr lex*) (cdr loc*)))
 				   (assertion-violation 'make-export-env/lookup "internal error"))))
-		    (type      (if (lexical-var-mutated? bind-val)
+		    (type      (if (lexical-var-binding-descriptor-value.assigned? bind-val)
 				   'mutable
 				 'global)))
 	       (loop (cdr lexenv.run)
@@ -1327,7 +1327,7 @@
 	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-macro loc) export-env)
-		     (cons (cons loc (syntactic-binding-value binding)) macro*))))
+		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
 
 	    ((local-macro!)
 	     ;;When we define a binding for an identifier syntax: the local code sees
@@ -1349,7 +1349,7 @@
 	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-macro! loc) export-env)
-		     (cons (cons loc (syntactic-binding-value binding)) macro*))))
+		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
 
 	    ((local-ctv)
 	     ;;When we  define a binding  for a  compile-time value (CTV):  the local
@@ -1371,7 +1371,7 @@
 	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-ctv loc) export-env)
-		     (cons (cons loc (syntactic-binding-value binding)) macro*))))
+		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
 
 	    (($rtd $module $fluid $synonym)
 	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
@@ -1395,13 +1395,13 @@
 	     ;;
 	     (loop (cdr lexenv.run)
 		   export-env
-		   (cons (cons #f (syntactic-binding-value binding)) macro*)))
+		   (cons (cons #f (syntactic-binding-descriptor.value binding)) macro*)))
 
 	    (else
 	     (assertion-violation 'core-body-expander
 	       "internal error: do not know how to export"
-	       (syntactic-binding-type  binding)
-	       (syntactic-binding-value binding))))))))
+	       (syntactic-binding-descriptor.type  binding)
+	       (syntactic-binding-descriptor.value binding))))))))
 
   (define (%validate-exports export-spec* export-subst export-env)
     ;;We want to forbid code like the following:
@@ -1421,7 +1421,7 @@
       (for-each (lambda (subst)
 		  (cond ((assq (export-subst-entry-label subst) export-env)
 			 => (lambda (entry)
-			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry.binding-descriptor entry)))
+			      (when (eq? 'mutable (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry)))
 				(syntax-violation 'export
 				  "attempt to export mutated variable"
 				  (export-subst-entry-name subst)))))))
