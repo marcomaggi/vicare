@@ -86,10 +86,9 @@
 
     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
     fluid-syntax-binding-descriptor?
-    fluid-syntax-binding-fluid-label
+    fluid-syntax-binding-descriptor.fluid-label
 
     make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
-    synonym-syntax-binding-synonym-label
 
     make-syntactic-binding-descriptor/local-macro/compile-time-value
     local-compile-time-value-binding-descriptor.object
@@ -772,7 +771,7 @@
 
 (define-syntactic-binding-descriptor-predicate fluid-syntax-binding-descriptor? $fluid)
 
-(define-syntax-rule (fluid-syntax-binding-fluid-label ?binding)
+(define-syntax-rule (fluid-syntax-binding-descriptor.fluid-label ?binding)
   (syntactic-binding-descriptor.value ?binding))
 
 ;;; --------------------------------------------------------------------
@@ -801,7 +800,7 @@
 
 (define-syntactic-binding-descriptor-predicate synonym-syntax-binding-descriptor? $synonym)
 
-(define-syntax-rule (synonym-syntax-binding-synonym-label ?binding)
+(define-syntax-rule (synonym-syntax-binding-descriptor.synonym-label ?binding)
   (syntactic-binding-descriptor.value ?binding))
 
 ;;; --------------------------------------------------------------------
@@ -1176,7 +1175,7 @@
 	      ;;
 	      ;;   (displaced-lexical . #f)
 	      ;;
-	      (let* ((fluid-label   (fluid-syntax-binding-fluid-label binding))
+	      (let* ((fluid-label   (fluid-syntax-binding-descriptor.fluid-label binding))
 		     (fluid-binding (cond ((assq fluid-label lexenv)
 					   => lexenv-entry.binding-descriptor)
 					  (else
@@ -1192,7 +1191,7 @@
 	      binding)))))
 
   (define (%follow-through binding lexenv accum-labels)
-    (let ((synonym-label (synonym-syntax-binding-synonym-label binding)))
+    (let ((synonym-label (synonym-syntax-binding-descriptor.synonym-label binding)))
       (if (memq synonym-label accum-labels)
 	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
 	(label->syntactic-binding-descriptor synonym-label lexenv (cons synonym-label accum-labels)))))

@@ -653,7 +653,7 @@
 			 (%synner "unbound identifier" lhs)))
 	   (binding  (label->syntactic-binding-descriptor/no-indirection label lexenv.run)))
       (cond ((fluid-syntax-binding-descriptor? binding)
-	     (fluid-syntax-binding-fluid-label binding))
+	     (fluid-syntax-binding-descriptor.fluid-label binding))
 	    (else
 	     (%synner "not a fluid identifier" lhs)))))
 
