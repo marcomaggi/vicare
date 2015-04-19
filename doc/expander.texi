@@ -1966,7 +1966,7 @@ pattern variable, as created by @syntax{syntax-case} and
 @syntax{syntax-rules}, has descriptor with format:
 
 @example
-(syntax . (@meta{name} . @meta{level}))
+(pattern-variable . (@meta{name} . @meta{level}))
 @end example
 
 @noindent
@@ -1978,14 +1978,14 @@ The @syntax{syntax-case} patterns below will generate the displayed
 syntactic binding descriptors:
 
 @example
-?a                      ->  (syntax . (?a . 0))
-(?a)                    ->  (syntax . (?a . 0))
-(((?a)))                ->  (syntax . (?a . 0))
-(?a ...)                ->  (syntax . (?a . 1))
-((?a) ...)              ->  (syntax . (?a . 1))
-((((?a))) ...)          ->  (syntax . (?a . 1))
-((?a ...) ...)          ->  (syntax . (?a . 2))
-(((?a ...) ...) ...)    ->  (syntax . (?a . 3))
+?a                      ->  (pattern-variable . (?a . 0))
+(?a)                    ->  (pattern-variable . (?a . 0))
+(((?a)))                ->  (pattern-variable . (?a . 0))
+(?a ...)                ->  (pattern-variable . (?a . 1))
+((?a) ...)              ->  (pattern-variable . (?a . 1))
+((((?a))) ...)          ->  (pattern-variable . (?a . 1))
+((?a ...) ...)          ->  (pattern-variable . (?a . 2))
+(((?a ...) ...) ...)    ->  (pattern-variable . (?a . 3))
 @end example
 
 @c ------------------------------------------------------------------------

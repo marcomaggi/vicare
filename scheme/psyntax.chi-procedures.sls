@@ -222,7 +222,7 @@
 	   ((core-prim
 	     lexical global mutable
 	     core-macro! global-macro global-macro! macro macro! local-macro local-macro!
-	     import export library $module syntax
+	     import export library $module pattern-variable
 	     local-ctv global-ctv
 	     displaced-lexical)
 	    (values type (syntactic-binding-descriptor.value binding) ?id))
@@ -774,7 +774,7 @@
 	 ((displaced-lexical)
 	  (stx-error expr.stx "identifier out of context"))
 
-	 ((syntax)
+	 ((pattern-variable)
 	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
 	 ((define define-syntax define-fluid-syntax define-alias module import library)
@@ -793,8 +793,8 @@
 		      " was found where an expression was expected")))
 
 	 ((mutable)
-	  ;;Variable in reference  position, whose binding is a  mutable variable; it
-	  ;;means EXPR.STX is an identifier.
+	  ;;Variable in reference  position, whose binding is assigned  at least once
+	  ;;in the source code; it means EXPR.STX is an identifier.
 	  ;;
 	  ;;We expect the syntactic binding descriptor to be:
 	  ;;

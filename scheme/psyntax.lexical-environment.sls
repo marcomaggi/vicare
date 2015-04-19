@@ -918,11 +918,11 @@
   ;;
   ;;The returned descriptor as format:
   ;;
-  ;;   (syntax . (?name . ?ellipsis-nesting-level))
+  ;;   (pattern-variable . (?name . ?ellipsis-nesting-level))
   ;;
-  (make-syntactic-binding-descriptor syntax (cons name ellipsis-nesting-level)))
+  (make-syntactic-binding-descriptor pattern-variable (cons name ellipsis-nesting-level)))
 
-(define-syntactic-binding-descriptor-predicate pattern-variable-binding-descriptor? syntax)
+(define-syntactic-binding-descriptor-predicate pattern-variable-binding-descriptor? pattern-variable)
 
 
 ;;;; label gensym, lexical variable gensyms, storage location gensyms

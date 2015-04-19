@@ -732,21 +732,21 @@
   ;;About pattern  variables: they are  present in  a lexical environment  as entries
   ;;with format:
   ;;
-  ;;   (?label . (syntax . (?name . ?level)))
+  ;;   (?label . (pattern-variable . (?name . ?level)))
   ;;
-  ;;where: ?LABEL  is the label  in the identifier's  syntax object, "syntax"  is the
-  ;;symbol  "syntax", ?NAME  is  the  symbol representing  the  name  of the  pattern
-  ;;variable, ?LEVEL  is an  exact integer representing  the nesting  ellipsis level.
-  ;;The SYNTAX-CASE patterns below will generate the given entries:
+  ;;where: ?LABEL is the label in the identifier's syntax object, ?NAME is the symbol
+  ;;representing  the name  of  the  pattern variable,  ?LEVEL  is  an exact  integer
+  ;;representing the  nesting ellipsis  level.  The  SYNTAX-CASE patterns  below will
+  ;;generate the given entries:
   ;;
-  ;;   ?a			->  (syntax . (?a . 0))
-  ;;   (?a)			->  (syntax . (?a . 0))
-  ;;   (((?a)))			->  (syntax . (?a . 0))
-  ;;   (?a ...)			->  (syntax . (?a . 1))
-  ;;   ((?a) ...)		->  (syntax . (?a . 1))
-  ;;   ((((?a))) ...)		->  (syntax . (?a . 1))
-  ;;   ((?a ...) ...)		->  (syntax . (?a . 2))
-  ;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
+  ;;   ?a			->  (pattern-variable . (?a . 0))
+  ;;   (?a)			->  (pattern-variable . (?a . 0))
+  ;;   (((?a)))			->  (pattern-variable . (?a . 0))
+  ;;   (?a ...)			->  (pattern-variable . (?a . 1))
+  ;;   ((?a) ...)		->  (pattern-variable . (?a . 1))
+  ;;   ((((?a))) ...)		->  (pattern-variable . (?a . 1))
+  ;;   ((?a ...) ...)		->  (pattern-variable . (?a . 2))
+  ;;   (((?a ...) ...) ...)	->  (pattern-variable . (?a . 3))
   ;;
   ;;The  input template  is first  visited  in post-order,  building an  intermediate
   ;;symbolic representation  of it;  then the symbolic  representation is  visited in
