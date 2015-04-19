@@ -1308,9 +1308,10 @@
 		     macro*)))
 
 	    ((local-macro)
-	     ;;When we define  a binding for a non-identifier syntax:  the local code
-	     ;;sees it  as "local-macro".   If we export  such binding:  the importer
-	     ;;must see it as a "global-macro".
+	     ;;When we define a syntactic binding representing a keyword binding with
+	     ;;non-variable transformer: the local code sees the descriptor with type
+	     ;;"local-macro".  If we  export such binding: the importer  must see the
+	     ;;descriptor with type "global-macro".
 	     ;;
 	     ;;The entry from the LEXENV looks like this:
 	     ;;
@@ -1330,9 +1331,10 @@
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
 
 	    ((local-macro!)
-	     ;;When we define a binding for an identifier syntax: the local code sees
-	     ;;it as  "local-macro!".  If we  export such binding: the  importer must
-	     ;;see it as a "global-macro!".
+	     ;;When we define a syntactic binding representing a keyword binding with
+	     ;;variable transformer:  the local  code sees  the descriptor  with type
+	     ;;"local-macro!".  If we export such  binding: the importer must see the
+	     ;;descriptor with type "global-macro!".
 	     ;;
 	     ;;The entry from the LEXENV looks like this:
 	     ;;
