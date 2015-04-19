@@ -67,8 +67,6 @@
     (psyntax.library-manager)
     (psyntax.internal))
 
-  (include "psyntax.helpers.scm" #t)
-
 
 ;;The  "chi-*" functions  are the  ones visiting  syntax objects  and performing  the
 ;;expansion process.
@@ -76,6 +74,8 @@
 
 
 ;;;; helpers
+
+(include "psyntax.helpers.scm" #t)
 
 (define-syntax stx-error
   (syntax-rules ()
@@ -414,33 +414,32 @@
 	 chi-local-macro
 	 chi-global-macro)
 
-  (define* (chi-non-core-macro {procname symbol?} input-form-stx lexenv.run {rib false-or-rib?})
+  (define* (chi-non-core-macro {procname symbol?} input-form.stx lexenv.run {rib false-or-rib?})
     ;;Expand an expression representing the use  of a non-core macro; the transformer
     ;;function is  integrated in the  expander.  Return a syntax  object representing
     ;;the macro output form.
     ;;
-    ;;PROCNAME is a  symbol representing the name  of the non-core macro;  we can map
-    ;;from   such  symbol   to  the   transformer   function  with   the  module   of
+    ;;PROCNAME  is a  symbol representing  the  name of  the non-core  macro; we  can
+    ;;retrieve   the  transformer   procedure   from  PROCNAME   with  the   function
     ;;NON-CORE-MACRO-TRANSFORMER.
     ;;
-    ;;INPUT-FORM-STX is the syntax object representing the expression to be expanded.
+    ;;INPUT-FORM.STX is the syntax object representing the expression to be expanded.
     ;;
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
     ;;RIB is false or a struct of type "rib".
     ;;
-    (%do-macro-call (non-core-macro-transformer procname)
-		    input-form-stx lexenv.run rib))
+    (do-macro-call (non-core-macro-transformer procname)
+		   input-form.stx lexenv.run rib))
 
-  (define* (chi-local-macro bind-val input-form-stx lexenv.run {rib false-or-rib?})
-    ;;This function  is used  to expand  macro uses for  macros whose  transformer is
-    ;;defined by local user code, but  not identifier syntaxes; these are the lexical
-    ;;environment  entries with  types  "local-macro" and  "local-macro!".  Return  a
-    ;;syntax object representing the macro output form.
+  (define* (chi-local-macro bind-val input-form.stx lexenv.run {rib false-or-rib?})
+    ;;This function is used to expand macro uses for macros defined by the code being
+    ;;expanded; these  are the lexical  environment entries with  types "local-macro"
+    ;;and "local-macro!".  Return a syntax object representing the macro output form.
     ;;
-    ;;BIND-VAL is the binding value of the global macro.  The format of the syntactic
-    ;;binding descriptors is:
+    ;;BIND-VAL is  the value of the  local macro's syntactic binding  descriptor; the
+    ;;format of the descriptors is:
     ;;
     ;;     (local-macro  . (?transformer . ?expanded-expr))
     ;;     (local-macro! . (?transformer . ?expanded-expr))
@@ -449,23 +448,28 @@
     ;;
     ;;     (?transformer . ?expanded-expr)
     ;;
-    ;;INPUT-FORM-STX is the syntax object representing the expression to be expanded.
+    ;;INPUT-FORM.STX is the syntax object representing the expression to be expanded.
     ;;
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
     ;;RIB is false or a struct of type "rib".
     ;;
-    (%do-macro-call (car bind-val) input-form-stx lexenv.run rib))
+    (do-macro-call (car bind-val) input-form.stx lexenv.run rib))
 
-  (define* (chi-global-macro bind-val input-form-stx lexenv.run {rib false-or-rib?})
-    ;;This function  is used  to expand  macro uses for  macros whose  transformer is
-    ;;defined by user  code in imported libraries; these are  the lexical environment
-    ;;entries with types "global-macro" and  "global-macro!".  Return a syntax object
-    ;;representing the macro output form.
+  (define* (chi-global-macro bind-val input-form.stx lexenv.run {rib false-or-rib?})
+    ;;This  function is  used to  expand macro  uses for:
     ;;
-    ;;BIND-VAL is the binding value of the global macro.  The format of the syntactic
-    ;;binding descriptors is:
+    ;;* Macros imported from other libraries.
+    ;;
+    ;;* Macros  defined by expressions  previously evaluated in the  same interaction
+    ;;  environment.
+    ;;
+    ;;these  are  the  lexical  environment entries  with  types  "global-macro"  and
+    ;;"global-macro!".  Return a syntax object representing the macro output form.
+    ;;
+    ;;BIND-VAL is the  value of the global macro's syntactic  binding descriptor; the
+    ;;format of the descriptors is:
     ;;
     ;;     (global-macro  . (?library . ?loc))
     ;;     (global-macro! . (?library . ?loc))
@@ -474,7 +478,7 @@
     ;;
     ;;     (?library . ?loc)
     ;;
-    ;;INPUT-FORM-STX is the syntax object representing the expression to be expanded.
+    ;;INPUT-FORM.STX is the syntax object representing the expression to be expanded.
     ;;
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
@@ -487,79 +491,88 @@
       ;;visit the library.
       (unless (eq? lib '*interaction*)
 	(visit-library lib))
-      (let* ((x           (symbol-value loc))
-	     (transformer (cond ((procedure? x)
-				 x)
-				((variable-transformer? x)
-				 (variable-transformer-procedure x))
-				(else
-				 (assertion-violation/internal-error __who__
-				   "not a procedure" x)))))
-	(%do-macro-call transformer input-form-stx lexenv.run rib))))
+      (let ((transformer (let ((x (symbol-value loc)))
+			   (cond ((procedure? x)
+				  x)
+				 ((variable-transformer? x)
+				  (variable-transformer-procedure x))
+				 (else
+				  (assertion-violation/internal-error __who__
+				    "invalid object in \"value\" slot of global macro's loc gensym" x))))))
+	(do-macro-call transformer input-form.stx lexenv.run rib))))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%do-macro-call transformer input-form-stx lexenv.run {rib false-or-rib?})
-    ;;Apply  the transformer  to the  macro input  form.  Return  the output  form as
-    ;;syntax object.
+  (define* (do-macro-call transformer input-form.stx lexenv.run {rib false-or-rib?})
+    ;;Apply the transformer  to the syntax object representing the  macro input form.
+    ;;Return a syntax object representing the output form.
     ;;
-    (import ADD-MARK)
+    ;;The gist of the macro call is:
+    ;;
+    ;;   (add-new-mark rib
+    ;;                 (transformer (add-anti-mark input-form.stx))
+    ;;                 input-form.stx)
+    ;;
+    ;;in this function we do more than this to allows for: invalid transformer output
+    ;;detection;   implementation  of   compile-time   values;  expander   inspection
+    ;;facilities.
+    ;;
     (define (main)
+      (import ADD-MARK)
       ;;We parametrise here because we can never know which transformer, for example,
       ;;will query the syntactic binding properties.
-      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(let ((output-form-expr (transformer (add-anti-mark input-form-stx))))
-	  ;;If  the  transformer returns  a  function:  we  must apply  the  returned
-	  ;;function  to a  function acting  as compile-time  value retriever.   Such
-	  ;;application must return a value as a transformer would do.
-	  (if (procedure? output-form-expr)
-	      (%return (output-form-expr %ctv-retriever))
-	    (%return output-form-expr)))))
+      (receive (output-form.stx)
+	  (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	    (let ((output-form-expr (transformer (add-anti-mark input-form.stx))))
+	      ;;If the  transformer returns  a function: we  must apply  the returned
+	      ;;function to a function acting  as compile-time value retriever.  Such
+	      ;;application must return a value as a transformer would do.
+	      (if (procedure? output-form-expr)
+		  (output-form-expr %ctv-retriever)
+		output-form-expr)))
+	(%assert-no-raw-symbols-in-output-form output-form.stx)
+	;;Put a new mark on the output form.  For all the identifiers already present
+	;;in the input  form: this new mark  will be annihilated by  the anti-mark we
+	;;put before.   For all the  identifiers introduced by the  transformer: this
+	;;new mark will stay there.
+	(add-new-mark rib output-form.stx input-form.stx)))
 
-    (define (%return output-form-expr)
-      (import ADD-MARK)
-      ;;Check  that there  are no  raw symbols  in the  value returned  by the  macro
-      ;;transformer.
-      (let recur ((x output-form-expr))
-	;;Don't feed me cycles.
-	(unless (stx? x)
-	  (cond ((pair? x)
-		 (recur (car x))
-		 (recur (cdr x)))
-		((vector? x)
-		 (vector-for-each recur x))
-		((symbol? x)
-		 (syntax-violation #f
-		   "raw symbol encountered in output of macro"
-		   input-form-stx x)))))
-      ;;Put a new mark  on the output form.  For all  the identifiers already present
-      ;;in the input form: this new mark  will be annihilated by the anti-mark we put
-      ;;before.  For all the identifiers introduced by the transformer: this new mark
-      ;;will stay there.
-      (add-new-mark rib output-form-expr input-form-stx))
+    (define (%assert-no-raw-symbols-in-output-form x)
+      ;;Recursive function.  X must be a wrapped or unwrapped syntax object.
+      ;;
+      (unless (stx? x)
+	(cond ((pair? x)
+	       (%assert-no-raw-symbols-in-output-form (car x))
+	       (%assert-no-raw-symbols-in-output-form (cdr x)))
+	      ((vector? x)
+	       (vector-for-each %assert-no-raw-symbols-in-output-form x))
+	      ((symbol? x)
+	       (syntax-violation __who__
+		 "raw symbol encountered in output of macro" input-form.stx x)))))
 
     (define (%ctv-retriever id)
       ;;This is  the compile-time  values retriever  function.  Given  an identifier:
       ;;search an  entry in  the lexical  environment; when  found return  its value,
       ;;otherwise return false.
       ;;
-      (unless (identifier? id)
-	(assertion-violation 'rho "not an identifier" id))
-      (let ((binding (label->syntactic-binding-descriptor (id->label id) lexenv.run)))
-	(case (syntactic-binding-descriptor.type binding)
-	  ;;The given identifier is bound to  a local compile-time value.  The actual
-	  ;;object is stored in the binding itself.
-	  ((local-ctv)
-	   (local-compile-time-value-binding-object binding))
+      (if (identifier? id)
+	  (let ((descriptor (label->syntactic-binding-descriptor (id->label id) lexenv.run)))
+	    (case (syntactic-binding-descriptor.type descriptor)
+	      ;;The given  identifier is  bound to a  local compile-time  value.  The
+	      ;;actual object is stored in the descriptor itself.
+	      ((local-ctv)
+	       (local-compile-time-value-binding-descriptor.object descriptor))
 
-	  ;;The given  identifier is bound  to a  compile-time value imported  from a
-	  ;;library or the top-level environment.  The actual object is stored in the
-	  ;;"value" field of a loc gensym.
-	  ((global-ctv)
-	   (global-compile-time-value-binding-object binding))
+	      ;;The given identifier is bound to a compile-time value imported from a
+	      ;;library or the top-level environment.  The actual object is stored in
+	      ;;the "value" field of a loc gensym.
+	      ((global-ctv)
+	       (global-compile-time-value-binding-descriptor.object descriptor))
 
-	  ;;The given identifier is not bound to a compile-time value.
-	  (else #f))))
+	      ;;The given identifier is not bound to a compile-time value.
+	      (else #f)))
+	(assertion-violation __who__
+	  "expected identifier as argument of compile-time value retriever" id)))
 
     (main))
 
@@ -664,13 +677,14 @@
 		    (identifier-tag-retvals-signature expr.stx)))
 
 	 ((global-macro global-macro!)
-	  ;;Global macro use.
+	  ;;Macro uses of macros imported from other libraries or defined by previous
+	  ;;expressions in the same interaction environment.
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-global-macro bind-val expr.stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((local-macro local-macro!)
-	  ;;Macro uses of macros that are local in a non top-level region.
+	  ;;Macro uses of macros defined in the code being expanded.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-local-macro bind-val expr.stx lexenv.run #f))))
@@ -3172,6 +3186,8 @@
 ;;; end of file
 ;;Local Variables:
 ;;fill-column: 85
-;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
-;;eval: (put 'raise-compound-condition-object	'scheme-indent-function 1)
+;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
+;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
+;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
+;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;End:

@@ -94,8 +94,8 @@
     synonym-syntax-binding-synonym-label
 
     make-binding-descriptor/local-macro/compile-time-value
-    local-compile-time-value-binding-object
-    global-compile-time-value-binding-object
+    local-compile-time-value-binding-descriptor.object
+    global-compile-time-value-binding-descriptor.object
 
     make-binding-descriptor/local-global-macro/module-interface
 
@@ -820,7 +820,7 @@
   ;;
   (make-syntactic-binding-descriptor local-ctv (cons obj expanded-expr)))
 
-(define-syntax-rule (local-compile-time-value-binding-object ?descriptor)
+(define-syntax-rule (local-compile-time-value-binding-descriptor.object ?descriptor)
   ;;Given a  syntactic binding  descriptor representing a  local compile  time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -830,7 +830,7 @@
   ;;
   (cadr ?descriptor))
 
-(define (global-compile-time-value-binding-object binding)
+(define (global-compile-time-value-binding-descriptor.object binding)
   ;;Given a syntactic binding descriptor representing an imported compile time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -2700,10 +2700,10 @@
 	(let ((binding (label->syntactic-binding-descriptor label ((current-run-lexenv)))))
 	  (case (syntactic-binding-descriptor.type binding)
 	    ((local-ctv)
-	     (local-compile-time-value-binding-object binding))
+	     (local-compile-time-value-binding-descriptor.object binding))
 
 	    ((global-ctv)
-	     (global-compile-time-value-binding-object binding))
+	     (global-compile-time-value-binding-descriptor.object binding))
 
 	    (else
 	     (procedure-argument-violation __who__
