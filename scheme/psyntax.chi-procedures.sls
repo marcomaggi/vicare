@@ -1706,7 +1706,7 @@
 	 ;;     (define var 1)
 	 ;;     (set! var 2))
 	 ;;
-	 (set-lexical-mutable! bind-val)
+	 (lexical-var-binding-descriptor-value.assigned? bind-val #t)
 	 (let* ((lhs.tag (or (identifier-tag lhs.id)
 			     (top-tag-id)))
 		(rhs.psi (chi-expr (bless
@@ -1833,7 +1833,7 @@
 	((?arg* ...)
 	 (let* ((lex*        (map gensym-for-lexical-var ?arg*))
 		(lab*        (map gensym-for-label       ?arg*))
-		(lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
+		(lexenv.run^ (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
 	   (define validation*.stx
 	     (if (lambda-clause-attributes:safe-formals? attributes.sexp)
 		 (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
@@ -1861,7 +1861,7 @@
 		(lab*         (map gensym-for-label       ?arg*))
 		(rest-lex     (gensym-for-lexical-var ?rest-arg))
 		(rest-lab     (gensym-for-label       ?rest-arg))
-		(lexenv.run^  (add-lexical-bindings (cons rest-lab lab*)
+		(lexenv.run^  (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
 						    (cons rest-lex lex*)
 						    lexenv.run)))
 	   (receive (arg-tag* rest-tag)
@@ -2548,7 +2548,7 @@
 		   (extend-rib! rib id lab sd?)
 		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
-			      (add-lexical-binding lab lex lexenv.run) lexenv.expand
+			      (lexenv-add-lexical-var-binding lab lex lexenv.run) lexenv.expand
 			      (cons lex lex*) (cons qrhs.stx qrhs*)
 			      mod** kwd* export-spec* rib mix? sd?))))
 

@@ -545,7 +545,7 @@
 	   ;;Notice  that the  region of  all the  LETREC bindings  includes all  the
 	   ;;right-hand sides.
 	   (let* ((rib        (make-filled-rib lhs*.id lhs*.lab))
-		  (lexenv.run (add-lexical-bindings lhs*.lab lhs*.lex lexenv.run))
+		  (lexenv.run (lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
 		  (rhs*.psi   ($map-in-order
 			       (lambda (rhs.stx lhs.lab lhs.tag)
 				 (receive-and-return (rhs.psi)
