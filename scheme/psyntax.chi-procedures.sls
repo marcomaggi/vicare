@@ -328,9 +328,9 @@
 (define (expand-macro-transformer rhs-expr.stx lexenv.expand)
   ;;Given  a  syntax object  representing  the  right-hand  side  (RHS) of  a  syntax
   ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
-  ;;FLUID-LET-SYNTAX): expand it,  invoking libraries as needed, and  return the core
-  ;;language  sexp representing  the expression.   Usually the  return value  of this
-  ;;function is handed to EVAL-MACRO-TRANSFORMER.
+  ;;FLUID-LET-SYNTAX):  expand  it, invoking  libraries  as  needed, and  return  the
+  ;;expanded language sexp representing the  expression.  Usually the return value of
+  ;;this function is handed to EVAL-MACRO-TRANSFORMER.
   ;;
   ;;For:
   ;;
@@ -348,7 +348,7 @@
   ;;
   ;;   (expand-macro-transformer #'?rhs lexenv.expand)
   ;;
-  (let* ((rtc (make-collector))
+  (let* ((rtc          (make-collector))
 	 (rhs-expr.psi (parametrise ((inv-collector rtc)
 				     (vis-collector (lambda (x) (void))))
 			 (chi-expr rhs-expr.stx lexenv.expand lexenv.expand))))
@@ -367,15 +367,24 @@
 (define* (eval-macro-transformer rhs-expr.core lexenv.run)
   ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
   ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
-  ;;FLUID-LET-SYNTAX):  evaluate it  and return  a proper  syntactic binding  for the
-  ;;resulting  object.  Usually  this  function is  applied to  the  return value  of
-  ;;EXPAND-MACRO-TRANSFORMER.
+  ;;FLUID-LET-SYNTAX):  compile  it, evaluate  it,  then  return a  proper  syntactic
+  ;;binding descriptor for the resulting object.  Usually this function is applied to
+  ;;the return value of EXPAND-MACRO-TRANSFORMER.
   ;;
-  ;;When the RHS of  a syntax definition is evaluated, the  returned object should be
-  ;;either:  a  syntax transformer  procedure;  an  identifier-syntax transformer;  a
-  ;;Vicare struct type  descriptor or an R6RS record type  descriptor; a compile-time
-  ;;value; a synonim transformer.  If the return  value is not of such type: we raise
-  ;;an assertion violation.
+  ;;When the  RHS of a keyword  binding definition is evaluated,  the returned object
+  ;;should be a descriptor of:
+  ;;
+  ;;* Keyword binding with non-variable transformer.
+  ;;
+  ;;* Keyword binding with variable transformer.
+  ;;
+  ;;* Vicare struct-type descriptor or R6RS record-type descriptor.
+  ;;
+  ;;* Keyword binding with compile-time value.
+  ;;
+  ;;* Keyword binding with synonym transformer.
+  ;;
+  ;;If the return value is not of such type: we raise an assertion violation.
   ;;
   (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	      (compiler.eval-core (expanded->core rhs-expr.core)))))
@@ -394,7 +403,7 @@
 	    (condition
 	     (make-assertion-violation)
 	     (make-who-condition __who__)
-	     (make-message-condition "invalid return value from syntax definition right-hand side")
+	     (make-message-condition "invalid return value from syntax definition's right-hand side")
 	     (make-syntax-definition-expanded-rhs-condition rhs-expr.core)
 	     (make-syntax-definition-expression-return-value-condition rv)))))))
 
@@ -734,9 +743,8 @@
 						   (push-lexical-contour xrib x))))
 				    (with-exception-handler/input-form
 					in-form
-				      (eval-macro-transformer
-				       (expand-macro-transformer in-form lexenv.expand)
-				       lexenv.run))))
+				      (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+							      lexenv.run))))
 			     ?xrhs*)))
 	       (let ((body*.psi (chi-expr* (map (lambda (x)
 						  (push-lexical-contour xrib x))
@@ -2661,9 +2669,8 @@
 							 (push-lexical-contour xrib x))))
 					  (with-exception-handler/input-form
 					      in-form
-					    (eval-macro-transformer
-					     (expand-macro-transformer in-form lexenv.expand)
-					     lexenv.run))))
+					    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+								    lexenv.run))))
 				   ?xrhs*)))
 		    (chi-body*
 		     ;;Splice the internal  body forms but add a  lexical contour to
