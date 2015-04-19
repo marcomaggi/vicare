@@ -652,7 +652,7 @@
     (let* ((label    (or (id->label lhs)
 			 (%synner "unbound identifier" lhs)))
 	   (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
-      (cond ((fluid-syntax-binding? binding)
+      (cond ((fluid-syntax-binding-descriptor? binding)
 	     (fluid-syntax-binding-fluid-label binding))
 	    (else
 	     (%synner "not a fluid identifier" lhs)))))
@@ -894,7 +894,7 @@
       (?id
        (identifier? ?id)
        (let ((binding (label->syntactic-binding (id->label ?id) lexenv)))
-	 (if (pattern-variable-binding? binding)
+	 (if (pattern-variable-binding-descriptor? binding)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
 		 (let* ((name.level  (syntactic-binding-descriptor.value binding))

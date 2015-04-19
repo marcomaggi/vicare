@@ -87,22 +87,20 @@
     R6RS-RECORD-TYPE-SPEC
 
     make-binding-descriptor/local-global-macro/fluid-syntax
-    fluid-syntax-binding?
+    fluid-syntax-binding-descriptor?
     fluid-syntax-binding-fluid-label
 
     make-binding-descriptor/local-global-macro/synonym-syntax
-    synonym-syntax-binding?
     synonym-syntax-binding-synonym-label
 
     make-binding-descriptor/local-macro/compile-time-value
-    local-compile-time-value-binding?
     local-compile-time-value-binding-object
     global-compile-time-value-binding-object
 
     make-binding-descriptor/local-global-macro/module-interface
 
     make-binding-descriptor/pattern-variable
-    pattern-variable-binding?
+    pattern-variable-binding-descriptor?
 
     ;; lexical environment utilities
     label->syntactic-binding
@@ -767,7 +765,7 @@
   ;;
   (make-syntactic-binding-descriptor $fluid ?fluid-label))
 
-(define-syntactic-binding-descriptor-predicate fluid-syntax-binding? $fluid)
+(define-syntactic-binding-descriptor-predicate fluid-syntax-binding-descriptor? $fluid)
 
 (define-syntax-rule (fluid-syntax-binding-fluid-label ?binding)
   (syntactic-binding-descriptor.value ?binding))
@@ -796,7 +794,7 @@
   ;;
   (make-syntactic-binding-descriptor $synonym (id->label/or-error 'expander src-id src-id)))
 
-(define-syntactic-binding-descriptor-predicate synonym-syntax-binding? $synonym)
+(define-syntactic-binding-descriptor-predicate synonym-syntax-binding-descriptor? $synonym)
 
 (define-syntax-rule (synonym-syntax-binding-synonym-label ?binding)
   (syntactic-binding-descriptor.value ?binding))
@@ -821,8 +819,6 @@
   ;;the DEFINE-SYNTAX form.
   ;;
   (make-syntactic-binding-descriptor local-ctv (cons obj expanded-expr)))
-
-(define-syntactic-binding-descriptor-predicate local-compile-time-value-binding? local-ctv)
 
 (define-syntax-rule (local-compile-time-value-binding-object ?descriptor)
   ;;Given a  syntactic binding  descriptor representing a  local compile  time value:
@@ -922,7 +918,7 @@
   ;;
   (make-syntactic-binding-descriptor syntax (cons name ellipsis-nesting-level)))
 
-(define-syntactic-binding-descriptor-predicate pattern-variable-binding? syntax)
+(define-syntactic-binding-descriptor-predicate pattern-variable-binding-descriptor? syntax)
 
 
 ;;;; label gensym, lexical variable gensyms, storage location gensyms
@@ -1150,7 +1146,7 @@
      (label->syntactic-binding label lexenv '()))
     ((label lexenv accum-labels)
      (let ((binding (label->syntactic-binding/no-indirection label lexenv)))
-       (cond ((fluid-syntax-binding? binding)
+       (cond ((fluid-syntax-binding-descriptor? binding)
 	      ;;Fluid syntax  bindings (created  by DEFINE-FLUID-SYNTAX)
 	      ;;require  different   logic.   The   lexical  environment
 	      ;;contains the main fluid  syntax definition entry and one
@@ -1180,11 +1176,11 @@
 					   => lexenv-entry.binding-descriptor)
 					  (else
 					   (label->syntactic-binding/no-indirection fluid-label '())))))
-		(if (synonym-syntax-binding? fluid-binding)
+		(if (synonym-syntax-binding-descriptor? fluid-binding)
 		    (%follow-through binding lexenv accum-labels)
 		  fluid-binding)))
 
-	     ((synonym-syntax-binding? binding)
+	     ((synonym-syntax-binding-descriptor? binding)
 	      (%follow-through binding lexenv accum-labels))
 
 	     (else
