@@ -462,12 +462,7 @@
 ;;   ;;
 ;;   (make-syntactic-binding-descriptor core-prim public-name))
 ;;
-;; (define (core-primitive-binding? obj)
-;;   ;;Return  true  if OBJ  is  a  syntactic  binding  descriptor representing  a  core
-;;   ;;primitive; otherwise return false.
-;;   ;;
-;;   (and (pair? obj)
-;;        (eq? 'core-prim (syntactic-binding-descriptor.type obj))))
+;; (define-syntactic-binding-descriptor-predicate core-primitive-binding-descriptor? core-prim)
 ;;
 ;; (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
 ;;   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
