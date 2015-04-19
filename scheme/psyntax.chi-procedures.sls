@@ -389,15 +389,15 @@
   (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
 	      (compiler.eval-core (expanded->core rhs-expr.core)))))
     (cond ((procedure? rv)
-	   (make-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
+	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
 	  ((variable-transformer? rv)
-	   (make-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
+	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
 	  ((struct-or-record-type-descriptor-binding? rv)
 	   rv)
 	  ((compile-time-value? rv)
-	   (make-binding-descriptor/local-macro/compile-time-value (compile-time-value-object rv) rhs-expr.core))
+	   (make-syntactic-binding-descriptor/local-macro/compile-time-value (compile-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
-	   (make-binding-descriptor/local-global-macro/synonym-syntax (synonym-transformer-identifier rv)))
+	   (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax (synonym-transformer-identifier rv)))
 	  (else
 	   (raise
 	    (condition
@@ -2625,7 +2625,7 @@
 				      (eval-macro-transformer rhs.core lexenv.run)))
 			  ;;This LEXENV entry represents the definition of the fluid
 			  ;;syntax.
-			  (entry1   (cons lab (make-binding-descriptor/local-global-macro/fluid-syntax flab)))
+			  (entry1   (cons lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax flab)))
 			  ;;This LEXENV entry represents  the current binding of the
 			  ;;fluid  syntax;   the  binding  descriptor  is   of  type
 			  ;;LOCAL-MACRO, LOCAL-MACRO!  or  LOCAL-CTV.  Other entries
@@ -3096,7 +3096,7 @@
 						      ae*)))
 				    all-export-id*)
 				  all-export-lab*))
-		     (binding    (make-binding-descriptor/local-global-macro/module-interface iface))
+		     (binding    (make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
 		     (entry      (cons name-label binding)))
 		(values lex* qrhs*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.

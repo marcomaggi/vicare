@@ -64,8 +64,8 @@
     lexenv-add-lexical-var-binding
     lexenv-add-lexical-var-bindings
 
-    make-binding-descriptor/local-macro/non-variable-transformer
-    make-binding-descriptor/local-macro/variable-transformer
+    make-syntactic-binding-descriptor/local-macro/non-variable-transformer
+    make-syntactic-binding-descriptor/local-macro/variable-transformer
 
     make-struct-or-record-type-descriptor-binding
     struct-or-record-type-descriptor-binding?
@@ -86,20 +86,20 @@
     r6rs-record-type-descriptor-bindval-spec
     R6RS-RECORD-TYPE-SPEC
 
-    make-binding-descriptor/local-global-macro/fluid-syntax
+    make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
     fluid-syntax-binding-descriptor?
     fluid-syntax-binding-fluid-label
 
-    make-binding-descriptor/local-global-macro/synonym-syntax
+    make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
     synonym-syntax-binding-synonym-label
 
-    make-binding-descriptor/local-macro/compile-time-value
+    make-syntactic-binding-descriptor/local-macro/compile-time-value
     local-compile-time-value-binding-descriptor.object
     global-compile-time-value-binding-descriptor.object
 
-    make-binding-descriptor/local-global-macro/module-interface
+    make-syntactic-binding-descriptor/local-global-macro/module-interface
 
-    make-binding-descriptor/pattern-variable
+    make-syntactic-binding-descriptor/pattern-variable
     pattern-variable-binding-descriptor?
 
     ;; lexical environment utilities
@@ -473,7 +473,7 @@
 ;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
 
-(define (make-binding-descriptor/lexical-var lex-name)
+(define (make-syntactic-binding-descriptor/lexical-var lex-name)
   ;;Build and return  a syntactic binding descriptor representing  a constant lexical
   ;;variable;  this variable  is never  assigned  in the  code.  LEX-NAME  must be  a
   ;;lexical  gensym representing  the  name of  a lexical  variable  in the  expanded
@@ -534,7 +534,7 @@
   ;;LABEL must be a  syntactic binding's label gensym.  LEX must  be a lexical gensym
   ;;representing the name of a lexical variable in the expanded language forms.
   ;;
-  (cons (cons label (make-binding-descriptor/lexical-var lex))
+  (cons (cons label (make-syntactic-binding-descriptor/lexical-var lex))
 	lexenv))
 
 (define (lexenv-add-lexical-var-bindings label* lex* lexenv)
@@ -553,7 +553,7 @@
 ;;; --------------------------------------------------------------------
 ;;; local macro with non-variable transformer bindings
 
-(define (make-binding-descriptor/local-macro/non-variable-transformer transformer expanded-expr)
+(define (make-syntactic-binding-descriptor/local-macro/non-variable-transformer transformer expanded-expr)
   ;;Build  and return  a syntactic  binding descriptor  representing a  local keyword
   ;;binding  with  non-variable  transformer.
   ;;
@@ -577,7 +577,7 @@
 ;;; --------------------------------------------------------------------
 ;;; local macro with variable transformer bindings
 
-(define (make-binding-descriptor/local-macro/variable-transformer transformer expanded-expr)
+(define (make-syntactic-binding-descriptor/local-macro/variable-transformer transformer expanded-expr)
   ;;Build  and return  a syntactic  binding descriptor  representing a  local keyword
   ;;binding with variable transformer.
   ;;
@@ -734,7 +734,7 @@
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
 
-(define-syntax-rule (make-binding-descriptor/local-global-macro/fluid-syntax ?fluid-label)
+(define-syntax-rule (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax ?fluid-label)
   ;;Build and returnn a syntactic binding descriptor representing a fluid syntax; the
   ;;descriptor can be used to represent both a local and imported syntactic binding.
   ;;
@@ -768,7 +768,7 @@
 ;;; --------------------------------------------------------------------
 ;;; rename bindings
 
-(define (make-binding-descriptor/local-global-macro/synonym-syntax src-id)
+(define (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax src-id)
   ;;Build  a  syntactic  binding  descriptor   representing  a  synonym  syntax;  the
   ;;descriptor can be used to represent  both a local and imported syntactic binding.
   ;;When successful return the descriptor; if an error occurs: raise an exception.
@@ -797,7 +797,7 @@
 ;;; --------------------------------------------------------------------
 ;;; compile-time values bindings
 
-(define (make-binding-descriptor/local-macro/compile-time-value obj expanded-expr)
+(define (make-syntactic-binding-descriptor/local-macro/compile-time-value obj expanded-expr)
   ;;Build a  syntactic binding  descriptor representing  a local  compile-time value.
   ;;
   ;;OBJ  must  be  the  actual   object  computed  from  a  compile-time  expression.
@@ -880,7 +880,7 @@
 ;;; --------------------------------------------------------------------
 ;;; module bindings
 
-(define (make-binding-descriptor/local-global-macro/module-interface iface)
+(define (make-syntactic-binding-descriptor/local-global-macro/module-interface iface)
   ;;Build and return a syntactic  binding descriptor representing a module interface;
   ;;the  descriptor can  be used  to represent  both a  local and  imported syntactic
   ;;binding.
@@ -898,7 +898,7 @@
 ;;; --------------------------------------------------------------------
 ;;; pattern variable bindings
 
-(define (make-binding-descriptor/pattern-variable name ellipsis-nesting-level)
+(define (make-syntactic-binding-descriptor/pattern-variable name ellipsis-nesting-level)
   ;;Build and return a syntactic  binding descriptor representing a pattern variable.
   ;;The descriptor can be used only to represent  a local binding: there is no way to
   ;;export a pattern variable binding.
@@ -1249,7 +1249,7 @@
 			  ;;remember that  for interaction environments:
 			  ;;we  reuse  the  storage location  gensym  as
 			  ;;lexical gensym.
-			  (make-binding-descriptor/lexical-var (cdr lab.loc/lex))))
+			  (make-syntactic-binding-descriptor/lexical-var (cdr lab.loc/lex))))
 		    (else
 		     ;;Unbound label.
 		     '(displaced-lexical . #f)))))

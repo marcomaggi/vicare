@@ -1183,7 +1183,7 @@
 	   (define lexenv.run^
 	     ;;Push a  pattern variable  entry to the  lexenv.  The  ellipsis nesting
 	     ;;level is 0.
-	     (cons (cons label (make-binding-descriptor/pattern-variable lex 0))
+	     (cons (cons label (make-syntactic-binding-descriptor/pattern-variable lex 0))
 		   lexenv.run))
 	   (define output-expr.core
 	     (%chi-expr.core output-expr^ lexenv.run^ lexenv.expand))
@@ -1336,7 +1336,7 @@
     (define bindings
       ;;For each pattern variable: a binding to be pushed on the lexical environment.
       (map (lambda (label name level)
-	     (cons label (make-binding-descriptor/pattern-variable name level)))
+	     (cons label (make-syntactic-binding-descriptor/pattern-variable name level)))
 	labels names levels))
     (define expr.core
       ;;Expand the  expression in  a lexical environment  augmented with  the pattern
