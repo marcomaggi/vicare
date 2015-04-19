@@ -651,7 +651,7 @@
     ;;
     (let* ((label    (or (id->label lhs)
 			 (%synner "unbound identifier" lhs)))
-	   (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
+	   (binding  (label->syntactic-binding-descriptor/no-indirection label lexenv.run)))
       (cond ((fluid-syntax-binding-descriptor? binding)
 	     (fluid-syntax-binding-fluid-label binding))
 	    (else
@@ -893,7 +893,7 @@
       ;;
       (?id
        (identifier? ?id)
-       (let ((binding (label->syntactic-binding (id->label ?id) lexenv)))
+       (let ((binding (label->syntactic-binding-descriptor (id->label ?id) lexenv)))
 	 (if (pattern-variable-binding-descriptor? binding)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
@@ -1568,7 +1568,7 @@
     ;;
     (cond ((id->label type-id)
 	   => (lambda (label)
-		(let ((binding (label->syntactic-binding label lexenv.run)))
+		(let ((binding (label->syntactic-binding-descriptor label lexenv.run)))
 		  (if (struct-type-descriptor-binding? binding)
 		      (syntactic-binding-descriptor.value binding)
 		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
@@ -1747,7 +1747,7 @@
 	    (sys.identifier? (sys.syntax ?lexenv)))
        (sys.syntax
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
-	       (binding  (label->syntactic-binding label ?lexenv)))
+	       (binding  (label->syntactic-binding-descriptor label ?lexenv)))
 	  (cond ((r6rs-record-type-descriptor-binding? binding)
 		 ?r6rs-body0 ?r6rs-body ...)
 		((struct-type-descriptor-binding? binding)
@@ -1768,7 +1768,7 @@
 	    (sys.identifier? (sys.syntax ?lexenv)))
        (sys.syntax
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
-	       (?binding  (label->syntactic-binding label ?lexenv)))
+	       (?binding  (label->syntactic-binding-descriptor label ?lexenv)))
 	  (cond ((r6rs-record-type-descriptor-binding? ?binding)
 		 ?r6rs-body0 ?r6rs-body ...)
 		((struct-type-descriptor-binding? ?binding)
@@ -2624,7 +2624,7 @@
     ((_ ?id)
      (identifier? ?id)
      (let* ((label               (id->label/or-error __who__ input-form.stx ?id))
-	    (binding-descriptor  (label->syntactic-binding label lexenv.run))
+	    (binding-descriptor  (label->syntactic-binding-descriptor label lexenv.run))
 	    (binding-value       (case (syntactic-binding-descriptor.type binding-descriptor)
 				   ((local-macro local-macro!)
 				    (syntactic-binding-descriptor.value binding-descriptor))

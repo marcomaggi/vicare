@@ -103,8 +103,8 @@
     pattern-variable-binding-descriptor?
 
     ;; lexical environment utilities
-    label->syntactic-binding
-    label->syntactic-binding/no-indirection
+    label->syntactic-binding-descriptor
+    label->syntactic-binding-descriptor/no-indirection
 
     ;; marks of lexical contours
     top-marked?
@@ -253,7 +253,7 @@
 	  compile-time-value-object)
     (only (psyntax.library-manager)
 	  visit-library
-	  imported-label->syntactic-binding))
+	  label->imported-syntactic-binding-descriptor))
 
 
 ;;;; helpers
@@ -1101,7 +1101,7 @@
 		  ;;the  data structure  implementing the  symbol object
 		  ;;holds informations about the  binding in an internal
 		  ;;field; else such field is set to false.
-		  (if (imported-label->syntactic-binding label)
+		  (if (label->imported-syntactic-binding-descriptor label)
 		      ;;Create new label to shadow imported binding.
 		      (gensym-for-label id)
 		    ;;Recycle old label.
@@ -1127,9 +1127,9 @@
 
 ;;;; lexical environment: mapping labels to syntactic binding descriptors
 
-(module (label->syntactic-binding)
+(module (label->syntactic-binding-descriptor)
 
-  (case-define label->syntactic-binding
+  (case-define label->syntactic-binding-descriptor
     ;;Look up the  symbol LABEL in the  LEXENV as well as  in the global
     ;;environment.   If an  entry with  key LABEL  is found:  return the
     ;;associated syntactic  binding descriptor; if no  matching entry is
@@ -1143,9 +1143,9 @@
     ;;the binding.
     ;;
     ((label lexenv)
-     (label->syntactic-binding label lexenv '()))
+     (label->syntactic-binding-descriptor label lexenv '()))
     ((label lexenv accum-labels)
-     (let ((binding (label->syntactic-binding/no-indirection label lexenv)))
+     (let ((binding (label->syntactic-binding-descriptor/no-indirection label lexenv)))
        (cond ((fluid-syntax-binding-descriptor? binding)
 	      ;;Fluid syntax  bindings (created  by DEFINE-FLUID-SYNTAX)
 	      ;;require  different   logic.   The   lexical  environment
@@ -1175,7 +1175,7 @@
 		     (fluid-binding (cond ((assq fluid-label lexenv)
 					   => lexenv-entry.binding-descriptor)
 					  (else
-					   (label->syntactic-binding/no-indirection fluid-label '())))))
+					   (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
 		(if (synonym-syntax-binding-descriptor? fluid-binding)
 		    (%follow-through binding lexenv accum-labels)
 		  fluid-binding)))
@@ -1190,11 +1190,11 @@
     (let ((synonym-label (synonym-syntax-binding-synonym-label binding)))
       (if (memq synonym-label accum-labels)
 	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
-	(label->syntactic-binding synonym-label lexenv (cons synonym-label accum-labels)))))
+	(label->syntactic-binding-descriptor synonym-label lexenv (cons synonym-label accum-labels)))))
 
   #| end of module |# )
 
-(define (label->syntactic-binding/no-indirection label lexenv)
+(define (label->syntactic-binding-descriptor/no-indirection label lexenv)
   ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
   ;;environment.   If an  entry  with  key LABEL  is  found: return  the
   ;;associated  syntactic binding  descriptor; if  no matching  entry is
@@ -1217,7 +1217,7 @@
 	 ;;possible to use the concise expression:
 	 ;;
 	 ;;   (define ?binding
-	 ;;     (label->syntactic-binding (id->label ?id) ?lexenv))
+	 ;;     (label->syntactic-binding-descriptor (id->label ?id) ?lexenv))
 	 ;;
 	 ;;provided that later we check for the type of ?BINDING.
 	 '(displaced-lexical))
@@ -1229,9 +1229,9 @@
 	;;
 	;;So,  if we  have a  label, we  can check  if it  references an
 	;;imported binding simply by checking its "value" field; this is
-	;;what IMPORTED-LABEL->SYNTACTIC-BINDING does.
+	;;what LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR does.
 	;;
-	((imported-label->syntactic-binding label)
+	((label->imported-syntactic-binding-descriptor label)
 	 => (lambda (binding)
 	      (if (core-rtd-binding? binding)
 		  (make-struct-or-record-type-descriptor-binding
@@ -2140,7 +2140,7 @@
   ;;record type descriptor: raise a syntax violation exception.
   ;;
   (let* ((label   (id->label/or-error who form type-name-id))
-	 (binding (label->syntactic-binding label lexenv)))
+	 (binding (label->syntactic-binding-descriptor label lexenv)))
     (if (r6rs-record-type-descriptor-binding? binding)
 	binding
       (syntax-violation who
@@ -2668,7 +2668,7 @@
   ;;of LEXENV.RUN while a macro is being expanded.
   ;;
   ;;The  default  value will  return  null,  which represents  an  empty
-  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
+  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING-DESCRIPTOR: the
   ;;mapping   label/binding  is   performed   only   in  the   top-level
   ;;environment.
   ;;
@@ -2697,7 +2697,7 @@
 (define* (syntax-parameter-value {id identifier?})
   (let ((label (id->label id)))
     (if label
-	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
+	(let ((binding (label->syntactic-binding-descriptor label ((current-run-lexenv)))))
 	  (case (syntactic-binding-descriptor.type binding)
 	    ((local-ctv)
 	     (local-compile-time-value-binding-object binding))

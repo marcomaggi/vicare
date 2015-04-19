@@ -1555,7 +1555,7 @@ a previous expression, @meta{library} is the symbol
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported binding: non--identifier macro
+@subsubheading Imported binding: non--variable macro
 
 A syntactic binding representing an imported keyword binding with a
 non--variable transformer has descriptor with format:
@@ -1576,7 +1576,7 @@ of evaluating their right--hand side expression is a function.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported binding: identifier macro
+@subsubheading Imported binding: variable macro
 
 A syntactic binding representing an imported keyword binding with
 variable transformer has descriptor with format:

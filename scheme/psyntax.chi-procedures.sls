@@ -216,7 +216,7 @@
      (let ((label (id->label/intern ?id)))
        (unless label
 	 (raise-unbound-error #f expr.stx ?id))
-       (let* ((binding (label->syntactic-binding label lexenv))
+       (let* ((binding (label->syntactic-binding-descriptor label lexenv))
 	      (type    (syntactic-binding-descriptor.type binding)))
 	 (case type
 	   ((core-prim
@@ -242,7 +242,7 @@
      ;;
      (cond ((id->label/intern ?car)
 	    => (lambda (label)
-		 (let* ((binding (label->syntactic-binding label lexenv))
+		 (let* ((binding (label->syntactic-binding-descriptor label lexenv))
 			(type    (syntactic-binding-descriptor.type binding)))
 		   (case type
 		     ((core-macro
@@ -536,7 +536,7 @@
       ;;
       (unless (identifier? id)
 	(assertion-violation 'rho "not an identifier" id))
-      (let ((binding (label->syntactic-binding (id->label id) lexenv.run)))
+      (let ((binding (label->syntactic-binding-descriptor (id->label id) lexenv.run)))
 	(case (syntactic-binding-descriptor.type binding)
 	  ;;The given identifier is bound to  a local compile-time value.  The actual
 	  ;;object is stored in the binding itself.

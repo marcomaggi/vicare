@@ -58,7 +58,7 @@
 
     ;; miscellaneous
     library-name-identifiers
-    imported-label->syntactic-binding)
+    label->imported-syntactic-binding-descriptor)
   (import (rnrs)
     (psyntax.compat))
 
@@ -732,15 +732,16 @@
 
 ;;;; utilities for the expansion process
 
-(define (imported-label->syntactic-binding lab)
-  ;;If a label gensym is associated to  a binding from the the boot image environment
-  ;;or to a binding from a library's  EXPORT-ENV: it has the associated descriptor in
-  ;;its "value" field; otherwise such field is set to #f.
+(define (label->imported-syntactic-binding-descriptor lab)
+  ;;If a label  gensym is associated to  a syntactic binding established  by the boot
+  ;;image or a library's EXPORT-ENV: it  has the associated descriptor in its "value"
+  ;;field; otherwise such field is set to #f.
   ;;
   ;;So, if we have a label, we can  check if it references an imported binding simply
-  ;;by  checking its  "value" field;  this is  what IMPORTED-LABEL->SYNTACTIC-BINDING
-  ;;does.   If LAB  is a  label genysm  referencing an  imported binding:  return the
-  ;;associated syntactic binding descriptor; otherwise return false.
+  ;;by      checking       its      "value"       field;      this       is      what
+  ;;LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR  does.  If  LAB  is  a label  genysm
+  ;;referencing  an  imported  binding:   return  the  associated  syntactic  binding
+  ;;descriptor; otherwise return false.
   ;;
   (label-binding lab))
 
