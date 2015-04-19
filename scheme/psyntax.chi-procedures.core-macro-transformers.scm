@@ -1569,7 +1569,7 @@
     (cond ((id->label type-id)
 	   => (lambda (label)
 		(let ((binding (label->syntactic-binding-descriptor label lexenv.run)))
-		  (if (struct-type-descriptor-binding? binding)
+		  (if (std-binding-descriptor? binding)
 		      (syntactic-binding-descriptor.value binding)
 		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
 	  (else
@@ -1748,9 +1748,9 @@
        (sys.syntax
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
 	       (binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((r6rs-record-type-descriptor-binding? binding)
+	  (cond ((rtd-binding-descriptor? binding)
 		 ?r6rs-body0 ?r6rs-body ...)
-		((struct-type-descriptor-binding? binding)
+		((std-binding-descriptor? binding)
 		 ?struct-body0 ?struct-body ...)
 		((identifier-object-type-spec ?type-id)
 		 ?spec-body0 ?spec-body ...)
@@ -1769,9 +1769,9 @@
        (sys.syntax
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
 	       (?binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((r6rs-record-type-descriptor-binding? ?binding)
+	  (cond ((rtd-binding-descriptor? ?binding)
 		 ?r6rs-body0 ?r6rs-body ...)
-		((struct-type-descriptor-binding? ?binding)
+		((std-binding-descriptor? ?binding)
 		 ?struct-body0 ?struct-body ...)
 		((identifier-object-type-spec ?type-id)
 		 ?spec-body0 ?spec-body ...)

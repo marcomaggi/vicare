@@ -67,14 +67,12 @@
     make-syntactic-binding-descriptor/local-macro/non-variable-transformer
     make-syntactic-binding-descriptor/local-macro/variable-transformer
 
-    make-struct-or-record-type-descriptor-binding
-    struct-or-record-type-descriptor-binding?
-    struct-type-descriptor-binding?
+    std/rtd-binding-descriptor?
+    std-binding-descriptor?
     struct-type-descriptor-binding-std
     struct-type-descriptor-bindval?
     struct-type-descriptor-bindval-std
-    core-rtd-binding?
-    r6rs-record-type-descriptor-binding?
+    rtd-binding-descriptor?
     make-r6rs-record-type-descriptor-binding
     r6rs-record-type-descriptor-binding-rtd
     r6rs-record-type-descriptor-binding-rcd
@@ -603,16 +601,22 @@
 ;;; --------------------------------------------------------------------
 ;;; struct/record type descriptor bindings
 
-(define-syntax-rule (make-struct-or-record-type-descriptor-binding ?bind-val)
+(define-syntax-rule (make-syntactic-binding-descriptor/struct-or-record-type-descriptor ?bind-val)
   (make-syntactic-binding-descriptor $rtd ?bind-val))
 
-(define-syntactic-binding-descriptor-predicate struct-or-record-type-descriptor-binding? $rtd)
+;;Return true if the argument is  a syntactic binding descriptor representing a local
+;;or imported binding describing a struct-type descriptor or record-type descriptor.
+;;
+(define-syntactic-binding-descriptor-predicate std/rtd-binding-descriptor? $rtd)
 
 ;;; --------------------------------------------------------------------
-;;; Vicare struct type descriptor bindings
+;;; Vicare struct-type descriptor bindings
 
-(define (struct-type-descriptor-binding? binding)
-  (and (struct-or-record-type-descriptor-binding? binding)
+;;Return true if the argument is  a syntactic binding descriptor representing a local
+;;or imported binding describing a struct-type descriptor.
+;;
+(define (std-binding-descriptor? binding)
+  (and (std/rtd-binding-descriptor? binding)
        (struct-type-descriptor-bindval? (syntactic-binding-descriptor.value binding))))
 
 (define-syntax-rule (struct-type-descriptor-binding-std ?binding)
@@ -627,12 +631,18 @@
 ;;; --------------------------------------------------------------------
 ;;; R6RS record-type descriptor binding
 
-(define-syntactic-binding-descriptor-predicate core-rtd-binding? $core-rtd)
+;;Return true  if the argument  is a syntactic  binding descriptor describing  a R6RS
+;;record-type descriptor established by the boot image.
+;;
+(define-syntactic-binding-descriptor-predicate core-rtd-binding-descriptor? $core-rtd)
 
 ;;;
 
-(define (r6rs-record-type-descriptor-binding? binding)
-  (and (struct-or-record-type-descriptor-binding? binding)
+;;Return true if the argument is  a syntactic binding descriptor representing a local
+;;or imported binding describing a R6RS record-type descriptor.
+;;
+(define (rtd-binding-descriptor? binding)
+  (and (std/rtd-binding-descriptor? binding)
        (pair? (syntactic-binding-descriptor.value binding))))
 
 (define-syntax-rule (make-r6rs-record-type-descriptor-binding ?rtd-id ?rcd-id ?spec)
@@ -1228,8 +1238,8 @@
 	;;
 	((label->imported-syntactic-binding-descriptor label)
 	 => (lambda (binding)
-	      (if (core-rtd-binding? binding)
-		  (make-struct-or-record-type-descriptor-binding
+	      (if (core-rtd-binding-descriptor? binding)
+		  (make-syntactic-binding-descriptor/struct-or-record-type-descriptor
 		   (map bless (syntactic-binding-descriptor.value binding)))
 		binding)))
 
@@ -2136,7 +2146,7 @@
   ;;
   (let* ((label   (id->label/or-error who form type-name-id))
 	 (binding (label->syntactic-binding-descriptor label lexenv)))
-    (if (r6rs-record-type-descriptor-binding? binding)
+    (if (rtd-binding-descriptor? binding)
 	binding
       (syntax-violation who
 	"identifier not bound to a record type descriptor"

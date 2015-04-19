@@ -392,7 +392,7 @@
 	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
 	  ((variable-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
-	  ((struct-or-record-type-descriptor-binding? rv)
+	  ((std/rtd-binding-descriptor? rv)
 	   rv)
 	  ((compile-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/compile-time-value (compile-time-value-object rv) rhs-expr.core))
