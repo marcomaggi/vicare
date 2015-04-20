@@ -67,22 +67,15 @@
     make-syntactic-binding-descriptor/local-macro/non-variable-transformer
     make-syntactic-binding-descriptor/local-macro/variable-transformer
 
+    make-syntactic-binding-descriptor/struct-type-name
     struct-type-name-binding-descriptor?
     struct-type-name-binding-descriptor.type-descriptor
-    struct-type-descriptor-binding-std
-    struct-type-descriptor-bindval?
-    struct-type-descriptor-bindval-std
 
+    make-syntactic-binding-descriptor/record-type-name
     record-type-name-binding-descriptor?
-    make-r6rs-record-type-descriptor-binding
-    r6rs-record-type-descriptor-binding-rtd
-    r6rs-record-type-descriptor-binding-rcd
-    r6rs-record-type-descriptor-binding-spec
-    make-r6rs-record-type-descriptor-bindval
-    r6rs-record-type-descriptor-bindval?
-    r6rs-record-type-descriptor-bindval-rtd
-    r6rs-record-type-descriptor-bindval-rcd
-    r6rs-record-type-descriptor-bindval-spec
+    record-type-name-binding-descriptor.rtd-id
+    record-type-name-binding-descriptor.rcd-id
+    record-type-name-binding-descriptor.spec
     R6RS-RECORD-TYPE-SPEC
 
     make-syntactic-binding-descriptor/local-global-macro/fluid-syntax
@@ -601,21 +594,22 @@
 ;;; --------------------------------------------------------------------
 ;;; Vicare struct-type name bindings
 
-(define-syntax-rule (make-syntactic-binding-descriptor/struct-type-name ?type-descriptor)
+(define (make-syntactic-binding-descriptor/struct-type-name type-descriptor)
   ;;Build and return a syntactic binding descriptor representing a struct-type name.
   ;;
-  ;;The argument  ?TYPE-DESCRIPTOR must  be the  struct-type descriptor  itself.
+  ;;The argument TYPE-DESCRIPTOR must be the struct-type descriptor itself.
   ;;
   ;;The returned descriptor has format:
   ;;
   ;;   ($struct-type-descriptor . ?type-descriptor)
   ;;
-  (make-syntactic-binding-descriptor $struct-type-descriptor ?bind-val))
+  (make-syntactic-binding-descriptor $struct-type-descriptor type-descriptor))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported binding describing a struct-type descriptor.
 ;;
-(define-syntactic-binding-descriptor-predicate struct-type-name-binding-descriptor? $struct-type-descriptor)
+(define-syntactic-binding-descriptor-predicate struct-type-name-binding-descriptor?
+  $struct-type-descriptor)
 
 (define-syntax-rule (struct-type-name-binding-descriptor.type-descriptor ?descriptor)
   ;;Given a syntactic binding descriptor  representing a struct-type name: return the
@@ -626,15 +620,6 @@
   ;;   ($struct-type-descriptor . ?type-descriptor)
   ;;
   (syntactic-binding-descriptor.value ?descriptor))
-
-(define-syntax-rule (struct-type-descriptor-binding-std ?binding)
-  (struct-type-descriptor-bindval-std (syntactic-binding-descriptor.value ?binding)))
-
-(define-syntax-rule (struct-type-descriptor-bindval? ?bind-val)
-  (struct-type-descriptor? ?bind-val))
-
-(define-syntax-rule (struct-type-descriptor-bindval-std ?bind-val)
-  ?bind-val)
 
 ;;; --------------------------------------------------------------------
 ;;; core R6RS record-type descriptor binding
@@ -652,10 +637,10 @@
   ;;
   ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
   ;;
-  (make-syntactic-binding-descriptor/record-type-name
-   (let ((bindval (syntactic-binding-descriptor.value descriptor)))
-     (list (bless (core-record-type-name-binding-descriptor-value.rtd-name bindval))
-	   (bless (core-record-type-name-binding-descriptor-value.rcd-name bindval))))))
+  (let ((bindval (syntactic-binding-descriptor.value descriptor)))
+    (make-syntactic-binding-descriptor/record-type-name
+     (bless (core-record-type-name-binding-descriptor-value.rtd-name bindval))
+     (bless (core-record-type-name-binding-descriptor-value.rcd-name bindval)))))
 
 ;;Return true  if the argument  is a syntactic  binding descriptor describing  a R6RS
 ;;record-type descriptor established by the boot image.
@@ -672,8 +657,23 @@
 ;;; --------------------------------------------------------------------
 ;;; R6RS record-type descriptor binding
 
-(define-syntax-rule (make-syntactic-binding-descriptor/record-type-name ?bind-val)
-  (make-syntactic-binding-descriptor $record-type-descriptor ?bind-val))
+(case-define make-syntactic-binding-descriptor/record-type-name
+  ;;Build and return a syntactic binding descriptor representing a record-type name.
+  ;;
+  ;;The  argument RTD-ID  must be  a syntactic  identifier bound  to the  record-type
+  ;;descriptor object.  The  argument RCD-ID must be a syntactic  identifier bound to
+  ;;the  record-constructor descriptor  object.   The optional  argument  SPEC is  an
+  ;;instance of "r6rs-record-type-spec".
+  ;;
+  ;;The returned descriptor has one of the formats:
+  ;;
+  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
+  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id . spec))
+  ;;
+  ((rtd-id rcd-id)
+   (make-syntactic-binding-descriptor $record-type-descriptor (list rtd-id rcd-id)))
+  ((rtd-id rcd-id spec)
+   (make-syntactic-binding-descriptor $record-type-descriptor (cons rtd-id (cons rcd-id spec)))))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported binding describing a R6RS record-type descriptor.
@@ -681,97 +681,83 @@
 (define-syntactic-binding-descriptor-predicate record-type-name-binding-descriptor?
   $record-type-descriptor)
 
-(define-syntax-rule (make-r6rs-record-type-descriptor-binding ?rtd-id ?rcd-id ?spec)
-  (make-syntactic-binding-descriptor $record-type-descriptor (make-r6rs-record-type-descriptor-bindval ?rtd-id ?rcd-id ?spec)))
+(define-syntax-rule (record-type-name-binding-descriptor.rtd-id ?descriptor)
+  (record-type-name-binding-descriptor-value.rtd-id (syntactic-binding-descriptor.value ?descriptor)))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding)
-  (r6rs-record-type-descriptor-bindval-rtd (syntactic-binding-descriptor.value ?binding)))
+(define-syntax-rule (record-type-name-binding-descriptor.rcd-id ?descriptor)
+  (record-type-name-binding-descriptor-value.rcd-id (syntactic-binding-descriptor.value ?descriptor)))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding)
-  (r6rs-record-type-descriptor-bindval-rcd (syntactic-binding-descriptor.value ?binding)))
+(define-syntax-rule (record-type-name-binding-descriptor.spec ?descriptor)
+  (record-type-name-binding-descriptor-value.spec   (syntactic-binding-descriptor.value ?descriptor)))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding)
-  (r6rs-record-type-descriptor-bindval-spec (syntactic-binding-descriptor.value ?binding)))
+(define-syntax-rule (record-type-name-binding-descriptor-value.rtd-id ?descriptor-value)
+  (car ?descriptor-value))
 
-;;;
+(define-syntax-rule (record-type-name-binding-descriptor-value.rcd-id ?descriptor-value)
+  (cadr ?descriptor-value))
 
-(define-syntax-rule (make-r6rs-record-type-descriptor-bindval ?rtd-id ?rcd-id ?spec)
-  (cons ?rtd-id (cons ?rcd-id ?spec)))
-
-(define-syntax-rule (r6rs-record-type-descriptor-bindval? ?bind-val)
-  (pair? ?bind-val))
-
-(define-syntax-rule (r6rs-record-type-descriptor-bindval-rtd ?bind-val)
-  (car ?bind-val))
-
-(define-syntax-rule (r6rs-record-type-descriptor-bindval-rcd ?bind-val)
-  (cadr ?bind-val))
-
-(define-syntax-rule (r6rs-record-type-descriptor-bindval-spec ?bind-val)
-  (cddr ?bind-val))
+(define-syntax-rule (record-type-name-binding-descriptor-value.spec ?descriptor-value)
+  (cddr ?descriptor-value))
 
 ;;;
 
 (module R6RS-RECORD-TYPE-SPEC
   (make-r6rs-record-type-spec
    r6rs-record-type-spec?
-   r6rs-record-type-descriptor-binding-safe-accessor
-   r6rs-record-type-descriptor-binding-safe-mutator
-   r6rs-record-type-descriptor-binding-unsafe-accessor
-   r6rs-record-type-descriptor-binding-unsafe-mutator)
+   record-type-name-binding-descriptor.safe-accessor
+   record-type-name-binding-descriptor.safe-mutator
+   record-type-name-binding-descriptor.unsafe-accessor
+   record-type-name-binding-descriptor.unsafe-mutator)
 
   (define-record r6rs-record-type-spec
     (safe-accessors-table
-		;Alist  mapping all  field names  to the  identifiers to
-		;which the safe accessors are bound.
+		;Alist mapping all  field names to the identifiers to  which the safe
+		;accessors are bound.
      safe-mutators-table
-		;Alist mapping mutable field names to the identifiers to
-		;which safe mutators are bound.
+		;Alist mapping mutable  field names to the identifiers  to which safe
+		;mutators are bound.
      unsafe-accessors-table
-		;False  or   alist  mapping  all  field   names  to  the
-		;identifiers to which the unsafe accessors are bound.
+		;False or alist  mapping all field names to the  identifiers to which
+		;the unsafe accessors are bound.
      unsafe-mutators-table
-		;False  or  alist mapping  mutable  field  names to  the
-		;identifiers to which unsafe mutators are bound.
+		;False or  alist mapping  mutable field names  to the  identifiers to
+		;which unsafe mutators are bound.
      ))
 
-  (define (r6rs-record-type-descriptor-binding-safe-accessor binding field-name-id synner)
-    (%spec-actor binding field-name-id r6rs-record-type-spec-safe-accessors-table
-		 'record-accessor synner))
+  (define (record-type-name-binding-descriptor.safe-accessor binding-descriptor field-name-id synner)
+    (%spec-actor binding-descriptor field-name-id r6rs-record-type-spec-safe-accessors-table 'record-accessor synner))
 
-  (define (r6rs-record-type-descriptor-binding-safe-mutator binding field-name-id synner)
-    (%spec-actor binding field-name-id r6rs-record-type-spec-safe-mutators-table
-		 'record-mutator synner))
+  (define (record-type-name-binding-descriptor.safe-mutator binding-descriptor field-name-id synner)
+    (%spec-actor binding-descriptor field-name-id r6rs-record-type-spec-safe-mutators-table  'record-mutator synner))
 
-  (define (r6rs-record-type-descriptor-binding-unsafe-accessor binding field-name-id synner)
-    (%spec-actor binding field-name-id r6rs-record-type-spec-unsafe-accessors-table
-		 'unsafe-record-accessor synner))
+  (define (record-type-name-binding-descriptor.unsafe-accessor binding-descriptor field-name-id synner)
+    (%spec-actor binding-descriptor field-name-id r6rs-record-type-spec-unsafe-accessors-table 'unsafe-record-accessor synner))
 
-  (define (r6rs-record-type-descriptor-binding-unsafe-mutator binding field-name-id synner)
-    (%spec-actor binding field-name-id r6rs-record-type-spec-unsafe-mutators-table
-		 'unsafe-record-mutator synner))
+  (define (record-type-name-binding-descriptor.unsafe-mutator binding-descriptor field-name-id synner)
+    (%spec-actor binding-descriptor field-name-id r6rs-record-type-spec-unsafe-mutators-table  'unsafe-record-mutator synner))
 
-  (define (%spec-actor binding field-name-id table-getter actor-constructor synner)
-    ;;Given an  R6RS record  type descriptor  binding and  an identifier
-    ;;representing  a   record  field  name:  return   a  syntax  object
-    ;;representing an expression which,  expanded and evaluated, returns
-    ;;the accessor or mutator for the named field.
+  (define (%spec-actor binding-descriptor field-name-id table-getter actor-constructor synner)
+    ;;Given  an  R6RS  record-type  name's   binding  descriptor  and  an  identifier
+    ;;representing  a record's  field name:  return a  syntax object  representing an
+    ;;expression which, expanded  and evaluated, returns the accessor  or mutator for
+    ;;the named field.
     ;;
-    ;;TABLE-GETTER must be a function which, applied to the record spec,
-    ;;returns the required association list.
+    ;;TABLE-GETTER must be a function which,  applied to the record spec, returns the
+    ;;required association list.
     ;;
-    ;;ACTOR-CONSTRUCTOR  must be  one of  the symbols:  record-accessor,
-    ;;record-mutator.
+    ;;ACTOR-CONSTRUCTOR must be one  of the symbols: record-accessor, record-mutator,
+    ;;unsafe-record-accessor, unsafe-record-mutator;  these are  the public  names of
+    ;;the core primitives building the accessors and mutators.
     ;;
     (let ((field-name-sym (syntax->datum field-name-id))
-	  (spec           (r6rs-record-type-descriptor-binding-spec binding)))
+	  (spec           (record-type-name-binding-descriptor.spec binding-descriptor)))
       (cond ((and (r6rs-record-type-spec? spec)
 		  (assq field-name-sym (table-getter spec)))
 	     => cdr)
 	    (else
 	     ;;Fallback  to   the  common  field  accessor   or  mutator
 	     ;;constructor.
-	     (let ((rtd-id (r6rs-record-type-descriptor-binding-rtd binding)))
+	     (let ((rtd-id (record-type-name-binding-descriptor.rtd-id binding-descriptor)))
 	       (bless
 		`(,actor-constructor ,rtd-id (quote ,field-name-sym))))))))
 
@@ -2170,22 +2156,22 @@
   (or (id->label id)
       (raise-unbound-error who input-form.stx id)))
 
-(define (id->record-type-name-binding-descriptor who form type-name-id lexenv)
-  ;;TYPE-NAME-ID  is  meant  to  be  an  identifier bound  to  an  R6RS  record  type
-  ;;descriptor; retrieve its label then its  binding in LEXENV and return the binding
-  ;;descriptor.
+(define (id->record-type-name-binding-descriptor who input-form.stx type-name-id lexenv)
+  ;;TYPE-NAME-ID is meant  to be a syntactic identifier bound  to an R6RS record-type
+  ;;name  binding descriptor;  retrieve its  label then  its binding  descriptor from
+  ;;LEXENV, finally return the binding descriptor.
   ;;
   ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
-  ;;syntactic binding descriptor  does not represent an R6RS  record type descriptor:
-  ;;raise a syntax violation exception.
+  ;;syntactic binding descriptor does not represent an R6RS record-type name: raise a
+  ;;syntax violation exception.
   ;;
-  (let* ((label (id->label/or-error who form type-name-id))
+  (let* ((label (id->label/or-error who input-form.stx type-name-id))
 	 (descr (label->syntactic-binding-descriptor label lexenv)))
     (if (record-type-name-binding-descriptor? descr)
 	descr
       (syntax-violation who
 	"identifier not bound to a record type descriptor"
-	form type-name-id))))
+	input-form.stx type-name-id))))
 
 
 ;;So, what's an anti-mark and why is it there?

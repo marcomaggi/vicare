@@ -913,7 +913,7 @@
 	    ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
 	    ;;bound when the "object-type-spec" is built.
 	    (define-syntax ,type.id
-	      (cons '$struct-type-descriptor ',std))
+	      (make-syntactic-binding-descriptor/struct-type-name ',std))
 	    (begin-for-syntax ,object-type-spec-form)
 	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
 	      (receive-and-return (S)
@@ -1144,9 +1144,7 @@
 	(define ,foo-rcd ,foo-rcd-code)
 	;;Binding for record type name.
 	(define-syntax ,foo
-	  (cons '$record-type-descriptor
-		(cons (syntax ,foo-rtd)
-		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
+	  (make-syntactic-binding-descriptor/record-type-name (syntax ,foo-rtd) (syntax ,foo-rcd) (quote ,binding-spec)))
 	(begin-for-syntax ,object-type-spec-form)
 	;;Record instance predicate.
 	(define (brace ,foo? <predicate>)

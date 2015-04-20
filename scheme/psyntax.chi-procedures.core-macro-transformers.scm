@@ -1599,16 +1599,6 @@
 	 record-type-field-ref-transformer
 	 $record-type-field-set!-transformer
 	 $record-type-field-ref-transformer)
-  ;;The syntactic  binding representing  the R6RS record  type descriptor  and record
-  ;;constructor descriptor has one of the formats:
-  ;;
-  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
-  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id . ?spec))
-  ;;
-  ;;where: ?RTD-ID  is the identifier to  which the record type  descriptor is bound;
-  ;;?RCD-ID is the  identifier to which the default record  constructor descriptor is
-  ;;bound; ?SPEC is a record of type R6RS-RECORD-TYPE-SPEC.
-  ;;
   (import R6RS-RECORD-TYPE-SPEC)
 
   (let-syntax
@@ -1623,8 +1613,8 @@
 			   lexenv.run lexenv.expand))
 		)))
 	   )))
-    (define-transformer record-type-descriptor        r6rs-record-type-descriptor-binding-rtd)
-    (define-transformer record-constructor-descriptor r6rs-record-type-descriptor-binding-rcd)
+    (define-transformer record-type-descriptor        record-type-name-binding-descriptor.rtd-id)
+    (define-transformer record-constructor-descriptor record-type-name-binding-descriptor.rcd-id)
     #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -1647,8 +1637,8 @@
 			     lexenv.run lexenv.expand)))
 		)))
 	   )))
-    (define-transformer  record-type-field-ref r6rs-record-type-descriptor-binding-safe-accessor)
-    (define-transformer $record-type-field-ref r6rs-record-type-descriptor-binding-unsafe-accessor)
+    (define-transformer  record-type-field-ref record-type-name-binding-descriptor.safe-accessor)
+    (define-transformer $record-type-field-ref record-type-name-binding-descriptor.unsafe-accessor)
     #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
@@ -1671,8 +1661,8 @@
 			     lexenv.run lexenv.expand)))
 		)))
 	   )))
-    (define-transformer  record-type-field-set! r6rs-record-type-descriptor-binding-safe-mutator)
-    (define-transformer $record-type-field-set! r6rs-record-type-descriptor-binding-unsafe-mutator)
+    (define-transformer  record-type-field-set! record-type-name-binding-descriptor.safe-mutator)
+    (define-transformer $record-type-field-set! record-type-name-binding-descriptor.unsafe-mutator)
     #| end of LET-SYNTAX |# )
 
   #| end of module |# )
@@ -1702,7 +1692,7 @@
        (identifier? ?type-id)
        (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
 	 ((r6rs-record-type)
-	  (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
+	  (chi-expr (record-type-name-binding-descriptor.rtd-id binding)
 		    lexenv.run lexenv.expand))
 	 ((vicare-struct-type)
 	  (make-psi input-form.stx
