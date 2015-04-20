@@ -601,15 +601,15 @@
   ;;
   ;;The returned descriptor has format:
   ;;
-  ;;   ($struct-type-descriptor . ?type-descriptor)
+  ;;   ($struct-type-name . ?type-descriptor)
   ;;
-  (make-syntactic-binding-descriptor $struct-type-descriptor type-descriptor))
+  (make-syntactic-binding-descriptor $struct-type-name type-descriptor))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported binding describing a struct-type descriptor.
 ;;
 (define-syntactic-binding-descriptor-predicate struct-type-name-binding-descriptor?
-  $struct-type-descriptor)
+  $struct-type-name)
 
 (define-syntax-rule (struct-type-name-binding-descriptor.type-descriptor ?descriptor)
   ;;Given a syntactic binding descriptor  representing a struct-type name: return the
@@ -617,7 +617,7 @@
   ;;
   ;;We expect the descriptor to have the format:
   ;;
-  ;;   ($struct-type-descriptor . ?type-descriptor)
+  ;;   ($struct-type-name . ?type-descriptor)
   ;;
   (syntactic-binding-descriptor.value ?descriptor))
 
@@ -635,7 +635,7 @@
   ;;
   ;;and the usable descriptor to have the format:
   ;;
-  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
+  ;;   ($record-type-name . (?rtd-id ?rcd-id))
   ;;
   (let ((bindval (syntactic-binding-descriptor.value descriptor)))
     (make-syntactic-binding-descriptor/record-type-name
@@ -667,19 +667,19 @@
   ;;
   ;;The returned descriptor has one of the formats:
   ;;
-  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
-  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id . spec))
+  ;;   ($record-type-name . (?rtd-id ?rcd-id))
+  ;;   ($record-type-name . (?rtd-id ?rcd-id . spec))
   ;;
   ((rtd-id rcd-id)
-   (make-syntactic-binding-descriptor $record-type-descriptor (list rtd-id rcd-id)))
+   (make-syntactic-binding-descriptor $record-type-name (list rtd-id rcd-id)))
   ((rtd-id rcd-id spec)
-   (make-syntactic-binding-descriptor $record-type-descriptor (cons rtd-id (cons rcd-id spec)))))
+   (make-syntactic-binding-descriptor $record-type-name (cons rtd-id (cons rcd-id spec)))))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported binding describing a R6RS record-type descriptor.
 ;;
 (define-syntactic-binding-descriptor-predicate record-type-name-binding-descriptor?
-  $record-type-descriptor)
+  $record-type-name)
 
 (define-syntax-rule (record-type-name-binding-descriptor.rtd-id ?descriptor)
   (record-type-name-binding-descriptor-value.rtd-id (syntactic-binding-descriptor.value ?descriptor)))

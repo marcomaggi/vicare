@@ -254,7 +254,7 @@
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module)
 		      (values type (syntactic-binding-descriptor.value binding) ?car))
-		     (($record-type-descriptor $struct-type-descriptor)
+		     (($record-type-name $struct-type-name)
 		      (values 'tag-maker-application (syntactic-binding-descriptor.value binding) ?car))
 		     (else
 		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.

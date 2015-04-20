@@ -1056,7 +1056,7 @@ core-macro macro core-prim $core-rtd
 global global-macro global-macro! global-ctv
 
 lexical local-macro local-macro! local-ctv
-$record-type-descriptor $struct-type-descriptor
+$record-type-name $struct-type-name
 $fluid $module $synonym pattern-variable
 @end example
 
@@ -1627,7 +1627,7 @@ A syntactic binding representing an imported keyword binding associated
 to a @value{PRJNAME}'s struct--type name has descriptor with format:
 
 @example
-($struct-type-descriptor . @meta{struct-type-descriptor})
+($struct-type-name . @meta{struct-type-descriptor})
 @end example
 
 @noindent
@@ -1644,8 +1644,8 @@ library, but not established by the boot image, associated to a
 of the formats:
 
 @example
-($record-type-descriptor . (@meta{rtd-id} @meta{rcd-id}))
-($record-type-descriptor . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+($record-type-name . (@meta{rtd-id} @meta{rcd-id}))
+($record-type-name . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
 @end example
 
 @noindent
@@ -1997,7 +1997,7 @@ A syntactic binding representing a keyword binding associated to a
 @value{PRJNAME}'s struct--type name has descriptor with format:
 
 @example
-($struct-type-descriptor . @meta{type-descriptor-struct})
+($struct-type-name . @meta{type-descriptor-struct})
 @end example
 
 @noindent
@@ -2015,8 +2015,8 @@ A syntactic binding representing a keyword binding associated to a
 @rnrs{6}'s record--type name has descriptor with one of the formats:
 
 @example
-($record-type-descriptor . (@meta{rtd-id} @meta{rcd-id}))
-($record-type-descriptor . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+($record-type-name . (@meta{rtd-id} @meta{rcd-id}))
+($record-type-name . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
 @end example
 
 @noindent
