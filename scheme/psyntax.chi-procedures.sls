@@ -213,22 +213,23 @@
   (syntax-match expr.stx ()
     (?id
      (identifier? expr.stx)
-     (let ((label (id->label/intern ?id)))
-       (unless label
-	 (raise-unbound-error #f expr.stx ?id))
-       (let* ((binding (label->syntactic-binding-descriptor label lexenv))
-	      (type    (syntactic-binding-descriptor.type binding)))
-	 (case type
-	   ((core-prim
-	     lexical global global-mutable
-	     core-macro! global-macro global-macro! macro macro! local-macro local-macro!
-	     import export library $module pattern-variable
-	     local-ctv global-ctv
-	     displaced-lexical)
-	    (values type (syntactic-binding-descriptor.value binding) ?id))
+     (cond ((id->label/intern ?id)
+	    => (lambda (label)
+		 (let* ((binding (label->syntactic-binding-descriptor label lexenv))
+			(type    (syntactic-binding-descriptor.type binding)))
+		   (case type
+		     ((core-prim
+		       lexical global global-mutable
+		       macro macro! global-macro global-macro! local-macro local-macro!
+		       import export library $module pattern-variable
+		       local-ctv global-ctv
+		       displaced-lexical)
+		      (values type (syntactic-binding-descriptor.value binding) ?id))
+		     (else
+		      ;;This will cause an error to be raised later.
+		      (values 'other #f #f))))))
 	   (else
-	    ;;This will cause an error to be raised later.
-	    (values 'other #f #f))))))
+	    (raise-unbound-error #f expr.stx ?id))))
 
     ((?tag)
      (tag-identifier? ?tag)
