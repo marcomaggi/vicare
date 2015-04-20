@@ -804,7 +804,7 @@
 	     (uid            (if uid
 				 (identifier->symbol uid)
 			       (gensym type.str)))
-	     (rtd            (~datum->syntax type.id (make-struct-type type.str field*.sym uid)))
+	     (std            (~datum->syntax type.id (make-struct-type type.str field*.sym uid)))
 	     (constructor.id (or maker.id     (string->id (string-append "make-" type.str))))
 	     (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
 	     (field*.idx     (enumerate field*.stx)))
@@ -909,16 +909,16 @@
 		   ,@accessor*.id ,@unsafe-accessor*.id
 		   ,@mutator*.id  ,@unsafe-mutator*.id)
 	    (define ((brace ,predicate.id ,(boolean-tag-id)) obj)
-	      ($struct/rtd? obj ',rtd))
+	      ($struct/rtd? obj ',std))
 	    ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
 	    ;;bound when the "object-type-spec" is built.
 	    (define-syntax ,type.id
-	      (cons '$rtd ',rtd))
+	      (cons '$struct-type-descriptor ',std))
 	    (begin-for-syntax ,object-type-spec-form)
 	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
 	      (receive-and-return (S)
-		  ($struct ',rtd ,@field*.sym)
-		(when ($std-destructor ',rtd)
+		  ($struct ',std ,@field*.sym)
+		(when ($std-destructor ',std)
 		  ($struct-guardian S))))
 	    ,@unsafe-accessor-sexp*
 	    ,@unsafe-mutator-sexp*
@@ -1144,7 +1144,7 @@
 	(define ,foo-rcd ,foo-rcd-code)
 	;;Binding for record type name.
 	(define-syntax ,foo
-	  (cons '$rtd
+	  (cons '$record-type-descriptor
 		(cons (syntax ,foo-rtd)
 		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
 	(begin-for-syntax ,object-type-spec-form)

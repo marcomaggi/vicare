@@ -1375,7 +1375,7 @@
 		     (cons (cons* label 'global-ctv loc) export-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
 
-	    (($rtd $module $fluid $synonym)
+	    (($record-type-descriptor $struct-type-descriptor $module $fluid $synonym)
 	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
 	     ;;EXPORT-ENV.
 	     ;;

@@ -616,7 +616,8 @@
 			       module begin set! stale-when
 			       global mutable
 			       core-macro macro macro!
-			       $core-rtd $rtd $module $fluid $synonym)
+			       $core-rtd $record-type-descriptor $struct-type-descriptor
+			       $module $fluid $synonym)
 			      binding)
 			     (else
 			      (assertion-violation __module_who__

@@ -1101,28 +1101,39 @@ Syntactic bindings of this type are established by
 of evaluating their right--hand side expression is the return value of a
 call to @func{make-compile-time-value}.
 
-@item $rtd
+@item $struct-type-descriptor
 Denotes a syntactic binding representing a @value{PRJNAME}'s
-struct--type name or @rnrs{6} record--type name.  The export descriptor
-has one of the formats:
+struct--type name.  The export descriptor has the format:
 
 @example
-($rtd . @meta{type-descriptor-struct})
-($rtd . (@meta{rtd-id} @meta{rcd-id}))
-($rtd . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+($struct-type-descriptor . @meta{type-descriptor-struct})
 @end example
 
 @noindent
-where: @meta{type-descriptor-struct} is a struct representing the
-struct--type descriptor; @meta{rtd-id} is the syntactic identifier to
-which the record--type descriptor is bound; @meta{rcd-id} is the
-syntactic identifier to which the default record--constructor descriptor
-is bound; @meta{spec} is an instance of record type
+where @meta{type-descriptor-struct} is a struct representing the
+struct--type descriptor.
+
+Syntactic bindings of this type are established by uses of the syntax
+@syntax{define-struct}.
+
+@item $record-type-descriptor
+Denotes a syntactic binding representing a @rnrs{6} record--type name.
+The export descriptor has one of the formats:
+
+@example
+($record-type-descriptor . (@meta{rtd-id} @meta{rcd-id}))
+($record-type-descriptor . (@meta{rtd-id} @meta{rcd-id} . @meta{spec}))
+@end example
+
+@noindent
+where: @meta{rtd-id} is the syntactic identifier to which the
+record--type descriptor is bound; @meta{rcd-id} is the syntactic
+identifier to which the default record--constructor descriptor is bound;
+@meta{spec} is an instance of record type
 @objtype{r6rs-record-type-spec}.
 
 Syntactic bindings of this type are established by uses of the syntaxes
-@syntax{define-struct}, @syntax{define-record-type} and
-@syntax{define-condition-type}.
+@syntax{define-record-type} and @syntax{define-condition-type}.
 
 @item $module
 Denotes a syntactic binding representing a module interface.  The export

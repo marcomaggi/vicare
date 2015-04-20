@@ -1561,16 +1561,16 @@
 ;;; --------------------------------------------------------------------
 
   (define (%struct-type-id->rtd who input-form.stx type-id lexenv.run)
-    ;;Given the  identifier of  the struct  type: find its  label then  its syntactic
-    ;;binding and  return the  struct type  descriptor.  If  no binding  captures the
-    ;;identifier or the binding does not  describe a structure type descriptor: raise
-    ;;an exception.
+    ;;Given the syntactic identifier TYPE-ID of  the struct-type: find its label then
+    ;;its  syntactic binding  descriptor, finally  return the  struct-type descriptor
+    ;;itself.  If no binding captures the identifier or the binding does not describe
+    ;;a struct-type name: raise an exception.
     ;;
     (cond ((id->label type-id)
 	   => (lambda (label)
-		(let ((binding (label->syntactic-binding-descriptor label lexenv.run)))
-		  (if (std-binding-descriptor? binding)
-		      (syntactic-binding-descriptor.value binding)
+		(let ((binding-descriptor (label->syntactic-binding-descriptor label lexenv.run)))
+		  (if (struct-type-name-binding-descriptor? binding-descriptor)
+		      (struct-type-name-binding-descriptor.type-descriptor binding-descriptor)
 		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
 	  (else
 	   (raise-unbound-error who input-form.stx type-id))))
@@ -1602,12 +1602,12 @@
   ;;The syntactic  binding representing  the R6RS record  type descriptor  and record
   ;;constructor descriptor has one of the formats:
   ;;
-  ;;   ($rtd . (?rtd-id ?rcd-id))
-  ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
+  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
+  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id . ?spec))
   ;;
-  ;;where: "$rtd" is the symbol "$rtd"; ?RTD-ID is the identifier to which the record
-  ;;type descriptor is  bound; ?RCD-ID is the identifier to  which the default record
-  ;;constructor descriptor is bound; ?SPEC is a record of type R6RS-RECORD-TYPE-SPEC.
+  ;;where: ?RTD-ID  is the identifier to  which the record type  descriptor is bound;
+  ;;?RCD-ID is the  identifier to which the default record  constructor descriptor is
+  ;;bound; ?SPEC is a record of type R6RS-RECORD-TYPE-SPEC.
   ;;
   (import R6RS-RECORD-TYPE-SPEC)
 
@@ -1748,9 +1748,9 @@
        (sys.syntax
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
 	       (binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((rtd-binding-descriptor? binding)
+	  (cond ((record-type-name-binding-descriptor? binding)
 		 ?r6rs-body0 ?r6rs-body ...)
-		((std-binding-descriptor? binding)
+		((struct-type-name-binding-descriptor? binding)
 		 ?struct-body0 ?struct-body ...)
 		((identifier-object-type-spec ?type-id)
 		 ?spec-body0 ?spec-body ...)
@@ -1769,9 +1769,9 @@
        (sys.syntax
 	(let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
 	       (?binding  (label->syntactic-binding-descriptor label ?lexenv)))
-	  (cond ((rtd-binding-descriptor? ?binding)
+	  (cond ((record-type-name-binding-descriptor? ?binding)
 		 ?r6rs-body0 ?r6rs-body ...)
-		((std-binding-descriptor? ?binding)
+		((struct-type-name-binding-descriptor? ?binding)
 		 ?struct-body0 ?struct-body ...)
 		((identifier-object-type-spec ?type-id)
 		 ?spec-body0 ?spec-body ...)

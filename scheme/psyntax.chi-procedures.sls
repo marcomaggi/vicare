@@ -254,7 +254,7 @@
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module)
 		      (values type (syntactic-binding-descriptor.value binding) ?car))
-		     (($rtd)
+		     (($record-type-descriptor $struct-type-descriptor)
 		      (values 'tag-maker-application (syntactic-binding-descriptor.value binding) ?car))
 		     (else
 		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
@@ -392,7 +392,8 @@
 	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
 	  ((variable-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
-	  ((std/rtd-binding-descriptor? rv)
+	  ((or (record-type-name-binding-descriptor? rv)
+	       (struct-type-name-binding-descriptor? rv))
 	   rv)
 	  ((compile-time-value? rv)
 	   (make-syntactic-binding-descriptor/local-macro/compile-time-value (compile-time-value-object rv) rhs-expr.core))
