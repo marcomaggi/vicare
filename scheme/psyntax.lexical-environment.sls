@@ -624,10 +624,11 @@
 ;;; --------------------------------------------------------------------
 ;;; core R6RS record-type descriptor binding
 
-(define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor descriptor)
-  ;;Convert  a syntactic  binding  descriptor representing  a  core record-type  name
-  ;;(established by the boot image)  into a syntactic binding descriptor representing
-  ;;a record-type name in the format usable by the expander.
+(define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor)
+  ;;Mutate  a  syntactic  binding  descriptor  from  the  representation  of  a  core
+  ;;record-type  name (established  by  the  boot image)  to  a  representation of  a
+  ;;record-type  name in  the  format  usable by  the  expander.  Return  unspecified
+  ;;values.
   ;;
   ;;We expect the core descriptor to have format:
   ;;
@@ -637,16 +638,40 @@
   ;;
   ;;   ($record-type-name . (?rtd-id ?rcd-id))
   ;;
-  (let ((bindval (syntactic-binding-descriptor.value descriptor)))
-    (make-syntactic-binding-descriptor/record-type-name
-     (bless (core-record-type-name-binding-descriptor-value.rtd-name bindval))
-     (bless (core-record-type-name-binding-descriptor-value.rcd-name bindval)))))
+  (set-car! descriptor '$record-type-name)
+  (set-cdr! descriptor (let ((bindval (syntactic-binding-descriptor.value descriptor)))
+			 (list (bless (core-record-type-name-binding-descriptor-value.rtd-name bindval))
+			       (bless (core-record-type-name-binding-descriptor-value.rcd-name bindval))))))
+
+;;Commented out  because unused, but kept  for reference.  (Marco Maggi;  Mon Apr 20,
+;;2015)
+;;
+;; (define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor descriptor)
+;;   ;;Convert  a syntactic  binding  descriptor representing  a  core record-type  name
+;;   ;;(established by the boot image)  into a syntactic binding descriptor representing
+;;   ;;a record-type name in the format usable by the expander.
+;;   ;;
+;;   ;;We expect the core descriptor to have format:
+;;   ;;
+;;   ;;   ($core-rtd . (?rtd-name ?rcd-name))
+;;   ;;
+;;   ;;and the usable descriptor to have the format:
+;;   ;;
+;;   ;;   ($record-type-name . (?rtd-id ?rcd-id))
+;;   ;;
+;;   (let ((bindval (syntactic-binding-descriptor.value descriptor)))
+;;     (make-syntactic-binding-descriptor/record-type-name
+;;      (bless (core-record-type-name-binding-descriptor-value.rtd-name bindval))
+;;      (bless (core-record-type-name-binding-descriptor-value.rcd-name bindval)))))
 
 ;;Return true  if the argument  is a syntactic  binding descriptor describing  a R6RS
 ;;record-type descriptor established by the boot image.
 ;;
 (define-syntactic-binding-descriptor-predicate core-record-type-name-binding-descriptor?
   $core-rtd)
+
+(define-syntax-rule ($core-record-type-name-binding-descriptor? ?descriptor)
+  (eq? '$core-rtd ($car ?descriptor)))
 
 (define-syntax-rule (core-record-type-name-binding-descriptor-value.rtd-name ?descriptor-value)
   (car ?descriptor-value))
@@ -1260,9 +1285,11 @@
 	;;
 	((label->imported-syntactic-binding-descriptor label)
 	 => (lambda (descriptor)
-	      (if (core-record-type-name-binding-descriptor? descriptor)
-		  (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor descriptor)
-		descriptor)))
+	      ;;The first time we access  a syntactic binding descriptor representing
+	      ;;a core record-type name: we mutate it to a format usable by the code.
+	      (when ($core-record-type-name-binding-descriptor? descriptor)
+		(core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
+	      descriptor))
 
 	;;Search the given LEXENV.
 	;;
