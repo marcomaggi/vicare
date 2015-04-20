@@ -614,7 +614,7 @@
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
-			       global mutable
+			       global global-mutable
 			       core-macro macro macro!
 			       $core-rtd $record-type-name $struct-type-name
 			       $module $fluid $synonym)

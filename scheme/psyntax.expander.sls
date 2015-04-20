@@ -1301,7 +1301,7 @@
 				       (lookup lexical-gensym (cdr lex*) (cdr loc*)))
 				   (assertion-violation 'make-export-env/lookup "internal error"))))
 		    (type      (if (lexical-var-binding-descriptor-value.assigned? bind-val)
-				   'mutable
+				   'global-mutable
 				 'global)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label type loc) export-env)
@@ -1423,7 +1423,7 @@
       (for-each (lambda (subst)
 		  (cond ((assq (export-subst-entry-label subst) export-env)
 			 => (lambda (entry)
-			      (when (eq? 'mutable (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry)))
+			      (when (eq? 'global-mutable (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry)))
 				(syntax-violation 'export
 				  "attempt to export mutated variable"
 				  (export-subst-entry-name subst)))))))

@@ -793,7 +793,7 @@
 			(else                     "a non-expression"))
 		      " was found where an expression was expected")))
 
-	 ((mutable)
+	 ((global-mutable)
 	  ;;Variable in reference  position, whose binding is assigned  at least once
 	  ;;in the source code; it means EXPR.STX is an identifier.
 	  ;;
@@ -1753,7 +1753,7 @@
 	((local-macro!)
 	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
-	((mutable)
+	((global-mutable)
 	 ;;Let's consider this library:
 	 ;;
 	 ;;   (library (demo)
