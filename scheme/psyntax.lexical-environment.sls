@@ -149,7 +149,7 @@
     id->label
     id->label/intern
     id->label/or-error
-    id->r6rs-record-type-descriptor-binding
+    id->record-type-name-binding-descriptor
 
     ;; syntax objects: marks
     same-marks?
@@ -637,16 +637,43 @@
   ?bind-val)
 
 ;;; --------------------------------------------------------------------
-;;; R6RS record-type descriptor binding
+;;; core R6RS record-type descriptor binding
 
-(define-syntax-rule (make-syntactic-binding-descriptor/record-type-name ?bind-val)
-  (make-syntactic-binding-descriptor $record-type-descriptor ?bind-val))
+(define (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor descriptor)
+  ;;Convert  a syntactic  binding  descriptor representing  a  core record-type  name
+  ;;(established by the boot image)  into a syntactic binding descriptor representing
+  ;;a record-type name in the format usable by the expander.
+  ;;
+  ;;We expect the core descriptor to have format:
+  ;;
+  ;;   ($core-rtd . (?rtd-name ?rcd-name))
+  ;;
+  ;;and the usable descriptor to have the format:
+  ;;
+  ;;   ($record-type-descriptor . (?rtd-id ?rcd-id))
+  ;;
+  (make-syntactic-binding-descriptor/record-type-name
+   (let ((bindval (syntactic-binding-descriptor.value descriptor)))
+     (list (bless (core-record-type-name-binding-descriptor-value.rtd-name bindval))
+	   (bless (core-record-type-name-binding-descriptor-value.rcd-name bindval))))))
 
 ;;Return true  if the argument  is a syntactic  binding descriptor describing  a R6RS
 ;;record-type descriptor established by the boot image.
 ;;
 (define-syntactic-binding-descriptor-predicate core-record-type-name-binding-descriptor?
   $core-rtd)
+
+(define-syntax-rule (core-record-type-name-binding-descriptor-value.rtd-name ?descriptor-value)
+  (car ?descriptor-value))
+
+(define-syntax-rule (core-record-type-name-binding-descriptor-value.rcd-name ?descriptor-value)
+  (cadr ?descriptor-value))
+
+;;; --------------------------------------------------------------------
+;;; R6RS record-type descriptor binding
+
+(define-syntax-rule (make-syntactic-binding-descriptor/record-type-name ?bind-val)
+  (make-syntactic-binding-descriptor $record-type-descriptor ?bind-val))
 
 ;;Return true if the argument is  a syntactic binding descriptor representing a local
 ;;or imported binding describing a R6RS record-type descriptor.
@@ -1246,11 +1273,10 @@
 	;;what LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR does.
 	;;
 	((label->imported-syntactic-binding-descriptor label)
-	 => (lambda (binding)
-	      (if (core-record-type-name-binding-descriptor? binding)
-		  (make-syntactic-binding-descriptor/record-type-name
-		   (map bless (syntactic-binding-descriptor.value binding)))
-		binding)))
+	 => (lambda (descriptor)
+	      (if (core-record-type-name-binding-descriptor? descriptor)
+		  (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor descriptor)
+		descriptor)))
 
 	;;Search the given LEXENV.
 	;;
@@ -2144,19 +2170,19 @@
   (or (id->label id)
       (raise-unbound-error who input-form.stx id)))
 
-(define (id->r6rs-record-type-descriptor-binding who form type-name-id lexenv)
-  ;;TYPE-NAME-ID is  meant to be an  identifier bound to an  R6RS record
-  ;;type descriptor; retrieve  its label then its binding  in LEXENV and
-  ;;return the binding descriptor.
+(define (id->record-type-name-binding-descriptor who form type-name-id lexenv)
+  ;;TYPE-NAME-ID  is  meant  to  be  an  identifier bound  to  an  R6RS  record  type
+  ;;descriptor; retrieve its label then its  binding in LEXENV and return the binding
+  ;;descriptor.
   ;;
-  ;;If TYPE-NAME-ID is unbound: raise an "unbound identifier" exception.
-  ;;If  the syntactic  binding  descriptor does  not  represent an  R6RS
-  ;;record type descriptor: raise a syntax violation exception.
+  ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
+  ;;syntactic binding descriptor  does not represent an R6RS  record type descriptor:
+  ;;raise a syntax violation exception.
   ;;
-  (let* ((label   (id->label/or-error who form type-name-id))
-	 (binding (label->syntactic-binding-descriptor label lexenv)))
-    (if (record-type-name-binding-descriptor? binding)
-	binding
+  (let* ((label (id->label/or-error who form type-name-id))
+	 (descr (label->syntactic-binding-descriptor label lexenv)))
+    (if (record-type-name-binding-descriptor? descr)
+	descr
       (syntax-violation who
 	"identifier not bound to a record type descriptor"
 	form type-name-id))))

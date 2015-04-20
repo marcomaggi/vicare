@@ -1619,7 +1619,7 @@
 	      (syntax-match input-form.stx ()
 		((_ ?type-name)
 		 (identifier? ?type-name)
-		 (chi-expr (?actor-getter (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
+		 (chi-expr (?actor-getter (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
 			   lexenv.run lexenv.expand))
 		)))
 	   )))
@@ -1640,7 +1640,7 @@
 		      (identifier? ?field-name))
 		 (let* ((synner   (lambda (message)
 				    (syntax-violation __who__ message input-form.stx ?type-name)))
-			(binding  (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
+			(binding  (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
 			(accessor (?actor-getter binding ?field-name synner)))
 		   (chi-expr (bless
 			      (list accessor ?record))
@@ -1664,7 +1664,7 @@
 		      (identifier? ?field-name))
 		 (let* ((synner  (lambda (message)
 				   (syntax-violation __who__ message input-form.stx ?type-name)))
-			(binding (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
+			(binding (id->record-type-name-binding-descriptor __who__ input-form.stx ?type-name lexenv.run))
 			(mutator (?actor-getter binding ?field-name synner)))
 		   (chi-expr (bless
 			      (list mutator ?record ?new-value))
