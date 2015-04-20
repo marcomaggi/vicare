@@ -220,7 +220,7 @@
 	      (type    (syntactic-binding-descriptor.type binding)))
 	 (case type
 	   ((core-prim
-	     lexical global mutable
+	     lexical global global-mutable
 	     core-macro! global-macro global-macro! macro macro! local-macro local-macro!
 	     import export library $module pattern-variable
 	     local-ctv global-ctv
@@ -257,7 +257,8 @@
 		     (($record-type-name $struct-type-name)
 		      (values 'tag-maker-application (syntactic-binding-descriptor.value binding) ?car))
 		     (else
-		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
+		      ;;This case  includes TYPE  being: CORE-PRIM,  LEXICAL, GLOBAL,
+		      ;;GLOBAL-MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
 	    (raise-unbound-error #f expr.stx ?car))))
@@ -799,7 +800,7 @@
 	  ;;
 	  ;;We expect the syntactic binding descriptor to be:
 	  ;;
-	  ;;   (mutable . (?library . ?loc))
+	  ;;   (global-mutable . (?library . ?loc))
 	  ;;
 	  ;;and BIND-VAL to be:
 	  ;;
