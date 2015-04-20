@@ -882,7 +882,33 @@
   ;;
   (cadr ?descriptor))
 
-(define (global-compile-time-value-binding-descriptor.object binding)
+;;; --------------------------------------------------------------------
+
+;;Commented out  because unused, but kept  for reference.  (Marco Maggi;  Mon Apr 20,
+;;2015)
+;;
+;; (define (make-syntactic-binding-descriptor/global-compile-time-value lib loc)
+;;   ;;Build  and  return  a  syntactic  binding  descriptor  representing  an  imported
+;;   ;;compile-time value.
+;;   ;;
+;;   ;;The argument LOC is a loc gensym.  The argument LIB is either: a "library" object
+;;   ;;representing  the  library  from  which  the  binding  is  imported;  the  symbol
+;;   ;;"*interaction*",  if  the  binding  was  established  by  a  previous  expression
+;;   ;;evaluated in an interaction environment.
+;;   ;;
+;;   ;;The returned descriptor has format:
+;;   ;;
+;;   ;;   (global-ctv . (?library . ?loc))
+;;   ;;
+;;   (make-syntactic-binding-descriptor global-ctv (cons lib loc)))
+
+(define-syntax-rule (global-compile-time-value-binding-descriptor.lib ?descriptor)
+  (cadr ?descriptor))
+
+(define-syntax-rule (global-compile-time-value-binding-descriptor.loc ?descriptor)
+  (cddr ?descriptor))
+
+(define (global-compile-time-value-binding-descriptor.object descriptor)
   ;;Given a syntactic binding descriptor representing an imported compile time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -893,8 +919,8 @@
   ;;gensym containing the actual object in its VALUE slot (but only after the library
   ;;has been visited).
   ;;
-  (let ((lib (cadr binding))
-	(loc (cddr binding)))
+  (let ((lib (global-compile-time-value-binding-descriptor.lib descriptor))
+	(loc (global-compile-time-value-binding-descriptor.loc descriptor)))
     ;;If this global binding use is the first  time a binding from LIB is used: visit
     ;;the library.   This makes  sure that  the actual  object is  stored in  the loc
     ;;gensym.
