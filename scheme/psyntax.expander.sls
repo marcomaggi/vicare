@@ -773,7 +773,7 @@
   (define (%build-visit-code macro* option*)
     ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
     ;;definitions in the  core language: the visit code; code  evaluated whenever the
-    ;;library  is visited;  each  library is  visited  only once  the  first time  an
+    ;;library  is visited;  each library  is  visited only  once, the  first time  an
     ;;exported binding is used.
     ;;
     ;;MACRO* is a list of sublists.  The entries with format:
@@ -809,13 +809,14 @@
       (build-with-compilation-options option*
         (build-sequence no-source
 	  (map (lambda (entry)
-		 (let ((loc (car entry)))
-		   (if loc
-		       (let ((rhs.core (cddr entry)))
-			 (build-global-assignment no-source
-			   loc rhs.core))
-		     (let ((expr.core (cdr entry)))
-		       expr.core))))
+		 (cond ((car entry)
+			=> (lambda (loc)
+			     (let ((rhs.core (cddr entry)))
+			       (build-global-assignment no-source
+				 loc rhs.core))))
+		       (else
+			(let ((expr.core (cdr entry)))
+			  expr.core))))
 	    macro*)))))
 
   #| end of module: EXPAND-LIBRARY |# )
