@@ -823,7 +823,7 @@
   (syntactic-binding-descriptor.value ?binding))
 
 ;;; --------------------------------------------------------------------
-;;; rename bindings
+;;; synonym bindings
 
 (define (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax src-id)
   ;;Build  a  syntactic  binding  descriptor   representing  a  synonym  syntax;  the
@@ -1229,16 +1229,16 @@
 					  (else
 					   (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
 		(if (synonym-syntax-binding-descriptor? fluid-binding)
-		    (%follow-through binding lexenv accum-labels)
+		    (%follow-through-synonym-descriptor binding lexenv accum-labels)
 		  fluid-binding)))
 
 	     ((synonym-syntax-binding-descriptor? binding)
-	      (%follow-through binding lexenv accum-labels))
+	      (%follow-through-synonym-descriptor binding lexenv accum-labels))
 
 	     (else
 	      binding)))))
 
-  (define (%follow-through binding lexenv accum-labels)
+  (define (%follow-through-synonym-descriptor binding lexenv accum-labels)
     (let ((synonym-label (synonym-syntax-binding-descriptor.synonym-label binding)))
       (if (memq synonym-label accum-labels)
 	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
