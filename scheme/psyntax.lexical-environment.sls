@@ -900,35 +900,10 @@
     ;;gensym.
     (unless (eq? lib '*interaction*)
       (visit-library lib))
-    ;;FIXME The following form should really be just:
-    ;;
-    ;;   (symbol-value loc)
-    ;;
-    ;;because  the value  in  LOC should  be the  actual  compile-time value  object.
-    ;;Instead  there is  at least  a  case in  which the  value  in LOC  is the  full
-    ;;compile-time value:
-    ;;
-    ;;   (ctv . ?obj)
-    ;;
-    ;;It happens when the library:
-    ;;
-    ;;   (library (demo)
-    ;;     (export obj)
-    ;;     (import (vicare))
-    ;;     (define-syntax obj (make-compile-time-value 123)))
-    ;;
-    ;;is precompiled and then loaded by the program:
-    ;;
-    ;;   (import (vicare) (demo))
-    ;;   (define-syntax (doit stx)
-    ;;     (lambda (ctv-retriever) (ctv-retriever #'obj)))
-    ;;   (doit)
-    ;;
-    ;;the expansion of "(doit)" fails with an error because the value returned by the
-    ;;transformer is  the CTV special value.   We circumvent this problem  by testing
-    ;;below the nature  of the value in  LOC, but it is just  a temporary workaround.
-    ;;(Marco Maggi; Sun Jan 19, 2014)
-    ;;
+    ;;When the  library LIB  has been  loaded from  source: the  compile-time value's
+    ;;object is stored in the loc gensym.   When the library LIB has been loaded from
+    ;;a compiled file: the compile-time value itself is in the loc gensym, so we have
+    ;;to extract it.
     (let ((ctv (symbol-value loc)))
       (if (compile-time-value? ctv)
 	  (compile-time-value-object ctv)

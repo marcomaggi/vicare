@@ -99,7 +99,7 @@ alist with the following symbols as keys:
 
 @example
 invoke-lib* invoke-code
-macro*
+visit-code*
 export-subst export-env
 option*
 @end example
@@ -143,7 +143,7 @@ yields the @code{invoke-code}:
 @end example
 
 @noindent
-the @code{macro*}:
+the @code{visit-code*}:
 
 @example
 ((loc.lab.mac #<procedure> . (annotated-case-lambda

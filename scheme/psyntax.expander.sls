@@ -439,7 +439,7 @@
     ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
     ;;struct representing the environment after the program execution.
     ;;
-    (receive (lib* invoke-code macro* export-subst export-env option*)
+    (receive (lib* invoke-code visit-code* export-subst export-env option*)
 	(expand-top-level program-form*)
       (lambda ()
 	;;Make  sure  that the  code  of  all  the needed  libraries  is
@@ -449,7 +449,7 @@
 	(for-each invoke-library lib*)
 	;;Store  the  expanded  code  representing  the  macros  in  the
 	;;associated location gensyms.
-	(initial-visit! macro*)
+	(initial-visit! visit-code*)
 	;;Convert  the expanded  language  code to  core language  code,
 	;;compile it and evaluate it.
 	(compiler.eval-core (expanded->core invoke-code))
@@ -473,7 +473,7 @@
   ;;R6RS top level program, expand it and return a thunk to be evaluated
   ;;to obtain a closure representing the program.
   ;;
-  (receive (lib* invoke-code macro* export-subst export-env)
+  (receive (lib* invoke-code visit-code* export-subst export-env)
       (expand-top-level expr*)
     (lambda ()
       ;;Make sure that the code of  all the needed libraries is compiled
@@ -482,7 +482,7 @@
       (for-each invoke-library lib*)
       ;;Store  the   expanded  code  representing  the   macros  in  the
       ;;associated location gensyms.
-      (initial-visit! macro*)
+      (initial-visit! visit-code*)
       (values (map library-descriptor lib*)
 	      ;;Convert the expanded language code to core language code.
 	      (compiler.compile-core-expr (expanded->core invoke-code))))))
@@ -501,13 +501,13 @@
     ;;
     (receive (import-spec* option* body*)
 	(%parse-top-level-program program-form*)
-      (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
+      (receive (import-spec* invoke-lib* visit-lib* invoke-code visit-code* export-subst export-env)
 	  (let ((option* (%parse-program-options option*))
 		(mixed-definitions-and-expressions? #t))
 	    (import CORE-BODY-EXPANDER)
 	    (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
 				%verbose-messages-thunk))
-	(values invoke-lib* invoke-code macro* export-subst export-env option*))))
+	(values invoke-lib* invoke-code visit-code* export-subst export-env option*))))
 
   (define (%verbose-messages-thunk)
     (when (option.tagged-language?)
@@ -565,11 +565,11 @@
   #| end of module: EXPAND-TOP-LEVEL |# )
 
 (define (expand-top-level->sexp sexp)
-  (receive (invoke-lib* invoke-code macro* export-subst export-env option*)
+  (receive (invoke-lib* invoke-code visit-code* export-subst export-env option*)
       (expand-top-level sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
-      (macro*		. ,macro*)
+      (visit-code*	. ,visit-code*)
       (export-subst	. ,export-subst)
       (export-env	. ,export-env)
       (option*		. ,option*))))
@@ -735,7 +735,7 @@
     ((library-sexp filename verify-libname)
      (receive (libname
 	       import-lib* invoke-lib* visit-lib*
-	       invoke-code macro*
+	       invoke-code visit-code*
 	       export-subst export-env
 	       guard-code guard-lib*
 	       option*)
@@ -752,14 +752,14 @@
 	     (visit-proc	(lambda ()
 				  ;;This initial visit is performed whenever a source
 				  ;;library is visited.
-				  (initial-visit! macro*)))
+				  (initial-visit! visit-code*)))
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc	(lambda ()
 				  (compiler.eval-core (expanded->core invoke-code))))
 	     ;;This visit code is compiled and  stored in FASL files; the resulting
 	     ;;code objects are  the ones evaluated whenever a  compiled library is
 	     ;;loaded and visited.
-	     (visit-code	(%build-visit-code macro* option*))
+	     (visit-code	(%build-visit-code visit-code* option*))
 	     (visible?		#t))
 	 ;;This call returns a "library" object.
 	 (intern-library uid libname
@@ -770,13 +770,13 @@
 			 guard-code guard-libdesc*
 			 visible? filename option*)))))
 
-  (define (%build-visit-code macro* option*)
+  (define (%build-visit-code visit-code* option*)
     ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
     ;;definitions in the  core language: the visit code; code  evaluated whenever the
     ;;library  is visited;  each library  is  visited only  once, the  first time  an
     ;;exported binding is used.
     ;;
-    ;;MACRO* is a list of sublists.  The entries with format:
+    ;;VISIT-CODE* is a list of sublists.  The entries with format:
     ;;
     ;;   (?loc . (?obj . ?core-code))
     ;;
@@ -804,7 +804,7 @@
     ;;	      (annotated-call (+ 4 5)
     ;;          (primitive +) '4 '5))))
     ;;
-    (if (null? macro*)
+    (if (null? visit-code*)
 	(build-void)
       (build-with-compilation-options option*
         (build-sequence no-source
@@ -817,7 +817,7 @@
 		       (else
 			(let ((expr.core (cdr entry)))
 			  expr.core))))
-	    macro*)))))
+	    visit-code*)))))
 
   #| end of module: EXPAND-LIBRARY |# )
 
@@ -862,7 +862,7 @@
       (let* ((libname.sexp  (syntax->datum libname))
 	     (option*       (%parse-library-options libopt*))
 	     (stale-clt     (%make-stale-collector)))
-	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-code* export-subst export-env)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
 		(import CORE-BODY-EXPANDER)
@@ -873,7 +873,7 @@
 	      (stale-clt)
 	    (values libname.sexp
 		    import-lib* invoke-lib* visit-lib*
-		    invoke-code macro* export-subst
+		    invoke-code visit-code* export-subst
 		    export-env guard-code guard-lib*
 		    option*))))))
 
@@ -1072,8 +1072,8 @@
   ;;           (lex.var2 loc.lec.var2 '2))
   ;;        ((primitive void)))
   ;;
-  ;;5..MACRO* is a list of bindings representing the macros defined in the code.  For
-  ;;   the example library MACRO* is:
+  ;;5..VISIT-ENV* is a list of bindings  representing the macros defined in the code.
+  ;;   For the example library VISIT-ENV* is:
   ;;
   ;;      ((lab.mac #<procedure> .
   ;;         (annotated-case-lambda (#'lambda (#'stx) #'3)
@@ -1155,8 +1155,8 @@
 		    (unseal-rib! rib)
 		    (let ((loc*          (map gensym-for-storage-location lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
-		      (receive (export-env macro*)
-			  (%make-export-env/macro* lex* loc* lexenv.run)
+		      (receive (export-env visit-env*)
+			  (%make-export-env/visit-env* lex* loc* lexenv.run)
 			(%validate-exports export-spec* export-subst export-env)
 			(let ((invoke-code (build-with-compilation-options option*
 					     (build-library-letrec* no-source
@@ -1167,7 +1167,7 @@
 						 (build-sequence no-source
 						   (map psi-core-expr init*.psi)))))))
 			  (values (itc) (rtc) (vtc)
-				  invoke-code macro* export-subst export-env)))))))))))))
+				  invoke-code visit-env* export-subst export-env)))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -1247,10 +1247,10 @@
 	       (syntax-violation #f "cannot export unbound identifier" export-id))))
       export-name* export-id*))
 
-  (define (%make-export-env/macro* lex* loc* lexenv.run)
+  (define (%make-export-env/visit-env* lex* loc* lexenv.run)
     ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an EXPORT-ENV entry,
     ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or compile-time
-    ;;value: accumulate the MACRO* alist.
+    ;;value: accumulate the VISIT-ENV* alist.
     ;;
     ;;Notice that  EXPORT-ENV contains  an entry for  every global  lexical variable,
     ;;both the exported ones and the  non-exported ones.  It is responsibility of the
@@ -1264,9 +1264,9 @@
     ;;
     (let loop ((lexenv.run	lexenv.run)
 	       (export-env	'())
-	       (macro*		'()))
+	       (visit-env*	'()))
       (if (null? lexenv.run)
-	  (values export-env macro*)
+	  (values export-env visit-env*)
 	(let* ((entry    (car lexenv.run))
 	       (label    (lexenv-entry.label entry))
 	       (binding  (lexenv-entry.binding-descriptor entry)))
@@ -1306,7 +1306,7 @@
 				 'global)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label type loc) export-env)
-		     macro*)))
+		     visit-env*)))
 
 	    ((local-macro)
 	     ;;When we define a syntactic binding representing a keyword binding with
@@ -1322,14 +1322,14 @@
 	     ;;
 	     ;;   (?label global-macro . ?loc)
 	     ;;
-	     ;;and to the MACRO* an entry like:
+	     ;;and to the VISIT-ENV* an entry like:
 	     ;;
 	     ;;   (?loc . (?transformer . ?expanded-expr))
 	     ;;
 	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-macro loc) export-env)
-		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
+		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    ((local-macro!)
 	     ;;When we define a syntactic binding representing a keyword binding with
@@ -1345,14 +1345,14 @@
 	     ;;
 	     ;;   (?label global-macro . ?loc)
 	     ;;
-	     ;;and to the MACRO* an entry like:
+	     ;;and to the VISIT-ENV* an entry like:
 	     ;;
 	     ;;   (?loc . (?transformer . ?expanded-expr))
 	     ;;
 	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-macro! loc) export-env)
-		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
+		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    ((local-ctv)
 	     ;;When we  define a binding  for a  compile-time value (CTV):  the local
@@ -1367,14 +1367,14 @@
 	     ;;
 	     ;;   (?label . (global-ctv . ?loc))
 	     ;;
-	     ;;and to the MACRO* an entry like:
+	     ;;and to the VISIT-ENV* an entry like:
 	     ;;
 	     ;;   (?loc . (?object . ?expanded-expr))
 	     ;;
 	     (let ((loc (gensym-for-storage-location label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-ctv loc) export-env)
-		     (cons (cons loc (syntactic-binding-descriptor.value binding)) macro*))))
+		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    (($record-type-name $struct-type-name $module $fluid $synonym)
 	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
@@ -1382,7 +1382,7 @@
 	     ;;
 	     (loop (cdr lexenv.run)
 		   (cons entry export-env)
-		   macro*))
+		   visit-env*))
 
 	    ((begin-for-syntax)
 	     ;;This entry is  the result of expanding BEGIN-FOR-SYNTAX  macro use; we
@@ -1392,13 +1392,13 @@
 	     ;;
 	     ;;   (?label . (begin-for-syntax . ?expanded-expr))
 	     ;;
-	     ;;add to the MACRO* an entry like:
+	     ;;add to the VISIT-ENV* an entry like:
 	     ;;
 	     ;;   (#f . ?expanded-expr)
 	     ;;
 	     (loop (cdr lexenv.run)
 		   export-env
-		   (cons (cons #f (syntactic-binding-descriptor.value binding)) macro*)))
+		   (cons (cons #f (syntactic-binding-descriptor.value binding)) visit-env*)))
 
 	    (else
 	     (assertion-violation 'core-body-expander
