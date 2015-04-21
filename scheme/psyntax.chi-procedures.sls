@@ -102,6 +102,19 @@
        (lambda () . ?body)))
     ))
 
+;;; --------------------------------------------------------------------
+
+(define* (proper-list->last-item ell)
+  (syntax-match ell ()
+    (()
+     (assertion-violation __who__ "expected non-empty list" ell))
+    ((?last)
+     ?last)
+    ((?car . ?cdr)
+     (proper-list->last-item ?cdr))
+    ))
+
+
 
 (module SPLICE-FIRST-ENVELOPE
   (make-splice-first-envelope

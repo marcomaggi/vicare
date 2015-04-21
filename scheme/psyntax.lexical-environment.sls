@@ -98,9 +98,9 @@
     label->syntactic-binding-descriptor/no-indirection
 
     ;; marks of lexical contours
-    top-marked?
-    symbol->top-marked-identifier
-    top-marked-symbols
+    src-marked?
+    symbol->src-marked-identifier
+    rib-src-marked-symbols-ref
 
     ;; rib objects
     rib
@@ -248,6 +248,8 @@
 
 
 ;;;; helpers
+
+(include "psyntax.helpers.scm" #t)
 
 (define (non-compound-sexp? obj)
   (or (null? obj)
@@ -443,23 +445,25 @@
 ;;NOTE Commented out because unused.  Kept here for reference.  (Marco Maggi; Sat Apr
 ;;18, 2015)
 ;;
-;; (define (make-syntactic-binding-descriptor/core-primitive public-name)
-;;   ;;Build and  return a syntactic  binding descriptor representing a  core primitive.
-;;   ;;PUBLIC-NAME must be a symbol representing the public name of the primitive.
-;;   ;;
-;;   ;;The returned descriptor has format:
-;;   ;;
-;;   ;;   (core-primt . ?public-name)
-;;   ;;
-;;   (make-syntactic-binding-descriptor core-prim public-name))
-;;
-;; (define-syntactic-binding-descriptor-predicate core-primitive-binding-descriptor? core-prim)
-;;
-;; (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
-;;   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
-;;   ;;public name symbol.
-;;   ;;
-;;   (cdr ?descriptor))
+(comment
+ (define (make-syntactic-binding-descriptor/core-primitive public-name)
+   ;;Build and  return a syntactic  binding descriptor representing a  core primitive.
+   ;;PUBLIC-NAME must be a symbol representing the public name of the primitive.
+   ;;
+   ;;The returned descriptor has format:
+   ;;
+   ;;   (core-primt . ?public-name)
+   ;;
+   (make-syntactic-binding-descriptor core-prim public-name))
+
+ (define-syntactic-binding-descriptor-predicate core-primitive-binding-descriptor? core-prim)
+
+ (define-syntax-rule (core-primitive-binding-descriptor.public-name ?descriptor)
+   ;;Given a  syntactic binding descriptor  representing a core primitive:  return its
+   ;;public name symbol.
+   ;;
+   (cdr ?descriptor))
+ /comment)
 
 ;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
@@ -1354,44 +1358,48 @@
 (define-syntax-rule (lexical-contour-mark? ?obj)
   (string? ?obj))
 
-(define-syntax-rule (top-mark? ?obj)
-  (eq? ?obj 'top))
+(define-syntax-rule (src-mark? ?obj)
+  (eq? ?obj 'src))
 
 (define-syntax-rule (anti-mark? ?obj)
   (not ?obj))
 
 (define (mark? obj)
-  (or (top-mark? obj)
+  (or (src-mark? obj)
       (lexical-contour-mark? obj)
       (anti-mark? obj)))
 
 (define-list-of-type-predicate list-of-marks? mark?)
 
-;;The body of a library, when it is first processed, gets this set of marks...
+;;The body of a library, when it is first processed, gets this set of marks:
 ;;
-(define-constant TOP-MARK*	'(top))
-(define-constant TOP-MARK**	'((top)))
-
-;;... consequently, every syntax object that has  a "top" symbol in its marks set was
+;;* This for the "mark*" field of "stx" objects:
+(define-constant SRC-MARK*	'(src))
+;;
+;;* This for the "mark**" field of "rib" objects:
+(define-constant SRC-MARK**	'((src)))
+;;
+;;consequently, every  syntax object  that has a  "src" symbol in  its marks  set was
 ;;present in the program source.
-(define-syntax-rule (top-marked? mark*)
-  (memq 'top mark*))
+;;
+(define-syntax-rule (src-marked? mark*)
+  (memq 'src mark*))
 
-(define* (symbol->top-marked-identifier {sym symbol?})
-  ;;Given a  raw Scheme  symbol return a  syntax object  representing an
-  ;;identifier with top marks.
+(define* (symbol->src-marked-identifier {sym symbol?})
+  ;;Given a raw Scheme symbol return  a syntax object representing an identifier with
+  ;;src marks.
   ;;
-  (make-stx sym TOP-MARK* '() '()))
+  (make-stx sym SRC-MARK* '() '()))
 
-(define* (top-marked-symbols {rib rib?})
+(define* (rib-src-marked-symbols-ref {rib rib?})
   ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
-  ;;and having the top mark.
+  ;;and having the src mark.
   ;;
-  (define (%top-marks? obj)
-    ;;Return true if OBJ is equal to TOP-MARK*.
+  (define (%src-marks? obj)
+    ;;Return true if OBJ is equal to SRC-MARK*.
     ;;
     (and (pair? obj)
-	 (eq? 'top ($car obj))
+	 (eq? 'src ($car obj))
 	 (null? ($cdr obj))))
   (let ((name*  ($rib-name*  rib))
 	(mark** ($rib-mark** rib)))
@@ -1402,7 +1410,7 @@
 	  (define-syntax-rule (%recursion)
 	    (recur ($fxadd1 i) imax))
 	  (if ($fx< i imax)
-	      (if (%top-marks? ($vector-ref mark** i))
+	      (if (%src-marks? ($vector-ref mark** i))
 		  (cons ($vector-ref name* i) (%recursion))
 		(%recursion))
 	    '()))
@@ -1412,7 +1420,7 @@
 	(define-syntax-rule (%recursion)
 	  (recur ($cdr name*) ($cdr mark**)))
 	(if (pair? name*)
-	    (if (%top-marks? ($car mark**))
+	    (if (%src-marks? ($car mark**))
 		(cons ($car name*) (%recursion))
 	      (%recursion))
 	  '())))))
@@ -1438,10 +1446,9 @@
 ;;and insert a frequency vector in the SEALED/FREQ field.  The frequency
 ;;vector is a Scheme vector of exact integers.
 ;;
-;;The  frequency vector  is an  optimization  that allows  the RIB  to
-;;reorganize itself by  bubbling frequently used mappings to  the top of
-;;the RIB.   This is possible because  the order in  which the binding
-;;tuples appear in a RIB does not matter.
+;;The frequency vector is an optimization that allows the RIB to reorganize itself by
+;;bubbling frequently used mappings to the top  of the RIB.  This is possible because
+;;the order in which the binding tuples appear in a RIB does not matter.
 ;;
 ;;The vector is  maintained in non-descending order  and an identifier's
 ;;entry in the RIB is incremented at every access.  If an identifier's
@@ -1452,14 +1459,14 @@
 ;;An unsealed rib with 2 binings looks as follows:
 ;;
 ;;   name*       = (b       a)
-;;   mark**      = ((top)   (top))
+;;   mark**      = ((src)   (src))
 ;;   label*      = (lab.b   lab.a)
 ;;   sealed/freq = #f
 ;;
 ;;and right after sealing it:
 ;;
 ;;   name*       = #(b       a)
-;;   mark**      = #((top)   (top))
+;;   mark**      = #((src)   (src))
 ;;   label*      = #(lab.b   lab.a)
 ;;   sealed/freq = #(0       0)
 ;;
@@ -1467,7 +1474,7 @@
 ;;frequency is incremented:
 ;;
 ;;   name*       = #(b       a)
-;;   mark**      = #((top)   (top))
+;;   mark**      = #((src)   (src))
 ;;   label*      = #(lab.b   lab.a)
 ;;   sealed/freq = #(1       0)
 ;;
@@ -1475,7 +1482,7 @@
 ;;tuples are swapped:
 ;;
 ;;   name*       = #(a       b)
-;;   mark**      = #((top)   (top))
+;;   mark**      = #((src)   (src))
 ;;   label*      = #(lab.a   lab.b)
 ;;   sealed/freq = #(2       1)
 ;;
@@ -1600,34 +1607,38 @@
 	(sealed/freq  #f))
     (make-rib name* mark** label* sealed/freq)))
 
-(define (make-top-rib-from-symbols-and-labels sym* lab*)
-  (make-rib sym* TOP-MARK** lab* #f))
+(define (make-top-rib-from-symbols-and-labels source-name* lab*)
+  ;;Build and return a  new "rib" object to be used at the  top-level of a library or
+  ;;program body.
+  ;;
+  ;;The  argument SOURCE-NAME*  must  be  a list  of  symbols  representing names  of
+  ;;syntactic bindings as they appear in the  source code.  The argument LAB* must be
+  ;;the list of label gensyms associated to the SOURCE-NAME* bindings.
+  ;;
+  (let ((sealed/freq #f))
+    (make-rib source-name* SRC-MARK** lab* sealed/freq)))
 
-(define* (make-top-rib name-vec label-vec)
-  ;;Build  and  return a  new  rib  record initialised  with  bindings
-  ;;imported  from a  set  or IMPORT  specifications  or an  environment
-  ;;record.
+(define* (make-top-rib source-name-vec label-vec)
+  ;;Build and return a  new "rib" object to be used at the  top-level of a library or
+  ;;program body.
   ;;
-  ;;NAME-VEC is a  vector of symbols representing the  external names of
-  ;;the  imported bindings.   LABEL-VEC  is a  vector  of label  gensyms
-  ;;uniquely associated to the imported bindings.
+  ;;SOURCE-NAME-VEC is  a vector of  symbols representing syntactic binding  names as
+  ;;they appear in the source code.  LABEL-VEC  is a vector of label gensyms uniquely
+  ;;associated to the syntactic bindings.
   ;;
-  ;;For example, when creating the  lexical contour for a top-level body
-  ;;(either for a library or a program) we can do:
+  ;;For example, when creating the lexical contour for a top-level body (either for a
+  ;;library or a program) we can do:
   ;;
   ;;   (define import-spec*
   ;;     '((vicare) (vicare ffi)))
   ;;
   ;;   (define rib
-  ;;     (receive (name-vec label-vec)
-  ;;         (let ()
-  ;;           (import PARSE-IMPORT-SPEC)
-  ;;           (parse-import-spec* import-spec*))
-  ;;       (make-top-rib name-vec label-vec)))
+  ;;     (receive (source-name-vec label-vec)
+  ;;         (parse-import-spec* import-spec*)
+  ;;       (make-top-rib source-name-vec label-vec)))
   ;;
-  ;;when  creating  the  lexical  contour  for  a  top-level  expression
-  ;;evaluated by  EVAL in the  context of a  non-interactive environment
-  ;;record we, can do:
+  ;;when creating the lexical contour for a top-level expression evaluated by EVAL in
+  ;;the context of a non-interactive environment record we, can do:
   ;;
   ;;   (define env
   ;;     (environment '(vicare)))
@@ -1640,12 +1651,12 @@
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
-	      (let ((id                    (symbol->top-marked-identifier name))
+	      (let ((id                    (symbol->src-marked-identifier name))
 		    (shadowing-definition? #t))
 		(extend-rib! rib id label shadowing-definition?))
             (assertion-violation __who__
 	      "Vicare bug: expected symbol as binding name" name)))
-      name-vec label-vec)))
+      source-name-vec label-vec)))
 
 (define (export-subst->rib export-subst)
   ;;Build  and  return   a  new  RIB  structure  initialised  with   the  entries  of
@@ -1656,8 +1667,8 @@
   ;;external symbol names  of the bindings and whose values  are the associated label
   ;;gensyms.
   ;;
-  ;;Being defined at  the top-level: every name  is associated to the  "top" mark, so
-  ;;its list of marks is TOP-MARK*.
+  ;;Being defined at  the top-level: every name  is associated to the  "src" mark, so
+  ;;its list of marks is SRC-MARK*.
   ;;
   (let loop ((nam.lab*  export-subst)
 	     (name*     '())
@@ -1667,7 +1678,7 @@
 	(let ((nam.lab ($car nam.lab*)))
 	  (loop ($cdr nam.lab*)
 		(cons ($car nam.lab) name*)
-		(cons TOP-MARK*      mark**)
+		(cons SRC-MARK*      mark**)
 		(cons ($cdr nam.lab) label*)))
       (let ((sealed/freq #f))
 	(make-rib name* mark** label* sealed/freq)))))
@@ -1683,19 +1694,19 @@
   ;;   mark** = ()
   ;;   label* = ()
   ;;
-  ;;adding a  binding to it  with name  "ciao", marks "(top)"  and label
+  ;;adding a  binding to it  with name  "ciao", marks "(src)"  and label
   ;;"lab.ciao" means mutating the fields to:
   ;;
   ;;   name*  = (ciao)
-  ;;   mark** = ((top))
+  ;;   mark** = ((src))
   ;;   label* = (lab.ciao)
   ;;
-  ;;pushing the  "binding tuple": ciao, (top),  lab.ciao; adding another
-  ;;binding with name "hello", mark  "(top)" and label "lab.hello" means
+  ;;pushing the  "binding tuple": ciao, (src),  lab.ciao; adding another
+  ;;binding with name "hello", mark  "(src)" and label "lab.hello" means
   ;;mutating the fields to:
   ;;
   ;;   name*  = (hello     ciao)
-  ;;   mark** = ((top)     (top))
+  ;;   mark** = ((src)     (src))
   ;;   label* = (lab.hello lab.ciao)
   ;;
   ;;As further example, let's consider the form:
@@ -1712,7 +1723,7 @@
   ;;effect) to the RIB:
   ;;
   ;;   name*  = (b       a)
-  ;;   mark** = ((top)   (top))
+  ;;   mark** = ((src)   (src))
   ;;   label* = (lab.b   lab.a)
   ;;
   ;;That the order in which the  binding tuples appear in the RIB does
@@ -1730,13 +1741,13 @@
   ;;after the first DEFINE is parsed the tuples are:
   ;;
   ;;   name*  = (a)
-  ;;   mark** = ((top))
+  ;;   mark** = ((src))
   ;;   label* = (lab.a.1)
   ;;
   ;;and after the secon DEFINE is parsed the tuples are:
   ;;
   ;;   name*  = (a)
-  ;;   mark** = ((top))
+  ;;   mark** = ((src))
   ;;   label* = (lab.a.2)
   ;;
   ;;we see that the label has changed.
@@ -1822,7 +1833,7 @@
 		;A symbolic expression, possibly  annotated, whose subexpressions can
 		;also be instances of stx.
    mark*
-		;Null or a proper list of marks, including the symbol "top".
+		;Null or a proper list of marks, including the symbol "src".
    rib*
 		;Null or  a proper list of  rib instances or "shift"  symbols.  Every
 		;rib represents  a nested lexical  contour; a "shift"  represents the
@@ -1905,14 +1916,14 @@
   (wrap-expression sym (make-top-rib-from-symbols-and-labels (list sym) (list lab))))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
-  ;;Build and return a  new top marked syntactic identifier to  be used for temporary
+  ;;Build and return a  new src marked syntactic identifier to  be used for temporary
   ;;variables.   The returned  identifier can  be an  item in  the list  generated by
   ;;GENERATE-TEMPORARIES.
   ;;
-  (make-stx sym TOP-MARK* '() '()))
+  (make-stx sym SRC-MARK* '() '()))
 
 (define* (make-top-level-syntax-object/quoted-quoting sym)
-  ;;Return a top-marked syntax object representing one among:
+  ;;Return a src-marked syntax object representing one among:
   ;;
   ;;   (quote quasiquote)
   ;;   (quote unquote)
@@ -1920,14 +1931,14 @@
   ;;
   (case sym
     ((quasiquote unquote unquote-splicing)
-     (list (core-prim-id 'quote) (make-stx sym TOP-MARK* '() '())))
+     (list (core-prim-id 'quote) (make-stx sym SRC-MARK* '() '())))
     (else
      (syntax-violation __who__
        "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
        sym))))
 
 (define* (wrap-expression expr {rib rib?})
-  (make-stx expr TOP-MARK* (list rib) '()))
+  (make-stx expr SRC-MARK* (list rib) '()))
 
 ;;; --------------------------------------------------------------------
 
@@ -1937,7 +1948,7 @@
   ;;EXPR-STX can be a raw sexp, an  instance of STX or a (partially) unwrapped syntax
   ;;object.
   ;;
-  ;;MARK* must be null or a proper list of marks, including the symbol "top".
+  ;;MARK* must be null or a proper list of marks, including the symbol "src".
   ;;
   ;;RIB* must be null or a proper list of rib instances and "shift" symbols.
   ;;
@@ -1951,7 +1962,7 @@
   ;;making sure that marks and anti-marks and corresponding shifts cancel properly.
   ;;
   (if (and (stx? expr-stx)
-	   (not (top-marked? mark*)))
+	   (not (src-marked? mark*)))
       (receive (mark* rib* annotated-expr*)
 	  (join-wraps mark* rib* annotated-expr* expr-stx)
 	(make-stx (stx-expr expr-stx) mark* rib* annotated-expr*))
@@ -1989,11 +2000,11 @@
     ;;expression and associated marks of a  wrapped or unwrapped syntax object.  This
     ;;function is also the implementation of SYNTAX->DATUM.
     ;;
-    ;;NOTE This function assumes that: if  MARK* contains the symbol "top", then EXPR
+    ;;NOTE This function assumes that: if  MARK* contains the symbol "src", then EXPR
     ;;is a raw  symbolic expression or an annotated symbolic  expression; that is: it
     ;;is not a syntax object.
     ;;
-    (if (top-marked? mark*)
+    (if (src-marked? mark*)
 	(if (or (annotation? expr)
 		(and (pair? expr)
 		     (annotation? ($car expr)))
@@ -2554,9 +2565,9 @@
   ;;                    (set! subst S))))
   ;;    => (lambda (name.label)
   ;;         (receive-and-return (id)
-  ;;             (make-stx (car name.label) TOP-MARK*
+  ;;             (make-stx (car name.label) SRC-MARK*
   ;;                         (list (make-rib (list (car name.label))
-  ;;                                           TOP-MARK**
+  ;;                                           SRC-MARK**
   ;;                                           (list (cdr name.label))
   ;;                                           #f))
   ;;                         '())
@@ -2574,14 +2585,14 @@
 	     => (lambda (label)
 		  (receive-and-return (id)
 		      (let ((top-rib (make-top-rib-from-symbols-and-labels (list sym) (list label))))
-			(make-stx sym TOP-MARK* (list top-rib) '()))
+			(make-stx sym SRC-MARK* (list top-rib) '()))
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     ;;SYM is  not the  name of  a core primitive,  so we  just build  a free
 	     ;;identifier.   Such free  identifier  will work  just  fine in  binding
 	     ;;position.
 	     (receive-and-return (stx)
-		 (make-stx sym TOP-MARK* '() '())
+		 (make-stx sym SRC-MARK* '() '())
 	       (putprop sym '*vicare-scheme-temporary-variable-id* stx))))))
 
 ;;; --------------------------------------------------------------------
@@ -2602,9 +2613,9 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (make-stx sym TOP-MARK*
+		      (make-stx sym SRC-MARK*
 				(list (make-rib (list sym)
-						TOP-MARK**
+						SRC-MARK**
 						(list label)
 						#f))
 				'())
@@ -2721,10 +2732,9 @@
   ;;This parameter holds  a function which is meant to  return the value
   ;;of LEXENV.RUN while a macro is being expanded.
   ;;
-  ;;The  default  value will  return  null,  which represents  an  empty
-  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING-DESCRIPTOR: the
-  ;;mapping   label/binding  is   performed   only   in  the   top-level
-  ;;environment.
+  ;;The default value  will return null, which represents an  empty LEXENV; when such
+  ;;value is used with LABEL->SYNTACTIC-BINDING-DESCRIPTOR: the mapping label/binding
+  ;;is performed only in the top-level environment.
   ;;
   ;;Another possibility we could think of is to use as default value the
   ;;function:
@@ -3118,7 +3128,7 @@
     ;;    1. &who: one
     ;;    2. &message: "demo"
     ;;    3. &syntax:
-    ;;        form: #<syntax expr=(one) mark*=(#f "" top) ...>
+    ;;        form: #<syntax expr=(one) mark*=(#f "" src) ...>
     ;;        subform: #f
     ;;    4. &source-position:
     ;;        port-id: "../tests/test-demo.sps"
@@ -3126,8 +3136,8 @@
     ;;        character: 514
     ;;        line: 31
     ;;        column: 8
-    ;;    5. &macro-expansion-trace: #<syntax expr=(one) mark*=(#f "" top) ...>
-    ;;    6. &macro-expansion-trace: #<syntax expr=(two) mark*=(top) ...>
+    ;;    5. &macro-expansion-trace: #<syntax expr=(one) mark*=(#f "" src) ...>
+    ;;    6. &macro-expansion-trace: #<syntax expr=(two) mark*=(src) ...>
     ;;
     ;;and we can see  the expansion's trace.  But if we compose  the output form with
     ;;pieces of different origin:
@@ -3150,9 +3160,9 @@
     ;;      1. &who: one
     ;;      2. &message: "demo"
     ;;      3. &syntax:
-    ;;          form: (#<syntax expr=one mark*=(#f "" top) ...>
-    ;;                 #<syntax expr=display mark*=(#f top) ...>
-    ;;                 . #<syntax expr=() mark*=(#f "" top)>)
+    ;;          form: (#<syntax expr=one mark*=(#f "" src) ...>
+    ;;                 #<syntax expr=display mark*=(#f src) ...>
+    ;;                 . #<syntax expr=() mark*=(#f "" src)>)
     ;;          subform: #f
     ;;
     ;;and there is no trace.  This is  because the syntax object used as "form" value

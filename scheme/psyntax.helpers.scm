@@ -27,6 +27,15 @@
      (module ()))
     ))
 
+(define-syntax /comment
+  (syntax-rules ()))
+
+(define-syntax comment
+  (syntax-rules (/comment)
+    ((comment ?form ... /comment)
+     (module ()))
+    ))
+
 ;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
 ;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
 ;;no annotated expression to be given.
@@ -53,39 +62,6 @@
   (and (not (null? obj))
        (list? obj)
        (for-all symbol? obj)))
-
-(define (improper-list->list-and-rest ell)
-  (let loop ((ell   ell)
-	     (item* '()))
-    (syntax-match ell ()
-      ((?car . ?cdr)
-       (loop ?cdr (cons ?car item*)))
-      (()
-       (values (reverse item*) '()))
-      (_
-       (values (reverse item*) ell)))
-    ))
-
-(define* (proper-list->head-and-last ell)
-  (let loop ((ell   ell)
-	     (item* '()))
-    (syntax-match ell ()
-      (()
-       (assertion-violation __who__ "expected non-empty list" ell))
-      ((?last)
-       (values (reverse item*) ?last))
-      ((?car . ?cdr)
-       (loop ?cdr (cons ?car item*))))))
-
-(define* (proper-list->last-item ell)
-  (syntax-match ell ()
-    (()
-     (assertion-violation __who__ "expected non-empty list" ell))
-    ((?last)
-     ?last)
-    ((?car . ?cdr)
-     (proper-list->last-item ?cdr))
-    ))
 
 (define-syntax-rule (trace-define (?name . ?formals) . ?body)
   (define (?name . ?formals)

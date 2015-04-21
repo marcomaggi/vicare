@@ -563,8 +563,8 @@ original code is accompanied by the associations:
 
 @multitable {original name} {lexical contour mark}
 @headitem original name @tab lexical contour mark
-@item this @tab top-mark
-@item that @tab top-mark
+@item this @tab src-mark
+@item that @tab src-mark
 @item outer a @tab 1-mark
 @item inner a @tab 2-mark
 @end multitable
@@ -576,8 +576,8 @@ rib for the top level contour holds the associations:
 
 @multitable {original name} {lexical contour mark}
 @headitem original name @tab lexical contour mark
-@item this @tab top-mark
-@item that @tab top-mark
+@item this @tab src-mark
+@item that @tab src-mark
 @end multitable
 
 @noindent
@@ -616,13 +616,13 @@ structure:
           (let ((a 1))
             (let ((a 2))
               (list a this that))))
-   rib=#<rib mark=top-mark>>
+   rib=#<rib mark=src-mark>>
 @end example
 
 @noindent
-syntactic bindings established in this contour will get the top-mark;
+syntactic bindings established in this contour will get the src--mark;
 expressions in the right--hand sides of binding definitions are expanded
-in the context of the top-mark.
+in the context of the src-mark.
 
 @item
 After the outer contour has been processed, the outer @syntax{let} is in
@@ -639,7 +639,7 @@ a syntax object:
 @noindent
 syntactic bindings established in this contour will get the 1-mark;
 expressions in the right--hand sides of binding definitions are expanded
-in the context of the top-mark.
+in the context of the src-mark.
 
 @item
 After the outer @syntax{let} has been processed, the inner @syntax{let}
@@ -686,8 +686,8 @@ associations are also stored in the rib representing a lexical contour:
 
 @multitable {original name} {lexical contour mark} {label}
 @headitem original name @tab lexical contour mark @tab label
-@item this     @tab top-mark  @tab lab.this
-@item that     @tab top-mark  @tab lab.that
+@item this     @tab src-mark  @tab lab.this
+@item that     @tab src-mark  @tab lab.that
 @item outer a  @tab 1-mark    @tab lab.a.1
 @item inner a  @tab 2-mark    @tab lab.a.2
 @end multitable
@@ -872,7 +872,7 @@ of @objtype{annotation} objects returned by @func{get-annotated-datum}
 
 @item mark*
 Null or a proper list of @func{eq?}--unique objects, including the
-symbol @samp{top}, used to distinguish between identifiers introduced by
+symbol @samp{src}, used to distinguish between identifiers introduced by
 the source code and identifiers introduced by applications of macro
 transformers.  Each of these marks can be either a generated mark or an
 anti--mark.
@@ -923,7 +923,7 @@ Return a symbolic expression, possibly annotated.
 
 @defop {Field accessor} @objtype{stx} stx-mark* @var{stx}
 Return null or a proper list of @func{eq?}--unique objects acting as
-lexical contour marks, including the symbol @samp{top}.
+lexical contour marks, including the symbol @samp{src}.
 @end defop
 
 
@@ -979,7 +979,7 @@ We can create a syntax object holding a raw expression as follows:
 (define X 1)
 (begin-for-syntax
   (datum->syntax #'X 'ciao))
-@result{} #<syntactic-identifier expr=ciao mark*=(top)>
+@result{} #<syntactic-identifier expr=ciao mark*=(src)>
 @end lisp
 
 @noindent
@@ -1006,7 +1006,7 @@ follows:
     stx)
     @result{} #<syntax
              expr=(list X)
-             mark*=(top)
+             mark*=(src)
              line=1 column=1 source=*string-input-port*>
 @end lisp
 
@@ -1024,8 +1024,8 @@ we can unwrap a syntax object by using @syntax{syntax-case}:
                    ((?head ?tail)
                     (list #'?head #'?tail)))))
     stx)
-@result{} (#<syntactic-identifier expr=list mark*=(top)>
-    #<syntactic-identifier expr=X mark*=(top)>)
+@result{} (#<syntactic-identifier expr=list mark*=(src)>
+    #<syntactic-identifier expr=X mark*=(src)>)
 @end lisp
 
 @c page

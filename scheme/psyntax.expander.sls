@@ -1226,7 +1226,7 @@
     ;;specifications declared using the EXPORT syntax in the body.
     ;;
     (parse-export-spec* (if (%expanding-program? export-spec*)
-			    (map wrap (top-marked-symbols top-level-rib))
+			    (map wrap (rib-src-marked-symbols-ref top-level-rib))
 			  (append (map wrap export-spec*)
 				  internal-export*))))
 

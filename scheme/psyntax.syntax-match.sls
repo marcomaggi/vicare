@@ -26,7 +26,11 @@
     ellipsis? underscore?
     %verify-literals
     ellipsis-map
-    syntax-dispatch)
+    syntax-dispatch
+
+    ;; helpers using SYNTAX-MATCH
+    improper-list->list-and-rest
+    proper-list->head-and-last)
   (import (except (rnrs)
 		  eval
 		  environment		environment?
@@ -501,7 +505,7 @@
 		 pvar*))
 	  ((stx? expr)
 	   ;;Visit the syntax object.
-	   (and (not (top-marked? mark*))
+	   (and (not (src-marked? mark*))
 		(receive (mark*^ rib*^ annotated-expr*^)
 		    (join-wraps mark* rib* annotated-expr* expr)
 		  (%match (stx-expr expr) pattern mark*^ rib*^ annotated-expr*^ pvar*))))
@@ -571,7 +575,7 @@
 	;;
 	((free-id)
 	 (and (symbol? expr)
-	      (top-marked? mark*)
+	      (src-marked? mark*)
 	      (~free-identifier=? (%make-syntax-object expr mark* rib* annotated-expr*)
 				  (vector-ref pattern 1))
 	      pvar*))
@@ -586,7 +590,7 @@
 	;;
 	((scheme-id)
 	 (and (symbol? expr)
-	      (top-marked? mark*)
+	      (src-marked? mark*)
 	      (~free-identifier=? (%make-syntax-object expr mark* rib* annotated-expr*)
 				  (scheme-stx (vector-ref pattern 1)))
 	      pvar*))
@@ -654,7 +658,7 @@
 	  ((null? expr)
 	   '())
 	  ((stx? expr)
-	   (and (not (top-marked? mark*))
+	   (and (not (src-marked? mark*))
 		(receive (mark*^ rib*^ annotated-expr*^)
 		    (join-wraps mark* rib* annotated-expr* expr)
 		  (%match-each (stx-expr expr) pattern mark*^ rib*^ annotated-expr*^))))
@@ -678,7 +682,7 @@
 			     (%match (car e) (car y-pat) mark* rib* annotated-expr* pvar*)))
 		 (values #f #f #f))))
 	    ((stx? e)
-	     (if (top-marked? mark*)
+	     (if (src-marked? mark*)
 		 (values '() y-pat (%match e z-pat mark* rib* annotated-expr* pvar*))
 	       (receive (mark* rib* annotated-expr*)
 		   (join-wraps mark* rib* annotated-expr* e)
@@ -695,7 +699,7 @@
 	  ((null? e)
 	   '())
 	  ((stx? e)
-	   (and (not (top-marked? mark*))
+	   (and (not (src-marked? mark*))
 		(receive (mark* rib* annotated-expr*)
 		    (join-wraps mark* rib* annotated-expr* e)
 		  (%match-each-any (stx-expr e) mark* rib* annotated-expr*))))
@@ -745,6 +749,32 @@
 	    (%combine (map cdr pvar**) pvar*))))
 
   #| end of module: SYNTAX-DISPATCH |# )
+
+
+;;;; helpers using SYNTAX-MATCH
+
+(define (improper-list->list-and-rest ell)
+  (let loop ((ell   ell)
+	     (item* '()))
+    (syntax-match ell ()
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*)))
+      (()
+       (values (reverse item*) '()))
+      (_
+       (values (reverse item*) ell)))
+    ))
+
+(define* (proper-list->head-and-last ell)
+  (let loop ((ell   ell)
+	     (item* '()))
+    (syntax-match ell ()
+      (()
+       (assertion-violation __who__ "expected non-empty list" ell))
+      ((?last)
+       (values (reverse item*) ?last))
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*))))))
 
 
 ;;;; done

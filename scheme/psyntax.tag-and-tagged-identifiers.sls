@@ -214,7 +214,9 @@
     (prefix (psyntax.lexical-environment)
 	    lex.)
     (only (psyntax.syntax-match)
-	  syntax-match)
+	  syntax-match
+	  improper-list->list-and-rest
+	  proper-list->head-and-last)
     (psyntax.syntactic-binding-properties)
     (only (psyntax.syntax-utilities)
 	  syntax-unwrap)
