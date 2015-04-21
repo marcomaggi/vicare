@@ -103,24 +103,24 @@
 
     ;; rib objects
     rib
-    make-rib				rib?
-    rib-name*				set-rib-name*!
-    rib-mark**				set-rib-mark**!
-    rib-label*				set-rib-label*!
-    rib-sealed/freq			set-rib-sealed/freq!
+    make-rib					rib?
+    rib-name*					set-rib-name*!
+    rib-mark**					set-rib-mark**!
+    rib-label*					set-rib-label*!
+    rib-sealed/freq				set-rib-sealed/freq!
 
-    $rib-name*				$set-rib-name*!
-    $rib-mark**				$set-rib-mark**!
-    $rib-label*				$set-rib-label*!
-    $rib-sealed/freq			$set-rib-sealed/freq!
+    $rib-name*					$set-rib-name*!
+    $rib-mark**					$set-rib-mark**!
+    $rib-label*					$set-rib-label*!
+    $rib-sealed/freq				$set-rib-sealed/freq!
 
     ;; rib operations
-    false-or-rib?			list-of-ribs?
-    make-empty-rib			make-rib-from-identifiers-and-labels
+    false-or-rib?				list-of-ribs?
+    make-empty-rib
+    make-rib-from-identifiers-and-labels	make-top-rib-from-source-names-and-labels
     make-top-rib
-    seal-rib!				unseal-rib!
-    extend-rib!
-    export-subst->rib
+    seal-rib!					unseal-rib!
+    extend-rib!					export-subst->rib
 
     ;; syntax objects basics
     syntax-object?			stx?

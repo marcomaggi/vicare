@@ -337,7 +337,8 @@
     ;;evaluating the core expr.
     ;;
     (cond ((env? env)
-	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
+	   (let ((rib (make-top-rib-from-source-names-and-labels (vector->list (env-names  env))
+								 (vector->list (env-labels env)))))
 	     (let ((expr.stx (wrap-expression expr rib))
 		   (rtc      (make-collector))
 		   (vtc      (make-collector))
