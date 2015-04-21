@@ -1178,12 +1178,14 @@
     ;;standalone IMPORT syntax; build and  return the top-level "rib" struct defining
     ;;the top-level environment.
     ;;
-    ;;NAME-VEC is a vector of symbols representing the external names of the imported
-    ;;bindings.  LABEL-VEC  is a vector of  label gensyms uniquely associated  to the
-    ;;imported bindings.
-    (receive (name-vec label-vec)
+    ;;IMPORT-NAME.VEC is a  vector of symbols representing the external  names of the
+    ;;imported bindings;  this vector has  no duplicates.   LABEL.VEC is a  vector of
+    ;;label gensyms uniquely associated to the  imported bindings; this vector has no
+    ;;duplicates.
+    (receive (import-name.vec label.vec)
 	(parse-import-spec* import-spec*)
-      (make-top-rib name-vec label-vec)))
+      (make-top-rib-from-source-names-and-labels (vector->list import-name.vec)
+						 (vector->list label.vec))))
 
   (define (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
     ;;Perform  the preliminary  expansion of  the top-level  forms in  the body;  the

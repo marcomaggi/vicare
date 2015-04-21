@@ -173,10 +173,10 @@
   ;;Return 2 values which can be used to build a new top level RIB record:
   ;;
   ;;1. NAME-VEC, a vector of symbols  representing the external names of the imported
-  ;;   bindings.
+  ;;   bindings.  This vector has no duplicates.
   ;;
   ;;2. LABEL-VEC  is a vector  of label gensyms  uniquely associated to  the imported
-  ;;   bindings.
+  ;;   bindings.  This vector has no duplicates.
   ;;
   (define (parse-import-spec* import-spec*)
     (let loop ((import-spec*  import-spec*)

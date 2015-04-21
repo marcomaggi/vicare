@@ -118,7 +118,6 @@
     false-or-rib?				list-of-ribs?
     make-empty-rib
     make-rib-from-identifiers-and-labels	make-top-rib-from-source-names-and-labels
-    make-top-rib
     seal-rib!					unseal-rib!
     extend-rib!					export-subst->rib
 
@@ -1602,52 +1601,24 @@
   ;;Build and return a  new "rib" object to be used at the  top-level of a library or
   ;;program body.
   ;;
-  ;;The  argument SOURCE-NAME*  must  be  a list  of  symbols  representing names  of
-  ;;syntactic bindings as they appear in the  source code.  The argument LAB* must be
-  ;;the list of label gensyms associated to the SOURCE-NAME* bindings.
+  ;;The argument SOURCE-NAME*  must be a list of symbols  representing names, without
+  ;;duplicates,  of syntactic  bindings  as  they appear  in  the  source code.   The
+  ;;argument LAB* must  be the list of label gensyms,  without duplicates, associated
+  ;;to the SOURCE-NAME* bindings.
   ;;
   (let ((sealed/freq #f))
-    (make-rib source-name* SRC-MARK** lab* sealed/freq)))
+    (make-rib source-name* (map (lambda (dummy) SRC-MARK*) lab*) lab* sealed/freq)))
 
-(define* (make-top-rib source-name-vec label-vec)
+(define (make-top-rib-from-source-name-and-label source-name lab)
   ;;Build and return a  new "rib" object to be used at the  top-level of a library or
   ;;program body.
   ;;
-  ;;SOURCE-NAME-VEC is  a vector of  symbols representing syntactic binding  names as
-  ;;they appear in the source code.  LABEL-VEC  is a vector of label gensyms uniquely
-  ;;associated to the syntactic bindings.
+  ;;The argument  SOURCE-NAME must be a  symbol representing the name  of a syntactic
+  ;;binding as  it appears in the  source code.  The  argument LAB must be  the label
+  ;;gensym associated to the SOURCE-NAME binding.
   ;;
-  ;;For example, when creating the lexical contour for a top-level body (either for a
-  ;;library or a program) in a non-interaction environment, we can do:
-  ;;
-  ;;   (define import-spec*
-  ;;     '((vicare) (vicare ffi)))
-  ;;
-  ;;   (define rib
-  ;;     (receive (source-name-vec label-vec)
-  ;;         (parse-import-spec* import-spec*)
-  ;;       (make-top-rib source-name-vec label-vec)))
-  ;;
-  ;;when creating the lexical contour for a  top-level expression in the context of a
-  ;;non-interaction environment, we can do:
-  ;;
-  ;;   (define env
-  ;;     (environment '(vicare)))
-  ;;
-  ;;   (define rib
-  ;;     (make-top-rib (env-names env) (env-labels env)))
-  ;;
-  (receive-and-return (rib)
-      (make-empty-rib)
-    (vector-for-each
-        (lambda (name label)
-          (if (symbol? name)
-	      (let ((id                    (source-binding-name->src-marked-identifier name))
-		    (redefine-binding? #t))
-		(extend-rib! rib id label redefine-binding?))
-            (assertion-violation __who__
-	      "Vicare bug: expected symbol as binding name" name)))
-      source-name-vec label-vec)))
+  (let ((sealed/freq #f))
+    (make-rib (list source-name) SRC-MARK** (list lab) sealed/freq)))
 
 (define (export-subst->rib export-subst)
   ;;Build  and  return   a  new  RIB  structure  initialised  with   the  entries  of
@@ -2550,28 +2521,6 @@
   ;;create a fresh identifier that maps only the symbol to its label in that library.
   ;;Symbols not in that library become fresh.
   ;;
-  ;;NOTE  In the  original code,  the labels  of the  core primitives  were extracted
-  ;;directly from the export subst of the library (psyntax system $all); there was no
-  ;;SYSTEM-LABEL function back then.  There was a COND clause as follows:
-  ;;
-  ;;   ((assq sym (or subst
-  ;;                  (receive-and-return (S)
-  ;;                      (library-export-subst
-  ;;                       (find-library-by-reference '(psyntax system $all)))
-  ;;                    (set! subst S))))
-  ;;    => (lambda (name.label)
-  ;;         (receive-and-return (id)
-  ;;             (make-stx (car name.label) SRC-MARK*
-  ;;                         (list (make-rib (list (car name.label))
-  ;;                                           SRC-MARK**
-  ;;                                           (list (cdr name.label))
-  ;;                                           #f))
-  ;;                         '())
-  ;;           (putprop sym system-id-gensym id))))
-  ;;
-  ;;where SUBST  is a variable  SCHEME-STX was closed upon.   I am keeping  this code
-  ;;here as reference (sue me!).  (Marco Maggi; Tue Apr 15, 2014)
-  ;;
   (or (getprop sym system-id-gensym)
       (getprop sym '*vicare-scheme-temporary-variable-id*)
       (cond ((system-label sym)
@@ -2609,12 +2558,8 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (make-stx sym SRC-MARK*
-				(list (make-rib (list sym)
-						SRC-MARK**
-						(list label)
-						#f))
-				'())
+		      (let ((rib (make-top-rib-from-source-name-and-label sym label)))
+			(make-stx sym SRC-MARK* (list rib) '()))
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
