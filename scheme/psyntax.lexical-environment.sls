@@ -116,8 +116,8 @@
 
     ;; rib operations
     false-or-rib?			list-of-ribs?
-    make-empty-rib			make-filled-rib
-    make-top-rib			make-top-rib-from-symbols-and-labels
+    make-empty-rib			make-rib-from-identifiers-and-labels
+    make-top-rib
     seal-rib!				unseal-rib!
     extend-rib!
     export-subst->rib
@@ -1565,11 +1565,11 @@
   ;;and  then hand  the  resulting  syntax object  STX^  to  the appropriate  "chi-*"
   ;;function to perform the expansion.  Later we can add bindings to the rib with:
   ;;
-  ;;   (extend-rib! rib id label shadowing-definitions?)
+  ;;   (extend-rib! rib id label redefine-binding?)
   ;;
   (make-rib '() '() '() #f))
 
-(define (make-filled-rib id* label*)
+(define (make-rib-from-identifiers-and-labels id* label*)
   ;;Build  and return  a  new RIB  record  initialised with  bindings  having ID*  as
   ;;original identifiers and LABEL* as associated label gensyms.
   ;;
@@ -1587,7 +1587,7 @@
   ;;   (define lhs.id*    ?lhs*)
   ;;   (define body.stx   ?body*)
   ;;   (define lhs.label* (map gensym-for-label lhs.id*))
-  ;;   (define rib        (make-filled-rib lhs.id* lhs.label*))
+  ;;   (define rib        (make-rib-from-identifiers-and-labels lhs.id* lhs.label*))
   ;;   (define body.stx^  (push-lexical-contour rib body.stx))
   ;;
   ;;and then  hand the resulting syntax  object BODY.STX^ to the  appropriate "chi-*"
@@ -1598,7 +1598,7 @@
 	(sealed/freq  #f))
     (make-rib name* mark** label* sealed/freq)))
 
-(define (make-top-rib-from-symbols-and-labels source-name* lab*)
+(define (make-top-rib-from-source-names-and-labels source-name* lab*)
   ;;Build and return a  new "rib" object to be used at the  top-level of a library or
   ;;program body.
   ;;
@@ -1618,7 +1618,7 @@
   ;;associated to the syntactic bindings.
   ;;
   ;;For example, when creating the lexical contour for a top-level body (either for a
-  ;;library or a program) we can do:
+  ;;library or a program) in a non-interaction environment, we can do:
   ;;
   ;;   (define import-spec*
   ;;     '((vicare) (vicare ffi)))
@@ -1628,8 +1628,8 @@
   ;;         (parse-import-spec* import-spec*)
   ;;       (make-top-rib source-name-vec label-vec)))
   ;;
-  ;;when creating the lexical contour for a top-level expression evaluated by EVAL in
-  ;;the context of a non-interactive environment record we, can do:
+  ;;when creating the lexical contour for a  top-level expression in the context of a
+  ;;non-interaction environment, we can do:
   ;;
   ;;   (define env
   ;;     (environment '(vicare)))
@@ -1643,8 +1643,8 @@
         (lambda (name label)
           (if (symbol? name)
 	      (let ((id                    (source-binding-name->src-marked-identifier name))
-		    (shadowing-definition? #t))
-		(extend-rib! rib id label shadowing-definition?))
+		    (redefine-binding? #t))
+		(extend-rib! rib id label redefine-binding?))
             (assertion-violation __who__
 	      "Vicare bug: expected symbol as binding name" name)))
       source-name-vec label-vec)))
@@ -1724,8 +1724,8 @@
   ;;
   ;;However,  it is  possible to  redefine  a syntactic  binding.  Let's  say we  are
   ;;evaluating forms  in an interaction  environment (for example: we  are evaluating
-  ;;forms read  from the REPL): in  this case the argument  SHADOWING-DEFINITIONS? is
-  ;;set to non-false.  If we type:
+  ;;forms read from the REPL): in this  case the argument REDEFINE-BINDING? is set to
+  ;;true.  If we type:
   ;;
   ;;   vicare> (define a 1)
   ;;   vicare> (define a 2)
@@ -1744,16 +1744,23 @@
   ;;
   ;;we see that the label has changed.
   ;;
-  (define* (extend-rib! {rib rib?} {id identifier?} label shadowing-definitions?)
+  (define* (extend-rib! {rib rib?} {id identifier?} label redefine-binding?)
+    ;;If the  argument REDEFINE-BINDING?   is false: the  new syntactic  binding must
+    ;;have unique source-name in this RIB.
+    ;;
+    ;;If  the argument  REDEFINE-BINDING?   is  true: the  new  syntactic binding  is
+    ;;allowed to  redefine an  existing syntactic binding  with the  same source-name
+    ;;this RIB, by replacing the original label gensym with LABEL.
+    ;;
     (when ($rib-sealed/freq rib)
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
-    (let ((id.sym      (~identifier->symbol id))
-	  (id.mark*    ($stx-mark*  id))
-	  (rib.name*   ($rib-name*  rib))
-	  (rib.mark**  ($rib-mark** rib))
-	  (rib.label*  ($rib-label* rib)))
-      (cond ((%find-binding-with-same-marks id.sym id.mark* rib.name* rib.mark** rib.label*)
+    (let ((id.source-name  (~identifier->symbol id))
+	  (id.mark*        ($stx-mark*  id))
+	  (rib.name*       ($rib-name*  rib))
+	  (rib.mark**      ($rib-mark** rib))
+	  (rib.label*      ($rib-label* rib)))
+      (cond ((%find-binding-with-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*)
 	     ;;A binding for ID already exists in this lexical contour.  For example,
 	     ;;in an internal body we have:
 	     ;;
@@ -1767,7 +1774,7 @@
 	     ;;
 	     => (lambda (tail-of-rib.label*)
 		  (unless (eq? label (car tail-of-rib.label*))
-		    (if (not shadowing-definitions?)
+		    (if redefine-binding?
 			;;We override the already existent label with the new label.
 			(set-car! tail-of-rib.label* label)
 		      ;;Signal an error if the identifier was already in the rib.
@@ -1775,27 +1782,27 @@
 			"multiple definitions of identifier" id)))))
 	    (else
 	     ;;No binding exists for ID in this lexical contour: create a new one.
-	     ($set-rib-name*!  rib (cons id.sym   rib.name*))
-	     ($set-rib-mark**! rib (cons id.mark* rib.mark**))
-	     ($set-rib-label*! rib (cons label    rib.label*))))))
+	     ($set-rib-name*!  rib (cons id.source-name  rib.name*))
+	     ($set-rib-mark**! rib (cons id.mark*        rib.mark**))
+	     ($set-rib-label*! rib (cons label           rib.label*))))))
 
-  (define-syntax-rule (%find-binding-with-same-marks id.sym id.mark*
+  (define-syntax-rule (%find-binding-with-same-marks id.source-name id.mark*
 						     rib.name* rib.mark** rib.label*)
-    (and (memq id.sym rib.name*)
-	 (%find id.sym id.mark* rib.name* rib.mark** rib.label*)))
+    (and (memq id.source-name rib.name*)
+	 (%find id.source-name id.mark* rib.name* rib.mark** rib.label*)))
 
-  (define (%find id.sym id.mark* rib.name* rib.mark** rib.label*)
+  (define (%find id.source-name id.mark* rib.name* rib.mark** rib.label*)
     ;;Here we know that the list of  symbols RIB.NAME* has at least one element equal
-    ;;to ID.SYM; we iterate through  RIB.NAME*, RIB.MARK** and RIB.LABEL* looking for
-    ;;a tuple having name equal to ID.SYM  and marks equal to ID.MARK* and return the
+    ;;to ID.SOURCE-NAME; we iterate through  RIB.NAME*, RIB.MARK** and RIB.LABEL* looking for
+    ;;a tuple having name equal to ID.SOURCE-NAME  and marks equal to ID.MARK* and return the
     ;;tail of RIB.LABEL* having the associated label  as car.  If such binding is not
     ;;found return false.
     ;;
     (and (pair? rib.name*)
-	 (if (and (eq? id.sym ($car rib.name*))
+	 (if (and (eq? id.source-name ($car rib.name*))
 		  (same-marks? id.mark* ($car rib.mark**)))
 	     rib.label*
-	   (%find id.sym id.mark* ($cdr rib.name*) ($cdr rib.mark**) ($cdr rib.label*)))))
+	   (%find id.source-name id.mark* ($cdr rib.name*) ($cdr rib.mark**) ($cdr rib.label*)))))
 
   #| end of module: EXTEND-RIB! |# )
 
@@ -1903,7 +1910,7 @@
   (syntax-object-strip-annotations S '()))
 
 (define (make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
-  (wrap-expression sym (make-top-rib-from-symbols-and-labels (list sym) (list lab))))
+  (wrap-expression sym (make-top-rib-from-source-names-and-labels (list sym) (list lab))))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
   ;;Build and return a  new src marked syntactic identifier to  be used for temporary
@@ -2167,15 +2174,14 @@
 	     => (lambda (env)
 		  (let ((rib (interaction-env-rib env)))
 		    (receive (lab unused-lex/loc)
-			;;If  a binding  in the  interaction environment
-			;;captures  ID: we  retrieve  its label.   Other
-			;;wise a new binding is added to the interaction
-			;;environment.
+			;;If  a  syntactic  binding in  the  interaction  environment
+			;;captures  ID:  we  retrieve  its label.   Otherwise  a  new
+			;;binding is added to the interaction environment.
 			(let ((shadowing-definition? #f))
 			  (gen-define-label+lex id rib shadowing-definition?))
 		      ;;FIXME (Abdulaziz Ghuloum)
-		      (let ((shadowing-definition? #t))
-			(extend-rib! rib id lab shadowing-definition?))
+		      (let ((redefine-binding? #f))
+			(extend-rib! rib id lab redefine-binding?))
 		      lab))))
 	    (else #f))))
 
@@ -2574,7 +2580,7 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (let ((top-rib (make-top-rib-from-symbols-and-labels (list sym) (list label))))
+		      (let ((top-rib (make-top-rib-from-source-names-and-labels (list sym) (list label))))
 			(make-stx sym SRC-MARK* (list top-rib) '()))
 		    (putprop sym system-id-gensym id))))
 	    (else

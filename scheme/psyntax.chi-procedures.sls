@@ -766,7 +766,7 @@
 	     (unless (valid-bound-ids? ?xlhs*)
 	       (syntax-violation __who__ "invalid identifiers" expr.stx))
 	     (let* ((xlab* (map gensym-for-label ?xlhs*))
-		    (xrib  (make-filled-rib ?xlhs* xlab*))
+		    (xrib  (make-rib-from-identifiers-and-labels ?xlhs* xlab*))
 		    (xb*   (map (lambda (x)
 				  (let ((in-form (if (eq? type 'let-syntax)
 						     x
@@ -1880,7 +1880,7 @@
 	     (not (null? validation*.stx)))
 	   (define body-form^*.stx
 	     (push-lexical-contour
-		 (make-filled-rib ?arg* lab*)
+		 (make-rib-from-identifiers-and-labels ?arg* lab*)
 	       (append validation*.stx
 		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			   (%build-retvals-validation-form has-arguments-validators?
@@ -1912,7 +1912,7 @@
 	       (not (null? validation*.stx)))
 	     (define body-form^*.stx
 	       (push-lexical-contour
-		   (make-filled-rib (cons ?rest-arg ?arg*)
+		   (make-rib-from-identifiers-and-labels (cons ?rest-arg ?arg*)
 				    (cons rest-lab  lab*))
 		 (append validation*.stx
 			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
@@ -2583,7 +2583,7 @@
 		     ;;  in QRHS; in this case the loc is generated here.
 		     ;;
 		     (gen-define-label+lex id rib sd?)
-		   (extend-rib! rib id lab sd?)
+		   (extend-rib! rib id lab (not sd?))
 		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
 			      (lexenv-add-lexical-var-binding lab lex lexenv.run) lexenv.expand
@@ -2607,7 +2607,7 @@
 				   (expand-macro-transformer rhs.stx lexenv.expand))))
 		   ;;First map  the identifier to  the label, creating  the binding;
 		   ;;then evaluate the macro transformer.
-		   (extend-rib! rib id lab sd?)
+		   (extend-rib! rib id lab (not sd?))
 		   (let ((entry (cons lab (with-exception-handler/input-form
 					      rhs.stx
 					    (eval-macro-transformer rhs.core lexenv.run)))))
@@ -2635,7 +2635,7 @@
 				    (expand-macro-transformer rhs.stx lexenv.expand))))
 		   ;;First map  the identifier to  the label,  so that it  is bound;
 		   ;;then evaluate the macro transformer.
-		   (extend-rib! rib id lab sd?)
+		   (extend-rib! rib id lab (not sd?))
 		   (let* ((binding  (with-exception-handler/input-form
 					rhs.stx
 				      (eval-macro-transformer rhs.core lexenv.run)))
@@ -2664,7 +2664,7 @@
 		   (stx-error body-form.stx "cannot redefine keyword"))
 		 (cond ((id->label old-id)
 			=> (lambda (label)
-			     (extend-rib! rib alias-id label sd?)
+			     (extend-rib! rib alias-id label (not sd?))
 			     (chi-body* (cdr body-form*.stx)
 					lexenv.run lexenv.expand
 					lex* qrhs* mod** kwd* export-spec* rib
@@ -2685,7 +2685,7 @@
 		  (unless (valid-bound-ids? ?xlhs*)
 		    (stx-error body-form.stx "invalid identifiers"))
 		  (let* ((xlab*  (map gensym-for-label ?xlhs*))
-			 (xrib   (make-filled-rib ?xlhs* xlab*))
+			 (xrib   (make-rib-from-identifiers-and-labels ?xlhs* xlab*))
 			 ;;We  evaluate  the  transformers  for  LET-SYNTAX  without
 			 ;;pushing the XRIB: the syntax bindings do not exist in the
 			 ;;environment in which the transformer is evaluated.
@@ -2787,7 +2787,7 @@
 		 ;;Extend  the  rib with  the  syntactic  bindings exported  by  the
 		 ;;module.
 		 (vector-for-each (lambda (id lab)
-				    (extend-rib! rib id lab sd?))
+				    (extend-rib! rib id lab (not sd?)))
 		   m-exp-id* m-exp-lab*)
 		 (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
 			    lex* qrhs* mod** kwd* export-spec*
@@ -2978,7 +2978,7 @@
       (receive (id* lab*)
 	  (%any-import*-checked body-form.stx lexenv.run)
 	(vector-for-each (lambda (id lab)
-			   (extend-rib! rib id lab sd?))
+			   (extend-rib! rib id lab (not sd?)))
 	  id* lab*)))
 
     (define (%any-import*-checked import-form lexenv.run)

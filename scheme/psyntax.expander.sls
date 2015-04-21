@@ -1174,8 +1174,8 @@
 
   (define (%process-import-specs-build-top-level-rib import-spec*)
     ;;Parse the import  specifications from a library's IMPORT clause  or a program's
-    ;;standalone  IMPORT  syntax;  build  and return  the  top-level  "rib"  struct
-    ;;defining the top-level environment.
+    ;;standalone IMPORT syntax; build and  return the top-level "rib" struct defining
+    ;;the top-level environment.
     ;;
     ;;NAME-VEC is a vector of symbols representing the external names of the imported
     ;;bindings.  LABEL-VEC  is a vector of  label gensyms uniquely associated  to the
