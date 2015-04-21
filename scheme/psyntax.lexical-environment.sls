@@ -1881,7 +1881,7 @@
   (syntax-object-strip-annotations S '()))
 
 (define (make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
-  (wrap-expression sym (make-top-rib-from-source-names-and-labels (list sym) (list lab))))
+  (wrap-expression sym (make-top-rib-from-source-name-and-label sym lab)))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
   ;;Build and return a  new src marked syntactic identifier to  be used for temporary
@@ -2529,8 +2529,7 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (let ((top-rib (make-top-rib-from-source-names-and-labels (list sym) (list label))))
-			(make-stx sym SRC-MARK* (list top-rib) '()))
+		      (make-top-level-syntactic-identifier-from-symbol-and-label sym label)
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     ;;SYM is  not the  name of  a core primitive,  so we  just build  a free
@@ -2558,8 +2557,7 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (let ((rib (make-top-rib-from-source-name-and-label sym label)))
-			(make-stx sym SRC-MARK* (list rib) '()))
+		      (make-top-level-syntactic-identifier-from-symbol-and-label sym label)
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
