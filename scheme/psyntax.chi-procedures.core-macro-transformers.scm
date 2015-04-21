@@ -50,6 +50,32 @@
 		?body0 ?body ...)))))))
     ))
 
+(module ($map-in-order
+	 $map-in-order1)
+
+  (case-define $map-in-order
+    ((func ell)
+     ($map-in-order1 func ell))
+    ((func . ells)
+     (if (null? ells)
+	 '()
+       (let recur ((ells ells))
+	 (if (pair? ($car ells))
+	     (let* ((cars ($map-in-order1 $car ells))
+		    (cdrs ($map-in-order1 $cdr ells))
+		    (head (apply func cars)))
+	       (cons head (recur cdrs)))
+	   '())))))
+
+  (define-syntax-rule ($map-in-order1 ?func ?ell)
+    (let recur ((ell ?ell))
+      (if (pair? ell)
+	  (let ((head (?func ($car ell))))
+	    (cons head (recur ($cdr ell))))
+	ell)))
+
+  #| end of module |# )
+
 
 ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
 ;;non-core macros to their macro transformers.
