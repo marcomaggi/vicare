@@ -1899,7 +1899,8 @@
   ;;
   (case sym
     ((quasiquote unquote unquote-splicing)
-     (list (core-prim-id 'quote) (make-stx sym SRC-MARK* '() '())))
+     (let ((Q (core-prim-id 'quote)))
+       (list Q (make-stx sym SRC-MARK* (stx-rib* Q) '()))))
     (else
      (syntax-violation __who__
        "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
