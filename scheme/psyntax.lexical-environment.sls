@@ -99,7 +99,6 @@
 
     ;; marks of lexical contours
     src-marked?
-    symbol->src-marked-identifier
     rib-src-marked-symbols-ref
 
     ;; rib objects
@@ -1385,15 +1384,15 @@
 (define-syntax-rule (src-marked? mark*)
   (memq 'src mark*))
 
-(define* (symbol->src-marked-identifier {sym symbol?})
-  ;;Given a raw Scheme symbol return  a syntax object representing an identifier with
-  ;;src marks.
+(define* (source-binding-name->src-marked-identifier {sym symbol?})
+  ;;Given a  raw Scheme symbol representing  the source name of  a syntactic binding:
+  ;;build and return a new syntactic identifier with "src" mark.
   ;;
   (make-stx sym SRC-MARK* '() '()))
 
 (define* (rib-src-marked-symbols-ref {rib rib?})
   ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
-  ;;and having the src mark.
+  ;;and having the "src" mark.
   ;;
   (define (%src-marks? obj)
     ;;Return true if OBJ is equal to SRC-MARK*.
@@ -1428,33 +1427,30 @@
 
 ;;;; rib record type definition
 ;;
-;;A  RIB is  a  record constructed  at every  lexical  contour in  the
-;;program to  hold informations about  the variables introduced  in that
-;;contour; "lexical contours" are, for example, LET and similar syntaxes
-;;that can introduce bindings.
+;;A RIB  is a  record constructed  at every lexical  contour in  the program  to hold
+;;informations about  the variables  introduced in  that contour;  "lexical contours"
+;;are, for example, LET and similar syntaxes that can introduce bindings.
 ;;
-;;The purpose  of ribs is  to map original  binding names to  the labels
-;;associated to those bindings; this map  is used when establishing if a
-;;syntax  object identifier  in  reference position  is  captured by  an
-;;existing sytactic binding.
+;;The purpose of  ribs is to map  original binding names to the  labels associated to
+;;those bindings; this map is used when establishing if a syntax object identifier in
+;;reference position is captured by an existing sytactic binding.
 ;;
 ;;Sealing ribs
 ;;------------
 ;;
-;;A non-empty  RIB can be sealed  once all bindings are  inserted.  To
-;;seal a RIB, we convert the lists NAME*, MARK** and LABEL* to vectors
-;;and insert a frequency vector in the SEALED/FREQ field.  The frequency
-;;vector is a Scheme vector of exact integers.
+;;A non-empty RIB  can be sealed once all  bindings are inserted.  To seal  a RIB, we
+;;convert the lists NAME*, MARK** and LABEL* to vectors and insert a frequency vector
+;;in  the SEALED/FREQ  field.   The frequency  vector  is a  Scheme  vector of  exact
+;;integers.
 ;;
 ;;The frequency vector is an optimization that allows the RIB to reorganize itself by
 ;;bubbling frequently used mappings to the top  of the RIB.  This is possible because
 ;;the order in which the binding tuples appear in a RIB does not matter.
 ;;
-;;The vector is  maintained in non-descending order  and an identifier's
-;;entry in the RIB is incremented at every access.  If an identifier's
-;;frequency  exceeds the  preceeding one,  the identifier's  position is
-;;promoted  to the  top of  its  class (or  the bottom  of the  previous
-;;class).
+;;The vector is  maintained in non-descending order and an  identifier's entry in the
+;;RIB  is incremented  at every  access.  If  an identifier's  frequency exceeds  the
+;;preceeding one, the identifier's  position is promoted to the top  of its class (or
+;;the bottom of the previous class).
 ;;
 ;;An unsealed rib with 2 binings looks as follows:
 ;;
@@ -1470,16 +1466,16 @@
 ;;   label*      = #(lab.b   lab.a)
 ;;   sealed/freq = #(0       0)
 ;;
-;;after  accessing once  the  binding  of "b"  in  the  sealed rib,  its
-;;frequency is incremented:
+;;after  accessing once  the binding  of  "b" in  the  sealed rib,  its frequency  is
+;;incremented:
 ;;
 ;;   name*       = #(b       a)
 ;;   mark**      = #((src)   (src))
 ;;   label*      = #(lab.b   lab.a)
 ;;   sealed/freq = #(1       0)
 ;;
-;;and after  accessing twice the binding  of "a" in the  sealed rib, the
-;;tuples are swapped:
+;;and after  accessing twice the  binding of  "a" in the  sealed rib, the  tuples are
+;;swapped:
 ;;
 ;;   name*       = #(a       b)
 ;;   mark**      = #((src)   (src))
@@ -1488,34 +1484,30 @@
 ;;
 (define-record (rib make-rib rib?)
   (name*
-		;List of symbols representing the original binding names
-		;in the source code.
+		;List  of symbols  representing  the original  binding  names in  the
+		;source code.
 		;
-		;When the  RIB is sealed:  the list is converted  to a
-		;vector.
+		;When the RIB is sealed: the list is converted to a vector.
 
    mark**
-		;List of sublists of marks;  there is a sublist of marks
-		;for every item in NAME*.
+		;List of  sublists of marks;  there is a  sublist of marks  for every
+		;item in NAME*.
 		;
-		;When the  RIB is sealed:  the list is converted  to a
-		;vector.
+		;When the RIB is sealed: the list is converted to a vector.
 
    label*
-		;List   of  label   gensyms  uniquely   identifying  the
-		;syntactic bindings; there  is a label for  each item in
-		;NAME*.
+		;List of  label gensyms uniquely identifying  the syntactic bindings;
+		;there is a label for each item in NAME*.
 		;
-		;When the  RIB is sealed:  the list is converted  to a
-		;vector.
+		;When the RIB is sealed: the list is converted to a vector.
 
    sealed/freq
-		;False or  vector of  exact integers.  When  false: this
-		;RIB is extensible, that is  new bindings can be added
-		;to it.  When a vector: this RIB is selaed.
+		;False  or  vector  of  exact  integers.  When  false:  this  RIB  is
+		;extensible, that is new bindings can be added to it.  When a vector:
+		;this RIB is selaed.
 		;
-		;See  below  the  code  section "sealing  ribs"  for  an
-		;explanation of the frequency vector.
+		;See below the code section "sealing  ribs" for an explanation of the
+		;frequency vector.
    )
   (lambda (S port subwriter) ;record printer function
     (define-syntax-rule (%display ?thing)
@@ -1549,20 +1541,20 @@
 (define-syntax-rule (make-empty-rib)
   ;;Build and return a new empty RIB record.
   ;;
-  ;;Empty ribs are used to represent freshly created lexical contours in
-  ;;which no initial bindings are defined.  For example, internal bodies
-  ;;might contain internal definitions:
+  ;;Empty ribs  are used to  represent freshly created  lexical contours in  which no
+  ;;initial  bindings  are  defined.   For example,  internal  bodies  might  contain
+  ;;internal definitions:
   ;;
   ;;   (let ()
   ;;     (define a 1)
   ;;     (define b 2)
   ;;     (display a))
   ;;
-  ;;but we  know about  them only  when we  begin their  expansion; when
-  ;;creating the lexical contour for them we must create an empty rib.
+  ;;but we  know about  them only when  we begin their  expansion; when  creating the
+  ;;lexical contour for them we must create an empty rib.
   ;;
-  ;;If STX  is a syntax object  representing an expression that  must be
-  ;;expanded in a new lexical contour, we do:
+  ;;If STX is a  syntax object representing an expression that must  be expanded in a
+  ;;new lexical contour, we do:
   ;;
   ;;   (define stx  #'((define a 1)
   ;;                   (define b 2)
@@ -1570,37 +1562,36 @@
   ;;   (define rib  (make-empty-rib))
   ;;   (define stx^ (push-lexical-contour rib stx))
   ;;
-  ;;and then  hand the resulting  syntax object STX^ to  the appropriate
-  ;;"chi-*"  function  to  perform  the expansion.   Later  we  can  add
-  ;;bindings to the rib with:
+  ;;and  then hand  the  resulting  syntax object  STX^  to  the appropriate  "chi-*"
+  ;;function to perform the expansion.  Later we can add bindings to the rib with:
   ;;
   ;;   (extend-rib! rib id label shadowing-definitions?)
   ;;
   (make-rib '() '() '() #f))
 
 (define (make-filled-rib id* label*)
-  ;;Build and return a new RIB record initialised with bindings having
-  ;;ID*  as   original  identifiers  and  LABEL*   as  associated  label
-  ;;gensyms.
+  ;;Build  and return  a  new RIB  record  initialised with  bindings  having ID*  as
+  ;;original identifiers and LABEL* as associated label gensyms.
   ;;
-  ;;ID* must  be a  list of syntax  object identifiers  representing the
-  ;;original binding names.  LABEL* must be a list of label gensyms.
+  ;;The  argument ID*  must  be  a list  of  syntactic  identifiers representing  the
+  ;;original binding  names.  The argument LABEL*  must be the list  of label gensyms
+  ;;associated to the identifiers.
   ;;
-  ;;For example, when creating a rib to represent the lexical context of
-  ;;a LET syntax:
+  ;;For  example, when  creating a  rib to  represent the  lexical context  of a  LET
+  ;;syntax:
   ;;
   ;;   (let ((?lhs* ?rhs*) ...) ?body* ...)
   ;;
   ;;we do:
   ;;
-  ;;   (define lhs-ids    ?lhs*)
-  ;;   (define body-stx   ?body*)
-  ;;   (define label*     (map gensym-for-label lhs-ids))
-  ;;   (define rib        (make-filled-rib lhs-ids label*))
-  ;;   (define body-stx^  (push-lexical-contour rib body-stx))
+  ;;   (define lhs.id*    ?lhs*)
+  ;;   (define body.stx   ?body*)
+  ;;   (define lhs.label* (map gensym-for-label lhs.id*))
+  ;;   (define rib        (make-filled-rib lhs.id* lhs.label*))
+  ;;   (define body.stx^  (push-lexical-contour rib body.stx))
   ;;
-  ;;and  then  hand  the  resulting   syntax  object  BODY-STX^  to  the
-  ;;appropriate "chi-*" function to perform the expansion.
+  ;;and then  hand the resulting syntax  object BODY.STX^ to the  appropriate "chi-*"
+  ;;function to perform the expansion.
   ;;
   (let ((name*        (map identifier->symbol id*))
 	(mark**       (map stx-mark* id*))
@@ -1651,7 +1642,7 @@
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
-	      (let ((id                    (symbol->src-marked-identifier name))
+	      (let ((id                    (source-binding-name->src-marked-identifier name))
 		    (shadowing-definition? #t))
 		(extend-rib! rib id label shadowing-definition?))
             (assertion-violation __who__
@@ -1684,9 +1675,8 @@
 	(make-rib name* mark** label* sealed/freq)))))
 
 (module (extend-rib!)
-  ;;A RIB can be extensible, or sealed.  Adding an identifier-to-label
-  ;;mapping to  an extensible RIB  is achieved by prepending  items to
-  ;;the field lists.
+  ;;A RIB can be extensible, or  sealed.  Adding an identifier-to-label mapping to an
+  ;;extensible RIB is achieved by prepending items to the field lists.
   ;;
   ;;For example, an empty extensible RIB has fields:
   ;;
@@ -1694,16 +1684,19 @@
   ;;   mark** = ()
   ;;   label* = ()
   ;;
-  ;;adding a  binding to it  with name  "ciao", marks "(src)"  and label
+  ;;adding a syntactic binding to it with source name "ciao", marks "(src)" and label
   ;;"lab.ciao" means mutating the fields to:
   ;;
   ;;   name*  = (ciao)
   ;;   mark** = ((src))
   ;;   label* = (lab.ciao)
   ;;
-  ;;pushing the  "binding tuple": ciao, (src),  lab.ciao; adding another
-  ;;binding with name "hello", mark  "(src)" and label "lab.hello" means
-  ;;mutating the fields to:
+  ;;we can think of this as "pushing the syntactic binding's tuple":
+  ;;
+  ;;   { ciao, (src), lab.ciao }
+  ;;
+  ;;on the  rib.  Adding another binding  with source name "hello",  mark "(src)" and
+  ;;label "lab.hello" means mutating the fields to:
   ;;
   ;;   name*  = (hello     ciao)
   ;;   mark** = ((src)     (src))
@@ -1716,24 +1709,23 @@
   ;;     (define b 2)
   ;;     (list a b))
   ;;
-  ;;when starting  to process the LAMBDA  internal body: a new  RIB is
-  ;;created  and  is  added  to   the  metadata  of  the  syntax  object
-  ;;representing  the  body itself;  when  each  internal definition  is
-  ;;encountered,  a new  entry for  the  identifier is  added (via  side
-  ;;effect) to the RIB:
+  ;;when starting to process  LAMBDA's internal body: a new rib  is created and added
+  ;;to the  metadata of  the syntax  object representing the  body itself;  when each
+  ;;internal definition is encountered, a new  entry for the identifier is added (via
+  ;;side effect) to the rib:
   ;;
   ;;   name*  = (b       a)
   ;;   mark** = ((src)   (src))
   ;;   label* = (lab.b   lab.a)
   ;;
-  ;;That the order in which the  binding tuples appear in the RIB does
-  ;;not matter:  two tuples are different  when both the symbol  and the
-  ;;marks are different and  it is an error to add twice  a tuple to the
-  ;;same RIB.
+  ;;The order  in which the  binding tuples  appear in the  rib does not  matter: two
+  ;;tuples are different when  both the symbol and the marks are  different and it is
+  ;;an error to add twice a tuple to the same RIB.
   ;;
-  ;;However, it  is possible to  redefine a  binding.  Let's say  we are
-  ;;evaluating    forms   read    from    the    REPL:   the    argument
-  ;;SHADOWING-DEFINITIONS? is true.  If we type:
+  ;;However,  it is  possible to  redefine  a syntactic  binding.  Let's  say we  are
+  ;;evaluating forms  in an interaction  environment (for example: we  are evaluating
+  ;;forms read  from the REPL): in  this case the argument  SHADOWING-DEFINITIONS? is
+  ;;set to non-false.  If we type:
   ;;
   ;;   vicare> (define a 1)
   ;;   vicare> (define a 2)
@@ -1756,34 +1748,33 @@
     (when ($rib-sealed/freq rib)
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
-    (let ((id.sym      (identifier->symbol id))
+    (let ((id.sym      (~identifier->symbol id))
 	  (id.mark*    ($stx-mark*  id))
 	  (rib.name*   ($rib-name*  rib))
 	  (rib.mark**  ($rib-mark** rib))
 	  (rib.label*  ($rib-label* rib)))
       (cond ((%find-binding-with-same-marks id.sym id.mark* rib.name* rib.mark** rib.label*)
-	     ;;A binding for ID already  exists in this lexical contour.
-	     ;;For example, in an internal body we have:
+	     ;;A binding for ID already exists in this lexical contour.  For example,
+	     ;;in an internal body we have:
 	     ;;
 	     ;;   (define a 1)
 	     ;;   (define a 2)
 	     ;;
-	     ;;in an R6RS program or library we must raise an exception;
-	     ;;at the REPL we just redefine the binding.
+	     ;;* In an R6RS program or library: we must raise an exception.
+	     ;;
+	     ;;* In the  context of an interaction environment: we  just redefine the
+	     ;;  binding.
 	     ;;
 	     => (lambda (tail-of-rib.label*)
 		  (unless (eq? label (car tail-of-rib.label*))
 		    (if (not shadowing-definitions?)
-			;;We  override the  already existent  label with
-			;;the new label.
+			;;We override the already existent label with the new label.
 			(set-car! tail-of-rib.label* label)
-		      ;;Signal an error if the identifier was already in
-		      ;;the rib.
+		      ;;Signal an error if the identifier was already in the rib.
 		      (syntax-violation 'expander
 			"multiple definitions of identifier" id)))))
 	    (else
-	     ;;No binding exists for ID  in this lexical contour: create
-	     ;;a new one.
+	     ;;No binding exists for ID in this lexical contour: create a new one.
 	     ($set-rib-name*!  rib (cons id.sym   rib.name*))
 	     ($set-rib-mark**! rib (cons id.mark* rib.mark**))
 	     ($set-rib-label*! rib (cons label    rib.label*))))))
@@ -1794,12 +1785,11 @@
 	 (%find id.sym id.mark* rib.name* rib.mark** rib.label*)))
 
   (define (%find id.sym id.mark* rib.name* rib.mark** rib.label*)
-    ;;Here we know  that the list of symbols RIB.NAME*  has at least one
-    ;;element equal to ID.SYM;  we iterate through RIB.NAME*, RIB.MARK**
-    ;;and RIB.LABEL* looking for a tuple having name equal to ID.SYM and
-    ;;marks equal to  ID.MARK* and return the tail  of RIB.LABEL* having
-    ;;the associated label as car.  If  such binding is not found return
-    ;;false.
+    ;;Here we know that the list of  symbols RIB.NAME* has at least one element equal
+    ;;to ID.SYM; we iterate through  RIB.NAME*, RIB.MARK** and RIB.LABEL* looking for
+    ;;a tuple having name equal to ID.SYM  and marks equal to ID.MARK* and return the
+    ;;tail of RIB.LABEL* having the associated label  as car.  If such binding is not
+    ;;found return false.
     ;;
     (and (pair? rib.name*)
 	 (if (and (eq? id.sym ($car rib.name*))
