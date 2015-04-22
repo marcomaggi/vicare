@@ -2574,18 +2574,19 @@
 		 (when (bound-id-member? id kwd*)
 		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
 		 (receive (lab lex)
-		     ;;About  this call  to GENERATE-LABEL-AND-LEX-GENSYMS-FOR-DEFINE
+		     ;;About this  call to GENERATE-OR-RETRIEVE-LABEL-AND-LEX-GENSYMS
 		     ;;notice that:
 		     ;;
 		     ;;* If  the binding is at  the top-level of a  program body: we
 		     ;;  need a loc gensym to store the result of evaluating the RHS
 		     ;;  in QRHS; this loc will be generated later.
 		     ;;
-		     ;;* If the binding is at the top-level of a REPL expression: we
-		     ;;  need a loc gensym to store the result of evaluating the RHS
-		     ;;  in QRHS; in this case the loc is generated here.
+		     ;;* If the binding is at  the top-level of a REPL expression: we
+		     ;;  need a loc gensym to  store the result of evaluating the RHS
+		     ;;  in  QRHS; in this  case the  lex gensym generated  here also
+		     ;;  acts as loc gensym.
 		     ;;
-		     (generate-label-and-lex-gensyms-for-define id rib (not sd?))
+		     (generate-or-retrieve-label-and-lex-gensyms id rib (not sd?))
 		   (extend-rib! rib id lab (not sd?))
 		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
@@ -2604,7 +2605,7 @@
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
 		 ;;We want order here!?!
-		 (let ((lab      (gen-define-syntax-label id rib sd?))
+		 (let ((lab      (generate-or-retrieve-define-syntax-label-gensym id rib (not sd?)))
 		       (rhs.core (with-exception-handler/input-form
 				     rhs.stx
 				   (expand-macro-transformer rhs.stx lexenv.expand))))
@@ -2631,8 +2632,8 @@
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
 		 ;;We want order here!?!
-		 (let* ((lab      (gen-define-syntax-label id rib sd?))
-			(flab     (gen-define-syntax-label id rib sd?))
+		 (let* ((lab      (generate-or-retrieve-define-syntax-label-gensym id rib (not sd?)))
+			(flab     (generate-or-retrieve-define-syntax-label-gensym id rib (not sd?)))
 			(rhs.core (with-exception-handler/input-form
 				      rhs.stx
 				    (expand-macro-transformer rhs.stx lexenv.expand))))

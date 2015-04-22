@@ -50,8 +50,8 @@
     gensym-for-lexical-var
     gensym-for-storage-location
     generate-label-gensym
-    generate-label-and-lex-gensyms-for-define
-    gen-define-syntax-label
+    generate-or-retrieve-label-and-lex-gensyms
+    generate-or-retrieve-define-syntax-label-gensym
 
     ;; LEXENV entries and syntactic binding descriptors
     lexenv-entry.label
@@ -1062,17 +1062,19 @@
 	     (gensym)))
     (gensym)))
 
-(module (generate-label-and-lex-gensyms-for-define
-	 gen-define-syntax-label)
+(module (generate-or-retrieve-label-and-lex-gensyms
+	 generate-or-retrieve-define-syntax-label-gensym)
 
-  (define (generate-label-and-lex-gensyms-for-define id rib redefine-binding?)
+  (define (generate-or-retrieve-label-and-lex-gensyms id rib redefine-binding?)
     ;;Whenever a DEFINE syntax:
     ;;
     ;;   (define ?id ?rhs)
     ;;
     ;;is expanded  we need to generate  for it: a label  gensym, a lex gensym,  a loc
-    ;;gensym.  This function returns 2 values: the  label and the lex; a loc might be
-    ;;generated too.
+    ;;gensym.
+    ;;
+    ;;This function returns  2 values: the label  gensym and the lex  gensym.  If the
+    ;;argument REDEFINE-BINDING? is true: the lex gensym also acts as loc gensym.
     ;;
     ;;The  argument ID  must be  a syntactic  identifier representing  the name  of a
     ;;DEFINE binding.
@@ -1080,77 +1082,81 @@
     ;;The argument RIB must be the rib object describing the lexical contour in which
     ;;DEFINE is expanded.
     ;;
-    ;;REDEFINE-BINDING?  must  be a  boolean, true  if it is  fine to  generate a
-    ;;binding that shadows an already existing binding.  Specifically:
+    ;;The  argument REDEFINE-BINDING?   must be  a  boolean, true  if it  is fine  to
+    ;;redefine a binding already existent in RIB.  Specifically:
     ;;
-    ;;* When this argument is true: we always  generate a new label, a new lex and no
-    ;;  loc.  Upon returning from this function, we have 2 choices:
+    ;;* When this argument is false: we always  generate a new label gensym and a new
+    ;;  lex gensym.  Upon returning from this function, we have 2 choices:
     ;;
-    ;;  - Search the relevant LEXENV for the returned label and raise an error when a
-    ;;    binding already exists.
+    ;;** Search the relevant LEXENV for the  returned label and raise an error when a
+    ;;   binding already exists.
     ;;
-    ;;  - Create a new binding by pushing a new entry on the relevant LEXENV.
+    ;;** Create a new binding by pushing a new entry on the relevant LEXENV.
     ;;
-    ;;*  When this  argument is  false: we  assume there  is a  top-level interaction
+    ;;*  When this  argument is  true:  we assume  there is  a top-level  interaction
     ;;  environment set.
     ;;
-    ;;  - If an  existent binding in such top-level env captures  ID: we cause DEFINE
-    ;;    to mutate the existent binding  by returning the already existent label and
-    ;;    lex.
+    ;;** If an  existent binding in such  interaction env captures ID:  we return the
+    ;;   already existent label and lex gensyms.
     ;;
-    ;;  - Otherwise  we fabricate  a new  binding in  the top-level  environment and
-    ;;    return  the new label and  lex; in this case  we generate a loc  gensym and
-    ;;    also use it as lex gensym.
+    ;;**  Otherwise  we  fabricate  a   new  syntactic  binding  in  the  interaction
+    ;;   environment and return  the new label and lex gensyms; in  this case the lex
+    ;;   gensym also acts as loc gensym.
     ;;
     (if redefine-binding?
 	;;If  a syntactic  binding capturing  ID already  exists in  RIB: the  DEFINE
 	;;syntax we are expanding redefines it by replacing the old label gensym with
 	;;a new label gensym.
 	(let* ((env           (top-level-context))
-	       (label         (%gen-top-level-label id rib))
+	       (label         (%generate-or-retrieve-top-level-label-gensym id rib))
+	       ;;LAB.LOC/LEX*  is an  alist  having  label gensyms  as  keys and  loc
+	       ;;gensyms as values; the loc gensyms are also used as lex gensyms.  It
+	       ;;maps binding labels to storage location gensyms in the context of an
+	       ;;interaction environment.
 	       (lab.loc/lex*  (interaction-env-lab.loc/lex* env)))
 	  (values label
 		  (cond ((assq label lab.loc/lex*)
 			 => cdr)
 			(else
+			 ;;There was  no binding in RIB  capturing ID, so LABEL  is a
+			 ;;new label gensym.  Here we generate a new lex gensym, also
+			 ;;acting  as  loc gensym,  and  add  it to  the  interaction
+			 ;;environment.
 			 (receive-and-return (loc)
 			     (gensym-for-storage-location id)
 			   (set-interaction-env-lab.loc/lex*! env
 			     (cons (cons label loc)
 				   lab.loc/lex*)))))))
-      ;;If a syntactic binding capturing ID  already exists in RIB: the DEFINE syntax
-      ;;we are expanding is in error, an exception will be raised later.
       (values (generate-label-gensym id) (gensym-for-lexical-var id))))
 
-  (define (gen-define-syntax-label id rib shadowing-definition?)
-    ;;Whenever a DEFINE syntax:
+  (define (generate-or-retrieve-define-syntax-label-gensym id rib redefine-binding?)
+    ;;Whenever a syntactic form:
     ;;
-    ;;   (define-syntax ?id ?rhs)
+    ;;   (define-syntax       ?id ?rhs)
+    ;;   (define-fluid-syntax ?id ?rhs)
     ;;
-    ;;is expanded we need to generate for it: a label gensym, and that's
-    ;;all.  This function returns the label.
+    ;;is expanded, we need to generate for  it: a label gensym, and that's all.  This
+    ;;function returns the label.
     ;;
-    ;;ID must be an identifier  representing the name of a DEFINE-SYNTAX
-    ;;binding.
+    ;;The argument ID must be an  identifier representing the name of a DEFINE-SYNTAX
+    ;;or DEFINE-FLUID-SYNTAX binding.
     ;;
-    ;;RIB  must be  the RIB  describing the  lexical contour  in which
-    ;;DEFINE-SYNTAX is present.
+    ;;The argument RIB must be the rib object describing the lexical contour in which
+    ;;the binding is created.
     ;;
-    ;;SHADOWING-DEFINITION?  must  be a boolean,  true if it is  fine to
-    ;;generate a binding that shadows an already existing binding:
+    ;;The argument REDEFINE-BINDING?  must be a boolean:
     ;;
-    ;;* When this argument is true: we always generate a new label.
+    ;;* When this argument is false: we always generate a new label.
     ;;
-    ;;* When this argument is false, we first check if RIB has a binding
-    ;;  capturing ID: if it exists and it is not an imported binding, we
-    ;;  return its  already existent label; otherwise we  generate a new
-    ;;  label.
+    ;;* When this argument is true, we first check if RIB has a binding capturing ID:
+    ;;   if it  exists and  it is  not  an imported  binding, we  return its  already
+    ;;  existent label; otherwise we generate a new label.
     ;;
-    (if shadowing-definition?
-        (generate-label-gensym id)
-      (%gen-top-level-label id rib)))
+    (if redefine-binding?
+	(%generate-or-retrieve-top-level-label-gensym id rib)
+      (generate-label-gensym id)))
 
-  (define (%gen-top-level-label id rib)
+  (define (%generate-or-retrieve-top-level-label-gensym id rib)
     (let ((id.source-name   (~identifier->symbol id))
 	  (id.mark*         ($stx-mark* id))
 	  (rib.source-name* ($rib-name* rib)))
@@ -1173,19 +1179,19 @@
 	     ;;Create a new label for a new syntactic binding.
 	     (generate-label-gensym id)))))
 
-  (define (%find-label-of-source-name source-name id.mark* rib.source-name* mark** label*)
+  (define (%find-label-of-source-name source-name id.mark* rib.source-name* rib.mark** rib.label*)
     ;;Upon  entering a  call to  this  function: we  know  that the  list of  symbols
     ;;RIB.SOURCE-NAME* has at least one element equal to SOURCE-NAME.
     ;;
-    ;;We recurse  iterating over RIB.SOURCE-NAME*, MARK**  and LABEL*; we look  for a
-    ;;tuple having marks equal to ID.MARK*  and return the associated label.  If such
-    ;;binding is not found return false.
+    ;;We recurse iterating over RIB.SOURCE-NAME*,  RIB.MARK** and RIB.LABEL*; we look
+    ;;for a tuple having marks equal to ID.MARK* and return the associated label.  If
+    ;;such binding is not found return false.
     ;;
     (and (pair? rib.source-name*)
 	 (if (and (eq? source-name (car rib.source-name*))
-		  (same-marks? id.mark* (car mark**)))
-	     (car label*)
-	   (%find-label-of-source-name source-name id.mark* (cdr rib.source-name*) (cdr mark**) (cdr label*)))))
+		  (same-marks? id.mark* (car rib.mark**)))
+	     (car rib.label*)
+	   (%find-label-of-source-name source-name id.mark* (cdr rib.source-name*) (cdr rib.mark**) (cdr rib.label*)))))
 
   #| end of module |# )
 
@@ -1675,7 +1681,7 @@
     ;;have unique source-name in this RIB.
     ;;
     ;;If  the argument  REDEFINE-BINDING?   is  true: the  new  syntactic binding  is
-    ;;allowed to  redefine an  existing syntactic binding  with the  same source-name
+    ;;allowed to redefine an existing syntactic  binding with the same source-name in
     ;;this RIB, by replacing the original label gensym with LABEL.
     ;;
     (when ($rib-sealed/freq rib)
@@ -2114,7 +2120,7 @@
 			;;captures  ID:  we  retrieve  its label.   Otherwise  a  new
 			;;binding is added to the interaction environment.
 			(let ((redefine-binding? #t))
-			  (generate-label-and-lex-gensyms-for-define id rib redefine-binding?))
+			  (generate-or-retrieve-label-and-lex-gensyms id rib redefine-binding?))
 		      ;;FIXME (Abdulaziz Ghuloum)
 		      (let ((redefine-binding? #f))
 			(extend-rib! rib id lab redefine-binding?))
