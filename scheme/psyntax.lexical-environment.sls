@@ -2295,52 +2295,51 @@
 (module (id->label)
 
   (define* (id->label {id identifier?})
-    ;;Given the  identifier ID  search its ribs  for a  label associated
-    ;;with the  same sym  and marks.   If found  return the  label, else
-    ;;return false.
+    ;;Given the identifier  ID search its ribs  for a label associated  with the same
+    ;;sym and marks.  If found return the label, else return false.
     ;;
-    (let ((sym (~identifier->symbol id)))
+    (let ((id.source-name (~identifier->symbol id)))
       (let search ((rib*  ($stx-rib*  id))
 		   (mark* ($stx-mark* id)))
-	(cond ((null? rib*)
-	       #f)
-	      ((eq? ($car rib*) 'shift)
-	       ;;This is the  only place in the expander  where a symbol
-	       ;;"shift" in a  RIB* makes some difference;  a "shift" is
-	       ;;pushed on the RIB* when a mark is pushed on the MARK*.
-	       ;;
-	       ;;When  we   find  a  "shift"   in  RIB*:  we   skip  the
-	       ;;corresponding mark in MARK*.
-	       (search ($cdr rib*) ($cdr mark*)))
-	      (else
+	(and (pair? rib*)
+	     (if (eq? ($car rib*) 'shift)
+		 ;;This is the only place in the expander where a symbol "shift" in a
+		 ;;RIB* makes some difference; a "shift" is pushed on the RIB* when a
+		 ;;mark is pushed on the MARK*.
+		 ;;
+		 ;;When we find a "shift" in  RIB*: we skip the corresponding mark in
+		 ;;MARK*.
+		 (search ($cdr rib*) ($cdr mark*))
 	       (let ((rib ($car rib*)))
-		 (define (next-search)
+		 (define (search-in-next-rib)
 		   (search ($cdr rib*) mark*))
 		 (if ($rib-sealed/freq rib)
-		     (%search-in-sealed-rib rib sym mark* next-search)
-		   (%search-in-rib rib sym mark* next-search))))))))
+		     (%search-in-rib/sealed rib id.source-name mark* search-in-next-rib)
+		   (%search-in-rib/non-sealed rib id.source-name mark* search-in-next-rib))))))))
 
-  (define (%search-in-rib rib sym mark* next-search)
-    (let loop ((name*   ($rib-name*  rib))
-	       (mark**  ($rib-mark** rib))
-	       (label*  ($rib-label* rib)))
-      (cond ((null? name*)
-	     (next-search))
-	    ((and (eq? ($car name*) sym)
-		  (same-marks? ($car mark**) mark*))
-	     ($car label*))
-	    (else
-	     (loop ($cdr name*) ($cdr mark**) ($cdr label*))))))
+  (define-syntax-rule (same-name? x y)
+    (eq? x y))
 
-  (module (%search-in-sealed-rib)
+  (define (%search-in-rib/non-sealed rib id.source-name id.mark* search-in-next-rib)
+    (let loop ((rib.source-name* ($rib-name*  rib))
+	       (rib.mark**       ($rib-mark** rib))
+	       (rib.label*       ($rib-label* rib)))
+      (if (pair? rib.source-name*)
+	  (if (and (same-name?  ($car rib.source-name*) id.source-name)
+		   (same-marks? ($car rib.mark**)       id.mark*))
+	      ($car rib.label*)
+	    (loop ($cdr rib.source-name*) ($cdr rib.mark**) ($cdr rib.label*)))
+	(search-in-next-rib))))
 
-    (define (%search-in-sealed-rib rib sym mark* next-search)
+  (module (%search-in-rib/sealed)
+
+    (define (%search-in-rib/sealed rib id.source-name mark* search-in-next-rib)
       (define name* ($rib-name* rib))
       (let loop ((i       0)
 		 (rib.len ($vector-length name*)))
 	(cond (($fx= i rib.len)
-	       (next-search))
-	      ((and (eq? ($vector-ref name* i) sym)
+	       (search-in-next-rib))
+	      ((and (eq? ($vector-ref name* i) id.source-name)
 		    (same-marks? mark* ($vector-ref ($rib-mark** rib) i)))
 	       (receive-and-return (label)
 		   ($vector-ref ($rib-label* rib) i)
@@ -2372,7 +2371,7 @@
 	      (%vector-swap mark** idx i)
 	      (%vector-swap label* idx i))))))
 
-    #| end of module: %SEARCH-IN-SEALED-RIB |# )
+    #| end of module: %SEARCH-IN-RIB/SEALED |# )
 
   #| end of module: ID->LABEL |# )
 
