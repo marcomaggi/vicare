@@ -1233,7 +1233,7 @@
 	 ;;In a program we do not care about the internal EXPORT syntax uses: we just
 	 ;;ignore INTERNAL-EXPORT*.
 	 (map wrap-source-expression-with-top-rib
-	   (rib-src-marked-symbols-ref top-level-rib))
+	   (rib-src-marked-source-names top-level-rib))
        (append (map wrap-source-expression-with-top-rib
 		 export-spec*)
 	       internal-export*))))

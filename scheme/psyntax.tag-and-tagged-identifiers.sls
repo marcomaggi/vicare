@@ -891,7 +891,7 @@
     ;;LEXENV in which its label is associated to a syntactic binding descriptor.
     ;;
     (let ((lab (gensym sym)))
-      (values (lex.make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
+      (values (lex.make-top-level-syntactic-identifier-from-source-name-and-label sym lab)
 	      lab)))
 
   (define-constant *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE*

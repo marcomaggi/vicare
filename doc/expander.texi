@@ -824,6 +824,7 @@ descriptor.  This alist is called @lexenv{}.
 @end table
 
 @menu
+* expander lexenv rib::         Lexical contours and @objtype{rib} objects.
 * expander lexenv stx::         Wrapped and unwrapped syntax objects.
 * expander lexenv descriptors:: Syntactic binding's descriptors.
 * expander lexenv primitive::   Primitive syntactic bindings.
@@ -832,6 +833,21 @@ descriptor.  This alist is called @lexenv{}.
 * expander lexenv fluids::      How fluid syntaxes work.
 * expander lexenv synonyms::    How synonym syntaxes work.
 @end menu
+
+@c page
+@node expander lexenv rib
+@subsection Lexical contours and @objtype{rib} objects
+
+
+@deftp {Object Type} rib
+Disjoint object type representing lexical contours in the expansion
+process.  Ribs associate the source name of syntactic bindings to their
+label gensyms.
+
+Objects of type @objtype{stx} have the following fields:
+
+@end deftp
+
 
 @c page
 @node expander lexenv stx

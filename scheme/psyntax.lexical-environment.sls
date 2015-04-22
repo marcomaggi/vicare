@@ -99,7 +99,7 @@
 
     ;; marks of lexical contours
     src-marked?
-    rib-src-marked-symbols-ref
+    rib-src-marked-source-names
 
     ;; rib objects
     rib
@@ -131,7 +131,7 @@
     syntax->datum
     push-lexical-contour
     syntax-annotation			syntax-object-strip-annotations
-    make-top-level-syntactic-identifier-from-symbol-and-label
+    make-top-level-syntactic-identifier-from-source-name-and-label
     make-syntactic-identifier-for-temporary-variable
     make-top-level-syntax-object/quoted-quoting
     wrap-source-expression
@@ -265,6 +265,15 @@
       (would-block-object?	x)
       (unbound-object?		x)
       (bwp-object?		x)))
+
+(define-syntax let-syntax-rules
+  (syntax-rules ()
+    ((_ (((?lhs0 . ?args0) ?rhs0) ((?lhs . ?args) ?rhs) ...) ?body0 ?body ...)
+     (let-syntax ((?lhs0 (syntax-rules () ((_ . ?args0) ?rhs0)))
+		  (?lhs  (syntax-rules () ((_ . ?args)  ?rhs)))
+		  ...)
+       ?body0 ?body ...))
+    ))
 
 
 ;;;; top-level environments
@@ -1383,15 +1392,9 @@
 (define-syntax-rule (src-marked? mark*)
   (memq 'src mark*))
 
-(define* (source-binding-name->src-marked-identifier {sym symbol?})
-  ;;Given a  raw Scheme symbol representing  the source name of  a syntactic binding:
-  ;;build and return a new syntactic identifier with "src" mark.
-  ;;
-  (make-stx sym SRC-MARK* '() '()))
-
-(define* (rib-src-marked-symbols-ref {rib rib?})
+(define* (rib-src-marked-source-names {rib rib?})
   ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
-  ;;and having the "src" mark.
+  ;;and having only the "src" mark.
   ;;
   (define (%src-marks? obj)
     ;;Return true if OBJ is equal to SRC-MARK*.
@@ -1402,26 +1405,30 @@
   (let ((name*  ($rib-name*  rib))
 	(mark** ($rib-mark** rib)))
     (if ($rib-sealed/freq rib)
-	;;Here NAME* and MARK** are vectors.
+	;;This rib is sealed: here NAME* and MARK** are vectors.
 	(let recur ((i    0)
 		    (imax ($vector-length name*)))
-	  (define-syntax-rule (%recursion)
-	    (recur ($fxadd1 i) imax))
-	  (if ($fx< i imax)
-	      (if (%src-marks? ($vector-ref mark** i))
-		  (cons ($vector-ref name* i) (%recursion))
-		(%recursion))
-	    '()))
-      ;;Here NAME* and MARK** are lists.
+	  (let-syntax-rules (((%recursion)       (recur ($fxadd1 i) imax))
+			     ((%more?)           ($fx< i imax))
+			     ((%next-mark* arg)  ($vector-ref arg i))
+			     ((%next-name arg)   ($vector-ref arg i)))
+	    (if (%more?)
+		(if (%src-marks? (%next-mark* mark**))
+		    (cons (%next-name name*) (%recursion))
+		  (%recursion))
+	      '())))
+      ;;This rib is not sealed: here NAME* and MARK** are lists.
       (let recur ((name*  name*)
 		  (mark** mark**))
-	(define-syntax-rule (%recursion)
-	  (recur ($cdr name*) ($cdr mark**)))
-	(if (pair? name*)
-	    (if (%src-marks? ($car mark**))
-		(cons ($car name*) (%recursion))
-	      (%recursion))
-	  '())))))
+	(let-syntax-rules (((%recursion)       (recur ($cdr name*) ($cdr mark**)))
+			   ((%more?)           (pair? name*))
+			   ((%next-mark* arg)  ($car arg))
+			   ((%next-name arg)   ($car arg)))
+	  (if (%more?)
+	      (if (%src-marks? (%next-mark* mark**))
+		  (cons (%next-name name*) (%recursion))
+		(%recursion))
+	    '()))))))
 
 
 ;;;; rib record type definition
@@ -1883,7 +1890,7 @@
 (define (syntax->datum S)
   (syntax-object-strip-annotations S '()))
 
-(define (make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
+(define (make-top-level-syntactic-identifier-from-source-name-and-label sym lab)
   (wrap-source-expression sym (make-top-rib-from-source-name-and-label sym lab)))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
@@ -2524,12 +2531,9 @@
 		 'bless-output (syntax->datum output-stx))))
 
 (define* (scheme-stx {sym symbol?})
-  ;;Take a symbol and if it's in the library:
-  ;;
-  ;;   (psyntax system $all)
-  ;;
-  ;;create a fresh identifier that maps only the symbol to its label in that library.
-  ;;Symbols not in that library become fresh.
+  ;;Take a symbol and if it's the public  name of a syntactic binding exported by the
+  ;;library "(psyntax system  $all)": create a fresh identifier that  maps the symbol
+  ;;to its label in that library.  Symbols not in that library become fresh.
   ;;
   (or (getprop sym system-id-gensym)
       (getprop sym '*vicare-scheme-temporary-variable-id*)
@@ -2539,7 +2543,7 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (make-top-level-syntactic-identifier-from-symbol-and-label sym label)
+		      (make-top-level-syntactic-identifier-from-source-name-and-label sym label)
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     ;;SYM is  not the  name of  a core primitive,  so we  just build  a free
@@ -2567,7 +2571,7 @@
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
-		      (make-top-level-syntactic-identifier-from-symbol-and-label sym label)
+		      (make-top-level-syntactic-identifier-from-source-name-and-label sym label)
 		    (putprop sym system-id-gensym id))))
 	    (else
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
@@ -3147,4 +3151,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; coding: utf-8-unix
+;; eval: (put 'let-syntax-rules		'scheme-indent-function 1)
 ;; End:
