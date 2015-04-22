@@ -4081,6 +4081,38 @@
 	      env))
     => '(10 20 30))
 
+  (check	;check binding redefinition
+      (let ((env (new-interaction-environment '(rnrs base))))
+	(eval '(begin
+		 (define-syntax x (identifier-syntax 1))
+		 (define-syntax y (identifier-syntax 2))
+		 (define-syntax z (identifier-syntax 3)))
+	      env)
+	(eval '(begin
+		 (define-syntax x (identifier-syntax 10))
+		 (define-syntax y (identifier-syntax 20))
+		 (define-syntax z (identifier-syntax 30)))
+	      env)
+	(eval '(list x y z)
+	      env))
+    => '(10 20 30))
+
+  (check	;check binding redefinition
+      (let ((env (new-interaction-environment '(vicare))))
+	(eval '(begin
+		 (define-fluid-syntax x (identifier-syntax 1))
+		 (define-fluid-syntax y (identifier-syntax 2))
+		 (define-fluid-syntax z (identifier-syntax 3)))
+	      env)
+	(eval '(begin
+		 (define-fluid-syntax x (identifier-syntax 10))
+		 (define-fluid-syntax y (identifier-syntax 20))
+		 (define-fluid-syntax z (identifier-syntax 30)))
+	      env)
+	(eval '(list x y z)
+	      env))
+    => '(10 20 30))
+
   (check	;check binding definition with SET!
       (let ((env (new-interaction-environment '(rnrs base))))
 	(eval '(set! e 3) env)

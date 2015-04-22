@@ -2633,7 +2633,7 @@
 		   (stx-error body-form.stx "cannot redefine keyword"))
 		 ;;We want order here!?!
 		 (let* ((lab      (generate-or-retrieve-define-syntax-label-gensym id rib (not sd?)))
-			(flab     (generate-or-retrieve-define-syntax-label-gensym id rib (not sd?)))
+			(flab     (generate-label-gensym id))
 			(rhs.core (with-exception-handler/input-form
 				      rhs.stx
 				    (expand-macro-transformer rhs.stx lexenv.expand))))
