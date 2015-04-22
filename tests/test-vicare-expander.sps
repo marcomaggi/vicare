@@ -4119,6 +4119,35 @@
 	(eval 'e env))
     => 3)
 
+  ;;In  an  interaction  environment  the   top-level  definitions  in  the  body  of
+  ;;BEGIN-FOR-SYNTAX can be redefined.
+  ;;
+  (check
+      (let ((env (new-interaction-environment '(vicare))))
+	(eval '(begin
+		 (begin-for-syntax
+		   (define a 1)
+		   (define a 2))
+		 (define-syntax doit
+		   (lambda (stx) a)))
+	      env)
+	(eval '(doit) env))
+    => 2)
+
+  ;;In  an  interaction  environment  the   top-level  definitions  in  the  body  of
+  ;;BEGIN-FOR-SYNTAX can shadow the bindings imported by the environment.
+  ;;
+  (check
+      (let ((env (new-interaction-environment '(vicare))))
+	(eval '(begin
+		 (begin-for-syntax
+		   (define display 123))
+		 (define-syntax doit
+		   (lambda (stx) display)))
+	      env)
+	(eval '(doit) env))
+    => 123)
+
   #t)
 
 

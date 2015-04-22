@@ -377,11 +377,44 @@
 	      module-init-form**.stx
 	      kwd*.unused internal-export*.unused)
 	(let ((mixed-definitions-and-expressions? #t)
-	      (shadowing-definitions?             #f))
+	      ;;We  are  about  to  expand  syntactic forms  in  the  context  of  an
+	      ;;interaction top-level  environment.  When  calling CHI-BODY*,  we set
+	      ;;the argument SHADOW/REDEFINE-BINDINGS? to true because:
+	      ;;
+	      ;;* Syntactic  binding definitions  at the top-level  of this  body are
+	      ;;allowed  to shadow  imported  syntactic bindings  established by  the
+	      ;;top-level interaction environment.  That is, at the REPL:
+	      ;;
+	      ;;   vicare> (import (rnrs))
+	      ;;   vicare> (define display 123)
+	      ;;
+	      ;;is a valid  definition; a DEFINE use expanded at  the top-level of an
+	      ;;interaction  environment   can  shadow  the  binding   imported  from
+	      ;;"(rnrs)".  The following definition is also valid:
+	      ;;
+	      ;;   vicare> (define-syntax let (identifier-syntax 1))
+	      ;;
+	      ;;* Syntactic binding definitions at the  top-level of this body can be
+	      ;;redefined.  That is, at the REPL:
+	      ;;
+	      ;;   vicare> (define a 1)
+	      ;;   vicare> (define a 2)
+	      ;;
+	      ;;is  valid;  a DEFINE  use  can  redefine  a binding.   The  following
+	      ;;redefinitions are also valid:
+	      ;;
+	      ;;   vicare> (begin (define a 1) (define a 2))
+	      ;;
+	      ;;   vicare> (define-syntax b (identifier-syntax 1))
+	      ;;   vicare> (define-syntax b (identifier-syntax 2))
+	      ;;
+	      ;;   vicare> (define-fluid-syntax b (identifier-syntax 1))
+	      ;;   vicare> (define-fluid-syntax b (identifier-syntax 2))
+	      ;;
+	      (shadow/redefine-bindings?   #t))
 	  (chi-body* (list expr.stx) lexenv.run lexenv.run
 		     '() '() '() '() '() rib
-		     mixed-definitions-and-expressions?
-		     shadowing-definitions?))
+		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (let ((expr*.core (%expand-interaction-qrhs*/init*
 			 (reverse lex*) (reverse qrhs*)
 			 (append (reverse-and-append module-init-form**.stx)
@@ -1196,10 +1229,39 @@
 	      lexenv.run lexenv.expand
 	      lex* qrhs*
 	      module-init-form**.stx unused-kwd* internal-export*)
-	(let ((shadowing-definitions? #t))
-	  (chi-body* body-stx* '() '() '() '() '() '() '() rib
-		     mixed-definitions-and-expressions?
-		     shadowing-definitions?))
+	;;We are about  to expand syntactic forms  from the body in the  context of a
+	;;non-interaction top-level environment.  When  calling CHI-BODY*, we set the
+	;;argument SHADOW/REDEFINE-BINDINGS? to false because:
+	;;
+	;;* Syntactic  binding definitions at the  top-level of this body  must *not*
+	;;shadow   imported  syntactic   bindings   established   by  the   top-level
+	;;environment.  That is:
+	;;
+	;;   (import (rnrs))
+	;;   (define display 123)
+	;;
+	;;is  a syntax  violation,  because the  DEFINE  use at  the  top-level of  a
+	;;program's body cannot shadow the binding imported from "(rnrs)".
+	;;
+	;;* Syntactic binding definitions cannot be redefined.  That is:
+	;;
+	;;   (define a 1)
+	;;   (define a 2)
+	;;
+	;;is  a syntax  violation  because the  use of  DEFINE  cannot redefined  the
+	;;binding for "a".
+	(let ((shadow/redefine-bindings?	#f)
+	      (lexenv.run			'())
+	      (lexenv.expand			'())
+	      (lex*				'())
+	      (qrhs*				'())
+	      (mod**				'())
+	      (kwd*				'())
+	      (export-spec*			'()))
+	  (chi-body* body-stx*
+		     lexenv.run lexenv.expand
+		     lex* qrhs* mod** kwd* export-spec* rib
+		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       ;;We build a list  of init form putting first the trailing  init forms from the
       ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
       ;;library/program body.
