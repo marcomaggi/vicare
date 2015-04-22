@@ -134,7 +134,7 @@
     make-top-level-syntactic-identifier-from-symbol-and-label
     make-syntactic-identifier-for-temporary-variable
     make-top-level-syntax-object/quoted-quoting
-    wrap-expression
+    wrap-source-expression
 
     ;; syntax objects: mapping identifiers to labels
     id->label
@@ -1777,6 +1777,9 @@
 
   #| end of module: EXTEND-RIB! |# )
 
+;;; --------------------------------------------------------------------
+;;; rib sealing
+
 (define* (seal-rib! {rib rib?})
   (let ((name* ($rib-name* rib)))
     (unless (null? name*) ;only seal if RIB is not empty
@@ -1881,7 +1884,7 @@
   (syntax-object-strip-annotations S '()))
 
 (define (make-top-level-syntactic-identifier-from-symbol-and-label sym lab)
-  (wrap-expression sym (make-top-rib-from-source-name-and-label sym lab)))
+  (wrap-source-expression sym (make-top-rib-from-source-name-and-label sym lab)))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
   ;;Build and return a  new src marked syntactic identifier to  be used for temporary
@@ -1906,7 +1909,13 @@
        "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
        sym))))
 
-(define* (wrap-expression expr {rib rib?})
+(define* (wrap-source-expression expr {rib rib?})
+  ;;Wrap EXPR in a  syntax object giving it the source mark and  the RIB.  Return the
+  ;;stx object.
+  ;;
+  ;;EXPR   must  be   a  symbolic   expression,   possibly  annotated   as  read   by
+  ;;GET-ANNOTATED-DATUM.
+  ;;
   (make-stx expr SRC-MARK* (list rib) '()))
 
 ;;; --------------------------------------------------------------------
@@ -2592,6 +2601,9 @@
        (~free-identifier=? id (place-holder-id))))
 
 (define (jolly-id? id)
+  ;;Return  true if  ID is  a  syntactic identifier  that  could be  captured by  the
+  ;;primitive binding "_" or "<>"; otherwise return false.
+  ;;
   (and (identifier? id)
        (or (~free-identifier=? id (underscore-id))
 	   (~free-identifier=? id (place-holder-id)))))

@@ -339,7 +339,7 @@
     (cond ((env? env)
 	   (let ((rib (make-top-rib-from-source-names-and-labels (vector->list (env-names  env))
 								 (vector->list (env-labels env)))))
-	     (let ((expr.stx (wrap-expression expr rib))
+	     (let ((expr.stx (wrap-source-expression expr rib))
 		   (rtc      (make-collector))
 		   (vtc      (make-collector))
 		   (itc      (env-itc env)))
@@ -357,7 +357,7 @@
 	   (let ((rib         (interaction-env-rib env))
 		 (lexenv.run  (interaction-env-lexenv env))
 		 (rtc         (make-collector)))
-	     (let ((expr.stx (wrap-expression expr rib)))
+	     (let ((expr.stx (wrap-source-expression expr rib)))
 	       (receive (expr.core lexenv.run^)
 		   (parametrise ((top-level-context env)
 				 (inv-collector rtc)
@@ -1107,12 +1107,12 @@
 		  (top-level-context  #f))
       (define rib
 	(%process-import-specs-build-top-level-rib import-spec*))
-      (define (wrap expr)
-	(wrap-expression expr rib))
+      (define (wrap-source-expression-with-top-rib expr)
+	(wrap-source-expression expr rib))
       (with-tagged-language (memq 'tagged-language option*)
 	(with-option-strict-r6rs (memq 'strict-r6rs option*)
 	  (verbose-messages-thunk)
-	  (let ((body-stx*	(map wrap body-sexp*))
+	  (let ((body-stx*	(map wrap-source-expression-with-top-rib body-sexp*))
 		(rtc	(make-collector))
 		(vtc	(make-collector)))
 	    (parametrise ((inv-collector  rtc)
@@ -1137,7 +1137,7 @@
 	      (receive (init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
 		  (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
 		(receive (export-name* export-id*)
-		    (%parse-all-export-specs export-spec* internal-export* wrap rib)
+		    (%parse-all-export-specs export-spec* internal-export* wrap-source-expression-with-top-rib rib)
 		  (seal-rib! rib)
 		  ;;RHS*.PSI  is  a list  of  PSI  structs containing  core  language
 		  ;;symbolic expressions representing the DEFINE right-hand sides.
@@ -1219,7 +1219,7 @@
 		;;specifications declared using the EXPORT syntax in the body.
 		internal-export*))))
 
-  (define (%parse-all-export-specs export-spec* internal-export* wrap top-level-rib)
+  (define (%parse-all-export-specs export-spec* internal-export* wrap-source-expression-with-top-rib top-level-rib)
     ;;Parse all the export specifications.
     ;;
     ;;EXPORT-SPEC*  must   be  a   list  of   identifiers  representing   the  export
@@ -1228,10 +1228,15 @@
     ;;INTERNAL-EXPORT*  must  be  a  list  of  identifiers  representing  the  export
     ;;specifications declared using the EXPORT syntax in the body.
     ;;
-    (parse-export-spec* (if (%expanding-program? export-spec*)
-			    (map wrap (rib-src-marked-symbols-ref top-level-rib))
-			  (append (map wrap export-spec*)
-				  internal-export*))))
+    (parse-export-spec*
+     (if (%expanding-program? export-spec*)
+	 ;;In a program we do not care about the internal EXPORT syntax uses: we just
+	 ;;ignore INTERNAL-EXPORT*.
+	 (map wrap-source-expression-with-top-rib
+	   (rib-src-marked-symbols-ref top-level-rib))
+       (append (map wrap-source-expression-with-top-rib
+		 export-spec*)
+	       internal-export*))))
 
   (define (%make-export-subst export-name* export-id*)
     ;;For  every  identifier in  ID:  get  the rib  of  ID  and extract  the  lexical
