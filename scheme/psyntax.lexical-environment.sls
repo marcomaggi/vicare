@@ -1399,44 +1399,6 @@
 (define-syntax-rule (src-marked? mark*)
   (memq 'src mark*))
 
-(define* (rib-src-marked-source-names {rib rib?})
-  ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
-  ;;and having only the "src" mark.
-  ;;
-  (define (%src-marks? obj)
-    ;;Return true if OBJ is equal to SRC-MARK*.
-    ;;
-    (and (pair? obj)
-	 (eq? 'src ($car obj))
-	 (null? ($cdr obj))))
-  (let ((name*  ($rib-name*  rib))
-	(mark** ($rib-mark** rib)))
-    (if ($rib-sealed/freq rib)
-	;;This rib is sealed: here NAME* and MARK** are vectors.
-	(let recur ((i    0)
-		    (imax ($vector-length name*)))
-	  (let-syntax-rules (((%recursion)       (recur ($fxadd1 i) imax))
-			     ((%more?)           ($fx< i imax))
-			     ((%next-mark* arg)  ($vector-ref arg i))
-			     ((%next-name arg)   ($vector-ref arg i)))
-	    (if (%more?)
-		(if (%src-marks? (%next-mark* mark**))
-		    (cons (%next-name name*) (%recursion))
-		  (%recursion))
-	      '())))
-      ;;This rib is not sealed: here NAME* and MARK** are lists.
-      (let recur ((name*  name*)
-		  (mark** mark**))
-	(let-syntax-rules (((%recursion)       (recur ($cdr name*) ($cdr mark**)))
-			   ((%more?)           (pair? name*))
-			   ((%next-mark* arg)  ($car arg))
-			   ((%next-name arg)   ($car arg)))
-	  (if (%more?)
-	      (if (%src-marks? (%next-mark* mark**))
-		  (cons (%next-name name*) (%recursion))
-		(%recursion))
-	    '()))))))
-
 
 ;;;; rib type definition
 
@@ -1494,6 +1456,7 @@
 (define-list-of-type-predicate list-of-ribs-and-shifts? rib-or-shift?)
 
 ;;; --------------------------------------------------------------------
+;;; rib constructors
 
 (define-syntax-rule (make-empty-rib)
   ;;Build and return a new, empty RIB object.
@@ -1581,6 +1544,8 @@
   (let ((sealed/freq #f))
     (make-rib (list source-name) SRC-MARK** (list lab) sealed/freq)))
 
+;;; --------------------------------------------------------------------
+
 (define (export-subst->rib export-subst)
   ;;Build  and  return   a  new  RIB  structure  initialised  with   the  entries  of
   ;;EXPORT-SUBST, which is meant to come from a library object.
@@ -1605,6 +1570,27 @@
 		(cons ($cdr nam.lab) label*)))
       (let ((sealed/freq #f))
 	(make-rib name* mark** label* sealed/freq)))))
+
+;;; --------------------------------------------------------------------
+;;; rib sealing
+
+(define* (seal-rib! {rib rib?})
+  (let ((name* ($rib-name* rib)))
+    (unless (null? name*) ;only seal if RIB is not empty
+      (let ((name* (list->vector name*)))
+	($set-rib-name*!       rib name*)
+	($set-rib-mark**!      rib (list->vector ($rib-mark** rib)))
+	($set-rib-label*!      rib (list->vector ($rib-label* rib)))
+	($set-rib-sealed/freq! rib (make-vector (vector-length name*) 0))))))
+
+(define* (unseal-rib! {rib rib?})
+  (when ($rib-sealed/freq rib)
+    ($set-rib-sealed/freq! rib #f)
+    ($set-rib-name*!       rib (vector->list ($rib-name*  rib)))
+    ($set-rib-mark**!      rib (vector->list ($rib-mark** rib)))
+    ($set-rib-label*!      rib (vector->list ($rib-label* rib)))))
+
+;;; --------------------------------------------------------------------
 
 (module (extend-rib!)
   ;;A RIB can be extensible, or  sealed.  Adding an identifier-to-label mapping to an
@@ -1739,418 +1725,47 @@
   #| end of module: EXTEND-RIB! |# )
 
 ;;; --------------------------------------------------------------------
-;;; rib sealing
 
-(define* (seal-rib! {rib rib?})
-  (let ((name* ($rib-name* rib)))
-    (unless (null? name*) ;only seal if RIB is not empty
-      (let ((name* (list->vector name*)))
-	($set-rib-name*!       rib name*)
-	($set-rib-mark**!      rib (list->vector ($rib-mark** rib)))
-	($set-rib-label*!      rib (list->vector ($rib-label* rib)))
-	($set-rib-sealed/freq! rib (make-vector (vector-length name*) 0))))))
-
-(define* (unseal-rib! {rib rib?})
-  (when ($rib-sealed/freq rib)
-    ($set-rib-sealed/freq! rib #f)
-    ($set-rib-name*!       rib (vector->list ($rib-name*  rib)))
-    ($set-rib-mark**!      rib (vector->list ($rib-mark** rib)))
-    ($set-rib-label*!      rib (vector->list ($rib-label* rib)))))
-
-
-;;;; syntax object type definition
-
-(define-record stx
-  (expr
-		;A symbolic expression, possibly  annotated, whose subexpressions can
-		;also be instances of stx.
-   mark*
-		;Null or a proper list of marks, including the symbol "src".
-   rib*
-		;Null or  a proper list of  rib instances or "shift"  symbols.  Every
-		;rib represents  a nested lexical  contour; a "shift"  represents the
-		;return from a macro transformer application.
-		;
-		;NOTE The items in the fields  MARK* and RIB* are not associated: the
-		;two lists  can grow independently  of each other.   But, considering
-		;the whole structure of nested stx  instances: the items in all the
-		;MARK* fields  are associated to the  items in all the  RIB*, see the
-		;functions JOIN-WRAPS and ADD-MARK for details.
-   annotated-expr*
-		;List of annotated expressions: null or a proper list whose items are
-		;#f or input  forms of macro transformer calls.  It  is used to trace
-		;the transformations a  form undergoes when it is  processed as macro
-		;use.
-		;
-		;The #f items  are inserted when this instance is  processed as input
-		;form of a macro call, but is later discarded.
-   )
-  (lambda (S port subwriter) ;record printer function
-    (define-syntax-rule (%display ?thing)
-      (display ?thing port))
-    (define-syntax-rule (%write ?thing)
-      (write ?thing port))
-    (define-syntax-rule (%pretty-print ?thing)
-      (pretty-print* ?thing port 0 #f))
-    (define raw-expr
-      (syntax->datum S))
-    (if (symbol? raw-expr)
-	(%display "#<syntactic-identifier")
-      (%display "#<syntax"))
-    (%display " expr=")		(%pretty-print raw-expr)
-    (%display " mark*=")	(%pretty-print (stx-mark* S))
-    (let ((expr (stx-expr S)))
-      (when (annotation? expr)
-	(let ((pos (annotation-textual-position expr)))
-	  (when (source-position-condition? pos)
-	    (%display " line=")		(%display (source-position-line    pos))
-	    (%display " column=")	(%display (source-position-column  pos))
-	    (%display " source=")	(%display (source-position-port-id pos))))))
-    (%display ">")))
-
-;;; --------------------------------------------------------------------
-
-(define (syntax-object? obj)
-  ;;Return #t if  OBJ is a wrapped  or unwrapped syntax object;  otherwise return #f.
-  ;;This  is not  a full  validation, because  a component  stx may  contain a  raw
-  ;;symbol.
+(define* (rib-src-marked-source-names {rib rib?})
+  ;;Scan the  RIB and return a  list of symbols representing  syntactic binding names
+  ;;and having only the "src" mark.
   ;;
-  (cond ((stx? obj)
-	 obj)
-	((pair? obj)
-	 (cons (syntax-object? ($car obj)) (syntax-object? ($cdr obj))))
-	((symbol? obj)
-	 #f)
-	((vector? obj)
-	 (vector-map syntax-object? obj))
-	(else
-	 (non-compound-sexp? obj))))
-
-;;; --------------------------------------------------------------------
-
-(define* (datum->syntax {id identifier?} datum)
-  (~datum->syntax id datum))
-
-(define (~datum->syntax id datum)
-  ;;Since all the identifier->label bindings  are encapsulated within the identifier,
-  ;;converting  a datum  to  a syntax  object (non-hygienically)  is  done simply  by
-  ;;creating an stx that has the same marks and ribs as the identifier.
-  ;;
-  ;;We include also  the annotated expression from ID because,  when showing an error
-  ;;trace, it helps to understand from where the returned object comes.
-  ;;
-  (make-stx datum ($stx-mark* id) ($stx-rib* id) ($stx-annotated-expr* id)))
-
-(define (syntax->datum S)
-  (syntax-object-strip-annotations S '()))
-
-(define (make-top-level-syntactic-identifier-from-source-name-and-label sym lab)
-  (wrap-source-expression sym (make-top-rib-from-source-name-and-label sym lab)))
-
-(define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
-  ;;Build and return a  new src marked syntactic identifier to  be used for temporary
-  ;;variables.   The returned  identifier can  be an  item in  the list  generated by
-  ;;GENERATE-TEMPORARIES.
-  ;;
-  (make-stx sym SRC-MARK* '() '()))
-
-(define* (make-top-level-syntax-object/quoted-quoting sym)
-  ;;Return a src-marked syntax object representing one among:
-  ;;
-  ;;   (quote quasiquote)
-  ;;   (quote unquote)
-  ;;   (quote unquote-splicing)
-  ;;
-  (case sym
-    ((quasiquote unquote unquote-splicing)
-     (let ((Q (core-prim-id 'quote)))
-       (list Q (make-stx sym SRC-MARK* (stx-rib* Q) '()))))
-    (else
-     (syntax-violation __who__
-       "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
-       sym))))
-
-(define* (wrap-source-expression expr {rib rib?})
-  ;;Wrap EXPR in a  syntax object giving it the source mark and  the RIB.  Return the
-  ;;stx object.
-  ;;
-  ;;EXPR   must  be   a  symbolic   expression,   possibly  annotated   as  read   by
-  ;;GET-ANNOTATED-DATUM.
-  ;;
-  (make-stx expr SRC-MARK* (list rib) '()))
-
-;;; --------------------------------------------------------------------
-
-(define* (mkstx expr-stx mark* {rib* list-of-ribs-and-shifts?} annotated-expr*)
-  ;;This is the proper constructor for wrapped syntax objects.
-  ;;
-  ;;EXPR-STX can be a raw sexp, an  instance of STX or a (partially) unwrapped syntax
-  ;;object.
-  ;;
-  ;;MARK* must be null or a proper list of marks, including the symbol "src".
-  ;;
-  ;;RIB* must be null or a proper list of rib instances and "shift" symbols.
-  ;;
-  ;;ANNOTATED-EXPR* must  be null or a  proper list of annotated  expressions: syntax
-  ;;objects being input forms for macro transformer calls.
-  ;;
-  ;;When EXPR-STX is a raw sexp or  an unwrapped syntax object: just build and return
-  ;;a new syntax object with the lexical context described by the given arguments.
-  ;;
-  ;;When EXPR-STX is a  stx instance: join the wraps from  EXPR-STX with given wraps,
-  ;;making sure that marks and anti-marks and corresponding shifts cancel properly.
-  ;;
-  (if (and (stx? expr-stx)
-	   (not (src-marked? mark*)))
-      (receive (mark* rib* annotated-expr*)
-	  (join-wraps mark* rib* annotated-expr* expr-stx)
-	(make-stx (stx-expr expr-stx) mark* rib* annotated-expr*))
-    (make-stx expr-stx mark* rib* annotated-expr*)))
-
-(define* (push-lexical-contour {rib rib?} expr-stx)
-  ;;Add  a rib  to a  syntax object  or expression  and return  the resulting  syntax
-  ;;object.  During  the expansion process  we visit  the nested subexpressions  in a
-  ;;syntax  object  repesenting source  code:  this  procedure introduces  a  lexical
-  ;;contour in the context of EXPR-STX, for example when we enter a LET syntax.
-  ;;
-  ;;RIB must be an instance of RIB.
-  ;;
-  ;;EXPR-STX can be a raw sexp, an instance of STX or a wrapped syntax object.
-  ;;
-  ;;This function prepares a computation that will be lazily performed later; the RIB
-  ;;will be pushed  on the stack of  ribs in every identifier in  the fully unwrapped
-  ;;version of the returned syntax object.
-  ;;
-  (let ((mark*	'())
-	(ae*	'()))
-    (mkstx expr-stx mark* (list rib) ae*)))
-
-(define (syntax-annotation x)
-  (if (stx? x)
-      (stx-expr x)
-    x))
-
-;;; --------------------------------------------------------------------
-
-(module (syntax-object-strip-annotations)
-
-  (define (syntax-object-strip-annotations expr mark*)
-    ;;Remove  the wrap  of a  syntax object.   EXPR  and MARK*  are meant  to be  the
-    ;;expression and associated marks of a  wrapped or unwrapped syntax object.  This
-    ;;function is also the implementation of SYNTAX->DATUM.
+  (define (%src-marks? obj)
+    ;;Return true if OBJ is equal to SRC-MARK*.
     ;;
-    ;;NOTE This function assumes that: if  MARK* contains the symbol "src", then EXPR
-    ;;is a raw  symbolic expression or an annotated symbolic  expression; that is: it
-    ;;is not a syntax object.
-    ;;
-    (if (src-marked? mark*)
-	(if (or (annotation? expr)
-		(and (pair? expr)
-		     (annotation? ($car expr)))
-		(and (vector? expr)
-		     (not ($vector-empty? expr))
-		     (annotation? ($vector-ref expr 0))))
-	    ;;TODO Ask Kent why this is a sufficient test.  (Abdulaziz Ghuloum)
-	    (%strip-annotations expr)
-	  expr)
-      (let f ((x expr))
-	(cond ((stx? x)
-	       (syntax-object-strip-annotations ($stx-expr x) ($stx-mark* x)))
-	      ((annotation? x)
-	       (annotation-stripped x))
-	      ((pair? x)
-	       (let ((a (f ($car x)))
-		     (d (f ($cdr x))))
-		 (if (and (eq? a ($car x))
-			  (eq? d ($cdr x)))
-		     x
-		   (cons a d))))
-	      ((vector? x)
-	       (let* ((old (vector->list x))
-		      (new (map f old)))
-		 (if (for-all eq? old new)
-		     x
-		   (list->vector new))))
-	      (else x)))))
-
-  (define (%strip-annotations x)
-    (cond ((pair? x)
-	   (cons (%strip-annotations ($car x))
-		 (%strip-annotations ($cdr x))))
-	  ((vector? x)
-	   (vector-map %strip-annotations x))
-	  ((annotation? x)
-	   (annotation-stripped x))
-	  (else x)))
-
-  #| end of module: SYNTAX-OBJECT-STRIP-ANNOTATIONS |# )
-
-
-;;;; syntax objects: mapping identifiers to labels
-
-(module (id->label)
-
-  (define* (id->label {id identifier?})
-    ;;Given the  identifier ID  search its ribs  for a  label associated
-    ;;with the  same sym  and marks.   If found  return the  label, else
-    ;;return false.
-    ;;
-    (let ((sym (~identifier->symbol id)))
-      (let search ((rib*  ($stx-rib*  id))
-		   (mark* ($stx-mark* id)))
-	(cond ((null? rib*)
-	       #f)
-	      ((eq? ($car rib*) 'shift)
-	       ;;This is the  only place in the expander  where a symbol
-	       ;;"shift" in a  RIB* makes some difference;  a "shift" is
-	       ;;pushed on the RIB* when a mark is pushed on the MARK*.
-	       ;;
-	       ;;When  we   find  a  "shift"   in  RIB*:  we   skip  the
-	       ;;corresponding mark in MARK*.
-	       (search ($cdr rib*) ($cdr mark*)))
-	      (else
-	       (let ((rib ($car rib*)))
-		 (define (next-search)
-		   (search ($cdr rib*) mark*))
-		 (if ($rib-sealed/freq rib)
-		     (%search-in-sealed-rib rib sym mark* next-search)
-		   (%search-in-rib rib sym mark* next-search))))))))
-
-  (define-inline (%search-in-rib rib sym mark* next-search)
-    (let loop ((name*   ($rib-name*  rib))
-	       (mark**  ($rib-mark** rib))
-	       (label*  ($rib-label* rib)))
-      (cond ((null? name*)
-	     (next-search))
-	    ((and (eq? ($car name*) sym)
-		  (same-marks? ($car mark**) mark*))
-	     ($car label*))
-	    (else
-	     (loop ($cdr name*) ($cdr mark**) ($cdr label*))))))
-
-  (module (%search-in-sealed-rib)
-
-    (define (%search-in-sealed-rib rib sym mark* next-search)
-      (define name* ($rib-name* rib))
-      (let loop ((i       0)
-		 (rib.len ($vector-length name*)))
-	(cond (($fx= i rib.len)
-	       (next-search))
-	      ((and (eq? ($vector-ref name* i) sym)
-		    (same-marks? mark* ($vector-ref ($rib-mark** rib) i)))
-	       (receive-and-return (label)
-		   ($vector-ref ($rib-label* rib) i)
-		 (%increment-rib-frequency! rib i)))
-	      (else
-	       (loop ($fxadd1 i) rib.len)))))
-
-    (define (%increment-rib-frequency! rib idx)
-      (let* ((freq* (rib-sealed/freq rib))
-	     (freq  (vector-ref freq* idx))
-	     (i     (let loop ((i idx))
-		      (if (zero? i)
-			  0
-			(let ((j (- i 1)))
-			  (if (= freq (vector-ref freq* j))
-			      (loop j)
-			    i))))))
-	($vector-set! freq* i (+ freq 1))
-	(unless (= i idx)
-	  (let ((name*  (rib-name*  rib))
-		(mark** (rib-mark** rib))
-		(label* (rib-label* rib)))
-	    (let-syntax ((%vector-swap (syntax-rules ()
-					 ((_ ?vec ?idx1 ?idx2)
-					  (let ((V ($vector-ref ?vec ?idx1)))
-					    ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
-					    ($vector-set! ?vec ?idx2 V))))))
-	      (%vector-swap name*  idx i)
-	      (%vector-swap mark** idx i)
-	      (%vector-swap label* idx i))))))
-
-    #| end of module: %SEARCH-IN-SEALED-RIB |# )
-
-  #| end of module: ID->LABEL |# )
-
-(define (id->label/intern id)
-  ;;Given the identifier ID search the lexical environment for a binding
-  ;;that captures  it; if such  binding is found: return  the associated
-  ;;label.
-  ;;
-  ;;If  no  capturing  binding  is found  but  a  top-level  interaction
-  ;;environment  is  set:  we  fabricate   a  lexical  binding  in  such
-  ;;environment so  that there exists a  lex gensym to name  the binding
-  ;;and a loc gensym in which to store a value (actually the lex and the
-  ;;loc are the same gensym).  This allows us to write "special" code on
-  ;;the REPL, for example:
-  ;;
-  ;;   vicare> (set! a 1)
-  ;;
-  ;;when  A is  not defined  will not  fail, rather  it will  implicitly
-  ;;define a binding as if we had typed:
-  ;;
-  ;;   vicare> (define a)
-  ;;   vicare> (set! a 1)
-  ;;
-  ;;another example of weird code that will not fail at the REPL:
-  ;;
-  ;;   vicare> (let ()
-  ;;             (set! a 1)
-  ;;             (debug-print a))
-  ;;
-  ;;will just print A as if we had typed:
-  ;;
-  ;;   vicare> (let ()
-  ;;             (define a)
-  ;;             (set! a 1)
-  ;;             (debug-print a))
-  ;;
-  ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
-  ;;"(define id)".
-  ;;
-  ;;If neither a  capturing binding is found nor a  top-level interaction environment
-  ;;is set: return false.
-  ;;
-  (or (id->label id)
-      (cond ((top-level-context)
-	     => (lambda (env)
-		  (let ((rib (interaction-env-rib env)))
-		    (receive (lab unused-lex/loc)
-			;;If  a  syntactic  binding in  the  interaction  environment
-			;;captures  ID:  we  retrieve  its label.   Otherwise  a  new
-			;;binding is added to the interaction environment.
-			(let ((redefine-binding? #t))
-			  (generate-or-retrieve-label-and-lex-gensyms id rib redefine-binding?))
-		      ;;FIXME (Abdulaziz Ghuloum)
-		      (let ((redefine-binding? #f))
-			(extend-rib! rib id lab redefine-binding?))
-		      lab))))
-	    (else #f))))
+    (and (pair? obj)
+	 (eq? 'src ($car obj))
+	 (null? ($cdr obj))))
+  (let ((name*  ($rib-name*  rib))
+	(mark** ($rib-mark** rib)))
+    (if ($rib-sealed/freq rib)
+	;;This rib is sealed: here NAME* and MARK** are vectors.
+	(let recur ((i    0)
+		    (imax ($vector-length name*)))
+	  (let-syntax-rules (((%recursion)       (recur ($fxadd1 i) imax))
+			     ((%more?)           ($fx< i imax))
+			     ((%next-mark* arg)  ($vector-ref arg i))
+			     ((%next-name arg)   ($vector-ref arg i)))
+	    (if (%more?)
+		(if (%src-marks? (%next-mark* mark**))
+		    (cons (%next-name name*) (%recursion))
+		  (%recursion))
+	      '())))
+      ;;This rib is not sealed: here NAME* and MARK** are lists.
+      (let recur ((name*  name*)
+		  (mark** mark**))
+	(let-syntax-rules (((%recursion)       (recur ($cdr name*) ($cdr mark**)))
+			   ((%more?)           (pair? name*))
+			   ((%next-mark* arg)  ($car arg))
+			   ((%next-name arg)   ($car arg)))
+	  (if (%more?)
+	      (if (%src-marks? (%next-mark* mark**))
+		  (cons (%next-name name*) (%recursion))
+		(%recursion))
+	    '()))))))
 
 ;;; --------------------------------------------------------------------
 
-(define (id->label/or-error who input-form.stx id)
-  (or (id->label id)
-      (raise-unbound-error who input-form.stx id)))
-
-(define (id->record-type-name-binding-descriptor who input-form.stx type-name-id lexenv)
-  ;;TYPE-NAME-ID is meant  to be a syntactic identifier bound  to an R6RS record-type
-  ;;name  binding descriptor;  retrieve its  label then  its binding  descriptor from
-  ;;LEXENV, finally return the binding descriptor.
-  ;;
-  ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
-  ;;syntactic binding descriptor does not represent an R6RS record-type name: raise a
-  ;;syntax violation exception.
-  ;;
-  (let* ((label (id->label/or-error who input-form.stx type-name-id))
-	 (descr (label->syntactic-binding-descriptor label lexenv)))
-    (if (record-type-name-binding-descriptor? descr)
-	descr
-      (syntax-violation who
-	"identifier not bound to a record type descriptor"
-	input-form.stx type-name-id))))
-
-
 ;;So, what's an anti-mark and why is it there?
 ;;
 ;;The theory goes like  this: when a macro call is encountered, the  input stx to the
@@ -2445,6 +2060,399 @@
 	   expr)))
 
   #| end of module: ADD-MARK |# )
+
+
+;;;; syntax object type definition
+
+(define-record stx
+  (expr
+		;A symbolic expression, possibly  annotated, whose subexpressions can
+		;also be instances of stx.
+   mark*
+		;Null or a proper list of marks, including the symbol "src".
+   rib*
+		;Null or  a proper list of  rib instances or "shift"  symbols.  Every
+		;rib represents  a nested lexical  contour; a "shift"  represents the
+		;return from a macro transformer application.
+		;
+		;NOTE The items in the fields  MARK* and RIB* are not associated: the
+		;two lists  can grow independently  of each other.   But, considering
+		;the whole structure of nested stx  instances: the items in all the
+		;MARK* fields  are associated to the  items in all the  RIB*, see the
+		;functions JOIN-WRAPS and ADD-MARK for details.
+   annotated-expr*
+		;List of annotated expressions: null or a proper list whose items are
+		;#f or input  forms of macro transformer calls.  It  is used to trace
+		;the transformations a  form undergoes when it is  processed as macro
+		;use.
+		;
+		;The #f items  are inserted when this instance is  processed as input
+		;form of a macro call, but is later discarded.
+   )
+  (lambda (S port subwriter) ;record printer function
+    (define-syntax-rule (%display ?thing)
+      (display ?thing port))
+    (define-syntax-rule (%write ?thing)
+      (write ?thing port))
+    (define-syntax-rule (%pretty-print ?thing)
+      (pretty-print* ?thing port 0 #f))
+    (define raw-expr
+      (syntax->datum S))
+    (if (symbol? raw-expr)
+	(%display "#<syntactic-identifier")
+      (%display "#<syntax"))
+    (%display " expr=")		(%pretty-print raw-expr)
+    (%display " mark*=")	(%pretty-print (stx-mark* S))
+    (let ((expr (stx-expr S)))
+      (when (annotation? expr)
+	(let ((pos (annotation-textual-position expr)))
+	  (when (source-position-condition? pos)
+	    (%display " line=")		(%display (source-position-line    pos))
+	    (%display " column=")	(%display (source-position-column  pos))
+	    (%display " source=")	(%display (source-position-port-id pos))))))
+    (%display ">")))
+
+;;; --------------------------------------------------------------------
+
+(define (syntax-object? obj)
+  ;;Return #t if  OBJ is a wrapped  or unwrapped syntax object;  otherwise return #f.
+  ;;This  is not  a full  validation, because  a component  stx may  contain a  raw
+  ;;symbol.
+  ;;
+  (cond ((stx? obj)
+	 obj)
+	((pair? obj)
+	 (cons (syntax-object? ($car obj)) (syntax-object? ($cdr obj))))
+	((symbol? obj)
+	 #f)
+	((vector? obj)
+	 (vector-map syntax-object? obj))
+	(else
+	 (non-compound-sexp? obj))))
+
+;;; --------------------------------------------------------------------
+
+(define* (datum->syntax {id identifier?} datum)
+  (~datum->syntax id datum))
+
+(define (~datum->syntax id datum)
+  ;;Since all the identifier->label bindings  are encapsulated within the identifier,
+  ;;converting  a datum  to  a syntax  object (non-hygienically)  is  done simply  by
+  ;;creating an stx that has the same marks and ribs as the identifier.
+  ;;
+  ;;We include also  the annotated expression from ID because,  when showing an error
+  ;;trace, it helps to understand from where the returned object comes.
+  ;;
+  (make-stx datum ($stx-mark* id) ($stx-rib* id) ($stx-annotated-expr* id)))
+
+(define (syntax->datum S)
+  (syntax-object-strip-annotations S '()))
+
+(define (make-top-level-syntactic-identifier-from-source-name-and-label sym lab)
+  (wrap-source-expression sym (make-top-rib-from-source-name-and-label sym lab)))
+
+(define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
+  ;;Build and return a  new src marked syntactic identifier to  be used for temporary
+  ;;variables.   The returned  identifier can  be an  item in  the list  generated by
+  ;;GENERATE-TEMPORARIES.
+  ;;
+  (make-stx sym SRC-MARK* '() '()))
+
+(define* (make-top-level-syntax-object/quoted-quoting sym)
+  ;;Return a src-marked syntax object representing one among:
+  ;;
+  ;;   (quote quasiquote)
+  ;;   (quote unquote)
+  ;;   (quote unquote-splicing)
+  ;;
+  (case sym
+    ((quasiquote unquote unquote-splicing)
+     (let ((Q (core-prim-id 'quote)))
+       (list Q (make-stx sym SRC-MARK* (stx-rib* Q) '()))))
+    (else
+     (syntax-violation __who__
+       "invalid quoting syntax name, expected one among: quasiquote, unquote, unquote-splicing"
+       sym))))
+
+(define* (wrap-source-expression expr {rib rib?})
+  ;;Wrap EXPR in a  syntax object giving it the source mark and  the RIB.  Return the
+  ;;stx object.
+  ;;
+  ;;EXPR   must  be   a  symbolic   expression,   possibly  annotated   as  read   by
+  ;;GET-ANNOTATED-DATUM.
+  ;;
+  (make-stx expr SRC-MARK* (list rib) '()))
+
+;;; --------------------------------------------------------------------
+
+(define* (mkstx expr-stx mark* {rib* list-of-ribs-and-shifts?} annotated-expr*)
+  ;;This is the proper constructor for wrapped syntax objects.
+  ;;
+  ;;EXPR-STX can be a raw sexp, an  instance of STX or a (partially) unwrapped syntax
+  ;;object.
+  ;;
+  ;;MARK* must be null or a proper list of marks, including the symbol "src".
+  ;;
+  ;;RIB* must be null or a proper list of rib instances and "shift" symbols.
+  ;;
+  ;;ANNOTATED-EXPR* must  be null or a  proper list of annotated  expressions: syntax
+  ;;objects being input forms for macro transformer calls.
+  ;;
+  ;;When EXPR-STX is a raw sexp or  an unwrapped syntax object: just build and return
+  ;;a new syntax object with the lexical context described by the given arguments.
+  ;;
+  ;;When EXPR-STX is a  stx instance: join the wraps from  EXPR-STX with given wraps,
+  ;;making sure that marks and anti-marks and corresponding shifts cancel properly.
+  ;;
+  (if (and (stx? expr-stx)
+	   (not (src-marked? mark*)))
+      (receive (mark* rib* annotated-expr*)
+	  (join-wraps mark* rib* annotated-expr* expr-stx)
+	(make-stx (stx-expr expr-stx) mark* rib* annotated-expr*))
+    (make-stx expr-stx mark* rib* annotated-expr*)))
+
+(define* (push-lexical-contour {rib rib?} expr-stx)
+  ;;Add  a rib  to a  syntax object  or expression  and return  the resulting  syntax
+  ;;object.  During  the expansion process  we visit  the nested subexpressions  in a
+  ;;syntax  object  repesenting source  code:  this  procedure introduces  a  lexical
+  ;;contour in the context of EXPR-STX, for example when we enter a LET syntax.
+  ;;
+  ;;RIB must be an instance of RIB.
+  ;;
+  ;;EXPR-STX can be a raw sexp, an instance of STX or a wrapped syntax object.
+  ;;
+  ;;This function prepares a computation that will be lazily performed later; the RIB
+  ;;will be pushed  on the stack of  ribs in every identifier in  the fully unwrapped
+  ;;version of the returned syntax object.
+  ;;
+  (let ((mark*	'())
+	(ae*	'()))
+    (mkstx expr-stx mark* (list rib) ae*)))
+
+(define (syntax-annotation x)
+  (if (stx? x)
+      (stx-expr x)
+    x))
+
+;;; --------------------------------------------------------------------
+
+(module (syntax-object-strip-annotations)
+
+  (define (syntax-object-strip-annotations expr mark*)
+    ;;Remove  the wrap  of a  syntax object.   EXPR  and MARK*  are meant  to be  the
+    ;;expression and associated marks of a  wrapped or unwrapped syntax object.  This
+    ;;function is also the implementation of SYNTAX->DATUM.
+    ;;
+    ;;NOTE This function assumes that: if  MARK* contains the symbol "src", then EXPR
+    ;;is a raw  symbolic expression or an annotated symbolic  expression; that is: it
+    ;;is not a syntax object.
+    ;;
+    (if (src-marked? mark*)
+	(if (or (annotation? expr)
+		(and (pair? expr)
+		     (annotation? ($car expr)))
+		(and (vector? expr)
+		     (not ($vector-empty? expr))
+		     (annotation? ($vector-ref expr 0))))
+	    ;;TODO Ask Kent why this is a sufficient test.  (Abdulaziz Ghuloum)
+	    (%strip-annotations expr)
+	  expr)
+      (let f ((x expr))
+	(cond ((stx? x)
+	       (syntax-object-strip-annotations ($stx-expr x) ($stx-mark* x)))
+	      ((annotation? x)
+	       (annotation-stripped x))
+	      ((pair? x)
+	       (let ((a (f ($car x)))
+		     (d (f ($cdr x))))
+		 (if (and (eq? a ($car x))
+			  (eq? d ($cdr x)))
+		     x
+		   (cons a d))))
+	      ((vector? x)
+	       (let* ((old (vector->list x))
+		      (new (map f old)))
+		 (if (for-all eq? old new)
+		     x
+		   (list->vector new))))
+	      (else x)))))
+
+  (define (%strip-annotations x)
+    (cond ((pair? x)
+	   (cons (%strip-annotations ($car x))
+		 (%strip-annotations ($cdr x))))
+	  ((vector? x)
+	   (vector-map %strip-annotations x))
+	  ((annotation? x)
+	   (annotation-stripped x))
+	  (else x)))
+
+  #| end of module: SYNTAX-OBJECT-STRIP-ANNOTATIONS |# )
+
+
+;;;; syntax objects: mapping identifiers to labels
+
+(module (id->label)
+
+  (define* (id->label {id identifier?})
+    ;;Given the  identifier ID  search its ribs  for a  label associated
+    ;;with the  same sym  and marks.   If found  return the  label, else
+    ;;return false.
+    ;;
+    (let ((sym (~identifier->symbol id)))
+      (let search ((rib*  ($stx-rib*  id))
+		   (mark* ($stx-mark* id)))
+	(cond ((null? rib*)
+	       #f)
+	      ((eq? ($car rib*) 'shift)
+	       ;;This is the  only place in the expander  where a symbol
+	       ;;"shift" in a  RIB* makes some difference;  a "shift" is
+	       ;;pushed on the RIB* when a mark is pushed on the MARK*.
+	       ;;
+	       ;;When  we   find  a  "shift"   in  RIB*:  we   skip  the
+	       ;;corresponding mark in MARK*.
+	       (search ($cdr rib*) ($cdr mark*)))
+	      (else
+	       (let ((rib ($car rib*)))
+		 (define (next-search)
+		   (search ($cdr rib*) mark*))
+		 (if ($rib-sealed/freq rib)
+		     (%search-in-sealed-rib rib sym mark* next-search)
+		   (%search-in-rib rib sym mark* next-search))))))))
+
+  (define (%search-in-rib rib sym mark* next-search)
+    (let loop ((name*   ($rib-name*  rib))
+	       (mark**  ($rib-mark** rib))
+	       (label*  ($rib-label* rib)))
+      (cond ((null? name*)
+	     (next-search))
+	    ((and (eq? ($car name*) sym)
+		  (same-marks? ($car mark**) mark*))
+	     ($car label*))
+	    (else
+	     (loop ($cdr name*) ($cdr mark**) ($cdr label*))))))
+
+  (module (%search-in-sealed-rib)
+
+    (define (%search-in-sealed-rib rib sym mark* next-search)
+      (define name* ($rib-name* rib))
+      (let loop ((i       0)
+		 (rib.len ($vector-length name*)))
+	(cond (($fx= i rib.len)
+	       (next-search))
+	      ((and (eq? ($vector-ref name* i) sym)
+		    (same-marks? mark* ($vector-ref ($rib-mark** rib) i)))
+	       (receive-and-return (label)
+		   ($vector-ref ($rib-label* rib) i)
+		 (%increment-rib-frequency! rib i)))
+	      (else
+	       (loop ($fxadd1 i) rib.len)))))
+
+    (define (%increment-rib-frequency! rib idx)
+      (let* ((freq* (rib-sealed/freq rib))
+	     (freq  (vector-ref freq* idx))
+	     (i     (let loop ((i idx))
+		      (if (zero? i)
+			  0
+			(let ((j (- i 1)))
+			  (if (= freq (vector-ref freq* j))
+			      (loop j)
+			    i))))))
+	($vector-set! freq* i (+ freq 1))
+	(unless (= i idx)
+	  (let ((name*  (rib-name*  rib))
+		(mark** (rib-mark** rib))
+		(label* (rib-label* rib)))
+	    (let-syntax ((%vector-swap (syntax-rules ()
+					 ((_ ?vec ?idx1 ?idx2)
+					  (let ((V ($vector-ref ?vec ?idx1)))
+					    ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
+					    ($vector-set! ?vec ?idx2 V))))))
+	      (%vector-swap name*  idx i)
+	      (%vector-swap mark** idx i)
+	      (%vector-swap label* idx i))))))
+
+    #| end of module: %SEARCH-IN-SEALED-RIB |# )
+
+  #| end of module: ID->LABEL |# )
+
+(define (id->label/intern id)
+  ;;Given the identifier ID search the lexical environment for a binding
+  ;;that captures  it; if such  binding is found: return  the associated
+  ;;label.
+  ;;
+  ;;If  no  capturing  binding  is found  but  a  top-level  interaction
+  ;;environment  is  set:  we  fabricate   a  lexical  binding  in  such
+  ;;environment so  that there exists a  lex gensym to name  the binding
+  ;;and a loc gensym in which to store a value (actually the lex and the
+  ;;loc are the same gensym).  This allows us to write "special" code on
+  ;;the REPL, for example:
+  ;;
+  ;;   vicare> (set! a 1)
+  ;;
+  ;;when  A is  not defined  will not  fail, rather  it will  implicitly
+  ;;define a binding as if we had typed:
+  ;;
+  ;;   vicare> (define a)
+  ;;   vicare> (set! a 1)
+  ;;
+  ;;another example of weird code that will not fail at the REPL:
+  ;;
+  ;;   vicare> (let ()
+  ;;             (set! a 1)
+  ;;             (debug-print a))
+  ;;
+  ;;will just print A as if we had typed:
+  ;;
+  ;;   vicare> (let ()
+  ;;             (define a)
+  ;;             (set! a 1)
+  ;;             (debug-print a))
+  ;;
+  ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
+  ;;"(define id)".
+  ;;
+  ;;If neither a  capturing binding is found nor a  top-level interaction environment
+  ;;is set: return false.
+  ;;
+  (or (id->label id)
+      (cond ((top-level-context)
+	     => (lambda (env)
+		  (let ((rib (interaction-env-rib env)))
+		    (receive (lab unused-lex/loc)
+			;;If  a  syntactic  binding in  the  interaction  environment
+			;;captures  ID:  we  retrieve  its label.   Otherwise  a  new
+			;;binding is added to the interaction environment.
+			(let ((redefine-binding? #t))
+			  (generate-or-retrieve-label-and-lex-gensyms id rib redefine-binding?))
+		      ;;FIXME (Abdulaziz Ghuloum)
+		      (let ((redefine-binding? #f))
+			(extend-rib! rib id lab redefine-binding?))
+		      lab))))
+	    (else #f))))
+
+;;; --------------------------------------------------------------------
+
+(define (id->label/or-error who input-form.stx id)
+  (or (id->label id)
+      (raise-unbound-error who input-form.stx id)))
+
+(define (id->record-type-name-binding-descriptor who input-form.stx type-name-id lexenv)
+  ;;TYPE-NAME-ID is meant  to be a syntactic identifier bound  to an R6RS record-type
+  ;;name  binding descriptor;  retrieve its  label then  its binding  descriptor from
+  ;;LEXENV, finally return the binding descriptor.
+  ;;
+  ;;If  TYPE-NAME-ID is  unbound: raise  an "unbound  identifier" exception.   If the
+  ;;syntactic binding descriptor does not represent an R6RS record-type name: raise a
+  ;;syntax violation exception.
+  ;;
+  (let* ((label (id->label/or-error who input-form.stx type-name-id))
+	 (descr (label->syntactic-binding-descriptor label lexenv)))
+    (if (record-type-name-binding-descriptor? descr)
+	descr
+      (syntax-violation who
+	"identifier not bound to a record type descriptor"
+	input-form.stx type-name-id))))
 
 
 ;;;; identifiers from the built-in environment
