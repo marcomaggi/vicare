@@ -1151,39 +1151,41 @@
       (%gen-top-level-label id rib)))
 
   (define (%gen-top-level-label id rib)
-    (let ((sym   (identifier->symbol id))
-	  (mark* (stx-mark* id))
-	  (sym*  (rib-name* rib)))
-      (cond ((and (memq sym (rib-name* rib))
-		  (%find sym mark* sym* (rib-mark** rib) (rib-label* rib)))
+    (let ((id.source-name   (~identifier->symbol id))
+	  (id.mark*         ($stx-mark* id))
+	  (rib.source-name* ($rib-name* rib)))
+      (cond ((and (memq id.source-name rib.source-name*)
+		  (%find-label-of-source-name id.source-name id.mark* rib.source-name* ($rib-mark** rib) ($rib-label* rib)))
 	     => (lambda (label)
-		  ;;If we are here RIB  contains a binding that captures
-		  ;;ID and LABEL is its label.
+		  ;;If we are here RIB contains  a binding that captures ID and LABEL
+		  ;;is its label.
 		  ;;
-		  ;;If the  LABEL is associated to  an imported binding:
-		  ;;the  data structure  implementing the  symbol object
-		  ;;holds informations about the  binding in an internal
-		  ;;field; else such field is set to false.
+		  ;;If LABEL is associated to an imported binding: the data structure
+		  ;;implementing  the  symbol  object  holds  the  syntactic  binding
+		  ;;descriptor in its  "value" field; otherwise such field  is set to
+		  ;;false.
 		  (if (label->imported-syntactic-binding-descriptor label)
 		      ;;Create new label to shadow imported binding.
 		      (generate-label-gensym id)
 		    ;;Recycle old label.
 		    label)))
 	    (else
-	     ;;Create a new label for a new binding.
+	     ;;Create a new label for a new syntactic binding.
 	     (generate-label-gensym id)))))
 
-  (define (%find sym mark* sym* mark** label*)
-    ;;We know  that the list  of symbols SYM*  has at least  one element
-    ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
-    ;;a  tuple having  marks equal  to MARK*  and return  the associated
-    ;;label.  If such binding is not found return false.
+  (define (%find-label-of-source-name source-name id.mark* rib.source-name* mark** label*)
+    ;;Upon  entering a  call to  this  function: we  know  that the  list of  symbols
+    ;;RIB.SOURCE-NAME* has at least one element equal to SOURCE-NAME.
     ;;
-    (and (pair? sym*)
-	 (if (and (eq? sym (car sym*))
-		  (same-marks? mark* (car mark**)))
+    ;;We recurse  iterating over RIB.SOURCE-NAME*, MARK**  and LABEL*; we look  for a
+    ;;tuple having marks equal to ID.MARK*  and return the associated label.  If such
+    ;;binding is not found return false.
+    ;;
+    (and (pair? rib.source-name*)
+	 (if (and (eq? source-name (car rib.source-name*))
+		  (same-marks? id.mark* (car mark**)))
 	     (car label*)
-	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
+	   (%find-label-of-source-name source-name id.mark* (cdr rib.source-name*) (cdr mark**) (cdr label*)))))
 
   #| end of module |# )
 

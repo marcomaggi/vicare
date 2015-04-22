@@ -4013,6 +4013,22 @@
 	      (interaction-environment)))
     => 4)
 
+  (check	;check binding redefinition
+      (begin
+	(eval '(begin
+		 (define x 1)
+		 (define y 2)
+		 (define z 3))
+	      (interaction-environment))
+	(eval '(begin
+		 (define x 10)
+		 (define y 20)
+		 (define z 30))
+	      (interaction-environment))
+	(eval '(list x y z)
+	      (interaction-environment)))
+    => '(10 20 30))
+
   (check	;check binding definition with SET!
       (let ((env (interaction-environment)))
 	(eval '(set! e 3) env)
@@ -4048,6 +4064,22 @@
 	(eval '(define d 4) env)
 	(eval 'd env))
     => 4)
+
+  (check	;check binding redefinition
+      (let ((env (new-interaction-environment '(rnrs base))))
+	(eval '(begin
+		 (define x 1)
+		 (define y 2)
+		 (define z 3))
+	      env)
+	(eval '(begin
+		 (define x 10)
+		 (define y 20)
+		 (define z 30))
+	      env)
+	(eval '(list x y z)
+	      env))
+    => '(10 20 30))
 
   (check	;check binding definition with SET!
       (let ((env (new-interaction-environment '(rnrs base))))
