@@ -46,11 +46,11 @@
     environment-libraries
     environment-binding
 
-    ;; label gensyms, lexical variable gensymts, storage location gensyms
+    ;; label gensyms, lexical variable gensyms, storage location gensyms
     gensym-for-lexical-var
     gensym-for-storage-location
-    gensym-for-label
-    gen-define-label+lex
+    generate-label-gensym
+    generate-label-and-lex-gensyms-for-define
     gen-define-syntax-label
 
     ;; LEXENV entries and syntactic binding descriptors
@@ -1042,7 +1042,7 @@
 	    (else
 	     (gensym)))))))
 
-(define (gensym-for-label seed)
+(define (generate-label-gensym seed)
   ;;Every  syntactic binding  has a  label  associated to  it as  unique
   ;;identifier  in the  whole running  process; this  function generates
   ;;such labels as gensyms.
@@ -1062,66 +1062,65 @@
 	     (gensym)))
     (gensym)))
 
-(module (gen-define-label+lex
+(module (generate-label-and-lex-gensyms-for-define
 	 gen-define-syntax-label)
 
-  (define (gen-define-label+lex id rib shadowing-definition?)
+  (define (generate-label-and-lex-gensyms-for-define id rib redefine-binding?)
     ;;Whenever a DEFINE syntax:
     ;;
     ;;   (define ?id ?rhs)
     ;;
-    ;;is expanded  we need  to generate  for it: a  label gensym,  a lex
-    ;;gensym  and a  loc gensym.   This function  returns 2  values: the
-    ;;label and the lex; a loc might be generated too.
+    ;;is expanded  we need to generate  for it: a label  gensym, a lex gensym,  a loc
+    ;;gensym.  This function returns 2 values: the  label and the lex; a loc might be
+    ;;generated too.
     ;;
-    ;;ID  must  be an  identifier  representing  the  name of  a  DEFINE
-    ;;binding.
+    ;;The  argument ID  must be  a syntactic  identifier representing  the name  of a
+    ;;DEFINE binding.
     ;;
-    ;;RIB  must be  the RIB  describing the  lexical contour  in which
-    ;;DEFINE is present.
+    ;;The argument RIB must be the rib object describing the lexical contour in which
+    ;;DEFINE is expanded.
     ;;
-    ;;SHADOWING-DEFINITION?  must  be a boolean,  true if it is  fine to
-    ;;generate a binding that shadows an already existing binding:
+    ;;REDEFINE-BINDING?  must  be a  boolean, true  if it is  fine to  generate a
+    ;;binding that shadows an already existing binding.  Specifically:
     ;;
-    ;;* When  this argument is true:  we always generate a  new label, a
-    ;;  new lex and no loc.   Upon returning from this function, we have
-    ;;  2 choices:
+    ;;* When this argument is true: we always  generate a new label, a new lex and no
+    ;;  loc.  Upon returning from this function, we have 2 choices:
     ;;
-    ;;  - Search the relevant LEXENV for the returned label and raise an
-    ;;    error when a binding already exists.
+    ;;  - Search the relevant LEXENV for the returned label and raise an error when a
+    ;;    binding already exists.
     ;;
-    ;;  - Create  a new binding by  pushing a new entry  on the relevant
-    ;;    LEXENV.
+    ;;  - Create a new binding by pushing a new entry on the relevant LEXENV.
     ;;
-    ;;* When  this argument  is false:  we assume  there is  a top-level
-    ;;  interaction  environment set.
+    ;;*  When this  argument is  false: we  assume there  is a  top-level interaction
+    ;;  environment set.
     ;;
-    ;;  - If  an existent binding in such top-level  env captures ID: we
-    ;;    cause DEFINE  to mutate the existent binding  by returning the
-    ;;    already existent label and lex.
+    ;;  - If an  existent binding in such top-level env captures  ID: we cause DEFINE
+    ;;    to mutate the existent binding  by returning the already existent label and
+    ;;    lex.
     ;;
-    ;;  -  Otherwise  we  fabricate  a  new  binding  in  the  top-level
-    ;;    environment and return the new  label and lex; in this case we
-    ;;    generate a loc gensym and also use it as lex gensym.
+    ;;  - Otherwise  we fabricate  a new  binding in  the top-level  environment and
+    ;;    return  the new label and  lex; in this case  we generate a loc  gensym and
+    ;;    also use it as lex gensym.
     ;;
-    (if shadowing-definition?
-	;;This DEFINE binding is *allowed* to shadow an existing lexical
-	;;binding.
-	(values (gensym-for-label id) (gensym-for-lexical-var id))
-      ;;This DEFINE binding is *forbidden* to shadow an existing lexical
-      ;;binding.
-      (let* ((env       (top-level-context))
-	     (label     (%gen-top-level-label id rib))
-	     (lab.loc/lex*  (interaction-env-lab.loc/lex* env)))
-	(values label
-		(cond ((assq label lab.loc/lex*)
-		       => cdr)
-		      (else
-		       (receive-and-return (loc)
-			   (gensym-for-storage-location id)
-			 (set-interaction-env-lab.loc/lex*! env
-			   (cons (cons label loc)
-				 lab.loc/lex*)))))))))
+    (if redefine-binding?
+	;;If  a syntactic  binding capturing  ID already  exists in  RIB: the  DEFINE
+	;;syntax we are expanding redefines it by replacing the old label gensym with
+	;;a new label gensym.
+	(let* ((env           (top-level-context))
+	       (label         (%gen-top-level-label id rib))
+	       (lab.loc/lex*  (interaction-env-lab.loc/lex* env)))
+	  (values label
+		  (cond ((assq label lab.loc/lex*)
+			 => cdr)
+			(else
+			 (receive-and-return (loc)
+			     (gensym-for-storage-location id)
+			   (set-interaction-env-lab.loc/lex*! env
+			     (cons (cons label loc)
+				   lab.loc/lex*)))))))
+      ;;If a syntactic binding capturing ID  already exists in RIB: the DEFINE syntax
+      ;;we are expanding is in error, an exception will be raised later.
+      (values (generate-label-gensym id) (gensym-for-lexical-var id))))
 
   (define (gen-define-syntax-label id rib shadowing-definition?)
     ;;Whenever a DEFINE syntax:
@@ -1148,7 +1147,7 @@
     ;;  label.
     ;;
     (if shadowing-definition?
-        (gensym-for-label id)
+        (generate-label-gensym id)
       (%gen-top-level-label id rib)))
 
   (define (%gen-top-level-label id rib)
@@ -1167,12 +1166,12 @@
 		  ;;field; else such field is set to false.
 		  (if (label->imported-syntactic-binding-descriptor label)
 		      ;;Create new label to shadow imported binding.
-		      (gensym-for-label id)
+		      (generate-label-gensym id)
 		    ;;Recycle old label.
 		    label)))
 	    (else
 	     ;;Create a new label for a new binding.
-	     (gensym-for-label id)))))
+	     (generate-label-gensym id)))))
 
   (define (%find sym mark* sym* mark** label*)
     ;;We know  that the list  of symbols SYM*  has at least  one element
@@ -1431,63 +1430,8 @@
 	    '()))))))
 
 
-;;;; rib record type definition
-;;
-;;A RIB  is a  record constructed  at every lexical  contour in  the program  to hold
-;;informations about  the variables  introduced in  that contour;  "lexical contours"
-;;are, for example, LET and similar syntaxes that can introduce bindings.
-;;
-;;The purpose of  ribs is to map  original binding names to the  labels associated to
-;;those bindings; this map is used when establishing if a syntax object identifier in
-;;reference position is captured by an existing sytactic binding.
-;;
-;;Sealing ribs
-;;------------
-;;
-;;A non-empty RIB  can be sealed once all  bindings are inserted.  To seal  a RIB, we
-;;convert the lists NAME*, MARK** and LABEL* to vectors and insert a frequency vector
-;;in  the SEALED/FREQ  field.   The frequency  vector  is a  Scheme  vector of  exact
-;;integers.
-;;
-;;The frequency vector is an optimization that allows the RIB to reorganize itself by
-;;bubbling frequently used mappings to the top  of the RIB.  This is possible because
-;;the order in which the binding tuples appear in a RIB does not matter.
-;;
-;;The vector is  maintained in non-descending order and an  identifier's entry in the
-;;RIB  is incremented  at every  access.  If  an identifier's  frequency exceeds  the
-;;preceeding one, the identifier's  position is promoted to the top  of its class (or
-;;the bottom of the previous class).
-;;
-;;An unsealed rib with 2 binings looks as follows:
-;;
-;;   name*       = (b       a)
-;;   mark**      = ((src)   (src))
-;;   label*      = (lab.b   lab.a)
-;;   sealed/freq = #f
-;;
-;;and right after sealing it:
-;;
-;;   name*       = #(b       a)
-;;   mark**      = #((src)   (src))
-;;   label*      = #(lab.b   lab.a)
-;;   sealed/freq = #(0       0)
-;;
-;;after  accessing once  the binding  of  "b" in  the  sealed rib,  its frequency  is
-;;incremented:
-;;
-;;   name*       = #(b       a)
-;;   mark**      = #((src)   (src))
-;;   label*      = #(lab.b   lab.a)
-;;   sealed/freq = #(1       0)
-;;
-;;and after  accessing twice the  binding of  "a" in the  sealed rib, the  tuples are
-;;swapped:
-;;
-;;   name*       = #(a       b)
-;;   mark**      = #((src)   (src))
-;;   label*      = #(lab.a   lab.b)
-;;   sealed/freq = #(2       1)
-;;
+;;;; rib type definition
+
 (define-record (rib make-rib rib?)
   (name*
 		;List  of symbols  representing  the original  binding  names in  the
@@ -1510,10 +1454,8 @@
    sealed/freq
 		;False  or  vector  of  exact  integers.  When  false:  this  RIB  is
 		;extensible, that is new bindings can be added to it.  When a vector:
-		;this RIB is selaed.
-		;
-		;See below the code section "sealing  ribs" for an explanation of the
-		;frequency vector.
+		;this RIB is  sealed; see the documentation in Texinfo  format for an
+		;explanation of the frequency vector.
    )
   (lambda (S port subwriter) ;record printer function
     (define-syntax-rule (%display ?thing)
@@ -1529,6 +1471,8 @@
     (%display " sealed/freq=")	(%pretty-print (rib-sealed/freq S))
     (%display ">")))
 
+;;; --------------------------------------------------------------------
+
 (define (false-or-rib? obj)
   (or (not obj)
       (rib? obj)))
@@ -1541,17 +1485,16 @@
 
 (define-list-of-type-predicate list-of-ribs-and-shifts? rib-or-shift?)
 
-
-;;;; rib operations
+;;; --------------------------------------------------------------------
 
 (define-syntax-rule (make-empty-rib)
-  ;;Build and return a new empty RIB record.
+  ;;Build and return a new, empty RIB object.
   ;;
   ;;Empty ribs  are used to  represent freshly created  lexical contours in  which no
   ;;initial  bindings  are  defined.   For example,  internal  bodies  might  contain
   ;;internal definitions:
   ;;
-  ;;   (let ()
+  ;;   (internal-body
   ;;     (define a 1)
   ;;     (define b 2)
   ;;     (display a))
@@ -1559,17 +1502,20 @@
   ;;but we  know about  them only when  we begin their  expansion; when  creating the
   ;;lexical contour for them we must create an empty rib.
   ;;
-  ;;If STX is a  syntax object representing an expression that must  be expanded in a
-  ;;new lexical contour, we do:
+  ;;If  STX* is  a  list of  syntax  objects representing  expressions  that must  be
+  ;;expanded in a new lexical contour:
   ;;
-  ;;   (define stx  #'((define a 1)
-  ;;                   (define b 2)
-  ;;                   (display a)))
-  ;;   (define rib  (make-empty-rib))
-  ;;   (define stx^ (push-lexical-contour rib stx))
+  ;;   (define stx*  #'((define a 1)
+  ;;                    (define b 2)
+  ;;                    (display a)))
   ;;
-  ;;and  then hand  the  resulting  syntax object  STX^  to  the appropriate  "chi-*"
-  ;;function to perform the expansion.  Later we can add bindings to the rib with:
+  ;;we do:
+  ;;
+  ;;   (define rib (make-empty-rib))
+  ;;   (define stx (push-lexical-contour rib stx*))
+  ;;
+  ;;and then hand the resulting syntax object STX to the appropriate "chi-*" function
+  ;;to perform the expansion.  Later we can add bindings to the rib with:
   ;;
   ;;   (extend-rib! rib id label redefine-binding?)
   ;;
@@ -1592,7 +1538,7 @@
   ;;
   ;;   (define lhs.id*    ?lhs*)
   ;;   (define body.stx   ?body*)
-  ;;   (define lhs.label* (map gensym-for-label lhs.id*))
+  ;;   (define lhs.label* (map generate-label-gensym lhs.id*))
   ;;   (define rib        (make-rib-from-identifiers-and-labels lhs.id* lhs.label*))
   ;;   (define body.stx^  (push-lexical-contour rib body.stx))
   ;;
@@ -2154,8 +2100,8 @@
   ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
   ;;"(define id)".
   ;;
-  ;;If neither a capturing binding  is found nor a top-level interaction
-  ;;environment is set: return false.
+  ;;If neither a  capturing binding is found nor a  top-level interaction environment
+  ;;is set: return false.
   ;;
   (or (id->label id)
       (cond ((top-level-context)
@@ -2165,8 +2111,8 @@
 			;;If  a  syntactic  binding in  the  interaction  environment
 			;;captures  ID:  we  retrieve  its label.   Otherwise  a  new
 			;;binding is added to the interaction environment.
-			(let ((shadowing-definition? #f))
-			  (gen-define-label+lex id rib shadowing-definition?))
+			(let ((redefine-binding? #t))
+			  (generate-label-and-lex-gensyms-for-define id rib redefine-binding?))
 		      ;;FIXME (Abdulaziz Ghuloum)
 		      (let ((redefine-binding? #f))
 			(extend-rib! rib id lab redefine-binding?))

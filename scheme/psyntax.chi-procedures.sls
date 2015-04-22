@@ -765,7 +765,7 @@
 	    ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
 	     (unless (valid-bound-ids? ?xlhs*)
 	       (syntax-violation __who__ "invalid identifiers" expr.stx))
-	     (let* ((xlab* (map gensym-for-label ?xlhs*))
+	     (let* ((xlab* (map generate-label-gensym ?xlhs*))
 		    (xrib  (make-rib-from-identifiers-and-labels ?xlhs* xlab*))
 		    (xb*   (map (lambda (x)
 				  (let ((in-form (if (eq? type 'let-syntax)
@@ -1870,7 +1870,7 @@
 	;;Without rest argument.
 	((?arg* ...)
 	 (let* ((lex*        (map gensym-for-lexical-var ?arg*))
-		(lab*        (map gensym-for-label       ?arg*))
+		(lab*        (map generate-label-gensym       ?arg*))
 		(lexenv.run^ (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
 	   (define validation*.stx
 	     (if (lambda-clause-attributes:safe-formals? attributes.sexp)
@@ -1881,6 +1881,7 @@
 	   (define body-form^*.stx
 	     (push-lexical-contour
 		 (make-rib-from-identifiers-and-labels ?arg* lab*)
+	       ;;Build a list of syntax objects representing the internal body.
 	       (append validation*.stx
 		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			   (%build-retvals-validation-form has-arguments-validators?
@@ -1896,9 +1897,9 @@
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
 	 (let* ((lex*         (map gensym-for-lexical-var ?arg*))
-		(lab*         (map gensym-for-label       ?arg*))
+		(lab*         (map generate-label-gensym       ?arg*))
 		(rest-lex     (gensym-for-lexical-var ?rest-arg))
-		(rest-lab     (gensym-for-label       ?rest-arg))
+		(rest-lab     (generate-label-gensym       ?rest-arg))
 		(lexenv.run^  (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
 						    (cons rest-lex lex*)
 						    lexenv.run)))
@@ -1914,6 +1915,7 @@
 	       (push-lexical-contour
 		   (make-rib-from-identifiers-and-labels (cons ?rest-arg ?arg*)
 				    (cons rest-lab  lab*))
+		 ;;Build a list of syntax objects representing the internal body.
 		 (append validation*.stx
 			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			     (%build-retvals-validation-form has-arguments-validators?
@@ -2572,7 +2574,8 @@
 		 (when (bound-id-member? id kwd*)
 		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
 		 (receive (lab lex)
-		     ;;About this call to GEN-DEFINE-LABEL+LEX notice that:
+		     ;;About  this call  to GENERATE-LABEL-AND-LEX-GENSYMS-FOR-DEFINE
+		     ;;notice that:
 		     ;;
 		     ;;* If  the binding is at  the top-level of a  program body: we
 		     ;;  need a loc gensym to store the result of evaluating the RHS
@@ -2582,7 +2585,7 @@
 		     ;;  need a loc gensym to store the result of evaluating the RHS
 		     ;;  in QRHS; in this case the loc is generated here.
 		     ;;
-		     (gen-define-label+lex id rib sd?)
+		     (generate-label-and-lex-gensyms-for-define id rib (not sd?))
 		   (extend-rib! rib id lab (not sd?))
 		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
@@ -2684,7 +2687,7 @@
 		 ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
 		  (unless (valid-bound-ids? ?xlhs*)
 		    (stx-error body-form.stx "invalid identifiers"))
-		  (let* ((xlab*  (map gensym-for-label ?xlhs*))
+		  (let* ((xlab*  (map generate-label-gensym ?xlhs*))
 			 (xrib   (make-rib-from-identifiers-and-labels ?xlhs* xlab*))
 			 ;;We  evaluate  the  transformers  for  LET-SYNTAX  without
 			 ;;pushing the XRIB: the syntax bindings do not exist in the
@@ -3097,7 +3100,7 @@
 		(values lex* qrhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
 	      ;;The module has a name.  Only the name itself will go in the enclosing
 	      ;;lexical environment.
-	      (let* ((name-label (gensym-for-label 'module))
+	      (let* ((name-label (generate-label-gensym 'module))
 		     (iface      (make-module-interface
 				  (car (stx-mark* name))
 				  (vector-map

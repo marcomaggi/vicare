@@ -562,7 +562,7 @@
 	   (parse-list-of-tagged-bindings ?lhs* input-form.stx)
 	 ;;Generate unique variable names and labels for the LETREC bindings.
 	 (let ((lhs*.lex (map gensym-for-lexical-var lhs*.id))
-	       (lhs*.lab (map gensym-for-label       lhs*.id)))
+	       (lhs*.lab (map generate-label-gensym       lhs*.id)))
 	   (map set-label-tag! lhs*.id lhs*.lab lhs*.tag)
 	   ;;Generate what  is needed  to create  a lexical contour:  a <RIB>  and an
 	   ;;extended lexical  environment in which  to evaluate both  the right-hand
@@ -1198,7 +1198,7 @@
 	 ;;
 	 ;;a  standalone identifier  matches everything  and  binds it  to a  pattern
 	 ;;variable whose name is ?ID.
-	 (let ((label (gensym-for-label ?pattern))
+	 (let ((label (generate-label-gensym ?pattern))
 	       (lex   (gensym-for-lexical-var ?pattern)))
 	   ;;The expression must be expanded  in a lexical environment augmented with
 	   ;;the pattern variable.
@@ -1350,7 +1350,7 @@
       (map car pvars.levels))
     (define labels
       ;;For each pattern variable: a gensym used as label in the lexical environment.
-      (map gensym-for-label ids))
+      (map generate-label-gensym ids))
     (define names
       ;;For  each pattern  variable: a  gensym used  as unique  variable name  in the
       ;;lexical environment.

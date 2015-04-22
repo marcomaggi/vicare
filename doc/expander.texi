@@ -839,15 +839,114 @@ descriptor.  This alist is called @lexenv{}.
 @subsection Lexical contours and @objtype{rib} objects
 
 
+A @objtype{rib} is an object constructed at every lexical contour in the
+source code to hold informations about the syntactic bindings introduced
+in that contour; ``lexical contours'' are, for example, @syntax{let} and
+similar syntaxes that can introduce bindings.
+
+The purpose of ribs is to map syntactic binding's names, the symbols as
+they appear in the source code, to the associated label gensyms; this
+map is used when establishing if a syntax object identifier in reference
+position is captured by an existing syntactic binding.
+
+
 @deftp {Object Type} rib
 Disjoint object type representing lexical contours in the expansion
 process.  Ribs associate the source name of syntactic bindings to their
 label gensyms.
 
-Objects of type @objtype{stx} have the following fields:
+Objects of type @objtype{rib} have the following fields:
 
+@table @code
+@item name*
+List of symbols representing the source name of syntactic bindings.
+When the @objtype{rib} is sealed: the list is converted to a vector.
+
+@item mark**
+List of sublists of marks; there is a sublist of marks for every item in
+@code{name*}.  When the @objtype{rib} is sealed: the list is converted
+to a vector.
+
+@item label*
+List of label gensyms uniquely identifying syntactic bindings; there is
+a label for each item in @code{name*}.  When the @objtype{rib} is
+sealed: the list is converted to a vector.
+
+@item sealed/freq
+@false{} or vector of exact integers.  When @false{}: this @objtype{rib}
+is extensible: new syntactic bindings can be added to it.  When a
+vector: this @objtype{rib} is sealed.  See below for an explanation of
+the frequency vector.
+@end table
 @end deftp
 
+@menu
+* expander lexenv rib sealing:: Sealing ribs.
+@end menu
+
+@c page
+@node expander lexenv rib sealing
+@subsubsection Sealing ribs
+
+
+A non--empty @objtype{rib} can be ``sealed'' once all bindings are
+inserted.  To seal a @objtype{rib}, we convert the lists @code{NAME*},
+@code{MARK**} and @code{label*} to vectors and insert a frequency vector
+in the @code{sealed/freq} field.
+
+The frequency vector is a Scheme vector of exact integers: an
+optimisation that allows the @objtype{rib} to reorganise itself by
+bubbling frequently used mappings to the top of the @objtype{rib}.  This
+is possible because the order in which the binding tuples appear in a
+@objtype{rib} does not matter.
+
+The vector is maintained in non--descending order and an identifier's
+entry in the @objtype{rib} is incremented at every access.  If an
+identifier's frequency exceeds the preceding one, the identifier's
+position is promoted to the top of its class (or the bottom of the
+previous class).
+
+An unsealed @objtype{rib} with 2 bindings having source names @samp{a}
+and @samp{b} and the @code{src} mark, looks as follows:
+
+@example
+name*       = (b       a)
+mark**      = ((src)   (src))
+label*      = (lab.b   lab.a)
+sealed/freq = #f
+@end example
+
+@noindent
+and right after sealing it:
+
+@example
+name*       = #(b       a)
+mark**      = #((src)   (src))
+label*      = #(lab.b   lab.a)
+sealed/freq = #(0       0)
+@end example
+
+@noindent
+after accessing once the binding of @samp{b} in the sealed
+@objtype{rib}, its frequency is incremented:
+
+@example
+name*       = #(b       a)
+mark**      = #((src)   (src))
+label*      = #(lab.b   lab.a)
+sealed/freq = #(1       0)
+@end example
+
+@noindent
+and after accessing twice the binding of @samp{a} in the sealed
+@objtype{rib}, the tuples are swapped:
+
+@example
+name*       = #(a       b)
+mark**      = #((src)   (src))
+label*      = #(lab.a   lab.b)
+sealed/freq = #(2       1)
+@end example
 
 @c page
 @node expander lexenv stx

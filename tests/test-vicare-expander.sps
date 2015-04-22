@@ -3983,6 +3983,8 @@
 
 (parametrise ((check-test-name	'interaction-environment))
 
+;;; interaction-environment
+
   (check	;check persistence of bindings
       (begin
 	(eval '(begin
@@ -4001,7 +4003,24 @@
 	      (interaction-environment)))
     => 3)
 
+  (check	;check binding redefinition
+      (begin
+	(eval '(define d 3)
+	      (interaction-environment))
+	(eval '(define d 4)
+	      (interaction-environment))
+	(eval 'd
+	      (interaction-environment)))
+    => 4)
+
+  (check	;check binding definition with SET!
+      (let ((env (interaction-environment)))
+	(eval '(set! e 3) env)
+	(eval 'e env))
+    => 3)
+
 ;;; --------------------------------------------------------------------
+;;; new-interaction-environment
 
   (check	;check persistence of bindings
       (let ((env (new-interaction-environment)))
@@ -4022,6 +4041,19 @@
 	(eval '(list a b)
 	      env))
     => '(1 2))
+
+  (check	;check binding redefinition
+      (let ((env (new-interaction-environment '(rnrs base))))
+	(eval '(define d 3) env)
+	(eval '(define d 4) env)
+	(eval 'd env))
+    => 4)
+
+  (check	;check binding definition with SET!
+      (let ((env (new-interaction-environment '(rnrs base))))
+	(eval '(set! e 3) env)
+	(eval 'e env))
+    => 3)
 
   #t)
 
