@@ -561,7 +561,7 @@
        (receive (lhs*.id lhs*.tag)
 	   (parse-list-of-tagged-bindings ?lhs* input-form.stx)
 	 ;;Generate unique variable names and labels for the LETREC bindings.
-	 (let ((lhs*.lex (map gensym-for-lexical-var lhs*.id))
+	 (let ((lhs*.lex (map generate-lexical-gensym lhs*.id))
 	       (lhs*.lab (map generate-label-gensym       lhs*.id)))
 	   (map set-label-tag! lhs*.id lhs*.lab lhs*.tag)
 	   ;;Generate what  is needed  to create  a lexical contour:  a <RIB>  and an
@@ -1025,7 +1025,7 @@
 		 => (lambda (b)
 		      (values (cdr b) maps)))
 		(else
-		 (let ((inner-var (gensym-for-lexical-var 'tmp)))
+		 (let ((inner-var (generate-lexical-gensym 'tmp)))
 		   (values inner-var
 			   (cons (cons (cons outer-var inner-var)
 				       (car maps))
@@ -1141,7 +1141,7 @@
        (%verify-literals ?literal* input-form.stx)
        (let* ( ;;The lexical variable to which  the result of evaluating the ?EXPR is
 	      ;;bound.
-	      (expr.sym   (gensym-for-lexical-var 'tmp))
+	      (expr.sym   (generate-lexical-gensym 'tmp))
 	      ;;The full SYNTAX-CASE pattern matching code, generated and transformed
 	      ;;to core language.
 	      (body.core  (%gen-syntax-case expr.sym ?literal* ?clauses*
@@ -1199,7 +1199,7 @@
 	 ;;a  standalone identifier  matches everything  and  binds it  to a  pattern
 	 ;;variable whose name is ?ID.
 	 (let ((label (generate-label-gensym ?pattern))
-	       (lex   (gensym-for-lexical-var ?pattern)))
+	       (lex   (generate-lexical-gensym ?pattern)))
 	   ;;The expression must be expanded  in a lexical environment augmented with
 	   ;;the pattern variable.
 	   (define output-expr^
@@ -1287,7 +1287,7 @@
 			 (not (ellipsis? (car x))))
 		pvars.levels)
 	(stx-error pattern.stx "misplaced ellipsis in syntax-case pattern"))
-      (let* ((tmp-sym      (gensym-for-lexical-var 'tmp))
+      (let* ((tmp-sym      (generate-lexical-gensym 'tmp))
 	     (fender-cond  (%build-fender-conditional expr.sym literals tmp-sym pvars.levels
 						      fender.stx output-expr.stx
 						      lexenv.run lexenv.expand
@@ -1354,7 +1354,7 @@
     (define names
       ;;For  each pattern  variable: a  gensym used  as unique  variable name  in the
       ;;lexical environment.
-      (map gensym-for-lexical-var ids))
+      (map generate-lexical-gensym ids))
     (define levels
       ;;For each pattern variable: an exact integer representing the ellipsis nesting
       ;;level.  See SYNTAX-TRANSFORMER for details.

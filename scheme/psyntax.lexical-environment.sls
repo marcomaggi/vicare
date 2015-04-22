@@ -47,8 +47,8 @@
     environment-binding
 
     ;; label gensyms, lexical variable gensyms, storage location gensyms
-    gensym-for-lexical-var
-    gensym-for-storage-location
+    generate-lexical-gensym
+    generate-storage-location-gensym
     generate-label-gensym
     generate-or-retrieve-label-and-lex-gensyms
     generate-or-retrieve-define-syntax-label-gensym
@@ -987,7 +987,7 @@
 
 ;;;; label gensym, lexical variable gensyms, storage location gensyms
 
-(define* (gensym-for-lexical-var seed)
+(define* (generate-lexical-gensym seed)
   ;;Generate a unique symbol to represent the name of a lexical variable
   ;;in the core language forms.  Such  symbols have the purpose of being
   ;;unique in the core language  expressions representing a full library
@@ -1009,7 +1009,7 @@
 	   (assertion-violation __who__
 	     "expected symbol or identifier as argument" seed)))))
 
-(define gensym-for-storage-location
+(define generate-storage-location-gensym
   ;;Build  and return  a gensym  to be  used as  storage location  for a
   ;;global lexical variable.  The "value" slot of such gensym is used to
   ;;hold the value of the variable.
@@ -1123,11 +1123,11 @@
 			 ;;acting  as  loc gensym,  and  add  it to  the  interaction
 			 ;;environment.
 			 (receive-and-return (loc)
-			     (gensym-for-storage-location id)
+			     (generate-storage-location-gensym id)
 			   (set-interaction-env-lab.loc/lex*! env
 			     (cons (cons label loc)
 				   lab.loc/lex*)))))))
-      (values (generate-label-gensym id) (gensym-for-lexical-var id))))
+      (values (generate-label-gensym id) (generate-lexical-gensym id))))
 
   (define (generate-or-retrieve-define-syntax-label-gensym id rib redefine-binding?)
     ;;Whenever a syntactic form:

@@ -1869,7 +1869,7 @@
       (syntax-match standard-formals.stx ()
 	;;Without rest argument.
 	((?arg* ...)
-	 (let* ((lex*        (map gensym-for-lexical-var ?arg*))
+	 (let* ((lex*        (map generate-lexical-gensym ?arg*))
 		(lab*        (map generate-label-gensym       ?arg*))
 		(lexenv.run^ (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
 	   (define validation*.stx
@@ -1896,9 +1896,9 @@
 
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
-	 (let* ((lex*         (map gensym-for-lexical-var ?arg*))
+	 (let* ((lex*         (map generate-lexical-gensym ?arg*))
 		(lab*         (map generate-label-gensym       ?arg*))
-		(rest-lex     (gensym-for-lexical-var ?rest-arg))
+		(rest-lex     (generate-lexical-gensym ?rest-arg))
 		(rest-lab     (generate-label-gensym       ?rest-arg))
 		(lexenv.run^  (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
 						    (cons rest-lex lex*)
@@ -2849,7 +2849,7 @@
 	       (if mix?
 		   (chi-body* (cdr body-form*.stx)
 			      lexenv.run lexenv.expand
-			      (cons (gensym-for-lexical-var 'dummy) lex*)
+			      (cons (generate-lexical-gensym 'dummy) lex*)
 			      (cons (cons 'top-expr body-form.stx) qrhs*)
 			      mod** kwd* export-spec* rib #t sd?)
 		 (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)))))))))

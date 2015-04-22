@@ -1154,7 +1154,7 @@
 		    ;;Is it  an additional check  of its internal  integrity?  (Marco
 		    ;;Maggi; Sun Mar 23, 2014)
 		    (unseal-rib! rib)
-		    (let ((loc*          (map gensym-for-storage-location lex*))
+		    (let ((loc*          (map generate-storage-location-gensym lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
 		      (receive (export-env visit-env*)
 			  (%make-export-env/visit-env* lex* loc* lexenv.run)
@@ -1334,7 +1334,7 @@
 	     ;;
 	     ;;   (?loc . (?transformer . ?expanded-expr))
 	     ;;
-	     (let ((loc (gensym-for-storage-location label)))
+	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-macro loc) export-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
@@ -1357,7 +1357,7 @@
 	     ;;
 	     ;;   (?loc . (?transformer . ?expanded-expr))
 	     ;;
-	     (let ((loc (gensym-for-storage-location label)))
+	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-macro! loc) export-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
@@ -1379,7 +1379,7 @@
 	     ;;
 	     ;;   (?loc . (?object . ?expanded-expr))
 	     ;;
-	     (let ((loc (gensym-for-storage-location label)))
+	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
 		     (cons (cons* label 'global-ctv loc) export-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
