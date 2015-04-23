@@ -2384,33 +2384,37 @@
     ;;MARK** and LABEL*, we  just need to increment the freq  in the destination slot
     ;;of A: there is no swapping needed in the freq vector.
     ;;
-    (let* ((rib.freq* (rib-sealed/freq rib))
-	   (freq      (vector-ref rib.freq* src.idx))
-	   (dst.idx   (let loop ((i src.idx))
-			(if (fxzero? i)
-			    0
-			  (let ((j (fxsub1 i)))
-			    (if (fx= freq (vector-ref rib.freq* j))
-				;;The freq of the slot previous to I is equal: loop.
-				(loop j)
-			      ;;The freq of the slot previous to I is greater: accept
-			      ;;I as swap position.
-			      i))))))
-      ;;Rather than swapping  the slots DST.IDX and SRC.IDX in  the frequency vector:
-      ;;we just increment the dst slot.
-      (vector-set! rib.freq* dst.idx (fxadd1 freq))
-      (unless (fx= dst.idx src.idx)
-	(let ((rib.name*  (rib-name*  rib))
-	      (rib.mark** (rib-mark** rib))
-	      (rib.label* (rib-label* rib)))
-	  (let-syntax ((%vector-swap (syntax-rules ()
-				       ((_ ?vec ?idx1 ?idx2)
-					(let ((V ($vector-ref ?vec ?idx1)))
-					  ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
-					  ($vector-set! ?vec ?idx2 V))))))
-	    (%vector-swap rib.name*  src.idx dst.idx)
-	    (%vector-swap rib.mark** src.idx dst.idx)
-	    (%vector-swap rib.label* src.idx dst.idx))))))
+    (unless (fxzero? src.idx)
+      (let* ((rib.freq* (rib-sealed/freq rib))
+	     (freq      (vector-ref rib.freq* src.idx))
+	     ;;Search for the leftmost slot, starting from SRC.IDX, that has the same
+	     ;;freq of the slot at SRC.IDX.
+	     (dst.idx   (let loop ((i src.idx))
+			  (if (fxzero? i)
+			      0
+			    (let ((j (fxsub1 i)))
+			      (if (fx= freq (vector-ref rib.freq* j))
+				  ;;The  freq of  the slot  previous to  I is  equal:
+				  ;;loop.
+				  (loop j)
+				;;The  freq of  the slot  previous to  I is  greater:
+				;;accept I as swap position.
+				i))))))
+	;;Rather than swapping the slots DST.IDX and SRC.IDX in the frequency vector:
+	;;we just increment the dst slot.
+	(vector-set! rib.freq* dst.idx (fxadd1 freq))
+	(unless (fx= dst.idx src.idx)
+	  (let ((rib.name*  (rib-name*  rib))
+		(rib.mark** (rib-mark** rib))
+		(rib.label* (rib-label* rib)))
+	    (let-syntax ((%vector-swap (syntax-rules ()
+					 ((_ ?vec ?idx1 ?idx2)
+					  (let ((V ($vector-ref ?vec ?idx1)))
+					    ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
+					    ($vector-set! ?vec ?idx2 V))))))
+	      (%vector-swap rib.name*  src.idx dst.idx)
+	      (%vector-swap rib.mark** src.idx dst.idx)
+	      (%vector-swap rib.label* src.idx dst.idx)))))))
 
   #| end of module: ID->LABEL |# )
 
