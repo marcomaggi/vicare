@@ -2384,16 +2384,16 @@
     ;;MARK** and LABEL*, we  just need to increment the freq  in the destination slot
     ;;of A: there is no swapping needed in the freq vector.
     ;;
-    (unless (fxzero? src.idx)
+    (unless ($fxzero? src.idx)
       (let* ((rib.freq* (rib-sealed/freq rib))
-	     (freq      (vector-ref rib.freq* src.idx))
+	     (freq      ($vector-ref rib.freq* src.idx))
 	     ;;Search for the leftmost slot, starting from SRC.IDX, that has the same
 	     ;;freq of the slot at SRC.IDX.
 	     (dst.idx   (let loop ((i src.idx))
-			  (if (fxzero? i)
+			  (if ($fxzero? i)
 			      0
-			    (let ((j (fxsub1 i)))
-			      (if (fx= freq (vector-ref rib.freq* j))
+			    (let ((j ($fxsub1 i)))
+			      (if ($fx= freq ($vector-ref rib.freq* j))
 				  ;;The  freq of  the slot  previous to  I is  equal:
 				  ;;loop.
 				  (loop j)
@@ -2402,8 +2402,8 @@
 				i))))))
 	;;Rather than swapping the slots DST.IDX and SRC.IDX in the frequency vector:
 	;;we just increment the dst slot.
-	(vector-set! rib.freq* dst.idx (fxadd1 freq))
-	(unless (fx= dst.idx src.idx)
+	($vector-set! rib.freq* dst.idx ($fxadd1 freq))
+	(unless ($fx= dst.idx src.idx)
 	  (let ((rib.name*  (rib-name*  rib))
 		(rib.mark** (rib-mark** rib))
 		(rib.label* (rib-label* rib)))
