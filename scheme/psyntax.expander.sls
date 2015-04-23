@@ -327,8 +327,7 @@
 
 
 (module (expand-form-to-core-language)
-  (define-syntax __module_who__
-    (identifier-syntax 'expand-form-to-core-language))
+  (define-module-who expand-form-to-core-language)
 
   (define (expand-form-to-core-language expr env)
     ;;Interface to the internal expression expander (chi-expr).  Take an
@@ -526,8 +525,7 @@
 
 (module (expand-top-level)
 
-  (define-syntax __module_who__
-    (identifier-syntax 'expand-top-level))
+  (define-module-who expand-top-level)
 
   (define (expand-top-level program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top

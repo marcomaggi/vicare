@@ -490,10 +490,9 @@
   ;;    University.   Proceedings  of  the 2006  Scheme  and  Functional  Programming
   ;;   Workshop.  University of Chicago Technical Report TR-2006-06.
   ;;
-  ;;FIXME There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17, 2014)
+  ;;FIXME There is room for improvement.  (Marco Maggi; Thu Apr 17, 2014)
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'case))
+  (define-module-who case)
 
   (define (case-macro input-form.stx)
     (syntax-match input-form.stx (else)
@@ -769,8 +768,7 @@
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'define-struct))
+  (define-module-who define-struct)
 
   (define (define-struct-macro input-form.stx)
     (syntax-match input-form.stx (nongenerative)
@@ -2414,8 +2412,7 @@
   ;;                 (c G.c) (d G.d) (e G.e))
   ;;             ?body0 ?body)))))
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'let-values))
+  (define-module-who let-values)
 
   (define (let-values-macro input-form.stx)
     (syntax-match input-form.stx ()
@@ -3506,8 +3503,7 @@
 ;;
 (module (guard-macro)
 
-  (define-syntax __module_who__
-    (identifier-syntax 'guard))
+  (define-module-who guard)
 
   (define (guard-macro x)
     ;;Transformer function used to expand R6RS  GUARD macros from the top-level built
@@ -4683,8 +4679,7 @@
 	      (syntax ,v))))))
       ))
 
-  (define-syntax __module_who__
-    (identifier-syntax 'quasisyntax))
+  (define-module-who quasisyntax)
 
   (define (quasi p nesting-level)
     (syntax-match p (unsyntax unsyntax-splicing quasisyntax)

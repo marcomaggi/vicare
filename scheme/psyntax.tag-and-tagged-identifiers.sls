@@ -475,8 +475,7 @@
 	    (loop ($object-type-spec-parent-spec spec)))))))
 
 (module (tag-identifier-dispatch)
-  (define-syntax __module_who__
-    (identifier-syntax 'tag-identifier-dispatch))
+  (define-module-who tag-identifier-dispatch)
 
   (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} {input-form.stx lex.syntax-object?})
     ;;Given  a tag  identifier  and  a member  identifier:  search  the hierarchy  of
@@ -2454,8 +2453,7 @@
   ;;
   ;;2..An object representing the LET-VALUES tagging signature.
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'parse-tagged-formals-syntax))
+  (define-module-who parse-tagged-formals-syntax)
 
   (case-define* parse-tagged-formals-syntax
     (({_ standard-formals-syntax? formals-signature?} original-formals.stx)

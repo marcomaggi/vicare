@@ -18,6 +18,8 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+(import (prefix (rnrs syntax-case) sys.))
+
 (define-syntax commented-out
   ;;Comment out a sequence of forms.  It allows us to comment out forms and still use
   ;;the editor's autoindentation features in the commented out section.
@@ -46,11 +48,24 @@
 (define-syntax-rule (reverse-and-append ?item**)
   (apply append (reverse ?item**)))
 
+;;; --------------------------------------------------------------------
+
 (define-syntax with-who
   (syntax-rules ()
     ((_ ?who ?body0 ?body ...)
      (fluid-let-syntax ((__who__ (identifier-syntax (quote ?who)))) ?body0 ?body ...))
     ))
+
+(define-syntax define-module-who
+  (lambda (stx)
+    (sys.syntax-case stx ()
+      ((_ ?module-who)
+       (sys.with-syntax
+	   ((MODULE-WHO (sys.datum->syntax (sys.syntax ?module-who) '__module_who__)))
+	 (sys.syntax
+	  (define-syntax MODULE-WHO
+	    (identifier-syntax (quote ?module-who))))))
+      )))
 
 ;;; --------------------------------------------------------------------
 
@@ -75,4 +90,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
+;; eval: (put 'sys.syntax-case		'scheme-indent-function 2)
+;; eval: (put 'sys.with-syntax		'scheme-indent-function 1)
 ;; End:

@@ -62,6 +62,8 @@
   (import (rnrs)
     (psyntax.compat))
 
+  (include "psyntax.helpers.scm" #t)
+
 
 ;;;; type definitions: library object
 
@@ -570,8 +572,7 @@
   ;;LIBRARY-OPTION* -
   ;;   A list of sexps representing library options.
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'intern-library))
+  (define-module-who intern-library)
 
   (define* (intern-library {uid symbol?} {libname library-name?}
 			    import-libdesc* visit-libdesc* invoke-libdesc*

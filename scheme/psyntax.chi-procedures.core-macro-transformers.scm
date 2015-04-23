@@ -865,8 +865,7 @@
 	   (make-psi use-stx code))))
       ))
 
-  (define-syntax __module_who__
-    (identifier-syntax 'syntax))
+  (define-module-who syntax)
 
   (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
@@ -1126,8 +1125,7 @@
   ;;Notice that the parsing of the patterns is performed by CONVERT-PATTERN at expand
   ;;time and the actual pattern matching is performed by SYNTAX-DISPATCH at run time.
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'syntax-case))
+  (define-module-who syntax-case)
 
   (define-syntax stx-error
     (syntax-rules ()

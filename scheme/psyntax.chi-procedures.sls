@@ -907,8 +907,7 @@
   ;;and ?RATOR will evaluate to a closure object with tag identifier RATOR.TAG, which
   ;;is a sub-tag of "<procedure>".
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax '%process-closure-object-application))
+  (define-module-who %process-closure-object-application)
 
   (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
 					       rator.tag rator.psi rand*.psi)
@@ -1413,8 +1412,7 @@
 ;;;; chi procedures: general operator application, nothing already expanded
 
 (module (chi-application)
-  (define-syntax __module_who__
-    (identifier-syntax (quote chi-application)))
+  (define-module-who chi-application)
 
   (define (chi-application input-form.stx lexenv.run lexenv.expand)
     ;;Expand an operator  application form; it is called when  INPUT-FORM.STX has the
@@ -1696,6 +1694,8 @@
 (module CHI-SET
   (chi-set!)
 
+  (define-module-who set!)
+
   (define (chi-set! input-form.stx lexenv.run lexenv.expand)
     (while-not-expanding-application-first-subform
      (syntax-match input-form.stx ()
@@ -1728,7 +1728,7 @@
 			     ?lhs ?rhs))
 
        (_
-	(syntax-violation 'set! "invalid setter syntax" input-form.stx)))))
+	(syntax-violation __module_who__ "invalid setter syntax" input-form.stx)))))
 
   (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)
     (receive (type bind-val kwd)
@@ -1757,10 +1757,10 @@
 		     (make-retvals-signature-single-top))))
 
 	((core-prim)
-	 (syntax-violation 'set! "cannot modify imported core primitive" input-form.stx lhs.id))
+	 (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
 	((global)
-	 (syntax-violation 'set! "attempt to modify an immutable binding" input-form.stx lhs.id))
+	 (syntax-violation __module_who__ "attempt to modify an immutable binding" input-form.stx lhs.id))
 
 	((global-macro!)
 	 (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
@@ -1804,7 +1804,7 @@
 			   loc
 			   (psi-core-expr rhs.psi))
 			 (make-retvals-signature-single-top)))
-	   (syntax-violation 'set!
+	   (syntax-violation __module_who__
 	     "attempt to modify a variable imported from another lexical context"
 	     input-form.stx lhs.id)))
 
@@ -1814,7 +1814,7 @@
   (define-syntax stx-error
     (syntax-rules ()
       ((_ ?stx ?msg)
-       (syntax-violation 'set! ?msg ?stx))
+       (syntax-violation __module_who__ ?msg ?stx))
       ))
 
   #| end of module: CHI-SET |# )
