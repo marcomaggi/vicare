@@ -1368,7 +1368,8 @@
 				     (if (eq? lexical-gensym (car lex*))
 					 (car loc*)
 				       (lookup lexical-gensym (cdr lex*) (cdr loc*)))
-				   (assertion-violation 'make-export-env/lookup "internal error"))))
+				   (assertion-violation/internal-error 'make-export-env/lookup
+				     "missing lexical gensym in lexenv" lexical-gensym))))
 		    (type      (if (lexical-var-binding-descriptor-value.assigned? bind-val)
 				   'global-mutable
 				 'global)))
@@ -1469,10 +1470,9 @@
 		   (cons (cons #f (syntactic-binding-descriptor.value binding)) visit-env*)))
 
 	    (else
-	     (assertion-violation 'core-body-expander
-	       "internal error: do not know how to export"
-	       (syntactic-binding-descriptor.type  binding)
-	       (syntactic-binding-descriptor.value binding))))))))
+	     (assertion-violation/internal-error 'core-body-expander
+	       "unknown or unexportable syntactic binding"
+	       binding)))))))
 
   (define (%validate-exports export-spec* export-subst export-env)
     ;;We want to forbid code like the following:

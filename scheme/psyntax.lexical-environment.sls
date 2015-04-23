@@ -2855,6 +2855,8 @@
   make-expand-time-type-signature-violation
   expand-time-type-signature-violation?)
 
+;;; --------------------------------------------------------------------
+
 ;;This is  used to describe  exceptions in which:  after expanding an  expression, we
 ;;were expecting it to  have a "retvals-signature" matching a given  one, but the one
 ;;we got does not match.
@@ -2870,6 +2872,13 @@
 (define* (make-expand-time-retvals-signature-violation {expected-signature retvals-signature?}
 						       {returned-signature retvals-signature?})
   (%make-expand-time-retvals-signature-violation expected-signature returned-signature))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &vicare-scheme-internal-error
+    &error
+  make-vicare-scheme-internal-error
+  vicare-scheme-internal-error?)
 
 
 ;;;; exception raising functions
@@ -2888,24 +2897,23 @@
 	      				      byte-offset character-offset
 	      				      line-number column-number))))
 
-(module (syntax-violation/internal-error assertion-violation/internal-error)
+(case-define* syntax-violation/internal-error
+  ((who msg form)
+   (syntax-violation/internal-error who msg form #f))
+  ((who {msg string?} form subform)
+   (raise
+    (condition (make-who-condition who)
+	       (make-message-condition (string-append "Vicare Scheme: internal error: " msg))
+	       (make-syntax-violation form subform)
+	       (make-vicare-scheme-internal-error)))))
 
-  (case-define* syntax-violation/internal-error
-    ((who {msg string?} form)
-     (syntax-violation who (string-append PREFIX msg) form #f))
-    ((who {msg string?} form subform)
-     (syntax-violation who (string-append PREFIX msg) form subform)))
-
-  (case-define* assertion-violation/internal-error
-    ((who {msg string?} . irritants)
-     (apply assertion-violation who (string-append PREFIX msg) irritants))
-    ((who {msg string?} . irritants)
-     (apply assertion-violation who (string-append PREFIX msg) irritants)))
-
-  (define-constant PREFIX
-    "Vicare Scheme: internal error: ")
-
-  #| end of module |# )
+(define* (assertion-violation/internal-error who {msg string?} . irritants)
+  (raise
+   (condition (make-vicare-scheme-internal-error)
+	      (make-assertion-violation)
+	      (make-who-condition who)
+	      (make-message-condition (string-append "Vicare Scheme: internal error: " msg))
+	      (make-irritants-condition irritants))))
 
 (module (raise-unbound-error
 	 syntax-violation

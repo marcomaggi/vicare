@@ -26,6 +26,8 @@
     vis-collector		stale-when-collector)
   (import (rnrs)
     (psyntax.compat)
+    (only (psyntax.lexical-environment)
+	  assertion-violation/internal-error)
     (only (psyntax.library-manager)
 	  library?))
 
@@ -52,7 +54,7 @@
 	 ((__who__ (identifier-syntax (quote ?who))))
        (make-parameter
 	   (lambda args
-	     (assertion-violation __who__ "internal error: parameter not initialized"))
+	     (assertion-violation/internal-error __who__ "parameter not initialized"))
 	 (lambda (x)
 	   (if (procedure? x)
 	       x
