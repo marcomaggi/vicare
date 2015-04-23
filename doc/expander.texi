@@ -890,24 +890,18 @@ the frequency vector.
 
 
 A non--empty @objtype{rib} can be ``sealed'' once all bindings are
-inserted.  To seal a @objtype{rib}, we convert the lists @code{NAME*},
-@code{MARK**} and @code{label*} to vectors and insert a frequency vector
+inserted.  To seal a @objtype{rib}, we convert the lists @code{name*},
+@code{mark**} and @code{label*} to vectors and insert a frequency vector
 in the @code{sealed/freq} field.
 
-The frequency vector is a Scheme vector of exact integers: an
-optimisation that allows the @objtype{rib} to reorganise itself by
-bubbling frequently used mappings to the top of the @objtype{rib}.  This
-is possible because the order in which the binding tuples appear in a
-@objtype{rib} does not matter.
+The frequency vector is a Scheme vector of fixnums: an optimisation that
+allows the @objtype{rib} to reorganise itself by moving frequently used
+tuples towards the beginning of the vectors.  This is possible because
+the order in which the tuples appear in a @objtype{rib} does not matter.
 
-The vector is maintained in non--descending order and an identifier's
-entry in the @objtype{rib} is incremented at every access.  If an
-identifier's frequency exceeds the preceding one, the identifier's
-position is promoted to the top of its class (or the bottom of the
-previous class).
-
-An unsealed @objtype{rib} with 2 bindings having source names @samp{a}
-and @samp{b} and the @code{src} mark, looks as follows:
+Let's see how it works.  An unsealed @objtype{rib} holding two syntactic
+bindings with source names @samp{a} and @samp{b} and the @code{src}
+mark, looks as follows:
 
 @example
 name*       = (b       a)
@@ -927,7 +921,8 @@ sealed/freq = #(0       0)
 @end example
 
 @noindent
-after accessing once the binding of @samp{b} in the sealed
+the access frequencies in the @code{sealed/freq} field are initialised
+to zero; after accessing once the binding of @samp{b} in the sealed
 @objtype{rib}, its frequency is incremented:
 
 @example
@@ -946,6 +941,34 @@ name*       = #(a       b)
 mark**      = #((src)   (src))
 label*      = #(lab.a   lab.b)
 sealed/freq = #(2       1)
+@end example
+
+Let's see what happens when there are multiple syntactic bindings with
+the same access frequency.  If the scenario before the access is:
+
+@example
+name*       = #(f e d c b a)
+sealed/freq = #(1 1 1 0 0 0)
+@end example
+
+@noindent
+and we access @code{a}: first we want the tuple of @code{a} to be moved
+in the leftmost position in the group of tuples with frequency equal to
+zero:
+
+@example
+name*       = #(f e d a b c)
+sealed/freq = #(1 1 1 0 0 0)
+@end example
+
+@noindent
+we do this by swapping tuples in the vectors, in this case we swap the
+tuple of @code{a} with the tuple of @code{c}; then we increment its
+access frequency, the scenario after the access is:
+
+@example
+name*       = #(f e d a b c)
+sealed/freq = #(1 1 1 1 0 0)
 @end example
 
 @c page
