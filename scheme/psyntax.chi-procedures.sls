@@ -254,7 +254,7 @@
      ;;
      ;;   (?car ?form ...)
      ;;
-     (cond ((id->label/intern ?car)
+     (cond ((id->label ?car)
 	    => (lambda (label)
 		 (let* ((binding (label->syntactic-binding-descriptor label lexenv))
 			(type    (syntactic-binding-descriptor.type binding)))
