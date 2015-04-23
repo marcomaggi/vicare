@@ -2287,8 +2287,9 @@
 (module (id->label)
 
   (define* (id->label {id identifier?})
-    ;;Given the identifier  ID search its ribs  for a label associated  with the same
-    ;;sym and marks.  If found return the label, else return false.
+    ;;Given  the syntactic  identifier ID  search its  ribs for  a syntactic  binding
+    ;;having the  same source-name  and marks.  If  successful: return  the syntactic
+    ;;binding's label gensym; otherwise return false.
     ;;
     (let ((id.source-name (~identifier->symbol id)))
       (let search ((rib*  ($stx-rib*  id))
