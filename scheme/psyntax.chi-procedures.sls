@@ -205,44 +205,62 @@
 
 ;;;; chi procedures: syntax object type inspection
 
-(define (expr-syntax-type expr.stx lexenv)
-  ;;Determine the  syntax type of  an expression.  EXPR.STX  must be a  syntax object
-  ;;representing an expression.  Return 3 values:
-  ;;
-  ;;1..A symbol representing the syntax type.
-  ;;
-  ;;2..If  the syntax  is a  macro application:  the value  of the  syntactic binding
-  ;;   associated to the macro identifier; otherwise false.
-  ;;
-  ;;3..If the  syntax is a macro  application: the identifier representing  the macro
-  ;;   keyword; otherwise false.
-  ;;
-  ;;The type of an expression is determined by two things:
+(define (syntactic-form-type expr.stx lexenv)
+  ;;Determine the  syntax type of a  syntactic form representing an  expression.  The
+  ;;type of an expression is determined by two things:
   ;;
   ;;* The shape of the expression (identifier, pair, or datum).
   ;;
   ;;* The binding of the identifier or the type of car of the pair.
   ;;
+  ;;The argument EXPR.STX must be a syntax object representing an expression.
+  ;;
+  ;;Return 3 values:
+  ;;
+  ;;* If the syntactic form is a macro application:
+  ;;
+  ;;   1. A symbol representing the syntax type.
+  ;;
+  ;;   2. The value of the syntactic binding associated to the macro identifier.
+  ;;
+  ;;   3. The syntactic identifier representing the macro keyword.
+  ;;
+  ;;* If the syntactic form is not a macro application:
+  ;;
+  ;;   1. A symbol representing the syntax type.
+  ;;
+  ;;   2. False.
+  ;;
+  ;;   3. False.
+  ;;
+  ;;Special cases of return values and exceptional conditions:
+  ;;
+  ;;* If EXPR.STX is  a standalone syntactic identifier and it  is unbound: the first
+  ;;return value is the symbol "standalone-unbound-identifier".
+  ;;
+  ;;* If  EXPR.STX is  a pair  whose car is  an unbound  identifier: an  exception is
+  ;;raised.
+  ;;
   (syntax-match expr.stx ()
     (?id
      (identifier? expr.stx)
-     (cond ((id->label/intern ?id)
+     (cond ((id->label ?id)
 	    => (lambda (label)
-		 (let* ((binding (label->syntactic-binding-descriptor label lexenv))
-			(type    (syntactic-binding-descriptor.type binding)))
-		   (case type
+		 (let* ((binding-descriptor (label->syntactic-binding-descriptor label lexenv))
+			(binding-type       (syntactic-binding-descriptor.type binding-descriptor)))
+		   (case binding-type
 		     ((core-prim
 		       lexical global global-mutable
 		       macro macro! global-macro global-macro! local-macro local-macro!
 		       import export library $module pattern-variable
 		       local-ctv global-ctv
 		       displaced-lexical)
-		      (values type (syntactic-binding-descriptor.value binding) ?id))
+		      (values binding-type (syntactic-binding-descriptor.value binding-descriptor) ?id))
 		     (else
 		      ;;This will cause an error to be raised later.
 		      (values 'other #f #f))))))
 	   (else
-	    (raise-unbound-error #f expr.stx ?id))))
+	    (values 'standalone-unbound-identifier #f #f))))
 
     ((?tag)
      (tag-identifier? ?tag)
@@ -616,7 +634,7 @@
     ;;
     (%drop-splice-first-envelope-maybe
      (receive (type bind-val kwd)
-	 (expr-syntax-type expr.stx lexenv.run)
+	 (syntactic-form-type expr.stx lexenv.run)
        (case type
 	 ((core-macro)
 	  ;;Core  macro use.   The  core  macro transformers  are  integrated in  the
@@ -864,6 +882,9 @@
 	  (chi-expr (bless
 		     `(splice-first-expand (tag-cast ,kwd)))
 		    lexenv.run lexenv.expand))
+
+	 ((standalone-unbound-identifier)
+	  (raise-unbound-error __who__ expr.stx expr.stx))
 
 	 (else
 	  (stx-error expr.stx "invalid expression"))))
@@ -1732,7 +1753,7 @@
 
   (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)
     (receive (type bind-val kwd)
-	(expr-syntax-type lhs.id lexenv.run)
+	(syntactic-form-type lhs.id lexenv.run)
       (case type
 	((lexical)
 	 ;;A  lexical binding  used as  LHS of  SET! is  mutable and  so unexportable
@@ -1807,6 +1828,32 @@
 	   (syntax-violation __module_who__
 	     "attempt to modify a variable imported from another lexical context"
 	     input-form.stx lhs.id)))
+
+	((standalone-unbound-identifier)
+	 ;;The identifier  LHS.ID is  unbound.  If  we are at  the top-level  with an
+	 ;;interaction environment: we abuse the  SET! syntax and fabricate a binding
+	 ;;here.  This abuse is a Vicare-specific feature.
+	 ;;
+	 (cond ((top-level-context)
+		=> (lambda (env)
+		     ;;Let's fabricate a lexical var syntactic binding.
+		     (let ((rib (interaction-env-rib env)))
+		       (receive (lab unused-lex/loc)
+			   ;;Setting  SHADOW/REDEFINE-BINDINGS?   to true  here  will
+			   ;;cause a  label/lex association  to be  added to  the top
+			   ;;rib.
+			   (let ((shadow/redefine-bindings? #t))
+			     (generate-or-retrieve-label-and-lex-gensyms lhs.id rib shadow/redefine-bindings?))
+			 ;;Setting  SHADOW/REDEFINE-BINDINGS?   to  false  here  will
+			 ;;cause an  error to be raised  if LHS.ID does not  have the
+			 ;;marks needed to match the binding in the top rib.
+			 (let ((shadow/redefine-bindings? #f))
+			   (extend-rib! rib lhs.id lab shadow/redefine-bindings?))
+			 ;;If we are here: the  syntactic binding has been fabricated
+			 ;;with success, so let's try again.
+			 (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)))))
+	       (else
+		(raise-unbound-error __module_who__ input-form.stx lhs.id))))
 
 	(else
 	 (stx-error input-form.stx "syntax error")))))
@@ -2641,14 +2688,14 @@
   ;;
   ;;the second DEFINE use is fine: it can redefine the binding for "a".
   ;;
-  (define (chi-body* body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib
+  (define* (chi-body* body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib
 		     mix?
 		     shadow/redefine-bindings?)
     (if (null? body-form*.stx)
 	(values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
       (let ((body-form.stx (car body-form*.stx)))
 	(receive (type bind-val kwd)
-	    (expr-syntax-type body-form.stx lexenv.run)
+	    (syntactic-form-type body-form.stx lexenv.run)
 	  (let ((kwd* (if (identifier? kwd)
 			  (cons kwd kwd*)
 			kwd*)))
@@ -2947,6 +2994,9 @@
 	       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
 			  lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
 
+	      ((standalone-unbound-identifier)
+	       (raise-unbound-error __who__ body-form.stx body-form.stx))
+
 	      (else
 	       ;;Any other expression.
 	       ;;
@@ -3096,6 +3146,8 @@
     ;;Process  an IMPORT  form.   The purpose  of  such  forms is  to  push some  new
     ;;identifier-to-label association on the current RIB.
     ;;
+    (define-module-who import)
+
     (define (%chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
       (receive (id.vec lab.vec)
 	  (%any-import*-checked body-form.stx lexenv.run)
@@ -3131,12 +3183,14 @@
 	((_ ?id)
 	 (identifier? ?id)
 	 (receive (type bind-val kwd)
-	     (expr-syntax-type ?id lexenv.run)
+	     (syntactic-form-type ?id lexenv.run)
 	   (case type
 	     (($module)
 	      (let ((iface bind-val))
 		(values (module-interface-exp-id*     iface ?id)
 			(module-interface-exp-lab-vec iface))))
+	     ((standalone-unbound-identifier)
+	      (raise-unbound-error __module_who__ import-form ?id))
 	     (else
 	      (stx-error import-form "invalid import")))))))
 

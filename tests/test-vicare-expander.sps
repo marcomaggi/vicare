@@ -4113,7 +4113,10 @@
 	      env))
     => '(10 20 30))
 
-  (check	;check binding definition with SET!
+  ;;A  SET!  syntactic  form  with  unbound  identifier  at  the  top-level  with  an
+  ;;interaction environment defines a new syntactic binding.
+  ;;
+  (check
       (let ((env (new-interaction-environment '(rnrs base))))
 	(eval '(set! e 3) env)
 	(eval 'e env))
