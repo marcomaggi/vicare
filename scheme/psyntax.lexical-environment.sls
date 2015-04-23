@@ -2348,21 +2348,58 @@
 	      (loop-to-next-rib-tuple))
 	  (search-in-next-rib)))))
 
-  (define (%increment-rib-frequency! rib idx)
-    ;;The argument RIB is a sealed rib object.   The argument IDX is the index of the
-    ;;tuple in RIB that was last accessed.
+  (define (%increment-rib-frequency! rib src.idx)
+    ;;The argument RIB is a sealed rib  object.  The argument SRC.IDX is the index of
+    ;;the tuple in RIB that was last accessed.
+    ;;
+    ;;If the scenario before the access is:
+    ;;
+    ;;   name*       = #(b a)
+    ;;   sealed/freq = #(0 0)
+    ;;
+    ;;and we access A, we want the scenario after the access to be:
+    ;;
+    ;;   name*       = #(a b)
+    ;;   sealed/freq = #(1 0)
+    ;;
+    ;;so the tuple of A is moved to the left and its access frequency is incremented.
+    ;;
+    ;;If the scenario before the access is:
+    ;;
+    ;;   name*       = #(f e d c b a)
+    ;;   sealed/freq = #(1 1 1 0 0 0)
+    ;;
+    ;;and we  access A:  first we want  the tuple of  A to  be moved in  the leftmost
+    ;;position in the group of tuples with FREQ equal to 0:
+    ;;
+    ;;   name*       = #(f e d a b c)
+    ;;   sealed/freq = #(1 1 1 0 0 0)
+    ;;
+    ;;then we increment its access frequency; the scenario after the access must be:
+    ;;
+    ;;   name*       = #(f e d a b c)
+    ;;   sealed/freq = #(1 1 1 1 0 0)
+    ;;
+    ;;notice that:  while we  need to  swap the  tuple values  in the  vectors NAME*,
+    ;;MARK** and LABEL*, we  just need to increment the freq  in the destination slot
+    ;;of A: there is no swapping needed in the freq vector.
     ;;
     (let* ((rib.freq* (rib-sealed/freq rib))
-	   (freq      (vector-ref rib.freq* idx))
-	   (idx2      (let loop ((i idx))
+	   (freq      (vector-ref rib.freq* src.idx))
+	   (dst.idx   (let loop ((i src.idx))
 			(if (fxzero? i)
 			    0
 			  (let ((j (fxsub1 i)))
 			    (if (fx= freq (vector-ref rib.freq* j))
+				;;The freq of the slot previous to I is equal: loop.
 				(loop j)
+			      ;;The freq of the slot previous to I is greater: accept
+			      ;;I as swap position.
 			      i))))))
-      (vector-set! rib.freq* idx2 (fxadd1 freq))
-      (unless (fx= idx2 idx)
+      ;;Rather than swapping  the slots DST.IDX and SRC.IDX in  the frequency vector:
+      ;;we just increment the dst slot.
+      (vector-set! rib.freq* dst.idx (fxadd1 freq))
+      (unless (fx= dst.idx src.idx)
 	(let ((rib.name*  (rib-name*  rib))
 	      (rib.mark** (rib-mark** rib))
 	      (rib.label* (rib-label* rib)))
@@ -2371,9 +2408,9 @@
 					(let ((V ($vector-ref ?vec ?idx1)))
 					  ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
 					  ($vector-set! ?vec ?idx2 V))))))
-	    (%vector-swap rib.name*  idx idx2)
-	    (%vector-swap rib.mark** idx idx2)
-	    (%vector-swap rib.label* idx idx2))))))
+	    (%vector-swap rib.name*  src.idx dst.idx)
+	    (%vector-swap rib.mark** src.idx dst.idx)
+	    (%vector-swap rib.label* src.idx dst.idx))))))
 
   #| end of module: ID->LABEL |# )
 
