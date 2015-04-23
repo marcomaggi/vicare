@@ -2702,26 +2702,37 @@
 	    (case type
 
 	      ((define)
-	       ;;The body form is a core language DEFINE macro use:
+	       ;;The  body  form  is  an INTERNAL-DEFINE  primitive  macro  use;  for
+	       ;;example, one among:
 	       ;;
-	       ;;   (define ?id ?rhs)
+	       ;;   (internal-define ?attributes ?lhs ?rhs)
+	       ;;   (internal-define ?attributes (?lhs . ?formals) . ?body)
 	       ;;
-	       ;;we parse the form and generate  a QRHS that will be expanded later.
-	       ;;We create a new lexical binding:
+	       ;;we parse  the form and  generate a qualified right-hand  side (QRHS)
+	       ;;object that will be expanded later.
 	       ;;
-	       ;;* We generate a label gensym uniquely associated to the binding and
-	       ;;  a lex gensym as name of the binding in the expanded code.
+	       ;;Here we create  a new syntactic binding representing  a lexical var,
+	       ;;either local or top-level:
 	       ;;
-	       ;;* We register the association id/label in the rib.
+	       ;;* We generate a label gensym  uniquely associated to the binding and
+	       ;;a lex gensym as name of the binding in the expanded code.
 	       ;;
-	       ;;*  We push  an entry  on  LEXENV.RUN to  represent the  association
-	       ;;  label/lex.
+	       ;;* We register the association identifier/label in the rib.
+	       ;;
+	       ;;*  We push  an  entry  on LEXENV.RUN  to  represent the  association
+	       ;;label/lex.
 	       ;;
 	       ;;* Finally we recurse on the rest of the body.
 	       ;;
-	       ;;We  receive  the  following  values:   ID  is  the  tagged  binding
-	       ;;identifier; TAG  is the tag  identifier for ID  (possibly "<top>");
-	       ;;QRHS.STX the QRHS to be expanded later.
+	       ;;Notice  the  special case:  if  a  syntactic binding  capturing  the
+	       ;;syntactic identifier already exists in the top rib of an interaction
+	       ;;environment, we allow the binding to be redefined.  This is a Vicare
+	       ;;extension.   Normally, in  a non-interaction  environment, we  would
+	       ;;raise an exception as mandated by R6RS.
+	       ;;
+	       ;;From parsing  the syntactic form,  we receive the  following values:
+	       ;;ID, the  tagged binding identifier;  TAG, the tag identifier  for ID
+	       ;;(possibly "<top>"); QRHS.STX, the QRHS object to be expanded later.
 	       (receive (id tag qrhs.stx)
 		   (%parse-define body-form.stx)
 		 (when (bound-id-member? id kwd*)
