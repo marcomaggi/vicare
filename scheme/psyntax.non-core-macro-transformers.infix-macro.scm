@@ -33,13 +33,18 @@
 
 #!vicare
 
+(define-module-who infix)
+
+(define (synner-internal-error message subform)
+  (assertion-violation/internal-error __module_who__ message subform))
+
 (define (infix-macro input-form.stx)
   ;;Transformer  function used  to expand  Vicare's INFIX  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
   ;;
   (define (synner message subform)
-    (syntax-violation 'infix message input-form.stx subform))
+    (syntax-violation __module_who__ message input-form.stx subform))
   (define (immediate-end-of-input-handler)
     ;;Special case: no input tokens.
     (bless
@@ -394,7 +399,7 @@
 	    ((end-of-input? token)
 	     left-semantic-value)
 	    (else
-	     (synner "internal error: invalid object from lexer" token)))))
+	     (synner-internal-error "invalid object from lexer" token)))))
 
   ;;When correct  input is given:  we expect at least  a sub-expression.  It  is an
   ;;exception if we immediately find end-of-input.
@@ -406,7 +411,7 @@
 	   ;;We got an EOI before composing a full expression.
 	   (immediate-end-of-input-handler))
 	  (else
-	   (synner "internal error: invalid object from lexer" token)))))
+	   (synner-internal-error "invalid object from lexer" token)))))
 
 
 (define-record-type <token>
@@ -847,7 +852,7 @@
 	    ((end-of-input? token)
 	     (end-of-input-handler))
 	    (else
-	     (synner "internal error: invalid object from lexer" token))))))
+	     (synner-internal-error "invalid object from lexer" token))))))
 
 (define (<left-paren>-led this-token lexer synner left-semantic-value)
   ;;This token  is a left parenthesis,  there is a  left semantic value and  it has
@@ -912,7 +917,7 @@
 	    ((end-of-input? token)
 	     (end-of-input-handler))
 	    (else
-	     (synner "internal error: invalid object from lexer" token)))))
+	     (synner-internal-error "invalid object from lexer" token)))))
 
   (unless (identifier? left-semantic-value)
     (synner "expected identifier as left operand in procedure application"
@@ -932,7 +937,7 @@
 	  ((end-of-input? token)
 	   (end-of-input-handler))
 	  (else
-	   (synner "internal error: invalid object from lexer" token)))))
+	   (synner-internal-error "invalid object from lexer" token)))))
 
 
 (define-record-type <colon>
@@ -1017,7 +1022,7 @@
 	    ((end-of-input? token)
 	     (end-of-input-handler))
 	    (else
-	     (synner "internal error: invalid object from lexer" token))))))
+	     (synner-internal-error "invalid object from lexer" token))))))
 
 
 ;;;; binding powers
