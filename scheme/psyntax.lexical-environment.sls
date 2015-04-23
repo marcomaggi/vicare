@@ -138,7 +138,6 @@
 
     ;; syntax objects: mapping identifiers to labels
     id->label
-    id->label/intern
     id->label/or-error
     id->record-type-name-binding-descriptor
 
@@ -2417,69 +2416,6 @@
 	      (%vector-swap rib.label* src.idx dst.idx)))))))
 
   #| end of module: ID->LABEL |# )
-
-(define (id->label/intern id)
-  ;;Given  the identifier  ID  search  the lexical  environment  for  a binding  that
-  ;;captures it:
-  ;;
-  ;;* If a capturing binding is found: return the associated label.
-  ;;
-  ;;*  If no  capturing binding  is found  and the  top-level environment  is not  an
-  ;;interaction environment: return false.
-  ;;
-  ;;*  If  no  capturing  binding  is  found but  the  top-level  environment  is  an
-  ;;interaction  environment: fabricate  a new  syntactic binding  in such  top-level
-  ;;environment so  that there  exists a  lex gensym to  name the  binding and  a loc
-  ;;gensym in  which to  store a value  (actually the  lex and the  loc are  the same
-  ;;gensym).
-  ;;
-  ;;The syntactic binding fabrication allows us  to write "special" code on the REPL,
-  ;;for example:
-  ;;
-  ;;   vicare> (set! a 1)
-  ;;
-  ;;when A is not  defined will not fail, rather it will  implicitly define a binding
-  ;;as if we had typed:
-  ;;
-  ;;   vicare> (define a)
-  ;;   vicare> (set! a 1)
-  ;;
-  ;;another example of weird code that will not fail at the REPL:
-  ;;
-  ;;   vicare> (let ()
-  ;;             (set! a 1)
-  ;;             (debug-print a))
-  ;;
-  ;;will just print A as if we had typed:
-  ;;
-  ;;   vicare> (let ()
-  ;;             (define a)
-  ;;             (set! a 1)
-  ;;             (debug-print a))
-  ;;
-  ;;fabricating the lexical binding is like injecting the syntax "(define id)".
-  ;;
-  (or (id->label id)
-      ;;If we are here we know that  no capturing binding was found: either fabricate
-      ;;a new binding or return false.
-      (cond ((top-level-context)
-	     => (lambda (env)
-		  (let ((rib (interaction-env-rib env)))
-		    (receive (lab unused-lex/loc)
-			;;Here  we  know  that  we  are trying  to  map  a  syntactic
-			;;identifier  to  its  label  gensym in  the  context  of  an
-			;;interaction environment.
-			;;
-			;;If  a  syntactic  binding in  the  interaction  environment
-			;;captures  ID:  we  retrieve  its label.   Otherwise  a  new
-			;;binding is added to the interaction environment.
-			(let ((shadow/redefine-bindings? #t))
-			  (generate-or-retrieve-label-and-lex-gensyms id rib shadow/redefine-bindings?))
-		      ;;FIXME (Abdulaziz Ghuloum)
-		      (let ((shadow/redefine-bindings? #f))
-			(extend-rib! rib id lab shadow/redefine-bindings?))
-		      lab))))
-	    (else #f))))
 
 ;;; --------------------------------------------------------------------
 
