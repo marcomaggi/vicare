@@ -51,7 +51,8 @@
     string-empty?			syntax=?
     ratnum?				bignum?
     compnum?				cflonum?
-    fxadd1
+    fx=
+    fxadd1				fxsub1
 
     ;; low-level symbols properties
     system-label			system-id-gensym
@@ -129,7 +130,7 @@
 
     ;; unsafe bindings
     $car $cdr
-    $fx= $fx< $fx> $fx<= $fx>= $fxadd1
+    $fx= $fx< $fx> $fx<= $fx>= $fxadd1 $fxsub1
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-length $vector-empty? $vector-ref $vector-set!
     $putprop $getprop $remprop $property-list)
@@ -179,7 +180,7 @@
 	  system-id-gensym
 	  system-label)
     (only (vicare system $fx)
-	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
+	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1 $fxsub1
 	  $fxzero? $fxpositive? $fxnonnegative?)
     (only (vicare system $pairs)
 	  $car $cdr)

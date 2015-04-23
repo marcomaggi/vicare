@@ -234,7 +234,6 @@
 		  syntax-violation	make-variable-transformer)
     (rnrs mutable-pairs)
     (prefix (rnrs syntax-case) sys.)
-    (vicare system $pairs)
     (psyntax.config)
     (psyntax.compat)
     (only (psyntax.special-transformers)
@@ -2291,24 +2290,24 @@
     ;;having the  same source-name  and marks.  If  successful: return  the syntactic
     ;;binding's label gensym; otherwise return false.
     ;;
-    (let ((id.source-name (~identifier->symbol id)))
-      (let search ((rib*  ($stx-rib*  id))
-		   (mark* ($stx-mark* id)))
-	(and (pair? rib*)
-	     (if (eq? ($car rib*) 'shift)
-		 ;;This is the only place in the expander where a symbol "shift" in a
-		 ;;RIB* makes some difference; a "shift" is pushed on the RIB* when a
-		 ;;mark is pushed on the MARK*.
-		 ;;
-		 ;;When we find a "shift" in  RIB*: we skip the corresponding mark in
-		 ;;MARK*.
-		 (search ($cdr rib*) ($cdr mark*))
-	       (let ((rib ($car rib*)))
-		 (define (search-in-next-rib)
-		   (search ($cdr rib*) mark*))
-		 (if ($rib-sealed/freq rib)
-		     (%search-in-rib/sealed rib id.source-name mark* search-in-next-rib)
-		   (%search-in-rib/non-sealed rib id.source-name mark* search-in-next-rib))))))))
+    (define id.source-name (~identifier->symbol id))
+    (let search ((rib*  ($stx-rib* id))
+		 (mark* ($stx-mark* id)))
+      (and (pair? rib*)
+	   (if (eq? ($car rib*) 'shift)
+	       ;;This is the only  place in the expander where a  symbol "shift" in a
+	       ;;RIB* makes some  difference; a "shift" is pushed on  the RIB* when a
+	       ;;mark is pushed on the MARK*.
+	       ;;
+	       ;;When we  find a "shift" in  RIB*: we skip the  corresponding mark in
+	       ;;MARK*.
+	       (search ($cdr rib*) ($cdr mark*))
+	     (let ((rib ($car rib*)))
+	       (define (search-in-next-rib)
+		 (search ($cdr rib*) mark*))
+	       (if ($rib-sealed/freq rib)
+		   (%search-in-rib/sealed rib id.source-name mark* search-in-next-rib)
+		 (%search-in-rib/non-sealed rib id.source-name mark* search-in-next-rib)))))))
 
   (define-syntax-rule (same-name? x y)
     (eq? x y))
@@ -2353,14 +2352,14 @@
     (let* ((freq* (rib-sealed/freq rib))
 	   (freq  (vector-ref freq* idx))
 	   (i     (let loop ((i idx))
-		    (if (zero? i)
+		    (if (fxzero? i)
 			0
-		      (let ((j (- i 1)))
-			(if (= freq (vector-ref freq* j))
+		      (let ((j (fxsub1 i)))
+			(if (fx= freq (vector-ref freq* j))
 			    (loop j)
 			  i))))))
-      ($vector-set! freq* i (+ freq 1))
-      (unless (= i idx)
+      (vector-set! freq* i (fxadd1 freq))
+      (unless (fx= i idx)
 	(let ((name*  (rib-name*  rib))
 	      (mark** (rib-mark** rib))
 	      (label* (rib-label* rib)))
