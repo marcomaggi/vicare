@@ -1456,87 +1456,37 @@
 ;;; --------------------------------------------------------------------
 
 (module (extend-rib!)
-  ;;A RIB can be extensible, or  sealed.  Adding an identifier-to-label mapping to an
-  ;;extensible RIB is achieved by prepending items to the field lists.
-  ;;
-  ;;For example, an empty extensible RIB has fields:
-  ;;
-  ;;   name*  = ()
-  ;;   mark** = ()
-  ;;   label* = ()
-  ;;
-  ;;adding a syntactic binding to it with source name "ciao", marks "(src)" and label
-  ;;"lab.ciao" means mutating the fields to:
-  ;;
-  ;;   name*  = (ciao)
-  ;;   mark** = ((src))
-  ;;   label* = (lab.ciao)
-  ;;
-  ;;we can think of this as "pushing the syntactic binding's tuple":
-  ;;
-  ;;   { ciao, (src), lab.ciao }
-  ;;
-  ;;on the  rib.  Adding another binding  with source name "hello",  mark "(src)" and
-  ;;label "lab.hello" means mutating the fields to:
-  ;;
-  ;;   name*  = (hello     ciao)
-  ;;   mark** = ((src)     (src))
-  ;;   label* = (lab.hello lab.ciao)
-  ;;
-  ;;As further example, let's consider the form:
-  ;;
-  ;;   (lambda ()
-  ;;     (define a 1)
-  ;;     (define b 2)
-  ;;     (list a b))
-  ;;
-  ;;when starting to process  LAMBDA's internal body: a new rib  is created and added
-  ;;to the  metadata of  the syntax  object representing the  body itself;  when each
-  ;;internal definition is encountered, a new  entry for the identifier is added (via
-  ;;side effect) to the rib:
-  ;;
-  ;;   name*  = (b       a)
-  ;;   mark** = ((src)   (src))
-  ;;   label* = (lab.b   lab.a)
-  ;;
-  ;;The order  in which the  binding tuples  appear in the  rib does not  matter: two
-  ;;tuples are different when  both the symbol and the marks are  different and it is
-  ;;an error to add twice a tuple to the same RIB.
-  ;;
-  ;;However,  it is  possible to  redefine  a syntactic  binding.  Let's  say we  are
-  ;;evaluating forms  in an interaction  environment (for example: we  are evaluating
-  ;;forms read from the REPL): in this case the argument SHADOW/REDEFINE-BINDINGS? is
-  ;;set to true.  If we type:
-  ;;
-  ;;   vicare> (define a 1)
-  ;;   vicare> (define a 2)
-  ;;
-  ;;after the first DEFINE is parsed the tuples are:
-  ;;
-  ;;   name*  = (a)
-  ;;   mark** = ((src))
-  ;;   label* = (lab.a.1)
-  ;;
-  ;;and after the secon DEFINE is parsed the tuples are:
-  ;;
-  ;;   name*  = (a)
-  ;;   mark** = ((src))
-  ;;   label* = (lab.a.2)
-  ;;
-  ;;we see that the label has changed.
-  ;;
-  ;;If the  argument SHADOW/REDEFINE-BINDINGS?  is  false: the new  syntactic binding
-  ;;must have unique source-name and marks in  this RIB; it is responsibility of this
-  ;;function to  raise an  exception if an  illegal attempt to  redefine or  shadow a
-  ;;binding is performed.
-  ;;
-  ;;If the argument SHADOW/REDEFINE-BINDINGS?  is  true: the new syntactic binding is
-  ;;allowed to  redefine an existing syntactic  binding with the same  source-name in
-  ;;this  RIB,  by  replacing  the  original   label  gensym  with  LABEL.   See  the
-  ;;documentation   of  CHI-BODY*   for  the   full  description   of  the   argument
-  ;;SHADOW/REDEFINE-BINDINGS?.
-  ;;
+
   (define* (extend-rib! {rib rib?} {id identifier?} label shadow/redefine-bindings?)
+    ;;Add  to  the  RIB  a  syntactic binding's  association  between  the  syntactic
+    ;;identifier ID and the LABEL gensym.
+    ;;
+    ;;This  function  is used  only  while  expanding  a  body, either:  a  library's
+    ;;top-level body; a  program's top-level body; an internal body  (uses of LET and
+    ;;similar syntaxes,  uses of INTERNAL-BODY);  a top-level expression  expanded in
+    ;;the context of an interaction environment.
+    ;;
+    ;;This function is used to add to a rib object the syntactic bindings established
+    ;;by  the  syntaxes:  DEFINE, DEFINE-SYNTAX,  DEFINE-FLUID-SYNTAX,  DEFINE-ALIAS,
+    ;;MODULE, IMPORT.
+    ;;
+    ;;This function  is the only  place where the  argument SHADOW/REDEFINE-BINDINGS?
+    ;;makes some difference:
+    ;;
+    ;;* When SHADOW/REDEFINE-BINDINGS?  is false: if a syntactic binding capturing ID
+    ;;already exists  in RIB,  the call  to this function  is interpreted  as illegal
+    ;;attempt  to:  redefine  a  previously   defined  syntactic  binding;  shadow  a
+    ;;previously imported syntactic  binding.  It is responsibility  of this function
+    ;;to raise an exception.
+    ;;
+    ;;* When SHADOW/REDEFINE-BINDINGS?  is true:  if a syntactic binding capturing ID
+    ;;already exists  in RIB,  the new  syntactic binding is  allowed to  redefine or
+    ;;shadow the existing  syntactic binding, by replacing the  original label gensym
+    ;;with LABEL.
+    ;;
+    ;;See the  documentation of CHI-BODY*  for the  full description of  the argument
+    ;;SHADOW/REDEFINE-BINDINGS?.
+    ;;
     (when ($rib-sealed/freq rib)
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))

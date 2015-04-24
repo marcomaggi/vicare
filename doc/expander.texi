@@ -881,8 +881,137 @@ the frequency vector.
 @end deftp
 
 @menu
-* expander lexenv rib sealing:: Sealing ribs.
+* expander lexenv rib extending::  Extending ribs.
+* expander lexenv rib sealing::    Sealing ribs.
 @end menu
+
+@c page
+@node expander lexenv rib extending
+@subsubsection Extending ribs
+
+
+A non--sealed @objtype{rib} object is extensible: new syntactic bindings
+can be added to it.  Adding an identifier--to--label mapping to an
+extensible @objtype{rib} is achieved by prepending items to the field's
+lists.
+
+For example, an empty extensible @objtype{rib} has fields:
+
+@example
+name*  = ()
+mark** = ()
+label* = ()
+@end example
+
+@noindent
+adding a syntactic binding to it with source name @samp{ciao}, marks
+@samp{(src)} and label @samp{lab.ciao} means mutating the fields to:
+
+@example
+name*  = (ciao)
+mark** = ((src))
+label* = (lab.ciao)
+@end example
+
+@noindent
+we can think of this operation as ``pushing the syntactic binding's
+tuple'':
+
+@example
+@{ ciao, (src), lab.ciao @}
+@end example
+
+@noindent
+on the @objtype{rib}.  Adding another binding with source name
+@samp{hello}, marks @samp{(src)} and label @samp{lab.hello} means to
+push the tuple.
+
+@example
+@{ hello, (src), lab.hello @}
+@end example
+
+@noindent
+that is to mutate the fields to:
+
+@example
+name*  = (hello     ciao)
+mark** = ((src)     (src))
+label* = (lab.hello lab.ciao)
+@end example
+
+As further example, let's consider the syntactic form:
+
+@lisp
+(lambda ()
+  (define a 1)
+  (define b 2)
+  (list a b))
+@end lisp
+
+@noindent
+when starting to expand @syntax{lambda}'s internal body: a new
+@objtype{rib} is created and added to the metadata of the syntax object
+representing the body itself; when each internal definition is
+encountered, a new entry for the identifier is added (via side effect)
+to the @objtype{rib}:
+
+@example
+name*  = (b       a)
+mark** = ((src)   (src))
+label* = (lab.b   lab.a)
+@end example
+
+The order in which the syntactic binding's tuples appear in the
+@objtype{rib} does not matter: two tuples are different when both the
+source name's symbol and the marks are different and it is an error to
+add twice a tuple to the same @objtype{rib}.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Redefining or shadowing syntactic bindings
+
+While it is an error to add twice a syntactic binding's tuple to the
+same @objtype{rib}, when expanding syntactic forms at the top--level of
+an interaction environment: it is possible to redefine a previously
+defined syntactic binding and to shadow a previously imported syntactic
+binding.
+
+Interaction environment objects (@pxref{iklib environment}) hold a
+@objtype{rib} object representing their top--level lexical contour; such
+@objtype{rib} holds tuples representing both the syntactic bindings
+imported from libraries and the syntactic bindings defined when
+expanding expressions at the top--level.
+
+Let's say we are expanding syntactic forms read from the @repl{} (which
+uses an interaction environment); if we type:
+
+@example
+vicare> (define a 1)
+vicare> (define a 2)
+@end example
+
+@noindent
+after the first @syntax{define} is expanded the tuples in the
+@objtype{rib} representing the top--level lexical contour are:
+
+@example
+name*  = (a)
+mark** = ((src))
+label* = (lab.a.1)
+@end example
+
+@noindent
+and after the second @syntax{define} is expanded the tuples are:
+
+@example
+name*  = (a)
+mark** = ((src))
+label* = (lab.a.2)
+@end example
+
+@noindent
+we see that the old label gensym has been replaced with a new label
+gensym: this causes the syntactic binding to be redefined.
 
 @c page
 @node expander lexenv rib sealing
