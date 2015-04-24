@@ -4029,12 +4029,6 @@
 	      (interaction-environment)))
     => '(10 20 30))
 
-  (check	;check binding definition with SET!
-      (let ((env (interaction-environment)))
-	(eval '(set! e 3) env)
-	(eval 'e env))
-    => 3)
-
 ;;; --------------------------------------------------------------------
 ;;; new-interaction-environment
 
@@ -4113,14 +4107,16 @@
 	      env))
     => '(10 20 30))
 
-  ;;A  SET!  syntactic  form  with  unbound  identifier  at  the  top-level  with  an
-  ;;interaction environment defines a new syntactic binding.
+  ;;In an interaction  environment the top-level definitions can  shadow the bindings
+  ;;imported by the environment.
   ;;
   (check
-      (let ((env (new-interaction-environment '(rnrs base))))
-	(eval '(set! e 3) env)
-	(eval 'e env))
-    => 3)
+      (let ((env (new-interaction-environment '(vicare))))
+	(eval '(define display 123) env)
+	(eval 'display env))
+    => 123)
+
+;;; --------------------------------------------------------------------
 
   ;;In  an  interaction  environment  the   top-level  definitions  in  the  body  of
   ;;BEGIN-FOR-SYNTAX can be redefined.

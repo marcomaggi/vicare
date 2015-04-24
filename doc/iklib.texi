@@ -8282,6 +8282,13 @@ persistent bindings:
 
 @example
 (begin
+  (eval '(define c 3)
+        (interaction-environment))
+  (eval 'c
+        (interaction-environment)))
+@result{} 3
+
+(begin
   (eval '(begin
            (define a 1)
            (define b 2))
@@ -8289,13 +8296,6 @@ persistent bindings:
   (eval '(list a b)
         (interaction-environment)))
 @result{} (1 2)
-
-(begin
-  (eval '(define c 3)
-        (interaction-environment))
-  (eval 'c
-        (interaction-environment)))
-@result{} 3
 
 (let ((env (new-interaction-environment)))
   (eval '(begin
@@ -8314,6 +8314,93 @@ and it is also possible to import additional libraries:
 (eval '(import (nausicaa))
        (interaction-environment))
 @end example
+
+At the top--level of an interaction environment, it is possible to
+redefine syntactic bindings:
+
+@lisp
+(let ((env (new-interaction-environment '(rnrs base))))
+  (eval '(define d 3) env)
+  (eval '(define d 4) env)
+  (eval 'd env))
+@result{} 4
+
+(let ((env (new-interaction-environment '(rnrs base))))
+  (eval '(begin
+           (define x 1)
+           (define y 2)
+           (define z 3))
+        env)
+  (eval '(begin
+           (define x 10)
+           (define y 20)
+           (define z 30))
+        env)
+  (eval '(list x y z)
+        env))
+@result{} (10 20 30)
+
+(let ((env (new-interaction-environment '(rnrs base))))
+  (eval '(begin
+           (define-syntax x (identifier-syntax 1))
+           (define-syntax y (identifier-syntax 2))
+           (define-syntax z (identifier-syntax 3)))
+        env)
+  (eval '(begin
+           (define-syntax x (identifier-syntax 10))
+           (define-syntax y (identifier-syntax 20))
+           (define-syntax z (identifier-syntax 30)))
+        env)
+  (eval '(list x y z)
+        env))
+@result{} (10 20 30)
+
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(begin
+           (define-fluid-syntax x (identifier-syntax 1))
+           (define-fluid-syntax y (identifier-syntax 2))
+           (define-fluid-syntax z (identifier-syntax 3)))
+        env)
+  (eval '(begin
+           (define-fluid-syntax x (identifier-syntax 10))
+           (define-fluid-syntax y (identifier-syntax 20))
+           (define-fluid-syntax z (identifier-syntax 30)))
+        env)
+  (eval '(list x y z)
+        env))
+@result{} (10 20 30)
+
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(begin
+           (begin-for-syntax
+             (define a 1)
+             (define a 2))
+           (define-syntax doit
+             (lambda (stx) a)))
+        env)
+  (eval '(doit) env))
+@result{} 2
+@end lisp
+
+At the top--level of an interaction environment, it is possible to
+shadow syntactic bindings imported from a library:
+
+@lisp
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(define display 123) env)
+  (eval 'display env))
+@result{} 123
+
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(begin
+           (begin-for-syntax
+             (define display 123))
+           (define-syntax doit
+             (lambda (stx) display)))
+        env)
+  (eval '(doit) env))
+@result{} 123
+@end lisp
 
 
 @defun environment-symbols @var{env}
