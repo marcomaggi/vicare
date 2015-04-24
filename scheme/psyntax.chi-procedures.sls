@@ -2721,20 +2721,19 @@
 		   (%parse-define body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
-		 (receive (lab lex)
-		     ;;About this  call to GENERATE-OR-RETRIEVE-LABEL-AND-LEX-GENSYMS
-		     ;;notice that:
-		     ;;
-		     ;;* If  the binding is at  the top-level of a  program body: we
-		     ;;  need a loc gensym to store the result of evaluating the RHS
-		     ;;  in QRHS; this loc will be generated later.
-		     ;;
-		     ;;* If the binding is at the top-level of an expression expanded
-		     ;;  in an interaction environment: we need a loc gensym to store
-		     ;;  the result  of evaluating the RHS in QRHS;  in this case the
-		     ;;  lex gensym generated here also acts as loc gensym.
-		     ;;
-		     (generate-or-retrieve-label-and-lex-gensyms id rib shadow/redefine-bindings?)
+		 (let ((lab (generate-label-gensym   id))
+		       ;;About this call to GENERATE-LEXICAL-GENSYM notice that:
+		       ;;
+		       ;;* If the  binding is at the top-level of  a program body: we
+		       ;;need a loc gensym to store  the result of evaluating the RHS
+		       ;;in QRHS; this loc will be generated later.
+		       ;;
+		       ;;*  If the  binding  is  at the  top-level  of an  expression
+		       ;;expanded in an interaction environment: we need a loc gensym
+		       ;;to store the  result of evaluating the RHS in  QRHS; in this
+		       ;;case the lex gensym generated here also acts as loc gensym.
+		       ;;
+		       (lex (generate-lexical-gensym id)))
 		   ;;This call will raise an exception if it represents an attempt to
 		   ;;illegally redefine a binding.
 		   (extend-rib! rib id lab shadow/redefine-bindings?)
@@ -2745,23 +2744,35 @@
 			      mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	      ((define-syntax)
-	       ;;The  body form  is a  core  language DEFINE-SYNTAX  macro use.   We
-	       ;;expand and  evaluate the transformer expression,  build a syntactic
-	       ;;binding for it, register the label  in the rib.  Finally we recurse
-	       ;;on the rest of the body.
+	       ;;The body form  is a built-in DEFINE-SYNTAX macro use.   This is what
+	       ;;happens:
+	       ;;
+	       ;;1. Parse the syntactic form.
+	       ;;
+	       ;;2. Expand the right-hand side expression.  This expansion happens in
+	       ;;a lexical context in which the syntactic binding of the macro itself
+	       ;;has *not* yet been established.
+	       ;;
+	       ;;3. Add  to the rib  the syntactic binding's association  between the
+	       ;;macro keyword and the label.
+	       ;;
+	       ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
+	       ;;return:  a  macro  transformer  function, a  compile-time  value,  a
+	       ;;synonym transformer or whatever.
+	       ;;
+	       ;;5. Add to the lexenv the syntactic binding's association between the
+	       ;;label and the binding's descriptor.
+	       ;;
+	       ;;6. Finally recurse to expand the rest of the body.
 	       ;;
 	       (receive (id rhs.stx)
 		   (%parse-define-syntax body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
-		 ;;First map the identifier to  the label, creating the binding; then
-		 ;;evaluate   the   macro   transformer.   For   DEFINE-SYNTAX:   the
-		 ;;transformer  is  evaluated  in  a lexical  context  in  which  its
-		 ;;syntactic binding exists!
 		 (let ((rhs.core (with-exception-handler/input-form
 				     rhs.stx
 				   (expand-macro-transformer rhs.stx lexenv.expand)))
-		       (lab      (generate-or-retrieve-label-gensym/define-syntax id rib shadow/redefine-bindings?)))
+		       (lab      (generate-label-gensym id)))
 		   ;;This call will raise an exception if it represents an attempt to
 		   ;;illegally redefine a binding.
 		   (extend-rib! rib id lab shadow/redefine-bindings?)
@@ -2775,23 +2786,35 @@
 				mix? shadow/redefine-bindings?)))))
 
 	      ((define-fluid-syntax)
-	       ;;The body form is a core language DEFINE-FLUID-SYNTAX macro use.  We
-	       ;;expand  and evaluate  the transformer  expression, build  syntactic
-	       ;;bindings for it, register the label in the rib.  Finally we recurse
-	       ;;on the rest of the body.
+	       ;;The body form is a  built-in DEFINE-FLUID-SYNTAX macro use.  This is
+	       ;;what happens:
+	       ;;
+	       ;;1. Parse the syntactic form.
+	       ;;
+	       ;;2. Expand the right-hand side expression.  This expansion happens in
+	       ;;a lexical context in which the syntactic binding of the macro itself
+	       ;;has *not* yet been established.
+	       ;;
+	       ;;3. Add  to the rib  the syntactic binding's association  between the
+	       ;;macro keyword and the label.
+	       ;;
+	       ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
+	       ;;return:  a  macro  transformer  function, a  compile-time  value,  a
+	       ;;synonym transformer or whatever.
+	       ;;
+	       ;;5. Add to the lexenv the syntactic binding's association between the
+	       ;;label and the binding's descriptor.
+	       ;;
+	       ;;6. Finally recurse to expand the rest of the body.
 	       ;;
 	       (receive (id rhs.stx)
 		   (%parse-define-syntax body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
-		 ;;First  map the  identifier to  the label,  creating the  syntactic
-		 ;;binding;    then   evaluate    the    macro   transformer.     For
-		 ;;DEFINE-FLUID-SYNTAX:  the transformer  is evaluated  in a  lexical
-		 ;;context in which its syntactic binding exists!
 		 (let ((rhs.core (with-exception-handler/input-form
 				     rhs.stx
 				   (expand-macro-transformer rhs.stx lexenv.expand)))
-		       (lab      (generate-or-retrieve-label-gensym/define-syntax id rib shadow/redefine-bindings?)))
+		       (lab      (generate-label-gensym id)))
 		   ;;This call will raise an exception if it represents an attempt to
 		   ;;illegally redefine a binding.
 		   (extend-rib! rib id lab shadow/redefine-bindings?)
@@ -2799,13 +2822,11 @@
 					rhs.stx
 				      (eval-macro-transformer rhs.core lexenv.run)))
 			  (flab     (generate-label-gensym id))
-			  ;;This LEXENV entry represents the definition of the fluid
+			  ;;This LEXENV entry represents  the definition of the fluid
 			  ;;syntax.
 			  (entry1   (cons lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax flab)))
-			  ;;This LEXENV entry represents  the current binding of the
-			  ;;fluid  syntax;   the  binding  descriptor  is   of  type
-			  ;;LOCAL-MACRO, LOCAL-MACRO!  or  LOCAL-CTV.  Other entries
-			  ;;like this one can be pushed to rebind the fluid syntax.
+			  ;;This LEXENV  entry represents the current  binding of the
+			  ;;fluid syntax.
 			  (entry2   (cons flab binding)))
 		     (chi-body* (cdr body-form*.stx)
 				(cons* entry1 entry2 lexenv.run)
@@ -2814,8 +2835,8 @@
 				mix? shadow/redefine-bindings?)))))
 
 	      ((define-alias)
-	       ;;The body form is a core  language DEFINE-ALIAS macro use.  We add a
-	       ;;new association  identifier/label to  the current rib.   Finally we
+	       ;;The body form  is a core language DEFINE-ALIAS macro  use.  We add a
+	       ;;new  association identifier/label  to the  current rib.   Finally we
 	       ;;recurse on the rest of the body.
 	       ;;
 	       (receive (alias-id old-id)

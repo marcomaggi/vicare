@@ -50,8 +50,6 @@
     generate-lexical-gensym
     generate-storage-location-gensym
     generate-label-gensym
-    generate-or-retrieve-label-and-lex-gensyms
-    generate-or-retrieve-define-syntax-label-gensym
 
     ;; LEXENV entries and syntactic binding descriptors
     lexenv-entry.label
@@ -1060,129 +1058,6 @@
 	     (gensym)))
     (gensym)))
 
-(module (generate-or-retrieve-label-and-lex-gensyms
-	 generate-or-retrieve-define-syntax-label-gensym)
-
-  (define (generate-or-retrieve-label-and-lex-gensyms id rib shadow/redefine-bindings?)
-    ;;Whenever a DEFINE syntax:
-    ;;
-    ;;   (define ?id ?rhs)
-    ;;
-    ;;is expanded  we need to generate  for it: a label  gensym, a lex gensym,  a loc
-    ;;gensym.  This function  returns 2 values: the label gensym  and the lex gensym.
-    ;;If the argument SHADOW/REDEFINE-BINDINGS? is true:  the lex gensym also acts as
-    ;;loc gensym.
-    ;;
-    ;;The argument ID must be a syntactic identifier, either the name of a new DEFINE
-    ;;binding or an already bound identifier for  which we want to retrieve the label
-    ;;and lex.
-    ;;
-    ;;The argument RIB must be the rib object describing the lexical contour in which
-    ;;the syntactic binding of ID must be established or resolved.
-    ;;
-    ;;The argument SHADOW/REDEFINE-BINDINGS? is interpreted as boolean:
-    ;;
-    ;;* When set to false: this function generates new label and lex gensyms.
-    ;;
-    ;;*  When set  to  true: if  the  RIB holds  a syntactic  binding  with the  same
-    ;;source-name of  ID, the label and  lex of that binding  are returned; otherwise
-    ;;new label and lex gensyms are generated.
-    ;;
-    ;;see the  documentation of CHI-BODY*  for the  full description of  the argument
-    ;;SHADOW/REDEFINE-BINDINGS?.
-    ;;
-    (if shadow/redefine-bindings?
-	(let ((label (%generate-or-retrieve-top-level-label-gensym id rib)))
-	  (let* ((env           (top-level-context))
-		 ;;LAB.LOC/LEX*  is an  alist having  label gensyms  as keys  and loc
-		 ;;gensyms as values;  the loc gensyms are also used  as lex gensyms.
-		 ;;It maps binding labels to  storage location gensyms in the context
-		 ;;of an interaction environment.
-		 (lab.loc/lex*  (interaction-env-lab.loc/lex* env)))
-	    (values label
-		    (cond ((assq label lab.loc/lex*)
-			   => cdr)
-			  (else
-			   ;;There was no binding in RIB with the same source name of
-			   ;;ID, so LABEL is a new  label gensym.  Here we generate a
-			   ;;new lex gensym, also acting as loc gensym, and add it to
-			   ;;the interaction environment.
-			   (receive-and-return (loc)
-			       (generate-storage-location-gensym id)
-			     (set-interaction-env-lab.loc/lex*! env
-			       (cons (cons label loc)
-				     lab.loc/lex*))))))))
-      (values (generate-label-gensym id) (generate-lexical-gensym id))))
-
-  (define (generate-or-retrieve-define-syntax-label-gensym id rib shadow/redefine-bindings?)
-    ;;Whenever a syntactic form:
-    ;;
-    ;;   (define-syntax       ?id ?rhs)
-    ;;   (define-fluid-syntax ?id ?rhs)
-    ;;
-    ;;is expanded, we need to generate for  it: a label gensym, and that's all.  This
-    ;;function returns the label.
-    ;;
-    ;;The argument ID must be an  identifier representing the name of a DEFINE-SYNTAX
-    ;;or DEFINE-FLUID-SYNTAX binding.
-    ;;
-    ;;The argument RIB must be the rib object describing the lexical contour in which
-    ;;the binding is created.
-    ;;
-    ;;The argument SHADOW/REDEFINE-BINDINGS? is interpreted as boolean:
-    ;;
-    ;;* When set to false: this function generates a new label gensym.
-    ;;
-    ;;*  When set  to  true: if  the  RIB holds  a syntactic  binding  with the  same
-    ;;source-name of ID, the label of that binding is returned; otherwise a new label
-    ;;gensym is generated.
-    ;;
-    ;;see the  documentation of CHI-BODY*  for the  full description of  the argument
-    ;;SHADOW/REDEFINE-BINDINGS?.
-    ;;
-    (if shadow/redefine-bindings?
-	(%generate-or-retrieve-top-level-label-gensym id rib)
-      (generate-label-gensym id)))
-
-  (define (%generate-or-retrieve-top-level-label-gensym id rib)
-    (let ((id.source-name   (~identifier->symbol id))
-	  (id.mark*         ($stx-mark* id))
-	  (rib.source-name* ($rib-name* rib)))
-      (cond ((and (memq id.source-name rib.source-name*)
-		  (%find-label-of-source-name id.source-name id.mark* rib.source-name* ($rib-mark** rib) ($rib-label* rib)))
-	     => (lambda (label)
-		  ;;If we are  here RIB contains a binding with  the same source-name
-		  ;;of ID and LABEL is its label.
-		  ;;
-		  ;;If LABEL is associated to an imported binding: the data structure
-		  ;;implementing  the  symbol  object  holds  the  syntactic  binding
-		  ;;descriptor in its  "value" field; otherwise such field  is set to
-		  ;;false.
-		  (if (label->imported-syntactic-binding-descriptor label)
-		      ;;Create new label to shadow imported binding.
-		      (generate-label-gensym id)
-		    ;;Recycle old label.
-		    label)))
-	    (else
-	     ;;Create a new label for a new syntactic binding.
-	     (generate-label-gensym id)))))
-
-  (define (%find-label-of-source-name source-name id.mark* rib.source-name* rib.mark** rib.label*)
-    ;;Upon  entering a  call to  this  function: we  know  that the  list of  symbols
-    ;;RIB.SOURCE-NAME* has at least one element equal to SOURCE-NAME.
-    ;;
-    ;;We recurse iterating over RIB.SOURCE-NAME*,  RIB.MARK** and RIB.LABEL*; we look
-    ;;for a tuple having marks equal to ID.MARK* and return the associated label.  If
-    ;;such binding is not found return false.
-    ;;
-    (and (pair? rib.source-name*)
-	 (if (and (eq? source-name (car rib.source-name*))
-		  (same-marks? id.mark* (car rib.mark**)))
-	     (car rib.label*)
-	   (%find-label-of-source-name source-name id.mark* (cdr rib.source-name*) (cdr rib.mark**) (cdr rib.label*)))))
-
-  #| end of module |# )
-
 
 ;;;; lexical environment: mapping labels to syntactic binding descriptors
 
@@ -1651,14 +1526,15 @@
   ;;we see that the label has changed.
   ;;
   ;;If the  argument SHADOW/REDEFINE-BINDINGS?  is  false: the new  syntactic binding
-  ;;must    have   unique    source-name   in    this   RIB.     If   the    argument
-  ;;SHADOW/REDEFINE-BINDINGS?   is true:  the  new syntactic  binding  is allowed  to
-  ;;redefine an existing syntactic binding with  the same source-name in this RIB, by
-  ;;replacing  the  original label  gensym  with  LABEL.   See the  documentation  of
-  ;;CHI-BODY* for the full description of the argument SHADOW/REDEFINE-BINDINGS?.
+  ;;must have unique source-name and marks in  this RIB; it is responsibility of this
+  ;;function to  raise an  exception if an  illegal attempt to  redefine or  shadow a
+  ;;binding is performed.
   ;;
-  ;;It is responsibility of this function to raise an exception if an illegal attempt
-  ;;to redefine or shadow a binding is performed.
+  ;;If the argument SHADOW/REDEFINE-BINDINGS?  is  true: the new syntactic binding is
+  ;;allowed to  redefine an existing syntactic  binding with the same  source-name in
+  ;;this  RIB,  by  replacing  the  original   label  gensym  with  LABEL.   See  the
+  ;;documentation   of  CHI-BODY*   for  the   full  description   of  the   argument
+  ;;SHADOW/REDEFINE-BINDINGS?.
   ;;
   (define* (extend-rib! {rib rib?} {id identifier?} label shadow/redefine-bindings?)
     (when ($rib-sealed/freq rib)
@@ -1669,48 +1545,48 @@
 	  (rib.name*       ($rib-name*  rib))
 	  (rib.mark**      ($rib-mark** rib))
 	  (rib.label*      ($rib-label* rib)))
-      (cond ((%find-binding-with-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*)
-	     ;;A binding for ID already exists in this lexical contour.  For example,
-	     ;;in an internal body we have:
-	     ;;
-	     ;;   (define a 1)
-	     ;;   (define a 2)
-	     ;;
-	     ;;* In an R6RS program or library: we must raise an exception.
-	     ;;
-	     ;;* In the  context of an interaction environment: we  just redefine the
-	     ;;  binding.
-	     ;;
+      (cond ((and (memq id.source-name rib.name*)
+		  (%find-syntactic-binding-with-same-name-and-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*))
 	     => (lambda (tail-of-label*)
-		  (unless (eq? label (car tail-of-label*))
-		    (if shadow/redefine-bindings?
-			;;We override the already existent label with the new label.
-			(set-car! tail-of-label* label)
-		      ;;Signal an error if the identifier was already in the rib.
-		      (syntax-violation 'expander "multiple definitions of identifier" id)))))
+		  ;;If  we  are here:  we  have  found  in  RIB a  syntactic  binding
+		  ;;capturing ID (same source-name, same marks).  We need to remember
+		  ;;that  EXTEND-RIB!   is called  only  to  establish new  syntactic
+		  ;;bindings (either lexical variables or macros).
+		  (if shadow/redefine-bindings?
+		      ;;We  replace  the old  label  with  the new  one,  in-so-doing
+		      ;;redefining or shadowing the already existing binding.
+		      (set-car! tail-of-label* label)
+		    ;;Signal an error if the identifier was already in the rib.
+		    (syntax-violation __who__ "multiple definitions of identifier" id))))
 	    (else
-	     ;;No binding exists for ID in this lexical contour: create a new one.
+	     ;;No capturing binding  exists for ID in RIB: let's  establish a new one
+	     ;;by pushing the appropriate tuple on the rib.
 	     ($set-rib-name*!  rib (cons id.source-name  rib.name*))
 	     ($set-rib-mark**! rib (cons id.mark*        rib.mark**))
 	     ($set-rib-label*! rib (cons label           rib.label*))))))
 
-  (define-syntax-rule (%find-binding-with-same-marks id.source-name id.mark*
-						     rib.name* rib.mark** rib.label*)
-    (and (memq id.source-name rib.name*)
-	 (%find id.source-name id.mark* rib.name* rib.mark** rib.label*)))
-
-  (define (%find id.source-name id.mark* rib.name* rib.mark** rib.label*)
-    ;;Here we know that the list of  symbols RIB.NAME* has at least one element equal
-    ;;to ID.SOURCE-NAME; we iterate through  RIB.NAME*, RIB.MARK** and RIB.LABEL* looking for
-    ;;a tuple having name equal to ID.SOURCE-NAME  and marks equal to ID.MARK* and return the
-    ;;tail of RIB.LABEL* having the associated label  as car.  If such binding is not
-    ;;found return false.
+  (define (%find-syntactic-binding-with-same-name-and-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*)
+    ;;Here we  know that the  list of source-names RIB.NAME*  has one element  EQ? to
+    ;;ID.SOURCE-NAME; we  do not know,  yet, if such  source-name is associated  to a
+    ;;list of marks equal to ID.MARK* or not.   In other words: we do not know if the
+    ;;rib holds a syntactic binding capturing ID.
     ;;
+    ;;Iterate the tuples in RIB.NAME*, RIB.MARK**  and RIB.LABEL* looking for a tuple
+    ;;having  name  equal  to  ID.SOURCE-NAME  and marks  equal  to  ID.MARK*.   When
+    ;;successful: return the  tail sublist of RIB.LABEL* having  the associated label
+    ;;as car.  If no capturing binding is found: return false.
+    ;;
+    (define-syntax-rule (%recurse rib.name* rib.mark** rib.label*)
+      (%find-syntactic-binding-with-same-name-and-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*))
     (and (pair? rib.name*)
-	 (if (and (eq? id.source-name ($car rib.name*))
-		  (same-marks? id.mark* ($car rib.mark**)))
+	 (if (and (same-name?  id.source-name ($car rib.name*))
+		  (same-marks? id.mark*       ($car rib.mark**)))
+	     ;;Capturing binding found!
 	     rib.label*
-	   (%find id.source-name id.mark* ($cdr rib.name*) ($cdr rib.mark**) ($cdr rib.label*)))))
+	   (%recurse ($cdr rib.name*) ($cdr rib.mark**) ($cdr rib.label*)))))
+
+  (define-syntax-rule (same-name? x y)
+    (eq? x y))
 
   #| end of module: EXTEND-RIB! |# )
 
