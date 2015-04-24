@@ -1830,30 +1830,14 @@
 	     input-form.stx lhs.id)))
 
 	((standalone-unbound-identifier)
-	 ;;The identifier  LHS.ID is  unbound.  If  we are at  the top-level  with an
-	 ;;interaction environment: we abuse the  SET! syntax and fabricate a binding
-	 ;;here.  This abuse is a Vicare-specific feature.
+	 ;;The identifier  LHS.ID is unbound: raise  an exception.
 	 ;;
-	 (cond ((top-level-context)
-		=> (lambda (env)
-		     ;;Let's fabricate a lexical var syntactic binding.
-		     (let ((rib (interaction-env-rib env)))
-		       (receive (lab unused-lex/loc)
-			   ;;Setting  SHADOW/REDEFINE-BINDINGS?   to true  here  will
-			   ;;cause a  label/lex association  to be  added to  the top
-			   ;;rib.
-			   (let ((shadow/redefine-bindings? #t))
-			     (generate-or-retrieve-label-and-lex-gensyms lhs.id rib shadow/redefine-bindings?))
-			 ;;Setting  SHADOW/REDEFINE-BINDINGS?   to  false  here  will
-			 ;;cause an  error to be raised  if LHS.ID does not  have the
-			 ;;marks needed to match the binding in the top rib.
-			 (let ((shadow/redefine-bindings? #f))
-			   (extend-rib! rib lhs.id lab shadow/redefine-bindings?))
-			 ;;If we are here: the  syntactic binding has been fabricated
-			 ;;with success, so let's try again.
-			 (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)))))
-	       (else
-		(raise-unbound-error __module_who__ input-form.stx lhs.id))))
+	 ;;NOTE In  the original Ikarus' code,  and for years in  Vicare's code: SET!
+	 ;;could create a new syntactic binding  when LHS.ID was unbound and the SET!
+	 ;;syntactic  form   was  expanded  at   the  top-level  of   an  interaction
+	 ;;environment.  I nuked this feature.  (Marco Maggi; Fri Apr 24, 2015)
+	 ;;
+	 (raise-unbound-error __module_who__ input-form.stx lhs.id))
 
 	(else
 	 (stx-error input-form.stx "syntax error")))))
