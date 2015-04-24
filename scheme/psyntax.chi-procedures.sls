@@ -2774,10 +2774,10 @@
 		 ;;evaluate   the   macro   transformer.   For   DEFINE-SYNTAX:   the
 		 ;;transformer  is  evaluated  in  a lexical  context  in  which  its
 		 ;;syntactic binding exists!
-		 (let ((lab      (generate-or-retrieve-define-syntax-label-gensym id rib shadow/redefine-bindings?))
-		       (rhs.core (with-exception-handler/input-form
+		 (let ((rhs.core (with-exception-handler/input-form
 				     rhs.stx
-				   (expand-macro-transformer rhs.stx lexenv.expand))))
+				   (expand-macro-transformer rhs.stx lexenv.expand)))
+		       (lab      (generate-or-retrieve-label-gensym/define-syntax id rib shadow/redefine-bindings?)))
 		   ;;This call will raise an exception if it represents an attempt to
 		   ;;illegally redefine a binding.
 		   (extend-rib! rib id lab shadow/redefine-bindings?)
@@ -2800,21 +2800,21 @@
 		   (%parse-define-syntax body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
-		 ;;First map the identifier to  the label, creating the binding; then
-		 ;;evaluate  the  macro  transformer.  For  DEFINE-FLUID-SYNTAX:  the
-		 ;;transformer  is  evaluated  in  a lexical  context  in  which  its
-		 ;;syntactic binding exists!
-		 (let* ((lab      (generate-or-retrieve-define-syntax-label-gensym id rib shadow/redefine-bindings?))
-			(flab     (generate-label-gensym id))
-			(rhs.core (with-exception-handler/input-form
-				      rhs.stx
-				    (expand-macro-transformer rhs.stx lexenv.expand))))
+		 ;;First  map the  identifier to  the label,  creating the  syntactic
+		 ;;binding;    then   evaluate    the    macro   transformer.     For
+		 ;;DEFINE-FLUID-SYNTAX:  the transformer  is evaluated  in a  lexical
+		 ;;context in which its syntactic binding exists!
+		 (let ((rhs.core (with-exception-handler/input-form
+				     rhs.stx
+				   (expand-macro-transformer rhs.stx lexenv.expand)))
+		       (lab      (generate-or-retrieve-label-gensym/define-syntax id rib shadow/redefine-bindings?)))
 		   ;;This call will raise an exception if it represents an attempt to
 		   ;;illegally redefine a binding.
 		   (extend-rib! rib id lab shadow/redefine-bindings?)
 		   (let* ((binding  (with-exception-handler/input-form
 					rhs.stx
 				      (eval-macro-transformer rhs.core lexenv.run)))
+			  (flab     (generate-label-gensym id))
 			  ;;This LEXENV entry represents the definition of the fluid
 			  ;;syntax.
 			  (entry1   (cons lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax flab)))
