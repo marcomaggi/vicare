@@ -219,6 +219,7 @@
     current-run-lexenv
 
     ;; bindings for (vicare expander)
+    (rename (id->label syntactic-identifier->label))
     current-inferior-lexenv)
   (import (except (rnrs)
 		  eval

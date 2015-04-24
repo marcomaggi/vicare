@@ -844,10 +844,22 @@ source code to hold informations about the syntactic bindings introduced
 in that contour; ``lexical contours'' are, for example, @syntax{let} and
 similar syntaxes that can introduce bindings.
 
-The purpose of ribs is to map syntactic binding's names, the symbols as
-they appear in the source code, to the associated label gensyms; this
-map is used when establishing if a syntax object identifier in reference
-position is captured by an existing syntactic binding.
+The purpose of ribs is to map syntactic binding's source names (the
+symbols as they appear in the source code) to the associated label
+gensyms; this map is used when establishing if a syntax object
+identifier in reference position is captured by an existing syntactic
+binding.
+
+@menu
+* expander lexenv rib type::       The @objtype{rib} object type.
+* expander lexenv rib extending::  Extending ribs.
+* expander lexenv rib sealing::    Sealing ribs.
+* expander lexenv rib examples::   Ribs usage examples.
+@end menu
+
+@c page
+@node expander lexenv rib type
+@subsubsection The @objtype{rib} object type
 
 
 @deftp {Object Type} rib
@@ -880,20 +892,20 @@ the frequency vector.
 @end table
 @end deftp
 
-@menu
-* expander lexenv rib extending::  Extending ribs.
-* expander lexenv rib sealing::    Sealing ribs.
-@end menu
-
 @c page
 @node expander lexenv rib extending
 @subsubsection Extending ribs
 
 
 A non--sealed @objtype{rib} object is extensible: new syntactic bindings
-can be added to it.  Adding an identifier--to--label mapping to an
-extensible @objtype{rib} is achieved by prepending items to the field's
-lists.
+can be added to it.  This happens every time the expander processes
+internal definitions in a top--level body or internal body; examples
+are: the top--level body of a program; the top--level body of a library;
+the @syntax{internal-body} syntax; the internal body of @syntax{lambda};
+the internal body of @syntax{let} and its variants.
+
+Adding an identifier--to--label mapping to an extensible @objtype{rib}
+is achieved by prepending items to the field's lists.
 
 For example, an empty extensible @objtype{rib} has fields:
 
@@ -942,18 +954,17 @@ label* = (lab.hello lab.ciao)
 As further example, let's consider the syntactic form:
 
 @lisp
-(lambda ()
+(internal-body
   (define a 1)
   (define b 2)
   (list a b))
 @end lisp
 
 @noindent
-when starting to expand @syntax{lambda}'s internal body: a new
-@objtype{rib} is created and added to the metadata of the syntax object
-representing the body itself; when each internal definition is
-encountered, a new entry for the identifier is added (via side effect)
-to the @objtype{rib}:
+when starting to expand the internal body: a new @objtype{rib} is
+created and added to the metadata of the syntax object representing the
+body itself; when each internal definition is encountered, a new entry
+for the identifier is added (via side effect) to the @objtype{rib}:
 
 @example
 name*  = (b       a)
@@ -1019,7 +1030,11 @@ gensym: this causes the syntactic binding to be redefined.
 
 
 A non--empty @objtype{rib} can be ``sealed'' once all bindings are
-inserted.  To seal a @objtype{rib}, we convert the lists @code{name*},
+inserted.  This happens every time a syntax creates a lexical contour
+with a number of syntactic bindings that is immediately known; examples
+are: @syntax{lambda}, @syntax{let} and its variants.
+
+To seal a @objtype{rib}, we convert the lists @code{name*},
 @code{mark**} and @code{label*} to vectors and insert a frequency vector
 in the @code{sealed/freq} field.
 
@@ -1099,6 +1114,20 @@ access frequency, the scenario after the access is:
 name*       = #(f e d a b c)
 sealed/freq = #(1 1 1 1 0 0)
 @end example
+
+@c page
+@node expander lexenv rib examples
+@subsubsection Ribs usage examples
+
+
+Here we will inspect the fields of @objtype{stx} objects and
+@objtype{rib} objects to understand how the lexical environment is
+managed.  All the examples are given in executable code, but when the
+output of the pretty printer is shown: it is edited for readability.
+
+We will examine the expansion of nested @syntax{internal-body} uses:
+these syntaxes are the simplest because they create a single lexical
+contour.
 
 @c page
 @node expander lexenv stx

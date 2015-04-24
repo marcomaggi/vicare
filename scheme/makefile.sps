@@ -3536,6 +3536,8 @@
     (expand-form-to-core-language			$expander)
     (current-inferior-lexenv				$expander)
 
+    (syntactic-identifier->label			$expander)
+
     ;;These are only for internal use by the expander.
     (make-syntactic-binding-descriptor/struct-type-name)
     (make-syntactic-binding-descriptor/record-type-name)
