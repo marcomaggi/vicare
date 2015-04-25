@@ -2612,6 +2612,26 @@ Like @func{label->syntactic-binding-descriptor}, but if the binding
 descriptor represents a fluid syntax or a synonym syntax: do
 @strong{not} follow through; instead return the binding descriptor of
 the fluid or synonym syntax definition.
+
+@lisp
+(import (vicare)
+   (prefix (vicare expander) xp.))
+
+(define-fluid-syntax flu
+  (identifier-syntax 123))
+
+(begin-for-syntax
+  (xp.label->syntactic-binding-descriptor
+    (xp.syntactic-identifier->label #'flu)
+    (xp.current-inferior-lexenv)))
+@result{} (local-macro . (?procedure . ?sexp))
+
+(begin-for-syntax
+  (xp.label->syntactic-binding-descriptor/no-indirection
+    (xp.syntactic-identifier->label #'flu)
+    (xp.current-inferior-lexenv)))
+@result{} ($fluid . lab.flu)
+@end lisp
 @end defun
 
 @c page
