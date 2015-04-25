@@ -830,6 +830,7 @@ descriptor.  This alist is called @lexenv{}.
 * expander lexenv primitive::   Primitive syntactic bindings.
 * expander lexenv imported::    Imported syntactic bindings.
 * expander lexenv internal::    Internal syntactic bindings.
+* expander lexenv examples::    Lexical contours examples.
 * expander lexenv fluids::      How fluid syntaxes work.
 * expander lexenv synonyms::    How synonym syntaxes work.
 * expander lexenv inspection::  Lexical environment inspection.
@@ -855,7 +856,6 @@ binding.
 * expander lexenv rib type::       The @objtype{rib} object type.
 * expander lexenv rib extending::  Extending ribs.
 * expander lexenv rib sealing::    Sealing ribs.
-* expander lexenv rib examples::   Ribs usage examples.
 @end menu
 
 @c page
@@ -1115,39 +1115,6 @@ access frequency, the scenario after the access is:
 name*       = #(f e d a b c)
 sealed/freq = #(1 1 1 1 0 0)
 @end example
-
-@c page
-@node expander lexenv rib examples
-@subsubsection Ribs usage examples
-
-
-Here we will inspect the fields of @objtype{stx} objects and
-@objtype{rib} objects to understand how the lexical environment is used
-to represent lexical contours.
-
-All the examples are given in executable code, but when the output of
-the pretty printer is shown: it is edited for readability.  All the
-examples are @rnrs{6} programs, starting with the prelude:
-
-@lisp
-(import (vicare)
-  (prefix (vicare expander) xp.))
-@end lisp
-
-@noindent
-and we will inspect the syntactic identifiers and ribs from the body of
-a @syntax{begin-for-syntax} use.
-
-We will examine the expansion of nested @syntax{internal-body} uses:
-these syntaxes are the simplest because they create a single lexical
-contour.
-
-@c ------------------------------------------------------------------------
-
-@subsubheading The top--level environment
-
-The syntactic bindings established by the @clause{import} clause of
-programs are stored in a top--level @objtype{rib} object;
 
 @c page
 @node expander lexenv stx
@@ -2416,6 +2383,256 @@ environment query with invalid label value (not a symbol):
 @example
 (displaced-lexical . ())
 @end example
+
+@c page
+@node expander lexenv examples
+@subsection Lexical contours examples
+
+
+We will inspect the fields of @objtype{stx} objects and @objtype{rib}
+objects to understand how the lexical environment is used to represent
+lexical contours.
+
+All the examples are given in executable code, but when the output of
+the pretty printer is shown: it is edited for readability.  All the
+examples are @rnrs{6} programs, starting with the prelude:
+
+@lisp
+(import (vicare)
+  (prefix (vicare expander) xp.))
+
+(begin-for-syntax
+  (define (id->label id)
+    (xp.syntactic-identifier->label id))
+
+  (define (label->descriptor lab)
+    (xp.label->syntactic-binding-descriptor lab
+      (xp.current-inferior-lexenv)))
+
+  (define (id->descriptor id)
+    (label->descriptor (id->label id)))
+
+  (define (id-rib*/no-top id)
+    (reverse (cdr (reverse (xp.stx-rib* id)))))
+
+  #| end of BEGIN-FOR-SYNTAX |# )
+@end lisp
+
+@noindent
+and ending with the postlude:
+
+@lisp
+(flush-output-port (current-output-port))
+@end lisp
+
+@noindent
+and we will inspect the syntactic identifiers and ribs from the body of
+a @syntax{begin-for-syntax} use.
+
+We will examine the expansion of nested @syntax{internal-body} uses:
+these syntaxes are the simplest because they create a single lexical
+contour.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading The top--level environment
+@cindex Top--level lexical environment
+
+The syntactic bindings established by the @clause{import} clause of
+programs and libraries are stored in a @objtype{rib} object; this rib
+represents the @dfn{top--level environment} and it is referred to as
+@dfn{top--level rib}.  The descriptors of top--level syntactic bindings
+is stored in the @code{value} field of their label gensyms.
+
+We can look at a syntactic identifier as follows:
+
+@lisp
+(begin-for-syntax
+  (pretty-print #'display))
+@print{} #<syntactic-identifier expr=display mark*=(src)>
+@end lisp
+
+@noindent
+we see that: the source--name symbol is @samp{display}; the list of
+marks is @samp{(src)}; the list of rib objects is not displayed, because
+it is too long.  We can inspect the list of ribs too:
+
+@lisp
+(begin-for-syntax
+  (pretty-print (xp.stx-rib* #'display)))
+@print{} (#<rib name*=(...) mark**=(...) label*=(...) sealed/freq=#f>)
+@end lisp
+
+@noindent
+we do not show the full output, because it is really long: the list of
+ribs contains a single item being the top--level rib of the program;
+this top rib contains a tuple for every syntactic binding imported in
+the program.
+
+We can retrieve the elements of syntactic bindings from the top rib:
+
+@lisp
+(begin-for-syntax
+  (pretty-print (id->label #'display)))
+@print{} #@{g8342 |j/I5Wz!aG/dK!099|@}
+
+(begin-for-syntax
+  (pretty-print (id->descriptor #'display)))
+@print{} (core-prim . display)
+@end lisp
+
+If we define a lexical variable at the top--level of the program, we can
+then query its syntactic binding:
+
+@lisp
+(define a 1)
+
+(begin-for-syntax
+  (pretty-print (id->descriptor #'a)))
+@print{} (lexical . (#@{a |CMA8MuJzGAb=<0ga|@} . #f))
+@end lisp
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Single internal body
+
+Now let's create a single lexical contour with the syntax
+@syntax{internal-body} and compare a top--level binding with a local
+binding:
+
+@lisp
+(define A 1)
+(internal-body
+  (define B 2)
+  (begin-for-syntax
+    (pretty-print (syntax A))
+    (pretty-print (syntax B))
+    (pretty-print (eq? (xp.stx-rib* (syntax A))
+                       (xp.stx-rib* (syntax B)))))
+  (void))
+@print{} #<syntactic-identifier expr=A mark*=(src)>
+@print{} #<syntactic-identifier expr=B mark*=(src)>
+@print{} #t
+@end lisp
+
+@noindent
+we see that the syntactic identifiers created by @syntax{syntax} in the
+@syntax{begin-for-expand} have the same list of marks and the same list
+of ribs.
+
+Let's see the ribs:
+
+@lisp
+(define A 1)
+(internal-body
+  (define B 2)
+  (begin-for-syntax
+    (let ((ribs (xp.stx-rib* #'A)))
+      (pretty-print (length ribs))
+      (pretty-print ribs)))
+  (void))
+@print{} 2
+@print{} (#<rib name*=(B) mark**=((src)) label*=(lab.B)>
+    #<rib name*=(A ...) mark**=((src) ...) label*=(lab.A ...)>)
+@end lisp
+
+@noindent
+the list of ribs in the identifier @samp{#'A} has two items: the first
+is the rib associated to @syntax{internal-body}; the second is the top
+rib.  We see the internal rib holds a single tuple describing the
+syntactic binding for @samp{B}; the syntactic binding for @samp{A} is in
+the top rib.
+
+With this layout we can understand what the function @func{id->label}
+does in the call:
+
+@lisp
+(define A 1)
+(internal-body
+  (begin-for-syntax
+    (pretty-print (id->label #'A)))
+  (void))
+@print{} lab.A
+@end lisp
+
+@noindent
+it extracts from its argument the symbol source--name @samp{A}, the list
+of marks @samp{(src)} and the list of ribs, then it scans the list of
+ribs left--to--right looking for a tuple whose source name is @func{eq?}
+to @samp{A} and whose list of marks is @func{equal?} to @samp{(src)}; it
+finds one in the top rib.
+
+This action of looking for a tuple with the same source name and the
+same marks is the @dfn{syntactic identifier resolution}, and we say that
+the tuple @dfn{captures} the identifier.
+
+This is not the whole story: to handle macro expansion we need more than
+this; but for lexical contours: building a list of ribs and using a
+single mark is enough.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Double internal body
+
+Now let's create two nested lexical contours with the syntax
+@syntax{internal-body} and inspect the ribs:
+
+@lisp
+(internal-body
+  (define A 1)
+  (internal-body
+    (define A 2)
+    (begin-for-syntax
+      (pretty-print #'A)
+      (pretty-print (xp.stx-rib* #'A)))
+    (void)))
+@print{} #<syntactic-identifier expr=A mark*=(src)>
+@print{} (#<rib name*=(A) mark**=((src)) label*=(lab.A.2)>
+    #<rib name*=(A) mark**=((src)) label*=(lab.A.1)>
+    #<rib name*=(...) mark**=(...) label*=(...)>)
+@end lisp
+
+@noindent
+we see that @code{(syntax A)} builds an identifier whose list of ribs
+has @math{3} items: the rib of the internal @syntax{internal-body}; the
+rib of the external @syntax{internal-body}; the top rib.
+
+We avoid defining top--level bindings because printing the top rib is
+annoying; for this reason we use the function @func{id-rib*/no-top}
+which cuts out the top rib from a list of ribs (the top rib is always
+the last item in a list of ribs):
+
+@lisp
+(internal-body
+  (define A 1)
+  (internal-body
+    (define A 2)
+    (begin-for-syntax
+      (pretty-print #'A)
+      (pretty-print (id-rib*/no-top #'A)))
+    (void)))
+@print{} #<syntactic-identifier expr=A mark*=(src)>
+@print{} (#<rib name*=(A) mark**=((src)) label*=(lab.A.2)>
+    #<rib name*=(A) mark**=((src)) label*=(lab.A.1)>)
+@end lisp
+
+@noindent
+we see that both the ribs have a tuple with source--name @samp{A} and
+marks @samp{(src)}, but the rib of the internal @syntax{internal-body}
+comes first; so the internal syntactic binding for @samp{A} is the one
+that captures the identifier:
+
+@lisp
+(internal-body
+  (define A 1)
+  (internal-body
+    (define A 2)
+    (begin-for-syntax
+      (pretty-print (id->label #'A)))
+    (void)))
+@print{} lab.A.2
+@end lisp
+
 
 @c page
 @node expander lexenv fluids
