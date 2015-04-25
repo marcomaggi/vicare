@@ -1062,143 +1062,146 @@
 
 ;;;; lexical environment: mapping labels to syntactic binding descriptors
 
-(module (label->syntactic-binding-descriptor)
+(module (label->syntactic-binding-descriptor
+	 label->syntactic-binding-descriptor/no-indirection)
 
-  (case-define label->syntactic-binding-descriptor
-    ;;Look up the  symbol LABEL in the  LEXENV as well as  in the global
-    ;;environment.   If an  entry with  key LABEL  is found:  return the
-    ;;associated syntactic  binding descriptor; if no  matching entry is
-    ;;found, return one of the special descriptors:
+  (define (label->syntactic-binding-descriptor/no-indirection label lexenv)
+    ;;Look up the  symbol LABEL in the  LEXENV as well as in  the global environment.
+    ;;If an  entry with key LABEL  is found: return the  associated syntactic binding
+    ;;descriptor;  if  no  matching  entry  is  found,  return  one  of  the  special
+    ;;descriptors:
     ;;
     ;;   (displaced-lexical . ())
     ;;   (displaced-lexical . #f)
     ;;
-    ;;If the  binding descriptor  represents a  fluid syntax  or synonym
-    ;;syntax: follow  through and return the  innermost re-definition of
-    ;;the binding.
+    ;;If the  binding descriptor represents a  fluid syntax or a  synonym syntax: *do
+    ;;not* follow through and return the binding descriptor of the syntax definition.
     ;;
-    ((label lexenv)
-     (label->syntactic-binding-descriptor label lexenv '()))
-    ((label lexenv accum-labels)
-     (let ((binding (label->syntactic-binding-descriptor/no-indirection label lexenv)))
-       (cond ((fluid-syntax-binding-descriptor? binding)
-	      ;;Fluid syntax  bindings (created  by DEFINE-FLUID-SYNTAX)
-	      ;;require  different   logic.   The   lexical  environment
-	      ;;contains the main fluid  syntax definition entry and one
-	      ;;or more subordinate fluid syntax re-definition entries.
-	      ;;
-	      ;;LABEL  is  associated  to the  main  binding  definition
-	      ;;entry;  its syntactic  binding  descriptor contains  the
-	      ;;fluid  label,  which  is   associated  to  one  or  more
-	      ;;subordinate re-definitions.  We  extract the fluid label
-	      ;;from  BINDING,  then  search  for  the  innermost  fluid
-	      ;;binding associated to it.
-	      ;;
-	      ;;Such  search for  the fluid  re-definition binding  must
-	      ;;begin from  LEXENV, and then in  the global environment.
-	      ;;This  is because  we can  nest at  will FLUID-LET-SYNTAX
-	      ;;forms  that   redefine  the   binding  by   pushing  new
-	      ;;re-definition entries  on the LEXENV.  To  reach for the
-	      ;;innermost we must query the LEXENV first.
-	      ;;
-	      ;;If there  is no binding descriptor  for FLUID-LABEL: the
-	      ;;return value will be:
-	      ;;
-	      ;;   (displaced-lexical . #f)
-	      ;;
-	      (let* ((fluid-label   (fluid-syntax-binding-descriptor.fluid-label binding))
-		     (fluid-binding (cond ((assq fluid-label lexenv)
-					   => lexenv-entry.binding-descriptor)
-					  (else
-					   (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
-		(if (synonym-syntax-binding-descriptor? fluid-binding)
-		    (%follow-through-synonym-descriptor binding lexenv accum-labels)
-		  fluid-binding)))
+    ;;Since all  labels are unique,  it doesn't  matter which environment  we consult
+    ;;first; we lookup the global environment first because it's faster.
+    ;;
+    (cond ((not label)
+	   ;;If LABEL is  the result of a  previous call to ID->LABEL  for an unbound
+	   ;;identifier: LABEL  is false.  This  check makes  it possible to  use the
+	   ;;concise expression:
+	   ;;
+	   ;;   (define ?binding
+	   ;;     (label->syntactic-binding-descriptor (id->label ?id) ?lexenv))
+	   ;;
+	   ;;provided that later we check for the type of ?BINDING.
+	   SYNTACTIC-BINDING-DESCRIPTOR/INVALID-LABEL)
 
-	     ((synonym-syntax-binding-descriptor? binding)
-	      (%follow-through-synonym-descriptor binding lexenv accum-labels))
+	  ;;If  a  label is  associated  to  a  syntactic  binding from  a  library's
+	  ;;EXPORT-ENV (including  those established by  the boot image): it  has the
+	  ;;associated descriptor in  its "value" field; otherwise such  field is set
+	  ;;to #f.
+	  ;;
+	  ;;So, if we have a label, we can check if it references an imported binding
+	  ;;simply    by    checking    its    "value"   field;    this    is    what
+	  ;;LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR does.
+	  ;;
+	  ((label->imported-syntactic-binding-descriptor label)
+	   => (lambda (descriptor)
+		;;The first time we access  a syntactic binding descriptor representing
+		;;a core record-type name: we mutate it to a format usable by the code.
+		(when ($core-record-type-name-binding-descriptor? descriptor)
+		  (core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
+		descriptor))
 
-	     (else
-	      binding)))))
+	  ;;Search the given LEXENV.
+	  ;;
+	  ((assq label lexenv)
+	   => lexenv-entry.binding-descriptor)
+
+	  ;;Search the interaction top-level environment, if any.
+	  ;;
+	  ((top-level-context)
+	   => (lambda (env)
+		(cond ((assq label (interaction-env-lab.loc/lex* env))
+		       => (lambda (lab.loc/lex)
+			    ;;Fabricate   a   binding   descriptor   representing   a
+			    ;;non-assigned  lexical variable.   We  need to  remember
+			    ;;that for interaction environments: we reuse the storage
+			    ;;location gensym as lexical gensym.
+			    (make-syntactic-binding-descriptor/lexical-var (cdr lab.loc/lex))))
+		      (else
+		       ;;Unbound label.
+		       SYNTACTIC-BINDING-DESCRIPTOR/UNBOUND-LABEL))))
+
+	  ;;Unbound label.
+	  ;;
+	  (else
+	   SYNTACTIC-BINDING-DESCRIPTOR/UNBOUND-LABEL)))
+
+  (define (label->syntactic-binding-descriptor label lexenv)
+    ;;Look up the  symbol LABEL in the  LEXENV as well as in  the global environment.
+    ;;If an  entry with key LABEL  is found: return the  associated syntactic binding
+    ;;descriptor;  if  no  matching  entry  is  found,  return  one  of  the  special
+    ;;descriptors:
+    ;;
+    ;;   (displaced-lexical . ())
+    ;;   (displaced-lexical . #f)
+    ;;
+    ;;If the binding  descriptor represents a fluid syntax or  synonym syntax: follow
+    ;;through and return the innermost re-definition of the binding.
+    ;;
+    (%label->descriptor label lexenv '()))
+
+  (define (%label->descriptor label lexenv accum-labels)
+    (let ((binding (label->syntactic-binding-descriptor/no-indirection label lexenv)))
+      (cond ((eq? 'displaced-lexical (car binding))
+	     binding)
+	    ((fluid-syntax-binding-descriptor? binding)
+	     (%follow-through-fluid-descriptor binding lexenv accum-labels))
+
+	    ((synonym-syntax-binding-descriptor? binding)
+	     (%follow-through-synonym-descriptor binding lexenv accum-labels))
+
+	    (else
+	     binding))))
+
+  (define (%follow-through-fluid-descriptor binding lexenv accum-labels)
+    ;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require different logic.
+    ;;The lexical environment contains the main fluid syntax definition entry and one
+    ;;or more subordinate fluid syntax re-definition entries.
+    ;;
+    ;;LABEL is associated to the main binding definition entry; its syntactic binding
+    ;;descriptor  contains the  fluid  label,  which is  associated  to  one or  more
+    ;;subordinate  re-definitions.  We  extract the  fluid label  from BINDING,  then
+    ;;search for the innermost fluid binding associated to it.
+    ;;
+    ;;Such search  for the fluid  re-definition binding  must begin from  LEXENV, and
+    ;;then  in  the  global  environment.   This  is because  we  can  nest  at  will
+    ;;FLUID-LET-SYNTAX forms that  redefine the binding by  pushing new re-definition
+    ;;entries on  the LEXENV.  To  reach for the innermost  we must query  the LEXENV
+    ;;first.
+    ;;
+    ;;If there is no binding descriptor for FLUID-LABEL: the return value will be:
+    ;;
+    ;;   (displaced-lexical . #f)
+    ;;
+    (let* ((fluid-label   (fluid-syntax-binding-descriptor.fluid-label binding))
+	   (fluid-binding (cond ((assq fluid-label lexenv)
+				 => lexenv-entry.binding-descriptor)
+				(else
+				 (label->syntactic-binding-descriptor/no-indirection fluid-label '())))))
+      (if (synonym-syntax-binding-descriptor? fluid-binding)
+	  (%follow-through-synonym-descriptor binding lexenv accum-labels)
+	fluid-binding)))
 
   (define (%follow-through-synonym-descriptor binding lexenv accum-labels)
     (let ((synonym-label (synonym-syntax-binding-descriptor.synonym-label binding)))
       (if (memq synonym-label accum-labels)
 	  (syntax-violation #f "circular reference detected while resolving synonym transformers" #f)
-	(label->syntactic-binding-descriptor synonym-label lexenv (cons synonym-label accum-labels)))))
+	(%label->descriptor synonym-label lexenv (cons synonym-label accum-labels)))))
+
+  (define-constant SYNTACTIC-BINDING-DESCRIPTOR/UNBOUND-LABEL
+    '(displaced-lexical . #f))
+
+  (define-constant SYNTACTIC-BINDING-DESCRIPTOR/INVALID-LABEL
+    '(displaced-lexical . ()))
 
   #| end of module |# )
-
-(define (label->syntactic-binding-descriptor/no-indirection label lexenv)
-  ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
-  ;;environment.   If an  entry  with  key LABEL  is  found: return  the
-  ;;associated  syntactic binding  descriptor; if  no matching  entry is
-  ;;found, return one of the special descriptors:
-  ;;
-  ;;   (displaced-lexical . ())
-  ;;   (displaced-lexical . #f)
-  ;;
-  ;;If the  binding descriptor  represents a fluid  syntax or  a synonym
-  ;;syntax: *do not* follow through and return the binding descriptor of
-  ;;the syntax definition.
-  ;;
-  ;;Since all labels are unique,  it doesn't matter which environment we
-  ;;consult first; we  lookup the global environment  first because it's
-  ;;faster.
-  ;;
-  (cond ((not label)
-	 ;;If LABEL is the result of a previous call to ID->LABEL for an
-	 ;;unbound  identifier: LABEL  is  false.  This  check makes  it
-	 ;;possible to use the concise expression:
-	 ;;
-	 ;;   (define ?binding
-	 ;;     (label->syntactic-binding-descriptor (id->label ?id) ?lexenv))
-	 ;;
-	 ;;provided that later we check for the type of ?BINDING.
-	 '(displaced-lexical))
-
-	;;If a label is associated to  a binding from the the boot image
-	;;environment or  to a binding  from a library's  EXPORT-ENV: it
-	;;has the associated descriptor  in its "value" field; otherwise
-	;;such field is set to #f.
-	;;
-	;;So,  if we  have a  label, we  can check  if it  references an
-	;;imported binding simply by checking its "value" field; this is
-	;;what LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR does.
-	;;
-	((label->imported-syntactic-binding-descriptor label)
-	 => (lambda (descriptor)
-	      ;;The first time we access  a syntactic binding descriptor representing
-	      ;;a core record-type name: we mutate it to a format usable by the code.
-	      (when ($core-record-type-name-binding-descriptor? descriptor)
-		(core-record-type-name-binding-descriptor->record-type-name-binding-descriptor! descriptor))
-	      descriptor))
-
-	;;Search the given LEXENV.
-	;;
-	((assq label lexenv)
-	 => lexenv-entry.binding-descriptor)
-
-	;;Search the interaction top-level environment, if any.
-	;;
-	((top-level-context)
-	 => (lambda (env)
-	      (cond ((assq label (interaction-env-lab.loc/lex* env))
-		     => (lambda (lab.loc/lex)
-			  ;;Fabricate a  binding descriptor representing
-			  ;;an immutated  lexical variable.  We  need to
-			  ;;remember that  for interaction environments:
-			  ;;we  reuse  the  storage location  gensym  as
-			  ;;lexical gensym.
-			  (make-syntactic-binding-descriptor/lexical-var (cdr lab.loc/lex))))
-		    (else
-		     ;;Unbound label.
-		     '(displaced-lexical . #f)))))
-
-	;;Unbound label.
-	;;
-	(else
-	 '(displaced-lexical . #f))))
 
 
 ;;;; marks of lexical contours

@@ -832,6 +832,7 @@ descriptor.  This alist is called @lexenv{}.
 * expander lexenv internal::    Internal syntactic bindings.
 * expander lexenv fluids::      How fluid syntaxes work.
 * expander lexenv synonyms::    How synonym syntaxes work.
+* expander lexenv inspection::  Lexical environment inspection.
 @end menu
 
 @c page
@@ -1121,13 +1122,32 @@ sealed/freq = #(1 1 1 1 0 0)
 
 
 Here we will inspect the fields of @objtype{stx} objects and
-@objtype{rib} objects to understand how the lexical environment is
-managed.  All the examples are given in executable code, but when the
-output of the pretty printer is shown: it is edited for readability.
+@objtype{rib} objects to understand how the lexical environment is used
+to represent lexical contours.
+
+All the examples are given in executable code, but when the output of
+the pretty printer is shown: it is edited for readability.  All the
+examples are @rnrs{6} programs, starting with the prelude:
+
+@lisp
+(import (vicare)
+  (prefix (vicare expander) xp.))
+@end lisp
+
+@noindent
+and we will inspect the syntactic identifiers and ribs from the body of
+a @syntax{begin-for-syntax} use.
 
 We will examine the expansion of nested @syntax{internal-body} uses:
 these syntaxes are the simplest because they create a single lexical
 contour.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading The top--level environment
+
+The syntactic bindings established by the @clause{import} clause of
+programs are stored in a top--level @objtype{rib} object;
 
 @c page
 @node expander lexenv stx
@@ -2521,6 +2541,72 @@ where @meta{synonym-label} is the label bound to the identifier
 associated @meta{label} and so the @meta{synonym-label}; then we can
 ``follow through'' @meta{synonym-label} to retrieve the actual binding
 descriptor associated to @meta{id}.
+
+@c page
+@node expander lexenv inspection
+@subsection Lexical environment inspection
+
+
+The following syntactic bindings are exported by the library
+@library{vicare expander}.
+
+
+@defun syntactic-identifier->label @var{id}
+Given the syntactic identifier @var{id} search its sequence of ribs for
+a syntactic binding having the same source--name and marks.  If
+successful: return the syntactic binding's label gensym; otherwise
+return @false{}.
+
+@lisp
+(import (vicare) (prefix (vicare expander) xp.))
+
+(xp.syntactic-identifier->label #'display)
+@result{} #@{lab.display |PeEZ8c2>r<R&lTRg|@}
+@end lisp
+@end defun
+
+
+@defun label->syntactic-binding-descriptor @var{label} @var{lexenv}
+Look up the symbol @var{label} in the @var{lexenv} as well as in the
+global environment.  If an entry with key @var{label} is found: return
+the associated syntactic binding descriptor; if no matching entry is
+found, return one of the special descriptors:
+
+@table @code
+@item (displaced-lexical . #f)
+If the @var{label} is unbound in @var{lexenv}.
+
+@item (displaced-lexical . ())
+If the argument @var{label} is invalid.
+@end table
+
+If the binding descriptor represents a fluid syntax or synonym syntax:
+follow through and return the innermost redefinition of the binding.
+
+@lisp
+(import (vicare) (prefix (vicare expander) xp.))
+
+(begin-for-syntax
+  (xp.label->syntactic-binding-descriptor
+      (xp.syntactic-identifier->label #'display)
+      (xp.current-inferior-lexenv)))
+@result{} (core-prim . display)
+
+(begin-for-syntax
+  (xp.label->syntactic-binding-descriptor
+      'label
+      (xp.current-inferior-lexenv)))
+@result{} (displaced-lexical . #f)
+@end lisp
+@end defun
+
+
+@defun label->syntactic-binding-descriptor/no-indirection
+Like @func{label->syntactic-binding-descriptor}, but if the binding
+descriptor represents a fluid syntax or a synonym syntax: do
+@strong{not} follow through and return the binding descriptor of the
+syntax definition.
+@end defun
 
 @c page
 @node expander utils
