@@ -1115,7 +1115,7 @@
 
 	  ;;Search the interaction top-level environment, if any.
 	  ;;
-	  ((top-level-context)
+	  #;((top-level-context)
 	   => (lambda (env)
 		(cond ((assq label (interaction-env-lab.loc/lex* env))
 		       => (lambda (lab.loc/lex)
