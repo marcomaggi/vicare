@@ -353,23 +353,27 @@
 		 (values (psi-core-expr psi) (rtc))))))
 
 	  ((interaction-env? env)
-	   (let ((rib         (interaction-env-rib env))
-		 (lexenv.run  (interaction-env-lexenv env))
-		 (rtc         (make-collector)))
-	     (let ((expr.stx (wrap-source-expression expr rib)))
+	   (let ((rib         (interaction-env-rib    env))
+		 (lexenv.run  (interaction-env-lexenv env)))
+	     (let* ((expr.stx (wrap-source-expression expr rib))
+		    (rtc      (make-collector)))
 	       (receive (expr.core lexenv.run^)
 		   (parametrise ((top-level-context env)
 				 (inv-collector rtc)
 				 (vis-collector (make-collector))
 				 (imp-collector (make-collector)))
 		     (%chi-interaction-expr expr.stx rib lexenv.run))
+		 ;;All the  new syntactic bindings  added to the  lexical environment
+		 ;;are persistent across code evaluations.   The rib has already been
+		 ;;mutated  to hold  them.   Here  we store  in  ENV  the new  lexenv
+		 ;;entries.
 		 (set-interaction-env-lexenv! env lexenv.run^)
 		 (values expr.core (rtc))))))
 
 	  (else
 	   (assertion-violation __module_who__ "not an environment" env))))
 
-  (define (%chi-interaction-expr expr.stx rib lexenv.run)
+  (define (%chi-interaction-expr expr.stx rib lexenv.all)
     (receive (trailing-init-form*.stx
 	      lexenv.run^ lexenv.expand^
 	      lex* qrhs*
@@ -411,7 +415,7 @@
 	      ;;   vicare> (define-fluid-syntax b (identifier-syntax 2))
 	      ;;
 	      (shadow/redefine-bindings?   #t))
-	  (chi-body* (list expr.stx) lexenv.run lexenv.run
+	  (chi-body* (list expr.stx) lexenv.all lexenv.all
 		     '() '() '() '() '() rib
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (let ((expr*.core (%expand-interaction-qrhs*/init*
