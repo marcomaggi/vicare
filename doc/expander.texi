@@ -2610,8 +2610,8 @@ follow through and return the innermost redefinition of the binding.
 @defun label->syntactic-binding-descriptor/no-indirection
 Like @func{label->syntactic-binding-descriptor}, but if the binding
 descriptor represents a fluid syntax or a synonym syntax: do
-@strong{not} follow through and return the binding descriptor of the
-syntax definition.
+@strong{not} follow through; instead return the binding descriptor of
+the fluid or synonym syntax definition.
 @end defun
 
 @c page
