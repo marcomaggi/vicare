@@ -300,9 +300,10 @@
   (()
    (new-interaction-environment (base-of-interaction-library)))
   ((libref)
-   (let* ((lib (find-library-by-reference libref))
-	  (rib (export-subst->rib (library-export-subst lib))))
-     (make-interaction-env rib '() '()))))
+   (let* ((lib    (find-library-by-reference libref))
+	  (rib    (export-subst->rib (library-export-subst lib)))
+	  (lexenv '()))
+     (make-interaction-env rib lexenv))))
 
 (define interaction-environment
   ;;When  called  with  no   arguments:  return  an  environment  object
@@ -490,9 +491,9 @@
 	;;Convert  the expanded  language  code to  core language  code,
 	;;compile it and evaluate it.
 	(compiler.eval-core (expanded->core invoke-code))
-	(make-interaction-env (export-subst->rib export-subst)
-			      (map %export-env-entry->lexenv-entry export-env)
-			      '()))))
+	(let ((rib    (export-subst->rib export-subst))
+	      (lexenv (map %export-env-entry->lexenv-entry export-env)))
+	  (make-interaction-env rib lexenv)))))
 
   (define (%export-env-entry->lexenv-entry export-env-entry)
     (let* ((label           (car export-env-entry))

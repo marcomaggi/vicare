@@ -37,7 +37,6 @@
     make-interaction-env		interaction-env?
     interaction-env-rib			set-interaction-env-rib!
     interaction-env-lexenv		set-interaction-env-lexenv!
-    interaction-env-lab.loc/lex*	set-interaction-env-lab.loc/lex*!
 
     ;; operations
     environment?
@@ -342,10 +341,6 @@
    lexenv
 		;The LEXENV  for both run  time and expand  time.  It maps  labels to
 		;syntactic binding descriptors.
-   lab.loc/lex*
-		;An alist having label gensyms as keys and loc gensyms as values; the
-		;loc gensyms are also used as lex gensyms.  It maps binding labels to
-		;storage location gensyms.
    )
   (lambda (S port sub-printer)
     (display "#<interaction-environment>" port)))
@@ -1112,21 +1107,6 @@
 	  ;;
 	  ((assq label lexenv)
 	   => lexenv-entry.binding-descriptor)
-
-	  ;;Search the interaction top-level environment, if any.
-	  ;;
-	  #;((top-level-context)
-	   => (lambda (env)
-		(cond ((assq label (interaction-env-lab.loc/lex* env))
-		       => (lambda (lab.loc/lex)
-			    ;;Fabricate   a   binding   descriptor   representing   a
-			    ;;non-assigned  lexical variable.   We  need to  remember
-			    ;;that for interaction environments: we reuse the storage
-			    ;;location gensym as lexical gensym.
-			    (make-syntactic-binding-descriptor/lexical-var (cdr lab.loc/lex))))
-		      (else
-		       ;;Unbound label.
-		       SYNTACTIC-BINDING-DESCRIPTOR/UNBOUND-LABEL))))
 
 	  ;;Unbound label.
 	  ;;
