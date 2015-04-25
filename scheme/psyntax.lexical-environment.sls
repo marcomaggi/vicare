@@ -1075,7 +1075,7 @@
     ;;Since all  labels are unique,  it doesn't  matter which environment  we consult
     ;;first; we lookup the global environment first because it's faster.
     ;;
-    (cond ((not label)
+    (cond ((not (symbol? label))
 	   ;;If LABEL is  the result of a  previous call to ID->LABEL  for an unbound
 	   ;;identifier: LABEL  is false.  This  check makes  it possible to  use the
 	   ;;concise expression:

@@ -2597,6 +2597,12 @@ follow through and return the innermost redefinition of the binding.
       'label
       (xp.current-inferior-lexenv)))
 @result{} (displaced-lexical . #f)
+
+(begin-for-syntax
+  (xp.label->syntactic-binding-descriptor
+      123
+      (xp.current-inferior-lexenv)))
+@result{} (displaced-lexical . ())
 @end lisp
 @end defun
 
