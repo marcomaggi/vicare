@@ -2394,8 +2394,9 @@ objects to understand how the lexical environment is used to represent
 lexical contours.
 
 All the examples are given in executable code, but when the output of
-the pretty printer is shown: it is edited for readability.  All the
-examples are @rnrs{6} programs, starting with the prelude:
+the pretty printer is shown: it is edited for readability.  Unless
+otherwise specified: all the examples are @rnrs{6} programs, starting
+with the prelude:
 
 @lisp
 (import (vicare)
@@ -2414,6 +2415,9 @@ examples are @rnrs{6} programs, starting with the prelude:
 
   (define (id-rib*/no-top id)
     (reverse (cdr (reverse (xp.stx-rib* id)))))
+
+  (define (eq-ribs? id1 id2)
+    (eq? (xp.stx-rib* id1) (xp.stx-rib* id2)))
 
   #| end of BEGIN-FOR-SYNTAX |# )
 @end lisp
@@ -2507,8 +2511,7 @@ binding:
   (begin-for-syntax
     (pretty-print (syntax A))
     (pretty-print (syntax B))
-    (pretty-print (eq? (xp.stx-rib* (syntax A))
-                       (xp.stx-rib* (syntax B)))))
+    (pretty-print (eq-ribs? (syntax A) (syntax B))))
   (void))
 @print{} #<syntactic-identifier expr=A mark*=(src)>
 @print{} #<syntactic-identifier expr=B mark*=(src)>
@@ -2537,7 +2540,7 @@ Let's see the ribs:
 @end lisp
 
 @noindent
-the list of ribs in the identifier @samp{#'A} has two items: the first
+the list of ribs in the identifier @samp{(syntax A)} has two items: the first
 is the rib associated to @syntax{internal-body}; the second is the top
 rib.  We see the internal rib holds a single tuple describing the
 syntactic binding for @samp{B}; the syntactic binding for @samp{A} is in
@@ -2569,6 +2572,132 @@ the tuple @dfn{captures} the identifier.
 This is not the whole story: to handle macro expansion we need more than
 this; but for lexical contours: building a list of ribs and using a
 single mark is enough.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Single internal body and different phases
+
+Let's consider the syntactic form:
+
+@lisp
+(internal-body
+  (begin-for-syntax
+    (void))
+  (void))
+@end lisp
+
+@noindent
+the @syntax{internal-body} is expanded at phase 1 and evaluated at phase
+0; the @syntax{begin-for-syntax} is expanded at phase 2 and evaluated at
+phase 1.  The code in @syntax{begin-for-syntax} is evaluated when the
+code in @syntax{internal-body} is expanded.
+
+Let's compare two syntactic identifiers captured by syntactic bindings
+established at different expansion phases:
+
+@lisp
+(internal-body
+  (define A 1)
+  (begin-for-syntax
+    (define B 1)
+    (pretty-print #'A)
+    (pretty-print #'B)
+    (printf "same ribs? ~a\n" (eq-ribs? #'A #'B))
+    (pretty-print (id-rib*/no-top #'A)))
+  (void))
+@print{} #<syntactic-identifier expr=A mark*=(src)>
+@print{} #<syntactic-identifier expr=B mark*=(src)>
+@print{} same ribs? #t
+@print{} (#<rib name*=(B A) mark**=((src) (src)) label*=(lab.B lab.A)>)
+@end lisp
+
+@noindent
+let's acknowledge that:
+
+@itemize
+@item
+The syntactic binding @samp{A} is established when
+@syntax{internal-body} is expanded: at phase 1.
+
+@item
+The syntactic binding @samp{B} is established when
+@syntax{begin-for-syntax} is expanded: at phase 2.
+
+@item
+The @objtype{stx} objects representing the syntactic identifiers
+@samp{(syntax A)} and @samp{(syntax B)} have the same marks and ribs.
+
+@item
+The @objtype{rib} of @syntax{internal-body} has tuples for both @samp{A}
+and @samp{B}.
+@end itemize
+
+@noindent
+so the expansion/evaluation phases are @strong{not} distinguished in the
+@objtype{stx} objects and the @objtype{rib} objects.  Under
+@value{PRJNAME}: phase 0 has its @lexenv{}; phase 1 and the other phases
+have their @lexenv{}.
+
+Let's try to resolve the identifiers using the inferior @lexenv{} from
+the @syntax{begin-for-expand}:
+
+@lisp
+(internal-body
+  (define A 1)
+  (begin-for-syntax
+    (define B 1)
+    (pretty-print (id->label      #'A))
+    (pretty-print (id->label      #'B))
+    (pretty-print (id->descriptor #'A))
+    (pretty-print (id->descriptor #'B)))
+  (void))
+@print{} lab.A
+@print{} lab.B
+@print{} (lexical . (lab.A . #f))
+@print{} (displaced-lexical . #f)
+@end lisp
+
+@noindent
+we see that the labels are retrieved correctly from the rib object; the
+descriptor of @samp{A} is retrieved from the inferior @lexenv{}, while
+the label of @samp{B} appears unbound.
+
+To retrieve the descriptor of @samp{B} we do:
+
+@lisp
+(internal-body
+  (begin-for-syntax
+    (define B 1)
+    (begin-for-syntax
+      (pretty-print (id->label      #'B))
+      (pretty-print (id->descriptor #'B))))
+  (void))
+@print{} lab.B
+@print{} (lexical . (lab.B . #f))
+@end lisp
+
+@noindent
+let's acknowledge that:
+
+@itemize
+@item
+The code in the external @syntax{begin-for-syntax} is expanded at phase
+2 and evaluated at phase 1.  If we evaluate
+@func{current-inferior-lexenv} in the body of the external
+@syntax{begin-for-syntax}: we retrieve the @lexenv{} holding descriptors
+for phase 1.
+
+@item
+The code in the internal @syntax{begin-for-syntax} is expanded at phase
+3 and evaluated at phase 2.  If we evaluate
+@func{current-inferior-lexenv} in the body of the internal
+@syntax{begin-for-syntax}: we retrieve the @lexenv{} holding descriptors
+for phase 2.
+@end itemize
+
+@noindent
+for this reason: from the internal @syntax{begin-for-syntax} we are able
+to retrieve the descriptor of @samp{B}.
 
 @c ------------------------------------------------------------------------
 

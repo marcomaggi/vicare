@@ -44,7 +44,7 @@
     strip-source-info
     generate-debug-calls
     check-compiler-pass-preconditions
-    (rename (option.descriptive-labels descriptive-labels))
+    generate-descriptive-labels?
     open-mvcalls
 
     ;; middle pass inspection
@@ -134,7 +134,6 @@
 	  code-entry-adjustment)
     (prefix (only (ikarus.options)
 		  strict-r6rs
-		  descriptive-labels
 		  verbose?)
 	    option.))
 
@@ -203,6 +202,9 @@
   ;;Set to true when the option "--debug" is used on the command line of
   ;;the executable "vicare"; else set to #f.
   ;;
+  (make-parameter #f))
+
+(define generate-descriptive-labels?
   (make-parameter #f))
 
 (define strip-source-info

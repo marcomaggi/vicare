@@ -33,7 +33,6 @@
     debug-mode-enabled?
     drop-assertions?
     strict-r6rs
-    descriptive-labels
     descriptive-marks
     ;; tagged language parameter options
     tagged-language.rhs-tag-propagation?
@@ -158,11 +157,6 @@
 ;;also set to true all the tagged language sub-parameters.
 ;;
 (define-parameter-boolean-option tagged-language?)
-
-;;Turn on generation  of descriptive labels in Assembly language  code and labels for
-;;expander's bindings.  It is used by the compiler and the expander.
-;;
-(define-parameter-boolean-option descriptive-labels)
 
 ;;Turn  on  generation of  descriptive  marks  in the  expander.   It  is useful  for
 ;;debugging purposes.

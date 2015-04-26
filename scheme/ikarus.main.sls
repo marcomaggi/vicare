@@ -59,7 +59,6 @@
 		  verbose?
 		  debug-mode-enabled?
 		  drop-assertions?
-		  descriptive-labels
 		  descriptive-marks
 		  print-loaded-libraries?
 		  print-debug-messages?
@@ -561,14 +560,6 @@
 	   (option.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--descriptive-labels")
-	   (option.descriptive-labels #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-descriptive-labels")
-	   (option.descriptive-labels #f)
-	   (next-option (cdr args) k))
-
 	  ((%option= "--descriptive-marks")
 	   (option.descriptive-marks #t)
 	   (next-option (cdr args) k))
@@ -932,15 +923,6 @@ Other options:
         Do  not  strictly  follow  R6RS  specifications:  enable  Vicare
         extensions.  Disables the effect  of --strict-r6rs.  This is the
         default.
-
-   --descriptive-labels
-        For debugging purposes: generate  descriptive labels in expanded
-        and assembly code.
-
-   --no-descriptive-labels
-        For debugging  purposes: do  not generate descriptive  labels in
-        expanded  code  and  assembly code.  Disables   the   effect  of
-        --descriptive-labels.  This is the default.
 
    --descriptive-marks
         For debugging purposes: generate descriptive marks.

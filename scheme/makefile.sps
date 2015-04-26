@@ -255,7 +255,7 @@
 ;;readable labels.  Generating  descriptive labels is slower, so this  is usually set
 ;;to false.  (Marco Maggi; Sun Nov 16, 2014)
 ;;
-(compiler.descriptive-labels #f)
+(compiler.generate-descriptive-labels? #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 

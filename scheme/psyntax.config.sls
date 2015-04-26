@@ -30,8 +30,7 @@
     if-wants-library-letrec*	if-wants-descriptive-gensyms
     base-of-interaction-library)
   (import (rnrs)
-    (only (psyntax.compat)
-	  option.descriptive-labels))
+    (psyntax.compat))
 
 
 (define (base-of-interaction-library)
@@ -90,16 +89,17 @@
 ;;helps in debugging and understanding the code.
 ;;
 (define-syntax if-wants-descriptive-gensyms
-  (syntax-rules ()
-    ((_ ?success-kont ?failure-kont)
-     (if (option.descriptive-labels)
-	 ?success-kont
-       ?failure-kont))
-    ))
+  (lambda (stx)
+    (module (generate-descriptive-labels?)
+      (include "ikarus.config.scm"))
+    (syntax-case stx ()
+      ((_ ?true ?false)
+       (if generate-descriptive-labels? #'?true #'?false))
+      )))
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

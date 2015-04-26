@@ -67,7 +67,6 @@
     option.drop-assertions?
     option.strict-r6rs
     option.enable-arguments-validation?
-    option.descriptive-labels
     option.descriptive-marks
     option.print-loaded-libraries?
     option.print-debug-messages?
@@ -152,7 +151,6 @@
 			  debug-mode-enabled?
 			  drop-assertions?
 			  strict-r6rs
-			  descriptive-labels
 			  descriptive-marks
 			  print-loaded-libraries?
 			  print-debug-messages?

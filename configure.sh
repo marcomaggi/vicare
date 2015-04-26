@@ -17,6 +17,7 @@ LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
     --cache-file=../config.cache			\
     --prefix="${prefix}"				\
     --libdir="${libdir}"				\
+    --enable-descriptive-labels-generation		\
     --enable-binfmt					\
     --enable-time-tests					\
     --enable-scheme-script				\
@@ -24,7 +25,7 @@ LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
     --with-cre2						\
     CFLAGS='-O3 -pedantic'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
-    VFLAGS='-O3'					\
+    VFLAGS='-O2'					\
     "$@"
 
 ### end of file

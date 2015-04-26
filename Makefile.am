@@ -451,6 +451,7 @@ ikarus.config.scm:
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))'			>>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'	>>$@
+	echo '(define generate-descriptive-labels? #$(VICARE_DESCRIPTIVE_LABELS_GENERATION))'	      >>$@
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'			>>$@
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'	>>$@
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'	>>$@
@@ -491,6 +492,7 @@ boot-image-32-bit: vicare
 	echo '(define wordsize 4)'							>>ikarus.config.scm
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
+	echo '(define generate-descriptive-labels? #$(VICARE_DESCRIPTIVE_LABELS_GENERATION))' >>ikarus.config.scm
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
@@ -514,6 +516,7 @@ boot-image-64-bit: vicare
 	echo '(define wordsize 8)'							>>ikarus.config.scm
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
+	echo '(define generate-descriptive-labels? #$(VICARE_DESCRIPTIVE_LABELS_GENERATION))' >>ikarus.config.scm
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
