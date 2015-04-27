@@ -2784,8 +2784,8 @@ then query its syntactic binding:
 
 
 We will inspect the fields of @objtype{stx} objects and @objtype{rib}
-objects to understand how the lexical environment is used to represent
-lexical contours.
+objects to understand how the lexical environment's data structures are
+used to represent lexical contours.
 
 We will examine the expansion of nested @syntax{internal-body} uses:
 these syntaxes are the simplest because they create a single lexical
@@ -2802,7 +2802,7 @@ body of a @syntax{begin-for-syntax} use.
 @subsubsection Single internal body
 
 
-Now let's create a single lexical contour with the syntax
+Let's create a single lexical contour with the syntax
 @syntax{internal-body} and compare a top--level binding with a local
 binding:
 
@@ -2837,7 +2837,7 @@ Let's see the ribs:
       (pretty-print ribs)))
   (void))
 @print{} 2
-@print{} (#<rib name*=(B) mark**=((src)) label*=(lab.B)>
+@print{} (#<rib name*=(B)     mark**=((src))     label*=(lab.B)>
     #<rib name*=(A ...) mark**=((src) ...) label*=(lab.A ...)>)
 @end lisp
 
@@ -2863,13 +2863,13 @@ does in the call:
 @noindent
 it extracts from its argument the symbol source--name @samp{A}, the list
 of marks @samp{(src)} and the list of ribs, then it scans the list of
-ribs left--to--right looking for a tuple whose source name is @func{eq?}
-to @samp{A} and whose list of marks is @func{equal?} to @samp{(src)}; it
-finds one in the top rib.
+ribs left--to--right looking for a tuple whose source--name is
+@func{eq?}  to @samp{A} and whose list of marks is @func{equal?} to
+@samp{(src)}; it finds one in the top rib.
 
-This action of looking for a tuple with the same source name and the
-same marks is the @dfn{syntactic identifier resolution}, and we say that
-the tuple @dfn{captures} the identifier.
+This action of looking for a rib's tuple with the same source--name and
+the same marks is the @dfn{syntactic identifier resolution}, and we say
+that the tuple @dfn{captures} the identifier.
 
 This is not the whole story: to handle macro expansion we need more than
 this; but for lexical contours: building a list of ribs and using a
