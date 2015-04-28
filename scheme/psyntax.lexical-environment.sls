@@ -979,27 +979,45 @@
 
 ;;;; label gensym, lexical variable gensyms, storage location gensyms
 
-(define* (generate-lexical-gensym seed)
-  ;;Generate a unique symbol to represent the name of a lexical variable
-  ;;in the core language forms.  Such  symbols have the purpose of being
-  ;;unique in the core language  expressions representing a full library
-  ;;or full program.
-  ;;
-  (if-wants-descriptive-gensyms
+;;Every syntactic binding  has a label associated  to it as unique  identifier in the
+;;whole running process; this function generates such labels as gensyms.
+;;
+;;Labels must have  read/write EQ?  invariance to support  separate compilation (when
+;;we write  the expanded sexp to  a file and then  read it back, the  labels must not
+;;change and still be globally unique).
+;;
+(if-wants-descriptive-gensyms
+    (define (generate-label-gensym seed)
+      (cond ((identifier? seed)
+	     (gensym (string-append "lab." (symbol->string (~identifier->symbol seed)))))
+	    ((symbol? seed)
+	     (gensym (string-append "lab." (symbol->string seed))))
+	    ((string? seed)
+	     (gensym (string-append "lab." seed)))
+	    (else
+	     (gensym))))
+  (define-syntax-rule (generate-label-gensym ?seed)
+    (gensym)))
+
+;;Generate a unique  symbol to represent the  name of a lexical variable  in the core
+;;language forms.  Such symbols have the purpose of being unique in the core language
+;;expressions representing a full library or full program.
+;;
+(if-wants-descriptive-gensyms
+    (define* (generate-lexical-gensym seed)
       (cond ((identifier? seed)
 	     (gensym (string-append "lex." (symbol->string (~identifier->symbol seed)))))
 	    ((symbol? seed)
 	     (gensym (string-append "lex." (symbol->string seed))))
 	    (else
 	     (assertion-violation __who__
-	       "expected symbol or identifier as argument" seed)))
-    (cond ((identifier? seed)
-	   (gensym (symbol->string (~identifier->symbol seed))))
-	  ((symbol? seed)
-	   (gensym (symbol->string seed)))
-	  (else
-	   (assertion-violation __who__
-	     "expected symbol or identifier as argument" seed)))))
+	       "expected symbol or identifier as argument" seed))))
+  (define-syntax generate-lexical-gensym
+    (syntax-rules ()
+      ((_ ?seed)
+       (gensym))
+      ((_)
+       (gensym)))))
 
 (define generate-storage-location-gensym
   ;;Build  and return  a gensym  to be  used as  storage location  for a
@@ -1033,26 +1051,6 @@
 	     (gensym seed))
 	    (else
 	     (gensym)))))))
-
-(define (generate-label-gensym seed)
-  ;;Every  syntactic binding  has a  label  associated to  it as  unique
-  ;;identifier  in the  whole running  process; this  function generates
-  ;;such labels as gensyms.
-  ;;
-  ;;Labels  must have  read/write  EQ?  invariance  to support  separate
-  ;;compilation (when we write the expanded sexp to a file and then read
-  ;;it back, the labels must not change and still be globally unique).
-  ;;
-  (if-wants-descriptive-gensyms
-      (cond ((identifier? seed)
-	     (gensym (string-append "lab." (symbol->string (~identifier->symbol seed)))))
-	    ((symbol? seed)
-	     (gensym (string-append "lab." (symbol->string seed))))
-	    ((string? seed)
-	     (gensym (string-append "lab." seed)))
-	    (else
-	     (gensym)))
-    (gensym)))
 
 
 ;;;; lexical environment: mapping labels to syntactic binding descriptors
