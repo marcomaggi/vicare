@@ -2778,6 +2778,11 @@ then query its syntactic binding:
 @print{} (lexical . (lex.A . #f))
 @end lisp
 
+In the following examples: we avoid defining top--level bindings because
+printing the top rib is annoying; for this reason we use the function
+@func{id-rib*/no-top} which cuts out the top rib from a list of ribs
+(the top rib is always the last item in a list of ribs).
+
 @c page
 @node expander examples contours
 @subsection Lexical contours inspection
@@ -2880,33 +2885,71 @@ single mark is enough.
 @subsubsection Double internal body
 
 
-Now let's create two nested lexical contours with the syntax
+Let's create two nested lexical contours with the syntax
 @syntax{internal-body} and inspect the ribs:
 
 @lisp
 (internal-body
   (define A 1)
   (internal-body
-    (define A 2)
+    (define B 2)
     (begin-for-syntax
       (pretty-print #'A)
-      (pretty-print (xp.stx-rib* #'A)))
+      (pretty-print #'B)
+      (pretty-print (eq-ribs? #'A #'B))
+      (pretty-print (length (xp.stx-rib* #'A)))
+      (pretty-print (id-rib*/no-top #'A)))
     (void)))
 @print{} #<syntactic-identifier expr=A mark*=(src)>
-@print{} (#<rib name*=(A) mark**=((src)) label*=(lab.A.2)>
-    #<rib name*=(A) mark**=((src)) label*=(lab.A.1)>
-    #<rib name*=(...) mark**=(...) label*=(...)>)
+@print{} #<syntactic-identifier expr=B mark*=(src)>
+@print{} #t
+@print{} 3
+@print{} (#<rib name*=(B) mark**=((src)) label*=(lab.B)>
+    #<rib name*=(A) mark**=((src)) label*=(lab.A)>)
 @end lisp
 
 @noindent
-we see that @code{(syntax A)} builds an identifier whose list of ribs
-has @math{3} items: the rib of the internal @syntax{internal-body}; the
-rib of the external @syntax{internal-body}; the top rib.
+we see that:
 
-We avoid defining top--level bindings because printing the top rib is
-annoying; for this reason we use the function @func{id-rib*/no-top}
-which cuts out the top rib from a list of ribs (the top rib is always
-the last item in a list of ribs):
+@itemize
+@item
+Both @code{#'A} and @code{#'B} have the same marks and ribs.
+
+@item
+@code{#'A} and @code{#'B} build identifiers whose list of ribs has
+@math{3} items: the rib of the internal @syntax{internal-body}; the rib
+of the external @syntax{internal-body}; the top rib, which we have cut
+out using @func{id-rib*/no-top}.
+
+@item
+The rib of the internal @syntax{internal-body} comes first in the list
+of ribs and it has the tuple of @samp{B}.
+
+@item
+The rib of the external @syntax{internal-body} comes second in the list
+of ribs and it has the tuple of @samp{A}.
+@end itemize
+
+It is simple to resolve the identifiers:
+
+@lisp
+(internal-body
+  (define A 1)
+  (internal-body
+    (define B 2)
+    (begin-for-syntax
+      (pretty-print (id->label #'A))
+      (pretty-print (id->label #'B))
+      (pretty-print (id->descriptor #'A))
+      (pretty-print (id->descriptor #'B)))
+    (void)))
+@print{} lab.A
+@print{} lab.B
+@print{} (lexical . (lex.A . #f))
+@print{} (lexical . (lex.B . #f))
+@end lisp
+
+Now let's create two syntactic bindings with the same source name:
 
 @lisp
 (internal-body
@@ -2915,18 +2958,20 @@ the last item in a list of ribs):
     (define A 2)
     (begin-for-syntax
       (pretty-print #'A)
+      (pretty-print (length (xp.stx-rib* #'A)))
       (pretty-print (id-rib*/no-top #'A)))
     (void)))
 @print{} #<syntactic-identifier expr=A mark*=(src)>
+@print{} 3
 @print{} (#<rib name*=(A) mark**=((src)) label*=(lab.A.2)>
     #<rib name*=(A) mark**=((src)) label*=(lab.A.1)>)
 @end lisp
 
 @noindent
-we see that both the ribs have a tuple with source--name @samp{A} and
-marks @samp{(src)}, but the rib of the internal @syntax{internal-body}
-comes first; so the internal syntactic binding for @samp{A} is the one
-that captures the identifier:
+we see that both the ribs in the list of @samp{#'A} have a tuple with
+source--name @samp{A} and marks @samp{(src)}, but the rib of the
+internal @syntax{internal-body} comes first; so the internal syntactic
+binding for @samp{A} is the one that captures the identifier:
 
 @lisp
 (internal-body
@@ -2939,6 +2984,20 @@ that captures the identifier:
 @print{} lab.A.2
 @end lisp
 
+Without describing how macros work, let's see how we can introduce in
+the internal body a syntactic identifier that is captured by the
+external syntactic binding; first the result:
+
+@lisp
+(internal-body
+  (define A 1)
+  (define-syntax (doit stx)
+    #'A)
+  (internal-body
+    (define A 2)
+    (pretty-print (doit))))
+@print{} 1
+@end lisp
 
 @c page
 @node expander examples phases
