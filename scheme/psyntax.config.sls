@@ -26,8 +26,9 @@
   (export
     if-wants-define-record	#;if-wants-define-struct
     if-wants-case-lambda
-    if-wants-letrec*		if-wants-global-defines
-    if-wants-library-letrec*	if-wants-descriptive-gensyms
+    if-wants-letrec*			if-wants-global-defines
+    if-wants-library-letrec*
+    if-wants-descriptive-gensyms	if-wants-descriptive-marks
     base-of-interaction-library)
   (import (rnrs)
     (psyntax.compat))
@@ -47,33 +48,31 @@
        (syntax-rules ()
 	 ((_ ?success-kont ?failure-kont) ?failure-kont))))))
 
-;;DEFINE-RECORD is an Ikarus-specific  extension.  It should be disabled
-;;for all  other implementations; the  source is included  to illustrate
-;;how implementation-specific extensions can be added to the expander
+;;DEFINE-RECORD is an Ikarus-specific extension.  It should be disabled for all other
+;;implementations; the  source is included to  illustrate how implementation-specific
+;;extensions can be added to the expander
 ;;
 (define-option if-wants-define-record  #t)
 (define-option if-wants-define-struct  #t)
 
-;;If the  implementation requires that  all global variables  be defined
-;;before they're  SET!ed, then enabling this option  causes the expander
-;;to produce:
+;;If the implementation requires that all  global variables be defined before they're
+;;SET!ed, then enabling this option causes the expander to produce:
 ;;
 ;;  (define <global> '#f)
 ;;
-;;for every exported  identifiers.  If the option is  disabled, then the
-;;global definitions are suppressed.
+;;for  every exported  identifiers.   If  the option  is  disabled,  then the  global
+;;definitions are suppressed.
 ;;
 (define-option if-wants-global-defines #f)
 
-;;Implementations  that support  CASE-LAMBDA natively  should  have this
-;;option  enabled.  Disabling WANTS-CASE-LAMBDA  causes the  expander to
-;;produce ugly,  inefficient, but correct code  by expanding CASE-LAMBDA
-;;into explicit dispatch code.
+;;Implementations that support CASE-LAMBDA natively  should have this option enabled.
+;;Disabling WANTS-CASE-LAMBDA causes  the expander to produce  ugly, inefficient, but
+;;correct code by expanding CASE-LAMBDA into explicit dispatch code.
 ;;
 (define-option if-wants-case-lambda    #t)
 
-;;If the implementation has built-in support for efficient LETREC*, then
-;;this option should be  enabled.  Disabling the option expands:
+;;If the implementation has built-in support  for efficient LETREC*, then this option
+;;should be enabled.  Disabling the option expands:
 ;;
 ;;  (letrec* ((lhs* rhs*)  ...) body)
 ;;
@@ -85,10 +84,22 @@
 
 (define-option if-wants-library-letrec* #t)
 
-;;If true: generate gensyms with  descriptive names, which is slower but
-;;helps in debugging and understanding the code.
+;;If true:  generate gensyms  with descriptive  names, which is  slower but  helps in
+;;debugging and understanding the code.
 ;;
 (define-syntax if-wants-descriptive-gensyms
+  (lambda (stx)
+    (module (generate-descriptive-labels?)
+      (include "ikarus.config.scm"))
+    (syntax-case stx ()
+      ((_ ?true ?false)
+       (if generate-descriptive-labels? #'?true #'?false))
+      )))
+
+;;If  true: generate  descriptive strings  as  syntactic identifier  marks, which  is
+;;slower but helps in debugging and understanding the code.
+;;
+(define-syntax if-wants-descriptive-marks
   (lambda (stx)
     (module (generate-descriptive-labels?)
       (include "ikarus.config.scm"))

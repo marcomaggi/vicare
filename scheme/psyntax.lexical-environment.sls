@@ -996,8 +996,20 @@
 	     (gensym (string-append "lab." seed)))
 	    (else
 	     (gensym))))
-  (define-syntax-rule (generate-label-gensym ?seed)
-    (gensym)))
+  (define-syntax (generate-label-gensym stx)
+    (sys.syntax-case stx ()
+      ;;When this binding is used as:
+      ;;
+      ;;   (map generate-label-genysm ?list)
+      ;;
+      ;;let's give the compile a chance to integrate the MAP and the LAMBDA below.
+      ;;
+      (?id
+       (sys.identifier? (sys.syntax ?id))
+       (sys.syntax (lambda (unused) (gensym))))
+      ((_ ?seed)
+       (sys.syntax (gensym)))
+      )))
 
 ;;Generate a unique  symbol to represent the  name of a lexical variable  in the core
 ;;language forms.  Such symbols have the purpose of being unique in the core language
@@ -1012,12 +1024,20 @@
 	    (else
 	     (assertion-violation __who__
 	       "expected symbol or identifier as argument" seed))))
-  (define-syntax generate-lexical-gensym
-    (syntax-rules ()
+  (define-syntax (generate-lexical-gensym stx)
+    (sys.syntax-case stx ()
+      ;;When this binding is used as:
+      ;;
+      ;;   (map generate-lexical-genysm ?list)
+      ;;
+      ;;let's give the compile a chance to integrate the MAP and the LAMBDA below.
+      ;;
+      (?id
+       (sys.identifier? (sys.syntax ?id))
+       (sys.syntax (lambda (unused) (gensym))))
       ((_ ?seed)
-       (gensym))
-      ((_)
-       (gensym)))))
+       (sys.syntax (gensym)))
+      )))
 
 (define generate-storage-location-gensym
   ;;Build  and return  a gensym  to be  used as  storage location  for a
@@ -1184,35 +1204,23 @@
 
 ;;;; marks of lexical contours
 
-(define-syntax define-mark-generator
-  (lambda (stx)
-    (sys.syntax-case stx ()
-      ((?kwd)
-       (with-syntax
-	   ((WHO (sys.datum->syntax (sys.syntax ?kwd) 'generate-new-mark)))
-	 (if (option.descriptive-marks)
-	     (begin
-	       (fprintf (current-error-port) "vicare: enabled descriptive marks generation\n")
-	       (sys.syntax
-		(define WHO
-		  ;;Generate a new  unique mark.  We want a new  string for every function
-		  ;;call.
-		  (let ((i 0))
-		    (lambda ()
-		      (set! i (+ i 1))
-		      (string-append "mark." (number->string i)))))))
-	   (begin
-	     (fprintf (current-error-port) "vicare: enabled non-descriptive marks generation\n")
-	     (sys.syntax
-	      (define-syntax-rule (WHO)
-		;;Generate a  new unique mark.   We want a  new string for  every function
-		;;call.
-		(string)))))))
-      )))
-(define-mark-generator)
+;;Generate a new unique mark.  We want a new string for every function call.
+;;
+(if-wants-descriptive-marks
+    (define generate-new-mark
+      (let ((i 0))
+	(lambda ()
+	  (set! i (fxadd1 1))
+	  (string-append "mark." (number->string i)))))
+  (define-syntax-rule (generate-new-mark)
+    (string)))
 
-;;We use #f as the anti-mark.
-(define-constant anti-mark #f)
+;;By default we use #f as the anti-mark.
+;;
+;; (if-wants-descriptive-marks
+;;     (define-constant THE-ANTI-MARK 'anti-mark)
+;;   (define-constant THE-ANTI-MARK #f))
+(define-constant THE-ANTI-MARK #f)
 
 (define-syntax-rule (lexical-contour-mark? ?obj)
   (string? ?obj))
@@ -1220,8 +1228,13 @@
 (define-syntax-rule (src-mark? ?obj)
   (eq? ?obj 'src))
 
+;; (if-wants-descriptive-marks
+;;     (define-syntax-rule (anti-mark? ?obj)
+;;       (eq? ?obj THE-ANTI-MARK))
+;;   (define-syntax-rule (anti-mark? ?obj)
+;;     (not ?obj)))
 (define-syntax-rule (anti-mark? ?obj)
-  (not ?obj))
+    (not ?obj))
 
 (define (mark? obj)
   (or (src-mark? obj)
@@ -1700,7 +1713,7 @@
   (define (add-anti-mark input-form-stx)
     ;;Push an anti-mark on the input form of a macro use.
     ;;
-    (add-mark anti-mark #f input-form-stx #f))
+    (add-mark THE-ANTI-MARK #f input-form-stx #f))
 
   (define (add-new-mark rib output-form-expr input-form-stx)
     ;;Push a new mark on the output form of a macro use.
@@ -1801,7 +1814,7 @@
 			      (append accum-rib* expr.rib*)
 			      (%merge-annotated-expr* ae* ($stx-annotated-expr* expr))))
 
-		   ((eq? (car expr.mark*) anti-mark)
+		   ((anti-mark? (car expr.mark*))
 		    ;;EXPR with non-empty MARK*  having the anti-mark as
 		    ;;first mark; this means EXPR is the input form of a
 		    ;;macro transformer call.
@@ -2915,5 +2928,6 @@
 ;;; end of file
 ;; Local Variables:
 ;; coding: utf-8-unix
-;; eval: (put 'let-syntax-rules		'scheme-indent-function 1)
+;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
+;; eval: (put 'if-wants-descriptive-marks	'scheme-indent-function 1)
 ;; End:
