@@ -113,8 +113,8 @@
 
     ;; rib operations
     false-or-rib?				list-of-ribs?
-    make-empty-rib
-    make-rib-from-identifiers-and-labels	make-top-rib-from-source-names-and-labels
+    make-rib/empty
+    make-rib/from-identifiers-and-labels	make-rib/top-from-source-names-and-labels
     seal-rib!					unseal-rib!
     extend-rib!					export-subst->rib
 
@@ -1305,7 +1305,7 @@
 ;;; --------------------------------------------------------------------
 ;;; rib constructors
 
-(define-syntax-rule (make-empty-rib)
+(define-syntax-rule (make-rib/empty)
   ;;Build and return a new, empty RIB object.
   ;;
   ;;Empty ribs  are used to  represent freshly created  lexical contours in  which no
@@ -1329,7 +1329,7 @@
   ;;
   ;;we do:
   ;;
-  ;;   (define rib (make-empty-rib))
+  ;;   (define rib (make-rib/empty))
   ;;   (define stx (push-lexical-contour rib stx*))
   ;;
   ;;and then hand the resulting syntax object STX to the appropriate "chi-*" function
@@ -1339,7 +1339,7 @@
   ;;
   (make-rib '() '() '() #f))
 
-(define (make-rib-from-identifiers-and-labels id* label*)
+(define (make-rib/from-identifiers-and-labels id* label*)
   ;;Build  and return  a  new RIB  record  initialised with  bindings  having ID*  as
   ;;original identifiers and LABEL* as associated label gensyms.
   ;;
@@ -1357,7 +1357,7 @@
   ;;   (define lhs.id*    ?lhs*)
   ;;   (define body.stx   ?body*)
   ;;   (define lhs.label* (map generate-label-gensym lhs.id*))
-  ;;   (define rib        (make-rib-from-identifiers-and-labels lhs.id* lhs.label*))
+  ;;   (define rib        (make-rib/from-identifiers-and-labels lhs.id* lhs.label*))
   ;;   (define body.stx^  (push-lexical-contour rib body.stx))
   ;;
   ;;and then  hand the resulting syntax  object BODY.STX^ to the  appropriate "chi-*"
@@ -1368,7 +1368,7 @@
 	(sealed/freq  #f))
     (make-rib name* mark** label* sealed/freq)))
 
-(define (make-top-rib-from-source-names-and-labels source-name* lab*)
+(define (make-rib/top-from-source-names-and-labels source-name* lab*)
   ;;Build and return a  new "rib" object to be used at the  top-level of a library or
   ;;program body.
   ;;
@@ -1380,7 +1380,7 @@
   (let ((sealed/freq #f))
     (make-rib source-name* (map (lambda (dummy) SRC-MARK*) lab*) lab* sealed/freq)))
 
-(define (make-top-rib-from-source-name-and-label source-name lab)
+(define (make-rib/top-from-source-name-and-label source-name lab)
   ;;Build and return a  new "rib" object to be used at the  top-level of a library or
   ;;program body.
   ;;
@@ -1949,7 +1949,7 @@
   (syntax-object-strip-annotations S '()))
 
 (define (make-top-level-syntactic-identifier-from-source-name-and-label sym lab)
-  (wrap-source-expression sym (make-top-rib-from-source-name-and-label sym lab)))
+  (wrap-source-expression sym (make-rib/top-from-source-name-and-label sym lab)))
 
 (define* (make-syntactic-identifier-for-temporary-variable {sym symbol?})
   ;;Build and return a  new src marked syntactic identifier to  be used for temporary

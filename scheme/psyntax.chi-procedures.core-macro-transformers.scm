@@ -570,7 +570,7 @@
 	   ;;
 	   ;;Notice  that the  region of  all the  LETREC bindings  includes all  the
 	   ;;right-hand sides.
-	   (let* ((rib        (make-rib-from-identifiers-and-labels lhs*.id lhs*.lab))
+	   (let* ((rib        (make-rib/from-identifiers-and-labels lhs*.id lhs*.lab))
 		  (lexenv.run (lexenv-add-lexical-var-bindings lhs*.lab lhs*.lex lexenv.run))
 		  (rhs*.psi   ($map-in-order
 			       (lambda (rhs.stx lhs.lab lhs.tag)
@@ -1202,7 +1202,7 @@
 	   ;;the pattern variable.
 	   (define output-expr^
 	     (push-lexical-contour
-		 (make-rib-from-identifiers-and-labels (list ?pattern) (list label))
+		 (make-rib/from-identifiers-and-labels (list ?pattern) (list label))
 	       ?output-expr))
 	   (define lexenv.run^
 	     ;;Push a  pattern variable  entry to the  lexenv.  The  ellipsis nesting
@@ -1380,7 +1380,7 @@
       ;;The two methods are fully equivalent; the one we have chosen is a bit faster.
       ;;
       (%chi-expr.core (push-lexical-contour
-			  (make-rib-from-identifiers-and-labels ids labels)
+			  (make-rib/from-identifiers-and-labels ids labels)
 			expr.stx)
 		      (append bindings lexenv.run)
 		      lexenv.expand))

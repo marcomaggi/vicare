@@ -337,7 +337,7 @@
     ;;evaluating the core expr.
     ;;
     (cond ((env? env)
-	   (let ((rib (make-top-rib-from-source-names-and-labels (vector->list (env-names  env))
+	   (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
 								 (vector->list (env-labels env)))))
 	     (let ((expr.stx (wrap-source-expression expr rib))
 		   (rtc      (make-collector))
@@ -1220,7 +1220,7 @@
     ;;duplicates.
     (receive (import-name.vec label.vec)
 	(parse-import-spec* import-spec*)
-      (make-top-rib-from-source-names-and-labels (vector->list import-name.vec)
+      (make-rib/top-from-source-names-and-labels (vector->list import-name.vec)
 						 (vector->list label.vec))))
 
   (define (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)

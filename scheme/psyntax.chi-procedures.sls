@@ -784,7 +784,7 @@
 	     (unless (valid-bound-ids? ?xlhs*)
 	       (syntax-violation __who__ "invalid identifiers" expr.stx))
 	     (let* ((xlab* (map generate-label-gensym ?xlhs*))
-		    (xrib  (make-rib-from-identifiers-and-labels ?xlhs* xlab*))
+		    (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
 		    (xb*   (map (lambda (x)
 				  (let ((in-form (if (eq? type 'let-syntax)
 						     x
@@ -1911,7 +1911,7 @@
 	     (not (null? validation*.stx)))
 	   (define body-form^*.stx
 	     (push-lexical-contour
-		 (make-rib-from-identifiers-and-labels ?arg* lab*)
+		 (make-rib/from-identifiers-and-labels ?arg* lab*)
 	       ;;Build a list of syntax objects representing the internal body.
 	       (append validation*.stx
 		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
@@ -1944,7 +1944,7 @@
 	       (not (null? validation*.stx)))
 	     (define body-form^*.stx
 	       (push-lexical-contour
-		   (make-rib-from-identifiers-and-labels (cons ?rest-arg ?arg*)
+		   (make-rib/from-identifiers-and-labels (cons ?rest-arg ?arg*)
 				    (cons rest-lab  lab*))
 		 ;;Build a list of syntax objects representing the internal body.
 		 (append validation*.stx
@@ -2506,7 +2506,7 @@
   ;;so we create  a rib to describe  the lexical contour of the  implicit LETREC* and
   ;;push it on the BODY-FORM*.STX.
   ;;
-  (let ((rib (make-empty-rib)))
+  (let ((rib (make-rib/empty)))
     (receive (trailing-expr-stx*^
 	      lexenv.run^ lexenv.expand^
 	      lex*^ qrhs*^
@@ -2868,7 +2868,7 @@
 		  (unless (valid-bound-ids? ?xlhs*)
 		    (stx-error body-form.stx "invalid identifiers"))
 		  (let* ((xlab*  (map generate-label-gensym ?xlhs*))
-			 (xrib   (make-rib-from-identifiers-and-labels ?xlhs* xlab*))
+			 (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
 			 ;;We  evaluate  the  transformers  for  LET-SYNTAX  without
 			 ;;pushing the XRIB: the syntax bindings do not exist in the
 			 ;;environment in which the transformer is evaluated.
@@ -3134,16 +3134,16 @@
     ;;  (define-syntax (?name ?arg) ?body0 ?body ...)
     ;;
     (syntax-match stx ()
+      ((_ (?id ?arg) ?body0 ?body* ...)
+       (and (identifier? ?id)
+	    (identifier? ?arg))
+       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ((_ ?id)
        (identifier? ?id)
        (values ?id (bless '(syntax-rules ()))))
       ((_ ?id ?transformer-expr)
        (identifier? ?id)
        (values ?id ?transformer-expr))
-      ((_ (?id ?arg) ?body0 ?body* ...)
-       (and (identifier? ?id)
-	    (identifier? ?arg))
-       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ))
 
   (define (%parse-define-alias body-form.stx)
@@ -3255,7 +3255,7 @@
     ;;
     (receive (name export-id* internal-body-form*)
 	(%parse-module module-form-stx)
-      (let* ((module-rib               (make-empty-rib))
+      (let* ((module-rib               (make-rib/empty))
 	     (internal-body-form*/rib  (map (lambda (form)
 					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
