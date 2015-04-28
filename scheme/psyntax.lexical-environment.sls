@@ -1206,21 +1206,27 @@
 
 ;;Generate a new unique mark.  We want a new string for every function call.
 ;;
-(if-wants-descriptive-marks
-    (define generate-new-mark
-      (let ((i 0))
-	(lambda ()
-	  (set! i (fxadd1 1))
-	  (string-append "mark." (number->string i)))))
-  (define-syntax-rule (generate-new-mark)
-    (string)))
+;; (if-wants-descriptive-marks
+;;     (define generate-new-mark
+;;       (let ((i 0))
+;; 	(lambda ()
+;; 	  (set! i (fxadd1 1))
+;; 	  (string-append "mark." (number->string i)))))
+;;   (define-syntax-rule (generate-new-mark)
+;;     (string)))
+#;(define generate-new-mark
+  (let ((i 0))
+    (lambda ()
+      (set! i (fxadd1 1))
+      (string-append "mark." (number->string i)))))
+(define-syntax-rule (generate-new-mark)
+  (string))
 
 ;;By default we use #f as the anti-mark.
 ;;
-;; (if-wants-descriptive-marks
-;;     (define-constant THE-ANTI-MARK 'anti-mark)
-;;   (define-constant THE-ANTI-MARK #f))
-(define-constant THE-ANTI-MARK #f)
+(if-wants-descriptive-marks
+    (define-constant THE-ANTI-MARK 'anti-mark)
+  (define-constant THE-ANTI-MARK #f))
 
 (define-syntax-rule (lexical-contour-mark? ?obj)
   (string? ?obj))
@@ -1228,13 +1234,11 @@
 (define-syntax-rule (src-mark? ?obj)
   (eq? ?obj 'src))
 
-;; (if-wants-descriptive-marks
-;;     (define-syntax-rule (anti-mark? ?obj)
-;;       (eq? ?obj THE-ANTI-MARK))
-;;   (define-syntax-rule (anti-mark? ?obj)
-;;     (not ?obj)))
-(define-syntax-rule (anti-mark? ?obj)
-    (not ?obj))
+(if-wants-descriptive-marks
+    (define-syntax-rule (anti-mark? ?obj)
+      (eq? ?obj THE-ANTI-MARK))
+  (define-syntax-rule (anti-mark? ?obj)
+    (not ?obj)))
 
 (define (mark? obj)
   (or (src-mark? obj)
