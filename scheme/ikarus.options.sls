@@ -33,7 +33,6 @@
     debug-mode-enabled?
     drop-assertions?
     strict-r6rs
-    descriptive-marks
     ;; tagged language parameter options
     tagged-language.rhs-tag-propagation?
     tagged-language.datums-as-operators?
@@ -157,11 +156,6 @@
 ;;also set to true all the tagged language sub-parameters.
 ;;
 (define-parameter-boolean-option tagged-language?)
-
-;;Turn  on  generation of  descriptive  marks  in the  expander.   It  is useful  for
-;;debugging purposes.
-;;
-(define-parameter-boolean-option descriptive-marks)
 
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:

@@ -59,7 +59,6 @@
 		  verbose?
 		  debug-mode-enabled?
 		  drop-assertions?
-		  descriptive-marks
 		  print-loaded-libraries?
 		  print-debug-messages?
 		  strict-r6rs)
@@ -560,14 +559,6 @@
 	   (option.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--descriptive-marks")
-	   (option.descriptive-marks #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-descriptive-marks")
-	   (option.descriptive-marks #f)
-	   (next-option (cdr args) k))
-
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -923,13 +914,6 @@ Other options:
         Do  not  strictly  follow  R6RS  specifications:  enable  Vicare
         extensions.  Disables the effect  of --strict-r6rs.  This is the
         default.
-
-   --descriptive-marks
-        For debugging purposes: generate descriptive marks.
-
-   --no-descriptive-marks
-        For debugging purposes: do not generate descriptive marks.  This
-        is the default.
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,

@@ -378,19 +378,6 @@ Do not strictly follow @rnrs{6} specifications: enable @value{PRJNAME}
 extensions.  Disables the effect of @option{--strict-r6rs}.  This is the
 default.
 
-@item --descriptive-marks
-@cindex Command line option @option{--descriptive-marks}
-@cindex @option{--descriptive-marks}, command line option
-For debugging purposes: generate descriptive marks in the expander to
-distinguish between lexical contours.
-
-@item --no-descriptive-marks
-@cindex Command line option @option{--no-descriptive-marks}
-@cindex @option{--no-descriptive-marks}, command line option
-For debugging purposes: do not generate descriptive marks in the
-expander.  Disables the effect of @option{--descriptive-marks}.  This is
-the default.
-
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
