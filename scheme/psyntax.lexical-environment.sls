@@ -1214,11 +1214,11 @@
 ;; 	  (string-append "mark." (number->string i)))))
 ;;   (define-syntax-rule (generate-new-mark)
 ;;     (string)))
-#;(define generate-new-mark
-  (let ((i 0))
-    (lambda ()
-      (set! i (fxadd1 1))
-      (string-append "mark." (number->string i)))))
+;;
+;;FIXME  For some  reason  unknown to  me  (at  present): if  I  try the  descriptive
+;;implementation  above I  get  errors  in some  libraries  using imported  syntactic
+;;bindings  established by  DEFINE-CONSTANT.  No  error happens  with the  definition
+;;below.  Something is wrong somewhere.  (Marco Maggi; Wed Apr 29, 2015)
 (define-syntax-rule (generate-new-mark)
   (string))
 
