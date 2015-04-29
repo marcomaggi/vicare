@@ -2986,7 +2986,7 @@ binding for @samp{A} is the one that captures the identifier:
 
 Without describing how macros work, let's see how we can introduce in
 the internal body a syntactic identifier that is captured by the
-external syntactic binding; first the result:
+external syntactic binding:
 
 @lisp
 (internal-body
