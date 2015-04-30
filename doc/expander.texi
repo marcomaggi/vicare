@@ -518,7 +518,7 @@ breadth--first order.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Lexical contours and ribs
+@subsubheading Lexical contours and @rib{} objects
 
 To distinguish among different bindings with the same name (like the two
 local bindings both named @samp{a} in the example) we must distinguish
@@ -573,8 +573,8 @@ original code is accompanied by the associations:
 
 @noindent
 which are registered in a component of the lexical environment: a record
-of type @objtype{rib}.  Every lexical contour is described by a rib; the
-rib for the top level contour holds the associations:
+of type @rib{}.  Every lexical contour is described by a @rib{}; the
+@rib{} for the top level contour holds the associations:
 
 @multitable {original name} {lexical contour mark}
 @headitem original name @tab lexical contour mark
@@ -583,7 +583,7 @@ rib for the top level contour holds the associations:
 @end multitable
 
 @noindent
-the rib of the outer @syntax{let} holds the associations:
+the @rib{} of the outer @syntax{let} holds the associations:
 
 @multitable {original name} {lexical contour mark}
 @headitem original name @tab lexical contour mark
@@ -591,7 +591,7 @@ the rib of the outer @syntax{let} holds the associations:
 @end multitable
 
 @noindent
-the rib of the inner @syntax{let} holds the associations:
+the @rib{} of the inner @syntax{let} holds the associations:
 
 @multitable {original name} {lexical contour mark}
 @headitem original name @tab lexical contour mark
@@ -607,8 +607,8 @@ While the code is being visited by the expander: data structures called
 
 @enumerate
 @item
-At first, the whole code is in a syntax object referencing the top rib
-structure:
+At first, the whole code is in a syntax object referencing the top
+@rib{} structure:
 
 @example
 #<syntax-object
@@ -680,11 +680,12 @@ among its fields.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Label gensyms and ribs
+@subsubheading Label gensyms and @rib{} objects
 
 An @func{eq?}-unique object is assigned to each syntactic binding: a
 gensym indicated as @dfn{label gensym} or just @dfn{label}; such
-associations are also stored in the rib representing a lexical contour:
+associations are also stored in the @rib{} representing a lexical
+contour:
 
 @multitable {original name} {lexical contour mark} {label}
 @headitem original name @tab lexical contour mark @tab label
@@ -803,9 +804,9 @@ associating syntactic identifiers to label gensyms and label gensyms to
 syntactic binding descriptors.  The components are:
 
 @table @strong
-@item Lexical context ribs
-Objects of type @objtype{rib} that map syntactic identifiers to label
-gensyms, keeping track of lexical contours.
+@item Lexical context @rib{} objects
+Objects of type @rib{} that map syntactic identifiers to label gensyms,
+keeping track of lexical contours.
 
 @item Primitive syntactic binding's labels
 A set of label gensyms associated to the syntactic bindings established
@@ -826,7 +827,7 @@ descriptor.  This alist is called @lexenv{}.
 @end table
 
 @menu
-* expander lexenv rib::         Lexical contours and @objtype{rib} objects.
+* expander lexenv rib::         Lexical contours and @rib{} objects.
 * expander lexenv stx::         Wrapped and unwrapped syntax objects.
 * expander lexenv descriptors:: Syntactic binding's descriptors.
 * expander lexenv primitive::   Primitive syntactic bindings.
@@ -839,77 +840,77 @@ descriptor.  This alist is called @lexenv{}.
 
 @c page
 @node expander lexenv rib
-@subsection Lexical contours and @objtype{rib} objects
+@subsection Lexical contours and @rib{} objects
 
 
-A @objtype{rib} is an object constructed at every lexical contour in the
-source code to hold informations about the syntactic bindings introduced
-in that contour; ``lexical contours'' are, for example, @syntax{let} and
+A @rib{} is an object constructed at every lexical contour in the source
+code to hold informations about the syntactic bindings introduced in
+that contour; ``lexical contours'' are, for example, @syntax{let} and
 similar syntaxes that can introduce bindings.
 
-The purpose of ribs is to map syntactic binding's source names (the
-symbols as they appear in the source code) to the associated label
+The purpose of @rib{} objects is to map syntactic binding's source names
+(the symbols as they appear in the source code) to the associated label
 gensyms; this map is used when establishing if a syntax object
 identifier in reference position is captured by an existing syntactic
 binding.
 
 @menu
-* expander lexenv rib type::       The @objtype{rib} object type.
-* expander lexenv rib extending::  Extending ribs.
-* expander lexenv rib sealing::    Sealing ribs.
+* expander lexenv rib type::       The @rib{} object type.
+* expander lexenv rib extending::  Extending @rib{} objects.
+* expander lexenv rib sealing::    Sealing @rib{} objects.
 @end menu
 
 @c page
 @node expander lexenv rib type
-@subsubsection The @objtype{rib} object type
+@subsubsection The @rib{} object type
 
 
 @deftp {Object Type} rib
 Disjoint object type representing lexical contours in the expansion
-process.  Ribs associate the source name of syntactic bindings to their
-label gensyms.
+process.  @rib{} objects associate the source name of syntactic bindings
+to their label gensyms.
 
-Objects of type @objtype{rib} have the following fields:
+Objects of type @rib{} have the following fields:
 
 @table @code
 @item name*
 List of symbols representing the source name of syntactic bindings.
-When the @objtype{rib} is sealed: the list is converted to a vector.
+When the @rib{} is sealed: the list is converted to a vector.
 
 @item mark**
 List of sublists of marks; there is a sublist of marks for every item in
-@code{name*}.  When the @objtype{rib} is sealed: the list is converted
-to a vector.
+@code{name*}.  When the @rib{} is sealed: the list is converted to a
+vector.
 
 @item label*
 List of label gensyms uniquely identifying syntactic bindings; there is
-a label for each item in @code{name*}.  When the @objtype{rib} is
-sealed: the list is converted to a vector.
+a label for each item in @code{name*}.  When the @rib{} is sealed: the
+list is converted to a vector.
 
 @item sealed/freq
-@false{} or vector of exact integers.  When @false{}: this @objtype{rib}
-is extensible: new syntactic bindings can be added to it.  When a
-vector: this @objtype{rib} is sealed.  See below for an explanation of
-the frequency vector.
+@false{} or vector of exact integers.  When @false{}: this @rib{} is
+extensible: new syntactic bindings can be added to it.  When a vector:
+this @rib{} is sealed.  See below for an explanation of the frequency
+vector.
 @end table
 @end deftp
 
 @c page
 @node expander lexenv rib extending
-@subsubsection Extending ribs
+@subsubsection Extending @rib{} objects
 
 
-A non--sealed @objtype{rib} object is extensible: new syntactic bindings
-can be added to it.  This happens every time the expander processes
-internal definitions in a top--level body or internal body; examples
-are: the top--level body of a program; the top--level body of a library;
-the @syntax{internal-body} syntax; the internal body of @syntax{lambda};
-the internal body of @syntax{let} and its variants.
+A non--sealed @rib{} object is extensible: new syntactic bindings can be
+added to it.  This happens every time the expander processes internal
+definitions in a top--level body or internal body; examples are: the
+top--level body of a program; the top--level body of a library; the
+@syntax{internal-body} syntax; the internal body of @syntax{lambda}; the
+internal body of @syntax{let} and its variants.
 
-Adding an identifier--to--label mapping to an extensible @objtype{rib}
-is achieved by prepending items to the field's lists.
+Adding an identifier--to--label mapping to an extensible @rib{} is
+achieved by prepending items to the field's lists.
 
-For example, an empty extensible @objtype{rib} has fields:
+For example, an empty extensible @rib{} has fields:
 
 @example
 name*  = ()
@@ -936,9 +937,8 @@ tuple'':
 @end example
 
 @noindent
-on the @objtype{rib}.  Adding another binding with source name
-@samp{hello}, marks @samp{(src)} and label @samp{lab.hello} means to
-push the tuple.
+on the @rib{}.  Adding another binding with source name @samp{hello},
+marks @samp{(src)} and label @samp{lab.hello} means to push the tuple.
 
 @example
 @{ hello, (src), lab.hello @}
@@ -963,10 +963,10 @@ As further example, let's consider the syntactic form:
 @end lisp
 
 @noindent
-when starting to expand the internal body: a new @objtype{rib} is
-created and added to the metadata of the syntax object representing the
-body itself; when each internal definition is encountered, a new entry
-for the identifier is added (via side effect) to the @objtype{rib}:
+when starting to expand the internal body: a new @rib{} is created and
+added to the metadata of the syntax object representing the body itself;
+when each internal definition is encountered, a new entry for the
+identifier is added (via side effect) to the @rib{}:
 
 @example
 name*  = (b       a)
@@ -974,26 +974,25 @@ mark** = ((src)   (src))
 label* = (lab.b   lab.a)
 @end example
 
-The order in which the syntactic binding's tuples appear in the
-@objtype{rib} does not matter: two tuples are different when both the
-source name's symbol and the marks are different and it is an error to
-add twice a tuple to the same @objtype{rib}.
+The order in which the syntactic binding's tuples appear in the @rib{}
+does not matter: two tuples are different when both the source name's
+symbol and the marks are different and it is an error to add twice a
+tuple to the same @rib{}.
 
 @c ------------------------------------------------------------------------
 
 @subsubheading Redefining or shadowing syntactic bindings
 
 While it is an error to add twice a syntactic binding's tuple to the
-same @objtype{rib}, when expanding syntactic forms at the top--level of
-an interaction environment: it is possible to redefine a previously
-defined syntactic binding and to shadow a previously imported syntactic
-binding.
+same @rib{}, when expanding syntactic forms at the top--level of an
+interaction environment: it is possible to redefine a previously defined
+syntactic binding and to shadow a previously imported syntactic binding.
 
 Interaction environment objects (@pxref{iklib environment}) hold a
-@objtype{rib} object representing their top--level lexical contour; such
-@objtype{rib} holds tuples representing both the syntactic bindings
-imported from libraries and the syntactic bindings defined when
-expanding expressions at the top--level.
+@rib{} object representing their top--level lexical contour; such @rib{}
+holds tuples representing both the syntactic bindings imported from
+libraries and the syntactic bindings defined when expanding expressions
+at the top--level.
 
 Let's say we are expanding syntactic forms read from the @repl{} (which
 uses an interaction environment); if we type:
@@ -1004,8 +1003,8 @@ vicare> (define a 2)
 @end example
 
 @noindent
-after the first @syntax{define} is expanded the tuples in the
-@objtype{rib} representing the top--level lexical contour are:
+after the first @syntax{define} is expanded the tuples in the @rib{}
+representing the top--level lexical contour are:
 
 @example
 name*  = (a)
@@ -1028,24 +1027,24 @@ gensym: this causes the syntactic binding to be redefined.
 
 @c page
 @node expander lexenv rib sealing
-@subsubsection Sealing ribs
+@subsubsection Sealing @rib{} objects
 
 
-A non--empty @objtype{rib} can be ``sealed'' once all bindings are
-inserted.  This happens every time a syntax creates a lexical contour
-with a number of syntactic bindings that is immediately known; examples
-are: @syntax{lambda}, @syntax{let} and its variants.
+A non--empty @rib{} can be ``sealed'' once all bindings are inserted.
+This happens every time a syntax creates a lexical contour with a number
+of syntactic bindings that is immediately known; examples are:
+@syntax{lambda}, @syntax{let} and its variants.
 
-To seal a @objtype{rib}, we convert the lists @code{name*},
-@code{mark**} and @code{label*} to vectors and insert a frequency vector
-in the @code{sealed/freq} field.
+To seal a @rib{}, we convert the lists @code{name*}, @code{mark**} and
+@code{label*} to vectors and insert a frequency vector in the
+@code{sealed/freq} field.
 
 The frequency vector is a Scheme vector of fixnums: an optimisation that
-allows the @objtype{rib} to reorganise itself by moving frequently used
-tuples towards the beginning of the vectors.  This is possible because
-the order in which the tuples appear in a @objtype{rib} does not matter.
+allows the @rib{} to reorganise itself by moving frequently used tuples
+towards the beginning of the vectors.  This is possible because the
+order in which the tuples appear in a @rib{} does not matter.
 
-Let's see how it works.  An unsealed @objtype{rib} holding two syntactic
+Let's see how it works.  An unsealed @rib{} holding two syntactic
 bindings with source names @samp{a} and @samp{b} and the @code{src}
 mark, looks as follows:
 
@@ -1069,7 +1068,7 @@ sealed/freq = #(0       0)
 @noindent
 the access frequencies in the @code{sealed/freq} field are initialised
 to zero; after accessing once the binding of @samp{b} in the sealed
-@objtype{rib}, its frequency is incremented:
+@rib{}, its frequency is incremented:
 
 @example
 name*       = #(b       a)
@@ -1079,8 +1078,8 @@ sealed/freq = #(1       0)
 @end example
 
 @noindent
-and after accessing twice the binding of @samp{a} in the sealed
-@objtype{rib}, the tuples are swapped:
+and after accessing twice the binding of @samp{a} in the sealed @rib{},
+the tuples are swapped:
 
 @example
 name*       = #(a       b)
@@ -1126,13 +1125,13 @@ Under @value{PRJNAME}, we adopt the following definitions:
 
 @table @dfn
 @item Wrapped syntax object
-An object of type @objtype{stx}.
+An object of type @stx{}.
 
 @item Unwrapped syntax object
 A compound object holding: nulls, pairs, vectors, numbers, strings,
 bytevectors, chars, booleans, keywords, would--block objects, unbound
 objects, @eof{} objects, broken weak pointer objects, objects of type
-@objtype{stx}.
+@stx{}.
 @end table
 
 An unwrapped symbol object @strong{cannot} be part of an unwrapped
@@ -1144,7 +1143,7 @@ unwrapped symbol will, sooner or later, cause an exception to be raised.
 Disjoint object type representing wrapped syntax objects: source code
 expressions associated to meta data representing their lexical contour.
 
-Objects of type @objtype{stx} have the following fields:
+Objects of type @stx{} have the following fields:
 
 @table @code
 @item expr
@@ -1165,12 +1164,12 @@ Two marks must be @func{eq?}--comparable, so, by default, we use empty
 strings as marks and @false{} as anti--mark: their generation is fast.
 
 @item rib*
-Null or a proper list of @objtype{rib} objects or @code{shift} symbols.
-Every @objtype{rib} represents a nested lexical contour; a @code{shift}
-represents the return from a macro transformer application.
+Null or a proper list of @rib{} objects or @code{shift} symbols.  Every
+@rib{} represents a nested lexical contour; a @code{shift} represents
+the return from a macro transformer application.
 
 While expanding source code: upon entering a syntactic form representing
-a lexical contour, a new @objtype{rib} is added to the syntax object
+a lexical contour, a new @rib{} is added to the syntax object
 representing the syntactic form itself, to allow syntactic identifiers
 in the form to be captured by the bindings introduced in that contour.
 
@@ -1200,24 +1199,24 @@ Return @true{} if @var{stx} is a wrapped syntax object; else return
 @end defun
 
 
-@defop {Field accessor} @objtype{stx} stx-expr @var{stx}
+@defop {Field accessor} @stx{} stx-expr @var{stx}
 Return a symbolic expression, possibly annotated.
 @end defop
 
 
-@defop {Field accessor} @objtype{stx} stx-mark* @var{stx}
+@defop {Field accessor} @stx{} stx-mark* @var{stx}
 Return null or a proper list of @func{eq?}--unique objects acting as
 lexical contour marks, including the symbol @samp{src}.
 @end defop
 
 
-@defop {Field accessor} @objtype{stx} stx-rib* @var{stx}
-Return null or a proper list of @objtype{rib} instances or @code{shift}
+@defop {Field accessor} @stx{} stx-rib* @var{stx}
+Return null or a proper list of @rib{} instances or @code{shift}
 symbols.
 @end defop
 
 
-@defop {Field accessor} @objtype{stx} stx-annotated-expr* @var{stx}
+@defop {Field accessor} @stx{} stx-annotated-expr* @var{stx}
 Return null or a proper list of annotated expressions: @false{} or input
 forms of macro transformer calls.
 @end defop
@@ -1226,10 +1225,10 @@ forms of macro transformer calls.
 
 @subsubheading What are syntax objects
 
-All the syntactic identifiers are @objtype{stx} objects with a symbol in
-their @code{expr} field; other objects such as pairs and vectors may be
-wrapped or unwrapped.  A wrapped pair is an @objtype{stx} whose
-@code{expr} field is a pair:
+All the syntactic identifiers are @stx{} objects with a symbol in their
+@code{expr} field; other objects such as pairs and vectors may be
+wrapped or unwrapped.  A wrapped pair is an @stx{} whose @code{expr}
+field is a pair:
 
 @example
 (syntax (a . b))
@@ -1745,8 +1744,8 @@ of the gensyms.
 
 @item
 When a library is imported: the imported names of syntactic bindings are
-associated to their label gensyms in the @objtype{rib} object
-representing the current lexical context.
+associated to their label gensyms in the @rib{} object representing the
+current lexical context.
 @end itemize
 
 @c ------------------------------------------------------------------------
@@ -2106,7 +2105,7 @@ language.
 Top level and local syntactic bindings are represented in the same way
 in the @lexenv{}; the difference between them is that top level
 syntactic bindings have the association between the source name and the
-label gensym stored in the top level @objtype{rib} object.
+label gensym stored in the top level @rib{} object.
 
 @c ------------------------------------------------------------------------
 
@@ -2358,7 +2357,7 @@ is expanded the following entry is pushed on the @lexenv{}:
 
 @noindent
 where: @meta{unused-label} is a dummy label gensym which is not bound in
-the current rib; @meta{visit-code} is a full core language expression
+the current @rib{}; @meta{visit-code} is a full core language expression
 representing the expanded contents of the @syntax{begin-for-syntax} use.
 
 @c ------------------------------------------------------------------------
@@ -2399,7 +2398,7 @@ When a fluid syntax's syntactic binding is established by
 
 @noindent
 an identifier @meta{lhs} is associated to a main label @meta{label} in
-the current rib; an entry is pushed on the @lexenv{}:
+the current @rib{}; an entry is pushed on the @lexenv{}:
 
 @example
 (@meta{label} . ($fluid . @meta{fluid-label}))
@@ -2497,7 +2496,7 @@ When an synonym syntax binding is established:
 
 @noindent
 an identifier @meta{lhs} is associated to a main label @meta{label} in
-the current rib; an entry is pushed on the @lexenv{}:
+the current @rib{}; an entry is pushed on the @lexenv{}:
 
 @example
 (@meta{label} . ($synonym . @meta{synonym-label}))
@@ -2520,8 +2519,8 @@ The following syntactic bindings are exported by the library
 
 
 @defun syntactic-identifier->label @var{id}
-Given the syntactic identifier @var{id} search its sequence of ribs for
-a syntactic binding having the same source--name and marks.  If
+Given the syntactic identifier @var{id} search its sequence of @rib{}
+for a syntactic binding having the same source--name and marks.  If
 successful: return the syntactic binding's label gensym; otherwise
 return @false{}.
 
@@ -2723,10 +2722,10 @@ and ending with the postlude:
 
 
 The syntactic bindings established by the @clause{import} clause of
-programs and libraries are stored in a @objtype{rib} object; this rib
+programs and libraries are stored in a @rib{} object; this @rib{}
 represents the @dfn{top--level environment} and it is referred to as
-@dfn{top--level rib}.  The descriptors of top--level syntactic bindings
-are stored in the @code{value} field of their label gensyms.
+@dfn{top--level @rib{}}.  The descriptors of top--level syntactic
+bindings are stored in the @code{value} field of their label gensyms.
 
 We can look at a syntactic identifier as follows:
 
@@ -2738,8 +2737,8 @@ We can look at a syntactic identifier as follows:
 
 @noindent
 we see that: the source--name symbol is @samp{display}; the list of
-marks is @samp{(src)}; the list of rib objects is not displayed, because
-it is too long.  We can inspect the list of ribs too:
+marks is @samp{(src)}; the list of @rib{} objects is not displayed,
+because it is too long.  We can inspect the list of @rib{} objects too:
 
 @lisp
 (begin-for-syntax
@@ -2749,11 +2748,11 @@ it is too long.  We can inspect the list of ribs too:
 
 @noindent
 we do not show the full output, because it is really long: the list of
-ribs contains a single item being the top--level rib of the program;
-this top rib contains a tuple for every syntactic binding imported in
+ribs contains a single item being the top--level @rib{} of the program;
+this top @rib{} contains a tuple for every syntactic binding imported in
 the program.
 
-We can retrieve the elements of syntactic bindings from the top rib:
+We can retrieve the elements of syntactic bindings from the top @rib{}:
 
 @lisp
 (begin-for-syntax
@@ -2779,27 +2778,29 @@ then query its syntactic binding:
 @end lisp
 
 In the following examples: we avoid defining top--level bindings because
-printing the top rib is annoying; for this reason we use the function
-@func{id-rib*/no-top} which cuts out the top rib from a list of ribs
-(the top rib is always the last item in a list of ribs).
+printing the top @rib{} is annoying; for this reason we use the function
+@func{id-rib*/no-top} which cuts out the top @rib{} from a list of
+@rib{} objects (the top @rib{} is always the last item in a list of
+ribs).
 
 @c page
 @node expander examples contours
 @subsection Lexical contours inspection
 
 
-We will inspect the fields of @objtype{stx} objects and @objtype{rib}
-objects to understand how the lexical environment's data structures are
-used to represent lexical contours.
+We will inspect the fields of @stx{} objects and @rib{} objects to
+understand how the lexical environment's data structures are used to
+represent lexical contours.
 
 We will examine the expansion of nested @syntax{internal-body} uses:
 these syntaxes are the simplest because they create a single lexical
-contour.  We will inspect the syntactic identifiers and ribs from the
-body of a @syntax{begin-for-syntax} use.
+contour.  We will inspect the syntactic identifiers and @rib{} objects
+from the body of a @syntax{begin-for-syntax} use.
 
 @menu
 * expander examples contours single::  Single internal body.
 * expander examples contours double::  Double internal body.
+* expander examples contours datum::   What @func{datum->syntax} does.
 @end menu
 
 @c page
@@ -2828,9 +2829,9 @@ binding:
 @noindent
 we see that the syntactic identifiers created by @syntax{syntax} in the
 @syntax{begin-for-expand} have the same list of marks and the same list
-of ribs.
+of @rib{} objects.
 
-Let's see the ribs:
+Let's see the @rib{} objects:
 
 @lisp
 (define A 1)
@@ -2847,11 +2848,11 @@ Let's see the ribs:
 @end lisp
 
 @noindent
-the list of ribs in the identifier @samp{(syntax A)} has two items: the first
-is the rib associated to @syntax{internal-body}; the second is the top
-rib.  We see the internal rib holds a single tuple describing the
-syntactic binding for @samp{B}; the syntactic binding for @samp{A} is in
-the top rib.
+the list of @rib{} objects in the identifier @samp{(syntax A)} has two
+items: the first is the @rib{} associated to @syntax{internal-body}; the
+second is the top @rib{}.  We see the internal @rib{} holds a single
+tuple describing the syntactic binding for @samp{B}; the syntactic
+binding for @samp{A} is in the top @rib{}.
 
 With this layout we can understand what the function @func{id->label}
 does in the call:
@@ -2867,18 +2868,18 @@ does in the call:
 
 @noindent
 it extracts from its argument the symbol source--name @samp{A}, the list
-of marks @samp{(src)} and the list of ribs, then it scans the list of
-ribs left--to--right looking for a tuple whose source--name is
-@func{eq?}  to @samp{A} and whose list of marks is @func{equal?} to
-@samp{(src)}; it finds one in the top rib.
+of marks @samp{(src)} and the list of @rib{} objects, then it scans the
+list of @rib{} objects left--to--right looking for a tuple whose
+source--name is @func{eq?}  to @samp{A} and whose list of marks is
+@func{equal?} to @samp{(src)}; it finds one in the top @rib{}.
 
-This action of looking for a rib's tuple with the same source--name and
-the same marks is the @dfn{syntactic identifier resolution}, and we say
-that the tuple @dfn{captures} the identifier.
+This action of looking for a @rib{}'s tuple with the same source--name
+and the same marks is the @dfn{syntactic identifier resolution}, and we
+say that the tuple @dfn{captures} the identifier.
 
 This is not the whole story: to handle macro expansion we need more than
-this; but for lexical contours: building a list of ribs and using a
-single mark is enough.
+this; but for lexical contours: building a list of @rib{} objects and
+using a single mark is enough.
 
 @c page
 @node expander examples contours double
@@ -2886,7 +2887,7 @@ single mark is enough.
 
 
 Let's create two nested lexical contours with the syntax
-@syntax{internal-body} and inspect the ribs:
+@syntax{internal-body} and inspect the @rib{} objects:
 
 @lisp
 (internal-body
@@ -2913,21 +2914,21 @@ we see that:
 
 @itemize
 @item
-Both @code{#'A} and @code{#'B} have the same marks and ribs.
+Both @code{#'A} and @code{#'B} have the same marks and @rib{} objects.
 
 @item
-@code{#'A} and @code{#'B} build identifiers whose list of ribs has
-@math{3} items: the rib of the internal @syntax{internal-body}; the rib
-of the external @syntax{internal-body}; the top rib, which we have cut
-out using @func{id-rib*/no-top}.
+@code{#'A} and @code{#'B} build identifiers whose list of @rib{} objects
+has @math{3} items: the @rib{} of the internal @syntax{internal-body};
+the @rib{} of the external @syntax{internal-body}; the top @rib{}, which
+we have cut out using @func{id-rib*/no-top}.
 
 @item
-The rib of the internal @syntax{internal-body} comes first in the list
-of ribs and it has the tuple of @samp{B}.
+The @rib{} of the internal @syntax{internal-body} comes first in the
+list of @rib{} objects and it has the tuple of @samp{B}.
 
 @item
-The rib of the external @syntax{internal-body} comes second in the list
-of ribs and it has the tuple of @samp{A}.
+The @rib{} of the external @syntax{internal-body} comes second in the
+list of @rib{} objects and it has the tuple of @samp{A}.
 @end itemize
 
 It is simple to resolve the identifiers:
@@ -2968,10 +2969,10 @@ Now let's create two syntactic bindings with the same source name:
 @end lisp
 
 @noindent
-we see that both the ribs in the list of @samp{#'A} have a tuple with
-source--name @samp{A} and marks @samp{(src)}, but the rib of the
-internal @syntax{internal-body} comes first; so the internal syntactic
-binding for @samp{A} is the one that captures the identifier:
+we see that both the @rib{} objects in the list of @samp{#'A} have a
+tuple with source--name @samp{A} and marks @samp{(src)}, but the @rib{}
+of the internal @syntax{internal-body} comes first; so the internal
+syntactic binding for @samp{A} is the one that captures the identifier:
 
 @lisp
 (internal-body
@@ -2998,6 +2999,54 @@ external syntactic binding:
     (pretty-print (doit))))
 @print{} 1
 @end lisp
+
+@c page
+@node expander examples contours datum
+@subsubsection What @func{datum->syntax} does
+
+
+Armed with our understanding of lists of @rib{} objects as
+representation of nested lexical contours, we can understand what the
+standard procedure @func{datum->syntax} does (@pxref{stdlib syntax-case
+conversion, datum->syntax}).  Let's see this example:
+
+@lisp
+(internal-body
+  (define A 1)
+  (begin-for-syntax
+    (define B.id (datum->syntax #'A 'B))
+    (pretty-print #'A)
+    (pretty-print B.id)
+    (pretty-print (eq-ribs? #'A B.id)))
+  (void))
+@print{} #<syntactic-identifier expr=A mark*=(src)>
+@print{} #<syntactic-identifier expr=B mark*=(src)>
+@print{} #t
+@end lisp
+
+@noindent
+@func{datum->syntax} builds a new @stx{object} using its @var{datum}
+argument as symbolic expression and the marks and @rib{} list of its
+@var{template-id} argument as wraps.
+
+@func{datum->syntax} does not care if it generates a syntax objects with
+unbound identifiers in reference position:
+
+@lisp
+(internal-body
+  (define A 1)
+  (begin-for-syntax
+    (define B.id (datum->syntax #'A 'B))
+    (pretty-print (id->label      B.id))
+    (pretty-print (id->descriptor B.id)))
+  (void))
+@print{} #f
+@print{} (displaced-lexical . ())
+@end lisp
+
+@noindent
+it is only if we use the generated syntax object as part of the output
+form of a macro use that the ``boundness'' matters.
 
 @c page
 @node expander examples phases
@@ -3061,19 +3110,18 @@ The syntactic binding @samp{B} is established when
 @syntax{begin-for-syntax} is expanded: at phase 2.
 
 @item
-The @objtype{stx} objects representing the syntactic identifiers
-@samp{(syntax A)} and @samp{(syntax B)} have the same marks and ribs.
+The @stx{} objects representing the syntactic identifiers @samp{(syntax
+A)} and @samp{(syntax B)} have the same marks and @rib{} objects.
 
 @item
-The @objtype{rib} of @syntax{internal-body} has tuples for both @samp{A}
-and @samp{B}.
+The @rib{} of @syntax{internal-body} has tuples for both @samp{A} and
+@samp{B}.
 @end itemize
 
 @noindent
 so the expansion/evaluation phases are @strong{not} distinguished in the
-@objtype{stx} objects and the @objtype{rib} objects.  Under
-@value{PRJNAME}: phase 0 has its @lexenv{}; phase 1 and the other phases
-have their @lexenv{}.
+@stx{} objects and the @rib{} objects.  Under @value{PRJNAME}: phase 0
+has its @lexenv{}; phase 1 and the other phases have their @lexenv{}.
 
 Let's try to resolve the identifiers using the inferior @lexenv{} from
 the @syntax{begin-for-expand}:
@@ -3095,9 +3143,9 @@ the @syntax{begin-for-expand}:
 @end lisp
 
 @noindent
-we see that the labels are retrieved correctly from the rib object; the
-descriptor of @samp{A} is retrieved from the inferior @lexenv{}, while
-the label of @samp{B} appears unbound.
+we see that the labels are retrieved correctly from the @rib{} object;
+the descriptor of @samp{A} is retrieved from the inferior @lexenv{},
+while the label of @samp{B} appears unbound.
 
 To retrieve the descriptor of @samp{B} we do:
 

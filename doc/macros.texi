@@ -607,12 +607,20 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{RE2}
 @end macro
 
+@macro rib{}
+@objtype{rib}
+@end macro
+
 @macro sel{}
 @acronym{SEL}
 @end macro
 
 @macro std{}
 @acronym{STD}
+@end macro
+
+@macro stx{}
+@objtype{stx}
 @end macro
 
 @macro urldate{DATE}
