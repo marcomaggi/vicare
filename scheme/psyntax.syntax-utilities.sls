@@ -60,12 +60,11 @@
 		 ;;If  it is  an identifier  we  do *not*  want  to use  its name  as
 		 ;;temporary name, because  it looks ugly and  confusing when looking
 		 ;;at the result of the expansion with PRINT-GENSYM set to #f.
-		 (gensym 't)
+		 (gensym "tmp")
 	       (let ((x (syntax->datum x)))
-		 (if (or (symbol? x)
-			 (string? x))
+		 (if (string? x)
 		     (gensym x)
-		   (gensym 't))))))
+		   (gensym "tmp"))))))
        ?item*))
     (_
      (assertion-violation __who__
