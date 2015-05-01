@@ -2714,7 +2714,7 @@
 
   (module (define*-macro)
     ;;Transformer function used to expand  Vicare's DEFINE* macros from the top-level
-    ;;built in environment.  Expand the contents of EXPR-STX.  Return a syntax object
+    ;;built in environment.  Expand the contents of EXPR.STX.  Return a syntax object
     ;;that must be further expanded.
     ;;
     ;;We want to implement the following example expansions:
@@ -2747,87 +2747,104 @@
     ;;              (expression-return-value-violation __who__
     ;; 	              "failed return value validation" (list '?pred rv))))))
     ;;
-    (define (define*-macro stx)
+    (define (define*-macro expr.stx)
       (define (%synner message subform)
-	(syntax-violation 'define* message stx subform))
-      (syntax-match stx (brace)
-	;;No ret-pred.
-	((_ (?who . ?formals) ?body0 ?body* ...)
-	 (identifier? ?who)
-	 (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
+	(syntax-violation 'define* message expr.stx subform))
+      (bless
+       (syntax-match expr.stx (brace)
+	 ;;No ret-pred.
+	 ((_ (?who . ?formals) ?body0 ?body* ...)
+	  (identifier? ?who)
+	  (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
 
-	;;Return value predicates.
-	((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (identifier? ?who)
-	 (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+	 ;;Return value predicates.
+	 ((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	  (identifier? ?who)
+	  (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
 
-	((_ ?who ?expr)
-	 (identifier? ?who)
-	 (bless
+	 ((_ ?who ?expr)
+	  (identifier? ?who)
 	  `(define ,?who
 	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
-	       ,?expr))))
+	       ,?expr)))
 
-	((_ ?who)
-	 (identifier? ?who)
-	 (bless
-	  `(define ,?who (void))))
+	 ((_ ?who)
+	  (identifier? ?who)
+	  `(define ,?who (void)))
 
-	))
+	 )))
 
-    (define (%generate-define-output-form/without-ret-pred ?who ?predicate-formals ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  (bless
-	   `(define (,?who . ,?standard-formals)
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote ,?who))))
-		,@ARG-VALIDATION*
-		(internal-body . ,?body*)))))))
+    (define (%generate-define-output-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;definition.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(define (,who.id . ,standard-formals.stx)
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ,who.id))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  `(begin
+		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     (internal-body . ,body*.stx))
+		;;Without validation
+		`(begin . ,body*.stx))))))
 
-    (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form
-				 (map (lambda (rv.id pred.stx)
-					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-				   RET* ?ret-pred*)
-				 synner)))
-	  (bless
-	   `(define (,?who . ,?standard-formals)
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote ,?who))))
-		,@ARG-VALIDATION*
-		(receive-and-return (,@RET*)
-		    (internal-body . ,?body*)
-		  ,RET-VALIDATION)))))))
+    (define (%generate-define-output-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;definition.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(define (,who.id . ,standard-formals.stx)
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ,who.id))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      (map (lambda (rv.id pred.stx)
+						     (make-retval-validation-spec rv.id pred.stx
+										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+						RETVAL* ret-pred*.stx)
+					      synner)))
+		    `(begin
+		       ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		       (receive-and-return ,RETVAL*
+			   (internal-body . ,body*.stx)
+			 . ,RETVAL-VALIDATION*)))
+		;;Without validation.
+		`(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: DEFINE*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (case-define*-macro)
 
-    (define (case-define*-macro stx)
+    (define (case-define*-macro expr.stx)
       ;;Transformer function  used to  expand Vicare's  CASE-DEFINE* macros  from the
-      ;;top-level built in  environment.  Expand the contents of  EXPR-STX.  Return a
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
-	(syntax-violation 'case-define* message stx subform))
-      (syntax-match stx ()
+	(syntax-violation 'case-define* message expr.stx subform))
+      (syntax-match expr.stx ()
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
 	  `(define ,?who
-	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
-	       (case-lambda
-		,@(map (lambda (?clause)
-			 (%generate-case-define-form ?who ?clause %synner))
-		    (cons ?clause0 ?clause*)))))))
+	     (case-lambda
+	      ,@(map (lambda (?clause)
+		       (%generate-case-define-form ?who ?clause %synner))
+		  (cons ?clause0 ?clause*))))))
 	))
 
     (define (%generate-case-define-form ?who ?clause synner)
@@ -2835,163 +2852,225 @@
 	;;Return value predicates.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (underscore-id? ?underscore)
-	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
+	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner))
+	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) synner))
 	))
 
-    (define (%generate-case-define-clause-form/without-ret-pred ?who ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote ,?who))))
-	      ,@ARG-VALIDATION*
-	      (internal-body ,?body0 ,@?body*))))))
+    (define (%generate-case-define-clause-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
+      ;;Build and return  a symbolic expression, to be BLESSed  later, representing a
+      ;;definition clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote ,who.id))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 `(begin
+		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		    (internal-body . ,body*.stx))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form
-				 (map (lambda (rv.id pred.stx)
-					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-				   RET* ?ret-pred*)
-				 synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote ,?who))))
-	      ,@ARG-VALIDATION*
-	      (receive-and-return (,@RET*)
-		  (internal-body ,?body0 ,@?body*)
-		,RET-VALIDATION))))))
+    (define (%generate-case-define-clause-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return  a symbolic expression, to be BLESSed  later, representing a
+      ;;definition clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote ,who.id))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     (map (lambda (rv.id pred.stx)
+						    (make-retval-validation-spec rv.id pred.stx
+										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					       RETVAL* ret-pred*.stx)
+					     synner)))
+		   `(begin
+		      ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		      (receive-and-return ,RETVAL*
+			  (internal-body . ,body*.stx)
+			. ,RETVAL-VALIDATION*)))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: CASE-DEFINE*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (lambda*-macro)
 
-    (define (lambda*-macro stx)
+    (define (lambda*-macro expr.stx)
       ;;Transformer  function  used  to  expand  Vicare's  LAMBDA*  macros  from  the
-      ;;top-level built in  environment.  Expand the contents of  EXPR-STX.  Return a
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
-	(syntax-violation 'lambda* message stx subform))
-      (syntax-match stx (brace)
-	;;Ret-pred with list spec.
-	((?kwd ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (underscore-id? ?underscore)
-	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
+	(syntax-violation 'lambda* message expr.stx subform))
+      (bless
+       (syntax-match expr.stx (brace)
+	 ;;Ret-pred with list spec.
+	 ((_ ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	  (underscore-id? ?underscore)
+	  (%generate-lambda-output-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
 
-	;;No ret-pred.
-	((?kwd ?formals ?body0 ?body* ...)
-	 (%generate-lambda-output-form/without-ret-pred ?kwd ?formals ?body0 ?body* %synner))
+	 ;;No ret-pred.
+	 ((_ ?formals ?body0 ?body* ...)
+	  (%generate-lambda-output-form/without-ret-pred ?formals (cons ?body0 ?body*) %synner))
 
-	))
+	 )))
 
-    (define (%generate-lambda-output-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  (bless
-	   `(lambda ,?standard-formals
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote _))))
-		,@ARG-VALIDATION*
-		(internal-body ,?body0 ,@?body*)))))))
+    (define (%generate-lambda-output-form/without-ret-pred predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;LAMBDA syntax use.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(lambda ,standard-formals.stx
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote _))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  `(begin
+		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     (internal-body . ,body*.stx))
+		;;Without validation.
+		`(begin . ,body*.stx))))))
 
-    (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form
-				 (map (lambda (rv.id pred.stx)
-					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-				   RET* ?ret-pred*)
-				 synner)))
-	  (bless
-	   `(lambda ,?standard-formals
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote _))))
-		,@ARG-VALIDATION*
-		(receive-and-return (,@RET*)
-		    (internal-body ,?body0 ,@?body*)
-		  ,RET-VALIDATION)))))))
+    (define (%generate-lambda-output-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;LAMBDA syntax use.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(lambda ,standard-formals.stx
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote _))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      (map (lambda (rv.id pred.stx)
+						     (make-retval-validation-spec rv.id pred.stx
+										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+						RETVAL* ret-pred*.stx)
+					      synner)))
+		    `(begin
+		       ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		       (receive-and-return ,RETVAL*
+			   (internal-body . ,body*.stx)
+			 . ,RETVAL-VALIDATION*)))
+		;;Without validation
+		`(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: LAMBDA*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (case-lambda*-macro)
 
-    (define (case-lambda*-macro stx)
+    (define (case-lambda*-macro expr.stx)
       ;;Transformer function  used to  expand Vicare's  CASE-LAMBDA* macros  from the
-      ;;top-level built in  environment.  Expand the contents of  EXPR-STX.  Return a
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
       ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
-	(syntax-violation 'case-lambda* message stx subform))
-      (syntax-match stx ()
-	((?kwd ?clause0 ?clause* ...)
+	(syntax-violation 'case-lambda* message expr.stx subform))
+      (syntax-match expr.stx ()
+	((_ ?clause0 ?clause* ...)
 	 (bless
 	  `(case-lambda
-	    ,@(map (lambda (?clause)
-		     (%generate-case-lambda-form ?kwd ?clause %synner))
+	    ,@(map (lambda (clause.stx)
+		     (%generate-case-lambda-form clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
 	))
 
-    (define (%generate-case-lambda-form ?ctx ?clause synner)
-      (syntax-match ?clause (brace)
+    (define (%generate-case-lambda-form clause.stx synner)
+      (syntax-match clause.stx (brace)
 	;;Ret-pred with list spec.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (underscore-id? ?underscore)
-	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
+	 (%generate-case-lambda-clause-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?formals ?body0 ?body* synner))
+	 (%generate-case-lambda-clause-form/without-ret-pred ?formals (cons ?body0 ?body*) synner))
 	))
 
-    (define (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote _))))
-	      ,@ARG-VALIDATION*
-	      (internal-body ,?body0 ,@?body*))))))
+    (define (%generate-case-lambda-clause-form/without-ret-pred predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;CASE-LAMBDA clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote _))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 `(begin
+		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		    (internal-body . ,body*.stx))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    (define (%generate-case-lambda-clause-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form
-				 (map (lambda (rv.id pred.stx)
-					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
-				   RET* ?ret-pred*)
-				 synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote _))))
-	      ,@ARG-VALIDATION*
-	      (receive-and-return (,@RET*)
-		  (internal-body ,?body0 ,@?body*)
-		,RET-VALIDATION))))))
+    (define (%generate-case-lambda-clause-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;CASE-LAMBDA clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote _))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation
+		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     (map (lambda (rv.id pred.stx)
+						    (make-retval-validation-spec rv.id pred.stx
+										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					       RETVAL* ret-pred*.stx)
+					     synner)))
+		   `(begin
+		      ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		      (receive-and-return ,RETVAL*
+			  (internal-body . ,body*.stx)
+			. ,RETVAL-VALIDATION*)))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: CASE-LAMBDA*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-predicate-formals ?predicate-formals synner)
+  (define (%parse-predicate-formals predicate-formals.stx synner)
     ;;Split  formals from  tags.   We  rely on  the  DEFINE,  LAMBDA and  CASE-LAMBDA
     ;;syntaxes in the  output form to further validate the  formals against duplicate
     ;;bindings.
@@ -3024,7 +3103,7 @@
     ;;* A list of ARGUMENT-VALIDATION-SPEC  structures each representing a validation
     ;;  predicate.
     ;;
-    (syntax-match ?predicate-formals (brace)
+    (syntax-match predicate-formals.stx (brace)
 
       ;;Tagged args.
       ;;
@@ -3041,18 +3120,22 @@
 	   (synner "invalid rest argument specification" (list 'brace ?rest-id ?rest-pred)))
 	 (let recur ((?pred-arg* ?pred-arg*))
 	   (if (pair? ?pred-arg*)
-	       (receive (?standard-formals arg-validation-spec*)
+	       ;;STANDARD-FORMALS.STX is an improper list of identifiers representing
+	       ;;the   standard  formals.    ARG-VALIDATION-SPEC*   is   a  list   of
+	       ;;ARGUMENT-VALIDATION-SPEC structures, each  representing a validation
+	       ;;predicate.
+	       (receive (standard-formals.stx arg-validation-spec*)
 		   (recur (cdr ?pred-arg*))
 		 (let ((?pred-arg (car ?pred-arg*)))
 		   (syntax-match ?pred-arg (brace)
 		     ;;Untagged argument.
 		     (?id
 		      (identifier? ?id)
-		      (values (cons ?id ?standard-formals) arg-validation-spec*))
+		      (values (cons ?id standard-formals.stx) arg-validation-spec*))
 		     ;;Tagged argument.
 		     ((brace ?id ?pred)
 		      (identifier? ?id)
-		      (values (cons ?id ?standard-formals)
+		      (values (cons ?id standard-formals.stx)
 			      (cons (make-argument-validation-spec ?id (%parse-logic-predicate-syntax ?pred ?id synner))
 				    arg-validation-spec*)))
 		     (else
@@ -3067,18 +3150,22 @@
        (identifier? ?rest-id)
        (let recur ((?pred-arg* ?pred-arg*))
 	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
+	     ;;STANDARD-FORMALS.STX is  an improper list of  identifiers representing
+	     ;;the   standard   formals.    ARG-VALIDATION-SPEC*   is   a   list   of
+	     ;;ARGUMENT-VALIDATION-SPEC  structures, each  representing a  validation
+	     ;;predicate.
+	     (receive (standard-formals.stx arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
 		 (syntax-match ?pred-arg (brace)
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals) arg-validation-spec*))
+		    (values (cons ?id standard-formals.stx) arg-validation-spec*))
 		   ;;Tagged argument.
 		   ((brace ?id ?pred)
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals)
+		    (values (cons ?id standard-formals.stx)
 			    (cons (make-argument-validation-spec ?id (%parse-logic-predicate-syntax ?pred ?id synner))
 				  arg-validation-spec*)))
 		   (else
@@ -3096,7 +3183,7 @@
       ((?id* ... . ?rest-id)
        (and (for-all identifier? ?id*)
 	    (identifier? ?rest-id))
-       (values ?predicate-formals '()))
+       (values predicate-formals.stx '()))
 
       ;;Standard formals: untagged args.
       ;;
@@ -3109,18 +3196,22 @@
       ((?pred-arg* ...)
        (let recur ((?pred-arg* ?pred-arg*))
 	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
+	     ;;STANDARD-FORMALS.STX is  an improper list of  identifiers representing
+	     ;;the   standard   formals.    ARG-VALIDATION-SPEC*   is   a   list   of
+	     ;;ARGUMENT-VALIDATION-SPEC  structures, each  representing a  validation
+	     ;;predicate.
+	     (receive (standard-formals.stx arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
 		 (syntax-match ?pred-arg (brace)
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals) arg-validation-spec*))
+		    (values (cons ?id standard-formals.stx) arg-validation-spec*))
 		   ;;Tagged argument.
 		   ((brace ?id ?pred)
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals)
+		    (values (cons ?id standard-formals.stx)
 			    (cons (make-argument-validation-spec ?id (%parse-logic-predicate-syntax ?pred ?id synner))
 				  arg-validation-spec*)))
 		   (else
@@ -3131,32 +3222,25 @@
 ;;; --------------------------------------------------------------------
 
   (define (%make-arg-validation-forms arg-validation-spec* synner)
-    (if (option.enable-arguments-validation?)
-	(map (lambda (spec)
-	       (let ((?arg-expr (argument-validation-spec-expr   spec))
-		     (?arg-id   (argument-validation-spec-arg-id spec)))
-		 `(unless ,?arg-expr
-		    (procedure-argument-violation __who__
-		      "failed argument validation"
-		      (quote ,?arg-expr) ,?arg-id))))
-	  arg-validation-spec*)
-      '()))
+    (map (lambda (spec)
+	   (let ((?arg-expr (argument-validation-spec-expr   spec))
+		 (?arg-id   (argument-validation-spec-arg-id spec)))
+	     `(unless ,?arg-expr
+		(procedure-argument-violation __who__
+		  "failed argument validation"
+		  (quote ,?arg-expr) ,?arg-id))))
+      arg-validation-spec*))
 
-  (define (%make-ret-validation-form retval-validation-spec* synner)
-    (if (option.enable-arguments-validation?)
-	`(begin
-	   ,@(map (lambda (spec)
-		    (let ((?expr (retval-validation-spec-expr  spec))
-			  (?pred (retval-validation-spec-pred  spec))
-			  (?ret  (retval-validation-spec-rv-id spec)))
-		      `(unless ,?expr
-			 (expression-return-value-violation __who__
-			   "failed return value validation"
-			   ;;This list represents the application of the predicate to
-			   ;;the offending value.
-			   (list (quote ,?pred) ,?ret)))))
-	       retval-validation-spec*))
-      '(void)))
+  (define (%make-ret-validation-forms retval-validation-spec* synner)
+    (map (lambda (spec)
+	   (let ((?expr (retval-validation-spec-expr  spec))
+		 (?pred (retval-validation-spec-pred  spec))
+		 (?ret  (retval-validation-spec-rv-id spec)))
+	     `(unless ,?expr
+		(expression-return-value-violation __who__
+		  "failed return value validation"
+		  (list (quote ,?pred) ,?ret)))))
+      retval-validation-spec*))
 
   (define (%parse-logic-predicate-syntax pred.stx var.id synner)
     (parse-logic-predicate-syntax pred.stx
