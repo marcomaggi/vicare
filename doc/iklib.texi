@@ -426,9 +426,9 @@ Turn on strict support for @rnrs{6} language.
 
 The syntaxes @func{lambda*} and @func{case-lambda*} are similar to
 @func{lambda} and @func{case-lambda} as defined by @rnrs{6}, but they
-allow the selection of predicate functions to validate the arguments and
-the return value; a predicate function accepts a single argument and
-returns true or @false{}.  Examples:
+allow the specification of logic predicates to validate the arguments
+and the return values; a logic predicate is a composition of predicate
+expressions.  Examples:
 
 @example
 #!vicare
@@ -455,8 +455,7 @@ returns true or @false{}.  Examples:
 @noindent
 in the definition of the function bound to @func{vec}: notice that
 @code{@{_ vector?@}} is not a function argument, it is a special
-notation used to select a predicate function to validate the return
-value.
+notation used to select a predicate to validate the return value.
 
 In the extended @func{lambda*} and @func{case-lambda*} syntaxes the
 @meta{pred-formals} can have any of the forms:
@@ -474,18 +473,34 @@ identifier is used to name a formal argument, in the extended
 
 @example
 @meta{id}
-(brace @meta{id} @meta{pred})
+(brace @meta{id} @meta{logic-pred})
 @end example
 
 @noindent
-where @meta{id} is an identifier naming the formal argument; @meta{pred}
-is an identifier which, at run time, must evaluate to a predicate
-function; @func{brace} is the binding exported by @library{vicare}.  The
-formal argument @meta{rest} can have only one of the following forms:
+where: @syntax{brace} is the identifier exported by @library{vicare};
+@meta{id} is an identifier naming the formal argument.
+@meta{logic-pred} must have one of the following recursive formats:
+
+@example
+@meta{logic-pred} = @meta{pred-id}
+            | (and @metao{logic-pred} @meta{logic-pred} ...)
+            | (or  @metao{logic-pred} @meta{logic-pred} ...)
+            | (xor @metao{logic-pred} @meta{logic-pred} ...)
+            | (not @meta{logic-pred})
+@end example
+
+@noindent
+where: @meta{pred-id} is an identifier expanding and evaluating to a
+predicate function accepting a single argument and returning true or
+@false{}; @syntax{and}, @syntax{or}, @syntax{xor}, @syntax{not} are the
+identifiers exported by @library{vicare}.
+
+The formal argument @meta{rest} can have only one of the following
+forms:
 
 @example
 @meta{rest-id}
-(brace @meta{rest-id} @meta{pred})
+(brace @meta{rest-id} @meta{logic-pred})
 @end example
 
 @noindent
@@ -493,13 +508,13 @@ and the formal argument @meta{args} can have one of the following forms:
 
 @example
 @meta{args-id}
-(brace @meta{args-id} @meta{pred})
+(brace @meta{args-id} @meta{logic-pred})
 @end example
 
 The first item in the @meta{pred-formals} can have the special syntax:
 
 @example
-(brace _ @metao{pred} @meta{pred} ...)
+(brace _ @metao{logic-pred} @meta{logic-pred} ...)
 @end example
 
 @noindent
@@ -511,9 +526,9 @@ selects predicates to validate the values returned by the last
 @c ------------------------------------------------------------
 
 @deffn Syntax lambda* @meta{pred-formals} @metao{body} @meta{body} @dots{}
-Like the standard @func{lambda} and additionally allows the selection of
-predicate functions to validate the arguments and the return value.  The
-formal arguments are handled according to the following rules:
+Like the standard @func{lambda} and additionally allow the specification
+of predicate functions to validate the arguments and the return value.
+The formal arguments are handled according to the following rules:
 
 @itemize
 @item
@@ -536,13 +551,14 @@ ignored and @func{lambda*} behaves like the standard @func{lambda}.
 If the first element of @meta{pred-formals} has the format:
 
 @example
-(brace _ @metao{pred} @meta{pred} ...)
+(brace _ @metao{logic-pred} @meta{logic-pred} ...)
 @end example
 
 @noindent
 the values returned by the last @meta{body} form are validated using the
-given @meta{pred}: if a predicate fails for its returned value, an
-exception is raised using @condition{expression-return-value-violation}.
+given @meta{logic-pred}: if a predicate fails for its returned value, an
+exception is raised using a compound condition object with component of
+type @condition{expression-return-value-violation}.
 @end itemize
 
 In addition the fluid identifier syntax @code{__who__} is bound to the
@@ -636,10 +652,10 @@ Function with multiple validated return values:
 @c ------------------------------------------------------------
 
 @deffn Syntax case-lambda* @meta{pred-cl-clause} @dots{}
-Like the standard @func{case-lambda} and additionally allows the
-selection of predicate functions to validate the arguments and the
-return value.  Clause by clause the formals are handled as explained for
-@func{lambda*}.
+Like the standard @func{case-lambda} and additionally allow the
+specification of logic predicates to validate the arguments and the
+return values.  Clause by clause the formals are handled as explained
+for @func{lambda*}.
 
 In addition the fluid identifier syntax @code{__who__} is bound to the
 quoted symbol @code{_}.
@@ -686,14 +702,14 @@ Convenience syntax which expands as follows:
 @deffnx Syntax define* (@meta{who} . @meta{formals}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define* (@meta{pred-who} . @meta{formals}) @metao{body} @meta{body} @dots{}
 Like the standard @func{define} as defined by @rnrs{6}, but when
-defining a function: allow the selection of predicate functions to
-validate the arguments and the return value.
+defining a function: allow the specification of logic predicates to
+validate the arguments and return values.
 
-Predicates selections is performed as explained for the @func{lambda*}
-extended syntax, @ref{iklib syntaxes lambdas, @func{lambda}--like
-additional syntaxes}.  There is an exception, where @func{lambda*} uses
-the @code{_} symbol to select predicates for the returned values,
-@func{define*} uses the binding identifier @meta{who}.
+Logic predicates specification is performed as explained for the
+@func{lambda*} extended syntax (@pxref{iklib syntaxes lambdas}).  There
+is an exception, where @func{lambda*} uses the @code{_} symbol to select
+predicates for the returned values, @func{define*} uses the binding
+identifier @meta{who}.
 
 In addition, when defining a function, the fluid identifier syntax
 @code{__who__} is bound to the quoted symbol @meta{who}.

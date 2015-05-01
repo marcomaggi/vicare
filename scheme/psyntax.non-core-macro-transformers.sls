@@ -2694,28 +2694,28 @@
 
   (define-record argument-validation-spec
     (arg-id
-		;Identifier representing the formal name of the argument
-		;being validated.
+		;Identifier  representing  the  formal  name of  the  argument  being
+		;validated.
      expr
-		;Syntax  object  representing   an  argument  validation
-		;expression.
+		;Syntax object representing an argument's validation expression.
      ))
 
   (define-record retval-validation-spec
     (rv-id
-		;Identifier representing the internal formal name of the
-		;return value being validated.
+		;Identifier representing the internal formal name of the return value
+		;being validated.
      pred
-		;Identifier bound to the predicate  to be applied to the
-		;return value.
+		;Syntax object representing the validation logic predicate.
+     expr
+		;Syntax object representing a return value's validation expression.
      ))
 
 ;;; --------------------------------------------------------------------
 
   (module (define*-macro)
-    ;;Transformer function  used to expand Vicare's  DEFINE* macros from
-    ;;the  top-level  built  in  environment.  Expand  the  contents  of
-    ;;EXPR-STX.  Return a syntax object that must be further expanded.
+    ;;Transformer function used to expand  Vicare's DEFINE* macros from the top-level
+    ;;built in environment.  Expand the contents of EXPR-STX.  Return a syntax object
+    ;;that must be further expanded.
     ;;
     ;;We want to implement the following example expansions:
     ;;
@@ -2758,9 +2758,7 @@
 
 	;;Return value predicates.
 	((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
+	 (identifier? ?who)
 	 (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
 
 	((_ ?who ?expr)
@@ -2793,8 +2791,11 @@
 	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
+	       (RET-VALIDATION  (%make-ret-validation-form
+				 (map (lambda (rv.id pred.stx)
+					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+				   RET* ?ret-pred*)
+				 synner)))
 	  (bless
 	   `(define (,?who . ,?standard-formals)
 	      (fluid-let-syntax
@@ -2811,9 +2812,9 @@
   (module (case-define*-macro)
 
     (define (case-define*-macro stx)
-      ;;Transformer function used to expand Vicare's CASE-DEFINE* macros
-      ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
+      ;;Transformer function  used to  expand Vicare's  CASE-DEFINE* macros  from the
+      ;;top-level built in  environment.  Expand the contents of  EXPR-STX.  Return a
+      ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-define* message stx subform))
@@ -2833,9 +2834,7 @@
       (syntax-match ?clause (brace)
 	;;Return value predicates.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (underscore-id? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
+	 (underscore-id? ?underscore)
 	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
 
 	;;No ret-pred.
@@ -2858,8 +2857,11 @@
 	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
+	       (RET-VALIDATION  (%make-ret-validation-form
+				 (map (lambda (rv.id pred.stx)
+					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+				   RET* ?ret-pred*)
+				 synner)))
 	  `(,?standard-formals
 	    (fluid-let-syntax
 		((__who__ (identifier-syntax (quote ,?who))))
@@ -2875,18 +2877,16 @@
   (module (lambda*-macro)
 
     (define (lambda*-macro stx)
-      ;;Transformer function used to expand Vicare's LAMBDA* macros from
-      ;;the  top-level built  in  environment.  Expand  the contents  of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
+      ;;Transformer  function  used  to  expand  Vicare's  LAMBDA*  macros  from  the
+      ;;top-level built in  environment.  Expand the contents of  EXPR-STX.  Return a
+      ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'lambda* message stx subform))
       (syntax-match stx (brace)
 	;;Ret-pred with list spec.
 	((?kwd ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (underscore-id? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
+	 (underscore-id? ?underscore)
 	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
 
 	;;No ret-pred.
@@ -2911,8 +2911,11 @@
 	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
+	       (RET-VALIDATION  (%make-ret-validation-form
+				 (map (lambda (rv.id pred.stx)
+					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+				   RET* ?ret-pred*)
+				 synner)))
 	  (bless
 	   `(lambda ,?standard-formals
 	      (fluid-let-syntax
@@ -2929,9 +2932,9 @@
   (module (case-lambda*-macro)
 
     (define (case-lambda*-macro stx)
-      ;;Transformer function used to expand Vicare's CASE-LAMBDA* macros
-      ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
+      ;;Transformer function  used to  expand Vicare's  CASE-LAMBDA* macros  from the
+      ;;top-level built in  environment.  Expand the contents of  EXPR-STX.  Return a
+      ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-lambda* message stx subform))
@@ -2948,9 +2951,7 @@
       (syntax-match ?clause (brace)
 	;;Ret-pred with list spec.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (underscore-id? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
+	 (underscore-id? ?underscore)
 	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
 
 	;;No ret-pred.
@@ -2973,8 +2974,11 @@
 	  (%parse-predicate-formals ?predicate-formals synner)
 	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
 	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
+	       (RET-VALIDATION  (%make-ret-validation-form
+				 (map (lambda (rv.id pred.stx)
+					(make-retval-validation-spec rv.id pred.stx (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+				   RET* ?ret-pred*)
+				 synner)))
 	  `(,?standard-formals
 	    (fluid-let-syntax
 		((__who__ (identifier-syntax (quote _))))
@@ -2988,12 +2992,12 @@
 ;;; --------------------------------------------------------------------
 
   (define (%parse-predicate-formals ?predicate-formals synner)
-    ;;Split  formals from  tags.   We  rely on  the  DEFINE, LAMBDA  and
-    ;;CASE-LAMBDA syntaxes  in the output  form to further  validate the
-    ;;formals against duplicate bindings.
+    ;;Split  formals from  tags.   We  rely on  the  DEFINE,  LAMBDA and  CASE-LAMBDA
+    ;;syntaxes in the  output form to further validate the  formals against duplicate
+    ;;bindings.
     ;;
-    ;;We use  the conventions: ?ID,  ?REST-ID and ?ARGS-ID  are argument
-    ;;identifiers; ?PRED is a predicate identifier.
+    ;;We use  the conventions: ?ID,  ?REST-ID and ?ARGS-ID are  argument identifiers;
+    ;;?PRED is a predicate identifier.
     ;;
     ;;We accept the following standard formals formats:
     ;;
@@ -3014,28 +3018,26 @@
     ;;
     ;;Return 2 values:
     ;;
-    ;;* A list  of syntax objects representing the  standard formals for
-    ;;  the DEFINE, LAMBDA and CASE-LAMBDA syntaxes.
+    ;;* A  list of syntax objects  representing the standard formals  for the DEFINE,
+    ;;  LAMBDA and CASE-LAMBDA syntaxes.
     ;;
-    ;;* A list of  ARGUMENT-VALIDATION-SPEC structures each representing
-    ;;  a validation predicate.
+    ;;* A list of ARGUMENT-VALIDATION-SPEC  structures each representing a validation
+    ;;  predicate.
     ;;
     (syntax-match ?predicate-formals (brace)
 
       ;;Tagged args.
       ;;
       ((brace ?args-id ?args-pred)
-       (and (identifier? ?args-id)
-	    (identifier? ?args-pred))
+       (identifier? ?args-id)
        (values ?args-id
-	       (list (make-argument-validation-spec ?args-id (list ?args-pred ?args-id)))))
+	       (list (make-argument-validation-spec ?args-id (%parse-logic-predicate-syntax ?args-pred ?args-id synner)))))
 
       ;;Possibly tagged identifiers with tagged rest argument.
       ;;
       ((?pred-arg* ... . (brace ?rest-id ?rest-pred))
        (begin
-	 (unless (and (identifier? ?rest-id)
-		      (identifier? ?rest-pred))
+	 (unless (identifier? ?rest-id)
 	   (synner "invalid rest argument specification" (list 'brace ?rest-id ?rest-pred)))
 	 (let recur ((?pred-arg* ?pred-arg*))
 	   (if (pair? ?pred-arg*)
@@ -3049,15 +3051,15 @@
 		      (values (cons ?id ?standard-formals) arg-validation-spec*))
 		     ;;Tagged argument.
 		     ((brace ?id ?pred)
-		      (and (identifier? ?id)
-			   (identifier? ?pred))
+		      (identifier? ?id)
 		      (values (cons ?id ?standard-formals)
-			      (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+			      (cons (make-argument-validation-spec ?id (%parse-logic-predicate-syntax ?pred ?id synner))
+				    arg-validation-spec*)))
 		     (else
 		      (synner "invalid argument specification" ?pred-arg)))))
 	     ;;Process rest argument.
 	     (values ?rest-id
-		     (list (make-argument-validation-spec ?rest-id (list ?rest-pred ?rest-id))))))))
+		     (list (make-argument-validation-spec ?rest-id (%parse-logic-predicate-syntax ?rest-pred ?rest-id synner))))))))
 
       ;;Possibly tagged identifiers with UNtagged rest argument.
       ;;
@@ -3075,10 +3077,10 @@
 		    (values (cons ?id ?standard-formals) arg-validation-spec*))
 		   ;;Tagged argument.
 		   ((brace ?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
+		    (identifier? ?id)
 		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+			    (cons (make-argument-validation-spec ?id (%parse-logic-predicate-syntax ?pred ?id synner))
+				  arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
 	   (values ?rest-id '()))))
@@ -3117,10 +3119,10 @@
 		    (values (cons ?id ?standard-formals) arg-validation-spec*))
 		   ;;Tagged argument.
 		   ((brace ?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
+		    (identifier? ?id)
 		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+			    (cons (make-argument-validation-spec ?id (%parse-logic-predicate-syntax ?pred ?id synner))
+				  arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
 	   (values '() '()))))
@@ -3144,16 +3146,27 @@
     (if (option.enable-arguments-validation?)
 	`(begin
 	   ,@(map (lambda (spec)
-		    (let ((?pred (retval-validation-spec-pred  spec))
+		    (let ((?expr (retval-validation-spec-expr  spec))
+			  (?pred (retval-validation-spec-pred  spec))
 			  (?ret  (retval-validation-spec-rv-id spec)))
-		      `(unless (,?pred ,?ret)
+		      `(unless ,?expr
 			 (expression-return-value-violation __who__
 			   "failed return value validation"
-			   ;;This list  represents the application  of the
-			   ;;predicate to the offending value.
+			   ;;This list represents the application of the predicate to
+			   ;;the offending value.
 			   (list (quote ,?pred) ,?ret)))))
 	       retval-validation-spec*))
       '(void)))
+
+  (define (%parse-logic-predicate-syntax pred.stx var.id synner)
+    (parse-logic-predicate-syntax pred.stx
+				  (lambda (pred.id)
+				    (syntax-match pred.id ()
+				      (?pred
+				       (identifier? ?pred)
+				       (list pred.id var.id))
+				      (else
+				       (synner "expected identifier as predicate name" pred.id))))))
 
   #| end of module |# )
 

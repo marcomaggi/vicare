@@ -2264,6 +2264,91 @@
 	(doit))
     => '_)
 
+;;; --------------------------------------------------------------------
+;;; compound predicates
+
+;;; argument
+
+  (check
+      (internal-body
+	(define doit
+	  (lambda* ({a (or integer? string?)})
+	    a))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(define doit
+	  (lambda* ({a (or integer? string?)})
+	    a))
+	(doit 1.2))
+    => '(_ ((or (integer? a) (string? a)) 1.2)))
+
+;;; rest argument
+
+  (check
+      (internal-body
+	(define doit
+	  (lambda* (a {b (or integer? string?)})
+	    b))
+	(values (doit 1 123) (doit 1 "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(define doit
+	  (lambda* (a {b (or integer? string?)})
+	    b))
+	(doit 1 1.2))
+    => '(_ ((or (integer? b) (string? b)) 1.2)))
+
+;;; single return value
+
+  (check
+      (internal-body
+	(define doit
+	  (lambda* ({_ (or integer? string?)} a)
+	    a))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define doit
+	  (lambda* ({_ (or integer? string?)} a)
+	    a))
+	(doit 1.2))
+    => '(_ (((or integer? string?) 1.2))))
+
+;;; multiple return values
+
+  (check
+      (internal-body
+	(define doit
+	  (lambda* ({_ (or integer? string?) (or symbol? string?)} a b)
+	    (values a b)))
+	(let-values (((a b) (doit 123 'ciao))
+		     ((c d) (doit "B" "C")))
+	  (values a b c d)))
+    => 123 'ciao "B" "C")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define doit
+	  (lambda* ({_ (or integer? string?) (or symbol? string?)} a b)
+	    (values a b)))
+	(doit 1.2 'ciao))
+    => '(_ (((or integer? string?) 1.2))))
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define doit
+	  (lambda* ({_ (or integer? string?) (or symbol? string?)} a b)
+	    (values a b)))
+	(doit 12 4))
+    => '(_ (((or symbol? string?) 4))))
+
   #t)
 
 
@@ -2531,6 +2616,100 @@
 	(doit))
     => '_)
 
+;;; --------------------------------------------------------------------
+;;; compound predicates
+
+;;; argument
+
+  (check
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({a (or integer? string?)})
+	     a)))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({a (or integer? string?)})
+	     a)))
+	(doit 1.2))
+    => '(_ ((or (integer? a) (string? a)) 1.2)))
+
+;;; rest argument
+
+  (check
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    ((a {b (or integer? string?)})
+	     b)))
+	(values (doit 1 123) (doit 1 "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    ((a {b (or integer? string?)})
+	     b)))
+	(doit 1 1.2))
+    => '(_ ((or (integer? b) (string? b)) 1.2)))
+
+;;; single return value
+
+  (check
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({_ (or integer? string?)} a)
+	     a)))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({_ (or integer? string?)} a)
+	     a)))
+	(doit 1.2))
+    => '(_ (((or integer? string?) 1.2))))
+
+;;; multiple return values
+
+  (check
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({_ (or integer? string?) (or symbol? string?)} a b)
+	     (values a b))))
+	(let-values (((a b) (doit 123 'ciao))
+		     ((c d) (doit "B" "C")))
+	  (values a b c d)))
+    => 123 'ciao "B" "C")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({_ (or integer? string?) (or symbol? string?)} a b)
+	     (values a b))))
+	(doit 1.2 'ciao))
+    => '(_ (((or integer? string?) 1.2))))
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define doit
+	  (case-lambda*
+	    (({_ (or integer? string?) (or symbol? string?)} a b)
+	     (values a b))))
+	(doit 12 4))
+    => '(_ (((or symbol? string?) 4))))
+
   #t)
 
 
@@ -2743,6 +2922,82 @@
 	  __who__)
 	(doit))
     => 'doit)
+
+;;; --------------------------------------------------------------------
+;;; compound predicates
+
+;;; argument
+
+  (check
+      (internal-body
+	(define* (doit {a (or integer? string?)})
+	  a)
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(define* (doit {a (or integer? string?)})
+	  a)
+	(doit 1.2))
+    => '(doit ((or (integer? a) (string? a)) 1.2)))
+
+;;; rest argument
+
+  (check
+      (internal-body
+	(define* (doit a {b (or integer? string?)})
+	  b)
+	(values (doit 1 123) (doit 1 "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(define* (doit a {b (or integer? string?)})
+	  b)
+	(doit 1 1.2))
+    => '(doit ((or (integer? b) (string? b)) 1.2)))
+
+;;; single return value
+
+  (check
+      (internal-body
+	(define* ({doit (or integer? string?)} a)
+	  a)
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define* ({doit (or integer? string?)} a)
+	  a)
+	(doit 1.2))
+    => '(doit (((or integer? string?) 1.2))))
+
+;;; multiple return values
+
+  (check
+      (internal-body
+	(define* ({doit (or integer? string?) (or symbol? string?)} a b)
+	  (values a b))
+	(let-values (((a b) (doit 123 'ciao))
+		     ((c d) (doit "B" "C")))
+	  (values a b c d)))
+    => 123 'ciao "B" "C")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define* ({doit (or integer? string?) (or symbol? string?)} a b)
+	  (values a b))
+	(doit 1.2 'ciao))
+    => '(doit (((or integer? string?) 1.2))))
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define* ({doit (or integer? string?) (or symbol? string?)} a b)
+	  (values a b))
+	(doit 12 4))
+    => '(doit (((or symbol? string?) 4))))
 
   #t)
 
@@ -3035,6 +3290,91 @@
 	   __who__))
 	(doit))
     => 'doit)
+
+;;; --------------------------------------------------------------------
+;;; compound predicates
+
+;;; argument
+
+  (check
+      (internal-body
+	(case-define* doit
+	  (({a (or integer? string?)})
+	   a))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(case-define* doit
+	  (({a (or integer? string?)})
+	   a))
+	(doit 1.2))
+    => '(doit ((or (integer? a) (string? a)) 1.2)))
+
+;;; rest argument
+
+  (check
+      (internal-body
+	(case-define* doit
+	  ((a {b (or integer? string?)})
+	   b))
+	(values (doit 1 123) (doit 1 "B")))
+    => 123 "B")
+
+  (check-for-procedure-argument-violation
+      (internal-body
+	(case-define* doit
+	  ((a {b (or integer? string?)})
+	   b))
+	(doit 1 1.2))
+    => '(doit ((or (integer? b) (string? b)) 1.2)))
+
+;;; single return value
+
+  (check
+      (internal-body
+	(case-define* doit
+	  (({_ (or integer? string?)} a)
+	   a))
+	(values (doit 123) (doit "B")))
+    => 123 "B")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(case-define* doit
+	  (({_ (or integer? string?)} a)
+	   a))
+	(doit 1.2))
+    => '(doit (((or integer? string?) 1.2))))
+
+;;; multiple return values
+
+  (check
+      (internal-body
+	(case-define* doit
+	  (({_ (or integer? string?) (or symbol? string?)} a b)
+	   (values a b)))
+	(let-values (((a b) (doit 123 'ciao))
+		     ((c d) (doit "B" "C")))
+	  (values a b c d)))
+    => 123 'ciao "B" "C")
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(case-define* doit
+	  (({_ (or integer? string?) (or symbol? string?)} a b)
+	   (values a b)))
+	(doit 1.2 'ciao))
+    => '(doit (((or integer? string?) 1.2))))
+
+  (check-for-expression-return-value-violation
+      (internal-body
+	(case-define* doit
+	  (({_ (or integer? string?) (or symbol? string?)} a b)
+	   (values a b)))
+	(doit 12 4))
+    => '(doit (((or symbol? string?) 4))))
 
   #t)
 

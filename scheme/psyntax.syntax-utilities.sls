@@ -62,7 +62,8 @@
 		 ;;at the result of the expansion with PRINT-GENSYM set to #f.
 		 (gensym "tmp")
 	       (let ((x (syntax->datum x)))
-		 (if (string? x)
+		 (if (or (symbol? x)
+			 (string? x))
 		     (gensym x)
 		   (gensym "tmp"))))))
        ?item*))
