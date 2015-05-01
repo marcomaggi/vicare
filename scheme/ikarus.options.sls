@@ -40,6 +40,7 @@
     tagged-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
+    vicare-built-with-descriptive-labels-generation
     vicare-built-with-srfi-enabled
     vicare-built-with-ffi-enabled
     vicare-built-with-iconv-enabled
@@ -173,6 +174,7 @@
 ;;;; vicare build configuration options
 
 (module (vicare-built-with-arguments-validation-enabled
+	 vicare-built-with-descriptive-labels-generation
 	 vicare-built-with-srfi-enabled
 	 vicare-built-with-ffi-enabled
 	 vicare-built-with-iconv-enabled
@@ -180,6 +182,7 @@
 	 vicare-built-with-glibc-enabled
 	 vicare-built-with-linux-enabled)
   (module (arguments-validation
+	   generate-descriptive-labels?
 	   VICARE_BUILT_WITH_SRFI_ENABLED
 	   VICARE_BUILT_WITH_ICONV_ENABLED
 	   VICARE_BUILT_WITH_FFI_ENABLED
@@ -190,6 +193,8 @@
     (include "ikarus.config.scm" #t))
   (define (vicare-built-with-arguments-validation-enabled)
     arguments-validation)
+  (define (vicare-built-with-descriptive-labels-generation)
+    generate-descriptive-labels?)
   (define (vicare-built-with-srfi-enabled)	VICARE_BUILT_WITH_SRFI_ENABLED)
   (define (vicare-built-with-iconv-enabled)	VICARE_BUILT_WITH_ICONV_ENABLED)
   (define (vicare-built-with-ffi-enabled)	VICARE_BUILT_WITH_FFI_ENABLED)

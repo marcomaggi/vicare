@@ -3024,6 +3024,7 @@
     (vicare-built-with-srfi-enabled		v $language)
 
     (vicare-built-with-arguments-validation-enabled	v $language)
+    (vicare-built-with-descriptive-labels-generation	v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; coroutines
