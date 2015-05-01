@@ -103,7 +103,7 @@
   ;;
   (if (pred obj)
       obj
-    (expression-return-value-violation type-name "invalid object type" obj)))
+    (expression-return-value-violation type-name "invalid object type" #f #f obj obj)))
 
 
 ;;;; done

@@ -333,7 +333,9 @@
      (check
 	 (guard (E ((expression-return-value-violation? E)
 		    (list (condition-who E)
-			  (condition-irritants E)))
+			  (expression-return-value-violation.index E)
+			  (expression-return-value-violation.failed-expression E)
+			  (expression-return-value-violation.offending-value E)))
 		   (else E))
 	   ?body)
        => ?expected-who/irritants))

@@ -5806,7 +5806,21 @@ component types: @condition{who}, @condition{message},
 
 @deftp {Condition Type} &expression-return-value-violation
 Condition object type representing invalid values returned from an
-expression; it is derived from @condition{assertion}.
+expression; it is derived from @condition{assertion}.  It has the
+following fields:
+
+@table @code
+@item index
+One--base index of the offending return value in the tuple of values
+returned by the expression.  It is @false{} when the index is unknown.
+
+@item failed-expression
+Symbolic expression representing the predicate used to validate the
+return value.
+
+@item offending-value
+The actual value returned by the expression.
+@end table
 @end deftp
 
 
@@ -5823,7 +5837,15 @@ Return @true{} if @var{obj} is a condition object of type
 @end defun
 
 
-@defun expression-return-value-violation @var{who} @var{message} @var{irritant} @dots{}
+@defun expression-return-value-violation.index
+@defunx expression-return-value-violation.failed-expression
+@defunx expression-return-value-violation.offending-value
+Accessors for the fields of condition objects of type
+@condition{expression-return-value-validation}.
+@end defun
+
+
+@defun expression-return-value-violation @var{who} @var{message} @var{retval-index} @var{failed-expression} @var{offending-value} @var{irritant} @dots{}
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
 @condition{irritants}, @condition{expression-return-value-validation}.

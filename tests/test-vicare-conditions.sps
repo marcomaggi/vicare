@@ -122,11 +122,11 @@
 (parametrise ((check-test-name	'expression-return-value-violation))
 
   (check
-      (expression-return-value-violation? (make-expression-return-value-violation))
+      (expression-return-value-violation? (make-expression-return-value-violation 1 'fixnum? "ciao"))
     => #t)
 
   (check
-      (assertion-violation? (make-expression-return-value-violation))
+      (assertion-violation? (make-expression-return-value-violation 1 'fixnum? "ciao"))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -135,22 +135,43 @@
       (guard (E ((expression-return-value-violation? E)
 		 (condition-who E))
 		(else E))
-	(expression-return-value-violation 'ciao "message" 1 2 3))
+	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
     => 'ciao)
 
   (check
       (guard (E ((expression-return-value-violation? E)
 		 (condition-message E))
 		(else E))
-	(expression-return-value-violation 'ciao "message" 1 2 3))
+	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
     => "message")
 
   (check
       (guard (E ((expression-return-value-violation? E)
 		 (condition-irritants E))
 		(else E))
-	(expression-return-value-violation 'ciao "message" 1 2 3))
+	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
     => '(1 2 3))
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (expression-return-value-violation.index E))
+		(else E))
+	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
+    => 1)
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (expression-return-value-violation.failed-expression E))
+		(else E))
+	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
+    => 'fixnum?)
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (expression-return-value-violation.offending-value E))
+		(else E))
+	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
+    => "ciao")
 
   #t)
 

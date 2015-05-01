@@ -989,7 +989,7 @@
       (unless (procedure? constructor)
 	(expression-return-value-violation __who__
 	  "expected procedure as return value of R6RS record protocol function"
-	  constructor))
+	  1 'procedure? constructor constructor))
       (let ((builder (let ((name (record-type-name rtd)))
 		       (lambda constructor-args
 			 (%the-builder rtd name constructor constructor-args)))))

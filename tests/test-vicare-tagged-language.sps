@@ -2369,7 +2369,7 @@
 
   (check-for-expression-return-value-violation
       (tag-return-value-validator <fixnum> "123")
-    => '(<fixnum> ("123")))
+    => '(<fixnum> #f #f "123"))
 
   (check
       (tag-return-value-validator <top> 123)

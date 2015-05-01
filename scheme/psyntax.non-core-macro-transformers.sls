@@ -3232,15 +3232,21 @@
       arg-validation-spec*))
 
   (define (%make-ret-validation-forms retval-validation-spec* synner)
-    (map (lambda (spec)
-	   (let ((?expr (retval-validation-spec-expr  spec))
-		 (?pred (retval-validation-spec-pred  spec))
-		 (?ret  (retval-validation-spec-rv-id spec)))
-	     `(unless ,?expr
-		(expression-return-value-violation __who__
-		  "failed return value validation"
-		  (list (quote ,?pred) ,?ret)))))
-      retval-validation-spec*))
+    (reverse
+     (cdr (fold-left (lambda (knil spec)
+		       (let ((retval-counter (car knil))
+			     (rev-head-forms (cdr knil)))
+			 (let ((?expr (retval-validation-spec-expr  spec))
+			       (?pred (retval-validation-spec-pred  spec))
+			       (?ret  (retval-validation-spec-rv-id spec)))
+			   (cons (fxadd1 retval-counter)
+				 (cons `(unless ,?expr
+					  (expression-return-value-violation __who__
+					    "failed return value validation"
+					    ,retval-counter (quote ,?pred) ,?ret))
+				       rev-head-forms)))))
+	    '(1 . ())
+	    retval-validation-spec*))))
 
   (define (%parse-logic-predicate-syntax pred.stx var.id synner)
     (parse-logic-predicate-syntax pred.stx

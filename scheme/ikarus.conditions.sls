@@ -100,6 +100,9 @@
     &expression-return-value-violation-rcd
     make-expression-return-value-violation
     expression-return-value-violation?
+    expression-return-value-violation.index
+    expression-return-value-violation.failed-expression
+    expression-return-value-violation.offending-value
     expression-return-value-violation
 
     &non-reinstatable
@@ -183,6 +186,9 @@
 		  &expression-return-value-violation-rcd
 		  make-expression-return-value-violation
 		  expression-return-value-violation?
+		  expression-return-value-violation.index
+		  expression-return-value-violation.failed-expression
+		  expression-return-value-violation.offending-value
 		  expression-return-value-violation
 
 		  &non-reinstatable
@@ -535,14 +541,21 @@
 ;;; --------------------------------------------------------------------
 
 (define-condition-type &expression-return-value-violation &assertion
-  make-expression-return-value-violation expression-return-value-violation?)
+  make-expression-return-value-violation expression-return-value-violation?
+  ;;One-base index of the  offending return value in the tuple  of values returned by
+  ;;the expression.
+  (index		expression-return-value-violation.index)
+  ;;Symbolic expression representing the predicate used to validate the return value.
+  (failed-expression	expression-return-value-violation.failed-expression)
+  ;;The actual value returned by the expression.
+  (offending-value	expression-return-value-violation.offending-value))
 
-(define (expression-return-value-violation who message . irritants)
+(define (expression-return-value-violation who message retval-index failed-expression offending-value . irritants)
   (raise
    (condition (make-who-condition who)
 	      (make-message-condition message)
 	      (make-irritants-condition irritants)
-	      (make-expression-return-value-violation))))
+	      (make-expression-return-value-violation retval-index failed-expression offending-value))))
 
 ;;; --------------------------------------------------------------------
 

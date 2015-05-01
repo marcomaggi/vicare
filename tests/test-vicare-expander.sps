@@ -2224,7 +2224,7 @@
 	  (lambda* ({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	    (vector 123 a b c)))
 	(doit 4 5 6))
-    => '(_ ((list? #(123 4 5 6)))))
+    => '(_ 1 list? #(123 4 5 6)))
 
 ;;; --------------------------------------------------------------------
 ;;; multiple retval predicates
@@ -2243,7 +2243,7 @@
 	  (lambda* ({_ fixnum? string? char?})
 	    (values 1 'a #\3)))
 	(doit))
-    => '(_ ((string? a))))
+    => '(_ 2 string? a))
 
 ;;; --------------------------------------------------------------------
 ;;; non-hygienic bindings
@@ -2319,7 +2319,7 @@
 	  (lambda* ({_ (or integer? string?)} a)
 	    a))
 	(doit 1.2))
-    => '(_ (((or integer? string?) 1.2))))
+    => '(_ 1 (or integer? string?) 1.2))
 
 ;;; multiple return values
 
@@ -2339,7 +2339,7 @@
 	  (lambda* ({_ (or integer? string?) (or symbol? string?)} a b)
 	    (values a b)))
 	(doit 1.2 'ciao))
-    => '(_ (((or integer? string?) 1.2))))
+    => '(_ 1 (or integer? string?) 1.2))
 
   (check-for-expression-return-value-violation
       (internal-body
@@ -2347,7 +2347,7 @@
 	  (lambda* ({_ (or integer? string?) (or symbol? string?)} a b)
 	    (values a b)))
 	(doit 12 4))
-    => '(_ (((or symbol? string?) 4))))
+    => '(_ 2 (or symbol? string?) 4))
 
   #t)
 
@@ -2572,7 +2572,7 @@
 	    (({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	     (vector 123 a b c))))
 	(doit 4 5 6))
-    => '(_ ((list? #(123 4 5 6)))))
+    => '(_ 1 list? #(123 4 5 6)))
 
 ;;; --------------------------------------------------------------------
 ;;; multiple retval predicates
@@ -2593,7 +2593,7 @@
 	    (({_ fixnum? string? char?})
 	     (values 1 'a #\3))))
 	(doit))
-    => '(_ ((string? a))))
+    => '(_ 2 string? a))
 
 ;;; --------------------------------------------------------------------
 ;;; non-hygienic bindings
@@ -2677,7 +2677,7 @@
 	    (({_ (or integer? string?)} a)
 	     a)))
 	(doit 1.2))
-    => '(_ (((or integer? string?) 1.2))))
+    => '(_ 1 (or integer? string?) 1.2))
 
 ;;; multiple return values
 
@@ -2699,7 +2699,7 @@
 	    (({_ (or integer? string?) (or symbol? string?)} a b)
 	     (values a b))))
 	(doit 1.2 'ciao))
-    => '(_ (((or integer? string?) 1.2))))
+    => '(_ 1 (or integer? string?) 1.2))
 
   (check-for-expression-return-value-violation
       (internal-body
@@ -2708,7 +2708,7 @@
 	    (({_ (or integer? string?) (or symbol? string?)} a b)
 	     (values a b))))
 	(doit 12 4))
-    => '(_ (((or symbol? string?) 4))))
+    => '(_ 2 (or symbol? string?) 4))
 
   #t)
 
@@ -2887,7 +2887,7 @@
 	(define* ({doit list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	  (vector 123 a b c))
 	(doit 4 5 6))
-    => '(doit ((list? #(123 4 5 6)))))
+    => '(doit 1 list? #(123 4 5 6)))
 
 ;;; --------------------------------------------------------------------
 ;;; multiple retval predicates
@@ -2904,7 +2904,7 @@
 	(define* ({doit fixnum? string? char?})
 	  (values 1 'a #\3))
 	(doit))
-    => '(doit ((string? a))))
+    => '(doit 2 string? a))
 
 ;;; --------------------------------------------------------------------
 ;;; non-hygienic bindings
@@ -2972,7 +2972,7 @@
 	(define* ({doit (or integer? string?)} a)
 	  a)
 	(doit 1.2))
-    => '(doit (((or integer? string?) 1.2))))
+    => '(doit 1 (or integer? string?) 1.2))
 
 ;;; multiple return values
 
@@ -2990,14 +2990,14 @@
 	(define* ({doit (or integer? string?) (or symbol? string?)} a b)
 	  (values a b))
 	(doit 1.2 'ciao))
-    => '(doit (((or integer? string?) 1.2))))
+    => '(doit 1 (or integer? string?) 1.2))
 
   (check-for-expression-return-value-violation
       (internal-body
 	(define* ({doit (or integer? string?) (or symbol? string?)} a b)
 	  (values a b))
 	(doit 12 4))
-    => '(doit (((or symbol? string?) 4))))
+    => '(doit 2 (or symbol? string?) 4))
 
   #t)
 
@@ -3251,7 +3251,7 @@
 	  (({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	   (vector 123 a b c)))
 	(doit 4 5 6))
-    => '(doit ((list? #(123 4 5 6)))))
+    => '(doit 1 list? #(123 4 5 6)))
 
 ;;; --------------------------------------------------------------------
 ;;; multiple retval predicates
@@ -3270,7 +3270,7 @@
 	  (({_ fixnum? string? char?})
 	   (values 1 'a #\3)))
 	(doit))
-    => '(doit ((string? a))))
+    => '(doit 2 string? a))
 
 ;;; --------------------------------------------------------------------
 ;;; non-hygienic bindings
@@ -3346,7 +3346,7 @@
 	  (({_ (or integer? string?)} a)
 	   a))
 	(doit 1.2))
-    => '(doit (((or integer? string?) 1.2))))
+    => '(doit 1 (or integer? string?) 1.2))
 
 ;;; multiple return values
 
@@ -3366,7 +3366,7 @@
 	  (({_ (or integer? string?) (or symbol? string?)} a b)
 	   (values a b)))
 	(doit 1.2 'ciao))
-    => '(doit (((or integer? string?) 1.2))))
+    => '(doit 1 (or integer? string?) 1.2))
 
   (check-for-expression-return-value-violation
       (internal-body
@@ -3374,7 +3374,7 @@
 	  (({_ (or integer? string?) (or symbol? string?)} a b)
 	   (values a b)))
 	(doit 12 4))
-    => '(doit (((or symbol? string?) 4))))
+    => '(doit 2 (or symbol? string?) 4))
 
   #t)
 
@@ -4960,7 +4960,7 @@
     (if (list? obj)
 	obj
       (expression-return-value-violation who
-	"expected list object as return value" obj)))
+	"expected list object as return value" 1 'list? obj obj)))
 
   (begin-for-syntax
     (set-predicate-assertion-return-value-validation! #'list?
@@ -4970,13 +4970,9 @@
       ((predicate-return-value-validation list?) 'hey '(1 2 3))
     => '(1 2 3))
 
-  (check
-      (guard (E ((expression-return-value-violation? E)
-		 (vector (condition-who E)
-			 (condition-irritants E)))
-		(else E))
-	((predicate-return-value-validation list?) 'hey '#(1 2 3)))
-    => '#(hey (#(1 2 3))))
+  (check-for-expression-return-value-violation
+      ((predicate-return-value-validation list?) 'hey '#(1 2 3))
+    => '(hey 1 list? #(1 2 3)))
 
   #t)
 

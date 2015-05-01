@@ -581,7 +581,7 @@
 		  obj
 		(expression-return-value-violation 'current-primitive-locations
 		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
-		  obj))))
+		  1 'symbol? obj obj))))
 	(else
 	 (error __who__
 	   "*** Vicare error: primitive missing from makefile.sps" op))))
