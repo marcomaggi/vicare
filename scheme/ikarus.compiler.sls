@@ -1428,6 +1428,7 @@
   ;;   (if ?test ?consequent ?alternate)
   ;;   (set! ?lhs ?rhs)
   ;;   (begin ?body0 ?body ...)
+  ;;   (let ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (letrec  ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
@@ -1561,6 +1562,23 @@
 	 (if (null? D)
 	     (E A ctxt)
 	   (make-seq (E A) (recur ($car D) ($cdr D))))))
+
+      ;;Synopsis: (let ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ;;Return a struct instance of type BIND.
+      ;;
+      ((let)
+       (let ((bind* (cadr  X))		     ;list of bindings
+	     (body  (caddr X)))		     ;list of body forms
+	 (let ((lhs* ($map/stx car  bind*))  ;list of bindings left-hand sides
+	       (rhs* ($map/stx cadr bind*))) ;list of bindings right-hand sides
+	   ;;Make sure that LHS* is processed first!!!
+	   (let* ((lhs*^ (gen-fml* lhs*))
+		  (rhs*^ ($map/stx E rhs* lhs*))
+		  (body^ (E body ctxt)))
+	     (begin0
+		 (make-bind lhs*^ rhs*^ body^)
+	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
