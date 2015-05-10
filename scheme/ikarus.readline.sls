@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.readline)
   (export
     readline-enabled?
@@ -46,18 +46,17 @@
     (only (ikarus strings)
 	  $string-copy!/count
 	  $substring)
-    (vicare language-extensions syntaxes))
+    (only (vicare language-extensions syntaxes)
+	  with-bytevectors/or-false))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (prompt who obj)
-  (or (not obj) (bytevector? obj) (string? obj))
-  (procedure-argument-violation who "expected false, bytevector or string as prompt argument" obj))
+(define (prompt-object? obj)
+  (or (not obj) (bytevector? obj) (string? obj)))
 
-(define-argument-validation (prompt-maker who obj)
-  (or (not obj) (procedure? obj))
-  (procedure-argument-violation who "expected false or procedure as prompt maker argument" obj))
+(define (prompt-maker? obj)
+  (or (not obj) (procedure? obj)))
 
 
 ;;;; access to C API
@@ -74,70 +73,61 @@
 (define (readline-enabled?)
   (capi.readline-enabled?))
 
-(define readline
-  (case-lambda
-   (()
-    (readline #f))
-   ((prompt)
-    (define who 'readline)
-    (assert enabled?)
-    (with-arguments-validation (who)
-	((prompt	prompt))
-      (with-bytevectors/or-false ((prompt.bv prompt))
-	(let ((rv (capi.readline prompt.bv)))
-	  (and rv (ascii->string rv))))))))
+(case-define* readline
+  (()
+   (readline #f))
+  (({prompt prompt-object?})
+   (assert enabled?)
+   (with-bytevectors/or-false ((prompt.bv prompt))
+     (let ((rv (capi.readline prompt.bv)))
+       (and rv (ascii->string rv))))))
 
-(define make-readline-input-port
-  (case-lambda
-   (()
-    (make-readline-input-port #f))
-   ((make-prompt)
-    (define who 'make-readline-input-port)
-    (define buffer (string))
-    (define device-position 0)
-    (define (read! str start count)
-      (define who 'make-readline-input-port/read!)
-      (let ((buffer.len ($string-length buffer)))
-	(if ($fx<= count buffer.len)
-	    ;;Enough data in the buffer to satisfy the request.
-	    (begin
-	      ($string-copy!/count buffer 0 str start count)
-	      (set! buffer ($substring buffer count buffer.len))
-	      count)
-	  ;;Read another line.
-	  (let ((rv (readline (and make-prompt (make-prompt)))))
-	    (if rv
-		(let ((rv.len ($string-length rv)))
-		  (set! device-position (+ rv.len device-position))
-		  (if (bignum? (+ 1 buffer.len rv.len))
-		      (error who "input line from readline too long")
-		    (begin
-		      (set! buffer (string-append buffer rv "\n"))
-		      (let* ((buffer.len	($string-length buffer))
-			     (count		(fxmin count buffer.len)))
-			($string-copy!/count buffer 0 str start count)
-			(set! buffer ($substring buffer count buffer.len))
-			count))))
-	      ;;EOF was found: return the available data.
-	      (if ($fxzero? buffer.len)
-		  0
-		;;Flush the buffer.
-		(begin
-		  ($string-copy!/count buffer 0 str start buffer.len)
-		  (set! buffer (string))
-		  buffer.len)))))))
-    (define (get-position)
-      ;;Dummy  function needed  when reading  Scheme code  input  with a
-      ;;readline port: the READ function expects the port position to be
-      ;;available for debugging purposes.
-      device-position)
-    (assert enabled?)
-    (with-arguments-validation (who)
-	((prompt-maker	make-prompt))
-      (let ((port (make-custom-textual-input-port "readline input port"
-						  read! get-position #f #f)))
-	(set-port-buffer-mode! port (buffer-mode line))
-	port)))))
+(case-define* make-readline-input-port
+  (()
+   (make-readline-input-port #f))
+  (({make-prompt prompt-maker?})
+   (define buffer (string))
+   (define device-position 0)
+   (define (read! str start count)
+     (define who 'make-readline-input-port/read!)
+     (let ((buffer.len ($string-length buffer)))
+       (if ($fx<= count buffer.len)
+	   ;;Enough data in the buffer to satisfy the request.
+	   (begin
+	     ($string-copy!/count buffer 0 str start count)
+	     (set! buffer ($substring buffer count buffer.len))
+	     count)
+	 ;;Read another line.
+	 (let ((rv (readline (and make-prompt (make-prompt)))))
+	   (if rv
+	       (let ((rv.len ($string-length rv)))
+		 (set! device-position (+ rv.len device-position))
+		 (if (bignum? (+ 1 buffer.len rv.len))
+		     (error who "input line from readline too long")
+		   (begin
+		     (set! buffer (string-append buffer rv "\n"))
+		     (let* ((buffer.len	($string-length buffer))
+			    (count		(fxmin count buffer.len)))
+		       ($string-copy!/count buffer 0 str start count)
+		       (set! buffer ($substring buffer count buffer.len))
+		       count))))
+	     ;;EOF was found: return the available data.
+	     (if ($fxzero? buffer.len)
+		 0
+	       ;;Flush the buffer.
+	       (begin
+		 ($string-copy!/count buffer 0 str start buffer.len)
+		 (set! buffer (string))
+		 buffer.len)))))))
+   (define (get-position)
+     ;;Dummy function needed when reading Scheme code input with a readline port: the
+     ;;READ  function  expects  the  port  position to  be  available  for  debugging
+     ;;purposes.
+     device-position)
+   (assert enabled?)
+   (receive-and-return (port)
+       (make-custom-textual-input-port "readline input port" read! get-position #f #f)
+     (set-port-buffer-mode! port (buffer-mode line)))))
 
 
 ;;;; done
@@ -145,9 +135,9 @@
 (define enabled?
   (capi.readline-enabled?))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'with-bytevectors 'scheme-indent-function 1)
+;; eval: (put 'with-bytevectors/or-false	'scheme-indent-function 1)
 ;; End:

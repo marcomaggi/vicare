@@ -53,12 +53,12 @@
 
 ;;;; comparison
 
-(define-equality/sorting-predicate boolean=?	$boolean=	boolean? list-of-booleans?)
-(define-equality/sorting-predicate boolean<?	$boolean<	boolean? list-of-booleans?)
-(define-equality/sorting-predicate boolean<=?	$boolean<=	boolean? list-of-booleans?)
-(define-equality/sorting-predicate boolean>?	$boolean>	boolean? list-of-booleans?)
-(define-equality/sorting-predicate boolean>=?	$boolean>=	boolean? list-of-booleans?)
-(define-inequality-predicate       boolean!=?	$boolean!=	boolean? list-of-booleans?)
+(define-equality/sorting-predicate boolean=?	$boolean=	boolean?)
+(define-equality/sorting-predicate boolean<?	$boolean<	boolean?)
+(define-equality/sorting-predicate boolean<=?	$boolean<=	boolean?)
+(define-equality/sorting-predicate boolean>?	$boolean>	boolean?)
+(define-equality/sorting-predicate boolean>=?	$boolean>=	boolean?)
+(define-inequality-predicate       boolean!=?	$boolean!=	boolean?)
 
 (define ($boolean= bo1 bo2)
   (eq? bo1 bo2))
@@ -95,8 +95,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison boolean-max $boolean-max boolean? list-of-booleans?)
-(define-min/max-comparison boolean-min $boolean-min boolean? list-of-booleans?)
+(define-min/max-comparison boolean-max $boolean-max boolean?)
+(define-min/max-comparison boolean-min $boolean-min boolean?)
 
 (define ($boolean-min str1 str2)
   (if ($boolean< str1 str2) str1 str2))

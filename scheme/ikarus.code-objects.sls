@@ -56,6 +56,45 @@
   (and (code? code)
        ($fxzero? ($code-freevars code))))
 
+(define (code-object-and-index? code idx)
+  (and ($fxnonnegative? idx)
+       ($fx<  idx ($code-size code))))
+
+;;; --------------------------------------------------------------------
+
+;;FIXME At the next boot image rotation: this syntax must be replaced with the one in
+;;the library (vicare language-extensions syntaxes).  (Marco Maggi; Sun May 3, 2015)
+;;
+(define-syntax (preconditions stx)
+  (module (vicare-built-with-arguments-validation-enabled)
+    (module (arguments-validation)
+      (include "ikarus.config.scm" #t))
+    (define (vicare-built-with-arguments-validation-enabled)
+      arguments-validation)
+    #| end of module |# )
+  (syntax-case stx ()
+    ;;Single precondition.
+    ;;
+    ((_ (?predicate ?arg ...))
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(unless (?predicate ?arg ...)
+	     (assertion-violation __who__
+	       "failed precondition"
+	       '(?predicate ?arg ...) ?arg ...))
+       #'(void)))
+
+    ;;Multiple preconditions.
+    ;;
+    ((_ (?predicate ?arg ...) ...)
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(begin
+	     (preconditions (?predicate ?arg ...))
+	     ...)
+       #'(void)))
+    ))
+
 
 (define* (make-code {code-size code-size?} {freevars number-of-freevars?})
   (foreign-call "ikrt_make_code" code-size freevars '#()))
@@ -70,17 +109,13 @@
   ($code-size x))
 
 (define* (code-set! {code code?} {idx fixnum?} {octet words.word-u8?})
-  (unless (and ($fx>= idx 0)
-	       ($fx<  idx ($code-size code)))
-    (procedure-argument-violation __who__
-      "expected valid fixnum code index argument" idx code))
+  (preconditions
+   (code-object-and-index? code idx))
   ($code-set! code idx octet))
 
 (define* (code-ref {code code?} {idx fixnum?})
-  (unless (and ($fx>= idx 0)
-	       ($fx<  idx ($code-size code)))
-    (procedure-argument-violation __who__
-      "expected valid fixnum code index argument" idx code))
+  (preconditions
+   (code-object-and-index? code idx))
   ($code-ref code idx))
 
 (define* (set-code-reloc-vector! {code code?} {vec vector?})

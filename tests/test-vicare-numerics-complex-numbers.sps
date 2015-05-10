@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (except (vicare) catch)
+(import (vicare)
   (vicare system $compnums)
   (vicare system $numerics)
   (vicare checks))
@@ -57,18 +57,6 @@
     (and (flequal? x.mag y.mag)
 	 (flequal? (sin x.arg)
 		   (sin y.arg)))))
-
-(define-syntax catch
-  (syntax-rules (=>)
-    ((_ ?flag ?body => ?expected)
-     (check
-	 (guard (E ((assertion-violation? E)
-		    (when ?flag
-		      (check-pretty-print E))
-		    (condition-irritants E))
-		   (else E))
-	   ?body)
-       => ?expected))))
 
 
 (parametrise ((check-test-name	'make-rectangular))
@@ -233,13 +221,19 @@
 
 ;;; --------------------------------------------------------------------
 
-  (catch #f
-      (make-rectangular 1+2i 3)
-    => '(1+2i))
+  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
+  ;;8, 2015)
+  ;;
+  ;; (check-for-procedure-signature-argument-violation
+  ;;     (make-rectangular 1+2i 3)
+  ;;   => '(make-rectangular 1 real? 1+2i))
 
-  (catch #f
-      (make-rectangular 3 1+2i)
-    => '(1+2i))
+  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
+  ;;8, 2015)
+  ;;
+  ;; (check-for-procedure-signature-argument-violation
+  ;;     (make-rectangular 3 1+2i)
+  ;;   => '(make-rectangular 2 real? 1+2i))
 
   #t)
 
@@ -410,13 +404,19 @@
 
 ;;; --------------------------------------------------------------------
 
-  (catch #f
-      (make-polar 1+2i 3)
-    => '(1+2i))
+  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
+  ;;8, 2015)
+  ;;
+  ;; (check-for-procedure-signature-argument-violation
+  ;;     (make-polar 1+2i 3)
+  ;;   => '(make-polar 1 real? 1+2i))
 
-  (catch #f
-      (make-polar 3 1+2i)
-    => '(1+2i))
+  ;;FIXME To be uncommented  at the next boot image rotation.   (Marco Maggi; Fri May
+  ;;8, 2015)
+  ;;
+  ;; (check-for-procedure-signature-argument-violation
+  ;;     (make-polar 3 1+2i)
+  ;;   => '(make-polar 2 real? 1+2i))
 
   #t)
 
@@ -500,6 +500,3 @@
 (check-report)
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'catch 'scheme-indent-function 2)
-;; End:

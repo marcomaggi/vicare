@@ -211,6 +211,8 @@
     )
   (import (except (rnrs)
 		  generate-temporaries)
+    (prefix (rnrs syntax-case) sys.)
+    (psyntax.compat)
     (prefix (psyntax.lexical-environment)
 	    lex.)
     (only (psyntax.syntax-match)
@@ -219,8 +221,7 @@
 	  proper-list->head-and-last)
     (psyntax.syntactic-binding-properties)
     (only (psyntax.syntax-utilities)
-	  syntax-unwrap)
-    (psyntax.compat))
+	  syntax-unwrap))
 
 
 ;;;; helpers

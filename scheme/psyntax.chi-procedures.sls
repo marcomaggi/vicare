@@ -43,8 +43,6 @@
 		  syntax-violation	make-variable-transformer)
     (prefix (rnrs syntax-case) sys.)
     (psyntax.compat)
-    (only (vicare)
-	  expand-library)
     (psyntax.builders)
     (psyntax.lexical-environment)
     (psyntax.syntax-match)

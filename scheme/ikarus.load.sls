@@ -45,7 +45,13 @@
     current-library-serialiser
     current-library-serialiser-in-build-directory)
   (import (except (vicare)
-		  load)
+		  load
+		  current-include-loader
+		  default-include-loader
+		  default-include-file-locator
+		  default-include-file-loader
+		  current-include-file-locator
+		  current-include-file-loader)
     (prefix (ikarus.posix)
 	    posix.)
     (only (ikarus.compiler)
@@ -59,7 +65,7 @@
     (only (ikarus.reader)
 	  read-script-source-file
 	  read-library-source-port)
-    (ikarus library-utils)
+    (psyntax.library-utils)
     (only (ikarus fasl read)
 	  fasl-read-header
 	  fasl-read-object)

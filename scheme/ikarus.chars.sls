@@ -43,7 +43,10 @@
     (vicare system $fx)
     (except (vicare system $chars)
 	    $chmax
-	    $chmin)
+	    $chmin
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat
+	    ;;Nov 22, 2014)
+	    $char!=)
     (only (vicare language-extensions syntaxes)
 	  define-list-of-type-predicate
 	  define-min/max-comparison
@@ -73,12 +76,12 @@
 
 ;;;; comparison
 
-(define-equality/sorting-predicate char=?	$char=	char? list-of-chars?)
-(define-equality/sorting-predicate char<?	$char<	char? list-of-chars?)
-(define-equality/sorting-predicate char<=?	$char<=	char? list-of-chars?)
-(define-equality/sorting-predicate char>?	$char>	char? list-of-chars?)
-(define-equality/sorting-predicate char>=?	$char>=	char? list-of-chars?)
-(define-inequality-predicate       char!=?	$char!=	char? list-of-chars?)
+(define-equality/sorting-predicate char=?	$char=	char?)
+(define-equality/sorting-predicate char<?	$char<	char?)
+(define-equality/sorting-predicate char<=?	$char<=	char?)
+(define-equality/sorting-predicate char>?	$char>	char?)
+(define-equality/sorting-predicate char>=?	$char>=	char?)
+(define-inequality-predicate       char!=?	$char!=	char?)
 
 (define ($char!= ch1 ch2)
   ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
@@ -93,8 +96,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison chmax $chmax char? list-of-chars?)
-(define-min/max-comparison chmin $chmin char? list-of-chars?)
+(define-min/max-comparison chmax $chmax char?)
+(define-min/max-comparison chmin $chmin char?)
 
 ;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
 ;;

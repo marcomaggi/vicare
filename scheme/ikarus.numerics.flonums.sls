@@ -599,8 +599,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison flmax $flmax flonum? list-of-flonums?)
-(define-min/max-comparison flmin $flmin flonum? list-of-flonums?)
+(define-min/max-comparison flmax $flmax flonum?)
+(define-min/max-comparison flmin $flmin flonum?)
 
 (define ($flmax x y)
   (cond (($flnan? x)	+nan.0)
@@ -617,12 +617,12 @@
 
 ;;;; comparison
 
-(define-equality/sorting-predicate fl=?		$fl=	flonum? list-of-flonums?)
-(define-equality/sorting-predicate fl<?		$fl<	flonum? list-of-flonums?)
-(define-equality/sorting-predicate fl<=?	$fl<=	flonum? list-of-flonums?)
-(define-equality/sorting-predicate fl>?		$fl>	flonum? list-of-flonums?)
-(define-equality/sorting-predicate fl>=?	$fl>=	flonum? list-of-flonums?)
-(define-inequality-predicate       fl!=?	$fl!=	flonum? list-of-flonums?)
+(define-equality/sorting-predicate fl=?		$fl=	flonum?)
+(define-equality/sorting-predicate fl<?		$fl<	flonum?)
+(define-equality/sorting-predicate fl<=?	$fl<=	flonum?)
+(define-equality/sorting-predicate fl>?		$fl>	flonum?)
+(define-equality/sorting-predicate fl>=?	$fl>=	flonum?)
+(define-inequality-predicate       fl!=?	$fl!=	flonum?)
 
 (define ($fl!= fl1 fl2)
   ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
@@ -640,7 +640,7 @@
 (let-syntax
     ((define-arithmetic-operation
        (syntax-rules ()
-	 ((_ ?who ?unary-unsafe-who ?binary-unsafe-who ?type-pred ?list-type-pred)
+	 ((_ ?who ?unary-unsafe-who ?binary-unsafe-who ?type-pred)
 	  (case-define* ?who
 	    (({x ?type-pred} {y ?type-pred})
 	     (?binary-unsafe-who x y))
@@ -648,7 +648,13 @@
 	    (({x ?type-pred} {y ?type-pred} {z ?type-pred})
 	     (?binary-unsafe-who (?binary-unsafe-who x y) z))
 
-	    (({x ?type-pred} {y ?type-pred} {z ?type-pred} {w ?type-pred} . {rest ?list-type-pred})
+	    (({x ?type-pred} {y ?type-pred} {z ?type-pred} {w ?type-pred} . rest)
+	     ;;FIXME  At  the next  boot  image  rotation:  this validation  must  be
+	     ;;integrated with the signature.  (Marco Maggi; Sun May 10, 2015)
+	     (for-each (lambda (item)
+			 (unless (flonum? item)
+			   (procedure-argument-violation __who__ "failed argument validation" item)))
+	       rest)
 	     (let loop ((ac   (?binary-unsafe-who (?binary-unsafe-who (?binary-unsafe-who x y) z) w))
 			(rest rest))
 	       (if (pair? rest)
@@ -663,10 +669,10 @@
 	     ;;We always return the same flonum object: is this bad?
 	     0.0)))
 	 )))
-  (define-arithmetic-operation fl+ $unary-fl+ $fl+ flonum? list-of-flonums?)
-  (define-arithmetic-operation fl- $unary-fl- $fl- flonum? list-of-flonums?)
-  (define-arithmetic-operation fl* $unary-fl* $fl* flonum? list-of-flonums?)
-  (define-arithmetic-operation fl/ $unary-fl/ $fl/ flonum? list-of-flonums?)
+  (define-arithmetic-operation fl+ $unary-fl+ $fl+ flonum?)
+  (define-arithmetic-operation fl- $unary-fl- $fl- flonum?)
+  (define-arithmetic-operation fl* $unary-fl* $fl* flonum?)
+  (define-arithmetic-operation fl/ $unary-fl/ $fl/ flonum?)
   #| end of LET-SYNTAX |# )
 
 (define-syntax-rule ($unary-fl+ ?fl)

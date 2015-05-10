@@ -517,6 +517,10 @@ and the formal argument @meta{args} can have one of the following forms:
 (brace @meta{args-id} @meta{logic-pred})
 @end example
 
+@noindent
+the @meta{logic-pred} for @meta{rest} and @meta{args} is applied to each
+item in the proper list bound to @meta{rest-id} and @meta{args-id}.
+
 The first item in the @meta{pred-formals} can have the special syntax:
 
 @example
@@ -593,13 +597,8 @@ Function with two mandatory arguments and the rest argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
 (define f
-  (lambda* (@{a number?@} @{b number?@}
-            . @{rest list-of-numbers?@})
+  (lambda* (@{a number?@} @{b number?@} . @{rest number?@})
     (list (number->string a)
           (number->string b)
           (length rest))))
@@ -614,12 +613,8 @@ Function with the @meta{args} argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
 (define f
-  (lambda* @{args list-of-numbers?@}
+  (lambda* @{args number?@}
     (length args)))
 
 (f 1 2 3)               @result{} 3
@@ -717,8 +712,9 @@ is an exception, where @func{lambda*} uses the @code{_} symbol to select
 predicates for the returned values, @func{define*} uses the binding
 identifier @meta{who}.
 
-In addition, when defining a function, the fluid identifier syntax
-@code{__who__} is bound to the quoted symbol @meta{who}.
+In addition, when defining a function or a variable with non--empty
+right--hand side, the fluid identifier syntax @syntax{__who__} is bound
+to the quoted symbol @meta{who}.
 
 Usage examples:
 
@@ -743,12 +739,7 @@ Function with two mandatory arguments and the rest argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
-(define* (f @{a number?@} @{b number?@}
-            . @{rest list-of-numbers?@})
+(define* (f @{a number?@} @{b number?@} . @{rest number?@})
   (list (number->string a)
         (number->string b)
         (length rest)))
@@ -763,11 +754,7 @@ Function with the @meta{args} argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
-(define* (f . @{args list-of-numbers?@})
+(define* (f . @{args number?@})
   (length args))
 
 (f 1 2 3)               @result{} 3
@@ -810,6 +797,16 @@ Accessing the function name:
 
 (f)     @result{} f
 @end example
+
+@item
+Accessing the variable name:
+
+@lisp
+(import (vicare))
+
+(define* a (list 'name __who__))
+a       @result{} (name a)
+@end lisp
 @end itemize
 @end deffn
 
@@ -5655,14 +5652,60 @@ waiting for its termination in a coroutine; it assumes that
 
 
 @menu
+* iklib conditions raising::    Raising conditions.
+* iklib conditions preds::      Predicates for condition objects.
 * iklib conditions spos::       Scheme source code position.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
+* iklib conditions procpre::    Procedure precondition violations.
+* iklib conditions procpost::   Procedure postcondition violations.
 * iklib conditions procarg::    Procedure argument violations.
+* iklib conditions sigarg::     Procedure signature argument violations.
+* iklib conditions rvarg::      Procedure signature return value violations.
+* iklib conditions proccon::    Procedure argument consistency violations.
 * iklib conditions exprret::    Expression return value violations.
 * iklib conditions non-reinst:: Non-reinstatable continuations.
 * iklib conditions misc::       Miscellaneous primitives.
 @end menu
+
+@c page
+@node iklib conditions raising
+@subsection Raising conditions
+
+
+@defun raise-non-continuable-standard-condition @var{who} @var{message} @var{irritants}
+@defunx raise-non-continuable-standard-condition @var{who} @var{message} @var{irritants} @var{cnd}
+Raise a non--continuable exception with a compound condition object of
+types: @condition{who}, @condition{message}, @condition{irritants}; in
+addition, when used, add the condition object @var{cnd} to it.
+
+The argument @var{who} must be a symbol.  The argument @var{message}
+must be a string.  The argument @var{irritants} must be null or a list
+of objects.  The optional argument @var{cnd} must be a simple or
+compound condition object.
+@end defun
+
+@c page
+@node iklib conditions preds
+@subsection Predicates for condition objects
+
+
+@defun simple-condition? @var{obj}
+Return @true{} if @var{obj} is a simple condition object; otherwise
+return @false{}.
+@end defun
+
+
+@defun list-of-simple-conditions? @var{obj}
+Return @true{} if @var{obj} is a proper list of simple condition
+objects; otherwise return @false{}.
+@end defun
+
+
+@defun list-of-conditions? @var{obj}
+Return @true{} if @var{obj} is a proper list of simple or compound
+condition objects; otherwise return @false{}.
+@end defun
 
 @c page
 @node iklib conditions spos
@@ -5777,43 +5820,153 @@ an instance of @condition{errno}.
 @end defun
 
 @c page
+@node iklib conditions procpre
+@subsection Procedure precondition violations
+
+
+@deftp {Condition Type} &procedure-precondition-violation
+Base condition object type representing invalid state or argument for a
+procedure application; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-procedure-precondition-violation
+Build and return a new condition object of type
+@condition{procedure-precondition-violation}.
+@end defun
+
+
+@defun procedure-precondition-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-precondition-violation}; otherwise return
+@false{}.
+@end defun
+
+@c page
+@node iklib conditions procpost
+@subsection Procedure postcondition violations
+
+
+@deftp {Condition Type} &procedure-postcondition-violation
+Base condition object type representing invalid state or return values
+for a procedure application; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-procedure-postcondition-violation
+Build and return a new condition object of type
+@condition{procedure-postcondition-violation}.
+@end defun
+
+
+@defun procedure-postcondition-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-postcondition-violation}; otherwise return
+@false{}.
+@end defun
+
+@c page
 @node iklib conditions procarg
 @subsection Procedure argument violations
 
 
 @deftp {Condition Type} &procedure-argument-violation
-Condition object type representing invalid values handed as arguments to
-a procedure; it is derived from @condition{assertion}.
+Condition object type representing, generically, one or more invalid
+values handed as arguments to a procedure application; it is derived
+from @condition{procedure-precondition-violation}.
 @end deftp
 
 
 @defun make-procedure-argument-violation
 Build and return a new condition object of type
-@condition{procedure-argument-validation}.
+@condition{procedure-argument-violation}.
 @end defun
 
 
 @defun procedure-argument-violation? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
-@condition{procedure-argument-validation}; otherwise return @false{}.
+@condition{procedure-argument-violation}; otherwise return @false{}.
 @end defun
 
 
 @defun procedure-argument-violation @var{who} @var{message} @var{irritant} @dots{}
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
-@condition{irritants}, @condition{procedure-argument-validation}.
+@condition{irritants}, @condition{procedure-argument-violation}.
 @end defun
 
 @c page
-@node iklib conditions exprret
-@subsection Expression return value violations
+@node iklib conditions sigarg
+@subsection Procedure signature argument violations
 
 
-@deftp {Condition Type} &expression-return-value-violation
+@deftp {Condition Type} &procedure-signature-argument-violation
+Condition object type representing an invalid value handed as argument
+to a procedure application; it is derived from
+@condition{procedure-argument-violation}.
+
+This condition type has the following fields:
+
+@table @code
+@item index
+One--base index of the offending operand.  It is @false{} when the index
+is unknown.
+
+@item failed-expression
+Symbolic expression representing the predicate used to validate the
+operand; set to the void object if the expression is not available.
+When debugging mode is disabled: some code might avoid putting symbolic
+expressions in this field.
+
+@item offending-value
+The actual value of the operand.  If there are multiple offending
+values: this field can be set to @code{(void)} and an additional
+condition object of type @condition{irritants} can be used.
+@end table
+
+This condition type is meant to be used to signal a wrong argument given
+to a procedure performing signature validation; for example
+@syntax{define*} and @syntax{case-define*} use it to signal a violation
+of the logic predicate specifications.
+@end deftp
+
+
+@defun make-procedure-signature-argument-violation @var{operand-index} @var{failed-expression} @var{offending-value}
+Build and return a new condition object of type
+@condition{procedure-signature-argument-violation}.
+@end defun
+
+
+@defun procedure-signature-argument-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-signature-argument-violation}; otherwise return @false{}.
+@end defun
+
+
+@defun procedure-signature-argument-violation.one-based-argument-index @var{cnd}
+@defunx procedure-signature-argument-violation.failed-expression @var{cnd}
+@defunx procedure-signature-argument-violation.offending-value @var{cnd}
+Accessors for the fields of condition objects of type
+@condition{procedure-signature-argument-violation}.
+@end defun
+
+
+@defun procedure-signature-argument-violation @var{who} @var{message} @var{operand-index} @var{failed-expression} @var{offending-value}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{procedure-signature-argument-violation}.
+@end defun
+
+@c page
+@node iklib conditions rvarg
+@subsection Procedure signature return value violations
+
+
+@deftp {Condition Type} &procedure-signature-return-value-violation
 Condition object type representing invalid values returned from an
-expression; it is derived from @condition{assertion}.  It has the
-following fields:
+expression; it is derived from
+@condition{procedure-postcondition-violation}.  It has the following
+fields:
 
 @table @code
 @item index
@@ -5830,31 +5983,93 @@ The actual value returned by the expression.
 @end deftp
 
 
+@defun make-procedure-signature-return-value-violation @var{retval-index} @var{failed-expression} @var{offending-value}
+Build and return a new condition object of type
+@condition{procedure-signature-return-value-violation}.
+@end defun
+
+
+@defun procedure-signature-return-value-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-signature-return-value-violation}; otherwise return
+@false{}.
+@end defun
+
+
+@defun procedure-signature-return-value-violation.one-based-return-value-index @var{cnd}
+@defunx procedure-signature-return-value-violation.failed-expression @var{cnd}
+@defunx procedure-signature-return-value-violation.offending-value @var{cnd}
+Accessors for the fields of condition objects of type
+@condition{procedure-signature-return-value-violation}.
+@end defun
+
+
+@defun procedure-signature-return-value-violation @var{who} @var{message} @var{retval-index} @var{failed-expression} @var{offending-value} @var{irritant} @dots{}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{procedure-signature-return-value-violation}.
+@end defun
+
+@c page
+@node iklib conditions proccon
+@subsection Procedure argument consistency violations
+
+
+@deftp {Condition Type} &procedure-arguments-consistency-violation
+Condition object type representing a set of inconsistent arguments to a
+procedure application; it is derived from
+@condition{procedure-precondition-violation}.
+@end deftp
+
+
+@defun make-procedure-arguments-consistency-violation
+Build and return a new condition object of type
+@condition{procedure-arguments-consistency-violation}.
+@end defun
+
+
+@defun procedure-arguments-consistency-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-arguments-consistency-violation}; otherwise return
+@false{}.
+@end defun
+
+
+@defun procedure-arguments-consistency-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object
+holding components of type: @condition{who}, @condition{message},
+@condition{irritants},
+@condition{procedure-arguments-consistency-violation}.
+@end defun
+
+@c page
+@node iklib conditions exprret
+@subsection Expression return value violations
+
+
+@deftp {Condition Type} &expression-return-value-violation
+Condition object type representing invalid values returned from an
+expression; it is derived from @condition{assertion}.
+@end deftp
+
+
 @defun make-expression-return-value-violation
 Build and return a new condition object of type
-@condition{expression-return-value-validation}.
+@condition{expression-return-value-violation}.
 @end defun
 
 
 @defun expression-return-value-violation? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
-@condition{expression-return-value-validation}; otherwise return
+@condition{expression-return-value-violation}; otherwise return
 @false{}.
 @end defun
 
 
-@defun expression-return-value-violation.index
-@defunx expression-return-value-violation.failed-expression
-@defunx expression-return-value-violation.offending-value
-Accessors for the fields of condition objects of type
-@condition{expression-return-value-validation}.
-@end defun
-
-
-@defun expression-return-value-violation @var{who} @var{message} @var{retval-index} @var{failed-expression} @var{offending-value} @var{irritant} @dots{}
+@defun expression-return-value-violation @var{who} @var{message} @var{irritant} @dots{}
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
-@condition{irritants}, @condition{expression-return-value-validation}.
+@condition{irritants}, @condition{expression-return-value-violation}.
 @end defun
 
 @c page
@@ -10664,46 +10879,21 @@ occurs because of impossible generation: raise an error.
 @section Additional vector functions
 
 
-The following bindings are exported by the library @library{vicare}.
+@menu
+* iklib vectors constructors::  Vector constructors.
+* iklib vectors predicates::    Vector predicates.
+* iklib vectors copying::       Copying vectors.
+* iklib vectors iteration::     Iterating vectors.
+@end menu
+
+@c page
+@node iklib vectors constructors
+@subsection Vector constructors
 
 
-@defun subvector @var{vec} @var{start} @var{end}
-@var{vec} must be a vector, and @var{start} and @var{end} must be exact
-integer objects satisfying:
-
-@example
-0 <= @var{start} <= @var{end} <= (vector-length @var{vec})
-@end example
-
-Return a newly allocated vector formed from the items of @var{vec}
-beginning with index @var{start} (inclusive) and ending with index
-@var{end} (exclusive).
-@end defun
-
-
-@defun vector-empty? @var{vec}
-Return @true{} if the vector @var{vec} has zero length, otherwise return
-@false{}.
-@end defun
-
-
-@defun vector-append @var{vec} ...
+@defun vector-append @var{vec} @dots{}
 Return a newly allocated vector whose items form the concatenation of
 the given vectors.
-@end defun
-
-
-@defun vector-copy @var{vec}
-Return a newly allocated copy of the given vector.  This is ``shallow''
-copy, @strong{not} a ``deep'' copy: the returned vector holds the same
-items of @var{vec}.
-@end defun
-
-
-@defun vector-copy! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
-Copy @var{count} items from @var{src.vec} starting at @var{src.start}
-(inclusive) to @var{dst.vec} starting at @var{dst.start}.  Return
-unspecified values.
 @end defun
 
 
@@ -10721,6 +10911,78 @@ are filled with @var{fill}.  When not used: @var{fill} defaults to
 (vector-resize '#(1 2 3) 2)     @result{} #(1 2)
 @end example
 @end defun
+
+@c page
+@node iklib vectors predicates
+@subsection Vector predicates
+
+
+@defun vector-empty? @var{vec}
+Return @true{} if the vector @var{vec} has zero length, otherwise return
+@false{}.
+@end defun
+
+
+@defun non-empty-vector? @var{obj}
+Return @true{} if @var{obj} is a vector object with non--zero length;
+otherwise return @false{}.  This function does @strong{not} raise an
+exception if @var{obj} is not a vector object.
+@end defun
+
+
+@defun list-of-vectors? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of vector objects;
+otherwise return @false{}.
+@end defun
+
+
+@defun vectors-of-same-length? @varo{vec} @var{vec} @dots{}
+Return @true{} if all the arguments are vectors of the same length;
+otherwise return @false{}.  It is an error if an argument is not a
+vector object.
+@end defun
+
+
+@defun list-of-vectors-of-same-length? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of vector objects,
+all with the same length; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib vectors copying
+@subsection Copying vectors
+
+
+@defun subvector @var{vec} @var{start} @var{end}
+@var{vec} must be a vector, and @var{start} and @var{end} must be exact
+integer objects satisfying:
+
+@example
+0 <= @var{start} <= @var{end} <= (vector-length @var{vec})
+@end example
+
+Return a newly allocated vector formed from the items of @var{vec}
+beginning with index @var{start} (inclusive) and ending with index
+@var{end} (exclusive).
+@end defun
+
+
+@defun vector-copy @var{vec}
+Return a newly allocated copy of the given vector.  This is ``shallow''
+copy, @strong{not} a ``deep'' copy: the returned vector holds the same
+items of @var{vec}.
+@end defun
+
+
+@defun vector-copy! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
+Copy @var{count} items from @var{src.vec} starting at @var{src.start}
+(inclusive) to @var{dst.vec} starting at @var{dst.start}.  Return
+unspecified values.
+@end defun
+
+@c page
+@node iklib vectors iteration
+@subsection Iterating vectors
 
 
 @defun vector-find @var{proc} @var{vec}
@@ -11162,11 +11424,11 @@ primitive value; we can easily inspect such situation as follows:
 @example
 (import (vicare))
 
-(getprop 'display system-value-gensym)
+(getprop 'display (system-value-gensym))
 @result{} loc.display
 
 ;; extract the procedure from the loc
-(symbol-value (getprop 'display system-value-gensym))
+(symbol-value (getprop 'display (system-value-gensym)))
 @result{} #<procedure display>
 
 (system-value 'display)
@@ -11177,7 +11439,7 @@ primitive value; we can easily inspect such situation as follows:
 @end example
 
 We see that the property list contains an entry with key set to the
-symbol bound to @code{system-value-gensym}; notice that this key is
+symbol returned by @func{system-value-gensym}; notice that this key is
 different every time we rebuild the boot image.
 
 
@@ -11188,10 +11450,10 @@ raise an assertion violation.
 @end defun
 
 
-@defvr Constant system-value-gensym
-A special gensym used internally to map core primitive names to their
-value.
-@end defvr
+@defun system-value-gensym
+Return special gensym used internally to map core primitive names to
+their value.
+@end defun
 
 @c page
 @node iklib symbols labels
@@ -11216,11 +11478,11 @@ inspect such situation as follows:
 @example
 (import (vicare))
 
-(getprop 'display system-label-gensym)
+(getprop 'display (system-label-gensym))
 @result{} lab.display
 
 ;; extract the lexical environment entry describing DISPLAY
-(symbol-value (getprop 'display system-label-gensym))
+(symbol-value (getprop 'display (system-label-gensym)))
 @result{} (core-prim . display)
 
 (system-label 'display)
@@ -11228,7 +11490,7 @@ inspect such situation as follows:
 @end example
 
 We see that the property list contains an entry with key set to the
-symbol bound to @code{system-label-gensym}; notice that this key is
+symbol returned by @func{system-label-gensym}; notice that this key is
 different every time we rebuild the boot image.
 
 
@@ -11239,10 +11501,10 @@ the label, else return @false{}.
 @end defun
 
 
-@defvr Constant system-label-gensym
-A special gensym used internally to map core primitive names to their
-syntactic binding label gensym.
-@end defvr
+@defun system-label-gensym
+Return a special gensym used internally to map core primitive names to
+their syntactic binding label gensym.
+@end defun
 
 @c page
 @node iklib symbols identifiers
@@ -11263,7 +11525,7 @@ easily inspect such situation as follows:
 @example
 (import (vicare))
 
-(getprop 'procedure? system-id-gensym)
+(getprop 'procedure? (system-id-gensym))
 @result{} #<syntax expr=procedure? ...>
 
 (system-id 'procedure?)
@@ -11271,7 +11533,7 @@ easily inspect such situation as follows:
 @end example
 
 We see that the property list contains an entry with key set to the
-symbol bound to @code{system-id-gensym}; notice that this key is
+return value of @func{system-id-gensym}; notice that this key is
 different every time we rebuild the boot image.
 
 
@@ -11282,10 +11544,10 @@ Attempt to extract from @var{symbol} the bound identifier of which
 @end defun
 
 
-@defvr Constant system-id-gensym
-A special gensym used internally to map core primitive names to their
-syntactic binding identifiers.
-@end defvr
+@defun system-id-gensym
+Return a special gensym used internally to map core primitive names to
+their syntactic binding identifiers.
+@end defun
 
 @c page
 @node iklib fixnums
@@ -15451,6 +15713,12 @@ otherwise return @false{}.  If @var{obj} is not a pointer: return
 @defun pointer-and-offset? @var{ptr} @var{diff}
 Return true if the exact integer @var{diff} can be added to @var{ptr}
 without causing a pointer overflow or underflow.
+@end defun
+
+
+@defun list-of-pointers? @var{obj}
+Return @true{} if @var{obj} is a, possibly empty, proper list of pointer
+objects; otherwise return @false{}.
 @end defun
 
 @c page

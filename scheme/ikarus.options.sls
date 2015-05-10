@@ -49,6 +49,7 @@
     vicare-built-with-linux-enabled)
   (import (except (vicare)
 		  vicare-built-with-arguments-validation-enabled
+		  vicare-built-with-descriptive-labels-generation
 		  vicare-built-with-srfi-enabled
 		  vicare-built-with-ffi-enabled
 		  vicare-built-with-iconv-enabled

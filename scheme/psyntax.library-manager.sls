@@ -23,6 +23,7 @@
 (library (psyntax.library-manager)
   (export
     ;; library inspection
+    make-library
     library?
     library-uid				library-name
     library-imp-lib*			library-vis-lib*
@@ -60,6 +61,7 @@
     library-name-identifiers
     label->imported-syntactic-binding-descriptor)
   (import (rnrs)
+    (prefix (rnrs syntax-case) sys.)
     (psyntax.compat))
 
   (include "psyntax.helpers.scm" #t)

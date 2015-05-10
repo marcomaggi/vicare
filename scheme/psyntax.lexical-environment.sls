@@ -94,6 +94,8 @@
     label->syntactic-binding-descriptor
     label->syntactic-binding-descriptor/no-indirection
 
+    system-label	system-label-gensym	SYSTEM-LABEL-GENSYM
+
     ;; marks of lexical contours
     src-marked?
     rib-src-marked-source-names
@@ -144,6 +146,7 @@
     ADD-MARK
 
     ;; identifiers from the built-in environment
+    system-id-gensym			system-id
     bless
     trace-bless
     scheme-stx
@@ -2267,6 +2270,53 @@
 	input-form.stx type-name-id))))
 
 
+;;;; system label gensym
+
+(define-constant SYSTEM-LABEL-GENSYM
+  ;;Notice  that  this  gensym is  generated  a-new  every  time  the boot  image  is
+  ;;initialised.  We  must avoid the source  optimizer to precompute and  hard-code a
+  ;;value.
+  ;;
+  ;;This syntactic binding is  not part of the public API: it is  not exported by the
+  ;;library  "(vicare)".  However,  it  is  used by  the  init  library generated  by
+  ;;"makefile.sps" when building a new boot image.
+  (expand-time-gensym "system-label-gensym"))
+
+(define (system-label-gensym)
+  SYSTEM-LABEL-GENSYM)
+
+(define* (system-label {x symbol?})
+  ;;If X is  the symbol name of  a primitive procedure: return  its syntactic binding
+  ;;label gensym, otherwise return false.
+  ;;
+  (getprop x SYSTEM-LABEL-GENSYM))
+
+
+;;;; system id gensym
+
+(module (system-id-gensym system-id)
+
+  (define-constant SYSTEM-ID-GENSYM
+    ;;Notice  that this  gensym  is generated  a-new  every time  the  boot image  is
+    ;;initialised.  We must avoid the source  optimizer to precompute and hard-code a
+    ;;value.
+    (expand-time-gensym "system-id-gensym"))
+
+  (define (system-id-gensym)
+    SYSTEM-ID-GENSYM)
+
+  (case-define* system-id
+    (({x symbol?})
+     ;;If X is the symbol name of a primitive procedure: return its syntactic binding
+     ;;identifier, otherwise return false.
+     ;;
+     (getprop x SYSTEM-ID-GENSYM))
+    (({x symbol?} property)
+     (putprop x SYSTEM-ID-GENSYM property)))
+
+  #| end of module |# )
+
+
 ;;;; identifiers from the built-in environment
 
 (define (bless input-form.stx)
@@ -2304,12 +2354,14 @@
     (debug-print 'bless-input  (syntax->datum input-form.stx)
 		 'bless-output (syntax->datum output-stx))))
 
+;;; --------------------------------------------------------------------
+
 (define* (scheme-stx {sym symbol?})
   ;;Take a symbol and if it's the public  name of a syntactic binding exported by the
   ;;library "(psyntax system  $all)": create a fresh identifier that  maps the symbol
   ;;to its label in that library.  Symbols not in that library become fresh.
   ;;
-  (or (getprop sym system-id-gensym)
+  (or (system-id sym)
       (getprop sym '*vicare-scheme-temporary-variable-id*)
       (cond ((system-label sym)
 	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
@@ -2318,7 +2370,7 @@
 	     => (lambda (label)
 		  (receive-and-return (id)
 		      (make-top-level-syntactic-identifier-from-source-name-and-label sym label)
-		    (putprop sym system-id-gensym id))))
+		    (system-id sym id))))
 	    (else
 	     ;;SYM is  not the  name of  a core primitive,  so we  just build  a free
 	     ;;identifier.   Such free  identifier  will work  just  fine in  binding
@@ -2338,17 +2390,20 @@
   ;;This function is similar to SCHEME-STX,  but it does not create fresh identifiers
   ;;for non-core-primitive symbols.
   ;;
-  (or (getprop sym system-id-gensym)
+  (or (system-id sym)
       (cond ((system-label sym)
 	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
-	     ;;with a proper "rib" and  the binding's label.  Such bound identifier
+	     ;;with a  proper "rib" and  the binding's label.  Such  bound identifier
 	     ;;will be captured by the entry in the top-level environment.
 	     => (lambda (label)
 		  (receive-and-return (id)
 		      (make-top-level-syntactic-identifier-from-source-name-and-label sym label)
-		    (putprop sym system-id-gensym id))))
+		    (system-id sym id))))
 	    (else
 	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
+
+(define* (make-syntactic-identifier-for-fake-core-primitive {source-name symbol?})
+  (make-stx source-name '() '() '()))
 
 (let-syntax
     ((define-core-prim-id-retriever (syntax-rules ()

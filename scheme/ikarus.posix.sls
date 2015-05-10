@@ -124,28 +124,29 @@
 		  ;; program name
 		  vicare-argv0
 		  vicare-argv0-string)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $bytevectors)
+    (vicare system $chars)
+    (vicare system $strings)
+    (vicare system $vectors)
     (vicare platform constants)
     (prefix (vicare unsafe capi)
 	    capi.)
-    (vicare system $bytevectors)
-    (vicare unsafe operations)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation))
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  with-pathnames))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (boolean/fixnum who obj)
-  (or (fixnum? obj) (boolean? obj))
-  (procedure-argument-violation who "expected boolean or fixnum as argument" obj))
+(define (boolean-or-fixnum? obj)
+  (or (fixnum?  obj)
+      (boolean? obj)))
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (list-of-string-pathnames who obj)
-  (and (list? obj)
-       (for-all file-string-pathname? obj))
-  (procedure-argument-violation who
-    "expected list of valid strings as list of pathnames argument" obj))
+(define (non-empty-string? obj)
+  (and (string? obj)
+       ($fxpositive? ($string-length obj))))
 
 
 ;;;; helpers
@@ -156,21 +157,28 @@
 (define-inline-constant ASCII-SLASH-FX
   47 #;(char->integer #\/))
 
+(define-syntax-rule (with-who ?name . ?body)
+  (fluid-let-syntax
+      ((__who__ (identifier-syntax (quote ?name))))
+    . ?body))
+
+(define ($make-clean-vector len)
+  (receive-and-return (vec)
+      ($make-vector len)
+    (foreign-call "ikrt_vector_clean" vec)))
+
 
 ;;;; errors handling
 
-(define (strerror errno)
-  (define who 'strerror)
-  (with-arguments-validation (who)
-      ((boolean/fixnum  errno))
-    (if errno
-	(if (boolean? errno)
-	    "unknown errno code (#t)"
-	  (let ((msg (capi.posix-strerror errno)))
-	    (if msg
-		(string-append (errno->string errno) ": " (utf8->string msg))
-	      (string-append "unknown errno code " (number->string (- errno))))))
-      "no error")))
+(define* (strerror {errno boolean-or-fixnum?})
+  (if errno
+      (if (boolean? errno)
+	  "unknown errno code (#t)"
+	(let ((msg (capi.posix-strerror errno)))
+	  (if msg
+	      (string-append (errno->string errno) ": " (utf8->string msg))
+	    (string-append "unknown errno code " (number->string (- errno))))))
+    "no error"))
 
 (define (%raise-errno-error/filename who errno filename . irritants)
   (raise (condition
@@ -184,23 +192,18 @@
 
 ;;;; errno handling
 
-(define (errno->string negated-errno-code)
-  ;;Convert   an   errno   code    as   represented   by   the   (vicare
-  ;;platform constants)  library into  a string  representing  the errno
-  ;;code symbol.
+(define* (errno->string {negated-errno-code fixnum?})
+  ;;Convert an errno  code as represented by the (vicare  platform constants) library
+  ;;into a string representing the errno code symbol.
   ;;
-  (define who 'errno->string)
-  (with-arguments-validation (who)
-      ((fixnum negated-errno-code))
-    (let ((errno-code ($fx- 0 negated-errno-code)))
-      (and ($fx> errno-code 0)
-	   ($fx< errno-code (vector-length ERRNO-VECTOR))
-	   (vector-ref ERRNO-VECTOR errno-code)))))
+  (let ((errno-code ($fx- 0 negated-errno-code)))
+    (and ($fxnonnegative? errno-code)
+	 ($fx< errno-code (vector-length ERRNO-VECTOR))
+	 (vector-ref ERRNO-VECTOR errno-code))))
 
 (let-syntax
     ((make-errno-vector
       (lambda (stx)
-	(define who 'make-errno-vector)
 	(define (%mk-vector)
 	  (let* ((max-code (fold-left
 			       (lambda (max-code pair)
@@ -213,7 +216,7 @@
 					 ((boolean? code)
 					  max-code)
 					 (else
-					  (syntax-violation who
+					  (syntax-violation 'make-errno-vector
 					    "invalid errno code specification" pair)))))
 			     0 errno-alist)))
 	    (receive-and-return (vec)
@@ -366,12 +369,9 @@
 
 ;;;; system environment variables
 
-(define (getenv key)
-  (define who 'getenv)
-  (with-arguments-validation (who)
-      ((string  key))
-    (let ((rv (capi.posix-getenv (string->utf8 key))))
-      (and rv (utf8->string rv)))))
+(define* (getenv {key string?})
+  (let ((rv (capi.posix-getenv (string->utf8 key))))
+    (and rv (utf8->string rv))))
 
 (define (environ)
   (define (%find-index-of-= str idx str.len)
@@ -397,31 +397,25 @@
 
 ;;;; creating directories
 
-(define (mkdir pathname mode)
-  (define who 'mkdir)
-  (with-arguments-validation (who)
-      ((file-pathname	pathname)
-       (fixnum		mode))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-mkdir pathname.bv mode)))
-	(unless ($fxzero? rv)
-	  (%raise-errno-error/filename who rv pathname mode))))))
+(define* (mkdir {pathname file-pathname?} {mode fixnum?})
+  (with-pathnames ((pathname.bv pathname))
+    (let ((rv (capi.posix-mkdir pathname.bv mode)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error/filename __who__ rv pathname mode)))))
 
 (module (mkdir/parents)
-  (define (mkdir/parents pathname mode)
-    (define who 'mkdir/parents)
-    (with-arguments-validation (who)
-	((file-pathname		pathname)
-	 (fixnum		mode))
-      (let next-component ((pathname pathname))
-	(if (file-exists? pathname)
-	    (unless (%file-is-directory? who pathname)
-	      (error who "path component is not a directory" pathname))
-	  (let-values (((base suffix) (split-pathname-root-and-tail pathname)))
-	    (unless ($fxzero? ($string-length base))
-	      (next-component base))
-	    (unless ($fxzero? ($string-length suffix))
-	      (mkdir pathname mode)))))))
+
+  (define* (mkdir/parents {pathname file-pathname?} {mode fixnum?})
+    (let next-component ((pathname pathname))
+      (if (file-exists? pathname)
+	  (unless (%file-is-directory? __who__ pathname)
+	    (error __who__ "path component is not a directory" pathname))
+	(receive (base suffix)
+	    (split-pathname-root-and-tail pathname)
+	  (unless ($fxzero? ($string-length base))
+	    (next-component base))
+	  (unless ($fxzero? ($string-length suffix))
+	    (mkdir pathname mode))))))
 
   (define (%file-is-directory? who pathname)
     (with-pathnames ((pathname.bv pathname))
@@ -568,11 +562,8 @@
 
 ;;;; file operations
 
-(define (real-pathname pathname)
-  (define who 'real-pathname)
-  (with-arguments-validation (who)
-      ((file-pathname		pathname))
-    ($real-pathname who pathname)))
+(define* (real-pathname {pathname file-pathname?})
+  ($real-pathname __who__ pathname))
 
 (define ($real-pathname who pathname)
   (with-pathnames ((pathname.bv pathname))
@@ -581,24 +572,20 @@
 	  ((filename->string-func) rv)
 	(%raise-errno-error/filename who rv pathname)))))
 
-(define (delete-file pathname)
+(define* (delete-file {pathname file-pathname?})
   ;;Defined by R6RS.
   ;;
-  (define who 'delete-file)
-  (with-arguments-validation (who)
-      ((file-pathname	pathname))
-    (with-pathnames ((pathname.bv pathname))
-      (let ((rv (capi.posix-unlink pathname.bv)))
-	(unless ($fxzero? rv)
-	  (%raise-errno-error/filename who rv pathname))))))
+  (with-pathnames ((pathname.bv pathname))
+    (let ((rv (capi.posix-unlink pathname.bv)))
+      (unless ($fxzero? rv)
+	(%raise-errno-error/filename __who__ rv pathname)))))
 
 
 ;;;; string pathnames
 
 (module (split-pathname-root-and-tail)
-  (define who 'split-pathname-root-and-tail)
 
-  (define (split-pathname-root-and-tail pathname)
+  (define* (split-pathname-root-and-tail {pathname string?})
     ;;Split a string pathname into the directory part and the tail part.
     ;;Return 2  values: a string  representing the directory part  and a
     ;;string representing the  tail name part.  If PATHNAME  is just the
@@ -608,15 +595,13 @@
     ;;Assume  the  pathname  components   separator  is  "/",  which  is
     ;;Unix-specific.
     ;;
-    (with-arguments-validation (who)
-	((string  pathname))
-      (cond (($find-last PATH-SEPARATOR pathname)
-	     => (lambda (i)
-		  (values (substring pathname 0 i)
-			  (let ((i (fx+ i 1)))
-			    (substring pathname i (string-length pathname))))))
-	    (else
-	     (values "" pathname)))))
+    (cond (($find-last PATH-SEPARATOR pathname)
+	   => (lambda (i)
+		(values (substring pathname 0 i)
+			(let ((i (fx+ i 1)))
+			  (substring pathname i (string-length pathname))))))
+	  (else
+	   (values "" pathname))))
 
   (define ($find-last ch str)
     ;;Return a fixnum  representing the index of the  last occurrence of
@@ -640,7 +625,7 @@
 (module (search-file-in-environment-path
 	 search-file-in-list-path)
 
-  (define (search-file-in-environment-path pathname environment-variable)
+  (define* (search-file-in-environment-path {pathname file-string-pathname?} {environment-variable non-empty-string?})
     ;;Search a  file pathname (regular  file or directory) in  the given
     ;;search path.
     ;;
@@ -664,33 +649,29 @@
     ;;process'  current  working directory  only  if  such directory  is
     ;;listed in the given path.
     ;;
-    (define who 'search-file-in-environment-path)
-    (with-arguments-validation (who)
-	((file-string-pathname	pathname)
-	 (non-empty-string	environment-variable))
-      (if (file-absolute-pathname? pathname)
-	  ;;The file is absolute: test for its existence.
+    (if (file-absolute-pathname? pathname)
+	;;The file is absolute: test for its existence.
+	(and (file-exists? pathname)
+	     ($real-pathname __who__ pathname))
+      (receive (root tail)
+	  (split-pathname-root-and-tail pathname)
+	(if ($string-empty? root)
+	    ;;The pathname is  relative and it has  no directory part:
+	    ;;search it in the given path.
+	    (cond ((getenv environment-variable)
+		   => (lambda (string-path)
+			(%search-file-in-list-path pathname (split-search-path-string string-path))))
+		  (else
+		   ;;There is no path from the environment: the search
+		   ;;has failed.   Notice that we do  *not* search the
+		   ;;file in the current directory.
+		   #f))
+	  ;;The pathname  is relative but  has a directory  part: test
+	  ;;for its existence.
 	  (and (file-exists? pathname)
-	       ($real-pathname who pathname))
-	(receive (root tail)
-	    (split-pathname-root-and-tail pathname)
-	  (if ($string-empty? root)
-	      ;;The pathname is  relative and it has  no directory part:
-	      ;;search it in the given path.
-	      (cond ((getenv environment-variable)
-		     => (lambda (string-path)
-			  (%search-file-in-list-path pathname (split-search-path-string string-path))))
-		    (else
-		     ;;There is no path from the environment: the search
-		     ;;has failed.   Notice that we do  *not* search the
-		     ;;file in the current directory.
-		     #f))
-	    ;;The pathname  is relative but  has a directory  part: test
-	    ;;for its existence.
-	    (and (file-exists? pathname)
-		 ($real-pathname who pathname)))))))
+	       ($real-pathname __who__ pathname))))))
 
-  (define (search-file-in-list-path pathname list-of-directories)
+  (define* (search-file-in-list-path {pathname file-string-pathname?} {list-of-directories list-of-string-pathnames?})
     ;;Search a  file pathname (regular  file or directory) in  the given
     ;;search path.
     ;;
@@ -713,51 +694,38 @@
     ;;searched in  the process' current  working directory only  if such
     ;;directory is listed in the given path.
     ;;
-    (define who 'search-file-in-list-path)
-    (with-arguments-validation (who)
-	((file-string-pathname		pathname)
-	 (list-of-string-pathnames	list-of-directories))
-      (if (file-absolute-pathname? pathname)
-	  ;;The file is absolute: test for its existence.
+    (if (file-absolute-pathname? pathname)
+	;;The file is absolute: test for its existence.
+	(and (file-exists? pathname)
+	     ($real-pathname __who__ pathname))
+      (receive (root tail)
+	  (split-pathname-root-and-tail pathname)
+	(if ($string-empty? root)
+	    ;;The pathname is relative and it has no directory part: search it in the
+	    ;;given path.
+	    (%search-file-in-list-path pathname list-of-directories)
+	  ;;The  pathname  is  relative  but  has a  directory  part:  test  for  its
+	  ;;existence.
 	  (and (file-exists? pathname)
-	       ($real-pathname who pathname))
-	(receive (root tail)
-	    (split-pathname-root-and-tail pathname)
-	  (if ($string-empty? root)
-	      ;;The pathname is  relative and it has  no directory part:
-	      ;;search it in the given path.
-	      (%search-file-in-list-path pathname list-of-directories)
-	    ;;The pathname  is relative but  has a directory  part: test
-	    ;;for its existence.
-	    (and (file-exists? pathname)
-		 ($real-pathname who pathname)))))))
+	       ($real-pathname __who__ pathname))))))
 
   (define (%search-file-in-list-path pathname list-of-directories)
     (let loop ((dirs list-of-directories))
-      (if (null? dirs)
-	  #f
-	(let* ((pathname    (string-append ($car dirs) "/" pathname))
-	       (pathname.bv (with-pathnames ((pathname.bv pathname))
-			      (capi.posix-realpath pathname.bv))))
-	  (if (bytevector? pathname.bv)
-	      ((pathname->string-func) pathname.bv)
-	    (loop ($cdr dirs)))))))
+      (and (pair? dirs)
+	   (let* ((pathname    (string-append ($car dirs) "/" pathname))
+		  (pathname.bv (with-pathnames ((pathname.bv pathname))
+				 (capi.posix-realpath pathname.bv))))
+	     (if (bytevector? pathname.bv)
+		 ((pathname->string-func) pathname.bv)
+	       (loop ($cdr dirs)))))))
 
   #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
-(define (list-of-pathnames? obj)
-  (and (list? obj)
-       (for-all file-pathname? obj)))
-
-(define (list-of-string-pathnames? obj)
-  (and (list? obj)
-       (for-all file-string-pathname? obj)))
-
-(define (list-of-bytevector-pathnames? obj)
-  (and (list? obj)
-       (for-all file-string-pathname? obj)))
+(define-list-of-type-predicate list-of-pathnames?		file-pathname?)
+(define-list-of-type-predicate list-of-string-pathnames?	file-string-pathname?)
+(define-list-of-type-predicate list-of-bytevector-pathnames?	file-bytevector-pathname?)
 
 ;;; --------------------------------------------------------------------
 
@@ -768,77 +736,59 @@
 	 split-pathname-bytevector
 	 split-pathname-string)
 
-  (define (split-search-path path)
-    (define who 'split-search-path)
-    (with-arguments-validation (who)
-	((file-colon-search-path	path))
-      (if (string? path)
-	  (map ascii->string (split-search-path-bytevector (string->ascii path)))
-	(split-search-path-bytevector path))))
+  (define* (split-search-path {path file-colon-search-path?})
+    (if (string? path)
+	(map ascii->string (split-search-path-bytevector (string->ascii path)))
+      (split-search-path-bytevector path)))
 
-  (define (split-search-path-string path)
-    (define who 'split-search-path-string)
-    (with-arguments-validation (who)
-	((file-string-colon-search-path	path))
-      (map ascii->string (split-search-path-bytevector (string->ascii path)))))
+  (define* (split-search-path-string {path file-string-colon-search-path?})
+    (map ascii->string (split-search-path-bytevector (string->ascii path))))
 
-  (define (split-search-path-bytevector path)
-    (define who 'split-search-path-bytevector)
-    (with-arguments-validation (who)
-	((file-bytevector-colon-search-path	path))
-      (let ((path.len ($bytevector-length path)))
-	(if ($fxzero? path.len)
-	    '()
-	  (let next-pathname ((path.index	0)
-			      (pathnames	'()))
-	    (if ($fx= path.index path.len)
-		(reverse pathnames)
-	      (let ((separator-index (%find-next-separator ASCII-COLON-FX
-							   path path.index path.len)))
-		(if separator-index
-		    (next-pathname ($fxadd1 separator-index)
-				   (if ($fx= path.index separator-index)
-				       pathnames
-				     (cons (%$subbytevector path path.index separator-index)
-					   pathnames)))
-		  (reverse (cons (%$subbytevector path path.index path.len)
-				 pathnames))))))))))
+  (define* (split-search-path-bytevector {path file-bytevector-colon-search-path?})
+    (let ((path.len ($bytevector-length path)))
+      (if ($fxzero? path.len)
+	  '()
+	(let next-pathname ((path.index	0)
+			    (pathnames	'()))
+	  (if ($fx= path.index path.len)
+	      (reverse pathnames)
+	    (let ((separator-index (%find-next-separator ASCII-COLON-FX
+							 path path.index path.len)))
+	      (if separator-index
+		  (next-pathname ($fxadd1 separator-index)
+				 (if ($fx= path.index separator-index)
+				     pathnames
+				   (cons (%$subbytevector path path.index separator-index)
+					 pathnames)))
+		(reverse (cons (%$subbytevector path path.index path.len)
+			       pathnames)))))))))
 
-  (define (split-pathname pathname)
-    (define who 'split-pathname)
-    (with-arguments-validation (who)
-	((file-pathname		pathname))
-      (if (string? pathname)
-	  (split-pathname-string pathname)
-	(split-pathname-bytevector pathname))))
+  (define* (split-pathname {pathname file-pathname?})
+    (if (string? pathname)
+	(split-pathname-string pathname)
+      (split-pathname-bytevector pathname)))
 
-  (define (split-pathname-string pathname)
-    (define who 'split-pathname-string)
-    (with-arguments-validation (who)
-	((file-string-pathname	pathname))
-      (let-values (((absolute? components)
-		    (split-pathname-bytevector (string->ascii pathname))))
-	(values absolute? (map ascii->string components)))))
+  (define* (split-pathname-string {pathname file-string-pathname?})
+    (receive (absolute? components)
+	(split-pathname-bytevector (string->ascii pathname))
+      (values absolute? (map ascii->string components))))
 
-  (define (split-pathname-bytevector pathname)
-    (define who 'split-pathname-bytevector)
-    (with-arguments-validation (who)
-	((file-bytevector-pathname	pathname))
-      (let* ((pathname.len	($bytevector-length pathname))
-	     (components	(if ($fxzero? pathname.len)
+  (define* (split-pathname-bytevector {pathname file-bytevector-pathname?})
+    (let* ((pathname.len	($bytevector-length pathname))
+	   (components		(if ($fxzero? pathname.len)
 				    '()
 				  (%$bytevector-pathname-components pathname pathname.len))))
-	(cond ((null? components)
-	       (cond (($fxzero? pathname.len)
-		      (values #f '()))
-		     (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
-		      (values #t '()))
-		     (else
-		      (values #f '()))))
-	      (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
-	       (values #t components))
-	      (else
-	       (values #f components))))))
+      (cond ((null? components)
+	     (cond (($fxzero? pathname.len)
+		    (values #f '()))
+		   (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
+		    (values #t '()))
+		   (else
+		    (values #f '()))))
+	    (($fx= ASCII-SLASH-FX ($bytevector-u8-ref pathname 0))
+	     (values #t components))
+	    (else
+	     (values #f components)))))
 
   (define (%$bytevector-pathname-components pathname.bv pathname.len)
     (let next-component ((pathname.index	0)
@@ -884,17 +834,14 @@
 
 ;;;; file attributes
 
-(define (file-modification-time pathname)
-  (define who 'file-modification-time)
-  (with-arguments-validation (who)
-      ((file-pathname	pathname))
-    (with-pathnames ((pathname.bv  pathname))
-      (let* ((timespec ($make-clean-vector 2))
-	     (rv       (capi.posix-file-mtime pathname.bv timespec)))
-	(if ($fxzero? rv)
-	    (+ (* #e1e9 ($vector-ref timespec 0))
-	       ($vector-ref timespec 1))
-	  (%raise-errno-error/filename who rv pathname))))))
+(define* (file-modification-time {pathname file-pathname?})
+  (with-pathnames ((pathname.bv  pathname))
+    (let* ((timespec ($make-clean-vector 2))
+	   (rv       (capi.posix-file-mtime pathname.bv timespec)))
+      (if ($fxzero? rv)
+	  (+ (* #e1e9 ($vector-ref timespec 0))
+	     ($vector-ref timespec 1))
+	(%raise-errno-error/filename __who__ rv pathname)))))
 
 
 ;;;; program name
@@ -908,7 +855,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -90,7 +90,7 @@
     (only (ikarus.strings-table)
 	  $initialize-interned-strings-table!)
     (prefix (ikarus load) load.)
-    (prefix (only (ikarus library-utils)
+    (prefix (only (psyntax.library-utils)
 		  init-search-paths-and-directories)
 	    libutils.)
     (prefix (only (ikarus.posix)

@@ -18,8 +18,6 @@
 ;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
 ;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(import (prefix (rnrs syntax-case) sys.))
-
 (define-syntax commented-out
   ;;Comment out a sequence of forms.  It allows us to comment out forms and still use
   ;;the editor's autoindentation features in the commented out section.

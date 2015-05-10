@@ -410,6 +410,12 @@
 
 
 (import (except (vicare)
+		;;FIXME To be removed at the next boot image rotation.  (Marco Maggi;
+		;;Tue May 5, 2015)
+		procedure-arguments-consistency-violation
+		non-negative-fixnum?
+		;;;
+
 		+ - * / = != < <= > >=
 		min				max
 		add1				sub1
@@ -505,11 +511,28 @@
   (vicare system $compnums)
   (vicare system $chars)
   (vicare system $strings)
-  (vicare arguments validation)
-  (vicare language-extensions syntaxes))
+  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue May 5,
+  ;;2015)
+  (only (ikarus conditions)
+	procedure-arguments-consistency-violation)
+  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue May 5,
+  ;;2015)
+  (only (ikarus fixnums)
+	non-negative-fixnum?)
+  (only (vicare language-extensions syntaxes)
+	cond-numeric-operand
+	cond-real-numeric-operand
+	cond-exact-integer-operand
+	cond-inexact-integer-operand
+	cond-exact-real-numeric-operand))
 
 
 ;;;; helpers
+
+(define-syntax-rule (with-who ?name . ?body)
+  (fluid-let-syntax
+      ((__who__ (identifier-syntax (quote ?name))))
+    . ?body))
 
 (define (err who x)
   (procedure-argument-violation who
@@ -518,39 +541,25 @@
       "expected number as argument")
     x))
 
-(define-syntax %error-not-number
-  (lambda (stx)
-    (syntax-case stx ()
-      ((?k ?arg)
-       (identifier? #'?arg)
-       (with-syntax ((WHO (datum->syntax #'?k 'who)))
-	 #'(procedure-argument-violation WHO "expected number as argument" ?arg))))))
+(define-syntax-rule (%error-not-number ?obj)
+  (procedure-argument-violation __who__ "expected number as argument" ?obj))
 
-(define-syntax %error-not-real-number
-  (lambda (stx)
-    (syntax-case stx ()
-      ((?k ?arg)
-       (identifier? #'?arg)
-       (with-syntax ((WHO (datum->syntax #'?k 'who)))
-	 #'(procedure-argument-violation WHO "expected real number as argument" ?arg))))))
+(define-syntax-rule (%error-not-real-number ?obj)
+  (procedure-argument-violation __who__ "expected real number as argument" ?obj))
 
-(define (%error-not-integer who obj)
-  (procedure-argument-violation who "expected exact or inexact integer as argument" obj))
+(define-syntax-rule (%error-not-integer ?obj)
+  (procedure-argument-violation __who__ "expected exact or inexact integer as argument" ?obj))
 
-(define-syntax %error-division-by-zero
-  (syntax-rules ()
-    ((_ ?who . ?irritants)
-     ;;According to R6RS this must be an assertion.
-     (procedure-argument-violation ?who "division by zero" . ?irritants))))
-
-(define-syntax %error-undefined-operation
-  (syntax-rules ()
-    ((_ ?who . ?irritants)
-     (procedure-argument-violation ?who "undefined operation" . ?irritants))))
+(define-syntax-rule (%error-not-exact-integer ?obj)
+  (procedure-argument-violation __who__ "expected exact integer as argument" ?obj))
 
 (define (%non-negative-integer? obj)
   (and (integer? obj)
        (not (negative? obj))))
+
+(define (bit-value? obj)
+  (or (eq? obj 0)
+      (eq? obj 1)))
 
 
 ;;;; constants
@@ -560,24 +569,16 @@
 (define greek-pi/2	1.5707963267948966)
 
 
-(module (real->flonum)
-  (define who 'real->flonum)
-
-  (define (real->flonum x)
-    (cond-numeric-operand x
-      ((fixnum?)	($fixnum->flonum x))
-      ((bignum?)	($bignum->flonum x))
-      ((ratnum?)	($ratnum->flonum x))
-      ((flonum?)	x)
-      ((compnum?)	(%error-not-real x))
-      ((cflonum?)	(%error-not-real x))
-      (else
-       (%error-not-real x))))
-
-  (define (%error-not-real x)
-    (procedure-argument-violation who "expected real number as argument" x))
-
-  #| end of module: real->flonum |# )
+(define* (real->flonum x)
+  (cond-numeric-operand x
+    ((fixnum?)	($fixnum->flonum x))
+    ((bignum?)	($bignum->flonum x))
+    ((ratnum?)	($ratnum->flonum x))
+    ((flonum?)	x)
+    ((compnum?)	(%error-not-real-number x))
+    ((cflonum?)	(%error-not-real-number x))
+    (else
+     (procedure-argument-violation __who__ "expected real number as argument" x))))
 
 (define ($compnum->cflonum Z)
   ($make-cflonum (real->flonum ($compnum-real Z))
@@ -586,85 +587,79 @@
 
 ;;;; generic arithmetic functions
 
-(define +
-  (case-lambda
-   ((x y)
-    ($add-number-number x y))
-   ((x y z)
-    ($add-number-number ($add-number-number x y) z))
-   ((a)
-    (cond ((fixnum? a)
-	   a)
-	  ((number? a)
-	   a)
-	  (else
-	   (procedure-argument-violation '+ "not a number" a))))
-   (()
-    0)
-   ((a b c d . e*)
-    (let loop ((ac ($add-number-number ($add-number-number ($add-number-number a b) c) d))
-	       (e* e*))
-      (if (null? e*)
-	  ac
-	(loop ($add-number-number ac ($car e*)) ($cdr e*)))))))
+(case-define* +
+  ((x y)
+   ($add-number-number x y))
+  ((x y z)
+   ($add-number-number ($add-number-number x y) z))
+  ((a)
+   (cond ((fixnum? a)
+	  a)
+	 ((number? a)
+	  a)
+	 (else
+	  (procedure-argument-violation __who__ "not a number" a))))
+  (()
+   0)
+  ((a b c d . e*)
+   (let loop ((ac ($add-number-number ($add-number-number ($add-number-number a b) c) d))
+	      (e* e*))
+     (if (pair? e*)
+	 (loop ($add-number-number ac ($car e*)) ($cdr e*))
+       ac))))
 
-(define -
-  (case-lambda
-   ((x y)
-    ($sub-number-number x y))
-   ((x y z)
-    ($sub-number-number ($sub-number-number x y) z))
-   ((a)
-    ($sub-number-number 0 a))
-   ((a b c d . e*)
-    (let loop ((ac ($sub-number-number ($sub-number-number ($sub-number-number a b) c) d))
-	       (e* e*))
-      (if (null? e*)
-	  ac
-	(loop ($sub-number-number ac ($car e*)) ($cdr e*)))))))
+(case-define* -
+  ((x y)
+   ($sub-number-number x y))
+  ((x y z)
+   ($sub-number-number ($sub-number-number x y) z))
+  ((a)
+   ($sub-number-number 0 a))
+  ((a b c d . e*)
+   (let loop ((ac ($sub-number-number ($sub-number-number ($sub-number-number a b) c) d))
+	      (e* e*))
+     (if (pair? e*)
+	 (loop ($sub-number-number ac ($car e*)) ($cdr e*))
+       ac))))
 
-(define *
-  (case-lambda
-   ((x y)
-    ($mul-number-number x y))
-   ((x y z)
-    ($mul-number-number ($mul-number-number x y) z))
-   ((a)
-    (cond ((fixnum? a) a)
-	  ((number? a) a)
-	  (else
-	   (procedure-argument-violation '* "not a number" a))))
-   (()
-    1)
-   ((a b c d . e*)
-    (let loop ((ac ($mul-number-number ($mul-number-number ($mul-number-number a b) c) d))
-	       (e* e*))
-      (if (null? e*)
-	  ac
-	(loop ($mul-number-number ac ($car e*)) ($cdr e*)))))))
+(case-define* *
+  ((x y)
+   ($mul-number-number x y))
+  ((x y z)
+   ($mul-number-number ($mul-number-number x y) z))
+  ((a)
+   (cond ((fixnum? a) a)
+	 ((number? a) a)
+	 (else
+	  (procedure-argument-violation __who__ "not a number" a))))
+  (()
+   1)
+  ((a b c d . e*)
+   (let loop ((ac ($mul-number-number ($mul-number-number ($mul-number-number a b) c) d))
+	      (e* e*))
+     (if (pair? e*)
+	 (loop ($mul-number-number ac ($car e*)) ($cdr e*))
+       ac))))
 
-(define /
-  (case-lambda
-   ((x y)
-    ($div-number-number x y))
-   ((x)
-    ($inv-number x))
-   ((x y z . ls)
-    (let loop ((a  ($div-number-number x y))
-	       (b  z)
-	       (ls ls))
-      (if (null? ls)
-	  ($div-number-number a b)
-	(loop ($div-number-number a b) ($car ls) ($cdr ls)))))
-   ))
+(case-define* /
+  ((x y)
+   ($div-number-number x y))
+  ((x)
+   ($inv-number x))
+  ((x y z . ls)
+   (let loop ((a  ($div-number-number x y))
+	      (b  z)
+	      (ls ls))
+     (if (pair? ls)
+	 (loop ($div-number-number a b) ($car ls) ($cdr ls))
+       ($div-number-number a b)))))
 
 
 (module ($neg-number
 	 $neg-fixnum	$neg-bignum	$neg-flonum
 	 $neg-ratnum	$neg-compnum	$neg-cflonum)
-  (define who (quote -))
 
-  (define ($neg-number x)
+  (define* ($neg-number x)
     (cond-numeric-operand x
       ((fixnum?)	($neg-fixnum  x))
       ((bignum?)	($neg-bignum  x))
@@ -673,12 +668,11 @@
       ((compnum?)	($neg-compnum x))
       ((cflonum?)	($neg-cflonum x))
       (else
-       (procedure-argument-violation who "expected number as argument" x))))
+       (procedure-argument-violation __who__ "expected number as argument" x))))
 
   (define ($neg-fixnum x)
     (if ($fx= x (least-fixnum))
-	;;The following  constant expression will be  precomputed by the
-	;;optimizer.
+	;;The following constant expression will be precomputed by the optimizer.
 	(- (least-fixnum))
       ($fx- x)))
 
@@ -710,9 +704,8 @@
 (module ($inv-number
 	 $inv-fixnum	$inv-bignum	$inv-flonum
 	 $inv-ratnum	$inv-compnum	$inv-cflonum)
-  (define who (quote /))
 
-  (define ($inv-number x)
+  (define* ($inv-number x)
     (cond-numeric-operand x
       ((fixnum?)	($inv-fixnum  x))
       ((bignum?)	($inv-bignum  x))
@@ -721,13 +714,13 @@
       ((compnum?)	($inv-compnum x))
       ((cflonum?)	($inv-cflonum x))
       (else
-       (procedure-argument-violation who "expected number as argument" x))))
+       (procedure-argument-violation __who__ "expected number as argument" x))))
 
-  (define ($inv-fixnum x)
+  (define* ($inv-fixnum x)
     (cond (($fxzero? x)
 	   ;;According to R6RS this must be an assertion.
-	   (%error-division-by-zero who))
-	  (($fx> x 0)
+	   (procedure-argument-violation __who__ "division by zero" x))
+	  (($fxpositive? x)
 	   (if ($fx= x 1)
 	       1
 	     ($make-ratnum 1 x)))
@@ -811,9 +804,8 @@
 	 $add-compnum-compnum	$add-compnum-flonum	$add-compnum-cflonum
 	 $add-cflonum-fixnum	$add-cflonum-bignum	$add-cflonum-ratnum
 	 $add-cflonum-flonum	$add-cflonum-compnum	$add-cflonum-cflonum)
-  (define who (quote +))
 
-  (define ($add-number-number x y)
+  (define* ($add-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($add-fixnum-number  x y))
       ((bignum?)	($add-bignum-number  x y))
@@ -822,11 +814,11 @@
       ((compnum?)	($add-compnum-number x y))
       ((cflonum?)	($add-cflonum-number x y))
       (else
-       (err who x))))
+       (err __who__ x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($add-fixnum-number x y)
+  (define* ($add-fixnum-number x y)
     (cond-numeric-operand y
      ((fixnum?)		($add-fixnum-fixnum  x y))
      ((bignum?)		($add-fixnum-bignum  x y))
@@ -835,9 +827,9 @@
      ((compnum?)	($add-fixnum-compnum x y))
      ((cflonum?)	($add-fixnum-cflonum x y))
      (else
-      (err who y))))
+      (err __who__ y))))
 
-  (define ($add-bignum-number x y)
+  (define* ($add-bignum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($add-bignum-fixnum  x y))
       ((bignum?)	($add-bignum-bignum  x y))
@@ -846,9 +838,9 @@
       ((compnum?)	($add-bignum-compnum x y))
       ((cflonum?)	($add-bignum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($add-flonum-number x y)
+  (define* ($add-flonum-number x y)
     (cond-numeric-operand y
      ((fixnum?)		($add-flonum-fixnum  x y))
      ((bignum?)		($add-flonum-bignum  x y))
@@ -857,9 +849,9 @@
      ((compnum?)	($add-flonum-compnum x y))
      ((cflonum?)	($add-flonum-cflonum x y))
      (else
-      (err who y))))
+      (err __who__ y))))
 
-  (define ($add-ratnum-number x y)
+  (define* ($add-ratnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($add-ratnum-fixnum  x y))
       ((bignum?)	($add-ratnum-bignum  x y))
@@ -868,9 +860,9 @@
       ((compnum?)	($add-ratnum-compnum x y))
       ((cflonum?)	($add-ratnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($add-compnum-number x y)
+  (define* ($add-compnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($add-compnum-fixnum  x y))
       ((bignum?)	($add-compnum-bignum  x y))
@@ -879,9 +871,9 @@
       ((compnum?)	($add-compnum-compnum x y))
       ((cflonum?)	($add-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($add-cflonum-number x y)
+  (define* ($add-cflonum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($add-cflonum-flonum  x y))
       ((cflonum?)	($add-cflonum-cflonum x y))
@@ -890,11 +882,11 @@
       ((ratnum?)	($add-cflonum-ratnum  x y))
       ((compnum?)	($add-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($add-number-fixnum x y)
+  (define* ($add-number-fixnum x y)
     (cond-numeric-operand x
      ((fixnum?)		($add-fixnum-fixnum  x y))
      ((bignum?)		($add-bignum-fixnum  x y))
@@ -903,9 +895,9 @@
      ((compnum?)	($add-compnum-fixnum x y))
      ((cflonum?)	($add-cflonum-fixnum x y))
      (else
-      (err who y))))
+      (err __who__ y))))
 
-  (define ($add-number-bignum x y)
+  (define* ($add-number-bignum x y)
     (cond-numeric-operand x
       ((fixnum?)	($add-fixnum-bignum  x y))
       ((bignum?)	($add-bignum-bignum  x y))
@@ -914,9 +906,9 @@
       ((compnum?)	($add-compnum-bignum x y))
       ((cflonum?)	($add-cflonum-bignum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($add-number-flonum x y)
+  (define* ($add-number-flonum x y)
     (cond-numeric-operand x
      ((fixnum?)		($add-fixnum-flonum  x y))
      ((bignum?)		($add-bignum-flonum  x y))
@@ -925,9 +917,9 @@
      ((compnum?)	($add-compnum-flonum x y))
      ((cflonum?)	($add-cflonum-flonum x y))
      (else
-      (err who y))))
+      (err __who__ y))))
 
-  (define ($add-number-ratnum x y)
+  (define* ($add-number-ratnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($add-fixnum-ratnum  x y))
       ((bignum?)	($add-bignum-ratnum  x y))
@@ -936,9 +928,9 @@
       ((compnum?)	($add-compnum-ratnum x y))
       ((cflonum?)	($add-cflonum-ratnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($add-number-compnum x y)
+  (define* ($add-number-compnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($add-fixnum-compnum  x y))
       ((bignum?)	($add-bignum-compnum  x y))
@@ -947,9 +939,9 @@
       ((compnum?)	($add-compnum-compnum x y))
       ((cflonum?)	($add-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($add-number-cflonum x y)
+  (define* ($add-number-cflonum x y)
     (cond-numeric-operand x
       ((flonum?)	($add-flonum-cflonum  x y))
       ((cflonum?)	($add-cflonum-cflonum x y))
@@ -958,7 +950,7 @@
       ((ratnum?)	($add-ratnum-cflonum  x y))
       ((compnum?)	($add-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1284,9 +1276,8 @@
 	 $sub-compnum-compnum	$sub-compnum-flonum	$sub-compnum-cflonum
 	 $sub-cflonum-fixnum	$sub-cflonum-bignum	$sub-cflonum-ratnum
 	 $sub-cflonum-flonum	$sub-cflonum-compnum	$sub-cflonum-cflonum)
-  (define who (quote -))
 
-  (define ($sub-number-number x y)
+  (define* ($sub-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($sub-fixnum-number  x y))
       ((bignum?)	($sub-bignum-number  x y))
@@ -1295,11 +1286,11 @@
       ((compnum?)	($sub-compnum-number x y))
       ((cflonum?)	($sub-cflonum-number x y))
       (else
-       (err who x))))
+       (err __who__ x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($sub-fixnum-number x y)
+  (define* ($sub-fixnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($sub-fixnum-fixnum  x y))
       ((bignum?)	($sub-fixnum-bignum  x y))
@@ -1308,9 +1299,9 @@
       ((compnum?)	($sub-fixnum-compnum x y))
       ((cflonum?)	($sub-fixnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-bignum-number x y)
+  (define* ($sub-bignum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($sub-bignum-fixnum x y))
       ((bignum?)	($sub-bignum-bignum x y))
@@ -1319,9 +1310,9 @@
       ((compnum?)	($sub-bignum-compnum x y))
       ((cflonum?)	($sub-bignum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-flonum-number x y)
+  (define* ($sub-flonum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($sub-flonum-flonum  x y))
       ((cflonum?)	($sub-flonum-cflonum x y))
@@ -1330,9 +1321,9 @@
       ((ratnum?)	($sub-flonum-ratnum  x y))
       ((compnum?)	($sub-flonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-ratnum-number x y)
+  (define* ($sub-ratnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($sub-ratnum-fixnum  x y))
       ((bignum?)	($sub-ratnum-bignum  x y))
@@ -1341,9 +1332,9 @@
       ((compnum?)	($sub-ratnum-compnum x y))
       ((cflonum?)	($sub-ratnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-compnum-number x y)
+  (define* ($sub-compnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($sub-compnum-fixnum  x y))
       ((bignum?)	($sub-compnum-bignum  x y))
@@ -1352,9 +1343,9 @@
       ((compnum?)	($sub-compnum-compnum x y))
       ((cflonum?)	($sub-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-cflonum-number x y)
+  (define* ($sub-cflonum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($sub-cflonum-flonum  x y))
       ((cflonum?)	($sub-cflonum-cflonum x y))
@@ -1363,11 +1354,11 @@
       ((ratnum?)	($sub-cflonum-ratnum  x y))
       ((compnum?)	($sub-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($sub-number-fixnum x y)
+  (define* ($sub-number-fixnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($sub-fixnum-fixnum  x y))
       ((bignum?)	($sub-bignum-fixnum  x y))
@@ -1376,9 +1367,9 @@
       ((compnum?)	($sub-compnum-fixnum x y))
       ((cflonum?)	($sub-cflonum-fixnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-number-bignum x y)
+  (define* ($sub-number-bignum x y)
     (cond-numeric-operand x
       ((fixnum?)	($sub-fixnum-bignum  x y))
       ((bignum?)	($sub-bignum-bignum  x y))
@@ -1387,9 +1378,9 @@
       ((compnum?)	($sub-compnum-bignum x y))
       ((cflonum?)	($sub-cflonum-bignum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-number-flonum x y)
+  (define* ($sub-number-flonum x y)
     (cond-numeric-operand x
       ((flonum?)	($sub-flonum-flonum  x y))
       ((cflonum?)	($sub-cflonum-flonum x y))
@@ -1398,9 +1389,9 @@
       ((ratnum?)	($sub-ratnum-flonum  x y))
       ((compnum?)	($sub-compnum-flonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-number-ratnum x y)
+  (define* ($sub-number-ratnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($sub-fixnum-ratnum  x y))
       ((bignum?)	($sub-bignum-ratnum  x y))
@@ -1409,9 +1400,9 @@
       ((compnum?)	($sub-compnum-ratnum x y))
       ((cflonum?)	($sub-cflonum-ratnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-number-compnum x y)
+  (define* ($sub-number-compnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($sub-fixnum-compnum  x y))
       ((bignum?)	($sub-bignum-compnum  x y))
@@ -1420,9 +1411,9 @@
       ((compnum?)	($sub-compnum-compnum x y))
       ((cflonum?)	($sub-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($sub-number-cflonum x y)
+  (define* ($sub-number-cflonum x y)
     (cond-numeric-operand x
       ((flonum?)	($sub-flonum-cflonum  x y))
       ((cflonum?)	($sub-cflonum-cflonum x y))
@@ -1431,7 +1422,7 @@
       ((ratnum?)	($sub-ratnum-cflonum  x y))
       ((compnum?)	($sub-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1701,9 +1692,8 @@
 	 $mul-compnum-flonum	$mul-compnum-compnum	$mul-compnum-cflonum
 	 $mul-cflonum-fixnum	$mul-cflonum-bignum	$mul-cflonum-ratnum
 	 $mul-cflonum-flonum	$mul-cflonum-compnum	$mul-cflonum-cflonum)
-  (define who (quote *))
 
-  (define ($mul-number-number x y)
+  (define* ($mul-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($mul-fixnum-number  x y))
       ((bignum?)	($mul-bignum-number  x y))
@@ -1712,11 +1702,11 @@
       ((compnum?)	($mul-compnum-number x y))
       ((cflonum?)	($mul-cflonum-number x y))
       (else
-       (err who x))))
+       (err __who__ x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($mul-fixnum-number x y)
+  (define* ($mul-fixnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($mul-fixnum-fixnum  x y))
       ((bignum?)	($mul-fixnum-bignum  x y))
@@ -1725,9 +1715,9 @@
       ((compnum?)	($mul-fixnum-compnum x y))
       ((cflonum?)	($mul-fixnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-bignum-number x y)
+  (define* ($mul-bignum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($mul-bignum-fixnum  x y))
       ((bignum?)	($mul-bignum-bignum  x y))
@@ -1736,9 +1726,9 @@
       ((compnum?)	($mul-bignum-compnum x y))
       ((cflonum?)	($mul-bignum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-flonum-number x y)
+  (define* ($mul-flonum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($mul-flonum-flonum  x y))
       ((cflonum?)	($mul-flonum-cflonum x y))
@@ -1747,9 +1737,9 @@
       ((ratnum?)	($mul-flonum-ratnum  x y))
       ((compnum?)	($mul-flonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-ratnum-number x y)
+  (define* ($mul-ratnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($mul-ratnum-fixnum  x y))
       ((bignum?)	($mul-ratnum-bignum  x y))
@@ -1758,9 +1748,9 @@
       ((compnum?)	($mul-ratnum-compnum x y))
       ((cflonum?)	($mul-ratnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-compnum-number x y)
+  (define* ($mul-compnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($mul-compnum-fixnum  x y))
       ((bignum?)	($mul-compnum-bignum  x y))
@@ -1769,9 +1759,9 @@
       ((compnum?)	($mul-compnum-compnum x y))
       ((cflonum?)	($mul-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-cflonum-number x y)
+  (define* ($mul-cflonum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($mul-cflonum-flonum  x y))
       ((cflonum?)	($mul-cflonum-cflonum x y))
@@ -1780,11 +1770,11 @@
       ((ratnum?)	($mul-cflonum-ratnum  x y))
       ((compnum?)	($mul-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($mul-number-fixnum x y)
+  (define* ($mul-number-fixnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($mul-fixnum-fixnum  x y))
       ((bignum?)	($mul-bignum-fixnum  x y))
@@ -1793,9 +1783,9 @@
       ((compnum?)	($mul-compnum-fixnum x y))
       ((cflonum?)	($mul-cflonum-fixnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-number-bignum x y)
+  (define* ($mul-number-bignum x y)
     (cond-numeric-operand x
       ((fixnum?)	($mul-fixnum-bignum  x y))
       ((bignum?)	($mul-bignum-bignum  x y))
@@ -1804,9 +1794,9 @@
       ((compnum?)	($mul-compnum-bignum x y))
       ((cflonum?)	($mul-cflonum-bignum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-number-flonum x y)
+  (define* ($mul-number-flonum x y)
     (cond-numeric-operand x
       ((flonum?)	($mul-flonum-flonum  x y))
       ((cflonum?)	($mul-cflonum-flonum x y))
@@ -1815,16 +1805,16 @@
       ((ratnum?)	($mul-ratnum-flonum  x y))
       ((compnum?)	($mul-compnum-flonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-number-ratnum x y)
+  (define* ($mul-number-ratnum x y)
     (cond ((ratnum?  x)		($mul-ratnum-ratnum  x y))
 	  ((compnum? x)		($mul-compnum-ratnum x y))
 	  ((cflonum? x)		($mul-cflonum-ratnum x y))
 	  (else
 	   ($mul-number-number y x))))
 
-  (define ($mul-number-compnum x y)
+  (define* ($mul-number-compnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($mul-fixnum-compnum  x y))
       ((bignum?)	($mul-bignum-compnum  x y))
@@ -1833,9 +1823,9 @@
       ((compnum?)	($mul-compnum-compnum x y))
       ((cflonum?)	($mul-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($mul-number-cflonum x y)
+  (define* ($mul-number-cflonum x y)
     (cond-numeric-operand x
       ((flonum?)	($mul-flonum-cflonum  x y))
       ((cflonum?)	($mul-cflonum-cflonum x y))
@@ -1844,7 +1834,7 @@
       ((ratnum?)	($mul-ratnum-cflonum  x y))
       ((compnum?)	($mul-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2063,9 +2053,8 @@
 	 $div-compnum-flonum	$div-compnum-compnum	$div-compnum-cflonum
 	 $div-cflonum-fixnum	$div-cflonum-bignum	$div-cflonum-ratnum
 	 $div-cflonum-flonum	$div-cflonum-compnum	$div-cflonum-cflonum)
-  (define who (quote /))
 
-  (define ($div-number-number x y)
+  (define* ($div-number-number x y)
     (cond-numeric-operand x
       ((fixnum?)	($div-fixnum-number  x y))
       ((bignum?)	($div-bignum-number  x y))
@@ -2074,11 +2063,11 @@
       ((compnum?)	($div-compnum-number x y))
       ((cflonum?)	($div-cflonum-number x y))
       (else
-       (err who x))))
+       (err __who__ x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($div-flonum-number x y)
+  (define* ($div-flonum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($div-flonum-flonum  x y))
       ((cflonum?)	($div-flonum-cflonum x y))
@@ -2087,9 +2076,9 @@
       ((ratnum?)	($div-flonum-ratnum  x y))
       ((compnum?)	($div-flonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-fixnum-number x y)
+  (define* ($div-fixnum-number x y)
     (cond-numeric-operand y
       ((flonum?)	($div-fixnum-flonum  x y))
       ((cflonum?)	($div-fixnum-cflonum x y))
@@ -2098,9 +2087,9 @@
       ((ratnum?)	($div-fixnum-ratnum  x y))
       ((compnum?)	($div-fixnum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-bignum-number x y)
+  (define* ($div-bignum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($div-bignum-fixnum  x y))
       ((bignum?)	($div-bignum-bignum  x y))
@@ -2108,9 +2097,9 @@
       ((ratnum?)	($div-bignum-ratnum  x y))
       ((compnum?)	($div-bignum-compnum x y))
       ((cflonum?)	($div-bignum-cflonum x y))
-      (else (err who y))))
+      (else (err __who__ y))))
 
-  (define ($div-ratnum-number x y)
+  (define* ($div-ratnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($div-ratnum-fixnum  x y))
       ((bignum?)	($div-ratnum-bignum  x y))
@@ -2119,9 +2108,9 @@
       ((compnum?)	($div-ratnum-compnum x y))
       ((cflonum?)	($div-ratnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-compnum-number x y)
+  (define* ($div-compnum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($div-compnum-fixnum  x y))
       ((bignum?)	($div-compnum-bignum  x y))
@@ -2130,9 +2119,9 @@
       ((compnum?)	($div-compnum-compnum x y))
       ((cflonum?)	($div-compnum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-cflonum-number x y)
+  (define* ($div-cflonum-number x y)
     (cond-numeric-operand y
       ((fixnum?)	($div-cflonum-fixnum  x y))
       ((bignum?)	($div-cflonum-bignum  x y))
@@ -2141,11 +2130,11 @@
       ((compnum?)	($div-cflonum-compnum x y))
       ((cflonum?)	($div-cflonum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($div-number-flonum x y)
+  (define* ($div-number-flonum x y)
     (cond-numeric-operand x
       ((flonum?)	($div-flonum-flonum  x y))
       ((cflonum?)	($div-cflonum-flonum x y))
@@ -2154,9 +2143,9 @@
       ((ratnum?)	($div-ratnum-flonum  x y))
       ((compnum?)	($div-compnum-flonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-number-fixnum x y)
+  (define* ($div-number-fixnum x y)
     (cond-numeric-operand x
       ((flonum?)	($div-flonum-fixnum  x y))
       ((cflonum?)	($div-cflonum-fixnum x y))
@@ -2165,9 +2154,9 @@
       ((ratnum?)	($div-ratnum-fixnum  x y))
       ((compnum?)	($div-compnum-fixnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-number-bignum x y)
+  (define* ($div-number-bignum x y)
     (cond-numeric-operand x
       ((fixnum?)	($div-fixnum-bignum  x y))
       ((bignum?)	($div-bignum-bignum  x y))
@@ -2176,9 +2165,9 @@
       ((compnum?)	($div-compnum-bignum x y))
       ((cflonum?)	($div-cflonum-bignum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-number-ratnum x y)
+  (define* ($div-number-ratnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($div-fixnum-ratnum  x y))
       ((bignum?)	($div-bignum-ratnum  x y))
@@ -2187,9 +2176,9 @@
       ((compnum?)	($div-compnum-ratnum x y))
       ((cflonum?)	($div-cflonum-ratnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-number-compnum x y)
+  (define* ($div-number-compnum x y)
     (cond-numeric-operand x
       ((fixnum?)	($div-fixnum-compnum  x y))
       ((bignum?)	($div-bignum-compnum  x y))
@@ -2198,9 +2187,9 @@
       ((compnum?)	($div-compnum-compnum x y))
       ((cflonum?)	($div-cflonum-compnum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
-  (define ($div-number-cflonum x y)
+  (define* ($div-number-cflonum x y)
     (cond-numeric-operand x
       ((fixnum?)	($div-fixnum-cflonum  x y))
       ((bignum?)	($div-bignum-cflonum  x y))
@@ -2209,16 +2198,16 @@
       ((compnum?)	($div-compnum-cflonum x y))
       ((cflonum?)	($div-cflonum-cflonum x y))
       (else
-       (err who y))))
+       (err __who__ y))))
 
 ;;; --------------------------------------------------------------------
 
   (define ($div-fixnum-flonum x y)
     ($fl/ ($fixnum->flonum x) y))
 
-  (define ($div-fixnum-fixnum x y)
+  (define* ($div-fixnum-fixnum x y)
     (cond (($fxzero? y)
-	   (procedure-argument-violation who "division by 0" x y))
+	   (procedure-arguments-consistency-violation __who__ "division by 0" x y))
 	  (($fxzero? x)
 	   0)
 	  (($fx= 1 y)
@@ -2406,10 +2395,10 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($div-bignum-fixnum x y)
+  (define* ($div-bignum-fixnum x y)
     ;;Remember that a bignum cannot be zero, so X is not zero here.
     (cond (($fxzero? y)
-	   (procedure-argument-violation who "division by 0" x y))
+	   (procedure-arguments-consistency-violation __who__ "division by 0" x y))
 	  (($fx= 1 y)
 	   x)
 	  (($fxpositive? y)
@@ -2912,30 +2901,29 @@
 	 $gcd-fixnum-fixnum	$gcd-fixnum-bignum	$gcd-fixnum-flonum
 	 $gcd-bignum-fixnum	$gcd-bignum-bignum	$gcd-bignum-flonum
 	 $gcd-flonum-fixnum	$gcd-flonum-bignum	$gcd-flonum-flonum)
-  (define who 'gcd)
 
-  (define gcd
-    (case-lambda
-     ((x y)
-      ($gcd-number-number x y))
+  (case-define* gcd
+    ((x y)
+     ($gcd-number-number x y))
 
-     ((x)
-      ($gcd-number x))
+    ((x)
+     ($gcd-number x))
 
-     (() 0)
+    (() 0)
 
-     ((x y z . ls)
-      (let loop ((g  ($gcd-number-number ($gcd-number-number x y) z))
-		 (ls ls))
-	(if (null? ls)
-	    g
-	  (loop ($gcd-number-number g ($car ls))
-		($cdr ls)))))
-     ))
+    ((x y z . ls)
+     (let loop ((g  ($gcd-number-number ($gcd-number-number x y) z))
+		(ls ls))
+       (if (null? ls)
+	   g
+	 (loop ($gcd-number-number g ($car ls))
+	       ($cdr ls)))))
+
+    #| end of CASE-DEFINE* |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define ($gcd-number x)
+  (define* ($gcd-number x)
     (cond-inexact-integer-operand x
       ((fixnum?)
        (if ($fxnonnegative? x)
@@ -2950,7 +2938,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($gcd-number-number x y)
+  (define* ($gcd-number-number x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($gcd-fixnum-number x y))
       ((bignum?)	($gcd-bignum-number x y))
@@ -2960,7 +2948,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($gcd-fixnum-number x y)
+  (define* ($gcd-fixnum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($gcd-fixnum-fixnum x y))
       ((bignum?)	($gcd-fixnum-bignum x y))
@@ -2968,7 +2956,7 @@
       (else
        (%error-not-integer y))))
 
-  (define ($gcd-bignum-number x y)
+  (define* ($gcd-bignum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($gcd-bignum-fixnum x y))
       ((bignum?)	($gcd-bignum-bignum x y))
@@ -2976,7 +2964,7 @@
       (else
        (%error-not-integer y))))
 
-  (define ($gcd-flonum-number x y)
+  (define* ($gcd-flonum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($gcd-flonum-fixnum x y))
       ((bignum?)	($gcd-flonum-bignum x y))
@@ -2986,7 +2974,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($gcd-number-fixnum x y)
+  (define* ($gcd-number-fixnum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($gcd-fixnum-fixnum x y))
       ((bignum?)	($gcd-bignum-fixnum x y))
@@ -2994,7 +2982,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($gcd-number-bignum x y)
+  (define* ($gcd-number-bignum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($gcd-fixnum-bignum x y))
       ((bignum?)	($gcd-bignum-bignum x y))
@@ -3002,7 +2990,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($gcd-number-flonum x y)
+  (define* ($gcd-number-flonum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($gcd-fixnum-flonum x y))
       ((bignum?)	($gcd-bignum-flonum x y))
@@ -3012,7 +3000,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($gcd-fixnum-fixnum x y)
+  (define* ($gcd-fixnum-fixnum x y)
     ;;The GCD between two fixnums is *not* always a fixnum: when X and Y
     ;;are both (least-fixnum) the GCD is the bignum (- (least-fixnum)).
     ;;
@@ -3059,7 +3047,7 @@
 	      (else
 	       x.abs)))))
 
-  (define ($gcd-fixnum-flonum x y)
+  (define* ($gcd-fixnum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($gcd-fixnum-fixnum x y.exact)))
@@ -3095,7 +3083,7 @@
 	    (else
 	     x.abs))))
 
-  (define ($gcd-bignum-flonum x y)
+  (define* ($gcd-bignum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($gcd-bignum-fixnum x y.exact)))
@@ -3105,7 +3093,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($gcd-flonum-fixnum x y)
+  (define* ($gcd-flonum-fixnum x y)
     (let ((x.exact ($flonum->exact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($gcd-fixnum-fixnum x.exact y)))
@@ -3113,7 +3101,7 @@
 	(else
 	 (%error-not-integer x)))))
 
-  (define ($gcd-flonum-bignum x y)
+  (define* ($gcd-flonum-bignum x y)
     (let ((x.exact ($flonum->exact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($gcd-fixnum-bignum x.exact y)))
@@ -3121,7 +3109,7 @@
 	(else
 	 (%error-not-integer x)))))
 
-  (define ($gcd-flonum-flonum x y)
+  (define* ($gcd-flonum-flonum x y)
     (let ((x.exact ($flonum->exact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	($gcd-fixnum-flonum x.exact y))
@@ -3133,7 +3121,7 @@
 
   ;;This is the old generic implementation.
   ;;
-  ;; (define ($gcd x y)
+  ;; (define* ($gcd x y)
   ;;   (let ((x.abs (abs x))
   ;;         (y.abs (abs y)))
   ;;     (cond ((> x.abs y.abs)
@@ -3151,11 +3139,6 @@
 	x
       (%greatest-common-divisor y (remainder x y))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-integer x)
-    (procedure-argument-violation who "expected exact or inexact integer as argument" x))
-
   #| end of module |# )
 
 
@@ -3166,28 +3149,25 @@
 	 $lcm-fixnum-fixnum	$lcm-fixnum-bignum	$lcm-fixnum-flonum
 	 $lcm-bignum-fixnum	$lcm-bignum-bignum	$lcm-bignum-flonum
 	 $lcm-flonum-fixnum	$lcm-flonum-bignum	$lcm-flonum-flonum)
-  (define who 'lcm)
 
-  (define lcm
-    (case-lambda
-     ((x y)
-      ($lcm-number-number x y))
-     ((x)
-      ($lcm-number x))
-     (() 1)
-     ((x y z . ls)
-      ;;FIXME Incorrect for multiple roundings.  (Abdulaziz Ghuloum)
-      (let loop ((g  ($lcm-number-number ($lcm-number-number x y) z))
-		 (ls ls))
-	(if (null? ls)
-	    g
-	  (loop ($lcm-number-number g ($car ls))
-		($cdr ls)))))
-     ))
+  (case-define* lcm
+    ((x y)
+     ($lcm-number-number x y))
+    ((x)
+     ($lcm-number x))
+    (() 1)
+    ((x y z . ls)
+     ;;FIXME Incorrect for multiple roundings.  (Abdulaziz Ghuloum)
+     (let loop ((g  ($lcm-number-number ($lcm-number-number x y) z))
+		(ls ls))
+       (if (null? ls)
+	   g
+	 (loop ($lcm-number-number g ($car ls))
+	       ($cdr ls))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($lcm-number x)
+  (define* ($lcm-number x)
     (cond-inexact-integer-operand x
       ((fixnum?)
        (if ($fxnonnegative? x)
@@ -3202,7 +3182,7 @@
       (else
        (%error-not-exact-integer x))))
 
-  (define ($lcm-number-number x y)
+  (define* ($lcm-number-number x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($lcm-fixnum-number x y))
       ((bignum?)	($lcm-bignum-number x y))
@@ -3212,7 +3192,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($lcm-fixnum-number x y)
+  (define* ($lcm-fixnum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($lcm-fixnum-fixnum x y))
       ((bignum?)	($lcm-fixnum-bignum x y))
@@ -3220,7 +3200,7 @@
       (else
        (%error-not-integer y))))
 
-  (define ($lcm-bignum-number x y)
+  (define* ($lcm-bignum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($lcm-bignum-fixnum x y))
       ((bignum?)	($lcm-bignum-bignum x y))
@@ -3228,7 +3208,7 @@
       (else
        (%error-not-integer y))))
 
-  (define ($lcm-flonum-number x y)
+  (define* ($lcm-flonum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($lcm-flonum-fixnum x y))
       ((bignum?)	($lcm-flonum-bignum x y))
@@ -3238,7 +3218,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($lcm-number-fixnum x y)
+  (define* ($lcm-number-fixnum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($lcm-fixnum-fixnum x y))
       ((bignum?)	($lcm-bignum-fixnum x y))
@@ -3246,7 +3226,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($lcm-number-bignum x y)
+  (define* ($lcm-number-bignum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($lcm-fixnum-bignum x y))
       ((bignum?)	($lcm-bignum-bignum x y))
@@ -3254,7 +3234,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($lcm-number-flonum x y)
+  (define* ($lcm-number-flonum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($lcm-fixnum-flonum x y))
       ((bignum?)	($lcm-bignum-flonum x y))
@@ -3285,7 +3265,7 @@
 	  0
 	($least-common-multiple x.abs ($abs-bignum y)))))
 
-  (define ($lcm-fixnum-flonum x y)
+  (define* ($lcm-fixnum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($lcm-fixnum-fixnum x y.exact)))
@@ -3304,7 +3284,7 @@
   (define ($lcm-bignum-bignum x y)
     ($least-common-multiple ($abs-bignum x) ($abs-bignum y)))
 
-  (define ($lcm-bignum-flonum x y)
+  (define* ($lcm-bignum-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (cond-exact-integer-operand y.exact
 	((fixnum?)	(inexact ($lcm-bignum-fixnum x y.exact)))
@@ -3314,7 +3294,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($lcm-flonum-fixnum x y)
+  (define* ($lcm-flonum-fixnum x y)
     (let ((x.exact ($flonum->exact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($lcm-fixnum-fixnum x.exact y)))
@@ -3322,7 +3302,7 @@
 	(else
 	 (%error-not-integer x)))))
 
-  (define ($lcm-flonum-bignum x y)
+  (define* ($lcm-flonum-bignum x y)
     (let ((x.exact ($flonum->exact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	(inexact ($lcm-fixnum-bignum x.exact y)))
@@ -3330,7 +3310,7 @@
 	(else
 	 (%error-not-integer x)))))
 
-  (define ($lcm-flonum-flonum x y)
+  (define* ($lcm-flonum-flonum x y)
     (let ((x.exact ($flonum->exact x)))
       (cond-exact-integer-operand x.exact
 	((fixnum?)	($lcm-fixnum-flonum x.exact y))
@@ -3345,14 +3325,6 @@
     ;;
     (let ((g ($gcd-number-number x.abs y.abs)))
       ($mul-number-number y.abs (quotient x.abs g))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-integer x)
-    (procedure-argument-violation who "expected integer as argument" x))
-
-  (define (%error-not-exact-integer x)
-    (procedure-argument-violation who "expected exact integer as argument" x))
 
   #| end of module |# )
 
@@ -3393,11 +3365,10 @@
   ;;   sign(quotient)  = sign(X) * sign(Y)
   ;;   sign(remainder) = sign(X)
   ;;
-  (define who 'quotient+remainder)
 
-  (define (quotient+remainder x y)
+  (define* (quotient+remainder x y)
     (if (zero? y) ;both exact and inexact
-	(procedure-argument-violation who "second argument must be non-zero")
+	(procedure-argument-violation __who__ "second argument must be non-zero" y)
       (cond-inexact-integer-operand x
 	((fixnum?)	($quotient+remainder-fixnum-number x y))
 	((bignum?)	($quotient+remainder-bignum-number x y))
@@ -3407,7 +3378,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($quotient+remainder-fixnum-number x y)
+  (define* ($quotient+remainder-fixnum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($quotient+remainder-fixnum-fixnum x y))
       ((bignum?)	($quotient+remainder-fixnum-bignum x y))
@@ -3415,7 +3386,7 @@
       (else
        (%error-not-integer y))))
 
-  (define ($quotient+remainder-bignum-number x y)
+  (define* ($quotient+remainder-bignum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($quotient+remainder-bignum-fixnum x y))
       ((bignum?)	($quotient+remainder-bignum-bignum x y))
@@ -3423,7 +3394,7 @@
       (else
        (%error-not-integer y))))
 
-  (define ($quotient+remainder-flonum-number x y)
+  (define* ($quotient+remainder-flonum-number x y)
     (cond-inexact-integer-operand y
       ((fixnum?)	($quotient+remainder-flonum-fixnum x y))
       ((bignum?)	($quotient+remainder-flonum-bignum x y))
@@ -3433,7 +3404,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($quotient+remainder-number-fixnum x y)
+  (define* ($quotient+remainder-number-fixnum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($quotient+remainder-fixnum-fixnum x y))
       ((bignum?)	($quotient+remainder-bignum-fixnum x y))
@@ -3441,7 +3412,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($quotient+remainder-number-bignum x y)
+  (define* ($quotient+remainder-number-bignum x y)
     (cond-inexact-integer-operand x
       ((fixnum?)	($quotient+remainder-fixnum-bignum x y))
       ((bignum?)	($quotient+remainder-bignum-bignum x y))
@@ -3449,7 +3420,7 @@
       (else
        (%error-not-integer x))))
 
-  (define ($quotient+remainder-number-flonum x y)
+  (define* ($quotient+remainder-number-flonum x y)
     (let ((y.exact ($flonum->exact y)))
       (receive (q r)
 	  (cond-exact-integer-operand y.exact
@@ -3482,7 +3453,7 @@
 	  (values ($neg-number r) ($neg-number q)))
       (values 0 x)))
 
-  (define ($quotient+remainder-fixnum-flonum x y)
+  (define* ($quotient+remainder-fixnum-flonum x y)
     (receive (q r)
 	(let ((y.exact ($flonum->exact y)))
 	  (cond-exact-integer-operand y.exact
@@ -3513,7 +3484,7 @@
     (let ((p (foreign-call "ikrt_bnbndivrem" x y)))
       (values ($car p) ($cdr p))))
 
-  (define ($quotient+remainder-bignum-flonum x y)
+  (define* ($quotient+remainder-bignum-flonum x y)
     (receive (q r)
 	(let ((y.exact ($flonum->exact y)))
 	  (cond-exact-integer-operand y.exact
@@ -3532,7 +3503,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($quotient+remainder-flonum-fixnum x y)
+  (define* ($quotient+remainder-flonum-fixnum x y)
     (cond (($flzero?/positive x)
 	   (values (if ($fxpositive? y) +0.0 -0.0)
 		   +0.0))
@@ -3556,7 +3527,7 @@
 			 (if ($flpositive? x) +0.0 -0.0)
 		       (inexact r)))))))
 
-  (define ($quotient+remainder-flonum-bignum x y)
+  (define* ($quotient+remainder-flonum-bignum x y)
     (cond (($flzero?/positive x)
 	   (values (if ($bignum-positive? y) +0.0 -0.0)
 		   +0.0))
@@ -3580,7 +3551,7 @@
 			 (if ($flpositive? x) +0.0 -0.0)
 		       (inexact r)))))))
 
-  (define ($quotient+remainder-flonum-flonum x y)
+  (define* ($quotient+remainder-flonum-flonum x y)
     (cond (($flzero?/positive x)
 	   (values (if ($flpositive? y) +0.0 -0.0)
 		   +0.0))
@@ -3594,11 +3565,6 @@
 	       ((bignum?)	($quotient+remainder-bignum-flonum x.exact y))
 	       (else
 		(%error-not-integer x)))))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-integer x)
-    (procedure-argument-violation who "expected exact or inexact integer as argument" x))
 
   #| end of module: quotient+remainder |# )
 
@@ -3727,9 +3693,8 @@
   ;;
   ;;when computing the modulo we want Y to be non-zero.
   ;;
-  (define who 'modulo)
 
-  (define (modulo n m)
+  (define* (modulo n m)
     (cond-inexact-integer-operand n
       ((fixnum?)	($modulo-fixnum-number n m))
       ((bignum?)	($modulo-bignum-number n m))
@@ -3739,7 +3704,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($modulo-fixnum-number n m)
+  (define* ($modulo-fixnum-number n m)
     (cond-inexact-integer-operand m
       ((fixnum?)	($modulo-fixnum-fixnum n m))
       ((bignum?)	($modulo-fixnum-bignum n m))
@@ -3747,7 +3712,7 @@
       (else
        (%error-not-integer m))))
 
-  (define ($modulo-bignum-number n m)
+  (define* ($modulo-bignum-number n m)
     (cond-inexact-integer-operand m
       ((fixnum?)	($modulo-bignum-fixnum n m))
       ((bignum?)	($modulo-bignum-bignum n m))
@@ -3755,7 +3720,7 @@
       (else
        (%error-not-integer m))))
 
-  (define ($modulo-flonum-number n m)
+  (define* ($modulo-flonum-number n m)
     (cond-inexact-integer-operand m
       ((fixnum?)	($modulo-flonum-fixnum n m))
       ((bignum?)	($modulo-flonum-bignum n m))
@@ -3765,7 +3730,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($modulo-number-fixnum n m)
+  (define* ($modulo-number-fixnum n m)
     (cond-inexact-integer-operand n
       ((fixnum?)	($modulo-fixnum-fixnum n m))
       ((bignum?)	($modulo-bignum-fixnum n m))
@@ -3773,7 +3738,7 @@
       (else
        (%error-not-integer n))))
 
-  (define ($modulo-number-bignum n m)
+  (define* ($modulo-number-bignum n m)
     (cond-inexact-integer-operand n
       ((fixnum?)	($modulo-fixnum-bignum n m))
       ((bignum?)	($modulo-bignum-bignum n m))
@@ -3781,7 +3746,7 @@
       (else
        (%error-not-integer n))))
 
-  (define ($modulo-number-flonum n m)
+  (define* ($modulo-number-flonum n m)
     (let ((m.exact ($flonum->exact m)))
       (cond-exact-integer-operand m.exact
 	((fixnum?)	(inexact ($modulo-number-fixnum n m.exact)))
@@ -3791,9 +3756,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($modulo-fixnum-fixnum n m)
+  (define* ($modulo-fixnum-fixnum n m)
     (if ($fxzero? m)
-	(procedure-argument-violation who "division by zero" n m)
+	(procedure-arguments-consistency-violation __who__ "division by zero" n m)
       ($fxmodulo n m)))
 
   (define ($modulo-fixnum-bignum n m)
@@ -3815,7 +3780,7 @@
 	     ;;N positive, M negative
 	     (foreign-call "ikrt_fxbnplus" n m)))))
 
-  (define ($modulo-fixnum-flonum n m)
+  (define* ($modulo-fixnum-flonum n m)
     (let* ((v ($flonum->exact m))
 	   (R (cond-exact-integer-operand v
 		((fixnum?)	(inexact ($modulo-fixnum-fixnum n v)))
@@ -3832,9 +3797,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($modulo-bignum-fixnum n m)
+  (define* ($modulo-bignum-fixnum n m)
     (if ($fxzero? m)
-	(procedure-argument-violation who "division by zero" n m)
+	(procedure-arguments-consistency-violation __who__ "division by zero" n m)
       (foreign-call "ikrt_bnfx_modulo" n m)))
 
   (define ($modulo-bignum-bignum n m)
@@ -3861,7 +3826,7 @@
 	    (else
 	     rem))))					;;;both negative
 
-  (define ($modulo-bignum-flonum n m)
+  (define* ($modulo-bignum-flonum n m)
     (let* ((m.exact ($flonum->exact m))
 	   (R       (cond-exact-integer-operand m.exact
 		      ((fixnum?)	(inexact ($modulo-bignum-fixnum n m.exact)))
@@ -3878,7 +3843,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($modulo-flonum-fixnum n m)
+  (define* ($modulo-flonum-fixnum n m)
     (let* ((n.exact ($flonum->exact n))
 	   (R       (cond-exact-integer-operand n.exact
 		      ((fixnum?)	(inexact ($modulo-fixnum-fixnum n.exact m)))
@@ -3892,7 +3857,7 @@
 	    -0.0)
 	(inexact R))))
 
-  (define ($modulo-flonum-bignum n m)
+  (define* ($modulo-flonum-bignum n m)
     (let ((n.exact ($flonum->exact n)))
       (cond-exact-integer-operand n.exact
 	((fixnum?)	(inexact ($modulo-fixnum-bignum n.exact m)))
@@ -3900,7 +3865,7 @@
 	(else
 	 (%error-not-integer n)))))
 
-  (define ($modulo-flonum-flonum n m)
+  (define* ($modulo-flonum-flonum n m)
     (let ((n.exact ($flonum->exact n)))
       (cond-exact-integer-operand n.exact
 	((fixnum?)	($modulo-fixnum-flonum n.exact m))
@@ -3908,20 +3873,14 @@
 	(else
 	 (%error-not-integer n)))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-not-integer x)
-    (procedure-argument-violation who "expected exact or inexact integer number as argument" x))
-
   #| end of module: modulo |# )
 
 
 (module (square
 	 $square-fixnum		$square-bignum		$square-ratnum
 	 $square-compnum	$square-cflonum)
-  (define who 'square)
 
-  (define (square x)
+  (define* (square x)
     (cond-numeric-operand x
       ((fixnum?)	($square-fixnum  x))
       ((bignum?)	($square-bignum  x))
@@ -3930,7 +3889,7 @@
       ((compnum?)	($square-compnum x))
       ((cflonum?)	($square-cflonum x))
       (else
-       (procedure-argument-violation who "expected number as argument" x))))
+       (procedure-argument-violation __who__ "expected number as argument" x))))
 
   (define ($square-fixnum x)
     ($mul-fixnum-fixnum x x))
@@ -3970,9 +3929,8 @@
 (module (cube
 	 $cube-fixnum		$cube-bignum		$cube-ratnum
 	 $cube-compnum		$cube-cflonum)
-  (define who 'cube)
 
-  (define (cube x)
+  (define* (cube x)
     (cond-numeric-operand x
       ((fixnum?)	($cube-fixnum  x))
       ((bignum?)	($cube-bignum  x))
@@ -4161,9 +4119,8 @@
   ;;
   ;;   (* +inf.0 0.0i) => +nan.0
   ;;
-  (define who 'expt)
 
-  (define (expt n m)
+  (define* (expt n m)
     (cond-numeric-operand m
       ((fixnum?)	($expt-number-fixnum  n m))
       ((bignum?)	($expt-number-bignum  n m))
@@ -4265,7 +4222,7 @@
 	   $expt-compnum-zero-fixnum
 	   $expt-cflonum-zero-fixnum)
 
-    (define ($expt-number-zero-fixnum n)
+    (define* ($expt-number-zero-fixnum n)
       ;;N is a number to be raised to the power of 0.
       ;;
       (cond-numeric-operand n
@@ -4434,7 +4391,7 @@
     ;;     significant  bit inserted extends the  sign of M, the  bit is
     ;;     zero if M is positive and 1 if M is negative.
     ;;
-    (define ($expt-number-positive-fixnum n m)
+    (define* ($expt-number-positive-fixnum n m)
       ;;N is a number, M is a positive fixnum.
       ;;
       (if ($fx= m 1)
@@ -4536,7 +4493,7 @@
 	   $expt-fixnum-bignum	$expt-bignum-bignum	$expt-ratnum-bignum
 	   $expt-flonum-bignum	$expt-compnum-bignum	$expt-cflonum-bignum)
 
-    (define ($expt-number-bignum n m)
+    (define* ($expt-number-bignum n m)
       ;;N is a number, M is a bignum.
       ;;
       (cond-numeric-operand n
@@ -4549,7 +4506,7 @@
 	(else
 	 (%error-not-number n))))
 
-    (define ($expt-fixnum-bignum n m)
+    (define* ($expt-fixnum-bignum n m)
       ;;N is a fixnum, M is a bignum.
       ;;
       (cond (($fxzero? n)	0)
@@ -4558,7 +4515,7 @@
 	    (else
 	     (%error-result-too-big n m))))
 
-    (define ($expt-bignum-bignum n m)
+    (define* ($expt-bignum-bignum n m)
       ;;N is a bignum, M is a bignum.
       ;;
       (%error-result-too-big n m))
@@ -4590,7 +4547,7 @@
 	       ;;Negative operands have complex logarithms.
 	       ($exp-cflonum ($mul-flonum-cflonum (inexact m) ($log-flonum n)))))))
 
-    (define ($expt-compnum-bignum n m)
+    (define* ($expt-compnum-bignum n m)
       ;;N is a compnum, M is a bignum.
       ;;
       (let ((n.rep ($compnum-real n))
@@ -4613,7 +4570,7 @@
 	   $expt-fixnum-flonum	$expt-bignum-flonum	$expt-ratnum-flonum
 	   $expt-flonum-flonum	$expt-compnum-flonum	$expt-cflonum-flonum)
 
-    (define ($expt-number-flonum n m)
+    (define* ($expt-number-flonum n m)
       (cond-numeric-operand n
 	((fixnum?)	($expt-fixnum-flonum n m))
 	((bignum?)	($expt-bignum-flonum n m))
@@ -4730,7 +4687,7 @@
     ;;
     ;;so let's not try to be heroes and do the inexact conversion.
     ;;
-    (define ($expt-number-ratnum n m)
+    (define* ($expt-number-ratnum n m)
       (cond-numeric-operand n
 	((fixnum?)	($expt-fixnum-ratnum  n m))
 	((bignum?)	($expt-bignum-ratnum  n m))
@@ -4741,11 +4698,11 @@
 	(else
 	 (%error-not-number n))))
 
-    (define ($expt-fixnum-ratnum n m)
+    (define* ($expt-fixnum-ratnum n m)
       (cond (($fxzero? n)
 	     (if (positive? ($ratnum-n m))
 		 0
-	       (%error-division-by-zero who n m)))
+	       (procedure-arguments-consistency-violation __who__ "division by zero" n m)))
 	    (($fx= n 1)
 	     1)
 	    (else
@@ -4779,7 +4736,7 @@
 	   $expt-fixnum-compnum		$expt-bignum-compnum	$expt-ratnum-compnum
 	   $expt-flonum-compnum		$expt-compnum-compnum	$expt-cflonum-compnum)
 
-    (define ($expt-number-compnum n m)
+    (define* ($expt-number-compnum n m)
       (cond-numeric-operand n
 	((fixnum?)	($expt-fixnum-compnum  n m))
 	((bignum?)	($expt-bignum-compnum  n m))
@@ -4790,14 +4747,14 @@
 	(else
 	 (%error-not-number n))))
 
-    (define ($expt-fixnum-compnum n m)
+    (define* ($expt-fixnum-compnum n m)
       (cond (($fxzero? n)
 	     (let ((m.rep ($compnum-real m)))
 	       (cond ((or (and (fixnum? m.rep) ($fxnegative?      m.rep))
 			  (and (bignum? m.rep) ($bignum-negative? m.rep)))
-		      (%error-division-by-zero who n m))
+		      (procedure-arguments-consistency-violation __who__ "division by zero" n m))
 		     ((eq? m.rep 0)
-		      (%error-undefined-operation who n m))
+		      (procedure-arguments-consistency-violation __who__ "undefined operation" n m))
 		     (else
 		      0))))
 	    (($fx= n 1)
@@ -4839,7 +4796,7 @@
 	   $expt-fixnum-cflonum		$expt-bignum-cflonum	$expt-ratnum-cflonum
 	   $expt-flonum-cflonum		$expt-compnum-cflonum	$expt-cflonum-cflonum)
 
-    (define ($expt-number-cflonum n m)
+    (define* ($expt-number-cflonum n m)
       (cond-numeric-operand n
 	((fixnum?)	($expt-fixnum-cflonum  n m))
 	((bignum?)	($expt-bignum-cflonum  n m))
@@ -4859,7 +4816,7 @@
     (define ($expt-ratnum-cflonum n m)
       ($expt-flonum-cflonum ($ratnum->flonum n) m))
 
-    (define ($expt-flonum-cflonum n m)
+    (define* ($expt-flonum-cflonum n m)
       ;;We should do:
       ;;
       ;;   (expt N M) = (exp (* M (log N)))
@@ -4907,7 +4864,7 @@
     (define ($expt-compnum-cflonum n m)
       ($expt-cflonum-cflonum ($compnum->cflonum n) m))
 
-    (define ($expt-cflonum-cflonum n m)
+    (define* ($expt-cflonum-cflonum n m)
       ;;See the discussion for $EXPT-FLONUM-CFLONUM.
       ;;
       (let ((n.rep ($cflonum-real n))
@@ -4934,17 +4891,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%error-result-too-big n m)
+  (define-syntax-rule (%error-result-too-big n m)
     (raise
-     (condition (make-who-condition who)
+     (condition (make-who-condition __who__)
 		(make-implementation-restriction-violation)
 		(make-message-condition "result is too big to compute")
 		(make-irritants-condition (list n m)))))
 
-  (define (%error-undefined-result n m)
+  (define-syntax-rule (%error-undefined-result n m)
     (raise
      (condition (make-implementation-restriction-violation)
-		(make-who-condition who)
+		(make-who-condition __who__)
 		(make-message-condition "undefined result")
 		(make-irritants-condition (list n m)))))
 
@@ -4954,9 +4911,8 @@
 (module (sqrt
 	 $sqrt-fixnum		$sqrt-flonum		$sqrt-bignum
 	 $sqrt-ratnum		$sqrt-compnum		$sqrt-cflonum)
-  (define who 'sqrt)
 
-  (define (sqrt x)
+  (define* (sqrt x)
     (cond-numeric-operand x
       ((fixnum?)	($sqrt-fixnum x))
       ((bignum?)	($sqrt-bignum x))
@@ -5058,9 +5014,8 @@
 (module (cbrt
 	 $cbrt-fixnum		$cbrt-flonum		$cbrt-bignum
 	 $cbrt-ratnum		$cbrt-compnum		$cbrt-cflonum)
-  (define who 'cbrt)
 
-  (define (cbrt x)
+  (define* (cbrt x)
     (cond-numeric-operand x
       ((fixnum?)	($cbrt-fixnum x))
       ((bignum?)	($cbrt-bignum x))
@@ -5126,9 +5081,7 @@
 	 $exact-integer-sqrt-fixnum
 	 $exact-integer-sqrt-bignum)
 
-  (define who 'exact-integer-sqrt)
-
-  (define (exact-integer-sqrt x)
+  (define* (exact-integer-sqrt x)
     (cond ((fixnum? x)
 	   ($exact-integer-sqrt-fixnum x))
 
@@ -5136,9 +5089,9 @@
 	   ($exact-integer-sqrt-bignum x))
 
 	  (else
-	   (procedure-argument-violation who "expected exact integer as argument" x))))
+	   (procedure-argument-violation __who__ "expected exact integer as argument" x))))
 
-  (define ($exact-integer-sqrt-fixnum x)
+  (define* ($exact-integer-sqrt-fixnum x)
     (cond (($fx> x 0)
 	   (let ((s (foreign-call "ikrt_exact_fixnum_sqrt" x)))
 	     (values s ($fx- x ($fx* s s)))))
@@ -5147,14 +5100,14 @@
 	  (else
 	   (%error-negative-operand x))))
 
-  (define ($exact-integer-sqrt-bignum x)
+  (define* ($exact-integer-sqrt-bignum x)
     (if ($bignum-positive? x)
 	(let ((r (foreign-call "ikrt_exact_bignum_sqrt" x)))
 	  (values ($car r) ($cdr r)))
       (%error-negative-operand x)))
 
-  (define (%error-negative-operand x)
-    (procedure-argument-violation who "expected non-negative exact integer as argument" x))
+  (define-syntax-rule (%error-negative-operand x)
+    (procedure-argument-violation __who__ "expected non-negative exact integer as argument" 1 (void) x))
 
   #| end of module: exact-integer-sqrt |# )
 
@@ -5176,31 +5129,29 @@
 	 $max-ratnum-fixnum $max-ratnum-bignum $max-ratnum-ratnum $max-ratnum-flonum)
   (define who 'max)
 
-  (define max
-    (case-lambda
-     ((x y)
-      (%binary-max x y))
-     ((x y z . rest)
-      (let loop ((a  (%binary-max x y))
-		 (b  z)
-		 (ls rest))
-	(if (null? ls)
-	    (%binary-max a b)
-	  (loop (%binary-max a b)
-		($car ls)
-		($cdr ls)))))
-     ((x)
-      (if (or (fixnum? x)
-	      (bignum? x)
-	      (ratnum? x)
-	      (flonum? x))
-	  x
-	(%error-not-real-number x)))
-     ))
+  (case-define* max
+    ((x y)
+     (%binary-max x y))
+    ((x y z . rest)
+     (let loop ((a  (%binary-max x y))
+		(b  z)
+		(ls rest))
+       (if (null? ls)
+	   (%binary-max a b)
+	 (loop (%binary-max a b)
+	       ($car ls)
+	       ($cdr ls)))))
+    ((x)
+     (if (or (fixnum? x)
+	     (bignum? x)
+	     (ratnum? x)
+	     (flonum? x))
+	 x
+       (%error-not-real-number x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%binary-max x y)
+  (define* (%binary-max x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($max-fixnum-number x y))
       ((bignum?)	($max-bignum-number x y))
@@ -5211,7 +5162,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($max-fixnum-number x y)
+  (define* ($max-fixnum-number x y)
     (cond-real-numeric-operand y
       ((fixnum?)	($max-fixnum-fixnum x y))
       ((bignum?)	($max-fixnum-bignum x y))
@@ -5220,7 +5171,7 @@
       (else
        (%error-not-real-number y))))
 
-  (define ($max-bignum-number x y)
+  (define* ($max-bignum-number x y)
     (cond-real-numeric-operand y
       ((fixnum?)	($max-bignum-fixnum x y))
       ((bignum?)	($max-bignum-bignum x y))
@@ -5229,7 +5180,7 @@
       (else
        (%error-not-real-number y))))
 
-  (define ($max-flonum-number x y)
+  (define* ($max-flonum-number x y)
     (cond-real-numeric-operand y
       ((flonum?)	($max-flonum-flonum x y))
       ((fixnum?)	($max-flonum-fixnum x y))
@@ -5238,7 +5189,7 @@
       (else
        (%error-not-real-number y))))
 
-  (define ($max-ratnum-number x y)
+  (define* ($max-ratnum-number x y)
     (cond-real-numeric-operand y
       ((fixnum?)	($max-ratnum-fixnum x y))
       ((bignum?)	($max-ratnum-bignum x y))
@@ -5249,7 +5200,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($max-number-fixnum x y)
+  (define* ($max-number-fixnum x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($max-fixnum-fixnum x y))
       ((bignum?)	($max-bignum-fixnum x y))
@@ -5258,7 +5209,7 @@
       (else
        (%error-not-real-number x))))
 
-  (define ($max-number-bignum x y)
+  (define* ($max-number-bignum x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($max-fixnum-bignum x y))
       ((bignum?)	($max-bignum-bignum x y))
@@ -5267,7 +5218,7 @@
       (else
        (%error-not-real-number x))))
 
-  (define ($max-number-flonum x y)
+  (define* ($max-number-flonum x y)
     (cond-real-numeric-operand x
       ((flonum?)	($max-flonum-flonum x y))
       ((fixnum?)	($max-fixnum-flonum x y))
@@ -5276,7 +5227,7 @@
       (else
        (%error-not-real-number x))))
 
-  (define ($max-number-ratnum x y)
+  (define* ($max-number-ratnum x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($max-fixnum-ratnum x y))
       ((bignum?)	($max-bignum-ratnum x y))
@@ -5375,31 +5326,29 @@
 	 $min-ratnum-fixnum $min-ratnum-bignum $min-ratnum-ratnum $min-ratnum-flonum)
   (define who 'min)
 
-  (define min
-    (case-lambda
-     ((x y)
-      (%binary-min x y))
-     ((x y z . rest)
-      (let loop ((a  (%binary-min x y))
-		 (b  z)
-		 (ls rest))
-	(if (null? ls)
-	    (%binary-min a b)
-	  (loop (%binary-min a b)
-		($car ls)
-		($cdr ls)))))
-     ((x)
-      (if (or (fixnum? x)
-	      (bignum? x)
-	      (ratnum? x)
-	      (flonum? x))
-	  x
-	(%error-not-real-number x)))
-     ))
+  (case-define* min
+    ((x y)
+     (%binary-min x y))
+    ((x y z . rest)
+     (let loop ((a  (%binary-min x y))
+		(b  z)
+		(ls rest))
+       (if (null? ls)
+	   (%binary-min a b)
+	 (loop (%binary-min a b)
+	       ($car ls)
+	       ($cdr ls)))))
+    ((x)
+     (if (or (fixnum? x)
+	     (bignum? x)
+	     (ratnum? x)
+	     (flonum? x))
+	 x
+       (%error-not-real-number x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%binary-min x y)
+  (define* (%binary-min x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($min-fixnum-number x y))
       ((bignum?)	($min-bignum-number x y))
@@ -5410,7 +5359,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($min-fixnum-number x y)
+  (define* ($min-fixnum-number x y)
     (cond-real-numeric-operand y
       ((fixnum?)	($min-fixnum-fixnum x y))
       ((bignum?)	($min-fixnum-bignum x y))
@@ -5419,7 +5368,7 @@
       (else
        (%error-not-real-number y))))
 
-  (define ($min-bignum-number x y)
+  (define* ($min-bignum-number x y)
     (cond-real-numeric-operand y
       ((fixnum?)	($min-bignum-fixnum x y))
       ((bignum?)	($min-bignum-bignum x y))
@@ -5428,7 +5377,7 @@
       (else
        (%error-not-real-number y))))
 
-  (define ($min-flonum-number x y)
+  (define* ($min-flonum-number x y)
     (cond-real-numeric-operand y
       ((flonum?)	($min-flonum-flonum x y))
       ((fixnum?)	($min-flonum-fixnum x y))
@@ -5437,7 +5386,7 @@
       (else
        (%error-not-real-number y))))
 
-  (define ($min-ratnum-number x y)
+  (define* ($min-ratnum-number x y)
     (cond-real-numeric-operand y
       ((fixnum?)	($min-ratnum-fixnum x y))
       ((bignum?)	($min-ratnum-bignum x y))
@@ -5448,7 +5397,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define ($min-number-fixnum x y)
+  (define* ($min-number-fixnum x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($min-fixnum-fixnum x y))
       ((bignum?)	($min-bignum-fixnum x y))
@@ -5457,7 +5406,7 @@
       (else
        (%error-not-real-number x))))
 
-  (define ($min-number-bignum x y)
+  (define* ($min-number-bignum x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($min-fixnum-bignum x y))
       ((bignum?)	($min-bignum-bignum x y))
@@ -5466,7 +5415,7 @@
       (else
        (%error-not-real-number x))))
 
-  (define ($min-number-flonum x y)
+  (define* ($min-number-flonum x y)
     (cond-real-numeric-operand x
       ((flonum?)	($min-flonum-flonum x y))
       ((fixnum?)	($min-fixnum-flonum x y))
@@ -5475,7 +5424,7 @@
       (else
        (%error-not-real-number x))))
 
-  (define ($min-number-ratnum x y)
+  (define* ($min-number-ratnum x y)
     (cond-real-numeric-operand x
       ((fixnum?)	($min-fixnum-ratnum x y))
       ((bignum?)	($min-bignum-ratnum x y))
@@ -5570,7 +5519,7 @@
 	 $sign-flonum		$sign-ratnum)
   (define who 'sign)
 
-  (define (sign x)
+  (define* (sign x)
     (cond-real-numeric-operand x
       ((fixnum?)	($sign-fixnum x))
       ((bignum?)	($sign-bignum x))
@@ -5609,7 +5558,7 @@
 	 $abs-flonum		$abs-ratnum)
   (define who 'abs)
 
-  (define (abs x)
+  (define* (abs x)
     (cond-real-numeric-operand x
       ((fixnum?)	($abs-fixnum x))
       ((bignum?)	($abs-bignum x))
@@ -5726,7 +5675,7 @@
   (define (inexact x)
     (->inexact x 'inexact))
 
-  (define (->inexact x who)
+  (define* (->inexact x who)
     (cond-numeric-operand x
       ((fixnum?)	($fixnum->flonum x))
       ((bignum?)	($bignum->flonum x))
@@ -5753,57 +5702,32 @@
 
 (module (number->string)
 
-  (define who 'number->string)
-
-  (module (number->string)
-
-    (define number->string
-      (case-lambda
-       ((x)
-	($number->string x 10))
-       ((x r)
-	(with-arguments-validation (who)
-	    ((radix	r))
-	  ($number->string x r)))
-       ((x r precision)
-	;;(%do-warn)
-	(number->string x r))))
-
-    (define (%do-warn)
-      ;;Overwrite the binding so that the warning is raised only once.
-      (set! %do-warn values)
-      (raise-continuable
-       (condition (make-warning)
-		  (make-who-condition who)
-		  (make-message-condition "precision argument is not supported"))))
-
-    (define-argument-validation (radix who obj)
-      (case obj
-	((2 8 10 16)	#t)
-	(else		#f))
-      (procedure-argument-violation who "invalid radix" obj))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
+  (case-define* number->string
+    ((x)
+     ($number->string x 10))
+    ((x {r number-to-string-radix?})
+     ($number->string x r))
+    ((x {r number-to-string-radix?} precision)
+     ($number->string x r)))
 
   (module ($number->string)
 
-    (define ($number->string x radix)
+    (define* ($number->string x radix)
       (cond-numeric-operand x
 	((fixnum?)	(fixnum->string   x radix))
   	((bignum?)	(bignum->string   x radix))
-	((flonum?)	(%flonum->string  x radix))
+	((flonum?)
+	 (unless (number-to-string-radix10? radix)
+	   (procedure-argument-violation __who__ "invalid radix for inexact number, expected 10" radix))
+	 (flonum->string x))
 	((ratnum?)	(ratnum->string   x radix))
 	((compnum?)	(%compnum->string x radix))
-	((cflonum?)	(%cflonum->string x radix))
+	((cflonum?)
+	 (unless (number-to-string-radix10? radix)
+	   (procedure-argument-violation __who__ "invalid radix for inexact number, expected 10" radix))
+	 (%cflonum->string x radix))
 	(else
 	 (%error-not-number x))))
-
-    (define (%flonum->string x radix)
-      (with-arguments-validation (who)
-	  ((radix10	radix))
-	(flonum->string x)))
 
     (define (%compnum->string x radix)
       (let ((x.rep ($compnum-real x))
@@ -5815,17 +5739,15 @@
 			 (imag x.imp radix) "i"))))
 
     (define (%cflonum->string x radix)
-      (with-arguments-validation (who)
-	  ((radix10	radix))
-	(let ((x.rep ($cflonum-real x))
-	      (x.imp ($cflonum-imag x)))
-	  (cond (($flnan? x.imp)
-		 (string-append (flonum->string x.rep) "+nan.0i"))
-		(($flinfinite? x.imp)
-		 (string-append (flonum->string x.rep)
-				(if ($flpositive? x.imp) "+inf.0i" "-inf.0i")))
-		(else
-		 (string-append (flonum->string x.rep) (imag x.imp 10) "i"))))))
+      (let ((x.rep ($cflonum-real x))
+	    (x.imp ($cflonum-imag x)))
+	(cond (($flnan? x.imp)
+	       (string-append (flonum->string x.rep) "+nan.0i"))
+	      (($flinfinite? x.imp)
+	       (string-append (flonum->string x.rep)
+			      (if ($flpositive? x.imp) "+inf.0i" "-inf.0i")))
+	      (else
+	       (string-append (flonum->string x.rep) (imag x.imp 10) "i")))))
 
     (define (imag x.imp radix)
       ;;Compose a string for the imaginary part of a cflonum or compnum.
@@ -5868,24 +5790,20 @@
        (else
 	(string-append "+" ($number->string x.imp radix)))))
 
-    (define-argument-validation (radix10 who obj)
-      (eqv? obj 10)
-      (procedure-argument-violation who "invalid radix for inexact number, expected 10" obj))
-
     #| end of module: $number->string |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (bignum->string)
 
-    (define (bignum->string x r)
+    (define* (bignum->string x r)
       (case r
 	((10) (bignum->decimal-string x))
 	((2)  (bignum->power-string x  1 1))
 	((8)  (bignum->power-string x  7 3))
 	((16) (bignum->power-string x 15 4))
 	(else
-	 (procedure-argument-violation who "BUG"))))
+	 (procedure-argument-violation __who__ "invalid radix value" r))))
 
     (define (bignum->decimal-string x)
       (utf8->string (foreign-call "ikrt_bignum_to_bytevector" x)))
@@ -5921,7 +5839,7 @@
 		       s)
 		      (($fx< k 8)
 		       (loop i ($fxadd1 j) ($fx+ k 8)
-			  ($fxlogor b ($fxsll ($bignum-byte-ref x j) k))))
+			     ($fxlogor b ($fxsll ($bignum-byte-ref x j) k))))
 		      (else
 		       (string-set! s ($fx- n i)
 				    (string-ref string-map
@@ -5937,48 +5855,56 @@
 		   "/"
 		   ($number->string ($ratnum-d x) r)))
 
+;;; --------------------------------------------------------------------
+
+  (define (number-to-string-radix? obj)
+    (case obj
+      ((2 8 10 16)	#t)
+      (else		#f)))
+
+  (define (number-to-string-radix10? obj)
+    (eqv? obj 10))
+
   #| end of module: number->string |# )
 
 
 (module (=)
-  (define who (quote =))
 
-  (define =
-    (case-lambda
-     ((x y)
-      (cond-numeric-operand x
-	((fixnum?)	($fixnum=number?  x y))
-	((bignum?)	($bignum=number?  x y))
-	((flonum?)	($flonum=number?  x y))
-	((ratnum?)	($ratnum=number?  x y))
-	((compnum?)	($compnum=number? x y))
-	((cflonum?)	($cflonum=number? x y))
-	(else
-	 (%error-not-number x))))
+  (case-define* =
+    ((x y)
+     (cond-numeric-operand x
+       ((fixnum?)	($fixnum=number?  x y))
+       ((bignum?)	($bignum=number?  x y))
+       ((flonum?)	($flonum=number?  x y))
+       ((ratnum?)	($ratnum=number?  x y))
+       ((compnum?)	($compnum=number? x y))
+       ((cflonum?)	($cflonum=number? x y))
+       (else
+	(%error-not-number x))))
 
-     ((x y z)
-      (cond ((= x y)
-	     (= y z))
-	    ((number? z)
-	     #f)
-	    (else
-	     (%error-not-number z))))
+    ((x y z)
+     (cond ((= x y)
+	    (= y z))
+	   ((number? z)
+	    #f)
+	   (else
+	    (%error-not-number z))))
 
-     ((x)
-      (if (number? x)
-	  #t
-	(%error-not-number x)))
+    ((x)
+     (if (number? x)
+	 #t
+       (%error-not-number x)))
 
-     ((x y . ls)
-      (cond-numeric-operand x
-	((fixnum?)	(%doloop $fixnum=number?  x y ls))
-	((bignum?)	(%doloop $bignum=number?  x y ls))
-	((flonum?)	(%doloop $flonum=number?  x y ls))
-	((ratnum?)	(%doloop $ratnum=number?  x y ls))
-	((compnum?)	(%doloop $compnum=number? x y ls))
-	((cflonum?)	(%doloop $cflonum=number? x y ls))
-	(else
-	 (%error-not-number x))))))
+    ((x y . ls)
+     (cond-numeric-operand x
+       ((fixnum?)	(%doloop $fixnum=number?  x y ls))
+       ((bignum?)	(%doloop $bignum=number?  x y ls))
+       ((flonum?)	(%doloop $flonum=number?  x y ls))
+       ((ratnum?)	(%doloop $ratnum=number?  x y ls))
+       ((compnum?)	(%doloop $compnum=number? x y ls))
+       ((cflonum?)	(%doloop $cflonum=number? x y ls))
+       (else
+	(%error-not-number x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -5995,15 +5921,16 @@
 	       (%validate-rest-arguments ($car ls) ($cdr ls))))))))
 
   (define (%validate-rest-arguments x ls)
-    (if (number? x)
-	(if (null? ls)
-	    #f
-	  (%validate-rest-arguments ($car ls) ($cdr ls)))
-      (%error-not-number x)))
+    (with-who =
+      (if (number? x)
+	  (if (null? ls)
+	      #f
+	    (%validate-rest-arguments ($car ls) ($cdr ls)))
+	(%error-not-number x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum=number? x y)
+  (define* ($fixnum=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	($fx= x y))
       ((bignum?)	#f)
@@ -6016,7 +5943,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($bignum=number? x y)
+  (define* ($bignum=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#f)
       ((bignum?)	(bnbn= x y))
@@ -6029,7 +5956,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($flonum=number? x y)
+  (define* ($flonum=number? x y)
     (cond-numeric-operand y
       ((flonum?)	(flfl= x y))
       ((cflonum?)
@@ -6042,7 +5969,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($ratnum=number? x y)
+  (define* ($ratnum=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#f)
       ((bignum?)	#f)
@@ -6055,7 +5982,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($compnum=number? x y)
+  (define* ($compnum=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#f)
       ((bignum?)	#f)
@@ -6066,7 +5993,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($cflonum=number? x y)
+  (define* ($cflonum=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#f)
       ((bignum?)	#f)
@@ -6097,44 +6024,42 @@
 
 
 (module (!=)
-  (define who (quote !=))
 
-  (define !=
-    (case-lambda
-     ((x y)
-      (cond-numeric-operand x
-	((fixnum?)	($fixnum!=number?  x y))
-	((bignum?)	($bignum!=number?  x y))
-	((flonum?)	($flonum!=number?  x y))
-	((ratnum?)	($ratnum!=number?  x y))
-	((compnum?)	($compnum!=number? x y))
-	((cflonum?)	($cflonum!=number? x y))
-	(else
-	 (%error-not-number x))))
+  (case-define* !=
+    ((x y)
+     (cond-numeric-operand x
+       ((fixnum?)	($fixnum!=number?  x y))
+       ((bignum?)	($bignum!=number?  x y))
+       ((flonum?)	($flonum!=number?  x y))
+       ((ratnum?)	($ratnum!=number?  x y))
+       ((compnum?)	($compnum!=number? x y))
+       ((cflonum?)	($cflonum!=number? x y))
+       (else
+	(%error-not-number x))))
 
-     ((x y z)
-      (cond ((= x y)
-	     (!= y z))
-	    ((number? z)
-	     #t)
-	    (else
-	     (%error-not-number z))))
+    ((x y z)
+     (cond ((= x y)
+	    (!= y z))
+	   ((number? z)
+	    #t)
+	   (else
+	    (%error-not-number z))))
 
-     ((x)
-      (if (number? x)
-	  #f
-	(%error-not-number x)))
+    ((x)
+     (if (number? x)
+	 #f
+       (%error-not-number x)))
 
-     ((x y . ls)
-      (cond-numeric-operand x
-	((fixnum?)	(%doloop $fixnum!=number?  x y ls))
-	((bignum?)	(%doloop $bignum!=number?  x y ls))
-	((flonum?)	(%doloop $flonum!=number?  x y ls))
-	((ratnum?)	(%doloop $ratnum!=number?  x y ls))
-	((compnum?)	(%doloop $compnum!=number? x y ls))
-	((cflonum?)	(%doloop $cflonum!=number? x y ls))
-	(else
-	 (%error-not-number x))))))
+    ((x y . ls)
+     (cond-numeric-operand x
+       ((fixnum?)	(%doloop $fixnum!=number?  x y ls))
+       ((bignum?)	(%doloop $bignum!=number?  x y ls))
+       ((flonum?)	(%doloop $flonum!=number?  x y ls))
+       ((ratnum?)	(%doloop $ratnum!=number?  x y ls))
+       ((compnum?)	(%doloop $compnum!=number? x y ls))
+       ((cflonum?)	(%doloop $cflonum!=number? x y ls))
+       (else
+	(%error-not-number x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -6152,15 +6077,16 @@
 	     (loop x ($car ls) ($cdr ls))))))))
 
   (define (%validate-rest-arguments x ls)
-    (if (number? x)
-	(if (null? ls)
-	    #t
-	  (%validate-rest-arguments ($car ls) ($cdr ls)))
-      (%error-not-number x)))
+    (with-who !=
+      (if (number? x)
+	  (if (null? ls)
+	      #t
+	    (%validate-rest-arguments ($car ls) ($cdr ls)))
+	(%error-not-number x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($fixnum!=number? x y)
+  (define* ($fixnum!=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	(not ($fx= x y)))
       ((bignum?)	#t)
@@ -6173,7 +6099,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($bignum!=number? x y)
+  (define* ($bignum!=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#t)
       ((bignum?)	(not (bnbn= x y)))
@@ -6186,7 +6112,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($flonum!=number? x y)
+  (define* ($flonum!=number? x y)
     (cond-numeric-operand y
       ((flonum?)	(not (flfl= x y)))
       ((cflonum?)
@@ -6199,7 +6125,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($ratnum!=number? x y)
+  (define* ($ratnum!=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#t)
       ((bignum?)	#t)
@@ -6212,7 +6138,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($compnum!=number? x y)
+  (define* ($compnum!=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#t)
       ((bignum?)	#t)
@@ -6223,7 +6149,7 @@
       (else
        (%error-not-number y))))
 
-  (define ($cflonum!=number? x y)
+  (define* ($cflonum!=number? x y)
     (cond-numeric-operand y
       ((fixnum?)	#t)
       ((bignum?)	#t)
@@ -6263,214 +6189,215 @@
 	  fxrt< rtfx< bnrt< rtbn< flrt< rtfl< rtrt<)
        (module (?who)
 
-	 (define ?who
-	   (case-lambda
-	    ((x y)
-	     (cond-real-numeric-operand x
-	       ((fixnum?)
-		(cond-real-numeric-operand y
-		  ((fixnum?)	(fxfx< x y))
-		  ((bignum?)	(fxbn< x y))
-		  ((flonum?)	(fxfl< x y))
-		  ((ratnum?)	(fxrt< x y))
-		  (else
-		   (%error-not-real y))))
-	       ((bignum?)
-		(cond-real-numeric-operand y
-		  ((fixnum?)	(bnfx< x y))
-		  ((bignum?)	(bnbn< x y))
-		  ((flonum?)	(bnfl< x y))
-		  ((ratnum?)	(bnrt< x y))
-		  (else
-		   (%error-not-real y))))
-	       ((flonum?)
-		(cond-real-numeric-operand y
-		  ((fixnum?)	(flfx< x y))
-		  ((bignum?)	(flbn< x y))
-		  ((flonum?)	(flfl< x y))
-		  ((ratnum?)	(flrt< x y))
-		  (else
-		   (%error-not-real y))))
-	       ((ratnum?)
-		(cond-real-numeric-operand y
-		  ((fixnum?)	(rtfx< x y))
-		  ((bignum?)	(rtbn< x y))
-		  ((flonum?)	(rtfl< x y))
-		  ((ratnum?)	(rtrt< x y))
-		  (else
-		   (%error-not-real y))))
-	       (else
-		(%error-not-real x))))
+	 (case-define* ?who
+	   ((x y)
+	    (cond-real-numeric-operand x
+	      ((fixnum?)
+	       (cond-real-numeric-operand y
+		 ((fixnum?)	(fxfx< x y))
+		 ((bignum?)	(fxbn< x y))
+		 ((flonum?)	(fxfl< x y))
+		 ((ratnum?)	(fxrt< x y))
+		 (else
+		  (%error-not-real-number y))))
+	      ((bignum?)
+	       (cond-real-numeric-operand y
+		 ((fixnum?)	(bnfx< x y))
+		 ((bignum?)	(bnbn< x y))
+		 ((flonum?)	(bnfl< x y))
+		 ((ratnum?)	(bnrt< x y))
+		 (else
+		  (%error-not-real-number y))))
+	      ((flonum?)
+	       (cond-real-numeric-operand y
+		 ((fixnum?)	(flfx< x y))
+		 ((bignum?)	(flbn< x y))
+		 ((flonum?)	(flfl< x y))
+		 ((ratnum?)	(flrt< x y))
+		 (else
+		  (%error-not-real-number y))))
+	      ((ratnum?)
+	       (cond-real-numeric-operand y
+		 ((fixnum?)	(rtfx< x y))
+		 ((bignum?)	(rtbn< x y))
+		 ((flonum?)	(rtfl< x y))
+		 ((ratnum?)	(rtrt< x y))
+		 (else
+		  (%error-not-real-number y))))
+	      (else
+	       (%error-not-real-number x))))
 
-	    ((x y z)
-	     (and (?who x y)
-		  (?who y z)))
+	   ((x y z)
+	    (and (?who x y)
+		 (?who y z)))
 
-	    ((x)
-	     (if (real? x)
-		 #t
-	       (%error-not-real x)))
+	   ((x)
+	    (if (real? x)
+		#t
+	      (%error-not-real-number x)))
 
-	    ((x y . ls)
-	     (cond-real-numeric-operand x
-	       ((fixnum?)		(%loop-with-fixnum-as-first x y ls))
-	       ((bignum?)		(%loop-with-bignum-as-first x y ls))
-	       ((flonum?)		(%loop-with-flonum-as-first x y ls))
-	       ((ratnum?)		(%loop-with-ratnum-as-first x y ls))
-	       (else
-		(%error-not-real x))))))
+	   ((x y . ls)
+	    (cond-real-numeric-operand x
+	      ((fixnum?)		(%loop-with-fixnum-as-first x y ls))
+	      ((bignum?)		(%loop-with-bignum-as-first x y ls))
+	      ((flonum?)		(%loop-with-flonum-as-first x y ls))
+	      ((ratnum?)		(%loop-with-ratnum-as-first x y ls))
+	      (else
+	       (%error-not-real-number x)))))
 
 ;;; --------------------------------------------------------------------
 
 	 (define (%loop-with-fixnum-as-first x y ls)
-	   (cond-real-numeric-operand y
-	     ((fixnum?)
-	      (cond ((null? ls)
-		     (fxfx< x y))
-		    ((fxfx< x y)
-		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((bignum?)
-	      (cond ((null? ls)
-		     (fxbn< x y))
-		    ((fxbn< x y)
-		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((flonum?)
-	      (cond ((null? ls)
-		     (fxfl< x y))
-		    ((fxfl< x y)
-		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((ratnum?)
-	      (cond ((null? ls)
-		     (fxrt< x y))
-		    ((fxrt< x y)
-		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     (else
-	      (%error-not-real y))))
+	   (with-who ?who
+	     (cond-real-numeric-operand y
+	       ((fixnum?)
+		(cond ((null? ls)
+		       (fxfx< x y))
+		      ((fxfx< x y)
+		       (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((bignum?)
+		(cond ((null? ls)
+		       (fxbn< x y))
+		      ((fxbn< x y)
+		       (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((flonum?)
+		(cond ((null? ls)
+		       (fxfl< x y))
+		      ((fxfl< x y)
+		       (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((ratnum?)
+		(cond ((null? ls)
+		       (fxrt< x y))
+		      ((fxrt< x y)
+		       (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       (else
+		(%error-not-real-number y)))))
 
 ;;; --------------------------------------------------------------------
 
 	 (define (%loop-with-bignum-as-first x y ls)
-	   (cond-real-numeric-operand y
-	     ((fixnum?)
-	      (cond ((null? ls)
-		     (bnfx< x y))
-		    ((bnfx< x y)
-		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((bignum?)
-	      (cond ((null? ls)
-		     (bnbn< x y))
-		    ((bnbn< x y)
-		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((flonum?)
-	      (cond ((null? ls)
-		     (bnfl< x y))
-		    ((bnfl< x y)
-		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((ratnum?)
-	      (cond ((null? ls)
-		     (bnrt< x y))
-		    ((bnrt< x y)
-		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     (else
-	      (%error-not-real y))))
+	   (with-who ?who
+	     (cond-real-numeric-operand y
+	       ((fixnum?)
+		(cond ((null? ls)
+		       (bnfx< x y))
+		      ((bnfx< x y)
+		       (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((bignum?)
+		(cond ((null? ls)
+		       (bnbn< x y))
+		      ((bnbn< x y)
+		       (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((flonum?)
+		(cond ((null? ls)
+		       (bnfl< x y))
+		      ((bnfl< x y)
+		       (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((ratnum?)
+		(cond ((null? ls)
+		       (bnrt< x y))
+		      ((bnrt< x y)
+		       (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       (else
+		(%error-not-real-number y)))))
 
 ;;; --------------------------------------------------------------------
 
 	 (define (%loop-with-flonum-as-first x y ls)
-	   (cond-real-numeric-operand y
-	     ((fixnum?)
-	      (cond ((null? ls)
-		     (flfx< x y))
-		    ((flfx< x y)
-		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((bignum?)
-	      (cond ((null? ls)
-		     (flbn< x y))
-		    ((flbn< x y)
-		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((flonum?)
-	      (cond ((null? ls)
-		     (flfl< x y))
-		    ((flfl< x y)
-		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((ratnum?)
-	      (cond ((null? ls)
-		     (flrt< x y))
-		    ((flrt< x y)
-		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     (else
-	      (%error-not-real y))))
+	   (with-who ?who
+	     (cond-real-numeric-operand y
+	       ((fixnum?)
+		(cond ((null? ls)
+		       (flfx< x y))
+		      ((flfx< x y)
+		       (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((bignum?)
+		(cond ((null? ls)
+		       (flbn< x y))
+		      ((flbn< x y)
+		       (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((flonum?)
+		(cond ((null? ls)
+		       (flfl< x y))
+		      ((flfl< x y)
+		       (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((ratnum?)
+		(cond ((null? ls)
+		       (flrt< x y))
+		      ((flrt< x y)
+		       (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       (else
+		(%error-not-real-number y)))))
 
 ;;; --------------------------------------------------------------------
 
 	 (define (%loop-with-ratnum-as-first x y ls)
-	   (cond-real-numeric-operand y
-	     ((fixnum?)
-	      (cond ((null? ls)
-		     (rtfx< x y))
-		    ((rtfx< x y)
-		     (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((bignum?)
-	      (cond ((null? ls)
-		     (rtbn< x y))
-		    ((rtbn< x y)
-		     (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((flonum?)
-	      (cond ((null? ls)
-		     (rtfl< x y))
-		    ((rtfl< x y)
-		     (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     ((ratnum?)
-	      (cond ((null? ls)
-		     (rtrt< x y))
-		    ((rtrt< x y)
-		     (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
-		    (else
-		     (%validate-rest-arguments ($car ls) ($cdr ls)))))
-	     (else
-	      (%error-not-real y))))
+	   (with-who ?who
+	     (cond-real-numeric-operand y
+	       ((fixnum?)
+		(cond ((null? ls)
+		       (rtfx< x y))
+		      ((rtfx< x y)
+		       (%loop-with-fixnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((bignum?)
+		(cond ((null? ls)
+		       (rtbn< x y))
+		      ((rtbn< x y)
+		       (%loop-with-bignum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((flonum?)
+		(cond ((null? ls)
+		       (rtfl< x y))
+		      ((rtfl< x y)
+		       (%loop-with-flonum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       ((ratnum?)
+		(cond ((null? ls)
+		       (rtrt< x y))
+		      ((rtrt< x y)
+		       (%loop-with-ratnum-as-first y ($car ls) ($cdr ls)))
+		      (else
+		       (%validate-rest-arguments ($car ls) ($cdr ls)))))
+	       (else
+		(%error-not-real-number y)))))
 
 ;;; --------------------------------------------------------------------
 
 	 (define (%validate-rest-arguments x ls)
-	   (if (real? x)
-	       (if (null? ls)
-		   #f
-		 (%validate-rest-arguments ($car ls) ($cdr ls)))
-	     (%error-not-real x)))
-
-	 (define (%error-not-real x)
-	   (procedure-argument-violation '?who "expected real number as argument" x))
+	   (with-who ?who
+	     (if (real? x)
+		 (if (null? ls)
+		     #f
+		   (%validate-rest-arguments ($car ls) ($cdr ls)))
+	       (%error-not-real-number x))))
 
 	 #| end of module: ?who |# )
        )))
@@ -6786,7 +6713,7 @@
 
 ;;;; generic numbers sign predicates
 
-(define (zero? x)
+(define* (zero? x)
   (cond-numeric-operand x
     ((fixnum?)	($fxzero? x))
     ((bignum?)	#f)
@@ -6798,9 +6725,9 @@
     ((cflonum?)	(and ($flzero? ($cflonum-real x))
 		     ($flzero? ($cflonum-imag x))))
     (else
-     (procedure-argument-violation 'zero? "expected number as argument" x))))
+     (procedure-argument-violation __who__ "expected number as argument" x))))
 
-(define (positive? x)
+(define* (positive? x)
   (cond-real-numeric-operand x
     ((fixnum?)	($fxpositive? x))
     ((bignum?)	($bignum-positive? x))
@@ -6808,9 +6735,9 @@
     ;;The denominator of a ratnum is always strictly positive.
     ((ratnum?)	(positive? ($ratnum-n x)))
     (else
-     (procedure-argument-violation 'positive? "expected real number as argument" x))))
+     (procedure-argument-violation __who__ "expected real number as argument" x))))
 
-(define (negative? x)
+(define* (negative? x)
   (cond-real-numeric-operand x
     ((fixnum?)	($fxnegative? x))
     ((bignum?)	($bignum-negative? x))
@@ -6818,10 +6745,9 @@
     ((ratnum?)	(negative? ($ratnum-n x)))
     ((flonum?)	($flnegative? x))
     (else
-     (procedure-argument-violation 'negative? "expected real number as argument" x))))
+     (procedure-argument-violation __who__ "expected real number as argument" x))))
 
-(define (non-positive? x)
-  (define who 'non-positive?)
+(define* (non-positive? x)
   (cond-real-numeric-operand x
     ((fixnum?)	($fxnonpositive? x))
     ((bignum?)	($bignum-non-positive? x))
@@ -6830,8 +6756,7 @@
     (else
      (%error-not-real-number x))))
 
-(define (non-negative? x)
-  (define who 'non-negative?)
+(define* (non-negative? x)
   (cond-real-numeric-operand x
     ((fixnum?)	($fxnonnegative? x))
     ((bignum?)	($bignum-non-negative? x))
@@ -6840,21 +6765,21 @@
     (else
      (%error-not-real-number x))))
 
-(define (even? x)
+(define* (even? x)
   (cond-inexact-integer-operand x
     ((fixnum?)	($fxeven? x))
     ((bignum?)	($bignum-even? x))
     ((flonum?)	($fleven? x))
     (else
-     (procedure-argument-violation 'even? "expected integer as argument" x))))
+     (procedure-argument-violation __who__ "expected integer as argument" x))))
 
-(define (odd? x)
+(define* (odd? x)
   (cond-inexact-integer-operand x
     ((fixnum?)	($fxodd? x))
     ((bignum?)	($bignum-odd? x))
     ((flonum?)	($flodd? x))
     (else
-     (procedure-argument-violation 'odd? "expected integer as argument" x))))
+     (procedure-argument-violation __who__ "expected integer as argument" x))))
 
 
 ;;;; exact integer sign predicates
@@ -6889,31 +6814,30 @@
 	 $log-ratnum		$log-compnum		$log-cflonum)
   (define who 'log)
 
-  (define log
-    (case-lambda
-     ((x)
-      (cond-numeric-operand x
-	((fixnum?)	($log-fixnum  x))
-	((bignum?)	($log-bignum  x))
-	((ratnum?)	($log-ratnum  x))
-	((flonum?)	($log-flonum  x))
-	((compnum?)	($log-compnum x))
-	((cflonum?)	($log-cflonum x))
-	(else
-	 (procedure-argument-violation who "not a number" x))))
-     ((x y)
-      (let ((ly (log y)))
-	(if (eq? ly 0)
-	    (procedure-argument-violation who "invalid arguments" x y)
-	  (/ (log x) ly))))))
+  (case-define* log
+    ((x)
+     (cond-numeric-operand x
+       ((fixnum?)	($log-fixnum  x))
+       ((bignum?)	($log-bignum  x))
+       ((ratnum?)	($log-ratnum  x))
+       ((flonum?)	($log-flonum  x))
+       ((compnum?)	($log-compnum x))
+       ((cflonum?)	($log-cflonum x))
+       (else
+	(procedure-argument-violation __who__ "not a number" x))))
+    ((x y)
+     (let ((ly (log y)))
+       (if (eq? ly 0)
+	   (procedure-argument-violation __who__ "logarithm of second operand must be non-zero" y)
+	 (/ (log x) ly)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($log-fixnum x)
+  (define* ($log-fixnum x)
     (cond (($fx= x 1)
 	   0)
 	  (($fxzero? x)
-	   (procedure-argument-violation who "undefined around 0"))
+	   (procedure-argument-violation __who__ "undefined around 0" x))
 	  (($fxpositive? x)
 	   (foreign-call "ikrt_fx_log" x))
 	  (else
@@ -6995,9 +6919,8 @@
 (module (exp
 	 $exp-fixnum		$exp-bignum		$exp-ratnum
 	 $exp-compnum		$exp-cflonum)
-  (define who 'exp)
 
-  (define (exp x)
+  (define* (exp x)
     (cond-numeric-operand x
       ((flonum?)	($exp-flonum  x))
       ((cflonum?)	($exp-cflonum x))
@@ -7079,9 +7002,8 @@
 (module (sin
 	 $sin-fixnum		$sin-bignum		$sin-ratnum
 	 $sin-cflonum		$sin-compnum)
-  (define who 'sin)
 
-  (define (sin x)
+  (define* (sin x)
     (cond-numeric-operand x
       ((flonum?)	($sin-flonum x))
       ((cflonum?)	($sin-cflonum x))
@@ -7215,9 +7137,8 @@
 (module (cos
 	 $cos-fixnum		$cos-bignum		$cos-ratnum
 	 $cos-cflonum		$cos-compnum)
-  (define who 'cos)
 
-  (define (cos x)
+  (define* (cos x)
     (cond-numeric-operand x
       ((flonum?)	($cos-flonum x))
       ((cflonum?)	($cos-cflonum x))
@@ -7350,9 +7271,8 @@
 (module (tan
 	 $tan-fixnum		$tan-bignum		$tan-ratnum
 	 $tan-compnum		$tan-cflonum)
-  (define who 'tan)
 
-  (define (tan x)
+  (define* (tan x)
     (cond-numeric-operand x
       ((flonum?)	($tan-flonum  x))
       ((cflonum?)	($tan-cflonum x))
@@ -7468,9 +7388,8 @@
 (module (asin
 	 $asin-fixnum		$asin-bignum		$asin-ratnum
 	 $asin-flonum		$asin-cflonum		$asin-compnum)
-  (define who 'asin)
 
-  (define (asin x)
+  (define* (asin x)
     (cond-numeric-operand x
       ((flonum?)	($asin-flonum  x))
       ((cflonum?)	($asin-cflonum x))
@@ -7572,9 +7491,8 @@
 (module (acos
 	 $acos-fixnum		$acos-bignum		$acos-ratnum
 	 $acos-flonum		$acos-cflonum		$acos-compnum)
-  (define who 'acos)
 
-  (define (acos x)
+  (define* (acos x)
     (cond-numeric-operand x
       ((flonum?)	($acos-flonum  x))
       ((cflonum?)	($acos-cflonum x))
@@ -7638,25 +7556,20 @@
 	 $atan2-real-real
 	 $atan-fixnum		$atan-ratnum		$atan-bignum
 	 $atan-cflonum		$atan-compnum)
-  (define who 'atan)
 
-  (define atan
-    (case-lambda
-     ((x)
-      (cond-numeric-operand x
-	((flonum?)	($atan-flonum  x))
-	((cflonum?)	($atan-cflonum x))
-	((fixnum?)	($atan-fixnum  x))
-	((bignum?)	($atan-bignum  x))
-	((ratnum?)	($atan-ratnum  x))
-	((compnum?)	($atan-compnum x))
-	(else
-	 (%error-not-number x))))
-     ((imp rep)
-      (with-arguments-validation (who)
-	  ((real	imp)
-	   (real	rep))
-	($atan2-real-real imp rep)))))
+  (case-define* atan
+    ((x)
+     (cond-numeric-operand x
+       ((flonum?)	($atan-flonum  x))
+       ((cflonum?)	($atan-cflonum x))
+       ((fixnum?)	($atan-fixnum  x))
+       ((bignum?)	($atan-bignum  x))
+       ((ratnum?)	($atan-ratnum  x))
+       ((compnum?)	($atan-compnum x))
+       (else
+	(%error-not-number x))))
+    (({imp real?} {rep real?})
+     ($atan2-real-real imp rep)))
 
   (define ($atan2-real-real imp rep)
     (foreign-call "ikrt_atan2" (inexact imp) (inexact rep)))
@@ -7713,9 +7626,8 @@
 (module (sinh
 	 $sinh-fixnum		$sinh-bignum		$sinh-ratnum
 	 $sinh-compnum		$sinh-cflonum)
-  (define who 'sinh)
 
-  (define (sinh x)
+  (define* (sinh x)
     (cond-numeric-operand x
       ((flonum?)	($flsinh       x))
       ((cflonum?)	($sinh-cflonum x))
@@ -7755,9 +7667,8 @@
 (module (cosh
 	 $cosh-fixnum		$cosh-bignum		$cosh-ratnum
 	 $cosh-compnum		$cosh-cflonum)
-  (define who 'cosh)
 
-  (define (cosh x)
+  (define* (cosh x)
     (cond-numeric-operand x
       ((flonum?)	($flcosh       x))
       ((cflonum?)	($cosh-cflonum x))
@@ -7797,9 +7708,8 @@
 (module (tanh
 	 $tanh-fixnum		$tanh-bignum		$tanh-ratnum
 	 $tanh-compnum		$tanh-cflonum)
-  (define who 'tanh)
 
-  (define (tanh x)
+  (define* (tanh x)
     (cond-numeric-operand x
       ((flonum?)	($fltanh       x))
       ((cflonum?)	($tanh-cflonum x))
@@ -7871,9 +7781,8 @@
 (module (asinh
 	 $asinh-fixnum		$asinh-bignum		$asinh-ratnum
 	 $asinh-cflonum		$asinh-compnum)
-  (define who 'asinh)
 
-  (define (asinh x)
+  (define* (asinh x)
     (cond-numeric-operand x
       ((flonum?)	($flasinh x))
       ((cflonum?)	($asinh-cflonum x))
@@ -7935,9 +7844,8 @@
 (module (acosh
 	 $acosh-fixnum		$acosh-bignum		$acosh-ratnum
 	 $acosh-flonum		$acosh-cflonum		$acosh-compnum)
-  (define who 'acosh)
 
-  (define (acosh x)
+  (define* (acosh x)
     (cond-numeric-operand x
       ((flonum?)	($acosh-flonum x))
       ((cflonum?)	($acosh-cflonum x))
@@ -8010,9 +7918,8 @@
 (module (atanh
 	 $atanh-fixnum		$atanh-bignum		$atanh-ratnum
 	 $atanh-flonum		$atanh-cflonum		$atanh-compnum)
-  (define who 'atanh)
 
-  (define (atanh x)
+  (define* (atanh x)
     (cond-numeric-operand x
       ((flonum?)	($atanh-flonum  x))
       ((cflonum?)	($atanh-cflonum x))
@@ -8074,8 +7981,7 @@
 	 $numerator-flonum
 	 $numerator-ratnum)
 
-  (define (numerator x)
-    (define who 'numerator)
+  (define* (numerator x)
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
@@ -8106,8 +8012,7 @@
 	 $denominator-flonum
 	 $denominator-ratnum)
 
-  (define (denominator x)
-    (define who 'denominator)
+  (define* (denominator x)
     (cond-real-numeric-operand x
       ((fixnum?)	1)
       ((bignum?)	1)
@@ -8139,9 +8044,7 @@
   ;;Return the largest  integer object not larger than  X.  Return exact
   ;;objects for exact operands and inexact objects for inexact operands.
   ;;
-  (define who 'floor)
-
-  (define (floor x)
+  (define* (floor x)
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
@@ -8181,9 +8084,7 @@
   ;;Return the smallest integer object not smaller than X.  Return exact
   ;;objects for exact operands and inexact objects for inexact operands.
   ;;
-  (define who 'ceiling)
-
-  (define (ceiling x)
+  (define* (ceiling x)
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
@@ -8224,9 +8125,7 @@
   ;;halfway.   Return  exact  objects  for exact  operands  and  inexact
   ;;objects for inexact operands.
   ;;
-  (define who 'round)
-
-  (define (round x)
+  (define* (round x)
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
@@ -8269,9 +8168,7 @@
   ;;Return the integer  object closest to X whose absolute  value is not
   ;;larger than the absolute value of X.
   ;;
-  (define who 'truncate)
-
-  (define (truncate x)
+  (define* (truncate x)
     (cond-real-numeric-operand x
       ((fixnum?)	x)
       ((bignum?)	x)
@@ -8300,16 +8197,13 @@
   #| end of module |# )
 
 
-(define (random n)
-  (define who 'random)
-  (with-arguments-validation (who)
-      ((fixnum	n))
-    (cond (($fx> n 1)
-	   (foreign-call "ikrt_fxrandom" n))
-	  (($fx= n 1)
-	   0)
-	  (else
-	   (procedure-argument-violation who "incorrect argument" n)))))
+(define* (random {n fixnum?})
+  (cond (($fx> n 1)
+	 (foreign-call "ikrt_fxrandom" n))
+	(($fx= n 1)
+	 0)
+	(else
+	 (procedure-argument-violation __who__ "incorrect argument" n))))
 
 
 ;;;; common bitwise operations
@@ -8349,12 +8243,12 @@
 	 $bitwise-not-bignum)
   (define who 'bitwise-not)
 
-  (define (bitwise-not x)
+  (define* (bitwise-not x)
     (cond-exact-integer-operand x
       ((fixnum?)	($bitwise-not-fixnum x))
       ((bignum?)	($bitwise-not-bignum x))
       (else
-       (procedure-argument-violation who "expected exact integer as argument" x))))
+       (procedure-argument-violation __who__ "expected exact integer as argument" x))))
 
   (define ($bitwise-not-fixnum x)
     ($fxlognot x))
@@ -8369,30 +8263,29 @@
 	 $bitwise-and-fixnum-number	$bitwise-and-bignum-number
 	 $bitwise-and-fixnum-fixnum	$bitwise-and-fixnum-bignum
 	 $bitwise-and-bignum-fixnum	$bitwise-and-bignum-bignum)
-  (define who 'bitwise-and)
 
-  (define (binary-bitwise-and x y)
+  (define* (binary-bitwise-and x y)
     (cond-exact-integer-operand x
       ((fixnum?)	($bitwise-and-fixnum-number x y))
       ((bignum?)	($bitwise-and-bignum-number x y))
       (else
-       (%error-expected-integer x))))
+       (%error-not-exact-integer x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bitwise-and-fixnum-number x y)
+  (define* ($bitwise-and-fixnum-number x y)
     (cond-exact-integer-operand y
       ((fixnum?)	($bitwise-and-fixnum-fixnum x y))
       ((bignum?)	($bitwise-and-fixnum-bignum x y))
       (else
-       (%error-expected-integer y))))
+       (%error-not-exact-integer y))))
 
-  (define ($bitwise-and-bignum-number x y)
+  (define* ($bitwise-and-bignum-number x y)
     (cond-exact-integer-operand y
       ((fixnum?)	($bitwise-and-bignum-fixnum x y))
       ((bignum?)	($bitwise-and-bignum-bignum x y))
       (else
-       (%error-expected-integer y))))
+       (%error-not-exact-integer y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -8410,11 +8303,6 @@
   (define ($bitwise-and-bignum-bignum x y)
     (foreign-call "ikrt_bnbnlogand" x y))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-expected-integer x)
-    (procedure-argument-violation who "expected exact integer as argument" x))
-
   #| end of module: binary-bitwise-and |# )
 
 
@@ -8422,30 +8310,29 @@
 	 $bitwise-ior-fixnum-number	$bitwise-ior-bignum-number
 	 $bitwise-ior-fixnum-fixnum	$bitwise-ior-fixnum-bignum
 	 $bitwise-ior-bignum-fixnum	$bitwise-ior-bignum-bignum)
-  (define who 'bitwise-ior)
 
-  (define (binary-bitwise-ior x y)
+  (define* (binary-bitwise-ior x y)
     (cond-exact-integer-operand x
       ((fixnum?)	($bitwise-ior-fixnum-number x y))
       ((bignum?)	($bitwise-ior-bignum-number x y))
       (else
-       (%error-expected-integer x))))
+       (%error-not-exact-integer x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bitwise-ior-fixnum-number x y)
+  (define* ($bitwise-ior-fixnum-number x y)
     (cond-exact-integer-operand y
       ((fixnum?)	($bitwise-ior-fixnum-fixnum x y))
       ((bignum?)	($bitwise-ior-fixnum-bignum x y))
       (else
-       (%error-expected-integer y))))
+       (%error-not-exact-integer y))))
 
-  (define ($bitwise-ior-bignum-number x y)
+  (define* ($bitwise-ior-bignum-number x y)
     (cond-exact-integer-operand y
       ((fixnum?)	($bitwise-ior-bignum-fixnum x y))
       ((bignum?)	($bitwise-ior-bignum-bignum x y))
       (else
-       (%error-expected-integer y))))
+       (%error-not-exact-integer y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -8463,11 +8350,6 @@
   (define ($bitwise-ior-bignum-bignum x y)
     (foreign-call "ikrt_bnbnlogor" x y))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-expected-integer x)
-    (procedure-argument-violation who "expected exact integer as argument" x))
-
   #| end of module: binary-bitwise-ior |# )
 
 
@@ -8475,30 +8357,29 @@
 	 $bitwise-xor-fixnum-number	$bitwise-xor-bignum-number
 	 $bitwise-xor-fixnum-fixnum	$bitwise-xor-fixnum-bignum
 	 $bitwise-xor-bignum-fixnum	$bitwise-xor-bignum-bignum)
-  (define who 'bitwise-xor)
 
-  (define (binary-bitwise-xor x y)
+  (define* (binary-bitwise-xor x y)
     (cond-exact-integer-operand x
       ((fixnum?)	($bitwise-xor-fixnum-number x y))
       ((bignum?)	($bitwise-xor-bignum-number x y))
       (else
-       (%error-expected-integer x))))
+       (%error-not-exact-integer x))))
 
 ;;; --------------------------------------------------------------------
 
-  (define ($bitwise-xor-fixnum-number x y)
+  (define* ($bitwise-xor-fixnum-number x y)
     (cond-exact-integer-operand y
       ((fixnum?)	($bitwise-xor-fixnum-fixnum x y))
       ((bignum?)	($bitwise-xor-fixnum-bignum x y))
       (else
-       (%error-expected-integer y))))
+       (%error-not-exact-integer y))))
 
-  (define ($bitwise-xor-bignum-number x y)
+  (define* ($bitwise-xor-bignum-number x y)
     (cond-exact-integer-operand y
       ((fixnum?)	($bitwise-xor-bignum-fixnum x y))
       ((bignum?)	($bitwise-xor-bignum-bignum x y))
       (else
-       (%error-expected-integer y))))
+       (%error-not-exact-integer y))))
 
 ;;; --------------------------------------------------------------------
 
@@ -8530,85 +8411,63 @@
 		   (bitwise-arithmetic-shift-left (binary-bitwise-xor x1 y1)
 						  D))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%error-expected-integer x)
-    (procedure-argument-violation who "expected exact integer as argument" x))
-
   #| end of module: binary-bitwise-xor |# )
 
 
 ;;;; uncommon bitwise operations
 
-(define (bitwise-if x y z)
-  (define who 'bitwise-if)
-  (with-arguments-validation (who)
-      ((exact-integer	x)
-       (exact-integer	y)
-       (exact-integer	z))
-    (bitwise-ior (bitwise-and x y)
-		 (bitwise-and (bitwise-not x) z))))
+(define* (bitwise-if {x exact-integer?} {y exact-integer?} {z exact-integer?})
+  (bitwise-ior (bitwise-and x y)
+	       (bitwise-and (bitwise-not x) z)))
 
 (module (bitwise-copy-bit-field
 	 bitwise-reverse-bit-field
 	 bitwise-rotate-bit-field)
 
-  (define (bitwise-copy-bit-field x i j n)
-    (define who 'bitwise-copy-bit-field)
-    (with-arguments-validation (who)
-	((exact-integer		x)
-	 (exact-integer		i)
-	 (exact-integer		j)
-	 (exact-integer		n)
-	 (index-order		i j))
-      (bitwise-if (sll (sub1 (sll 1 (- j i))) i)
-		  (sll n i)
-		  x)))
+  (define* (bitwise-copy-bit-field {x exact-integer?} {i exact-integer?} {j exact-integer?} {n exact-integer?})
+    (assert-index-order i j)
+    (bitwise-if (sll (sub1 (sll 1 (- j i))) i)
+		(sll n i)
+		x))
 
-  (define (bitwise-reverse-bit-field N start end)
-    (define who 'bitwise-reverse-bit-field)
-    (with-arguments-validation (who)
-	((exact-integer			N)
-	 (non-negative-exact-integer	start)
-	 (non-negative-exact-integer	end)
-	 (index-order			start end))
-      (let ((width (- end start)))
-	(if (positive? width)
-	    (let loop ((reversed	0)
-		       (field	(bitwise-bit-field N start end))
-		       (width	width))
-	      (if (zero? width)
-		  (bitwise-copy-bit-field N start end reversed)
-		(if (zero? (bitwise-and field 1))
-		    (loop (bitwise-arithmetic-shift reversed 1)
-			  (bitwise-arithmetic-shift-right field 1)
-			  (- width 1))
-		  (loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
+  (define* (bitwise-reverse-bit-field {N exact-integer?}
+				      {start non-negative-exact-integer?}
+				      {end   non-negative-exact-integer?})
+    (assert-index-order start end)
+    (let ((width (- end start)))
+      (if (positive? width)
+	  (let loop ((reversed	0)
+		     (field	(bitwise-bit-field N start end))
+		     (width	width))
+	    (if (zero? width)
+		(bitwise-copy-bit-field N start end reversed)
+	      (if (zero? (bitwise-and field 1))
+		  (loop (bitwise-arithmetic-shift reversed 1)
 			(bitwise-arithmetic-shift-right field 1)
-			(- width 1)))))
-	  N))))
+			(- width 1))
+		(loop (bitwise-ior (bitwise-arithmetic-shift reversed 1) 1)
+		      (bitwise-arithmetic-shift-right field 1)
+		      (- width 1)))))
+	N)))
 
-  (define (bitwise-rotate-bit-field N start end count)
-    (define who 'bitwise-rotate-bit-field)
-    (with-arguments-validation (who)
-	((exact-integer			N)
-	 (non-negative-exact-integer	start)
-	 (non-negative-exact-integer	end)
-	 (non-negative-exact-integer	count)
-	 (index-order			start end))
-      (let ((width (- end start)))
-	(if (positive? width)
-	    (let* ((count  (mod count width))
-		   (field0 (bitwise-bit-field N start end))
-		   (field1 (bitwise-arithmetic-shift-left field0 count))
-		   (field2 (bitwise-arithmetic-shift-right field0 (- width count)))
-		   (field  (bitwise-ior field1 field2)))
-	      (bitwise-copy-bit-field N start end field))
-	  N))))
+  (define* (bitwise-rotate-bit-field {N     exact-integer?}
+				    {start non-negative-exact-integer?}
+				    {end   non-negative-exact-integer?}
+				    {count non-negative-exact-integer?})
+    (assert-index-order start end)
+    (let ((width (- end start)))
+      (if (positive? width)
+	  (let* ((count  (mod count width))
+		 (field0 (bitwise-bit-field N start end))
+		 (field1 (bitwise-arithmetic-shift-left field0 count))
+		 (field2 (bitwise-arithmetic-shift-right field0 (- width count)))
+		 (field  (bitwise-ior field1 field2)))
+	    (bitwise-copy-bit-field N start end field))
+	N)))
 
-  (define-argument-validation (index-order who i j)
-    (<= i j)
-    (procedure-argument-violation who "indexes must be in nondescending order" i j))
+  (define-syntax-rule (assert-index-order i j)
+    (unless (<= i j)
+      (procedure-arguments-consistency-violation __who__ "indexes must be in nondescending order" i j)))
 
   #| end of module |# )
 
@@ -8620,7 +8479,7 @@
   (define (bitwise-arithmetic-shift-right integer offset)
     (%shift-right-arithmetic integer offset 'bitwise-arithmetic-shift-right))
 
-  (define (%shift-right-arithmetic integer offset who)
+  (define* (%shift-right-arithmetic integer offset who)
     ;;Shift right  the exact  INTEGER by OFFSET  and return  the result;
     ;;OFFSET must be non-negative.  Fill the introduced most significant
     ;;bits as appropriate to extend the sign of INTEGER.
@@ -8628,29 +8487,26 @@
     (unless (fixnum? offset)
       (raise
        (condition (make-implementation-restriction-violation)
-		  (make-who-condition who)
+		  (make-who-condition __who__)
 		  (make-message-condition "expected fixnum as shift offset argument")
 		  (make-irritants-condition (list offset)))))
     (cond-exact-integer-operand integer
       ((fixnum?)
        (if ($fx>= offset 0)
 	   ($fxsra integer offset)
-	 (%error-offset-non-negative who offset)))
+	 (%error-offset-non-negative offset)))
       ((bignum?)
        (cond (($fxpositive? offset)
 	      (foreign-call "ikrt_bignum_shift_right" integer offset))
 	     (($fxzero? offset)
 	      integer)
 	     (else
-	      (%error-offset-non-negative who offset))))
+	      (%error-offset-non-negative offset))))
       (else
-       (%error-not-integer who offset))))
+       (%error-not-integer offset))))
 
-  (define (%error-offset-non-negative who obj)
-    (procedure-argument-violation who "offset must be non-negative" obj))
-
-  (define (%error-not-integer who obj)
-    (procedure-argument-violation who "expected exact integer as argument" obj))
+  (define-syntax-rule (%error-offset-non-negative obj)
+    (procedure-argument-violation __who__ "offset must be non-negative" obj))
 
 ;;; --------------------------------------------------------------------
 
@@ -8698,49 +8554,50 @@
 
 
 (module (bitwise-arithmetic-shift-left sll)
-  (define (sll integer offset)
+
+  (define* (sll integer offset)
     (%shift-left-logical integer offset 'sll))
 
-  (define (bitwise-arithmetic-shift-left integer offset)
+  (define* (bitwise-arithmetic-shift-left integer offset)
     (%shift-left-logical integer offset 'bitwise-arithmetic-shift-left))
 
   (define (%shift-left-logical integer offset who)
-    (unless (fixnum? offset)
-      (raise
-       (condition (make-implementation-restriction-violation)
-		  (make-who-condition who)
-		  (make-message-condition "expected fixnum as shift offset argument")
-		  (make-irritants-condition (list offset)))))
-    (cond-exact-integer-operand integer
-      ((fixnum?)
-       (cond (($fxpositive? offset)
-	      (foreign-call "ikrt_fixnum_shift_left" integer offset))
-	     (($fxzero? offset)
-	      integer)
-	     (else
-	      (%error-positive-offset who offset))))
-      ((bignum?)
-       (cond (($fxpositive? offset)
-	      (foreign-call "ikrt_bignum_shift_left" integer offset))
-	     (($fxzero? offset)
-	      integer)
-	     (else
-	      (%error-positive-offset who offset))))
-      (else
-       (procedure-argument-violation who "expected exact integer as argument" integer))))
+    (with-who who
+      (unless (fixnum? offset)
+	(raise
+	 (condition (make-implementation-restriction-violation)
+		    (make-who-condition __who__)
+		    (make-message-condition "expected fixnum as shift offset argument")
+		    (make-irritants-condition (list offset)))))
+      (cond-exact-integer-operand integer
+	((fixnum?)
+	 (cond (($fxpositive? offset)
+		(foreign-call "ikrt_fixnum_shift_left" integer offset))
+	       (($fxzero? offset)
+		integer)
+	       (else
+		(%error-positive-offset offset))))
+	((bignum?)
+	 (cond (($fxpositive? offset)
+		(foreign-call "ikrt_bignum_shift_left" integer offset))
+	       (($fxzero? offset)
+		integer)
+	       (else
+		(%error-positive-offset offset))))
+	(else
+	 (procedure-argument-violation __who__ "expected exact integer as argument" integer)))))
 
-  (define (%error-positive-offset who offset)
-    (procedure-argument-violation who "offset must be non-negative" offset))
+  (define-syntax-rule (%error-positive-offset offset)
+    (procedure-argument-violation __who__ "offset must be non-negative" offset))
 
   #| end of module |# )
 
 
-(define (bitwise-arithmetic-shift integer offset)
-  (define who 'bitwise-arithmetic-shift)
+(define* (bitwise-arithmetic-shift integer offset)
   (unless (fixnum? offset)
     (raise
      (condition (make-implementation-restriction-violation)
-		(make-who-condition who)
+		(make-who-condition __who__)
 		(make-message-condition "expected fixnum as shift offset argument")
 		(make-irritants-condition (list offset)))))
   (cond-exact-integer-operand integer
@@ -8755,7 +8612,7 @@
 	    (let ((offset^ (- offset)))
 	      (if (fixnum? offset^)
 		  ($fxsra integer offset^)
-		(procedure-argument-violation who "shift amount is too big" offset))))))
+		(procedure-argument-violation __who__ "shift amount is too big" offset))))))
 
     ((bignum?)
      (cond (($fxpositive? offset)
@@ -8768,106 +8625,58 @@
 	    (let ((offset^ (- offset)))
 	      (if (fixnum? offset^)
 		  (foreign-call "ikrt_bignum_shift_right" integer offset^)
-		(procedure-argument-violation who "shift amount is too big" offset))))))
+		(procedure-argument-violation __who__ "shift amount is too big" offset))))))
 
     (else
-     (procedure-argument-violation who "not an exact integer" integer))))
+     (procedure-argument-violation __who__ "not an exact integer" integer))))
 
-
-(define (bitwise-length n)
+(define* (bitwise-length n)
   (cond-exact-integer-operand n
     ((fixnum?)	(fxlength n))
     ((bignum?)	(foreign-call "ikrt_bignum_length" n))
     (else
-     (procedure-argument-violation 'bitwise-length "not an exact integer" n))))
+     (procedure-argument-violation __who__ "not an exact integer" n))))
 
-
-(module (bitwise-copy-bit)
-  (define who 'bitwise-copy-bit)
+(define* (bitwise-copy-bit {n exact-integer?} {idx non-negative-exact-integer?} {bit bit-value?})
+  (define (%error-unrepresentable-result)
+    (procedure-arguments-consistency-violation __who__ "unrepresentable result" n idx bit))
+  (if (fixnum? idx)
+      (if (fxzero? bit)
+	  (if (bitwise-bit-set? n idx)
+	      (bitwise-and n (bitwise-not (sll 1 idx)))
+	    n)
+	;;Here we know BIT is 1.
+	(cond ((bitwise-bit-set? n idx)
+	       n)
+	      ((>= n 0)
+	       (+ n (sll 1 idx)))
+	      (else
+	       (bitwise-not (bitwise-and (bitwise-not n)
+					 (bitwise-not (sll 1 idx)))))))
+    ;;Here we know IDX is a bignum.
+    (if (fxzero? bit)
+	(if (non-negative? n)
+	    n
+	  (%error-unrepresentable-result))
+      ;;Here we know BIT is 1.
+      (if (negative? n)
+	  n
+	(%error-unrepresentable-result)))))
 
-  (define (bitwise-copy-bit n idx bit)
-    (cond ((fixnum? idx)
-	   (cond ((fx< idx 0)
-		  (procedure-argument-violation who "negative bit index" idx))
-		 ((or (fixnum? n) (bignum? n))
-		  (do-copy-bit n idx bit))
-		 (else
-		  (procedure-argument-violation who "not an exact integer" n))))
-	  ((bignum? idx)
-	   (unless (or (fixnum? n) (bignum? n))
-	     (procedure-argument-violation who "not an exact integer" n))
-	   (if ($bignum-positive? idx)
-	       (case bit
-		 ((0)
-		  (if (>= n 0)
-		      n
-		    (procedure-argument-violation who "unrepresentable result")))
-		 ((1)
-		  (if (< n 0)
-		      n
-		    (procedure-argument-violation who "unrepresentable result")))
-		 (else
-		  (procedure-argument-violation who "bit must be either 0 or 1" bit)))
-	     (procedure-argument-violation who "negative bit index" idx)))
-	  (else
-	   (procedure-argument-violation who "index is not an exact integer" idx))))
-
-  (define (do-copy-bit n idx bit)
-    (case bit
-      ((0)
-       (if (bitwise-bit-set? n idx)
-	   (bitwise-and n (bitwise-not (sll 1 idx)))
-	 n))
-      ((1)
-       (cond ((bitwise-bit-set? n idx)
-	      n)
-	     ((>= n 0)
-	      (+ n (sll 1 idx)))
-	     (else
-	      (bitwise-not (bitwise-and (bitwise-not n)
-					(bitwise-not (sll 1 idx)))))))
-      (else
-       (procedure-argument-violation who "bit must be either 0 or 1" bit))))
-
-  #| end of module |# )
-
-
-(define (bitwise-bit-field integer idx1 idx2)
-  (define who 'bitwise-bit-field)
-  (cond ((and (fixnum? idx1)
-	      (fx>= idx1 0))
-	 (cond ((and (fixnum? idx2)
-		     ($fx>= idx2 0))
-		(if ($fx<= idx1 idx2)
-		    (if (or (fixnum? integer)
-			    (bignum? integer))
-			(bitwise-and (sra integer idx1)
-				     (- (sll 1 (- idx2 idx1)) 1))
-		      (procedure-argument-violation who "not an exact integer" integer))
-		  (procedure-argument-violation who "invalid order for indices" idx1 idx2)))
-	       ((not (fixnum? idx2))
-		(procedure-argument-violation who "invalid index" idx2))
-	       (else
-		(procedure-argument-violation who "negative index" idx2))))
-	((not (fixnum? idx1))
-	 (procedure-argument-violation who "invalid index" idx1))
-	(else
-	 (procedure-argument-violation who "negative index" idx1))))
+(define* (bitwise-bit-field {integer exact-integer?} {idx1 non-negative-fixnum?} {idx2 non-negative-fixnum?})
+  (unless ($fx<= idx1 idx2)
+    (procedure-arguments-consistency-violation __who__ "invalid order for indices" idx1 idx2))
+  (bitwise-and (sra integer idx1)
+	       (- (sll 1 (- idx2 idx1)) 1)))
 
 
 ;;;; debugging functions
 
-(define (bignum->bytevector bigN)
-  (define who 'bignum->bytevector)
-  (with-arguments-validation (who)
-      ((bignum	bigN))
-    (foreign-call "ikrt_debug_bignum_to_bytevector" bigN)))
+(define* (bignum->bytevector {bigN bignum?})
+  (foreign-call "ikrt_debug_bignum_to_bytevector" bigN))
 
-(define (bytevector->bignum bv)
-  (define who 'bytevector->bignum)
-  (with-arguments-validation (who)
-      ((bytevector	bv))
-    (foreign-call "ikrt_debug_bignum_from_bytevector" bv)))
+(define* (bytevector->bignum {bv bytevector?})
+  (foreign-call "ikrt_debug_bignum_from_bytevector" bv))
 
 
 ;;;; done

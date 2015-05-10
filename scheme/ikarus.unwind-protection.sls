@@ -29,6 +29,10 @@
     unwinding-call/cc
     run-unwind-protection-cleanup-upon-exit?)
   (import (except (vicare)
+		  ;;FIXME To be removed at the next boot image rotation.
+		  non-reinstatable-violation
+		  ;;;
+
 		  unwinding-call/cc
 		  run-unwind-protection-cleanup-upon-exit?)
     ;;FIXME To be removed at the next boot image rotation.

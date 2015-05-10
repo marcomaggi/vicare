@@ -119,14 +119,71 @@
   #t)
 
 
-(parametrise ((check-test-name	'expression-return-value-violation))
+(parametrise ((check-test-name	'procedure-signature-return-value-violation))
 
   (check
-      (expression-return-value-violation? (make-expression-return-value-violation 1 'fixnum? "ciao"))
+      (procedure-signature-return-value-violation? (make-procedure-signature-return-value-violation 1 'fixnum? "ciao"))
     => #t)
 
   (check
-      (assertion-violation? (make-expression-return-value-violation 1 'fixnum? "ciao"))
+      (assertion-violation? (make-procedure-signature-return-value-violation 1 'fixnum? "ciao"))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (guard (E ((procedure-signature-return-value-violation? E)
+		 (condition-who E))
+		(else E))
+	(procedure-signature-return-value-violation 'ciao "message" 1 'fixnum? "ciao"))
+    => 'ciao)
+
+  (check
+      (guard (E ((procedure-signature-return-value-violation? E)
+		 (condition-message E))
+		(else E))
+	(procedure-signature-return-value-violation 'ciao "message" 1 'fixnum? "ciao"))
+    => "message")
+
+  (check
+      (guard (E ((procedure-signature-return-value-violation? E)
+		 (condition-irritants E))
+		(else E))
+	(procedure-signature-return-value-violation 'ciao "message" 1 'fixnum? "ciao"))
+    => '("ciao"))
+
+  (check
+      (guard (E ((procedure-signature-return-value-violation? E)
+		 (procedure-signature-return-value-violation.one-based-return-value-index E))
+		(else E))
+	(procedure-signature-return-value-violation 'ciao "message" 1 'fixnum? "ciao"))
+    => 1)
+
+  (check
+      (guard (E ((procedure-signature-return-value-violation? E)
+		 (procedure-signature-return-value-violation.failed-expression E))
+		(else E))
+	(procedure-signature-return-value-violation 'ciao "message" 1 'fixnum? "ciao"))
+    => 'fixnum?)
+
+  (check
+      (guard (E ((procedure-signature-return-value-violation? E)
+		 (procedure-signature-return-value-violation.offending-value E))
+		(else E))
+	(procedure-signature-return-value-violation 'ciao "message" 1 'fixnum? "ciao"))
+    => "ciao")
+
+  #t)
+
+
+(parametrise ((check-test-name	'expression-return-value-violation))
+
+  (check
+      (expression-return-value-violation? (make-expression-return-value-violation))
+    => #t)
+
+  (check
+      (assertion-violation? (make-expression-return-value-violation))
     => #t)
 
 ;;; --------------------------------------------------------------------
@@ -135,43 +192,22 @@
       (guard (E ((expression-return-value-violation? E)
 		 (condition-who E))
 		(else E))
-	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
+	(expression-return-value-violation 'ciao "message" 1 2 3))
     => 'ciao)
 
   (check
       (guard (E ((expression-return-value-violation? E)
 		 (condition-message E))
 		(else E))
-	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
+	(expression-return-value-violation 'ciao "message" 1 2 3))
     => "message")
 
   (check
       (guard (E ((expression-return-value-violation? E)
 		 (condition-irritants E))
 		(else E))
-	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
+	(expression-return-value-violation 'ciao "message" 1 2 3))
     => '(1 2 3))
-
-  (check
-      (guard (E ((expression-return-value-violation? E)
-		 (expression-return-value-violation.index E))
-		(else E))
-	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
-    => 1)
-
-  (check
-      (guard (E ((expression-return-value-violation? E)
-		 (expression-return-value-violation.failed-expression E))
-		(else E))
-	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
-    => 'fixnum?)
-
-  (check
-      (guard (E ((expression-return-value-violation? E)
-		 (expression-return-value-violation.offending-value E))
-		(else E))
-	(expression-return-value-violation 'ciao "message" 1 'fixnum? "ciao" 1 2 3))
-    => "ciao")
 
   #t)
 

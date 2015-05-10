@@ -26,25 +26,38 @@
 
 
 #!vicare
-(import (except (vicare) catch)
-  (vicare checks)
+(import (vicare)
+  (except (vicare checks)
+	  check-for-assertion-violation)
   (vicare system $vectors))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare vector functions\n")
 
 
-;;;; syntax helpers
+;;;; helpers
 
-(define-syntax catch
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
-	       (else E))
-       (begin . ?body)))))
+(define-syntax check-for-assertion-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (cdr (condition-irritants E)))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
+    ))
+
+(define-syntax check-for-assertion-irritants
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (condition-irritants E))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
+    ))
 
 
 (parametrise ((check-test-name	'vector-length))
@@ -63,9 +76,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (catch #f
-	(vector-length 123))
+  (check-for-assertion-violation
+      (vector-length 123)
     => '(123))
 
 ;;; --------------------------------------------------------------------
@@ -94,43 +106,36 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vector
 
-  (check
-      (catch #f
-	(vector-ref 123 1))
+  (check-for-assertion-violation
+      (vector-ref 123 1)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check
-      (catch #f
-  	(vector-ref '#(c i a o) #\d))
-    => '(#\d #(c i a o)))
+  (check-for-assertion-violation
+      (vector-ref '#(c i a o) #\d)
+    => '(#\d))
 
-  (check
-      (catch #f
-  	(vector-ref '#(c i a o) 'd))
-    => '(d #(c i a o)))
+  (check-for-assertion-violation
+      (vector-ref '#(c i a o) 'd)
+    => '(d))
 
-  (check
-      (catch #f
-	(vector-ref '#() -1))
-    => '(-1 #()))
+  (check-for-assertion-violation
+      (vector-ref '#() -1)
+    => '(-1))
 
-  (check
-      (catch #f
-	(vector-ref '#() (+ 1 (greatest-fixnum))))
-    => (list (+ 1 (greatest-fixnum)) '#()))
+  (check-for-assertion-violation
+      (vector-ref '#() (+ 1 (greatest-fixnum)))
+    => (list (+ 1 (greatest-fixnum))))
 
-  (check
-      (catch #f
-	(vector-ref '#() 0))
-    => '(0 #()))
+  (check-for-assertion-violation
+      (vector-ref '#() 0)
+    => '(0))
 
-  (check
-      (catch #f
-	(vector-ref '#(a b c) 10))
-    => '(10 #(a b c)))
+  (check-for-assertion-violation
+      (vector-ref '#(a b c) 10)
+    => '(10))
 
   #t)
 
@@ -158,38 +163,32 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vector
 
-  (check
-      (catch #f
-	(vector-set! 123 1 'a))
+  (check-for-assertion-violation
+      (vector-set! 123 1 'a)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
-  (check
-      (catch #f
-	(vector-set! (vector 'a 'b 'c) 'a 'b))
-    => '(a #(a b c)))
+  (check-for-assertion-violation
+      (vector-set! (vector 'a 'b 'c) 'a 'b)
+    => '(a))
 
-  (check
-      (catch #f
-	(vector-set! (vector 'a 'b 'c) -1 'a))
-    => '(-1 #(a b c)))
+  (check-for-assertion-violation
+      (vector-set! (vector 'a 'b 'c) -1 'a)
+    => '(-1))
 
-  (check
-      (catch #f
-	(vector-set! (vector 'a 'b 'c) (+ 1 (greatest-fixnum)) 'a))
-    => (list (+ 1 (greatest-fixnum)) '#(a b c)))
+  (check-for-assertion-violation
+      (vector-set! (vector 'a 'b 'c) (+ 1 (greatest-fixnum)) 'a)
+    => (list (+ 1 (greatest-fixnum))))
 
-  (check
-      (catch #f
-	(vector-set! (vector) 0 'a))
-    => '(0 #()))
+  (check-for-assertion-violation
+      (vector-set! (vector) 0 'a)
+    => '(0))
 
-  (check
-      (catch #f
-	(vector-set! (vector 'a 'b 'c) 10 '9))
-    => `(10 #(a b c)))
+  (check-for-assertion-violation
+      (vector-set! (vector 'a 'b 'c) 10 '9)
+    => `(10))
 
   #t)
 
@@ -225,19 +224,18 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: length
 
-  (check	;not a number
-      (catch #f
-	(make-vector #\t 'A))
+  (check-for-assertion-violation ;not a number
+      (make-vector #\t 'A)
     => '(#\t))
 
-  (check	;negative
-      (catch #f
-	(make-vector -1 'A))
+  ;;negative
+  (check-for-assertion-violation
+      (make-vector -1 'A)
     => '(-1))
 
-  (check	;not a fixnum
-      (catch #f
-	(make-vector (+ 1 (greatest-fixnum)) 'A))
+  ;;not a fixnum
+  (check-for-assertion-violation
+      (make-vector (+ 1 (greatest-fixnum)) 'A)
     => (list (+ 1 (greatest-fixnum))))
 
   #t)
@@ -319,69 +317,68 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vector
 
-  (check
-      (catch #f
-	(subvector 123 1 1))
+  (check-for-assertion-violation
+      (subvector 123 1 1)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: start index
 
-  (check	;not a number
-      (catch #f
-	(subvector '#(a b c d) #t 1))
+  ;;not a number
+  (check-for-assertion-violation
+      (subvector '#(a b c d) #t 1)
     => '(#t))
 
-  (check	;negative
-      (catch #f
-	(subvector '#(a b c d) -1 1))
+  ;;negative
+  (check-for-assertion-violation
+      (subvector '#(a b c d) -1 1)
     => '(-1))
 
-  (check	;not a fixnum
-      (catch #f
-	(subvector '#(a b c d) (+ 1 (greatest-fixnum)) 1))
+  ;;not a fixnum
+  (check-for-assertion-violation
+      (subvector '#(a b c d) (+ 1 (greatest-fixnum)) 1)
     => (list (+ 1 (greatest-fixnum))))
 
-  (check	;too big for vector
-      (catch #f
-	(subvector '#(a b c d) 5 6))
-    => '(5 4))
+  ;;too big for vector
+  (check-for-assertion-violation
+      (subvector '#(a b c d) 5 6)
+    => '(5))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: end index
 
-  (check	;not a number
-      (catch #f
-	(subvector '#(a b c d) 1 #t))
+  ;;not a number
+  (check-for-assertion-violation
+      (subvector '#(a b c d) 1 #t)
     => '(#t))
 
-  (check	;negative
-      (catch #f
-	(subvector '#(a b c d) 1 -1))
+  ;;negative
+  (check-for-assertion-violation
+      (subvector '#(a b c d) 1 -1)
     => '(-1))
 
-  (check	;not a fixnum
-      (catch #f
-	(subvector '#(a b c d) 1 (+ 1 (greatest-fixnum))))
+  ;;not a fixnum
+  (check-for-assertion-violation
+      (subvector '#(a b c d) 1 (+ 1 (greatest-fixnum)))
     => (list (+ 1 (greatest-fixnum))))
 
-  (check	;too big for vector
-      (catch #f
-	(subvector '#(a b c d) 2 6))
-    => '(6 4))
+  ;;too big for vector
+  (check-for-assertion-violation
+      (subvector '#(a b c d) 2 6)
+    => '(6))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: indexes
 
-  (check	;incorrect order
-      (catch #f
-	(subvector '#(a b c d) 2 1))
-    => '(2 1))
+  ;;incorrect order
+  (check-for-assertion-violation
+      (subvector '#(a b c d) 2 1)
+    => '(1))
 
   #t)
 
 
-(parametrise ((check-test-name	'vector-copy))
+(parametrise ((check-test-name	'vector-copy-base))
 
   (check
       (vector-copy '#())
@@ -398,9 +395,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vector
 
-  (check
-      (catch #f
-	(vector-copy 123))
+  (check-for-assertion-violation
+      (vector-copy 123)
     => '(123))
 
   #t)
@@ -441,17 +437,15 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vector
 
-  (check
-      (catch #f
-	(vector-resize 123 1))
+  (check-for-assertion-violation
+      (vector-resize 123 1)
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: new-len
 
-  (check
-      (catch #f
-	(vector-resize '#(1 2 3) -123))
+  (check-for-assertion-violation
+      (vector-resize '#(1 2 3) -123)
     => '(-123))
 
   #t)
@@ -474,9 +468,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(vector->list 123))
+  (check-for-assertion-violation
+      (vector->list 123)
     => '(123))
 
   #t)
@@ -499,25 +492,25 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check	;not a list
-      (catch #f
-	(list->vector 123))
+  ;;not a list
+  (check-for-assertion-irritants
+      (list->vector 123)
     => '(123))
 
-  (check	;not a proper list
-      (catch #f
-	(list->vector '(a b . c)))
+  ;;not a proper list
+  (check-for-assertion-irritants
+      (list->vector '(a b . c))
     => '((a b . c)))
 
-  (check	;not a proper list
-      (catch #f
-	(list->vector '(a . c)))
+  ;;not a proper list
+  (check-for-assertion-irritants
+      (list->vector '(a . c))
     => '((a . c)))
 
+  ;;circular list
   (let ((circ '#0=(a b c . #0#)))
-    (check	;circular list
-	(catch #f
-	  (list->vector circ))
+    (check-for-assertion-irritants
+	(list->vector circ)
       => (list circ)))
 
   #t)
@@ -592,35 +585,29 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation
 
-  (check
-      (catch #f
-	(vector-append 123))
+  (check-for-assertion-violation
+      (vector-append 123)
     => '(123))
 
-  (check
-      (catch #f
-	(vector-append '#(a) 123))
+  (check-for-assertion-violation
+      (vector-append '#(a) 123)
     => '(123))
 
-  (check
-      (catch #f
-	(vector-append '#(a) '#(b) 123))
+  (check-for-assertion-violation
+      (vector-append '#(a) '#(b) 123)
     => '(123))
 
-  (check
-      (catch #f
-	(vector-append '#(a) '#(b) '#(c) 123))
+  (check-for-assertion-violation
+      (vector-append '#(a) '#(b) '#(c) 123)
     => '(123))
 
-  (check
-      (catch #f
-	(vector-append '#(a) '#(b) '#(c) '#(d) 123))
-    => '(123))
+  (check-for-procedure-argument-violation
+      (vector-append '#(a) '#(b) '#(c) '#(d) 123)
+    => '(vector-append (123)))
 
-  (check
-      (catch #f
-	(vector-append '#(a) '#(b) '#(c) '#(d) '#(e) 123))
-    => '(123))
+  (check-for-procedure-argument-violation
+      (vector-append '#(a) '#(b) '#(c) '#(d) '#(e) 123)
+    => '(vector-append (123)))
 
   #t)
 
@@ -701,43 +688,36 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: procedure
 
-  (check
-      (catch #f
-	(vector-for-each 123 '#()))
+  (check-for-assertion-violation
+      (vector-for-each 123 '#())
     => '(123))
 
-  (check
-      (catch #f
-	(vector-for-each 123 '#() '#()))
+  (check-for-assertion-violation
+      (vector-for-each 123 '#() '#())
     => '(123))
 
-  (check
-      (catch #f
-	(vector-for-each 123 '#() '#() '#()))
+  (check-for-assertion-violation
+      (vector-for-each 123 '#() '#() '#())
     => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vectors
 
-  (check
-      (catch #f
-	(vector-for-each values 123))
+  (check-for-assertion-violation
+      (vector-for-each values 123)
     => '(123))
 
-  (check
-      (catch #f
-	(vector-for-each values '#() 123))
+  (check-for-assertion-violation
+      (vector-for-each values '#() 123)
     => '(123))
 
-  (check
-      (catch #f
-	(vector-for-each values '#() '#() 123))
-    => '(123))
+  (check-for-procedure-argument-violation
+      (vector-for-each values '#() '#() 123)
+    => '(vector-for-each (123)))
 
-  (check
-      (catch #f
-	(vector-for-each values '#() '#() '#() 123))
-    => '(123))
+  (check-for-procedure-argument-violation
+      (vector-for-each values '#() '#() '#() 123)
+    => '(vector-for-each (123)))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe operation
@@ -789,9 +769,8 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: vector
 
-  (check
-      (catch #f
-	(vector-fill! 123 'a))
+  (check-for-assertion-violation
+      (vector-fill! 123 'a)
     => '(123))
 
   #t)
@@ -1046,6 +1025,18 @@
 	 (#\a . #\A)))
 
   (check
+      (vector-fold-left (lambda (nil x y z)
+			  (cons (list x y z) nil))
+	'()
+	'#(#\a #\b #\c #\d)
+	'#(#\A #\B #\C #\D)
+	'#(0 1 2 3))
+    => '((#\d #\D 3)
+	 (#\c #\C 2)
+	 (#\b #\B 1)
+	 (#\a #\A 0)))
+
+  (check
       (vector-fold-left (lambda (nil x) (cons x nil))
 	'()
 	'#())
@@ -1080,6 +1071,18 @@
 	 (#\b . #\B)
 	 (#\c . #\C)
 	 (#\d . #\D)))
+
+  (check
+      (vector-fold-right (lambda (x y z nil)
+			   (cons (list x y z) nil))
+	'()
+	'#(#\a #\b #\c #\d)
+	'#(#\A #\B #\C #\D)
+	'#(0 1 2 3))
+    => '((#\a #\A 0)
+	 (#\b #\B 1)
+	 (#\c #\C 2)
+	 (#\d #\D 3)))
 
   (check
       (vector-fold-right (lambda (x nil) (cons x nil))

@@ -175,21 +175,38 @@
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
-  (prefix (only (ikarus.options)
-		verbose?)
-	  option.)
-  (prefix (ikarus.compiler) compiler.)
-  #;(only (psyntax.expander) expand-library)
-  (prefix (only (psyntax system $bootstrap)
-		current-library-collection
-		find-library-by-name)
-	  bootstrap.)
+  ;;This library is from the old boot image.
+  (prefix (psyntax system $bootstrap)	bootstrap.)
+  ;;The following libraries are read, expanded and compiled from the source tree.
+  (prefix (ikarus.options)		option.)
+  (prefix (ikarus.compiler)		compiler.)
   (prefix (only (ikarus.fasl.write)
 		writing-boot-image?)
 	  fasl-write.))
 
 (module (BOOT-IMAGE-MAJOR-VERSION BOOT-IMAGE-MINOR-VERSION)
   (include "ikarus.config.scm" #t))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax if-building-rotation-boot-image?
+  (lambda (stx)
+    (define rotating?
+      (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
+    (fprintf (current-error-port)
+	     "makefile.sps: conditional for ~a boot image\n"
+	     (if rotating? "rotation" "normal"))
+    (syntax-case stx ()
+      ((_ ?true-body)
+       (if rotating? #'?true-body #'(module ())))
+      ((_ ?true-body ?false-body)
+       (if rotating? #'?true-body #'?false-body))
+      )))
+
+;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
+(if-building-rotation-boot-image?
+    (import (vicare libraries))
+  (import (only (vicare) expand-library)))
 
 
 ;;;; configuration inspection
@@ -340,6 +357,7 @@
     "ikarus.string-to-number.sls"
     "ikarus.bignums.sls"
     "ikarus.ratnums.sls"
+    "ikarus.conditions.sls"
     "ikarus.numerics.flonums.sls"
     "ikarus.numerics.generic-arithmetic.sls"
     "ikarus.numerics.flonum-conversion.sls"
@@ -348,7 +366,6 @@
     "ikarus.numerics.flonums.div-and-mod.sls"
     "ikarus.numerics.bitwise.misc.sls"
     "ikarus.numerics.complex-numbers.sls"
-    "ikarus.conditions.sls"
     "ikarus.unwind-protection.sls"
     "ikarus.guardians.sls"
     "ikarus.symbol-table.sls"
@@ -368,7 +385,7 @@
     "ikarus.fasl.write.sls"
     "ikarus.fasl.read.sls"
     "ikarus.compiler.sls"
-    "ikarus.library-utils.sls"
+    "psyntax.library-utils.sls"
     "psyntax.compat.sls"
     "psyntax.library-manager.sls"
     "psyntax.internal.sls"
@@ -714,8 +731,18 @@
 							      &interrupted-rcd)))
     (&source-position				($core-rtd . (&source-position-rtd
 							      &source-position-rcd)))
+    (&procedure-precondition-violation		($core-rtd . (&procedure-precondition-violation-rtd
+							      &procedure-precondition-violation-rcd)))
+    (&procedure-postcondition-violation		($core-rtd . (&procedure-postcondition-violation-rtd
+							      &procedure-postcondition-violation-rcd)))
     (&procedure-argument-violation		($core-rtd . (&procedure-argument-violation-rtd
 							      &procedure-argument-violation-rcd)))
+    (&procedure-signature-argument-violation	($core-rtd . (&procedure-signature-argument-violation-rtd
+							      &procedure-signature-argument-violation-rcd)))
+    (&procedure-signature-return-value-violation ($core-rtd . (&procedure-signature-return-value-violation-rtd
+							       &procedure-signature-return-value-violation-rcd)))
+    (&procedure-arguments-consistency-violation	($core-rtd . (&procedure-arguments-consistency-violation-rtd
+							      &procedure-arguments-consistency-violation-rcd)))
     (&expression-return-value-violation		($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
     (&non-reinstatable				($core-rtd . (&non-reinstatable-rtd
@@ -777,7 +804,7 @@
 
 
 (define-constant LIBRARY-LEGEND
-  ;;The library legend  lists all the library  that will be implemented  by the newly
+  ;;The library legend lists all the libraries  that will be implemented by the newly
   ;;built boot image.  If a library is  listed here: after building and loading a new
   ;;boot image, it is possible to IMPORT such library.
   ;;
@@ -796,7 +823,7 @@
   ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this list.
   ;;
   ;; abbr.              name			                visible? required?
-  '((v			(vicare)				#t	#t)
+  `((v			(vicare)				#t	#t)
     (r			(rnrs)					#t	#t)
     (r5			(rnrs r5rs)				#t	#t)
     (ct			(rnrs control)				#t	#t)
@@ -857,8 +884,8 @@
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
 ;;;
-;; These   libraries  are   used   by  the   R6RS   functions  NULL-ENVIRONMENT   and
-;; SCHEME-REPORT-ENVIRONMENT.
+    ;; These   libraries  are   used   by  the   R6RS   functions  NULL-ENVIRONMENT   and
+    ;; SCHEME-REPORT-ENVIRONMENT.
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
@@ -869,10 +896,13 @@
 ;;;
     ;;FIXME At  the next boot  image rotation  these libraries must  become required.
     ;;(Marco Maggi; Mon Apr 14, 2014)
-    ($type-specs	(vicare expander object-type-specs)	#t	#f)
-    ($expander-tags	(vicare expander tags)			#t	#f)
-    ($expander		(vicare expander)			#t	#f)
-    ))
+    ,@(if-building-rotation-boot-image?
+	  '(($type-specs	(vicare expander object-type-specs)	#t	#t)
+	    ($expander-tags	(vicare expander tags)			#t	#t)
+	    ($expander		(vicare expander)			#t	#t))
+	'(($type-specs		(vicare expander object-type-specs)	#t	#f)
+	  ($expander-tags	(vicare expander tags)			#t	#f)
+	  ($expander		(vicare expander)			#t	#f)))))
 
 
 (define-constant IDENTIFIER->LIBRARY-MAP
@@ -1962,6 +1992,9 @@
     (vector-for-each				v r ba)
     (vector-length				v r ba se)
     (vector-empty?				v $language)
+    (non-empty-vector?				v $language)
+    (vectors-of-same-length?			v $language)
+    (list-of-vectors-of-same-length?		v $language)
     (vector-map					v r ba)
     (vector-for-all				v $language)
     (vector-exists				v $language)
@@ -1976,6 +2009,7 @@
     (vector-copy!				v $language)
     (vector-resize				v $language)
     (vector?					v r ba se)
+    (list-of-vectors?				v $language)
     (zero?					v r ba se)
     (...					v r ba sc se ne)
     (=>						v r ba ex se ne)
@@ -2308,6 +2342,9 @@
     (utf32->string				v r bv)
     (print-condition				v $language)
     (condition?					v r co)
+    (simple-condition?				v $language)
+    (list-of-conditions?			v $language)
+    (list-of-simple-conditions?			v $language)
     (compound-condition?			v $language)
     (condition-and-rtd?				v $language)
     (&assertion					v r co)
@@ -2386,6 +2423,7 @@
     (eval					v ev se)
     (raise					v r ex)
     (raise-continuable				v r ex)
+    (raise-non-continuable-standard-condition	v $language)
     (with-exception-handler			v r ex)
     (guard					v r ex)
     (binary-port?				v r ip)
@@ -2487,14 +2525,51 @@
     (errno-condition?				v $language)
     (&h_errno					v $language)
     (h_errno-condition?				v $language)
-    (&procedure-argument-violation		v $language)
-    (procedure-argument-violation?		v $language)
-    (&expression-return-value-violation		v $language)
-    (expression-return-value-violation?		v $language)
+;;;
+    (&procedure-precondition-violation		v $language)
+    (procedure-precondition-violation?		v $language)
+    (make-procedure-precondition-violation	v $language)
+;;;
+    (&procedure-postcondition-violation		v $language)
+    (make-procedure-postcondition-violation	v $language)
+    (procedure-postcondition-violation?		v $language)
+;;;
+    (&procedure-argument-violation				v $language)
+    (procedure-argument-violation?				v $language)
+    (make-procedure-argument-violation				v $language)
+    (procedure-argument-violation				v $language)
+;;;
+    (&procedure-signature-argument-violation				v $language)
+    (procedure-signature-argument-violation?				v $language)
+    (make-procedure-signature-argument-violation			v $language)
+    (procedure-signature-argument-violation.one-based-argument-index	v $language)
+    (procedure-signature-argument-violation.failed-expression		v $language)
+    (procedure-signature-argument-violation.offending-value		v $language)
+    (procedure-signature-argument-violation				v $language)
+;;;
+    (&procedure-signature-return-value-violation				v $language)
+    (make-procedure-signature-return-value-violation				v $language)
+    (procedure-signature-return-value-violation?				v $language)
+    (procedure-signature-return-value-violation.one-based-return-value-index	v $language)
+    (procedure-signature-return-value-violation.failed-expression		v $language)
+    (procedure-signature-return-value-violation.offending-value			v $language)
+    (procedure-signature-return-value-violation					v $language)
+;;;
+    (&procedure-arguments-consistency-violation		v $language)
+    (make-procedure-arguments-consistency-violation	v $language)
+    (procedure-arguments-consistency-violation?		v $language)
+    (procedure-arguments-consistency-violation		v $language)
+;;;
+    (&expression-return-value-violation					v $language)
+    (expression-return-value-violation?					v $language)
+    (make-expression-return-value-violation				v $language)
+    (expression-return-value-violation					v $language)
+;;;
     (&non-reinstatable				v $language)
     (make-non-reinstatable-violation		v $language)
     (non-reinstatable-violation?		v $language)
     (non-reinstatable-violation			v $language)
+;;;
     (lookahead-char				v r ip)
     (lookahead-u8				v r ip)
     (lookahead-two-u8				v $language)
@@ -2546,13 +2621,6 @@
     (condition-errno				v $language)
     (make-h_errno-condition			v $language)
     (condition-h_errno				v $language)
-    (make-procedure-argument-violation		v $language)
-    (procedure-argument-violation		v $language)
-    (make-expression-return-value-violation	v $language)
-    (expression-return-value-violation.index			v $language)
-    (expression-return-value-violation.failed-expression	v $language)
-    (expression-return-value-violation.offending-value		v $language)
-    (expression-return-value-violation		v $language)
     (latin-1-codec				v r ip)
     (make-transcoder				v r ip)
     (native-eol-style				v r ip)
@@ -3544,7 +3612,7 @@
     (label->syntactic-binding-descriptor		$expander)
     (label->syntactic-binding-descriptor/no-indirection	$expander)
 
-    ;;These are only for internal use by the expander.
+    ;;These are only for internal use by the psyntax.
     (make-syntactic-binding-descriptor/struct-type-name)
     (make-syntactic-binding-descriptor/record-type-name)
 
@@ -4427,12 +4495,15 @@
     ;;These are exported only by "(psyntax system $all)".
     (procedure-argument-validation-with-predicate)
     (return-value-validation-with-predicate)
+    (signature-rest-argument-validation-with-predicate)
     (any->symbol)
     (any->string)
 
     ))
 
 
+;;;; bootstrap library collection
+
 (define bootstrap-collection
   ;;A  collection of  LIBRARY structures  accessed  through a  closure.  The  LIBRARY
   ;;structure type is defined in the psyntax modules.
@@ -4446,11 +4517,11 @@
   ;;argument:  such argument  must be  a LIBRARY  structure and  it is  added to  the
   ;;collection if not already there.
   ;;
-  ;;The  initial value  is a  list  of LIBRARY  structures  built by  adding all  the
-  ;;libraries  in LIBRARY-LEGEND  which are  marked as  REQUIRED?.  Notice  that such
-  ;;structures  are built  by FIND-LIBRARY-BY-NAME,  which means  that the  libraries
-  ;;marked as  REQUIRED?  must  be already  interned in the  boot image  running this
-  ;;program.
+  ;;The initial  value is  a list  of old  boot image's  LIBRARY structures  built by
+  ;;adding all the libraries in LIBRARY-LEGEND which are marked as REQUIRED?.  Notice
+  ;;that  such structures  are built  by FIND-LIBRARY-BY-NAME,  which means  that the
+  ;;libraries marked  as REQUIRED?  must  be already interned  in the old  boot image
+  ;;running this program.
   ;;
   ;;To add  a REQUIRED? library  to a boot  image: first we have  to add an  entry to
   ;;LIBRARY-LEGEND marked  as non-REQUIRED?  and  build a temporary boot  image, then
@@ -4458,16 +4529,21 @@
   ;;image which will have the new library as REQUIRED?.
   ;;
   (let ((list-of-library-records
-	 (let next-library-entry ((entries LIBRARY-LEGEND))
-	   (define required?	cadddr)
-	   (define library-name	cadr)
-	   (cond ((null? entries)
-		  '())
-		 ((required? (car entries))
-		  (cons (bootstrap.find-library-by-name (library-name (car entries)))
-			(next-library-entry (cdr entries))))
-		 (else
-		  (next-library-entry (cdr entries)))))))
+	 (begin
+	   (fprintf (current-error-port) "initialising bootstrap library collection:")
+	   (let next-library-entry ((entries LIBRARY-LEGEND))
+	     (define entry.required?	cadddr)
+	     (define entry.library-name	cadr)
+	     (cond ((null? entries)
+		    '())
+		   ((entry.required? (car entries))
+		    (fprintf (current-error-port)
+			     " ~a" (entry.library-name (car entries)))
+		    (cons (bootstrap.find-library-by-name (entry.library-name (car entries)))
+			  (next-library-entry (cdr entries))))
+		   (else
+		    (next-library-entry (cdr entries))))))))
+    (fprintf (current-error-port) "\n")
     (case-lambda
      (()
       list-of-library-records)
@@ -4478,8 +4554,7 @@
 
 (module (expand-all)
   ;;For  the  meaning  of  "location  gensym",  "label  gensym"  and  the  format  of
-  ;;INVOKE-CODE,  EXPORT-SUBST   and  EXPORT-ENV  see   the  comments  in   the  file
-  ;;"psyntax.expander.sls".
+  ;;INVOKE-CODE, EXPORT-SUBST and EXPORT-ENV see the expander documentation.
   ;;
   (define (expand-all files)
     ;;Expand all the libraries in FILES, which must be a list of strings representing
@@ -4834,27 +4909,29 @@
 		   intern-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
-	     ;;These   gensyms   are   fresh    ones   generated   by   the   library
-	     ;;"(ikarus.symbols)" for the new boot image.
+	     ;;These gensyms are fresh ones generated by the source libraries for the
+	     ;;new boot image.
+	     (only (psyntax.lexical-environment)
+		   SYSTEM-LABEL-GENSYM)
 	     (only (ikarus.symbols)
-		   system-value-gensym
-		   system-label-gensym))
+		   SYSTEM-VALUE-GENSYM
+		   $putprop))
 	   ;;Store in the property list of each primitive procedure's symbol name its
 	   ;;loc gensym.
 	   (for-each
 	       (lambda (func-name.loc)
-		 (putprop (car func-name.loc) system-value-gensym (cdr func-name.loc)))
+		 ($putprop (car func-name.loc) SYSTEM-VALUE-GENSYM (cdr func-name.loc)))
 	     ',export-primlocs)
 	   ;;Initialise  the internal  parameter  CURRENT-PRIMITIVE-LOCATIONS with  a
 	   ;;function capable of retrieving a  primitive procedure's loc gensym given
 	   ;;its symbol name.
 	   (current-primitive-locations (lambda (func-name)
-					  (getprop func-name system-value-gensym)))
+					  (getprop func-name SYSTEM-VALUE-GENSYM)))
 	   ;;Store in the property list of each primitive procedure's symbol name its
 	   ;;label gensym.
 	   (for-each
 	       (lambda (func-name.lab)
-	   	 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
+	   	 ($putprop (car func-name.lab) SYSTEM-LABEL-GENSYM (cdr func-name.lab)))
 	     ',export-subst)
 	   ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
@@ -4963,14 +5040,21 @@
     ;;EXPORT-ENV -
     ;;   Represents the global bindings defined by the library body.
     ;;
-    (receive (uid libname
-		  imp-libdesc* vis-libdesc* inv-libdesc*
-		  invoke-code visit-code
-		  export-subst export-env
-		  guard-code guard-libdesc*
-		  option*)
-	(expand-library library-sexp)
-      (values libname invoke-code export-subst export-env)))
+    ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
+    (if-building-rotation-boot-image?
+	(let ((lib (expand-library library-sexp)))
+	  (values (library-name         lib)
+		  (library-invoke-code  lib)
+		  (library-export-subst lib)
+		  (library-export-env   lib)))
+      (receive (uid libname
+		    imp-libdesc* vis-libdesc* inv-libdesc*
+		    invoke-code visit-code
+		    export-subst export-env
+		    guard-code guard-libdesc*
+		    option*)
+	  (expand-library library-sexp)
+	(values libname invoke-code export-subst export-env))))
 
   #| end of module: EXPAND-ALL |# )
 
@@ -5032,6 +5116,7 @@
 ;;; end of file
 ;; Local Variables:
 ;; coding: utf-8-unix
-;; eval: (put 'time-it 'scheme-indent-function 1)
-;; eval: (put 'each-for 'scheme-indent-function 1)
+;; eval: (put 'time-it					'scheme-indent-function 1)
+;; eval: (put 'each-for					'scheme-indent-function 1)
+;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 1)
 ;; End:

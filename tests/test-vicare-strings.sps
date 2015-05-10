@@ -1387,7 +1387,7 @@
     => test-bytevector)
 
   (check
-      (guard (E ((procedure-argument-violation? E)
+      (guard (E ((assertion-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -1470,7 +1470,7 @@
     => test-bytevector)
 
   (check
-      (guard (E ((procedure-argument-violation? E)
+      (guard (E ((assertion-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
@@ -1484,7 +1484,7 @@
     => test-string)
 
   (check
-      (guard (E ((procedure-argument-violation? E)
+      (guard (E ((assertion-violation? E)
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))

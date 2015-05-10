@@ -2,24 +2,28 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus conditions)
   (export
     condition? compound-condition? condition-and-rtd?
+    simple-condition?
+    list-of-conditions?
+    list-of-simple-conditions?
     simple-conditions condition-predicate
     condition condition-accessor print-condition
+
+    raise-non-continuable-standard-condition
 
     make-message-condition message-condition?
     condition-message make-warning warning?
@@ -88,6 +92,18 @@
     &h_errno &h_errno-rtd &h_errno-rcd
     make-h_errno-condition h_errno-condition? condition-h_errno
 
+    &procedure-precondition-violation
+    &procedure-precondition-violation-rtd
+    &procedure-precondition-violation-rcd
+    make-procedure-precondition-violation
+    procedure-precondition-violation?
+
+    &procedure-postcondition-violation
+    &procedure-postcondition-violation-rtd
+    &procedure-postcondition-violation-rcd
+    make-procedure-postcondition-violation
+    procedure-postcondition-violation?
+
     &procedure-argument-violation
     &procedure-argument-violation-rtd
     &procedure-argument-violation-rcd
@@ -95,26 +111,57 @@
     procedure-argument-violation?
     procedure-argument-violation
 
+    &procedure-signature-argument-violation
+    &procedure-signature-argument-violation-rtd
+    &procedure-signature-argument-violation-rcd
+    make-procedure-signature-argument-violation
+    procedure-signature-argument-violation?
+    procedure-signature-argument-violation.one-based-argument-index
+    procedure-signature-argument-violation.failed-expression
+    procedure-signature-argument-violation.offending-value
+    procedure-signature-argument-violation
+
+    &procedure-signature-return-value-violation
+    &procedure-signature-return-value-violation-rtd
+    &procedure-signature-return-value-violation-rcd
+    make-procedure-signature-return-value-violation
+    procedure-signature-return-value-violation?
+    procedure-signature-return-value-violation.one-based-return-value-index
+    procedure-signature-return-value-violation.failed-expression
+    procedure-signature-return-value-violation.offending-value
+    procedure-signature-return-value-violation
+
+    &procedure-arguments-consistency-violation
+    &procedure-arguments-consistency-violation-rtd
+    &procedure-arguments-consistency-violation-rcd
+    make-procedure-arguments-consistency-violation
+    procedure-arguments-consistency-violation?
+    procedure-arguments-consistency-violation
+
     &expression-return-value-violation
     &expression-return-value-violation-rtd
     &expression-return-value-violation-rcd
     make-expression-return-value-violation
     expression-return-value-violation?
-    expression-return-value-violation.index
-    expression-return-value-violation.failed-expression
-    expression-return-value-violation.offending-value
     expression-return-value-violation
 
     &non-reinstatable
     make-non-reinstatable-violation
     non-reinstatable-violation?
-    non-reinstatable-violation)
+    non-reinstatable-violation
+
+    preconditions)
   (import (except (vicare)
 		  define-condition-type
 		  condition? compound-condition? condition-and-rtd?
+		  simple-condition?
+		  list-of-conditions?
+		  list-of-simple-conditions?
 		  simple-conditions
 		  condition condition-predicate condition-accessor
 		  print-condition
+
+		  raise-non-continuable-standard-condition
 
 		  &condition &message &warning &serious &error &violation
 		  &assertion &irritants &who &non-continuable
@@ -174,6 +221,18 @@
 		  source-position-byte source-position-character
 		  source-position-line source-position-column
 
+		  &procedure-precondition-violation
+		  &procedure-precondition-violation-rtd
+		  &procedure-precondition-violation-rcd
+		  make-procedure-precondition-violation
+		  procedure-precondition-violation?
+
+		  &procedure-postcondition-violation
+		  &procedure-postcondition-violation-rtd
+		  &procedure-postcondition-violation-rcd
+		  make-procedure-postcondition-violation
+		  procedure-postcondition-violation?
+
 		  &procedure-argument-violation
 		  &procedure-argument-violation-rtd
 		  &procedure-argument-violation-rcd
@@ -181,14 +240,38 @@
 		  procedure-argument-violation?
 		  procedure-argument-violation
 
+		  &procedure-signature-argument-violation
+		  &procedure-signature-argument-violation-rtd
+		  &procedure-signature-argument-violation-rcd
+		  make-procedure-signature-argument-violation
+		  procedure-signature-argument-violation?
+		  procedure-signature-argument-violation.one-based-argument-index
+		  procedure-signature-argument-violation.failed-expression
+		  procedure-signature-argument-violation.offending-value
+		  procedure-signature-argument-violation
+
+		  &procedure-signature-return-value-violation
+		  &procedure-signature-return-value-violation-rtd
+		  &procedure-signature-return-value-violation-rcd
+		  make-procedure-signature-return-value-violation
+		  procedure-signature-return-value-violation?
+		  procedure-signature-return-value-violation.one-based-return-value-index
+		  procedure-signature-return-value-violation.failed-expression
+		  procedure-signature-return-value-violation.offending-value
+		  procedure-signature-return-value-violation
+
+		  &procedure-arguments-consistency-violation
+		  &procedure-arguments-consistency-violation-rtd
+		  &procedure-arguments-consistency-violation-rcd
+		  make-procedure-arguments-consistency-violation
+		  procedure-arguments-consistency-violation?
+		  procedure-arguments-consistency-violation
+
 		  &expression-return-value-violation
 		  &expression-return-value-violation-rtd
 		  &expression-return-value-violation-rcd
 		  make-expression-return-value-violation
 		  expression-return-value-violation?
-		  expression-return-value-violation.index
-		  expression-return-value-violation.failed-expression
-		  expression-return-value-violation.offending-value
 		  expression-return-value-violation
 
 		  &non-reinstatable
@@ -199,36 +282,27 @@
 		  non-reinstatable-violation)
     (only (ikarus records procedural)
 	  rtd-subtype?)
-    (vicare language-extensions syntaxes)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate
+	  define-min/max-comparison
+	  define-equality/sorting-predicate
+	  define-inequality-predicate)
     (vicare unsafe operations))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (condition who obj)
-  (condition? obj)
-  (assertion-violation who "expected condition object as argument" obj))
+(define (simple-condition-rtd-subtype? obj)
+  (and (record-type-descriptor? obj)
+       (rtd-subtype? obj (record-type-descriptor &condition))))
 
-(define-argument-validation (rtd who obj)
-  (record-type-descriptor? obj)
-  (assertion-violation who "expected record type descriptor as argument" obj))
-
-(define-argument-validation (rtd-subtype who obj)
-  (rtd-subtype? obj (record-type-descriptor &condition))
-  (assertion-violation who "expected an RTD descendant of &condition as argument" obj))
-
-(define-argument-validation (procedure who obj)
-  (procedure? obj)
-  (assertion-violation who "expected procedure as argument" obj))
-
-(define-argument-validation (output-port who obj)
-  (output-port? obj)
-  (assertion-violation who "expected output port as argument" obj))
+(define-list-of-type-predicate list-of-conditions? condition?)
+(define-list-of-type-predicate list-of-simple-conditions? simple-condition?)
 
 
 ;;;; data types and some predicates
 
-(define-record-type &condition
+(define-record-type (&condition make-simple-condition simple-condition?)
   (nongenerative))
 
 (define &condition-rtd
@@ -237,141 +311,143 @@
 (define &condition-rcd
   (record-constructor-descriptor &condition))
 
+;;; --------------------------------------------------------------------
+
 (define-record-type compound-condition
   (nongenerative)
   (fields (immutable components))
   (sealed #t)
   (opaque #f))
 
+;;; --------------------------------------------------------------------
+
 (define (condition? x)
-  ;;Defined  by  R6RS.   Return  #t  if  X is  a  (simple  or  compound)
-  ;;condition, otherwise return #f.
+  ;;Defined by R6RS.  Return  #t if X is a (simple  or compound) condition, otherwise
+  ;;return #f.
   ;;
-  (or (&condition? x)
+  (or (simple-condition? x)
       (compound-condition? x)))
 
-(define (condition-and-rtd? obj rtd)
-  (fluid-let-syntax
-      ((__who__ (identifier-syntax 'condition-and-rtd?)))
-    (with-arguments-validation (__who__)
-	((rtd          rtd)
-	 (rtd-subtype  rtd))
-      (let ((p? (record-predicate rtd)))
-	(cond ((compound-condition? obj)
-	       (let loop ((ls (compound-condition-components obj)))
-		 (and (pair? ls)
-		      (or (p? ($car ls))
-			  (loop ($cdr ls))))))
-	      ((&condition? obj)
-	       (p? obj))
-	      (else #f))))))
+(define* (condition-and-rtd? obj {rtd simple-condition-rtd-subtype?})
+  (let ((p? (record-predicate rtd)))
+    (cond ((compound-condition? obj)
+	   (let loop ((ls (compound-condition-components obj)))
+	     (and (pair? ls)
+		  (or (p? (car ls))
+		      (loop (cdr ls))))))
+	  ((simple-condition? obj)
+	   (p? obj))
+	  (else #f))))
 
 
-(define condition
-  ;;Defined by R6RS.   Return a condition object with  the components of
-  ;;the condition arguments  as its components, in the  same order.  The
-  ;;returned condition is compound if  the total number of components is
-  ;;zero or greater than one.  Otherwise, it may be compound or simple.
+(case-define* condition
+  ;;Defined by R6RS.  Return a condition  object with the components of the condition
+  ;;arguments  as its  components,  in the  same order.   The  returned condition  is
+  ;;compound  if  the  total number  of  components  is  zero  or greater  than  one.
+  ;;Otherwise, it may be compound or simple.
   ;;
-  (case-lambda
-   (()
-    (make-compound-condition '()))
-   ((x)
-    (define who 'condition)
-    (with-arguments-validation (who)
-	((condition x))
-      x))
-   (x*
-    (define who 'condition)
-    (let ((ls (let loop ((x* x*))
-		(cond ((null? x*)
-		       '())
-		      ((&condition? ($car x*))
-		       (cons ($car x*) (loop ($cdr x*))))
-		      ((compound-condition? ($car x*))
-		       (append (simple-conditions ($car x*)) (loop ($cdr x*))))
-		      (else
-		       (assertion-violation who
-			 "expected condition object as argument" ($car x*)))))))
-      (cond ((null? ls)
-	     (make-compound-condition '()))
-	    ((null? ($cdr ls))
-	     ($car ls))
-	    (else
-	     (make-compound-condition ls)))))))
+  (()
+   (make-compound-condition '()))
+  (({x condition?})
+   x)
+  (x*
+   (let ((ls (let recur ((x* x*))
+	       (if (pair? x*)
+		   (cond ((simple-condition? (car x*))
+			  (cons (car x*) (recur (cdr x*))))
+			 ((compound-condition? (car x*))
+			  (append (simple-conditions (car x*)) (recur (cdr x*))))
+			 (else
+			  (procedure-argument-violation __who__
+			    "expected condition object as argument"
+			    (car x*))))
+		 '()))))
+     (cond ((null? ls)
+	    (make-compound-condition '()))
+	   ((null? (cdr ls))
+	    (car ls))
+	   (else
+	    (make-compound-condition ls))))))
 
-(define (simple-conditions x)
-  ;;Defined by R6RS.  Return a list  of the components of X, in the same
-  ;;order as they appeared in  the construction of X.  The returned list
-  ;;is  immutable.  If  the returned  list  is modified,  the effect  on
-  ;;X is unspecified.
+(define* (simple-conditions x)
+  ;;Defined by R6RS.  Return a list of the components of X, in the same order as they
+  ;;appeared  in the  construction of  X.  The  returned list  is immutable.   If the
+  ;;returned list is modified, the effect on X is unspecified.
   ;;
-  ;;NOTE  Because   CONDITION  decomposes  its   arguments  into  simple
-  ;;conditions, SIMPLE-CONDITIONS always returns a ``flattened'' list of
-  ;;simple conditions.
+  ;;NOTE  Because   CONDITION  decomposes  its  arguments   into  simple  conditions,
+  ;;SIMPLE-CONDITIONS always returns a ``flattened'' list of simple conditions.
   ;;
   (cond ((compound-condition? x)
 	 (compound-condition-components x))
-	((&condition? x)
+	((simple-condition? x)
 	 (list x))
 	(else
-	 (assertion-violation 'simple-conditions "expected condition object as argument" x))))
+	 (procedure-argument-violation __who__
+	   "expected condition object as argument"
+	   x))))
 
 
-(define (condition-predicate rtd)
-  ;;Defined by R6RS.  RTD must  be a record-type descriptor of a subtype
-  ;;of  "&condition".   The   CONDITION-PREDICATE  procedure  returns  a
-  ;;procedure that takes one argument.  This procedure returns #t if its
-  ;;argument is  a condition of  the condition type represented  by RTD,
-  ;;i.e., if it is either a simple condition of that record type (or one
-  ;;of  its subtypes)  or  a  compound conditition  with  such a  simple
-  ;;condition as one of its components, and #f otherwise.
+(define* (condition-predicate {rtd simple-condition-rtd-subtype?})
+  ;;Defined  by  R6RS.   RTD  must  be  a record-type  descriptor  of  a  subtype  of
+  ;;"&condition".  The  CONDITION-PREDICATE procedure returns a  procedure that takes
+  ;;one argument.  This  procedure returns #t if  its argument is a  condition of the
+  ;;condition type represented  by RTD, i.e., if  it is either a  simple condition of
+  ;;that record type (or  one of its subtypes) or a compound  conditition with such a
+  ;;simple condition as one of its components, and #f otherwise.
   ;;
-  (define who 'condition-predicate)
-  (with-arguments-validation (who)
-      ((rtd          rtd)
-       (rtd-subtype  rtd))
-    (let ((p? (record-predicate rtd)))
-      (lambda (x)
-	(or (p? x)
-	    (and (compound-condition? x)
-		 (let loop ((ls (compound-condition-components x)))
-		   (and (pair? ls)
-			(or (p? ($car ls))
-			    (loop ($cdr ls)))))))))))
+  (let ((p? (record-predicate rtd)))
+    (lambda (x)
+      (or (p? x)
+	  (and (compound-condition? x)
+	       (let loop ((ls (compound-condition-components x)))
+		 (and (pair? ls)
+		      (or (p? (car ls))
+			  (loop (cdr ls))))))))))
 
-(define (condition-accessor rtd proc)
-  ;;Defined by R6RS.  RTD must  be a record-type descriptor of a subtype
-  ;;of "&condition".  PROC  should accept one argument, a  record of the
-  ;;record type  of RTD.
+(define* (condition-accessor {rtd simple-condition-rtd-subtype?} {proc procedure?})
+  ;;Defined  by  R6RS.   RTD  must  be  a record-type  descriptor  of  a  subtype  of
+  ;;"&condition".  PROC  should accept one argument,  a record of the  record type of
+  ;;RTD.
   ;;
-  ;;The CONDITION-ACCESSOR procedure returns  a procedure that accepts a
-  ;;single argument, which  must be a condition of  the type represented
-  ;;by  RTD.   This  procedure  extracts  the  first  component  of  the
-  ;;condition of the type represented  by RTD, and returns the result of
-  ;;applying PROC to that component.
+  ;;The  CONDITION-ACCESSOR  procedure returns  a  procedure  that accepts  a  single
+  ;;argument,  which must  be  a condition  of  the type  represented  by RTD.   This
+  ;;procedure extracts the  first component of the condition of  the type represented
+  ;;by RTD, and returns the result of applying PROC to that component.
   ;;
-  (define who 'condition-accessor)
-  (with-arguments-validation (who)
-      ((rtd		rtd)
-       (rtd-subtype	rtd)
-       (procedure	proc))
-    (let ((p? (record-predicate rtd)))
-      (lambda (x)
-	(define who 'anonymous-condition-accessor)
+  (let ((p? (record-predicate rtd)))
+    (lambda (x)
+      (fluid-let-syntax
+	  ((__who__ (identifier-syntax 'anonymous-condition-accessor)))
+	(define (%error)
+	  (procedure-arguments-consistency-violation __who__ "not a condition of correct type" x rtd))
 	(cond ((p? x)
 	       (proc x))
 	      ((compound-condition? x)
 	       (let loop ((ls (compound-condition-components x)))
 		 (cond ((pair? ls)
-			(if (p? ($car ls))
-			    (proc ($car ls))
-			  (loop ($cdr ls))))
+			(if (p? (car ls))
+			    (proc (car ls))
+			  (loop (cdr ls))))
 		       (else
-			(assertion-violation who
-			  "not a condition of correct type" x rtd)))))
+			(%error)))))
 	      (else
-	       (assertion-violation who "not a condition of correct type" x rtd)))))))
+	       (%error)))))))
+
+
+;;;; raising exceptions
+
+(case-define* raise-non-continuable-standard-condition
+  (({who symbol?} {message string?} {irritants list?})
+   (raise
+    (condition (make-who-condition who)
+	       (make-message-condition message)
+	       (make-irritants-condition irritants))))
+  (({who symbol?} {message string?} {irritants list?} {cnd condition?})
+   (raise
+    (condition cnd
+	       (make-who-condition who)
+	       (make-message-condition message)
+	       (make-irritants-condition irritants)))))
 
 
 (define-syntax define-condition-type
@@ -528,34 +604,83 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &procedure-argument-violation &assertion
-  make-procedure-argument-violation procedure-argument-violation?)
-
-(define (procedure-argument-violation who message . irritants)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants)
-	      (make-procedure-argument-violation))))
+(define-condition-type &procedure-precondition-violation
+    &assertion
+  make-procedure-precondition-violation
+  procedure-precondition-violation?)
 
 ;;; --------------------------------------------------------------------
 
-(define-condition-type &expression-return-value-violation &assertion
-  make-expression-return-value-violation expression-return-value-violation?
+(define-condition-type &procedure-postcondition-violation
+    &assertion
+  make-procedure-postcondition-violation
+  procedure-postcondition-violation?)
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &procedure-argument-violation
+    &procedure-precondition-violation
+  make-procedure-argument-violation procedure-argument-violation?)
+
+(define (procedure-argument-violation who message . irritants)
+  (raise-non-continuable-standard-condition who
+    message irritants (make-procedure-argument-violation)))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &procedure-signature-argument-violation
+    &procedure-argument-violation
+  make-procedure-signature-argument-violation procedure-signature-argument-violation?
+  ;;One-base index of the offending operand.
+  (one-based-argument-index	procedure-signature-argument-violation.one-based-argument-index)
+  ;;Symbolic expression representing the predicate used to validate the operand.
+  (failed-expression		procedure-signature-argument-violation.failed-expression)
+  ;;The actual operand.
+  (offending-value		procedure-signature-argument-violation.offending-value))
+
+(define (procedure-signature-argument-violation who message operand-index failed-expression offending-value)
+  (raise-non-continuable-standard-condition who
+    message (list offending-value)
+    (make-procedure-signature-argument-violation operand-index failed-expression offending-value)))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &procedure-signature-return-value-violation
+    &procedure-postcondition-violation
+  make-procedure-signature-return-value-violation procedure-signature-return-value-violation?
   ;;One-base index of the  offending return value in the tuple  of values returned by
   ;;the expression.
-  (index		expression-return-value-violation.index)
+  (one-based-return-value-index	procedure-signature-return-value-violation.one-based-return-value-index)
   ;;Symbolic expression representing the predicate used to validate the return value.
-  (failed-expression	expression-return-value-violation.failed-expression)
+  (failed-expression		procedure-signature-return-value-violation.failed-expression)
   ;;The actual value returned by the expression.
-  (offending-value	expression-return-value-violation.offending-value))
+  (offending-value		procedure-signature-return-value-violation.offending-value))
 
-(define (expression-return-value-violation who message retval-index failed-expression offending-value . irritants)
-  (raise
-   (condition (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants)
-	      (make-expression-return-value-violation retval-index failed-expression offending-value))))
+(define (procedure-signature-return-value-violation who message retval-index failed-expression offending-value)
+  (raise-non-continuable-standard-condition who
+    message (list offending-value)
+    (make-procedure-signature-return-value-violation retval-index failed-expression offending-value)))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &procedure-arguments-consistency-violation
+    &procedure-precondition-violation
+  make-procedure-arguments-consistency-violation
+  procedure-arguments-consistency-violation?)
+
+(define (procedure-arguments-consistency-violation who message . irritants)
+  (raise-non-continuable-standard-condition who
+    message irritants
+    (make-procedure-arguments-consistency-violation)))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &expression-return-value-violation
+    &assertion
+  make-expression-return-value-violation expression-return-value-violation?)
+
+(define (expression-return-value-violation who message . irritants)
+  (raise-non-continuable-standard-condition who message irritants (make-expression-return-value-violation)))
 
 ;;; --------------------------------------------------------------------
 
@@ -565,45 +690,36 @@
   non-reinstatable-violation?)
 
 (define (non-reinstatable-violation who message . irritants)
-  (raise
-   (condition (make-non-reinstatable-violation)
-	      (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants))))
+  (raise-non-continuable-standard-condition who
+    message irritants (make-non-reinstatable-violation)))
 
 
 ;;;; printing condition objects
 
-(define print-condition
-  ;;Defined  by  Ikarus.  Print  a  human  readable  serialisation of  a
-  ;;condition object to the given port.
+(case-define* print-condition
+  ;;Defined by Ikarus.  Print a human readable serialisation of a condition object to
+  ;;the given port.
   ;;
-  (case-lambda
-   ((x)
-    (print-condition x (console-error-port)))
-   ((x port)
-    (define who 'print-condition)
-    (with-arguments-validation (who)
-	((output-port port))
-      (cond ((condition? x)
-	     (let ((ls (simple-conditions x)))
-	       (if (null? ls)
-		   (display "Condition object with no further information\n" port)
-		 (begin
-		   (display " Condition components:\n" port)
-		   (let loop ((ls ls) (i 1))
-		     (unless (null? ls)
-		       (display "   " port)
-		       (display i port)
-		       (display ". " port)
-		       (%print-simple-condition (car ls) port)
-		       (loop (cdr ls) (fxadd1 i)))))))
-	     #;(flush-output-port port))
-	    (else
-	     (display " Non-condition object: " port)
-	     (write x port)
-	     (newline port)
-	     #;(flush-output-port port)))))))
+  ((x)
+   (print-condition x (console-error-port)))
+  ((x {port textual-output-port?})
+   (if (condition? x)
+       (let ((ls (simple-conditions x)))
+	 (if (pair? ls)
+	     (begin
+	       (display " Condition components:\n" port)
+	       (let loop ((ls ls) (i 1))
+		 (when (pair? ls)
+		   (display "   " port)
+		   (display i port)
+		   (display ". " port)
+		   (%print-simple-condition (car ls) port)
+		   (loop (cdr ls) (fxadd1 i)))))
+	   (display "Condition object with no further information\n" port)))
+     (begin
+       (display " Non-condition object: " port)
+       (write x port)
+       (newline port)))))
 
 (define (%print-simple-condition x port)
   (let* ((rtd	(record-rtd x))
@@ -654,6 +770,39 @@
 		 ;;   (newline port))
 		 (loop (fxadd1 i) rtd v))))
 	 rf)))))
+
+
+;;;; syntaxes
+
+(define-syntax (preconditions stx)
+  (module (vicare-built-with-arguments-validation-enabled)
+    (module (arguments-validation)
+      (include "ikarus.config.scm" #t))
+    (define (vicare-built-with-arguments-validation-enabled)
+      arguments-validation)
+    #| end of module |# )
+  (syntax-case stx ()
+    ;;Single precondition.
+    ;;
+    ((_ (?predicate ?arg ...))
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(unless (?predicate ?arg ...)
+	     (procedure-arguments-consistency-violation __who__
+	       "failed precondition"
+	       '(?predicate ?arg ...) ?arg ...))
+       #'(void)))
+
+    ;;Multiple preconditions.
+    ;;
+    ((_ (?predicate ?arg ...) ...)
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(begin
+	     (preconditions (?predicate ?arg ...))
+	     ...)
+       #'(void)))
+    ))
 
 
 ;;;; done

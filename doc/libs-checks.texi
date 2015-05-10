@@ -195,14 +195,81 @@ select, Selecting tests to be run}.
 @end deffn
 
 
+@deffn Syntax check-for-assertion-violation @meta{body} => @meta{expected-who/irritants}
+@deffnx {Auxiliary Syntax} =>
+Expand to:
+
+@lisp
+(check
+    (guard (E ((assertion-violation? E)
+               (list (condition-who E)
+                     (condition-irritants E))
+              (else E))
+      ?body)
+  => ?expected-who/irritants))
+@end lisp
+@end deffn
+
 
 @deffn Syntax check-for-procedure-argument-violation @meta{body} => @meta{expected-who/irritants}
 @deffnx {Auxiliary Syntax} =>
 Expand to:
 
-@example
+@lisp
 (check
     (guard (E ((procedure-argument-violation? E)
+               (list (condition-who E)
+                     (condition-irritants E))
+              (else E))
+      ?body)
+  => ?expected-who/irritants))
+@end lisp
+@end deffn
+
+
+@deffn Syntax check-for-procedure-signature-argument-violation @meta{body} => @meta{expected-who/irritants}
+@deffnx {Auxiliary Syntax} =>
+Expand to:
+
+@lisp
+(check
+    (guard (E ((procedure-argument-violation? E)
+               (list (condition-who E)
+                     (procedure-argument-violation.one-based-argument-index E)
+                     (procedure-argument-violation.failed-expression E)
+                     (procedure-argument-violation.offending-value E)))
+              (else E))
+      @meta{body})
+  => @meta{expected-who/irritants})
+@end lisp
+@end deffn
+
+
+@deffn Syntax check-for-procedure-signature-return-value-violation @meta{body} => @meta{expected-who/irritants}
+@deffnx {Auxiliary Syntax} =>
+Expand to:
+
+@example
+(check
+    (guard (E ((procedure-signature-return-value-violation? E)
+               (list (condition-who E)
+                     (procedure-signature-return-value-violation.one-based-return-value-index E)
+                     (procedure-signature-return-value-violation.failed-expression E)
+                     (procedure-signature-return-value-violation.offending-value E)))
+              (else E))
+      @meta{body})
+  => @meta{expected-who/irritants})
+@end example
+@end deffn
+
+
+@deffn Syntax check-for-procedure-arguments-consistency-violation @meta{body} => @meta{expected-who/irritants}
+@deffnx {Auxiliary Syntax} =>
+Expand to:
+
+@example
+(check
+    (guard (E ((procedure-arguments-consistency-violation? E)
                (list (condition-who E)
                      (condition-irritants E)))
               (else E))
@@ -220,9 +287,7 @@ Expand to:
 (check
     (guard (E ((expression-return-value-violation? E)
                (list (condition-who E)
-                     (expression-return-value-violation.index E)
-                     (expression-return-value-violation.failed-expression E)
-                     (expression-return-value-violation.offending-value E)))
+                     (condition-irritants E)))
               (else E))
       @meta{body})
   => @meta{expected-who/irritants})

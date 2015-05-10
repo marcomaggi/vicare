@@ -138,10 +138,6 @@
        #| end of BEGIN |# ))
     ))
 
-(define (%list-of-comparators? obj)
-  (and (list? obj)
-       (for-all comparator? obj)))
-
 (define (srfi-number-hash obj)
   ;;This is different from NUMBER-HASH as defined by Vicare.  Here it must be that:
   ;;
@@ -1394,7 +1390,7 @@
 (module (make-selecting-comparator
 	 make-refining-comparator)
 
-  (define* (make-selecting-comparator {K comparator?} . {K* %list-of-comparators?})
+  (define* (make-selecting-comparator {K comparator?} . {K* comparator?})
     ;;Selecting comparator: finds the first one that type-tests
     ;;
     (define comparators (cons K K*))
@@ -1438,7 +1434,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (make-refining-comparator {K comparator?} . {K* %list-of-comparators?})
+  (define* (make-refining-comparator {K comparator?} . {K* comparator?})
     ;;Use all type-matching comparators until one is found that can discriminate.
     ;;
     (define comparators (cons K K*))

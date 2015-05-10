@@ -155,20 +155,18 @@
 (define* (coroutine-state {uid symbol?})
   ;;Given a coroutine UID: return the associated state procedure.
   ;;
-  (if (symbol-bound? uid)
-      (let ((state (%coroutine-state uid)))
-	(if (<coroutine-state>? state)
-	    state
-	  (procedure-argument-violation __who__
-	    "expected a coroutine UID symbol as argument" uid)))
-    (procedure-argument-violation __who__
-      "expected bound symbol as coroutine UID" uid)))
+  (or (%coroutine-state uid)
+      (procedure-argument-violation __who__
+	"expected symbol with coroutine state in value slot as coroutine UID argument"
+	uid)))
 
-(define-syntax-rule (%coroutine-state ?uid)
-  ;;Given a  coroutine UID:  return the  associated state  procedure.  ?UID  is *not*
-  ;;validated as UID.
+(define (%coroutine-state uid)
+  ;;Given a coroutine UID: return the associated state procedure.
   ;;
-  (symbol-value ?uid))
+  (and (symbol-bound? uid)
+       (let ((val (symbol-value uid)))
+	 (and (<coroutine-state>? val)
+	      val))))
 
 
 ;;;; basic operations

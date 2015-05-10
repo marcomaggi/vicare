@@ -330,7 +330,6 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.keywords.sls				\
 	scheme/ikarus.intel-assembler.sls			\
 	scheme/ikarus.io.sls					\
-	scheme/ikarus.library-utils.sls				\
 	scheme/ikarus.lists.sls					\
 	scheme/ikarus.load.sls					\
 	scheme/ikarus.main.sls					\
@@ -395,6 +394,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
 	scheme/psyntax.expander.sls				\
 	scheme/psyntax.internal.sls				\
+	scheme/psyntax.library-utils.sls			\
 	scheme/psyntax.library-manager.sls
 
 EXTRA_DIST += \
@@ -554,7 +554,8 @@ boot-image-64-bit: vicare
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.scm
-	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try \
+	BUILDING_ROTATION_BOOT_IMAGE=yes; export BUILDING_ROTATION_BOOT_IMAGE;		\
+	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try	\
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 #page

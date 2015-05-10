@@ -27,8 +27,7 @@
     unsafe-record-accessor		unsafe-record-mutator
 
     ;; bindings for (rnrs records inspection (6))
-    record?				record-object?
-    record-rtd
+    record?				record-rtd
     record-type-name			record-type-parent
     record-type-uid			record-type-generative?
     record-type-sealed?			record-type-opaque?
@@ -38,16 +37,18 @@
     ;; extension utility functions, non-R6RS
     rtd-subtype?			print-r6rs-record-instance
     record-reset			record=?
-    record-and-rtd?
+    record-and-rtd?			record-object?
     record-destructor-set!		record-destructor)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Tue Mar 31, 2015)
 		  non-negative-fixnum?
+		  procedure-arguments-consistency-violation
+		  ;;;
 
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
-		  record-type-descriptor?
+		  record-type-descriptor?		record-constructor-descriptor?
 		  record-constructor			record-predicate
 		  record-accessor			record-mutator
 		  unsafe-record-accessor		unsafe-record-mutator
@@ -63,7 +64,7 @@
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				print-r6rs-record-instance
 		  record-reset				record=?
-		  record-and-rtd?
+		  record-and-rtd?			record-object?
 		  record-destructor-set!		record-destructor)
     (vicare system $fx)
     (vicare system $pairs)
@@ -381,6 +382,12 @@
 
 ;;;; helpers
 
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
+;;2015)
+;;
+(define procedure-arguments-consistency-violation
+  assertion-violation)
+
 (define (record-fields-specification-vector? V)
   ;;Return true if  V is valid as vector  specifying the fields of a  record type.  A
   ;;fields vector looks like this:
@@ -513,7 +520,7 @@
 (define-assertion (assert-absolute-field-index abs-index max-index rtd relative-field-index)
   (unless (and (fixnum? abs-index)
 	       ($fx< abs-index max-index))
-    (procedure-argument-violation __who__
+    (procedure-arguments-consistency-violation __who__
       (string-append "absolute field index " (number->string abs-index)
 		     " out of range, expected non-negative fixnum less than " (number->string max-index))
       rtd relative-field-index)))
@@ -526,14 +533,14 @@
   ;;specifications.
   ;;
   (unless ($car ($vector-ref (<rtd>-fields rtd) relative-field-index))
-    (procedure-argument-violation __who__
+    (procedure-arguments-consistency-violation __who__
       "selected record field is not mutable" relative-field-index rtd)))
 
 (define-assertion (assert-rtd-and-parent-rcd rtd parent-rcd)
   (unless (or (not parent-rcd)
 	      (eq? (<rtd>-parent rtd)
 		   (<rcd>-rtd    parent-rcd)))
-    (procedure-argument-violation __who__
+    (procedure-arguments-consistency-violation __who__
       "expected false or record-constructor descriptor associated to the \
        parent of the record-type descriptor"
       rtd parent-rcd)))
@@ -622,14 +629,14 @@
 				    (+ field-index ($<rtd>-total-fields-number prtd))
 				  field-index)))
     (cond ((not (fixnum? absolute-field-index))
-	   (procedure-argument-violation __who__
-	     "field index out of range" field-index))
+	   (procedure-arguments-consistency-violation __who__
+	     "field index out of range" rtd field-index))
 	  (($fx< absolute-field-index ($<rtd>-total-fields-number rtd))
 	   ;;Remember  that the  RTD structure  holds  a normalised  vector of  field
 	   ;;specifications.
 	   ($car ($vector-ref ($<rtd>-fields rtd) field-index)))
 	  (else
-	   (procedure-argument-violation __who__
+	   (procedure-arguments-consistency-violation __who__
 	     "relative field index out of range for record type" field-index rtd)))))
 
 
@@ -912,7 +919,7 @@
     (define rtd
       (%lookup-nongenerative-rtd uid))
     (define (%error wrong-field)
-      (procedure-argument-violation 'make-record-type-descriptor
+      (procedure-arguments-consistency-violation 'make-record-type-descriptor
 	(string-append
 	 "requested access to non-generative record-type descriptor \
             with " wrong-field " not equivalent to that in the interned RTD")
@@ -989,7 +996,7 @@
       (unless (procedure? constructor)
 	(expression-return-value-violation __who__
 	  "expected procedure as return value of R6RS record protocol function"
-	  1 'procedure? constructor constructor))
+	  constructor))
       (let ((builder (let ((name (record-type-name rtd)))
 		       (lambda constructor-args
 			 (%the-builder rtd name constructor constructor-args)))))
@@ -1014,7 +1021,7 @@
 				  initialiser))
 	       (constructor	(protocol maker))
 	       (builder		(lambda constructor-args
-				  (%the-builder rtd constructor constructor-args)))
+				  (%the-builder rtd (record-type-name rtd) constructor constructor-args)))
 	       (default-rcd	(make-<rcd> rtd parent-rcd maker constructor builder)))
 	  (set-<rtd>-default-rcd! rtd default-rcd)
 	  default-rcd)))
@@ -1138,7 +1145,7 @@
 		     (%field-name->absolute-field-index rtd index/name)
 		   (if abs-index
 		       (values abs-index mutable?)
-		     (procedure-argument-violation who
+		     (procedure-arguments-consistency-violation who
 		       "unknown field name for record-type descriptor"
 		       rtd index/name))))
 
@@ -1156,7 +1163,7 @@
 		       (procedure-argument-violation actor-who
 			 "expected R6RS record as argument to field accessor" obj))
 		     (unless (record-and-rtd? obj rtd)
-		       (procedure-argument-violation actor-who
+		       (procedure-arguments-consistency-violation actor-who
 			 "R6RS record is not an instance of the expected record-type descriptor"
 			 obj rtd))
 		     ($struct-ref obj abs-index))
@@ -1173,7 +1180,7 @@
 		       (procedure-argument-violation actor-who
 			 "expected R6RS record as argument to field mutator" obj))
 		     (unless (record-and-rtd? obj rtd)
-		       (procedure-argument-violation actor-who
+		       (procedure-arguments-consistency-violation actor-who
 			 "R6RS record is not an instance of the expected record-type descriptor"
 			 obj rtd))
 		     ($struct-set! obj abs-index new-value))
@@ -1183,7 +1190,7 @@
 	      (else
 	       ;;If we  are here the  caller has requested a  mutator, but
 	       ;;the field is immutable.
-	       (procedure-argument-violation who
+	       (procedure-arguments-consistency-violation who
 		 "requested mutator for immutable field"
 		 rtd index/name))))))
 

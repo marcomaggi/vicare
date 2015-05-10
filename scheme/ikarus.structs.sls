@@ -45,6 +45,14 @@
     struct-name			struct-printer
     struct-destructor		struct-length)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed May 6, 2015)
+		  procedure-arguments-consistency-violation
+		  ;;;
+
+		  ;;This is redefined in this library.
+		  list-of-symbols?
+
 		  ;; struct type descriptor constructor
 		  make-struct-type
 
@@ -70,21 +78,23 @@
 		  struct-rtd			struct-type-descriptor
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
-    (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
     (vicare system $structs)
     (only (vicare system $symbols)
 	  $set-symbol-value!
-	  $symbol-value))
-
+	  $symbol-value)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate))
 
 
 ;;;; helpers
 
-(define (list-of-symbols? obj)
-  (or (null? obj)
-      (and (pair? obj)
-	   (symbol? ($car obj))
-	   (list-of-symbols? ($cdr obj)))))
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
+;;2015)
+(define procedure-arguments-consistency-violation assertion-violation)
+
+(define-list-of-type-predicate list-of-symbols? symbol?)
 
 (define-syntax (assert-struct-of-type stx)
   (syntax-case stx ()
@@ -92,7 +102,7 @@
      (and (identifier? #'?struct)
 	  (identifier? #'?std))
      #'(unless ($struct/rtd? ?struct ?std)
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "not a data structure of correct type" ?struct ?std)))
     ))
 
@@ -104,7 +114,7 @@
      #'(unless (and (fixnum? ?index)
 		    ($fx>= ?index 0)
 		    ($fx<  ?index ($std-length ($struct-rtd ?struct))))
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "expected fixnum in range for structure field as ?index argument"
 	   ?index ?struct)))
     ))
@@ -306,21 +316,21 @@
     (cond ((fixnum? index/name)
 	   (unless (and ($fx>= index/name 0)
 			($fx<  index/name ($std-length std)))
-	     (procedure-argument-violation who
+	     (procedure-arguments-consistency-violation who
 	       "struct field index out of range for std" index/name std))
 	   index/name)
 	  ((symbol? index/name)
 	   (let loop ((field-idx   0)
 		      (field-name* ($std-fields std)))
 	     (cond ((null? field-name*)
-		    (procedure-argument-violation who
+		    (procedure-arguments-consistency-violation who
 		      "not a struct field name" index/name std))
 		   ((eq? index/name ($car field-name*))
 		    field-idx)
 		   (else
 		    (loop ($fxadd1 field-idx) ($cdr field-name*))))))
 	  (else
-	   (procedure-argument-violation who
+	   (procedure-arguments-consistency-violation who
 	     "not a valid struct field index/name" index/name std))))
 
   #| end of module |# )
