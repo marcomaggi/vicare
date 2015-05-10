@@ -512,7 +512,7 @@
   ;;R6RS top level program, expand it and return a thunk to be evaluated
   ;;to obtain a closure representing the program.
   ;;
-  (receive (lib* invoke-code visit-code* export-subst export-env)
+  (receive (lib* invoke-code visit-code* export-subst export-env option*)
       (expand-top-level expr*)
     (lambda ()
       ;;Make sure that the code of  all the needed libraries is compiled
