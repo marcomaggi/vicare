@@ -344,7 +344,7 @@
   ;;of syntax definitions and  miscellaneous bindings for predicates and
   ;;constructors.
   ;;
-  (define spec   (parser-help.parse-label-definition stx #'<top> #'lambda/tags retrieve-compile-time-value synner))
+  (define spec   (parser-help.parse-label-definition stx #'<top> #'lambda/tags synner))
   (define tag-id (parser-help.<parsed-spec>-name-id spec))
   (with-syntax
       ((THE-TAG			tag-id)
@@ -617,7 +617,7 @@
   ;;of syntax definitions and  miscellaneous bindings for predicates and
   ;;constructors.
   ;;
-  (define spec	(parser-help.parse-class-definition stx #'<top> #'lambda/tags retrieve-compile-time-value synner))
+  (define spec	(parser-help.parse-class-definition stx #'<top> #'lambda/tags synner))
   (define tag-id	(parser-help.<parsed-spec>-name-id spec))
   (define abstract?	(parser-help.<parsed-spec>-abstract? spec))
   (with-syntax
@@ -1016,7 +1016,7 @@
 ;;
 (define-syntax* (define-mixin stx)
   (receive (mixin-name-id mixin-ctv)
-      (parser-help.parse-mixin-definition stx #'<top> #'lambda/tags retrieve-compile-time-value synner)
+      (parser-help.parse-mixin-definition stx #'<top> #'lambda/tags synner)
     #`(define-syntax #,mixin-name-id
 	(make-compile-time-value (quote #,mixin-ctv)))))
 

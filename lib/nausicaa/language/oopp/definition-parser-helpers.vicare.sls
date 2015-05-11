@@ -644,7 +644,7 @@
 	 parse-label-definition
 	 parse-mixin-definition)
 
-  (define (parse-class-definition stx top-id lambda-id ctv-retriever synner)
+  (define (parse-class-definition stx top-id lambda-id synner)
     ;;Parse the full  DEFINE-CLASS form in the syntax  object STX (after
     ;;mixin clauses  insertion) and  return an  instance of  record type
     ;;"<class-spec>".
@@ -669,13 +669,13 @@
 				      (syntax-clauses-unwrap #'(?clause ...) synner)
 				      synner)
 	   (syntax-clauses-fold-specs %combine class-spec CLASS-CLAUSES-SPECS
-				      (%process-mixin-inclusion-requests! class-spec ctv-retriever synner)
+				      (%process-mixin-inclusion-requests! class-spec synner)
 				      synner)
 	   (%finalise-clauses-parsing! class-spec synner))))
       (_
        (synner "syntax error in class definition"))))
 
-  (define (parse-label-definition stx top-id lambda-id ctv-retriever synner)
+  (define (parse-label-definition stx top-id lambda-id synner)
     ;;Parse the full  DEFINE-LABEL form in the syntax  object STX (after
     ;;mixin clauses  insertion) and  return an  instance of  record type
     ;;"<label-spec>".
@@ -700,13 +700,13 @@
 				      (syntax-clauses-unwrap #'(?clause ...) synner)
 				      synner)
 	   (syntax-clauses-fold-specs %combine label-spec LABEL-CLAUSES-SPECS
-				      (%process-mixin-inclusion-requests! label-spec ctv-retriever synner)
+				      (%process-mixin-inclusion-requests! label-spec synner)
 				      synner)
 	   (%finalise-clauses-parsing! label-spec synner))))
       (_
        (synner "syntax error in label definition"))))
 
-  (define (parse-mixin-definition stx top-id lambda-id ctv-retriever synner)
+  (define (parse-mixin-definition stx top-id lambda-id synner)
     ;;Parse  the full  DEFINE-MIXIN form  in the  syntax object  STX and
     ;;build  an instance  of record  type "<mixin-spec>"  for validation
     ;;purposes.  Finally  return two values: the  mixin name identifier;
@@ -732,7 +732,7 @@
        (let* ((clauses     (syntax-clauses-unwrap #'(?clause ...) synner))
 	      (mixin-spec  (make-<mixin-spec> #'?mixin-name top-id lambda-id)))
 	 (syntax-clauses-fold-specs %combine mixin-spec MIXIN-CLAUSES-SPECS clauses synner)
-	 (let ((included-clauses (%process-mixin-inclusion-requests! mixin-spec ctv-retriever synner)))
+	 (let ((included-clauses (%process-mixin-inclusion-requests! mixin-spec synner)))
 	   (syntax-clauses-fold-specs %combine mixin-spec CLASS-CLAUSES-SPECS
 				      included-clauses synner)
 	   (%finalise-clauses-parsing! mixin-spec synner)
@@ -775,7 +775,7 @@
       (_
        (synner "invalid name specification in tag definition" stx))))
 
-  (define* (%process-mixin-inclusion-requests! {parsed-spec <parsed-spec>?} ctv-retriever synner)
+  (define* (%process-mixin-inclusion-requests! {parsed-spec <parsed-spec>?} synner)
     ;;For  each mixin  inclusion  request in  PARSED-SPEC: retrieve  the
     ;;corresponding compile-time  value (CTV),  which is an  instance of
     ;;"<mixin-clauses-ctv>",  and  apply  the  identifiers  map  to  the
