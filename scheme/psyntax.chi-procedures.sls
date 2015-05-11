@@ -251,7 +251,7 @@
 		       lexical global global-mutable
 		       macro macro! global-macro global-macro! local-macro local-macro!
 		       import export library $module pattern-variable
-		       local-ctv global-ctv
+		       local-etv global-etv
 		       displaced-lexical)
 		      (values binding-type (syntactic-binding-descriptor.value binding-descriptor) ?id))
 		     (else
@@ -280,7 +280,7 @@
 		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
 		       begin set! stale-when
-		       local-ctv global-ctv
+		       local-etv global-etv
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module)
 		      (values type (syntactic-binding-descriptor.value binding) ?car))

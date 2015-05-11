@@ -610,7 +610,7 @@
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
-			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
+			     ((global-etv)    (cons* 'global-etv    lib (cdr binding)))
 			     ((core-prim
 			       library import export
 			       define define-syntax define-alias
@@ -726,7 +726,7 @@
 				 (binding (cdr export-env-entry)))
 			     (remove-location label)
 			     (when (memq (car binding)
-					 '(global global-macro global-macro! global-ctv))
+					 '(global global-macro global-macro! global-etv))
 			       (remove-location (cdr binding)))))
 		 ($library-export-env lib))))
 	 (else

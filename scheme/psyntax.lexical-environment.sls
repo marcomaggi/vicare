@@ -870,20 +870,20 @@
   ;;
   ;;Given the definition:
   ;;
-  ;;   (define-syntax ctv
+  ;;   (define-syntax etv
   ;;      (make-expand-time-value ?expr))
   ;;
   ;;the  argument OBJ  is the  return value  of expanding  and evaluating  ?EXPR; the
   ;;argument EXPANDED-EXPR  is the result of  expanding the whole right-hand  side of
   ;;the DEFINE-SYNTAX form.
   ;;
-  (make-syntactic-binding-descriptor local-ctv (cons obj expanded-expr)))
+  (make-syntactic-binding-descriptor local-etv (cons obj expanded-expr)))
 
 (define-syntax-rule (local-expand-time-value-binding-descriptor.object ?descriptor)
   ;;Given a  syntactic binding  descriptor representing a  local compile  time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
-  ;;   (local-ctv . (?obj . ?expanded-expr))
+  ;;   (local-etv . (?obj . ?expanded-expr))
   ;;
   ;;and we want to return ?OBJ.
   ;;
@@ -898,13 +898,13 @@
     (case (syntactic-binding-descriptor.type descriptor)
       ;;The given  identifier is  bound to  a local  compile-time value.   The actual
       ;;object is stored in the descriptor itself.
-      ((local-ctv)
+      ((local-etv)
        (local-expand-time-value-binding-descriptor.object descriptor))
 
       ;;The given identifier is bound to a compile-time value imported from a library
       ;;or the  top-level environment.  The  actual object  is stored in  the "value"
       ;;field of a loc gensym.
-      ((global-ctv)
+      ((global-etv)
        (global-expand-time-value-binding-descriptor.object descriptor))
 
       ;;The given identifier is not bound to a compile-time value.
@@ -924,9 +924,9 @@
 ;;   ;;
 ;;   ;;The returned descriptor has format:
 ;;   ;;
-;;   ;;   (global-ctv . (?library . ?loc))
+;;   ;;   (global-etv . (?library . ?loc))
 ;;   ;;
-;;   (make-syntactic-binding-descriptor global-ctv (cons lib loc)))
+;;   (make-syntactic-binding-descriptor global-etv (cons lib loc)))
 
 (define-syntax-rule (global-expand-time-value-binding-descriptor.lib ?descriptor)
   (cadr ?descriptor))
@@ -938,7 +938,7 @@
   ;;Given a syntactic binding descriptor representing an imported compile time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
-  ;;   (global-ctv . (?library . ?loc))
+  ;;   (global-etv . (?library . ?loc))
   ;;
   ;;where: ?LIBRARY is an object of  type "library" describing the library from which
   ;;the binding is imported;  ?LOC is the log gensym containing  the actual object in
@@ -954,10 +954,10 @@
     ;;object is stored in the loc gensym.   When the library LIB has been loaded from
     ;;a compiled file: the compile-time value itself is in the loc gensym, so we have
     ;;to extract it.
-    (let ((ctv (symbol-value loc)))
-      (if (expand-time-value? ctv)
-	  (expand-time-value-object ctv)
-	ctv))))
+    (let ((etv (symbol-value loc)))
+      (if (expand-time-value? etv)
+	  (expand-time-value-object etv)
+	etv))))
 
 ;;; --------------------------------------------------------------------
 ;;; module bindings
@@ -2572,10 +2572,10 @@
     (if label
 	(let ((binding (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
 	  (case (syntactic-binding-descriptor.type binding)
-	    ((local-ctv)
+	    ((local-etv)
 	     (local-expand-time-value-binding-descriptor.object binding))
 
-	    ((global-ctv)
+	    ((global-etv)
 	     (global-expand-time-value-binding-descriptor.object binding))
 
 	    (else

@@ -172,20 +172,20 @@
 ;;3..The sexp is compiled and evaluated by the function %EVAL-MACRO-TRANSFORMER.  The
 ;;   result of the evaluation is a "special value" with format:
 ;;
-;;      (ctv! . ?obj)
+;;      (local-etv . ?obj)
 ;;
 ;;   where ?OBJ is the actual compile-time value.
 ;;
 ;;4..%EVAL-MACRO-TRANSFORMER    recognises    the     value    as    special    using
-;;   EXPAND-TIME-VALUE?  and transforms it to a "local-ctv" syntactic binding.
+;;   EXPAND-TIME-VALUE?  and transforms it to a "local-etv" syntactic binding.
 ;;
 
 (define (make-expand-time-value obj)
-  (cons 'ctv obj))
+  (cons 'etv obj))
 
 (define (expand-time-value? obj)
   (and (pair? obj)
-       (eq? 'ctv (car obj))))
+       (eq? 'etv (car obj))))
 
 (define expand-time-value-object
   ;;Given  a compile-time  value datum:  return the  actual compile-time

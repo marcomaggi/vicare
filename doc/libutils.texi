@@ -1083,12 +1083,12 @@ Syntactic bindings of this type are established by uses of
 of evaluating the right--hand side expression is the return value of a
 call to @func{make-variable-transformer}.
 
-@item global-ctv
+@item global-etv
 Denotes a syntactic binding representing an expand--time value.  The
 export descriptor has the format:
 
 @example
-(global-ctv . @meta{loc})
+(global-etv . @meta{loc})
 @end example
 
 @noindent
@@ -1188,7 +1188,7 @@ We can toy with the @code{export-env} with the following program:
 (library (demo)
   (options visit-upon-loading)
   (export var macro var-macro macro-id
-          ctv color <color> modu fluid synonym alias)
+          etv color <color> modu fluid synonym alias)
   (import (vicare))
   (define var 1)
   (define (fun) 2)
@@ -1196,7 +1196,7 @@ We can toy with the @code{export-env} with the following program:
   (define-syntax macro-id (identifier-syntax 4))
   (define-syntax var-macro
     (make-variable-transformer (lambda (stx) 5)))
-  (define-syntax ctv (make-expand-time-value 6))
+  (define-syntax etv (make-expand-time-value 6))
   (module modu (modu-var) (define modu-var 7))
   (define-fluid-syntax fluid (lambda (stx) 8))
   (define-syntax synonym (make-synonym-transformer #'var))
@@ -1422,14 +1422,14 @@ example, expanding the library:
 
 @example
 (library (ciao)
-  (export var fun mac ctv)
+  (export var fun mac etv)
   (import (vicare))
   (define var 1)
   (define (fun)
     2)
   (define-syntax (mac stx)
     3)
-  (define-syntax ctv
+  (define-syntax etv
     (make-expand-time-value
      (+ 4 5))))
 @end example
@@ -1453,7 +1453,7 @@ the @code{visit-code}:
         (annotated-case-lambda
             (#'lambda (#'stx) #'3)
           ((lex.stx) '3)))
-  (set! loc.lab.ctv
+  (set! loc.lab.etv
         (annotated-call
             (make-expand-time-value (+ 4 5))
           (primitive make-expand-time-value)
@@ -1464,7 +1464,7 @@ the @code{visit-code}:
 the @code{export-subst}:
 
 @example
-((ctv . lab.ctv)
+((etv . lab.etv)
  (mac . lab.mac)
  (fun . lab.fun)
  (var . lab.var))
@@ -1477,7 +1477,7 @@ the @code{export-env}:
 ((lab.var global        . loc.lex.var)
  (lab.fun global        . loc.lex.fun)
  (lab.mac global-macro  . loc.lab.mac)
- (lab.ctv global-ctv    . loc.lab.ctv))
+ (lab.etv global-etv    . loc.lab.etv))
 @end example
 
 Another example, for the library:

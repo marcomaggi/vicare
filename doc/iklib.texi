@@ -6735,7 +6735,7 @@ datum and embedding the datum itself.
 * iklib expander fluids::           Fluid syntaxes.
 * iklib expander utils::            Utilities for macro writers.
 * iklib expander clauses::          Syntax clauses helpers.
-* iklib expander ctv::              Expand-time values.
+* iklib expander etv::              Expand-time values.
 * iklib expander parameters::       Expand-time parameters.
 * iklib expander synonym::          Synonym transformers.
 @end menu
@@ -8104,7 +8104,7 @@ according to @func{free-identifier=?}, to an identifier in the
 @end defun
 
 @c page
-@node iklib expander ctv
+@node iklib expander etv
 @subsection expand--time values
 
 
@@ -8160,7 +8160,7 @@ by the expander as holding a precomputed expand--time object.
 @end defun
 
 
-@defun expand-time-value-object @var{ctv}
+@defun expand-time-value-object @var{etv}
 Given a ``special'' object that is recognised by the expander as holding
 a precomputed expand--time object: return the actual value.
 @end defun

@@ -685,14 +685,14 @@
   ;;For example, expanding the library:
   ;;
   ;;   (library (ciao)
-  ;;     (export var fun mac ctv)
+  ;;     (export var fun mac etv)
   ;;     (import (vicare))
   ;;     (define var 1)
   ;;     (define (fun)
   ;;       2)
   ;;     (define-syntax (mac stx)
   ;;       3)
-  ;;     (define-syntax ctv
+  ;;     (define-syntax etv
   ;;       (make-expand-time-value
   ;;        (+ 4 5))))
   ;;
@@ -710,7 +710,7 @@
   ;;           (annotated-case-lambda
   ;;               (#'lambda (#'stx) #'3)
   ;;             ((lex.stx) '3)))
-  ;;     (set! loc.lab.ctv
+  ;;     (set! loc.lab.etv
   ;;           (annotated-call
   ;;               (make-expand-time-value (+ 4 5))
   ;;             (primitive make-expand-time-value)
@@ -718,7 +718,7 @@
   ;;
   ;;the EXPORT-SUBST:
   ;;
-  ;;   ((ctv . lab.ctv)
+  ;;   ((etv . lab.etv)
   ;;    (mac . lab.mac)
   ;;    (fun . lab.fun)
   ;;    (var . lab.var))
@@ -728,7 +728,7 @@
   ;;   ((lab.var global		. loc.lex.var)
   ;;    (lab.fun global		. loc.lex.fun)
   ;;    (lab.mac global-macro	. loc.lab.mac)
-  ;;    (lab.ctv global-ctv	. loc.lab.ctv))
+  ;;    (lab.etv global-etv	. loc.lab.etv))
   ;;
   ;;Another example, for the library:
   ;;
@@ -1308,7 +1308,7 @@
 
   (define (%make-export-env/visit-env* lex* loc* lexenv.run)
     ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an EXPORT-ENV entry,
-    ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or compile-time
+    ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or expand-time
     ;;value: accumulate the VISIT-ENV* alist.
     ;;
     ;;Notice that  EXPORT-ENV contains  an entry for  every global  lexical variable,
@@ -1417,18 +1417,18 @@
 		     (cons (cons* label 'global-macro! loc) export-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
-	    ((local-ctv)
-	     ;;When we  define a binding  for a  compile-time value (CTV):  the local
-	     ;;code sees it as "local-ctv".  If  we export such binding: the importer
-	     ;;must see it as a "global-ctv".
+	    ((local-etv)
+	     ;;When we define a binding for a expand-time value (ETV): the local code
+	     ;;sees it as "local-etv".  If we  export such binding: the importer must
+	     ;;see it as a "global-etv".
 	     ;;
 	     ;;The entry from the LEXENV looks like this:
 	     ;;
-	     ;;   (?label . (local-ctv . (?object . ?expanded-expr)))
+	     ;;   (?label . (local-etv . (?object . ?expanded-expr)))
 	     ;;
 	     ;;Add to the EXPORT-ENV an entry like:
 	     ;;
-	     ;;   (?label . (global-ctv . ?loc))
+	     ;;   (?label . (global-etv . ?loc))
 	     ;;
 	     ;;and to the VISIT-ENV* an entry like:
 	     ;;
@@ -1436,7 +1436,7 @@
 	     ;;
 	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-ctv loc) export-env)
+		     (cons (cons* label 'global-etv loc) export-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    (($record-type-name $struct-type-name $module $fluid $synonym)
