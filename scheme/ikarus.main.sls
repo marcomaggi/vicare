@@ -82,9 +82,9 @@
 		  current-library-expander
 		  source-code-location)
 	    psyntax.)
-    (only (ikarus.reader)
-	  read-source-file
-	  read-script-source-file)
+    (prefix (only (ikarus.reader)
+		  read-libraries-from-file)
+	    reader.)
     (only (ikarus.symbol-table)
 	  $initialize-symbol-table!)
     (only (ikarus.strings-table)
@@ -1017,7 +1017,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		      (for-each (lambda (library-form)
 				  (parametrise ((psyntax.source-code-location source-filename))
 				    ((psyntax.current-library-expander) library-form)))
-			(read-source-file source-filename)))
+			(reader.read-libraries-from-file source-filename)))
 	    cfg.load-libraries))))
 
 

@@ -28,8 +28,8 @@
     annotation-source		annotation-textual-position
 
     ;; internal functions only for Vicare
-    read-source-file		read-script-source-file
-    read-library-source-file	read-library-source-port)
+    read-libraries-from-file	read-script-from-file
+    read-library-from-file	read-library-from-port)
   (import (except (vicare)
 		  ;; public functions
 		  read				get-datum
@@ -41,11 +41,12 @@
 		  annotation-source		annotation-textual-position
 
 		  ;; internal functions only for Vicare
-		  read-source-file		read-script-source-file
-		  read-library-source-file	read-library-source-port)
-    (only (vicare.foreign-libraries)
-	  register-filename-foreign-library
-	  autoload-filename-foreign-library)
+		  read-libraries-from-file	read-script-from-file
+		  read-library-from-file	read-library-from-port)
+    (vicare system $fx)
+    (vicare system $chars)
+    (vicare system $pairs)
+    (vicare system $strings)
     (only (vicare system $bytevectors)
 	  ;;FIXME To be  removed at the next boot image  rotation.  (Marco Maggi; Sun
 	  ;;Mar 22, 2015)
@@ -93,9 +94,19 @@
 	  $bytevector-s64n-ref			$bytevector-s64n-set!
 	  $bytevector-u64-ref			$bytevector-u64-set!
 	  $bytevector-s64-ref			$bytevector-s64-set!)
-    (vicare language-extensions syntaxes)
     (prefix (vicare platform words) words.)
-    (vicare unsafe operations))
+    (only (vicare.foreign-libraries)
+	  register-filename-foreign-library
+	  autoload-filename-foreign-library)
+    (only (vicare language-extensions posix)
+	  file-string-pathname?))
+
+
+;;;; arguments validation helpers
+
+(define (false-or-string? obj)
+  (or (not obj)
+      (string? obj)))
 
 
 ;;;; syntax helpers
@@ -654,77 +665,34 @@
 
 ;;;; public functions used by Vicare itself
 ;;
-;;These  functions  are exported  by  this  library  but not  listed  in
-;;"makefile.sps", so they are not visible to client code.
-;;
 ;;The following functions are entry points to the reader:
 ;;
-;;   read-source-file
-;;   read-script-source-file
-;;   read-library-source-file
-;;   read-library-source-port
+;;   read-script-from-file
+;;   read-library-from-file
+;;   read-library-from-port
+;;   read-libraries-from-file
 ;;
-;;but all of them call $GET-ANNOTATED-DATUM.
+;;but all of them call $GET-ANNOTATED-DATUM to actually do the work.
 ;;
 
-(define (read-library-source-file filename)
-  ;;Open FILENAME for input only  using the native transcoder, then read
-  ;;and return the first datum; close the port.
+(define* (read-script-from-file {filename file-string-pathname?})
+  ;;Open FILENAME  for input only using  the native transcoder, then  read and return
+  ;;all the datums in a list.  The input  is expected to represent either: a R6RS top
+  ;;level program; a list of forms to be evaluated with EVAL.
   ;;
-  (let ((port (open-input-file filename)))
-    (unwind-protect
-	(read-library-source-port port filename)
-      (close-input-port port))))
-
-(define read-library-source-port
-  (case-lambda
-   ((port)
-    (read-library-source-port port #f))
-   ((port filename)
-    ;;Read a library symbolic expression from the textual input PORT and
-    ;;return the result.   We assume that applying  the function PORT-ID
-    ;;to PORT will  return a string representing a  file name associated
-    ;;to the port (or equivalent).  After reading: the PORT is left open
-    ;;with the cursor after the end of the library datum.
-    ;;
-    (parameterize
-	((current-library-file			(or filename (port-id port)))
-	 (shared-library-loading-enabled?	#t))
-      ($get-annotated-datum port)))
-   ))
-
-(define (read-source-file filename)
-  ;;Open FILENAME for input only  using the native transcoder, then read
-  ;;and return all the datums in a list; close the port.
+  ;;Discard  the first  line from  the  file if  the  first two  bytes represent  the
+  ;;sharp-bang sequence  "#!"; this  is useful  to allow scripts  on Unix  systems to
+  ;;start with the  command line needed to  use them.  Notice that  this will discard
+  ;;valid sharp-bang comments if the are at the very beginning of a file.
   ;;
-  (parameterize ((shared-library-loading-enabled? #t))
-    (let ((port (open-input-file filename)))
-      (define-inline (%next-datum)
-	($get-annotated-datum port))
-      (unwind-protect
-	  (let read-next-datum ((obj (%next-datum)))
-	    (if (eof-object? obj)
-		'()
-	      (cons obj (read-next-datum (%next-datum)))))
-	(close-input-port port)))))
-
-(define (read-script-source-file filename)
-  ;;Open FILENAME for input only  using the native transcoder, then read
-  ;;and return all the datums in a list.
-  ;;
-  ;;Discard  the  first  line from  the  file  if  the first  two  bytes
-  ;;represent  the sharp-bang  sequence "#!";  this is  useful  to allow
-  ;;scripts on Unix systems to start with the command line needed to use
-  ;;them.
-  ;;
-  ;;Notice that this  will discard valid sharp-bang comments  if the are
-  ;;at the very beginning of a file.
+  ;;NOTE  In  truth we  do  nothing  to validate  the  input  as symbolic  expression
+  ;;representing a R6RS top level program or list of evaluable forms.
   ;;
   (parameterize ((shared-library-loading-enabled? #t))
     (let ((port (open-file-input-port filename)))
       (unwind-protect
 	  (let* ((sharp-bang? (receive (octet1 octet2)
-				  ;;If an  error happens here  PORT will be  closed by
+				  ;;If an error  happens here PORT will  be closed by
 				  ;;the port guardian.
 				  (lookahead-two-u8 port)
 				(and (= octet1 CHAR-FIXNUM-SHARP)
@@ -742,6 +710,61 @@
 		      (cons obj (read-next-datum (%next-datum))))))
 	      (close-input-port tport)))
 	(close-input-port port)))))
+
+(module (read-libraries-from-file
+	 read-library-from-file
+	 read-library-from-port)
+
+  (define* (read-libraries-from-file {filename file-string-pathname?})
+    ;;Open FILENAME  for input only  using the native  transcoder, then read  all the
+    ;;datums until EOF and  return them in a list; close the  port.  The input datums
+    ;;are expected to represent LIBRARY forms.
+    ;;
+    ;;NOTE  In  truth  we do  nothing  to  validate  the  input as  LIBRARY  symbolic
+    ;;expression.
+    ;;
+    (let ((port (open-input-file filename)))
+      (unwind-protect
+	  (let recur ((obj ($read-library-from-port port filename)))
+	    (if (eof-object? obj)
+		'()
+	      (cons obj (recur ($read-library-from-port port filename)))))
+	(close-input-port port))))
+
+  (define* (read-library-from-file {filename file-string-pathname?})
+    ;;Open FILENAME for input only using  the native transcoder, then read and return
+    ;;the first datum; close the port.
+    ;;
+    ;;NOTE  In  truth  we do  nothing  to  validate  the  input as  LIBRARY  symbolic
+    ;;expression.
+    ;;
+    (let ((port (open-input-file filename)))
+      (unwind-protect
+	  ($read-library-from-port port filename)
+	(close-input-port port))))
+
+  (case-define* read-library-from-port
+    ;;Read a library  symbolic expression from the textual input  PORT and return the
+    ;;result.  We  assume that applying  the function PORT-ID  to PORT will  return a
+    ;;string representing a file name associated  to the port (or equivalent).  After
+    ;;reading: the  PORT is left open  with the cursor  after the end of  the library
+    ;;datum.
+    ;;
+    ;;NOTE  In  truth  we do  nothing  to  validate  the  input as  LIBRARY  symbolic
+    ;;expression.
+    ;;
+    (({port textual-input-port?})
+     ($read-library-from-port port #f))
+    (({port textual-input-port?} {filename false-or-string?})
+     ($read-library-from-port port filename)))
+
+  (define ($read-library-from-port port filename)
+    (parameterize
+	((current-library-file			(or filename (port-id port)))
+	 (shared-library-loading-enabled?	#t))
+      ($get-annotated-datum port)))
+
+  #| end of module |# )
 
 
 ;;;; helpers for public functions

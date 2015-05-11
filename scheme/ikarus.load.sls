@@ -62,9 +62,10 @@
     (only (psyntax.expander)
 	  expand-r6rs-top-level-make-evaluator
 	  expand-r6rs-top-level-make-compiler)
-    (only (ikarus.reader)
-	  read-script-source-file
-	  read-library-source-port)
+    (prefix (only (ikarus.reader)
+		  read-script-from-file
+		  read-library-from-port)
+	    reader.)
     (psyntax.library-utils)
     (only (ikarus fasl read)
 	  fasl-read-header
@@ -311,7 +312,7 @@
   ;;
   (print-library-debug-message "~a: reading library from port: ~a" __who__ port)
   (let ((source-pathname  (port-id port))
-	(libsexp          (read-library-source-port port)))
+	(libsexp          (reader.read-library-from-port port)))
     ;;If the library name extracted from LIBSEXP  does not conform to LIBREF: we make
     ;;the expander raise  an exception with REJECT-KEY as raised  object; we catch it
     ;;here and return false.
@@ -1139,7 +1140,7 @@
   ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
   (print-library-verbose-message "~a: loading R6RS script: ~a" __who__ file-pathname)
-  (let* ((prog  (read-script-source-file file-pathname))
+  (let* ((prog  (reader.read-script-from-file file-pathname))
 	 (thunk (parametrise ((libman.source-code-location file-pathname))
 		  (expand-r6rs-top-level-make-evaluator prog))))
     (when serialise?
@@ -1172,7 +1173,7 @@
 			 (eval sexp (interaction-environment)))))
   (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
    (print-library-verbose-message "~a: loading script: ~a" __who__ file-pathname)
-   (let next-form ((ls (read-script-source-file file-pathname)))
+   (let next-form ((ls (reader.read-script-from-file file-pathname)))
      (unless (null? ls)
        (eval-proc (car ls))
        (next-form (cdr ls))))))
@@ -1208,7 +1209,7 @@
     (print-library-verbose-message "~a: loading library: ~a" who source-pathname)
     (let ((port (%open-source-library source-pathname)))
       (unwind-protect
-	  (read-library-source-port port)
+	  (reader.read-library-from-port port)
 	(close-input-port port))))
 
   #| end of module |# )
@@ -1259,7 +1260,7 @@
     ;;BINARY-FILENAME is invalid: an exception is raised.
     ;;
     (receive (lib-descr* thunk)
-	((expand-r6rs-top-level-make-compiler (read-script-source-file source-filename)))
+	((expand-r6rs-top-level-make-compiler (reader.read-script-from-file source-filename)))
       (store-serialised-program source-filename lib-descr* thunk binary-filename)))
 
   (define* (run-compiled-program {binary-filename posix.file-string-pathname?})
