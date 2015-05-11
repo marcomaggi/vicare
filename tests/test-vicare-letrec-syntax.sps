@@ -54,14 +54,24 @@
 ;;; checking illegal references to bindings
 
   ;; error
-  (check-syntax-violation ,(if (vicare-built-with-descriptive-labels-generation)
-			       'lex.ciao_0
-			     'ciao_0)
-    (let ()
-      (define b (ciao))
-      (define (ciao)
-	123)
-      #t))
+  (if (vicare-built-with-descriptive-labels-generation)
+      (check-syntax-violation lex.ciao_0
+	(internal-body
+	  (define b (ciao))
+	  (define (ciao)
+	    123)
+	  #t))
+    (check-for-true
+     (guard (E
+	     ((syntax-violation? E)
+	      (symbol? (syntax-violation-subform E)))
+	     (else E))
+       (eval (quote (internal-body
+		      (define b (ciao))
+		      (define (ciao)
+			123)
+		      #t))
+	     (environment '(vicare))))))
 
   ;; no error
   (check-syntax-violation 123
