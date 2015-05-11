@@ -60,7 +60,6 @@
 	  retrieve-filename-foreign-libraries)
     (prefix (psyntax.library-manager) libman.)
     (only (psyntax.expander)
-	  expand-r6rs-top-level-make-evaluator
 	  expand-r6rs-top-level-make-compiler)
     (prefix (only (ikarus.reader)
 		  read-script-from-file
@@ -1140,24 +1139,28 @@
   ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
   (print-library-verbose-message "~a: loading R6RS script: ~a" __who__ file-pathname)
-  (let* ((prog  (reader.read-script-from-file file-pathname))
-	 (thunk (parametrise ((libman.source-code-location file-pathname))
-		  (expand-r6rs-top-level-make-evaluator prog))))
+  (let ((compiler-thunk (parametrise ((libman.source-code-location file-pathname))
+			  ;;Expand  the  top  level program;  intern  the  depencency
+			  ;;libraries.
+			  (expand-r6rs-top-level-make-compiler (reader.read-script-from-file file-pathname)))))
     (when serialise?
       (serialise-collected-libraries
        (lambda (source-pathname libname contents)
-	 (store-full-serialised-library-to-file
-	  (cond ((compiled-libraries-build-directory)
-		 (library-name->library-binary-pathname-in-build-directory libname))
-		(else
-		 (error __who__
-		   "cannot determine a destination directory for compiled library files")))
-	  source-pathname libname contents))
+	 (let ((binary-pathname (cond ((compiled-libraries-build-directory)
+				       (library-name->library-binary-pathname-in-build-directory libname))
+				      (else
+				       (error __who__
+					 "cannot determine a destination directory for compiled library files")))))
+	   (store-full-serialised-library-to-file binary-pathname source-pathname libname contents)))
        (lambda (core-expr)
 	 (compile-core-expr core-expr))))
     (when run?
       (print-library-verbose-message "~a: running R6RS script: ~a" __who__ file-pathname)
-      (thunk))))
+      (receive (lib-descr* run-thunk)
+	  ;;Invoke the dependency libraries and compile the top level program.
+	  (compiler-thunk)
+	;;Run the top level program.
+	(run-thunk)))))
 
 (case-define* load
   ;;Load source code  from FILE-PATHNAME, which must be a  string representing a file
