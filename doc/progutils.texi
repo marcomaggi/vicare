@@ -64,7 +64,7 @@ The following bindings are exported by the library @library{vicare
 libraries}.
 
 
-@defun expand-top-level @var{sexp}
+@defun expand-r6rs-top-level-program @var{sexp}
 Expand an @rnrs{6} program whose symbolic expression is @var{sexp}.
 Return @math{6} values:
 
@@ -92,10 +92,11 @@ A list of symbols representing the options enabled for this program;
 @end defun
 
 
-@defun expand-top-level->sexp @var{sexp}
+@defun expand-r6rs-top-level-program->sexp @var{sexp}
 This function is for debugging purposes.  Expand the program form
-@var{sexp} and return the return values of @func{expand-top-level} in an
-alist with the following symbols as keys:
+@var{sexp} and return the return values of
+@func{expand-r6rs-top-level-program} in an alist with the following
+symbols as keys:
 
 @example
 invoke-lib* invoke-code
@@ -113,7 +114,7 @@ We can toy with the program expander using the following code:
 (import (vicare)
   (prefix (vicare programs) progs.))
 (print-gensym #f)
-(debug-print (progs.expand-top-level->sexp @meta{sexp}))
+(debug-print (progs.expand-r6rs-top-level-program->sexp @meta{sexp}))
 @end example
 
 @noindent

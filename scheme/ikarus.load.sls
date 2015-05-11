@@ -1259,9 +1259,11 @@
     ;;a  pathname  is built  from  SOURCE-FILENAME  using  a default  procedure.   If
     ;;BINARY-FILENAME is invalid: an exception is raised.
     ;;
-    (receive (lib-descr* thunk)
+    (receive (lib-descr* run-thunk)
+	;;Expand the program; invoke the dependency libraries; compile the program.
 	((expand-r6rs-top-level-make-compiler (reader.read-script-from-file source-filename)))
-      (store-serialised-program source-filename lib-descr* thunk binary-filename)))
+      ;;The RUN-THUNK is a procedure: if we call it, we run the program.
+      (store-serialised-program source-filename lib-descr* run-thunk binary-filename)))
 
   (define* (run-compiled-program {binary-filename posix.file-string-pathname?})
     (receive (lib-descr* closure)
