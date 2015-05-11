@@ -4083,8 +4083,7 @@
 
 	(define-syntax get-obj1
 	  (lambda (stx)
-	    (lambda (ctv-retriever)
-	      (ctv-retriever #'obj1))))
+	    (retrieve-compile-time-value #'obj1)))
 
 	(get-obj1))
     => 6)
@@ -4096,8 +4095,7 @@
 
 	(define-syntax get-obj2
 	  (lambda (stx)
-	    (lambda (ctv-retriever)
-	      #`(quote #,(ctv-retriever #'obj2)))))
+	    #`(quote #,(retrieve-compile-time-value #'obj2))))
 
 	(get-obj2))
     => '#(1 2 3))
@@ -4827,31 +4825,28 @@
 
 (parametrise ((check-test-name	'syntax-parameters))
 
-  (check	;no parametrise, ctv-retriever
+  (check	;no parametrise, retrieve-compile-time-value
       (let ()
 	(define-syntax-parameter parm 1)
 	(define-syntax (show-it stx)
-	  (lambda (ctv-retriever)
-	    (ctv-retriever #'parm)))
+	  (retrieve-compile-time-value #'parm))
 	(show-it))
     => 1)
 
-  (check	;one parametrise, ctv-retriever
+  (check	;one parametrise, retrieve-compile-time-value
       (let ()
 	(define-syntax-parameter parm 1)
 	(define-syntax (show-it stx)
-	  (lambda (ctv-retriever)
-	    (ctv-retriever #'parm)))
+	  (retrieve-compile-time-value #'parm))
 	(syntax-parametrise ((parm 2))
 	  (show-it)))
     => 2)
 
-  (check	;two parametrise, ctv-retriever
+  (check	;two parametrise, retrieve-compile-time-value
       (let ()
 	(define-syntax-parameter parm 1)
 	(define-syntax (show-it stx)
-	  (lambda (ctv-retriever)
-	    (ctv-retriever #'parm)))
+	  (retrieve-compile-time-value #'parm))
 	(syntax-parametrise ((parm 2))
 	  (show-it)))
     => 2)

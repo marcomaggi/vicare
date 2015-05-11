@@ -788,7 +788,7 @@
 	(lambda (clauses mixin-inclusion-request)
 	  (let* ((mixin-name-id  (car mixin-inclusion-request))
 		 (mixin-id-map   (cdr mixin-inclusion-request))
-		 (mixin-ctv      (ctv-retriever mixin-name-id)))
+		 (mixin-ctv      (retrieve-compile-time-value mixin-name-id)))
 	    (cond ((<mixin-clauses-ctv>? mixin-ctv)
 		   ;;Check that a mixin is  not included twice, then add
 		   ;;the imported mixin identifiers in the parsed spec.

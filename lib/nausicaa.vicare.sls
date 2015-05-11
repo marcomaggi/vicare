@@ -995,6 +995,7 @@
     make-compile-time-value
     compile-time-value?
     compile-time-value-object
+    retrieve-compile-time-value
     make-errno-condition
     make-file-options
     make-guardian

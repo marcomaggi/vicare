@@ -84,6 +84,7 @@
     make-syntactic-binding-descriptor/local-macro/compile-time-value
     local-compile-time-value-binding-descriptor.object
     global-compile-time-value-binding-descriptor.object
+    retrieve-compile-time-value
 
     make-syntactic-binding-descriptor/local-global-macro/module-interface
 
@@ -887,6 +888,27 @@
   ;;and we want to return ?OBJ.
   ;;
   (cadr ?descriptor))
+
+(define* (retrieve-compile-time-value {id identifier?})
+  ;;This is the compile-time values  retriever function.  Given an identifier: search
+  ;;an  entry in  the lexical  environment; when  found return  its value,  otherwise
+  ;;return false.
+  ;;
+  (let ((descriptor (label->syntactic-binding-descriptor (id->label id) (current-inferior-lexenv))))
+    (case (syntactic-binding-descriptor.type descriptor)
+      ;;The given  identifier is  bound to  a local  compile-time value.   The actual
+      ;;object is stored in the descriptor itself.
+      ((local-ctv)
+       (local-compile-time-value-binding-descriptor.object descriptor))
+
+      ;;The given identifier is bound to a compile-time value imported from a library
+      ;;or the  top-level environment.  The  actual object  is stored in  the "value"
+      ;;field of a loc gensym.
+      ((global-ctv)
+       (global-compile-time-value-binding-descriptor.object descriptor))
+
+      ;;The given identifier is not bound to a compile-time value.
+      (else #f))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2507,29 +2529,32 @@
       expr)))
 
 
-;;;; identifiers: syntax parameters
+;;;; current inferior lexenv
+;;
+;;When calling a macro transformer procedure: we set the paramerer CURRENT-RUN-LEXENV
+;;to a function  returning the current inferior LEXENV.  This  allows us to implement
+;;syntax parameters and compile-time value retrieving.
+;;
 
 (define current-run-lexenv
-  ;;This parameter holds  a function which is meant to  return the value
-  ;;of LEXENV.RUN while a macro is being expanded.
+  ;;This parameter holds a function which is  meant to return the value of LEXENV.RUN
+  ;;while a macro is being expanded.
   ;;
   ;;The default value  will return null, which represents an  empty LEXENV; when such
   ;;value is used with LABEL->SYNTACTIC-BINDING-DESCRIPTOR: the mapping label/binding
   ;;is performed only in the top-level environment.
   ;;
-  ;;Another possibility we could think of is to use as default value the
-  ;;function:
+  ;;Another possibility we could think of is to use as default value the function:
   ;;
   ;;   (lambda ()
   ;;     (syntax-violation 'current-run-lexenv
   ;; 	   "called outside the extent of a macro expansion"
   ;; 	   '(current-run-lexenv)))
   ;;
-  ;;However there are  cases where we actually want  the returned LEXENV
-  ;;to be null, for example: when evaluating the visit code of a library
-  ;;just loaded in  FASL form; such visit code might  need, for example,
-  ;;to access the  syntactic binding property lists, and it  would do it
-  ;;outside any macro expansion.
+  ;;However there are  cases where we actually  want the returned LEXENV  to be null,
+  ;;for example:  when evaluating  the visit code  of a library  just loaded  in FASL
+  ;;form; such  visit code might need,  for example, to access  the syntactic binding
+  ;;property lists, and it would do it outside any macro expansion.
   ;;
   (make-parameter
       (lambda () '())
@@ -2539,10 +2564,13 @@
 (define (current-inferior-lexenv)
   ((current-run-lexenv)))
 
+
+;;;; identifiers: syntax parameters
+
 (define* (syntax-parameter-value {id identifier?})
   (let ((label (id->label id)))
     (if label
-	(let ((binding (label->syntactic-binding-descriptor label ((current-run-lexenv)))))
+	(let ((binding (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
 	  (case (syntactic-binding-descriptor.type binding)
 	    ((local-ctv)
 	     (local-compile-time-value-binding-descriptor.object binding))

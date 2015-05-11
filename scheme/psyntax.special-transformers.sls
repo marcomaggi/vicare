@@ -150,9 +150,7 @@
 ;;
 ;;   (define-syntax get-it
 ;;     (lambda (stx)
-;;       (lambda (ctv-retriever)
-;;         (ctv-retriever #'it) => 3
-;;         )))
+;;       (retrieve-compile-time-value #'it))) => 3
 ;;
 ;;Let's say we define a compile-time value with:
 ;;

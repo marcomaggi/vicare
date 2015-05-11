@@ -548,64 +548,24 @@
     ;;detection;   implementation  of   compile-time   values;  expander   inspection
     ;;facilities.
     ;;
-    (define (main)
-      (import ADD-MARK)
-      ;;We parametrise here because we can never know which transformer, for example,
-      ;;will query the syntactic binding properties.
-      (receive (output-form.stx)
-	  (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	    (let ((output-form-expr (transformer (add-anti-mark input-form.stx))))
-	      ;;If the  transformer returns  a function: we  must apply  the returned
-	      ;;function to a function acting  as compile-time value retriever.  Such
-	      ;;application must return a value as a transformer would do.
-	      (if (procedure? output-form-expr)
-		  (output-form-expr %ctv-retriever)
-		output-form-expr)))
-	(%assert-no-raw-symbols-in-output-form output-form.stx)
-	;;Put a new mark on the output form.  For all the identifiers already present
-	;;in the input  form: this new mark  will be annihilated by  the anti-mark we
-	;;put before.   For all the  identifiers introduced by the  transformer: this
-	;;new mark will stay there.
-	(add-new-mark rib output-form.stx input-form.stx)))
-
-    (define (%assert-no-raw-symbols-in-output-form x)
-      ;;Recursive function.  X must be a wrapped or unwrapped syntax object.
-      ;;
-      (unless (stx? x)
-	(cond ((pair? x)
-	       (%assert-no-raw-symbols-in-output-form (car x))
-	       (%assert-no-raw-symbols-in-output-form (cdr x)))
-	      ((vector? x)
-	       (vector-for-each %assert-no-raw-symbols-in-output-form x))
-	      ((symbol? x)
-	       (syntax-violation __who__
-		 "raw symbol encountered in output of macro" input-form.stx x)))))
-
-    (define (%ctv-retriever id)
-      ;;This is  the compile-time  values retriever  function.  Given  an identifier:
-      ;;search an  entry in  the lexical  environment; when  found return  its value,
-      ;;otherwise return false.
-      ;;
-      (if (identifier? id)
-	  (let ((descriptor (label->syntactic-binding-descriptor (id->label id) lexenv.run)))
-	    (case (syntactic-binding-descriptor.type descriptor)
-	      ;;The given  identifier is  bound to a  local compile-time  value.  The
-	      ;;actual object is stored in the descriptor itself.
-	      ((local-ctv)
-	       (local-compile-time-value-binding-descriptor.object descriptor))
-
-	      ;;The given identifier is bound to a compile-time value imported from a
-	      ;;library or the top-level environment.  The actual object is stored in
-	      ;;the "value" field of a loc gensym.
-	      ((global-ctv)
-	       (global-compile-time-value-binding-descriptor.object descriptor))
-
-	      ;;The given identifier is not bound to a compile-time value.
-	      (else #f)))
-	(assertion-violation __who__
-	  "expected identifier as argument of compile-time value retriever" id)))
-
-    (main))
+    (import ADD-MARK)
+    (let ((output-form.stx (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			     (transformer (add-anti-mark input-form.stx)))))
+      (let assert-no-raw-symbols-in-output-form ((x output-form.stx))
+	(unless (stx? x)
+	  (cond ((pair? x)
+		 (assert-no-raw-symbols-in-output-form (car x))
+		 (assert-no-raw-symbols-in-output-form (cdr x)))
+		((vector? x)
+		 (vector-for-each assert-no-raw-symbols-in-output-form x))
+		((symbol? x)
+		 (syntax-violation __who__
+		   "raw symbol encountered in output of macro" input-form.stx x)))))
+      ;;Put a new mark  on the output form.  For all  the identifiers already present
+      ;;in the input form: this new mark  will be annihilated by the anti-mark we put
+      ;;before.  For all the identifiers introduced by the transformer: this new mark
+      ;;will stay there.
+      (add-new-mark rib output-form.stx input-form.stx)))
 
   #| end of module |# )
 

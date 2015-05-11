@@ -2826,6 +2826,7 @@
     (make-compile-time-value			v $language)
     (compile-time-value?			v $language)
     (compile-time-value-object			v $language)
+    (retrieve-compile-time-value		v $language)
     (syntactic-binding-putprop			v $language)
     (syntactic-binding-getprop			v $language)
     (syntactic-binding-remprop			v $language)
