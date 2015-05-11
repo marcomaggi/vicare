@@ -897,10 +897,8 @@
 ;;   ;;Build  and  return  a  syntactic  binding  descriptor  representing  an  imported
 ;;   ;;compile-time value.
 ;;   ;;
-;;   ;;The argument LOC is a loc gensym.  The argument LIB is either: a "library" object
-;;   ;;representing  the  library  from  which  the  binding  is  imported;  the  symbol
-;;   ;;"*interaction*",  if  the  binding  was  established  by  a  previous  expression
-;;   ;;evaluated in an interaction environment.
+;;   ;;The  argument LOC  is a  loc  gensym.  The  argument  LIB is  a "library"  object
+;;   ;;representing the library from which the binding is imported.
 ;;   ;;
 ;;   ;;The returned descriptor has format:
 ;;   ;;
@@ -920,18 +918,16 @@
   ;;
   ;;   (global-ctv . (?library . ?loc))
   ;;
-  ;;where: ?LIBRARY is either an object of type "library" describing the library from
-  ;;which the  binding is  imported or  the symbol "*interaction*";  ?LOC is  the log
-  ;;gensym containing the actual object in its VALUE slot (but only after the library
-  ;;has been visited).
+  ;;where: ?LIBRARY is an object of  type "library" describing the library from which
+  ;;the binding is imported;  ?LOC is the log gensym containing  the actual object in
+  ;;its VALUE slot (but only after the library has been visited).
   ;;
   (let ((lib (global-compile-time-value-binding-descriptor.lib descriptor))
 	(loc (global-compile-time-value-binding-descriptor.loc descriptor)))
     ;;If this global binding use is the first  time a binding from LIB is used: visit
     ;;the library.   This makes  sure that  the actual  object is  stored in  the loc
     ;;gensym.
-    (unless (eq? lib '*interaction*)
-      (visit-library lib))
+    (visit-library lib)
     ;;When the  library LIB  has been  loaded from  source: the  compile-time value's
     ;;object is stored in the loc gensym.   When the library LIB has been loaded from
     ;;a compiled file: the compile-time value itself is in the loc gensym, so we have

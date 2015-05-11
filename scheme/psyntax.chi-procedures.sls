@@ -521,8 +521,7 @@
 	  (loc (cdr bind-val)))
       ;;If this  global binding use  is the  first time a  binding from LIB  is used:
       ;;visit the library.
-      (unless (eq? lib '*interaction*)
-	(visit-library lib))
+      (visit-library lib)
       (let ((transformer (let ((x (symbol-value loc)))
 			   (cond ((procedure? x)
 				  x)
@@ -825,25 +824,10 @@
 		      " was found where an expression was expected")))
 
 	 ((global-mutable)
-	  ;;Variable in reference  position, whose binding is assigned  at least once
-	  ;;in the source code; it means EXPR.STX is an identifier.
-	  ;;
-	  ;;We expect the syntactic binding descriptor to be:
-	  ;;
-	  ;;   (global-mutable . (?library . ?loc))
-	  ;;
-	  ;;and BIND-VAL to be:
-	  ;;
-	  ;;   (?library . ?loc)
-	  ;;
-	  (if (and (pair? bind-val)
-		   (let ((lib (car bind-val)))
-		     (eq? lib '*interaction*)))
-	      (let ((loc (cdr bind-val)))
-		(make-psi expr.stx
-			  (build-global-reference no-source loc)
-			  (identifier-tag-retvals-signature expr.stx)))
-	    (stx-error expr.stx "attempt to reference an unexportable variable")))
+	  ;;Imported variable  in reference  position, whose  binding is  assigned at
+	  ;;least once in the  code of the imported library; it  means EXPR.STX is an
+	  ;;identifier.
+	  (stx-error expr.stx "attempt to reference a variable that is assigned in an imported library"))
 
 	 ((tag-maker-application)
 	  ;;Here we expand  a form whose car  is a tag identifier.  The  result is an
@@ -1779,7 +1763,9 @@
 	 (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
 	((global)
-	 (syntax-violation __module_who__ "attempt to modify an immutable binding" input-form.stx lhs.id))
+	 (syntax-violation __module_who__
+	   "attempt to assign a variable that is imported from a library"
+	   input-form.stx lhs.id))
 
 	((global-macro!)
 	 (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
@@ -1788,6 +1774,9 @@
 	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
 	((global-mutable)
+	 ;;Imported  variable in  reference position,  whose binding  is assigned  at
+	 ;;least once in the code of the imported library.
+	 ;;
 	 ;;Let's consider this library:
 	 ;;
 	 ;;   (library (demo)
@@ -1800,32 +1789,17 @@
 	 ;;     (define var 123)
 	 ;;     (set! var 8))
 	 ;;
-	 ;;in which VAR is mutable and not exportable according to R6RS; if we import
-	 ;;the library in a program and use MACRO:
+	 ;;in which VAR  is assigned and so  not exportable according to  R6RS; if we
+	 ;;import the library in a program and use MACRO:
 	 ;;
 	 ;;   (import (vicare) (demo))
 	 ;;   (macro)
 	 ;;
 	 ;;we are  attempting to  mutate an unexportable  binding in  another lexical
 	 ;;context.  This is forbidden by R6RS.
-	 ;;
-	 (if (and (pair? bind-val)
-		  (let ((lib (car bind-val)))
-		    (eq? lib '*interaction*)))
-	     (let* ((loc     (cdr bind-val))
-		    (lhs.tag (or (identifier-tag lhs.id)
-				 (top-tag-id)))
-		    (rhs.psi (chi-expr (bless
-					`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
-				       lexenv.run lexenv.expand)))
-	       (make-psi input-form.stx
-			 (build-global-assignment no-source
-			   loc
-			   (psi-core-expr rhs.psi))
-			 (make-retvals-signature-single-top)))
-	   (syntax-violation __module_who__
-	     "attempt to modify a variable imported from another lexical context"
-	     input-form.stx lhs.id)))
+	 (syntax-violation __module_who__
+	   "attempt to assign a variable that is imported from a library"
+	   input-form.stx lhs.id))
 
 	((standalone-unbound-identifier)
 	 ;;The identifier  LHS.ID is unbound: raise  an exception.

@@ -36,16 +36,14 @@
 
 (define (make-collector)
   (let ((ls '()))
-    (case-lambda
+    (case-lambda*
      (()
       ls)
-     ((x)
-      (unless (eq? x '*interaction*)
-	(assert (library? x))
-	;;Prepend X to the list LS if it is not already contained according to EQ?.
-	(set! ls (if (memq x ls)
-		     ls
-		   (cons x ls))))))))
+     (({x library?})
+      ;;Prepend X to the list LS if it is not already contained according to EQ?.
+      (set! ls (if (memq x ls)
+		   ls
+		 (cons x ls)))))))
 
 (define-syntax %mk-collector-parameter
   (syntax-rules ()

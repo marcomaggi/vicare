@@ -1342,11 +1342,14 @@
 	     ;;
 	     ;;   (?label . (?type . ?lex/loc))
 	     ;;
-	     ;;where: ?TYPE is the symbol  "mutable" or the symbol "global"; ?lex/loc
-	     ;;is the loc gensym of the variable, used as lex gensym and loc gensym.
+	     ;;where: ?TYPE  is the symbol  "global-mutable" or the  symbol "global";
+	     ;;?lex/loc is the loc gensym of the variable, used as lex gensym and loc
+	     ;;gensym.
 	     ;;
-	     ;;NOTE The entries of type "mutable"  are forbidden to be exported.  The
-	     ;;error will be raised later.
+	     ;;NOTE  The  entries  of  type  "global-mutable"  are  forbidden  to  be
+	     ;;exported: entries  of this  type can  be in  the EXPORT-ENV,  but they
+	     ;;cannot  be referenced  in the  EXPORT-SUBST; this  validation will  be
+	     ;;performed later.
 	     ;;
 	     (let* ((bind-val  (syntactic-binding-descriptor.value binding))
 		    ;;Search for LEXICAL-GENSYM  in the list LEX*:  when found return
@@ -1476,6 +1479,10 @@
     ;;	      (set! that a)))
     ;;
     ;;in which the mutable variable THAT is exported.
+    ;;
+    ;;Entries of type "global-mutable" are forbidden  to be exported: entries of this
+    ;;type  can  be  in  the  EXPORT-ENV,  but  they  cannot  be  referenced  in  the
+    ;;EXPORT-SUBST.
     ;;
     (define export-subst-entry-name  car)
     (define export-subst-entry-label cdr)

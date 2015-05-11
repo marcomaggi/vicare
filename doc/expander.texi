@@ -1830,13 +1830,6 @@ where: @meta{library} is the @objtype{library} object from which the
 binding is imported; @meta{lex/loc} is the storage location gensym
 containing the variable's value in its @code{value} field.
 
-@quotation
-@strong{NOTE} When we are evaluating code in an interaction environment
-(for example at the @repl{}): if the variable binding was established by
-a previous expression, @meta{library} is the symbol
-@samp{*interaction*}.
-@end quotation
-
 @c ------------------------------------------------------------------------
 
 @subsubheading Imported binding: non--variable macro
