@@ -81,10 +81,10 @@
 
     make-syntactic-binding-descriptor/local-global-macro/synonym-syntax
 
-    make-syntactic-binding-descriptor/local-macro/compile-time-value
-    local-compile-time-value-binding-descriptor.object
-    global-compile-time-value-binding-descriptor.object
-    retrieve-compile-time-value
+    make-syntactic-binding-descriptor/local-macro/expand-time-value
+    local-expand-time-value-binding-descriptor.object
+    global-expand-time-value-binding-descriptor.object
+    retrieve-expand-time-value
 
     make-syntactic-binding-descriptor/local-global-macro/module-interface
 
@@ -238,8 +238,8 @@
     (psyntax.config)
     (psyntax.compat)
     (only (psyntax.special-transformers)
-	  compile-time-value?
-	  compile-time-value-object)
+	  expand-time-value?
+	  expand-time-value-object)
     (only (psyntax.library-manager)
 	  visit-library
 	  label->imported-syntactic-binding-descriptor))
@@ -861,7 +861,7 @@
 ;;; --------------------------------------------------------------------
 ;;; compile-time values bindings
 
-(define (make-syntactic-binding-descriptor/local-macro/compile-time-value obj expanded-expr)
+(define (make-syntactic-binding-descriptor/local-macro/expand-time-value obj expanded-expr)
   ;;Build a  syntactic binding  descriptor representing  a local  compile-time value.
   ;;
   ;;OBJ  must  be  the  actual   object  computed  from  a  compile-time  expression.
@@ -871,7 +871,7 @@
   ;;Given the definition:
   ;;
   ;;   (define-syntax ctv
-  ;;      (make-compile-time-value ?expr))
+  ;;      (make-expand-time-value ?expr))
   ;;
   ;;the  argument OBJ  is the  return value  of expanding  and evaluating  ?EXPR; the
   ;;argument EXPANDED-EXPR  is the result of  expanding the whole right-hand  side of
@@ -879,7 +879,7 @@
   ;;
   (make-syntactic-binding-descriptor local-ctv (cons obj expanded-expr)))
 
-(define-syntax-rule (local-compile-time-value-binding-descriptor.object ?descriptor)
+(define-syntax-rule (local-expand-time-value-binding-descriptor.object ?descriptor)
   ;;Given a  syntactic binding  descriptor representing a  local compile  time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -889,7 +889,7 @@
   ;;
   (cadr ?descriptor))
 
-(define* (retrieve-compile-time-value {id identifier?})
+(define* (retrieve-expand-time-value {id identifier?})
   ;;This is the compile-time values  retriever function.  Given an identifier: search
   ;;an  entry in  the lexical  environment; when  found return  its value,  otherwise
   ;;return false.
@@ -899,13 +899,13 @@
       ;;The given  identifier is  bound to  a local  compile-time value.   The actual
       ;;object is stored in the descriptor itself.
       ((local-ctv)
-       (local-compile-time-value-binding-descriptor.object descriptor))
+       (local-expand-time-value-binding-descriptor.object descriptor))
 
       ;;The given identifier is bound to a compile-time value imported from a library
       ;;or the  top-level environment.  The  actual object  is stored in  the "value"
       ;;field of a loc gensym.
       ((global-ctv)
-       (global-compile-time-value-binding-descriptor.object descriptor))
+       (global-expand-time-value-binding-descriptor.object descriptor))
 
       ;;The given identifier is not bound to a compile-time value.
       (else #f))))
@@ -915,7 +915,7 @@
 ;;Commented out  because unused, but kept  for reference.  (Marco Maggi;  Mon Apr 20,
 ;;2015)
 ;;
-;; (define (make-syntactic-binding-descriptor/global-compile-time-value lib loc)
+;; (define (make-syntactic-binding-descriptor/global-expand-time-value lib loc)
 ;;   ;;Build  and  return  a  syntactic  binding  descriptor  representing  an  imported
 ;;   ;;compile-time value.
 ;;   ;;
@@ -928,13 +928,13 @@
 ;;   ;;
 ;;   (make-syntactic-binding-descriptor global-ctv (cons lib loc)))
 
-(define-syntax-rule (global-compile-time-value-binding-descriptor.lib ?descriptor)
+(define-syntax-rule (global-expand-time-value-binding-descriptor.lib ?descriptor)
   (cadr ?descriptor))
 
-(define-syntax-rule (global-compile-time-value-binding-descriptor.loc ?descriptor)
+(define-syntax-rule (global-expand-time-value-binding-descriptor.loc ?descriptor)
   (cddr ?descriptor))
 
-(define (global-compile-time-value-binding-descriptor.object descriptor)
+(define (global-expand-time-value-binding-descriptor.object descriptor)
   ;;Given a syntactic binding descriptor representing an imported compile time value:
   ;;return the actual compile-time object.  We expect ?DESCRIPTOR to have the format:
   ;;
@@ -944,8 +944,8 @@
   ;;the binding is imported;  ?LOC is the log gensym containing  the actual object in
   ;;its VALUE slot (but only after the library has been visited).
   ;;
-  (let ((lib (global-compile-time-value-binding-descriptor.lib descriptor))
-	(loc (global-compile-time-value-binding-descriptor.loc descriptor)))
+  (let ((lib (global-expand-time-value-binding-descriptor.lib descriptor))
+	(loc (global-expand-time-value-binding-descriptor.loc descriptor)))
     ;;If this global binding use is the first  time a binding from LIB is used: visit
     ;;the library.   This makes  sure that  the actual  object is  stored in  the loc
     ;;gensym.
@@ -955,8 +955,8 @@
     ;;a compiled file: the compile-time value itself is in the loc gensym, so we have
     ;;to extract it.
     (let ((ctv (symbol-value loc)))
-      (if (compile-time-value? ctv)
-	  (compile-time-value-object ctv)
+      (if (expand-time-value? ctv)
+	  (expand-time-value-object ctv)
 	ctv))))
 
 ;;; --------------------------------------------------------------------
@@ -2573,10 +2573,10 @@
 	(let ((binding (label->syntactic-binding-descriptor label (current-inferior-lexenv))))
 	  (case (syntactic-binding-descriptor.type binding)
 	    ((local-ctv)
-	     (local-compile-time-value-binding-descriptor.object binding))
+	     (local-expand-time-value-binding-descriptor.object binding))
 
 	    ((global-ctv)
-	     (global-compile-time-value-binding-descriptor.object binding))
+	     (global-expand-time-value-binding-descriptor.object binding))
 
 	    (else
 	     (procedure-argument-violation __who__

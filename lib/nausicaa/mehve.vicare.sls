@@ -991,10 +991,10 @@
     make-binary-file-descriptor-output-port*
     make-binary-socket-input/output-port
     make-binary-socket-input/output-port*
-    make-compile-time-value
-    compile-time-value?
-    compile-time-value-object
-    retrieve-compile-time-value
+    make-expand-time-value
+    expand-time-value?
+    expand-time-value-object
+    retrieve-expand-time-value
     make-errno-condition
     make-file-options
     make-guardian

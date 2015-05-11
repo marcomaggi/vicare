@@ -1084,7 +1084,7 @@ of evaluating the right--hand side expression is the return value of a
 call to @func{make-variable-transformer}.
 
 @item global-ctv
-Denotes a syntactic binding representing a compile-time value.  The
+Denotes a syntactic binding representing an expand--time value.  The
 export descriptor has the format:
 
 @example
@@ -1093,13 +1093,13 @@ export descriptor has the format:
 
 @noindent
 where @meta{loc} is the storage location gensym; after the library has
-been visited: @meta{loc} holds the actual compile--time object.  This
+been visited: @meta{loc} holds the actual expand--time object.  This
 binding can be exported.
 
 Syntactic bindings of this type are established by
 @syntax{define-syntax}, @syntax{let-syntax} and similar when the result
 of evaluating their right--hand side expression is the return value of a
-call to @func{make-compile-time-value}.
+call to @func{make-expand-time-value}.
 
 @item $struct-type-descriptor
 Denotes a syntactic binding representing a @value{PRJNAME}'s
@@ -1196,7 +1196,7 @@ We can toy with the @code{export-env} with the following program:
   (define-syntax macro-id (identifier-syntax 4))
   (define-syntax var-macro
     (make-variable-transformer (lambda (stx) 5)))
-  (define-syntax ctv (make-compile-time-value 6))
+  (define-syntax ctv (make-expand-time-value 6))
   (module modu (modu-var) (define modu-var 7))
   (define-fluid-syntax fluid (lambda (stx) 8))
   (define-syntax synonym (make-synonym-transformer #'var))
@@ -1430,7 +1430,7 @@ example, expanding the library:
   (define-syntax (mac stx)
     3)
   (define-syntax ctv
-    (make-compile-time-value
+    (make-expand-time-value
      (+ 4 5))))
 @end example
 
@@ -1455,8 +1455,8 @@ the @code{visit-code}:
           ((lex.stx) '3)))
   (set! loc.lab.ctv
         (annotated-call
-            (make-compile-time-value (+ 4 5))
-          (primitive make-compile-time-value)
+            (make-expand-time-value (+ 4 5))
+          (primitive make-expand-time-value)
           (annotated-call (+ 4 5) (primitive +) '4 '5))))
 @end example
 

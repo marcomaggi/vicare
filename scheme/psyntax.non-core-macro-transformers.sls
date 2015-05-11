@@ -5287,7 +5287,7 @@
      (identifier? ?param-id)
      (bless
       `(define-fluid-syntax ,?param-id
-	 (make-compile-time-value ,?param-expr))))
+	 (make-expand-time-value ,?param-expr))))
     ))
 
 (define (syntax-parametrise-macro expr-stx)
@@ -5301,7 +5301,7 @@
      (for-all identifier? ?lhs*)
      (bless
       `(fluid-let-syntax ,(map (lambda (lhs rhs)
-				 (list lhs `(make-compile-time-value ,rhs)))
+				 (list lhs `(make-expand-time-value ,rhs)))
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
     ))

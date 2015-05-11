@@ -1654,9 +1654,9 @@
   ;; make-synonym-transformer
   ;; synonym-transformer?
   ;; synonym-transformer-identifier
-  ;; make-compile-time-value
-  ;; compile-time-value?
-  ;; compile-time-value-object
+  ;; make-expand-time-value
+  ;; expand-time-value?
+  ;; expand-time-value-object
   ;; syntactic-binding-putprop
   ;; syntactic-binding-getprop
   ;; syntactic-binding-remprop

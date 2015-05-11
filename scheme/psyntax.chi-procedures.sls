@@ -60,7 +60,7 @@
     (only (psyntax.special-transformers)
 	  variable-transformer?		variable-transformer-procedure
 	  synonym-transformer?		synonym-transformer-identifier
-	  compile-time-value?		compile-time-value-object)
+	  expand-time-value?		expand-time-value-object)
     (psyntax.non-core-macro-transformers)
     (psyntax.library-manager)
     (psyntax.internal))
@@ -426,8 +426,8 @@
 	  ((or (record-type-name-binding-descriptor? rv)
 	       (struct-type-name-binding-descriptor? rv))
 	   rv)
-	  ((compile-time-value? rv)
-	   (make-syntactic-binding-descriptor/local-macro/compile-time-value (compile-time-value-object rv) rhs-expr.core))
+	  ((expand-time-value? rv)
+	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
 	   (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax (synonym-transformer-identifier rv)))
 	  (else

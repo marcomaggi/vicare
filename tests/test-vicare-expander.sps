@@ -4074,16 +4074,16 @@
   #t)
 
 
-(parametrise ((check-test-name	'compile-time-values))
+(parametrise ((check-test-name	'expand-time-values))
 
   (check
       (let ()
 	(define-syntax obj1
-	  (make-compile-time-value (+ 1 2 3)))
+	  (make-expand-time-value (+ 1 2 3)))
 
 	(define-syntax get-obj1
 	  (lambda (stx)
-	    (retrieve-compile-time-value #'obj1)))
+	    (retrieve-expand-time-value #'obj1)))
 
 	(get-obj1))
     => 6)
@@ -4091,11 +4091,11 @@
   (check
       (let ()
 	(define-syntax obj2
-	  (make-compile-time-value (vector 1 2 3)))
+	  (make-expand-time-value (vector 1 2 3)))
 
 	(define-syntax get-obj2
 	  (lambda (stx)
-	    #`(quote #,(retrieve-compile-time-value #'obj2))))
+	    #`(quote #,(retrieve-expand-time-value #'obj2))))
 
 	(get-obj2))
     => '#(1 2 3))
@@ -4825,28 +4825,28 @@
 
 (parametrise ((check-test-name	'syntax-parameters))
 
-  (check	;no parametrise, retrieve-compile-time-value
+  (check	;no parametrise, retrieve-expand-time-value
       (let ()
 	(define-syntax-parameter parm 1)
 	(define-syntax (show-it stx)
-	  (retrieve-compile-time-value #'parm))
+	  (retrieve-expand-time-value #'parm))
 	(show-it))
     => 1)
 
-  (check	;one parametrise, retrieve-compile-time-value
+  (check	;one parametrise, retrieve-expand-time-value
       (let ()
 	(define-syntax-parameter parm 1)
 	(define-syntax (show-it stx)
-	  (retrieve-compile-time-value #'parm))
+	  (retrieve-expand-time-value #'parm))
 	(syntax-parametrise ((parm 2))
 	  (show-it)))
     => 2)
 
-  (check	;two parametrise, retrieve-compile-time-value
+  (check	;two parametrise, retrieve-expand-time-value
       (let ()
 	(define-syntax-parameter parm 1)
 	(define-syntax (show-it stx)
-	  (retrieve-compile-time-value #'parm))
+	  (retrieve-expand-time-value #'parm))
 	(syntax-parametrise ((parm 2))
 	  (show-it)))
     => 2)

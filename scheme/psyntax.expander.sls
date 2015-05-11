@@ -693,7 +693,7 @@
   ;;     (define-syntax (mac stx)
   ;;       3)
   ;;     (define-syntax ctv
-  ;;       (make-compile-time-value
+  ;;       (make-expand-time-value
   ;;        (+ 4 5))))
   ;;
   ;;yields the INVOKE-CODE:
@@ -712,8 +712,8 @@
   ;;             ((lex.stx) '3)))
   ;;     (set! loc.lab.ctv
   ;;           (annotated-call
-  ;;               (make-compile-time-value (+ 4 5))
-  ;;             (primitive make-compile-time-value)
+  ;;               (make-expand-time-value (+ 4 5))
+  ;;             (primitive make-expand-time-value)
   ;;             (annotated-call (+ 4 5) (primitive +) '4 '5))))
   ;;
   ;;the EXPORT-SUBST:
@@ -822,8 +822,8 @@
     ;;	      ((stx) '3)))
     ;;    (set! G5
     ;;      (annotated-call
-    ;;	      (make-compile-time-value (+ 4 5))
-    ;;	      (primitive make-compile-time-value)
+    ;;	      (make-expand-time-value (+ 4 5))
+    ;;	      (primitive make-expand-time-value)
     ;;	      (annotated-call (+ 4 5)
     ;;          (primitive +) '4 '5))))
     ;;

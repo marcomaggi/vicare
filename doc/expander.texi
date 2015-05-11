@@ -1875,10 +1875,10 @@ call to @func{make-variable-transformer}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Imported binding: compile--time value
+@subsubheading Imported binding: expand--time value
 
 A syntactic binding representing an imported keyword binding associated
-to a compile-time value has descriptor with format:
+to an expand--time value has descriptor with format:
 
 @example
 (global-ctv . (@meta{library} . @meta{loc}))
@@ -1893,7 +1893,12 @@ the library has been visited).
 Syntactic bindings of this type are established by
 @syntax{define-syntax}, @syntax{let-syntax} and similar when the result
 of evaluating their right--hand side expression is the return value of a
-call to @func{make-compile-time-value}.
+call to @func{make-expand-time-value}.
+
+@quotation
+@strong{NOTE} The type symbol @samp{global-ctv} stands for ``global
+compile--time value''.
+@end quotation
 
 @c ------------------------------------------------------------------------
 
@@ -2013,7 +2018,7 @@ bindings:
     (make-variable-transformer (lambda (stx) "ohayo")))
 
   (define-syntax ctv
-    (make-compile-time-value 123))
+    (make-expand-time-value 123))
 
   (define-struct color
     (red green blue))
@@ -2187,10 +2192,10 @@ to the return value of @func{make-variable-transformer}.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Internal binding: compile--time value
+@subsubheading Internal binding: expand--time value
 
-A syntactic binding representing a keyword binding associated to a
-compile--time value has descriptor with format:
+A syntactic binding representing a keyword binding associated to an
+expand--time value has descriptor with format:
 
 @example
 (local-ctv . (@meta{object} . @meta{expanded-expr}))
@@ -2214,7 +2219,12 @@ where @meta{loc} is the storage location gensym of the macro.
 
 These syntactic bindings are established by @syntax{define-syntax},
 @syntax{let-syntax} and similar, when their right--hand side evaluates
-to the return value of @func{make-compile-time-value}.
+to the return value of @func{make-expand-time-value}.
+
+@quotation
+@strong{NOTE} The type symbol @samp{local-ctv} stands for ``local
+compile--time value''.
+@end quotation
 
 @c ------------------------------------------------------------------------
 

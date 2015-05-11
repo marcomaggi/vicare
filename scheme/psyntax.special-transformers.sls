@@ -29,9 +29,9 @@
     synonym-transformer?
     synonym-transformer-identifier
 
-    make-compile-time-value
-    compile-time-value?
-    compile-time-value-object)
+    make-expand-time-value
+    expand-time-value?
+    expand-time-value-object)
   (import (except (vicare)
 		  make-variable-transformer
 		  variable-transformer?
@@ -41,9 +41,9 @@
 		  synonym-transformer?
 		  synonym-transformer-identifier
 
-		  make-compile-time-value
-		  compile-time-value?
-		  compile-time-value-object))
+		  make-expand-time-value
+		  expand-time-value?
+		  expand-time-value-object))
 
 
 ;;;; public interface: variable transformer
@@ -143,14 +143,14 @@
 ;;environment with:
 ;;
 ;;   (define-syntax it
-;;     (make-compile-time-value (+ 1 2)))
+;;     (make-expand-time-value (+ 1 2)))
 ;;
 ;;later  we  can retrieve  it  by  defining a  transformer  function  that returns  a
 ;;function:
 ;;
 ;;   (define-syntax get-it
 ;;     (lambda (stx)
-;;       (retrieve-compile-time-value #'it))) => 3
+;;       (retrieve-expand-time-value #'it))) => 3
 ;;
 ;;Let's say we define a compile-time value with:
 ;;
@@ -158,7 +158,7 @@
 ;;
 ;;where ?EXPRESSION is:
 ;;
-;;   (make-compile-time-value ?stuff)
+;;   (make-expand-time-value ?stuff)
 ;;
 ;;here is what happen:
 ;;
@@ -177,17 +177,17 @@
 ;;   where ?OBJ is the actual compile-time value.
 ;;
 ;;4..%EVAL-MACRO-TRANSFORMER    recognises    the     value    as    special    using
-;;   COMPILE-TIME-VALUE?  and transforms it to a "local-ctv" syntactic binding.
+;;   EXPAND-TIME-VALUE?  and transforms it to a "local-ctv" syntactic binding.
 ;;
 
-(define (make-compile-time-value obj)
+(define (make-expand-time-value obj)
   (cons 'ctv obj))
 
-(define (compile-time-value? obj)
+(define (expand-time-value? obj)
   (and (pair? obj)
        (eq? 'ctv (car obj))))
 
-(define compile-time-value-object
+(define expand-time-value-object
   ;;Given  a compile-time  value datum:  return the  actual compile-time
   ;;object.
   ;;

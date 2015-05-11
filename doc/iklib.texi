@@ -6735,8 +6735,8 @@ datum and embedding the datum itself.
 * iklib expander fluids::           Fluid syntaxes.
 * iklib expander utils::            Utilities for macro writers.
 * iklib expander clauses::          Syntax clauses helpers.
-* iklib expander ctv::              Compile-time values.
-* iklib expander parameters::       Expand--time parameters.
+* iklib expander ctv::              Expand-time values.
+* iklib expander parameters::       Expand-time parameters.
 * iklib expander synonym::          Synonym transformers.
 @end menu
 
@@ -8105,80 +8105,78 @@ according to @func{free-identifier=?}, to an identifier in the
 
 @c page
 @node iklib expander ctv
-@subsection Compile--time values
+@subsection expand--time values
 
 
 It is sometimes useful to precompute a value at expand--time and push it
 on the lexical environment to be later retrieved.  Here is an example of
-simple compile--time value (@acronym{CTV}) computation, retrieval and
-insertion in which the value is a self--evaluating fixnum:
+simple expand--time value computation, retrieval and insertion in which
+the value is a self--evaluating fixnum:
 
 @example
 (import (vicare))
 
 (define-syntax obj1
-  (make-compile-time-value (+ 1 2 3)))
+  (make-expand-time-value (+ 1 2 3)))
 
 (define-syntax get-obj1
   (lambda (stx)
-    (retrieve-compile-time-value #'obj1)))
+    (retrieve-expand-time-value #'obj1)))
 
 (get-obj1) @expansion{} 6
 @end example
 
 @noindent
-here is an example of simple compile--time value computation, retrieval
+here is an example of simple expand--time value computation, retrieval
 and insertion in which the value is a non--self--evaluating vector:
 
 @example
 (import (vicare))
 
 (define-syntax obj2
-  (make-compile-time-value (vector 1 2 3)))
+  (make-expand-time-value (vector 1 2 3)))
 
 (define-syntax get-obj2
   (lambda (stx)
-    #`(quote #,(retrieve-compile-time-value #'obj2))))
+    #`(quote #,(retrieve-expand-time-value #'obj2))))
 
 (get-obj2) @expansion{} (quote #(1 2 3))
 @end example
 
 @noindent
-we see that to produce a compile--time value we define a syntax keyword
-bound to the result of @func{make-compile-time-value}.  For historical
-reasons, this @api{} is called ``compile--time values''; a better name
-is ``expand--time values''.
+we see that to produce an expand--time value we define a syntax keyword
+bound to the result of @func{make-expand-time-value}.
 
 
-@defun make-compile-time-value @var{obj}
+@defun make-expand-time-value @var{obj}
 Build and return a ``special'' object that is recognised by the expander
-as holding @var{obj} as a precomputed compile--time object.
+as holding @var{obj} as a precomputed expand--time object.
 @end defun
 
 
-@defun compile-time-value? @var{obj}
+@defun expand-time-value? @var{obj}
 Return @true{} if @var{obj} is a ``special'' object that is recognised
-by the expander as holding a precomputed compile--time object.
+by the expander as holding a precomputed expand--time object.
 @end defun
 
 
-@defun compile-time-value-object @var{ctv}
+@defun expand-time-value-object @var{ctv}
 Given a ``special'' object that is recognised by the expander as holding
-a precomputed compile--time object: return the actual value.
+a precomputed expand--time object: return the actual value.
 @end defun
 
 
-@defun retrieve-compile-time-value @var{id}
-Given a syntactic identifier return its associated compile--time value;
-if @var{id} is not associated to a compile--time value: return @false{}.
+@defun retrieve-expand-time-value @var{id}
+Given a syntactic identifier return its associated expand--time value;
+if @var{id} is not associated to a expand--time value: return @false{}.
 @end defun
 
 @c ------------------------------------------------------------
 
-@subsubheading What compile--time values are @strong{not} for
+@subsubheading What expand--time values are @strong{not} for
 
 
-We have to understand that the real use of compile--time values is not
+We have to understand that the real use of expand--time values is not
 actually to precompute values and put them in compiled code; for this we
 can just use @func{define-inline-constant}, which in the end defines a
 ``normal'' syntax transformer as the following:
@@ -8199,15 +8197,14 @@ obj1    @expansion{} (quote #(1 2 3))
 
 @c ------------------------------------------------------------
 
-@subsubheading What compile--time values are for
-
+@subsubheading What expand--time values are for
 
 Let's say we define a record type in a library (it must go in a library
 so that we can import it and use it at expand--time in the body of
 transformers):
 
 @example
-(library (ctv-demo)
+(library (etv-demo)
   (export that make-that)
   (import (vicare))
   (define-record-type that
@@ -8220,11 +8217,11 @@ lexical environment, bound to the identifier @code{it}:
 
 @example
 (import (vicare)
-  (for (ctv-demo) expand))
+  (for (etv-demo) expand))
 
 (define-syntax it
-  (make-compile-time-value
-   (make-that 1 2 3)))
+  (make-expand-time-value
+    (make-that 1 2 3)))
 @end example
 
 @noindent
@@ -8234,7 +8231,7 @@ and use its fields to produce the output of a syntax use:
 @example
 (define-syntax get-it
   (lambda (stx)
-    (let ((S (retrieve-compile-time-value #'it)))
+    (let ((S (retrieve-expand-time-value #'it)))
       (with-syntax
           ((A (record-type-field-ref that a S))
            (B (record-type-field-ref that b S))
@@ -8249,7 +8246,7 @@ and use its fields to produce the output of a syntax use:
 @subsection Expand--time parameters
 
 
-Fluid syntaxes and compile--time values can be used to implement a sort
+Fluid syntaxes and expand--time values can be used to implement a sort
 of expand--time parameters, @ref{iklib parameters, Parameters}.  The
 following example shows the mechanism by defining a ``parameter''
 @samp{parm}:
@@ -8261,16 +8258,16 @@ following example shows the mechanism by defining a ``parameter''
   (fprintf (current-error-port)
            "parm ~a: ~a\n"
            (cadr (syntax->datum stx))
-           (retrieve-compile-time-value #'parm))
+           (retrieve-expand-time-value #'parm))
   #f)
 
 (define-fluid-syntax parm
-  (make-compile-time-value #f))
+  (make-expand-time-value #f))
 
 (show-it "1, expect #f")
-(fluid-let-syntax ((parm (make-compile-time-value #t)))
+(fluid-let-syntax ((parm (make-expand-time-value #t)))
   (show-it "2, expect #t")
-  (fluid-let-syntax ((parm (make-compile-time-value #f)))
+  (fluid-let-syntax ((parm (make-expand-time-value #f)))
     (show-it "3, expect #f"))
   (show-it "4, expect #t"))
 (show-it "5, expect #f")
@@ -8315,14 +8312,14 @@ Using the @api{} described here, the example can be rewritten:
 @deffn Syntax define-syntax-parameter @meta{parm-id} @meta{expr}
 Define a new syntax parameter bound to the identifier @meta{parm-id}.
 The parameter is initialised to the result of evaluating the
-compile--time expression @meta{expr}.
+expand--time expression @meta{expr}.
 @end deffn
 
 
 @deffn Syntax syntax-parametrise ((@meta{parm-id} @meta{expr}) @dots{}) @metao{body} @meta{body} @dots{}
-Bind one or more syntax parameters to new compile--time values and while
+Bind one or more syntax parameters to new expand--time values and while
 the body forms are expanded.  The arguments @meta{parm-id} must be
-identifiers previously bound to compile--time values by
+identifiers previously bound to expand--time values by
 @func{define-syntax-parameter}.  The arguments @meta{expr} must be
 expressions.
 @end deffn
