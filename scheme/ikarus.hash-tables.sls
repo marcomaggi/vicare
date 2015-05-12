@@ -69,6 +69,12 @@
     $string-hash		$string-ci-hash
     $symbol-hash		$bytevector-hash)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Fri Mar 20, 2015)
+		  vector-find
+		  vector-fold-right
+		  ;;;
+
 		  make-eq-hashtable		make-eqv-hashtable
 		  make-hashtable
 		  hashtable?			hashtable-mutable?	mutable-hashtable?
@@ -780,7 +786,7 @@
 	  (receive-and-return (i)
 	      (f k)
 	    (unless (exact-integer? i)
-	      (procedure-argument-violation __who__
+	      (expression-return-value-violation __who__
 		"invalid hash value from custom hash function"
 		i)))))))
 

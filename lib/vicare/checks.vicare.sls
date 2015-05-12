@@ -1,6 +1,6 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
@@ -40,7 +40,11 @@
 
     ;; more macros
     false-if-exception check-for-true check-for-false
+    check-for-assertion-violation
     check-for-procedure-argument-violation
+    check-for-procedure-signature-argument-violation
+    check-for-procedure-signature-return-value-violation
+    check-for-procedure-arguments-consistency-violation
     check-for-expression-return-value-violation
 
     ;; selecting tests
@@ -315,11 +319,66 @@
     ((_ (quote ?name) ?form)
      (check (quote ?name) (if ?form #t #f) => #f))))
 
+(define-syntax check-for-assertion-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((assertion-violation? E)
+		    (list (condition-who E)
+			  (condition-irritants E)))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
+    ))
+
 (define-syntax check-for-procedure-argument-violation
   (syntax-rules (=>)
     ((_ ?body => ?expected-who/irritants)
      (check
 	 (guard (E ((procedure-argument-violation? E)
+		    (list (condition-who E)
+			  (condition-irritants E)))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
+    ))
+
+(define-syntax check-for-procedure-signature-argument-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((procedure-signature-argument-violation? E)
+		    (list (condition-who E)
+			  (procedure-signature-argument-violation.one-based-argument-index E)
+			  (procedure-signature-argument-violation.failed-expression E)
+			  (procedure-signature-argument-violation.offending-value E)))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
+    ))
+
+(define-syntax check-for-procedure-signature-return-value-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((procedure-signature-return-value-violation? E)
+		    (list (condition-who E)
+			  (procedure-signature-return-value-violation.one-based-return-value-index E)
+			  (procedure-signature-return-value-violation.failed-expression E)
+			  (procedure-signature-return-value-violation.offending-value E)))
+		   (else E))
+	   ?body)
+       => ?expected-who/irritants))
+    ))
+
+
+;;; --------------------------------------------------------------------
+
+(define-syntax check-for-procedure-arguments-consistency-violation
+  (syntax-rules (=>)
+    ((_ ?body => ?expected-who/irritants)
+     (check
+	 (guard (E ((procedure-arguments-consistency-violation? E)
 		    (list (condition-who E)
 			  (condition-irritants E)))
 		   (else E))

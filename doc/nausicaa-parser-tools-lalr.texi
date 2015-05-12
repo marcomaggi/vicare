@@ -1152,7 +1152,7 @@ used for the @clause{parser-name:} option:
 @deffn {Auxiliary Syntax} {library-language:} @var{lang}
 Instruct @func{lalr-parser} to use @var{lang} as language for the
 library; the language is the first import specification after
-@code{import} in the @code{library} form.  By default the language is
+@code{import} in the @syntax{library} form.  By default the language is
 @library{nausicaa}.
 @end deffn
 

@@ -52,6 +52,8 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/exception-handlers-implementation.texi	\
 	doc/iklib.texi					\
 	doc/libutils.texi				\
+	doc/progutils.texi				\
+	doc/includes.texi				\
 	doc/ffi.texi					\
 	doc/syslib.texi					\
 	doc/tags.texi					\
@@ -59,6 +61,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/capi.texi					\
 	doc/objects.texi				\
 	doc/debug.texi					\
+	doc/expander.texi				\
 	doc/machinery.texi				\
 	doc/compiler.texi				\
 	doc/boot-image.texi				\
@@ -289,6 +292,7 @@ endif
 
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
+	scheme/ikarus.compiler.config.sls			\
 	scheme/ikarus.compiler.scheme-objects-ontology.sls	\
 	scheme/ikarus.compiler.core-primitive-properties.sls	\
 	scheme/ikarus.compiler.sls				\
@@ -337,7 +341,6 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.condition-types.sls		\
 	scheme/ikarus.intel-assembler.sls			\
 	scheme/ikarus.io.sls					\
-	scheme/ikarus.library-utils.sls				\
 	scheme/ikarus.lists.sls					\
 	scheme/ikarus.load.sls					\
 	scheme/ikarus.main.sls					\
@@ -382,20 +385,27 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.vectors.sls				\
 	scheme/ikarus.writer.sls				\
 	\
-	scheme/psyntax.builders.sls					\
-	scheme/psyntax.compat.sls					\
-	scheme/psyntax.config.sls					\
-	scheme/psyntax.expander.sls					\
-	scheme/psyntax.expander.chi-module.scm				\
-	scheme/psyntax.expander.syntactic-binding-properties.scm	\
-	scheme/psyntax.expander.tagged-identifiers.scm			\
-	scheme/psyntax.expander.signatures.scm				\
-	scheme/psyntax.expander.built-in-tags.scm			\
-	scheme/psyntax.expander.core-prims-init.scm			\
-	scheme/psyntax.expander.core-macro-transformers.scm		\
-	scheme/psyntax.expander.non-core-macro-transformers.scm		\
-	scheme/psyntax.expander.infix-macro.scm				\
-	scheme/psyntax.internal.sls					\
+	scheme/psyntax.helpers.scm				\
+	scheme/psyntax.builders.sls				\
+	scheme/psyntax.compat.sls				\
+	scheme/psyntax.config.sls				\
+	scheme/psyntax.special-transformers.sls			\
+	scheme/psyntax.lexical-environment.sls			\
+	scheme/psyntax.syntax-match.sls				\
+	scheme/psyntax.syntactic-binding-properties.sls		\
+	scheme/psyntax.syntax-utilities.sls			\
+	scheme/psyntax.tag-and-tagged-identifiers.sls		\
+	scheme/psyntax.core-primitives-properties.sls		\
+	scheme/psyntax.library-collectors.sls			\
+	scheme/psyntax.import-spec-parser.sls			\
+	scheme/psyntax.export-spec-parser.sls			\
+	scheme/psyntax.non-core-macro-transformers.sls		\
+	scheme/psyntax.non-core-macro-transformers.infix-macro.scm	\
+	scheme/psyntax.chi-procedures.sls			\
+	scheme/psyntax.chi-procedures.core-macro-transformers.scm	\
+	scheme/psyntax.expander.sls				\
+	scheme/psyntax.internal.sls				\
+	scheme/psyntax.library-utils.sls			\
 	scheme/psyntax.library-manager.sls
 
 EXTRA_DIST += \
@@ -452,6 +462,7 @@ ikarus.config.scm:
 	echo '(define wordsize $(VICARE_SIZE_OF_VOIDP))'			>>$@
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'	>>$@
+	echo '(define generate-descriptive-labels? #$(VICARE_DESCRIPTIVE_LABELS_GENERATION))'	      >>$@
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'			>>$@
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'	>>$@
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'	>>$@
@@ -492,6 +503,7 @@ boot-image-32-bit: vicare
 	echo '(define wordsize 4)'							>>ikarus.config.scm
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
+	echo '(define generate-descriptive-labels? #$(VICARE_DESCRIPTIVE_LABELS_GENERATION))' >>ikarus.config.scm
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
@@ -515,6 +527,7 @@ boot-image-64-bit: vicare
 	echo '(define wordsize 8)'							>>ikarus.config.scm
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.scm
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.scm
+	echo '(define generate-descriptive-labels? #$(VICARE_DESCRIPTIVE_LABELS_GENERATION))' >>ikarus.config.scm
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
@@ -552,7 +565,8 @@ boot-image-64-bit: vicare
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.scm
-	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try \
+	BUILDING_ROTATION_BOOT_IMAGE=yes; export BUILDING_ROTATION_BOOT_IMAGE;		\
+	$(VICARE_BOOT_ENV) $(VICARE_NEW_EXECUTABLE) -b $(builddir)/vicare.boot.try	\
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 #page
@@ -727,6 +741,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-io.sps					\
 	tests/test-vicare-letrec-syntax.sps				\
 	tests/test-vicare-library-utils.sps				\
+	tests/test-vicare-program-utils.sps				\
 	tests/test-vicare-lists.sps					\
 	tests/test-vicare-log.sps					\
 	tests/test-vicare-numerics-generic.sps				\

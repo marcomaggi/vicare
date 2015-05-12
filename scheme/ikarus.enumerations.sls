@@ -65,6 +65,8 @@
 		  ;;FIXME  This except  is  to  be removed  at  the  next boot  image
 		  ;;rotation.  (Marco Maggi; Wed Apr 1, 2015)
 		  list-of-symbols?
+		  procedure-arguments-consistency-violation
+		  ;;;
 
 		  enum-set->list
 		  enum-set-complement
@@ -87,6 +89,10 @@
     ;;2015)
     (only (ikarus.symbols)
 	  list-of-symbols?)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon May 4,
+    ;;2015)
+    (only (ikarus conditions)
+	  procedure-arguments-consistency-violation)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (vicare arguments validation))
@@ -205,7 +211,8 @@
     (lambda (symbol)
       (unless (symbol? symbol)
 	(procedure-argument-violation 'anonymous-enumeration-indexer
-	  "expected symbol as argument" symbol))
+	  "expected symbol as argument"
+	  symbol))
       (symbol-to-index-ref table symbol))))
 
 (define* (enum-set-constructor {set enum-set?})
@@ -223,7 +230,9 @@
 			       "given symbol is not in universe of enumeration set" sym set.type))))
       (lambda (ell)
 	(unless (list-of-symbols? ell)
-	  (procedure-argument-violation __who__ "expected list of symbols as argument" ell))
+	  (procedure-argument-violation __who__
+	    "expected list of symbols as argument"
+	    ell))
 	(let loop ((ell			ell)
 		   (newset.bitvector	0))
 	  (if (null? ell)
@@ -300,7 +309,9 @@
   ;;
   (let ((set1.type (enum-set-type set1)))
     (unless (eq? set1.type (enum-set-type set2))
-      (procedure-argument-violation who "expected enumeration sets with the same enumeration type" set1 set2))
+      (procedure-arguments-consistency-violation who
+	"expected enumeration sets with the same enumeration type"
+	set1 set2))
     (make-enum-set set1.type (combine (enum-set-bitvector set1) (enum-set-bitvector set2)))))
 
 (define* (enum-set-union {set1 enum-set?} {set2 enum-set?})

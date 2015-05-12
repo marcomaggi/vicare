@@ -27,13 +27,17 @@
 #!vicare
 (import (vicare)
   (vicare checks)
+  (only (vicare expander)
+	expand-form-to-core-language)
+  (only (vicare libraries)
+	expand-library->sexp)
   (prefix (vicare compiler)
 	  compiler.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler pass: specify representation\n")
 
-(compiler.descriptive-labels   #t)
+(compiler.generate-descriptive-labels?   #t)
 (compiler.generate-debug-calls #f)
 
 

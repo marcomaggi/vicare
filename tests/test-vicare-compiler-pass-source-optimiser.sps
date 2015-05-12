@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,10 +27,15 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare compiler) compiler.)
+  (vicare checks)
+  (only (vicare expander)
+	expand-form-to-core-language)
+  (only (vicare libraries)
+	expand-library->sexp)
+  (prefix (vicare compiler)
+	  compiler.)
   (prefix (vicare platform words) words.)
-  (vicare unsafe operations)
-  (vicare checks))
+  (vicare unsafe operations))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler: source optimiser pass\n")

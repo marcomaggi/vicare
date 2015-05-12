@@ -1,25 +1,128 @@
-;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+(library (psyntax.chi-procedures)
+  (export
+    make-psi
+    psi?			psi-stx
+    psi-core-expr		psi-retvals-signature
+    psi-application-retvals-signature
+    chi-expr			chi-expr*
+    chi-body*			chi-internal-body
+    chi-qrhs*			chi-defun
+    chi-lambda			chi-case-lambda
+    chi-application/psi-first-operand
+
+    SPLICE-FIRST-ENVELOPE)
+  (import (except (rnrs)
+		  eval
+		  environment		environment?
+		  null-environment	scheme-report-environment
+		  identifier?
+		  bound-identifier=?	free-identifier=?
+		  generate-temporaries
+		  datum->syntax		syntax->datum
+		  syntax-violation	make-variable-transformer)
+    (prefix (rnrs syntax-case) sys.)
+    (psyntax.compat)
+    (psyntax.builders)
+    (psyntax.lexical-environment)
+    (psyntax.syntax-match)
+    (only (psyntax.import-spec-parser)
+	  parse-import-spec*)
+    (only (psyntax.syntax-utilities)
+	  syntax->list
+	  error-invalid-formals-syntax)
+    (only (psyntax.syntactic-binding-properties)
+	  identifier-unsafe-variant
+	  predicate-assertion-procedure-argument-validation
+	  predicate-assertion-return-value-validation)
+    (psyntax.library-collectors)
+    (psyntax.tag-and-tagged-identifiers)
+    (only (psyntax.special-transformers)
+	  variable-transformer?		variable-transformer-procedure
+	  synonym-transformer?		synonym-transformer-identifier
+	  expand-time-value?		expand-time-value-object)
+    (psyntax.non-core-macro-transformers)
+    (psyntax.library-manager)
+    (psyntax.internal))
+
+
+;;The  "chi-*" functions  are the  ones visiting  syntax objects  and performing  the
+;;expansion process.
+;;
+
+
+;;;; helpers
+
+(include "psyntax.helpers.scm" #t)
+
+(define-syntax stx-error
+  (syntax-rules ()
+    ((_ ?stx ?msg)
+     (syntax-violation #f ?msg ?stx))
+    ((_ ?stx)
+     (syntax-violation #f "syntax error" ?stx))
+    ))
+
+(define-syntax with-exception-handler/input-form
+  ;;This macro is typically used as follows:
+  ;;
+  ;;   (with-exception-handler/input-form
+  ;;       input-form.stx
+  ;;     (eval-macro-transformer
+  ;;        (expand-macro-transformer input-form.stx lexenv.expand)
+  ;;        lexenv.run))
+  ;;
+  (syntax-rules ()
+    ((_ ?input-form . ?body)
+     (with-exception-handler
+	 (lambda (E)
+	   (raise (condition E (make-macro-use-input-form-condition ?input-form))))
+       (lambda () . ?body)))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define* (proper-list->last-item ell)
+  (syntax-match ell ()
+    (()
+     (assertion-violation __who__ "expected non-empty list" ell))
+    ((?last)
+     ?last)
+    ((?car . ?cdr)
+     (proper-list->last-item ?cdr))
+    ))
+
+
+
+(module SPLICE-FIRST-ENVELOPE
+  (make-splice-first-envelope
+   splice-first-envelope?
+   splice-first-envelope-form)
+
+  (define-record splice-first-envelope
+    (form))
+
+  #| end of module |# )
 
 
 ;;;; core expressions struct
@@ -100,43 +203,62 @@
 
 ;;;; chi procedures: syntax object type inspection
 
-(define (expr-syntax-type expr.stx lexenv)
-  ;;Determine the  syntax type of  an expression.  EXPR.STX  must be a  syntax object
-  ;;representing an expression.  Return 3 values:
-  ;;
-  ;;1..A symbol representing the syntax type.
-  ;;
-  ;;2..If  the syntax  is a  macro application:  the value  of the  syntactic binding
-  ;;   associated to the macro identifier; otherwise false.
-  ;;
-  ;;3..If the  syntax is a macro  application: the identifier representing  the macro
-  ;;   keyword; otherwise false.
-  ;;
-  ;;The type of an expression is determined by two things:
+(define (syntactic-form-type expr.stx lexenv)
+  ;;Determine the  syntax type of a  syntactic form representing an  expression.  The
+  ;;type of an expression is determined by two things:
   ;;
   ;;* The shape of the expression (identifier, pair, or datum).
   ;;
   ;;* The binding of the identifier or the type of car of the pair.
   ;;
+  ;;The argument EXPR.STX must be a syntax object representing an expression.
+  ;;
+  ;;Return 3 values:
+  ;;
+  ;;* If the syntactic form is a macro application:
+  ;;
+  ;;   1. A symbol representing the syntax type.
+  ;;
+  ;;   2. The value of the syntactic binding associated to the macro identifier.
+  ;;
+  ;;   3. The syntactic identifier representing the macro keyword.
+  ;;
+  ;;* If the syntactic form is not a macro application:
+  ;;
+  ;;   1. A symbol representing the syntax type.
+  ;;
+  ;;   2. False.
+  ;;
+  ;;   3. False.
+  ;;
+  ;;Special cases of return values and exceptional conditions:
+  ;;
+  ;;* If EXPR.STX is  a standalone syntactic identifier and it  is unbound: the first
+  ;;return value is the symbol "standalone-unbound-identifier".
+  ;;
+  ;;* If  EXPR.STX is  a pair  whose car is  an unbound  identifier: an  exception is
+  ;;raised.
+  ;;
   (syntax-match expr.stx ()
     (?id
      (identifier? expr.stx)
-     (let ((label (id->label/intern ?id)))
-       (unless label
-	 (%raise-unbound-error #f expr.stx ?id))
-       (let* ((binding (label->syntactic-binding label lexenv))
-	      (type    (syntactic-binding-type binding)))
-	 (case type
-	   ((core-prim
-	     lexical global mutable
-	     core-macro! global-macro global-macro! macro macro! local-macro local-macro!
-	     import export library $module syntax
-	     local-ctv global-ctv
-	     displaced-lexical)
-	    (values type (syntactic-binding-value binding) ?id))
+     (cond ((id->label ?id)
+	    => (lambda (label)
+		 (let* ((binding-descriptor (label->syntactic-binding-descriptor label lexenv))
+			(binding-type       (syntactic-binding-descriptor.type binding-descriptor)))
+		   (case binding-type
+		     ((core-prim
+		       lexical global global-mutable
+		       macro macro! global-macro global-macro! local-macro local-macro!
+		       import export library $module pattern-variable
+		       local-etv global-etv
+		       displaced-lexical)
+		      (values binding-type (syntactic-binding-descriptor.value binding-descriptor) ?id))
+		     (else
+		      ;;This will cause an error to be raised later.
+		      (values 'other #f #f))))))
 	   (else
-	    ;;This will cause an error to be raised later.
-	    (values 'other #f #f))))))
+	    (values 'standalone-unbound-identifier #f #f))))
 
     ((?tag)
      (tag-identifier? ?tag)
@@ -148,27 +270,28 @@
      ;;
      ;;   (?car ?form ...)
      ;;
-     (cond ((id->label/intern ?car)
+     (cond ((id->label ?car)
 	    => (lambda (label)
-		 (let* ((binding (label->syntactic-binding label lexenv))
-			(type    (syntactic-binding-type binding)))
+		 (let* ((binding (label->syntactic-binding-descriptor label lexenv))
+			(type    (syntactic-binding-descriptor.type binding)))
 		   (case type
 		     ((core-macro
 		       define define-syntax define-alias
 		       define-fluid-syntax
 		       let-syntax letrec-syntax begin-for-syntax
 		       begin set! stale-when
-		       local-ctv global-ctv
+		       local-etv global-etv
 		       global-macro global-macro! local-macro local-macro! macro
 		       import export library module)
-		      (values type (syntactic-binding-value binding) ?car))
-		     (($rtd)
-		      (values 'tag-maker-application (syntactic-binding-value binding) ?car))
+		      (values type (syntactic-binding-descriptor.value binding) ?car))
+		     (($record-type-name $struct-type-name)
+		      (values 'tag-maker-application (syntactic-binding-descriptor.value binding) ?car))
 		     (else
-		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
+		      ;;This case  includes TYPE  being: CORE-PRIM,  LEXICAL, GLOBAL,
+		      ;;GLOBAL-MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
-	    (%raise-unbound-error #f expr.stx ?car))))
+	    (raise-unbound-error #f expr.stx ?car))))
 
     ((?car . ?cdr)
      ;;Here we know that EXPR.STX has the format:
@@ -231,41 +354,124 @@
        ?body0 ?body ...))))
 
 
+;;;; macro transformers helpers
+
+(define (expand-macro-transformer rhs-expr.stx lexenv.expand)
+  ;;Given  a  syntax object  representing  the  right-hand  side  (RHS) of  a  syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX):  expand  it, invoking  libraries  as  needed, and  return  the
+  ;;expanded language sexp representing the  expression.  Usually the return value of
+  ;;this function is handed to EVAL-MACRO-TRANSFORMER.
+  ;;
+  ;;For:
+  ;;
+  ;;   (define-syntax ?lhs ?rhs)
+  ;;
+  ;;this function is called as:
+  ;;
+  ;;   (expand-macro-transformer #'?rhs lexenv.expand)
+  ;;
+  ;;For:
+  ;;
+  ;;   (let-syntax ((?lhs ?rhs)) ?body0 ?body ...)
+  ;;
+  ;;this function is called as:
+  ;;
+  ;;   (expand-macro-transformer #'?rhs lexenv.expand)
+  ;;
+  (let* ((rtc          (make-collector))
+	 (rhs-expr.psi (parametrise ((inv-collector rtc)
+				     (vis-collector (lambda (x) (void))))
+			 (chi-expr rhs-expr.stx lexenv.expand lexenv.expand))))
+    ;;We invoke all the libraries needed to evaluate the right-hand side.
+    (for-each
+	(let ((register-visited-library (vis-collector)))
+	  (lambda (lib)
+	    ;;LIB is a  record of type "library".  Here we  invoke the library, which
+	    ;;means  we evaluate  its run-time  code.  Then  we mark  the library  as
+	    ;;visited.
+	    (invoke-library lib)
+	    (register-visited-library lib)))
+      (rtc))
+    (psi-core-expr rhs-expr.psi)))
+
+(define* (eval-macro-transformer rhs-expr.core lexenv.run)
+  ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX):  compile  it, evaluate  it,  then  return a  proper  syntactic
+  ;;binding descriptor for the resulting object.  Usually this function is applied to
+  ;;the return value of EXPAND-MACRO-TRANSFORMER.
+  ;;
+  ;;When the  RHS of a keyword  binding definition is evaluated,  the returned object
+  ;;should be a descriptor of:
+  ;;
+  ;;* Keyword binding with non-variable transformer.
+  ;;
+  ;;* Keyword binding with variable transformer.
+  ;;
+  ;;* Vicare struct-type descriptor or R6RS record-type descriptor.
+  ;;
+  ;;* Keyword binding with compile-time value.
+  ;;
+  ;;* Keyword binding with synonym transformer.
+  ;;
+  ;;If the return value is not of such type: we raise an assertion violation.
+  ;;
+  (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	      (compiler.eval-core (expanded->core rhs-expr.core)))))
+    (cond ((procedure? rv)
+	   (make-syntactic-binding-descriptor/local-macro/non-variable-transformer rv rhs-expr.core))
+	  ((variable-transformer? rv)
+	   (make-syntactic-binding-descriptor/local-macro/variable-transformer (variable-transformer-procedure rv) rhs-expr.core))
+	  ((or (record-type-name-binding-descriptor? rv)
+	       (struct-type-name-binding-descriptor? rv))
+	   rv)
+	  ((expand-time-value? rv)
+	   (make-syntactic-binding-descriptor/local-macro/expand-time-value (expand-time-value-object rv) rhs-expr.core))
+	  ((synonym-transformer? rv)
+	   (make-syntactic-binding-descriptor/local-global-macro/synonym-syntax (synonym-transformer-identifier rv)))
+	  (else
+	   (raise
+	    (condition
+	     (make-assertion-violation)
+	     (make-who-condition __who__)
+	     (make-message-condition "invalid return value from syntax definition's right-hand side")
+	     (make-syntax-definition-expanded-rhs-condition rhs-expr.core)
+	     (make-syntax-definition-expression-return-value-condition rv)))))))
+
+
 ;;;; chi procedures: macro calls
 
 (module (chi-non-core-macro
 	 chi-local-macro
 	 chi-global-macro)
 
-  (define* (chi-non-core-macro {procname symbol?} input-form-stx lexenv.run {rib false-or-rib?})
+  (define* (chi-non-core-macro {procname symbol?} input-form.stx lexenv.run {rib false-or-rib?})
     ;;Expand an expression representing the use  of a non-core macro; the transformer
     ;;function is  integrated in the  expander.  Return a syntax  object representing
     ;;the macro output form.
     ;;
-    ;;PROCNAME is a  symbol representing the name  of the non-core macro;  we can map
-    ;;from   such  symbol   to  the   transformer   function  with   the  module   of
+    ;;PROCNAME  is a  symbol representing  the  name of  the non-core  macro; we  can
+    ;;retrieve   the  transformer   procedure   from  PROCNAME   with  the   function
     ;;NON-CORE-MACRO-TRANSFORMER.
     ;;
-    ;;INPUT-FORM-STX is the syntax object representing the expression to be expanded.
+    ;;INPUT-FORM.STX is the syntax object representing the expression to be expanded.
     ;;
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "<rib>".
+    ;;RIB is false or a struct of type "rib".
     ;;
-    (%do-macro-call (let ()
-		      (import NON-CORE-MACRO-TRANSFORMER)
-		      (non-core-macro-transformer procname))
-		    input-form-stx lexenv.run rib))
+    (do-macro-call (non-core-macro-transformer procname)
+		   input-form.stx lexenv.run rib))
 
-  (define* (chi-local-macro bind-val input-form-stx lexenv.run {rib false-or-rib?})
-    ;;This function  is used  to expand  macro uses for  macros whose  transformer is
-    ;;defined by local user code, but  not identifier syntaxes; these are the lexical
-    ;;environment  entries with  types  "local-macro" and  "local-macro!".  Return  a
-    ;;syntax object representing the macro output form.
+  (define* (chi-local-macro bind-val input-form.stx lexenv.run {rib false-or-rib?})
+    ;;This function is used to expand macro uses for macros defined by the code being
+    ;;expanded; these  are the lexical  environment entries with  types "local-macro"
+    ;;and "local-macro!".  Return a syntax object representing the macro output form.
     ;;
-    ;;BIND-VAL is the binding value of the global macro.  The format of the syntactic
-    ;;binding descriptors is:
+    ;;BIND-VAL is  the value of the  local macro's syntactic binding  descriptor; the
+    ;;format of the descriptors is:
     ;;
     ;;     (local-macro  . (?transformer . ?expanded-expr))
     ;;     (local-macro! . (?transformer . ?expanded-expr))
@@ -274,23 +480,28 @@
     ;;
     ;;     (?transformer . ?expanded-expr)
     ;;
-    ;;INPUT-FORM-STX is the syntax object representing the expression to be expanded.
+    ;;INPUT-FORM.STX is the syntax object representing the expression to be expanded.
     ;;
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "<rib>".
+    ;;RIB is false or a struct of type "rib".
     ;;
-    (%do-macro-call (car bind-val) input-form-stx lexenv.run rib))
+    (do-macro-call (car bind-val) input-form.stx lexenv.run rib))
 
-  (define* (chi-global-macro bind-val input-form-stx lexenv.run {rib false-or-rib?})
-    ;;This function  is used  to expand  macro uses for  macros whose  transformer is
-    ;;defined by user  code in imported libraries; these are  the lexical environment
-    ;;entries with types "global-macro" and  "global-macro!".  Return a syntax object
-    ;;representing the macro output form.
+  (define* (chi-global-macro bind-val input-form.stx lexenv.run {rib false-or-rib?})
+    ;;This  function is  used to  expand macro  uses for:
     ;;
-    ;;BIND-VAL is the binding value of the global macro.  The format of the syntactic
-    ;;binding descriptors is:
+    ;;* Macros imported from other libraries.
+    ;;
+    ;;* Macros  defined by expressions  previously evaluated in the  same interaction
+    ;;  environment.
+    ;;
+    ;;these  are  the  lexical  environment entries  with  types  "global-macro"  and
+    ;;"global-macro!".  Return a syntax object representing the macro output form.
+    ;;
+    ;;BIND-VAL is the  value of the global macro's syntactic  binding descriptor; the
+    ;;format of the descriptors is:
     ;;
     ;;     (global-macro  . (?library . ?loc))
     ;;     (global-macro! . (?library . ?loc))
@@ -299,95 +510,62 @@
     ;;
     ;;     (?library . ?loc)
     ;;
-    ;;INPUT-FORM-STX is the syntax object representing the expression to be expanded.
+    ;;INPUT-FORM.STX is the syntax object representing the expression to be expanded.
     ;;
     ;;LEXENV.RUN is the run-time lexical environment  in which the expression must be
     ;;expanded.
     ;;
-    ;;RIB is false or a struct of type "<rib>".
+    ;;RIB is false or a struct of type "rib".
     ;;
     (let ((lib (car bind-val))
 	  (loc (cdr bind-val)))
       ;;If this  global binding use  is the  first time a  binding from LIB  is used:
       ;;visit the library.
-      (unless (eq? lib '*interaction*)
-	(visit-library lib))
-      (let* ((x           (symbol-value loc))
-	     (transformer (cond ((procedure? x)
-				 x)
-				((variable-transformer? x)
-				 (variable-transformer-procedure x))
-				(else
-				 (assertion-violation/internal-error __who__
-				   "not a procedure" x)))))
-	(%do-macro-call transformer input-form-stx lexenv.run rib))))
+      (visit-library lib)
+      (let ((transformer (let ((x (symbol-value loc)))
+			   (cond ((procedure? x)
+				  x)
+				 ((variable-transformer? x)
+				  (variable-transformer-procedure x))
+				 (else
+				  (assertion-violation/internal-error __who__
+				    "invalid object in \"value\" slot of global macro's loc gensym" x))))))
+	(do-macro-call transformer input-form.stx lexenv.run rib))))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%do-macro-call transformer input-form-stx lexenv.run {rib false-or-rib?})
-    ;;Apply  the transformer  to the  macro input  form.  Return  the output  form as
-    ;;syntax object.
+  (define* (do-macro-call transformer input-form.stx lexenv.run {rib false-or-rib?})
+    ;;Apply the transformer  to the syntax object representing the  macro input form.
+    ;;Return a syntax object representing the output form.
+    ;;
+    ;;The gist of the macro call is:
+    ;;
+    ;;   (add-new-mark rib
+    ;;                 (transformer (add-anti-mark input-form.stx))
+    ;;                 input-form.stx)
+    ;;
+    ;;in this function we do more than this to allows for: invalid transformer output
+    ;;detection;   implementation  of   compile-time   values;  expander   inspection
+    ;;facilities.
     ;;
     (import ADD-MARK)
-    (define (main)
-      ;;We parametrise here because we can never know which transformer, for example,
-      ;;will query the syntactic binding properties.
-      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(let ((output-form-expr (transformer
-				 ;;Put the anti-mark on the input form.
-				 (add-mark anti-mark #f input-form-stx #f))))
-	  ;;If  the  transformer returns  a  function:  we  must apply  the  returned
-	  ;;function  to a  function acting  as compile-time  value retriever.   Such
-	  ;;application must return a value as a transformer would do.
-	  (if (procedure? output-form-expr)
-	      (%return (output-form-expr %ctv-retriever))
-	    (%return output-form-expr)))))
-
-    (define (%return output-form-expr)
-      ;;Check  that there  are no  raw symbols  in the  value returned  by the  macro
-      ;;transformer.
-      (let recur ((x output-form-expr))
-	;;Don't feed me cycles.
-	(unless (<stx>? x)
+    (let ((output-form.stx (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			     (transformer (add-anti-mark input-form.stx)))))
+      (let assert-no-raw-symbols-in-output-form ((x output-form.stx))
+	(unless (stx? x)
 	  (cond ((pair? x)
-		 (recur (car x))
-		 (recur (cdr x)))
+		 (assert-no-raw-symbols-in-output-form (car x))
+		 (assert-no-raw-symbols-in-output-form (cdr x)))
 		((vector? x)
-		 (vector-for-each recur x))
+		 (vector-for-each assert-no-raw-symbols-in-output-form x))
 		((symbol? x)
-		 (syntax-violation #f
-		   "raw symbol encountered in output of macro"
-		   input-form-stx x)))))
+		 (syntax-violation __who__
+		   "raw symbol encountered in output of macro" input-form.stx x)))))
       ;;Put a new mark  on the output form.  For all  the identifiers already present
       ;;in the input form: this new mark  will be annihilated by the anti-mark we put
       ;;before.  For all the identifiers introduced by the transformer: this new mark
       ;;will stay there.
-      (add-mark (gen-mark) rib output-form-expr input-form-stx))
-
-    (define (%ctv-retriever id)
-      ;;This is  the compile-time  values retriever  function.  Given  an identifier:
-      ;;search an  entry in  the lexical  environment; when  found return  its value,
-      ;;otherwise return false.
-      ;;
-      (unless (identifier? id)
-	(assertion-violation 'rho "not an identifier" id))
-      (let ((binding (label->syntactic-binding (id->label id) lexenv.run)))
-	(case (syntactic-binding-type binding)
-	  ;;The given identifier is bound to  a local compile-time value.  The actual
-	  ;;object is stored in the binding itself.
-	  ((local-ctv)
-	   (local-compile-time-value-binding-object binding))
-
-	  ;;The given  identifier is bound  to a  compile-time value imported  from a
-	  ;;library or the top-level environment.  The actual object is stored in the
-	  ;;"value" field of a loc gensym.
-	  ((global-ctv)
-	   (global-compile-time-value-binding-object binding))
-
-	  ;;The given identifier is not bound to a compile-time value.
-	  (else #f))))
-
-    (main))
+      (add-new-mark rib output-form.stx input-form.stx)))
 
   #| end of module |# )
 
@@ -408,12 +586,12 @@
 
 (module (chi-expr)
 
-  (define (chi-expr expr.stx lexenv.run lexenv.expand)
+  (define* (chi-expr expr.stx lexenv.run lexenv.expand)
     ;;Expand a single expression form.  Return a PSI struct.
     ;;
     (%drop-splice-first-envelope-maybe
      (receive (type bind-val kwd)
-	 (expr-syntax-type expr.stx lexenv.run)
+	 (syntactic-form-type expr.stx lexenv.run)
        (case type
 	 ((core-macro)
 	  ;;Core  macro use.   The  core  macro transformers  are  integrated in  the
@@ -430,14 +608,14 @@
 			     ;;for core macros we have to do it here.
 			     ;;
 			     ;;NOTE Unfortunately, I have  measured that wrapping the
-			     ;;input  form into  an additional  "<stx>" record  slows
+			     ;;input  form into  an additional  "stx" record  slows
 			     ;;down  the   expansion  in  a  significant   way;  when
 			     ;;rebuilding the full Vicare  source code, compiling the
 			     ;;libraries and  running the  test suite the  total time
 			     ;;can  be 25%  greater.  For  this reason  this step  is
 			     ;;performed only when debugging mode is enabled.  (Marco
 			     ;;Maggi; Wed Apr 2, 2014)
-			     (make-<stx> expr.stx '() '() (list expr.stx))
+			     (make-stx expr.stx '() '() (list expr.stx))
 			   expr.stx)
 			 lexenv.run lexenv.expand)))
 
@@ -459,8 +637,9 @@
 		      (identifier-tag-retvals-signature expr.stx))))
 
 	 ((core-prim)
-	  ;;Core primitive (it  is either a procedure or a  constant).  We expect the
-	  ;;syntactic binding descriptor to be:
+	  ;;Core primitive;  it is either  a built-in  procedure (like DISPLAY)  or a
+	  ;;constant (like  then R6RS  record-type descriptor for  "&condition").  We
+	  ;;expect the syntactic binding descriptor to be:
 	  ;;
 	  ;;   (core-prim . ?prim-name)
 	  ;;
@@ -484,18 +663,19 @@
 	 ((lexical)
 	  ;;Reference to lexical variable; this means EXPR.STX is an identifier.
 	  (make-psi expr.stx
-		    (let ((lex (lexical-var bind-val)))
+		    (let ((lex (lexical-var-binding-descriptor-value.lex-name bind-val)))
 		      (build-lexical-reference no-source lex))
 		    (identifier-tag-retvals-signature expr.stx)))
 
 	 ((global-macro global-macro!)
-	  ;;Global macro use.
+	  ;;Macro uses of macros imported from other libraries or defined by previous
+	  ;;expressions in the same interaction environment.
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-global-macro bind-val expr.stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((local-macro local-macro!)
-	  ;;Macro uses of macros that are local in a non top-level region.
+	  ;;Macro uses of macros defined in the code being expanded.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
 			(chi-local-macro bind-val expr.stx lexenv.run #f))))
@@ -557,20 +737,19 @@
 	 ((let-syntax letrec-syntax)
 	  ;;LET-SYNTAX or LETREC-SYNTAX core macro uses.
 	  (syntax-match expr.stx ()
-	    ((_ ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
+	    ((?key ((?xlhs* ?xrhs*) ...) ?xbody ?xbody* ...)
 	     (unless (valid-bound-ids? ?xlhs*)
-	       (stx-error expr.stx "invalid identifiers"))
-	     (let* ((xlab* (map gensym-for-label ?xlhs*))
-		    (xrib  (make-filled-rib ?xlhs* xlab*))
+	       (syntax-violation __who__ "invalid identifiers" expr.stx))
+	     (let* ((xlab* (map generate-label-gensym ?xlhs*))
+		    (xrib  (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
 		    (xb*   (map (lambda (x)
 				  (let ((in-form (if (eq? type 'let-syntax)
 						     x
 						   (push-lexical-contour xrib x))))
 				    (with-exception-handler/input-form
 					in-form
-				      (%eval-macro-transformer
-				       (%expand-macro-transformer in-form lexenv.expand)
-				       lexenv.run))))
+				      (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+							      lexenv.run))))
 			     ?xrhs*)))
 	       (let ((body*.psi (chi-expr* (map (lambda (x)
 						  (push-lexical-contour xrib x))
@@ -586,43 +765,29 @@
 	 ((displaced-lexical)
 	  (stx-error expr.stx "identifier out of context"))
 
-	 ((syntax)
+	 ((pattern-variable)
 	  (stx-error expr.stx "reference to pattern variable outside a syntax form"))
 
 	 ((define define-syntax define-fluid-syntax define-alias module import library)
-	  (stx-error expr.stx (string-append
-			       (case type
-				 ((define)                 "a definition")
-				 ((define-syntax)          "a define-syntax")
-				 ((define-fluid-syntax)    "a define-fluid-syntax")
-				 ((define-alias)           "a define-alias")
-				 ((module)                 "a module definition")
-				 ((library)                "a library definition")
-				 ((import)                 "an import declaration")
-				 ((export)                 "an export declaration")
-				 (else                     "a non-expression"))
-			       " was found where an expression was expected")))
+	  (stx-error expr.stx
+		     (string-append
+		      (case type
+			((define)                 "a definition")
+			((define-syntax)          "a define-syntax")
+			((define-fluid-syntax)    "a define-fluid-syntax")
+			((define-alias)           "a define-alias")
+			((module)                 "a module definition")
+			((library)                "a library definition")
+			((import)                 "an import declaration")
+			((export)                 "an export declaration")
+			(else                     "a non-expression"))
+		      " was found where an expression was expected")))
 
-	 ((mutable)
-	  ;;Variable in reference  position, whose binding is a  mutable variable; it
-	  ;;means EXPR.STX is an identifier.
-	  ;;
-	  ;;We expect the syntactic binding descriptor to be:
-	  ;;
-	  ;;   (mutable . (?library . ?loc))
-	  ;;
-	  ;;and BIND-VAL to be:
-	  ;;
-	  ;;   (?library . ?loc)
-	  ;;
-	  (if (and (pair? bind-val)
-		   (let ((lib (car bind-val)))
-		     (eq? lib '*interaction*)))
-	      (let ((loc (cdr bind-val)))
-		(make-psi expr.stx
-			  (build-global-reference no-source loc)
-			  (identifier-tag-retvals-signature expr.stx)))
-	    (stx-error expr.stx "attempt to reference an unexportable variable")))
+	 ((global-mutable)
+	  ;;Imported variable  in reference  position, whose  binding is  assigned at
+	  ;;least once in the  code of the imported library; it  means EXPR.STX is an
+	  ;;identifier.
+	  (stx-error expr.stx "attempt to reference a variable that is assigned in an imported library"))
 
 	 ((tag-maker-application)
 	  ;;Here we expand  a form whose car  is a tag identifier.  The  result is an
@@ -660,8 +825,10 @@
 		     `(splice-first-expand (tag-cast ,kwd)))
 		    lexenv.run lexenv.expand))
 
+	 ((standalone-unbound-identifier)
+	  (raise-unbound-error __who__ expr.stx expr.stx))
+
 	 (else
-	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr.stx '()))
 	  (stx-error expr.stx "invalid expression"))))
      lexenv.run lexenv.expand))
 
@@ -681,6 +848,12 @@
 					       lexenv.run lexenv.expand))
 	expr.psi)))
 
+  (define-syntax stx-error
+    (syntax-rules ()
+      ((_ ?stx ?msg . ?args)
+       (syntax-violation __who__ ?msg ?stx . ?args))
+      ))
+
   #| end of module: CHI-EXPR |# )
 
 
@@ -697,8 +870,7 @@
   ;;and ?RATOR will evaluate to a closure object with tag identifier RATOR.TAG, which
   ;;is a sub-tag of "<procedure>".
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax '%process-closure-object-application))
+  (define-module-who %process-closure-object-application)
 
   (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
 					       rator.tag rator.psi rand*.psi)
@@ -787,7 +959,7 @@
       (signature operand-retvals-signature))
 
     (define (%error-more-operands-than-arguments who input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object who
+      (raise-compound-condition-object who
 	"while expanding, detected wrong number of operands in function application: more given operands than expected arguments"
 	input-form.stx
 	(condition
@@ -797,7 +969,7 @@
 	 (make-given-operands-count-condition given-operands-count))))
 
     (define (%error-more-arguments-than-operands who input-form.stx expected-arguments-count given-operands-count)
-      (%raise-compound-condition-object who
+      (raise-compound-condition-object who
 	"while expanding, detected wrong number of operands in function application: more expected arguments than given operands"
 	input-form.stx
 	(condition
@@ -808,7 +980,7 @@
 
     (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature who input-form.stx rand.stx
 										arg.idx arg.tag rand.retvals-signature)
-      (%raise-compound-condition-object who
+      (raise-compound-condition-object who
 	"expand-time mismatch between expected argument tag and operand retvals signature"
 	input-form.stx
 	(condition
@@ -1203,8 +1375,7 @@
 ;;;; chi procedures: general operator application, nothing already expanded
 
 (module (chi-application)
-  (define-syntax __module_who__
-    (identifier-syntax (quote chi-application)))
+  (define-module-who chi-application)
 
   (define (chi-application input-form.stx lexenv.run lexenv.expand)
     ;;Expand an operator  application form; it is called when  INPUT-FORM.STX has the
@@ -1486,6 +1657,8 @@
 (module CHI-SET
   (chi-set!)
 
+  (define-module-who set!)
+
   (define (chi-set! input-form.stx lexenv.run lexenv.expand)
     (while-not-expanding-application-first-subform
      (syntax-match input-form.stx ()
@@ -1518,11 +1691,11 @@
 			     ?lhs ?rhs))
 
        (_
-	(syntax-violation 'set! "invalid setter syntax" input-form.stx)))))
+	(syntax-violation __module_who__ "invalid setter syntax" input-form.stx)))))
 
   (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)
     (receive (type bind-val kwd)
-	(expr-syntax-type lhs.id lexenv.run)
+	(syntactic-form-type lhs.id lexenv.run)
       (case type
 	((lexical)
 	 ;;A  lexical binding  used as  LHS of  SET! is  mutable and  so unexportable
@@ -1534,7 +1707,7 @@
 	 ;;     (define var 1)
 	 ;;     (set! var 2))
 	 ;;
-	 (set-lexical-mutable! bind-val)
+	 (lexical-var-binding-descriptor-value.assigned? bind-val #t)
 	 (let* ((lhs.tag (or (identifier-tag lhs.id)
 			     (top-tag-id)))
 		(rhs.psi (chi-expr (bless
@@ -1542,15 +1715,17 @@
 				   lexenv.run lexenv.expand)))
 	   (make-psi input-form.stx
 		     (build-lexical-assignment no-source
-		       (lexical-var bind-val)
+		       (lexical-var-binding-descriptor-value.lex-name bind-val)
 		       (psi-core-expr rhs.psi))
 		     (make-retvals-signature-single-top))))
 
 	((core-prim)
-	 (syntax-violation 'set! "cannot modify imported core primitive" input-form.stx lhs.id))
+	 (syntax-violation __module_who__ "cannot modify imported core primitive" input-form.stx lhs.id))
 
 	((global)
-	 (syntax-violation 'set! "attempt to modify an immutable binding" input-form.stx lhs.id))
+	 (syntax-violation __module_who__
+	   "attempt to assign a variable that is imported from a library"
+	   input-form.stx lhs.id))
 
 	((global-macro!)
 	 (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
@@ -1558,7 +1733,10 @@
 	((local-macro!)
 	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
-	((mutable)
+	((global-mutable)
+	 ;;Imported  variable in  reference position,  whose binding  is assigned  at
+	 ;;least once in the code of the imported library.
+	 ;;
 	 ;;Let's consider this library:
 	 ;;
 	 ;;   (library (demo)
@@ -1571,35 +1749,36 @@
 	 ;;     (define var 123)
 	 ;;     (set! var 8))
 	 ;;
-	 ;;in which VAR is mutable and not exportable according to R6RS; if we import
-	 ;;the library in a program and use MACRO:
+	 ;;in which VAR  is assigned and so  not exportable according to  R6RS; if we
+	 ;;import the library in a program and use MACRO:
 	 ;;
 	 ;;   (import (vicare) (demo))
 	 ;;   (macro)
 	 ;;
 	 ;;we are  attempting to  mutate an unexportable  binding in  another lexical
 	 ;;context.  This is forbidden by R6RS.
+	 (syntax-violation __module_who__
+	   "attempt to assign a variable that is imported from a library"
+	   input-form.stx lhs.id))
+
+	((standalone-unbound-identifier)
+	 ;;The identifier  LHS.ID is unbound: raise  an exception.
 	 ;;
-	 (if (and (pair? bind-val)
-		  (let ((lib (car bind-val)))
-		    (eq? lib '*interaction*)))
-	     (let* ((loc     (cdr bind-val))
-		    (lhs.tag (or (identifier-tag lhs.id)
-				 (top-tag-id)))
-		    (rhs.psi (chi-expr (bless
-					`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
-				       lexenv.run lexenv.expand)))
-	       (make-psi input-form.stx
-			 (build-global-assignment no-source
-			   loc
-			   (psi-core-expr rhs.psi))
-			 (make-retvals-signature-single-top)))
-	   (syntax-violation 'set!
-	     "attempt to modify a variable imported from another lexical context"
-	     input-form.stx lhs.id)))
+	 ;;NOTE In  the original Ikarus' code,  and for years in  Vicare's code: SET!
+	 ;;could create a new syntactic binding  when LHS.ID was unbound and the SET!
+	 ;;syntactic  form   was  expanded  at   the  top-level  of   an  interaction
+	 ;;environment.  I nuked this feature.  (Marco Maggi; Fri Apr 24, 2015)
+	 ;;
+	 (raise-unbound-error __module_who__ input-form.stx lhs.id))
 
 	(else
-	 (stx-error input-form.stx)))))
+	 (stx-error input-form.stx "syntax error")))))
+
+  (define-syntax stx-error
+    (syntax-rules ()
+      ((_ ?stx ?msg)
+       (syntax-violation __module_who__ ?msg ?stx))
+      ))
 
   #| end of module: CHI-SET |# )
 
@@ -1653,9 +1832,9 @@
       (syntax-match standard-formals.stx ()
 	;;Without rest argument.
 	((?arg* ...)
-	 (let* ((lex*        (map gensym-for-lexical-var ?arg*))
-		(lab*        (map gensym-for-label       ?arg*))
-		(lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
+	 (let* ((lex*        (map generate-lexical-gensym ?arg*))
+		(lab*        (map generate-label-gensym       ?arg*))
+		(lexenv.run^ (lexenv-add-lexical-var-bindings lab* lex* lexenv.run)))
 	   (define validation*.stx
 	     (if (lambda-clause-attributes:safe-formals? attributes.sexp)
 		 (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
@@ -1664,7 +1843,8 @@
 	     (not (null? validation*.stx)))
 	   (define body-form^*.stx
 	     (push-lexical-contour
-		 (make-filled-rib ?arg* lab*)
+		 (make-rib/from-identifiers-and-labels ?arg* lab*)
+	       ;;Build a list of syntax objects representing the internal body.
 	       (append validation*.stx
 		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			   (%build-retvals-validation-form has-arguments-validators?
@@ -1679,11 +1859,11 @@
 
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
-	 (let* ((lex*         (map gensym-for-lexical-var ?arg*))
-		(lab*         (map gensym-for-label       ?arg*))
-		(rest-lex     (gensym-for-lexical-var ?rest-arg))
-		(rest-lab     (gensym-for-label       ?rest-arg))
-		(lexenv.run^  (add-lexical-bindings (cons rest-lab lab*)
+	 (let* ((lex*         (map generate-lexical-gensym ?arg*))
+		(lab*         (map generate-label-gensym       ?arg*))
+		(rest-lex     (generate-lexical-gensym ?rest-arg))
+		(rest-lab     (generate-label-gensym       ?rest-arg))
+		(lexenv.run^  (lexenv-add-lexical-var-bindings (cons rest-lab lab*)
 						    (cons rest-lex lex*)
 						    lexenv.run)))
 	   (receive (arg-tag* rest-tag)
@@ -1696,8 +1876,9 @@
 	       (not (null? validation*.stx)))
 	     (define body-form^*.stx
 	       (push-lexical-contour
-		   (make-filled-rib (cons ?rest-arg ?arg*)
+		   (make-rib/from-identifiers-and-labels (cons ?rest-arg ?arg*)
 				    (cons rest-lab  lab*))
+		 ;;Build a list of syntax objects representing the internal body.
 		 (append validation*.stx
 			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
 			     (%build-retvals-validation-form has-arguments-validators?
@@ -2071,10 +2252,62 @@
   ;;body; then we  build a special core language expression  with global assignments;
   ;;finally we evaluate the result.
   ;;
+  ;;When calling CHI-BODY*: the argument SHADOW/REDEFINE-BINDINGS? is honoured.
+  ;;
+  ;;* If SHADOW/REDEFINE-BINDINGS? is set to false:
+  ;;
+  ;;** Syntactic binding definitions in the body of a BEGIN-FOR-SYNTAX use must *not*
+  ;;shadow syntactic bindings established by the top-level environment.  For example:
+  ;;
+  ;;  (library (demo)
+  ;;    (export)
+  ;;    (import (vicare))
+  ;;    (begin-for-syntax
+  ;;      (define display 1)
+  ;;      (debug-print display)))
+  ;;
+  ;;is  a syntax  violation  because the  use  of DEFINE  cannot  shadow the  binding
+  ;;imported from "(vicare)".
+  ;;
+  ;;** Syntactic  bindings established  in the  body of  a BEGIN-FOR-SYNTAX  use must
+  ;;*not* be redefined.  For example:
+  ;;
+  ;;   (import (vicare))
+  ;;   (begin-for-syntax
+  ;;     (define a 1)
+  ;;     (define a 2)
+  ;;     (debug-print a))
+  ;;
+  ;;is a syntax violation  because the use of DEFINE cannot  redefine the binding for
+  ;;"a".
+  ;;
+  ;;* If the argument SHADOW/REDEFINE-BINDINGS? is set to true:
+  ;;
+  ;;**  Syntactic binding  definitions  in the  body of  a  BEGIN-FOR-SYNTAX use  are
+  ;;allowed  to  shadow imported  syntactic  bindings  established by  the  top-level
+  ;;interaction environment.  For example, at the REPL:
+  ;;
+  ;;  vicare> (begin-for-syntax
+  ;;            (define display 1)
+  ;;            (debug-print display))
+  ;;
+  ;;is fine, because DEFINE can shadow the binding imported from "(vicare)".
+  ;;
+  ;;** Syntactic  binding definitions in  the body of  a BEGIN-FOR-SYNTAX use  can be
+  ;;redefined.  For example, at the REPL:
+  ;;
+  ;;  vicare> (begin-for-syntax
+  ;;            (define a 1)
+  ;;            (define a 2)
+  ;;            (debug-print a))
+  ;;
+  ;;is fine, because DEFINE can redefine the binding for "a".
+  ;;
   (define (chi-begin-for-syntax input-form.stx body-form*.stx lexenv.run lexenv.expand
-				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)
+				lex* qrhs* mod** kwd* export-spec* rib mix?
+				shadow/redefine-bindings?)
     (receive (lhs*.lex init*.core rhs*.core lexenv.expand^)
-	(%expand input-form.stx lexenv.expand rib)
+	(%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
       ;;Build an expanded  code expression and evaluate it.
       ;;
       ;;NOTE This variable is set to #f (which is invalid core code) when there is no
@@ -2118,9 +2351,9 @@
 	(chi-body* (cdr body-form*.stx)
 		   lexenv.run^ lexenv.expand^
 		   lex* qrhs* mod** kwd* export-spec* rib
-		   mix? sd?))))
+		   mix? shadow/redefine-bindings?))))
 
-  (define (%expand input-form.stx lexenv.expand rib)
+  (define (%expand input-form.stx lexenv.expand rib shadow/redefine-bindings?)
     (define rtc
       (make-collector))
     (parametrise ((inv-collector rtc)
@@ -2136,15 +2369,13 @@
 		(mod**                            '())
 		(kwd*                             '())
 		(export-spec*                     '())
-		(mix-definitions-and-expressions? #t)
-		(shadowing-definitions?           #t))
+		(mix-definitions-and-expressions? #t))
 	    (syntax-match input-form.stx ()
 	      ((_ ?expr ?expr* ...)
 	       (chi-body* (cons ?expr ?expr*)
 			  lexenv.expand lexenv.super
 			  lex* qrhs* mod** kwd* export-spec* rib
-			  mix-definitions-and-expressions?
-			  shadowing-definitions?))))
+			  mix-definitions-and-expressions? shadow/redefine-bindings?))))
 	;;There must be no trailing expressions because we allowed mixing definitions
 	;;and expressions as in a top-level program.
 	(assert (null? empty))
@@ -2207,7 +2438,7 @@
   ;;so we create  a rib to describe  the lexical contour of the  implicit LETREC* and
   ;;push it on the BODY-FORM*.STX.
   ;;
-  (let ((rib (make-empty-rib)))
+  (let ((rib (make-rib/empty)))
     (receive (trailing-expr-stx*^
 	      lexenv.run^ lexenv.expand^
 	      lex*^ qrhs*^
@@ -2219,16 +2450,30 @@
 	      (kwd*                              '())
 	      (export-spec*                      '())
 	      (mix-definitions-and-expressions?  #f)
-	      (shadowing-definitions?            #t))
+	      ;;We are about to expand syntactic forms in an internal body defining a
+	      ;;lexical contour; it  does not matter if the  top-level environment is
+	      ;;interaction  or not.   When calling  CHI-BODY*, we  set the  argument
+	      ;;SHADOW/REDEFINE-BINDINGS? to false because:
+	      ;;
+	      ;;* Syntactic  binding definitions  in this  body cannot  be redefined.
+	      ;;That is:
+	      ;;
+	      ;;   (internal-body
+	      ;;     (define a 1)
+	      ;;     (define a 2)
+	      ;;     a)
+	      ;;
+	      ;;is a syntax  violation because the use of DEFINE  cannot redefine the
+	      ;;binding for "a".
+	      (shadow/redefine-bindings?    #f))
 	  (chi-body* (map (lambda (x)
 			    (push-lexical-contour rib x))
 		       (syntax->list body-form*.stx))
 		     lexenv.run lexenv.expand
 		     lex* qrhs* mod** kwd* export-spec* rib
-		     mix-definitions-and-expressions?
-		     shadowing-definitions?))
+		     mix-definitions-and-expressions? shadow/redefine-bindings?))
       (when (null? trailing-expr-stx*^)
-	(stx-error body-form*.stx "no expression in body"))
+	(syntax-violation #f "no expression in body" body-form*.stx))
       ;;We want order here!   First the RHS then the inits, so that  tags are put in
       ;;place when the inits are expanded.
       (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
@@ -2314,132 +2559,216 @@
   ;;definition  and  expression  forms,  accepting  a  mixed  sequence  of  them;  an
   ;;expression form is handled as a dummy definition form.
   ;;
-  ;;When SD? is  false this body is  allowed to redefine bindings  created by DEFINE;
-  ;;this happens when  expanding for the Scheme REPL in  the interaction environment.
-  ;;When  SD?  is  true: attempting  to  redefine  a  DEFINE  binding will  raise  an
-  ;;exception.
+  ;;When the argument SHADOW/REDEFINE-BINDINGS? is set to false:
   ;;
-  (define (chi-body* body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib mix? sd?)
+  ;;* Syntactic binding definitions in this body must *not* shadow syntactic bindings
+  ;;established by the top-level environment.  For example, in the program:
+  ;;
+  ;;   (import (vicare))
+  ;;   (define display 1)
+  ;;   (debug-print display)
+  ;;
+  ;;the DEFINE use is a syntax violation  because the use of DEFINE cannot shadow the
+  ;;binding imported from "(vicare)".
+  ;;
+  ;;*  Syntactic bindings  established  in the  body must  *not*  be redefined.   For
+  ;;example, in the program:
+  ;;
+  ;;   (import (vicare))
+  ;;   (define a 1)
+  ;;   (define a 2)
+  ;;   (debug-print a)
+  ;;
+  ;;the second  DEFINE use  is a syntax  violation because the  use of  DEFINE cannot
+  ;;redefine the binding for "a".
+  ;;
+  ;;When the argument SHADOW/REDEFINE-BINDINGS? is set to true:
+  ;;
+  ;;* Syntactic  binding definitions  in this  body are  allowed to  shadow syntactic
+  ;;bindings established by the top-level environment.  For example, at the REPL:
+  ;;
+  ;;   vicare> (import (vicare))
+  ;;   vicare> (define display 1)
+  ;;   vicare> (debug-print display)
+  ;;
+  ;;the  DEFINE use  is fine:  it  is allowed  to  shadow the  binding imported  from
+  ;;"(vicare)".
+  ;;
+  ;;** Syntactic binding  definitions in the body can be  redefined.  For example, at
+  ;;the REPL:
+  ;;
+  ;;  vicare> (begin
+  ;;            (define a 1)
+  ;;            (define a 2)
+  ;;            (debug-print a))
+  ;;
+  ;;the second DEFINE use is fine: it can redefine the binding for "a".
+  ;;
+  (define* (chi-body* body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib
+		     mix?
+		     shadow/redefine-bindings?)
     (if (null? body-form*.stx)
 	(values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
       (let ((body-form.stx (car body-form*.stx)))
 	(receive (type bind-val kwd)
-	    (expr-syntax-type body-form.stx lexenv.run)
+	    (syntactic-form-type body-form.stx lexenv.run)
 	  (let ((kwd* (if (identifier? kwd)
 			  (cons kwd kwd*)
 			kwd*)))
 	    (case type
 
 	      ((define)
-	       ;;The body form is a core language DEFINE macro use:
+	       ;;The  body  form  is  an INTERNAL-DEFINE  primitive  macro  use;  for
+	       ;;example, one among:
 	       ;;
-	       ;;   (define ?id ?rhs)
+	       ;;   (internal-define ?attributes ?lhs ?rhs)
+	       ;;   (internal-define ?attributes (?lhs . ?formals) . ?body)
 	       ;;
-	       ;;we parse the form and generate  a QRHS that will be expanded later.
-	       ;;We create a new lexical binding:
+	       ;;we parse  the form and  generate a qualified right-hand  side (QRHS)
+	       ;;object that will be expanded later.
 	       ;;
-	       ;;* We generate a label gensym uniquely associated to the binding and
-	       ;;  a lex gensym as name of the binding in the expanded code.
+	       ;;Here we create  a new syntactic binding representing  a lexical var,
+	       ;;either local or top-level:
 	       ;;
-	       ;;* We register the association id/label in the rib.
+	       ;;* We generate a label gensym  uniquely associated to the binding and
+	       ;;a lex gensym as name of the binding in the expanded code.
 	       ;;
-	       ;;*  We push  an entry  on  LEXENV.RUN to  represent the  association
-	       ;;  label/lex.
+	       ;;* We register the association identifier/label in the rib.
+	       ;;
+	       ;;*  We push  an  entry  on LEXENV.RUN  to  represent the  association
+	       ;;label/lex.
 	       ;;
 	       ;;* Finally we recurse on the rest of the body.
 	       ;;
-	       ;;We  receive  the  following  values:   ID  is  the  tagged  binding
-	       ;;identifier; TAG  is the tag  identifier for ID  (possibly "<top>");
-	       ;;QRHS.STX the QRHS to be expanded later.
+	       ;;Notice  the  special case:  if  a  syntactic binding  capturing  the
+	       ;;syntactic identifier already exists in the top rib of an interaction
+	       ;;environment, we allow the binding to be redefined.  This is a Vicare
+	       ;;extension.   Normally, in  a non-interaction  environment, we  would
+	       ;;raise an exception as mandated by R6RS.
+	       ;;
+	       ;;From parsing  the syntactic form,  we receive the  following values:
+	       ;;ID, the  tagged binding identifier;  TAG, the tag identifier  for ID
+	       ;;(possibly "<top>"); QRHS.STX, the QRHS object to be expanded later.
 	       (receive (id tag qrhs.stx)
 		   (%parse-define body-form.stx)
 		 (when (bound-id-member? id kwd*)
-		   (stx-error body-form.stx "cannot redefine keyword"))
-		 (receive (lab lex)
-		     ;;About this call to GEN-DEFINE-LABEL+LEX notice that:
-		     ;;
-		     ;;* If  the binding is at  the top-level of a  program body: we
-		     ;;  need a loc gensym to store the result of evaluating the RHS
-		     ;;  in QRHS; this loc will be generated later.
-		     ;;
-		     ;;* If the binding is at the top-level of a REPL expression: we
-		     ;;  need a loc gensym to store the result of evaluating the RHS
-		     ;;  in QRHS; in this case the loc is generated here.
-		     ;;
-		     (gen-define-label+lex id rib sd?)
-		   (extend-rib! rib id lab sd?)
+		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
+		 (let ((lab (generate-label-gensym   id))
+		       ;;About this call to GENERATE-LEXICAL-GENSYM notice that:
+		       ;;
+		       ;;* If the  binding is at the top-level of  a program body: we
+		       ;;need a loc gensym to store  the result of evaluating the RHS
+		       ;;in QRHS; this loc will be generated later.
+		       ;;
+		       ;;*  If the  binding  is  at the  top-level  of an  expression
+		       ;;expanded in an interaction environment: we need a loc gensym
+		       ;;to store the  result of evaluating the RHS in  QRHS; in this
+		       ;;case the lex gensym generated here also acts as loc gensym.
+		       ;;
+		       (lex (generate-lexical-gensym id)))
+		   ;;This call will raise an exception if it represents an attempt to
+		   ;;illegally redefine a binding.
+		   (extend-rib! rib id lab shadow/redefine-bindings?)
 		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
-			      (add-lexical-binding lab lex lexenv.run) lexenv.expand
+			      (lexenv-add-lexical-var-binding lab lex lexenv.run) lexenv.expand
 			      (cons lex lex*) (cons qrhs.stx qrhs*)
-			      mod** kwd* export-spec* rib mix? sd?))))
+			      mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	      ((define-syntax)
-	       ;;The  body form  is a  core  language DEFINE-SYNTAX  macro use.   We
-	       ;;expand and  evaluate the transformer expression,  build a syntactic
-	       ;;binding for it, register the label  in the rib.  Finally we recurse
-	       ;;on the rest of the body.
+	       ;;The body form  is a built-in DEFINE-SYNTAX macro use.   This is what
+	       ;;happens:
+	       ;;
+	       ;;1. Parse the syntactic form.
+	       ;;
+	       ;;2. Expand the right-hand side expression.  This expansion happens in
+	       ;;a lexical context in which the syntactic binding of the macro itself
+	       ;;has *not* yet been established.
+	       ;;
+	       ;;3. Add  to the rib  the syntactic binding's association  between the
+	       ;;macro keyword and the label.
+	       ;;
+	       ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
+	       ;;return:  a  macro  transformer  function, a  compile-time  value,  a
+	       ;;synonym transformer or whatever.
+	       ;;
+	       ;;5. Add to the lexenv the syntactic binding's association between the
+	       ;;label and the binding's descriptor.
+	       ;;
+	       ;;6. Finally recurse to expand the rest of the body.
 	       ;;
 	       (receive (id rhs.stx)
 		   (%parse-define-syntax body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
-		 ;;We want order here!?!
-		 (let ((lab      (gen-define-syntax-label id rib sd?))
-		       (rhs.core (with-exception-handler/input-form
+		 (let ((rhs.core (with-exception-handler/input-form
 				     rhs.stx
-				   (%expand-macro-transformer rhs.stx lexenv.expand))))
-		   ;;First map  the identifier to  the label, creating  the binding;
-		   ;;then evaluate the macro transformer.
-		   (extend-rib! rib id lab sd?)
+				   (expand-macro-transformer rhs.stx lexenv.expand)))
+		       (lab      (generate-label-gensym id)))
+		   ;;This call will raise an exception if it represents an attempt to
+		   ;;illegally redefine a binding.
+		   (extend-rib! rib id lab shadow/redefine-bindings?)
 		   (let ((entry (cons lab (with-exception-handler/input-form
 					      rhs.stx
-					    (%eval-macro-transformer rhs.core lexenv.run)))))
+					    (eval-macro-transformer rhs.core lexenv.run)))))
 		     (chi-body* (cdr body-form*.stx)
 				(cons entry lexenv.run)
 				(cons entry lexenv.expand)
 				lex* qrhs* mod** kwd* export-spec* rib
-				mix? sd?)))))
+				mix? shadow/redefine-bindings?)))))
 
 	      ((define-fluid-syntax)
-	       ;;The body form is a core language DEFINE-FLUID-SYNTAX macro use.  We
-	       ;;expand  and evaluate  the transformer  expression, build  syntactic
-	       ;;bindings for it, register the label in the rib.  Finally we recurse
-	       ;;on the rest of the body.
+	       ;;The body form is a  built-in DEFINE-FLUID-SYNTAX macro use.  This is
+	       ;;what happens:
+	       ;;
+	       ;;1. Parse the syntactic form.
+	       ;;
+	       ;;2. Expand the right-hand side expression.  This expansion happens in
+	       ;;a lexical context in which the syntactic binding of the macro itself
+	       ;;has *not* yet been established.
+	       ;;
+	       ;;3. Add  to the rib  the syntactic binding's association  between the
+	       ;;macro keyword and the label.
+	       ;;
+	       ;;4.   Evaluate the  right-hand  side expression,  which  is meant  to
+	       ;;return:  a  macro  transformer  function, a  compile-time  value,  a
+	       ;;synonym transformer or whatever.
+	       ;;
+	       ;;5. Add to the lexenv the syntactic binding's association between the
+	       ;;label and the binding's descriptor.
+	       ;;
+	       ;;6. Finally recurse to expand the rest of the body.
 	       ;;
 	       (receive (id rhs.stx)
 		   (%parse-define-syntax body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
-		 ;;We want order here!?!
-		 (let* ((lab      (gen-define-syntax-label id rib sd?))
-			(flab     (gen-define-syntax-label id rib sd?))
-			(rhs.core (with-exception-handler/input-form
-				      rhs.stx
-				    (%expand-macro-transformer rhs.stx lexenv.expand))))
-		   ;;First map  the identifier to  the label,  so that it  is bound;
-		   ;;then evaluate the macro transformer.
-		   (extend-rib! rib id lab sd?)
+		 (let ((rhs.core (with-exception-handler/input-form
+				     rhs.stx
+				   (expand-macro-transformer rhs.stx lexenv.expand)))
+		       (lab      (generate-label-gensym id)))
+		   ;;This call will raise an exception if it represents an attempt to
+		   ;;illegally redefine a binding.
+		   (extend-rib! rib id lab shadow/redefine-bindings?)
 		   (let* ((binding  (with-exception-handler/input-form
 					rhs.stx
-				      (%eval-macro-transformer rhs.core lexenv.run)))
-			  ;;This LEXENV entry represents the definition of the fluid
+				      (eval-macro-transformer rhs.core lexenv.run)))
+			  (flab     (generate-label-gensym id))
+			  ;;This LEXENV entry represents  the definition of the fluid
 			  ;;syntax.
-			  (entry1   (cons lab (make-fluid-syntax-binding flab)))
-			  ;;This LEXENV entry represents  the current binding of the
-			  ;;fluid  syntax;   the  binding  descriptor  is   of  type
-			  ;;LOCAL-MACRO, LOCAL-MACRO!  or  LOCAL-CTV.  Other entries
-			  ;;like this one can be pushed to rebind the fluid syntax.
+			  (entry1   (cons lab (make-syntactic-binding-descriptor/local-global-macro/fluid-syntax flab)))
+			  ;;This LEXENV  entry represents the current  binding of the
+			  ;;fluid syntax.
 			  (entry2   (cons flab binding)))
 		     (chi-body* (cdr body-form*.stx)
 				(cons* entry1 entry2 lexenv.run)
 				(cons* entry1 entry2 lexenv.expand)
 				lex* qrhs* mod** kwd* export-spec* rib
-				mix? sd?)))))
+				mix? shadow/redefine-bindings?)))))
 
 	      ((define-alias)
-	       ;;The body form is a core  language DEFINE-ALIAS macro use.  We add a
-	       ;;new association  identifier/label to  the current rib.   Finally we
+	       ;;The body form  is a core language DEFINE-ALIAS macro  use.  We add a
+	       ;;new  association identifier/label  to the  current rib.   Finally we
 	       ;;recurse on the rest of the body.
 	       ;;
 	       (receive (alias-id old-id)
@@ -2448,11 +2777,13 @@
 		   (stx-error body-form.stx "cannot redefine keyword"))
 		 (cond ((id->label old-id)
 			=> (lambda (label)
-			     (extend-rib! rib alias-id label sd?)
+			     ;;This call will raise an  exception if it represents an
+			     ;;attempt to illegally redefine a binding.
+			     (extend-rib! rib alias-id label shadow/redefine-bindings?)
 			     (chi-body* (cdr body-form*.stx)
 					lexenv.run lexenv.expand
 					lex* qrhs* mod** kwd* export-spec* rib
-					mix? sd?)))
+					mix? shadow/redefine-bindings?)))
 		       (else
 			(stx-error body-form.stx "unbound source identifier")))))
 
@@ -2468,8 +2799,8 @@
 		 ((_ ((?xlhs* ?xrhs*) ...) ?xbody* ...)
 		  (unless (valid-bound-ids? ?xlhs*)
 		    (stx-error body-form.stx "invalid identifiers"))
-		  (let* ((xlab*  (map gensym-for-label ?xlhs*))
-			 (xrib   (make-filled-rib ?xlhs* xlab*))
+		  (let* ((xlab*  (map generate-label-gensym ?xlhs*))
+			 (xrib   (make-rib/from-identifiers-and-labels ?xlhs* xlab*))
 			 ;;We  evaluate  the  transformers  for  LET-SYNTAX  without
 			 ;;pushing the XRIB: the syntax bindings do not exist in the
 			 ;;environment in which the transformer is evaluated.
@@ -2483,9 +2814,8 @@
 							 (push-lexical-contour xrib x))))
 					  (with-exception-handler/input-form
 					      in-form
-					    (%eval-macro-transformer
-					     (%expand-macro-transformer in-form lexenv.expand)
-					     lexenv.run))))
+					    (eval-macro-transformer (expand-macro-transformer in-form lexenv.expand)
+								    lexenv.run))))
 				   ?xrhs*)))
 		    (chi-body*
 		     ;;Splice the internal  body forms but add a  lexical contour to
@@ -2502,13 +2832,13 @@
 		     (append (map cons xlab* xbind*) lexenv.run)
 		     (append (map cons xlab* xbind*) lexenv.expand)
 		     lex* qrhs* mod** kwd* export-spec* rib
-		     mix? sd?)))))
+		     mix? shadow/redefine-bindings?)))))
 
 	      ((begin-for-syntax)
 	       (let ()
 		 (import CHI-BEGIN-FOR-SYNTAX)
 		 (chi-begin-for-syntax body-form.stx body-form*.stx lexenv.run lexenv.expand
-				       lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
+				       lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	      ((begin)
 	       ;;The body form  is a BEGIN syntax use.  Just  splice the expressions
@@ -2518,7 +2848,7 @@
 		 ((_ ?expr* ...)
 		  (chi-body* (append ?expr* (cdr body-form*.stx))
 			     lexenv.run lexenv.expand
-			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?))))
+			     lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	      ((stale-when)
 	       ;;The body form  is a STALE-WHEN syntax use.   Process the stale-when
@@ -2531,7 +2861,7 @@
 		    (handle-stale-when ?guard lexenv.expand)
 		    (chi-body* (append ?expr* (cdr body-form*.stx))
 			       lexenv.run lexenv.expand
-			       lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
+			       lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))))
 
 	      ((global-macro global-macro!)
 	       ;;The body form  is a macro use,  where the macro is  imported from a
@@ -2541,7 +2871,7 @@
 	       (let ((body-form.stx^ (chi-global-macro bind-val body-form.stx lexenv.run rib)))
 		 (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			    lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
+			    lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	      ((local-macro local-macro!)
 	       ;;The body form  is a macro use, where the  macro is locally defined.
@@ -2551,7 +2881,7 @@
 	       (let ((body-form.stx^ (chi-local-macro bind-val body-form.stx lexenv.run rib)))
 		 (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			    lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
+			    lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	      ((macro)
 	       ;;The body form is  a macro use, where the macro  is a non-core macro
@@ -2561,7 +2891,7 @@
 	       (let ((body-form.stx^ (chi-non-core-macro bind-val body-form.stx lexenv.run rib)))
 		 (chi-body* (cons body-form.stx^ (cdr body-form*.stx))
 			    lexenv.run lexenv.expand
-			    lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
+			    lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?)))
 
 	      ((module)
 	       ;;The body  form is  an internal module  definition.  We  process the
@@ -2569,14 +2899,16 @@
 	       ;;
 	       (receive (lex* qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
 		   (chi-internal-module body-form.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
-		 ;;Extend  the  rib with  the  syntactic  bindings exported  by  the
-		 ;;module.
+		 ;;Extend the rib with the syntactic bindings exported by the module.
 		 (vector-for-each (lambda (id lab)
-				    (extend-rib! rib id lab sd?))
+				    ;;This  call  will  raise   an  exception  if  it
+				    ;;represents an  attempt to illegally  redefine a
+				    ;;binding.
+				    (extend-rib! rib id lab shadow/redefine-bindings?))
 		   m-exp-id* m-exp-lab*)
 		 (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
 			    lex* qrhs* mod** kwd* export-spec*
-			    rib mix? sd?)))
+			    rib mix? shadow/redefine-bindings?)))
 
 	      ((library)
 	       ;;The body  form is  a library definition.   We process  the library,
@@ -2586,7 +2918,7 @@
 	       (chi-body* (cdr body-form*.stx)
 			  lexenv.run lexenv.expand
 			  lex* qrhs* mod** kwd* export-spec*
-			  rib mix? sd?))
+			  rib mix? shadow/redefine-bindings?))
 
 	      ((export)
 	       ;;The body  form is an  EXPORT form.   We just accumulate  the export
@@ -2599,16 +2931,19 @@
 			     lexenv.run lexenv.expand
 			     lex* qrhs* mod** kwd*
 			     (append ?export-spec* export-spec*)
-			     rib mix? sd?))))
+			     rib mix? shadow/redefine-bindings?))))
 
 	      ((import)
-	       ;;The body  form is an IMPORT  form.  We just process  the form which
-	       ;;results  in   extending  the  RIB  with   more  identifier-to-label
+	       ;;The body  form is an  IMPORT form.  We  just process the  form which
+	       ;;results  in   extending  the   RIB  with   more  identifier-to-label
 	       ;;associations.  Finally we recurse on the rest of the body.
 	       ;;
-	       (%chi-import body-form.stx lexenv.run rib sd?)
+	       (%chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
 	       (chi-body* (cdr body-form*.stx) lexenv.run lexenv.expand
-			  lex* qrhs* mod** kwd* export-spec* rib mix? sd?))
+			  lex* qrhs* mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))
+
+	      ((standalone-unbound-identifier)
+	       (raise-unbound-error __who__ body-form.stx body-form.stx))
 
 	      (else
 	       ;;Any other expression.
@@ -2630,9 +2965,9 @@
 	       (if mix?
 		   (chi-body* (cdr body-form*.stx)
 			      lexenv.run lexenv.expand
-			      (cons (gensym-for-lexical-var 'dummy) lex*)
+			      (cons (generate-lexical-gensym 'dummy) lex*)
 			      (cons (cons 'top-expr body-form.stx) qrhs*)
-			      mod** kwd* export-spec* rib #t sd?)
+			      mod** kwd* export-spec* rib #t shadow/redefine-bindings?)
 		 (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)))))))))
 
 ;;; --------------------------------------------------------------------
@@ -2731,16 +3066,16 @@
     ;;  (define-syntax (?name ?arg) ?body0 ?body ...)
     ;;
     (syntax-match stx ()
+      ((_ (?id ?arg) ?body0 ?body* ...)
+       (and (identifier? ?id)
+	    (identifier? ?arg))
+       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ((_ ?id)
        (identifier? ?id)
        (values ?id (bless '(syntax-rules ()))))
       ((_ ?id ?transformer-expr)
        (identifier? ?id)
        (values ?id ?transformer-expr))
-      ((_ (?id ?arg) ?body0 ?body* ...)
-       (and (identifier? ?id)
-	    (identifier? ?arg))
-       (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
       ))
 
   (define (%parse-define-alias body-form.stx)
@@ -2759,12 +3094,16 @@
     ;;Process  an IMPORT  form.   The purpose  of  such  forms is  to  push some  new
     ;;identifier-to-label association on the current RIB.
     ;;
-    (define (%chi-import body-form.stx lexenv.run rib sd?)
-      (receive (id* lab*)
+    (define-module-who import)
+
+    (define (%chi-import body-form.stx lexenv.run rib shadow/redefine-bindings?)
+      (receive (id.vec lab.vec)
 	  (%any-import*-checked body-form.stx lexenv.run)
 	(vector-for-each (lambda (id lab)
-			   (extend-rib! rib id lab sd?))
-	  id* lab*)))
+			   ;;This call  will raise an  exception if it  represents an
+			   ;;attempt to illegally redefine a binding.
+			   (extend-rib! rib id lab shadow/redefine-bindings?))
+	  id.vec lab.vec)))
 
     (define (%any-import*-checked import-form lexenv.run)
       (syntax-match import-form ()
@@ -2792,12 +3131,14 @@
 	((_ ?id)
 	 (identifier? ?id)
 	 (receive (type bind-val kwd)
-	     (expr-syntax-type ?id lexenv.run)
+	     (syntactic-form-type ?id lexenv.run)
 	   (case type
 	     (($module)
 	      (let ((iface bind-val))
 		(values (module-interface-exp-id*     iface ?id)
 			(module-interface-exp-lab-vec iface))))
+	     ((standalone-unbound-identifier)
+	      (raise-unbound-error __module_who__ import-form ?id))
 	     (else
 	      (stx-error import-form "invalid import")))))))
 
@@ -2808,11 +3149,9 @@
 	 ;;imported  bindings.   LABEL-VEC is  a  vector  of label  gensyms  uniquely
 	 ;;associated to the imported bindings.
 	 (receive (name-vec label-vec)
-	     (let ()
-	       (import PARSE-IMPORT-SPEC)
-	       (parse-import-spec* (syntax->datum ?imp*)))
+	     (parse-import-spec* (syntax->datum ?imp*))
 	   (values (vector-map (lambda (name)
-				 ($datum->syntax ?ctxt name))
+				 (~datum->syntax ?ctxt name))
 		     name-vec)
 		   label-vec)))
 	(_
@@ -2848,7 +3187,7 @@
     ;;
     (receive (name export-id* internal-body-form*)
 	(%parse-module module-form-stx)
-      (let* ((module-rib               (make-empty-rib))
+      (let* ((module-rib               (make-rib/empty))
 	     (internal-body-form*/rib  (map (lambda (form)
 					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
@@ -2856,13 +3195,24 @@
 	    ;;In a module: we do not want the trailing expressions to be converted to
 	    ;;dummy definitions; rather  we want them to be accumulated  in the MOD**
 	    ;;argument, for later expansion and evaluation.  So we set MIX? to false.
-	    (let ((empty-export-spec*      '())
-		  (mix?                    #f)
-		  (shadowing-definitions?  #t))
+	    (let ((empty-export-spec*	'())
+		  (mix?			#f)
+		  ;;In calling  CHI-BODY* we set the  argument REDEFINE-BINDINGS?  to
+		  ;;false because definitions  at the top level of  the module's body
+		  ;;cannot be redefined.  That is:
+		  ;;
+		  ;; (import (vicare))
+		  ;; (module ()
+		  ;;   (define a 1)
+		  ;;   (define a 2))
+		  ;;
+		  ;;is  a  syntax  violation  because   the  binding  "a"  cannot  be
+		  ;;redefined.
+		  (redefine-bindings?	#f))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
 			 lex* qrhs* mod** kwd* empty-export-spec*
-			 module-rib mix? shadowing-definitions?))
+			 module-rib mix? redefine-bindings?))
 	  ;;The list  of exported  identifiers is  not only the  one from  the MODULE
 	  ;;argument, but  also the  one from  all the EXPORT  forms in  the MODULE's
 	  ;;body.
@@ -2871,8 +3221,8 @@
 				      (lambda (id)
 					;;For every exported identifier there must be
 					;;a label already in the rib.
-					(or (id->label (make-<stx> (identifier->symbol id)
-								   (<stx>-mark* id)
+					(or (id->label (make-stx (identifier->symbol id)
+								   (stx-mark* id)
 								   (list module-rib)
 								   '()))
 					    (stx-error id "cannot find module export")))
@@ -2884,22 +3234,22 @@
 		(values lex* qrhs* all-export-id* all-export-lab* lexenv.run lexenv.expand mod** kwd*)
 	      ;;The module has a name.  Only the name itself will go in the enclosing
 	      ;;lexical environment.
-	      (let* ((name-label (gensym-for-label 'module))
+	      (let* ((name-label (generate-label-gensym 'module))
 		     (iface      (make-module-interface
-				  (car ($<stx>-mark* name))
+				  (car (stx-mark* name))
 				  (vector-map
 				      (lambda (x)
 					;;This   is  a   syntax  object   holding  an
 					;;identifier.
 					(let ((rib* '())
 					      (ae*  '()))
-					  (make-<stx> ($<stx>-expr x)
-						      ($<stx>-mark* x)
+					  (make-stx (stx-expr x)
+						      (stx-mark* x)
 						      rib*
 						      ae*)))
 				    all-export-id*)
 				  all-export-lab*))
-		     (binding    (make-module-binding iface))
+		     (binding    (make-syntactic-binding-descriptor/local-global-macro/module-interface iface))
 		     (entry      (cons name-label binding)))
 		(values lex* qrhs*
 			;;FIXME: module cannot export itself yet.  Abdulaziz Ghuloum.
@@ -2933,7 +3283,7 @@
   (module (module-interface-exp-id*)
 
     (define (module-interface-exp-id* iface id-for-marks)
-      (let ((diff   (%diff-marks (<stx>-mark* id-for-marks)
+      (let ((diff   (%diff-marks (stx-mark* id-for-marks)
 				 (module-interface-first-mark iface)))
 	    (id-vec (module-interface-exp-id-vec iface)))
 	(if (null? diff)
@@ -2942,8 +3292,8 @@
 	      (lambda (x)
 		(let ((rib* '())
 		      (ae*  '()))
-		  (make-<stx> ($<stx>-expr x)
-			      (append diff ($<stx>-mark* x))
+		  (make-stx (stx-expr x)
+			      (append diff (stx-mark* x))
 			      rib*
 			      ae*)))
 	    id-vec))))
@@ -2974,11 +3324,23 @@
 	   => (lambda (c)
 		(c (psi-core-expr guard-expr.psi) (stc)))))))
 
+
+;;;; macro transformer modules
+
+(module CORE-MACRO-TRANSFORMER
+  (core-macro-transformer)
+  (include "psyntax.chi-procedures.core-macro-transformers.scm" #t))
+
+
+;;;; done
+
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:
-;;mode: vicare
 ;;fill-column: 85
-;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
-;;eval: (put '%raise-compound-condition-object	'scheme-indent-function 1)
+;;eval: (put 'with-exception-handler/input-form		'scheme-indent-function 1)
+;;eval: (put 'raise-compound-condition-object		'scheme-indent-function 1)
+;;eval: (put 'assertion-violation/internal-error	'scheme-indent-function 1)
+;;eval: (put 'with-who					'scheme-indent-function 1)
 ;;End:

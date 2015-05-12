@@ -24,8 +24,8 @@ for each possible tuple of argument types; the methods are applied
 @quotation
 @strong{NOTE} When writing a library implementing methods for Nausicaa
 multimethods: we must enable the option @code{visit-upon-loading} in the
-options clause of the @code{library} form; @vicareref{iklib syntaxes
-libraries, Extended @code{library} syntax}.  Without this option methods
+options clause of the @syntax{library} form; @vicareref{iklib syntaxes
+libraries, Extended @syntax{library} syntax}.  Without this option methods
 may not be registered properly.
 @end quotation
 

@@ -1,30 +1,44 @@
-;;;Copyright (c) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+(library (psyntax.core-primitives-properties)
+  (export initialise-core-prims-tagging)
+  (import (rnrs)
+    (only (psyntax.lexical-environment)
+	  core-prim-id)
+    (only (psyntax.tag-and-tagged-identifiers)
+	  make-lambda-signature
+	  make-retvals-signature
+	  make-formals-signature
+	  make-clambda-compound
+	  set-identifier-tag!
+	  fabricate-procedure-tag-identifier)
+    (only (psyntax.syntactic-binding-properties)
+	  set-identifier-unsafe-variant!)
+    (psyntax.compat))
 
 
 ;;;; helpers
 
 (define-syntax-rule (C ?core-prim)
-  (scheme-stx (quote ?core-prim)))
+  (core-prim-id (quote ?core-prim)))
 
 (define-syntax-rule (S ?retvals-signature-syntax ?formals-signature-syntax)
   (make-lambda-signature
@@ -1640,9 +1654,9 @@
   ;; make-synonym-transformer
   ;; synonym-transformer?
   ;; synonym-transformer-identifier
-  ;; make-compile-time-value
-  ;; compile-time-value?
-  ;; compile-time-value-object
+  ;; make-expand-time-value
+  ;; expand-time-value?
+  ;; expand-time-value-object
   ;; syntactic-binding-putprop
   ;; syntactic-binding-getprop
   ;; syntactic-binding-remprop
@@ -2892,8 +2906,10 @@
 
 ;;;; done
 
+#| end of library |# )
+
 ;;; end of file
 ;; Local Variables:
-;; mode: vicare
+;; coding: utf-8-unix
 ;; fill-column: 85
 ;; End:

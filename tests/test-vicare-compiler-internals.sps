@@ -27,13 +27,18 @@
 #!vicare
 (import (vicare)
   (vicare checks)
+  (only (vicare expander)
+	expand-form-to-core-language)
+  (only (vicare libraries)
+	expand-library->sexp)
   (prefix (vicare compiler)
 	  compiler.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler internals\n")
 
-(compiler.optimize-level 2)
+(compiler.generate-descriptive-labels?	#f)
+(compiler.optimize-level		2)
 (compiler.source-optimizer-passes-count 2)
 ;;(compiler.cp0-effort-limit 50)
 ;;(compiler.cp0-size-limit   8)
@@ -1853,7 +1858,7 @@
 
 (parametrise ((check-test-name						'optimise-direct-jumps)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
   (define (%optimise-direct-jumps core-language-form)
     (let* ((D (compiler.recordize core-language-form))
@@ -2014,7 +2019,7 @@
 
 (parametrise ((check-test-name						'closure-makers)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
@@ -2129,7 +2134,7 @@
 
 (parametrise ((check-test-name						'clambda-lifting)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
@@ -2470,7 +2475,7 @@
 
 (parametrise ((check-test-name						'introduce-primitive-operation-calls)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
@@ -2526,7 +2531,7 @@
 
 (parametrise ((check-test-name						'rewrite-freevar-refs)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
@@ -2673,7 +2678,7 @@
 
 (parametrise ((check-test-name						'engine-checks)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
@@ -2742,7 +2747,7 @@
 
 (parametrise ((check-test-name						'stack-overflow-checks)
 	      (compiler.enabled-function-application-integration?	#f)
-	      (compiler.descriptive-labels				#t))
+	      (compiler.generate-descriptive-labels?			#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
@@ -2811,7 +2816,7 @@
 
 
 (parametrise ((check-test-name			'specify-representation)
-	      (compiler.descriptive-labels	#t))
+	      (compiler.generate-descriptive-labels?	#t))
 
 ;;;NOTE There is a separate file for testing this compiler pass!!!
 
@@ -2898,7 +2903,7 @@
 
 
 (parametrise ((check-test-name			'impose-evaluation-order)
-	      (compiler.descriptive-labels	#t))
+	      (compiler.generate-descriptive-labels?	#t))
 
 ;;;NOTE There is a separate file for testing this compiler pass!!!
 

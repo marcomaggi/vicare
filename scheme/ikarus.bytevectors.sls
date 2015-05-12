@@ -176,6 +176,13 @@
     $bytevector-self-copy-forwards!/count	$bytevector-self-copy-backwards!/count
     $bytevector-fill!)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Sun May 3, 2015)
+		  procedure-arguments-consistency-violation
+		  positive-fixnum?
+		  non-negative-fixnum?
+		  ;;;
+
 		  make-bytevector			bytevector-length
 		  bytevector-empty?
 		  bytevector-copy!			bytevector-fill!
@@ -293,6 +300,9 @@
 	  $bytevector-ieee-single-nonnative-ref
 	  $bytevector-ieee-single-nonnative-set!)
     (prefix (vicare platform words) words.)
+    (only (ikarus conditions)
+	  procedure-arguments-consistency-violation
+	  preconditions)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon Mar 23,
     ;;2015)
     (only (ikarus fixnums)
@@ -487,49 +497,14 @@
 
 ;;;; preconditions syntax and arguments validation
 
-;;FIXME Should  this syntax be  included in the expander?   (Marco Maggi; Wed  Dec 4,
-;;2013)
-(define-syntax (preconditions stx)
-  (module (vicare-built-with-arguments-validation-enabled)
-    (module (arguments-validation)
-      (include "ikarus.config.scm" #t))
-    (define (vicare-built-with-arguments-validation-enabled)
-      arguments-validation)
-    #| end of module |# )
-  (syntax-case stx ()
-    ;;Single precondition.
-    ;;
-    ((_ ?who (?predicate ?arg ...))
-     (identifier? #'?who)
-     (if (vicare-built-with-arguments-validation-enabled)
-	 #'(unless (?predicate ?arg ...)
-	     (procedure-argument-violation ?who
-	       "failed precondition validation"
-	       ;;This  way of  composing the  "&irritants" is  like the  one used  by
-	       ;;LAMBDA* and similar syntaxes.
-	       '(?predicate ?arg ...) ?arg ...))
-       #'(void)))
-
-    ;;Multiple preconditions.
-    ;;
-    ((_ ?who (?predicate ?arg ...) ...)
-     (identifier? #'?who)
-     (if (vicare-built-with-arguments-validation-enabled)
-	 #'(begin
-	     (preconditions ?who (?predicate ?arg ...))
-	     ...)
-       #'(void)))
-    ))
-
-;;; --------------------------------------------------------------------
-
 (define-syntax (assert-total-string-length stx)
   (syntax-case stx ()
     ((_ ?len)
      (identifier? #'?len)
      #'(unless (bytevector-length? ?len)
-	 (procedure-argument-violation __who__
-	   "total resulting bytevector length out of range, expected non-negative fixnum" ?len)))
+	 (procedure-arguments-consistency-violation __who__
+	   "total resulting bytevector length out of range, expected non-negative fixnum"
+	   ?len)))
     ))
 
 
@@ -538,8 +513,8 @@
 (define-auxiliary-syntaxes big little)
 
 (define-syntax (case-endianness stx)
-  ;;We want this syntax  to raise a "&procedure-argument-violation" when
-  ;;the endianness is wrong.
+  ;;We  want  this  syntax  to   raise  a  "&procedure-argument-violation"  when  the
+  ;;endianness is wrong.
   ;;
   (syntax-case stx (big little)
     ((_ (?who ?endianness)
@@ -561,7 +536,8 @@
 	 ((little)	. ?lit-body)
 	 (else
 	  (procedure-argument-violation ?who
-	    "expected endianness symbol as argument" ?endianness))))
+	    "expected endianness symbol as argument"
+	    ?endianness))))
     ))
 
 
@@ -697,18 +673,18 @@
 
 ;;;; comparison
 
-(define-equality/sorting-predicate bytevector=?		$bytevector=	bytevector? list-of-bytevectors?)
-(define-inequality-predicate       bytevector!=?	$bytevector!=	bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector=?		$bytevector=	bytevector?)
+(define-inequality-predicate       bytevector!=?	$bytevector!=	bytevector?)
 
-(define-equality/sorting-predicate bytevector-u8<?	$bytevector-u8<		bytevector? list-of-bytevectors?)
-(define-equality/sorting-predicate bytevector-u8<=?	$bytevector-u8<=	bytevector? list-of-bytevectors?)
-(define-equality/sorting-predicate bytevector-u8>?	$bytevector-u8>		bytevector? list-of-bytevectors?)
-(define-equality/sorting-predicate bytevector-u8>=?	$bytevector-u8>=	bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-u8<?	$bytevector-u8<		bytevector?)
+(define-equality/sorting-predicate bytevector-u8<=?	$bytevector-u8<=	bytevector?)
+(define-equality/sorting-predicate bytevector-u8>?	$bytevector-u8>		bytevector?)
+(define-equality/sorting-predicate bytevector-u8>=?	$bytevector-u8>=	bytevector?)
 
-(define-equality/sorting-predicate bytevector-s8<?	$bytevector-s8<		bytevector? list-of-bytevectors?)
-(define-equality/sorting-predicate bytevector-s8<=?	$bytevector-s8<=	bytevector? list-of-bytevectors?)
-(define-equality/sorting-predicate bytevector-s8>?	$bytevector-s8>		bytevector? list-of-bytevectors?)
-(define-equality/sorting-predicate bytevector-s8>=?	$bytevector-s8>=	bytevector? list-of-bytevectors?)
+(define-equality/sorting-predicate bytevector-s8<?	$bytevector-s8<		bytevector?)
+(define-equality/sorting-predicate bytevector-s8<=?	$bytevector-s8<=	bytevector?)
+(define-equality/sorting-predicate bytevector-s8>?	$bytevector-s8>		bytevector?)
+(define-equality/sorting-predicate bytevector-s8>=?	$bytevector-s8>=	bytevector?)
 
 ;;; --------------------------------------------------------------------
 
@@ -862,8 +838,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison bytevector-u8-max $bytevector-u8-max bytevector? list-of-bytevectors?)
-(define-min/max-comparison bytevector-u8-min $bytevector-u8-min bytevector? list-of-bytevectors?)
+(define-min/max-comparison bytevector-u8-max $bytevector-u8-max bytevector?)
+(define-min/max-comparison bytevector-u8-min $bytevector-u8-min bytevector?)
 
 (define ($bytevector-u8-min bv1 bv2)
   (if ($bytevector-u8< bv1 bv2) bv1 bv2))
@@ -873,8 +849,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-min/max-comparison bytevector-s8-max $bytevector-s8-max bytevector? list-of-bytevectors?)
-(define-min/max-comparison bytevector-s8-min $bytevector-s8-min bytevector? list-of-bytevectors?)
+(define-min/max-comparison bytevector-s8-max $bytevector-s8-max bytevector?)
+(define-min/max-comparison bytevector-s8-min $bytevector-s8-min bytevector?)
 
 (define ($bytevector-s8-min bv1 bv2)
   (if ($bytevector-s8< bv1 bv2) bv1 bv2))
@@ -964,7 +940,7 @@
   ;;
   ;;Return unspecified values.
   ;;
-  (preconditions __who__
+  (preconditions
    (bytevector-start-index-and-count-for-word8? src.bv src.start byte-count)
    (bytevector-start-index-and-count-for-word8? dst.bv dst.start byte-count))
   ($bytevector-copy!/count src.bv src.start dst.bv dst.start byte-count))
@@ -1091,11 +1067,11 @@
   ;;
   (({src.bv bytevector?} src.start)
    (let ((src.end ($bytevector-length src.bv)))
-     (preconditions __who__
+     (preconditions
        (bytevector-start-past-indexes? src.bv src.start src.end))
      ($subbytevector-u8 src.bv src.start src.end)))
   (({src.bv bytevector?} {src.start bytevector-index?} {src.end bytevector-index?})
-   (preconditions __who__
+   (preconditions
      (bytevector-start-past-indexes? src.bv src.start src.end))
    ($subbytevector-u8 src.bv src.start src.end)))
 
@@ -1111,7 +1087,7 @@
   ;;
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
-  (preconditions __who__
+  (preconditions
     (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
   ($subbytevector-u8/count src.bv src.start dst.len))
 
@@ -1134,11 +1110,11 @@
   ;;
   (({src.bv bytevector?} src.start)
    (let ((src.end ($bytevector-length src.bv)))
-     (preconditions __who__
+     (preconditions
        (bytevector-start-past-indexes? src.bv src.start src.end))
      ($subbytevector-s8 src.bv src.start src.end))>)
   (({src.bv bytevector?} {src.start bytevector-index?} {src.end bytevector-index?})
-   (preconditions __who__
+   (preconditions
      (bytevector-start-past-indexes? src.bv src.start src.end))
    ($subbytevector-s8 src.bv src.start src.end)))
 
@@ -1154,7 +1130,7 @@
   ;;
   ;;   0 <= SRC.START <= SRC.START + DST.LEN <= (bytevector-length SRC.BV)
   ;;
-  (preconditions __who__
+  (preconditions
     (bytevector-start-index-and-count-for-word8? src.bv src.start dst.len))
   ($subbytevector-s8/count src.bv src.start dst.len))
 
@@ -1169,10 +1145,16 @@
 
 ;;;; appending and concatenating
 
-(define* (bytevector-append . {bv* list-of-bytevectors?})
+(define* (bytevector-append . bv*)
   ;;Defined by Vicare.   Concatenate the bytevector arguments and  return the result.
   ;;If no arguments are given: return the empty bytevector.
   ;;
+  ;;FIXME At  the next boot image  rotation: this validation must  be integrated with
+  ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+  (for-each (lambda (item)
+	      (unless (bytevector? item)
+		(procedure-argument-violation __who__ "failed argument validation" item)))
+    bv*)
   (let ((total-length ($bytevector-total-length 0 bv*)))
     (assert-total-string-length total-length)
     ($bytevector-concatenate total-length bv*)))
@@ -1251,22 +1233,22 @@
 ;;;; 8-bit setters and getters
 
 (define* (bytevector-s8-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word8? bv index))
   ($bytevector-s8-ref bv index))
 
 (define* (bytevector-u8-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word8? bv index))
   ($bytevector-u8-ref bv index))
 
 (define* (bytevector-s8-set! {bv bytevector?} {index bytevector-index?} {byte words.word-s8?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word8? bv index))
   ($bytevector-s8-set! bv index byte))
 
 (define* (bytevector-u8-set! {bv bytevector?} {index bytevector-index?} {octet words.word-u8?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word8? bv index))
   ($bytevector-u8-set! bv index octet))
 
@@ -1284,7 +1266,7 @@
 ;;;; 16-bit setters and getters
 
 (define* (bytevector-u16-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1293,7 +1275,7 @@
      ($bytevector-u16l-ref bv index))))
 
 (define* (bytevector-u16-set! {bv bytevector?} {index bytevector-index?} {word words.word-u16?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1304,7 +1286,7 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s16-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1313,7 +1295,7 @@
      ($bytevector-s16l-ref bv index))))
 
 (define* (bytevector-s16-set! {bv bytevector?} {index bytevector-index?} {word words.word-s16?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word16? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1324,13 +1306,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-u16-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-u16n-ref bv index))
 
 (define* (bytevector-u16-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-u16?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-u16n-set! bv index word))
@@ -1338,13 +1320,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s16-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-s16n-ref bv index))
 
 (define* (bytevector-s16-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-s16?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-2? index)
     (bytevector-index-for-word16? bv index))
   ($bytevector-s16n-set! bv index word))
@@ -1353,7 +1335,7 @@
 ;;;; 32-bit setters and getters
 
 (define* (bytevector-u32-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word32? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1362,7 +1344,7 @@
      ($bytevector-u32l-ref bv index))))
 
 (define* (bytevector-u32-set! {bv bytevector?} {index bytevector-index?} {word words.word-u32?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word32? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1373,7 +1355,7 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s32-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word32? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1382,7 +1364,7 @@
      ($bytevector-s32l-ref bv index))))
 
 (define* (bytevector-s32-set! {bv bytevector?} {index bytevector-index?} {word words.word-s32?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word32? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1393,13 +1375,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-u32-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-u32n-ref bv index))
 
 (define* (bytevector-u32-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-u32?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-u32n-set! bv index word))
@@ -1407,13 +1389,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s32-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-s32n-ref bv index))
 
 (define* (bytevector-s32-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-s32?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-4? index)
     (bytevector-index-for-word32? bv index))
   ($bytevector-s32n-set! bv index word))
@@ -1422,7 +1404,7 @@
 ;;;; 64-bit setters and getters
 
 (define* (bytevector-u64-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word64? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1431,7 +1413,7 @@
      ($bytevector-u64l-ref bv index))))
 
 (define* (bytevector-u64-set! {bv bytevector?} {index bytevector-index?} {word words.word-u64?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word64? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1442,7 +1424,7 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s64-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word64? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1451,7 +1433,7 @@
      ($bytevector-s64l-ref bv index))))
 
 (define* (bytevector-s64-set! {bv bytevector?} {index bytevector-index?} {word words.word-s64?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word64? bv index))
   (case-endianness (__who__ endianness)
     ((big)
@@ -1462,13 +1444,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-u64-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-u64n-ref bv index))
 
 (define* (bytevector-u64-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-u64?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-u64n-set! bv index word))
@@ -1476,13 +1458,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-s64-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-s64n-ref bv index))
 
 (define* (bytevector-s64-native-set! {bv bytevector?} {index bytevector-index?} {word words.word-s64?})
-  (preconditions __who__
+  (preconditions
     (words.fixnum-aligned-to-8? index)
     (bytevector-index-for-word64? bv index))
   ($bytevector-s64n-set! bv index word))
@@ -1491,7 +1473,7 @@
 ;;;; double-precision flonum bytevector functions
 
 (define* (bytevector-ieee-double-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-double-flonum? bv index))
   (if (words.fixnum-aligned-to-8? index)
       (case-endianness (__who__ endianness)
@@ -1506,7 +1488,7 @@
        ($bytevector-ieee-double-big-ref bv index)))))
 
 (define* (bytevector-ieee-double-set! {bv bytevector?} {index bytevector-index?} {X flonum?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-double-flonum? bv index))
   (if (words.fixnum-aligned-to-8? index)
       (case-endianness (__who__ endianness)
@@ -1523,13 +1505,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-ieee-double-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-double-flonum? bv index)
     (bytevector-index-aligned-to-8? index))
   ($bytevector-ieee-double-native-ref bv index))
 
 (define* (bytevector-ieee-double-native-set! {bv bytevector?} {index bytevector-index?} {X flonum?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-double-flonum? bv index)
     (bytevector-index-aligned-to-8? index))
   ($bytevector-ieee-double-native-set! bv index X))
@@ -1538,7 +1520,7 @@
 ;;;; single-precision flonum bytevector functions
 
 (define* (bytevector-ieee-single-ref {bv bytevector?} {index bytevector-index?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-single-flonum? bv index))
   (if (words.fixnum-aligned-to-4? index)
       (case-endianness (__who__ endianness)
@@ -1554,7 +1536,7 @@
 
 (define* (bytevector-ieee-single-set! {bv bytevector?} {index bytevector-index?}
 				      {X flonum?} endianness)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-single-flonum? bv index))
   (if (words.fixnum-aligned-to-4? index)
       (case-endianness (__who__ endianness)
@@ -1571,13 +1553,13 @@
 ;;; --------------------------------------------------------------------
 
 (define* (bytevector-ieee-single-native-ref {bv bytevector?} {index bytevector-index?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-single-flonum? bv index)
     (bytevector-index-aligned-to-4? index))
   ($bytevector-ieee-single-native-ref bv index))
 
 (define* (bytevector-ieee-single-native-set! {bv bytevector?} {index bytevector-index?} {X flonum?})
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-single-flonum? bv index)
     (bytevector-index-aligned-to-4? index))
   ($bytevector-ieee-single-native-set! bv index X))
@@ -2196,7 +2178,7 @@
 ;;;
 
   (define* (bytevector-sint-ref {bv bytevector?} {idx.start bytevector-index?} endianness {size bytevector-word-size?})
-    (preconditions __who__
+    (preconditions
       (bytevector-index-for-word? bv idx.start size))
     (let ((idx.past ($fx+ idx.start size)))
       (case-endianness (__who__ endianness)
@@ -2204,7 +2186,7 @@
 	((big)		(sref-big    bv idx.start idx.past)))))
 
   (define* (bytevector-uint-ref {bv bytevector?} {idx.start bytevector-index?} endianness {size bytevector-word-size?})
-    (preconditions __who__
+    (preconditions
       (bytevector-index-for-word? bv idx.start size))
     (let ((idx.past ($fx+ idx.start size)))
       (case-endianness (__who__ endianness)
@@ -2252,7 +2234,7 @@
 				   {word non-negative-exact-integer?}
 				   endianness
 				   {word-size bytevector-word-size?} who)
-  (preconditions __who__
+  (preconditions
     (bytevector-index-for-word? bv idx word-size))
   (let ((nbits (bitwise-length word)))
     (when (< (* word-size 8) nbits)
@@ -2280,8 +2262,8 @@
 (define* (bytevector-sint-set!/who {bv bytevector?} {idx bytevector-index?}
 				   {word exact-integer?} endianness
 				   {word-size bytevector-word-size?} who)
-  (preconditions __who__
-    (bytevector-index-for-word? bv idx word-size))
+  (preconditions
+   (bytevector-index-for-word? bv idx word-size))
   (let ((nbits (add1 (bitwise-length word))))
     (when (< (* word-size 8) nbits)
       (procedure-argument-violation who
@@ -2325,11 +2307,11 @@
   (syntax-rules ()
     ((_ ?who ?tag ?bytes-in-word ?bytevector-ref)
      (define* (?who {bv bytevector?})
-       (let* ((bv.len ($bytevector-length bv))
-	      (rest   (fxmod bv.len ?bytes-in-word)))
-	 (unless ($fxzero? rest)
-	   (procedure-argument-violation (quote ?who)
-	     "invalid bytevector size for requested type conversion" '?tag bv.len))
+       (let ((bv.len ($bytevector-length bv)))
+	 (unless (fxzero? (fxmod bv.len ?bytes-in-word))
+	   (procedure-arguments-consistency-violation (quote ?who)
+	     "invalid bytevector size, not an exact multiple of word size"
+	     bv ?bytes-in-word bv.len))
 	 (let loop ((bv		bv)
 		    (i		bv.len)
 		    (accum	'()))
@@ -2439,7 +2421,7 @@
 	     s
 	   (let ((c ($car ls)))
 	     (unless (?valid-number-pred c)
-	       (procedure-argument-violation (quote ?who) "invalid element for requested bytevector type" '?tag c))
+	       (procedure-argument-violation (quote ?who) "invalid element for requested bytevector type" c))
 	     (?bytevector-set! s i c)
 	     (%fill s ($fx+ ?bytes-in-word i) (cdr ls)))))
 
@@ -2675,7 +2657,7 @@
 	  (make-bytevector idx)
 	(procedure-argument-violation who "not a proper list" ls))))
   (lambda (ls endianness size)
-    (if (and (fixnum? size) (fx> size 0))
+    (if (positive-fixnum? size)
 	(race ls ls ls 0 endianness size)
       (procedure-argument-violation who "size must be a positive integer" size))))
 
@@ -2707,5 +2689,4 @@
 ;;coding: utf-8-unix
 ;;eval: (put '%implementation-violation	'scheme-indent-function 1)
 ;;eval: (put 'case-endianness		'scheme-indent-function 1)
-;;eval: (put 'preconditions		'scheme-indent-function 1)
 ;;End:

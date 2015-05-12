@@ -257,7 +257,6 @@
     $vector-ref
     $vector-set!
     $vector-length
-    $vector-empty?
 
     $vector-map1
     $vector-for-each1
@@ -266,8 +265,6 @@
 
     $vector-copy
     $vector-copy!
-    $vector-self-copy-forwards!
-    $vector-self-copy-backwards!
     $vector-fill!
     $subvector
     $vector-clean!
@@ -682,11 +679,6 @@
 	 (vec ($make-vector ?len)))
     ($vector-clean! vec)))
 
-;;Commented out because implemented by the boot image.
-;;
-;; (define-inline ($vector-empty? vec)
-;;   ($fxzero? ($vector-length vec)))
-
 (define-inline ($vector-clean! ?vec)
   (foreign-call "ikrt_vector_clean" ?vec))
 
@@ -724,34 +716,6 @@
 	(loop src.vec ($fxadd1 src.start)
 	      dst.vec ($fxadd1 dst.start)
 	      src.end)))))
-
-(define-inline ($vector-self-copy-forwards! ?vec ?src.start ?dst.start ?count)
-  ;;Copy ?COUNT items  of ?VEC from ?SRC.START inclusive  to ?VEC itself
-  ;;starting at ?DST.START inclusive.   The copy happens forwards, so it
-  ;;is suitable for the case ?SRC.START > ?DST.START.
-  ;;
-  (let loop ((vec	?vec)
-	     (src.start	?src.start)
-	     (dst.start	?dst.start)
-	     (src.end	($fx+ ?src.start ?count)))
-    (unless ($fx= src.start src.end)
-      ($vector-set! vec dst.start ($vector-ref vec src.start))
-      (loop vec ($fxadd1 src.start) ($fxadd1 dst.start) src.end))))
-
-(define-inline ($vector-self-copy-backwards! ?vec ?src.start ?dst.start ?count)
-  ;;Copy ?COUNT items  of ?VEC from ?SRC.START inclusive  to ?VEC itself
-  ;;starting at ?DST.START inclusive.  The copy happens backwards, so it
-  ;;is suitable for the case ?SRC.START < ?DST.START.
-  ;;
-  (let loop ((vec	?vec)
-	     (src.start	($fx+ ?src.start ?count))
-	     (dst.start	($fx+ ?dst.start ?count))
-	     (src.end	?src.start))
-    (unless ($fx= src.start src.end)
-      (let ((src.start ($fxsub1 src.start))
-	    (dst.start ($fxsub1 dst.start)))
-	($vector-set! vec dst.start ($vector-ref vec src.start))
-	(loop vec src.start dst.start src.end)))))
 
 (define-inline ($subvector ?vec ?start ?end)
   ;;Return a new vector holding items from ?VEC from ?START inclusive to

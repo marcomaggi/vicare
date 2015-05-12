@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -29,9 +29,10 @@
 (library (ikarus.emergency)
   (export emergency-write)
   (import (vicare)
+    (only (vicare system $bytevectors)
+	  $bytevector-length)
     (prefix (vicare unsafe capi)
-	    capi.)
-    (vicare unsafe operations))
+	    capi.))
 
 
 ;;;; emergency debugging
@@ -51,6 +52,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

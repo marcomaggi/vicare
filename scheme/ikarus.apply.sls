@@ -51,7 +51,7 @@
 	   (%error ls "expected proper list as argument"))))
 
   (define (%error ls message)
-    (procedure-argument-violation 'apply message ls))
+    (procedure-argument-violation 'apply message #f 'list-of-arguments? ls))
 
   ;;Limit artificially set; notice that it is the maximum number of items in the last
   ;;argument of APPLY,  not the maximum number of arguments.   This limit attempts to

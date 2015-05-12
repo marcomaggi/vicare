@@ -1,4 +1,4 @@
-;;;Copyright (c) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
 ;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
@@ -23,6 +23,7 @@
 (library (psyntax.library-manager)
   (export
     ;; library inspection
+    make-library
     library?
     library-uid				library-name
     library-imp-lib*			library-vis-lib*
@@ -58,9 +59,12 @@
 
     ;; miscellaneous
     library-name-identifiers
-    imported-label->syntactic-binding)
+    label->imported-syntactic-binding-descriptor)
   (import (rnrs)
+    (prefix (rnrs syntax-case) sys.)
     (psyntax.compat))
+
+  (include "psyntax.helpers.scm" #t)
 
 
 ;;;; type definitions: library object
@@ -403,14 +407,8 @@
   ;;The current library  expander is used to expand LIBRARY  forms from source files.
   ;;The interface is as follows:
   ;;
-  ;;   (receive (uid libname
-  ;;             import-libdesc* visit-libdesc* invoke-libdesc*
-  ;;             invoke-code visit-code
-  ;;             export-subst export-env
-  ;;             guard-code guard-libdesc*
-  ;;             library-option*)
-  ;;       ((current-library-expander) ?libsexp ?source-pathname ?verify-libname)
-  ;;     ---)
+  ;;   (define lib
+  ;;     ((current-library-expander) ?libsexp ?source-pathname ?verify-libname))
   ;;
   ;;The argument ?LIBSEXP must be the symbolic expression:
   ;;
@@ -426,6 +424,8 @@
   ;;library name as argument; it is meant to perform some validation upon the library
   ;;name components (especially  the version) and raise an exception  if something is
   ;;wrong; otherwise it should just return.
+  ;;
+  ;;The returned value must be an object of type "library".
   ;;
   (make-parameter
       (lambda (library-sexp)
@@ -507,8 +507,9 @@
      ((current-library-collection)))))
 
 (module (intern-library)
-  ;;Build a  LIBRARY object and  intern it in  the internal collection  of libraries;
-  ;;return unspecified values.  The arguments are:
+  ;;Build a  LIBRARY object and  intern it in  the internal collection  of libraries.
+  ;;When successful:  return a "library"  object; otherwise raise an  exception.  The
+  ;;arguments are:
   ;;
   ;;UID -
   ;;   A gensym uniquely identifying this library.
@@ -573,8 +574,7 @@
   ;;LIBRARY-OPTION* -
   ;;   A list of sexps representing library options.
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'intern-library))
+  (define-module-who intern-library)
 
   (define* (intern-library {uid symbol?} {libname library-name?}
 			    import-libdesc* visit-libdesc* invoke-libdesc*
@@ -589,10 +589,11 @@
 	  (guard-lib*	(map find-library-in-collection-by-descriptor guard-libdesc*)))
       (when (find-library-in-collection-by-name libname)
 	(assertion-violation __module_who__ "library is already interned" libname))
-      (let ((lib (make-library uid libname import-lib* visit-lib* invoke-lib*
-			       export-subst export-env visit-proc invoke-proc
-			       visit-code invoke-code guard-code guard-lib*
-			       visible? source-file-name library-option*)))
+      (receive-and-return (lib)
+	  (make-library uid libname import-lib* visit-lib* invoke-lib*
+			export-subst export-env visit-proc invoke-proc
+			visit-code invoke-code guard-code guard-lib*
+			visible? source-file-name library-option*)
 	(%intern-library-object lib)
 	(when (memq 'visit-upon-loading library-option*)
 	  (visit-library lib)))))
@@ -609,16 +610,17 @@
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
-			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
+			     ((global-etv)    (cons* 'global-etv    lib (cdr binding)))
 			     ((core-prim
 			       library import export
 			       define define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
-			       global mutable
+			       global global-mutable
 			       core-macro macro macro!
-			       $core-rtd $rtd $module $fluid $synonym)
+			       $core-rtd $record-type-name $struct-type-name
+			       $module $fluid $synonym)
 			      binding)
 			     (else
 			      (assertion-violation __module_who__
@@ -724,7 +726,7 @@
 				 (binding (cdr export-env-entry)))
 			     (remove-location label)
 			     (when (memq (car binding)
-					 '(global global-macro global-macro! global-ctv))
+					 '(global global-macro global-macro! global-etv))
 			       (remove-location (cdr binding)))))
 		 ($library-export-env lib))))
 	 (else
@@ -734,20 +736,22 @@
 
 ;;;; utilities for the expansion process
 
-(define (imported-label->syntactic-binding lab)
-  ;;If a label gensym is associated to  a binding from the the boot image environment
-  ;;or to a binding from a library's  EXPORT-ENV: it has the associated descriptor in
-  ;;its "value" field; otherwise such field is set to #f.
+(define (label->imported-syntactic-binding-descriptor lab)
+  ;;If a label  gensym is associated to  a syntactic binding established  by the boot
+  ;;image or a library's EXPORT-ENV: it  has the associated descriptor in its "value"
+  ;;field; otherwise such field is set to #f.
   ;;
   ;;So, if we have a label, we can  check if it references an imported binding simply
-  ;;by  checking its  "value" field;  this is  what IMPORTED-LABEL->SYNTACTIC-BINDING
-  ;;does.   If LAB  is a  label genysm  referencing an  imported binding:  return the
-  ;;associated syntactic binding descriptor; otherwise return false.
+  ;;by      checking       its      "value"       field;      this       is      what
+  ;;LABEL->IMPORTED-SYNTACTIC-BINDING-DESCRIPTOR  does.  If  LAB  is  a label  genysm
+  ;;referencing  an  imported  binding:   return  the  associated  syntactic  binding
+  ;;descriptor; otherwise return false.
   ;;
   (label-binding lab))
 
 (define* (invoke-library {lib library?})
-  ;;Evaluate the invoke code.
+  ;;Evaluate the invoke code of the  library LIB.  When successful return LIB itself;
+  ;;if an error occurs: raise an exception.
   ;;
   (let ((invoke (library-invoke-state lib)))
     (when (procedure? invoke)
@@ -758,10 +762,12 @@
 				       (assertion-violation __who__ "first invoke did not return" lib)))
       (library-debug-message "invoking: ~a" (library-name lib))
       (invoke)
-      (set-library-invoke-state! lib #t))))
+      (set-library-invoke-state! lib #t)))
+  lib)
 
 (define* (visit-library {lib library?})
-  ;;Evaluate the visit code.
+  ;;Evaluate the visit  code of the library LIB.  When  successful return LIB itself;
+  ;;if an error occurs: raise an exception.
   ;;
   (let ((visit (library-visit-state lib)))
     (when (procedure? visit)
@@ -772,7 +778,8 @@
 				      (assertion-violation __who__ "first visit did not return" lib)))
       (library-debug-message "visiting: ~a" (library-name lib))
       (visit)
-      (set-library-visit-state! lib #t))))
+      (set-library-visit-state! lib #t)))
+  lib)
 
 
 ;;;; done

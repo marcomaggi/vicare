@@ -192,36 +192,12 @@
 
 ;;;; procedure arguments validation
 
-(module (%list-of-sets?
-	 %list-of-bags?
-	 %check-same-comparator)
-
-  (define (%list-of-sets? obj)
-    ;;Used to validate rest arguments, as in:
-    ;;
-    ;;   (define* (operation . {args %list-of-sets?})
-    ;;     ---)
-    ;;
-    (or (null? obj)
-	(and (list? obj)
-	     (for-all set? obj)
-	     (%sob-check-comparators obj))))
-
-  (define (%list-of-bags? obj)
-    ;;Used to validate rest arguments, as in:
-    ;;
-    ;;   (define* (operation . {args %list-of-bags?})
-    ;;     ---)
-    ;;
-    (or (null? obj)
-	(and (list? obj)
-	     (for-all bag? obj)
-	     (%sob-check-comparators obj))))
+(module (%check-same-comparator)
 
   (case-define %check-same-comparator
     ;;Used to validate SOB arguments, as in:
     ;;
-    ;;   (define* (operation {set1 set?} {set2 set?} {set3 set?} . {sets %list-of-sets?})
+    ;;   (define* (operation {set1 set?} {set2 set?} {set3 set?} . {sets set?})
     ;;     (%check-same-comparator __who__ set1 set2 set3 sets)
     ;;     ---)
     ;;
@@ -904,7 +880,7 @@
 
 (define-syntax define-subset-proc
   (syntax-rules ()
-    ((_ ?who ?dyadic-who ?arg-pred ?arg-list-pred)
+    ((_ ?who ?dyadic-who ?arg-pred)
      (case-define* ?who
        (({sob ?arg-pred})
 	#t)
@@ -915,7 +891,7 @@
 	(%check-same-comparator __who__ sob1 sob2 sob3 '())
 	(and (?dyadic-who sob1 sob2)
 	     (?dyadic-who sob2 sob3)))
-       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} {sob4 ?arg-pred} . {sobs ?arg-list-pred})
+       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} {sob4 ?arg-pred} . {sobs ?arg-pred})
 	(%check-same-comparator __who__ sob1 sob2 sob3 sobs)
 	(and (?dyadic-who sob1 sob2)
 	     (?dyadic-who sob2 sob3)
@@ -926,8 +902,8 @@
 
 (module (set=? bag=?)
 
-  (define-subset-proc set=? dyadic-sob=? set? %list-of-sets?)
-  (define-subset-proc bag=? dyadic-sob=? bag? %list-of-bags?)
+  (define-subset-proc set=? dyadic-sob=? set?)
+  (define-subset-proc bag=? dyadic-sob=? bag?)
 
   (define (dyadic-sob=? sob1 sob2)
     ;;First we check that  there are the same number of entries  in the hashtables of
@@ -950,8 +926,8 @@
 (module SET-LESS-THAN/EQUAL-TO
   (set<=? bag<=? dyadic-sob<=?)
 
-  (define-subset-proc set<=? dyadic-sob<=? set? %list-of-sets?)
-  (define-subset-proc bag<=? dyadic-sob<=? bag? %list-of-bags?)
+  (define-subset-proc set<=? dyadic-sob<=? set?)
+  (define-subset-proc bag<=? dyadic-sob<=? bag?)
 
   (define (dyadic-sob<=? sob1 sob2)
     ;;Every key in SOB1's hashtable must be a key in SOB2's hashtable.
@@ -976,8 +952,8 @@
   (module (dyadic-sob<=?)
     (import SET-LESS-THAN/EQUAL-TO))
 
-  (define-subset-proc set>? dyadic-sob>? set? %list-of-sets?)
-  (define-subset-proc bag>? dyadic-sob>? bag? %list-of-bags?)
+  (define-subset-proc set>? dyadic-sob>? set?)
+  (define-subset-proc bag>? dyadic-sob>? bag?)
 
   (define (dyadic-sob>? sob1 sob2)
     ;;This is the negation  of <=.  Note that this is only true  at the dyadic level;
@@ -997,8 +973,8 @@
   (module (dyadic-sob>?)
     (import SET-GREATER-THAN))
 
-  (define-subset-proc set<? dyadic-sob<? set? %list-of-sets?)
-  (define-subset-proc bag<? dyadic-sob<? bag? %list-of-bags?)
+  (define-subset-proc set<? dyadic-sob<? set?)
+  (define-subset-proc bag<? dyadic-sob<? bag?)
 
   (define (dyadic-sob<? sob1 sob2)
     ;;This is the inverse of >.  Note that  this is only true at the dyadic level; we
@@ -1017,8 +993,8 @@
   (module (dyadic-sob<?)
     (import SET-LESS-THAN))
 
-  (define-subset-proc set>=? dyadic-sob>=? set? %list-of-sets?)
-  (define-subset-proc bag>=? dyadic-sob>=? bag? %list-of-bags?)
+  (define-subset-proc set>=? dyadic-sob>=? set?)
+  (define-subset-proc bag>=? dyadic-sob>=? bag?)
 
   (define (dyadic-sob>=? sob1 sob2)
     ;;This is the negation of <.  Note that this is only true at the dyadic level; we
@@ -1042,14 +1018,14 @@
 
 (define-syntax define-set-theory-proc
   (syntax-rules ()
-    ((_ ?who ?sob-who ?arg-pred ?arg-list-pred)
+    ((_ ?who ?sob-who ?arg-pred)
      (case-define* ?who
        (({sob ?arg-pred})
 	(?sob-who sob))
        (({sob1 ?arg-pred} {sob2 ?arg-pred})
 	(%check-same-comparator __who__ sob1 sob2)
 	(?sob-who sob1 sob2))
-       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} . {sobs ?arg-list-pred})
+       (({sob1 ?arg-pred} {sob2 ?arg-pred} {sob3 ?arg-pred} . {sobs ?arg-pred})
 	(%check-same-comparator __who__ sob1 sob2 sob3 sobs)
 	(?sob-who sob1 sob2 sob3 sobs))))
     ))
@@ -1058,11 +1034,11 @@
 
 (module (set-union bag-union set-union! bag-union!)
 
-  (define-set-theory-proc set-union sob-union set? %list-of-sets?)
-  (define-set-theory-proc bag-union sob-union bag? %list-of-bags?)
+  (define-set-theory-proc set-union sob-union set?)
+  (define-set-theory-proc bag-union sob-union bag?)
 
-  (define-set-theory-proc set-union! sob-union! set? %list-of-sets?)
-  (define-set-theory-proc bag-union! sob-union! bag? %list-of-bags?)
+  (define-set-theory-proc set-union! sob-union! set?)
+  (define-set-theory-proc bag-union! sob-union! bag?)
 
   (case-define sob-union
     ((sob)
@@ -1119,11 +1095,11 @@
 
 (module (set-intersection bag-intersection set-intersection! bag-intersection!)
 
-  (define-set-theory-proc set-intersection sob-intersection set? %list-of-sets?)
-  (define-set-theory-proc bag-intersection sob-intersection bag? %list-of-bags?)
+  (define-set-theory-proc set-intersection sob-intersection set?)
+  (define-set-theory-proc bag-intersection sob-intersection bag?)
 
-  (define-set-theory-proc set-intersection! sob-intersection! set? %list-of-sets?)
-  (define-set-theory-proc bag-intersection! sob-intersection! bag? %list-of-bags?)
+  (define-set-theory-proc set-intersection! sob-intersection! set?)
+  (define-set-theory-proc bag-intersection! sob-intersection! bag?)
 
   (case-define sob-intersection
     ((sob)
@@ -1178,11 +1154,11 @@
 
 (module (set-difference bag-difference set-difference! bag-difference!)
 
-  (define-set-theory-proc set-difference sob-difference set? %list-of-sets?)
-  (define-set-theory-proc bag-difference sob-difference bag? %list-of-bags?)
+  (define-set-theory-proc set-difference sob-difference set?)
+  (define-set-theory-proc bag-difference sob-difference bag?)
 
-  (define-set-theory-proc set-difference! sob-difference! set? %list-of-sets?)
-  (define-set-theory-proc bag-difference! sob-difference! bag? %list-of-bags?)
+  (define-set-theory-proc set-difference! sob-difference! set?)
+  (define-set-theory-proc bag-difference! sob-difference! bag?)
 
   (case-define sob-difference
     ((sob)
@@ -1327,8 +1303,8 @@
 (module (bag-sum bag-sum!)
   ;;Sum is defined for bags only; for sets, it is the same as union.
 
-  (define-set-theory-proc bag-sum  sob-sum  bag? %list-of-bags?)
-  (define-set-theory-proc bag-sum! sob-sum! bag? %list-of-bags?)
+  (define-set-theory-proc bag-sum  sob-sum  bag?)
+  (define-set-theory-proc bag-sum! sob-sum! bag?)
 
   (case-define sob-sum
     ((sob)

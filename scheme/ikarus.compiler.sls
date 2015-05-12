@@ -45,7 +45,7 @@
     generate-debug-calls
     check-compiler-pass-preconditions
     enabled-function-application-integration?
-    (rename (option.descriptive-labels descriptive-labels))
+    generate-descriptive-labels?
 
     ;; middle pass inspection
     assembler-output
@@ -111,6 +111,7 @@
 		  optimize-level
 		  perform-core-type-inference	strip-source-info
 		  fasl-write)
+    (ikarus.compiler.config)
     ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
     ;;
     ;;* During normal execution: this binding is the one from the boot image.
@@ -132,7 +133,6 @@
 	  assemble-sources)
     (prefix (only (ikarus.options)
 		  strict-r6rs
-		  descriptive-labels
 		  verbose?)
 	    option.))
 
@@ -2367,7 +2367,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%name->asmlabel name)
-    (if (option.descriptive-labels)
+    (if (generate-descriptive-labels?)
 	(gensym (string-append "asmlabel:"
 			       (cond ((symbol? name)
 				      (symbol->string name))
@@ -2467,7 +2467,7 @@
 	  clause*)))
 
     (define (%asmlabel->asmlabel-case asmlabel proper? fml*)
-      (if (option.descriptive-labels)
+      (if (generate-descriptive-labels?)
 	  (gensym (string-append (symbol->string asmlabel)
 				 ":case-"
 				 (if proper?

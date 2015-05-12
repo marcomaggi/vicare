@@ -24,9 +24,11 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
-		  ;;FIXME  This  except  must  be  removed at  the  next  boot  image
+		  ;;FIXME  These  except must  be  removed  at  the next  boot  image
 		  ;;rotation.  (Marco Maggi; Mon Mar 30, 2015)
 		  non-negative-fixnum?
+		  record-object?
+		  ;;;
 
 		  pretty-print			pretty-print*
 		  pretty-width
@@ -43,8 +45,10 @@
     (only (ikarus.pretty-formats)
 	  get-fmt)
     (only (ikarus records procedural)
-	  record-object?
-	  print-r6rs-record-instance)
+	  print-r6rs-record-instance
+	  ;;FIXME  This import  must  be removed  at the  next  boot image  rotation.
+	  ;;(Marco Maggi; Sun May 10, 2015)
+	  record-object?)
     (only (vicare system $structs)
 	  $struct-rtd))
 

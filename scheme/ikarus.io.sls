@@ -525,6 +525,10 @@
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Mon May 4, 2015)
+		  procedure-arguments-consistency-violation
+		  ;;;
 
 		  ;; would block object
 		  would-block-object			would-block-object?
@@ -691,6 +695,10 @@
 	  $bytevector-fill!
 	  $bytevector-u16-set!		$bytevector-s16-set!
 	  $bytevector-u16-ref		$bytevector-s16-ref)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Mon May 4,
+    ;;2015)
+    (only (ikarus conditions)
+	  procedure-arguments-consistency-violation)
     ;;This internal library is the one exporting: $MAKE-PORT, $PORT-* and $SET-PORT-*
     ;;bindings.
     (vicare system $io)
@@ -1411,12 +1419,6 @@
 	      (make-i/o-invalid-position-error position)
 	      (make-procedure-argument-violation))))
 
-(define-argument-validation (get-position-result who position port)
-  (and (or (fixnum? position)
-	   (bignum? position))
-       (>= position 0))
-  (procedure-argument-violation who "invalid value returned by get-position" port position))
-
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (port-identifier who obj)
@@ -1492,7 +1494,7 @@
   ;;a fixnum, too.
   ;;
   (<= (+ start count) ($bytevector-length dst.bv))
-  (procedure-argument-violation who
+  (procedure-arguments-consistency-violation who
     (string-append "count argument "    (number->string count)
 		   " from start index " (number->string start)
 		   " too big for bytevector of length "
@@ -1504,7 +1506,7 @@
   ;;a fixnum, too.
   ;;
   (<= (+ start count) ($string-length dst.str))
-  (procedure-argument-violation who
+  (procedure-arguments-consistency-violation who
     (string-append "count argument "    (number->string count)
 		   " from start index " (number->string start)
 		   " too big for string of length "
@@ -2455,19 +2457,24 @@
   (with-port (port)
     (let ((getpos port.get-position))
       (cond ((procedure? getpos)
-	     ;;The port has a device whose position cannot be tracked by
-	     ;;the cookie's POS field.
-	     (let ((device-position (getpos)))
-	       (with-arguments-validation (who)
-		   ((get-position-result device-position port))
-		 device-position)))
+	     ;;The port has a device whose position cannot be tracked by the cookie's
+	     ;;POS field.
+	     (receive-and-return (position)
+		 (getpos)
+	       (unless (and (or (fixnum? position)
+				(bignum? position))
+			    (>= position 0))
+		 (expression-return-value-violation who
+		   "invalid value returned by get-position"
+		   position))))
 	    ((and (boolean? getpos) getpos)
 	     ;;The  cookie's  POS  field  correctly tracks  the  current
 	     ;;device position.
 	     port.device.position)
 	    (else
-	     (assertion-violation who
-	       "port does not support port-position operation" port))))))
+	     (procedure-argument-violation who
+	       "port does not support port-position operation"
+	       port))))))
 
 (define (%unsafe.port-position/tracked-position who port)
   ;;If the port supports the GET-POSITION operation: use its own policy;

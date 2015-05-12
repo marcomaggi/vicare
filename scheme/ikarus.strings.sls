@@ -102,6 +102,13 @@
 	    ($uri-encoded-string?	$percent-encoded-string?))
     #| end of export |# )
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed May 6, 2015)
+		  procedure-arguments-consistency-violation
+		  non-negative-fixnum?
+		  list-of-chars?
+		  ;;;
+
 		  make-string			string
 		  substring			string-length
 		  string-empty?
@@ -200,6 +207,12 @@
 
 ;;;; arguments validation
 
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
+;;2015)
+;;
+(define procedure-arguments-consistency-violation
+  assertion-violation)
+
 (define string-index?	non-negative-fixnum?)
 (define string-length?	non-negative-fixnum?)
 
@@ -211,7 +224,7 @@
        (and (identifier? #'?str)
 	    (identifier? #'?idx))
        #'(unless (%index-for-string ?str ?idx)
-	   (procedure-argument-violation __who__ "string index out of range" ?str ?idx)))
+	   (procedure-arguments-consistency-violation __who__ "string index out of range" ?str ?idx)))
       ))
 
   (define (%index-for-string str idx)
@@ -224,7 +237,7 @@
     ((_ ?len)
      (identifier? #'?len)
      #'(unless (string-length? ?len)
-	 (procedure-argument-violation __who__ "total resulting string length out of range, expected non-negative fixnum" ?len)))
+	 (procedure-arguments-consistency-violation __who__ "total resulting string length out of range, expected non-negative fixnum" ?len)))
     ))
 
 (define-syntax (assert-start-index-for-string stx)
@@ -233,7 +246,7 @@
      (and (identifier? #'?start)
 	  (identifier? #'?len))
      #'(unless ($fx<= ?start ?len)
-	 (procedure-argument-violation __who__ "start index out of range" ?start ?len)))
+	 (procedure-arguments-consistency-violation __who__ "start index out of range" ?start ?len)))
     ))
 
 (define-syntax (assert-end-index-for-string stx)
@@ -242,7 +255,7 @@
      (and (identifier? #'?end)
 	  (identifier? #'?len))
      #'(unless ($fx<= ?end ?len)
-	 (procedure-argument-violation __who__ "end index out of range" ?end ?len)))
+	 (procedure-arguments-consistency-violation __who__ "end index out of range" ?end ?len)))
     ))
 
 (define-syntax (assert-start/end-indexes-for-string stx)
@@ -255,7 +268,7 @@
 	 (assert-start-index-for-string ?start ?len)
 	 (assert-end-index-for-string   ?end   ?len)
 	 (unless ($fx<= ?start ?end)
-	   (procedure-argument-violation __who__ "start index less than end index" ?start ?end))))
+	   (procedure-arguments-consistency-violation __who__ "start index less than end index" ?start ?end))))
     ))
 
 (define-syntax (assert-start-index-and-count-for-string stx)
@@ -268,7 +281,7 @@
 	 (assert-start-index-for-string ?start ?len)
 	 (let ((end (+ ?start ?count)))
 	   (unless (string-index? end)
-	     (procedure-argument-violation __who__
+	     (procedure-arguments-consistency-violation __who__
 	       "count of characters out of range for string and start index" ?str ?start ?count)))))
     ))
 
@@ -288,7 +301,7 @@
 			   ($string-length S))
 		      str*)))
 	 (unless (apply = len*)
-	   (procedure-argument-violation __who__ "expected strings with equal length" len* str*))))
+	   (procedure-arguments-consistency-violation __who__ "expected strings with equal length" len* str*))))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -299,7 +312,7 @@
      (and (identifier? #'?str)
 	  (identifier? #'?code-ponit))
      #'(unless ($latin1-chi? ?code-point)
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "expected only Latin-1 code points in argument"
 	   (integer->char ?code-point) ?str)))
     ))
@@ -310,7 +323,7 @@
      (and (identifier? #'?bv)
 	  (identifier? #'?code-ponit))
      #'(unless ($latin1-chi? ?code-point)
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "expected only Latin-1 code points in argument"
 	   (integer->char ?code-point) ?bv)))
     ))
@@ -323,7 +336,7 @@
      (and (identifier? #'?str)
 	  (identifier? #'?code-ponit))
      #'(unless ($ascii-chi? ?code-point)
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "expected only ASCII code points in argument"
 	   (integer->char ?code-point) ?str)))
     ))
@@ -334,7 +347,7 @@
      (and (identifier? #'?bv)
 	  (identifier? #'?code-ponit))
      #'(unless ($ascii-chi? ?code-point)
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "expected only ASCII code points in argument"
 	   (integer->char ?code-point) ?bv)))
     ))
@@ -558,12 +571,12 @@
 ;;longer string.
 ;;
 
-(define-equality/sorting-predicate string=?	$string=	string? list-of-strings?)
-(define-equality/sorting-predicate string<?	$string<	string? list-of-strings?)
-(define-equality/sorting-predicate string<=?	$string<=	string? list-of-strings?)
-(define-equality/sorting-predicate string>?	$string>	string? list-of-strings?)
-(define-equality/sorting-predicate string>=?	$string>=	string? list-of-strings?)
-(define-inequality-predicate       string!=?	$string!=	string? list-of-strings?)
+(define-equality/sorting-predicate string=?	$string=	string?)
+(define-equality/sorting-predicate string<?	$string<	string?)
+(define-equality/sorting-predicate string<=?	$string<=	string?)
+(define-equality/sorting-predicate string>?	$string>	string?)
+(define-equality/sorting-predicate string>=?	$string>=	string?)
+(define-inequality-predicate       string!=?	$string!=	string?)
 
 ;;; --------------------------------------------------------------------
 
@@ -648,8 +661,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison string-max $string-max string? list-of-strings?)
-(define-min/max-comparison string-min $string-min string? list-of-strings?)
+(define-min/max-comparison string-max $string-max string?)
+(define-min/max-comparison string-min $string-min string?)
 
 (define ($string-min str1 str2)
   (if ($string< str1 str2) str1 str2))
@@ -738,7 +751,7 @@
        ($string-copy! str2 0 dst.str len1 len2)
        ($string-copy! str3 0 dst.str ($fx+ len1 len2) len3))))
 
-  (({str1 string?} {str2 string?} {str3 string?} {str4 string?} . {str* list-of-strings?})
+  (({str1 string?} {str2 string?} {str3 string?} {str4 string?} . str*)
 
    (define (%compute-total-string-length len str*)
      (if (pair? str*)
@@ -755,6 +768,12 @@
 	     (%fill-strings dst.str ($cdr str*) ($fx+ dst.start src.len))))
        dst.str))
 
+   ;;FIXME At the  next boot image rotation: this validation  must be integrated with
+   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+   (for-each (lambda (item)
+	       (unless (string? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     str*)
    (let* ((len1		($string-length str1))
 	  (len2		($string-length str2))
 	  (len3		($string-length str3))
@@ -880,7 +899,13 @@
 	     ($string-ref str1 str.index))
        (next-char ($fxadd1 str.index) str.len))))
 
-  (({proc procedure?} {str0 string?} {str1 string?} {str2 string?} . {str* list-of-strings?})
+  (({proc procedure?} {str0 string?} {str1 string?} {str2 string?} . str*)
+   ;;FIXME At the  next boot image rotation: this validation  must be integrated with
+   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+   (for-each (lambda (item)
+	       (unless (string? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     str*)
    (assert-equal-length-strings (cons* str0 str1 str2 str*))
    (let next-char ((str*	str*)
 		   (str.index	0)
@@ -1069,7 +1094,7 @@
 	   (chi ($char->fixnum ch)))
       (if ($fx<= 0 chi 255)
 	  ($bytevector-set! bv i chi)
-	(procedure-argument-violation __who__
+	(procedure-arguments-consistency-violation __who__
 	  "impossible conversion from character to octet" ch str)))))
 
 ;;; --------------------------------------------------------------------

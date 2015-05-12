@@ -33,7 +33,6 @@
     debug-mode-enabled?
     drop-assertions?
     strict-r6rs
-    descriptive-labels
     ;; tagged language parameter options
     tagged-language.rhs-tag-propagation?
     tagged-language.datums-as-operators?
@@ -41,6 +40,7 @@
     tagged-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
+    vicare-built-with-descriptive-labels-generation
     vicare-built-with-srfi-enabled
     vicare-built-with-ffi-enabled
     vicare-built-with-iconv-enabled
@@ -49,6 +49,7 @@
     vicare-built-with-linux-enabled)
   (import (except (vicare)
 		  vicare-built-with-arguments-validation-enabled
+		  vicare-built-with-descriptive-labels-generation
 		  vicare-built-with-srfi-enabled
 		  vicare-built-with-ffi-enabled
 		  vicare-built-with-iconv-enabled
@@ -158,11 +159,6 @@
 ;;
 (define-parameter-boolean-option tagged-language?)
 
-;;Turn on generation  of descriptive labels in Assembly language  code and labels for
-;;expander's bindings.  It is used by the compiler and the expander.
-;;
-(define-parameter-boolean-option descriptive-labels)
-
 ;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
 ;;assertions.  Specifically:
 ;;
@@ -179,6 +175,7 @@
 ;;;; vicare build configuration options
 
 (module (vicare-built-with-arguments-validation-enabled
+	 vicare-built-with-descriptive-labels-generation
 	 vicare-built-with-srfi-enabled
 	 vicare-built-with-ffi-enabled
 	 vicare-built-with-iconv-enabled
@@ -186,6 +183,7 @@
 	 vicare-built-with-glibc-enabled
 	 vicare-built-with-linux-enabled)
   (module (arguments-validation
+	   generate-descriptive-labels?
 	   VICARE_BUILT_WITH_SRFI_ENABLED
 	   VICARE_BUILT_WITH_ICONV_ENABLED
 	   VICARE_BUILT_WITH_FFI_ENABLED
@@ -196,6 +194,8 @@
     (include "ikarus.config.scm" #t))
   (define (vicare-built-with-arguments-validation-enabled)
     arguments-validation)
+  (define (vicare-built-with-descriptive-labels-generation)
+    generate-descriptive-labels?)
   (define (vicare-built-with-srfi-enabled)	VICARE_BUILT_WITH_SRFI_ENABLED)
   (define (vicare-built-with-iconv-enabled)	VICARE_BUILT_WITH_ICONV_ENABLED)
   (define (vicare-built-with-ffi-enabled)	VICARE_BUILT_WITH_FFI_ENABLED)

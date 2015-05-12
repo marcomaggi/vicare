@@ -129,9 +129,12 @@
 
 (library (ikarus vectors)
   (export
+    list-of-vectors?
     make-vector		vector
     subvector		vector-length
-    vector-empty?
+    vector-empty?	non-empty-vector?
+    vectors-of-same-length?
+    list-of-vectors-of-same-length?
     vector-ref		vector-set!
     vector->list	list->vector
     vector-map		vector-for-each
@@ -147,12 +150,20 @@
     $vector-map1
     $vector-for-each1
     $vector-for-all1
-    $vector-exists1
-    )
+    $vector-exists1)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed May 6, 2015)
+		  non-negative-fixnum?
+		  procedure-arguments-consistency-violation
+		  ;;;
+
+		  list-of-vectors?
 		  make-vector		vector
 		  subvector		vector-length
-		  vector-empty?
+		  vector-empty?		non-empty-vector?
+		  vectors-of-same-length?
+		  list-of-vectors-of-same-length?
 		  vector-ref		vector-set!
 		  vector->list		list->vector
 		  vector-map		vector-for-each
@@ -162,250 +173,409 @@
 		  vector-fill!		vector-append
 		  vector-copy		vector-copy!
 		  vector-resize)
-    (vicare arguments validation)
-    (except (vicare unsafe operations)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (except (vicare system $vectors)
 	    $vector-empty?
 	    $vector-map1
 	    $vector-for-each1
 	    $vector-for-all1
-	    $vector-exists1
-	    ))
+	    $vector-exists1)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed May 6,
+    ;;2015)
+    (only (ikarus fixnums)
+	  non-negative-fixnum?)
+    (only (vicare language-extensions syntaxes)
+	  define-list-of-type-predicate))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (start-index-and-length who idx len)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx<= idx len)
-  (procedure-argument-violation who "start index argument out of range for vector" idx len))
+(define-syntax (preconditions stx)
+  (module (vicare-built-with-arguments-validation-enabled)
+    (module (arguments-validation)
+      (include "ikarus.config.scm" #t))
+    (define (vicare-built-with-arguments-validation-enabled)
+      arguments-validation)
+    #| end of module |# )
+  (syntax-case stx ()
+    ;;Single precondition.
+    ;;
+    ((_ (?predicate ?arg ...))
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(unless (?predicate ?arg ...)
+	     (procedure-arguments-consistency-violation __who__
+	       "failed precondition"
+	       '(?predicate ?arg ...) ?arg ...))
+       #'(void)))
 
-(define-argument-validation (end-index-and-length who idx len)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx<= idx len)
-  (procedure-argument-violation who "end index argument out of range for vector" idx len))
-
-(define-argument-validation (start-and-end-indices who start end)
-  ;;To be used after INDEX validation.
-  ;;
-  ($fx<= start end)
-  (procedure-argument-violation who "start and end index arguments are in decreasing order" start end))
+    ;;Multiple preconditions.
+    ;;
+    ((_ (?predicate ?arg ...) ...)
+     (identifier? #'?who)
+     (if (vicare-built-with-arguments-validation-enabled)
+	 #'(begin
+	     (preconditions (?predicate ?arg ...))
+	     ...)
+       #'(void)))
+    ))
 
 ;;; --------------------------------------------------------------------
 
-(define-argument-validation (start-index-and-count-and-length who start count len)
-  ($fx<= ($fx+ start count) len)
-  (procedure-argument-violation who
-    (vector-append "count argument out of range for vector of length " (number->string len)
-		   " and start index " (number->string start))
-    count))
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
+;;2015)
+;;
+(define procedure-arguments-consistency-violation
+  assertion-violation)
 
-;;; --------------------------------------------------------------------
-
-(define-argument-validation (vector-of-length who vec len)
-  ($fx= len ($vector-length vec))
-  (procedure-argument-violation who "expected vector arguments with the same length" len vec))
-
-(define-argument-validation (list-of-vectors-of-length who who1 ell len)
-  ;;WHO is used  twice in the arguments list because we  need it also in
-  ;;the predicate expression.
+(define-syntax-rule (valid-index-for-vector-slot vec idx)
+  ;;Assume VEC and IDX have been already validated as vector and non-negative fixnum.
   ;;
-  (let next-vector ((ell ell)
-		    (len len))
-    (or (null? ell)
-	(let ((a ($car ell)))
-	  (with-arguments-validation (who1)
-	      ((vector a))
-	    (and ($fx= ($vector-length a) len)
-		 (next-vector ($cdr ell) len))))))
-  (procedure-argument-violation who "expected vector arguments with the same length" len ell))
+  (unless ($fx< idx ($vector-length vec))
+    (procedure-arguments-consistency-violation __who__
+      (format "index ~a out of range for vector of length ~a"
+	idx ($vector-length vec))
+      vec idx)))
 
-
-;;;; constants
+(define-syntax-rule (total-vector-length-is-a-fixnum total-length)
+  (unless (fixnum? total-length)
+    (procedure-arguments-consistency-violation __who__
+      "total vector length greater than maximum vector length" total-length)))
 
-(define EXPECTED_PROPER_LIST_AS_ARGUMENT
-  "expected proper list as argument")
+(define-syntax-rule (valid-start-index-for-vector-slot vec idx)
+  ;;Assume VEC and IDX have been already validated as vector and non-negative fixnum.
+  ;;
+  (unless ($fx<= idx ($vector-length vec))
+    (procedure-arguments-consistency-violation __who__
+      (format "start index ~a out of range for vector of length ~a" idx ($vector-length vec))
+      vec idx)))
+
+(define-syntax-rule (valid-end-index-for-vector-slot vec idx)
+  ;;Assume VEC and IDX have been already validated as vector and non-negative fixnum.
+  ;;
+  (unless ($fx<= idx ($vector-length vec))
+    (procedure-arguments-consistency-violation __who__
+      (format "end index ~a out of range for vector of length ~a" idx ($vector-length vec))
+      vec idx)))
+
+(define-syntax-rule (start-and-end-indexes-in-correct-order start end)
+  ;;Assume START and END have been already validated as non-negative fixnums.
+  ;;
+  (unless ($fx<= start end)
+    (procedure-arguments-consistency-violation __who__
+      (format "start index ~a and end index ~a in wrong order" start end)
+      start end)))
+
+(define-syntax-rule (valid-start-index-and-slot-count-for-vector vec idx count)
+  ;;Assume  VEC  and  IDX  and  COUNT  have been  already  validated  as  vector  and
+  ;;non-negative fixnums.
+  ;;
+  (let ((end (+ idx count)))
+    (unless (fixnum? end)
+      (procedure-arguments-consistency-violation __who__
+	(format "start index ~a and slot count ~a out of range for maximum vector length" idx count)
+	idx count))
+    (unless ($fx<= end ($vector-length vec))
+      (procedure-arguments-consistency-violation __who__
+	(format "start index ~a and slot count ~a out of range for vector of length ~a" idx count ($vector-length vec))
+	vec idx count))))
+
+(define-syntax vectors-of-same-length
+  (syntax-rules ()
+    ((_ ?v0 ?v1)
+     (unless ($vectors-of-same-length? ?v0 ?v1)
+       (procedure-arguments-consistency-violation __who__
+	 "expected vectors of same length" ?v0 ?v1)))
+    ((_ ?v0 ?v1 ?v*)
+     (unless (apply $vectors-of-same-length? ?v0 ?v1 ?v*)
+       (procedure-arguments-consistency-violation __who__
+	 "expected vectors of same length" ?v0 ?v1 ?v*)))
+    ))
 
 
 ;;;; helpers
 
-(define (%$vector-copy! src.vec src.start
-			      dst.vec dst.start
-			      src.end)
-  ($vector-copy! src.vec src.start
-		       dst.vec dst.start
-		       src.end))
+(define-syntax-rule (with-who ?name . ?body)
+  (fluid-let-syntax
+      ((__who__ (identifier-syntax (quote ?name))))
+    . ?body))
 
 
-(define (vector-length vec)
+;;;; common unsafe operations
+
+(define ($make-clean-vector ?len)
+  (let* ((len ?len)
+	 (vec ($make-vector ?len)))
+    ($vector-clean! vec)))
+
+(define-syntax-rule ($vector-clean! ?vec)
+  (foreign-call "ikrt_vector_clean" ?vec))
+
+(case-define $vectors-of-same-length?
+  ((v0 v1)
+   ($fx= ($vector-length v0)
+	 ($vector-length v1)))
+  ((v0 v1 v2)
+   (let ((len0 ($vector-length v0)))
+     (and ($fx= len0 ($vector-length v1))
+	  ($fx= len0 ($vector-length v2)))))
+  ((v0 . v*)
+   (let ((len ($vector-length v0)))
+     (for-all (lambda (V)
+		($fx= len ($vector-length V)))
+       v*)))
+  #| end of CASE-DEFINE |# )
+
+(define ($vector-copy-source-range! src.vec src.start src.end
+				    dst.vec dst.start)
+  ;;Tail-recursive function.   Copy items  from SRC.VEC  to DST.VEC;  return DST.VEC.
+  ;;Copy the items from the source  slots from index SRC.START (inclusive) to SRC.END
+  ;;(exclusive), in the destination slots starting at index DST.START.
+  ;;
+  (if ($fx< src.start src.end)
+      (begin
+	($vector-set! dst.vec dst.start ($vector-ref src.vec src.start))
+	($vector-copy-source-range! src.vec ($fxadd1 src.start) src.end
+				    dst.vec ($fxadd1 dst.start)))
+    dst.vec))
+
+(define ($vector-copy-source-count! src.vec src.start dst.vec dst.start count)
+  ;;Tail-recursive  function.   Copy COUNT  items  from  SRC.VEC to  DST.VEC;  return
+  ;;DST.VEC.  Copy  the items the source  slots at index SRC.START  inclusive, to the
+  ;;destination slots at index DST.START inclusive.
+  ;;
+  (if ($fxpositive? count)
+      (begin
+	($vector-set! dst.vec dst.start ($vector-ref src.vec src.start))
+	($vector-copy-source-count! src.vec ($fxadd1 src.start) dst.vec ($fxadd1 dst.start) ($fxsub1 count)))
+    dst.vec))
+
+(define ($vector-self-copy-forwards! vec src.start dst.start count)
+  ;;Copy  COUNT items  of VEC  from  SRC.START inclusive  to VEC  itself starting  at
+  ;;DST.START inclusive.  The  copy happens forwards, so it is  suitable for the case
+  ;;SRC.START > DST.START.
+  ;;
+  (if ($fxpositive? count)
+      (begin
+	($vector-set! vec dst.start ($vector-ref vec src.start))
+	($vector-self-copy-forwards! vec ($fxadd1 src.start) ($fxadd1 dst.start) ($fxsub1 count)))
+    vec))
+
+(define ($vector-self-copy-backwards! vec src.end dst.end count)
+  ;;Copy COUNT items of VEC from SRC.END  exclusive to VEC itself starting at DST.END
+  ;;exclusive.  The copy happens backwards, so it  is suitable for the case SRC.END <
+  ;;DST.END.
+  ;;
+  (if ($fxpositive? count)
+      (let ((src.idx ($fxsub1 src.end))
+	    (dst.idx ($fxsub1 dst.end)))
+	;;FIXME I tried using $VECTOR-SET!  and  $VECTOR-REF here, but it appears the
+	;;unsafe operations trigger a compiler bug that causes wrong code generation.
+	;;Everything works fine using the safe  operations.  (Marco Maggi; Thu May 7,
+	;;2015)
+	(vector-set! vec dst.idx (vector-ref vec src.idx))
+	($vector-self-copy-backwards! vec src.idx dst.idx ($fxsub1 count)))
+    vec))
+
+(define ($subvector src.vec src.start src.end)
+  ;;Return  a new  vector  holding items  from SRC.VEC  from  SRC.START inclusive  to
+  ;;SRC.END exclusive.
+  ;;
+  (let ((dst.len ($fx- src.end src.start)))
+    (if ($fxpositive? dst.len)
+	(receive-and-return (dst.vec)
+	    ($make-vector dst.len)
+	  ($vector-copy-source-range! src.vec src.start src.end dst.vec 0))
+      ($make-vector 0))))
+
+(define ($list->vector v i ls)
+  ;;Fill the vector V with items from the proper list LS, starting at index I.
+  ;;
+  (if (pair? ls)
+      (begin
+	($vector-set! v i (car ls))
+	($list->vector v ($fxadd1 i) (cdr ls)))
+    v))
+
+
+;;;; predicates and vector length
+
+(define-list-of-type-predicate list-of-vectors? vector?)
+
+(define* (vector-length {vec vector?})
   ;;Defined by R6RS.   Return the number of elements in  VEC as an exact
   ;;integer object.
   ;;
-  (define who 'vector-length)
-  (with-arguments-validation (who)
-      ((vector vec))
-    ($vector-length vec)))
+  ($vector-length vec))
 
-(define make-vector
-  ;;Defined by R6RS.   Return a newly allocated vector  of LEN elements.
-  ;;If a second  argument is given, then each  element is initialized to
-  ;;FILL.    Otherwise  the   initial  contents   of  each   element  is
-  ;;unspecified.
-  ;;
-  (case-lambda
-   ((len)
-    (make-vector len (void)))
-   ((len fill)
-    (define who 'make-vector)
-    (with-arguments-validation (who)
-	((non-negative-fixnum	len))
-      (let loop ((vec	($make-clean-vector len))
-		 (i	0)
-		 (len	len)
-		 (fill	fill))
-	(if ($fx= i len)
-	    vec
-	  (begin
-	    ($vector-set! vec i fill)
-	    (loop vec ($fxadd1 i) len fill))))))))
+(case-define* vectors-of-same-length?
+  (({v0 vector?} {v1 vector?})
+   ($fx= ($vector-length v0)
+	 ($vector-length v1)))
+  (({v0 vector?} {v1 vector?} {v2 vector?})
+   (let ((len0 ($vector-length v0)))
+     (and ($fx= len0 ($vector-length v1))
+	  ($fx= len0 ($vector-length v2)))))
+  (({v0 vector?} . v*)
+   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
+   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+   (for-each (lambda (item)
+	       (unless (vector? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     v*)
+   (let ((len ($vector-length v0)))
+     (for-all (lambda (V)
+		($fx= len ($vector-length V)))
+       v*)))
+  #| end of CASE-DEFINE |# )
 
-(define vector
-  ;;Defined  by R6RS.  Return  a newly  allocated vector  whose elements
-  ;;contain the given arguments.  Analogous to LIST.
-  ;;
-  (case-lambda
-   (()
-    '#())
-   ((one)
-    (let ((vec ($make-clean-vector 1)))
-      ($vector-set! vec 0 one)
-      vec))
-   ((one two)
-    (let ((vec ($make-clean-vector 2)))
-      ($vector-set! vec 0 one)
-      ($vector-set! vec 1 two)
-      vec))
-   ((one two three)
-    (let ((vec ($make-clean-vector 3)))
-      ($vector-set! vec 0 one)
-      ($vector-set! vec 1 two)
-      ($vector-set! vec 2 three)
-      vec))
-   ((one two three four)
-    (let ((vec ($make-clean-vector 4)))
-      ($vector-set! vec 0 one)
-      ($vector-set! vec 1 two)
-      ($vector-set! vec 2 three)
-      ($vector-set! vec 3 four)
-      vec))
-   ((one . ls)
-    (define (length ls n)
-      (if (null? ls)
-	  n
-	(length ($cdr ls) ($fxadd1 n))))
-    (define (loop v ls i n)
-      (if ($fx= i n)
-	  v
-	(begin
-	  ($vector-set! v i ($car ls))
-	  (loop v ($cdr ls) ($fxadd1 i) n))))
-    (define who 'make-vector)
-    (let* ((ls (cons one ls))
-	   (n  (length ls 0)))
-      (with-arguments-validation (who)
-	  ((non-negative-fixnum	n))
-	(loop ($make-clean-vector n) ls 0 n))))))
-
-(define (vector-fill! vec fill)
-  ;;Defined by  R6RS.  Store  FILL in every  element of VEC  and returns
-  ;;unspecified.
-  ;;
-  (define who 'vector-fill!)
-  (with-arguments-validation (who)
-      ((vector vec))
-    (let f ((vec  vec)
-	    (i    0)
-	    (len  ($vector-length vec))
-	    (fill fill))
-      (unless ($fx= i len)
-	($vector-set! vec i fill)
-	(f vec ($fxadd1 i) len fill)))))
+(define (list-of-vectors-of-same-length? obj)
+  (and (pair? obj)
+       (and (vector? (car obj))
+	    (let ((len ($vector-length (car obj))))
+	      (let loop ((ell (cdr obj)))
+		(if (pair? ell)
+		    (and (vector? (car ell))
+			 ($fx= len ($vector-length (car ell)))
+			 (loop (cdr ell)))
+		  (null? ell)))))))
 
 
-(define (vector-ref vec idx)
-  ;;Defined by  R6RS.  IDX  must be  a valid index  of VEC.   Return the
-  ;;contents of element IDX of VEC.
-  ;;
-  (define who 'vector-ref)
-  (with-arguments-validation (who)
-      ((vector			vec)
-       (index-for-vector	vec idx))
-    ($vector-ref vec idx)))
+;;;; constructors
 
-(define (vector-set! vec idx new-item)
+(case-define* make-vector
+  ;;Defined by R6RS.  Return  a newly allocated vector of LEN  elements.  If a second
+  ;;argument  is given,  then each  element is  initialized to  FILL.  Otherwise  the
+  ;;initial contents of each element is unspecified.
+  ;;
+  ((len)
+   (make-vector len (void)))
+  (({len non-negative-fixnum?} fill)
+   ($vector-fill-range! ($make-clean-vector len) 0 len fill))
+  #| end of CASE-DEFINE* |# )
+
+(case-define* vector
+  ;;Defined by  R6RS.  Return  a newly  allocated vector  whose elements  contain the
+  ;;given arguments.  Analogous to LIST.
+  ;;
+  (()
+   ($make-vector 0))
+
+  ((one)
+   (receive-and-return (vec)
+       ($make-clean-vector 1)
+     ($vector-set! vec 0 one)))
+
+  ((one two)
+   (receive-and-return (vec)
+       ($make-clean-vector 2)
+     ($vector-set! vec 0 one)
+     ($vector-set! vec 1 two)))
+
+  ((one two three)
+   (receive-and-return (vec)
+       ($make-clean-vector 3)
+     ($vector-set! vec 0 one)
+     ($vector-set! vec 1 two)
+     ($vector-set! vec 2 three)))
+
+  ((one two three four)
+   (receive-and-return (vec)
+       ($make-clean-vector 4)
+     ($vector-set! vec 0 one)
+     ($vector-set! vec 1 two)
+     ($vector-set! vec 2 three)
+     ($vector-set! vec 3 four)))
+
+  (arg*
+   (let ((len (let loop ((ls arg*) (len 0))
+		(if (pair? ls)
+		    (loop ($cdr ls) ($fxadd1 len))
+		  len))))
+     (preconditions
+      (total-vector-length-is-a-fixnum len))
+     ($list->vector ($make-clean-vector len) 0 arg*)))
+
+  #| end of CASE-DEFINE* |# )
+
+
+;;;; filling
+
+(define* (vector-fill! {vec vector?} fill)
+  ;;Defined by R6RS.  Store FILL in every element of VEC and returns unspecified.
+  ;;
+  ($vector-fill-range! vec 0 ($vector-length vec) fill))
+
+(define ($vector-fill-range! vec start end fill)
+  ;;Set to  FILL all  the slots in  VEC in  the range from  START (inclusive)  to END
+  ;;(exclusive).  Return VEC.
+  ;;
+  (if ($fx< start end)
+      (begin
+	($vector-set! vec start fill)
+	($vector-fill-range! vec ($fxadd1 start) end fill))
+    vec))
+
+
+(define* (vector-ref {vec vector?} {idx non-negative-fixnum?})
+  ;;Defined by  R6RS.  IDX  must be  a valid index  of VEC.   Return the  contents of
+  ;;element IDX of VEC.
+  ;;
+  (preconditions
+   (valid-index-for-vector-slot vec idx))
+  ($vector-ref vec idx))
+
+(define* (vector-set! {vec vector?} {idx non-negative-fixnum?} new-item)
   ;;Defined by R6RS.  IDX must be  a valid index of VEC.  Store NEW-ITEM
   ;;in element IDX of VEC, and return unspecified values.
   ;;
   ;;Passing an immutable vector to VECTOR-SET! should cause an exception
   ;;with condition type "&assertion" to be raised.
   ;;
-  (define who 'vector-set!)
-  (with-arguments-validation (who)
-      ((vector			vec)
-       (index-for-vector	vec idx))
-    ($vector-set! vec idx new-item)))
+  (preconditions
+   (valid-index-for-vector-slot vec idx))
+  ($vector-set! vec idx new-item))
 
 
-(define (vector->list vec)
-  ;;Defined  by R6RS.   Return a  newly  allocated list  of the  objects
-  ;;contained in the elements of VEC.
+(define* (vector->list {vec vector?})
+  ;;Defined by R6RS.  Return  a newly allocated list of the  objects contained in the
+  ;;elements of VEC.
   ;;
-  (define who 'vector->list)
   (define (f vec idx ls)
     (if ($fx< idx 0)
 	ls
       (f vec ($fxsub1 idx) (cons ($vector-ref vec idx) ls))))
-  (with-arguments-validation (who)
-      ((vector vec))
-    (let ((len ($vector-length vec)))
-      (if ($fxzero? len)
-	  '()
-	(f vec ($fxsub1 len) '())))))
+  (let ((len ($vector-length vec)))
+    (if ($fxzero? len)
+	'()
+      (f vec ($fxsub1 len) '()))))
 
-(define (list->vector ls)
-  ;;Defined by R6RS.   Return a newly created vector  initialized to the
-  ;;elements of the list LS.
+(define* (list->vector ls)
+  ;;Defined by  R6RS.  Return a newly  created vector initialized to  the elements of
+  ;;the list LS.
   ;;
-  (define who 'list->vector)
   (define (race h t ls n)
-    (cond ((pair? h)
-	   (let ((h ($cdr h)))
-	     (cond ((pair? h)
-		    (if (not (eq? h t))
-			(race ($cdr h) ($cdr t) ls ($fx+ n 2))
-		      (procedure-argument-violation who
-			"circular list is invalid as argument" ls)))
-		   ((null? h)
-		    ($fx+ n 1))
-		   (else
-		    (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls)))))
-	  ((null? h)
-	   n)
-	  (else
-	   (procedure-argument-violation who EXPECTED_PROPER_LIST_AS_ARGUMENT ls))))
+    (with-who list->vector
+      (cond ((pair? h)
+	     (let ((h ($cdr h)))
+	       (cond ((pair? h)
+		      (if (not (eq? h t))
+			  (race ($cdr h) ($cdr t) ls ($fx+ n 2))
+			(procedure-argument-violation __who__ "circular list is invalid as argument" ls)))
+		     ((null? h)
+		      ($fx+ n 1))
+		     (else
+		      (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
+	    ((null? h)
+	     n)
+	    (else
+	     (procedure-argument-violation __who__ "expected proper list as argument" ls)))))
 
-  (define (fill v i ls)
-    (if (null? ls)
-	v
-      (let ((c ($car ls)))
-	($vector-set! v i c)
-	(fill v ($fxadd1 i) (cdr ls)))))
-
-  (let ((n (race ls ls ls 0)))
-    (with-arguments-validation (who)
-	((non-negative-fixnum	n))
-      (fill ($make-clean-vector n) 0 ls))))
+  (let ((len (race ls ls ls 0)))
+    (preconditions
+     (total-vector-length-is-a-fixnum len))
+    ($list->vector ($make-clean-vector len) 0 ls)))
 
 
 (module (vector-map)
@@ -427,7 +597,6 @@
   ;;described.  An implementation may  check whether P is an appropriate
   ;;argument before applying it.
   ;;
-  (define who 'vector-map)
 
   (define (ls->vec ls n)
     (let f ((v  ($make-clean-vector n))
@@ -439,15 +608,15 @@
 	  ($vector-set! v n ($car ls))
 	  (f v n ($cdr ls))))))
 
-  (define vector-map
+  (case-define* vector-map
     ;;Notice that R6RS states:
     ;;
-    ;;"If multiple  returns occur  from VECTOR-MAP, the  return values
-    ;;returned by earlier returns are not mutated."
+    ;;  "If  multiple returns occur  from VECTOR-MAP,  the return values  returned by
+    ;;  earlier returns are not mutated."
     ;;
-    ;;so  if  we  jump  back   into  the  mapping  procedure  using  a
-    ;;continuation,  VECTOR-MAP  must   return  a  new  vector.   This
-    ;;behaviour can be demonstrated with the following program:
+    ;;so if we jump back into  the mapping procedure using a continuation, VECTOR-MAP
+    ;;must  return  a new  vector.   This  behaviour  can  be demonstrated  with  the
+    ;;following program:
     ;;
     ;;#!r6rs
     ;;(import (rnrs))
@@ -482,132 +651,112 @@
     ;;#(x 4 9 16 25 36)  ;; wrong!!!
     ;;#(x 4 9 16 25 36)
     ;;
-    (case-lambda
-     ((p v)
-      (with-arguments-validation (who)
-	  ((procedure	p)
-	   (vector	v))
-	(let f ((p  p)
-		(v  v)
-		(i  0)
-		(n  (vector-length v))
-		(ac '()))
-	  (if ($fx= i n)
-	      (ls->vec ac n)
-	    (f p v ($fxadd1 i) n (cons (p (vector-ref v i)) ac))))))
+    (({p procedure?} {v vector?})
+     (let f ((p  p)
+	     (v  v)
+	     (i  0)
+	     (n  (vector-length v))
+	     (ac '()))
+       (if ($fx= i n)
+	   (ls->vec ac n)
+	 (f p v ($fxadd1 i) n (cons (p (vector-ref v i)) ac)))))
 
-     ((p v0 v1)
-      (with-arguments-validation (who)
-	  ((procedure	p)
-	   (vector	v0)
-	   (vector	v1))
-	(let ((n (vector-length v0)))
-	  (unless ($fx= n ($vector-length v1))
-	    (procedure-argument-violation who "length mismatch" v0 v1))
-	  (let f ((p  p)
-		  (v0 v0)
-		  (v1 v1)
-		  (i  0)
-		  (n  n)
-		  (ac '()))
-	    (if ($fx= i n)
-		(ls->vec ac n)
-	      (f p v0 v1 ($fxadd1 i) n
-		 (cons (p ($vector-ref v0 i) ($vector-ref v1 i)) ac)))))))
+    (({p procedure?} {v0 vector?} {v1 vector?})
+     (preconditions
+      (vectors-of-same-length v0 v1))
+     (let f ((p  p)
+	     (v0 v0)
+	     (v1 v1)
+	     (i  0)
+	     (n  ($vector-length v0))
+	     (ac '()))
+       (if ($fx= i n)
+	   (ls->vec ac n)
+	 (f p v0 v1 ($fxadd1 i) n
+	    (cons (p ($vector-ref v0 i) ($vector-ref v1 i)) ac)))))
 
-     ((p v0 v1 . v*)
-      (with-arguments-validation (who)
-	  ((procedure	p)
-	   (vector	v0)
-	   (vector	v1))
-	(let ((n (vector-length v0)))
-	  (with-arguments-validation (who)
-	      ((vector-of-length          v1 n)
-	       (list-of-vectors-of-length who v* n))
-	    (let f ((p p) (v0 v0) (v1 v1) (v* v*) (i 0) (n n) (ac '()))
-	      (if ($fx= i n)
-		  (ls->vec ac n)
-		(f p v0 v1 v* ($fxadd1 i) n
-		   (cons (apply p ($vector-ref v0 i) ($vector-ref v1 i)
-				(let f ((i i) (v* v*))
-				  (if (null? v*)
-				      '()
-				    (cons ($vector-ref ($car v*) i)
-					  (f i ($cdr v*))))))
-			 ac))))))))
-     ))
+    (({p procedure?} {v0 vector?} {v1 vector?} . v*)
+     ;;FIXME At the next boot image  rotation this validation should be integrated in
+     ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+     (for-each (lambda (item)
+		 (unless (vector? item)
+		   (procedure-argument-violation __who__ "failed argument validation" item)))
+       v*)
+     (preconditions
+      (vectors-of-same-length v0 v1 v*))
+     (let loop ((i 0) (len (vector-length v0)) (ac '()))
+       (if ($fx= i len)
+	   (ls->vec ac len)
+	 (loop ($fxadd1 i) len
+	       (cons (apply p ($vector-ref v0 i) ($vector-ref v1 i)
+			    (let inner-loop ((i i) (v* v*))
+			      (if (pair? v*)
+				  (cons ($vector-ref ($car v*) i)
+					(inner-loop i ($cdr v*)))
+				'())))
+		     ac)))))
+
+    #| end of CASE-DEFINE* |# )
 
   #| end of module|# )
 
 
-(define vector-for-each
-  ;;Defined  by R6RS.   The  vector  arguments must  all  have the  same
-  ;;length.  The  procedure P should  accept as many arguments  as there
-  ;;are vectors.   The VECTOR-FOR-EACH procedure  applies P element-wise
-  ;;to the elements  of the vectors for its side  effects, in order from
-  ;;the first  elements to  the last.   P is always  called in  the same
-  ;;dynamic environment as VECTOR-FOR-EACH itself.  The return values of
-  ;;VECTOR-FOR-EACH are unspecified.
+(case-define* vector-for-each
+  ;;Defined  by R6RS.   The vector  arguments  must all  have the  same length.   The
+  ;;procedure  P  should  accept  as  many  arguments  as  there  are  vectors.   The
+  ;;VECTOR-FOR-EACH procedure applies  P element-wise to the elements  of the vectors
+  ;;for its side effects, in order from the  first elements to the last.  P is always
+  ;;called in  the same  dynamic environment as  VECTOR-FOR-EACH itself.   The return
+  ;;values of VECTOR-FOR-EACH are unspecified.
   ;;
   ;;Analogous to FOR-EACH.
   ;;
-  ;;IMPLEMENTATION  RESPONSIBILITIES The  implementation must  check the
-  ;;restrictions  on  P  to  the  extent performed  by  applying  it  as
-  ;;described.  An implementation may  check whether P is an appropriate
-  ;;argument before applying it.
+  ;;IMPLEMENTATION RESPONSIBILITIES The implementation must check the restrictions on
+  ;;P to  the extent performed  by applying it  as described.  An  implementation may
+  ;;check whether P is an appropriate argument before applying it.
   ;;
-  (case-lambda
-   ((p v)
-    (define who 'vector-for-each)
-    (with-arguments-validation (who)
-	((procedure p)
-	 (vector    v))
-      (let f ((p p) (v v) (i 0) (n ($vector-length v)))
-	(if ($fx= i n)
-	    (void)
-	  (begin
-	    (p ($vector-ref v i))
-	    (f p v ($fxadd1 i) n))))))
+  (({p procedure?} {v vector?})
+   (let loop ((i 0) (len ($vector-length v)))
+     (if ($fx= i len)
+	 ;;We want to make sure that the return value is void.
+	 (void)
+       (begin
+	 (p ($vector-ref v i))
+	 (loop ($fxadd1 i) len)))))
 
-   ((p v0 v1)
-    (define who 'vector-for-each)
-    (with-arguments-validation (who)
-	((procedure p)
-	 (vector    v0)
-	 (vector    v1))
-      (let ((n ($vector-length v0)))
-	(with-arguments-validation (who)
-	    ((vector-of-length v1 n))
-	  (let f ((p p) (v0 v0) (v1 v1) (i 0) (n n))
-	    (if ($fx= i n)
-		(void)
-	      (begin
-		(p ($vector-ref v0 i)
-		   ($vector-ref v1 i))
-		(f p v0 v1 ($fxadd1 i) n))))))))
+  (({p procedure?} {v0 vector?} {v1 vector?})
+   (preconditions
+    (vectors-of-same-length v0 v1))
+   (let loop ((i 0) (len ($vector-length v0)))
+     (if ($fx= i len)
+	 (void)
+       (begin
+	 (p ($vector-ref v0 i)
+	    ($vector-ref v1 i))
+	 (loop ($fxadd1 i) len)))))
 
-   ((p v0 v1 . v*)
-    (define who 'vector-for-each)
-    (with-arguments-validation (who)
-	((procedure p)
-	 (vector    v0)
-	 (vector    v1))
-      (let ((n ($vector-length v0)))
-	(with-arguments-validation (who)
-	    ((vector-of-length          v1 n)
-	     (list-of-vectors-of-length who v* n))
-	  (let f ((p p) (v0 v0) (v1 v1) (v* v*) (i 0) (n n))
-	    (if ($fx= i n)
-		(void)
-	      (begin
-		(apply p ($vector-ref v0 i) ($vector-ref v1 i)
-		       (let f ((i i) (v* v*))
-			 (if (null? v*)
-			     '()
-			   (cons ($vector-ref ($car v*) i)
-				 (f i ($cdr v*))))))
-		(f p v0 v1 v* ($fxadd1 i) n))))))))
-   ))
+  (({p procedure?} {v0 vector?} {v1 vector?} . v*)
+   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
+   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+   (for-each (lambda (item)
+	       (unless (vector? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     v*)
+   (preconditions
+    (vectors-of-same-length v0 v1 v*))
+   (let loop ((i 0) (len ($vector-length v0)))
+     (if ($fx= i len)
+	 (void)
+       (begin
+	 (apply p ($vector-ref v0 i) ($vector-ref v1 i)
+		(let inner-loop ((i i) (v* v*))
+		  (if (pair? v*)
+		      (cons ($vector-ref ($car v*) i)
+			    (inner-loop i ($cdr v*)))
+		    '())))
+	 (loop ($fxadd1 i) len)))))
+
+  #| end of CASE-DEFINE* |# )
 
 
 ;;;; iterations
@@ -626,48 +775,61 @@
 (define-syntax define-vector-iterator
   (syntax-rules ()
     ((_ ?name ?logic-combine)
-     (define (?name proc vec . vectors)
-       (define who '?name)
-       (define (iterator-1 proc vec)
-	 (unless (vector? vec)
-	   (procedure-argument-violation who "not a vector" vec))
-	 (let ((len (vector-length vec)))
-	   (if (zero? len)
-	       (?logic-combine)
-	     (let ((len-1 (- len 1)))
-	       (let loop ((i 0))
-		 (if (= i len-1)
-		     (proc (vector-ref vec i)) ;tail call deciding the return value
-		   (?logic-combine (proc (vector-ref vec i))
-				   (loop (+ 1 i)))))))))
-       (define (iterator-n proc vectors)
-	 ;;To be called with 2 or more vector arguments.
-	 ;;
-	 (let loop ((vectors vectors))
-	   (unless (null? vectors)
-	     (if (vector? (car vectors))
-		 (loop (cdr vectors))
-	       (procedure-argument-violation who "not a vector" (car vectors)))))
-	 (let ((len (vector-length (car vectors))))
-	   (unless (for-all (lambda (vec)
-			      (= len (vector-length vec)))
-		     (cdr vectors))
-	     (procedure-argument-violation who "length mismatch" vectors))
-	   (if (zero? len)
-	       (?logic-combine)
-	     (let ((len-1 (- len 1)))
-	       (let loop ((i 0))
-		 (if (= i len-1)
-		     (apply proc (map (lambda (vec)
-					(vector-ref vec i))
-				   vectors)) ;tail call deciding the return value
-		   (?logic-combine (apply proc (map (lambda (vec)
-						      (vector-ref vec i))
-						 vectors))
-				   (loop (+ 1 i)))))))))
-       (if (null? vectors)
-	   (iterator-1 proc vec)
-	 (iterator-n proc (cons vec vectors)))))))
+     (case-define* ?name
+
+       (({proc procedure?} {v0 vector?})
+	(let ((len (vector-length v0)))
+	  (if ($fxzero? len)
+	      (?logic-combine)
+	    (let ((len-1 ($fxsub1 len)))
+	      (let loop ((i 0))
+		(if ($fx= i len-1)
+		    (proc ($vector-ref v0 i)) ;tail call deciding the return value
+		  (?logic-combine (proc ($vector-ref v0 i))
+				  (loop ($fxadd1 i)))))))))
+
+       (({proc procedure?} {v0 vector?} {v1 vector?})
+	(preconditions
+	 (vectors-of-same-length v0 v1))
+	(let ((len (vector-length v0)))
+	  (if (zero? len)
+	      (?logic-combine)
+	    (let ((len-1 ($fxsub1 len)))
+	      (let loop ((i 0))
+		(if ($fx= i len-1)
+		    (proc ($vector-ref v0 i)
+			  ($vector-ref v1 i)) ;tail call deciding the return value
+		  (?logic-combine (proc ($vector-ref v0 i)
+					($vector-ref v1 i))
+				  (loop ($fxadd1 i)))))))))
+
+       (({proc procedure?} {v0 vector?} {v1 vector?} . v*)
+	;;FIXME At the next boot image  rotation this validation should be integrated
+	;;in the signature.  (Marco Maggi; Sun May 10, 2015)
+	(for-each (lambda (item)
+		    (unless (vector? item)
+		      (procedure-argument-violation __who__ "failed argument validation" item)))
+	  v*)
+	(preconditions
+	 (vectors-of-same-length v0 v1 v*))
+	(let ((len ($vector-length v0)))
+	  (if ($fxzero? len)
+	      (?logic-combine)
+	    (let ((len-1 (- len 1)))
+	      (let loop ((i 0))
+		(if ($fx= i len-1)
+		    (apply proc v0 v0
+			   (map (lambda (vec)
+				  ($vector-ref vec i))
+			     v*)) ;tail call deciding the return value
+		  (?logic-combine (apply proc v0 v1
+					 (map (lambda (vec)
+						($vector-ref vec i))
+					   v*))
+				  (loop ($fxadd1 i)))))))))
+
+       #| end of CASE-DEFINE* |# ))
+    ))
 
 (define-vector-iterator vector-for-all and)
 (define-vector-iterator vector-exists  or)
@@ -675,302 +837,293 @@
 
 ;;;; folding
 
-(module (vector-fold-left vector-fold-right)
+(case-define* vector-fold-left
 
-  (case-define* vector-fold-left
-    (({combine procedure?} knil {vec vector?})
-     (define-constant LEN
-       (vector-length vec))
-     (if (fxzero? LEN)
+  (({combine procedure?} knil {v0 vector?})
+   (let ((len (vector-length v0)))
+     (if (fxzero? len)
 	 knil
        (let loop ((i     0)
-		  (imax  (fxsub1 LEN))
+		  (imax  (fxsub1 len))
 		  (state knil))
 	 (define-syntax-rule (doit ?idx)
-	   (combine state (vector-ref vec ?idx)))
+	   (combine state (vector-ref v0 ?idx)))
 	 (if (fx=? i imax)
 	     ;;Tail-call as last COMBINE application.
 	     (doit i)
-	   (loop (fxadd1 i) imax (doit i))))))
+	   (loop (fxadd1 i) imax (doit i)))))))
 
-    (({combine procedure?} knil vec0 . vectors)
-     (define vector* (cons vec0 vectors))
-     (%assert-vectors-of-equal-length __who__ vector*)
-     (let ((len (vector-length vec0)))
-       (if (fxzero? len)
-	   knil
-	 (let loop ((i     0)
-		    (imax  (fxsub1 len))
-		    (state knil))
-	   (define-syntax-rule (doit ?idx)
-	     (apply combine (%state+elements ?idx state vector*)))
-	   (if (fx=? i imax)
-	       ;;Tail-call as last COMBINE application.
-	       (doit i)
-	     (loop (fxadd1 i) imax (doit i))))))))
-
-  (case-define* vector-fold-right
-    (({combine procedure?} knil {vec vector?})
-     (define-constant LEN
-       (vector-length vec))
-     (if (fxzero? LEN)
+  (({combine procedure?} knil {v0 vector?} {v1 vector?})
+   (preconditions
+    (vectors-of-same-length v0 v1))
+   (let ((len (vector-length v0)))
+     (if (fxzero? len)
 	 knil
-       (let loop ((i     (fxsub1 LEN))
+       (let loop ((i     0)
+		  (imax  (fxsub1 len))
+		  (state knil))
+	 (define-syntax-rule (doit ?idx)
+	   (combine state (vector-ref v0 ?idx) (vector-ref v1 ?idx)))
+	 (if (fx=? i imax)
+	     ;;Tail-call as last COMBINE application.
+	     (doit i)
+	   (loop (fxadd1 i) imax (doit i)))))))
+
+  (({combine procedure?} knil {v0 vector?} {v1 vector?} . v*)
+   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
+   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+   (for-each (lambda (item)
+	       (unless (vector? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     v*)
+   (preconditions
+    (vectors-of-same-length v0 v1 v*))
+   (let ((len (vector-length v0)))
+     (if (fxzero? len)
+	 knil
+       (let loop ((i     0)
+		  (imax  (fxsub1 len))
+		  (state knil))
+	 (define (doit idx)
+	   (apply combine state
+		  (vector-ref v0 idx)
+		  (vector-ref v1 idx)
+		  (map (lambda (vec)
+			 (vector-ref vec idx))
+		    v*)))
+	 (if (fx=? i imax)
+	     ;;Tail-call as last COMBINE application.
+	     (doit i)
+	   (loop (fxadd1 i) imax (doit i)))))))
+
+  #| end of CASE-DEFINE* |# )
+
+;;; --------------------------------------------------------------------
+
+
+(case-define* vector-fold-right
+  (({combine procedure?} knil {v0 vector?})
+   (let ((len (vector-length v0)))
+     (if (fxzero? len)
+	 knil
+       (let loop ((i     (fxsub1 len))
 		  (imin  0)
 		  (state knil))
 	 (define-syntax-rule (doit ?idx)
-	   (combine (vector-ref vec ?idx) state))
+	   (combine (vector-ref v0 ?idx) state))
 	 (if (fx=? i imin)
 	     ;;Tail-call as last COMBINE application.
 	     (doit i)
-	   (loop (fxsub1 i) imin (doit i))))))
+	   (loop (fxsub1 i) imin (doit i)))))))
 
-    (({combine procedure?} knil vec0 . vectors)
-     (define vector* (cons vec0 vectors))
-     (%assert-vectors-of-equal-length __who__ vector*)
-     (let ((len (vector-length vec0)))
-       (if (fxzero? len)
-	   knil
-	 (let loop ((i     (fxsub1 len))
-		    (imin  0)
-		    (state knil))
-	   (define-syntax-rule (doit ?idx)
-	     (apply combine (%elements+state ?idx state vector*)))
-	   (if (fx=? i imin)
-	       ;;Tail-call as last COMBINE application.
-	       (doit i)
-	     (loop (fxsub1 i) imin (doit i))))))))
+  (({combine procedure?} knil {v0 vector?} {v1 vector?})
+   (preconditions
+    (vectors-of-same-length v0 v1))
+   (let ((len (vector-length v0)))
+     (if (fxzero? len)
+	 knil
+       (let loop ((i     (fxsub1 len))
+		  (imin  0)
+		  (state knil))
+	 (define-syntax-rule (doit ?idx)
+	   (combine (vector-ref v0 ?idx) (vector-ref v1 ?idx) state))
+	 (if (fx=? i imin)
+	     ;;Tail-call as last COMBINE application.
+	     (doit i)
+	   (loop (fxsub1 i) imin (doit i)))))))
 
-  (define (%state+elements i knil vector*)
-    ;;Extract the elements at index I from each vector in the list VECTOR* and return
-    ;;the elements in a list with KNIL as first item.
-    (cons knil (map (lambda (vec)
-		      (vector-ref vec i))
-		 vector*)))
+  (({combine procedure?} knil {v0 vector?} {v1 vector?} . v*)
+   ;;FIXME At  the next boot image  rotation this validation should  be integrated in
+   ;;the signature.  (Marco Maggi; Sun May 10, 2015)
+   (for-each (lambda (item)
+	       (unless (vector? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     v*)
+   (preconditions
+    (vectors-of-same-length v0 v1 v*))
+   (let ((len (vector-length v0)))
+     (if (fxzero? len)
+	 knil
+       (let loop ((i     (fxsub1 len))
+		  (imin  0)
+		  (state knil))
+	 (define (doit idx)
+	   (apply combine
+		  (vector-ref v0 idx)
+		  (vector-ref v1 idx)
+		  (fold-right (lambda (vec tail)
+				(cons (vector-ref vec idx)
+				      tail))
+		    (list state) v*)))
+	 (if (fx=? i imin)
+	     ;;Tail-call as last COMBINE application.
+	     (doit i)
+	   (loop (fxsub1 i) imin (doit i)))))))
 
-  (define (%elements+state i knil vectors)
-    ;;Extract the elements at index I from each vector in the list VECTORS and return
-    ;;the elements in a list with KNIL as last item.
-    (reverse (cons knil
-		   (fold-left (lambda (knil vec) (cons (vector-ref vec i) knil))
-		     '() vectors))))
-
-  (define (%assert-vectors-of-equal-length proc-name vector*)
-    (unless (case (length vector*)
-	      ((0) #f)
-	      ((1) #t)
-	      ((2)
-	       (let ((A (car  vector*))
-		     (B (cadr vector*)))
-		 (and (vector? A)
-		      (vector? B)
-		      (fx=? (vector-length A)
-			    (vector-length B)))))
-	      (else
-	       (and (for-all vector? vector*)
-		    (apply = (map = (vector-length vector*))))))
-      (procedure-argument-violation proc-name
-	"expected vectors of equal length" vector*)))
-
-  #| end of module |# )
+  #| end of CASE-DEFINE* |# )
 
 
-(define vector-append
-  ;;Defined by Vicare.  Return a newly allocated vector whose items form
-  ;;the concatenation of the given vectors.
+(case-define* vector-append
+  ;;Defined  by  Vicare.  Return  a  newly  allocated  vector  whose items  form  the
+  ;;concatenation of the given vectors.
   ;;
-  (case-lambda
-   (() '#())
+  (() '#())
 
-   ((vec)
-    (define who 'vector-append)
-    (with-arguments-validation (who)
-	((vector vec))
-      vec))
+  (({vec vector?})
+   vec)
 
-   ((vec1 vec2)
-    (define who 'vector-append)
-    (with-arguments-validation (who)
-	((vector vec1)
-	 (vector vec2))
-      (let* ((len1	($vector-length vec1))
-	     (len2	($vector-length vec2))
-	     (dst.len	(+ len1 len2)))
-	(with-arguments-validation (who)
-	    ((non-negative-fixnum dst.len))
-	  (let ((dst.vec ($make-clean-vector dst.len)))
-	    (%$vector-copy! vec1 0 dst.vec 0    len1)
-	    (%$vector-copy! vec2 0 dst.vec len1 len2)
-	    dst.vec)))))
+  (({vec1 vector?} {vec2 vector?})
+   (let* ((len1		($vector-length vec1))
+	  (len2		($vector-length vec2))
+	  (dst.len	(+ len1 len2)))
+     (preconditions
+      (total-vector-length-is-a-fixnum dst.len))
+     (receive-and-return (dst.vec)
+	 ($make-clean-vector dst.len)
+       ($vector-copy-source-range! vec1 0 len1 dst.vec 0)
+       ($vector-copy-source-range! vec2 0 len2 dst.vec len1))))
 
-   ((vec1 vec2 vec3)
-    (define who 'vector-append)
-    (with-arguments-validation (who)
-	((vector vec1)
-	 (vector vec2)
-	 (vector vec3))
-      (let* ((len1	($vector-length vec1))
-	     (len2	($vector-length vec2))
-	     (len3	($vector-length vec3))
-	     (dst.len	(+ len1 len2 len3)))
-	(with-arguments-validation (who)
-	    ((non-negative-fixnum  dst.len))
-	  (let ((dst.vec ($make-clean-vector dst.len)))
-	    (%$vector-copy! vec1 0 dst.vec 0    len1)
-	    (%$vector-copy! vec2 0 dst.vec len1 len2)
-	    (%$vector-copy! vec3 0 dst.vec ($fx+ len1 len2) len3)
-	    dst.vec)))))
+  (({vec1 vector?} {vec2 vector?} {vec3 vector?})
+   (let* ((len1		($vector-length vec1))
+	  (len2		($vector-length vec2))
+	  (len3		($vector-length vec3))
+	  (dst.len	(+ len1 len2 len3)))
+     (preconditions
+      (total-vector-length-is-a-fixnum dst.len))
+     (receive-and-return (dst.vec)
+	 ($make-clean-vector dst.len)
+       ($vector-copy-source-range! vec1 0 len1 dst.vec 0)
+       ($vector-copy-source-range! vec2 0 len2 dst.vec len1)
+       ($vector-copy-source-range! vec3 0 len3 dst.vec ($fx+ len1 len2)))))
 
-   ((vec1 vec2 vec3 vec4)
-    (define who 'vector-append)
-    (with-arguments-validation (who)
-	((vector  vec1)
-	 (vector  vec2)
-	 (vector  vec3)
-	 (vector  vec4))
-      (let* ((len1	($vector-length vec1))
-	     (len2	($vector-length vec2))
-	     (len3	($vector-length vec3))
-	     (len4	($vector-length vec4))
-	     (dst.len	(+ len1 len2 len3 len4)))
-	(with-arguments-validation (who)
-	    ((non-negative-fixnum  dst.len))
-	  (let ((dst.vec ($make-clean-vector dst.len)))
-	    (%$vector-copy! vec1 0 dst.vec 0    len1)
-	    (%$vector-copy! vec2 0 dst.vec len1 len2)
-	    (let ((dst.start ($fx+ len1 len2)))
-	      (%$vector-copy! vec3 0 dst.vec dst.start len3)
-	      (let ((dst.start ($fx+ dst.start len3)))
-		(%$vector-copy! vec4 0 dst.vec dst.start len4)))
-	    dst.vec)))))
+  (({vec1 vector?} {vec2 vector?} {vec3 vector?} {vec4 vector?})
+   (let* ((len1		($vector-length vec1))
+	  (len2		($vector-length vec2))
+	  (len3		($vector-length vec3))
+	  (len4		($vector-length vec4))
+	  (dst.len	(+ len1 len2 len3 len4)))
+     (preconditions
+      (total-vector-length-is-a-fixnum dst.len))
+     (receive-and-return (dst.vec)
+	 ($make-clean-vector dst.len)
+       ($vector-copy-source-range! vec1 0 len1 dst.vec 0)
+       ($vector-copy-source-range! vec2 0 len2 dst.vec len1)
+       (let ((dst.start ($fx+ len1 len2)))
+	 ($vector-copy-source-range! vec3 0 len3 dst.vec dst.start)
+	 (let ((dst.start ($fx+ dst.start len3)))
+	   ($vector-copy-source-range! vec4 0 len4 dst.vec dst.start))))))
 
-   ((vec1 . vecs)
-    (define who 'vector-append)
-    (define (%length-and-validation vecs len)
-      (if (null? vecs)
-	  len
-	(let ((vec ($car vecs)))
-	  (with-arguments-validation (who)
-	      ((vector vec))
-	    (%length-and-validation ($cdr vecs) (+ len ($vector-length vec)))))))
+  (v*
+   (for-each (lambda (item)
+	       (unless (vector? item)
+		 (procedure-argument-violation __who__ "failed argument validation" item)))
+     v*)
+   (let ((dst.len (fold-left (lambda (accum-len V)
+			       (+ accum-len ($vector-length V)))
+		    0 v*)))
+     (preconditions
+      (total-vector-length-is-a-fixnum dst.len))
+     (receive-and-return (dst.vec)
+	 ($make-clean-vector dst.len)
+       (fold-left (lambda (dst.start V)
+		    (let ((V.len ($vector-length V)))
+		      ($vector-copy-source-range! V 0 V.len dst.vec dst.start)
+		      ($fx+ dst.start V.len)))
+	 0 v*))))
 
-    (define (%fill-vectors dst.vec vecs dst.start)
-      (if (null? vecs)
-	  dst.vec
-	(let* ((src.vec ($car vecs))
-	       (src.len ($vector-length src.vec)))
-	  (begin
-	    ($vector-copy! src.vec 0 dst.vec dst.start src.len)
-	    (%fill-vectors dst.vec ($cdr vecs) ($fx+ dst.start src.len))))))
-
-    (let* ((vecs    (cons vec1 vecs))
-           (dst.len (%length-and-validation vecs 0)))
-      (with-arguments-validation (who)
-	  ((non-negative-fixnum dst.len))
-	(%fill-vectors ($make-clean-vector dst.len) vecs 0))))))
+  #| end of CASE-DEFINE* |# )
 
 
-(define (subvector vec start end)
-  ;;Defined by Vicare.  VEC must be  a vector, and START and END must be
-  ;;exact integer objects satisfying:
+(define* (subvector {vec vector?} {start non-negative-fixnum?} {end non-negative-fixnum?})
+  ;;Defined by Vicare.  VEC must be a vector, and START and END must be exact integer
+  ;;objects satisfying:
   ;;
-  ;; 0 <= START <= END <= (vector-length VEC)
+  ;;   0 <= START <= END <= (vector-length VEC)
   ;;
-  ;;Return  a  newly allocated  vector  formed  from  the items  of  VEC
-  ;;beginning  with index START  (inclusive) and  ending with  index END
-  ;;(exclusive).
+  ;;Return a newly allocated vector formed from the items of VEC beginning with index
+  ;;START (inclusive) and ending with index END (exclusive).
   ;;
-  (define who 'subvector)
-  (with-arguments-validation (who)
-      ((vector			vec)
-       (non-negative-fixnum	start)
-       (non-negative-fixnum	end))
-    (let ((len ($vector-length vec)))
-      (with-arguments-validation (who)
-	  ((start-index-and-length	start len)
-	   (end-index-and-length	end   len)
-	   (start-and-end-indices	start end))
-	($subvector vec start end)))))
+  (preconditions
+   (valid-start-index-for-vector-slot vec start)
+   (valid-end-index-for-vector-slot   vec end)
+   (start-and-end-indexes-in-correct-order start end))
+  ($subvector vec start end))
 
-(define (vector-copy vec)
+(define* (vector-copy {vec vector?})
   ;;Defined by Vicare.  Return a newly allocated copy of the given VEC.
   ;;
-  (define who 'vector-copy)
-  (with-arguments-validation (who)
-      ((vector vec))
-    (let ((end ($vector-length vec)))
-      ($subvector vec 0 end))))
+  ($subvector vec 0 ($vector-length vec)))
 
-(define vector-resize
-  (case-lambda
-   ((vec new-len)
-    (vector-resize vec new-len #f))
-   ((vec new-len fill)
-    (define who 'vector-resize)
-    (with-arguments-validation (who)
-	((vector		vec)
-	 (non-negative-fixnum	new-len))
-      ($vector-resize vec new-len fill)))
-   ))
+(case-define* vector-resize
+  (({vec vector?} {new-len non-negative-fixnum?})
+   ($vector-resize vec new-len #f))
+  (({vec vector?} {new-len non-negative-fixnum?} fill)
+   ($vector-resize vec new-len fill))
+  #| end of CASE-DEFINE* |# )
 
-(define ($vector-resize old-vec new-len fill)
-  (let loop ((new-vec	($make-clean-vector new-len))
-	     (old-len	($vector-length old-vec))
-	     (i		0)
-	     (fill	fill))
-    (if ($fx= i new-len)
-	new-vec
-      (begin
-	(if ($fx< i old-len)
-	    ($vector-set! new-vec i ($vector-ref old-vec i))
-	  ($vector-set! new-vec i fill))
-	(loop new-vec old-len ($fxadd1 i) fill)))))
-
-(define (vector-copy! src.vec src.start dst.vec dst.start count)
-  ;;Defined  by  Vicare.  Copy  COUNT  items  from  SRC.VEC starting  at
-  ;;SRC.START  (inclusive)  to DST.VEC  starting  at DST.START.   Return
-  ;;unspecified values.
+(define ($vector-resize src.vec dst.len fill)
+  ;;Build and return a new vector  object of length DST.LEN representing the resizing
+  ;;of SRC.VEC.
   ;;
-  (define who 'vector-copy!)
-  (with-arguments-validation (who)
-      ((vector			src.vec)
-       (vector			dst.vec)
-       (non-negative-fixnum	src.start)
-       (non-negative-fixnum	dst.start)
-       (non-negative-fixnum	count))
-    (let ((src.len ($vector-length src.vec))
-	  (dst.len ($vector-length dst.vec)))
-      (with-arguments-validation (who)
-	  ((start-index-and-length		src.start src.len)
-	   (start-index-and-length		dst.start dst.len)
-	   (start-index-and-count-and-length	src.start count src.len)
-	   (start-index-and-count-and-length	dst.start count dst.len))
-	(cond (($fxzero? count)
-	       (void))
-	      ((eq? src.vec dst.vec)
-	       (cond (($fx< dst.start src.start)
-		      ($vector-self-copy-forwards!  src.vec src.start dst.start count))
-		     (($fx> dst.start src.start)
-		      ($vector-self-copy-backwards! src.vec src.start dst.start count))
-		     (else (void))))
-	      (else
-	       (let ((src.end ($fx+ src.start count)))
-		 ($vector-copy! src.vec src.start dst.vec dst.start src.end))))))))
+  ;;* If  DST.LEN is less  than the  length of SRC.VEC:  the new vector  represents a
+  ;;subvector of SRC.VEC.
+  ;;
+  ;;* If DST.LEN is  greater than the length of SRC.VEC: the new  vector has the head
+  ;;slots holding the same items of SRC.VEC and the tail slots initialised to FILL.
+  ;;
+  ;;Examples:
+  ;;
+  ;;   ($vector-resize '#(1 2 3 4) 2 #f)  => #(1 2)
+  ;;   ($vector-resize '#(1 2 3 4) 6 #f)  => #(1 2 3 4 #f #f)
+  ;;
+  (receive-and-return (dst.vec)
+      ($make-clean-vector dst.len)
+    (let ((src.len ($vector-length src.vec)))
+      ($vector-copy-source-range! src.vec 0 src.len dst.vec 0)
+      (when ($fx< src.len dst.len)
+	($vector-fill-range! dst.vec src.len dst.len fill)))))
+
+(define* (vector-copy! {src.vec vector?} {src.start non-negative-fixnum?}
+		       {dst.vec vector?} {dst.start non-negative-fixnum?}
+		       {count non-negative-fixnum?})
+  ;;Defined  by  Vicare.   Copy  COUNT  items  from  SRC.VEC  starting  at  SRC.START
+  ;;(inclusive) to DST.VEC starting at DST.START.  Return unspecified values.
+  ;;
+  (preconditions
+   (valid-start-index-for-vector-slot src.vec src.start)
+   (valid-start-index-for-vector-slot dst.vec dst.start)
+   (valid-start-index-and-slot-count-for-vector src.vec src.start count)
+   (valid-start-index-and-slot-count-for-vector dst.vec dst.start count))
+  (cond (($fxzero? count)
+	 (void))
+	((eq? src.vec dst.vec)
+	 (cond (($fx< dst.start src.start)
+		($vector-self-copy-forwards!  src.vec src.start dst.start count))
+	       (($fx> dst.start src.start)
+		($vector-self-copy-backwards! src.vec
+					      ($fx+ src.start count)
+					      ($fx+ dst.start count)
+					      count))
+	       (else (void))))
+	(else
+	 ($vector-copy-source-count! src.vec src.start dst.vec dst.start count))))
 
 
-(define (vector-empty? vec)
-  ;;Defined by  Vicare.  Return true  if VEC is empty,  otherwise return
-  ;;false.
+(define* (vector-empty? {vec vector?})
+  ;;Defined by Vicare.  Return true if VEC is empty, otherwise return false.
   ;;
-  (define who 'vector-empty?)
-  (with-arguments-validation (who)
-      ((vector	vec))
-    ($vector-empty? vec)))
+  ($vector-empty? vec))
 
-;;FIXME This  should become a  true primitive operation.   (Marco Maggi;
-;;Tue Oct 8, 2013)
+;;FIXME This  should become  a true  primitive operation.  (Marco  Maggi; Tue  Oct 8,
+;;2013)
 (define ($vector-empty? vec)
   ($fxzero? ($vector-length vec)))
+
+(define (non-empty-vector? obj)
+  ;;Does not raise an exception if OBJ is not a vector object.
+  ;;
+  (and (vector? obj)
+       (not ($vector-empty? obj))))
 
 
 ;;;; simplified unsafe operations
@@ -1032,7 +1185,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 
 (library (vicare system vectors)

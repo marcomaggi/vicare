@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -46,7 +46,7 @@
 		 (else E))
 	   (eval (quote ?body)
 		 (environment '(vicare))))
-       => (quote ?expected-result)))))
+       => (quasiquote ?expected-result)))))
 
 
 (parametrise ((check-test-name		'illegal))
@@ -54,12 +54,24 @@
 ;;; checking illegal references to bindings
 
   ;; error
-  (check-syntax-violation ciao_0
-    (let ()
-      (define b (ciao))
-      (define (ciao)
-	123)
-      #t))
+  (if (vicare-built-with-descriptive-labels-generation)
+      (check-syntax-violation lex.ciao_0
+	(internal-body
+	  (define b (ciao))
+	  (define (ciao)
+	    123)
+	  #t))
+    (check-for-true
+     (guard (E
+	     ((syntax-violation? E)
+	      (symbol? (syntax-violation-subform E)))
+	     (else E))
+       (eval (quote (internal-body
+		      (define b (ciao))
+		      (define (ciao)
+			123)
+		      #t))
+	     (environment '(vicare))))))
 
   ;; no error
   (check-syntax-violation 123

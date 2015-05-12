@@ -59,7 +59,6 @@
 		  verbose?
 		  debug-mode-enabled?
 		  drop-assertions?
-		  descriptive-labels
 		  print-loaded-libraries?
 		  print-debug-messages?
 		  strict-r6rs)
@@ -83,15 +82,15 @@
 		  current-library-expander
 		  source-code-location)
 	    psyntax.)
-    (only (ikarus.reader)
-	  read-source-file
-	  read-script-source-file)
+    (prefix (only (ikarus.reader)
+		  read-libraries-from-file)
+	    reader.)
     (only (ikarus.symbol-table)
 	  $initialize-symbol-table!)
     (only (ikarus.strings-table)
 	  $initialize-interned-strings-table!)
     (prefix (ikarus load) load.)
-    (prefix (only (ikarus library-utils)
+    (prefix (only (psyntax.library-utils)
 		  init-search-paths-and-directories)
 	    libutils.)
     (prefix (only (ikarus.posix)
@@ -560,14 +559,6 @@
 	   (option.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--descriptive-labels")
-	   (option.descriptive-labels #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-descriptive-labels")
-	   (option.descriptive-labels #f)
-	   (next-option (cdr args) k))
-
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
 
@@ -924,15 +915,6 @@ Other options:
         extensions.  Disables the effect  of --strict-r6rs.  This is the
         default.
 
-   --descriptive-labels
-        For debugging purposes: generate  descriptive labels in expanded
-        and assembly code.
-
-   --no-descriptive-labels
-        For debugging  purposes: do  not generate descriptive  labels in
-        expanded  code  and  assembly code.  Disables   the   effect  of
-        --descriptive-labels.  This is the default.
-
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,
         compile-time, source.
@@ -1035,7 +1017,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 		      (for-each (lambda (library-form)
 				  (parametrise ((psyntax.source-code-location source-filename))
 				    ((psyntax.current-library-expander) library-form)))
-			(read-source-file source-filename)))
+			(reader.read-libraries-from-file source-filename)))
 	    cfg.load-libraries))))
 
 

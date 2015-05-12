@@ -162,7 +162,7 @@
   (unique-label "L_shortcut_interrupt_handler"))
 
 (define unique-label
-  (if (option.descriptive-labels)
+  (if (generate-descriptive-labels?)
       (let-constants ((DESCRIPTIVE-NAMES-TABLE (make-hashtable string-hash string=?)))
 	(case-lambda
 	 (()

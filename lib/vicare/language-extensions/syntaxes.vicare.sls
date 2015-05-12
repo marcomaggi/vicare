@@ -170,12 +170,18 @@
 
 (define-syntax define-min/max-comparison
   (syntax-rules ()
-    ((_ ?who ?unsafe-who ?type-pred ?list-of-type-pred)
+    ((_ ?who ?unsafe-who ?type-pred)
      (case-define* ?who
        (({x ?type-pred} {y ?type-pred})
 	(?unsafe-who x y))
 
-       (({x ?type-pred} {y ?type-pred} {z ?type-pred} . {rest ?list-of-type-pred})
+       (({x ?type-pred} {y ?type-pred} {z ?type-pred} . rest)
+	;;FIXME At the  next boot image rotation: this validation  must be integrated
+	;;with the signature.  (Marco Maggi; Sun May 10, 2015)
+	(for-each (lambda (item)
+		    (unless (?type-pred item)
+		      (procedure-argument-violation __who__ "failed argument validation" item)))
+	  rest)
 	(let loop ((a  (?unsafe-who x y))
 		   (b  z)
 		   (ls rest))
@@ -189,7 +195,7 @@
 
 (define-syntax define-equality/sorting-predicate
   (syntax-rules ()
-    ((_ ?who ?unsafe-who ?type-pred ?list-of-type-pred)
+    ((_ ?who ?unsafe-who ?type-pred)
      (case-define* ?who
        (({obj1 ?type-pred} {obj2 ?type-pred})
 	(?unsafe-who obj1 obj2))
@@ -201,7 +207,13 @@
        (({fl ?type-pred})
 	#t)
 
-       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . {obj* ?list-of-type-pred})
+       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . obj*)
+	;;FIXME At the  next boot image rotation: this validation  must be integrated
+	;;with the signature.  (Marco Maggi; Sun May 10, 2015)
+	(for-each (lambda (item)
+		    (unless (?type-pred item)
+		      (procedure-argument-violation __who__ "failed argument validation" item)))
+	  obj*)
 	(and (?unsafe-who obj1 obj2)
 	     (?unsafe-who obj2 obj3)
 	     (?unsafe-who obj3 obj4)
@@ -217,13 +229,13 @@
 (define-syntax define-inequality-predicate
   ;;Usage examples:
   ;;
-  ;;   (define-inequality-predicate fx!=?     $fx!=     fixnum?   list-of-fixnums?)
-  ;;   (define-inequality-predicate fl!=?     $fl!=     flonum?   list-of-flonums?)
-  ;;   (define-inequality-predicate char!=?   $char!=   char?     list-of-chars?)
-  ;;   (define-inequality-predicate string!=? $string!= string?   list-of-strings?)
+  ;;   (define-inequality-predicate fx!=?     $fx!=     fixnum?)
+  ;;   (define-inequality-predicate fl!=?     $fl!=     flonum?)
+  ;;   (define-inequality-predicate char!=?   $char!=   char?)
+  ;;   (define-inequality-predicate string!=? $string!= string?)
   ;;
   (syntax-rules ()
-    ((_ ?who ?unsafe-who ?type-pred ?list-of-type-pred)
+    ((_ ?who ?unsafe-who ?type-pred)
      (case-define* ?who
        (({obj1 ?type-pred} {obj2 ?type-pred})
 	(?unsafe-who obj1 obj2))
@@ -233,7 +245,13 @@
 	     (?unsafe-who obj2 obj3)
 	     (?unsafe-who obj3 obj1)))
 
-       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . {obj* ?list-of-type-pred})
+       (({obj1 ?type-pred} {obj2 ?type-pred} {obj3 ?type-pred} {obj4 ?type-pred} . obj*)
+	;;FIXME At the  next boot image rotation: this validation  must be integrated
+	;;with the signature.  (Marco Maggi; Sun May 10, 2015)
+	(for-each (lambda (item)
+		    (unless (?type-pred item)
+		      (procedure-argument-violation __who__ "failed argument validation" item)))
+	  obj*)
 	;;We must compare every argument to all the other arguments.
 	(let outer-loop ((objX   obj1)
 			 (obj*  (cons* obj2 obj3 obj4 obj*)))

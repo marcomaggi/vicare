@@ -9,71 +9,6 @@
 
 @c page
 @c ------------------------------------------------------------
-@c Vicare specific macros.
-@c ------------------------------------------------------------
-
-@macro bub{}
-@acronym{BUB}
-@end macro
-
-@macro cif{}
-@acronym{CIF}
-@end macro
-
-@macro cretwo{}
-@acronym{CRE2}
-@end macro
-
-@macro eol{}
-@acronym{EOL}
-@end macro
-
-@macro fasl{}
-@acronym{FASL}
-@end macro
-
-@macro fifo{}
-@acronym{FIFO}
-@end macro
-
-@macro ikptr{}
-@code{ikptr}
-@end macro
-
-@macro oob{}
-@acronym{OOB}
-@end macro
-
-@macro os{}
-@acronym{OS}
-@end macro
-
-@macro pcb{}
-@acronym{PCB}
-@end macro
-
-@macro retwo{}
-@acronym{RE2}
-@end macro
-
-@macro sel{}
-@acronym{SEL}
-@end macro
-
-@macro std{}
-@acronym{STD}
-@end macro
-
-@macro urldate{DATE}
-(@acronym{URL} last verified \DATE\)
-@end macro
-
-@macro void{}
-@code{#<void>}
-@end macro
-
-@c page
-@c ------------------------------------------------------------
 @c Values.
 @c ------------------------------------------------------------
 
@@ -222,7 +157,9 @@ Trademarks used herein are the property of their respective owners.
 * baselib::                     Base library.
 * stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
-* libutils::                    Scheme libraries utility functions.
+* libutils::                    Scheme libraries utilities.
+* progutils::                   Scheme programs utilities.
+* includes::                    Loading include files.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
 * tags::                        Tagged language.
@@ -233,6 +170,7 @@ Internals
 
 * objects::                     Built in Scheme objects.
 * debug int::                   Debug mode.
+* expander::                    Expander internals.
 * machinery::                   Introduction to execution machinery.
 * compiler::                    Wild notes on the compiler internals.
 * boot image::                  Anatomy of the boot image.
@@ -279,6 +217,8 @@ External documents
 @include stdlib.texi
 @include iklib.texi
 @include libutils.texi
+@include progutils.texi
+@include includes.texi
 @include ffi.texi
 @include syslib.texi
 @include tags.texi
@@ -287,6 +227,7 @@ External documents
 
 @include objects.texi
 @include debug.texi
+@include expander.texi
 @include machinery.texi
 @include compiler.texi
 @include boot-image.texi

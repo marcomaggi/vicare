@@ -25,8 +25,8 @@
 ;;;
 
 
-#!r6rs
-(import (except (vicare) catch)
+#!vicare
+(import (vicare)
   (vicare language-extensions syntaxes)
   (vicare system $structs)
   (libtest records-lib)
@@ -34,19 +34,6 @@
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare R6RS records, syntactic layer\n")
-
-
-;;;; syntax helpers
-
-(define-syntax catch
-  (syntax-rules ()
-    ((_ print? . ?body)
-     (guard (E ((assertion-violation? E)
-		(when print?
-		  (check-pretty-print (condition-message E)))
-		(condition-irritants E))
-	       (else E))
-       (begin . ?body)))))
 
 
 (parametrise ((check-test-name	'definition))
@@ -1315,15 +1302,14 @@
 
 (parametrise ((check-test-name	'bugs))
 
-  (check
-      (catch #f
-	(let ()
-	  (define-record-type alpha
-	    (fields a)
-	    (protocol (lambda (maker)
-			(newline))))
-	  (make-alpha 1)))
-    => (list (void)))
+  (check-for-expression-return-value-violation
+      (internal-body
+	(define-record-type alpha
+	  (fields a)
+	  (protocol (lambda (maker)
+		      (void))))
+	(make-alpha 1))
+    => '(make-record-constructor-descriptor (#!void)))
 
   #t)
 

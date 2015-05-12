@@ -19,7 +19,7 @@
   (export
 
     ;; pointer objects
-    pointer?
+    pointer?				list-of-pointers?
     null-pointer			set-pointer-null!
     pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer
@@ -174,9 +174,11 @@
 		  list-of-strings?
 		  list-of-bytevectors?
 		  list-of-symbols?
+		  procedure-arguments-consistency-violation
+		  ;;;
 
 		  ;; pointer objects
-		  pointer?
+		  pointer?				list-of-pointers?
 		  null-pointer				set-pointer-null!
 		  pointer-null?				pointer-non-null?
 		  pointer->integer			integer->pointer
@@ -340,6 +342,10 @@
     ;;2015)
     (only (ikarus fixnums)
 	  non-negative-fixnum?)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sun Mar 29,
+    ;;2015)
+    (only (ikarus conditions)
+	  procedure-arguments-consistency-violation)
     (except (vicare unsafe operations)
 	    $memory-block-pointer
 	    $memory-block-size
@@ -397,7 +403,7 @@
      (and (identifier? #'?ptr)
 	  (identifier? #'?delta))
      #'(unless (%pointer-and-offset? ?ptr ?delta)
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "offset would cause pointer overflow or underflow" ?ptr ?delta)))
     ))
 
@@ -408,7 +414,7 @@
 	  (identifier? #'?offset))
      #'(unless (or (pointer? ?memory)
 		   (<= (+ ?offset ?data-size) (memory-block-size ?memory)))
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "offset from pointer out of range for data size"
 	   ?memory ?offset ?data-size)))
     ))
@@ -420,7 +426,7 @@
 	  (identifier? #'?index))
      #'(unless (or (pointer? ?memory)
 		   (<= (* ?index ?data-size) (memory-block-size ?memory)))
-	 (procedure-argument-violation __who__
+	 (procedure-arguments-consistency-violation __who__
 	   "offset from pointer out of range for data size"
 	   ?memory ?index ?data-size)))
     ))
@@ -586,7 +592,7 @@
   (assert-pointer-and-offset ptr delta)
   (let ((rv (capi.ffi-pointer-add ptr delta)))
     (or rv
-	(procedure-argument-violation __who__
+	(procedure-arguments-consistency-violation __who__
 	  "requested pointer arithmetic operation would cause machine word overflow or underflow"
 	  ptr delta))))
 
@@ -603,12 +609,12 @@
 
 ;;;; comparison
 
-(define-equality/sorting-predicate pointer=?	$pointer=	pointer? list-of-pointers?)
-(define-equality/sorting-predicate pointer<?	$pointer<	pointer? list-of-pointers?)
-(define-equality/sorting-predicate pointer<=?	$pointer<=	pointer? list-of-pointers?)
-(define-equality/sorting-predicate pointer>?	$pointer>	pointer? list-of-pointers?)
-(define-equality/sorting-predicate pointer>=?	$pointer>=	pointer? list-of-pointers?)
-(define-inequality-predicate       pointer!=?	$pointer!=	pointer? list-of-pointers?)
+(define-equality/sorting-predicate pointer=?	$pointer=	pointer?)
+(define-equality/sorting-predicate pointer<?	$pointer<	pointer?)
+(define-equality/sorting-predicate pointer<=?	$pointer<=	pointer?)
+(define-equality/sorting-predicate pointer>?	$pointer>	pointer?)
+(define-equality/sorting-predicate pointer>=?	$pointer>=	pointer?)
+(define-inequality-predicate       pointer!=?	$pointer!=	pointer?)
 
 (define ($pointer!= ptr1 ptr2)
   (capi.ffi-pointer-neq ptr1 ptr2))
@@ -628,8 +634,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison pointer-max $pointer-max pointer? list-of-pointers?)
-(define-min/max-comparison pointer-min $pointer-min pointer? list-of-pointers?)
+(define-min/max-comparison pointer-max $pointer-max pointer?)
+(define-min/max-comparison pointer-min $pointer-min pointer?)
 
 (define ($pointer-min str1 str2)
   (if ($pointer< str1 str2) str1 str2))
@@ -868,19 +874,19 @@
 	       ((bytevector? src)
 		(if (bytevector-start-index-and-count-for-word8? src src.start count)
 		    (foreign-call "ikrt_memcpy_from_bv" (pointer-add dst dst.start) src src.start count)
-		  (procedure-argument-violation __who__
+		  (procedure-arguments-consistency-violation __who__
 		    "start index and bytes count out of range for source bytevector" src src.start count)))
 	       (else
 		(procedure-argument-violation __who__ "expected pointer or bytevector as source argument" src))))
 	((bytevector? dst)
 	 (unless (bytevector-start-index-and-count-for-word8? dst dst.start count)
-	   (procedure-argument-violation __who__
+	   (procedure-arguments-consistency-violation __who__
 	     "start index and bytes count out of range for destination bytevector" dst dst.start count))
 	 (cond ((pointer? src)
 		(foreign-call "ikrt_memcpy_to_bv" dst dst.start (pointer-add src src.start) count))
 	       ((bytevector? src)
 		(unless (bytevector-start-index-and-count-for-word8? src src.start count)
-		  (procedure-argument-violation __who__
+		  (procedure-arguments-consistency-violation __who__
 		    "start index and bytes count out of range for source bytevector" src src.start count))
 		($bytevector-copy!/count src src.start dst dst.start count))
 	       (else
@@ -1448,7 +1454,7 @@
       (when checkers
 	(vector-for-each (lambda (arg-pred type arg)
 			   (unless (arg-pred arg)
-			     (procedure-argument-violation __who__
+			     (procedure-arguments-consistency-violation __who__
 			       "argument does not match specified type" type arg)))
 	  checkers types args)))
     (capi.ffi-callout user-data args)))

@@ -23,11 +23,14 @@
     case-lambda*			lambda*
     define-record			define-auxiliary-syntaxes
     define-inline			define-syntax-rule
+    fluid-let-syntax
     unwind-protect
     receive				receive-and-return
     module				import
     begin0				define-values
     include
+    define-list-of-type-predicate
+    expand-time-gensym			expand-library
 
     __who__				brace
 
@@ -49,10 +52,8 @@
     string-empty?			syntax=?
     ratnum?				bignum?
     compnum?				cflonum?
-    fxadd1
-
-    ;; low-level symbols properties
-    system-label			system-id-gensym
+    fx=
+    fxadd1				fxsub1
 
     ;; compiler related operations
     compiler.eval-core			compiler.core-expr->optimized-code
@@ -64,7 +65,6 @@
     option.drop-assertions?
     option.strict-r6rs
     option.enable-arguments-validation?
-    option.descriptive-labels
     option.print-loaded-libraries?
     option.print-debug-messages?
     option.tagged-language.rhs-tag-propagation?
@@ -126,15 +126,11 @@
 
     ;; unsafe bindings
     $car $cdr
-    $fx= $fx< $fx> $fx<= $fx>= $fxadd1
+    $fx= $fx< $fx> $fx<= $fx>= $fxadd1 $fxsub1
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-length $vector-empty? $vector-ref $vector-set!
     $putprop $getprop $remprop $property-list)
-  (import (except (vicare)
-		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
-		  ;;Maggi; Fri May 23, 2014)
-		  system-id-gensym
-		  system-label)
+  (import (vicare)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  compile-core-expr
@@ -148,7 +144,6 @@
 			  debug-mode-enabled?
 			  drop-assertions?
 			  strict-r6rs
-			  descriptive-labels
 			  print-loaded-libraries?
 			  print-debug-messages?
 			  tagged-language.rhs-tag-propagation?
@@ -159,7 +154,7 @@
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    option.)
-    (ikarus library-utils)
+    (psyntax.library-utils)
     (only (ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
@@ -169,19 +164,36 @@
     (only (vicare system $symbols)
 	  $unintern-gensym
 	  $putprop $getprop $remprop $property-list)
-    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 15,
-    ;;2014)
-    (only (ikarus.symbols)
-	  system-id-gensym
-	  system-label)
     (only (vicare system $fx)
-	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
+	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1 $fxsub1
 	  $fxzero? $fxpositive? $fxnonnegative?)
     (only (vicare system $pairs)
 	  $car $cdr)
     (only (vicare system $vectors)
 	  $vector-empty? $vector-length
 	  $vector-ref $vector-set!))
+
+
+;;;; configuration to build boot image
+
+(define-syntax if-building-rotation-boot-image?
+  (lambda (stx)
+    (define rotating?
+      (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
+    (fprintf (current-error-port)
+	     "makefile.sps: conditional for ~a boot image\n"
+	     (if rotating? "rotation" "normal"))
+    (syntax-case stx ()
+      ((_ ?true-body)
+       (if rotating? #'?true-body #'(module ())))
+      ((_ ?true-body ?false-body)
+       (if rotating? #'?true-body #'?false-body))
+      )))
+
+;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
+(if-building-rotation-boot-image?
+    (import (only (vicare libraries) expand-library))
+  (import (only (vicare) expand-library)))
 
 
 (define (library-version-mismatch-warning name depname filename)
@@ -211,6 +223,21 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (set-label-binding! label binding)
+  (set-symbol-value! label binding))
+
+(define (label-binding label)
+  (and (symbol-bound? label) (symbol-value label)))
+
+(define (remove-location x)
+  ($unintern-gensym x))
+
+(define (expander-option.integrate-special-list-functions?)
+  (fx>=? 3 (compiler.optimize-level)))
+
+
+;;;; syntax helpers
+
 (define-syntax define-record
   (syntax-rules ()
     ((_ (?name ?maker ?pred) (?field* ...) ?printer)
@@ -229,17 +256,29 @@
      (define-struct ?name (?field* ...)))
     ))
 
-(define (set-label-binding! label binding)
-  (set-symbol-value! label binding))
+(define-syntax define-list-of-type-predicate
+  (syntax-rules ()
+    ((_ ?who ?type-pred)
+     (define (?who obj)
+       (if (pair? obj)
+	   (and (?type-pred (car obj))
+		(?who (cdr obj)))
+	 (null? obj))))
+    ))
 
-(define (label-binding label)
-  (and (symbol-bound? label) (symbol-value label)))
-
-(define (remove-location x)
-  ($unintern-gensym x))
-
-(define (expander-option.integrate-special-list-functions?)
-  (fx>=? 3 (compiler.optimize-level)))
+(define-syntax (expand-time-gensym stx)
+  (syntax-case stx ()
+    ((_ ?template)
+     (let* ((tmp (syntax->datum (syntax ?template)))
+	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	    (str (apply string-append tmp (map (lambda (N)
+						 (string-append "." (number->string N)))
+					    fxs)))
+	    (sym (gensym str)))
+       (with-syntax
+	   ((SYM (datum->syntax (syntax here) sym)))
+	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	 (syntax (quote SYM)))))))
 
 
 ;;;; done

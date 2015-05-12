@@ -417,7 +417,7 @@ Revised^6 Report on the algorithmic language Scheme
 @c @end macro
 
 @macro bibref{TAG}
-@code{[\TAG\]}
+@cite{[\TAG\]}
 @end macro
 
 @macro autoconfref{NODE, TITLE}
@@ -542,6 +542,93 @@ Revised^6 Report on the algorithmic language Scheme
 
 @macro varj{THING}
 @var{\THING\j}
+@end macro
+
+@c ------------------------------------------------------------------------
+
+@macro lexenv{}
+@sc{lexenv}
+@end macro
+
+@macro ExportEnv{}
+@sc{export-env}
+@end macro
+
+@macro ExportSubst{}
+@sc{export-subst}
+@end macro
+
+@c page
+@c ------------------------------------------------------------
+@c Vicare specific macros.
+@c ------------------------------------------------------------
+
+@macro bub{}
+@acronym{BUB}
+@end macro
+
+@macro cif{}
+@acronym{CIF}
+@end macro
+
+@macro cretwo{}
+@acronym{CRE2}
+@end macro
+
+@macro eol{}
+@acronym{EOL}
+@end macro
+
+@macro fasl{}
+@acronym{FASL}
+@end macro
+
+@macro fifo{}
+@acronym{FIFO}
+@end macro
+
+@macro ikptr{}
+@code{ikptr}
+@end macro
+
+@macro oob{}
+@acronym{OOB}
+@end macro
+
+@macro os{}
+@acronym{OS}
+@end macro
+
+@macro pcb{}
+@acronym{PCB}
+@end macro
+
+@macro retwo{}
+@acronym{RE2}
+@end macro
+
+@macro rib{}
+@objtype{rib}
+@end macro
+
+@macro sel{}
+@acronym{SEL}
+@end macro
+
+@macro std{}
+@acronym{STD}
+@end macro
+
+@macro stx{}
+@objtype{stx}
+@end macro
+
+@macro urldate{DATE}
+(@acronym{URL} last verified \DATE\)
+@end macro
+
+@macro void{}
+@code{#<void>}
 @end macro
 
 @c end of file

@@ -126,6 +126,12 @@ arguments validation enabled; otherwise return @false{}.
 @end defun
 
 
+@defun vicare-built-with-descriptive-labels-generation
+Return @true{} if the package was installed along with descriptive
+labels generation; otherwise return @false{}.
+@end defun
+
+
 @defun vicare-built-with-srfi-enabled
 Return @true{} if the package was installed along with the @srfi{}
 libraries; otherwise return @false{}.
@@ -292,7 +298,7 @@ Example:
 
 
 @menu
-* iklib syntaxes libraries::    Extended @code{library} syntax.
+* iklib syntaxes libraries::    Extended @syntax{library} syntax.
 * iklib syntaxes programs::     Extended program syntax.
 * iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
 * iklib syntaxes defines::      @func{define}-like additional syntaxes.
@@ -307,7 +313,6 @@ Example:
 * iklib syntaxes integrable::   Integrable expressions and functions.
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
-* iklib syntaxes include::      Including source files at expand time.
 * iklib syntaxes body::         Internal body.
 * iklib syntaxes types::        Type syntaxes.
 * iklib syntaxes predicates::   Predicate syntaxes.
@@ -316,6 +321,7 @@ Example:
 * iklib syntaxes splice1st::    Splice first form syntax.
 * iklib syntaxes infix::        Infix to prefix transformer.
 * iklib syntaxes increments::   Incrementing and decrementing.
+* iklib syntaxes unsafe::       Unsafe binding variants.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
@@ -327,14 +333,14 @@ Example:
 
 @c page
 @node iklib syntaxes libraries
-@subsection Extended @code{library} syntax
+@subsection Extended @syntax{library} syntax
 
 
 @cindex @clause{options}, library clause
 @cindex Library clause @clause{options}
 
 
-@value{PRJNAME} extends the format of @code{library} forms by allowing
+@value{PRJNAME} extends the format of @syntax{library} forms by allowing
 an optional @clause{options} clause:
 
 @example
@@ -426,9 +432,9 @@ Turn on strict support for @rnrs{6} language.
 
 The syntaxes @func{lambda*} and @func{case-lambda*} are similar to
 @func{lambda} and @func{case-lambda} as defined by @rnrs{6}, but they
-allow the selection of predicate functions to validate the arguments and
-the return value; a predicate function accepts a single argument and
-returns true or @false{}.  Examples:
+allow the specification of logic predicates to validate the arguments
+and the return values; a logic predicate is a composition of predicate
+expressions.  Examples:
 
 @example
 #!vicare
@@ -455,8 +461,7 @@ returns true or @false{}.  Examples:
 @noindent
 in the definition of the function bound to @func{vec}: notice that
 @code{@{_ vector?@}} is not a function argument, it is a special
-notation used to select a predicate function to validate the return
-value.
+notation used to select a predicate to validate the return value.
 
 In the extended @func{lambda*} and @func{case-lambda*} syntaxes the
 @meta{pred-formals} can have any of the forms:
@@ -474,18 +479,34 @@ identifier is used to name a formal argument, in the extended
 
 @example
 @meta{id}
-(brace @meta{id} @meta{pred})
+(brace @meta{id} @meta{logic-pred})
 @end example
 
 @noindent
-where @meta{id} is an identifier naming the formal argument; @meta{pred}
-is an identifier which, at run time, must evaluate to a predicate
-function; @func{brace} is the binding exported by @library{vicare}.  The
-formal argument @meta{rest} can have only one of the following forms:
+where: @syntax{brace} is the identifier exported by @library{vicare};
+@meta{id} is an identifier naming the formal argument.
+@meta{logic-pred} must have one of the following recursive formats:
+
+@example
+@meta{logic-pred} = @meta{pred-id}
+            | (and @metao{logic-pred} @meta{logic-pred} ...)
+            | (or  @metao{logic-pred} @meta{logic-pred} ...)
+            | (xor @metao{logic-pred} @meta{logic-pred} ...)
+            | (not @meta{logic-pred})
+@end example
+
+@noindent
+where: @meta{pred-id} is an identifier expanding and evaluating to a
+predicate function accepting a single argument and returning true or
+@false{}; @syntax{and}, @syntax{or}, @syntax{xor}, @syntax{not} are the
+identifiers exported by @library{vicare}.
+
+The formal argument @meta{rest} can have only one of the following
+forms:
 
 @example
 @meta{rest-id}
-(brace @meta{rest-id} @meta{pred})
+(brace @meta{rest-id} @meta{logic-pred})
 @end example
 
 @noindent
@@ -493,13 +514,17 @@ and the formal argument @meta{args} can have one of the following forms:
 
 @example
 @meta{args-id}
-(brace @meta{args-id} @meta{pred})
+(brace @meta{args-id} @meta{logic-pred})
 @end example
+
+@noindent
+the @meta{logic-pred} for @meta{rest} and @meta{args} is applied to each
+item in the proper list bound to @meta{rest-id} and @meta{args-id}.
 
 The first item in the @meta{pred-formals} can have the special syntax:
 
 @example
-(brace _ @metao{pred} @meta{pred} ...)
+(brace _ @metao{logic-pred} @meta{logic-pred} ...)
 @end example
 
 @noindent
@@ -511,9 +536,9 @@ selects predicates to validate the values returned by the last
 @c ------------------------------------------------------------
 
 @deffn Syntax lambda* @meta{pred-formals} @metao{body} @meta{body} @dots{}
-Like the standard @func{lambda} and additionally allows the selection of
-predicate functions to validate the arguments and the return value.  The
-formal arguments are handled according to the following rules:
+Like the standard @func{lambda} and additionally allow the specification
+of predicate functions to validate the arguments and the return value.
+The formal arguments are handled according to the following rules:
 
 @itemize
 @item
@@ -536,13 +561,14 @@ ignored and @func{lambda*} behaves like the standard @func{lambda}.
 If the first element of @meta{pred-formals} has the format:
 
 @example
-(brace _ @metao{pred} @meta{pred} ...)
+(brace _ @metao{logic-pred} @meta{logic-pred} ...)
 @end example
 
 @noindent
 the values returned by the last @meta{body} form are validated using the
-given @meta{pred}: if a predicate fails for its returned value, an
-exception is raised using @condition{expression-return-value-violation}.
+given @meta{logic-pred}: if a predicate fails for its returned value, an
+exception is raised using a compound condition object with component of
+type @condition{expression-return-value-violation}.
 @end itemize
 
 In addition the fluid identifier syntax @code{__who__} is bound to the
@@ -571,13 +597,8 @@ Function with two mandatory arguments and the rest argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
 (define f
-  (lambda* (@{a number?@} @{b number?@}
-            . @{rest list-of-numbers?@})
+  (lambda* (@{a number?@} @{b number?@} . @{rest number?@})
     (list (number->string a)
           (number->string b)
           (length rest))))
@@ -592,12 +613,8 @@ Function with the @meta{args} argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
 (define f
-  (lambda* @{args list-of-numbers?@}
+  (lambda* @{args number?@}
     (length args)))
 
 (f 1 2 3)               @result{} 3
@@ -636,10 +653,10 @@ Function with multiple validated return values:
 @c ------------------------------------------------------------
 
 @deffn Syntax case-lambda* @meta{pred-cl-clause} @dots{}
-Like the standard @func{case-lambda} and additionally allows the
-selection of predicate functions to validate the arguments and the
-return value.  Clause by clause the formals are handled as explained for
-@func{lambda*}.
+Like the standard @func{case-lambda} and additionally allow the
+specification of logic predicates to validate the arguments and the
+return values.  Clause by clause the formals are handled as explained
+for @func{lambda*}.
 
 In addition the fluid identifier syntax @code{__who__} is bound to the
 quoted symbol @code{_}.
@@ -686,17 +703,18 @@ Convenience syntax which expands as follows:
 @deffnx Syntax define* (@meta{who} . @meta{formals}) @metao{body} @meta{body} @dots{}
 @deffnx Syntax define* (@meta{pred-who} . @meta{formals}) @metao{body} @meta{body} @dots{}
 Like the standard @func{define} as defined by @rnrs{6}, but when
-defining a function: allow the selection of predicate functions to
-validate the arguments and the return value.
+defining a function: allow the specification of logic predicates to
+validate the arguments and return values.
 
-Predicates selections is performed as explained for the @func{lambda*}
-extended syntax, @ref{iklib syntaxes lambdas, @func{lambda}--like
-additional syntaxes}.  There is an exception, where @func{lambda*} uses
-the @code{_} symbol to select predicates for the returned values,
-@func{define*} uses the binding identifier @meta{who}.
+Logic predicates specification is performed as explained for the
+@func{lambda*} extended syntax (@pxref{iklib syntaxes lambdas}).  There
+is an exception, where @func{lambda*} uses the @code{_} symbol to select
+predicates for the returned values, @func{define*} uses the binding
+identifier @meta{who}.
 
-In addition, when defining a function, the fluid identifier syntax
-@code{__who__} is bound to the quoted symbol @meta{who}.
+In addition, when defining a function or a variable with non--empty
+right--hand side, the fluid identifier syntax @syntax{__who__} is bound
+to the quoted symbol @meta{who}.
 
 Usage examples:
 
@@ -721,12 +739,7 @@ Function with two mandatory arguments and the rest argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
-(define* (f @{a number?@} @{b number?@}
-            . @{rest list-of-numbers?@})
+(define* (f @{a number?@} @{b number?@} . @{rest number?@})
   (list (number->string a)
         (number->string b)
         (length rest)))
@@ -741,11 +754,7 @@ Function with the @meta{args} argument:
 #!vicare
 (import (vicare))
 
-(define (list-of-numbers? obj)
-  (and (list? obj)
-       (for-all number? obj)))
-
-(define* (f . @{args list-of-numbers?@})
+(define* (f . @{args number?@})
   (length args))
 
 (f 1 2 3)               @result{} 3
@@ -788,6 +797,16 @@ Accessing the function name:
 
 (f)     @result{} f
 @end example
+
+@item
+Accessing the variable name:
+
+@lisp
+(import (vicare))
+
+(define* a (list 'name __who__))
+a       @result{} (name a)
+@end lisp
 @end itemize
 @end deffn
 
@@ -1707,20 +1726,6 @@ Act like @func{begin}, but in addition causes an expression,
 When such expression evaluates to false: the compiled library is stale
 with respect to some source file.  See for example the @func{include}
 syntax.
-@end deffn
-
-@c page
-@node iklib syntaxes include
-@subsection Including source files at expand time
-
-
-@deffn Syntax include @meta{filename}
-@deffnx Syntax include @meta{filename} #t
-Include in the current source file the contents of the file selected by
-the pathname @meta{filename}, which must be a string.  Everything
-happens as if the code was present in place of the @func{include} form.
-When the optional @true{} argument is given: print a message on the
-current error port describing the include operation.
 @end deffn
 
 @c page
@@ -2849,6 +2854,123 @@ as follows:
 @end deffn
 
 @c page
+@node iklib syntaxes unsafe
+@subsection Unsafe binding variants
+
+
+Whenever we apply a function to a tuple of arguments of which we know at
+compile--time the type is correct: we can avoid run--time arguments type
+validation; it would be ideal to replace the call to an
+argument--validating (safe) function with a call to a non--validating
+(unsafe) function.  This is what the expander does with unsafe variants.
+
+The @dfn{unsafe variant} of a function is a syntax object which,
+expanded by itself and evaluated, returns a function that does not
+validate the type of its arguments.  As example, the function:
+
+@example
+#!vicare
+(import (vicare))
+
+(define* (@{string-ref-fx fixnum?@} @{str string?@} @{idx fixnum?@})
+  (import (vicare system $chars)
+    (vicare system $strings))
+  (assert (and (fx<=? 0 idx)
+               (fx<?  idx (string-length str))))
+  ($char->fixnum ($string-ref str idx)))
+@end example
+
+@noindent
+can be split into:
+
+@example
+(define* (@{string-ref-fx fixnum?@} @{str string?@} @{idx fixnum?@})
+  (~string-ref-fx str idx))
+
+(define (~string-ref-fx str idx)
+  (import (vicare system $chars)
+          (vicare system $strings))
+  (assert (and (fx<=? 0 idx)
+               (fx<?  idx (string-length str))))
+  ($char->fixnum ($string-ref str idx)))
+@end example
+
+@noindent
+where the function @func{~string-ref-fx} is an unsafe implementation of
+@func{string-ref-fx}; in this case the syntax object:
+
+@example
+(syntax ~string-ref-fx)
+@end example
+
+@noindent
+is the unsafe variant of @func{string-ref-fx}; the unsafe variants
+@api{} allows us to register this fact, for use by the expander, as
+follows:
+
+@example
+(begin-for-syntax
+  (set-identifier-unsafe-variant!
+     #'string-ref-fx #'~string-ref-fx))
+@end example
+
+All this infrastructure is automatically implemented by the expander
+when we use the tagged language and the built--in @func{define} syntax;
+the expander will use the prefix @samp{~} to generate the unsafe
+function name.  So it is enough for us to write:
+
+@example
+#!vicare
+(import (vicare))
+(option tagged-language)
+
+(define (@{string-ref-fx <fixnum>@} @{str <string>@} @{idx <fixnum>@})
+  (import (vicare system $chars)
+    (vicare system $strings))
+  (assert (and (fx<=? 0 idx)
+               (fx<?  idx (string-length str))))
+  ($char->fixnum ($string-ref str idx)))
+@end example
+
+@noindent
+whenever the expander finds:
+
+@example
+(string-ref-fx "ciao" 2)
+@end example
+
+@noindent
+it can validate the arguments and replace the form with:
+
+@example
+(~string-ref-fx "ciao" 2)
+@end example
+
+We still need to hand--write validations involving multiple arguments.
+
+
+@defun set-identifier-unsafe-variant! @meta{safe.id} @meta{unsafe.stx}
+Specify that the unsafe variant of the binding for the identifier
+@meta{safe.id} is the expression in the syntax object @meta{unsafe.stx}.
+@meta{unsafe.stx} is stored as syntax object and it is expanded and
+evaluated at each use of the unsafe variant.
+@end defun
+
+
+@defun identifier-unsafe-variant @var{safe.id}
+Return the syntax object registered as unsafe variant of the bound
+identifier @var{safe.id}; return @false{} if @var{safe.id} has no unsafe
+variant.
+@end defun
+
+
+@deffn Syntax unsafe @meta{safe.id}
+Expand into the syntax object registered as unsafe variant of the bound
+identifier @var{safe.id}; raise a syntax violation if @meta{safe.id} has
+no unsafe variant.
+@end deffn
+
+@c page
 @node iklib syntaxes misc
 @subsection Miscellaneous syntaxes
 
@@ -2965,8 +3087,8 @@ argument @var{id} is not a bound identifier.
 
 When writing a library making use of syntactic binding properties: we
 must enable the option @code{visit-upon-loading} in the options clause
-of the @code{library} form; @ref{iklib syntaxes libraries, Extended
-@code{library} syntax}.  Without this option properties may not be
+of the @syntax{library} form; @ref{iklib syntaxes libraries, Extended
+@syntax{library} syntax}.  Without this option properties may not be
 registered properly.
 
 
@@ -3145,15 +3267,15 @@ As example, we can associate a procedure argument auxiliary function to
 @func{list?} as follows:
 
 @example
-(define (list-procedure-argument who obj)
+(define (assert-list-procedure-argument who obj)
   (if (list? obj)
       obj
     (procedure-argument-violation who
       "expected list object as argument" obj)))
 
 (begin-for-syntax
-  (set-predicate-procedure-argument-validation! #'list?
-    #'list-procedure-argument?))
+  (set-predicate-assertion-procedure-argument-validation! #'list?
+    #'assert-list-procedure-argument))
 
 ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
 @result{} (1 2 3)
@@ -3167,15 +3289,15 @@ and we can associate a return value auxiliary function to @func{list?}
 as follows:
 
 @example
-(define (list-return-value? who obj)
+(define (assert-list-return-value who obj)
   (if (list? obj)
       obj
     (expression-return-value-violation who
       "expected list object as argument" obj)))
 
 (begin-for-syntax
-  (set-predicate-return-value-validation! #'list?
-    #'list-return-value?))
+  (set-predicate-assertion-return-value-validation! #'list?
+    #'assert-list-return-value?))
 
 ((predicate-return-value-validation list?) 'hey '(1 2 3))
 @result{} (1 2 3)
@@ -3185,12 +3307,16 @@ as follows:
 @end example
 
 
-@defun set-predicate-procedure-argument-validation! @var{pred-id} @var{valid-stx}
-Specify that the predicate identifier @var{pred-id} is associated to the
-procedure argument validation function resulting from the expansion and
-evaluation of the syntax object @var{valid-stx}.  @var{valid-stx} is
-stored as syntax object and it is expanded and evaluated at each use of
-the validation function.
+@defun set-predicate-assertion-procedure-argument-validation! @var{pred-id} @var{valid-stx}
+@defunx predicate-assertion-procedure-argument-validation @var{pred-id}
+Setter and getter for assertion procedure associated to a predicate
+function.
+
+The setter specifies that the predicate identifier @var{pred-id} is
+associated to the procedure argument validation function resulting from
+the expansion and evaluation of the syntax object @var{valid-stx}.
+@var{valid-stx} is stored as syntax object and it is expanded and
+evaluated at each use of the validation function.
 @end defun
 
 
@@ -3201,12 +3327,16 @@ function is available: raise a syntax violation.
 @end deffn
 
 
-@defun set-predicate-return-value-validation! @var{pred-id} @var{valid-stx}
-Specify that the predicate identifier @var{pred-id} is associated to the
-return value validation function resulting from the evaluation of the
-expansion and evaluation of the syntax object @var{valid-stx}.
-@var{valid-stx} is stored as syntax object and it is expanded and
-evaluated at each use of the validation function.
+@defun set-predicate-assertion-return-value-validation! @var{pred-id} @var{valid-stx}
+@defunx predicate-assertion-return-value-validation @var{pred-id}
+Setter and getter for assertion procedure associated to a predicate
+function.
+
+The setter specifies that the predicate identifier @var{pred-id} is
+associated to the return value validation function resulting from the
+evaluation of the expansion and evaluation of the syntax object
+@var{valid-stx}.  @var{valid-stx} is stored as syntax object and it is
+expanded and evaluated at each use of the validation function.
 @end defun
 
 
@@ -5522,14 +5652,60 @@ waiting for its termination in a coroutine; it assumes that
 
 
 @menu
+* iklib conditions raising::    Raising conditions.
+* iklib conditions preds::      Predicates for condition objects.
 * iklib conditions spos::       Scheme source code position.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
+* iklib conditions procpre::    Procedure precondition violations.
+* iklib conditions procpost::   Procedure postcondition violations.
 * iklib conditions procarg::    Procedure argument violations.
+* iklib conditions sigarg::     Procedure signature argument violations.
+* iklib conditions rvarg::      Procedure signature return value violations.
+* iklib conditions proccon::    Procedure argument consistency violations.
 * iklib conditions exprret::    Expression return value violations.
 * iklib conditions non-reinst:: Non-reinstatable continuations.
 * iklib conditions misc::       Miscellaneous primitives.
 @end menu
+
+@c page
+@node iklib conditions raising
+@subsection Raising conditions
+
+
+@defun raise-non-continuable-standard-condition @var{who} @var{message} @var{irritants}
+@defunx raise-non-continuable-standard-condition @var{who} @var{message} @var{irritants} @var{cnd}
+Raise a non--continuable exception with a compound condition object of
+types: @condition{who}, @condition{message}, @condition{irritants}; in
+addition, when used, add the condition object @var{cnd} to it.
+
+The argument @var{who} must be a symbol.  The argument @var{message}
+must be a string.  The argument @var{irritants} must be null or a list
+of objects.  The optional argument @var{cnd} must be a simple or
+compound condition object.
+@end defun
+
+@c page
+@node iklib conditions preds
+@subsection Predicates for condition objects
+
+
+@defun simple-condition? @var{obj}
+Return @true{} if @var{obj} is a simple condition object; otherwise
+return @false{}.
+@end defun
+
+
+@defun list-of-simple-conditions? @var{obj}
+Return @true{} if @var{obj} is a proper list of simple condition
+objects; otherwise return @false{}.
+@end defun
+
+
+@defun list-of-conditions? @var{obj}
+Return @true{} if @var{obj} is a proper list of simple or compound
+condition objects; otherwise return @false{}.
+@end defun
 
 @c page
 @node iklib conditions spos
@@ -5644,32 +5820,226 @@ an instance of @condition{errno}.
 @end defun
 
 @c page
+@node iklib conditions procpre
+@subsection Procedure precondition violations
+
+
+@deftp {Condition Type} &procedure-precondition-violation
+Base condition object type representing invalid state or argument for a
+procedure application; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-procedure-precondition-violation
+Build and return a new condition object of type
+@condition{procedure-precondition-violation}.
+@end defun
+
+
+@defun procedure-precondition-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-precondition-violation}; otherwise return
+@false{}.
+@end defun
+
+@c page
+@node iklib conditions procpost
+@subsection Procedure postcondition violations
+
+
+@deftp {Condition Type} &procedure-postcondition-violation
+Base condition object type representing invalid state or return values
+for a procedure application; it is derived from @condition{assertion}.
+@end deftp
+
+
+@defun make-procedure-postcondition-violation
+Build and return a new condition object of type
+@condition{procedure-postcondition-violation}.
+@end defun
+
+
+@defun procedure-postcondition-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-postcondition-violation}; otherwise return
+@false{}.
+@end defun
+
+@c page
 @node iklib conditions procarg
 @subsection Procedure argument violations
 
 
 @deftp {Condition Type} &procedure-argument-violation
-Condition object type representing invalid values handed as arguments to
-a procedure; it is derived from @condition{assertion}.
+Condition object type representing, generically, one or more invalid
+values handed as arguments to a procedure application; it is derived
+from @condition{procedure-precondition-violation}.
 @end deftp
 
 
 @defun make-procedure-argument-violation
 Build and return a new condition object of type
-@condition{procedure-argument-validation}.
+@condition{procedure-argument-violation}.
 @end defun
 
 
 @defun procedure-argument-violation? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
-@condition{procedure-argument-validation}; otherwise return @false{}.
+@condition{procedure-argument-violation}; otherwise return @false{}.
 @end defun
 
 
 @defun procedure-argument-violation @var{who} @var{message} @var{irritant} @dots{}
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
-@condition{irritants}, @condition{procedure-argument-validation}.
+@condition{irritants}, @condition{procedure-argument-violation}.
+@end defun
+
+@c page
+@node iklib conditions sigarg
+@subsection Procedure signature argument violations
+
+
+@deftp {Condition Type} &procedure-signature-argument-violation
+Condition object type representing an invalid value handed as argument
+to a procedure application; it is derived from
+@condition{procedure-argument-violation}.
+
+This condition type has the following fields:
+
+@table @code
+@item index
+One--base index of the offending operand.  It is @false{} when the index
+is unknown.
+
+@item failed-expression
+Symbolic expression representing the predicate used to validate the
+operand; set to the void object if the expression is not available.
+When debugging mode is disabled: some code might avoid putting symbolic
+expressions in this field.
+
+@item offending-value
+The actual value of the operand.  If there are multiple offending
+values: this field can be set to @code{(void)} and an additional
+condition object of type @condition{irritants} can be used.
+@end table
+
+This condition type is meant to be used to signal a wrong argument given
+to a procedure performing signature validation; for example
+@syntax{define*} and @syntax{case-define*} use it to signal a violation
+of the logic predicate specifications.
+@end deftp
+
+
+@defun make-procedure-signature-argument-violation @var{operand-index} @var{failed-expression} @var{offending-value}
+Build and return a new condition object of type
+@condition{procedure-signature-argument-violation}.
+@end defun
+
+
+@defun procedure-signature-argument-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-signature-argument-violation}; otherwise return @false{}.
+@end defun
+
+
+@defun procedure-signature-argument-violation.one-based-argument-index @var{cnd}
+@defunx procedure-signature-argument-violation.failed-expression @var{cnd}
+@defunx procedure-signature-argument-violation.offending-value @var{cnd}
+Accessors for the fields of condition objects of type
+@condition{procedure-signature-argument-violation}.
+@end defun
+
+
+@defun procedure-signature-argument-violation @var{who} @var{message} @var{operand-index} @var{failed-expression} @var{offending-value}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{procedure-signature-argument-violation}.
+@end defun
+
+@c page
+@node iklib conditions rvarg
+@subsection Procedure signature return value violations
+
+
+@deftp {Condition Type} &procedure-signature-return-value-violation
+Condition object type representing invalid values returned from an
+expression; it is derived from
+@condition{procedure-postcondition-violation}.  It has the following
+fields:
+
+@table @code
+@item index
+One--base index of the offending return value in the tuple of values
+returned by the expression.  It is @false{} when the index is unknown.
+
+@item failed-expression
+Symbolic expression representing the predicate used to validate the
+return value.
+
+@item offending-value
+The actual value returned by the expression.
+@end table
+@end deftp
+
+
+@defun make-procedure-signature-return-value-violation @var{retval-index} @var{failed-expression} @var{offending-value}
+Build and return a new condition object of type
+@condition{procedure-signature-return-value-violation}.
+@end defun
+
+
+@defun procedure-signature-return-value-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-signature-return-value-violation}; otherwise return
+@false{}.
+@end defun
+
+
+@defun procedure-signature-return-value-violation.one-based-return-value-index @var{cnd}
+@defunx procedure-signature-return-value-violation.failed-expression @var{cnd}
+@defunx procedure-signature-return-value-violation.offending-value @var{cnd}
+Accessors for the fields of condition objects of type
+@condition{procedure-signature-return-value-violation}.
+@end defun
+
+
+@defun procedure-signature-return-value-violation @var{who} @var{message} @var{retval-index} @var{failed-expression} @var{offending-value} @var{irritant} @dots{}
+Raise a compound condition object as non--continuable exception with
+component types: @condition{who}, @condition{message},
+@condition{irritants}, @condition{procedure-signature-return-value-violation}.
+@end defun
+
+@c page
+@node iklib conditions proccon
+@subsection Procedure argument consistency violations
+
+
+@deftp {Condition Type} &procedure-arguments-consistency-violation
+Condition object type representing a set of inconsistent arguments to a
+procedure application; it is derived from
+@condition{procedure-precondition-violation}.
+@end deftp
+
+
+@defun make-procedure-arguments-consistency-violation
+Build and return a new condition object of type
+@condition{procedure-arguments-consistency-violation}.
+@end defun
+
+
+@defun procedure-arguments-consistency-violation? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{procedure-arguments-consistency-violation}; otherwise return
+@false{}.
+@end defun
+
+
+@defun procedure-arguments-consistency-violation @var{who} @var{message} @var{irritant} @dots{}
+Raise a non--continuable exception with compound condition object
+holding components of type: @condition{who}, @condition{message},
+@condition{irritants},
+@condition{procedure-arguments-consistency-violation}.
 @end defun
 
 @c page
@@ -5685,13 +6055,13 @@ expression; it is derived from @condition{assertion}.
 
 @defun make-expression-return-value-violation
 Build and return a new condition object of type
-@condition{expression-return-value-validation}.
+@condition{expression-return-value-violation}.
 @end defun
 
 
 @defun expression-return-value-violation? @var{obj}
 Return @true{} if @var{obj} is a condition object of type
-@condition{expression-return-value-validation}; otherwise return
+@condition{expression-return-value-violation}; otherwise return
 @false{}.
 @end defun
 
@@ -5699,7 +6069,7 @@ Return @true{} if @var{obj} is a condition object of type
 @defun expression-return-value-violation @var{who} @var{message} @var{irritant} @dots{}
 Raise a compound condition object as non--continuable exception with
 component types: @condition{who}, @condition{message},
-@condition{irritants}, @condition{expression-return-value-validation}.
+@condition{irritants}, @condition{expression-return-value-violation}.
 @end defun
 
 @c page
@@ -6283,46 +6653,72 @@ read: the next form read has case insensitive identifiers.  When
 @subsection Additional reader functions
 
 
+The Scheme source code reader allows us to annotate source code read
+from a textual input with informations about the position of an
+expression in the input.  For example:
+
+@lisp
+(import (vicare))
+
+(define port  (open-string-input-port "(list var)"))
+(define datum (get-annotated-datum port))
+(pretty-print datum)
+@print{} #[annotation
+        expression=#<omitted>
+        stripped=(list var)
+        textual-position=#[r6rs-record: &source-position
+                              port-id="*string-input-port*"
+                              byte=0
+                              character=0
+                              line=1
+                              column=1]]
+@end lisp
+
 The following bindings are exported by the library @library{vicare}.
 
 
-@defun get-annotated-datum @var{port}
-Like @func{get-datum}, but rather than returning a datum return a
-hierarchy of @code{annotation} objects with the same hierarchy of the
-datum and embedding the datum itself.
-@end defun
+@deftp {Object type} annotation
+Disjoint object type representing source code read from a textual input
+port.  The source code expression is annotated with informations from
+its textual input.
+@end deftp
 
 
 @defun annotation? @var{obj}
-Return @true{} if @var{obj} is an @code{annotation} object, else return
+Return @true{} if @var{obj} is an @objtype{annotation} object, else return
 @false{}.
 @end defun
 
 
-@defun annotation-expression @var{ann}
-Accessor for the @code{expression} field of an @code{annotation} object.
+@defop {Field accessor} @objtype{annotation} annotation-expression @var{ann}
 Return a list, vector, identifier, what--have--you that may contain
 further annotations.
-@end defun
+@end defop
 
 
-@defun annotation-stripped @var{ann}
-Accessor for the @code{stripped} field of an @code{annotation} object.
-The same symbolic expression of the @code{expression} field with no
-annotations.
-@end defun
+@defop {Field accessor} @objtype{annotation} annotation-stripped @var{ann}
+Return the same symbolic expression of the @code{expression} field with
+no annotations.
+@end defop
 
 
-@defun annotation-textual-position @var{ann}
-Accessor for the @code{textual-position} field of an @code{annotation}
-object.  A condition object of type @condition{source-position}
+@defop {Field accessor} @objtype{annotation} annotation-textual-position @var{ann}
+Return a condition object of type @condition{source-position}
 representing the position of the expression in the source code.
-@end defun
+@end defop
 
 
-@defun annotation-source @var{ann}
-A pair whose car is the port identifier and whose cdr is the offset of
-the character.
+@defop {Field accessor} @objtype{annotation} annotation-source @var{ann}
+Return a pair whose car is the port identifier and whose cdr is the
+offset of the first character of the source expression in the textual
+input.
+@end defop
+
+
+@defun get-annotated-datum @var{port}
+Like @func{get-datum}, but rather than returning a datum return a
+hierarchy of @objtype{annotation} objects with the same hierarchy of the
+datum and embedding the datum itself.
 @end defun
 
 @c page
@@ -6331,43 +6727,18 @@ the character.
 
 
 @menu
-* iklib expander syntax::           Inspecting syntax objects.
 * iklib expander transformers::     Syntax transformers facilities.
-* iklib expander expand::           Expander facilities.
 * iklib expander export specs::     Additional export specifications.
 * iklib expander import specs::     Additional import specifications.
 * iklib expander local import::     Local library imports.
 * iklib expander extended export::  Extended library exports.
 * iklib expander fluids::           Fluid syntaxes.
-* iklib expander utils::            Utility functions for writing macro.
+* iklib expander utils::            Utilities for macro writers.
 * iklib expander clauses::          Syntax clauses helpers.
-* iklib expander ctv::              Compile-time values.
-* iklib expander parameters::       Expand--time parameters.
+* iklib expander etv::              Expand-time values.
+* iklib expander parameters::       Expand-time parameters.
 * iklib expander synonym::          Synonym transformers.
 @end menu
-
-@c page
-@node iklib expander syntax
-@subsection Inspecting syntax objects
-
-
-Under @value{PRJNAME}, a syntax object is the instance of a data
-structure.  The following bindings are exported by the library
-@library{vicare}.
-
-
-@defun syntax-object? @var{stx}
-Return @true{} if @var{stx} is a syntax object, else return @false{}.
-@end defun
-
-
-@defun syntax-object-expression @var{stx}
-@defunx syntax-object-marks @var{stx}
-@defunx syntax-object-ribs @var{stx}
-@defunx syntax-object-source-objects @var{stx}
-Field accessors for the syntax object structure type, to be used for
-debugging purposes.
-@end defun
 
 @c page
 @node iklib expander transformers
@@ -6398,357 +6769,6 @@ otherwise return @false{}.
 If @var{var-trasf} is recognised by the expander as a variable
 transformer: return the actual transformer function, otherwise raise an
 assertion violation.
-@end defun
-
-@c page
-@node iklib expander expand
-@subsection Expander facilities
-
-
-@menu
-* iklib expander expand library:: Expanding libraries.
-* iklib expander expand program:: Expanding programs.
-* iklib expander expand form::    Expanding forms.
-@end menu
-
-@c page
-@node iklib expander expand library
-@subsubsection Expanding libraries
-
-
-@defun expand-library @var{sexp}
-@defunx expand-library @var{sexp} @var{filename}
-@defunx expand-library @var{sexp} @var{filename} @var{verify-libname}
-Expand the symbolic expression @var{sexp} representing a library and
-register the result in the internal library manager.  @var{sexp} must be
-a symbolic expression @code{(library . ---)}.
-
-The optional @var{filename} must be @false{} or a string representing
-the source file from which the library was loaded; it is used for
-information purposes.  When not given defaults to @false{}.
-
-The optional argument @var{verify-libname} must be a procedure accepting
-a @rnrs{6} library name as argument and returning unspecified values; it
-is meant to perform some validation upon the library name components and
-raise an exception if something is wrong; otherwise it should just
-return.
-
-Return @math{12} values:
-
-@table @var
-@item uid
-A gensym uniquely identifying this library.
-
-@item libname
-A @rnrs{6} library name.
-
-@item import-libdesc*
-A list of library descriptors representing the libraries that need to be
-imported for the invoke code.
-
-@item visit-libdesc*
-A list of library descriptors representing the libraries that need to be
-imported for the visit code.
-
-@item invoke-libdesc*
-A list of library descriptors representing the libraries that need to be
-invoked to make available the values of the imported variables.
-
-@item invoke-code
-A symbolic expression representing the code to be evaluated to create
-the top--level @func{define} bindings and evaluate the trailing init
-expressions.
-
-@item visit-code -
-A symbolic expression representing the code to be evaluated to create
-the expand--time code.
-
-@item export-subst
-A subst representing the top--level bindings.
-
-@item export-env
-A list representing the bindings exported by the library.
-
-@item guard-code
-A predicate expression in the core language representing the
-@func{stale-when} tests from the body of the library.
-
-@item guard-libdesc*
-A list of library descriptors representing the libraries that need to be
-invoked for the @func{stale-when} code.
-
-@item option*
-A list of symbolic expressions representing options from the
-@clause{options} clause of the @func{library} form.
-@end table
-@end defun
-
-
-@defun expand-library->sexp @var{sexp}
-This function is for debugging purposes.  Expand the library form
-@var{sexp} and return the return values of @func{expand-library} in an
-alist with the following symbols as keys:
-
-@example
-uid libname
-import-libdesc* visit-libdesc* invoke-libdesc*
-invoke-code visit-code
-export-subst export-env
-guard-code guard-libdesc*
-option*
-@end example
-@end defun
-
-
-We can toy with the library expander using the following code:
-
-@example
-#!r6rs
-(import (vicare))
-(print-gensym #f)
-(debug-print (expand-library->sexp @meta{sexp}))
-@end example
-
-@noindent
-where @meta{sexp} is the @func{library} symbolic expression.  For
-example, expanding the library:
-
-@example
-(library (ciao)
-  (export var fun mac ctv)
-  (import (vicare))
-  (define var 1)
-  (define (fun)
-    2)
-  (define-syntax (mac stx)
-    3)
-  (define-syntax ctv
-    (make-compile-time-value
-     (+ 4 5))))
-@end example
-
-@noindent
-yields the @code{invoke-code}:
-
-@example
-(library-letrec*
-    ((lex.var loc.lex.var '1)
-     (lex.fun loc.lex.fun (annotated-case-lambda fun (() '2))))
-  ((primitive void)))
-@end example
-
-@noindent
-the @code{visit-code}:
-
-@example
-(begin
-  (set! loc.lab.mac
-        (annotated-case-lambda
-            (#'lambda (#'stx) #'3)
-          ((lex.stx) '3)))
-  (set! loc.lab.ctv
-        (annotated-call
-            (make-compile-time-value (+ 4 5))
-          (primitive make-compile-time-value)
-          (annotated-call (+ 4 5) (primitive +) '4 '5))))
-@end example
-
-@noindent
-the @code{export-subst}:
-
-@example
-((ctv . lab.ctv)
- (mac . lab.mac)
- (fun . lab.fun)
- (var . lab.var))
-@end example
-
-@noindent
-the @code{export-env}:
-
-@example
-((lab.var global        . loc.lex.var)
- (lab.fun global        . loc.lex.fun)
- (lab.mac global-macro  . loc.lab.mac)
- (lab.ctv global-ctv    . loc.lab.ctv))
-@end example
-
-Another example, for the library:
-
-@example
-(library (ciao (1 2))
-  (export doit)
-  (import (vicare))
-  (stale-when (< 1 2)
-    (define a 123))
-  (stale-when (< 2 3)
-    (define b 123))
-  (define (doit)
-    123))
-@end example
-
-@noindent
-the @code{guard-code} is:
-
-@example
-(if (if '#f
-        '#t
-       (annotated-call (< 1 2) (primitive <) '1 '2))
-    '#t
-  (annotated-call (< 2 3) (primitive <) '2 '3))
-@end example
-
-@c page
-@node iklib expander expand program
-@subsubsection Expanding programs
-
-
-@defun expand-top-level @var{sexp}
-Expand an @rnrs{6} program whose symbolic expression is @var{sexp}.
-Return @math{6} values:
-
-@table @var
-@item invoke-lib*
-A list of @code{library} structs representing the libraries that need to
-be invoked to run the code.
-
-@item invoke-code
-The fully expanded code from the body of the program.
-
-@item macro*
-A list of sublists representing the macros defined in the program.
-
-@item export-subst
-A subst representing the top--level bindings.
-
-@item export-env
-A list representing the bindings exported by the program.
-
-@item option*
-A list of symbols representing the options enabled for this program;
-@ref{iklib syntaxes programs} for details.
-@end table
-@end defun
-
-
-@defun expand-top-level->sexp @var{sexp}
-This function is for debugging purposes.  Expand the program form
-@var{sexp} and return the return values of @func{expand-top-level} in an
-alist with the following symbols as keys:
-
-@example
-invoke-lib* invoke-code
-macro*
-export-subst export-env
-option*
-@end example
-@end defun
-
-
-We can toy with the library expander using the following code:
-
-@example
-#!r6rs
-(import (vicare))
-(print-gensym #f)
-(debug-print (expand-top-level->sexp @meta{sexp}))
-@end example
-
-@noindent
-where @meta{sexp} is the program symbolic expression.  For example,
-expanding the program:
-
-@example
-(import (vicare))
-(define var 1)
-(define-syntax (mac stx)
-  2)
-(display var)
-@end example
-
-@noindent
-yields the @code{invoke-code}:
-
-@example
-(library-letrec*
-    ((lex.var   loc.lex.var   '1)
-     (lex.dummy loc.lex.dummy
-        (begin
-          (annotated-call (display var)
-             (primitive display) lex.var)
-          ((primitive void)))))
-  ((primitive void)))
-@end example
-
-@noindent
-the @code{macro*}:
-
-@example
-((loc.lab.mac #<procedure> . (annotated-case-lambda
-                                 (#'lambda (#'stx) #'2)
-                               ((lex.stx) '2))))
-@end example
-
-@noindent
-where the procedure is the result of compiling and evaluating the
-expanded code; the @code{export-subst} (with many entries removed):
-
-@example
-((flmod          . g2374)
- (flonum->string . g990)
- (flsquare       . g743)
- ...
- (var            . lab.var)
- (mac            . lab.mac))
-@end example
-
-@noindent
-the @code{export-env}:
-
-@example
-((lab.var global       . loc.lex.var)
- (lab.mac global-macro . loc.lab.mac))
-@end example
-
-@c page
-@node iklib expander expand form
-@subsubsection Expanding forms
-
-
-@defun expand-form-to-core-language @var{sexp} @var{env}
-Interface to the internal expression expander, it is the expansion
-engine used by @rnrs{6}'s @func{eval} function.
-
-@var{sexp} must be a symbolic expression representing a Scheme form;
-@var{env} must be an evaluation environment.
-
-Return two values: the result of the expansion as symbolic expression in
-the core language; a list of libraries that must be invoked before
-evaluating the returned expression.
-
-Example:
-
-@example
-(import (vicare))
-
-(receive (code libs)
-     (expand-form-to-core-language
-        '(define (doit x)
-           (if (null? x)
-               #f
-             (doit (cdr x))))
-        (environment '(vicare)))
-  code)
-@result{} (set! loc.doit
-     (annotated-case-lambda doit
-       ((lex.x)
-        (if (annotated-call (null? x)
-              (primitive null?) lex.x)
-            '#f
-        (annotated-call (doit (cdr x))
-          loc.doit
-          (annotated-call (cdr x) (primitive cdr) lex.x))))))
-@end example
 @end defun
 
 @c page
@@ -7024,7 +7044,7 @@ the function.
 
 @value{PRJNAME} allows the @func{export} syntax to appear at the top
 level of a library among the definitions, not only as third form of a
-@func{library} form.
+@syntax{library} form.
 
 
 @deffn Syntax export @meta{export-spec} ...
@@ -7118,7 +7138,7 @@ the enclosing body.
 
 @c page
 @node iklib expander utils
-@subsection Utility functions for writing macro
+@subsection Utilities for macro writers
 
 
 @menu
@@ -8084,84 +8104,79 @@ according to @func{free-identifier=?}, to an identifier in the
 @end defun
 
 @c page
-@node iklib expander ctv
-@subsection Compile--time values
+@node iklib expander etv
+@subsection expand--time values
 
 
 It is sometimes useful to precompute a value at expand--time and push it
 on the lexical environment to be later retrieved.  Here is an example of
-simple compile--time value (@acronym{CTV}) computation, retrieval and
-insertion in which the value is a self--evaluating fixnum:
+simple expand--time value computation, retrieval and insertion in which
+the value is a self--evaluating fixnum:
 
 @example
 (import (vicare))
 
 (define-syntax obj1
-  (make-compile-time-value (+ 1 2 3)))
+  (make-expand-time-value (+ 1 2 3)))
 
 (define-syntax get-obj1
   (lambda (stx)
-    (lambda (ctv-retriever)
-      (ctv-retriever #'obj1))))
+    (retrieve-expand-time-value #'obj1)))
 
 (get-obj1) @expansion{} 6
 @end example
 
 @noindent
-here is an example of simple compile--time value computation, retrieval
+here is an example of simple expand--time value computation, retrieval
 and insertion in which the value is a non--self--evaluating vector:
 
 @example
 (import (vicare))
 
 (define-syntax obj2
-  (make-compile-time-value (vector 1 2 3)))
+  (make-expand-time-value (vector 1 2 3)))
 
 (define-syntax get-obj2
   (lambda (stx)
-    (lambda (ctv-retriever)
-      #`(quote #,(ctv-retriever #'obj2)))))
+    #`(quote #,(retrieve-expand-time-value #'obj2))))
 
 (get-obj2) @expansion{} (quote #(1 2 3))
 @end example
 
 @noindent
-we see that to produce a compile--time value we define a syntax bound to
-the result of @func{make-compile-time-value}.
-
-We can use a compile--time value in the body of a transformer function;
-whenever a syntax transformer function returns a function: such function
-is called by the expander with a single argument being a compile--time
-value retriever; if the retriever is applied to an identifier bound to a
-@acronym{CTV}: it returns the value itself or @false{} if the identifier
-is not bound to a @acronym{CTV}.  Once we have the @acronym{CTV}
-retriever: we can retrieve all the @acronym{CTV} objects currently on
-the lexical environment.
+we see that to produce an expand--time value we define a syntax keyword
+bound to the result of @func{make-expand-time-value}.
 
 
-@defun make-compile-time-value @var{obj}
+@defun make-expand-time-value @var{obj}
 Build and return a ``special'' object that is recognised by the expander
-as holding @var{obj} as a precomputed compile--time object.
+as holding @var{obj} as a precomputed expand--time object.
 @end defun
 
 
-@defun compile-time-value? @var{obj}
+@defun expand-time-value? @var{obj}
 Return @true{} if @var{obj} is a ``special'' object that is recognised
-by the expander as holding a precomputed compile--time object.
+by the expander as holding a precomputed expand--time object.
 @end defun
 
 
-@defun compile-time-value-object @var{ctv}
+@defun expand-time-value-object @var{etv}
 Given a ``special'' object that is recognised by the expander as holding
-a precomputed compile--time object: return the actual value.
+a precomputed expand--time object: return the actual value.
+@end defun
+
+
+@defun retrieve-expand-time-value @var{id}
+Given a syntactic identifier return its associated expand--time value;
+if @var{id} is not associated to a expand--time value: return @false{}.
 @end defun
 
 @c ------------------------------------------------------------
 
-@subsubheading What compile--time values are @strong{not} for
+@subsubheading What expand--time values are @strong{not} for
 
 
-We have to understand that the real use of compile--time values is not
+We have to understand that the real use of expand--time values is not
 actually to precompute values and put them in compiled code; for this we
 can just use @func{define-inline-constant}, which in the end defines a
 ``normal'' syntax transformer as the following:
@@ -8182,15 +8197,14 @@ obj1    @expansion{} (quote #(1 2 3))
 
 @c ------------------------------------------------------------
 
-@subsubheading What compile--time values are for
-
+@subsubheading What expand--time values are for
 
 Let's say we define a record type in a library (it must go in a library
 so that we can import it and use it at expand--time in the body of
 transformers):
 
 @example
-(library (ctv-demo)
+(library (etv-demo)
   (export that make-that)
   (import (vicare))
   (define-record-type that
@@ -8199,16 +8213,15 @@ transformers):
 
 @noindent
 now we can instantiate a struct @code{that} and push the instance on the
-lexical environment bound to the identifier @code{it}:
+lexical environment, bound to the identifier @code{it}:
 
 @example
 (import (vicare)
-  (for (proof)
-    expand))
+  (for (etv-demo) expand))
 
 (define-syntax it
-  (make-compile-time-value
-   (make-that 1 2 3)))
+  (make-expand-time-value
+    (make-that 1 2 3)))
 @end example
 
 @noindent
@@ -8218,13 +8231,12 @@ and use its fields to produce the output of a syntax use:
 @example
 (define-syntax get-it
   (lambda (stx)
-    (lambda (ctv-retriever)
-      (let ((S (ctv-retriever #'it)))
-        (with-syntax
-            ((A (record-type-field-ref that a S))
-             (B (record-type-field-ref that b S))
-             (C (record-type-field-ref that c S)))
-          #'(quote #(A B C)))))))
+    (let ((S (retrieve-expand-time-value #'it)))
+      (with-syntax
+          ((A (record-type-field-ref that a S))
+           (B (record-type-field-ref that b S))
+           (C (record-type-field-ref that c S)))
+        #'(quote #(A B C))))))
 
 (get-it)        @expansion{} (quote #(1 2 3))
 @end example
@@ -8234,7 +8246,7 @@ and use its fields to produce the output of a syntax use:
 @subsection Expand--time parameters
 
 
-Fluid syntaxes and compile--time values can be used to implement a sort
+Fluid syntaxes and expand--time values can be used to implement a sort
 of expand--time parameters, @ref{iklib parameters, Parameters}.  The
 following example shows the mechanism by defining a ``parameter''
 @samp{parm}:
@@ -8243,20 +8255,19 @@ following example shows the mechanism by defining a ``parameter''
 (import (vicare))
 
 (define-syntax (show-it stx)
-  (lambda (ctv-retriever)
-    (fprintf (current-error-port)
-             "parm ~a: ~a\n"
-             (cadr (syntax->datum stx))
-             (ctv-retriever #'parm))
-    #f))
+  (fprintf (current-error-port)
+           "parm ~a: ~a\n"
+           (cadr (syntax->datum stx))
+           (retrieve-expand-time-value #'parm))
+  #f)
 
 (define-fluid-syntax parm
-  (make-compile-time-value #f))
+  (make-expand-time-value #f))
 
 (show-it "1, expect #f")
-(fluid-let-syntax ((parm (make-compile-time-value #t)))
+(fluid-let-syntax ((parm (make-expand-time-value #t)))
   (show-it "2, expect #t")
-  (fluid-let-syntax ((parm (make-compile-time-value #f)))
+  (fluid-let-syntax ((parm (make-expand-time-value #f)))
     (show-it "3, expect #f"))
   (show-it "4, expect #t"))
 (show-it "5, expect #f")
@@ -8301,14 +8312,14 @@ Using the @api{} described here, the example can be rewritten:
 @deffn Syntax define-syntax-parameter @meta{parm-id} @meta{expr}
 Define a new syntax parameter bound to the identifier @meta{parm-id}.
 The parameter is initialised to the result of evaluating the
-compile--time expression @meta{expr}.
+expand--time expression @meta{expr}.
 @end deffn
 
 
 @deffn Syntax syntax-parametrise ((@meta{parm-id} @meta{expr}) @dots{}) @metao{body} @meta{body} @dots{}
-Bind one or more syntax parameters to new compile--time values and while
+Bind one or more syntax parameters to new expand--time values and while
 the body forms are expanded.  The arguments @meta{parm-id} must be
-identifiers previously bound to compile--time values by
+identifiers previously bound to expand--time values by
 @func{define-syntax-parameter}.  The arguments @meta{expr} must be
 expressions.
 @end deffn
@@ -8521,6 +8532,13 @@ persistent bindings:
 
 @example
 (begin
+  (eval '(define c 3)
+        (interaction-environment))
+  (eval 'c
+        (interaction-environment)))
+@result{} 3
+
+(begin
   (eval '(begin
            (define a 1)
            (define b 2))
@@ -8528,13 +8546,6 @@ persistent bindings:
   (eval '(list a b)
         (interaction-environment)))
 @result{} (1 2)
-
-(begin
-  (eval '(define c 3)
-        (interaction-environment))
-  (eval 'c
-        (interaction-environment)))
-@result{} 3
 
 (let ((env (new-interaction-environment)))
   (eval '(begin
@@ -8553,6 +8564,93 @@ and it is also possible to import additional libraries:
 (eval '(import (nausicaa))
        (interaction-environment))
 @end example
+
+At the top--level of an interaction environment, it is possible to
+redefine syntactic bindings:
+
+@lisp
+(let ((env (new-interaction-environment '(rnrs base))))
+  (eval '(define d 3) env)
+  (eval '(define d 4) env)
+  (eval 'd env))
+@result{} 4
+
+(let ((env (new-interaction-environment '(rnrs base))))
+  (eval '(begin
+           (define x 1)
+           (define y 2)
+           (define z 3))
+        env)
+  (eval '(begin
+           (define x 10)
+           (define y 20)
+           (define z 30))
+        env)
+  (eval '(list x y z)
+        env))
+@result{} (10 20 30)
+
+(let ((env (new-interaction-environment '(rnrs base))))
+  (eval '(begin
+           (define-syntax x (identifier-syntax 1))
+           (define-syntax y (identifier-syntax 2))
+           (define-syntax z (identifier-syntax 3)))
+        env)
+  (eval '(begin
+           (define-syntax x (identifier-syntax 10))
+           (define-syntax y (identifier-syntax 20))
+           (define-syntax z (identifier-syntax 30)))
+        env)
+  (eval '(list x y z)
+        env))
+@result{} (10 20 30)
+
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(begin
+           (define-fluid-syntax x (identifier-syntax 1))
+           (define-fluid-syntax y (identifier-syntax 2))
+           (define-fluid-syntax z (identifier-syntax 3)))
+        env)
+  (eval '(begin
+           (define-fluid-syntax x (identifier-syntax 10))
+           (define-fluid-syntax y (identifier-syntax 20))
+           (define-fluid-syntax z (identifier-syntax 30)))
+        env)
+  (eval '(list x y z)
+        env))
+@result{} (10 20 30)
+
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(begin
+           (begin-for-syntax
+             (define a 1)
+             (define a 2))
+           (define-syntax doit
+             (lambda (stx) a)))
+        env)
+  (eval '(doit) env))
+@result{} 2
+@end lisp
+
+At the top--level of an interaction environment, it is possible to
+shadow syntactic bindings imported from a library:
+
+@lisp
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(define display 123) env)
+  (eval 'display env))
+@result{} 123
+
+(let ((env (new-interaction-environment '(vicare))))
+  (eval '(begin
+           (begin-for-syntax
+             (define display 123))
+           (define-syntax doit
+             (lambda (stx) display)))
+        env)
+  (eval '(doit) env))
+@result{} 123
+@end lisp
 
 
 @defun environment-symbols @var{env}
@@ -8584,7 +8682,7 @@ the list returned by @func{environment-symbols}.
 
 
 @defun environment-libraries @var{env}
-Return the list of @code{library} records representing the libraries
+Return the list of @objtype{library} records representing the libraries
 forming the non--interaction environment @var{env}.
 @end defun
 
@@ -10772,46 +10870,21 @@ occurs because of impossible generation: raise an error.
 @section Additional vector functions
 
 
-The following bindings are exported by the library @library{vicare}.
+@menu
+* iklib vectors constructors::  Vector constructors.
+* iklib vectors predicates::    Vector predicates.
+* iklib vectors copying::       Copying vectors.
+* iklib vectors iteration::     Iterating vectors.
+@end menu
+
+@c page
+@node iklib vectors constructors
+@subsection Vector constructors
 
 
-@defun subvector @var{vec} @var{start} @var{end}
-@var{vec} must be a vector, and @var{start} and @var{end} must be exact
-integer objects satisfying:
-
-@example
-0 <= @var{start} <= @var{end} <= (vector-length @var{vec})
-@end example
-
-Return a newly allocated vector formed from the items of @var{vec}
-beginning with index @var{start} (inclusive) and ending with index
-@var{end} (exclusive).
-@end defun
-
-
-@defun vector-empty? @var{vec}
-Return @true{} if the vector @var{vec} has zero length, otherwise return
-@false{}.
-@end defun
-
-
-@defun vector-append @var{vec} ...
+@defun vector-append @var{vec} @dots{}
 Return a newly allocated vector whose items form the concatenation of
 the given vectors.
-@end defun
-
-
-@defun vector-copy @var{vec}
-Return a newly allocated copy of the given vector.  This is ``shallow''
-copy, @strong{not} a ``deep'' copy: the returned vector holds the same
-items of @var{vec}.
-@end defun
-
-
-@defun vector-copy! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
-Copy @var{count} items from @var{src.vec} starting at @var{src.start}
-(inclusive) to @var{dst.vec} starting at @var{dst.start}.  Return
-unspecified values.
 @end defun
 
 
@@ -10829,6 +10902,78 @@ are filled with @var{fill}.  When not used: @var{fill} defaults to
 (vector-resize '#(1 2 3) 2)     @result{} #(1 2)
 @end example
 @end defun
+
+@c page
+@node iklib vectors predicates
+@subsection Vector predicates
+
+
+@defun vector-empty? @var{vec}
+Return @true{} if the vector @var{vec} has zero length, otherwise return
+@false{}.
+@end defun
+
+
+@defun non-empty-vector? @var{obj}
+Return @true{} if @var{obj} is a vector object with non--zero length;
+otherwise return @false{}.  This function does @strong{not} raise an
+exception if @var{obj} is not a vector object.
+@end defun
+
+
+@defun list-of-vectors? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of vector objects;
+otherwise return @false{}.
+@end defun
+
+
+@defun vectors-of-same-length? @varo{vec} @var{vec} @dots{}
+Return @true{} if all the arguments are vectors of the same length;
+otherwise return @false{}.  It is an error if an argument is not a
+vector object.
+@end defun
+
+
+@defun list-of-vectors-of-same-length? @var{obj}
+Return @true{} if @var{obj} is null or a proper list of vector objects,
+all with the same length; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib vectors copying
+@subsection Copying vectors
+
+
+@defun subvector @var{vec} @var{start} @var{end}
+@var{vec} must be a vector, and @var{start} and @var{end} must be exact
+integer objects satisfying:
+
+@example
+0 <= @var{start} <= @var{end} <= (vector-length @var{vec})
+@end example
+
+Return a newly allocated vector formed from the items of @var{vec}
+beginning with index @var{start} (inclusive) and ending with index
+@var{end} (exclusive).
+@end defun
+
+
+@defun vector-copy @var{vec}
+Return a newly allocated copy of the given vector.  This is ``shallow''
+copy, @strong{not} a ``deep'' copy: the returned vector holds the same
+items of @var{vec}.
+@end defun
+
+
+@defun vector-copy! @var{src.vec} @var{src.start} @var{dst.vec} @var{dst.start} @var{count}
+Copy @var{count} items from @var{src.vec} starting at @var{src.start}
+(inclusive) to @var{dst.vec} starting at @var{dst.start}.  Return
+unspecified values.
+@end defun
+
+@c page
+@node iklib vectors iteration
+@subsection Iterating vectors
 
 
 @defun vector-find @var{proc} @var{vec}
@@ -11270,11 +11415,11 @@ primitive value; we can easily inspect such situation as follows:
 @example
 (import (vicare))
 
-(getprop 'display system-value-gensym)
+(getprop 'display (system-value-gensym))
 @result{} loc.display
 
 ;; extract the procedure from the loc
-(symbol-value (getprop 'display system-value-gensym))
+(symbol-value (getprop 'display (system-value-gensym)))
 @result{} #<procedure display>
 
 (system-value 'display)
@@ -11285,7 +11430,7 @@ primitive value; we can easily inspect such situation as follows:
 @end example
 
 We see that the property list contains an entry with key set to the
-symbol bound to @code{system-value-gensym}; notice that this key is
+symbol returned by @func{system-value-gensym}; notice that this key is
 different every time we rebuild the boot image.
 
 
@@ -11296,10 +11441,10 @@ raise an assertion violation.
 @end defun
 
 
-@defvr Constant system-value-gensym
-A special gensym used internally to map core primitive names to their
-value.
-@end defvr
+@defun system-value-gensym
+Return special gensym used internally to map core primitive names to
+their value.
+@end defun
 
 @c page
 @node iklib symbols labels
@@ -11324,11 +11469,11 @@ inspect such situation as follows:
 @example
 (import (vicare))
 
-(getprop 'display system-label-gensym)
+(getprop 'display (system-label-gensym))
 @result{} lab.display
 
 ;; extract the lexical environment entry describing DISPLAY
-(symbol-value (getprop 'display system-label-gensym))
+(symbol-value (getprop 'display (system-label-gensym)))
 @result{} (core-prim . display)
 
 (system-label 'display)
@@ -11336,7 +11481,7 @@ inspect such situation as follows:
 @end example
 
 We see that the property list contains an entry with key set to the
-symbol bound to @code{system-label-gensym}; notice that this key is
+symbol returned by @func{system-label-gensym}; notice that this key is
 different every time we rebuild the boot image.
 
 
@@ -11347,10 +11492,10 @@ the label, else return @false{}.
 @end defun
 
 
-@defvr Constant system-label-gensym
-A special gensym used internally to map core primitive names to their
-syntactic binding label gensym.
-@end defvr
+@defun system-label-gensym
+Return a special gensym used internally to map core primitive names to
+their syntactic binding label gensym.
+@end defun
 
 @c page
 @node iklib symbols identifiers
@@ -11371,7 +11516,7 @@ easily inspect such situation as follows:
 @example
 (import (vicare))
 
-(getprop 'procedure? system-id-gensym)
+(getprop 'procedure? (system-id-gensym))
 @result{} #<syntax expr=procedure? ...>
 
 (system-id 'procedure?)
@@ -11379,7 +11524,7 @@ easily inspect such situation as follows:
 @end example
 
 We see that the property list contains an entry with key set to the
-symbol bound to @code{system-id-gensym}; notice that this key is
+return value of @func{system-id-gensym}; notice that this key is
 different every time we rebuild the boot image.
 
 
@@ -11390,10 +11535,10 @@ Attempt to extract from @var{symbol} the bound identifier of which
 @end defun
 
 
-@defvr Constant system-id-gensym
-A special gensym used internally to map core primitive names to their
-syntactic binding identifiers.
-@end defvr
+@defun system-id-gensym
+Return a special gensym used internally to map core primitive names to
+their syntactic binding identifiers.
+@end defun
 
 @c page
 @node iklib fixnums
@@ -12937,11 +13082,12 @@ access definitions in a module without explicitly using the
 
 
 @rnrs{6} defines libraries to be top--level symbolic expressions; the
-form @func{library} can appear only at the top--level; @ref{scheme
+form @syntax{library} can appear only at the top--level; @ref{scheme
 library form, Library form}.  @value{PRJNAME} extends the notion of
-libraries by having the library @library{vicare} export a @func{library}
-syntax; such syntax can be used anywhere a definition can be used and
-the defined library can be imported in its region of visibility.
+libraries by having the library @library{vicare} export a
+@syntax{library} syntax; such syntax can be used anywhere a definition
+can be used and the defined library can be imported in its region of
+visibility.
 
 The following is a perfectly valid Vicare program:
 
@@ -15558,6 +15704,12 @@ otherwise return @false{}.  If @var{obj} is not a pointer: return
 @defun pointer-and-offset? @var{ptr} @var{diff}
 Return true if the exact integer @var{diff} can be added to @var{ptr}
 without causing a pointer overflow or underflow.
+@end defun
+
+
+@defun list-of-pointers? @var{obj}
+Return @true{} if @var{obj} is a, possibly empty, proper list of pointer
+objects; otherwise return @false{}.
 @end defun
 
 @c page

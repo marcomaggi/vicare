@@ -2938,7 +2938,7 @@ closure object.  The bindings of primitive functions are immutable.
 
 @subsubheading Use in library top level bindings
 
-All the top level bindings defined by a @func{library} form have a loc
+All the top level bindings defined by a @syntax{library} form have a loc
 gensym associated to them:
 
 @itemize

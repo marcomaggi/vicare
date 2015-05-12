@@ -1032,27 +1032,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'program-pathnames))
-
-  (check
-      (program-source-pathname->program-binary-pathname "demo.sps")
-    => "demo")
-
-  (check
-      (program-source-pathname->program-binary-pathname "tests/demo.sps")
-    => "tests/demo")
-
-  (check
-      (program-source-pathname->program-binary-pathname "demo.ciao")
-    => "demo.ciao.fasl")
-
-  (check
-      (program-source-pathname->program-binary-pathname "tests/demo.ciao")
-    => "tests/demo.ciao.fasl")
-
-  #t)
-
-
 ;;;; done
 
 (check-report)

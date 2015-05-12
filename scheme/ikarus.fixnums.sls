@@ -204,11 +204,8 @@
 
 (define-list-of-type-predicate list-of-fixnums? fixnum?)
 
-(define* (fxzero? x)
-  (cond ((eq? x 0)	#t)
-	((fixnum? x)	#f)
-	(else
-	 (procedure-argument-violation __who__ "expected fixnum as argument" x))))
+(define* (fxzero? {x fixnum?})
+  (eq? x 0))
 
 (define ($fxpositive? N)	($fx> N 0))
 (define ($fxnegative? N)	($fx< N 0))
@@ -269,7 +266,14 @@
 			    (({x fixnum?} {y fixnum?})
 			     (?unsafe-op x y))
 
-			    (({x fixnum?} {y fixnum?} {z fixnum?} . {rest list-of-fixnums?})
+			    (({x fixnum?} {y fixnum?} {z fixnum?} . rest)
+			     ;;FIXME At the next boot image rotation: this validation
+			     ;;must be integrated with  the signature.  (Marco Maggi;
+			     ;;Sun May 10, 2015)
+			     (for-each (lambda (item)
+					 (unless (fixnum? item)
+					   (procedure-argument-violation __who__ "failed argument validation" item)))
+			       rest)
 			     (let loop ((accum  (?unsafe-op (?unsafe-op x y) z))
 					(rest   rest))
 			       (if (pair? rest)
@@ -314,20 +318,27 @@
   (fxarithmetic-shift-left x y))
 
 (define* (fxarithmetic-shift {x fixnum?} {y fixnum?})
-  (if ($fxnonnegative? y)
-      (if ($fx< y (fixnum-width))
-	  (let ((r ($fxsll x y)))
-	    (if ($fx= x ($fxsra r y))
-		r
-	      (%overflow-violation __who__ x y)))
-	(procedure-argument-violation __who__
-	  "expected positive fixnum less than fixnum width as shift argument"
-	  y))
-    (if ($fx> y (- (fixnum-width)))
-	($fxsra x ($fx- 0 y))
-      (procedure-argument-violation __who__
-	"expected negative fixnum less than fixnum width as shift argument"
-	y))))
+  (cond (($fxzero? y)
+	 x)
+	(($positive-index-of-bit-in-fixnum-representation? y)
+	 (let ((r ($fxsll x y)))
+	   (if ($fx= x ($fxsra r y))
+	       r
+	     (%overflow-violation __who__ x y))))
+	(($negative-index-of-bit-in-fixnum-representation? y)
+	 ($fxsra x ($fx- 0 y)))
+	(else
+	 (procedure-argument-violation __who__
+	   "expected positive or negative fixnum representing index of bit in fixnum representation as shift argument"
+	   y))))
+
+(define ($positive-index-of-bit-in-fixnum-representation? Y)
+  (and ($fxpositive? Y)
+       ($fx< Y (fixnum-width))))
+
+(define ($negative-index-of-bit-in-fixnum-representation? Y)
+  (and ($fxnegative? Y)
+       ($fx> Y (- (fixnum-width)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -444,12 +455,12 @@
 
 ;;;; comparison predicates
 
-(define-equality/sorting-predicate fx=?		$fx=	fixnum? list-of-fixnums?)
-(define-equality/sorting-predicate fx<?		$fx<	fixnum? list-of-fixnums?)
-(define-equality/sorting-predicate fx<=?	$fx<=	fixnum? list-of-fixnums?)
-(define-equality/sorting-predicate fx>?		$fx>	fixnum? list-of-fixnums?)
-(define-equality/sorting-predicate fx>=?	$fx>=	fixnum? list-of-fixnums?)
-(define-inequality-predicate       fx!=?	$fx!=	fixnum? list-of-fixnums?)
+(define-equality/sorting-predicate fx=?		$fx=	fixnum?)
+(define-equality/sorting-predicate fx<?		$fx<	fixnum?)
+(define-equality/sorting-predicate fx<=?	$fx<=	fixnum?)
+(define-equality/sorting-predicate fx>?		$fx>	fixnum?)
+(define-equality/sorting-predicate fx>=?	$fx>=	fixnum?)
+(define-inequality-predicate       fx!=?	$fx!=	fixnum?)
 
 (define ($fx!= fx1 fx2)
   ;;FIXME This is  also a primitive operation.   At the next boot  image rotation the
@@ -471,8 +482,8 @@
 
 ;;;; min max
 
-(define-min/max-comparison fxmax $fxmax fixnum? list-of-fixnums?)
-(define-min/max-comparison fxmin $fxmin fixnum? list-of-fixnums?)
+(define-min/max-comparison fxmax $fxmax fixnum?)
+(define-min/max-comparison fxmin $fxmin fixnum?)
 
 ;;FIXME This should be a proper primitive operation.  (Marco Maggi; Fri Mar 27, 2015)
 ;;
@@ -586,7 +597,8 @@
        ((16) ($fixnum->string x 16))
        (else
 	(procedure-argument-violation __who__
-	  "invalid radix, expected 2, 8, 10 or 16" r)))))
+	  "invalid radix, expected 2, 8, 10 or 16"
+	  r)))))
 
   (define ($fixnum->string x radix)
     (cond (($fxzero? x)

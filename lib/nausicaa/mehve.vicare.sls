@@ -873,9 +873,6 @@
     non-negative-exact-integer?
     non-positive-exact-integer?
     exit-hooks
-    expand-form-to-core-language
-    expand-library
-    expand-top-level
     export
     f4b-list->bytevector
     f4l-list->bytevector
@@ -994,9 +991,10 @@
     make-binary-file-descriptor-output-port*
     make-binary-socket-input/output-port
     make-binary-socket-input/output-port*
-    make-compile-time-value
-    compile-time-value?
-    compile-time-value-object
+    make-expand-time-value
+    expand-time-value?
+    expand-time-value-object
+    retrieve-expand-time-value
     make-errno-condition
     make-file-options
     make-guardian
@@ -1294,11 +1292,6 @@
     symbol-bound?
     symbol->keyword
     symbol-value
-    syntax-object?
-    syntax-object-expression
-    syntax-object-marks
-    syntax-object-source-objects
-    syntax-object-ribs
     tanh
     time
     time<=?

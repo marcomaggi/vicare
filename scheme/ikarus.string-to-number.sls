@@ -17,132 +17,136 @@
 
 ;;;; documentation
 ;;
-;;For the  parser constructor see the library  (vicare parser-logic) and
-;;its documentation in Texinfo format.
+;;For  the  parser  constructor  see   the  library  (vicare  parser-logic)  and  its
+;;documentation in Texinfo format.
 ;;
+;;
+;;Syntax of number's string representation
+;;----------------------------------------
+;;
+;; <number>          ::= <num 2>
+;;                     | <num 8>
+;;                     | <num 10>
+;;                     | <num 16>
+;; <num R>           ::= <prefix R> <complex R>
+;; <complex R>       ::= <real R>
+;;                     | <real R> "@" <real R>
+;;                     | <real R> "+" <ureal R> "i"
+;;                     | <real R> "-" <ureal R> "i"
+;;                     | <real R> "+" <naninf> "i"
+;;                     | <real R> "-" <naninf> "i"
+;;                     | <real R> "+" "i"
+;;                     | <real R> "-" "i"
+;;                     | "+" <ureal R> "i"
+;;                     | "-" <ureal R> "i"
+;;                     | "+" <naninf> "i"
+;;                     | "-" <naninf> "i"
+;;                     | "+" "i"
+;;                     | "-" "i"
+;; <real R>          ::= <sign> <ureal R>
+;;                     | "+" <naninf>
+;;                     | "-" <naninf>
+;; <naninf>          ::= "nan.0"
+;;                     | "inf.0"
+;; <ureal R>           | <uinteger R>
+;;                     | <uinteger R> "/" <uinteger R>
+;;                     | <decimal R> <mantissa width>
+;; <decimal 10>      ::= <uinteger 10> <suffix>
+;;                     | "." <digit 10> + <suffix>
+;;                     | <digit 10> + "." <digit 10> * <suffix>
+;;                     | <digit 10> + "." <suffix>
+;; <uinteger R>      ::= <digit R> +
+;; <prefix R>          | <radix R> <exactness>
+;;                     | <exactness <radix R>
+;; <suffix>          ::= epsilon
+;;                     | <exponent-marker> <sign> <digit 10> +
+;; <exponent-marker> ::= "e"
+;;                     | "E"
+;;                     | "s"
+;;                     | "S"
+;;                     | "f"
+;;                     | "F"
+;;                     | "d"
+;;                     | "D"
+;;                     | "l"
+;;                     | "L"
+;; <mantissa-width>  ::= epsilon
+;;                     | "|" <digit +>
+;; <sign>            ::= epsilon
+;;                     | "+"
+;;                     | "-"
+;; <exactness>       ::= epsilon
+;;                     | "#i"
+;;                     | "#I"
+;;                     | "#e"
+;;                     | "#E"
+;; <radix-2>         ::= "#b"
+;;                     | "#B"
+;; <radix-8>         ::= "#o"
+;;                     | "#O"
+;; <radix-10>        ::= epsilon
+;;                     | "#d"
+;;                     | "#D"
+;; <radix-16>        ::= "#x"
+;;                     | "#X"
+;; <digit-2>         ::= "0"
+;;                     | "1"
+;; <digit-8>         ::= "0"
+;;                     | "1"
+;;                     | "2"
+;;                     | "3"
+;;                     | "4"
+;;                     | "5"
+;;                     | "6"
+;;                     | "7"
+;; <digit-10>        ::= <digit>
+;; <digit-16>        ::= <hex-digit>
+;; <digit>           ::= "0"
+;;                     | "1"
+;;                     | "2"
+;;                     | "3"
+;;                     | "4"
+;;                     | "5"
+;;                     | "6"
+;;                     | "7"
+;;                     | "8"
+;;                     | "9"
+;; <hex-digit>       ::= <hex>
+;;                     | "A"
+;;                     | "B"
+;;                     | "C"
+;;                     | "D"
+;;                     | "E"
+;;                     | "F"
+;;                     | "a"
+;;                     | "b"
+;;                     | "c"
+;;                     | "d"
+;;                     | "e"
+;;                     | "f"
 
 
+#!vicare
 (library (ikarus.string-to-number)
   (export string->number define-string->number-parser)
   (import (except (vicare)
 		  string->number
 		  sign)
-    (vicare language-extensions syntaxes)
-    (vicare parser-logic)
-    (vicare unsafe operations)
-    (vicare arguments validation))
-
-;;; <number>          ::= <num 2>
-;;;                     | <num 8>
-;;;                     | <num 10>
-;;;                     | <num 16>
-;;; <num R>           ::= <prefix R> <complex R>
-;;; <complex R>       ::= <real R>
-;;;                     | <real R> "@" <real R>
-;;;                     | <real R> "+" <ureal R> "i"
-;;;                     | <real R> "-" <ureal R> "i"
-;;;                     | <real R> "+" <naninf> "i"
-;;;                     | <real R> "-" <naninf> "i"
-;;;                     | <real R> "+" "i"
-;;;                     | <real R> "-" "i"
-;;;                     | "+" <ureal R> "i"
-;;;                     | "-" <ureal R> "i"
-;;;                     | "+" <naninf> "i"
-;;;                     | "-" <naninf> "i"
-;;;                     | "+" "i"
-;;;                     | "-" "i"
-;;; <real R>          ::= <sign> <ureal R>
-;;;                     | "+" <naninf>
-;;;                     | "-" <naninf>
-;;; <naninf>          ::= "nan.0"
-;;;                     | "inf.0"
-;;; <ureal R>           | <uinteger R>
-;;;                     | <uinteger R> "/" <uinteger R>
-;;;                     | <decimal R> <mantissa width>
-;;; <decimal 10>      ::= <uinteger 10> <suffix>
-;;;                     | "." <digit 10> + <suffix>
-;;;                     | <digit 10> + "." <digit 10> * <suffix>
-;;;                     | <digit 10> + "." <suffix>
-;;; <uinteger R>      ::= <digit R> +
-;;; <prefix R>          | <radix R> <exactness>
-;;;                     | <exactness <radix R>
-;;; <suffix>          ::= epsilon
-;;;                     | <exponent-marker> <sign> <digit 10> +
-;;; <exponent-marker> ::= "e"
-;;;                     | "E"
-;;;                     | "s"
-;;;                     | "S"
-;;;                     | "f"
-;;;                     | "F"
-;;;                     | "d"
-;;;                     | "D"
-;;;                     | "l"
-;;;                     | "L"
-;;; <mantissa-width>  ::= epsilon
-;;;                     | "|" <digit +>
-;;; <sign>            ::= epsilon
-;;;                     | "+"
-;;;                     | "-"
-;;; <exactness>       ::= epsilon
-;;;                     | "#i"
-;;;                     | "#I"
-;;;                     | "#e"
-;;;                     | "#E"
-;;; <radix-2>         ::= "#b"
-;;;                     | "#B"
-;;; <radix-8>         ::= "#o"
-;;;                     | "#O"
-;;; <radix-10>        ::= epsilon
-;;;                     | "#d"
-;;;                     | "#D"
-;;; <radix-16>        ::= "#x"
-;;;                     | "#X"
-;;; <digit-2>         ::= "0"
-;;;                     | "1"
-;;; <digit-8>         ::= "0"
-;;;                     | "1"
-;;;                     | "2"
-;;;                     | "3"
-;;;                     | "4"
-;;;                     | "5"
-;;;                     | "6"
-;;;                     | "7"
-;;; <digit-10>        ::= <digit>
-;;; <digit-16>        ::= <hex-digit>
-;;; <digit>           ::= "0"
-;;;                     | "1"
-;;;                     | "2"
-;;;                     | "3"
-;;;                     | "4"
-;;;                     | "5"
-;;;                     | "6"
-;;;                     | "7"
-;;;                     | "8"
-;;;                     | "9"
-;;; <hex-digit>       ::= <hex>
-;;;                     | "A"
-;;;                     | "B"
-;;;                     | "C"
-;;;                     | "D"
-;;;                     | "E"
-;;;                     | "F"
-;;;                     | "a"
-;;;                     | "b"
-;;;                     | "c"
-;;;                     | "d"
-;;;                     | "e"
-;;;                     | "f"
+    (vicare system $fx)
+    (vicare system $chars)
+    (vicare system $pairs)
+    (vicare system $strings)
+    (vicare parser-logic))
 
 
 ;;;; arguments validation
 
-(define-argument-validation (radix who obj)
+(define (string-to-number-radix? obj)
   (and (fixnum? obj)
        (or ($fx= obj 10)
 	   ($fx= obj 16)
 	   ($fx= obj 2)
-	   ($fx= obj 8)))
-  (procedure-argument-violation who "expected supported radix as argument" obj))
+	   ($fx= obj 8))))
 
 
 ;;;; helpers
@@ -392,18 +396,18 @@
     ((#\#)
      (next parse-prefix-after-hash radix override-radix exactness))
     ((sign) => sn
-     (let-inline ((n0 #f))
+     (let ((n0 #f))
        (next u:sign radix n0 exactness sn)))
     ((#\.)
      (if ($fx= radix 10)
-	 (let-inline ((n0 #f)
-		      (sn +1))
+	 (let ((n0 #f)
+	       (sn +1))
 	   (next u:dot radix n0 exactness sn))
        (fail)))
     ((digit radix) => digit-fx
-     (let-inline ((accum digit-fx)
-		  (n0    #f)
-		  (sn    +1))
+     (let ((accum digit-fx)
+	   (n0    #f)
+	   (sn    +1))
        (next u:digit+ radix n0 exactness sn accum))))
 
   (parse-prefix-after-hash (radix override-radix exactness)
@@ -454,32 +458,32 @@
      ;;must be either false or a pair containing the magnitude.
      (if (and n0 (not (pair? n0)))
 	 (fail)
-       (let-inline ((n1 (sign*accum-with-exactness sn exactness accum)))
+       (let ((n1 (sign*accum-with-exactness sn exactness accum)))
 	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
-     (let-inline ((accum (+ (* accum radix) digit-fx)))
+     (let ((accum (+ (* accum radix) digit-fx)))
        (next u:digit+ radix n0 exactness sn accum)))
     ((#\.)
      (if ($fx= radix 10)
-	 (let-inline ((exponent 0))
+	 (let ((exponent 0))
 	   (next u:digit+dot radix n0 exactness sn accum exponent))
        (fail)))
     ((#\/)
      ;;Terminate the numerator of  an exact rational; the next character
      ;;will be part of the denominator.
-     (let-inline ((numerator accum))
+     (let ((numerator accum))
        (next u:denominator radix n0 exactness sn numerator)))
     ((sign) => sn2
      ;;Terminate  the  real part  of  a  complex  number in  rectangular
      ;;notation and start the imaginary part.
      (if n0
 	 (fail)
-       (let-inline ((n0 (sign*accum-with-exactness sn exactness accum)))
+       (let ((n0 (sign*accum-with-exactness sn exactness accum)))
 	 (next u:sign radix n0 exactness sn2))))
     ((#\i)
      ;;Terminate the  imaginary part of  a complex number  in rectangular
      ;;notation.
-     (let-inline ((n1 (sign*accum-with-exactness sn exactness accum)))
+     (let ((n1 (sign*accum-with-exactness sn exactness accum)))
        (next u:done (%make-number-after-ending-i fail n0 n1))))
     ((#\@)
      ;;Terminate the  magnitude of a  complex number in  polar notation;
@@ -493,13 +497,13 @@
      ;;character will be  part of the exponent.  We  ignore the specific
      ;;exponent because Vicare only has "double" flonums.
      (if ($fx= radix 10)
-	 (let-inline ((exponent 0))
+	 (let ((exponent 0))
 	   (next u:exponent radix n0 exactness sn accum exponent))
        (fail)))
     ((#\|)
      ;;Terminate  an inexact  number with  mantissa width  attached; the
      ;;next character will be part of the mantissa width.
-     (let-inline ((n1 (sign*accum-with-exactness sn 'i accum)))
+     (let ((n1 (sign*accum-with-exactness sn 'i accum)))
        (next u:mant radix n0 n1 exactness))))
 
   (u:digit+dot (radix n0 exactness sn accum exponent)
@@ -514,34 +518,34 @@
      ;;must be either false or a pair containing the magnitude.
      (if (and n0 (not (pair? n0)))
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 exponent)))
-		     (n1    (sign*accum-with-INexactness sn exactness accum)))
+       (let* ((accum (* accum (expt 10 exponent)))
+	      (n1    (sign*accum-with-INexactness sn exactness accum)))
 	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
-     (let-inline ((accum    (+ (* accum radix) digit-fx))
-		  (exponent (- exponent 1)))
+     (let ((accum    (+ (* accum radix) digit-fx))
+	   (exponent (- exponent 1)))
        (next u:digit+dot radix n0 exactness sn accum exponent)))
     ((#\i)
      ;;Terminate the  imaginary part of  a complex number  in rectangular
      ;;notation.
-     (let*-inline ((accum (* accum (expt 10 exponent)))
-		   (n1    (sign*accum-with-INexactness sn exactness accum)))
+     (let* ((accum (* accum (expt 10 exponent)))
+	    (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:done (%make-number-after-ending-i fail n0 n1))))
     ((sign) => sn2
      ;;Terminate  the  real part  of  a  complex  number in  rectangular
      ;;notation and start the imaginary part.
      (if n0
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 exponent)))
-		     (n1    (sign*accum-with-INexactness sn exactness accum)))
+       (let* ((accum (* accum (expt 10 exponent)))
+	      (n1    (sign*accum-with-INexactness sn exactness accum)))
 	 (next u:sign radix n1 exactness sn2))))
     ((#\@)
      ;;Terminate the  magnitude of a  complex number in  polar notation;
      ;;the next character will be part of the angle.
      (if n0
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 exponent)))
-		     (mag   (sign*accum-with-INexactness sn exactness accum)))
+       (let* ((accum (* accum (expt 10 exponent)))
+	      (mag   (sign*accum-with-INexactness sn exactness accum)))
 	 (next u:polar radix mag exactness))))
     ((#\e #\E #\s #\S #\f #\F #\d #\D #\l #\L) ;exponent markers
      ;;Terminate  the  significand  of   an  inexact  number;  the  next
@@ -553,8 +557,8 @@
     ((#\|)
      ;;Terminate  an inexact  number with  mantissa width  attached; the
      ;;next character will be part of the mantissa width.
-     (let*-inline ((accum (* accum (expt 10 exponent)))
-		   (n1    (sign*accum-with-INexactness sn exactness accum)))
+     (let* ((accum (* accum (expt 10 exponent)))
+	    (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:mant radix n0 n1 exactness))))
 
   (u:dot (radix n0 exactness sn)
@@ -562,8 +566,8 @@
     ;;is NOT preceeded by digits itseld, for example "-.123".
     ;;
     ((digit radix) => digit-fx
-     (let-inline ((accum    digit-fx)
-		  (exponent -1))
+     (let ((accum    digit-fx)
+	   (exponent -1))
        (next u:digit+dot radix n0 exactness sn accum exponent))))
 
 ;;; --------------------------------------------------------------------
@@ -581,7 +585,7 @@
     ;;is "+nan.0" or "-nan.0".
     ;;
     ((digit radix) => digit-fx
-     (let-inline ((accum digit-fx))
+     (let ((accum digit-fx))
        (next u:digit+ radix n0 exactness sn accum)))
     ((#\i)
      (next u:sign-i radix n0 exactness sn))
@@ -613,24 +617,24 @@
     ((:end-of-input)
      (if (zero? accum)
 	 (fail)
-       (let-inline ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
+       (let ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
 	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
-     (let-inline ((accum (+ (* accum radix) digit-fx)))
+     (let ((accum (+ (* accum radix) digit-fx)))
        (next u:denominator+ radix n0 exactness sn numerator accum)))
     ((sign) => sn2
      ;;Terminate  an exact  rational number  being  the real  part of  a
      ;;complex in rectangular notation and start the imaginary part.
      (if (or n0 (zero? accum))
 	 (fail)
-       (let-inline ((n0 (sign*accum-with-exactness sn exactness (/ numerator accum))))
+       (let ((n0 (sign*accum-with-exactness sn exactness (/ numerator accum))))
 	 (next u:sign radix n0 exactness sn2))))
     ((#\@)
      ;;Terminate  an exact  rational  number being  the  magnitude of  a
      ;;complex in polar notation and start the angle part.
      (if (or n0 (zero? accum))
 	 (fail)
-       (let-inline ((mag (sign*accum-with-exactness sn exactness (/ numerator accum))))
+       (let ((mag (sign*accum-with-exactness sn exactness (/ numerator accum))))
 	 (next u:polar radix mag exactness))))
     ((#\i)
      ;;Terminate an exact rational number  being the imaginary part of a
@@ -638,7 +642,7 @@
      ;;end-of-number are valid.
      (if (zero? accum)
 	 (fail)
-       (let-inline ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
+       (let ((n1 (sign*accum-with-exactness sn exactness (/ numerator accum))))
 	 (next u:done (%make-number-after-ending-i fail n0 n1))))))
 
 ;;; --------------------------------------------------------------------
@@ -663,18 +667,18 @@
     ;;complex number.
     ;;
     ((digit radix) => digit-fx
-     (let-inline ((n0    (cons 'polar mag))
-		  (sn    +1)
-		  (accum digit-fx))
+     (let ((n0    (cons 'polar mag))
+	   (sn    +1)
+	   (accum digit-fx))
        (next u:digit+ radix n0 exactness sn accum)))
     ((#\.)
      (if ($fx= radix 10)
-	 (let-inline ((n0 (cons 'polar mag))
-		      (sn +1))
+	 (let ((n0 (cons 'polar mag))
+	       (sn +1))
 	   (next u:dot radix n0 exactness sn))
        (fail)))
     ((sign) => sn
-     (let-inline ((n0 (cons 'polar mag)))
+     (let ((n0 (cons 'polar mag)))
        (next u:sign radix n0 exactness sn))))
 
 ;;; --------------------------------------------------------------------
@@ -705,8 +709,8 @@
     ;;keeping track of the sign.
     ;;
     ((digit radix) => digit-fx
-     (let-inline ((exponent2 digit-fx)
-		  (exp-sign  +1))
+     (let ((exponent2 digit-fx)
+	   (exp-sign  +1))
        (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign)))
     ((sign) => sn2
      (next u:exponent+sign radix n0 exactness sn accum exponent1 sn2)))
@@ -716,7 +720,7 @@
     ;;sign have been parsed; a digit is expected.
     ;;
     ((digit radix) => digit-fx
-     (let-inline ((exponent2 digit-fx))
+     (let ((exponent2 digit-fx))
        (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign))))
 
   (u:exponent+digit (radix n0 exactness sn accum exponent1 exponent2 exp-sign)
@@ -730,39 +734,39 @@
      ;;must be either false or a pair containing the magnitude.
      (if (and n0 (not (pair? n0))) #;(number? n0)
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
-		     (n1    (sign*accum-with-INexactness sn exactness accum)))
+       (let* ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+	      (n1    (sign*accum-with-INexactness sn exactness accum)))
 	 (%make-number-non-rectangular n0 n1 (fail)))))
     ((digit radix) => digit-fx
-     (let-inline ((exponent2 (+ (* exponent2 radix) digit-fx)))
+     (let ((exponent2 (+ (* exponent2 radix) digit-fx)))
        (next u:exponent+digit radix n0 exactness sn accum exponent1 exponent2 exp-sign)))
     ((sign) => sn2
      ;;Terminate  an inexact  number being  the real  part of  a complex
      ;;number in rectangular notation and start the imaginary part.
      (if n0
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
-		     (n1    (sign*accum-with-INexactness sn exactness accum)))
+       (let* ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+	      (n1    (sign*accum-with-INexactness sn exactness accum)))
 	 (next u:sign radix n1 exactness sn2))))
     ((#\@)
      ;;Terminate an inexact number being the magnitude part of a complex
      ;;number in polar notation and start the angle part.
      (if n0
 	 (fail)
-       (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
-		     (mag   (sign*accum-with-INexactness sn exactness accum)))
+       (let* ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+	      (mag   (sign*accum-with-INexactness sn exactness accum)))
 	 (next u:polar radix mag exactness))))
     ((#\i)
      ;;Terminate an inexact number being the imaginary part of a complex
      ;;number in rectangular notation; this must also end the number.
-     (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
-		   (n1    (sign*accum-with-INexactness sn exactness accum)))
+     (let* ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+	    (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:done (%make-number-after-ending-i fail n0 n1))))
     ((#\|)
      ;;Terminate an  inexact number with a mantissa  width attached; the
      ;;next character will be part of the mantissa width.
-     (let*-inline ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
-		   (n1    (sign*accum-with-INexactness sn exactness accum)))
+     (let* ((accum (* accum (expt 10 (+ exponent1 (* exponent2 exp-sign)))))
+	    (n1    (sign*accum-with-INexactness sn exactness accum)))
        (next u:mant radix n0 n1 exactness))))
 
 ;;; --------------------------------------------------------------------
@@ -817,14 +821,14 @@
     ;;This operator is a subroutine of U:SIGN.
     ;;
     ((:end-of-input)
-     (let-inline ((n1 (sign*accum-with-exactness sn exactness 1)))
+     (let ((n1 (sign*accum-with-exactness sn exactness 1)))
        (%make-number-after-ending-i fail n0 n1)))
     ((#\n)
      ;;After  parsing the  #\n we  already know  that the  only possible
      ;;numbers  are  +inf.0 and  -inf.0,  and  since  we know  the  sign
      ;;already, we can compute N1 right now.
      ;;
-     (let-inline ((n1 (* sn +inf.0)))
+     (let ((n1 (* sn +inf.0)))
        (next u:sign-in radix n0 n1 exactness))))
 
   (u:sign-in (radix n0 n1 exactness)
@@ -925,21 +929,21 @@
      ;;part.
      (if n0
 	 (fail)
-       (let-inline ((n1 +nan.0))
+       (let ((n1 +nan.0))
 	 (next u:sign radix n1 exactness sn2))))
     ((#\@)
      ;;Terminate  the  magnitude  part  of  a complex  number  in  polar
      ;;notation (with the magnitude being NaN) and start the angle part.
      (if n0
 	 (fail)
-       (let-inline ((n1 +nan.0))
+       (let ((n1 +nan.0))
 	 (next u:polar radix n1 exactness))))
     ((#\i)
      ;;Terminate the  imaginary part of a complex  number in rectangular
      ;;notation (with the imaginary part  being NaN); this must also end
      ;;the numeric string.
      (next u:done
-	   (let-inline ((n1 +nan.0))
+	   (let ((n1 +nan.0))
 	     (%make-number-after-ending-i fail n0 n1)))))
 
   #| end of DEFINE-PARSER-LOGIC |# )
@@ -950,49 +954,38 @@
 (define-string->number-parser string->token-or-false
   (parse-numeric-string))
 
-(define string->number
-  ;;Defined  by R6RS.   Convert a  string into  a number;  if successful
-  ;;return the number object, else return false.  The string is meant to
-  ;;hold a complete number from the first to the last character.
+(case-define* string->number
+  ;;Defined by R6RS.  Convert a string into a number; if successful return the number
+  ;;object, else return  false.  The string is  meant to hold a  complete number from
+  ;;the first to the last character.
   ;;
-  (case-lambda
-   ((S)
-    (define who 'string->number)
-    (with-arguments-validation (who)
-	((string S))
-      ;;The arguments:
-      ;;
-      ;;  S ($string-length S) 0
-      ;;
-      ;;are  the device-specific arguments  for the  operator functions:
-      ;;INPUT.STRING, INPUT.LENGTH, INPUT.INDEX.
-      ;;
-      ;;The argument 10  is the selected radix, which  can be overridden
-      ;;by the prefixes #o, #b, #x, #d in the string S itself.
-      ;;
-      ;;The first #f argument is the override radix; if the string S has
-      ;;a prefix  among #o, #b, #x,  #d, the radix  is overridden.  This
-      ;;argument  exists for  the only  purpose of  checking  that radix
-      ;;prefixes are not used multiple times.
-      ;;
-      ;;The second #f argument is  the exactness specification and it is
-      ;;selected by the  prefixes #i and #e.  This  value should be: #f,
-      ;;the symbol "e" or the symbol "i".
-      ;;
-      (parse-numeric-string S ($string-length S) 0
-			    10 #f #f)))
-   ((S radix)
-    (define who 'string->number)
-    (with-arguments-validation (who)
-	((string S)
-	 (radix	 radix))
-      (parse-numeric-string S ($string-length S) 0
-			    radix #f #f)))))
+  (({S string?})
+   ;;The arguments:
+   ;;
+   ;;  S ($string-length S) 0
+   ;;
+   ;;are  the device-specific  arguments  for the  operator functions:  INPUT.STRING,
+   ;;INPUT.LENGTH, INPUT.INDEX.
+   ;;
+   ;;The argument 10 is  the selected radix, which can be  overridden by the prefixes
+   ;;#o, #b, #x, #d in the string S itself.
+   ;;
+   ;;The first #f argument is the override radix;  if the string S has a prefix among
+   ;;#o, #b,  #x, #d,  the radix is  overridden.  This argument  exists for  the only
+   ;;purpose of checking that radix prefixes are not used multiple times.
+   ;;
+   ;;The second #f argument is the exactness  specification and it is selected by the
+   ;;prefixes #i and #e.  This value should be: #f, the symbol "e" or the symbol "i".
+   ;;
+   (parse-numeric-string S ($string-length S) 0 10    #f #f))
+  (({S string?} {radix string-to-number-radix?})
+   (parse-numeric-string S ($string-length S) 0 radix #f #f))
+  #| end of CASE-DEFINE* |# )
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:
@@ -1022,6 +1015,4 @@
 ;;eval: (put 'u:exponent	'scheme-indent-function 1)
 ;;eval: (put 'u:exponent+sign	'scheme-indent-function 1)
 ;;eval: (put 'u:exponent+digit	'scheme-indent-function 1)
-;;eval: (put 'let-inline	'scheme-indent-function 1)
-;;eval: (put 'let*-inline	'scheme-indent-function 1)
 ;;End:

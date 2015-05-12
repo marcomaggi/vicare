@@ -8,7 +8,7 @@
 ;;;
 ;;;	Test the compiler pass "color by chaitin".
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -27,13 +27,17 @@
 #!vicare
 (import (vicare)
   (vicare checks)
+  (only (vicare expander)
+	expand-form-to-core-language)
+  (only (vicare libraries)
+	expand-library->sexp)
   (prefix (vicare compiler)
 	  compiler.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler pass: color by chaitin\n")
 
-(compiler.descriptive-labels   #t)
+(compiler.generate-descriptive-labels?   #t)
 (compiler.generate-debug-calls #f)
 
 

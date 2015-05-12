@@ -25,7 +25,7 @@
 
 
 #!vicare
-(library (ikarus library-utils)
+(library (psyntax.library-utils)
   (export
     init-search-paths-and-directories
 

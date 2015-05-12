@@ -36,31 +36,45 @@
 
     ;; validation
     procedure-argument-validation-with-predicate
-    return-value-validation-with-predicate)
+    return-value-validation-with-predicate
+    signature-rest-argument-validation-with-predicate)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Fri May 8, 2015)
+		  procedure-signature-argument-violation
+		  ;;;
+
 		  any->symbol		any->string
 		  always-true		always-false
 		  procedure-and-error
 		  procedure-argument-validation-with-predicate
-		  return-value-validation-with-predicate))
+		  return-value-validation-with-predicate)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Fri May 8,
+    ;;2015)
+    (only (ikarus conditions)
+	  procedure-signature-argument-violation)
+    (only (vicare system $fx)
+	  $fxadd1))
 
 
 ;;;; conversion
 
-(define (any->symbol obj)
+(define* (any->symbol obj)
   (cond ((string? obj)
 	 (string->symbol obj))
+	((symbol? obj)
+	 obj)
 	(else
-	 (procedure-argument-violation '<symbol>
+	 (procedure-argument-violation __who__
 	   "invalid source object type for conversion" obj))))
 
-(define (any->string obj)
+(define* (any->string obj)
   (cond ((symbol? obj)
 	 (symbol->string obj))
 	((number? obj)
 	 (number->string obj))
 	(else
-	 (procedure-argument-violation '<string>
+	 (procedure-argument-violation __who__
 	   "invalid source object type for conversion" obj))))
 
 
@@ -71,6 +85,46 @@
 
 (define (always-false . args)
   #f)
+
+(define (signature-rest-argument-validation-with-predicate who arg-counter pred pred-sexp arg*)
+  ;;This is used by LAMBDA* and similar syntaxes to validate rest and args arguments.
+  ;;
+  ;;Let's say we have:
+  ;;
+  ;;   (define* (doit a . {rest fixnum?})
+  ;;     ---)
+  ;;
+  ;;   (doit 1 2 3 4)
+  ;;
+  ;;we know that REST will be a proper list (possibly null), so we only need to check
+  ;;that every item  in REST is a fixnum,  this is what this function  does; for this
+  ;;example this function must be called as:
+  ;;
+  ;;   (signature-rest-argument-validation-with-predicate 'doit 2 fixnum? 'fixnum? rest)
+  ;;
+  ;;notice that the argument counter is 1-based.
+  ;;
+  ;;Let's say we have:
+  ;;
+  ;;   (define* (doit . {args fixnum?})
+  ;;     ---)
+  ;;
+  ;;   (doit 1 2 3 4)
+  ;;
+  ;;we know that ARGS will be a proper list (possibly null), so we only need to check
+  ;;that every item  in ARGS is a fixnum,  this is what this function  does; for this
+  ;;example this function must be called as:
+  ;;
+  ;;   (signature-rest-argument-validation-with-predicate 'doit 1 fixnum? 'fixnum? args)
+  ;;
+  ;;notice that the argument counter is 1-based.
+  ;;
+  (when (pair? arg*)
+    (if (pred (car arg*))
+	(signature-rest-argument-validation-with-predicate who ($fxadd1 arg-counter) pred pred-sexp (cdr arg*))
+      (procedure-signature-argument-violation who
+	"failed argument validation"
+	arg-counter pred-sexp (car arg*)))))
 
 
 ;;;; object type validation
@@ -112,7 +166,7 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.object-utilities")))
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

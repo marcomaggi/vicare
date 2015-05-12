@@ -96,6 +96,19 @@ AM_COND_IF([WANT_ARGUMENTS_VALIDATION],
 AC_SUBST([VICARE_ARGUMENTS_VALIDATION],
   [$vicare_subst_ARGUMENTS_VALIDATION])
 
+VICARE_ENABLE_OPTION([GENERATE_DESCRIPTIVE_LABELS],[descriptive-labels-generation],[no],
+  [whether to generate descriptive pretty names for internal gensyms],
+  [enable generation of descriptive pretty names for internal gensyms])
+AM_CONDITIONAL([WANT_DESCRIPTIVE_LABELS_GENERATION],
+  [test "x$vicare_enable_GENERATE_DESCRIPTIVE_LABELS" = xyes])
+
+vicare_subst_DESCRIPTIVE_LABELS_GENERATION=f
+AM_COND_IF([WANT_DESCRIPTIVE_LABELS_GENERATION],
+  [vicare_subst_DESCRIPTIVE_LABELS_GENERATION=t],
+  [vicare_subst_DESCRIPTIVE_LABELS_GENERATION=f])
+AC_SUBST([VICARE_DESCRIPTIVE_LABELS_GENERATION],
+  [$vicare_subst_DESCRIPTIVE_LABELS_GENERATION])
+
 dnl --------------------------------------------------------------------
 
 VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],

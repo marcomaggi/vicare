@@ -182,7 +182,7 @@
 
   (check-for-procedure-argument-violation
       (symbol<? 'abc 'def 'ghi 'lmn 123)
-    => '(symbol<? ((list-of-symbols? obj*) (123))))
+    => '(symbol<? (123)))
 
 ;;;
 
@@ -204,7 +204,7 @@
 
   (check-for-procedure-argument-violation
       (symbol<=? 'abc 'def 'ghi 'lmn 123)
-    => '(symbol<=? ((list-of-symbols? obj*) (123))))
+    => '(symbol<=? (123)))
 
 ;;;
 
@@ -226,7 +226,7 @@
 
   (check-for-procedure-argument-violation
       (symbol>? 'abc 'def 'ghi 'lmn 123)
-    => '(symbol>? ((list-of-symbols? obj*) (123))))
+    => '(symbol>? (123)))
 ;;;
 
   (check-for-procedure-argument-violation
@@ -247,7 +247,7 @@
 
   (check-for-procedure-argument-violation
       (symbol>=? 'abc 'def 'ghi 'lmn 123)
-    => '(symbol>=? ((list-of-symbols? obj*) (123))))
+    => '(symbol>=? (123)))
   #t)
 
 

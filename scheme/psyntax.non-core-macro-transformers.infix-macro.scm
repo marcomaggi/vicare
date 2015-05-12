@@ -15,7 +15,7 @@
 ;;;        of Technology.  Proceedings of the 1st Annual ACM SIGACT-SIGPLAN Symposium
 ;;;        on Principles of Programming Languages (1973).
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
@@ -33,13 +33,18 @@
 
 #!vicare
 
+(define-module-who infix)
+
+(define (synner-internal-error message subform)
+  (assertion-violation/internal-error __module_who__ message subform))
+
 (define (infix-macro input-form.stx)
   ;;Transformer  function used  to expand  Vicare's INFIX  macros from  the top-level
   ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
   ;;object that must be further expanded.
   ;;
   (define (synner message subform)
-    (syntax-violation 'infix message input-form.stx subform))
+    (syntax-violation __module_who__ message input-form.stx subform))
   (define (immediate-end-of-input-handler)
     ;;Special case: no input tokens.
     (bless
@@ -199,75 +204,75 @@
 	   ((:)		COLON-TOKEN)
 	   (else
 	    (cond
-	     ((free-id=? obj ID:+)			PLUS-TOKEN)
-	     ((free-id=? obj ID:-)			MINUS-TOKEN)
-	     ((free-id=? obj ID:*)			MUL-TOKEN)
-	     ((free-id=? obj ID:/)			DIV-TOKEN)
-	     ((free-id=? obj ID:++)			INCR-TOKEN)
-	     ((free-id=? obj ID:--)			DECR-TOKEN)
-	     ((free-id=? obj ID:div)			IDIV-TOKEN)
-	     ((free-id=? obj ID:mod)			IMOD-TOKEN)
-	     ((free-id=? obj ID:div0)			IDIV0-TOKEN)
-	     ((free-id=? obj ID:mod0)			IMOD0-TOKEN)
-	     ((free-id=? obj ID:expt)			EXPT-TOKEN)
+	     ((~free-identifier=? obj ID:+)			PLUS-TOKEN)
+	     ((~free-identifier=? obj ID:-)			MINUS-TOKEN)
+	     ((~free-identifier=? obj ID:*)			MUL-TOKEN)
+	     ((~free-identifier=? obj ID:/)			DIV-TOKEN)
+	     ((~free-identifier=? obj ID:++)			INCR-TOKEN)
+	     ((~free-identifier=? obj ID:--)			DECR-TOKEN)
+	     ((~free-identifier=? obj ID:div)			IDIV-TOKEN)
+	     ((~free-identifier=? obj ID:mod)			IMOD-TOKEN)
+	     ((~free-identifier=? obj ID:div0)			IDIV0-TOKEN)
+	     ((~free-identifier=? obj ID:mod0)			IMOD0-TOKEN)
+	     ((~free-identifier=? obj ID:expt)			EXPT-TOKEN)
 
-	     ((free-id=? obj ID:fx+)			FXPLUS-TOKEN)
-	     ((free-id=? obj ID:fx-)			FXMINUS-TOKEN)
-	     ((free-id=? obj ID:fx*)			FXMUL-TOKEN)
-	     ((free-id=? obj ID:fxdiv)			FXDIV-TOKEN)
-	     ((free-id=? obj ID:fxmod)			FXMOD-TOKEN)
-	     ((free-id=? obj ID:fxdiv0)			FXDIV0-TOKEN)
-	     ((free-id=? obj ID:fxmod0)			FXMOD0-TOKEN)
+	     ((~free-identifier=? obj ID:fx+)			FXPLUS-TOKEN)
+	     ((~free-identifier=? obj ID:fx-)			FXMINUS-TOKEN)
+	     ((~free-identifier=? obj ID:fx*)			FXMUL-TOKEN)
+	     ((~free-identifier=? obj ID:fxdiv)			FXDIV-TOKEN)
+	     ((~free-identifier=? obj ID:fxmod)			FXMOD-TOKEN)
+	     ((~free-identifier=? obj ID:fxdiv0)			FXDIV0-TOKEN)
+	     ((~free-identifier=? obj ID:fxmod0)			FXMOD0-TOKEN)
 
-	     ((free-id=? obj ID:fl+)			FLPLUS-TOKEN)
-	     ((free-id=? obj ID:fl-)			FLMINUS-TOKEN)
-	     ((free-id=? obj ID:fl*)			FLMUL-TOKEN)
-	     ((free-id=? obj ID:fl/)			FLDIV-TOKEN)
-	     ((free-id=? obj ID:flexpt)			FLEXPT-TOKEN)
+	     ((~free-identifier=? obj ID:fl+)			FLPLUS-TOKEN)
+	     ((~free-identifier=? obj ID:fl-)			FLMINUS-TOKEN)
+	     ((~free-identifier=? obj ID:fl*)			FLMUL-TOKEN)
+	     ((~free-identifier=? obj ID:fl/)			FLDIV-TOKEN)
+	     ((~free-identifier=? obj ID:flexpt)			FLEXPT-TOKEN)
 
-	     ((free-id=? obj ID:and)			AND-TOKEN)
-	     ((free-id=? obj ID:or)			OR-TOKEN)
-	     ((free-id=? obj ID:xor)			XOR-TOKEN)
-	     ((free-id=? obj ID:not)			NOT-TOKEN)
+	     ((~free-identifier=? obj ID:and)			AND-TOKEN)
+	     ((~free-identifier=? obj ID:or)			OR-TOKEN)
+	     ((~free-identifier=? obj ID:xor)			XOR-TOKEN)
+	     ((~free-identifier=? obj ID:not)			NOT-TOKEN)
 
-	     ((free-id=? obj ID:<)			LESS-THAN-TOKEN)
-	     ((free-id=? obj ID:>)			GREATER-THAN-TOKEN)
-	     ((free-id=? obj ID:<=)			LESS-THAN-EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:>=)			GREATER-THAN-EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:=)			EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:!=)			NOT-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:<)			LESS-THAN-TOKEN)
+	     ((~free-identifier=? obj ID:>)			GREATER-THAN-TOKEN)
+	     ((~free-identifier=? obj ID:<=)			LESS-THAN-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:>=)			GREATER-THAN-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:=)			EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:!=)			NOT-EQUAL-TO-TOKEN)
 
-	     ((free-id=? obj ID:fx<?)			FXLESS-THAN-TOKEN)
-	     ((free-id=? obj ID:fx>?)			FXGREATER-THAN-TOKEN)
-	     ((free-id=? obj ID:fx<=?)			FXLESS-THAN-EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:fx>=?)			FXGREATER-THAN-EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:fx=?)			FXEQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:fx<?)			FXLESS-THAN-TOKEN)
+	     ((~free-identifier=? obj ID:fx>?)			FXGREATER-THAN-TOKEN)
+	     ((~free-identifier=? obj ID:fx<=?)			FXLESS-THAN-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:fx>=?)			FXGREATER-THAN-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:fx=?)			FXEQUAL-TO-TOKEN)
 
-	     ((free-id=? obj ID:fl<?)			FLLESS-THAN-TOKEN)
-	     ((free-id=? obj ID:fl>?)			FLGREATER-THAN-TOKEN)
-	     ((free-id=? obj ID:fl<=?)			FLLESS-THAN-EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:fl>=?)			FLGREATER-THAN-EQUAL-TO-TOKEN)
-	     ((free-id=? obj ID:fl=?)			FLEQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:fl<?)			FLLESS-THAN-TOKEN)
+	     ((~free-identifier=? obj ID:fl>?)			FLGREATER-THAN-TOKEN)
+	     ((~free-identifier=? obj ID:fl<=?)			FLLESS-THAN-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:fl>=?)			FLGREATER-THAN-EQUAL-TO-TOKEN)
+	     ((~free-identifier=? obj ID:fl=?)			FLEQUAL-TO-TOKEN)
 
-	     ((free-id=? obj ID:eq?)			EQ-PRED-TOKEN)
-	     ((free-id=? obj ID:eqv?)			EQV-PRED-TOKEN)
-	     ((free-id=? obj ID:equal?)			EQUAL-PRED-TOKEN)
-
-	     ;; bitwise operators
-	     ((free-id=? obj ID:bitwise-and)		BITWISE-AND-TOKEN)
-	     ((free-id=? obj ID:bitwise-ior)		BITWISE-IOR-TOKEN)
-	     ((free-id=? obj ID:bitwise-xor)		BITWISE-XOR-TOKEN)
-	     ((free-id=? obj ID:bitwise-not)		BITWISE-NOT-TOKEN)
-	     ((free-id=? obj ID:bitwise-arithmetic-shift-left)	BITWISE-SHIFT-LEFT-TOKEN)
-	     ((free-id=? obj ID:bitwise-arithmetic-shift-right)	BITWISE-SHIFT-RIGHT-TOKEN)
+	     ((~free-identifier=? obj ID:eq?)			EQ-PRED-TOKEN)
+	     ((~free-identifier=? obj ID:eqv?)			EQV-PRED-TOKEN)
+	     ((~free-identifier=? obj ID:equal?)			EQUAL-PRED-TOKEN)
 
 	     ;; bitwise operators
-	     ((free-id=? obj ID:fxand)			FXAND-TOKEN)
-	     ((free-id=? obj ID:fxior)			FXIOR-TOKEN)
-	     ((free-id=? obj ID:fxxor)			FXXOR-TOKEN)
-	     ((free-id=? obj ID:fxnot)			FXNOT-TOKEN)
-	     ((free-id=? obj ID:fxarithmetic-shift-left)	FXSHIFT-LEFT-TOKEN)
-	     ((free-id=? obj ID:fxarithmetic-shift-right)	FXSHIFT-RIGHT-TOKEN)
+	     ((~free-identifier=? obj ID:bitwise-and)		BITWISE-AND-TOKEN)
+	     ((~free-identifier=? obj ID:bitwise-ior)		BITWISE-IOR-TOKEN)
+	     ((~free-identifier=? obj ID:bitwise-xor)		BITWISE-XOR-TOKEN)
+	     ((~free-identifier=? obj ID:bitwise-not)		BITWISE-NOT-TOKEN)
+	     ((~free-identifier=? obj ID:bitwise-arithmetic-shift-left)	BITWISE-SHIFT-LEFT-TOKEN)
+	     ((~free-identifier=? obj ID:bitwise-arithmetic-shift-right)	BITWISE-SHIFT-RIGHT-TOKEN)
+
+	     ;; bitwise operators
+	     ((~free-identifier=? obj ID:fxand)			FXAND-TOKEN)
+	     ((~free-identifier=? obj ID:fxior)			FXIOR-TOKEN)
+	     ((~free-identifier=? obj ID:fxxor)			FXXOR-TOKEN)
+	     ((~free-identifier=? obj ID:fxnot)			FXNOT-TOKEN)
+	     ((~free-identifier=? obj ID:fxarithmetic-shift-left)	FXSHIFT-LEFT-TOKEN)
+	     ((~free-identifier=? obj ID:fxarithmetic-shift-right)	FXSHIFT-RIGHT-TOKEN)
 
 	     (else
 	      ;;It is a variable.
@@ -394,7 +399,7 @@
 	    ((end-of-input? token)
 	     left-semantic-value)
 	    (else
-	     (synner "internal error: invalid object from lexer" token)))))
+	     (synner-internal-error "invalid object from lexer" token)))))
 
   ;;When correct  input is given:  we expect at least  a sub-expression.  It  is an
   ;;exception if we immediately find end-of-input.
@@ -406,7 +411,7 @@
 	   ;;We got an EOI before composing a full expression.
 	   (immediate-end-of-input-handler))
 	  (else
-	   (synner "internal error: invalid object from lexer" token)))))
+	   (synner-internal-error "invalid object from lexer" token)))))
 
 
 (define-record-type <token>
@@ -847,7 +852,7 @@
 	    ((end-of-input? token)
 	     (end-of-input-handler))
 	    (else
-	     (synner "internal error: invalid object from lexer" token))))))
+	     (synner-internal-error "invalid object from lexer" token))))))
 
 (define (<left-paren>-led this-token lexer synner left-semantic-value)
   ;;This token  is a left parenthesis,  there is a  left semantic value and  it has
@@ -912,7 +917,7 @@
 	    ((end-of-input? token)
 	     (end-of-input-handler))
 	    (else
-	     (synner "internal error: invalid object from lexer" token)))))
+	     (synner-internal-error "invalid object from lexer" token)))))
 
   (unless (identifier? left-semantic-value)
     (synner "expected identifier as left operand in procedure application"
@@ -932,7 +937,7 @@
 	  ((end-of-input? token)
 	   (end-of-input-handler))
 	  (else
-	   (synner "internal error: invalid object from lexer" token)))))
+	   (synner-internal-error "invalid object from lexer" token)))))
 
 
 (define-record-type <colon>
@@ -1017,7 +1022,7 @@
 	    ((end-of-input? token)
 	     (end-of-input-handler))
 	    (else
-	     (synner "internal error: invalid object from lexer" token))))))
+	     (synner-internal-error "invalid object from lexer" token))))))
 
 
 ;;;; binding powers

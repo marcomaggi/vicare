@@ -1,34 +1,107 @@
 ;;;Copyright (c) 2010-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;
-;;;Permission is hereby granted, free of charge, to any person obtaining
-;;;a  copy of  this  software and  associated  documentation files  (the
-;;;"Software"), to  deal in the Software  without restriction, including
-;;;without limitation  the rights to use, copy,  modify, merge, publish,
-;;;distribute, sublicense,  and/or sell copies  of the Software,  and to
-;;;permit persons to whom the Software is furnished to do so, subject to
-;;;the following conditions:
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
 ;;;
-;;;The  above  copyright notice  and  this  permission  notice shall  be
-;;;included in all copies or substantial portions of the Software.
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
 ;;;
-;;;THE  SOFTWARE IS  PROVIDED "AS  IS",  WITHOUT WARRANTY  OF ANY  KIND,
-;;;EXPRESS OR  IMPLIED, INCLUDING BUT  NOT LIMITED TO THE  WARRANTIES OF
-;;;MERCHANTABILITY,    FITNESS   FOR    A    PARTICULAR   PURPOSE    AND
-;;;NONINFRINGEMENT.  IN NO EVENT  SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-;;;BE LIABLE  FOR ANY CLAIM, DAMAGES  OR OTHER LIABILITY,  WHETHER IN AN
-;;;ACTION OF  CONTRACT, TORT  OR OTHERWISE, ARISING  FROM, OUT OF  OR IN
-;;;CONNECTION  WITH THE SOFTWARE  OR THE  USE OR  OTHER DEALINGS  IN THE
-;;;SOFTWARE.
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
-;;non-core macros to their macro transformers.
-;;
-;;NOTE This  module is very  long, so it  is split into  multiple code
-;;pages.  (Marco Maggi; Sat Apr 27, 2013)
-;;
+;;;; copyright notice for the original code of the XOR macro
+;;;
+;;;Copyright (c) 2008 Derick Eddington
+;;;
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
+;;;
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
+;;;
+;;;Except as  contained in this  notice, the name(s)  of the above  copyright holders
+;;;shall not be  used in advertising or  otherwise to promote the sale,  use or other
+;;;dealings in this Software without prior written authorization.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND NONINFRINGEMENT.   IN NO EVENT SHALL  THE AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+;;;;copyright notice for the original code of RECEIVE
+;;;
+;;;Copyright (C) John David Stone (1999). All Rights Reserved.
+;;;
+;;;Permission is hereby  granted, free of charge,  to any person obtaining  a copy of
+;;;this software and associated documentation files  (the "Software"), to deal in the
+;;;Software  without restriction,  including without  limitation the  rights to  use,
+;;;copy, modify,  merge, publish, distribute,  sublicense, and/or sell copies  of the
+;;;Software,  and to  permit persons  to whom  the Software  is furnished  to do  so,
+;;;subject to the following conditions:
+;;;
+;;;The above  copyright notice and  this permission notice  shall be included  in all
+;;;copies or substantial portions of the Software.
+;;;
+;;;THE  SOFTWARE IS  PROVIDED  "AS IS",  WITHOUT  WARRANTY OF  ANY  KIND, EXPRESS  OR
+;;;IMPLIED, INCLUDING BUT  NOT LIMITED TO THE WARRANTIES  OF MERCHANTABILITY, FITNESS
+;;;FOR A  PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO  EVENT SHALL THE  AUTHORS OR
+;;;COPYRIGHT HOLDERS BE LIABLE FOR ANY  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;;;AN ACTION OF  CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF  OR IN CONNECTION
+;;;WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+(library (psyntax.non-core-macro-transformers)
+  (export non-core-macro-transformer)
+  (import (except (rnrs)
+		  eval
+		  environment		environment?
+		  null-environment	scheme-report-environment
+		  identifier?
+		  bound-identifier=?	free-identifier=?
+		  generate-temporaries
+		  datum->syntax		syntax->datum
+		  syntax-violation	make-variable-transformer)
+    (psyntax.compat)
+    (prefix (rnrs syntax-case) sys.)
+    (only (psyntax.syntax-utilities)
+	  syntax-unwrap
+	  parse-logic-predicate-syntax)
+    (psyntax.lexical-environment)
+    (psyntax.syntax-match)
+    (only (psyntax.syntax-utilities)
+	  generate-temporaries
+	  parse-logic-predicate-syntax
+	  error-invalid-formals-syntax)
+    (only (psyntax.syntactic-binding-properties)
+	  identifier-unsafe-variant)
+    (psyntax.tag-and-tagged-identifiers)
+    (only (psyntax.library-manager)
+	  current-include-loader
+	  source-code-location))
+
+  (include "psyntax.helpers.scm" #t)
+
+
 (define* (non-core-macro-transformer {x symbol?})
+  ;;Map symbols representing non-core macros to their macro transformers.
+  ;;
   (case x
     ((exported-define)			exported-define-macro)
     ((define-struct)			define-struct-macro)
@@ -124,6 +197,8 @@
     ((concurrently)			concurrently-macro)
     ((monitor)				monitor-macro)
 
+    ((unsafe)				unsafe-macro)
+
     ((pre-incr)				pre-incr-macro)
     ((pre-decr)				pre-decr-macro)
     ((post-incr)			post-incr-macro)
@@ -158,7 +233,7 @@
 
     ((__file__)
      (lambda (stx)
-       (let ((expr (<stx>-expr stx)))
+       (let ((expr (stx-expr stx)))
 	 (if (annotation? expr)
 	     (let ((pos (annotation-textual-position expr)))
 	       (if (source-position-condition? pos)
@@ -171,7 +246,7 @@
 
     ((__line__)
      (lambda (stx)
-       (let ((expr (<stx>-expr stx)))
+       (let ((expr (stx-expr stx)))
 	 (if (annotation? expr)
 	     (let ((pos (annotation-textual-position expr)))
 	       (if (source-position-condition? pos)
@@ -186,16 +261,16 @@
 
     ;;Expander tags.
     ((<top> <void>
-      <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
-      <procedure> <predicate>
-      <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
-      <rational-valued> <rational> <integer> <integer-valued>
-      <exact-integer> <real> <real-valued> <complex> <number>
-      <string> <vector> <pair> <list> <bytevector> <hashtable>
-      <record> <record-type-descriptor> <struct> <struct-type-descriptor> <condition>
-      <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
-      <textual-input-port> <textual-output-port> <textual-input/output-port>
-      <binary-input-port> <binary-output-port> <binary-input/output-port>)
+	    <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
+	    <procedure> <predicate>
+	    <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
+	    <rational-valued> <rational> <integer> <integer-valued>
+	    <exact-integer> <real> <real-valued> <complex> <number>
+	    <string> <vector> <pair> <list> <bytevector> <hashtable>
+	    <record> <record-type-descriptor> <struct> <struct-type-descriptor> <condition>
+	    <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
+	    <textual-input-port> <textual-output-port> <textual-input/output-port>
+	    <binary-input-port> <binary-output-port> <binary-input/output-port>)
      (lambda (expr-stx)
        (syntax-violation #f "incorrect usage of built-in tag keyword" expr-stx)))
 
@@ -203,7 +278,7 @@
      (assertion-violation/internal-error __who__ "unknown non-core macro name" x))))
 
 
-;;;; module non-core-macro-transformer: DEFINE
+;;;; non-core macro: DEFINE
 
 (module (exported-define-macro)
 
@@ -311,7 +386,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-AUXILIARY-SYNTAXES
+;;;; non-core macro: DEFINE-AUXILIARY-SYNTAXES
 
 (define (define-auxiliary-syntaxes-macro expr-stx)
   ;;Transformer      function      used     to      expand      Vicare's
@@ -332,7 +407,7 @@
 	     ?id*))))))
 
 
-;;;; module non-core-macro-transformer: control structures macros
+;;;; non-core macro: control structures macros
 
 (define (when-macro expr-stx)
   (syntax-match expr-stx ()
@@ -345,7 +420,7 @@
      (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
 
-;;;; module non-core-macro-transformer: CASE
+;;;; non-core macro: CASE
 
 (module (case-macro)
   ;;Transformer function used to expand R6RS's CASE macros (with extensions) from the
@@ -416,10 +491,9 @@
   ;;    University.   Proceedings  of  the 2006  Scheme  and  Functional  Programming
   ;;   Workshop.  University of Chicago Technical Report TR-2006-06.
   ;;
-  ;;FIXME There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17, 2014)
+  ;;FIXME There is room for improvement.  (Marco Maggi; Thu Apr 17, 2014)
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'case))
+  (define-module-who case)
 
   (define (case-macro input-form.stx)
     (syntax-match input-form.stx (else)
@@ -628,7 +702,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: CASE-IDENTIFIERS
+;;;; non-core macro: CASE-IDENTIFIERS
 
 (module (case-identifiers-macro)
   (define-constant __who__
@@ -688,15 +762,14 @@
   #| end of module: CASE-IDENTIFIERS-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-STRUCT
+;;;; non-core macro: DEFINE-STRUCT
 
 (module (define-struct-macro)
   ;;Transformer  function  used to  expand  Vicare's  DEFINE-STRUCT macros  from  the
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'define-struct))
+  (define-module-who define-struct)
 
   (define (define-struct-macro input-form.stx)
     (syntax-match input-form.stx (nongenerative)
@@ -717,7 +790,7 @@
 
   (define (%build-output-form input-form.stx type.id maker.id predicate.id field*.stx uid)
     (let* ((string->id (lambda (str)
-			 ($datum->syntax type.id (string->symbol str))))
+			 (~datum->syntax type.id (string->symbol str))))
 	   (type.sym   (identifier->symbol type.id))
 	   (type.str   (symbol->string type.sym)))
       (define-values (field*.id field*.tag)
@@ -730,7 +803,7 @@
 	     (uid            (if uid
 				 (identifier->symbol uid)
 			       (gensym type.str)))
-	     (rtd            ($datum->syntax type.id (make-struct-type type.str field*.sym uid)))
+	     (std            (~datum->syntax type.id (make-struct-type type.str field*.sym uid)))
 	     (constructor.id (or maker.id     (string->id (string-append "make-" type.str))))
 	     (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
 	     (field*.idx     (enumerate field*.stx)))
@@ -835,16 +908,16 @@
 		   ,@accessor*.id ,@unsafe-accessor*.id
 		   ,@mutator*.id  ,@unsafe-mutator*.id)
 	    (define ((brace ,predicate.id ,(boolean-tag-id)) obj)
-	      ($struct/rtd? obj ',rtd))
+	      ($struct/rtd? obj ',std))
 	    ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
 	    ;;bound when the "object-type-spec" is built.
 	    (define-syntax ,type.id
-	      (cons '$rtd ',rtd))
+	      (make-syntactic-binding-descriptor/struct-type-name ',std))
 	    (begin-for-syntax ,object-type-spec-form)
 	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
 	      (receive-and-return (S)
-		  ($struct ',rtd ,@field*.sym)
-		(when ($std-destructor ',rtd)
+		  ($struct ',std ,@field*.sym)
+		(when ($std-destructor ',std)
 		  ($struct-guardian S))))
 	    ,@unsafe-accessor-sexp*
 	    ,@unsafe-mutator-sexp*
@@ -959,14 +1032,14 @@
   #| end of module: DEFINE-STRUCT-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
+;;;; non-core macro: DEFINE-RECORD-TYPE
 
 (module (define-record-type-macro)
   ;;Transformer function used to expand R6RS's DEFINE-RECORD-TYPE macros
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
-  (define-constant __who__ 'define-record-type)
+  (define-constant __module_who__ 'define-record-type)
 
   (define (define-record-type-macro input-form.stx)
     (syntax-match input-form.stx ()
@@ -983,7 +1056,7 @@
       ((message)
        (synner message #f))
       ((message subform)
-       (syntax-violation __who__ message input-form.stx subform)))
+       (syntax-violation __module_who__ message input-form.stx subform)))
 
     (define-values (foo make-foo foo?)
       (%parse-full-name-spec namespec))
@@ -1070,9 +1143,7 @@
 	(define ,foo-rcd ,foo-rcd-code)
 	;;Binding for record type name.
 	(define-syntax ,foo
-	  (cons '$rtd
-		(cons (syntax ,foo-rtd)
-		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
+	  (make-syntactic-binding-descriptor/record-type-name (syntax ,foo-rtd) (syntax ,foo-rcd) (quote ,binding-spec)))
 	(begin-for-syntax ,object-type-spec-form)
 	;;Record instance predicate.
 	(define (brace ,foo? <predicate>)
@@ -1633,20 +1704,24 @@
 	    ((?kwd . ?rest)
 	     (cond ((or (not (identifier? ?kwd))
 			(not (%free-id-member? ?kwd VALID-KEYWORDS)))
-		    (stx-error ?kwd "not a valid DEFINE-RECORD-TYPE keyword"))
+		    (syntax-violation __module_who__
+		      "not a valid DEFINE-RECORD-TYPE keyword"
+		      input-form.stx ?kwd))
 		   ((bound-id-member? ?kwd seen*)
-		    (syntax-violation __who__
+		    (syntax-violation __module_who__
 		      "invalid duplicate clause in DEFINE-RECORD-TYPE"
 		      input-form.stx ?kwd))
 		   (else
 		    (loop (cdr cls*) (cons ?kwd seen*)))))
 	    (?cls
-	     (stx-error ?cls "malformed define-record-type clause"))
+	     (syntax-violation __module_who__
+	       "malformed define-record-type clause"
+	       input-form.stx ?cls))
 	    ))))
 
     (define (%free-id-member? x ls)
       (and (pair? ls)
-	   (or (free-id=? x (car ls))
+	   (or (~free-identifier=? x (car ls))
 	       (%free-id-member? x (cdr ls)))))
 
     #| end of module: %VERIFY-CLAUSES |# )
@@ -1663,7 +1738,7 @@
 	(()
 	 #f)
 	(((?key . ?rest) . ?clause*)
-	 (if (free-id=? id ?key)
+	 (if (~free-identifier=? id ?key)
 	     `(,?key . ,?rest)
 	   (next id ?clause*))))))
 
@@ -1675,7 +1750,7 @@
   #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: RECORD-TYPE-AND-RECORD?
+;;;; non-core macro: RECORD-TYPE-AND-RECORD?
 
 (define (record-type-and-record?-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
@@ -1690,7 +1765,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE
+;;;; non-core macro: DEFINE-CONDITION-TYPE
 
 (define (define-condition-type-macro expr-stx)
   ;;Transformer  function  used  to  expand  R6RS  RECORD-CONDITION-TYPE
@@ -1735,7 +1810,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
+;;;; non-core macro: PARAMETERIZE and PARAMETRISE
 
 (define (parameterize-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's PARAMETERIZE  macros
@@ -1787,7 +1862,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
+;;;; non-core macro: WITH-UNWIND-PROTECTION, UNWIND-PROTECT
 
 (define (with-unwind-protection-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  WITH-UNWIND-PROTECTION macros from
@@ -1863,7 +1938,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-IMPLICITS
+;;;; non-core macro: WITH-IMPLICITS
 
 (define (with-implicits-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
@@ -1926,7 +2001,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: SET-CONS!
+;;;; non-core macro: SET-CONS!
 
 (define (set-cons!-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
@@ -1940,7 +2015,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: compensations
+;;;; non-core macro: compensations
 
 (module (with-compensations/on-error-macro
 	 with-compensations-macro)
@@ -2059,7 +2134,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: CONCURRENTLY, MONITOR
+;;;; non-core macro: CONCURRENTLY, MONITOR
 
 (define (concurrently-macro expr-stx)
   ;;Transformer  function  used  to  expand Vicare's  CONCURRENTLY  macros  from  the
@@ -2098,7 +2173,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: SYNTAX-RULES, DEFINE-SYNTAX-RULE
+;;;; non-core macro: SYNTAX-RULES, DEFINE-SYNTAX-RULE
 
 (define (syntax-rules-macro expr-stx)
   ;;Transformer function  used to  expand R6RS SYNTAX-RULES  macros from
@@ -2142,7 +2217,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-SYNTAX*
+;;;; non-core macro: DEFINE-SYNTAX*
 
 (define (define-syntax*-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
@@ -2179,7 +2254,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: WITH-SYNTAX
+;;;; non-core macro: WITH-SYNTAX
 
 (define (with-syntax-macro expr-stx)
   ;;Transformer function used to expand R6RS WITH-SYNTAX macros from the
@@ -2214,7 +2289,7 @@
 		       (append idn* (recur (cdr pat*))))))))
        (let ((formals (map car idn*)))
 	 (unless (standard-formals-syntax? formals)
-	   (%error-invalid-formals-syntax expr-stx formals)))
+	   (error-invalid-formals-syntax expr-stx formals)))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
 	  `(let ,(map list t* ?expr*)
@@ -2232,7 +2307,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
+;;;; non-core macro: IDENTIFIER-SYNTAX
 
 (define (identifier-syntax-macro stx)
   ;;Transformer function  used to  expand R6RS  IDENTIFIER-SYNTAX macros
@@ -2274,7 +2349,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET*, TRACE-LET
+;;;; non-core macro: LET*, TRACE-LET
 
 (define (let*-macro expr-stx)
   ;;Transformer  function  used to  expand  R6RS  LET* macros  from  the
@@ -2313,7 +2388,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET-VALUES
+;;;; non-core macro: LET-VALUES
 
 (module (let-values-macro)
   ;;Transformer function  used to  expand R6RS LET-VALUES  macros from  the top-level
@@ -2338,8 +2413,7 @@
   ;;                 (c G.c) (d G.d) (e G.e))
   ;;             ?body0 ?body)))))
   ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'let-values))
+  (define-module-who let-values)
 
   (define (let-values-macro input-form.stx)
     (syntax-match input-form.stx ()
@@ -2417,7 +2491,7 @@
   #| end of module: LET-VALUES-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: LET*-VALUES
+;;;; non-core macro: LET*-VALUES
 
 (define (let*-values-macro expr-stx)
   ;;Transformer function used to expand R6RS LET*-VALUES macros from the
@@ -2456,7 +2530,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: VALUES->LIST-MACRO
+;;;; non-core macro: VALUES->LIST-MACRO
 
 (define (values->list-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's VALUES->LIST  macros
@@ -2471,7 +2545,7 @@
 	 list)))))
 
 
-;;;; module non-core-macro-transformer: LET*-SYNTAX
+;;;; non-core macro: LET*-SYNTAX
 
 (define (let*-syntax-macro expr-stx)
   ;;Transformer function used to expand Vicare's LET*-SYNTAX macros from
@@ -2497,7 +2571,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
+;;;; non-core macro: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
 
 (define (let-constants-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  LET-CONSTANTS macros
@@ -2595,7 +2669,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: CASE-DEFINE
+;;;; non-core macro: CASE-DEFINE
 
 (define (case-define-macro expr-stx)
   ;;Transformer function used to expand Vicare's CASE-DEFINE macros from
@@ -2612,7 +2686,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
+;;;; non-core macro: DEFINE*, LAMBDA*, CASE-DEFINE*, CASE-LAMBDA*
 
 (module (lambda*-macro
 	 define*-macro
@@ -2621,306 +2695,363 @@
 
   (define-record argument-validation-spec
     (arg-id
-		;Identifier representing the formal name of the argument
-		;being validated.
+		;Identifier  representing  the  formal  name of  the  argument  being
+		;validated.
+     pred
+		;Syntax object representing the validation logic predicate.
      expr
-		;Syntax  object  representing   an  argument  validation
-		;expression.
+		;Syntax object representing an argument's validation expression.
+     list-arg?
+		;Boolean.  True if this struct represents a rest or args argument.
      ))
 
   (define-record retval-validation-spec
     (rv-id
-		;Identifier representing the internal formal name of the
-		;return value being validated.
+		;Identifier representing the internal formal name of the return value
+		;being validated.
      pred
-		;Identifier bound to the predicate  to be applied to the
-		;return value.
+		;Syntax object representing the validation logic predicate.
+     expr
+		;Syntax object representing a return value's validation expression.
      ))
 
 ;;; --------------------------------------------------------------------
 
   (module (define*-macro)
-    ;;Transformer function  used to expand Vicare's  DEFINE* macros from
-    ;;the  top-level  built  in  environment.  Expand  the  contents  of
-    ;;EXPR-STX.  Return a syntax object that must be further expanded.
+    ;;Transformer function used to expand  Vicare's DEFINE* macros from the top-level
+    ;;built in environment.  Expand the contents of EXPR.STX.  Return a syntax object
+    ;;that must be further expanded.
     ;;
-    ;;We want to implement the following example expansions:
-    ;;
-    ;;  (define* ?id ?value)	==> (define ?id ?value)
-    ;;  (define* ?id)		==> (define ?id)
-    ;;
-    ;;  (define* (?who . ?common-formals) . ?body)
-    ;;  ==> (define (?who . ?common-formals)
-    ;;        (fluid-let-syntax
-    ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (internal-body . ?body)))
-    ;;
-    ;;  (define* (?who (brace ?var ?pred)) . ?body)
-    ;;  ==> (define (?who ?var)
-    ;;        (fluid-let-syntax
-    ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (unless (?pred ?var)
-    ;; 	          (procedure-argument-violation __who__
-    ;; 	            "failed argument validation" '(?pred ?var) ?var))
-    ;;          (internal-body . ?body)))
-    ;;
-    ;;  (define* ((brace ?who ?pred) ?var) . ?body)
-    ;;  ==> (define (?who ?var)
-    ;;        (fluid-let-syntax
-    ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (receive-and-return (rv)
-    ;;              (internal-body . ?body)
-    ;;            (unless (?pred rv)
-    ;;              (expression-return-value-violation __who__
-    ;; 	              "failed return value validation" (list '?pred rv))))))
-    ;;
-    (define (define*-macro stx)
+    (define (define*-macro expr.stx)
       (define (%synner message subform)
-	(syntax-violation 'define* message stx subform))
-      (syntax-match stx (brace)
-	;;No ret-pred.
-	((_ (?who . ?formals) ?body0 ?body* ...)
-	 (identifier? ?who)
-	 (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
+	(syntax-violation 'define* message expr.stx subform))
+      (bless
+       (syntax-match expr.stx (brace)
+	 ;;No ret-pred.
+	 ((_ (?who . ?formals) ?body0 ?body* ...)
+	  (identifier? ?who)
+	  (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
 
-	;;Return value predicates.
-	((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
+	 ;;Return value predicates.
+	 ((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	  (identifier? ?who)
+	  (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
 
-	((_ ?who ?expr)
-	 (identifier? ?who)
-	 (bless
+	 ((_ ?who ?expr)
+	  (identifier? ?who)
 	  `(define ,?who
 	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
-	       ,?expr))))
+	       ,?expr)))
 
-	((_ ?who)
-	 (identifier? ?who)
-	 (bless
-	  `(define ,?who (void))))
+	 ((_ ?who)
+	  (identifier? ?who)
+	  `(define ,?who (void)))
 
-	))
+	 )))
 
-    (define (%generate-define-output-form/without-ret-pred ?who ?predicate-formals ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  (bless
-	   `(define (,?who . ,?standard-formals)
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote ,?who))))
-		,@ARG-VALIDATION*
-		(internal-body . ,?body*)))))))
+    (define (%generate-define-output-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;definition.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(define (,who.id . ,standard-formals.stx)
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ,who.id))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  `(begin
+		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     (internal-body . ,body*.stx))
+		;;Without validation
+		`(begin . ,body*.stx))))))
 
-    (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  (bless
-	   `(define (,?who . ,?standard-formals)
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote ,?who))))
-		,@ARG-VALIDATION*
-		(receive-and-return (,@RET*)
-		    (internal-body . ,?body*)
-		  ,RET-VALIDATION)))))))
+    (define (%generate-define-output-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;definition.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(define (,who.id . ,standard-formals.stx)
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ,who.id))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      (map (lambda (rv.id pred.stx)
+						     (make-retval-validation-spec rv.id pred.stx
+										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+						RETVAL* ret-pred*.stx)
+					      synner)))
+		    `(begin
+		       ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		       (receive-and-return ,RETVAL*
+			   (internal-body . ,body*.stx)
+			 . ,RETVAL-VALIDATION*)))
+		;;Without validation.
+		`(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: DEFINE*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (case-define*-macro)
 
-    (define (case-define*-macro stx)
-      ;;Transformer function used to expand Vicare's CASE-DEFINE* macros
-      ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
+    (define (case-define*-macro expr.stx)
+      ;;Transformer function  used to  expand Vicare's  CASE-DEFINE* macros  from the
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
+      ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
-	(syntax-violation 'case-define* message stx subform))
-      (syntax-match stx ()
+	(syntax-violation 'case-define* message expr.stx subform))
+      (syntax-match expr.stx ()
 	((_ ?who ?clause0 ?clause* ...)
 	 (identifier? ?who)
 	 (bless
 	  `(define ,?who
-	     (fluid-let-syntax ((__who__ (identifier-syntax (quote ,?who))))
-	       (case-lambda
-		,@(map (lambda (?clause)
-			 (%generate-case-define-form ?who ?clause %synner))
-		    (cons ?clause0 ?clause*)))))))
+	     (case-lambda
+	      ,@(map (lambda (?clause)
+		       (%generate-case-define-form ?who ?clause %synner))
+		  (cons ?clause0 ?clause*))))))
 	))
 
     (define (%generate-case-define-form ?who ?clause synner)
       (syntax-match ?clause (brace)
 	;;Return value predicates.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (underscore-id? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
+	 (underscore-id? ?underscore)
+	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals ?body0 ?body* synner))
+	 (%generate-case-define-clause-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) synner))
 	))
 
-    (define (%generate-case-define-clause-form/without-ret-pred ?who ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote ,?who))))
-	      ,@ARG-VALIDATION*
-	      (internal-body ,?body0 ,@?body*))))))
+    (define (%generate-case-define-clause-form/without-ret-pred who.id predicate-formals.stx body*.stx synner)
+      ;;Build and return  a symbolic expression, to be BLESSed  later, representing a
+      ;;definition clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote ,who.id))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 `(begin
+		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		    (internal-body . ,body*.stx))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote ,?who))))
-	      ,@ARG-VALIDATION*
-	      (receive-and-return (,@RET*)
-		  (internal-body ,?body0 ,@?body*)
-		,RET-VALIDATION))))))
+    (define (%generate-case-define-clause-form/with-ret-pred who.id ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return  a symbolic expression, to be BLESSed  later, representing a
+      ;;definition clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote ,who.id))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     (map (lambda (rv.id pred.stx)
+						    (make-retval-validation-spec rv.id pred.stx
+										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					       RETVAL* ret-pred*.stx)
+					     synner)))
+		   `(begin
+		      ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		      (receive-and-return ,RETVAL*
+			  (internal-body . ,body*.stx)
+			. ,RETVAL-VALIDATION*)))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: CASE-DEFINE*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (lambda*-macro)
 
-    (define (lambda*-macro stx)
-      ;;Transformer function used to expand Vicare's LAMBDA* macros from
-      ;;the  top-level built  in  environment.  Expand  the contents  of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
+    (define (lambda*-macro expr.stx)
+      ;;Transformer  function  used  to  expand  Vicare's  LAMBDA*  macros  from  the
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
+      ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
-	(syntax-violation 'lambda* message stx subform))
-      (syntax-match stx (brace)
-	;;Ret-pred with list spec.
-	((?kwd ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (underscore-id? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
+	(syntax-violation 'lambda* message expr.stx subform))
+      (bless
+       (syntax-match expr.stx (brace)
+	 ;;Ret-pred with list spec.
+	 ((_ ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	  (underscore-id? ?underscore)
+	  (%generate-lambda-output-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
 
-	;;No ret-pred.
-	((?kwd ?formals ?body0 ?body* ...)
-	 (%generate-lambda-output-form/without-ret-pred ?kwd ?formals ?body0 ?body* %synner))
+	 ;;No ret-pred.
+	 ((_ ?formals ?body0 ?body* ...)
+	  (%generate-lambda-output-form/without-ret-pred ?formals (cons ?body0 ?body*) %synner))
 
-	))
+	 )))
 
-    (define (%generate-lambda-output-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  (bless
-	   `(lambda ,?standard-formals
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote _))))
-		,@ARG-VALIDATION*
-		(internal-body ,?body0 ,@?body*)))))))
+    (define (%generate-lambda-output-form/without-ret-pred predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;LAMBDA syntax use.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(lambda ,standard-formals.stx
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote _))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  `(begin
+		     ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		     (internal-body . ,body*.stx))
+		;;Without validation.
+		`(begin . ,body*.stx))))))
 
-    (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  (bless
-	   `(lambda ,?standard-formals
-	      (fluid-let-syntax
-		  ((__who__ (identifier-syntax (quote _))))
-		,@ARG-VALIDATION*
-		(receive-and-return (,@RET*)
-		    (internal-body ,?body0 ,@?body*)
-		  ,RET-VALIDATION)))))))
+    (define (%generate-lambda-output-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;LAMBDA syntax use.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(lambda ,standard-formals.stx
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote _))))
+	     ,(if (option.enable-arguments-validation?)
+		  ;;With validation.
+		  (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			 (RETVAL-VALIDATION* (%make-ret-validation-forms
+					      (map (lambda (rv.id pred.stx)
+						     (make-retval-validation-spec rv.id pred.stx
+										  (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+						RETVAL* ret-pred*.stx)
+					      synner)))
+		    `(begin
+		       ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		       (receive-and-return ,RETVAL*
+			   (internal-body . ,body*.stx)
+			 . ,RETVAL-VALIDATION*)))
+		;;Without validation
+		`(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: LAMBDA*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (case-lambda*-macro)
 
-    (define (case-lambda*-macro stx)
-      ;;Transformer function used to expand Vicare's CASE-LAMBDA* macros
-      ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a syntax object that must be further expanded.
+    (define (case-lambda*-macro expr.stx)
+      ;;Transformer function  used to  expand Vicare's  CASE-LAMBDA* macros  from the
+      ;;top-level built in  environment.  Expand the contents of  EXPR.STX.  Return a
+      ;;syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
-	(syntax-violation 'case-lambda* message stx subform))
-      (syntax-match stx ()
-	((?kwd ?clause0 ?clause* ...)
+	(syntax-violation 'case-lambda* message expr.stx subform))
+      (syntax-match expr.stx ()
+	((_ ?clause0 ?clause* ...)
 	 (bless
 	  `(case-lambda
-	    ,@(map (lambda (?clause)
-		     (%generate-case-lambda-form ?kwd ?clause %synner))
+	    ,@(map (lambda (clause.stx)
+		     (%generate-case-lambda-form clause.stx %synner))
 		(cons ?clause0 ?clause*)))))
 	))
 
-    (define (%generate-case-lambda-form ?ctx ?clause synner)
-      (syntax-match ?clause (brace)
+    (define (%generate-case-lambda-form clause.stx synner)
+      (syntax-match clause.stx (brace)
 	;;Ret-pred with list spec.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (underscore-id? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
+	 (underscore-id? ?underscore)
+	 (%generate-case-lambda-clause-form/with-ret-pred (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) synner))
 
 	;;No ret-pred.
 	((?formals ?body0 ?body* ...)
-	 (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?formals ?body0 ?body* synner))
+	 (%generate-case-lambda-clause-form/without-ret-pred ?formals (cons ?body0 ?body*) synner))
 	))
 
-    (define (%generate-case-lambda-clause-form/without-ret-pred ?ctx ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote _))))
-	      ,@ARG-VALIDATION*
-	      (internal-body ,?body0 ,@?body*))))))
+    (define (%generate-case-lambda-clause-form/without-ret-pred predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;CASE-LAMBDA clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote _))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation.
+		 `(begin
+		    ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		    (internal-body . ,body*.stx))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    (define (%generate-case-lambda-clause-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
-      (receive (?standard-formals arg-validation-spec*)
-	  (%parse-predicate-formals ?predicate-formals synner)
-	(let* ((ARG-VALIDATION* (%make-arg-validation-forms arg-validation-spec* synner))
-	       (RET*            (generate-temporaries ?ret-pred*))
-	       (RET-VALIDATION  (%make-ret-validation-form (map make-retval-validation-spec RET* ?ret-pred*)
-							   synner)))
-	  `(,?standard-formals
-	    (fluid-let-syntax
-		((__who__ (identifier-syntax (quote _))))
-	      ,@ARG-VALIDATION*
-	      (receive-and-return (,@RET*)
-		  (internal-body ,?body0 ,@?body*)
-		,RET-VALIDATION))))))
+    (define (%generate-case-lambda-clause-form/with-ret-pred ret-pred*.stx predicate-formals.stx body*.stx synner)
+      ;;Build and return a symbolic expression, to be BLESSed later, representing the
+      ;;CASE-LAMBDA clause.
+      ;;
+      ;;STANDARD-FORMALS.STX  is an  improper  list of  identifiers representing  the
+      ;;standard formals.  ARG-VALIDATION-SPEC* is a list of ARGUMENT-VALIDATION-SPEC
+      ;;structures, each representing a validation predicate.
+      (receive (standard-formals.stx arg-validation-spec*)
+	  (%parse-predicate-formals predicate-formals.stx synner)
+	`(,standard-formals.stx
+	  (fluid-let-syntax
+	      ((__who__ (identifier-syntax (quote _))))
+	    ,(if (option.enable-arguments-validation?)
+		 ;;With validation
+		 (let* ((RETVAL*            (generate-temporaries ret-pred*.stx))
+			(RETVAL-VALIDATION* (%make-ret-validation-forms
+					     (map (lambda (rv.id pred.stx)
+						    (make-retval-validation-spec rv.id pred.stx
+										 (%parse-logic-predicate-syntax pred.stx rv.id synner)))
+					       RETVAL* ret-pred*.stx)
+					     synner)))
+		   `(begin
+		      ,@(%make-arg-validation-forms arg-validation-spec* synner)
+		      (receive-and-return ,RETVAL*
+			  (internal-body . ,body*.stx)
+			. ,RETVAL-VALIDATION*)))
+	       ;;Without validation.
+	       `(begin . ,body*.stx))))))
 
-    #| end of module |# )
+    #| end of module: CASE-LAMBDA*-MACRO |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-predicate-formals ?predicate-formals synner)
-    ;;Split  formals from  tags.   We  rely on  the  DEFINE, LAMBDA  and
-    ;;CASE-LAMBDA syntaxes  in the output  form to further  validate the
-    ;;formals against duplicate bindings.
+  (define (%parse-predicate-formals predicate-formals.stx synner)
+    ;;Split  formals from  tags.   We  rely on  the  DEFINE,  LAMBDA and  CASE-LAMBDA
+    ;;syntaxes in the  output form to further validate the  formals against duplicate
+    ;;bindings.
     ;;
-    ;;We use  the conventions: ?ID,  ?REST-ID and ?ARGS-ID  are argument
-    ;;identifiers; ?PRED is a predicate identifier.
+    ;;We use  the conventions: ?ID,  ?REST-ID and ?ARGS-ID are  argument identifiers;
+    ;;?PRED is a predicate identifier.
     ;;
     ;;We accept the following standard formals formats:
     ;;
@@ -2941,50 +3072,56 @@
     ;;
     ;;Return 2 values:
     ;;
-    ;;* A list  of syntax objects representing the  standard formals for
-    ;;  the DEFINE, LAMBDA and CASE-LAMBDA syntaxes.
+    ;;* A  list of syntax objects  representing the standard formals  for the DEFINE,
+    ;;  LAMBDA and CASE-LAMBDA syntaxes.
     ;;
-    ;;* A list of  ARGUMENT-VALIDATION-SPEC structures each representing
-    ;;  a validation predicate.
+    ;;*  A  list  of  false booleans  and  ARGUMENT-VALIDATION-SPEC  structures  each
+    ;;  representing a validation predicate; when an argument has no logic predicate:
+    ;;  the corresponding item in the list is the boolean false.
     ;;
-    (syntax-match ?predicate-formals (brace)
+    (syntax-match predicate-formals.stx (brace)
 
       ;;Tagged args.
       ;;
       ((brace ?args-id ?args-pred)
-       (and (identifier? ?args-id)
-	    (identifier? ?args-pred))
+       (identifier? ?args-id)
        (values ?args-id
-	       (list (make-argument-validation-spec ?args-id (list ?args-pred ?args-id)))))
+	       (list (make-argument-validation-spec ?args-id ?args-pred
+						    (%parse-list-logic-predicate-syntax ?args-pred ?args-id synner) #t))))
 
       ;;Possibly tagged identifiers with tagged rest argument.
       ;;
       ((?pred-arg* ... . (brace ?rest-id ?rest-pred))
        (begin
-	 (unless (and (identifier? ?rest-id)
-		      (identifier? ?rest-pred))
+	 (unless (identifier? ?rest-id)
 	   (synner "invalid rest argument specification" (list 'brace ?rest-id ?rest-pred)))
 	 (let recur ((?pred-arg* ?pred-arg*))
 	   (if (pair? ?pred-arg*)
-	       (receive (?standard-formals arg-validation-spec*)
+	       ;;STANDARD-FORMALS.STX is an improper list of identifiers representing
+	       ;;the   standard  formals.    ARG-VALIDATION-SPEC*   is   a  list   of
+	       ;;ARGUMENT-VALIDATION-SPEC structures, each  representing a validation
+	       ;;predicate.
+	       (receive (standard-formals.stx arg-validation-spec*)
 		   (recur (cdr ?pred-arg*))
 		 (let ((?pred-arg (car ?pred-arg*)))
 		   (syntax-match ?pred-arg (brace)
 		     ;;Untagged argument.
 		     (?id
 		      (identifier? ?id)
-		      (values (cons ?id ?standard-formals) arg-validation-spec*))
+		      (values (cons ?id standard-formals.stx)
+			      (cons #f  arg-validation-spec*)))
 		     ;;Tagged argument.
 		     ((brace ?id ?pred)
-		      (and (identifier? ?id)
-			   (identifier? ?pred))
-		      (values (cons ?id ?standard-formals)
-			      (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+		      (identifier? ?id)
+		      (values (cons ?id standard-formals.stx)
+			      (cons (make-argument-validation-spec ?id ?pred (%parse-logic-predicate-syntax ?pred ?id synner) #f)
+				    arg-validation-spec*)))
 		     (else
 		      (synner "invalid argument specification" ?pred-arg)))))
 	     ;;Process rest argument.
 	     (values ?rest-id
-		     (list (make-argument-validation-spec ?rest-id (list ?rest-pred ?rest-id))))))))
+		     (list (make-argument-validation-spec ?rest-id ?rest-pred
+							  (%parse-list-logic-predicate-syntax ?rest-pred ?rest-id synner) #t)))))))
 
       ;;Possibly tagged identifiers with UNtagged rest argument.
       ;;
@@ -2992,20 +3129,25 @@
        (identifier? ?rest-id)
        (let recur ((?pred-arg* ?pred-arg*))
 	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
+	     ;;STANDARD-FORMALS.STX is  an improper list of  identifiers representing
+	     ;;the   standard   formals.    ARG-VALIDATION-SPEC*   is   a   list   of
+	     ;;ARGUMENT-VALIDATION-SPEC  structures, each  representing a  validation
+	     ;;predicate.
+	     (receive (standard-formals.stx arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
 		 (syntax-match ?pred-arg (brace)
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals) arg-validation-spec*))
+		    (values (cons ?id standard-formals.stx)
+			    (cons #f  arg-validation-spec*)))
 		   ;;Tagged argument.
 		   ((brace ?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+		    (identifier? ?id)
+		    (values (cons ?id standard-formals.stx)
+			    (cons (make-argument-validation-spec ?id ?pred (%parse-logic-predicate-syntax ?pred ?id synner) #f)
+				  arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
 	   (values ?rest-id '()))))
@@ -3021,7 +3163,7 @@
       ((?id* ... . ?rest-id)
        (and (for-all identifier? ?id*)
 	    (identifier? ?rest-id))
-       (values ?predicate-formals '()))
+       (values predicate-formals.stx '()))
 
       ;;Standard formals: untagged args.
       ;;
@@ -3034,20 +3176,25 @@
       ((?pred-arg* ...)
        (let recur ((?pred-arg* ?pred-arg*))
 	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
+	     ;;STANDARD-FORMALS.STX is  an improper list of  identifiers representing
+	     ;;the   standard   formals.    ARG-VALIDATION-SPEC*   is   a   list   of
+	     ;;ARGUMENT-VALIDATION-SPEC  structures, each  representing a  validation
+	     ;;predicate.
+	     (receive (standard-formals.stx arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
 		 (syntax-match ?pred-arg (brace)
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals) arg-validation-spec*))
+		    (values (cons ?id standard-formals.stx)
+			    (cons #f  arg-validation-spec*)))
 		   ;;Tagged argument.
 		   ((brace ?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+		    (identifier? ?id)
+		    (values (cons ?id standard-formals.stx)
+			    (cons (make-argument-validation-spec ?id ?pred (%parse-logic-predicate-syntax ?pred ?id synner) #f)
+				  arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
 	   (values '() '()))))
@@ -3056,36 +3203,80 @@
 ;;; --------------------------------------------------------------------
 
   (define (%make-arg-validation-forms arg-validation-spec* synner)
-    (if (option.enable-arguments-validation?)
-	(map (lambda (spec)
-	       (let ((?arg-expr (argument-validation-spec-expr   spec))
-		     (?arg-id   (argument-validation-spec-arg-id spec)))
-		 `(unless ,?arg-expr
-		    (procedure-argument-violation __who__
-		      "failed argument validation"
-		      (quote ,?arg-expr) ,?arg-id))))
-	  arg-validation-spec*)
-      '()))
+    (reverse
+     (cdr (fold-left (lambda (knil spec)
+		       (let ((arg-counter    (car knil))
+			     (rev-head-forms (cdr knil)))
+			 (if spec
+			     ;;This argument HAS a logic predicate specification.
+			     (let ((?expr   (argument-validation-spec-expr   spec))
+				   (?pred   (argument-validation-spec-pred   spec))
+				   (?arg-id (argument-validation-spec-arg-id spec)))
+			       (cons* (fxadd1 arg-counter)
+				      (if (argument-validation-spec-list-arg? spec)
+					  `(signature-rest-argument-validation-with-predicate
+					    __who__ ,arg-counter ,?expr (quote ,?pred) ,?arg-id)
+					`(unless ,?expr
+					   (procedure-signature-argument-violation __who__
+					     "failed argument validation"
+					     ,arg-counter (quote ,?pred) ,?arg-id)))
+				      rev-head-forms))
+			   ;;This argument HAS NO logic predicate specification.
+			   (cons (fxadd1 arg-counter) rev-head-forms))))
+	    '(1 . ())
+	    arg-validation-spec*))))
 
-  (define (%make-ret-validation-form retval-validation-spec* synner)
-    (if (option.enable-arguments-validation?)
-	`(begin
-	   ,@(map (lambda (spec)
-		    (let ((?pred (retval-validation-spec-pred  spec))
-			  (?ret  (retval-validation-spec-rv-id spec)))
-		      `(unless (,?pred ,?ret)
-			 (expression-return-value-violation __who__
-			   "failed return value validation"
-			   ;;This list  represents the application  of the
-			   ;;predicate to the offending value.
-			   (list (quote ,?pred) ,?ret)))))
-	       retval-validation-spec*))
-      '(void)))
+  (define (%make-ret-validation-forms retval-validation-spec* synner)
+    (reverse
+     (cdr (fold-left (lambda (knil spec)
+		       (let ((retval-counter (car knil))
+			     (rev-head-forms (cdr knil)))
+			 (let ((?expr (retval-validation-spec-expr  spec))
+			       (?pred (retval-validation-spec-pred  spec))
+			       (?ret  (retval-validation-spec-rv-id spec)))
+			   (if (and (identifier? ?pred)
+				    (free-identifier=? ?pred (core-prim-id 'always-true)))
+			       ;;This return value HAS NO logic predicate specification.
+			       (cons (fxadd1 retval-counter) rev-head-forms)
+			     ;;This return value HAS a logic predicate specification.
+			     (cons* (fxadd1 retval-counter)
+				    `(unless ,?expr
+				       (procedure-signature-return-value-violation __who__
+					 "failed return value validation"
+					 ,retval-counter (quote ,?pred) ,?ret))
+				    rev-head-forms)))))
+	    '(1 . ())
+	    retval-validation-spec*))))
+
+  (define (%parse-logic-predicate-syntax pred.stx var.id synner)
+    ;;This is used for normal arguments.
+    ;;
+    (parse-logic-predicate-syntax pred.stx
+				  (lambda (pred.id)
+				    (syntax-match pred.id ()
+				      (?pred
+				       (identifier? ?pred)
+				       (list pred.id var.id))
+				      (else
+				       (synner "expected identifier as predicate name" pred.id))))))
+
+  (define (%parse-list-logic-predicate-syntax pred.stx var.id synner)
+    ;;This is used for rest and args arguments.
+    ;;
+    `(lambda (,var.id)
+       ,(parse-logic-predicate-syntax pred.stx
+				      (lambda (pred.id)
+					(syntax-match pred.id ()
+					  (?pred
+					   (identifier? ?pred)
+					   (list pred.id var.id))
+					  (else
+					   (synner "expected identifier as predicate name" pred.id)))))))
 
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
+;;;; non-core macro: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
 
 (define (trace-lambda-macro expr-stx)
   ;;Transformer  function used  to expand  Vicare's TRACE-LAMBDA  macros
@@ -3117,53 +3308,55 @@
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ (?who ?formal* ...) ?body ?body* ...)
-     (begin
-       ;;We parse the formals for validation purposes.
-       (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
-       (bless
-	`(define ,?who
-	   (make-traced-procedure ',?who
-				  (lambda ,?formal*
-				    ,?body . ,?body*))))))
+  (with-who trace-define
+    (syntax-match expr-stx ()
+      ((_ (?who ?formal* ...) ?body ?body* ...)
+       (begin
+	 ;;We parse the formals for validation purposes.
+	 (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
+	 (bless
+	  `(define ,?who
+	     (make-traced-procedure ',?who
+				    (lambda ,?formal*
+				      ,?body . ,?body*))))))
 
-    ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-     (begin
-       ;;We parse the formals for validation purposes.
-       (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
-       (bless
-	`(define ,?who
-	   (make-traced-procedure ',?who
-				  (lambda (,@?formal* . ,?rest-formal)
-				    ,?body . ,?body*))))))
+      ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
+       (begin
+	 ;;We parse the formals for validation purposes.
+	 (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
+	 (bless
+	  `(define ,?who
+	     (make-traced-procedure ',?who
+				    (lambda (,@?formal* . ,?rest-formal)
+				      ,?body . ,?body*))))))
 
-    ((_ ?who ?expr)
-     (if (identifier? ?who)
-	 (bless `(define ,?who
-		   (let ((v ,?expr))
-		     (if (procedure? v)
-			 (make-traced-procedure ',?who v)
-		       v))))
-       (stx-error expr-stx "invalid name")))
-    ))
+      ((_ ?who ?expr)
+       (if (identifier? ?who)
+	   (bless `(define ,?who
+		     (let ((v ,?expr))
+		       (if (procedure? v)
+			   (make-traced-procedure ',?who v)
+			 v))))
+	 (syntax-violation __who__ "invalid name" expr-stx)))
+      )))
 
 (define (trace-define-syntax-macro expr-stx)
   ;;Transformer  function used  to  expand Vicare's  TRACE-DEFINE-SYNTAX
   ;;macros from the top-level built in environment.  Expand the contents
   ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?who ?expr)
-     (if (identifier? ?who)
-	 (bless
-	  `(define-syntax ,?who
-	     (make-traced-macro ',?who ,?expr)))
-       (stx-error expr-stx "invalid name")))
-    ))
+  (with-who trace-define-syntax
+    (syntax-match expr-stx ()
+      ((_ ?who ?expr)
+       (if (identifier? ?who)
+	   (bless
+	    `(define-syntax ,?who
+	       (make-traced-macro ',?who ,?expr)))
+	 (syntax-violation __who__ "invalid name" expr-stx)))
+      )))
 
 
-;;;; module non-core-macro-transformer: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
+;;;; non-core macro: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
 
 (module (trace-let-syntax-macro
 	 trace-letrec-syntax-macro)
@@ -3179,7 +3372,7 @@
 	       (bless
 		`(,who ,(map list ?lhs* rhs*)
 		       ,?body . ,?body*)))
-	   (%error-invalid-formals-syntax stx ?lhs*)))
+	   (error-invalid-formals-syntax stx ?lhs*)))
 	)))
 
   (define trace-let-syntax-macro
@@ -3201,7 +3394,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: GUARD
+;;;; non-core macro: GUARD
 ;;
 ;;Vicare's implementation of the GUARD syntax  is really sophisticated because it has
 ;;to  deal with  both the  dynamic environment  requirements of  R6RS and  the unwind
@@ -3428,6 +3621,8 @@
 ;;
 (module (guard-macro)
 
+  (define-module-who guard)
+
   (define (guard-macro x)
     ;;Transformer function used to expand R6RS  GUARD macros from the top-level built
     ;;in environment.  Expand  the contents of EXPR-STX; return a  syntax object that
@@ -3514,7 +3709,7 @@
 		   reinstate-exception-handler-continuation-id)))
 
 	(others
-	 (stx-error others "invalid guard clause"))))
+	 (syntax-violation __module_who__ "invalid guard clause" others))))
 
     (define (%process-single-cond-clause clause kont-code-stx run-unwind-protect-cleanups-id)
       (syntax-match clause (=>)
@@ -3544,7 +3739,7 @@
 	    ,kont-code-stx))
 
 	(_
-	 (stx-error clause "invalid guard clause"))))
+	 (syntax-violation __module_who__ "invalid guard clause" clause))))
 
     #| end of module: GEN-CLAUSES |# )
 
@@ -3638,7 +3833,7 @@
 	     ,kont-code-stx))
 
 	 (_
-	  (stx-error clause "invalid guard clause"))))
+	  (syntax-violation __module_who__ "invalid guard clause" clause))))
 
      (define (%process-multi-cond-clauses clause*)
        (syntax-match clause* (else)
@@ -3664,7 +3859,7 @@
 		    return-to-exception-handler-k)))
 
 	 (others
-	  (stx-error others "invalid guard clause"))))
+	  (syntax-violation __module_who__ "invalid guard clause" others))))
 
      (receive (code-stx return-to-exception-handler-k)
 	 (%process-multi-cond-clauses clause*)
@@ -3677,7 +3872,7 @@
    #| end of module: GUARD-MACRO |# ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
+;;;; non-core macro: DEFINE-ENUMERATION
 
 (define (define-enumeration-macro stx)
   ;;Transformer function  used to expand R6RS  DEFINE-ENUMERATION macros
@@ -3815,7 +4010,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DO, DO*, WHILE, UNTIL, FOR
+;;;; non-core macro: DO, DO*, WHILE, UNTIL, FOR
 
 (define (with-escape-fluids escape next-iteration body*)
   ;;NOTE We  define BREAK  as accepting  any number of  arguments and  returning zero
@@ -3848,83 +4043,84 @@
   ;;environment;  we also  support extended  Vicare syntax.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (define (%normalise-binding binding-stx)
-    (syntax-match binding-stx ()
-      ((?var ?init)
-       (receive (id tag)
-	   (parse-tagged-identifier-syntax ?var)
-	 `(,?var ,?init ,id)))
-      ((?var ?init ?step)
-       `(,?var ,?init ,?step))
-      (_
-       (stx-error expr-stx "invalid binding"))))
-  (syntax-match expr-stx (while until)
+  (with-who 'do
+    (define (%normalise-binding binding-stx)
+      (syntax-match binding-stx ()
+	((?var ?init)
+	 (receive (id tag)
+	     (parse-tagged-identifier-syntax ?var)
+	   `(,?var ,?init ,id)))
+	((?var ?init ?step)
+	 `(,?var ,?init ,?step))
+	(_
+	 (syntax-violation __who__ "invalid binding" expr-stx))))
+    (syntax-match expr-stx (while until)
 
-    ;;This is an extended Vicare syntax.
-    ;;
-    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-    ;;
-    ;;NOTE Using CONTINUE in the body causes a jump to the test.
-    ((_ ?body (while ?test))
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration")))
-       (bless
-	`(unwinding-call/cc
-	     (lambda (,escape)
-	       (let loop ()
-		 (unwinding-call/cc
-		     (lambda (,next-iteration)
-		       ,(with-escape-fluids escape next-iteration (list ?body))))
-		 (when ,?test
-		   (loop))))))))
+      ;;This is an extended Vicare syntax.
+      ;;
+      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+      ;;
+      ;;NOTE Using CONTINUE in the body causes a jump to the test.
+      ((_ ?body (while ?test))
+       (let ((escape         (gensym "escape"))
+	     (next-iteration (gensym "next-iteration")))
+	 (bless
+	  `(unwinding-call/cc
+	       (lambda (,escape)
+		 (let loop ()
+		   (unwinding-call/cc
+		       (lambda (,next-iteration)
+			 ,(with-escape-fluids escape next-iteration (list ?body))))
+		   (when ,?test
+		     (loop))))))))
 
-    ;;This is an extended Vicare syntax.
-    ;;
-    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-    ;;
-    ;;NOTE Using CONTINUE in the body causes a jump to the test.
-    ((_ ?body (until ?test))
-     (let ((escape         (gensym "escape"))
-	   (next-iteration (gensym "next-iteration")))
-       (bless
-	`(unwinding-call/cc
-	     (lambda (,escape)
-	       (let loop ()
-		 (unwinding-call/cc
-		     (lambda (,next-iteration)
-		       ,(with-escape-fluids escape next-iteration (list ?body))))
-		 (until ,?test
-		   (loop))))))))
+      ;;This is an extended Vicare syntax.
+      ;;
+      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+      ;;
+      ;;NOTE Using CONTINUE in the body causes a jump to the test.
+      ((_ ?body (until ?test))
+       (let ((escape         (gensym "escape"))
+	     (next-iteration (gensym "next-iteration")))
+	 (bless
+	  `(unwinding-call/cc
+	       (lambda (,escape)
+		 (let loop ()
+		   (unwinding-call/cc
+		       (lambda (,next-iteration)
+			 ,(with-escape-fluids escape next-iteration (list ?body))))
+		   (until ,?test
+		     (loop))))))))
 
-    ;;This is the R6RS syntax.
-    ;;
-    ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
-    ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
-    ((_ (?binding* ...)
-	(?test ?expr* ...)
-	?command* ...)
-     (syntax-match (map %normalise-binding ?binding*) ()
-       (((?var* ?init* ?step*) ...)
-	(let ((escape         (gensym "escape"))
-	      (next-iteration (gensym "next-iteration")))
-	  (bless
-	   `(unwinding-call/cc
-		(lambda (,escape)
-		  (letrec ((loop (lambda ,?var*
-				   (if (unwinding-call/cc
-					   (lambda (,next-iteration)
-					     (if ,?test
-						 #f
-					       ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
-				       (loop . ,?step*)
-				     ,(if (null? ?expr*)
-					  '(void)
-					`(begin . ,?expr*))))))
-		    (loop . ,?init*)))))))
-       ))
-    ))
+      ;;This is the R6RS syntax.
+      ;;
+      ;;NOTE We want an implementation in which:  when BREAK and CONTINUE are not used,
+      ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
+      ((_ (?binding* ...)
+	  (?test ?expr* ...)
+	  ?command* ...)
+       (syntax-match (map %normalise-binding ?binding*) ()
+	 (((?var* ?init* ?step*) ...)
+	  (let ((escape         (gensym "escape"))
+		(next-iteration (gensym "next-iteration")))
+	    (bless
+	     `(unwinding-call/cc
+		  (lambda (,escape)
+		    (letrec ((loop (lambda ,?var*
+				     (if (unwinding-call/cc
+					     (lambda (,next-iteration)
+					       (if ,?test
+						   #f
+						 ,(with-escape-fluids escape next-iteration `(,@?command* #t)))))
+					 (loop . ,?step*)
+				       ,(if (null? ?expr*)
+					    '(void)
+					  `(begin . ,?expr*))))))
+		      (loop . ,?init*)))))))
+	 ))
+      )))
 
 ;;; --------------------------------------------------------------------
 
@@ -3938,6 +4134,7 @@
   ;;NOTE We want  an implementation in which:  when BREAK and CONTINUE  are not used,
   ;;the escape functions are never referenced, so the compiler can remove CALL/CC.
   ;;
+  (with-who 'do*
   (define (%make-init-binding binding-stx)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -3949,7 +4146,7 @@
 	   (parse-tagged-identifier-syntax ?var)
 	 (list ?var ?init)))
       (_
-       (stx-error expr-stx "invalid binding"))))
+       (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
   (define (%make-step-update binding-stx knil)
     (syntax-match binding-stx ()
       ((?var ?init)
@@ -3960,7 +4157,7 @@
 	 (cons `(set! ,id ,?step)
 	       knil)))
       (_
-       (stx-error expr-stx "invalid binding"))))
+       (syntax-violation __who__ "invalid binding" expr-stx binding-stx))))
   (syntax-match expr-stx ()
     ((_ (?binding* ...)
 	(?test ?expr* ...)
@@ -3986,7 +4183,7 @@
 					 '(void)
 				       `(begin . ,?expr*))))))
 		   (loop))))))))
-    ))
+    )))
 
 ;;; --------------------------------------------------------------------
 
@@ -4117,7 +4314,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RETURNABLE
+;;;; non-core macro: RETURNABLE
 
 (define (returnable-macro expr-stx)
   ;;Transformer function used to expand Vicare's RETURNABLE macros from the top-level
@@ -4137,7 +4334,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: TRY
+;;;; non-core macro: TRY
 
 (module (try-macro)
   (define-constant __who__ 'try)
@@ -4223,7 +4420,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
+;;;; non-core macro: WITH-BLOCKED-EXCEPTIONS, WITH-CURRENT-DYNAMIC-ENVIRONMENT
 
 (define (with-blocked-exceptions-macro expr-stx)
   ;;Transformer function used to  expand Vicare's WITH-BLOCKED-EXCEPTIONS macros from
@@ -4278,7 +4475,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: OR, AND
+;;;; non-core macro: OR, AND
 
 (define (or-macro expr-stx)
   ;;Transformer function  used to expand R6RS  OR macros from the  top-level built in
@@ -4318,64 +4515,65 @@
     ))
 
 
-;;;; module non-core-macro-transformer: COND
+;;;; non-core macro: COND
 
 (define (cond-macro expr-stx)
-  ;;Transformer  function  used to  expand  R6RS  COND macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand R6RS  COND macros from the top-level built in
+  ;;environment.  Expand the  contents of EXPR-STX; return a syntax  object that must
+  ;;be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?cls ?cls* ...)
-     (bless
-      (let recur ((cls ?cls) (cls* ?cls*))
-	(if (null? cls*)
+  (with-who 'cond
+    (syntax-match expr-stx ()
+      ((_ ?cls ?cls* ...)
+       (bless
+	(let recur ((cls ?cls) (cls* ?cls*))
+	  (if (null? cls*)
+	      (syntax-match cls (else =>)
+		((else ?expr ?expr* ...)
+		 `(internal-body ,?expr . ,?expr*))
+
+		((?test => ?proc)
+		 `(let ((t ,?test))
+		    (if t
+			(,?proc t)
+		      (void))))
+
+		((?expr)
+		 `(or ,?expr (void)))
+
+		((?test ?expr* ...)
+		 `(if ,?test
+		      (internal-body . ,?expr*)
+		    (void)))
+
+		(_
+		 (syntax-violation __who__ "invalid last clause" expr-stx cls)))
+
 	    (syntax-match cls (else =>)
 	      ((else ?expr ?expr* ...)
-	       `(internal-body ,?expr . ,?expr*))
+	       (syntax-violation __who__ "incorrect position of keyword ELSE" expr-stx cls))
 
 	      ((?test => ?proc)
 	       `(let ((t ,?test))
 		  (if t
 		      (,?proc t)
-		    (void))))
+		    ,(recur (car cls*) (cdr cls*)))))
 
 	      ((?expr)
-	       `(or ,?expr (void)))
+	       `(or ,?expr
+		    ,(recur (car cls*) (cdr cls*))))
 
 	      ((?test ?expr* ...)
 	       `(if ,?test
 		    (internal-body . ,?expr*)
-		  (void)))
-
-	      (_
-	       (stx-error expr-stx "invalid last clause")))
-
-	  (syntax-match cls (else =>)
-	    ((else ?expr ?expr* ...)
-	     (stx-error expr-stx "incorrect position of keyword else"))
-
-	    ((?test => ?proc)
-	     `(let ((t ,?test))
-		(if t
-		    (,?proc t)
-		  ,(recur (car cls*) (cdr cls*)))))
-
-	    ((?expr)
-	     `(or ,?expr
 		  ,(recur (car cls*) (cdr cls*))))
 
-	    ((?test ?expr* ...)
-	     `(if ,?test
-		  (internal-body . ,?expr*)
-		,(recur (car cls*) (cdr cls*))))
-
-	    (_
-	     (stx-error expr-stx "invalid last clause")))))))
-    ))
+	      (_
+	       (syntax-violation __who__ "invalid last clause" expr-stx cls)))))))
+      )))
 
 
-;;;; module non-core-macro-transformer: QUASIQUOTE
+;;;; non-core macro: QUASIQUOTE
 
 (module (quasiquote-macro)
   ;;Transformer function used to expand  R6RS QUASIQUOTE macros from the
@@ -4410,25 +4608,25 @@
       ((unquote p)
        (if (zero? nesting-level)
 	   p
-	 (%quasicons (%keyword 'unquote)
+	 (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote)
 		     (%quasi (list p) (sub1 nesting-level)))))
 
       (((unquote p ...) . q)
        (if (zero? nesting-level)
 	   (%quasicons* p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%keyword 'unquote)
+	 (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote)
 				 (%quasi p (sub1 nesting-level)))
 		     (%quasi q nesting-level))))
 
       (((unquote-splicing p ...) . q)
        (if (zero? nesting-level)
 	   (%quasiappend p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%keyword 'unquote-splicing)
+	 (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote-splicing)
 				 (%quasi p (sub1 nesting-level)))
 		     (%quasi q nesting-level))))
 
       ((quasiquote p)
-       (%quasicons (%keyword 'quasiquote)
+       (%quasicons (make-top-level-syntax-object/quoted-quoting 'quasiquote)
 		   (%quasi (list p) (add1 nesting-level))))
 
       ((p . q)
@@ -4436,7 +4634,7 @@
 		   (%quasi q nesting-level)))
 
       (#(x ...)
-       (not (<stx>? x))
+       (not (stx? x))
        (%quasivector (%vector-quasi x nesting-level)))
 
       (p
@@ -4452,14 +4650,14 @@
   	 ((unquote p ...)
   	  (if (zero? nesting-level)
   	      (%quasicons* p (%vector-quasi q nesting-level))
-  	    (%quasicons (%quasicons (%keyword 'unquote)
+  	    (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote)
   				    (%quasi p (sub1 nesting-level)))
   			(%vector-quasi q nesting-level))))
 
   	 ((unquote-splicing p ...)
   	  (if (zero? nesting-level)
   	      (%quasiappend p (%vector-quasi q nesting-level))
-  	    (%quasicons (%quasicons (%keyword 'unquote-splicing)
+  	    (%quasicons (%quasicons (make-top-level-syntax-object/quoted-quoting 'unquote-splicing)
   				    (%quasi p (sub1 nesting-level)))
   			(%vector-quasi q nesting-level))))
 
@@ -4471,18 +4669,6 @@
       (()
        (%application 'quote '()))
       ))
-
-  (define (%keyword key)
-    ;;Return a  top-marked syntax  object representing a  quoted symbol;
-    ;;the  symbol  being the  name  of  a  syntax  from the  boot  image
-    ;;EXPORT-ENV.  Expanding  and evaluating the returned  syntax object
-    ;;is equivalent to evaluating:
-    ;;
-    ;;   (quote key)
-    ;;
-    ;;where KEY is one of: quasiquote, unquote, unquote-splicing.
-    ;;
-    (list (core-prim-id 'quote) (mkstx key TOP-MARK* '() '())))
 
   (define-syntax %application
     ;;Expand to an expression which, when evaluated, results in a syntax
@@ -4591,7 +4777,7 @@
   #| end of module: QUASIQUOTE-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: QUASISYNTAX
+;;;; non-core macro: QUASISYNTAX
 
 (module (quasisyntax-macro)
   ;;Transformer function used to expand R6RS QUASISYNTAX macros from the
@@ -4611,6 +4797,8 @@
 	      (syntax ,v))))))
       ))
 
+  (define-module-who quasisyntax)
+
   (define (quasi p nesting-level)
     (syntax-match p (unsyntax unsyntax-splicing quasisyntax)
       ((unsyntax p)
@@ -4623,7 +4811,7 @@
 
       (unsyntax
        (zero? nesting-level)
-       (stx-error p "incorrect use of unsyntax"))
+       (syntax-violation __module_who__ "incorrect use of unsyntax" p))
 
       (((unsyntax p* ...) . q)
        (receive (lhs* rhs* q)
@@ -4658,7 +4846,7 @@
 
       (unsyntax-splicing
        (zero? nesting-level)
-       (stx-error p "incorrect use of unsyntax-splicing"))
+       (syntax-violation __module_who__ "incorrect use of unsyntax-splicing" p))
 
       ((quasisyntax p)
        (receive (lhs* rhs* p)
@@ -4685,7 +4873,7 @@
   #| end of module |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
+;;;; non-core macro: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
 
 (define (define-values-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
@@ -4821,7 +5009,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
+;;;; non-core macro: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
 
 (define (receive-macro input-form.stx)
   ;;Transformer function  used to expand  Vicare's RECEIVE macros from  the top-level
@@ -4917,7 +5105,7 @@
   #| end of module: XOR-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: DEFINE-INLINE, DEFINE-CONSTANT
+;;;; non-core macro: DEFINE-INLINE, DEFINE-CONSTANT
 
 (define (define-constant-macro expr-stx)
   ;;Transformer function used to  expand Vicare's DEFINE-CONSTANT macros
@@ -5006,46 +5194,48 @@
     ))
 
 
-;;;; module non-core-macro-transformer: INCLUDE
+;;;; non-core macro: INCLUDE
 
-(module (include-macro)
-  ;;Transformer function used to expand Vicare's INCLUDE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define (include-macro expr-stx)
+  ;;Transformer function  used to expand  Vicare's INCLUDE macros from  the top-level
+  ;;built in  environment.  Expand the contents  of EXPR-STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
-  (define (include-macro expr-stx)
+  (with-who 'include
+    (define (main expr-stx)
+      (syntax-match expr-stx ()
+	((?context ?filename)
+	 (%include-file ?filename ?context #f %synner))
+	((?context ?filename #t)
+	 (%include-file ?filename ?context #t %synner))
+	))
+
+    (define (%include-file filename-stx context-id verbose? synner)
+      (define filename.str
+	(syntax->datum filename-stx))
+      (unless (string? filename.str)
+	(%synner "expected string as include file pathname" filename-stx))
+      (receive (pathname contents)
+	  ((current-include-loader) filename.str verbose? synner)
+	;;We expect CONTENTS to be null or a list of annotated datums.
+	(bless
+	 `(stale-when (internal-body
+			(import (only (vicare language-extensions posix)
+				      file-modification-time))
+			(or (not (file-exists? ,pathname))
+			    (> (file-modification-time ,pathname)
+			       ,(file-modification-time pathname))))
+	    . ,(map (lambda (item)
+		      (datum->syntax context-id item))
+		 contents)))))
+
     (define (%synner message subform)
-      (syntax-violation 'include message expr-stx subform))
-    (syntax-match expr-stx ()
-      ((?context ?filename)
-       (%include-file ?filename ?context #f %synner))
-      ((?context ?filename #t)
-       (%include-file ?filename ?context #t %synner))
-      ))
+      (syntax-violation __who__ message expr-stx subform))
 
-  (define (%include-file filename-stx context-id verbose? synner)
-    (define filename.str
-      (syntax->datum filename-stx))
-    (unless (string? filename.str)
-      (stx-error filename-stx "expected string as include file pathname"))
-    (receive (pathname contents)
-	((current-include-loader) filename.str verbose? synner)
-      ;;We expect CONTENTS to be null or a list of annotated datums.
-      (bless
-       `(stale-when (internal-body
-		      (import (only (vicare language-extensions posix)
-				    file-modification-time))
-		      (or (not (file-exists? ,pathname))
-			  (> (file-modification-time ,pathname)
-			     ,(file-modification-time pathname))))
-	  . ,(map (lambda (item)
-		    (datum->syntax context-id item))
-	       contents)))))
-
-  #| end of module: INCLUDE-MACRO |# )
+    (main expr-stx)))
 
 
-;;;; module non-core-macro-transformer: DEFINE-INTEGRABLE
+;;;; non-core macro: DEFINE-INTEGRABLE
 
 (define (define-integrable-macro expr-stx)
   ;;Transformer  function  used  to  expand  Vicare's  DEFINE-INTEGRABLE
@@ -5085,7 +5275,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
+;;;; non-core macro: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
 
 (define (define-syntax-parameter-macro expr-stx)
   ;;Transformer function used to expand Vicare's DEFINE-SYNTAX-PARAMETER
@@ -5097,7 +5287,7 @@
      (identifier? ?param-id)
      (bless
       `(define-fluid-syntax ,?param-id
-	 (make-compile-time-value ,?param-expr))))
+	 (make-expand-time-value ,?param-expr))))
     ))
 
 (define (syntax-parametrise-macro expr-stx)
@@ -5111,13 +5301,30 @@
      (for-all identifier? ?lhs*)
      (bless
       `(fluid-let-syntax ,(map (lambda (lhs rhs)
-				 (list lhs `(make-compile-time-value ,rhs)))
+				 (list lhs `(make-expand-time-value ,rhs)))
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
     ))
 
 
-;;;; module non-core-macro-transformer: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
+;;;; non-core macro: UNSAFE
+
+(define (unsafe-macro input-form.stx)
+  ;;Transformer function  used to  expand Vicare's UNSAFE  macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (with-who unsafe
+    (syntax-match input-form.stx ()
+      ((_ ?safe-id)
+       (identifier? ?safe-id)
+       (or (identifier-unsafe-variant ?safe-id)
+	   (syntax-violation __who__
+	     "identifier has no unsafe variant" input-form.stx ?safe-id)))
+      )))
+
+
+;;;; non-core macro: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
 
 (define (pre-incr-macro input-form.stx)
   ;;Transformer function used to expand  Vicare's PRE-INCR! macros from the top-level
@@ -5234,14 +5441,14 @@
     ))
 
 
-;;;; module non-core-macro-transformer: INFIX
+;;;; non-core macro: INFIX
 
 (module (infix-macro)
-  (include "psyntax.expander.infix-macro.scm" #t)
+  (include "psyntax.non-core-macro-transformers.infix-macro.scm" #t)
   #| end of module: INFIX-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: miscellanea
+;;;; non-core macro: miscellanea
 
 (define (time-macro expr-stx)
   ;;Transformer function  used to expand  Vicare's TIME macros  from the
@@ -5373,9 +5580,10 @@
 
 ;;;; done
 
+#| end of library |# )
+
 ;;; end of file
 ;;Local Variables:
-;;mode: vicare
 ;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
@@ -5390,7 +5598,7 @@
 ;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
-;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'with-who				'scheme-indent-function 1)
 ;;End:
