@@ -27,6 +27,7 @@
 
 #!r6rs
 (import (vicare)
+  (prefix (vicare expander) xp.)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -54,7 +55,7 @@
 ;;; checking illegal references to bindings
 
   ;; error
-  (if (vicare-built-with-descriptive-labels-generation)
+  (if (xp.generate-descriptive-gensyms?)
       (check-syntax-violation lex.ciao_0
 	(internal-body
 	  (define b (ciao))

@@ -19,7 +19,6 @@ VFLAGS=${VFLAGS:=-O2 --no-drop-assertions --check-compiler-pass-preconditions}
     --cache-file=../config.cache			\
     --prefix="${prefix}"				\
     --libdir="${libdir}"				\
-    --enable-descriptive-labels-generation		\
     --enable-binfmt					\
     --enable-time-tests					\
     --enable-scheme-script				\

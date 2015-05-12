@@ -28,7 +28,6 @@
     if-wants-case-lambda
     if-wants-letrec*			if-wants-global-defines
     if-wants-library-letrec*
-    if-wants-descriptive-gensyms	if-wants-descriptive-marks
     base-of-interaction-library)
   (import (rnrs)
     (psyntax.compat))
@@ -83,30 +82,6 @@
 (define-option if-wants-letrec*        #t)
 
 (define-option if-wants-library-letrec* #t)
-
-;;If true:  generate gensyms  with descriptive  names, which is  slower but  helps in
-;;debugging and understanding the code.
-;;
-(define-syntax if-wants-descriptive-gensyms
-  (lambda (stx)
-    (module (generate-descriptive-labels?)
-      (include "ikarus.config.scm"))
-    (syntax-case stx ()
-      ((_ ?true ?false)
-       (if generate-descriptive-labels? #'?true #'?false))
-      )))
-
-;;If  true: generate  descriptive strings  as  syntactic identifier  marks, which  is
-;;slower but helps in debugging and understanding the code.
-;;
-(define-syntax if-wants-descriptive-marks
-  (lambda (stx)
-    (module (generate-descriptive-labels?)
-      (include "ikarus.config.scm"))
-    (syntax-case stx ()
-      ((_ ?true ?false)
-       (if generate-descriptive-labels? #'?true #'?false))
-      )))
 
 
 ;;;; done

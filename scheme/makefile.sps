@@ -3596,6 +3596,9 @@
 ;;; --------------------------------------------------------------------
 ;;; expander stuff
 
+    (generate-descriptive-gensyms?			$expander)
+    (generate-descriptive-marks?			$expander)
+
     (syntax-object?					$expander)
     (stx?						$expander)
     (stx-expr						$expander)

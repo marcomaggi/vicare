@@ -27,8 +27,10 @@
 #!vicare
 (import (vicare)
   (vicare checks)
-  (only (vicare expander)
-	expand-form-to-core-language)
+  (prefix (only (vicare expander)
+		expand-form-to-core-language
+		generate-descriptive-gensyms?)
+	  expander.)
   (only (vicare libraries)
 	expand-library->sexp)
   (prefix (vicare compiler)
@@ -37,6 +39,7 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler internals\n")
 
+(expander.generate-descriptive-gensyms?	#t)
 (compiler.generate-descriptive-labels?	#f)
 (compiler.optimize-level		2)
 (compiler.source-optimizer-passes-count 2)
@@ -74,7 +77,7 @@
 
 (define (%expand standard-language-form)
   (receive (code libs)
-      (expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
+      (expander.expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
     code))
 
 (define (%expand-library standard-language-form)

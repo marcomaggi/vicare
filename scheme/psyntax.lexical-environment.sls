@@ -22,6 +22,10 @@
 (library (psyntax.lexical-environment)
   (export
 
+    ;;configuration
+    generate-descriptive-gensyms?
+    generate-descriptive-marks?
+
     top-level-context
     self-evaluating?
 
@@ -233,6 +237,7 @@
 		  generate-temporaries
 		  datum->syntax		syntax->datum
 		  syntax-violation	make-variable-transformer)
+    (vicare system $symbols)
     (rnrs mutable-pairs)
     (prefix (rnrs syntax-case) sys.)
     (psyntax.config)
@@ -274,6 +279,15 @@
 		  ...)
        ?body0 ?body ...))
     ))
+
+
+;;;; configuration
+
+(define generate-descriptive-gensyms?
+  (make-parameter #f))
+
+(define generate-descriptive-marks?
+  (make-parameter #f))
 
 
 ;;;; top-level environments
@@ -1000,6 +1014,9 @@
 
 ;;;; label gensym, lexical variable gensyms, storage location gensyms
 
+(define-syntax-rule (%fastest-gensym)
+  ($make-symbol #f))
+
 ;;Every syntactic binding  has a label associated  to it as unique  identifier in the
 ;;whole running process; this function generates such labels as gensyms.
 ;;
@@ -1007,91 +1024,47 @@
 ;;we write  the expanded sexp to  a file and then  read it back, the  labels must not
 ;;change and still be globally unique).
 ;;
-(if-wants-descriptive-gensyms
-    (define (generate-label-gensym seed)
+(define* (generate-label-gensym seed)
+  (if (generate-descriptive-gensyms?)
       (cond ((identifier? seed)
-	     (gensym (string-append "lab." (symbol->string (~identifier->symbol seed)))))
+	     (gensym (string-append "lab." ($symbol->string (~identifier->symbol seed)))))
 	    ((symbol? seed)
-	     (gensym (string-append "lab." (symbol->string seed))))
+	     (gensym (string-append "lab." ($symbol->string seed))))
 	    ((string? seed)
 	     (gensym (string-append "lab." seed)))
 	    (else
-	     (gensym))))
-  (define-syntax (generate-label-gensym stx)
-    (sys.syntax-case stx ()
-      ;;When this binding is used as:
-      ;;
-      ;;   (map generate-label-genysm ?list)
-      ;;
-      ;;let's give the compile a chance to integrate the MAP and the LAMBDA below.
-      ;;
-      (?id
-       (sys.identifier? (sys.syntax ?id))
-       (sys.syntax (lambda (unused) (gensym))))
-      ((_ ?seed)
-       (sys.syntax (gensym)))
-      )))
+	     (procedure-argument-violation __who__ "expected identifier, symbol or string as argument" seed)))
+    (%fastest-gensym)))
 
 ;;Generate a unique  symbol to represent the  name of a lexical variable  in the core
 ;;language forms.  Such symbols have the purpose of being unique in the core language
 ;;expressions representing a full library or full program.
 ;;
-(if-wants-descriptive-gensyms
-    (define* (generate-lexical-gensym seed)
+(define* (generate-lexical-gensym seed)
+  (if (generate-descriptive-gensyms?)
       (cond ((identifier? seed)
 	     (gensym (string-append "lex." (symbol->string (~identifier->symbol seed)))))
 	    ((symbol? seed)
 	     (gensym (string-append "lex." (symbol->string seed))))
 	    (else
-	     (assertion-violation __who__
-	       "expected symbol or identifier as argument" seed))))
-  (define-syntax (generate-lexical-gensym stx)
-    (sys.syntax-case stx ()
-      ;;When this binding is used as:
-      ;;
-      ;;   (map generate-lexical-genysm ?list)
-      ;;
-      ;;let's give the compile a chance to integrate the MAP and the LAMBDA below.
-      ;;
-      (?id
-       (sys.identifier? (sys.syntax ?id))
-       (sys.syntax (lambda (unused) (gensym))))
-      ((_ ?seed)
-       (sys.syntax (gensym)))
-      )))
+	     (procedure-argument-violation __who__ "expected identifier, symbol or string as argument" seed)))
+    (%fastest-gensym)))
 
-(define generate-storage-location-gensym
+(define* (generate-storage-location-gensym seed)
   ;;Build  and return  a gensym  to be  used as  storage location  for a
   ;;global lexical variable.  The "value" slot of such gensym is used to
   ;;hold the value of the variable.
   ;;
-  (if-wants-descriptive-gensyms
-      (case-lambda
-       (()
-	(gensym "loc.anonymous"))
-       ((seed)
-	(cond ((identifier? seed)
-	       (gensym (string-append "loc." (symbol->string (~identifier->symbol seed)))))
-	      ((symbol? seed)
-	       (gensym (string-append "loc." (symbol->string seed))))
-	      ((string? seed)
-	       (gensym (string-append "loc." seed)))
-	      (else
-	       (gensym)))))
-    ;;It is  really important to  use a  seeded gensym here,  because it
-    ;;will show up in some error messages about unbound identifiers.
-    (case-lambda
-     (()
-      (gensym))
-     ((seed)
+  (if (generate-descriptive-gensyms?)
       (cond ((identifier? seed)
-	     (gensym (symbol->string (~identifier->symbol seed))))
+	     (gensym (string-append "loc." (symbol->string (~identifier->symbol seed)))))
 	    ((symbol? seed)
-	     (gensym (symbol->string seed)))
+	     (gensym (string-append "loc." (symbol->string seed))))
 	    ((string? seed)
-	     (gensym seed))
+	     (gensym (string-append "loc." seed)))
 	    (else
-	     (gensym)))))))
+	     (procedure-argument-violation __who__ "expected identifier, symbol or string as argument" seed)))
+    (%fastest-gensym)))
 
 
 ;;;; lexical environment: mapping labels to syntactic binding descriptors
@@ -1225,29 +1198,24 @@
 
 ;;;; marks of lexical contours
 
-;;Generate a new unique mark.  We want a new string for every function call.
-;;
-;; (if-wants-descriptive-marks
-;;     (define generate-new-mark
-;;       (let ((i 0))
-;; 	(lambda ()
-;; 	  (set! i (fxadd1 1))
-;; 	  (string-append "mark." (number->string i)))))
-;;   (define-syntax-rule (generate-new-mark)
-;;     (string)))
-;;
-;;FIXME  For some  reason  unknown to  me  (at  present): if  I  try the  descriptive
-;;implementation  above I  get  errors  in some  libraries  using imported  syntactic
-;;bindings  established by  DEFINE-CONSTANT.  No  error happens  with the  definition
-;;below.  Something is wrong somewhere.  (Marco Maggi; Wed Apr 29, 2015)
-(define-syntax-rule (generate-new-mark)
-  (string))
+(module (generate-new-mark)
+
+  (define counter 0)
+
+  (define (generate-new-mark)
+    ;;Generate a new unique mark.  We want a new string for every function call.
+    ;;
+    (if (generate-descriptive-marks?)
+	(begin
+	  (set! counter (fxadd1 counter))
+	  (string-append "mark." (number->string counter)))
+      (string)))
+
+  #| end of module |# )
 
 ;;By default we use #f as the anti-mark.
 ;;
-(if-wants-descriptive-marks
-    (define-constant THE-ANTI-MARK 'anti-mark)
-  (define-constant THE-ANTI-MARK #f))
+(define-constant THE-ANTI-MARK #f)
 
 (define-syntax-rule (lexical-contour-mark? ?obj)
   (string? ?obj))
@@ -1255,11 +1223,8 @@
 (define-syntax-rule (src-mark? ?obj)
   (eq? ?obj 'src))
 
-(if-wants-descriptive-marks
-    (define-syntax-rule (anti-mark? ?obj)
-      (eq? ?obj THE-ANTI-MARK))
-  (define-syntax-rule (anti-mark? ?obj)
-    (not ?obj)))
+(define-syntax-rule (anti-mark? ?obj)
+  (not ?obj))
 
 (define (mark? obj)
   (or (src-mark? obj)
@@ -3013,5 +2978,4 @@
 ;; Local Variables:
 ;; coding: utf-8-unix
 ;; eval: (put 'let-syntax-rules			'scheme-indent-function 1)
-;; eval: (put 'if-wants-descriptive-marks	'scheme-indent-function 1)
 ;; End:

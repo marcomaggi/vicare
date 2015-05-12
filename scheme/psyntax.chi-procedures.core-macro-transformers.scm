@@ -2784,7 +2784,6 @@
 ;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'core-lang-builder			'scheme-indent-function 1)
 ;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
-;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)

@@ -152,6 +152,9 @@
 
 (case-define* gensym
   (()
+   ;;This form generates a non-interned symbol  with unset strings; it is the fastest
+   ;;way of  generating gensyms.  The pretty  string and unique string  are generated
+   ;;only if explicitly requested.
    ($make-symbol #f))
   ((s)
    (cond ((string? s)
