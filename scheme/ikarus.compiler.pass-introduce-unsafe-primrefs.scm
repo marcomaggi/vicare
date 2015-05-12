@@ -110,7 +110,7 @@
 	   tuple-tags-arity
 	   tuple-tags-rest-objects-tag
 	   tuple-tags-ref)
-    (import CORE-PRIMITIVE-PROPERTIES))
+    (import (ikarus.compiler.core-primitive-properties)))
 
   (define (E-funcall rator rand*)
     (let ((rand*^ ($map/stx E-known rand*)))

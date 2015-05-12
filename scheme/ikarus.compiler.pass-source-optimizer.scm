@@ -1597,7 +1597,7 @@
 	   application-attributes-result-false?
 	   application-attributes-identity?
 	   CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
-    (import CORE-PRIMITIVE-PROPERTIES))
+    (import (ikarus.compiler.core-primitive-properties)))
 
   (define-syntax __module_who__
     (identifier-syntax 'fold-prim))

@@ -78,7 +78,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
   (module (core-primitive-name->core-type-tag)
-    (import CORE-PRIMITIVE-PROPERTIES))
+    (import (ikarus.compiler.core-primitive-properties)))
 
   (define-syntax __module_who__
     (identifier-syntax 'core-type-inference))

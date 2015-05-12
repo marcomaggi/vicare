@@ -294,7 +294,23 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
 	scheme/ikarus.compiler.config.sls			\
 	scheme/ikarus.compiler.scheme-objects-ontology.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.sls	\
+	\
+	scheme/ikarus.compiler.core-primitive-properties.base.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.configuration.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.booleans.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.characters.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.fixnums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.bignums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.ratnums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.flonums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.cflonums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.compnums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.symbols.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.keywords.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.pointers.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.pairs-and-lists.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.sls			\
+	\
 	scheme/ikarus.compiler.sls				\
 	scheme/ikarus.compiler.scheme-objects-layout.scm	\
 	scheme/ikarus.compiler.pass-letrec-optimizer.scm	\
