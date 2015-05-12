@@ -403,7 +403,10 @@
     "ikarus.compiler.core-primitive-properties.symbols.sls"
     "ikarus.compiler.core-primitive-properties.keywords.sls"
     "ikarus.compiler.core-primitive-properties.pointers.sls"
+    "ikarus.compiler.core-primitive-properties.bytevectors.sls"
     "ikarus.compiler.core-primitive-properties.pairs-and-lists.sls"
+    "ikarus.compiler.core-primitive-properties.vectors.sls"
+    "ikarus.compiler.core-primitive-properties.structs.sls"
     "ikarus.compiler.core-primitive-properties.sls"
 ;;;
     "ikarus.compiler.sls"
