@@ -305,6 +305,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-properties.flonums.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.cflonums.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.compnums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.strings.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.symbols.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.keywords.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.pointers.sls		\

@@ -399,6 +399,7 @@
     "ikarus.compiler.core-primitive-properties.flonums.sls"
     "ikarus.compiler.core-primitive-properties.cflonums.sls"
     "ikarus.compiler.core-primitive-properties.compnums.sls"
+    "ikarus.compiler.core-primitive-properties.strings.sls"
     "ikarus.compiler.core-primitive-properties.symbols.sls"
     "ikarus.compiler.core-primitive-properties.keywords.sls"
     "ikarus.compiler.core-primitive-properties.pointers.sls"
