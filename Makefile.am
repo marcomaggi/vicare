@@ -305,6 +305,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-properties.flonums.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.cflonums.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.compnums.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.code-objects.sls	\
 	scheme/ikarus.compiler.core-primitive-properties.strings.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.symbols.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.keywords.sls		\
@@ -313,6 +314,13 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-properties.pairs-and-lists.sls	\
 	scheme/ikarus.compiler.core-primitive-properties.vectors.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.structs.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.records.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.hash-tables.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.annotation-objects.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.enum-sets.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.condition-objects.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.transcoder-objects.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.input-output.sls	\
 	scheme/ikarus.compiler.core-primitive-properties.sls			\
 	\
 	scheme/ikarus.compiler.sls				\
