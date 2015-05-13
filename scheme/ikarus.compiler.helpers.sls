@@ -18,15 +18,20 @@
 #!r6rs
 (library (ikarus.compiler.helpers)
   (export
-    if-building-rotation-boot-image?
-    cond-expand
-    %list-of-one-item?
-    fxincr!
+    if-building-rotation-boot-image?		cond-expand
     expand-time-gensym
-    $map/stx
-    $for-each/stx
-    $fold-right/stx)
-  (import (vicare))
+    %list-of-one-item?				fxincr!
+    $map/stx					$for-each/stx
+    $fold-right/stx
+    struct-case					define-structure
+    print-compiler-warning-message
+    void-object?
+    remq1
+    union					difference)
+  (import (except (vicare)
+		  assembler-output
+		  optimizer-output)
+    (ikarus.compiler.config))
 
 
 ;;;; helper syntaxes
@@ -180,6 +185,248 @@
 	       (?combine (car ell0) (car ELL) ... (recur knil (cdr ell0) (cdr ELL) ...))
 	     knil))))
     ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax struct-case
+  ;;Specialised  CASE syntax  for data  structures.  Notice  that we  could use  this
+  ;;syntax for  any set of struct  types, not only  the struct types defined  in this
+  ;;library.
+  ;;
+  ;;Given:
+  ;;
+  ;;  (define-struct alpha (a b c))
+  ;;  (define-struct beta  (d e f))
+  ;;
+  ;;we want to expand:
+  ;;
+  ;;  (struct-case ?expr
+  ;;    ((alpha a b)
+  ;;     (do-this))
+  ;;    ((beta d e f)
+  ;;     (do-that))
+  ;;    (else
+  ;;     (do-other)))
+  ;;
+  ;;into:
+  ;;
+  ;;  (let ((v ?expr))
+  ;;    (if ($struct/rtd? v (type-descriptor alpha))
+  ;;        (let ((a ($struct-ref v 0))
+  ;;              (b ($struct-ref v 1)))
+  ;;          (do-this))
+  ;;      (if ($struct/rtd? v (type-descriptor beta))
+  ;;          (let ((d ($struct-ref v 0))
+  ;;                (e ($struct-ref v 1))
+  ;;                (f ($struct-ref v 2)))
+  ;;            (do-that))
+  ;;        (begin
+  ;;          (do-other)))))
+  ;;
+  ;;notice that: in the clauses the pattern "(alpha  a b)" must list the fields A and
+  ;;B in the same order in which they appear in the struct type definition.
+  ;;
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((_ ?expr ?clause ...)
+	 (with-syntax ((BODY (%generate-body #'(?clause ...))))
+	   #'(let ((v ?expr))
+	       (import (only (vicare system $structs)
+			     $struct-ref $struct/rtd?))
+	       BODY)))))
+
+    (define (%generate-body clauses-stx)
+      (syntax-case clauses-stx (else)
+        (()
+	 (with-syntax ((INPUT-FORM stx))
+	   #'(error 'compiler "unknown struct type" v 'INPUT-FORM)))
+
+        (((else ?body0 ?body ...))
+	 #'(let () ?body0 ?body ...))
+
+        ((((?struct-name ?field-name ...) ?body0 ?body ...) . ?other-clauses)
+	 (identifier? #'?struct-name)
+         (with-syntax
+	     ((RTD		#'(type-descriptor ?struct-name))
+	      ((FIELD-NAM ...)  (%filter-field-names #'(?field-name ...)))
+	      ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
+	      (ALTERN		(%generate-body #'?other-clauses)))
+	   #'(if ($struct/rtd? v RTD)
+		 (let ((FIELD-NAM ($struct-ref v FIELD-IDX))
+		       ...)
+		   ?body0 ?body ...)
+	       ALTERN)))))
+
+    (define (%filter-field-names field*.stx)
+      ;;FIELD*.STX  must be  a  syntax object  holding a  list  of identifiers  being
+      ;;underscores or struct  field names.  Filter out the underscores  and return a
+      ;;list of identifiers representing the true field names.
+      ;;
+      (syntax-case field*.stx ()
+        (() '())
+        ((?field-name . ?other-names)
+	 (eq? '_ (syntax->datum #'?field-name))
+	 (%filter-field-names #'?other-names))
+        ((?field-name . ?other-names)
+	 (cons #'?field-name (%filter-field-names #'?other-names)))
+	))
+
+    (define (%enumerate field*.stx next-field-idx)
+      ;;FIELD*.STX  must be  a  syntax object  holding a  list  of identifiers  being
+      ;;underscores  or  struct  field  names.    NEXT-FIELD-IDX  must  be  a  fixnum
+      ;;representing the index of the first field in FIELD*.STX.
+      ;;
+      ;;Return  a  list  of  fixnums  representing  the  indexes  of  the  fields  in
+      ;;FIELD*.STX, discarding the fixnums matching underscores.
+      ;;
+      (syntax-case field*.stx ()
+        (() '())
+        ((?field-name . ?other-names)
+	 (eq? '_ (syntax->datum #'?field-name))
+	 (%enumerate #'?other-names (fxadd1 next-field-idx)))
+        ((?field-name . ?other-names)
+	 (cons next-field-idx (%enumerate #'?other-names (fxadd1 next-field-idx))))
+	))
+
+    (main stx)))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax define-structure
+  ;;A syntax to define struct types for compatibility with the notation used in Oscar
+  ;;Waddell's thesis; it allows  the definition of struct types in  which some of the
+  ;;fields are initialised  by the maker with default values,  while other fields are
+  ;;initialised with arguments handed to the maker.
+  ;;
+  ;;Synopsis:
+  ;;
+  ;;  (define-structure ?name
+  ;;    (?field-without ...)
+  ;;    ((?field-with ?default)
+  ;;	 ...))
+  ;;
+  ;;where: ?NAME is the struct type name, ?FIELD-WITHOUT are identifier names for the
+  ;;fields  without default,  ?FIELD-WITH are  identifier names  for the  fields with
+  ;;default, ?DEFAULT are the default values.
+  ;;
+  ;;The maker accepts a number of arguments equal to the number of ?FIELD-WITHOUT, in
+  ;;the same order in which they appear in the struct definition.
+  ;;
+  ;;(It is a bit ugly...  Marco Maggi; Oct 10, 2012)
+  ;;
+  (lambda (stx)
+    (define (%format-id ctxt template-str . args)
+      (datum->syntax ctxt (string->symbol
+			   (apply format template-str (map syntax->datum args)))))
+    (syntax-case stx ()
+      ((_ ?name (?field-without-default ...) ((?field-with-default ?default) ...))
+       (identifier? #'?name)
+       (let ((name.id #'?name))
+	 (with-syntax
+	     ((PRED			(%format-id name.id "~s?" name.id))
+	      (MAKER			(%format-id name.id "make-~s" name.id))
+	      ((GETTER ...)		(map (lambda (x)
+					       (%format-id name.id "~s-~s" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...)))
+	      ((UNSAFE-GETTER ...)	(map (lambda (x)
+					       (%format-id name.id "$~s-~s" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...)))
+	      ((SETTER ...)		(map (lambda (x)
+					       (%format-id name.id "set-~s-~s!" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...)))
+	      ((UNSAFE-SETTER ...)	(map (lambda (x)
+					       (%format-id name.id "$set-~s-~s!" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...))))
+	   #'(module (?name PRED
+			    GETTER ... UNSAFE-GETTER ...
+			    SETTER ... UNSAFE-SETTER ...
+			    MAKER)
+	       (module private
+		 (?name PRED
+			GETTER ... UNSAFE-GETTER ...
+			SETTER ... UNSAFE-SETTER ...
+			MAKER)
+		 (define-struct ?name
+		   (?field-without-default ... ?field-with-default ...)))
+	       (module (MAKER)
+		 (define (MAKER ?field-without-default ...)
+		   (import private)
+		   (MAKER ?field-without-default ... ?default ...)))
+	       (module (?name PRED
+			      GETTER ... UNSAFE-GETTER ...
+			      SETTER ... UNSAFE-SETTER ...)
+		 (import private))))))
+
+      ((_ ?name (?field ...))
+       (identifier? #'?name)
+       #'(define-struct ?name (?field ...)))
+      )))
+
+
+;;;; helper functions
+
+(define (print-compiler-warning-message template . args)
+  (when (option.verbose?)
+    (let ((P (current-error-port)))
+      (display "vicare: compiler warning: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
+;;; --------------------------------------------------------------------
+
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Tue  Sep 30,
+;;2014)
+(define (void-object? x)
+  (eq? x (void)))
+
+;;; --------------------------------------------------------------------
+
+(define (remq1 x ls)
+  ;;Scan the list  LS and remove only the  first instance of object X,  using EQ?  as
+  ;;comparison function; return the resulting list which may share its tail with LS.
+  ;;
+  (if (pair? ls)
+      (if (eq? x (car ls))
+	  (cdr ls)
+	(let ((t (remq1 x (cdr ls))))
+	  (cond ((eq? t (cdr ls))
+		 ls)
+		(else
+		 (cons (car ls) t)))))
+    '()))
+
+(define (union s1 s2)
+  ;;Return a  list which  is the  union between  the lists  S1 and  S2, with  all the
+  ;;duplicates removed.
+  ;;
+  (define (add* s1 s2)
+    (if (pair? s1)
+	(add (car s1)
+	     (add* (cdr s1) s2))
+      s2))
+  (define (add x s)
+    (if (memq x s)
+	s
+      (cons x s)))
+  (cond ((null? s1) s2)
+	((null? s2) s1)
+	(else
+	 (add* s1 s2))))
+
+(define (difference s1 s2)
+  ;;Return a list holding  all the elements from the list S1 not  present in the list
+  ;;S2.
+  ;;
+  (define (rem* s2 s1)
+    (if (pair? s2)
+	(remq1 (car s2)
+	       (rem* (cdr s2) s1))
+      s1))
+  (cond ((null? s1) '())
+	((null? s2) s1)
+	(else
+	 (rem* s2 s1))))
 
 
 ;;;; done

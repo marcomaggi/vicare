@@ -2916,7 +2916,6 @@
     (unbound-object				v $language)
     (unbound-object?				v $language)
     (eval-core					$boot)
-    (current-core-eval				v $language) ;;; temp
     (pretty-print				v $language $boot)
     (pretty-print*				v $language)
     (debug-print				v $language)

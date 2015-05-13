@@ -832,7 +832,6 @@
     cstring->bytevector*
     cstring->string
     cube
-    current-core-eval
     current-time
     date-string
     debug-print
