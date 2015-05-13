@@ -176,10 +176,24 @@
 ;;boot image are interned in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (vicare)
   ;;This library is from the old boot image.
-  (prefix (psyntax system $bootstrap)	bootstrap.)
+  (prefix (only (psyntax system $all)
+		find-library-by-name
+		current-library-collection)
+	  bootstrap.)
   ;;The following libraries are read, expanded and compiled from the source tree.
   (prefix (ikarus.options)		option.)
-  (prefix (ikarus.compiler)		compiler.)
+  (prefix (only (ikarus.compiler)
+		current-primitive-locations
+		compile-core-expr-to-port
+		;; configuration options
+		perform-core-type-inference
+		perform-unsafe-primrefs-introduction
+		strip-source-info
+		current-letrec-pass
+		generate-debug-calls
+		check-compiler-pass-preconditions
+		generate-descriptive-labels?)
+	  compiler.)
   (prefix (only (ikarus.fasl.write)
 		writing-boot-image?)
 	  fasl-write.))
@@ -935,7 +949,6 @@
     ($hashtables	(vicare system $hashtables)		#f	#t)
 ;;;
     ($all		(psyntax system $all)			#f	#t)
-    ($boot		(psyntax system $bootstrap)		#f	#t)
 ;;;
     ;; These   libraries  are   used   by  the   R6RS   functions  NULL-ENVIRONMENT   and
     ;; SCHEME-REPORT-ENVIRONMENT.
@@ -1182,8 +1195,6 @@
     (pointer-value				v $language)
 ;;;
     (apropos					v $language)
-    (current-primitive-locations		$boot)
-    (current-library-collection			$boot)
 
 ;;; ------------------------------------------------------------
 ;;; symbols stuff
@@ -2908,15 +2919,14 @@
     (string-titlecase				v r uc)
     (string-upcase				v r uc)
     (load					v $language)
-    (void					v $language $boot)
+    (void					v $language)
     (void-object?				v $language)
-    (gensym					v $language $boot)
-    (symbol-value				v $language $boot)
-    (set-symbol-value!				v $language $boot)
+    (gensym					v $language)
+    (symbol-value				v $language)
+    (set-symbol-value!				v $language)
     (unbound-object				v $language)
     (unbound-object?				v $language)
-    (eval-core					$boot)
-    (pretty-print				v $language $boot)
+    (pretty-print				v $language)
     (pretty-print*				v $language)
     (debug-print				v $language)
     (debug-print-enabled?			v $language)
@@ -3570,7 +3580,7 @@
 
     (library?						$libraries)
     (library-uid					$libraries)
-    (library-name					$libraries $boot)
+    (library-name					$libraries)
     (library-imp-lib*					$libraries)
     (library-vis-lib*					$libraries)
     (library-inv-lib*					$libraries)
@@ -3592,8 +3602,8 @@
     (library-descriptor-uid				$libraries)
     (library-descriptor-name				$libraries)
 
-    (find-library-by-name				$libraries $boot)
-    (find-library-by-reference				$libraries $boot)
+    (find-library-by-name				$libraries)
+    (find-library-by-reference				$libraries)
     (find-library-by-descriptor				$libraries)
     (find-library-in-collection-by-predicate		$libraries)
     (find-library-in-collection-by-name			$libraries)
@@ -3643,6 +3653,9 @@
 
 ;;; --------------------------------------------------------------------
 ;;; expander stuff
+
+    ;;This goes in "(psyntax system $all)" and it is used in this makefile.
+    (current-library-collection)
 
     (generate-descriptive-gensyms?			$expander)
     (generate-descriptive-marks?			$expander)

@@ -222,7 +222,6 @@
   ;; pointer-value
 ;;;
   ;; apropos
-  ;; current-primitive-locations
   ;; boot-library-expand
   ;; current-library-collection
   ;; library-name

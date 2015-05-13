@@ -101,7 +101,6 @@
 		  system-value
 
 		  return
-		  current-primitive-locations	eval-core
 		  compile-core-expr-to-port	compile-core-expr
 
 		  assembler-output		optimizer-output
@@ -133,12 +132,23 @@
 (define current-primitive-locations
   ;;Closure upon a function capable of  retrieving a core primitive's location gensym
   ;;given its symbol name.   Notice that this is not a  parameter because: whenever a
-  ;;new procedure is set some initialisation must be performed.
+  ;;new  procedure is  set, some  initialisation must  be performed;  also: there  is
+  ;;really no need to set this value with the features of the dynamic environment.
   ;;
   ;;The referenced function will allow this computation:
   ;;
   ;;   ((current-primitive-locations) 'display)
   ;;   => ?display-loc-gensym
+  ;;
+  ;;When  Vicare  is  running  normally: the  built-in  library  "(ikarus  primlocs)"
+  ;;initialises  this parameter  to  a function  that queries  the  property list  of
+  ;;symbols, looking for an entry having  SYSTEM-VALUE-GENSYM as key and the location
+  ;;gensym  as  value (similarly  to  what  SYSTEM-VALUE  does, but  without  raising
+  ;;exceptions).
+  ;;
+  ;;When  building  the  boot  image: the  program  "makefile.sps"  initialises  this
+  ;;parameter  to a  function that  extracts  the loc  gensyms from  tables built  by
+  ;;"makefile.sps" itself.
   ;;
   (let ((plocs (lambda (x) #f)))
     (case-lambda*
@@ -168,7 +178,7 @@
 	 => (lambda (obj)
 	      (if (symbol? obj)
 		  obj
-		(expression-return-value-violation 'current-primitive-locations
+		(expression-return-value-violation __who__
 		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
 		  obj))))
 	(else

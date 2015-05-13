@@ -66,7 +66,7 @@
       ;;
       ;;   (system-value 'cons)    => #<procedure cons>
       ;;
-      (cond ((getprop x SYSTEM-VALUE-GENSYM)
+      (cond (($getprop x SYSTEM-VALUE-GENSYM)
 	     => (lambda (g)
 		  (receive-and-return (v)
 		      ($symbol-value g)

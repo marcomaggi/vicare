@@ -21,15 +21,8 @@
 ;;;SOFTWARE.
 
 (library (psyntax.internal)
-  (export
-    ;;Commented out because unused.  (Marco Maggi; Oct 14, 2012)
-    ;;
-    ;; current-primitive-locations
-    ;; compile-core-expr-to-port
-    expanded->core)
-  (import (rnrs)
-    (psyntax.compat)
-    (ikarus.compiler))
+  (export expanded->core)
+  (import (rnrs))
   (define (expanded->core x)
     x))
 
