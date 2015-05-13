@@ -30,6 +30,8 @@
     core-expr->optimized-code		core-expr->assembly-code
     core-expr->optimisation-and-core-type-inference-code
 
+    system-value			system-value-gensym
+
     ;; these go in (vicare compiler)
     optimize-level
 
@@ -95,9 +97,9 @@
 		  ;;Maggi; Wed Dec 10, 2014)
 		  void-object?
 
-		  ;;We need a SYSTEM-VALUE procedure, but the correct one.  See below
-		  ;;the appropriately commented import spec.
-		  #;system-value
+		  ;;We  need  a SYSTEM-VALUE  procedure,  but  the correct  one:  the
+		  ;;binding imported from "(ikaurs.compiler.system-value)".
+		  system-value
 
 		  return
 		  current-primitive-locations
@@ -112,15 +114,8 @@
 		  perform-core-type-inference	strip-source-info
 		  fasl-write)
     (ikarus.compiler.config)
-    ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
-    ;;
-    ;;* During normal execution: this binding is the one from the boot image.
-    ;;
-    ;;* While building  a new boot image: this  binding is the one from  the old boot
-    ;;  image, *not* the one from loading "(ikarus.symbols)" in source form.
-    ;;
-    ;;We really need it this way for the use we do of such procedure.
-    (only (vicare) system-value)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.system-value)
     ;;When building a new  boot image: the FASL write library  is loaded from source.
     ;;This needs  to be  loaded here  so that  it evaluates  with the  freshly loaded
     ;;"ikarus.config.scm", including the correct value for WORDSIZE.
@@ -130,201 +125,12 @@
     (ikarus.compiler.scheme-objects-ontology)
     (ikarus.compiler.core-primitive-properties)
     (only (ikarus.intel-assembler)
-	  assemble-sources)
-    (prefix (only (ikarus.options)
-		  strict-r6rs
-		  verbose?)
-	    option.))
+	  assemble-sources))
 
   (include "ikarus.wordsize.scm" #t)
 
 
-;;;; configuration parameters
-
-(define generate-debug-calls
-  ;;Set  to true  when  the option  "--debug"  is used  on the  command  line of  the
-  ;;executable "vicare"; else set to #f.
-  ;;
-  (make-parameter #f))
-
-(define strip-source-info
-  ;;When true:  while processing  the core  language form  ANNOTATED-CASE-LAMBDA, the
-  ;;annotation about the source code location of the expression is removed; otherwise
-  ;;it is left in to be used by the debugger.
-  ;;
-  ;;We should strip source annotations when building the boot image.
-  ;;
-  (make-parameter #f))
-
-(define optimizer-output
-  (make-parameter #f))
-
-(define perform-core-type-inference
-  ;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
-  ;;
-  (make-parameter #t))
-
-(define perform-unsafe-primrefs-introduction
-  ;;When true: the pass INTRODUCE-UNSAFE-PRIMREFS  is performed, else it is skipped.
-  ;;It makes sense to perform such compiler  pass only if we have first performed the
-  ;;core type inference.
-  ;;
-  (make-parameter #t))
-
-(define assembler-output
-  (make-parameter #f))
-
-(define enabled-function-application-integration?
-  ;;When  true:   the  source   optimiser  will   attempt  integration   of  function
-  ;;applications.
-  ;;
-  (make-parameter #t
-    (lambda (obj)
-      (and obj #t))))
-
-(define check-compiler-pass-preconditions
-  ;;When true:  perform additional  compiler code-validation  passes to  validate the
-  ;;recordised code between true compiler passes.
-  ;;
-  (make-parameter #f
-    (lambda (obj)
-      (and obj #t))))
-
-
 ;;;; helper syntaxes
-
-(define-syntax (cond-expand stx)
-  ;;A  simple  implementation of  COND-EXPAND  in  which  the tests  are  expressions
-  ;;evaluated at expand time.
-  ;;
-  (syntax-case stx (else)
-    ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ... (else . ?else*))
-     (with-syntax
-	 ((OUTPUT (datum->syntax #'?ctx 'output)))
-       #'(let-syntax ((OUTPUT (lambda (stx)
-				(syntax-case stx ()
-				  ((??ctx)
-				   (datum->syntax #'??ctx
-						  (cond (?test0 '(begin . ?clause0*))
-							(?test  '(begin . ?clause*))
-							...
-							(else   '(begin . ?else*)))))
-				  ))))
-	   (OUTPUT))))
-    ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ...)
-     (with-syntax
-	 ((OUTPUT (datum->syntax #'?ctx 'output)))
-       #'(let-syntax ((OUTPUT (lambda (stx)
-				(syntax-case stx ()
-				  ((??ctx)
-				   (datum->syntax #'??ctx
-						  (cond (?test0 '(begin . ?clause0*))
-							(?test  '(begin . ?clause*))
-							...
-							(else   '(void)))))))))
-	   (OUTPUT))))
-    ))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax-rule (%list-of-one-item? ?ell)
-  (let ((ell ?ell))
-    (and (pair? ell)
-	 (null? (cdr ell)))))
-
-(define-syntax-rule (fxincr! ?var)
-  (set! ?var (fxadd1 ?var)))
-
-(define-syntax (compile-time-gensym stx)
-  ;;Generate a gensym at expand time and expand to the quoted symbol.
-  ;;
-  (syntax-case stx ()
-    ((_ ?template)
-     (let* ((tmp (syntax->datum #'?template))
-	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
-	    (str (apply string-append tmp (map (lambda (N)
-						 (string-append "." (number->string N)))
-					    fxs)))
-	    (sym (gensym str)))
-       (with-syntax
-	   ((SYM (datum->syntax #'here sym)))
-	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
-	 #'(quote SYM))))))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax ($map/stx stx)
-  ;;Like  MAP, but  expand the  loop inline.   The "function"  to be  mapped must  be
-  ;;specified by an identifier or lambda form because it is evaluated multiple times.
-  (syntax-case stx ()
-    ((_ ?proc ?ell0 ?ell ...)
-     ;;This implementation  is: tail recursive,  loops in order, assumes  proper list
-     ;;arguments of equal length.
-     (with-syntax
-	 (((ELL0 ELL ...) (generate-temporaries #'(?ell0 ?ell ...))))
-       #'(letrec ((loop (lambda (result.head result.last-pair ELL0 ELL ...)
-			  (if (pair? ELL0)
-			      (let* ((result.last-pair^ (let ((new-last-pair (cons (?proc (car ELL0)
-											  (car ELL)
-											  ...)
-										   '())))
-							  (if result.last-pair
-							      (begin
-								(set-cdr! result.last-pair new-last-pair)
-								new-last-pair)
-							    new-last-pair)))
-				     (result.head^       (or result.head result.last-pair^)))
-				(loop result.head^ result.last-pair^ (cdr ELL0) (cdr ELL) ...))
-			    (or result.head '())))))
-	   (loop #f #f ?ell0 ?ell ...)))
-     ;;This alternative  implementation: is non-tail recursive,  loops in unspecified
-     ;;order, assumes proper list arguments of equal length.
-     ;;
-     ;; (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
-     ;;   #'(let recur ((t ?ell0) (T ?ell) ...)
-     ;; 	   (if (null? t)
-     ;; 	       '()
-     ;; 	     (cons (?proc (car t) (car T) ...)
-     ;; 		   (recur (cdr t) (cdr T) ...))))))
-     )))
-
-(define-syntax ($for-each/stx stx)
-  ;;Like FOR-HEACH, but expand the loop inline.   The "function" to be mapped must be
-  ;;specified by an identifier or lambda form because it is evaluated multiple times.
-  ;;
-  ;;This implementation:  is tail recursive,  assumes proper list arguments  of equal
-  ;;length.
-  ;;
-  (syntax-case stx ()
-    ((_ ?func ?ell0 ?ell ...)
-     (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
-       #'(let loop ((t ?ell0) (T ?ell) ...)
-	   (when (pair? t)
-	     (?func (car t) (car T) ...)
-	     (loop  (cdr t) (cdr T) ...)))))
-    ))
-
-(define-syntax ($fold-right/stx stx)
-  ;;Like FOLD-RIGHT, but expand the loop inline.  The "function" to be folded must be
-  ;;specified by an identifier or lambda form because it is evaluated multiple times.
-  ;;
-  ;;This  implementation: is  non-tail recursive,  assumes proper  list arguments  of
-  ;;equal length.
-  ;;
-  (syntax-case stx ()
-    ((_ ?combine ?knil ?ell0 ?ell ...)
-     (with-syntax (((ELL ...) (generate-temporaries #'(?ell ...))))
-       #'(let recur ((knil ?knil)
-		     (ell0 ?ell0)
-		     (ELL  ?ell)
-		     ...)
-	   (if (pair? ell0)
-	       ;;This is FOLD-RIGHT so: first we recur, then we combine.
-	       (?combine (car ell0) (car ELL) ... (recur knil (cdr ell0) (cdr ELL) ...))
-	     knil))))
-    ))
-
-;;; --------------------------------------------------------------------
 
 (define-syntax struct-case
   ;;Specialised  CASE syntax  for data  structures.  Notice  that we  could use  this
@@ -1244,7 +1050,7 @@
 ;;universal  constants.  Given  the  public  name of  a  primitive  function: we  can
 ;;retrieve its location gensym with:
 ;;
-;;   (getprop 'list system-value-gensym) => ?loc-gensym-of-list
+;;   (getprop 'list (system-value-gensym)) => ?loc-gensym-of-list
 ;;
 (define-struct primref
   (name
@@ -6089,7 +5895,7 @@
   ;;CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
   ;;
   (define-constant COOKIE
-    (compile-time-gensym "core-primitive-operation/integration-handler"))
+    (expand-time-gensym "core-primitive-operation/integration-handler"))
 
   (define* (core-primitive-operation? {core-primitive-symbol-name symbol?})
     ;;Return  true  if  CORE-PRIMITIVE-SYMBOL-NAME  is  the public  name  of  a  core

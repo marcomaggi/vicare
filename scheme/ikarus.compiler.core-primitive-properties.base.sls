@@ -214,7 +214,7 @@
 ;;2014)
 
 ;; (define-constant CORE-PRIMITIVE-PROPKEY
-;;   (compile-time-gensym "applicable-core-primitive-properties"))
+;;   (expand-time-gensym "applicable-core-primitive-properties"))
 
 ;; (define* (core-primitive-name->application-attributes* {prim-name symbol?})
 ;;   ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return

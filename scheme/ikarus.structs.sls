@@ -456,6 +456,9 @@
 
 ;;;; done
 
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.structs before"))
+
 ;;Initialise the fields of the base RTD.
 ($set-std-name!       (base-rtd) "base-rtd")
 ($set-std-fields!     (base-rtd) '(name length fields printer symbol destructor))
@@ -464,6 +467,9 @@
 ;;   ($set-symbol-value! uid (base-rtd)))
 ($set-std-destructor! (base-rtd) #f)
 ($set-std-printer!    (base-rtd) default-struct-printer)
+
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.structs after"))
 
 #| end of libray (ikarus structs) |# )
 

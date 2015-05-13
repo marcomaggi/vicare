@@ -292,7 +292,6 @@ endif
 
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
-	scheme/ikarus.compiler.config.sls			\
 	scheme/ikarus.compiler.scheme-objects-ontology.sls	\
 	\
 	scheme/ikarus.compiler.core-primitive-properties.base.sls			\
@@ -333,7 +332,9 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-properties.posix.sls			\
 	scheme/ikarus.compiler.core-primitive-properties.sls				\
 	\
-	scheme/ikarus.compiler.sls				\
+	scheme/ikarus.compiler.config.sls			\
+	scheme/ikarus.compiler.helpers.sls			\
+	scheme/ikarus.compiler.system-value.sls			\
 	scheme/ikarus.compiler.scheme-objects-layout.scm	\
 	scheme/ikarus.compiler.pass-letrec-optimizer.scm	\
 	scheme/ikarus.compiler.pass-source-optimizer.scm	\
@@ -347,6 +348,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-operations.scm	\
 	scheme/ikarus.compiler.intel-assembly.scm		\
 	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
+	scheme/ikarus.compiler.sls				\
 	\
 	scheme/ikarus.apply.sls					\
 	scheme/ikarus.apropos.sls				\
