@@ -263,6 +263,144 @@
    ((T:binary-input-port)	=> (T:object))))
 
 
+;;;; foldable core primitive variants
+
+(declare-core-primitive foldable-cons
+    (safe)
+  (signatures
+   ((_ _)		=> (T:pair)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive foldable-list
+    (safe)
+  (signatures
+   (()			=> (T:null))
+   ((_ . _)		=> (T:non-empty-proper-list)))
+  (attributes
+   (()			foldable effect-free result-true)
+   ((_ . _)		foldable effect-free result-true)))
+
+(declare-core-primitive foldable-string
+    (safe)
+  (signatures
+   (()			=> (T:string))
+   (T:char		=> (T:string)))
+  (attributes
+   (()			foldable effect-free result-true)
+   (_			foldable effect-free result-true)))
+
+(declare-core-primitive foldable-vector
+    (safe)
+  (signatures
+   (()				=> (T:vector))
+   (_				=> (T:vector)))
+  (attributes
+   (()				foldable effect-free result-true)
+   (_				foldable effect-free result-true)))
+
+(declare-core-primitive foldable-list->vector
+    (safe)
+  (signatures
+   ((T:proper-list)		=> (T:vector)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive foldable-append
+    (safe)
+  (signatures
+   (()				=> (T:null))
+   ((T:object . T:object)	=> (T:improper-list)))
+  (attributes
+   (()				foldable effect-free result-true)
+   ((_ . _)			foldable effect-free result-true)))
+
+
+;;;; debugging helpers
+
+(declare-exact-integer-unary integer->machine-word)
+(declare-exact-integer-unary machine-word->integer)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive flonum->bytevector
+    (safe)
+  (signatures
+   ((T:flonum)		=> (T:bytevector)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive bytevector->flonum
+    (safe)
+  (signatures
+   ((T:flonum)		=> (T:bytevector)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive bignum->bytevector
+    (safe)
+  (signatures
+   ((T:bignum)		=> (T:bytevector)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive bytevector->bignum
+    (safe)
+  (signatures
+   ((T:bytevector)	=> (T:bignum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive time-it
+    (safe)
+  (signatures
+   ((T:string T:procedure)	=> T:object)))
+
+(declare-core-primitive time-and-gather
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)	=> T:object)))
+
+(declare-parameter verbose-timer)
+
+;;;
+
+(declare-type-predicate stats?		T:stats)
+
+(letrec-syntax
+    ((declare (syntax-rules ()
+		((_ ?who)
+		 (declare ?who T:object))
+		((_ ?who ?return-value-tag)
+		 (declare-core-primitive ?who
+		     (safe)
+		   (signatures
+		    ((T:stats)		=> (?return-value-tag)))
+		   (attributes
+		    ((_)		effect-free))))
+		)))
+  (declare stats-collection-id)
+  (declare stats-user-secs	T:exact-integer)
+  (declare stats-user-usecs	T:exact-integer)
+  (declare stats-sys-secs	T:exact-integer)
+  (declare stats-sys-usecs	T:exact-integer)
+  (declare stats-real-secs	T:exact-integer)
+  (declare stats-real-usecs	T:exact-integer)
+  (declare stats-gc-user-secs	T:exact-integer)
+  (declare stats-gc-user-usecs	T:exact-integer)
+  (declare stats-gc-sys-secs	T:exact-integer)
+  (declare stats-gc-sys-usecs	T:exact-integer)
+  (declare stats-gc-real-secs	T:exact-integer)
+  (declare stats-gc-real-usecs	T:exact-integer)
+  (declare stats-bytes-minor	T:exact-integer)
+  (declare stats-bytes-major	T:exact-integer)
+  #| end of LET-SYNTAX |# )
+
+
 ;;;; done
 
  #| end of DEFINE |# )

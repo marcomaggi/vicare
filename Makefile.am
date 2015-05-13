@@ -327,6 +327,10 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-properties.numerics.sls			\
 	scheme/ikarus.compiler.core-primitive-properties.times-and-dates.sls		\
 	scheme/ikarus.compiler.core-primitive-properties.library-utils.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.expander.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.eval-and-environments.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.ffi.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.posix.sls			\
 	scheme/ikarus.compiler.core-primitive-properties.sls				\
 	\
 	scheme/ikarus.compiler.sls				\

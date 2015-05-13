@@ -427,6 +427,10 @@
     "ikarus.compiler.core-primitive-properties.numerics.sls"
     "ikarus.compiler.core-primitive-properties.times-and-dates.sls"
     "ikarus.compiler.core-primitive-properties.library-utils.sls"
+    "ikarus.compiler.core-primitive-properties.expander.sls"
+    "ikarus.compiler.core-primitive-properties.eval-and-environments.sls"
+    "ikarus.compiler.core-primitive-properties.ffi.sls"
+    "ikarus.compiler.core-primitive-properties.posix.sls"
     ;;
     "ikarus.compiler.core-primitive-properties.sls"
 ;;;
