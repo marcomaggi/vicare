@@ -295,33 +295,39 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.config.sls			\
 	scheme/ikarus.compiler.scheme-objects-ontology.sls	\
 	\
-	scheme/ikarus.compiler.core-primitive-properties.base.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.configuration.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.booleans.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.characters.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.fixnums.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.bignums.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.ratnums.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.flonums.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.cflonums.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.compnums.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.code-objects.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.strings.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.symbols.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.keywords.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.pointers.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.bytevectors.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.pairs-and-lists.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.vectors.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.structs.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.records.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.hash-tables.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.annotation-objects.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.enum-sets.sls		\
-	scheme/ikarus.compiler.core-primitive-properties.condition-objects.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.transcoder-objects.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.input-output.sls	\
-	scheme/ikarus.compiler.core-primitive-properties.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.base.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.configuration.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.booleans.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.characters.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.fixnums.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.bignums.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.ratnums.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.flonums.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.cflonums.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.compnums.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.code-objects.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.strings.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.symbols.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.keywords.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.pointers.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.bytevectors.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.pairs-and-lists.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.vectors.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.structs.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.records.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.hash-tables.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.annotation-objects.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.enum-sets.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.condition-objects.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.transcoder-objects.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.control.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.generic-primitives.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.input-output.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.environment-inquiry.sls	\
+	scheme/ikarus.compiler.core-primitive-properties.numerics.sls			\
+	scheme/ikarus.compiler.core-primitive-properties.times-and-dates.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.library-utils.sls		\
+	scheme/ikarus.compiler.core-primitive-properties.sls				\
 	\
 	scheme/ikarus.compiler.sls				\
 	scheme/ikarus.compiler.scheme-objects-layout.scm	\

@@ -391,30 +391,43 @@
 ;;;
     "ikarus.compiler.core-primitive-properties.base.sls"
     "ikarus.compiler.core-primitive-properties.configuration.sls"
+    ;;
     "ikarus.compiler.core-primitive-properties.booleans.sls"
     "ikarus.compiler.core-primitive-properties.characters.sls"
+    ;;
     "ikarus.compiler.core-primitive-properties.fixnums.sls"
     "ikarus.compiler.core-primitive-properties.bignums.sls"
     "ikarus.compiler.core-primitive-properties.ratnums.sls"
     "ikarus.compiler.core-primitive-properties.flonums.sls"
     "ikarus.compiler.core-primitive-properties.cflonums.sls"
     "ikarus.compiler.core-primitive-properties.compnums.sls"
+    ;;
     "ikarus.compiler.core-primitive-properties.code-objects.sls"
     "ikarus.compiler.core-primitive-properties.strings.sls"
     "ikarus.compiler.core-primitive-properties.symbols.sls"
     "ikarus.compiler.core-primitive-properties.keywords.sls"
     "ikarus.compiler.core-primitive-properties.pointers.sls"
     "ikarus.compiler.core-primitive-properties.bytevectors.sls"
+    ;;
     "ikarus.compiler.core-primitive-properties.pairs-and-lists.sls"
     "ikarus.compiler.core-primitive-properties.vectors.sls"
     "ikarus.compiler.core-primitive-properties.structs.sls"
     "ikarus.compiler.core-primitive-properties.records.sls"
     "ikarus.compiler.core-primitive-properties.hash-tables.sls"
+    ;;
     "ikarus.compiler.core-primitive-properties.annotation-objects.sls"
     "ikarus.compiler.core-primitive-properties.enum-sets.sls"
     "ikarus.compiler.core-primitive-properties.condition-objects.sls"
     "ikarus.compiler.core-primitive-properties.transcoder-objects.sls"
+    ;;
+    "ikarus.compiler.core-primitive-properties.control.sls"
+    "ikarus.compiler.core-primitive-properties.generic-primitives.sls"
     "ikarus.compiler.core-primitive-properties.input-output.sls"
+    "ikarus.compiler.core-primitive-properties.environment-inquiry.sls"
+    "ikarus.compiler.core-primitive-properties.numerics.sls"
+    "ikarus.compiler.core-primitive-properties.times-and-dates.sls"
+    "ikarus.compiler.core-primitive-properties.library-utils.sls"
+    ;;
     "ikarus.compiler.core-primitive-properties.sls"
 ;;;
     "ikarus.compiler.sls"
