@@ -629,138 +629,73 @@
 	   "while building boot image: primitive missing from makefile.sps" name))))
 
 
-(module (compile-core-expr-to-port
-	 compile-core-expr
-	 compile-core-expr->code
-	 core-expr->optimized-code
-	 core-expr->optimisation-and-core-type-inference-code
-	 core-expr->assembly-code)
+;;;; compiler entry point
 
-  (define (compile-core-expr-to-port expr port)
-    ;;This function is used to write binary code into the boot image.
-    ;;
-    (fasl-write (compile-core-expr->code expr) port))
+(module COMPILER-SINGLE-ENTRY-POINT
+  (compile-core-language-expression)
 
-  (define (compile-core-expr x)
-    ;;This function is used to compile  libraries' source code for serialisation into
-    ;;FASL files.
-    ;;
-    (import (only (vicare system $codes)
-		  $code->closure))
-    (let ((code (compile-core-expr->code x)))
-      ($code->closure code)))
+  (define compiler-initialised? #f)
 
-  (define (compile-core-expr->code core-language-sexp)
-    ;;This  is *the*  commpiler function.   It  transforms a  core language  symbolic
-    ;;expression into a code object.
+  (define (initialise-compiler)
+    (unless compiler-initialised?
+      (initialise-core-primitive-properties)
+      (set! compiler-initialised? #t)))
+
+;;; --------------------------------------------------------------------
+
+  (define (compile-core-language-expression core-language-sexp
+					    perform-core-type-inference?
+					    introduce-unsafe-primitives?
+					    stop-after-optimisation?
+					    stop-after-core-type-inference?
+					    stop-after-assembly-generation?)
+    ;;This is *the* commpiler function.  Transform a symbolic expression representing
+    ;;a Scheme program in core language; return a code object.
     ;;
+    (initialise-compiler)
     (%parse-compilation-options core-language-sexp
       (lambda (core-language-sexp)
 	(let* ((p (recordize core-language-sexp))
 	       (p (optimize-direct-calls p))
 	       (p (optimize-letrec p))
 	       (p (source-optimize p)))
-	  (when (optimizer-output)
-	    (pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
-	  (let* ((p (rewrite-references-and-assignments p))
-		 (p (if (perform-core-type-inference)
-			(core-type-inference p)
-		      p))
-		 (p (if (and (perform-core-type-inference)
-			     (perform-unsafe-primrefs-introduction))
-			(introduce-unsafe-primrefs p)
-		      p))
-		 (p (sanitize-bindings p))
-		 (p (optimize-for-direct-jumps p))
-		 (p (insert-global-assignments p))
-		 (p (introduce-vars p))
-		 (p (introduce-closure-makers p))
-		 (p (optimize-combinator-calls/lift-clambdas p))
-		 (p (introduce-primitive-operation-calls p))
-		 (p (rewrite-freevar-references p))
-		 (p (insert-engine-checks p))
-		 (p (insert-stack-overflow-check p))
-		 (code-object-sexp* (alt-cogen p)))
-	    (%print-assembly code-object-sexp*)
-	    (let ((code* (assemble-sources thunk?-label code-object-sexp*)))
-	      ;;CODE* is  a list of code  objects; the first is  the one representing
-	      ;;the initialisation  expression, the others are  the ones representing
-	      ;;the CLAMBDAs.   The initialisation expression's code  object contains
-	      ;;references to all the CLAMBDA code objects.
-	      (car code*)))))))
-
-  (define (core-expr->optimized-code core-language-sexp)
-    ;;This is a utility function used for debugging and inspection purposes; it is to
-    ;;be used to inspect the result of optimisation.
-    ;;
-    (%parse-compilation-options core-language-sexp
-      (lambda (core-language-sexp)
-	(let* ((p (recordize core-language-sexp))
-	       (p (optimize-direct-calls p))
-	       (p (optimize-letrec p))
-	       (p (source-optimize p))
-	       (p (rewrite-references-and-assignments p))
-	       (p (if (perform-core-type-inference)
-	       	      (core-type-inference p)
-	       	    p))
-	       (p (if (and (perform-core-type-inference)
-	       		   (perform-unsafe-primrefs-introduction))
-	       	      (introduce-unsafe-primrefs p)
-	       	    p)))
-	  (unparse-recordized-code/pretty p)))))
-
-  (define (core-expr->optimisation-and-core-type-inference-code core-language-sexp)
-    ;;This is a utility function used for debugging and inspection purposes; it is to
-    ;;be used to inspect the result of optimisation.
-    ;;
-    (%parse-compilation-options core-language-sexp
-      (lambda (core-language-sexp)
-	(let* ((p (recordize core-language-sexp))
-	       (p (optimize-direct-calls p))
-	       (p (optimize-letrec p))
-	       (p (source-optimize p))
-	       (p (rewrite-references-and-assignments p))
-	       (p (if (perform-core-type-inference)
-	       	      (core-type-inference p)
-	       	    p))
-	       (p (if (and (perform-core-type-inference)
-	       		   (perform-unsafe-primrefs-introduction))
-	       	      (introduce-unsafe-primrefs p)
-	       	    p)))
-	  (unparse-recordized-code/pretty p)))))
-
-  (define (core-expr->assembly-code core-language-sexp)
-    ;;This is  a utility  function used  for debugging  and inspection  purposes.  It
-    ;;transforms  a symbolic  expression representing  core language  into a  list of
-    ;;sublists, each sublist  representing assembly language instructions  for a code
-    ;;object.
-    ;;
-    (%parse-compilation-options core-language-sexp
-      (lambda (core-language-sexp)
-	(let* ((p (recordize core-language-sexp))
-	       (p (optimize-direct-calls p))
-	       (p (optimize-letrec p))
-	       (p (source-optimize p)))
-	  (let* ((p (rewrite-references-and-assignments p))
-		 (p (if (perform-core-type-inference)
-			(core-type-inference p)
-		      p))
-		 (p (if (and (perform-core-type-inference)
-			     (perform-unsafe-primrefs-introduction))
-			(introduce-unsafe-primrefs p)
-		      p))
-		 (p (sanitize-bindings p))
-		 (p (optimize-for-direct-jumps p))
-		 (p (insert-global-assignments p))
-		 (p (introduce-vars p))
-		 (p (introduce-closure-makers p))
-		 (p (optimize-combinator-calls/lift-clambdas p))
-		 (p (introduce-primitive-operation-calls p))
-		 (p (rewrite-freevar-references p))
-		 (p (insert-engine-checks p))
-		 (p (insert-stack-overflow-check p))
-		 (code-object-sexp* (alt-cogen p)))
-	    code-object-sexp*)))))
+	  (%print-optimiser-output p)
+	  (let ((p (rewrite-references-and-assignments p)))
+	    (if stop-after-optimisation?
+		p
+	      (let* ((p (if perform-core-type-inference?
+			    (core-type-inference p)
+			  p))
+		     (p (if introduce-unsafe-primitives?
+			    (introduce-unsafe-primrefs p)
+			  p)))
+		(if stop-after-core-type-inference?
+		    p
+		  (let* ((p (sanitize-bindings p))
+			 (p (optimize-for-direct-jumps p))
+			 (p (insert-global-assignments p))
+			 (p (introduce-vars p))
+			 (p (introduce-closure-makers p))
+			 (p (optimize-combinator-calls/lift-clambdas p))
+			 (p (introduce-primitive-operation-calls p))
+			 (p (rewrite-freevar-references p))
+			 (p (insert-engine-checks p))
+			 (p (insert-stack-overflow-check p))
+			 (code-object-sexp* (alt-cogen p)))
+		    (%print-assembly code-object-sexp*)
+		    (if stop-after-assembly-generation?
+			code-object-sexp*
+		      (let ((code* (assemble-sources thunk?-label code-object-sexp*)))
+			;;CODE*  is a  list of  code objects;  the first  is the  one
+			;;representing the initialisation  expression, the others are
+			;;the ones representing the CLAMBDAs.
+			;;
+			;;The  initialisation   expression's  code   object  contains
+			;;references to  all the CLAMBDA code  objects.  By returning
+			;;the initialisation expression: we return the root of a tree
+			;;hierarchy of code objects.  By recursively serialising from
+			;;the root: we serialise all the code objects.
+			(car code*))))))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -803,6 +738,12 @@
 	      (print-compiler-warning-message "enabling compiler's strict R6RS support"))
 	    (kont body)))
       (kont core-language-sexp)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%print-optimiser-output p)
+    (when (optimizer-output)
+      (pretty-print (unparse-recordized-code/pretty p) (current-error-port))))
 
 ;;; --------------------------------------------------------------------
 
@@ -875,6 +816,101 @@
 	  (newline port))))
 
     #| end of module: %PRINT-ASSEMBLY |# )
+
+
+  #| end of module: COMPILER-SINGLE-ENTRY-POINT |# )
+
+
+;;;; compiler public API
+
+(module (compile-core-expr-to-port
+	 compile-core-expr
+	 compile-core-expr->code
+	 core-expr->optimized-code
+	 core-expr->optimisation-and-core-type-inference-code
+	 core-expr->assembly-code)
+  (import COMPILER-SINGLE-ENTRY-POINT)
+
+  (define (compile-core-expr-to-port expr port)
+    ;;This function is used to write binary code into the boot image.
+    ;;
+    (fasl-write (compile-core-expr->code expr) port))
+
+  (define (compile-core-expr x)
+    ;;This function is used to compile  libraries' source code for serialisation into
+    ;;FASL files.
+    ;;
+    (import (only (vicare system $codes)
+		  $code->closure))
+    (let ((code (compile-core-expr->code x)))
+      ($code->closure code)))
+
+  (define (compile-core-expr->code core-language-sexp)
+    ;;Transform a core language symbolic expression into a code object.
+    ;;
+    (let* ((perform-core-type-inference?	(perform-core-type-inference))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+	   (stop-after-optimisation?		#f)
+	   (stop-after-core-type-inference?	#f)
+	   (stop-after-assembly-generation?	#f))
+      (compile-core-language-expression core-language-sexp
+					perform-core-type-inference?
+					introduce-unsafe-primitives?
+					stop-after-optimisation?
+					stop-after-core-type-inference?
+					stop-after-assembly-generation?)))
+
+  (define (core-expr->optimized-code core-language-sexp)
+    ;;This is a utility function used for debugging and inspection purposes; it is to
+    ;;be used to inspect the result of optimisation.
+    ;;
+    (let* ((perform-core-type-inference?	(perform-core-type-inference))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+	   (stop-after-optimisation?		#t)
+	   (stop-after-core-type-inference?	#t)
+	   (stop-after-assembly-generation?	#f))
+      (unparse-recordized-code/pretty
+       (compile-core-language-expression core-language-sexp
+					 perform-core-type-inference?
+					 introduce-unsafe-primitives?
+					 stop-after-optimisation?
+					 stop-after-core-type-inference?
+					 stop-after-assembly-generation?))))
+
+  (define (core-expr->optimisation-and-core-type-inference-code core-language-sexp)
+    ;;This is a utility function used for debugging and inspection purposes; it is to
+    ;;be used to inspect the result of optimisation.
+    ;;
+    (let* ((perform-core-type-inference?	(perform-core-type-inference))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+	   (stop-after-optimisation?		#f)
+	   (stop-after-core-type-inference?	#t)
+	   (stop-after-assembly-generation?	#f))
+      (unparse-recordized-code/pretty
+       (compile-core-language-expression core-language-sexp
+					 perform-core-type-inference?
+					 introduce-unsafe-primitives?
+					 stop-after-optimisation?
+					 stop-after-core-type-inference?
+					 stop-after-assembly-generation?))))
+
+  (define (core-expr->assembly-code core-language-sexp)
+    ;;This is  a utility  function used  for debugging  and inspection  purposes.  It
+    ;;transforms  a symbolic  expression representing  core language  into a  list of
+    ;;sublists, each sublist  representing assembly language instructions  for a code
+    ;;object.
+    ;;
+    (let* ((perform-core-type-inference?	(perform-core-type-inference))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+	   (stop-after-optimisation?		#f)
+	   (stop-after-core-type-inference?	#f)
+	   (stop-after-assembly-generation?	#t))
+      (compile-core-language-expression core-language-sexp
+					perform-core-type-inference?
+					introduce-unsafe-primitives?
+					stop-after-optimisation?
+					stop-after-core-type-inference?
+					stop-after-assembly-generation?)))
 
   #| end of module: compile-core-expr |# )
 
