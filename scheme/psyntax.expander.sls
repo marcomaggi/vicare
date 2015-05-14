@@ -327,146 +327,48 @@
       (set! current-env env)))))
 
 
-(module (expand-form-to-core-language)
-  (define-module-who expand-form-to-core-language)
+(define* (expand-form-to-core-language expr env)
+  ;;Interface to the internal expression expander (chi-expr).  Take an expression and
+  ;;an  environment.  Return  two values:  the resulting  core-expression, a  list of
+  ;;libraries that must be invoked before evaluating the core expr.
+  ;;
+  (cond ((env? env)
+	 (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
+							       (vector->list (env-labels env)))))
+	   (let ((expr.stx (wrap-source-expression expr rib))
+		 (rtc      (make-collector))
+		 (vtc      (make-collector))
+		 (itc      (env-itc env)))
+	     (let ((psi (parametrise ((top-level-context #f)
+				      (inv-collector rtc)
+				      (vis-collector vtc)
+				      (imp-collector itc))
+			  (let ((lexenv.run     '())
+				(lexenv.expand  '()))
+			    (chi-expr expr.stx lexenv.run lexenv.expand)))))
+	       (seal-rib! rib)
+	       (values (psi-core-expr psi) (rtc))))))
 
-  (define (expand-form-to-core-language expr env)
-    ;;Interface to the internal expression expander (chi-expr).  Take an
-    ;;expression and  an environment.  Return two  values: the resulting
-    ;;core-expression, a list  of libraries that must  be invoked before
-    ;;evaluating the core expr.
-    ;;
-    (cond ((env? env)
-	   (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
-								 (vector->list (env-labels env)))))
-	     (let ((expr.stx (wrap-source-expression expr rib))
-		   (rtc      (make-collector))
-		   (vtc      (make-collector))
-		   (itc      (env-itc env)))
-	       (let ((psi (parametrise ((top-level-context #f)
-					(inv-collector rtc)
-					(vis-collector vtc)
-					(imp-collector itc))
-			    (let ((lexenv.run     '())
-				  (lexenv.expand  '()))
-			      (chi-expr expr.stx lexenv.run lexenv.expand)))))
-		 (seal-rib! rib)
-		 (values (psi-core-expr psi) (rtc))))))
+	((interaction-env? env)
+	 (let ((rib         (interaction-env-rib    env))
+	       (lexenv.run  (interaction-env-lexenv env)))
+	   (let* ((expr.stx (wrap-source-expression expr rib))
+		  (rtc      (make-collector)))
+	     (receive (expr.core lexenv.run^)
+		 (parametrise ((top-level-context env)
+			       (inv-collector rtc)
+			       (vis-collector (make-collector))
+			       (imp-collector (make-collector)))
+		   (chi-interaction-expr expr.stx rib lexenv.run))
+	       ;;All the  new syntactic bindings  added to the  lexical environment
+	       ;;are persistent across code evaluations.   The rib has already been
+	       ;;mutated  to hold  them.   Here  we store  in  ENV  the new  lexenv
+	       ;;entries.
+	       (set-interaction-env-lexenv! env lexenv.run^)
+	       (values expr.core (rtc))))))
 
-	  ((interaction-env? env)
-	   (let ((rib         (interaction-env-rib    env))
-		 (lexenv.run  (interaction-env-lexenv env)))
-	     (let* ((expr.stx (wrap-source-expression expr rib))
-		    (rtc      (make-collector)))
-	       (receive (expr.core lexenv.run^)
-		   (parametrise ((top-level-context env)
-				 (inv-collector rtc)
-				 (vis-collector (make-collector))
-				 (imp-collector (make-collector)))
-		     (%chi-interaction-expr expr.stx rib lexenv.run))
-		 ;;All the  new syntactic bindings  added to the  lexical environment
-		 ;;are persistent across code evaluations.   The rib has already been
-		 ;;mutated  to hold  them.   Here  we store  in  ENV  the new  lexenv
-		 ;;entries.
-		 (set-interaction-env-lexenv! env lexenv.run^)
-		 (values expr.core (rtc))))))
-
-	  (else
-	   (assertion-violation __module_who__ "not an environment" env))))
-
-  (define (%chi-interaction-expr expr.stx rib lexenv.all)
-    (receive (trailing-init-form*.stx
-	      lexenv.run^ lexenv.expand^
-	      lex* qrhs*
-	      module-init-form**.stx
-	      kwd*.unused internal-export*.unused)
-	(let ((mixed-definitions-and-expressions? #t)
-	      ;;We  are  about  to  expand  syntactic forms  in  the  context  of  an
-	      ;;interaction top-level  environment.  When  calling CHI-BODY*,  we set
-	      ;;the argument SHADOW/REDEFINE-BINDINGS? to true because:
-	      ;;
-	      ;;* Syntactic  binding definitions  at the top-level  of this  body are
-	      ;;allowed  to shadow  imported  syntactic bindings  established by  the
-	      ;;top-level interaction environment.  That is, at the REPL:
-	      ;;
-	      ;;   vicare> (import (rnrs))
-	      ;;   vicare> (define display 123)
-	      ;;
-	      ;;is a valid  definition; a DEFINE use expanded at  the top-level of an
-	      ;;interaction  environment   can  shadow  the  binding   imported  from
-	      ;;"(rnrs)".  The following definition is also valid:
-	      ;;
-	      ;;   vicare> (define-syntax let (identifier-syntax 1))
-	      ;;
-	      ;;* Syntactic binding definitions at the  top-level of this body can be
-	      ;;redefined.  That is, at the REPL:
-	      ;;
-	      ;;   vicare> (define a 1)
-	      ;;   vicare> (define a 2)
-	      ;;
-	      ;;is  valid;  a DEFINE  use  can  redefine  a binding.   The  following
-	      ;;redefinitions are also valid:
-	      ;;
-	      ;;   vicare> (begin (define a 1) (define a 2))
-	      ;;
-	      ;;   vicare> (define-syntax b (identifier-syntax 1))
-	      ;;   vicare> (define-syntax b (identifier-syntax 2))
-	      ;;
-	      ;;   vicare> (define-fluid-syntax b (identifier-syntax 1))
-	      ;;   vicare> (define-fluid-syntax b (identifier-syntax 2))
-	      ;;
-	      (shadow/redefine-bindings?   #t))
-	  (chi-body* (list expr.stx) lexenv.all lexenv.all
-		     '() '() '() '() '() rib
-		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
-      (let ((expr*.core (%expand-interaction-qrhs*/init*
-			 (reverse lex*) (reverse qrhs*)
-			 (append (reverse-and-append module-init-form**.stx)
-				 trailing-init-form*.stx)
-			 lexenv.run^ lexenv.expand^)))
-	(let ((expr.core (cond ((null? expr*.core)
-				(build-void))
-			       ((null? (cdr expr*.core))
-				(car expr*.core))
-			       (else
-				(build-sequence no-source expr*.core)))))
-	  (values expr.core lexenv.run^)))))
-
-  (define (%expand-interaction-qrhs*/init* lhs* qrhs* trailing-init* lexenv.run lexenv.expand)
-    ;;Return a list of expressions in the core language.
-    ;;
-    (let recur ((lhs*  lhs*)
-		(qrhs* qrhs*))
-      (if (null? lhs*)
-	  (map (lambda (init)
-		 (psi-core-expr (chi-expr init lexenv.run lexenv.expand)))
-	    trailing-init*)
-	(let ((lhs  (car lhs*))
-	      (qrhs (car qrhs*)))
-	  (define-syntax-rule (%recurse-and-cons ?expr.core)
-	    (cons ?expr.core
-		  (recur (cdr lhs*) (cdr qrhs*))))
-	  (case (car qrhs)
-	    ((defun)
-	     (let ((psi (chi-defun (cdr qrhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source
-				    lhs (psi-core-expr psi)))))
-	    ((expr)
-	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source
-				    lhs (psi-core-expr psi)))))
-	    ((untagged-define-expr)
-	     (let ((psi (chi-expr  (cddr qrhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (build-global-assignment no-source
-				    lhs (psi-core-expr psi)))))
-	    ((top-expr)
-	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
-	       (%recurse-and-cons (psi-core-expr psi))))
-	    (else
-	     (assertion-violation __module_who__
-	       "invalid qualified RHS while expanding expression" qrhs)))))))
-
-  #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
+	(else
+	 (procedure-argument-violation __who__ "not an environment" env))))
 
 
 (define (expand-r6rs-top-level-make-compiler expr*)
