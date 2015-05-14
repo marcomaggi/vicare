@@ -33,8 +33,8 @@
     (except (vicare system $codes)
 	    assembler-property-key))
 
-  (module (wordsize boot.case-word-size)
-    (include "ikarus.wordsize.scm" #t))
+  (module (wordsize boot.case-word-size off-code-data)
+    (include "ikarus.compiler.scheme-objects-layout.scm" #t))
 
 
 ;;;; introduction
@@ -767,8 +767,6 @@
 
 
 (module (make-reloc-vector-record-filler)
-  (module (off-code-data)
-    (include "ikarus.compiler.scheme-objects-layout.scm" #t))
 
   (define-syntax __who__
     (identifier-syntax 'make-reloc-vector-record-filler))

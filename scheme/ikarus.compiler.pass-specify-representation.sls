@@ -1,50 +1,72 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (specify-representation)
-  ;;
-  ;;
-  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
-  ;;recordized code must be composed by struct instances of the following types:
-  ;;
-  ;;   bind		fix		conditional
-  ;;   seq		closure-maker	code-loc
-  ;;   forcall		funcall		jmpcall
-  ;;   primopcall	primref
-  ;;   constant		known		var
-  ;;
-  ;;CLOSURE-MAKER structs are present only in the RHS of FIX structs.
-  ;;
-  ;;CODE-LOC structs are present only in the CODE field of CLOSURE-MAKER structs.
-  ;;
-  ;;KNOWN structs  are possibly  present only:  as operator  and operands  of FUNCALL
-  ;;structs; as operands of PRIMOPCALL structs.
-  ;;
+#!vicare
+(library (ikarus.compiler.pass-specify-representation)
+  (export
+    specify-representation
+    make-primitive-handler
+    CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS
+    P
+    V V-known V-simple-operand
+    K KN)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code)
+    (ikarus.compiler.core-primitive-operation-names)
+    (ikarus.compiler.scheme-objects-ontology)
+    (only (ikarus.compiler.common-assembly-subroutines)
+	  primitive-public-function-name->location-gensym))
+
   (import CORE-PRIMITIVE-OPERATION-NAMES SCHEME-OBJECTS-ONTOLOGY)
+  (include "ikarus.compiler.scheme-objects-layout.scm" #t)
 
-  (define-syntax __module_who__
-    (identifier-syntax 'specify-representation))
+
+;;;; introduction
+;;
+;;This  module accepts  as input  a  struct instance  of type  CODES, whose  internal
+;;recordized code must be composed by struct instances of the following types:
+;;
+;;   bind		fix		conditional
+;;   seq		closure-maker	code-loc
+;;   forcall		funcall		jmpcall
+;;   primopcall	primref
+;;   constant		known		var
+;;
+;;CLOSURE-MAKER structs are present only in the RHS of FIX structs.
+;;
+;;CODE-LOC structs are present only in the CODE field of CLOSURE-MAKER structs.
+;;
+;;KNOWN  structs are  possibly  present only:  as operator  and  operands of  FUNCALL
+;;structs; as operands of PRIMOPCALL structs.
+;;
 
-  (define (specify-representation x)
-    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
-    ;;a  CODES struct  representing recordised  code; build  and return  a new  CODES
-    ;;struct.
-    ;;
-    (V-codes x))
+(define-syntax __module_who__
+  (identifier-syntax 'specify-representation))
+
+(define (specify-representation x)
+  ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+  ;;a  CODES struct  representing recordised  code; build  and return  a new  CODES
+  ;;struct.
+  ;;
+  (V-codes x))
 
 
 ;;;; process CODES struct
@@ -170,7 +192,8 @@
    ))
 
 
-(module (with-tmp)
+(module WITH-TMP
+  (with-tmp)
 
   (define-syntax (with-tmp stx)
     ;;Do what is needed to generate recordized  code in the region of a local binding
@@ -227,8 +250,66 @@
   #| end of module: WITH-TMP |# )
 
 
+;;;; utility functions for Assembly code generation
+
+(module CODE-GENERATION-UTILITIES
+  (target-platform-fixnum? NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)
+
+  ;;WORDSIZE is  the number of bytes  in a word: 4  on 32-bit platforms, 8  on 64-bit
+  ;;platforms.
+
+  (define-constant NUMBER-OF-BITS-IN-WORD
+    (fx* wordsize 8))
+
+  (define-constant NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+    ;;This is 30 on 32-bit platforms and 61 on 64-bit platforms.
+    (fx- NUMBER-OF-BITS-IN-WORD fx-shift))
+
+  (define-constant NUMBER-OF-NEGATIVE-FIXNUMS
+    (expt 2 (fx- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1)))
+
+  (define-constant TARGET-PLATFORM-LEAST-FIXNUM
+    (- NUMBER-OF-NEGATIVE-FIXNUMS))
+
+  (define-constant TARGET-PLATFORM-GREATEST-FIXNUM
+    (- NUMBER-OF-NEGATIVE-FIXNUMS 1))
+
+  (define (target-platform-fixnum? x)
+    ;;Return true if X is a compile-time constant that can be represented by a fixnum
+    ;;on the target platform.
+    ;;
+    (and (or (fixnum? x)
+	     (bignum? x))
+	 (<= TARGET-PLATFORM-LEAST-FIXNUM x TARGET-PLATFORM-GREATEST-FIXNUM)))
+
+  ;; (fprintf (current-error-port)
+  ;; 	   "target platform's word size = ~a\n\
+  ;;           target platform's NUMBER-OF-BITS-IN-WORD = ~a\n\
+  ;; 	    target platform's NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION = ~a\n\
+  ;; 	    target platform's NUMBER-OF-NEGATIVE-FIXNUMS = ~a\n\
+  ;; 	    TARGET-PLATFORM-LEAST-FIXNUM = ~a\n\
+  ;; 	    TARGET-PLATFORM-GREATEST-FIXNUM = ~a\n\
+  ;; 	    host's (least-fixnum)    = ~a\n\
+  ;; 	    host's (greatest-fixnum) = ~a\n"
+  ;; 	   wordsize
+  ;; 	   NUMBER-OF-BITS-IN-WORD
+  ;; 	   NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+  ;; 	   NUMBER-OF-NEGATIVE-FIXNUMS
+  ;; 	   TARGET-PLATFORM-LEAST-FIXNUM
+  ;; 	   TARGET-PLATFORM-GREATEST-FIXNUM
+  ;; 	   (least-fixnum) (greatest-fixnum)))
+
+  #| end od module |# )
+
+
 (module CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS
-  (cogen-primop cogen-debug-primop flagged-interrupt)
+  (cogen-primop
+   cogen-debug-primop
+   flagged-interrupt
+   target-platform-fixnum?
+   NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+   with-tmp)
+  (import CODE-GENERATION-UTILITIES WITH-TMP)
   ;;Some core primitives are implemented both as:
   ;;
   ;;*  Core primitive  functions.   There  exists a  loc  gensym  whose "value"  slot
@@ -863,6 +944,7 @@
 	    ;;a location for it, even if we do not use such return value.
 	    (let ((e (apply V-handler simple-rand*)))
 	      (define (%doit-with-adapter)
+		(import WITH-TMP)
 		(with-tmp ((t e))
 		  (nop)))
 	      (struct-case e
@@ -1600,17 +1682,16 @@
 
 ;;;; constants and native constants
 
-(define-syntax K
+(define-syntax-rule (K ?x)
   ;;Wrap X with a struct instance of type CONSTANT.
   ;;
-  (syntax-rules ()
-    ((_ ?x)
-     (make-constant ?x))))
+  (make-constant ?x))
 
 (define (KN x)
   ;;Wrap  X with  a  struct instance  of  type CONSTANT;  X must  be  a native  value
   ;;representation.
   ;;
+  (import CODE-GENERATION-UTILITIES)
   (cond ((target-platform-fixnum? x)
 	 (make-constant x))
 	(else
@@ -1628,6 +1709,7 @@
   ;;The binary  representation is an  exact integer that  fits into a  single machine
   ;;word.
   ;;
+  (import CODE-GENERATION-UTILITIES)
   (let ((x.const (constant-value x)))
     (cond ((target-platform-fixnum? x.const)
 	   ;;Shifting as is done below is equivalent to:
@@ -1787,6 +1869,7 @@
     ;;evaluating RATOR  yields a  closure object;  if it does:  RATOR is  returned at
     ;;run-time, otherwise an error is raised at run-time.
     ;;
+    (import WITH-TMP)
     (if check?
 	(with-tmp ((x (V rator)))
 	  (make-shortcut
@@ -1815,65 +1898,9 @@
   #| end of module: VE-function |# )
 
 
-;;;; utility functions for Assembly code generation
-
-(module (target-platform-fixnum? NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)
-
-  ;;WORDSIZE is  the number of bytes  in a word: 4  on 32-bit platforms, 8  on 64-bit
-  ;;platforms.
-
-  (define-constant NUMBER-OF-BITS-IN-WORD
-    (fx* wordsize 8))
-
-  (define-constant NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
-    ;;This is 30 on 32-bit platforms and 61 on 64-bit platforms.
-    (fx- NUMBER-OF-BITS-IN-WORD fx-shift))
-
-  (define-constant NUMBER-OF-NEGATIVE-FIXNUMS
-    (expt 2 (fx- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1)))
-
-  (define-constant TARGET-PLATFORM-LEAST-FIXNUM
-    (- NUMBER-OF-NEGATIVE-FIXNUMS))
-
-  (define-constant TARGET-PLATFORM-GREATEST-FIXNUM
-    (- NUMBER-OF-NEGATIVE-FIXNUMS 1))
-
-  (define (target-platform-fixnum? x)
-    ;;Return true if X is a compile-time constant that can be represented by a fixnum
-    ;;on the target platform.
-    ;;
-    (and (or (fixnum? x)
-	     (bignum? x))
-	 (<= TARGET-PLATFORM-LEAST-FIXNUM x TARGET-PLATFORM-GREATEST-FIXNUM)))
-
-  ;; (fprintf (current-error-port)
-  ;; 	   "target platform's word size = ~a\n\
-  ;;           target platform's NUMBER-OF-BITS-IN-WORD = ~a\n\
-  ;; 	    target platform's NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION = ~a\n\
-  ;; 	    target platform's NUMBER-OF-NEGATIVE-FIXNUMS = ~a\n\
-  ;; 	    TARGET-PLATFORM-LEAST-FIXNUM = ~a\n\
-  ;; 	    TARGET-PLATFORM-GREATEST-FIXNUM = ~a\n\
-  ;; 	    host's (least-fixnum)    = ~a\n\
-  ;; 	    host's (greatest-fixnum) = ~a\n"
-  ;; 	   wordsize
-  ;; 	   NUMBER-OF-BITS-IN-WORD
-  ;; 	   NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
-  ;; 	   NUMBER-OF-NEGATIVE-FIXNUMS
-  ;; 	   TARGET-PLATFORM-LEAST-FIXNUM
-  ;; 	   TARGET-PLATFORM-GREATEST-FIXNUM
-  ;; 	   (least-fixnum) (greatest-fixnum)))
-
-  #| end od module |# )
-
-
-;;;; some external code
-
-(include "ikarus.compiler.core-primitive-operations.scm" #t)
-
-
 ;;;; done
 
-#| end of module SPECIFY-REPRESENTATION |# )
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

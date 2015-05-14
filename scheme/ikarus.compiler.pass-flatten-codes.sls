@@ -15,41 +15,62 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (flatten-codes)
-  ;;This module  converts a  struct instance of  type CODES into  a list  of assembly
-  ;;language instructions, all inclusive.  Return a  list of lists with the following
-  ;;format:
-  ;;
-  ;;   (?asm-list-for-body ?asm-list-for-clambda ...)
-  ;;
-  ;;for  each sublist  in the  returned  list a  code  object will  be created.   The
-  ;;symbolic expression ?ASM-LIST-FOR-BODY represents  the generated Assembly for the
-  ;;body  of  the  CODES   struct;  each  symbolic  expression  ?ASM-LIST-FOR-CLAMBDA
-  ;;represents the generated Assembly for the CLAMBDA structs in the CODES struct.
-  ;;
-  ;;This operation is called "flattening" because the assembly directives like "int+"
-  ;;are expanded into actual assembly instructions for the underlying CPU.
-  ;;
-  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
-  ;;recordized code must be composed by struct instances of the following types:
-  ;;
-  ;;   seq		conditional	shortcut
-  ;;   non-tail-call	asmcall		asm-instr
-  ;;
-  ;;structs of the following types may appear as operands in ASM-INSTR structs:
-  ;;
-  ;;   fvar		constant	disp
-  ;;
-  ;;symbols representing CPU  register names also may appear as  operands; structs of
-  ;;the following types may appear in CONSTANT structs:
-  ;;
-  ;;   object		code-loc	foreign-label
-  ;;   closure-maker
-  ;;
+#!vicare
+(library (ikarus.compiler.pass-flatten-codes)
+  (export flatten-codes)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code)
+    (ikarus.compiler.intel-assembly)
+    (only (ikarus.compiler.common-assembly-subroutines)
+	  primitive-public-function-name->location-gensym
+	  sl-invalid-args-label
+	  sl-mv-ignore-rp-label
+	  sl-mv-error-rp-label))
+
+  (include "ikarus.compiler.scheme-objects-layout.scm" #t)
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
-  (define-syntax __module_who__
-    (identifier-syntax 'flatten-codes))
+
+;;;; introduction
+;;
+;;This module  converts a  struct instance of  type CODES into  a list  of assembly
+;;language instructions, all inclusive.  Return a  list of lists with the following
+;;format:
+;;
+;;   (?asm-list-for-body ?asm-list-for-clambda ...)
+;;
+;;for  each sublist  in the  returned  list a  code  object will  be created.   The
+;;symbolic expression ?ASM-LIST-FOR-BODY represents  the generated Assembly for the
+;;body  of  the  CODES   struct;  each  symbolic  expression  ?ASM-LIST-FOR-CLAMBDA
+;;represents the generated Assembly for the CLAMBDA structs in the CODES struct.
+;;
+;;This operation is called "flattening" because the assembly directives like "int+"
+;;are expanded into actual assembly instructions for the underlying CPU.
+;;
+;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+;;recordized code must be composed by struct instances of the following types:
+;;
+;;   seq		conditional	shortcut
+;;   non-tail-call	asmcall		asm-instr
+;;
+;;structs of the following types may appear as operands in ASM-INSTR structs:
+;;
+;;   fvar		constant	disp
+;;
+;;symbols representing CPU  register names also may appear as  operands; structs of
+;;the following types may appear in CONSTANT structs:
+;;
+;;   object		code-loc	foreign-label
+;;   closure-maker
+;;
+
+(define-syntax __module_who__
+  (identifier-syntax 'flatten-codes))
 
 
 ;;;; helpers
@@ -1835,7 +1856,7 @@
 
 ;;;; done
 
-#| end of module: FLATTEN-CODES |# )
+#| end of LIBRARY |# )
 
 ;;; end of file
 ;; Local Variables:

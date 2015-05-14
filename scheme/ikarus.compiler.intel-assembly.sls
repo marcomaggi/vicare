@@ -15,6 +15,23 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
+(library (ikarus.compiler.intel-assembly)
+  (export INTEL-ASSEMBLY-CODE-GENERATION)
+  (import (except (rnrs)
+		  fixnum-width
+		  greatest-fixnum
+		  least-fixnum)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code))
+
+  (include "ikarus.compiler.scheme-objects-layout.scm" #t)
+
+
 (module INTEL-ASSEMBLY-CODE-GENERATION
   (
    ;;function-call table stuff
@@ -571,6 +588,8 @@
 ;;;; done
 
 #| end of module: INTEL-ASSEMBLY-CODE-GENERATION |# )
+
+#| end of LIBRARY |# )
 
 ;;; end of file
 ;; Local Variables:

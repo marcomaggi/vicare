@@ -15,6 +15,21 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
+(library (ikarus.compiler.pass-assign-frame-sizes)
+  (export
+    assign-frame-sizes
+    FRAME-CONFLICT-SETS)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code)
+    (ikarus.compiler.intel-assembly))
+
+
 ;;;; recapitulation
 ;;
 ;;Let's  clarify where  we are  when  this compiler  pass  is applied.   There are  3
@@ -145,37 +160,38 @@
 ;;
 
 
-(module (assign-frame-sizes FRAME-CONFLICT-SETS)
-  ;;
-  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
-  ;;recordized code must be composed by struct instances of the following types:
-  ;;
-  ;;   asm-instr	conditional	constant
-  ;;   asmcall		seq		shortcut
-  ;;   locals		non-tail-call	non-tail-call-frame
-  ;;
-  ;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
-  ;;structs.  The  only ASMCALL operators  still accepted  as input in  this compiler
-  ;;pass are:
-  ;;
-  ;;   return			indirect-jump		direct-jump
-  ;;   nop			interrupt		incr/zero?
-  ;;   fl:double->single	fl:single->double
-  ;;
-  ;;NOTE In the  input and output recordised code: the  ASM-INSTR structs contain, as
-  ;;operands: DISP structs, FVAR structs,  CONSTANT structs, symbols representing CPU
-  ;;register names,  VAR structs  with LOC field  set to #f.   Among these,  the DISP
-  ;;structs  have:  as  OBJREF  field,  a   CONSTANT,  FVAR,  VAR  struct  or  symbol
-  ;;representing a CPU register name; as OFFSET field, a CONSTANT or VAR struct.  The
-  ;;VAR structs in the DISP have LOC field set to #f.
-  ;;
-  ;;NOTE The returned code does not contain NFV structs anymore.
-  ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'assign-frame-sizes))
+;;;; introduction
+;;
+;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+;;recordized code must be composed by struct instances of the following types:
+;;
+;;   asm-instr	conditional	constant
+;;   asmcall		seq		shortcut
+;;   locals		non-tail-call	non-tail-call-frame
+;;
+;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
+;;structs.  The  only ASMCALL operators  still accepted  as input in  this compiler
+;;pass are:
+;;
+;;   return			indirect-jump		direct-jump
+;;   nop			interrupt		incr/zero?
+;;   fl:double->single	fl:single->double
+;;
+;;NOTE In the  input and output recordised code: the  ASM-INSTR structs contain, as
+;;operands: DISP structs, FVAR structs,  CONSTANT structs, symbols representing CPU
+;;register names,  VAR structs  with LOC field  set to #f.   Among these,  the DISP
+;;structs  have:  as  OBJREF  field,  a   CONSTANT,  FVAR,  VAR  struct  or  symbol
+;;representing a CPU register name; as OFFSET field, a CONSTANT or VAR struct.  The
+;;VAR structs in the DISP have LOC field set to #f.
+;;
+;;NOTE The returned code does not contain NFV structs anymore.
+;;
 
-  (define (assign-frame-sizes x)
-    (E-codes x))
+(define-syntax __module_who__
+  (identifier-syntax 'assign-frame-sizes))
+
+(define (assign-frame-sizes x)
+  (E-codes x))
 
 
 ;;;; non-tail calls and nested non-tail calls
@@ -2283,7 +2299,7 @@
 
 ;;;; done
 
-#| end of module: assign-frame-sizes |# )
+#| end of LIBRARY |# )
 
 ;;; end of file
 ;; Local Variables:

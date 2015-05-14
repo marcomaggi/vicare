@@ -243,7 +243,12 @@
     disp				disp?
     make-disp
     disp-objref
-    disp-offset)
+    disp-offset
+
+    ;; high-level assembly instructions
+    asm
+    nop
+    interrupt)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -1322,6 +1327,30 @@
 		;A CONSTANT struct  representing the offset of the  machine word that
 		;must be extracted from the Scheme object referenced by OBJREF.
    ))
+
+
+;;;; high-level assembly instructions
+
+(define (asm op . rand*)
+  ;;Build  and  return  recordised  call which  performs  the  high-level  Assembly
+  ;;instruction OP applying it to the arguments RAND*.
+  ;;
+  (make-asmcall op rand*))
+
+(define (nop)
+  ;;Build  and  return  recordised  call representing  the  dummy  instruction  "no
+  ;;operation".
+  ;;
+  (asm 'nop))
+
+(define (interrupt)
+  ;;Build and  return recordised call representing  a jump to a  SHORTCUT interrupt
+  ;;handler.
+  ;;
+  ;;NOTE This function is shadowed in  the pass "specify representation" by a local
+  ;;INTERRUPT function.
+  ;;
+  (asm 'interrupt))
 
 
 ;;;; done

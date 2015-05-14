@@ -15,82 +15,102 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (impose-calling-convention/evaluation-order)
-  ;;This module does stuff:
-  ;;
-  ;;*  All the  BIND  struct instances  in  the input  expression  are processed  and
-  ;;substituted with code that evaluates the  RHS expressions and stores their single
-  ;;return value into appropriately allocated Scheme stack machine words.  Here it is
-  ;;decided in which order the RHS expressions are computed.
-  ;;
-  ;;*  All the  FUNCALL  struct  instances in  the  input  expression representing  a
-  ;;function call:
-  ;;
-  ;;   (funcall (asmcall mref
-  ;;                    (constant (object ?loc))
-  ;;                    (constant ?off-symbol-record-proc))
-  ;;            (?rand ...))
-  ;;
-  ;;are converted to the equivalent of:
-  ;;
-  ;;   (bind ((tmp ?rand) ...)
-  ;;     (funcall (asmcall mref
-  ;;                      (constant (object ?loc))
-  ;;                      (constant ?off-symbol-record-proc))
-  ;;              (tmp ...)))
-  ;;
-  ;;so that the order of evaluation of the operands' expressions is decided.
-  ;;
-  ;;*  All the  ASMCALL  struct  instances in  the  input  expression representing  a
-  ;;high-level Assembly instruction:
-  ;;
-  ;;   (asmcall ?instr (?rand ...))
-  ;;
-  ;;are converted to the equivalent of:
-  ;;
-  ;;   (bind ((tmp ?rand) ...)
-  ;;     (asmcall ?instr (tmp ...)))
-  ;;
-  ;;so that the order of evaluation of the operands' expressions is decided.
-  ;;
-  ;;* Function call  instruction blocks are inserted to represent  non-tail calls and
-  ;;tail-calls.
-  ;;
-  ;;* High-level Assembly instructions requiring temporary locations to store partial
-  ;;results are expanded into more basic instructions.
-  ;;
-  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
-  ;;recordized code must be composed by struct instances of the following types:
-  ;;
-  ;;   bind		conditional		constant
-  ;;   forcall		funcall			jmpcall
-  ;;   asmcall		seq
-  ;;   shortcut		var
-  ;;
-  ;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
-  ;;structs.
-  ;;
-  ;;NOTE In this module we create FVAR structs and NFV structs in the recordised code
-  ;;returned to  the caller; such  structures will  be processed in  further compiler
-  ;;passes.  But *no* FVAR and NFV structs are present in the input recordised code.
-  ;;
-  ;;NOTE In the returned recordised code: the ASM-INSTR structs contain, as operands:
-  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
-  ;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
-  ;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
-  ;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
-  ;;DISP have LOC field set to #f.
-  ;;
-  (module (argc-convention register?
+#!vicare
+(library (ikarus.compiler.pass-impose-evaluation-order)
+  (export impose-calling-convention/evaluation-order)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code)
+    (ikarus.compiler.intel-assembly)
+    (only (ikarus.compiler.common-assembly-subroutines)
+	  primitive-public-function-name->location-gensym))
+
+  (include "ikarus.compiler.scheme-objects-layout.scm" #t)
+
+  (module ( ;;
+	   argc-convention register?
 	   eax ecx edx
 	   AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
 
-  (define-syntax __module_who__
-    (identifier-syntax 'impose-calling-convention/evaluation-order))
+
+;;;; introduction
+;;
+;;This module does stuff:
+;;
+;;*  All  the  BIND struct  instances  in  the  input  expression are  processed  and
+;;substituted with  code that evaluates the  RHS expressions and stores  their single
+;;return value into  appropriately allocated Scheme stack machine words.   Here it is
+;;decided in which order the RHS expressions are computed.
+;;
+;;* All the FUNCALL struct instances  in the input expression representing a function
+;;call:
+;;
+;;   (funcall (asmcall mref
+;;                    (constant (object ?loc))
+;;                    (constant ?off-symbol-record-proc))
+;;            (?rand ...))
+;;
+;;are converted to the equivalent of:
+;;
+;;   (bind ((tmp ?rand) ...)
+;;     (funcall (asmcall mref
+;;                      (constant (object ?loc))
+;;                      (constant ?off-symbol-record-proc))
+;;              (tmp ...)))
+;;
+;;so that the order of evaluation of the operands' expressions is decided.
+;;
+;;*  All  the  ASMCALL  struct  instances in  the  input  expression  representing  a
+;;high-level Assembly instruction:
+;;
+;;   (asmcall ?instr (?rand ...))
+;;
+;;are converted to the equivalent of:
+;;
+;;   (bind ((tmp ?rand) ...)
+;;     (asmcall ?instr (tmp ...)))
+;;
+;;so that the order of evaluation of the operands' expressions is decided.
+;;
+;;* Function  call instruction blocks  are inserted  to represent non-tail  calls and
+;;tail-calls.
+;;
+;;* High-level Assembly  instructions requiring temporary locations  to store partial
+;;results are expanded into more basic instructions.
+;;
+;;This  module accepts  as input  a  struct instance  of type  CODES, whose  internal
+;;recordized code must be composed by struct instances of the following types:
+;;
+;;   bind		conditional		constant
+;;   forcall		funcall			jmpcall
+;;   asmcall		seq
+;;   shortcut		var
+;;
+;;in addition CLOSURE-MAKER and CODE-LOC structs can appear in side CONSTANT structs.
+;;
+;;NOTE In this module  we create FVAR structs and NFV structs  in the recordised code
+;;returned  to the  caller; such  structures will  be processed  in further  compiler
+;;passes.  But *no* FVAR and NFV structs are present in the input recordised code.
+;;
+;;NOTE In the  returned recordised code: the ASM-INSTR structs  contain, as operands:
+;;DISP structs,  FVAR structs,  CONSTANT structs,  symbols representing  CPU register
+;;names, VAR structs with  LOC field set to #f.  Among these,  the DISP structs have:
+;;as OBJREF field, a CONSTANT, FVAR, VAR struct or symbol representing a CPU register
+;;name; as OFFSET field, a CONSTANT or VAR  struct.  The VAR structs in the DISP have
+;;LOC field set to #f.
+;;
 
-  (define (impose-calling-convention/evaluation-order codes)
-    (V-codes codes))
+
+(define-syntax __module_who__
+  (identifier-syntax 'impose-calling-convention/evaluation-order))
+
+(define (impose-calling-convention/evaluation-order codes)
+  (V-codes codes))
 
 
 ;;;; helpers
@@ -1530,7 +1550,7 @@
 
 ;;;; done
 
-#| end of module: IMPOSE-CALLING-CONVENTION/EVALUATION-ORDER |# )
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

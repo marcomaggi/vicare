@@ -13,6 +13,11 @@
 ;;;You should have received a copy of  the GNU General Public License along with this
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+(module (boot.case-word-size wordsize)
+  (include "ikarus.wordsize.scm" #t))
+
+
 ;;;The following constants  definitions must be kept in sync  with the definitions in
 ;;;the C language header files "internals.h" and "vicare.h".
 
@@ -436,6 +441,9 @@
 (define-constant pcb-interrupted		(fx* 10 wordsize))
 (define-constant pcb-base-rtd			(fx* 11 wordsize))
 (define-constant pcb-collect-key		(fx* 12 wordsize))
+
+
+;;;; done
 
 ;;; end of file
 ;; Local Variables:

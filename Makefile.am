@@ -292,6 +292,9 @@ endif
 
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm							\
+	scheme/ikarus.intel-assembler.sls						\
+	scheme/ikarus.compiler.scheme-objects-layout.scm				\
+	scheme/ikarus.compiler.condition-types.sls					\
 	\
 	scheme/ikarus.compiler.core-primitive-properties.base.sls			\
 	scheme/ikarus.compiler.core-primitive-properties.configuration.sls		\
@@ -337,7 +340,6 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.system-value.sls						\
 	scheme/ikarus.compiler.typedefs.sls						\
 	scheme/ikarus.compiler.scheme-objects-ontology.sls				\
-	scheme/ikarus.compiler.scheme-objects-layout.scm				\
 	scheme/ikarus.compiler.unparse-recordised-code.sls				\
 	scheme/ikarus.compiler.core-primitive-operation-names.sls			\
 	scheme/ikarus.compiler.pass-recordise.sls					\
@@ -357,15 +359,15 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.pass-rewrite-freevar-references.sls			\
 	scheme/ikarus.compiler.pass-insert-engine-checks.sls				\
 	scheme/ikarus.compiler.pass-insert-stack-overflow-check.sls			\
-	\
-	scheme/ikarus.compiler.pass-specify-representation.scm				\
-	scheme/ikarus.compiler.pass-impose-evaluation-order.scm				\
-	scheme/ikarus.compiler.pass-assign-frame-sizes.scm				\
-	scheme/ikarus.compiler.pass-color-by-chaitin.scm				\
-	scheme/ikarus.compiler.pass-flatten-codes.scm					\
-	scheme/ikarus.compiler.core-primitive-operations.scm				\
-	scheme/ikarus.compiler.intel-assembly.scm					\
-	scheme/ikarus.compiler.common-assembly-subroutines.scm				\
+	scheme/ikarus.compiler.code-generation.sls					\
+	scheme/ikarus.compiler.pass-specify-representation.sls				\
+	scheme/ikarus.compiler.core-primitive-operations.sls				\
+	scheme/ikarus.compiler.pass-impose-evaluation-order.sls				\
+	scheme/ikarus.compiler.pass-assign-frame-sizes.sls				\
+	scheme/ikarus.compiler.pass-color-by-chaitin.sls				\
+	scheme/ikarus.compiler.pass-flatten-codes.sls					\
+	scheme/ikarus.compiler.intel-assembly.sls					\
+	scheme/ikarus.compiler.common-assembly-subroutines.sls				\
 	scheme/ikarus.compiler.sls							\
 	\
 	scheme/ikarus.apply.sls					\
@@ -396,8 +398,6 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.handlers.sls				\
 	scheme/ikarus.hash-tables.sls				\
 	scheme/ikarus.keywords.sls				\
-	scheme/ikarus.compiler.condition-types.sls		\
-	scheme/ikarus.intel-assembler.sls			\
 	scheme/ikarus.io.sls					\
 	scheme/ikarus.lists.sls					\
 	scheme/ikarus.load.sls					\

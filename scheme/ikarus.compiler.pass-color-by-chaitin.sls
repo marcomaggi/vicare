@@ -1,18 +1,37 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY or  FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received a  copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#!vicare
+(library (ikarus.compiler.pass-color-by-chaitin)
+  (export
+    color-by-chaitin
+    preconditions-for-color-by-chaitin)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code)
+    (ikarus.compiler.intel-assembly)
+    (only (ikarus.compiler.pass-assign-frame-sizes)
+	  FRAME-CONFLICT-SETS))
+
+  (include "ikarus.compiler.scheme-objects-layout.scm" #t)
+  (import INTEL-ASSEMBLY-CODE-GENERATION)
 
 
 ;;;; compiler pass preconditions
@@ -467,154 +486,153 @@
   #| end of module: PRECONDITIONS-FOR-COLOR-BY-CHAITIN |# )
 
 
+;;;; introduction
+;;
+;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+;;recordized code must be composed by struct instances of the following types:
+;;
+;;   asm-instr	code-loc	conditional
+;;   constant		disp		fvar
+;;   locals		non-tail-call	var
+;;   asmcall		seq		shortcut
+;;
+;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
+;;
+;;NOTE In the *input* recordised code:  the ASM-INSTR structs contain, as operands:
+;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
+;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
+;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
+;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
+;;DISP have LOC field set to #f.
+;;
+;;NOTE In the *output* recordised code: the ASM-INSTR structs contain, as operands:
+;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
+;;names.  Among these, the  DISP structs have: as OBJREF field,  a CONSTANT or FVAR
+;;struct or a symbol representing a CPU  register name; as OFFSET field, a CONSTANT
+;;or symbol representing a CPU register name.
+;;
+
+(define-syntax __module_who__
+  (identifier-syntax 'color-by-chaitin))
+
 (module (color-by-chaitin)
+  ;;The purpose of this module is to apply the function %COLOR-PROGRAM below to all
+  ;;the bodies.
   ;;
-  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
-  ;;recordized code must be composed by struct instances of the following types:
-  ;;
-  ;;   asm-instr	code-loc	conditional
-  ;;   constant		disp		fvar
-  ;;   locals		non-tail-call	var
-  ;;   asmcall		seq		shortcut
-  ;;
-  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
-  ;;
-  ;;NOTE In the *input* recordised code:  the ASM-INSTR structs contain, as operands:
-  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
-  ;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
-  ;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
-  ;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
-  ;;DISP have LOC field set to #f.
-  ;;
-  ;;NOTE In the *output* recordised code: the ASM-INSTR structs contain, as operands:
-  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
-  ;;names.  Among these, the  DISP structs have: as OBJREF field,  a CONSTANT or FVAR
-  ;;struct or a symbol representing a CPU  register name; as OFFSET field, a CONSTANT
-  ;;or symbol representing a CPU register name.
-  ;;
-  (import INTEL-ASSEMBLY-CODE-GENERATION)
+  (define (color-by-chaitin x)
+    (struct-case x
+      ((codes x.clambda* x.locals)
+       (make-codes (map E-clambda x.clambda*) (%color-program x.locals)))))
 
-  (define-syntax __module_who__
-    (identifier-syntax 'color-by-chaitin))
+  (define (E-clambda x)
+    (struct-case x
+      ((clambda label clause* cp freevar* name)
+       (make-clambda label (map E-clambda-clause clause*) cp freevar* name))))
 
-  (module (color-by-chaitin)
-    ;;The purpose of this module is to apply the function %COLOR-PROGRAM below to all
-    ;;the bodies.
-    ;;
-    (define (color-by-chaitin x)
+  (define (E-clambda-clause x)
+    (struct-case x
+      ((clambda-case x.info x.locals)
+       (make-clambda-case x.info (%color-program x.locals)))))
+
+  (module (%color-program)
+
+    (define (%color-program x)
+      ;;The argument X must  be a LOCALS struct representing the  body of a CLAMBDA
+      ;;clause or the  body of an initialisation expression.  Return  the return of
+      ;;the call to %SUBSTITUTE-VARS-WITH-ASSOCIATED-LOCATIONS.
+      ;;
+      (module (list->set make-empty-set)
+	(import LISTY-SET))
       (struct-case x
-	((codes x.clambda* x.locals)
-	 (make-codes (map E-clambda x.clambda*) (%color-program x.locals)))))
+	((locals x.vars x.body)
+	 ;;X.VARS.VEC  is  a vector  of  VAR  structs  representing all  the  local
+	 ;;variables in  X.BODY.  Some of these  VAR structs have a  FVAR struct in
+	 ;;their LOC  field: they have  already been allocated to  stack locations;
+	 ;;the other  VAR structs  have #f  in their  LOC field:  they are  not yet
+	 ;;allocated.
+	 ;;
+	 ;;X.VARS.SPILLABLE* is  a list of  VAR structs representing the  subset of
+	 ;;VAR structs  in X.VARS.VEC that have  #f in their LOC  field.  These VAR
+	 ;;structs  can  be  allocated  to  CPU registers  or  to  stack  locations
+	 ;;(spilled).
+	 (let ((x.vars.vec        (car x.vars))
+	       (x.vars.spillable* (cdr x.vars)))
+	   (let loop ((spillable.set    (list->set x.vars.spillable*))
+		      (unspillable.set  (make-empty-set))
+		      (body             x.body))
+	     (receive (unspillable.set^ body^)
+		 ;;FIXME This really needs to be inside the loop.  But why?  Insert
+		 ;;explanation here.  (Marco Maggi; Wed Oct 22, 2014)
+		 (%add-unspillables unspillable.set body)
+	       (let ((G (%build-interference-graph body^)))
+		 #;(print-graph G)
+		 (receive (spilled* spillable.set^ env)
+		     (%color-graph spillable.set unspillable.set^ G)
+		   (if (null? spilled*)
+		       ;;Finished!
+		       (%substitute-vars-with-associated-locations env body^)
+		     ;;Another iteration is needed.
+		     (let* ((env^   (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec))
+			    (body^^ (%substitute-vars-with-associated-locations env^ body^)))
+		       (loop spillable.set^ unspillable.set^ body^^)))))))))))
 
-    (define (E-clambda x)
-      (struct-case x
-	((clambda label clause* cp freevar* name)
-	 (make-clambda label (map E-clambda-clause clause*) cp freevar* name))))
+    (define (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec)
+      ;;The argument  SPILLED* is the  list of  the VAR structs  representing local
+      ;;variables spilled on the stack: VAR structs  whose LOC field must be set to
+      ;;a newly allocated FVAR struct.
+      ;;
+      ;;The argument  X.VARS.VEC is a  vector of  VAR structs representing  all the
+      ;;local variables in X.BODY.
+      ;;
+      ;;For every VAR struct in SPILLED*: select a stack frame location that is not
+      ;;already used by  other VAR structs and  allocated it to the  VAR by storing
+      ;;the  associated FVAR  struct in  its  LOC field;  updated the  interference
+      ;;graphs accordingly.
+      ;;
+      ;;Return an ENV  value: an alist whose  keys are the spilled  VAR structs and
+      ;;whose values are the associated FVAR structs.
+      ;;
+      ;;FIXME Why  in hell the  FVAR allocated to spilled  vars here do  not always
+      ;;have  increasing  index in  a  single  function execution?   Uncomment  the
+      ;;FPRINTFs  and see  for yourself.   Almost  always they  are incresing,  but
+      ;;sometimes they are not.  (Marco Maggi; Thu Nov 6, 2014)
+      ;;
+      #;(fprintf (current-error-port) "start\n")
+      ($map/stx
+	  (lambda (spilled)
+	    (module (for-each-var add-frm rem-var mem-frm?)
+	      (import FRAME-CONFLICT-SETS))
+	    (let ((spilled.fvar (let loop ((stack-frame-conflicts ($var-frm-conf spilled))
+					   (stack-offset          1))
+				  (let ((stack-frame-loc (mkfvar stack-offset)))
+				    (if (mem-frm? stack-frame-loc stack-frame-conflicts)
+					;;The  stack frame  location referenced  by
+					;;STACK-FRAME-LOC   is   already  used   by
+					;;another  local variable,  check the  next
+					;;one.
+					(begin
+					  #;(fprintf (current-error-port) "~a, " stack-offset)
+					  (loop stack-frame-conflicts (fxadd1 stack-offset)))
+				      ;;The  stack  frame  location  referended  by
+				      ;;STACK-FRAME-LOC is unused: choose it.
+				      stack-frame-loc)))))
+	      #;(fprintf (current-error-port) " i=~a\n" (fvar-idx spilled.fvar))
+	      ;;For  each local  variable in  X.VARS.VEC: remove  SPILLED from  the
+	      ;;interference  graph of  VAR structs  (VAR-CONF) and  add it  to the
+	      ;;interference graph of FVAR structs (FRM-CONF).
+	      (for-each-var
+		  ($var-var-conf spilled)
+		  x.vars.vec
+		(lambda (x.var)
+		  ($set-var-var-conf! x.var (rem-var spilled      ($var-var-conf x.var)))
+		  ($set-var-frm-conf! x.var (add-frm spilled.fvar ($var-frm-conf x.var)))))
+	      ($set-var-loc! spilled spilled.fvar)
+	      (cons spilled spilled.fvar)))
+	spilled*))
 
-    (define (E-clambda-clause x)
-      (struct-case x
-	((clambda-case x.info x.locals)
-	 (make-clambda-case x.info (%color-program x.locals)))))
+    #| end of module: %COLOR-PROGRAM |# )
 
-    (module (%color-program)
-
-      (define (%color-program x)
-	;;The argument X must  be a LOCALS struct representing the  body of a CLAMBDA
-	;;clause or the  body of an initialisation expression.  Return  the return of
-	;;the call to %SUBSTITUTE-VARS-WITH-ASSOCIATED-LOCATIONS.
-	;;
-	(module (list->set make-empty-set)
-	  (import LISTY-SET))
-	(struct-case x
-	  ((locals x.vars x.body)
-	   ;;X.VARS.VEC  is  a vector  of  VAR  structs  representing all  the  local
-	   ;;variables in  X.BODY.  Some of these  VAR structs have a  FVAR struct in
-	   ;;their LOC  field: they have  already been allocated to  stack locations;
-	   ;;the other  VAR structs  have #f  in their  LOC field:  they are  not yet
-	   ;;allocated.
-	   ;;
-	   ;;X.VARS.SPILLABLE* is  a list of  VAR structs representing the  subset of
-	   ;;VAR structs  in X.VARS.VEC that have  #f in their LOC  field.  These VAR
-	   ;;structs  can  be  allocated  to  CPU registers  or  to  stack  locations
-	   ;;(spilled).
-	   (let ((x.vars.vec        (car x.vars))
-		 (x.vars.spillable* (cdr x.vars)))
-	     (let loop ((spillable.set    (list->set x.vars.spillable*))
-			(unspillable.set  (make-empty-set))
-			(body             x.body))
-	       (receive (unspillable.set^ body^)
-		   ;;FIXME This really needs to be inside the loop.  But why?  Insert
-		   ;;explanation here.  (Marco Maggi; Wed Oct 22, 2014)
-		   (%add-unspillables unspillable.set body)
-		 (let ((G (%build-interference-graph body^)))
-		   #;(print-graph G)
-		   (receive (spilled* spillable.set^ env)
-		       (%color-graph spillable.set unspillable.set^ G)
-		     (if (null? spilled*)
-			 ;;Finished!
-			 (%substitute-vars-with-associated-locations env body^)
-		       ;;Another iteration is needed.
-		       (let* ((env^   (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec))
-			      (body^^ (%substitute-vars-with-associated-locations env^ body^)))
-			 (loop spillable.set^ unspillable.set^ body^^)))))))))))
-
-      (define (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec)
-	;;The argument  SPILLED* is the  list of  the VAR structs  representing local
-	;;variables spilled on the stack: VAR structs  whose LOC field must be set to
-	;;a newly allocated FVAR struct.
-	;;
-	;;The argument  X.VARS.VEC is a  vector of  VAR structs representing  all the
-	;;local variables in X.BODY.
-	;;
-	;;For every VAR struct in SPILLED*: select a stack frame location that is not
-	;;already used by  other VAR structs and  allocated it to the  VAR by storing
-	;;the  associated FVAR  struct in  its  LOC field;  updated the  interference
-	;;graphs accordingly.
-	;;
-	;;Return an ENV  value: an alist whose  keys are the spilled  VAR structs and
-	;;whose values are the associated FVAR structs.
-	;;
-	;;FIXME Why  in hell the  FVAR allocated to spilled  vars here do  not always
-	;;have  increasing  index in  a  single  function execution?   Uncomment  the
-	;;FPRINTFs  and see  for yourself.   Almost  always they  are incresing,  but
-	;;sometimes they are not.  (Marco Maggi; Thu Nov 6, 2014)
-	;;
-	#;(fprintf (current-error-port) "start\n")
-	($map/stx
-	    (lambda (spilled)
-	      (module (for-each-var add-frm rem-var mem-frm?)
-		(import FRAME-CONFLICT-SETS))
-	      (let ((spilled.fvar (let loop ((stack-frame-conflicts ($var-frm-conf spilled))
-					     (stack-offset          1))
-				    (let ((stack-frame-loc (mkfvar stack-offset)))
-				      (if (mem-frm? stack-frame-loc stack-frame-conflicts)
-					  ;;The  stack frame  location referenced  by
-					  ;;STACK-FRAME-LOC   is   already  used   by
-					  ;;another  local variable,  check the  next
-					  ;;one.
-					  (begin
-					    #;(fprintf (current-error-port) "~a, " stack-offset)
-					    (loop stack-frame-conflicts (fxadd1 stack-offset)))
-					;;The  stack  frame  location  referended  by
-					;;STACK-FRAME-LOC is unused: choose it.
-					stack-frame-loc)))))
-		#;(fprintf (current-error-port) " i=~a\n" (fvar-idx spilled.fvar))
-		;;For  each local  variable in  X.VARS.VEC: remove  SPILLED from  the
-		;;interference  graph of  VAR structs  (VAR-CONF) and  add it  to the
-		;;interference graph of FVAR structs (FRM-CONF).
-		(for-each-var
-		    ($var-var-conf spilled)
-		    x.vars.vec
-		  (lambda (x.var)
-		    ($set-var-var-conf! x.var (rem-var spilled      ($var-var-conf x.var)))
-		    ($set-var-frm-conf! x.var (add-frm spilled.fvar ($var-frm-conf x.var)))))
-		($set-var-loc! spilled spilled.fvar)
-		(cons spilled spilled.fvar)))
-	  spilled*))
-
-      #| end of module: %COLOR-PROGRAM |# )
-
-    #| end of module: COLOR-BY-CHAITIN |# )
+  #| end of module: COLOR-BY-CHAITIN |# )
 
 
 (module LISTY-SET
@@ -2265,7 +2283,7 @@
 
 ;;;; done
 
-#| end of module: color-by-chaitin |# )
+#| end of LIBRARY |# )
 
 ;;; end of file
 ;; Local Variables:

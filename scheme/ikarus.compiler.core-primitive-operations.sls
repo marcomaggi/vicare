@@ -15,18 +15,41 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-;;;; Introduction
-;;
-;;
+#!vicare
+(library (ikarus.compiler.core-primitive-operations)
+  (export initialise-core-primitive-operations)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (except (ikarus.compiler.typedefs)
+	    interrupt)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code)
+    (ikarus.compiler.scheme-objects-ontology)
+    (ikarus.compiler.core-primitive-operation-names)
+    (ikarus.compiler.pass-specify-representation)
+    (ikarus.compiler.intel-assembly)
+    (only (ikarus.compiler.common-assembly-subroutines)
+	  sl-continuation-code-label
+	  sl-annotated-procedure-label
+	  sl-values-label
+	  sl-cwv-label))
 
-(module CORE-PRIMITIVE-OPERATION-DEFINITIONS
-  ()
+  (import SCHEME-OBJECTS-ONTOLOGY)
+  (import CORE-PRIMITIVE-OPERATION-NAMES)
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (module (PC-REGISTER FP-REGISTER)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
+  (include "ikarus.compiler.scheme-objects-layout.scm" #t)
 
-  (define-syntax __module_who__
-    (identifier-syntax 'CORE-PRIMITIVE-OPERATION-DEFINITIONS))
+
+;;;; setup procedure
+
+(define-syntax __module_who__
+  (identifier-syntax 'CORE-PRIMITIVE-OPERATION-DEFINITIONS))
+
+(define (initialise-core-primitive-operations)
 
 
 (define-auxiliary-syntaxes safe unsafe)
@@ -172,49 +195,6 @@
   (main stx))
 
 
-;;;; primitive operation definition helpers
-
-(define (%validate-P-implementation-handler-retval who rv)
-  ;;Called by all the  "for predicate" primitive-operation implementation-handlers to
-  ;;validate the return value.  If the return  value RV is correct: return RV itself,
-  ;;otherwise raise an exception.
-  ;;
-  ;;An implementation handler for the P context can return:
-  ;;
-  ;;*  The constants  (K #t)  or  (K #f)  as special  values  to be  recognised in  a
-  ;;  subsequent compiler pass.
-  ;;
-  ;;* An  ASMCALL with operand among:  =, !=, <, <=,  >, >=, u<, u<=,  u>, u>=, fl:=,
-  ;;  fl:<, fl:<=,  fl:>, fl:>=.  This is  the "true" return value; it  is the proper
-  ;;  operation  that generates, as Assembly  instructions, a jump to  the "label for
-  ;;  consequent" or "label for alternate".
-  ;;
-  ;;* A  variety of recordised  code which has  one of the  above as tail  form.  For
-  ;;   example:  a  call  to  SEC-TAG-TEST  used  to  implement  SYMBOL?   returns  a
-  ;;  CONDITIONAL; a call to $FLCMP-AUX used to implement "fl=?" returns a SEQ.
-  ;;
-  ;;Here we do what we can to validate such return value.
-  ;;
-  (define (%error msg)
-    (compiler-internal-error __module_who__ who msg (unparse-recordized-code/sexp rv)))
-  (struct-case rv
-    ((constant rv.const)
-     (if (boolean? rv.const)
-	 rv
-       (%error "wrong CONSTANT recordised code returned from \
-                primitive-operation implementation handler, expected (K #t) or (K #f)")))
-    ((asmcall op args)
-     (case op
-       ((interrupt)
-	rv)
-       ((= != < <= > >= u< u<= u> u>=)
-	rv)
-       (else
-	(%error "invalid ASMCALL operand in recordised code returned from primitive-operation implementation handler,\
-                 expected an operand among: =, !=, <, <=, >, >=, u<, u<=, u>, u>=, interrupt"))))
-    (else rv)))
-
-
 ;;;; syntax helpers
 
 (define-syntax /section
@@ -280,6 +260,49 @@
   (if (target-platform-fixnum? binary-representation)
       (nop)
     (interrupt)))
+
+
+;;;; primitive operation definition helpers
+
+(define (%validate-P-implementation-handler-retval who rv)
+  ;;Called by all the  "for predicate" primitive-operation implementation-handlers to
+  ;;validate the return value.  If the return  value RV is correct: return RV itself,
+  ;;otherwise raise an exception.
+  ;;
+  ;;An implementation handler for the P context can return:
+  ;;
+  ;;*  The constants  (K #t)  or  (K #f)  as special  values  to be  recognised in  a
+  ;;  subsequent compiler pass.
+  ;;
+  ;;* An  ASMCALL with operand among:  =, !=, <, <=,  >, >=, u<, u<=,  u>, u>=, fl:=,
+  ;;  fl:<, fl:<=,  fl:>, fl:>=.  This is  the "true" return value; it  is the proper
+  ;;  operation  that generates, as Assembly  instructions, a jump to  the "label for
+  ;;  consequent" or "label for alternate".
+  ;;
+  ;;* A  variety of recordised  code which has  one of the  above as tail  form.  For
+  ;;   example:  a  call  to  SEC-TAG-TEST  used  to  implement  SYMBOL?   returns  a
+  ;;  CONDITIONAL; a call to $FLCMP-AUX used to implement "fl=?" returns a SEQ.
+  ;;
+  ;;Here we do what we can to validate such return value.
+  ;;
+  (define (%error msg)
+    (compiler-internal-error __module_who__ who msg (unparse-recordized-code/sexp rv)))
+  (struct-case rv
+    ((constant rv.const)
+     (if (boolean? rv.const)
+	 rv
+       (%error "wrong CONSTANT recordised code returned from \
+                primitive-operation implementation handler, expected (K #t) or (K #f)")))
+    ((asmcall op args)
+     (case op
+       ((interrupt)
+	rv)
+       ((= != < <= > >= u< u<= u> u>=)
+	rv)
+       (else
+	(%error "invalid ASMCALL operand in recordised code returned from primitive-operation implementation handler,\
+                 expected an operand among: =, !=, <, <=, >, >=, u<, u<=, u>, u>=, interrupt"))))
+    (else rv)))
 
 
 ;;;; helpers
@@ -5716,6 +5739,10 @@
 
 
 ;;;; done
+
+(void)
+
+#| end of INITIALISE-CORE-PRIMITIVE-OPERATIONS |# )
 
 #| end of module |# )
 
