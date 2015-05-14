@@ -344,8 +344,8 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.pass-letrec-optimizer.sls				\
 	scheme/ikarus.compiler.pass-source-optimizer.sls				\
 	scheme/ikarus.compiler.pass-rewrite-references-and-assignments.sls		\
-	scheme/ikarus.compiler.pass-core-type-inference.scm				\
-	scheme/ikarus.compiler.pass-introduce-unsafe-primrefs.scm			\
+	scheme/ikarus.compiler.pass-core-type-inference.sls				\
+	scheme/ikarus.compiler.pass-introduce-unsafe-primrefs.sls			\
 	scheme/ikarus.compiler.pass-specify-representation.scm				\
 	scheme/ikarus.compiler.pass-impose-evaluation-order.scm				\
 	scheme/ikarus.compiler.pass-assign-frame-sizes.scm				\

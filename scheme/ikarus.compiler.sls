@@ -105,6 +105,8 @@
     (ikarus.compiler.pass-letrec-optimizer)
     (ikarus.compiler.pass-source-optimizer)
     (ikarus.compiler.pass-rewrite-references-and-assignments)
+    (ikarus.compiler.pass-core-type-inference)
+    (ikarus.compiler.pass-introduce-unsafe-primrefs)
     ;;When building a new  boot image: the FASL write library  is loaded from source.
     ;;This needs  to be  loaded here  so that  it evaluates  with the  freshly loaded
     ;;"ikarus.config.scm", including the correct value for WORDSIZE.
@@ -464,12 +466,6 @@
 					stop-after-assembly-generation?)))
 
   #| end of module: compile-core-expr |# )
-
-
-;;;; some other external code
-
-(include "ikarus.compiler.pass-core-type-inference.scm" #t)
-(include "ikarus.compiler.pass-introduce-unsafe-primrefs.scm" #t)
 
 
 (module (sanitize-bindings)

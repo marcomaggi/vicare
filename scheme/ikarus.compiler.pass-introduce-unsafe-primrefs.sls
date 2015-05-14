@@ -1,6 +1,6 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 ;;;
 ;;;This program is free software: you can  redistribute it and/or modify it under the
 ;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
@@ -14,27 +14,40 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (introduce-unsafe-primrefs)
-  ;;This optional compiler  pass recognises the application of  *safe* core primitive
-  ;;functions  having  operands of  the  correct  type  and  replaces them  with  the
-  ;;corresponding  application of  *unsafe* core  primitive functions  or operations.
-  ;;The result is faster code.
-  ;;
-  ;;It makes sense to perform this compiler pass only if CORE-TYPE-INFERENCE has been
-  ;;performed first.
-  ;;
-  ;;Accept as input a nested hierarchy of the following structs:
-  ;;
-  ;;   constant		prelex		primref
-  ;;   bind		fix		conditional
-  ;;   seq		clambda		known
-  ;;   forcall		funcall		typed-expr
-  ;;
-  (define-syntax __module_who__
-    (identifier-syntax 'introduce-unsafe-primrefs))
+#!vicare
+(library (ikarus.compiler.pass-introduce-unsafe-primrefs)
+  (export introduce-unsafe-primrefs)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code))
 
-  (define (introduce-unsafe-primrefs x)
-    (E x))
+
+;;;; introduction
+;;
+;;This optional  compiler pass  recognises the application  of *safe*  core primitive
+;;functions  having  operands  of  the  correct  type  and  replaces  them  with  the
+;;corresponding application of *unsafe* core  primitive functions or operations.  The
+;;result is faster code.
+;;
+;;It makes sense  to perform this compiler pass only  if CORE-TYPE-INFERENCE has been
+;;performed first.
+;;
+;;Accept as input a nested hierarchy of the following structs:
+;;
+;;   constant		prelex		primref
+;;   bind		fix		conditional
+;;   seq		clambda		known
+;;   forcall		funcall		typed-expr
+;;
+(define-syntax __module_who__
+  (identifier-syntax 'introduce-unsafe-primrefs))
+
+(define (introduce-unsafe-primrefs x)
+  (E x))
 
 
 (define* (E x)
@@ -399,9 +412,8 @@
 
 ;;;; done
 
-#| end of module: INTRODUCE-UNSAFE-PRIMREFS |# )
+#| end of LIBRARY |# )
 
 ;;; end of file
 ;; Local Variables:
-;; mode: vicare
 ;; End:

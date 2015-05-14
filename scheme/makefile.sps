@@ -459,6 +459,8 @@
     "ikarus.compiler.pass-letrec-optimizer.sls"
     "ikarus.compiler.pass-source-optimizer.sls"
     "ikarus.compiler.pass-rewrite-references-and-assignments.sls"
+    "ikarus.compiler.pass-core-type-inference.sls"
+    "ikarus.compiler.pass-introduce-unsafe-primrefs.sls"
     "ikarus.compiler.sls"
 ;;;
     "psyntax.library-utils.sls"
