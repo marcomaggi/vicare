@@ -880,6 +880,7 @@ Other options:
 
    -d
    -g
+	Turn on debugging mode.
 
    --option OPTION-NAME
         Turn on or off a  compiler or expander option.  OPTION-VALUE can
