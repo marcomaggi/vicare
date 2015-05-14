@@ -29,9 +29,8 @@
     ;;
     option.strict-r6rs
     option.verbose?)
-  (import (except (vicare)
-		  assembler-output
-		  optimizer-output)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (prefix (only (ikarus.options)
 		  strict-r6rs
 		  verbose?)

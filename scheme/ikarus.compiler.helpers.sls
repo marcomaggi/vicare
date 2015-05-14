@@ -25,12 +25,10 @@
     $fold-right/stx
     struct-case					define-structure
     print-compiler-warning-message
-    void-object?
     remq1
     union					difference)
-  (import (except (vicare)
-		  assembler-output
-		  optimizer-output)
+  (import (rnrs)
+    (ikarus.compiler.compat)
     (ikarus.compiler.config))
 
 
@@ -372,13 +370,6 @@
       (display "vicare: compiler warning: " P)
       (apply fprintf P template args)
       (newline P))))
-
-;;; --------------------------------------------------------------------
-
-;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Tue  Sep 30,
-;;2014)
-(define (void-object? x)
-  (eq? x (void)))
 
 ;;; --------------------------------------------------------------------
 

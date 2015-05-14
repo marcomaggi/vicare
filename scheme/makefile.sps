@@ -448,9 +448,11 @@
     ;;
     "ikarus.compiler.core-primitive-properties.sls"
 ;;;
+    "ikarus.compiler.compat.sls"
     "ikarus.compiler.config.sls"
     "ikarus.compiler.helpers.sls"
     "ikarus.compiler.system-value.sls"
+    "ikarus.compiler.typedefs.sls"
     "ikarus.compiler.sls"
 ;;;
     "psyntax.library-utils.sls"
