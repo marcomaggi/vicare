@@ -15,6 +15,24 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
+(library (ikarus.compiler.pass-source-optimizer)
+  (export
+    source-optimize
+    optimize-level
+    source-optimizer-passes-count
+    cp0-effort-limit
+    cp0-size-limit)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.system-value)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code))
+
+
 ;;;; the source code optimizer
 ;;
 ;;Check  the "makefile.sps"  used  to build  the  boot  image to  see  if the  source
@@ -34,94 +52,90 @@
 ;;   Oscar  Waddell,  R.  Kent  Dybvig.  "Fast  and  Effective  Procedure  Inlining".
 ;;   Indiana University.  Computer Science Department.  Technical Report No. 484.
 ;;
-(module (source-optimize
-	 optimize-level
-	 source-optimizer-passes-count
-	 cp0-effort-limit
-	 cp0-size-limit)
-  (define-syntax __module_who__
-    (identifier-syntax 'source-optimize))
 
-  (define-constant DEFAULT-CP0-EFFORT-LIMIT	50)
-  (define-constant DEFAULT-CP0-SIZE-LIMIT	8)
-  (define-constant O3-CP0-EFFORT-LIMIT		(* 4 DEFAULT-CP0-EFFORT-LIMIT))
-  (define-constant O3-CP0-SIZE-LIMIT		(* 4 DEFAULT-CP0-SIZE-LIMIT))
+(define-syntax __module_who__
+  (identifier-syntax 'source-optimize))
 
-  (define cp0-effort-limit
-    (make-parameter DEFAULT-CP0-EFFORT-LIMIT
-      (lambda (obj)
-	(if (and (fixnum? obj)
-		 (fxnonnegative? obj))
-	    obj
-	  (procedure-argument-violation 'cp0-effort-limit
-	    "expected positive fixnum as optimisation effort limit"
-	    obj)))))
+(define-constant DEFAULT-CP0-EFFORT-LIMIT	50)
+(define-constant DEFAULT-CP0-SIZE-LIMIT	8)
+(define-constant O3-CP0-EFFORT-LIMIT		(* 4 DEFAULT-CP0-EFFORT-LIMIT))
+(define-constant O3-CP0-SIZE-LIMIT		(* 4 DEFAULT-CP0-SIZE-LIMIT))
 
-  (define cp0-size-limit
-    (make-parameter DEFAULT-CP0-SIZE-LIMIT
-      (lambda (obj)
-	(if (and (fixnum? obj)
-		 (fxnonnegative? obj))
-	    obj
-	  (procedure-argument-violation 'cp0-size-limit
-	    "expected positive fixnum as optimisation size limit"
-	    obj)))))
+(define cp0-effort-limit
+  (make-parameter DEFAULT-CP0-EFFORT-LIMIT
+    (lambda (obj)
+      (if (and (fixnum? obj)
+	       (fxnonnegative? obj))
+	  obj
+	(procedure-argument-violation 'cp0-effort-limit
+	  "expected positive fixnum as optimisation effort limit"
+	  obj)))))
 
-  (define optimize-level
-    (make-parameter 2
-      (lambda (obj)
-	(case obj
-	  ((0 1 2 3)
-	   obj)
-	  (else
-	   (procedure-argument-violation 'optimize-level
-	     "valid optimization levels are 0, 1, 2, and 3"
-	     obj))))))
+(define cp0-size-limit
+  (make-parameter DEFAULT-CP0-SIZE-LIMIT
+    (lambda (obj)
+      (if (and (fixnum? obj)
+	       (fxnonnegative? obj))
+	  obj
+	(procedure-argument-violation 'cp0-size-limit
+	  "expected positive fixnum as optimisation size limit"
+	  obj)))))
 
-  (define source-optimizer-passes-count
-    (make-parameter 1
-      (lambda (obj)
-	(if (and (fixnum?     obj)
-		 (fxpositive? obj))
-	    obj
-	  (procedure-argument-violation 'source-optimizer-passes-count
-	    "expected positive fixnum as source optimiser passes count"
-	    obj)))))
-
-  (define source-optimizer-input
-    ;;This is used in case of internal error to show better error context.
-    ;;
-    (make-parameter #f))
-
-  (module (source-optimize)
-
-    (define (source-optimize expr)
-      (case (optimize-level)
-	((3)
-	 ;;This optimisation level is meant to do the most possible.
-	 (parametrise ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
-		       (cp0-size-limit		O3-CP0-SIZE-LIMIT)
-		       (source-optimizer-passes-count 2))
-	   (%do-one-pass expr (source-optimizer-passes-count))))
-	((2)
-	 (%do-one-pass expr (source-optimizer-passes-count)))
-	((1)
-	 (let ((expr (parametrise ((cp0-size-limit 0))
-		       (%do-one-pass expr (source-optimizer-passes-count)))))
-	   #;(debug-print expr)
-	   expr))
+(define optimize-level
+  (make-parameter 2
+    (lambda (obj)
+      (case obj
+	((0 1 2 3)
+	 obj)
 	(else
+	 (procedure-argument-violation 'optimize-level
+	   "valid optimization levels are 0, 1, 2, and 3"
+	   obj))))))
+
+(define source-optimizer-passes-count
+  (make-parameter 1
+    (lambda (obj)
+      (if (and (fixnum?     obj)
+	       (fxpositive? obj))
+	  obj
+	(procedure-argument-violation 'source-optimizer-passes-count
+	  "expected positive fixnum as source optimiser passes count"
+	  obj)))))
+
+(define source-optimizer-input
+  ;;This is used in case of internal error to show better error context.
+  ;;
+  (make-parameter #f))
+
+(module (source-optimize)
+
+  (define (source-optimize expr)
+    (case (optimize-level)
+      ((3)
+       ;;This optimisation level is meant to do the most possible.
+       (parametrise ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
+		     (cp0-size-limit		O3-CP0-SIZE-LIMIT)
+		     (source-optimizer-passes-count 2))
+	 (%do-one-pass expr (source-optimizer-passes-count))))
+      ((2)
+       (%do-one-pass expr (source-optimizer-passes-count)))
+      ((1)
+       (let ((expr (parametrise ((cp0-size-limit 0))
+		     (%do-one-pass expr (source-optimizer-passes-count)))))
+	   #;(debug-print expr)
+	 expr))
+      (else
 	 #;(debug-print expr)
-	 expr)))
+       expr)))
 
-    (define (%do-one-pass expr passes-count)
-      (if (fxzero? passes-count)
-	  expr
-	(%do-one-pass (parametrise ((source-optimizer-input expr))
-			(E expr 'v (make-empty-env) (passive-counter) (passive-counter)))
-		      (fxsub1 passes-count))))
+  (define (%do-one-pass expr passes-count)
+    (if (fxzero? passes-count)
+	expr
+      (%do-one-pass (parametrise ((source-optimizer-input expr))
+		      (E expr 'v (make-empty-env) (passive-counter) (passive-counter)))
+		    (fxsub1 passes-count))))
 
-    #| end of module: source-optimize |# )
+  #| end of module: source-optimize |# )
 
 
 ;;;; type definitions
@@ -1789,7 +1803,7 @@
 
 ;;;; done
 
-#| end of source optimiser module |# )
+#| end of LIBRARY |# )
 
 ;;; end of file
 ;; Local Variables:

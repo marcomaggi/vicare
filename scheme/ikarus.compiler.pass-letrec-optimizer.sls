@@ -15,6 +15,24 @@
 ;;;
 
 
+#!vicare
+(library (ikarus.compiler.pass-letrec-optimizer)
+  (export
+    optimize-letrec
+    current-letrec-pass
+    check-for-illegal-letrec
+    optimize-letrec/basic
+    optimize-letrec/waddell
+    optimize-letrec/scc)
+  (import (rnrs)
+    (ikarus.compiler.compat)
+    (ikarus.compiler.config)
+    (ikarus.compiler.helpers)
+    (ikarus.compiler.typedefs)
+    (ikarus.compiler.condition-types)
+    (ikarus.compiler.unparse-recordised-code))
+
+
 ;;;; introduction
 ;;
 ;;For an  introduction to processing LETREC  and LETREC* syntaxes, and  to understand
@@ -78,41 +96,34 @@
 ;;
 
 
-(module (optimize-letrec
-	 current-letrec-pass
-	 check-for-illegal-letrec)
+(define check-for-illegal-letrec
+  (make-parameter #t
+    (lambda (obj)
+      (and obj #t))))
 
-  (define check-for-illegal-letrec
-    (make-parameter #t
-      (lambda (obj)
-	(and obj #t))))
+(define current-letrec-pass
+  (make-parameter 'scc
+    (lambda (obj)
+      (if (memq obj '(scc waddell basic))
+	  obj
+	(procedure-argument-violation 'current-letrec-pass
+	  "invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
+	  obj)))))
 
-  (define current-letrec-pass
-    (make-parameter 'scc
-      (lambda (obj)
-	(if (memq obj '(scc waddell basic))
-	    obj
-	  (procedure-argument-violation 'current-letrec-pass
-	    "invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
-	    obj)))))
-
-  (define* (optimize-letrec X)
-    (when (check-for-illegal-letrec)
-      (check-for-illegal-letrec-references X))
-    (let ((Y (integrate-nested-binding-forms X)))
-      (case (current-letrec-pass)
-	((scc)     (optimize-letrec/scc     Y))
-	((waddell) (optimize-letrec/waddell Y))
-	((basic)   (optimize-letrec/basic   Y))
-	(else
-	 (assertion-violation __who__
-	   "invalid letrec optimization mode" (current-letrec-pass))))))
+(define* (optimize-letrec X)
+  (when (check-for-illegal-letrec)
+    (check-for-illegal-letrec-references X))
+  (let ((Y (integrate-nested-binding-forms X)))
+    (case (current-letrec-pass)
+      ((scc)     (optimize-letrec/scc     Y))
+      ((waddell) (optimize-letrec/waddell Y))
+      ((basic)   (optimize-letrec/basic   Y))
+      (else
+       (assertion-violation __who__
+	 "invalid letrec optimization mode" (current-letrec-pass))))))
 
 
 ;;;; helpers
-
-(define-syntax-rule (fxincr! ?id)
-  (set! ?id (fxadd1 ?id)))
 
 (case-define %map-in-order-with-index
   ((func serial-idx ell1)
@@ -2145,7 +2156,7 @@
 
 ;;;; done
 
-#| end of module |# )
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

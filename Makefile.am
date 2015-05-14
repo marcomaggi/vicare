@@ -291,8 +291,7 @@ endif
 #### compiling the boot image: source files
 
 VICARE_BOOT_SRCS = \
-	scheme/ikarus.wordsize.scm				\
-	scheme/ikarus.compiler.scheme-objects-ontology.sls	\
+	scheme/ikarus.wordsize.scm							\
 	\
 	scheme/ikarus.compiler.core-primitive-properties.base.sls			\
 	scheme/ikarus.compiler.core-primitive-properties.configuration.sls		\
@@ -337,9 +336,14 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.helpers.sls						\
 	scheme/ikarus.compiler.system-value.sls						\
 	scheme/ikarus.compiler.typedefs.sls						\
+	scheme/ikarus.compiler.scheme-objects-ontology.sls				\
 	scheme/ikarus.compiler.scheme-objects-layout.scm				\
-	scheme/ikarus.compiler.pass-letrec-optimizer.scm				\
-	scheme/ikarus.compiler.pass-source-optimizer.scm				\
+	scheme/ikarus.compiler.unparse-recordised-code.sls				\
+	scheme/ikarus.compiler.pass-recordise.sls					\
+	scheme/ikarus.compiler.pass-optimize-direct-calls.sls				\
+	scheme/ikarus.compiler.pass-letrec-optimizer.sls				\
+	scheme/ikarus.compiler.pass-source-optimizer.sls				\
+	scheme/ikarus.compiler.pass-rewrite-references-and-assignments.sls		\
 	scheme/ikarus.compiler.pass-core-type-inference.scm				\
 	scheme/ikarus.compiler.pass-introduce-unsafe-primrefs.scm			\
 	scheme/ikarus.compiler.pass-specify-representation.scm				\

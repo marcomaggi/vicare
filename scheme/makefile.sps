@@ -453,6 +453,12 @@
     "ikarus.compiler.helpers.sls"
     "ikarus.compiler.system-value.sls"
     "ikarus.compiler.typedefs.sls"
+    "ikarus.compiler.unparse-recordised-code.sls"
+    "ikarus.compiler.pass-recordise.sls"
+    "ikarus.compiler.pass-optimize-direct-calls.sls"
+    "ikarus.compiler.pass-letrec-optimizer.sls"
+    "ikarus.compiler.pass-source-optimizer.sls"
+    "ikarus.compiler.pass-rewrite-references-and-assignments.sls"
     "ikarus.compiler.sls"
 ;;;
     "psyntax.library-utils.sls"
