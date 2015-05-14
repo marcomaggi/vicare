@@ -339,6 +339,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.scheme-objects-ontology.sls				\
 	scheme/ikarus.compiler.scheme-objects-layout.scm				\
 	scheme/ikarus.compiler.unparse-recordised-code.sls				\
+	scheme/ikarus.compiler.core-primitive-operation-names.sls			\
 	scheme/ikarus.compiler.pass-recordise.sls					\
 	scheme/ikarus.compiler.pass-optimize-direct-calls.sls				\
 	scheme/ikarus.compiler.pass-letrec-optimizer.sls				\
@@ -346,6 +347,17 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.pass-rewrite-references-and-assignments.sls		\
 	scheme/ikarus.compiler.pass-core-type-inference.sls				\
 	scheme/ikarus.compiler.pass-introduce-unsafe-primrefs.sls			\
+	scheme/ikarus.compiler.pass-sanitize-bindings.sls				\
+	scheme/ikarus.compiler.pass-optimize-for-direct-jumps.sls			\
+	scheme/ikarus.compiler.pass-insert-global-assignments.sls			\
+	scheme/ikarus.compiler.pass-introduce-vars.sls					\
+	scheme/ikarus.compiler.pass-introduce-closure-makers.sls			\
+	scheme/ikarus.compiler.pass-optimize-combinator-calls-lift-clambdas.sls		\
+	scheme/ikarus.compiler.pass-introduce-primitive-operation-calls.sls		\
+	scheme/ikarus.compiler.pass-rewrite-freevar-references.sls			\
+	scheme/ikarus.compiler.pass-insert-engine-checks.sls				\
+	scheme/ikarus.compiler.pass-insert-stack-overflow-check.sls			\
+	\
 	scheme/ikarus.compiler.pass-specify-representation.scm				\
 	scheme/ikarus.compiler.pass-impose-evaluation-order.scm				\
 	scheme/ikarus.compiler.pass-assign-frame-sizes.scm				\

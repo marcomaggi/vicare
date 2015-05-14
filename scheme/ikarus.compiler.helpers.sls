@@ -18,6 +18,7 @@
 #!r6rs
 (library (ikarus.compiler.helpers)
   (export
+    sl-apply-label-func
     if-building-rotation-boot-image?		cond-expand
     expand-time-gensym
     %list-of-one-item?				fxincr!
@@ -30,6 +31,14 @@
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config))
+
+
+;;;; stuff
+
+(define sl-apply-label-func
+  (make-parameter (lambda ()
+		    (assertion-violation 'sl-apply-label-func
+		      "parameter not initialised"))))
 
 
 ;;;; helper syntaxes
