@@ -272,9 +272,6 @@ interface is available.
 
 @item -d
 @itemx -g
-@itemx --debug
-@cindex Command line option @option{--debug}
-@cindex @option{--debug}, command line option
 @cindex Command line option @option{-d}
 @cindex @option{-d}, command line option
 @cindex Command line option @option{-g}
@@ -283,19 +280,45 @@ Turn on debugging mode.  With this option: unhandled exceptions in the
 program will result in starting the debugger, which allows stack trace
 inspection.
 
-@item -nd
-@itemx --no-debug
-@cindex Command line option @option{--no-debug}
-@cindex @option{--no-debug}, command line option
-@cindex Command line option @option{-nd}
-@cindex @option{-nd}, command line option
-Turn off debugging mode.
+@c ------------------------------------------------------------------------
 
-@item --drop-assertions
-@cindex Command line option @option{--drop-assertions}
-@cindex @option{--drop-assertions}, command line option
-When used: causes every @syntax{assert} macro to be expanded into its
-expression, dropping the assertions.  Specifically:
+@item --option @var{option-name}
+@cindex Command line option @option{--option}
+@cindex @option{--option}, command line option
+Turn on or off compiler and expander options; @var{option-name} must be
+a string among:
+
+@table @code
+@item strict-r6rs
+@itemx no-strict-r6rs
+@cindex Command line option @code{strict-r6rs}
+@cindex Command line option @code{no-strict-r6rs}
+@cindex @code{strict-r6rs}, command line option
+@cindex @code{no-strict-r6rs}, command line option
+The first option causes @value{PRJNAME} to strictly follow @rnrs{6}
+specifications, disabling extensions.  The default is to enable
+extensions.
+
+@item debug
+@itemx no-debug
+@cindex Command line option @code{debug}
+@cindex @code{debug}, command line option
+Turn on or off debugging mode.  With this option: unhandled exceptions
+in the program will result in starting the debugger, which allows stack
+trace inspection.  Using @code{--option debug} is equivalent to using
+the options @option{-d} and @option{-g}.
+
+@item drop-assertions
+@itemx no-drop-assertions
+@cindex Command line option @code{drop-assertions}
+@cindex Command line option @code{no-drop-assertions}
+@cindex @code{drop-assertions}, command line option
+@cindex @code{no-drop-assertions}, command line option
+The first option causes every @syntax{assert} macro to be expanded into
+its expression, dropping the assertions.  The second option expands uses
+of the @syntax{assert} syntax as full assertions; this is the default.
+
+Specifically, when @code{drop-assertions} is used:
 
 @example
 (assert @meta{expr})
@@ -312,71 +335,59 @@ is expanded into:
 so that side effects in @meta{expr} are performed and the resulting
 value is returned.  The default is to include the full assertion.
 
-@item --no-drop-assertions
-@cindex Command line option @option{--no-drop-assertions}
-@cindex @option{--no-drop-assertions}, command line option
-Expand uses of the @syntax{assert} syntax as full assertions.  This is
-the default.
+@item check-compiler-pass-preconditions
+@itemx no-check-compiler-pass-preconditions
+@cindex Command line option @code{check-compiler-pass-preconditions}
+@cindex Command line option @code{no-check-compiler-pass-preconditions}
+@cindex @code{check-compiler-pass-preconditions}, command line option
+@cindex @code{no-check-compiler-pass-preconditions}, command line option
+The first option enables performing additional compiler passes to
+validate generated code.  To be used when debugging @value{PRJNAME}'s
+compiler.  The default is @strong{not} to perform such compiler passes.
 
-@item --check-compiler-pass-preconditions
-@cindex Command line option @option{--check-compiler-pass-preconditions}
-@cindex @option{--check-compiler-pass-preconditions}, command line option
-Enable performing additional compiler passes to validate generated code.
-To be used when debugging @value{PRJNAME}'s compiler.  The default is
-@strong{not} to perform such compiler passes.
+@item gc-integrity-checks
+@itemx no-gc-integrity-checks
+@cindex Command line option @code{gc-integrity-checks}
+@cindex @code{gc-integrity-checks}, command line option
+The first option enables garbage collection integrity checks.  This
+slows down the garbage collection.  The default is to disable garbage
+collection integrity checks.
 
-@item --no-check-compiler-pass-preconditions
-@cindex Command line option @option{--no-check-compiler-pass-preconditions}
-@cindex @option{--no-check-compiler-pass-preconditions}, command line option
-Disable performing additional compiler passes to validate generated
-code.  To be used when debugging @value{PRJNAME}'s compiler.
+@item print-assembly
+@cindex Command line option @code{print-assembly}
+@cindex @code{print-assembly}, command line option
+Print to the current error port the assembly instructions generated when
+compiling code.
 
-@item --gc-integrity-checks
-@cindex Command line option @option{--gc-integrity-checks}
-@cindex @option{--gc-integrity-checks}, command line option
-Enable garbage collection integrity checks.  This slows down the garbage
-collection.
+@item print-optimizer
+@itemx print-optimiser
+@cindex Command line option @code{print-optimizer}
+@cindex @code{print-optimizer}, command line option
+Print to the current error port a symbolic expression which results from
+running the optimiser.
 
-@item --no-gc-integrity-checks
-@cindex Command line option @option{--no-gc-integrity-checks}
-@cindex @option{--no-gc-integrity-checks}, command line option
-Disable garbage collection integrity checks.  This is the default.
+@item print-loaded-libraries
+@itemx no-print-loaded-libraries
+@cindex Command line option @code{print-loaded-libraries}
+@cindex Command line option @code{no-print-loaded-libraries}
+@cindex @code{print-loaded-libraries}, command line option
+@cindex @code{no-print-loaded-libraries}, command line option
+Whenever a library file is loaded: the first option causes a message to
+be printed on the console error port.  This is for debugging purposes.
+When used together with @option{--debug-messages}: even more detailed
+messages are generated for library related actions.
 
-@item --print-loaded-libraries
-@cindex Command line option @option{--print-loaded-libraries}
-@cindex @option{--print-loaded-libraries}, command line option
-Whenever a library file is loaded print a message on the console error
-port.  This is for debugging purposes.  When used together with
-@option{--debug-messages}: even more detailed messages are generated for
-library related actions.
-
-@item --no-print-loaded-libraries
-@cindex Command line option @option{--no-print-loaded-libraries}
-@cindex @option{--no-print-loaded-libraries}, command line option
-Disables the effect of @option{--print-loaded-libraries}.
-
-@item --debug-messages
-@cindex Command line option @option{--debug-messages}
-@cindex @option{--debug-messages}, command line option
+@item debug-messages
+@itemx no-debug-messages
+@cindex Command line option @code{debug-messages}
+@cindex Command line option @code{no-debug-messages}
+@cindex @code{debug-messages}, command line option
+@cindex @code{no-debug-messages}, command line option
 Be more verbose about undertaken actions.  This is for debugging
 purposes.
+@end table
 
-@item --no-debug-messages
-@cindex Command line option @option{--no-debug-messages}
-@cindex @option{--no-debug-messages}, command line option
-Disables the effect of @option{--debug-messages}.
-
-@item --strict-r6rs
-@cindex Command line option @option{--strict-r6rs}
-@cindex @option{--strict-r6rs}, command line option
-Strictly follow @rnrs{6} specifications: disable Vicare extensions.
-
-@item --no-strict-r6rs
-@cindex Command line option @option{--no-strict-r6rs}
-@cindex @option{--no-strict-r6rs}, command line option
-Do not strictly follow @rnrs{6} specifications: enable @value{PRJNAME}
-extensions.  Disables the effect of @option{--strict-r6rs}.  This is the
-default.
+@c ------------------------------------------------------------------------
 
 @item -O0
 @cindex Command line option @option{-O}
@@ -396,19 +407,6 @@ The default optimisation level is equivalent to @code{-O2}.
 @cindex @option{--optimizer-passes-count}, command line option
 Specify how many passes to perform with the source optimizer.  Must be a
 positive fixnum.  Defaults to 1.
-
-@item --print-assembly
-@cindex Command line option @option{--print-assembly}
-@cindex @option{--print-assembly}, command line option
-Print to the current error port the assembly instructions generated when
-compiling code.
-
-@item --print-optimizer
-@itemx --print-optimiser
-@cindex Command line option @option{--print-optimizer}
-@cindex @option{--print-optimizer}, command line option
-Print to the current error port a symbolic expression which results from
-running the optimiser.
 
 @item -V
 @itemx --version

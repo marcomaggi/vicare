@@ -11,7 +11,7 @@ fi
 LIBFFI_VERSION=3.2.1
 LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
 
-VFLAGS=${VFLAGS:=-O2 --no-drop-assertions --check-compiler-pass-preconditions}
+VFLAGS=${VFLAGS:=-O2}
 
 ../configure \
     --enable-maintainer-mode				\

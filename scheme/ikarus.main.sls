@@ -145,6 +145,19 @@
 	  (cons 'begin (reverse the-expr))
 	(loop port (cons form the-expr))))))
 
+(define-syntax (string-case stx)
+  (syntax-case stx (else)
+    ((_ ?expr ((?string ...) . ?body) ... (else ?else-body))
+     #'(let ((expr ?expr))
+	 (cond ((or (string=? expr ?string) ...) . ?body)
+	       ...
+	       (else ?else-body))))
+    ((_ ?expr ((?string ...) . ?body) ...)
+     #'(let ((expr ?expr))
+	 (cond ((or (string=? expr ?string) ...) . ?body)
+	       ...)))
+    ))
+
 
 ;;;; data types
 
@@ -479,41 +492,13 @@
 ;;; --------------------------------------------------------------------
 ;;; Vicare options without argument
 
-	  ((%option= "-d" "-g" "--debug")
+	  ((%option= "-d" "-g")
 	   (option.debug-mode-enabled? #t)
 	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #t))))
-
-	  ((%option= "-nd" "--no-debug")
-	   (option.debug-mode-enabled? #f)
-	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
-
-	  ((%option= "--check-compiler-pass-preconditions")
-	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #t))))
-
-	  ((%option= "--no-check-compiler-pass-preconditions")
-	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #f))))
-
-	  ((%option= "--drop-assertions")
-	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #t))))
-
-	  ((%option= "--no-drop-assertions")
-	   (next-option (cdr args) (lambda () (k) (option.drop-assertions? #f))))
-
-	  ((%option= "--gc-integrity-checks")
-	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
-
-	  ((%option= "--no-gc-integrity-checks")
-	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_disable_gc_integrity_checks"))))
 
 	  ((%option= "--no-greetings")
 	   (set-run-time-config-no-greetings! cfg #t)
 	   (next-option (cdr args) k))
-
-	  ((%option= "--print-assembly")
-	   (next-option (cdr args) (lambda () (k) (compiler.assembler-output #t))))
-
-	  ((%option= "--print-optimizer" "--print-optimiser")
-	   (next-option (cdr args) (lambda () (k) (compiler.optimizer-output #t))))
 
 	  ((%option= "--no-rcfile")
 	   (run-time-config-rcfiles-register! cfg #f)
@@ -527,36 +512,12 @@
 	   (set-run-time-config-raw-repl! cfg #t)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--print-loaded-libraries")
-	   (option.print-loaded-libraries? #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-print-loaded-libraries")
-	   (option.print-loaded-libraries? #f)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--debug-messages")
-	   (option.print-debug-messages? #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-debug-messages")
-	   (option.print-debug-messages? #f)
-	   (next-option (cdr args) k))
-
 	  ((%option= "-v" "--verbose")
 	   (option.verbose? #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--silent")
 	   (option.verbose? #f)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--strict-r6rs")
-	   (option.strict-r6rs #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-strict-r6rs")
-	   (option.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -623,6 +584,64 @@
 		       load.source-library-locator)
 		      (else
 		       (%error-and-exit "invalid library location selection"))))
+	       (next-option (cddr args) k))))
+
+	  ((%option= "--option")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--option requires a string argument")
+	     (begin
+	       (string-case (cadr args)
+
+		 (("debug")
+		  (option.debug-mode-enabled? #t)
+		  (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #t))))
+		 (("no-debug")
+		  (option.debug-mode-enabled? #f)
+		  (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
+
+		 (("strict-r6rs")
+		  (option.strict-r6rs #t)
+		  (next-option (cdr args) k))
+		 (("no-strict-r6rs")
+		  (option.strict-r6rs #f)
+		  (next-option (cdr args) k))
+
+		 (("drop-assertions")
+		  (next-option (cdr args) (lambda () (k) (option.drop-assertions? #t))))
+		 (("no-drop-assertions")
+		  (next-option (cdr args) (lambda () (k) (option.drop-assertions? #f))))
+
+		 (("check-compiler-pass-preconditions")
+		  (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #t))))
+		 (("no-check-compiler-pass-preconditions")
+		  (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #f))))
+
+		 (("gc-integrity-checks")
+		  (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
+		 (("no-gc-integrity-checks")
+		  (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_disable_gc_integrity_checks"))))
+
+		 (("print-assembly")
+		  (next-option (cdr args) (lambda () (k) (compiler.assembler-output #t))))
+		 (("print-optimizer" "print-optimiser")
+		  (next-option (cdr args) (lambda () (k) (compiler.optimizer-output #t))))
+
+		 (("print-loaded-libraries")
+		  (option.print-loaded-libraries? #t)
+		  (next-option (cdr args) k))
+		 (("no-print-loaded-libraries")
+		  (option.print-loaded-libraries? #f)
+		  (next-option (cdr args) k))
+
+		 (("debug-messages")
+		  (option.print-debug-messages? #t)
+		  (next-option (cdr args) k))
+		 (("no-debug-messages")
+		  (option.print-debug-messages? #f)
+		  (next-option (cdr args) k))
+
+		 (else
+		  (%error-and-exit "invalid --option argument" (cadr args))))
 	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
@@ -861,59 +880,21 @@ Other options:
 
    -d
    -g
-   --debug
-        Turn  on debugging  mode.  Unhandled  exceptions in  the program
-	will result  in starting the debugger, which  allows stack trace
-	inspection.
 
-   -nd
-   --no-debug
-        Turn off debugging mode.
+   --option OPTION-NAME
+        Turn on or off a  compiler or expander option.  OPTION-VALUE can
+        be one among:
 
-   --drop-assertions
-        Expand uses  of  the  ASSERT  macro  into  just  the  expression,
-        dropping the assertion.
-
-   --no-drop-assertions
-        Expand uses of the ASSERT macro as full assertions.  This  is the
-        default.
-
-   --check-compiler-pass-preconditions
-        Enable internal validation compiler passes.
-
-   --no-check-compiler-pass-preconditions
-        Disable  internal   validation   compiler  passes.  This  is  the
-        default.
-
-   --gc-integrity-checks
-        Enable garbage collection integrity checks.  This slows down the
-        garbage collection.
-
-   --no-gc-integrity-checks
-        Disable   garbage   collection integrity   checks.  This  is the
-        default.
-
-   --print-loaded-libraries
-        Whenever a library file is loaded print a message on the console
-        error port.  This is for debugging purposes.
-
-   --no-print-loaded-libraries
-        Disables the effect of --print-loaded-libraries.
-
-   --debug-messages
-        Be more verbose aboud undertaken actions.  This is for debugging
-        purposes.
-
-   --no-debug-messages
-        Disables the effect of --debug-messages.
-
-   --strict-r6rs
-        Strictly follow R6RS specifications: disable Vicare extensions.
-
-   --no-strict-r6rs
-        Do  not  strictly  follow  R6RS  specifications:  enable  Vicare
-        extensions.  Disables the effect  of --strict-r6rs.  This is the
-        default.
+	   debug			no-debug
+	   strict-r6rs			no-strict-r6rs
+	   drop-assertions		no-drop-assertions
+	   gc-integrity-checks		no-gc-integrity-checks
+	   print-loaded-libraries	no-print-loaded-libraries
+	   debug-messages		no-debug-messages
+	   print-assembly		print-optimizer
+	   print-optimiser
+	   check-compiler-pass-preconditions
+	   no-check-compiler-pass-preconditions
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,
@@ -930,15 +911,6 @@ Other options:
    --optimizer-passes-count COUNT
         Specify how  many passes to  perform with the  source optimizer.
         Must be a positive fixnum.  Defaults to 1.
-
-   --print-assembly
-        Print  to  the  current  error port  the  assembly  instructions
-	generated when compiling code.
-
-   --print-optimizer
-   --print-optimiser
-        Print  to the  current error  port a  symbolic  expression which
-        results from running the optimiser.
 
    -v
    --verbose
@@ -1405,4 +1377,5 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 ;;eval: (put 'with-run-time-config		'scheme-indent-function 1)
 ;;eval: (put '%execute				'scheme-indent-function 1)
 ;;eval: (put 'case-file-type-from-extension	'scheme-indent-function 1)
+;;eval: (put 'string-case			'scheme-indent-function 1)
 ;;End:
