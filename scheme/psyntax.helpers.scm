@@ -44,10 +44,34 @@
   (lambda (x) #f))
 
 (define-syntax-rule (reverse-and-append ?item**)
-  (apply append (reverse ?item**)))
+  (reverse-and-append-with-tail ?item** '()))
 
 (define-syntax-rule (reverse-and-append-with-tail ?item** ?tail-item*)
-  (apply append (reverse (cons ?tail-item* ?item**))))
+  ($fold-left/stx (lambda (knil item)
+		    (append item knil))
+		  ?tail-item*
+		  ?item**))
+
+(define-syntax ($fold-left/stx stx)
+  ;;Like FOLD-LEFT, but expand the loop inline.   The "function" to be folded must be
+  ;;specified by an identifier or lambda form because it is evaluated multiple times.
+  ;;
+  ;;This  implementation: is  non-tail recursive,  assumes proper  list arguments  of
+  ;;equal length.
+  ;;
+  (sys.syntax-case stx ()
+    ((_ ?combine ?knil ?ell0 ?ell ...)
+     (sys.with-syntax (((ELL ...) (sys.generate-temporaries #'(?ell ...))))
+       (sys.syntax
+	(let recur ((knil ?knil)
+		    (ell0 ?ell0)
+		    (ELL  ?ell)
+		    ...)
+	  (if (pair? ell0)
+	      (recur (?combine knil (car ell0) (car ELL) ... )
+		     (cdr ell0) (cdr ELL) ...)
+	    knil)))))
+    ))
 
 ;;; --------------------------------------------------------------------
 
