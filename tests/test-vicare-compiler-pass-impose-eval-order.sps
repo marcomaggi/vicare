@@ -27,8 +27,10 @@
 #!vicare
 (import (vicare)
   (vicare checks)
-  (only (vicare expander)
-	expand-form-to-core-language)
+  (prefix (only (vicare expander)
+		expand-form-to-core-language
+		generate-descriptive-gensyms?)
+	  expander.)
   (only (vicare libraries)
 	expand-library->sexp)
   (prefix (vicare compiler)
@@ -37,6 +39,7 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler pass: impose evaluation order\n")
 
+(expander.generate-descriptive-gensyms?  #t)
 (compiler.generate-descriptive-labels?   #t)
 (compiler.generate-debug-calls #f)
 
@@ -62,7 +65,7 @@
 
 (define (%expand standard-language-form)
   (receive (code libs)
-      (expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
+      (expander.expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
     code))
 
 (define (%expand-library standard-language-form)
@@ -1221,10 +1224,11 @@
   (check
       (%before-impose-eval-order
        (receive (code libs)
-	   (expand-form-to-core-language '(lambda (receiver-func)
-					    ($seal-frame-and-call receiver-func))
-					 (environment '(vicare)
-						      '(vicare system $stack)))
+	   (expander.expand-form-to-core-language
+	    '(lambda (receiver-func)
+	       ($seal-frame-and-call receiver-func))
+	    (environment '(vicare)
+			 '(vicare system $stack)))
 	 code))
     => '(codes
 	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0 lex.receiver-func_0)
@@ -1268,10 +1272,10 @@
   (check
       (%impose-eval-order
        (receive (code libs)
-	   (expand-form-to-core-language '(lambda (receiver-func)
-					    ($seal-frame-and-call receiver-func))
-					 (environment '(vicare)
-						      '(vicare system $stack)))
+	   (expander.expand-form-to-core-language '(lambda (receiver-func)
+						     ($seal-frame-and-call receiver-func))
+						  (environment '(vicare)
+							       '(vicare system $stack)))
 	 code))
     => '(codes
 	 ((lambda (label: asmlabel:anonymous:clambda) (%edi fvar.1)

@@ -131,8 +131,8 @@
 		(a-func 1 2))
 	      (define (b)
 		1))
-	    (library-letrec* ((a a (annotated-call (a-func 1 2) a-func (quote 1) (quote 2)))
-			      (b b (annotated-case-lambda b (() (quote 1)))))
+	    (library-letrec* ((lex.a loc.a (annotated-call (a-func 1 2) loc.a-func (quote 1) (quote 2)))
+			      (lex.b loc.b (annotated-case-lambda b (() (quote 1)))))
 	      (quote #!void)))
 
   #t)
@@ -179,19 +179,19 @@
 	   (let ((a '2))
 	     (let ((a '3))
 	       a)))
-	 (bind ((a_0 (constant 1)))
-	   (bind ((a_1 (constant 2)))
-	     (bind ((a_2 (constant 3)))
-	       a_2))))
+	 (bind ((lex.a_0 (constant 1)))
+	   (bind ((lex.a_1 (constant 2)))
+	     (bind ((lex.a_2 (constant 3)))
+	       lex.a_2))))
 
   (doit* (let ((a '1))
 	   (let ((a a))
 	     (let ((a a))
 	       a)))
-	 (bind ((a_0 (constant 1)))
-	   (bind ((a_1 a_0))
-	     (bind ((a_2 a_1))
-	       a_2))))
+	 (bind ((lex.a_0 (constant 1)))
+	   (bind ((lex.a_1 lex.a_0))
+	     (bind ((lex.a_2 lex.a_1))
+	       lex.a_2))))
 
 ;;; --------------------------------------------------------------------
 ;;; sequences
@@ -211,9 +211,9 @@
 	      (define (a-thunk)
 		"ciao")
 	      (define a-const 123))
-	    (rec*bind ((a-func_0  (lambda (a_0 b_0) (funcall (primref +) a_0 b_0)))
-		       (a-thunk_0 (lambda () (constant "ciao")))
-		       (a-const_0 (constant 123)))
+	    (rec*bind ((lex.a-func_0  (lambda (lex.a_0 lex.b_0) (funcall (primref +) lex.a_0 lex.b_0)))
+		       (lex.a-thunk_0 (lambda () (constant "ciao")))
+		       (lex.a-const_0 (constant 123)))
 	      (constant #!void)))
 
   ;;How reference imported bindings are recordised.
@@ -226,9 +226,9 @@
 		    (a-func 1 2)))
 	    (rec*bind ()
 	      (funcall (primref list)
-		(funcall (primref top-level-value) (constant a-const))
-		(funcall (funcall (primref top-level-value) (constant a-thunk)))
-		(funcall (funcall (primref top-level-value) (constant a-func))
+		(funcall (primref top-level-value) (constant loc.a-const))
+		(funcall (funcall (primref top-level-value) (constant loc.a-thunk)))
+		(funcall (funcall (primref top-level-value) (constant loc.a-func))
 		  (constant 1) (constant 2)))))
 
   ;;Record type definition.
@@ -236,16 +236,16 @@
 	      (export make-a a?)
 	      (import (rnrs))
 	      (define-record-type a))
-	    (rec*bind ((a-rtd_0      (funcall (primref make-record-type-descriptor)
-				       (constant a) (constant #f) (constant #f)
-				       (constant #f) (constant #f) (constant #())))
-		       (a-protocol_0 (constant #f))
-		       (a-rcd_0      (funcall (primref make-record-constructor-descriptor)
-				       a-rtd_0 (constant #f) a-protocol_0))
-		       (a?_0         (funcall (primref record-predicate) a-rtd_0))
-		       (make-a_0     (funcall (primref record-constructor) a-rcd_0))
-		       (a-first-field-offset_0
-			(funcall (primref $struct-ref) a-rtd_0 (constant 3))))
+	    (rec*bind ((lex.a-rtd_0      (funcall (primref make-record-type-descriptor)
+					   (constant a) (constant #f) (constant #f)
+					   (constant #f) (constant #f) (constant #())))
+		       (lex.a-protocol_0 (constant #f))
+		       (lex.a-rcd_0      (funcall (primref make-record-constructor-descriptor)
+					   lex.a-rtd_0 (constant #f) lex.a-protocol_0))
+		       (lex.a?_0         (funcall (primref record-predicate) lex.a-rtd_0))
+		       (lex.make-a_0     (funcall (primref record-constructor) lex.a-rcd_0))
+		       (lex.a-first-field-offset_0
+			(funcall (primref $struct-ref) lex.a-rtd_0 (constant 3))))
 	      (constant #!void)))
 
 ;;; --------------------------------------------------------------------
@@ -260,32 +260,32 @@
     (doit* ((lambda (x y) (list x y)) '1 '2)
 	   (funcall (primref debug-call)
 	     (constant (#f . ((lambda (x y) (list x y)) '1 '2)))
-	     (lambda (x_0 y_0)
+	     (lambda (lex.x_0 lex.y_0)
 	       (funcall (primref debug-call)
 		 (constant (#f . (list x y)))
 		 (primref list)
-		 x_0 y_0))
+		 lex.x_0 lex.y_0))
 	     (constant 1) (constant 2)))
 
     (doit* ((lambda (x) x) '1)
 	   (funcall (primref debug-call)
 	     (constant (#f . ((lambda (x) x) '1)))
-	     (lambda (x_0) x_0)
+	     (lambda (lex.x_0) lex.x_0)
 	     (constant 1)))
 
     (doit* (let ((x '1)
 		 (y '2))
 	     (list x y))
-	   (bind ((x_0 (constant 1))
-		  (y_0 (constant 2)))
+	   (bind ((lex.x_0 (constant 1))
+		  (lex.y_0 (constant 2)))
 	     (funcall (primref debug-call) (constant (#f . (list x y)))
-		      (primref list) x_0 y_0)))
+		      (primref list) lex.x_0 lex.y_0)))
 
     (doit* (let ((f (lambda (x) x)))
 	     (f '1))
-	   (bind ((f_0 (lambda (x_0) x_0)))
+	   (bind ((lex.f_0 (lambda (lex.x_0) lex.x_0)))
 	     (funcall (primref debug-call) (constant (#f . (f '1)))
-		      f_0 (constant 1))))
+		      lex.f_0 (constant 1))))
 
     #f)
 
@@ -313,25 +313,25 @@
     (doit* ,(%make-annotated-form '((lambda (x) x) 1))
 	   (funcall (primref debug-call)
 	     (constant (("*string-input-port*" . 0) . ((lambda (x) x) 1)))
-	     (lambda (x_0) x_0)
+	     (lambda (lex.x_0) lex.x_0)
 	     (constant 1)))
 
     (doit* ,(%make-annotated-form '(let ((x '1)
                            		 (y '2))
                            	     (list x y)))
-	   (bind ((x_0 (constant 1))
-		  (y_0 (constant 2)))
+	   (bind ((lex.x_0 (constant 1))
+		  (lex.y_0 (constant 2)))
 	     (funcall (primref debug-call)
 	       (constant (("*string-input-port*" . 21) . (list x y)))
 	       (primref list)
-	       x_0 y_0)))
+	       lex.x_0 lex.y_0)))
 
     (doit* ,(%make-annotated-form '(let ((f (lambda (x) x)))
 				     (f '1)))
-	   (bind ((f_0 (lambda (x_0) x_0)))
+	   (bind ((lex.f_0 (lambda (lex.x_0) lex.x_0)))
 	     (funcall (primref debug-call)
 	       (constant (("*string-input-port*". 26) . (f '1)))
-	       f_0
+	       lex.f_0
 	       (constant 1))))
 
     (doit* ,(%make-annotated-form '((let ((f (lambda (x) x)))
@@ -339,7 +339,7 @@
 				    1))
 	   (funcall (primref debug-call)
 	     (constant (("*string-input-port*" . 0) . ((let ((f (lambda (x) x))) f) 1)))
-	     (bind ((f_0 (lambda (x_0) x_0))) f_0)
+	     (bind ((lex.f_0 (lambda (lex.x_0) lex.x_0))) lex.f_0)
 	     (constant 1)))
 
     #f)
@@ -376,16 +376,16 @@
 ;;; CLAMBDA integration
 
   (doit* ((lambda (x) x) '1)
-	 (bind ((x_0 (constant 1)))
-	   x_0))
+	 (bind ((lex.x_0 (constant 1)))
+	   lex.x_0))
 
   (doit* ((case-lambda
 	   ((x y) y)
 	   ((x) x)
 	   (args args))
 	  '1)
-	 (bind ((x_0 (constant 1)))
-	   x_0))
+	 (bind ((lex.x_0 (constant 1)))
+	   lex.x_0))
 
 ;;; --------------------------------------------------------------------
 ;;; binding forms integration
@@ -393,9 +393,9 @@
   (doit* ((let ((x '1))
 	    (lambda (y) (list x y)))
 	  '2)
-	 (bind ((x_0 (constant 1)))
-	   (bind ((y_0 (constant 2)))
-	     (funcall (primref list) x_0 y_0))))
+	 (bind ((lex.x_0 (constant 1)))
+	   (bind ((lex.y_0 (constant 2)))
+	     (funcall (primref list) lex.x_0 lex.y_0))))
 
   ;;CLAMBDA body
   (doit ((let ((x '1))
@@ -450,9 +450,9 @@
 	 '2)
 	(bind ((x_0 (constant 1)))
 	  (bind ((tmp_0 (seq
-			  (funcall (primref display) (constant 1))
-			  (lambda (y_0)
-			    (funcall (primref list) x_0 y_0)))))
+			      (funcall (primref display) (constant 1))
+			      (lambda (y_0)
+				(funcall (primref list) x_0 y_0)))))
 	    (funcall tmp_0 (constant 2)))))
 
 ;;; --------------------------------------------------------------------
@@ -467,8 +467,8 @@
 	 (funcall (primref call-with-values)
 	   (lambda ()
 	     (funcall (primref values) (funcall (primref read)) (funcall (primref read))))
-	   (lambda (x_0 y_0)
-	     (funcall (primref list) x_0 y_0))))
+	   (lambda (lex.x_0 lex.y_0)
+	     (funcall (primref list) lex.x_0 lex.y_0))))
 
   ;;Consumer is a CLAMBDA with single argument.
   (doit* (call-with-values
@@ -476,9 +476,9 @@
 	       (read))
 	   (lambda (x)
 	     (list x)))
-	 (bind ((x_0 (bind ()
+	 (bind ((lex.x_0 (bind ()
 		       (funcall (primref read)))))
-	   (funcall (primref list) x_0)))
+	   (funcall (primref list) lex.x_0)))
 
 ;;; --------------------------------------------------------------------
 ;;; special cases
@@ -488,10 +488,10 @@
 		     (write Y)))
 	       (else
 		(read)))
-	 (bind ((t_0 (funcall (primref read))))
-	   (conditional t_0
-	       (bind ((Y_0 t_0))
-		 (funcall (primref write) Y_0))
+	 (bind ((lex.t_0 (funcall (primref read))))
+	   (conditional lex.t_0
+	       (bind ((lex.Y_0 lex.t_0))
+		 (funcall (primref write) lex.Y_0))
 	     (funcall (primref read)))))
 
 ;;; --------------------------------------------------------------------
@@ -500,16 +500,16 @@
   (parametrise ((compiler.generate-debug-calls #t))
 
     (doit* ,(%make-annotated-form '((lambda (x) x) '1))
-	   (bind ((x_0 (constant 1)))
-	     x_0))
+	   (bind ((lex.x_0 (constant 1)))
+	     lex.x_0))
 
     (doit* ,(%make-annotated-form '((let ((f (lambda (y) y)))
 				      f)
 				    1))
-	   (bind ((f_0 (lambda (y_0) y_0)))
+	   (bind ((lex.f_0 (lambda (lex.y_0) lex.y_0)))
 	     (funcall (primref debug-call)
 	       (constant (("*string-input-port*" . 0) . ((let ((f (lambda (y) y))) f) 1)))
-	       f_0 (constant 1))))
+	       lex.f_0 (constant 1))))
 
     #f)
 
@@ -579,14 +579,14 @@
   (doit* (letrec ((a (lambda () (quote 1)))
 		  (b (lambda () (quote 2))))
 	   (list (a) (b)))
-	 (bind ((a_0 (constant #!void))
-		(b_0 (constant #!void)))
-	   (bind ((a_1 (lambda () (constant 1)))
-		  (b_1 (lambda () (constant 2))))
+	 (bind ((lex.a_0 (constant #!void))
+		(lex.b_0 (constant #!void)))
+	   (bind ((lex.a_1 (lambda () (constant 1)))
+		  (lex.b_1 (lambda () (constant 2))))
 	     (seq
-	       (assign a_0 a_1)
-	       (assign b_0 b_1)
-	       (funcall (primref list) (funcall a_0) (funcall b_0))))))
+	       (assign lex.a_0 lex.a_1)
+	       (assign lex.b_0 lex.b_1)
+	       (funcall (primref list) (funcall lex.a_0) (funcall lex.b_0))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -607,12 +607,12 @@
   (doit* (letrec* ((a (lambda () (quote 1)))
 		   (b (lambda () (quote 2))))
 	   (list (a) (b)))
-	 (bind ((a_0 (constant #!void))
-		(b_0 (constant #!void)))
+	 (bind ((lex.a_0 (constant #!void))
+		(lex.b_0 (constant #!void)))
 	   (seq
-	     (assign a_0 (lambda () (constant 1)))
-	     (assign b_0 (lambda () (constant 2)))
-	     (funcall (primref list) (funcall a_0) (funcall b_0)))))
+	     (assign lex.a_0 (lambda () (constant 1)))
+	     (assign lex.b_0 (lambda () (constant 2)))
+	     (funcall (primref list) (funcall lex.a_0) (funcall lex.b_0)))))
 
 ;;; --------------------------------------------------------------------
 ;;; special
@@ -623,13 +623,13 @@
 	      (define (a) 1)
 	      (define (b) (a) 2)
 	      (define (c) (b) 3))
-	    (bind ((a_0 (constant #!void))
-		   (b_0 (constant #!void))
-		   (c_0 (constant #!void)))
+	    (bind ((lex.a_0 (constant #!void))
+		   (lex.b_0 (constant #!void))
+		   (lex.c_0 (constant #!void)))
 	      (seq
-		(assign-init a_0 (lambda () (constant 1)))
-		(assign-init b_0 (lambda () (seq (funcall a_0) (constant 2))))
-		(assign-init c_0 (lambda () (seq (funcall b_0) (constant 3))))
+		(assign-init lex.a_0 (lambda () (constant 1)))
+		(assign-init lex.b_0 (lambda () (seq (funcall lex.a_0) (constant 2))))
+		(assign-init lex.c_0 (lambda () (seq (funcall lex.b_0) (constant 3))))
 		(constant #!void))))
 
 ;;; --------------------------------------------------------------------
@@ -888,28 +888,28 @@
 	   (let ((a a))
 	     a))
 	 (waddell
-	  (bind ((a_0 (constant 1)))
-	    (bind ((a_1 a_0))
-	      a_1)))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.a_1 lex.a_0))
+	      lex.a_1)))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((a_1 a_0))
-	      a_1))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.a_1 lex.a_0))
+	      lex.a_1))))
 
   (doit* (letrec* ((a '1))
 	   (let ((a a))
 	     a))
 	 (waddell
-	  (bind ((a_0 (constant #!void))
-		 (a_1 (constant #!void)))
+	  (bind ((lex.a_0 (constant #!void))
+		 (lex.a_1 (constant #!void)))
 	    (seq
-	      (assign a_0 (constant 1))
-	      (assign a_1 a_0)
-	      a_1)))
+	      (assign lex.a_0 (constant 1))
+	      (assign lex.a_1 lex.a_0)
+	      lex.a_1)))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((a_1 a_0))
-	      a_1))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.a_1 lex.a_0))
+	      lex.a_1))))
 
   ;;Single, unreferenced, assigned binding.
   ;;
@@ -1102,24 +1102,24 @@
 		  (b '2))
 	   (list a b))
 	 (waddell
-	  (bind ((a_0 (constant 1))
-		 (b_0 (constant 2)))
-	    (funcall (primref list) a_0 b_0)))
+	  (bind ((lex.a_0 (constant 1))
+		 (lex.b_0 (constant 2)))
+	    (funcall (primref list) lex.a_0 lex.b_0)))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (constant 2)))
-	      (funcall (primref list) a_0 b_0)))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (constant 2)))
+	      (funcall (primref list) lex.a_0 lex.b_0)))))
   (doit* (letrec* ((a '1)
 		   (b '2))
 	   (list a b))
 	 (waddell
-	  (bind ((a_0 (constant 1))
-		 (b_0 (constant 2)))
-	    (funcall (primref list) a_0 b_0)))
+	  (bind ((lex.a_0 (constant 1))
+		 (lex.b_0 (constant 2)))
+	    (funcall (primref list) lex.a_0 lex.b_0)))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (constant 2)))
-	      (funcall (primref list) a_0 b_0)))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (constant 2)))
+	      (funcall (primref list) lex.a_0 lex.b_0)))))
 
 ;;; --------------------------------------------------------------------
 ;;; multiple lambda RHS expressions
@@ -1179,13 +1179,13 @@
 		  (b (lambda () (a))))
 	   (list a b))
 	 (waddell
-	  (fix ((a_0 (lambda () (funcall b_0)))
-		(b_0 (lambda () (funcall a_0))))
-	    (funcall (primref list) a_0 b_0)))
+	  (fix ((lex.a_0 (lambda () (funcall lex.b_0)))
+		(lex.b_0 (lambda () (funcall lex.a_0))))
+	    (funcall (primref list) lex.a_0 lex.b_0)))
 	 (scc
-	  (fix ((b_0 (lambda () (funcall a_0)))
-		(a_0 (lambda () (funcall b_0))))
-	    (funcall (primref list) a_0 b_0))))
+	  (fix ((lex.b_0 (lambda () (funcall lex.a_0)))
+		(lex.a_0 (lambda () (funcall lex.b_0))))
+	    (funcall (primref list) lex.a_0 lex.b_0))))
   (doit (letrec* ((a (lambda () (b)))
 		  (b (lambda () (a))))
 	  '#f)
@@ -1212,13 +1212,13 @@
 		   (b (lambda () (a))))
 	   (list a b))
 	 (waddell
-	  (fix ((a_0 (lambda () (funcall b_0)))
-		(b_0 (lambda () (funcall a_0))))
-	    (funcall (primref list) a_0 b_0)))
+	  (fix ((lex.a_0 (lambda () (funcall lex.b_0)))
+		(lex.b_0 (lambda () (funcall lex.a_0))))
+	    (funcall (primref list) lex.a_0 lex.b_0)))
 	 (scc
-	  (fix ((b_0 (lambda () (funcall a_0)))
-		(a_0 (lambda () (funcall b_0))))
-	    (funcall (primref list) a_0 b_0))))
+	  (fix ((lex.b_0 (lambda () (funcall lex.a_0)))
+		(lex.a_0 (lambda () (funcall lex.b_0))))
+	    (funcall (primref list) lex.a_0 lex.b_0))))
 
   ;;Here the  binding B is assigned,  even though in the  body of a LAMBDA;  for this
   ;;reason it cannot be classified as "fixable", rather it is classified as "complex".
@@ -1291,30 +1291,30 @@
 			'9)))
 	   a)
 	 (waddell
-	  (bind ((b_0 (constant 123)))
-	    (bind ((c_0 (constant #!void))
-		   (d_0 (constant #!void)))
-	      (fix ((a_0 (lambda (x_0)
-			   (conditional x_0
-			       (funcall a_0 (constant #f))
-			     (constant #!void)))))
+	  (bind ((lex.b_0 (constant 123)))
+	    (bind ((lex.c_0 (constant #!void))
+		   (lex.d_0 (constant #!void)))
+	      (fix ((lex.a_0 (lambda (lex.x_0)
+			       (conditional lex.x_0
+				   (funcall lex.a_0 (constant #f))
+				 (constant #!void)))))
 		(seq
-		  (assign c_0 (constant 456))
-		  (assign d_0 (seq
-				(assign c_0 (constant 789))
-				(constant 9)))
-		  a_0)))))
+		  (assign lex.c_0 (constant 456))
+		  (assign lex.d_0 (seq
+				    (assign lex.c_0 (constant 789))
+				    (constant 9)))
+		  lex.a_0)))))
 	 (scc
-	  (fix ((a_0 (lambda (x_0)
-		       (conditional x_0
-			   (funcall a_0 (constant #f))
-			 (constant #!void)))))
-	    (bind ((b_0 (constant 123)))
-	      (bind ((c_0 (constant 456)))
-		(bind ((d_0 (seq
-			      (assign c_0 (constant 789))
-			      (constant 9))))
-		  a_0))))))
+	  (fix ((lex.a_0 (lambda (lex.x_0)
+			   (conditional lex.x_0
+			       (funcall lex.a_0 (constant #f))
+			     (constant #!void)))))
+	    (bind ((lex.b_0 (constant 123)))
+	      (bind ((lex.c_0 (constant 456)))
+		(bind ((lex.d_0 (seq
+				  (assign lex.c_0 (constant 789))
+				  (constant 9))))
+		  lex.a_0))))))
 
   ;;The binding  A is  referenced in  a RHS, so  it cannot  be "simple"  according to
   ;;waddell.
@@ -1323,16 +1323,16 @@
 		   (b a))
 	   b)
 	 (waddell
-	  (bind ((a_0 (constant #!void))
-		 (b_0 (constant #!void)))
+	  (bind ((lex.a_0 (constant #!void))
+		 (lex.b_0 (constant #!void)))
 	    (seq
-	      (assign a_0 (constant 1))
-	      (assign b_0 a_0)
-	      b_0)))
+	      (assign lex.a_0 (constant 1))
+	      (assign lex.b_0 lex.a_0)
+	      lex.b_0)))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 a_0))
-	      b_0))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 lex.a_0))
+	      lex.b_0))))
 
   ;;waddell: here the binding D is initialised  by a LAMBDA RHS expression, but later
   ;;it is  assigned; for  this reason  D cannot  end into  a FIX  form, rather  it is
@@ -1343,36 +1343,36 @@
 	   (set! d '123)
 	   a)
 	 (waddell
-	  (bind ((a_0 (constant 123)))
-	    (bind ((d_0 (constant #!void)))
-	      (bind ((d_1 (lambda () (constant 123))))
+	  (bind ((lex.a_0 (constant 123)))
+	    (bind ((lex.d_0 (constant #!void)))
+	      (bind ((lex.d_1 (lambda () (constant 123))))
 		(seq
-		  (assign d_0 d_1)
-		  (assign d_0 (constant 123))
-		  a_0)))))
+		  (assign lex.d_0 lex.d_1)
+		  (assign lex.d_0 (constant 123))
+		  lex.a_0)))))
 	 (scc
-	  (bind ((a_0 (constant 123)))
-	    (bind ((d_0 (lambda () (constant 123))))
+	  (bind ((lex.a_0 (constant 123)))
+	    (bind ((lex.d_0 (lambda () (constant 123))))
 	      (seq
-		(assign d_0 (constant 123))
-		a_0)))))
+		(assign lex.d_0 (constant 123))
+		lex.a_0)))))
   (doit* (letrec* ((a '123)
 		   (d (lambda () '123)))
 	   (set! d '123)
 	   a)
 	 (waddell
-	  (bind ((a_0 (constant 123)))
-	    (bind ((d_0 (constant #!void)))
+	  (bind ((lex.a_0 (constant 123)))
+	    (bind ((lex.d_0 (constant #!void)))
 	      (seq
-		(assign d_0 (lambda () (constant 123)))
-		(assign d_0 (constant 123))
-		a_0))))
+		(assign lex.d_0 (lambda () (constant 123)))
+		(assign lex.d_0 (constant 123))
+		lex.a_0))))
 	 (scc
-	  (bind ((a_0 (constant 123)))
-	    (bind ((d_0 (lambda () (constant 123))))
+	  (bind ((lex.a_0 (constant 123)))
+	    (bind ((lex.d_0 (lambda () (constant 123))))
 	      (seq
-		(assign d_0 (constant 123))
-		a_0)))))
+		(assign lex.d_0 (constant 123))
+		lex.a_0)))))
 
 ;;; --------------------------------------------------------------------
 ;;; special cases
@@ -1429,12 +1429,12 @@
 	   (let ((b (lambda () a)))
 	     '#f))
 	 (waddell
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (lambda () a_0)))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (lambda () lex.a_0)))
 	      (constant #f))))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (lambda () a_0)))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (lambda () lex.a_0)))
 	      (constant #f)))))
 
 
@@ -1444,15 +1444,15 @@
 	   (let ((b (lambda () (set! a '2))))
 	     '#f))
 	 (waddell
-	  (bind ((a_0 (constant #!void)))
-	    (bind ((a_1 (constant 1)))
+	  (bind ((lex.a_0 (constant #!void)))
+	    (bind ((lex.a_1 (constant 1)))
 	      (seq
-		(assign a_0 a_1)
-		(bind ((b_0 (lambda () (assign a_0 (constant 2)))))
+		(assign lex.a_0 lex.a_1)
+		(bind ((lex.b_0 (lambda () (assign lex.a_0 (constant 2)))))
 		  (constant #f))))))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (lambda () (assign a_0 (constant 2)))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (lambda () (assign lex.a_0 (constant 2)))))
 	      (constant #f)))))
 
   (doit (letrec* ((a '1)
@@ -1481,16 +1481,16 @@
 		   (b (write a)))
 	   a)
 	 (waddell
-	  (bind ((a_0 (constant #!void))
-		 (b_0 (constant #!void)))
+	  (bind ((lex.a_0 (constant #!void))
+		 (lex.b_0 (constant #!void)))
 	    (seq
-	      (assign a_0 (constant 1))
-	      (assign b_0 (funcall (primref write) a_0))
-	      a_0)))
+	      (assign lex.a_0 (constant 1))
+	      (assign lex.b_0 (funcall (primref write) lex.a_0))
+	      lex.a_0)))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (funcall (primref write) a_0)))
-	      a_0))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (funcall (primref write) lex.a_0)))
+	      lex.a_0))))
 
   ;;Function  call in  RHS expression  that does  not make  the enclosing  expression
   ;;"complex".
@@ -1498,13 +1498,13 @@
 		   (b ($fx+ '1 '2)))
 	   a)
 	 (waddell
-	  (bind ((a_0 (constant 1))
-		 (b_0 (funcall (primref $fx+) (constant 1) (constant 2))))
-	    a_0))
+	  (bind ((lex.a_0 (constant 1))
+		 (lex.b_0 (funcall (primref $fx+) (constant 1) (constant 2))))
+	    lex.a_0))
 	 (scc
-	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (funcall (primref $fx+) (constant 1) (constant 2))))
-	      a_0))))
+	  (bind ((lex.a_0 (constant 1)))
+	    (bind ((lex.b_0 (funcall (primref $fx+) (constant 1) (constant 2))))
+	      lex.a_0))))
 
   ;;Nested RHS LETREC.
   (doit (letrec* ((a '1)
@@ -1544,9 +1544,9 @@
 			 (define (c) (b) 3)))
 	       (form2 (%expand-library form1)))
 	  (%optimize-letrec form2)))
-    => '(fix ((a_0 (lambda () (constant 1)))
-	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
-	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
+    => '(fix ((lex.a_0 (lambda () (constant 1)))
+	      (lex.b_0 (lambda () (seq (funcall lex.a_0) (constant 2))))
+	      (lex.c_0 (lambda () (seq (funcall lex.b_0) (constant 3)))))
 	  (constant #!void)))
 
   ;;This test will install the library!!!
@@ -1560,9 +1560,9 @@
 			 (define (c) (b) 3)))
 	       (form2 (%expand-library form1)))
 	  (%optimize-letrec form2)))
-    => '(fix ((a_0 (lambda () (constant 1)))
-	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
-	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
+    => '(fix ((lex.a_0 (lambda () (constant 1)))
+	      (lex.b_0 (lambda () (seq (funcall lex.a_0) (constant 2))))
+	      (lex.c_0 (lambda () (seq (funcall lex.b_0) (constant 3)))))
 	  (constant #!void)))
 
   ;;Record type definition.
@@ -1574,15 +1574,15 @@
 			 (define-record-type a)))
 	       (form2 (%expand-library form1)))
 	  (%optimize-letrec form2)))
-    => '(bind ((a-rtd_0 (funcall (primref make-record-type-descriptor)
-			  (constant a) (constant #f) (constant #f)
-			  (constant #f) (constant #f) (constant #()))))
-	  (bind ((a-protocol_0 (constant #f)))
-	    (bind ((a-rcd_0 (funcall (primref make-record-constructor-descriptor)
-			      a-rtd_0 (constant #f) a-protocol_0)))
-	      (bind ((a?_0 (funcall (primref record-predicate) a-rtd_0)))
-		(bind ((make-a_0 (funcall (primref record-constructor) a-rcd_0)))
-		  (bind ((a-first-field-offset_0 (funcall (primref $struct-ref) a-rtd_0 (constant 3))))
+    => '(bind ((lex.a-rtd_0 (funcall (primref make-record-type-descriptor)
+			      (constant a) (constant #f) (constant #f)
+			      (constant #f) (constant #f) (constant #()))))
+	  (bind ((lex.a-protocol_0 (constant #f)))
+	    (bind ((lex.a-rcd_0 (funcall (primref make-record-constructor-descriptor)
+				  lex.a-rtd_0 (constant #f) lex.a-protocol_0)))
+	      (bind ((lex.a?_0 (funcall (primref record-predicate) lex.a-rtd_0)))
+		(bind ((lex.make-a_0 (funcall (primref record-constructor) lex.a-rcd_0)))
+		  (bind ((lex.a-first-field-offset_0 (funcall (primref $struct-ref) lex.a-rtd_0 (constant 3))))
 		    (constant #!void))))))))
 
   #t)
