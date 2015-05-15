@@ -4705,9 +4705,9 @@
     ;;
     (receive (name* invoke-code* export-subst export-env)
 	(make-init-code)
-      (debug-printf "Expanding:\n")
+      (debug-printf "\nSource libraries expansion\n")
       (for-each (lambda (file)
-		  (debug-printf " ~s\n" file)
+		  (debug-printf "expanding: ~a\n" file)
 		  ;;For  each library  in the  file apply  the closure  for its  side
 		  ;;effects.
 		  (load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
@@ -5204,17 +5204,16 @@
       (let ((port (open-file-output-port BOOT-FILE-NAME (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
-	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
+	    (debug-printf "\nCompiling and writing to fasl (one code object for each library form): ")
 	    (for-each (lambda (name core)
 			;; (begin
 			;;   (print-gensym #f)
 			;;   (when (equal? name '(ikarus chars))
 			;;     (pretty-print (syntax->datum core))))
-	    		(debug-printf " ~s" name)
+	    		(debug-printf "compiling: ~s\n" name)
 	    		(compiler.compile-core-expr-to-port core port))
 	      name*
-	      invoke-code*)
-	    (debug-printf "\n")))
+	      invoke-code*)))
 	(close-output-port port)))))
 
 (fprintf (console-error-port) "Happy Happy Joy Joy\n")
