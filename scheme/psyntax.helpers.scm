@@ -76,28 +76,29 @@
 (define-syntax ($map/stx stx)
   ;;Like  MAP, but  expand the  loop inline.   The "function"  to be  mapped must  be
   ;;specified by an identifier or lambda form because it is evaluated multiple times.
-  (syntax-case stx ()
+  (sys.syntax-case stx ()
     ((_ ?proc ?ell0 ?ell ...)
      ;;This implementation  is: tail recursive,  loops in order, assumes  proper list
      ;;arguments of equal length.
-     (with-syntax
-	 (((ELL0 ELL ...) (generate-temporaries #'(?ell0 ?ell ...))))
-       #'(letrec ((loop (lambda (result.head result.last-pair ELL0 ELL ...)
-			  (if (pair? ELL0)
-			      (let* ((result.last-pair^ (let ((new-last-pair (cons (?proc (car ELL0)
-											  (car ELL)
-											  ...)
-										   '())))
-							  (if result.last-pair
-							      (begin
-								(set-cdr! result.last-pair new-last-pair)
-								new-last-pair)
-							    new-last-pair)))
-				     (result.head^       (or result.head result.last-pair^)))
-				(loop result.head^ result.last-pair^ (cdr ELL0) (cdr ELL) ...))
-			    (or result.head '())))))
-	   (loop #f #f ?ell0 ?ell ...))
-       ))
+     (sys.with-syntax
+	 (((ELL0 ELL ...) (sys.generate-temporaries #'(?ell0 ?ell ...))))
+       (sys.syntax
+	(letrec ((loop (lambda (result.head result.last-pair ELL0 ELL ...)
+			 (if (pair? ELL0)
+			     (let* ((result.last-pair^ (let ((new-last-pair (cons (?proc (car ELL0)
+											 (car ELL)
+											 ...)
+										  '())))
+							 (if result.last-pair
+							     (begin
+							       (set-cdr! result.last-pair new-last-pair)
+							       new-last-pair)
+							   new-last-pair)))
+				    (result.head^       (or result.head result.last-pair^)))
+			       (loop result.head^ result.last-pair^ (cdr ELL0) (cdr ELL) ...))
+			   (or result.head '())))))
+	  (loop #f #f ?ell0 ?ell ...))
+	)))
     ))
 
 ;;; --------------------------------------------------------------------
