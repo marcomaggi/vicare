@@ -502,8 +502,7 @@ VICARE_BOOT_ENV		= \
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_SOURCE_PATH=$(BOOT_SEARCH_PATH);		export VICARE_SOURCE_PATH;
 VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
-			  --print-loaded-libraries --no-rcfile --library-locator source	\
-			  --r6rs-script
+			  --no-rcfile --library-locator source --r6rs-script
 
 CLEANFILES		+= ikarus.config.scm $(VICARE_NEW_BOOT)
 
@@ -663,7 +662,7 @@ EXTRA_DIST		+= \
 
 VICARE_BUILD_DEPS	= \
 	$(VICARE_COMPILE_RUN) \
-		--source-path $(testdir) --print-loaded-libraries --library-locator source \
+		--source-path $(testdir) --library-locator source \
 		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps --
 
 .PHONY: dependencies
@@ -1257,7 +1256,7 @@ VICARE_INSTCHECK_SOURCE_PATH	= $(DESTDIR)$(bundledlibsdir):$(testdir):$(srcdir)/
 VICARE_INSTCHECK_LD_PATH	= $(DESTDIR)$(libdir)
 VICARE_INSTCHECK_DYLD_PATH	= $(DESTDIR)$(libdir)
 
-VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(AX_VFLAGS) $(VFLAGS)
+VICARE_INSTCHECK_FLAGS	= $(AX_VFLAGS) $(VFLAGS)
 VICARE_INSTCHECK_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_SOURCE_PATH=$(VICARE_INSTCHECK_SOURCE_PATH);	export VICARE_SOURCE_PATH;	\
@@ -1363,11 +1362,11 @@ VICARE_COMPILED_TESTS_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_COMPILED_TESTS_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
 		--build-directory $(fasldir)						\
-		--print-loaded-libraries --compile-program
+		--compile-program
 VICARE_COMPILED_TESTS_RUN_FLAGS		= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)	\
 		--library-path $(fasldir)						\
 		--build-directory $(fasldir)						\
-		--print-loaded-libraries --binary-program
+		--binary-program
 VICARE_COMPILED_TESTS_ENV	= \
 	VICARE_SOURCE_PATH=$(VICARE_COMPILED_TESTS_SEARCH_PATH);   export VICARE_SOURCE_PATH;	\
 	VICARE_LIBRARY_PATH=$(VICARE_COMPILED_TESTS_LIBRARY_PATH); export VICARE_LIBRARY_PATH;	\
