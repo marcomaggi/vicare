@@ -26,6 +26,7 @@
     $fold-right/stx
     struct-case					define-structure
     print-compiler-warning-message
+    print-compiler-debug-message		print-compiler-debug-message/unchecked
     remq1
     union					difference)
   (import (rnrs)
@@ -379,6 +380,19 @@
       (display "vicare: compiler warning: " P)
       (apply fprintf P template args)
       (newline P))))
+
+(define (print-compiler-debug-message template . args)
+  (when (option.print-debug-messages?)
+    (let ((P (current-error-port)))
+      (display "vicare: compiler: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
+(define (print-compiler-debug-message/unchecked template . args)
+  (let ((P (current-error-port)))
+    (display "vicare: compiler: " P)
+    (apply fprintf P template args)
+    (newline P)))
 
 ;;; --------------------------------------------------------------------
 

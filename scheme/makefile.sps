@@ -259,6 +259,7 @@
 ;;; --------------------------------------------------------------------
 
 (option.verbose? #t)
+(option.print-debug-messages? (equal? "yes" (getenv "DEBUG_MESSAGES")))
 
 (fasl-write.writing-boot-image? #t)
 

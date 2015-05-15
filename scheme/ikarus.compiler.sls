@@ -140,6 +140,7 @@
 
   (define (initialise-compiler)
     (unless compiler-initialised?
+      (print-compiler-debug-message "initialising compiler internals")
       (initialise-core-primitive-properties)
       (initialise-core-primitive-operations)
       (set! compiler-initialised? #t)))
@@ -155,40 +156,46 @@
     ;;This is *the* commpiler function.  Transform a symbolic expression representing
     ;;a Scheme program in core language; return a code object.
     ;;
+    (define print? (option.print-debug-messages?))
+    (define-syntax-rule (do-pass (?pass . ?args))
+      (begin
+	(when print?
+	  (print-compiler-debug-message/unchecked "doing ~a" (quote ?pass)))
+	(?pass . ?args)))
     (initialise-compiler)
     (%parse-compilation-options core-language-sexp
       (lambda (core-language-sexp)
-	(let* ((p (pass-recordize core-language-sexp))
-	       (p (pass-optimize-direct-calls p))
-	       (p (pass-optimize-letrec p))
-	       (p (pass-source-optimize p)))
+	(let* ((p (do-pass (pass-recordize core-language-sexp)))
+	       (p (do-pass (pass-optimize-direct-calls p)))
+	       (p (do-pass (pass-optimize-letrec p)))
+	       (p (do-pass (pass-source-optimize p))))
 	  (%print-optimiser-output p)
-	  (let ((p (pass-rewrite-references-and-assignments p)))
+	  (let ((p (do-pass (pass-rewrite-references-and-assignments p))))
 	    (if stop-after-optimisation?
 		p
 	      (let* ((p (if perform-core-type-inference?
-			    (pass-core-type-inference p)
+			    (do-pass (pass-core-type-inference p))
 			  p))
 		     (p (if introduce-unsafe-primitives?
-			    (pass-introduce-unsafe-primrefs p)
+			    (do-pass (pass-introduce-unsafe-primrefs p))
 			  p)))
 		(if stop-after-core-type-inference?
 		    p
-		  (let* ((p (pass-sanitize-bindings p))
-			 (p (pass-optimize-for-direct-jumps p))
-			 (p (pass-insert-global-assignments p))
-			 (p (pass-introduce-vars p))
-			 (p (pass-introduce-closure-makers p))
-			 (p (pass-optimize-combinator-calls/lift-clambdas p))
-			 (p (pass-introduce-primitive-operation-calls p))
-			 (p (pass-rewrite-freevar-references p))
-			 (p (pass-insert-engine-checks p))
-			 (p (pass-insert-stack-overflow-check p))
-			 (code-object-sexp* (pass-code-generation p)))
+		  (let* ((p (do-pass (pass-sanitize-bindings p)))
+			 (p (do-pass (pass-optimize-for-direct-jumps p)))
+			 (p (do-pass (pass-insert-global-assignments p)))
+			 (p (do-pass (pass-introduce-vars p)))
+			 (p (do-pass (pass-introduce-closure-makers p)))
+			 (p (do-pass (pass-optimize-combinator-calls/lift-clambdas p)))
+			 (p (do-pass (pass-introduce-primitive-operation-calls p)))
+			 (p (do-pass (pass-rewrite-freevar-references p)))
+			 (p (do-pass (pass-insert-engine-checks p)))
+			 (p (do-pass (pass-insert-stack-overflow-check p)))
+			 (code-object-sexp* (do-pass (pass-code-generation p))))
 		    (%print-assembly code-object-sexp*)
 		    (if stop-after-assembly-generation?
 			code-object-sexp*
-		      (let ((code* (assemble-sources thunk?-label code-object-sexp*)))
+		      (let ((code* (do-pass (assemble-sources thunk?-label code-object-sexp*))))
 			;;CODE*  is a  list of  code objects;  the first  is the  one
 			;;representing the initialisation  expression, the others are
 			;;the ones representing the CLAMBDAs.
