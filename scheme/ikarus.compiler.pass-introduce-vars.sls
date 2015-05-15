@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-introduce-vars)
-  (export introduce-vars)
+  (export pass-introduce-vars)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -47,13 +47,13 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'introduce-vars))
+  (identifier-syntax 'pass-introduce-vars))
 
 ;;Make the code more readable.
 (define-syntax E
-  (identifier-syntax introduce-vars))
+  (identifier-syntax pass-introduce-vars))
 
-(define* (introduce-vars x)
+(define* (pass-introduce-vars x)
   ;;Perform code transformation traversing the whole  hierarchy in X, which must be
   ;;a  struct instance  representing  recordized  code in  the  core language,  and
   ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new

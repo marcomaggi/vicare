@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-introduce-primitive-operation-calls)
-  (export introduce-primitive-operation-calls)
+  (export pass-introduce-primitive-operation-calls)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -70,9 +70,9 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'introduce-primitive-operation-calls))
+  (identifier-syntax 'pass-introduce-primitive-operation-calls))
 
-(define* (introduce-primitive-operation-calls Program)
+(define* (pass-introduce-primitive-operation-calls Program)
   (struct-case Program
     ((codes code* body)
      (make-codes ($map/stx E-clambda code*)

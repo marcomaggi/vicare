@@ -723,8 +723,8 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@deffn Parameter descriptive-labels
-@cindex Parameter @func{descriptive-labels}
+@deffn Parameter generate-descriptive-labels
+@cindex Parameter @func{generate-descriptive-labels}
 When set to true: attempt to generate descriptive pretty names for
 gensyms used by the compiler as lexical gensyms, loc gensyms and code
 labels; this is useful for debugging purposes and code generation
@@ -777,19 +777,19 @@ passes.  The output of this function is similar to
 The sequence of compiler passes is:
 
 @example
-recordize
-optimize-direct-calls
-optimize-letrec
-source-optimize
-rewrite-references-and-assignments
-core-type-inference (optional)
-introduce-unsafe-primrefs (optional)
-sanitize-bindings
-optimize-for-direct-jumps
-insert-global-assignments
-introduce-vars
-introduce-closure-makers
-optimize-combinator-calls/lift-clambdas
+pass-recordize
+pass-optimize-direct-calls
+pass-optimize-letrec
+pass-source-optimize
+pass-rewrite-references-and-assignments
+pass-core-type-inference (optional)
+pass-introduce-unsafe-primrefs (optional)
+pass-sanitize-bindings
+pass-optimize-for-direct-jumps
+pass-insert-global-assignments
+pass-introduce-vars
+pass-introduce-closure-makers
+pass-optimize-combinator-calls/lift-clambdas
 @end example
 
 @noindent
@@ -820,7 +820,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun recordize @var{core-language-form}
+@defun pass-recordize @var{core-language-form}
 Given a symbolic expression representing a form in the core language,
 convert it into a nested hierarchy of struct instances; return the outer
 struct instance.
@@ -1213,7 +1213,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun optimize-direct-calls @var{input}
+@defun pass-optimize-direct-calls @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -1519,7 +1519,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun optimize-letrec @var{recordised-code}
+@defun pass-optimize-letrec @var{recordised-code}
 Perform transformations and optimisations to convert the recordised
 representation of @func{letrec}, @func{letrec*} and
 @func{libary-letrec*} core language forms into a composition of low
@@ -2227,7 +2227,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun source-optimize @var{input}
+@defun pass-source-optimize @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2319,7 +2319,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun rewrite-references-and-assignments @var{input}
+@defun pass-rewrite-references-and-assignments @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2469,7 +2469,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun core-type-inference @var{input}
+@defun pass-core-type-inference @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2565,7 +2565,7 @@ core primitives implemented only as functions (not operations) that
 still have an unsafe variant.
 
 
-@defun introduce-unsafe-primrefs @var{input}
+@defun pass-introduce-unsafe-primrefs @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2595,7 +2595,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun sanitize-bindings @var{input}
+@defun pass-sanitize-bindings @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2691,7 +2691,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun optimize-for-direct-jumps @var{input}
+@defun pass-optimize-for-direct-jumps @var{input}
 Perform code optimisation traversing the whole hierarchy in @var{input},
 which must be a struct instance representing recordised code, and
 building a new hierarchy of optimised, recordised code; return the new
@@ -2789,7 +2789,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun insert-global-assignments @var{input}
+@defun pass-insert-global-assignments @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of transformed, recordized code;
@@ -2856,7 +2856,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun introduce-vars @var{input}
+@defun pass-introduce-vars @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2940,7 +2940,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun introduce-closure-makers @var{input}
+@defun pass-introduce-closure-makers @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -3850,7 +3850,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun optimize-combinator-calls/lift-clambdas @var{input}
+@defun pass-optimize-combinator-calls/lift-clambdas @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code in the core language, and building a new hierarchy of transformed,
@@ -3898,7 +3898,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun introduce-primitive-operation-calls @var{input}
+@defun pass-introduce-primitive-operation-calls @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -3967,7 +3967,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun rewrite-freevar-references @var{input}
+@defun pass-rewrite-freevar-references @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4057,7 +4057,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun insert-engine-checks @var{input}
+@defun pass-insert-engine-checks @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4092,7 +4092,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun insert-stack-overflow-check @var{input}
+@defun pass-insert-stack-overflow-check @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4110,7 +4110,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun alt-cogen @var{input}
+@defun pass-code-generation @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4135,7 +4135,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun specify-representation @var{input}
+@defun pass-specify-representation @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4150,7 +4150,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun impose-calling-convention/evaluation-order @var{input}
+@defun pass-impose-calling-convention/evaluation-order @var{input}
 @end defun
 
 @c page
@@ -4162,7 +4162,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun assign-frame-sizes @var{input}
+@defun pass-assign-frame-sizes @var{input}
 @end defun
 
 @c page
@@ -4178,7 +4178,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun color-by-chaitin @var{input}
+@defun pass-color-by-chaitin @var{input}
 @end defun
 
 @c page
@@ -4190,7 +4190,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun flatten-codes @var{input}
+@defun pass-flatten-codes @var{input}
 @end defun
 
 @c page

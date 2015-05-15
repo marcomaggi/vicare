@@ -18,7 +18,7 @@
 #!vicare
 (library (ikarus.compiler.pass-assign-frame-sizes)
   (export
-    assign-frame-sizes
+    pass-assign-frame-sizes
     FRAME-CONFLICT-SETS)
   (import (rnrs)
     (ikarus.compiler.compat)
@@ -190,7 +190,7 @@
 (define-syntax __module_who__
   (identifier-syntax 'assign-frame-sizes))
 
-(define (assign-frame-sizes x)
+(define (pass-assign-frame-sizes x)
   (E-codes x))
 
 

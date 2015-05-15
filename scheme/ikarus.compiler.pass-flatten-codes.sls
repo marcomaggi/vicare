@@ -17,7 +17,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-flatten-codes)
-  (export flatten-codes)
+  (export pass-flatten-codes)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -70,7 +70,7 @@
 ;;
 
 (define-syntax __module_who__
-  (identifier-syntax 'flatten-codes))
+  (identifier-syntax 'pass-flatten-codes))
 
 
 ;;;; helpers
@@ -167,7 +167,7 @@
 
 ;;;; beginning of FLATTEN-CODES functions
 
-(define (flatten-codes input-codes)
+(define (pass-flatten-codes input-codes)
   ;;Process the input CODES struct.
   ;;
   ;;NOTE The reason we use nested functions here is that we value descriptive labels.

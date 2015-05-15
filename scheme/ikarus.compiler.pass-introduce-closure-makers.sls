@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-introduce-closure-makers)
-  (export introduce-closure-makers)
+  (export pass-introduce-closure-makers)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -49,9 +49,9 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'introduce-closure-makers))
+  (identifier-syntax 'pass-introduce-closure-makers))
 
-(define* (introduce-closure-makers X)
+(define* (pass-introduce-closure-makers X)
   ;;Perform code transformation traversing the whole  hierarchy in X, which must be
   ;;a  struct instance  representing  recordised  code in  the  core language,  and
   ;;building  a new  hierarchy  of  transformed, recordised  code;  return the  new

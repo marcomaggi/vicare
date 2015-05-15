@@ -17,7 +17,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-impose-evaluation-order)
-  (export impose-calling-convention/evaluation-order)
+  (export pass-impose-calling-convention/evaluation-order)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -107,9 +107,9 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'impose-calling-convention/evaluation-order))
+  (identifier-syntax 'pass-impose-calling-convention/evaluation-order))
 
-(define (impose-calling-convention/evaluation-order codes)
+(define (pass-impose-calling-convention/evaluation-order codes)
   (V-codes codes))
 
 

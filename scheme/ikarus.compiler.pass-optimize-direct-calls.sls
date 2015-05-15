@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-optimize-direct-calls)
-  (export optimize-direct-calls)
+  (export pass-optimize-direct-calls)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -108,12 +108,12 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'optimize-direct-calls))
+  (identifier-syntax 'pass-optimize-direct-calls))
 
 (define-syntax E ;make the code more readable
-  (identifier-syntax optimize-direct-calls))
+  (identifier-syntax pass-optimize-direct-calls))
 
-(define* (optimize-direct-calls x)
+(define* (pass-optimize-direct-calls x)
   ;;Perform code  optimisation traversing the whole  hierarchy in X, which  must be a
   ;;struct instance representing recordized code in the core language, and building a
   ;;new hierarchy of optimised, recordized code; return the new hierarchy.

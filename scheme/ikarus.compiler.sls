@@ -53,31 +53,33 @@
     optimizer-output
 
     compile-core-expr->code
-    recordize
-    optimize-direct-calls
-    optimize-letrec
-    source-optimize
-    rewrite-references-and-assignments
-    core-type-inference
-    introduce-unsafe-primrefs
-    sanitize-bindings
-    optimize-for-direct-jumps
-    insert-global-assignments
-    introduce-vars
-    introduce-closure-makers
-    optimize-combinator-calls/lift-clambdas
-    introduce-primitive-operation-calls
-    rewrite-freevar-references
-    insert-engine-checks
-    insert-stack-overflow-check
-    alt-cogen
+
+    pass-recordize
+    pass-optimize-direct-calls
+    pass-optimize-letrec
+    pass-source-optimize
+    pass-rewrite-references-and-assignments
+    pass-core-type-inference
+    pass-introduce-unsafe-primrefs
+    pass-sanitize-bindings
+    pass-optimize-for-direct-jumps
+    pass-insert-global-assignments
+    pass-introduce-vars
+    pass-introduce-closure-makers
+    pass-optimize-combinator-calls/lift-clambdas
+    pass-introduce-primitive-operation-calls
+    pass-rewrite-freevar-references
+    pass-insert-engine-checks
+    pass-insert-stack-overflow-check
+    pass-code-generation
     assemble-sources
 
-    specify-representation
-    impose-calling-convention/evaluation-order
-    assign-frame-sizes
-    color-by-chaitin
-    flatten-codes
+    ;; code generation passes
+    pass-specify-representation
+    pass-impose-calling-convention/evaluation-order
+    pass-assign-frame-sizes
+    pass-color-by-chaitin
+    pass-flatten-codes
 
     unparse-recordized-code
     unparse-recordized-code/sexp
@@ -156,33 +158,33 @@
     (initialise-compiler)
     (%parse-compilation-options core-language-sexp
       (lambda (core-language-sexp)
-	(let* ((p (recordize core-language-sexp))
-	       (p (optimize-direct-calls p))
-	       (p (optimize-letrec p))
-	       (p (source-optimize p)))
+	(let* ((p (pass-recordize core-language-sexp))
+	       (p (pass-optimize-direct-calls p))
+	       (p (pass-optimize-letrec p))
+	       (p (pass-source-optimize p)))
 	  (%print-optimiser-output p)
-	  (let ((p (rewrite-references-and-assignments p)))
+	  (let ((p (pass-rewrite-references-and-assignments p)))
 	    (if stop-after-optimisation?
 		p
 	      (let* ((p (if perform-core-type-inference?
-			    (core-type-inference p)
+			    (pass-core-type-inference p)
 			  p))
 		     (p (if introduce-unsafe-primitives?
-			    (introduce-unsafe-primrefs p)
+			    (pass-introduce-unsafe-primrefs p)
 			  p)))
 		(if stop-after-core-type-inference?
 		    p
-		  (let* ((p (sanitize-bindings p))
-			 (p (optimize-for-direct-jumps p))
-			 (p (insert-global-assignments p))
-			 (p (introduce-vars p))
-			 (p (introduce-closure-makers p))
-			 (p (optimize-combinator-calls/lift-clambdas p))
-			 (p (introduce-primitive-operation-calls p))
-			 (p (rewrite-freevar-references p))
-			 (p (insert-engine-checks p))
-			 (p (insert-stack-overflow-check p))
-			 (code-object-sexp* (alt-cogen p)))
+		  (let* ((p (pass-sanitize-bindings p))
+			 (p (pass-optimize-for-direct-jumps p))
+			 (p (pass-insert-global-assignments p))
+			 (p (pass-introduce-vars p))
+			 (p (pass-introduce-closure-makers p))
+			 (p (pass-optimize-combinator-calls/lift-clambdas p))
+			 (p (pass-introduce-primitive-operation-calls p))
+			 (p (pass-rewrite-freevar-references p))
+			 (p (pass-insert-engine-checks p))
+			 (p (pass-insert-stack-overflow-check p))
+			 (code-object-sexp* (pass-code-generation p)))
 		    (%print-assembly code-object-sexp*)
 		    (if stop-after-assembly-generation?
 			code-object-sexp*

@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-insert-engine-checks)
-  (export insert-engine-checks)
+  (export pass-insert-engine-checks)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -51,11 +51,11 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'insert-engine-checks))
+  (identifier-syntax 'pass-insert-engine-checks))
 
-(module (insert-engine-checks)
+(module (pass-insert-engine-checks)
 
-  (define (insert-engine-checks x)
+  (define (pass-insert-engine-checks x)
     (struct-case x
       ((codes list body)
        (make-codes ($map/stx E-clambda list)

@@ -84,27 +84,27 @@
 ;;; --------------------------------------------------------------------
 
 (define (%core-type-inference core-language-form)
-  (let* ((D (compiler.recordize core-language-form))
-	 (D (compiler.optimize-direct-calls D))
-	 (D (compiler.optimize-letrec D))
+  (let* ((D (compiler.pass-recordize core-language-form))
+	 (D (compiler.pass-optimize-direct-calls D))
+	 (D (compiler.pass-optimize-letrec D))
 	 ;;Source optimisation is skipped here to  make it easier to write meaningful
 	 ;;code for debugging and inspection.
-	 #;(D (compiler.source-optimize D))
-	 (D (compiler.rewrite-references-and-assignments D))
-	 (D (compiler.core-type-inference D))
+	 #;(D (compiler.pass-source-optimize D))
+	 (D (compiler.pass-rewrite-references-and-assignments D))
+	 (D (compiler.pass-core-type-inference D))
 	 (S (compiler.unparse-recordized-code/sexp D)))
     S))
 
 (define (%introduce-unsafe-primrefs core-language-form)
-  (let* ((D (compiler.recordize core-language-form))
-	 (D (compiler.optimize-direct-calls D))
-	 (D (compiler.optimize-letrec D))
+  (let* ((D (compiler.pass-recordize core-language-form))
+	 (D (compiler.pass-optimize-direct-calls D))
+	 (D (compiler.pass-optimize-letrec D))
 	 ;;Source optimisation is skipped here to  make it easier to write meaningful
 	 ;;code for debugging and inspection.
-	 #;(D (compiler.source-optimize D))
-	 (D (compiler.rewrite-references-and-assignments D))
-	 (D (compiler.core-type-inference D))
-	 (D (compiler.introduce-unsafe-primrefs D))
+	 #;(D (compiler.pass-source-optimize D))
+	 (D (compiler.pass-rewrite-references-and-assignments D))
+	 (D (compiler.pass-core-type-inference D))
+	 (D (compiler.pass-introduce-unsafe-primrefs D))
 	 (S (compiler.unparse-recordized-code/sexp D)))
     S))
 

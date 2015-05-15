@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-rewrite-freevar-references)
-  (export rewrite-freevar-references)
+  (export pass-rewrite-freevar-references)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -75,9 +75,9 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'rewrite-freevar-references))
+  (identifier-syntax 'pass-rewrite-freevar-references))
 
-(define* (rewrite-freevar-references Program)
+(define* (pass-rewrite-freevar-references Program)
   (struct-case Program
     ((codes code* body)
      ;;First traverse  the bodies of  the lifted  CLAMBDAs, then traverse  the init

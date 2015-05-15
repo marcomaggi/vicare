@@ -18,7 +18,7 @@
 #!vicare
 (library (ikarus.compiler.pass-letrec-optimizer)
   (export
-    optimize-letrec
+    pass-optimize-letrec
     current-letrec-pass
     check-for-illegal-letrec
     optimize-letrec/basic
@@ -110,7 +110,7 @@
 	  "invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
 	  obj)))))
 
-(define* (optimize-letrec X)
+(define* (pass-optimize-letrec X)
   (when (check-for-illegal-letrec)
     (check-for-illegal-letrec-references X))
   (let ((Y (integrate-nested-binding-forms X)))

@@ -17,40 +17,40 @@
 #!vicare
 (library (ikarus.compiler.code-generation)
   (export
-    alt-cogen
-    current-primitive-locations
+    initialise-core-primitive-operations
     primitive-public-function-name->location-gensym
-    specify-representation
-    impose-calling-convention/evaluation-order
-    assign-frame-sizes
-    color-by-chaitin
-    flatten-codes
-    initialise-core-primitive-operations)
+    current-primitive-locations
+    pass-code-generation
+    pass-specify-representation
+    pass-impose-calling-convention/evaluation-order
+    pass-assign-frame-sizes
+    pass-color-by-chaitin
+    pass-flatten-codes)
   (import (rnrs)
-    (ikarus.compiler.compat)
     (ikarus.compiler.config)
-    (ikarus.compiler.helpers)
-    (ikarus.compiler.typedefs)
-    (ikarus.compiler.condition-types)
-    (ikarus.compiler.unparse-recordised-code)
-    (ikarus.compiler.intel-assembly)
-    (ikarus.compiler.common-assembly-subroutines)
+    (only (ikarus.compiler.helpers)
+	  sl-apply-label-func)
+    (only (ikarus.compiler.common-assembly-subroutines)
+	  current-primitive-locations
+	  primitive-public-function-name->location-gensym
+	  sl-apply-label)
+    (only (ikarus.compiler.core-primitive-operations)
+	  initialise-core-primitive-operations)
     (ikarus.compiler.pass-specify-representation)
-    (ikarus.compiler.core-primitive-operations)
     (ikarus.compiler.pass-impose-evaluation-order)
     (ikarus.compiler.pass-assign-frame-sizes)
     (ikarus.compiler.pass-color-by-chaitin)
     (ikarus.compiler.pass-flatten-codes))
 
-  (define (alt-cogen x)
-    (let* ((x  (specify-representation x))
-	   (x  (impose-calling-convention/evaluation-order x))
-	   (x  (assign-frame-sizes x))
+  (define (pass-code-generation x)
+    (let* ((x  (pass-specify-representation x))
+	   (x  (pass-impose-calling-convention/evaluation-order x))
+	   (x  (pass-assign-frame-sizes x))
 	   (x  (if (check-compiler-pass-preconditions)
 		   (preconditions-for-color-by-chaitin x)
 		 x))
-	   (x  (color-by-chaitin x))
-	   (code-object-sexp* (flatten-codes x)))
+	   (x  (pass-color-by-chaitin x))
+	   (code-object-sexp* (pass-flatten-codes x)))
       code-object-sexp*))
 
   (sl-apply-label-func sl-apply-label)

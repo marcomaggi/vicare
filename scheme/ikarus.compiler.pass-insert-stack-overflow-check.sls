@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-insert-stack-overflow-check)
-  (export insert-stack-overflow-check)
+  (export pass-insert-stack-overflow-check)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -51,11 +51,11 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'insert-stack-overflow-check))
+  (identifier-syntax 'pass-insert-stack-overflow-check))
 
-(module (insert-stack-overflow-check)
+(module (pass-insert-stack-overflow-check)
 
-  (define (insert-stack-overflow-check x)
+  (define (pass-insert-stack-overflow-check x)
     (struct-case x
       ((codes code* body)
        (make-codes (map E-clambda code*)

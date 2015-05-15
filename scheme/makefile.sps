@@ -181,7 +181,7 @@
 		current-library-collection)
 	  bootstrap.)
   ;;The following libraries are read, expanded and compiled from the source tree.
-  (prefix (ikarus.options)		option.)
+  (prefix (ikarus.options) option.)
   (prefix (only (ikarus.compiler)
 		current-primitive-locations
 		compile-core-expr-to-port
@@ -256,8 +256,6 @@
 (define-constant BOOT-IMAGE-FILES-SOURCE-DIR
   (or (getenv "VICARE_SRC_DIR") "."))
 
-(define verbose-output? #t)
-
 ;;; --------------------------------------------------------------------
 
 (option.verbose? #t)
@@ -313,7 +311,7 @@
       (set! set (cons x set))))))
 
 (define debug-printf
-  (if verbose-output?
+  (if (option.verbose?)
       (lambda args
 	(let ((port (console-error-port)))
 	  (apply fprintf port args)
@@ -3739,31 +3737,31 @@
     (optimizer-output					$compiler)
 
     (compile-core-expr->code				$compiler)
-    (recordize						$compiler)
-    (optimize-direct-calls				$compiler)
-    (optimize-letrec					$compiler)
-    (source-optimize					$compiler)
-    (rewrite-references-and-assignments			$compiler)
-    (core-type-inference				$compiler)
-    (introduce-unsafe-primrefs				$compiler)
-    (introduce-vars					$compiler)
-    (sanitize-bindings					$compiler)
-    (optimize-for-direct-jumps				$compiler)
-    (insert-global-assignments				$compiler)
-    (introduce-closure-makers				$compiler)
-    (optimize-combinator-calls/lift-clambdas		$compiler)
-    (introduce-primitive-operation-calls		$compiler)
-    (rewrite-freevar-references				$compiler)
-    (insert-engine-checks				$compiler)
-    (insert-stack-overflow-check			$compiler)
-    (alt-cogen						$compiler)
+    (pass-recordize					$compiler)
+    (pass-optimize-direct-calls				$compiler)
+    (pass-optimize-letrec				$compiler)
+    (pass-source-optimize				$compiler)
+    (pass-rewrite-references-and-assignments		$compiler)
+    (pass-core-type-inference				$compiler)
+    (pass-introduce-unsafe-primrefs			$compiler)
+    (pass-introduce-vars				$compiler)
+    (pass-sanitize-bindings				$compiler)
+    (pass-optimize-for-direct-jumps			$compiler)
+    (pass-insert-global-assignments			$compiler)
+    (pass-introduce-closure-makers			$compiler)
+    (pass-optimize-combinator-calls/lift-clambdas	$compiler)
+    (pass-introduce-primitive-operation-calls		$compiler)
+    (pass-rewrite-freevar-references			$compiler)
+    (pass-insert-engine-checks				$compiler)
+    (pass-insert-stack-overflow-check			$compiler)
+    (pass-code-generation				$compiler)
     (assemble-sources					$compiler)
 
-    (specify-representation				$compiler)
-    (impose-calling-convention/evaluation-order		$compiler)
-    (assign-frame-sizes					$compiler)
-    (color-by-chaitin					$compiler)
-    (flatten-codes					$compiler)
+    (pass-specify-representation			$compiler)
+    (pass-impose-calling-convention/evaluation-order	$compiler)
+    (pass-assign-frame-sizes				$compiler)
+    (pass-color-by-chaitin				$compiler)
+    (pass-flatten-codes					$compiler)
 
     (unparse-recordized-code				$compiler)
     (unparse-recordized-code/pretty			$compiler)

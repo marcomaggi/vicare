@@ -17,7 +17,7 @@
 #!vicare
 (library (ikarus.compiler.pass-specify-representation)
   (export
-    specify-representation
+    pass-specify-representation
     make-primitive-handler
     CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS
     P
@@ -59,9 +59,9 @@
 ;;
 
 (define-syntax __module_who__
-  (identifier-syntax 'specify-representation))
+  (identifier-syntax 'pass-specify-representation))
 
-(define (specify-representation x)
+(define (pass-specify-representation x)
   ;;Perform code transformation traversing the whole  hierarchy in X, which must be
   ;;a  CODES struct  representing recordised  code; build  and return  a new  CODES
   ;;struct.

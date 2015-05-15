@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-introduce-unsafe-primrefs)
-  (export introduce-unsafe-primrefs)
+  (export pass-introduce-unsafe-primrefs)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -44,9 +44,9 @@
 ;;   forcall		funcall		typed-expr
 ;;
 (define-syntax __module_who__
-  (identifier-syntax 'introduce-unsafe-primrefs))
+  (identifier-syntax 'pass-introduce-unsafe-primrefs))
 
-(define (introduce-unsafe-primrefs x)
+(define (pass-introduce-unsafe-primrefs x)
   (E x))
 
 

@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-core-type-inference)
-  (export core-type-inference)
+  (export pass-core-type-inference)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -95,9 +95,9 @@
   (import (ikarus.compiler.core-primitive-properties)))
 
 (define-syntax __module_who__
-  (identifier-syntax 'core-type-inference))
+  (identifier-syntax 'pass-core-type-inference))
 
-(define (core-type-inference x)
+(define (pass-core-type-inference x)
   (receive (y env y.tag)
       (%infer-core-types x EMPTY-ENV)
     y))

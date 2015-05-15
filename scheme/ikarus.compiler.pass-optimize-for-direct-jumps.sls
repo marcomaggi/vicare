@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-optimize-for-direct-jumps)
-  (export optimize-for-direct-jumps)
+  (export pass-optimize-for-direct-jumps)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -69,14 +69,15 @@
 ;;   forcall		funcall
 ;;
 
+
 (define-syntax __module_who__
-  (identifier-syntax 'optimize-for-direct-jumps))
+  (identifier-syntax 'pass-optimize-for-direct-jumps))
 
 ;;Make the code more readable.
 (define-syntax E
-  (identifier-syntax optimize-for-direct-jumps))
+  (identifier-syntax pass-optimize-for-direct-jumps))
 
-(define* (optimize-for-direct-jumps x)
+(define* (pass-optimize-for-direct-jumps x)
   ;;Perform code optimisation traversing the whole  hierarchy in X, which must be a
   ;;struct instance representing recordized code in the core language, and building
   ;;a new hierarchy of optimised, recordized code; return the new hierarchy.

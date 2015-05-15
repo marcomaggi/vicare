@@ -18,7 +18,7 @@
 #!vicare
 (library (ikarus.compiler.pass-source-optimizer)
   (export
-    source-optimize
+    pass-source-optimize
     optimize-level
     source-optimizer-passes-count
     cp0-effort-limit
@@ -54,7 +54,7 @@
 ;;
 
 (define-syntax __module_who__
-  (identifier-syntax 'source-optimize))
+  (identifier-syntax 'pass-source-optimize))
 
 (define-constant DEFAULT-CP0-EFFORT-LIMIT	50)
 (define-constant DEFAULT-CP0-SIZE-LIMIT	8)
@@ -107,15 +107,15 @@
   ;;
   (make-parameter #f))
 
-(module (source-optimize)
+(module (pass-source-optimize)
 
-  (define (source-optimize expr)
+  (define (pass-source-optimize expr)
     (case (optimize-level)
       ((3)
        ;;This optimisation level is meant to do the most possible.
-       (parametrise ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
-		     (cp0-size-limit		O3-CP0-SIZE-LIMIT)
-		     (source-optimizer-passes-count 2))
+       (parametrise ((cp0-effort-limit			O3-CP0-EFFORT-LIMIT)
+		     (cp0-size-limit			O3-CP0-SIZE-LIMIT)
+		     (source-optimizer-passes-count	2))
 	 (%do-one-pass expr (source-optimizer-passes-count))))
       ((2)
        (%do-one-pass expr (source-optimizer-passes-count)))
@@ -135,7 +135,7 @@
 		      (E expr 'v (make-empty-env) (passive-counter) (passive-counter)))
 		    (fxsub1 passes-count))))
 
-  #| end of module: source-optimize |# )
+  #| end of module: pass-source-optimize |# )
 
 
 ;;;; type definitions

@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-optimize-combinator-calls-lift-clambdas)
-  (export optimize-combinator-calls/lift-clambdas)
+  (export pass-optimize-combinator-calls/lift-clambdas)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -46,9 +46,9 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'optimize-combinator-calls/lift-clambdas))
+  (identifier-syntax 'pass-optimize-combinator-calls/lift-clambdas))
 
-(define (optimize-combinator-calls/lift-clambdas X)
+(define (pass-optimize-combinator-calls/lift-clambdas X)
   ;;Perform code transformation traversing the whole  hierarchy in X, which must be
   ;;a  struct instance  representing  recordised  code in  the  core language,  and
   ;;building  a new  hierarchy  of  transformed, recordised  code;  return a  CODES

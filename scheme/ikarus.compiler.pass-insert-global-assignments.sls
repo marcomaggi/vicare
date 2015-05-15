@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-insert-global-assignments)
-  (export insert-global-assignments)
+  (export pass-insert-global-assignments)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -42,13 +42,13 @@
 ;;
 
 (define-syntax __module_who__
-  (identifier-syntax 'insert-global-assignments))
+  (identifier-syntax 'pass-insert-global-assignments))
 
 ;;Make the code more readable.
 (define-syntax E
-  (identifier-syntax insert-global-assignments))
+  (identifier-syntax pass-insert-global-assignments))
 
-(define* (insert-global-assignments x)
+(define* (pass-insert-global-assignments x)
   ;;Perform code transformations traversing the whole hierarchy in X, which must be
   ;;a struct instance representing recordized code, and building a new hierarchy of
   ;;transformed, recordized code; return the new hierarchy.

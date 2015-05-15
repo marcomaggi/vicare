@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-sanitize-bindings)
-  (export sanitize-bindings)
+  (export pass-sanitize-bindings)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -88,13 +88,13 @@
 
 
 (define-syntax __module_who__
-  (identifier-syntax 'sanitize-bindings))
+  (identifier-syntax 'pass-sanitize-bindings))
 
 ;;Make the code more readable.
 (define-syntax E
-  (identifier-syntax sanitize-bindings))
+  (identifier-syntax pass-sanitize-bindings))
 
-(define* (sanitize-bindings x)
+(define* (pass-sanitize-bindings x)
   ;;Perform code transformation traversing the whole  hierarchy in X, which must be
   ;;a  struct instance  representing  recordized  code in  the  core language,  and
   ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new

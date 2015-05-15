@@ -39,7 +39,7 @@
 
 (compiler.optimize-level 2)
 (compiler.source-optimizer-passes-count 2)
-;;(compiler.cp0-effort-limit 50)
+;;(compiler.pass-cp0-effort-limit 50)
 ;;(compiler.cp0-size-limit   8)
 
 
@@ -95,14 +95,14 @@
 ;;; --------------------------------------------------------------------
 
 (define (%core-type-inference core-language-form)
-  (let* ((D (compiler.recordize core-language-form))
-	 (D (compiler.optimize-direct-calls D))
-	 (D (compiler.optimize-letrec D))
+  (let* ((D (compiler.pass-recordize core-language-form))
+	 (D (compiler.pass-optimize-direct-calls D))
+	 (D (compiler.pass-optimize-letrec D))
 	 ;;By skipping source optimisation we  make it simpler to write inspectable
 	 ;;test cases.
-	 #;(D (compiler.source-optimize D))
-	 (D (compiler.rewrite-references-and-assignments D))
-	 (D (compiler.core-type-inference D))
+	 #;(D (compiler.pass-source-optimize D))
+	 (D (compiler.pass-rewrite-references-and-assignments D))
+	 (D (compiler.pass-core-type-inference D))
 	 (S (compiler.unparse-recordized-code/sexp D)))
     S))
 

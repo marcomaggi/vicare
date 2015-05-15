@@ -103,10 +103,10 @@
 ;;; --------------------------------------------------------------------
 
 (define (%source-optimize core-language-form)
-  (let* ((D (compiler.recordize core-language-form))
-	 (D (compiler.optimize-direct-calls D))
-	 (D (compiler.optimize-letrec D))
-	 (D (compiler.source-optimize D))
+  (let* ((D (compiler.pass-recordize core-language-form))
+	 (D (compiler.pass-optimize-direct-calls D))
+	 (D (compiler.pass-optimize-letrec D))
+	 (D (compiler.pass-source-optimize D))
 	 (S (compiler.unparse-recordized-code/sexp D)))
     S))
 

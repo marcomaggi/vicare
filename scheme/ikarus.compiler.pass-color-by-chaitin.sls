@@ -17,7 +17,7 @@
 #!vicare
 (library (ikarus.compiler.pass-color-by-chaitin)
   (export
-    color-by-chaitin
+    pass-color-by-chaitin
     preconditions-for-color-by-chaitin)
   (import (rnrs)
     (ikarus.compiler.compat)
@@ -513,13 +513,13 @@
 ;;
 
 (define-syntax __module_who__
-  (identifier-syntax 'color-by-chaitin))
+  (identifier-syntax 'pass-color-by-chaitin))
 
-(module (color-by-chaitin)
+(module (pass-color-by-chaitin)
   ;;The purpose of this module is to apply the function %COLOR-PROGRAM below to all
   ;;the bodies.
   ;;
-  (define (color-by-chaitin x)
+  (define (pass-color-by-chaitin x)
     (struct-case x
       ((codes x.clambda* x.locals)
        (make-codes (map E-clambda x.clambda*) (%color-program x.locals)))))

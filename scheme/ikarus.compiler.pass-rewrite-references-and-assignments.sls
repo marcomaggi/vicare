@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-rewrite-references-and-assignments)
-  (export rewrite-references-and-assignments)
+  (export pass-rewrite-references-and-assignments)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -91,16 +91,17 @@
 ;;recordised code.
 ;;
 
+
 (define-syntax __module_who__
-  (identifier-syntax 'rewrite-references-and-assignments))
+  (identifier-syntax 'pass-rewrite-references-and-assignments))
 
-(define* (rewrite-references-and-assignments x)
+(define* (pass-rewrite-references-and-assignments x)
   ;;Perform code transformation traversing the whole  hierarchy in X, which must be a
   ;;struct instance representing recordized code in the core language, and building a
   ;;new hierarchy of transformed, recordized code; return the new hierarchy.
   ;;
   (define-syntax E ;make the code more readable
-    (identifier-syntax rewrite-references-and-assignments))
+    (identifier-syntax pass-rewrite-references-and-assignments))
   (struct-case x
     ((constant)
      x)

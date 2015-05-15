@@ -16,7 +16,7 @@
 
 #!vicare
 (library (ikarus.compiler.pass-recordise)
-  (export recordize)
+  (export pass-recordize)
   (import (rnrs)
     (ikarus.compiler.compat)
     (ikarus.compiler.config)
@@ -30,9 +30,9 @@
 ;;;; recordisation compiler pass
 
 (define-syntax __module_who__
-  (identifier-syntax 'recordize))
+  (identifier-syntax 'pass-recordize))
 
-(define* (recordize input-expr)
+(define* (pass-recordize input-expr)
   ;;Given a symbolic expression INPUT-EXPR representing  a form in the core language,
   ;;convert it into  a nested hierarchy of struct instances;  return the outer struct
   ;;instance.
