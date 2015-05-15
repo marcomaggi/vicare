@@ -2154,7 +2154,7 @@
 (define* (make-clambda-compound {signatures list-of-lambda-signatures?})
   (%make-clambda-compound (if (null? signatures) ;this is REDUCE
 			      (make-retvals-signature-standalone-list)
-			    (fold-left retvals-signature-common-ancestor
+			    ($fold-left/stx retvals-signature-common-ancestor
 			      (lambda-signature-retvals ($car signatures))
 			      (map lambda-signature-retvals ($cdr signatures))))
 			  signatures))

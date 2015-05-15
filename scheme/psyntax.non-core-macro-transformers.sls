@@ -583,10 +583,10 @@
 		  (else
 		   (syntax-violation __module_who__ "invalid datum type" input-form.stx datum))))))
       (values (map list closure*.id closure*.stx)
-	      (fold-left (lambda (knil clause)
-			   (if (null? clause)
-			       knil
-			     (cons clause knil)))
+	      ($fold-left/stx (lambda (knil clause)
+				(if (null? clause)
+				    knil
+				  (cons clause knil)))
 		'()
 		(list
 		 (mk-datum-clause boolean?	boolean=?	boolean-entry*)
@@ -3204,47 +3204,47 @@
 
   (define (%make-arg-validation-forms arg-validation-spec* synner)
     (reverse
-     (cdr (fold-left (lambda (knil spec)
-		       (let ((arg-counter    (car knil))
-			     (rev-head-forms (cdr knil)))
-			 (if spec
-			     ;;This argument HAS a logic predicate specification.
-			     (let ((?expr   (argument-validation-spec-expr   spec))
-				   (?pred   (argument-validation-spec-pred   spec))
-				   (?arg-id (argument-validation-spec-arg-id spec)))
-			       (cons* (fxadd1 arg-counter)
-				      (if (argument-validation-spec-list-arg? spec)
-					  `(signature-rest-argument-validation-with-predicate
-					    __who__ ,arg-counter ,?expr (quote ,?pred) ,?arg-id)
-					`(unless ,?expr
-					   (procedure-signature-argument-violation __who__
-					     "failed argument validation"
-					     ,arg-counter (quote ,?pred) ,?arg-id)))
-				      rev-head-forms))
-			   ;;This argument HAS NO logic predicate specification.
-			   (cons (fxadd1 arg-counter) rev-head-forms))))
+     (cdr ($fold-left/stx (lambda (knil spec)
+			    (let ((arg-counter    (car knil))
+				  (rev-head-forms (cdr knil)))
+			      (if spec
+				  ;;This argument HAS a logic predicate specification.
+				  (let ((?expr   (argument-validation-spec-expr   spec))
+					(?pred   (argument-validation-spec-pred   spec))
+					(?arg-id (argument-validation-spec-arg-id spec)))
+				    (cons* (fxadd1 arg-counter)
+					   (if (argument-validation-spec-list-arg? spec)
+					       `(signature-rest-argument-validation-with-predicate
+						 __who__ ,arg-counter ,?expr (quote ,?pred) ,?arg-id)
+					     `(unless ,?expr
+						(procedure-signature-argument-violation __who__
+						  "failed argument validation"
+						  ,arg-counter (quote ,?pred) ,?arg-id)))
+					   rev-head-forms))
+				;;This argument HAS NO logic predicate specification.
+				(cons (fxadd1 arg-counter) rev-head-forms))))
 	    '(1 . ())
 	    arg-validation-spec*))))
 
   (define (%make-ret-validation-forms retval-validation-spec* synner)
     (reverse
-     (cdr (fold-left (lambda (knil spec)
-		       (let ((retval-counter (car knil))
-			     (rev-head-forms (cdr knil)))
-			 (let ((?expr (retval-validation-spec-expr  spec))
-			       (?pred (retval-validation-spec-pred  spec))
-			       (?ret  (retval-validation-spec-rv-id spec)))
-			   (if (and (identifier? ?pred)
-				    (free-identifier=? ?pred (core-prim-id 'always-true)))
-			       ;;This return value HAS NO logic predicate specification.
-			       (cons (fxadd1 retval-counter) rev-head-forms)
-			     ;;This return value HAS a logic predicate specification.
-			     (cons* (fxadd1 retval-counter)
-				    `(unless ,?expr
-				       (procedure-signature-return-value-violation __who__
-					 "failed return value validation"
-					 ,retval-counter (quote ,?pred) ,?ret))
-				    rev-head-forms)))))
+     (cdr ($fold-left/stx (lambda (knil spec)
+			    (let ((retval-counter (car knil))
+				  (rev-head-forms (cdr knil)))
+			      (let ((?expr (retval-validation-spec-expr  spec))
+				    (?pred (retval-validation-spec-pred  spec))
+				    (?ret  (retval-validation-spec-rv-id spec)))
+				(if (and (identifier? ?pred)
+					 (free-identifier=? ?pred (core-prim-id 'always-true)))
+				    ;;This return value HAS NO logic predicate specification.
+				    (cons (fxadd1 retval-counter) rev-head-forms)
+				  ;;This return value HAS a logic predicate specification.
+				  (cons* (fxadd1 retval-counter)
+					 `(unless ,?expr
+					    (procedure-signature-return-value-violation __who__
+					      "failed return value validation"
+					      ,retval-counter (quote ,?pred) ,?ret))
+					 rev-head-forms)))))
 	    '(1 . ())
 	    retval-validation-spec*))))
 
@@ -5600,4 +5600,5 @@
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;eval: (put 'with-who				'scheme-indent-function 1)
+;;eval: (put '$fold-left/stx			'scheme-indent-function 1)
 ;;End:

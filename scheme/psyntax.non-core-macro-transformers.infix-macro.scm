@@ -132,7 +132,7 @@
 	     (list #\,)))
     ((?item* ...)
      (cons #\)
-	   (fold-left
+	   ($fold-left/stx
 	       (lambda (knil item)
 		 (syntax-match item ()
 		   ;;This clause is needed to  correctly handle the case of procedure
@@ -1342,4 +1342,5 @@
 ;; coding: utf-8-unix
 ;; mode: vicare
 ;; fill-column: 85
+;; eval: (put '$fold-left/stx			'scheme-indent-function 1)
 ;; End:
