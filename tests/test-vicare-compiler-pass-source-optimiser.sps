@@ -28,8 +28,10 @@
 #!vicare
 (import (vicare)
   (vicare checks)
-  (only (vicare expander)
-	expand-form-to-core-language)
+  (prefix (only (vicare expander)
+		expand-form-to-core-language
+		generate-descriptive-gensyms?)
+	  expander.)
   (only (vicare libraries)
 	expand-library->sexp)
   (prefix (vicare compiler)
@@ -40,6 +42,9 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler: source optimiser pass\n")
 
+(begin-for-syntax
+  (expander.generate-descriptive-gensyms? #t))
+(compiler.generate-descriptive-labels?	#t)
 (compiler.optimize-level 2)
 (compiler.source-optimizer-passes-count 2)
 ;;(compiler.cp0-effort-limit 50)
@@ -76,7 +81,7 @@
 
 (define (%expand standard-language-form)
   (receive (code libs)
-      (expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
+      (expander.expand-form-to-core-language standard-language-form THE-ENVIRONMENT)
     code))
 
 (define (%expand-library standard-language-form)
@@ -131,8 +136,8 @@
 	 ;;A variable reference evaluated for side effects only is removed.
 	 x
 	 (write x)))
-    => '(let ((x_0 (read)))
-	  (write x_0)))
+    => '(let ((lex.x_0 (read)))
+	  (write lex.x_0)))
 
   (check
       (optimisation-of
@@ -140,8 +145,8 @@
 	 ;;A variable reference evaluated for side effects only is removed.
 	 x x x x
 	 (write x)))
-    => '(let ((x_0 (read)))
-	  (write x_0)))
+    => '(let ((lex.x_0 (read)))
+	  (write lex.x_0)))
 
 ;;; --------------------------------------------------------------------
 
