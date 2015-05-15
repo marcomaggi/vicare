@@ -861,7 +861,11 @@
 ;;;; chi procedures: expressions in the interaction environment
 
 (module (chi-interaction-expr)
-
+  ;;Expand an expression in the context of an interaction environment.  If successful
+  ;;return two values: the  result of the expansion as output  expression in the core
+  ;;language;  the LEXENV  updated  with  the top-level  definitions  from the  input
+  ;;expression.
+  ;;
   (define-module-who chi-interaction-expr)
 
   (define (chi-interaction-expr expr.stx rib lexenv.all)
@@ -932,21 +936,21 @@
 	    (define-syntax-rule (%recurse-and-cons ?expr.core)
 	      (cons ?expr.core
 		    (recur (cdr lhs*) (cdr qrhs*))))
-	    (case (car qrhs)
+	    (case (qualified-rhs-type qrhs)
 	      ((defun)
-	       (let ((psi (chi-defun (cdr qrhs) lexenv.run lexenv.expand)))
+	       (let ((psi (chi-defun (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (build-global-assignment no-source
 				      lhs (psi-core-expr psi)))))
-	      ((expr)
-	       (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
+	      ((defvar)
+	       (let ((psi (chi-expr  (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (build-global-assignment no-source
 				      lhs (psi-core-expr psi)))))
-	      ((untagged-define-expr)
-	       (let ((psi (chi-expr  (cddr qrhs) lexenv.run lexenv.expand)))
+	      ((untagged-defvar)
+	       (let ((psi (chi-expr  (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (build-global-assignment no-source
 				      lhs (psi-core-expr psi)))))
 	      ((top-expr)
-	       (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
+	       (let ((psi (chi-expr  (qualified-rhs-stx qrhs) lexenv.run lexenv.expand)))
 		 (%recurse-and-cons (psi-core-expr psi))))
 	      (else
 	       (assertion-violation __module_who__
@@ -2210,51 +2214,49 @@
 
 ;;;; chi procedures: lexical bindings qualified right-hand sides
 ;;
-;;A "qualified right-hand side expression" is a pair whose car is a symbol specifying
-;;the  type of  the expression  and whose  cdr is  a syntax  object representing  the
-;;right-hand side expression of a lexical binding definition.
+;;A "qualified right-hand side expression" is  an object of type QUALIFIED-RHS; these
+;;objects are generated only by CHI-BODY*.
 ;;
 ;;For  example, when  CHI-BODY*  expands a  body that  allows  mixed definitions  and
 ;;expressions:
 ;;
-;;   (define (fun)
-;;     1)
+;;   (define (fun x) (list x 1))
 ;;   (define name)
-;;   (define {var2 tag} (+ 3 4))
-;;   (define var1 (+ 3 4))
+;;   (define {red tag} (+ 1 2))
+;;   (define blue (+ 3 4))
 ;;   (display 5)
 ;;
-;;all the forms are parsed and the following QRHS compounds are created:
+;;all the forms are parsed and the following QUALIFIED-RHS objects are created:
 ;;
-;;   (defun    . #'(internal-define ?attributes (fun) 1))
-;;   (expr     . #'(void))
-;;   (expr     . #'(+ 3 4))
-;;   (untagged-define-expr . (#'var1 . #'(+ 3 4)))
-;;   (top-expr . #'(display 5))
+;;   #<qualified-rhs defun            #'fun    #'(internal-define ?attributes (fun x) (list x 1))>
+;;   #<qualified-rhs defvar           #'name   #'(void)>
+;;   #<qualified-rhs defvar           #'red    #'(+ 1 2)>
+;;   #<qualified-rhs untagged-defvar  #'blue   #'(+ 3 4)>
+;;   #<qualified-rhs top-expr         #'dummy  #'(display 5)>
+;;
+;;the definitions are not immediately expanded.  This allows to expand the macros and
+;;macro definitions  first, and  to expand the  variable definitions  and expressions
+;;later.
 ;;
 ;;The possible types are:
 ;;
-;;DEFUN -
+;;defun -
 ;;   For a function variable definition.  A syntax like:
 ;;
 ;;      (internal-define ?attributes (?id . ?formals) ?body ...)
 ;;
-;;UNSAFE-DEFUN -
-;;   Like  DEFUN,  but do  not  automatically  include  validation forms  for  tagged
-;;   operands and return values.
-;;
-;;EXPR -
+;;defvar -
 ;;  For an non-function variable definition.  A syntax like:
 ;;
 ;;      (internal-define ?attributes ?id)
 ;;      (internal-define ?attributes {?id ?tag} ?val)
 ;;
-;;UNTAGGED-DEFINE-EXPR -
+;;untagged-defvar -
 ;;  For an non-function variable definition.  A syntax like:
 ;;
 ;;      (internal-define ?attributes ?id ?val)
 ;;
-;;TOP-EXPR -
+;;top-expr -
 ;;  For an expression that is not a  definition; this QRHS is created only when mixed
 ;;  definitions and expressions are allowed.  A syntax like:
 ;;
@@ -2268,24 +2270,48 @@
 ;;represent the DEFINE syntax; when CHI-QRHS and CHI-QRHS* are called the binding has
 ;;already been created.
 ;;
+
+(define-record qualified-rhs
+  (type
+		;A symbol specifying the type  of the expression; one among: "defun",
+		;"defvar", "untagged-defvar", "top-expr".
+   id
+		;The syntactic identifier bound by this expression.
+   stx
+		;A syntax  object representing  the right-hand  side expression  of a
+		;lexical binding definition.
+   ))
+
+(define-syntax-rule (make-qualified-rhs/defun ?id ?expr)
+  (make-qualified-rhs 'defun ?id ?expr))
+
+(define-syntax-rule (make-qualified-rhs/defvar ?id ?expr)
+  (make-qualified-rhs 'defvar ?id ?expr))
+
+(define-syntax-rule (make-qualified-rhs/untagged-defvar ?id ?expr)
+  (make-qualified-rhs 'untagged-defvar ?id ?expr))
+
+(define-syntax-rule (make-qualified-rhs/top-expr ?id ?expr)
+  (make-qualified-rhs 'top-expr ?id ?expr))
+
+;;; --------------------------------------------------------------------
+
 (define* (chi-qrhs qrhs lexenv.run lexenv.expand)
   ;;Expand a qualified right-hand side expression and return a PSI struct.
   ;;
   (while-not-expanding-application-first-subform
-   (case (car qrhs)
+   (case (qualified-rhs-type qrhs)
      ((defun)
-      (let ((expr.stx (cdr qrhs)))
-	;;This returns a PSI struct containing a lambda core expression.
-	(chi-defun expr.stx lexenv.run lexenv.expand)))
+      ;;This returns a PSI struct containing a lambda core expression.
+      (chi-defun (qualified-rhs-stx qrhs) lexenv.run lexenv.expand))
 
-     ((expr)
-      (let ((expr.stx (cdr qrhs)))
-	(chi-expr expr.stx lexenv.run lexenv.expand)))
+     ((defvar)
+      (chi-expr (qualified-rhs-stx qrhs) lexenv.run lexenv.expand))
 
-     ((untagged-define-expr)
+     ((untagged-defvar)
       ;;We know that here the definition is for an untagged identifier.
-      (let ((var.id   (cadr qrhs))
-	    (expr.stx (cddr qrhs)))
+      (let ((var.id   (qualified-rhs-id  qrhs))
+	    (expr.stx (qualified-rhs-stx qrhs)))
 	(receive-and-return (expr.psi)
 	    (chi-expr expr.stx lexenv.run lexenv.expand)
 	  (let ((expr.sig (psi-retvals-signature expr.psi))
@@ -2315,7 +2341,7 @@
 	      )))))
 
      ((top-expr)
-      (let* ((expr.stx  (cdr qrhs))
+      (let* ((expr.stx  (qualified-rhs-stx qrhs))
 	     (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	     (expr.core (psi-core-expr expr.psi)))
 	(make-psi expr.stx
@@ -2619,20 +2645,7 @@
   ;;sides representing right-hand  side expressions for DEFINE syntax  uses; they are
   ;;meant to  be processed together  item by item;  they are accumulated  in reversed
   ;;order.  Whenever the QRHS expressions are  expanded: a core language binding will
-  ;;be created with a  LEX gensym associate to a QRHS expression.   The QRHS have the
-  ;;formats:
-  ;;
-  ;;   (defun . ?full-form)
-  ;;		Represents a DEFINE form which defines a function.  ?FULL-FORM is the
-  ;;		syntax object representing the full DEFINE form.
-  ;;
-  ;;   (expr  . ?val)
-  ;;		Represents a DEFINE form which defines a non-function variable.  ?VAL
-  ;;		is a syntax object representing the variable's value.
-  ;;
-  ;;   (top-expr . ?body-form-stx)
-  ;;		Represents  a  dummy  DEFINE   form  introduced  when  processing  an
-  ;;		expression in a R6RS program.
+  ;;be created with a LEX gensym associated  to a QRHS expression.
   ;;
   ;;About the MOD** argument.  We know that module definitions have the syntax:
   ;;
@@ -2748,8 +2761,8 @@
 	       ;;
 	       ;;From parsing  the syntactic form,  we receive the  following values:
 	       ;;ID, the  tagged binding identifier;  TAG, the tag identifier  for ID
-	       ;;(possibly "<top>"); QRHS.STX, the QRHS object to be expanded later.
-	       (receive (id tag qrhs.stx)
+	       ;;(possibly "<top>"); QRHS, the QRHS object to be expanded later.
+	       (receive (id tag qrhs)
 		   (%parse-define body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (syntax-violation #f "cannot redefine keyword" body-form.stx))
@@ -2772,7 +2785,7 @@
 		   (set-label-tag! id lab tag)
 		   (chi-body* (cdr body-form*.stx)
 			      (lexenv-add-lexical-var-binding lab lex lexenv.run) lexenv.expand
-			      (cons lex lex*) (cons qrhs.stx qrhs*)
+			      (cons lex lex*) (cons qrhs qrhs*)
 			      mod** kwd* export-spec* rib mix? shadow/redefine-bindings?))))
 
 	      ((define-syntax)
@@ -3063,11 +3076,14 @@
 	       ;;"trailing expressions" return value.
 	       ;;
 	       (if mix?
-		   (chi-body* (cdr body-form*.stx)
-			      lexenv.run lexenv.expand
-			      (cons (generate-lexical-gensym 'dummy) lex*)
-			      (cons (cons 'top-expr body-form.stx) qrhs*)
-			      mod** kwd* export-spec* rib #t shadow/redefine-bindings?)
+		   (let* ((lex  (generate-lexical-gensym 'dummy))
+			  (qrhs (let ((id (make-syntactic-identifier-for-temporary-variable lex)))
+				  (make-qualified-rhs/top-expr id body-form.stx))))
+		     (chi-body* (cdr body-form*.stx)
+				lexenv.run lexenv.expand
+				(cons lex  lex*)
+				(cons qrhs qrhs*)
+				mod** kwd* export-spec* rib #t shadow/redefine-bindings?))
 		 (values body-form*.stx lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)))))))))
 
 ;;; --------------------------------------------------------------------
@@ -3109,7 +3125,7 @@
       ;;when LAMBDA is expanded.
       ((_ ?attributes ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?body0 ?body* ...)
        (identifier? ?who)
-       (let* ((qrhs   (cons 'defun input-form.stx))
+       (let* ((qrhs   (make-qualified-rhs/defun ?who input-form.stx))
       	      (tag.id (receive (standard-formals-stx signature)
       			  (parse-tagged-lambda-proto-syntax (bless
       							     `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
@@ -3121,14 +3137,14 @@
       ((_ ?attributes (brace ?id ?tag) ?expr)
        (identifier? ?id)
        (let* ((rhs.stx (bless `(tag-assert-and-return (,?tag) ,?expr)))
-	      (qrhs    (cons 'expr rhs.stx)))
+	      (qrhs    (make-qualified-rhs/defvar ?id rhs.stx)))
 	 (values ?id ?tag qrhs)))
 
       ;;Variable definition with tagged identifier, no init.
       ((_ ?attributes (brace ?id ?tag))
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
-	      (qrhs    (cons 'expr rhs.stx)))
+	      (qrhs    (make-qualified-rhs/defvar ?id rhs.stx)))
 	 (values ?id ?tag qrhs)))
 
       ;;Function definition with possibly tagged formals.
@@ -3137,7 +3153,7 @@
       ;;tag the defined identifier ?WHO; see above for an explanation.
       ((_ ?attributes (?who . ?fmls) ?body0 ?body ...)
        (identifier? ?who)
-       (let* ((qrhs   (cons 'defun input-form.stx))
+       (let* ((qrhs   (make-qualified-rhs/defun ?who input-form.stx))
 	      (tag.id (receive (standard-formals-stx signature)
 			  (parse-tagged-lambda-proto-syntax ?fmls input-form.stx)
 			(fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
@@ -3146,14 +3162,14 @@
       ;;R6RS variable definition.
       ((_ ?attributes ?id ?expr)
        (identifier? ?id)
-       (let ((qrhs (cons* 'untagged-define-expr ?id ?expr)))
+       (let ((qrhs (make-qualified-rhs/untagged-defvar ?id ?expr)))
 	 (values ?id (top-tag-id) qrhs)))
 
       ;;R6RS variable definition, no init.
       ((_ ?attributes ?id)
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
-	      (qrhs    (cons 'expr rhs.stx)))
+	      (qrhs    (make-qualified-rhs/defvar ?id rhs.stx)))
 	 (values ?id (top-tag-id) qrhs)))
 
       ))
