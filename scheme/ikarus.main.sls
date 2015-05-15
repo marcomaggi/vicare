@@ -115,12 +115,16 @@
 
 ;;;; helpers
 
-(define (%error-and-exit msg)
-  (let ((port (current-error-port)))
-    (display "*** vicare error: " port)
-    (display msg port)
-    (newline port)
-    (exit 1)))
+(define (print-error-message template . args)
+  (let ((P (current-error-port)))
+    (display "vicare: compiler: " P)
+    (apply fprintf P template args)
+    (newline P)))
+
+
+(define (%error-and-exit template . args)
+  (apply print-error-message template args)
+  (exit 1))
 
 (define (%error-invalid-rc)
   (%error-and-exit "option --no-rcfile is invalid when used along with --rcfile"))
