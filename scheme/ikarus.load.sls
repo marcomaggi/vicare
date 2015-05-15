@@ -1373,10 +1373,10 @@
   (unless (posix.file-string-pathname? include-pathname)
     (synner "file name must be a non-empty string representing a valid pathname" include-pathname))
   (when verbose?
-    (fprintf (current-error-port) "Vicare: searching include file: ~a\n" include-pathname))
+    (fprintf (current-error-port) "vicare: searching include file: ~a\n" include-pathname))
   (let ((include-pathname ((current-include-file-locator) include-pathname synner)))
     (when verbose?
-      (fprintf (current-error-port) "Vicare: including file: ~a\n" include-pathname))
+      (fprintf (current-error-port) "vicare: including file: ~a\n" include-pathname))
     (values include-pathname ((current-include-file-loader) include-pathname synner))))
 
 (module ()
