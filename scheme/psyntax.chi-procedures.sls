@@ -31,7 +31,7 @@
     chi-qrhs*			chi-defun
     chi-lambda			chi-case-lambda
     chi-application/psi-first-operand
-
+    generate-qrhs-loc
     SPLICE-FIRST-ENVELOPE)
   (import (except (rnrs)
 		  eval
@@ -2293,6 +2293,9 @@
 
 (define-syntax-rule (make-qualified-rhs/top-expr ?id ?expr)
   (make-qualified-rhs 'top-expr ?id ?expr))
+
+(define (generate-qrhs-loc qrhs)
+  (generate-storage-location-gensym (qualified-rhs-id qrhs)))
 
 ;;; --------------------------------------------------------------------
 

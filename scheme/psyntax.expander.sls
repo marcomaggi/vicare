@@ -1076,7 +1076,7 @@
 		  ;;are needed.
 		  (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
 			 (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
-			 (loc*          (map generate-storage-location-gensym lex*))
+			 (loc*          (map generate-qrhs-loc qrhs*))
 			 (export-subst  (%make-export-subst export-name* export-id*)))
 		    (receive (export-env visit-env*)
 			(%make-export-env/visit-env* lex* loc* lexenv.run)
