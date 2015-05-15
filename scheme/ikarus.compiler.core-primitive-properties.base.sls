@@ -40,9 +40,6 @@
     core-primitive-name->application-attributes*
     core-primitive-name->core-type-signature*
     core-primitive-name->replacement*
-    core-type-tag?
-    core-type-tag-is-a?
-    core-type-tag-matches-any-object?
     tuple-tags-arity
     tuple-tags-rest-objects-tag
     tuple-tags-ref
