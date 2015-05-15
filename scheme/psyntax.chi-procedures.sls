@@ -911,7 +911,7 @@
 		     mixed-definitions-and-expressions? shadow/redefine-bindings?))
       (let ((expr*.core (%expand-interaction-qrhs*/init*
 			 (reverse lex*) (reverse qrhs*)
-			 (append (reverse-and-append module-init-form**.stx) trailing-init-form*.stx)
+			 (reverse-and-append-with-tail module-init-form**.stx trailing-init-form*.stx)
 			 lexenv.run^ lexenv.expand^)))
 	(let ((expr.core (cond ((null? expr*.core)
 				(build-void))
@@ -2578,8 +2578,7 @@
       ;;We want order here!   First the RHS then the inits, so that  tags are put in
       ;;place when the inits are expanded.
       (let* ((rhs*.psi       (chi-qrhs* (reverse qrhs*^) lexenv.run^ lexenv.expand^))
-	     (init*.psi      (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**^)
-						trailing-expr-stx*^)
+	     (init*.psi      (chi-expr* (reverse-and-append-with-tail trailing-mod-expr-stx**^ trailing-expr-stx*^)
 					lexenv.run^ lexenv.expand^))
 	     (rhs*.core      (map psi-core-expr rhs*.psi))
 	     (init*.core     (map psi-core-expr init*.psi))

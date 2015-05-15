@@ -1156,8 +1156,7 @@
       ;;We build a list  of init form putting first the trailing  init forms from the
       ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
       ;;library/program body.
-      (let ((init-form*.stx (append (reverse-and-append module-init-form**.stx)
-				    trailing-init-form*.stx)))
+      (let ((init-form*.stx (reverse-and-append-with-tail module-init-form**.stx trailing-init-form*.stx)))
 	(values init-form*.stx
 		lexenv.run lexenv.expand
 		;;This is  a list of gensyms  to be used in  binding definitions when

@@ -46,6 +46,9 @@
 (define-syntax-rule (reverse-and-append ?item**)
   (apply append (reverse ?item**)))
 
+(define-syntax-rule (reverse-and-append-with-tail ?item** ?tail-item*)
+  (apply append (reverse (cons ?tail-item* ?item**))))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax with-who
