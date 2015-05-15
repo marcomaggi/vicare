@@ -1027,11 +1027,11 @@
 (define* (generate-label-gensym seed)
   (if (generate-descriptive-gensyms?)
       (cond ((identifier? seed)
-	     (gensym (string-append "lab." ($symbol->string (~identifier->symbol seed)))))
+	     ($make-symbol (string-append "lab." ($symbol->string ($identifier->symbol seed)))))
 	    ((symbol? seed)
-	     (gensym (string-append "lab." ($symbol->string seed))))
+	     ($make-symbol (string-append "lab." ($symbol->string seed))))
 	    ((string? seed)
-	     (gensym (string-append "lab." seed)))
+	     ($make-symbol (string-append "lab." seed)))
 	    (else
 	     (procedure-argument-violation __who__ "expected identifier, symbol or string as argument" seed)))
     (%fastest-gensym)))
@@ -1043,9 +1043,9 @@
 (define* (generate-lexical-gensym seed)
   (if (generate-descriptive-gensyms?)
       (cond ((identifier? seed)
-	     (gensym (string-append "lex." (symbol->string (~identifier->symbol seed)))))
+	     ($make-symbol (string-append "lex." ($symbol->string ($identifier->symbol seed)))))
 	    ((symbol? seed)
-	     (gensym (string-append "lex." (symbol->string seed))))
+	     ($make-symbol (string-append "lex." ($symbol->string seed))))
 	    (else
 	     (procedure-argument-violation __who__ "expected identifier, symbol or string as argument" seed)))
     (%fastest-gensym)))
@@ -1057,11 +1057,11 @@
   ;;
   (if (generate-descriptive-gensyms?)
       (cond ((identifier? seed)
-	     (gensym (string-append "loc." (symbol->string (~identifier->symbol seed)))))
+	     ($make-symbol (string-append "loc." ($symbol->string ($identifier->symbol seed)))))
 	    ((symbol? seed)
-	     (gensym (string-append "loc." (symbol->string seed))))
+	     ($make-symbol (string-append "loc." ($symbol->string seed))))
 	    ((string? seed)
-	     (gensym (string-append "loc." seed)))
+	     ($make-symbol (string-append "loc." seed)))
 	    (else
 	     (procedure-argument-violation __who__ "expected identifier, symbol or string as argument" seed)))
     (%fastest-gensym)))
@@ -1475,7 +1475,7 @@
     (when ($rib-sealed/freq rib)
       (assertion-violation/internal-error __who__
 	"attempt to extend sealed RIB" rib))
-    (let ((id.source-name  (~identifier->symbol id))
+    (let ((id.source-name  ($identifier->symbol id))
 	  (id.mark*        ($stx-mark*  id))
 	  (rib.name*       ($rib-name*  rib))
 	  (rib.mark**      ($rib-mark** rib))
@@ -2101,7 +2101,7 @@
     ;;having the  same source-name  and marks.  If  successful: return  the syntactic
     ;;binding's label gensym; otherwise return false.
     ;;
-    (define id.source-name (~identifier->symbol id))
+    (define id.source-name ($identifier->symbol id))
     (let search ((rib*  ($stx-rib* id))
 		 (mark* ($stx-mark* id)))
       (and (pair? rib*)
@@ -2450,7 +2450,7 @@
   ;;Two identifiers  are ~BOUND-IDENTIFIER=? if they  have the same name  and the
   ;;same set of marks.
   ;;
-  (and (eq? (~identifier->symbol id1) (~identifier->symbol id2))
+  (and (eq? ($identifier->symbol id1) ($identifier->symbol id2))
        (same-marks? ($stx-mark* id1) ($stx-mark* id2))))
 
 (define* (free-identifier=? {x identifier?} {y identifier?})
@@ -2464,8 +2464,8 @@
 	(t2 (id->label id2)))
     (if (or t1 t2)
 	(eq? t1 t2)
-      (eq? (~identifier->symbol id1)
-	   (~identifier->symbol id2)))))
+      (eq? ($identifier->symbol id1)
+	   ($identifier->symbol id2)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2485,9 +2485,9 @@
 (define* (identifier->symbol {x identifier?})
   ;;Given an identifier return its symbol expression.
   ;;
-  (~identifier->symbol x))
+  ($identifier->symbol x))
 
-(define (~identifier->symbol x)
+(define ($identifier->symbol x)
   (let ((expr ($stx-expr x)))
     (if (annotation? expr)
 	(annotation-stripped expr)
