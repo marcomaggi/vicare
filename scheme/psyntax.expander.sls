@@ -1074,27 +1074,23 @@
 		  ;;We want order here?  Yes.   We expand first the definitions, then
 		  ;;the init forms; so that tag  identifiers have been put where they
 		  ;;are needed.
-		  (let* ((rhs*.psi  (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
-			 (init*.psi (chi-expr* init*.stx lexenv.run lexenv.expand)))
-		    ;;QUESTION Why do we unseal the rib  if we do not use it anymore?
-		    ;;Is it  an additional check  of its internal  integrity?  (Marco
-		    ;;Maggi; Sun Mar 23, 2014)
-		    (unseal-rib! rib)
-		    (let ((loc*          (map generate-storage-location-gensym lex*))
-			  (export-subst  (%make-export-subst export-name* export-id*)))
-		      (receive (export-env visit-env*)
-			  (%make-export-env/visit-env* lex* loc* lexenv.run)
-			(%validate-exports export-spec* export-subst export-env)
-			(let ((invoke-code (build-with-compilation-options option*
-					     (build-library-letrec* no-source
-					       mixed-definitions-and-expressions?
-					       lex* loc* (map psi-core-expr rhs*.psi)
-					       (if (null? init*.psi)
-						   (build-void)
-						 (build-sequence no-source
-						   (map psi-core-expr init*.psi)))))))
-			  (values (itc) (rtc) (vtc)
-				  invoke-code visit-env* export-subst export-env)))))))))))))
+		  (let* ((rhs*.psi      (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
+			 (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
+			 (loc*          (map generate-storage-location-gensym lex*))
+			 (export-subst  (%make-export-subst export-name* export-id*)))
+		    (receive (export-env visit-env*)
+			(%make-export-env/visit-env* lex* loc* lexenv.run)
+		      (%validate-exports export-spec* export-subst export-env)
+		      (let ((invoke-code (build-with-compilation-options option*
+					   (build-library-letrec* no-source
+					     mixed-definitions-and-expressions?
+					     lex* loc* (map psi-core-expr rhs*.psi)
+					     (if (null? init*.psi)
+						 (build-void)
+					       (build-sequence no-source
+						 (map psi-core-expr init*.psi)))))))
+			(values (itc) (rtc) (vtc)
+				invoke-code visit-env* export-subst export-env))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
