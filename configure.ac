@@ -57,7 +57,7 @@ AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS)])
 #    $ make BOOT_VFLAGS="--no-drop-assertions"
 #
 # These flags are used to build the boot image.
-AS_VAR_SET(AX_BOOT_VFLAGS,["--no-debug --no-rcfile --library-locator source -O2"])
+AS_VAR_SET(AX_BOOT_VFLAGS,["--no-rcfile --library-locator source -O2"])
 AS_VAR_SET_IF(BOOT_VFLAGS,,[AS_VAR_SET(BOOT_VFLAGS)])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
