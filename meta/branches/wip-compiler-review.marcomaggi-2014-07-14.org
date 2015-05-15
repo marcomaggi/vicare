@@ -20,3 +20,15 @@
 
 ** Splitting the big library into component libraries.
 
+** Implement unsafe variant of FX+ and similar.
+
+   This is  to allow  the substitution of  "fx+" and  similar primitives
+   with  the  equivalent  unsafe  variant  when it  is  known  that  the
+   application operands have the correct type.
+
+   For    example:   while    "+"    already    is   substituted    with
+   "$add-fixnum-fixnum"  when there  are two  fixnum operands,  "fx+" is
+   left untouched because;  it is not possible to  substitute "fx+" with
+   "$fx+", because  the return value  of "fx+" must  be a fixnum,  so an
+   overflow check must be performed.
+
