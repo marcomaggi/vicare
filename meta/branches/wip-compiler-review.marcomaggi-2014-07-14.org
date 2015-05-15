@@ -2,8 +2,6 @@
 
   Total review of the compiler.
 
-  Development of the source optimiser.
-
 * Compiler pass: introduce unsafe primcalls
 
 ** Use table of core primitives to infer core types.
@@ -15,4 +13,10 @@
 * Compiler pass: source optimiser
 
 ** Total code review.
+
+* Core primitive operations implementation
+
+** Total code review.
+
+** Splitting the big library into component libraries.
 
