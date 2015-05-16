@@ -142,7 +142,7 @@
     ((expansion-of)				expansion-of-transformer)
     ((visit-code-of)				visit-code-of-transformer)
     ((optimisation-of)				optimisation-of-transformer)
-    ((optimisation-and-core-type-inference-of)	optimisation-and-core-type-inference-of-transformer)
+    ((further-optimisation-of)	further-optimisation-of-transformer)
     ((assembly-of)				assembly-of-transformer)
 
     (else
@@ -2730,11 +2730,10 @@
 		 (make-retvals-signature-single-top))))
     ))
 
-(define-core-transformer (optimisation-and-core-type-inference-of input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer        function         used        to         expand        Vicare's
-  ;;OPTIMISATION-AND-CORE-TYPE-INFERENCE-OF  syntaxes  from  the top-level  built  in
-  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
-  ;;LEXENV; return a PSI struct.
+(define-core-transformer (further-optimisation-of input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's FURTHER-OPTIMISATION-OF  syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr)

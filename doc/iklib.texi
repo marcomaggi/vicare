@@ -3498,14 +3498,14 @@ The default is equivalent to @option{-O2}.
 @end deffn
 
 
-@deffn Syntax optimisation-and-core-type-inference-of @meta{expr}
+@deffn Syntax further-optimisation-of @meta{expr}
 Like @func{optimisation-of}, but in addition perform some compiler
-passes to introduce core type inference.
+passes that additionally optimise the code.
 
 Example session:
 
 @example
-(optimisation-and-core-type-inference-of
+(further-optimisation-of
   (let ((x (read)))
     (when (fixnum? x)
       (gcd x 2))))
