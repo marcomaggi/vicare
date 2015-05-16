@@ -1236,13 +1236,14 @@
     (top-level-value				v)
     (top-level-bound?				v)
     (set-top-level-value!			v)
-    (system-value-gensym			v)
     (system-label-gensym			v)
-    (system-value				v)
     (reset-symbol-proc!				v)
     (system-label				v)
     (system-id					v)
     (system-id-gensym				v)
+
+    (system-value-gensym			$symbols)
+    (system-value				$symbols)
 
 ;;; --------------------------------------------------------------------
 ;;; foldable primitives
@@ -5164,7 +5165,14 @@
   #| end of module: EXPAND-ALL |# )
 
 
-;;;; Go!
+;;;; do it
+
+;;Setting this variable  causes the compiler libraries to configure  themselves to be
+;;part of a boot image.
+;;
+(foreign-call "ikrt_posix_setenv"
+	      #ve(ascii "BUILDING_FOR_INCLUSION_IN_BOOT_IMAGE")
+	      #ve(ascii "yes"))
 
 ;;Internal  consistency  check:  verify  that  all  the  library  nicknames  used  in
 ;;IDENTIFIER->LIBRARY-MAP are defined by LIBRARY-LEGEND.
@@ -5209,8 +5217,8 @@
 			;;   (print-gensym #f)
 			;;   (when (equal? name '(ikarus chars))
 			;;     (pretty-print (syntax->datum core))))
-	    		(debug-printf "compiling: ~s\n" name)
-	    		(compiler.compile-core-expr-to-port core port))
+			(debug-printf "compiling: ~s\n" name)
+			(compiler.compile-core-expr-to-port core port))
 	      name*
 	      invoke-code*)))
 	(close-output-port port)))))

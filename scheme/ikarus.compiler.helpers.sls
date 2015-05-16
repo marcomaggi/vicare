@@ -18,9 +18,13 @@
 #!r6rs
 (library (ikarus.compiler.helpers)
   (export
+    cond-compiler-expansion
+    building-normal-boot-image
+    building-rotation-boot-image
+    inclusion-in-boot-image
+
     sl-apply-label-func
-    if-building-rotation-boot-image?		cond-expand
-    expand-time-gensym
+    cond-expand					expand-time-gensym
     %list-of-one-item?				fxincr!
     $map/stx					$for-each/stx
     $fold-right/stx
@@ -44,23 +48,53 @@
 
 ;;;; helper syntaxes
 
-(define-syntax (if-building-rotation-boot-image? stx)
-  (define rotating?
+(define-auxiliary-syntaxes
+  building-normal-boot-image
+  building-rotation-boot-image
+  inclusion-in-boot-image)
+
+(define-syntax (cond-compiler-expansion stx)
+
+  ;;This is  true when the compiler  libraries are expanded  to be included in  a new
+  ;;boot image, either  normal or rotation.  It is false  when the compiler libraries
+  ;;are expanded to build a new boot image, not to be included in it.
+  ;;
+  (define expanding-for-inclusion-in-boot-image?
+    (equal? "yes" (getenv "BUILDING_FOR_INCLUSION_IN_BOOT_IMAGE")))
+
+  ;;This is meaningful only  when the compiler libraries are expanded  to build a new
+  ;;boot image, not  to be included in it.  It  is true when the new boot  image is a
+  ;;rotation one; it is false when the new boot image is a normal one.
+  ;;
+  (define expanding-to-build-new-rotation-boot-image?
     (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
+
   (define (log description.stx)
     (fprintf (current-error-port)
-	     "ikarus.compiler: conditional for ~a boot image: ~a\n"
-	     (if rotating? "rotation" "normal")
-	     (syntax->datum description.stx)))
-  (syntax-case stx ()
-    ((_ ?description ?true-body)
+	     "ikarus.compiler: conditional for ~a: ~a\n"
+	     (syntax->datum description.stx)
+	     (cond (expanding-for-inclusion-in-boot-image?
+		    "inclusion in a new boot image")
+		   (expanding-to-build-new-rotation-boot-image?
+		    "building a new rotation boot image")
+		   (else
+		    "building a new normal boot image"))))
+
+  (syntax-case stx (building-normal-boot-image
+		    building-rotation-boot-image
+		    inclusion-in-boot-image)
+    ((_ ?description
+	((inclusion-in-boot-image)	. ?inclusion-in-boot-body)
+	((building-normal-boot-image)	. ?building-normal-body)
+	((building-rotation-boot-image)	. ?building-rotation-body))
      (begin
        (log #'?description)
-       (if rotating? #'?true-body #'(module ()))))
-    ((_ ?description ?true-body ?false-body)
-     (begin
-       (log #'?description)
-       (if rotating? #'?true-body #'?false-body)))
+       (cond (expanding-for-inclusion-in-boot-image?
+	      #'(begin . ?inclusion-in-boot-body))
+	     (expanding-to-build-new-rotation-boot-image?
+	      #'(begin . ?building-rotation-body))
+	     (else
+	      #'(begin . ?building-normal-body)))))
     ))
 
 (define-syntax (cond-expand stx)
