@@ -69,7 +69,8 @@
 		  check-compiler-pass-preconditions
 		  assembler-output
 		  optimizer-output
-		  source-optimizer-passes-count)
+		  source-optimizer-passes-count
+		  generate-descriptive-labels?)
 	    compiler.)
     (prefix (only (ikarus.debugger)
 		  guarded-start)
@@ -81,6 +82,10 @@
     (prefix (only (psyntax.library-manager)
 		  current-library-expander
 		  source-code-location)
+	    psyntax.)
+    (prefix (only (psyntax.lexical-environment)
+		  generate-descriptive-gensyms?
+		  generate-descriptive-marks?)
 	    psyntax.)
     (prefix (only (ikarus.reader)
 		  read-libraries-from-file)
@@ -638,6 +643,15 @@
 		 (("no-debug-messages")
 		  (option.print-debug-messages? #f))
 
+		 (("expander-descriptive-gensyms")
+		  (psyntax.generate-descriptive-gensyms? #t))
+
+		 (("expander-descriptive-marks")
+		  (psyntax.generate-descriptive-marks? #t))
+
+		 (("compiler-descriptive-labels")
+		  (compiler.generate-descriptive-labels? #t))
+
 		 (else
 		  (%error-and-exit "invalid --option argument" (cadr args))))
 	       (next-option (cddr args) k))))
@@ -894,6 +908,9 @@ Other options:
 	   print-optimiser
 	   check-compiler-pass-preconditions
 	   no-check-compiler-pass-preconditions
+           expander-descriptive-gensyms
+           expander-descriptive-marks
+           compiler-descriptive-labels
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,

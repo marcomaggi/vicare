@@ -385,6 +385,22 @@ messages are generated for library related actions.
 @cindex @code{no-debug-messages}, command line option
 Be more verbose about undertaken actions.  This is for debugging
 purposes.
+
+@item expander-descriptive-gensyms
+@cindex Command line option @code{expander-descriptive-gensyms}
+@cindex @code{expander-descriptive-gensyms}, command line option
+Instruct the expander to generate descriptive lexical and storage
+location gensyms.
+
+@item expander-descriptive-marks
+@cindex Command line option @code{expander-descriptive-marks}
+@cindex @code{expander-descriptive-marks}, command line option
+Instruct the expander to generate descriptive mark objects.
+
+@item compiler-descriptive-labels
+@cindex Command line option @code{compiler-descriptive-labels}
+@cindex @code{compiler-descriptive-labels}, command line option
+Instruct the compiler to generate descriptive labels.
 @end table
 
 @c ------------------------------------------------------------------------
