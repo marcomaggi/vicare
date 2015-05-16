@@ -219,6 +219,9 @@
 
 ;;;; done
 
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.complex-numbers"))
+
 #| end of library |# )
 
 ;;; end of file

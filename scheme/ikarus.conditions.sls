@@ -14,6 +14,7 @@
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus conditions)
   (export
     condition? compound-condition? condition-and-rtd?
@@ -807,8 +808,7 @@
 
 ;;;; done
 
-;; #!vicare
-;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions"))
+;;(foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.conditions"))
 
 #| end of library |# )
 

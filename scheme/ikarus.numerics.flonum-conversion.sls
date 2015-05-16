@@ -31,20 +31,19 @@
 
   (module (flonum->digits)
 
-    (define flonum->digits
-      (lambda (f e min-e p b B)
-	;; flonum v = f * b^e
-	;; p = precision  (p >= 1)
-	(let ((round? (even? f)))
-	  (if (>= e 0)
-	      (if (not (= f (expt b (- p 1))))
-		  (let ((be (expt b e)))
-		    (scale (* f be 2) 2 be be 0 B round? f e))
-		(let* ((be (expt b e)) (be1 (* be b)))
-		  (scale (* f be1 2) (* b 2) be1 be 0 B round? f e)))
-	    (if (or (= e min-e) (not (= f (expt b (- p 1)))))
-		(scale (* f 2) (* (expt b (- e)) 2) 1 1 0 B round? f e)
-	      (scale (* f b 2) (* (expt b (- 1 e)) 2) b 1 0 B round? f e))))))
+    (define (flonum->digits f e min-e p b B)
+      ;; flonum v = f * b^e
+      ;; p = precision  (p >= 1)
+      (let ((round? (even? f)))
+	(if (>= e 0)
+	    (if (not (= f (expt b (- p 1))))
+		(let ((be (expt b e)))
+		  (scale (* f be 2) 2 be be 0 B round? f e))
+	      (let* ((be (expt b e)) (be1 (* be b)))
+		(scale (* f be1 2) (* b 2) be1 be 0 B round? f e)))
+	  (if (or (= e min-e) (not (= f (expt b (- p 1)))))
+	      (scale (* f 2) (* (expt b (- e)) 2) 1 1 0 B round? f e)
+	    (scale (* f b 2) (* (expt b (- 1 e)) 2) b 1 0 B round? f e)))))
 
     (define (len n)
       (let f ((n n) (i 0))
@@ -200,13 +199,8 @@
   #| end of module: flonum->string |# )
 
 
-(define (string->flonum x)
-  (cond
-   ((string? x)
-    (foreign-call "ikrt_bytevector_to_flonum"
-		  (string->utf8 x)))
-   (else
-    (die 'string->flonum "not a string" x))))
+(define* (string->flonum {x string?})
+  (foreign-call "ikrt_bytevector_to_flonum" (string->utf8 x)))
 
 
 ;;;; done
