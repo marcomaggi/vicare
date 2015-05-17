@@ -1181,7 +1181,7 @@ EXTRA_DIST	+= \
 #### interface for "make check": selecting test programs
 
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS)
-XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps tests/test-issue-070.sps
+XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
