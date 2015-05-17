@@ -12587,11 +12587,6 @@ Fill @var{table} with the entries of the alist @var{al}.  Return
 @subsection Additional hash functions
 
 
-@defun string-ci-hash @var{str}
-Case--insensitive hash function for strings.
-@end defun
-
-
 @defun bytevector-hash @var{bv}
 @defunx bytevector-hash @var{bv} @var{max-len}
 Return a non--negative fixnum representing the hash value for @var{bv},
