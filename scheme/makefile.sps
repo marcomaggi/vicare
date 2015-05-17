@@ -207,18 +207,24 @@
   (lambda (stx)
     (define rotating?
       (equal? "yes" (getenv "BUILDING_ROTATION_BOOT_IMAGE")))
-    (fprintf (current-error-port)
-	     "makefile.sps: conditional for ~a boot image\n"
-	     (if rotating? "rotation" "normal"))
+    (define (%log description)
+      (fprintf (current-error-port)
+	       "makefile.sps: ~a: conditional for ~a boot image\n"
+	       description
+	       (if rotating? "rotation" "normal")))
     (syntax-case stx ()
-      ((_ ?true-body)
-       (if rotating? #'?true-body #'(module ())))
-      ((_ ?true-body ?false-body)
-       (if rotating? #'?true-body #'?false-body))
+      ((_ ?description ?true-body)
+       (begin
+	 (%log (syntax->datum #'?description))
+	 (if rotating? #'?true-body #'(module ()))))
+      ((_ ?description ?true-body ?false-body)
+       (begin
+	 (%log (syntax->datum #'?description))
+	 (if rotating? #'?true-body #'?false-body)))
       )))
 
 ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
-(if-building-rotation-boot-image?
+(if-building-rotation-boot-image? "importing EXPAND-LIBRARY"
     (import (vicare libraries))
   (import (only (vicare) expand-library)))
 
@@ -992,7 +998,7 @@
 ;;;
     ;;FIXME At  the next boot  image rotation  these libraries must  become required.
     ;;(Marco Maggi; Mon Apr 14, 2014)
-    ,@(if-building-rotation-boot-image?
+    ,@(if-building-rotation-boot-image? "expander built-in libaries requirements"
 	  '(($type-specs	(vicare expander object-type-specs)	#t	#t)
 	    ($expander-tags	(vicare expander tags)			#t	#t)
 	    ($expander		(vicare expander)			#t	#t))
@@ -5147,7 +5153,7 @@
     ;;   Represents the global bindings defined by the library body.
     ;;
     ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
-    (if-building-rotation-boot-image?
+    (if-building-rotation-boot-image? "extracting values after library expansion"
 	(let ((lib (expand-library library-sexp)))
 	  (values (library-name         lib)
 		  (library-invoke-code  lib)
@@ -5230,5 +5236,5 @@
 ;; coding: utf-8-unix
 ;; eval: (put 'time-it					'scheme-indent-function 1)
 ;; eval: (put 'each-for					'scheme-indent-function 1)
-;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 1)
+;; eval: (put 'if-building-rotation-boot-image?		'scheme-indent-function 2)
 ;; End:
