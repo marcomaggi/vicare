@@ -3461,6 +3461,18 @@ $1 = (lambda (stx) #<syntax expr=(void))
 @end example
 @end deffn
 
+
+@deffn Syntax expansion-of* @metao{expr} @meta{expr} @dots{}
+Like @syntax{expansion-of}, but wrap the input expression as follows:
+
+@lisp
+(internal-body @metao{expr} @meta{expr} @dots{} (void))
+@end lisp
+
+@noindent
+this allows the expansion of definition forms.
+@end deffn
+
 @c page
 @node iklib syntaxes optim-of
 @subsection Inspecting optimisation results
@@ -3498,6 +3510,34 @@ The default is equivalent to @option{-O2}.
 @end deffn
 
 
+@deffn Syntax optimisation-of* @metao{expr} @meta{expr} @dots{}
+Like @syntax{optimisation-of}, but wrap the input expression as follows:
+
+@lisp
+(internal-body @metao{expr} @meta{expr} @dots{} (void))
+@end lisp
+
+@noindent
+this allows the expansion and optimisation of definition forms.
+Example of @repl{} session:
+
+@example
+vicare> (pretty-width 65)
+vicare> (print-gensym #f)
+vicare> (optimisation-of*
+   (define-record-type frob)
+   (define it (make-frob)))
+$1 = (let* ((lex.frob-rtd_0
+        (make-record-type-descriptor 'frob '#f '#f '#f '#f '#()))
+       (lex.frob-rcd_0
+        (make-record-constructor-descriptor lex.frob-rtd_0 '#f
+          '#f))
+       (lex.make-frob_0 (record-constructor lex.frob-rcd_0)))
+  (begin (lex.make-frob_0) '#<void>))
+@end example
+@end deffn
+
+
 @deffn Syntax further-optimisation-of @meta{expr}
 Like @func{optimisation-of}, but in addition perform some compiler
 passes that additionally optimise the code.
@@ -3521,6 +3561,47 @@ Example session:
                T:real T:exact-integer T:exact T:number
                T:immediate T:object)))
          (constant #<void>)))
+@end example
+@end deffn
+
+
+@deffn Syntax further-optimisation-of* @metao{expr} @meta{expr} @dots{}
+Like @syntax{further-optimisation-of}, but wrap the input expression as
+follows:
+
+@lisp
+(internal-body @metao{expr} @meta{expr} @dots{} (void))
+@end lisp
+
+@noindent
+this allows the expansion and optimisation of definition forms.  Example
+of @repl{} session:
+
+@example
+vicare> (pretty-width 65)
+vicare> (print-gensym #f)
+vicare> (further-optimisation-of*
+   (define-record-type frob)
+   (define it (make-frob)))
+$1 = (let* ((lex.frob-rtd_0
+        (make-record-type-descriptor
+          (known 'frob
+            (T:symbol T:non-false T:nonimmediate T:object))
+          (known '#f (T:false T:boolean T:immediate T:object))
+          (known '#f (T:false T:boolean T:immediate T:object))
+          (known '#f (T:false T:boolean T:immediate T:object))
+          (known '#f (T:false T:boolean T:immediate T:object))
+          (known '#()
+            (T:vector T:non-false T:nonimmediate T:object))))
+       (lex.frob-rcd_0
+        (make-record-constructor-descriptor lex.frob-rtd_0
+          (known '#f (T:false T:boolean T:immediate T:object))
+          (known '#f (T:false T:boolean T:immediate T:object))))
+       (lex.make-frob_0 (record-constructor lex.frob-rcd_0)))
+  (begin
+    ((known lex.make-frob_0
+       (T:procedure T:non-false T:nonimmediate T:object)))
+    '#<void>))
 @end example
 @end deffn
 

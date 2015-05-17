@@ -140,9 +140,12 @@
 
     ((type-of)					type-of-transformer)
     ((expansion-of)				expansion-of-transformer)
+    ((expansion-of*)				expansion-of*-transformer)
     ((visit-code-of)				visit-code-of-transformer)
     ((optimisation-of)				optimisation-of-transformer)
-    ((further-optimisation-of)	further-optimisation-of-transformer)
+    ((further-optimisation-of)			further-optimisation-of-transformer)
+    ((optimisation-of*)				optimisation-of*-transformer)
+    ((further-optimisation-of*)			further-optimisation-of*-transformer)
     ((assembly-of)				assembly-of-transformer)
 
     (else
@@ -2687,6 +2690,17 @@
 		 (make-retvals-signature-single-top))))
     ))
 
+(define-core-transformer (expansion-of* input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's EXPANSION-OF*  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?expr0 ?expr* ...)
+     (chi-expr (bless `(expansion-of (internal-body ,?expr0 ,@?expr* (void))))
+	       lexenv.run lexenv.expand))
+    ))
+
 
 ;;;; module core-macro-transformer: VISIT-CODE-OF
 
@@ -2712,7 +2726,7 @@
     ))
 
 
-;;;; module core-macro-transformer: OPTIMISATION-OF
+;;;; module core-macro-transformer: OPTIMISATION-OF, OPTIMISATION-OF*, FURTHER-OPTIMISATION-OF, FURTHER-OPTIMISATION-OF*
 
 (define-core-transformer (optimisation-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand  Vicare's OPTIMISATION-OF syntaxes  from the
@@ -2730,6 +2744,23 @@
 		 (make-retvals-signature-single-top))))
     ))
 
+(define-core-transformer (optimisation-of* input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used  to expand Vicare's OPTIMISATION-OF*  syntaxes from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?expr0 ?expr* ...)
+     (let* ((expr.psi  (chi-expr (bless `(internal-body ,?expr0 ,@?expr* (void)))
+				 lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sexp (compiler.core-expr->optimized-code expr.core)))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   expr.sexp)
+		 (make-retvals-signature-single-top))))
+    ))
+
 (define-core-transformer (further-optimisation-of input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's FURTHER-OPTIMISATION-OF  syntaxes
   ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
@@ -2738,6 +2769,23 @@
   (syntax-match input-form.stx ()
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   expr.sexp)
+		 (make-retvals-signature-single-top))))
+    ))
+
+(define-core-transformer (further-optimisation-of* input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to  expand Vicare's  FURTHER-OPTIMISATION-OF* syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?expr0 ?expr* ...)
+     (let* ((expr.psi  (chi-expr (bless `(internal-body ,?expr0 ,@?expr* (void)))
+				 lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sexp (compiler.core-expr->optimisation-and-core-type-inference-code expr.core)))
        (make-psi input-form.stx
