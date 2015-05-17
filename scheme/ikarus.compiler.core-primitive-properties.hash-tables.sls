@@ -164,6 +164,14 @@
   (attributes
    ((_)				effect-free)))
 
+(declare-core-primitive mutable-hashtable?
+    (safe)
+  (signatures
+   ((T:hashtable)		=> (T:true))
+   ((T:object)			=> (T:false)))
+  (attributes
+   ((_)				foldable effect-free)))
+
 (declare-core-primitive hashtable-size
     (safe)
   (signatures
@@ -186,8 +194,124 @@
   (attributes
    ((_)				effect-free result-true)))
 
-;;; --------------------------------------------------------------------
-;;; hash functions
+
+;;;; safe hashtable iterators
+;;
+;;NOTE All the procedures that apply operand functions might generate side effects!!!
+;;
+
+(declare-core-primitive hashtable-map-keys
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:hashtable)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-map-entries
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:hashtable)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-for-each-key
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:void)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-for-each-entry
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:void)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-for-all-keys
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:object)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-for-all-entries
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:object)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable-exists-key
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:object)))
+  (attributes
+   ((_ _)				effect-free)))
+
+(declare-core-primitive hashtable-exists-entry
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:object)))
+  (attributes
+   ((_ _)				effect-free)))
+
+(declare-core-primitive hashtable-find-key
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:object))))
+
+(declare-core-primitive hashtable-find-entry
+    (safe)
+  (signatures
+   ((T:procedure T:hashtable)		=> (T:object))))
+
+(declare-core-primitive hashtable-fold-keys
+    (safe)
+  (signatures
+   ((T:procedure T:object T:hashtable)		=> (T:object))))
+
+(declare-core-primitive hashtable-fold-entries
+    (safe)
+  (signatures
+   ((T:procedure T:object T:hashtable)		=> (T:object))))
+
+(declare-core-primitive alist->hashtable!
+    (safe)
+  (signatures
+   ((T:hashtable T:proper-list)		=> (T:hashtable)))
+  (attributes
+   ((_ _)				result-true)))
+
+(declare-core-primitive hashtable->alist
+    (safe)
+  (signatures
+   ((T:hashtable)				=> (T:proper-list))
+   ((T:hashtable (or T:false T:procedure))	=> (T:proper-list)))
+  (attributes
+   ((_)					result-true)
+   ((_ _)				result-true)))
+
+
+;;; safe hash functions
+
+(let-syntax
+    ((declare-hash-function (syntax-rules ()
+			      ((_ ?who ?obj-tag . ?replacements)
+			       (declare-core-primitive ?who
+				   (safe)
+				 (signatures
+				  ((?obj-tag)						=> (T:fixnum))
+				  ((?obj-tag (or T:non-negative-fixnum T:boolean))	=> (T:fixnum)))
+				 (attributes
+				  ((_)			foldable effect-free result-true)
+				  ((_ _)		foldable effect-free result-true))
+				 . ?replacements))
+			      )))
+  (declare-hash-function string-hash		T:string	(replacements $string-hash))
+  (declare-hash-function string-ci-hash		T:string	(replacements $string-ci-hash))
+  (declare-hash-function bytevector-hash	T:bytevector	(replacements $bytevector-hash))
+  #| end of LET-SYNTAX |# )
 
 (let-syntax
     ((declare-hash-function (syntax-rules ()
@@ -201,12 +325,29 @@
 				 . ?replacements))
 			      )))
   (declare-hash-function equal-hash		T:object)
-  (declare-hash-function string-hash		T:string	(replacements $string-hash))
-  (declare-hash-function string-ci-hash		T:string	(replacements $string-ci-hash))
   (declare-hash-function symbol-hash		T:symbol	(replacements $symbol-hash))
-  (declare-hash-function bytevector-hash	T:bytevector	(replacements $bytevector-hash))
   (declare-hash-function port-hash		T:port)
+  (declare-hash-function char-hash		T:char)
+  (declare-hash-function char-ci-hash		T:char)
+  (declare-hash-function boolean-hash		T:boolean)
+  (declare-hash-function fixnum-hash		T:fixnum)
+  (declare-hash-function exact-integer-hash	T:exact-integer)
+  (declare-hash-function flonum-hash		T:flonum)
+  (declare-hash-function number-hash		T:number)
+  (declare-hash-function struct-hash		T:struct)
+  (declare-hash-function record-hash		T:record)
+  (declare-hash-function void-hash		T:void)
+  (declare-hash-function eof-object-hash	T:eof)
+  (declare-hash-function would-block-hash	T:would-block)
+  (declare-hash-function object-hash		T:object)
   #| end of LET-SYNTAX |# )
+
+(declare-core-primitive pointer-value
+    (safe)
+  (signatures
+   ((T:object)		=> (T:fixnum)))
+  (attributes
+   ((_)			effect-free result-true)))
 
 
 ;;;; hashtables, unsafe procedures
@@ -219,14 +360,28 @@
 			       (declare-core-primitive ?who
 				   (unsafe)
 				 (signatures
+				  ((?obj-tag)						=> (T:fixnum))
+				  ((?obj-tag (or T:non-negative-fixnum T:boolean))	=> (T:fixnum)))
+				 (attributes
+				  ((_)			foldable effect-free result-true)
+				  ((_ _)		foldable effect-free result-true))))
+			      )))
+  (declare-hash-function $string-hash		T:string)
+  (declare-hash-function $string-ci-hash	T:string)
+  (declare-hash-function $bytevector-hash	T:bytevector)
+  #| end of LET-SYNTAX |# )
+
+(let-syntax
+    ((declare-hash-function (syntax-rules ()
+			      ((_ ?who ?obj-tag)
+			       (declare-core-primitive ?who
+				   (unsafe)
+				 (signatures
 				  ((?obj-tag)		=> (T:fixnum)))
 				 (attributes
 				  ((_)			foldable effect-free result-true))))
 			      )))
-  (declare-hash-function $string-hash		T:string)
-  (declare-hash-function $string-ci-hash	T:string)
   (declare-hash-function $symbol-hash		T:symbol)
-  (declare-hash-function $bytevector-hash	T:bytevector)
   #| end of LET-SYNTAX |# )
 
 
@@ -237,3 +392,6 @@
 #| end of library |# )
 
 ;;; end o file
+;; Local Variables:
+;; eval: (put 'declare-core-primitive 'scheme-indent-function 2)
+;; End:
