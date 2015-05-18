@@ -1683,6 +1683,7 @@
     ($struct-rtd				$structs)
     ($struct					$structs)
     ($make-struct				$structs)
+    ($make-clean-struct				$structs)
     ($struct?					$structs)
     ($struct/rtd?				$structs)
     ($struct-guardian				$structs)

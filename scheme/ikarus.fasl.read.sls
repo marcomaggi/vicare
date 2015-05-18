@@ -34,7 +34,8 @@
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
-    (vicare unsafe operations)
+    (except (vicare unsafe operations)
+	    $make-clean-struct)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
@@ -423,11 +424,14 @@
 
 ;;;; utilities
 
+(define-syntax-rule ($make-clean-struct ?std)
+  (foreign-call "ikrt_make_struct" ?std))
+
 (define (make-struct rtd n)
   ;;Build  and return  a new  struct  object of  type RTD  and having  N
   ;;fields.  Initialise all the fields to the fixnum 0.
   ;;
-  (let loop ((i 0) (n n) (s ($make-struct rtd n)))
+  (let loop ((i 0) (n n) (s ($make-clean-struct rtd)))
     (if ($fx= i n)
 	s
       (begin

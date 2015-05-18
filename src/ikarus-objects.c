@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute	it and/or modify
   it under the	terms of the GNU General Public	 License as published by
@@ -623,7 +623,7 @@ ikrt_make_vector1 (ikptr s_len, ikpcb* pcb)
 /* This  is   the  core   implementation  of  the   primitive  operation
    MAKE-VECTOR, */
 {
-  int intlen = (int)s_len;
+  iksword_t intlen = (iksword_t)s_len;
   if (IK_IS_FIXNUM(s_len) && (intlen >= 0)) {
     ikptr s = ik_safe_alloc(pcb, IK_ALIGN(s_len + disp_vector_data));
     IK_REF(s, 0) = s_len;
@@ -734,6 +734,12 @@ ikrt_vector_copy (ikptr s_dst, ikptr s_dst_start,
 /** --------------------------------------------------------------------
  ** Scheme struct utilities.
  ** ----------------------------------------------------------------- */
+
+ikptr
+ikrt_make_struct (ikptr s_std, ikpcb* pcb)
+{
+  return ika_struct_alloc_and_init(pcb, s_std);
+}
 
 int
 ik_is_struct (ikptr R)

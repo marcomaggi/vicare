@@ -43,7 +43,10 @@
     ;; structure inspection
     struct-rtd
     struct-name			struct-printer
-    struct-destructor		struct-length)
+    struct-destructor		struct-length
+
+    ;; unsafe operations
+    $make-clean-struct)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed May 6, 2015)
@@ -80,7 +83,8 @@
 		  struct-destructor		struct-length)
     (vicare system $fx)
     (vicare system $pairs)
-    (vicare system $structs)
+    (except (vicare system $structs)
+	    $make-clean-struct)
     (only (vicare system $symbols)
 	  $set-symbol-value!
 	  $symbol-value)
@@ -248,6 +252,9 @@
 
 ;;;; data structure functions
 
+(define ($make-clean-struct std)
+  (foreign-call "ikrt_make_struct" std))
+
 (module (struct-constructor)
   ;;Return a constructor function for  data structures of type STD.  The
   ;;constructor accepts as  many arguments as fields defined  by STD and
@@ -255,9 +262,8 @@
   ;;
   (define* (struct-constructor {std struct-type-descriptor?})
     (lambda args
-      (let* ((field-num ($std-length std))
-	     (stru      ($make-struct std field-num)))
-	(if (%set-fields stru args 0 field-num)
+      (let ((stru ($make-clean-struct std)))
+	(if (%set-fields stru args 0 ($std-length std))
 	    ;;Notice  that the  expander also  has this  operation in  its
 	    ;;implementation of DEFINE-STRUCT.
 	    (if ($std-destructor std)
