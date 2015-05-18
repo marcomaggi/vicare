@@ -269,8 +269,8 @@
 
 (fasl-write.writing-boot-image? #t)
 
-(compiler.perform-core-type-inference? #t)
-(compiler.perform-unsafe-primrefs-introduction? #t)
+;; (compiler.perform-core-type-inference? #f)
+;; (compiler.perform-unsafe-primrefs-introduction? #f)
 (pretty-width 160)
 ((pretty-format 'fix)
  ((pretty-format 'letrec)))
