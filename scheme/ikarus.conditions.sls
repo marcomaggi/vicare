@@ -153,7 +153,11 @@
 
     preconditions)
   (import (except (vicare)
+
+		  ;;We use an internal macro  definition to define condition types in
+		  ;;this library.
 		  define-condition-type
+
 		  condition? compound-condition? condition-and-rtd?
 		  simple-condition?
 		  list-of-conditions?
@@ -287,8 +291,7 @@
 	  define-list-of-type-predicate
 	  define-min/max-comparison
 	  define-equality/sorting-predicate
-	  define-inequality-predicate)
-    (vicare unsafe operations))
+	  define-inequality-predicate))
 
 
 ;;;; arguments validation
@@ -451,35 +454,41 @@
 	       (make-irritants-condition irritants)))))
 
 
-(define-syntax define-condition-type
-  (lambda (x)
-    (define (mkname name suffix)
-      (datum->syntax name
-		     (string->symbol
-		      (string-append (symbol->string (syntax->datum name))
-				     suffix))))
-    (syntax-case x ()
-      ((ctxt name super constructor predicate (field* accessor*) ...)
-       (and (identifier? #'name)
-	    (identifier? #'super)
-	    (identifier? #'constructor)
-	    (identifier? #'predicate)
-	    (andmap identifier? #'(field* ...))
-	    (andmap identifier? #'(accessor* ...)))
-       (with-syntax (((aux-accessor* ...) (generate-temporaries #'(accessor* ...)))
-		     (rtd (mkname #'name "-rtd"))
-		     (rcd (mkname #'name "-rcd")))
-	 #'(begin
-	     (define-record-type (name constructor p?)
-	       (parent super)
-	       (fields (immutable field* aux-accessor*) ...)
-	       (nongenerative)
-	       (sealed #f) (opaque #f))
-	     (define predicate (condition-predicate (record-type-descriptor name)))
-	     (define accessor* (condition-accessor (record-type-descriptor name) aux-accessor*))
-	     ...
-	     (define rtd (record-type-descriptor name))
-	     (define rcd (record-constructor-descriptor name))))))))
+(define-syntax (define-condition-type stx)
+  ;;This macro is used in this library to define condition object types.
+  ;;
+  ;;NOTE Remember that this  macro is *not* the one exported by  the boot image.  The
+  ;;transformer of  the keyword  binding DEFINE-CONDITION-TYPE  exported by  the boot
+  ;;image is integrated in the expander.
+  ;;
+  (define (mkname name suffix)
+    (datum->syntax name
+		   (string->symbol
+		    (string-append (symbol->string (syntax->datum name))
+				   suffix))))
+  (syntax-case stx ()
+    ((ctxt name super constructor predicate (field* accessor*) ...)
+     (and (identifier? #'name)
+	  (identifier? #'super)
+	  (identifier? #'constructor)
+	  (identifier? #'predicate)
+	  (andmap identifier? #'(field* ...))
+	  (andmap identifier? #'(accessor* ...)))
+     (with-syntax (((aux-accessor* ...) (generate-temporaries #'(accessor* ...)))
+		   (rtd (mkname #'name "-rtd"))
+		   (rcd (mkname #'name "-rcd")))
+       #'(begin
+	   (define-record-type (name constructor p?)
+	     (parent super)
+	     (fields (immutable field* aux-accessor*) ...)
+	     (nongenerative)
+	     (sealed #f) (opaque #f))
+	   (define predicate (condition-predicate (record-type-descriptor name)))
+	   (define accessor* (condition-accessor (record-type-descriptor name) aux-accessor*))
+	   ...
+	   (define rtd (record-type-descriptor name))
+	   (define rcd (record-constructor-descriptor name)))))
+    ))
 
 
 ;;;; R6RS condition types

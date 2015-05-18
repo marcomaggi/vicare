@@ -68,9 +68,23 @@
 		  record-destructor-set!		record-destructor)
     (vicare system $fx)
     (vicare system $pairs)
-    (vicare system $structs)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
+    ;;2015)
+    (only (ikarus structs)
+	  $make-clean-struct)
+    (except (vicare system $structs)
+	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Mon May 18, 2015)
+	    $make-clean-struct)
     (vicare system $symbols)
-    (vicare system $vectors)
+    (except (vicare system $vectors)
+	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Mon May 18, 2015)
+	    $make-clean-vector)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Mon May 18,
+    ;;2015)
+    (only (ikarus vectors)
+	  $make-clean-vector)
     ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Mar 31,
     ;;2015)
     (only (ikarus fixnums)
@@ -429,16 +443,18 @@
   ;;the symbols MUTABLE and IMMUTABLE are  respectively converted into true and false
   ;;booleans, lists are converted to pairs.
   ;;
-  (let* ((number-of-fields	($vector-length input-vector))
-	 (normalised-vector	($make-vector   number-of-fields)))
-    (let next-field ((i 0))
-      (if ($fx= i number-of-fields)
-	  normalised-vector
-	(let* ((item		($vector-ref input-vector i))
-	       (mutability	($car item))
-	       (name		($car ($cdr item))))
-	  ($vector-set! normalised-vector i (cons (eq? mutability 'mutable) name))
-	  (next-field ($fxadd1 i)))))))
+  (let ((number-of-fields (vector-length input-vector)))
+    (if (fxzero? number-of-fields)
+	input-vector
+      (let next-field ((normalised-vector ($make-clean-vector number-of-fields))
+		       (i                 0))
+	(if ($fx< i number-of-fields)
+	    (let* ((item	($vector-ref input-vector i))
+		   (mutability	($car item))
+		   (name	($car ($cdr item))))
+	      ($vector-set! normalised-vector i (cons (eq? mutability 'mutable) name))
+	      (next-field normalised-vector ($fxadd1 i)))
+	  normalised-vector)))))
 
 (define (%field-name->absolute-field-index rtd field-name-sym)
   ;;Given a record-type descriptor and a symbol representing a field name: search the
@@ -612,7 +628,7 @@
   ;;
   (let* ((fields-vector     ($<rtd>-fields rtd))
 	 (number-of-fields  ($vector-length fields-vector)))
-    (let next-field ((v ($make-vector number-of-fields))
+    (let next-field ((v ($make-clean-vector number-of-fields))
 		     (i 0))
       (if ($fx= i number-of-fields)
 	  v
@@ -671,17 +687,17 @@
     ;;record type has a destructor: register the record in the guardian.  RTD must be
     ;;an instance of <RTD>.
     ;;
-    (let* ((N (<rtd>-total-fields-number rtd))
-	   (S ($make-struct rtd N)))
-      (let loop ((i 0))
-	(if ($fx= i N)
-	    (cond ((<rtd>-destructor rtd)
-		   => (lambda (destructor)
-			($record-guardian S)))
-		  (else S))
-	  (begin
-	    ($struct-set! S i (void))
-	    (loop ($fxadd1 i)))))))
+    (let loop ((S ($make-clean-struct rtd))
+	       (N (<rtd>-total-fields-number rtd))
+	       (i 0))
+      (if ($fx= i N)
+	  (cond ((<rtd>-destructor rtd)
+		 => (lambda (destructor)
+		      ($record-guardian S)))
+		(else S))
+	(begin
+	  ($struct-set! S i (void))
+	  (loop S N ($fxadd1 i))))))
 
   #| end of module |# )
 
@@ -875,13 +891,12 @@
     ;;
     ;;See the R6RS document for details on the arguments.
     ;;
-    (define normalised-fields-description
-      (%normalise-fields-vector fields))
-    (receive-and-return (rtd)
-	(if (symbol? uid)
-	    (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields-description fields)
-	  (%generate-rtd name parent uid sealed? opaque? normalised-fields-description))
-      ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))
+    (let ((normalised-fields-description (%normalise-fields-vector fields)))
+      (receive-and-return (rtd)
+	  (if (symbol? uid)
+	      (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields-description fields)
+	    (%generate-rtd name parent uid sealed? opaque? normalised-fields-description))
+	($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd)))))
 
   (define (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
@@ -916,32 +931,32 @@
     ;;interned) RTD.  If the  specified UID holds an RTD in  its "value" field: check
     ;;that the arguments are compatible and return the interned RTD.
     ;;
-    (define rtd
-      (%lookup-nongenerative-rtd uid))
-    (define (%error wrong-field)
-      (procedure-arguments-consistency-violation 'make-record-type-descriptor
-	(string-append
-	 "requested access to non-generative record-type descriptor \
-            with " wrong-field " not equivalent to that in the interned RTD")
-	rtd `(,name ,parent-rtd ,uid ,sealed? ,opaque? ,fields)))
-    (if rtd
-	;;Should  this  validation  be  omitted when  we  compile  without  arguments
-	;;validation?  (Marco Maggi; Sun Mar 18, 2012)
-	;;
-	;;Notice  that the  requested  NAME can  be  different from  the  one in  the
-	;;interned RTD.
-	(if (eq? ($<rtd>-parent rtd) parent-rtd)
-	    (if (boolean=? ($<rtd>-sealed? rtd) sealed?)
-		(if (boolean=? ($<rtd>-opaque? rtd) opaque?)
-		    (if (equal? ($<rtd>-fields  rtd) normalised-fields)
-			;;Return the interned RTD.
-			rtd
-		      (%error "fields"))
-		  (%error "opaque"))
-	      (%error "sealed"))
-	  (%error "parent"))
-      ;;Build a new RTD and intern it.
-      (%intern-nongenerative-rtd! uid (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields))))
+    (cond ((%lookup-nongenerative-rtd uid)
+	   => (lambda (rtd)
+		(define (%error wrong-field)
+		  (procedure-arguments-consistency-violation 'make-record-type-descriptor
+		    (string-append
+		     "requested access to non-generative record-type descriptor \
+                      with " wrong-field " not equivalent to that in the interned RTD")
+		    rtd `(,name ,parent-rtd ,uid ,sealed? ,opaque? ,fields)))
+		;;Should this validation be omitted when we compile without arguments
+		;;validation?  (Marco Maggi; Sun Mar 18, 2012)
+		;;
+		;;Notice that the requested NAME can be different from the one in the
+		;;interned RTD.
+		(if (eq? ($<rtd>-parent rtd) parent-rtd)
+		    (if (boolean=? ($<rtd>-sealed? rtd) sealed?)
+			(if (boolean=? ($<rtd>-opaque? rtd) opaque?)
+			    (if (equal? ($<rtd>-fields  rtd) normalised-fields)
+				;;Return the interned RTD.
+				rtd
+			      (%error "fields"))
+			  (%error "opaque"))
+		      (%error "sealed"))
+		  (%error "parent"))))
+	  (else
+	   ;;Build a new RTD and intern it.
+	   (%intern-nongenerative-rtd! uid (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)))))
 
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
     (receive-and-return (rtd)

@@ -5526,6 +5526,12 @@ behaviour is undefined.
 @end deffn
 
 
+@deffn {Unsafe Operation} $make-clean-struct @var{std}
+Allocate a new data structure of type @var{std} and reset all the fields
+to the fixnum zero.
+@end deffn
+
+
 @deffn {Unsafe Operation} $struct-rtd @var{stru}
 Return a reference to the type descriptor of @var{stru}.
 @end deffn
