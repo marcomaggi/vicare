@@ -401,7 +401,7 @@
   ;;
   ;;To serialise a compiled program: we serialise the RUN-THUNK closure object.
   ;;
-  (receive (invoke-lib* invoke-code visit-code* export-subst export-env option*)
+  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option*)
       (expand-r6rs-top-level-program expr*)
     (lambda ()
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
@@ -428,13 +428,13 @@
     ;;
     (receive (import-spec* option* body*)
 	(%parse-top-level-program program-form*)
-      (receive (import-spec* invoke-lib* visit-lib* invoke-code visit-code* export-subst export-env)
+      (receive (import-spec* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
 	  (let ((option* (%parse-program-options option*))
 		(mixed-definitions-and-expressions? #t))
 	    (import CORE-BODY-EXPANDER)
 	    (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
 				%verbose-messages-thunk))
-	(values invoke-lib* invoke-code visit-code* export-subst export-env option*))))
+	(values invoke-lib* invoke-code visit-code* export-subst global-env option*))))
 
   (define (%verbose-messages-thunk)
     (when (option.tagged-language?)
@@ -492,13 +492,13 @@
   #| end of module: EXPAND-R6RS-TOP-LEVEL-PROGRAM |# )
 
 (define (expand-r6rs-top-level-program->sexp sexp)
-  (receive (invoke-lib* invoke-code visit-code* export-subst export-env option*)
+  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option*)
       (expand-r6rs-top-level-program sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
       (visit-code*	. ,visit-code*)
       (export-subst	. ,export-subst)
-      (export-env	. ,export-env)
+      (global-env	. ,global-env)
       (option*		. ,option*))))
 
 
@@ -568,7 +568,7 @@
   ;;EXPORT-SUBST -
   ;;  A subst representing the bindings to export.
   ;;
-  ;;EXPORT-ENV -
+  ;;GLOBAL-ENV -
   ;;  A list representing the bindings exported by the library.
   ;;
   ;;GUARD-CODE -
@@ -627,7 +627,7 @@
   ;;    (fun . lab.fun)
   ;;    (var . lab.var))
   ;;
-  ;;the EXPORT-ENV
+  ;;the GLOBAL-ENV
   ;;
   ;;   ((lab.var global		. loc.lex.var)
   ;;    (lab.fun global		. loc.lex.fun)
@@ -663,7 +663,7 @@
      (receive (libname
 	       import-lib* invoke-lib* visit-lib*
 	       invoke-code visit-code*
-	       export-subst export-env
+	       export-subst global-env
 	       guard-code guard-lib*
 	       option*)
 	 (parametrise ((source-code-location (or filename (source-code-location))))
@@ -691,7 +691,7 @@
 	 ;;This call returns a "library" object.
 	 (intern-library uid libname
 			 import-libdesc* visit-libdesc* invoke-libdesc*
-			 export-subst export-env
+			 export-subst global-env
 			 visit-proc invoke-proc
 			 visit-code invoke-code
 			 guard-code guard-libdesc*
@@ -758,7 +758,7 @@
       (invoke-code	. ,(library-invoke-code   lib))
       (visit-code	. ,(library-visit-code    lib))
       (export-subst	. ,(library-export-subst  lib))
-      (export-env	. ,(library-export-env    lib))
+      (global-env	. ,(library-global-env    lib))
       (guard-code	. ,(library-guard-code    lib))
       (guard-libdesc*	. ,(map library-descriptor (library-guard-lib* lib)))
       (option*		. ,(library-option*       lib)))))
@@ -789,7 +789,7 @@
       (let* ((libname.sexp  (syntax->datum libname))
 	     (option*       (%parse-library-options libopt*))
 	     (stale-clt     (%make-stale-collector)))
-	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-code* export-subst export-env)
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
 		(import CORE-BODY-EXPANDER)
@@ -801,7 +801,7 @@
 	    (values libname.sexp
 		    import-lib* invoke-lib* visit-lib*
 		    invoke-code visit-code* export-subst
-		    export-env guard-code guard-lib*
+		    global-env guard-code guard-lib*
 		    option*))))))
 
   (define (%make-verbose-messages-thunk libname.sexp)
@@ -1018,9 +1018,9 @@
   ;;       (the-var2 . lab.var2)
   ;;       (var1     . lab.var1))
   ;;
-  ;;7..EXPORT-ENV is  the lexical  environment of bindings  exported by  the library.
+  ;;7..GLOBAL-ENV is  the lexical  environment of bindings  exported by  the library.
   ;;   Its format  is different from the  one of the LEXENV.*  values used throughout
-  ;;   the expansion process.  For the library in the example, EXPORT-ENV is:
+  ;;   the expansion process.  For the library in the example, GLOBAL-ENV is:
   ;;
   ;;      ((lab.var1 global       . loc.lex.var1)
   ;;       (lab.var2 global       . loc.lex.var2)
@@ -1078,9 +1078,9 @@
 			 (init*.psi     (chi-expr* init*.stx lexenv.run lexenv.expand))
 			 (loc*          (map generate-qrhs-loc qrhs*))
 			 (export-subst  (%make-export-subst export-name* export-id*)))
-		    (receive (export-env visit-env*)
-			(%make-export-env/visit-env* lex* loc* lexenv.run)
-		      (%validate-exports export-spec* export-subst export-env)
+		    (receive (global-env visit-env*)
+			(%make-global-env/visit-env* lex* loc* lexenv.run)
+		      (%validate-exports export-spec* export-subst global-env)
 		      (let ((invoke-code (build-with-compilation-options option*
 					   (build-library-letrec* no-source
 					     mixed-definitions-and-expressions?
@@ -1090,7 +1090,7 @@
 					       (build-sequence no-source
 						 (map psi-core-expr init*.psi)))))))
 			(values (itc) (rtc) (vtc)
-				invoke-code visit-env* export-subst export-env))))))))))))
+				invoke-code visit-env* export-subst global-env))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -1205,12 +1205,12 @@
 	       (syntax-violation #f "cannot export unbound identifier" export-id))))
       export-name* export-id*))
 
-  (define (%make-export-env/visit-env* lex* loc* lexenv.run)
-    ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an EXPORT-ENV entry,
-    ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or expand-time
+  (define (%make-global-env/visit-env* lex* loc* lexenv.run)
+    ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an GLOBAL-ENV entry,
+    ;;accumulating GLOBAL-ENV;  if the syntactic  binding is a macro  or expand-time
     ;;value: accumulate the VISIT-ENV* alist.
     ;;
-    ;;Notice that  EXPORT-ENV contains  an entry for  every global  lexical variable,
+    ;;Notice that  GLOBAL-ENV contains  an entry for  every global  lexical variable,
     ;;both the exported ones and the  non-exported ones.  It is responsibility of the
     ;;EXPORT-SUBST to select the entries representing the exported bindings.
     ;;
@@ -1221,10 +1221,10 @@
     ;;variables: there must be a loc in LOC* for every lex in LEX*.
     ;;
     (let loop ((lexenv.run	lexenv.run)
-	       (export-env	'())
+	       (global-env	'())
 	       (visit-env*	'()))
       (if (null? lexenv.run)
-	  (values export-env visit-env*)
+	  (values global-env visit-env*)
 	(let* ((entry    (car lexenv.run))
 	       (label    (lexenv-entry.label entry))
 	       (binding  (lexenv-entry.binding-descriptor entry)))
@@ -1237,7 +1237,7 @@
 	     ;;
 	     ;;   (?label . (lexical . (?lexvar . ?mutable)))
 	     ;;
-	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;Add to the GLOBAL-ENV an entry like:
 	     ;;
 	     ;;   (?label . (?type . ?lex/loc))
 	     ;;
@@ -1246,7 +1246,7 @@
 	     ;;gensym.
 	     ;;
 	     ;;NOTE  The  entries  of  type  "global-mutable"  are  forbidden  to  be
-	     ;;exported: entries  of this  type can  be in  the EXPORT-ENV,  but they
+	     ;;exported: entries  of this  type can  be in  the GLOBAL-ENV,  but they
 	     ;;cannot  be referenced  in the  EXPORT-SUBST; this  validation will  be
 	     ;;performed later.
 	     ;;
@@ -1261,13 +1261,13 @@
 				     (if (eq? lexical-gensym (car lex*))
 					 (car loc*)
 				       (lookup lexical-gensym (cdr lex*) (cdr loc*)))
-				   (assertion-violation/internal-error 'make-export-env/lookup
+				   (assertion-violation/internal-error 'make-global-env/lookup
 				     "missing lexical gensym in lexenv" lexical-gensym))))
 		    (type      (if (lexical-var-binding-descriptor-value.assigned? bind-val)
 				   'global-mutable
 				 'global)))
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label type loc) export-env)
+		     (cons (cons* label type loc) global-env)
 		     visit-env*)))
 
 	    ((local-macro)
@@ -1280,7 +1280,7 @@
 	     ;;
 	     ;;   (?label . (local-macro . (?transformer . ?expanded-expr)))
 	     ;;
-	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;Add to the GLOBAL-ENV an entry like:
 	     ;;
 	     ;;   (?label global-macro . ?loc)
 	     ;;
@@ -1290,7 +1290,7 @@
 	     ;;
 	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-macro loc) export-env)
+		     (cons (cons* label 'global-macro loc) global-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    ((local-macro!)
@@ -1303,7 +1303,7 @@
 	     ;;
 	     ;;   (?label . (local-macro! . (?transformer . ?expanded-expr)))
 	     ;;
-	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;Add to the GLOBAL-ENV an entry like:
 	     ;;
 	     ;;   (?label global-macro . ?loc)
 	     ;;
@@ -1313,7 +1313,7 @@
 	     ;;
 	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-macro! loc) export-env)
+		     (cons (cons* label 'global-macro! loc) global-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    ((local-etv)
@@ -1325,7 +1325,7 @@
 	     ;;
 	     ;;   (?label . (local-etv . (?object . ?expanded-expr)))
 	     ;;
-	     ;;Add to the EXPORT-ENV an entry like:
+	     ;;Add to the GLOBAL-ENV an entry like:
 	     ;;
 	     ;;   (?label . (global-etv . ?loc))
 	     ;;
@@ -1335,15 +1335,15 @@
 	     ;;
 	     (let ((loc (generate-storage-location-gensym label)))
 	       (loop (cdr lexenv.run)
-		     (cons (cons* label 'global-etv loc) export-env)
+		     (cons (cons* label 'global-etv loc) global-env)
 		     (cons (cons loc (syntactic-binding-descriptor.value binding)) visit-env*))))
 
 	    (($record-type-name $struct-type-name $module $fluid $synonym)
 	     ;;Just  add the  entry  "as  is" from  the  lexical  environment to  the
-	     ;;EXPORT-ENV.
+	     ;;GLOBAL-ENV.
 	     ;;
 	     (loop (cdr lexenv.run)
-		   (cons entry export-env)
+		   (cons entry global-env)
 		   visit-env*))
 
 	    ((begin-for-syntax)
@@ -1359,7 +1359,7 @@
 	     ;;   (#f . ?expanded-expr)
 	     ;;
 	     (loop (cdr lexenv.run)
-		   export-env
+		   global-env
 		   (cons (cons #f (syntactic-binding-descriptor.value binding)) visit-env*)))
 
 	    (else
@@ -1367,7 +1367,7 @@
 	       "unknown or unexportable syntactic binding"
 	       binding)))))))
 
-  (define (%validate-exports export-spec* export-subst export-env)
+  (define (%validate-exports export-spec* export-subst global-env)
     ;;We want to forbid code like the following:
     ;;
     ;;    (library (proof)
@@ -1380,14 +1380,14 @@
     ;;in which the mutable variable THAT is exported.
     ;;
     ;;Entries of type "global-mutable" are forbidden  to be exported: entries of this
-    ;;type  can  be  in  the  EXPORT-ENV,  but  they  cannot  be  referenced  in  the
+    ;;type  can  be  in  the  GLOBAL-ENV,  but  they  cannot  be  referenced  in  the
     ;;EXPORT-SUBST.
     ;;
     (define export-subst-entry-name  car)
     (define export-subst-entry-label cdr)
     (unless (%expanding-program? export-spec*)
       (for-each (lambda (subst)
-		  (cond ((assq (export-subst-entry-label subst) export-env)
+		  (cond ((assq (export-subst-entry-label subst) global-env)
 			 => (lambda (entry)
 			      (when (eq? 'global-mutable (syntactic-binding-descriptor.type (lexenv-entry.binding-descriptor entry)))
 				(syntax-violation 'export
@@ -1398,11 +1398,11 @@
   #| end of module: CORE-BODY-EXPANDER |# )
 
 
-;;;; EXPORT-ENV helpers
+;;;; GLOBAL-ENV helpers
 
-(define-syntax-rule (make-export-env-entry ?label ?type ?loc)
-  ;;Given a  label gensym, a  symbol representing an EXPORT-ENV  type, a
-  ;;loc gensym: build and return an entry of EXPORT-ENV.
+(define-syntax-rule (make-global-env-entry ?label ?type ?loc)
+  ;;Given a  label gensym, a  symbol representing an GLOBAL-ENV  type, a
+  ;;loc gensym: build and return an entry of GLOBAL-ENV.
   ;;
   (cons* ?label ?type ?loc))
 
@@ -1413,7 +1413,7 @@
 
 (define-syntax-rule (export-binding-loc ?export-binding)
   ;;Given an export  binding return the loc gensym holding  its value.  Remember that
-  ;;not all the EXPORT-ENV entries have a loc gensym.
+  ;;not all the GLOBAL-ENV entries have a loc gensym.
   ;;
   (cdr ?export-binding))
 

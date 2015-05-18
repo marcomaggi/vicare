@@ -4677,7 +4677,7 @@
     ;;arguments ?ARG*.
     ;;
     ;;?CONSTRUCTOR must be a symbol  representing the name of a function
-    ;;or syntax  from the boot  image EXPORT-ENV; candidates  are: list,
+    ;;or syntax  from the boot  image GLOBAL-ENV; candidates  are: list,
     ;;vector, list->vector, cons, quote.
     ;;
     (syntax-rules (quote)
@@ -4692,7 +4692,7 @@
     ;;arguments ?ARG* and the list of arguments ?TAIL-ARG*.
     ;;
     ;;?CONSTRUCTOR must be a symbol  representing the name of a function
-    ;;or syntax  from the boot  image EXPORT-ENV; candidates  are: list,
+    ;;or syntax  from the boot  image GLOBAL-ENV; candidates  are: list,
     ;;append, vector.
     ;;
     (syntax-rules (quote)

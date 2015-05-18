@@ -1099,7 +1099,7 @@
 	   SYNTACTIC-BINDING-DESCRIPTOR/INVALID-LABEL)
 
 	  ;;If  a  label is  associated  to  a  syntactic  binding from  a  library's
-	  ;;EXPORT-ENV (including  those established by  the boot image): it  has the
+	  ;;GLOBAL-ENV (including  those established by  the boot image): it  has the
 	  ;;associated descriptor in  its "value" field; otherwise such  field is set
 	  ;;to #f.
 	  ;;

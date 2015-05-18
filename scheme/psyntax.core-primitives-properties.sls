@@ -2170,7 +2170,7 @@
   ;; library-vis-lib*
   ;; library-inv-lib*
   ;; library-export-subst
-  ;; library-export-env
+  ;; library-global-env
   ;; library-visit-state
   ;; library-invoke-state
   ;; library-visit-code

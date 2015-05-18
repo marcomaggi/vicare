@@ -3629,7 +3629,7 @@
     (library-vis-lib*					$libraries)
     (library-inv-lib*					$libraries)
     (library-export-subst				$libraries)
-    (library-export-env					$libraries)
+    (library-global-env					$libraries)
     (library-visit-state				$libraries)
     (library-invoke-state				$libraries)
     (library-visit-code					$libraries)
@@ -4671,7 +4671,7 @@
 
 (module (expand-all)
   ;;For  the  meaning  of  "location  gensym",  "label  gensym"  and  the  format  of
-  ;;INVOKE-CODE, EXPORT-SUBST and EXPORT-ENV see the expander documentation.
+  ;;INVOKE-CODE, EXPORT-SUBST and GLOBAL-ENV see the expander documentation.
   ;;
   (define (expand-all files)
     ;;Expand all the libraries in FILES, which must be a list of strings representing
@@ -4708,16 +4708,16 @@
     ;;
     ;;EXPORT-SUBST -
     ;;   An export  subst selecting the lexical  bindings to be exported  by the boot
-    ;;   image between the ones in defined in EXPORT-ENV.
+    ;;   image between the ones in defined in GLOBAL-ENV.
     ;;
-    ;;EXPORT-ENV -
+    ;;GLOBAL-ENV -
     ;;    An export  env  representing the  global lexical  bindings  defined by  the
     ;;   library body.
     ;;
     ;;Notice that, from  the results of library expansion, we  discard all the macros
     ;;and all the library descriptors representing the library dependencies.
     ;;
-    (receive (name* invoke-code* export-subst export-env)
+    (receive (name* invoke-code* export-subst global-env)
 	(make-init-code)
       (debug-printf "\nSource libraries expansion\n")
       (for-each (lambda (file)
@@ -4731,16 +4731,16 @@
 			    ;; (when (equal? name '(ikarus flonum-conversion))
 			    ;;   (debug-print 'invoke-code  code)
 			    ;;   (debug-print 'export-subst subst)
-			    ;;   (debug-print 'export-env   env))
+			    ;;   (debug-print 'global-env   env))
 			    (set! name*        (cons name name*))
 			    (set! invoke-code* (cons code invoke-code*))
 			    (set! export-subst (append subst export-subst))
-			    (set! export-env   (append env   export-env))))))
+			    (set! global-env   (append env   global-env))))))
 	files)
-      (receive (export-subst export-env export-primlocs)
-	  (make-system-data (prune-subst export-subst export-env) export-env)
+      (receive (export-subst global-env export-primlocs)
+	  (make-system-data (prune-subst export-subst global-env) global-env)
 	(receive (primlocs-lib-name primlocs-lib-code)
-	    (build-system-library export-subst export-env export-primlocs)
+	    (build-system-library export-subst global-env export-primlocs)
 	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
 		  (reverse (cons* (car invoke-code*) primlocs-lib-code (cdr invoke-code*)))
 		  export-primlocs)))))
@@ -4758,10 +4758,10 @@
     ;;   language representing the invoke code of the library (ikarus.init).
     ;;
     ;;EXPORT-SUBST -
-    ;;   A subst selecting  the bindings to be exported from  the ones in EXPORT-ENV.
+    ;;   A subst selecting  the bindings to be exported from  the ones in GLOBAL-ENV.
     ;;   For (ikarus.init) there is only one: $INIT-SYMBOL-VALUE!.
     ;;
-    ;;EXPORT-ENV -
+    ;;GLOBAL-ENV -
     ;;    Represents  the   global  bindings  defined  by  the   library  body.   For
     ;;   (ikarus.init) there is only one: $INIT-SYMBOL-VALUE!
     ;;
@@ -4850,21 +4850,21 @@
 	      `(($init-symbol-value! . ,label))
 	      `((,label . (global . ,loc))))))
 
-  (define (prune-subst export-subst export-env)
+  (define (prune-subst export-subst global-env)
     ;;Remove  from EXPORT-SUBST  all re-exported  identifiers (those  with labels  in
-    ;;EXPORT-SUBST but no binding in EXPORT-ENV).
+    ;;EXPORT-SUBST but no binding in GLOBAL-ENV).
     ;;
     (cond ((null? export-subst)
 	   '())
-	  ((not (assq (cdar export-subst) export-env))
-	   (prune-subst (cdr export-subst) export-env))
+	  ((not (assq (cdar export-subst) global-env))
+	   (prune-subst (cdr export-subst) global-env))
 	  (else
 	   (cons (car export-subst)
-		 (prune-subst (cdr export-subst) export-env)))))
+		 (prune-subst (cdr export-subst) global-env)))))
 
-  (define (make-system-data export-subst export-env)
+  (define (make-system-data export-subst global-env)
     ;;EXPORT-SUBST has  an entry for  each primitive binding  to export from  all the
-    ;;source libraries  in the boot image.   EXPORT-ENV has an entry  for each global
+    ;;source libraries  in the boot image.   GLOBAL-ENV has an entry  for each global
     ;;binding from all the source libraries in the boot image.
     ;;
     ;;Return 4 values: an EXPORT-SUBST alist with entries:
@@ -4872,7 +4872,7 @@
     ;;   (?prim-name  . ?label)
     ;;   (?macro-name . ?label)
     ;;
-    ;;an EXPORT-ENV alist with entries:
+    ;;an GLOBAL-ENV alist with entries:
     ;;
     ;;   (?label . (core-prim . ?prim-name))
     ;;   (?label . ?macro-binding)
@@ -4889,7 +4889,7 @@
     (define-syntax-rule (procedure-identifier? x)
       (not (macro-identifier? x)))
     (let ((export-subst-clt    (make-collection))
-	  (export-env-clt      (make-collection))
+	  (global-env-clt      (make-collection))
 	  (export-primlocs-clt (make-collection)))
       ;;Build bindings for the macros exported by the boot image.  Here we create the
       ;;binding labels.  The expected format of the entries is:
@@ -4913,21 +4913,21 @@
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
-	    (export-env-clt   (cons label binding)))))
+	    (global-env-clt   (cons label binding)))))
       (each-for VICARE-SYSTEM-FLUIDS
 	(lambda (entry)
 	  (let* ((name		(car  entry))
 		 (binding	(cadr entry))
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
-	    (export-env-clt   (cons label binding)))))
+	    (global-env-clt   (cons label binding)))))
       (each-for VICARE-SYSTEM-FLUIDS-DEFAULTS
 	(lambda (entry)
 	  (let* ((label		(car  entry))
 		 (binding	(cadr entry)))
-	    (export-env-clt   (cons label binding)))))
+	    (global-env-clt   (cons label binding)))))
       ;;For every  exported primitive function  we expect an  entry to be  present in
-      ;;EXPORT-ENV with the format:
+      ;;GLOBAL-ENV with the format:
       ;;
       ;;   (?label ?type . ?loc)
       ;;
@@ -4955,13 +4955,13 @@
 			(unless (pair? name.label)
 			  (error __who__ "invalid exports" name.label prim-name))
 			(let ((label (cdr name.label)))
-			  (cond ((assq label export-env)
+			  (cond ((assq label global-env)
 				 => (lambda (label.binding)
 				      (let ((binding (cdr label.binding)))
 					(case (car binding)
 					  ((global)
 					   (export-subst-clt    (cons prim-name label))
-					   (export-env-clt      (cons label     (cons 'core-prim prim-name)))
+					   (global-env-clt      (cons label     (cons 'core-prim prim-name)))
 					   (export-primlocs-clt (cons prim-name (cdr binding))))
 					  (else
 					   (error __who__
@@ -4979,19 +4979,19 @@
 		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
 		   (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
 		     (export-subst-clt (cons prim-name label))
-		     (export-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
+		     (global-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
 
-      (values (export-subst-clt) (export-env-clt) (export-primlocs-clt))))
+      (values (export-subst-clt) (global-env-clt) (export-primlocs-clt))))
 
   (module (build-system-library)
 
-    (define (build-system-library export-subst export-env export-primlocs)
+    (define (build-system-library export-subst global-env export-primlocs)
       ;;EXPORT-SUBST is an alist with entries:
       ;;
       ;;   (?prim-name  . ?label)
       ;;   (?macro-name . ?label)
       ;;
-      ;;EXPORT-ENV is an alist with entries:
+      ;;GLOBAL-ENV is an alist with entries:
       ;;
       ;;   (?label . (core-prim . ?prim-name))
       ;;   (?label . ?macro-binding)
@@ -5055,7 +5055,7 @@
 	     ',export-subst)
 	   ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
-		    (build-intern-library-form legend-entry export-subst export-env))
+		    (build-intern-library-form legend-entry export-subst global-env))
 	       LIBRARY-LEGEND)))
 
       ;;Logging this  symbolic expression  gives some insight  about what  happens at
@@ -5069,7 +5069,7 @@
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
-    (define (build-intern-library-form legend-entry export-subst export-env)
+    (define (build-intern-library-form legend-entry export-subst global-env)
       ;;Return a sexp representing a call to the function INTERN-LIBRARY.
       ;;
       ;;Each entry from the LIBRARY-LEGEND has the format:
@@ -5092,7 +5092,7 @@
 				      (else
 				       '())))
 	     (system-all?	(equal? fullname '(psyntax system $all)))
-	     (env		(if system-all? export-env '()))
+	     (env		(if system-all? global-env '()))
 	     (subst		(if system-all?
 				    export-subst
 				  (get-export-subset nickname export-subst)))
@@ -5155,9 +5155,9 @@
     ;;   A list of symbolic expressions representing the body of the library.
     ;;
     ;;EXPORT-SUBST -
-    ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
+    ;;   A subst selecting the bindings to be exported from the ones in GLOBAL-ENV.
     ;;
-    ;;EXPORT-ENV -
+    ;;GLOBAL-ENV -
     ;;   Represents the global bindings defined by the library body.
     ;;
     ;;FIXME To be fixed at the next boot image rotation.  (Marco Maggi; Sun May 10, 2015)
@@ -5166,15 +5166,15 @@
 	  (values (library-name         lib)
 		  (library-invoke-code  lib)
 		  (library-export-subst lib)
-		  (library-export-env   lib)))
+		  (library-global-env   lib)))
       (receive (uid libname
 		    imp-libdesc* vis-libdesc* inv-libdesc*
 		    invoke-code visit-code
-		    export-subst export-env
+		    export-subst global-env
 		    guard-code guard-libdesc*
 		    option*)
 	  (expand-library library-sexp)
-	(values libname invoke-code export-subst export-env))))
+	(values libname invoke-code export-subst global-env))))
 
   #| end of module: EXPAND-ALL |# )
 

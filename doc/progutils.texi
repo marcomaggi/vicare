@@ -82,7 +82,7 @@ A list of sublists representing the macros defined in the program.
 @item export-subst
 A subst representing the top--level bindings.
 
-@item export-env
+@item global-env
 A list representing the bindings exported by the program.
 
 @item option*
@@ -101,7 +101,7 @@ symbols as keys:
 @example
 invoke-lib* invoke-code
 visit-code*
-export-subst export-env
+export-subst global-env
 option*
 @end example
 @end defun
@@ -166,7 +166,7 @@ expanded code; the @code{export-subst} (with many entries removed):
 @end example
 
 @noindent
-the @code{export-env}:
+the @code{global-env}:
 
 @example
 ((lab.var global       . loc.lex.var)

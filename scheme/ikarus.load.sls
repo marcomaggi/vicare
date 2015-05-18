@@ -1028,7 +1028,7 @@
 		     (map libman.library-descriptor (libman.library-vis-lib* lib))
 		     (map libman.library-descriptor (libman.library-inv-lib* lib))
 		     (libman.library-export-subst lib)
-		     (libman.library-export-env lib)
+		     (libman.library-global-env lib)
 		     (compile (libman.library-visit-code lib))
 		     (compile (libman.library-invoke-code lib))
 		     (compile (libman.library-guard-code lib))

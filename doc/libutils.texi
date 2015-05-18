@@ -796,7 +796,7 @@ processed by the expander and when a binary library is loaded from a
 
 @menu
 * libutils libraries typedef::       @objtype{library} object type.
-* libutils libraries export-env::    The @code{export-env} field.
+* libutils libraries global-env::    The @code{global-env} field.
 * libutils libraries ops::           Library operations.
 @end menu
 
@@ -873,8 +873,8 @@ invoke code.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-export-env @var{lib}
-The @code{export-env} representing the top--level bindings defined by
+@deffn {Accessor for @objtype{library}} library-global-env @var{lib}
+The @code{global-env} representing the top--level bindings defined by
 the library body.  See the expander's code for details.
 @end deffn
 
@@ -981,8 +981,8 @@ Given a library descriptor object return the @rnrs{6} library name.
 @end defun
 
 @c page
-@node libutils libraries export-env
-@subsection The @code{export-env} field
+@node libutils libraries global-env
+@subsection The @code{global-env} field
 
 
 @deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
@@ -991,14 +991,14 @@ Return the lexical environment exported by the @objtype{library} object
 @end deffn
 
 
-The @code{export-env} is a data structure used to map the label gensyms
+The @code{global-env} is a data structure used to map the label gensyms
 of top level syntactic bindings defined by a library to the
 corresponding storage location gensyms.  ``Top level bindings'' does not
-mean ``exported bindings'': not all the entries in @code{export-env}
+mean ``exported bindings'': not all the entries in @code{global-env}
 represent exported bindings, it is the role of the @code{export-subst}
 to select the exported ones.
 
-An @code{export-env} is an alist whose entries have the format:
+An @code{global-env} is an alist whose entries have the format:
 
 @example
 (@meta{label} . @meta{export-descriptor})
@@ -1179,7 +1179,7 @@ syntax.
 
 @subsubheading Example library
 
-We can toy with the @code{export-env} with the following program:
+We can toy with the @code{global-env} with the following program:
 
 @lisp
 (import (vicare)
@@ -1212,7 +1212,7 @@ We can toy with the @code{export-env} with the following program:
 
 (print-gensym #f)
 (pretty-print
- (library-export-env lib))
+ (library-global-env lib))
 
 (flush-output-port (current-output-port))
 @end lisp
@@ -1399,7 +1399,7 @@ alist with the following symbols as keys:
 uid libname
 import-libdesc* visit-libdesc* invoke-libdesc*
 invoke-code visit-code
-export-subst export-env
+export-subst global-env
 guard-code guard-libdesc*
 option*
 @end example
@@ -1471,7 +1471,7 @@ the @code{export-subst}:
 @end example
 
 @noindent
-the @code{export-env}:
+the @code{global-env}:
 
 @example
 ((lab.var global        . loc.lex.var)

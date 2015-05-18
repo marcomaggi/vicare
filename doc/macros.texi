@@ -550,8 +550,8 @@ Revised^6 Report on the algorithmic language Scheme
 @sc{lexenv}
 @end macro
 
-@macro ExportEnv{}
-@sc{export-env}
+@macro GlobalEnv{}
+@sc{global-env}
 @end macro
 
 @macro ExportSubst{}

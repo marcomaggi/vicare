@@ -28,7 +28,7 @@
     library-uid				library-name
     library-imp-lib*			library-vis-lib*
     library-inv-lib*			library-export-subst
-    library-export-env			library-visit-state
+    library-global-env			library-visit-state
     library-invoke-state		library-visit-code
     library-invoke-code			library-guard-code
     library-guard-lib*			library-visible?
@@ -100,10 +100,10 @@
 		;The list of LIBRARY objects selecting libraries needed by the invoke
 		;code.
    export-subst
-		;A subst  selecting the exported  bindings from the  EXPORT-ENV.  See
+		;A subst  selecting the exported  bindings from the  GLOBAL-ENV.  See
 		;the expander's code for details.
-   export-env
-		;The EXPORT-ENV  representing the  top-level bindings defined  by the
+   global-env
+		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
 		;library body.  See the expander's code for details.
    visit-state
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
@@ -530,9 +530,9 @@
   ;;   code.
   ;;
   ;;EXPORT-SUBST -
-  ;;   A subst selecting the bindings to export from the EXPORT-ENV.
+  ;;   A subst selecting the bindings to export from the GLOBAL-ENV.
   ;;
-  ;;EXPORT-ENV -
+  ;;GLOBAL-ENV -
   ;;   The list of top-level bindings defined  by the library body.  Some of them are
   ;;   to be exported, others are not.
   ;;
@@ -578,7 +578,7 @@
 
   (define* (intern-library {uid symbol?} {libname library-name?}
 			    import-libdesc* visit-libdesc* invoke-libdesc*
-			    export-subst export-env
+			    export-subst global-env
 			    visit-proc invoke-proc
 			    visit-code invoke-code
 			    guard-code guard-libdesc*
@@ -591,7 +591,7 @@
 	(assertion-violation __module_who__ "library is already interned" libname))
       (receive-and-return (lib)
 	  (make-library uid libname import-lib* visit-lib* invoke-lib*
-			export-subst export-env visit-proc invoke-proc
+			export-subst global-env visit-proc invoke-proc
 			visit-code invoke-code guard-code guard-lib*
 			visible? source-file-name library-option*)
 	(%intern-library-object lib)
@@ -600,12 +600,12 @@
 
   (define (%intern-library-object lib)
     (for-each
-	(lambda (export-env-entry)
-	  ;;See the comments  in the expander code for the  format of the EXPORT-ENV.
-	  ;;Entries in the EXPORT-ENV are different  from entries in the LEXENV; here
-	  ;;we transform an EXPORT-ENV binding into a LEXENV binding descriptor.
-	  (let* ((label    (car export-env-entry))
-		 (binding  (cdr export-env-entry))
+	(lambda (global-env-entry)
+	  ;;See the comments  in the expander code for the  format of the GLOBAL-ENV.
+	  ;;Entries in the GLOBAL-ENV are different  from entries in the LEXENV; here
+	  ;;we transform an GLOBAL-ENV binding into a LEXENV binding descriptor.
+	  (let* ((label    (car global-env-entry))
+		 (binding  (cdr global-env-entry))
 		 (binding1 (case (car binding)
 			     ((global)        (cons* 'global        lib (cdr binding)))
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
@@ -624,14 +624,14 @@
 			      binding)
 			     (else
 			      (assertion-violation __module_who__
-				"invalid syntactic binding descriptor type in EXPORT-ENV entry"
-				lib export-env-entry)))))
+				"invalid syntactic binding descriptor type in GLOBAL-ENV entry"
+				lib global-env-entry)))))
 	    ;;When the library is serialised: the content of the label's "value" slot
 	    ;;is not  saved, so  we have  to set it  here every  time the  library is
 	    ;;loaded.
 	    (set-label-binding! label binding1)))
-      ;;This expression returns the EXPORT-ENV of the library LIB.
-      (library-export-env lib))
+      ;;This expression returns the GLOBAL-ENV of the library LIB.
+      (library-global-env lib))
     ;;Register the object in the collection of interned libraries.
     ((current-library-collection) lib))
 
@@ -640,7 +640,7 @@
 (define (intern-binary-library-and-its-dependencies
 	 uid libname
 	 import-libdesc* visit-libdesc* invoke-libdesc*
-	 export-subst export-env
+	 export-subst global-env
 	 visit-proc invoke-proc guard-proc
 	 guard-libdesc* visible? library-option* source-filename)
   ;;Whenever we load a serialied compiled library from a binary file we read the file
@@ -691,7 +691,7 @@
 		   (source-file-name  #f))
 	       (intern-library uid libname
 				import-libdesc* visit-libdesc* invoke-libdesc*
-				export-subst export-env
+				export-subst global-env
 				visit-proc invoke-proc
 				visit-code invoke-code
 				guard-code guard-libdesc*
@@ -717,18 +717,18 @@
 	  => (lambda (lib)
 	       (%remove-library-from-current-collection lib)
 	       ;;Remove label gensyms from the internal table.
-	       (for-each (lambda (export-env-entry)
+	       (for-each (lambda (global-env-entry)
 			   ;;We expect the entry to have the format:
 			   ;;
 			   ;;   (?label . (?type . ?loc))
 			   ;;
-			   (let ((label   (car export-env-entry))
-				 (binding (cdr export-env-entry)))
+			   (let ((label   (car global-env-entry))
+				 (binding (cdr global-env-entry)))
 			     (remove-location label)
 			     (when (memq (car binding)
 					 '(global global-macro global-macro! global-etv))
 			       (remove-location (cdr binding)))))
-		 ($library-export-env lib))))
+		 ($library-global-env lib))))
 	 (else
 	  (when err?
 	    (assertion-violation __who__ "library not uninterned" libname))))))
@@ -738,7 +738,7 @@
 
 (define (label->imported-syntactic-binding-descriptor lab)
   ;;If a label  gensym is associated to  a syntactic binding established  by the boot
-  ;;image or a library's EXPORT-ENV: it  has the associated descriptor in its "value"
+  ;;image or a library's GLOBAL-ENV: it  has the associated descriptor in its "value"
   ;;field; otherwise such field is set to #f.
   ;;
   ;;So, if we have a label, we can  check if it references an imported binding simply

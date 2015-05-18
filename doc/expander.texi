@@ -723,7 +723,7 @@ still important.
 
 @c ------------------------------------------------------------------------
 
-@subsubheading Storage location gensyms and @ExportEnv{}
+@subsubheading Storage location gensyms and @GlobalEnv{}
 
 About the value of syntactic bindings:
 
@@ -762,7 +762,7 @@ So the expanded code is accompanied by the following association:
 where the @code{loc.*} symbols are gensyms.  To represent the
 association between the top level binding labels (both the exported ones
 and the non--exported ones) and their storage location gensyms, the
-expander builds a data structure indicated as @ExportEnv{}.
+expander builds a data structure indicated as @GlobalEnv{}.
 
 @c ------------------------------------------------------------------------
 
@@ -1727,8 +1727,8 @@ whose entries have format:
 @end example
 
 @item
-The syntactic binding's descriptors are taken from the @code{export-env}
-field of the @objtype{library} object.  The @code{export-env} maps label
+The syntactic binding's descriptors are taken from the @code{global-env}
+field of the @objtype{library} object.  The @code{global-env} maps label
 gensyms to their binding descriptors; it is an alist whose entries have
 format:
 
@@ -1738,7 +1738,7 @@ format:
 
 @item
 When the library is interned: a @objtype{library} object is created and
-the fields @code{export-subst} and @code{export-env} are used to build
+the fields @code{export-subst} and @code{global-env} are used to build
 the label gensyms by storing the descriptors in the @code{value} slots
 of the gensyms.
 
