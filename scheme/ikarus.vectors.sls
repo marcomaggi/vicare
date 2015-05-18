@@ -385,7 +385,7 @@
   (let ((dst.len ($fx- src.end src.start)))
     (if ($fxpositive? dst.len)
 	(receive-and-return (dst.vec)
-	    ($make-vector dst.len)
+	    ($make-clean-vector dst.len)
 	  ($vector-copy-source-range! src.vec src.start src.end dst.vec 0))
       ($make-vector 0))))
 
