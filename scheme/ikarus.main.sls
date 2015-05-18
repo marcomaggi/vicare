@@ -503,7 +503,8 @@
 
 	  ((%option= "-d" "-g")
 	   (option.debug-mode-enabled? #t)
-	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #t))))
+	   (compiler.generate-debug-calls #t)
+	   (next-option (cdr args) k))
 
 	  ((%option= "--no-greetings")
 	   (set-run-time-config-no-greetings! cfg #t)
@@ -681,16 +682,20 @@
 ;;; compiler options without argument
 
 	  ((%option= "-O3")
-	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 3))))
+	   (compiler.optimize-level 3)
+	   (next-option (cdr args) k))
 
 	  ((%option= "-O2")
-	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 2))))
+	   (compiler.optimize-level 2)
+	   (next-option (cdr args) k))
 
 	  ((%option= "-O1")
-	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 1))))
+	   (compiler.optimize-level 1)
+	   (next-option (cdr args) k))
 
 	  ((%option= "-O0")
-	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 0))))
+	   (compiler.optimize-level 0)
+	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
 ;;; program options
