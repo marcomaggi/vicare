@@ -401,6 +401,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.io.sls					\
 	scheme/ikarus.lists.sls					\
 	scheme/ikarus.load.sls					\
+	scheme/ikarus.load.dynamic-library-loading.sls		\
 	scheme/ikarus.main.sls					\
 	scheme/ikarus.multiple-values.sls			\
 	scheme/ikarus.numerics.flonums.sls			\
@@ -785,6 +786,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-expand-time-specs.sps				\
 	tests/test-vicare-debugging.sps					\
 	tests/test-vicare-dynamic-environment.sps			\
+	tests/test-vicare-dynamic-library-loading.sps			\
 	tests/test-vicare-fasl.sps					\
 	tests/test-vicare-fixnums.sps					\
 	tests/test-vicare-flonum-base.sps				\

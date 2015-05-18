@@ -24,6 +24,7 @@ in the boot image.  It is suggested to import it using the prefix
 * libutils loading::            Loading libraries.
 * libutils locating::           Locating libraries.
 * libutils file-system::        Locating libraries on the file system.
+* libutils dynamic::            Dynamically loading Scheme libraries.
 * libutils compiling::          Compiling libraries.
 @end menu
 
@@ -873,9 +874,9 @@ invoke code.
 @end deffn
 
 
-@deffn {Accessor for @objtype{library}} library-global-env @var{lib}
-The @code{global-env} representing the top--level bindings defined by
-the library body.  See the expander's code for details.
+@deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
+Return the @code{export-subst} of @var{lib}: an alist representing the
+global bindings exported by the library.
 @end deffn
 
 
@@ -985,7 +986,7 @@ Given a library descriptor object return the @rnrs{6} library name.
 @subsection The @code{global-env} field
 
 
-@deffn {Accessor for @objtype{library}} library-export-subst @var{lib}
+@deffn {Accessor for @objtype{library}} library-global-env @var{lib}
 Return the lexical environment exported by the @objtype{library} object
 @var{lib}.
 @end deffn
@@ -2892,6 +2893,69 @@ constraint; for example: if its version number does not conform to
 
 When no matching library is found: the returned thunk returns @false{}
 and @false{}.
+@end defun
+
+@c page
+@node libutils dynamic
+@section Dynamically loading Scheme libraries
+
+
+It is possible to dynamically load a Scheme library after the program
+has been compiled.  Here is an example of: creating a library, importing
+it, then dynamically loading its syntactic bindings:
+
+@lisp
+(import (vicare)
+  (prefix (vicare libraries) libs.))
+
+(library (demo-01)
+  (export fun var)
+  (import (rnrs))
+  (define (fun a b)
+    (+ a b))
+  (define var 123))
+
+(import (demo-01))
+
+(let* ((lib (libs.library-dynamic-load-and-intern '(demo-01)))
+       (fun (libs.library-dynamic-retrieve lib 'fun))
+       (var (libs.library-dynamic-retrieve lib 'var)))
+  (values (fun 1 2) var))
+@result{} 3 123
+@end lisp
+
+@noindent
+another example which loads the installed @library{vicare pregexp}:
+
+@lisp
+(import (vicare)
+  (prefix (vicare libraries) libs.))
+
+(define-values (pregexp-match)
+  (let ((lib (libs.library-dynamic-load-and-intern
+                 '(vicare pregexp))))
+    (values (libs.library-dynamic-retrieve lib 'pregexp-match))))
+
+(pregexp-match "[a-z]+" "ciao hello ciao")
+@result{} ("ciao")
+@end lisp
+
+
+@defun library-dynamic-load-and-intern @var{libref}
+Search for a library whose name matches the library reference
+@var{libref}, intern it and invoke it.  When successful return a
+@objtype{library} object.  If an error occurs: raise an exception.
+
+This function makes use of @func{find-library-by-name} to search and
+intern the requested library.
+@end defun
+
+
+@defun library-dynamic-retrieve @var{lib} @var{name}
+Search in the @GlobalEnv{} of the @objtype{library} object @var{lib} an
+exported syntactic binding whose public name is the symbol @var{name}.
+When successful: return the value bound to the syntactic binding.  If an
+error occurs: raise an exception.
 @end defun
 
 @c page

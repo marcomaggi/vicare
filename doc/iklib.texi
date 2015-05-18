@@ -13157,6 +13157,10 @@ access definitions in a module without explicitly using the
 @section Local libraries
 
 
+@cindex @syntax{library}, standalone syntax
+@cindex Syntax @syntax{library}
+
+
 @rnrs{6} defines libraries to be top--level symbolic expressions; the
 form @syntax{library} can appear only at the top--level; @ref{scheme
 library form, Library form}.  @value{PRJNAME} extends the notion of
@@ -13167,7 +13171,7 @@ visibility.
 
 The following is a perfectly valid Vicare program:
 
-@example
+@lisp
 (import (vicare))
 
 (let ()
@@ -13185,7 +13189,7 @@ The following is a perfectly valid Vicare program:
   (import (hello))
 
   (display (list a b)))
-@end example
+@end lisp
 
 @c page
 @node iklib parameters

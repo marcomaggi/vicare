@@ -510,6 +510,7 @@
     "ikarus.apropos.sls"
     "ikarus.enumerations.sls"
     "ikarus.load.sls"
+    "ikarus.load.dynamic-library-loading.sls"
     "ikarus.pretty-print.sls"
     "ikarus.readline.sls"
     "ikarus.cafe.sls"
@@ -3687,6 +3688,9 @@
     (current-library-binary-search-path-scanner		$libraries)
     (default-library-source-search-path-scanner		$libraries)
     (default-library-binary-search-path-scanner		$libraries)
+
+    (library-dynamic-load-and-intern			$libraries)
+    (library-dynamic-retrieve				$libraries)
 
 ;;; --------------------------------------------------------------------
 ;;; programs
