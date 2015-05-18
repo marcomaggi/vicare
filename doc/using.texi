@@ -401,6 +401,18 @@ Instruct the expander to generate descriptive mark objects.
 @cindex Command line option @code{compiler-descriptive-labels}
 @cindex @code{compiler-descriptive-labels}, command line option
 Instruct the compiler to generate descriptive labels.
+
+@item compiler-core-type-inference
+@itemx no-compiler-core-type-inference
+Instruct the compiler to perform core type inference or not; the default
+is to perform it.  Disabling core type inference automatically disables
+substitution of core primitive calls with unsafe core primitive calls.
+
+@item compiler-introduce-primrefs
+@itemx no-compiler-introduce-primrefs
+Instruct the compiler to perform substitution between core primitive
+calls and unsafe core primitive calls, when the correctness of the
+operand is determined at compile--time; the default is to perform it.
 @end table
 
 @c ------------------------------------------------------------------------

@@ -186,8 +186,8 @@
 		current-primitive-locations
 		compile-core-expr-to-port
 		;; configuration options
-		perform-core-type-inference
-		perform-unsafe-primrefs-introduction
+		perform-core-type-inference?
+		perform-unsafe-primrefs-introduction?
 		strip-source-info
 		current-letrec-pass
 		generate-debug-calls
@@ -269,8 +269,8 @@
 
 (fasl-write.writing-boot-image? #t)
 
-(compiler.perform-core-type-inference #t)
-(compiler.perform-unsafe-primrefs-introduction #t)
+(compiler.perform-core-type-inference? #t)
+(compiler.perform-unsafe-primrefs-introduction? #t)
 (pretty-width 160)
 ((pretty-format 'fix)
  ((pretty-format 'letrec)))
@@ -3740,8 +3740,8 @@
     (make-compile-time-retval-core-type-error		$compiler)
     (compile-time-retval-core-type-error?		$compiler)
     (source-optimizer-passes-count			$compiler)
-    (perform-core-type-inference			$compiler)
-    (perform-unsafe-primrefs-introduction		$compiler)
+    (perform-core-type-inference?			$compiler)
+    (perform-unsafe-primrefs-introduction?		$compiler)
     (cp0-size-limit					$compiler)
     (cp0-effort-limit					$compiler)
     (strip-source-info					$compiler)

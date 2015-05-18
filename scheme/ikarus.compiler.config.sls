@@ -21,8 +21,8 @@
     generate-debug-calls
     strip-source-info
     optimizer-output
-    perform-core-type-inference
-    perform-unsafe-primrefs-introduction
+    perform-core-type-inference?
+    perform-unsafe-primrefs-introduction?
     assembler-output
     enabled-function-application-integration?
     check-compiler-pass-preconditions
@@ -62,12 +62,12 @@
 (define optimizer-output
   (make-parameter #f))
 
-(define perform-core-type-inference
+(define perform-core-type-inference?
   ;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
   ;;
   (make-parameter #t))
 
-(define perform-unsafe-primrefs-introduction
+(define perform-unsafe-primrefs-introduction?
   ;;When true: the pass INTRODUCE-UNSAFE-PRIMREFS  is performed, else it is skipped.
   ;;It makes sense to perform such compiler  pass only if we have first performed the
   ;;core type inference.

@@ -2477,8 +2477,8 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter perform-core-type-inference
-@cindex Parameter @func{perform-core-type-inference}
+@deffn Parameter perform-core-type-inference?
+@cindex Parameter @func{perform-core-type-inference?}
 When true the pass @func{core-type-inference} is performed, else it is
 skipped.  Defaults to @true{}.
 @end deffn
@@ -2573,8 +2573,8 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter perform-unsafe-primrefs-introduction
-@cindex Parameter @func{perform-unsafe-primrefs-introduction}
+@deffn Parameter perform-unsafe-primrefs-introduction?
+@cindex Parameter @func{perform-unsafe-primrefs-introduction?}
 When true the pass @func{introduce-unsafe-primrefs} is performed, else
 it is skipped.  Defaults to @true{}.
 @end deffn

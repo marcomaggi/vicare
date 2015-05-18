@@ -38,8 +38,8 @@
     current-letrec-pass
     check-for-illegal-letrec
     source-optimizer-passes-count
-    perform-core-type-inference
-    perform-unsafe-primrefs-introduction
+    perform-core-type-inference?
+    perform-unsafe-primrefs-introduction?
     cp0-effort-limit
     cp0-size-limit
     strip-source-info
@@ -363,8 +363,8 @@
   (define (compile-core-expr->code core-language-sexp)
     ;;Transform a core language symbolic expression into a code object.
     ;;
-    (let* ((perform-core-type-inference?	(perform-core-type-inference))
-	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+    (let* ((perform-core-type-inference?	(perform-core-type-inference?))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction?)))
 	   (stop-after-optimisation?		#f)
 	   (stop-after-core-type-inference?	#f)
 	   (stop-after-assembly-generation?	#f))
@@ -379,8 +379,8 @@
     ;;This is a utility function used for debugging and inspection purposes; it is to
     ;;be used to inspect the result of optimisation.
     ;;
-    (let* ((perform-core-type-inference?	(perform-core-type-inference))
-	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+    (let* ((perform-core-type-inference?	(perform-core-type-inference?))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction?)))
 	   (stop-after-optimisation?		#t)
 	   (stop-after-core-type-inference?	#t)
 	   (stop-after-assembly-generation?	#f))
@@ -396,8 +396,8 @@
     ;;This is a utility function used for debugging and inspection purposes; it is to
     ;;be used to inspect the result of optimisation.
     ;;
-    (let* ((perform-core-type-inference?	(perform-core-type-inference))
-	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+    (let* ((perform-core-type-inference?	(perform-core-type-inference?))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction?)))
 	   (stop-after-optimisation?		#f)
 	   (stop-after-core-type-inference?	#t)
 	   (stop-after-assembly-generation?	#f))
@@ -415,8 +415,8 @@
     ;;sublists, each sublist  representing assembly language instructions  for a code
     ;;object.
     ;;
-    (let* ((perform-core-type-inference?	(perform-core-type-inference))
-	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction)))
+    (let* ((perform-core-type-inference?	(perform-core-type-inference?))
+	   (introduce-unsafe-primitives?	(and perform-core-type-inference? (perform-unsafe-primrefs-introduction?)))
 	   (stop-after-optimisation?		#f)
 	   (stop-after-core-type-inference?	#f)
 	   (stop-after-assembly-generation?	#t))

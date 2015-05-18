@@ -70,7 +70,9 @@
 		  assembler-output
 		  optimizer-output
 		  source-optimizer-passes-count
-		  generate-descriptive-labels?)
+		  generate-descriptive-labels?
+		  perform-core-type-inference?
+		  perform-unsafe-primrefs-introduction?)
 	    compiler.)
     (prefix (only (ikarus.debugger)
 		  guarded-start)
@@ -653,6 +655,16 @@
 		 (("compiler-descriptive-labels")
 		  (compiler.generate-descriptive-labels? #t))
 
+		 (("compiler-core-type-inference")
+		  (compiler.perform-core-type-inference? #t))
+		 (("no-compiler-core-type-inference")
+		  (compiler.perform-core-type-inference? #f))
+
+		 (("compiler-introduce-primrefs")
+		  (compiler.perform-unsafe-primrefs-introduction? #t))
+		 (("no-compiler-introduce-primrefs")
+		  (compiler.perform-unsafe-primrefs-introduction? #f))
+
 		 (else
 		  (%error-and-exit "invalid --option argument" (cadr args))))
 	       (next-option (cddr args) k))))
@@ -916,6 +928,8 @@ Other options:
            expander-descriptive-gensyms
            expander-descriptive-marks
            compiler-descriptive-labels
+           compiler-core-type-inference no-compiler-core-type-inference
+           compiler-introduce-primrefs  no-compiler-introduce-primrefs
 
    --library-locator NAME
         Select a  library  locator.  NAME can  be one  among:  run-time,
