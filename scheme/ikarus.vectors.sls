@@ -146,6 +146,7 @@
     vector-resize
 
     ;; unsafe operations
+    $make-clean-vector
     $vector-empty?
     $vector-map1
     $vector-for-each1
@@ -176,6 +177,7 @@
     (vicare system $fx)
     (vicare system $pairs)
     (except (vicare system $vectors)
+	    $make-clean-vector
 	    $vector-empty?
 	    $vector-map1
 	    $vector-for-each1
@@ -304,10 +306,8 @@
 
 ;;;; common unsafe operations
 
-(define ($make-clean-vector ?len)
-  (let* ((len ?len)
-	 (vec ($make-vector ?len)))
-    ($vector-clean! vec)))
+(define ($make-clean-vector len)
+  (foreign-call "ikrt_make_vector1" len))
 
 (define-syntax-rule ($vector-clean! ?vec)
   (foreign-call "ikrt_vector_clean" ?vec))

@@ -395,7 +395,8 @@
     (vicare system $compnums)
     (vicare system $pairs)
     (vicare system $lists)
-    (vicare system $vectors)
+    (except (vicare system $vectors)
+	    $make-clean-vector)
     (vicare system $bytevectors)
     (except (vicare system $chars)
 	    $char=
@@ -674,10 +675,8 @@
 
 ;;;; miscellaneous vector operations
 
-(define-inline ($make-clean-vector ?len)
-  (let* ((len ?len)
-	 (vec ($make-vector ?len)))
-    ($vector-clean! vec)))
+(define-syntax-rule ($make-clean-vector ?len)
+  (foreign-call "ikrt_make_vector1" ?len))
 
 (define-inline ($vector-clean! ?vec)
   (foreign-call "ikrt_vector_clean" ?vec))

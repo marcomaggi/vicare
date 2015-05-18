@@ -5623,9 +5623,14 @@ Allocate and return a new vector value of @var{fx} elements.
 the items set to whatever is on the Scheme heap; this is bad for garbage
 collection if the newly built vector is moved before the items are
 initialised to correct Scheme values.  We should use the
-@func{$make-clean-vector} operations from @library{vicare
-unsafe-operations}.
+@func{$make-clean-vector} function.
 @end quotation
+@end deffn
+
+
+@deffn {Unsafe Operation} $make-clean-vector @var{fx}
+Allocate and return a new vector value of @var{fx} elements; initialise
+all the slots to the fixnum zero.
 @end deffn
 
 

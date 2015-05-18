@@ -1585,6 +1585,7 @@
     ($magnitude-cflonum				$numerics)
 ;;;
     ($make-vector				$vectors)
+    ($make-clean-vector				$vectors)
     ($vector-length				$vectors)
     ($vector-empty?				$vectors)
     ($vector-ref				$vectors)
