@@ -120,7 +120,7 @@ an optional @clause{options} clause:
   (options @meta{option} ...)
   (export  @meta{export-spec} ...)
   (import  @meta{import-spec} ...)
-  @meta{library-body})
+  . @meta{library-body})
 @end example
 
 @noindent
@@ -185,7 +185,7 @@ an optional @clause{foreign-library} clause:
   (foreign-library @meta{shared-object-id})
   (export  @meta{export-spec} ...)
   (import  @meta{import-spec} ...)
-  @meta{library-body})
+  . @meta{library-body})
 @end example
 
 @noindent
@@ -245,7 +245,7 @@ The delimited sequence can be wrapped into an implementation--defined
 enclosing form.
 @end itemize
 
-@value{PRJNAME} gathers this freedom to accept two formats of top-level
+@value{PRJNAME} gathers this freedom to accept two formats of top--level
 programs:
 
 @enumerate
@@ -263,7 +263,7 @@ A @syntax{program} form with the following syntax:
 (program @meta{program-name}
   @meta{config-form} ...
   (import @meta{import-spec} ...)
-  @meta{program-body})
+  . @meta{program-body})
 @end lisp
 @end enumerate
 
@@ -288,7 +288,7 @@ optional @clause{options} clause:
 (program @meta{program-name}
   (options @meta{option} ...)
   (import  @meta{import-spec} ...)
-  @meta{program-body})
+  . @meta{program-body})
 @end lisp
 
 @noindent
@@ -323,7 +323,7 @@ optional @clause{foreign-library} clause:
 (program @meta{program-name}
   (foreign-library @meta{shared-object-id})
   (import  @meta{import-spec} ...)
-  @meta{program-body})
+  . @meta{program-body})
 @end lisp
 
 @noindent
