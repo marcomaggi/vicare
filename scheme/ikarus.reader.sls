@@ -95,9 +95,6 @@
 	  $bytevector-u64-ref			$bytevector-u64-set!
 	  $bytevector-s64-ref			$bytevector-s64-set!)
     (prefix (vicare platform words) words.)
-    (only (vicare.foreign-libraries)
-	  register-filename-foreign-library
-	  autoload-filename-foreign-library)
     (only (vicare language-extensions posix)
 	  file-string-pathname?))
 
@@ -3373,27 +3370,6 @@
     (die/p port 'tokenize msg ls))
   (unless (null? ls)
     (case (car ls)
-      ((load-shared-library)
-       ;;Cause a foreign shared library to be loaded immediately or when
-       ;;the FASL file is loaded.  The format of the comment list is:
-       ;;
-       ;;  #!(load-shared-library "library-id")
-       ;;
-       (cond ((null? (cdr ls))
-	      (%error "expected argument to load-shared-library"))
-	     ((not (null? (cddr ls)))
-	      (%error "expected single argument to load-shared-library"))
-	     (else
-	      (let ((libid (cadr ls)))
-		(if (string? libid)
-		    (begin
-		      (unless (shared-library-loading-enabled?)
-			(%error
-			 "comment list processing is disabled for this reading operation"))
-		      (when (current-library-file)
-			(register-filename-foreign-library (current-library-file) libid))
-		      (autoload-filename-foreign-library libid))
-		  (%error "expected string argument to load-shared-library"))))))
       ((char-names)
        ;;Define a  set of named  characters.  The format of  the comment
        ;;list is:

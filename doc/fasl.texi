@@ -257,56 +257,8 @@ Read and return a serialised object from the binary input @var{port}.
 @appendixsec Associating foreign libraries to @fasl{} files
 
 
-@findex @func{foreign-call}
-
-
-The macro @func{foreign-call}, exported by the library @library{vicare},
-is expanded to compiled code which invokes a C function from the process
-image; the first argument to @func{foreign-call} is a string naming the
-C function.  Whenever the code is compiled, the C pointer to the named
-function is retrieved with a call to:
-
-@example
-dlsym(RTLD_DEFAULT, function_name);
-@end example
-
-@noindent
-so all the public functions from the running @value{EXECUTABLE}
-executable are available and also all the functions from host's shared
-libraries loaded with @cfunc{dlopen} using the flags @code{RTLD_NOW |
-RTLD_GLOBAL}.
-
-It is possible to associate one or more host's shared libraries to a
-@fasl{} file, so that: whenever the @fasl{} file is loaded, the shared
-library is loaded too and the functions required by @func{foreign-call}
-are available.  This is especially useful to implement bindings to
-foreign libraries without relying on the @ffi{} and making full use of
-garbage collection facilities and access to Scheme values' memory
-representations.
-
-@quotation
-@strong{NOTE} The mechanism described below is a temporary
-implementation which may change in the future.
-@end quotation
-
-Whenever @value{PRJNAME}'s source code reader, in @code{#!vicare} mode,
-while reading a program, script or library finds a form like:
-
-@example
-#!(load-shared-library "vicarecre2")
-@end example
-
-@noindent
-it handles it as a special comment which causes no code to be expanded
-nor compiled: a foreign shared library whose identifier is
-@code{vicarecre2} is immediately loaded.
-
-If the library file containing such special comment is compiled to a
-@fasl{} file, an object field with header @code{O} is written to the
-@strong{beginning} of the @fasl{} file: such object will cause the
-foreign library to be loaded whenever the @fasl{} file is loaded.
-
-On Unix--like systems: the library identifier is prefixed with
-@code{lib} and suffixed with @code{.so} to compose a library file name.
+It is possible to register in a @fasl{} a list of host's shared objects
+to be loaded upon loading the @fasl{} file itself, @ref{foreign} for
+details.
 
 @c end of file

@@ -33,7 +33,7 @@
     (only (ikarus.strings-table)
 	  intern-string)
     (only (vicare.foreign-libraries)
-	  autoload-filename-foreign-library)
+	  dynamically-load-shared-object-from-identifier)
     (except (vicare unsafe operations)
 	    $make-clean-struct)
     (vicare language-extensions syntaxes)
@@ -330,7 +330,7 @@
 	       keys vals))
 	   x))
 	((#\O) ;autoload foreign library
-	 (autoload-filename-foreign-library (%read-without-mark))
+	 (dynamically-load-shared-object-from-identifier (%read-without-mark))
 	 ;;recurse to satisfy the request to return an object
 	 (%read/mark m))
 	(else

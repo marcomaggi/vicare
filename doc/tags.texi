@@ -152,8 +152,8 @@ inference.
 
 Tagged language extensions are @strong{off} by default.  To enable the
 extensions in libraries we have to use the @code{tagged-language} and
-@code{visit-upon-loading} options as follows (@pxref{iklib syntaxes
-libraries, Extended @syntax{library} syntax}):
+@code{visit-upon-loading} options as follows (@pxref{iklib libraries,
+Extended @syntax{library} syntax}):
 
 @example
 (library (demo)
@@ -164,8 +164,8 @@ libraries, Extended @syntax{library} syntax}):
 @end example
 
 To enable the extensions in programs we have to use the
-@code{tagged-language} option as follows (@pxref{iklib syntaxes
-programs, Extended program syntax}):
+@code{tagged-language} option as follows (@pxref{iklib programs,
+Extended program syntax}):
 
 @example
 (import (vicare))

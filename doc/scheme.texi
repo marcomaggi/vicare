@@ -36,7 +36,7 @@
 * scheme overview data::          Syntactic data and datum values.
 * scheme overview continuations:: Continuations.
 * scheme overview libraries::     Libraries.
-* scheme overview programs::      Top--level programs.
+* scheme overview programs::      Top-level programs.
 @end menu
 
 @c page

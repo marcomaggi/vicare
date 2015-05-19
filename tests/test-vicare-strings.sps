@@ -24,10 +24,11 @@
 
 
 #!vicare
-(import (except (vicare) catch)
-  (vicare system $strings)
-  (vicare checks))
-(options strict-r6rs)
+(program (test)
+  (options strict-r6rs)
+  (import (except (vicare) catch)
+    (vicare system $strings)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare string functions\n")
@@ -2076,6 +2077,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;;Local Variables:

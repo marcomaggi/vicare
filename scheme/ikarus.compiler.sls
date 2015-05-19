@@ -25,7 +25,7 @@
 (library (ikarus.compiler)
   (export
     current-primitive-locations		eval-core
-    compile-core-expr-to-port		compile-core-expr
+    compile-core-expr-to-port		compile-core-expr-to-thunk
     core-expr->optimized-code		core-expr->assembly-code
     core-expr->optimisation-and-core-type-inference-code
 
@@ -336,10 +336,10 @@
   ;;This function is used to compile  fully expanded R6RS programs, invoke libraries,
   ;;implement R6RS's eval function, compile right-hand sides of syntax definitions.
   ;;
-  ((compile-core-expr x)))
+  ((compile-core-expr-to-thunk x)))
 
 (module (compile-core-expr-to-port
-	 compile-core-expr
+	 compile-core-expr-to-thunk
 	 compile-core-expr->code
 	 core-expr->optimized-code
 	 core-expr->optimisation-and-core-type-inference-code
@@ -351,7 +351,7 @@
     ;;
     (fasl-write (compile-core-expr->code expr) port))
 
-  (define (compile-core-expr x)
+  (define (compile-core-expr-to-thunk x)
     ;;This function is used to compile  libraries' source code for serialisation into
     ;;FASL files.
     ;;
@@ -427,7 +427,7 @@
 					stop-after-core-type-inference?
 					stop-after-assembly-generation?)))
 
-  #| end of module: compile-core-expr |# )
+  #| end of module |# )
 
 
 ;;;; done

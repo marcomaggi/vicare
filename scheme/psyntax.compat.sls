@@ -58,7 +58,7 @@
     ;; compiler related operations
     compiler.eval-core			compiler.core-expr->optimized-code
     compiler.core-expr->optimisation-and-core-type-inference-code
-    compiler.core-expr->assembly-code	compiler.compile-core-expr
+    compiler.core-expr->assembly-code	compiler.compile-core-expr-to-thunk
 
     ;; runtime options
     option.debug-mode-enabled?
@@ -73,6 +73,7 @@
     option.tagged-language?
 
     expander-option.integrate-special-list-functions?
+    foreign.dynamically-load-shared-object-from-identifier
 
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
@@ -93,8 +94,6 @@
     remprop				property-list
 
     ;; error handlers
-    library-version-mismatch-warning
-    library-stale-warning
     print-expander-warning-message
     procedure-argument-violation
     warning
@@ -133,7 +132,7 @@
   (import (vicare)
     (prefix (only (ikarus.compiler)
 		  eval-core
-		  compile-core-expr
+		  compile-core-expr-to-thunk
 		  core-expr->optimized-code
 		  core-expr->optimisation-and-core-type-inference-code
 		  core-expr->assembly-code
@@ -159,6 +158,9 @@
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
 	  file-modification-time)
+    (prefix (only (vicare.foreign-libraries)
+		  dynamically-load-shared-object-from-identifier)
+	    foreign.)
     ;;NOTE Let's  try to import  the unsafe  operations from the  built-in libraries,
     ;;when possible, rather that using external libraries of macros.
     (only (vicare system $symbols)
@@ -196,16 +198,6 @@
   (import (only (vicare) expand-library)))
 
 
-(define (library-version-mismatch-warning name depname filename)
-  (print-expander-warning-message "library ~s has an inconsistent dependency \
-                                   on library ~s; file ~s will be recompiled from source."
-				  name depname filename))
-
-(define (library-stale-warning name filename)
-  (print-expander-warning-message "library ~s is stale; file ~s will be \
-                                   recompiled from source."
-				  name filename))
-
 (define (print-expander-warning-message template . args)
   (when (option.verbose?)
     (let ((P (current-error-port)))

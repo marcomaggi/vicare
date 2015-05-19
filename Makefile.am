@@ -54,6 +54,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/libutils.texi				\
 	doc/progutils.texi				\
 	doc/includes.texi				\
+	doc/foreign.texi				\
 	doc/ffi.texi					\
 	doc/syslib.texi					\
 	doc/tags.texi					\

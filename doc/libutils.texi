@@ -921,6 +921,12 @@ evaluate to run the @syntax{stale-when} composite test expression.
 @deffn {Accessor for @objtype{library}} library-guard-lib* @var{lib}
 The list of @objtype{library} objects selecting libraries needed by the
 @syntax{stale-when} composite test expression.
+
+@quotation
+@strong{NOTE} These are the libraries accumulated by the
+@func{inv-collector} while expanding the @syntax{stale-when} test
+expressions.
+@end quotation
 @end deffn
 
 
@@ -941,7 +947,15 @@ from which the source code of the library was read.
 
 
 @deffn {Accessor for @objtype{library}} library-option* @var{lib}
-A symbolic expression holding library options.
+A list of symbolic expressions holding library options.
+@end deffn
+
+
+@deffn {Accessor for @objtype{library}} library-foreign-library* @var{lib}
+A list of strings each representing the identifier of a foreign library
+that must be dynamically loaded for this @var{lib} object.  These
+libraries are the ones especially written to interface @value{PRJNAME}
+with platform--specific services.
 @end deffn
 
 
@@ -980,6 +994,95 @@ Given a library descriptor object return the @uid{}.
 @defun library-descriptor-name @var{libdescr}
 Given a library descriptor object return the @rnrs{6} library name.
 @end defun
+
+@c ------------------------------------------------------------------------
+
+As example of @objtype{library} fields, expanding the library:
+
+@lisp
+(library (ciao)
+  (export var fun mac etv)
+  (import (vicare))
+  (define var 1)
+  (define (fun)
+    2)
+  (define-syntax (mac stx)
+    3)
+  (define-syntax etv
+    (make-expand-time-value
+     (+ 4 5))))
+@end lisp
+
+@noindent
+yields the @code{invoke-code}:
+
+@lisp
+(library-letrec*
+    ((lex.var loc.var '1)
+     (lex.fun loc.fun (annotated-case-lambda fun (() '2))))
+  ((primitive void)))
+@end lisp
+
+@noindent
+the @code{visit-code}:
+
+@lisp
+(begin
+  (set! loc.mac
+        (annotated-case-lambda
+            (#'lambda (#'stx) #'3)
+          ((lex.stx) '3)))
+  (set! loc.etv
+        (annotated-call
+            (make-expand-time-value (+ 4 5))
+          (primitive make-expand-time-value)
+          (annotated-call (+ 4 5) (primitive +) '4 '5))))
+@end lisp
+
+@noindent
+the @code{export-subst}:
+
+@lisp
+((etv . lab.etv)
+ (mac . lab.mac)
+ (fun . lab.fun)
+ (var . lab.var))
+@end lisp
+
+@noindent
+the @code{global-env}:
+
+@lisp
+((lab.var global        . loc.var)
+ (lab.fun global        . loc.fun)
+ (lab.mac global-macro  . loc.mac)
+ (lab.etv global-etv    . loc.etv))
+@end lisp
+
+Another example, for the library:
+
+@lisp
+(library (ciao (1 2))
+  (export doit)
+  (import (vicare))
+  (stale-when (< 1 2)
+    (define a 123))
+  (stale-when (< 2 3)
+    (define b 123))
+  (define (doit)
+    123))
+@end lisp
+
+@noindent
+the @code{guard-code} is:
+
+@lisp
+(if (if '#f
+        '#t
+       (annotated-call (< 1 2) (primitive <) '1 '2))
+    '#t
+  (annotated-call (< 2 3) (primitive <) '2 '3))
+@end lisp
 
 @c page
 @node libutils libraries global-env

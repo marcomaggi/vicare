@@ -87,7 +87,7 @@ A list representing the bindings exported by the program.
 
 @item option*
 A list of symbols representing the options enabled for this program;
-@ref{iklib syntaxes programs} for details.
+@ref{iklib programs} for details.
 @end table
 @end defun
 

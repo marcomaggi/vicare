@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,13 +26,15 @@
 
 
 #!r6rs
-(import (except (vicare) catch)
-  (vicare language-extensions syntaxes)
-  (vicare arguments validation)
-  (prefix (vicare arguments validation)
-	  args.)
-  (vicare checks))
-(options strict-r6rs)
+(program (test)
+  (options strict-r6rs)
+  (import (except (vicare) catch)
+    (vicare language-extensions syntaxes)
+    (vicare arguments validation)
+    (prefix (vicare arguments validation)
+	    args.)
+    (vicare checks))
+
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare arguments validation library\n")
@@ -2388,5 +2390,7 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file

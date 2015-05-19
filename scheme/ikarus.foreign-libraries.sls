@@ -11,7 +11,7 @@
 ;;;	source  files and  FASL files;  dynamically load  foreign shared
 ;;;	library in the appropriate way.
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -31,49 +31,21 @@
 #!r6rs
 (library (vicare.foreign-libraries)
   (export
-    register-filename-foreign-library
-    retrieve-filename-foreign-libraries
-    autoload-filename-foreign-library)
+    dynamically-load-shared-object-from-identifier)
   (import (vicare)
-    (prefix (vicare system $foreign) ffi.))
-
-
-;;;; foreign libraries table
-
-;;Table  associating  library source  file  names  to  lists of  strings
-;;representing foreign shared library identifiers.
-;;
-(define FOREIGN-LIBRARIES-TABLE
-  (make-hashtable string-hash string=?))
-
-(define (register-filename-foreign-library filename foreign-library-id)
-  ;;Register the string FOREIGN-LIBRARY-ID as foreign library identifier
-  ;;associated  to  the  library  source  file name  whose  pathname  is
-  ;;FILENAME.
-  ;;
-  (let ((ls (hashtable-ref FOREIGN-LIBRARIES-TABLE filename #f)))
-    (hashtable-set! FOREIGN-LIBRARIES-TABLE filename
-		    (if ls
-			(cons foreign-library-id ls)
-		      (list foreign-library-id)))))
-
-(define (retrieve-filename-foreign-libraries filename)
-  ;;Return a  list of  strings representing foreign  library identifiers
-  ;;associated  to  the  library  source  file name  whose  pathname  is
-  ;;FILENAME.  If  the file has no associated  foreign libraries: return
-  ;;false.
-  ;;
-  (hashtable-ref FOREIGN-LIBRARIES-TABLE filename #f))
+    (prefix (vicare system $foreign) ffi.)
+    (prefix (only (ikarus.options)
+		  verbose?)
+	    option.))
 
 
 ;;;; foreign libraries loading
 
-(define (autoload-filename-foreign-library libid)
-  ;;Load  the foreign  shared  library whose  identifier  is the  string
-  ;;LIBID.   Make  all the  exported  symbols  immediately  part of  the
-  ;;process image, so that the macro FOREIGN-CALL can reference them.
+(define* (dynamically-load-shared-object-from-identifier libid)
+  ;;Load the foreign  shared library whose identifier is the  string LIBID.  Make all
+  ;;the exported  symbols immediately part  of the process  image, so that  the macro
+  ;;FOREIGN-CALL can reference them.
   ;;
-  (define who 'autoload-filename-foreign-library)
   (define-inline (%make-libname-unix   id)	(string-append "lib" id ".so"))
   (define-inline (%make-libname-bsd    id)	(string-append "lib" id ".so"))
   (define-inline (%make-libname-cygwin id)	(string-append id ".dll"))
@@ -86,13 +58,18 @@
 			  ((cygwin)	(%make-libname-cygwin libid))
 			  ((darwin)	(%make-libname-darwin libid))
 			  (else
-			   (error who
+			   (error __who__
 			     "internal error: invalid target OS UID"
 			     target-os-uid))))
-	 (rv		(ffi.dlopen libname #t #t)))
+	 (rv		(begin
+			  (when (option.verbose?)
+			    (fprintf (current-error-port)
+				     "vicare: loading shared object \"~a\"\n"
+				     libname))
+			  (ffi.dlopen libname #t #t))))
     ;;FIXME The handle is lost: the library cannot be closed.
     (unless rv
-      (error who (ffi.dlerror)))))
+      (error __who__ (ffi.dlerror)))))
 
 
 ;;;; done

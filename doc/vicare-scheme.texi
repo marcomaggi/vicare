@@ -160,6 +160,8 @@ Trademarks used herein are the property of their respective owners.
 * libutils::                    Scheme libraries utilities.
 * progutils::                   Scheme programs utilities.
 * includes::                    Loading include files.
+* foreign::                     Interfacing with adapting foreign
+                                libraries.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
 * tags::                        Tagged language.
@@ -219,6 +221,7 @@ External documents
 @include libutils.texi
 @include progutils.texi
 @include includes.texi
+@include foreign.texi
 @include ffi.texi
 @include syslib.texi
 @include tags.texi

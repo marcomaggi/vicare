@@ -34,6 +34,9 @@ the function @func{vicare-built-with-ffi-enabled} from @library{vicare}
 expand--time with the clause @code{ffi-enabled} of @func{cond-expand}
 from @ansrfi{0} (@libsref{srfi cond-expand vicare, ffi-enabled}).
 
+@value{PRJNAME} defines an @api{} to handle pointer objects, @ref{iklib
+pointers} for details.
+
 @menu
 * ffi libffi::                  Installing and using Libffi.
 * ffi dl::                      Accessing shared libraries.

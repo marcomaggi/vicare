@@ -9,7 +9,7 @@
 ;;;	Built in  binding to the CRE2  library: a C wrapper  for the RE2
 ;;;	regular expressions library from Google.
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,8 +27,8 @@
 
 
 #!vicare
-#!(load-shared-library "vicarecre2")
 (library (vicare cre2)
+  (foreign-library "vicarecre2")
   (export
     ;; version functions
     enabled?			version-interface-current

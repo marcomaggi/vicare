@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,9 +26,10 @@
 
 
 #!vicare
-(import (vicare)
-  (vicare checks))
-(options tagged-language)
+(program (test)
+  (options tagged-language)
+  (import (vicare)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing issue 70: rogue object reference generated when returning multiple values from optimised R6RS record accessors")
@@ -65,6 +66,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

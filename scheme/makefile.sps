@@ -1002,7 +1002,7 @@
 ;;;
     ;;FIXME At  the next boot  image rotation  these libraries must  become required.
     ;;(Marco Maggi; Mon Apr 14, 2014)
-    ,@(if-building-rotation-boot-image? "expander built-in libaries requirements"
+    ,@(if-building-rotation-boot-image? "expander built-in libraries requirements"
 	  '(($type-specs	(vicare expander object-type-specs)	#t	#t)
 	    ($expander-tags	(vicare expander tags)			#t	#t)
 	    ($expander		(vicare expander)			#t	#t))
@@ -5027,6 +5027,7 @@
 		       system-value-gensym
 		       system-label-gensym)
 	     (only (psyntax.library-manager)
+		   make-library
 		   intern-library)
 	     (only (ikarus.compiler)
 		   system-value-gensym
@@ -5104,13 +5105,24 @@
 	     (option*		'()))
 	;;Datums embedded in this symbolic expression are quoted to allow the sexp to
 	;;be handed to EVAL (I guess; Marco Maggi, Aug 26, 2011).
-	`(intern-library ',id
-			 (quote ,(append fullname (list version)))
-			 '()  ;; import-libs
-			 '()  ;; visit-libs
-			 '()  ;; invoke-libs
-			 ',subst ',env void void '#f '#f '#f '() ',visible?
-			 (quote ,source-file-name) (quote ,option*))))
+	`(intern-library (make-library ',id					 ;uid
+				       (quote ,(append fullname (list version))) ;name
+				       '()			 ;imp-lib*
+				       '()			 ;vis-lib*
+				       '()			 ;inv-lib*
+				       ',subst			 ;export-subst
+				       ',env			 ;global-env
+				       void			 ;visit-state
+				       void			 ;invoke-state
+				       '#f			 ;visit-code
+				       '#f			 ;invoke-code
+				       '#f			 ;guard-code
+				       '()			 ;guard-lib*
+				       ',visible?		 ;visible*
+				       (quote ,source-file-name) ;source-file-name
+				       (quote ,option*)		 ;option*
+				       '()			 ;foreign-library*
+				       ))))
 
     (define (get-export-subset nickname export-subst)
       ;;Given the alist of substitutions EXPORT-SUBST, build and return the subset of

@@ -33,13 +33,14 @@
     library-invoke-code			library-guard-code
     library-guard-lib*			library-visible?
     library-source-file-name		library-option*
+    library-foreign-library*
     library-loaded-from-source-file?	library-loaded-from-binary-file?
     library-descriptor			library-descriptor?
     library-descriptor-uid		library-descriptor-name
 
     ;; interning libraries
     intern-library			unintern-library
-    interned-libraries			intern-binary-library-and-its-dependencies
+    interned-libraries
 
     ;; library operations
     visit-library			invoke-library
@@ -100,11 +101,10 @@
 		;The list of LIBRARY objects selecting libraries needed by the invoke
 		;code.
    export-subst
-		;A subst  selecting the exported  bindings from the  GLOBAL-ENV.  See
-		;the expander's code for details.
+		;A subst selecting the exported bindings from the GLOBAL-ENV.
    global-env
 		;The GLOBAL-ENV  representing the  top-level bindings defined  by the
-		;library body.  See the expander's code for details.
+		;library body.
    visit-state
 		;When set  to a  procedure: it is  the thunk to  call to  compile and
 		;evaluate the visit  code.  When set to something  else: this library
@@ -144,6 +144,10 @@
 		;the source code of the library was read.
    option*
 		;A sexp holding library options.
+   foreign-library*
+		;A list of strings representing  identifiers of shared libraries that
+		;must be  loaded before  this library is  invoked.  For  example: for
+		;"libvicare-curl.so", the string identifier is "vicare-curl".
    )
   (lambda (S port sub-printer)
     (define-syntax-rule (%display thing)
@@ -506,197 +510,53 @@
      '()
      ((current-library-collection)))))
 
-(module (intern-library)
+(define* (intern-library {lib library?})
   ;;Build a  LIBRARY object and  intern it in  the internal collection  of libraries.
-  ;;When successful:  return a "library"  object; otherwise raise an  exception.  The
-  ;;arguments are:
+  ;;When  successful: return  the "library"  object  LIB itself;  otherwise raise  an
+  ;;exception.
   ;;
-  ;;UID -
-  ;;   A gensym uniquely identifying this library.
-  ;;
-  ;;NAME -
-  ;;   A R6RS library name.
-  ;;
-  ;;IMPORT-LIBDESC* -
-  ;;    A list  of library  descriptors enumerating  the libraries  specified in  the
-  ;;   IMPORT clauses.
-  ;;
-  ;;VISIT-LIBDESC* -
-  ;;   A  list of library descriptors  enumerating the libraries needed  by the visit
-  ;;   code.
-  ;;
-  ;;INVOKE-LIBDESC* -
-  ;;   A  list of library descriptors  enmerating the libraries needed  by the invoke
-  ;;   code.
-  ;;
-  ;;EXPORT-SUBST -
-  ;;   A subst selecting the bindings to export from the GLOBAL-ENV.
-  ;;
-  ;;GLOBAL-ENV -
-  ;;   The list of top-level bindings defined  by the library body.  Some of them are
-  ;;   to be exported, others are not.
-  ;;
-  ;;VISIT-PROC -
-  ;;   A thunk to evaluate to visit the library.
-  ;;
-  ;;INVOKE-PROC -
-  ;;   A thunk to evaluate to invoke the library.
-  ;;
-  ;;VISIT-CODE -
-  ;;   When this argument is created from  source code: this field is a core language
-  ;;    symbolic expression  representing  the  visit code.   When  this argument  is
-  ;;   created  from a compiled  library: this  field is a  thunk to be  evaluated to
-  ;;   visit the library.
-  ;;
-  ;;INVOKE-CODE -
-  ;;   When this argument is created from  source code: this field is a core language
-  ;;    symbolic expression  representing the  invoke  code.  When  this argument  is
-  ;;   created from a binary library: this field is a thunk to be evaluated to invoke
-  ;;   the library.
-  ;;
-  ;;GUARD-CODE -
-  ;;   When this argument is created from  source code: this field is a core language
-  ;;    symbolic expression  representing  the  guard code.   When  this argument  is
-  ;;   created from  a binary library: this field  is a thunk to be  evaluated to run
-  ;;   the STALE-WHEN composite test expression.
-  ;;
-  ;;GUARD-LIBDESC* -
-  ;;   A list of library descriptors enmerating the libraries needed by the composite
-  ;;   STALE-WHEN test expression.
-  ;;
-  ;;VISIBLE? -
-  ;;    A boolean,  true  if this  library  is to  be made  visible  to the  function
-  ;;   INTERNED-LIBRARIES.
-  ;;
-  ;;SOURCE-FILE-NAME -
-  ;;   False or a string representing the source file name.
-  ;;
-  ;;LIBRARY-OPTION* -
-  ;;   A list of sexps representing library options.
-  ;;
-  (define-module-who intern-library)
-
-  (define* (intern-library {uid symbol?} {libname library-name?}
-			    import-libdesc* visit-libdesc* invoke-libdesc*
-			    export-subst global-env
-			    visit-proc invoke-proc
-			    visit-code invoke-code
-			    guard-code guard-libdesc*
-			    visible? source-file-name library-option*)
-    (let ((import-lib*	(map find-library-in-collection-by-descriptor import-libdesc*))
-	  (visit-lib*	(map find-library-in-collection-by-descriptor visit-libdesc*))
-	  (invoke-lib*	(map find-library-in-collection-by-descriptor invoke-libdesc*))
-	  (guard-lib*	(map find-library-in-collection-by-descriptor guard-libdesc*)))
-      (when (find-library-in-collection-by-name libname)
-	(assertion-violation __module_who__ "library is already interned" libname))
-      (receive-and-return (lib)
-	  (make-library uid libname import-lib* visit-lib* invoke-lib*
-			export-subst global-env visit-proc invoke-proc
-			visit-code invoke-code guard-code guard-lib*
-			visible? source-file-name library-option*)
-	(%intern-library-object lib)
-	(when (memq 'visit-upon-loading library-option*)
-	  (visit-library lib)))))
-
-  (define (%intern-library-object lib)
-    (for-each
-	(lambda (global-env-entry)
-	  ;;See the comments  in the expander code for the  format of the GLOBAL-ENV.
-	  ;;Entries in the GLOBAL-ENV are different  from entries in the LEXENV; here
-	  ;;we transform an GLOBAL-ENV binding into a LEXENV binding descriptor.
-	  (let* ((label    (car global-env-entry))
-		 (binding  (cdr global-env-entry))
-		 (binding1 (case (car binding)
-			     ((global)        (cons* 'global        lib (cdr binding)))
-			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
-			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
-			     ((global-etv)    (cons* 'global-etv    lib (cdr binding)))
+  (let ((name (library-name lib)))
+    (when (find-library-in-collection-by-name name)
+      (assertion-violation __who__
+	"attempt to intern already interned library" name lib)))
+  ;;See the  documentation of  the expander  code for the  format of  the GLOBAL-ENV.
+  ;;Entries  in the  GLOBAL-ENV are  different from  entries in  the LEXENV;  here we
+  ;;transform a  GLOBAL-ENV entry into a  syntactic binding descriptor stored  in the
+  ;;VALUE slot of its label gensym.
+  (for-each
+      (lambda (label.descriptor)
+	(let* ((label      (car label.descriptor))
+	       (type.value (cdr label.descriptor))
+	       (binding    (case (car type.value)
+			     ((global)        (cons* 'global        lib (cdr type.value)))
+			     ((global-macro)  (cons* 'global-macro  lib (cdr type.value)))
+			     ((global-macro!) (cons* 'global-macro! lib (cdr type.value)))
+			     ((global-etv)    (cons* 'global-etv    lib (cdr type.value)))
 			     ((core-prim
 			       library import export
 			       define define-syntax define-alias
 			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
-			       global global-mutable
+			       global-mutable
 			       core-macro macro macro!
 			       $core-rtd $record-type-name $struct-type-name
 			       $module $fluid $synonym)
-			      binding)
+			      type.value)
 			     (else
-			      (assertion-violation __module_who__
+			      (assertion-violation __who__
 				"invalid syntactic binding descriptor type in GLOBAL-ENV entry"
-				lib global-env-entry)))))
-	    ;;When the library is serialised: the content of the label's "value" slot
-	    ;;is not  saved, so  we have  to set it  here every  time the  library is
-	    ;;loaded.
-	    (set-label-binding! label binding1)))
-      ;;This expression returns the GLOBAL-ENV of the library LIB.
-      (library-global-env lib))
-    ;;Register the object in the collection of interned libraries.
-    ((current-library-collection) lib))
-
-  #| end of module: INTERN-LIBRARY |# )
-
-(define (intern-binary-library-and-its-dependencies
-	 uid libname
-	 import-libdesc* visit-libdesc* invoke-libdesc*
-	 export-subst global-env
-	 visit-proc invoke-proc guard-proc
-	 guard-libdesc* visible? library-option* source-filename)
-  ;;Whenever we load a serialied compiled library from a binary file we read the file
-  ;;decoding  whatever  format  we have  used;  the  result  is  a tuple  of  objects
-  ;;representing the compiled library.
-  ;;
-  ;;This function interns the binary library  in the internal collection after having
-  ;;loaded  and interned  all its  dependency  libraries.  When  successful return  a
-  ;;symbolic expression representing the R6RS library name; otherwise return #f.
-  ;;
-  ;;Dependency libraries are interned with FIND-LIBRARY-BY-NAME, which does the right
-  ;;thing if the libraries are already interned.
-  ;;
-  (let loop ((libdesc* (append import-libdesc* visit-libdesc* invoke-libdesc* guard-libdesc*)))
-    (cond ((pair? libdesc*)
-	   ;;For every  library descriptor  in the list  of dependencies:  search the
-	   ;;library, load it if needed and intern it.
-	   (let* ((deplib-descr    (car libdesc*))
-		  (deplib-libname  (library-descriptor-name deplib-descr))
-		  (deplib-lib      (find-library-by-name deplib-libname)))
-	     (if (and (library? deplib-lib)
-		      (eq? (library-descriptor-uid deplib-descr)
-			   (library-uid            deplib-lib)))
-		 (loop (cdr libdesc*))
-	       (begin
-		 ;;Print a message to warn the user.
-		 (library-version-mismatch-warning libname deplib-libname source-filename)
-		 #f))))
-	  (else
-	   ;;Invoke  all  the  guard  libraries  so we  can  evaluate  the  composite
-	   ;;STALE-WHEN test expression.
-	   (for-each (lambda (guard-libdesc)
-		       (invoke-library (find-library-by-name (library-descriptor-name guard-libdesc))))
-	     guard-libdesc*)
-	   ;;Evaluate   the   composite   STALE-WHEN  test   expression   and   react
-	   ;;appropriately.
-	   (if (guard-proc)
-	       ;;The compiled library is stale: print a message to warn the user then
-	       ;;return false.
-	       (begin
-		 (library-stale-warning libname source-filename)
-		 #f)
-	     ;;The compiled library is fine: intern it and return true.
-	     (let ((visit-code        #f)
-		   (invoke-code       #f)
-		   (guard-code        (quote (quote #f)))
-		   (guard-libdesc*    '())
-		   (source-file-name  #f))
-	       (intern-library uid libname
-				import-libdesc* visit-libdesc* invoke-libdesc*
-				export-subst global-env
-				visit-proc invoke-proc
-				visit-code invoke-code
-				guard-code guard-libdesc*
-				visible? source-file-name library-option*)
-	       libname))))))
+				lib label.descriptor)))))
+	  ;;When the library  is serialised: the content of the  label's "value" slot
+	  ;;is not saved, so we have to set it here every time the library is loaded.
+	  (set-label-binding! label binding)))
+    ;;This expression returns the GLOBAL-ENV of the library LIB.
+    (library-global-env lib))
+  ;;Register the object in the collection of interned libraries.
+  ((current-library-collection) lib)
+  (when (memq 'visit-upon-loading (library-option* lib))
+    (visit-library lib))
+  lib)
 
 
 ;;;; uninterning libraries

@@ -54,13 +54,14 @@
 		  current-include-file-loader)
     (prefix (ikarus.posix)
 	    posix.)
-    (only (ikarus.compiler)
-	  compile-core-expr)
-    (only (vicare.foreign-libraries)
-	  retrieve-filename-foreign-libraries)
+    (prefix (only (ikarus.compiler)
+		  compile-core-expr-to-thunk)
+	    compiler.)
     (prefix (psyntax.library-manager) libman.)
     (only (psyntax.expander)
 	  expand-r6rs-top-level-make-compiler)
+    (only (psyntax.compat)
+	  print-expander-warning-message)
     (prefix (only (ikarus.reader)
 		  read-script-from-file
 		  read-library-from-port)
@@ -323,7 +324,7 @@
 	       #f))
       ;;This  call  to  the  library  expander loads  and  interns  all  the  library
       ;;dependencies using FIND-LIBRARY-BY-REFERENCE.
-      (let ((lib  ((libman.current-library-expander) libsexp source-pathname %verify-libname)))
+      (let ((lib ((libman.current-library-expander) libsexp source-pathname %verify-libname)))
 	(receive-and-return (name)
 	    (libman.library-name lib)
 	  (print-library-verbose-message "loaded library \"~a\" from: ~a" name (port-id port)))))))
@@ -370,10 +371,13 @@
     (guard (E ((eq? E REJECT-KEY)
 	       (print-library-debug-message "~a: rejected library from port: ~a" __who__ port)
 	       #f))
-      (cond ((read-library-binary-port port libman.intern-binary-library-and-its-dependencies %verify-libname)
-	     => (lambda (libname)
-		  (print-library-verbose-message "loaded library \"~a\" from: ~a" libname (port-id port))
-		  libname))
+      (cond ((read-serialised-library-from-binary-port port %verify-libname)
+	     => (lambda (serialised-lib)
+		  (print-library-verbose-message "loaded library \"~a\" from: ~a"
+						 (serialised-library-name serialised-lib)
+						 (port-id port))
+		  (let ((interned-lib (intern-binary-library-and-its-dependencies serialised-lib)))
+		    (libman.library-name interned-lib))))
 	    (else
 	     (print-library-verbose-message
 	      "warning: not using FASL file ~s because invalid or compiled with a different instance of Vicare"
@@ -916,21 +920,17 @@
   ;;library: it is silently overwritten.
   ;;
   (when (libman.library-loaded-from-source-file? lib)
-    (let ((source-pathname (libman.library-source-file-name lib)))
-      (print-library-verbose-message "serialising library: ~a" binary-pathname)
-      (serialise-library lib
-			 (lambda (source-pathname libname contents)
-			   (store-full-serialised-library-to-file binary-pathname source-pathname libname contents))
-			 (lambda (core-expr)
-			   (compile-core-expr core-expr))))))
+    (print-library-verbose-message "serialising library: ~a" binary-pathname)
+    (store-full-serialised-library-to-file binary-pathname lib)))
 
 (define current-library-serialiser
   ;;References a  function used to  serialise a compiled  library into a  gieven FASL
   ;;file pathname.
   ;;
   ;;The referenced  function must accept 2  arguments: a LIBRARY object  and a string
-  ;;file pathname representing  the FASL pathname; it can  return unspecified values;
-  ;;if an error occurs it must raise an exception.
+  ;;file pathname representing the binary library  pathname (the pathname of the FASL
+  ;;file); it  can return  unspecified values; if  an error occurs  it must  raise an
+  ;;exception.
   ;;
   ;;Only libraries loaded form source files  must be serialised: if the given library
   ;;was loaded from a binary file: nothing must happen.
@@ -943,9 +943,9 @@
 ;;; --------------------------------------------------------------------
 
 (define* (default-library-build-directory-serialiser {lib libman.library?})
-  ;;Default  value  for   the  parameter  CURRENT-LIBRARY-SERIALISER-IN-BUILD-DIRECTORY.
-  ;;Given aLIBRARY  object: serialise the compiled  library in a FASL  file under the
-  ;;currently selected store directory.  Return unspecified values.  Serialisation is
+  ;;Default  value for  the parameter  CURRENT-LIBRARY-SERIALISER-IN-BUILD-DIRECTORY.
+  ;;Given a LIBRARY object:  serialise the compiled library in a  FASL file under the
+  ;;currently selected build directory.  Return unspecified values.  Serialisation is
   ;;performed  with the  library  serialiser procedure  referenced  by the  parameter
   ;;CURRENT-LIBRARY-SERIALISER.
   ;;
@@ -970,161 +970,204 @@
       obj)))
 
 ;;; --------------------------------------------------------------------
-
-(define (serialise-collected-libraries serialise compile)
-  ;;Traverse the  current collection of libraries  and serialise the contents  of all
-  ;;the LIBRARY objects  that were loaded from source; to  "serialise" means to write
-  ;;the compiled contents in a FASL file.  Return unspecified values.
-  ;;
-  ;;SERIALISE must be a closure to be invoked as follows:
-  ;;
-  ;;   (serialise ?source-pathname ?libname ?contents)
-  ;;
-  ;;where: ?SOURCE-PATHNAME  must be  a string representing  the source  library file
-  ;;pathname; ?LIBNAME  must be a  symbolic expression representing a  R6RS compliant
-  ;;library name;  ?CONTENTS must  be a  value representing  the compiled  library as
-  ;;defined by the procedure SERIALISE-LIBRARY.
-  ;;
-  ;;COMPILE must be a closure to be invoked as follows:
-  ;;
-  ;;   (compile ?core-language-expression)
-  ;;
-  ;;where ?CORE-LANGUAGE-EXPRESSION  must be  a symbolic expression  representing the
-  ;;invoke, visit or guard code from the  library; the closure must compile the given
-  ;;core language  expression and return  a closure  object wrapping the  code object
-  ;;representing the init expression.
-  ;;
-  (for-each (lambda (lib)
-	      (serialise-library lib serialise compile))
-    ((libman.current-library-collection))))
-
-(define* (serialise-library {lib libman.library?} {serialise procedure?} {compile procedure?})
-  ;;Compile and serialise the given LIBRARY object.  Return unspecified values.
-  ;;
-  ;;SERIALISE must be a closure to be invoked as follows:
-  ;;
-  ;;   (serialise ?source-pathname ?libname ?contents)
-  ;;
-  ;;where: ?SOURCE-PATHNAME  must be  a string representing  the source  library file
-  ;;pathname; ?LIBNAME  must be a  symbolic expression representing a  R6RS compliant
-  ;;library name;  ?CONTENTS must  be a  value representing  the compiled  library as
-  ;;defined by this procedure.
-  ;;
-  ;;COMPILE must be a closure to be invoked as follows:
-  ;;
-  ;;   (compile ?core-language-expression)
-  ;;
-  ;;where ?CORE-LANGUAGE-EXPRESSION  must be  a symbolic expression  representing the
-  ;;invoke, visit or guard code from the  library; the closure must compile the given
-  ;;core language  expression and return  a closure  object wrapping the  code object
-  ;;representing the init expression.
-  ;;
-  (let ((libname         (libman.library-name lib))
-	(source-pathname (libman.library-source-file-name lib)))
-    (serialise source-pathname libname
-	       (list (libman.library-uid lib)
-		     libname
-		     (map libman.library-descriptor (libman.library-imp-lib* lib))
-		     (map libman.library-descriptor (libman.library-vis-lib* lib))
-		     (map libman.library-descriptor (libman.library-inv-lib* lib))
-		     (libman.library-export-subst lib)
-		     (libman.library-global-env lib)
-		     (compile (libman.library-visit-code lib))
-		     (compile (libman.library-invoke-code lib))
-		     (compile (libman.library-guard-code lib))
-		     (map libman.library-descriptor (libman.library-guard-lib* lib))
-		     (libman.library-visible? lib)
-		     (libman.library-option* lib)
-		     source-pathname))))
-
-;;; --------------------------------------------------------------------
 ;;; reading and writing binary libraries in FASL files
 
-(module (read-library-binary-port
-	 store-full-serialised-library-to-port
-	 store-full-serialised-library-to-file)
+(define* (read-serialised-library-from-binary-port {port binary-input-port?} {verify-libname procedure?})
+  ;;Given a string representing the existent pathname of a FASL file: load it looking
+  ;;for a  full binary library  serialisation, build a SERIALISED-LIBRARY  object and
+  ;;return it.  If the file has invalid contents: return false.
+  ;;
+  ;;VERIFY-LIBNAME must  be a procedure accepting  a single argument; it  must verify
+  ;;that the argument is a R6RS library  name and that it conforms to some additional
+  ;;constraint (especially the  version); it must raise an exception  if something is
+  ;;wrong; otherwise it should just return unspecified values.
+  ;;
+  (let ((libname (fasl-read-object port)))
+    (verify-libname libname)
+    (let ((x (fasl-read-object port)))
+      (and (serialised-library? x)
+	   x))))
 
-  (define-struct serialised-library
-    (contents
-		;A list of  values representing a LIBRARY  object holding precompiled
-		;code.   For   details  on   the  format  see   SERIALISE-LIBRARY  in
-		;"psyntax.library-manager.sls".
-     ))
+(define* (store-full-serialised-library-to-file {binary-pathname posix.file-string-pathname?} {lib libman.library?})
+  ;;Given  the FASL  pathname  of a  compiled  library to  be  serialised: store  the
+  ;;CONTENTS into  it, creating a  new file or  overwriting an existing  one.  Return
+  ;;unspecified values.
+  ;;
+  ;;BINARY-PATHNAME must be a string representing  the pathname of the binary library
+  ;;FASL file.
+  ;;
+  ;;LIB must be a LIBRARY object representing the library to be serialised.
+  ;;
+  (receive (dir name)
+      (posix.split-pathname-root-and-tail binary-pathname)
+    (unless (string-empty? dir)
+      ;;Create the destination directory if it does not already exists.
+      (posix.mkdir/parents dir #o755)))
+  ;;Serialise the library
+  (let ((port (open-file-output-port binary-pathname (file-options no-fail))))
+    (unwind-protect
+	(store-full-serialised-library-to-port port lib)
+      (close-output-port port)))
+  (print-library-verbose-message "library serialisation done"))
 
-  (define* (read-library-binary-port {port binary-input-port?}
-				     {success-kont procedure?}
-				     {verify-libname procedure?})
-    ;;Given  a string  representing the  existent pathname  of a  FASL file:  load it
-    ;;looking for a full binary library serialisation, then apply SUCCESS-KONT to the
-    ;;library contents.
-    ;;
-    ;;If successful: return the result of  the SUCCESS-KONT application.  If the file
-    ;;has invalid contents: return false.
-    ;;
-    ;;VERIFY-LIBNAME must be a procedure accepting  a single argument; it must verify
-    ;;that  the  argument is  a  R6RS  library name  and  that  it conforms  to  some
-    ;;additional constraint (especially  the version); it must raise  an exception if
-    ;;something is wrong; otherwise it should just return unspecified values.
-    ;;
-    (let ((libname (fasl-read-object port)))
-      (verify-libname libname)
-      (let ((x (fasl-read-object port)))
-	(and (serialised-library? x)
-	     (apply success-kont (serialised-library-contents x))))))
+(define* (store-full-serialised-library-to-port {port binary-output-port?} {lib libman.library?})
+  ;;Given a binary output port: store the  contents of a serialised full library into
+  ;;it.  Return unspecified values.
+  ;;
+  ;;LIB must be a LIBRARY object representing the library to be serialised.
+  ;;
+  (fasl-write-header port)
+  ;;Write  the name  first, so  that we  can read  it back  and validate  the library
+  ;;without reading the whole file.
+  (fasl-write-object (libman.library-name lib)                        port)
+  (fasl-write-object (%library-object->serialised-library-object lib) port (libman.library-foreign-library* lib)))
 
-  (define* (store-full-serialised-library-to-port {port binary-output-port?}
-						  {source-pathname posix.file-string-pathname?}
-						  {libname library-name?}
-						  contents)
-    ;;Given a  binary output port:  store the CONTENTS  of a serialised  full library
-    ;;into it.  Return unspecified values.
-    ;;
-    ;;SOURCE-PATHNAME  must be  a  string  representing the  pathname  of the  source
-    ;;library file (or equivalent).
-    ;;
-    ;;LIBNAME must be a R6RS library name.
-    ;;
-    ;;CONTENTS  must be  a  list  of values  representing  a  LIBRARY object  holding
-    ;;precompiled     code.      See     the    function     SERIALISE-LIBRARY     in
-    ;;"psyntax.library-manager.sls" for details on the format.
-    ;;
-    (fasl-write-header port)
-    (fasl-write-object libname port)
-    (fasl-write-object (make-serialised-library contents) port
-		       (retrieve-filename-foreign-libraries source-pathname)))
+;;; --------------------------------------------------------------------
 
-  (define* (store-full-serialised-library-to-file {binary-pathname posix.file-string-pathname?}
-						  {source-pathname posix.file-string-pathname?}
-						  {libname library-name?}
-						  contents)
-    ;;Given  the FASL  pathname of  a compiled  library to  be serialised:  store the
-    ;;CONTENTS into it,  creating a new file or overwriting  an existing one.  Return
-    ;;unspecified values.
-    ;;
-    ;;BINARY-PATHNAME  must be  a  string  representing the  pathname  of the  binary
-    ;;library FASL file.
-    ;;
-    ;;SOURCE-PATHNAME  must be  a  string  representing the  pathname  of the  source
-    ;;library file (or equivalent).
-    ;;
-    ;;LIBNAME must be a R6RS library name.
-    ;;
-    ;;CONTENTS  must be  a  list  of values  representing  a  LIBRARY object  holding
-    ;;precompiled     code.      See     the    function     SERIALISE-LIBRARY     in
-    ;;"psyntax.library-manager.sls" for details on the format.
-    ;;
-    (print-library-verbose-message "serialising ~a ..." binary-pathname)
-    (receive (dir name)
-	(posix.split-pathname-root-and-tail binary-pathname)
-      (unless (string-empty? dir)
-	(posix.mkdir/parents dir #o755)))
-    (let ((port (open-file-output-port binary-pathname (file-options no-fail))))
-      (unwind-protect
-	  (store-full-serialised-library-to-port port source-pathname libname contents)
-	(close-output-port port)))
-    (print-library-verbose-message "library serialisation done"))
+(define-struct serialised-library
+  (uid
+		;A gensym  uniquely identifying this serialised  library.  This field
+		;is equal to the one of "library" objects.
+   name
+		;A library name as  defined by R6RS.  This field is  equal to the one
+		;of "library" objects.
+   import-libdesc*
+		;A list of library descriptors as selected by the IMPORT syntax.
+   visit-libdesc*
+		;A list of  library descriptors representing the  libraries needed by
+		;the visit code.
+   invoke-libdesc*
+		;A list of  library descriptors representing the  libraries needed by
+		;the invoke code.
+   export-subst
+		;An alist public-name/label representing  the syntactic bindings from
+		;the GLOBAL-ENV  that this library  exports.  This field is  equal to
+		;the one of "library" objects.
+   global-env
+		;An  alist  label/descriptor  representing  the  top-level  synatctic
+		;bindings defined by this library.  This field is equal to the one of
+		;"library" objects.
+   visit-proc
+		;A thunk to call to evaluate the visit code.
+   invoke-proc
+		;A thunk to call to evaluate the invoke code.
+   guard-proc
+		;A thunk  to call  to evaluate  the guard code.   The thunk  runs the
+		;STALE-WHEN composite test expression.
+   guard-libdesc*
+		;A list of  library descriptors representing the  libraries needed by
+		;the guard code.
+   visible?
+		;A boolean determining if the  library is visible.  This attribute is
+		;used  by  INTERNED-LIBRARIES  to   select  libraries  to  report  as
+		;interned.  This field is equal to the one of "library" objects.
+   source-file-name
+		;False or a  string representing the pathname of the  file from which
+		;the source code of the library was read.
+   option*
+		;A sexp holding  library options.  This field is equal  to the one of
+		;"library" objects.
+   foreign-library*
+		;A list of strings representing  identifiers of shared libraries that
+		;must be  loaded before  this library is  invoked.  For  example: for
+		;"libvicare-curl.so", the  string identifier is  "vicare-curl".  This
+		;field is equal to the one of "library" objects.
+   ))
 
-  #| end of module |# )
+(define (%library-object->serialised-library-object lib)
+  (make-serialised-library
+   (libman.library-uid lib)
+   (libman.library-name lib)
+   (map libman.library-descriptor (libman.library-imp-lib* lib)) ;import-libdesc*
+   (map libman.library-descriptor (libman.library-vis-lib* lib)) ;visit-libdesc*
+   (map libman.library-descriptor (libman.library-inv-lib* lib)) ;invoke-libdesc*
+   (libman.library-export-subst lib)
+   (libman.library-global-env   lib)
+   (compiler.compile-core-expr-to-thunk (libman.library-visit-code  lib)) ;visit-proc
+   (compiler.compile-core-expr-to-thunk (libman.library-invoke-code lib)) ;invoke-proc
+   (compiler.compile-core-expr-to-thunk (libman.library-guard-code  lib)) ;guard-proc
+   (map libman.library-descriptor (libman.library-guard-lib* lib)) ;guard-libdesc*
+   (libman.library-visible? lib)
+   (libman.library-source-file-name lib)
+   (libman.library-option* lib)
+   (libman.library-foreign-library* lib)))
+
+(define (intern-binary-library-and-its-dependencies slib)
+  ;;Intern  the  "serialised-library" object  SLIB,  which  must represent  a  binary
+  ;;library read  from a FASL file;  also intern all its  dependency libraries.  When
+  ;;successful: return a "library" object representing the interned library.
+  ;;
+  ;;Dependency libraries are interned with FIND-LIBRARY-BY-NAME, which does the right
+  ;;thing if the libraries are already interned.
+  ;;
+  (define (%library-descriptor->library-object libdesc)
+    (libman.find-library-in-collection-by-name (libman.library-descriptor-name libdesc)))
+  (define (%library-version-mismatch-warning name depname filename)
+    (print-expander-warning-message "library ~s has an inconsistent dependency \
+                                     on library ~s; file ~s will be recompiled from source."
+				    name depname filename))
+  (define (%library-stale-warning name filename)
+    (print-expander-warning-message "library ~s is stale; file ~s will be recompiled from source."
+				    name filename))
+  (define guard-libdesc*
+    (serialised-library-guard-libdesc* slib))
+  (let loop ((libdesc* (append (serialised-library-import-libdesc* slib)
+			       (serialised-library-visit-libdesc*  slib)
+			       (serialised-library-invoke-libdesc* slib)
+			       guard-libdesc*)))
+    (cond ((pair? libdesc*)
+	   ;;For every  library descriptor  in the list  of dependencies:  search the
+	   ;;library, load it if needed and intern it.
+	   (let* ((deplib-descr    (car libdesc*))
+		  (deplib-libname  (libman.library-descriptor-name deplib-descr))
+		  (deplib-lib      (libman.find-library-by-name    deplib-libname)))
+	     (if (and (libman.library? deplib-lib)
+		      (eq? (libman.library-descriptor-uid deplib-descr)
+			   (libman.library-uid            deplib-lib)))
+		 ;;Dependency  library successfully  interned.  Go  on with  the next
+		 ;;one.
+		 (loop (cdr libdesc*))
+	       ;;Failed to  intern dependency  library: print a  message to  warn the
+	       ;;user, then return false.
+	       (begin
+		 (%library-version-mismatch-warning (serialised-library-name slib)
+						    deplib-libname
+						    (serialised-library-source-file-name slib))
+		 #f))))
+	  (else
+	   ;;Invoke  all  the  guard  libraries  so we  can  evaluate  the  composite
+	   ;;STALE-WHEN test expression.
+	   (for-each (lambda (guard-libdesc)
+		       (libman.invoke-library (libman.find-library-by-name (libman.library-descriptor-name guard-libdesc))))
+	     guard-libdesc*)
+	   ;;Evaluate   the   composite   STALE-WHEN  test   expression   and   react
+	   ;;appropriately.
+	   (if ((serialised-library-guard-proc slib))
+	       ;;The compiled library is stale: print a message to warn the user then
+	       ;;return false.
+	       (begin
+		 (%library-stale-warning (serialised-library-name slib) (serialised-library-source-file-name slib))
+		 #f)
+	     ;;The compiled library is fine: intern it and return it.
+	     (libman.intern-library
+	      (libman.make-library
+	       (serialised-library-uid slib)
+	       (serialised-library-name slib)
+	       (map %library-descriptor->library-object (serialised-library-import-libdesc* slib))
+	       (map %library-descriptor->library-object (serialised-library-visit-libdesc*  slib))
+	       (map %library-descriptor->library-object (serialised-library-invoke-libdesc* slib))
+	       (serialised-library-export-subst slib)
+	       (serialised-library-global-env   slib)
+	       (serialised-library-visit-proc   slib)
+	       (serialised-library-invoke-proc  slib)
+	       #f		  ;visit-code
+	       #f		  ;invoke-code
+	       (quote (quote #f)) ;guard-code
+	       '()		  ;guard-lib*
+	       (serialised-library-visible? slib)
+	       #f ;source-file-name
+	       (serialised-library-option* slib)
+	       (serialised-library-foreign-library* slib))))))))
 
 
 ;;;; loading source programs
@@ -1143,20 +1186,22 @@
 			  ;;Expand  the  top  level program;  intern  the  depencency
 			  ;;libraries.
 			  (expand-r6rs-top-level-make-compiler (reader.read-script-from-file file-pathname)))))
+    ;;Traverse the current collection of libraries  and serialise the contents of all
+    ;;the LIBRARY objects that were loaded from source; to "serialise" means to write
+    ;;the compiled contents in a FASL file.  Return unspecified values.
     (when serialise?
-      (serialise-collected-libraries
-       (lambda (source-pathname libname contents)
-	 (let ((binary-pathname (cond ((compiled-libraries-build-directory)
-				       (library-name->library-binary-pathname-in-build-directory libname))
-				      (else
-				       (error __who__
-					 "cannot determine a destination directory for compiled library files")))))
-	   (store-full-serialised-library-to-file binary-pathname source-pathname libname contents)))
-       (lambda (core-expr)
-	 (compile-core-expr core-expr))))
+      (for-each (lambda (lib)
+		  (define binary-pathname
+		    (cond ((compiled-libraries-build-directory)
+			   (library-name->library-binary-pathname-in-build-directory (libman.library-name lib)))
+			  (else
+			   (error __who__
+			     "cannot determine a destination directory for compiled library files"))))
+		  (store-full-serialised-library-to-file binary-pathname lib))
+	((libman.current-library-collection))))
     (when run?
       (print-library-verbose-message "~a: running R6RS script: ~a" __who__ file-pathname)
-      (receive (lib-descr* run-thunk)
+      (receive (lib-descr* run-thunk option* foreign-library*)
 	  ;;Invoke the dependency libraries and compile the top level program.
 	  (compiler-thunk)
 	;;Run the top level program.
@@ -1246,9 +1291,14 @@
     (lib-descr*
 		;A   list  of   library  descriptors   representing  the
 		;libraries needed to run the program.
-     closure
+     thunk
 		;A  closure  object  representing the  program.   To  be
 		;evaluated after having invoked the required libraries.
+     option*
+		;A sexp holding library options.
+     foreign-library*
+		;A list of strings representing  identifiers of shared libraries that
+		;must be loaded before this program is run.
      ))
 
   (define* (compile-source-program {source-filename posix.file-string-pathname?}
@@ -1262,14 +1312,15 @@
     ;;a  pathname  is built  from  SOURCE-FILENAME  using  a default  procedure.   If
     ;;BINARY-FILENAME is invalid: an exception is raised.
     ;;
-    (receive (lib-descr* run-thunk)
+    (receive (lib-descr* run-thunk option* foreign-library*)
 	;;Expand the program; invoke the dependency libraries; compile the program.
 	((expand-r6rs-top-level-make-compiler (reader.read-script-from-file source-filename)))
-      ;;The RUN-THUNK is a procedure: if we call it, we run the program.
-      (store-serialised-program source-filename lib-descr* run-thunk binary-filename)))
+      ;;The RUN-THUNK is a closure object: if we call it, we run the program.
+      (store-serialised-program binary-filename source-filename
+				lib-descr* run-thunk option* foreign-library*)))
 
   (define* (run-compiled-program {binary-filename posix.file-string-pathname?})
-    (receive (lib-descr* closure)
+    (receive (prog)
 	(load-serialised-program binary-filename)
       (for-each (lambda (descr)
 		  (cond ((libman.find-library-by-descriptor descr)
@@ -1278,9 +1329,10 @@
 			(else
 			 (error __who__
 			   "unable to load library required by program" descr))))
-	lib-descr*)
-      #;(debug-print 'running-thunk closure)
-      (closure)))
+	(serialised-program-lib-descr* prog))
+      ;;Notice that the host's shared objects associated to this program have already
+      ;;been loaded by the FASL reader.  We need to do nothing here.
+      ((serialised-program-thunk prog))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1296,24 +1348,24 @@
 	   (%error-invalid-pathname __who__
 	     "selected serialised program file does not exist" binary-filename))
 	  (else
-	   (let ((x (let ((port (open-file-input-port binary-filename)))
-		      (unwind-protect
-			  (fasl-read port)
-			(close-input-port port)))))
-	     (if (serialised-program? x)
-		 (values (serialised-program-lib-descr* x)
-			 (serialised-program-closure    x))
+	   (let ((obj (let ((port (open-file-input-port binary-filename)))
+			(unwind-protect
+			    (fasl-read port)
+			  (close-input-port port)))))
+	     (if (serialised-program? obj)
+		 obj
 	       (error __who__
 		 "invalid contents in selected serialised program file"
 		 binary-filename))))))
 
-  (define* (store-serialised-program source-filename lib-descr* closure binary-filename)
+  (define* (store-serialised-program binary-filename source-filename
+				     lib-descr* run-thunk option* foreign-library*)
     ;;Given  the source  name of  an  R6RS script,  the list  of library  descriptors
     ;;required for its execution, a closure object  to be called to run it: write the
     ;;serialised program FASL file.
     ;;
     (let ((binary-filename (%make-binary-filename __who__ binary-filename source-filename)))
-      (print-library-verbose-message "serialising ~a ... " binary-filename)
+      (print-library-verbose-message "serialising program ~a ... " binary-filename)
       (receive (dir name)
 	  (posix.split-pathname-root-and-tail binary-filename)
 	(unless (string-empty? dir)
@@ -1327,8 +1379,8 @@
 					   (import (ikarus enumerations))
 					   (make-file-options '(no-fail executable))))))
 	(unwind-protect
-	    (fasl-write (make-serialised-program lib-descr* closure) port
-			(retrieve-filename-foreign-libraries source-filename))
+	    (fasl-write (make-serialised-program lib-descr* run-thunk option* foreign-library*)
+			port foreign-library*)
 	  (close-output-port port)))
       (print-library-verbose-message "done")))
 
@@ -1469,6 +1521,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'read-library-binary-port		'scheme-indent-function 2)
 ;; eval: (put '%error-invalid-pathname		'scheme-indent-function 1)
 ;; End:

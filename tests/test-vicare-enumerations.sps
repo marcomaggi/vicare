@@ -26,9 +26,10 @@
 
 
 #!r6rs
-(import (vicare)
-  (vicare checks))
-(options strict-r6rs)
+(program (test)
+  (options strict-r6rs)
+  (import (vicare)
+    (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare enumerations\n")
@@ -297,6 +298,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

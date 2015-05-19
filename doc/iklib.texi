@@ -38,6 +38,8 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 @end table
 
 @menu
+* iklib libraries::             Extended @syntax{library} syntax.
+* iklib programs::              Extended program syntax.
 * iklib progname::              Finding the @value{EXECUTABLE} executable.
 * iklib config::                Configuration options inspection.
 * iklib cmdline::               Command line arguments.
@@ -72,7 +74,6 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib hashtables::            Additional functions on hash tables.
 * iklib load::                  Loading source files.
 * iklib modules::               Local modules.
-* iklib libraries::             Local libraries.
 * iklib parameters::            Parameters.
 * iklib gensym::                Gensyms.
 * iklib printing::              Printing.
@@ -91,6 +92,250 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib debug::                 Debugging utilities.
 * iklib misc::                  Miscellaneous functions.
 @end menu
+
+@c page
+@node iklib libraries
+@section Extended @syntax{library} syntax
+
+
+@menu
+* iklib libraries options::     Library-specific options.
+* iklib libraries foreign::     Loading host's foreign libraries.
+@end menu
+
+@c page
+@node iklib libraries options
+@subsection Library--specific options
+
+
+@cindex @clause{options}, library clause
+@cindex Library clause @clause{options}
+
+
+@value{PRJNAME} extends the format of @syntax{library} forms by allowing
+an optional @clause{options} clause:
+
+@example
+(library @meta{library-name}
+  (options @meta{option} ...)
+  (export  @meta{export-spec} ...)
+  (import  @meta{import-spec} ...)
+  @meta{library-body})
+@end example
+
+@noindent
+where each @meta{option} is a symbolic expression.  There can be a
+single @clause{options} clause, before the @clause{export} one.
+
+
+@defvr {Library Option} visit-upon-loading
+Forces invoking and visiting a library upon its loading from the source
+or compiled file.
+
+The @rnrs{6} allows, and @value{PRJNAME} implements, a form of lazy
+evaluation of library code; an imported library is loaded but:
+
+@itemize
+@item
+Its code for run--time (the ``invoke code'' in @value{PRJNAME}'s jargon)
+is evaluated only when an exported variable is referenced in the
+importing code.
+
+@item
+Its code for expand--time (the ``visit code'' in @value{PRJNAME}'s
+jargon) is evaluated only when an exported syntax is first referenced in
+the importing code.
+@end itemize
+
+@noindent
+This is the default operations mode for @value{PRJNAME}.  This library
+option rejects this lazy mode, requesting that this library is visited
+when the library is loaded; visiting a library implies invoking it.
+
+This option is especially useful when the library assigns properties to
+syntactic bindings (@pxref{iklib syntaxes properties}) and when adding
+methods to Nausicaa's multimethods.
+@end defvr
+
+
+@defvr {Library Option} tagged-language
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
+@end defvr
+
+
+@defvr {Library Option} strict-r6rs
+Turn on strict support for @rnrs{6} language.
+@end defvr
+
+
+@c page
+@node iklib libraries foreign
+@subsection Loading host's foreign libraries
+
+
+@cindex @clause{foreign-library}, library clause
+@cindex Library clause @clause{foreign-library}
+
+
+@value{PRJNAME} extends the format of @syntax{library} forms by allowing
+an optional @clause{foreign-library} clause:
+
+@example
+(library @meta{library-name}
+  (foreign-library @meta{shared-object-id})
+  (export  @meta{export-spec} ...)
+  (import  @meta{import-spec} ...)
+  @meta{library-body})
+@end example
+
+@noindent
+where each @meta{shared-object-id} is a Scheme string object.  There can
+be any number of @clause{foreign-library} clauses, before the
+@clause{export} one.
+
+The clause @clause{foreign-library} allows us to associate a host's
+shared object to the Scheme library, so that, whenever the library is
+expanded from source code or loaded from a @fasl{} file: the shared
+object is dynamically loaded with a call to the operating system's
+function @cfunc{dlopen}.  @ref{foreign} for details.
+
+@c page
+@node iklib programs
+@section Extended program syntax
+
+
+@menu
+* iklib programs form::         Top-level program form.
+* iklib programs options::      Program-specific options.
+* iklib programs foreign::      Loading host's foreign libraries.
+@end menu
+
+@c page
+@node iklib programs form
+@subsection Top--level program form
+
+
+@cindex @clause{program} top--level program form
+@cindex top--level program form @clause{program}
+
+
+The @rnrs{6} document specifies a compliant top--level program as:
+
+@quotation
+@dots{} a delimited piece of text, typically a file, that has the
+following form:
+
+@example
+@meta{import-form} @meta{top-level-body}
+@end example
+@end quotation
+
+@noindent
+so it only specifies that it is ``delimited''; it means:
+
+@itemize
+@item
+Any form can come before @meta{import-form}.
+
+@item
+Any form can come after @meta{top-level-body}.
+
+@item
+The delimited sequence can be wrapped into an implementation--defined
+enclosing form.
+@end itemize
+
+@value{PRJNAME} gathers this freedom to accept two formats of top-level
+programs:
+
+@enumerate
+@item
+The standalone delimited sequence:
+
+@lisp
+(import @meta{import-spec} ...) @meta{body} ...
+@end lisp
+
+@item
+A @syntax{program} form with the following syntax:
+
+@lisp
+(program @meta{program-name}
+  @meta{config-form} ...
+  (import @meta{import-spec} ...)
+  @meta{program-body})
+@end lisp
+@end enumerate
+
+@noindent
+where @meta{program-name} is meant to be a descriptive list of symbols
+and the @meta{config-form} clauses allow additional configuration and
+behaviour specification.
+
+@c page
+@node iklib programs options
+@subsection Program-specific options
+
+
+@cindex @clause{options}, program clause
+@cindex Program clause @clause{options}
+
+
+@value{PRJNAME} extends the format of top--level programs by allowing an
+optional @clause{options} clause:
+
+@lisp
+(program @meta{program-name}
+  (options @meta{option} ...)
+  (import  @meta{import-spec} ...)
+  @meta{program-body})
+@end lisp
+
+@noindent
+where each @meta{option} is a symbolic expression.  There can be only
+one @clause{options} clause, before the @clause{import} one.
+
+The following options are supported.
+
+
+@defvr {Program Option} tagged-language
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
+@end defvr
+
+
+@defvr {Program Option} strict-r6rs
+Turn on strict support for @rnrs{6} language.
+@end defvr
+
+@c page
+@node iklib programs foreign
+@subsection Loading host's foreign libraries
+
+
+@cindex @clause{foreign-library}, program clause
+@cindex Program clause @clause{foreign-library}
+
+
+@value{PRJNAME} extends the format of top--level programs by allowing an
+optional @clause{foreign-library} clause:
+
+@lisp
+(program @meta{program-name}
+  (foreign-library @meta{shared-object-id})
+  (import  @meta{import-spec} ...)
+  @meta{program-body})
+@end lisp
+
+@noindent
+where each @meta{shared-object-id} is a Scheme string object.  There can
+be any number of @clause{foreign-library} clauses, before the
+@clause{import} one.
+
+The clause @clause{foreign-library} allows us to associate a host's
+shared object to the Scheme program, so that, whenever the program is
+expanded from source code or loaded from a @fasl{} file: the shared
+object is dynamically loaded with a call to the operating system's
+function @cfunc{dlopen}.  @ref{foreign} for details.
 
 @c page
 @node iklib progname
@@ -298,8 +543,7 @@ Example:
 
 
 @menu
-* iklib syntaxes libraries::    Extended @syntax{library} syntax.
-* iklib syntaxes programs::     Extended program syntax.
+* iklib syntaxes libraries::    Local libraries.
 * iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
 * iklib syntaxes defines::      @func{define}-like additional syntaxes.
 * iklib syntaxes defstxs::      @func{define-syntax}-like additional syntaxes.
@@ -333,97 +577,42 @@ Example:
 
 @c page
 @node iklib syntaxes libraries
-@subsection Extended @syntax{library} syntax
+@subsection Local libraries
 
 
-@cindex @clause{options}, library clause
-@cindex Library clause @clause{options}
+@cindex @syntax{library}, standalone syntax
+@cindex Syntax @syntax{library}
 
 
-@value{PRJNAME} extends the format of @syntax{library} forms by allowing
-an optional @clause{options} clause:
+@rnrs{6} defines libraries to be top--level symbolic expressions; the
+form @syntax{library} can appear only at the top--level; @ref{scheme
+library form, Library form}.  @value{PRJNAME} extends the notion of
+libraries by having the library @library{vicare} export a
+@syntax{library} syntax; such syntax can be used anywhere a definition
+can be used and the defined library can be imported in its region of
+visibility.
 
-@example
-(libary @meta{libary-name}
-  (options @meta{option} ...)
-  (export  @meta{export-spec} ...)
-  (import  @meta{import-spec} ...)
-  @meta{library-body})
-@end example
+The following is a perfectly valid Vicare program:
 
-@noindent
-where each @meta{option} is a symbolic expression.
+@lisp
+(import (vicare))
 
+(let ()
+  (library (ciao)
+    (export a)
+    (import (rnrs))
+    (define a 1))
 
-@defvr {Library Option} visit-upon-loading
-Forces invoking and visiting a library upon its loading from the source
-or compiled file.
+  (library (hello)
+    (export b)
+    (import (rnrs))
+    (define b 1))
 
-The @rnrs{6} allows, and @value{PRJNAME} implements, a form of lazy
-evaluation of library code; an imported library is loaded but:
+  (import (ciao))
+  (import (hello))
 
-@itemize
-@item
-Its code for run--time (the ``invoke code'' in @value{PRJNAME}'s jargon)
-is evaluated only when an exported variable is referenced in the
-importing code.
-
-@item
-Its code for expand--time (the ``visit code'' in @value{PRJNAME}'s
-jargon) is evaluated only when an exported syntax is first referenced in
-the importing code.
-@end itemize
-
-@noindent
-This is the default operations mode for @value{PRJNAME}.  This library
-option rejects this lazy mode, requesting that this library is visited
-when the library is loaded; visiting a library implies invoking it.
-
-This option is especially useful when the library assigns properties to
-syntactic bindings (@pxref{iklib syntaxes properties}) and when adding
-methods to Nausicaa's multimethods.
-@end defvr
-
-
-@defvr {Library Option} tagged-language
-Turn on the tagged language extensions, @ref{tags, Tagged language}.
-@end defvr
-
-
-@defvr {Library Option} strict-r6rs
-Turn on strict support for @rnrs{6} language.
-@end defvr
-
-@c page
-@node iklib syntaxes programs
-@subsection Extended program syntax
-
-
-@cindex @clause{options}, program clause
-@cindex Program clause @clause{options}
-
-
-@value{PRJNAME} extends the format of programs by allowing an optional
-@clause{options} clause after the @clause{import} one:
-
-@example
-(import  @meta{import-spec} ...)
-(options @meta{option} ...)
-@meta{program-body}
-@end example
-
-@noindent
-where each @meta{option} is a symbolic expression.
-
-
-@defvr {Program Option} tagged-language
-Turn on the tagged language extensions, @ref{tags, Tagged language}.
-@end defvr
-
-
-@defvr {Program Option} strict-r6rs
-Turn on strict support for @rnrs{6} language.
-@end defvr
+  (display (list a b)))
+@end lisp
 
 @c page
 @node iklib syntaxes lambdas
@@ -13151,45 +13340,6 @@ access definitions in a module without explicitly using the
            ((in-module red one)   123)
            ((in-module green one) 456)))
 @end example
-
-@c page
-@node iklib libraries
-@section Local libraries
-
-
-@cindex @syntax{library}, standalone syntax
-@cindex Syntax @syntax{library}
-
-
-@rnrs{6} defines libraries to be top--level symbolic expressions; the
-form @syntax{library} can appear only at the top--level; @ref{scheme
-library form, Library form}.  @value{PRJNAME} extends the notion of
-libraries by having the library @library{vicare} export a
-@syntax{library} syntax; such syntax can be used anywhere a definition
-can be used and the defined library can be imported in its region of
-visibility.
-
-The following is a perfectly valid Vicare program:
-
-@lisp
-(import (vicare))
-
-(let ()
-  (library (ciao)
-    (export a)
-    (import (rnrs))
-    (define a 1))
-
-  (library (hello)
-    (export b)
-    (import (rnrs))
-    (define b 1))
-
-  (import (ciao))
-  (import (hello))
-
-  (display (list a b)))
-@end lisp
 
 @c page
 @node iklib parameters

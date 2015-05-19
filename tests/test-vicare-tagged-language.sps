@@ -26,12 +26,14 @@
 
 
 #!vicare
-(import (vicare)
-  (for (prefix (vicare expander object-type-specs) typ.)
-    run expand)
-  (vicare expander tags)
-  (vicare checks))
-(options tagged-language)
+(program (test)
+  (options tagged-language)
+  (import (vicare)
+    (for (prefix (vicare expander object-type-specs) typ.)
+      run expand)
+    (vicare expander tags)
+    (vicare checks))
+
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: expand-time types\n")
@@ -3869,6 +3871,8 @@
 ;;;; done
 
 (check-report)
+
+#| end of program |# )
 
 ;;; end of file
 ;; Local Variables:

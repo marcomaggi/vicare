@@ -1,0 +1,107 @@
+@node foreign
+@chapter Interfacing with adapting foreign libraries
+
+
+@cindex @clause{foreign-library}, library clause
+@cindex @clause{foreign-library}, program clause
+@cindex Library clause @clause{foreign-library}
+@cindex Program clause @clause{foreign-library}
+@findex @func{foreign-call}
+
+
+The core macro @syntax{foreign-call}, exported by the library
+@library{vicare}, is expanded to the core language syntax
+@syntax{foreign-call}, which in turn is compiled to code invoking a C
+function from the operating system's process image; the first argument
+to @func{foreign-call} is a string naming the C function.
+
+Whenever the code:
+
+@example
+(foreign-call "function_name" @meta{arg} @dots{})
+@end example
+
+@noindent
+is compiled, the C pointer referencing the entry point of the named
+function is retrieved with a C language call:
+
+@example
+dlsym(RTLD_DEFAULT, "function_name");
+@end example
+
+@noindent
+so all the public functions from the running @value{EXECUTABLE}
+executable are available; also available are all the functions from
+host's shared libraries loaded with @cfunc{dlopen} using the flags
+@code{RTLD_NOW | RTLD_GLOBAL}.
+
+This @api{} for C language functions call is meant to be used to
+interface with functions specifically written to be called from Scheme
+code; examples are interface libraries installed by the @value{PRJNAME}
+extension packages like Vicare/@acronym{CURL} and Vicare/SQLite.  This
+@api{} @strong{cannot} be used to directly call a generic C language
+function from, say, @file{libz.so} or @file{libgmp.so}.
+
+It is possible to associate one or more host's shared libraries to a
+@fasl{} file, so that: whenever the @fasl{} file is loaded, the shared
+library is loaded too and the functions required by @func{foreign-call}
+are available.  This is especially useful to implement bindings to
+foreign libraries without relying on the @ffi{} and making full use of
+garbage collection facilities and access to Scheme values' memory
+representations.
+
+A @value{PRJNAME}'s library might have the format:
+
+@lisp
+(library (libname)
+  (foreign-library @meta{foreign-library-id})
+  (export . @meta{export-specs})
+  (import . @meta{import-specs})
+  . @meta{body})
+@end lisp
+
+@noindent
+and a @value{PRJNAME}'s top--level program might have the format:
+
+@lisp
+(program (progname)
+  (foreign-library @meta{foreign-library-id})
+  (import . @meta{import-specs})
+  . @meta{body})
+@end lisp
+
+@noindent
+the @meta{foreign-library-id} form must be a string representing the
+identifier of a host's shared object.  There can be any number of
+@clause{foreign-library} clauses, all before @clause{export} for
+libraries and before @clause{import} for programs.
+
+The identifier is used to build the file name of a shared object; for
+example the identifier @code{vicare-curl} is used to build the following
+file names:
+
+@table @file
+@item libvicare-curl.so
+On Unix--like systems, including @gnu{}+Linux.
+
+@item libvicare-curl.dylib
+On Darwin systems.
+
+@item vicare-curl.dll
+On Cygwin systems.
+@end table
+
+Whenever the library or program are expanded: the shared objects are
+immediately loaded using @cfunc{dlopen}.
+
+Whenever a library or program in binary form is written to a @fasl{}
+file: an object field with header @code{O} is written to the
+@strong{beginning} of the @fasl{} file; such object will cause the
+shared object to be dynamically loaded whenever the @fasl{} file is
+loaded.
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-scheme"
+@c End:

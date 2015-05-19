@@ -181,7 +181,7 @@
     (psyntax.export-spec-parser)
     (psyntax.library-collectors)
     (psyntax.chi-procedures)
-    (psyntax.library-manager)
+    (prefix (psyntax.library-manager) libman.)
     (psyntax.internal))
 
 
@@ -250,7 +250,7 @@
 	    (option.tagged-language?  (and expander-options (enum-set-member? 'strict-r6rs expander-options))))
 	 (expand-form-to-core-language x env))
      ;;Here we use the expander and compiler options from the libraries.
-     (for-each invoke-library invoke-req*)
+     (for-each libman.invoke-library invoke-req*)
      (parametrise ((option.strict-r6rs (and compiler-options
 					    (enum-set-member? 'strict-r6rs compiler-options))))
        (compiler.eval-core (expanded->core x))))))
@@ -300,8 +300,8 @@
   (()
    (new-interaction-environment (base-of-interaction-library)))
   ((libref)
-   (let* ((lib    (find-library-by-reference libref))
-	  (rib    (export-subst->rib (library-export-subst lib)))
+   (let* ((lib    (libman.find-library-by-reference libref))
+	  (rib    (export-subst->rib (libman.library-export-subst lib)))
 	  (lexenv '()))
      (make-interaction-env rib lexenv))))
 
@@ -393,7 +393,7 @@
   ;;    (expand-r6rs-top-level-make-compiler program-sexp))
   ;;
   ;;  ;;Invoke the dependency libraries and compile the program.
-  ;;  (define-values (lib-descr* run-thunk)
+  ;;  (define-values (lib-descr* run-thunk option* foreign-library*)
   ;;    (compiler-thunk))
   ;;
   ;;  ;;Run the program.
@@ -401,19 +401,22 @@
   ;;
   ;;To serialise a compiled program: we serialise the RUN-THUNK closure object.
   ;;
-  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option*)
+  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)
       (expand-r6rs-top-level-program expr*)
     (lambda ()
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
       ;;evaluated.  The storage location gensyms  associated to the exported bindings
       ;;are initialised with the global values.
-      (for-each invoke-library invoke-lib*)
+      (for-each libman.invoke-library invoke-lib*)
       ;;Store the  expanded code representing  the macros in the  associated location
       ;;gensyms.
       (initial-visit! visit-code*)
-      (values (map library-descriptor invoke-lib*)
-	      ;;Convert the expanded language code to core language code.
-	      (compiler.compile-core-expr (expanded->core invoke-code))))))
+      (values (map libman.library-descriptor invoke-lib*)
+	      ;;Convert  the  expanded language  code  to  core language  code,  then
+	      ;;compile it and wrap it into a thunk.
+	      (compiler.compile-core-expr-to-thunk (expanded->core invoke-code))
+	      option*
+	      foreign-library*))))
 
 
 ;;;; R6RS program expander
@@ -426,15 +429,17 @@
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
     ;;level program, expand it.
     ;;
-    (receive (import-spec* option* body*)
+    (receive (import-spec* body* option* foreign-library*)
 	(%parse-top-level-program program-form*)
-      (receive (import-spec* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
-	  (let ((option* (%parse-program-options option*))
-		(mixed-definitions-and-expressions? #t))
-	    (import CORE-BODY-EXPANDER)
-	    (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
-				%verbose-messages-thunk))
-	(values invoke-lib* invoke-code visit-code* export-subst global-env option*))))
+      (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
+	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
+	(receive (import-spec* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
+	    (let ((option* (%parse-program-options option*))
+		  (mixed-definitions-and-expressions? #t))
+	      (import CORE-BODY-EXPANDER)
+	      (core-body-expander 'all import-spec* option* body* mixed-definitions-and-expressions?
+				  %verbose-messages-thunk))
+	  (values invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)))))
 
   (define (%verbose-messages-thunk)
     (when (option.tagged-language?)
@@ -443,35 +448,49 @@
       (print-expander-warning-message "enabling expander's strict R6RS support for program")))
 
   (define (%parse-top-level-program program-form*)
-    ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
-    ;;level program, possibly with Vicare extensions, parse it and return 3 values:
+    ;;Given  a  list  of  SYNTAX-MATCH  expression  arguments  representing  an  R6RS
+    ;;top-level program or a Vicare top-level program, parse it and return 4 values:
     ;;
     ;;1. A list of import specifications.
     ;;
-    ;;2. A list of options specifications.
+    ;;2. A list of body forms.
     ;;
-    ;;3. A list of body forms.
+    ;;3. A list of options specifications.
+    ;;
+    ;;4. A list of shared library identifiers.
     ;;
     (syntax-match program-form* ()
-      (((?import  ?import-spec* ...)
-	(?options ?option-spec* ...)
-	?body* ...)
-       (and (eq? (syntax->datum ?import)  'import)
-	    (eq? (syntax->datum ?options) 'options))
-       (values ?import-spec* ?option-spec* ?body*))
 
       (((?import ?import-spec* ...) ?body* ...)
        (eq? (syntax->datum ?import) 'import)
-       (values ?import-spec* '() ?body*))
+       (values ?import-spec* ?body* '() '()))
 
-      (((?import . x) . y)
-       (eq? (syntax->datum ?import) 'import)
-       (syntax-violation __module_who__
-	 "invalid syntax of top-level program" (syntax-car program-form*)))
+      (((?program ?program-name . ?stuff*))
+       (eq? (syntax->datum ?program) 'program)
+       (let loop ((stuff*           ?stuff*)
+		  (option*          '())
+		  (foreign-library* '()))
+	 (syntax-match stuff* ()
+	   (((?import ?import-spec* ...) ?body* ...)
+	    (eq? (syntax->datum ?import) 'import)
+	    (values ?import-spec* ?body* option* (reverse foreign-library*)))
+
+	   (((?options ?progopt* ...) . ?stuff*)
+	    (eq? (syntax->datum ?options) 'options)
+	    (if (null? option*)
+		(loop ?stuff* ?progopt* foreign-library*)
+	      (syntax-violation __module_who__
+		"OPTIONS clause can appear only once in top-level PROGRAM forms")))
+
+	   (((?foreign-library ?libid) . ?stuff*)
+	    (eq? (syntax->datum ?foreign-library) 'foreign-library)
+	    (loop ?stuff* option* (cons ?libid foreign-library*)))
+
+	   (_
+	    (syntax-violation __module_who__ "malformed top-level program")))))
 
       (_
-       (assertion-violation __module_who__
-	 "top-level program is missing an (import ---) clause"))))
+       (assertion-violation __module_who__ "invalid syntax of top-level program"))))
 
   (define (%parse-program-options option*)
     (syntax-match option* ()
@@ -489,17 +508,28 @@
 	      "invalid program option" ?opt)))))
       ))
 
+  (define (%parse-foreign-library* foreign-library*)
+    (receive-and-return (id*)
+	(map syntax->datum foreign-library*)
+      (unless (for-all (lambda (id)
+			 (and (string? id)
+			      (not (fxzero? (string-length id)))))
+		id*)
+	(syntax-violation __module_who__
+	  "invalid foreign library identifiers" foreign-library*))))
+
   #| end of module: EXPAND-R6RS-TOP-LEVEL-PROGRAM |# )
 
 (define (expand-r6rs-top-level-program->sexp sexp)
-  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option*)
+  (receive (invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)
       (expand-r6rs-top-level-program sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
       (visit-code*	. ,visit-code*)
       (export-subst	. ,export-subst)
       (global-env	. ,global-env)
-      (option*		. ,option*))))
+      (option*		. ,option*)
+      (foreign-library* . ,foreign-library*))))
 
 
 ;;;; R6RS library expander
@@ -515,144 +545,15 @@
   ;;
   ;;or an ANNOTATION struct representing such expression.
   ;;
-  ;;The optional FILENAME must be #f or a string representing the source
-  ;;file from which  the library was loaded; it is  used for information
-  ;;purposes.
+  ;;The optional FILENAME  must be #f or  a string representing the  source file from
+  ;;which the library was loaded; it is used for information purposes.
   ;;
-  ;;The optional argument VERIFY-LIBNAME must be a procedure accepting a
-  ;;R6RS  library  name  as  argument;  it  is  meant  to  perform  some
-  ;;validation upon the library name components (especially the version)
-  ;;and raise  an exception if  something is wrong; otherwise  it should
-  ;;just return.
+  ;;The optional argument VERIFY-LIBNAME must be a procedure accepting a R6RS library
+  ;;name as argument;  it is meant to  perform some validation upon  the library name
+  ;;components (especially the version) and raise an exception if something is wrong;
+  ;;otherwise it should just return.
   ;;
-  ;;The returned values are:
-  ;;
-  ;;UID -
-  ;;  A gensym uniquely identifying this library.
-  ;;
-  ;;LIBNAME -
-  ;;  A R6RS library name.  For the library:
-  ;;
-  ;;     (library (ciao (1 2))
-  ;;       (export A)
-  ;;       (import (rnrs))
-  ;;       (define A 123))
-  ;;
-  ;;  LIBNAME is the list (ciao (1 2)).
-  ;;
-  ;;IMPORT-LIBDESC* -
-  ;;  A list of library descriptors representing the libraries that need
-  ;;  to be  imported for the invoke  code.  Each item in the  list is a
-  ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
-  ;;
-  ;;VISIT-LIBDESC* -
-  ;;  A list of library descriptors representing the libraries that need
-  ;;  to  be imported for the  visit code.  Each  item in the list  is a
-  ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
-  ;;
-  ;;INVOKE-LIBDESC* -
-  ;;  A list of library descriptors representing the libraries that need
-  ;;   to be  invoked  to  make available  the  values  of the  imported
-  ;;  variables.   Each item in  the list  is a "library  descriptor" as
-  ;;  built by the LIBRARY-DESCRIPTOR function.
-  ;;
-  ;;INVOKE-CODE -
-  ;;  A  symbolic expression  representing the code  to be  evaluated to
-  ;;  create  the top-level  DEFINE bindings  and evaluate  the trailing
-  ;;  init expressions.
-  ;;
-  ;;VISIT-CODE -
-  ;;  A  symbolic expression  representing the code  to be  evaluated to
-  ;;  create the expand-time code.
-  ;;
-  ;;EXPORT-SUBST -
-  ;;  A subst representing the bindings to export.
-  ;;
-  ;;GLOBAL-ENV -
-  ;;  A list representing the bindings exported by the library.
-  ;;
-  ;;GUARD-CODE -
-  ;;   A predicate  expression  in the  core  language representing  the
-  ;;  stale-when tests from the body of the library.
-  ;;
-  ;;GUARD-LIBDESC* -
-  ;;  A list of library descriptors representing the libraries that need
-  ;;  to  be invoked for  the STALE-WHEN  code; these are  the libraries
-  ;;  accumulated  by the  INV-COLLECTOR while expanding  the STALE-WHEN
-  ;;  test expressions.  Each item in the list is a "library descriptor"
-  ;;  as built by the LIBRARY-DESCRIPTOR function.
-  ;;
-  ;;OPTION* -
-  ;;   A list  of  symbolic expressions  representing  options from  the
-  ;;  OPTIONS clause of the LIBRARY form.
-  ;;
-  ;;For example, expanding the library:
-  ;;
-  ;;   (library (ciao)
-  ;;     (export var fun mac etv)
-  ;;     (import (vicare))
-  ;;     (define var 1)
-  ;;     (define (fun)
-  ;;       2)
-  ;;     (define-syntax (mac stx)
-  ;;       3)
-  ;;     (define-syntax etv
-  ;;       (make-expand-time-value
-  ;;        (+ 4 5))))
-  ;;
-  ;;yields the INVOKE-CODE:
-  ;;
-  ;;   (library-letrec*
-  ;;       ((lex.var loc.lex.var '1)
-  ;;        (lex.fun loc.lex.fun (annotated-case-lambda fun (() '2))))
-  ;;     ((primitive void)))
-  ;;
-  ;;the VISIT-CODE:
-  ;;
-  ;;   (begin
-  ;;     (set! loc.lab.mac
-  ;;           (annotated-case-lambda
-  ;;               (#'lambda (#'stx) #'3)
-  ;;             ((lex.stx) '3)))
-  ;;     (set! loc.lab.etv
-  ;;           (annotated-call
-  ;;               (make-expand-time-value (+ 4 5))
-  ;;             (primitive make-expand-time-value)
-  ;;             (annotated-call (+ 4 5) (primitive +) '4 '5))))
-  ;;
-  ;;the EXPORT-SUBST:
-  ;;
-  ;;   ((etv . lab.etv)
-  ;;    (mac . lab.mac)
-  ;;    (fun . lab.fun)
-  ;;    (var . lab.var))
-  ;;
-  ;;the GLOBAL-ENV
-  ;;
-  ;;   ((lab.var global		. loc.lex.var)
-  ;;    (lab.fun global		. loc.lex.fun)
-  ;;    (lab.mac global-macro	. loc.lab.mac)
-  ;;    (lab.etv global-etv	. loc.lab.etv))
-  ;;
-  ;;Another example, for the library:
-  ;;
-  ;;   (library (ciao (1 2))
-  ;;     (export doit)
-  ;;     (import (vicare))
-  ;;     (stale-when (< 1 2)
-  ;;       (define a 123))
-  ;;     (stale-when (< 2 3)
-  ;;       (define b 123))
-  ;;     (define (doit)
-  ;;       123))
-  ;;
-  ;;the GUARD-CODE is:
-  ;;
-  ;;   (if (if '#f
-  ;;           '#t
-  ;;          (annotated-call (< 1 2) (primitive <) '1 '2))
-  ;;       '#t
-  ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
+  ;;Return a "library" object representing an interned library.
   ;;
   (case-define expand-library
     ((library-sexp)
@@ -665,16 +566,12 @@
 	       invoke-code visit-code*
 	       export-subst global-env
 	       guard-code guard-lib*
-	       option*)
-	 (parametrise ((source-code-location (or filename (source-code-location))))
+	       option* foreign-library*)
+	 (parametrise ((libman.source-code-location (or filename (libman.source-code-location))))
 	   (let ()
 	     (import CORE-LIBRARY-EXPANDER)
 	     (core-library-expander library-sexp verify-libname)))
        (let ((uid		(gensym)) ;library unique-symbol identifier
-	     (import-libdesc*	(map library-descriptor import-lib*))
-	     (visit-libdesc*	(map library-descriptor visit-lib*))
-	     (invoke-libdesc*	(map library-descriptor invoke-lib*))
-	     (guard-libdesc*	(map library-descriptor guard-lib*))
 	     ;;Thunk to eval to visit the library.
 	     (visit-proc	(lambda ()
 				  ;;This initial visit is performed whenever a source
@@ -689,13 +586,15 @@
 	     (visit-code	(%build-visit-code visit-code* option*))
 	     (visible?		#t))
 	 ;;This call returns a "library" object.
-	 (intern-library uid libname
-			 import-libdesc* visit-libdesc* invoke-libdesc*
-			 export-subst global-env
-			 visit-proc invoke-proc
-			 visit-code invoke-code
-			 guard-code guard-libdesc*
-			 visible? filename option*)))))
+	 (libman.intern-library
+	  (libman.make-library uid libname
+			       import-lib* visit-lib* invoke-lib*
+			       export-subst global-env
+			       visit-proc invoke-proc
+			       visit-code invoke-code
+			       guard-code guard-lib*
+			       visible? filename
+			       option* foreign-library*))))))
 
   (define (%build-visit-code visit-code* option*)
     ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
@@ -750,18 +649,19 @@
 
 (define (expand-library->sexp libsexp)
   (let ((lib (expand-library libsexp)))
-    `((uid		. ,(library-uid           lib))
-      (libname		. ,(library-name          lib))
-      (import-libdesc*	. ,(map library-descriptor (library-imp-lib* lib)))
-      (visit-libdesc*	. ,(map library-descriptor (library-vis-lib* lib)))
-      (invoke-libdesc*	. ,(map library-descriptor (library-inv-lib* lib)))
-      (invoke-code	. ,(library-invoke-code   lib))
-      (visit-code	. ,(library-visit-code    lib))
-      (export-subst	. ,(library-export-subst  lib))
-      (global-env	. ,(library-global-env    lib))
-      (guard-code	. ,(library-guard-code    lib))
-      (guard-libdesc*	. ,(map library-descriptor (library-guard-lib* lib)))
-      (option*		. ,(library-option*       lib)))))
+    `((uid		. ,(libman.library-uid               lib))
+      (libname		. ,(libman.library-name              lib))
+      (import-libdesc*	. ,(map libman.library-descriptor    (libman.library-imp-lib* lib)))
+      (visit-libdesc*	. ,(map libman.library-descriptor    (libman.library-vis-lib* lib)))
+      (invoke-libdesc*	. ,(map libman.library-descriptor    (libman.library-inv-lib* lib)))
+      (invoke-code	. ,(libman.library-invoke-code       lib))
+      (visit-code	. ,(libman.library-visit-code        lib))
+      (export-subst	. ,(libman.library-export-subst      lib))
+      (global-env	. ,(libman.library-global-env        lib))
+      (guard-code	. ,(libman.library-guard-code        lib))
+      (guard-libdesc*	. ,(map libman.library-descriptor    (libman.library-guard-lib* lib)))
+      (option*		. ,(libman.library-option*           lib))
+      (foreign-library*	. ,(libman.library-foreign-library*  lib)))))
 
 
 (module CORE-LIBRARY-EXPANDER
@@ -783,12 +683,14 @@
     ;;version) and raise  an exception if something  is wrong; otherwise
     ;;it should just return.
     ;;
-    (receive (libname export-spec* import-spec* body* libopt*)
+    (receive (libname export-spec* import-spec* body* libopt* foreign-library*)
 	(%parse-library library-sexp)
       (%validate-library-name libname verify-libname)
       (let* ((libname.sexp  (syntax->datum libname))
-	     (option*       (%parse-library-options libopt*))
-	     (stale-clt     (%make-stale-collector)))
+	     (option*           (%parse-library-options libopt*))
+	     (foreign-library*  (%parse-foreign-library* foreign-library*))
+	     (stale-clt         (%make-stale-collector)))
+	(map foreign.dynamically-load-shared-object-from-identifier foreign-library*)
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code visit-code* export-subst global-env)
 	    (parametrise ((stale-when-collector    stale-clt))
 	      (let ((mixed-definitions-and-expressions? #f))
@@ -802,7 +704,7 @@
 		    import-lib* invoke-lib* visit-lib*
 		    invoke-code visit-code* export-subst
 		    global-env guard-code guard-lib*
-		    option*))))))
+		    option* foreign-library*))))))
 
   (define (%make-verbose-messages-thunk libname.sexp)
     (lambda ()
@@ -812,45 +714,55 @@
 	(print-expander-warning-message "enabling expander's strict R6RS support for library: ~a" libname.sexp))))
 
   (define (%parse-library library-sexp)
-    ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
-    ;;expression, return 4 values:
+    ;;Given an  ANNOTATION struct  representing a  LIBRARY form  symbolic expression,
+    ;;return 6 values:
     ;;
-    ;;1..The name part.  A SYNTAX-MATCH expression argument representing
-    ;;   parts of the library name.
+    ;;1. The name part.  A SYNTAX-MATCH expression argument representing parts of the
+    ;;library name.
     ;;
-    ;;2..The   export  specs.    A   SYNTAX-MATCH  expression   argument
-    ;;   representing the exports specification.
+    ;;2.  The export  specs.   A SYNTAX-MATCH  expression  argument representing  the
+    ;;exports specification.
     ;;
-    ;;3..The   import  specs.    A   SYNTAX-MATCH  expression   argument
-    ;;   representing the imports specification.
+    ;;3.  The import  specs.   A SYNTAX-MATCH  expression  argument representing  the
+    ;;imports specification.
     ;;
-    ;;4..The body  of the  library.  A SYNTAX-MATCH  expression argument
-    ;;   representing the body of the library.
+    ;;4. The  body of the  library.  A SYNTAX-MATCH expression  argument representing
+    ;;the body of the library.
     ;;
-    ;;This function  performs no validation  of the returned  values, it
-    ;;just validates the structure of the LIBRARY form.
+    ;;5. The list of library options (like "strict-r6rs" and "visit-upon-loading").
+    ;;
+    ;;6. A list of strings representing platform's shared library identifiers.
+    ;;
+    ;;This function performs no validation of  the returned values, it just validates
+    ;;the structure of the LIBRARY form.
     ;;
     (syntax-match library-sexp ()
-      ((?library (?name* ...)
-		 (?options ?libopt* ...)
-		 (?export ?exp* ...)
-		 (?import ?imp* ...)
-		 ?body* ...)
-       (and (eq? (syntax->datum ?library) 'library)
+      ((?library (?name* ...) . ?stuff*)
+       (eq? (syntax->datum ?library) 'library)
+       (let loop ((stuff*           ?stuff*)
+		  (option*          '())
+		  (foreign-library*  '()))
+	 (syntax-match stuff* ()
+	   (((?export ?exp* ...) (?import ?imp* ...) ?body* ...)
+	    (and (eq? (syntax->datum ?export) 'export)
+		 (eq? (syntax->datum ?import) 'import))
+	    (values ?name* ?exp* ?imp* ?body* option*
+		    (reverse foreign-library*)))
+
+	   (((?options ?libopt* ...) . ?stuff*)
 	    (eq? (syntax->datum ?options) 'options)
-	    (eq? (syntax->datum ?export)  'export)
-	    (eq? (syntax->datum ?import)  'import))
-       (values ?name* ?exp* ?imp* ?body* ?libopt*))
-      ((?library (?name* ...)
-		 (?export ?exp* ...)
-		 (?import ?imp* ...)
-		 ?body* ...)
-       (and (eq? (syntax->datum ?library) 'library)
-	    (eq? (syntax->datum ?export)  'export)
-	    (eq? (syntax->datum ?import)  'import))
-       (values ?name* ?exp* ?imp* ?body* '()))
-      (_
-       (syntax-violation __module_who__ "malformed library" library-sexp))))
+	    (if (null? option*)
+		(loop ?stuff* ?libopt* foreign-library*)
+	      (syntax-violation __module_who__
+		"OPTIONS clause can appear only once in LIBRARY forms")))
+
+	   (((?foreign-library ?libid) . ?stuff*)
+	    (eq? (syntax->datum ?foreign-library) 'foreign-library)
+	    (loop ?stuff* option* (cons ?libid foreign-library*)))
+
+	   (_
+	    (syntax-violation __module_who__ "malformed library" library-sexp)))))
+      ))
 
   (define (%validate-library-name libname verify-libname)
     ;;Given a SYNTAX-MATCH expression argument LIBNAME  which is meant to represent a
@@ -897,6 +809,16 @@
 	    (syntax-violation __module_who__
 	      "invalid library option" ?opt)))))
       ))
+
+  (define (%parse-foreign-library* foreign-library*)
+    (receive-and-return (id*)
+	(map syntax->datum foreign-library*)
+      (unless (for-all (lambda (id)
+			 (and (string? id)
+			      (not (fxzero? (string-length id)))))
+		id*)
+	(syntax-violation __module_who__
+	  "invalid foreign library identifiers" foreign-library*))))
 
   (module (%make-stale-collector)
     ;;When a library has code like:
@@ -1452,7 +1374,7 @@
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander before"))
 
 ;;Register the expander with the library manager.
-(current-library-expander expand-library)
+(libman.current-library-expander expand-library)
 
 ;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander after"))
 ;; (void)
