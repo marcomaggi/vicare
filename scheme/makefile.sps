@@ -3696,8 +3696,8 @@
 ;;; programs
 
     (program-source-pathname->program-binary-pathname	$programs)
-    (expand-r6rs-top-level-program			$programs)
-    (expand-r6rs-top-level-program->sexp		$programs)
+    (expand-top-level-program				$programs)
+    (expand-top-level-program->sexp			$programs)
 
 ;;; --------------------------------------------------------------------
 ;;; expander stuff

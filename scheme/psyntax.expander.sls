@@ -74,9 +74,9 @@
     environment-labels			environment-binding
 
     expand-form-to-core-language
-    expand-r6rs-top-level-program	expand-r6rs-top-level-program->sexp
+    expand-top-level-program	expand-top-level-program->sexp
     expand-library			expand-library->sexp
-    expand-r6rs-top-level-make-compiler
+    expand-top-level-make-compiler
 
     ;; exception raisers
     syntax-violation			assertion-error
@@ -373,7 +373,7 @@
 	 (procedure-argument-violation __who__ "not an environment" env))))
 
 
-(define (expand-r6rs-top-level-make-compiler expr*)
+(define (expand-top-level-make-compiler expr*)
   ;;Given a list  of SYNTAX-MATCH expression arguments representing a  R6RS top level
   ;;program,  expand it  and return  a thunk.
   ;;
@@ -390,7 +390,7 @@
   ;;
   ;;  ;;Expand the program.
   ;;  (define compiler-thunk
-  ;;    (expand-r6rs-top-level-make-compiler program-sexp))
+  ;;    (expand-top-level-make-compiler program-sexp))
   ;;
   ;;  ;;Invoke the dependency libraries and compile the program.
   ;;  (define-values (lib-descr* run-thunk option* foreign-library*)
@@ -402,7 +402,7 @@
   ;;To serialise a compiled program: we serialise the RUN-THUNK closure object.
   ;;
   (receive (invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)
-      (expand-r6rs-top-level-program expr*)
+      (expand-top-level-program expr*)
     (lambda ()
       ;;Make  sure  that  the code  of  all  the  needed  libraries is  compiled  and
       ;;evaluated.  The storage location gensyms  associated to the exported bindings
@@ -421,11 +421,11 @@
 
 ;;;; R6RS program expander
 
-(module (expand-r6rs-top-level-program)
+(module (expand-top-level-program)
 
-  (define-module-who expand-r6rs-top-level-program)
+  (define-module-who expand-top-level-program)
 
-  (define (expand-r6rs-top-level-program program-form*)
+  (define (expand-top-level-program program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
     ;;level program, expand it.
     ;;
@@ -518,11 +518,11 @@
 	(syntax-violation __module_who__
 	  "invalid foreign library identifiers" foreign-library*))))
 
-  #| end of module: EXPAND-R6RS-TOP-LEVEL-PROGRAM |# )
+  #| end of module: EXPAND-TOP-LEVEL-PROGRAM |# )
 
-(define (expand-r6rs-top-level-program->sexp sexp)
+(define (expand-top-level-program->sexp sexp)
   (receive (invoke-lib* invoke-code visit-code* export-subst global-env option* foreign-library*)
-      (expand-r6rs-top-level-program sexp)
+      (expand-top-level-program sexp)
     `((invoke-lib*	. ,invoke-lib*)
       (invoke-code	. ,invoke-code)
       (visit-code*	. ,visit-code*)

@@ -59,7 +59,7 @@
 	    compiler.)
     (prefix (psyntax.library-manager) libman.)
     (only (psyntax.expander)
-	  expand-r6rs-top-level-make-compiler)
+	  expand-top-level-make-compiler)
     (only (psyntax.compat)
 	  print-expander-warning-message)
     (prefix (only (ikarus.reader)
@@ -1185,7 +1185,7 @@
   (let ((compiler-thunk (parametrise ((libman.source-code-location file-pathname))
 			  ;;Expand  the  top  level program;  intern  the  depencency
 			  ;;libraries.
-			  (expand-r6rs-top-level-make-compiler (reader.read-script-from-file file-pathname)))))
+			  (expand-top-level-make-compiler (reader.read-script-from-file file-pathname)))))
     ;;Traverse the current collection of libraries  and serialise the contents of all
     ;;the LIBRARY objects that were loaded from source; to "serialise" means to write
     ;;the compiled contents in a FASL file.  Return unspecified values.
@@ -1314,7 +1314,7 @@
     ;;
     (receive (lib-descr* run-thunk option* foreign-library*)
 	;;Expand the program; invoke the dependency libraries; compile the program.
-	((expand-r6rs-top-level-make-compiler (reader.read-script-from-file source-filename)))
+	((expand-top-level-make-compiler (reader.read-script-from-file source-filename)))
       ;;The RUN-THUNK is a closure object: if we call it, we run the program.
       (store-serialised-program binary-filename source-filename
 				lib-descr* run-thunk option* foreign-library*)))
