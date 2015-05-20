@@ -779,7 +779,6 @@ requested at installation--time with command line options for the
 
 @menu
 * overview foreign readline::   Interface to @gnu{} Readline.
-* overview foreign cre2::       Interface to @cretwo{}.
 @end menu
 
 @c page
@@ -807,27 +806,5 @@ a compatible alternative is Editline:
 and another possible replacement is Libedit:
 
 @center @url{http://sourceforge.net/projects/libedit/}
-
-@c page
-@node overview foreign cre2
-@subsection Interface to @cretwo{}
-
-
-@cretwo{} is a C language wrapper for the @retwo{} library, which is
-implemented in C++.  @retwo{} is a fast, safe, thread--friendly
-alternative to backtracking regular expression engines like those used
-in PCRE, Perl, and Python; it is a Google project found at:
-
-@center @url{http://code.google.com/p/re2/}
-
-@noindent
-while @cretwo{} is available at:
-
-@center @url{http://github.com/marcomaggi/cre2/}
-
-@value{PRJNAME} interface to @cretwo{} can be included at package
-configuration time by giving the @option{--with-cre2} option to the
-@command{configure} script.  @libsref{cre2, A binding to the library
-CRE2} for the @api{} documentation.
 
 @c end of file

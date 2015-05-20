@@ -23,7 +23,6 @@ VFLAGS=${VFLAGS:=-O2}
     --enable-time-tests					\
     --enable-scheme-script				\
     --with-pthread					\
-    --with-cre2						\
     CFLAGS='-O3 -pedantic'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
     VFLAGS="$VFLAGS"					\

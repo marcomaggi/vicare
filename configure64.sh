@@ -17,7 +17,6 @@ LIBFFI_INCLUDEDIR=${libdir}/libffi-${LIBFFI_VERSION}/include
     --enable-binfmt					\
     --enable-time-tests					\
     --with-pthread					\
-    --with-cre2						\
     CFLAGS='-m64 -O3 -pedantic'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
     LDFLAGS='-m64'					\

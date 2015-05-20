@@ -90,7 +90,6 @@ doc_vicare_libs_TEXINFOS = \
 	doc/glibc.texi					\
 	doc/iconv.texi					\
 	doc/linux.texi					\
-	doc/cre2.texi					\
 	\
 	doc/libs-arguments-validation.texi		\
 	doc/libs-arrays.texi				\
@@ -270,22 +269,6 @@ vicare_LDADD		=
 # Add Libiconv if requested by the configuration script.
 if WANT_LIBICONV
 vicare_LDADD		+= @LTLIBICONV@
-endif
-
-#page
-#### additional C language libraries
-
-# List of  library specifications:  tell GNU  Automake to  build these
-# libraries, too.
-lib_LTLIBRARIES			=
-
-# Build   the  Vicare/CRE2   shared  library   if  requested   by  the
-# configuration script.
-if WANT_CRE2
-lib_LTLIBRARIES			+= libvicarecre2.la
-libvicarecre2_la_LDFLAGS	= -version-info 0:0:0
-libvicarecre2_la_SOURCES	= src/ikarus-cre2.c
-libvicarecre2_la_LIBADD		= @CRE2_LIBS@
 endif
 
 #page
@@ -1089,8 +1072,6 @@ VICARE_SCHEME_ICONV_TESTS	= tests/test-vicare-iconv.sps
 
 VICARE_SCHEME_LINUX_TESTS	= tests/test-vicare-linux.sps
 
-VICARE_SCHEME_CRE2_TESTS	= tests/foreign-test-vicare-cre2.sps
-
 #page
 #### running the test suite: distribution files
 
@@ -1177,8 +1158,7 @@ EXTRA_DIST	+= \
 	$(VICARE_SCHEME_POSIX_TESTS)			\
 	$(VICARE_SCHEME_GLIBC_TESTS)			\
 	$(VICARE_SCHEME_ICONV_TESTS)			\
-	$(VICARE_SCHEME_LINUX_TESTS)			\
-	$(VICARE_SCHEME_CRE2_TESTS)
+	$(VICARE_SCHEME_LINUX_TESTS)
 
 #page
 #### interface for "make check": selecting test programs
@@ -1215,10 +1195,6 @@ endif
 
 if WANT_LINUX
 TESTS		+= $(VICARE_SCHEME_LINUX_TESTS)
-endif
-
-if WANT_CRE2
-TESTS		+= $(VICARE_SCHEME_CRE2_TESTS)
 endif
 
 #page

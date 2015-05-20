@@ -188,9 +188,6 @@
      (vicare getopts)
      (vicare formations))
 
-    ((WANT_CRE2)
-     (vicare cre2))
-
     ((WANT_SRFI)
      (srfi :0)
      (srfi :1)

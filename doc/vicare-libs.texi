@@ -35,7 +35,7 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2010-2014
+@set COPYRIGHT_YEARS            2010-2015
 
 
 @set TARBALLURL                 @url{https://bitbucket.org/marcomaggi/vicare-scheme/downloads}
@@ -182,7 +182,6 @@ Library groups
 
 Appendices
 
-* cre2::                        Binding to the library @cretwo{}.
 * Package License::             @gnu{} General Public License.
 
 Indexes
@@ -258,8 +257,6 @@ External documents
 
 @c page
 @c appendices
-
-@include cre2.texi
 
 @include gpl-3.0.texi
 

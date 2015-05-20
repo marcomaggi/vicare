@@ -157,8 +157,7 @@ libraries) can be obtained with:
          --without-pthread	\
          --without-libffi	\
          --without-libiconv	\
-         --without-readline	\
-         --without-cre2
+         --without-readline
 
   To test what a rule will do use the "-n" option; example:
 
@@ -193,26 +192,7 @@ compiling libraries and running tests; for example:
    $ make VFLAGS="-g -O2 --print-loaded-libraries"
 
 
-3.2 Install CRE2
-----------------
-
-CRE2 is a  C language wrapper for the RE2  library, which is implemented
-in  C++.    RE2  is  a   fast,  safe,  thread-friendly   alternative  to
-backtracking regular  expression engines from Google like  those used in
-PCRE, Perl, and Python.
-
-  Vicare  implements an  optional  built  in interface  to  CRE2; it  is
-disabled by default, to enable it  we must give the "--with-cre2" option
-to the "configure" script.
-
-  At present (Jan 6, 2012), to install  RE2 we must check out a revision
-from  the  repository  (see  Resources);   then  we  should  follow  the
-installation instructions in the README file.  To install CRE2: download
-the  latest tarball,  build  and  install it;  CRE2  relies  on the  GNU
-Autotools.
-
-
-3.3 Special make rules
+3.2 Special make rules
 ----------------------
 
 There are  special makefile rules  to rebuild source code  files, mostly
@@ -276,11 +256,6 @@ hosting machine must allow TCP and UDP connections on 127.0.0.1:8080 and
 variable RUN_INET_TESTS set to something:
 
    $ make test file=vicare-posix-sockets RUN_INET_TESTS=1
-
-  When included, it is possible to run tests for the bindings to foreign
-libraries (like CRE2) with:
-
-   $ make foreign-test
 
 
 A. Credits
@@ -376,14 +351,6 @@ and as backup at:
   The GMP library is available at:
 
 			  <http://gmplib.org/>
-
-  The library RE2 is available at:
-
-		    <http://code.google.com/p/re2/>
-
-the library CRE2 is available from:
-
-		  <http://github.com/marcomaggi/cre2/>
 
   The home page of the R6RS standard is at:
 

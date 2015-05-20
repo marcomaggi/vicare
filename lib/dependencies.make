@@ -2069,24 +2069,6 @@ endif
 EXTRA_DIST += lib/vicare/formations.vicare.sls
 CLEANFILES += lib/vicare/formations.fasl
 
-lib/vicare/cre2.fasl: \
-		lib/vicare/cre2.vicare.sls \
-		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-if WANT_CRE2
-lib_vicare_cre2_fasldir = $(bundledlibsdir)/vicare
-lib_vicare_cre2_vicare_slsdir  = $(bundledlibsdir)/vicare
-nodist_lib_vicare_cre2_fasl_DATA = lib/vicare/cre2.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_cre2_vicare_sls_DATA = lib/vicare/cre2.vicare.sls
-endif
-EXTRA_DIST += lib/vicare/cre2.vicare.sls
-CLEANFILES += lib/vicare/cre2.fasl
-endif
-
 lib/srfi/%3a0.fasl: \
 		lib/srfi/%3a0.sls \
 		lib/srfi/%3a0/cond-expand.fasl \

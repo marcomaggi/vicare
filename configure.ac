@@ -1499,59 +1499,6 @@ AS_IF([test "x$with_READLINE" != "xno"],
    [AC_MSG_NOTICE([Readline support was not requested])])
 AM_CONDITIONAL([WANT_READLINE],[test "x$vicare_with_READLINE" = xyes])
 
-dnl --------------------------------------------------------------------
-dnl Check for CRE2 (optional)
-
-with_CRE2=no
-AC_MSG_CHECKING([whether to link with CRE2])
-AC_ARG_WITH([cre2],
-  [AS_HELP_STRING([--with-cre2],[link executable with CRE2 (default is no)])],
-  [AS_CASE([$withval],
-     [yes],  [with_CRE2=yes],
-     [no],   [with_CRE2=no],
-     [check],[with_CRE2=check],
-     [AC_MSG_ERROR([bad value $withval for --with-cre2])])],
-  [with_CRE2=no])
-AC_MSG_RESULT([$with_CRE2])
-
-# We must check for both CRE2 and re2!!!
-
-vicare_with_CRE2=no
-CRE2_LIBS=
-AS_IF([test "x$with_CRE2" != xno],
-  [# Check for header file and shared (or static) library.
-   # No need to check for "re2.h" header file.
-   AC_CHECK_LIB([re2],[main],
-     [have_re2=yes],
-     [AC_MSG_WARN([test for RE2 library failed])])
-   AC_CHECK_LIB([cre2],[cre2_version_string],
-     [vicare_have_cre2=yes],[vicare_have_cre2=no],[-lre2])
-   AC_CHECK_HEADERS([cre2.h],[vicare_have_cre2_h=yes],[vicare_have_cre2_h=no])
-   AS_IF([test "x$vicare_have_cre2" = xyes && test "x$vicare_have_cre2_h" = xyes],
-     [# Both the library and the header were found: success!
-      AC_MSG_NOTICE([cre2 support enabled])
-      AC_DEFINE([HAVE_CRE2],[1],[define if you have a cre2 library])
-      vicare_with_CRE2=yes
-      CRE2_LIBS="-lcre2 -lre2"],
-
-     [test "x$with_CRE2" = xyes],
-     [# The user requested support for library or die, but either
-      # the header or the library or both were not found.
-      AS_IF([test "x$vicare_have_cre2_h" = xno],
-            [AC_MSG_ERROR([cre2.h cannot be found.])],
-            [test "x$vicare_have_cre2" = xno],
-            [AC_MSG_ERROR([cre2 cannot be found])])],
-
-     [# The user requested a check for optional cre2 support, but
-      # either the header or the library or both were not found.
-      AC_MSG_WARN([cre2 not found])])],
-  [AC_MSG_NOTICE([cre2 was not requested])])
-AM_CONDITIONAL([WANT_CRE2],[test "x$vicare_with_CRE2" = xyes])
-
-AM_COND_IF([WANT_CRE2],[cre2_val=1],[cre2_val=0])
-AC_DEFINE_UNQUOTED([ENABLE_CRE2],[$cre2_val],[adds support for CRE2])
-AC_SUBST([CRE2_LIBS])
-
 AC_CACHE_SAVE
 
 #page
