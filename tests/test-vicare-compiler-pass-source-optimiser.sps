@@ -175,6 +175,11 @@
 
 ;;; --------------------------------------------------------------------
 
+  ;;We would like this to yield:
+  ;;
+  ;;   (begin
+  ;;     (read)
+  ;;     (quote 123))
   (check
       (optimisation-of
        (let ((x (read)))
@@ -184,9 +189,18 @@
 	 (set! x 1)
 	 123))
     => '(begin
-	  (read)
-	  (quote 123)))
+    	  (read)
+    	  (let* ((lex.x_0 '#!void)
+    		 (lex.x_1 (vector lex.x_0)))
+    	    (begin
+    	      ($vector-set! lex.x_1 '0 '1)
+    	      '123))))
 
+  ;;We would like this to yield:
+  ;;
+  ;;   (begin
+  ;;     (read)
+  ;;     (quote 123))
   (check
       (optimisation-of
        (let ((x (read)))
@@ -196,9 +210,18 @@
 	 (set! x 1)
 	 123))
     => '(begin
-	  (read)
-	  (quote 123)))
+    	  (read)
+    	  (let* ((lex.x_0 '#!void)
+    		 (lex.x_1 (vector lex.x_0)))
+    	    (begin
+    	      ($vector-set! lex.x_1 '0 '1)
+    	      '123))))
 
+  ;;We would like this to yield:
+  ;;
+  ;;   (begin
+  ;;     (read)
+  ;;     (quote 123))
   (check
       (optimisation-of
        (let ((x (read)))
@@ -208,9 +231,18 @@
 	 x
 	 123))
     => '(begin
-	  (read)
-	  (quote 123)))
+    	  (read)
+    	  (let* ((lex.x_0 '#!void)
+    		 (lex.x_1 (vector lex.x_0)))
+    	    (begin
+    	      ($vector-set! lex.x_1 '0 '1)
+    	      '123))))
 
+  ;;We would like this to yield:
+  ;;
+  ;;   (begin
+  ;;     (read)
+  ;;     (quote 123))
   (check
       (optimisation-of
        (let ((x (read)))
@@ -220,8 +252,12 @@
 	 x x x x
 	 123))
     => '(begin
-	  (read)
-	  (quote 123)))
+    	  (read)
+    	  (let* ((lex.x_0 '#!void)
+    		 (lex.x_1 (vector lex.x_0)))
+    	    (begin
+    	      ($vector-set! lex.x_1 '0 '1)
+    	      '123))))
 
   #t)
 
