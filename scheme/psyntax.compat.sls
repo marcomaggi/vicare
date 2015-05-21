@@ -95,33 +95,13 @@
 
     ;; error handlers
     print-expander-warning-message
+    print-expander-debug-message
     procedure-argument-violation
     warning
     library-debug-message
 
     ;; system stuff
     file-modification-time
-
-    ;; library names and version numbers
-    library-name?
-    library-version-numbers?		library-version-number?
-    library-name-decompose
-    library-name->identifiers		library-name->version
-    library-name-identifiers=?		library-name=?
-    library-name<?			library-name<=?
-    library-version=?
-    library-version<?			library-version<=?
-
-    ;; library references and conformity
-    library-reference?			library-version-reference?
-    library-sub-version-reference?	library-sub-version?
-    library-reference-decompose
-    library-reference->identifiers
-    library-reference->version-reference
-    library-reference-identifiers=?
-    conforming-sub-version-and-sub-version-reference?
-    conforming-version-and-version-reference?
-    conforming-library-name-and-library-reference?
 
     ;; unsafe bindings
     $car $cdr
@@ -153,7 +133,6 @@
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    option.)
-    (psyntax.library-utils)
     (only (ikarus.posix)
 	  ;;This is  used by INCLUDE to  register the modification time  of the files
 	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
@@ -202,6 +181,13 @@
   (when (option.verbose?)
     (let ((P (current-error-port)))
       (display "vicare: expander warning: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
+(define (print-expander-debug-message template . args)
+  (when (option.print-debug-messages?)
+    (let ((P (current-error-port)))
+      (display "vicare: expander: " P)
       (apply fprintf P template args)
       (newline P))))
 

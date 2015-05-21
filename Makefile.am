@@ -428,10 +428,11 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.vectors.sls				\
 	scheme/ikarus.writer.sls				\
 	\
+	scheme/psyntax.config.sls				\
+	scheme/psyntax.setup.sls				\
 	scheme/psyntax.helpers.scm				\
 	scheme/psyntax.builders.sls				\
 	scheme/psyntax.compat.sls				\
-	scheme/psyntax.config.sls				\
 	scheme/psyntax.special-transformers.sls			\
 	scheme/psyntax.lexical-environment.sls			\
 	scheme/psyntax.syntax-match.sls				\

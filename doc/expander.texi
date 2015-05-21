@@ -22,6 +22,7 @@ syntactic binding names, it is suggested to import it with prefix
 
 @menu
 * expander intro::              Introduction to the expansion process.
+* expander options::            Initialisation and general configuration.
 * expander lexenv::             The lexical environment.
 * expander utils::              Miscellaneous utilities.
 * expander examples::           Expansion and expander inspection
@@ -793,6 +794,16 @@ then the @ExportSubst{} represents the association:
 @headitem label @tab external name
 @item lab.this  @tab external-this
 @end multitable
+
+@c page
+@node expander options
+@section Initialisation and general configuration
+
+
+@defun initialise-expander
+Initialise expander's internal tables.  It is automatically called by
+the functions in the public @api{}.
+@end defun
 
 @c page
 @node expander lexenv

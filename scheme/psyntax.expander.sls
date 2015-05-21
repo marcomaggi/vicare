@@ -147,11 +147,7 @@
     expand-time-type-signature-violation?
     expand-time-retvals-signature-violation?
     expand-time-retvals-signature-violation-expected-signature
-    expand-time-retvals-signature-violation-returned-signature
-
-    ;; expand-time type specs: stuff for built-in tags and core primitives
-    initialise-type-spec-for-built-in-object-types
-    initialise-core-prims-tagging)
+    expand-time-retvals-signature-violation-returned-signature)
   (import (except (rnrs)
 		  eval
 		  environment		environment?
@@ -165,7 +161,10 @@
     (rnrs mutable-pairs)
     (except (psyntax.compat)
 	    expand-library)
-    (psyntax.config)
+    (prefix (only (psyntax.config)
+		  initialise-expander)
+	    config.)
+    (psyntax.setup)
     (psyntax.builders)
     (psyntax.special-transformers)
     (psyntax.lexical-environment)
@@ -179,6 +178,7 @@
 	  initialise-core-prims-tagging)
     (psyntax.import-spec-parser)
     (psyntax.export-spec-parser)
+    (psyntax.library-utils)
     (psyntax.library-collectors)
     (psyntax.chi-procedures)
     (prefix (psyntax.library-manager) libman.)
@@ -264,6 +264,7 @@
   ;;representing import  specifications as  defined by R6RS  plus Vicare
   ;;extensions.
   ;;
+  (config.initialise-expander)
   (let ((itc (make-collector)))
     (parametrise ((imp-collector itc))
       ;;NAME-VEC is a vector of  symbols representing the external names
@@ -300,6 +301,7 @@
   (()
    (new-interaction-environment (base-of-interaction-library)))
   ((libref)
+   (config.initialise-expander)
    (let* ((lib    (libman.find-library-by-reference libref))
 	  (rib    (export-subst->rib (libman.library-export-subst lib)))
 	  (lexenv '()))
@@ -332,6 +334,7 @@
   ;;an  environment.  Return  two values:  the resulting  core-expression, a  list of
   ;;libraries that must be invoked before evaluating the core expr.
   ;;
+  (config.initialise-expander)
   (cond ((env? env)
 	 (let ((rib (make-rib/top-from-source-names-and-labels (vector->list (env-names  env))
 							       (vector->list (env-labels env)))))
@@ -429,6 +432,7 @@
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
     ;;level program, expand it.
     ;;
+    (config.initialise-expander)
     (receive (import-spec* body* option* foreign-library*)
 	(%parse-top-level-program program-form*)
       (let ((foreign-library*  (%parse-foreign-library* foreign-library*)))
@@ -561,6 +565,7 @@
     ((library-sexp filename)
      (expand-library library-sexp filename (lambda (libname) (void))))
     ((library-sexp filename verify-libname)
+     (config.initialise-expander)
      (receive (libname
 	       import-lib* invoke-lib* visit-lib*
 	       invoke-code visit-code*

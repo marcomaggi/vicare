@@ -52,7 +52,7 @@
     core-language->sexp)
   (import (rnrs)
     (psyntax.compat)
-    (psyntax.config))
+    (psyntax.setup))
 
 
 (define (build-with-compilation-options library-option* body)

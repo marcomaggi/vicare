@@ -240,7 +240,7 @@
     (vicare system $symbols)
     (rnrs mutable-pairs)
     (prefix (rnrs syntax-case) sys.)
-    (psyntax.config)
+    (psyntax.setup)
     (psyntax.compat)
     (only (psyntax.special-transformers)
 	  expand-time-value?

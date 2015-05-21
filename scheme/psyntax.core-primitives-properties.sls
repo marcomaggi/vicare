@@ -21,6 +21,8 @@
 (library (psyntax.core-primitives-properties)
   (export initialise-core-prims-tagging)
   (import (rnrs)
+    (psyntax.compat)
+    (prefix (psyntax.config) config.)
     (only (psyntax.lexical-environment)
 	  core-prim-id)
     (only (psyntax.tag-and-tagged-identifiers)
@@ -31,8 +33,7 @@
 	  set-identifier-tag!
 	  fabricate-procedure-tag-identifier)
     (only (psyntax.syntactic-binding-properties)
-	  set-identifier-unsafe-variant!)
-    (psyntax.compat))
+	  set-identifier-unsafe-variant!))
 
 
 ;;;; helpers
@@ -2904,6 +2905,8 @@
 
 
 ;;;; done
+
+(config.expander-initialisation/initialise-core-prims-tagging initialise-core-prims-tagging)
 
 #| end of library |# )
 

@@ -88,6 +88,7 @@
     (psyntax.compat)
     (psyntax.syntax-match)
     (psyntax.library-collectors)
+    (psyntax.library-utils)
     (prefix (psyntax.library-manager) lm.))
 
 

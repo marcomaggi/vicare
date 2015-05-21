@@ -39,8 +39,8 @@
     library-descriptor-uid		library-descriptor-name
 
     ;; interning libraries
-    intern-library			unintern-library
-    interned-libraries
+    intern-library			just-intern-library
+    unintern-library			interned-libraries
 
     ;; library operations
     visit-library			invoke-library
@@ -63,7 +63,10 @@
     label->imported-syntactic-binding-descriptor)
   (import (rnrs)
     (prefix (rnrs syntax-case) sys.)
-    (psyntax.compat))
+    (psyntax.compat)
+    (only (psyntax.config)
+	  initialise-expander)
+    (psyntax.library-utils))
 
   (include "psyntax.helpers.scm" #t)
 
@@ -275,6 +278,7 @@
   ;;PRED returns true.  If PRED returns false  for all the entries in the collection:
   ;;return false.
   ;;
+  (initialise-expander)
   (let next-library-struct ((lib* ((current-library-collection))))
     (and (pair? lib*)
 	 (if (pred (car lib*))
@@ -502,6 +506,7 @@
   (()
    (interned-libraries #f))
   ((all?)
+   (initialise-expander)
    ;;We want to return a newly allocated list.
    (fold-right (lambda (lib knil)
 		 (if (or all? (library-visible? lib))
@@ -519,10 +524,16 @@
     (when (find-library-in-collection-by-name name)
       (assertion-violation __who__
 	"attempt to intern already interned library" name lib)))
-  ;;See the  documentation of  the expander  code for the  format of  the GLOBAL-ENV.
-  ;;Entries  in the  GLOBAL-ENV are  different from  entries in  the LEXENV;  here we
-  ;;transform a  GLOBAL-ENV entry into a  syntactic binding descriptor stored  in the
-  ;;VALUE slot of its label gensym.
+  (just-intern-library lib)
+  (when (memq 'visit-upon-loading (library-option* lib))
+    (visit-library lib))
+  lib)
+
+(define* (just-intern-library lib)
+  ;;See the documentation of the expander  for the format of the GLOBAL-ENV.  Entries
+  ;;in the GLOBAL-ENV are  different from entries in the LEXENV;  here we transform a
+  ;;GLOBAL-ENV entry into a syntactic binding  descriptor stored in the VALUE slot of
+  ;;its label gensym.
   (for-each
       (lambda (label.descriptor)
 	(let* ((label      (car label.descriptor))
@@ -553,10 +564,7 @@
     ;;This expression returns the GLOBAL-ENV of the library LIB.
     (library-global-env lib))
   ;;Register the object in the collection of interned libraries.
-  ((current-library-collection) lib)
-  (when (memq 'visit-upon-loading (library-option* lib))
-    (visit-library lib))
-  lib)
+  ((current-library-collection) lib))
 
 
 ;;;; uninterning libraries

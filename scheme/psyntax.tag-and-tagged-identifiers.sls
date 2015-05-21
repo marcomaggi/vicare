@@ -135,7 +135,6 @@
     print-identifier-info
 
     ;; tag identifiers utilities
-    initialise-type-spec-for-built-in-object-types
     retvals-signature-of-datum
     procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
     list-tag-id			$list-tag-id?		list-tag-id?
@@ -213,8 +212,8 @@
 		  generate-temporaries)
     (prefix (rnrs syntax-case) sys.)
     (psyntax.compat)
-    (prefix (psyntax.lexical-environment)
-	    lex.)
+    (prefix (psyntax.config) config.)
+    (prefix (psyntax.lexical-environment) lex.)
     (only (psyntax.syntax-match)
 	  syntax-match
 	  improper-list->list-and-rest
@@ -2640,6 +2639,8 @@
 
 
 ;;;; done
+
+(config.expander-initialisation/initialise-type-spec-for-built-in-object-types initialise-type-spec-for-built-in-object-types)
 
 #| end of library |# )
 

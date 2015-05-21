@@ -488,11 +488,12 @@
     "ikarus.compiler.code-generation.sls"
     "ikarus.compiler.sls"
 ;;;
-    "psyntax.library-utils.sls"
     "psyntax.compat.sls"
+    "psyntax.config.sls"
+    "psyntax.setup.sls"
+    "psyntax.library-utils.sls"
     "psyntax.library-manager.sls"
     "psyntax.internal.sls"
-    "psyntax.config.sls"
     "psyntax.builders.sls"
     "psyntax.special-transformers.sls"
     "psyntax.lexical-environment.sls"
@@ -3710,6 +3711,7 @@
     ;;This goes in "(psyntax system $all)" and it is used in this makefile.
     (current-library-collection)
 
+    (initialise-expander				$expander)
     (generate-descriptive-gensyms?			$expander)
     (generate-descriptive-marks?			$expander)
 
@@ -5035,9 +5037,11 @@
 	       (except (vicare)
 		       system-value-gensym
 		       system-label-gensym)
+	     (only (psyntax.config)
+		   expander-initialisation/initialise-label-gensyms-and-interned-libraries)
 	     (only (psyntax.library-manager)
 		   make-library
-		   intern-library)
+		   just-intern-library)
 	     (only (ikarus.compiler)
 		   compiler-initialisation/storage-location-gensyms-associations-func
 		   system-value-gensym
@@ -5063,18 +5067,20 @@
 	     ;;given its symbol name.
 	     (current-primitive-locations (lambda (func-name)
 					    ($getprop func-name SYSTEM-VALUE-GENSYM))))
-	   ;;Store in the property list of each primitive procedure's symbol name its
-	   ;;label gensym.
-	   (for-each
-	       (lambda (func-name.lab)
-	   	 ($putprop (car func-name.lab) SYSTEM-LABEL-GENSYM (cdr func-name.lab)))
-	     ',export-subst)
-	   ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
-	   ,@(map (lambda (legend-entry)
-		    (build-intern-library-form legend-entry export-subst global-env))
-	       LIBRARY-LEGEND)
+	   (define (initialise-label-gensyms-and-interned-libraries)
+	     ;;Store in the  property list of each primitive  procedure's symbol name
+	     ;;its label gensym.
+	     (for-each
+		 (lambda (func-name.lab)
+		   ($putprop (car func-name.lab) SYSTEM-LABEL-GENSYM (cdr func-name.lab)))
+	       ',export-subst)
+	     ;;This evaluates to a spliced list of INTERN-LIBRARY forms.
+	     ,@(map (lambda (legend-entry)
+		      (build-intern-library-form legend-entry export-subst global-env))
+		 LIBRARY-LEGEND))
 	   ;;Set up.
 	   (compiler-initialisation/storage-location-gensyms-associations-func initialise-storage-location-gensyms-associations)
+	   (expander-initialisation/initialise-label-gensyms-and-interned-libraries initialise-label-gensyms-and-interned-libraries)
 	   #| end of LIBRARY |# ))
 
       ;;Logging this  symbolic expression  gives some insight  about what  happens at
@@ -5117,26 +5123,25 @@
 				  (get-export-subset nickname export-subst)))
 	     (source-file-name	#f)
 	     (option*		'()))
-	;;Datums embedded in this symbolic expression are quoted to allow the sexp to
-	;;be handed to EVAL (I guess; Marco Maggi, Aug 26, 2011).
-	`(intern-library (make-library ',id					 ;uid
-				       (quote ,(append fullname (list version))) ;name
-				       '()			 ;imp-lib*
-				       '()			 ;vis-lib*
-				       '()			 ;inv-lib*
-				       ',subst			 ;export-subst
-				       ',env			 ;global-env
-				       void			 ;visit-state
-				       void			 ;invoke-state
-				       '#f			 ;visit-code
-				       '#f			 ;invoke-code
-				       '#f			 ;guard-code
-				       '()			 ;guard-lib*
-				       ',visible?		 ;visible*
-				       (quote ,source-file-name) ;source-file-name
-				       (quote ,option*)		 ;option*
-				       '()			 ;foreign-library*
-				       ))))
+	`(just-intern-library
+	  (make-library ',id					  ;uid
+			(quote ,(append fullname (list version))) ;name
+			'()					  ;imp-lib*
+			'()					  ;vis-lib*
+			'()					  ;inv-lib*
+			',subst					  ;export-subst
+			',env					  ;global-env
+			void					  ;visit-state
+			void					  ;invoke-state
+			'#f					  ;visit-code
+			'#f					  ;invoke-code
+			'#f					  ;guard-code
+			'()					  ;guard-lib*
+			',visible?				  ;visible*
+			(quote ,source-file-name)		  ;source-file-name
+			(quote ,option*)			  ;option*
+			'()					  ;foreign-library*
+			))))
 
     (define (get-export-subset nickname export-subst)
       ;;Given the alist of substitutions EXPORT-SUBST, build and return the subset of

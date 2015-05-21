@@ -77,10 +77,6 @@
     (prefix (only (ikarus.debugger)
 		  guarded-start)
 	    debugger.)
-    (prefix (only (psyntax.expander)
-		  initialise-type-spec-for-built-in-object-types
-		  initialise-core-prims-tagging)
-	    psyntax.)
     (prefix (only (psyntax.library-manager)
 		  current-library-expander
 		  source-code-location)
@@ -1121,9 +1117,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ($initialize-symbol-table!)
   ;;See "ikarus.strings.table.sls".
   ($initialize-interned-strings-table!)
-
-  (psyntax.initialise-type-spec-for-built-in-object-types)
-  (psyntax.initialise-core-prims-tagging)
 
   #| end of module |# )
 
