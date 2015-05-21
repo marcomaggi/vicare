@@ -25,6 +25,8 @@ syntactic binding names, it is suggested to import it with prefix
 * expander options::            Initialisation and general configuration.
 * expander lexenv::             The lexical environment.
 * expander utils::              Miscellaneous utilities.
+* expander system-labels::      Retrieving syntactic binding labels.
+* expander system-identifiers:: Retrieving syntactic binding identifiers.
 * expander examples::           Expansion and expander inspection
                                 examples.
 @end menu
@@ -1525,7 +1527,7 @@ we can further inspect @code{&condition-rtd} and @code{&condition-rcd}:
 If we know the public name of a primitive syntactic binding
 (@func{display}, @syntax{lambda}, @syntax{let}, @condition{condition},
 @dots{}) we can retrieve the binding's label using @func{system-label}
-(@pxref{iklib symbols labels}) and given the label we can retrieve the
+(@pxref{expander system-labels}) and given the label we can retrieve the
 binding descriptor using @func{symbol-value} (@pxref{iklib symbols
 value}).  Examples:
 
@@ -1558,7 +1560,7 @@ System values bound to symbols}.
 @item
 Given the primitive's label gensym we can retrieve the binding type, the
 public name and so the storage location gensym and the system value,
-@ref{iklib symbols labels, Retrieving syntactic binding labels}.
+@ref{expander system-labels, Retrieving syntactic binding labels}.
 @end itemize
 
 Core primitive syntaxes and non--core primitive syntaxes have
@@ -2658,6 +2660,103 @@ Example:
           loc.doit
           (annotated-call (cdr x) (primitive cdr) lex.x))))))
 @end example
+@end defun
+
+@c page
+@node expander system-labels
+@section Retrieving syntactic binding labels
+
+
+Every core primitive has a name that is considered part of
+@value{PRJNAME}'s core language; such primitive name is the actual
+public name of the binding exported by the boot image.  The name of the
+function @func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+Every core primitive syntactic binding has a unique @dfn{label} gensym
+associated to it; the label is used to map core primitive's syntactic
+identifiers to syntactic binding's decriptors in the lexical
+environment.
+
+The property list of the name contains a special entry whose value is
+the label gensym of the core primitive syntactic binding; we can easily
+inspect such situation as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare expander) xp.))
+
+(getprop 'display (xp.system-label-gensym))
+@result{} lab.display
+
+;; extract the lexical environment entry describing DISPLAY
+(symbol-value (getprop 'display (xp.system-label-gensym)))
+@result{} (core-prim . display)
+
+(xp.system-label 'display)
+@result{} lab.display
+@end example
+
+We see that the property list contains an entry with key set to the
+symbol returned by @func{system-label-gensym}; notice that this key is
+different every time we rebuild the boot image.
+
+
+@defun system-label @var{symbol}
+Attempt to extract from @var{symbol} the core primitive syntactic
+binding label of which @var{symbol} is the name; if successful return
+the label, else return @false{}.
+@end defun
+
+
+@defun system-label-gensym
+Return a special gensym used internally to map core primitive names to
+their syntactic binding label gensym.
+@end defun
+
+@c page
+@node expander system-identifiers
+@section Retrieving syntactic binding identifiers
+
+
+Every core primitive has a name that is considered part of
+@value{PRJNAME}'s core language; such primitive name is the actual
+public name of the binding exported by the boot image.  The name of the
+function @func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+Some internal operations generate a syntactic identifier bound to a core
+primitive and store it in the property list of the public primitive
+name; we can easily inspect such situation as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare expander) xp.))
+
+(getprop 'procedure? (xp.system-id-gensym))
+@result{} #<syntax expr=procedure? ...>
+
+(xp.system-id 'procedure?)
+@result{} #<syntax expr=procedure? ...>
+@end example
+
+We see that the property list contains an entry with key set to the
+return value of @func{system-id-gensym}; notice that this key is
+different every time we rebuild the boot image.
+
+
+@defun system-id @var{symbol}
+Attempt to extract from @var{symbol} the bound identifier of which
+@var{symbol} is the name; if successful return the label, else return
+@false{}.
+@end defun
+
+
+@defun system-id-gensym
+Return a special gensym used internally to map core primitive names to
+their syntactic binding identifiers.
 @end defun
 
 @c page

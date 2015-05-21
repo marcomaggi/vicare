@@ -6100,7 +6100,8 @@ Condition type used to describe a failed expression, for example in a
 procedure argument validation predicate.  It is derived from
 @condition{condition}.  It has the following fields:
 
-@table failed-expression
+@table @code
+@item failed-expression
 A symbolic expression representing the source code of the failed
 expression.
 @end table
@@ -11418,8 +11419,6 @@ in which @var{state} is the @strong{last} argument.
 * iklib symbols comparison::    Comparing symbols.
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
-* iklib symbols labels::        Retrieving syntactic binding labels.
-* iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
 
 @c page
@@ -11706,100 +11705,6 @@ Remove property @var{key} from the list associated to @var{symbol}.
 Return a new association list representing the property list of
 @var{symbol}.  The order of the entries is the same as the property
 creation order.
-@end defun
-
-@c page
-@node iklib symbols labels
-@subsection Retrieving syntactic binding labels
-
-
-Every core primitive value has a name that is considered part of
-Vicare's core language; such primitive name is the actual public name of
-the binding exported by the boot image.  The name of the function
-@func{display} is the symbol @code{display}; the name of the
-record--type descriptor @code{&condition-rtd} is the symbol
-@code{&condition-rtd}.
-
-Every core primitive syntactic binding has a unique @dfn{label} gensym
-associated to it; the label is used to map identifiers bound to core
-primitives to syntactic binding decriptors in the lexical environment.
-
-The property list of the name contains a special entry whose value is
-the label gensym of the core primitive syntactic binding; we can easily
-inspect such situation as follows:
-
-@example
-(import (vicare))
-
-(getprop 'display (system-label-gensym))
-@result{} lab.display
-
-;; extract the lexical environment entry describing DISPLAY
-(symbol-value (getprop 'display (system-label-gensym)))
-@result{} (core-prim . display)
-
-(system-label 'display)
-@result{} lab.display
-@end example
-
-We see that the property list contains an entry with key set to the
-symbol returned by @func{system-label-gensym}; notice that this key is
-different every time we rebuild the boot image.
-
-
-@defun system-label @var{symbol}
-Attempt to extract from @var{symbol} the core primitive syntactic
-binding label of which @var{symbol} is the name; if successful return
-the label, else return @false{}.
-@end defun
-
-
-@defun system-label-gensym
-Return a special gensym used internally to map core primitive names to
-their syntactic binding label gensym.
-@end defun
-
-@c page
-@node iklib symbols identifiers
-@subsection Retrieving syntactic binding identifiers
-
-
-Every core primitive binding has a name that is considered part of
-Vicare's core language; such primitive name is the actual public name of
-the binding exported by the boot image.  The name of the function
-@func{display} is the symbol @code{display}; the name of the
-record--type descriptor @code{&condition-rtd} is the symbol
-@code{&condition-rtd}.
-
-Some internal operations generate an identifier bound to the primitive
-and store it in the property list of the public primitive name; we can
-easily inspect such situation as follows:
-
-@example
-(import (vicare))
-
-(getprop 'procedure? (system-id-gensym))
-@result{} #<syntax expr=procedure? ...>
-
-(system-id 'procedure?)
-@result{} #<syntax expr=procedure? ...>
-@end example
-
-We see that the property list contains an entry with key set to the
-return value of @func{system-id-gensym}; notice that this key is
-different every time we rebuild the boot image.
-
-
-@defun system-id @var{symbol}
-Attempt to extract from @var{symbol} the bound identifier of which
-@var{symbol} is the name; if successful return the label, else return
-@false{}.
-@end defun
-
-
-@defun system-id-gensym
-Return a special gensym used internally to map core primitive names to
-their syntactic binding identifiers.
 @end defun
 
 @c page

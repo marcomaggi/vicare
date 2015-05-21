@@ -1252,11 +1252,7 @@
     (top-level-value				v)
     (top-level-bound?				v)
     (set-top-level-value!			v)
-    (system-label-gensym			v)
     (reset-symbol-proc!				v)
-    (system-label				v)
-    (system-id					v)
-    (system-id-gensym				v)
 
 ;;; --------------------------------------------------------------------
 ;;; foldable primitives
@@ -3728,6 +3724,11 @@
     (syntactic-identifier->label			$expander)
     (label->syntactic-binding-descriptor		$expander)
     (label->syntactic-binding-descriptor/no-indirection	$expander)
+
+    (system-label-gensym				$expander)
+    (system-label					$expander)
+    (system-id-gensym					$expander)
+    (system-id						$expander)
 
     ;;These are only for internal use by the psyntax.
     (make-syntactic-binding-descriptor/struct-type-name)
