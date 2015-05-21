@@ -11418,7 +11418,6 @@ in which @var{state} is the @strong{last} argument.
 * iklib symbols comparison::    Comparing symbols.
 * iklib symbols value::         Symbol values.
 * iklib symbols plists::        Property lists.
-* iklib symbols system::        System values bound to symbols.
 * iklib symbols labels::        Retrieving syntactic binding labels.
 * iklib symbols identifiers::   Retrieving syntactic binding identifiers.
 @end menu
@@ -11707,56 +11706,6 @@ Remove property @var{key} from the list associated to @var{symbol}.
 Return a new association list representing the property list of
 @var{symbol}.  The order of the entries is the same as the property
 creation order.
-@end defun
-
-@c page
-@node iklib symbols system
-@subsection System values bound to symbols
-
-
-Every core primitive value has a name that is considered part of
-Vicare's core language; such primitive name is the actual public name of
-the binding exported by the boot image.  The name of the function
-@func{display} is the symbol @code{display}; the name of the
-record--type descriptor @code{&condition-rtd} is the symbol
-@code{&condition-rtd}.
-
-The property list of the name contains a special entry whose value is
-the @dfn{storage location gensym} (``loc'' for short) of the core
-primitive value; we can easily inspect such situation as follows:
-
-@example
-(import (vicare))
-
-(getprop 'display (system-value-gensym))
-@result{} loc.display
-
-;; extract the procedure from the loc
-(symbol-value (getprop 'display (system-value-gensym)))
-@result{} #<procedure display>
-
-(system-value 'display)
-@result{} #<procedure display>
-
-(system-value '&condition-rtd)
-@result{} #[rtd name=&condition ...]
-@end example
-
-We see that the property list contains an entry with key set to the
-symbol returned by @func{system-value-gensym}; notice that this key is
-different every time we rebuild the boot image.
-
-
-@defun system-value @var{symbol}
-Attempt to extract from @var{symbol} the core primitive value of which
-@var{symbol} is the name; if successful return the Scheme object, else
-raise an assertion violation.
-@end defun
-
-
-@defun system-value-gensym
-Return special gensym used internally to map core primitive names to
-their value.
 @end defun
 
 @c page

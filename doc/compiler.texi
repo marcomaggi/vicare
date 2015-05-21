@@ -23,7 +23,9 @@ of comments.
 * compiler intro::              Introduction to the compilation process.
 * compiler conv::               Compiler coding conventions.
 * compiler topics::             Inspection by topics.
-* compiler options::            General configuration options.
+* compiler options::            Initialisation and general configuration
+                                options.
+* compiler sysval::             System values bound to core primitive names.
 * compiler unparse::            Unparsing intermediate representations.
 
 Compiler passes
@@ -716,11 +718,17 @@ assigned bindings end up defined by @objtype{fix} forms.
 
 @c page
 @node compiler options
-@section General configuration options
+@section Initialisation and general configuration options
 
 
 The following bindings are exported by the library @library{vicare
 compiler}.
+
+
+@defun initialise-compiler
+Initialise compiler's internal tables.  It is automatically called the
+first time the compiler is invoked to generate code.
+@end defun
 
 
 @deffn Parameter generate-descriptive-labels
@@ -731,6 +739,59 @@ labels; this is useful for debugging purposes and code generation
 inspection.  When set to false: attempt to generate gensyms in the
 fastest way.
 @end deffn
+
+@c page
+@node compiler sysval
+@section System values bound to core primitive names
+
+
+Every core primitive value has a name that is considered part of
+@value{PRJNAME}'s core language; such primitive name is the actual
+public name of the binding exported by the boot image.  The name of the
+function @func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+The name's property list contains a special entry whose value is the
+@dfn{storage location gensym} (``loc'' for short) of the core primitive
+value; we can easily inspect such situation as follows:
+
+@example
+(import (vicare)
+  (prefix (vicare compiler) compiler.))
+
+(compiler.initialise-compiler)
+
+(getprop 'display (compiler.system-value-gensym))
+@result{} loc.display
+
+;; extract the procedure from the loc
+(symbol-value (getprop 'display (compiler.system-value-gensym)))
+@result{} #<procedure display>
+
+(compiler.system-value 'display)
+@result{} #<procedure display>
+
+(compiler.system-value '&condition-rtd)
+@result{} #[rtd name=&condition ...]
+@end example
+
+We see that the property list contains an entry with key set to the
+symbol returned by @func{system-value-gensym}; notice that this key is
+different every time we rebuild the boot image.
+
+
+@defun system-value @var{symbol}
+Attempt to extract from @var{symbol} the core primitive value of which
+@var{symbol} is the name; if successful return the Scheme object, else
+raise an assertion violation.
+@end defun
+
+
+@defun system-value-gensym
+Return special gensym used internally to map core primitive names to
+their value.
+@end defun
 
 @c page
 @node compiler unparse

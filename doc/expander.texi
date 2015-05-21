@@ -1541,8 +1541,8 @@ record--constructor descriptors:
 @itemize
 @item
 Given the primitive's public name we can retrieve the binding type, the
-storage location gensym and so the system value, @ref{iklib symbols
-system, System values bound to symbols}.
+storage location gensym and so the system value, @ref{compiler sysval,
+System values bound to symbols}.
 
 @item
 Given the primitive's label gensym we can retrieve the binding type, the

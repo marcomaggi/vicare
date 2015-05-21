@@ -24,17 +24,18 @@
 #!vicare
 (library (ikarus.compiler)
   (export
+    initialise-compiler
     current-primitive-locations		eval-core
     compile-core-expr-to-port		compile-core-expr-to-thunk
     core-expr->optimized-code		core-expr->assembly-code
     core-expr->optimisation-and-core-type-inference-code
 
-    system-value			system-value-gensym
-
     ;; these go in (vicare compiler)
     optimize-level
+    system-value			system-value-gensym
 
     ;; configuration parameters
+    compiler-initialisation/storage-location-gensyms-associations-func
     current-letrec-pass
     check-for-illegal-letrec
     source-optimizer-passes-count
@@ -131,21 +132,25 @@
   (include "ikarus.wordsize.scm" #t)
 
 
+;;;; initialisation
+
+(define initialise-compiler
+  (let ((compiler-initialised? #f))
+    (lambda ()
+      (unless compiler-initialised?
+	(print-compiler-debug-message "initialising compiler internals")
+	(let ((func (compiler-initialisation/storage-location-gensyms-associations-func)))
+	  (when func
+	    (func)))
+	(initialise-core-primitive-properties)
+	(initialise-core-primitive-operations)
+	(set! compiler-initialised? #t)))))
+
+
 ;;;; compiler entry point
 
 (module COMPILER-SINGLE-ENTRY-POINT
   (compile-core-language-expression)
-
-  (define compiler-initialised? #f)
-
-  (define (initialise-compiler)
-    (unless compiler-initialised?
-      (print-compiler-debug-message "initialising compiler internals")
-      (initialise-core-primitive-properties)
-      (initialise-core-primitive-operations)
-      (set! compiler-initialised? #t)))
-
-;;; --------------------------------------------------------------------
 
   (define (compile-core-language-expression core-language-sexp
 					    perform-core-type-inference?

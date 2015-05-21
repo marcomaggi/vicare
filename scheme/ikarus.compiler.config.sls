@@ -17,6 +17,7 @@
 #!r6rs
 (library (ikarus.compiler.config)
   (export
+    compiler-initialisation/storage-location-gensyms-associations-func
     generate-descriptive-labels?
     generate-debug-calls
     strip-source-info
@@ -40,6 +41,9 @@
 
 
 ;;;; configuration parameters
+
+(define compiler-initialisation/storage-location-gensyms-associations-func
+  (make-parameter #f))
 
 (define generate-descriptive-labels?
   (make-parameter #f))
