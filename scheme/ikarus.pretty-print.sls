@@ -366,9 +366,9 @@
      ;;Right now the would block object is a struct instance, so we have
      ;;to check for  it before checking for structs.   (Marco Maggi; Mon
      ;;May 13, 2013)
-     ((would-block-object? x)	"#<would-block-object>")
-     ((bwp-object? x)		"#<bwp-object>")
-     ((unbound-object? x)	"#<unbound-object>")
+     ((would-block-object? x)	"#!would-block-object")
+     ((bwp-object? x)		"#!bwp-object")
+     ((unbound-object? x)	"#!unbound-object")
      ((struct? x)        (boxify-shared x boxify-struct))
 ;;;((setbox? x)
 ;;; (let ((i (format "#~a=" (setbox-idx x)))
@@ -670,6 +670,6 @@
 
 ;;;; done
 
-)
+#| end of file |# )
 
 ;;; end of file

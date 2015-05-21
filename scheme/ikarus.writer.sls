@@ -682,17 +682,24 @@
 		     (number->string x))
 		   p)
       i)
-     ((vector? x) (write-shared x p m h i write-vector))
-     ((bytevector? x) (write-shared x p m h i write-bytevector))
-     ((procedure? x) (write-procedure x p) i)
-     ((port? x) (write-port x p) i)
-     ((eq? x (void)) (write-char* "#<void>" p) i)
-     ((eof-object? x) (write-char* "#!eof" p) i)
-     ((bwp-object? x) (write-char* "#!bwp" p) i)
-     ((would-block-object? x) (write-char* "#!would-block" p) i)
-     ((transcoder? x) (write-char* "#<transcoder>" p) i)
-     ((struct? x) (write-shared x p m h i write-struct))
-     ((code? x) (write-char* "#<code>" p) i)
+     ((vector? x)		(write-shared x p m h i write-vector))
+     ((bytevector? x)		(write-shared x p m h i write-bytevector))
+     ((procedure? x)		(write-procedure x p) i)
+     ((port? x)			(write-port x p) i)
+     ((eq? x (void))		(write-char* "#!void" p) i)
+     ((eof-object? x)		(write-char* "#!eof" p) i)
+     ((bwp-object? x)		(write-char* "#!bwp" p) i)
+     ((would-block-object? x)	(write-char* "#!would-block" p) i)
+     ((transcoder? x)
+      (write-char* (string-append "#<transcoder"
+				  " codec="			(symbol->string (transcoder-codec x))
+				  " eol-style="			(symbol->string (transcoder-eol-style x))
+				  " error-handling-mode="	(symbol->string (transcoder-error-handling-mode x))
+				  ">")
+		   p)
+      i)
+     ((struct? x)		(write-shared x p m h i write-struct))
+     ((code? x)			(write-char* "#<code>" p) i)
      ((pointer? x)
       (write-char* "#<pointer #x" p)
       (write-hex (pointer->integer x)
@@ -700,9 +707,10 @@
 		  ((32)		8)
 		  ((64)		16))
 		 p)
-      (write-char* ">" p))
-     (($unbound-object? x) (write-char* "#<unbound-object>" p) i)
-     (else (write-char* "#<unknown>" p) i)))
+      (write-char* ">" p)
+      i)
+     (($unbound-object? x)	(write-char* "#!unbound-object" p) i)
+     (else			(write-char* "#<unknown>" p) i)))
   (wr x p m h i))
 
 
@@ -871,6 +879,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
