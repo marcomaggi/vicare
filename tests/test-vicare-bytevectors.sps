@@ -84,6 +84,17 @@
 		(else E))
 	?body)))))
 
+(define-syntax check-consistency-violation
+  (syntax-rules ()
+    ((_ ?body ?irritant0 ?irritant ...)
+     (check
+	 (guard (E ((procedure-arguments-consistency-violation? E)
+		    (condition-irritants E))
+		   (else E))
+	   ?body)
+       => (list ?irritant0 ?irritant ...)))
+    ))
+
 
 ;;;; helpers
 
@@ -674,17 +685,17 @@
   (check-argument-validation (bytevector-copy! #vu8() -1 #vu8()  0 1) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-copy! #vu8()     1 #vu8()    0 1) #vu8()     1 1)
-  (check-argument-validation (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10 1)
+  (check-consistency-violation (bytevector-copy! #vu8()     1 #vu8()    0 1) #vu8()     1 1)
+  (check-consistency-violation (bytevector-copy! #vu8(1 2) 10 #vu8(1 2) 0 1) #vu8(1 2) 10 1)
 
   ;;not a fixnum
   (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() #\b 1) #\b)
-  ;;too low
+  ;;negative
   (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() -2 1) -2)
 
   ;;too high
-  (check-argument-validation (bytevector-copy! #vu8(1)   0 #vu8()     2 1) #vu8()     2 1)
-  (check-argument-validation (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) #vu8(1 2) 20 1)
+  (check-consistency-violation (bytevector-copy! #vu8(1)   0 #vu8()     2 1) #vu8()     2 1)
+  (check-consistency-violation (bytevector-copy! #vu8(1 2) 0 #vu8(1 2) 20 1) #vu8(1 2) 20 1)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: count
@@ -695,10 +706,10 @@
   (check-argument-validation (bytevector-copy! #vu8() 0 #vu8() 0 -2)  -2)
 
   ;;too big for source
-  (check-argument-validation (bytevector-copy! #vu8(1 2) 0 #vu8() 0 3)  #vu8(1 2) 0 3)
+  (check-consistency-violation (bytevector-copy! #vu8(1 2) 0 #vu8() 0 3)  #vu8(1 2) 0 3)
 
   ;;too big for dest
-  (check-argument-validation (bytevector-copy! #vu8(1 2) 0 #vu8(1) 0 2)  #vu8(1) 0 2)
+  (check-consistency-violation (bytevector-copy! #vu8(1 2) 0 #vu8(1) 0 2)  #vu8(1) 0 2)
 
   #t)
 
@@ -713,14 +724,14 @@
 ;;; argument validation, start index
 
   ;;start index not an integer
-  (check-argument-validation (subbytevector-u8 '#vu8() #\a) '#vu8() #\a 0)
+  (check-argument-validation (subbytevector-u8 '#vu8() #\a) #\a)
   ;;start index not an exact integer
-  (check-argument-validation (subbytevector-u8 '#vu8() 1.0) '#vu8() 1.0 0)
+  (check-argument-validation (subbytevector-u8 '#vu8() 1.0) 1.0)
   ;;start index is negative
-  (check-argument-validation (subbytevector-u8 '#vu8() -1) ' #vu8() -1 0)
+  (check-argument-validation (subbytevector-u8 '#vu8() -1) -1)
 
   ;;start index too big
-  (check-argument-validation (subbytevector-u8 '#vu8() 1) '#vu8() 1 0)
+  (check-consistency-violation (subbytevector-u8 '#vu8() 1) '#vu8() 1 0)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, end index
@@ -733,7 +744,7 @@
   (check-argument-validation (subbytevector-u8 '#vu8(1) 0 -1) -1)
 
   ;;end index too big
-  (check-argument-validation (subbytevector-u8 '#vu8(1) 0 2) #vu8(1) 0 2)
+  (check-consistency-violation (subbytevector-u8 '#vu8(1) 0 2) #vu8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -786,7 +797,7 @@
   (check-argument-validation (subbytevector-u8/count '#vu8() -1 1) -1)
 
   ;;start index too big
-  (check-argument-validation (subbytevector-u8/count '#vu8() 1 1) #vu8() 1 1)
+  (check-consistency-violation (subbytevector-u8/count '#vu8() 1 1) #vu8() 1 1)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, word count
@@ -799,7 +810,7 @@
   (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 -1) -1)
 
   ;;end index too big
-  (check-argument-validation (subbytevector-u8/count '#vu8(1) 0 2) #vu8(1) 0 2)
+  (check-consistency-violation (subbytevector-u8/count '#vu8(1) 0 2) #vu8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -844,14 +855,14 @@
 ;;; argument validation, start index
 
   ;;start index not an integer
-  (check-argument-validation (subbytevector-s8 '#vs8() #\a) '#vu8() #\a 0)
+  (check-argument-validation (subbytevector-s8 '#vs8() #\a) #\a)
   ;;start index not an exact integer
-  (check-argument-validation (subbytevector-s8 '#vs8() 1.0) '#vu8() 1.0 0)
+  (check-argument-validation (subbytevector-s8 '#vs8() 1.0) 1.0)
   ;;start index is negative
-  (check-argument-validation (subbytevector-s8 '#vs8() -1) '#vu8() -1 0)
+  (check-argument-validation (subbytevector-s8 '#vs8() -1) -1)
 
   ;;start index too big
-  (check-argument-validation (subbytevector-s8 '#vs8() 1) #vs8() 1 0)
+  (check-consistency-violation (subbytevector-s8 '#vs8() 1) #vs8() 1 0)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, end index
@@ -864,7 +875,7 @@
   (check-argument-validation (subbytevector-s8 '#vs8(1) 0 -1) -1)
 
   ;;end index too big
-  (check-argument-validation (subbytevector-s8 '#vs8(1) 0 2) #vs8(1) 0 2)
+  (check-consistency-violation (subbytevector-s8 '#vs8(1) 0 2) #vs8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -917,7 +928,7 @@
   (check-argument-validation (subbytevector-s8/count '#vs8() -1 1) -1)
 
   ;;start index too big
-  (check-argument-validation (subbytevector-s8/count '#vs8() 1 1) #vs8() 1 1)
+  (check-consistency-violation (subbytevector-s8/count '#vs8() 1 1) #vs8() 1 1)
 
 ;;; --------------------------------------------------------------------
 ;;; argument validation, word count
@@ -930,7 +941,7 @@
   (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 -1) -1)
 
   ;;end index too big
-  (check-argument-validation (subbytevector-s8/count '#vs8(1) 0 2) #vs8(1) 0 2)
+  (check-consistency-violation (subbytevector-s8/count '#vs8(1) 0 2) #vs8(1) 0 2)
 
 ;;; --------------------------------------------------------------------
 
@@ -969,8 +980,13 @@
 
 ;;; arguments validation
 
-  (check-argument-validation (bytevector-append 123) '(123))
-  (check-argument-validation (bytevector-append '#vu8() 123) '(#vu8() 123))
+  (check-for-procedure-argument-violation
+      (bytevector-append 123)
+    => '(bytevector-append (123)))
+
+  (check-for-procedure-argument-violation
+      (bytevector-append '#vu8() 123)
+    => '(bytevector-append (123)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1136,9 +1152,9 @@
   (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) -1 2) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 4 2) '#vu8(1 2 3) 4)
+  (check-consistency-violation (bytevector-u8-set! #vu8(1 2 3) 4 2) '#vu8(1 2 3) 4)
   ;;too high
-  (check-argument-validation (bytevector-u8-set! #vu8(1 2 3) 3 2) '#vu8(1 2 3) 3)
+  (check-consistency-violation (bytevector-u8-set! #vu8(1 2 3) 3 2) '#vu8(1 2 3) 3)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1176,9 +1192,9 @@
   (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) -1) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) 4) #vu8(1 2 3) 4)
+  (check-consistency-violation (bytevector-u8-ref #vu8(1 2 3) 4) #vu8(1 2 3) 4)
   ;;too high
-  (check-argument-validation (bytevector-u8-ref #vu8(1 2 3) 3) #vu8(1 2 3) 3)
+  (check-consistency-violation (bytevector-u8-ref #vu8(1 2 3) 3) #vu8(1 2 3) 3)
 
   #t)
 
@@ -1207,9 +1223,9 @@
   (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) -1 2) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 4 2) #vs8(1 2 3) 4)
+  (check-consistency-violation (bytevector-s8-set! #vs8(1 2 3) 4 2) #vs8(1 2 3) 4)
   ;;too high
-  (check-argument-validation (bytevector-s8-set! #vs8(1 2 3) 3 2) #vs8(1 2 3) 3)
+  (check-consistency-violation (bytevector-s8-set! #vs8(1 2 3) 3 2) #vs8(1 2 3) 3)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1247,9 +1263,9 @@
   (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) -1) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) 4) #vs8(1 2 3) 4)
+  (check-consistency-violation (bytevector-s8-ref #vs8(1 2 3) 4) #vs8(1 2 3) 4)
   ;;too high
-  (check-argument-validation (bytevector-s8-ref #vs8(1 2 3) 3) #vs8(1 2 3) 3)
+  (check-consistency-violation (bytevector-s8-ref #vs8(1 2 3) 3) #vs8(1 2 3) 3)
 
   #t)
 
@@ -1312,9 +1328,9 @@
   (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) -1 2 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-u16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (endianness little)) '#vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1387,9 +1403,9 @@
   (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-u16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1432,12 +1448,12 @@
   (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
 
   ;;not aligned to 2
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
+  (check-consistency-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-u16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1480,12 +1496,12 @@
   (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) -1) -1)
 
   ;;not aligned to 2
-  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
+  (check-consistency-violation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-u16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) (mult 3))
 
   #t)
 
@@ -1537,33 +1553,30 @@
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: bytevector
 
-  (check-argument-validation (bytevector-s16-native-set! #\a 1 2) #\a)
+  (check-argument-validation (bytevector-s16-set! #\a 1 2 (native-endianness)) #\a)
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: index
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) #\a 2) #\a)
+  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) #\a 2 (native-endianness)) #\a)
   ;;negative
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
-
-  ;;not aligned to 2
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
+  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) -1 2 (native-endianness)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) (mult 4) 2 (native-endianness))  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-s16-set! #vu8(1 0 2 0 3 0) (mult 3) 2 (native-endianness))  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
 
   ;;not a fixnum
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 #\a) #\a)
+  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 #\a (native-endianness)) #\a)
   ;;too low
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*)) (words.least-s16*))
+  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.least-s16*) (native-endianness)) (words.least-s16*))
   ;;too high
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*)) (words.greatest-s16*))
+  (check-argument-validation (bytevector-s16-set! #vu8(1 0 2 0 3 0) 1 (words.greatest-s16*) (native-endianness)) (words.greatest-s16*))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1650,9 +1663,9 @@
   (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) -1 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 4) (endianness little))  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-s16-ref #vu8(1 0 2 0 3 0) (mult 3) (endianness little))  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1695,12 +1708,12 @@
   (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) -1 2) -1)
 
   ;;not aligned to 2
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
+  (check-consistency-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) 1 0) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 4) 2)  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-s16-native-set! #vu8(1 0 2 0 3 0) (mult 3) 2)  #vu8(1 0 2 0 3 0) (mult 3))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1759,12 +1772,12 @@
   (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) -1) -1)
 
   ;;not aligned to 2
-  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
+  (check-consistency-violation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) 1) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) (mult 4))
+  (check-consistency-violation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 4))  #vu8(1 0 2 0 3 0) (mult 4))
   ;;too high
-  (check-argument-validation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) (mult 3))
+  (check-consistency-violation (bytevector-s16-native-ref #vu8(1 0 2 0 3 0) (mult 3))  #vu8(1 0 2 0 3 0) (mult 3))
 
   #t)
 
@@ -1833,9 +1846,9 @@
   (check-argument-validation (bytevector-u32-set! TEST-BV-1 -1 2 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-u32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u32-set! TEST-BV-1 (mult 4) 2 (endianness little)) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-u32-set! TEST-BV-1 (mult 4) 2 (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -1921,9 +1934,9 @@
   (check-argument-validation (bytevector-u32-ref TEST-BV-1 -1  (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-u32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u32-ref TEST-BV-1 (mult 4) (endianness little)) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-u32-ref TEST-BV-1 (mult 4) (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -1967,12 +1980,12 @@
   (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 -1 2) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 1 0) 1)
+  (check-consistency-violation (bytevector-u32-native-set! TEST-BV-1 1 0) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 (mult 5) 2) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-u32-native-set! TEST-BV-1 (mult 5) 2) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u32-native-set! TEST-BV-1 (mult 4) 2) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-u32-native-set! TEST-BV-1 (mult 4) 2) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2018,12 +2031,12 @@
   (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 -1) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 1) 1)
+  (check-consistency-violation (bytevector-u32-native-ref TEST-BV-1 1) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 (mult 5)) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-u32-native-ref TEST-BV-1 (mult 5)) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u32-native-ref TEST-BV-1 (mult 4)) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-u32-native-ref TEST-BV-1 (mult 4)) TEST-BV-1 (mult 4))
 
   #t)
 
@@ -2095,9 +2108,9 @@
   (check-argument-validation (bytevector-s32-set! TEST-BV-1 -1 2 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-s32-set! TEST-BV-1 (mult 5) 2 (endianness little)) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s32-set! TEST-BV-1 (mult 4) 2 (endianness little)) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-s32-set! TEST-BV-1 (mult 4) 2 (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2201,9 +2214,9 @@
   (check-argument-validation (bytevector-s32-ref TEST-BV-1 -1  (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-s32-ref TEST-BV-1 (mult 5) (endianness little)) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s32-ref TEST-BV-1 (mult 4) (endianness little)) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-s32-ref TEST-BV-1 (mult 4) (endianness little)) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2247,12 +2260,12 @@
   (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 -1 2) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 1 0) 1)
+  (check-consistency-violation (bytevector-s32-native-set! TEST-BV-1 1 0) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 (mult 5) 2) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-s32-native-set! TEST-BV-1 (mult 5) 2) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s32-native-set! TEST-BV-1 (mult 4) 2) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-s32-native-set! TEST-BV-1 (mult 4) 2) TEST-BV-1 (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2314,12 +2327,12 @@
   (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 -1) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 1) 1)
+  (check-consistency-violation (bytevector-s32-native-ref TEST-BV-1 1) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 (mult 5)) TEST-BV-1 (mult 5))
+  (check-consistency-violation (bytevector-s32-native-ref TEST-BV-1 (mult 5)) TEST-BV-1 (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s32-native-ref TEST-BV-1 (mult 4)) TEST-BV-1 (mult 4))
+  (check-consistency-violation (bytevector-s32-native-ref TEST-BV-1 (mult 4)) TEST-BV-1 (mult 4))
 
   #t)
 
@@ -2437,9 +2450,9 @@
   (check-argument-validation (bytevector-u64-set! THE-BV -1 2 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u64-set! THE-BV (mult 5) 2 (endianness little)) THE-BV (mult 5))
+  (check-consistency-violation (bytevector-u64-set! THE-BV (mult 5) 2 (endianness little)) THE-BV (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u64-set! THE-BV (mult 4) 2 (endianness little)) THE-BV (mult 4))
+  (check-consistency-violation (bytevector-u64-set! THE-BV (mult 4) 2 (endianness little)) THE-BV (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2531,9 +2544,9 @@
   (check-argument-validation (bytevector-u64-ref THE-BV-BE -1  (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-u64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
+  (check-consistency-violation (bytevector-u64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u64-ref THE-BV-BE (mult 4) (endianness little)) THE-BV-BE (mult 4))
+  (check-consistency-violation (bytevector-u64-ref THE-BV-BE (mult 4) (endianness little)) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2583,12 +2596,12 @@
   (check-argument-validation (bytevector-u64-native-set! THE-BV -1 2) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-u64-native-set! THE-BV 1 2) 1)
+  (check-consistency-violation (bytevector-u64-native-set! THE-BV 1 2) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u64-native-set! THE-BV (mult 5) 2) THE-BV (mult 5))
+  (check-consistency-violation (bytevector-u64-native-set! THE-BV (mult 5) 2) THE-BV (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u64-native-set! THE-BV (mult 4) 2) THE-BV (mult 4))
+  (check-consistency-violation (bytevector-u64-native-set! THE-BV (mult 4) 2) THE-BV (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2650,12 +2663,12 @@
   (check-argument-validation (bytevector-u64-native-ref THE-BV-BE -1) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE 1) 1)
+  (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE 1) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 5)) THE-BV-BE (mult 5))
+  (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE (mult 5)) THE-BV-BE (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 4)) THE-BV-BE (mult 4))
+  (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE (mult 4)) THE-BV-BE (mult 4))
 
   #t)
 
@@ -2760,9 +2773,9 @@
   (check-argument-validation (bytevector-s64-set! THE-BV-BE -1 2 (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE (mult 5) 2 (endianness little)) THE-BV-BE (mult 5))
+  (check-consistency-violation (bytevector-s64-set! THE-BV-BE (mult 5) 2 (endianness little)) THE-BV-BE (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s64-set! THE-BV-BE (mult 4) 2 (endianness little)) THE-BV-BE (mult 4))
+  (check-consistency-violation (bytevector-s64-set! THE-BV-BE (mult 4) 2 (endianness little)) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2852,9 +2865,9 @@
   (check-argument-validation (bytevector-s64-ref THE-BV-BE -1  (endianness little)) -1)
 
   ;;too high
-  (check-argument-validation (bytevector-s64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
+  (check-consistency-violation (bytevector-s64-ref THE-BV-BE (mult 5) (endianness little)) THE-BV-BE (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s64-ref THE-BV-BE (mult 4) (endianness little)) THE-BV-BE (mult 4))
+  (check-consistency-violation (bytevector-s64-ref THE-BV-BE (mult 4) (endianness little)) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: endianness
@@ -2929,12 +2942,12 @@
   (check-argument-validation (bytevector-s64-native-set! THE-BV-BE -1 2) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE 1 2) 1)
+  (check-consistency-violation (bytevector-s64-native-set! THE-BV-BE 1 2) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE (mult 5) 2) THE-BV-BE (mult 5))
+  (check-consistency-violation (bytevector-s64-native-set! THE-BV-BE (mult 5) 2) THE-BV-BE (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-s64-native-set! THE-BV-BE (mult 4) 2) THE-BV-BE (mult 4))
+  (check-consistency-violation (bytevector-s64-native-set! THE-BV-BE (mult 4) 2) THE-BV-BE (mult 4))
 
 ;;; --------------------------------------------------------------------
 ;;; arguments validation: value
@@ -2994,12 +3007,12 @@
   (check-argument-validation (bytevector-u64-native-ref THE-BV-BE -1) -1)
 
   ;;not aligned
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE 1) 1)
+  (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE 1) 1)
 
   ;;too high
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 5)) THE-BV-BE (mult 5))
+  (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE (mult 5)) THE-BV-BE (mult 5))
   ;;too high
-  (check-argument-validation (bytevector-u64-native-ref THE-BV-BE (mult 4)) THE-BV-BE (mult 4))
+  (check-consistency-violation (bytevector-u64-native-ref THE-BV-BE (mult 4)) THE-BV-BE (mult 4))
 
   #t)
 

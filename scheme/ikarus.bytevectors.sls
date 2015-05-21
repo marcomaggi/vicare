@@ -1065,7 +1065,7 @@
   ;;
   ;;   0 <= SRC.START <= src.END <= (bytevector-length SRC.BV)
   ;;
-  (({src.bv bytevector?} src.start)
+  (({src.bv bytevector?} {src.start bytevector-index?})
    (let ((src.end ($bytevector-length src.bv)))
      (preconditions
        (bytevector-start-past-indexes? src.bv src.start src.end))
@@ -1108,7 +1108,7 @@
   ;;
   ;;   0 <= SRC.START <= src.END <= (bytevector-length SRC.BV)
   ;;
-  (({src.bv bytevector?} src.start)
+  (({src.bv bytevector?} {src.start bytevector-index?})
    (let ((src.end ($bytevector-length src.bv)))
      (preconditions
        (bytevector-start-past-indexes? src.bv src.start src.end))

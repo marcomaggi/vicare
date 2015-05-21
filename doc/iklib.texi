@@ -5927,6 +5927,7 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions spos::       Scheme source code position.
 * iklib conditions eagain::     Reporting @code{EAGAIN} exceptions.
 * iklib conditions errno::      Reporting @code{errno} exceptions.
+* iklib conditions failexpr::   Failed expression conditions.
 * iklib conditions procpre::    Procedure precondition violations.
 * iklib conditions procpost::   Procedure postcondition violations.
 * iklib conditions procarg::    Procedure argument violations.
@@ -6087,6 +6088,40 @@ Return @true{} if @var{obj} is an instance of @condition{errno}.
 @defun condition-errno @var{obj}
 Accessor for the encoded @code{errno} value in @var{obj}, which must be
 an instance of @condition{errno}.
+@end defun
+
+@c page
+@node iklib conditions failexpr
+@subsection Failed expression conditions
+
+
+@deftp {Condition Type} &failed-expression-condition
+Condition type used to describe a failed expression, for example in a
+procedure argument validation predicate.  It is derived from
+@condition{condition}.  It has the following fields:
+
+@table failed-expression
+A symbolic expression representing the source code of the failed
+expression.
+@end table
+@end deftp
+
+
+@defun make-failed-expression-condition @var{sexp}
+Build and return a condition object of type
+@condition{failed-expression-condition}.
+@end defun
+
+
+@defun failed-expression-condition? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{failed-expression-condition}; otherwise return @false{}.
+@end defun
+
+
+@defun condition-failed-expression @var{cnd}
+Given a condition object off type
+@condition{failed-expression-condition} return the symbolic expression.
 @end defun
 
 @c page
@@ -6310,6 +6345,14 @@ Raise a non--continuable exception with compound condition object
 holding components of type: @condition{who}, @condition{message},
 @condition{irritants},
 @condition{procedure-arguments-consistency-violation}.
+@end defun
+
+
+@defun procedure-arguments-consistency-violation/failed-expression @var{who} @var{message} @var{failed-expression} @var{irritant} @dots{}
+Like @func{procedure-arguments-consistency-violation} and in addition
+attach to the raised condition object a component with type
+@condition{failed-expression-condition}, using the symbolic
+@var{failed-expression} as argument.
 @end defun
 
 @c page

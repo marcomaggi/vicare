@@ -838,6 +838,8 @@
 							      &interrupted-rcd)))
     (&source-position				($core-rtd . (&source-position-rtd
 							      &source-position-rcd)))
+    (&failed-expression-condition		($core-rtd . (&failed-expression-condition-rtd
+							      &failed-expression-condition-rcd)))
     (&procedure-precondition-violation		($core-rtd . (&procedure-precondition-violation-rtd
 							      &procedure-precondition-violation-rcd)))
     (&procedure-postcondition-violation		($core-rtd . (&procedure-postcondition-violation-rtd
@@ -2628,6 +2630,11 @@
     (&h_errno					v $language)
     (h_errno-condition?				v $language)
 ;;;
+    (&failed-expression-condition		v $language)
+    (make-failed-expression-condition		v $language)
+    (failed-expression-condition?		v $language)
+    (condition-failed-expression		v $language)
+;;;
     (&procedure-precondition-violation		v $language)
     (procedure-precondition-violation?		v $language)
     (make-procedure-precondition-violation	v $language)
@@ -2661,6 +2668,7 @@
     (make-procedure-arguments-consistency-violation	v $language)
     (procedure-arguments-consistency-violation?		v $language)
     (procedure-arguments-consistency-violation		v $language)
+    (procedure-arguments-consistency-violation/failed-expression	v $language)
 ;;;
     (&expression-return-value-violation					v $language)
     (expression-return-value-violation?					v $language)

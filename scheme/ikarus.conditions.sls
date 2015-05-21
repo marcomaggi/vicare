@@ -93,6 +93,13 @@
     &h_errno &h_errno-rtd &h_errno-rcd
     make-h_errno-condition h_errno-condition? condition-h_errno
 
+    &failed-expression-condition
+    &failed-expression-condition-rtd
+    &failed-expression-condition-rcd
+    make-failed-expression-condition
+    failed-expression-condition?
+    condition-failed-expression
+
     &procedure-precondition-violation
     &procedure-precondition-violation-rtd
     &procedure-precondition-violation-rcd
@@ -138,6 +145,7 @@
     make-procedure-arguments-consistency-violation
     procedure-arguments-consistency-violation?
     procedure-arguments-consistency-violation
+    procedure-arguments-consistency-violation/failed-expression
 
     &expression-return-value-violation
     &expression-return-value-violation-rtd
@@ -225,6 +233,13 @@
 		  source-position-port-id
 		  source-position-byte source-position-character
 		  source-position-line source-position-column
+
+		  &failed-expression-condition
+		  &failed-expression-condition-rtd
+		  &failed-expression-condition-rcd
+		  make-failed-expression-condition
+		  failed-expression-condition?
+		  condition-failed-expression
 
 		  &procedure-precondition-violation
 		  &procedure-precondition-violation-rtd
@@ -601,16 +616,25 @@
 
 ;;; Vicare specific condition types
 
-(define-condition-type &i/o-eagain &i/o
+(define-condition-type &i/o-eagain
+    &i/o
   make-i/o-eagain i/o-eagain-error?)
 
-(define-condition-type &errno &condition
+(define-condition-type &errno
+    &condition
   make-errno-condition errno-condition?
   (code		condition-errno))
 
-(define-condition-type &h_errno &condition
+(define-condition-type &h_errno
+    &condition
   make-h_errno-condition h_errno-condition?
   (code		condition-h_errno))
+
+(define-condition-type &failed-expression-condition
+    &condition
+  make-failed-expression-condition
+  failed-expression-condition?
+  (failed-expression	condition-failed-expression))
 
 ;;; --------------------------------------------------------------------
 
@@ -682,6 +706,12 @@
   (raise-non-continuable-standard-condition who
     message irritants
     (make-procedure-arguments-consistency-violation)))
+
+(define (procedure-arguments-consistency-violation/failed-expression who message failed-expression . irritants)
+  (raise-non-continuable-standard-condition who
+    message irritants
+    (condition (make-procedure-arguments-consistency-violation)
+	       (make-failed-expression-condition failed-expression))))
 
 ;;; --------------------------------------------------------------------
 
@@ -798,9 +828,8 @@
      (identifier? #'?who)
      (if (vicare-built-with-arguments-validation-enabled)
 	 #'(unless (?predicate ?arg ...)
-	     (procedure-arguments-consistency-violation __who__
-	       "failed precondition"
-	       '(?predicate ?arg ...) ?arg ...))
+	     (procedure-arguments-consistency-violation/failed-expression __who__
+	       "failed precondition" '(?predicate ?arg ...) ?arg ...))
        #'(void)))
 
     ;;Multiple preconditions.
