@@ -6,6 +6,9 @@ When interfacing a C language foreign library with @value{PRJNAME}, it
 is often needed to convert Scheme objects to raw memory blocks, possibly
 containing @asciiz{} strings.
 
+To access generalised C buffers at the C language level see
+@vicareref{objects misc cbuffers}.
+
 @menu
 * cbuffers buffers::            Introduction to generalised C buffers.
 * cbuffers strings::            Introduction to generalised C strings.
