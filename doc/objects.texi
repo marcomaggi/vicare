@@ -1806,7 +1806,9 @@ range of fixnums.
 
 @deftypefun ikptr ika_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
 Allocate, initialise and return a new bytevector and copy the contents
-of the @asciiz{} string referenced by @var{cstr} in the data area.
+of the @asciiz{} string referenced by @var{cstr} in the data area.  As
+special case: if @var{cstr} is @cnull{}, this function allocates and
+returns an empty bytevector.
 
 @strong{NOTE} If the string length is greater than the maximum positive
 fixnum: the string is @strong{silently truncated} to a length equal to

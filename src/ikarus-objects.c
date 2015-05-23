@@ -207,13 +207,19 @@ ika_bytevector_alloc (ikpcb * pcb, long int requested_number_of_bytes)
 ikptr
 ika_bytevector_from_cstring (ikpcb * pcb, const char * cstr)
 {
-  size_t    len	 = strlen(cstr);
-  if (len > most_positive_fixnum)
-    len = most_positive_fixnum;
-  ikptr	    s_bv = ika_bytevector_alloc(pcb, len);
-  char *    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
-  memcpy(data, cstr, len);
-  return s_bv;
+  if (cstr) {
+    ikptr	s_bv;
+    char *	data;
+    size_t	len = strlen(cstr);
+    if (len > most_positive_fixnum)
+      len = most_positive_fixnum;
+    s_bv = ika_bytevector_alloc(pcb, len);
+    data = IK_BYTEVECTOR_DATA_CHARP(s_bv);
+    memcpy(data, cstr, len);
+    return s_bv;
+  } else {
+    return ika_bytevector_alloc(pcb, 0);
+  }
 }
 ikptr
 ika_bytevector_from_cstring_len (ikpcb * pcb, const char * cstr, size_t len)
