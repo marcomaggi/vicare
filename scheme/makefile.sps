@@ -198,7 +198,11 @@
 		writing-boot-image?)
 	  fasl-write.))
 
-(module (BOOT-IMAGE-MAJOR-VERSION BOOT-IMAGE-MINOR-VERSION)
+(module (BOOT-IMAGE-MAJOR-VERSION
+	 BOOT-IMAGE-MINOR-VERSION
+	 BOOT-IMAGE-YEAR-VERSION
+	 BOOT-IMAGE-MONTH-VERSION
+	 BOOT-IMAGE-DAY-VERSION)
   (include "ikarus.config.scm" #t))
 
 ;;; --------------------------------------------------------------------
@@ -5167,9 +5171,11 @@
       ;;number, the minor version number, the  build year, the build month, the build
       ;;day.
       ;;
-      (let ((V (append (list BOOT-IMAGE-MAJOR-VERSION
-			     BOOT-IMAGE-MINOR-VERSION)
-		       (vector->list (foreign-call "ikrt_current_time_fixnums")))))
+      (let ((V (list BOOT-IMAGE-MAJOR-VERSION
+		     BOOT-IMAGE-MINOR-VERSION
+		     BOOT-IMAGE-YEAR-VERSION
+		     BOOT-IMAGE-MONTH-VERSION
+		     BOOT-IMAGE-DAY-VERSION)))
 	(lambda () V)))
 
     #| end of module: BUILD-SYSTEM-LIBRARY |# )

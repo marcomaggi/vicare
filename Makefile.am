@@ -508,6 +508,9 @@ ikarus.config.scm:
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'			>>$@
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'	>>$@
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'	>>$@
+	echo '(define BOOT-IMAGE-YEAR-VERSION $(BOOT_IMAGE_YEAR_VERSION))'	>>$@
+	echo '(define BOOT-IMAGE-MONTH-VERSION $(BOOT_IMAGE_MONTH_VERSION))'	>>$@
+	echo '(define BOOT-IMAGE-DAY-VERSION $(BOOT_IMAGE_DAY_VERSION))'	>>$@
 	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))'	      >>$@
 	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))'	      >>$@
 	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))'	      >>$@
@@ -548,6 +551,9 @@ boot-image-32-bit: vicare
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-YEAR-VERSION $(BOOT_IMAGE_YEAR_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-MONTH-VERSION $(BOOT_IMAGE_MONTH_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-DAY-VERSION $(BOOT_IMAGE_DAY_VERSION))'		>>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.scm
@@ -571,6 +577,9 @@ boot-image-64-bit: vicare
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MAJOR-VERSION $(BOOT_IMAGE_MAJOR_VERSION))'		>>ikarus.config.scm
 	echo '(define BOOT-IMAGE-MINOR-VERSION $(BOOT_IMAGE_MINOR_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-YEAR-VERSION $(BOOT_IMAGE_YEAR_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-MONTH-VERSION $(BOOT_IMAGE_MONTH_VERSION))'		>>ikarus.config.scm
+	echo '(define BOOT-IMAGE-DAY-VERSION $(BOOT_IMAGE_DAY_VERSION))'		>>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.scm
 	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.scm
