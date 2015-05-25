@@ -167,6 +167,24 @@ The following bindings are exported by the library @library{vicare
 arguments general-c-buffers}.
 
 
+@defun general-c-string? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C string.
+@end defun
+
+
+@defun general-c-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C buffer.
+@end defun
+
+
+@defun general-c-sticky-buffer? @meta{obj}
+Expand to an expression which evaluates @meta{obj} once and returns
+@true{} if the result is a generalised C sticky buffer.
+@end defun
+
+
 @defun general-c-buffer-len @var{buf} @var{buf.len}
 Return the number of bytes in a generalised C buffer object.
 

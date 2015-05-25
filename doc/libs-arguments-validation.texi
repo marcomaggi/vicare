@@ -1354,12 +1354,6 @@ The following bindings are exported by the library @library{vicare
 arguments validation}.
 
 
-@deffn Syntax general-c-string? @meta{obj}
-Expand to an expression which evaluates @meta{obj} once and returns
-@true{} if the result is a generalised C string.
-@end deffn
-
-
 @deffn {Validation Clause} general-c-string @var{obj}
 Succeed if @var{obj} is a generalised C string.
 @end deffn
@@ -1401,12 +1395,6 @@ The following bindings are exported by the library @library{vicare
 arguments validation}.
 
 
-@deffn Syntax general-c-buffer? @meta{obj}
-Expand to an expression which evaluates @meta{obj} once and returns
-@true{} if the result is a generalised C buffer.
-@end deffn
-
-
 @deffn {Validation Clause} general-c-buffer @var{obj}
 Succeed if @var{obj} is a generalised C buffer.
 @end deffn
@@ -1414,12 +1402,6 @@ Succeed if @var{obj} is a generalised C buffer.
 
 @deffn {Validation Clause} general-c-buffer/false @var{obj}
 Succeed if @var{obj} is @false{} or a generalised C buffer.
-@end deffn
-
-
-@deffn Syntax general-c-sticky-buffer? @meta{obj}
-Expand to an expression which evaluates @meta{obj} once and returns
-@true{} if the result is a generalised C sticky buffer.
 @end deffn
 
 

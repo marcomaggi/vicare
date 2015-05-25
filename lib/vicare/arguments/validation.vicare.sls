@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -275,19 +275,16 @@
     procedure/false.vicare-arguments-validation
 
     ;; generalised C strings and buffers
-    general-c-string?
     general-c-string.vicare-arguments-validation
     general-c-string/false.vicare-arguments-validation
     general-c-string*.vicare-arguments-validation
     general-c-string*/false.vicare-arguments-validation
 
-    general-c-buffer?
     general-c-buffer.vicare-arguments-validation
     general-c-buffer/false.vicare-arguments-validation
     general-c-buffer*.vicare-arguments-validation
     general-c-buffer*/false.vicare-arguments-validation
 
-    general-c-sticky-buffer?
     general-c-sticky-buffer.vicare-arguments-validation
     general-c-sticky-buffer/false.vicare-arguments-validation
     general-c-sticky-buffer*.vicare-arguments-validation

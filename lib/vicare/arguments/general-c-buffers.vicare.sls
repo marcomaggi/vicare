@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,9 +25,12 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare arguments general-c-buffers)
   (export
+    general-c-string?
+    general-c-buffer?
+    general-c-sticky-buffer?
     general-c-buffer-len
     with-general-c-strings
     with-general-c-strings/false
@@ -35,9 +38,8 @@
     with-general-c-pathnames/false
     string-to-bytevector)
   (import (vicare)
-    (vicare language-extensions syntaxes)
-    (vicare arguments validation)
-    (only (vicare unsafe operations)
+    (prefix (vicare platform words) words.)
+    (only (vicare system $bytevectors)
 	  $bytevector-length))
 
 
@@ -45,22 +47,37 @@
 
 (define-auxiliary-syntaxes string-to-bytevector)
 
-
-;;;; helper functions
+(define (false-or-size_t? obj)
+  (or (not obj)
+      (words.size_t? obj)))
 
-(define (general-c-buffer-len buf buf.len)
-  (define who 'general-c-buffer-len)
-  (with-arguments-validation (who)
-      ((general-c-buffer	buf)
-       (size_t/false		buf.len))
-    (cond ((bytevector? buf)
-	   ($bytevector-length buf))
-	  ((memory-block? buf)
-	   (memory-block-size buf))
-	  ((pointer? buf)
-	   buf.len)
-	  (else
-	   (assertion-violation who "internal error" buf buf.len)))))
+(define* (general-c-buffer-len {buf general-c-buffer?} {buf.len false-or-size_t?})
+  (cond ((bytevector? buf)
+	 ($bytevector-length buf))
+	((memory-block? buf)
+	 (memory-block-size buf))
+	((pointer? buf)
+	 buf.len)
+	(else
+	 (assertion-violation __who__ "internal error" buf buf.len))))
+
+
+;;;; predicates
+
+(define (general-c-string? obj)
+  (or (string?		obj)
+      (bytevector?	obj)
+      (pointer?		obj)
+      (memory-block?	obj)))
+
+(define (general-c-buffer? obj)
+  (or (bytevector?	obj)
+      (pointer?		obj)
+      (memory-block?	obj)))
+
+(define (general-c-sticky-buffer? obj)
+  (or (pointer?		obj)
+      (memory-block?	obj)))
 
 
 ;;;; general C strings
@@ -151,6 +168,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
