@@ -118,14 +118,16 @@
   (signatures
    ((T:pointer)			=> (T:exact-integer)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_)				effect-free result-true)))
 
+;;This is not foldable because we do not want poiner objects to go in fasl files.
+;;
 (declare-core-primitive integer->pointer
     (safe)
   (signatures
    ((T:exact-integer)		=> (T:pointer)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   ((_)				effect-free result-true)))
 
 
 ;;;; pointers, unsafe functions
