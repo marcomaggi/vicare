@@ -619,7 +619,7 @@ first word of the page.
 
 
 In this section we discuss some private fields of the C data structure
-@code{ikpcb} related to memory allocation and garbage collection.
+@code{ikpcb_t} related to memory allocation and garbage collection.
 
 @table @code
 @item ikptr memory_base

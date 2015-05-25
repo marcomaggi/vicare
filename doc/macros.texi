@@ -588,7 +588,7 @@ Revised^6 Report on the algorithmic language Scheme
 @end macro
 
 @macro ikptr{}
-@code{ikptr}
+@code{ikptr_t}
 @end macro
 
 @macro oob{}

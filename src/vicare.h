@@ -118,7 +118,7 @@
  ** ----------------------------------------------------------------- */
 
 #define IK_ASS(LEFT,RIGHT)	\
-  { ikptr s_tmp = (RIGHT); (LEFT) = s_tmp; }
+  { ikptr_t s_tmp = (RIGHT); (LEFT) = s_tmp; }
 
 
 /** --------------------------------------------------------------------
@@ -136,68 +136,73 @@ typedef unsigned long		ik_ulong;
 typedef unsigned long long	ik_ullong;
 
 #if   (4 == SIZEOF_VOID_P)
-typedef uint32_t		ikptr;
+typedef uint32_t		ikptr_t;
 typedef int32_t			iksword_t;
 typedef uint32_t		ikuword_t;
 #elif (8 == SIZEOF_VOID_P)
-typedef uint64_t		ikptr;
+typedef uint64_t		ikptr_t;
 typedef int64_t			iksword_t;
 typedef uint64_t		ikuword_t;
 #else
-typedef unsigned long		ikptr;
+typedef unsigned long		ikptr_t;
 typedef signed long		iksword_t;
 typedef unsigned long		ikuword_t;
 #endif
 
-typedef struct ikpcb {
-  ikptr		dummy0;		/* ikptr allocation_pointer; */
-  ikptr		dummy1;		/* ikptr allocation_redline; */
-  ikptr		dummy2;		/* ikptr frame_pointer; */
-  ikptr		dummy3;		/* ikptr frame_base; */
-  ikptr		dummy4;		/* ikptr frame_redline; */
-  ikptr		dummy5;		/* ikptr next_k; */
-  ikptr		dummy6;		/* ikptr system_stack; */
-  ikptr		dummy7;		/* ikptr dirty_vector; */
-  ikptr		dummy8;		/* ikptr arg_list; */
-  ikptr		dummy9;		/* ikptr engine_counter; */
-  ikptr		dummy10;	/* ikptr interrupted; */
-  ikptr		dummy11;	/* ikptr base_rtd; */
-  ikptr		dummy12;	/* ikptr collect_key; */
+typedef struct ikpcb_t {
+  ikptr_t		dummy0;		/* ikptr_t allocation_pointer; */
+  ikptr_t		dummy1;		/* ikptr_t allocation_redline; */
+  ikptr_t		dummy2;		/* ikptr_t frame_pointer; */
+  ikptr_t		dummy3;		/* ikptr_t frame_base; */
+  ikptr_t		dummy4;		/* ikptr_t frame_redline; */
+  ikptr_t		dummy5;		/* ikptr_t next_k; */
+  ikptr_t		dummy6;		/* ikptr_t system_stack; */
+  ikptr_t		dummy7;		/* ikptr_t dirty_vector; */
+  ikptr_t		dummy8;		/* ikptr_t arg_list; */
+  ikptr_t		dummy9;		/* ikptr_t engine_counter; */
+  ikptr_t		dummy10;	/* ikptr_t interrupted; */
+  ikptr_t		dummy11;	/* ikptr_t base_rtd; */
+  ikptr_t		dummy12;	/* ikptr_t collect_key; */
 
   /* Additional roots for the garbage collector.  They are used to avoid
      collecting objects still in use while they are in use by C code. */
-  ikptr*		root0;
-  ikptr*		root1;
-  ikptr*		root2;
-  ikptr*		root3;
-  ikptr*		root4;
-  ikptr*		root5;
-  ikptr*		root6;
-  ikptr*		root7;
-  ikptr*		root8;
-  ikptr*		root9;
+  ikptr_t*		root0;
+  ikptr_t*		root1;
+  ikptr_t*		root2;
+  ikptr_t*		root3;
+  ikptr_t*		root4;
+  ikptr_t*		root5;
+  ikptr_t*		root6;
+  ikptr_t*		root7;
+  ikptr_t*		root8;
+  ikptr_t*		root9;
 
   /* Other fields not useful in the public API. */
-} ikpcb;
+} ikpcb_t;
+
+/* NOTE Some day in a far,  far future these aliases will be deprecated.
+   (Marco Maggi; Mon May 25, 2015) */
+typedef ikptr_t			ikptr;
+typedef ikpcb_t			ikpcb;
 
 
 /** --------------------------------------------------------------------
  ** Function prototypes.
  ** ----------------------------------------------------------------- */
 
-ik_api_decl ikpcb *	ik_the_pcb (void);
-ik_api_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb* pcb, ikptr s_pointer);
+ik_api_decl ikpcb_t *	ik_the_pcb (void);
+ik_api_decl void	ik_signal_dirt_in_page_of_pointer (ikpcb_t* pcb, ikptr_t s_pointer);
 
 ik_api_decl int		ik_abort		(const char * error_message, ...);
-ik_api_decl void	ik_error		(ikptr args);
+ik_api_decl void	ik_error		(ikptr_t args);
 ik_api_decl void	ik_debug_message	(const char * error_message, ...);
 
-ik_api_decl ikptr	ik_unsafe_alloc		(ikpcb* pcb, ik_ulong size);
-ik_api_decl ikptr	ik_safe_alloc		(ikpcb* pcb, ik_ulong size);
+ik_api_decl ikptr_t	ik_unsafe_alloc		(ikpcb_t* pcb, ik_ulong size);
+ik_api_decl ikptr_t	ik_safe_alloc		(ikpcb_t* pcb, ik_ulong size);
 
-ik_api_decl void	ik_print		(ikptr x);
-ik_api_decl void	ik_print_no_newline	(ikptr x);
-ik_api_decl void	ik_fprint		(FILE*, ikptr x);
+ik_api_decl void	ik_print		(ikptr_t x);
+ik_api_decl void	ik_print_no_newline	(ikptr_t x);
+ik_api_decl void	ik_fprint		(FILE*, ikptr_t x);
 
 
 /** --------------------------------------------------------------------
@@ -210,25 +215,25 @@ ik_api_decl void	ik_fprint		(FILE*, ikptr x);
 
 #define IK_TAGOF(X)	(((int)(X)) & 7)
 
-#define IK_REF(X,N)	(((ikptr*)(((long)(X)) + ((long)(N))))[0])
+#define IK_REF(X,N)	(((ikptr_t*)(((long)(X)) + ((long)(N))))[0])
 
 /* The smallest multiple of the wordsize which is greater than N. */
 #define IK_ALIGN(N) \
   ((((N) + IK_ALIGN_SIZE - 1) >>  IK_ALIGN_SHIFT) << IK_ALIGN_SHIFT)
 
-#define IK_FALSE_OBJECT		((ikptr)0x2F)
-#define IK_TRUE_OBJECT		((ikptr)0x3F)
-#define IK_NULL_OBJECT		((ikptr)0x4F)
-#define IK_EOF_OBJECT		((ikptr)0x5F)
-#define IK_VOID_OBJECT		((ikptr)0x7F)
+#define IK_FALSE_OBJECT		((ikptr_t)0x2F)
+#define IK_TRUE_OBJECT		((ikptr_t)0x3F)
+#define IK_NULL_OBJECT		((ikptr_t)0x4F)
+#define IK_EOF_OBJECT		((ikptr_t)0x5F)
+#define IK_VOID_OBJECT		((ikptr_t)0x7F)
 
 /* Special machine word value stored in locations that used to hold weak
    references to values which have been already garbage collected. */
-#define IK_BWP_OBJECT		((ikptr)0x8F)
+#define IK_BWP_OBJECT		((ikptr_t)0x8F)
 
 /* Special machine word value stored  in the "value" and "proc" field of
    Scheme symbol memory blocks to signal that these fields are unset. */
-#define IK_UNBOUND_OBJECT	((ikptr)0x6F)
+#define IK_UNBOUND_OBJECT	((ikptr_t)0x6F)
 
 #define IK_FALSE		IK_FALSE_OBJECT
 #define IK_TRUE			IK_TRUE_OBJECT
@@ -252,11 +257,11 @@ ik_api_decl void	ik_fprint		(FILE*, ikptr x);
 #define IK_GREATEST_FIXNUM	most_positive_fixnum
 #define IK_LEAST_FIXNUM		(-most_negative_fixnum)
 
-#define IK_FIX(X)	((ikptr)(((long)(X)) << fx_shift))
+#define IK_FIX(X)	((ikptr_t)(((long)(X)) << fx_shift))
 #define IK_UNFIX(X)	(((long)(X)) >> fx_shift)
 #define IK_IS_FIXNUM(X)	((((ik_ulong)(X)) & fx_mask) == fx_tag)
 
-ik_api_decl ikptr	ikrt_fxrandom		(ikptr x);
+ik_api_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 
 
 /** --------------------------------------------------------------------
@@ -283,14 +288,14 @@ ik_api_decl ikptr	ikrt_fxrandom		(ikptr x);
 #define IKA_PAIR_ALLOC(PCB)	(ik_safe_alloc((PCB),  pair_size) | pair_tag)
 #define IKU_PAIR_ALLOC(PCB)	(ik_unsafe_alloc((PCB),pair_size) | pair_tag)
 
-ik_api_decl ikptr ika_pair_alloc		(ikpcb * pcb);
-ik_api_decl ikptr iku_pair_alloc		(ikpcb * pcb);
-ik_api_decl long ik_list_length		(ikptr x);
-ik_api_decl void ik_list_to_argv		(ikptr x, char **argv);
-ik_api_decl void ik_list_to_argv_and_argc	(ikptr x, char **argv, long *argc);
+ik_api_decl ikptr_t ika_pair_alloc		(ikpcb_t * pcb);
+ik_api_decl ikptr_t iku_pair_alloc		(ikpcb_t * pcb);
+ik_api_decl long ik_list_length		(ikptr_t x);
+ik_api_decl void ik_list_to_argv		(ikptr_t x, char **argv);
+ik_api_decl void ik_list_to_argv_and_argc	(ikptr_t x, char **argv, long *argc);
 
-ik_api_decl ikptr ika_list_from_argv	(ikpcb * pcb, char ** argv);
-ik_api_decl ikptr ika_list_from_argv_and_argc(ikpcb * pcb, char ** argv, long argc);
+ik_api_decl ikptr_t ika_list_from_argv	(ikpcb_t * pcb, char ** argv);
+ik_api_decl ikptr_t ika_list_from_argv_and_argc(ikpcb_t * pcb, char ** argv, long argc);
 
 
 /** --------------------------------------------------------------------
@@ -303,16 +308,16 @@ typedef uint32_t	ikchar;
 #define char_mask	0xFF
 #define char_shift	8
 
-#define IK_IS_CHAR(X)		(char_tag == (char_mask & (ikptr)(X)))
+#define IK_IS_CHAR(X)		(char_tag == (char_mask & (ikptr_t)(X)))
 
 #define IK_CHAR_FROM_INTEGER(X) \
-  ((ikptr)((((ik_ulong)(X)) << char_shift) | char_tag))
+  ((ikptr_t)((((ik_ulong)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR32_FROM_INTEGER(X) \
   ((ikchar)((((ik_ulong)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR_TO_INTEGER(X) \
-  ((ik_ulong)(((ikptr)(X)) >> char_shift))
+  ((ik_ulong)(((ikptr_t)(X)) >> char_shift))
 
 #define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
 
@@ -331,31 +336,31 @@ typedef uint32_t	ikchar;
 #define off_string_length	(disp_string_length - string_tag)
 #define off_string_data		(disp_string_data   - string_tag)
 
-#define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr)(X)))
+#define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr_t)(X)))
 #define IK_STRING_LENGTH_FX(STR)	IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr_t)(STR)) + off_string_data))[IDX])
 
-#define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr)(STR)) + off_string_data))
-#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr)(STR)) + off_string_data))
+#define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr_t)(STR)) + off_string_data))
+#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr_t)(STR)) + off_string_data))
 
-ik_api_decl ikptr ika_string_alloc		(ikpcb * pcb, long number_of_chars);
-ik_api_decl ikptr ika_string_from_cstring	(ikpcb * pcb, const char * cstr);
+ik_api_decl ikptr_t ika_string_alloc		(ikpcb_t * pcb, long number_of_chars);
+ik_api_decl ikptr_t ika_string_from_cstring	(ikpcb_t * pcb, const char * cstr);
 
-ik_api_decl ikptr iku_string_alloc		(ikpcb * pcb, long number_of_chars);
-ik_api_decl ikptr iku_string_from_cstring	(ikpcb * pcb, const char * cstr);
-ik_api_decl ikptr iku_string_to_symbol		(ikpcb * pcb, ikptr s_str);
+ik_api_decl ikptr_t iku_string_alloc		(ikpcb_t * pcb, long number_of_chars);
+ik_api_decl ikptr_t iku_string_from_cstring	(ikpcb_t * pcb, const char * cstr);
+ik_api_decl ikptr_t iku_string_to_symbol		(ikpcb_t * pcb, ikptr_t s_str);
 
-ik_api_decl ikptr ikrt_string_to_symbol		(ikptr, ikpcb* pcb);
-ik_api_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
+ik_api_decl ikptr_t ikrt_string_to_symbol		(ikptr_t, ikpcb_t* pcb);
+ik_api_decl ikptr_t ikrt_strings_to_gensym	(ikptr_t, ikptr_t,	ikpcb_t* pcb);
 
 
 /** --------------------------------------------------------------------
  ** Symbol objects.
  ** ----------------------------------------------------------------- */
 
-#define symbol_tag			((ikptr) 0x5F)
-#define symbol_mask			((ikptr) 0xFF)
+#define symbol_tag			((ikptr_t) 0x5F)
+#define symbol_mask			((ikptr_t) 0xFF)
 #define disp_symbol_record_tag		0
 #define disp_symbol_record_string	(1 * wordsize)
 #define disp_symbol_record_ustring	(2 * wordsize)
@@ -371,8 +376,8 @@ ik_api_decl ikptr ikrt_strings_to_gensym	(ikptr, ikptr,	ikpcb* pcb);
 #define off_symbol_record_proc		(disp_symbol_record_proc    - record_tag)
 #define off_symbol_record_plist		(disp_symbol_record_plist   - record_tag)
 
-ik_api_decl int   ik_is_symbol			(ikptr obj);
-ik_api_decl ikptr iku_symbol_from_string	(ikpcb * pcb, ikptr s_str);
+ik_api_decl int   ik_is_symbol			(ikptr_t obj);
+ik_api_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
 
 
 /** --------------------------------------------------------------------
@@ -400,7 +405,7 @@ ik_api_decl ikptr iku_symbol_from_string	(ikpcb * pcb, ikptr s_str);
   (ik_safe_alloc((PCB), IK_BIGNUM_ALLOC_SIZE(LIMB_COUNT)) | vector_tag)
 
 #define IK_COMPOSE_BIGNUM_FIRST_WORD(LIMB_COUNT,SIGN)		\
-  ((ikptr)(((LIMB_COUNT) << bignum_nlimbs_shift) | (SIGN) | bignum_tag))
+  ((ikptr_t)(((LIMB_COUNT) << bignum_nlimbs_shift) | (SIGN) | bignum_tag))
 
 #define IK_POSITIVE_BIGNUM_FIRST_WORD(LIMB_COUNT)		\
   IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((0)<<bignum_sign_shift))
@@ -420,100 +425,100 @@ ik_api_decl ikptr iku_symbol_from_string	(ikpcb * pcb, ikptr s_str);
 #define IK_BIGNUM_FIRST(X)	IK_REF((X), off_bignum_tag)
 #define IK_LIMB(X,IDX)		IK_REF((X), off_bignum_data + (IDX)*wordsize)
 
-ik_api_decl int	ik_is_bignum		(ikptr x);
+ik_api_decl int	ik_is_bignum		(ikptr_t x);
 
-ik_api_decl ikptr	ika_integer_from_int	(ikpcb* pcb, int N);
-ik_api_decl ikptr	ika_integer_from_long	(ikpcb* pcb, long N);
-ik_api_decl ikptr	ika_integer_from_llong	(ikpcb* pcb, ik_llong N);
-ik_api_decl ikptr	ika_integer_from_uint	(ikpcb* pcb, ik_uint N);
-ik_api_decl ikptr	ika_integer_from_ulong	(ikpcb* pcb, ik_ulong N);
-ik_api_decl ikptr	ika_integer_from_ullong	(ikpcb* pcb, ik_ullong N);
+ik_api_decl ikptr_t	ika_integer_from_int	(ikpcb_t* pcb, int N);
+ik_api_decl ikptr_t	ika_integer_from_long	(ikpcb_t* pcb, long N);
+ik_api_decl ikptr_t	ika_integer_from_llong	(ikpcb_t* pcb, ik_llong N);
+ik_api_decl ikptr_t	ika_integer_from_uint	(ikpcb_t* pcb, ik_uint N);
+ik_api_decl ikptr_t	ika_integer_from_ulong	(ikpcb_t* pcb, ik_ulong N);
+ik_api_decl ikptr_t	ika_integer_from_ullong	(ikpcb_t* pcb, ik_ullong N);
 
-ik_api_decl ikptr	ika_integer_from_sint8	(ikpcb* pcb, int8_t N);
-ik_api_decl ikptr	ika_integer_from_sint16	(ikpcb* pcb, int16_t N);
-ik_api_decl ikptr	ika_integer_from_sint32	(ikpcb* pcb, int32_t N);
-ik_api_decl ikptr	ika_integer_from_sint64	(ikpcb* pcb, int64_t N);
-ik_api_decl ikptr	ika_integer_from_uint8	(ikpcb* pcb, uint8_t N);
-ik_api_decl ikptr	ika_integer_from_uint16	(ikpcb* pcb, uint16_t N);
-ik_api_decl ikptr	ika_integer_from_uint32	(ikpcb* pcb, uint32_t N);
-ik_api_decl ikptr	ika_integer_from_uint64	(ikpcb* pcb, uint64_t N);
+ik_api_decl ikptr_t	ika_integer_from_sint8	(ikpcb_t* pcb, int8_t N);
+ik_api_decl ikptr_t	ika_integer_from_sint16	(ikpcb_t* pcb, int16_t N);
+ik_api_decl ikptr_t	ika_integer_from_sint32	(ikpcb_t* pcb, int32_t N);
+ik_api_decl ikptr_t	ika_integer_from_sint64	(ikpcb_t* pcb, int64_t N);
+ik_api_decl ikptr_t	ika_integer_from_uint8	(ikpcb_t* pcb, uint8_t N);
+ik_api_decl ikptr_t	ika_integer_from_uint16	(ikpcb_t* pcb, uint16_t N);
+ik_api_decl ikptr_t	ika_integer_from_uint32	(ikpcb_t* pcb, uint32_t N);
+ik_api_decl ikptr_t	ika_integer_from_uint64	(ikpcb_t* pcb, uint64_t N);
 
-ik_api_decl ikptr	ika_integer_from_off_t	(ikpcb * pcb, off_t N);
-ik_api_decl ikptr	ika_integer_from_ssize_t(ikpcb * pcb, ssize_t N);
-ik_api_decl ikptr	ika_integer_from_size_t	(ikpcb * pcb, size_t N);
-ik_api_decl ikptr	ika_integer_from_ptrdiff_t (ikpcb * pcb, ptrdiff_t N);
+ik_api_decl ikptr_t	ika_integer_from_off_t	(ikpcb_t * pcb, off_t N);
+ik_api_decl ikptr_t	ika_integer_from_ssize_t(ikpcb_t * pcb, ssize_t N);
+ik_api_decl ikptr_t	ika_integer_from_size_t	(ikpcb_t * pcb, size_t N);
+ik_api_decl ikptr_t	ika_integer_from_ptrdiff_t (ikpcb_t * pcb, ptrdiff_t N);
 
-ik_api_decl int8_t	 ik_integer_to_sint8	(ikptr x);
-ik_api_decl int16_t	 ik_integer_to_sint16	(ikptr x);
-ik_api_decl int32_t	 ik_integer_to_sint32	(ikptr x);
-ik_api_decl int64_t	 ik_integer_to_sint64	(ikptr x);
-ik_api_decl uint8_t  ik_integer_to_uint8	(ikptr x);
-ik_api_decl uint16_t ik_integer_to_uint16	(ikptr x);
-ik_api_decl uint32_t ik_integer_to_uint32	(ikptr x);
-ik_api_decl uint64_t ik_integer_to_uint64	(ikptr x);
+ik_api_decl int8_t	 ik_integer_to_sint8	(ikptr_t x);
+ik_api_decl int16_t	 ik_integer_to_sint16	(ikptr_t x);
+ik_api_decl int32_t	 ik_integer_to_sint32	(ikptr_t x);
+ik_api_decl int64_t	 ik_integer_to_sint64	(ikptr_t x);
+ik_api_decl uint8_t  ik_integer_to_uint8	(ikptr_t x);
+ik_api_decl uint16_t ik_integer_to_uint16	(ikptr_t x);
+ik_api_decl uint32_t ik_integer_to_uint32	(ikptr_t x);
+ik_api_decl uint64_t ik_integer_to_uint64	(ikptr_t x);
 
-ik_api_decl int	 ik_integer_to_int	(ikptr x);
-ik_api_decl long	 ik_integer_to_long	(ikptr x);
-ik_api_decl ik_llong ik_integer_to_llong	(ikptr x);
-ik_api_decl ik_uint	 ik_integer_to_uint	(ikptr x);
-ik_api_decl ik_ulong  ik_integer_to_ulong	(ikptr x);
-ik_api_decl ik_ullong ik_integer_to_ullong	(ikptr x);
+ik_api_decl int	 ik_integer_to_int	(ikptr_t x);
+ik_api_decl long	 ik_integer_to_long	(ikptr_t x);
+ik_api_decl ik_llong ik_integer_to_llong	(ikptr_t x);
+ik_api_decl ik_uint	 ik_integer_to_uint	(ikptr_t x);
+ik_api_decl ik_ulong  ik_integer_to_ulong	(ikptr_t x);
+ik_api_decl ik_ullong ik_integer_to_ullong	(ikptr_t x);
 
-ik_api_decl off_t	ik_integer_to_off_t	(ikptr x);
-ik_api_decl size_t	ik_integer_to_size_t	(ikptr x);
-ik_api_decl ssize_t	ik_integer_to_ssize_t	(ikptr x);
-ik_api_decl ptrdiff_t ik_integer_to_ptrdiff_t (ikptr x);
+ik_api_decl off_t	ik_integer_to_off_t	(ikptr_t x);
+ik_api_decl size_t	ik_integer_to_size_t	(ikptr_t x);
+ik_api_decl ssize_t	ik_integer_to_ssize_t	(ikptr_t x);
+ik_api_decl ptrdiff_t ik_integer_to_ptrdiff_t (ikptr_t x);
 
 /* inspection */
-ik_api_decl ikptr	ikrt_positive_bn	(ikptr x);
-ik_api_decl ikptr	ikrt_even_bn		(ikptr x);
+ik_api_decl ikptr_t	ikrt_positive_bn	(ikptr_t x);
+ik_api_decl ikptr_t	ikrt_even_bn		(ikptr_t x);
 
 /* arithmetics */
-ik_api_decl ikptr	ikrt_fxfxplus		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_fxbnplus		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnbnplus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_api_decl ikptr_t	ikrt_fxfxplus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_fxbnplus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnbnplus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
 
-ik_api_decl ikptr	ikrt_fxfxminus		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_fxbnminus		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnfxminus		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnbnminus		(ikptr x, ikptr y, ikpcb* pcb);
+ik_api_decl ikptr_t	ikrt_fxfxminus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_fxbnminus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnfxminus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnbnminus		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
 
-ik_api_decl ikptr	ikrt_bnnegate		(ikptr x, ikpcb* pcb);
+ik_api_decl ikptr_t	ikrt_bnnegate		(ikptr_t x, ikpcb_t* pcb);
 
-ik_api_decl ikptr	ikrt_fxfxmult		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_fxbnmult		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnbnmult		(ikptr x, ikptr y, ikpcb* pcb);
+ik_api_decl ikptr_t	ikrt_fxfxmult		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_fxbnmult		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnbnmult		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
 
-ik_api_decl ikptr	ikrt_bnbncomp		(ikptr bn1, ikptr bn2);
+ik_api_decl ikptr_t	ikrt_bnbncomp		(ikptr_t bn1, ikptr_t bn2);
 
-ik_api_decl ikptr	ikrt_bnlognot		(ikptr x, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_fxbnlogand		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnbnlogand		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_fxbnlogor		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnbnlogor		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bignum_shift_right	(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_fixnum_shift_left	(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bignum_shift_left	(ikptr x, ikptr y, ikpcb* pcb);
+ik_api_decl ikptr_t	ikrt_bnlognot		(ikptr_t x, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_fxbnlogand		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnbnlogand		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_fxbnlogor		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnbnlogor		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bignum_shift_right	(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_fixnum_shift_left	(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bignum_shift_left	(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
 
-ik_api_decl ikptr	ikrt_bnbndivrem		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnfxdivrem		(ikptr x, ikptr y, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bnfx_modulo	(ikptr x, ikptr y /*, ikpcb* pcb */);
-ik_api_decl ikptr	ikrt_bignum_length	(ikptr x);
+ik_api_decl ikptr_t	ikrt_bnbndivrem		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnfxdivrem		(ikptr_t x, ikptr_t y, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bnfx_modulo	(ikptr_t x, ikptr_t y /*, ikpcb_t* pcb */);
+ik_api_decl ikptr_t	ikrt_bignum_length	(ikptr_t x);
 
-ik_api_decl ikptr	ikrt_exact_fixnum_sqrt	(ikptr fx /*, ikpcb* pcb*/);
-ik_api_decl ikptr	ikrt_exact_bignum_sqrt	(ikptr bn, ikpcb* pcb);
+ik_api_decl ikptr_t	ikrt_exact_fixnum_sqrt	(ikptr_t fx /*, ikpcb_t* pcb*/);
+ik_api_decl ikptr_t	ikrt_exact_bignum_sqrt	(ikptr_t bn, ikpcb_t* pcb);
 
-ik_api_decl ikptr	ikrt_bignum_to_bytevector (ikptr x, ikpcb* pcb);
-ik_api_decl ikptr	ikrt_bignum_to_flonum	(ikptr bn, ikptr more_bits, ikptr fl);
+ik_api_decl ikptr_t	ikrt_bignum_to_bytevector (ikptr_t x, ikpcb_t* pcb);
+ik_api_decl ikptr_t	ikrt_bignum_to_flonum	(ikptr_t bn, ikptr_t more_bits, ikptr_t fl);
 
-ik_api_decl ikptr	ikrt_bignum_hash	(ikptr bn /*, ikpcb* pcb */);
+ik_api_decl ikptr_t	ikrt_bignum_hash	(ikptr_t bn /*, ikpcb_t* pcb */);
 
 
 /** --------------------------------------------------------------------
  ** Ratnum objects.
  ** ----------------------------------------------------------------- */
 
-#define ratnum_tag		((ikptr) 0x27)
+#define ratnum_tag		((ikptr_t) 0x27)
 #define disp_ratnum_tag		0
 #define disp_ratnum_num		(1 * wordsize)
 #define disp_ratnum_den		(2 * wordsize)
@@ -528,16 +533,16 @@ ik_api_decl ikptr	ikrt_bignum_hash	(ikptr bn /*, ikpcb* pcb */);
 #define IK_NUMERATOR(X)		IK_REF((X), off_ratnum_num)
 #define IK_DENOMINATOR(X)	IK_REF((X), off_ratnum_den)
 
-ik_api_decl int	ik_is_ratnum	(ikptr X);
-ik_api_decl ikptr	ika_ratnum_alloc_no_init	(ikpcb * pcb);
-ik_api_decl ikptr	ika_ratnum_alloc_and_init	(ikpcb * pcb);
+ik_api_decl int	ik_is_ratnum	(ikptr_t X);
+ik_api_decl ikptr_t	ika_ratnum_alloc_no_init	(ikpcb_t * pcb);
+ik_api_decl ikptr_t	ika_ratnum_alloc_and_init	(ikpcb_t * pcb);
 
 
 /** --------------------------------------------------------------------
  ** Compnum objects.
  ** ----------------------------------------------------------------- */
 
-#define compnum_tag		((ikptr) 0x37)
+#define compnum_tag		((ikptr_t) 0x37)
 #define disp_compnum_tag	0
 #define disp_compnum_real	(1 * wordsize)
 #define disp_compnum_imag	(2 * wordsize)
@@ -552,16 +557,16 @@ ik_api_decl ikptr	ika_ratnum_alloc_and_init	(ikpcb * pcb);
 #define IK_COMPNUM_REAL(X)	IK_REF((X), off_compnum_real)
 #define IK_COMPNUM_IMAG(X)	IK_REF((X), off_compnum_imag)
 
-ik_api_decl int	ik_is_compnum	(ikptr X);
-ik_api_decl ikptr	ika_compnum_alloc_no_init	(ikpcb * pcb);
-ik_api_decl ikptr	ika_compnum_alloc_and_init	(ikpcb * pcb);
+ik_api_decl int	ik_is_compnum	(ikptr_t X);
+ik_api_decl ikptr_t	ika_compnum_alloc_no_init	(ikpcb_t * pcb);
+ik_api_decl ikptr_t	ika_compnum_alloc_and_init	(ikpcb_t * pcb);
 
 
 /** --------------------------------------------------------------------
  ** Flonum objects.
  ** ----------------------------------------------------------------- */
 
-#define flonum_tag		((ikptr)0x17)
+#define flonum_tag		((ikptr_t)0x17)
 #define flonum_size		16 /* four 32-bit words, two 64-bit words */
 #define disp_flonum_tag		0 /* not f(wordsize) */
 #define disp_flonum_data	8 /* not f(wordsize) */
@@ -569,22 +574,22 @@ ik_api_decl ikptr	ika_compnum_alloc_and_init	(ikpcb * pcb);
 #define off_flonum_data		(disp_flonum_data - vector_tag)
 
 #define IKU_DEFINE_AND_ALLOC_FLONUM(VARNAME)				\
-  ikptr VARNAME = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;	\
-  IK_REF(VARNAME, off_flonum_tag) = (ikptr)flonum_tag
+  ikptr_t VARNAME = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;	\
+  IK_REF(VARNAME, off_flonum_tag) = (ikptr_t)flonum_tag
 
 #define IK_FLONUM_DATA(X)	(*((double*)(((long)(X))+off_flonum_data)))
 
-ik_api_decl int   ik_is_flonum		(ikptr obj);
-ik_api_decl ikptr iku_flonum_alloc		(ikpcb * pcb, double fl);
-ik_api_decl ikptr ika_flonum_from_double	(ikpcb* pcb, double N);
-ik_api_decl ikptr ikrt_flonum_hash		(ikptr x /*, ikpcb* pcb */);
+ik_api_decl int   ik_is_flonum		(ikptr_t obj);
+ik_api_decl ikptr_t iku_flonum_alloc		(ikpcb_t * pcb, double fl);
+ik_api_decl ikptr_t ika_flonum_from_double	(ikpcb_t* pcb, double N);
+ik_api_decl ikptr_t ikrt_flonum_hash		(ikptr_t x /*, ikpcb_t* pcb */);
 
 
 /** --------------------------------------------------------------------
  ** Cflonum objects.
  ** ----------------------------------------------------------------- */
 
-#define cflonum_tag		((ikptr) 0x47)
+#define cflonum_tag		((ikptr_t) 0x47)
 #define disp_cflonum_tag	0
 #define disp_cflonum_real	(1 * wordsize)
 #define disp_cflonum_imag	(2 * wordsize)
@@ -595,11 +600,11 @@ ik_api_decl ikptr ikrt_flonum_hash		(ikptr x /*, ikpcb* pcb */);
 #define off_cflonum_imag	(disp_cflonum_imag - vector_tag)
 
 #define IKU_DEFINE_AND_ALLOC_CFLONUM(VARNAME)				\
-  ikptr VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\
-  IK_REF(VARNAME, off_cflonum_tag) = (ikptr)cflonum_tag
+  ikptr_t VARNAME = ik_unsafe_alloc(pcb, cflonum_size) | vector_tag;	\
+  IK_REF(VARNAME, off_cflonum_tag) = (ikptr_t)cflonum_tag
 
-ik_api_decl int   ik_is_cflonum	(ikptr X);
-ik_api_decl ikptr iku_cflonum_alloc_and_init (ikpcb * pcb, double re, double im);
+ik_api_decl int   ik_is_cflonum	(ikptr_t X);
+ik_api_decl ikptr_t iku_cflonum_alloc_and_init (ikpcb_t * pcb, double re, double im);
 
 #define IK_CFLONUM_REAL(X)	IK_REF((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG(X)	IK_REF((X), off_cflonum_imag)
@@ -611,17 +616,17 @@ ik_api_decl ikptr iku_cflonum_alloc_and_init (ikpcb * pcb, double re, double im)
  ** Pointer objects.
  ** ----------------------------------------------------------------- */
 
-#define pointer_tag		((ikptr) 0x107)
+#define pointer_tag		((ikptr_t) 0x107)
 #define disp_pointer_tag	0
 #define disp_pointer_data	(1 * wordsize)
 #define pointer_size		(2 * wordsize)
 #define off_pointer_tag		(disp_pointer_tag  - vector_tag)
 #define off_pointer_data	(disp_pointer_data - vector_tag)
 
-ik_api_decl ikptr ika_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
-ik_api_decl ikptr iku_pointer_alloc	(ikpcb* pcb, ik_ulong memory);
-ik_api_decl ikptr ikrt_is_pointer	(ikptr X);
-ik_api_decl int   ik_is_pointer	(ikptr X);
+ik_api_decl ikptr_t ika_pointer_alloc	(ikpcb_t* pcb, ik_ulong memory);
+ik_api_decl ikptr_t iku_pointer_alloc	(ikpcb_t* pcb, ik_ulong memory);
+ik_api_decl ikptr_t ikrt_is_pointer	(ikptr_t X);
+ik_api_decl int   ik_is_pointer	(ikptr_t X);
 
 #define IK_IS_POINTER(X)	\
   (((vector_tag == IK_TAGOF(X)) && (pointer_tag == IK_REF(X, -vector_tag))))
@@ -635,7 +640,7 @@ ik_api_decl int   ik_is_pointer	(ikptr X);
 #define IK_POINTER_DATA_ULONG(X)	((ik_ulong) IK_REF((X), off_pointer_data))
 #define IK_POINTER_DATA_ULLONG(X)	((ik_ullong)IK_REF((X), off_pointer_data))
 
-#define IK_POINTER_SET(X,P)	(IK_REF((X), off_pointer_data) = (ikptr)((void*)(P)))
+#define IK_POINTER_SET(X,P)	(IK_REF((X), off_pointer_data) = (ikptr_t)((void*)(P)))
 #define IK_POINTER_SET_NULL(X)	(IK_REF((X), off_pointer_data) = 0)
 #define IK_POINTER_IS_NULL(X)	(0 == IK_POINTER_DATA(X))
 
@@ -651,17 +656,17 @@ ik_api_decl int   ik_is_pointer	(ikptr X);
 #define off_vector_length	(disp_vector_length - vector_tag)
 #define off_vector_data		(disp_vector_data   - vector_tag)
 
-ik_api_decl ikptr ika_vector_alloc_no_init	(ikpcb * pcb, long number_of_items);
-ik_api_decl ikptr ika_vector_alloc_and_init	(ikpcb * pcb, long number_of_items);
+ik_api_decl ikptr_t ika_vector_alloc_no_init	(ikpcb_t * pcb, long number_of_items);
+ik_api_decl ikptr_t ika_vector_alloc_and_init	(ikpcb_t * pcb, long number_of_items);
 
-ik_api_decl ikptr iku_vector_alloc_no_init	(ikpcb * pcb, long number_of_items);
-ik_api_decl ikptr iku_vector_alloc_and_init (ikpcb * pcb, long number_of_items);
+ik_api_decl ikptr_t iku_vector_alloc_no_init	(ikpcb_t * pcb, long number_of_items);
+ik_api_decl ikptr_t iku_vector_alloc_and_init (ikpcb_t * pcb, long number_of_items);
 
-ik_api_decl int   ik_is_vector		(ikptr s_vec);
-ik_api_decl ikptr ikrt_vector_clean	(ikptr s_vec);
-ik_api_decl ikptr ikrt_vector_copy	(ikptr s_dst, ikptr s_dst_start,
-					 ikptr s_src, ikptr s_src_start,
-					 ikptr s_count, ikpcb * pcb);
+ik_api_decl int   ik_is_vector		(ikptr_t s_vec);
+ik_api_decl ikptr_t ikrt_vector_clean	(ikptr_t s_vec);
+ik_api_decl ikptr_t ikrt_vector_copy	(ikptr_t s_dst, ikptr_t s_dst_start,
+					 ikptr_t s_src, ikptr_t s_src_start,
+					 ikptr_t s_count, ikpcb_t * pcb);
 
 #define IK_VECTOR_LENGTH_FX(VEC)	IK_REF((VEC), off_vector_length)
 #define IK_VECTOR_LENGTH(VEC)		IK_UNFIX(IK_VECTOR_LENGTH_FX(VEC))
@@ -681,15 +686,15 @@ ik_api_decl ikptr ikrt_vector_copy	(ikptr s_dst, ikptr s_dst_start,
 
 #define IK_IS_BYTEVECTOR(X)	(bytevector_tag == (((long)(X)) & bytevector_mask))
 
-ik_api_decl ikptr ika_bytevector_alloc		(ikpcb * pcb, long requested_number_of_bytes);
-ik_api_decl ikptr ika_bytevector_from_cstring	(ikpcb * pcb, const char * cstr);
-ik_api_decl ikptr ika_bytevector_from_cstring_len	(ikpcb * pcb, const char * cstr, size_t len);
-ik_api_decl ikptr ika_bytevector_from_memory_block	(ikpcb * pcb, const void * memory,
+ik_api_decl ikptr_t ika_bytevector_alloc		(ikpcb_t * pcb, long requested_number_of_bytes);
+ik_api_decl ikptr_t ika_bytevector_from_cstring	(ikpcb_t * pcb, const char * cstr);
+ik_api_decl ikptr_t ika_bytevector_from_cstring_len	(ikpcb_t * pcb, const char * cstr, size_t len);
+ik_api_decl ikptr_t ika_bytevector_from_memory_block	(ikpcb_t * pcb, const void * memory,
 						 size_t length);
-ik_api_decl ikptr ika_bytevector_from_utf16z	(ikpcb * pcb, const void * data);
-ik_api_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
-				    ikptr s_src, ikptr s_src_start,
-				    ikptr s_count);
+ik_api_decl ikptr_t ika_bytevector_from_utf16z	(ikpcb_t * pcb, const void * data);
+ik_api_decl ikptr_t ikrt_bytevector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
+				    ikptr_t s_src, ikptr_t s_src_start,
+				    ikptr_t s_count);
 
 #define IK_BYTEVECTOR_LENGTH_FX(BV)	IK_REF((BV), off_bytevector_length)
 #define IK_BYTEVECTOR_LENGTH(BV)	IK_UNFIX(IK_BYTEVECTOR_LENGTH_FX(BV))
@@ -729,9 +734,9 @@ ik_api_decl ikptr ikrt_bytevector_copy (ikptr s_dst, ikptr s_dst_start,
 #define off_rtd_symbol		(disp_rtd_symbol  - rtd_tag)
 #define off_rtd_destructor	(disp_rtd_destructor - rtd_tag)
 
-ik_api_decl ikptr ika_struct_alloc_and_init	(ikpcb * pcb, ikptr rtd);
-ik_api_decl ikptr ika_struct_alloc_no_init	(ikpcb * pcb, ikptr rtd);
-ik_api_decl int   ik_is_struct	(ikptr R);
+ik_api_decl ikptr_t ika_struct_alloc_and_init	(ikpcb_t * pcb, ikptr_t rtd);
+ik_api_decl ikptr_t ika_struct_alloc_no_init	(ikpcb_t * pcb, ikptr_t rtd);
+ik_api_decl int   ik_is_struct	(ikptr_t R);
 
 #define IK_FIELD(STRUCT,FIELD)	IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))
 
@@ -786,7 +791,7 @@ ik_api_decl int   ik_is_struct	(ikptr R);
 */
 #define code_primary_mask	vector_mask
 #define code_primary_tag	vector_tag
-#define code_tag		((ikptr)0x2F)
+#define code_tag		((ikptr_t)0x2F)
 
 #define disp_code_tag		0
 #define disp_code_code_size	(1 * wordsize)
@@ -834,7 +839,7 @@ ik_api_decl int   ik_is_struct	(ikptr R);
 
 /* ------------------------------------------------------------------ */
 
-#define continuation_tag		((ikptr)0x1F)
+#define continuation_tag		((ikptr_t)0x1F)
 #define disp_continuation_tag		0
 #define disp_continuation_top		(1 * wordsize)
 #define disp_continuation_size		(2 * wordsize)
@@ -852,7 +857,7 @@ ik_api_decl int   ik_is_struct	(ikptr R);
 
 /* ------------------------------------------------------------------ */
 
-#define system_continuation_tag		((ikptr) 0x11F)
+#define system_continuation_tag		((ikptr_t) 0x11F)
 #define disp_system_continuation_tag	0
 #define disp_system_continuation_top	(1 * wordsize)
 #define disp_system_continuation_next	(2 * wordsize)
@@ -894,12 +899,12 @@ ik_api_decl int   ik_is_struct	(ikptr R);
  ** Miscellanous functions.
  ** ----------------------------------------------------------------- */
 
-ik_api_decl ikptr ikrt_general_copy (ikptr s_dst, ikptr s_dst_start,
-				     ikptr s_src, ikptr s_src_start,
-				     ikptr s_count, ikpcb * pcb);
+ik_api_decl ikptr_t ikrt_general_copy (ikptr_t s_dst, ikptr_t s_dst_start,
+				     ikptr_t s_src, ikptr_t s_src_start,
+				     ikptr_t s_count, ikpcb_t * pcb);
 
-ik_api_decl void ik_enter_c_function (ikpcb* pcb);
-ik_api_decl void ik_leave_c_function (ikpcb* pcb);
+ik_api_decl void ik_enter_c_function (ikpcb_t* pcb);
+ik_api_decl void ik_leave_c_function (ikpcb_t* pcb);
 
 
 /** --------------------------------------------------------------------
@@ -1053,7 +1058,7 @@ ik_api_decl void ik_leave_c_function (ikpcb* pcb);
  ** Generalised C buffer stuff.
  ** ----------------------------------------------------------------- */
 
-ik_api_decl size_t ik_generalised_c_buffer_len (ikptr s_buffer, ikptr s_buffer_len);
+ik_api_decl size_t ik_generalised_c_buffer_len (ikptr_t s_buffer, ikptr_t s_buffer_len);
 
 /* ------------------------------------------------------------------ */
 
