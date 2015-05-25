@@ -586,14 +586,11 @@
   ;;
   (syntax-rules ()
     ((_ ?who (?code ...))
-     (define (?who code)
-       (define who '?who)
-       (with-arguments-validation (who)
-	   ((exact-integer	code))
-	 (case code
-	   ((?code)	'?code)
-	   ...
-	   (else #f)))))))
+     (define* (?who {code exact-integer?})
+       (cond ((= ?code code)	'?code)
+	     ...
+	     (else #f))))
+    ))
 
 
 ;;;; done
