@@ -14175,7 +14175,9 @@ The optional argument @var{requested-generation} represents the oldest
 objects generation to collect: when @false{} the generation is
 determined internally; when a fixnum between @code{0} inclusive and
 @code{4} inclusive the fixnum represents the generation, where @code{0}
-is the youngest generation and @code{4} is the oldest generation.
+is the youngest generation and @code{4} is the oldest generation.  The
+symbol @samp{fastest} is equivalent to @code{0}, the symbol
+@samp{fullest} is equivalent to @code{4}.
 @end defun
 
 @c ------------------------------------------------------------

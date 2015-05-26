@@ -102,7 +102,7 @@
 
 (define do-vararg-overflow do-overflow)
 
-(case-define collect
+(case-define* collect
   ;;Force a  garbage collection and make  room on the  heap for at least  4096 bytes.
   ;;4096 is  an arbitrary value.  It  is arbitrarily decided that  this function must
   ;;return a single value and such value is void.
@@ -111,7 +111,14 @@
    (do-overflow 4096 #f)
    (void))
   ((requested-generation)
-   (do-overflow 4096 requested-generation)
+   (do-overflow 4096 (case requested-generation
+		       ((0 fastest)	0)
+		       ((#f 1 2 3)	requested-generation)
+		       ((4 fullest)	4)
+		       (else
+			(procedure-argument-violation __who__
+			  "requested invalid garbage collection generation level"
+			  requested-generation))))
    (void)))
 
 (define (do-stack-overflow)
