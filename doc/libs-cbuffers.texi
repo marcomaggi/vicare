@@ -185,6 +185,18 @@ Expand to an expression which evaluates @meta{obj} once and returns
 @end defun
 
 
+@defun assert-general-c-buffer-and-length @var{who} @var{buf} @var{len}
+@defunx assert-general-c-string-and-length @var{who} @var{str} @var{len}
+Assume that @var{buf} and @var{str} have already been validated as
+general C buffer and general C string; validate @var{len} as valid
+length of buffer or string.
+
+When successful: nothing happens.  If the validation fails: raise an
+exception using @func{procedure-arguments-consistency-violation}.  The
+argument @var{who} is used for the condition of type @condition{who}.
+@end defun
+
+
 @defun general-c-buffer-len @var{buf} @var{buf.len}
 Return the number of bytes in a generalised C buffer object.
 

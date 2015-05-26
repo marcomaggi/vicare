@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -298,6 +298,19 @@
       (with-general-c-pathnames/false ((a^ #f))
 	a^)
     => #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'assertions))
+
+  (check-for-procedure-arguments-consistency-violation
+   (assert-general-c-string-and-length 'who "ciao" 123)
+   => '(who ("ciao" 123)))
+
+  (check-for-procedure-arguments-consistency-violation
+   (assert-general-c-buffer-and-length 'who '#ve(ascii "ciao") 123)
+   => '(who (#ve(ascii "ciao") 123)))
 
   #t)
 

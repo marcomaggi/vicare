@@ -31,6 +31,8 @@
     general-c-string?
     general-c-buffer?
     general-c-sticky-buffer?
+    assert-general-c-string-and-length
+    assert-general-c-buffer-and-length
     general-c-buffer-len
     with-general-c-strings
     with-general-c-strings/false
@@ -78,6 +80,30 @@
 (define (general-c-sticky-buffer? obj)
   (or (pointer?		obj)
       (memory-block?	obj)))
+
+
+;;;; assertions
+
+(define (assert-general-c-string-and-length who str str.len)
+  (unless (cond ((or (string?       str)
+		     (bytevector?   str)
+		     (memory-block? str))
+		 (not str.len))
+		((pointer? str)
+		 (words.size_t? str.len))
+		(else #f))
+    (procedure-arguments-consistency-violation who
+      "expected general C string and optional length as arguments" str str.len)))
+
+(define (assert-general-c-buffer-and-length who buf buf.len)
+  (unless (cond ((or (bytevector?   buf)
+		     (memory-block? buf))
+		 (not buf.len))
+		((pointer? buf)
+		 (words.size_t? buf.len))
+		(else #f))
+    (procedure-arguments-consistency-violation who
+      "expected general C buffer and optional length as arguments" buf buf.len)))
 
 
 ;;;; general C strings
