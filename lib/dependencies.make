@@ -3,11 +3,11 @@
 # Automatically built.
 
 EXTRA_DIST +=  \
-	lib/nausicaa/uri/pathnames.sls.in \
-	lib/vicare/platform/configuration.sls.in \
-	lib/vicare/platform/constants.sls.in \
-	lib/vicare/platform/errno.sls.in \
-	lib/vicare/platform/words.sls.in
+	lib/vicare/platform/errno.vicare.sls.in \
+	lib/vicare/platform/words.vicare.sls.in \
+	lib/nausicaa/uri/pathnames.vicare.sls.in \
+	lib/vicare/platform/configuration.vicare.sls.in \
+	lib/vicare/platform/constants.vicare.sls.in
 
 lib/vicare/platform/configuration.fasl: \
 		lib/vicare/platform/configuration.vicare.sls \
@@ -20,7 +20,6 @@ nodist_lib_vicare_platform_configuration_fasl_DATA = lib/vicare/platform/configu
 if WANT_INSTALL_SOURCES
 dist_lib_vicare_platform_configuration_vicare_sls_DATA = lib/vicare/platform/configuration.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/platform/configuration.vicare.sls
 CLEANFILES += lib/vicare/platform/configuration.fasl
 
 lib/vicare/platform/words.fasl: \
@@ -35,7 +34,6 @@ nodist_lib_vicare_platform_words_fasl_DATA = lib/vicare/platform/words.fasl
 if WANT_INSTALL_SOURCES
 dist_lib_vicare_platform_words_vicare_sls_DATA = lib/vicare/platform/words.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/platform/words.vicare.sls
 CLEANFILES += lib/vicare/platform/words.fasl
 
 lib/vicare/platform/errno.fasl: \
@@ -49,7 +47,6 @@ nodist_lib_vicare_platform_errno_fasl_DATA = lib/vicare/platform/errno.fasl
 if WANT_INSTALL_SOURCES
 dist_lib_vicare_platform_errno_vicare_sls_DATA = lib/vicare/platform/errno.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/platform/errno.vicare.sls
 CLEANFILES += lib/vicare/platform/errno.fasl
 
 lib/vicare/platform/constants.fasl: \
@@ -64,19 +61,18 @@ nodist_lib_vicare_platform_constants_fasl_DATA = lib/vicare/platform/constants.f
 if WANT_INSTALL_SOURCES
 dist_lib_vicare_platform_constants_vicare_sls_DATA = lib/vicare/platform/constants.vicare.sls
 endif
-EXTRA_DIST += lib/vicare/platform/constants.vicare.sls
 CLEANFILES += lib/vicare/platform/constants.fasl
 
 lib/vicare/platform/features.fasl: \
-		lib/vicare/platform/features.sls \
+		lib/vicare/platform/features.vicare.sls \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_features_fasldir = $(bundledlibsdir)/vicare/platform
-lib_vicare_platform_features_slsdir  = $(bundledlibsdir)/vicare/platform
+lib_vicare_platform_features_vicare_slsdir  = $(bundledlibsdir)/vicare/platform
 nodist_lib_vicare_platform_features_fasl_DATA = lib/vicare/platform/features.fasl
 if WANT_INSTALL_SOURCES
-dist_lib_vicare_platform_features_sls_DATA = lib/vicare/platform/features.sls
+dist_lib_vicare_platform_features_vicare_sls_DATA = lib/vicare/platform/features.vicare.sls
 endif
 CLEANFILES += lib/vicare/platform/features.fasl
 
@@ -262,9 +258,7 @@ CLEANFILES += lib/vicare/arguments/validation.fasl
 
 lib/vicare/arguments/general-c-buffers.fasl: \
 		lib/vicare/arguments/general-c-buffers.vicare.sls \
-		lib/vicare/language-extensions/syntaxes.fasl \
-		lib/vicare/arguments/validation.fasl \
-		lib/vicare/unsafe/operations.fasl \
+		lib/vicare/platform/words.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -4360,7 +4354,6 @@ nodist_lib_nausicaa_uri_pathnames_fasl_DATA = lib/nausicaa/uri/pathnames.fasl
 if WANT_INSTALL_SOURCES
 dist_lib_nausicaa_uri_pathnames_vicare_sls_DATA = lib/nausicaa/uri/pathnames.vicare.sls
 endif
-EXTRA_DIST += lib/nausicaa/uri/pathnames.vicare.sls
 CLEANFILES += lib/nausicaa/uri/pathnames.fasl
 endif
 

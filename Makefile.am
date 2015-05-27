@@ -640,12 +640,12 @@ FASL_PREREQUISITES	= $(VICARE_NEW_BOOT) vicare
 
 ## --------------------------------------------------------------------
 
-BUILT_SOURCES		+= lib/vicare/platform/features.sls
-CLEANFILES		+= lib/vicare/platform/features.sls
+BUILT_SOURCES		+= lib/vicare/platform/features.vicare.sls
+CLEANFILES		+= lib/vicare/platform/features.vicare.sls
 noinst_PROGRAMS		= features
 features_SOURCES	= lib/features.c
 
-lib/vicare/platform/features.sls : features
+lib/vicare/platform/features.vicare.sls : features
 	$(MKDIR_P) lib/vicare/platform && ./features >$@
 
 ## --------------------------------------------------------------------
