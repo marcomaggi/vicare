@@ -1259,6 +1259,28 @@
   #t)
 
 
+(parametrise ((check-test-name	'predicates))
+
+  (check-for-false
+   (ffi.c-callback? 123))
+
+  (check-for-true
+   (ffi.c-callback? (null-pointer)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-false
+   (ffi.false-or-c-callback? 123))
+
+  (check-for-true
+   (ffi.false-or-c-callback? #f))
+
+  (check-for-true
+   (ffi.false-or-c-callback? (null-pointer)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

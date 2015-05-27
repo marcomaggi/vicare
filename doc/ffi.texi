@@ -648,6 +648,15 @@ callback function.  If the pointer is not a callback pointer: raise an
 assertion violation.
 @end defun
 
+
+@defun c-callback? @var{obj}
+@defunx false-or-c-callback? @var{obj}
+Return @true{} if @var{obj} is a callback pointer (or @false{});
+otherwise return @false{}.  These predicates only test if @var{obj} is a
+pointer object; at present there is no way to distinguish a callback
+pointer from a non--callback pointer.
+@end defun
+
 @c page
 @node ffi call types
 @subsection Specifying native types

@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2008, 2009  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (vicare ffi)
+(library (vicare ffi (0 4 2015 05 27))
   (export
 
     ;; shared libraries inteface
@@ -25,6 +25,8 @@
     ;; calling functions and callbacks
     make-c-callout-maker		make-c-callout-maker/with-errno
     make-c-callback-maker		free-c-callback
+
+    c-callback?				false-or-c-callback?
 
     ;; system agnostic shared libraries interface
     open-shared-object			close-shared-object
@@ -211,6 +213,16 @@
   (foreign-symbol	condition-shared-object-lookup-foreign-symbol))
 
 
+;;;; predicates
+
+(define (c-callback? obj)
+  (pointer? obj))
+
+(define (false-or-c-callback? obj)
+  (or (not obj)
+      (c-callback? obj)))
+
+
 ;;;; system agnostic API to load libraries
 
 (define open-shared-object
@@ -262,6 +274,6 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
