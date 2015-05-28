@@ -29,7 +29,7 @@
 
 
 #!r6rs
-(library (vicare platform words)
+(library (vicare platform words (0 4 2015 5 28))
   (export
 
     ;; syntaxes
@@ -66,6 +66,35 @@
 
     size_t?		ssize_t?
     off_t?		ptrdiff_t?
+
+    ;; sign predicates
+    positive-word-s8?			non-positive-word-s8?
+    negative-word-s8?			non-negative-word-s8?
+    positive-word-s16?			non-positive-word-s16?
+    negative-word-s16?			non-negative-word-s16?
+    positive-word-s32?			non-positive-word-s32?
+    negative-word-s32?			non-negative-word-s32?
+    positive-word-s64?			non-positive-word-s64?
+    negative-word-s64?			non-negative-word-s64?
+    positive-word-s128?			non-positive-word-s128?
+    negative-word-s128?			non-negative-word-s128?
+    positive-word-s256?			non-positive-word-s256?
+    negative-word-s256?			non-negative-word-s256?
+
+    positive-signed-char?		non-positive-signed-char?
+    negative-signed-char?		non-negative-signed-char?
+    positive-signed-int?		non-positive-signed-int?
+    negative-signed-int?		non-negative-signed-int?
+    positive-signed-long?		non-positive-signed-long?
+    negative-signed-long?		non-negative-signed-long?
+    positive-signed-long-long?		non-positive-signed-long-long?
+    negative-signed-long-long?		non-negative-signed-long-long?
+    positive-ssize_t?			non-positive-ssize_t?
+    negative-ssize_t?			non-negative-ssize_t?
+    positive-off_t?			non-positive-off_t?
+    negative-off_t?			non-negative-off_t?
+    positive-ptrdiff_t?			non-positive-ptrdiff_t?
+    negative-ptrdiff_t?			non-negative-ptrdiff_t?
 
     ;; inclusive limits
     greatest-u8		least-u8
@@ -176,6 +205,43 @@
        ((4)	. ?body-4)
        ((8)	. ?body-8))
      (begin . ?body-8))))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (declare-positive-predicate ?who ?pred)
+  (define-inline (?who obj)
+    (and (?pred obj)
+	 (positive? obj))))
+
+(define-syntax-rule (declare-negative-predicate ?who ?pred)
+  (define-inline (?who obj)
+    (and (?pred obj)
+	 (negative? obj))))
+
+(define-syntax-rule (declare-non-positive-predicate ?who ?pred)
+  (define-inline (?who obj)
+    (and (?pred obj)
+	 (non-positive? obj))))
+
+(define-syntax-rule (declare-non-negative-predicate ?who ?pred)
+  (define-inline (?who obj)
+    (and (?pred obj)
+	 (non-negative? obj))))
+
+(define-syntax (declare-sign-predicates stx)
+  (syntax-case stx ()
+    ((_ ?pred)
+     (with-syntax
+	 ((POSITIVE-WHO		(identifier-prefix "positive-"     #'?pred))
+	  (NEGATIVE-WHO		(identifier-prefix "negative-"     #'?pred))
+	  (NON-POSITIVE-WHO	(identifier-prefix "non-positive-" #'?pred))
+	  (NON-NEGATIVE-WHO	(identifier-prefix "non-negative-" #'?pred)))
+       #'(begin
+	   (declare-positive-predicate POSITIVE-WHO ?pred)
+	   (declare-negative-predicate NEGATIVE-WHO ?pred)
+	   (declare-non-positive-predicate NON-POSITIVE-WHO ?pred)
+	   (declare-non-negative-predicate NON-NEGATIVE-WHO ?pred))))
+    ))
 
 
 ;;;; syntaxes
@@ -682,6 +748,15 @@
 	   ($bnbn>= N S256MIN)
 	   ($bnbn<= N S256MAX))))
 
+;;; --------------------------------------------------------------------
+
+(declare-sign-predicates word-s8?)
+(declare-sign-predicates word-s16?)
+(declare-sign-predicates word-s32?)
+(declare-sign-predicates word-s64?)
+(declare-sign-predicates word-s128?)
+(declare-sign-predicates word-s256?)
+
 
 ;;;; C language data predicates
 
@@ -729,6 +804,16 @@
   (define-predicate off_t?			@SIZEOF_OFF_T@		signed)
   (define-predicate ptrdiff_t?			@SIZEOF_PTRDIFF_T@	signed)
   )
+
+;;; --------------------------------------------------------------------
+
+(declare-sign-predicates signed-char?)
+(declare-sign-predicates signed-int?)
+(declare-sign-predicates signed-long?)
+(declare-sign-predicates signed-long-long?)
+(declare-sign-predicates ssize_t?)
+(declare-sign-predicates off_t?)
+(declare-sign-predicates ptrdiff_t?)
 
 
 ;;;; vector index alignment

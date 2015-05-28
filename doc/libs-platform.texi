@@ -149,13 +149,14 @@ are @strong{not} meant to be binding identifiers.
 
 It is often needed to validate exact integers agains fixed range bounds,
 for example for 32-bit and 64-bit representations or some platform
-specific C language type.  The library @library{vicare platform words} implements
-such predicates and minimum/maximum range constants.
+specific C language type.  The library @library{vicare platform words}
+implements such predicates and minimum/maximum range constants.
 
 @menu
 * words syntaxes::              Miscellaneous syntaxes.
 * words sizeof::                Knowing the size of C language types.
 * words predicates::            Verifying the range of integers.
+* words sign::                  Verifying the sign of integers.
 * words limits::                Exact integer range limits.
 @end menu
 
@@ -408,6 +409,132 @@ if @var{N} is a fixnum multiple of @math{8}; else evaluate to @false{}.
 Evaluate to @true{} if @var{N} is a fixnum multiple of @math{alignment};
 else evaluate to @false{}.
 @end deffn
+
+@c page
+@node words sign
+@subsection Verifying the sign of integers
+
+
+Starting with the specified version, the following bindings are exported
+by the @library{vicare platform words (0 4 2015 5 28)} library.
+
+
+@defun positive-word-s8? @var{obj}
+@defunx negative-word-s8? @var{obj}
+@defunx non-positive-word-s8? @var{obj}
+@defunx non-negative-word-s8? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-word-s16? @var{obj}
+@defunx negative-word-s16? @var{obj}
+@defunx non-positive-word-s16? @var{obj}
+@defunx non-negative-word-s16? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-word-s32? @var{obj}
+@defunx negative-word-s32? @var{obj}
+@defunx non-positive-word-s32? @var{obj}
+@defunx non-negative-word-s32? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-word-s64? @var{obj}
+@defunx negative-word-s64? @var{obj}
+@defunx non-positive-word-s64? @var{obj}
+@defunx non-negative-word-s64? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-word-s128? @var{obj}
+@defunx negative-word-s128? @var{obj}
+@defunx non-positive-word-s128? @var{obj}
+@defunx non-negative-word-s128? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-word-s256? @var{obj}
+@defunx negative-word-s256? @var{obj}
+@defunx non-positive-word-s256? @var{obj}
+@defunx non-negative-word-s256? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@defun positive-signed-char? @var{obj}
+@defunx negative-signed-char? @var{obj}
+@defunx non-positive-signed-char? @var{obj}
+@defunx non-negative-signed-char? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-signed-int? @var{obj}
+@defunx negative-signed-int? @var{obj}
+@defunx non-positive-signed-int? @var{obj}
+@defunx non-negative-signed-int? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-signed-long? @var{obj}
+@defunx negative-signed-long? @var{obj}
+@defunx non-positive-signed-long? @var{obj}
+@defunx non-negative-signed-long? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-signed-long-long? @var{obj}
+@defunx negative-signed-long-long? @var{obj}
+@defunx non-positive-signed-long-long? @var{obj}
+@defunx non-negative-signed-long-long? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-ssize_t? @var{obj}
+@defunx negative-ssize_t? @var{obj}
+@defunx non-positive-ssize_t? @var{obj}
+@defunx non-negative-ssize_t? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-off_t? @var{obj}
+@defunx negative-off_t? @var{obj}
+@defunx non-positive-off_t? @var{obj}
+@defunx non-negative-off_t? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
+
+
+@defun positive-ptrdiff_t? @var{obj}
+@defunx negative-ptrdiff_t? @var{obj}
+@defunx non-positive-ptrdiff_t? @var{obj}
+@defunx non-negative-ptrdiff_t? @var{obj}
+Return @true{} if @var{obj} is an exact integer in the specified range
+with the specified sign; otherwise return @false{}.
+@end defun
 
 @c page
 @node words limits

@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -143,6 +143,99 @@
   (check (words.off_t? OFF_T_MAX)		=> #t)
   (check (words.off_t? OFF_T_MIN)		=> #t)
   (check (words.off_t? (+ -1 OFF_T_MIN))	=> #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'sign))
+
+  (define-syntax positive-doit
+    (syntax-rules ()
+      ((_ ?who)
+       (begin
+	 (check-for-true  (?who +1))
+	 (check-for-false (?who -1))
+	 (check-for-false (?who 0))))
+      ))
+
+  (define-syntax negative-doit
+    (syntax-rules ()
+      ((_ ?who)
+       (begin
+	 (check-for-false (?who +1))
+	 (check-for-true  (?who -1))
+	 (check-for-false (?who 0))))
+      ))
+
+  (define-syntax non-positive-doit
+    (syntax-rules ()
+      ((_ ?who)
+       (begin
+	 (check-for-false (?who +1))
+	 (check-for-true  (?who -1))
+	 (check-for-true  (?who 0))))
+      ))
+
+  (define-syntax non-negative-doit
+    (syntax-rules ()
+      ((_ ?who)
+       (begin
+	 (check-for-true  (?who +1))
+	 (check-for-false (?who -1))
+	 (check-for-true  (?who 0))))
+      ))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?positive-who ?non-positive-who
+	  ?negative-who ?non-negative-who)
+       (begin
+	 (positive-doit ?positive-who) (non-positive-doit ?non-positive-who)
+	 (negative-doit ?negative-who) (non-negative-doit ?non-negative-who)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit words.positive-word-s8?			words.non-positive-word-s8?
+	words.negative-word-s8?			words.non-negative-word-s8?)
+
+  (doit words.positive-word-s16?		words.non-positive-word-s16?
+	words.negative-word-s16?		words.non-negative-word-s16?)
+
+  (doit words.positive-word-s32?		words.non-positive-word-s32?
+	words.negative-word-s32?		words.non-negative-word-s32?)
+
+  (doit words.positive-word-s64?		words.non-positive-word-s64?
+	words.negative-word-s64?		words.non-negative-word-s64?)
+
+  (doit words.positive-word-s128?		words.non-positive-word-s128?
+	words.negative-word-s128?		words.non-negative-word-s128?)
+
+  (doit words.positive-word-s256?		words.non-positive-word-s256?
+	words.negative-word-s256?		words.non-negative-word-s256?)
+
+;;; --------------------------------------------------------------------
+
+  (doit words.positive-signed-char?		words.non-positive-signed-char?
+	words.negative-signed-char?		words.non-negative-signed-char?)
+
+  (doit words.positive-signed-int?		words.non-positive-signed-int?
+	words.negative-signed-int?		words.non-negative-signed-int?)
+
+  (doit words.positive-signed-long?		words.non-positive-signed-long?
+	words.negative-signed-long?		words.non-negative-signed-long?)
+
+  (doit words.positive-signed-long-long?	words.non-positive-signed-long-long?
+	words.negative-signed-long-long?	words.non-negative-signed-long-long?)
+
+  (doit words.positive-ssize_t?			words.non-positive-ssize_t?
+	words.negative-ssize_t?			words.non-negative-ssize_t?)
+
+  (doit words.positive-off_t?			words.non-positive-off_t?
+	words.negative-off_t?			words.non-negative-off_t?)
+
+  (doit words.positive-ptrdiff_t?		words.non-positive-ptrdiff_t?
+	words.negative-ptrdiff_t?		words.non-negative-ptrdiff_t?)
 
   #t)
 
