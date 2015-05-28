@@ -61,7 +61,7 @@
 
     ;; pointer values
     pointer?				list-of-pointers?
-    maybe-pointer?
+    maybe-pointer?			false-or-pointer?
     null-pointer			set-pointer-null!
     pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer

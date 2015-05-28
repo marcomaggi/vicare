@@ -85,6 +85,28 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check-for-true
+   (maybe-pointer? (integer->pointer 123)))
+
+  (check-for-false
+   (maybe-pointer? '#(123)))
+
+  (check-for-true
+   (maybe-pointer? (void)))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (false-or-pointer? (integer->pointer 123)))
+
+  (check-for-false
+   (false-or-pointer? '#(123)))
+
+  (check-for-true
+   (false-or-pointer? #f))
+
+;;; --------------------------------------------------------------------
+
   (check
       (pointer->integer (integer->pointer 0))
     => 0)

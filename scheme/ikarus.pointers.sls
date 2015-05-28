@@ -20,7 +20,7 @@
 
     ;; pointer objects
     pointer?				list-of-pointers?
-    maybe-pointer?
+    false-or-pointer?			maybe-pointer?
     null-pointer			set-pointer-null!
     pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer
@@ -180,7 +180,7 @@
 
 		  ;; pointer objects
 		  pointer?				list-of-pointers?
-		  maybe-pointer?
+		  false-or-pointer?			maybe-pointer?
 		  null-pointer				set-pointer-null!
 		  pointer-null?				pointer-non-null?
 		  pointer->integer			integer->pointer
@@ -529,6 +529,10 @@
 
 (define (maybe-pointer? obj)
   (or (eq? obj (void))
+      (pointer? obj)))
+
+(define (false-or-pointer? obj)
+  (or (not obj)
       (pointer? obj)))
 
 (define-list-of-type-predicate list-of-pointers? pointer?)

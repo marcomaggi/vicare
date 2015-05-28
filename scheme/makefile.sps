@@ -3293,6 +3293,7 @@
     (errno					v $language $for)
     (pointer?					v $language $for)
     (maybe-pointer?				v $language $for)
+    (false-or-pointer?				v $language $for)
     (list-of-pointers?				v $language $for)
     (null-pointer				v $language $for)
     (pointer->integer				v $language $for)
