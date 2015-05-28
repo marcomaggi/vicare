@@ -65,6 +65,17 @@
 
 ;;; --------------------------------------------------------------------
 
+  (check-for-true
+   (ffi.maybe-pointer? (ffi.integer->pointer 123)))
+
+  (check-for-false
+   (ffi.maybe-pointer? '#(123)))
+
+  (check-for-true
+   (ffi.maybe-pointer? (void)))
+
+;;; --------------------------------------------------------------------
+
   (check
       (ffi.pointer->integer (ffi.integer->pointer 0))
     => 0)

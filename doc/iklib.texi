@@ -15816,6 +15816,12 @@ otherwise.
 @end defun
 
 
+@defun maybe-pointer? @var{obj}
+Return @true{} if @var{obj} is a pointer object or @void{}, return @false{}
+otherwise.
+@end defun
+
+
 @defun pointer-null? @var{obj}
 Return @true{} if @var{obj} is a pointer object and it represents
 @cnull{}; otherwise return @false{}.  If @var{obj} is not a pointer:

@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (vicare ffi (0 4 2015 05 27))
+(library (vicare ffi (0 4 2015 05 28))
   (export
 
     ;; shared libraries inteface
@@ -27,6 +27,7 @@
     make-c-callback-maker		free-c-callback
 
     c-callback?				false-or-c-callback?
+    maybe-c-callback?
 
     ;; system agnostic shared libraries interface
     open-shared-object			close-shared-object
@@ -59,7 +60,8 @@
 ;;; reexports from (vicare)
 
     ;; pointer values
-    pointer?
+    pointer?				list-of-pointers?
+    maybe-pointer?
     null-pointer			set-pointer-null!
     pointer-null?			pointer-non-null?
     pointer->integer			integer->pointer
@@ -220,6 +222,10 @@
 
 (define (false-or-c-callback? obj)
   (or (not obj)
+      (c-callback? obj)))
+
+(define (maybe-c-callback? obj)
+  (or (eq? obj (void))
       (c-callback? obj)))
 
 

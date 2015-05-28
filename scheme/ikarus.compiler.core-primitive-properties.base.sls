@@ -59,6 +59,8 @@
     section /section
 
     declare-type-predicate
+    declare-type-predicate/maybe
+    declare-type-predicate/list
     define-object-predicate-declarer
     declare-object-predicate
     declare-fixnum-predicate
@@ -1095,6 +1097,55 @@
 	 (safe)
        (signatures
 	((?obj-tag)	=> (T:true))
+	((_)		=> (T:boolean)))
+       (attributes
+	((_)		foldable effect-free))))
+    ))
+
+(define-syntax declare-type-predicate/maybe
+  ;;Usage examples:
+  ;;
+  ;;   (declare-type-predicate/maybe maybe-pointer? T:pointer)
+  ;;
+  (syntax-rules ()
+    ((_ ?who)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((T:void)	=> (T:true))
+	((_)		=> (T:boolean)))
+       (attributes
+	((_)		foldable effect-free))))
+    ((_ ?who ?obj-tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((T:void)	=> (T:true))
+	((?obj-tag)	=> (T:true))
+	((_)		=> (T:boolean)))
+       (attributes
+	((_)		foldable effect-free))))
+    ))
+
+(define-syntax declare-type-predicate/list
+  ;;Usage examples:
+  ;;
+  ;;   (declare-type-predicate/list list-of-pointers? T:pointer)
+  ;;
+  (syntax-rules ()
+    ((_ ?who)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((T:null)	=> (T:true))
+	((_)		=> (T:boolean)))
+       (attributes
+	((_)		foldable effect-free))))
+    ((_ ?who ?obj-tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((T:null)	=> (T:true))
 	((_)		=> (T:boolean)))
        (attributes
 	((_)		foldable effect-free))))

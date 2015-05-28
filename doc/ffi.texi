@@ -657,6 +657,14 @@ pointer object; at present there is no way to distinguish a callback
 pointer from a non--callback pointer.
 @end defun
 
+
+@defun maybe-callback? @var{obj}
+Return @true{} if @var{obj} is a callback object or @void{}, return
+@false{} otherwise.  This predicate only tests if @var{obj} is a pointer
+object; at present there is no way to distinguish a callback pointer
+from a non--callback pointer.
+@end defun
+
 @c page
 @node ffi call types
 @subsection Specifying native types

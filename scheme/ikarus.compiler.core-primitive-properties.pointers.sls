@@ -47,7 +47,9 @@
 
 ;;;; pointers, safe functions
 
-(declare-type-predicate pointer? T:pointer)
+(declare-type-predicate       pointer?		T:pointer)
+(declare-type-predicate/maybe maybe-pointer?	T:pointer)
+(declare-type-predicate/list  list-of-pointers?	T:pointer)
 
 ;;; --------------------------------------------------------------------
 

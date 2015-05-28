@@ -628,7 +628,7 @@ Revised^6 Report on the algorithmic language Scheme
 @end macro
 
 @macro void{}
-@code{#<void>}
+@code{#!void}
 @end macro
 
 @c end of file
