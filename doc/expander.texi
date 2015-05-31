@@ -3128,8 +3128,8 @@ conversion, datum->syntax}).  Let's see this example:
 @end lisp
 
 @noindent
-@func{datum->syntax} builds a new @stx{object} using its @var{datum}
-argument as symbolic expression and the marks and @rib{} list of its
+@func{datum->syntax} builds a new @stx{} using its @var{datum} argument
+as symbolic expression and the marks and @rib{} list of its
 @var{template-id} argument as wraps.
 
 @func{datum->syntax} does not care if it generates a syntax objects with
