@@ -1455,6 +1455,21 @@
     ;;by  the  syntaxes:  DEFINE, DEFINE-SYNTAX,  DEFINE-FLUID-SYNTAX,  DEFINE-ALIAS,
     ;;MODULE, IMPORT.
     ;;
+    ;;This function  is called  to establish new  syntactic bindings  (either lexical
+    ;;variables or macros), but  it is also called when an  IMPORT syntax is expanded
+    ;;in an  internal body.   In the first  case, we  need to raise  an error  when a
+    ;;syntactic binding is established twice:
+    ;;
+    ;;   (define a 1)
+    ;;   (define a 2)
+    ;;
+    ;;in the second case, we need to allow:
+    ;;
+    ;;   (import (rnrs))
+    ;;   (import (rnrs))
+    ;;
+    ;;because importing twice the same binding is fine.
+    ;;
     ;;This function  is the only  place where the  argument SHADOW/REDEFINE-BINDINGS?
     ;;makes some difference:
     ;;
@@ -1484,15 +1499,28 @@
 		  (%find-syntactic-binding-with-same-name-and-same-marks id.source-name id.mark* rib.name* rib.mark** rib.label*))
 	     => (lambda (tail-of-label*)
 		  ;;If  we  are here:  we  have  found  in  RIB a  syntactic  binding
-		  ;;capturing ID (same source-name, same marks).  We need to remember
-		  ;;that  EXTEND-RIB!   is called  only  to  establish new  syntactic
-		  ;;bindings (either lexical variables or macros).
-		  (if shadow/redefine-bindings?
-		      ;;We  replace  the old  label  with  the new  one,  in-so-doing
-		      ;;redefining or shadowing the already existing binding.
-		      (set-car! tail-of-label* label)
-		    ;;Signal an error if the identifier was already in the rib.
-		    (syntax-violation __who__ "multiple definitions of identifier" id))))
+		  ;;capturing ID (same source-name, same marks).
+		  (cond ((let ((label-in-rib (car tail-of-label*)))
+			   (and (label-binding label)
+				(eq? label label-in-rib)))
+			 ;;This happens when importing twice the same binding, as in:
+			 ;;
+			 ;;   (import (rnrs))
+			 ;;   (import (rnrs))
+			 ;;
+			 (void))
+			(shadow/redefine-bindings?
+			 ;;We replace  the old  label with  the new  one, in-so-doing
+			 ;;redefining or shadowing the already existing binding.
+			 (set-car! tail-of-label* label))
+			(else
+			 ;;Signal an error if the  identifier was already in the rib.
+			 ;;This is the case of:
+			 ;;
+			 ;;   (define a 1)
+			 ;;   (define a 2)
+			 ;;
+			 (syntax-violation __who__ "multiple definitions of identifier" id)))))
 	    (else
 	     ;;No capturing binding  exists for ID in RIB: let's  establish a new one
 	     ;;by pushing the appropriate tuple on the rib.
