@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare system $fx)
   (only (vicare platform words)
@@ -322,6 +322,25 @@
   (check ($fxnonnegative? 0)		=> #t)
   (check ($fxnonnegative? +123)		=> #t)
   (check ($fxnonnegative? -123)		=> #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'fixing-errors))
+
+  (check
+      (internal-body
+	(define* (doit {x fixnum?})
+	  ($fxlogxor x 60000))
+	(doit 123))
+    => #t)
+
+(debug-print
+ (assembly-of
+  (internal-body
+    (define* (doit {x fixnum?})
+      ($fxlogxor x 283))
+    (doit (read)))))
 
   #t)
 
