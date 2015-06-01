@@ -6978,7 +6978,7 @@
 		       (raise
 			(condition (make-i/o-decoding-error port)
 				   (make-who-condition who)
-				   (make-message-condition "invalid code point for Latin-1 coded")
+				   (make-message-condition "invalid code point for Latin-1 coded port")
 				   (make-irritants-condition (list octet ($fixnum->char octet))))))
 		      (else
 		       (assertion-violation who "vicare internal error: invalid error handling mode" port mode)))))))
@@ -7006,7 +7006,7 @@
 		     (raise
 		      (condition (make-i/o-decoding-error port)
 				 (make-who-condition who)
-				 (make-message-condition "invalid code point for Latin-1 coded")
+				 (make-message-condition "invalid code point for Latin-1 coded port")
 				 (make-irritants-condition (list octet ($fixnum->char octet))))))
 		    (else
 		     (assertion-violation who "vicare internal error: invalid error handling mode" port mode))))))
@@ -7056,7 +7056,7 @@
 		 (raise
 		  (condition (make-i/o-decoding-error port)
 			     (make-who-condition who)
-			     (make-message-condition "invalid code point for Latin-1 coded")
+			     (make-message-condition "invalid code point for Latin-1 coded port")
 			     (make-irritants-condition (list octet ($fixnum->char octet))))))
 		(else
 		 (assertion-violation who "vicare internal error: invalid error handling mode" port mode)))))))
