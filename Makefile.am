@@ -752,17 +752,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-ikarus-symbol-table.sps				\
 	tests/test-ikarus-unicode.sps					\
 	\
-	tests/test-vicare-compiler-scheme-objects-ontology.sps		\
-	tests/test-vicare-compiler-internals.sps			\
-	tests/test-vicare-compiler-pass-source-optimiser.sps		\
-	tests/test-vicare-compiler-pass-core-type-inference.sps		\
-	tests/test-vicare-compiler-pass-introduce-unsafe-primrefs.sps	\
-	tests/test-vicare-compiler-pass-specify-representation.sps	\
-	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
-	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
-	tests/test-vicare-compiler-pass-color-by-chaitin.sps		\
-	tests/test-vicare-compiler-pass-flatten-codes.sps		\
-	\
 	tests/test-vicare-bignums.sps					\
 	tests/test-vicare-booleans.sps					\
 	tests/test-vicare-bytevectors.sps				\
@@ -944,6 +933,19 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-parser-tools-silex-file.sps			\
 	tests/test-vicare-parser-tools-silex-online.sps			\
 	tests/test-vicare-parser-tools-unix-pathnames.sps
+
+# Tests for the compiler's internals are written only for 64-bit platforms.
+VICARE_SCHEME_COMPILER_TESTS	= \
+	tests/test-vicare-compiler-scheme-objects-ontology.sps		\
+	tests/test-vicare-compiler-internals.sps			\
+	tests/test-vicare-compiler-pass-source-optimiser.sps		\
+	tests/test-vicare-compiler-pass-core-type-inference.sps		\
+	tests/test-vicare-compiler-pass-introduce-unsafe-primrefs.sps	\
+	tests/test-vicare-compiler-pass-specify-representation.sps	\
+	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
+	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
+	tests/test-vicare-compiler-pass-color-by-chaitin.sps		\
+	tests/test-vicare-compiler-pass-flatten-codes.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	tests/long-test-r6rs-run.sps					\
@@ -1161,6 +1163,7 @@ EXTRA_DIST	+= \
 	$(VICARE_SCHEME_R6RS_TESTS)			\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\
+	$(VICARE_SCHEME_COMPILER_TESTS)			\
 	$(VICARE_SCHEME_SRFI_TESTS)			\
 	$(VICARE_SCHEME_SRFI_POSIX_TESTS)		\
 	$(VICARE_SCHEME_NAUSICAA_TESTS)			\
@@ -1175,6 +1178,10 @@ EXTRA_DIST	+= \
 
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS)
 XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps
+
+if WANT_64BIT_SUPPORT
+TESTS		+= $(VICARE_SCHEME_COMPILER_TESTS)
+endif
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
