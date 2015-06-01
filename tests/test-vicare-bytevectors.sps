@@ -3477,6 +3477,51 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-utf8))
+
+  (check (utf8->string-length '#vu8())				=> 0)
+  (check (utf8->string-length '#vu8(1 2 3))			=> 3)
+
+  ;;BOM!!!
+  (check (utf8->string-length '#vu8(#xEF #xBB #xBF))		=> 0)
+  (check (utf8->string-length '#vu8(#xEF #xBB #xBF 1 2 3))	=> 3)
+
+  ;;Invalid  sequence starting  with  valid  first byte  in  3-octet sequence.   When
+  ;;ignoring or replacing: we process the whole triplet.
+  (begin
+    (check (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'ignore)	=> 0)
+    (check (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'replace)	=> 1)
+    (check
+	(guard (E ((error? E)
+		   #t)
+		  (else E))
+	  (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'raise))
+      => #t))
+
+;;; --------------------------------------------------------------------
+
+  (check (utf8->string '#vu8())				=> "")
+  (check (utf8->string '#vu8(1 2 3))			=> "\x01;\x02;\x03;")
+
+  ;;BOM!!!
+  (check (utf8->string '#vu8(#xEF #xBB #xBF))		=> "")
+  (check (utf8->string '#vu8(#xEF #xBB #xBF 1 2 3))	=> "\x01;\x02;\x03;")
+
+  ;;Invalid  sequence starting  with  valid  first byte  in  3-octet sequence.   When
+  ;;ignoring or replacing: we process the whole triplet.
+  (begin
+    (check (utf8->string '#vu8(#xe0 #x67 #x0a) 'ignore)		=> "")
+    (check (utf8->string '#vu8(#xe0 #x67 #x0a) 'replace)	=> "\xFFFD;")
+    (check
+	(guard (E ((error? E)
+		   #t)
+		  (else E))
+	  (utf8->string '#vu8(#xe0 #x67 #x0a) 'raise))
+      => #t))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

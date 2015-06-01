@@ -327,7 +327,6 @@
 	    ;;Not foldable because it must return a new string at every application.
 	    ((_) 		effect-free result-true))))
 	)))
-  (declare-bytevector->string-conversion utf8->string)
   (declare-bytevector->string-conversion utf16le->string)
   (declare-bytevector->string-conversion utf16n->string)
   (declare-bytevector->string-conversion utf16be->string)
@@ -339,6 +338,26 @@
   (declare-bytevector->string-conversion percent-encoding->string)
   (declare-bytevector->string-conversion uri-encoding->string)
   #| end of LET-SYNTAX |# )
+
+(declare-core-primitive utf8->string
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:string))
+   ((T:bytevector T:symbol)	=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_) 		effect-free result-true)
+   ((_ _) 		effect-free result-true)))
+
+(declare-core-primitive utf8->string-length
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:fixnum))
+   ((T:bytevector T:symbol)	=> (T:fixnum)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_) 		effect-free result-true)
+   ((_ _) 		effect-free result-true)))
 
 (declare-core-primitive utf16->string
     (safe)
@@ -604,3 +623,6 @@
 #| end of library |# )
 
 ;;; end o file
+;; Local Variables:
+;; eval: (put 'declare-core-primitive 'scheme-indent-function 2)
+;; End:

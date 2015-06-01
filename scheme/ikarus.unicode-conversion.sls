@@ -14,7 +14,8 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+
+#!vicare
 (library (ikarus transcoders)
   (export string->utf8		utf8->string
 	  string->utf16		utf16->string
@@ -22,7 +23,9 @@
 	  string->utf16be	utf16be->string
 	  string->utf16n	utf16n->string
 	  string->utf32		utf32->string
-	  string->bytevector	bytevector->string)
+	  string->bytevector	bytevector->string
+
+	  utf8->string-length	string->utf8-length)
   (import (except (vicare)
 		  string->utf8		utf8->string
 		  string->utf16		utf16->string
@@ -30,304 +33,417 @@
 		  string->utf16be	utf16be->string
 		  string->utf16n	utf16n->string
 		  string->utf32		utf32->string
-                  string->bytevector	bytevector->string)
+                  string->bytevector	bytevector->string
+
+		  utf8->string-length	string->utf8-length)
     (vicare system $strings)
     (vicare system $bytevectors)
     (vicare system $fx)
-    (vicare system $chars))
+    (vicare system $chars)
+    ;;See the documentation of this library for details on Unicode.
+    (vicare unsafe unicode))
 
 
-;;; From http://en.wikipedia.org/wiki/UTF-8
-;;; hexadecimal      binary scalar value            UTF8
-;;; 000000-00007F    00000000_00000000_0zzzzzzz     0zzzzzzz
-;;; 000080-0007FF    00000000_00000yyy_yyzzzzzz     110yyyyy 10zzzzzz
-;;; 000800-00FFFF    00000000_xxxxyyyy_yyzzzzzz     1110xxxx 10yyyyyy 10zzzzzz
-;;; 010000-10FFFF    000wwwxx_xxxxyyyy_yyzzzzzz     11110www 10xxxxxx 10yyyyyy 10zzzzzz
+;;;; helpers
 
-;;; valid ranges:  [000000 - 00D7FF] \union [00E000 - 10FFFF]
-;;; invalid hole:  [00D800 - 00DFFF]
+(define (endianness? obj)
+  (memq obj '(little big)))
 
-;;; handling-modes: ignore, replace, raise
-;;; ignore: skips over the offending bytes
-;;; replace: places a U+FFFD in place of the malformed bytes
-;;; raise: raises an die
+(define ($fxadd2 N)
+  ($fx+ N 2))
 
-;;; It appears that utf-8 data can start with a #xEF #xBB #xBF BOM!
+(define ($fxadd3 N)
+  ($fx+ N 3))
 
-(define integer->char/invalid
-  (lambda (n)
-    (cond
-     [(not (fixnum? n))  #\xFFFD]
-     [($fx<= n #xD7FF)   ($fixnum->char n)]
-     [($fx< n #xE000)    #\xFFFD]
-     [($fx<= n #x10FFFF) ($fixnum->char n)]
-     [else               #\xFFFD])))
+(define ($fxadd4 N)
+  ($fx+ N 4))
 
-(define string->utf8
-  (lambda (str)
-    (define (utf8-string-size str)
-      (let f ([str str] [i 0] [j ($string-length str)] [n 0])
-	(cond
-	 [($fx= i j) n]
-	 [else
-	  (let ([c ($string-ref str i)])
-	    (let ([b ($char->fixnum c)])
-	      (f str ($fxadd1 i) j
-		 ($fx+ n
-		       (cond
-                        [($fx<= b #x7F)    1]
-                        [($fx<= b #x7FF)   2]
-                        [($fx<= b #xFFFF)  3]
-                        [else              4])))))])))
-    (define (fill-utf8-bytevector bv str)
-      (let f ([bv bv] [str str] [i 0] [j 0] [n ($string-length str)])
-	(cond
-	 [($fx= i n) bv]
-	 [else
-	  (let ([c ($string-ref str i)])
-	    (let ([b ($char->fixnum c)])
-	      (cond
-	       [($fx<= b #x7F)
-		($bytevector-set! bv j b)
-		(f bv str ($fxadd1 i) ($fxadd1 j) n)]
-	       [($fx<= b #x7FF)
-		($bytevector-set! bv j
-				  ($fxlogor #b11000000 ($fxsra b 6)))
-		($bytevector-set! bv ($fx+ j 1)
-				  ($fxlogor #b10000000 ($fxlogand b #b111111)))
-		(f bv str ($fxadd1 i) ($fx+ j 2) n)]
-	       [($fx<= b #xFFFF)
-		($bytevector-set! bv j
-				  ($fxlogor #b11100000 ($fxsra b 12)))
-		($bytevector-set! bv ($fx+ j 1)
-				  ($fxlogor #b10000000 ($fxlogand ($fxsra b 6) #b111111)))
-		($bytevector-set! bv ($fx+ j 2)
-				  ($fxlogor #b10000000 ($fxlogand b #b111111)))
-		(f bv str ($fxadd1 i) ($fx+ j 3) n)]
-	       [else
-		($bytevector-set! bv j
-				  ($fxlogor #b11110000 ($fxsra b 18)))
-		($bytevector-set! bv ($fx+ j 1)
-				  ($fxlogor #b10000000 ($fxlogand ($fxsra b 12) #b111111)))
-		($bytevector-set! bv ($fx+ j 2)
-				  ($fxlogor #b10000000 ($fxlogand ($fxsra b 6) #b111111)))
-		($bytevector-set! bv ($fx+ j 3)
-				  ($fxlogor #b10000000 ($fxlogand b #b111111)))
-		(f bv str ($fxadd1 i) ($fx+ j 4) n)])))])))
-    (unless (string? str)
-      (die 'string->utf8 "not a string" str))
-    (fill-utf8-bytevector
-     ($make-bytevector (utf8-string-size str))
-     str)))
+
+(define (integer->char/invalid n)
+  (cond ((not (fixnum? n))	#\xFFFD)
+	(($fx<= n #xD7FF)	($fixnum->char n))
+	(($fx<  n #xE000)	#\xFFFD)
+	(($fx<= n #x10FFFF)	($fixnum->char n))
+	(else			#\xFFFD)))
 
-(define (utf8->string x)
-  (unless (bytevector? x)
-    (die 'utf8->string "not a bytevector" x))
-  (decode-utf8-bytevector x 'replace))
+
+(module (string->utf8 string->utf8-length)
 
-(define decode-utf8-bytevector
-  (let ()
-    (define who 'decode-utf8-bytevector)
-    (define (count bv i mode)
-      (let f ([x bv] [i i] [j ($bytevector-length bv)] [n 0] [mode mode])
-	(cond
-	 [($fx= i j) n]
-	 [else
-	  (let ([b0 ($bytevector-u8-ref x i)])
-	    (cond
-	     [($fx<= b0 #x7F)
-	      (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-	     [($fx= ($fxsra b0 5) #b110)
-	      (let ([i ($fxadd1 i)])
-		(cond
-		 [($fx< i j)
-		  (let ([b1 ($bytevector-u8-ref x i)])
-		    (cond
-		     [(and ($fx= ($fxsra b1 6) #b10)
-                                 ;;; 000080-0007FF
-			   (let ([n (fxlogor (fxsll (fxlogand b0 #x1F) 6)
-					     (fxlogand b1 #x3F))])
-			     (and (fx>= n #x80)
-				  (fx<= n #x7FF))))
-		      (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-		     [(eq? mode 'ignore)
-		      (f x i j n mode)]
-		     [(eq? mode 'replace)
-		      (f x i j ($fxadd1 n) mode)]
-		     [else
-		      (die who "invalid byte sequence at idx of bytevector"
-			   b0 b1 i bv)]))]
-		 [(eq? mode 'ignore) n]
-		 [(eq? mode 'replace) ($fxadd1 n)]
-		 [else
-		  (die who "invalid byte near end of bytevector" b0)]))]
-	     [($fx= ($fxsra b0 4) #b1110)
-	      (cond
-	       [($fx< ($fx+ i 2) j)
-		(let ([b1 ($bytevector-u8-ref x ($fx+ i 1))]
-		      [b2 ($bytevector-u8-ref x ($fx+ i 2))])
-		  (cond
-		   [(and ($fx= ($fxsra ($fxlogor b1 b2) 6) #b10)
-			 (let ([n (fx+ (fxsll (fxlogand b0 #xF) 12)
-                                       (fx+ (fxsll (fxlogand b1 #x3F) 6)
-                                            (fxlogand b2 #x3F)))])
-                              ;;; REVIEW LATER ; 000800-00FFFF
-			   (and (fx>= n #x0000800) (fx<= n #x00FFFF))))
-		    (f x ($fx+ i 3) j ($fxadd1 n) mode)]
-		   [(eq? mode 'ignore)
-		    (f x ($fxadd1 i) j n mode)]
-		   [(eq? mode 'replace)
-		    (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-		   [else (die who "invalid sequence" b0 b1 b2)]))]
-	       [(eq? mode 'ignore) (f x ($fxadd1 i) j n mode)]
-	       [(eq? mode 'replace) (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-	       [else (die who "incomplete char sequence")])]
-	     [($fx= ($fxsra b0 3) #b11110)
-	      (cond
-	       [($fx< ($fx+ i 3) j)
-		(let ([b1 ($bytevector-u8-ref x ($fx+ i 1))]
-		      [b2 ($bytevector-u8-ref x ($fx+ i 2))]
-		      [b3 ($bytevector-u8-ref x ($fx+ i 3))])
-		  (cond
-		   [(and ($fx= ($fxsra ($fxlogor b1 ($fxlogor b2 b3)) 6) #b10)
-			 (let ([n
-				($fx+ ($fxlogand b3 #b111111)
-				      ($fx+ ($fxsll ($fxlogand b2 #b111111) 6)
-					    ($fx+ ($fxsll ($fxlogand b1 #b111111) 12)
-						  ($fxsll ($fxlogand b0 #b111) 18))))])
-                              ;;; 010000-10FFFF
-			   (and (fx>= n #x10000) (fx<= n #x10FFFF))))
-		    (f x ($fx+ i 4) j ($fxadd1 n) mode)]
-		   [(eq? mode 'ignore)
-		    (f x ($fxadd1 i) j n mode)]
-		   [(eq? mode 'replace)
-		    (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-		   [else (die who "invalid sequence" b0 b1 b2 b3)]))]
-	       [(eq? mode 'ignore) (f x ($fxadd1 i) j n mode)]
-	       [(eq? mode 'replace) (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-	       [else (die who "incomplete char sequence")])]
-	     [(eq? mode 'ignore) (f x ($fxadd1 i) j n mode)]
-	     [(eq? mode 'replace) (f x ($fxadd1 i) j ($fxadd1 n) mode)]
-	     [else (die who "invalid byte at index of bytevector" b0 i x)]))])))
-    (define (fill str bv i mode)
-      (let f ([str str] [x bv] [i i] [j ($bytevector-length bv)] [n 0] [mode mode])
-	(cond
-	 [($fx= i j) str]
-	 [else
-	  (let ([b0 ($bytevector-u8-ref x i)])
-	    (cond
-	     [($fx<= b0 #x7F)
-	      ($string-set! str n ($fixnum->char b0))
-	      (f str x ($fxadd1 i) j ($fxadd1 n) mode)]
-	     [($fx= ($fxsra b0 5) #b110)
-	      (let ([i ($fxadd1 i)])
-		(cond
-		 [($fx< i j)
-		  (let ([b1 ($bytevector-u8-ref x i)])
-		    (cond
-		     [(and ($fx= ($fxsra b1 6) #b10)
-                              ;;; 000080-0007FF
-			   (let ([n (fxlogor (fxsll (fxlogand b0 #x1F) 6)
-					     (fxlogand b1 #x3F))])
-			     (and (fx>= n #x80)
-				  (fx<= n #x7FF)
-				  ($fixnum->char n)))) =>
-				  (lambda (c)
-				    ($string-set! str n c)
-				    (f str x ($fxadd1 i) j ($fxadd1 n) mode))]
-		     [(eq? mode 'ignore)
-		      (f str x i j n mode)]
-		     [(eq? mode 'replace)
-		      ($string-set! str n ($fixnum->char #xFFFD))
-		      (f str x i j ($fxadd1 n) mode)]
-		     [else (die who "BUG")]))]
-		 [(eq? mode 'ignore) str]
-		 [(eq? mode 'replace)
-		  ($string-set! str n ($fixnum->char #xFFFD))
-		  str]
-		 [else (die who "BUG")]))]
-	     [($fx= ($fxsra b0 4) #b1110)
-	      (cond
-	       [($fx< ($fx+ i 2) j)
-		(let ([b1 ($bytevector-u8-ref x ($fx+ i 1))]
-		      [b2 ($bytevector-u8-ref x ($fx+ i 2))])
-		  (cond
-		   [(and ($fx= ($fxsra ($fxlogor b1 b2) 6) #b10)
-			 (let ([n (fx+ (fxsll (fxlogand b0 #xF) 12)
-                                       (fx+ (fxsll (fxlogand b1 #x3F) 6)
-                                            (fxlogand b2 #x3F)))])
-                              ;;; REVIEW LATER ; 000800-00FFFF
-			   (and (and (fx>= n #x000800) (fx<= n #x00FFFF))
-				($fixnum->char n)))) =>
-				(lambda (c)
-				  ($string-set! str n c)
-				  (f str x ($fx+ i 3) j ($fxadd1 n) mode))]
-		   [(eq? mode 'ignore)
-		    (f str x ($fxadd1 i) j n mode)]
-		   [(eq? mode 'replace)
-		    ($string-set! str n ($fixnum->char #xFFFD))
-		    (f str x ($fxadd1 i) j ($fxadd1 n) mode)]
-		   [else (die who "BUG")]))]
-	       [(eq? mode 'ignore) (f str x ($fxadd1 i) j n mode)]
-	       [(eq? mode 'replace)
-		($string-set! str n ($fixnum->char #xFFFD))
-		(f str x ($fxadd1 i) j ($fxadd1 n) mode)]
-	       [else (die who "BUG")])]
-	     [($fx= ($fxsra b0 3) #b11110)
-	      (cond
-	       [($fx< ($fx+ i 3) j)
-		(let ([b1 ($bytevector-u8-ref x ($fx+ i 1))]
-		      [b2 ($bytevector-u8-ref x ($fx+ i 2))]
-		      [b3 ($bytevector-u8-ref x ($fx+ i 3))])
-		  (cond
-		   [(and ($fx= ($fxsra ($fxlogor b1 ($fxlogor b2 b3)) 6) #b10)
-			 (let ([n
-				($fx+ ($fxlogand b3 #b111111)
-				      ($fx+ ($fxsll ($fxlogand b2 #b111111) 6)
-					    ($fx+ ($fxsll ($fxlogand b1 #b111111) 12)
-						  ($fxsll ($fxlogand b0 #b111) 18))))])
-                              ;;; 010000-10FFFF
-			   (and (fx>= n #x10000)
-				(fx<= n #x10FFFF)
-				($fixnum->char n)))) =>
-				(lambda (c)
-				  ($string-set! str n c)
-				  (f str x ($fx+ i 4) j ($fxadd1 n) mode))]
-		   [(eq? mode 'ignore)
-		    (f str x ($fxadd1 i) j n mode)]
-		   [(eq? mode 'replace)
-		    ($string-set! str n ($fixnum->char #xFFFD))
-		    (f str x ($fxadd1 i) j ($fxadd1 n) mode)]
-		   [else (die who "BUG")]))]
-	       [(eq? mode 'ignore) (f str x ($fxadd1 i) j n mode)]
-	       [(eq? mode 'replace)
-		($string-set! str n ($fixnum->char #xFFFD))
-		(f str x ($fxadd1 i) j ($fxadd1 n) mode)]
-	       [else (die who "BUG")])]
-	     [(eq? mode 'ignore) (f str x ($fxadd1 i) j n mode)]
-	     [(eq? mode 'replace)
-	      ($string-set! str n ($fixnum->char #xFFFD))
-	      (f str x ($fxadd1 i) j ($fxadd1 n) mode)]
-	     [else (die who "BUG")]))])))
-    (define (has-bom? bv)
-      (and (fx> (bytevector-length bv) 3)
-	   (fx= (bytevector-u8-ref bv 0) #xEF)
-	   (fx= (bytevector-u8-ref bv 1) #xBB)
-	   (fx= (bytevector-u8-ref bv 2) #xBF)))
-    (define (convert bv mode)
-      (cond
-       [(has-bom? bv)
-	(fill ($make-string (count bv 3 mode)) bv 3 mode)]
-       [else
-	(fill ($make-string (count bv 0 mode)) bv 0 mode)]))
-    (case-lambda
-     [(bv) (convert bv 'raise)]
-     [(bv handling-mode)
-      (unless (memq handling-mode '(ignore replace raise))
-	(die 'decode-utf8-bytevector
-	     "not a valid handling mode"
-	     handling-mode))
-      (convert bv handling-mode)])))
+  (define* (string->utf8 {str string?})
+    (let loop ((bv       ($make-bytevector (string->utf8-length str)))
+	       (str      str)
+	       (str.idx  0)
+	       (bv.idx   0)
+	       (str.len  ($string-length str)))
+      (if ($fx= str.idx str.len)
+	  bv
+	(let ((code-point ($char->fixnum ($string-ref str str.idx))))
+	  (cond (($fx<= code-point #x7F)
+		 ;;CODE-POINT fits in a 1-octet sequence.
+		 ($bytevector-set! bv bv.idx code-point)
+		 (loop bv str ($fxadd1 str.idx) ($fxadd1 bv.idx) str.len))
+
+		(($fx<= code-point #x7FF)
+		 ;;CODE-POINT fits in a 2-octect sequence.
+		 ($bytevector-set! bv bv.idx          ($fxlogor #b11000000 ($fxsra    code-point 6)))
+		 ($bytevector-set! bv ($fx+ bv.idx 1) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
+		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 2) str.len))
+
+		;;CODE-POINT fits in a 3-octect sequence.
+		(($fx<= code-point #xFFFF)
+		 ($bytevector-set! bv bv.idx          ($fxlogor #b11100000 ($fxsra    code-point 12)))
+		 ($bytevector-set! bv ($fx+ bv.idx 1) ($fxlogor #b10000000 ($fxlogand ($fxsra code-point 6) #b111111)))
+		 ($bytevector-set! bv ($fx+ bv.idx 2) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
+		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 3) str.len))
+
+		;;CODE-POINT fits in a 4-octect sequence.
+		(else
+		 ($bytevector-set! bv bv.idx          ($fxlogor #b11110000 ($fxsra    code-point 18)))
+		 ($bytevector-set! bv ($fx+ bv.idx 1) ($fxlogor #b10000000 ($fxlogand ($fxsra code-point 12) #b111111)))
+		 ($bytevector-set! bv ($fx+ bv.idx 2) ($fxlogor #b10000000 ($fxlogand ($fxsra code-point  6) #b111111)))
+		 ($bytevector-set! bv ($fx+ bv.idx 3) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
+		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 4) str.len)))))))
+
+  (define (string->utf8-length str)
+    (let loop ((str str) (str.len ($string-length str)) (str.idx 0) (bv.len 0))
+      (if ($fx= str.idx str.len)
+	  bv.len
+	(let ((code-point ($char->fixnum ($string-ref str str.idx))))
+	  (loop str str.len ($fxadd1 str.idx)
+		($fx+ bv.len (cond (($fx<= code-point #x7F)    1)
+				   (($fx<= code-point #x7FF)   2)
+				   (($fx<= code-point #xFFFF)  3)
+				   (else                       4))))))))
+
+  #| end of module |# )
+
+
+(module (utf8->string utf8->string-length)
+
+  (module (utf8->string)
+
+    (case-define* utf8->string
+      (({bv bytevector?})
+       (%convert __who__ bv 'replace))
+      (({bv bytevector?} {handling-mode error-handling-mode?})
+       (%convert __who__ bv handling-mode)))
+
+    (define (%convert who bv mode)
+      (let* ((bv.start   (if (%has-bom? bv) 3 0))
+	     (bv.end     ($bytevector-length bv))
+	     (str        ($make-string (%compute-string-length who bv bv.start bv.end 0 mode)))
+	     (str.start  0))
+	(%convert-and-fill-string who bv bv.start bv.end str str.start mode)))
+
+    #| end of module |# )
+
+  (module (utf8->string-length)
+
+    (case-define* utf8->string-length
+      (({bv bytevector?})
+       (%compute __who__ bv 'replace))
+      (({bv bytevector?} {handling-mode error-handling-mode?})
+       (%compute __who__ bv handling-mode)))
+
+    (define (%compute who bv mode)
+      (let ((bv.start   (if (%has-bom? bv) 3 0))
+	    (bv.end     ($bytevector-length bv))
+	    (accum-len  0))
+	(%compute-string-length who bv bv.start bv.end accum-len mode)))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (error-handling-mode? obj)
+    (or (eq? obj 'ignore)
+	(eq? obj 'replace)
+	(eq? obj 'raise)))
+
+  (define (%has-bom? bv)
+    (and ($fx>= ($bytevector-length bv) 3)
+	 ($fx= ($bytevector-u8-ref bv 0) #xEF)
+	 ($fx= ($bytevector-u8-ref bv 1) #xBB)
+	 ($fx= ($bytevector-u8-ref bv 2) #xBF)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%compute-string-length who bv bv.idx bv.end accum-len mode)
+    (define-syntax-rule (%recurse bv.idx accum-len)
+      (%compute-string-length who bv bv.idx bv.end accum-len mode))
+
+    (define (%error-at-end)
+      (case mode
+	((ignore)
+	 ;;When we ignore: we leave the computed string length unchanged.
+	 accum-len)
+	((replace)
+	 ($fxadd1 accum-len))
+	(else
+	 (error who "invalid byte sequence near end of bytevector" bv))))
+
+    (define (%error-at-index bv.idx bv.next-idx . irritants)
+      (case mode
+	((ignore)
+	 ;;When we ignore: we leave the computed string length unchanged.
+	 (%recurse bv.next-idx accum-len))
+	((replace)
+	 (%recurse bv.next-idx ($fxadd1 accum-len)))
+	(else
+	 (apply error who
+		(string-append "invalid byte sequence at index " (number->string bv.idx) " of bytevector")
+		bv irritants))))
+
+    (if ($fx= bv.idx bv.end)
+	accum-len
+      (let ((octet0 ($bytevector-u8-ref bv bv.idx)))
+	(cond ((utf-8-single-octet? octet0)
+	       (%recurse ($fxadd1 bv.idx) ($fxadd1 accum-len)))
+
+	      ((utf-8-first-of-two-octets? octet0)
+	       (if ($fx< ($fxadd1 bv.idx) bv.end)
+		   ;;Good, there is  still one octect which may be  the second in a
+		   ;;2-octet sequence.
+		   (let* ((i1     ($fxadd1 bv.idx))
+			  (octet1 ($bytevector-u8-ref bv i1))
+			  (bv.next-idx ($fxadd1 i1)))
+		     (if (utf-8-second-of-two-octets? octet1)
+			 (begin
+			   (assert (let ((code-point (utf-8-decode-two-octets octet0 octet1)))
+				     (utf-8-valid-code-point-from-2-octets? code-point)))
+			   (%recurse bv.next-idx ($fxadd1 accum-len)))
+		       (%error-at-index bv.idx bv.next-idx octet0 octet1)))
+		 (%error-at-end)))
+
+	      ((utf-8-first-of-three-octets? octet0)
+	       (if ($fx< ($fxadd2 bv.idx) bv.end)
+		   ;;Good, there are still two octects  which may be the second and
+		   ;;third in a 3-octet sequence.
+		   (let* ((i1     ($fxadd1 bv.idx))
+			  (octet1 ($bytevector-u8-ref bv i1))
+			  (i2     ($fxadd1 i1))
+			  (octet2 ($bytevector-u8-ref bv i2))
+			  (bv.next-idx ($fxadd1 i2)))
+		     (if (utf-8-second-and-third-of-three-octets? octet1 octet2)
+			 (begin
+			   (assert (let ((code-point (utf-8-decode-three-octets octet0 octet1 octet2)))
+				     (utf-8-valid-code-point-from-3-octets? code-point)))
+			   (%recurse bv.next-idx ($fxadd1 accum-len)))
+		       (%error-at-index bv.idx bv.next-idx octet0 octet1 octet2)))
+		 (%error-at-end)))
+
+	      ((utf-8-first-of-four-octets? octet0)
+	       (if ($fx< ($fxadd3 bv.idx) bv.end)
+		   ;;Good, there are  still three octects which may  be the second,
+		   ;;third and fourth in a 4-octet sequence.
+		   (let* ((i1     ($fxadd1 bv.idx))
+			  (octet1 ($bytevector-u8-ref bv i1))
+			  (i2     ($fxadd1 i1))
+			  (octet2 ($bytevector-u8-ref bv i2))
+			  (i3     ($fxadd1 i2))
+			  (octet3 ($bytevector-u8-ref bv i3))
+			  (bv.next-idx ($fxadd1 i3)))
+		     (if (utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+			 (begin
+			   (assert (let ((code-point (utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
+				     (utf-8-valid-code-point-from-4-octets? code-point)))
+			   (%recurse bv.next-idx ($fxadd1 accum-len)))
+		       (%error-at-index bv.idx bv.next-idx octet0 octet1 octet2 octet3)))
+		 (%error-at-end)))
+
+	      (else
+	       (%error-at-end))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%convert-and-fill-string who bv bv.idx bv.end str str.idx mode)
+    (define-syntax-rule (%recurse bv.idx str.idx)
+      (%convert-and-fill-string who bv bv.idx bv.end str str.idx mode))
+
+    (define (%error-at-end)
+      (case mode
+	((ignore)
+	 ;;When we ignore: we  skip the invalid char.  This is  coherent with what we
+	 ;;did when computing the length.
+	 str)
+	((replace)
+	 ($string-set! str str.idx ($fixnum->char #xFFFD))
+	 str)
+	(else
+	 (error who "invalid byte sequence near end of bytevector" bv))))
+
+    (define (%error-at-index bv.idx bv.next-idx str.idx . irritants)
+      (case mode
+	((ignore)
+	 ;;When we  ignore: we  skip the  invalid char  and leave  STR.IDX unchanged.
+	 ;;This is coherent with what we did when computing the length.
+	 (%recurse bv.next-idx str.idx))
+	((replace)
+	 ($string-set! str str.idx ($fixnum->char #xFFFD))
+	 (%recurse bv.next-idx ($fxadd1 str.idx)))
+	(else
+	 (apply error who
+		(string-append "invalid byte sequence at index " (number->string bv.idx) " of bytevector")
+		bv irritants))))
+
+    (if ($fx= bv.idx bv.end)
+	str
+      (let ((octet0 ($bytevector-u8-ref bv bv.idx)))
+	(cond ((utf-8-single-octet? octet0)
+	       ($string-set! str str.idx ($fixnum->char octet0))
+	       (%recurse ($fxadd1 bv.idx) ($fxadd1 str.idx)))
+
+	      ((utf-8-first-of-two-octets? octet0)
+	       (if ($fx< ($fxadd1 bv.idx) bv.end)
+		   ;;Good, there is  still one octect which may be  the second in a
+		   ;;2-octet sequence.
+		   (let* ((i1     ($fxadd1 bv.idx))
+			  (octet1 ($bytevector-u8-ref bv i1))
+			  (bv.next-idx ($fxadd1 i1)))
+		     (if (utf-8-second-of-two-octets? octet1)
+			 (begin
+			   ($string-set! str str.idx ($fixnum->char (utf-8-decode-two-octets octet0 octet1)))
+			   (%recurse bv.next-idx ($fxadd1 str.idx)))
+		       (%error-at-index bv.idx bv.next-idx str.idx octet0 octet1)))
+		 (%error-at-end)))
+
+	      ((utf-8-first-of-three-octets? octet0)
+	       (if ($fx< ($fxadd2 bv.idx) bv.end)
+		   ;;Good, there are still two octects  which may be the second and
+		   ;;third in a 3-octet sequence.
+		   (let* ((i1     ($fxadd1 bv.idx))
+			  (octet1 ($bytevector-u8-ref bv i1))
+			  (i2     ($fxadd1 i1))
+			  (octet2 ($bytevector-u8-ref bv i2))
+			  (bv.next-idx ($fxadd1 i2)))
+		     (if (utf-8-second-and-third-of-three-octets? octet1 octet2)
+			 (begin
+			   ($string-set! str str.idx ($fixnum->char (utf-8-decode-three-octets octet0 octet1 octet2)))
+			   (%recurse bv.next-idx ($fxadd1 str.idx)))
+		       (%error-at-index bv.idx bv.next-idx str.idx octet0 octet1 octet2)))
+		 (%error-at-end)))
+
+	      ((utf-8-first-of-four-octets? octet0)
+	       (if ($fx< ($fxadd3 bv.idx) bv.end)
+		   ;;Good, there are  still three octects which may  be the second,
+		   ;;third and fourth in a 4-octet sequence.
+		   (let* ((i1     ($fxadd1 bv.idx))
+			  (octet1 ($bytevector-u8-ref bv i1))
+			  (i2     ($fxadd1 i1))
+			  (octet2 ($bytevector-u8-ref bv i2))
+			  (i3     ($fxadd1 i2))
+			  (octet3 ($bytevector-u8-ref bv i3))
+			  (bv.next-idx ($fxadd1 i3)))
+		     (if (utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+			 (begin
+			   ($string-set! str str.idx ($fixnum->char (utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
+			   (%recurse bv.next-idx ($fxadd1 str.idx)))
+		       (%error-at-index bv.idx bv.next-idx str.idx octet0 octet1 octet2 octet3)))
+		 (%error-at-end)))
+
+	      (else
+	       (%error-at-end))))))
+
+    ;; (let loop ((str     str)
+    ;; 	       (x       bv)
+    ;; 	       (i       i)
+    ;; 	       (bv.len  ($bytevector-length bv))
+    ;; 	       (n       0)
+    ;; 	       (mode    mode))
+    ;;   (if ($fx= i bv.len)
+    ;; 	  str
+    ;; 	(let ((b0 ($bytevector-u8-ref x i)))
+    ;; 	  (cond (($fx<= b0 #x7F)
+    ;; 		 ($string-set! str n ($fixnum->char b0))
+    ;; 		 (loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode))
+    ;; 		(($fx= ($fxsra b0 5) #b110)
+    ;; 		 (let ((i ($fxadd1 i)))
+    ;; 		   (cond (($fx< i bv.len)
+    ;; 			  (let ((b1 ($bytevector-u8-ref x i)))
+    ;; 			    (cond ((and ($fx= ($fxsra b1 6) #b10)
+    ;; 					;; 000080-0007FF
+    ;; 					(let ((n (fxlogor (fxsll (fxlogand b0 #x1F) 6)
+    ;; 							  (fxlogand b1 #x3F))))
+    ;; 					  (and (fx>= n #x80)
+    ;; 					       (fx<= n #x7FF)
+    ;; 					       ($fixnum->char n)))) =>
+    ;; 					       (lambda (c)
+    ;; 						 ($string-set! str n c)
+    ;; 						 (loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode)))
+    ;; 				  ((eq? mode 'ignore)
+    ;; 				   (loop str x i bv.len n mode))
+    ;; 				  ((eq? mode 'replace)
+    ;; 				   ($string-set! str n ($fixnum->char #xFFFD))
+    ;; 				   (loop str x i bv.len ($fxadd1 n) mode))
+    ;; 				  (else (die who "BUG")))))
+    ;; 			 ((eq? mode 'ignore) str)
+    ;; 			 ((eq? mode 'replace)
+    ;; 			  ($string-set! str n ($fixnum->char #xFFFD))
+    ;; 			  str)
+    ;; 			 (else (die who "BUG")))))
+    ;; 		(($fx= ($fxsra b0 4) #b1110)
+    ;; 		 (cond (($fx< ($fxadd2 i) bv.len)
+    ;; 			(let ((b1 ($bytevector-u8-ref x ($fxadd1 i)))
+    ;; 			      (b2 ($bytevector-u8-ref x ($fxadd2 i))))
+    ;; 			  (cond ((and ($fx= ($fxsra ($fxlogor b1 b2) 6) #b10)
+    ;; 				      (let ((n (fx+ (fxsll (fxlogand b0 #xF) 12)
+    ;; 						    (fx+ (fxsll (fxlogand b1 #x3F) 6)
+    ;; 							 (fxlogand b2 #x3F)))))
+    ;; 					;; REVIEW LATER ; 000800-00FFFF
+    ;; 					(and (and (fx>= n #x000800) (fx<= n #x00FFFF))
+    ;; 					     ($fixnum->char n)))) =>
+    ;; 					     (lambda (c)
+    ;; 					       ($string-set! str n c)
+    ;; 					       (loop str x ($fxadd3 i) bv.len ($fxadd1 n) mode)))
+    ;; 				((eq? mode 'ignore)
+    ;; 				 (loop str x ($fxadd1 i) bv.len n mode))
+    ;; 				((eq? mode 'replace)
+    ;; 				 ($string-set! str n ($fixnum->char #xFFFD))
+    ;; 				 (loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode))
+    ;; 				(else (die who "BUG")))))
+    ;; 		       ((eq? mode 'ignore) (loop str x ($fxadd1 i) bv.len n mode))
+    ;; 		       ((eq? mode 'replace)
+    ;; 			($string-set! str n ($fixnum->char #xFFFD))
+    ;; 			(loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode))
+    ;; 		       (else (die who "BUG"))))
+    ;; 		(($fx= ($fxsra b0 3) #b11110)
+    ;; 		 (cond (($fx< ($fxadd3 i) bv.len)
+    ;; 			(let ((b1 ($bytevector-u8-ref x ($fxadd1 i)))
+    ;; 			      (b2 ($bytevector-u8-ref x ($fxadd2 i)))
+    ;; 			      (b3 ($bytevector-u8-ref x ($fxadd3 i))))
+    ;; 			  (cond ((and ($fx= ($fxsra ($fxlogor b1 ($fxlogor b2 b3)) 6) #b10)
+    ;; 				      (let ((n
+    ;; 					     ($fx+ ($fxlogand b3 #b111111)
+    ;; 						   ($fx+ ($fxsll ($fxlogand b2 #b111111) 6)
+    ;; 							 ($fx+ ($fxsll ($fxlogand b1 #b111111) 12)
+    ;; 							       ($fxsll ($fxlogand b0 #b111) 18))))))
+    ;; 					;; 010000-10FFFF
+    ;; 					(and (fx>= n #x10000)
+    ;; 					     (fx<= n #x10FFFF)
+    ;; 					     ($fixnum->char n))))
+    ;; 				 => (lambda (c)
+    ;; 				      ($string-set! str n c)
+    ;; 				      (loop str x ($fxadd4 i) bv.len ($fxadd1 n) mode)))
+    ;; 				((eq? mode 'ignore)
+    ;; 				 (loop str x ($fxadd1 i) bv.len n mode))
+    ;; 				((eq? mode 'replace)
+    ;; 				 ($string-set! str n ($fixnum->char #xFFFD))
+    ;; 				 (loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode))
+    ;; 				(else (die who "BUG")))))
+    ;; 		       ((eq? mode 'ignore) (loop str x ($fxadd1 i) bv.len n mode))
+    ;; 		       ((eq? mode 'replace)
+    ;; 			($string-set! str n ($fixnum->char #xFFFD))
+    ;; 			(loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode))
+    ;; 		       (else (die who "BUG"))))
+    ;; 		((eq? mode 'ignore)
+    ;; 		 (loop str x ($fxadd1 i) bv.len n mode))
+    ;; 		((eq? mode 'replace)
+    ;; 		 ($string-set! str n ($fixnum->char #xFFFD))
+    ;; 		 (loop str x ($fxadd1 i) bv.len ($fxadd1 n) mode))
+    ;; 		(else
+    ;; 		 (die who "BUG")))))))
+
+  #| end of module |# )
 
 
 ;;; From: http://tools.ietf.org/html/rfc2781
@@ -391,241 +507,233 @@
   (define ($string->utf16 str endianness)
     (define (count-surr* str len i n)
       (cond
-       [(fx= i len) n]
-       [else
-	(let ([c (string-ref str i)])
+       ((fx= i len) n)
+       (else
+	(let ((c (string-ref str i)))
 	  (cond
-	   [(char<? c #\x10000)
-	    (count-surr* str len (fx+ i 1) n)]
-	   [else
-	    (count-surr* str len (fx+ i 1) (fx+ n 1))]))]))
+	   ((char<? c #\x10000)
+	    (count-surr* str len (fx+ i 1) n))
+	   (else
+	    (count-surr* str len (fx+ i 1) (fx+ n 1))))))))
     (define (bvfill str bv i j len endianness)
       (cond
-       [(fx= i len) bv]
-       [else
-	(let ([n (char->integer (string-ref str i))])
+       ((fx= i len) bv)
+       (else
+	(let ((n (char->integer (string-ref str i))))
 	  (cond
-	   [(fx< n #x10000)
+	   ((fx< n #x10000)
 	    (bytevector-u16-set! bv j n endianness)
-	    (bvfill str bv (fx+ i 1) (fx+ j 2) len endianness)]
-	   [else
-	    (let ([u^ (fx- n #x10000)])
+	    (bvfill str bv (fx+ i 1) (fx+ j 2) len endianness))
+	   (else
+	    (let ((u^ (fx- n #x10000)))
 	      (bytevector-u16-set! bv j
 				   (fxlogor (fxsll #b110110 10) (fxsra u^ 10))
 				   endianness)
 	      (bytevector-u16-set! bv (fx+ j 2)
 				   (fxlogor (fxsll #b110111 10) (fxlogand u^ #x3FF))
 				   endianness))
-	    (bvfill str bv (fx+ i 1) (fx+ j 4) len endianness)]))]))
-    (let ([len ($string-length str)])
-      (let ([n (count-surr* str len 0 0)])
+	    (bvfill str bv (fx+ i 1) (fx+ j 4) len endianness)))))))
+    (let ((len ($string-length str)))
+      (let ((n (count-surr* str len 0 0)))
           ;;; FIXME: maybe special case for n=0 later
-	(let ([bv (make-bytevector (fxsll (fx+ len n) 1))])
+	(let ((bv (make-bytevector (fxsll (fx+ len n) 1))))
 	  (bvfill str bv 0 0 len endianness)))))
   (define string->utf16
     (case-lambda
-     [(str)
+     ((str)
       (unless (string? str)
 	(die 'string->utf16 "not a string" str))
-      ($string->utf16 str 'big)]
-     [(str endianness)
+      ($string->utf16 str 'big))
+     ((str endianness)
       (unless (string? str)
 	(die 'string->utf16 "not a string" str))
       (unless (memv endianness '(big little))
 	(die 'string->utf16 "invalid endianness" endianness))
-      ($string->utf16 str endianness)])))
+      ($string->utf16 str endianness)))))
 
 (module (utf16->string)
   (define who 'utf16->string)
   (define (count-size bv endianness i len n)
     (cond
-     [(fx= i len)
+     ((fx= i len)
       (if (fx= len (bytevector-length bv))
 	  n
-	(+ n 1))]
-     [else
-      (let ([w1 (bytevector-u16-ref bv i endianness)])
+	(+ n 1)))
+     (else
+      (let ((w1 (bytevector-u16-ref bv i endianness)))
 	(cond
-	 [(or (fx< w1 #xD800) (fx> w1 #xDFFF))
-	  (count-size bv endianness (+ i 2) len (+ n 1))]
-	 [(not (fx<= #xD800 w1 #xDBFF)) ;;; error sequence
-	  (count-size bv endianness (+ i 2) len (+ n 1))]
-	 [(<= (+ i 4) (bytevector-length bv))
-	  (let ([w2 (bytevector-u16-ref bv (+ i 2) endianness)])
+	 ((or (fx< w1 #xD800) (fx> w1 #xDFFF))
+	  (count-size bv endianness (+ i 2) len (+ n 1)))
+	 ((not (fx<= #xD800 w1 #xDBFF)) ;;; error sequence
+	  (count-size bv endianness (+ i 2) len (+ n 1)))
+	 ((<= (+ i 4) (bytevector-length bv))
+	  (let ((w2 (bytevector-u16-ref bv (+ i 2) endianness)))
 	    (cond
-	     [(not (<= #xDC00 w2 #xDFFF))
+	     ((not (<= #xDC00 w2 #xDFFF))
                    ;;; do we skip w2 also?
                    ;;; I won't.  Just w1 is an error
-	      (count-size bv endianness (+ i 2) len (+ n 1))]
-	     [else
+	      (count-size bv endianness (+ i 2) len (+ n 1)))
+	     (else
                    ;;; 4-byte sequence is ok
-	      (count-size bv endianness (+ i 4) len (+ n 1))]))]
-	 [else
+	      (count-size bv endianness (+ i 4) len (+ n 1))))))
+	 (else
               ;;; error again
-	  (count-size bv endianness (+ i 2) len (+ n 1))]))]))
+	  (count-size bv endianness (+ i 2) len (+ n 1))))))))
   (define (fill bv endianness str i len n)
     (cond
-     [(fx= i len)
+     ((fx= i len)
       (unless (fx= len (bytevector-length bv))
 	(string-set! str n #\xFFFD))
-      str]
-     [else
-      (let ([w1 (bytevector-u16-ref bv i endianness)])
+      str)
+     (else
+      (let ((w1 (bytevector-u16-ref bv i endianness)))
 	(cond
-	 [(or (fx< w1 #xD800) (fx> w1 #xDFFF))
+	 ((or (fx< w1 #xD800) (fx> w1 #xDFFF))
 	  (string-set! str n (integer->char/invalid w1))
-	  (fill bv endianness str (+ i 2) len (+ n 1))]
-	 [(not (fx<= #xD800 w1 #xDBFF)) ;;; error sequence
+	  (fill bv endianness str (+ i 2) len (+ n 1)))
+	 ((not (fx<= #xD800 w1 #xDBFF)) ;;; error sequence
 	  (string-set! str n #\xFFFD)
-	  (fill bv endianness str (+ i 2) len (+ n 1))]
-	 [(<= (+ i 4) (bytevector-length bv))
-	  (let ([w2 (bytevector-u16-ref bv (+ i 2) endianness)])
+	  (fill bv endianness str (+ i 2) len (+ n 1)))
+	 ((<= (+ i 4) (bytevector-length bv))
+	  (let ((w2 (bytevector-u16-ref bv (+ i 2) endianness)))
 	    (cond
-	     [(not (<= #xDC00 w2 #xDFFF))
+	     ((not (<= #xDC00 w2 #xDFFF))
                    ;;; do we skip w2 also?
                    ;;; I won't.  Just w1 is an error
 	      (string-set! str n #\xFFFD)
-	      (fill bv endianness str (+ i 2) len (+ n 1))]
-	     [else
+	      (fill bv endianness str (+ i 2) len (+ n 1)))
+	     (else
 	      (string-set! str n
 			   (integer->char/invalid
 			    (+ #x10000
 			       (fxlogor (fxsll (fxlogand w1 #x3FF) 10)
 					(fxlogand w2 #x3FF)))))
-	      (fill bv endianness str (+ i 4) len (+ n 1))]))]
-	 [else
+	      (fill bv endianness str (+ i 4) len (+ n 1))))))
+	 (else
               ;;; error again
 	  (string-set! str n #\xFFFD)
-	  (fill bv endianness str (+ i 2) len (+ n 1))]))]))
+	  (fill bv endianness str (+ i 2) len (+ n 1))))))))
   (define (decode bv endianness start)
-    (let ([len (fxand (bytevector-length bv) -2)])
-      (let ([n (count-size bv endianness start len 0)])
-	(let ([str (make-string n)])
+    (let ((len (fxand (bytevector-length bv) -2)))
+      (let ((n (count-size bv endianness start len 0)))
+	(let ((str (make-string n)))
 	  (fill bv endianness str start len 0)))))
   (define ($utf16->string bv endianness em?)
     (define (bom-present bv)
       (and (fx>= (bytevector-length bv) 2)
-	   (let ([n (bytevector-u16-ref bv 0 'big)])
+	   (let ((n (bytevector-u16-ref bv 0 'big)))
 	     (cond
-	      [(fx= n #xFEFF) 'big]
-	      [(fx= n #xFFFE) 'little]
-	      [else #f]))))
+	      ((fx= n #xFEFF) 'big)
+	      ((fx= n #xFFFE) 'little)
+	      (else #f)))))
     (unless (bytevector? bv)
       (die who "not a bytevector" bv))
     (unless (memv endianness '(big little))
       (die who "invalid endianness" endianness))
     (cond
-     [em?  (decode bv endianness 0)]
-     [(bom-present bv) =>
+     (em?  (decode bv endianness 0))
+     ((bom-present bv) =>
       (lambda (endianness)
-	(decode bv endianness 2))]
-     [else
-      (decode bv endianness 0)]))
+	(decode bv endianness 2)))
+     (else
+      (decode bv endianness 0))))
   (define utf16->string
     (case-lambda
-     [(bv endianness)
-      ($utf16->string bv endianness #f)]
-     [(bv endianness em?)
-      ($utf16->string bv endianness em?)])))
+     ((bv endianness)
+      ($utf16->string bv endianness #f))
+     ((bv endianness em?)
+      ($utf16->string bv endianness em?)))))
 
 
 (module (string->utf32)
-  (define who 'string->utf32)
-  (define (vfill str bv i len endianness)
-    (cond
-     [(fx= i len) bv]
-     [else
-      (bytevector-u32-set! bv (fxsll i 2)
-			   (char->integer (string-ref str i))
-			   endianness)
-      (vfill str bv (fx+ i 1) len endianness)]))
+
+  (case-define* string->utf32
+    (({str string?})
+     ($string->utf32 str 'big))
+
+    (({str string?} {endianness endianness?})
+     ($string->utf32 str endianness))
+
+    #| end of CASE-DEFINE* |# )
+
   (define ($string->utf32 str endianness)
-    (let ([len (string-length str)])
+    (let ((len (string-length str)))
       (vfill str (make-bytevector (fxsll len 2)) 0 len endianness)))
-  (define string->utf32
-    (case-lambda
-     [(str)
-      (unless (string? str)
-	(die who "not a string" str))
-      ($string->utf32 str 'big)]
-     [(str endianness)
-      (unless (string? str)
-	(die who "not a string" str))
-      (unless (memq endianness '(little big))
-	(die who "invalid endianness" endianness))
-      ($string->utf32 str endianness)])))
+
+  (define (vfill str bv i len endianness)
+    (if (fx=? i len)
+	bv
+      (begin
+	(bytevector-u32-set! bv
+			     (fxsll i 2)
+			     (char->integer (string-ref str i))
+			     endianness)
+	(vfill str bv (fx+ i 1) len endianness))))
+
+  #| end of module: STRING->UTF32 |# )
 
 (module (utf32->string)
-  (define who 'utf32->string)
-  (define (fill bv endianness str i j n)
-    (cond
-     [(fx= i j)
-      (unless (fx= n (string-length str))
-	(string-set! str n #\xFFFD))
-      str]
-     [else
-      (string-set! str n
-		   (integer->char/invalid
-		    (bytevector-u32-ref bv i endianness)))
-      (fill bv endianness str (fx+ i 4) j (fx+ n 1))]))
-  (define (decode bv endianness start)
-    (let ([bvlen (bytevector-length bv)])
-      (let ([strlen (fxsra (fx+ (fx- bvlen start) 3) 2)])
-	(fill bv endianness (make-string strlen)
-	      start (fxand bvlen -4)
-	      0))))
+
+  (case-define* utf32->string
+    (({bv bytevector?} {endianness endianness?})
+     ($utf32->string bv endianness #f))
+    (({bv bytevector?} {endianness endianness?} em?)
+     ($utf32->string bv endianness em?))
+    #| end of CASE-DEFINE* |# )
+
   (define ($utf32->string bv endianness em?)
-    (define (bom-present bv)
-      (and (fx>= (bytevector-length bv) 4)
-	   (let ([n (bytevector-u32-ref bv 0 'big)])
-	     (cond
-	      [(= n #x0000FEFF) 'big]
-	      [(= n #xFFFE0000) 'little]
-	      [else #f]))))
-    (unless (bytevector? bv)
-      (die who "not a bytevector" bv))
-    (unless (memv endianness '(big little))
-      (die who "invalid endianness" endianness))
-    (cond
-     [em? (decode bv endianness 0)]
-     [(bom-present bv) =>
-      (lambda (endianness)
-	(decode bv endianness 4))]
-     [else
-      (decode bv endianness 0)]))
-  (define utf32->string
-    (case-lambda
-     [(bv endianness)
-      ($utf32->string bv endianness #f)]
-     [(bv endianness em?)
-      ($utf32->string bv endianness em?)])))
+    (cond (em?
+	   (%decode bv endianness 0))
+	  ((%bom-present bv)
+	   => (lambda (endianness)
+		(%decode bv endianness 4)))
+	  (else
+	   (%decode bv endianness 0))))
+
+  (define (%bom-present bv)
+    (and (fx>= (bytevector-length bv) 4)
+	 (let ((n (bytevector-u32-ref bv 0 'big)))
+	   (cond ((= n #x0000FEFF)	'big)
+		 ((= n #xFFFE0000)	'little)
+		 (else			#f)))))
+
+  (define (%decode bv endianness start)
+    (let* ((bv.len  ($bytevector-length bv))
+	   (str.len ($fxsra ($fx+ ($fx- bv.len start) 3) 2)))
+      (%fill bv endianness (make-string str.len)
+	     start (fxand bv.len -4)
+	     0)))
+
+  (define (%fill bv endianness str i j n)
+    (cond ((fx= i j)
+	   (unless (fx= n (string-length str))
+	     (string-set! str n #\xFFFD))
+	   str)
+	  (else
+	   (string-set! str n (integer->char/invalid (bytevector-u32-ref bv i endianness)))
+	   (%fill bv endianness str (fx+ i 4) j (fx+ n 1)))))
+
+  #| end of module: UTF32->STRING |# )
 
 
-(define (bytevector->string bv t)
-  (define who 'bytevector->string)
-  (unless (bytevector? bv)
-    (die who "not a bytevector" bv))
-  (unless (transcoder? t)
-    (die who "not a transcoder" t))
-  (call-with-port (open-bytevector-input-port bv t)
-    (lambda (tcip)
-      (let ([r (get-string-all tcip)])
-	(if (eof-object? r) "" r)))))
+(define* (bytevector->string {bv bytevector?} {tran transcoder?})
+  (call-with-port
+      (open-bytevector-input-port bv tran)
+    (lambda (port)
+      (let ((r (get-string-all port)))
+	(if (eof-object? r)
+	    ""
+	  r)))))
 
-(define (string->bytevector str t)
-  (define who 'string->bytevector)
-  (unless (string? str)
-    (die who "not a string" str))
-  (unless (transcoder? t)
-    (die who "not a transcoder" t))
+(define* (string->bytevector {str string?} {tran transcoder?})
   (call-with-bytevector-output-port
-      (lambda (tcop)
-        (put-string tcop str))
-    t))
+      (lambda (port)
+        (put-string port str))
+    tran))
 
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file

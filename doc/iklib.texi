@@ -10595,6 +10595,18 @@ These conversion functions work like @func{bytevector->u8-list} and
 library @library{vicare}.
 
 
+@defun utf8->string-length @var{bv}
+@defunx utf8->string-length @var{bv} @var{handling-mode}
+Given a bytevector representing a string in @utf{}-8 encoding: compute
+and return the length of the Scheme string required to hold the
+characters.
+
+The optional @var{handling-mode} must be an error handling mode as
+validated by the standard syntax @syntax{error-handling-mode}; when not
+given: it defaults to @samp{replace}.
+@end defun
+
+
 @defun {bytevector->s8-list} @var{bytevector}
 @defunx {s8-list->bytevector} @var{list}
 Convert between a list of signed bytes and a bytevector.
@@ -11037,6 +11049,12 @@ Return the maximal or minimal string argument according to
 @c page
 @node iklib strings conversion
 @subsection Converting between strings and other objects
+
+
+@defun string->utf8-length @var{str}
+Given a string compute and return the length of the bytevector that
+would contain its @utf{}-8 representation.
+@end defun
 
 
 @defun string->octets @var{string}

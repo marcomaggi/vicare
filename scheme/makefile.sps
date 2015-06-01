@@ -2435,6 +2435,8 @@
     (s64n-list->bytevector			v $language)
     (uint-list->bytevector			v r bv)
     (utf8->string				v r bv)
+    (utf8->string-length			v $language)
+    (string->utf8-length			v $language)
     (utf16->string				v r bv)
     (utf16le->string				v $language)
     (utf16n->string				v $language)

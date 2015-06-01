@@ -335,7 +335,7 @@
 
 (define-inline (utf-8-valid-code-point-from-4-octets? code-point)
   ;;Evaluate to true if CODE-POINT is a valid integer representation for a code point
-  ;;decoded from a 3-octets UTF-8 sequence.
+  ;;decoded from a 4-octets UTF-8 sequence.
   ;;
   (and ($fx<= #x010000 code-point) ($fx<= code-point #x10FFFF)))
 
