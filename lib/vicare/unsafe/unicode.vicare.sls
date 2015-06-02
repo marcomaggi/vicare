@@ -455,6 +455,9 @@
 
 ;;;; UTF-16 decoding
 ;;
+;;Code points in the  range [0, #x10000) are encoded with a  single UTF-16 word; code
+;;points in the range [#x10000, #x10FFFF] are encoded in a surrogate pair.
+;;
 ;;Given a 16-bit  word in a UTF-16 stream,  represented in Scheme as a  fixnum in the
 ;;range [#x0000, #xFFFF], we can classify it on the following axis:
 ;;
@@ -469,9 +472,18 @@
 ;;   word in [#xD800, #xDBFF] => first in surrogate pair
 ;;   word in [#xDC00, #xDFFF] => second in surrogate pair
 ;;   word in [#xE000, #xFFFF] => single word character
+;;
+;;A UTF-16 stream may start with a Byte Order Mark (BOM).  A UTF-16 BOM is either:
+;;
+;;* A sequence of bytes #xFE, #xFF specifying "big" and UTF-16BE encoding.
+;;
+;;* A sequence of bytes #xFF, #xFE specifying "little" and UTF-16LE encoding.
+;;
 
 ;;The  following macros  assume the  WORD arguments  are fixnums  representing 16-bit
-;;words: they must be in the range [0, #xFFFF].
+;;words: they must be  in the range [0, #xFFFF].  While  the CODE-POINT arguments are
+;;fixnums representing Unicode code points (they  are in the range [0, #x10FFFF], but
+;;outside the range [#xD800, #xDFFF])
 ;;
 
 ;;; 1-word encoding
@@ -515,8 +527,10 @@
 ;;; 1-word encoding
 
 (define-inline (utf-16-single-word-code-point? code-point)
-  (and ($fx>= code-point 0)
-       ($fx<  code-point #x10000)))
+  ($fx< code-point #x10000))
+;; (define-inline (utf-16-single-word-code-point? code-point)
+;;   (and ($fx>= code-point 0)
+;;        ($fx<  code-point #x10000)))
 
 (define-inline (utf-16-encode-single-word code-point)
   code-point)
@@ -526,7 +540,7 @@
 
 (define-inline (utf-16-two-words-code-point? code-point)
   (and ($fx>= code-point #x10000)
-       ($fx<  code-point #x10FFFF)))
+       ($fx<= code-point #x10FFFF)))
 
 (define-inline (utf-16-encode-first-of-two-words code-point)
   ($fxior #xD800 ($fxsra ($fx- code-point #x10000) 10)))

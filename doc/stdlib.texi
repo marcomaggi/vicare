@@ -946,18 +946,54 @@ bytevector.
 @utf{}-16LE, or a fourth encoding scheme that differs from all three of
 those as follows: If @var{endianness-mandatory} is absent or @false{},
 @func{utf16->string} determines the endianness according to a @utf{}-16
-BOM at the beginning of @var{bytevector} if a BOM is present; in this
-case, the BOM is not decoded as a character.  Also in this case, if no
-@utf{}-16 BOM is present, @var{endianness} specifies the endianness of
-the encoding.  If @var{endianness-mandatory} is a true value,
-@var{endianness} specifies the endianness of the encoding, and any
-@utf{}-16 BOM in the encoding is decoded as a regular character.
+Byte Order Mark (@bom{}) at the beginning of @var{bytevector} if a @bom{}
+is present; in this case, the @bom{} is not decoded as a character.  Also
+in this case, if no @utf{}-16 @bom{} is present, @var{endianness} specifies
+the endianness of the encoding.  If @var{endianness-mandatory} is a true
+value, @var{endianness} specifies the endianness of the encoding, and
+any @utf{}-16 @bom{} in the encoding is decoded as a regular character.
 
 @quotation
-@strong{NOTE} A @utf{}-16 BOM is either a sequence of bytes @code{#xFE},
+@strong{NOTE} A @utf{}-16 @bom{} is either a sequence of bytes @code{#xFE},
 @code{#xFF} specifying @code{big} and @utf{}-16BE, or @code{#xFF},
 @code{#xFE} specifying @code{little} and @utf{}-16LE.
 @end quotation
+
+@lisp
+(utf16->string '#vu8(#xAA #xBB) (endianness big))
+@result{} "\xAABB;"
+(utf16->string '#vu8(#xAA #xBB) (endianness little))
+@result{} "\xBBAA;"
+
+;;In all the following tests: the endianness argument is
+;;ignored; the BOM is processed; an empty string is generated.
+
+;;Big endian BOM.
+(utf16->string '#vu8(#xFE #xFF) (endianness big)    #f)
+@result{} ""
+(utf16->string '#vu8(#xFE #xFF) (endianness little) #f)
+@result{} ""
+;;Little endian BOM.
+(utf16->string '#vu8(#xFF #xFE) (endianness big)    #f)
+@result{} ""
+(utf16->string '#vu8(#xFF #xFE) (endianness little) #f)
+@result{} ""
+
+;;In all the following tests: the endianness argument is
+;;ignored; the BOM is processed; a string of 1 character is
+;;generated.
+
+;;Big endian BOM.
+(utf16->string '#vu8(#xFE #xFF #xAA #xBB) (endianness big)    #f)
+@result{} "\xAABB;"
+(utf16->string '#vu8(#xFE #xFF #xAA #xBB) (endianness little) #f)
+@result{} "\xAABB;"
+;;Little endian BOM.
+(utf16->string '#vu8(#xFF #xFE #xAA #xBB) (endianness big)    #f)
+@result{} "\xBBAA;"
+(utf16->string '#vu8(#xFF #xFE #xAA #xBB) (endianness little) #f)
+@result{} "\xBBAA;"
+@end lisp
 @end deffn
 
 
@@ -974,17 +1010,18 @@ bytevector.
 @utf{}-32LE, or a fourth encoding scheme that differs from all three of
 those as follows: If @var{endianness-mandatory} is absent or @false{},
 @func{utf32->string} determines the endianness according to a @utf{}-32
-BOM at the beginning of @var{bytevector} if a BOM is present; in this
-case, the BOM is not decoded as a character.  Also in this case, if no
-@utf{}-32 BOM is present, @var{endianness} specifies the endianness of
-the encoding.  If @var{endianness-mandatory} is a true value,
-@var{endianness} specifies the endianness of the encoding, and any
-@utf{}-32 BOM in the encoding is decoded as a regular character.
+Byte Order Mark (@bom{}) at the beginning of @var{bytevector} if a
+@bom{} is present; in this case, the @bom{} is not decoded as a
+character.  Also in this case, if no @utf{}-32 @bom{} is present,
+@var{endianness} specifies the endianness of the encoding.  If
+@var{endianness-mandatory} is a true value, @var{endianness} specifies
+the endianness of the encoding, and any @utf{}-32 @bom{} in the encoding
+is decoded as a regular character.
 
 @quotation
-@strong{NOTE} A @utf{}-32 BOM is either a sequence of bytes @code{#x00},
-@code{#x00}, @code{#xFE}, @code{#xFF} specifying @code{big} and
-@utf{}-32BE, or @code{#xFF}, @code{#xFE}, @code{#x00}, @code{#x00},
+@strong{NOTE} A @utf{}-32 @bom{} is either a sequence of bytes
+@code{#x00}, @code{#x00}, @code{#xFE}, @code{#xFF} specifying @code{big}
+and @utf{}-32BE, or @code{#xFF}, @code{#xFE}, @code{#x00}, @code{#x00},
 specifying @code{little} and @utf{}-32LE.
 @end quotation
 @end deffn

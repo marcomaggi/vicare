@@ -35,9 +35,15 @@
 		  string->utf32		utf32->string
                   string->bytevector	bytevector->string
 
-		  utf8->string-length	string->utf8-length)
+		  utf8->string-length	string->utf8-length
+		  string->utf16-length)
     (vicare system $strings)
-    (vicare system $bytevectors)
+    (except (vicare system $bytevectors)
+	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
+	    ;;(Marco Maggi; Tue Jun 2, 2015)
+	    $bytevector-u16-ref
+	    $bytevector-u16b-ref
+	    $bytevector-u16l-ref)
     (vicare system $fx)
     (vicare system $chars)
     ;;See the documentation of this library for details on Unicode.
@@ -57,6 +63,42 @@
 
 (define ($fxadd4 N)
   ($fx+ N 4))
+
+(define ($fxsub2 N)
+  ($fx- N 2))
+
+(define ($fxsub3 N)
+  ($fx- N 3))
+
+(define ($fxsub4 N)
+  ($fx- N 4))
+
+;;; --------------------------------------------------------------------
+
+(define ($bytevector-u16b-ref bv index)
+  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue Jun 2,
+  ;;2015)
+  ($fxlogor
+   ;; lowest memory location -> most significant byte
+   ($fxsll ($bytevector-u8-ref bv index) 8)
+   ;; highest memory location -> least significant byte
+   ($bytevector-u8-ref bv ($fxadd1 index))))
+
+(define ($bytevector-u16l-ref bv index)
+  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue Jun 2,
+  ;;2015)
+  ($fxlogor
+   ;; highest memory location -> most significant byte
+   ($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
+   ;; lowest memory location -> least significant byte
+   ($bytevector-u8-ref bv index)))
+
+(define ($bytevector-u16-ref bv index endianness)
+  ;;FIXME To be  removed at the next  boot image rotation.  (Marco Maggi;  Tue Jun 2,
+  ;;2015)
+  (case endianness
+    ((big)		($bytevector-u16b-ref bv index))
+    ((little)		($bytevector-u16l-ref bv index))))
 
 
 (define (integer->char/invalid n)
@@ -347,54 +389,7 @@
   #| end of module |# )
 
 
-;;; From: http://tools.ietf.org/html/rfc2781
-;;;
-;;; 2.1 Encoding UTF-16
-;;;
-;;;   Encoding of a single character from an ISO 10646 character value
-;;;   to UTF-16 proceeds as follows. Let U be the character number, no
-;;;   greater than 0x10FFFF.
-;;;
-;;;   1) If U < 0x10000, encode U as a 16-bit unsigned integer and terminate.
-;;;
-;;;   2) Let U' = U - 0x10000. Because U is less than or equal to 0x10FFFF,
-;;;      U' must be less than or equal to 0xFFFFF. That is, U' can be
-;;;      represented in 20 bits.
-;;;
-;;;   3) Initialize two 16-bit unsigned integers, W1 and W2, to 0xD800 and
-;;;      0xDC00, respectively. These integers each have 10 bits free to
-;;;      encode the character value, for a total of 20 bits.
-;;;
-;;;   4) Assign the 10 high-order bits of the 20-bit U' to the 10 low-order
-;;;      bits of W1 and the 10 low-order bits of U' to the 10 low-order
-;;;      bits of W2. Terminate.
-;;;
-;;;   Graphically, steps 2 through 4 look like:
-;;;   U' = yyyyyyyyyyxxxxxxxxxx
-;;;   W1 = 110110yyyyyyyyyy
-;;;   W2 = 110111xxxxxxxxxx
-;;;
-;;;   Decoding of a single character from UTF-16 to an ISO 10646 character
-;;;   value proceeds as follows. Let W1 be the next 16-bit integer in the
-;;;   sequence of integers representing the text. Let W2 be the (eventual)
-;;;   next integer following W1.
-;;;
-;;;   1) If W1 < 0xD800 or W1 > 0xDFFF, the character value U is the value
-;;;      of W1. Terminate.
-;;;
-;;;   2) Determine if W1 is between 0xD800 and 0xDBFF. If not, the sequence
-;;;      is in error and no valid character can be obtained using W1.
-;;;      Terminate.
-;;;
-;;;   3) If there is no W2 (that is, the sequence ends with W1), or if W2
-;;;      is not between 0xDC00 and 0xDFFF, the sequence is in error.
-;;;      Terminate.
-;;;
-;;;   4) Construct a 20-bit unsigned integer U', taking the 10 low-order
-;;;      bits of W1 as its 10 high-order bits and the 10 low-order bits of
-;;;      W2 as its 10 low-order bits.
-;;;   5) Add 0x10000 to U' to obtain the character value U.
-;;;      Terminate.
+;;;; UTF-16 helpers
 
 (define (utf16le->string bv)	(utf16->string bv (endianness little)))
 (define (utf16be->string bv)	(utf16->string bv (endianness big)))
@@ -404,146 +399,375 @@
 (define (string->utf16be str)	(string->utf16 str (endianness big)))
 (define (string->utf16n  str)	(string->utf16 str (native-endianness)))
 
-(module (string->utf16)
-  (define ($string->utf16 str endianness)
-    (define (count-surr* str len i n)
-      (cond
-       ((fx= i len) n)
-       (else
-	(let ((c (string-ref str i)))
-	  (cond
-	   ((char<? c #\x10000)
-	    (count-surr* str len (fx+ i 1) n))
-	   (else
-	    (count-surr* str len (fx+ i 1) (fx+ n 1))))))))
-    (define (bvfill str bv i j len endianness)
-      (cond
-       ((fx= i len) bv)
-       (else
-	(let ((n (char->integer (string-ref str i))))
-	  (cond
-	   ((fx< n #x10000)
-	    (bytevector-u16-set! bv j n endianness)
-	    (bvfill str bv (fx+ i 1) (fx+ j 2) len endianness))
-	   (else
-	    (let ((u^ (fx- n #x10000)))
-	      (bytevector-u16-set! bv j
-				   (fxlogor (fxsll #b110110 10) (fxsra u^ 10))
-				   endianness)
-	      (bytevector-u16-set! bv (fx+ j 2)
-				   (fxlogor (fxsll #b110111 10) (fxlogand u^ #x3FF))
-				   endianness))
-	    (bvfill str bv (fx+ i 1) (fx+ j 4) len endianness)))))))
-    (let ((len ($string-length str)))
-      (let ((n (count-surr* str len 0 0)))
-          ;;; FIXME: maybe special case for n=0 later
-	(let ((bv (make-bytevector (fxsll (fx+ len n) 1))))
-	  (bvfill str bv 0 0 len endianness)))))
-  (define string->utf16
-    (case-lambda
-     ((str)
-      (unless (string? str)
-	(die 'string->utf16 "not a string" str))
-      ($string->utf16 str 'big))
-     ((str endianness)
-      (unless (string? str)
-	(die 'string->utf16 "not a string" str))
-      (unless (memv endianness '(big little))
-	(die 'string->utf16 "invalid endianness" endianness))
-      ($string->utf16 str endianness)))))
+
+(module (string->utf16 string->utf16-length)
 
+  (case-define* string->utf16
+    (({str string?})
+     ($string->utf16 str 'big))
+
+    (({str string?} {endianness endianness?})
+     ($string->utf16 str endianness))
+
+    #| end of CASE-DEFINE* |# )
+
+  (define* (string->utf16-length {str string?})
+    ($string->utf16-length str))
+
+  (define ($string->utf16-length str)
+    ;;The number of octets needed is:
+    ;;
+    ;;   2 * ((number of chars in STR) + (number of surrogate pairs))
+    ;;
+    (let ((str.len ($string-length str)))
+      ;;We must avoid overflow and check that the returned value is a fixnum!!!
+      (fxsll (fx+ str.len (%count-surrogate-pairs str str.len 0 0)) 1)))
+
+  (define ($string->utf16 str endianness)
+    (let ((str.len ($string-length str)))
+      (if ($fxzero? str.len)
+	  ;;Let's return a new bytevector.
+	  ($make-bytevector 0)
+	;;The number  of octets needed  is the number of  characters in STR  plus the
+	;;number of surrogate pairs, times 2.
+	(let ((bv ($make-bytevector ($string->utf16-length str))))
+	  (%encode-and-fill-bytevector str 0 str.len bv 0 endianness)))))
+
+  (define (%count-surrogate-pairs str str.len i accum-count)
+    (if ($fx= i str.len)
+	accum-count
+      ;;Code points in the range [0, #x10000)  are encoded with a single UTF-16 word;
+      ;;code points in the range [#x10000, #x10FFFF] are encoded in a surrogate pair.
+      (if (utf-16-single-word-code-point? ($char->fixnum ($string-ref str i)))
+	  (%count-surrogate-pairs str str.len ($fxadd1 i) accum-count)
+	(%count-surrogate-pairs str str.len ($fxadd1 i) ($fxadd1 accum-count)))))
+
+  (define (%encode-and-fill-bytevector str str.idx str.len bv bv.idx endianness)
+    (if ($fx= str.idx str.len)
+	bv
+      (let ((code-point ($char->fixnum ($string-ref str str.idx))))
+	(if (utf-16-single-word-code-point? code-point)
+	    (begin
+	      (bytevector-u16-set! bv bv.idx (utf-16-encode-single-word code-point) endianness)
+	      (%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv ($fxadd2 bv.idx) endianness))
+	  (begin
+	    (bytevector-u16-set! bv bv.idx           (utf-16-encode-first-of-two-words  code-point) endianness)
+	    (bytevector-u16-set! bv ($fxadd2 bv.idx) (utf-16-encode-second-of-two-words code-point) endianness)
+	    (%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv ($fxadd4 bv.idx) endianness))))))
+
+  #| end of module |# )
+
+
 (module (utf16->string)
-  (define who 'utf16->string)
-  (define (count-size bv endianness i len n)
-    (cond
-     ((fx= i len)
-      (if (fx= len (bytevector-length bv))
-	  n
-	(+ n 1)))
-     (else
-      (let ((w1 (bytevector-u16-ref bv i endianness)))
-	(cond
-	 ((or (fx< w1 #xD800) (fx> w1 #xDFFF))
-	  (count-size bv endianness (+ i 2) len (+ n 1)))
-	 ((not (fx<= #xD800 w1 #xDBFF)) ;;; error sequence
-	  (count-size bv endianness (+ i 2) len (+ n 1)))
-	 ((<= (+ i 4) (bytevector-length bv))
-	  (let ((w2 (bytevector-u16-ref bv (+ i 2) endianness)))
-	    (cond
-	     ((not (<= #xDC00 w2 #xDFFF))
-                   ;;; do we skip w2 also?
-                   ;;; I won't.  Just w1 is an error
-	      (count-size bv endianness (+ i 2) len (+ n 1)))
-	     (else
-                   ;;; 4-byte sequence is ok
-	      (count-size bv endianness (+ i 4) len (+ n 1))))))
-	 (else
-              ;;; error again
-	  (count-size bv endianness (+ i 2) len (+ n 1))))))))
-  (define (fill bv endianness str i len n)
-    (cond
-     ((fx= i len)
-      (unless (fx= len (bytevector-length bv))
-	(string-set! str n #\xFFFD))
-      str)
-     (else
-      (let ((w1 (bytevector-u16-ref bv i endianness)))
-	(cond
-	 ((or (fx< w1 #xD800) (fx> w1 #xDFFF))
-	  (string-set! str n (integer->char/invalid w1))
-	  (fill bv endianness str (+ i 2) len (+ n 1)))
-	 ((not (fx<= #xD800 w1 #xDBFF)) ;;; error sequence
-	  (string-set! str n #\xFFFD)
-	  (fill bv endianness str (+ i 2) len (+ n 1)))
-	 ((<= (+ i 4) (bytevector-length bv))
-	  (let ((w2 (bytevector-u16-ref bv (+ i 2) endianness)))
-	    (cond
-	     ((not (<= #xDC00 w2 #xDFFF))
-                   ;;; do we skip w2 also?
-                   ;;; I won't.  Just w1 is an error
-	      (string-set! str n #\xFFFD)
-	      (fill bv endianness str (+ i 2) len (+ n 1)))
-	     (else
-	      (string-set! str n
-			   (integer->char/invalid
-			    (+ #x10000
-			       (fxlogor (fxsll (fxlogand w1 #x3FF) 10)
-					(fxlogand w2 #x3FF)))))
-	      (fill bv endianness str (+ i 4) len (+ n 1))))))
-	 (else
-              ;;; error again
-	  (string-set! str n #\xFFFD)
-	  (fill bv endianness str (+ i 2) len (+ n 1))))))))
-  (define (decode bv endianness start)
-    (let ((len (fxand (bytevector-length bv) -2)))
-      (let ((n (count-size bv endianness start len 0)))
-	(let ((str (make-string n)))
-	  (fill bv endianness str start len 0)))))
-  (define ($utf16->string bv endianness em?)
-    (define (bom-present bv)
-      (and (fx>= (bytevector-length bv) 2)
-	   (let ((n (bytevector-u16-ref bv 0 'big)))
-	     (cond
-	      ((fx= n #xFEFF) 'big)
-	      ((fx= n #xFFFE) 'little)
-	      (else #f)))))
-    (unless (bytevector? bv)
-      (die who "not a bytevector" bv))
-    (unless (memv endianness '(big little))
-      (die who "invalid endianness" endianness))
-    (cond
-     (em?  (decode bv endianness 0))
-     ((bom-present bv) =>
-      (lambda (endianness)
-	(decode bv endianness 2)))
-     (else
-      (decode bv endianness 0))))
-  (define utf16->string
-    (case-lambda
-     ((bv endianness)
-      ($utf16->string bv endianness #f))
-     ((bv endianness em?)
-      ($utf16->string bv endianness em?)))))
+
+  (case-define* utf16->string
+    (({bv bytevector?} {endianness endianness?})
+     ($utf16->string bv endianness #f))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
+     ($utf16->string bv endianness endianness-mandatory?)))
+
+  (case-define* utf16->string-length
+    (({bv bytevector?} {endianness endianness?})
+     ($utf16->string-length bv endianness #f))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
+     ($utf16->string-length bv endianness endianness-mandatory?)))
+
+;;; --------------------------------------------------------------------
+
+  (module ($utf16->string)
+
+    (define* ($utf16->string bv endianness endianness-mandatory?)
+      (cond (endianness-mandatory?
+	     ;;We accept the argument ENDIANNESS as endianness specification.
+	     (%decode __who__ bv 0 endianness))
+	    ((%bom->endianness bv)
+	     => (lambda (endian)
+		  (%decode __who__ bv 2 endian)))
+	    (else
+	     ;;There  is  no  BOM,  accept  the  argument  ENDIANNESS  as  endianness
+	     ;;specification.
+	     (%decode __who__ bv 0 endianness))))
+
+    (define (%decode who bv bv.start endianness)
+      (let* ((bv.len  ($bytevector-length bv))
+	     (str.len (%compute-string-length who bv bv.start bv.len 0 endianness 'raise))
+	     (str     ($make-string str.len)))
+	(%decode-string-fill-bytevector who bv bv.start bv.len str 0 endianness 'raise)))
+
+    #| end of module |# )
+
+  (module ($utf16->string-length)
+
+    (define* ($utf16->string-length bv endianness endianness-mandatory?)
+      (cond (endianness-mandatory?
+	     ;;We accept the argument ENDIANNESS as endianness specification.
+	     (%compute-length __who__ bv 0 endianness))
+	    ((%bom->endianness bv)
+	     => (lambda (endian)
+		  (%compute-length __who__ bv 2 endian)))
+	    (else
+	     ;;There  is  no  BOM,  accept  the  argument  ENDIANNESS  as  endianness
+	     ;;specification.
+	     (%compute-length __who__ bv 0 endianness))))
+
+    (define (%compute-length who bv bv.start endianness)
+      (%compute-string-length who bv bv.start ($bytevector-length bv) 0 endianness 'raise))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%bom->endianness bv)
+    (and ($fx>= ($bytevector-length bv) 2)
+	 (let ((n ($bytevector-u16b-ref bv 0)))
+	   (cond (($fx= n #xFEFF)	'big)
+		 (($fx= n #xFFFE)	'little)
+		 (else			#f)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%compute-string-length who bv bv.idx bv.len accum-len endianness mode)
+    ;;Compute the  length of the string  object needed to represent  the given UTF-16
+    ;;bytevector.
+    ;;
+    (define-syntax-rule (%recurse bv.idx accum-len)
+      (%compute-string-length who bv bv.idx bv.len accum-len endianness mode))
+
+    (define (%error-invalid-first-word bv.idx accum-len)
+      ;;At index BV.IDX there should be either  a standalone 16-bit word or the first
+      ;;word of a surrogate pair.  Instead, there is an invalid word.
+      ;;
+      (case mode
+	((ignore)
+	 ;;When converting: we will ignore the invalid word.
+	 (%recurse ($fxadd2 bv.idx) accum-len))
+	((replace)
+	 ;;When  converting:  we  will  replace  the  invalid  word  with  a  #\xFFFD
+	 ;;character.
+	 (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
+	(else	;raise
+	 (error who
+	   (string-append "invalid 16-bit word at index " (number->string bv.idx) "of UTF-16 bytevector")
+	   bv))))
+
+    (define (%error-invalid-second-word bv.idx accum-len)
+      ;;At index BV.IDX there  should be the second 16-bit word  in a surrogate pair.
+      ;;Instead, there is an invalid word.
+      (case mode
+	((ignore)
+	 ;;When converting: we will ignore the invalid pair.
+	 (%recurse ($fxadd2 bv.idx) accum-len))
+	((replace)
+	 ;;When  converting:  we  will  replace  the  invalid  pair  with  a  #\xFFFD
+	 ;;character.
+	 (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
+	(else	;raise
+	 (error who
+	   (string-append "invalid second 16-bit word in pair at index " (number->string bv.idx) "of UTF-16 bytevector")
+	   bv))))
+
+    (define (%error-standalone-first-word-in-pair bv.idx accum-len)
+      ;;At index BV.IDX there is a standalone first word in surrogate pair; we are at
+      ;;the end of the bytevector and the second word is missing.
+      (case mode
+	((ignore)
+	 ;;When converting: we will ignore the standalone first word.
+	 accum-len)
+	((replace)
+	 ;;When  converting: we  will  replace  the standalone  word  with a  #\xFFFD
+	 ;;character.
+	 ($fxadd1 accum-len))
+	(else	;raise
+	 (error who "standalone first word in surrogate pair at end of UTF-16 bytevector" bv))))
+
+    (define (%error-not-enough-octets bv.idx accum-len)
+      ;;At index BV.IDX there  should be a first 16-bit word or the  second word in a
+      ;;pair; we are  not yet at the end  of the bytevector, but there  is not enough
+      ;;room for a full  16-bit word or a full surrogate pair:  there is a standalone
+      ;;octet.
+      ;;
+      (case mode
+	((ignore)
+	 ;;When converting: we will ignore the standalone octet.
+	 accum-len)
+	((replace)
+	 ;;When  converting: we  will replace  the  standalone octet  with a  #\xFFFD
+	 ;;character.
+	 ($fxadd1 accum-len))
+	(else	;raise
+	 (error who "standalone octet at end of UTF-16 bytevector" bv))))
+
+    (cond (($fx<= bv.idx ($fxsub2 bv.len))
+	   ;;Good there is room for at least one more 16-bit word.
+	   (let ((word0 ($bytevector-u16-ref bv bv.idx endianness)))
+	     (cond ((utf-16-single-word? word0)
+		    (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
+		   ((utf-16-first-of-two-words? word0)
+		    (let ((bv.idx1 ($fxadd2 bv.idx)))
+		      (cond (($fx<= bv.idx1 ($fxsub2 bv.len))
+			     ;;Good there  is room  for the second  16-bit word  in a
+			     ;;surrogate pair.
+			     (let ((word1 ($bytevector-u16-ref bv bv.idx1 endianness)))
+			       (if (utf-16-second-of-two-words? word1)
+				   ;;Good there is a full surrogate pair.
+				   (%recurse ($fxadd2 bv.idx1) ($fxadd1 accum-len))
+				 ;;Error: at index BV.IDX1 there should be the second
+				 ;;word in a surrogate pair.
+				 (%error-invalid-second-word bv.idx1 accum-len))))
+			    (($fx= bv.idx1 bv.len)
+			     ;;Error: we are  at the end of the  bytevector, at index
+			     ;;BV.IDX there  is a standalone first  word in surrogate
+			     ;;pair.
+			     (%error-standalone-first-word-in-pair bv.idx accum-len))
+			    (($fx< bv.idx1 bv.len)
+			     ;;Error: we  are not yet  at the end of  the bytevector,
+			     ;;but there  is not  enough room  for the  second 16-bit
+			     ;;word  in the  surrogate pair.   There is  a standalone
+			     ;;octet after the first word.
+			     (%error-not-enough-octets bv.idx accum-len))
+			    (else
+			     ;;Error we have gone past the end of the bytevector.
+			     (assertion-violation who "internal error: overflow while processing UTF-16 bytevector")))))
+		   (else
+		    ;;Error: at index BV.IDX there is an invalid 16-bit word.
+		    (%error-invalid-first-word bv.idx accum-len)))))
+
+	  (($fx= bv.idx bv.len)
+	   ;;We correctly are at the end of the bytevector.  Done.
+	   accum-len)
+
+	  (($fx< bv.idx bv.len)
+	   ;;Error: we  are not yet at  the end of  the bytevector, but there  is not
+	   ;;enough room for a 16-bit word.
+	   (%error-not-enough-octets bv.idx accum-len))
+
+	  (else
+	   ;;Error we have gone past the end of the bytevector.
+	   (assertion-violation who "internal error: overflow while processing UTF-16 bytevector"))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (%decode-string-fill-bytevector who bv bv.idx bv.len str str.idx endianness mode)
+    (define-syntax-rule (%recurse bv.idx str.idx)
+      (%decode-string-fill-bytevector who bv bv.idx bv.len str str.idx endianness mode))
+
+    (define (%error-invalid-first-word bv.idx str.idx)
+      ;;At index BV.IDX there should be either  a standalone 16-bit word or the first
+      ;;word of a surrogate pair.  Instead, there is an invalid word.
+      ;;
+      (case mode
+	((ignore)
+	 ;;We ignore the invalid word.
+	 (%recurse ($fxadd2 bv.idx) str.idx))
+	((replace)
+	 ;;We replace the invalid word with a #\xFFFD character.
+	 ($string-set! str str.idx #\xFFFD)
+	 (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
+	(else	;raise
+	 (error who
+	   (string-append "invalid 16-bit word at index " (number->string bv.idx) "of UTF-16 bytevector")
+	   bv))))
+
+    (define (%error-invalid-second-word bv.idx str.idx)
+      ;;At index BV.IDX there  should be the second 16-bit word  in a surrogate pair.
+      ;;Instead, there is an invalid word.
+      ;;
+      (case mode
+	((ignore)
+	 ;;We ignore the invalid pair.
+	 (%recurse ($fxadd2 bv.idx) str.idx))
+	((replace)
+	 ;;We replace the invalid pair with a #\xFFFD character.
+	 ($string-set! str str.idx #\xFFFD)
+	 (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
+	(else	;raise
+	 (error who
+	   (string-append "invalid second 16-bit word in pair at index " (number->string bv.idx) "of UTF-16 bytevector")
+	   bv))))
+
+    (define (%error-standalone-first-word-in-pair bv.idx str.idx)
+      ;;At index BV.IDX there is a standalone first word in surrogate pair; we are at
+      ;;the end of the bytevector and the second word is missing.
+      (case mode
+	((ignore)
+	 ;;We ignore the standalone first word.
+	 str)
+	((replace)
+	 ;;We replace the standalone word with a #\xFFFD character.
+	 ($string-set! str str.idx #\xFFFD)
+	 str)
+	(else	;raise
+	 (error who "standalone first word in surrogate pair at end of UTF-16 bytevector" bv))))
+
+    (define (%error-not-enough-octets bv.idx str.idx)
+      ;;At index BV.IDX there  should be a first 16-bit word or the  second word in a
+      ;;pair; we are  not yet at the end  of the bytevector, but there  is not enough
+      ;;room for a full  16-bit word or a full surrogate pair:  there is a standalone
+      ;;octet.
+      ;;
+      (case mode
+	((ignore)
+	 ;;We ignore the standalone octet.
+	 str)
+	((replace)
+	 ;;We replace the standalone octet with a #\xFFFD character.
+	 ($string-set! str str.idx #\xFFFD)
+	 str)
+	(else	;raise
+	 (error who "standalone octet at end of UTF-16 bytevector" bv))))
+
+    (cond (($fx<= bv.idx ($fxsub2 bv.len))
+	   ;;Good there is room for at least one more 16-bit word.
+	   (let ((word0 ($bytevector-u16-ref bv bv.idx endianness)))
+	     (cond ((utf-16-single-word? word0)
+		    ($string-set! str str.idx ($fixnum->char (utf-16-decode-single-word word0)))
+		    (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
+		   ((utf-16-first-of-two-words? word0)
+		    (let ((bv.idx1 ($fxadd2 bv.idx)))
+		      (cond (($fx<= bv.idx1 ($fxsub2 bv.len))
+			     ;;Good there  is room  for the second  16-bit word  in a
+			     ;;surrogate pair.
+			     (let ((word1 ($bytevector-u16-ref bv bv.idx1 endianness)))
+			       (if (utf-16-second-of-two-words? word1)
+				   ;;Good there is a full surrogate pair.
+				   (begin
+				     ($string-set! str str.idx ($fixnum->char (utf-16-decode-surrogate-pair word0 word1)))
+				     (%recurse ($fxadd2 bv.idx1) ($fxadd1 str.idx)))
+				 ;;Error: at index BV.IDX1 there should be the second
+				 ;;word in a surrogate pair.
+				 (%error-invalid-second-word bv.idx1 str.idx))))
+			    (($fx= bv.idx1 bv.len)
+			     ;;Error: we are  at the end of the  bytevector, at index
+			     ;;BV.IDX there  is a standalone first  word in surrogate
+			     ;;pair.
+			     (%error-standalone-first-word-in-pair bv.idx str.idx))
+			    (($fx< bv.idx1 bv.len)
+			     ;;Error: we  are not yet  at the end of  the bytevector,
+			     ;;but there  is not  enough room  for the  second 16-bit
+			     ;;word  in the  surrogate pair.   There is  a standalone
+			     ;;octet after the first word.
+			     (%error-not-enough-octets bv.idx str.idx))
+			    (else
+			     ;;Error we have gone past the end of the bytevector.
+			     (assertion-violation who "internal error: overflow while processing UTF-16 bytevector")))))
+		   (else
+		    ;;Error: at index BV.IDX there is an invalid 16-bit word.
+		    (%error-invalid-first-word bv.idx str.idx)))))
+
+	  (($fx= bv.idx bv.len)
+	   ;;We correctly are at the end of the bytevector.  Done.
+	   str)
+
+	  (($fx< bv.idx bv.len)
+	   ;;Error: we  are not yet at  the end of  the bytevector, but there  is not
+	   ;;enough room for a 16-bit word.
+	   (%error-not-enough-octets bv.idx str.idx))
+
+	  (else
+	   ;;Error we have gone past the end of the bytevector.
+	   (assertion-violation who "internal error: overflow while processing UTF-16 bytevector"))))
+
+  #| end of module: UTF16->STRING |# )
 
 
 (module (string->utf32)

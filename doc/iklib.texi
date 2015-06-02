@@ -11057,6 +11057,12 @@ would contain its @utf{}-8 representation.
 @end defun
 
 
+@defun string->utf16-length @var{str}
+Given a string compute and return the length of the bytevector that
+would contain its @utf{}-16 representation.
+@end defun
+
+
 @defun string->octets @var{string}
 @defunx octets->string @var{bytevector}
 Convert to and from a Scheme string and a Scheme bytevector holding the

@@ -760,6 +760,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-collect.sps					\
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-conditions.sps				\
+	tests/test-vicare-convert-bytevectors.sps			\
 	tests/test-vicare-coroutines.sps				\
 	tests/test-vicare-enumerations.sps				\
 	tests/test-vicare-environment-inquiry.sps			\

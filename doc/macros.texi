@@ -219,6 +219,10 @@ Revised^6 Report on the algorithmic language Scheme
 @acronym{XML}
 @end macro
 
+@macro bom{}
+@acronym{BOM}
+@end macro
+
 @macro cpu{}
 @acronym{CPU}
 @end macro
