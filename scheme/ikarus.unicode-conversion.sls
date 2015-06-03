@@ -25,7 +25,8 @@
 	  string->utf32		utf32->string
 	  string->bytevector	bytevector->string
 
-	  utf8->string-length	string->utf8-length)
+	  utf8->string-length	string->utf8-length
+	  utf16->string-length	string->utf16-length)
   (import (except (vicare)
 		  string->utf8		utf8->string
 		  string->utf16		utf16->string
@@ -36,7 +37,7 @@
                   string->bytevector	bytevector->string
 
 		  utf8->string-length	string->utf8-length
-		  string->utf16-length)
+		  utf16->string-length	string->utf16-length)
     (vicare system $strings)
     (except (vicare system $bytevectors)
 	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
@@ -54,6 +55,11 @@
 
 (define (endianness? obj)
   (memq obj '(little big)))
+
+(define (error-handling-mode? obj)
+  (or (eq? obj 'ignore)
+      (eq? obj 'replace)
+      (eq? obj 'raise)))
 
 (define ($fxadd2 N)
   ($fx+ N 2))
@@ -196,11 +202,6 @@
     #| end of module |# )
 
 ;;; --------------------------------------------------------------------
-
-  (define (error-handling-mode? obj)
-    (or (eq? obj 'ignore)
-	(eq? obj 'replace)
-	(eq? obj 'raise)))
 
   (define (%has-bom? bv)
     (and ($fx>= ($bytevector-length bv) 3)
@@ -458,60 +459,64 @@
   #| end of module |# )
 
 
-(module (utf16->string)
+(module (utf16->string utf16->string-length)
 
   (case-define* utf16->string
     (({bv bytevector?} {endianness endianness?})
-     ($utf16->string bv endianness #f))
+     ($utf16->string bv endianness #f 'raise))
     (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
-     ($utf16->string bv endianness endianness-mandatory?)))
+     ($utf16->string bv endianness endianness-mandatory? 'raise))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory? {mode error-handling-mode?})
+     ($utf16->string bv endianness endianness-mandatory? mode)))
 
   (case-define* utf16->string-length
     (({bv bytevector?} {endianness endianness?})
-     ($utf16->string-length bv endianness #f))
+     ($utf16->string-length bv endianness #f 'raise))
     (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
-     ($utf16->string-length bv endianness endianness-mandatory?)))
+     ($utf16->string-length bv endianness endianness-mandatory? 'raise))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory? {mode error-handling-mode?})
+     ($utf16->string-length bv endianness endianness-mandatory? mode)))
 
 ;;; --------------------------------------------------------------------
 
   (module ($utf16->string)
 
-    (define* ($utf16->string bv endianness endianness-mandatory?)
+    (define* ($utf16->string bv endianness endianness-mandatory? mode)
       (cond (endianness-mandatory?
 	     ;;We accept the argument ENDIANNESS as endianness specification.
-	     (%decode __who__ bv 0 endianness))
+	     (%decode __who__ bv 0 endianness mode))
 	    ((%bom->endianness bv)
 	     => (lambda (endian)
-		  (%decode __who__ bv 2 endian)))
+		  (%decode __who__ bv 2 endian mode)))
 	    (else
 	     ;;There  is  no  BOM,  accept  the  argument  ENDIANNESS  as  endianness
 	     ;;specification.
-	     (%decode __who__ bv 0 endianness))))
+	     (%decode __who__ bv 0 endianness mode))))
 
-    (define (%decode who bv bv.start endianness)
+    (define (%decode who bv bv.start endianness mode)
       (let* ((bv.len  ($bytevector-length bv))
-	     (str.len (%compute-string-length who bv bv.start bv.len 0 endianness 'raise))
+	     (str.len (%compute-string-length who bv bv.start bv.len 0 endianness mode))
 	     (str     ($make-string str.len)))
-	(%decode-string-fill-bytevector who bv bv.start bv.len str 0 endianness 'raise)))
+	(%decode-string-fill-bytevector who bv bv.start bv.len str 0 endianness mode)))
 
     #| end of module |# )
 
   (module ($utf16->string-length)
 
-    (define* ($utf16->string-length bv endianness endianness-mandatory?)
+    (define* ($utf16->string-length bv endianness endianness-mandatory? mode)
       (cond (endianness-mandatory?
 	     ;;We accept the argument ENDIANNESS as endianness specification.
-	     (%compute-length __who__ bv 0 endianness))
+	     (%compute-length __who__ bv 0 endianness mode))
 	    ((%bom->endianness bv)
 	     => (lambda (endian)
-		  (%compute-length __who__ bv 2 endian)))
+		  (%compute-length __who__ bv 2 endian mode)))
 	    (else
 	     ;;There  is  no  BOM,  accept  the  argument  ENDIANNESS  as  endianness
 	     ;;specification.
-	     (%compute-length __who__ bv 0 endianness))))
+	     (%compute-length __who__ bv 0 endianness mode))))
 
-    (define (%compute-length who bv bv.start endianness)
-      (%compute-string-length who bv bv.start ($bytevector-length bv) 0 endianness 'raise))
+    (define (%compute-length who bv bv.start endianness mode)
+      (%compute-string-length who bv bv.start ($bytevector-length bv) 0 endianness mode))
 
     #| end of module |# )
 

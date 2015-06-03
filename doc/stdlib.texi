@@ -935,8 +935,9 @@ is encoded by the given bytevector.
 
 @deffn Procedure utf16->string @var{bytevector} @var{endianness}
 @deffnx Procedure utf16->string @var{bytevector} @var{endianness} @var{endianness-mandatory}
-@var{endianness} must be the symbol @code{big} or the symbol
-@code{little}.
+@deffnx Procedure utf16->string @var{bytevector} @var{endianness} @var{endianness-mandatory} @var{handling-mode}
+The argument @var{endianness} must be the symbol @code{big} or the
+symbol @code{little}.
 
 The @func{utf16->string} procedure returns a newly allocated (unless
 empty) string whose character sequence is encoded by the given
@@ -994,6 +995,11 @@ any @utf{}-16 @bom{} in the encoding is decoded as a regular character.
 (utf16->string '#vu8(#xFF #xFE #xAA #xBB) (endianness little) #f)
 @result{} "\xBBAA;"
 @end lisp
+
+As @value{PRJNAME} extension: the optional argument @var{handling-mode}
+must be a symbol representing an error handling mode, as validated by
+@syntax{error-handling-mode} (@pxref{stdlib io port transcoders,
+error-handling-mode}); when not given, it defaults to @samp{raise}.
 @end deffn
 
 

@@ -362,12 +362,14 @@
 (declare-core-primitive utf16->string
     (safe)
   (signatures
-   ((T:bytevector T:symbol)		=> (T:string))
-   ((T:bytevector T:symbol T:object)	=> (T:string)))
+   ((T:bytevector T:symbol)			=> (T:string))
+   ((T:bytevector T:symbol T:object)		=> (T:string))
+   ((T:bytevector T:symbol T:object T:symbol)	=> (T:string)))
   (attributes
    ;;Not foldable because it must return a new string at every application.
    ((_ _) 		effect-free result-true)
-   ((_ _ _) 		effect-free result-true)))
+   ((_ _ _) 		effect-free result-true)
+   ((_ _ _ _) 		effect-free result-true)))
 
 (declare-core-primitive utf32->string
     (safe)

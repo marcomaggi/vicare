@@ -99,10 +99,201 @@
   #t)
 
 
+(parametrise ((check-test-name	'string-utf16-length))
+
+  ;; characters encoded with 1 word
+  (check (utf16->string-length '#vu8(#x12 #x34) (endianness big))	=> 1)
+  (check (utf16->string-length '#vu8(#x34 #x12) (endianness little))	=> 1)
+
+  ;; characters encoded with 2 words
+  (check (utf16->string-length '#vu8(#xAA #xBB) (endianness big))	=> 1)
+  (check (utf16->string-length '#vu8(#xAA #xBB) (endianness little))	=> 1)
+
+;;; --------------------------------------------------------------------
+
+;;Code points in the  range [0, #x10000) are encoded with a  single UTF-16 word; code
+;;points in the range [#x10000, #x10FFFF] are encoded in a surrogate pair.
+
+  (check (string->utf16-length "\x00;")				=> 2)
+
+  (check (string->utf16-length "\x00;\x01;\x02;\x03;")		=> 8)
+  (check (string->utf16-length "\x00;\x01;\x02;\x03;")		=> 8)
+
+  (check (string->utf16-length "\xFFFE;")				=> 2)
+  (check (string->utf16-length "\xFFFE;")				=> 2)
+  (check (utf16->string-length '#vu8(#xFF #xFE) (endianness big)    #t)	=> 1)
+  (check (utf16->string-length '#vu8(#xFE #xFF) (endianness little) #t)	=> 1)
+
+  ;;BOM processing:
+  ;;
+  ;;* #xFEFF is the BOM for big endian.
+  ;;
+  ;;* #xFFFE is the BOM for little endian.
+  ;;
+  ;;In all these tests: the endianness argument  is ignored; the BOM is processed; an
+  ;;empty string is generated.
+  (begin
+    ;;Big endian BOM.
+    (check (utf16->string-length '#vu8(#xFE #xFF) (endianness big)    #f)	=> 0)
+    (check (utf16->string-length '#vu8(#xFE #xFF) (endianness little) #f)	=> 0)
+    ;;Little endian BOM.
+    (check (utf16->string-length '#vu8(#xFF #xFE) (endianness big)    #f)	=> 0)
+    (check (utf16->string-length '#vu8(#xFF #xFE) (endianness little) #f)	=> 0))
+  ;;In all these tests:  the endianness argument is ignored; the  BOM is processed; a
+  ;;string of 1 character is generated.
+  (begin
+    ;;Big endian BOM.
+    (check (utf16->string-length '#vu8(#xFE #xFF #xAA #xBB) (endianness big)    #f)	=> 1)
+    (check (utf16->string-length '#vu8(#xFE #xFF #xAA #xBB) (endianness little) #f)	=> 1)
+    ;;Little endian BOM.
+    (check (utf16->string-length '#vu8(#xFF #xFE #xAA #xBB) (endianness big)    #f)	=> 1)
+    (check (utf16->string-length '#vu8(#xFF #xFE #xAA #xBB) (endianness little) #f)	=> 1))
+
+  ;; highest code point that is encoded with 1 16-bit word
+  (begin
+    (check (string->utf16-length "\xFFFF;")	=> 2))
+
+;;; --------------------------------------------------------------------
+
+  ;; lowest code point that is encoded with 2 16-bit words
+  (begin
+    (check (string->utf16-length "\x10000;")						=> 4)
+    (check (string->utf16-length "\x10000;")						=> 4)
+    (check (utf16->string-length '#vu8(#xD8 #x00 #xDC #x00) (endianness big))		=> 1)
+    (check (utf16->string-length '#vu8(#x00 #xD8 #x00 #xDC) (endianness little))	=> 1))
+
+  ;; generic code point that is encoded with 2 16-bit words
+  (begin
+    (check (string->utf16-length "\x12345;")						=> 4)
+    (check (string->utf16-length "\x12345;")						=> 4)
+    (check (utf16->string-length '#vu8(#xD8 #x08 #xDF #x45)	(endianness big))	=> 1)
+    (check (utf16->string-length '#vu8(#x08 #xD8 #x45 #xDF)	(endianness little))	=> 1))
+
+  ;; highest code point that is encoded with 2 16-bit words
+  (begin
+    (check (string->utf16-length "\x10FFFF;")						=> 4)
+    (check (string->utf16-length "\x10FFFF;")						=> 4)
+    (check (utf16->string-length '#vu8(#xDB #xFF #xDF #xFF)	(endianness big))	=> 1)
+    (check (utf16->string-length '#vu8(#xFF #xDB #xFF #xDF)	(endianness little))	=> 1))
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: replace
+
+  (internal-body
+    (define (do-big str)
+      (utf16->string-length str (endianness big)    #f (error-handling-mode replace)))
+    (define (do-lit str)
+      (utf16->string-length str (endianness little) #f (error-handling-mode replace)))
+
+    ;;The string "\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#x12 #x34)
+    ;;
+    ;;* With little endian:		#vu8(#x34 #x12)
+    ;;
+
+    ;;The string "\x12345;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#xD8 #x08 #xDF #x45)
+    ;;
+    ;;* With little endian:		#vu8(#x08 #xD8 #x45 #xDF)
+    ;;
+
+    ;;Error: replace mode, 1-word character, missing second octet.
+    ;;
+    (check (do-big '#vu8(#x00))				=> 1)
+    (check (do-big '#vu8(#x12 #x34   #x00))		=> 2)
+    (check (do-lit '#vu8(#x00))				=> 1)
+    (check (do-lit '#vu8(#x34 #x12   #x00))		=> 2)
+
+    ;;Error: replace mode, 2-words character, missing second octet of second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08   #xDF))		=> 1)
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08 #xDF))	=> 2)
+    (check (do-lit '#vu8(#x08 #xD8   #xDF))		=> 1)
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45))	=> 2)
+
+    ;;Error: replace mode, 2-words character, missing second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08))			=> 1)
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08))	=> 2)
+    (check (do-lit '#vu8(#x08 #xD8))			=> 1)
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8))	=> 2)
+
+    ;;Error: replace mode, 2-words character, missing second octet of first word.
+    ;;
+    (check (do-big '#vu8(#xD8))				=> 1)
+    (check (do-big '#vu8(#x12 #x34   #xD8))		=> 2)
+    (check (do-lit '#vu8(#x08))				=> 1)
+    (check (do-lit '#vu8(#x34 #x12   #x08))		=> 2)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: ignore
+
+  (internal-body
+    (define (do-big str)
+      (utf16->string-length str (endianness big)    #f (error-handling-mode ignore)))
+    (define (do-lit str)
+      (utf16->string-length str (endianness little) #f (error-handling-mode ignore)))
+
+    ;;The string "\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#x12 #x34)
+    ;;
+    ;;* With little endian:		#vu8(#x34 #x12)
+    ;;
+
+    ;;The string "\x12345;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#xD8 #x08 #xDF #x45)
+    ;;
+    ;;* With little endian:		#vu8(#x08 #xD8 #x45 #xDF)
+    ;;
+
+    ;;Error: ignore mode, 1-word character, missing second octet.
+    ;;
+    (check (do-big '#vu8(#x00))				=> 0)
+    (check (do-big '#vu8(#x12 #x34   #x00))		=> 1)
+    (check (do-lit '#vu8(#x00))				=> 0)
+    (check (do-lit '#vu8(#x34 #x12   #x00))		=> 1)
+
+    ;;Error: ignore mode, 2-words character, missing second octet of second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08   #xDF))		=> 0)
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08 #xDF))	=> 1)
+    (check (do-lit '#vu8(#x08 #xD8   #xDF))		=> 0)
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45))	=> 1)
+
+    ;;Error: ignore mode, 2-words character, missing second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08))			=> 0)
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08))	=> 1)
+    (check (do-lit '#vu8(#x08 #xD8))			=> 0)
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8))	=> 1)
+
+    ;;Error: ignore mode, 2-words character, missing second octet of first word.
+    ;;
+    (check (do-big '#vu8(#xD8))				=> 0)
+    (check (do-big '#vu8(#x12 #x34   #xD8))		=> 1)
+    (check (do-lit '#vu8(#x08))				=> 0)
+    (check (do-lit '#vu8(#x34 #x12   #x08))		=> 1)
+
+    #| end of INTERNAL-BODY |# )
+
+  #t)
+
+
 (parametrise ((check-test-name	'string-utf16))
 
 ;;; tests for use in the documentation
 
+  ;; characters encoded with 1 word
+  (check (utf16->string '#vu8(#x12 #x34) (endianness big))	=> "\x1234;")
+  (check (utf16->string '#vu8(#x34 #x12) (endianness little))	=> "\x1234;")
+
+  ;; characters encoded with 2 words
   (check (utf16->string '#vu8(#xAA #xBB) (endianness big))	=> "\xAABB;")
   (check (utf16->string '#vu8(#xAA #xBB) (endianness little))	=> "\xBBAA;")
 
@@ -182,8 +373,110 @@
     (check (string->utf16 "\x10FFFF;" (endianness little))	=> '#vu8(#xFF #xDB #xFF #xDF)))
 
 ;;; --------------------------------------------------------------------
+;;; error handling mode: replace
 
+  (internal-body
+    (define (do-big str)
+      (utf16->string str (endianness big)    #f (error-handling-mode replace)))
+    (define (do-lit str)
+      (utf16->string str (endianness little) #f (error-handling-mode replace)))
 
+    ;;The string "\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#x12 #x34)
+    ;;
+    ;;* With little endian:		#vu8(#x34 #x12)
+    ;;
+
+    ;;The string "\x12345;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#xD8 #x08 #xDF #x45)
+    ;;
+    ;;* With little endian:		#vu8(#x08 #xD8 #x45 #xDF)
+    ;;
+
+    ;;Error: replace mode, 1-word character, missing second octet.
+    ;;
+    (check (do-big '#vu8(#x00))				=> "\xFFFD;")
+    (check (do-big '#vu8(#x12 #x34   #x00))		=> "\x1234;\xFFFD;")
+    (check (do-lit '#vu8(#x00))				=> "\xFFFD;")
+    (check (do-lit '#vu8(#x34 #x12   #x00))		=> "\x1234;\xFFFD;")
+
+    ;;Error: replace mode, 2-words character, missing second octet of second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08   #xDF))		=> "\xFFFD;")
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08 #xDF))	=> "\x1234;\xFFFD;")
+    (check (do-lit '#vu8(#x08 #xD8   #xDF))		=> "\xFFFD;")
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45))	=> "\x1234;\xFFFD;")
+
+    ;;Error: replace mode, 2-words character, missing second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08))			=> "\xFFFD;")
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08))	=> "\x1234;\xFFFD;")
+    (check (do-lit '#vu8(#x08 #xD8))			=> "\xFFFD;")
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8))	=> "\x1234;\xFFFD;")
+
+    ;;Error: replace mode, 2-words character, missing second octet of first word.
+    ;;
+    (check (do-big '#vu8(#xD8))				=> "\xFFFD;")
+    (check (do-big '#vu8(#x12 #x34   #xD8))		=> "\x1234;\xFFFD;")
+    (check (do-lit '#vu8(#x08))				=> "\xFFFD;")
+    (check (do-lit '#vu8(#x34 #x12   #x08))		=> "\x1234;\xFFFD;")
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: ignore
+
+  (internal-body
+    (define (do-big str)
+      (utf16->string str (endianness big)    #f (error-handling-mode ignore)))
+    (define (do-lit str)
+      (utf16->string str (endianness little) #f (error-handling-mode ignore)))
+
+    ;;The string "\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#x12 #x34)
+    ;;
+    ;;* With little endian:		#vu8(#x34 #x12)
+    ;;
+
+    ;;The string "\x12345;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#xD8 #x08 #xDF #x45)
+    ;;
+    ;;* With little endian:		#vu8(#x08 #xD8 #x45 #xDF)
+    ;;
+
+    ;;Error: ignore mode, 1-word character, missing second octet.
+    ;;
+    (check (do-big '#vu8(#x00))				=> "")
+    (check (do-big '#vu8(#x12 #x34   #x00))		=> "\x1234;")
+    (check (do-lit '#vu8(#x00))				=> "")
+    (check (do-lit '#vu8(#x34 #x12   #x00))		=> "\x1234;")
+
+    ;;Error: ignore mode, 2-words character, missing second octet of second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08   #xDF))		=> "")
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08 #xDF))	=> "\x1234;")
+    (check (do-lit '#vu8(#x08 #xD8   #xDF))		=> "")
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45))	=> "\x1234;")
+
+    ;;Error: ignore mode, 2-words character, missing second word.
+    ;;
+    (check (do-big '#vu8(#xD8 #x08))			=> "")
+    (check (do-big '#vu8(#x12 #x34   #xD8 #x08))	=> "\x1234;")
+    (check (do-lit '#vu8(#x08 #xD8))			=> "")
+    (check (do-lit '#vu8(#x34 #x12   #x08 #xD8))	=> "\x1234;")
+
+    ;;Error: ignore mode, 2-words character, missing second octet of first word.
+    ;;
+    (check (do-big '#vu8(#xD8))				=> "")
+    (check (do-big '#vu8(#x12 #x34   #xD8))		=> "\x1234;")
+    (check (do-lit '#vu8(#x08))				=> "")
+    (check (do-lit '#vu8(#x34 #x12   #x08))		=> "\x1234;")
+
+    #| end of INTERNAL-BODY |# )
 
   #t)
 

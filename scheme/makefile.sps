@@ -2439,6 +2439,7 @@
     (string->utf8-length			v $language)
     (utf16->string				v r bv)
     (string->utf16-length			v $language)
+    (utf16->string-length			v $language)
     (utf16le->string				v $language)
     (utf16n->string				v $language)
     (utf16be->string				v $language)

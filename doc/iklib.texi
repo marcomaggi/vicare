@@ -10607,6 +10607,18 @@ given: it defaults to @samp{replace}.
 @end defun
 
 
+@defun utf16->string-length @var{bytevector} @var{endianness}
+@defunx utf16->string-length @var{bytevector} @var{endianness} @var{endianness-mandatory}
+@defunx utf16->string-length @var{bytevector} @var{endianness} @var{endianness-mandatory} @var{handling-mode}
+Given a bytevector representing a string in @utf{}-16 encoding: compute
+the length of the Scheme string required to hold the characters and
+return it as non--negative fixnum.
+
+All the arguments have the same meaning they have for
+@func{utf16->string} (@pxref{stdlib bytevector strings, utf16->string}).
+@end defun
+
+
 @defun {bytevector->s8-list} @var{bytevector}
 @defunx {s8-list->bytevector} @var{list}
 Convert between a list of signed bytes and a bytevector.
