@@ -492,6 +492,19 @@ VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 
 CLEANFILES		+= ikarus.config.scm $(VICARE_NEW_BOOT)
 
+VICARE_BOOT_PREREQUISITES	= \
+	vicare						\
+	ikarus.config.scm				\
+	scheme/makefile.sps				\
+	\
+	lib/vicare/platform/words.vicare.sls		\
+	lib/vicare/platform/constants.vicare.sls	\
+	lib/vicare/platform/errno.vicare.sls		\
+	\
+	lib/vicare/unsafe/unicode.vicare.sls		\
+	lib/vicare/unsafe/capi.vicare.sls		\
+	lib/vicare/unsafe/operations.vicare.sls
+
 ## --------------------------------------------------------------------
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
@@ -531,7 +544,7 @@ ikarus.config.scm:
 # the command  line options selected  by AX_VFLAGS and  VFLAGS; rather
 # all the options are set in the script "makefile.sps".
 #
-$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.scm scheme/makefile.sps
+$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) $(VICARE_BOOT_PREREQUISITES)
 	$(VICARE_BOOT_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
