@@ -282,6 +282,246 @@
 
     #| end of INTERNAL-BODY |# )
 
+;;; --------------------------------------------------------------------
+;;; error handling mode: raise
+
+  (internal-body
+    (define (do-big str)
+      (utf16->string-length str (endianness big)    #f (error-handling-mode raise)))
+    (define (do-lit str)
+      (utf16->string-length str (endianness little) #f (error-handling-mode raise)))
+
+    ;;The string "\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#x12 #x34)
+    ;;
+    ;;* With little endian:		#vu8(#x34 #x12)
+    ;;
+
+    ;;The string "\x12345;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#xD8 #x08 #xDF #x45)
+    ;;
+    ;;* With little endian:		#vu8(#x08 #xD8 #x45 #xDF)
+    ;;
+
+    ;;Error: ignore mode, 1-word character, missing second octet.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 0)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 0)
+    (check
+	(try
+	    (do-lit '#vu8(#x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 0)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 0)
+
+    ;;Error: ignore mode, 2-words character, missing second octet of second word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8 #x08   #xDF))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #xDF)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8 #x08 #xDF))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 4 #xDF)
+    (check
+	(try
+	    (do-lit '#vu8(#x08 #xD8   #xDF))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #xDF)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 4 #x45)
+
+    ;;Error: ignore mode, 2-words character, missing second word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8 #x08))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 0 #xD808)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8 #x08))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 2 #xD808)
+    (check
+	(try
+	    (do-lit '#vu8(#x08 #xD8))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 0 #xD808)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08 #xD8))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 2 #xD808)
+
+    ;;Error: ignore mode, 2-words character, missing second octet of first word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 #xD8)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #xD8)
+    (check
+	(try
+	    (do-lit '#vu8(#x08))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 #x08)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #x08)
+
+    ;;Error: ignore mode, 2-words character, invalid second word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8 #x08 #x00 #x45))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 2 #xD808 #x0045)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8 #x08 #x00 #x45))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 4 #xD808 #x0045)
+    (check
+	(try
+	    (do-lit '#vu8(#x08 #xD8 #x45 #x00))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 2 #xD808 #x0045)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45 #x00))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 4 #xD808 #x0045)
+
+    #| end of INTERNAL-BODY |# )
+
   #t)
 
 
@@ -475,6 +715,246 @@
     (check (do-big '#vu8(#x12 #x34   #xD8))		=> "\x1234;")
     (check (do-lit '#vu8(#x08))				=> "")
     (check (do-lit '#vu8(#x34 #x12   #x08))		=> "\x1234;")
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: raise
+
+  (internal-body
+    (define (do-big str)
+      (utf16->string str (endianness big)    #f (error-handling-mode raise)))
+    (define (do-lit str)
+      (utf16->string str (endianness little) #f (error-handling-mode raise)))
+
+    ;;The string "\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#x12 #x34)
+    ;;
+    ;;* With little endian:		#vu8(#x34 #x12)
+    ;;
+
+    ;;The string "\x12345;" is encoded as:
+    ;;
+    ;;* With big endian:		#vu8(#xD8 #x08 #xDF #x45)
+    ;;
+    ;;* With little endian:		#vu8(#x08 #xD8 #x45 #xDF)
+    ;;
+
+    ;;Error: ignore mode, 1-word character, missing second octet.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 0)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 0)
+    (check
+	(try
+	    (do-lit '#vu8(#x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 0)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x00))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 0)
+
+    ;;Error: ignore mode, 2-words character, missing second octet of second word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8 #x08   #xDF))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #xDF)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8 #x08 #xDF))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 4 #xDF)
+    (check
+	(try
+	    (do-lit '#vu8(#x08 #xD8   #xDF))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #xDF)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 4 #x45)
+
+    ;;Error: ignore mode, 2-words character, missing second word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8 #x08))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 0 #xD808)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8 #x08))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 2 #xD808)
+    (check
+	(try
+	    (do-lit '#vu8(#x08 #xD8))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 0 #xD808)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08 #xD8))
+	  (catch E
+	    ((&utf16-string-decoding-missing-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-missing-second-word.index E)
+		     (utf16-string-decoding-missing-second-word.word E)))
+	    (else E)))
+      => 2 #xD808)
+
+    ;;Error: ignore mode, 2-words character, missing second octet of first word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 #xD8)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #xD8)
+    (check
+	(try
+	    (do-lit '#vu8(#x08))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 0 #x08)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08))
+	  (catch E
+	    ((&utf16-string-decoding-standalone-octet)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-standalone-octet.index E)
+		     (utf16-string-decoding-standalone-octet.octet E)))
+	    (else E)))
+      => 2 #x08)
+
+    ;;Error: ignore mode, 2-words character, invalid second word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xD8 #x08 #x00 #x45))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 2 #xD808 #x0045)
+    (check
+	(try
+	    (do-big '#vu8(#x12 #x34   #xD8 #x08 #x00 #x45))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 4 #xD808 #x0045)
+    (check
+	(try
+	    (do-lit '#vu8(#x08 #xD8 #x45 #x00))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 2 #xD808 #x0045)
+    (check
+	(try
+	    (do-lit '#vu8(#x34 #x12   #x08 #xD8 #x45 #x00))
+	  (catch E
+	    ((&utf16-string-decoding-invalid-second-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf16-string-decoding-invalid-second-word.index E)
+		     (utf16-string-decoding-invalid-second-word.first-word E)
+		     (utf16-string-decoding-invalid-second-word.second-word E)))
+	    (else E)))
+      => 4 #xD808 #x0045)
 
     #| end of INTERNAL-BODY |# )
 

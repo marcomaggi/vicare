@@ -28,6 +28,14 @@
 	  utf8->string-length	string->utf8-length
 	  utf16->string-length	string->utf16-length)
   (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Wed Jun 3, 2015)
+		  make-utf16-string-decoding-invalid-first-word
+		  make-utf16-string-decoding-invalid-second-word
+		  make-utf16-string-decoding-missing-second-word
+		  make-utf16-string-decoding-standalone-octet
+		  ;;
+
 		  string->utf8		utf8->string
 		  string->utf16		utf16->string
 		  string->utf16le	utf16le->string
@@ -48,7 +56,14 @@
     (vicare system $fx)
     (vicare system $chars)
     ;;See the documentation of this library for details on Unicode.
-    (vicare unsafe unicode))
+    (vicare unsafe unicode)
+    ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Jun 3,
+    ;;2015)
+    (only (ikarus conditions)
+	  make-utf16-string-decoding-invalid-first-word
+	  make-utf16-string-decoding-invalid-second-word
+	  make-utf16-string-decoding-missing-second-word
+	  make-utf16-string-decoding-standalone-octet))
 
 
 ;;;; helpers
@@ -78,6 +93,12 @@
 
 (define ($fxsub4 N)
   ($fx- N 4))
+
+(define (%raise-condition who message cnd)
+  (raise
+   (condition (make-who-condition who)
+	      (make-message-condition message)
+	      cnd)))
 
 ;;; --------------------------------------------------------------------
 
@@ -540,7 +561,8 @@
 
     (define (%error-invalid-first-word bv.idx accum-len)
       ;;At index BV.IDX there should be either  a standalone 16-bit word or the first
-      ;;word of a surrogate pair.  Instead, there is an invalid word.
+      ;;word of  a surrogate pair;  instead, there is  an invalid word.   This should
+      ;;never happen.
       ;;
       (case mode
 	((ignore)
@@ -551,13 +573,12 @@
 	 ;;character.
 	 (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
 	(else	;raise
-	 (error who
-	   (string-append "invalid 16-bit word at index " (number->string bv.idx) "of UTF-16 bytevector")
-	   bv))))
+	 (%raise-condition who "invalid 16-bit first word"
+			   (make-utf16-string-decoding-invalid-first-word bv bv.idx (bytevector-u16-ref bv bv.idx endianness))))))
 
-    (define (%error-invalid-second-word bv.idx accum-len)
-      ;;At index BV.IDX there  should be the second 16-bit word  in a surrogate pair.
-      ;;Instead, there is an invalid word.
+    (define (%error-invalid-second-word bv.idx-1st bv.idx-2nd accum-len)
+      ;;At index BV.IDX-SECOND there should be  the second 16-bit word in a surrogate
+      ;;pair.  Instead, there is an invalid word.
       (case mode
 	((ignore)
 	 ;;When converting: we will ignore the invalid pair.
@@ -567,9 +588,10 @@
 	 ;;character.
 	 (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
 	(else	;raise
-	 (error who
-	   (string-append "invalid second 16-bit word in pair at index " (number->string bv.idx) "of UTF-16 bytevector")
-	   bv))))
+	 (%raise-condition who "invalid second 16-bit word in surrogate pair"
+			   (make-utf16-string-decoding-invalid-second-word bv bv.idx-2nd
+									   (bytevector-u16-ref bv bv.idx-1st endianness)
+									   (bytevector-u16-ref bv bv.idx-2nd endianness))))))
 
     (define (%error-standalone-first-word-in-pair bv.idx accum-len)
       ;;At index BV.IDX there is a standalone first word in surrogate pair; we are at
@@ -583,7 +605,8 @@
 	 ;;character.
 	 ($fxadd1 accum-len))
 	(else	;raise
-	 (error who "standalone first word in surrogate pair at end of UTF-16 bytevector" bv))))
+	 (%raise-condition who "standalone first word in surrogate pair at end of UTF-16 bytevector"
+			   (make-utf16-string-decoding-missing-second-word bv bv.idx (bytevector-u16-ref bv bv.idx endianness))))))
 
     (define (%error-not-enough-octets bv.idx accum-len)
       ;;At index BV.IDX there  should be a first 16-bit word or the  second word in a
@@ -600,7 +623,8 @@
 	 ;;character.
 	 ($fxadd1 accum-len))
 	(else	;raise
-	 (error who "standalone octet at end of UTF-16 bytevector" bv))))
+	 (%raise-condition who "standalone octet at end of UTF-16 bytevector"
+			   (make-utf16-string-decoding-standalone-octet bv bv.idx (bytevector-u8-ref bv bv.idx))))))
 
     (cond (($fx<= bv.idx ($fxsub2 bv.len))
 	   ;;Good there is room for at least one more 16-bit word.
@@ -618,7 +642,7 @@
 				   (%recurse ($fxadd2 bv.idx1) ($fxadd1 accum-len))
 				 ;;Error: at index BV.IDX1 there should be the second
 				 ;;word in a surrogate pair.
-				 (%error-invalid-second-word bv.idx1 accum-len))))
+				 (%error-invalid-second-word bv.idx bv.idx1 accum-len))))
 			    (($fx= bv.idx1 bv.len)
 			     ;;Error: we are  at the end of the  bytevector, at index
 			     ;;BV.IDX there  is a standalone first  word in surrogate
@@ -629,12 +653,13 @@
 			     ;;but there  is not  enough room  for the  second 16-bit
 			     ;;word  in the  surrogate pair.   There is  a standalone
 			     ;;octet after the first word.
-			     (%error-not-enough-octets bv.idx accum-len))
+			     (%error-not-enough-octets bv.idx1 accum-len))
 			    (else
 			     ;;Error we have gone past the end of the bytevector.
 			     (assertion-violation who "internal error: overflow while processing UTF-16 bytevector")))))
 		   (else
-		    ;;Error: at index BV.IDX there is an invalid 16-bit word.
+		    ;;Error: at index  BV.IDX there is an invalid  16-bit word.  This
+		    ;;should never happen.
 		    (%error-invalid-first-word bv.idx accum-len)))))
 
 	  (($fx= bv.idx bv.len)
@@ -658,7 +683,8 @@
 
     (define (%error-invalid-first-word bv.idx str.idx)
       ;;At index BV.IDX there should be either  a standalone 16-bit word or the first
-      ;;word of a surrogate pair.  Instead, there is an invalid word.
+      ;;word of  a surrogate pair;  instead, there is  an invalid word.   This should
+      ;;never happen.
       ;;
       (case mode
 	((ignore)
@@ -669,13 +695,12 @@
 	 ($string-set! str str.idx #\xFFFD)
 	 (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
 	(else	;raise
-	 (error who
-	   (string-append "invalid 16-bit word at index " (number->string bv.idx) "of UTF-16 bytevector")
-	   bv))))
+	 (%raise-condition who "invalid 16-bit first word"
+			   (make-utf16-string-decoding-invalid-first-word bv bv.idx (bytevector-u16-ref bv bv.idx endianness))))))
 
-    (define (%error-invalid-second-word bv.idx str.idx)
-      ;;At index BV.IDX there  should be the second 16-bit word  in a surrogate pair.
-      ;;Instead, there is an invalid word.
+    (define (%error-invalid-second-word bv.idx-1st bv.idx-2nd str.idx)
+      ;;At index  BV.IDX-2ND there should  be the second  16-bit word in  a surrogate
+      ;;pair.  Instead, there is an invalid word.
       ;;
       (case mode
 	((ignore)
@@ -686,9 +711,10 @@
 	 ($string-set! str str.idx #\xFFFD)
 	 (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
 	(else	;raise
-	 (error who
-	   (string-append "invalid second 16-bit word in pair at index " (number->string bv.idx) "of UTF-16 bytevector")
-	   bv))))
+	 (%raise-condition who "invalid second 16-bit word in surrogate pair"
+			   (make-utf16-string-decoding-invalid-second-word bv bv.idx-2nd
+									   (bytevector-u16-ref bv bv.idx-1st endianness)
+									   (bytevector-u16-ref bv bv.idx-2nd endianness))))))
 
     (define (%error-standalone-first-word-in-pair bv.idx str.idx)
       ;;At index BV.IDX there is a standalone first word in surrogate pair; we are at
@@ -702,7 +728,8 @@
 	 ($string-set! str str.idx #\xFFFD)
 	 str)
 	(else	;raise
-	 (error who "standalone first word in surrogate pair at end of UTF-16 bytevector" bv))))
+	 (%raise-condition who "standalone first word in surrogate pair at end of UTF-16 bytevector"
+			   (make-utf16-string-decoding-missing-second-word bv bv.idx (bytevector-u16-ref bv bv.idx endianness))))))
 
     (define (%error-not-enough-octets bv.idx str.idx)
       ;;At index BV.IDX there  should be a first 16-bit word or the  second word in a
@@ -719,7 +746,8 @@
 	 ($string-set! str str.idx #\xFFFD)
 	 str)
 	(else	;raise
-	 (error who "standalone octet at end of UTF-16 bytevector" bv))))
+	 (%raise-condition who "standalone octet at end of UTF-16 bytevector"
+			   (make-utf16-string-decoding-standalone-octet bv bv.idx (bytevector-u8-ref bv bv.idx))))))
 
     (cond (($fx<= bv.idx ($fxsub2 bv.len))
 	   ;;Good there is room for at least one more 16-bit word.
@@ -740,7 +768,7 @@
 				     (%recurse ($fxadd2 bv.idx1) ($fxadd1 str.idx)))
 				 ;;Error: at index BV.IDX1 there should be the second
 				 ;;word in a surrogate pair.
-				 (%error-invalid-second-word bv.idx1 str.idx))))
+				 (%error-invalid-second-word bv.idx bv.idx1 str.idx))))
 			    (($fx= bv.idx1 bv.len)
 			     ;;Error: we are  at the end of the  bytevector, at index
 			     ;;BV.IDX there  is a standalone first  word in surrogate
@@ -751,12 +779,13 @@
 			     ;;but there  is not  enough room  for the  second 16-bit
 			     ;;word  in the  surrogate pair.   There is  a standalone
 			     ;;octet after the first word.
-			     (%error-not-enough-octets bv.idx str.idx))
+			     (%error-not-enough-octets bv.idx1 str.idx))
 			    (else
 			     ;;Error we have gone past the end of the bytevector.
 			     (assertion-violation who "internal error: overflow while processing UTF-16 bytevector")))))
 		   (else
-		    ;;Error: at index BV.IDX there is an invalid 16-bit word.
+		    ;;Error: at index  BV.IDX there is an invalid  16-bit word.  This
+		    ;;should never happen.
 		    (%error-invalid-first-word bv.idx str.idx)))))
 
 	  (($fx= bv.idx bv.len)
