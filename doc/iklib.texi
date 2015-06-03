@@ -5936,6 +5936,7 @@ waiting for its termination in a coroutine; it assumes that
 * iklib conditions proccon::    Procedure argument consistency violations.
 * iklib conditions exprret::    Expression return value violations.
 * iklib conditions non-reinst:: Non-reinstatable continuations.
+* iklib conditions string::     String encoding and decoding.
 * iklib conditions misc::       Miscellaneous primitives.
 @end menu
 
@@ -6415,6 +6416,382 @@ Return @true{} if @var{obj} is a condition object of type
 Raise a compound condition object with components: @condition{who},
 @condition{message}, @condition{irritants},
 @condition{non-reinstatable}.
+@end defun
+
+@c page
+@node iklib conditions string
+@subsection String encoding and decoding
+
+
+@menu
+* iklib conditions string generic::     Generic string encoding condition types.
+* iklib conditions string utf8::        @utf{}-8 string encoding condition types.
+* iklib conditions string utf16::       @utf{}-16 string encoding condition types.
+* iklib conditions string utf32::       @utf{}-32 string encoding condition types.
+@end menu
+
+@c page
+@node iklib conditions string generic
+@subsubsection Generic string encoding condition types
+
+
+@subsubheading Encoding strings
+
+@deftp {Condition Type} &string-encoding
+Condition object type representing an error while encoding a string into
+a bytevector; it is derived from @condition{error}.
+@end deftp
+
+
+@defun make-string-encoding-error
+Build and return a new condition object of type
+@condition{string-encoding}.
+@end defun
+
+
+@defun string-encoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{string-encoding}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding strings
+
+@deftp {Condition Type} &string-decoding
+Condition object type representing an error while encoding a bytevector
+into a string; it is derived from @condition{error}.
+@end deftp
+
+
+@defun make-string-decoding-error
+Build and return a new condition object of type
+@condition{string-decoding}.
+@end defun
+
+
+@defun string-decoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{string-decoding}; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib conditions string utf8
+@subsubsection @utf{}-8 string encoding condition types
+
+
+@subsubheading Encoding strings into @utf{}-8 bytevectors
+
+
+@deftp {Condition Type} &utf8-string-encoding
+Condition object type representing an error while encoding a string into
+a @utf{}-8 bytevector; it is derived from @condition{string-encoding}.
+@end deftp
+
+
+@defun make-utf8-string-encoding-error
+Build and return a new condition object of type
+@condition{utf8-string-encoding}.
+@end defun
+
+
+@defun utf8-string-encoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-encoding}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding strings from @utf{}-8 bytevectors
+
+
+@deftp {Condition Type} &utf8-string-decoding
+Condition object type representing an error while decoding a @utf{}-8
+bytevector into a string; it is derived from
+@condition{string-decoding}.
+@end deftp
+
+
+@defun make-utf8-string-decoding-error
+Build and return a new condition object of type
+@condition{utf8-string-decoding}.
+@end defun
+
+
+@defun utf8-string-decoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding}; otherwise return @false{}.
+@end defun
+
+@c page
+@node iklib conditions string utf16
+@subsubsection @utf{}-16 string encoding condition types
+
+
+@subsubheading Encoding strings into @utf{}-16 bytevectors
+
+
+@deftp {Condition Type} &utf16-string-encoding
+Condition object type representing an error while encoding a string into
+a @utf{}-16 bytevector; it is derived from @condition{string-encoding}.
+@end deftp
+
+
+@defun make-utf16-string-encoding-error
+Build and return a new condition object of type
+@condition{utf16-string-encoding}.
+@end defun
+
+
+@defun utf16-string-encoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf16-string-encoding}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding strings from @utf{}-16 bytevectors
+
+
+@deftp {Condition Type} &utf16-string-decoding
+Condition object type representing an error while decoding a @utf{}-16
+bytevector into a string; it is derived from
+@condition{string-decoding}.
+@end deftp
+
+
+@defun make-utf16-string-decoding-error
+Build and return a new condition object of type
+@condition{utf16-string-decoding}.
+@end defun
+
+
+@defun utf16-string-decoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf16-string-decoding}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid first word in @utf{}-16 bytevectors
+
+@deftp {Condition Type} &utf16-string-decoding-invalid-first-word
+Condition object type representing an invalid 16-bit word in the
+position of standalone word or first word of a surrogate pair; it is
+derived from @condition{utf16-string-decoding}.  It has the following
+fields:
+
+@table @code
+@item bytevector
+The bytevector object.
+
+@item index
+The index of the offending word.
+
+@item word
+The offending word.
+@end table
+@end deftp
+
+
+@defun make-utf16-string-decoding-invalid-first-word @var{bytevector} @var{index} @var{word}
+Build and return a new condition object of type
+@condition{utf16-string-decoding-invalid-first-word}.
+@end defun
+
+
+@defun utf16-string-decoding-invalid-first-word? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf16-string-decoding-invalid-first-word}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf16-string-decoding-invalid-first-word.bytevector @var{cnd}
+@defunx utf16-string-decoding-invalid-first-word.index @var{cnd}
+@defunx utf16-string-decoding-invalid-first-word.word @var{cnd}
+Field accessors for condition objects of type
+@condition{utf16-string-decoding-invalid-first-word}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid second word in @utf{}-16 bytevectors
+
+@deftp {Condition Type} &utf16-string-decoding-invalid-second-word
+Condition object type representing an invalid 16-bit word in the
+position of second word of a surrogate pair; it is derived from
+@condition{utf16-string-decoding}.  It has the following fields:
+
+@table @code
+@item bytevector
+The bytevector object.
+
+@item index
+The index of the offending second word.
+
+@item first-word
+The correct first word.
+
+@item second-word
+The offending second word.
+@end table
+@end deftp
+
+
+@defun make-utf16-string-decoding-invalid-second-word @var{bytevector} @var{index} @var{first-word} @var{second-word}
+Build and return a new condition object of type
+@condition{utf16-string-decoding-invalid-second-word}.
+@end defun
+
+
+@defun utf16-string-decoding-invalid-second-word? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf16-string-decoding-invalid-second-word}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf16-string-decoding-invalid-second-word.bytevector @var{cnd}
+@defunx utf16-string-decoding-invalid-second-word.index @var{cnd}
+@defunx utf16-string-decoding-invalid-second-word.first-word @var{cnd}
+@defunx utf16-string-decoding-invalid-second-word.second-word @var{cnd}
+Field accessors for condition objects of type
+@condition{utf16-string-decoding-invalid-second-word}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Missing second word in @utf{}-16 bytevectors
+
+
+@deftp {Condition Type} &utf16-string-decoding-missing-second-word
+Condition object type representing a missing 16-bit word in the position
+of second word of a surrogate pair; it is derived from
+@condition{utf16-string-decoding}.  It has the following fields:
+
+@table @code
+@item bytevector
+The bytevector object.
+
+@item index
+The index of the correct first word.
+
+@item word
+The correct first word.
+@end table
+@end deftp
+
+
+@defun make-utf16-string-decoding-missing-second-word @var{bytevector} @var{index} @var{word}
+Build and return a new condition object of type
+@condition{utf16-string-decoding-missing-second-word}.
+@end defun
+
+
+@defun utf16-string-decoding-missing-second-word? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf16-string-decoding-missing-second-word}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf16-string-decoding-missing-second-word.bytevector @var{cnd}
+@defunx utf16-string-decoding-missing-second-word.index @var{cnd}
+@defunx utf16-string-decoding-missing-second-word.word @var{cnd}
+Field accessors for condition objects of type
+@condition{utf16-string-decoding-missing-second-word}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Standalone octet in @utf{}-16 bytevectors
+
+
+@deftp {Condition Type} &utf16-string-decoding-standalone-octet
+Condition object type representing a standalone octet at the end of the
+byte vector; it is derived from @condition{utf16-string-decoding}.  It
+has the following fields:
+
+@table @code
+@item bytevector
+The bytevector object.
+
+@item index
+The index of the octet.
+
+@item octet
+The offending octet.
+@end table
+@end deftp
+
+
+@defun make-utf16-string-decoding-standalone-octet @var{bytevector} @var{index} @var{octet}
+Build and return a new condition object of type
+@condition{utf16-string-decoding-standalone-octet}.
+@end defun
+
+
+@defun utf16-string-decoding-standalone-octet? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf16-string-decoding-standalone-octet}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf16-string-decoding-standalone-octet.bytevector @var{cnd}
+@defunx utf16-string-decoding-standalone-octet.index @var{cnd}
+@defunx utf16-string-decoding-standalone-octet.octet @var{cnd}
+Field accessors for condition objects of type
+@condition{utf16-string-decoding-standalone-octet}.
+@end defun
+
+@c page
+@node iklib conditions string utf32
+@subsubsection @utf{}-32 string encoding condition types
+
+
+@subsubheading Encoding strings into @utf{}-32 bytevectors
+
+
+@deftp {Condition Type} &utf32-string-encoding
+Condition object type representing an error while encoding a string into
+a @utf{}-32 bytevector; it is derived from @condition{string-encoding}.
+@end deftp
+
+
+@defun make-utf32-string-encoding-error
+Build and return a new condition object of type
+@condition{utf32-string-encoding}.
+@end defun
+
+
+@defun utf32-string-encoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf32-string-encoding}; otherwise return @false{}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding strings from @utf{}-32 bytevectors
+
+
+@deftp {Condition Type} &utf32-string-decoding
+Condition object type representing an error while decoding a @utf{}-32
+bytevector into a string; it is derived from
+@condition{string-decoding}.
+@end deftp
+
+
+@defun make-utf32-string-decoding-error
+Build and return a new condition object of type
+@condition{utf32-string-decoding}.
+@end defun
+
+
+@defun utf32-string-decoding-error? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf32-string-decoding}; otherwise return @false{}.
 @end defun
 
 @c page

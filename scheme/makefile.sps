@@ -862,6 +862,31 @@
     (&non-reinstatable				($core-rtd . (&non-reinstatable-rtd
 							      &non-reinstatable-rcd)))
 ;;;
+    (&string-encoding					($core-rtd . (&string-encoding-rtd
+								      &string-encoding-rcd)))
+    (&string-decoding					($core-rtd . (&string-decoding-rtd
+								      &string-decoding-rcd)))
+    (&utf8-string-encoding				($core-rtd . (&utf8-string-encoding-rtd
+								      &utf8-string-encoding-rcd)))
+    (&utf16-string-encoding				($core-rtd . (&utf16-string-encoding-rtd
+								      &utf16-string-encoding-rcd)))
+    (&utf32-string-encoding				($core-rtd . (&utf32-string-encoding-rtd
+								      &utf32-string-encoding-rcd)))
+    (&utf8-string-decoding				($core-rtd . (&utf8-string-decoding-rtd
+								      &utf8-string-decoding-rcd)))
+    (&utf16-string-decoding				($core-rtd . (&utf16-string-decoding-rtd
+								      &utf16-string-decoding-rcd)))
+    (&utf32-string-decoding				($core-rtd . (&utf32-string-decoding-rtd
+								      &utf32-string-decoding-rcd)))
+    (&utf16-string-decoding-invalid-first-word		($core-rtd . (&utf16-string-decoding-invalid-first-word-rtd
+								      &utf16-string-decoding-invalid-first-word-rcd)))
+    (&utf16-string-decoding-invalid-second-word		($core-rtd . (&utf16-string-decoding-invalid-second-word-rtd
+								      &utf16-string-decoding-invalid-second-word-rcd)))
+    (&utf16-string-decoding-missing-second-word		($core-rtd . (&utf16-string-decoding-missing-second-word-rtd
+								      &utf16-string-decoding-missing-second-word-rcd)))
+    (&utf16-string-decoding-standalone-octet		($core-rtd . (&utf16-string-decoding-standalone-octet-rtd
+								      &utf16-string-decoding-standalone-octet-rcd)))
+;;;
     (<top>					(macro . <top>))
     (<void>					(macro . <void>))
     (<boolean>					(macro . <boolean>))
@@ -2626,31 +2651,47 @@
     (&i/o-write					v r ip is fi)
     (i/o-write-error?				v r ip is fi)
     (&i/o-eagain				v $language)
+    (&i/o-eagain-rtd)
+    (&i/o-eagain-rcd)
     (i/o-eagain-error?				v $language)
     (&errno					v $language)
+    (&errno-rtd)
+    (&errno-rcd)
     (errno-condition?				v $language)
     (&h_errno					v $language)
+    (&h_errno-rtd)
+    (&h_errno-rcd)
     (h_errno-condition?				v $language)
 ;;;
     (&failed-expression-condition		v $language)
+    (&failed-expression-condition-rtd)
+    (&failed-expression-condition-rcd)
     (make-failed-expression-condition		v $language)
     (failed-expression-condition?		v $language)
     (condition-failed-expression		v $language)
 ;;;
     (&procedure-precondition-violation		v $language)
+    (&procedure-precondition-violation-rtd)
+    (&procedure-precondition-violation-rcd)
     (procedure-precondition-violation?		v $language)
     (make-procedure-precondition-violation	v $language)
 ;;;
     (&procedure-postcondition-violation		v $language)
+    (&procedure-postcondition-violation-rtd)
+    (&procedure-postcondition-violation-rcd)
     (make-procedure-postcondition-violation	v $language)
     (procedure-postcondition-violation?		v $language)
 ;;;
     (&procedure-argument-violation				v $language)
+    (&procedure-argument-violation-rtd)
+    (&procedure-argument-violation-rcd)
     (procedure-argument-violation?				v $language)
     (make-procedure-argument-violation				v $language)
     (procedure-argument-violation				v $language)
 ;;;
     (&procedure-signature-argument-violation				v $language)
+    (&procedure-signature-argument-violation-rtd)
+    (&procedure-signature-argument-violation-rcd)
     (procedure-signature-argument-violation?				v $language)
     (make-procedure-signature-argument-violation			v $language)
     (procedure-signature-argument-violation.one-based-argument-index	v $language)
@@ -2659,6 +2700,8 @@
     (procedure-signature-argument-violation				v $language)
 ;;;
     (&procedure-signature-return-value-violation				v $language)
+    (&procedure-signature-return-value-violation-rtd)
+    (&procedure-signature-return-value-violation-rcd)
     (make-procedure-signature-return-value-violation				v $language)
     (procedure-signature-return-value-violation?				v $language)
     (procedure-signature-return-value-violation.one-based-return-value-index	v $language)
@@ -2667,17 +2710,23 @@
     (procedure-signature-return-value-violation					v $language)
 ;;;
     (&procedure-arguments-consistency-violation		v $language)
+    (&procedure-arguments-consistency-violation-rtd)
+    (&procedure-arguments-consistency-violation-rcd)
     (make-procedure-arguments-consistency-violation	v $language)
     (procedure-arguments-consistency-violation?		v $language)
     (procedure-arguments-consistency-violation		v $language)
     (procedure-arguments-consistency-violation/failed-expression	v $language)
 ;;;
     (&expression-return-value-violation					v $language)
+    (&expression-return-value-violation-rtd)
+    (&expression-return-value-violation-rcd)
     (expression-return-value-violation?					v $language)
     (make-expression-return-value-violation				v $language)
     (expression-return-value-violation					v $language)
 ;;;
     (&non-reinstatable				v $language)
+    (&non-reinstatable-rtd)
+    (&non-reinstatable-rcd)
     (make-non-reinstatable-violation		v $language)
     (non-reinstatable-violation?		v $language)
     (non-reinstatable-violation			v $language)
@@ -2995,6 +3044,94 @@
     (make-file-options				v $language)
     (make-expander-options			v $language)
     (make-compiler-options			v $language)
+
+;;; --------------------------------------------------------------------
+;;; string encoding and decoding condition types
+
+    (&string-encoding					v $language)
+    (&string-encoding-rtd)
+    (&string-encoding-rcd)
+    (make-string-encoding-error				v $language)
+    (string-encoding-error?				v $language)
+
+    (&string-decoding					v $language)
+    (&string-decoding-rtd)
+    (&string-decoding-rcd)
+    (make-string-decoding-error				v $language)
+    (string-decoding-error?				v $language)
+
+    (&utf8-string-encoding				v $language)
+    (&utf8-string-encoding-rtd)
+    (&utf8-string-encoding-rcd)
+    (make-utf8-string-encoding-error			v $language)
+    (utf8-string-encoding-error?			v $language)
+
+    (&utf16-string-encoding				v $language)
+    (&utf16-string-encoding-rtd)
+    (&utf16-string-encoding-rcd)
+    (make-utf16-string-encoding-error			v $language)
+    (utf16-string-encoding-error?			v $language)
+
+    (&utf32-string-encoding				v $language)
+    (&utf32-string-encoding-rtd)
+    (&utf32-string-encoding-rcd)
+    (make-utf32-string-encoding-error			v $language)
+    (utf32-string-encoding-error?			v $language)
+
+    (&utf8-string-decoding				v $language)
+    (&utf8-string-decoding-rtd)
+    (&utf8-string-decoding-rcd)
+    (make-utf8-string-decoding-error			v $language)
+    (utf8-string-decoding-error?			v $language)
+
+    (&utf16-string-decoding				v $language)
+    (&utf16-string-decoding-rtd)
+    (&utf16-string-decoding-rcd)
+    (make-utf16-string-decoding-error			v $language)
+    (utf16-string-decoding-error?			v $language)
+
+    (&utf32-string-decoding				v $language)
+    (&utf32-string-decoding-rtd)
+    (&utf32-string-decoding-rcd)
+    (make-utf32-string-decoding-error			v $language)
+    (utf32-string-decoding-error?			v $language)
+
+    (&utf16-string-decoding-invalid-first-word			v $language)
+    (&utf16-string-decoding-invalid-first-word-rtd)
+    (&utf16-string-decoding-invalid-first-word-rcd)
+    (make-utf16-string-decoding-invalid-first-word		v $language)
+    (utf16-string-decoding-invalid-first-word?			v $language)
+    (utf16-string-decoding-invalid-first-word.bytevector	v $language)
+    (utf16-string-decoding-invalid-first-word.index		v $language)
+    (utf16-string-decoding-invalid-first-word.word		v $language)
+
+    (&utf16-string-decoding-invalid-second-word			v $language)
+    (&utf16-string-decoding-invalid-second-word-rtd)
+    (&utf16-string-decoding-invalid-second-word-rcd)
+    (make-utf16-string-decoding-invalid-second-word		v $language)
+    (utf16-string-decoding-invalid-second-word?			v $language)
+    (utf16-string-decoding-invalid-second-word.bytevector	v $language)
+    (utf16-string-decoding-invalid-second-word.index		v $language)
+    (utf16-string-decoding-invalid-second-word.first-word	v $language)
+    (utf16-string-decoding-invalid-second-word.second-word	v $language)
+
+    (&utf16-string-decoding-missing-second-word			v $language)
+    (&utf16-string-decoding-missing-second-word-rtd)
+    (&utf16-string-decoding-missing-second-word-rcd)
+    (make-utf16-string-decoding-missing-second-word		v $language)
+    (utf16-string-decoding-missing-second-word?			v $language)
+    (utf16-string-decoding-missing-second-word.bytevector	v $language)
+    (utf16-string-decoding-missing-second-word.index		v $language)
+    (utf16-string-decoding-missing-second-word.word		v $language)
+
+    (&utf16-string-decoding-standalone-octet			v $language)
+    (&utf16-string-decoding-standalone-octet-rtd)
+    (&utf16-string-decoding-standalone-octet-rcd)
+    (make-utf16-string-decoding-standalone-octet		v $language)
+    (utf16-string-decoding-standalone-octet?			v $language)
+    (utf16-string-decoding-standalone-octet.bytevector		v $language)
+    (utf16-string-decoding-standalone-octet.index		v $language)
+    (utf16-string-decoding-standalone-octet.octet		v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; special list functions
@@ -3327,6 +3464,8 @@
     (memory-block-reset				v $language $for)
 ;;;
     (&out-of-memory-error			v $language $for)
+    (&out-of-memory-error-rtd)
+    (&out-of-memory-error-rcd)
     (make-out-of-memory-error			v $language $for)
     (out-of-memory-error?			v $language $for)
     (out-of-memory-error.old-pointer		v $language $for)
