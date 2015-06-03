@@ -1892,7 +1892,7 @@
   ;;
   (syntax-match input-form.stx ()
     ((_ ?expr ?tag)
-     (tag-identifier? ?tag)
+     (identifier? ?tag)
      (chi-expr (bless
 		`(condition-and-rtd? ,?expr (record-type-descriptor ,?tag)))
 	       lexenv.run lexenv.expand))
