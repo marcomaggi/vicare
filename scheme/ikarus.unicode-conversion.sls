@@ -52,7 +52,8 @@
 	    ;;(Marco Maggi; Tue Jun 2, 2015)
 	    $bytevector-u16-ref
 	    $bytevector-u16b-ref
-	    $bytevector-u16l-ref)
+	    $bytevector-u16l-ref
+	    $bytevector-u32-ref $bytevector-u32-set!)
     (vicare system $fx)
     (vicare system $chars)
     ;;See the documentation of this library for details on Unicode.
@@ -126,6 +127,63 @@
   (case endianness
     ((big)		($bytevector-u16b-ref bv index))
     ((little)		($bytevector-u16l-ref bv index))))
+
+;;; --------------------------------------------------------------------
+
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  Jun 3,
+;;2015)
+(module ($bytevector-u32-ref $bytevector-u32-set!)
+
+  (define ($bytevector-u32-ref bv index endianness)
+    (case endianness
+      ((big)		($bytevector-u32b-ref bv index))
+      ((little)		($bytevector-u32l-ref bv index))))
+
+  (define ($bytevector-u32-set! bv index word endianness)
+    (case endianness
+      ((big)		($bytevector-u32b-set! bv index word))
+      ((little)		($bytevector-u32l-set! bv index word))))
+
+  (define ($bytevector-u32b-ref bv index)
+    (+ (sll ($bytevector-u8-ref bv index) 24)
+       ($fixnum-ior
+	($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 16)
+	($fxsll ($bytevector-u8-ref bv ($fx+ index 2))  8)
+	($bytevector-u8-ref bv ($fx+ index 3)))))
+
+  (define ($bytevector-u32b-set! bv index word)
+    (let ((b (sra word 16)))
+      ($bytevector-set! bv index ($fxsra b 8))
+      ($bytevector-set! bv ($fxadd1 index) b))
+    (let ((b (bitwise-and word #xFFFF)))
+      ($bytevector-set! bv ($fx+ index 2) ($fxsra b 8))
+      ($bytevector-set! bv ($fx+ index 3) b)))
+
+  (define ($bytevector-u32l-ref bv index)
+    (+ (sll ($bytevector-u8-ref bv ($fx+ index 3)) 24)
+       ($fixnum-ior
+	($fxsll ($bytevector-u8-ref bv ($fx+ index 2)) 16)
+	($fxsll ($bytevector-u8-ref bv ($fxadd1 index)) 8)
+	($bytevector-u8-ref bv index))))
+
+  (define ($bytevector-u32l-set! bv index word)
+    (let ((b (sra word 16)))
+      ($bytevector-set! bv ($fx+ index 3) ($fxsra b 8))
+      ($bytevector-set! bv ($fx+ index 2) b))
+    (let ((b (bitwise-and word #xFFFF)))
+      ($bytevector-set! bv ($fxadd1 index) ($fxsra b 8))
+      ($bytevector-set! bv index b)))
+
+  (define-syntax $fixnum-ior
+    (syntax-rules ()
+      ((_ ?op1)
+       ?op1)
+      ((_ ?op1 ?op2)
+       ($fxlogor ?op1 ?op2))
+      ((_ ?op1 ?op2 . ?ops)
+       ($fxlogor ?op1 ($fixnum-ior ?op2 . ?ops)))))
+
+  #| end of module |# )
 
 
 (define (integer->char/invalid n)
@@ -816,18 +874,19 @@
     #| end of CASE-DEFINE* |# )
 
   (define ($string->utf32 str endianness)
-    (let ((len (string-length str)))
-      (vfill str (make-bytevector (fxsll len 2)) 0 len endianness)))
+    (let ((str.len ($string-length str)))
+      ;;We need to make sure that the length of the bytevector is a fixnum!!!
+      (%encode-and-fill-bytevector str 0 str.len ($make-bytevector (fxsll str.len 2)) endianness)))
 
-  (define (vfill str bv i len endianness)
-    (if (fx=? i len)
+  (define (%encode-and-fill-bytevector str str.idx str.len bv endianness)
+    (if ($fx= str.idx str.len)
 	bv
       (begin
-	(bytevector-u32-set! bv
-			     (fxsll i 2)
-			     (char->integer (string-ref str i))
-			     endianness)
-	(vfill str bv (fx+ i 1) len endianness))))
+	($bytevector-u32-set! bv
+			      ($fxsll str.idx 2)
+			      ($char->fixnum ($string-ref str str.idx))
+			      endianness)
+	(%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv endianness))))
 
   #| end of module: STRING->UTF32 |# )
 
@@ -836,12 +895,12 @@
   (case-define* utf32->string
     (({bv bytevector?} {endianness endianness?})
      ($utf32->string bv endianness #f))
-    (({bv bytevector?} {endianness endianness?} em?)
-     ($utf32->string bv endianness em?))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
+     ($utf32->string bv endianness endianness-mandatory?))
     #| end of CASE-DEFINE* |# )
 
-  (define ($utf32->string bv endianness em?)
-    (cond (em?
+  (define ($utf32->string bv endianness endianness-mandatory?)
+    (cond (endianness-mandatory?
 	   (%decode bv endianness 0))
 	  ((%bom-present bv)
 	   => (lambda (endianness)
