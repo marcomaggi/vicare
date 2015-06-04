@@ -26,7 +26,8 @@
 	  string->bytevector	bytevector->string
 
 	  utf8->string-length	string->utf8-length
-	  utf16->string-length	string->utf16-length)
+	  utf16->string-length	string->utf16-length
+	  utf32->string-length	string->utf32-length)
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Jun 3, 2015)
@@ -45,7 +46,8 @@
                   string->bytevector	bytevector->string
 
 		  utf8->string-length	string->utf8-length
-		  utf16->string-length	string->utf16-length)
+		  utf16->string-length	string->utf16-length
+		  utf32->string-length	string->utf32-length)
     (vicare system $strings)
     (except (vicare system $bytevectors)
 	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
@@ -53,18 +55,24 @@
 	    $bytevector-u16-ref
 	    $bytevector-u16b-ref
 	    $bytevector-u16l-ref
-	    $bytevector-u32-ref $bytevector-u32-set!)
+	    $bytevector-u32-set!
+	    $bytevector-u32b-set!
+	    $bytevector-u32l-set!
+	    $bytevector-u32-ref
+	    $bytevector-u32b-ref)
     (vicare system $fx)
     (vicare system $chars)
     ;;See the documentation of this library for details on Unicode.
-    (vicare unsafe unicode)
+    (prefix (vicare unsafe unicode) unicode.)
     ;;FIXME To be removed at the next  boot image rotation.  (Marco Maggi; Wed Jun 3,
     ;;2015)
     (only (ikarus conditions)
 	  make-utf16-string-decoding-invalid-first-word
 	  make-utf16-string-decoding-invalid-second-word
 	  make-utf16-string-decoding-missing-second-word
-	  make-utf16-string-decoding-standalone-octet))
+	  make-utf16-string-decoding-standalone-octet
+	  make-utf32-string-decoding-invalid-word
+	  make-utf32-string-decoding-orphan-octets))
 
 
 ;;;; helpers
@@ -132,7 +140,11 @@
 
 ;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  Jun 3,
 ;;2015)
-(module ($bytevector-u32-ref $bytevector-u32-set!)
+(module ($bytevector-u32-set!
+	 $bytevector-u32b-set!
+	 $bytevector-u32l-set!
+	 $bytevector-u32-ref
+	 $bytevector-u32b-ref)
 
   (define ($bytevector-u32-ref bv index endianness)
     (case endianness
@@ -197,11 +209,15 @@
 (module (string->utf8 string->utf8-length)
 
   (define* (string->utf8 {str string?})
-    (let loop ((bv       ($make-bytevector (string->utf8-length str)))
+    (define str.len
+      ($string->utf8-length str))
+    (unless (fixnum? str.len)
+      (error __who__ "string too long for UTF-8 conversion" str))
+    (let loop ((bv       ($make-bytevector str.len))
 	       (str      str)
 	       (str.idx  0)
 	       (bv.idx   0)
-	       (str.len  ($string-length str)))
+	       (str.len  str.len))
       (if ($fx= str.idx str.len)
 	  bv
 	(let ((code-point ($char->fixnum ($string-ref str str.idx))))
@@ -231,16 +247,20 @@
 		 ($bytevector-set! bv ($fx+ bv.idx 3) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
 		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 4) str.len)))))))
 
-  (define (string->utf8-length str)
+  (define* (string->utf8-length {str string?})
+    ($string->utf8-length str))
+
+  (define ($string->utf8-length str)
     (let loop ((str str) (str.len ($string-length str)) (str.idx 0) (bv.len 0))
       (if ($fx= str.idx str.len)
 	  bv.len
-	(let ((code-point ($char->fixnum ($string-ref str str.idx))))
-	  (loop str str.len ($fxadd1 str.idx)
-		($fx+ bv.len (cond (($fx<= code-point #x7F)    1)
-				   (($fx<= code-point #x7FF)   2)
-				   (($fx<= code-point #xFFFF)  3)
-				   (else                       4))))))))
+	(let* ((code-point ($char->fixnum ($string-ref str str.idx)))
+	       (bv.len     (+ bv.len (cond (($fx<= code-point #x7F)    1)
+					   (($fx<= code-point #x7FF)   2)
+					   (($fx<= code-point #xFFFF)  3)
+					   (else                       4)))))
+	  (and (fixnum? bv.len)
+	       (loop str str.len ($fxadd1 str.idx) bv.len))))))
 
   #| end of module |# )
 
@@ -319,25 +339,25 @@
     (if ($fx= bv.idx bv.end)
 	accum-len
       (let ((octet0 ($bytevector-u8-ref bv bv.idx)))
-	(cond ((utf-8-single-octet? octet0)
+	(cond ((unicode.utf-8-single-octet? octet0)
 	       (%recurse ($fxadd1 bv.idx) ($fxadd1 accum-len)))
 
-	      ((utf-8-first-of-two-octets? octet0)
+	      ((unicode.utf-8-first-of-two-octets? octet0)
 	       (if ($fx< ($fxadd1 bv.idx) bv.end)
 		   ;;Good, there is  still one octect which may be  the second in a
 		   ;;2-octet sequence.
 		   (let* ((i1     ($fxadd1 bv.idx))
 			  (octet1 ($bytevector-u8-ref bv i1))
 			  (bv.next-idx ($fxadd1 i1)))
-		     (if (utf-8-second-of-two-octets? octet1)
+		     (if (unicode.utf-8-second-of-two-octets? octet1)
 			 (begin
-			   (assert (let ((code-point (utf-8-decode-two-octets octet0 octet1)))
-				     (utf-8-valid-code-point-from-2-octets? code-point)))
+			   (assert (let ((code-point (unicode.utf-8-decode-two-octets octet0 octet1)))
+				     (unicode.utf-8-valid-code-point-from-2-octets? code-point)))
 			   (%recurse bv.next-idx ($fxadd1 accum-len)))
 		       (%error-at-index bv.idx bv.next-idx octet0 octet1)))
 		 (%error-at-end)))
 
-	      ((utf-8-first-of-three-octets? octet0)
+	      ((unicode.utf-8-first-of-three-octets? octet0)
 	       (if ($fx< ($fxadd2 bv.idx) bv.end)
 		   ;;Good, there are still two octects  which may be the second and
 		   ;;third in a 3-octet sequence.
@@ -346,15 +366,15 @@
 			  (i2     ($fxadd1 i1))
 			  (octet2 ($bytevector-u8-ref bv i2))
 			  (bv.next-idx ($fxadd1 i2)))
-		     (if (utf-8-second-and-third-of-three-octets? octet1 octet2)
+		     (if (unicode.utf-8-second-and-third-of-three-octets? octet1 octet2)
 			 (begin
-			   (assert (let ((code-point (utf-8-decode-three-octets octet0 octet1 octet2)))
-				     (utf-8-valid-code-point-from-3-octets? code-point)))
+			   (assert (let ((code-point (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
+				     (unicode.utf-8-valid-code-point-from-3-octets? code-point)))
 			   (%recurse bv.next-idx ($fxadd1 accum-len)))
 		       (%error-at-index bv.idx bv.next-idx octet0 octet1 octet2)))
 		 (%error-at-end)))
 
-	      ((utf-8-first-of-four-octets? octet0)
+	      ((unicode.utf-8-first-of-four-octets? octet0)
 	       (if ($fx< ($fxadd3 bv.idx) bv.end)
 		   ;;Good, there are  still three octects which may  be the second,
 		   ;;third and fourth in a 4-octet sequence.
@@ -365,10 +385,10 @@
 			  (i3     ($fxadd1 i2))
 			  (octet3 ($bytevector-u8-ref bv i3))
 			  (bv.next-idx ($fxadd1 i3)))
-		     (if (utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+		     (if (unicode.utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
 			 (begin
-			   (assert (let ((code-point (utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
-				     (utf-8-valid-code-point-from-4-octets? code-point)))
+			   (assert (let ((code-point (unicode.utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
+				     (unicode.utf-8-valid-code-point-from-4-octets? code-point)))
 			   (%recurse bv.next-idx ($fxadd1 accum-len)))
 		       (%error-at-index bv.idx bv.next-idx octet0 octet1 octet2 octet3)))
 		 (%error-at-end)))
@@ -411,25 +431,25 @@
     (if ($fx= bv.idx bv.end)
 	str
       (let ((octet0 ($bytevector-u8-ref bv bv.idx)))
-	(cond ((utf-8-single-octet? octet0)
+	(cond ((unicode.utf-8-single-octet? octet0)
 	       ($string-set! str str.idx ($fixnum->char octet0))
 	       (%recurse ($fxadd1 bv.idx) ($fxadd1 str.idx)))
 
-	      ((utf-8-first-of-two-octets? octet0)
+	      ((unicode.utf-8-first-of-two-octets? octet0)
 	       (if ($fx< ($fxadd1 bv.idx) bv.end)
 		   ;;Good, there is  still one octect which may be  the second in a
 		   ;;2-octet sequence.
 		   (let* ((i1     ($fxadd1 bv.idx))
 			  (octet1 ($bytevector-u8-ref bv i1))
 			  (bv.next-idx ($fxadd1 i1)))
-		     (if (utf-8-second-of-two-octets? octet1)
+		     (if (unicode.utf-8-second-of-two-octets? octet1)
 			 (begin
-			   ($string-set! str str.idx ($fixnum->char (utf-8-decode-two-octets octet0 octet1)))
+			   ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-two-octets octet0 octet1)))
 			   (%recurse bv.next-idx ($fxadd1 str.idx)))
 		       (%error-at-index bv.idx bv.next-idx str.idx octet0 octet1)))
 		 (%error-at-end)))
 
-	      ((utf-8-first-of-three-octets? octet0)
+	      ((unicode.utf-8-first-of-three-octets? octet0)
 	       (if ($fx< ($fxadd2 bv.idx) bv.end)
 		   ;;Good, there are still two octects  which may be the second and
 		   ;;third in a 3-octet sequence.
@@ -438,14 +458,14 @@
 			  (i2     ($fxadd1 i1))
 			  (octet2 ($bytevector-u8-ref bv i2))
 			  (bv.next-idx ($fxadd1 i2)))
-		     (if (utf-8-second-and-third-of-three-octets? octet1 octet2)
+		     (if (unicode.utf-8-second-and-third-of-three-octets? octet1 octet2)
 			 (begin
-			   ($string-set! str str.idx ($fixnum->char (utf-8-decode-three-octets octet0 octet1 octet2)))
+			   ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
 			   (%recurse bv.next-idx ($fxadd1 str.idx)))
 		       (%error-at-index bv.idx bv.next-idx str.idx octet0 octet1 octet2)))
 		 (%error-at-end)))
 
-	      ((utf-8-first-of-four-octets? octet0)
+	      ((unicode.utf-8-first-of-four-octets? octet0)
 	       (if ($fx< ($fxadd3 bv.idx) bv.end)
 		   ;;Good, there are  still three octects which may  be the second,
 		   ;;third and fourth in a 4-octet sequence.
@@ -456,9 +476,9 @@
 			  (i3     ($fxadd1 i2))
 			  (octet3 ($bytevector-u8-ref bv i3))
 			  (bv.next-idx ($fxadd1 i3)))
-		     (if (utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
+		     (if (unicode.utf-8-second-third-and-fourth-of-four-octets? octet1 octet2 octet3)
 			 (begin
-			   ($string-set! str str.idx ($fixnum->char (utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
+			   ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-four-octets octet0 octet1 octet2 octet3)))
 			   (%recurse bv.next-idx ($fxadd1 str.idx)))
 		       (%error-at-index bv.idx bv.next-idx str.idx octet0 octet1 octet2 octet3)))
 		 (%error-at-end)))
@@ -499,26 +519,31 @@
     ;;
     ;;   2 * ((number of chars in STR) + (number of surrogate pairs))
     ;;
-    (let ((str.len ($string-length str)))
-      ;;We must avoid overflow and check that the returned value is a fixnum!!!
-      (fxsll (fx+ str.len (%count-surrogate-pairs str str.len 0 0)) 1)))
+    (let* ((str.len ($string-length str))
+	   ;;We must avoid overflow and check that the returned value is a fixnum!!!
+	   (bv.len  (bitwise-arithmetic-shift-left (+ str.len (%count-surrogate-pairs str str.len 0 0)) 1)))
+      (and (fixnum? bv.len)
+	   bv.len)))
 
-  (define ($string->utf16 str endianness)
+  (define* ($string->utf16 str endianness)
     (let ((str.len ($string-length str)))
       (if ($fxzero? str.len)
 	  ;;Let's return a new bytevector.
 	  ($make-bytevector 0)
 	;;The number  of octets needed  is the number of  characters in STR  plus the
 	;;number of surrogate pairs, times 2.
-	(let ((bv ($make-bytevector ($string->utf16-length str))))
-	  (%encode-and-fill-bytevector str 0 str.len bv 0 endianness)))))
+	(let ((bv.len ($string->utf16-length str)))
+	  (if (fixnum? bv.len)
+	      (let ((bv ($make-bytevector bv.len)))
+		(%encode-and-fill-bytevector str 0 str.len bv 0 endianness))
+	    (error __who__ "string too long for UTF-16 conversion" str))))))
 
   (define (%count-surrogate-pairs str str.len i accum-count)
     (if ($fx= i str.len)
 	accum-count
       ;;Code points in the range [0, #x10000)  are encoded with a single UTF-16 word;
       ;;code points in the range [#x10000, #x10FFFF] are encoded in a surrogate pair.
-      (if (utf-16-single-word-code-point? ($char->fixnum ($string-ref str i)))
+      (if (unicode.utf-16-single-word-code-point? ($char->fixnum ($string-ref str i)))
 	  (%count-surrogate-pairs str str.len ($fxadd1 i) accum-count)
 	(%count-surrogate-pairs str str.len ($fxadd1 i) ($fxadd1 accum-count)))))
 
@@ -526,13 +551,13 @@
     (if ($fx= str.idx str.len)
 	bv
       (let ((code-point ($char->fixnum ($string-ref str str.idx))))
-	(if (utf-16-single-word-code-point? code-point)
+	(if (unicode.utf-16-single-word-code-point? code-point)
 	    (begin
-	      (bytevector-u16-set! bv bv.idx (utf-16-encode-single-word code-point) endianness)
+	      (bytevector-u16-set! bv bv.idx (unicode.utf-16-encode-single-word code-point) endianness)
 	      (%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv ($fxadd2 bv.idx) endianness))
 	  (begin
-	    (bytevector-u16-set! bv bv.idx           (utf-16-encode-first-of-two-words  code-point) endianness)
-	    (bytevector-u16-set! bv ($fxadd2 bv.idx) (utf-16-encode-second-of-two-words code-point) endianness)
+	    (bytevector-u16-set! bv bv.idx           (unicode.utf-16-encode-first-of-two-words  code-point) endianness)
+	    (bytevector-u16-set! bv ($fxadd2 bv.idx) (unicode.utf-16-encode-second-of-two-words code-point) endianness)
 	    (%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv ($fxadd4 bv.idx) endianness))))))
 
   #| end of module |# )
@@ -687,15 +712,15 @@
     (cond (($fx<= bv.idx ($fxsub2 bv.len))
 	   ;;Good there is room for at least one more 16-bit word.
 	   (let ((word0 ($bytevector-u16-ref bv bv.idx endianness)))
-	     (cond ((utf-16-single-word? word0)
+	     (cond ((unicode.utf-16-single-word? word0)
 		    (%recurse ($fxadd2 bv.idx) ($fxadd1 accum-len)))
-		   ((utf-16-first-of-two-words? word0)
+		   ((unicode.utf-16-first-of-two-words? word0)
 		    (let ((bv.idx1 ($fxadd2 bv.idx)))
 		      (cond (($fx<= bv.idx1 ($fxsub2 bv.len))
 			     ;;Good there  is room  for the second  16-bit word  in a
 			     ;;surrogate pair.
 			     (let ((word1 ($bytevector-u16-ref bv bv.idx1 endianness)))
-			       (if (utf-16-second-of-two-words? word1)
+			       (if (unicode.utf-16-second-of-two-words? word1)
 				   ;;Good there is a full surrogate pair.
 				   (%recurse ($fxadd2 bv.idx1) ($fxadd1 accum-len))
 				 ;;Error: at index BV.IDX1 there should be the second
@@ -810,19 +835,19 @@
     (cond (($fx<= bv.idx ($fxsub2 bv.len))
 	   ;;Good there is room for at least one more 16-bit word.
 	   (let ((word0 ($bytevector-u16-ref bv bv.idx endianness)))
-	     (cond ((utf-16-single-word? word0)
-		    ($string-set! str str.idx ($fixnum->char (utf-16-decode-single-word word0)))
+	     (cond ((unicode.utf-16-single-word? word0)
+		    ($string-set! str str.idx ($fixnum->char (unicode.utf-16-decode-single-word word0)))
 		    (%recurse ($fxadd2 bv.idx) ($fxadd1 str.idx)))
-		   ((utf-16-first-of-two-words? word0)
+		   ((unicode.utf-16-first-of-two-words? word0)
 		    (let ((bv.idx1 ($fxadd2 bv.idx)))
 		      (cond (($fx<= bv.idx1 ($fxsub2 bv.len))
 			     ;;Good there  is room  for the second  16-bit word  in a
 			     ;;surrogate pair.
 			     (let ((word1 ($bytevector-u16-ref bv bv.idx1 endianness)))
-			       (if (utf-16-second-of-two-words? word1)
+			       (if (unicode.utf-16-second-of-two-words? word1)
 				   ;;Good there is a full surrogate pair.
 				   (begin
-				     ($string-set! str str.idx ($fixnum->char (utf-16-decode-surrogate-pair word0 word1)))
+				     ($string-set! str str.idx ($fixnum->char (unicode.utf-16-decode-surrogate-pair word0 word1)))
 				     (%recurse ($fxadd2 bv.idx1) ($fxadd1 str.idx)))
 				 ;;Error: at index BV.IDX1 there should be the second
 				 ;;word in a surrogate pair.
@@ -862,7 +887,7 @@
   #| end of module: UTF16->STRING |# )
 
 
-(module (string->utf32)
+(module (string->utf32 string->utf32-length)
 
   (case-define* string->utf32
     (({str string?})
@@ -873,63 +898,335 @@
 
     #| end of CASE-DEFINE* |# )
 
-  (define ($string->utf32 str endianness)
-    (let ((str.len ($string-length str)))
-      ;;We need to make sure that the length of the bytevector is a fixnum!!!
-      (%encode-and-fill-bytevector str 0 str.len ($make-bytevector (fxsll str.len 2)) endianness)))
+  (define* (string->utf32-length {str string?})
+    ($string->utf32-length str))
 
-  (define (%encode-and-fill-bytevector str str.idx str.len bv endianness)
+;;; --------------------------------------------------------------------
+
+  (define ($string->utf32-length str)
+    (let ((bv.len (bitwise-arithmetic-shift-left ($string-length str) 2)))
+      (and (fixnum? bv.len)
+	   bv.len)))
+
+  (define* ($string->utf32 str endianness)
+    ;;We need to make sure that the length of the bytevector is a fixnum!!!
+    (let ((bv.len  ($string->utf32-length str)))
+      (if (fixnum? bv.len)
+	  (let ((bv      ($make-bytevector bv.len))
+		(str.len ($string-length str)))
+	    (if (eq? endianness 'big)
+		(%encode-and-fill-bytevector/big str 0 str.len bv)
+	      (%encode-and-fill-bytevector/little str 0 str.len bv)))
+	(error __who__ "string too long for UTF-32 conversion" str))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%encode-and-fill-bytevector/big str str.idx str.len bv)
     (if ($fx= str.idx str.len)
 	bv
-      (begin
-	($bytevector-u32-set! bv
-			      ($fxsll str.idx 2)
-			      ($char->fixnum ($string-ref str str.idx))
-			      endianness)
-	(%encode-and-fill-bytevector str ($fxadd1 str.idx) str.len bv endianness))))
+      (let ((code-point ($char->fixnum ($string-ref str str.idx)))
+	    (bv.idx     ($fxsll str.idx 2)))
+	($bytevector-u32b-set! bv bv.idx (unicode.utf-32-encode code-point))
+	(%encode-and-fill-bytevector/big str ($fxadd1 str.idx) str.len bv))))
+
+  (define (%encode-and-fill-bytevector/little str str.idx str.len bv)
+    (if ($fx= str.idx str.len)
+	bv
+      (let ((code-point ($char->fixnum ($string-ref str str.idx)))
+	    (bv.idx     ($fxsll str.idx 2)))
+	($bytevector-u32l-set! bv bv.idx (unicode.utf-32-encode code-point))
+	(%encode-and-fill-bytevector/little str ($fxadd1 str.idx) str.len bv))))
 
   #| end of module: STRING->UTF32 |# )
 
-(module (utf32->string)
+
+(module (utf32->string utf32->string-length)
+  ;;When decoding  a UTF-32 bytevector into  a Scheme string: ideally  the bytevector
+  ;;holds only full 32-bit words representing Unicode code points.
+  ;;
+  ;;We  take  into  account the  case  of  bytevector  starting  with a  32-bit  word
+  ;;representing the  Byte Order Mark  (BOM).  For UTF-32, the  BOM is a  32-bit word
+  ;;stored in big endian format:
+  ;;
+  ;;* The BOM #x0000FEFF represents big endianness.
+  ;;
+  ;;* The BOM #xFFFE0000 represents little endianness.
+  ;;
+  ;;We also want to consider the cases in  which: after the full 32-bit words, at the
+  ;;end of the bytevector there are 1, 2 or 3 orphan octets.
+  ;;
+  ;;Let's name  BV.START the index of  the first octet  after the BOM and  BV.LEN the
+  ;;length of the bytevector.  When the BOM is not present:
+  ;;
+  ;;
+  ;;   |-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+  ;;    ^
+  ;; bv.start
+  ;;   |.............................................|
+  ;;                                                  ^
+  ;;                                               bv.len
+  ;;
+  ;;when the BOM is present:
+  ;;
+  ;;   |-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+  ;;   |.......|
+  ;;            ^
+  ;;        bv.start
+  ;;   |.............................................|
+  ;;                                                  ^
+  ;;                                               bv.len
+  ;;
+  ;;
+  ;;Ideal length of string
+  ;;----------------------
+  ;;
+  ;;Ideally, when the  bytevector has full 32-bit words between  BV.START and BV.LEN,
+  ;;the string length is:
+  ;;
+  ;;   (bv.len - bv.start) / 4
+  ;;
+  ;;which we can compute as:
+  ;;
+  ;;   ($fxsra ($fx- bv.len bv.start) 2)
+  ;;
+  ;;
+  ;;Non-ideal length of string
+  ;;--------------------------
+  ;;
+  ;;When  1, 2  or  3  orphan octets  are  present and  the  error  handling mode  is
+  ;;"replace": we want  to add a slot to the  string.  Leveraging integer arithmetics
+  ;;(in  which division  discards  the modulo),  we  add  3 to  the  ideal number  of
+  ;;characters:
+  ;;
+  ;;   (+ 3 (bv.len - bv.start)) / 4
+  ;;
+  ;;so that  a string slot is  added only if  there are 1,  2 or 3 orphan  octets; if
+  ;;there are no  orphan octets the result is  equal to the ideal.  We  can test this
+  ;;formula with the program:
+  ;;
+  ;;   (import (vicare))
+  ;;   (define (doit bv.start bv.len)
+  ;;     (import (vicare system $fx))
+  ;;     ($fxsra ($fx+ ($fx- bv.len bv.start) 3) 2))
+  ;;   (debug-print (doit 0  4) (doit 0  5) (doit 0  6) (doit 0  7))
+  ;;   (debug-print (doit 0  8) (doit 0  9) (doit 0 10) (doit 0 11))
+  ;;   (debug-print (doit 0 12) (doit 0 13) (doit 0 14) (doit 0 15))
+  ;;
+  ;;which prints:
+  ;;
+  ;;   (1 2 2 2)
+  ;;   (2 3 3 3)
+  ;;   (3 4 4 4)
+  ;;
+  ;;
+  ;;Index of first orphan octet
+  ;;---------------------------
+  ;;
+  ;;In the non-ideal  case of orphan octets  in the bytevector, what is  the index of
+  ;;the first  orphan octet?  It is  the greatest exact  multiple of 4 which  is less
+  ;;than BV.LEN.  Knowing that:
+  ;;
+  ;;   (number->string  0 2)	=>     "0"
+  ;;   (number->string  4 2)	=>   "100"
+  ;;   (number->string  8 2)	=>  "1000"
+  ;;   (number->string 12 2)	=>  "1100"
+  ;;   (number->string 16 2)	=> "10000"
+  ;;
+  ;;we can compute it by setting to 0 the 2 least significant bits of BV.LEN:
+  ;;
+  ;;   (number->string (bitwise-and 4 -4))	=> "100"
+  ;;   (number->string (bitwise-and 5 -4))	=> "100"
+  ;;   (number->string (bitwise-and 6 -4))	=> "100"
+  ;;   (number->string (bitwise-and 7 -4))	=> "100"
+  ;;
+  ;;so we can compute the index with:
+  ;;
+  ;;   ($fxand bv.len -4)
+  ;;
+  ;;If there are  *no* orphan octets: the  result of such formula  equals BV.LEN.  If
+  ;;there are orphan octets: the result is less than BV.LEN.
+  ;;
 
   (case-define* utf32->string
     (({bv bytevector?} {endianness endianness?})
-     ($utf32->string bv endianness #f))
+     ($utf32->string bv endianness #f 'raise))
     (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
-     ($utf32->string bv endianness endianness-mandatory?))
+     ($utf32->string bv endianness endianness-mandatory? 'raise))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory? {mode error-handling-mode?})
+     ($utf32->string bv endianness endianness-mandatory? mode))
     #| end of CASE-DEFINE* |# )
 
-  (define ($utf32->string bv endianness endianness-mandatory?)
-    (cond (endianness-mandatory?
-	   (%decode bv endianness 0))
-	  ((%bom-present bv)
-	   => (lambda (endianness)
-		(%decode bv endianness 4)))
-	  (else
-	   (%decode bv endianness 0))))
+  (case-define* utf32->string-length
+    (({bv bytevector?} {endianness endianness?})
+     ($utf32->string-length bv endianness #f 'raise))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory?)
+     ($utf32->string-length bv endianness endianness-mandatory? 'raise))
+    (({bv bytevector?} {endianness endianness?} endianness-mandatory? {mode error-handling-mode?})
+     ($utf32->string-length bv endianness endianness-mandatory? mode))
+    #| end of CASE-DEFINE* |# )
+
+;;; --------------------------------------------------------------------
+
+  (module ($utf32->string)
+
+    (define* ($utf32->string bv endianness endianness-mandatory? mode)
+      (cond (endianness-mandatory?
+	     (%decode __who__ bv 0 endianness mode))
+	    ((%bom-present bv)
+	     => (lambda (endian)
+		  (%decode __who__ bv 4 endian mode)))
+	    (else
+	     (%decode __who__ bv 0 endianness mode))))
+
+    (define (%decode who bv bv.start endianness mode)
+      (let* ((bv.len  ($bytevector-length bv))
+	     (bv.last ($fxlogand bv.len -4))
+	     (str.len (%compute-string-length who bv bv.start bv.last 0 endianness mode))
+	     (str     (make-string str.len)))
+	(%decode-and-fill-string who bv bv.start bv.last str 0 endianness mode)))
+
+    #| end of module |# )
+
+  (module ($utf32->string-length)
+
+    (define* ($utf32->string-length bv endianness endianness-mandatory? mode)
+      (cond (endianness-mandatory?
+	     (%compute __who__ bv 0 endianness mode))
+	    ((%bom-present bv)
+	     => (lambda (endian)
+		  (%compute __who__ bv 4 endian mode)))
+	    (else
+	     (%compute __who__ bv 0 endianness mode))))
+
+    (define (%compute who bv bv.start endianness mode)
+      (let* ((bv.len  ($bytevector-length bv))
+	     (bv.last ($fxlogand bv.len -4)))
+	(%compute-string-length who bv bv.start bv.last 0 endianness mode)))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
   (define (%bom-present bv)
-    (and (fx>= (bytevector-length bv) 4)
-	 (let ((n (bytevector-u32-ref bv 0 'big)))
-	   (cond ((= n #x0000FEFF)	'big)
-		 ((= n #xFFFE0000)	'little)
-		 (else			#f)))))
+    (and ($fx>= ($bytevector-length bv) 4)
+	 (case ($bytevector-u32b-ref bv 0)
+	   ((#x0000FEFF)	'big)
+	   ((#xFFFE0000)	'little)
+	   (else		#f))))
 
-  (define (%decode bv endianness start)
-    (let* ((bv.len  ($bytevector-length bv))
-	   (str.len ($fxsra ($fx+ ($fx- bv.len start) 3) 2)))
-      (%fill bv endianness (make-string str.len)
-	     start (fxand bv.len -4)
-	     0)))
+;;; --------------------------------------------------------------------
 
-  (define (%fill bv endianness str i j n)
-    (cond ((fx= i j)
-	   (unless (fx= n (string-length str))
-	     (string-set! str n #\xFFFD))
-	   str)
+  (define (%compute-string-length who bv bv.idx bv.last accum-len endianness mode)
+    (define-syntax-rule (%recurse bv.idx accum-len)
+      (%compute-string-length who bv bv.idx bv.last accum-len endianness mode))
+
+    (define (%error-orphan-octets-at-end bv.idx accum-len)
+      ;;At index BV.IDX of BV there are orphan  octets: 1, 2 or 3 octest that are not
+      ;;enough to form a full 32-bit word.
+      ;;
+      (case mode
+	((ignore)
+	 ;;When decoding: we will ignore the orphan octets at the end.
+	 accum-len)
+	((replace)
+	 ;;When decoding: we will replace the orphan octets with a #\xFFFD character.
+	 ($fxadd1 accum-len))
+	(else	;raise
+	 (let ((octet* (let loop ((i       bv.idx)
+				  (bv.len  (bytevector-length bv))
+				  (octet*  '()))
+			 (if (fx<? i bv.len)
+			     (loop (fxadd1 i) bv.len (cons (bytevector-u8-ref bv i) octet*))
+			   (reverse octet*)))))
+	   (%raise-condition who "orphan octets at end of UTF-32 bytevector"
+			     (make-utf32-string-decoding-orphan-octets bv bv.idx octet*))))))
+
+    (define (%error-invalid-word bv.idx str.idx)
+      ;;At index BV.IDX of BV there is a 32-bit word which is invalid as Unicode code
+      ;;point.
+      ;;
+      (case mode
+	((ignore)
+	 ;;When decoding: we will ignore the invalid word.
+	 (%recurse ($fxadd4 bv.idx) accum-len))
+	((replace)
+	 ;;When decoding: we will replace the invalid word with a #\xFFFD character.
+	 (%recurse ($fxadd4 bv.idx) ($fxadd1 accum-len)))
+	(else	;raise
+	 (%raise-condition who "invalid 32-bit word in UTF-32 bytevector"
+			   (make-utf32-string-decoding-invalid-word bv bv.idx (bytevector-u32-ref bv bv.idx endianness))))))
+
+    (cond (($fx= bv.idx bv.last)
+	   ;;If there  are no orphan octets:  now BV.IDX, BV.LAST and  BV.LEN are all
+	   ;;equal.
+	   (if ($fx= bv.last ($bytevector-length bv))
+	       accum-len
+	     (%error-orphan-octets-at-end bv.idx accum-len)))
 	  (else
-	   (string-set! str n (integer->char/invalid (bytevector-u32-ref bv i endianness)))
-	   (%fill bv endianness str (fx+ i 4) j (fx+ n 1)))))
+	   (let ((word ($bytevector-u32-ref bv bv.idx endianness)))
+	     (if (unicode.utf-32-word? word)
+		 (%recurse ($fxadd4 bv.idx) ($fxadd1 accum-len))
+	       (%error-invalid-word bv.idx accum-len))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%decode-and-fill-string who bv bv.idx bv.last str str.idx endianness mode)
+    (define-syntax-rule (%recurse bv.idx str.idx)
+      (%decode-and-fill-string who bv bv.idx bv.last str str.idx endianness mode))
+
+    (define (%error-orphan-octets-at-end bv.idx str.idx)
+      ;;At index BV.IDX of BV there are orphan  octets: 1, 2 or 3 octest that are not
+      ;;enough to form a full 32-bit word.
+      ;;
+      (case mode
+	((ignore)
+	 ;;Ignore the orphan octets at the end.
+	 str)
+	((replace)
+	 ;;Replace the orphan octets with a #\xFFFD character.
+	 ($string-set! str str.idx #\xFFFD)
+	 str)
+	(else	;raise
+	 (let ((octet* (let loop ((i       bv.idx)
+				  (bv.len  (bytevector-length bv))
+				  (octet*  '()))
+			 (if (fx<? i bv.len)
+			     (loop (fxadd1 i) bv.len (cons (bytevector-u8-ref bv i) octet*))
+			   (reverse octet*)))))
+	   (%raise-condition who "orphan octets at end of UTF-32 bytevector"
+			     (make-utf32-string-decoding-orphan-octets bv bv.idx octet*))))))
+
+    (define (%error-invalid-word bv.idx str.idx)
+      ;;At index BV.IDX of BV there is a 32-bit word which is invalid as Unicode code
+      ;;point.
+      ;;
+      (case mode
+	((ignore)
+	 ;;Ignore the invalid word.
+	 (%recurse ($fxadd4 bv.idx) str.idx))
+	((replace)
+	 ;;Replace the invalid word with a #\xFFFD character.
+	 ($string-set! str str.idx #\xFFFD)
+	 (%recurse ($fxadd4 bv.idx) ($fxadd1 str.idx)))
+	(else	;raise
+	 (%raise-condition who "invalid 32-bit word in UTF-32 bytevector"
+			   (make-utf32-string-decoding-invalid-word bv bv.idx (bytevector-u32-ref bv bv.idx endianness))))))
+
+    (cond (($fx= bv.idx bv.last)
+	   ;;If there  are no  orphan octets:  now BV.IDX  equals BV.LEN  and STR.IDX
+	   ;;equals the string  length.  If there are orphan  octets: STR.IDX indexes
+	   ;;the last slot in STR.
+	   (if ($fx= str.idx ($string-length str))
+	       str
+	     (%error-orphan-octets-at-end bv.idx str.idx)))
+	  (else
+	   (let ((word ($bytevector-u32-ref bv bv.idx endianness)))
+
+	     (if (unicode.utf-32-word? word)
+		 (begin
+		   ($string-set! str str.idx ($fixnum->char (unicode.utf-32-decode word)))
+		   (%recurse ($fxadd4 bv.idx) ($fxadd1 str.idx)))
+	       (%error-invalid-word bv.idx str.idx))))))
 
   #| end of module: UTF32->STRING |# )
 

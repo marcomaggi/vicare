@@ -6794,6 +6794,89 @@ Return @true{} if @var{obj} is a condition object of type
 @condition{utf32-string-decoding}; otherwise return @false{}.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid 32-bit word in @utf{}-32 bytevectors
+
+
+@deftp {Condition Type} &utf32-string-decoding-invalid-word
+Condition object type representing an invalid 32-bit word; it is derived
+from @condition{utf32-string-decoding}.  It has the following fields:
+
+@table @code
+@item bytevector
+The bytevector object.
+
+@item index
+The index of the offending word.
+
+@item word
+The offending word.
+@end table
+@end deftp
+
+
+@defun make-utf32-string-decoding-invalid-word @var{bytevector} @var{index} @var{word}
+Build and return a new condition object of type
+@condition{utf32-string-decoding-invalid-word}.
+@end defun
+
+
+@defun utf32-string-decoding-invalid-word? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf32-string-decoding-invalid-word}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf32-string-decoding-invalid-word.bytevector @var{cnd}
+@defunx utf32-string-decoding-invalid-word.index @var{cnd}
+@defunx utf32-string-decoding-invalid-word.word @var{cnd}
+Field accessors for condition objects of type
+@condition{utf32-string-decoding-invalid-word}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Orphan octets at end of @utf{}-32 bytevectors
+
+
+@deftp {Condition Type} &utf32-string-decoding-orphan-octets
+Condition object type representing the presence of 1, 2 or 3 orphan
+octets at the end of the @utf{}-32 bytevector; it is derived from
+@condition{utf32-string-decoding}.  It has the following fields:
+
+@table @code
+@item bytevector
+The bytevector object.
+
+@item index
+The index of the first octet.
+
+@item octets
+A list of fixnums representing the octets.
+@end table
+@end deftp
+
+
+@defun make-utf32-string-decoding-orphan-octets @var{bytevector} @var{index} @var{octets}
+Build and return a new condition object of type
+@condition{utf32-string-decoding-orphan-octets}.
+@end defun
+
+
+@defun utf32-string-decoding-orphan-octets? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf32-string-decoding-orphan-octets}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf32-string-decoding-orphan-octets.bytevector @var{cnd}
+@defunx utf32-string-decoding-orphan-octets.index @var{cnd}
+@defunx utf32-string-decoding-orphan-octets.octets @var{cnd}
+@end defun
+
 @c page
 @node iklib conditions misc
 @subsection Miscellaneous primitives
@@ -10996,6 +11079,18 @@ All the arguments have the same meaning they have for
 @end defun
 
 
+@defun utf32->string-length @var{bytevector} @var{endianness}
+@defunx utf32->string-length @var{bytevector} @var{endianness} @var{endianness-mandatory}
+@defunx utf32->string-length @var{bytevector} @var{endianness} @var{endianness-mandatory} @var{handling-mode}
+Given a bytevector representing a string in @utf{}-32 encoding: compute
+the length of the Scheme string required to hold the characters and
+return it as non--negative fixnum.
+
+All the arguments have the same meaning they have for
+@func{utf32->string} (@pxref{stdlib bytevector strings, utf32->string}).
+@end defun
+
+
 @defun {bytevector->s8-list} @var{bytevector}
 @defunx {s8-list->bytevector} @var{list}
 Convert between a list of signed bytes and a bytevector.
@@ -11442,13 +11537,22 @@ Return the maximal or minimal string argument according to
 
 @defun string->utf8-length @var{str}
 Given a string compute and return the length of the bytevector that
-would contain its @utf{}-8 representation.
+would contain its @utf{}-8 representation.  If the bytevector length
+would exceed the maximum length of a bytevector: return @false{}.
 @end defun
 
 
 @defun string->utf16-length @var{str}
 Given a string compute and return the length of the bytevector that
-would contain its @utf{}-16 representation.
+would contain its @utf{}-16 representation.  If the bytevector length
+would exceed the maximum length of a bytevector: return @false{}.
+@end defun
+
+
+@defun string->utf32-length @var{str}
+Given a string compute and return the length of the bytevector that
+would contain its @utf{}-32 representation.  If the bytevector length
+would exceed the maximum length of a bytevector: return @false{}.
 @end defun
 
 

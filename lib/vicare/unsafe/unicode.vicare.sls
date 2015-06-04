@@ -145,6 +145,13 @@
     utf-16-encode-second-of-two-words
     utf-16-classify-word
 
+;;; UTF-32
+    utf-32-code-point?
+    utf-32-encode
+
+    utf-32-word?
+    utf-32-decode
+
 ;;; Latin-1
     latin-1-octet?
     latin-1-decode
@@ -152,7 +159,8 @@
     latin-1-encode)
   (import (rnrs)
     (only (vicare)
-	  define-inline)
+	  define-inline
+	  define-syntax-rule)
     (vicare system $fx))
 
 
@@ -486,7 +494,7 @@
 ;;outside the range [#xD800, #xDFFF])
 ;;
 
-;;; 1-word encoding
+;;; 1-word decoding
 
 (define-inline (utf-16-single-word? word0)
   ;;Evaluate to  true if WORD0 is  valid as single  16-bit word UTF-16 encoding  of a
@@ -501,7 +509,7 @@
   word0)
 
 ;;; --------------------------------------------------------------------
-;;; 2-words encoding
+;;; 2-words decoding
 
 (define-inline (utf-16-first-of-two-words? word0)
   ;;Evaluate to  true if  WORD0 is  valid as first  16-bit word  in a  surrogate pair
@@ -567,6 +575,48 @@
 		  (list 'second-word-in-surrogate-pair str))
 		 (else
 		  (list 'internal-error str)))))))
+
+
+;;;; UTF-32 decoding
+;;
+;;UTF-32, also called UCS 4, is a multioctet character encoding for Unicode which can
+;;represent every character in the Unicode set:  it can represent every code point in
+;;the ranges [0, #xD800) and (#xDFFF, #x10FFFF].  It uses exactly 32 bits per Unicode
+;;code point.
+;;
+;;This  makes UTF-32  a  fixed-length  encoding, in  contrast  to  all other  Unicode
+;;transformation formats which  are variable-length encodings.  The UTF-32  form of a
+;;character is a direct representation of its code point.
+;;
+;;
+
+;;The  following macros  assume the  WORD arguments  are fixnums  representing 32-bit
+;;words: they must  be in the range [0, #xFFFFFFFF].   While the CODE-POINT arguments
+;;are fixnums representing Unicode code points  (they are in the range [0, #x10FFFF],
+;;but outside the range [#xD800, #xDFFF])
+;;
+
+;;; encoding
+
+(define-syntax-rule (utf-32-code-point? code-point)
+  #t)
+
+(define-syntax-rule (utf-32-encode code-point)
+  code-point)
+
+;;; decoding
+
+(define-inline (utf-32-word? word)
+  ;;Evaluate to  true if WORD  is valid  as single 32-bit  word UTF-32 encoding  of a
+  ;;Unicode character.
+  ;;
+  (and ($fx>= word 0)
+       ($fx<= word #x10FFFF)
+       (or ($fx< word #xD800)
+	   ($fx> word #xDFFF))))
+
+(define-syntax-rule (utf-32-decode word)
+  word)
 
 
 ;;;; ISO/IEC 8859-1 also known as Latin-1

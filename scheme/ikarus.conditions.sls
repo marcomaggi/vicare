@@ -245,6 +245,24 @@
     utf16-string-decoding-standalone-octet.index
     utf16-string-decoding-standalone-octet.octet
 
+    &utf32-string-decoding-invalid-word
+    &utf32-string-decoding-invalid-word-rtd
+    &utf32-string-decoding-invalid-word-rcd
+    make-utf32-string-decoding-invalid-word
+    utf32-string-decoding-invalid-word?
+    utf32-string-decoding-invalid-word.bytevector
+    utf32-string-decoding-invalid-word.index
+    utf32-string-decoding-invalid-word.word
+
+    &utf32-string-decoding-orphan-octets
+    &utf32-string-decoding-orphan-octets-rtd
+    &utf32-string-decoding-orphan-octets-rcd
+    make-utf32-string-decoding-orphan-octets
+    utf32-string-decoding-orphan-octets?
+    utf32-string-decoding-orphan-octets.bytevector
+    utf32-string-decoding-orphan-octets.index
+    utf32-string-decoding-orphan-octets.octets
+
     ;; macros
     preconditions)
   (import (except (vicare)
@@ -477,6 +495,24 @@
 		  utf16-string-decoding-standalone-octet.bytevector
 		  utf16-string-decoding-standalone-octet.index
 		  utf16-string-decoding-standalone-octet.octet
+
+		  &utf32-string-decoding-invalid-word
+		  &utf32-string-decoding-invalid-word-rtd
+		  &utf32-string-decoding-invalid-word-rcd
+		  make-utf32-string-decoding-invalid-word
+		  utf32-string-decoding-invalid-word?
+		  utf32-string-decoding-invalid-word.bytevector
+		  utf32-string-decoding-invalid-word.index
+		  utf32-string-decoding-invalid-word.word
+
+		  &utf32-string-decoding-orphan-octets
+		  &utf32-string-decoding-orphan-octets-rtd
+		  &utf32-string-decoding-orphan-octets-rcd
+		  make-utf32-string-decoding-orphan-octets
+		  utf32-string-decoding-orphan-octets?
+		  utf32-string-decoding-orphan-octets.bytevector
+		  utf32-string-decoding-orphan-octets.index
+		  utf32-string-decoding-orphan-octets.octets
 		  )
     (only (ikarus records procedural)
 	  rtd-subtype?)
@@ -992,6 +1028,34 @@
 
 (define* (make-utf16-string-decoding-standalone-octet {bytevector bytevector?} {index non-negative-fixnum?} {octet fixnum?})
   (%make-utf16-string-decoding-standalone-octet bytevector index octet))
+
+;;; --------------------------------------------------------------------
+;;; UTF-32 encoding errors, used by string->utf32
+
+;;; --------------------------------------------------------------------
+;;; UTF-32 decoding errors, used by utf32->string
+
+(define-condition-type &utf32-string-decoding-invalid-word
+    &utf32-string-decoding
+  %make-utf32-string-decoding-invalid-word
+  utf32-string-decoding-invalid-word?
+  (bytevector	utf32-string-decoding-invalid-word.bytevector)
+  (index	utf32-string-decoding-invalid-word.index)
+  (word		utf32-string-decoding-invalid-word.word))
+
+(define* (make-utf32-string-decoding-invalid-word {bv bytevector?} {bv.idx non-negative-fixnum?} {word exact-integer?})
+  (%make-utf32-string-decoding-invalid-word bv bv.idx word))
+
+(define-condition-type &utf32-string-decoding-orphan-octets
+    &utf32-string-decoding
+  %make-utf32-string-decoding-orphan-octets
+  utf32-string-decoding-orphan-octets?
+  (bytevector	utf32-string-decoding-orphan-octets.bytevector)
+  (index	utf32-string-decoding-orphan-octets.index)
+  (octets	utf32-string-decoding-orphan-octets.octets))
+
+(define* (make-utf32-string-decoding-orphan-octets {bv bytevector?} {bv.idx non-negative-fixnum?} {octet* list?})
+  (%make-utf32-string-decoding-orphan-octets bv bv.idx octet*))
 
 
 ;;;; printing condition objects

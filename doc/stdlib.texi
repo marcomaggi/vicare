@@ -1005,6 +1005,7 @@ error-handling-mode}); when not given, it defaults to @samp{raise}.
 
 @deffn Procedure utf32->string @var{bytevector} @var{endianness}
 @deffnx Procedure utf32->string @var{bytevector} @var{endianness} @var{endianness-mandatory}
+@deffnx Procedure utf32->string @var{bytevector} @var{endianness} @var{endianness-mandatory} @var{handling-mode}
 @var{endianness} must be the symbol @code{big} or the symbol
 @code{little}.
 
@@ -1030,6 +1031,11 @@ is decoded as a regular character.
 and @utf{}-32BE, or @code{#xFF}, @code{#xFE}, @code{#x00}, @code{#x00},
 specifying @code{little} and @utf{}-32LE.
 @end quotation
+
+As @value{PRJNAME} extension: the optional argument @var{handling-mode}
+must be a symbol representing an error handling mode, as validated by
+@syntax{error-handling-mode} (@pxref{stdlib io port transcoders,
+error-handling-mode}); when not given, it defaults to @samp{raise}.
 @end deffn
 
 @c page

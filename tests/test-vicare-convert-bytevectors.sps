@@ -547,13 +547,13 @@
 
   ;; code point that is encoded with 1 16-bit word, and it is equal to the BOM
   (begin
-    (check (code-point->utf16/1-word #xFFFE)			=> #xFFFE)
-    (check (string->utf16 "\xFFFE;" (endianness big))		=> '#vu8(#xFF #xFE))
-    (check (string->utf16 "\xFFFE;" (endianness little))	=> '#vu8(#xFE #xFF))
-    (check (utf16->string '#vu8(#xFF #xFE) (endianness big)    #t)	=> "\xFFFE;")
-    (check (utf16->string '#vu8(#xFE #xFF) (endianness little) #t)	=> "\xFFFE;")
-    (check (utf16-string-mirror/little "\xFFFE;")		=> "\xFFFE;")
-    (check (utf16-string-mirror/big    "\xFFFE;")		=> "\xFFFE;"))
+    (check (code-point->utf16/1-word #xFFFE)				=> #xFFFE)
+    (check (string->utf16 "\xFFFE;"		(endianness big))	=> '#vu8(#xFF #xFE))
+    (check (string->utf16 "\xFFFE;"		(endianness little))	=> '#vu8(#xFE #xFF))
+    (check (utf16->string '#vu8(#xFF #xFE)	(endianness big)    #t)	=> "\xFFFE;")
+    (check (utf16->string '#vu8(#xFE #xFF)	(endianness little) #t)	=> "\xFFFE;")
+    (check (utf16-string-mirror/little "\xFFFE;")			=> "\xFFFE;")
+    (check (utf16-string-mirror/big    "\xFFFE;")			=> "\xFFFE;"))
 
   ;;BOM processing:
   ;;
@@ -955,6 +955,590 @@
 		     (utf16-string-decoding-invalid-second-word.second-word E)))
 	    (else E)))
       => 4 #xD808 #x0045)
+
+    #| end of INTERNAL-BODY |# )
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-utf32-length))
+
+;;Unicode code points are exact integers in the ranges:
+;;
+;;   [0, #xD800)  (#xDFFF, #x10FFFF]
+;;
+
+;;; tests for documentation
+
+  (check (string->utf32-length "\x0;")			=> 4)
+  (check (string->utf32-length "\x10FFFF;")		=> 4)
+
+  (check (string->utf32-length "\xABCD;")		=> 4)
+  (check (string->utf32-length "\xABCD;\x1234;")	=> 8)
+  (check (string->utf32-length "\xABCD;")		=> 4)
+  (check (string->utf32-length "\xABCD;\x1234;")	=> 8)
+
+  (check (utf32->string-length '#vu8(#x00 #x10 #xFF #xFF)			(endianness big))	=> 1)
+  (check (utf32->string-length '#vu8(#x00 #x01 #x23 #x45  #x00 #x10 #xFF #xFF)	(endianness big))	=> 2)
+  (check (utf32->string-length '#vu8(#xFF #xFF #x10 #x00)			(endianness little))	=> 1)
+  (check (utf32->string-length '#vu8(#x45 #x23 #x10 #x00  #xFF #xFF #x10 #x00)	(endianness little))	=> 2)
+
+;;; --------------------------------------------------------------------
+
+  ;;BOM processing:
+  ;;
+  ;;* #x0000FEFF is the BOM for big endian.
+  ;;
+  ;;* #xFFFE0000 is the BOM for little endian.
+  ;;
+  ;;In all these tests: the endianness argument  is ignored; the BOM is processed; an
+  ;;empty string is generated.
+  (begin
+    ;;Big endian BOM.
+    (check (utf32->string-length '#vu8(#x00 #x00  #xFE #xFF) (endianness big)    #f)	=> 0)
+    (check (utf32->string-length '#vu8(#x00 #x00  #xFE #xFF) (endianness little) #f)	=> 0)
+    ;;Little endian BOM.
+    (check (utf32->string-length '#vu8(#xFF #xFE  #x00 #x00) (endianness big)    #f)	=> 0)
+    (check (utf32->string-length '#vu8(#xFF #xFE  #x00 #x00) (endianness little) #f)	=> 0))
+  ;;In all these tests:  the endianness argument is ignored; the  BOM is processed; a
+  ;;string of 1 character is generated.
+  (begin
+    ;;Big endian BOM.
+    (check (utf32->string-length '#vu8(#x00 #x00  #xFE #xFF   #x00 #x10 #xFF #xFF) (endianness big)    #f)	=> 1)
+    (check (utf32->string-length '#vu8(#x00 #x00  #xFE #xFF   #x00 #x10 #xFF #xFF) (endianness little) #f)	=> 1)
+    ;;Little endian BOM.
+    (check (utf32->string-length '#vu8(#xFF #xFE  #x00 #x00   #xFF #xFF #x10 #x00) (endianness big)    #f)	=> 1)
+    (check (utf32->string-length '#vu8(#xFF #xFE  #x00 #x00   #xFF #xFF #x10 #x00) (endianness little) #f)	=> 1))
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: replace
+
+  (internal-body
+    (define (do-big str)
+      (utf32->string-length str (endianness big)    #f (error-handling-mode replace)))
+    (define (do-lit str)
+      (utf32->string-length str (endianness little) #f (error-handling-mode replace)))
+
+    ;;The string "\xABCD;\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:	#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)
+    ;;
+    ;;* With little endian:	#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)
+    ;;
+
+    ;;Error: replace mode, orphan octets.
+    ;;
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12))			=> 2)
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00))			=> 2)
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00))				=> 2)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00))			=> 2)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12))			=> 2)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34))				=> 2)
+
+    ;;Error: replace mode, wrong word.
+    ;;
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #xFF #x00 #x00 #xFF))		=> 2)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x00 #xFF))		=> 2)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: ignore
+
+  (internal-body
+    (define (do-big str)
+      (utf32->string-length str (endianness big)    #f (error-handling-mode ignore)))
+    (define (do-lit str)
+      (utf32->string-length str (endianness little) #f (error-handling-mode ignore)))
+
+    ;;The string "\xABCD;\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:	#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)
+    ;;
+    ;;* With little endian:	#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)
+    ;;
+
+    ;;Error: replace mode, orphan octets.
+    ;;
+    (check (do-big '#vu8(#x00 #x00 #x12))					=> 0)
+    (check (do-big '#vu8(#x00 #x00))						=> 0)
+    (check (do-big '#vu8(#x00))							=> 0)
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12))			=> 1)
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00))			=> 1)
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00))				=> 1)
+    (check (do-lit '#vu8(#x34 #x12 #x00))					=> 0)
+    (check (do-lit '#vu8(#x34 #x12))						=> 0)
+    (check (do-lit '#vu8(#x34))							=> 0)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00))			=> 1)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12))			=> 1)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34))				=> 1)
+
+    ;;Error: replace mode, wrong word.
+    ;;
+    (check (do-big '#vu8(#xFF #x00 #x00 #xFF))					=> 0)
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #xFF #x00 #x00 #xFF))		=> 1)
+    (check (do-lit '#vu8(#x00 #x00 #x00 #xFF))					=> 0)
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x00 #xFF))		=> 1)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: raise
+
+  (internal-body
+    (define (do-big str)
+      (utf32->string-length str (endianness big)    #f (error-handling-mode raise)))
+    (define (do-lit str)
+      (utf32->string-length str (endianness little) #f (error-handling-mode raise)))
+
+    ;;The string "\xABCD;\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:	#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)
+    ;;
+    ;;* With little endian:	#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)
+    ;;
+
+    ;;Error: raise mode, orphan octets.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00))
+    (check
+	(try
+	    (do-big '#vu8(#x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00))
+    (check
+	(try
+	    (do-lit '#vu8(#x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-lit '#vu8(#x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00))
+    (check
+	(try
+	    (do-lit '#vu8(#x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00))
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00))
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00))
+
+    ;;Error: replace mode, wrong word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xFF #x00 #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 0 #xFF000000)
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #xFF #x00 #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 4 #xFF000000)
+    (check
+	(try
+	    (do-lit '#vu8(#x00 #x00 #x00 #xFF))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 0 #xFF000000)
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x00 #xFF))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 4 #xFF000000)
+
+    #| end of INTERNAL-BODY |# )
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-utf32))
+
+;;; tests for documentation
+
+  (check (string->utf32 "\xABCD;"		(endianness big))	=> '#vu8(#x00 #x00 #xAB #xCD))
+  (check (string->utf32 "\xABCD;\x1234;"	(endianness big))	=> '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34))
+  (check (string->utf32 "\xABCD;"		(endianness little))	=> '#vu8(#xCD #xAB #x00 #x00))
+  (check (string->utf32 "\xABCD;\x1234;"	(endianness little))	=> '#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00))
+
+  (check (utf32->string '#vu8(#x00 #x00 #xAB #xCD)			(endianness big))	=> "\xABCD;")
+  (check (utf32->string '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)	(endianness big))	=> "\xABCD;\x1234;")
+  (check (utf32->string '#vu8(#xCD #xAB #x00 #x00)			(endianness little))	=> "\xABCD;")
+  (check (utf32->string '#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)	(endianness little))	=> "\xABCD;\x1234;")
+
+;;; --------------------------------------------------------------------
+
+  ;;BOM processing:
+  ;;
+  ;;* #x0000FEFF is the BOM for big endian.
+  ;;
+  ;;* #xFFFE0000 is the BOM for little endian.
+  ;;
+  ;;In all these tests: the endianness argument  is ignored; the BOM is processed; an
+  ;;empty string is generated.
+  (begin
+    ;;Big endian BOM.
+    (check (utf32->string '#vu8(#x00 #x00  #xFE #xFF) (endianness big)    #f)	=> "")
+    (check (utf32->string '#vu8(#x00 #x00  #xFE #xFF) (endianness little) #f)	=> "")
+    ;;Little endian BOM.
+    (check (utf32->string '#vu8(#xFF #xFE  #x00 #x00) (endianness big)    #f)	=> "")
+    (check (utf32->string '#vu8(#xFF #xFE  #x00 #x00) (endianness little) #f)	=> ""))
+  ;;In all these tests:  the endianness argument is ignored; the  BOM is processed; a
+  ;;string of 1 character is generated.
+  (begin
+    ;;Big endian BOM.
+    (check (utf32->string '#vu8(#x00 #x00  #xFE #xFF   #x00 #x10 #xFF #xFF) (endianness big)    #f)	=> "\x10FFFF;")
+    (check (utf32->string '#vu8(#x00 #x00  #xFE #xFF   #x00 #x10 #xFF #xFF) (endianness little) #f)	=> "\x10FFFF;")
+    ;;Little endian BOM.
+    (check (utf32->string '#vu8(#xFF #xFE  #x00 #x00   #xFF #xFF #x10 #x00) (endianness big)    #f)	=> "\x10FFFF;")
+    (check (utf32->string '#vu8(#xFF #xFE  #x00 #x00   #xFF #xFF #x10 #x00) (endianness little) #f)	=> "\x10FFFF;"))
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: replace
+
+  (internal-body
+    (define (do-big str)
+      (utf32->string str (endianness big)    #f (error-handling-mode replace)))
+    (define (do-lit str)
+      (utf32->string str (endianness little) #f (error-handling-mode replace)))
+
+    ;;The string "\xABCD;\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:	#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)
+    ;;
+    ;;* With little endian:	#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)
+    ;;
+
+    ;;Error: replace mode, orphan octets.
+    ;;
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12))			=> "\xABCD;\xFFFD;")
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00))			=> "\xABCD;\xFFFD;")
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00))				=> "\xABCD;\xFFFD;")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00))			=> "\xABCD;\xFFFD;")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12))			=> "\xABCD;\xFFFD;")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34))				=> "\xABCD;\xFFFD;")
+
+    ;;Error: replace mode, wrong word.
+    ;;
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #xFF #x00 #x00 #xFF))		=> "\xABCD;\xFFFD;")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x00 #xFF))		=> "\xABCD;\xFFFD;")
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: ignore
+
+  (internal-body
+    (define (do-big str)
+      (utf32->string str (endianness big)    #f (error-handling-mode ignore)))
+    (define (do-lit str)
+      (utf32->string str (endianness little) #f (error-handling-mode ignore)))
+
+    ;;The string "\xABCD;\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:	#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)
+    ;;
+    ;;* With little endian:	#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)
+    ;;
+
+    ;;Error: replace mode, orphan octets.
+    ;;
+    (check (do-big '#vu8(#x00 #x00 #x12))					=> "")
+    (check (do-big '#vu8(#x00 #x00))						=> "")
+    (check (do-big '#vu8(#x00))							=> "")
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12))			=> "\xABCD;")
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00))			=> "\xABCD;")
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00))				=> "\xABCD;")
+    (check (do-lit '#vu8(#x34 #x12 #x00))					=> "")
+    (check (do-lit '#vu8(#x34 #x12))						=> "")
+    (check (do-lit '#vu8(#x34))							=> "")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00))			=> "\xABCD;")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34 #x12))			=> "\xABCD;")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x34))				=> "\xABCD;")
+
+    ;;Error: replace mode, wrong word.
+    ;;
+    (check (do-big '#vu8(#xFF #x00 #x00 #xFF))					=> "")
+    (check (do-big '#vu8(#x00 #x00 #xAB #xCD  #xFF #x00 #x00 #xFF))		=> "\xABCD;")
+    (check (do-lit '#vu8(#x00 #x00 #x00 #xFF))					=> "")
+    (check (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x00 #xFF))		=> "\xABCD;")
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: raise
+
+  (internal-body
+    (define (do-big str)
+      (utf32->string str (endianness big)    #f (error-handling-mode raise)))
+    (define (do-lit str)
+      (utf32->string str (endianness little) #f (error-handling-mode raise)))
+
+    ;;The string "\xABCD;\x1234;" is encoded as:
+    ;;
+    ;;* With big endian:	#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12 #x34)
+    ;;
+    ;;* With little endian:	#vu8(#xCD #xAB #x00 #x00  #x34 #x12 #x00 #x00)
+    ;;
+
+    ;;Error: raise mode, orphan octets.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00))
+    (check
+	(try
+	    (do-big '#vu8(#x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00))
+    (check
+	(try
+	    (do-lit '#vu8(#x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-lit '#vu8(#x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00 #x00))
+    (check
+	(try
+	    (do-lit '#vu8(#x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 0 '(#x00))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00))
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00))
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x12))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00 #x12))
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00 #x00))
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00))
+	  (catch E
+	    ((&utf32-string-decoding-orphan-octets)
+	     (values (utf32-string-decoding-orphan-octets.index E)
+		     (utf32-string-decoding-orphan-octets.octets E)))
+	    (else E)))
+      => 4 '(#x00))
+
+    ;;Error: replace mode, wrong word.
+    ;;
+    (check
+	(try
+	    (do-big '#vu8(#xFF #x00 #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 0 #xFF000000)
+    (check
+	(try
+	    (do-big '#vu8(#x00 #x00 #xAB #xCD  #xFF #x00 #x00 #x00))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 4 #xFF000000)
+    (check
+	(try
+	    (do-lit '#vu8(#x00 #x00 #x00 #xFF))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 0 #xFF000000)
+    (check
+	(try
+	    (do-lit '#vu8(#xCD #xAB #x00 #x00  #x00 #x00 #x00 #xFF))
+	  (catch E
+	    ((&utf32-string-decoding-invalid-word)
+	     #;(debug-print (condition-message E))
+	     (values (utf32-string-decoding-invalid-word.index E)
+		     (utf32-string-decoding-invalid-word.word E)))
+	    (else E)))
+      => 4 #xFF000000)
 
     #| end of INTERNAL-BODY |# )
 
