@@ -129,6 +129,7 @@
 
     utf-8-classify-octet
     utf-8-classify-code-point
+    utf-8-case-code-point
 
 ;;; UTF-16
     utf-16-single-word?
@@ -459,6 +460,20 @@
 	   (list 'four-octets-code-point ch code-point))
 	  (else
 	   (list 'internal-error ch code-point)))))
+
+(define-syntax utf-8-case-code-point
+  (syntax-rules ()
+    ((_ ?code-point
+	((1) . ?one-octet-encoding)
+	((2) . ?two-octets-encoding)
+	((3) . ?three-octets-encoding)
+	((4) . ?four-octets-encoding))
+     (let ((code-point ?code-point))
+       (cond (($fx<= code-point #x7F)    . ?one-octet-encoding)
+	     (($fx<= code-point #x7FF)   . ?two-octets-encoding)
+	     (($fx<= code-point #xFFFF)  . ?three-octets-encoding)
+	     (else                       . ?four-octets-encoding))))
+    ))
 
 
 ;;;; UTF-16 decoding

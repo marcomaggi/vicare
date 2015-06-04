@@ -59,6 +59,14 @@
   (check (utf8->string-length '#vu8())				=> 0)
   (check (utf8->string-length '#vu8(1 2 3))			=> 3)
 
+  (check (string->utf8 "\xD7FF;")					=> '#vu8(237 159 191))
+  (check (string->utf8 "\x10FFFF;")					=> '#vu8(244 143 191 191))
+  (check (string->utf8 "\x0;\x1;\x80;\xFF;\xD7FF;\xE000;\x10FFFF;")	=> '#vu8(0 1 194 128 195 191 237 159 191 238 128 128 244 143 191 191))
+
+  (check (utf8->string (string->utf8 "\xD7FF;"))	=> "\xD7FF;")
+  (check (utf8->string (string->utf8 "\x10FFFF;"))	=> "\x10FFFF;")
+  (check (utf8->string (string->utf8 "\x0;\x1;\x80;\xFF;\xD7FF;\xE000;\x10FFFF;"))	=> "\x0;\x1;\x80;\xFF;\xD7FF;\xE000;\x10FFFF;")
+
   ;;BOM!!!
   (check (utf8->string-length '#vu8(#xEF #xBB #xBF))		=> 0)
   (check (utf8->string-length '#vu8(#xEF #xBB #xBF 1 2 3))	=> 3)
@@ -74,6 +82,31 @@
 		  (else E))
 	  (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'raise))
       => #t))
+
+  (check
+      (internal-body
+	(define (textdata-hundreds.len)
+	  (* 100 256))
+
+	(define textdata-hundreds.str
+	  ;;A string holding 100 sequences of bytes from 0 included to 255 included.
+	  (let ((result #f))
+	    (define (%string-fill! bv)
+	      (do ((i 0 (+ 1 i)))
+		  ((= i 100)
+		   bv)
+		(let ((base (* 256 i)))
+		  (do ((j 0 (+ 1 j)))
+		      ((= j 256))
+		    (string-set! bv (+ base j) (integer->char j))))))
+	    (lambda ()
+	      (or result
+		  (begin
+		    (set! result (%string-fill! (make-string (textdata-hundreds.len) #\Z)))
+		    result)))))
+
+	(string=? (textdata-hundreds.str) (utf8->string (string->utf8 (textdata-hundreds.str)))))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 

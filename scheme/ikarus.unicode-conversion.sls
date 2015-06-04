@@ -214,38 +214,39 @@
     (unless (fixnum? str.len)
       (error __who__ "string too long for UTF-8 conversion" str))
     (let loop ((bv       ($make-bytevector str.len))
+	       (bv.idx   0)
 	       (str      str)
 	       (str.idx  0)
-	       (bv.idx   0)
 	       (str.len  str.len))
       (if ($fx= str.idx str.len)
 	  bv
 	(let ((code-point ($char->fixnum ($string-ref str str.idx))))
-	  (cond (($fx<= code-point #x7F)
-		 ;;CODE-POINT fits in a 1-octet sequence.
-		 ($bytevector-set! bv bv.idx code-point)
-		 (loop bv str ($fxadd1 str.idx) ($fxadd1 bv.idx) str.len))
+	  (unicode.utf-8-case-code-point code-point
+	    ((1)
+	     ;;CODE-POINT fits in a 1-octet sequence.
+	     ($bytevector-set! bv bv.idx (unicode.utf-8-encode-single-octet code-point))
+	     (loop bv ($fxadd1 bv.idx) str ($fxadd1 str.idx) str.len))
 
-		(($fx<= code-point #x7FF)
-		 ;;CODE-POINT fits in a 2-octect sequence.
-		 ($bytevector-set! bv bv.idx          ($fxlogor #b11000000 ($fxsra    code-point 6)))
-		 ($bytevector-set! bv ($fx+ bv.idx 1) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
-		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 2) str.len))
+	    ((2)
+	     ;;CODE-POINT fits in a 2-octect sequence.
+	     ($bytevector-set! bv bv.idx           (unicode.utf-8-encode-first-of-two-octets  code-point))
+	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode.utf-8-encode-second-of-two-octets code-point))
+	     (loop bv ($fxadd2 bv.idx) str ($fxadd1 str.idx) str.len))
 
-		;;CODE-POINT fits in a 3-octect sequence.
-		(($fx<= code-point #xFFFF)
-		 ($bytevector-set! bv bv.idx          ($fxlogor #b11100000 ($fxsra    code-point 12)))
-		 ($bytevector-set! bv ($fx+ bv.idx 1) ($fxlogor #b10000000 ($fxlogand ($fxsra code-point 6) #b111111)))
-		 ($bytevector-set! bv ($fx+ bv.idx 2) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
-		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 3) str.len))
+	    ((3)
+	     ;;CODE-POINT fits in a 3-octect sequence.
+	     ($bytevector-set! bv bv.idx           (unicode.utf-8-encode-first-of-three-octets  code-point))
+	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode.utf-8-encode-second-of-three-octets code-point))
+	     ($bytevector-set! bv ($fxadd2 bv.idx) (unicode.utf-8-encode-third-of-three-octets  code-point))
+	     (loop bv ($fxadd3 bv.idx) str ($fxadd1 str.idx) str.len))
 
-		;;CODE-POINT fits in a 4-octect sequence.
-		(else
-		 ($bytevector-set! bv bv.idx          ($fxlogor #b11110000 ($fxsra    code-point 18)))
-		 ($bytevector-set! bv ($fx+ bv.idx 1) ($fxlogor #b10000000 ($fxlogand ($fxsra code-point 12) #b111111)))
-		 ($bytevector-set! bv ($fx+ bv.idx 2) ($fxlogor #b10000000 ($fxlogand ($fxsra code-point  6) #b111111)))
-		 ($bytevector-set! bv ($fx+ bv.idx 3) ($fxlogor #b10000000 ($fxlogand code-point #b111111)))
-		 (loop bv str ($fxadd1 str.idx) ($fx+ bv.idx 4) str.len)))))))
+	    ((4)
+	     ;;CODE-POINT fits in a 4-octect sequence.
+	     ($bytevector-set! bv bv.idx           (unicode.utf-8-encode-first-of-four-octets  code-point))
+	     ($bytevector-set! bv ($fxadd1 bv.idx) (unicode.utf-8-encode-second-of-four-octets code-point))
+	     ($bytevector-set! bv ($fxadd2 bv.idx) (unicode.utf-8-encode-third-of-four-octets  code-point))
+	     ($bytevector-set! bv ($fxadd3 bv.idx) (unicode.utf-8-encode-fourth-of-four-octets code-point))
+	     (loop bv ($fxadd4 bv.idx) str ($fxadd1 str.idx) str.len)))))))
 
   (define* (string->utf8-length {str string?})
     ($string->utf8-length str))
@@ -255,10 +256,17 @@
       (if ($fx= str.idx str.len)
 	  bv.len
 	(let* ((code-point ($char->fixnum ($string-ref str str.idx)))
-	       (bv.len     (+ bv.len (cond (($fx<= code-point #x7F)    1)
-					   (($fx<= code-point #x7FF)   2)
-					   (($fx<= code-point #xFFFF)  3)
-					   (else                       4)))))
+	       (bv.len
+		(+ bv.len (cond (($fx<= code-point #x7F)    1)
+				(($fx<= code-point #x7FF)   2)
+				(($fx<= code-point #xFFFF)  3)
+				(else                       4)))
+		;; (+ bv.len (unicode.utf-8-case-code-point code-point
+		;; 	    ((1)	1)
+		;; 	    ((2)	2)
+		;; 	    ((3)	3)
+		;; 	    ((4)	4)))
+		))
 	  (and (fixnum? bv.len)
 	       (loop str str.len ($fxadd1 str.idx) bv.len))))))
 
@@ -1252,3 +1260,6 @@
 #| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; eval: (put 'unicode.utf-8-case-code-point 'scheme-indent-function 1)
+;; End:
