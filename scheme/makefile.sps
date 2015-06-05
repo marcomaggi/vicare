@@ -381,7 +381,7 @@
     "ikarus.bignums.sls"
     "ikarus.ratnums.sls"
     "ikarus.conditions.sls"
-    "ikarus.unicode-conversion.sls"
+    "ikarus.string-bytevector-conversion.sls"
     "ikarus.numerics.flonums.sls"
     "ikarus.numerics.generic-arithmetic.sls"
     "ikarus.numerics.flonum-conversion.sls"

@@ -16,7 +16,7 @@
 
 
 #!vicare
-(library (ikarus transcoders)
+(library (ikarus string-bytevector-conversion)
   (export string->utf8		utf8->string
 	  string->utf16		utf16->string
 	  string->utf16le	utf16le->string

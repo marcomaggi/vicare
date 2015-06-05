@@ -422,7 +422,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.syntax-utilities.sls			\
 	scheme/ikarus.time-and-date.sls				\
 	scheme/ikarus.timer.sls					\
-	scheme/ikarus.unicode-conversion.sls			\
+	scheme/ikarus.string-bytevector-conversion.sls		\
 	scheme/ikarus.unicode.sls				\
 	scheme/ikarus.unwind-protection.sls			\
 	scheme/ikarus.vectors.sls				\
