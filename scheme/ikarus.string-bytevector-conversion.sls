@@ -365,17 +365,11 @@
       (if ($fx= str.idx str.len)
 	  accum-len
 	(let* ((code-point ($char->fixnum ($string-ref str str.idx)))
-	       (accum-len
-		(+ accum-len (cond (($fx<= code-point #x7F)    1)
-				   (($fx<= code-point #x7FF)   2)
-				   (($fx<= code-point #xFFFF)  3)
-				   (else                       4)))
-		;; (+ accum-len (unicode.utf-8-case-code-point code-point
-		;; 	    ((1)	1)
-		;; 	    ((2)	2)
-		;; 	    ((3)	3)
-		;; 	    ((4)	4)))
-		))
+	       (accum-len (+ accum-len (unicode.utf-8-case-code-point code-point
+					 ((1)	1)
+					 ((2)	2)
+					 ((3)	3)
+					 ((4)	4)))))
 	  (and (fixnum? accum-len)
 	       (loop str str.len ($fxadd1 str.idx) accum-len))))))
 
