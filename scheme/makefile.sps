@@ -878,6 +878,20 @@
 								      &utf16-string-decoding-rcd)))
     (&utf32-string-decoding				($core-rtd . (&utf32-string-decoding-rtd
 								      &utf32-string-decoding-rcd)))
+    (&utf8-string-decoding-invalid-octet		($core-rtd . (&utf8-string-decoding-invalid-octet-rtd
+								      &utf8-string-decoding-invalid-octet-rcd)))
+    (&utf8-string-decoding-invalid-2-tuple		($core-rtd . (&utf8-string-decoding-invalid-2-tuple-rtd
+								      &utf8-string-decoding-invalid-2-tuple-rcd)))
+    (&utf8-string-decoding-invalid-3-tuple		($core-rtd . (&utf8-string-decoding-invalid-3-tuple-rtd
+								      &utf8-string-decoding-invalid-3-tuple-rcd)))
+    (&utf8-string-decoding-invalid-4-tuple		($core-rtd . (&utf8-string-decoding-invalid-4-tuple-rtd
+								      &utf8-string-decoding-invalid-4-tuple-rcd)))
+    (&utf8-string-decoding-incomplete-2-tuple		($core-rtd . (&utf8-string-decoding-incomplete-2-tuple-rtd
+								      &utf8-string-decoding-incomplete-2-tuple-rcd)))
+    (&utf8-string-decoding-incomplete-3-tuple		($core-rtd . (&utf8-string-decoding-incomplete-3-tuple-rtd
+								      &utf8-string-decoding-incomplete-3-tuple-rcd)))
+    (&utf8-string-decoding-incomplete-4-tuple		($core-rtd . (&utf8-string-decoding-incomplete-4-tuple-rtd
+								      &utf8-string-decoding-incomplete-4-tuple-rcd)))
     (&utf16-string-decoding-invalid-first-word		($core-rtd . (&utf16-string-decoding-invalid-first-word-rtd
 								      &utf16-string-decoding-invalid-first-word-rcd)))
     (&utf16-string-decoding-invalid-second-word		($core-rtd . (&utf16-string-decoding-invalid-second-word-rtd
@@ -3102,6 +3116,73 @@
     (make-utf32-string-decoding-error			v $language)
     (utf32-string-decoding-error?			v $language)
 
+;;;
+
+    (&utf8-string-decoding-invalid-octet		v $language)
+    (&utf8-string-decoding-invalid-octet-rtd)
+    (&utf8-string-decoding-invalid-octet-rcd)
+    (make-utf8-string-decoding-invalid-octet		v $language)
+    (utf8-string-decoding-invalid-octet?		v $language)
+    (utf8-string-decoding-invalid-octet.bytevector	v $language)
+    (utf8-string-decoding-invalid-octet.index		v $language)
+    (utf8-string-decoding-invalid-octet.octets		v $language)
+
+    (&utf8-string-decoding-invalid-2-tuple		v $language)
+    (&utf8-string-decoding-invalid-2-tuple-rtd)
+    (&utf8-string-decoding-invalid-2-tuple-rcd)
+    (make-utf8-string-decoding-invalid-2-tuple		v $language)
+    (utf8-string-decoding-invalid-2-tuple?		v $language)
+    (utf8-string-decoding-invalid-2-tuple.bytevector	v $language)
+    (utf8-string-decoding-invalid-2-tuple.index		v $language)
+    (utf8-string-decoding-invalid-2-tuple.octets	v $language)
+
+    (&utf8-string-decoding-invalid-3-tuple		v $language)
+    (&utf8-string-decoding-invalid-3-tuple-rtd)
+    (&utf8-string-decoding-invalid-3-tuple-rcd)
+    (make-utf8-string-decoding-invalid-3-tuple		v $language)
+    (utf8-string-decoding-invalid-3-tuple?		v $language)
+    (utf8-string-decoding-invalid-3-tuple.bytevector	v $language)
+    (utf8-string-decoding-invalid-3-tuple.index		v $language)
+    (utf8-string-decoding-invalid-3-tuple.octets	v $language)
+
+    (&utf8-string-decoding-invalid-4-tuple		v $language)
+    (&utf8-string-decoding-invalid-4-tuple-rtd)
+    (&utf8-string-decoding-invalid-4-tuple-rcd)
+    (make-utf8-string-decoding-invalid-4-tuple		v $language)
+    (utf8-string-decoding-invalid-4-tuple?		v $language)
+    (utf8-string-decoding-invalid-4-tuple.bytevector	v $language)
+    (utf8-string-decoding-invalid-4-tuple.index		v $language)
+    (utf8-string-decoding-invalid-4-tuple.octets	v $language)
+
+    (&utf8-string-decoding-incomplete-2-tuple		v $language)
+    (&utf8-string-decoding-incomplete-2-tuple-rtd)
+    (&utf8-string-decoding-incomplete-2-tuple-rcd)
+    (make-utf8-string-decoding-incomplete-2-tuple	v $language)
+    (utf8-string-decoding-incomplete-2-tuple?		v $language)
+    (utf8-string-decoding-incomplete-2-tuple.bytevector	v $language)
+    (utf8-string-decoding-incomplete-2-tuple.index	v $language)
+    (utf8-string-decoding-incomplete-2-tuple.octets	v $language)
+
+    (&utf8-string-decoding-incomplete-3-tuple		v $language)
+    (&utf8-string-decoding-incomplete-3-tuple-rtd)
+    (&utf8-string-decoding-incomplete-3-tuple-rcd)
+    (make-utf8-string-decoding-incomplete-3-tuple	v $language)
+    (utf8-string-decoding-incomplete-3-tuple?		v $language)
+    (utf8-string-decoding-incomplete-3-tuple.bytevector	v $language)
+    (utf8-string-decoding-incomplete-3-tuple.index	v $language)
+    (utf8-string-decoding-incomplete-3-tuple.octets	v $language)
+
+    (&utf8-string-decoding-incomplete-4-tuple		v $language)
+    (&utf8-string-decoding-incomplete-4-tuple-rtd)
+    (&utf8-string-decoding-incomplete-4-tuple-rcd)
+    (make-utf8-string-decoding-incomplete-4-tuple	v $language)
+    (utf8-string-decoding-incomplete-4-tuple?		v $language)
+    (utf8-string-decoding-incomplete-4-tuple.bytevector	v $language)
+    (utf8-string-decoding-incomplete-4-tuple.index	v $language)
+    (utf8-string-decoding-incomplete-4-tuple.octets	v $language)
+
+;;;
+
     (&utf16-string-decoding-invalid-first-word			v $language)
     (&utf16-string-decoding-invalid-first-word-rtd)
     (&utf16-string-decoding-invalid-first-word-rcd)
@@ -3138,6 +3219,8 @@
     (utf16-string-decoding-standalone-octet.bytevector		v $language)
     (utf16-string-decoding-standalone-octet.index		v $language)
     (utf16-string-decoding-standalone-octet.octet		v $language)
+
+;;;
 
     (&utf32-string-decoding-invalid-word			v $language)
     (&utf32-string-decoding-invalid-word-rtd)

@@ -172,6 +172,8 @@
     make-string-decoding-error
     string-decoding-error?
 
+;;;
+
     &utf8-string-encoding
     &utf8-string-encoding-rtd
     &utf8-string-encoding-rcd
@@ -207,6 +209,73 @@
     &utf32-string-decoding-rcd
     make-utf32-string-decoding-error
     utf32-string-decoding-error?
+
+;;;
+
+    &utf8-string-decoding-invalid-octet
+    &utf8-string-decoding-invalid-octet-rtd
+    &utf8-string-decoding-invalid-octet-rcd
+    make-utf8-string-decoding-invalid-octet
+    utf8-string-decoding-invalid-octet?
+    utf8-string-decoding-invalid-octet.bytevector
+    utf8-string-decoding-invalid-octet.index
+    utf8-string-decoding-invalid-octet.octets
+
+    &utf8-string-decoding-invalid-2-tuple
+    &utf8-string-decoding-invalid-2-tuple-rtd
+    &utf8-string-decoding-invalid-2-tuple-rcd
+    make-utf8-string-decoding-invalid-2-tuple
+    utf8-string-decoding-invalid-2-tuple?
+    utf8-string-decoding-invalid-2-tuple.bytevector
+    utf8-string-decoding-invalid-2-tuple.index
+    utf8-string-decoding-invalid-2-tuple.octets
+
+    &utf8-string-decoding-invalid-3-tuple
+    &utf8-string-decoding-invalid-3-tuple-rtd
+    &utf8-string-decoding-invalid-3-tuple-rcd
+    make-utf8-string-decoding-invalid-3-tuple
+    utf8-string-decoding-invalid-3-tuple?
+    utf8-string-decoding-invalid-3-tuple.bytevector
+    utf8-string-decoding-invalid-3-tuple.index
+    utf8-string-decoding-invalid-3-tuple.octets
+
+    &utf8-string-decoding-invalid-4-tuple
+    &utf8-string-decoding-invalid-4-tuple-rtd
+    &utf8-string-decoding-invalid-4-tuple-rcd
+    make-utf8-string-decoding-invalid-4-tuple
+    utf8-string-decoding-invalid-4-tuple?
+    utf8-string-decoding-invalid-4-tuple.bytevector
+    utf8-string-decoding-invalid-4-tuple.index
+    utf8-string-decoding-invalid-4-tuple.octets
+
+    &utf8-string-decoding-incomplete-2-tuple
+    &utf8-string-decoding-incomplete-2-tuple-rtd
+    &utf8-string-decoding-incomplete-2-tuple-rcd
+    make-utf8-string-decoding-incomplete-2-tuple
+    utf8-string-decoding-incomplete-2-tuple?
+    utf8-string-decoding-incomplete-2-tuple.bytevector
+    utf8-string-decoding-incomplete-2-tuple.index
+    utf8-string-decoding-incomplete-2-tuple.octets
+
+    &utf8-string-decoding-incomplete-3-tuple
+    &utf8-string-decoding-incomplete-3-tuple-rtd
+    &utf8-string-decoding-incomplete-3-tuple-rcd
+    make-utf8-string-decoding-incomplete-3-tuple
+    utf8-string-decoding-incomplete-3-tuple?
+    utf8-string-decoding-incomplete-3-tuple.bytevector
+    utf8-string-decoding-incomplete-3-tuple.index
+    utf8-string-decoding-incomplete-3-tuple.octets
+
+    &utf8-string-decoding-incomplete-4-tuple
+    &utf8-string-decoding-incomplete-4-tuple-rtd
+    &utf8-string-decoding-incomplete-4-tuple-rcd
+    make-utf8-string-decoding-incomplete-4-tuple
+    utf8-string-decoding-incomplete-4-tuple?
+    utf8-string-decoding-incomplete-4-tuple.bytevector
+    utf8-string-decoding-incomplete-4-tuple.index
+    utf8-string-decoding-incomplete-4-tuple.octets
+
+;;;
 
     &utf16-string-decoding-invalid-first-word
     &utf16-string-decoding-invalid-first-word-rtd
@@ -244,6 +313,8 @@
     utf16-string-decoding-standalone-octet.bytevector
     utf16-string-decoding-standalone-octet.index
     utf16-string-decoding-standalone-octet.octet
+
+;;;
 
     &utf32-string-decoding-invalid-word
     &utf32-string-decoding-invalid-word-rtd
@@ -458,6 +529,70 @@
 		  &utf32-string-decoding-rcd
 		  make-utf32-string-decoding-error
 		  utf32-string-decoding-error?
+
+		  &utf8-string-decoding-invalid-octet
+		  &utf8-string-decoding-invalid-octet-rtd
+		  &utf8-string-decoding-invalid-octet-rcd
+		  make-utf8-string-decoding-invalid-octet
+		  utf8-string-decoding-invalid-octet?
+		  utf8-string-decoding-invalid-octet.bytevector
+		  utf8-string-decoding-invalid-octet.index
+		  utf8-string-decoding-invalid-octet.octets
+
+		  &utf8-string-decoding-invalid-2-tuple
+		  &utf8-string-decoding-invalid-2-tuple-rtd
+		  &utf8-string-decoding-invalid-2-tuple-rcd
+		  make-utf8-string-decoding-invalid-2-tuple
+		  utf8-string-decoding-invalid-2-tuple?
+		  utf8-string-decoding-invalid-2-tuple.bytevector
+		  utf8-string-decoding-invalid-2-tuple.index
+		  utf8-string-decoding-invalid-2-tuple.octets
+
+		  &utf8-string-decoding-invalid-3-tuple
+		  &utf8-string-decoding-invalid-3-tuple-rtd
+		  &utf8-string-decoding-invalid-3-tuple-rcd
+		  make-utf8-string-decoding-invalid-3-tuple
+		  utf8-string-decoding-invalid-3-tuple?
+		  utf8-string-decoding-invalid-3-tuple.bytevector
+		  utf8-string-decoding-invalid-3-tuple.index
+		  utf8-string-decoding-invalid-3-tuple.octets
+
+		  &utf8-string-decoding-invalid-4-tuple
+		  &utf8-string-decoding-invalid-4-tuple-rtd
+		  &utf8-string-decoding-invalid-4-tuple-rcd
+		  make-utf8-string-decoding-invalid-4-tuple
+		  utf8-string-decoding-invalid-4-tuple?
+		  utf8-string-decoding-invalid-4-tuple.bytevector
+		  utf8-string-decoding-invalid-4-tuple.index
+		  utf8-string-decoding-invalid-4-tuple.octets
+
+		  &utf8-string-decoding-incomplete-2-tuple
+		  &utf8-string-decoding-incomplete-2-tuple-rtd
+		  &utf8-string-decoding-incomplete-2-tuple-rcd
+		  make-utf8-string-decoding-incomplete-2-tuple
+		  utf8-string-decoding-incomplete-2-tuple?
+		  utf8-string-decoding-incomplete-2-tuple.bytevector
+		  utf8-string-decoding-incomplete-2-tuple.index
+		  utf8-string-decoding-incomplete-2-tuple.octets
+
+		  &utf8-string-decoding-incomplete-3-tuple
+		  &utf8-string-decoding-incomplete-3-tuple-rtd
+		  &utf8-string-decoding-incomplete-3-tuple-rcd
+		  make-utf8-string-decoding-incomplete-3-tuple
+		  utf8-string-decoding-incomplete-3-tuple?
+		  utf8-string-decoding-incomplete-3-tuple.bytevector
+		  utf8-string-decoding-incomplete-3-tuple.index
+		  utf8-string-decoding-incomplete-3-tuple.octets
+
+		  &utf8-string-decoding-incomplete-4-tuple
+		  &utf8-string-decoding-incomplete-4-tuple-rtd
+		  &utf8-string-decoding-incomplete-4-tuple-rcd
+		  make-utf8-string-decoding-incomplete-4-tuple
+		  utf8-string-decoding-incomplete-4-tuple?
+		  utf8-string-decoding-incomplete-4-tuple.bytevector
+		  utf8-string-decoding-incomplete-4-tuple.index
+		  utf8-string-decoding-incomplete-4-tuple.octets
+
 
 		  &utf16-string-decoding-invalid-first-word
 		  &utf16-string-decoding-invalid-first-word-rtd
@@ -964,6 +1099,93 @@
 (define-condition-type &utf8-string-decoding	&error	make-utf8-string-decoding-error	      utf8-string-decoding-error?)
 (define-condition-type &utf16-string-decoding	&error	make-utf16-string-decoding-error      utf16-string-decoding-error?)
 (define-condition-type &utf32-string-decoding	&error	make-utf32-string-decoding-error      utf32-string-decoding-error?)
+
+;;; --------------------------------------------------------------------
+;;; UTF-8 encoding errors, used by string->utf16
+
+;;; --------------------------------------------------------------------
+;;; UTF-8 decoding errors, used by utf16->string
+
+(define-condition-type &utf8-string-decoding-invalid-octet
+    &utf8-string-decoding
+  %make-utf8-string-decoding-invalid-octet
+  utf8-string-decoding-invalid-octet?
+  (bytevector	utf8-string-decoding-invalid-octet.bytevector)
+  (index	utf8-string-decoding-invalid-octet.index)
+  (octets	utf8-string-decoding-invalid-octet.octets))
+
+(define* (make-utf8-string-decoding-invalid-octet {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-invalid-octet bytevector index octets))
+
+;;; invalid sequences of octets
+
+(define-condition-type &utf8-string-decoding-invalid-2-tuple
+    &utf8-string-decoding
+  %make-utf8-string-decoding-invalid-2-tuple
+  utf8-string-decoding-invalid-2-tuple?
+  (bytevector	utf8-string-decoding-invalid-2-tuple.bytevector)
+  (index	utf8-string-decoding-invalid-2-tuple.index)
+  (octets	utf8-string-decoding-invalid-2-tuple.octets))
+
+(define* (make-utf8-string-decoding-invalid-2-tuple {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-invalid-2-tuple bytevector index octets))
+
+(define-condition-type &utf8-string-decoding-invalid-3-tuple
+    &utf8-string-decoding
+  %make-utf8-string-decoding-invalid-3-tuple
+  utf8-string-decoding-invalid-3-tuple?
+  (bytevector	utf8-string-decoding-invalid-3-tuple.bytevector)
+  (index	utf8-string-decoding-invalid-3-tuple.index)
+  (octets	utf8-string-decoding-invalid-3-tuple.octets))
+
+(define* (make-utf8-string-decoding-invalid-3-tuple {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-invalid-3-tuple bytevector index octets))
+
+(define-condition-type &utf8-string-decoding-invalid-4-tuple
+    &utf8-string-decoding
+  %make-utf8-string-decoding-invalid-4-tuple
+  utf8-string-decoding-invalid-4-tuple?
+  (bytevector	utf8-string-decoding-invalid-4-tuple.bytevector)
+  (index	utf8-string-decoding-invalid-4-tuple.index)
+  (octets	utf8-string-decoding-invalid-4-tuple.octets))
+
+(define* (make-utf8-string-decoding-invalid-4-tuple {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-invalid-4-tuple bytevector index octets))
+
+;;; incomplete sequences of octets
+
+(define-condition-type &utf8-string-decoding-incomplete-2-tuple
+    &utf8-string-decoding
+  %make-utf8-string-decoding-incomplete-2-tuple
+  utf8-string-decoding-incomplete-2-tuple?
+  (bytevector	utf8-string-decoding-incomplete-2-tuple.bytevector)
+  (index	utf8-string-decoding-incomplete-2-tuple.index)
+  (octets	utf8-string-decoding-incomplete-2-tuple.octets))
+
+(define* (make-utf8-string-decoding-incomplete-2-tuple {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-incomplete-2-tuple bytevector index octets))
+
+(define-condition-type &utf8-string-decoding-incomplete-3-tuple
+    &utf8-string-decoding
+  %make-utf8-string-decoding-incomplete-3-tuple
+  utf8-string-decoding-incomplete-3-tuple?
+  (bytevector	utf8-string-decoding-incomplete-3-tuple.bytevector)
+  (index	utf8-string-decoding-incomplete-3-tuple.index)
+  (octets	utf8-string-decoding-incomplete-3-tuple.octets))
+
+(define* (make-utf8-string-decoding-incomplete-3-tuple {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-incomplete-3-tuple bytevector index octets))
+
+(define-condition-type &utf8-string-decoding-incomplete-4-tuple
+    &utf8-string-decoding
+  %make-utf8-string-decoding-incomplete-4-tuple
+  utf8-string-decoding-incomplete-4-tuple?
+  (bytevector	utf8-string-decoding-incomplete-4-tuple.bytevector)
+  (index	utf8-string-decoding-incomplete-4-tuple.index)
+  (octets	utf8-string-decoding-incomplete-4-tuple.octets))
+
+(define* (make-utf8-string-decoding-incomplete-4-tuple {bytevector bytevector?} {index non-negative-fixnum?} {octets list?})
+  (%make-utf8-string-decoding-incomplete-4-tuple bytevector index octets))
 
 ;;; --------------------------------------------------------------------
 ;;; UTF-16 encoding errors, used by string->utf16

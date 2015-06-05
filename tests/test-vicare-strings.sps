@@ -1426,8 +1426,8 @@
     => #t)
 
   (check
-      (latin1-encoded-string? (utf8->string '#vu8(1 2 3 255 10)))
-    => #f)
+      (latin1-encoded-string? (octets->string '#vu8(1 2 3 255 10)))
+    => #t)
 
   #t)
 
@@ -1509,7 +1509,7 @@
     => #t)
 
   (check
-      (ascii-encoded-string? (utf8->string '#vu8(1 2 3 200 10)))
+      (ascii-encoded-string? (octets->string '#vu8(1 2 3 200 10)))
     => #f)
 
   #t)

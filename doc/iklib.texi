@@ -6523,6 +6523,311 @@ Return @true{} if @var{obj} is a condition object of type
 @condition{utf8-string-decoding}; otherwise return @false{}.
 @end defun
 
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid octet in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-invalid-octet
+Condition object type representing an invalid octet in a @utf{}-8
+bytevector; it is derived from @condition{utf8-string-decoding}.  It has
+the following fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the offending octet.
+
+@item octets
+A list holding the offending octet.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-invalid-octet @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-invalid-octet}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-octet? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-invalid-octet}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-octet.bytevector @var{cnd}
+@defunx utf8-string-decoding-invalid-octet.index @var{cnd}
+@defunx utf8-string-decoding-invalid-octet.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-invalid-octet}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid 2-octets sequence in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-invalid-2-tuple
+Condition object type representing an invalid 2-octets sequence in a
+@utf{}-8 bytevector: the first octet is valid, the second one is
+invalid.  It is derived from @condition{utf8-string-decoding}.  It has
+the following fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the offending octet.
+
+@item octets
+A list holding the offending octets.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-invalid-2-tuple @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-invalid-2-tuple}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-2-tuple? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-invalid-2-tuple}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-2-tuple.bytevector @var{cnd}
+@defunx utf8-string-decoding-invalid-2-tuple.index @var{cnd}
+@defunx utf8-string-decoding-invalid-2-tuple.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-invalid-2-tuple}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid 3-octets sequence in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-invalid-3-tuple
+Condition object type representing an invalid 3-octets sequence in a
+@utf{}-8 bytevector: the first octet is valid, the second and/or third
+ones are invalid.  It is derived from @condition{utf8-string-decoding}.
+It has the following fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the offending octet.
+
+@item octets
+A list holding the offending octets.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-invalid-3-tuple @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-invalid-3-tuple}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-3-tuple? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-invalid-3-tuple}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-3-tuple.bytevector @var{cnd}
+@defunx utf8-string-decoding-invalid-3-tuple.index @var{cnd}
+@defunx utf8-string-decoding-invalid-3-tuple.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-invalid-3-tuple}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Invalid 4-octets sequence in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-invalid-4-tuple
+Condition object type representing an invalid 4-octets sequence in a
+@utf{}-8 bytevector: the first octet is valid, one or more among the
+second, third and fourth ones are invalid.  It is derived from
+@condition{utf8-string-decoding}.  It has the following fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the offending octet.
+
+@item octets
+A list holding the offending octets.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-invalid-4-tuple @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-invalid-4-tuple}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-4-tuple? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-invalid-4-tuple}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-invalid-4-tuple.bytevector @var{cnd}
+@defunx utf8-string-decoding-invalid-4-tuple.index @var{cnd}
+@defunx utf8-string-decoding-invalid-4-tuple.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-invalid-4-tuple}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Incomplete 2-octets sequence in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-incomplete-2-tuple
+Condition object type representing an incomplete 2-octets sequence in a
+@utf{}-8 bytevector: the first octet is present, the second one is
+missing because we are at the end of the bytevector.  It is derived from
+@condition{utf8-string-decoding}.  It has the following fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the first octet in the incomplete
+sequence.
+
+@item octets
+A list holding the incomplete sequence of octets.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-incomplete-2-tuple @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-incomplete-2-tuple}.
+@end defun
+
+
+@defun utf8-string-decoding-incomplete-2-tuple? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-incomplete-2-tuple}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-incomplete-2-tuple.bytevector @var{cnd}
+@defunx utf8-string-decoding-incomplete-2-tuple.index @var{cnd}
+@defunx utf8-string-decoding-incomplete-2-tuple.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-incomplete-2-tuple}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Incomplete 3-octets sequence in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-incomplete-3-tuple
+Condition object type representing an incomplete 3-octets sequence in a
+@utf{}-8 bytevector: the first octet is present, the second and/or third
+ones are missing because we are at the end of the bytevector.  It is
+derived from @condition{utf8-string-decoding}.  It has the following
+fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the first octet in the incomplete
+sequence.
+
+@item octets
+A list holding the incomplete sequence of octets.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-incomplete-3-tuple @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-incomplete-3-tuple}.
+@end defun
+
+
+@defun utf8-string-decoding-incomplete-3-tuple? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-incomplete-3-tuple}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-incomplete-3-tuple.bytevector @var{cnd}
+@defunx utf8-string-decoding-incomplete-3-tuple.index @var{cnd}
+@defunx utf8-string-decoding-incomplete-3-tuple.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-incomplete-3-tuple}.
+@end defun
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Incomplete 4-octets sequence in @utf{}-8 bytevector
+
+@deftp {Condition Type} &utf8-string-decoding-incomplete-4-tuple
+Condition object type representing an incomplete 4-octets sequence in a
+@utf{}-8 bytevector: the first octet is present, one or more among the
+second, third and fourth ones are missing because we are at the end of
+the bytevector.  It is derived from @condition{utf8-string-decoding}.
+It has the following fields:
+
+@table @code
+@item bytevector
+The @utf{}-8 bytevector.
+
+@item index
+The index in the bytevector of the first octet in the incomplete
+sequence.
+
+@item octets
+A list holding the incomplete sequence of octets.
+@end table
+@end deftp
+
+
+@defun make-utf8-string-decoding-incomplete-4-tuple @var{bytevector} @var{index} @var{octets}
+Build and return a condition object of type
+@condition{utf8-string-decoding-incomplete-4-tuple}.
+@end defun
+
+
+@defun utf8-string-decoding-incomplete-4-tuple? @var{obj}
+Return @true{} if @var{obj} is a condition object of type
+@condition{utf8-string-decoding-incomplete-4-tuple}; otherwise return
+@false{}.
+@end defun
+
+
+@defun utf8-string-decoding-incomplete-4-tuple.bytevector @var{cnd}
+@defunx utf8-string-decoding-incomplete-4-tuple.index @var{cnd}
+@defunx utf8-string-decoding-incomplete-4-tuple.octets @var{cnd}
+Field accessors for condition objects of type
+@condition{utf8-string-decoding-incomplete-4-tuple}.
+@end defun
+
 @c page
 @node iklib conditions string utf16
 @subsubsection @utf{}-16 string encoding condition types
