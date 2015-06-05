@@ -217,8 +217,19 @@
 ;; |     4        3 + 6 + 6 + 6 = 21  [#x010000, #x10FFFF]
 ;;
 ;;Note that octets  #xFE (#b11111110) and #xFF (#b11111111) cannot  appear in a valid
-;;stream of UTF-8 encoded characters.  The sequence of 3 octets is the one that could
-;;encode (but must not) the forbidden range [#xD800, #xDFFF].
+;;stream of UTF-8 encoded characters.
+;;
+;;The sequence of 3 octets is the one  that could encode (but must not) the forbidden
+;;range [#xD800, #xDFFF]  which are not Unicode  code points.  So the  table of valid
+;;encoded code points is:
+;;
+;; | # of octets |  # of payload bits |    code point range  |
+;; |-------------+--------------------+----------------------|
+;; |     1       |                  7 |   [#x0000,   #x007F] |
+;; |     2       |        5 + 6 = 11  |   [#x0080,   #x07FF] |
+;; |     3       |     4 + 6 + 6 = 16 |   [#x0800,   #xD7FF] |
+;; |     3       |     4 + 6 + 6 = 16 |   [#xE000,   #xFFFF] |
+;; |     4       | 3 + 6 + 6 + 6 = 21 | [#x010000, #x10FFFF] |
 ;;
 ;;The first  128 characters of the  Unicode character set correspond  one-to-one with
 ;;ASCII  and are  encoded using  a single  octet with  the same  binary value  as the
@@ -316,8 +327,11 @@
   ;;Evaluate to true if CODE-POINT is a valid integer representation for a code point
   ;;decoded from a 3-octets UTF-8 sequence.
   ;;
-  (and ($fx<= #x0800 code-point) ($fx<= code-point #xFFFF)
-       (or ($fx< code-point #xD800) ($fx<  #xDFFF code-point))))
+  (and ($fx<= #x0800 code-point)
+       ($fx<= code-point #xFFFF)
+       ;;This is the forbidden range.
+       (or ($fx< code-point #xD800)
+	   ($fx> code-point #xDFFF))))
 
 ;;; -------------------------------------------------------------
 ;;; decoding 4-octets UTF-8 to code points

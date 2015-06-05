@@ -357,7 +357,7 @@
 	 (%raise-condition who "invalid 2-tuple of octets in UTF-8 bytevector"
 			   (make-utf8-string-decoding-invalid-2-tuple bv bv.idx (list octet0 octet1))))))
 
-    (define (%error-incomplete-2-tuple bv.idx accum-len octets)
+    (define (%error-incomplete-2-tuple bv.idx accum-len octet0)
       ;;At the  end of the  bytevector, at index  BV.IDX starts a  2-octets sequence,
       ;;which has OCTET0 as first octet.  The second octet is missing because no more
       ;;octets are in the bytevector, OCTET0 is the last one.
@@ -372,7 +372,7 @@
 	 ($fxadd1 accum-len))
 	(else
 	 (%raise-condition who "incomplete 2-tuple of octets at the end of UTF-8 bytevector"
-			   (make-utf8-string-decoding-incomplete-2-tuple bv bv.idx octets)))))
+			   (make-utf8-string-decoding-incomplete-2-tuple bv bv.idx (list octet0))))))
 
 ;;;
 
@@ -393,7 +393,7 @@
 	 (%raise-condition who "invalid 3-tuple of octets in UTF-8 bytevector"
 			   (make-utf8-string-decoding-invalid-3-tuple bv bv.idx (list octet0 octet1 octet2))))))
 
-    (define (%error-incomplete-3-tuple bv.idx accum-len octets)
+    (define (%error-incomplete-3-tuple bv.idx accum-len octet0)
       ;;At the  end of the  bytevector, at index  BV.IDX starts a  3-octets sequence,
       ;;which has OCTETS as first octets.  The second and/or third octets are missing
       ;;because no more octets are in the bytevector.
@@ -408,7 +408,13 @@
 	 ($fxadd1 accum-len))
 	(else
 	 (%raise-condition who "incomplete 3-tuple of octets at the end of UTF-8 bytevector"
-			   (make-utf8-string-decoding-incomplete-3-tuple bv bv.idx octets)))))
+			   (let ((octets (case (fx- bv.end bv.idx)
+					   ((2)
+					    (list octet0
+						  (bytevector-u8-ref bv (fxadd1 bv.idx))))
+					   (else
+					    (list octet0)))))
+			     (make-utf8-string-decoding-incomplete-3-tuple bv bv.idx octets))))))
 
 ;;;
 
@@ -429,7 +435,7 @@
 	 (%raise-condition who "invalid 4-tuple of octets in UTF-8 bytevector"
 			   (make-utf8-string-decoding-invalid-4-tuple bv bv.idx (list octet0 octet1 octet2 octet3))))))
 
-    (define (%error-incomplete-4-tuple bv.idx accum-len octets)
+    (define (%error-incomplete-4-tuple bv.idx accum-len octet0)
       ;;At the  end of the  bytevector, at index  BV.IDX starts a  4-octets sequence,
       ;;which has OCTETS  as first octets.  One  or more among the  second, third and
       ;;fourth octets are missing because no more octets are in the bytevector.
@@ -444,7 +450,17 @@
 	 ($fxadd1 accum-len))
 	(else
 	 (%raise-condition who "incomplete 4-tuple of octets at the end of UTF-8 bytevector"
-			   (make-utf8-string-decoding-incomplete-4-tuple bv bv.idx octets)))))
+			   (let ((octets (case (fx- bv.end bv.idx)
+					   ((3)
+					    (list octet0
+						  (bytevector-u8-ref bv (fxadd1 bv.idx))
+						  (bytevector-u8-ref bv (fx+ 2 bv.idx))))
+					   ((2)
+					    (list octet0
+						  (bytevector-u8-ref bv (fxadd1 bv.idx))))
+					   (else
+					    (list octet0)))))
+			     (make-utf8-string-decoding-incomplete-4-tuple bv bv.idx octets))))))
 
 ;;;
 
@@ -489,7 +505,13 @@
 		   (let ((octet1      ($bytevector-u8-ref bv ($fxadd1 bv.idx)))
 			 (octet2      ($bytevector-u8-ref bv ($fxadd2 bv.idx))))
 		     (if (unicode.utf-8-second-and-third-of-three-octets? octet1 octet2)
-			 (%recurse ($fxadd3 bv.idx) ($fxadd1 accum-len))
+			 ;;The sequence of  3 octets is the one that  could, but must
+			 ;;not, encode the forbidden  range [#xD800, #xDFFF] that are
+			 ;;not Unicode code points.
+			 (let ((code-point (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
+			   (if (unicode.utf-8-valid-code-point-from-3-octets? code-point)
+			       (%recurse ($fxadd3 bv.idx) ($fxadd1 accum-len))
+			     (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) accum-len octet0 octet1 octet2)))
 		       (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) accum-len octet0 octet1 octet2)))
 		 (%error-incomplete-3-tuple bv.idx accum-len octet0)))
 
@@ -533,7 +555,7 @@
 	 (%raise-condition who "invalid 2-tuple of octets in UTF-8 bytevector"
 			   (make-utf8-string-decoding-invalid-2-tuple bv bv.idx (list octet0 octet1))))))
 
-    (define (%error-incomplete-2-tuple bv.idx str.idx octets)
+    (define (%error-incomplete-2-tuple bv.idx str.idx octet0)
       ;;At the  end of the  bytevector, at index  BV.IDX starts a  2-octets sequence,
       ;;which has OCTET0 as first octet.  The second octet is missing because no more
       ;;octets are in the bytevector, OCTET0 is the last one.
@@ -548,7 +570,7 @@
 	 str)
 	(else
 	 (%raise-condition who "incomplete 2-tuple of octets at the end of UTF-8 bytevector"
-			   (make-utf8-string-decoding-incomplete-2-tuple bv bv.idx octets)))))
+			   (make-utf8-string-decoding-incomplete-2-tuple bv bv.idx (list octet0))))))
 
 ;;;
 
@@ -569,7 +591,7 @@
 	 (%raise-condition who "invalid 3-tuple of octets in UTF-8 bytevector"
 			   (make-utf8-string-decoding-invalid-3-tuple bv bv.idx (list octet0 octet1 octet2))))))
 
-    (define (%error-incomplete-3-tuple bv.idx str.idx octets)
+    (define (%error-incomplete-3-tuple bv.idx str.idx octet0)
       ;;At the  end of the  bytevector, at index  BV.IDX starts a  3-octets sequence,
       ;;which has OCTETS as first octets.  The second and/or third octets are missing
       ;;because no more octets are in the bytevector.
@@ -584,7 +606,13 @@
 	 str)
 	(else
 	 (%raise-condition who "incomplete 3-tuple of octets at the end of UTF-8 bytevector"
-			   (make-utf8-string-decoding-incomplete-3-tuple bv bv.idx octets)))))
+			   (let ((octets (case (fx- bv.end bv.idx)
+					   ((2)
+					    (list octet0
+						  (bytevector-u8-ref bv (fxadd1 bv.idx))))
+					   (else
+					    (list octet0)))))
+			     (make-utf8-string-decoding-incomplete-3-tuple bv bv.idx octets))))))
 
 ;;;
 
@@ -605,7 +633,7 @@
 	 (%raise-condition who "invalid 4-tuple of octets in UTF-8 bytevector"
 			   (make-utf8-string-decoding-invalid-4-tuple bv bv.idx (list octet0 octet1 octet2 octet3))))))
 
-    (define (%error-incomplete-4-tuple bv.idx str.idx octets)
+    (define (%error-incomplete-4-tuple bv.idx str.idx octet0)
       ;;At the  end of the  bytevector, at index  BV.IDX starts a  4-octets sequence,
       ;;which has OCTETS  as first octets.  One  or more among the  second, third and
       ;;fourth octets are missing because no more octets are in the bytevector.
@@ -620,7 +648,17 @@
 	 str)
 	(else
 	 (%raise-condition who "incomplete 4-tuple of octets at the end of UTF-8 bytevector"
-			   (make-utf8-string-decoding-incomplete-4-tuple bv bv.idx octets)))))
+			   (let ((octets (case (fx- bv.end bv.idx)
+					   ((3)
+					    (list octet0
+						  (bytevector-u8-ref bv (fxadd1 bv.idx))
+						  (bytevector-u8-ref bv (fx+ 2 bv.idx))))
+					   ((2)
+					    (list octet0
+						  (bytevector-u8-ref bv (fxadd1 bv.idx))))
+					   (else
+					    (list octet0)))))
+			     (make-utf8-string-decoding-incomplete-4-tuple bv bv.idx octets))))))
 
 ;;;
 
@@ -668,9 +706,15 @@
 		   (let* ((octet1 ($bytevector-u8-ref bv ($fxadd1 bv.idx)))
 			  (octet2 ($bytevector-u8-ref bv ($fxadd2 bv.idx))))
 		     (if (unicode.utf-8-second-and-third-of-three-octets? octet1 octet2)
-			 (begin
-			   ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
-			   (%recurse ($fxadd3 bv.idx) ($fxadd1 str.idx)))
+			 ;;The sequence of  3 octets is the one that  could, but must
+			 ;;not, encode the forbidden  range [#xD800, #xDFFF] that are
+			 ;;not Unicode code points.
+			 (let ((code-point (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
+			   (if (unicode.utf-8-valid-code-point-from-3-octets? code-point)
+			       (begin
+				 ($string-set! str str.idx ($fixnum->char (unicode.utf-8-decode-three-octets octet0 octet1 octet2)))
+				 (%recurse ($fxadd3 bv.idx) ($fxadd1 str.idx)))
+			     (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) str.idx octet0 octet1 octet2)))
 		       (%error-invalid-3-tuple bv.idx ($fxadd3 bv.idx) str.idx octet0 octet1 octet2)))
 		 (%error-incomplete-3-tuple bv.idx str.idx octet0)))
 

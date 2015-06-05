@@ -11368,7 +11368,9 @@ characters.
 
 The optional @var{handling-mode} must be an error handling mode as
 validated by the standard syntax @syntax{error-handling-mode}; when not
-given: it defaults to @samp{replace}.
+given: it defaults to @samp{raise}.  This argument has the same meaning
+it has for @func{utf8->string} (@pxref{stdlib bytevector strings,
+utf8->string}).
 @end defun
 
 

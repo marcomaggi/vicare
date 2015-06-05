@@ -54,14 +54,314 @@
 
 
 
-(parametrise ((check-test-name	'string-utf8))
+(parametrise ((check-test-name	'string-utf8-length))
+
+;;; | # of octets |  # of payload bits |     code point       |
+;;; |-------------+--------------------+----------------------|
+;;; |     1       |                  7 |   [#x0000,   #x007F] |
+;;; |     2       |        5 + 6 = 11  |   [#x0080,   #x07FF] |
+;;; |     3       |     4 + 6 + 6 = 16 |   [#x0800,   #xD7FF] |
+;;; |     3       |     4 + 6 + 6 = 16 |   [#xE000,   #xFFFF] |
+;;; |     4       | 3 + 6 + 6 + 6 = 21 | [#x010000, #x10FFFF] |
 
   (check (utf8->string-length '#vu8())				=> 0)
   (check (utf8->string-length '#vu8(1 2 3))			=> 3)
 
+  (check (string->utf8-length "\xD7FF;")			=> 3)
+  (check (string->utf8-length "\x10FFFF;")			=> 4)
+  (check
+      (string->utf8-length "\x0;\x1;\x80;\xFF;\xD7FF;\xE000;\x10FFFF;")
+    => (bytevector-length '#vu8(0 1 194 128 195 191 237 159 191 238 128 128 244 143 191 191)))
+
+  ;;BOM!!!
+  (check (utf8->string-length '#vu8(#xEF #xBB #xBF))		=> 0)
+  (check (utf8->string-length '#vu8(#xEF #xBB #xBF 1 2 3))	=> 3)
+
+  ;;Invalid  sequence starting  with  valid  first byte  in  3-octet sequence.   When
+  ;;ignoring or replacing: we process the whole triplet.
+  (begin
+    (check (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'ignore)	=> 0)
+    (check (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'replace)	=> 1)
+    (check
+	(guard (E ((error? E)
+		   #t)
+		  (else E))
+	  (utf8->string-length '#vu8(#xe0 #x67 #x0a) 'raise))
+      => #t))
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: replace
+
+  (internal-body
+    (define (doit str)
+      (utf8->string-length str (error-handling-mode replace)))
+
+    ;;Encoded strings:
+    ;;
+    ;;   "\x07FF;"			#vu8(#xDF #xBF)
+    ;;   "\xD7FF;"			#vu8(237 159 191)
+    ;;   "\x10FFFF;"			#vu8(244 143 191 191)
+    ;;   "ABC"				#vu8(#x41 #x42 #x43)
+    ;;   "ABC\xD7FF;"			#vu8(#x41 #x42 #x43 #xED #x9F #xBF)
+    ;;
+    ;;The octets #xFE and #xFF appear in a valid stream of UTF-8 encoded characters.
+
+    ;;Standalone invalid octet.
+    ;;
+    (check (doit '#vu8(#xFE))					=> 1)
+    (check (doit '#vu8(#xFF))					=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 #xFE))			=> 4)
+    (check (doit '#vu8(#x41 #x42 #x43 #xFF))			=> 4)
+
+    ;;Invalid 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF #xFF))				=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF #xFF))		=> 4)
+
+    ;;Invalid 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237 159 #xFF))				=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 237 159 #xFF))		=> 4)
+
+    ;;Invalid 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244 143 191 #xFF))			=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191 #xFF))	=> 4)
+
+    ;;Incomplete 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF))					=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF))			=> 4)
+
+    ;;Incomplete 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237))					=> 1)
+    (check (doit '#vu8(237 159))				=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 237))			=> 4)
+    (check (doit '#vu8(#x41 #x42 #x43 237 159))			=> 4)
+
+    ;;Incomplete 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244))					=> 1)
+    (check (doit '#vu8(244 143))				=> 1)
+    (check (doit '#vu8(244 143 191))				=> 1)
+    (check (doit '#vu8(#x41 #x42 #x43 244))			=> 4)
+    (check (doit '#vu8(#x41 #x42 #x43 244 143))			=> 4)
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191))		=> 4)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: ignore
+
+  (internal-body
+    (define (doit str)
+      (utf8->string-length str (error-handling-mode ignore)))
+
+    ;;Encoded strings:
+    ;;
+    ;;   "\x07FF;"			#vu8(#xDF #xBF)
+    ;;   "\xD7FF;"			#vu8(237 159 191)
+    ;;   "\x10FFFF;"			#vu8(244 143 191 191)
+    ;;   "ABC"				#vu8(#x41 #x42 #x43)
+    ;;   "ABC\xD7FF;"			#vu8(#x41 #x42 #x43 #xED #x9F #xBF)
+    ;;
+    ;;The octets #xFE and #xFF appear in a valid stream of UTF-8 encoded characters.
+
+    ;;Standalone invalid octet.
+    ;;
+    (check (doit '#vu8(#xFE))					=> 0)
+    (check (doit '#vu8(#xFF))					=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 #xFE))			=> 3)
+    (check (doit '#vu8(#x41 #x42 #x43 #xFF))			=> 3)
+
+    ;;Invalid 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF #xFF))				=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF #xFF))		=> 3)
+
+    ;;Invalid 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237 159 #xFF))				=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 237 159 #xFF))		=> 3)
+
+    ;;Invalid 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244 143 191 #xFF))			=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191 #xFF))	=> 3)
+
+    ;;Incomplete 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF))					=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF))			=> 3)
+
+    ;;Incomplete 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237))					=> 0)
+    (check (doit '#vu8(237 159))				=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 237))			=> 3)
+    (check (doit '#vu8(#x41 #x42 #x43 237 159))			=> 3)
+
+    ;;Incomplete 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244))					=> 0)
+    (check (doit '#vu8(244 143))				=> 0)
+    (check (doit '#vu8(244 143 191))				=> 0)
+    (check (doit '#vu8(#x41 #x42 #x43 244))			=> 3)
+    (check (doit '#vu8(#x41 #x42 #x43 244 143))			=> 3)
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191))		=> 3)
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: raise
+
+  (internal-body
+    (define (doit str)
+      (utf8->string-length str (error-handling-mode raise)))
+
+    (define-syntax-rule (invalid-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-octet)
+	       (values (utf8-string-decoding-invalid-octet.index E)
+		       (utf8-string-decoding-invalid-octet.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (invalid-2-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-2-tuple)
+	       (values (utf8-string-decoding-invalid-2-tuple.index E)
+		       (utf8-string-decoding-invalid-2-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (invalid-3-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-3-tuple)
+	       (values (utf8-string-decoding-invalid-3-tuple.index E)
+		       (utf8-string-decoding-invalid-3-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (invalid-4-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-4-tuple)
+	       (values (utf8-string-decoding-invalid-4-tuple.index E)
+		       (utf8-string-decoding-invalid-4-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (incomplete-2-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-incomplete-2-tuple)
+	       (values (utf8-string-decoding-incomplete-2-tuple.index E)
+		       (utf8-string-decoding-incomplete-2-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (incomplete-3-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-incomplete-3-tuple)
+	       (values (utf8-string-decoding-incomplete-3-tuple.index E)
+		       (utf8-string-decoding-incomplete-3-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (incomplete-4-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-incomplete-4-tuple)
+	       (values (utf8-string-decoding-incomplete-4-tuple.index E)
+		       (utf8-string-decoding-incomplete-4-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    ;;Encoded strings:
+    ;;
+    ;;   "\x07FF;"			#vu8(#xDF #xBF)
+    ;;   "\xD7FF;"			#vu8(237 159 191)
+    ;;   "\x10FFFF;"			#vu8(244 143 191 191)
+    ;;   "ABC"				#vu8(#x41 #x42 #x43)
+    ;;   "ABC\xD7FF;"			#vu8(#x41 #x42 #x43 #xED #x9F #xBF)
+    ;;
+    ;;The octets #xFE and #xFF appear in a valid stream of UTF-8 encoded characters.
+
+    ;;Standalone invalid octet.
+    ;;
+    (invalid-octet #vu8(#xFE) 0 #xFE)
+    (invalid-octet #vu8(#xFF) 0 #xFF)
+    (invalid-octet #vu8(#x41 #x42 #x43 #xFE) 3 #xFE)
+    (invalid-octet #vu8(#x41 #x42 #x43 #xFF) 3 #xFF)
+
+    ;;Invalid 2-octet sequence.
+    ;;
+    (invalid-2-octet #vu8(#xDF #xFF) 0 #xDF #xFF)
+    (invalid-2-octet #vu8(#x41 #x42 #x43 #xDF #xFF) 3 #xDF #xFF)
+
+    ;;Invalid 3-octet sequence.
+    ;;
+    (invalid-3-octet #vu8(237 159 #xFF) 0 237 159 #xFF)
+    (invalid-3-octet #vu8(#x41 #x42 #x43 237 159 #xFF) 3 237 159 #xFF)
+
+    ;;Invalid 4-octet sequence.
+    ;;
+    (invalid-4-octet #vu8(244 143 191 #xFF) 0 244 143 191 #xFF)
+    (invalid-4-octet #vu8(#x41 #x42 #x43 244 143 191 #xFF) 3 244 143 191 #xFF)
+
+    ;;Incomplete 2-octet sequence.
+    ;;
+    (incomplete-2-octet #vu8(#xDF) 0 #xDF)
+    (incomplete-2-octet #vu8(#x41 #x42 #x43 #xDF) 3 #xDF)
+
+    ;;Incomplete 3-octet sequence.
+    ;;
+    (incomplete-3-octet #vu8(237) 0 237)
+    (incomplete-3-octet #vu8(237 159) 0 237 159)
+    (incomplete-3-octet #vu8(#x41 #x42 #x43 237) 3 237)
+    (incomplete-3-octet #vu8(#x41 #x42 #x43 237 159) 3 237 159)
+
+    ;;Incomplete 4-octet sequence.
+    ;;
+    (incomplete-4-octet #vu8(244) 0 244)
+    (incomplete-4-octet #vu8(244 143) 0 244 143)
+    (incomplete-4-octet #vu8(244 143 191) 0 244 143 191)
+    (incomplete-4-octet #vu8(#x41 #x42 #x43 244) 3 244)
+    (incomplete-4-octet #vu8(#x41 #x42 #x43 244 143) 3 244 143)
+    (incomplete-4-octet #vu8(#x41 #x42 #x43 244 143 191) 3 244 143 191)
+
+    #| end of INTERNAL-BODY |# )
+
+  #t)
+
+
+(parametrise ((check-test-name	'string-utf8))
+
   (check (string->utf8 "\xD7FF;")					=> '#vu8(237 159 191))
   (check (string->utf8 "\x10FFFF;")					=> '#vu8(244 143 191 191))
   (check (string->utf8 "\x0;\x1;\x80;\xFF;\xD7FF;\xE000;\x10FFFF;")	=> '#vu8(0 1 194 128 195 191 237 159 191 238 128 128 244 143 191 191))
+  (check (string->utf8 "ABC\xD7FF;")					=> '#vu8(#x41 #x42 #x43 #xED #x9F #xBF))
+  (check (string->utf8 "\x07FF;")					=> '#vu8(#xDF #xBF))
 
   (check (utf8->string (string->utf8 "\xD7FF;"))	=> "\xD7FF;")
   (check (utf8->string (string->utf8 "\x10FFFF;"))	=> "\x10FFFF;")
@@ -128,6 +428,269 @@
 		  (else E))
 	  (utf8->string '#vu8(#xe0 #x67 #x0a) 'raise))
       => #t))
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: replace
+
+  (internal-body
+    (define (doit str)
+      (utf8->string str (error-handling-mode replace)))
+
+    ;;Encoded strings:
+    ;;
+    ;;   "\x07FF;"			#vu8(#xDF #xBF)
+    ;;   "\xD7FF;"			#vu8(237 159 191)
+    ;;   "\x10FFFF;"			#vu8(244 143 191 191)
+    ;;   "ABC"				#vu8(#x41 #x42 #x43)
+    ;;   "ABC\xD7FF;"			#vu8(#x41 #x42 #x43 #xED #x9F #xBF)
+    ;;
+    ;;The octets #xFE and #xFF appear in a valid stream of UTF-8 encoded characters.
+
+    ;;Standalone invalid octet.
+    ;;
+    (check (doit '#vu8(#xFE))					=> "\xFFFD;")
+    (check (doit '#vu8(#xFF))					=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 #xFE))			=> "ABC\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 #xFF))			=> "ABC\xFFFD;")
+
+    ;;Invalid 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF #xFF))				=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF #xFF))		=> "ABC\xFFFD;")
+
+    ;;Invalid 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237 159 #xFF))				=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 237 159 #xFF))		=> "ABC\xFFFD;")
+
+    ;;Invalid 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244 143 191 #xFF))			=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191 #xFF))	=> "ABC\xFFFD;")
+
+    ;;Incomplete 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF))					=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF))			=> "ABC\xFFFD;")
+
+    ;;Incomplete 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237))					=> "\xFFFD;")
+    (check (doit '#vu8(237 159))				=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 237))			=> "ABC\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 237 159))			=> "ABC\xFFFD;")
+
+    ;;Incomplete 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244))					=> "\xFFFD;")
+    (check (doit '#vu8(244 143))				=> "\xFFFD;")
+    (check (doit '#vu8(244 143 191))				=> "\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 244))			=> "ABC\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 244 143))			=> "ABC\xFFFD;")
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191))		=> "ABC\xFFFD;")
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: ignore
+
+  (internal-body
+    (define (doit str)
+      (utf8->string str (error-handling-mode ignore)))
+
+    ;;Encoded strings:
+    ;;
+    ;;   "\x07FF;"			#vu8(#xDF #xBF)
+    ;;   "\xD7FF;"			#vu8(237 159 191)
+    ;;   "\x10FFFF;"			#vu8(244 143 191 191)
+    ;;   "ABC"				#vu8(#x41 #x42 #x43)
+    ;;   "ABC\xD7FF;"			#vu8(#x41 #x42 #x43 #xED #x9F #xBF)
+    ;;
+    ;;The octets #xFE and #xFF appear in a valid stream of UTF-8 encoded characters.
+
+    ;;Standalone invalid octet.
+    ;;
+    (check (doit '#vu8(#xFE))					=> "")
+    (check (doit '#vu8(#xFF))					=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 #xFE))			=> "ABC")
+    (check (doit '#vu8(#x41 #x42 #x43 #xFF))			=> "ABC")
+
+    ;;Invalid 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF #xFF))				=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF #xFF))		=> "ABC")
+
+    ;;Invalid 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237 159 #xFF))				=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 237 159 #xFF))		=> "ABC")
+
+    ;;Invalid 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244 143 191 #xFF))			=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191 #xFF))	=> "ABC")
+
+    ;;Incomplete 2-octet sequence.
+    ;;
+    (check (doit '#vu8(#xDF))					=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 #xDF))			=> "ABC")
+
+    ;;Incomplete 3-octet sequence.
+    ;;
+    (check (doit '#vu8(237))					=> "")
+    (check (doit '#vu8(237 159))				=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 237))			=> "ABC")
+    (check (doit '#vu8(#x41 #x42 #x43 237 159))			=> "ABC")
+
+    ;;Incomplete 4-octet sequence.
+    ;;
+    (check (doit '#vu8(244))					=> "")
+    (check (doit '#vu8(244 143))				=> "")
+    (check (doit '#vu8(244 143 191))				=> "")
+    (check (doit '#vu8(#x41 #x42 #x43 244))			=> "ABC")
+    (check (doit '#vu8(#x41 #x42 #x43 244 143))			=> "ABC")
+    (check (doit '#vu8(#x41 #x42 #x43 244 143 191))		=> "ABC")
+
+    #| end of INTERNAL-BODY |# )
+
+;;; --------------------------------------------------------------------
+;;; error handling mode: raise
+
+  (internal-body
+    (define (doit str)
+      (utf8->string str (error-handling-mode raise)))
+
+    (define-syntax-rule (invalid-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-octet)
+	       (values (utf8-string-decoding-invalid-octet.index E)
+		       (utf8-string-decoding-invalid-octet.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (invalid-2-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-2-tuple)
+	       (values (utf8-string-decoding-invalid-2-tuple.index E)
+		       (utf8-string-decoding-invalid-2-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (invalid-3-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-3-tuple)
+	       (values (utf8-string-decoding-invalid-3-tuple.index E)
+		       (utf8-string-decoding-invalid-3-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (invalid-4-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-invalid-4-tuple)
+	       (values (utf8-string-decoding-invalid-4-tuple.index E)
+		       (utf8-string-decoding-invalid-4-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (incomplete-2-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-incomplete-2-tuple)
+	       (values (utf8-string-decoding-incomplete-2-tuple.index E)
+		       (utf8-string-decoding-incomplete-2-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (incomplete-3-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-incomplete-3-tuple)
+	       (values (utf8-string-decoding-incomplete-3-tuple.index E)
+		       (utf8-string-decoding-incomplete-3-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    (define-syntax-rule (incomplete-4-octet ?bv ?index . ?octets)
+      (check
+	  (try
+	      (doit (quote ?bv))
+	    (catch E
+	      ((&utf8-string-decoding-incomplete-4-tuple)
+	       (values (utf8-string-decoding-incomplete-4-tuple.index E)
+		       (utf8-string-decoding-incomplete-4-tuple.octets E)))
+	      (else E)))
+	=> ?index (quote ?octets)))
+
+    ;;Encoded strings:
+    ;;
+    ;;   "\x07FF;"			#vu8(#xDF #xBF)
+    ;;   "\xD7FF;"			#vu8(237 159 191)
+    ;;   "\x10FFFF;"			#vu8(244 143 191 191)
+    ;;   "ABC"				#vu8(#x41 #x42 #x43)
+    ;;   "ABC\xD7FF;"			#vu8(#x41 #x42 #x43 #xED #x9F #xBF)
+    ;;
+    ;;The octets #xFE and #xFF appear in a valid stream of UTF-8 encoded characters.
+
+    ;;Standalone invalid octet.
+    ;;
+    (invalid-octet #vu8(#xFE) 0 #xFE)
+    (invalid-octet #vu8(#xFF) 0 #xFF)
+    (invalid-octet #vu8(#x41 #x42 #x43 #xFE) 3 #xFE)
+    (invalid-octet #vu8(#x41 #x42 #x43 #xFF) 3 #xFF)
+
+    ;;Invalid 2-octet sequence.
+    ;;
+    (invalid-2-octet #vu8(#xDF #xFF) 0 #xDF #xFF)
+    (invalid-2-octet #vu8(#x41 #x42 #x43 #xDF #xFF) 3 #xDF #xFF)
+
+    ;;Invalid 3-octet sequence.
+    ;;
+    (invalid-3-octet #vu8(237 159 #xFF) 0 237 159 #xFF)
+    (invalid-3-octet #vu8(#x41 #x42 #x43 237 159 #xFF) 3 237 159 #xFF)
+
+    ;;Invalid 4-octet sequence.
+    ;;
+    (invalid-4-octet #vu8(244 143 191 #xFF) 0 244 143 191 #xFF)
+    (invalid-4-octet #vu8(#x41 #x42 #x43 244 143 191 #xFF) 3 244 143 191 #xFF)
+
+    ;;Incomplete 2-octet sequence.
+    ;;
+    (incomplete-2-octet #vu8(#xDF) 0 #xDF)
+    (incomplete-2-octet #vu8(#x41 #x42 #x43 #xDF) 3 #xDF)
+
+    ;;Incomplete 3-octet sequence.
+    ;;
+    (incomplete-3-octet #vu8(237) 0 237)
+    (incomplete-3-octet #vu8(237 159) 0 237 159)
+    (incomplete-3-octet #vu8(#x41 #x42 #x43 237) 3 237)
+    (incomplete-3-octet #vu8(#x41 #x42 #x43 237 159) 3 237 159)
+
+    ;;Incomplete 4-octet sequence.
+    ;;
+    (incomplete-4-octet #vu8(244) 0 244)
+    (incomplete-4-octet #vu8(244 143) 0 244 143)
+    (incomplete-4-octet #vu8(244 143 191) 0 244 143 191)
+    (incomplete-4-octet #vu8(#x41 #x42 #x43 244) 3 244)
+    (incomplete-4-octet #vu8(#x41 #x42 #x43 244 143) 3 244 143)
+    (incomplete-4-octet #vu8(#x41 #x42 #x43 244 143 191) 3 244 143 191)
+
+    #| end of INTERNAL-BODY |# )
 
   #t)
 

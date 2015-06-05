@@ -928,8 +928,14 @@ If endianness is @code{little}, then @utf{}-32LE is used.
 
 
 @deffn Procedure utf8->string @var{bytevector}
+@deffnx Procedure utf8->string @var{bytevector} @var{handling-mode}
 Return a newly allocated (unless empty) string whose character sequence
 is encoded by the given bytevector.
+
+As @value{PRJNAME} extension: the optional argument @var{handling-mode}
+must be a symbol representing an error handling mode, as validated by
+@syntax{error-handling-mode} (@pxref{stdlib io port transcoders,
+error-handling-mode}); when not given, it defaults to @samp{raise}.
 @end deffn
 
 
