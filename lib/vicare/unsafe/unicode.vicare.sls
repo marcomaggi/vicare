@@ -157,7 +157,13 @@
     latin-1-octet?
     latin-1-decode
     latin-1-code-point?
-    latin-1-encode)
+    latin-1-encode
+
+;;; ASCII
+    ascii-code-point?
+    ascii-encode
+    ascii-octet?
+    ascii-decode)
   (import (rnrs)
     (only (vicare)
 	  define-inline
@@ -673,16 +679,53 @@
 ;;character.
 
 (define-inline (latin-1-octet? octet)
-  #t)
+  (or (and ($fx>= octet #x00)
+	   ($fx<= octet #x1F))
+      (and ($fx>= octet #x20)
+	   ($fx<= octet #x7E))
+      (and ($fx>= octet #xA0)
+	   ($fx<= octet #xFF))))
 
 (define-inline (latin-1-decode octet)
   octet)
 
+;;; --------------------------------------------------------------------
+
 (define-inline (latin-1-code-point? code-point)
-  (and ($fx<= 0 code-point) ($fx<= code-point 255)))
+  (and ($fx>= code-point 0)
+       ($fx<= code-point 255)))
 
 (define-inline (latin-1-encode code-point)
   code-point)
+
+
+;;;; ASCII
+
+(define-inline (ascii-code-point? code-point)
+  ;;Assume CODE-POINT is  the fixnum representation of a Unicode  code point.  Return
+  ;;true if CHI is in the range accepted by the ASCII encoding.
+  ;;
+  (and ($fx>= code-point #x00)
+       ($fx<= code-point #x7F)))
+
+(define-inline (ascii-encode code-point)
+  ;;Assume CODE-POINT  is the fixnum  representation of a  Unicode code point  in the
+  ;;range representable with ASCII encoding.  Return its encoding in ASCII format.
+  code-point)
+
+;;; --------------------------------------------------------------------
+
+(define-inline (ascii-octet? octet)
+  ;;Assume OCTET is a  fixnum representing an octet.  Return true if  OCTET is in the
+  ;;range accepted by the ASCII encoding; otherwise return false.
+  ;;
+  (and ($fx>= octet #x00)
+       ($fx<= octet #x7F)))
+
+(define-inline (ascii-decode octet)
+  ;;Assume OCTET is the fixnum representation  of an ASCII encoded character.  Return
+  ;;its associated Unicode code point.
+  octet)
 
 
 ;;;; done

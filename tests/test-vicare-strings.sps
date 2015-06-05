@@ -1392,8 +1392,8 @@
 		 #;(debug-print (condition-message E))
 		 (condition-irritants E))
 		(else E))
-	(string->latin1 "#\x80;"))
-    => '(#\x80 "#\x80;"))
+	(string->latin1 "\x80;"))
+    => '(#\x80 "\x80;"))
 
 ;;;
 

@@ -27,7 +27,26 @@
 
 	  utf8->string-length	string->utf8-length
 	  utf16->string-length	string->utf16-length
-	  utf32->string-length	string->utf32-length)
+	  utf32->string-length	string->utf32-length
+
+	  string->octets		octets->string
+	  octets-encoded-bytevector?	octets-encoded-string?
+
+	  string->ascii			ascii->string
+	  ascii-encoded-bytevector?	ascii-encoded-string?
+
+	  string->latin1		latin1->string
+	  latin1-encoded-bytevector?	latin1-encoded-string?
+
+	  $string->octets		$octets->string
+	  $octets-encoded-bytevector?	$octets-encoded-string?
+
+	  $string->ascii		$ascii->string
+	  $ascii-encoded-bytevector?	$ascii-encoded-string?
+
+	  $string->latin1		$latin1->string
+	  $latin1-encoded-bytevector?	$latin1-encoded-string?
+	  )
   (import (except (vicare)
 		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
 		  ;;Maggi; Wed Jun 3, 2015)
@@ -44,6 +63,7 @@
 		  make-utf16-string-decoding-standalone-octet
 		  make-utf32-string-decoding-invalid-word
 		  make-utf32-string-decoding-orphan-octets
+		  procedure-arguments-consistency-violation
 		  ;;;
 
 		  string->utf8		utf8->string
@@ -56,9 +76,27 @@
 
 		  utf8->string-length	string->utf8-length
 		  utf16->string-length	string->utf16-length
-		  utf32->string-length	string->utf32-length)
-    (vicare system $strings)
-    (except (vicare system $bytevectors)
+		  utf32->string-length	string->utf32-length
+
+		  string->octets		octets->string
+		  octets-encoded-bytevector?	octets-encoded-string?
+
+		  string->ascii			ascii->string
+		  ascii-encoded-bytevector?	ascii-encoded-string?
+
+		  string->latin1		latin1->string
+		  latin1-encoded-bytevector?	latin1-encoded-string?
+		  )
+    (only (vicare system $strings)
+	  $make-string
+	  $string-length
+	  $string-ref
+	  $string-set!)
+    (except (only (vicare system $bytevectors)
+		  $make-bytevector
+		  $bytevector-length
+		  $bytevector-u8-ref
+		  $bytevector-set!)
 	    ;;FIXME This  except is to  be removed at  the next boot  image rotation.
 	    ;;(Marco Maggi; Tue Jun 2, 2015)
 	    $bytevector-u16-ref
@@ -92,6 +130,12 @@
 
 
 ;;;; helpers
+
+;;FIXME To  be removed at  the next  boot image rotation.   (Marco Maggi; Wed  May 6,
+;;2015)
+;;
+(define procedure-arguments-consistency-violation
+  assertion-violation)
 
 (define (endianness? obj)
   (memq obj '(little big)))
@@ -214,6 +258,55 @@
   #| end of module |# )
 
 
+;;;; arguments validation
+
+(define-syntax (assert-string-code-point-is-latin-1-code-point stx)
+  (syntax-case stx ()
+    ((_ ?str ?code-point)
+     (and (identifier? #'?str)
+	  (identifier? #'?code-point))
+     #'(unless (unicode.latin-1-code-point? ?code-point)
+	 (procedure-arguments-consistency-violation __who__
+	   "expected only Latin-1 code points in string argument"
+	   (integer->char ?code-point) ?str)))
+    ))
+
+(define-syntax (assert-bytevector-octet-is-latin-1-octet stx)
+  (syntax-case stx ()
+    ((_ ?bv ?octet)
+     (and (identifier? #'?bv)
+	  (identifier? #'?octet))
+     #'(unless (unicode.latin-1-octet? ?octet)
+	 (procedure-arguments-consistency-violation __who__
+	   "expected only Latin-1 octets in bytevector argument"
+	   (integer->char ?octet) ?bv)))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (assert-string-code-point-is-ascii-code-point stx)
+  (syntax-case stx ()
+    ((_ ?str ?code-point)
+     (and (identifier? #'?str)
+	  (identifier? #'?code-point))
+     #'(unless (unicode.ascii-code-point? ?code-point)
+	 (procedure-arguments-consistency-violation __who__
+	   "expected only ASCII code points in string argument"
+	   (integer->char ?code-point) ?str)))
+    ))
+
+(define-syntax (assert-bytevector-octet-is-ascii-octet stx)
+  (syntax-case stx ()
+    ((_ ?bv ?octet)
+     (and (identifier? #'?bv)
+	  (identifier? #'?octet))
+     #'(unless (unicode.ascii-octet? ?octet)
+	 (procedure-arguments-consistency-violation __who__
+	   "expected only ASCII octets in bytevector argument"
+	   (integer->char ?octet) ?bv)))
+    ))
+
+
 (define (integer->char/invalid n)
   (cond ((not (fixnum? n))	#\xFFFD)
 	(($fx<= n #xD7FF)	($fixnum->char n))
@@ -268,23 +361,23 @@
     ($string->utf8-length str))
 
   (define ($string->utf8-length str)
-    (let loop ((str str) (str.len ($string-length str)) (str.idx 0) (bv.len 0))
+    (let loop ((str str) (str.len ($string-length str)) (str.idx 0) (accum-len 0))
       (if ($fx= str.idx str.len)
-	  bv.len
+	  accum-len
 	(let* ((code-point ($char->fixnum ($string-ref str str.idx)))
-	       (bv.len
-		(+ bv.len (cond (($fx<= code-point #x7F)    1)
-				(($fx<= code-point #x7FF)   2)
-				(($fx<= code-point #xFFFF)  3)
-				(else                       4)))
-		;; (+ bv.len (unicode.utf-8-case-code-point code-point
+	       (accum-len
+		(+ accum-len (cond (($fx<= code-point #x7F)    1)
+				   (($fx<= code-point #x7FF)   2)
+				   (($fx<= code-point #xFFFF)  3)
+				   (else                       4)))
+		;; (+ accum-len (unicode.utf-8-case-code-point code-point
 		;; 	    ((1)	1)
 		;; 	    ((2)	2)
 		;; 	    ((3)	3)
 		;; 	    ((4)	4)))
 		))
-	  (and (fixnum? bv.len)
-	       (loop str str.len ($fxadd1 str.idx) bv.len))))))
+	  (and (fixnum? accum-len)
+	       (loop str str.len ($fxadd1 str.idx) accum-len))))))
 
   #| end of module |# )
 
@@ -1478,6 +1571,188 @@
 	       (%error-invalid-word bv.idx str.idx))))))
 
   #| end of module: UTF32->STRING |# )
+
+
+;;;; octets bytevectors to/from strings
+
+(define* (octets-encoded-string? {str string?})
+  ($octets-encoded-string? str))
+
+(define ($octets-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+	(and (let ((code-point ($char->fixnum ($string-ref str i))))
+	       (and ($fx>= code-point 0)
+		    ($fx<= code-point 255)))
+	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (octets-encoded-bytevector? {bv bytevector?})
+  #t)
+
+(define ($octets-encoded-bytevector? bv)
+  #t)
+
+;;; --------------------------------------------------------------------
+
+(define* (string->octets {str string?})
+  ($string->octets str))
+
+(define* ($string->octets str)
+  (do ((i 0 ($fxadd1 i))
+       (bv ($make-bytevector ($string-length str))))
+      (($fx= i ($string-length str))
+       bv)
+    (let* ((ch  ($string-ref str i))
+	   (chi ($char->fixnum ch)))
+      (if (and ($fx>= chi 0)
+	       ($fx<= chi 255))
+	  ($bytevector-set! bv i chi)
+	(procedure-arguments-consistency-violation __who__
+	  "impossible conversion from character to octet" ch str)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (octets->string {bv bytevector?})
+  ($octets->string bv))
+
+(define ($octets->string bv)
+  (do ((i 0 ($fxadd1 i))
+       (str ($make-string ($bytevector-length bv))))
+      (($fx= i ($bytevector-length bv))
+       str)
+    ($string-set! str i ($fixnum->char ($bytevector-u8-ref bv i)))))
+
+
+;;;; Latin-1 bytevectors to/from strings
+
+(define* (string->latin1 {str string?})
+  ;;Defined by  Vicare.  Convert  the string  STR into  a bytevector  holding octects
+  ;;representing the character's Latin-1 code points.
+  ;;
+  ($string->latin1 str))
+
+(define* ($string->latin1 str)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (let* ((bv.len ($string-length str))
+	 (bv	 ($make-bytevector bv.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i bv.len)
+	 bv)
+      (let ((code-point ($char->fixnum ($string-ref str i))))
+	(assert-string-code-point-is-latin-1-code-point str code-point)
+	($bytevector-set! bv i (unicode.latin-1-encode code-point))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (latin1->string {bv bytevector?})
+  ;;Defined by  Vicare.  Convert the bytevector  BV into a string  holding characters
+  ;;representing bytes interpreted as Latin-1 code points.
+  ;;
+  ($latin1->string bv))
+
+(define* ($latin1->string bv)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (let* ((str.len ($bytevector-length bv))
+	 (str     ($make-string str.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i str.len)
+	 str)
+      (let ((octet ($bytevector-u8-ref bv i)))
+	(assert-bytevector-octet-is-latin-1-octet bv octet)
+	($string-set! str i ($fixnum->char (unicode.latin-1-decode octet)))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (latin1-encoded-bytevector? {bv bytevector?})
+  ;;Return true if the argument is interpretable as Latin1 encoded string.
+  ;;
+  ($latin1-encoded-bytevector? bv))
+
+(define ($latin1-encoded-bytevector? bv)
+  (let loop ((i 0))
+    (or ($fx= i ($bytevector-length bv))
+  	(and (unicode.latin-1-octet? ($bytevector-u8-ref bv i))
+  	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (latin1-encoded-string? {str string?})
+  ;;Return true if the argument is interpretable as Latin1 encoded string.
+  ;;
+  ($latin1-encoded-string? str))
+
+(define ($latin1-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+  	(and (unicode.latin-1-code-point? ($char->fixnum ($string-ref str i)))
+  	     (loop ($fxadd1 i))))))
+
+
+;;;; ASCII bytevectors to/from strings
+
+(define* (string->ascii {str string?})
+  ;;Defined by  Vicare.  Convert  the string  STR into  a bytevector  holding octects
+  ;;representing the character's ASCII code points.
+  ;;
+  ($string->ascii str))
+
+(define* ($string->ascii str)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (let* ((bv.len	($string-length str))
+	 (bv		($make-bytevector bv.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i bv.len)
+	 bv)
+      (let ((code-point ($char->fixnum ($string-ref str i))))
+	(assert-string-code-point-is-ascii-code-point str code-point)
+	($bytevector-set! bv i (unicode.ascii-encode code-point))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (ascii->string {bv bytevector?})
+  ;;Defined by  Vicare.  Convert the bytevector  BV into a string  holding characters
+  ;;representing bytes interpreted as ASCII code points.
+  ;;
+  ($ascii->string bv))
+
+(define* ($ascii->string bv)
+  ;;Both strings and bytevectors have length representable as fixnum.
+  (let* ((str.len	($bytevector-length bv))
+	 (str		($make-string str.len)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i str.len)
+	 str)
+      (let ((octet ($bytevector-u8-ref bv i)))
+	(assert-bytevector-octet-is-ascii-octet bv octet)
+	($string-set! str i ($fixnum->char (unicode.ascii-decode octet)))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (ascii-encoded-bytevector? {bv bytevector?})
+  ;;Return true if the argument is interpretable as ASCII encoded string.
+  ;;
+  ($ascii-encoded-bytevector? bv))
+
+(define ($ascii-encoded-bytevector? bv)
+  (let loop ((i 0))
+    (or ($fx= i ($bytevector-length bv))
+	(and (unicode.ascii-octet? ($bytevector-u8-ref bv i))
+	     (loop ($fxadd1 i))))))
+
+;;; --------------------------------------------------------------------
+
+(define* (ascii-encoded-string? {str string?})
+  ;;Return true if the argument is interpretable as Ascii encoded string.
+  ;;
+  ($ascii-encoded-string? str))
+
+(define ($ascii-encoded-string? str)
+  (let loop ((i 0))
+    (or ($fx= i ($string-length str))
+  	(and (unicode.ascii-code-point? ($char->fixnum ($string-ref str i)))
+  	     (loop ($fxadd1 i))))))
 
 
 (define* (bytevector->string {bv bytevector?} {tran transcoder?})
