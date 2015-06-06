@@ -60,7 +60,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib records::               Extensions to @rnrs{6} records.
 * iklib promises::              Delay, force and promises.
 * iklib booleans::              Additional boolean functions.
-* iklib characters::            Additional character functions.
+* iklib chars::                 Additional character functions.
 * iklib keywords::              Keyword objects.
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
@@ -10915,15 +10915,23 @@ Return the minimal or maximal boolean among the arguments.
 @end defun
 
 @c page
-@node iklib characters
+@node iklib chars
 @section Additional character functions
+
+
+@menu
+* iklib chars predicates::      Additional character predicates.
+* iklib chars comparison::      Additional character comparisons.
+* iklib chars unicode::         Unicode characters handling.
+@end menu
+
+@c page
+@node iklib chars predicates
+@subsection Additional character predicates
 
 
 The following bindings are exported by the library @library{vicare}.
 
-@c ------------------------------------------------------------------------
-
-@subsubheading Predicates
 
 @defun list-of-chars? @var{obj}
 Return @true{} if @var{obj} is null or a proper list of chars; otherwise
@@ -10949,9 +10957,13 @@ Return @true{} if @var{ch} is a character and it is printable; if
 character: raise an exception.
 @end defun
 
-@c ------------------------------------------------------------------------
+@c page
+@node iklib chars comparison
+@subsection Additional character comparisons
 
-@subsubheading Comparison
+
+The following bindings are exported by the library @library{vicare}.
+
 
 @deffn Procedure {char!=?} @varo{char} @var{char} @dots{}
 The arguments must be characters.  Return @true{} if the arguments are
@@ -10969,6 +10981,752 @@ arguments.
 @defunx chmax @varo{ch} @var{ch} @dots{}
 Return the minimum or maximum character among the arguments.
 @end defun
+
+@c page
+@node iklib chars unicode
+@subsection Unicode characters handling
+
+
+@cindex Library @library{vicare unsafe unicode}
+@cindex @library{vicare unsafe unicode}, library
+
+
+The library @library{vicare unsafe unicode} exports macros to handle:
+Unicode's code points; the encodings @utf{}-8, @utf{}-16, @utf{}-32; the
+Latin-1 encoding; the @ascii{} encoding.
+
+@menu
+* iklib chars unicode intro::   Introduction to Unicode.
+* iklib chars unicode utf8::    Unicode's @utf{}-8 encoding.
+* iklib chars unicode utf16::   Unicode's @utf{}-16 encoding.
+* iklib chars unicode utf32::   Unicode's @utf{}-32 encoding.
+* iklib chars unicode ascii::   @ascii{} encoding.
+* iklib chars unicode latin1::  Latin-1 encoding.
+@end menu
+
+@c page
+@node iklib chars unicode intro
+@subsubsection Introduction to Unicode
+
+
+The mandatory starting points to learn about Unicode are the following
+@aurl{}s:
+
+@center @url{http://www.unicode.org/faq/utf_bom.html}
+@center @url{http://en.wikipedia.org/wiki/Universal_Character_Set}
+@center @url{http://en.wikipedia.org/wiki/Unicode}
+@center @url{http://en.wikipedia.org/wiki/Byte_order_mark}
+@center @url{http://en.wikipedia.org/wiki/UTF-8}
+@center @url{http://en.wikipedia.org/wiki/UTF-16}
+@center @url{http://en.wikipedia.org/wiki/UTF-32}
+
+
+@noindent
+here we give only a brief overview of the main definitions, drawing text
+from those pages.  Let's not forget the main source:
+
+@center @url{http://www.unicode.org/}
+
+The @dfn{Universal Character Set} (@acronym{UCS}) is a standard set of
+characters upon which many character encodings are based; it contains
+abstract characters, each identified by an unambiguous name and an
+integer number called its @dfn{code point}.
+
+@dfn{Unicode} is a computing industry standard for the consistent
+encoding, representation and handling of text expressed in most of the
+world's writing systems.
+
+@acronym{UCS} and Unicode have an identical repertoire and numbers: the
+same characters with the same numbers exist in both standards.
+@acronym{UCS} is a simple character map, Unicode adds rules for
+collation, normalization of forms, and the bidirectional algorithm for
+scripts.
+
+The Unicode Consortium, the non--profit organization that coordinates
+Unicode's development, has the goal of eventually replacing existing
+character encoding schemes with Unicode and its standard ``Unicode
+Transformation Format'' alias ``@acronym{UCS} Transformation Format''
+(@utf{}) schemes.
+
+By convention a Unicode code point is referred to by writing @samp{U+}
+followed by its hexadecimal number with at least @math{4} digits
+(@samp{U+0044} is fine, @samp{U+12} is not).
+
+In practice, Unicode code points are exact integers in the range
+@samp{[0, #x10FFFF]}, but outside the range @samp{[#xD800, #xDFFF]}
+which has special meaning in @utf{} schemes.  A code point can be stored
+in @math{21} bits:
+
+@lisp
+(string-length (number->string #x10FFFF 2)) @result{} 21
+@end lisp
+
+@noindent
+@rnrs{6} defines fixnums to have at least @math{24} bits, so a fixnum is
+wide enough to hold a code point:
+
+@lisp
+(fixnum? #x10FFFF) @result{} #t
+@end lisp
+
+@noindent
+and indeed Scheme characters are a disjoint type of value holding such
+fixnums:
+
+@lisp
+(integer->char #x10FFFF) @result{} #\x10FFFF
+@end lisp
+
+@c page
+@node iklib chars unicode utf8
+@subsubsection Unicode's @utf{}-8 encoding
+
+
+@utf{}-8 is a multioctet character encoding for Unicode which can
+represent every character in the Unicode set: it can represent every
+code point in the ranges @samp{[0, #xD800)} and @samp{(#xDFFF,
+#x10FFFF]}.
+
+A stream of @utf{}-8 encoded characters is meant to be stored octet by
+octet in fixed order (and so without the need to specify the endianness
+of words).
+
+The encoding scheme uses sequences of 1, 2, 3 or 4 octets to encode each
+code point as shown in the following table; the first octet in a
+sequence has a unique bit pattern in the most significant bits and so it
+allows the determination of the sequence length; every octet contains a
+number of payload bits which must be concatenated (bitwise inclusive OR)
+to reconstruct the integer representation of a code point:
+
+@example
+# of octets | 1st octet  | 2nd octet  | 3rd octet  | 4th octet  |
+------------+------------+------------+------------+------------|
+     1        #b0xxxxxxx
+     2        #b110xxxxx   #b10xxxxxx
+     3        #b1110xxxx   #b10xxxxxx   #b10xxxxxx
+     4        #b11110xxx   #b10xxxxxx   #b10xxxxxx   #b10xxxxxx
+@end example
+
+@example
+ # of octets | # of payload bits  |       hex range
+-------------+--------------------+----------------------
+     1                          7     [#x0000,   #x007F]
+     2                 5 + 6 = 11     [#x0080,   #x07FF]
+     3             4 + 6 + 6 = 16     [#x0800,   #xFFFF]
+     4         3 + 6 + 6 + 6 = 21   [#x010000, #x10FFFF]
+@end example
+
+Note that octets @samp{#xFE} (@samp{#b11111110}) and @samp{#xFF}
+(@samp{#b11111111}) cannot appear in a valid stream of @utf{}-8 encoded
+characters.
+
+The sequence of 3 octets is the one that could encode (but must not) the
+forbidden range @samp{[#xD800, #xDFFF]} which are not Unicode code
+points.  So the table of valid encoded code points is:
+
+@example
+ # of octets |  # of payload bits |    code point range
+-------------+--------------------+----------------------
+     1       |                  7 |   [#x0000,   #x007F]
+     2       |        5 + 6 = 11  |   [#x0080,   #x07FF]
+     3       |     4 + 6 + 6 = 16 |   [#x0800,   #xD7FF]
+     3       |     4 + 6 + 6 = 16 |   [#xE000,   #xFFFF]
+     4       | 3 + 6 + 6 + 6 = 21 | [#x010000, #x10FFFF]
+@end example
+
+The first 128 characters of the Unicode character set correspond
+one--to--one with @ascii{} and are encoded using a single octet with the
+same binary value as the corresponding @ascii{} character, making valid
+@ascii{} text valid @utf{}-8 encoded Unicode text as well.  Such encoded
+octets have the Most Significant Bit (@acronym{MSB}) set to zero.
+
+Although the standard does not define it, many programs start a @utf{}-8
+stream with a Byte Order Mark (@bom{}) composed of the 3 octets:
+@samp{#xEF}, @samp{#xBB}, @samp{#xBF}.
+
+The following syntactic bindings are exported by the library
+@library{vicare unsafe unicode}.  All the macros are unsafe: no
+validation on the type of the arguments is performed.  For all the
+macros: the argument @var{octet} is meant to be a fixnum representing 1
+octet (in the range @samp{[0, 255]}); the argument @var{code-point} is
+meant to be a fixnum representing a Unicode code point (in the range
+@samp{[0, #x10FFFF]}, but outside the range @samp{[#xD800, #xDFFF]}).
+
+
+@deffn Syntax utf-8-invalid-octet? @var{octet}
+Evaluate to @true{} if @var{octet} has a value that must never appear in
+a valid @utf{}-8 stream; otherwise evaluate to @false{}.
+@end deffn
+
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding 1-octet UTF-8 to code points
+
+
+@deffn Syntax utf-8-single-octet? @var{octet}
+Evaluate to @true{} if @var{octet} is valid as 1-octet @utf{}-8 encoding
+of a Unicode character; otherwise evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax utf-8-decode-single-octet @var{octet}
+Decode the code point of a Unicode character from a 1-octet @utf{}-8
+encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-valid-code-point-from-1-octet? @var{code-point}
+Evaluate to true if @var{code-point} is a valid fixnum representation
+for a code point decoded from a 2-octets @utf{}-8 sequence.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding 2-octets @utf{}-8 to code points
+
+
+@deffn Syntax utf-8-first-of-two-octets? @varo{octet}
+Evaluate to @true{} if @varo{octet} is valid as first of 2-octets
+@utf{}-8 encoding of a Unicode character.
+@end deffn
+
+
+@deffn Syntax utf-8-second-of-two-octets? @vari{octet}
+Evaluate to true if @vari{octet} is valid as second of 2-octets @utf{}-8
+encoding of a Unicode character.
+@end deffn
+
+
+@deffn Syntax utf-8-decode-two-octets @varo{octet} @vari{octet}
+Decode the code point of a Unicode character from a 2-octets @utf{}-8
+encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-valid-code-point-from-2-octets? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a valid fixnum representation
+for a code point decoded from a 2-octets @utf{}-8 sequence.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding 3-octets @utf{}-8 to code points
+
+
+@deffn Syntax utf-8-first-of-three-octets? @varo{octet}
+Evaluate to @true{} if @varo{octet} is valid as first of 3-octets
+@utf{}-8 encoding of a Unicode character; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax utf-8-second-and-third-of-three-octets? @vari{octet} @varii{octet}
+Evaluate to @true{} if @vari{octet} and @varii{octet} are valid as
+second and third of 3-octets @utf{}-8 encoding of a Unicode character.
+@end deffn
+
+
+@deffn Syntax utf-8-decode-three-octets @varo{octet} @vari{octet} @varii{octet}
+Decode the code point of a Unicode character from a 3-octets @utf{}-8
+encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-valid-code-point-from-3-octets? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a valid integer
+representation for a code point decoded from a 3-octets @utf{}-8
+sequence.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding 4-octets @utf{}-8 to code points
+
+
+@deffn Syntax utf-8-first-of-four-octets? @varo{octet}
+Evaluate to @true{} if @varo{octet} is valid as first of 4-octets
+@utf{}-8 encoding of a Unicode character.
+@end deffn
+
+
+@deffn Syntax utf-8-second-third-and-fourth-of-four-octets? @vari{octet} @varii{octet} @variii{octet}
+Evaluate to true if @vari{octet}, @varii{octet} and @variii{octet} are
+valid as second, third and fourth of 4-octets @utf{}-8 encoding of a
+Unicode character.
+@end deffn
+
+
+@deffn Syntax utf-8-decode-four-octets @varo{octet} @vari{octet} @varii{octet} @variii{octet}
+Decode the code point of a Unicode character from a 4-octets UTF-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-valid-code-point-from-4-octets? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a valid integer
+representation for a code point decoded from a 4-octets @utf{}-8
+sequence.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding code points to 1-octet @utf{}-8
+
+
+@deffn Syntax utf-8-single-octet-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a Unicode code point
+representable as 1-octet @utf{}-8 encoding; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-single-octet @var{code-point}
+Encode the code point of a Unicode character to a 1-octet @utf{}-8
+encoding.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding code points to 2-octet @utf{}-8
+
+
+@deffn Syntax utf-8-two-octets-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a Unicode code point
+representable as 2-octet @utf{}-8 encoding; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-first-of-two-octets @var{code-point}
+Encode the code point of a Unicode character to the first octet in a
+2-octet @utf{}-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-second-of-two-octets @var{code-point}
+Encode the code point of a Unicode character to the second octet in a
+2-octet @utf{}-8 encoding.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding code points to 3-octet @utf{}-8
+
+
+@deffn Syntax utf-8-three-octets-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a Unicode code point
+representable as 3-octet @utf{}-8 encoding; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-first-of-three-octets @var{code-point}
+Encode the code point of a Unicode character to the first octet in a
+3-octet @utf{}-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-second-of-three-octets @var{code-point}
+Encode the code point of a Unicode character to the second octet in a
+3-octet @utf{}-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-third-of-three-octets @var{code-point}
+Encode the code point of a Unicode character to the fourth octet in a
+3-octet @utf{}-8 encoding.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding code points to 4-octet @utf{}-8
+
+
+@deffn Syntax utf-8-four-octets-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a Unicode code point
+representable as 4-octet @utf{}-8 encoding; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-first-of-four-octets @var{code-point}
+Encode the code point of a Unicode character to the first octet in a
+4-octet @utf{}-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-second-of-four-octets @var{code-point}
+Encode the code point of a Unicode character to the second octet in a
+4-octet @utf{}-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-third-of-four-octets @var{code-point}
+Encode the code point of a Unicode character to the third octet in a
+4-octet @utf{}-8 encoding.
+@end deffn
+
+
+@deffn Syntax utf-8-encode-fourth-of-four-octets @var{code-point}
+Encode the code point of a Unicode character to the fourth octet in a
+4-octet @utf{}-8 encoding.
+@end deffn
+
+@c page
+@node iklib chars unicode utf16
+@subsubsection Unicode's @utf{}-16 encoding
+
+
+@utf{}-16 is a multioctet character encoding for Unicode which can
+represent every character in the Unicode set: it can represent every
+code point in the ranges @samp{[0, #xD800)} and @samp{(#xDFFF,
+#x10FFFF]}.
+
+Code points in the range @samp{[0, #x10000)} are encoded with a single
+@utf{}-16 16-bit word; code points in the range @samp{[#x10000,
+#x10FFFF]} are encoded in a surrogate pair of 2 16-bit words.
+
+Given a 16-bit word in a @utf{}-16 stream, represented in Scheme as a
+fixnum in the range @samp{[#x0000, #xFFFF]}, we can classify it on the
+following axis:
+
+@example
+0000        D7FF D800    DBFF DC00      DFFF E000       FFFF
+ |-------------||-----------||-------------||------------|
+  single word    first in     second in      single word
+  character      pair         pair           character
+@end example
+
+@noindent
+or the following logic:
+
+@example
+word in [#x0000, #xD7FF] => single word character
+word in [#xD800, #xDBFF] => first in surrogate pair
+word in [#xDC00, #xDFFF] => second in surrogate pair
+word in [#xE000, #xFFFF] => single word character
+@end example
+
+A @utf{}-16 stream may start with a Byte Order Mark (@bom{}).  A
+@utf{}-16 @bom{} is either:
+
+@itemize
+@item
+A sequence of bytes @samp{#xFE}, @samp{#xFF} specifying ``big
+endianness'' and @utf{}-16BE encoding.
+
+@item
+A sequence of bytes @samp{#xFF}, @samp{#xFE} specifying ``little
+endianness'' and @utf{}-16LE encoding.
+@end itemize
+
+
+The following syntactic bindings are exported by the library
+@library{vicare unsafe unicode}.  The following macros assume the
+@var{word} arguments are fixnums representing 16-bit words: they must be
+in the range @samp{[0, #xFFFF]}; while the @var{code-point} arguments
+are fixnums representing Unicode code points (they are in the range
+@samp{[0, #x10FFFF]}, but outside the range @samp{[#xD800, #xDFFF]}).
+
+@c ------------------------------------------------------------------------
+
+@subsubheading 1-word decoding
+
+
+@deffn Syntax utf-16-single-word? @varo{word}
+Evaluate to @true{} if @varo{word} is valid as single 16-bit word
+@utf{}-16 encoding of a Unicode character; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax utf-16-decode-single-word @varo{word}
+Decode the integer representation of a Unicode character from a 16-bit
+single word @utf{}-16 encoding.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading 2-words decoding
+
+
+@deffn Syntax utf-16-first-of-two-words? @varo{word}
+Evaluate to @true{} if @varo{word} is valid as first 16-bit word in a
+surrogate pair @utf{}-16 encoding of a Unicode character; otherwise
+evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax utf-16-second-of-two-words? @vari{word}
+Evaluate to @true{} if @vari{word} is valid as second 16-bit word in a
+surrogate pair @utf{}-16 encoding of a Unicode character; otherwise
+evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax utf-16-decode-surrogate-pair @varo{word} @varii{word}
+Decode the integer representation of a Unicode character from a
+surrogate pair @utf{}-16 encoding.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading 1-word encoding
+
+
+@deffn Syntax utf-16-single-word-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is the fixnum representation of
+a Unicode code point representable as single 16-bit word @utf{}-16
+encoding; otherwise evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax utf-16-encode-single-word @var{code-point}
+Encode @var{code-point} as single 16-bit word @utf{}-16 encoding.
+@end deffn
+
+
+@c ------------------------------------------------------------------------
+
+@subsubheading 2-word encoding
+
+@deffn Syntax utf-16-two-words-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is the fixnum representation of
+a Unicode code point representable as surrogate pair of two 16-bit words
+@utf{}-16 encoding; otherwise evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax utf-16-encode-first-of-two-words @var{code-point}
+Encode @var{code-point} as first 16-bit word in a surrogate pair
+@utf{}-16 encoding.
+@end deffn
+
+
+@deffn Syntax utf-16-encode-second-of-two-words @var{code-point}
+Encode @var{code-point} as second 16-bit word in a surrogate pair
+@utf{}-16 encoding.
+@end deffn
+
+@c page
+@node iklib chars unicode utf32
+@subsubsection Unicode's @utf{}-32 encoding
+
+
+@utf{}-32, also called @acronym{UCS} 4, is a multioctet character
+encoding for Unicode which can represent every character in the Unicode
+set: it can represent every code point in the ranges @samp{[0, #xD800)}
+and @samp{(#xDFFF, #x10FFFF]}.  It uses exactly 32 bits per Unicode code
+point.
+
+This makes @utf{}-32 a fixed-length encoding, in contrast to all other
+Unicode Transformation Formats which are variable--length encodings.
+The @utf{}-32 form of a character is a direct representation of its code
+point.
+
+The following syntactic bindings are exported by the library
+@library{vicare unsafe unicode}.  The following macros assume the
+@var{word} arguments are fixnums representing 32-bit words: they must be
+in the range @samp{[0, #xFFFFFFFF]}; while the @var{code-point}
+arguments are fixnums representing Unicode code points (they are in the
+range @samp{[0, #x10FFFF]}, but outside the range @samp{[#xD800,
+#xDFFF]}).
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding
+
+
+@deffn Syntax utf-32-code-point? @var{code-point}
+Evaluate to @true{} if @var{code-point} is a Unicode code point
+representable in @utf{}-32 encoding.
+@end deffn
+
+
+@deffn Syntax utf-32-encode @var{code-point}
+Encode a Unicode code point as @utf{}-32 encoding.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding
+
+
+@deffn Syntax utf-32-word? @var{word}
+Evaluate to @true{} if @var{word} is valid as 32-bit word @utf{}-32
+encoding of a Unicode character; otherwise evaluate to @false{}.
+@end deffn
+
+
+@deffn Syntax utf-32-decode @var{word}
+Encode a valid @utf{}-32 encoding word into the corresponding Unicode
+code point.
+@end deffn
+
+@c page
+@node iklib chars unicode ascii
+@subsubsection @ascii{} encoding
+
+
+The following syntactic bindings are exported by the library
+@library{vicare unsafe unicode}.  In the following macros the argument
+@var{octet} is meant to be a fixnum representing an @ascii{} code point;
+while the argument @var{code-point} is meant to be a fixnum representing
+a Unicode code point.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding
+
+
+@deffn Syntax ascii-code-point? @var{code-point}
+Assume @var{code-point} is a fixnum representation of a Unicode code
+point.  Return @true{} if @var{code-point} is in the range accepted by
+the @ascii{} encoding.
+@end deffn
+
+
+@deffn Syntax ascii-encode @var{code-point}
+Assume @var{code-point} is a fixnum representation of a Unicode code
+point in the range representable with @ascii{} encoding.  Return its
+encoding in @ascii{} format.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding
+
+
+@deffn Syntax ascii-octet? @var{octet}
+Assume @var{octet} is a fixnum representing an octet.  Return @true{} if
+@var{octet} is in the range accepted by the @ascii{} encoding; otherwise
+return @false{}.
+@end deffn
+
+
+@deffn Syntax ascii-decode @var{octet}
+Assume @var{octet} is the fixnum representation of an @ascii{} encoded
+character.  Return its associated Unicode code point.
+@end deffn
+
+@c page
+@node iklib chars unicode latin1
+@subsubsection @acronym{ISO}/@acronym{IEC} 8859-1 also known as Latin-1 encoding
+
+
+Latin-1 encoding uses 1 octet per character.  For an itroduction to
+Latin-1 see:
+
+@center @url{http://en.wikipedia.org/wiki/ISO/IEC_8859-1}
+
+@noindent
+and for Unicode's ``C1 Controls and Latin-1 Supplement'' see:
+
+@center @url{https://en.wikipedia.org/wiki/Latin-1_Supplement_%28Unicode_block%29}
+@center @url{http://www.unicode.org/charts/PDF/U0080.pdf}
+
+Strictly speaking, the Latin-1 encoding only defines code points in the
+ranges @samp{[#x20, #x7E]} and @samp{[#xA0, #xFF]}; notice that the
+control characters are excluded.
+
+In the range @samp{[#x20, #x7E]} the Latin-1 code points are equal to
+the corresponding @ascii{} code points.
+
+In both the ranges @samp{[#x20, #x7E]} and @samp{[#xA0, #xFF]}:
+Latin-1's code points are equal to Unicode's code points, when we take
+into account Unicode's ``C1 Controls and Latin-1 Supplement''.
+
+Notice that:
+
+@itemize
+@item
+Unicode's ``C0 Controls and Basic Latin'' specifies the code points in
+the range @samp{[#x00, #x7F]} so that they are equal to @ascii{}'s
+control characters in the same range.  This Unicode block includes the
+range of control characters @samp{[#x00, #x1F]} which is left undefined
+by Latin-1.
+
+@item
+Unicode's ``C1 Controls and Latin-1 Supplement'' specifies code points
+in the range @samp{[#x80, #x9F]}.  This range is left undefined by
+Latin-1.
+@end itemize
+
+This library defines an @strong{extended} Latin-1 encoding spanning the
+whole @samp{[#x00, #xFF]} range with the following blocks:
+
+@example
+[#x00, #x1F]    C0 Controls
+[#x20, #x7E]    Latin-1 code points
+#x7F            C0 Controls
+[#x80, #x9F]    C1 Controls
+[#xA0, #xFF]    Latin-1 code points
+@end example
+
+The following syntactic bindings are exported by the library
+@library{vicare unsafe unicode}.  In the following macros the argument
+@var{latin-1-code-point} is meant to be a fixnum representing a Latin-1
+code point; while the argument @var{unicode-code-point} is meant to be a
+fixnum representing a Unicode code point.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Encoding Unicode code points as Latin-1 code points
+
+@deffn Syntax unicode-code-point-representable-as-latin-1-code-point? @var{unicode-code-point}
+Evaluate to @true{} if @var{unicode-code-point} is a Unicode code point
+in a range that can be encoded in Latin-1; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax latin-1-encode @var{unicode-code-point}
+Encode a Unicode code point into a Latin-1 code point.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Decoding Unicode code points from Latin-1 code points
+
+
+@deffn Syntax latin-1-code-point? @var{octet}
+Assum @var{octet} is the fixnum representation of an octet.  Evaluate to
+@true{} if @var{octet} a valid Latin-1 code point; otherwise evaluate to
+@false{}.
+@end deffn
+
+
+@deffn Syntax latin-1-decode @var{latin-1-code-point}
+Decode a Latin-1 code point to a Unicode code point.
+@end deffn
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Classification
+
+
+@deffn Syntax latin-1-C0-control? @var{latin-1-code-point}
+Evaluate to @true{} if the argument is a Latin-1 code point in the range
+of C0 Control characters.
+@end deffn
+
+
+@deffn Syntax latin-1-C1-control? @var{latin-1-code-point}
+Evaluate to @true{} if the argument is a Latin-1 code point in the range
+of C1 Control characters.
+@end deffn
+
+
+@deffn Syntax latin-1-control? @var{latin-1-code-point}
+Evaluate to @true{} if the argument is a Latin-1 code point in the range
+of C0 Control or C1 Control characters.
+@end deffn
+
+
+@deffn Syntax latin-1-graphic? @var{latin-1-code-point}
+Evaluate to @true{} if the argument is a Latin-1 code point in the range
+of graphics (non--control) characters.
+@end deffn
 
 @c page
 @node iklib keywords
@@ -11522,15 +12280,8 @@ considered an @ascii{} code point if:
 
 @defun latin1-encoded-bytevector? @var{bytevector}
 Return @true{} if @var{bytevector} can be interpreted as a Latin1
-encoded string, otherwise return @false{}.  An octet @var{chi} is
-considered a Latin1 code point if:
-
-@example
-(or (<= #x00 chi #x1F)
-    (<= #x20 chi #x7E)
-    (<= #xA0 chi #xFF))
-@result{} #t
-@end example
+encoded string, otherwise return @false{}.  @ref{iklib chars unicode
+latin1} for the definition of Latin-1 encoding used by @value{PRJNAME}.
 @end defun
 
 
@@ -11911,16 +12662,8 @@ Latin-1 encoding of the characters.
 
 @defun latin1-encoded-string? @var{string}
 Return @true{} if @var{string} can be interpreted as a Latin1 encoded
-string, otherwise return @false{}.  A character in the string is
-considered a Latin1 code point if its integer representation @var{chi}
-satisfies:
-
-@example
-(or (<= #x00 @var{chi} #x1F)
-    (<= #x20 @var{chi} #x7E)
-    (<= #xA0 @var{chi} #xFF))
-@result{} #t
-@end example
+string, otherwise return @false{}.  @ref{iklib chars unicode latin1} for
+the definition of Latin-1 encoding used by @value{PRJNAME}.
 @end defun
 
 

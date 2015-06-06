@@ -154,10 +154,14 @@
     utf-32-decode
 
 ;;; Latin-1
-    latin-1-octet?
-    latin-1-decode
-    latin-1-code-point?
+    unicode-code-point-representable-as-latin-1-code-point?
     latin-1-encode
+    latin-1-code-point?
+    latin-1-decode
+    latin-1-C0-control?
+    latin-1-C1-control?
+    latin-1-control?
+    latin-1-graphic?
 
 ;;; ASCII
     ascii-code-point?
@@ -430,56 +434,35 @@
 ;;; --------------------------------------------------------------------
 
 (define-inline (utf-8-classify-octet octet)
-  (cond ((not (fixnum? octet))
-	 (list 'invalid-value/not-a-fixnum octet))
-	((< octet 0)
-	 (list 'invalid-value/negative-fixnum octet))
+  (cond ((not (fixnum? octet))				'invalid-value/not-a-fixnum)
+	((< octet 0)					'invalid-value/negative-fixnum)
 	(else
-	 (let ((str (number->string octet 16)))
-	   (cond ((< #xFF octet)
-		  (list 'invalid-value/fixnum-too-big str))
-		 ((utf-8-invalid-octet? octet)
-		  (list 'invalid-byte str))
+	 (cond ((< #xFF octet)				'invalid-value/fixnum-too-big)
+	       ((utf-8-invalid-octet? octet)		'invalid-byte)
 
-		 ((utf-8-single-octet? octet)
-		  (list 'one-byte-character str))
+	       ((utf-8-single-octet? octet)		'one-byte-character)
 
-		 ((utf-8-first-of-two-octets? octet)
-		  (list 'first-in-2-byte-char str))
-		 ((utf-8-second-of-two-octets? octet)
-		  (list 'second-in-2-byte-char str))
+	       ((utf-8-first-of-two-octets?  octet)	'first-in-2-byte-char)
+	       ((utf-8-second-of-two-octets? octet)	'second-in-2-byte-char)
 
-		 ((utf-8-first-of-three-octets? octet)
-		  (list 'first-in-3-byte-char str))
-		 ((utf-8-second-of-three-octets? octet)
-		  (list 'second-in-3-byte-char str))
-		 ((utf-8-third-of-three-octets? octet)
-		  (list 'third-in-3-byte-char str))
+	       ((utf-8-first-of-three-octets?  octet)	'first-in-3-byte-char)
+	       ((utf-8-second-of-three-octets? octet)	'second-in-3-byte-char)
+	       ((utf-8-third-of-three-octets?  octet)	'third-in-3-byte-char)
 
-		 ((utf-8-first-of-four-octets? octet)
-		  (list 'first-in-4-byte-char str))
-		 ((utf-8-second-of-four-octets? octet)
-		  (list 'second-in-4-byte-char str))
-		 ((utf-8-third-of-four-octets? octet)
-		  (list 'third-in-4-byte-char str))
-		 ((utf-8-fouth-of-four-octets? octet)
-		  (list 'third-in-4-byte-char str))
+	       ((utf-8-first-of-four-octets?  octet)	'first-in-4-byte-char)
+	       ((utf-8-second-of-four-octets? octet)	'second-in-4-byte-char)
+	       ((utf-8-third-of-four-octets?  octet)	'third-in-4-byte-char)
+	       ((utf-8-fouth-of-four-octets?  octet)	'third-in-4-byte-char)
 
-		 (else
-		  (list 'internal-error str)))))))
+	       (else					'internal-error)))))
 
 (define-inline (utf-8-classify-code-point code-point)
   (let ((ch (integer->char code-point)))
-    (cond ((utf-8-single-octet-code-point? code-point)
-	   (list 'single-octet-code-point ch code-point))
-	  ((utf-8-two-octets-code-point? code-point)
-	   (list 'two-octets-code-point ch code-point))
-	  ((utf-8-three-octets-code-point? code-point)
-	   (list 'three-octets-code-point ch code-point))
-	  ((utf-8-four-octets-code-point? code-point)
-	   (list 'four-octets-code-point ch code-point))
-	  (else
-	   (list 'internal-error ch code-point)))))
+    (cond ((utf-8-single-octet-code-point? code-point)		'single-octet-code-point)
+	  ((utf-8-two-octets-code-point?   code-point)		'two-octets-code-point)
+	  ((utf-8-three-octets-code-point? code-point)		'three-octets-code-point)
+	  ((utf-8-four-octets-code-point?  code-point)		'four-octets-code-point)
+	  (else							'internal-error))))
 
 (define-syntax utf-8-case-code-point
   (syntax-rules ()
@@ -656,54 +639,107 @@
 
 ;;;; ISO/IEC 8859-1 also known as Latin-1
 ;;
-;;Latin-1  uses  1 octet  per  character.   The first  256  Unicode  code points  are
-;;identical  to  the content  of  Latin-1,  the first  127  Latin-1  code points  are
-;;identical to ASCII.  For an itroduction see:
+;;Latin-1 encoding uses 1 octet per character.  For an itroduction to Latin-1 see:
 ;;
 ;;  <http://en.wikipedia.org/wiki/ISO/IEC_8859-1>
 ;;
-;;Latin-1 code points are identical to their octet encoding.
+;;and for Unicode's "C1 Controls and Latin-1 Supplement" see:
 ;;
-;;Latin-1 code  points in the range  [0, 127] are  identical to the same  code points
-;;encoded in both ASCII and in UTF-8.
+;;  <https://en.wikipedia.org/wiki/Latin-1_Supplement_%28Unicode_block%29>
+;;  <http://www.unicode.org/charts/PDF/U0080.pdf>
 ;;
-;;Latin-1 code  points in  the range [128,  255] are *different*  from the  same code
-;;points encoded in UTF-8.
+;;Strictly speaking,  the Latin-1  encoding only  defines code  points in  the ranges
+;;[#x20, #x7E] and [#xA0, #xFF]; notice that the control characters are excluded.
 ;;
-;;Every octet (that is:  every fixnum in the range [0, 255]) can  be interpreted as a
-;;character in Latin-1 encoding.
+;;In the range  [#x20, #x7E] the Latin-1  code points are equal  to the corresponding
+;;ASCII code points.
+;;
+;;In both the ranges  [#x20, #x7E] and [#xA0, #xFF]: Latin-1's  code points are equal
+;;to Unicode's  code points,  when we  take into account  Unicode's "C1  Controls and
+;;Latin-1 Supplement".
+;;
+;;Notice that:
+;;
+;;* Unicode's "C0  Controls and Basic Latin"  specifies the code points  in the range
+;;  [#x00, #x7F]  so that they  are equal to ASCII's  control characters in  the same
+;;  range.  This Unicode block includes the  range of control characters [#x00, #x1F]
+;;  which is left undefined by Latin-1.
+;;
+;;* Unicode's "C1 Controls and Latin-1 Supplement" specifies code points in the range
+;;  [#x80, #x9F].  This range is left undefined by Latin-1.
+;;
+;;This library defines an *extended* Latin-1 encoding spanning the whole [#x00, #xFF]
+;;range with the following blocks:
+;;
+;;   [#x00, #x1F]	C0 Controls
+;;   [#x20, #x7E]	Latin-1 code points
+;;   #x7F               C0 Controls
+;;   [#x80, #x9F]	C1 Controls
+;;   [#xA0, #xFF]	Latin-1 code points
 ;;
 
-;;In the following macros the argument OCTET  is meant to be a fixnum representing an
-;;octet, while the argument CODE-POINT is meant to be the integer representation of a
-;;character.
-
-(define-inline (latin-1-octet? octet)
-  (or (and ($fx>= octet #x00)
-	   ($fx<= octet #x1F))
-      (and ($fx>= octet #x20)
-	   ($fx<= octet #x7E))
-      (and ($fx>= octet #xA0)
-	   ($fx<= octet #xFF))))
-
-(define-inline (latin-1-decode octet)
-  octet)
+;;In the  following macros the  argument LATIN-1-CODE-POINT is  meant to be  a fixnum
+;;representing a Latin-1  code point, while the argument  UNICODE-CODE-POINT is meant
+;;to be a fixnum representing a Unicode code point.
 
 ;;; --------------------------------------------------------------------
+;;; encoding Unicode code points as Latin-1 code points
 
-(define-inline (latin-1-code-point? code-point)
-  (and ($fx>= code-point 0)
-       ($fx<= code-point 255)))
+(define-inline (unicode-code-point-representable-as-latin-1-code-point? unicode-code-point)
+  ;;Return true if UNICODE-CODE-POINT is a Unicode  code point in a range that can be
+  ;;encoded in Latin-1.
+  ;;
+  (and ($fx>= unicode-code-point #x00)
+       ($fx<= unicode-code-point #xFF)))
 
-(define-inline (latin-1-encode code-point)
-  code-point)
+(define-inline (latin-1-encode unicode-code-point)
+  ;;Encode a Unicode code point into a Latin-1 code point.
+  ;;
+  unicode-code-point)
+
+;;; --------------------------------------------------------------------
+;;; decoding Unicode code points from Latin-1 code points
+
+(define-inline (latin-1-code-point? octet)
+  ;;Assume OCTET is the fixnum representation of an octet.  Evaluate to true if OCTET
+  ;;a valid Latin-1 code point; otherwise evaluate to false.
+  ;;
+  (and ($fx>= octet #x00)
+       ($fx<= octet #xFF)))
+
+(define-inline (latin-1-decode latin-1-code-point)
+  ;;Decode a Latin-1 code point to a Unicode code point.
+  ;;
+  latin-1-code-point)
+
+;;; --------------------------------------------------------------------
+;;; classification
+
+(define-inline (latin-1-C0-control? latin-1-code-point)
+  (or (and ($fx>= latin-1-code-point #x00)
+	   ($fx<= latin-1-code-point #x1F))
+      ($fx= latin-1-code-point #x7F)))
+
+(define-inline (latin-1-C1-control? latin-1-code-point)
+  (and ($fx>= latin-1-code-point #x80)
+       ($fx<= latin-1-code-point #x9F)))
+
+(define-inline (latin-1-control? latin-1-code-point)
+  (or (latin-1-C0-control? latin-1-code-point)
+      (latin-1-C1-control? latin-1-code-point)))
+
+(define-inline (latin-1-graphic? latin-1-code-point)
+  (or (and ($fx>= latin-1-code-point #x20)
+	   ($fx<= latin-1-code-point #x7E))
+      (and ($fx>= latin-1-code-point #xA0)
+	   ($fx<= latin-1-code-point #xFF))))
 
 
 ;;;; ASCII
 
 (define-inline (ascii-code-point? code-point)
   ;;Assume CODE-POINT is  the fixnum representation of a Unicode  code point.  Return
-  ;;true if CHI is in the range accepted by the ASCII encoding.
+  ;;true if CODE-POINT is in the range accepted by the ASCII encoding.
   ;;
   (and ($fx>= code-point #x00)
        ($fx<= code-point #x7F)))

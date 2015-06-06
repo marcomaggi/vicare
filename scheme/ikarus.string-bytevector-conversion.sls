@@ -265,7 +265,7 @@
     ((_ ?str ?code-point)
      (and (identifier? #'?str)
 	  (identifier? #'?code-point))
-     #'(unless (unicode.latin-1-code-point? ?code-point)
+     #'(unless (unicode.unicode-code-point-representable-as-latin-1-code-point? ?code-point)
 	 (procedure-arguments-consistency-violation __who__
 	   "expected only Latin-1 code points in string argument"
 	   (integer->char ?code-point) ?str)))
@@ -276,7 +276,7 @@
     ((_ ?bv ?octet)
      (and (identifier? #'?bv)
 	  (identifier? #'?octet))
-     #'(unless (unicode.latin-1-octet? ?octet)
+     #'(unless (unicode.latin-1-code-point? ?octet)
 	 (procedure-arguments-consistency-violation __who__
 	   "expected only Latin-1 octets in bytevector argument"
 	   (integer->char ?octet) ?bv)))
@@ -1667,7 +1667,7 @@
 (define ($latin1-encoded-bytevector? bv)
   (let loop ((i 0))
     (or ($fx= i ($bytevector-length bv))
-  	(and (unicode.latin-1-octet? ($bytevector-u8-ref bv i))
+  	(and (unicode.latin-1-code-point? ($bytevector-u8-ref bv i))
   	     (loop ($fxadd1 i))))))
 
 ;;; --------------------------------------------------------------------
@@ -1680,7 +1680,7 @@
 (define ($latin1-encoded-string? str)
   (let loop ((i 0))
     (or ($fx= i ($string-length str))
-  	(and (unicode.latin-1-code-point? ($char->fixnum ($string-ref str i)))
+  	(and (unicode.unicode-code-point-representable-as-latin-1-code-point? ($char->fixnum ($string-ref str i)))
   	     (loop ($fxadd1 i))))))
 
 
