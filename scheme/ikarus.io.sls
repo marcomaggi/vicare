@@ -6965,7 +6965,7 @@
 	    (begin
 	      (set! port.buffer.index ($fxadd1 buffer.offset))
 	      (let ((octet ($bytevector-u8-ref port.buffer buffer.offset)))
-		(if ($latin1-chi? octet)
+		(if (unicode.latin-1-code-point? octet)
 		    ($fixnum->char octet)
 		  (let ((mode (transcoder-error-handling-mode port.transcoder)))
 		    (case mode
@@ -6995,7 +6995,7 @@
       (let ((buffer.offset-byte port.buffer.index))
 	(if ($fx< buffer.offset-byte port.buffer.used-size)
 	    (let ((octet ($bytevector-u8-ref port.buffer buffer.offset-byte)))
-	      (if ($latin1-chi? octet)
+	      (if (unicode.latin-1-code-point? octet)
 		  ($fixnum->char octet)
 		(let ((mode (transcoder-error-handling-mode port.transcoder)))
 		  (case mode
@@ -7043,7 +7043,7 @@
 	(unless ($fxzero? buffer-index-increment)
 	  (port.buffer.index.incr! buffer-index-increment))
 	(let ((octet ($bytevector-u8-ref port.buffer buffer.offset)))
-	  (if ($latin1-chi? octet)
+	  (if (unicode.latin-1-code-point? octet)
 	      ($fixnum->char octet)
 	    (let ((mode (transcoder-error-handling-mode port.transcoder)))
 	      (case mode
@@ -7071,11 +7071,6 @@
 	   (%available-data ($fx+ offset port.buffer.index)))
 	  (if-available-data: (%available-data buffer.offset))
 	  ))))
-
-  (define-inline ($latin1-chi? chi)
-    (or ($fx<= #x00 chi #x1F) ;these are the control characters
-	($fx<= #x20 chi #x7E)
-	($fx<= #xA0 chi #xFF)))
 
   #| end of module |# )
 

@@ -9,7 +9,7 @@
 ;;;	Some tests  are from the  file "scheme/tests/io.ss" file  in the
 ;;;	original Ikarus distribution.
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006-2010 Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -170,7 +170,7 @@
 
   (check
       (transcoder-eol-style (native-transcoder))
-    => (eol-style none))
+    => (eol-style lf))
 
   (check
       (transcoder-error-handling-mode (native-transcoder))
@@ -206,7 +206,7 @@
 	      (transcoder-eol-style T)
 	      (transcoder-error-handling-mode T)))
     => (list (utf-8-codec)
-	     (eol-style none)
+	     (eol-style lf)
 	     (error-handling-mode replace)))
 
   (check
@@ -743,7 +743,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (test-get-u8-1 port number-of-bytes)
+  (define* (test-get-u8-1 port number-of-bytes)
     ;;Attempts  to  read   NUMBER-OF-BYTES  unsigned  bytes  from  PORT.
     ;;Success if NUMBER-OF-BYTES bytes are read and their value is equal
     ;;to their offset from the current position in the underlying device
@@ -753,13 +753,13 @@
       (let ((byte (get-u8 port)))
 	(cond ((eof-object? byte)
 	       (unless (= offset number-of-bytes)
-		 (error 'test0 "premature termination" offset)))
+		 (error __who__ "premature termination" offset)))
 	      ((= byte offset)
 	       (loop (+ 1 offset)))
 	      (else
-	       (error 'test0 "incorrect value returned" byte))))))
+	       (error __who__ "incorrect value returned" byte))))))
 
-  (define (test-get-char-1 port number-of-chars)
+  (define* (test-get-char-1 port number-of-chars)
     ;;Attempts to read NUMBER-OF-CHARS characters from PORT.  Success if
     ;;NUMBER-OF-CHARS  characters are  read and  their integer  value is
     ;;equal to their offset from  the current position in the underlying
@@ -769,13 +769,13 @@
       (let ((ch (get-char port)))
 	(cond ((eof-object? ch)
 	       (unless (= offset number-of-chars)
-		 (error 'test0 "premature termination" offset)))
+		 (error __who__ "premature termination" offset)))
 	      ((= offset (char->integer ch))
 	       (loop (+ 1 offset)))
 	      (else
-	       (error 'test0 "incorrect value returned" ch))))))
+	       (error __who__ "incorrect value returned" ch offset))))))
 
-  (define (test-peek-u8-1 port number-of-bytes)
+  (define* (test-peek-u8-1 port number-of-bytes)
     ;;Attempts  to peek  and  read NUMBER-OF-BYTES  unsigned bytes  from
     ;;PORT.  Success  if NUMBER-OF-BYTES bytes  are peeked and  read and
     ;;their value is equal to  their offset from the current position in
@@ -785,14 +785,14 @@
       (let* ((pbyte	(lookahead-u8 port))
 	     (byte	(get-u8 port)))
 	(cond ((not (eqv? pbyte byte))
-	       (error #f "peek invalid" pbyte byte))
+	       (error __who__ "peek invalid" pbyte byte))
 	      ((eof-object? byte)
 	       (unless (= offset number-of-bytes)
 		 (error #f "premature termination" offset)))
 	      ((= byte offset)
 	       (loop (+ 1 offset)))
 	      (else
-	       (error #f "incorrect value returned" byte offset))))))
+	       (error __who__ "incorrect value returned" byte offset))))))
 
   (define (test-peek-char-1 port number-of-chars)
     ;;Attempts to  peek and  read NUMBER-OF-CHARS characters  from PORT.
@@ -868,8 +868,13 @@
 	(test-binary-port-eof?-1 (make-n-byte-bytevector-binary-input-port 256) 256))
 
   ;;Latin-1 transcoder on top of bytevector binary input port.
-  (let ((make-port (lambda ()
-		     (transcoded-port (make-n-byte-bytevector-binary-input-port 256)
+  (let* ((latin-1-bv (receive-and-return (bv)
+			 (make-bytevector 256 0)
+		       (do ((i #x00 (fxadd1 i)))
+			   ((< #xFF i))
+			 (bytevector-u8-set! bv i i))))
+	 (make-port (lambda ()
+		     (transcoded-port (open-bytevector-input-port latin-1-bv)
 				      (make-transcoder (latin-1-codec) 'none 'raise)))))
     (test "reading 256 latin1 chars from bytevector-input-port"
 	  (test-get-char-1 (make-port) 256))
@@ -1278,11 +1283,11 @@
               (error #f "length mismatch" (string-length s) (string-length r))))))
       (printf "ok\n")
       #t)
-    (check
-	(test 'utf8 (utf-8-codec)
-	      string->utf8
-	      utf8->string)
-      => #t)
+    ;; (check
+    ;; 	(test 'utf8 (utf-8-codec)
+    ;; 	      string->utf8
+    ;; 	      utf8->string)
+    ;;   => #t)
     (check
 	(test 'utf16 (utf-16-codec)
 	      (lambda (x) (string->utf16 x 'big))
@@ -1293,22 +1298,22 @@
 
   (check
       (bytevector->string (make-utf8-bytevector-range1)
-			  (make-transcoder (utf-8-codec)))
+			  (make-transcoder (utf-8-codec) (eol-style none) (error-handling-mode replace)))
     => (make-utf8-string-range1))
 
   (check
       (bytevector->string (make-utf8-bytevector-range2)
-			  (make-transcoder (utf-8-codec)))
+			  (make-transcoder (utf-8-codec) (eol-style none) (error-handling-mode replace)))
     => (make-utf8-string-range2))
 
   (check
       (bytevector->string (make-utf8-bytevector-range3)
-			  (make-transcoder (utf-8-codec)))
+			  (make-transcoder (utf-8-codec) (eol-style none) (error-handling-mode replace)))
     => (make-utf8-string-range3))
 
   (check
       (bytevector->string (make-utf8-bytevector-range4)
-			  (make-transcoder (utf-8-codec)))
+			  (make-transcoder (utf-8-codec) (eol-style none) (error-handling-mode replace)))
     => (make-utf8-string-range4))
 
 
@@ -1430,14 +1435,15 @@
 
   ;;Test for port position predicates.
   (let-syntax ((check (syntax-rules ()
-			((_ e)
-			 (begin ;;; evaluating e twice
-			   (assert (not (port-has-port-position? e)))
-			   (assert
-			    (guard (con
-				    ((assertion-violation? con) #t)
-				    (else                       #f))
-			      (begin (port-position e) #f))))))))
+			((_ ?expr)
+			 (begin
+			   (check-for-false
+			    (port-has-port-position? ?expr))
+			   (let ((port ?expr))
+			     (check-for-assertion-violation
+				 (port-position port)
+			       => `(port-position (,port))))))
+			)))
     (check (make-custom-binary-input-port "foo" (lambda a 0) #f #f #f))
     (check (make-custom-binary-output-port "foo" (lambda a 0) #f #f #f))
     (check (make-custom-textual-input-port "foo" (lambda a 0) #f #f #f))
