@@ -319,10 +319,12 @@
 
   (define* (string->utf8 {str string?})
     (define str.len
+      ($string-length str))
+    (define bv.len
       ($string->utf8-length str))
     (unless (fixnum? str.len)
       (error __who__ "string too long for UTF-8 conversion" str))
-    (let loop ((bv       ($make-bytevector str.len))
+    (let loop ((bv       ($make-bytevector bv.len))
 	       (bv.idx   0)
 	       (str      str)
 	       (str.idx  0)

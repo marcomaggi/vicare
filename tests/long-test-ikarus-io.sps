@@ -1235,13 +1235,13 @@
     ;;returning one byte at a time.
     ;;
     (define (make-test-string)
-      ;;Build   and  return   a  string   holding  chars   with  integer
-      ;;representation  from 0 included  to #x110000  excluded, skipping
-      ;;the forbidden range.
+      ;;Build and  return a string holding  chars with integer representation  from 0
+      ;;included to #x10FFFF included, skipping the forbidden range [#xD800, #xDFFF].
       ;;
       (list->string (let loop ((i 0))
-		      (cond ((fx=? i #x110000)
+		      (cond ((fx>? i #x10FFFF)
 			     '())
+			    ;;Skip forbidden range.
 			    ((fx=? i #xD800)
 			     (loop #xE000))
 			    (else
@@ -1255,39 +1255,55 @@
 	    (read!		(let ((n 0))
 				  (lambda (dst.bv dst.start count)
 				    (if (fx=? n (bytevector-length bv))
+					;;Return the  number of octets read  from the
+					;;underlying device.
 					0
 				      (begin
+					;;Read the  octet and store it  in the port's
+					;;buffer.
 					(let ((u8 (bytevector-u8-ref bv n)))
-					  ;; (printf "got (~s) #b~b\n" n u8)
+					  #;(printf  "got (~s)  #b~b\n" n  u8)
 					  (bytevector-u8-set! dst.bv dst.start u8))
 					(set! n (+ n 1))
+					;;Return the  number of octets read  from the
+					;;underlying device.
 					1)))))
 	    (get-position	#f)
 	    (set-position!	#f)
 	    (close		#f))
-  	(transcoded-port (make-custom-binary-input-port identifier read!
-							get-position set-position! close)
+  	(transcoded-port (make-custom-binary-input-port identifier read! get-position set-position! close)
 			 transcoder)))
     (define (test name codec s->bv bv->s)
       (printf "testing partial reads for ~s codec ... " name)
       (let ((s (make-test-string)))
+	#;(debug-print 'checking-string-to-bytevector-conversion)
+	#;(debug-print (bytevector-length (s->bv s)))
+	#;(debug-print 'checking-string-conversion)
   	(assert (string=? s (bv->s (s->bv s))))
-  	(let ((r (call-with-port
-  		     (make-slow-input-port (s->bv s) (make-transcoder codec
-								      (eol-style none)
-								      (error-handling-mode raise)))
-  		   get-string-all)))
+	#;(debug-print 'done-checking-string-conversion)
+  	(let* ((port (receive-and-return (port)
+			 (let ((bv (s->bv s)))
+			   #;(debug-print 'making-port)
+			   (make-slow-input-port bv (make-transcoder codec (eol-style none) (error-handling-mode raise))))
+		       #;(debug-print 'made-port port)
+		       (void)))
+	       (r (begin
+		    #;(debug-print 'reading-from-port)
+		    (call-with-port
+			port
+		      get-string-all))))
+	  #;(debug-print 'read-from-port)
   	  (unless (string=? r s)
   	    (if (= (string-length r) (string-length s))
   		(error #f "test failed")
               (error #f "length mismatch" (string-length s) (string-length r))))))
       (printf "ok\n")
       #t)
-    ;; (check
-    ;; 	(test 'utf8 (utf-8-codec)
-    ;; 	      string->utf8
-    ;; 	      utf8->string)
-    ;;   => #t)
+    (check
+    	(test 'utf8 (utf-8-codec)
+    	      string->utf8
+    	      utf8->string)
+      => #t)
     (check
 	(test 'utf16 (utf-16-codec)
 	      (lambda (x) (string->utf16 x 'big))
