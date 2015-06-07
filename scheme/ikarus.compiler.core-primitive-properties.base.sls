@@ -167,7 +167,81 @@
   (import SCHEME-OBJECTS-ONTOLOGY)
 
 
+;;;; helpers
+
+(define-syntax (expand-time-gensym stx)
+  ;;Generate a gensym at expand time and expand to the quoted symbol.
+  ;;
+  (syntax-case stx ()
+    ((_ ?template)
+     (let* ((tmp (syntax->datum #'?template))
+	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	    (str (apply string-append tmp (map (lambda (N)
+						 (string-append "." (number->string N)))
+					    fxs)))
+	    (sym (gensym str)))
+       (with-syntax
+	   ((SYM (datum->syntax #'here sym)))
+	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	 #'(quote SYM))))))
+
+
 ;;;; properties from core primitive public names
+
+;;This API puts the structure holding core  primitive properties in the VALUE slot of
+;;core primitive's public names.
+
+;; (define-syntax-rule (associate-prim-name-with-prim-props ?prim-name ?prim-props)
+;;   (set-symbol-value! (quote ?prim-name) ?prim-props))
+
+;; (define (core-primitive-name->core-type-tag prim-name)
+;;   ;;Given a symbol  representing the name of a core  primitive: return the associated
+;;   ;;CORE-TYPE-TAG value.  As default return "T:object".
+;;   ;;
+;;   ;;At present, given a  symbol representing the public name of  a core primitive, we
+;;   ;;need to distinguish between:
+;;   ;;
+;;   ;;1. Core primitive procedures and core primitive operations.
+;;   ;;
+;;   ;;2. Core primitive non-procedures and non-operations.
+;;   ;;
+;;   (if (and (symbol-bound? prim-name)
+;; 	   (applicable-core-primitive-properties? (symbol-value prim-name)))
+;;       T:procedure
+;;     T:object))
+
+;; (define (core-primitive-name->application-attributes* prim-name)
+;;   ;;Return the APPLICATION-ATTRIBUTES*  list of the core  primitive PRIM-NAME; return
+;;   ;;false if  PRIM-NAME has no  attributes associated or it  is not a  core primitive
+;;   ;;name.
+;;   ;;
+;;   (and (symbol-bound? prim-name)
+;;        (applicable-core-primitive-properties-application-attributes* (symbol-value prim-name))))
+
+;; (define (core-primitive-name->core-type-signature* prim-name)
+;;   ;;Return  the SIGNATURE*  list of  the core  primitive PRIM-NAME;  return false  if
+;;   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
+;;   ;;
+;;   (and (symbol-bound? prim-name)
+;;        (applicable-core-primitive-properties-core-type-signature* (symbol-value prim-name))))
+
+;; (define (core-primitive-name->replacement* prim-name)
+;;   ;;Return the  REPLACEMENT* list of  the core  primitive PRIM-NAME; return  false if
+;;   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
+;;   ;;
+;;   (and (symbol-bound? prim-name)
+;;        (applicable-core-primitive-properties-replacement* (symbol-value prim-name))))
+
+;;; --------------------------------------------------------------------
+
+;;This API puts the structure holding  core primitive properties in the property list
+;;of core primitive's public names.
+
+(define-constant CORE-PRIMITIVE-PROPKEY
+  (expand-time-gensym "applicable-core-primitive-properties"))
+
+(define-syntax-rule (associate-prim-name-with-prim-props ?prim-name ?prim-props)
+  (putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY ?prim-props))
 
 (define (core-primitive-name->core-type-tag prim-name)
   ;;Given a symbol  representing the name of a core  primitive: return the associated
@@ -180,66 +254,37 @@
   ;;
   ;;2. Core primitive non-procedures and non-operations.
   ;;
-  (if (and (symbol-bound? prim-name)
-	   (applicable-core-primitive-properties? (symbol-value prim-name)))
-      T:procedure
-    T:object))
+  (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	 => (lambda (P)
+	      (if (applicable-core-primitive-properties? P)
+		  T:procedure
+		T:object)))
+	(else T:object)))
 
-(define (core-primitive-name->application-attributes* prim-name)
-  ;;Return the APPLICATION-ATTRIBUTES*  list of the core  primitive PRIM-NAME; return
-  ;;false if  PRIM-NAME has no  attributes associated or it  is not a  core primitive
+(define* (core-primitive-name->application-attributes* {prim-name symbol?})
+  ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return
+  ;;false if PRIM-NAME has  no attributes associated or it is  not a core primitive
   ;;name.
   ;;
-  (and (symbol-bound? prim-name)
-       (applicable-core-primitive-properties-application-attributes* (symbol-value prim-name))))
+  (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	 => applicable-core-primitive-properties-application-attributes*)
+	(else #f)))
 
-(define (core-primitive-name->core-type-signature* prim-name)
-  ;;Return  the SIGNATURE*  list of  the core  primitive PRIM-NAME;  return false  if
+(define* (core-primitive-name->core-type-signature* {prim-name symbol?})
+  ;;Return the  SIGNATURE* list of  the core  primitive PRIM-NAME; return  false if
   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
   ;;
-  (and (symbol-bound? prim-name)
-       (applicable-core-primitive-properties-core-type-signature* (symbol-value prim-name))))
+  (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	 => applicable-core-primitive-properties-core-type-signature*)
+	(else #f)))
 
-(define (core-primitive-name->replacement* prim-name)
-  ;;Return the  REPLACEMENT* list of  the core  primitive PRIM-NAME; return  false if
+(define* (core-primitive-name->replacement* {prim-name symbol?})
+  ;;Return the REPLACEMENT*  list of the core primitive PRIM-NAME;  return false if
   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
   ;;
-  (and (symbol-bound? prim-name)
-       (applicable-core-primitive-properties-replacement* (symbol-value prim-name))))
-
-;;; --------------------------------------------------------------------
-
-;;NOTE This API  was once using property  lists; the old implementation  is below.  I
-;;know that it is bad to keep old, uncommented code around.  (Marco Maggi; Tue Dec 2,
-;;2014)
-
-;; (define-constant CORE-PRIMITIVE-PROPKEY
-;;   (expand-time-gensym "applicable-core-primitive-properties"))
-
-;; (define* (core-primitive-name->application-attributes* {prim-name symbol?})
-;;   ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return
-;;   ;;false if PRIM-NAME has  no attributes associated or it is  not a core primitive
-;;   ;;name.
-;;   ;;
-;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-;;   	   => applicable-core-primitive-properties-application-attributes*)
-;;   	  (else #f)))
-
-;; (define* (core-primitive-name->core-type-signature* {prim-name symbol?})
-;;   ;;Return the  SIGNATURE* list of  the core  primitive PRIM-NAME; return  false if
-;;   ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
-;;   ;;
-;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-;;   	   => applicable-core-primitive-properties-core-type-signature*)
-;;   	  (else #f)))
-
-;; (define* (core-primitive-name->replacement* {prim-name symbol?})
-;;   ;;Return the REPLACEMENT*  list of the core primitive PRIM-NAME;  return false if
-;;   ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
-;;   ;;
-;;   (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
-;;   	   => applicable-core-primitive-properties-replacement*)
-;;   	  (else #f)))
+  (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	 => applicable-core-primitive-properties-replacement*)
+	(else #f)))
 
 
 ;;;; core primitive properties representation
@@ -435,19 +480,13 @@
        (let ((prim-name (%parse-prim-name #'?prim-name)))
 	 (receive (safe? signature* attribute* replacement-prim-name*)
 	     (%parse-clauses #'?clause*)
-	   ;; (debug-print
-	   ;;  (syntax->datum #`(set-symbol-value! (quote ?prim-name)
-	   ;; 					(make-applicable-core-primitive-properties
-	   ;; 					 #,safe?
-	   ;; 					 (quasiquote #,signature*)
-	   ;; 					 (quote #,attribute*)
-	   ;; 					 (quote #,(list->vector replacement-prim-name*))))))
-	   #`(set-symbol-value! (quote ?prim-name)
-				(make-applicable-core-primitive-properties
-				 #,safe?
-				 (quasiquote #,signature*)
-				 (quote #,attribute*)
-				 (quote #,(list->vector replacement-prim-name*)))))))
+	   #`(associate-prim-name-with-prim-props ?prim-name
+						  (make-applicable-core-primitive-properties
+						   #,safe?
+						   (quasiquote #,signature*)
+						   (quote #,attribute*)
+						   (quote #,(list->vector replacement-prim-name*))))
+	   )))
       (_
        (synner "invalid syntax in applicable core primitive declaration"))))
 
