@@ -509,7 +509,7 @@ VICARE_BOOT_PREREQUISITES	= \
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
-ikarus.config.scm:
+ikarus.config.scm: Makefile
 	echo '(define vicare-version "$(PACKAGE_VERSION)")'			>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")'				>>$@
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'			>>$@
