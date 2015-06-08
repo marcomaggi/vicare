@@ -86,7 +86,7 @@
    #| end of branch |# )
 
   ((building-rotation-boot-image)
-   (import (only (vicare system $symbols)
+   (import (only (vicare compiler)
 		 system-value
 		 system-value-gensym))
    #| end of branch |# ))

@@ -466,6 +466,7 @@
 		  make-procedure-arguments-consistency-violation
 		  procedure-arguments-consistency-violation?
 		  procedure-arguments-consistency-violation
+		  procedure-arguments-consistency-violation/failed-expression
 
 		  &expression-return-value-violation
 		  &expression-return-value-violation-rtd
