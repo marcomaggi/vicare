@@ -152,6 +152,15 @@
 (module COMPILER-SINGLE-ENTRY-POINT
   (compile-core-language-expression)
 
+  (define (static:perform-source-optimisation?)
+    #t)
+
+  (define (static:perform-core-type-inference?)
+    #t)
+
+  (define (static:introduce-unsafe-primitives?)
+    #t)
+
   (define (compile-core-language-expression core-language-sexp
 					    perform-core-type-inference?
 					    introduce-unsafe-primitives?
@@ -173,15 +182,19 @@
 	(let* ((p (do-pass (pass-recordize core-language-sexp)))
 	       (p (do-pass (pass-optimize-direct-calls p)))
 	       (p (do-pass (pass-optimize-letrec p)))
-	       (p (do-pass (pass-source-optimize p))))
+	       (p (do-pass (if (static:perform-source-optimisation?)
+			       (pass-source-optimize p)
+			     p))))
 	  (%print-optimiser-output p)
 	  (let ((p (do-pass (pass-rewrite-references-and-assignments p))))
 	    (if stop-after-optimisation?
 		p
-	      (let* ((p (if perform-core-type-inference?
+	      (let* ((p (if (and (static:perform-core-type-inference?)
+				 perform-core-type-inference?)
 			    (do-pass (pass-core-type-inference p))
 			  p))
-		     (p (if introduce-unsafe-primitives?
+		     (p (if (and (static:introduce-unsafe-primitives?)
+				 introduce-unsafe-primitives?)
 			    (do-pass (pass-introduce-unsafe-primrefs p))
 			  p)))
 		(if stop-after-core-type-inference?
