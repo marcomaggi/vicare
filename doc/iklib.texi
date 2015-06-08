@@ -12670,12 +12670,24 @@ the definition of Latin-1 encoding used by @value{PRJNAME}.
 @defun string->utf16le @var{string}
 @defunx string->utf16be @var{string}
 @defunx string->utf16n @var{string}
-@defunx utf16le->string @var{bytevector}
-@defunx utf16be->string @var{bytevector}
-@defunx utf16n->string @var{bytevector}
-Convert to and from a Scheme string and a Scheme bytevector holding the
+Convert from a Scheme string to a Scheme bytevector holding the
 @utf{}-16 encoding of the characters under little, big or native
 endianness respectively.
+@end defun
+
+
+@defun utf16le->string @var{bytevector}
+@defunx utf16be->string @var{bytevector}
+@defunx utf16n->string @var{bytevector}
+@defunx utf16le->string @var{bytevector} @var{error-handling-mode}
+@defunx utf16be->string @var{bytevector} @var{error-handling-mode}
+@defunx utf16n->string @var{bytevector} @var{error-handling-mode}
+Convert to a Scheme string from a Scheme bytevector holding the
+@utf{}-16 encoding of characters under little, big or native endianness
+respectively.
+
+The optional argument @var{error-handling-mode} has the same values and
+meaning it has for @func{utf16->string}.
 @end defun
 
 

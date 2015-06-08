@@ -327,9 +327,6 @@
 	    ;;Not foldable because it must return a new string at every application.
 	    ((_) 		effect-free result-true))))
 	)))
-  (declare-bytevector->string-conversion utf16le->string)
-  (declare-bytevector->string-conversion utf16n->string)
-  (declare-bytevector->string-conversion utf16be->string)
   (declare-bytevector->string-conversion ascii->string)
   (declare-bytevector->string-conversion bytevector->string-base64)
   (declare-bytevector->string-conversion bytevector->string-hex)
@@ -370,6 +367,25 @@
    ((_ _) 		effect-free result-true)
    ((_ _ _) 		effect-free result-true)
    ((_ _ _ _) 		effect-free result-true)))
+
+(let-syntax
+    ((declare-bytevector->string-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector)		=> (T:string))
+	    ((T:bytevector T:symbol)	=> (T:string)))
+	   (attributes
+	    ;;Not foldable because it must return a new string at every application.
+	    ((_) 		effect-free result-true)
+	    ((_ _) 		effect-free result-true))))
+	)))
+  (declare-bytevector->string-conversion utf16le->string)
+  (declare-bytevector->string-conversion utf16n->string)
+  (declare-bytevector->string-conversion utf16be->string)
+  #| end of LET-SYNTAX |# )
 
 (declare-core-primitive utf32->string
     (safe)

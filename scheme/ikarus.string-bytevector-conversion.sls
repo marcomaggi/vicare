@@ -830,9 +830,23 @@
 
 ;;;; UTF-16 helpers
 
-(define (utf16le->string bv)	(utf16->string bv (endianness little)))
-(define (utf16be->string bv)	(utf16->string bv (endianness big)))
-(define (utf16n->string  bv)	(utf16->string bv (native-endianness)))
+(case-define* utf16le->string
+  (({bv bytevector?})
+   ($utf16->string bv (endianness little) #t (error-handling-mode raise)))
+  (({bv bytevector?} {mode error-handling-mode?})
+   ($utf16->string bv (endianness little) #t mode)))
+
+(case-define* utf16be->string
+  (({bv bytevector?})
+   ($utf16->string bv (endianness big) #t (error-handling-mode raise)))
+  (({bv bytevector?} {mode error-handling-mode?})
+   ($utf16->string bv (endianness big) #t mode)))
+
+(case-define* utf16n->string
+  (({bv bytevector?})
+   ($utf16->string bv (native-endianness) #t (error-handling-mode raise)))
+  (({bv bytevector?} {mode error-handling-mode?})
+   ($utf16->string bv (native-endianness) #t mode)))
 
 (define (string->utf16le str)	(string->utf16 str (endianness little)))
 (define (string->utf16be str)	(string->utf16 str (endianness big)))
@@ -902,7 +916,9 @@
   #| end of module |# )
 
 
-(module (utf16->string utf16->string-length)
+(module (utf16->string
+	 utf16->string-length
+	 $utf16->string)
 
   (case-define* utf16->string
     (({bv bytevector?} {endianness endianness?})
