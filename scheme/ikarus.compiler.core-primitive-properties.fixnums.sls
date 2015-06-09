@@ -170,7 +170,7 @@
   (signatures
    ((T:fixnum T:fixnum)			=> (T:boolean)))
   (attributes
-   ((_ _)				foldable effect-free result-true)))
+   ((_ _)				foldable effect-free)))
 
 (declare-core-primitive fxreverse-bit-field
     (safe)
