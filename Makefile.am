@@ -422,7 +422,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.syntax-utilities.sls			\
 	scheme/ikarus.time-and-date.sls				\
 	scheme/ikarus.timer.sls					\
-	scheme/ikarus.unicode-conversion.sls			\
+	scheme/ikarus.string-bytevector-conversion.sls		\
 	scheme/ikarus.unicode.sls				\
 	scheme/ikarus.unwind-protection.sls			\
 	scheme/ikarus.vectors.sls				\
@@ -492,11 +492,24 @@ VICARE_BOOT_FLAGS	= $(AX_BOOT_VFLAGS) $(BOOT_VFLAGS)				\
 
 CLEANFILES		+= ikarus.config.scm $(VICARE_NEW_BOOT)
 
+VICARE_BOOT_PREREQUISITES	= \
+	vicare						\
+	ikarus.config.scm				\
+	scheme/makefile.sps				\
+	\
+	lib/vicare/platform/words.vicare.sls		\
+	lib/vicare/platform/constants.vicare.sls	\
+	lib/vicare/platform/errno.vicare.sls		\
+	\
+	lib/vicare/unsafe/unicode.vicare.sls		\
+	lib/vicare/unsafe/capi.vicare.sls		\
+	lib/vicare/unsafe/operations.vicare.sls
+
 ## --------------------------------------------------------------------
 
 # Strictly speaking: this  target should depend on  Makfile, but doing
 # it that way causes a lot of unnecessary rebuilds.
-ikarus.config.scm:
+ikarus.config.scm: Makefile
 	echo '(define vicare-version "$(PACKAGE_VERSION)")'			>$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")'				>>$@
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")'			>>$@
@@ -531,7 +544,7 @@ ikarus.config.scm:
 # the command  line options selected  by AX_VFLAGS and  VFLAGS; rather
 # all the options are set in the script "makefile.sps".
 #
-$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.scm scheme/makefile.sps
+$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) $(VICARE_BOOT_PREREQUISITES)
 	$(VICARE_BOOT_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) -b $(VICARE_PREBUILT_BOOT) \
 		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
@@ -634,7 +647,7 @@ VICARE_COMPILE_ENV	= \
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) \
 			  --library-locator compile-time --build-directory $(fasldir)
-VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
+VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(GDB) $(VICARE_NEW_EXECUTABLE) $(VICARE_COMPILE_FLAGS)
 
 FASL_PREREQUISITES	= $(VICARE_NEW_BOOT) vicare
 
@@ -752,17 +765,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-ikarus-symbol-table.sps				\
 	tests/test-ikarus-unicode.sps					\
 	\
-	tests/test-vicare-compiler-scheme-objects-ontology.sps		\
-	tests/test-vicare-compiler-internals.sps			\
-	tests/test-vicare-compiler-pass-source-optimiser.sps		\
-	tests/test-vicare-compiler-pass-core-type-inference.sps		\
-	tests/test-vicare-compiler-pass-introduce-unsafe-primrefs.sps	\
-	tests/test-vicare-compiler-pass-specify-representation.sps	\
-	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
-	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
-	tests/test-vicare-compiler-pass-color-by-chaitin.sps		\
-	tests/test-vicare-compiler-pass-flatten-codes.sps		\
-	\
 	tests/test-vicare-bignums.sps					\
 	tests/test-vicare-booleans.sps					\
 	tests/test-vicare-bytevectors.sps				\
@@ -771,6 +773,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-collect.sps					\
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-conditions.sps				\
+	tests/test-vicare-convert-bytevectors.sps			\
 	tests/test-vicare-coroutines.sps				\
 	tests/test-vicare-enumerations.sps				\
 	tests/test-vicare-environment-inquiry.sps			\
@@ -944,6 +947,19 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-parser-tools-silex-file.sps			\
 	tests/test-vicare-parser-tools-silex-online.sps			\
 	tests/test-vicare-parser-tools-unix-pathnames.sps
+
+# Tests for the compiler's internals are written only for 64-bit platforms.
+VICARE_SCHEME_COMPILER_TESTS	= \
+	tests/test-vicare-compiler-scheme-objects-ontology.sps		\
+	tests/test-vicare-compiler-internals.sps			\
+	tests/test-vicare-compiler-pass-source-optimiser.sps		\
+	tests/test-vicare-compiler-pass-core-type-inference.sps		\
+	tests/test-vicare-compiler-pass-introduce-unsafe-primrefs.sps	\
+	tests/test-vicare-compiler-pass-specify-representation.sps	\
+	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
+	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
+	tests/test-vicare-compiler-pass-color-by-chaitin.sps		\
+	tests/test-vicare-compiler-pass-flatten-codes.sps
 
 VICARE_SCHEME_LONG_TESTS	= \
 	tests/long-test-r6rs-run.sps					\
@@ -1161,6 +1177,7 @@ EXTRA_DIST	+= \
 	$(VICARE_SCHEME_R6RS_TESTS)			\
 	$(VICARE_SCHEME_CORE_TESTS)			\
 	$(VICARE_SCHEME_LONG_TESTS)			\
+	$(VICARE_SCHEME_COMPILER_TESTS)			\
 	$(VICARE_SCHEME_SRFI_TESTS)			\
 	$(VICARE_SCHEME_SRFI_POSIX_TESTS)		\
 	$(VICARE_SCHEME_NAUSICAA_TESTS)			\
@@ -1173,8 +1190,12 @@ EXTRA_DIST	+= \
 #page
 #### interface for "make check": selecting test programs
 
-TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS)
+TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME_LONG_TESTS)
 XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps
+
+if WANT_64BIT_SUPPORT
+TESTS		+= $(VICARE_SCHEME_COMPILER_TESTS)
+endif
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
@@ -1234,7 +1255,7 @@ VICARE_CHECK_ENV		= \
 # We must make sure that this ends with a semicolon!!!
 AM_TESTS_ENVIRONMENT	= $(VICARE_CHECK_ENV)
 TEST_EXTENSIONS		= .sps
-SPS_LOG_COMPILER	= $(VICARE_NEW_EXECUTABLE)
+SPS_LOG_COMPILER	= $(GDB) $(VICARE_NEW_EXECUTABLE)
 AM_SPS_LOG_FLAGS	= $(VICARE_CHECK_FLAGS)
 
 #page

@@ -327,10 +327,6 @@
 	    ;;Not foldable because it must return a new string at every application.
 	    ((_) 		effect-free result-true))))
 	)))
-  (declare-bytevector->string-conversion utf8->string)
-  (declare-bytevector->string-conversion utf16le->string)
-  (declare-bytevector->string-conversion utf16n->string)
-  (declare-bytevector->string-conversion utf16be->string)
   (declare-bytevector->string-conversion ascii->string)
   (declare-bytevector->string-conversion bytevector->string-base64)
   (declare-bytevector->string-conversion bytevector->string-hex)
@@ -340,25 +336,68 @@
   (declare-bytevector->string-conversion uri-encoding->string)
   #| end of LET-SYNTAX |# )
 
+(declare-core-primitive utf8->string
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:string))
+   ((T:bytevector T:symbol)	=> (T:string)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_) 		effect-free result-true)
+   ((_ _) 		effect-free result-true)))
+
+(declare-core-primitive utf8->string-length
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:fixnum))
+   ((T:bytevector T:symbol)	=> (T:fixnum)))
+  (attributes
+   ;;Not foldable because it must return a new string at every application.
+   ((_) 		effect-free result-true)
+   ((_ _) 		effect-free result-true)))
+
 (declare-core-primitive utf16->string
     (safe)
   (signatures
-   ((T:bytevector T:symbol)		=> (T:string))
-   ((T:bytevector T:symbol T:object)	=> (T:string)))
+   ((T:bytevector T:symbol)			=> (T:string))
+   ((T:bytevector T:symbol T:object)		=> (T:string))
+   ((T:bytevector T:symbol T:object T:symbol)	=> (T:string)))
   (attributes
    ;;Not foldable because it must return a new string at every application.
    ((_ _) 		effect-free result-true)
-   ((_ _ _) 		effect-free result-true)))
+   ((_ _ _) 		effect-free result-true)
+   ((_ _ _ _) 		effect-free result-true)))
+
+(let-syntax
+    ((declare-bytevector->string-conversion
+      (syntax-rules ()
+	((_ ?who)
+	 (declare-core-primitive ?who
+	     (safe)
+	   (signatures
+	    ((T:bytevector)		=> (T:string))
+	    ((T:bytevector T:symbol)	=> (T:string)))
+	   (attributes
+	    ;;Not foldable because it must return a new string at every application.
+	    ((_) 		effect-free result-true)
+	    ((_ _) 		effect-free result-true))))
+	)))
+  (declare-bytevector->string-conversion utf16le->string)
+  (declare-bytevector->string-conversion utf16n->string)
+  (declare-bytevector->string-conversion utf16be->string)
+  #| end of LET-SYNTAX |# )
 
 (declare-core-primitive utf32->string
     (safe)
   (signatures
-   ((T:bytevector T:symbol)		=> (T:string))
-   ((T:bytevector T:symbol T:object)	=> (T:string)))
+   ((T:bytevector T:symbol)			=> (T:string))
+   ((T:bytevector T:symbol T:object)		=> (T:string))
+   ((T:bytevector T:symbol T:object T:symbol)	=> (T:string)))
   (attributes
    ;;Not foldable because it must return a new string at every application.
    ((_ _) 		effect-free result-true)
-   ((_ _ _) 		effect-free result-true)))
+   ((_ _ _) 		effect-free result-true)
+   ((_ _ _ _) 		effect-free result-true)))
 
 (let-syntax
     ((declare-bytevector->bytevector-conversion
@@ -604,3 +643,6 @@
 #| end of library |# )
 
 ;;; end o file
+;; Local Variables:
+;; eval: (put 'declare-core-primitive 'scheme-indent-function 2)
+;; End:

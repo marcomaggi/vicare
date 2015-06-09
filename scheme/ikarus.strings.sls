@@ -37,15 +37,6 @@
     list-of-strings?
 
     ;; Vicare specific
-    string->octets		octets->string
-    octets-encoded-bytevector?	octets-encoded-string?
-
-    string->ascii		ascii->string
-    ascii-encoded-bytevector?	ascii-encoded-string?
-
-    string->latin1		latin1->string
-    latin1-encoded-bytevector?	latin1-encoded-string?
-
     string-hex->bytevector	bytevector->string-hex
     bytevector->hex		hex->bytevector
 
@@ -79,15 +70,6 @@
     $string-self-copy-forwards!/count
     $string-self-copy-backwards!/count
     $string-fill!
-
-    $string->octets		$octets->string
-    $octets-encoded-bytevector?	$octets-encoded-string?
-
-    $string->ascii		$ascii->string
-    $ascii-encoded-bytevector?	$ascii-encoded-string?
-
-    $string->latin1		$latin1->string
-    $latin1-encoded-bytevector?	$latin1-encoded-string?
 
     $string-base64->bytevector	$bytevector->string-base64
     $bytevector->base64		$base64->bytevector
@@ -128,15 +110,6 @@
 		  list-of-strings?
 
 		  ;; Vicare specific
-		  string->octets		octets->string
-		  octets-encoded-bytevector?	octets-encoded-string?
-
-		  string->ascii			ascii->string
-		  ascii-encoded-bytevector?	ascii-encoded-string?
-
-		  string->latin1		latin1->string
-		  latin1-encoded-bytevector?	latin1-encoded-string?
-
 		  bytevector->hex		hex->bytevector
 		  string-hex->bytevector	bytevector->string-hex
 		  string-base64->bytevector	bytevector->string-base64
@@ -186,7 +159,9 @@
 	  $make-string
 	  $string-length
 	  $string-ref
-	  $string-set!)
+	  $string-set!
+	  $ascii->string
+	  $string->ascii)
     (only (vicare unsafe operations)
 	  $fx<=
 	  $fxincr!)
@@ -304,64 +279,8 @@
 	   (procedure-arguments-consistency-violation __who__ "expected strings with equal length" len* str*))))
     ))
 
-;;; --------------------------------------------------------------------
-
-(define-syntax (assert-string-char-is-latin-1-code-point stx)
-  (syntax-case stx ()
-    ((_ ?str ?code-point)
-     (and (identifier? #'?str)
-	  (identifier? #'?code-ponit))
-     #'(unless ($latin1-chi? ?code-point)
-	 (procedure-arguments-consistency-violation __who__
-	   "expected only Latin-1 code points in argument"
-	   (integer->char ?code-point) ?str)))
-    ))
-
-(define-syntax (assert-bytevector-byte-is-latin-1-code-point stx)
-  (syntax-case stx ()
-    ((_ ?bv ?code-point)
-     (and (identifier? #'?bv)
-	  (identifier? #'?code-ponit))
-     #'(unless ($latin1-chi? ?code-point)
-	 (procedure-arguments-consistency-violation __who__
-	   "expected only Latin-1 code points in argument"
-	   (integer->char ?code-point) ?bv)))
-    ))
-
-;;; --------------------------------------------------------------------
-
-(define-syntax (assert-string-char-is-ascii-code-point stx)
-  (syntax-case stx ()
-    ((_ ?str ?code-point)
-     (and (identifier? #'?str)
-	  (identifier? #'?code-ponit))
-     #'(unless ($ascii-chi? ?code-point)
-	 (procedure-arguments-consistency-violation __who__
-	   "expected only ASCII code points in argument"
-	   (integer->char ?code-point) ?str)))
-    ))
-
-(define-syntax (assert-bytevector-byte-is-ascii-code-point stx)
-  (syntax-case stx ()
-    ((_ ?bv ?code-point)
-     (and (identifier? #'?bv)
-	  (identifier? #'?code-ponit))
-     #'(unless ($ascii-chi? ?code-point)
-	 (procedure-arguments-consistency-violation __who__
-	   "expected only ASCII code points in argument"
-	   (integer->char ?code-point) ?bv)))
-    ))
-
 
 ;;;; helpers
-
-(define-inline ($latin1-chi? chi)
-  (or ($fx<= #x00 chi #x1F) ;these are the control characters
-      ($fx<= #x20 chi #x7E)
-      ($fx<= #xA0 chi #xFF)))
-
-(define-inline ($ascii-chi? chi)
-  ($fx<= #x00 chi #x7F))
 
 (define ($string-last-index str)
   ;;To be called only if BV is not empty!!!
@@ -1059,185 +978,6 @@
 ;;2013)
 (define ($string-empty? str)
   ($fxzero? ($string-length str)))
-
-
-;;;; octets bytevectors to/from strings
-
-(define* (octets-encoded-string? {str string?})
-  ($octets-encoded-string? str))
-
-(define ($octets-encoded-string? str)
-  (let loop ((i 0))
-    (or ($fx= i ($string-length str))
-	(and ($fx<= 0 ($char->fixnum ($string-ref str i)) 255)
-	     (loop ($fxadd1 i))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (octets-encoded-bytevector? {bv bytevector?})
-  #t)
-
-(define ($octets-encoded-bytevector? bv)
-  #t)
-
-;;; --------------------------------------------------------------------
-
-(define* (string->octets {str string?})
-  ($string->octets str))
-
-(define* ($string->octets str)
-  (do ((i 0 ($fxadd1 i))
-       (bv ($make-bytevector ($string-length str))))
-      (($fx= i ($string-length str))
-       bv)
-    (let* ((ch  ($string-ref str i))
-	   (chi ($char->fixnum ch)))
-      (if ($fx<= 0 chi 255)
-	  ($bytevector-set! bv i chi)
-	(procedure-arguments-consistency-violation __who__
-	  "impossible conversion from character to octet" ch str)))))
-
-;;; --------------------------------------------------------------------
-
-(define* (octets->string {bv bytevector?})
-  ($octets->string bv))
-
-(define ($octets->string bv)
-  (do ((i 0 ($fxadd1 i))
-       (str ($make-string ($bytevector-length bv))))
-      (($fx= i ($bytevector-length bv))
-       str)
-    ($string-set! str i ($fixnum->char ($bytevector-u8-ref bv i)))))
-
-
-;;;; Latin-1 bytevectors to/from strings
-
-(define* (string->latin1 {str string?})
-  ;;Defined by  Vicare.  Convert  the string  STR into  a bytevector  holding octects
-  ;;representing the character's Latin-1 code points.
-  ;;
-  ($string->latin1 str))
-
-(define* ($string->latin1 str)
-  ;;Both strings and bytevectors have length representable as fixnum.
-  (let* ((bv.len ($string-length str))
-	 (bv	 ($make-bytevector bv.len)))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i bv.len)
-	 bv)
-      (let ((code-point ($char->fixnum ($string-ref str i))))
-	(assert-string-char-is-latin-1-code-point str code-point)
-	($bytevector-set! bv i code-point)))))
-
-;;; --------------------------------------------------------------------
-
-(define* (latin1->string {bv bytevector?})
-  ;;Defined by  Vicare.  Convert the bytevector  BV into a string  holding characters
-  ;;representing bytes interpreted as Latin-1 code points.
-  ;;
-  ($latin1->string bv))
-
-(define* ($latin1->string bv)
-  ;;Both strings and bytevectors have length representable as fixnum.
-  (let* ((str.len ($bytevector-length bv))
-	 (str     ($make-string str.len)))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i str.len)
-	 str)
-      (let ((code-point ($bytevector-u8-ref bv i)))
-	(assert-bytevector-byte-is-latin-1-code-point bv code-point)
-	($string-set! str i ($fixnum->char code-point))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (latin1-encoded-bytevector? {bv bytevector?})
-  ;;Return true if the argument is interpretable as Latin1 encoded string.
-  ;;
-  ($latin1-encoded-bytevector? bv))
-
-(define ($latin1-encoded-bytevector? bv)
-  (let loop ((i 0))
-    (or ($fx= i ($bytevector-length bv))
-  	(and ($latin1-chi? ($bytevector-u8-ref bv i))
-  	     (loop ($fxadd1 i))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (latin1-encoded-string? {str string?})
-  ;;Return true if the argument is interpretable as Latin1 encoded string.
-  ;;
-  ($latin1-encoded-string? str))
-
-(define ($latin1-encoded-string? str)
-  (let loop ((i 0))
-    (or ($fx= i ($string-length str))
-  	(and ($latin1-chi? ($char->fixnum ($string-ref str i)))
-  	     (loop ($fxadd1 i))))))
-
-
-;;;; ASCII bytevectors to/from strings
-
-(define* (string->ascii {str string?})
-  ;;Defined by  Vicare.  Convert  the string  STR into  a bytevector  holding octects
-  ;;representing the character's ASCII code points.
-  ;;
-  ($string->ascii str))
-
-(define* ($string->ascii str)
-  ;;Both strings and bytevectors have length representable as fixnum.
-  (let* ((bv.len	($string-length str))
-	 (bv		($make-bytevector bv.len)))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i bv.len)
-	 bv)
-      (let ((code-point ($char->fixnum ($string-ref str i))))
-	(assert-string-char-is-ascii-code-point str code-point)
-	($bytevector-set! bv i code-point)))))
-
-;;; --------------------------------------------------------------------
-
-(define* (ascii->string {bv bytevector?})
-  ;;Defined by  Vicare.  Convert the bytevector  BV into a string  holding characters
-  ;;representing bytes interpreted as ASCII code points.
-  ;;
-  ($ascii->string bv))
-
-(define* ($ascii->string bv)
-  ;;Both strings and bytevectors have length representable as fixnum.
-  (let* ((str.len	($bytevector-length bv))
-	 (str		($make-string str.len)))
-    (do ((i 0 ($fxadd1 i)))
-	(($fx= i str.len)
-	 str)
-      (let ((code-point ($bytevector-u8-ref bv i)))
-	(assert-bytevector-byte-is-ascii-code-point bv code-point)
-	($string-set! str i ($fixnum->char code-point))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (ascii-encoded-bytevector? {bv bytevector?})
-  ;;Return true if the argument is interpretable as ASCII encoded string.
-  ;;
-  ($ascii-encoded-bytevector? bv))
-
-(define ($ascii-encoded-bytevector? bv)
-  (let loop ((i 0))
-    (or ($fx= i ($bytevector-length bv))
-	(and ($ascii-chi? ($bytevector-u8-ref bv i))
-	     (loop ($fxadd1 i))))))
-
-;;; --------------------------------------------------------------------
-
-(define* (ascii-encoded-string? {str string?})
-  ;;Return true if the argument is interpretable as Ascii encoded string.
-  ;;
-  ($ascii-encoded-string? str))
-
-(define ($ascii-encoded-string? str)
-  (let loop ((i 0))
-    (or ($fx= i ($string-length str))
-  	(and ($ascii-chi? ($char->fixnum ($string-ref str i)))
-  	     (loop ($fxadd1 i))))))
 
 
 ;;;; bytevectors to/from HEX strings

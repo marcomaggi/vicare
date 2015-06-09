@@ -1388,12 +1388,8 @@
     => test-bytevector)
 
   (check
-      (guard (E ((assertion-violation? E)
-		 #;(debug-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(string->latin1 "#\x80;"))
-    => '(#\x80 "#\x80;"))
+      (string->latin1 "\x80;")
+    => '#vu8(#x80))
 
 ;;;
 
@@ -1402,12 +1398,8 @@
     => test-string)
 
   (check
-      (guard (E ((assertion-violation? E)
-		 #;(debug-print (condition-message E))
-		 (condition-irritants E))
-		(else E))
-	(latin1->string '#vu8(#x80)))
-    => '(#\x80 #vu8(#x80)))
+      (latin1->string '#vu8(#x80))
+    => "\x80;")
 
 ;;;
 
@@ -1417,7 +1409,7 @@
 
   (check
       (latin1-encoded-bytevector? '#vu8(#x80 255 10))
-    => #f)
+    => #t)
 
 ;;;
 
@@ -1426,8 +1418,8 @@
     => #t)
 
   (check
-      (latin1-encoded-string? (utf8->string '#vu8(1 2 3 255 10)))
-    => #f)
+      (latin1-encoded-string? (octets->string '#vu8(1 2 3 255 10)))
+    => #t)
 
   #t)
 
@@ -1509,7 +1501,7 @@
     => #t)
 
   (check
-      (ascii-encoded-string? (utf8->string '#vu8(1 2 3 200 10)))
+      (ascii-encoded-string? (octets->string '#vu8(1 2 3 200 10)))
     => #f)
 
   #t)
