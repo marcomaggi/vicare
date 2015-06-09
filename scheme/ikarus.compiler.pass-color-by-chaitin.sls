@@ -887,7 +887,7 @@
 ;;; --------------------------------------------------------------------
 
   (module ASM-INSTR-OPERANDS-HELPERS
-    (disp/fvar? long-immediate? small-operand?)
+    (disp/fvar? long-immediate? small-operand? constant-small-operand?)
     ;;All the  function exported  by this  module are  applied to  the ?SRC  and ?DST
     ;;operands of ASM-INSTR structs.
     ;;
@@ -931,6 +931,8 @@
        ((64)
 	(struct-case x
 	  ((constant n)
+	   ;;Return  true if  the  operand is  a  constant that  fits  into a  32-bit
+	   ;;integer.
 	   (if (integer? n)
 	       (<= MIN-SIGNED-32-BIT-INTEGER
 		   n
@@ -939,6 +941,19 @@
 	  (else
 	   (or (register? x)
 	       (var?      x)))))))
+
+    (define (constant-small-operand? x)
+      ;;Return true if the operand is a constant that fits into a 32-bit integer.
+      ;;
+      (import SIGNED-32-BIT-INTEGER-LIMITS)
+      (struct-case x
+	((constant n)
+	 (if (integer? n)
+	     (<= MIN-SIGNED-32-BIT-INTEGER
+		 n
+		 MAX-SIGNED-32-BIT-INTEGER)
+	   #f))
+	(else #f)))
 
     #| end of module: ASM-INSTR-OPERANDS-HELPERS |# )
 

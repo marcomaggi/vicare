@@ -333,14 +333,14 @@
 	(define* (doit {x fixnum?})
 	  ($fxlogxor x 60000))
 	(doit 123))
-    => #t)
+    => 59931)
 
-(debug-print
- (assembly-of
-  (internal-body
-    (define* (doit {x fixnum?})
-      ($fxlogxor x 283))
-    (doit (read)))))
+  #;(debug-print
+   (assembly-of
+    (internal-body
+      (define* (doit {x fixnum?})
+	($fxlogxor x 283))
+      (doit (read)))))
 
   #t)
 

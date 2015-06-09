@@ -747,7 +747,7 @@
 	   #;(assert (or (var? dst) (nfv? dst)))
 	   (make-asm-instr 'bref dst (%mk-disp (car rand*) (cadr rand*))))))
 
-      ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
+      ((int+ int- int* int-/overflow int+/overflow int*/overflow)
        ;;We expect X to have the format:
        ;;
        ;;   (asmcall ?op (?first-operand ?second-operand))
@@ -765,6 +765,66 @@
 	     ;;Perform the  operation OP between  the first  operand in DST  and the
 	     ;;second operand in SRC; store the resulting value in DST.
 	     (make-asm-instr op dst src)))))
+
+      ((logand logxor logor)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall ?op (?first-operand ?second-operand))
+       ;;
+       ;;representing a high-level Assembly instruction that must store the resulting
+       ;;value in ?FIRST-OPERAND.
+       ;;
+       ;;On the Intel  platform: these instructions become ANDL, ORL,  XORL; when the
+       ;;second  operand is  an immediate  constant that  fits into  32-bit, but  not
+       ;;8-bit, the first operand must be the register EAX.
+       ;;
+       ;;
+       ;;FIXME Here it happens that we insert  a move operation that is useless.  For
+       ;;example we might create:
+       ;;
+       ;;   (seq
+       ;;     (asm-instr move  tmp_0 fvar.1)
+       ;;     (asm-instr logor tmp_0 fvar.2)
+       ;;     (asm-instr move  tmp_1 tmp_0)
+       ;;     (asm-instr logor tmp_1 fvar.3))
+       ;;
+       ;;notice that the second MOVE could be avoided by generating:
+       ;;
+       ;;   (seq
+       ;;     (asm-instr move  tmp_0 fvar.1)
+       ;;     (asm-instr logor tmp_0 fvar.2)
+       ;;     (asm-instr logor tmp_0 fvar.3)
+       ;;
+       ;;this  is the  price we  pay for  the current,  correct, implementation  with
+       ;;respect to the *incorrect* implementation:
+       ;;
+       ;;   ((logand logxor logor)
+       ;;    (make-seq
+       ;;      (V dst (car rand*))
+       ;;      (S (cadr rand*)
+       ;;        (lambda (src)
+       ;;          (make-asm-instr op dst src)))))
+       ;;
+       ;;to  check for  the second  operand as  32-bit constant  we need  the current
+       ;;implementation.
+       ;;
+       (S* rand*
+	 (lambda (rand*)
+	   (let* ((first-operand  (car rand*))
+		  (second-operand (cadr rand*))
+		  (src            second-operand))
+	     (if (constant-fitting-32-bit? src)
+		 ;;Perform the operation OP between the  first operand in EAX and the
+		 ;;second operand in SRC; store the resulting value in EAX.
+		 (multiple-forms-sequence
+		   (%move-dst<-src eax first-operand)
+		   (make-asm-instr op eax src)
+		   (%move-dst<-src dst eax))
+	       ;;Perform the  operation OP between the  first operand in DST  and the
+	       ;;second operand in SRC; store the resulting value in DST.
+	       (make-seq
+		 (%move-dst<-src dst first-operand)
+		 (make-asm-instr op dst src)))))))
 
       ((int-quotient)
        ;;We expect X to have the format:
@@ -888,6 +948,27 @@
       4096)
 
     #| end of module: ALLOC-CHECK, ALLOC-CHECK/NO-HOOKS |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (constant-fitting-32-bit? obj)
+    ;;Return true if  SRC is a constant  integer fitting in 32-bit but  not in 8-bit;
+    ;;otherwise return false.  Notice that we  are talking about native constants, so
+    ;;(on 64-bit platforms) the fixnum "1" is represented as #b1000.
+    ;;
+    (let ((min-signed-32-bit-integer (- (expt 2 31)))
+	  (max-signed-32-bit-integer (- (expt 2 31) 1))
+	  (min-signed-8-bit-integer  (- (expt 2 8)))
+	  (max-signed-8-bit-integer  (- (expt 2 8) 1)))
+      (struct-case obj
+	((constant N)
+	 (if (integer? N)
+	     (and (>= N min-signed-32-bit-integer)
+		  (<= N max-signed-32-bit-integer)
+		  (or (<  N min-signed-8-bit-integer)
+		      (>  N max-signed-8-bit-integer)))
+	   #f))
+	(else #f))))
 
   #| end of module: V |# )
 

@@ -510,94 +510,88 @@
 	    (F '2 '3 '4)
 	    '5))
 	(codes
-	 ((lambda (label: asmlabel:F:clambda) (%edi fvar.1 fvar.2 fvar.3)
-	     (locals
-	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 tmp_4 tmp_5 cp_0)
-	      (seq (asm-instr move cp_0 %edi)
+	 ((lambda (label: asmlabel:F:clambda)
+	    (%edi fvar.1 fvar.2 fvar.3)
+	    (locals
+	     (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 tmp_4 tmp_5
+			  tmp_6 tmp_7 cp_0)
+	     (seq (asm-instr move cp_0 %edi)
+		  (shortcut
+		      (seq
+			(conditional
+			    (seq (asm-instr move tmp_0 fvar.1)
+				 (asm-instr logor tmp_0 fvar.2)
+				 (asm-instr move tmp_1 tmp_0)
+				 (asm-instr logor tmp_1 fvar.3)
+				 (asm-instr move tmp_2 tmp_1)
+				 (asm-instr logand tmp_2 (constant 7))
+				 (asm-instr = tmp_2 (constant 0)))
+			    (asmcall nop) (asmcall interrupt))
+			(asm-instr move tmp_3 (constant 8))
+			(asm-instr int+/overflow tmp_3 fvar.1)
+			(asm-instr int+/overflow tmp_3 fvar.2)
+			(asm-instr int+/overflow tmp_3 fvar.3)
+			(asm-instr move %eax tmp_3)
+			(asmcall return %eax %ebp %esp %esi))
+		    (seq (asm-instr move tmp_4 fvar.3)
+			 (asm-instr move tmp_5 fvar.2)
+			 (asm-instr move tmp_6 fvar.1)
+			 (asm-instr move tmp_7
+				    (disp (constant (object +)) (constant 19)))
+			 (asm-instr move fvar.1 (constant 8))
+			 (asm-instr move fvar.2 tmp_6)
+			 (asm-instr move fvar.3 tmp_5)
+			 (asm-instr move fvar.4 tmp_4)
+			 (asm-instr move %edi tmp_7)
+			 (asm-instr move %eax (constant -32))
+			 (asmcall indirect-jump %eax %ebp %edi %esp %esi
+				  fvar.1 fvar.2 fvar.3 fvar.4)))))))
+	 (locals (local-vars: tmp_8 tmp_9 tmp_10)
+		 (seq
 		   (shortcut
-		       (seq
-			 (conditional
-			     (seq (asm-instr move tmp_0 fvar.1)
-				  (asm-instr logor tmp_0 fvar.2)
-				  (asm-instr logor tmp_0 fvar.3)
-				  (asm-instr logand tmp_0 (constant 7))
-				  (asm-instr = tmp_0 (constant 0)))
-			     (asmcall nop)
-			   (asmcall interrupt))
-			 (asm-instr move tmp_1 (constant 8))
-			 (asm-instr int+/overflow tmp_1 fvar.1)
-			 (asm-instr int+/overflow tmp_1 fvar.2)
-			 (asm-instr int+/overflow tmp_1 fvar.3)
-			 (asm-instr move %eax tmp_1)
-			 (asmcall return %eax %ebp %esp %esi))
-		     (seq
-		       (asm-instr move tmp_2 fvar.3)
-		       (asm-instr move tmp_3 fvar.2)
-		       (asm-instr move tmp_4 fvar.1)
-		       (asm-instr move tmp_5 (disp (constant (object +)) (constant 19)))
-		       (asm-instr move fvar.1 (constant 8))
-		       (asm-instr move fvar.2 tmp_4)
-		       (asm-instr move fvar.3 tmp_3)
-		       (asm-instr move fvar.4 tmp_2)
-		       (asm-instr move %edi tmp_5)
-		       (asm-instr move %eax (constant -32))
-		       (asmcall indirect-jump
-				%eax %ebp %edi %esp %esi
-				fvar.1 fvar.2 fvar.3 fvar.4)))))))
-	 (locals
-	  (local-vars: tmp_6 tmp_7 tmp_8)
-	  (seq
-	    ;;Core primitive operation $STACK-OVERFLOW-CHECK.
-	    (shortcut (conditional (asm-instr u< %esp (disp %esi (constant 32)))
-			  (asmcall interrupt)
-			(asmcall nop))
-	      (non-tail-call-frame
-		(rand*: #f)
-		(live: #f)
-		(seq
-		  (asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
-		  (asm-instr move %eax (constant 0))
-		  (non-tail-call
-		    (target: "ik_stack_overflow")
-		    (retval-var: #f)
-		    (all-rand*: %eax %ebp %edi %esp %esi)
-		    (mask: #f)
-		    (size: #f)))))
-	    ;;Core primitive operation $DO-EVENT.
-	    (shortcut
-		(asmcall incr/zero? %esi (constant 72) (constant 8))
-	      (non-tail-call-frame
-		(rand*: #f)
-		(live: #f)
-		(seq
-		  (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
-		  (asm-instr move %edi tmp_6)
-		  (asm-instr move %eax (constant 0))
-		  (non-tail-call
-		    (target: #f)
-		    (retval-var: #f)
-		    (all-rand*: %eax %ebp %edi %esp %esi)
-		    (mask: #f)
-		    (size: #f)))))
-	    (non-tail-call-frame
-	      (rand*: nfv.1_0 nfv.2_0 nfv.3_0)
-	      (live: #f)
-	      (seq
-		(asm-instr move nfv.1_0 (constant 16))
-		(asm-instr move nfv.2_0 (constant 24))
-		(asm-instr move nfv.3_0 (constant 32))
-		(asm-instr move tmp_7 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
-		(asm-instr move tmp_8 tmp_7)
-		(asm-instr move %edi tmp_8)
-		(asm-instr move %eax (constant -24))
-		(non-tail-call
-		  (target: asmlabel:F:clambda:case-3)
-		  (retval-var: #f)
-		  (all-rand*: %eax %ebp %edi %esp %esi nfv.1_0 nfv.2_0 nfv.3_0)
-		  (mask: #f)
-		  (size: #f))))
-	    (asm-instr move %eax (constant 40))
-	    (asmcall return %eax %ebp %esp %esi)))))
+		       (conditional
+			   (asm-instr u< %esp (disp %esi (constant 32)))
+			   (asmcall interrupt) (asmcall nop))
+		     (non-tail-call-frame (rand*: #f) (live: #f)
+					  (seq
+					    (asm-instr move %edi
+						       (constant (foreign-label "ik_stack_overflow")))
+					    (asm-instr move %eax (constant 0))
+					    (non-tail-call (target: "ik_stack_overflow")
+							   (retval-var: #f)
+							   (all-rand*: %eax %ebp %edi %esp %esi)
+							   (mask: #f) (size: #f)))))
+		   (shortcut
+		       (asmcall incr/zero? %esi (constant 72) (constant 8))
+		     (non-tail-call-frame (rand*: #f) (live: #f)
+					  (seq
+					    (asm-instr move tmp_8
+						       (disp (constant (object $do-event))
+							     (constant 19)))
+					    (asm-instr move %edi tmp_8)
+					    (asm-instr move %eax (constant 0))
+					    (non-tail-call (target: #f) (retval-var: #f)
+							   (all-rand*: %eax %ebp %edi %esp %esi)
+							   (mask: #f) (size: #f)))))
+		   (non-tail-call-frame (rand*: nfv.1_0 nfv.2_0 nfv.3_0)
+					(live: #f)
+					(seq (asm-instr move nfv.1_0 (constant 16))
+					     (asm-instr move nfv.2_0 (constant 24))
+					     (asm-instr move nfv.3_0 (constant 32))
+					     (asm-instr move tmp_9
+							(constant
+							 (closure-maker (code-loc asmlabel:F:clambda)
+									no-freevars)))
+					     (asm-instr move tmp_10 tmp_9)
+					     (asm-instr move %edi tmp_10)
+					     (asm-instr move %eax (constant -24))
+					     (non-tail-call (target: asmlabel:F:clambda:case-3)
+							    (retval-var: #f)
+							    (all-rand*: %eax %ebp %edi %esp %esi nfv.1_0
+									nfv.2_0 nfv.3_0)
+							    (mask: #f) (size: #f))))
+		   (asm-instr move %eax (constant 40))
+		   (asmcall return %eax %ebp %esp %esi)))))
 
   #t)
 
@@ -670,7 +664,7 @@
 	(codes
 	 ((lambda (label: asmlabel:F:clambda) (%edi fvar.1)
 	     (locals
-	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 tmp_4 tmp_5 cp_0)
+	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 tmp_4 tmp_5 tmp_6 cp_0)
 	      (seq
 		;;Load  in  CP_0  the  reference  to this  closure  object  from  the
 		;;CP-REGISTER.
@@ -684,34 +678,36 @@
 		    (seq
 		      ;;With a single step: check if  the captured value of X (TMP_0)
 		      ;;and the argument Y (fvar.1) are both fixnums.
-		      (conditional (seq (asm-instr move tmp_1 tmp_0)
-					(asm-instr logor tmp_1 fvar.1)
-					(asm-instr logand tmp_1 (constant 7))
-					(asm-instr = tmp_1 (constant 0)))
+		      (conditional
+			  (seq (asm-instr move tmp_1 tmp_0)
+			       (asm-instr logor tmp_1 fvar.1)
+			       (asm-instr move tmp_2 tmp_1)
+			       (asm-instr logand tmp_2 (constant 7))
+			       (asm-instr = tmp_2 (constant 0)))
 			  (asmcall nop)
 			(asmcall interrupt))
 		      ;;Attempt to add the two fixnums.
-		      (asm-instr move tmp_2 tmp_0)
-		      (asm-instr int+/overflow tmp_2 fvar.1)
+		      (asm-instr move tmp_3 tmp_0)
+		      (asm-instr int+/overflow tmp_3 fvar.1)
 		      ;;Load the result in AA-REGISTER.
-		      (asm-instr move %eax tmp_2)
+		      (asm-instr move %eax tmp_3)
 		      ;;Return to the caller.
 		      (asmcall return %eax %ebp %esp %esi))
 		  ;;This  is the  interrupt  handler:  a full  call  to the  function
 		  ;;implementing "+".
 		  (seq
 		    ;;Put in temporary locations the stack operands of the call.
-		    (asm-instr move tmp_3 fvar.1)
-		    (asm-instr move tmp_4 tmp_0)
+		    (asm-instr move tmp_4 fvar.1)
+		    (asm-instr move tmp_5 tmp_0)
 		    ;;Load in a  temporary location, from the  relocation vector, the
 		    ;;reference to the closure object implementing "+".
-		    (asm-instr move tmp_5 (disp (constant (object +)) (constant 19)))
+		    (asm-instr move tmp_6 (disp (constant (object +)) (constant 19)))
 		    ;;Stack operands: put them on the stack in the correct order.
-		    (asm-instr move fvar.1 tmp_4)
-		    (asm-instr move fvar.2 tmp_3)
+		    (asm-instr move fvar.1 tmp_5)
+		    (asm-instr move fvar.2 tmp_4)
 		    ;;Register operand: load in  CP-REGISTER the reference to closure
 		    ;;object.
-		    (asm-instr move %edi tmp_5)
+		    (asm-instr move %edi tmp_6)
 		    ;;Register operand: load in AA-REGISTER a fixnum representing the
 		    ;;negated number of operands: -2.
 		    (asm-instr move %eax (constant -16))
@@ -720,7 +716,7 @@
 		    ;;CP-REGISTER.
 		    (asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))))
 	 (locals
-	  (local-vars: tmp_6 tmp_7 x_0 tmp_8 F_0)
+	  (local-vars: tmp_7 tmp_8 x_0 tmp_9 F_0)
 	  (seq
 	    ;;This SHORTCUT  is the  implementation of  the core  primitive operation
 	    ;;$STACK-OVERFLOW-CHECK.
@@ -756,10 +752,10 @@
 		(seq
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
 		  ;;reference to closure object implementing $DO-EVENT.
-		  (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move tmp_7 (disp (constant (object $do-event)) (constant 19)))
 		  ;;Register operand:  load in  CP-REGISTER the reference  to closure
 		  ;;object.
-		  (asm-instr move %edi tmp_6)
+		  (asm-instr move %edi tmp_7)
 		  ;;Register operand:  load in AA-REGISTER a  fixnum representing the
 		  ;;negated number of operands: 0.
 		  (asm-instr move %eax (constant 0))
@@ -777,10 +773,10 @@
 	      (seq
 		;;Load  in a  temporary  location, from  the  relocation vector,  the
 		;;reference to closure object implementing READ.
-		(asm-instr move tmp_7 (disp (constant (object read)) (constant 19)))
+		(asm-instr move tmp_8 (disp (constant (object read)) (constant 19)))
 		;;Register  operand: load  in  CP-REGISTER the  reference to  closure
 		;;object.
-		(asm-instr move %edi tmp_7)
+		(asm-instr move %edi tmp_8)
 		;;Register  operand: load  in AA-REGISTER  a fixnum  representing the
 		;;negated number of operands: 0.
 		(asm-instr move %eax (constant 0))
@@ -814,10 +810,10 @@
 		  (asm-instr move nfv.1_0 (constant 16))
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
 		  ;;reference to the closure object implementing DO-OVERFLOW.
-		  (asm-instr move tmp_8 (disp (constant (object do-overflow)) (constant 27)))
+		  (asm-instr move tmp_9 (disp (constant (object do-overflow)) (constant 27)))
 		  ;;Register operand:  load in  CP-REGISTER the reference  to closure
 		  ;;object.
-		  (asm-instr move %edi tmp_8)
+		  (asm-instr move %edi tmp_9)
 		  ;;Register operand:  load in AA-REGISTER a  fixnum representing the
 		  ;;negated number of arguments: -1.
 		  (asm-instr move %eax (constant -8))

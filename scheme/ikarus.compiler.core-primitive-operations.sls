@@ -2063,10 +2063,11 @@
    ((E x y) (nop)))
 
  (define-core-primitive-operation $fxlogxor unsafe
-   ((V x y) (asm 'logxor (V-simple-operand x) (V-simple-operand y)))
-   ;;((V x y) (with-tmp ((tx (V-simple-operand x)))
-   ;;           (with-tmp ((ty (V-simple-operand y)))
-   ;;             (asm 'logxor tx ty))))
+   ((V x y)
+    (asm 'logxor (V-simple-operand x) (V-simple-operand y)))
+   ;; ((V x y)
+   ;;  (with-tmp ((tx (V-simple-operand x)))
+   ;;    (asm 'logxor tx (V-simple-operand y))))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
