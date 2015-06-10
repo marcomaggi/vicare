@@ -26,6 +26,7 @@
 #!vicare
 (import (vicare)
   (vicare checks)
+  (srfi :14)
   (srfi :115))
 
 (check-set-mode! 'report-failed)
@@ -72,14 +73,240 @@
    (regexp-search '(~ ("Aab")) "B"))
   (check-for-false
    (regexp-search '(~ ("Aab")) "b"))
+
+  ;;FIXME
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(w/nocase (~ ("Aab"))) "B"))
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(w/nocase (~ ("Aab"))) "b"))
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(~ (w/nocase ("Aab"))) "B"))
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(~ (w/nocase ("Aab"))) "b"))
+
+;;; --------------------------------------------------------------------
+
   (check-for-regexp-match
-   (regexp-search '(w/nocase (~ ("Aab"))) "B"))
+   (regexp-search '(w/nocase "SMALL" (w/case "BIG"))
+		  "smallBIGsmall"))
+  (check-for-false
+   (regexp-search '(w/nocase (~ (w/case ("Aab")))) "b"))
+
+;;; --------------------------------------------------------------------
+
+  ;;FIXME
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(w/ascii bos (* letter) eos) "English"))
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(w/ascii bos (* "[a-zA-Z]") eos) "English"))
+
   (check-for-regexp-match
-   (regexp-search '(w/nocase (~ ("Aab"))) "b"))
+   (regexp-search '(* "[a-zA-Z]") "English"))
+
+;;; --------------------------------------------------------------------
+
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(w/unicode bos (* letter) eos) "English"))
+
+;;; --------------------------------------------------------------------
+
+  (let ((number '($ (+ digit))))
+    (check
+	(cdr
+	 (regexp-match->list
+	  (regexp-search `(: ,number "-" ,number "-" ,number)
+			 "555-867-5309")))
+      => '("555" "867" "5309"))
+    (check
+	(cdr
+	 (regexp-match->list
+	  (regexp-search `(: ,number "-" (w/nocapture ,number) "-" ,number)
+			 "555-867-5309")))
+      => '("555" "5309")))
+
+
+  #t)
+
+
+(parametrise ((check-test-name	'repeating-patterns))
+
   (check-for-regexp-match
-   (regexp-search '(~ (w/nocase ("Aab"))) "B"))
+   (regexp-search '(: "match" (? "es") "!") "matches!"))
+
   (check-for-regexp-match
-   (regexp-search '(~ (w/nocase ("Aab"))) "b"))
+   (regexp-search '(: "match" (? "es") "!") "match!"))
+
+  (check-for-false
+   (regexp-search '(: "match" (? "es") "!") "matche!"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (* (~ #\>)) ">") "<html>"))
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (* (~ #\>)) ">") "<>"))
+
+  (check-for-false
+   (regexp-search '(: "<" (* (~ #\>)) ">") "<html"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (+ (~ #\>)) ">") "<html>"))
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (+ (~ #\>)) ">") "<a>"))
+
+  (check-for-false
+   (regexp-search '(: "<" (+ (~ #\>)) ">") "<>"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (>= 3 (~ #\>)) ">") "<table>"))
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (>= 3 (~ #\>)) ">") "<pre>"))
+
+  (check-for-false
+   (regexp-search '(: "<" (>= 3 (~ #\>)) ">") "<tr>"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-search '(: "<" (= 4 (~ #\>)) ">") "<html>"))
+
+  ;;The regexp expects 4 chars between "<" and ">".
+  (check-for-false
+   (regexp-search '(: "<" (= 4 (~ #\>)) ">") "<table>"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-search '(: (= 3 (** 1 3 numeric) ".") (** 1 3 numeric))
+		  "192.168.1.10"))
+
+  (check-for-false
+   (regexp-search '(: (= 3 (** 1 3 numeric) ".") (** 1 3 numeric))
+		  "192.0168.1.10"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'char-sets-patterns))
+
+  (define char-set:vowels
+    (string->char-set "aeiou"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-matches '(* #\-) "---"))
+
+  (check-for-false
+   (regexp-matches '(* #\-) "-_-"))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (regexp-partition `(+ ,char-set:vowels) "vowels")
+    => '("v" "o" "w" "e" "ls"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-matches '(* ("aeiou")) "oui"))
+
+  (check-for-false
+   (regexp-matches '(* ("aeiou")) "ouais"))
+
+  ;;FIXME
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-matches '(* ("e\x0301;")) "e\x0301;"))
+  ;;
+  ;; (check-for-false
+  ;;  (regexp-matches '("e\x0301;") "e\x0301;"))
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-matches '("e\x0301;") "e"))
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-matches '("e\x0301;") "\x0301;"))
+  ;;
+  ;; (check-for-false
+  ;;  (regexp-matches '("e\x0301;") "\x00E9;"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-matches '(* (/ "AZ09")) "R2D2"))
+
+  (check-for-false
+   (regexp-matches '(* (/ "AZ09")) "C-3PO"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-matches '(* (- (/ "az") ("aeiou"))) "xyzzy"))
+
+  (check-for-false
+   (regexp-matches '(* (- (/ "az") ("aeiou"))) "vowels"))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-regexp-match
+   (regexp-matches '(* (& (/ "az") (~ ("aeiou")))) "xyzzy"))
+
+  (check-for-false
+   (regexp-matches '(* (& (/ "az") (~ ("aeiou")))) "vowels"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'boundary-patterns))
+
+  (check-for-regexp-match
+   (regexp-search '(: bow "foo") "foo"))
+
+  (check-for-regexp-match
+   (regexp-search '(: bow "foo") "foobar"))
+
+  ;;FIXME This is wrong in the SRFI document.
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-search '(: bow "foo") ""))
+
+  (check-for-false
+   (regexp-search '(: bow "foo") "snafoo"))
+
+  (check-for-regexp-match
+   (regexp-search '(: "foo" eow) "foo"))
+
+  (check-for-regexp-match
+   (regexp-search '(: "foo" eow) "foo!"))
+
+  (check-for-false
+   (regexp-search '(: "foo" eow) "foobar"))
+
+  #t)
+
+
+(parametrise ((check-test-name	'look-around-patterns))
+
+  ;;Not implemented in the reference implementation.
+  ;;
+  ;; (check-for-regexp-match
+  ;;  (regexp-matches '(: "regular" (look-ahead " expression")
+  ;; 		       " expression")
+  ;; 		   "regular expression"))
+
+  ;; (check-for-false
+  ;;  (regexp-matches '(: "regular" (look-ahead " ") "expression")
+  ;;                   "regular expression"))
 
   #t)
 
