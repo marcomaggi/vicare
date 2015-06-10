@@ -122,7 +122,6 @@ CLEANFILES += lib/vicare/unsafe/operations.fasl
 
 lib/vicare/unsafe/unicode.fasl: \
 		lib/vicare/unsafe/unicode.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -3465,6 +3464,40 @@ dist_lib_srfi__3a114_comparators_sls_DATA = lib/srfi/%3a114/comparators.sls
 endif
 EXTRA_DIST += lib/srfi/%3a114/comparators.sls
 CLEANFILES += lib/srfi/%3a114/comparators.fasl
+endif
+
+lib/srfi/%3a115.fasl: \
+		lib/srfi/%3a115.sls \
+		lib/srfi/%3a115/regexps.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a115_fasldir = $(bundledlibsdir)/srfi
+lib_srfi__3a115_slsdir  = $(bundledlibsdir)/srfi
+nodist_lib_srfi__3a115_fasl_DATA = lib/srfi/%3a115.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a115_sls_DATA = lib/srfi/%3a115.sls
+endif
+EXTRA_DIST += lib/srfi/%3a115.sls
+CLEANFILES += lib/srfi/%3a115.fasl
+endif
+
+lib/srfi/%3a115/regexps.fasl: \
+		lib/srfi/%3a115/regexps.sls \
+		lib/srfi/%3a14.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a115_regexps_fasldir = $(bundledlibsdir)/srfi/%3a115
+lib_srfi__3a115_regexps_slsdir  = $(bundledlibsdir)/srfi/%3a115
+nodist_lib_srfi__3a115_regexps_fasl_DATA = lib/srfi/%3a115/regexps.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a115_regexps_sls_DATA = lib/srfi/%3a115/regexps.sls
+endif
+EXTRA_DIST += lib/srfi/%3a115/regexps.sls
+CLEANFILES += lib/srfi/%3a115/regexps.fasl
 endif
 
 lib/srfi/%3a106.fasl: \
