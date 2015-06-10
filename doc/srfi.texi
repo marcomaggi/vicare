@@ -67,6 +67,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi env-inquiry::            @ansrfi{112} environment inquiry.
 * srfi sets-and-bags::          @ansrfi{113} sets and bags.
 * srfi comparators::            @ansrfi{114} comparators.
+* srfi regexps::                @ansrfi{115} regular expressions.
 @end menu
 
 @c ------------------------------------------------------------
@@ -109,5 +110,6 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-environment-inquiry.texi
 @include srfi-sets-and-bags.texi
 @include srfi-comparators.texi
+@include srfi-regular-expressions.texi
 
 @c end of file

@@ -1,0 +1,1363 @@
+@node srfi regexps
+@section @ansrfi{115} regular expressions
+
+
+@cindex @ansrfi{115} feature based conditional expansion construct
+@cindex @library{srfi :115}, library
+@cindex @library{srfi :115 regexps}, library
+@cindex Library @library{srfi :115}
+@cindex Library @library{srfi :115 regexps}
+
+
+The library @library{srfi :115} is by Alex Shinn as reference
+implementation for @ansrfi{0}; see:
+
+@center @url{http://srfi.schemers.org/srfi-115/srfi-115.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi regexps license::        Original document license.
+* srfi regexps abstract::       Abstract.
+* srfi regexps rationale::      Rationale.
+* srfi regexps conventions::    Types and naming conventions.
+* srfi regexps compatibility::  Compatibility levels and features.
+* srfi regexps procs::          Library procedures and syntax.
+* srfi regexps syntax::         SRE syntax.
+* srfi regexps references::     References.
+@end menu
+
+@c page
+@node srfi regexps license
+@subsection Original document license
+
+
+Copyright @copyright{} Alex Shinn 2014.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi regexps abstract
+@subsection Abstract
+
+
+This @srfi{} provides a library for matching strings with regular
+expressions described using the SRE ``Scheme Regular Expression''
+notation first introduced by SCSH, and extended heavily by IrRegex.
+
+@c page
+@node srfi regexps rationale
+@subsection Rationale
+
+
+Regular expressions, coming from a long history of formal language
+theory, are today the lingua franca of simple string matching.  A
+regular expression is an expression describing a regular language, the
+simplest level in the Chomsky hierarchy.  They have the nice property
+that they can match in linear time, whereas parsers for the next level
+in the hierarchy require cubic time.  This combined with their
+conciseness led them to be a popular choice for searching in editors,
+tools and search interfaces.  Other tools may be better suited to
+specific purposes, but it is assumed any modern language will provide
+regular expression support.
+
+SREs were first introduced in SCSH as an S--expression based alternative
+to the more common string based description.  This format offers many
+advantages, including being easier to read and write (notably with
+structured editors), easier to compose (with no escaping issues), and
+faster and simpler to compile.  An efficient reference implementation of
+this @srfi{} can be written in under @math{1000} lines of code, whereas
+in IrRegex the full PCRE parser alone requires over @math{500} lines.
+
+@c page
+@node srfi regexps conventions
+@subsection Types and naming conventions
+
+
+We introduce two new types, @objtype{regexp} and @objtype{regexp-match},
+which are disjoint from all other types.  We also introduce the concept
+of an ``SRE'', which is not a disjoint type but is a Scheme object
+following the specification described below.
+
+@ansrfi{14} defines the @objtype{char-set} type, which can be used as
+part of an SRE.
+
+In the prototypes below the following naming conventions imply type
+restrictions:
+
+@table @var
+@item char-set
+A @ansrfi{14} character set.
+
+@item cset-sre
+An SRE which corresponds to matching a single character out of a set of
+characters.
+
+@item end
+An exact, non--negative integer, defaulting to the @code{(string-length
+str)}.
+
+@item finish
+A procedure @samp{(lambda (i regexp-match str obj) ...)}.
+
+@item obj
+Any object.
+
+@item knil
+Any object.
+
+@item kons
+A procedure @samp{(lambda (i regexp-match str obj) ...)}.
+
+@item re
+An SRE or pre--compiled regexp object.
+
+@item regexp-match
+A @objtype{regexp-match} object from a successful match.
+
+@item sre
+An SRE as described below.
+
+@item start
+An exact, non--negative integer, defaulting to @samp{0}.
+
+@item str
+A string.
+
+@item subst
+A symbolic expression describing a substitution template.
+
+@item X-or-false
+Either an object of type @samp{X} or the @false{} value.
+@end table
+
+@c page
+@node srfi regexps compatibility
+@subsection Compatibility levels and features
+
+
+We specify a thorough, though not exhaustive, syntax with many
+extensions popular in modern regular expression libraries such as PCRE.
+This is because it is assumed in many cases said libraries will be used
+as the underlying implementation, the features will be desirable, and if
+left unspecified people will provide their own, often incompatible,
+extensions.
+
+On the other hand it is acknowledged that not all implementations will
+be able to support all extensions.  Some are difficult to implement for
+DFA implementations, and some, like @samp{backref}, are prohibitively
+expensive for any implementation.  Furthermore, even if an
+implementation has Unicode support, its regexp library may not.
+
+To resolve these differences we divide the syntax into a minimal core
+which all implementations are required to support, and additional
+extensions.  In @rnrs{7} or other implementations which support
+@ansrfi{0} @syntax{cond-expand} with library level features, the
+availability can be tested with the following @syntax{cond-expand}
+features:
+
+@table @code
+@item regexp-non-greedy
+The non--greedy repetition patterns @samp{??}, @samp{*?}, and @samp{**?}
+are supported.
+
+@item regexp-look-around
+The @samp{[neg-]look-ahead} and @samp{[neg-]look-behind} zero--width
+assertions are supported.
+
+@item regexp-backrefs
+The @samp{backref} pattern is supported.
+
+@item regexp-unicode
+Regexp character sets support Unicode.
+@end table
+
+The first three simply refer to support for certain SRE patterns.
+
+@samp{regexp-unicode} indicates support for Unicode contexts.  Toggling
+between Unicode and @ascii{} can be done with the @samp{w/unicode} and
+@samp{w/ascii} patterns.  In a Unicode context, the named character sets
+have their full Unicode definition as described below and grapheme
+boundaries are ``extended grapheme clusters'' as defined in UAX #29
+(Unicode Text Segmentation).  Implementations which provide this feature
+may still support non--Unicode characters.
+
+@c page
+@node srfi regexps procs
+@subsection Library procedures and syntax
+
+
+@deftypefn Function @var{regexp} regexp @var{re}
+Compiles a regexp if given an object whose structure matches the SRE
+syntax.  This may be written as a literal or partial literal with quote
+or quasiquote, or may be generated entirely programmatically.  Return
+@var{re} unmodified if it is already a regexp.  Raise an error if
+@var{re} is neither a regexp nor a valid representation of an SRE.
+
+Mutating @var{re} may invalidate the resulting regexp, causing
+unspecified results if subsequently used for matching.
+@end deftypefn
+
+
+@deftypefn Syntax @var{regexp} rx @var{sre} @dots{}
+Macro shorthand for @code{(regexp `(: sre ...))}.  May be able to
+perform some or all computation at compile time if @var{sre} is not
+unquoted.  Note because of this equivalence with the procedural
+constructor @func{regexp}, the semantics of unquote differs from the
+original SCSH implementation in that unquoted expressions can expand
+into any object matching the SRE syntax, but not a compiled regexp
+object.  Further, @syntax{unquote} and @syntax{unquote-splicing} both
+expand all matches.
+
+@quotation
+@strong{RATIONALE} Providing a procedural interface provides for greater
+flexibility, and without loss of potential compile--time optimizations
+by preserving the syntactic shorthand.  The alternative is to rely on
+@func{eval} to dynamically generate regular expressions.  However
+regexps in many cases come from untrusted sources, such as search
+parameters to a server, or from serialized sources such as config files
+or command--line arguments.  Moreover many applications may want to keep
+many thousands of regexps in memory at once.  Given the relatively heavy
+cost and insecurity of @func{eval}, and the frequency with which SREs
+are read and written as text, we prefer the procedural interface.
+@end quotation
+@end deftypefn
+
+
+@deftypefn Function @var{sre} regexp->sre @var{re}
+Return an SRE corresponding to the given regexp @var{re}.  The SRE will
+be equivalent to (will match the same strings) but not necessarily
+@func{equal?} to the SRE originally used to compile @var{re}.  Mutating
+the result may invalidate @var{re}, causing unspecified results if
+subsequently used for matching.
+@end deftypefn
+
+
+@deftypefn Function @var{sre} char-set->sre @var{char-set}
+Return an SRE corresponding to the given @ansrfi{14} character set.  The
+resulting SRE expands the character set into notation which does not
+make use of embedded @ansrfi{14} character sets, and so is suitable for
+writing portably.
+@end deftypefn
+
+
+@deftypefn Function @var{boolean} valid-sre? @var{obj}
+Return true if, and only if, @var{obj} can be safely passed to
+@func{regexp}.
+@end deftypefn
+
+
+@deftypefn Function @var{boolean} regexp? @var{obj}
+Return true if, and only if, @var{obj} is a regexp.
+@end deftypefn
+
+
+@deftypefn Function @var{regexp-match-or-false} regexp-matches @var{re} @var{str}
+@deftypefnx Function @var{regexp-match-or-false} regexp-matches @var{re} @var{str} @var{start}
+@deftypefnx Function @var{regexp-match-or-false} regexp-matches @var{re} @var{str} @var{start} @var{end}
+Return a @objtype{regexp-match} object if @var{re} successfully matches
+the entire string @var{str} from @var{start} (inclusive) to @var{end}
+(exclusive), or @false{} is the match fails.  The @objtype{regexp-match}
+object will contain information needed to extract any submatches.
+@end deftypefn
+
+
+@deftypefn Function @var{boolean} regexp-matches? @var{re} @var{str}
+@deftypefnx Function @var{boolean} regexp-matches? @var{re} @var{str} @var{start}
+@deftypefnx Function @var{boolean} regexp-matches? @var{re} @var{str} @var{start} @var{end}
+Return @true{} if @var{re} matches @var{str} as in
+@func{regexp-matches}, or @false{} otherwise.  May be faster than
+@func{regexp-matches} since it doesn't need to return submatch data.
+@end deftypefn
+
+
+@deftypefn Function @var{regexp-match-or-false} regexp-search @var{re} @var{str}
+@deftypefnx Function @var{regexp-match-or-false} regexp-search @var{re} @var{str} @var{start}
+@deftypefnx Function @var{regexp-match-or-false} regexp-search @var{re} @var{str} @var{start} @var{end}
+Return a @objtype{regexp-match} object if @var{re} successfully matches
+a substring of @var{str} between @var{start} (inclusive) and @var{end}
+(exclusive), or @false{} if the match fails.  The @objtype{regexp-match}
+object will contain information needed to extract any submatches.
+@end deftypefn
+
+
+@deftypefn Function @var{obj} regexp-fold @var{re} @var{kons} @var{knil} @var{str}
+@deftypefnx Function @var{obj} regexp-fold @var{re} @var{kons} @var{knil} @var{str} @var{finish}
+@deftypefnx Function @var{obj} regexp-fold @var{re} @var{kons} @var{knil} @var{str} @var{finish} @var{start}
+@deftypefnx Function @var{obj} regexp-fold @var{re} @var{kons} @var{knil} @var{str} @var{finish} @var{start} @var{end}
+The fundamental regexp matching iterator.  Repeatedly search @var{str}
+for the regexp @var{re} so long as a match can be found.  On each
+successful match, applies:
+
+@example
+(@var{kons} @var{i} @var{regexp-match} @var{str} @var{acc})
+@end example
+
+@noindent
+where @var{i} is the index since the last match (beginning with
+@var{start}), @var{regexp-match} is the resulting match, and @var{acc}
+is the result of the previous @var{kons} application, beginning with
+@var{knil}.  When no more matches can be found, calls @var{finish} with
+the same arguments, except that @var{regexp-match} is @false{}.
+
+By default finish just returns acc.
+
+@lisp
+(regexp-fold 'word
+   (lambda (i m str acc)
+     (let ((s (regexp-match-submatch m 0)))
+      (cond ((assoc s acc)
+             => (lambda (x) (set-cdr! x (+ 1 (cdr x))) acc))
+            (else `((,s . 1) ,@@acc)))))
+   '()
+   "to be or not to be")
+@result{} (("not" . 1) ("or" . 1) ("be" . 2) ("to" . 2))
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{list} regexp-extract @var{re} @var{str}
+@deftypefnx Function @var{list} regexp-extract @var{re} @var{str} @var{start}
+@deftypefnx Function @var{list} regexp-extract @var{re} @var{str} @var{start} @var{end}
+Extract all the non--empty substrings of @var{str} which match @var{re}
+between @var{start} and @var{end} as a list of strings.
+
+@lisp
+(regexp-extract '(+ numeric) "192.168.0.1")
+@result{} ("192" "168" "0" "1")
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{list} regexp-split @var{re} @var{str}
+@deftypefnx Function @var{list} regexp-split @var{re} @var{str} @var{start}
+@deftypefnx Function @var{list} regexp-split @var{re} @var{str} @var{start} @var{end}
+Split @var{str} into a list of strings separated by matches of @var{re}.
+
+@lisp
+(regexp-split '(+ space) " fee fi  fo\tfum\n")
+@result{} ("fee" "fi" "fo" "fum")
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{list} regexp-partition @var{re} @var{str}
+@deftypefnx Function @var{list} regexp-partition @var{re} @var{str} @var{start} @var{end}
+@deftypefnx Function @var{list} regexp-partition @var{re} @var{str} @var{start}
+Partition @var{str} into a list of non--empty strings matching @var{re},
+interspersed with the unmatched portions of the string @var{str}.  The
+first and every odd element is an unmatched substring, which will be the
+empty string if @var{re} matches at the beginning of the string or end
+of the previous match.  The second and every even element will be a
+substring matching @var{re}.  If the final match ends at the end of the
+string, no trailing empty string will be included.  Thus, in the
+degenerate case where @var{str} is the empty string, the result is
+@samp{("")}.
+
+@lisp
+(regexp-partition '(+ (or space punct)) "")
+@result{} ("")
+
+(regexp-partition '(+ (or space punct)) "Hello, world!\n")
+@result{} ("Hello" ", " "world" "!\n")
+
+(regexp-partition '(+ (or space punct)) "¿Dónde Estás?")
+@result{} ("" "¿" "Dónde" " " "Estás" "?")
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{string} regexp-replace @var{re} @var{str} @var{subst}
+@deftypefnx Function @var{string} regexp-replace @var{re} @var{str} @var{subst} @var{start}
+@deftypefnx Function @var{string} regexp-replace @var{re} @var{str} @var{subst} @var{start} @var{end}
+@deftypefnx Function @var{string} regexp-replace @var{re} @var{str} @var{subst} @var{start} @var{end} @var{count}
+Return a new string replacing the @var{count}th match of @var{re} in
+@var{str} with the @var{subst}, where the zero--indexed @var{count}
+defaults to zero (i.e. the first match).  If there are not count
+matches, return the selected substring unmodified.
+
+@var{subst} can be a string, an integer or symbol indicating the
+contents of a numbered or named submatch of @var{re}, @samp{pre} for the
+substring to the left of the match, or @samp{post} for the substring to
+the right of the match.
+
+The optional parameters @var{start} and @var{end} restrict both the
+matching and the substitution, to the given indices, such that the
+result is equivalent to omitting these parameters and replacing on
+@code{(substring @var{str} @var{start} @var{end})}.  As a convenience, a
+value of @false{} for @var{end} is equivalent to @code{(string-length
+@var{str})}.
+
+@lisp
+(regexp-replace '(+ space) "one two three" "_")
+@result{} "one_two three"
+
+(regexp-replace '(+ space) "one two three" "_" 0 #f 0)
+@result{} "one_two three"
+
+(regexp-replace '(+ space) "one two three" "_" 0 #f 1)
+@result{} "one two_three"
+
+(regexp-replace '(+ space) "one two three" "_" 0 #f 2)
+@result{} "one two three"
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{string} regexp-replace-all @var{re} @var{str} @var{subst}
+@deftypefnx Function @var{string} regexp-replace-all @var{re} @var{str} @var{subst} @var{start}
+@deftypefnx Function @var{string} regexp-replace-all @var{re} @var{str} @var{subst} @var{start} @var{end}
+Equivalent to @func{regexp-replace}, but replaces all occurrences of
+@var{re} in @var{str}.
+
+@lisp
+(regexp-replace-all '(+ space) "one two three" "_")
+@result{} "one_two_three"
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{boolean} regexp-match? @var{obj}
+Return true if, and only if, @var{obj} is a successful match from
+@func{regexp-matches} or @func{regexp-search}.
+
+@lisp
+(regexp-match? (regexp-matches "x" "x"))  @result{} #t
+(regexp-match? (regexp-matches "x" "y"))  @result{} #f
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{integer} regexp-match-count @var{regexp-match}
+Return the number of submatches of @func{regexp-match}, regardless of
+whether they matched or not.  Do not include the implicit zero full
+match in the count.
+
+@lisp
+(regexp-match-count (regexp-matches "x" "x"))       @result{} 0
+(regexp-match-count (regexp-matches '($ "x") "x"))  @result{} 1
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{string-or-false} regexp-match-submatch @var{regexp-match} @var{field}
+Return the substring matched in @var{regexp-match} corresponding to
+@var{field}, either an integer or a symbol for a named submatch.  Index
+@samp{0} refers to the entire match, index @samp{1} to the first
+lexicographic submatch, and so on.  If there are multiple submatches
+with the same name, the first which matched is returned.  If passed an
+integer outside the range of matches, or a symbol which does not
+correspond to a named submatch of the pattern, an error is raised.  If
+the corresponding submatch did not match, return @false{}.
+
+The result of extracting a submatch after the original matched string
+has been mutated is unspecified.
+
+@lisp
+(regexp-match-submatch (regexp-search 'word "**foo**") 0)
+@result{} "foo"
+
+(regexp-match-submatch
+  (regexp-search '(: "*" ($ word) "*") "**foo**") 0)
+@result{} "*foo*"
+
+(regexp-match-submatch
+  (regexp-search '(: "*" ($ word) "*") "**foo**") 1)
+@result{} "foo"
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{integer-or-false} regexp-match-submatch-start @var{regexp-match} @var{field}
+Return the start index in @var{regexp-match} corresponding to
+@var{field}, as in @func{regexp-match-submatch}.
+
+@lisp
+(regexp-match-submatch-start
+  (regexp-search 'word "**foo**") 0)
+@result{} 2
+
+(regexp-match-submatch-start
+  (regexp-search '(: "*" ($ word) "*") "**foo**") 0)
+@result{} 1
+
+(regexp-match-submatch-start
+  (regexp-search '(: "*" ($ word) "*") "**foo**") 1)
+@result{} 2
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{integer-or-false} regexp-match-submatch-end @var{regexp-match} @var{field}
+Return the end index in @var{regexp-match} corresponding to @var{field},
+as in @func{regexp-match-submatch}.
+
+@lisp
+(regexp-match-submatch-end
+  (regexp-search 'word "**foo**") 0)
+@result{} 5
+
+(regexp-match-submatch-end
+  (regexp-search '(: "*" ($ word) "*") "**foo**") 0)
+@result{} 6
+
+(regexp-match-submatch-end
+  (regexp-search '(: "*" ($ word) "*") "**foo**") 1)
+@result{} 5
+@end lisp
+@end deftypefn
+
+
+@deftypefn Function @var{list} regexp-match->list @var{regexp-match}
+Return a list of all submatches in @var{regexp-match} as string or
+@false{}, beginning with the entire match @samp{0}.
+
+@lisp
+(regexp-match->list
+  (regexp-search '(: ($ word) (+ (or space punct)) ($ word))
+                 "cats & dogs"))
+@result{} ("cats & dogs" "cats" "dogs")
+@end lisp
+@end deftypefn
+
+@c page
+@node srfi regexps syntax
+@subsection SRE Syntax
+
+
+@menu
+* srfi regexps syntax summary::         Summary of SRE syntax.
+* srfi regexps syntax basic::           Basic patterns.
+* srfi regexps syntax repeating::       Repeating patterns.
+* srfi regexps syntax submatch::        Submatch patterns.
+* srfi regexps syntax charsets::        Character sets.
+* srfi regexps syntax named::           Named character sets.
+* srfi regexps syntax boundary::        Boundary assertions.
+* srfi regexps syntax nongreed::        Non-greedy patterns.
+* srfi regexps syntax look::            Look around patterns.
+@end menu
+
+@c page
+@node srfi regexps syntax summary
+@subsubsection Summary of SRE syntax
+
+
+The grammar for SREs is summarized below.  Note that an SRE is a
+first--class object consisting of nested lists of strings, chars,
+@objtype{char-set}s, symbols and numbers.  Where the syntax is described
+as @samp{(foo bar)}, this can be constructed equivalently as
+@code{(quote (foo bar))} or @code{(list 'foo 'bar)}, etc.  The following
+sections explain the semantics in greater detail.
+
+@smallexample
+<sre> ::=
+ | <string>                    ; A literal string match.
+ | <cset-sre>                  ; A character set match.
+ | (* <sre> ...)               ; 0 or more matches.
+ | (zero-or-more <sre> ...)
+ | (+ <sre> ...)               ; 1 or more matches.
+ | (one-or-more <sre> ...)
+ | (? <sre> ...)               ; 0 or 1 matches.
+ | (optional <sre> ...)
+ | (= <n> <sre> ...)           ; <n> matches.
+ | (exactly <n> <sre> ...)
+ | (>= <n> <sre> ...)          ; <n> or more matches.
+ | (at-least <n> <sre> ...)
+ | (** <n> <m> <sre> ...)      ; <n> to <m> matches.
+ | (repeated <n> <m> <sre> ...)
+
+ | (|  <sre> ...)              ; Alternation.
+ | (or <sre> ...)
+
+ | (:   <sre> ...)             ; Sequence.
+ | (seq <sre> ...)
+ | ($ <sre> ...)               ; Numbered submatch.
+ | (submatch <sre> ...)
+ | (-> <name> <sre> ...)               ;  Named submatch.  <name> is
+ | (submatch-named <name> <sre> ...)   ;  a symbol.
+
+ | (w/case   <sre> ...)        ; Introduce a case-sensitive context.
+ | (w/nocase <sre> ...)        ; Introduce a case-insensitive context.
+
+ | (w/unicode   <sre> ...)     ; Introduce a unicode context.
+ | (w/ascii <sre> ...)         ; Introduce an ascii context.
+
+ | (w/nocapture <sre> ...)     ; Ignore all enclosed submatches.
+
+ | bos                         ; Beginning of string.
+ | eos                         ; End of string.
+
+ | bol                         ; Beginning of line.
+ | eol                         ; End of line.
+
+ | bog                         ; Beginning of grapheme cluster.
+ | eog                         ; End of grapheme cluster.
+ | grapheme                    ; A single grapheme cluster.
+
+ | bow                         ; Beginning of word.
+ | eow                         ; End of word.
+ | nwb                         ; A non-word boundary.
+ | (word <sre> ...)            ; An SRE wrapped in word boundaries.
+ | (word+ <cset-sre> ...)      ; A single word restricted to a cset.
+ | word                        ; A single word.
+
+ | (?? <sre> ...)              ; A non-greedy pattern, 0 or 1 match.
+ | (non-greedy-optional <sre> ...)
+ | (*? <sre> ...)              ; Non-greedy 0 or more matches.
+ | (non-greedy-zero-or-more <sre> ...)
+ | (**? <m> <n> <sre> ...)     ; Non-greedy <m> to <n> matches.
+ | (non-greedy-repeated <sre> ...)
+ | (look-ahead <sre> ...)      ; Zero-width look-ahead assertion.
+ | (look-behind <sre> ...)     ; Zero-width look-behind assertion.
+ | (neg-look-ahead <sre> ...)  ; Zero-width negative look-ahead assertion.
+ | (neg-look-behind <sre> ...) ; Zero-width negative look-behind assertion.
+
+ | (backref <n-or-name>)       ; Match a previous submatch.
+@end smallexample
+
+The grammar for @samp{cset-sre} is as follows.
+
+@smallexample
+<cset-sre> ::=
+ | <char>                      ; literal char
+ | "<char>"                    ; string of one char
+ | <char-set>                  ; embedded SRFI 14 char set
+ | (<string>)                  ; literal char set
+ | (char-set <string>)
+ | (/ <range-spec> ...)        ; ranges
+ | (char-range <range-spec> ...)
+ | (or <cset-sre> ...)         ; union
+ | (and <cset-sre> ...)        ; intersection
+ | (- <cset-sre> ...)          ; difference
+ | (- <difference> ...)
+ | (~ <cset-sre> ...)          ; complement of union
+ | (complement <cset-sre> ...)
+ | (w/case <cset-sre> ...)     ; case and unicode toggling
+ | (w/nocase <cset-sre> ...)
+ | (w/ascii <cset-sre> ...)
+ | (w/unicode <cset-sre> ...)
+ | any | nonl | ascii | lower-case | lower
+ | upper-case | upper | title-case | title
+ | alphabetic | alpha | alphanumeric | alphanum | alnum
+ | numeric | num | punctuation | punct | symbol
+ | graphic | graph | whitespace | white | space
+ | printing | print | control | cntrl | hex-digit | xdigit
+
+<range-spec> ::= <string> | <char>
+@end smallexample
+
+@c page
+@node srfi regexps syntax basic
+@subsubsection Basic patterns
+
+
+@table @code
+@item <string>
+A literal string.
+
+@lisp
+(regexp-search "needle" "hayneedlehay") @result{} #<regexp-match>
+(regexp-search "needle" "haynEEdlehay") @result{} #f
+@end lisp
+
+@item (seq sre ...)
+@itemx (: sre ...)
+Sequencing.  Matches if each of sre matches adjacently in order.
+
+@lisp
+(regexp-search '(: "one" space "two" space "three")
+               "one two three")
+ @result{} #<regexp-match>
+@end lisp
+
+@item (or sre ...)
+@itemx (|\|| sre ...)
+Alternation.  Matches if any of sre match.
+
+@lisp
+(regexp-search '(or "eeney" "meeney" "miney") "meeney")
+@result{} #<regexp-match>
+(regexp-search '(or "eeney" "meeney" "miney") "moe")
+@result{} #f
+@end lisp
+
+@item (w/nocase sre ...)
+Enclosed sres are case--insensitive.  In a Unicode context character and
+string literals match with the default simple Unicode case--insensitive
+matching.  Implementations may, but are not required to, handle variable
+length case conversions, such as @samp{#\x00DF} matching the two
+characters @samp{SS}.
+
+Character sets match if any character in the set matches
+case--insensitively to the input.  Conceptually each @var{cset-sre} is
+expanded to contain all case variants for all of its characters.  In a
+compound @var{cset-sre} the expansion is applied at the terminals
+consisting of characters, strings, embedded @ansrfi{14}
+@objtype{char-set}s, and named character sets.  For simple unions this
+would be equivalent to computing the full union first and then expanding
+case variants, but the semantics can differ when differences and
+intersections are applied.  For example:
+
+@example
+(w/nocase (~ ("Aab")))
+@end example
+
+@noindent
+is equivalent to:
+
+@example
+(~ ("AaBb"))
+@end example
+
+@noindent
+for which @samp{B} is clearly not a member.  However if you were to
+compute @samp{(~ ("Aab"))} first then you would have a
+@objtype{char-set} containing @samp{B}, and after expanding case
+variants both @samp{B} and @samp{b} would be members.
+
+In an @ascii{} context only the 52 @ascii{} letters @samp{(/ "a-zA-Z")}
+match case--insensitively to each other.
+
+In a Unicode context the only named @var{cset-sre} which are affected by
+@samp{w/nocase} are upper and lower.  Note that the case insensitive
+versions of these are not equivalent to letter as there are characters
+with the letter property but no case.
+
+@lisp
+(regexp-search "needle" "haynEEdlehay")
+@result{} #f
+(regexp-search '(w/nocase "needle") "haynEEdlehay")
+@result{} #<regexp-match>
+
+(regexp-search '(~ ("Aab")) "B") @result{} #<regexp-match>
+(regexp-search '(~ ("Aab")) "b") @result{} #f
+(regexp-search '(w/nocase (~ ("Aab"))) "B") @result{} #<regexp-match>
+(regexp-search '(w/nocase (~ ("Aab"))) "b") @result{} #<regexp-match>
+(regexp-search '(~ (w/nocase ("Aab"))) "B") @result{} #<regexp-match>
+(regexp-search '(~ (w/nocase ("Aab"))) "b") @result{} #<regexp-match>
+@end lisp
+
+@item (w/case sre ...)
+Enclosed sres are case--sensitive.  This is the default, and overrides
+any enclosing @samp{w/nocase} setting.
+
+@lisp
+(regexp-search '(w/nocase "SMALL" (w/case "BIG"))
+               "smallBIGsmall")
+@result{} #<regexp-match>
+
+(regexp-search '(w/nocase (~ (w/case ("Aab")))) "b")
+@result{} #f
+@end lisp
+
+@item (w/ascii sre ...)
+Enclosed sres are interpreted in an @ascii{} context.  In practice many
+regular expressions are used for simple parsing and only @ascii{}
+characters are relevant.  Switching to @ascii{} mode can improve
+performance in some implementations.
+
+@lisp
+(regexp-search '(w/ascii bos (* letter) eos) "English")
+@result{} #<regexp-match>
+@end lisp
+
+@item (w/unicode sre ...)
+Enclosed sres are interpreted in a Unicode context; character sets with
+both an @ascii{} and Unicode definition take the latter.  Has no effect
+if the @samp{regexp-unicode} feature is not provided.  This is the
+default.
+
+@lisp
+(regexp-search '(w/unicode bos (* letter) eos) "English")
+@result{} #<regexp-match>
+@end lisp
+
+
+@item (w/nocapture sre ...)
+Disables capturing for all submatches (@samp{$}, @samp{submatch},
+@samp{->} and @samp{submatch-named}) in the enclosed sres.  The
+resulting SRE matches exactly the same strings, but without any
+associated submatch info.  Useful for utility SREs which you want to
+incorporate without affecting your submatch positions.
+
+@lisp
+(let ((number '($ (+ digit))))
+  (cdr
+   (regexp-match->list
+    (regexp-search `(: ,number "-" ,number "-" ,number)
+                   "555-867-5309")))
+  @result{} ("555" "867" "5309")
+
+  (cdr
+   (regexp-match->list
+    (regexp-search `(: ,number "-" (w/nocapture ,number) "-" ,number)
+                   "555-867-5309"))))
+  @result{} ("555" "5309")
+@end lisp
+@end table
+
+@c page
+@node srfi regexps syntax repeating
+@subsubsection Repeating patterns
+
+
+@table @code
+@item (optional sre ...)
+@itemx (? sre ...)
+An optional pattern; matches 1 or 0 times.
+
+@lisp
+(regexp-search '(: "match" (? "es") "!") "matches!")
+@result{} #<regexp-match>
+
+(regexp-search '(: "match" (? "es") "!") "match!")
+@result{} #<regexp-match>
+
+(regexp-search '(: "match" (? "es") "!") "matche!")
+@result{} #f
+@end lisp
+
+@item (zero-or-more sre ...)
+@itemx (* sre ...)
+Kleene star; matches 0 or more times.
+
+@lisp
+(regexp-search '(: "<" (* (~ #\>)) ">") "<html>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (* (~ #\>)) ">") "<>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (* (~ #\>)) ">") "<html")
+@result{} #f
+@end lisp
+
+@item (one-or-more sre ...)
+@itemx (+ sre ...)
+1 or more matches.  Like @samp{*} but requires at least a single match.
+
+@lisp
+(regexp-search '(: "<" (+ (~ #\>)) ">") "<html>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (+ (~ #\>)) ">") "<a>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (+ (~ #\>)) ">") "<>")
+@result{} #f
+@end lisp
+
+@item (at-least n sre ...)
+@itemx (>= n sre ...)
+More generally, @var{n} or more matches.
+
+@lisp
+(regexp-search '(: "<" (>= 3 (~ #\>)) ">") "<table>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (>= 3 (~ #\>)) ">") "<pre>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (>= 3 (~ #\>)) ">") "<tr>")
+@result{} #f
+@end lisp
+
+@item (exactly n sre ...)
+@itemx (= n sre ...)
+Exactly @var{n} matches.
+
+@lisp
+(regexp-search '(: "<" (= 4 (~ #\>)) ">") "<html>")
+@result{} #<regexp-match>
+
+(regexp-search '(: "<" (= 4 (~ #\>)) ">") "<table>")
+@result{} #f
+@end lisp
+
+@item (repeated from to sre ...)
+@itemx (** from to sre ...)
+The most general form, from @var{n} to @var{m} matches, inclusive.
+
+@lisp
+(regexp-search '(: (= 3 (** 1 3 numeric) ".") (** 1 3 numeric))
+               "192.168.1.10")
+@result{} #<regexp-match>
+
+(regexp-search '(: (= 3 (** 1 3 numeric) ".") (** 1 3 numeric))
+               "192.0168.1.10")
+@result{} #f
+@end lisp
+@end table
+
+@c page
+@node srfi regexps syntax submatch
+@subsubsection Submatch Patterns
+
+
+@table @code
+@item (submatch sre ...)
+@itemx ($ sre ...)
+A numbered submatch.  The contents matching the pattern will be
+available in the resulting @objtype{regexp-match}.
+
+@item (submatch-named name sre ...)
+@itemx (-> name sre ...)
+A named submatch.  Behaves just like @samp{submatch}, but the field may
+also be referred to by name.
+
+@item (backref n-or-name)
+Optional: match a previously matched submatch.  The feature
+@samp{regexp-backrefs} will be provided if this pattern is supported.
+Back--references are expensive, and can trivially be shown to be
+NP-hard, so one should avoid their use even in implementations which
+support them.
+@end table
+
+@c page
+@node srfi regexps syntax charsets
+@subsubsection Character sets
+
+
+A character set pattern matches a single character.
+
+@table @code
+@item <char>
+A singleton char set.
+
+@lisp
+(regexp-matches '(* #\-) "---")  @result{} #<regexp-match>
+(regexp-matches '(* #\-) "-_-")  @result{} #f
+@end lisp
+
+@item "<char>"
+A singleton char set written as a string of length one rather than a
+character.  Equivalent to its interpretation as a literal string match,
+but included to clarify it can be composed in @var{cset-sre}s.
+
+@item <char-set>
+A @ansrfi{14} character set, which matches any character in the set.
+Note that currently there is no portable written representation of
+@ansrfi{14} character sets, which means that this pattern is typically
+generated programmatically, such as with a quasiquoted expression.
+
+@lisp
+(regexp-partition `(+ ,char-set:vowels) "vowels")
+@result{} ("v" "o" "w" "e" "ls")
+@end lisp
+
+@quotation
+@strong{RATIONALE} Many useful character sets are likely to be available
+as @ansrfi{14} @objtype{char-set}s, so it is desirable to reuse them in
+regular expressions.  Since many Unicode character sets are extremely
+large, converting back and forth between an internal and external
+representation can be expensive, so the option of direct embedding is
+necessary.  When a readable external representation is needed,
+@func{char-set->sre} can be used.
+@end quotation
+
+@item (char-set <string>)
+@itemx (<string>)
+The set of chars as formed by @ansrfi{14}:
+
+@lisp
+(string->char-set <string>)
+@end lisp
+
+Note that @objtype{char-set}s contain code points, not grapheme
+clusters, so any combining characters in @samp{<string>} will be
+inserted separately from any preceding base characters by
+@func{string->char-set}.
+
+@lisp
+(regexp-matches '(* ("aeiou")) "oui")       @result{} #<regexp-match>
+(regexp-matches '(* ("aeiou")) "ouais")     @result{} #f
+(regexp-matches '(* ("e\x0301")) "e\x0301") @result{} #<regexp-match>
+(regexp-matches '("e\x0301") "e\x0301")     @result{} #f
+(regexp-matches '("e\x0301") "e")           @result{} #<regexp-match>
+(regexp-matches '("e\x0301") "\x0301")      @result{} #<regexp-match>
+(regexp-matches '("e\x0301") "\x00E9")      @result{} #f
+@end lisp
+
+@item (char-range <range-spec> ...)
+@itemx (/ <range-spec> ...)
+Ranged char set.  The @samp{<range-spec>} is a list of strings and
+characters.  These are flattened and grouped into pairs of characters,
+and all ranges formed by the pairs are included in the char set.
+
+@lisp
+(regexp-matches '(* (/ "AZ09")) "R2D2")  @result{} #<regexp-match>
+(regexp-matches '(* (/ "AZ09")) "C-3PO") @result{} #f
+@end lisp
+
+@item (or <cset-sre> ...)
+@itemx (|\|| <cset-sre> ...)
+Char set union.  The single vertical bar form is provided for
+consistency and compatibility with SCSH, although it needs to be escaped
+in @rnrs{7}.
+
+@itemx (complement <cset-sre> ...)
+@itemx (~ <cset-sre> ...)
+Char set complement (i.e. @samp{[^...]} in PCRE notation).  @samp{(~ x)}
+is equivalent to @samp{(- any x)}, thus in an @ascii{} context the
+complement is always @ascii{}.
+
+@item (difference <cset-sre> ...)
+@itemx (- <cset-sre> ...)
+Char set difference.
+
+@lisp
+(regexp-matches '(* (- (/ "az") ("aeiou"))) "xyzzy")
+@result{} #<regexp-match>
+
+(regexp-matches '(* (- (/ "az") ("aeiou"))) "vowels")
+@result{} #f
+@end lisp
+
+@item (and <cset-sre> ...)
+@itemx (& <cset-sre> ...)
+Char set intersection.
+
+@lisp
+(regexp-matches '(* (& (/ "az") (~ ("aeiou")))) "xyzzy")
+@result{} #<regexp-match>
+
+(regexp-matches '(* (& (/ "az") (~ ("aeiou")))) "vowels")
+ @result{} #f
+@end lisp
+@end table
+
+@c page
+@node srfi regexps syntax named
+@subsubsection Named character sets
+
+
+@table @code
+@item any
+Match any character.  Equivalent to @samp{ascii} in an @ascii{} context.
+
+@item nonl
+Match any character other than @samp{#\return} or @samp{#\newline}.
+
+@item ascii
+Match any @ascii{} character @math{[0, 127]}.
+
+@item lower-case
+@itemx lower
+Matches any character for which @func{char-lower-case?} returns true.
+In a Unicode context this corresponds to the @samp{Lowercase} (@samp{Ll}
++ @samp{Other_Lowercase}) property.  In an @ascii{} context corresponds
+to @samp{(/ "az")}.
+
+@item upper-case
+@itemx upper
+Matches any character for which @func{char-upper-case?} returns true.
+In a Unicode context this corresponds to the @samp{Uppercase} (@samp{Lu}
++ @samp{Other_Uppercase}) property.  In an @ascii{} context corresponds
+to @samp{(/ "AZ")}.
+
+@item title-case
+@itemx title
+Matches any character with the Unicode @samp{Titlecase} (@samp{Lt})
+property.  This property only exists for the sake of ligature
+characters, of which only @math{31} exist at time of writing.  In an
+@ascii{} context this is empty.
+
+@item alphabetic
+@itemx alpha
+Matches any character for which @func{char-alphabetic?} returns true.
+In a Unicode context this corresponds to the @samp{Alphabetic} (@samp{L}
++ @samp{Nl} + @samp{Other_Alphabetic}) property.  In an @ascii{} context
+corresponds to @samp{(w/nocase (/ "az"))}.
+
+@item numeric
+@item num
+Matches any character for which @func{char-numeric?} returns true.  In a
+Unicode context this corresponds to the @samp{Numeric_Digit} (@samp{Nd})
+property.  In an @ascii{} context corresponds to @samp{(/ "09")}.
+
+@item alphanumeric
+@itemx alphanum
+@itemx alnum
+Matches any character which is either a letter or number.  Equivalent
+to @samp{(or alphabetic numeric)}.
+
+@item punctuation
+@itemx punct
+Matches any punctuation character.  In a Unicode context this
+corresponds to the @samp{Punctuation} (@samp{P}) property.  In an
+@ascii{} context this corresponds to
+@samp{"!\"#%&'()*,-./:;?@@[\]_@{@}"}.
+
+@item symbol
+Matches any symbol character.  In a Unicode context this corresponds to
+the @samp{Symbol} property (@samp{Sm}, @samp{Sc}, @samp{Sk}, or
+@samp{So}).  In an @ascii{} context this corresponds to
+@samp{"$+<=>^`|~"}.
+
+@item graphic
+@itemx graph
+Matches any graphic character.  Equivalent to @samp{(or alphanumeric
+punctuation symbol)}.
+
+@item whitespace
+@itemx white
+@itemx space
+Matches any whitespace character.  In a Unicode context this corresponds
+to the @samp{Separator} property (@samp{Zs}, @samp{Zl} or @samp{Zp}).
+In an @ascii{} context this corresponds to space, tab, line feed, form
+feed, and carriage return.
+
+@item printing
+@itemx print
+Matches any printing character.  Equivalent to @samp{(or graphic
+whitespace)}.
+
+@item control
+@itemx cntrl
+Matches any control or other character.  In a Unicode context this
+corresponds to the @samp{Other} property (@samp{Cc}, @samp{Cf},
+@samp{Co}, @samp{Cs} or @samp{Cn}).  In an @ascii{} context this
+corresponds to:
+
+@example
+`(/ ,(integer->char 0) ,(integer-char 31))
+@end example
+
+@item hex-digit
+@itemx xdigit
+Matches any valid digit in hexadecimal notation.  Always
+@ascii{}--only.  Equivalent to:
+
+@example
+(w/ascii (w/nocase (or numeric "abcdef")))
+@end example
+@end table
+
+@c page
+@node srfi regexps syntax boundary
+@subsubsection Boundary assertions
+
+
+@table @code
+@item bos
+@itemx eos
+Matches at the beginning/end of string without consuming any characters
+(a zero--width assertion).  If the search was initiated with
+@var{start}/@var{end} parameters, these are considered the end points,
+rather than the full string.
+
+@item bol
+@itemx eol
+Matches at the beginning/end of a line without consuming any characters
+(a zero--width assertion).  A line is a possibly empty sequence of
+characters followed by an end of line sequence as understood by the
+@rnrs{7} @func{read-line} procedure, specifically any of a linefeed
+character, carriage return character, or a carriage return followed by a
+linefeed character.  The string is assumed to contain end of line
+sequences before the start and after the end of the string, even if the
+search was made on a substring and the actual surrounding characters
+differ.
+
+@item bow
+@itemx eow
+Matches at the beginning/end of a word without consuming any characters
+(a zero--width assertion).  A word is a contiguous sequence of
+characters that are either alphanumeric or the underscore character,
+i.e. (or alphanumeric @samp{_}), with the definition of alphanumeric
+depending on the Unicode or @ascii{} context.  The string is assumed to
+contain non--word characters immediately before the start and after the
+end, even if the search was made on a substring and word constituent
+characters appear immediately before the beginning or after the end.
+
+@lisp
+(regexp-search '(: bow "foo") "foo")    @result{} #<regexp-match>
+(regexp-search '(: bow "foo") "")       @result{} #<regexp-match>
+(regexp-search '(: bow "foo") "snafoo") @result{} #f
+(regexp-search '(: "foo" eow) "foo")    @result{} #<regexp-match>
+(regexp-search '(: "foo" eow) "foo!")   @result{} #<regexp-match>
+(regexp-search '(: "foo" eow) "foobar") @result{} #f
+@end lisp
+
+@item nwb
+Matches a non--word--boundary (i.e. @samp{\B} in PCRE).  Equivalent to
+@samp{(neg-look-ahead (or bow eow))}.
+
+@item (word sre ...)
+Anchors a sequence to word boundaries.  Equivalent to @samp{(: bow sre
+... eow)}.
+
+@item (word+ cset-sre ...)
+Matches a single word composed of characters in the intersection of the
+given @var{cset-sre} and the word constituent characters.  Equivalent
+to:
+
+@example
+(word (+ (and (or alphanumeric "_") (or cset-sre ...))))
+@end example
+
+@item word
+A shorthand for @samp{(word+ any)}.
+
+@item bog
+@itemx eog
+Matches at the beginning/end of a single extended grapheme cluster
+without consuming any characters (a zero--width assertion).  Grapheme
+cluster boundaries are defined in Unicode TR29.  The string is assumed
+to contain non--combining code--points immediately before the start and
+after the end.  These always succeed in an @ascii{} context.
+
+@item grapheme
+Matches a single grapheme cluster (i.e. @samp{\X} in PCRE).  This is
+what the end--user typically thinks of as a single character, comprised
+of a base non--combining code--point followed by zero or more combining
+marks.  In an @ascii{} context this is equivalent to any.
+
+Assuming @code{char-set:mark} contains all characters with the
+@samp{Extend} or @samp{SpacingMark} properties defined in TR29, and
+@code{char-set:control}, @code{char-set:regional-indicator} and
+@code{char-set:hangul-*} are defined similarly, then the following SRE
+can be used with @func{regexp-extract} to define grapheme:
+
+@lisp
+`(or (: (* ,char-set:hangul-l) (+ ,char-set:hangul-v)
+        (* ,char-set:hangul-t))
+     (: (* ,char-set:hangul-l) ,char-set:hangul-v
+        (* ,char-set:hangul-v) (* ,char-set:hangul-t))
+     (: (* ,char-set:hangul-l) ,char-set:hangul-lvt
+        (* ,char-set:hangul-t))
+     (+ ,char-set:hangul-l)
+     (+ ,char-set:hangul-t)
+     (+ ,char-set:regional-indicator)
+     (: "\r\n")
+     (: (~ control ("\r\n"))
+        (+ ,char-set:mark))
+     control)
+@end lisp
+@end table
+
+@c page
+@node srfi regexps syntax nongreed
+@subsubsection Non--greedy patterns
+
+
+The following patterns are only supported if the feature
+@samp{regexp-non-greedy} is provided.
+
+@table @code
+@item (non-greedy-optional sre ...)
+@itemx (?? sre ...)
+Non--greedy pattern, matches 0 or 1 times, preferring the shorter match.
+
+@item (non-greedy-zero-or-more< sre ...)
+@itemx (*? sre ...)
+Non--greedy Kleene star, matches 0 or more times, preferring the shorter
+match.
+
+@item (non-greedy-repeated m n sre ...)
+@itemx (**? m n sre ...)
+Non--greedy Kleene star, matches @var{m} to @var{n} times, preferring
+the shorter match.
+@end table
+
+@c page
+@node srfi regexps syntax look
+@subsubsection Look around patterns
+
+
+The following patterns are only supported if the feature
+@samp{regexp-look-around} is provided.
+
+@table @code
+@item (look-ahead sre ...)
+Zero--width look--ahead assertion.  Asserts the sequence matches from
+the current position, without advancing the position.
+
+@lisp
+(regexp-matches '(: "regular" (look-ahead " expression")
+                    " expression")
+                "regular expression")
+@result{} #<regexp-match>
+
+(regexp-matches '(: "regular" (look-ahead " ") "expression")
+                    "regular expression")
+@result{} #f
+@end lisp
+
+@item (look-behind sre ...)
+Zero--width look--behind assertion.  Asserts the sequence matches behind
+the current position, without advancing the position.  It is an error if
+the sequence does not have a fixed length.
+
+@item (neg-look-ahead sre ...)
+Zero--width negative look--ahead assertion.
+
+@item (neg-look-behind sre ...)
+Zero--width negative look--behind assertion.
+@end table
+
+@c page
+@node srfi regexps references
+@subsection References
+
+
+[R7RS] Alex Shinn, John Cowan, Arthur Gleckler, ``Revised7 Report on the
+Algorithmic Language Scheme''.
+@url{http:/@//@/trac.sacrideo.us/@/wg/@/raw-attachment/@/wiki/@/WikiStart/@/r7rs.pdf}.
+
+[SCSH] Olin Shivers, ``A Scheme Shell''.  Massachusetts Institute of
+Technology Cambridge, MA, USA, 1994.
+@url{http:/@//@/www.scsh.net/@/docu/@/scsh-paper/@/scsh-paper.html}.
+
+[IrRegex] Alex Shinn, ``IrRegex - IrRegular Expressions''.
+@url{http:/@//@/synthcode.com/@/scheme/@/irregex/@/}.
+
+[TR18] Mark Davis, Andy Heninger, ``UTR #18: Unicode Regular
+Expressions''.  @url{http:/@//@/www.unicode.org/@/reports/@/tr18/@/}.
+
+[UAX29] Mark Davis, ``UAX #29: Unicode Text Segmentation''.
+@url{http:/@//@/www.unicode.org/@/reports/@/tr29/@/}.
+
+[SRFI 0] Marc Feeley, ``Feature--based conditional expansion
+construct''.  @url{http:/@//@/srfi.schemers.org/@/srfi-0/@/srfi-0.html}.
+
+[SRFI 14] Olin Shivers, ``Character--set Library''.
+@url{http:/@//@/srfi.schemers.org/@/srfi-14/@/srfi-14.html}.
+
+[ImplementingRegexps] Russ Cox, ``Implementing Regular Expressions''.
+@url{http:/@//@/swtch.com/@/~rsc/@/regexp/@/}.
+
+[Tcl] Russ Cox, Henry Spencer's Tcl Regex Library.
+@url{http:/@//@/compilers.iecc.com/@/comparch/@/article/@/07-10-026}
+
+[Gauche] Shiro Kawai, Gauche Scheme - Regular Expressions.
+@url{http:/@//@/practical-scheme.net/@/gauche/@/man/@/?p=Regular+expressions}.
+
+[Perl6] Damian Conway, Perl6 Exegesis 5 - Regular Expressions.
+@url{http:/@//@/www.perl.com/@/pub/@/a/@/2002/@/08/@/22/@/exegesis5.html}.
+
+[PCRE] Philip Hazel, PCRE - Perl Compatible Regular Expressions.
+@url{http:/@//@/www.pcre.org/@/}
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs.texi"
+@c End:
