@@ -25,6 +25,7 @@ for more details.
 * srfi regexps compatibility::  Compatibility levels and features.
 * srfi regexps procs::          Library procedures and syntax.
 * srfi regexps syntax::         SRE syntax.
+* srfi regexps vicare::         About the @value{PRJNAME} implementation.
 * srfi regexps references::     References.
 @end menu
 
@@ -699,6 +700,11 @@ Alternation.  Matches if any of sre match.
 @result{} #f
 @end lisp
 
+@quotation
+@strong{NOTE} The syntax @samp{|\||} is @strong{not} supported by
+@value{PRJNAME}.
+@end quotation
+
 @item (w/nocase sre ...)
 Enclosed sres are case--insensitive.  In a Unicode context character and
 string literals match with the default simple Unicode case--insensitive
@@ -1013,6 +1019,11 @@ Char set union.  The single vertical bar form is provided for
 consistency and compatibility with SCSH, although it needs to be escaped
 in @rnrs{7}.
 
+@quotation
+@strong{NOTE} The syntax @samp{|\||} is @strong{not} supported by
+@value{PRJNAME}.
+@end quotation
+
 @itemx (complement <cset-sre> ...)
 @itemx (~ <cset-sre> ...)
 Char set complement (i.e. @samp{[^...]} in PCRE notation).  @samp{(~ x)}
@@ -1312,6 +1323,29 @@ Zero--width negative look--ahead assertion.
 @item (neg-look-behind sre ...)
 Zero--width negative look--behind assertion.
 @end table
+
+@c page
+@node srfi regexps vicare
+@subsection About the @value{PRJNAME} implementation
+
+
+The @ansrfi{115} implementation distributed with @value{PRJNAME} is
+derived from the library @library{chibi regexp} distributed with
+@url{https://github.com/ashinn/chibi-scheme, Chibi Scheme}, by Alex
+Shinn.  It has the following limitations:
+
+@itemize
+@item
+The syntax @samp{|\||} is @strong{not} supported.  So @samp{(|\|| sre
+...)} cannot be used as alias for @samp{(or sre ...)}; @samp{(|\||
+cset-sre ...)} cannot be used as alias for @samp{(or cset-sre ...)}.
+
+@item
+Non--greedy patterns are not implemented.
+
+@item
+Look--around patterns are not implemented.
+@end itemize
 
 @c page
 @node srfi regexps references

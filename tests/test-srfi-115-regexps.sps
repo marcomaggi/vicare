@@ -74,7 +74,8 @@
   (check-for-false
    (regexp-search '(~ ("Aab")) "b"))
 
-  ;;FIXME
+  ;;FIXME These  are described in  the SRFI document as  returning a match,  but both
+  ;;this port and the original Chibi return false.
   ;;
   ;; (check-for-regexp-match
   ;;  (regexp-search '(w/nocase (~ ("Aab"))) "B"))
@@ -84,6 +85,27 @@
   ;;  (regexp-search '(~ (w/nocase ("Aab"))) "B"))
   ;; (check-for-regexp-match
   ;;  (regexp-search '(~ (w/nocase ("Aab"))) "b"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "abc"))
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "Abc"))
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "aBc"))
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "abC"))
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "ABc"))
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "aBC"))
+  (check-for-regexp-match
+   (regexp-search '(w/nocase "abc") "ABC"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/nocase ("[abc]")) "B"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/nocase ("[ABC]")) "b"))
 
 ;;; --------------------------------------------------------------------
 
@@ -103,10 +125,30 @@
   ;;  (regexp-search '(w/ascii bos (* "[a-zA-Z]") eos) "English"))
 
   (check-for-regexp-match
+   (regexp-search '(w/ascii bos (* "[a-zA-Z]")) "English"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/ascii (* "[a-zA-Z]") eos) "English"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/ascii bos (* "[a-zA-Z]") eos) "English"))
+
+  (check-for-regexp-match
    (regexp-search '(* "[a-zA-Z]") "English"))
 
 ;;; --------------------------------------------------------------------
 
+  (check-for-regexp-match
+   (regexp-search '(w/unicode bos (* "[a-zA-Z]")) "English"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/unicode (* "[a-zA-Z]") eos) "English"))
+
+  (check-for-regexp-match
+   (regexp-search '(w/unicode bos (* "[a-zA-Z]") eos) "English"))
+
+  ;;FIXME The pattern "letter" is unknown.
+  ;;
   ;; (check-for-regexp-match
   ;;  (regexp-search '(w/unicode bos (* letter) eos) "English"))
 
@@ -125,7 +167,6 @@
 	  (regexp-search `(: ,number "-" (w/nocapture ,number) "-" ,number)
 			 "555-867-5309")))
       => '("555" "5309")))
-
 
   #t)
 
@@ -223,7 +264,7 @@
   (check-for-false
    (regexp-matches '(* ("aeiou")) "ouais"))
 
-  ;;FIXME
+  ;;FIXME These work in Chibi but fail here.
   ;;
   ;; (check-for-regexp-match
   ;;  (regexp-matches '(* ("e\x0301;")) "e\x0301;"))
@@ -275,10 +316,8 @@
   (check-for-regexp-match
    (regexp-search '(: bow "foo") "foobar"))
 
-  ;;FIXME This is wrong in the SRFI document.
-  ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-search '(: bow "foo") ""))
+  (check-for-false
+   (regexp-search '(: bow "foo") ""))
 
   (check-for-false
    (regexp-search '(: bow "foo") "snafoo"))
