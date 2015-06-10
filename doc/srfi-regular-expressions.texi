@@ -685,7 +685,7 @@ Sequencing.  Matches if each of sre matches adjacently in order.
 @lisp
 (regexp-search '(: "one" space "two" space "three")
                "one two three")
- @result{} #<regexp-match>
+@result{} #<regexp-match>
 @end lisp
 
 @item (or sre ...)
