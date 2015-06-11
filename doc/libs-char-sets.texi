@@ -121,8 +121,16 @@ ranges @code{[0, #xD800)} and @code{(#xDFFF, #x10FFFF]}.
 
 
 @defun char-set? @var{obj}
-Return @true{} if @var{obj} is a valid @code{char-set}, else return
-@false{}.
+Return @true{} if @var{obj} is an object of type @objtype{char-set},
+else return @false{}.
+@end defun
+
+
+@defun char-set?/internals @var{obj}
+Return @true{} if @var{obj} is an object of type @objtype{char-set} and
+its internal representation is valid; otherwise return @false{}.  This
+function is more time--consuming than @func{char-set?}, and it is meant
+for debugging purposes.
 @end defun
 
 

@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -122,7 +122,21 @@
       (char-set? 123)
     => #f)
 
-  )
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set?/internals (char-set))
+    => #t)
+
+  (check
+      (char-set?/internals (char-set '(#\A . #\C)))
+    => #t)
+
+  (check
+      (char-set?/internals 123)
+    => #f)
+
+  #f)
 
 
 (parameterise ((check-test-name	'inspection))
@@ -1790,6 +1804,7 @@
 
 ;;;; done
 
+(collect 4)
 (check-report)
 
 ;;; end of file
