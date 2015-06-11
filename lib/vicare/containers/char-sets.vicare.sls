@@ -1297,28 +1297,25 @@
   (fields (immutable cs)
 		;An instance of CHAR-SET.
 	  (immutable ranges)
-		;Null or  the list of  ranges still to be  visited.  The
-		;first element is  the range we are  visiting.  When all
-		;the ranges have been visited,  or the char-set is empty
-		;to begin with: this field is set to null.
+		;Null or the  list of ranges still to be  visited.  The first element
+		;is  the range  we  are  visiting.  When  all  the  ranges have  been
+		;visited, or the  char-set is empty to begin with:  this field is set
+		;to null.
 	  (immutable next char-set-ref)
-		;False  or the  next character  to return.   It must  be
-		;inside  the first  range from  the list  in the  RANGES
-		;field.   When this  field is  set to  false, the  field
-		;RANGES is set to null.
+		;False or the next character to  return.  It must be inside the first
+		;range from the list in the RANGES  field.  When this field is set to
+		;false, the field RANGES is set to null.
 	  ))
 
-(define (char-set-cursor cs)
-  (assert (char-set? cs))
+(define* (char-set-cursor {cs char-set?})
   ;;RANGES is null or a list of ranges.
   (let ((ranges ($:char-set-domain cs)))
     (make-cursor cs ranges (if (null? ranges)
 				#f
 			      (caar ranges)))))
 
-(define (char-set-cursor-next cursor)
-  (assert (cursor? cursor))
-  (let ((cur (char-set-ref cursor)))
+(define* (char-set-cursor-next {cursor cursor?})
+  (let ((cur ($cursor-next cursor)))
     (and cur
 	 (let ((next (integer->char (+ 1 (char->integer cur)))))
 	   (let loop ((ranges (cursor-ranges cursor)))
@@ -1329,8 +1326,8 @@
 		     (make-cursor (cursor-cs cursor) '() #f)
 		   (make-cursor (cursor-cs cursor) ranges (caar ranges))))))))))
 
-(define (end-of-char-set? cursor)
-  (not (char-set-ref cursor)))
+(define* (end-of-char-set? {cursor cursor?})
+  (not ($cursor-next cursor)))
 
 
 ;;;; basic predefined char sets
