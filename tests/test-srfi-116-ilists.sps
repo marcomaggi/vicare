@@ -25,7 +25,9 @@
 
 #!r6rs
 (import (vicare)
+  (srfi :114)
   (srfi :116)
+  (srfi :116 comparators)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -441,6 +443,389 @@
 ) ; end ilists/conversion
 
 ) ; end ilists
+
+
+(parametrise ((check-test-name	'comparator-predicates))
+
+  (check-for-true (comparator? ipair-comparator))
+  (check-for-true (comparator? ilist-comparator))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true (comparator-comparison-procedure? ipair-comparator))
+  (check-for-true (comparator-comparison-procedure? ilist-comparator))
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true (comparator-hash-function? ipair-comparator))
+  (check-for-true (comparator-hash-function? ilist-comparator))
+
+  #t)
+
+
+(parametrise ((check-test-name	'comparator-accessors))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?C ?a ?b)
+       (begin
+	 (check-for-true  ((comparator-type-test-procedure ?C) ?a))
+	 (check-for-true  ((comparator-type-test-procedure ?C) ?b))
+	 (check-for-false ((comparator-type-test-procedure ?C) (void)))
+	 (check-for-true  ((comparator-equality-predicate ?C) ?a ?a))
+	 (check-for-false ((comparator-equality-predicate ?C) ?a ?b))
+	 (check
+	     ((comparator-comparison-procedure ?C) ?a ?a)
+	   => 0)
+	 (check
+	     ((comparator-comparison-procedure ?C) ?a ?b)
+	   => -1)
+	 (check
+	     ((comparator-comparison-procedure ?C) ?b ?a)
+	   => +1)
+	 (check-for-true
+	  (non-negative-exact-integer? ((comparator-hash-function ?C) ?a)))
+	 (check-for-true
+	  (non-negative-exact-integer? ((comparator-hash-function ?C) ?b)))
+	 ))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit ipair-comparator (iq 1 . 2) (iq 3 . 4))
+  (doit ilist-comparator (iq 1 2) (iq 3 4))
+
+;;; --------------------------------------------------------------------
+;;; pair comparison
+
+  (let ((cmp (comparator-comparison-procedure ipair-comparator)))
+    (check (cmp (iq 1 . 2) (iq 1 . 2)) =>  0)
+    (check (cmp (iq 1 . 2) (iq 1 . 3)) => -1) ;2 < 3
+    (check (cmp (iq 1 . 4) (iq 1 . 3)) => +1) ;4 > 3
+    (check (cmp (iq 1 . 0) (iq 2 . 0)) => -1)
+    (check (cmp (iq 3 . 0) (iq 2 . 0)) => +1)
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; list comparison
+
+  (let ((cmp (comparator-comparison-procedure ilist-comparator)))
+    (check (cmp (iq 1 2) (iq 1 2)) =>  0)
+    (check (cmp (iq 1 2) (iq 1 3)) => -1) ;2 < 3
+    (check (cmp (iq 1 4) (iq 1 3)) => +1) ;4 > 3
+    (check (cmp (iq 1 0) (iq 2 0)) => -1)
+    (check (cmp (iq 3 0) (iq 2 0)) => +1)
+
+    (check (cmp (iq ) (iq ))	=> 0)
+    (check (cmp (iq ) (iq 1))	=> -1)
+    (check (cmp (iq 1) (iq ))	=> +1)
+
+    ;;If first items are equal: compare the CADRs.  Here one of the CADRs is null.
+    (check (cmp (iq 1 2) (iq 1))	=> +1)
+    (check (cmp (iq 1)   (iq 1 2))	=> -1)
+
+    ;;Lists  of  different length,  but  it  does not  matter  because  the CARs  are
+    ;;non-equal.
+    (check (cmp (iq 1 2) (iq 2))	=> -1)
+    (check (cmp (iq 2)   (iq 1 2))	=> +1)
+    #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'comparator-applicators))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?C ?a ?b)
+       (begin
+	 (check-for-true  (comparator-test-type ?C ?a))
+	 (check-for-true  (comparator-test-type ?C ?b))
+	 (check-for-false (comparator-test-type ?C (void)))
+	 (check-for-true  (comparator-check-type ?C ?a))
+	 (check-for-true  (comparator-check-type ?C ?b))
+	 (check-for-true
+	  (try
+	      (comparator-check-type ?C (void))
+	    (catch E
+	      ((&comparator-type-error)
+	       #t)
+	      (else #f))))
+	 (check-for-true  (comparator-equal? ?C ?a ?a))
+	 (check-for-false (comparator-equal? ?C ?a ?b))
+	 (check
+	     (comparator-compare ?C ?a ?a)
+	   => 0)
+	 (check
+	     (comparator-compare ?C ?a ?b)
+	   => -1)
+	 (check
+	     (comparator-compare ?C ?b ?a)
+	   => +1)
+	 (check-for-true
+	  (non-negative-exact-integer? (comparator-hash ?C ?a)))
+	 (check-for-true
+	  (non-negative-exact-integer? (comparator-hash ?C ?b)))
+	 ))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit ipair-comparator (iq 1 . 2) (iq 3 . 4))
+  (doit ilist-comparator (iq 1 2) (iq 3 4))
+
+;;; --------------------------------------------------------------------
+;;; pair comparison
+
+  (let ((cmp (comparator-comparison-procedure ipair-comparator)))
+    (check (cmp (iq 1 . 2) (iq 1 . 2)) =>  0)
+    (check (cmp (iq 1 . 2) (iq 1 . 3)) => -1) ;2 < 3
+    (check (cmp (iq 1 . 4) (iq 1 . 3)) => +1) ;4 > 3
+    (check (cmp (iq 1 . 0) (iq 2 . 0)) => -1)
+    (check (cmp (iq 3 . 0) (iq 2 . 0)) => +1)
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; list comparison
+
+  (let ((cmp (comparator-comparison-procedure ilist-comparator)))
+    (check (cmp (iq 1 2) (iq 1 2)) =>  0)
+    (check (cmp (iq 1 2) (iq 1 3)) => -1) ;2 < 3
+    (check (cmp (iq 1 4) (iq 1 3)) => +1) ;4 > 3
+    (check (cmp (iq 1 0) (iq 2 0)) => -1)
+    (check (cmp (iq 3 0) (iq 2 0)) => +1)
+
+    (check (cmp (iq ) (iq ))	=> 0)
+    (check (cmp (iq ) (iq 1))	=> -1)
+    (check (cmp (iq 1) (iq ))	=> +1)
+
+    ;;If first items are equal: compare the CADRs.  Here one of the CADRs is null.
+    (check (cmp (iq 1 2) (iq 1))	=> +1)
+    (check (cmp (iq 1)   (iq 1 2))	=> -1)
+
+    ;;Lists  of  different length,  but  it  does not  matter  because  the CARs  are
+    ;;non-equal.
+    (check (cmp (iq 1 2) (iq 2))	=> -1)
+    (check (cmp (iq 2)   (iq 1 2))	=> +1)
+    #f)
+
+
+
+  #t)
+
+
+(parametrise ((check-test-name	'ipair-comparator))
+
+  (define-constant C
+    (make-ipair-comparator exact-integer-comparator
+			   real-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C (iq 1 . 2.0)))
+  (check-for-true  (comparator-test-type C (iq 1 . 2.0)))
+  (check-for-false (comparator-test-type C (iq )))
+  (check-for-false (comparator-test-type C (iq 1 . 2+1i)))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C (iq 1 . 2.0)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C (iq 1 . 2.0) (iq 1 . 2.0))	=> 0)
+  (check (comparator-compare C (iq 1 . 2.0) (iq 1 . 3))	=> -1)
+  (check (comparator-compare C (iq 1 . 3)   (iq 1 . 2.0))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq 1 . 2.0))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'icar-comparator))
+
+  (define-constant C
+    (make-icar-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C (iq 1 . 2.0)))
+  (check-for-true  (comparator-test-type C (iq 1 . 2.0)))
+  (check-for-true  (comparator-test-type C (iq 1 . 2+1i)))
+  (check-for-false (comparator-test-type C (iq 2.0 . 1)))
+  (check-for-false (comparator-test-type C (iq )))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C (iq 1 . 2.0)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C (iq 1 . 2) (iq 1 . 3))	=> 0)
+  (check (comparator-compare C (iq 1 . 2) (iq 2 . 3))	=> -1)
+  (check (comparator-compare C (iq 2 . 2) (iq 1 . 2))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq 1 . 2.0))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'icdr-comparator))
+
+  (define-constant C
+    (make-icdr-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C (iq 2.0 . 1)))
+  (check-for-true  (comparator-test-type C (iq 2.0 . 1)))
+  (check-for-true  (comparator-test-type C (iq 2+1i . 1)))
+  (check-for-false (comparator-test-type C (iq 1 . 2.0)))
+  (check-for-false (comparator-test-type C (iq )))
+  (check-for-false (comparator-test-type C "ciao"))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C (iq 2.0 . 1)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C (iq 2 . 1) (iq 3 . 1))	=> 0)
+  (check (comparator-compare C (iq 2 . 1) (iq 3 . 2))	=> -1)
+  (check (comparator-compare C (iq 2 . 2) (iq 2 . 1))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq 2.0 . 1))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'ilist-comparator))
+
+  (define-constant C
+    (make-ilist-comparator exact-integer-comparator))
+
+  ;; type test
+  (check-for-true  (comparator-test-type C (iq )))
+  (check-for-true  (comparator-test-type C (iq 1 2)))
+  (check-for-false (comparator-test-type C (iq 1 2 . 3)))
+  (check-for-false (comparator-test-type C (iq 1 2.0)))
+  (check-for-false (comparator-test-type C "ciao"))
+  (check-for-false (comparator-test-type C (iq 1+2i)))
+
+  ;; type check
+  (check-for-true  (comparator-check-type C (iq 1 2)))
+  (check-for-true
+   (try
+       (comparator-check-type C (void))
+     (catch E
+       ((&comparator-type-error)
+	#t)
+       (else E))))
+
+  ;; comparison
+  (check (comparator-compare C (iq 1 2) (iq 1 2))	=> 0)
+  (check (comparator-compare C (iq 1 2) (iq 1 3))	=> -1)
+  (check (comparator-compare C (iq 1 3) (iq 1 2))	=> +1)
+
+  (check (comparator-compare C (iq )    (iq ))	=> 0)
+  (check (comparator-compare C (iq )    (iq 1 2))	=> -1)
+  (check (comparator-compare C (iq 1 2) (iq ))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq ))))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq 1 2))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'improper-ilist-comparator))
+
+  (module (C)
+
+    (define element-compare
+      (let ((compare (comparator-comparison-procedure exact-integer-comparator)))
+	(lambda (A B)
+	  (if (ipair? A)
+	      (begin
+		(assert (ipair? B))
+		(let ((rv (compare (icar A) (icar B))))
+		  (if (zero? rv)
+		      (comparator-compare C (icdr A) (icdr B))
+		    rv)))
+	    (compare A B)))))
+
+    (define-constant E
+      (make-comparator #t #t
+		       element-compare
+		       (comparator-hash-function default-comparator)))
+
+    (define-constant C
+      (make-improper-ilist-comparator E))
+
+    #| end of module |# )
+
+  ;; type test
+  (check-for-true (comparator-test-type C (iq )))
+  (check-for-true (comparator-test-type C (iq 1 2)))
+  (check-for-true (comparator-test-type C (iq 1 2 . 3)))
+  (check-for-true (comparator-test-type C (iq 1 2.0)))
+  (check-for-true (comparator-test-type C "ciao"))
+  (check-for-true (comparator-test-type C (iq 1+2i)))
+
+  ;; type check
+  (check-for-true (comparator-check-type C (iq 1 2)))
+  (check-for-true (comparator-check-type C (void)))
+
+  ;; comparison
+  (check (comparator-compare C (iq 1 2) (iq 1 2))	=> 0)
+  (check (comparator-compare C (iq 1 2) (iq 1 3))	=> -1)
+  (check (comparator-compare C (iq 1 3) (iq 1 2))	=> +1)
+
+  (check (comparator-compare C (iq )    (iq ))	=> 0)
+  (check (comparator-compare C (iq )    (iq 1 2))	=> -1)
+  (check (comparator-compare C (iq 1 2) (iq ))	=> +1)
+
+  (check (comparator-compare C (iq 1 2 . 3) (iq 1 2 . 3))	=> 0)
+  (check (comparator-compare C (iq 1 2 . 3) (iq 1 2 . 4))	=> -1)
+  (check (comparator-compare C (iq 1 2 . 4) (iq 1 2 . 3))	=> +1)
+
+  (check (comparator-compare C (iq 1 2 9 . 3) (iq 1 2 9 . 3))	=> 0)
+  (check (comparator-compare C (iq 1 2 9 . 3) (iq 1 2 9 . 4))	=> -1)
+  (check (comparator-compare C (iq 1 2 9 . 4) (iq 1 2 9 . 3))	=> +1)
+
+  ;; hash
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq ))))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq 1 2))))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C (iq 1 2 . 3))))
+  (check-for-true
+   (non-negative-exact-integer? (comparator-hash C "ciao")))
+
+  #t)
 
 
 ;;;; done

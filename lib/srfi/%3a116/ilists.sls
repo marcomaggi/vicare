@@ -130,7 +130,7 @@
 #!vicare
 (library (srfi :116 ilists)
   (export
-    iq
+    iq (rename (iq iquote))
     ipair ilist xipair ipair* make-ilist ilist-tabulate iiota
     ipair?
     proper-ilist? ilist? dotted-ilist? not-ipair? null-ilist? ilist=
@@ -163,7 +163,7 @@
 
 ;;; The basic ilist cell
 
-(define-record-type (<ilist> ipair ipair?)
+(define-record-type (<ipair> ipair ipair?)
   (fields (immutable icar icar)
 	  (immutable icdr icdr)))
 
@@ -1190,3 +1190,6 @@
 #| end of library |# )
 
 ;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; End:

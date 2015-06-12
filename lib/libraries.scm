@@ -234,7 +234,8 @@
      (srfi :113)
      (srfi :114)
      (srfi :115)
-     (srfi :116))
+     (srfi :116)
+     (srfi :116 comparators))
 
     ((WANT_SRFI WANT_POSIX)
      (srfi :106))

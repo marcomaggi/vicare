@@ -15,7 +15,9 @@ implementation for @ansrfi{116}; see:
 @center @url{http://srfi.schemers.org/srfi-116/srfi-116.html}
 
 @noindent
-for more details.
+for more details.  The comparators @api{} is exported by the library
+@library{srfi :116 comparators}.
+
 
 @menu
 * srfi ilists license::         Original document license.
@@ -238,16 +240,37 @@ pairs and lists when reading list structure.  No recommendation is made
 about the behavior of @func{write}, @func{display}, and similar output
 procedures on immutable lists.
 
+
+@deffn Syntax iq @meta{item} @dots{}
+@deffnx Syntax iquote @meta{item} @dots{}
 To make life easier for Scheme programmers, given that many
-implementations do not provide immutable quotation, the syntax keyword
-@syntax{iq} is provided as part of this @srfi{}.  It is analogous to
-@syntax{quote}, taking an arbitrary number of literals and constructing
-an ilist from them, with any pairs in the literals converted to ipairs.
-It is useful for providing constant ipair--based objects.  Note that
-pairs within literal vectors or other implementation--dependent literals
-will not be converted.  Unfortunately, there is no ilist analogue of
-@samp{'}, so we save keystrokes by using @syntax{iq} rather than
-@syntax{iquote} and omitting the top--level parentheses.
+implementations do not provide immutable quotation, the syntax keywords
+@syntax{iq} and @syntax{iquote} is provided as part of this @srfi{}.
+
+It is analogous to @syntax{quote}, taking an arbitrary number of
+literals and constructing an ilist from them, with any pairs in the
+literals converted to ipairs.  It is useful for providing constant
+ipair--based objects.  Note that pairs within literal vectors or other
+implementation--dependent literals will not be converted.
+Unfortunately, there is no ilist analogue of @samp{'}, so we save
+keystrokes by using @syntax{iq} rather than @syntax{iquote} and omitting
+the top--level parentheses.
+
+@lisp
+(define L
+  (iq 1 2 3))
+
+(icar L)        @result{} 1
+(icadr L)       @result{} 2
+(icaddr L)      @result{} 3
+
+(define P
+  (iq 1 . 2))
+
+(icar P)        @result{} 1
+(icdr P)        @result{} 2
+@end lisp
+@end deffn
 
 @c page
 @node srfi ilists procs
@@ -2024,6 +2047,10 @@ but may be implemented more efficiently.
 @subsubsection Comparators
 
 
+The following syntactic bindings are exported by the library
+@library{srfi :116 comparators}.
+
+
 @defvr Constant ipair-comparator
 The @code{ipair-comparator} object is a @ansrfi{114} comparator suitable
 for comparing ipairs.  Note that it is not a procedure.  It compares
@@ -2055,6 +2082,14 @@ compared using @code{ilist-comparator}.
 @end defvr
 
 
+@deftypefun @var{comparator} make-pair-comparator @var{car-comparator} @var{cdr-comparator}
+Return a comparator that compares pairs first on their cars using
+@var{car-comparator}.  If the cars are equal: it compares the cdrs using
+@var{cdr-comparator}.  The hash function makes use of both the car and
+the cdr.
+@end deftypefun
+
+
 @deftypefun @var{comparator} make-ilist-comparator @var{element-comparator}
 Return a comparator suitable for comparing ilists using
 @var{element-comparator} to compare the elements.
@@ -2070,7 +2105,7 @@ are compared as if with:
 (make-ipair-comparator @var{comparator} @var{comparator})
 @end lisp
 
-All other objects are compared using comparator.
+All other objects are compared using @var{comparator}.
 @end deftypefun
 
 
