@@ -1028,7 +1028,7 @@ in @rnrs{7}.
 @value{PRJNAME}.
 @end quotation
 
-@itemx (complement <cset-sre> ...)
+@item (complement <cset-sre> ...)
 @itemx (~ <cset-sre> ...)
 Char set complement (i.e. @samp{[^...]} in PCRE notation).  @samp{(~ x)}
 is equivalent to @samp{(- any x)}, thus in an @ascii{} context the
