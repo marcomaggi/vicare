@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -122,7 +122,21 @@
       (char-set? 123)
     => #f)
 
-  )
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set?/internals (char-set))
+    => #t)
+
+  (check
+      (char-set?/internals (char-set '(#\A . #\C)))
+    => #t)
+
+  (check
+      (char-set?/internals 123)
+    => #f)
+
+  #f)
 
 
 (parameterise ((check-test-name	'inspection))
@@ -161,6 +175,26 @@
       (char-set-size char-set:full)
     => (+ (- #xD800 0)
 	  (- #x10FFFF #xDFFF)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-count (lambda (ch)
+			(char<=? #\A ch #\Z))
+		      (char-set))
+    => 0)
+
+  (check
+      (char-set-count (lambda (ch)
+			(char<=? #\A ch #\Z))
+		      (char-set #\0 #\9))
+    => 0)
+
+  (check
+      (char-set-count (lambda (ch)
+			(char<=? #\A ch #\Z))
+		      (char-set '(#\A . #\D)))
+    => 4)
 
 ;;; --------------------------------------------------------------------
 
@@ -260,6 +294,98 @@
   (check (char-set<? (char-set #\B) (char-set #\A)) => #f)
 
   )
+
+
+(parameterise ((check-test-name	'addition))
+
+  (check
+      (char-set-add (char-set) #\a)
+    (=> char-set=?)
+    (char-set #\a))
+
+  (check
+      (char-set-add (char-set #\a) #\a)
+    (=> char-set=?)
+    (char-set #\a))
+
+  (check
+      (char-set-add (char-set #\a) #\b)
+    (=> char-set=?)
+    (char-set #\a #\b))
+
+  (check
+      (char-set-add (char-set #\a #\b) #\b)
+    (=> char-set=?)
+    (char-set #\a #\b))
+
+  (check
+      (char-set-add (char-set #\a #\b) '(#\A . #\Z))
+    (=> char-set=?)
+    (char-set #\a #\b '(#\A . #\Z)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (receive-and-return (cs)
+	  (char-set)
+	(char-set-add! cs #\a))
+    (=> char-set=?)
+    (char-set #\a))
+
+  (check
+      (receive-and-return (cs)
+  	  (char-set #\a)
+  	(char-set-add! cs #\a))
+    (=> char-set=?)
+    (char-set #\a))
+
+  (check
+      (receive-and-return (cs)
+  	  (char-set #\a)
+  	(char-set-add! cs #\b))
+    (=> char-set=?)
+    (char-set #\a #\b))
+
+  (check
+      (receive-and-return (cs)
+  	  (char-set #\a #\b)
+  	(char-set-add! cs #\b))
+    (=> char-set=?)
+    (char-set #\a #\b))
+
+  (check
+      (receive-and-return (cs)
+  	  (char-set #\a #\b)
+  	(char-set-add! cs '(#\A . #\Z)))
+    (=> char-set=?)
+    (char-set #\a #\b '(#\A . #\Z)))
+
+  #t)
+
+
+(parameterise ((check-test-name	'deletion))
+
+  (check
+      (char-set-delete (char-set) #\a)
+    (=> char-set=?)
+    (char-set))
+
+  (check
+      (char-set-delete (char-set #\a) #\a)
+    (=> char-set=?)
+    (char-set))
+
+  (check
+      (char-set-delete (char-set #\a) #\b)
+    (=> char-set=?)
+    (char-set #\a))
+
+  (check
+      (char-set-delete (char-set #\a #\b) #\b)
+    (=> char-set=?)
+    (char-set #\a))
+
+  #t)
 
 
 (parameterise ((check-test-name	'intersection))
@@ -471,97 +597,209 @@
       ;; empty
       (char-set-difference (char-set)
 			   (char-set '(#\A . #\H)))
+    (=> char-set=?)
+    (char-set))
+
+  (check
+      (char-set-difference (char-set '(#\A . #\H))
+			   (char-set))
+    (=> char-set=?)
+    (char-set '(#\A . #\H)))
+
+
+  (check
+      (char-set-difference (char-set '(#\A . #\E))
+			   (char-set '(#\C . #\E)))
+    (=> char-set=?)
+    (char-set '(#\A . #\B)))
+
+  (check
+      (char-set-difference (char-set '(#\C . #\E))
+			   (char-set '(#\A . #\E)))
+    (=> char-set=?)
+    (char-set))
+
+  ;;           C     F
+  ;;    ------|+++++++|--------
+  ;;    ---|+++++++|----------
+  ;;        A     E
+  ;;
+  (check
+      (char-set-difference (char-set '(#\C . #\F))
+			   (char-set '(#\A . #\E)))
+    (=> char-set=?)
+    (char-set #\F))
+
+  (check
+      (char-set-difference (char-set '(#\A . #\E))
+			   (char-set '(#\B . #\C)))
+    (=> char-set=?)
+    (char-set #\A '(#\D . #\E)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-difference (char-set #\A #\B #\C #\D) (char-set #\A))
+    (=> char-set=?)            (char-set #\B #\C #\D))
+
+  (check
+      (char-set-difference (char-set #\A #\B #\C #\D) (char-set #\A) (char-set #\B))
+    (=> char-set=?)                (char-set #\C #\D))
+
+  (check
+      (char-set-difference (char-set #\A #\B #\C #\D) (char-set #\A) (char-set #\B) (char-set #\C))
+    (=> char-set=?)                    (char-set #\D))
+
+  (check
+      (char-set-difference (char-set #\A #\B #\C #\D) (char-set #\A) (char-set #\B) (char-set #\C) (char-set #\D))
+    (=> char-set=?)
+    char-set:empty)
+
+  #t)
+
+
+(parameterise ((check-test-name	'difference-and-intersection))
+
+  (check
+      (receive (D I)
+	  (char-set-difference+intersection (char-set)
+					    (char-set '(#\A . #\H)))
+	(and (char-set=? D char-set:empty)
+	     (char-set=? I char-set:empty)))
+    => #t)
+
+  (check
+      (receive (D I)
+	  (char-set-difference+intersection (char-set '(#\A . #\H))
+					    (char-set))
+	(and (char-set=? D (char-set '(#\A . #\H)))
+	     (char-set=? I char-set:empty)))
+    => #t)
+
+  (check
+      (receive (D I)
+	  (char-set-difference+intersection (char-set '(#\A . #\H))
+					    (char-set))
+	(and (char-set=? D (char-set '(#\A . #\H)))
+	     (char-set=? I char-set:empty)))
+    => #t)
+
+  (check
+      (receive (D I)
+	  (char-set-difference+intersection (char-set '(#\A . #\D))
+					    (char-set '(#\C . #\D)))
+	(and (char-set=? D (char-set '(#\A . #\B)))
+	     (char-set=? I (char-set '(#\C . #\D)))))
+    => #t)
+
+  (check
+      (receive (D I)
+	  (char-set-difference+intersection (char-set '(#\A . #\D))
+					    (char-set '(#\C . #\E)))
+	(and (char-set=? D (char-set '(#\A . #\B)))
+	     (char-set=? I (char-set '(#\C . #\D)))))
+    => #t)
+
+  #t)
+
+
+(parameterise ((check-test-name	'xor))
+
+  (check
+      ;; empty
+      (char-set-xor (char-set)
+		    (char-set '(#\A . #\H)))
     (=> char-set=?) (char-set '(#\A . #\H)))
 
   (check
       ;; empty
-      (char-set-difference (char-set '(#\A . #\H))
-			   (char-set))
+      (char-set-xor (char-set '(#\A . #\H))
+		    (char-set))
     (=> char-set=?) (char-set '(#\A . #\H)))
 
   (check
       ;; equal
-      (char-set-difference (char-set '(#\A . #\H))
-			   (char-set '(#\A . #\H)))
+      (char-set-xor (char-set '(#\A . #\H))
+		    (char-set '(#\A . #\H)))
     (=> char-set=?) (char-set))
 
   (check
       ;; disjoint
-      (char-set-difference (char-set '(#\A . #\C))
-			   (char-set '(#\E . #\H)))
+      (char-set-xor (char-set '(#\A . #\C))
+		    (char-set '(#\E . #\H)))
     (=> char-set=?) (char-set '(#\A . #\C) '(#\E . #\H)))
 
   (check
       ;; disjoint
-      (char-set-difference (char-set '(#\E . #\H))
-			   (char-set '(#\A . #\C)))
+      (char-set-xor (char-set '(#\E . #\H))
+		    (char-set '(#\A . #\C)))
     (=> char-set=?) (char-set '(#\A . #\C) '(#\E . #\H)))
 
   (check
       ;; contiguous
-      (char-set-difference (char-set '(#\A . #\D))
-			   (char-set '(#\E . #\H)))
+      (char-set-xor (char-set '(#\A . #\D))
+		    (char-set '(#\E . #\H)))
     (=> char-set=?) (char-set '(#\A . #\H)))
 
   (check
       ;; contiguous
-      (char-set-difference (char-set '(#\E . #\H))
-			   (char-set '(#\A . #\D)))
+      (char-set-xor (char-set '(#\E . #\H))
+		    (char-set '(#\A . #\D)))
     (=> char-set=?) (char-set '(#\A . #\H)))
 
   (check
       ;; inclusion
-      (char-set-difference (char-set '(#\C . #\F))
-			   (char-set '(#\A . #\H)))
+      (char-set-xor (char-set '(#\C . #\F))
+		    (char-set '(#\A . #\H)))
     (=> char-set=?) (char-set '(#\A . #\B)
 			      '(#\G . #\H)))
 
   (check
       ;; inclusion
-      (char-set-difference (char-set '(#\A . #\H))
-			   (char-set '(#\C . #\F)))
+      (char-set-xor (char-set '(#\A . #\H))
+		    (char-set '(#\C . #\F)))
     (=> char-set=?) (char-set '(#\A . #\B)
 			      '(#\G . #\H)))
 
   (check
-      (char-set-difference (char-set '(#\A . #\D) '(#\H . #\M) '(#\O . #\P))
-			   (char-set '(#\C . #\F) '(#\I . #\L) '(#\N . #\Q)))
+      (char-set-xor (char-set '(#\A . #\D) '(#\H . #\M) '(#\O . #\P))
+		    (char-set '(#\C . #\F) '(#\I . #\L) '(#\N . #\Q)))
     (=> char-set=?) (char-set #\A #\B #\E #\F #\H #\M #\N #\Q))
 
   (check
       ;; disjoint tail
-      (char-set-difference (char-set '(#\A . #\D) #\F)
-			   (char-set '(#\C . #\E) #\F #\M #\P #\R))
+      (char-set-xor (char-set '(#\A . #\D) #\F)
+		    (char-set '(#\C . #\E) #\F #\M #\P #\R))
     (=> char-set=?) (char-set '(#\A . #\B) #\E #\M #\P #\R))
 
   (check
       ;; disjoint tail
-      (char-set-difference (char-set '(#\A . #\D) #\F #\M #\P #\R)
-			   (char-set '(#\C . #\E) #\F))
+      (char-set-xor (char-set '(#\A . #\D) #\F #\M #\P #\R)
+		    (char-set '(#\C . #\E) #\F))
     (=> char-set=?) (char-set '(#\A . #\B) #\E #\M #\P #\R))
 
   (check
       ;; contiguous tail
-      (char-set-difference (char-set '(#\A . #\D) #\F #\G #\H #\I)
-			   (char-set '(#\C . #\E) #\F))
+      (char-set-xor (char-set '(#\A . #\D) #\F #\G #\H #\I)
+		    (char-set '(#\C . #\E) #\F))
     (=> char-set=?) (char-set '(#\A . #\B) #\E #\G #\H #\I))
 
   (check
       ;; contiguous tail
-      (char-set-difference (char-set '(#\A . #\D) #\F)
-			   (char-set '(#\C . #\E) #\F #\G #\H #\I))
+      (char-set-xor (char-set '(#\A . #\D) #\F)
+		    (char-set '(#\C . #\E) #\F #\G #\H #\I))
     (=> char-set=?) (char-set '(#\A . #\B) #\E #\G #\H #\I))
 
   (check
       ;; overlapping tail
-      (char-set-difference (char-set '(#\A . #\D) #\F)
-			   (char-set '(#\C . #\E) #\F '(#\H . #\N) '(#\L . #\P)))
+      (char-set-xor (char-set '(#\A . #\D) #\F)
+		    (char-set '(#\C . #\E) #\F '(#\H . #\N) '(#\L . #\P)))
     (=> char-set=?) (char-set '(#\A . #\B) #\E '(#\H . #\N) '(#\L . #\P)))
 
   (check
       ;; overlapping tail
-      (char-set-difference (char-set '(#\A . #\D) #\F '(#\H . #\N) '(#\L . #\P))
-			   (char-set '(#\C . #\E) #\F))
+      (char-set-xor (char-set '(#\A . #\D) #\F '(#\H . #\N) '(#\L . #\P))
+		    (char-set '(#\C . #\E) #\F))
     (=> char-set=?) (char-set '(#\A . #\B) #\E '(#\H . #\N) '(#\L . #\P)))
 
   )
@@ -613,6 +851,41 @@
 				(char-set #\A #\B #\C))
 	     #t))
     => '(#\A #\B #\C))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-map char-upcase (char-set #\a #\b #\c))
+    (=> char-set=?)
+    (char-set #\A #\B #\C))
+
+  (check
+      (char-set-map char-upcase (char-set))
+    (=> char-set=?)
+    (char-set))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set-filter (lambda (ch)
+			 (char<=? #\A ch #\Z))
+		       (char-set #\a #\b #\c))
+    (=> char-set=?)
+    (char-set))
+
+  (check
+      (char-set-filter (lambda (ch)
+			 (char<=? #\A ch #\Z))
+		       (char-set #\A #\B #\C))
+    (=> char-set=?)
+    (char-set #\A #\B #\C))
+
+  (check
+      (char-set-filter (lambda (ch)
+			 (char<=? #\A ch #\Z))
+		       (char-set #\A #\9 #\B #\0 #\C))
+    (=> char-set=?)
+    (char-set #\A #\B #\C))
 
 ;;; --------------------------------------------------------------------
 
@@ -693,7 +966,17 @@
     (=> char-set=?)
     (char-set #\A #\B #\C #\D))
 
-  )
+;;; --------------------------------------------------------------------
+
+  (check
+      (char-set->string (char-set '(#\A . #\D)))
+    => "ABCD")
+
+  (check
+      (char-set->string (char-set '(#\A . #\D) '(#\0 . #\4)))
+    => "01234ABCD")
+
+  #t)
 
 
 (parameterise ((check-test-name	'hash))
@@ -713,7 +996,7 @@
   #t)
 
 
-(parameterise ((check-test-name	'hash))
+(parameterise ((check-test-name	'cursor))
 
   (check
       (let ((cs  (char-set))
@@ -855,7 +1138,7 @@
     => #t)
 
   (check
-      (char-set? (char-set-difference char-set:full
+      (char-set? (char-set-xor char-set:full
 				      char-set:category/letter-uppercase
 				      char-set:category/letter-lowercase
 				      char-set:category/letter-titlecase
@@ -1441,175 +1724,175 @@
     => #t)
 
   (check
-      (char-set? (char-set-difference char-set:full
-				      char-set:block/basic-latin
-				      char-set:block/latin-1-supplement
-				      char-set:block/latin-extended-a
-				      char-set:block/latin-extended-b
-				      char-set:block/ipa-extensions
-				      char-set:block/spacing-modifier-letters
-				      char-set:block/combining-diacritical-marks
-				      char-set:block/greek-and-coptic
-				      char-set:block/cyrillic
-				      char-set:block/cyrillic-supplement
-				      char-set:block/armenian
-				      char-set:block/hebrew
-				      char-set:block/arabic
-				      char-set:block/syriac
-				      char-set:block/arabic-supplement
-				      char-set:block/thaana
-				      char-set:block/nko
-				      char-set:block/devanagari
-				      char-set:block/bengali
-				      char-set:block/gurmukhi
-				      char-set:block/gujarati
-				      char-set:block/oriya
-				      char-set:block/tamil
-				      char-set:block/telugu
-				      char-set:block/kannada
-				      char-set:block/malayalam
-				      char-set:block/sinhala
-				      char-set:block/thai
-				      char-set:block/lao
-				      char-set:block/tibetan
-				      char-set:block/myanmar
-				      char-set:block/georgian
-				      char-set:block/hangul-jamo
-				      char-set:block/ethiopic
-				      char-set:block/ethiopic-supplement
-				      char-set:block/cherokee
-				      char-set:block/unified-canadian-aboriginal-syllabics
-				      char-set:block/ogham
-				      char-set:block/runic
-				      char-set:block/tagalog
-				      char-set:block/hanunoo
-				      char-set:block/buhid
-				      char-set:block/tagbanwa
-				      char-set:block/khmer
-				      char-set:block/mongolian
-				      char-set:block/limbu
-				      char-set:block/tai-le
-				      char-set:block/new-tai-lue
-				      char-set:block/khmer-symbols
-				      char-set:block/buginese
-				      char-set:block/balinese
-				      char-set:block/sundanese
-				      char-set:block/lepcha
-				      char-set:block/ol-chiki
-				      char-set:block/phonetic-extensions
-				      char-set:block/phonetic-extensions-supplement
-				      char-set:block/combining-diacritical-marks-supplement
-				      char-set:block/latin-extended-additional
-				      char-set:block/greek-extended
-				      char-set:block/general-punctuation
-				      char-set:block/superscripts-and-subscripts
-				      char-set:block/currency-symbols
-				      char-set:block/combining-diacritical-mark-for-symbols
-				      char-set:block/letterlike-symbols
-				      char-set:block/number-forms
-				      char-set:block/arrows
-				      char-set:block/mathematical-operators
-				      char-set:block/miscellaneous-technical
-				      char-set:block/control-pictures
-				      char-set:block/optical-character-recognition
-				      char-set:block/enclosed-alphanumerics
-				      char-set:block/box-drawing
-				      char-set:block/block-elements
-				      char-set:block/geometric-shapes
-				      char-set:block/miscellaneous-symbols
-				      char-set:block/dingbats
-				      char-set:block/miscellaneous-mathematical-symbols-a
-				      char-set:block/supplemental-arrows-a
-				      char-set:block/braille-patterns
-				      char-set:block/supplemental-arrows-b
-				      char-set:block/miscellaneous-mathematical-symbols-b
-				      char-set:block/supplemental-mathematical-operators
-				      char-set:block/miscellaneous-symbols-and-arrows
-				      char-set:block/glagolitic
-				      char-set:block/latin-extended-c
-				      char-set:block/coptic
-				      char-set:block/georgian-supplement
-				      char-set:block/tifinagh
-				      char-set:block/ethiopic-extended
-				      char-set:block/cyrillic-extended-a
-				      char-set:block/supplemental-punctuation
-				      char-set:block/cjk-radicals-supplement
-				      char-set:block/kangxi-radicals
-				      char-set:block/ideographic-description-characters
-				      char-set:block/cjk-symbols-and-punctuation
-				      char-set:block/hiragana
-				      char-set:block/katakana
-				      char-set:block/bopomofo
-				      char-set:block/hangul-compatibility-jamo
-				      char-set:block/kanbun
-				      char-set:block/bopomofo-extended
-				      char-set:block/cjk-strokes
-				      char-set:block/katakana-phonetic-extensions
-				      char-set:block/enclosed-cjk-letters-and-months
-				      char-set:block/cjk-compatibility
-				      char-set:block/cjk-unified-Ideographs-extension-a
-				      char-set:block/yijing-hexagram-symbols
-				      char-set:block/cjk-unified-ideographs
-				      char-set:block/yi-syllables
-				      char-set:block/yi-radicals
-				      char-set:block/vai
-				      char-set:block/cyrillic-extended-b
-				      char-set:block/modifier-tone-letters
-				      char-set:block/latin-extended-d
-				      char-set:block/syloti-nagri
-				      char-set:block/phags-pa
-				      char-set:block/saurashtra
-				      char-set:block/kayah-li
-				      char-set:block/Rejang
-				      char-set:block/cham
-				      char-set:block/hangul-syllables
-				      char-set:block/private-use-area
-				      char-set:block/cjk-compatibility-ideographs
-				      char-set:block/alphabetic-presentation-forms
-				      char-set:block/arabic-presentation-forms-a
-				      char-set:block/variation-selectors
-				      char-set:block/vertical-forms
-				      char-set:block/combining-half-marks
-				      char-set:block/cjk-compatibility-forms
-				      char-set:block/small-form-variants
-				      char-set:block/arabic-presentation-forms-b
-				      char-set:block/halfwidth-and-fullwidth-forms
-				      char-set:block/specials
-				      char-set:block/linear-b-syllabary
-				      char-set:block/linear-b-ideograms
-				      char-set:block/aegean-numbers
-				      char-set:block/ancient-greek-numbers
-				      char-set:block/ancient-symbols
-				      char-set:block/phaistos-disc
-				      char-set:block/lycian
-				      char-set:block/carian
-				      char-set:block/old-italic
-				      char-set:block/gothic
-				      char-set:block/ugaritic
-				      char-set:block/old-persian
-				      char-set:block/deseret
-				      char-set:block/shavian
-				      char-set:block/osmanya
-				      char-set:block/cypriot-syllabary
-				      char-set:block/phoenician
-				      char-set:block/lydian
-				      char-set:block/kharoshthi
-				      char-set:block/cuneiform
-				      char-set:block/cuneiform-numbers-and-punctuation
-				      char-set:block/byzantine-musical-symbols
-				      char-set:block/musical-symbols
-				      char-set:block/ancient-greek-musical-notation
-				      char-set:block/tai-xuan-jing-symbols
-				      char-set:block/counting-rod-numerals
-				      char-set:block/mathematical-alphanumeric-symbols
-				      char-set:block/mahjong-tiles
-				      char-set:block/domino-tiles
-				      char-set:block/cjk-unified-ideographs-extension-b
-				      char-set:block/cjk-compatibility-ideographs-supplement
-				      char-set:block/tags
-				      char-set:block/variation-selectors-supplement
-				      char-set:block/supplementary-private-use-area-a
-				      char-set:block/supplementary-private-use-area-b))
+      (char-set? (char-set-xor char-set:full
+			       char-set:block/basic-latin
+			       char-set:block/latin-1-supplement
+			       char-set:block/latin-extended-a
+			       char-set:block/latin-extended-b
+			       char-set:block/ipa-extensions
+			       char-set:block/spacing-modifier-letters
+			       char-set:block/combining-diacritical-marks
+			       char-set:block/greek-and-coptic
+			       char-set:block/cyrillic
+			       char-set:block/cyrillic-supplement
+			       char-set:block/armenian
+			       char-set:block/hebrew
+			       char-set:block/arabic
+			       char-set:block/syriac
+			       char-set:block/arabic-supplement
+			       char-set:block/thaana
+			       char-set:block/nko
+			       char-set:block/devanagari
+			       char-set:block/bengali
+			       char-set:block/gurmukhi
+			       char-set:block/gujarati
+			       char-set:block/oriya
+			       char-set:block/tamil
+			       char-set:block/telugu
+			       char-set:block/kannada
+			       char-set:block/malayalam
+			       char-set:block/sinhala
+			       char-set:block/thai
+			       char-set:block/lao
+			       char-set:block/tibetan
+			       char-set:block/myanmar
+			       char-set:block/georgian
+			       char-set:block/hangul-jamo
+			       char-set:block/ethiopic
+			       char-set:block/ethiopic-supplement
+			       char-set:block/cherokee
+			       char-set:block/unified-canadian-aboriginal-syllabics
+			       char-set:block/ogham
+			       char-set:block/runic
+			       char-set:block/tagalog
+			       char-set:block/hanunoo
+			       char-set:block/buhid
+			       char-set:block/tagbanwa
+			       char-set:block/khmer
+			       char-set:block/mongolian
+			       char-set:block/limbu
+			       char-set:block/tai-le
+			       char-set:block/new-tai-lue
+			       char-set:block/khmer-symbols
+			       char-set:block/buginese
+			       char-set:block/balinese
+			       char-set:block/sundanese
+			       char-set:block/lepcha
+			       char-set:block/ol-chiki
+			       char-set:block/phonetic-extensions
+			       char-set:block/phonetic-extensions-supplement
+			       char-set:block/combining-diacritical-marks-supplement
+			       char-set:block/latin-extended-additional
+			       char-set:block/greek-extended
+			       char-set:block/general-punctuation
+			       char-set:block/superscripts-and-subscripts
+			       char-set:block/currency-symbols
+			       char-set:block/combining-diacritical-mark-for-symbols
+			       char-set:block/letterlike-symbols
+			       char-set:block/number-forms
+			       char-set:block/arrows
+			       char-set:block/mathematical-operators
+			       char-set:block/miscellaneous-technical
+			       char-set:block/control-pictures
+			       char-set:block/optical-character-recognition
+			       char-set:block/enclosed-alphanumerics
+			       char-set:block/box-drawing
+			       char-set:block/block-elements
+			       char-set:block/geometric-shapes
+			       char-set:block/miscellaneous-symbols
+			       char-set:block/dingbats
+			       char-set:block/miscellaneous-mathematical-symbols-a
+			       char-set:block/supplemental-arrows-a
+			       char-set:block/braille-patterns
+			       char-set:block/supplemental-arrows-b
+			       char-set:block/miscellaneous-mathematical-symbols-b
+			       char-set:block/supplemental-mathematical-operators
+			       char-set:block/miscellaneous-symbols-and-arrows
+			       char-set:block/glagolitic
+			       char-set:block/latin-extended-c
+			       char-set:block/coptic
+			       char-set:block/georgian-supplement
+			       char-set:block/tifinagh
+			       char-set:block/ethiopic-extended
+			       char-set:block/cyrillic-extended-a
+			       char-set:block/supplemental-punctuation
+			       char-set:block/cjk-radicals-supplement
+			       char-set:block/kangxi-radicals
+			       char-set:block/ideographic-description-characters
+			       char-set:block/cjk-symbols-and-punctuation
+			       char-set:block/hiragana
+			       char-set:block/katakana
+			       char-set:block/bopomofo
+			       char-set:block/hangul-compatibility-jamo
+			       char-set:block/kanbun
+			       char-set:block/bopomofo-extended
+			       char-set:block/cjk-strokes
+			       char-set:block/katakana-phonetic-extensions
+			       char-set:block/enclosed-cjk-letters-and-months
+			       char-set:block/cjk-compatibility
+			       char-set:block/cjk-unified-Ideographs-extension-a
+			       char-set:block/yijing-hexagram-symbols
+			       char-set:block/cjk-unified-ideographs
+			       char-set:block/yi-syllables
+			       char-set:block/yi-radicals
+			       char-set:block/vai
+			       char-set:block/cyrillic-extended-b
+			       char-set:block/modifier-tone-letters
+			       char-set:block/latin-extended-d
+			       char-set:block/syloti-nagri
+			       char-set:block/phags-pa
+			       char-set:block/saurashtra
+			       char-set:block/kayah-li
+			       char-set:block/Rejang
+			       char-set:block/cham
+			       char-set:block/hangul-syllables
+			       char-set:block/private-use-area
+			       char-set:block/cjk-compatibility-ideographs
+			       char-set:block/alphabetic-presentation-forms
+			       char-set:block/arabic-presentation-forms-a
+			       char-set:block/variation-selectors
+			       char-set:block/vertical-forms
+			       char-set:block/combining-half-marks
+			       char-set:block/cjk-compatibility-forms
+			       char-set:block/small-form-variants
+			       char-set:block/arabic-presentation-forms-b
+			       char-set:block/halfwidth-and-fullwidth-forms
+			       char-set:block/specials
+			       char-set:block/linear-b-syllabary
+			       char-set:block/linear-b-ideograms
+			       char-set:block/aegean-numbers
+			       char-set:block/ancient-greek-numbers
+			       char-set:block/ancient-symbols
+			       char-set:block/phaistos-disc
+			       char-set:block/lycian
+			       char-set:block/carian
+			       char-set:block/old-italic
+			       char-set:block/gothic
+			       char-set:block/ugaritic
+			       char-set:block/old-persian
+			       char-set:block/deseret
+			       char-set:block/shavian
+			       char-set:block/osmanya
+			       char-set:block/cypriot-syllabary
+			       char-set:block/phoenician
+			       char-set:block/lydian
+			       char-set:block/kharoshthi
+			       char-set:block/cuneiform
+			       char-set:block/cuneiform-numbers-and-punctuation
+			       char-set:block/byzantine-musical-symbols
+			       char-set:block/musical-symbols
+			       char-set:block/ancient-greek-musical-notation
+			       char-set:block/tai-xuan-jing-symbols
+			       char-set:block/counting-rod-numerals
+			       char-set:block/mathematical-alphanumeric-symbols
+			       char-set:block/mahjong-tiles
+			       char-set:block/domino-tiles
+			       char-set:block/cjk-unified-ideographs-extension-b
+			       char-set:block/cjk-compatibility-ideographs-supplement
+			       char-set:block/tags
+			       char-set:block/variation-selectors-supplement
+			       char-set:block/supplementary-private-use-area-a
+			       char-set:block/supplementary-private-use-area-b))
     => #t)
 
   (check
@@ -1785,11 +2068,12 @@
 		  char-set:full))
     => #t)
 
+  #f)
 
-  )
 
 ;;;; done
 
+(collect 4)
 (check-report)
 
 ;;; end of file
