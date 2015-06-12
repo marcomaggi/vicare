@@ -3,6 +3,7 @@
 ;;;
 ;;; Copyright (c) 1998, 1999 by Olin Shivers.
 ;;; Modifications Copyright (c) 2014 by John Cowan.
+;;; Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;; You may do as you please with
 ;;; this code as long as you do not remove either copyright notice
 ;;; or hold us liable for its use.  Please send bug reports to

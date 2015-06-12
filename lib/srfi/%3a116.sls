@@ -1,4 +1,5 @@
 ;;Copyright (C) John Cowan 2014.  All Rights Reserved.
+;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;
 ;;Permission is  hereby granted, free  of charge, to any  person obtaining a  copy of
 ;;this software and associated documentation files (the ``Software''), to deal in the
@@ -20,7 +21,7 @@
 
 (library (srfi :116)
   (export
-    iq
+    iq iquote
     ipair ilist xipair ipair* make-ilist ilist-tabulate iiota
     ipair?
     proper-ilist? ilist? dotted-ilist? not-ipair? null-ilist? ilist=
