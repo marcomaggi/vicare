@@ -10,7 +10,7 @@
 
 
 The library @library{srfi :115} is by Alex Shinn as reference
-implementation for @ansrfi{0}; see:
+implementation for @ansrfi{115}; see:
 
 @center @url{http://srfi.schemers.org/srfi-115/srfi-115.html}
 
