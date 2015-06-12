@@ -621,6 +621,30 @@ installed and functional.
 @itemx srfi-112
 @itemx srfi-112-environment-inquiry
 @ansrfi{112} is available.
+
+@item (srfi :113)
+@itemx (srfi :113 sets-and-bags)
+@itemx srfi-113
+@itemx srfi-113-sets-and-bags
+@ansrfi{113} is available.
+
+@item (srfi :114)
+@itemx (srfi :114 comparators)
+@itemx srfi-114
+@itemx srfi-114-comparators
+@ansrfi{114} is available.
+
+@item (srfi :115)
+@itemx (srfi :115 regexps)
+@itemx srfi-115
+@itemx srfi-115-regexps
+@ansrfi{115} is available.
+
+@item (srfi :116)
+@itemx (srfi :116 ilists)
+@itemx srfi-116
+@itemx srfi-116-ilists
+@ansrfi{116} is available.
 @end table
 
 @c end of file

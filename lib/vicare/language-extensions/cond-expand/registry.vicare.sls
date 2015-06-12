@@ -76,6 +76,10 @@
 	  #(106		socket				,(and SRFI-ENABLED? POSIX-ENABLED?))
 	  #(111		boxes				,SRFI-ENABLED?)
 	  #(112		environment-inquiry		,SRFI-ENABLED?)
+	  #(113		sets-and-bags			,SRFI-ENABLED?)
+	  #(114		comparators			,SRFI-ENABLED?)
+	  #(115		regexps				,SRFI-ENABLED?)
+	  #(116		ilists				,SRFI-ENABLED?)
 	  )))
 
     (define (SRFI-names srfi-entry)
