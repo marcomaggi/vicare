@@ -1193,7 +1193,9 @@ EXTRA_DIST	+= \
 #### interface for "make check": selecting test programs
 
 TESTS		= $(VICARE_SCHEME_R6RS_TESTS) $(VICARE_SCHEME_CORE_TESTS) $(VICARE_SCHEME_LONG_TESTS)
-XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps
+XFAIL_TESTS	= \
+	tests/test-issue-058-lalr-unary-prec.sps	\
+	tests/test-srfi-115-regexps.sps
 
 if WANT_64BIT_SUPPORT
 TESTS		+= $(VICARE_SCHEME_COMPILER_TESTS)

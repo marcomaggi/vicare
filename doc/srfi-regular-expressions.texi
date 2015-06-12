@@ -221,12 +221,16 @@ unspecified results if subsequently used for matching.
 @deftypefn Syntax @var{regexp} rx @var{sre} @dots{}
 Macro shorthand for @code{(regexp `(: sre ...))}.  May be able to
 perform some or all computation at compile time if @var{sre} is not
-unquoted.  Note because of this equivalence with the procedural
+unquoted.
+
+@quotation
+@strong{NOTE} Because of this equivalence with the procedural
 constructor @func{regexp}, the semantics of unquote differs from the
 original SCSH implementation in that unquoted expressions can expand
 into any object matching the SRE syntax, but not a compiled regexp
 object.  Further, @syntax{unquote} and @syntax{unquote-splicing} both
 expand all matches.
+@end quotation
 
 @quotation
 @strong{RATIONALE} Providing a procedural interface provides for greater

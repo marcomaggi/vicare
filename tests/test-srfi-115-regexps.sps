@@ -40,6 +40,43 @@
    (regexp-match? ?body)))
 
 
+(parametrise ((check-test-name	'regexp))
+
+  (check-for-true
+   (regexp? (regexp "[a-z]")))
+
+  (check-for-true
+   (regexp? (regexp "[a-z]*")))
+
+  (check-for-true
+   (regexp? (regexp '(* "[a-z]"))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'rx))
+
+  (check-for-true
+   (regexp? (rx "[a-z]")))
+
+  (check-for-true
+   (regexp? (rx "[a-z]*")))
+
+  (check-for-true
+   (regexp? (rx (* "[a-z]"))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'regexp-to-sre))
+
+  (check
+      (regexp->sre (rx (* "[a-z]")))
+    => '(: (* "[a-z]")))
+
+  #t)
+
+
 (parametrise ((check-test-name	'basic-patterns))
 
   (check-for-regexp-match
@@ -266,20 +303,20 @@
 
   ;;FIXME These work in Chibi but fail here.
   ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-matches '(* ("e\x0301;")) "e\x0301;"))
-  ;;
-  ;; (check-for-false
-  ;;  (regexp-matches '("e\x0301;") "e\x0301;"))
-  ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-matches '("e\x0301;") "e"))
-  ;;
-  ;; (check-for-regexp-match
-  ;;  (regexp-matches '("e\x0301;") "\x0301;"))
-  ;;
-  ;; (check-for-false
-  ;;  (regexp-matches '("e\x0301;") "\x00E9;"))
+  (check-for-regexp-match
+   (regexp-matches '(* ("e\x0301;")) "e\x0301;"))
+
+  (check-for-false
+   (regexp-matches '("e\x0301;") "e\x0301;"))
+
+  (check-for-regexp-match
+   (regexp-matches '("e\x0301;") "e"))
+
+  (check-for-regexp-match
+   (regexp-matches '("e\x0301;") "\x0301;"))
+
+  (check-for-false
+   (regexp-matches '("e\x0301;") "\x00E9;"))
 
 ;;; --------------------------------------------------------------------
 
