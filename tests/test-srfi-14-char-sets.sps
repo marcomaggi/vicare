@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2012, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -178,7 +178,7 @@
     (let ((ell '()))
       (do ((iter (char-set-cursor cs) (char-set-cursor-next cs iter)))
 	  ((end-of-char-set? iter)
-	   ell)
+	   (reverse ell))
 	(set! ell (cons (char-set-ref cs iter) ell)))))
 
   (check
@@ -202,7 +202,7 @@
 
   (check	;list of set members
       (char-set-fold cons '() (char-set #\a #\b #\c))
-    => '(#\a #\b #\c))
+    => (reverse '(#\a #\b #\c)))
 
   (check	;set size
       (char-set-fold (lambda (c i)
@@ -228,7 +228,7 @@
   (check
       (with-result
        (char-set-for-each add-result (char-set #\a #\b #\c)))
-    => (list (void) '(#\c #\b #\a)))
+    => (list (void) '(#\a #\b #\c)))
 
 ;;; --------------------------------------------------------------------
 ;;; map
@@ -500,7 +500,7 @@
 
   (check
       (char-set->string (char-set #\a #\b #\c))
-    => "cba")
+    => "abc")
 
 ;;; --------------------------------------------------------------------
 

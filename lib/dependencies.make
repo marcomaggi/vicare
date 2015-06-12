@@ -122,7 +122,6 @@ CLEANFILES += lib/vicare/unsafe/operations.fasl
 
 lib/vicare/unsafe/unicode.fasl: \
 		lib/vicare/unsafe/unicode.vicare.sls \
-		lib/vicare/unsafe/operations.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2336,7 +2335,8 @@ endif
 
 lib/srfi/%3a14/char-sets.fasl: \
 		lib/srfi/%3a14/char-sets.sls \
-		lib/vicare/arguments/validation.fasl \
+		lib/vicare/containers/char-sets.fasl \
+		lib/vicare/containers/char-sets/categories.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

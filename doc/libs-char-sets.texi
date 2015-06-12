@@ -11,8 +11,8 @@ characters.
 
 A @dfn{character} is every value for which the application of
 @func{char?}  returns @true{}; @dfn{character sets} are values of
-disjoint type @code{char-set} representing a number of character in the
-available Unicode ranges, @vicareref{stdlib unicode, Unicode}.
+disjoint type @objtype{char-set} representing a number of character in
+the available Unicode ranges, @vicareref{stdlib unicode, Unicode}.
 
 @menu
 * char-sets conv::              Arguments naming conventions.
@@ -68,27 +68,41 @@ character sets.
 
 
 @defun char-set @var{char/range} ...
-Build and return a new @code{char-set}.  The @var{char/range} arguments
-may be the empty list or a mixed list of characters and ranges.
+Build and return a new @objtype{char-set}.  The @var{char/range}
+arguments may be the empty list or a mixed list of characters and
+ranges.
 @end defun
 
 
 @defun char-set-copy @var{cs}
-Return a newly allocated @code{char-set} holding a copy of @var{cs}.
+Return a newly allocated @objtype{char-set} holding a copy of @var{cs}.
 @end defun
 
 
-@defun char-set-add @var{cs} @var{char/range}
-Add values to an existing @var{char-set}.  @var{char/range} can be a
-single character or a range.  Return a new instance of @code{char-set};
-the returned set may share some structure with the arguments.
+@defun char-set-add @var{cs} @var{char/range} @dots{}
+@defunx char-set-adjoin @var{cs} @var{char/range} @dots{}
+Add values to an existing @objtype{char-set}.  @var{char/range} can be a
+single character or a range.  Return a new instance of
+@objtype{char-set}; the returned set may share some structure with the
+arguments.
 @end defun
 
 
-@defun char-set-add! @var{cs} @var{char/range}
-Add values to an existing @var{char-set}.  @var{char/range} can be a
+@defun char-set-add! @var{cs} @var{char/range} @dots{}
+@defunx char-set-adjoin! @var{cs} @var{char/range} @dots{}
+Add values to an existing @objtype{char-set}.  @var{char/range} can be a
 single character or a range.  Return @var{cs} itself; the returned set
 may share some structure with the arguments.
+@end defun
+
+
+@defun char-set-delete @var{cs} @var{char/range} @dots{}
+Delete the @var{char/range} from the character set @var{cs}.
+
+@lisp
+(char-set-delete (char-set #\a #\b) #\b)
+@result{} (char-set #\a)
+@end lisp
 @end defun
 
 
@@ -135,7 +149,7 @@ for debugging purposes.
 
 
 @defun char-set-empty? @var{cs}
-Return @true{} if the @code{char-set} is empty, else return @false{}.
+Return @true{} if the @objtype{char-set} is empty, else return @false{}.
 @end defun
 
 
@@ -144,16 +158,28 @@ Return @true{} if @var{char} is an element of @var{cs}.
 @end defun
 
 
-@defun char-set=? @var{cs-a} @var{cs-b}
-Return @true{} if the arguments represent the same @code{char-set}, else
-return @false{}.
+@defun char-set=? @var{cs} @dots{}
+Return @true{} if the arguments represent the same @objtype{char-set},
+else return @false{}.  When called with no arguments: return @true{}.
+When called with one argument: return @true{}.
 @end defun
 
 
-@defun char-set<? @var{cs-a} @var{cs-b}
-Return @true{} if all the elements of @var{cs-a} are strictly less than
-all the elements of @var{cs-b}, else return @false{}.  Empty sets cannot
-be ordered, so if an argument is empty the return value is @false{}.
+@defun char-set<? @var{cs} @dots{}
+Return @true{} if all the elements of @var{cs} are strictly less than
+all the elements of the subsequent @var{cs}, else return @false{}.
+Empty sets cannot be ordered, so if an argument is empty the return
+value is @false{}.  When called with no arguments: return @true{}.  When
+called with one argument: return @true{}.
+@end defun
+
+
+@defun char-set<=? @var{cs} @dots{}
+Return @true{} if all the elements of @var{cs} are non--strictly less
+than all the elements of the subsequent @var{cs}, else return @false{}.
+Empty sets cannot be ordered, so if an argument is empty the return
+value is @false{}.  When called with no arguments: return @true{}.  When
+called with one argument: return @true{}.
 @end defun
 
 
@@ -183,6 +209,12 @@ Return an exact integer representing the number of characters in
 @end defun
 
 
+@defun char-set-count @var{pred} @var{cs}
+Return the number of characters in @var{cs} for which the predicate
+function @var{pred} returns non--false.
+@end defun
+
+
 @defun char-set-write @var{cs}
 @defunx char-set-write @var{cs} @var{port}
 Write to @var{port} a chunk of Scheme code that, when evaluated,
@@ -207,8 +239,8 @@ that can be represented with a single machine word.
 Invariant:
 
 @example
-(char-set= cs1 cs2) @result{} (= (char-set-hash cs1 b)
-                          (char-set-hash cs2 b))
+(char-set=? cs1 cs2) @result{} (= (char-set-hash cs1 b)
+                           (char-set-hash cs2 b))
 @end example
 @end defun
 
@@ -217,26 +249,49 @@ Invariant:
 @section Operations
 
 
-@defun char-set-intersection @var{cs0} @var{cs} ...
+@defun char-set-intersection @var{cs} @dots{}
 Return a new set representing the intersection of the arguments; the
 intersection is the set of characters present in all the arguments.
+When called with no arguments: return a new @objtype{char-set}
+representing all the characters in Unicode.
 
 The returned set may share some structure with the arguments.
 @end defun
 
 
-@defun char-set-union @var{cs0} @var{cs} ...
+@defun char-set-union @var{cs} @dots{}
 Return a new set representing the union of the arguments; the union is
-the set of characters present in one and/or more arguments.
+the set of characters present in one and/or more arguments.  When called
+with no arguments: return a new empty @objtype{char-set}.
 
 The returned set may share some structure with the arguments.
 @end defun
 
 
-@defun char-set-difference @var{cs0} @var{cs} ...
+@defun char-set-difference @varo{cs} @var{cs} @dots{}
 Return a new set representing the difference between the arguments; the
-difference is the set of characters present in only one of the
-arguments.
+difference is the set of characters from @varo{cs} not present in any of
+the @var{cs} @objtype{char-set} objects.
+
+The returned set may share some structure with the arguments.
+@end defun
+
+
+@defun char-set-difference+intersection @varo{cs} @var{cs} @dots{}
+Return two values: the difference and the intersection of the arguments;
+it partitions its first argument.  It is equivalent to:
+
+@example
+(values (char-set-difference cs1 cs2 ...)
+        (char-set-intersection cs1 (char-set-union cs2 ...)))
+@end example
+@end defun
+
+
+@defun char-set-xor @var{cs} @dots{}
+Return a new set representing the exclusive difference between the
+arguments: it is the set of characters in only one of the arguments.
+When called with no arguments: return the empty set.
 
 The returned set may share some structure with the arguments.
 @end defun
@@ -256,6 +311,20 @@ The returned set may share some structure with the arguments.
 
 @defun char-set-for-each @var{proc} @var{cs}
 Apply @var{proc} to each character in @var{cs}.
+@end defun
+
+
+@defun char-set-map @var{proc} @var{cs}
+Apply @var{proc} to each character in @var{cs}; @var{proc} must return a
+character.  Return a new @objtype{char-set} holding all the characters
+returned by @var{proc}.
+@end defun
+
+
+@defun char-set-filter @var{pred} @var{cs}
+Apply @var{pred} to each character in @var{cs}.  Return a new
+@objtype{char-set} holding all the characters from @var{cs} for which
+@var{pred} returned non--false.
 @end defun
 
 
@@ -287,8 +356,23 @@ some character sets the resulting list can be big.
 @end defun
 
 
+@defun list->char-set @var{list-of-chars}
+@defunx list->char-set @var{list-of-chars} @var{base-cs}
+Return a new @objtype{char-set} holding the characters in the given list
+and the characters in the given @var{base-cs}.
+@end defun
+
+
 @defun string->char-set @var{string}
-Return a new character set holding all the characters in @var{string}.
+@defunx string->char-set @var{string} @var{base-cs}
+Return a new character set holding all the characters in @var{string}
+and the characters in @var{base-cs}.
+@end defun
+
+
+@defun char-set->string @var{cs}
+Return a new string object holding all the characters from @var{cs}.
+The order in which the characters appear is undefined.
 @end defun
 
 
@@ -917,36 +1001,36 @@ Categories are disjoint, so the intersection of the category sets is the
 empty set.
 
 
-@defvr {Character Set} char-set:letter-uppercase
-@defvrx {Character Set} char-set:letter-lowercase
-@defvrx {Character Set} char-set:letter-titlecase
-@defvrx {Character Set} char-set:letter-modifier
-@defvrx {Character Set} char-set:letter-other
-@defvrx {Character Set} char-set:mark-nospacing
-@defvrx {Character Set} char-set:mark-spacing-combining
-@defvrx {Character Set} char-set:mark-enclosing
-@defvrx {Character Set} char-set:number-decimal-digit
-@defvrx {Character Set} char-set:number-letter
-@defvrx {Character Set} char-set:number-other
-@defvrx {Character Set} char-set:puncutation-connector
-@defvrx {Character Set} char-set:punctuation-dash
-@defvrx {Character Set} char-set:punctuation-open
-@defvrx {Character Set} char-set:punctuation-close
-@defvrx {Character Set} char-set:punctuation-initial-quote
-@defvrx {Character Set} char-set:punctuation-final-quote
-@defvrx {Character Set} char-set:punctuation-other
-@defvrx {Character Set} char-set:symbol-math
-@defvrx {Character Set} char-set:symbol-currency
-@defvrx {Character Set} char-set:symbol-modifier
-@defvrx {Character Set} char-set:symbol-other
-@defvrx {Character Set} char-set:separator-space
-@defvrx {Character Set} char-set:separator-line
-@defvrx {Character Set} char-set:separator-paragraph
-@defvrx {Character Set} char-set:control
-@defvrx {Character Set} char-set:format
-@defvrx {Character Set} char-set:surrogate
-@defvrx {Character Set} char-set:private-use
-@defvrx {Character Set} char-set:not-assigned
+@defvr {Character Set} char-set:category/letter-uppercase
+@defvrx {Character Set} char-set:category/letter-lowercase
+@defvrx {Character Set} char-set:category/letter-titlecase
+@defvrx {Character Set} char-set:category/letter-modifier
+@defvrx {Character Set} char-set:category/letter-other
+@defvrx {Character Set} char-set:category/mark-nospacing
+@defvrx {Character Set} char-set:category/mark-spacing-combining
+@defvrx {Character Set} char-set:category/mark-enclosing
+@defvrx {Character Set} char-set:category/number-decimal-digit
+@defvrx {Character Set} char-set:category/number-letter
+@defvrx {Character Set} char-set:category/number-other
+@defvrx {Character Set} char-set:category/puncutation-connector
+@defvrx {Character Set} char-set:category/punctuation-dash
+@defvrx {Character Set} char-set:category/punctuation-open
+@defvrx {Character Set} char-set:category/punctuation-close
+@defvrx {Character Set} char-set:category/punctuation-initial-quote
+@defvrx {Character Set} char-set:category/punctuation-final-quote
+@defvrx {Character Set} char-set:category/punctuation-other
+@defvrx {Character Set} char-set:category/symbol-math
+@defvrx {Character Set} char-set:category/symbol-currency
+@defvrx {Character Set} char-set:category/symbol-modifier
+@defvrx {Character Set} char-set:category/symbol-other
+@defvrx {Character Set} char-set:category/separator-space
+@defvrx {Character Set} char-set:category/separator-line
+@defvrx {Character Set} char-set:category/separator-paragraph
+@defvrx {Character Set} char-set:category/control
+@defvrx {Character Set} char-set:category/format
+@defvrx {Character Set} char-set:category/surrogate
+@defvrx {Character Set} char-set:category/private-use
+@defvrx {Character Set} char-set:category/not-assigned
 One set for each general category defined by the Unicode Standard.
 @end defvr
 

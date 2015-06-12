@@ -34,9 +34,13 @@
     ;; constructors
     char-set			char-set-copy
     char-set-add		char-set-add!
+    (rename (char-set-add	char-set-adjoin)
+	    (char-set-add!	char-set-adjoin!))
+    char-set-delete
 
     ;; inspection
     char-set-size		char-set-domain-ref
+    char-set-count
     char-set-write
     char-set-hash
 
@@ -46,25 +50,31 @@
     char-set=?			char-set<?
     char-set-superset?		char-set-superset?/strict
     char-set-subset?		char-set-subset?/strict
+    (rename (char-set-subset?	char-set<=?))
 
     ;; set operations
-    char-set-intersection char-set-union
-    char-set-difference char-set-complement
-
-    ;; string operations
-    string->char-set
-
-    ;; list operations
-    char-set-for-each char-set-every
-    char-set-any char-set-fold
-    char-set->list
+    char-set-intersection	char-set-union
+    char-set-difference		char-set-xor
+    char-set-complement		char-set-difference+intersection
 
     ;; iterations
+    char-set-for-each		char-set-map
+    char-set-every		char-set-any
+    char-set-filter		char-set-fold
+
+    ;; string operations
+    string->char-set		char-set->string
+
+    ;; list operations
+    char-set->list		list->char-set
+
+    ;; cursors
+    (rename (cursor?		char-set-cursor?))
     char-set-cursor		char-set-ref
     char-set-cursor-next	end-of-char-set?
 
     ;; predefined
-    char-set:empty       char-set:full
+    char-set:empty		char-set:full
 
     char-set:ascii
     char-set:ascii/dec-digit	(rename (char-set:ascii/dec-digit char-set:ascii/digit))
@@ -80,7 +90,8 @@
     char-set:ascii/vowels/lower-case	char-set:ascii/consonants/lower-case
     char-set:ascii/vowels/upper-case	char-set:ascii/consonants/upper-case
     )
-  (import (vicare))
+  (import (vicare)
+    (vicare system $chars))
 
 
 ;;;; helpers
@@ -100,12 +111,6 @@
       tail
     (%append-reverse (cdr rev-head)
 		     (cons (car rev-head) tail))))
-
-(define (%cons-head-tail head tail result)
-  ;;This is an internal helper for set operations.
-  ;;
-  (let ((result (if head (cons head result) result)))
-    (if tail (cons tail result) result)))
 
 
 ;;;; characters as items in domains and ranges
@@ -159,7 +164,7 @@
   (define (item-next ch range)
     (let* ((x  (+ 1 (item->integer ch))))
       (and (%number-in-item-range? x)
-	   (let ((ch (integer->char x)))
+	   (let ((ch ($fixnum->char x)))
 	     (if range
 		 (and (<= x (item->integer (cdr range)))
 		      ch)
@@ -168,7 +173,7 @@
   (define (item-prev ch range)
     (let* ((x  (- (item->integer ch) 1)))
       (and (%number-in-item-range? x)
-	   (let ((ch (integer->char x)))
+	   (let ((ch ($fixnum->char x)))
 	     (if range
 		 (and (<= (item->integer (car range)) x)
 		      ch)
@@ -298,7 +303,7 @@
     (item<=? (car range-a) (car range-b)))
 
   (define (range-last<? range-a range-b)
-    ;;Return #t if the  righttmost item in RANGE-A is less than  the leftmost item in
+    ;;Return #t if  the rightmost item in  RANGE-A is less than the  leftmost item in
     ;;RANGE-B:
     ;;
     ;;   |---------| range-a
@@ -592,8 +597,10 @@
     ;;Apply PROC to each item in RANGE, discard the results.
     ;;
     (let loop ((i (car range)))
-      (and i (proc i)
-	   (loop (item-next i range)))))
+      (and i
+	   (begin
+	     (proc i)
+	     (loop (item-next i range))))))
 
   (define (range-every proc range)
     ;;Apply PROC to every item in RANGE; return true if all the applications returned
@@ -633,32 +640,27 @@
 ;;
 
 (module DOMAINS-OF-ITEMS
-  (make-domain
+  ( ;;
+   make-domain			make-empty-domain
    domain-copy			domain-add-item		domain-add-range
+   domain-add
    domain?			domain-size		domain-empty?
    domain-contains?		domain=?		domain<?
    domain-superset?		domain-superset?/strict
    domain-intersection		domain-union		domain-difference
-   domain-complement		domain-for-each		domain-every
+   domain-complement		domain-for-each		domain-map
+   domain-every			domain-filter
    domain-any			domain-fold		domain->list)
   (import RANGES-OF-ITEMS CHARACTERS-AS-ITEMS)
 
-  (define-syntax-rule (%make-empty-domain)
+  (define-syntax-rule (make-empty-domain)
     '())
 
   (define* (make-domain items/ranges)
     ;;Given a list of items and/or ranges return a new domain.
     ;;
-    (fold-left (lambda (domain item)
-		 (cond ((item? item)
-			(domain-add-item  domain item))
-		       ((range? item)
-			(domain-add-range domain item))
-		       (else
-			(assertion-violation __who__
-			  "invalid element for domain, expected character or character range"
-			  item))))
-      (%make-empty-domain) items/ranges))
+    (fold-left domain-add
+      (make-empty-domain) items/ranges))
 
   (define (domain-copy domain)
     ;;Return a new domain equal to DOMAIN but having a new list structure.
@@ -667,6 +669,15 @@
 	(cons (domain-copy (car domain))
 	      (domain-copy (cdr domain)))
       domain))
+
+  (define* (domain-add domain obj)
+    (cond ((item? obj)
+	   (domain-add-item  domain obj))
+	  ((range? obj)
+	   (domain-add-range domain obj))
+	  (else
+	   (procedure-argument-violation __who__
+	     "invalid element for domain, expected character or character range" obj))))
 
   (define (domain-add-item domain obj)
     ;;Return a new domain having the same elements of DOMAIN and containing also OBJ.
@@ -969,65 +980,97 @@
 	      "internal error processing ranges" (list range-a range-b)))))))))
 
   (define* (domain-complement domain universe)
+    ;;Return a new domain holding the items from UNIVERSE not present in DOMAIN.
+    ;;
     (if (null? domain)
 	universe
-      (let loop ((result		'())
+      (let loop ((result	'())
 		 (universe	universe)
-		 (domain		domain))
+		 (domain	domain))
 	(cond ((domain-empty? universe)
 	       (reverse result))
 	      ((domain-empty? domain)
 	       (reverse (%append-reverse universe result)))
 	      (else
-	       (let ((range-a (car universe))
-		     (range-b (car domain)))
-		 (cond ((range<? range-b range-a)
+	       (let ((universe.range (car universe))
+		     (domain.range   (car domain)))
+		 (cond ((range<? domain.range universe.range)
+			;;Discard the domain range, go on with the same universe.
 			(loop result universe (cdr domain)))
 
-		       ((range<? range-a range-b)
-			(loop (cons range-a result) (cdr universe) domain))
+		       ((range<? universe.range domain.range)
+			;;Accept as  result the universe  range, go on with  the same
+			;;domain.
+			(loop (cons universe.range result) (cdr universe) domain))
 
-		       ((range=? range-a range-b)
+		       ((range=? universe.range domain.range)
+			;;Discarb both the ranges.
 			(loop result (cdr universe) (cdr domain)))
 
-		       ((range-overlapping? range-a range-b)
-			(let-values (((head tail)
-				      (%range-in-first-only range-a range-b)))
-			  (if (range-last<? range-b range-a)
-			      (loop (if head (cons head result) result)
-				    (cons tail (cdr universe)) (cdr domain))
+		       ((range-overlapping? universe.range domain.range)
+			(receive (head tail)
+			    (%range-in-first-only universe.range domain.range)
+			  (if (range-last<? domain.range universe.range)
+			      ;;The scenario is one among:
+			      ;;
+			      ;;       |---------| universe.range
+			      ;;   |---------| domain.range
+			      ;;
+			      ;;   |---------------| universe.range
+			      ;;      |---------| domain.range
+			      ;;
+			      ;;Here we know that TAIL is non-false: we still have to
+			      ;;check  the  TAIL  against  the next  range  from  the
+			      ;;domain.
+			      (loop (if head (cons head result) result) ;result
+				    (cons tail (cdr universe))		;universe
+				    (cdr domain))			;domain
 			    (let ((result (%cons-head-tail head tail result)))
-			      (cond ((range-last<? range-a range-b)
+			      (cond ((range-last<? universe.range domain.range)
+				     ;;The scenario is one among:
+				     ;;
+				     ;;   |---------| universe.range
+				     ;;      |---------| domain.range
+				     ;;
+				     ;;   |---------| universe.range
+				     ;;   |-------------| domain.range
+				     ;;
+				     ;;we  still  have  to  check  the  domain  range
+				     ;;against the next range from the universe.
 				     (loop result (cdr universe) domain))
 				    (else
+				     ;;The scenario is one among:
+				     ;;
+				     ;;   |------------| universe.range
+				     ;;      |---------| domain.range
+				     ;;
+				     ;;      |---------| universe.range
+				     ;;   |------------| domain.range
+				     ;;
 				     (loop result (cdr universe) (cdr domain))))))))
 		       (else
-			;;just discard RANGE-A
 			(assertion-violation __who__
-			  "internal error processing ranges" (list range-a range-b)))
+			  "internal error processing ranges" (list universe.range domain.range)))
 		       )))))))
-
-  (define (%range-in-first-only range-a range-b)
-    (let ((start-a (car range-a)) (last-a (cdr range-a))
-	  (start-b (car range-b)) (last-b (cdr range-b)))
-      (if (or (item<? last-b start-a)
-	      (item<? last-a start-b)) ; disjoint (including contiguous)
-	  (values #f range-a)
-	;;Here we know they are overlapping.
-	(values
-	 (and (item<? start-a start-b)
-	      (let ((start-b/prev (item-prev start-b range-a)))
-		(and (item<? start-a start-b/prev)
-		     (cons start-a start-b/prev))))
-	 (and (item<? last-b last-a)
-	      (let ((last-b/next (item-next last-b range-a)))
-		(and (item<? last-b/next last-a)
-		     (cons last-b/next last-a))))))))
 
   (define (domain-for-each proc domain)
     (for-each (lambda (range)
 		(range-for-each proc range))
       domain))
+
+  (define (domain-map proc domain)
+    (domain-fold (lambda (item knil)
+		   (domain-add-item knil (proc item)))
+		 (make-empty-domain)
+		 domain))
+
+  (define (domain-filter pred domain base-domain)
+    (domain-fold (lambda (item knil)
+		   (if (pred item)
+		       (domain-add-item knil item)
+		     knil))
+		 base-domain
+		 domain))
 
   (define (domain-every proc domain)
     (for-all (lambda (range)
@@ -1040,14 +1083,74 @@
       domain))
 
   (define (domain-fold kons knil domain)
-    (let loop ((domain domain)
-	       (knil knil))
-      (if (null? domain)
-	  knil
-	(loop (cdr domain) (range-fold kons knil (car domain))))))
+    (if (null? domain)
+	knil
+      (domain-fold kons (range-fold kons knil (car domain)) (cdr domain))))
 
   (define (domain->list domain)
     (reverse (apply append (map range->list domain))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%range-in-first-only range-a range-b)
+    ;;Return two values, each being a range  or false.  The returned values, head and
+    ;;tail, represent the subset of RANGE-A, not including the characters in RANGE-B.
+    ;;The returned range may share structure with the arguments.
+    ;;
+    (let ((start-a (car range-a)) (last-a (cdr range-a))
+	  (start-b (car range-b)) (last-b (cdr range-b)))
+      (if (or
+	   ;;    range-b     range-a
+	   ;; --|+++++++|---|+++++++|--
+	   (item<? last-b start-a)
+	   ;;    range-a     range-b
+	   ;; --|+++++++|---|+++++++|--
+	   (item<? last-a start-b))
+	  ;;The ranges are disjoint (including  contiguous): return false as head and
+	  ;;the whole RANGE-A as tail.
+	  (values #f range-a)
+	;;Here we know they are overlapping.
+	(values
+	 ;;Return false as head and a domain as tail when:
+	 ;;
+	 ;;        range-a
+	 ;; ------|+++++++|---
+	 ;; --|+++++++|+++|---
+	 ;;    range-b tail
+	 ;;
+	 ;;Return a domain as head and false as tail when:
+	 ;;
+	 ;;    range-a
+	 ;; --|+++++++|------
+	 ;; --|++|+++++++|---
+	 ;;  head range-b
+	 ;;
+	 ;;Return a domain as both head and tail when:
+	 ;;
+	 ;;       range-a
+	 ;; --|++++++++++++++|---
+	 ;; --|++|+++++++|+++|---
+	 ;;  head range-b tail
+	 ;;
+	 (and (item<? start-a start-b)
+	      (let ((start-b/prev (item-prev start-b range-a)))
+		(if (item<? start-a start-b/prev)
+		    (cons start-a start-b/prev)
+		  ;;start-a == start-b/prev
+		  (cons start-a start-a))))
+	 (and (item<? last-b last-a)
+	      (let ((last-b/next (item-next last-b range-a)))
+		(if (item<? last-b/next last-a)
+		    (cons last-b/next last-a)
+		  ;;last-b/next == last-a
+		  (cons last-a last-a))))))))
+
+  (define (%cons-head-tail head tail result)
+    ;;This  is an  internal helper  for  set operations.   Prepend HEAD  and TAIL  to
+    ;;RESULT, but only if they are ranges; if they are false: do nothing.
+    ;;
+    (let ((result (if head (cons head result) result)))
+      (if tail (cons tail result) result)))
 
   #| end of module: DOMAINS-OF-ITEMS |# )
 
@@ -1070,26 +1173,25 @@
 (define* (char-set-copy {cs char-set?})
   ;;Return a new instance of :CHAR-SET containing a copy of the fields of CS.
   ;;
-  (char-set (domain-copy ($:char-set-domain cs))))
+  (:make-char-set (domain-copy ($:char-set-domain cs))))
 
-(define* (char-set-add {cs char-set?} obj)
+(define* (char-set-add {cs char-set?} . char/range*)
   ;;Return a new instance of :CHAR-SET containing a copy of the fields of CS with the
   ;;addition of OBJ, which can be a character or range.
   ;;
-  (import RANGES-OF-ITEMS)
-  (cond ((char? obj)
-	 (:make-char-set (domain-add-item  ($:char-set-domain cs) obj)))
-	((range? obj)
-	 (:make-char-set (domain-add-range ($:char-set-domain cs) obj)))
-	(else
-	 (procedure-argument-violation __who__
-	   "attempt to add an invalid object to a char-set" obj))))
+  ($char-set-add cs char/range*))
 
-(define* (char-set-add! {cs char-set?} obj)
+(define ($char-set-add cs char/range*)
+  ($char-set-union cs (list (apply char-set char/range*))))
+
+(define* (char-set-add! {cs char-set?} . char/range*)
   ;;Return CS itself after adding OBJ to it; OBJ can be a character or range.
   ;;
-  ($:char-set-domain-set! cs (char-set-add cs obj))
+  ($:char-set-domain-set! cs ($:char-set-domain ($char-set-add cs char/range*)))
   cs)
+
+(define* (char-set-delete {cs char-set?} . char/range*)
+  ($char-set-difference cs (list (apply char-set char/range*))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1105,13 +1207,53 @@
 (define* (char-set-contains? {cs char-set?} {item char?})
   (domain-contains? ($:char-set-domain cs) item))
 
-(define* (char-set=? {cs-a char-set?} {cs-b char-set?})
-  (domain=? ($:char-set-domain cs-a)
-	    ($:char-set-domain cs-b)))
+(module (char-set=?)
 
-(define* (char-set<? {cs-a char-set?} {cs-b char-set?})
-  (domain<? ($:char-set-domain cs-a)
-	    ($:char-set-domain cs-b)))
+  (case-define* char-set=?
+    (()
+     #t)
+    (({cs char-set?})
+     #t)
+    (({cs1 char-set?} {cs2 char-set?})
+     ($char-set=?/two cs1 cs2))
+    (({cs1 char-set?} {cs2 char-set?} {cs3 char-set?} . {cs* char-set?})
+     (and ($char-set=?/two cs1 cs2)
+	  ($char-set=?/two cs2 cs3)
+	  (for-all (lambda (cs^)
+		     ($char-set=?/two cs3 cs^))
+	    cs*)))
+    #| end of CASE-DEFINE* |# )
+
+  (define ($char-set=?/two cs1 cs2)
+    (domain=? ($:char-set-domain cs1)
+	      ($:char-set-domain cs2)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (char-set<?)
+
+  (case-define* char-set<?
+    (()
+     #t)
+    (({cs char-set?})
+     #t)
+    (({cs1 char-set?} {cs2 char-set?})
+     ($char-set<?/two cs1 cs2))
+    (({cs1 char-set?} {cs2 char-set?} {cs3 char-set?} . {cs* char-set?})
+     (and ($char-set<?/two cs1 cs2)
+	  ($char-set<?/two cs2 cs3)
+	  (apply char-set<? cs3 cs*)))
+    #| end of CASE-DEFINE* |# )
+
+  (define ($char-set<?/two cs1 cs2)
+    (domain<? ($:char-set-domain cs1)
+	      ($:char-set-domain cs2)))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
 (module (char-set-superset?)
 
@@ -1203,29 +1345,68 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (char-set-intersection {cs char-set?} . {cs* char-set?})
-  (:make-char-set (fold-left (lambda (domain-prev domain)
-			       (domain-intersection domain domain-prev))
-		    ($:char-set-domain cs)
-		    (map (lambda (cs)
-			   ($:char-set-domain cs))
-		      cs*))))
+(case-define* char-set-intersection
+  (()
+   (char-set-copy char-set:full))
+  (({cs char-set?} . {cs* char-set?})
+   (:make-char-set (fold-left (lambda (domain-prev cs)
+				(domain-intersection ($:char-set-domain cs) domain-prev))
+		     ($:char-set-domain cs)
+		     cs*))))
 
-(define* (char-set-union {cs char-set?} . {cs* char-set?})
-  (:make-char-set (fold-left (lambda (domain-prev domain)
-			       (domain-union domain domain-prev))
-		    ($:char-set-domain cs)
-		    (map (lambda (cs)
-			   ($:char-set-domain cs))
-		      cs*))))
+(case-define* char-set-union
+  (()
+   (char-set))
+  (({cs char-set?} . {cs* char-set?})
+   ($char-set-union cs cs*)))
 
-(define* (char-set-difference {cs char-set?} . {cs* char-set?})
-  (:make-char-set (fold-left (lambda (domain-prev domain)
-			      (domain-difference domain domain-prev))
-			    ($:char-set-domain cs)
-			    (map (lambda (cs)
-				   ($:char-set-domain cs))
-			      cs*))))
+(define ($char-set-union cs cs*)
+  (:make-char-set (fold-left (lambda (domain-prev cs)
+			       (domain-union ($:char-set-domain cs) domain-prev))
+		    ($:char-set-domain cs)
+		    cs*)))
+
+(define* (char-set-difference {universe char-set?} . {cs* char-set?})
+  ($char-set-difference universe cs*))
+
+(define ($char-set-difference universe cs*)
+  ;;Return a  new char-set holding the  characters from UNIVERSE not  included in any
+  ;;char-set from CS*.
+  ;;
+  (:make-char-set (fold-left (lambda (universe-domain cs)
+			       ;;DOMAIN-COMPLEMENT returns  a new domain  holding the
+			       ;;items from  the second  argument not present  in the
+			       ;;first argument.
+			       (domain-complement ($:char-set-domain cs) universe-domain))
+		    ($:char-set-domain universe)
+		    cs*)))
+
+
+
+(define* (char-set-difference+intersection {cs char-set?} . {cs* char-set?})
+  (let* ((domain ($:char-set-domain cs))
+	 (Q      (fold-left (lambda (P cs)
+			      (let ((domain-prev.diff (car P))
+				    (domain-prev.inte (cdr P))
+				    (domain           ($:char-set-domain cs)))
+				(cons (domain-complement   domain domain-prev.diff)
+				      (domain-intersection domain domain-prev.inte))))
+		   (cons domain domain)
+		   cs*)))
+    (values (:make-char-set (car Q))	;difference
+	    (:make-char-set (cdr Q))))) ;intersection
+
+(case-define* char-set-xor
+  (()
+   (char-set))
+  (({cs char-set?} . {cs* char-set?})
+   ;;Return  a new  char-set  holding the  characters  from CS  not  included in  any
+   ;;char-set from CS*.
+   ;;
+   (:make-char-set (fold-left (lambda (domain-prev cs)
+				(domain-difference ($:char-set-domain cs) domain-prev))
+		     ($:char-set-domain cs)
+		     cs*))))
 
 (case-define* char-set-complement
   (({cs char-set?})
@@ -1236,8 +1417,18 @@
 
 ;;; --------------------------------------------------------------------
 
+(define* (char-set-map {proc procedure?} {cs char-set?})
+  (:make-char-set (domain-map proc ($:char-set-domain cs))))
+
 (define* (char-set-for-each {proc procedure?} {cs char-set?})
-  (domain-for-each proc ($:char-set-domain cs)))
+  (domain-for-each proc ($:char-set-domain cs))
+  (void))
+
+(case-define* char-set-filter
+  (({pred procedure?} {cs char-set?})
+   (:make-char-set (domain-filter pred ($:char-set-domain cs) (make-empty-domain))))
+  (({pred procedure?} {cs char-set?} {base-cs char-set?})
+   (:make-char-set (domain-filter pred ($:char-set-domain cs) ($:char-set-domain base-cs)))))
 
 (define* (char-set-every {proc procedure?} {cs char-set?})
   (domain-every proc ($:char-set-domain cs)))
@@ -1248,16 +1439,46 @@
 (define* (char-set-fold {kons procedure?} knil {cs char-set?})
   (domain-fold kons knil ($:char-set-domain cs)))
 
+;;; --------------------------------------------------------------------
+;;; list operations
+
 (define* (char-set->list {cs char-set?})
   (domain->list ($:char-set-domain cs)))
 
-(define* (string->char-set {str string?})
-  (:make-char-set (make-domain (string->list str))))
+(case-define* list->char-set
+  (({ell list-of-chars?})
+   (apply char-set ell))
+  (({ell list-of-chars?} {base-cs char-set?})
+   (char-set-union base-cs (apply char-set ell))))
+
+;;; --------------------------------------------------------------------
+;;; string operations
+
+(define* (char-set->string {cs char-set?})
+  (receive (port extract)
+      (open-string-output-port)
+    (char-set-for-each (lambda (ch)
+			 (display ch port))
+		       cs)
+    (extract)))
+
+(case-define* string->char-set
+  (({str string?})
+   (:make-char-set (make-domain (string->list str))))
+  (({str string?} {base-cs char-set?})
+   (char-set-union base-cs (:make-char-set (make-domain (string->list str))))))
 
 ;;; --------------------------------------------------------------------
 
 (define* (char-set-size {cs char-set?})
   (domain-size ($:char-set-domain cs)))
+
+(define* (char-set-count {pred procedure?} {cs char-set?})
+  (domain-fold (lambda (ch knil)
+		 (if (pred ch)
+		     (add1 knil)
+		   knil))
+	       0 ($:char-set-domain cs)))
 
 (case-define* char-set-write
   ((cs)
@@ -1281,8 +1502,8 @@
   (({cs char-set?} {bound non-negative-exact-integer?})
    (let ((R (fold-left (lambda (knil range)
 			 (+ knil
-			    (char->integer (car range))
-			    (char->integer (cdr range))))
+			    ($char->fixnum (car range))
+			    ($char->fixnum (cdr range))))
 	      0
 	      ($:char-set-domain cs))))
      (if (null? R)
