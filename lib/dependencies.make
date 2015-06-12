@@ -3501,6 +3501,39 @@ EXTRA_DIST += lib/srfi/%3a115/regexps.sls
 CLEANFILES += lib/srfi/%3a115/regexps.fasl
 endif
 
+lib/srfi/%3a116.fasl: \
+		lib/srfi/%3a116.sls \
+		lib/srfi/%3a116/ilists.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a116_fasldir = $(bundledlibsdir)/srfi
+lib_srfi__3a116_slsdir  = $(bundledlibsdir)/srfi
+nodist_lib_srfi__3a116_fasl_DATA = lib/srfi/%3a116.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a116_sls_DATA = lib/srfi/%3a116.sls
+endif
+EXTRA_DIST += lib/srfi/%3a116.sls
+CLEANFILES += lib/srfi/%3a116.fasl
+endif
+
+lib/srfi/%3a116/ilists.fasl: \
+		lib/srfi/%3a116/ilists.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a116_ilists_fasldir = $(bundledlibsdir)/srfi/%3a116
+lib_srfi__3a116_ilists_slsdir  = $(bundledlibsdir)/srfi/%3a116
+nodist_lib_srfi__3a116_ilists_fasl_DATA = lib/srfi/%3a116/ilists.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a116_ilists_sls_DATA = lib/srfi/%3a116/ilists.sls
+endif
+EXTRA_DIST += lib/srfi/%3a116/ilists.sls
+CLEANFILES += lib/srfi/%3a116/ilists.fasl
+endif
+
 lib/srfi/%3a106.fasl: \
 		lib/srfi/%3a106.sls \
 		lib/srfi/%3a106/socket.fasl \

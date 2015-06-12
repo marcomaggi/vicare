@@ -1,0 +1,766 @@
+@node srfi ilists
+@section @ansrfi{116} immutable lists
+
+
+@cindex @ansrfi{116} feature based conditional expansion construct
+@cindex @library{srfi :116}, library
+@cindex @library{srfi :116 regexps}, library
+@cindex Library @library{srfi :116}
+@cindex Library @library{srfi :116 regexps}
+
+
+The library @library{srfi :116} is by John Cowan as reference
+implementation for @ansrfi{116}; see:
+
+@center @url{http://srfi.schemers.org/srfi-116/srfi-116.html}
+
+@noindent
+for more details.
+
+@menu
+* srfi ilists license::         Original document license.
+* srfi ilists abstract::        Abstract.
+* srfi ilists rationale::       Rationale.
+* srfi ilists discussion::      Discussion.
+* srfi ilists quotation::       Quotation.
+* srfi ilists procs::           Procedures.
+* srfi ilists ack::             Acknowledgements.
+* srfi ilists references::      References.
+@end menu
+
+@c page
+@node srfi ilists license
+@subsection Original document license
+
+
+Copyright @copyright{} John Cowan 2014.  All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+@c page
+@node srfi ilists abstract
+@subsection Abstract
+
+
+Scheme currently does not provide immutable pairs corresponding to its
+existing mutable pairs, although most uses of pairs do not exploit their
+mutability.  The Racket system takes the radical approach of making
+Scheme's pairs immutable, and providing a minimal library of mutable
+pairs with procedures named @func{mpair?}, @func{mcons}, @func{mcar},
+@func{mcdr}, @func{set-mcar!}, @func{set-mcdr!}.  This @srfi{} takes the
+opposite approach of leaving Scheme's pairs unchanged and providing a
+full set of routines for creating and dealing with immutable pairs.  The
+sample implementation is portable (to systems with @ansrfi{9}) and
+efficient.
+
+@c page
+@node srfi ilists rationale
+@subsection Rationale
+
+
+The first question about this library is why it should exist at all.
+Why not simply eliminate mutability from Scheme's ordinary pairs and use
+a version of @ansrfi{1} that treats the linear--update procedures (with
+@samp{!}) as identical to their functional counterparts, as Racket does?
+The main answer is that this approach breaks @rnrs{5} and
+@rnrs{6}--small.  All the data structures in these versions of Scheme
+are inherently mutable, and portable code is allowed to depend on that
+property.
+
+@rnrs{6} segregates @func{set-car!} and @func{set-cdr!} into a separate
+library, thus allowing implementations to provide immutable Scheme pairs
+if this library is not (transitively) imported into a program, and
+mutable ones if it is.  However, it is not possible to write portable
+@rnrs{6} programs that differentiate between mutable and immutable
+pairs, for example by using immutable pairs most of the time and mutable
+pairs where necessary.
+
+Because of the Liskov Substitution Principle, it is not possible to
+treat mutable pairs as either a subtype or a supertype of mutable ones;
+they must be distinct, and if operations are to apply to both, they can
+do so only by ad hoc polymorphism of the kind that Scheme traditionally
+avoids for several reasons, including clarity, efficiency, and
+flexibility.  This proposal, therefore, treats mutable and immutable
+pairs separately, while allowing easy conversion from one to the other.
+
+Rather than attempting to design this library from scratch, I have
+chosen the conservative option of modifying @ansrfi{1}.  Consequently,
+most of the rationale given in that document applies to this one as
+well.  I have made the following changes:
+
+@itemize
+@item
+Removed all linear--update procedures ending in @samp{!}.
+
+@item
+Removed all references to circular lists (there will be a future @srfi{}
+for immutable bidirectional cycles).
+
+@item
+Removed the @math{O(n^2)} lists--as--sets procedures (there will be a
+future @srfi{} supporting @math{O(log n)} immutable sets).
+
+@item
+Inserted an @samp{i} at a judicious place in each identifier, usually at
+the beginning.  However, because ``icons'' means something else in both
+ordinary English and computer jargon, the basic constructor and its
+immediate relatives are named @func{ipair}, @func{xipair} and
+@func{ipair*} instead.
+
+@item
+Added procedures for conversion between ordinary and immutable pairs,
+lists, and trees.
+
+@item
+Added an analogue of @func{apply} for applying a procedure to an
+immutable list of arguments.
+
+@item
+Added @ansrfi{114} comparators for immutable pairs, lists, and dotted
+lists.
+@end itemize
+
+@quotation
+@strong{NOTE} In the prose, immutable pairs and lists are known as
+@emph{ipairs} and @emph{ilists} throughout.
+@end quotation
+
+@c page
+@node srfi ilists discussion
+@subsection Discussion
+
+
+A set of general criteria guided the design of the @ansrfi{1} library
+that underlies this library.  They are reproduced here.
+
+List--filtering procedures such as @func{ifilter} or @func{idelete} do
+not disorder lists.  Elements appear in the answer list in the same
+order as they appear in the argument list.  This constrains
+implementation, but seems like a desirable feature, since in many uses
+of lists, order matters.  (In particular, disordering an association
+list is definitely a bad idea.)
+
+Contrariwise, although the sample implementations of the list--filtering
+procedures share longest common tails between argument and answer lists,
+it is not part of the spec.
+
+Because ilists are an inherently sequential data structure (unlike, say,
+vectors), inspection procedures such as @func{ifind}, @func{ifind-tail},
+@func{ifor-each}, @func{iany} and @func{ievery} commit to a
+left-to--right traversal order of their argument list.
+
+However, constructors, such as @func{ilist-tabulate} and the mapping
+procedures (@func{iappend-map}, @func{ipair-for-each},
+@func{ifilter-map}, @func{imap-in-order}), do not specify the dynamic
+order in which their procedural argument is applied to its various
+values.
+
+Predicates return useful true values wherever possible.  Thus
+@func{iany} must return the true value produced by its predicate, and
+@func{ievery} returns the final true value produced by applying its
+predicate argument to the last element of its argument list.
+
+No special status is accorded Scheme's built--in equality predicate.
+Any functionality provided in terms of @func{eq?}, @func{eqv?},
+@func{equal?} is also available using a client--provided equality
+predicate.
+
+These procedures are not generic as between ordinary pairs/lists and
+immutable pairs/lists; they are specific to immutable lists.  Like Olin,
+I prefer to keep the library simple and focused.  However, there are a
+few conversions between mutable and immutable lists provided.
+
+@c ------------------------------------------------------------------------
+
+@subsubheading Improper Lists
+
+Scheme does not properly have a list type, just as C does not have a
+string type.  Rather, Scheme has a binary--tuple type, from which one
+can build binary trees.  There is an interpretation of Scheme values
+that allows one to treat these trees as lists.  The same interpretation
+is applied to immutable pairs.
+
+Because the empty list, written as @samp{()}, is already immutable, it
+is shared between mutable and immutable lists as the termination marker.
+It is the only Scheme object that is both a mutable list and an
+immutable list.
+
+Users should note that dotted lists, whether mutable or immutable, are
+not commonly used, and are considered by many Scheme programmers to be
+an ugly artifact of Scheme's lack of a true list type.  Dotted ilists
+are not fully supported by this @srfi{}.  Most procedures are defined
+only on proper ilists that is, @samp{()}--terminated ilists.  The
+procedures that will also handle dotted ilists are specifically marked.
+While this design decision restricts the domain of possible arguments
+one can pass to these procedures, it has the benefit of allowing the
+procedures to catch the error cases where programmers inadvertently pass
+scalar values to an ilist procedure by accident, e.g., by switching the
+arguments to a procedure call.
+
+@c page
+@node srfi ilists quotation
+@subsection Quotation
+
+
+The various Scheme standards permit, but do not require, Scheme
+implementations to treat quoted pairs and lists as immutable.  Thus
+whereas the expression @code{(set-car! (list 1 2 3) 10)} evaluates to
+the list @code{(10 2 3)}, the expression @code{(set-car! '(1 2 3) 10)}
+is not portable and in fact an error.
+
+This @srfi{} recommends that implementations that provide both this
+@srfi{} and immutable quotations should cause quotations to return the
+same immutable pairs that this @srfi{} describes.  This means that the
+standard Scheme pair and list operations, as well as libraries like
+@ansrfi{1} which are built on them, should accept both mutable and
+immutable pairs: thus @code{(car (ilist 1 2))} should evaluate to
+@samp{1}.
+
+This @srfi{} further recommends that @func{read} should return mutable
+pairs and lists when reading list structure.  No recommendation is made
+about the behavior of @func{write}, @func{display}, and similar output
+procedures on immutable lists.
+
+To make life easier for Scheme programmers, given that many
+implementations do not provide immutable quotation, the syntax keyword
+@syntax{iq} is provided as part of this @srfi{}.  It is analogous to
+@syntax{quote}, taking an arbitrary number of literals and constructing
+an ilist from them, with any pairs in the literals converted to ipairs.
+It is useful for providing constant ipair--based objects.  Note that
+pairs within literal vectors or other implementation--dependent literals
+will not be converted.  Unfortunately, there is no ilist analogue of
+@samp{'}, so we save keystrokes by using @syntax{iq} rather than
+@syntax{iquote} and omitting the top--level parentheses.
+
+@c page
+@node srfi ilists procs
+@subsection Procedures
+
+
+@menu
+* srfi ilists procs conventions::       Arguments notation conventions.
+* srfi ilists procs constructors::      Constructors.
+* srfi ilists procs predicates::        Predicates.
+* srfi ilists procs selectors::         Selectors.
+@end menu
+
+@c page
+@node srfi ilists procs conventions
+@subsubsection Arguments notation conventions
+
+
+The templates given below obey the following conventions for procedure
+formals:
+
+@table @var
+@item ilist
+A proper (@samp{()}--terminated) ilist.
+
+@item dilist
+A proper or dotted ilist.
+
+@item ipair
+An immutable pair.
+
+@item x
+@itemx y
+@itemx d
+@itemx a
+Any value.
+
+@item object
+@itemx value
+Any value.
+
+@item n
+@itemx i
+A natural number (an integer @samp{>= 0}).
+
+@item proc
+A procedure.
+
+@item pred
+A procedure whose return value is treated as a boolean.
+
+@item =
+A boolean procedure taking two arguments.
+@end table
+
+To interpret the examples, pretend that they are executed on a Scheme
+that prints immutable pairs and lists with the syntax of mutable ones.
+
+It is an error to pass a dotted ilist to a procedure not defined to
+accept such an argument.
+
+@c page
+@node srfi ilists procs constructors
+@subsubsection Constructors
+
+
+@deftypefun @var{ipair} ipair @var{a} @var{d}
+The primitive constructor.  Return a newly allocated ipair whose icar is
+@var{a} and whose icdr is @var{d}.  The ipair is guaranteed to be
+different (in the sense of @func{eqv?}) from every existing object.
+
+@lisp
+(ipair 'a '())                  @result{} (a)
+(ipair (iq a) (iq b c d))       @result{} ((a) b c d)
+(ipair "a" (iq b c))            @result{} ("a" b c)
+(ipair 'a 3)                    @result{} (a . 3)
+(ipair (iq a b) 'c)             @result{} ((a b ) . c)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} ilist @var{object} @dots{}
+Return a newly allocated ilist of its arguments.
+
+@lisp
+(ilist 'a (+ 3 4) 'c)           @result{}  (a 7 c)
+(ilist)                         @result{}  ()
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ipair} xipair @var{d} @var{a}
+Equivalent to:
+
+@lisp
+(lambda (d a) (ipair a d))
+@end lisp
+
+Of utility only as a value to be conveniently passed to higher--order
+procedures.
+
+@lisp
+(xipair (iq b c) 'a)            @result{} (a b c)
+@end lisp
+
+The name stands for ``eXchanged Immutable PAIR''.
+@end deftypefun
+
+
+@deftypefun @var{object} ipair* @vari{elt} @varii{elt} @dots{}
+Like @func{ilist}, but the last argument provides the tail of the
+constructed ilist, returning:
+
+@lisp
+(ipair elt1 (ipair elt2 (ipair ... eltn)))
+@end lisp
+
+@lisp
+(ipair* 1 2 3 4)        @result{} (1 2 3 . 4)
+(ipair* 1)              @result{} 1
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} make-ilist @var{n}
+@deftypefunx @var{ilist} make-ilist @var{n} @var{fill}
+Return an @var{n}--element ilist, whose elements are all the value
+@var{fill}.  If the @var{fill} argument is not given, the elements of
+the ilist may be arbitrary values.
+
+@lisp
+(make-ilist 4 'c)       @result{} (c c c c)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} ilist-tabulate @var{n} @var{init-proc}
+Return an @var{n}--element ilist.  Element @var{i} of the ilist, where
+@code{0 <= @var{i} < @var{n}}, is produced by @code{(init-proc
+@var{i})}.  No guarantee is made about the dynamic order in which
+@var{init-proc} is applied to these indices.
+
+@lisp
+(ilist-tabulate 4 values)       @result{} (0 1 2 3)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{dilist} ilist-copy @var{dilist}
+Copy the spine of the argument, including the ilist tail.
+@end deftypefun
+
+
+@deftypefun @var{ilist} iiota @var{count}
+@deftypefunx @var{ilist} iiota @var{count} @var{start} @var{step}
+Return an ilist containing the elements:
+
+@example
+(start start+step ... start+(count-1)*step)
+@end example
+
+The @var{start} and @var{step} parameters default to @samp{0} and
+@samp{1}, respectively.  This procedure takes its name from the
+@acronym{APL} primitive.
+
+@lisp
+(iiota 5)               @result{} (0 1 2 3 4)
+(iiota 5 0 -0.1)        @result{} (0 -0.1 -0.2 -0.3 -0.4)
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs predicates
+@subsubsection Predicates
+
+
+@deftypefun @var{boolean} proper-ilist? @var{x}
+@deftypefunx @var{boolean} ilist? @var{x}
+These identifiers are bound either to the same procedure, or to
+procedures of equivalent behavior.  In either case, true is returned if,
+and only if, @var{x} is a proper ilist a @samp{()}--terminated ilist.
+
+More specifically: the empty list is a proper ilist.  An ipair whose
+icdr is a proper ilist is also a proper ilist.  Everything else is a
+dotted ilist.  This includes non--ipair, non--@samp{()} values
+(e.g. symbols, numbers, mutable pairs), which are considered to be
+dotted ilists of length zero.
+@end deftypefun
+
+
+@deftypefun @var{boolean} dotted-ilist? @var{x}
+True if @var{x} is a finite, non--nil--terminated ilist. That is, there
+exists an @samp{n >= 0} such that @samp{icdrn(x)} is neither an ipair
+nor @samp{()}.  This includes non--ipair, non--@samp{()} values
+(e.g. symbols, numbers), which are considered to be dotted ilists of
+length zero.
+
+@lisp
+(dotted-ilist? x) @equiv{} (not (proper-ilist? x))
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{boolean} ipair? @var{object}
+Return @true{} if @var{object} is an ipair; otherwise @false{}.
+
+@lisp
+(ipair? (ipair 'a 'b))  @result{}  #t
+(ipair? (iq a b c))     @result{}  #t
+(ipair? (cons 1 2))     @result{}  #f
+(ipair? '())            @result{}  #f
+(ipair? '#(a b))        @result{}  #f
+(ipair? 7)              @result{}  #f
+(ipair? 'a)             @result{}  #f
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{boolean} null-ilist? @var{ilist}
+@var{ilist} is a proper ilist.  This procedure returns true if the
+argument is the empty list @samp{()}, and @false{} otherwise.  It is an
+error to pass this procedure a value which is not a proper ilist.  This
+procedure is recommended as the termination condition for
+ilist--processing procedures that are not defined on dotted ilists.
+@end deftypefun
+
+
+@deftypefun @var{boolean} not-ipair? @var{x}
+Equivalent to:
+
+@lisp
+(lambda (x) (not (ipair? x)))
+@end lisp
+
+Provided as a procedure as it can be useful as the termination condition
+for ilist--processing procedures that wish to handle all ilists, both
+proper and dotted.
+@end deftypefun
+
+
+@deftypefun @var{boolean} ilist= @var{elt=} @vari{ilist} @dots{}
+Determines ilist equality, given an element--equality procedure.  Proper
+ilist @var{A} equals proper ilist @var{B} if they are of the same
+length, and their corresponding elements are equal, as determined by
+@var{elt=}.  If the element--comparison procedure's first argument is
+from @var{ilisti}, then its second argument is from @var{ilisti+1},
+i.e. it is always called as @samp{(@var{elt=} @var{a} @var{b})} for
+@var{a} an element of ilist @var{A}, and @var{b} an element of ilist
+@var{B}.
+
+In the @var{n}--ary case, every @var{ilisti} is compared to
+@var{ilisti+1} (as opposed, for example, to comparing @var{ilist1} to
+@var{ilisti}, for @math{i>1}).  If there are no @var{ilist} arguments at
+all, @func{ilist=} simply returns @true{}.
+
+It is an error to apply @func{ilist=} to anything except proper ilists.
+It cannot reasonably be extended to dotted ilists, as it provides no way
+to specify an equality procedure for comparing the ilist terminators.
+
+Note that the dynamic order in which the @var{elt=} procedure is applied
+to pairs of elements is not specified.  For example, if @func{ilist=} is
+applied to three ilists, @var{A}, @var{B}, and @var{C}, it may first
+completely compare @var{A} to @var{B}, then compare @var{B} to @var{C},
+or it may compare the first elements of @var{A} and @var{B}, then the
+first elements of @var{B} and @var{C}, then the second elements of
+@var{A} and @var{B}, and so forth.
+
+The equality procedure must be consistent with @func{eq?}.  That is, it
+must be the case that:
+
+@lisp
+(eq? @var{x} @var{y}) @result{} (@var{elt=} @var{x} @var{y})
+@end lisp
+
+Note that this implies that two ilists which are @func{eq?} are always
+@func{ilist=}, as well; implementations may exploit this fact to
+``short--cut'' the element--by--element comparisons.
+
+@lisp
+(ilist= eq?)            @result{} #t ; trivial cases
+(ilist= eq? (iq a))     @result{} #t
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs selectors
+@subsubsection Selectors
+
+
+@deftypefun @var{value} icar @var{ipair}
+@deftypefunx @var{value} icdr @var{ipair}
+These procedures return the contents of the icar and icdr field of their
+argument, respectively.  Note that it is an error to apply them to the
+empty ilist.
+
+@lisp
+(icar (iq a b c))       @result{}  a
+(icdr (iq a b c))       @result{}  (b c)
+
+(icar (iq (a) b c d))   @result{}  (a)
+(icdr (iq (a) b c d))   @result{}  (b c d)
+
+(icar (ipair 1 2))      @result{}  1
+(icdr (ipair 1 2))      @result{}  2
+
+(icar '())              @error{}  invalid argument
+(icdr '())              @error{}  invalid argument
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} icaar @var{ipair}
+@deftypefunx @var{value} icadr @var{ipair}
+@deftypefunx @var{value} icdar @var{ipair}
+@deftypefunx @var{value} icddr @var{ipair}
+Compositions of icar and icdr.
+@end deftypefun
+
+
+@deftypefun @var{value} icaaar @var{ipair}
+@deftypefunx @var{value} icaadr @var{ipair}
+@deftypefunx @var{value} icadar @var{ipair}
+@deftypefunx @var{value} icaddr @var{ipair}
+@deftypefunx @var{value} icdaar @var{ipair}
+@deftypefunx @var{value} icdadr @var{ipair}
+@deftypefunx @var{value} icddar @var{ipair}
+@deftypefunx @var{value} icdddr @var{ipair}
+Compositions of icar and icdr.
+@end deftypefun
+
+
+@deftypefun @var{value} icaaaar @var{ipair}
+@deftypefunx @var{value} icaaadr @var{ipair}
+@deftypefunx @var{value} icaadar @var{ipair}
+@deftypefunx @var{value} icaaddr @var{ipair}
+@deftypefunx @var{value} icadaar @var{ipair}
+@deftypefunx @var{value} icadadr @var{ipair}
+@deftypefunx @var{value} icaddar @var{ipair}
+@deftypefunx @var{value} icadddr @var{ipair}
+@deftypefunx @var{value} icdaaar @var{ipair}
+@deftypefunx @var{value} icdaadr @var{ipair}
+@deftypefunx @var{value} icdadar @var{ipair}
+@deftypefunx @var{value} icdaddr @var{ipair}
+@deftypefunx @var{value} icddaar @var{ipair}
+@deftypefunx @var{value} icddadr @var{ipair}
+@deftypefunx @var{value} icdddar @var{ipair}
+@deftypefunx @var{value} icddddr @var{ipair}
+Compositions of icar and icdr.
+@end deftypefun
+
+
+@deftypefun @var{value} ilist-ref @var{ilist} @var{i}
+Return the @var{i}-th element of @var{ilist}.  (This is the same as the
+icar of @code{(idrop ilist i)}.)  It is an error if @samp{@var{i} >=
+@var{n}}, where @var{n} is the length of @var{ilist}.
+
+@lisp
+(ilist-ref (iq a b c d) 2)      @result{} c
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{object} ifirst @var{ipair}
+@deftypefunx @var{object} isecond @var{ipair}
+@deftypefunx @var{object} ithird @var{ipair}
+@deftypefunx @var{object} ifourth @var{ipair}
+@deftypefunx @var{object} ififth @var{ipair}
+@deftypefunx @var{object} isixth @var{ipair}
+@deftypefunx @var{object} iseventh @var{ipair}
+@deftypefunx @var{object} ieighth @var{ipair}
+@deftypefunx @var{object} ininth @var{ipair}
+@deftypefunx @var{object} itenth @var{ipair}
+Synonyms for @func{icar}, @func{icadr}, @func{icaddr}, @dots{}
+
+@lisp
+(ithird '(a b c d e))           @result{} c
+@end lisp
+@end deftypefun
+
+
+@deftypefun {@var{x} @var{y}} icar+icdr @var{ipair}
+The fundamental ipair deconstructor:
+
+@lisp
+(lambda (p) (values (icar p) (icdr p)))
+@end lisp
+
+This can, of course, be implemented more efficiently by a compiler.
+@end deftypefun
+
+
+@deftypefun @var{ilist} itake @var{x} @var{i}
+@deftypefunx @var{object} idrop @var{x} @var{i}
+@deftypefunx @var{object} ilist-tail @var{x} @var{i}
+@func{itake} returns the first @var{i} elements of ilist @var{x}.
+@func{idrop} returns all but the first @var{i} elements of ilist
+@var{x}.  @func{ilist-tail} is either the same procedure as @func{idrop}
+or else a procedure with the same behavior.
+
+@lisp
+(itake (iq a b c d e)  2)       @result{} (a b)
+(idrop (iq a b c d e)  2)       @result{} (c d e)
+@end lisp
+
+@var{x} may be any value: a proper or dotted ilist:
+
+@lisp
+(itake (ipair 1 (ipair 2 (ipair 3 'd)))         @result{} (1 2)
+(idrop (ipair 1 (ipair 2 (ipair 3 'd))) 2)      @result{} (3 . d)
+(itake (ipair 1 (ipair 2 (ipair 3 'd))) 3)      @result{} (1 2 3)
+(idrop (ipair 1 (ipair 2 (ipair 3 'd))) 3)      @result{} d
+@end lisp
+
+For a legal @var{i}, @func{itake} and @func{idrop} partition the ilist
+in a manner which can be inverted with @func{iappend}:
+
+@lisp
+(iappend (itake x i) (idrop x i))       @result{} x
+@end lisp
+
+@func{idrop} is exactly equivalent to performing @var{i} @func{icdr}
+operations on @var{x}; the returned value shares a common tail with
+@var{x}.
+@end deftypefun
+
+
+@deftypefun @var{object} itake-right @var{dilist} @var{i}
+@deftypefunx @var{object} idrop-right @var{dilist} @var{i}
+Return the last @var{i} elements of @var{dilist}.  @func{idrop-right}
+returns all but the last @var{i} elements of @var{dilist}.
+
+@lisp
+(itake-right (iq a b c d e) 2)  @result{} (d e)
+(idrop-right (iq a b c d e) 2)  @result{} (a b c)
+@end lisp
+
+The returned ilist may share a common tail with the argument ilist.
+
+@var{dilist} may be any ilist, either proper or dotted:
+
+@lisp
+(itake-right (iq ipair 1 (ipair 2 (ipair 3 'd))) 2)     @result{} (2 3 . d)
+(idrop-right (ipair 1 (ipair 2 (ipair 3 'd))) 2)        @result{} (1)
+(itake-right (ipair 1 (ipair 2 (ipair 3 'd))) 0)        @result{} d
+(idrop-right (ipair 1 (ipair 2 (ipair 3 'd))) 0)        @result{} (1 2 3)
+@end lisp
+
+For a legal @var{i}, @func{itake-right} and @func{idrop-right} partition
+the ilist in a manner which can be inverted with iappend:
+
+@lisp
+(iappend (itake dilist i) (idrop dilist i)) @result{} dilist
+@end lisp
+
+@func{itake-right}'s return value is guaranteed to share a common tail
+with @var{dilist}.
+@end deftypefun
+
+
+@deftypefun {@var{ilist} @var{object}} isplit-at @var{x} @var{i}
+Split the ilist @var{x} at index @var{i}, returning an ilist of the
+first @var{i} elements, and the remaining tail.  It is equivalent to:
+
+@lisp
+(values (itake x i) (idrop x i))
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{object} ilast @var{ipair}
+@deftypefunx @var{ipair} last-ipair @var{ipair}
+Return the last element of the non--empty, possibly dotted, ilist ipair.
+@func{last-ipair} returns the last ipair in the non--empty ilist pair.
+
+@lisp
+(ilast (iq a b c))              @result{} c
+(last-ipair (iq a b c))         @result{} (c)
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists ack
+@subsection Acknowledgements
+
+
+Without the work of Olin Shivers on @ansrfi{1}, this @srfi{} would not
+exist.  Everyone acknowledged there is transitively acknowledged here.
+This is not to imply that either Olin or anyone else necessarily
+endorses the final results, of course.
+
+@c page
+@node srfi ilists references
+@subsection References
+
+
+This document, in @acronym{HTML}:
+
+@center @url{http://srfi.schemers.org/srfi-116/srfi-116.html}
+
+Source code for the reference implementation:
+
+@center @url{http://srfi.schemers.org/srfi-116/ilists.tar.gz}
+
+Archive of @ansrfi{116} discussion--list email:
+
+@center @url{http://srfi.schemers.org/srfi-116/mail-archive/maillist.html}
+
+@srfi{} web site:
+
+@center @url{http://srfi.schemers.org/}
+
+
+@c Local Variables:
+@c mode: texinfo
+@c TeX-master: "vicare-libs"
+@c End:

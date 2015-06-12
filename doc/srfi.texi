@@ -68,6 +68,7 @@ minor modification of the original documents by Marco Maggi.
 * srfi sets-and-bags::          @ansrfi{113} sets and bags.
 * srfi comparators::            @ansrfi{114} comparators.
 * srfi regexps::                @ansrfi{115} regular expressions.
+* srfi ilists::                 @ansrfi{116} immutable lists.
 @end menu
 
 @c ------------------------------------------------------------
@@ -111,5 +112,6 @@ minor modification of the original documents by Marco Maggi.
 @include srfi-sets-and-bags.texi
 @include srfi-comparators.texi
 @include srfi-regular-expressions.texi
+@include srfi-immutable-lists.texi
 
 @c end of file

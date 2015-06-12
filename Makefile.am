@@ -147,6 +147,7 @@ doc_vicare_libs_TEXINFOS = \
 	doc/srfi-err5rs-records.texi			\
 	doc/srfi-error-reporting.texi			\
 	doc/srfi-general-cond.texi			\
+	doc/srfi-immutable-lists.texi			\
 	doc/srfi-intermediate-format.texi		\
 	doc/srfi-hash-tables.texi			\
 	doc/srfi-lazy.texi				\
@@ -1003,7 +1004,8 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	tests/test-srfi-112-environment-inquiry.sps			\
 	tests/test-srfi-113-sets-and-bags.sps				\
 	tests/test-srfi-114-comparators.sps				\
-	tests/test-srfi-115-regexps.sps
+	tests/test-srfi-115-regexps.sps					\
+	tests/test-srfi-116-regexps.sps
 
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	tests/test-srfi-106-socket.sps

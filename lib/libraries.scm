@@ -233,7 +233,8 @@
      (srfi :112)
      (srfi :113)
      (srfi :114)
-     (srfi :115))
+     (srfi :115)
+     (srfi :116))
 
     ((WANT_SRFI WANT_POSIX)
      (srfi :106))
