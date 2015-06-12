@@ -259,6 +259,18 @@ will not be converted.  Unfortunately, there is no ilist analogue of
 * srfi ilists procs constructors::      Constructors.
 * srfi ilists procs predicates::        Predicates.
 * srfi ilists procs selectors::         Selectors.
+* srfi ilists procs misc::              Miscellaneous: length, append,
+                                        concatenate, reverse,
+                                        zip and count.
+* srfi ilists procs fold::              Fold, unfold and map.
+* srfi ilists procs filter::            Filtering and partitioning.
+* srfi ilists procs searching::         Searching.
+* srfi ilists procs deletion::          Deletion.
+* srfi ilists procs alists::            Immutable association lists.
+* srfi ilists procs replacement::       Replacement.
+* srfi ilists procs conversion::        Conversion.
+* srfi ilists procs apply::             Procedure application.
+* srfi ilists procs comparators::       Comparators.
 @end menu
 
 @c page
@@ -726,6 +738,1351 @@ Return the last element of the non--empty, possibly dotted, ilist ipair.
 (ilast (iq a b c))              @result{} c
 (last-ipair (iq a b c))         @result{} (c)
 @end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs misc
+@subsubsection Miscellaneous: length, append, concatenate, reverse, zip and count
+
+
+@deftypefun @var{integer} ilength @var{ilist}
+Return the length of its argument.  It is an error to pass a value to
+ilength which is not a proper ilist (@samp{()}--terminated).
+
+The length of a proper ilist is a non--negative integer @var{n} such
+that @func{icdr} applied @var{n} times to the ilist produces the empty
+list.
+@end deftypefun
+
+
+@deftypefun @var{ilist} iappend @vari{ilist} @dots{}
+Return an ilist consisting of the elements of @vari{ilist} followed by
+the elements of the other ilist parameters.
+
+@lisp
+(iappend (iq x) (iq y))        @result{}  (x y)
+(iappend (iq a) (iq b c d))    @result{}  (a b c d)
+(iappend (iq a (b)) (iq (c)))  @result{}  (a (b) (c))
+@end lisp
+
+The resulting ilist is always newly allocated, except that it shares
+structure with the final @var{ilisti} argument.  This last argument may
+be any value at all; an improper ilist results if it is not a proper
+ilist.  All other arguments must be proper ilists.
+
+@lisp
+(iappend (iq a b) (ipair 'c 'd))        @result{} (a b c . d)
+(iappend '() 'a)                        @result{} a
+(iappend (iq x y))                      @result{} (x y)
+(iappend)                               @result{} ()
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} iconcatenate @var{ilist-of-ilists}
+Append the elements of its argument together.  That is, return:
+
+@lisp
+(iapply iappend @var{ilist-of-ilists})
+@end lisp
+
+@noindent
+or, equivalently:
+
+@lisp
+(ireduce-right iappend '() @var{ilist-of-ilists})
+@end lisp
+
+Note that some Scheme implementations do not support passing more than a
+certain number (e.g., 64) of arguments to an @var{n}--ary procedure.  In
+these implementations, the @code{(iapply iappend ...)} idiom would fail
+when applied to long lists, but @func{iconcatenate} would continue to
+function properly.
+
+As with @func{iappend}, the last element of the input list may be any
+value at all.
+@end deftypefun
+
+
+@deftypefun @var{ilist} ireverse @var{ilist}
+Return a newly allocated ilist consisting of the elements of @var{ilist}
+in reverse order.
+
+@lisp
+(ireverse (iq a b c))                   @result{} (c b a)
+(ireverse (iq a (b c) d (e (f))))       @result{} ((e (f)) d (b c) a)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} iappend-reverse @var{rev-head} @var{tail}
+Return:
+
+@lisp
+(iappend (ireverse @var{rev-head}) @var{tail})
+@end lisp
+
+It is provided because it is a common operation: a common
+list--processing style calls for this exact operation to transfer values
+accumulated in reverse order onto the front of another ilist, and
+because the implementation is significantly more efficient than the
+simple composition it replaces.  (But note that this pattern of
+iterative computation followed by a reverse can frequently be rewritten
+as a recursion, dispensing with the reverse and @func{iappend-reverse}
+steps, and shifting temporary, intermediate storage from the heap to the
+stack, which is typically a win for reasons of cache locality and eager
+storage reclamation.)
+@end deftypefun
+
+
+@deftypefun @var{ilist} izip @vari{ilist} @varii{ilist} @dots{}
+Equivalent to.
+
+@lisp
+(lambda ilists (iapply imap ilist ilists))
+@end lisp
+
+If @func{izip} is passed @var{n} ilists, it returns an ilist as long as
+the shortest of these ilists, each element of which is an
+@var{n}--element ilist comprised of the corresponding elements from the
+parameter ilists.
+
+@lisp
+(izip (iq one two three)
+      (iq 1 2 3)
+      (iq odd even odd even odd even odd even))
+@result{} ((one 1 odd) (two 2 even) (three 3 odd))
+
+(izip (iq 1 2 3))
+@result{} ((1) (2) (3))
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} iunzip1 @var{ilist}
+@deftypefunx {@var{ilist} @var{ilist}} iunzip2 @var{ilist }
+@deftypefunx {@var{ilist} @var{ilist} @var{ilist}} iunzip3 @var{ilist}
+@deftypefunx {@var{ilist} @var{ilist} @var{ilist} @var{ilist}} iunzip4 @var{ilist}
+@deftypefunx {@var{ilist} @var{ilist} @var{ilist} @var{ilist} @var{ilist}} iunzip5 @var{ilist}
+@func{iunzip1} takes an ilist of ilists, where every ilist must contain
+at least one element, and returns an ilist containing the initial
+element of each such ilist.  That is, it returns:
+
+@lisp
+(imap icar ilists)
+@end lisp
+
+@func{iunzip2} takes an ilist of ilists, where every ilist must contain
+at least two elements, and returns two values: an ilist of the first
+elements, and an ilist of the second elements.
+
+@func{iunzip3} does the same for the first three elements of the ilists,
+and so forth.
+
+@lisp
+(iunzip2 (iq (1 one) (2 two) (3 three)))
+@result{} (1 2 3) (one two three)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{integer} icount @var{pred} @vari{ilist} @varii{ilist} @dots{}
+@var{pred} is a procedure taking as many arguments as there are ilists
+and returning a single value.  It is applied element--wise to the
+elements of the ilists, and a count is tallied of the number of elements
+that produce a true value.  This count is returned.  @var{count} is
+``iterative'' in that it is guaranteed to apply @var{pred} to the ilist
+elements in a left--to--right order.  The counting stops when the
+shortest ilist expires.
+
+@lisp
+(count even? (iq 3 1 4 1 5 9 2 5 6))            @result{} 3
+(count < (iq 1 2 4 8) (iq 2 4 6 8 10 12 14 16)) @result{} 3
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs fold
+@subsubsection Fold, unfold and map
+
+
+@deftypefun @var{value} ifold @var{kons} @var{knil} @vari{ilist} @varii{ilist} @dots{}
+The fundamental ilist iterator.
+
+First, consider the single @var{ilist}--parameter case.  If:
+
+@example
+@vari{ilist} == (e1 e2 ... en)
+@end example
+
+@noindent
+then this procedure returns
+
+@lisp
+(kons en ... (kons e2 (kons e1 knil)) ...)
+@end lisp
+
+That is, it obeys the (tail) recursion:
+
+@example
+(ifold kons knil lis)
+@equiv{} (ifold kons (kons (icar lis) knil) (icdr lis))
+
+(ifold kons knil '())
+@equiv{} knil
+@end example
+
+Examples:
+
+@lisp
+(ifold + 0 lis)                 ; Add up the elements of LIS.
+
+(ifold ipair '() lis)           ; Reverse LIS.
+
+(ifold ipair tail rev-head)     ; See APPEND-REVERSE.
+
+;; How many symbols in LIS?
+(ifold (lambda (x count)
+         (if (symbol? x) (+ count 1) count))
+   0
+   lis)
+
+;; Length of the longest string in LIS:
+(ifold (lambda (s max-len)
+         (max max-len (string-length s)))
+   0
+   lis)
+@end lisp
+
+If @var{n} ilist arguments are provided, then the @var{kons} function
+must take @samp{@var{n}+1} parameters: one element from each ilist, and
+the ``seed'' or fold state, which is initially @var{knil}.  The fold
+operation terminates when the shortest ilist runs out of values:
+
+@lisp
+(ifold ipair* '() (iq a b c) (iq 1 2 3 4 5)) @result{} (c 3 b 2 a 1)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ifold-right @var{kons} @var{knil} @vari{ilist} @varii{ilist} @dots{}
+The fundamental ilist recursion operator.
+
+First, consider the single @var{ilist}--parameter case.  If:
+
+@example
+@vari{ilist} == (e1 e2 ... en)
+@end example
+
+@noindent
+then this procedure returns:
+
+@lisp
+(kons e1 (kons e2 ... (kons en knil)))
+@end lisp
+
+That is, it obeys the recursion
+
+@lisp
+(ifold-right kons knil lis)
+@equiv{} (kons (icar lis) (ifold-right kons knil (icdr lis)))
+
+(ifold-right kons knil '())
+@equiv{} knil
+@end lisp
+
+Examples:
+
+@lisp
+(ifold-right ipair '() lis)         ; Copy LIS.
+
+;; Filter the even numbers out of LIS.
+(ifold-right (lambda (x l)
+               (if (even? x) (ipair x l) l))
+  '() lis)
+@end lisp
+
+If @var{n} ilist arguments are provided, then the kons procedure must
+take @samp{@var{n}+1} parameters: one element from each ilist, and the
+``seed'' or fold state, which is initially @var{knil}.  The fold
+operation terminates when the shortest ilist runs out of values:
+
+@lisp
+(ifold-right ipair* '() (iq a b c) (iq 1 2 3 4 5))
+@result{} (a 1 b 2 c 3)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ipair-fold @var{kons} @var{knil} @varii{ilist} @varii{ilist} @dots{}
+Analogous to fold, but @var{kons} is applied to successive sub--ilists
+of the @var{ilist}s, rather than successive elements: that is,
+@var{kons} is applied to the ipairs making up the lists, giving this
+(tail) recursion:
+
+@lisp
+(ipair-fold kons knil lis)
+@equiv{} (let ((tail (icdr lis)))
+   (ipair-fold kons (kons lis knil) tail))
+
+(ipair-fold kons knil '()) @equiv{} knil
+@end lisp
+
+Example:
+
+@lisp
+(ipair-fold ipair '() (iq a b c)) @result{} ((c) (b c) (a b c))
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ipair-fold-right @var{kons} @var{knil} @vari{ilist} @varii{ilist} @dots{}
+Hold the same relationship with @func{ifold-right} that
+@func{ipair-fold} holds with @func{ifold}.  Obeys the recursion:
+
+@lisp
+(ipair-fold-right kons knil lis)
+@equiv{} (kons lis (ipair-fold-right kons knil (icdr lis)))
+
+(ipair-fold-right kons knil '()) @equiv{} knil
+@end lisp
+
+Example:
+
+@lisp
+(ipair-fold-right ipair '() (iq a b c)) @result{} ((a b c) (b c) (c))
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ireduce @var{f} @var{ridentity} @var{ilist}
+@func{ireduce} is a variant of @func{ifold}.
+
+@var{ridentity} should be a ``right identity'' of the procedure @var{f}:
+that is, for any value @var{x} acceptable to @var{f}:
+
+@lisp
+(f x ridentity) @equiv{} x
+@end lisp
+
+@func{ireduce} has the following definition:
+
+@itemize
+@item
+If @samp{@var{ilist} @equiv{} ()}, return @var{ridentity}.
+
+@item
+Otherwise, return:
+
+@lisp
+(ifold f (icar ilist) (icdr ilist))
+@end lisp
+@end itemize
+
+@noindent
+in other words, we compute @samp{(ifold @var{f} @var{ridentity}
+@var{ilist})}.
+
+Note that @var{ridentity} is used only in the empty--list case.  You
+typically use @func{ireduce} when applying @var{f} is expensive and
+you'd like to avoid the extra application incurred when @func{ifold}
+applies @var{f} to the head of @var{ilist} and the identity value,
+redundantly producing the same value passed in to @var{f}.  For example,
+if @var{f} involves searching a file directory or performing a database
+query, this can be significant.  In general, however, @func{ifold} is
+useful in many contexts where @func{ireduce} is not (consider the
+examples given in the @func{ifold} definition: only one of the five
+folds uses a function with a right identity.  The other four may not be
+performed with @func{ireduce}).
+
+@lisp
+;; take the max of an ilist of non-negative integers
+(ireduce max 0 nums) ; i.e., (iapply max 0 nums)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ireduce-right @var{f} @var{ridentity} @var{ilist}
+@func{ireduce-right} is the fold--right variant of @func{ireduce}.  It
+obeys the following definition:
+
+@lisp
+(ireduce-right f ridentity '()) @equiv{} ridentity
+
+(ireduce-right f ridentity (iq e1))
+@equiv{} (f e1 ridentity) @equiv{} e1
+
+(ireduce-right f ridentity (iq e1 e2 ...))
+@equiv{} (f e1 (ireduce f ridentity (e2 ...)))
+@end lisp
+
+@noindent
+in other words, we compute @samp{(ifold-right f ridentity ilist)}.
+
+@lisp
+;; Append a bunch of ilists together.
+;; I.e., (iapply iappend ilist-of-ilists)
+(ireduce-right iappend '() ilist-of-ilists)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} iunfold @var{p} @var{f} @var{g} @var{seed}
+@deftypefunx @var{ilist} iunfold @var{p} @var{f} @var{g} @var{seed} @var{tail-gen}
+@func{iunfold} is best described by its basic recursion:
+
+@lisp
+(iunfold p f g seed) @equiv{}
+  (if (p seed) (tail-gen seed)
+      (ipair (f seed)
+             (iunfold p f g (g seed))))
+@end lisp
+
+@table @var
+@item p
+Determines when to stop unfolding.
+
+@item f
+Maps each seed value to the corresponding ilist element.
+
+@item g
+Maps each seed value to next seed value.
+
+@item seed
+The ``state'' value for the unfold.
+
+@item tail-gen
+Creates the tail of the ilist; defaults to @code{(lambda (x) '())}.
+@end table
+
+In other words, we use @var{g} to generate a sequence of seed values.
+
+@example
+seed, g(seed), g2(seed), g3(seed), ...
+@end example
+
+@noindent
+these seed values are mapped to ilist elements by @var{f}, producing the
+elements of the result ilist in a left--to--right order.  @var{p} says
+when to stop.
+
+@func{iunfold} is the fundamental recursive ilist constructor, just as
+@func{ifold-right} is the fundamental recursive ilist consumer.  While
+@func{iunfold} may seem a bit abstract to novice functional programmers,
+it can be used in a number of ways:
+
+@lisp
+;; Ilist of squares: 1^2 ... 10^2
+(iunfold (lambda (x) (> x 10))
+         (lambda (x) (* x x))
+         (lambda (x) (+ x 1))
+         1)
+
+(iunfold null-ilist? icar icdr lis) ; Copy a proper ilist.
+
+;; Read current input port into an ilist of values.
+(iunfold eof-object? values (lambda (x) (read)) (read))
+
+;; Copy a possibly non-proper ilist:
+(iunfold not-ipair? icar icdr lis values)
+
+;; Append HEAD onto TAIL:
+(iunfold null-ilist? icar icdr head (lambda (x) tail))
+@end lisp
+
+Interested functional programmers may enjoy noting that
+@func{ifold-right} and @func{iunfold} are in some sense inverses.  That
+is, given operations @var{knull?}, @var{kar}, @var{kdr}, @var{kons}, and
+@var{knil} satisfying
+
+@example
+(kons (kar x) (kdr x)) @result{} x
+(knull? knil) @result{} #t
+@end example
+
+@noindent
+then:
+
+@lisp
+(ifold-right kons knil (iunfold knull? kar kdr x)) @result{} x
+@end lisp
+
+@noindent
+and:
+
+@lisp
+(iunfold knull? kar kdr (ifold-right kons knil x)) @result{} x
+@end lisp
+
+This combinator sometimes is called an ``anamorphism''; when an explicit
+@var{tail-gen} procedure is supplied, it is called an ``apomorphism''.
+@end deftypefun
+
+
+@deftypefun @var{ilist} iunfold-right @var{p} @var{f} @var{g} @var{seed}
+@deftypefunx @var{ilist} iunfold-right @var{p} @var{f} @var{g} @var{seed} @var{tail}
+@func{iunfold-right} constructs an ilist with the following loop:
+
+@lisp
+(let lp ((seed seed) (lis tail))
+  (if (p seed) lis
+      (lp (g seed)
+          (ipair (f seed) lis))))
+@end lisp
+
+@table @var
+@item p
+Determines when to stop unfolding.
+
+@item f
+Maps each seed value to the corresponding ilist element.
+
+@item g
+Maps each seed value to next seed value.
+
+@item seed
+The ``state'' value for the unfold.
+
+@item tail
+Ilist terminator; defaults to @samp{()}.
+@end table
+
+In other words, we use @var{g} to generate a sequence of seed values:
+
+@example
+seed, g(seed), g2(seed), g3(seed), ...
+@end example
+
+@noindent
+these seed values are mapped to ilist elements by @var{f}, producing the
+elements of the result ilist in a right--to--left order.  @var{p} says
+when to stop.
+
+@func{iunfold-right} is the fundamental iterative ilist constructor,
+just as @func{ifold} is the fundamental iterative ilist consumer.  While
+@func{iunfold-right} may seem a bit abstract to novice functional
+programmers, it can be used in a number of ways:
+
+@lisp
+;; Ilist of squares: 1^2 ... 10^2
+(iunfold-right zero?
+               (lambda (x) (* x x))
+               (lambda (x) (- x 1))
+               10)
+
+;; Reverse a proper ilist.
+(iunfold-right null-ilist? icar icdr lis)
+
+;; Read current input port into an ilist of values.
+(iunfold-right eof-object? values (lambda (x) (read)) (read))
+
+;; (iappend-reverse rev-head tail)
+(iunfold-right null-ilist? icar icdr rev-head tail)
+@end lisp
+
+Interested functional programmers may enjoy noting that @func{ifold} and
+@func{iunfold-right} are in some sense inverses.  That is, given
+operations @var{knull?}, @var{kar}, @var{kdr}, @var{kons}, and
+@var{knil} satisfying:
+
+@lisp
+(kons (kar x) (kdr x)) @result{} x
+(knull? knil) @result{} #t
+@end lisp
+
+@noindent
+then:
+
+@lisp
+(ifold kons knil (iunfold-right knull? kar kdr x)) @result{} x
+@end lisp
+
+@noindent
+and:
+
+@lisp
+(iunfold-right knull? kar kdr (ifold kons knil x)) @result{} x
+@end lisp
+
+This combinator presumably has some pretentious mathematical name;
+interested readers are invited to communicate it to the author.
+@end deftypefun
+
+
+@deftypefun @var{ilist} imap @var{proc} @vari{ilist} @varii{ilist} @dots{}
+@var{proc} is a procedure taking as many arguments as there are ilist
+arguments and returning a single value.  @func{imap} applies @var{proc}
+element--wise to the elements of the ilists and returns an ilist of the
+results, in order.  The dynamic order in which @var{proc} is applied to
+the elements of the ilists is unspecified.
+
+@lisp
+(imap icadr (iq (a b) (d e) (g h)))
+@result{} (b e h)
+
+(imap (lambda (n) (expt n n)) (iq 1 2 3 4 5))
+@result{} (1 4 27 256 3125)
+
+(imap + (iq 1 2 3) (iq 4 5 6))
+@result{} (5 7 9)
+
+(let ((count 0))
+  (imap (lambda (ignored)
+          (set! count (+ count 1))
+          count)
+        (iq a b)))
+@result{} (1 2) or (2 1)
+@end lisp
+@end deftypefun
+
+
+@defun ifor-each @var{proc} @vari{ilist} @varii{ilist} @dots{}
+The arguments to @func{ifor-each} are like the arguments to @func{imap},
+but @func{ifor-each} calls @var{proc} for its side effects rather than
+for its values.  Unlike @func{imap}, @func{ifor-each} is guaranteed to
+call @var{proc} on the elements of the ilists in order from the first
+element(s) to the last, and the value returned by @func{ifor-each} is
+unspecified.
+
+@lisp
+(let ((v (make-vector 5)))
+  (ifor-each (lambda (i)
+               (vector-set! v i (* i i)))
+             (iq 0 1 2 3 4))
+  v)
+@result{} #(0 1 4 9 16)
+@end lisp
+@end defun
+
+
+@deftypefun @var{value} iappend-map @var{f} @vari{ilist} @varii{ilist} @dots{}
+Equivalent to:
+
+@lisp
+(iapply iappend (imap f ilist1 ilist2 ...))
+@end lisp
+
+@noindent
+and.
+
+@lisp
+(iapply iappend (imap f ilist1 ilist2 ...))
+@end lisp
+
+Map @var{f} over the elements of the ilists, just as in the @func{imap}
+function.  However, the results of the applications are appended
+together (using @func{iappend}) to make the final result.
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.
+
+Example:
+
+@lisp
+(iappend-map (lambda (x) (ilist x (- x))) (iq 1 3 8))
+@result{} (1 -1 3 -3 8 -8)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} imap-in-order @var{f} @vari{ilist} @varii{ilist} @dots{}
+A variant of the @func{imap} procedure that guarantees to apply @var{f}
+across the elements of the @var{ilisti} arguments in a left--to--right
+order.  This is useful for mapping procedures that both have side
+effects and return useful values.
+@end deftypefun
+
+
+@defun ipair-for-each @var{f} @vari{ilist} @varii{ilist} @dots{}
+Like @func{ifor-each}, but @var{f} is applied to successive sub--ilists
+of the argument @var{ilist}s.  That is, @var{f} is applied to the cells
+of the ilists, rather than the ilists' elements.  These applications
+occur in left--to--right order.
+
+@lisp
+(ipair-for-each (lambda (ipair)
+                  (display ipair)
+                  (newline))
+  (iq a b c))
+@print{} (a b c)
+@print{} (b c)
+@print{} (c)
+@end lisp
+@end defun
+
+
+@deftypefun @var{ilist} ifilter-map @var{f} @vari{ilist} @varii{ilist} @dots{}
+Like @func{imap}, but only true values are saved.
+
+@lisp
+(ifilter-map (lambda (x)
+               (and (number? x) (* x x)))
+  (iq a 1 b 3 c 7))
+@result{} (1 9 49)
+@end lisp
+
+The dynamic order in which the various applications of @var{f} are made
+is not specified.
+@end deftypefun
+
+@c page
+@node srfi ilists procs filter
+@subsubsection Filtering and partitioning
+
+
+@deftypefun @var{ilist} ifilter @var{pred} @var{ilist}
+Return all the elements of @var{ilist} that satisfy predicate
+@var{pred}.  The @var{ilist} is not disordered: elements that appear in
+the result ilist occur in the same order as they occur in the argument
+ilist.  The returned ilist may share a common tail with the argument
+ilist.  The dynamic order in which the various applications of @var{pred} are
+made is not specified.
+
+@lisp
+(ifilter even? (iq 0 7 8 8 43 -4)) @result{} (0 8 8 -4)
+@end lisp
+@end deftypefun
+
+
+@deftypefun {@var{ilist} @var{ilist}} ipartition @var{pred} @var{ilist}
+Partitions the elements of @var{ilist} with predicate @var{pred}, and
+returns two values: the ilist of in--elements and the ilist of
+out--elements.  The ilist is not disordered: elements occur in the
+result ilists in the same order as they occur in the argument ilist.
+The dynamic order in which the various applications of @var{pred} are
+made is not specified.  One of the returned ilists may share a common
+tail with the argument ilist.
+
+@lisp
+(ipartition symbol? (iq one 2 3 four five 6))
+@result{} (one four five) (2 3 6)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} iremove @var{pred} @var{ilist}
+Return @var{ilist} without the elements that satisfy predicate
+@var{pred}:
+
+@lisp
+(lambda (pred ilist)
+  (ifilter (lambda (x)
+             (not (pred x)))
+    ilist))
+@end lisp
+
+The ilist is not disordered: elements that appear in the result ilist
+occur in the same order as they occur in the argument ilist.  The
+returned ilist may share a common tail with the argument ilist.  The
+dynamic order in which the various applications of @var{pred} are made
+is not specified.
+
+@lisp
+(iremove even? (iq 0 7 8 8 43 -4)) @result{} (7 43)
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs searching
+@subsubsection Searching
+
+
+The following procedures all search ilists for a leftmost element
+satisfying some criteria.  This means they do not always examine the
+entire ilist; thus, there is no efficient way for them to reliably
+detect and signal an error when passed a dotted ilist.  Here are the
+general rules describing how these procedures work when applied to
+different kinds of ilists:
+
+@table @asis
+@item Proper ilists
+The standard, canonical behavior happens in this case.
+
+@item Dotted ilists
+It is an error to pass these procedures a dotted ilist that does not
+contain an element satisfying the search criteria.  That is, it is an
+error if the procedure has to search all the way to the end of the
+dotted ilist.  However, this @srfi{} does not specify anything at all
+about the behavior of these procedures when passed a dotted ilist
+containing an element satisfying the search criteria.  It may finish
+successfully, signal an error, or perform some third action.  Different
+implementations may provide different functionality in this case; code
+which is compliant with this @srfi{} may not rely on any particular
+behavior.  Future @srfi{}s may refine this @srfi{} to define specific
+behavior in this case.
+@end table
+
+In brief, compliant code may not pass a dotted ilist argument to these
+procedures.
+
+Here are some examples, using the @func{ifind} and @func{iany}
+procedures as canonical representatives:
+
+@lisp
+;; Proper ilist: success
+(ifind even? (iq 1 2 3))	@result{} 2
+(iany  even? (iq 1 2 3))	@result{} #t
+
+;; proper ilist: failure
+(ifind even? (iq 1 7 3))	@result{} #f
+(iany  even? (iq 1 7 3))	@result{} #f
+
+;; Failure is error on a dotted ilist.
+(ifind even? (ipair (1 (ipair 3 x)))	@error{} invalid argument
+(iany  even? (ipair (1 (ipair 3 x)))	@error{} invalid argument
+
+;; The dotted ilist contains an element satisfying the search.
+;; This case is not specified: it could be success, an error,
+;; or some third possibility.
+(ifind even? (ipair (1 (ipair 2 x)))
+@result{} error/undefined
+(iany  even? (ipair (1 (ipair 2 x))))
+@result{} error/undefined ; success, error or other
+@end lisp
+
+
+@deftypefun @var{value} ifind @var{pred} @var{ilist}
+Return the first element of @var{ilist} that satisfies predicate
+@var{pred}; return @false{} if no element does.
+
+@lisp
+(ifind even? (iq 3 1 4 1 5 9)) @result{} 4
+@end lisp
+
+Note that @func{ifind} has an ambiguity in its lookup semantics: if
+@func{ifind} returns @false{}, you cannot tell (in general) if it found
+a @false{} element that satisfied pred, or if it did not find any
+element at all.  In many situations, this ambiguity cannot arise: either
+the @var{ilist} being searched is known not to contain any @false{}
+elements, or the ilist is guaranteed to have an element satisfying
+@var{pred}.  However, in cases where this ambiguity can arise, you
+should use @func{ifind-tail} instead of @func{ifind}: @func{ifind-tail}
+has no such ambiguity:
+
+@lisp
+(cond ((ifind-tail pred lis)
+       => (lambda (ipair) ...)) ; Handle (icar ipair)
+      (else ...))               ; Search failed
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ifind-tail @var{pred} @var{ilist}
+Return the first ipair of @var{ilist} whose icar satisfies @var{pred}.
+If no ipair does, return @false{}.
+
+@func{ifind-tail} can be viewed as a general--predicate variant of the
+@func{imember} function.
+
+Examples:
+
+@lisp
+(ifind-tail even? (iq 3 1 37 -8 -5 0 0)) @result{} (-8 -5 0 0)
+(ifind-tail even? (iq 3 1 37 -5))        @result{} #f
+
+;; IMEMBER X LIS:
+(ifind-tail (lambda (elt) (equal? x elt)) lis)
+@end lisp
+
+@func{ifind-tail} is essentially @func{idrop-while}, where the sense of
+the predicate is inverted: @func{ifind-tail} searches until it finds an
+element satisfying the predicate; @func{idrop-while} searches until it
+finds an element that doesn't satisfy the predicate.
+@end deftypefun
+
+
+@deftypefun @var{ilist} itake-while @var{pred} @var{ilist}
+Return the longest initial prefix of @var{ilist} whose elements all
+satisfy the predicate @var{pred}.
+
+@lisp
+(itake-while even? (iq 2 18 3 10 22 9)) @result{} (2 18)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} @func{idrop-while} @var{pred} @var{ilist}
+Drop the longest initial prefix of ilist whose elements all satisfy the
+predicate @var{pred}, and returns the rest of the @var{ilist}.
+
+@lisp
+(idrop-while even? (iq 2 18 3 10 22 9)) @result{} (3 10 22 9)
+@end lisp
+@end deftypefun
+
+
+@deftypefun {@var{ilist} @var{ilist}} ispan @var{pred} @var{ilist}
+@deftypefunx {@var{ilist} @var{ilist}} ibreak @var{pred} @var{ilist}
+@func{ispan} splits the @var{ilist} into the longest initial prefix
+whose elements all satisfy @var{pred}, and the remaining tail.
+@func{ibreak} inverts the sense of the predicate: the tail commences
+with the first element of the input ilist that satisfies the predicate.
+
+In other words: @func{ispan} finds the initial span of elements
+satisfying @var{pred}, and @func{ibreak} breaks the ilist at the first
+element satisfying @var{pred}.
+
+@func{ispan} is equivalent to.
+
+@lisp
+(values (itake-while pred ilist)
+        (idrop-while pred ilist))
+@end lisp
+
+@lisp
+(ispan even? (iq 2 18 3 10 22 9))
+@result{} (2 18) (3 10 22 9)
+
+(ibreak even? (iq 3 1 4 1 5 9))
+@result{} (3 1) (4 1 5 9)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} iany @var{pred} @vari{ilist} @varii{ilist} @dots{}
+Applies the predicate across the ilists, returning true if the predicate
+returns true on any application.
+
+If there are @var{n} ilist arguments: then @var{pred} must be a
+procedure taking @var{n} arguments and returning a boolean result.
+
+@func{iany} applies pred to the first elements of the ilist parameters.
+If this application returns a true value, @func{iany} immediately
+returns that value.  Otherwise, it iterates, applying @var{pred} to the
+second elements of the ilist parameters, then the third, and so forth.
+The iteration stops when a true value is produced or one of the ilists
+runs out of values; in the latter case, @func{iany} returns @false{}.
+The application of pred to the last element of the ilists is a tail
+call.
+
+Note the difference between @func{ifind} and @func{iany}: @func{ifind}
+returns the element that satisfied the predicate; @func{iany} returns
+the true value that the predicate produced.
+
+Like @func{ievery}, @func{iany}'s name does not end with a question
+mark: this is to indicate that it does not return a simple boolean
+(@true{} or @false{}), but a general value.
+
+@lisp
+(iany integer? (iq a 3 b 2.7))   @result{} #t
+(iany integer? (iq a 3.1 b 2.7)) @result{} #f
+(iany < (iq 3 1 4 1 5)
+        (iq 2 7 1 8 2))
+@result{} #t
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{value} ievery @var{pred} @vari{ilist} @varii{ilist} @dots{}
+Applies the predicate across the ilists, returning true if the predicate
+returns true on every application.
+
+If there are @var{n} ilist arguments: @var{pred} must be a procedure
+taking n arguments and returning a boolean result.
+
+@func{ievery} applies @var{pred} to the first elements of the ilist
+parameters.  If this application returns @false{}: @func{ievery}
+immediately returns @false{}.  Otherwise, it iterates, applying
+@var{pred} to the second elements of the ilist parameters, then the
+third, and so forth.  The iteration stops when a @false{} value is
+produced or one of the ilists runs out of values.  In the latter case,
+@func{ievery} returns the true value produced by its final application
+of @var{pred}.  The application of @var{pred} to the last element of the
+ilists is a tail call.
+
+If one of the ilist has no elements: @func{ievery} simply returns
+@false{}.
+
+Like @func{iany}, @func{ievery}'s name does not end with a question
+mark: this is to indicate that it does not return a simple boolean
+(@true{} or @false{}), but a general value.
+@end deftypefun
+
+
+@deftypefun @var{value} ilist-index @var{pred} @vari{ilist} @varii{ilist} @dots{}
+Return the index of the leftmost element that satisfies @var{pred}.
+
+If there are @var{n} ilist arguments: @var{pred} must be a function
+taking @var{n} arguments and returning a boolean result.
+
+@func{ilist-index} applies pred to the first elements of the ilist
+parameters.  If this application returns true, @func{ilist-index}
+immediately returns zero; otherwise, it iterates, applying @var{pred} to
+the second elements of the ilisti parameters, then the third, and so
+forth.  When it finds a tuple of ilist elements that cause @var{pred} to
+return true, it stops and returns the zero--based index of that position
+in the ilists.
+
+The iteration stops when one of the ilists runs out of values; in this
+case: @func{ilist-index} returns @false{}.
+
+@lisp
+(ilist-index even? (iq 3 1 4 1 5 9)) @result{} 2
+(ilist-index < (iq 3 1 4 1 5 9 2 5 6) (iq 2 7 1 8 2)) @result{} 1
+(ilist-index = (iq 3 1 4 1 5 9 2 5 6) (iq 2 7 1 8 2)) @result{} #f
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ilist} imember @var{x} @var{ilist}
+@deftypefunx @var{ilist} imember @var{x} @var{ilist} @var{=}
+@deftypefunx @var{ilist} imemq @var{x} @var{ilist}
+@deftypefunx @var{ilist} imemv @var{x} @var{ilist}
+These procedures return the first sub--ilist of ilist whose icar is
+@var{x}, where the sub--ilists of @var{ilist} are the non--empty ilists
+returned by @code{(idrop @var{ilist} @var{i})} for @var{i} less than the
+length of @var{ilist}.  If @var{x} does not occur in @var{ilist}:
+@false{} is returned.  @func{imemq} uses @func{eq?}  to compare @var{x}
+with the elements of ilist, while imemv uses @func{eqv?}, and
+@func{imember} uses @func{equal?}.
+
+@lisp
+(imemq 'a (iq a b c))           @result{}  (a b c)
+(imemq 'b (iq a b c))           @result{}  (b c)
+(imemq 'a (iq b c d))           @result{}  #f
+(imemq (ilist 'a) (iq b (a) c)) @result{}  #f
+(imember (ilist 'a)
+         (iq b (a) c))          @result{}  ((a) c)
+(imemq 101 (iq 100 101 102))    @result{}  *unspecified*
+(imemv 101 (iq 100 101 102))    @result{}  (101 102)
+@end lisp
+
+The comparison procedure is used to compare the elements @var{ei} of
+@var{ilist} to the key @var{x} in this way:
+
+@lisp
+(= x ei) ; ilist is (E1 ... En)
+@end lisp
+
+@noindent
+that is, the first argument is always @var{x}, and the second argument
+is one of the ilist elements.  Thus one can reliably find the first
+element of ilist that is greater than five with @code{(imember 5 ilist
+<)}.
+
+Note that fully general ilist searching may be performed with the
+@func{ifind-tail} and @func{ifind} procedures, e.g.
+
+@lisp
+(ifind-tail even? ilist) ; Find the first elt with an even key.
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs deletion
+@subsubsection Deletion
+
+
+@deftypefun @var{ilist} idelete @var{x} @var{ilist}
+@deftypefunx @var{ilist} idelete @var{x} @var{ilist} @var{=}
+@func{idelete} uses the comparison procedure @var{=}, which defaults to
+@func{equal?}, to find all elements of @var{ilist} that are equal to
+@var{x}, and deletes them from @var{ilist}.  The dynamic order in which
+the various applications of @var{=} are made is not specified.
+
+The ilist is not disordered: elements that appear in the result ilist
+occur in the same order as they occur in the argument ilist.  The result
+may share a common tail with the argument ilist.
+
+Note that fully general element deletion can be performed with the
+@func{iremove} procedures, e.g.:
+
+@lisp
+;; idelete all the even elements from LIS:
+(iremove even? lis)
+@end lisp
+
+The comparison procedure is used in this way: @samp{(= x ei)}.  That is,
+@var{x} is always the first argument, and an ilist element is always the
+second argument.  The comparison procedure will be used to compare each
+element of @var{ilist} exactly once; the order in which it is applied to
+the various @var{ei} is not specified.  Thus, one can reliably remove
+all the numbers greater than five from an ilist with @samp{(idelete 5
+ilist <)}.
+@end deftypefun
+
+
+@deftypefun @var{ilist} idelete-duplicates @var{ilist}
+@deftypefunx @var{ilist} idelete-duplicates @var{ilist} @var{=}
+@func{idelete-duplicates} removes duplicate elements from the ilist
+argument.  If there are multiple equal elements in the argument ilist,
+the result ilist only contains the first or leftmost of these elements
+in the result.  The order of these surviving elements is the same as in
+the original ilist: @func{idelete-duplicates} does not disorder the
+ilist (hence it is useful for ``cleaning up'' immutable association
+lists).
+
+The @var{=} parameter is used to compare the elements of the ilist; it
+defaults to @func{equal?}.  If @var{x} comes before @var{y} in ilist,
+then the comparison is performed @samp{(= x y)}.  The comparison
+procedure will be used to compare each pair of elements in ilist no more
+than once; the order in which it is applied to the various pairs is not
+specified.
+
+Implementations of @func{idelete-duplicates} are allowed to share common
+tails between argument and result ilists: for example, if the ilist
+argument contains only unique elements, it may simply return exactly
+this ilist.
+
+Be aware that, in general, @func{idelete-duplicates} runs in time
+@math{O(n2)} for @var{n}--element ilists.  Uniquifying long ilists can
+be accomplished in @math{O(n log n)} time by sorting the ilist to bring
+equal elements together, then using a linear--time algorithm to remove
+equal elements.  Alternatively, one can use algorithms based on
+element--marking, with linear--time results.
+
+@lisp
+(idelete-duplicates (iq a b a c a b c z)) => (a b c z)
+
+;; Clean up an ialist:
+(idelete-duplicates (iq (a . 3) (b . 7) (a . 9) (c . 1))
+  (lambda (x y) (eq? (icar x) (icar y))))
+@result{} ((a . 3) (b . 7) (c . 1))
+@end lisp
+@end deftypefun
+
+@c page
+@node srfi ilists procs alists
+@subsubsection Immutable association lists
+
+
+An @dfn{immutable association list} (or ``ialist'') is an ilist of
+ipairs.  The icar of each ipair contains a key value, and the icdr
+contains the associated data value.  They can be used to construct
+simple look--up tables in Scheme.  Note that ialists are probably
+inappropriate for performance--critical use on large data; in these
+cases, immutable maps or some other alternative should be employed.
+
+
+@deftypefun @var{value} iassoc @var{key} @var{ialist}
+@deftypefunx @var{value} iassoc @var{key} @var{ialist} @var{=}
+@deftypefunx @var{value} iassq @var{key} @var{ialist}
+@deftypefunx @var{value} iassv @var{key} @var{ialist}
+@var{ialist} must be an immutable association list: an ilist of ipairs.
+These procedures find the first ipair in ialist whose icar field is key,
+and returns that ipair.  If no ipair in ialist has key as its icar, then
+@false{} is returned.  @func{iassq} uses @func{eq?} to compare key with
+the icar fields of the ipairs in ialist, while @func{iassv} uses
+@func{eqv?}  and @func{iassoc} uses @func{equal?}.
+
+@lisp
+(define e (iq (a 1) (b 2) (c 3)))
+(iassq 'a e)                               @result{}  (a 1)
+(iassq 'b e)                               @result{}  (b 2)
+(iassq 'd e)                               @result{}  #f
+(iassq (ilist 'a) (iq ((a)) ((b)) ((c))))  @result{}  #f
+(iassoc (ilist 'a) (iq ((a)) ((b)) ((c)))) @result{}  ((a))
+(iassq 5 (iq (2 3) (5 7) (11 13)))	   @result{}  *unspecified*
+(iassv 5 (iq (2 3) (5 7) (11 13)))	   @result{}  (5 7)
+@end lisp
+
+The comparison procedure is used to compare the elements @var{ei} of
+@var{ilist} to the key parameter in this way:
+
+@lisp
+(= key (icar ei)) ; ilist is (E1 ... En)
+@end lisp
+
+@noindent
+that is, the first argument is always key, and the second argument is
+one of the ilist elements.  Thus one can reliably find the first entry
+of @var{ialist} whose key is greater than five with @samp{(iassoc 5
+ialist <)}.
+
+Note that fully general ialist searching may be performed with the
+@func{ifind-tail} and @func{ifind} procedures, e.g.
+
+@lisp
+;; Look up the first association in ialist with an even key:
+(ifind (lambda (a) (even? (icar a))) ialist)
+@end lisp
+@end deftypefun
+
+
+@deftypefun @var{ialist} ialist-cons @var{key} @var{datum} @var{ialist}
+Equivalent to:
+
+@lisp
+(lambda (key datum ialist) (ipair (ipair key datum) ialist))
+@end lisp
+
+Construct a new ialist entry mapping @var{key}/@var{datum} onto
+@var{ialist}.
+@end deftypefun
+
+
+@deftypefun @var{ialist} ialist-delete @var{key} @var{ialist}
+@deftypefunx @var{ialist} ialist-delete @var{key} @var{ialist} @var{=}
+Delete all associations from @var{ialist} with the given @var{key},
+using key--comparison procedure @var{=}, which defaults to
+@func{equal?}.  The dynamic order in which the various applications of
+@var{=} are made is not specified.
+
+Return values may share common tails with the @var{ialist} argument.
+The ialist is not disordered: elements that appear in the result ialist
+occur in the same order as they occur in the argument ialist.
+
+The comparison procedure is used to compare the element keys @var{ki} of
+ialist's entries to the @var{key} parameter in this way: @samp{(= key
+ki)}.  Thus, one can reliably remove all entries of @var{ialist} whose
+key is greater than five with @samp{(ialist-delete 5 ialist <)}.
+@end deftypefun
+
+@c page
+@node srfi ilists procs replacement
+@subsubsection Replacement
+
+
+These two procedures are analogues of the primitive side--effect
+operations on pairs, @func{set-car!} and @func{set-cdr!}.
+
+
+@deftypefun @var{ipair} replace-icar @var{ipair} @var{object}
+This procedure returns an ipair with object in the icar field and the
+icdr of ipair in the icdr field.
+@end deftypefun
+
+
+@deftypefun @var{ipair} replace-icdr @var{ipair} @var{object}
+This procedure returns an ipair with object in the icdr field and the
+icar of ipair in the icar field.
+@end deftypefun
+
+@c page
+@node srfi ilists procs conversion
+@subsubsection Conversion
+
+
+These procedures convert between mutable and immutable pair structures.
+
+
+@deftypefun @var{ipair} pair->ipair @var{pair}
+@deftypefunx @var{pair} ipair->pair @var{ipair}
+These procedures, which are inverses, return an ipair and a pair
+respectively that have the same (i)car and (i)cdr fields as the
+argument.
+@end deftypefun
+
+
+@deftypefun @var{dilist} list->ilist @var{flist}
+@deftypefunx @var{flist} ilist->list @var{dilist}
+These procedures return an ilist and a list respectively that have the
+same elements as the argument.  The tails of dotted (i)lists are
+preserved in the result, which makes the procedures not inverses when
+the tail of a dotted ilist is a list or vice versa.  The empty list is
+converted to itself.
+
+It is an error to apply @func{list->ilist} to a circular list.
+@end deftypefun
+
+
+@deftypefun @var{object} tree->itree @var{object}
+@deftypefunx @var{object} itree->tree @var{object}
+These procedures walk a tree of pairs or ipairs respectively and make a
+deep copy of it, returning an isomorphic tree containing ipairs or pairs
+respectively.  The result may share structure with the argument.  If the
+argument is not of the expected type, it is returned.
+
+These procedures are not inverses in the general case.  For example, a
+pair of ipairs would be converted by @func{tree->itree} to an ipair of
+ipairs, which if converted by @func{itree->tree} would produce a pair of
+pairs.
+@end deftypefun
+
+
+@deftypefun @var{object} gtree->itree @var{object}
+@deftypefunx @var{object} gtree->tree @var{object}
+These procedures walk a generalized tree consisting of pairs, ipairs, or
+a combination of both, and make a deep copy of it, returning an
+isomorphic tree containing only ipairs or pairs respectively.  The
+result may share structure with the argument.  If the argument is
+neither a pair nor an ipair, it is returned.
+@end deftypefun
+
+@c page
+@node srfi ilists procs apply
+@subsubsection Procedure application
+
+
+This procedure allows a procedure to be applied to an ilist.
+
+
+@deftypefun @var{object} iapply @var{procedure} @var{object} @dots{} @var{ilist}
+The @func{iapply} procedure is an analogue of @func{apply} whose last
+argument is an ilist rather than a list.  It is equivalent to:
+
+@lisp
+(apply procedure object ... (ilist->list ilist))
+@end lisp
+
+@noindent
+but may be implemented more efficiently.
+@end deftypefun
+
+@c page
+@node srfi ilists procs comparators
+@subsubsection Comparators
+
+
+@defvr Constant ipair-comparator
+The @code{ipair-comparator} object is a @ansrfi{114} comparator suitable
+for comparing ipairs.  Note that it is not a procedure.  It compares
+pairs using @code{default-comparator} on their cars.  If the cars are
+not equal, that value is returned.  If they are equal,
+@code{default-comparator} is used on their cdrs and that value is
+returned.
+@end defvr
+
+
+@defvr Constant ilist-comparator
+The @code{ilist-comparator} object is a @ansrfi{114} comparator suitable
+for comparing ilists.  Note that it is not a procedure.  It compares
+ilists lexicographically, as follows:
+
+@itemize
+@item
+The empty ilist compares equal to itself.
+
+@item
+The empty ilist compares less than any non--empty ilist.
+
+@item
+Two non--empty ilists are compared by comparing their icars.  If the
+icars are not equal when compared using @code{default-comparator}, then
+the result is the result of that comparison.  Otherwise, the icdrs are
+compared using @code{ilist-comparator}.
+@end itemize
+@end defvr
+
+
+@deftypefun @var{comparator} make-ilist-comparator @var{element-comparator}
+Return a comparator suitable for comparing ilists using
+@var{element-comparator} to compare the elements.
+@end deftypefun
+
+
+@deftypefun @var{comparator} make-improper-ilist-comparator @var{comparator}
+Return a comparator that compares arbitrary objects as follows: the
+empty list precedes all ipairs, which precede all other objects.  Ipairs
+are compared as if with:
+
+@lisp
+(make-ipair-comparator @var{comparator} @var{comparator})
+@end lisp
+
+All other objects are compared using comparator.
+@end deftypefun
+
+
+@deftypefun @var{comparator} make-icar-comparator @var{comparator}
+Return a comparator that compares ipairs on their icars alone using
+@var{comparator}.
+@end deftypefun
+
+
+@deftypefun @var{comparator} make-icdr-comparator @var{comparator}
+Return a comparator that compares ipairs on their icdrs alone using
+@var{comparator}.
 @end deftypefun
 
 @c page
