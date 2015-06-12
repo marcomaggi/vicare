@@ -24,7 +24,7 @@
 
 
 #!vicare
-(library (vicare containers char-sets)
+(library (vicare containers char-sets (0 4 2015 6 12))
   (export
 
     ;; bounds
