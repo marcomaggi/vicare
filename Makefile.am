@@ -1005,7 +1005,7 @@ VICARE_SCHEME_SRFI_TESTS	= \
 	tests/test-srfi-113-sets-and-bags.sps				\
 	tests/test-srfi-114-comparators.sps				\
 	tests/test-srfi-115-regexps.sps					\
-	tests/test-srfi-116-regexps.sps
+	tests/test-srfi-116-ilists.sps
 
 VICARE_SCHEME_SRFI_POSIX_TESTS	= \
 	tests/test-srfi-106-socket.sps
