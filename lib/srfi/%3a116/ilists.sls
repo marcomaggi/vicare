@@ -159,18 +159,13 @@
     pair->ipair ipair->pair list->ilist ilist->list
     tree->itree itree->tree gtree->itree gtree->tree
     iapply)
-  (import (vicare))
+  (import (rnrs)
+    (srfi :8)
+    (rnrs mutable-pairs)
+    (srfi :116 compat))
 
 
 ;;;; Enhancements and hooks in Olin's SRFI-1 code to make it work for ilists
-
-;;; The basic ilist cell
-
-;;This is a built-in type for Vicare.
-;;
-;;(define-record-type (<ipair> ipair ipair?)
-;;  (fields (immutable icar icar)
-;;          (immutable icdr icdr)))
 
 ;;; Syntax for quoting ilists
 
@@ -243,28 +238,24 @@
 
 (define (last ls) (if (null? (cdr ls)) (car ls) (last (cdr ls))))
 
-(module (iapply)
-
-  (define (iapply proc . ilists)
-    (cond ((null? ilists)
-	   (apply proc '()))
-	  ((null? (cdr ilists))
-	   (apply proc (ilist->list (car ilists))))
-	  (else
-	   (let ((final (ilist->list (last ilists))))
-	     (apply proc (append (drop-right! ilists 1) final))))))
-
+(define (iapply proc . ilists)
   (define (take! ls i)
     (if (<= i 0)
 	'()
       (let ((tail (list-tail ls (- i 1))))
-        (set-cdr! tail '())
-        ls)))
+	(set-cdr! tail '())
+	ls)))
 
   (define (drop-right! ls i)
     (take! ls (- (length ls) i)))
 
-  #| end of module |# )
+  (cond ((null? ilists)
+	 (apply proc '()))
+	((null? (cdr ilists))
+	 (apply proc (ilist->list (car ilists))))
+	(else
+	 (let ((final (ilist->list (last ilists))))
+	   (apply proc (append (drop-right! ilists 1) final))))))
 
 ;;; Printer for debugging
 
@@ -468,27 +459,28 @@
 	(else (error #f "null-ilist?: argument out of domain" l))))
 
 
-(case-define ilist=
-  ((item=)
-   #t)
-  ((item= ell)
-   #t)
-  ((item= ell1 ell2)
-   (cond ((eq? ell1 ell2)
-	  #t)
-	 ((null? ell1)
-	  (or (null? ell2)
-	      #f))
-	 ((null? ell2)
-	  #f)
-	 ((item= (icar ell1) (icar ell2))
-	  (ilist= item= (icdr ell1) (icdr ell2)))
-	 (else
-	  #f)))
-  ((item= . ells)
-   (and (ilist= item= (car ells) (cadr ells))
-	(apply ilist= item= (cdr ells))))
-  #| end of CASE-DEFINE |# )
+(define ilist=
+  (case-lambda
+   ((item=)
+    #t)
+   ((item= ell)
+    #t)
+   ((item= ell1 ell2)
+    (cond ((eq? ell1 ell2)
+	   #t)
+	  ((null? ell1)
+	   (or (null? ell2)
+	       #f))
+	  ((null? ell2)
+	   #f)
+	  ((item= (icar ell1) (icar ell2))
+	   (ilist= item= (icdr ell1) (icdr ell2)))
+	  (else
+	   #f)))
+   ((item= . ells)
+    (and (ilist= item= (car ells) (cadr ells))
+	 (apply ilist= item= (cdr ells))))
+   #| end of CASE-LAMBDA |# ))
 
 (define (ilength x)			; ILENGTH may diverge or
   (let lp ((x x) (len 0))		; raise an error if X is
