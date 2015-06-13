@@ -41,7 +41,7 @@
 ;;; itake-while idrop-while
 ;;; ispan ibreak
 ;;; idelete
-;;; ialist-cons alist-copy
+;;; ialist-cons ialist-copy
 ;;; idelete-duplicates
 ;;; ialist-delete
 ;;; ipair ipair? null? icar icdr
@@ -132,7 +132,7 @@
 (library (srfi :116 ilists)
   (export
     iq (rename (iq iquote))
-    ipair ilist xipair ipair* make-ilist ilist-tabulate iiota
+    ipair ilist xipair ipair* make-ilist ilist-tabulate iiota ilist-copy
     ipair?
     proper-ilist? ilist? dotted-ilist? not-ipair? null-ilist? ilist=
     icar icdr ilist-ref
@@ -142,6 +142,8 @@
     icaaaar icaaadr icaadar icaaddr icadaar icadadr icaddar icadddr
     icdaaar icdaadr icdadar icdaddr icddaar icddadr icdddar icddddr
     icar+icdr itake idrop ilist-tail
+    (rename (itake	itake-left)
+	    (idrop	idrop-left))
     itake-right idrop-right isplit-at ilast last-ipair
     ilength iappend iconcatenate ireverse iappend-reverse
     izip iunzip1 iunzip2 iunzip3 iunzip4 iunzip5
@@ -152,7 +154,7 @@
     ifind ifind-tail iany ievery
     ilist-index itake-while idrop-while ispan ibreak
     idelete idelete-duplicates
-    iassoc iassq iassv ialist-cons ialist-delete
+    iassoc iassq iassv ialist-cons ialist-copy ialist-delete
     replace-icar replace-icdr
     pair->ipair ipair->pair list->ilist ilist->list
     tree->itree itree->tree gtree->itree gtree->tree
@@ -237,27 +239,30 @@
 ;; If ilists are built in, optimize this!
 ;; Need a few SRFI-1 routines
 
-(define (take! ls i)
-  (if (<= i 0)
-      '()
+(define (last ls) (if (null? (cdr ls)) (car ls) (last (cdr ls))))
+
+(module (iapply)
+
+  (define (iapply proc . ilists)
+    (cond ((null? ilists)
+	   (apply proc '()))
+	  ((null? (cdr ilists))
+	   (apply proc (ilist->list (car ilists))))
+	  (else
+	   (let ((final (ilist->list (last ilists))))
+	     (apply proc (append (drop-right! ilists 1) final))))))
+
+  (define (take! ls i)
+    (if (<= i 0)
+	'()
       (let ((tail (list-tail ls (- i 1))))
         (set-cdr! tail '())
         ls)))
 
-(define (drop-right! ls i)
-  (take! ls (- (length ls) i)))
+  (define (drop-right! ls i)
+    (take! ls (- (length ls) i)))
 
-(define (last ls) (if (null? (cdr ls)) (car ls) (last (cdr ls))))
-
-(define (iapply proc . ilists)
-  (cond
-    ((null? ilists)
-     (apply proc '()))
-    ((null? (cdr ilists))
-     (apply proc (ilist->list (car ilists))))
-    (else
-      (let ((final (ilist->list (last ilists))))
-        (apply proc (append (drop-right! ilists 1) final))))))
+  #| end of module |# )
 
 ;;; Printer for debugging
 
@@ -461,24 +466,27 @@
 	(else (error #f "null-ilist?: argument out of domain" l))))
 
 
-(define (ilist= = . ilists)
-  (or (null? ilists) ; special case
-
-      (let lp1 ((ilist-a (car ilists)) (others (cdr ilists)))
-	(or (null? others)
-	    (let ((ilist-b (car others))
-		  (others (cdr others)))
-	      (if (eq? ilist-a ilist-b)	; EQ? => LIST=
-		  (lp1 ilist-b others)
-		  (let lp2 ((ilist-a ilist-a) (ilist-b ilist-b))
-		    (if (null-ilist? ilist-a)
-			(and (null-ilist? ilist-b)
-			     (lp1 ilist-b others))
-			(and (not (null-ilist? ilist-b))
-			     (= (icar ilist-a) (icar ilist-b))
-			     (lp2 (icdr ilist-a) (icdr ilist-b)))))))))))
-
-
+(case-define ilist=
+  ((item=)
+   #t)
+  ((item= ell)
+   #t)
+  ((item= ell1 ell2)
+   (cond ((eq? ell1 ell2)
+	  #t)
+	 ((null? ell1)
+	  (or (null? ell2)
+	      #f))
+	 ((null? ell2)
+	  #f)
+	 ((item= (icar ell1) (icar ell2))
+	  (ilist= item= (icdr ell1) (icdr ell2)))
+	 (else
+	  #f)))
+  ((item= . ells)
+   (and (ilist= item= (car ells) (cadr ells))
+	(apply ilist= item= (cdr ells))))
+  #| end of CASE-DEFINE |# )
 
 (define (ilength x)			; ILENGTH may diverge or
   (let lp ((x x) (len 0))		; raise an error if X is
@@ -1008,7 +1016,10 @@
 
 
 ;;; Inline us, please.
-(define (iremove  pred l) (ifilter  (lambda (x) (not (pred x))) l))
+(define (iremove  pred l)
+  (ifilter (lambda (x)
+	     (not (pred x)))
+	   l))
 
 
 
@@ -1073,7 +1084,7 @@
 
 (define (ialist-cons key datum alist) (ipair (ipair key datum) alist))
 
-(define (alist-copy alist)
+(define (ialist-copy alist)
   (imap (lambda (elt) (ipair (icar elt) (icdr elt)))
        alist))
 
@@ -1124,25 +1135,30 @@
 	      (values '() lis))))))
 
 (define (ibreak  pred lis) (ispan  (lambda (x) (not (pred x))) lis))
+
+;;This implementation of IEVERY was fixed by Will Clinger on the SRFI's mailing list.
+;;
 (define (ievery pred lis1 . lists)
   (check-arg procedure? pred ievery)
-  (if (ipair? lists)
+  (if (pair? lists) ; FIXED: was (ipair? lists)
 
       ;; N-ary case
-      (receive (heads tails) (%cars+cdrs (ipair lis1 lists))
-	(or (not (ipair? heads))
+      (receive (heads tails)
+	  (%cars+cdrs (cons lis1 lists)) ; FIXED: was (ipair lis1 lists))
+	(or (not (pair? heads))		 ; FIXED: was (ipair? heads)
 	    (let lp ((heads heads) (tails tails))
 	      (receive (next-heads next-tails) (%cars+cdrs tails)
-		(if (ipair? next-heads)
-		    (and (apply pred heads) (lp next-heads next-tails))
-		    (apply pred heads)))))) ; Last PRED app is tail call.
+		(if (pair? next-heads) ; FIXED: was (ipair? next-heads)
+		    (and (apply pred heads)
+                         (lp next-heads next-tails))
+		  (apply pred heads)))))) ; Last PRED app is tail call.
 
-      ;; Fast path
-      (or (null-ilist? lis1)
-	  (let lp ((head (icar lis1))  (tail (icdr lis1)))
-	    (if (null-ilist? tail)
-		(pred head)	; Last PRED app is tail call.
-		(and (pred head) (lp (icar tail) (icdr tail))))))))
+    ;; Fast path
+    (or (null-ilist? lis1)
+	(let lp ((head (icar lis1))  (tail (icdr lis1)))
+	  (if (null-ilist? tail)
+	      (pred head) ; Last PRED app is tail call.
+	    (and (pred head) (lp (icar tail) (icdr tail))))))))
 
 (define (iany pred ilis1 . ilists)
   (check-arg procedure? pred iany)

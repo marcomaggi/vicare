@@ -41,35 +41,35 @@
 
 ;;;; helpers
 
+(define-constant numbers (iq 0 1 2 3 4 5 6 7 8 9))
+
+;;; --------------------------------------------------------------------
+
 (define-syntax test-group
   (syntax-rules ()
     ((_ ?name . ?body)
      (begin . ?body))
     ))
 
-(define (%compar a b)
-  (cond ((and (ilist? a)
-	      (ilist? b))
-	 (ilist= %compar a b))
-	((and (ipair? a)
-	      (ipair? b))
-	 (and (%compar (icar a) (icar b))
-	      (%compar (icdr a) (icdr b))))
-	((and (list? a)
-	      (list? b))
-	 (for-all %compar a b))
-	((and (pair? a)
-	      (pair? b))
-	 (and (%compar (car a) (car b))
-	      (%compar (cdr a) (cdr b))))
-	((and (vector? a)
-	      (vector? b))
-	 (vector-for-all %compar a b))
+(define (iequal? a b)
+  (cond ((ipair? a)
+	 (and (ipair? b)
+	      (iequal? (icar a) (icar b))
+	      (iequal? (icdr a) (icdr b))))
+	((pair? a)
+	 (and (pair? b)
+	      (iequal? (car a) (car b))
+	      (iequal? (cdr a) (cdr b))))
+	((vector? a)
+	 (and (vector? b)
+	      (fx=? (vector-length a)
+		    (vector-length b))
+	      (vector-for-all iequal? a b)))
 	(else
 	 (equal? a b))))
 
 (define current-test-comparator
-  (make-parameter %compar))
+  (make-parameter iequal?))
 
 (define-syntax test
   (syntax-rules ()
@@ -448,6 +448,3166 @@
 ) ; end ilists/conversion
 
 ) ; end ilists
+
+
+(parameterise ((check-test-name 'constructors))
+
+  (check
+      (ipair* 1 2 3 4 (iq 5 6 7 8))
+    (=> iequal?) (iq 1 2 3 4 5 6 7 8))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (xipair 1 2)
+    (=> iequal?) (iq 2 . 1))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (make-ilist 4 'c)
+    (=> iequal?) (iq c c c c))
+
+  (check
+      (make-ilist 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (make-ilist 0 #f)
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist-tabulate 4 (lambda (i)
+			  (ipair i 'a)))
+    (=> iequal?) (iq (0 . a)
+		     (1 . a)
+		     (2 . a)
+		     (3 . a)))
+
+  (check
+      (ilist-tabulate 1 (lambda (i)
+			  (ipair i 'a)))
+    (=> iequal?) (iq (0 . a)))
+
+  (check
+      (ilist-tabulate 0 (lambda (i)
+			  (ipair i 'a)))
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist-copy (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ilist-copy (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (ilist-copy numbers)
+    (=> iequal?) numbers)
+
+  (check
+      (ilist-copy (iq 1 . 2))
+    (=> iequal?) (iq 1 . 2))
+
+  (check
+      (ilist-copy (iq 1 2 3 . 4))
+    (=> iequal?) (iq 1 2 3 . 4))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iiota 5 10)
+    (=> iequal?) (iq 10 11 12 13 14))
+
+  (check
+      (iiota 5)
+    (=> iequal?) (iq 0 1 2 3 4))
+
+  (check
+      (iiota 5 10 5)
+    (=> iequal?) (iq 10 15 20 25 30))
+
+  (check
+      (guard (exc (else #t))
+	(iiota -5 10 5))
+    (=> iequal?) #t)
+
+  #f)
+
+
+(parameterise ((check-test-name 'kind-predicates))
+
+  (check
+      (ilist? (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ilist? (iq 1 2 3))
+    (=> iequal?) #t)
+
+  (check
+      (ilist? (iq 1 2 3 . 4))
+    (=> iequal?) #f)
+
+  (check
+      (ilist? (iq 1 . 2))
+    (=> iequal?) #f)
+
+  (check
+      (ilist? 123)
+    (=> iequal?) #f)
+
+  (check
+      (ilist? #\a)
+    (=> iequal?) #f)
+
+  (check
+      (ilist? 'alpha)
+    (=> iequal?) #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (dotted-ilist? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (dotted-ilist? (iq 1 2 3))
+    (=> iequal?) #f)
+
+  (check
+      (dotted-ilist? (iq 1 . 2))
+    (=> iequal?) #t)
+
+  (check
+      (dotted-ilist? (iq 1 2 3 . 4))
+    (=> iequal?) #t)
+
+  (check
+      (dotted-ilist? 123)
+    (=> iequal?) #t)
+
+  (check
+      (dotted-ilist? #\a)
+    (=> iequal?) #t)
+
+  (check
+      (dotted-ilist? 'alpha)
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ipair? (iq 1 2))
+    (=> iequal?) #t)
+
+  (check
+      (ipair? (iq 1 . 2))
+    (=> iequal?) #t)
+
+  (check
+      (ipair? (iq 1))
+    (=> iequal?) #t)
+
+  (check
+      (ipair? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ipair? 1)
+    (=> iequal?) #f)
+
+  #t)
+
+
+(parameterise ((check-test-name 'comparison))
+
+  (check
+      (ilist= =)
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = numbers)
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = numbers numbers)
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = numbers numbers numbers)
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = numbers numbers numbers numbers)
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist= =
+	      (iq 1 2 3 4)
+	      (iq 1 9 3 4))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= =
+	      (iq 1 2 3)
+	      (iq 9 2 3))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= =
+	      (iq 1 2 3)
+	      (iq 9 2 3)
+	      (iq 9 2 3))
+    (=> iequal?) #f)
+  (check
+      (ilist= =
+	      (iq 9 2 3)
+	      (iq 1 2 3)
+	      (iq 9 2 3))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= =
+	      (iq 9 2 3)
+	      (iq 9 2 3)
+	      (iq 1 2 3))
+    (=> iequal?) #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist= = (iq 1))
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = (iq 1) (iq 1))
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = (iq 1) (iq 1) (iq 1))
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = (iq 1) (iq 1) (iq 1) (iq 1))
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist= = (iq 1) (iq 1 2))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = (iq 1 2) (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = (iq 1 2) (iq 1) (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = (iq 1) (iq 1 2) (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = (iq 1) (iq 1) (iq 1 2))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = numbers (iq 0 1 2 3 4))
+    (=> iequal?) #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist= = (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = (iq ) (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = (iq ) (iq ) (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ilist= = (iq ) (iq ) (iq ) (iq ))
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist= = (iq ) numbers)
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = numbers (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = numbers (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = (iq ) numbers (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist= = (iq ) (iq ) numbers)
+    (=> iequal?) #f)
+
+  #f)
+
+
+(parameterise ((check-test-name 'selectors))
+
+  (check (ifirst numbers)	(=> iequal?) 0)
+  (check (isecond numbers)	(=> iequal?) 1)
+  (check (ithird numbers)	(=> iequal?) 2)
+  (check (ifourth numbers)	(=> iequal?) 3)
+  (check (ififth numbers)	(=> iequal?) 4)
+  (check (isixth numbers)	(=> iequal?) 5)
+  (check (iseventh numbers)	(=> iequal?) 6)
+  (check (ieighth numbers)	(=> iequal?) 7)
+  (check (ininth numbers)	(=> iequal?) 8)
+  (check (itenth numbers)	(=> iequal?) 9)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist-ref numbers 0)
+    (=> iequal?) 0)
+
+  (check
+      (ilist-ref numbers 3)
+    (=> iequal?) 3)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda () (icar+icdr numbers))
+	ilist)
+    (=> iequal?)
+    (ilist (icar numbers) (icdr numbers)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (itake (iq ) 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (itake numbers 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (itake numbers 5)
+    (=> iequal?) (iq 0 1 2 3 4))
+
+  (check
+      (itake numbers 10)
+    (=> iequal?) numbers)
+
+  (check
+      (iappend (itake numbers 3)
+	       (idrop numbers 3))
+    (=> iequal?) numbers)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (idrop-right numbers 5)
+    (=> iequal?) (iq 0 1 2 3 4))
+
+  (check
+      (idrop-right numbers 0)
+    (=> iequal?) numbers)
+
+  (check
+      (idrop-right (iq ) 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (idrop-right numbers 10)
+    (=> iequal?) (iq ))
+
+  (check
+      (iappend (idrop-right numbers 3)
+	       (itake-right numbers 3))
+    (=> iequal?) numbers)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (itake-right numbers 5)
+    (=> iequal?) (iq 5 6 7 8 9))
+
+  (check
+      (itake-right numbers 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (itake-right (iq ) 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (itake-right numbers 10)
+    (=> iequal?) numbers)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (idrop-right numbers 5)
+    (=> iequal?) (iq 0 1 2 3 4))
+
+  (check
+      (idrop-right numbers 0)
+    (=> iequal?) numbers)
+
+  (check
+      (idrop-right (iq ) 0)
+    (=> iequal?) (iq ))
+
+  (check
+      (idrop-right numbers 10)
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda () (isplit-at numbers 5))
+	ilist)
+    (=> iequal?) (iq (0 1 2 3 4)
+		     (5 6 7 8 9)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilast numbers)
+    (=> iequal?) 9)
+
+  (check
+      (ilast (iq 9))
+    (=> iequal?) 9)
+
+;;; This raises an error.
+  ;;
+  ;; (check
+  ;;     (last (iq ))
+  ;;   (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (last-ipair numbers)
+    (=> iequal?) (iq 9))
+
+  (check
+      (last-ipair (iq 9))
+    (=> iequal?) (iq 9))
+
+;;; The empty list is not a pair, so the following raises an error.
+  ;;
+  ;; (check
+  ;;     (last-pair (iq ))
+  ;;   (=> iequal?) (iq ))
+
+  #f)
+
+
+(parameterise ((check-test-name 'miscellaneous))
+
+  (check
+      (ilength (iq 1 2 3 4 5 6))
+    (=> iequal?) 6)
+
+  (check
+      (ilength (iq 1))
+    (=> iequal?) 1)
+
+  (check
+      (ilength (iq ))
+    (=> iequal?) 0)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iappend (iq x) (iq y))
+    (=> iequal?) (iq x y))
+
+  (check
+      (iappend (iq a) (iq b c d))
+    (=> iequal?) (iq a b c d))
+
+  (check
+      (iappend (iq a (b)) (iq (c)))
+    (=> iequal?) (iq a (b) (c)))
+
+  (check
+      (iappend (iq a b) (iq c . d))
+    (=> iequal?) (iq a b c . d))
+
+  (check
+      (iappend (iq ) 'a)
+    (=> iequal?) 'a)
+
+  (check
+      (iappend (iq a) (iq ))
+    (=> iequal?) (iq a))
+
+  (check
+      (iappend (iq x y))
+    (=> iequal?) (iq x y))
+
+  (check
+      (iappend)
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iconcatenate (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (iconcatenate (iq ()))
+    (=> iequal?) (iq ))
+
+  (check
+      (iconcatenate (iq () ()))
+    (=> iequal?) (iq ))
+
+  (check
+      (iconcatenate (iq () () ()))
+    (=> iequal?) (iq ))
+
+  (check
+      (iconcatenate (iq (x)))
+    (=> iequal?) (iq x))
+
+  (check
+      (iconcatenate (iq (x) (y)))
+    (=> iequal?) (iq x y))
+
+  (check
+      (iconcatenate (iq (x) (y) (z)))
+    (=> iequal?) (iq x y z))
+
+  (check
+      (iconcatenate (iq (a)
+			(b c d)))
+    (=> iequal?) (iq a b c d))
+
+  (check
+      (iconcatenate (iq (a b)
+			(c d)))
+    (=> iequal?) (iq a b c d))
+
+  (check
+      (iconcatenate (iq (a b)
+			(c d)
+			(e f)))
+    (=> iequal?) (iq a b c d e f))
+
+  (check
+      (iconcatenate (iq (a b c d e f g)
+			(h i)
+			(l m n o)))
+    (=> iequal?) (iq a b c d e f g h i l m n o))
+
+  (check
+      (iconcatenate (iq (a (b)) ((c))))
+    (=> iequal?) (iq a (b) (c)))
+
+  (check
+      (iconcatenate (iq (a b) (c . d)))
+    (=> iequal?) (iq a b c . d))
+
+  (check
+      (iconcatenate (iq () (a)))
+    (=> iequal?) (iq a))
+
+  (check
+      (iconcatenate (iq (x y)))
+    (=> iequal?) (iq x y))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ireverse (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ireverse (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (ireverse (iq 1 2 3))
+    (=> iequal?) (iq 3 2 1))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iappend-reverse (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (iappend-reverse (iq x) (iq y))
+    (=> iequal?) (iq x y))
+
+  (check
+      (iappend-reverse (iq 1 2 3) (iq 4 5 6))
+    (=> iequal?) (iq 3 2 1 4 5 6))
+
+  (check
+      (iappend-reverse (iq a) (iq b c d))
+    (=> iequal?) (iq a b c d))
+
+  (check
+      (iappend-reverse (iq a (b)) (iq (c)))
+    (=> iequal?) (iq (b) a (c)))
+
+  (check
+      (iappend-reverse (iq a) (iq ))
+    (=> iequal?) (iq a))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (izip (iq))
+    (=> iequal?) (iq))
+
+  (check
+      (izip (iq one two three)
+	    (iq 1 2 3)
+	    (iq odd even odd))
+    (=> iequal?) (iq (one 1 odd) (two 2 even) (three 3 odd)))
+
+  (check
+      (izip (iq 1 2 3))
+    (=> iequal?) (iq (1) (2) (3)))
+
+  (check	;unequal length
+      (izip (iq one two three)
+	    (iq 1 2 3)
+	    (iq odd even odd even odd even odd even))
+    (=> iequal?) (iq (one 1 odd) (two 2 even) (three 3 odd)))
+
+  (check
+      (izip (iq 1 2 3))
+    (=> iequal?) (iq (1) (2) (3)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iunzip1 (iq (1)))
+    (=> iequal?) (iq 1))
+
+  (check
+      (iunzip1 (iq (1)
+		   (2)))
+    (=> iequal?) (iq 1 2))
+
+  (check
+      (iunzip1 (iq (1)
+		   (2)
+		   (3)))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (iunzip1 (iq (1 one)
+		   (2 two)
+		   (3 three)))
+    (=> iequal?) (iq 1 2 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (iunzip2 (iq (1 one))))
+	ilist)
+    (=> iequal?) (iq (1)
+		     (one)))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (iunzip2 (iq (1 one)
+			 (2 two))))
+	ilist)
+    (=> iequal?) (iq (1 2)
+		     (one two)))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (iunzip2 (iq (1 one)
+			 (2 two)
+			 (3 three))))
+	ilist)
+    (=> iequal?) (iq (1 2 3)
+		     (one two three)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (iunzip3 (iq (1 10 100)
+			 (2 20 200)
+			 (3 30 300))))
+	ilist)
+    (=> iequal?) (iq (1 2 3)
+		     (10 20 30)
+		     (100 200 300)))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (iunzip4 (iq (1 10 100 1000)
+			 (2 20 200 2000)
+			 (3 30 300 3000))))
+	ilist)
+    (=> iequal?) (iq (1 2 3)
+		     (10 20 30)
+		     (100 200 300)
+		     (1000 2000 3000)))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (iunzip5 (iq (1 10 100 1000 10000)
+			 (2 20 200 2000 20000)
+			 (3 30 300 3000 30000))))
+	ilist)
+    (=> iequal?) (iq (1 2 3)
+		     (10 20 30)
+		     (100 200 300)
+		     (1000 2000 3000)
+		     (10000 20000 30000)))
+
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (icount even? numbers)
+    (=> iequal?) 5)
+
+  (check
+      (icount even? (iq 1))
+    (=> iequal?) 0)
+
+  (check
+      (icount even? (iq 2))
+    (=> iequal?) 1)
+
+  (check
+      (icount even? (iq ))
+    (=> iequal?) 0)
+
+  #f)
+
+
+(parameterise ((check-test-name 'left-folding))
+
+  (check
+      (ifold + 0 numbers)
+    (=> iequal?) 45)
+
+  (check
+      (ifold ipair (iq ) numbers)
+    (=> iequal?) (iq 9 8 7 6 5 4 3 2 1 0))
+
+  (check
+      (ifold ipair (iq 4 5 6) (iq 3 2 1))
+    (=> iequal?) (iq 1 2 3 4 5 6))
+
+  (check
+      (ifold ipair (iq 4 5 6) (iq ))
+    (=> iequal?) (iq 4 5 6))
+
+  (check
+      (ifold ipair (iq 4 5 6) (iq 3))
+    (=> iequal?) (iq 3 4 5 6))
+
+  (check
+      (ifold (lambda (x count)
+	       (if (symbol? x)
+		   (+ count 1)
+		 count))
+	     0
+	     (iq a 1 b 2 c 3))
+    (=> iequal?) 3)
+
+  (check
+      (ifold (lambda (s len)
+	       (max len (string-length s)))
+	     0
+	     (iq "ciao" "hello" "salut" "hola"))
+    (=> iequal?) 5)
+
+  (check
+      (ifold ipair* (iq )
+	     (iq a b c)
+	     (iq 1 2 3 4 5))
+    (=> iequal?) (iq c 3 b 2 a 1))
+
+  (check
+      (ifold ipair* (iq )
+	     (iq a)
+	     (iq 1))
+    (=> iequal?) (iq a 1))
+
+  (check
+      (ifold (lambda (a b c knil)
+	       (ipair (ilist a b c)
+		      knil))
+	     (iq )
+	     (iq 1 2 3)
+	     (iq 10 20 30)
+	     (iq 100 200 300))
+    (=> iequal?) (iq (3 30 300)
+		     (2 20 200)
+		     (1 10 100)))
+
+  (check
+      (ifold (lambda (a b c knil)
+	       (ipair (ilist a b c)
+		      knil))
+	     (iq )
+	     (iq 1 2 3)
+	     (iq 10 20)
+	     (iq 100 200 300 400))
+    (=> iequal?) (iq (2 20 200)
+		     (1 10 100)))
+
+  (check
+      (ifold iappend
+	     (iq )
+	     (iq (1 2 3)
+		 (4 5)
+		 (6 7 8 9)
+		 (0)))
+    (=> iequal?) (iq 0 6 7 8 9 4 5 1 2 3))
+
+  #f)
+
+
+(parameterise ((check-test-name 'right-folding))
+
+  (check
+      (ifold-right ipair (iq ) (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (ifold-right ipair (iq ) numbers)
+    (=> iequal?) numbers)
+
+  (check
+      (ifold-right + 0 numbers)
+    (=> iequal?) 45)
+
+  (check
+      (ifold-right ipair (iq 4 5 6) (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3 4 5 6))
+
+  (check
+      (ifold-right (lambda (x count)
+		     (if (symbol? x)
+			 (+ count 1)
+		       count))
+		   0
+		   (iq a 1 b 2 c 3))
+    (=> iequal?) 3)
+
+  (check
+      (ifold-right (lambda (s len)
+		     (max len (string-length s)))
+		   0
+		   (iq "ciao" "hello" "salut" "hola"))
+    (=> iequal?) 5)
+
+  (check
+      (ifold-right (lambda (x l)
+		     (if (even? x)
+			 (ipair x l)
+		       l))
+		   (iq )
+		   (iq 0 1 2 3 4 5 6 7 8 9))
+    (=> iequal?) (iq 0 2 4 6 8))
+
+  (check
+      (ifold-right ipair* (iq )
+		   (iq a b c)
+		   (iq 1 2 3 4 5))
+    (=> iequal?) (iq a 1 b 2 c 3))
+
+  (check
+      (ifold-right ipair* (iq )
+		   (iq a)
+		   (iq 1))
+    (=> iequal?) (iq a 1))
+
+  (check
+      (ifold-right (lambda (a b c knil)
+		     (ipair (ilist a b c)
+			    knil))
+		   (iq )
+		   (iq 1 2 3)
+		   (iq 10 20 30)
+		   (iq 100 200 300))
+    (=> iequal?) (iq (1 10 100)
+		     (2 20 200)
+		     (3 30 300)))
+
+  (check
+      (ifold-right (lambda (a b c knil)
+		     (ipair (ilist a b c)
+			    knil))
+		   (iq )
+		   (iq 1 2 3)
+		   (iq 10 20)
+		   (iq 100 200 300 400))
+    (=> iequal?) (iq (1 10 100)
+		     (2 20 200)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ifold-right ipair (iq ) (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (ifold-right ipair (iq 1 2 3) (iq ))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (ifold-right ipair (iq 1 2 3) (iq 9))
+    (=> iequal?) (iq 9 1 2 3))
+
+  (check
+      (ifold-right ipair (iq ) numbers)
+    (=> iequal?) numbers)
+
+  (check
+      (ifold-right + 0 numbers)
+    (=> iequal?) 45)
+
+  (check
+      (ifold-right ipair (iq 4 5 6) (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3 4 5 6))
+
+  (check
+      (ifold-right (lambda (x count)
+		     (if (symbol? x)
+			 (+ count 1)
+		       count))
+		   0
+		   (iq a 1 b 2 c 3))
+    (=> iequal?) 3)
+
+  (check
+      (ifold-right (lambda (s len)
+		     (max len (string-length s)))
+		   0
+		   (iq "ciao" "hello" "salut" "hola"))
+    (=> iequal?) 5)
+
+  (check
+      (ifold-right (lambda (x l)
+		     (if (even? x)
+			 (ipair x l)
+		       l))
+		   (iq )
+		   (iq 0 1 2 3 4 5 6 7 8 9))
+    (=> iequal?) (iq 0 2 4 6 8))
+
+  (check
+      (ifold-right ipair* (iq )
+		   (iq a b c)
+		   (iq 1 2 3))
+    (=> iequal?) (iq a 1 b 2 c 3))
+
+  (check
+      (ifold-right ipair* (iq )
+		   (iq a)
+		   (iq 1))
+    (=> iequal?) (iq a 1))
+
+  (check
+      (ifold-right (lambda (a b c knil)
+		     (ipair (ilist a b c)
+			    knil))
+		   (iq )
+		   (iq 1 2 3)
+		   (iq 10 20 30)
+		   (iq 100 200 300))
+    (=> iequal?) (iq (1 10 100)
+		     (2 20 200)
+		     (3 30 300)))
+
+  (check
+      (ifold-right (lambda (a b c knil)
+		     (ipair (ilist a b c)
+			    knil))
+		   (iq )
+		   (iq 1 2 3)
+		   (iq 10 20)
+		   (iq 100 200 300 400))
+    (=> iequal?) (iq (1 10 100)
+		     (2 20 200)))
+
+  #f)
+
+
+(parameterise ((check-test-name 'pair-folding))
+
+  (check
+      (ipair-fold (lambda (elm knil)
+		    (ipair (icar elm) knil))
+		  (iq 999)
+		  (iq 1 2 3))
+    (=> iequal?) (iq 3 2 1 999))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1 2 3)
+		  (iq 10 20 30)
+		  (iq 100 200 300))
+    (=> iequal?) (iq (3 30 300)
+		     (2 20 200)
+		     (1 10 100)
+		     999))
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1)
+		  (iq 10)
+		  (iq 100))
+    (=> iequal?) (iq (1 10 100)
+		     999))
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1)
+		  (iq 10 20 30)
+		  (iq 100 200 300))
+    (=> iequal?) (iq (1 10 100)
+		     999))
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1 2 3)
+		  (iq 10)
+		  (iq 100 200 300))
+    (=> iequal?) (iq (1 10 100)
+		     999))
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1 2 3)
+		  (iq 10 20 30)
+		  (iq 100))
+    (=> iequal?) (iq (1 10 100)
+		     999))
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq )
+		  (iq 10 20 30)
+		  (iq 100 200 300))
+    (=> iequal?) (iq 999))
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1 2 3)
+		  (iq )
+		  (iq 100 200 300))
+    (=> iequal?) (iq 999))
+
+  (check
+      (ipair-fold (lambda (a b c knil)
+		    (ipair (ilist (icar a)
+				  (icar b)
+				  (icar c))
+			   knil))
+		  (iq 999)
+		  (iq 1 2 3)
+		  (iq 10 20 30)
+		  (iq ))
+    (=> iequal?) (iq 999))
+
+  #f)
+
+
+(parameterise ((check-test-name 'reducing))
+
+  (check
+      (ireduce + 0 numbers)
+    (=> iequal?) 45)
+
+  (check
+      (ireduce + 0 (iq ))
+    (=> iequal?) 0)
+
+  (check
+      (ireduce max 0 (iq 1 2 3 4 5))
+    (=> iequal?) 5)
+
+  (check
+      (ireduce iappend
+	       (iq )
+	       (iq (1 2 3)
+		   (4 5)
+		   (6 7 8 9)
+		   (0)))
+    (=> iequal?) (iq 0 6 7 8 9 4 5 1 2 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ireduce-right + 0 numbers)
+    (=> iequal?) 45)
+
+  (check
+      (ireduce-right + 0 (iq ))
+    (=> iequal?) 0)
+
+  (check
+      (ireduce-right max 0 (iq 1 2 3 4 5))
+    (=> iequal?) 5)
+
+  (check
+      (ireduce-right iappend
+		     (iq )
+		     (iq (1 2 3)
+			 (4 5)
+			 (6 7 8 9)
+			 (0)))
+    (=> iequal?) (iq 1 2 3 4 5 6 7 8 9 0))
+
+  #f)
+
+
+(parameterise ((check-test-name 'unfolding))
+
+  (check
+      (iunfold (lambda (x) (< 5 x))
+	       (lambda (x) (* x x))
+	       (lambda (x) (+ x 1))
+	       1)
+    (=> iequal?) (iq 1 4 9 16 25))
+
+  (check
+      (iunfold (lambda (x) (< 5 x))
+	       (lambda (x) (* x x))
+	       (lambda (x) (+ x 1))
+	       1
+	       (lambda (x) (- x)))
+    (=> iequal?) (iq 1 4 9 16 25 . -6))
+
+  (check
+      (iunfold (lambda (x) #t)
+	       (lambda (x) (* x x))
+	       (lambda (x) (+ x 1))
+	       1
+	       (lambda (x) (- x)))
+    (=> iequal?) -1)
+
+  (check
+      (iunfold null? icar icdr numbers)
+    (=> iequal?) numbers)
+
+  (check
+      (iunfold (lambda (obj)
+		 (not (ipair? obj)))
+	       icar icdr (iq 1 2 3 4 . 5) values)
+    (=> iequal?) (iq 1 2 3 4 . 5))
+
+  (check
+      (iunfold null? icar icdr (iq 1 2 3) (lambda (x) (iq 4 5 6)))
+    (=> iequal?) (iq 1 2 3 4 5 6))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iunfold-right zero?
+		     (lambda (x) (* x x))
+		     (lambda (x) (- x 1))
+		     5)
+    (=> iequal?) (iq 1 4 9 16 25))
+
+  (check
+      (iunfold-right null? icar icdr (iq 1 2 3 4 5))
+    (=> iequal?) (iq 5 4 3 2 1))
+
+  (check
+      (iunfold-right null? icar icdr (iq 3 2 1) (iq 4 5 6))
+    (=> iequal?) (iq 1 2 3 4 5 6))
+
+  #f)
+
+
+(parameterise ((check-test-name 'mapping))
+
+  (check
+      (imap - (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - numbers)
+    (=> iequal?) (iq 0 -1 -2 -3 -4 -5 -6 -7 -8 -9))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20 30))
+    (=> iequal?) (iq 11 22 33))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20 30)
+	    (iq 100 200 300))
+    (=> iequal?) (iq 111 222 333))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((r 0))
+	(ifor-each
+	 (lambda (e)
+	   (set! r (+ e r)))
+	 (iq ))
+	r)
+    (=> iequal?) 0)
+
+  (check
+      (let ((r 0))
+	(ifor-each
+	 (lambda (e1 e2)
+	   (set! r (+ e1 e2 r)))
+	 (iq ) (iq ))
+	r)
+    (=> iequal?) 0)
+
+  (check
+      (let ((r 0))
+	(ifor-each
+	 (lambda (e1 e2 e3)
+	   (set! r (+ e1 e2 e3 r)))
+	 (iq ) (iq ) (iq ))
+	r)
+    (=> iequal?) 0)
+
+  (check
+      (let ((r (iq 0 0)))
+	(ifor-each
+	 (lambda (e1 e2)
+	   (set! r (ilist (+ e1 (icar r))
+			  (+ e2 (icadr r)))))
+	 (iq 1 10 100)
+	 (iq 2 20 200))
+	r)
+    (=> iequal?) (iq 111 222))
+
+
+  (check
+      (let ((r (iq 0 0 0)))
+	(ifor-each
+	 (lambda (e1 e2 e3)
+	   (set! r (ilist (+ e1 (icar r))
+			  (+ e2 (icadr r))
+			  (+ e3 (icaddr r)))))
+	 (iq 1 10 100)
+	 (iq 2 20 200)
+	 (iq 3 30 300))
+	r)
+    (=> iequal?) (iq 111 222 333))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (imap - (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - (iq ) (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap - numbers)
+    (=> iequal?) (iq 0 -1 -2 -3 -4 -5 -6 -7 -8 -9))
+
+  (check
+      (imap + (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20 30))
+    (=> iequal?) (iq 11 22 33))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20 30)
+	    (iq 100 200 300))
+    (=> iequal?) (iq 111 222 333))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20)
+	    (iq 100 200 300))
+    (=> iequal?) (iq 111 222))
+
+  (check
+      (imap +
+	    (iq 1 2)
+	    (iq 10 20 30)
+	    (iq 100 200 300))
+    (=> iequal?) (iq 111 222))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20 30)
+	    (iq 100 200))
+    (=> iequal?) (iq 111 222))
+
+  (check
+      (imap +
+	    (iq )
+	    (iq 10 20 30)
+	    (iq 100 200 300))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq )
+	    (iq 100 200 300))
+    (=> iequal?) (iq ))
+
+  (check
+      (imap +
+	    (iq 1 2 3)
+	    (iq 10 20 30)
+	    (iq ))
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((r 0))
+	(ifor-each
+	 (lambda (e)
+	   (set! r (+ e r)))
+	 (iq ))
+	r)
+    (=> iequal?) 0)
+
+  (check
+      (let ((r 0))
+	(ifor-each
+	 (lambda (e1 e2)
+	   (set! r (+ e1 e2 r)))
+	 (iq ) (iq ))
+	r)
+    (=> iequal?) 0)
+
+  (check
+      (let ((r 0))
+	(ifor-each
+	 (lambda (e1 e2 e3)
+	   (set! r (+ e1 e2 e3 r)))
+	 (iq ) (iq ) (iq ))
+	r)
+    (=> iequal?) 0)
+
+  (check
+      (let ((r (iq 0 0)))
+	(ifor-each
+	 (lambda (e1 e2)
+	   (set! r (ilist (+ e1 (icar r))
+			  (+ e2 (icadr r)))))
+	 (iq 1 10 100)
+	 (iq 2 20 200))
+	r)
+    (=> iequal?) (iq 111 222))
+
+
+  (check
+      (let ((r (iq 0 0 0)))
+	(ifor-each
+	 (lambda (e1 e2 e3)
+	   (set! r (ilist (+ e1 (icar r))
+			  (+ e2 (icadr r))
+			  (+ e3 (icaddr r)))))
+	 (iq 1 10 100)
+	 (iq 2 20 200)
+	 (iq 3 30 300))
+	r)
+    (=> iequal?) (iq 111 222 333))
+
+;;; --------------------------------------------------------------------
+
+  (let ()
+    (define (f x)
+      (ilist x (- x)))
+
+    (check
+	(iappend-map f (iq ))
+      (=> iequal?) (iq ))
+
+    (check
+	(iappend-map ilist (iq ) (iq ))
+      (=> iequal?) (iq ))
+
+    (check
+	(iappend-map ilist (iq ) (iq ) (iq ))
+      (=> iequal?) (iq ))
+
+    (check
+	(iappend-map f (iq 1))
+      (=> iequal?) (iq 1 -1))
+
+    (check
+	(iappend-map ilist (iq 1) (iq 2))
+      (=> iequal?) (iq 1 2))
+
+    (check
+	(iappend-map ilist (iq 1) (iq 2) (iq 3))
+      (=> iequal?) (iq 1 2 3))
+
+    (check
+	(iappend-map f (iq 1 3 8))
+      (=> iequal?) (iq 1 -1 3 -3 8 -8))
+
+    (check
+	(iappend-map ilist
+		     (iq 1 2 3)
+		     (iq 10 20 30))
+      (=> iequal?) (iq 1 10 2 20 3 30))
+
+    (check
+	(iappend-map ilist
+		     (iq 1 2 3)
+		     (iq 10 20 30))
+      (=> iequal?) (iq 1 10 2 20 3 30))
+
+    (check
+	(iappend-map ilist
+		     (iq 1 2 3)
+		     (iq 10 20 30)
+		     (iq 100 200 300))
+      (=> iequal?) (iq 1 10 100 2 20 200 3 30 300))
+
+    (check
+	(iappend-map ilist
+		     (iq 1 2)
+		     (iq 10 20 30)
+		     (iq 100 200 300))
+      (=> iequal?) (iq 1 10 100 2 20 200))
+
+    (check
+	(iappend-map ilist
+		     (iq 1 2 3)
+		     (iq 10 20)
+		     (iq 100 200 300))
+      (=> iequal?) (iq 1 10 100 2 20 200))
+
+    (check
+	(iappend-map ilist
+		     (iq 1 2 3)
+		     (iq 10 20 30)
+		     (iq 100 200))
+      (=> iequal?) (iq 1 10 100 2 20 200))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq 1 2 3))
+	r)
+    (=> iequal?) (iq (3)
+		     (2 3)
+		     (1 2 3)))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y)
+	   (set! r (ipair (ilist x y)
+			  r)))
+	 (iq )
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq )
+	 (iq )
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq 1))
+	r)
+    (=> iequal?) (iq (1)))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq 1 2))
+	r)
+    (=> iequal?) (iq (2)
+		     (1 2)))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y)
+	   (set! r (ipair (ilist x y)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20 30))
+	r)
+    (=> iequal?) (iq ((3) (30))
+		     ((2 3) (20 30))
+		     ((1 2 3) (10 20 30))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20 30)
+	 (iq 100 200 300))
+	r)
+    (=> iequal?) (iq ((3) (30) (300))
+		     ((2 3) (20 30) (200 300))
+		     ((1 2 3) (10 20 30) (100 200 300))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1)
+	 (iq 10)
+	 (iq 100))
+	r)
+    (=> iequal?) (iq ((1) (10) (100))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq 1 2 3))
+	r)
+    (=> iequal?) (iq (3)
+		     (2 3)
+		     (1 2 3)))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq )
+	 (iq )
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y)
+	   (set! r (ipair (ilist x y)
+			  r)))
+	 (iq )
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq 1))
+	r)
+    (=> iequal?) (iq (1)))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x)
+	   (set! r (ipair x r)))
+	 (iq 1 2))
+	r)
+    (=> iequal?) (iq (2)
+		     (1 2)))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y)
+	   (set! r (ipair (ilist x y)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20 30))
+	r)
+    (=> iequal?) (iq ((3) (30))
+		     ((2 3) (20 30))
+		     ((1 2 3) (10 20 30))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20 30)
+	 (iq 100 200 300))
+	r)
+    (=> iequal?) (iq ((3) (30) (300))
+		     ((2 3) (20 30) (200 300))
+		     ((1 2 3) (10 20 30) (100 200 300))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2)
+	 (iq 10 20 30)
+	 (iq 100 200 300))
+	r)
+    (=> iequal?) (iq ((2) (20 30) (200 300))
+		     ((1 2) (10 20 30) (100 200 300))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20)
+	 (iq 100 200 300))
+	r)
+    (=> iequal?) (iq ((2 3) (20) (200 300))
+		     ((1 2 3) (10 20) (100 200 300))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20 30)
+	 (iq 100 200))
+	r)
+    (=> iequal?) (iq ((2 3) (20 30) (200))
+		     ((1 2 3) (10 20 30) (100 200))))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq )
+	 (iq 10 20 30)
+	 (iq 100 200 300))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2 3)
+	 (iq )
+	 (iq 100 200 300))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1 2 3)
+	 (iq 10 20 30)
+	 (iq ))
+	r)
+    (=> iequal?) (iq ))
+
+  (check
+      (let ((r (iq )))
+	(ipair-for-each
+	 (lambda (x y z)
+	   (set! r (ipair (ilist x y z)
+			  r)))
+	 (iq 1)
+	 (iq 10)
+	 (iq 100))
+	r)
+    (=> iequal?) (iq ((1) (10) (100))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ifilter-map
+       (lambda (x)
+	 (and (number? x)
+	      (* x x)))
+       (iq a 1 b 3 c 7))
+    (=> iequal?) (iq 1 9 49))
+
+  (check
+      (ifilter-map - (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - (iq ) (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - numbers)
+    (=> iequal?) (iq 0 -1 -2 -3 -4 -5 -6 -7 -8 -9))
+
+  (check
+      (ifilter-map + (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20 30))
+    (=> iequal?) (iq 11 22 33))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20 30)
+		   (iq 100 200 300))
+    (=> iequal?) (iq 111 222 333))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ifilter-map
+       (lambda (x)
+	 (and (number? x)
+	      (* x x)))
+       (iq a 1 b 3 c 7))
+    (=> iequal?) (iq 1 9 49))
+
+  (check
+      (ifilter-map - (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - (iq ) (iq ) (iq ) (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map - numbers)
+    (=> iequal?) (iq 0 -1 -2 -3 -4 -5 -6 -7 -8 -9))
+
+  (check
+      (ifilter-map + (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20 30))
+    (=> iequal?) (iq 11 22 33))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20 30)
+		   (iq 100 200 300))
+    (=> iequal?) (iq 111 222 333))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20)
+		   (iq 100 200 300))
+    (=> iequal?) (iq 111 222))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2)
+		   (iq 10 20 30)
+		   (iq 100 200 300))
+    (=> iequal?) (iq 111 222))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20 30)
+		   (iq 100 200))
+    (=> iequal?) (iq 111 222))
+
+  (check
+      (ifilter-map +
+		   (iq )
+		   (iq 10 20 30)
+		   (iq 100 200 300))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq )
+		   (iq 100 200 300))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter-map +
+		   (iq 1 2 3)
+		   (iq 10 20 30)
+		   (iq ))
+    (=> iequal?) (iq ))
+
+  #f)
+
+
+(parameterise ((check-test-name 'filtering))
+
+  (check
+      (ifilter even? (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter even? (iq 1))
+    (=> iequal?) (iq ))
+
+  (check
+      (ifilter even? (iq 2))
+    (=> iequal?) (iq 2))
+
+  (check
+      (ifilter even? numbers)
+    (=> iequal?) (iq 0 2 4 6 8))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (ipartition even? (iq )))
+	ilist)
+    (=> iequal?) (iq () ()))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (ipartition even? (iq 1)))
+	ilist)
+    (=> iequal?) (iq () (1)))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (ipartition even? (iq 2)))
+	ilist)
+    (=> iequal?) (iq (2) ()))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (ipartition even? (iq 1 3)))
+	ilist)
+    (=> iequal?) (iq () (1 3)))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (ipartition even? (iq 2 4)))
+	ilist)
+    (=> iequal?) (iq (2 4) ()))
+
+  (check
+      (call-with-values
+	  (lambda ()
+	    (ipartition even? numbers))
+	ilist)
+    (=> iequal?) (iq (0 2 4 6 8)
+		     (1 3 5 7 9)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iremove (lambda (obj) (eqv? 8 obj)) numbers)
+    (=> iequal?) (iq 0 1 2 3 4 5 6 7 9))
+
+  (check
+      (iremove (lambda (obj) (eqv? 8 obj)) (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (iremove (lambda (obj) (eqv? 8 obj)) (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (iremove (lambda (obj) (eqv? 8 obj)) (iq ))
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iremove even? (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (iremove even? (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (iremove even? (iq 2))
+    (=> iequal?) (iq ))
+
+  (check
+      (iremove even? numbers)
+    (=> iequal?) (iq 1 3 5 7 9))
+
+  #f)
+
+
+(parameterise ((check-test-name 'finding))
+
+  (check
+      (ifind even? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ifind even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ifind even? (iq 2))
+    (=> iequal?) 2)
+
+  (check
+      (ifind even? (iq 1 2 3))
+    (=> iequal?) 2)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ifind-tail even? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ifind-tail even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ifind-tail even? (iq 2))
+    (=> iequal?) (iq 2))
+
+  (check
+      (ifind-tail even? (iq 1 2 3))
+    (=> iequal?) (iq 2 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (itake-while even? (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (itake-while even? (iq 1))
+    (=> iequal?) (iq ))
+
+  (check
+      (itake-while even? (iq 2))
+    (=> iequal?) (iq 2))
+
+  (check
+      (itake-while even? (iq 2 4 6 1 3))
+    (=> iequal?) (iq 2 4 6))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (idrop-while even? (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (idrop-while even? (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (idrop-while even? (iq 2))
+    (=> iequal?) (iq ))
+
+  (check
+      (idrop-while even? (iq 2 4 6 1 3))
+    (=> iequal?) (iq 1 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda () (ispan even? (iq )))
+	ilist)
+    (=> iequal?) (iq () ()))
+
+  (check
+      (call-with-values
+	  (lambda () (ispan even? (iq 1)))
+	ilist)
+    (=> iequal?) (iq () (1)))
+
+  (check
+      (call-with-values
+	  (lambda () (ispan even? (iq 2)))
+	ilist)
+    (=> iequal?) (iq (2) ()))
+
+  (check
+      (call-with-values
+	  (lambda () (ispan even? (iq 2 4 6 1 3)))
+	ilist)
+    (=> iequal?) (iq (2 4 6) (1 3)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (call-with-values
+	  (lambda () (ibreak even? (iq )))
+	ilist)
+    (=> iequal?) (iq () ()))
+
+  (check
+      (call-with-values
+	  (lambda () (ibreak even? (iq 1)))
+	ilist)
+    (=> iequal?) (iq (1) ()))
+
+  (check
+      (call-with-values
+	  (lambda () (ibreak even? (iq 2)))
+	ilist)
+    (=> iequal?) (iq () (2)))
+
+  (check
+      (call-with-values
+	  (lambda () (ibreak even? (iq 1 3 2 4 6)))
+	ilist)
+    (=> iequal?) (iq (1 3) (2 4 6)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iany even? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iany even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (and (iany even? (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (iany even? (iq 1 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (iany even? (iq 1 3 5 7 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (iany (lambda args
+	      (integer? (apply + args)))
+	    (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iany (lambda args
+	      (integer? (apply + args)))
+	    (iq ) (iq ) (iq ))
+    (=> iequal?) #f)
+
+;;; The following are  false because when a list  is empty the predicate
+;;; is not applied at all and the return value is false.
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq ) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #f)
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq ) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #f)
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq ) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1) (iq 1.1) (iq 2))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1) (iq 2) (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1 2)
+		 (iq 2 2.2)
+		 (iq 1.1 3))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1 2)
+		 (iq 2 2)
+		 (iq 1.1 3))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (guard (E (else #t))
+	(iany (lambda args
+		(integer? (apply + args)))
+	      (iq 1 2)
+	      (iq 2 2)
+	      (iq 1.1 3)))
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iany even? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iany even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (and (iany even? (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (iany even? (iq 1 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (iany even? (iq 1 3 5 7 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (iany (lambda args
+	      (integer? (apply + args)))
+	    (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iany (lambda args
+	      (integer? (apply + args)))
+	    (iq ) (iq ) (iq ))
+    (=> iequal?) #f)
+
+;;; The following are  false because when a list  is empty the predicate
+;;; is not applied at all and the return value is false.
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #f)
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq ) (iq 1) (iq ))
+	   #t)
+    (=> iequal?) #f)
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq ) (iq ) (iq 1))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1) (iq 1.1) (iq 2))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1) (iq 2) (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1 2)
+		 (iq 2 2.2)
+		 (iq 1.1 3))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (iany (lambda args
+		   (integer? (apply + args)))
+		 (iq 1 2)
+		 (iq 2 2)
+		 (iq 1.1 3))
+	   #t)
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ievery even? (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ievery even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery even? (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (ievery even? (iq 1 2))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery even? (iq 4 8 10 12))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (ievery (lambda args
+		(integer? (apply + args)))
+	      (iq ) (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ievery (lambda args
+		(integer? (apply + args)))
+	      (iq ) (iq ) (iq ))
+    (=> iequal?) #t)
+
+;;; The following are true because when a list is empty the predicate is
+;;; not applied at all and the return value is true.
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq ) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #t)
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq ) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #t)
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq ) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1) (iq 1.1) (iq 2))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1) (iq 2) (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2)
+		   (iq 2 2.2)
+		   (iq 1 3))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2)
+		   (iq 2 2)
+		   (iq 1 3))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (guard (E (else #t))
+	(ievery (lambda args
+		  (integer? (apply + args)))
+		(iq 1 2)
+		(iq 2 2 2)
+		(iq 1 3)))
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ievery even? (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ievery even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery even? (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (ievery even? (iq 1 2))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery even? (iq 4 8 10 12))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (ievery (lambda args
+		(integer? (apply + args)))
+	      (iq ) (iq ))
+    (=> iequal?) #t)
+
+  (check
+      (ievery (lambda args
+		(integer? (apply + args)))
+	      (iq ) (iq ) (iq ))
+    (=> iequal?) #t)
+
+;;; The following are true because when a list is empty the predicate is
+;;; not applied at all and the return value is true.
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1) (iq ) (iq ))
+	   #t)
+    (=> iequal?) #t)
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq ) (iq 1) (iq ))
+	   #t)
+    (=> iequal?) #t)
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq ) (iq ) (iq 1))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1) (iq 1.1) (iq 2))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1) (iq 2) (iq 2))
+	   #t)
+    (=> iequal?) #t)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2)
+		   (iq 2 2.2)
+		   (iq 1 3))
+	   #t)
+    (=> iequal?) #f)
+
+  (check
+      (and (ievery (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2)
+		   (iq 2 2)
+		   (iq 1 3))
+	   #t)
+    (=> iequal?) #t)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist-index even? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq ) (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq 1 3 5))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq 2))
+    (=> iequal?) 0)
+
+  (check
+      (ilist-index even? (iq 1 2 3 5))
+    (=> iequal?) 1)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1 2 3))
+    (=> iequal?) 0)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1.1 2 3))
+    (=> iequal?) 1)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1 2 3)
+		   (iq 1 2 3))
+    (=> iequal?) 0)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1.1 2 3)
+		   (iq 1 2 3))
+    (=> iequal?) 1)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1 2 3)
+		   (iq 1.1 2.1 3))
+    (=> iequal?) 2)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ilist-index even? (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq ) (iq ) (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq 1))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq 1 3 5))
+    (=> iequal?) #f)
+
+  (check
+      (ilist-index even? (iq 2))
+    (=> iequal?) 0)
+
+  (check
+      (ilist-index even? (iq 1 2 3 5))
+    (=> iequal?) 1)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1 2 3))
+    (=> iequal?) 0)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1.1 2 3))
+    (=> iequal?) 1)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1 2 3)
+		   (iq 1 2 3))
+    (=> iequal?) 0)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1.1 2 3)
+		   (iq 1 2 3))
+    (=> iequal?) 1)
+
+  (check
+      (ilist-index (lambda args
+		     (integer? (apply + args)))
+		   (iq 1 2 3)
+		   (iq 1 2 3)
+		   (iq 1.1 2.1 3))
+    (=> iequal?) 2)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (imemq 'a (iq a b c))
+    (=> iequal?) (iq a b c))
+
+  (check
+      (imemq 'b (iq a b c))
+    (=> iequal?) (iq b c))
+
+  (check
+      (imemq 'a (iq b c d))
+    (=> iequal?) #f)
+
+  (check
+      (imemq (list 'a) (iq b (a) c))
+    (=> iequal?) #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (imember (iq a)
+	       (iq b (a) c))
+    (=> iequal?) (iq (a) c))
+
+  (check
+      (imember (iq a)
+	       (iq b (a) c))
+    (=> iequal?) (iq (a) c))
+
+  (check
+      (imember (iq a)
+	       (iq b a c))
+    (=> iequal?) #f)
+
+  (check
+      (imember (iq a)
+	       (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (imember 10
+	       (iq 1 2 3 11 4 5)
+	       (lambda (a b)
+		 (= (+ 1 a) b)))
+    (=> iequal?) (iq 11 4 5))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (imemv 101 (iq 100 101 102))
+    (=> iequal?) (iq 101 102))
+
+  #f)
+
+
+(parameterise ((check-test-name 'deletion))
+
+  (check
+      (idelete 8 (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (idelete 8 (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete 8 (iq 8))
+    (=> iequal?) (iq ))
+
+  (check
+      (idelete 8 (iq 1 2 3))
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (idelete 8 (iq 1 2 8 3 4 5 8 6 7 8))
+    (=> iequal?) (iq 1 2 3 4 5 6 7))
+
+  (check
+      (idelete 8 (iq ) =)
+    (=> iequal?) (iq ))
+
+  (check
+      (idelete 8 (iq 1) =)
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete 8 (iq 8) =)
+    (=> iequal?) (iq ))
+
+  (check
+      (idelete 8 (iq 1 2 3) =)
+    (=> iequal?) (iq 1 2 3))
+
+  (check
+      (idelete 8 (iq 1 2 8 3 4 5 8 6 7 8) =)
+    (=> iequal?) (iq 1 2 3 4 5 6 7))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (idelete-duplicates (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (idelete-duplicates (iq 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete-duplicates (iq 1 2))
+    (=> iequal?) (iq 1 2))
+
+  (check
+      (idelete-duplicates (iq 1 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete-duplicates (iq 1 1 1))
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete-duplicates (iq 1 2 3 2 4 5 4 6 1 7))
+    (=> iequal?) (iq 1 2 3 4 5 6 7))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (idelete-duplicates (iq ) =)
+    (=> iequal?) (iq ))
+
+  (check
+      (idelete-duplicates (iq 1) =)
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete-duplicates (iq 1 2) =)
+    (=> iequal?) (iq 1 2))
+
+  (check
+      (idelete-duplicates (iq 1 1) =)
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete-duplicates (iq 1 1 1) =)
+    (=> iequal?) (iq 1))
+
+  (check
+      (idelete-duplicates (iq 1 2 3 2 4 5 4 6 1 7) =)
+    (=> iequal?) (iq 1 2 3 4 5 6 7))
+
+  #f)
+
+
+(parameterise ((check-test-name 'alists))
+
+  (check
+      (iassoc 'a
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) (iq a . 1))
+
+  (check
+      (iassoc 'b
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) (iq b . 2))
+
+  (check
+      (iassoc 'c
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) (iq c . 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iassoc 'c
+	      (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iassoc 'd
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) #f)
+
+  (check
+      (iassoc 'a
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) (iq a . 1))
+
+  (check
+      (iassoc 'b
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) (iq b . 2))
+
+  (check
+      (iassoc 'c
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3)))
+    (=> iequal?) (iq c . 3))
+
+  (check
+      (iassoc 'a
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3))
+	      eq?)
+    (=> iequal?) (iq a . 1))
+
+  (check
+      (iassoc 'b
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3))
+	      eq?)
+    (=> iequal?) (iq b . 2))
+
+  (check
+      (iassoc 'c
+	      (iq (a . 1)
+		  (b . 2)
+		  (c . 3))
+	      eq?)
+    (=> iequal?) (iq c . 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iassq 'c
+	     (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iassq 'd
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) #f)
+
+  (check
+      (iassq 'a
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) (iq a . 1))
+
+  (check
+      (iassq 'b
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) (iq b . 2))
+
+  (check
+      (iassq 'c
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) (iq c . 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (iassv 'c
+	     (iq ))
+    (=> iequal?) #f)
+
+  (check
+      (iassv 'd
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) #f)
+
+  (check
+      (iassv 'a
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) (iq a . 1))
+
+  (check
+      (iassv 'b
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) (iq b . 2))
+
+  (check
+      (iassv 'c
+	     (iq (a . 1)
+		 (b . 2)
+		 (c . 3)))
+    (=> iequal?) (iq c . 3))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ialist-cons 'a 1
+		   (iq (b . 2)
+		       (c . 3)))
+    (=> iequal?) (iq (a . 1)
+		     (b . 2)
+		     (c . 3)))
+
+  (check
+      (ialist-cons 'a 1
+		   (iq ))
+    (=> iequal?) (iq (a . 1)))
+
+  (check
+      (ialist-cons 'b 2
+		   (iq (b . 2)
+		       (c . 3)))
+    (=> iequal?) (iq (b . 2)
+		     (b . 2)
+		     (c . 3)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ialist-copy (iq (a . 1)
+		       (b . 2)
+		       (c . 3)))
+    (=> iequal?) (iq (a . 1)
+		     (b . 2)
+		     (c . 3)))
+
+  (check
+      (ialist-copy (iq (a . 1)))
+    (=> iequal?) (iq (a . 1)))
+
+  (check
+      (ialist-copy (iq ))
+    (=> iequal?) (iq ))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (ialist-delete 'a
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3)))
+    (=> iequal?) (iq (b . 2)
+		     (c . 3)))
+
+  (check
+      (ialist-delete 'b
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3)))
+    (=> iequal?) (iq (a . 1)
+		     (c . 3)))
+
+  (check
+      (ialist-delete 'c
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3)))
+    (=> iequal?) (iq (a . 1)
+		     (b . 2)))
+
+  (check
+      (ialist-delete 'd
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3)))
+    (=> iequal?) (iq (a . 1)
+		     (b . 2)
+		     (c . 3)))
+
+  (check
+      (ialist-delete 'a
+		     (iq (a . 1)
+			 (a . 2)
+			 (c . 3)))
+    (=> iequal?) (iq (c . 3)))
+
+  (check
+      (ialist-delete 'a
+		     (iq ))
+    (=> iequal?) (iq ))
+
+  (check
+      (ialist-delete 'a
+		     (iq (a . 1)))
+    (=> iequal?) (iq ))
+
+  (check
+      (ialist-delete 'a
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3))
+		     eq?)
+    (=> iequal?) (iq (b . 2)
+		     (c . 3)))
+
+  (check
+      (ialist-delete 'b
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3))
+		     eq?)
+    (=> iequal?) (iq (a . 1)
+		     (c . 3)))
+
+  (check
+      (ialist-delete 'c
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3))
+		     eq?)
+    (=> iequal?) (iq (a . 1)
+		     (b . 2)))
+
+  (check
+      (ialist-delete 'd
+		     (iq (a . 1)
+			 (b . 2)
+			 (c . 3))
+		     eq?)
+    (=> iequal?) (iq (a . 1)
+		     (b . 2)
+		     (c . 3)))
+
+  (check
+      (ialist-delete 'a
+		     (iq (a . 1)
+			 (a . 2)
+			 (c . 3))
+		     eq?)
+    (=> iequal?) (iq (c . 3)))
+
+  (check
+      (ialist-delete 'a
+		     (iq )
+		     eq?)
+    (=> iequal?) (iq ))
+
+  (check
+      (ialist-delete 'a
+		     (iq (a . 1))
+		     eq?)
+    (=> iequal?) (iq ))
+
+  #f)
 
 
 (parametrise ((check-test-name	'comparator-predicates))

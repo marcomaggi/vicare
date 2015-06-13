@@ -270,6 +270,11 @@ the top--level parentheses.
 (icar P)        @result{} 1
 (icdr P)        @result{} 2
 @end lisp
+
+@quotation
+@strong{NOTE} @syntax{iq} is defined by the original @ansrfi{116};
+@syntax{iquote} is @value{PRJNAME} extension.
+@end quotation
 @end deffn
 
 @c page
@@ -706,6 +711,16 @@ in a manner which can be inverted with @func{iappend}:
 @func{idrop} is exactly equivalent to performing @var{i} @func{icdr}
 operations on @var{x}; the returned value shares a common tail with
 @var{x}.
+@end deftypefun
+
+
+@deftypefun @var{ilist} itake-left @var{x} @var{i}
+@deftypefunx @var{object} idrop-left @var{x} @var{i}
+Aliases for @func{itake} and @func{idrop}.
+
+@quotation
+@strong{NOTE} These syntactic bindings are @value{PRJNAME} extensions.
+@end quotation
 @end deftypefun
 
 
@@ -1931,6 +1946,19 @@ Equivalent to:
 
 Construct a new ialist entry mapping @var{key}/@var{datum} onto
 @var{ialist}.
+@end deftypefun
+
+
+@deftypefun @var{alist} ialist-copy @var{alist}
+Make a fresh copy of @var{alist}.  This means copying each pair that
+forms an association as well as the spine of the list:
+
+@example
+(lambda (a)
+  (imap (lambda (elt)
+          (icons (icar elt) (icdr elt)))
+       a))
+@end example
 @end deftypefun
 
 

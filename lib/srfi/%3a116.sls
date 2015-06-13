@@ -22,7 +22,7 @@
 (library (srfi :116)
   (export
     iq iquote
-    ipair ilist xipair ipair* make-ilist ilist-tabulate iiota
+    ipair ilist xipair ipair* make-ilist ilist-tabulate iiota ilist-copy
     ipair?
     proper-ilist? ilist? dotted-ilist? not-ipair? null-ilist? ilist=
     icar icdr ilist-ref
@@ -32,6 +32,8 @@
     icaaaar icaaadr icaadar icaaddr icadaar icadadr icaddar icadddr
     icdaaar icdaadr icdadar icdaddr icddaar icddadr icdddar icddddr
     icar+icdr itake idrop ilist-tail
+    (rename (itake	itake-left)
+	    (idrop	idrop-left))
     itake-right idrop-right isplit-at ilast last-ipair
     ilength iappend iconcatenate ireverse iappend-reverse
     izip iunzip1 iunzip2 iunzip3 iunzip4 iunzip5
@@ -42,7 +44,7 @@
     ifind ifind-tail iany ievery
     ilist-index itake-while idrop-while ispan ibreak
     idelete idelete-duplicates
-    iassoc iassq iassv ialist-cons ialist-delete
+    iassoc iassq iassv ialist-cons ialist-copy ialist-delete
     replace-icar replace-icdr
     pair->ipair ipair->pair list->ilist ilist->list
     tree->itree itree->tree gtree->itree gtree->tree
