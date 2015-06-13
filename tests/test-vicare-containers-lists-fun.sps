@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2008-2010, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2010, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -341,17 +341,14 @@
       (dotted-list? (cons 1 (cons 2 (cons 3 (cons 4 (circular-list 5 6 7 8))))))
     => #f)
 
-  (check
-      (dotted-list? 123)
-    => #f)
+  (check-for-true
+   (dotted-list? 123))
 
-  (check
-      (dotted-list? #\a)
-    => #f)
+  (check-for-true
+   (dotted-list? #\a))
 
-  (check
-      (dotted-list? 'alpha)
-    => #f)
+  (check-for-true
+   (dotted-list? 'alpha))
 
 ;;; --------------------------------------------------------------------
 

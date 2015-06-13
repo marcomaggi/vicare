@@ -1,6 +1,6 @@
 ;;;Derived from SRFI-1 list-processing library, reference implementation
 ;;;
-;;;Copyright (c) 2008-2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2011, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 1998, 1999 by Olin Shivers <shivers@ai.mit.edu>.
 ;;;Modified by Abdulaziz Ghuloum to port to Ikarus.
 ;;;Modified by Derick Eddington to port to R6RS.
@@ -287,22 +287,23 @@
   (or (null? obj) (circular-list? obj)))
 
 (define (dotted-list? obj)
-  (and (pair? obj)
-       ;;At every iteration ELL is CDR-ed twice, LAG is CDR-ed once.  So
-       ;;if  OBJ is a  pair, member  of circular  list, EQ?   below will
-       ;;detect   it   with   the   same  number   of   comparisons   of
-       ;;CIRCULAR-LIST?.
-       (let loop ((ell obj)
-		  (lag obj))
-	 (if (pair? ell)
-	     (let ((ell (cdr ell)))
-	       (if (pair? ell)
-		   (let ((ell (cdr ell))
-			 (lag (cdr lag)))
-		     (and (not (eq? ell lag))
-			  (loop ell lag)))
-		 (not (null? ell))))
-	   (not (null? ell))))))
+  (if (pair? obj)
+      ;;At every iteration ELL is CDR-ed twice, LAG is CDR-ed once.  So
+      ;;if  OBJ is a  pair, member  of circular  list, EQ?   below will
+      ;;detect   it   with   the   same  number   of   comparisons   of
+      ;;CIRCULAR-LIST?.
+      (let loop ((ell obj)
+		 (lag obj))
+	(if (pair? ell)
+	    (let ((ell (cdr ell)))
+	      (if (pair? ell)
+		  (let ((ell (cdr ell))
+			(lag (cdr lag)))
+		    (and (not (eq? ell lag))
+			 (loop ell lag)))
+		(not (null? ell))))
+	  (not (null? ell))))
+    (not (null? obj))))
 
 (define (dotted-list?/or-null obj)
   (or (null? obj) (dotted-list? obj)))
