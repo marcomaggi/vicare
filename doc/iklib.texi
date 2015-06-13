@@ -62,6 +62,7 @@ boolean value: @true{} if the feature is available, @false{} otherwise.
 * iklib booleans::              Additional boolean functions.
 * iklib chars::                 Additional character functions.
 * iklib keywords::              Keyword objects.
+* iklib ipairs::                Immutable pairs.
 * iklib lists::                 Additional list functions.
 * iklib bytevectors::           Additional bytevector functions.
 * iklib strings::               Additional string functions.
@@ -11775,6 +11776,36 @@ keyword objects are equal if they have the same symbol.
 @defun keyword-hash @var{keyword}
 Return an exact integer suitable to be used as hash value for
 @var{keyword} used as key for hash tables.
+@end defun
+
+@c page
+@node iklib ipairs
+@section Immutable pairs
+
+
+@value{PRJNAME} defines immutable pairs as a built--in disjoint type;
+only basic functions are implemented by @library{vicare}, the bulk of
+the utilities is implemented by @ansrfi{116}, in the library
+@library{srfi :116}, @libsref{srfi ilists, @ansrfi{116} immutable
+lists}.
+
+
+@defun ipair @vari{obj} @varii{obj}
+Build and return a new immutable pair object, using @vari{obj} as car
+and @varii{obj} as cdr.
+@end defun
+
+
+@defun ikpair? @var{obj}
+Return @true{} if @var{obj} is an immutable pair; otherwise return
+@false{}.
+@end defun
+
+
+@defun icar @var{ipair}
+@defunx icdr @var{ipair}
+Return the car and cdr of the immutable pair @var{ipair}.  It is an
+error if @var{ipair} is not an immutable pair.
 @end defun
 
 @c page

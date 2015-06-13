@@ -401,6 +401,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.object-utilities.sls			\
 	scheme/ikarus.options.sls				\
 	scheme/ikarus.pairs.sls					\
+	scheme/ikarus.immutable-pairs.sls			\
 	scheme/ikarus.pointers.sls				\
 	scheme/ikarus.posix.sls					\
 	scheme/ikarus.predicates.sls				\

@@ -51,22 +51,26 @@
      (begin . ?body))
     ))
 
-(define (iequal? a b)
-  (cond ((ipair? a)
-	 (and (ipair? b)
-	      (iequal? (icar a) (icar b))
-	      (iequal? (icdr a) (icdr b))))
-	((pair? a)
-	 (and (pair? b)
-	      (iequal? (car a) (car b))
-	      (iequal? (cdr a) (cdr b))))
-	((vector? a)
-	 (and (vector? b)
-	      (fx=? (vector-length a)
-		    (vector-length b))
-	      (vector-for-all iequal? a b)))
-	(else
-	 (equal? a b))))
+(define iequal? equal?)
+
+;;Immutable pairs are a built-in type for Vicare, so EQUAL? recognises them.
+;;
+;; (define (iequal? a b)
+;;   (cond ((ipair? a)
+;; 	 (and (ipair? b)
+;; 	      (iequal? (icar a) (icar b))
+;; 	      (iequal? (icdr a) (icdr b))))
+;; 	((pair? a)
+;; 	 (and (pair? b)
+;; 	      (iequal? (car a) (car b))
+;; 	      (iequal? (cdr a) (cdr b))))
+;; 	((vector? a)
+;; 	 (and (vector? b)
+;; 	      (fx=? (vector-length a)
+;; 		    (vector-length b))
+;; 	      (vector-for-all iequal? a b)))
+;; 	(else
+;; 	 (equal? a b))))
 
 (define current-test-comparator
   (make-parameter iequal?))

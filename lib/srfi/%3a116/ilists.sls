@@ -166,9 +166,11 @@
 
 ;;; The basic ilist cell
 
-(define-record-type (<ipair> ipair ipair?)
-  (fields (immutable icar icar)
-	  (immutable icdr icdr)))
+;;This is a built-in type for Vicare.
+;;
+;;(define-record-type (<ipair> ipair ipair?)
+;;  (fields (immutable icar icar)
+;;          (immutable icdr icdr)))
 
 ;;; Syntax for quoting ilists
 

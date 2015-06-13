@@ -37,10 +37,13 @@
 (library (ikarus.equal)
   (export equal?)
   (import (except (vicare)
-		  equal?)
+		  equal?
+		  ipair? icar icdr)
     (vicare system $pointers)
     (only (vicare system $keywords)
-	  $keyword=?))
+	  $keyword=?)
+    (only (ikarus.immutable-pairs)
+	  ipair? icar icdr))
 
   (module UNSAFE
     (< <= > >= = + - vector-ref vector-length car cdr)
@@ -128,6 +131,14 @@
 	 (and (keyword? y)
 	      ($keyword=? x y)
 	      k))
+	((ipair? x)
+	 ;;An  ipair is  a struct,  but  STRUCT=? uses  EQV? internally;  so here  we
+	 ;;implement a branch that actually traverses the internals of the ipairs.
+	 (and (ipair? y)
+	      (if (<= k 0)
+		  k
+		(let ((k (pre? (icar x) (icar y) (- k 1))))
+		  (and k (pre? (icdr x) (icdr y) k))))))
 	((struct? x)
 	 (and (struct? y)
 	      (struct=? x y)
@@ -184,6 +195,14 @@
 	(and (keyword? y)
 	     ($keyword=? x y)
 	     k))
+       ((ipair? x)
+	;;An  ipair is  a  struct, but  STRUCT=?  uses EQV?  internally;  so here  we
+	;;implement a branch that actually traverses the internals of the ipairs.
+	(and (ipair? y)
+	     (if (call-union-find x y)
+		 0
+	       (let ((k (e? (icar x) (icar y) (- k 1))))
+		 (and k (e? (icdr x) (icdr y) k))))))
        ((struct? x)
 	(and (struct? y)
 	     (struct=? x y)
@@ -225,6 +244,12 @@
 	  (and (keyword? y)
 	       ($keyword=? x y)
 	       k))
+	 ((ipair? x)
+	  ;;An  ipair is  a struct,  but STRUCT=?  uses EQV?  internally; so  here we
+	  ;;implement a branch that actually traverses the internals of the ipairs.
+	  (and (ipair? y)
+	       (let ((k (e? (icar x) (icar y) k)))
+		 (and k (e? (icdr x) (icdr y) k)))))
 	 ((struct? x)
 	  (and (struct? y)
 	       (struct=? x y)

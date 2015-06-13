@@ -365,6 +365,7 @@
     "ikarus.keywords.sls"
     "ikarus.predicates.sls"
     "ikarus.booleans.sls"
+    "ikarus.immutable-pairs.sls"
     "ikarus.equal.sls"
     "ikarus.pairs.sls"
     "ikarus.lists.sls"
@@ -3466,6 +3467,14 @@
     (monitor					v $language)
     ;;This is for internal use.
     (do-monitor)
+
+;;; --------------------------------------------------------------------
+;;; immutable pairs
+
+    (ipair					v $language)
+    (icar					v $language)
+    (icdr					v $language)
+    (ipair?					v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; POSIX functions
