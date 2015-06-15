@@ -3834,36 +3834,51 @@ It is a syntax violation if any of the identifiers @func{quasiquote},
 
 The following grammar for quasiquote expressions is not context--free.
 It is presented as a recipe for generating an infinite number of
-production rules.  Imagine a copy of the following rules for @math{D =
-1, 2, 3, @dots{}}.  @math{D} keeps track of the nesting depth.
+production rules.  Imagine a copy of the following rules for @math{N =
+1, 2, 3, @dots{}}; @math{N} keeps track of the nesting depth.
 
 @example
-@meta{qq-template} -> @meta{qq template 1}
+;;This is the argument of QUASIQUOTE.
+;;
+@meta{qq-template} -> @meta{qq-template-1}
+
+;;This represents an expression to be evaluated.  It exists
+;;to represent @meta{qq-template-@math{(N-1)}} when N=1.
+;;
 @meta{qq-template-0} -> @meta{expression}
-@meta{quasiquotation-@math{D}} -> (quasiquote @meta{qq-template-@math{D}})
-@meta{qq-template-@math{D}} -> @meta{lexeme-datum}
-    | @meta{list-qq-template-@math{D}}
-    | @meta{vector-qq-template-@math{D}}
-    | @meta{unquotation-@math{D}}
-@meta{list-qq-template-@math{D}} -> (@arbno{@meta{qq-template-or-splice-@math{D}}})
-    | (@atleastone{@meta{qq-template-or-splice-@math{D}}} . @meta{qq-template-@math{D}})
-    | @meta{quasiquotation-@math{D+1}}
-@meta{vector-qq-template-@math{D}} -> #(@arbno{@meta{qq-template-or-splice-@math{D}}})
-@meta{unquotation-@math{D}} -> (unquote @meta{qq-template-@math{D-1}})
-@meta{qq-template-or-splice-@math{D}} -> @meta{qq-template-@math{D}}
-    | @meta{splicing-unquotation-@math{D}}
-@meta{splicing-unquotation-@math{D}} ->
-      (unquote-splicing @arbno{@meta{qq-template-@math{D-1}}})
-    | (unquote @arbno{@meta{qq-template-@math{D-1}}})
+
+@meta{quasiquotation-@math{N}} -> (quasiquote @meta{qq-template-@math{N}})
+
+@meta{qq-template-@math{N}}
+   -> @meta{lexeme-datum}
+    | @meta{list-qq-template-@math{N}}
+    | @meta{vector-qq-template-@math{N}}
+    | @meta{unquotation-@math{N}}
+
+@meta{list-qq-template-@math{N}}
+   -> (@arbno{@meta{qq-template-or-splice-@math{N}}})
+    | (@atleastone{@meta{qq-template-or-splice-@math{N}}} . @meta{qq-template-@math{N}})
+    | @meta{quasiquotation-@math{(N+1)}}
+
+@meta{vector-qq-template-@math{N}} -> #(@arbno{@meta{qq-template-or-splice-@math{N}}})
+
+@meta{unquotation-@math{N}} -> (unquote @meta{qq-template-@math{(N-1)}})
+
+@meta{qq-template-or-splice-@math{N}}
+   -> @meta{qq-template-@math{N}}
+    | @meta{splicing-unquotation-@math{N}}
+
+@meta{splicing-unquotation-@math{N}}
+   -> (unquote-splicing @arbno{@meta{qq-template-@math{(N-1)}}})
+    | (unquote @arbno{@meta{qq-template-@math{(N-1)}}})
 @end example
 
-In @func{quasiquotation}s, a @meta{list-qq-template-@math{D}} can
-sometimes be confused with either an @meta{unquotation-@math{D}} or a
-@meta{splicing-unquotation-@math{D}}.  The interpretation as an
-@meta{unquotation} or @meta{splicing-unquotation-@math{D}} takes
-precedence.
+In @func{quasiquotation}s, a @meta{list-qq-template-@math{N}} can
+sometimes be confused with either an @meta{unquotation-@math{N}} or a
+@meta{splicing-unquotation-@math{N}}.  The interpretation as an
+@meta{unquotation-@math{N}} or @meta{splicing-unquotation-@math{N}}
+takes precedence.
 @end deffn
-
 
 @c page
 @node baselib syntax binding
