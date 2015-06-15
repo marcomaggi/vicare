@@ -159,10 +159,8 @@
     pair->ipair ipair->pair list->ilist ilist->list
     tree->itree itree->tree gtree->itree gtree->tree
     iapply)
-  (import (rnrs)
-    (srfi :8)
-    (rnrs mutable-pairs)
-    (srfi :116 compat))
+  (import (vicare)
+    (rnrs mutable-pairs))
 
 
 ;;;; Enhancements and hooks in Olin's SRFI-1 code to make it work for ilists
@@ -170,8 +168,9 @@
 ;;; Syntax for quoting ilists
 
 (define-syntax iq
-  (syntax-rules ()
-    ((iq . tree) (gtree->itree 'tree))))
+  (syntax-rules (iq)
+    ((iq . ?tree)
+     (gtree->itree '?tree))))
 
 ;;; Replacers
 
@@ -639,13 +638,21 @@
 ;;; iappend-reverse iconcatenate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (iappend . lists)
+(define* (iappend . lists)
   (if (pair? lists)
-      (let recur ((list1 (car lists)) (lists (cdr lists)))
-        (if (pair? lists)
-            (let ((tail (recur (car lists) (cdr lists))))
-              (ifold-right ipair tail list1)) ; Append LIST1 & TAIL.
-            list1))
+      (let recur ((list1 (car lists))
+		  (lists (cdr lists)))
+	(if (pair? lists)
+	    (cond ((null? list1)
+		   (recur (car lists) (cdr lists)))
+		  ((not (ipair? list1))
+		   (procedure-argument-violation 'iappend
+		     "expected immutable list as argument" list1))
+		  (else
+		   (let ((tail (recur (car lists) (cdr lists))))
+		     ;;Prepend LIST1 to TAIL.
+		     (ifold-right ipair tail list1))))
+	  list1))
       '()))
 
 ;;;(define (iappend-reverse rev-head tail) (ifold ipair tail rev-head))

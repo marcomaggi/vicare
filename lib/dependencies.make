@@ -3520,8 +3520,6 @@ endif
 
 lib/srfi/%3a116/ilists.fasl: \
 		lib/srfi/%3a116/ilists.sls \
-		lib/srfi/%3a8.fasl \
-		lib/srfi/%3a116/compat.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -3534,22 +3532,6 @@ dist_lib_srfi__3a116_ilists_sls_DATA = lib/srfi/%3a116/ilists.sls
 endif
 EXTRA_DIST += lib/srfi/%3a116/ilists.sls
 CLEANFILES += lib/srfi/%3a116/ilists.fasl
-endif
-
-lib/srfi/%3a116/compat.fasl: \
-		lib/srfi/%3a116/compat.vicare.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-if WANT_SRFI
-lib_srfi__3a116_compat_fasldir = $(bundledlibsdir)/srfi/%3a116
-lib_srfi__3a116_compat_vicare_slsdir  = $(bundledlibsdir)/srfi/%3a116
-nodist_lib_srfi__3a116_compat_fasl_DATA = lib/srfi/%3a116/compat.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_srfi__3a116_compat_vicare_sls_DATA = lib/srfi/%3a116/compat.vicare.sls
-endif
-EXTRA_DIST += lib/srfi/%3a116/compat.vicare.sls
-CLEANFILES += lib/srfi/%3a116/compat.fasl
 endif
 
 lib/srfi/%3a116/comparators.fasl: \
