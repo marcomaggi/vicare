@@ -156,7 +156,9 @@
     idelete idelete-duplicates
     iassoc iassq iassv ialist-cons ialist-copy ialist-delete
     replace-icar replace-icdr
-    pair->ipair ipair->pair list->ilist ilist->list
+    pair->ipair			ipair->pair
+    list->ilist			ilist->list
+    ilist->vector		vector->ilist
     tree->itree itree->tree gtree->itree gtree->tree
     iapply)
   (import (vicare)
@@ -202,6 +204,19 @@
     (if (ipair? ilist)
       (cons (icar ilist) (lp (icdr ilist)))
       ilist)))
+
+(define (ilist->vector iell)
+  (let loop ((vec  (make-vector (ilength iell)))
+	     (i    0)
+	     (iell iell))
+    (if (ipair? iell)
+	(begin
+	  (vector-set! vec i (icar iell))
+	  (loop vec (fxadd1 i) (icdr iell)))
+      vec)))
+
+(define* (vector->ilist {vec vector?})
+  (vector-fold-right ipair '() vec))
 
 (define (tree->itree obj)
   (if (pair? obj)

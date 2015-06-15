@@ -46,7 +46,9 @@
     idelete idelete-duplicates
     iassoc iassq iassv ialist-cons ialist-copy ialist-delete
     replace-icar replace-icdr
-    pair->ipair ipair->pair list->ilist ilist->list
+    pair->ipair			ipair->pair
+    list->ilist			ilist->list
+    ilist->vector		vector->ilist
     tree->itree itree->tree gtree->itree gtree->tree
     iapply)
   (import (srfi :116 ilists)))

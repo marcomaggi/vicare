@@ -2027,6 +2027,18 @@ It is an error to apply @func{list->ilist} to a circular list.
 @end deftypefun
 
 
+@deftypefun @var{ilist} vector->ilist @var{vector}
+@deftypefunx @var{vector} ilist->list @var{ilist}
+These procedures return an ilist and a vector respectively that have the
+same elements as the argument.  The empty list is converted to an empty
+vector.  It is an error to apply @func{ilist->vector} to a dotted list.
+
+@quotation
+@strong{NOTE} These functions are @value{PRJNAME} extensions.
+@end quotation
+@end deftypefun
+
+
 @deftypefun @var{object} tree->itree @var{object}
 @deftypefunx @var{object} itree->tree @var{object}
 These procedures walk a tree of pairs or ipairs respectively and make a
