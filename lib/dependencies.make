@@ -3552,6 +3552,23 @@ EXTRA_DIST += lib/srfi/%3a116/comparators.sls
 CLEANFILES += lib/srfi/%3a116/comparators.fasl
 endif
 
+lib/srfi/%3a116/quasiquote.fasl: \
+		lib/srfi/%3a116/quasiquote.sls \
+		lib/srfi/%3a116.fasl \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+if WANT_SRFI
+lib_srfi__3a116_quasiquote_fasldir = $(bundledlibsdir)/srfi/%3a116
+lib_srfi__3a116_quasiquote_slsdir  = $(bundledlibsdir)/srfi/%3a116
+nodist_lib_srfi__3a116_quasiquote_fasl_DATA = lib/srfi/%3a116/quasiquote.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_srfi__3a116_quasiquote_sls_DATA = lib/srfi/%3a116/quasiquote.sls
+endif
+EXTRA_DIST += lib/srfi/%3a116/quasiquote.sls
+CLEANFILES += lib/srfi/%3a116/quasiquote.fasl
+endif
+
 lib/srfi/%3a106.fasl: \
 		lib/srfi/%3a106.sls \
 		lib/srfi/%3a106/socket.fasl \
