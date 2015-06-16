@@ -365,7 +365,7 @@ The arguments of a @syntax{iunquote-splicing} form:
 (iunquote-splicing @meta{expr} ...)
 @end lisp
 
-@item
+@noindent
 must be expressions returning ilists.
 
 Some basic examples:
