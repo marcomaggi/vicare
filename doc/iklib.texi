@@ -11789,6 +11789,9 @@ the utilities is implemented by @ansrfi{116}, in the library
 @library{srfi :116}, @libsref{srfi ilists, @ansrfi{116} immutable
 lists}.
 
+Notice that @syntax{syntax-rules} and @syntax{syntax-case} patterns do
+@strong{not} recognise immutable pairs.
+
 
 @defun ipair @vari{obj} @varii{obj}
 Build and return a new immutable pair object, using @vari{obj} as car

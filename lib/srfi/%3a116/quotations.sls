@@ -74,8 +74,17 @@
 
 (define-syntax iquote
   (syntax-rules ()
-    ((_ ?tree)
-     (gtree->itree '?tree))
+    ((_ (?item0 ?item ...))
+     (foldable-ilist (iquote ?item0) (iquote ?item) ...))
+
+    ((_ (?car . ?cdr))
+     (foldable-ipair (iquote ?car) (iquote ?cdr)))
+
+    ((_ #(?item ...))
+     (foldable-vector (iquote ?item) ...))
+
+    ((_ ?datum)
+     (quote ?datum))
     ))
 
 
@@ -380,6 +389,10 @@
     ;;
     ;;Return a syntax object representing an expression that, at run-time, will build
     ;;an ilist holding the vector items.
+    ;;
+    ;;NOTE  The difference  between  %QUASI  and %VECTOR-QUASI  is  that: the  former
+    ;;accepts both  *proper* and *improper* lists  of items; the latter  accepts only
+    ;;*proper* lists of items.
     ;;
     (syntax-case item*.stx ()
       ((?input-car . ?input-cdr)

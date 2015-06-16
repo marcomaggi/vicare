@@ -4091,8 +4091,13 @@
 ;;; vectors
 
   (check (iquote #(1 2))		=> '#(1 2))
-  (check (iquote #(1 (2)))		=> '#(1 (2)))
+  (check (iquote #(1 (2)))		=> (vector 1 (ilist 2)))
   (check (iquote (#(1 2)))		=> (ilist '#(1 2)))
+  (check (iquote #(1 (2 #(3 4) 5)))	=> (vector 1 (ilist 2 (vector 3 4) 5)))
+  (check (iquote #(x (y #(s u) z)))	=> (vector 'x (ilist 'y (vector 's 'u) 'z)))
+  (check
+      (iquote #(1 (2 #(3 (4 . 5)) 6)))
+    => (vector 1 (ilist 2 (vector 3 (ipair 4 5)) 6)))
 
   #t)
 
@@ -4110,17 +4115,17 @@
 ;;; --------------------------------------------------------------------
 
   (check (iquasiquote 1)			=> 1)
-  (check (iquasiquote (1))			=> (iq 1))
-  (check (iquasiquote (1 . 2))			=> (iq 1 . 2))
-  (check (iquasiquote (1 2))			=> (iq 1 2))
-  (check (iquasiquote (1 2 . 3))		=> (iq 1 2 . 3))
-  (check (iquasiquote ((1) (2)))		=> (iq (1) (2)))
-  (check (iquasiquote ((1 2) (3 4)))		=> (iq (1 2) (3 4)))
-  (check (iquasiquote ((1 2) (3 4)))		=> (iq (1 2) (3 4)))
-  (check (iquasiquote ((1 . 2) (3 . 4)))	=> (iq (1 . 2) (3 . 4)))
-  (check (iquasiquote ((1 . 2) . (3 . 4)))	=> (iq (1 . 2) . (3 . 4)))
-  (check (iquasiquote ((1 2) . 3))		=> (iq (1 2) . 3))
-  (check (iquasiquote ((1 . 2) . 3))		=> (iq (1 . 2) . 3))
+  (check (iquasiquote (1))			=> (iquote (1)))
+  (check (iquasiquote (1 . 2))			=> (iquote (1 . 2)))
+  (check (iquasiquote (1 2))			=> (iquote (1 2)))
+  (check (iquasiquote (1 2 . 3))		=> (iquote (1 2 . 3)))
+  (check (iquasiquote ((1) (2)))		=> (iquote ((1) (2))))
+  (check (iquasiquote ((1 2) (3 4)))		=> (iquote ((1 2) (3 4))))
+  (check (iquasiquote ((1 2) (3 4)))		=> (iquote ((1 2) (3 4))))
+  (check (iquasiquote ((1 . 2) (3 . 4)))	=> (iquote ((1 . 2) (3 . 4))))
+  (check (iquasiquote ((1 . 2) . (3 . 4)))	=> (iquote ((1 . 2) . (3 . 4))))
+  (check (iquasiquote ((1 2) . 3))		=> (iquote ((1 2) . 3)))
+  (check (iquasiquote ((1 . 2) . 3))		=> (iquote ((1 . 2) . 3)))
 
   (check (iquasiquote ())			=> '())
   (check (iquasiquote (()))			=> (ilist '()))
@@ -4134,26 +4139,26 @@
   (check (iquasiquote (() () . (1)))		=> (ipair* '() '() (ilist 1)))
   (check (iquasiquote (() () . (1 2)))		=> (ipair* '() '() (ilist 1 2)))
 
-  (check (iquasiquote (1 . ()))			=> (iq 1))
-  (check (iquasiquote (1 2 . ()))		=> (iq 1 2))
-  (check (iquasiquote ((1 . 2) . ()))		=> (iq (1 . 2)))
-  (check (iquasiquote ((1 2) . ()))		=> (iq (1 2)))
-  (check (iquasiquote ((1 . 2) . ()))		=> (iq (1 . 2)))
+  (check (iquasiquote (1 . ()))			=> (iquote (1)))
+  (check (iquasiquote (1 2 . ()))		=> (iquote (1 2)))
+  (check (iquasiquote ((1 . 2) . ()))		=> (iquote ((1 . 2))))
+  (check (iquasiquote ((1 2) . ()))		=> (iquote ((1 2))))
+  (check (iquasiquote ((1 . 2) . ()))		=> (iquote ((1 . 2))))
 
 ;;; --------------------------------------------------------------------
 ;;; vector template
 
   (check (iquasiquote #(1))			=> '#(1))
-  (check (iquasiquote (#(1)))			=> (iq #(1)))
-  (check (iquasiquote (#(1) #(2)))		=> (iq #(1) #(2)))
-  (check (iquasiquote (#(1 2) (3 4)))		=> (iq #(1 2) (3 4)))
-  (check (iquasiquote ((1 2) #(3 4)))		=> (iq (1 2) #(3 4)))
-  (check (iquasiquote (#(1 2) (3 . 4)))		=> (iq #(1 2) (3 . 4)))
-  (check (iquasiquote ((1 . 2) #(3 4)))		=> (iq (1 . 2) #(3 4)))
-  (check (iquasiquote (#(1 2) . 3))		=> (iq #(1 2) . 3))
-  (check (iquasiquote ((1 2) . #(3)))		=> (iq (1 2) . #(3)))
-  (check (iquasiquote (#(1 2) . 3))		=> (iq #(1 2) . 3))
-  (check (iquasiquote ((1 . 2) . #(3)))		=> (iq (1 . 2) . #(3)))
+  (check (iquasiquote (#(1)))			=> (iquote (#(1))))
+  (check (iquasiquote (#(1) #(2)))		=> (iquote (#(1) #(2))))
+  (check (iquasiquote (#(1 2) (3 4)))		=> (iquote (#(1 2) (3 4))))
+  (check (iquasiquote ((1 2) #(3 4)))		=> (iquote ((1 2) #(3 4))))
+  (check (iquasiquote (#(1 2) (3 . 4)))		=> (iquote (#(1 2) (3 . 4))))
+  (check (iquasiquote ((1 . 2) #(3 4)))		=> (iquote ((1 . 2) #(3 4))))
+  (check (iquasiquote (#(1 2) . 3))		=> (iquote (#(1 2) . 3)))
+  (check (iquasiquote ((1 2) . #(3)))		=> (iquote ((1 2) . #(3))))
+  (check (iquasiquote (#(1 2) . 3))		=> (iquote (#(1 2) . 3)))
+  (check (iquasiquote ((1 . 2) . #(3)))		=> (iquote ((1 . 2) . #(3))))
 
   (check (iquasiquote #(#()))			=> '#(#()))
   (check (iquasiquote #(#() #()))		=> '#(#() #()))
@@ -4165,7 +4170,7 @@
 ;;; IUNQUOTE
 
   (check (iquasiquote (iunquote 1))			=> 1)
-  (check (iquasiquote (iunquote (iq 1 2 3)))		=> (iq 1 2 3))
+  (check (iquasiquote (iunquote (iquote (1 2 3))))	=> (iquote (1 2 3)))
 
   ;;Invalid multi-operand IUNQUOTE form outside list and vector templates.
   ;;
@@ -4178,18 +4183,18 @@
 	  (else E)))
     => '(iunquote 1 2))
 
-  (check (iquasiquote ((iunquote) 1))			=> (iq 1))
-  (check (iquasiquote ((iunquote) (+ 1 2)))		=> (iq (+ 1 2)))
-  (check (iquasiquote ((iunquote '()) 1))		=> (iq () 1))
-  (check (iquasiquote ((iunquote '()) ()))		=> (iq () ()))
+  (check (iquasiquote ((iunquote) 1))			=> (iquote (1)))
+  (check (iquasiquote ((iunquote) (+ 1 2)))		=> (iquote ((+ 1 2))))
+  (check (iquasiquote ((iunquote '()) 1))		=> (iquote (() 1)))
+  (check (iquasiquote ((iunquote '()) ()))		=> (iquote (() ())))
   (check (iquasiquote ((iunquote '()) . ()))		=> (ipair '() '()))
-  (check (iquasiquote ((iunquote 1) 2))			=> (iq 1 2))
+  (check (iquasiquote ((iunquote 1) 2))			=> (iquote (1 2)))
   (check (iquasiquote ((iunquote (+ 1 2)) . 4))		=> (ipair 3 4))
-  (check (iquasiquote ((iunquote (+ 1 2)) . (+ 8 9)))	=> (ipair 3 (iq + 8 9)))
+  (check (iquasiquote ((iunquote (+ 1 2)) . (+ 8 9)))	=> (ipair 3 (iquote (+ 8 9))))
   (check (iquasiquote ((iunquote (+ 1 2)) 4))		=> (ilist 3 4))
-  (check (iquasiquote ((iunquote (+ 1 2)) (+ 8 9)))	=> (ilist 3 (iq + 8 9)))
+  (check (iquasiquote ((iunquote (+ 1 2)) (+ 8 9)))	=> (ilist 3 (iquote (+ 8 9))))
 
-  (check (iquasiquote (1 (iunquote (+ 2 3))))		=> (iq 1 5))
+  (check (iquasiquote (1 (iunquote (+ 2 3))))		=> (iquote (1 5)))
   (check (iquasiquote (1 . (iunquote (+ 2 3))))		=> (ipair 1 (+ 2 3)))
 
   ;;Empty IUNQUOTE form in improper tail position.
@@ -4205,7 +4210,7 @@
 
   (check
       (iquasiquote ((iunquote (+ 10 1) (+ 20 2) (+ 30 3)) (+ 8 9)))
-    => (iq 11 22 33 (+ 8 9)))
+    => (iquote (11 22 33 (+ 8 9))))
 
   ;;Syntax error: improper list as IUNQUOTE form.
   ;;
@@ -4221,12 +4226,12 @@
 ;;; vector templates
 
   (check (iquasiquote #((iunquote) 1))			=> '#(1))
-  (check (iquasiquote #((iunquote) (+ 1 2)))		=> `#(,(iq + 1 2)))
+  (check (iquasiquote #((iunquote) (+ 1 2)))		=> `#(,(iquote (+ 1 2))))
   (check (iquasiquote #((iunquote '()) 1))		=> '#(() 1))
   (check (iquasiquote #((iunquote '()) ()))		=> '#(() ()))
   (check (iquasiquote #((iunquote 1) 2))		=> '#(1 2))
   (check (iquasiquote #((iunquote (+ 1 2)) 4))		=> '#(3 4))
-  (check (iquasiquote #((iunquote (+ 1 2)) (+ 8 9)))	=> `#(3 ,(iq + 8 9)))
+  (check (iquasiquote #((iunquote (+ 1 2)) (+ 8 9)))	=> `#(3 ,(iquote (+ 8 9))))
 
   (check
       (iquasiquote (1 #(2 (iunquote (+ 3. 4.)) (iunquote (+ 5. 6.)) 7) 8))
@@ -4234,7 +4239,7 @@
 
   (check
       (iquasiquote #((iunquote (+ 10 1) (+ 20 2) (+ 30 3)) (+ 8 9)))
-    => `#(11 22 33 ,(iq + 8 9)))
+    => `#(11 22 33 ,(iquote (+ 8 9))))
 
   (check
       (iquasiquote #(1 #((iunquote (+ 2 3)) 4) 5))
@@ -4268,16 +4273,16 @@
 ;;; --------------------------------------------------------------------
 ;;; IUNQUOTE-SPLICING
 
-  ;;(check (iquasiquote (iunquote-splicing (ilist 1)))	=> 1)
-  ;;(check (iquasiquote (iunquote (iq 1 2 3)))		=> (iq 1 2 3))
+  (check
+      (iquasiquote ((iunquote-splicing (iquote (1 2 3)))))
+    => (iquote (1 2 3)))
 
-
-  (check (iquasiquote ((iunquote-splicing) 1))				=> (iq 1))
-  (check (iquasiquote ((iunquote-splicing) (+ 1 2)))			=> (iq (+ 1 2)))
-  (check (iquasiquote ((iunquote-splicing '()) 1))			=> (iq 1))
-  (check (iquasiquote ((iunquote-splicing '()) ()))			=> (ilist '()))
-  (check (iquasiquote ((iunquote-splicing '()) . ()))			=> '())
-  (check (iquasiquote ((iunquote-splicing (iq 1)) 2))			=> (iq 1 2))
+  (check (iquasiquote ((iunquote-splicing) 1))			=> (iquote (1)))
+  (check (iquasiquote ((iunquote-splicing) (+ 1 2)))		=> (iquote ((+ 1 2))))
+  (check (iquasiquote ((iunquote-splicing '()) 1))		=> (iquote (1)))
+  (check (iquasiquote ((iunquote-splicing '()) ()))		=> (ilist '()))
+  (check (iquasiquote ((iunquote-splicing '()) . ()))		=> '())
+  (check (iquasiquote ((iunquote-splicing (iquote (1))) 2))	=> (iquote (1 2)))
 
   ;;Invalid IUNQUOTE-SPLICING form outside list and vector templates.
   ;;
@@ -4291,12 +4296,12 @@
     => '(iunquote-splicing (ilist 1)))
 
   (check (iquasiquote ((iunquote-splicing (ilist (+ 1 2))) . 4))	=> (ipair 3 4))
-  (check (iquasiquote ((iunquote-splicing (ilist (+ 1 2))) . (+ 8 9)))	=> (ipair 3 (iq + 8 9)))
+  (check (iquasiquote ((iunquote-splicing (ilist (+ 1 2))) . (+ 8 9)))	=> (ipair 3 (iquote (+ 8 9))))
   (check (iquasiquote ((iunquote-splicing (ilist (+ 1 2))) 4))		=> (ilist 3 4))
-  (check (iquasiquote ((iunquote-splicing (ilist (+ 1 2))) (+ 8 9)))	=> (ilist 3 (iq + 8 9)))
+  (check (iquasiquote ((iunquote-splicing (ilist (+ 1 2))) (+ 8 9)))	=> (ilist 3 (iquote (+ 8 9))))
 
-  (check (iquasiquote (1 (iunquote-splicing (ilist (+ 2 3)))))		=> (iq 1 5))
-  (check (iquasiquote (1 . (iunquote-splicing (ilist (+ 2 3)))))	=> (iq 1 5))
+  (check (iquasiquote (1 (iunquote-splicing (ilist (+ 2 3)))))		=> (iquote (1 5)))
+  (check (iquasiquote (1 . (iunquote-splicing (ilist (+ 2 3)))))	=> (iquote (1 5)))
 
   ;;Empty IUNQUOTE-SPLICING form in improper tail position.
   ;;
@@ -4318,7 +4323,7 @@
 				       (ilist (+ 20 2))
 				       (ilist (+ 30 3)))
 		    (+ 8 9)))
-    => (iq 11 22 33 (+ 8 9)))
+    => (iquote (11 22 33 (+ 8 9))))
 
   ;;Syntax error: improper list as IUNQUOTE-SPLICING form.
   ;;
@@ -4340,29 +4345,29 @@
 			      (ilist (+ 20 2))
 			      (ilist (+ 30 3)))
 		    (+ 8 9)))
-    => (iq (11) (22) (33) (+ 8 9)))
+    => (iquote ((11) (22) (33) (+ 8 9))))
   (check
       (iquasiquote ((iunquote-splicing (ilist (+ 10 1))
 				       (ilist (+ 20 2))
 				       (ilist (+ 30 3)))
 		    (+ 8 9)))
-    => (iq 11 22 33 (+ 8 9)))
+    => (iquote (11 22 33 (+ 8 9))))
 
 ;;; vector templates
 
   (check (iquasiquote #((iunquote-splicing) 1))				=> '#(1))
-  (check (iquasiquote #((iunquote-splicing) (+ 1 2)))			=> `#(,(iq + 1 2)))
+  (check (iquasiquote #((iunquote-splicing) (+ 1 2)))			=> `#(,(iquote (+ 1 2))))
   (check (iquasiquote #((iunquote-splicing '()) 1))			=> '#(1))
   (check (iquasiquote #((iunquote-splicing '()) ()))			=> '#(()))
-  (check (iquasiquote #((iunquote-splicing (iq 1)) 2))			=> '#(1 2))
+  (check (iquasiquote #((iunquote-splicing (iquote (1))) 2))		=> '#(1 2))
   (check (iquasiquote #((iunquote-splicing (ilist (+ 1 2))) 4))		=> '#(3 4))
-  (check (iquasiquote #((iunquote-splicing (ilist (+ 1 2))) (+ 8 9)))	=> `#(3 ,(iq + 8 9)))
+  (check (iquasiquote #((iunquote-splicing (ilist (+ 1 2))) (+ 8 9)))	=> `#(3 ,(iquote (+ 8 9))))
   (check
       (iquasiquote #((iunquote-splicing (ilist (+ 10 1))
 					(ilist (+ 20 2))
 					(ilist (+ 30 3)))
 		     (+ 8 9)))
-    => `#(11 22 33 ,(iq + 8 9)))
+    => `#(11 22 33 ,(iquote (+ 8 9))))
 
   (check
       (iquasiquote #(1 #((iunquote-splicing (ilist (+ 2 3))) 4) 5))
@@ -4393,22 +4398,22 @@
 ;;; --------------------------------------------------------------------
 ;;; nested quotation
 
-  (check (iquasiquote (1 (iquasiquote (2)) 3))		=> (iq 1 (iquasiquote (2)) 3))
-  (check (iquasiquote (1 (iquasiquote (2)) . 3))	=> (iq 1 (iquasiquote (2)) . 3))
+  (check (iquasiquote (1 (iquasiquote (2)) 3))		=> (iquote (1 (iquasiquote (2)) 3)))
+  (check (iquasiquote (1 (iquasiquote (2)) . 3))	=> (iquote (1 (iquasiquote (2)) . 3)))
 
-  (check (iquasiquote ((iquasiquote (2)) 3))		=> (iq (iquasiquote (2)) 3))
-  (check (iquasiquote ((iquasiquote (2)) . 3))		=> (iq (iquasiquote (2)) . 3))
+  (check (iquasiquote ((iquasiquote (2)) 3))		=> (iquote ((iquasiquote (2)) 3)))
+  (check (iquasiquote ((iquasiquote (2)) . 3))		=> (iquote ((iquasiquote (2)) . 3)))
 
-  (check (iquasiquote (1 (iquasiquote (2))))		=> (iq 1 (iquasiquote (2))))
-  (check (iquasiquote (1 . (iquasiquote (2))))		=> (iq 1 . (iquasiquote (2))))
+  (check (iquasiquote (1 (iquasiquote (2))))		=> (iquote (1 (iquasiquote (2)))))
+  (check (iquasiquote (1 . (iquasiquote (2))))		=> (iquote (1 . (iquasiquote (2)))))
 
   (check
       (iquasiquote (1 (iquasiquote (iunquote (+ 1 2))) 3))
-    => (iq 1 (iquasiquote (iunquote (+ 1 2))) 3))
+    => (iquote (1 (iquasiquote (iunquote (+ 1 2))) 3)))
 
   (check
       (iquasiquote (1 (iquasiquote (iunquote (iunquote (+ 1 2)))) 3))
-    => (iq 1 (iquasiquote (iunquote 3)) 3))
+    => (iquote (1 (iquasiquote (iunquote 3)) 3)))
 
   (check
       (iquasiquote (1 (iquasiquote (iunquote (iunquote-splicing (ilist (+ 1 2))))) 3))
@@ -4416,7 +4421,7 @@
 
   (check
       (iquasiquote (1 (iquasiquote (iunquote (iquasiquote (iunquote (+ 1 2))))) 3))
-    => (iq 1 (iquasiquote (iunquote (iquasiquote (iunquote (+ 1 2))))) 3))
+    => (iquote (1 (iquasiquote (iunquote (iquasiquote (iunquote (+ 1 2))))) 3)))
 
 
 ;;; --------------------------------------------------------------------

@@ -312,7 +312,7 @@ exports the following keyword syntactic bindings.
 
 @deffn Syntax iquote @meta{datum}
 Similar to the @rnrs{6} syntax @syntax{quote}: take a single datum and
-expand to an expression in which outer pairs are transformed into
+expand to an expression in which all the pairs are transformed into
 immutable pairs.
 
 @lisp
@@ -335,9 +335,19 @@ immutable pairs.
 (iquote ((x y) z))      @equiv{} (ilist (ilist 'x 'y) 'z)
 (iquote (x (y z)))      @equiv{} (ilist 'x (ilist 'y 'z))
 
-(iquote #(1 2))         @equiv{} '#(1 2)
-(iquote #(1 (2)))       @equiv{} '#(1 (2))
-(iquote (#(1 2)))       @equiv{} (ilist '#(1 2))
+;; vector templates
+(iquote #(1 2))         @equiv{} '#(1 2))
+(iquote #(1 (2)))       @equiv{} (vector 1 (ilist 2)))
+(iquote (#(1 2)))       @equiv{} (ilist '#(1 2)))
+
+(iquote #(1 (2 #(3 4) 5)))
+@equiv{} (vector 1 (ilist 2 (vector 3 4) 5)))
+
+(iquote #(x (y #(s u) z)))
+@equiv{} (vector 'x (ilist 'y (vector 's 'u) 'z)))
+
+(iquote #(1 (2 #(3 (4 . 5)) 6)))
+@equiv{} (vector 1 (ilist 2 (vector 3 (ipair 4 5)) 6)))
 @end lisp
 @end deffn
 
@@ -348,6 +358,88 @@ immutable pairs.
 Similar to the @rnrs{6} syntax @syntax{iquasiquote}: take a single datum
 and expand to an expression in which outer pairs are transformed into
 immutable pairs.  The datum may contain unquoted expressions.
+
+The arguments of a @syntax{iunquote-splicing} form:
+
+@lisp
+(iunquote-splicing @meta{expr} ...)
+@end lisp
+
+@item
+must be expressions returning ilists.
+
+Some basic examples:
+
+@lisp
+(iquasiquote 1)                    @equiv{} 1
+(iquasiquote (1))                  @equiv{} (iquote (1))
+(iquasiquote (1 . 2))              @equiv{} (iquote (1 . 2))
+(iquasiquote (1 2))                @equiv{} (iquote (1 2))
+(iquasiquote (1 2 . 3))            @equiv{} (iquote (1 2 . 3))
+(iquasiquote ((1) (2)))            @equiv{} (iquote ((1) (2)))
+(iquasiquote ((1 2) (3 4)))        @equiv{} (iquote ((1 2) (3 4)))
+(iquasiquote ((1 2) (3 4)))        @equiv{} (iquote ((1 2) (3 4)))
+(iquasiquote ((1 . 2) (3 . 4)))    @equiv{} (iquote ((1 . 2) (3 . 4)))
+(iquasiquote ((1 . 2) . (3 . 4)))  @equiv{} (iquote ((1 . 2) . (3 . 4)))
+(iquasiquote ((1 2) . 3))          @equiv{} (iquote ((1 2) . 3))
+(iquasiquote ((1 . 2) . 3))        @equiv{} (iquote ((1 . 2) . 3))
+@end lisp
+
+@noindent
+some @syntax{iunquote} examples:
+
+@lisp
+(iquasiquote (iunquote 1))                 @equiv{} 1
+(iquasiquote (iunquote (iquote (1 2 3))))  @equiv{} (iquote (1 2 3))
+(iquasiquote ((iunquote) (+ 1 2)))         @equiv{} (iquote ((+ 1 2)))
+(iquasiquote (1 (iunquote (+ 2 3))))       @equiv{} (iquote (1 5))
+(iquasiquote (1 . (iunquote (+ 2 3))))     @equiv{} (ipair 1 (+ 2 3))
+
+(iquasiquote ((iunquote (+ 10 1) (+ 20 2) (+ 30 3)) (+ 8 9)))
+@equiv{} (iquote (11 22 33 (+ 8 9)))
+
+(iquasiquote #((iunquote (+ 1 2)) (+ 8 9)))
+@equiv{} `#(3 ,(iquote (+ 8 9)))
+@end lisp
+
+@noindent
+some @syntax{iunquote-splicing} examples:
+
+@lisp
+(iquasiquote ((iunquote-splicing (iquote (1 2 3)))))
+@equiv{} (iquote (1 2 3))
+
+(iquasiquote ((iunquote-splicing) 1))
+@equiv{} (iquote (1))
+
+(iquasiquote ((iunquote-splicing '())
+              ()))
+@equiv{} (ilist '())
+
+(iquasiquote ((iunquote-splicing '()) . ()))
+@equiv{} '()
+
+(iquasiquote ((iunquote-splicing (ilist (+ 1 2))) . 4))
+@equiv{} (ipair 3 4)
+@end lisp
+
+@noindent
+two examples on the difference between @syntax{iunquote} and
+@syntax{iunquote-splicing}.
+
+@lisp
+(iquasiquote ((iunquote (ilist (+ 10 1))
+                        (ilist (+ 20 2))
+                        (ilist (+ 30 3)))
+              (+ 8 9)))
+@equiv{} (iquote ((11) (22) (33) (+ 8 9)))
+
+(iquasiquote ((iunquote-splicing (ilist (+ 10 1))
+                                 (ilist (+ 20 2))
+                                 (ilist (+ 30 3)))
+              (+ 8 9)))
+@equiv{} (iquote (11 22 33 (+ 8 9)))
+@end lisp
 @end deffn
 
 @c page
