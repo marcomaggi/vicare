@@ -687,9 +687,6 @@ dependencies:
 # defined by this very makefile.
 include $(top_srcdir)/lib/dependencies.make
 
-# This is not automatically included by "dependencies.make".
-EXTRA_DIST		+= lib/srfi/%a116/compat.sls
-
 ## --------------------------------------------------------------------
 
 .PHONY: clean-fasl
