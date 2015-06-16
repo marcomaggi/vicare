@@ -4155,6 +4155,12 @@
   (check (iquasiquote (#(1 2) . 3))		=> (iq #(1 2) . 3))
   (check (iquasiquote ((1 . 2) . #(3)))		=> (iq (1 . 2) . #(3)))
 
+  (check (iquasiquote #(#()))			=> '#(#()))
+  (check (iquasiquote #(#() #()))		=> '#(#() #()))
+  (check (iquasiquote #(#() #() #()))		=> '#(#() #() #()))
+  (check (iquasiquote #(1 #() 2))		=> '#(1 #() 2))
+  (check (iquasiquote #(1 #(2 3) 4))		=> '#(1 #(2 3) 4))
+
 ;;; --------------------------------------------------------------------
 ;;; IUNQUOTE
 
@@ -4212,7 +4218,7 @@
 	  (else E)))
     => '(iunquote (+ 10 1) (+ 20 2) . 3))
 
-;;; vector patterns
+;;; vector templates
 
   (check (iquasiquote #((iunquote) 1))			=> '#(1))
   (check (iquasiquote #((iunquote) (+ 1 2)))		=> `#(,(iq + 1 2)))
@@ -4229,6 +4235,24 @@
   (check
       (iquasiquote #((iunquote (+ 10 1) (+ 20 2) (+ 30 3)) (+ 8 9)))
     => `#(11 22 33 ,(iq + 8 9)))
+
+  (check
+      (iquasiquote #(1 #((iunquote (+ 2 3)) 4) 5))
+    => (vector 1 (vector (+ 2 3) 4) 5))
+
+  (check
+      (iquasiquote #(1 #((iquasiquote (+ 2 3)) 4) 5))
+    => (vector 1 (vector (ilist 'iquasiquote (iquote (+ 2 3))) 4) 5))
+
+  (check
+      (iquasiquote #(1 #((iquasiquote (+ 2 (iunquote (+ 3.1 3.2))) 4) 5)))
+    => (vector 1 (vector (iquote (iquasiquote (+ 2 (iunquote (+ 3.1 3.2))) 4)) 5)))
+
+  (check
+      (iquasiquote #(1 #((iquasiquote (+ 2 (iunquote (iunquote (+ 3.1 3.2)))) 4) 5)))
+    => (vector 1 (vector (ilist 'iquasiquote (ilist '+ 2 (ilist 'iunquote (+ 3.1 3.2))) 4) 5)))
+
+;;;
 
   ;;Syntax error: improper list as IUNQUOTE form.
   ;;
@@ -4324,7 +4348,7 @@
 		    (+ 8 9)))
     => (iq 11 22 33 (+ 8 9)))
 
-;;; vector patterns
+;;; vector templates
 
   (check (iquasiquote #((iunquote-splicing) 1))				=> '#(1))
   (check (iquasiquote #((iunquote-splicing) (+ 1 2)))			=> `#(,(iq + 1 2)))
@@ -4339,6 +4363,18 @@
 					(ilist (+ 30 3)))
 		     (+ 8 9)))
     => `#(11 22 33 ,(iq + 8 9)))
+
+  (check
+      (iquasiquote #(1 #((iunquote-splicing (ilist (+ 2 3))) 4) 5))
+    => (vector 1 (vector (+ 2 3) 4) 5))
+
+  (check
+      (iquasiquote #(1 #((iquasiquote (+ 2 (iunquote-splicing (ilist (+ 3.1 3.2)))) 4) 5)))
+    => (vector 1 (vector (iquote (iquasiquote (+ 2 (iunquote-splicing (ilist (+ 3.1 3.2)))) 4)) 5)))
+
+  (check
+      (iquasiquote #(1 #((iquasiquote (+ 2 (iunquote-splicing (iunquote-splicing (ilist (+ 3.1 3.2))))) 4) 5)))
+    => (vector 1 (vector (ilist 'iquasiquote (ilist '+ 2 (ilist 'iunquote-splicing (+ 3.1 3.2))) 4) 5)))
 
   ;;Syntax error: improper list as IUNQUOTE-SPLICING form.
   ;;

@@ -211,8 +211,8 @@
        (synner "invalid improper list as IUNQUOTE-SPLICING form"
 	       #'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
 
-      ((iquasiquote ?expr)
-       (%quasicons #'(quote iquasiquote) (%quasi (list #'?expr) (add1 nesting-level))))
+      ((iquasiquote ?expr ...)
+       (%quasicons #'(quote iquasiquote) (%quasi #'(?expr ...) (add1 nesting-level))))
 
       ((?car . ?cdr)
        (%quasicons (%quasi #'?car nesting-level)
@@ -440,11 +440,8 @@
 	    (synner "invalid improper list as IUNQUOTE-SPLICING form"
 		    #'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
 
-	   ;; (?atom
-	   ;;  (%quasicons (%quasi #'?atom nesting-level) output-tail.stx))
-
-	   ((iquasiquote ?nested-expr)
-	    (%quasicons (%quasicons #'(quote iquasiquote) (%quasi (list #'?nested-expr) (add1 nesting-level)))
+	   ((iquasiquote ?nested-expr ...)
+	    (%quasicons (%quasicons #'(quote iquasiquote) (%quasi #'(?nested-expr ...) (add1 nesting-level)))
 			output-tail.stx))
 
 	   ((?nested-input-car . ?nested-input-cdr)
