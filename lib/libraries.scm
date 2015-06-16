@@ -236,7 +236,7 @@
      (srfi :115)
      (srfi :116)
      (srfi :116 comparators)
-     (srfi :116 quasiquote))
+     (srfi :116 quotations))
 
     ((WANT_SRFI WANT_POSIX)
      (srfi :106))

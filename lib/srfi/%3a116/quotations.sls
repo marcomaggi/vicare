@@ -30,8 +30,8 @@
 ;;;
 
 
-(library (srfi :116 quasiquote)
-  (export iquasiquote iunquote iunquote-splicing)
+(library (srfi :116 quotations)
+  (export iquote iquasiquote iunquote iunquote-splicing)
   (import (vicare)
     (srfi :116))
 
@@ -70,6 +70,17 @@
 (define foldable-ilist->vector	ilist->vector)
 
 
+;;;; quotation
+
+(define-syntax iquote
+  (syntax-rules ()
+    ((_ ?tree)
+     (gtree->itree '?tree))
+    ))
+
+
+;;;; quasiquotation
+
 (define-syntax* (iquasiquote input-form.stx)
 
   (define (main stx)
@@ -208,7 +219,7 @@
 		   (%quasi #'?cdr nesting-level)))
 
       (#(?item ...)
-       (%quasivector (%vector-quasi (syntax->list #'(?item ...)) nesting-level)))
+       (%quasivector (%vector-quasi #'(?item ...) nesting-level)))
 
       (?atom
        #'(quote ?atom))))
@@ -358,38 +369,96 @@
 ;;; --------------------------------------------------------------------
 
   (define (%vector-quasi item*.stx nesting-level)
-    ;;Process a list of syntax objects representing the items from a vector.
+    ;;Recursive function.  Called to process an input syntax object with the format:
+    ;;
+    ;;   #(?item ...)
+    ;;
+    ;;At the first invocation, the argument ITEM*.STX is a syntax object representing
+    ;;a proper list of items from the vector:
+    ;;
+    ;;   (syntax (?item ...))
     ;;
     (syntax-case item*.stx ()
-      ((?car . ?cdr)
-       (let ((output-tail.stx (%vector-quasi #'?cdr nesting-level)))
-	 (syntax-case #'?car (iunquote iunquote-splicing)
-	   ((iunquote ?expr ...)
-	    (let ((input-car-subexpr*.stx (syntax->list #'(?expr ...))))
+      ((?input-car . ?input-cdr)
+       (let ((output-tail.stx (%vector-quasi #'?input-cdr nesting-level)))
+	 (syntax-case #'?input-car (iquasiquote iunquote iunquote-splicing)
+
+	   ((iunquote ?input-car-subexpr ...)
+	    ;;When the nesting level requires processing of unquoted expressions:
+	    ;;
+	    ;;* The expressions ?INPUT-CAR-SUBEXPR must be evaluated at run-time.
+	    ;;
+	    ;;* The input  syntax object ?INPUT-CDR must be processed  to produce the
+	    ;;  output syntax object ?OUTPUT-TAIL.
+	    ;;
+	    ;;*  The returned  syntax object  must represent  an expression  that, at
+	    ;;  run-time, will construct the result as:
+	    ;;
+	    ;;     (ipair* ?input-car-subexpr ... ?output-tail)
+	    ;;
+	    ;;  notice that the following expansion takes place:
+	    ;;
+	    ;;     ((iunquote) . ?input-cdr) ==> ?output-tail
+	    ;;
+	    (let ((input-car-subexpr*.stx (syntax->list #'(?input-car-subexpr ...))))
 	      (if (zero? nesting-level)
 		  (%unquote-splice-cons* input-car-subexpr*.stx output-tail.stx)
-		(%quasicons (%quasicons #'(quote iunquote)
-					(%quasi input-car-subexpr*.stx (sub1 nesting-level)))
+		(%quasicons (%quasicons #'(quote iunquote) (%quasi input-car-subexpr*.stx (sub1 nesting-level)))
 			    output-tail.stx))))
 
 	   ((iunquote ?input-car-subexpr ... . ?input-car-tail)
 	    (synner "invalid improper list as IUNQUOTE form"
 		    #'(iunquote ?input-car-subexpr ... . ?input-car-tail)))
 
-	   ((iunquote-splicing ?expr ...)
-	    (let ((input-car-subexpr*.stx (syntax->list #'(?expr ...))))
+	   ((iunquote-splicing ?input-car-subexpr ...)
+	    ;;When the nesting level requires processing of unquoted expressions:
+	    ;;
+	    ;;* The  subexpressions ?INPUT-CAR-SUBEXPR must be  evaluated at run-time
+	    ;;  and their results must be lists:
+	    ;;
+	    ;;     ?input-car-subexpr => (?output-car-item ...)
+	    ;;
+	    ;;* The input  syntax object ?INPUT-CDR must be processed  to produce the
+	    ;;  output syntax object ?OUTPUT-TAIL.
+	    ;;
+	    ;;*  The returned  syntax object  must represent  an expression  that, at
+	    ;;  run-time, will construct the result as:
+	    ;;
+	    ;;     (iappend ?input-car-subexpr ... ?output-tail)
+	    ;;
+	    ;;  notice that the following expansion takes place:
+	    ;;
+	    ;;     ((iunquote-splicing) . ?input-cdr) ==> ?output-tail
+	    ;;
+	    (let ((input-car-subexpr*.stx (syntax->list #'(?input-car-subexpr ...))))
 	      (if (zero? nesting-level)
 		  (%unquote-splice-append input-car-subexpr*.stx output-tail.stx)
-		(%quasicons (%quasicons #'(quote iunquote-splicing)
-					(%quasi input-car-subexpr*.stx (sub1 nesting-level)))
+		(%quasicons (%quasicons #'(quote iunquote-splicing) (%quasi input-car-subexpr*.stx (sub1 nesting-level)))
 			    output-tail.stx))))
 
 	   ((iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)
 	    (synner "invalid improper list as IUNQUOTE-SPLICING form"
 		    #'(iunquote-splicing ?input-car-subexpr ... . ?input-car-tail)))
 
-	   (?atom
-	    (%quasicons (%quasi #'?atom nesting-level) output-tail.stx)))))
+	   ;; (?atom
+	   ;;  (%quasicons (%quasi #'?atom nesting-level) output-tail.stx))
+
+	   ((iquasiquote ?nested-expr)
+	    (%quasicons (%quasicons #'(quote iquasiquote) (%quasi (list #'?nested-expr) (add1 nesting-level)))
+			output-tail.stx))
+
+	   ((?nested-input-car . ?nested-input-cdr)
+	    (%quasicons (%quasicons (%quasi #'?nested-input-car nesting-level)
+				    (%quasi #'?nested-input-cdr nesting-level))
+			output-tail.stx))
+
+	   (#(?nested-input-item ...)
+	    (%quasicons (%quasivector (%vector-quasi #'(?nested-input-item ...) nesting-level))
+			output-tail.stx))
+
+	   (?input-atom
+	    (%quasicons #'(quote ?input-atom) output-tail.stx)))))
+
       (()
        #'(quote ()))))
 

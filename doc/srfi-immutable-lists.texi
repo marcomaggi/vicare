@@ -241,20 +241,50 @@ about the behavior of @func{write}, @func{display}, and similar output
 procedures on immutable lists.
 
 
-@deffn Syntax iq @meta{item} @dots{}
-@deffnx Syntax iquote @meta{item} @dots{}
+@deffn Syntax iq @meta{datum} @dots{}
 To make life easier for Scheme programmers, given that many
-implementations do not provide immutable quotation, the syntax keywords
-@syntax{iq} and @syntax{iquote} is provided as part of this @srfi{}.
+implementations do not provide immutable quotation, the syntax keyword
+@syntax{iq} is provided as part of this @srfi{}.
 
-It is analogous to @syntax{quote}, taking an arbitrary number of
+It is analogous to @syntax{quote}, but takes an arbitrary number of
 literals and constructing an ilist from them, with any pairs in the
 literals converted to ipairs.  It is useful for providing constant
-ipair--based objects.  Note that pairs within literal vectors or other
-implementation--dependent literals will not be converted.
-Unfortunately, there is no ilist analogue of @samp{'}, so we save
-keystrokes by using @syntax{iq} rather than @syntax{iquote} and omitting
-the top--level parentheses.
+ipair--based objects.
+
+@lisp
+(iq)            @equiv{} '()
+(iq 1)          @equiv{} (ilist '1)
+(iq (1))        @equiv{} (ilist (ilist '1))
+(iq 1 . 2)      @equiv{} (ipair '1 '2)
+(iq 1 2)        @equiv{} (ilist '1 '2)
+(iq 1 2 3)      @equiv{} (ilist '1 '2 '3)
+
+(iq (1) 2 3)    @equiv{} (ilist (ilist '1) '2 '3)
+(iq 1 (2) 3)    @equiv{} (ilist '1 (ilist '2) '3)
+(iq 1 2 (3))    @equiv{} (ilist '1 '2 (ilist '3))
+
+(iq (1 2) 3)    @equiv{} (ilist (ilist '1 '2) '3)
+(iq 1 (2 3))    @equiv{} (ilist '1 (ilist '2 '3))
+
+(iq (x y) z)    @equiv{} (ilist (ilist 'x 'y) 'z)
+(iq x (y z))    @equiv{} (ilist 'x (ilist 'y 'z))
+@end lisp
+
+Note that pairs within literal vectors or other
+implementation--dependent literals will not be converted:
+
+@lisp
+(iq #(1 2))     @equiv{} (ilist '#(1 2))
+(iq #(1 (2)))   @equiv{} (ilist '#(1 (2)))
+@end lisp
+
+@noindent
+see how the second example contains an implementation--dependent list
+@samp{(2)} rather than an ilist object.
+
+Unfortunately, there is no ilist analogue of @samp{'} to abbreviate the
+notation, so we save keystrokes by using @syntax{iq} (rather than
+@syntax{iquote}) and omitting the top--level parentheses.
 
 @lisp
 (define L
@@ -270,11 +300,54 @@ the top--level parentheses.
 (icar P)        @result{} 1
 (icdr P)        @result{} 2
 @end lisp
+@end deffn
 
-@quotation
-@strong{NOTE} @syntax{iq} is defined by the original @ansrfi{116};
-@syntax{iquote} is @value{PRJNAME} extension.
-@end quotation
+@c ------------------------------------------------------------------------
+
+@subsubheading Quotation and quasiquotation
+
+As @value{PRJNAME} extension, the library @library{srfi :116 quotations}
+exports the following keyword syntactic bindings.
+
+
+@deffn Syntax iquote @meta{datum}
+Similar to the @rnrs{6} syntax @syntax{quote}: take a single datum and
+expand to an expression in which outer pairs are transformed into
+immutable pairs.
+
+@lisp
+(iquote)                @error{} no match
+(iquote 1 2)            @error{} no match
+
+(iquote 1)              @equiv{} 1
+(iquote (1))            @equiv{} (ilist 1)
+(iquote (1 . 2))        @equiv{} (ipair 1 2)
+(iquote (1 2))          @equiv{} (ilist 1 2)
+(iquote (1 2 3))        @equiv{} (ilist 1 2 3)
+
+(iquote ((1) 2 3))      @equiv{} (ilist (ilist 1) 2 3)
+(iquote (1 (2) 3))      @equiv{} (ilist 1 (ilist 2) 3)
+(iquote (1 2 (3)))      @equiv{} (ilist 1 2 (ilist 3))
+
+(iquote ((1 2) 3))      @equiv{} (ilist (ilist 1 2) 3)
+(iquote (1 (2 3)))      @equiv{} (ilist 1 (ilist 2 3))
+
+(iquote ((x y) z))      @equiv{} (ilist (ilist 'x 'y) 'z)
+(iquote (x (y z)))      @equiv{} (ilist 'x (ilist 'y 'z))
+
+(iquote #(1 2))         @equiv{} '#(1 2)
+(iquote #(1 (2)))       @equiv{} '#(1 (2))
+(iquote (#(1 2)))       @equiv{} (ilist '#(1 2))
+@end lisp
+@end deffn
+
+
+@deffn Syntax iquasiquote @meta{datum}
+@deffnx {Auxiliary Syntax} iunquote
+@deffnx {Auxiliary Syntax} iunquote-splicing
+Similar to the @rnrs{6} syntax @syntax{iquasiquote}: take a single datum
+and expand to an expression in which outer pairs are transformed into
+immutable pairs.  The datum may contain unquoted expressions.
 @end deffn
 
 @c page

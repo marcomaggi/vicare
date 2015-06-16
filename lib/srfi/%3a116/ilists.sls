@@ -131,7 +131,7 @@
 #!vicare
 (library (srfi :116 ilists)
   (export
-    iq (rename (iq iquote))
+    iq
     ipair ilist xipair ipair* make-ilist ilist-tabulate iiota ilist-copy
     ipair?
     proper-ilist? ilist? dotted-ilist? not-ipair? null-ilist? ilist=
