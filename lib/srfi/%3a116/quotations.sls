@@ -5,8 +5,8 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	This library is derived from code in  Vicare Scheme, which in turn comes from
-;;;	Ikarus Scheme.
+;;;	This library  is derived from  code in  Vicare Scheme, the  psyntax expander,
+;;;	which in turn comes from Ikarus Scheme.
 ;;;
 ;;;Copyright (c) 2006, 2007 Abdulaziz Ghuloum and Kent Dybvig
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
