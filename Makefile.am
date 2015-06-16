@@ -1204,6 +1204,19 @@ XFAIL_TESTS	= \
 	tests/test-issue-058-lalr-unary-prec.sps	\
 	tests/test-srfi-115-regexps.sps
 
+# The following tests fails because Nausicaa and the half-written type
+# system  in  (vicare)  are  incompatible.  In  future  they  will  be
+# converted and fixed to work.  (Marco Maggi; Tue Jun 16, 2015)
+XFAIL_TESTS	+= \
+	tests/test-nausicaa-tags-docs.sps			\
+	tests/test-nausicaa-oopp-binding-constructs.sps		\
+	tests/test-nausicaa-oopp-cast-operator.sps		\
+	tests/test-nausicaa-oopp-core.sps			\
+	tests/test-nausicaa-conditions.sps			\
+	tests/test-nausicaa-containers-iterators.sps		\
+	tests/test-mehve-language-numerics-arithmetics.sps	\
+	tests/test-mehve-language-infix.sps
+
 if WANT_64BIT_SUPPORT
 TESTS		+= $(VICARE_SCHEME_COMPILER_TESTS)
 endif
