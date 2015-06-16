@@ -378,6 +378,9 @@
     ;;
     ;;   (syntax (?item ...))
     ;;
+    ;;Return a syntax object representing an expression that, at run-time, will build
+    ;;an ilist holding the vector items.
+    ;;
     (syntax-case item*.stx ()
       ((?input-car . ?input-cdr)
        (let ((output-tail.stx (%vector-quasi #'?input-cdr nesting-level)))
@@ -459,33 +462,20 @@
       (()
        #'(quote ()))))
 
-  (define (%quasivector x)
-    (let ((pat-x x))
-      (syntax-case pat-x (quote)
-	((quote (?datum ...))
-	 #`(quote #,(list->vector (syntax->list #'(?datum ...)))))
-
-	(_
-	 (let loop ((x x)
-		    (k (lambda (ls)
-			 #`(foldable-vector . #,ls))))
-	   (syntax-case x (list cons quote)
-	     ((quote (?expr ...))
-	      (k (map (lambda (x)
-			#`(quote #,x))
-		   (syntax->list #'(?expr ...)))))
-
-	     ((list ?expr ...)
-	      (k #'(?expr ...)))
-
-	     ((cons ?car ?cdr)
-	      (loop #'?cdr (lambda (ls)
-			     (k (cons #'?car ls)))))
-
-	     (_
-	      #`(foldable-ilist->vector #,pat-x))
-	     )))
-	)))
+  (define (%quasivector output-list.stx)
+    ;;Process to call the result of %QUASI-VECTOR.  The argument OUTPUT-LIST.STX is a
+    ;;syntax object representing an expression that, at run-time, will build an ilist
+    ;;holding the vector items.
+    ;;
+    ;;Return  a syntax  object representing  an  expression that,  at run-time,  will
+    ;;convert the ilist to a vector.  In general applying ILIST->VECTOR always works,
+    ;;but there are special cases where a more efficient processing is possible.
+    ;;
+    (syntax-case output-list.stx (foldable-ilist quote)
+      ((foldable-ilist (quote ?datum) ...)
+       #`(quote #(?datum ...)))
+      (_
+       #`(foldable-ilist->vector #,output-list.stx))))
 
 ;;; --------------------------------------------------------------------
 
