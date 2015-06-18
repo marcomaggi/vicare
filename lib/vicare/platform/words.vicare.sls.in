@@ -45,6 +45,7 @@
     SIZEOF_SIZE_T	SIZEOF_SSIZE_T
     SIZEOF_OFF_T	SIZEOF_PTRDIFF_T
     SIZEOF_FLOAT	SIZEOF_DOUBLE
+    SIZEOF_DOUBLE_COMPLEX
     SIZEOF_POINTER
 
     ;; predicates
@@ -374,6 +375,7 @@
 (define-inline-constant SIZEOF_PTRDIFF_T	@SIZEOF_PTRDIFF_T@)
 (define-inline-constant SIZEOF_FLOAT		4)
 (define-inline-constant SIZEOF_DOUBLE		8)
+(define-inline-constant SIZEOF_DOUBLE_COMPLEX	16)
 (define-inline-constant SIZEOF_POINTER		@VICARE_SIZE_OF_VOIDP@)
 
 ;;; --------------------------------------------------------------------

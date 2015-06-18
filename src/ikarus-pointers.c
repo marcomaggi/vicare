@@ -9,7 +9,7 @@
 	distribution  for no  reason I	can know  (Marco Maggi;	 Nov 26,
 	2011).
 
-  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -33,6 +33,7 @@
 
 #include "internals.h"
 #include <dlfcn.h>
+#include <complex.h>
 
 #ifndef RTLD_LOCAL
 #  define RTLD_LOCAL	0 /* for cygwin, possibly incorrect */
@@ -681,6 +682,13 @@ ikrt_ref_double (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
   return ika_flonum_from_double(pcb, *data);
 }
 ikptr
+ikrt_ref_double_complex (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
+{
+  uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  double *	data   = (double *)(memory + IK_P_OFFSET(s_offset));
+  return ika_cflonum_from_doubles(pcb, *data, *(data + 1));
+}
+ikptr
 ikrt_ref_pointer (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
@@ -878,6 +886,17 @@ ikrt_set_double (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/
   uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
   double *	data	= (double *)(memory + IK_P_OFFSET(s_offset));
   *data = IK_FLONUM_DATA(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_set_double_complex (ikptr s_pointer, ikptr s_offset, ikptr s_value /*, ikpcb* pcb*/)
+{
+  uint8_t *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  double *	data	= (double *)(memory + IK_P_OFFSET(s_offset));
+  ikptr		s_real	= IK_CFLONUM_REAL(s_value);
+  ikptr		s_imag	= IK_CFLONUM_IMAG(s_value);
+  *data     = IK_FLONUM_DATA(s_real);
+  *(data+1) = IK_FLONUM_DATA(s_imag);
   return IK_VOID_OBJECT;
 }
 ikptr
@@ -1090,6 +1109,14 @@ ikrt_array_ref_double (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
   return ika_flonum_from_double(pcb, data);
 }
 ikptr
+ikrt_array_ref_double_complex (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
+{
+  double complex *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  ssize_t		idx    = IK_P_INDEX(s_index);
+  double complex	Z      = memory[idx];
+  return ika_cflonum_from_doubles(pcb, creal(Z), cimag(Z));
+}
+ikptr
 ikrt_array_ref_pointer (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
 {
   void **	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
@@ -1277,6 +1304,16 @@ ikrt_array_set_double (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* 
 {
   double *	memory	= IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
   memory[IK_P_INDEX(s_index)] = IK_FLONUM_DATA(s_value);
+  return IK_VOID_OBJECT;
+}
+ikptr
+ikrt_array_set_double_complex (ikptr s_pointer, ikptr s_index, ikptr s_value /*, ikpcb* pcb*/)
+{
+  double complex *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
+  ssize_t	idx	= IK_P_OFFSET(s_index);
+  double	re	= IK_FLONUM_DATA(IK_CFLONUM_REAL(s_value));
+  double	im	= IK_FLONUM_DATA(IK_CFLONUM_IMAG(s_value));
+  memory[idx]   = re + im * _Complex_I;
   return IK_VOID_OBJECT;
 }
 ikptr

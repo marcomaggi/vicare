@@ -17720,6 +17720,13 @@ Scheme @var{flonum} in the eight bytes at @var{offset} from
 @end defun
 
 
+@defun pointer-set-c-double-complex! @var{memory} @var{offset} @var{cflonum}
+Store the double precision @ieee{} 754 floating point values composing
+the Scheme @var{cflonum} in the 16 bytes at @var{offset} from
+@var{memory}, real part at the lowest address.
+@end defun
+
+
 @c ------------------------------------------------------------
 
 @subsubheading Poking pointers
@@ -17868,6 +17875,13 @@ number that @value{PRJNAME} uses to represent inexact numbers.
 Return the eight--byte float (represented as @ieee{} 754 double
 precision floating point number) stored at @var{offset} from
 @var{memory}.
+@end defun
+
+
+@defun pointer-ref-c-double-complex @var{memory} @var{offset}
+Return a cflonum built from the two eight--byte floats (represented as
+@ieee{} 754 double precision floating point numbers) stored at
+@var{offset} from @var{memory}, real part at the lowest address.
 @end defun
 
 @c ------------------------------------------------------------
@@ -18023,6 +18037,13 @@ Scheme @var{flonum} in the eight bytes at @var{index} from
 @end defun
 
 
+@defun array-set-c-double-complex! @var{memory} @var{index} @var{cflonum}
+Store the double precision @ieee{} 754 floating point values composing
+the Scheme @var{cflonum} in the 16 bytes at @var{index} from
+@var{memory}.
+@end defun
+
+
 @c ------------------------------------------------------------
 
 @subsubheading Poking pointers
@@ -18170,6 +18191,13 @@ number that @value{PRJNAME} uses to represent inexact numbers.
 Return the eight--byte float (represented as @ieee{} 754 double
 precision floating point number) stored at @var{index} from
 @var{memory}.
+@end defun
+
+
+@defun array-ref-c-double-complex @var{memory} @var{index}
+Return a cflonum composed by the two eight--byte floats (represented as
+@ieee{} 754 double precision floating point numbers) stored at
+@var{index} from @var{memory}.
 @end defun
 
 @c ------------------------------------------------------------

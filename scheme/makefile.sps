@@ -3675,6 +3675,7 @@
 ;;;
     (pointer-ref-c-float			v $language $for)
     (pointer-ref-c-double			v $language $for)
+    (pointer-ref-c-double-complex		v $language $for)
     (pointer-ref-c-pointer			v $language $for)
 ;;;
     (pointer-ref-c-size_t			v $language $for)
@@ -3704,6 +3705,7 @@
 ;;;
     (pointer-set-c-float!			v $language $for)
     (pointer-set-c-double!			v $language $for)
+    (pointer-set-c-double-complex!		v $language $for)
     (pointer-set-c-pointer!			v $language $for)
 ;;;
     (pointer-set-c-size_t!			v $language $for)
@@ -3733,6 +3735,7 @@
 ;;;
     (array-ref-c-float				v $language $for)
     (array-ref-c-double				v $language $for)
+    (array-ref-c-double-complex			v $language $for)
     (array-ref-c-pointer			v $language $for)
 ;;;
     (array-ref-c-size_t				v $language $for)
@@ -3762,6 +3765,7 @@
 ;;;
     (array-set-c-float!				v $language $for)
     (array-set-c-double!			v $language $for)
+    (array-set-c-double-complex!		v $language $for)
     (array-set-c-pointer!			v $language $for)
 ;;;
     (array-set-c-size_t!			v $language $for)

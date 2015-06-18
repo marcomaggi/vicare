@@ -4113,6 +4113,15 @@ Allocate a cflonum and its flonum components using
 collection is run while this function is evaluating.
 @end deftypefun
 
+
+@deftypefun ikptr ika_cflonum_from_doubles (ikpcb * @var{pcb}, double @var{re}, double @var{im})
+Allocate a cflonum and its flonum components using @cfunc{ik_safe_alloc}
+and return a tagged reference to it.
+
+This function takes care of calling
+@cfunc{ik_signal_dirt_in_page_of_pointer} when appropriate.
+@end deftypefun
+
 @c page
 @node objects ports
 @section Port objects

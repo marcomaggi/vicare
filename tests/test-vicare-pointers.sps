@@ -990,6 +990,15 @@
     => -1.23)
 
 ;;; --------------------------------------------------------------------
+;;; double complex
+
+  (check
+      (let ((P (guarded-malloc 32)))
+	(pointer-set-c-double-complex! P 2 -1.23+4.56i)
+	(pointer-ref-c-double-complex  P 2))
+    => -1.23+4.56i)
+
+;;; --------------------------------------------------------------------
 ;;; pointer
 
   (check
@@ -1747,6 +1756,15 @@
     => -1.23)
 
 ;;; --------------------------------------------------------------------
+;;; double complex
+
+  (check
+      (let ((P (guarded-malloc 256)))
+	(array-set-c-double-complex! P 2 -1.23+4.56i)
+	(array-ref-c-double-complex  P 2))
+    => -1.23+4.56i)
+
+;;; --------------------------------------------------------------------
 ;;; pointer
 
   (check
@@ -2318,6 +2336,12 @@
 	(pointer-set-c-double! P 2 -1.23)
 	(pointer-ref-c-double  P 2))
     => -1.23)
+
+  (check
+      (let ((P (block-malloc 256)))
+	(pointer-set-c-double-complex! P 2 -1.23+4.56i)
+	(pointer-ref-c-double-complex  P 2))
+    => -1.23+4.56i)
 
 ;;; --------------------------------------------------------------------
 

@@ -1156,6 +1156,20 @@ ika_flonum_from_double (ikpcb* pcb, double N)
   IK_FLONUM_DATA(x) = N;
   return x;
 }
+ikptr
+ika_cflonum_from_doubles (ikpcb* pcb, double re, double im)
+{
+  ikptr x = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+  IK_REF(x, off_flonum_tag) = cflonum_tag;
+  ik_signal_dirt_in_page_of_pointer(pcb, x);
+  pcb->root0 = &x;
+  {
+    IK_ASS(IK_CFLONUM_REAL(x), ika_flonum_from_double(pcb, re));
+    IK_ASS(IK_CFLONUM_IMAG(x), ika_flonum_from_double(pcb, im));
+  }
+  pcb->root0 = NULL;
+  return x;
+}
 
 /* ------------------------------------------------------------------ */
 

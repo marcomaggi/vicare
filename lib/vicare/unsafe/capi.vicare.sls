@@ -10,7 +10,7 @@
 ;;;	the Vicare  documentation.  This library  exports only syntaxes,
 ;;;	so it can be used in the source code of Vicare itself.
 ;;;
-;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -66,7 +66,7 @@
     ffi-pointer-ref-c-uint64		ffi-pointer-ref-c-sint64
 
     ffi-pointer-ref-c-float		ffi-pointer-ref-c-double
-    ffi-pointer-ref-c-pointer
+    ffi-pointer-ref-c-double-complex	ffi-pointer-ref-c-pointer
 
     ffi-pointer-ref-c-signed-char	ffi-pointer-ref-c-unsigned-char
     ffi-pointer-ref-c-signed-short	ffi-pointer-ref-c-unsigned-short
@@ -83,7 +83,7 @@
     ffi-pointer-set-c-uint64!		ffi-pointer-set-c-sint64!
 
     ffi-pointer-set-c-float!		ffi-pointer-set-c-double!
-    ffi-pointer-set-c-pointer!
+    ffi-pointer-set-c-double-complex!	ffi-pointer-set-c-pointer!
 
     ffi-pointer-set-c-signed-char!	ffi-pointer-set-c-unsigned-char!
     ffi-pointer-set-c-signed-short!	ffi-pointer-set-c-unsigned-short!
@@ -100,7 +100,7 @@
     ffi-array-ref-c-uint64		ffi-array-ref-c-sint64
 
     ffi-array-ref-c-float		ffi-array-ref-c-double
-    ffi-array-ref-c-pointer
+    ffi-array-ref-c-double-complex	ffi-array-ref-c-pointer
 
     ffi-array-ref-c-signed-char		ffi-array-ref-c-unsigned-char
     ffi-array-ref-c-signed-short	ffi-array-ref-c-unsigned-short
@@ -117,7 +117,7 @@
     ffi-array-set-c-uint64!		ffi-array-set-c-sint64!
 
     ffi-array-set-c-float!		ffi-array-set-c-double!
-    ffi-array-set-c-pointer!
+    ffi-array-set-c-double-complex!	ffi-array-set-c-pointer!
 
     ffi-array-set-c-signed-char!	ffi-array-set-c-unsigned-char!
     ffi-array-set-c-signed-short!	ffi-array-set-c-unsigned-short!
@@ -574,6 +574,9 @@
 (define-inline (ffi-pointer-ref-c-double pointer offset)
   (foreign-call "ikrt_ref_double" pointer offset))
 
+(define-inline (ffi-pointer-ref-c-double-complex pointer offset)
+  (foreign-call "ikrt_ref_double_complex" pointer offset))
+
 (define-inline (ffi-pointer-ref-c-pointer pointer offset)
   (foreign-call "ikrt_ref_pointer" pointer offset))
 
@@ -658,6 +661,9 @@
 
 (define-inline (ffi-pointer-set-c-double! pointer offset value)
   (foreign-call "ikrt_set_double" pointer offset value))
+
+(define-inline (ffi-pointer-set-c-double-complex! pointer offset value)
+  (foreign-call "ikrt_set_double_complex" pointer offset value))
 
 (define-inline (ffi-pointer-set-c-pointer! pointer offset value)
   (foreign-call "ikrt_set_pointer" pointer offset value))
@@ -744,6 +750,9 @@
 (define-inline (ffi-array-ref-c-double array offset)
   (foreign-call "ikrt_array_ref_double" array offset))
 
+(define-inline (ffi-array-ref-c-double-complex array offset)
+  (foreign-call "ikrt_array_ref_double_complex" array offset))
+
 (define-inline (ffi-array-ref-c-pointer array offset)
   (foreign-call "ikrt_array_ref_pointer" array offset))
 
@@ -828,6 +837,9 @@
 
 (define-inline (ffi-array-set-c-double! array offset value)
   (foreign-call "ikrt_array_set_double" array offset value))
+
+(define-inline (ffi-array-set-c-double-complex! array offset value)
+  (foreign-call "ikrt_array_set_double_complex" array offset value))
 
 (define-inline (ffi-array-set-c-pointer! array offset value)
   (foreign-call "ikrt_array_set_pointer" array offset value))

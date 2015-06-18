@@ -1476,6 +1476,7 @@ ik_decl ikptr_t ikrt_flonum_hash		(ikptr_t x /*, ikpcb_t* pcb */);
 
 ik_decl int   ik_is_cflonum	(ikptr_t X);
 ik_decl ikptr_t iku_cflonum_alloc_and_init (ikpcb_t * pcb, double re, double im);
+ik_decl ikptr	ika_cflonum_from_doubles (ikpcb* pcb, double re, double im);
 
 #define IK_CFLONUM_REAL(X)	IK_REF((X), off_cflonum_real)
 #define IK_CFLONUM_IMAG(X)	IK_REF((X), off_cflonum_imag)

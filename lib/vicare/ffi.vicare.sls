@@ -135,7 +135,7 @@
     pointer-ref-c-signed-long-long	pointer-ref-c-unsigned-long-long
 
     pointer-ref-c-float			pointer-ref-c-double
-    pointer-ref-c-pointer
+    pointer-ref-c-double-complex	pointer-ref-c-pointer
 
     pointer-ref-c-size_t		pointer-ref-c-ssize_t
     pointer-ref-c-off_t			pointer-ref-c-ptrdiff_t
@@ -152,7 +152,7 @@
     pointer-set-c-signed-long-long!	pointer-set-c-unsigned-long-long!
 
     pointer-set-c-float!		pointer-set-c-double!
-    pointer-set-c-pointer!
+    pointer-set-c-double-complex!	pointer-set-c-pointer!
 
     pointer-set-c-size_t!		pointer-set-c-ssize_t!
     pointer-set-c-off_t!		pointer-set-c-ptrdiff_t!
@@ -170,7 +170,7 @@
     array-ref-c-signed-long-long	array-ref-c-unsigned-long-long
 
     array-ref-c-float			array-ref-c-double
-    array-ref-c-pointer
+    array-ref-c-double-complex		array-ref-c-pointer
 
     array-ref-c-size_t			array-ref-c-ssize_t
     array-ref-c-off_t			array-ref-c-ptrdiff_t
@@ -187,7 +187,7 @@
     array-set-c-signed-long-long!	array-set-c-unsigned-long-long!
 
     array-set-c-float!			array-set-c-double!
-    array-set-c-pointer!
+    array-set-c-double-complex!		array-set-c-pointer!
 
     array-set-c-size_t!			array-set-c-ssize_t!
     array-set-c-off_t!			array-set-c-ptrdiff_t!)
