@@ -8,7 +8,7 @@
 ;;;	Export an  identifier syntax  for each platform  constant.  This
 ;;;	library can be used also by Vicare's source code.
 ;;;
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,7 +25,7 @@
 ;;;
 
 
-(library (vicare platform constants)
+(library (vicare platform constants (0 4 2015 6 18))
   (export
 
 ;;; data type sizes and limits
@@ -397,6 +397,9 @@
     M_PI_2		M_PI_4		M_1_PI
     M_2_PI		M_2_SQRTPI	M_SQRT2
     M_SQRT1_2
+
+    FP_NAN		FP_INFINITE	FP_ZERO
+    FP_SUBNORMAL	FP_NORMAL
 
 ;;; fnmatch()
     FNM_NOMATCH		FNM_FILE_NAME	FNM_PATHNAME
@@ -1506,6 +1509,12 @@
 (define-inline-constant M_2_SQRTPI		@VALUEOF_M_2_SQRTPI@)
 (define-inline-constant M_SQRT2			@VALUEOF_M_SQRT2@)
 (define-inline-constant M_SQRT1_2		@VALUEOF_M_SQRT1_2@)
+
+(define-inline-constant FP_NAN			@VALUEOF_FP_NAN@)
+(define-inline-constant FP_INFINITE		@VALUEOF_FP_INFINITE@)
+(define-inline-constant FP_ZERO			@VALUEOF_FP_ZERO@)
+(define-inline-constant FP_SUBNORMAL		@VALUEOF_FP_SUBNORMAL@)
+(define-inline-constant FP_NORMAL		@VALUEOF_FP_NORMAL@)
 
 ;;fnmatch
 (define-inline-constant FNM_NOMATCH		@VALUEOF_FNM_NOMATCH@)
