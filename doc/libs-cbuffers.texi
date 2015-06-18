@@ -7,7 +7,7 @@ is often needed to convert Scheme objects to raw memory blocks, possibly
 containing @asciiz{} strings.
 
 To access generalised C buffers at the C language level see
-@vicareref{objects misc cbuffers}.
+@vicareref{objects misc cbuffers, Generalised C buffers}.
 
 @menu
 * cbuffers buffers::            Introduction to generalised C buffers.
