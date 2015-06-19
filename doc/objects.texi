@@ -945,6 +945,21 @@ Perform a C language assignment enforcing the order of evaluation of the
 left--side and right--side expressions.  First evaluate @var{right},
 then evaluate @var{left}, finally store the result of @var{right} in the
 lvalue resulting from evaluating @var{left}.
+
+After a use of this macro: the function
+@cfunc{ik_signal_dirt_in_page_of_pointer} must be applied to the lvalue
+resulting from evaluating @var{left}.  For example, when allocating a
+pair filled with numbers:
+
+@example
+ikptr   s_pair = ika_pair_alloc(pcb);
+
+IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, 1));
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+
+IK_ASS(IK_CDR(s_pair), ika_integer_from_int(pcb, 2));
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
+@end example
 @end deffn
 
 
@@ -1095,6 +1110,7 @@ the memory assigment actually takes place; so we have to code:
 ikptr   s_tmp;
 s_tmp          = ika_bytevector_alloc(pcb, 8); /* GOOD */
 IK_CAR(s_pair) = s_tmp;
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @end example
 
 @noindent
@@ -1102,6 +1118,7 @@ or:
 
 @example
 IK_ASS(IK_CAR(s_pair), ika_bytevector_alloc(pcb, 8)); /* GOOD */
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @end example
 
 @noindent
@@ -1403,9 +1420,9 @@ ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 IK_REF(s_pair, off_car) = s_car;
 IK_REF(s_pair, off_cdr) = s_car;
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @end example
 
 @noindent
@@ -1417,9 +1434,9 @@ ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 IK_CAR(s_pair) = s_car;
 IK_CDR(s_pair) = s_car;
+ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @end example
 
 
@@ -1557,9 +1574,10 @@ ikptr   s_pair = ika_pair_alloc(pcb);
 
 pcb->root0 = &s_pair;
 @{
-  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
   IK_ASS(IK_CAR(s_pair), allocate_and_build_the_car(pcb));
+  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
   IK_ASS(IK_CDR(s_pair), allocate_and_build_the_cdr(pcb));
+  ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @}
 pcb->root0 = NULL;
 @end example
@@ -1599,11 +1617,12 @@ if (argc) @{
   pcb->root1 = &s_spine;
   @{
     for (i=0; i<argc;) @{
-      ik_signal_dirt_in_page_of_pointer(pcb, s_spine);
       IK_ASS(IK_CAR(s_spine),
              ika_bytevector_from_cstring(pcb, argv[i]));
+      ik_signal_dirt_in_page_of_pointer(pcb, s_spine);
       if (++i < argc) @{
         IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
+        ik_signal_dirt_in_page_of_pointer(pcb, s_spine);
         s_spine = IK_CDR(s_spine);
       @} else @{
         IK_CDR(s_spine) = IK_NULL_OBJECT;
@@ -2295,6 +2314,7 @@ ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
   @}
   pcb->root9 = NULL;
   IK_REF(s_stru, off_record_rtd) = s_rtd;
+  ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
   return s_stru;
 @}
 @end example
@@ -2331,6 +2351,7 @@ ikptr  s_field = the_field;
 
 ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_REF(s_stru, off_record_data + 2 * wordsize) = the_field;
+ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 @end example
 
 @noindent
@@ -2426,8 +2447,8 @@ ikptr   s_field;
 
 s_field = IK_FIELD(s_stru, 2);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 IK_FIELD(s_stru, 2) = s_field;
+ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 @end example
 @end deftypefn
 
@@ -3474,6 +3495,7 @@ pcb->root9 = NULL;
 IK_REF(s_rn, off_ratnum_tag) = ratnum_tag;
 IK_REF(s_rn, off_ratnum_num) = s_num;
 IK_REF(s_rn, off_ratnum_den) = s_den;
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 @end example
 
 @noindent
@@ -3507,6 +3529,7 @@ s_den = IK_REF(s_rn, off_ratnum_den);
 ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 IK_REF(s_rn, off_ratnum_num) = s_num;
 IK_REF(s_rn, off_ratnum_den) = s_den;
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 @end example
 
 
@@ -3565,8 +3588,8 @@ ikptr  s_num;
 
 s_num = IK_NUMERATOR(s_rn);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 IK_NUMERATOR(s_rn) = s_num;
+ik_signal_dirt_in_page_of_pointer(pcb, s_rn);
 @end example
 @end deftypefn
 
@@ -3818,6 +3841,7 @@ pcb->root9 = NULL;
 IK_REF(s_cn, off_compnum_tag)  = compnum_tag;
 IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 @end example
 
 @noindent
@@ -3848,9 +3872,9 @@ ikptr  s_im;
 s_re = IK_REF(s_cn, off_compnum_real);
 s_im = IK_REF(s_cn, off_compnum_imag);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 IK_REF(s_cn, off_compnum_real) = s_re;
 IK_REF(s_cn, off_compnum_imag) = s_im;
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 @end example
 
 
@@ -3909,8 +3933,8 @@ ikptr  s_re;
 
 s_re = IK_COMPNUM_REAL(s_cn);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 IK_COMPNUM_REAL(s_cn) = s_re;
+ik_signal_dirt_in_page_of_pointer(pcb, s_cn);
 @end example
 @end deftypefn
 
@@ -4001,6 +4025,7 @@ pcb->root9 = NULL;
 IK_REF(s_cf, off_cflonum_tag)  = cflonum_tag;
 IK_REF(s_cf, off_cflonum_real) = s_re;
 IK_REF(s_cf, off_cflonum_imag) = s_im;
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
 @end example
 
 @noindent
@@ -4031,9 +4056,9 @@ ikptr  s_im;
 s_re = IK_REF(s_cf, off_cflonum_real);
 s_im = IK_REF(s_cf, off_cflonum_imag);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
 IK_REF(s_cf, off_cflonum_real) = s_re;
 IK_REF(s_cf, off_cflonum_imag) = s_im;
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
 @end example
 
 
@@ -4092,8 +4117,8 @@ ikptr  s_re;
 
 s_re = IK_CFLONUM_REAL(s_cf);
 
-ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
 IK_CFLONUM_REAL(s_cf) = s_re;
+ik_signal_dirt_in_page_of_pointer(pcb, s_cf);
 @end example
 @end deftypefn
 
@@ -4116,7 +4141,8 @@ collection is run while this function is evaluating.
 
 @deftypefun ikptr ika_cflonum_from_doubles (ikpcb * @var{pcb}, double @var{re}, double @var{im})
 Allocate a cflonum and its flonum components using @cfunc{ik_safe_alloc}
-and return a tagged reference to it.
+and return a tagged reference to it.  This function makes use of
+@code{pcb->root9}.
 
 This function takes care of calling
 @cfunc{ik_signal_dirt_in_page_of_pointer} when appropriate.
@@ -5063,6 +5089,7 @@ IK_REF(s_kont, off_continuation_top)  = pcb->frame_pointer;
 IK_REF(s_kont, off_continuation_size) = \
    pcb->frame_base - pcb->frame_pointer - wordsize;
 IK_REF(s_kont, off_continuation_next) = pcb->next_k;
+ik_signal_dirt_in_page_of_pointer(pcb, s_kont);
 pcb->next_k = s_kont;
 @end example
 

@@ -138,10 +138,11 @@ ika_list_from_argv (ikpcb * pcb, char ** argv)
     {
       int		i;
       for (i=0; argv[i];) {
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	if (argv[++i]) {
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	  s_pair = IK_CDR(s_pair);
 	} else {
 	  IK_CDR(s_pair) = IK_NULL_OBJECT;
@@ -170,10 +171,11 @@ ika_list_from_argv_and_argc (ikpcb * pcb, char ** argv, long argc)
     {
       long	i;
       for (i=0; i<argc;) {
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	if (++i < argc) {
 	  IK_ASS(IK_CDR(s_pair), ika_pair_alloc(pcb));
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	  s_pair = IK_CDR(s_pair);
 	} else {
 	  IK_CDR(s_pair) = IK_NULL_OBJECT;
@@ -765,8 +767,8 @@ ika_struct_alloc_no_init (ikpcb * pcb, ikptr s_rtd)
   pcb->root9 = &s_rtd;
   {
     p_stru = ik_safe_alloc(pcb, align_size);
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     /* "ik_safe_alloc()" returns uninitialised  invalid memory; but such
        memory is on  the Scheme heap, which is not  a garbage collection
        root.   This   means  we  can  freely   leave  uninitialised  the
@@ -789,8 +791,8 @@ ika_struct_alloc_and_init (ikpcb * pcb, ikptr s_rtd)
   pcb->root9 = &s_rtd;
   {
     p_stru = ik_safe_alloc(pcb, align_size);
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     IK_REF(p_stru, disp_record_rtd) = s_rtd;
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, p_stru);
     /* Set the  reserved data  area to zero;  remember that  the machine
        word 0 is the fixnum zero.
 
@@ -1159,15 +1161,16 @@ ika_flonum_from_double (ikpcb* pcb, double N)
 ikptr
 ika_cflonum_from_doubles (ikpcb* pcb, double re, double im)
 {
-  ikptr x = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
+  ikptr	x = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
   IK_REF(x, off_flonum_tag) = cflonum_tag;
-  ik_signal_dirt_in_page_of_pointer(pcb, x);
-  pcb->root0 = &x;
+  pcb->root9 = &x;
   {
     IK_ASS(IK_CFLONUM_REAL(x), ika_flonum_from_double(pcb, re));
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, x);
     IK_ASS(IK_CFLONUM_IMAG(x), ika_flonum_from_double(pcb, im));
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, x);
   }
-  pcb->root0 = NULL;
+  pcb->root9 = NULL;
   return x;
 }
 
@@ -1826,6 +1829,7 @@ ik_collection_avoidance_list (ikpcb * pcb)
 	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	    } else {
 	      IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
+	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	      s_spine = IK_CDR(s_spine);
 	      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	    }
