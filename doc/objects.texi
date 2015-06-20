@@ -46,6 +46,20 @@ values is duplicated in the Scheme language compiler
 @section Some basic type definitions
 
 
+@deftp Typedef iksword_t
+The type of signed integers matching a machine word size.  On 32-bit
+platforms it is an alias for @code{int32_t}.  On 64-bit platforms it is
+an alias for @code{int64_t}.
+@end deftp
+
+
+@deftp Typedef ikuword_t
+The type of unsigned integers matching a machine word size.  On 32-bit
+platforms it is an alias for @code{uint32_t}.  On 64-bit platforms it is
+an alias for @code{uint64_t}.
+@end deftp
+
+
 @deftp Typedef ik_int
 An alias for @code{signed int}.
 @end deftp
@@ -87,14 +101,15 @@ interpretations:
 
 @table @strong
 @item Immediate values
-Objects that fit in a single machine word: special constants, fixnums,
-characters and input/output port transcoders.
+Objects that fit in a single machine word: special constants (like
+@true{} and @false{}), fixnums, characters and input/output port
+transcoders.
 
 @item Reference values
 Objects allocated on the heap and subject to garbage collection; they
 are represented by tagged pointers: symbols, pairs, vectors,
 bytevectors, structures, ports, bignums, ratnums, flonums, compnums,
-cflonums, strings, closures, continuations, codes, pointers.
+cflonums, strings, closures, continuations, code objects, pointers.
 @end table
 
 @noindent
@@ -125,7 +140,7 @@ heap: pairs, bytevectors, closures, strings.
 @end table
 
 
-@deftp {Object Reference} ikptr
+@deftp {Object Reference} ikptr_t
 An immediate built in object or a reference to a built in object;
 it is defined as follows:
 
@@ -145,27 +160,27 @@ int}.  This should never happen.
 @end deftp
 
 
-@deftypefn {Preprocessor Macro} int IK_TAGOF (ikptr @var{ref})
+@deftypefn {Preprocessor Macro} int IK_TAGOF (ikptr_t @var{ref})
 Return an integer representing the @math{3} least significant bits of an
 @ikptr{} value.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IK_REF (ikptr @var{value_ref}, long @var{byte_offset})
+@deftypefn {Preprocessor Macro} ikptr_t IK_REF (ikptr_t @var{value_ref}, long @var{byte_offset})
 Getter and setter for machine words.  Interpret @var{value_ref} as a
 pointer to an array of @ikptr{} values and locate the value at the
 zero--based @var{byte_offset}.  A use of this macro can appear both as
 operand and as left--side of an assignment.
 
 @example
-ikptr   P, Q;
+ikptr_t         P, Q;
 
 Q = IK_REF(P, 2*wordsize); /* retrieve the 3rd word */
 IK_REF(P, 0) = 123L;       /* store a value in the 1st word */
 @end example
 
 Both @var{value_ref} and @var{byte_offset} are first cast to @code{long}
-values, then added and the sum is cast to @code{ikptr *}.
+values, then added and the sum is cast to @code{ikptr_t *}.
 
 There are two categories of values for @var{byte_offset}: offsets and
 displacements; both are usually precomputed at compile time and are
@@ -186,8 +201,8 @@ Given an @strong{untagged} pointer to a vector, the fixnum representing
 the length of the vector can be obtained with:
 
 @example
-ikptr   p_vector = ...;
-ikptr   s_length = IK_REF(p_vector, disp_vector_length);
+ikptr_t   p_vector = ...;
+ikptr_t   s_length = IK_REF(p_vector, disp_vector_length);
 @end example
 
 @noindent
@@ -196,8 +211,8 @@ predefined displacements have names prefixed with @code{disp_}; given a
 of the vector can be obtained with:
 
 @example
-ikptr   s_vector = ...;
-ikptr   s_length = IK_REF(s_vector, off_vector_length);
+ikptr_t   s_vector = ...;
+ikptr_t   s_length = IK_REF(s_vector, off_vector_length);
 @end example
 
 @noindent
@@ -241,7 +256,7 @@ bits set to @math{1}; to distinguish between immediate values and
 references we can do:
 
 @example
-ikptr   X;
+ikptr_t   X;
 
 if (IK_IS_FIXNUM(X) || (immediate_tag == IK_TAGOF(X)))
   it_is_immediate();
@@ -289,7 +304,7 @@ references to values which have been already garbage collected.
 @end defmac
 
 
-@defmac IK_FORWARD_PTR ((ikptr)-1)
+@defmac IK_FORWARD_PTR ((ikptr_t)-1)
 When a Scheme object's memory block is moved by the garbage collector:
 the first word of the old memory block is overwritten with a special
 value, the ``forward pointer'', which is the symbol
@@ -332,7 +347,7 @@ transcoders    | #b01111111 |  #x7F   | #b11111111
 to identify a fixnum we can do:
 
 @example
-ikptr   X;
+ikptr_t   X;
 
 if (fx_tag == (X & fx_mask))
   it_is_a_fixnum();
@@ -415,7 +430,7 @@ While the @api{} defines predicates to recognise values, to identify a
 type--specific reference we can do:
 
 @example
-ikptr   X;
+ikptr_t   X;
 
 if (pair_tag == (X & pair_mask))
   it_is_a_pair();
@@ -430,7 +445,7 @@ the referenced vector of words on the heap; to recognise such values we
 can do:
 
 @example
-ikptr  X;
+ikptr_t  X;
 
 if ((vector_tag    == (X & vector_mask)) &&
     (secondary_tag == (secondary_mask & IK_REF(X, -vector_tag))))
@@ -498,24 +513,32 @@ attributes.
 
 
 @menu
-* objects memory cpre::         Interesting C preprocessor macros.
-* objects memory ikpcb::        Interesting @pcb{} fields.
+* objects memory pages::        System memory pages and @value{PRJNAME}
+                                memory pages.
+* objects memory segments::     Logic memory segments.
+* objects memory pcb::          Interesting @pcb{} fields.
 * objects memory alloc::        Basic memory allocation functions.
 * objects memory usage::        Writing correct C language code.
 @end menu
 
 @c page
-@node objects memory cpre
-@subsection Interesting C preprocessor macros
+@node objects memory pages
+@subsection System memory pages and @value{PRJNAME} memory pages
+
+
+@cindex @code{IK_MMAP_ALLOCATION_GRANULARITY}, C preprocessor symbol
+@cindex @code{IK_PAGESIZE}, C preprocessor symbol
+@cindex @code{IK_PAGESHIFT}, C preprocessor symbol
+@cindex @code{IK_CHUNK_SIZE}, C preprocessor symbol
 
 
 In this section we discuss some private C preprocessor symbols and
-related to memory allocation and garbage collection.
+related to memory allocation and garbage collection concepts.
 
 The preprocessor constant @code{IK_MMAP_ALLOCATION_GRANULARITY} is
-determined by the @command{configure} script and defined in the
-automatically generated header file @file{config.h}.  The constants
-@code{IK_PAGESIZE} and @code{IK_PAGESHIFT} are hard--coded.
+determined by the @gnu{} Autotools's @command{configure} script and
+defined in the automatically generated header file @file{config.h}.  The
+constants @code{IK_PAGESIZE} and @code{IK_PAGESHIFT} are hard--coded.
 
 The constant @code{IK_MMAP_ALLOCATION_GRANULARITY} represents the memory
 allocation granularity used by @cfunc{mmap}: no matter the number of
@@ -542,29 +565,49 @@ long granularity = sysconf(_SC_PAGESIZE);
 which should ``officially'' return the system page size, but in truth it
 does not (see Cygwin's documentation).
 
-To mind its own business, Vicare defines a ``page size'' as the
-preprocessor symbol @code{IK_PAGESIZE}, the number of bytes in Vicare's
-page size is @code{4096 = 4 * 1024 = 4 * 2^10 = 2^12 = #x1000}.
-Vicare's page size is @strong{not} defined to be equal to the system
-page size, but:
+To mind its own business, @value{PRJNAME} defines a ``page size'' as the
+preprocessor symbol @code{IK_PAGESIZE}, the number of bytes in
+@value{PRJNAME}'s page size is:
+
+@example
+4096 = 4 * 1024 = 4 * 2^10 = 2^12 = #x1000 = #b1000000000000
+@end example
+
+@noindent
+notice how many bits are set to zero in the binary representation of
+@math{4096}:
+
+@lisp
+(number->string 4096 2) @result{} #b1000000000000
+;;                           2109876543210
+@end lisp
+
+@noindent
+the constant @math{4096} is used often in the code, so the preprocessor
+symbol @code{IK_CHUNK_SIZE} is defined to it.
+
+@value{PRJNAME}'s page size is @strong{not} defined to be equal to the
+system page size, but:
 
 @itemize
 @item
-Most likely the system page size and Vicare's page size are equal.
+Most likely the system page size and @value{PRJNAME}'s page size are
+equal.
 
 @item
-We assume that in any case the system page size is equal to or an exact
-multiple of Vicare's page size.
+We assume that the system page size is equal to, or an exact multiple
+of, @value{PRJNAME}'s page size.
 
 @item
 We assume that @cfunc{mmap} returns pointers such that: the pointer
 references the first byte of a system page, and so also the first byte
-of a Vicare page; the numeric address of the pointer is an exact
-multiple of @math{4096} (the @math{12} least significant bits are zero).
+of a @value{PRJNAME} page; the numeric address of the pointer is an
+exact multiple of @math{4096} (the @math{12} least significant bits are
+zero).
 @end itemize
 
-@noindent
-it is natural to assign a zero--based index to each Vicare page:
+It is natural to assign a zero--based index to each @value{PRJNAME}
+page:
 
 @example
    page     page     page     page     page     page
@@ -584,8 +627,9 @@ IK_PAGESIZE >> IK_PAGESHIFT = 1
 @end example
 
 @noindent
-if IK_PAGESIZE is @math{4096}, the value of @code{IK_PAGESHIFT} is
-@math{12}; so we have:
+if @code{IK_PAGESIZE} is @math{4096}, the value of @code{IK_PAGESHIFT}
+is @math{12}; so for the example sizes @math{4000}, @math{8000} and
+@math{10000} we have:
 
 @example
 0 * 4096 <=  4000 < 1 * 4096        4000 >> 12 = 0
@@ -593,37 +637,232 @@ if IK_PAGESIZE is @math{4096}, the value of @code{IK_PAGESHIFT} is
 2 * 4096 <= 10000 < 3 * 4096       10000 >> 12 = 2
 @end example
 
+@noindent
+all the tagged pointers hold the tag in the @math{3} least significant
+bits, so right--shifting by @code{IK_PAGESIZE} removes the tag:
+right--shifting by @code{IK_PAGESIZE} works fine on both tagged and
+untagged pointers.
 
-@deftypefn {C Preprocessor Macro} ik_ulong IK_PAGE_INDEX (ikptr @var{X})
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_PAGE_INDEX (ikptr_t @var{X})
 Given the tagged or untagged pointer @var{X}: evaluate to the index of
 the memory page it is in; notice that the tag bits of a tagged pointer
 are not influent.
 @end deftypefn
 
 
-@deftypefn {C Preprocessor Macro} ik_ulong IK_PAGE_INDEX_RANGE (@var{size})
+@deftypefn {C Preprocessor Macro} ikuword_t IK_PAGE_INDEX_RANGE (ikuword_t @var{size})
 Given a number of bytes @var{size}: evaluate to the difference between
 two page indexes representing a region big enough to hold @var{size}
 bytes.
 @end deftypefn
 
 
-@deftypefn {C Preprocessor Macro} ikptr IK_PAGE_POINTER_FROM_INDEX (ik_ulong @var{idx})
-Given a Vicare page index @var{idx}: return an untagged pointer to the
-first word of the page.
+@deftypefn {C Preprocessor Macro} ikptr_t IK_PAGE_POINTER_FROM_INDEX (ikuword_t @var{idx})
+Given a @value{PRJNAME} page index @var{idx}: return an untagged pointer
+to the first word of the page.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_MMAP_ALLOCATION_SIZE (ikuword_t @var{size})
+Given a memory @var{size} in bytes: compute the smallest number of bytes
+@cfunc{mmap} will allocate to hold it.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_MINIMUM_PAGES_NUMBER_FOR_SIZE (ikuword_t @var{size})
+Given a memory @var{size} in bytes: compute the smallest number of pages
+of size @code{IK_PAGESIZE} needed to hold it.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_MMAP_ALLOCATION_SIZE_FOR_PAGES (ikuword_t @var{npages})
+Given a number of @value{PRJNAME} pages: return the number of bytes
+@cfunc{mmap} allocates to hold them.
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_ALIGN_TO_NEXT_PAGE (ikuword_t @var{X})
+Given a pointer or tagged pointer @var{X} return an untagged pointer
+referencing the first byte in the page right after the one @var{X}
+belongs to.
+
+@example
+    page     page     page
+|--------|--------|--------|
+               ^   ^
+               X   |
+                  returned_value
+@end example
+@end deftypefn
+
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_ALIGN_TO_PREV_PAGE (ikuword_t @var{X})
+Given a pointer or tagged pointer @var{X}: return an untagged pointer
+referencing the first byte in the page @var{X} belongs to.
+
+@example
+   page     page     page
+|--------|--------|--------|
+          ^    ^
+          |    X
+ returned_value
+@end example
 @end deftypefn
 
 @c page
-@node objects memory ikpcb
+@node objects memory segments
+@subsection Logic memory segments
+
+
+@cindex @code{IK_SEGMENT_SIZE}, C preprocessor symbol
+@cindex @code{IK_SEGMENT_SHIFT}, C preprocessor symbol
+
+
+Some memory for use by the Scheme program is allocated through
+@cfunc{mmap} in blocks called @dfn{allocted segments}.  A segment's size
+is a fixed constant which must be defined as an exact multiple of the
+memory allocation granularity used by @cfunc{mmap}; we define the
+preprocessor macro @code{IK_SEGMENT_SIZE} to be such constant.
+
+On Unix platforms we expect @cfunc{mmap}'s allocation granularity to be
+4096; on Windows platforms, under Cygwin, we expect @cfunc{mmap}'s
+allocation granularity to be @code{2^16 = 65536 = 16 * IK_PAGESIZE}.  So
+the allocation granularity is not always equal to the system page size,
+and not always equal to @value{PRJNAME}'s page size.
+
+Remembering that we have defined the preprocessor constant
+@code{IK_CHUNK_SIZE} to be 4096, and assuming:
+
+@example
+1 mebibyte = 1 MiB = 2^20 bytes = 1024 * 1024 bytes
+           = 1048576 bytes
+@end example
+
+@noindent
+we want the segment size to be 4 MiB:
+
+@example
+4 MiB = 4 * 1024 * 1024 = 64 * 2^16 = 64 * 65536
+      = 4096 * 1024 = 4096 * (4096 / 4) = IK_CHUNK_SIZE * 1024
+      = 2^22 = 4194304 bytes
+      = #x400000
+      = #b10000000000000000000000
+@end example
+
+@noindent
+notice how many zero bits there are in the binary representation of 4
+MiB:
+
+@example
+(number->string (* 4096 1024) 2)
+@result{} #b10000000000000000000000
+;;   21098765432109876543210
+@end example
+
+@value{PRJNAME} distinguishes among @dfn{allocated segments} and
+@dfn{logic segments}:
+
+@itemize
+@item
+We assume that @cfunc{mmap} returns pointers such that: the pointer
+references the first byte of a platform's system page; the numeric
+address of the pointer is an exact multiple of @math{4096} (the
+@math{12} least significant bits are zero).
+
+@item
+We request to @cfunc{mmap} to allocate memory in sizes that are
+multiples of the segment size; this memory is composed of @dfn{allocated
+segments}.
+
+@item
+We define a @dfn{logic segment} as a region of memory whose size is
+equal to the segment size and whose starting address is an exact
+multiple of the segment size.  The segment size is 4 MiB so: a memory
+address referencing the first byte of a logic segment has the @math{22}
+least significant bits set to zero; for example: the memory starting at
+address @math{0} is part of the first logic segment.
+@end itemize
+
+@noindent
+so, typically, allocated segments are displaced from logic segments:
+
+@example
+       alloc segment  alloc segment  alloc segment
+-----|--------------|--------------|--------------|----------
+
+  logic segment  logic segment  logic segment  logic segment
+|--------------|--------------|--------------|--------------|
+
+ page page page page page page page page page page page page
+|----|----|----|----|----|----|----|----|----|----|----|----|
+@end example
+
+@noindent
+logic segments are absolute portions of the memory seen by a running
+system process.  It is natural to assign a zero--based index to each
+logic segment:
+
+@example
+  logic segment  logic segment  logic segment  logic segment
+|--------------|--------------|--------------|--------------|
+ ^              ^              ^              ^
+#x000000       #x400000       #x800000       #xC00000
+index 0        index 1        index 2        index 3
+@end example
+
+
+@code{IK_SEGMENT_SHIFT} is the number of bits to right--shift a pointer
+or tagged pointer to obtain the index of the logic segment containing
+the pointer itself; it is the number for which:
+
+@example
+IK_SEGMENT_SIZE >> IK_SEGMENT_SHIFT = 1
+2^IK_SEGMENT_SHIFT = IK_SEGMENT_SIZE
+@end example
+
+When we want to determine the page index and logic segement index of the
+pointer @var{X}:
+
+@example
+  logic segment  logic segment  logic segment
+|--------------|--------------|--------------|
+ page page page page page page page page page
+|----|----|----|----|----|----|----|----|----|
+                       ^
+                       X
+|----|----|----|----|----|----|----|----|----| page indexes
+  P   P+1  P+2  P+3  P+4  P+5  P+6  P+7  P+7
+
+|--------------|--------------|--------------| segment indexes
+       S             S+1            S+2
+@end example
+
+@noindent
+we do:
+
+@example
+X >> IK_PAGESHIFT     == IK_PAGE_INDEX(X)    == P+4
+X >> IK_SEGMENT_SHIFT == IK_SEGMENT_INDEX(X) == S+1
+@end example
+
+
+@deftypefn {C Preprocessor Macro} ikuword_t IK_SEGMENT_INDEX (ikuword_t @var{X})
+Given a tagged or untagged pointer @var{X}: return the index of the
+logic segment it belongs to.
+@end deftypefn
+
+@c page
+@node objects memory pcb
 @subsection Interesting @pcb{} fields
 
 
 In this section we discuss some private fields of the C data structure
-@code{ikpcb_t} related to memory allocation and garbage collection.
+@ikpcb{} related to memory allocation and garbage collection.
 
 @table @code
-@item ikptr memory_base
-@itemx ikptr memory_end
+@item ikptr_t memory_base
+@itemx ikptr_t memory_end
 Untagged pointers updated (if needed) after every memory mapped
 allocation to be lower and greater than all the memory used by Scheme
 programs.  They are used for garbage collection purposes: every Vicare
@@ -648,7 +887,7 @@ the region delimited by @code{memory_base} and @code{memory_end}, it is
 marked as unused and pure.
 
 @item uint32_t * dirty_vector_base
-@itemx ikptr dirty_vector
+@itemx ikptr_t dirty_vector
 The dirty vector contains a slot for every Vicare page in the region of
 memory delimited by the fields @code{memory_base} and @code{memory_end};
 it is used to keep track of pages that were mutated at runtime; it
@@ -982,18 +1221,25 @@ down the collection time a bit.
 
 The garbage collector considers an object ``in use'' if at least one
 reference to it is reachable from the roots of the garbage collection;
-if an @ikptr{} reference exists only in a @acronym{CPU} register or on
-the C language stack, or on the C language heap out of segments
-allocated for Scheme: the garbage collector will not see it.  This
-allows to avoid scanning the full process' stack for references to
-values, but imposes care when writing C language code.
+if an @ikptr{} reference exists only in a @cpu{} register or on the C
+language stack, or on the C language heap out of segments allocated for
+Scheme: the garbage collector will not see it.  This allows to avoid
+scanning the full process' stack for references to values, but imposes
+care when writing C language code.
 
 Whenever we call @cfunc{ik_safe_alloc} or a function relying on it for
 memory allocation: a garbage collection may run and Scheme objects may
 be moved from their location in memory to another memory segment; this
-renders invalid all the pointers in the @acronym{CPU} registers, on the
-C stack and the C heap.  Notice that this includes the arguments to C
-functions called from Scheme through the macro @func{foreign-call}.
+makes invalid all the pointers in the @cpu{} registers, on the C stack
+and the C heap.  Notice that this includes the arguments to C functions
+called from Scheme through the macro @func{foreign-call}.
+
+If an old Scheme object contains a reference to a new Scheme object: we
+have to inform the garbage collector about this.
+
+Whenever we allocate a new Scheme object and store in one of its fields
+a reference to a previously allocated Scheme object: we have to
+register this event in the dirty vector.
 
 We must write C code with the following constraints:
 
