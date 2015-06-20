@@ -1883,8 +1883,8 @@ ik_register_to_avoid_collecting (ikptr s_obj, ikpcb * pcb)
       pcb->root0 = &s_obj;
       {
 	ikptr	s_pair = ika_pair_alloc(pcb);
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_CAR(s_pair) = s_obj;
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_CDR(s_pair) = pcb->not_to_be_collected;
 	pcb->not_to_be_collected = s_pair;
       }

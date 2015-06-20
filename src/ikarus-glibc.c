@@ -7,7 +7,7 @@
 
 	Interface to GNU C Library functions.
 
-  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -237,13 +237,21 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
     pcb->root1 = &s_spine;
     {
       for (i=0; arry[i].if_index;) {
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	IK_ASS(IK_CAR(s_spine), ika_pair_alloc(pcb));
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, IK_CAR(s_spine));
-	IK_CAAR(s_spine) = IK_FIX(arry[i].if_index);
-	IK_ASS(IK_CDAR(s_spine), ika_bytevector_from_cstring(pcb, arry[i].if_name));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
+	{
+	  ikptr	s_entry = IK_CAR(s_spine);
+	  pcb->root2 = &s_entry;
+	  {
+	    IK_CAR(s_entry) = IK_FIX(arry[i].if_index);
+	    IK_ASS(IK_CDR(s_entry), ika_bytevector_from_cstring(pcb, arry[i].if_name));
+	    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_entry);
+	  }
+	  pcb->root2 = NULL;
+	}
 	if (arry[++i].if_index) {
 	  IK_ASS(IK_CDR(s_spine), ika_pair_alloc(pcb));
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_spine);
 	  s_spine = IK_CDR(s_spine);
 	} else {
 	  IK_CDR(s_spine) = IK_NULL_OBJECT;
@@ -806,10 +814,10 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
   int           sgn;
   double        Y   = lgamma_r(X, &sgn);
   ikptr         s_pair = ika_pair_alloc(pcb);
-  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
   pcb->root0 = &s_pair;
   {
     IK_CAR(s_pair) = iku_flonum_alloc(pcb, Y);
+    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
     IK_CDR(s_pair) = IK_FIX(sgn);
   }
   pcb->root0 = NULL;
@@ -1006,10 +1014,10 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
 	s_retval = ika_pointer_alloc(pcb, (ik_ulong)rex);
       } else {
 	s_retval	  = ika_pair_alloc(pcb);
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_retval);
 	error_message_len = regerror(rv, rex, NULL, 0);
 	IK_CAR(s_retval)  = IK_FIX(rv);
 	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (long)error_message_len-1));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_retval);
 	error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_retval));
 	regerror(rv, rex, error_message, error_message_len);
 	regfree(rex);
@@ -1063,7 +1071,6 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
       size_t      i;
       ikptr       s_pair = IK_VOID_OBJECT;
       ikptr       s_match_vector = ika_vector_alloc_and_init(pcb, 1+nmatch);
-      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_match_vector);
       pcb->root0 = &s_match_vector;
       pcb->root1 = &s_pair;
       {
@@ -1074,6 +1081,7 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
           IK_CAR(s_pair) = IK_FIX(match[i].rm_so);
           IK_CDR(s_pair) = IK_FIX(match[i].rm_eo);
           IK_ITEM(s_match_vector, i) = s_pair;
+	  IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_match_vector);
         }
       }
       pcb->root1 = NULL;
@@ -1100,9 +1108,9 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
 	   But  I want  to  be supercareful  until  I really  understand
 	   everything about  garbage collection.  (Marco Maggi;  Sun Dec
 	   15, 2013) */
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	IK_CAR(s_pair) = s_error_code;
 	IK_CDR(s_pair) = s_error_msg;
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
       }
       pcb->root0 = NULL;
       return s_pair;
@@ -1151,11 +1159,11 @@ ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb * pcb)
   rv = wordexp(pattern, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
     s_words    = ika_vector_alloc_and_init(pcb, (long)W.we_wordc);
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_words);
     pcb->root0 = &s_words;
     {
       for (i=0; i<W.we_wordc; ++i) {
         IK_ASS(IK_ITEM(s_words, i), ika_bytevector_from_cstring(pcb, W.we_wordv[i]));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_words);
       }
     }
     pcb->root0 = NULL;

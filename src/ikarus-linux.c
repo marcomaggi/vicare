@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -409,23 +409,38 @@ ikrt_linux_read_signalfd_siginfo (ikptr s_fd, ikptr s_info, ikpcb * pcb)
   if (-1 != rv) {
     pcb->root0 = &s_info;
     {
-      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  0), ika_integer_from_uint32(pcb, info.ssi_signo));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  1), ika_integer_from_sint32(pcb, info.ssi_errno));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  2), ika_integer_from_sint32(pcb, info.ssi_code));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  3), ika_integer_from_uint32(pcb, info.ssi_pid));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  4), ika_integer_from_uint32(pcb, info.ssi_uid));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  5), ika_integer_from_sint32(pcb, info.ssi_fd));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  6), ika_integer_from_uint32(pcb, info.ssi_tid));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  7), ika_integer_from_uint32(pcb, info.ssi_band));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  8), ika_integer_from_uint32(pcb, info.ssi_overrun));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info,  9), ika_integer_from_uint32(pcb, info.ssi_trapno));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info, 10), ika_integer_from_sint32(pcb, info.ssi_status));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info, 11), ika_integer_from_sint32(pcb, info.ssi_int));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info, 12), ika_integer_from_uint64(pcb, info.ssi_ptr));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info, 13), ika_integer_from_uint64(pcb, info.ssi_utime));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info, 14), ika_integer_from_uint64(pcb, info.ssi_stime));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
       IK_ASS(IK_FIELD(s_info, 15), ika_integer_from_uint64(pcb, info.ssi_addr));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_info);
     }
     pcb->root0 = NULL;
     return IK_FIX(0);
@@ -489,15 +504,18 @@ ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old,
     if (IK_FALSE_OBJECT != s_old) {
       pcb->root0 = &s_old;
       {
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old);
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 0),
 	       ika_integer_from_long(pcb, (long)old.it_interval.tv_sec));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old);
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 0), 1),
 	       ika_integer_from_long(pcb, old.it_interval.tv_nsec));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old);
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 1), 0),
 	       ika_integer_from_long(pcb, old.it_value.tv_sec));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old);
 	IK_ASS(IK_FIELD(IK_FIELD(s_old, 1), 1),
 	       ika_integer_from_long(pcb, old.it_value.tv_nsec));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old);
       }
       pcb->root0 = NULL;
     }
@@ -526,15 +544,18 @@ ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
   if (0 == rv) {
     pcb->root0 = &s_curr;
     {
-      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_curr);
       IK_ASS(IK_FIELD(IK_FIELD(s_curr, 0), 0),
 	     ika_integer_from_long(pcb, (long)curr.it_interval.tv_sec));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_curr);
       IK_ASS(IK_FIELD(IK_FIELD(s_curr, 0), 1),
 	     ika_integer_from_long(pcb, curr.it_interval.tv_nsec));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_curr);
       IK_ASS(IK_FIELD(IK_FIELD(s_curr, 1), 0),
 	     ika_integer_from_long(pcb, curr.it_value.tv_sec));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_curr);
       IK_ASS(IK_FIELD(IK_FIELD(s_curr, 1), 1),
 	     ika_integer_from_long(pcb, curr.it_value.tv_nsec));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_curr);
     }
     pcb->root0 = NULL;
     return IK_FIX(0);
@@ -606,18 +627,20 @@ ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
     case 4:
       pcb->root0 = &s_old_rlim;
       {
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
 	IK_ASS(IK_FIELD(s_old_rlim,0),ika_integer_from_uint32(pcb,old_rlim.rlim_cur));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
 	IK_ASS(IK_FIELD(s_old_rlim,1),ika_integer_from_uint32(pcb,old_rlim.rlim_max));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
       }
       pcb->root0 = NULL;
       break;
     case 8:
       pcb->root0 = &s_old_rlim;
       {
-	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
 	IK_ASS(IK_FIELD(s_old_rlim,0),ika_integer_from_uint64(pcb,old_rlim.rlim_cur));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
 	IK_ASS(IK_FIELD(s_old_rlim,1),ika_integer_from_uint64(pcb,old_rlim.rlim_max));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_old_rlim);
       }
       pcb->root0 = NULL;
       break;
@@ -732,16 +755,21 @@ ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
     struct inotify_event *ev = (void*)buffer;
     pcb->root0 = &s_event;
     {
-      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       IK_ASS(IK_FIELD(s_event,0), ika_integer_from_int(pcb, ev->wd));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       IK_ASS(IK_FIELD(s_event,1), ika_integer_from_uint32(pcb, ev->mask));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       IK_ASS(IK_FIELD(s_event,2), ika_integer_from_uint32(pcb, ev->cookie));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       IK_ASS(IK_FIELD(s_event,3), ika_integer_from_uint32(pcb, ev->len));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       if (ev->len) {
 	IK_ASS(IK_FIELD(s_event,4),
 	       ika_bytevector_from_cstring_len(pcb, ev->name, (size_t)ev->len));
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       } else {
 	IK_ASS(IK_FIELD(s_event,4), IK_FALSE_OBJECT);
+	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_event);
       }
     }
     pcb->root0 = NULL;
@@ -869,11 +897,12 @@ ikrt_linux_ether_line (ikptr s_line_str, ikptr s_line_len, ikpcb * pcb)
   rv = ether_line(line, &addr, hostname);
   if (0 == rv) {
     ikptr	s_pair = ika_pair_alloc(pcb);
-    IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
     pcb->root0 = &s_pair;
     {
       IK_ASS(IK_CAR(s_pair), ika_bytevector_from_memory_block(pcb, &addr, sizeof(struct ether_addr)));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
       IK_ASS(IK_CDR(s_pair), ika_bytevector_from_cstring(pcb, hostname));
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
     }
     pcb->root0 = NULL;
     return s_pair;

@@ -213,7 +213,8 @@
  *    IK_PAGESIZE >> IK_PAGESHIFT = 1
  *    2^IK_PAGESHIFT = IK_PAGESIZE
  *
- * if IK_PAGESIZE is 4096, the value of IK_PAGESHIFT is 12; so we have:
+ * if IK_PAGESIZE is  4096, the value of IK_PAGESHIFT is  12; so for the
+ * example sizes 4000, 8000, 10000 we have:
  *
  *    0 * 4096 <=  4000 < 1 * 4096		 4000 >> 12 = 0
  *    1 * 4096 <=  8000 < 2 * 4096		 8000 >> 12 = 1
@@ -227,8 +228,8 @@
 /* Given the  tagged or untagged pointer  X as "ikptr_t": evaluate  to the
    index of  the memory page  it is  in; notice that  the tag bits  of a
    tagged pointer are not influent. */
-#define IK_PAGE_INDEX(X)	(((ik_ulong)(X)) >> IK_PAGESHIFT)
-/* Given  a  number  of  bytes  SIZE  as  "ik_ulong":  evaluate  to  the
+#define IK_PAGE_INDEX(X)	(((ikuword_t)(X)) >> IK_PAGESHIFT)
+/* Given  a  number  of  bytes  SIZE as  "ikuword_t":  evaluate  to  the
    difference between two page indexes  representing a region big enough
    to hold SIZE bytes. */
 #define IK_PAGE_INDEX_RANGE(SIZE)	IK_PAGE_INDEX(SIZE)
@@ -236,22 +237,22 @@
 /* Given a  Vicare page index: return  an untagged pointer to  the first
    word of the page. */
 #define IK_PAGE_POINTER_FROM_INDEX(IDX)	\
-  ((ikptr_t)(((ik_ulong)(IDX)) << IK_PAGESHIFT))
+  ((ikptr_t)(((ikuword_t)(IDX)) << IK_PAGESHIFT))
 
-/* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
+/* Given a  memory SIZE  in bytes as  "ikuword_t": compute  the smallest
    number of bytes "mmap()" will allocate to hold it. */
 #define IK_MMAP_ALLOCATION_SIZE(SIZE) \
   IK_SIZE_TO_GRANULARITY_SIZE((SIZE), IK_MMAP_ALLOCATION_GRANULARITY)
 
-/* Given  a memory  SIZE in  bytes as  "ik_ulong": compute  the smallest
+/* Given a  memory SIZE  in bytes as  "ikuword_t": compute  the smallest
    number of pages of size IK_PAGESIZE needed to hold it. */
 #define IK_MINIMUM_PAGES_NUMBER_FOR_SIZE(SIZE) \
   (IK_SIZE_TO_GRANULARITY_SIZE((SIZE),IK_PAGESIZE) / IK_PAGESIZE)
 
-/* Given a  number of Vicare pages  as "ik_ulong": return the  number of
+/* Given a number  of Vicare pages as "ikuword_t": return  the number of
    bytes "mmap()" allocates to hold them. */
 #define IK_MMAP_ALLOCATION_SIZE_FOR_PAGES(NPAGES) \
-  IK_MMAP_ALLOCATION_SIZE(((ik_ulong)(NPAGES)) * IK_PAGESIZE)
+  IK_MMAP_ALLOCATION_SIZE(((ikuword_t)(NPAGES)) * IK_PAGESIZE)
 
 /* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
  * referencing the first byte in the  page right after the one X belongs
@@ -264,7 +265,7 @@
  *                     returned_value
  */
 #define IK_ALIGN_TO_NEXT_PAGE(X) \
-  ((((ik_ulong)(X) + IK_PAGESIZE - 1) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+  (((((ikuword_t)(X)) + IK_PAGESIZE - 1) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
 /* Given  a pointer  or  tagged  pointer X  return  an untagged  pointer
  * referencing the first byte in the page X belongs to.
@@ -276,7 +277,7 @@
  *    returned_value
  */
 #define IK_ALIGN_TO_PREV_PAGE(X) \
-  ((((ik_ulong)(X)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
+  ((((ikuword_t)(X)) >> IK_PAGESHIFT) << IK_PAGESHIFT)
 
 /* *** DISCUSSION ABOUT "IK_SEGMENT_SIZE" and "IK_SEGMENT_SHIFT" ***
  *
@@ -324,7 +325,7 @@
  *
  * so, typically, allocated segments are displaced from logic segments:
  *
- *           alloc segment  alloc segment  alloc segment
+ *            alloc segment  alloc segment  alloc segment
  *    -----|--------------|--------------|--------------|----------
  *      logic segment  logic segment  logic segment  logic segment
  *    |--------------|--------------|--------------|--------------|
@@ -348,7 +349,8 @@
  *    IK_SEGMENT_SIZE >> IK_SEGMENT_SHIFT = 1
  *    2^IK_SEGMENT_SHIFT = IK_SEGMENT_SIZE
  *
- * scenario:
+ * When we want to determine the  page index and logic segement index of
+ * the pointer X:
  *
  *      logic segment  logic segment  logic segment
  *    |--------------|--------------|--------------|
@@ -359,10 +361,10 @@
  *    |----|----|----|----|----|----|----|----|----| page indexes
  *      P   P+1  P+2  P+3  P+4  P+5  P+6  P+7  P+7
  *
- *    |----|----|----|----|----|----|----|----|----| segment indexes
- *      S             S+1            S+2
+ *    |--------------|--------------|--------------| segment indexes
+ *           S             S+1            S+2
  *
- *  we have:
+ * we do:
  *
  *     X >> IK_PAGESHIFT     == IK_PAGE_INDEX(X)    == P+4
  *     X >> IK_SEGMENT_SHIFT == IK_SEGMENT_INDEX(X) == S+1
@@ -375,7 +377,7 @@
 #  define IK_SEGMENT_SIZE	(IK_CHUNK_SIZE * IK_NUMBER_OF_PAGES_PER_SEGMENT)
 #  define IK_SEGMENT_SHIFT	22 /* (IK_PAGESHIFT + IK_PAGESHIFT - 2) */
 #endif
-#define IK_SEGMENT_INDEX(x)	(((ik_ulong)(x)) >> IK_SEGMENT_SHIFT)
+#define IK_SEGMENT_INDEX(X)	(((ikuword_t)(X)) >> IK_SEGMENT_SHIFT)
 
 /* Slot size for both the PCB's dirty vector and the segments vector. */
 #define IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT	\
@@ -387,7 +389,7 @@
 
    NOTE We  double the  heap size  on 64-bit  platforms because  of some
    criterion I am not aware of.  (Marco Maggi; Thu Dec 12, 2013) */
-#define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((wordsize==4)?1:2))
+#define IK_HEAPSIZE		(IK_SEGMENT_SIZE * ((4==SIZEOF_VOID_P)?1:2))
 /* When we  need to perform an  unsafe Scheme object allocation  and the
    Scheme heap is nearly full: the old heap is stored away in the PCB; a
    new memory block  of at least this size is  allocated and becomes the
