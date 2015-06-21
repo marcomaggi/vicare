@@ -39,7 +39,7 @@ DEBUG_VERIFY_BIGNUM (ikptr x, char* caller)
 /* Validate the bignum X, which must be a tagged reference. */
 {
   ikptr		first_word;
-  long		limb_count;
+  iksword_t		limb_count;
   int		is_positive;
   mp_limb_t	last_limb;
   if (IK_TAGOF(x) != vector_tag)
@@ -98,9 +98,9 @@ ikrt_even_bn (ikptr x)
 ikptr
 ikrt_fxfxplus (ikptr x, ikptr y, ikpcb* pcb)
 {
-  long	n1 = IK_UNFIX(x);
-  long	n2 = IK_UNFIX(y);
-  long	R  = n1 + n2;
+  iksword_t	n1 = IK_UNFIX(x);
+  iksword_t	n2 = IK_UNFIX(y);
+  iksword_t	R  = n1 + n2;
   ikptr	Q  = IK_FIX(R);
   if (R == IK_UNFIX(Q)) {
     return Q;
@@ -124,8 +124,8 @@ ikrt_fxbnplus (ikptr x, ikptr y, ikpcb* pcb)
     return y ;
   }
   ikptr	first_word	= IK_REF(y, -vector_tag);
-  long	limb_count	= IK_BNFST_LIMB_COUNT(first_word);
-  long	intx		= IK_UNFIX(x);
+  iksword_t	limb_count	= IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t	intx		= IK_UNFIX(x);
   if (intx > 0) {
     if (IK_BNFST_POSITIVE(first_word)) {
       /* positive fx + positive bn = even bigger positive */
@@ -152,7 +152,7 @@ ikrt_fxbnplus (ikptr x, ikptr y, ikpcb* pcb)
       /* positive fx + negative bn = smaller negative bn */
       ikptr	r;
       mp_limb_t borrow;
-      long	result_size;
+      iksword_t	result_size;
       pcb->root0 = &y;
       {
 	r = IKA_BIGNUM_ALLOC(pcb, limb_count);
@@ -179,7 +179,7 @@ ikrt_fxbnplus (ikptr x, ikptr y, ikpcb* pcb)
       /* negative fx + positive bn = smaller positive fx or bn */
       ikptr	r;
       mp_limb_t borrow;
-      long	result_size;
+      iksword_t	result_size;
       pcb->root0 = &y;
       {
 	r = IKA_BIGNUM_ALLOC(pcb, limb_count);
@@ -234,16 +234,16 @@ ikrt_bnbnplus (ikptr x, ikptr y, ikpcb* pcb)
 {
   ikuword_t	xfst   = (ikuword_t)IK_BIGNUM_FIRST(x);
   ikuword_t	yfst   = (ikuword_t)IK_BIGNUM_FIRST(y);
-  long		xsign  = xfst & bignum_sign_mask;
-  long		ysign  = yfst & bignum_sign_mask;
-  long		xlimbs = xfst >> bignum_nlimbs_shift;
-  long		ylimbs = yfst >> bignum_nlimbs_shift;
+  iksword_t		xsign  = xfst & bignum_sign_mask;
+  iksword_t		ysign  = yfst & bignum_sign_mask;
+  iksword_t		xlimbs = xfst >> bignum_nlimbs_shift;
+  iksword_t		ylimbs = yfst >> bignum_nlimbs_shift;
   if (xsign == ysign) { /* bignums of equal sign */
     ikptr	res;	/* return value */
     ikptr	bn1;	/* bignum with greater number of limbs */
     ikptr	bn2;	/* bignum with lesser number of limbs */
-    long	nlimb1;	/* number of limbs in BN1 */
-    long	nlimb2;	/* number of limbs in BN2 */
+    iksword_t	nlimb1;	/* number of limbs in BN1 */
+    iksword_t	nlimb2;	/* number of limbs in BN2 */
     mp_limb_t	carry;
     if (xlimbs > ylimbs) {
       nlimb1 = xlimbs;
@@ -278,10 +278,10 @@ ikrt_bnbnplus (ikptr x, ikptr y, ikpcb* pcb)
     ikptr	res;				/* the return value */
     ikptr	bn1		= x;
     ikptr	bn2		= y;
-    long	nlimb1		= xlimbs;
-    long	nlimb2		= ylimbs;
-    long	len;
-    long	result_sign	= xsign;
+    iksword_t	nlimb1		= xlimbs;
+    iksword_t	nlimb2		= ylimbs;
+    iksword_t	len;
+    iksword_t	result_sign	= xsign;
     mp_limb_t	burrow;
     /* If the limbs are equal ther result is zero. */
     while ((xlimbs == ylimbs) && (IK_LIMB(x, xlimbs - 1) == IK_LIMB(y, xlimbs - 1))) {
@@ -357,9 +357,9 @@ ikrt_bnbnplus (ikptr x, ikptr y, ikpcb* pcb)
 ikptr
 ikrt_fxfxminus (ikptr x, ikptr y, ikpcb* pcb)
 {
-  long n1 = IK_UNFIX(x);
-  long n2 = IK_UNFIX(y);
-  long r = n1 - n2;
+  iksword_t n1 = IK_UNFIX(x);
+  iksword_t n2 = IK_UNFIX(y);
+  iksword_t r = n1 - n2;
   if (r >= 0) {
     if (((ikuword_t)r) <= most_positive_fixnum) {
       return IK_FIX(r);
@@ -392,12 +392,12 @@ ikrt_fxbnminus (ikptr x, ikptr y, ikpcb* pcb)
     return ikrt_bnnegate(y, pcb);
   }
   ikptr	first_word	= IK_REF(y, -vector_tag);
-  long	limb_count	= IK_BNFST_LIMB_COUNT(first_word);
-  long	intx		= IK_UNFIX(x);
+  iksword_t	limb_count	= IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t	intx		= IK_UNFIX(x);
   if (intx > 0) {
     if (IK_BNFST_NEGATIVE(first_word)) {
       ikptr	r;
-      long	carry;
+      iksword_t	carry;
       /* positive fx - negative bn = positive bn */
       pcb->root0 = &y;
       {
@@ -417,8 +417,8 @@ ikrt_fxbnminus (ikptr x, ikptr y, ikpcb* pcb)
       }
     } else {
       ikptr	r;
-      long	borrow;
-      long	result_size;
+      iksword_t	borrow;
+      iksword_t	result_size;
       /* positive fx - positive bn = smaller negative bn/fx */
       pcb->root0 = &y;
       {
@@ -452,14 +452,14 @@ ikrt_fxbnminus (ikptr x, ikptr y, ikpcb* pcb)
       pcb->root0 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+limb_count*wordsize));
       pcb->root0 = 0;
-      long borrow =
+      iksword_t borrow =
 	mpn_sub_1((mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
 		  (mp_limb_t*)(ikuword_t)(y - vector_tag + disp_bignum_data),
 		  limb_count,
 		  - intx);
       if (borrow)
 	ik_abort("BUG in borrow4");
-      long result_size =
+      iksword_t result_size =
 	(IK_REF(r, disp_bignum_data + (limb_count-1)*wordsize) == 0)
 	? (limb_count - 1)
 	: limb_count;
@@ -482,7 +482,7 @@ ikrt_fxbnminus (ikptr x, ikptr y, ikpcb* pcb)
       pcb->root0 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+(limb_count+1)*wordsize));
       pcb->root0 = 0;
-      long carry =
+      iksword_t carry =
 	mpn_add_1((mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
 		  (mp_limb_t*)(ikuword_t)(y - vector_tag + disp_bignum_data),
 		  limb_count,
@@ -509,15 +509,15 @@ ikrt_bnfxminus (ikptr x, ikptr y, ikpcb* pcb)
 {
   if (y == 0) { return x; }
   ikptr first_word = IK_REF(x, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
-  long inty = IK_UNFIX(y);
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t inty = IK_UNFIX(y);
   if (inty < 0) {
     if (!IK_BNFST_NEGATIVE(first_word)) {
       /* - negative fx + positive bn = positive bn */
       pcb->root0 = &x;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+(limb_count+1)*wordsize));
       pcb->root0 = 0;
-      long carry =
+      iksword_t carry =
 	mpn_add_1((mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
 		  (mp_limb_t*)(ikuword_t)(x - vector_tag + disp_bignum_data),
 		  limb_count,
@@ -542,14 +542,14 @@ ikrt_bnfxminus (ikptr x, ikptr y, ikpcb* pcb)
       pcb->root0 = &x;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+limb_count*wordsize));
       pcb->root0 = 0;
-      long borrow =
+      iksword_t borrow =
 	mpn_sub_1((mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
 		  (mp_limb_t*)(ikuword_t)(x - vector_tag + disp_bignum_data),
 		  limb_count,
 		  -inty);
       if (borrow)
 	ik_abort("BUG in borrow5\n");
-      long result_size =
+      iksword_t result_size =
 	(IK_REF(r, disp_bignum_data + (limb_count-1)*wordsize))
 	? limb_count
 	: (limb_count - 1);
@@ -575,14 +575,14 @@ ikrt_bnfxminus (ikptr x, ikptr y, ikpcb* pcb)
       pcb->root0 = &x;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+limb_count*wordsize));
       pcb->root0 = 0;
-      long borrow =
+      iksword_t borrow =
 	mpn_sub_1((mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
 		  (mp_limb_t*)(ikuword_t)(x - vector_tag + disp_bignum_data),
 		  limb_count,
 		  inty);
       if (borrow)
 	ik_abort("BUG in borrow6\n");
-      long result_size =
+      iksword_t result_size =
 	(IK_REF(r, disp_bignum_data + (limb_count-1)*wordsize) == 0)
 	? (limb_count - 1)
 	: limb_count;
@@ -605,7 +605,7 @@ ikrt_bnfxminus (ikptr x, ikptr y, ikpcb* pcb)
       pcb->root0 = &x;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data+(limb_count+1)*wordsize));
       pcb->root0 = 0;
-      long carry =
+      iksword_t carry =
 	mpn_add_1((mp_limb_t*)(ikuword_t)(r+disp_bignum_data),
 		  (mp_limb_t*)(ikuword_t)(x - vector_tag + disp_bignum_data),
 		  limb_count,
@@ -633,12 +633,12 @@ ikrt_bnbnminus(ikptr x, ikptr y, ikpcb* pcb)
   if (x == y) { return 0; }
   ikuword_t xfst = (ikuword_t)IK_REF(x, -vector_tag);
   ikuword_t yfst = (ikuword_t)IK_REF(y, -vector_tag);
-  long xsign = xfst & bignum_sign_mask;
-  long ysign = yfst & bignum_sign_mask;
-  long xlimbs = xfst >> bignum_nlimbs_shift;
-  long ylimbs = yfst >> bignum_nlimbs_shift;
+  iksword_t xsign = xfst & bignum_sign_mask;
+  iksword_t ysign = yfst & bignum_sign_mask;
+  iksword_t xlimbs = xfst >> bignum_nlimbs_shift;
+  iksword_t ylimbs = yfst >> bignum_nlimbs_shift;
   if (xsign != ysign) {
-    long n1,n2;
+    iksword_t n1,n2;
     ikptr s1,s2;
     if (xlimbs >= ylimbs) {
       n1 = xlimbs; n2 = ylimbs; s1 = x; s2 = y;
@@ -682,8 +682,8 @@ ikrt_bnbnminus(ikptr x, ikptr y, ikpcb* pcb)
       ylimbs = xlimbs;
     }
     ikptr s1=x, s2=y;
-    long n1=xlimbs, n2=ylimbs;
-    long result_sign = xsign;
+    iksword_t n1=xlimbs, n2=ylimbs;
+    iksword_t result_sign = xsign;
     /* |x| != |y| */
     if (xlimbs <= ylimbs) {
       if (xlimbs == ylimbs) {
@@ -706,7 +706,7 @@ ikrt_bnbnminus(ikptr x, ikptr y, ikpcb* pcb)
     bzero((void*)(res+disp_bignum_data), n1*wordsize);
     pcb->root0 = 0;
     pcb->root1 = 0;
-    long burrow =
+    iksword_t burrow =
       mpn_sub((mp_limb_t*)(ikuword_t)(res + disp_bignum_data),
 	      (mp_limb_t*)(ikuword_t)(s1 - vector_tag + disp_bignum_data),
 	      n1,
@@ -714,7 +714,7 @@ ikrt_bnbnminus(ikptr x, ikptr y, ikpcb* pcb)
 	      n2);
     if (burrow)
       ik_abort("BUG: burrow error in bnbn-");
-    long len = n1;
+    iksword_t len = n1;
     while(IK_REF(res, disp_bignum_data + (len-1)*wordsize) == 0) {
       len--;
       if (len == 0) {
@@ -755,7 +755,7 @@ ikptr
 ikrt_bnnegate (ikptr x, ikpcb* pcb)
 {
   ikptr first_word = IK_REF(x, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
   if (limb_count == 1) {
     if (! IK_BNFST_NEGATIVE(first_word)) {
       /* positive bignum */
@@ -783,12 +783,12 @@ ikrt_bnnegate (ikptr x, ikpcb* pcb)
 
 ikptr
 ikrt_fxfxmult(ikptr x, ikptr y, ikpcb* pcb) {
-  long n1 = IK_UNFIX(x);
-  long n2 = IK_UNFIX(y);
+  iksword_t n1 = IK_UNFIX(x);
+  iksword_t n2 = IK_UNFIX(y);
   mp_limb_t lo = 0;
   mp_limb_t s1 = n1;
   mp_limb_t s2 = n2;
-  long sign = 0;
+  iksword_t sign = 0;
   if (n1 < 0) {
     s1 = -n1;
     sign = 1 - sign;
@@ -828,7 +828,7 @@ ikrt_fxfxmult(ikptr x, ikptr y, ikpcb* pcb) {
 }
 
 ikptr
-ik_normalize_bignum(long limbs, int sign, ikptr r) {
+ik_normalize_bignum(iksword_t limbs, int sign, ikptr r) {
   while(IK_REF(r, disp_bignum_data + (limbs-1)*wordsize) == 0) {
     limbs--;
     if (limbs == 0) { return 0;}
@@ -852,11 +852,11 @@ ik_normalize_bignum(long limbs, int sign, ikptr r) {
 
 ikptr
 ikrt_fxbnmult(ikptr x, ikptr y, ikpcb* pcb) {
-  long n2 = IK_UNFIX(x);
+  iksword_t n2 = IK_UNFIX(x);
   if (n2 == 0) { return 0; }
   mp_limb_t s2 = (n2>0) ? n2 : (- n2);
   ikptr first_word = IK_REF(y, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
   pcb->root0 = &y;
   ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + (limb_count+1)*wordsize));
   pcb->root0 = 0;
@@ -865,7 +865,7 @@ ikrt_fxbnmult(ikptr x, ikptr y, ikpcb* pcb) {
 			   limb_count,
 			   s2);
   IK_REF(r, disp_bignum_data + limb_count * wordsize) = (ikptr)hi;
-  long sign =
+  iksword_t sign =
     ((n2 > 0) ?
      (bignum_sign_mask & (iksword_t)first_word) :
      ((1 << bignum_sign_shift) - (bignum_sign_mask&(iksword_t)first_word)));
@@ -874,11 +874,11 @@ ikrt_fxbnmult(ikptr x, ikptr y, ikpcb* pcb) {
 
 ikptr
 ikrt_bnbnmult(ikptr x, ikptr y, ikpcb* pcb) {
-  long f1 = (iksword_t)IK_REF(x, -vector_tag);
-  long f2 = (iksword_t)IK_REF(y, -vector_tag);
-  long n1 = IK_BNFST_LIMB_COUNT(f1);
-  long n2 = IK_BNFST_LIMB_COUNT(f2);
-  long nr = n1 + n2;
+  iksword_t f1 = (iksword_t)IK_REF(x, -vector_tag);
+  iksword_t f2 = (iksword_t)IK_REF(y, -vector_tag);
+  iksword_t n1 = IK_BNFST_LIMB_COUNT(f1);
+  iksword_t n2 = IK_BNFST_LIMB_COUNT(f2);
+  iksword_t nr = n1 + n2;
   pcb->root0 = &x;
   pcb->root1 = &y;
   ikptr bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + nr*wordsize));
@@ -897,7 +897,7 @@ ikrt_bnbnmult(ikptr x, ikptr y, ikpcb* pcb) {
 	    (mp_limb_t*)(ikuword_t)(x-vector_tag+disp_bignum_data),
 	    n1);
   }
-  long sign =
+  iksword_t sign =
     ((bignum_sign_mask & f1) ?
      ((1 << bignum_sign_shift) - (bignum_sign_mask & f2)) :
      (bignum_sign_mask & f2));
@@ -914,14 +914,14 @@ ikrt_bnbncomp(ikptr bn1, ikptr bn2) {
   if (IK_BNFST_NEGATIVE(f1)) {
     if (IK_BNFST_NEGATIVE(f2)) {
       /* both negative */
-      long n1 = ((mp_limb_t) f1) >> bignum_nlimbs_shift;
-      long n2 = ((mp_limb_t) f2) >> bignum_nlimbs_shift;
+      iksword_t n1 = ((mp_limb_t) f1) >> bignum_nlimbs_shift;
+      iksword_t n2 = ((mp_limb_t) f2) >> bignum_nlimbs_shift;
       if (n1 < n2) {
 	return IK_FIX(1);
       } else if (n1 > n2) {
 	return IK_FIX(-1);
       } else {
-	long i;
+	iksword_t i;
 	for(i=(n1-1); i>=0; i--) {
 	  mp_limb_t t1 =
 	    (mp_limb_t) IK_REF(bn1,disp_bignum_data-vector_tag+i*wordsize);
@@ -945,14 +945,14 @@ ikrt_bnbncomp(ikptr bn1, ikptr bn2) {
       return IK_FIX(1);
     } else {
       /* both positive */
-      long n1 = ((mp_limb_t) f1) >> bignum_nlimbs_shift;
-      long n2 = ((mp_limb_t) f2) >> bignum_nlimbs_shift;
+      iksword_t n1 = ((mp_limb_t) f1) >> bignum_nlimbs_shift;
+      iksword_t n2 = ((mp_limb_t) f2) >> bignum_nlimbs_shift;
       if (n1 < n2) {
 	return IK_FIX(-1);
       } else if (n1 > n2) {
 	return IK_FIX(1);
       } else {
-	long i;
+	iksword_t i;
 	for(i=(n1-1); i>=0; i--) {
 	  mp_limb_t t1 =
 	   (mp_limb_t) IK_REF(bn1,disp_bignum_data-vector_tag+i*wordsize);
@@ -992,9 +992,9 @@ copy_limbs(mp_limb_t* src, mp_limb_t* dst, int n1, int n2) {
 }
 
 static void
-bits_compliment(mp_limb_t* src, mp_limb_t* dst, long n) {
+bits_compliment(mp_limb_t* src, mp_limb_t* dst, iksword_t n) {
   mp_limb_t carry = 1;
-  long i;
+  iksword_t i;
   for(i=0; i<n; i++) {
     mp_limb_t d = src[i];
     mp_limb_t c = carry + ~ d;
@@ -1037,8 +1037,8 @@ bits_compliment_carry(mp_limb_t* src, mp_limb_t* dst, int n1, int n2, mp_limb_t 
 
 
 static void
-bits_compliment_with_carry(mp_limb_t* src, mp_limb_t* dst, long n, long carry) {
-  long i;
+bits_compliment_with_carry(mp_limb_t* src, mp_limb_t* dst, iksword_t n, iksword_t carry) {
+  iksword_t i;
   for(i=0; i<n; i++) {
     mp_limb_t d = src[i];
     mp_limb_t c = carry + ~ d;
@@ -1075,7 +1075,7 @@ bits_compliment_logor(mp_limb_t* s1, mp_limb_t* s2, mp_limb_t* dst, int n) {
 }
 
 
-static long
+static iksword_t
 bits_carry(mp_limb_t* s,  int n) {
   /*
   int carry = 1;
@@ -1098,7 +1098,7 @@ bits_carry(mp_limb_t* s,  int n) {
 ikptr
 ikrt_bnlognot(ikptr x, ikpcb* pcb) {
   ikptr first_word = IK_REF(x, -vector_tag);
-  long n = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t n = IK_BNFST_LIMB_COUNT(first_word);
   if (IK_BNFST_NEGATIVE(first_word)) {
     /* negative */
     pcb->root0 = &x;
@@ -1117,7 +1117,7 @@ ikrt_bnlognot(ikptr x, ikpcb* pcb) {
     return ik_normalize_bignum(n, 0, r);
   } else {
     /* positive */
-    long i;
+    iksword_t i;
     mp_limb_t* s1 = (mp_limb_t*)(ikuword_t)(x+disp_bignum_data-vector_tag);
     for(i=0; (i<n) && (s1[i] == (mp_limb_t)-1); i++) {/*nothing*/}
     if (i==n) {
@@ -1149,7 +1149,7 @@ ikrt_bnlognot(ikptr x, ikpcb* pcb) {
 
 ikptr
 ikrt_fxbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
-  long n1 = IK_UNFIX(x);
+  iksword_t n1 = IK_UNFIX(x);
   ikptr first_word = IK_REF(y, -vector_tag);
   if (n1 >= 0) {
     /* x is positive */
@@ -1165,7 +1165,7 @@ ikrt_fxbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
     if (n1 == -1) { return y; }
     if (IK_BNFST_NEGATIVE(first_word)) {
       /* y is negative */
-      long len = IK_BNFST_LIMB_COUNT(first_word);
+      iksword_t len = IK_BNFST_LIMB_COUNT(first_word);
       pcb->root0 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + (len+1)*wordsize));
       pcb->root0 = 0;
@@ -1177,7 +1177,7 @@ ikrt_fxbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
       return ik_normalize_bignum(len+1, 1<<bignum_sign_shift, r);
     } else {
       /* y is positive */
-      long len = IK_BNFST_LIMB_COUNT(first_word);
+      iksword_t len = IK_BNFST_LIMB_COUNT(first_word);
       pcb->root0 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + len * wordsize));
       pcb->root0 = 0;
@@ -1198,8 +1198,8 @@ ikptr
 ikrt_bnbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
   ikptr xfst = IK_REF(x, -vector_tag);
   ikptr yfst = IK_REF(y, -vector_tag);
-  long n1 = IK_BNFST_LIMB_COUNT(xfst);
-  long n2 = IK_BNFST_LIMB_COUNT(yfst);
+  iksword_t n1 = IK_BNFST_LIMB_COUNT(xfst);
+  iksword_t n2 = IK_BNFST_LIMB_COUNT(yfst);
   if (IK_BNFST_NEGATIVE(xfst)) {
     if (IK_BNFST_NEGATIVE(yfst)) {
       if (n1 >= n2) {
@@ -1224,7 +1224,7 @@ ikrt_bnbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
   } else {
     if (IK_BNFST_NEGATIVE(yfst)) {
       /* x positive, y negative */
-      /*  the result is at most n1 words long */
+      /*  the result is at most n1 words iksword_t */
       pcb->root0 = &x;
       pcb->root1 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + n1*wordsize));
@@ -1243,11 +1243,11 @@ ikrt_bnbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
     } else {
       /* both positive */
       int n = (n1<n2)?n1:n2;
-      long i;
+      iksword_t i;
       for(i=n-1; i>=0; i--) {
-	long l1 =
+	iksword_t l1 =
 	  (iksword_t) IK_REF(x, disp_bignum_data-vector_tag+i*wordsize);
-	long l2 =
+	iksword_t l2 =
 	  (iksword_t) IK_REF(y, disp_bignum_data-vector_tag+i*wordsize);
 	ikuword_t last = l1 & l2;
 	if (last) {
@@ -1279,7 +1279,7 @@ ikrt_bnbnlogand(ikptr x, ikptr y, ikpcb* pcb) {
 
 ikptr
 ikrt_fxbnlogor(ikptr x, ikptr y, ikpcb* pcb) {
-  long n1 = IK_UNFIX(x);
+  iksword_t n1 = IK_UNFIX(x);
   ikptr first_word = IK_REF(y, -vector_tag);
   if (n1 < 0) {
     /* x is negative */
@@ -1296,7 +1296,7 @@ ikrt_fxbnlogor(ikptr x, ikptr y, ikpcb* pcb) {
     /* x is positive */
     if (IK_BNFST_NEGATIVE(first_word)) {
       /* y is negative */
-      long len = IK_BNFST_LIMB_COUNT(first_word);
+      iksword_t len = IK_BNFST_LIMB_COUNT(first_word);
       pcb->root0 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + (len+1)*wordsize));
       pcb->root0 = 0;
@@ -1308,7 +1308,7 @@ ikrt_fxbnlogor(ikptr x, ikptr y, ikpcb* pcb) {
       return ik_normalize_bignum(len+1, 1<<bignum_sign_shift, r);
     } else {
       /* y is positive */
-      long len = IK_BNFST_LIMB_COUNT(first_word);
+      iksword_t len = IK_BNFST_LIMB_COUNT(first_word);
       pcb->root0 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + len * wordsize));
       pcb->root0 = 0;
@@ -1329,8 +1329,8 @@ ikptr
 ikrt_bnbnlogor(ikptr x, ikptr y, ikpcb* pcb) {
   ikptr xfst = IK_REF(x, -vector_tag);
   ikptr yfst = IK_REF(y, -vector_tag);
-  long n1 = IK_BNFST_LIMB_COUNT(xfst);
-  long n2 = IK_BNFST_LIMB_COUNT(yfst);
+  iksword_t n1 = IK_BNFST_LIMB_COUNT(xfst);
+  iksword_t n2 = IK_BNFST_LIMB_COUNT(yfst);
   if (IK_BNFST_NEGATIVE(xfst)) {
     if (IK_BNFST_NEGATIVE(yfst)) {
       if (n1 >= n2) {
@@ -1356,7 +1356,7 @@ ikrt_bnbnlogor(ikptr x, ikptr y, ikpcb* pcb) {
   } else {
     if (IK_BNFST_NEGATIVE(yfst)) {
       /* x positive, y negative */
-      /*  the result is at most n2 words long */
+      /*  the result is at most n2 words iksword_t */
       pcb->root0 = &x;
       pcb->root1 = &y;
       ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + n2*wordsize));
@@ -1385,7 +1385,7 @@ ikrt_bnbnlogor(ikptr x, ikptr y, ikpcb* pcb) {
       mp_limb_t* s2 = (mp_limb_t*)(ikuword_t)(y+disp_bignum_data-vector_tag);
       pcb->root0 = 0;
       pcb->root1 = 0;
-      long i;
+      iksword_t i;
       if (n == n1) {
 	for(i=0; i<n2; i++) {
 	  s[i] = s1[i] | s2[i];
@@ -1437,12 +1437,12 @@ copy_bits_shifting_left(mp_limb_t* src, mp_limb_t* dst, int n, int m) {
 ikptr
 ikrt_bignum_shift_right(ikptr x, ikptr y, ikpcb* pcb) {
   int limb_shift = (wordsize == 4 ? 5 : 6);
-  long m = IK_UNFIX(y);
+  iksword_t m = IK_UNFIX(y);
   ikptr first_word = IK_REF(x, -vector_tag);
-  long n = IK_BNFST_LIMB_COUNT(first_word);
-  long whole_limb_shift = m >> limb_shift;
-  long bit_shift = m & (mp_bits_per_limb-1);
-  long new_limb_count = n - whole_limb_shift;
+  iksword_t n = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t whole_limb_shift = m >> limb_shift;
+  iksword_t bit_shift = m & (mp_bits_per_limb-1);
+  iksword_t new_limb_count = n - whole_limb_shift;
   if (IK_BNFST_NEGATIVE(first_word)) {
     if (new_limb_count <= 0) {
       return IK_FIX(-1);
@@ -1511,10 +1511,10 @@ ikrt_bignum_shift_right(ikptr x, ikptr y, ikpcb* pcb) {
 ikptr
 ikrt_fixnum_shift_left(ikptr x, ikptr y, ikpcb* pcb) {
   int limb_shift = (wordsize == 4 ? 5 : 6);
-  long m = IK_UNFIX(y);
-  long n = IK_UNFIX(x);
-  long limb_count = (m >> limb_shift) + 2;
-  long bit_shift = m & (mp_bits_per_limb-1);
+  iksword_t m = IK_UNFIX(y);
+  iksword_t n = IK_UNFIX(x);
+  iksword_t limb_count = (m >> limb_shift) + 2;
+  iksword_t bit_shift = m & (mp_bits_per_limb-1);
   ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + limb_count * wordsize));
   ikuword_t* s = (ikuword_t*)(ikuword_t)(r+disp_bignum_data);
   bzero(s, limb_count * wordsize);
@@ -1536,13 +1536,13 @@ ikrt_fixnum_shift_left(ikptr x, ikptr y, ikpcb* pcb) {
 ikptr
 ikrt_bignum_shift_left(ikptr x, ikptr y, ikpcb* pcb) {
   int limb_shift = (wordsize == 4 ? 5 : 6);
-  long m = IK_UNFIX(y);
+  iksword_t m = IK_UNFIX(y);
   ikptr first_word = IK_REF(x, -vector_tag);
-  long n = IK_BNFST_LIMB_COUNT(first_word);
-  long whole_limb_shift = m >> limb_shift;
-  long bit_shift = m & (mp_bits_per_limb-1);
+  iksword_t n = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t whole_limb_shift = m >> limb_shift;
+  iksword_t bit_shift = m & (mp_bits_per_limb-1);
   if (bit_shift == 0) {
-    long limb_count = n + whole_limb_shift;
+    iksword_t limb_count = n + whole_limb_shift;
     pcb->root0 = &x;
     ikptr r = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + limb_count * wordsize));
     pcb->root0 = 0;
@@ -1638,11 +1638,11 @@ ikrt_bnbndivrem(ikptr x, ikptr y, ikpcb* pcb) {
 
   if (IK_BNFST_NEGATIVE(yfst)) {
     /* y is negative => quotient is opposite of x */
-    long sign = bignum_sign_mask - IK_BNFST_NEGATIVE(xfst);
+    iksword_t sign = bignum_sign_mask - IK_BNFST_NEGATIVE(xfst);
     q = ik_normalize_bignum(qn, sign, q);
   } else {
     /* y is positive => quotient is same as x */
-    long sign = IK_BNFST_NEGATIVE(xfst);
+    iksword_t sign = IK_BNFST_NEGATIVE(xfst);
     q = ik_normalize_bignum(qn, sign, q);
   }
   pcb->root0 = &q;
@@ -1676,7 +1676,7 @@ usages, qxn will be zero.
 
 ikptr
 ikrt_bnfxdivrem(ikptr x, ikptr y, ikpcb* pcb) {
-  long yint = IK_UNFIX(y);
+  iksword_t yint = IK_UNFIX(y);
   ikptr first_word = IK_REF(x, -vector_tag);
   mp_size_t s2n = IK_BNFST_LIMB_COUNT(first_word);
   pcb->root0 = &x;
@@ -1694,11 +1694,11 @@ ikrt_bnfxdivrem(ikptr x, ikptr y, ikpcb* pcb) {
 
   if (yint < 0) {
     /* y is negative => quotient is opposite of x */
-    long sign = bignum_sign_mask - IK_BNFST_NEGATIVE(first_word);
+    iksword_t sign = bignum_sign_mask - IK_BNFST_NEGATIVE(first_word);
     quot = ik_normalize_bignum(s2n, sign, quot);
   } else {
     /* y is positive => quotient is same as x */
-    long sign = IK_BNFST_NEGATIVE(first_word);
+    iksword_t sign = IK_BNFST_NEGATIVE(first_word);
     quot = ik_normalize_bignum(s2n, sign, quot);
   }
 
@@ -1728,7 +1728,7 @@ ikrt_bnfx_modulo (ikptr x, ikptr y /*, ikpcb* pcb */)
    the  fixnum  Y.   This  function  makes use  of  the  GMP's  function
    "mpn_mod_1()". */
 {
-  long		yint		= IK_UNFIX(y);
+  iksword_t		yint		= IK_UNFIX(y);
   mp_limb_t*	s2p		= (mp_limb_t*)(ikuword_t)(x + off_bignum_data);
   ikptr		first_word	= IK_REF(x, off_bignum_tag);
   mp_size_t	s2n		= IK_BNFST_LIMB_COUNT(first_word);
@@ -1810,13 +1810,13 @@ ikrt_bignum_to_bytevector(ikptr x, ikpcb* pcb) {
    * as a buffer to hold the temporary data after ensuring that it has enough
    * space */
   ikptr first_word = IK_REF(x, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
   if (limb_count <= 0)
     ik_abort("BUG: nbtostring: invalid length %ld", limb_count);
-  long sign_bit = bignum_sign_mask & (iksword_t) first_word;
-  long nbsize = limb_count * sizeof(mp_limb_t);
-  long strsize = limb_count * max_digits_per_limb;
-  long mem_req = nbsize + strsize + 1;
+  iksword_t sign_bit = bignum_sign_mask & (iksword_t) first_word;
+  iksword_t nbsize = limb_count * sizeof(mp_limb_t);
+  iksword_t strsize = limb_count * max_digits_per_limb;
+  iksword_t mem_req = nbsize + strsize + 1;
   uint8_t* mem = malloc(mem_req);
   if (! mem)
     ik_abort("error allocating space for bignum");
@@ -1843,7 +1843,7 @@ ikrt_bignum_to_bytevector(ikptr x, ikpcb* pcb) {
       dest++;
     }
     {
-      long i = 0;
+      iksword_t i = 0;
       while(i < bytes) {
 	dest[i] = string_start[i] + '0';
 	i++;
@@ -1858,15 +1858,15 @@ ikrt_bignum_to_bytevector(ikptr x, ikpcb* pcb) {
 
 ikptr
 ikrt_fxrandom(ikptr x) {
-  long mask = 1;
-  long n = IK_UNFIX(x);
+  iksword_t mask = 1;
+  iksword_t n = IK_UNFIX(x);
   {
     while(mask < n) {
       mask = (mask << 1) | 1;
     }
   }
   while(1) {
-    long r = random() & mask;
+    iksword_t r = random() & mask;
     if (r < n) {
       return IK_FIX(r);
     }
@@ -1897,7 +1897,7 @@ all_zeros(mp_limb_t* start, mp_limb_t* end) {
 static ikptr
 ikrt_bignum_to_flonum64(ikptr bn, ikptr more_bits, ikptr fl) {
   ikptr first_word = IK_REF(bn, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
   mp_limb_t* sp = (mp_limb_t*)(ikuword_t)(bn+off_bignum_data);
   double pos_result;
   if (limb_count == 1) {
@@ -1952,7 +1952,7 @@ ikrt_bignum_to_flonum(ikptr bn, ikptr more_bits, ikptr fl) {
     return ikrt_bignum_to_flonum64(bn, more_bits, fl);
   }
   ikptr first_word = IK_REF(bn, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
   mp_limb_t* sp = (mp_limb_t*)(ikuword_t)(bn+off_bignum_data);
   double pos_result;
   if (limb_count == 1) {
@@ -2023,8 +2023,8 @@ ikrt_exact_fixnum_sqrt(ikptr fx /*, ikpcb* pcb*/) {
 ikptr
 ikrt_exact_bignum_sqrt(ikptr bn, ikpcb* pcb) {
   ikptr first_word = IK_REF(bn, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
-  long result_limb_count = (limb_count + 1)/2;
+  iksword_t limb_count = IK_BNFST_LIMB_COUNT(first_word);
+  iksword_t result_limb_count = (limb_count + 1)/2;
   pcb->root0 = &bn;
   ikptr s = ik_safe_alloc(pcb,
 	    IK_ALIGN(disp_bignum_data+result_limb_count*wordsize))
@@ -2056,25 +2056,30 @@ ikrt_exact_bignum_sqrt(ikptr bn, ikpcb* pcb) {
   return pair;
 }
 
+
+/** --------------------------------------------------------------------
+ ** Numeric hash functions.
+ ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_flonum_hash(ikptr x /*, ikpcb* pcb */) {
-  short* buf = (short*)(x+off_flonum_data);
-  ikptr  H   = ((iksword_t)buf[0]) ^
-    ((iksword_t)buf[1] << 3) ^
-    ((iksword_t)buf[3] << 7) ^
-    ((iksword_t)buf[2] << 11);
+ikrt_flonum_hash (ikptr x /*, ikpcb* pcb */)
+{
+  uint16_t *	buf = (uint16_t*)(x+off_flonum_data);
+  ikptr		H   = ((iksword_t)(buf[0]))
+    ^ (((iksword_t)(buf[1])) << 3)
+    ^ (((iksword_t)(buf[3])) << 7)
+    ^ (((iksword_t)(buf[2])) << 11);
   /* Make it positive. */
   return IK_FIX((H << 4) >> 4);
 }
 ikptr
-ikrt_bignum_hash(ikptr bn /*, ikpcb* pcb */) {
-  ikptr first_word = IK_REF(bn, -vector_tag);
-  long limb_count = IK_BNFST_LIMB_COUNT(first_word);
-  long H = (iksword_t)first_word;
-  mp_limb_t* dat = (mp_limb_t*)(bn+off_bignum_data);
-  long i;
-  for (i=0; i<limb_count; i++) {
+ikrt_bignum_hash (ikptr bn /*, ikpcb* pcb */)
+{
+  ikptr		first_word	= IK_REF(bn, -vector_tag);
+  ikuword_t	limb_count	= IK_BNFST_LIMB_COUNT(first_word);
+  ikuword_t	H		= (ikuword_t)first_word;
+  mp_limb_t *	dat		= (mp_limb_t*)(bn+off_bignum_data);
+  for (ikuword_t i=0; i<limb_count; ++i) {
     H = (H^dat[i]) << 3;
   }
   /* Make it positive. */

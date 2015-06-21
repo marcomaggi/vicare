@@ -1267,9 +1267,9 @@ ik_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
 #define off_bignum_tag		(disp_bignum_tag  - vector_tag)
 #define off_bignum_data		(disp_bignum_data - vector_tag)
 
-#define IK_BNFST_NEGATIVE(X)		(((ik_ulong)(X)) & bignum_sign_mask)
+#define IK_BNFST_NEGATIVE(X)		(((ikuword_t)(X)) & bignum_sign_mask)
 #define IK_BNFST_POSITIVE(X)		(!IK_BNFST_NEGATIVE(X))
-#define IK_BNFST_LIMB_COUNT(X)		(((ik_ulong)(X)) >> bignum_nlimbs_shift)
+#define IK_BNFST_LIMB_COUNT(X)		(((ikuword_t)(X)) >> bignum_nlimbs_shift)
 
 #define IK_BIGNUM_ALLOC_SIZE(NUMBER_OF_LIMBS)			\
   IK_ALIGN(disp_bignum_data + (NUMBER_OF_LIMBS) * wordsize)
