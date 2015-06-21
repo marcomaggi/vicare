@@ -953,14 +953,14 @@ ika_integer_from_ullong (ikpcb_t * pcb, ik_ullong N)
   /* If	 it is	in the	range of  "unsigned long",  use	 the appropriate
      function to allocate memory only for an "unsigned long" in the data
      area. */
-  if (((ik_ullong)(ik_ulong) N) == N)
+  if (((ik_ullong)((ik_ulong) N)) == N)
     return ika_integer_from_ulong(pcb, N);
   else {
 #undef NUMBER_OF_WORDS
 #define NUMBER_OF_WORDS		sizeof(ik_ullong) / sizeof(mp_limb_t)
-    int	   align_size = IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
-    ikptr  bn	      = ik_safe_alloc(pcb, align_size);
-    bcopy((char*)(&N), (char*)(bn+disp_bignum_data), sizeof(ik_ullong));
+    ikuword_t	align_size	= IK_ALIGN(disp_bignum_data + sizeof(ik_ullong));
+    ikptr	bn		= ik_safe_alloc(pcb, align_size);
+    bcopy((uint8_t*)(&N), (uint8_t*)(bn+disp_bignum_data), sizeof(ik_ullong));
     /* "ik_normalize_bignum()" wants an *untagged* pointer as argument. */
     return ik_normalize_bignum(NUMBER_OF_WORDS, 0, bn);
   }
@@ -1740,7 +1740,7 @@ ikptr
 ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
 {
   if (IK_VOID == s_obj) {
-    return ika_pointer_alloc(pcb, (ik_ulong)NULL);
+    return ika_pointer_alloc(pcb, (ikuword_t)NULL);
   } else {
     ik_gc_avoidance_collection_t *	collection = pcb->not_to_be_collected;
     ikptr *				slot = NULL;
@@ -1775,7 +1775,7 @@ ik_register_to_avoid_collecting (ikptr s_obj, ikpcb_t * pcb)
     }
     /* Now SLOT references a free slot. */
     *slot = s_obj;
-    return ika_pointer_alloc(pcb, (ik_ulong)slot);
+    return ika_pointer_alloc(pcb, (ikuword_t)slot);
   }
 }
 ikptr
