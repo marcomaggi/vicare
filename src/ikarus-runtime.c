@@ -154,7 +154,7 @@ ik_munmap (ikptr mem, ik_ulong size)
  ** Memory mapping and tagging for garbage collection.
  ** ----------------------------------------------------------------- */
 
-static void set_page_range_type       (ikptr base, ik_ulong size, uint32_t type, ikpcb* pcb);
+static void set_page_range_type       (ikptr base, ikuword_t size, uint32_t type, ikpcb* pcb);
 static void extend_page_vectors_maybe (ikptr base, ik_ulong size, ikpcb* pcb);
 
 ikptr
@@ -440,7 +440,7 @@ ik_make_pcb (void)
        * This  configuration  must  be  repeated whenever  a  new  stack
        * segment is allocated because of detected stack overflow.
        */
-      mprotect((void*)(ik_ulong)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
+      mprotect((void*)(ikuword_t)(pcb->stack_base), IK_PAGESIZE, PROT_NONE);
       pcb->frame_redline= pcb->stack_base + IK_DOUBLE_PAGESIZE + IK_PAGESIZE;
     } else {
       pcb->frame_redline= pcb->stack_base + IK_DOUBLE_PAGESIZE;
@@ -469,7 +469,7 @@ ik_make_pcb (void)
     ikpage *	cur  = (ikpage*)ik_mmap(IK_PAGE_CACHE_SIZE_IN_BYTES);
     ikpage *	past = cur + IK_PAGE_CACHE_NUM_OF_SLOTS;
     ikpage *	prev = NULL;
-    pcb->cached_pages_base = (ikptr)cur;
+    pcb->cached_pages_base = (ikptr_t)cur;
     pcb->cached_pages_size = IK_PAGE_CACHE_SIZE_IN_BYTES;
     for (; cur < past; ++cur) {
       cur->next = prev;
@@ -577,8 +577,8 @@ ik_make_pcb (void)
    * "lo_seg_idx".
    */
   {
-    ikptr	lo_mem, hi_mem;
-    ik_ulong	lo_seg_idx, hi_seg_idx, vec_size, base_offset;
+    ikptr_t	lo_mem, hi_mem;
+    ikuword_t	lo_seg_idx, hi_seg_idx, vec_size, base_offset;
     if (pcb->heap_base < pcb->stack_base) {
       lo_mem = pcb->heap_base - IK_PAGESIZE;
       hi_mem = pcb->stack_base + pcb->stack_size + IK_PAGESIZE;
@@ -601,14 +601,14 @@ ik_make_pcb (void)
     base_offset = lo_seg_idx * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     vec_size    = (hi_seg_idx - lo_seg_idx) * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
     {
-      ikptr	dvec = ik_mmap(vec_size);
+      ikptr_t	dvec = ik_mmap(vec_size);
       bzero((char*)dvec, vec_size);
       pcb->dirty_vector_base   = (uint32_t *)dvec;
       pcb->dirty_vector        = dvec - base_offset;
     }
     {
-      ikptr	svec = ik_mmap(vec_size);
-      bzero((char*)(long)svec, vec_size);
+      ikptr_t	svec = ik_mmap(vec_size);
+      bzero((char*)svec, vec_size);
       pcb->segment_vector_base = (uint32_t *)svec;
       pcb->segment_vector      = (uint32_t *)(svec - base_offset);
     }
@@ -619,8 +619,8 @@ ik_make_pcb (void)
 	         ^                        ^
              memory_base              memory_end
     */
-    pcb->memory_base = (ikptr)(lo_seg_idx * IK_SEGMENT_SIZE);
-    pcb->memory_end  = (ikptr)(hi_seg_idx * IK_SEGMENT_SIZE);
+    pcb->memory_base = (ikptr_t)(lo_seg_idx * IK_SEGMENT_SIZE);
+    pcb->memory_end  = (ikptr_t)(hi_seg_idx * IK_SEGMENT_SIZE);
 
     /* Register  the heap  block and  the  stack block  in the  segments
        vector.   We  do this  here,  after  having  set the  PCB  fields
@@ -641,9 +641,9 @@ ik_make_pcb (void)
     fprintf(stderr, "*  memory_base = #x%lX\n", pcb->memory_base);
     fprintf(stderr, "*  memory_end  = #x%lX\n", pcb->memory_end);
     fprintf(stderr, "*  first dirty   slot: dirty_vector[%lu]\n",
-	    ((long)pcb->dirty_vector_base   - (long)pcb->dirty_vector)/IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT);
+	    ((ikuword_t)pcb->dirty_vector_base   - (ikuword_t)pcb->dirty_vector)/IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT);
     fprintf(stderr, "*  first segment slot: segment_vector[%lu]\n",
-	    ((long)pcb->segment_vector_base - (long)pcb->segment_vector)/IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT);
+	    ((ikuword_t)pcb->segment_vector_base - (ikuword_t)pcb->segment_vector)/IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT);
     fprintf(stderr, "\n");
 #endif
   }
@@ -653,9 +653,9 @@ ik_make_pcb (void)
      See   the  Texinfo   documentation  node   "objects  structs"   for
      details. */
   {
-    ikptr s_base_rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | rtd_tag;
+    ikptr_t s_base_rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | rtd_tag;
     IK_REF(s_base_rtd, off_rtd_rtd)        = s_base_rtd;
-    IK_REF(s_base_rtd, off_rtd_length)     = (ikptr) (rtd_size-wordsize);
+    IK_REF(s_base_rtd, off_rtd_length)     = (ikptr_t) (rtd_size-wordsize);
     IK_REF(s_base_rtd, off_rtd_name)       = 0; /* = the fixnum 0 */
     IK_REF(s_base_rtd, off_rtd_fields)     = 0; /* = the fixnum 0 */
     IK_REF(s_base_rtd, off_rtd_printer)    = 0; /* = the fixnum 0 */
@@ -691,29 +691,29 @@ ik_delete_pcb (ikpcb* pcb)
       ik_ptr_page* p = pcb->protected_list[i];
       while (p) {
         ik_ptr_page* next = p->next;
-        ik_munmap((ikptr)(long)p, IK_PAGESIZE);
+        ik_munmap((ikptr_t)p, IK_PAGESIZE);
 	p = next;
       }
     }
   }
-  ikptr	base = pcb->memory_base;
-  ikptr	end  = pcb->memory_end;
+  ikptr_t	base = pcb->memory_base;
+  ikptr_t	end  = pcb->memory_end;
   { /* Release all the used pages. */
     uint32_t *	segment_vec  = pcb->segment_vector;
-    long	page_idx     = IK_PAGE_INDEX(base);
-    long	page_idx_end = IK_PAGE_INDEX(end);
+    ikuword_t	page_idx     = IK_PAGE_INDEX(base);
+    ikuword_t	page_idx_end = IK_PAGE_INDEX(end);
     for (; page_idx < page_idx_end; ++page_idx) {
       if (HOLE_MT != segment_vec[page_idx]) {
-	ik_munmap((ikptr)(page_idx << IK_PAGESHIFT), IK_PAGESIZE);
+	ik_munmap((ikptr_t)(page_idx << IK_PAGESHIFT), IK_PAGESIZE);
       }
     }
   }
   { /* Release the dirty vector and the segments vector. */
-    ik_ulong	lo_seg   = IK_SEGMENT_INDEX(base);
-    ik_ulong	hi_seg   = IK_SEGMENT_INDEX(end);
-    ik_ulong	vec_size = (hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
-    ik_munmap((ikptr)(ik_ulong)pcb->dirty_vector_base,   vec_size);
-    ik_munmap((ikptr)(ik_ulong)pcb->segment_vector_base, vec_size);
+    ikuword_t	lo_seg   = IK_SEGMENT_INDEX(base);
+    ikuword_t	hi_seg   = IK_SEGMENT_INDEX(end);
+    ikuword_t	vec_size = (hi_seg - lo_seg) * IK_PAGE_VECTOR_SLOTS_PER_LOGIC_SEGMENT;
+    ik_munmap((ikptr_t)pcb->dirty_vector_base,   vec_size);
+    ik_munmap((ikptr_t)pcb->segment_vector_base, vec_size);
   }
   ik_free(pcb, sizeof(ikpcb));
 }
