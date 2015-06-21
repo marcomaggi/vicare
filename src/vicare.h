@@ -215,7 +215,7 @@ ik_api_decl void	ik_fprint		(FILE*, ikptr_t x);
 
 #define IK_TAGOF(X)	(((int)(X)) & 7)
 
-#define IK_REF(X,N)	(((ikptr_t*)(((long)(X)) + ((long)(N))))[0])
+#define IK_REF(X,N)	(((ikptr_t*)(((ikuword_t)(X)) + ((ikuword_t)(N))))[0])
 
 /* The smallest multiple of the wordsize which is greater than N. */
 #define IK_ALIGN(N) \
@@ -252,14 +252,14 @@ ik_api_decl void	ik_fprint		(FILE*, ikptr_t x);
 #define fx_shift	wordshift
 #define fx_mask		(wordsize - 1)
 
-#define most_positive_fixnum	(((ik_ulong)-1) >> (fx_shift+1))
+#define most_positive_fixnum	(((ikuword_t)-1) >> (fx_shift+1))
 #define most_negative_fixnum	(most_positive_fixnum+1)
 #define IK_GREATEST_FIXNUM	most_positive_fixnum
 #define IK_LEAST_FIXNUM		(-most_negative_fixnum)
 
-#define IK_FIX(X)	((ikptr_t)(((long)(X)) << fx_shift))
-#define IK_UNFIX(X)	(((long)(X)) >> fx_shift)
-#define IK_IS_FIXNUM(X)	((((ik_ulong)(X)) & fx_mask) == fx_tag)
+#define IK_FIX(X)	((ikptr_t)(((ikuword_t)(X)) << fx_shift))
+#define IK_UNFIX(X)	(((ikuword_t)(X)) >> fx_shift)
+#define IK_IS_FIXNUM(X)	((((ikuword_t)(X)) & fx_mask) == fx_tag)
 
 ik_api_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 
@@ -276,7 +276,7 @@ ik_api_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 #define off_car		(disp_car - pair_tag)
 #define off_cdr		(disp_cdr - pair_tag)
 
-#define IK_IS_PAIR(X)	(pair_tag == (((long)(X)) & pair_mask))
+#define IK_IS_PAIR(X)	(pair_tag == (((ikuword_t)(X)) & pair_mask))
 
 #define IK_CAR(PAIR)		    IK_REF((PAIR), off_car)
 #define IK_CDR(PAIR)		    IK_REF((PAIR), off_cdr)
@@ -290,7 +290,7 @@ ik_api_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 
 ik_api_decl ikptr_t ika_pair_alloc		(ikpcb_t * pcb);
 ik_api_decl ikptr_t iku_pair_alloc		(ikpcb_t * pcb);
-ik_api_decl long ik_list_length		(ikptr_t x);
+ik_api_decl long ik_list_length			(ikptr_t x);
 ik_api_decl void ik_list_to_argv		(ikptr_t x, char **argv);
 ik_api_decl void ik_list_to_argv_and_argc	(ikptr_t x, char **argv, long *argc);
 
@@ -311,17 +311,17 @@ typedef uint32_t	ikchar;
 #define IK_IS_CHAR(X)		(char_tag == (char_mask & (ikptr_t)(X)))
 
 #define IK_CHAR_FROM_INTEGER(X) \
-  ((ikptr_t)((((ik_ulong)(X)) << char_shift) | char_tag))
+  ((ikptr_t)((((ikuword_t)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR32_FROM_INTEGER(X) \
-  ((ikchar)((((ik_ulong)(X)) << char_shift) | char_tag))
+  ((ikchar)((((ikuword_t)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR_TO_INTEGER(X) \
-  ((ik_ulong)(((ikptr_t)(X)) >> char_shift))
+  ((ikuword_t)(((ikptr_t)(X)) >> char_shift))
 
 #define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
 
-#define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
+#define IK_UNICODE_FROM_ASCII(ASCII)	((ikuword_t)(ASCII))
 
 
 /** --------------------------------------------------------------------
@@ -344,10 +344,10 @@ typedef uint32_t	ikchar;
 #define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr_t)(STR)) + off_string_data))
 #define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr_t)(STR)) + off_string_data))
 
-ik_api_decl ikptr_t ika_string_alloc		(ikpcb_t * pcb, long number_of_chars);
+ik_api_decl ikptr_t ika_string_alloc		(ikpcb_t * pcb, ikuword_t number_of_chars);
 ik_api_decl ikptr_t ika_string_from_cstring	(ikpcb_t * pcb, const char * cstr);
 
-ik_api_decl ikptr_t iku_string_alloc		(ikpcb_t * pcb, long number_of_chars);
+ik_api_decl ikptr_t iku_string_alloc		(ikpcb_t * pcb, ikuword_t number_of_chars);
 ik_api_decl ikptr_t iku_string_from_cstring	(ikpcb_t * pcb, const char * cstr);
 ik_api_decl ikptr_t iku_string_to_symbol		(ikpcb_t * pcb, ikptr_t s_str);
 
@@ -394,9 +394,9 @@ ik_api_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
 #define off_bignum_tag		(disp_bignum_tag  - vector_tag)
 #define off_bignum_data		(disp_bignum_data - vector_tag)
 
-#define IK_BNFST_NEGATIVE(X)		(((ik_ulong)(X)) & bignum_sign_mask)
+#define IK_BNFST_NEGATIVE(X)		(((ikuword_t)(X)) & bignum_sign_mask)
 #define IK_BNFST_POSITIVE(X)		(!IK_BNFST_NEGATIVE(X))
-#define IK_BNFST_LIMB_COUNT(X)		(((ik_ulong)(X)) >> bignum_nlimbs_shift)
+#define IK_BNFST_LIMB_COUNT(X)		(((ikuword_t)(X)) >> bignum_nlimbs_shift)
 
 #define IK_BIGNUM_ALLOC_SIZE(NUMBER_OF_LIMBS)			\
   IK_ALIGN(disp_bignum_data + (NUMBER_OF_LIMBS) * wordsize)
@@ -414,7 +414,7 @@ ik_api_decl ikptr_t iku_symbol_from_string	(ikpcb_t * pcb, ikptr_t s_str);
   IK_COMPOSE_BIGNUM_FIRST_WORD((LIMB_COUNT),((1)<<bignum_sign_shift))
 
 #define IK_BIGNUM_DATA_LIMBP(X)					\
-  ((mp_limb_t*)(long)(X + off_bignum_data))
+  ((mp_limb_t*)(ikuword_t)(X + off_bignum_data))
 
 #define IK_BIGNUM_FIRST_LIMB(X)					\
   ((mp_limb_t)IK_REF((X), off_bignum_data))
@@ -457,12 +457,12 @@ ik_api_decl uint16_t ik_integer_to_uint16	(ikptr_t x);
 ik_api_decl uint32_t ik_integer_to_uint32	(ikptr_t x);
 ik_api_decl uint64_t ik_integer_to_uint64	(ikptr_t x);
 
-ik_api_decl int	 ik_integer_to_int	(ikptr_t x);
-ik_api_decl long	 ik_integer_to_long	(ikptr_t x);
-ik_api_decl ik_llong ik_integer_to_llong	(ikptr_t x);
-ik_api_decl ik_uint	 ik_integer_to_uint	(ikptr_t x);
-ik_api_decl ik_ulong  ik_integer_to_ulong	(ikptr_t x);
-ik_api_decl ik_ullong ik_integer_to_ullong	(ikptr_t x);
+ik_api_decl int		ik_integer_to_int	(ikptr_t x);
+ik_api_decl long	ik_integer_to_long	(ikptr_t x);
+ik_api_decl ik_llong	ik_integer_to_llong	(ikptr_t x);
+ik_api_decl ik_uint	ik_integer_to_uint	(ikptr_t x);
+ik_api_decl ik_ulong	ik_integer_to_ulong	(ikptr_t x);
+ik_api_decl ik_ullong	ik_integer_to_ullong	(ikptr_t x);
 
 ik_api_decl off_t	ik_integer_to_off_t	(ikptr_t x);
 ik_api_decl size_t	ik_integer_to_size_t	(ikptr_t x);
@@ -577,9 +577,9 @@ ik_api_decl ikptr_t	ika_compnum_alloc_and_init	(ikpcb_t * pcb);
   ikptr_t VARNAME = ik_unsafe_alloc(pcb, flonum_size) | vector_tag;	\
   IK_REF(VARNAME, off_flonum_tag) = (ikptr_t)flonum_tag
 
-#define IK_FLONUM_DATA(X)	(*((double*)(((long)(X))+off_flonum_data)))
+#define IK_FLONUM_DATA(X)	(*((double*)(((ikuword_t)(X))+off_flonum_data)))
 
-ik_api_decl int   ik_is_flonum		(ikptr_t obj);
+ik_api_decl int     ik_is_flonum		(ikptr_t obj);
 ik_api_decl ikptr_t iku_flonum_alloc		(ikpcb_t * pcb, double fl);
 ik_api_decl ikptr_t ika_flonum_from_double	(ikpcb_t* pcb, double N);
 ik_api_decl ikptr_t ikrt_flonum_hash		(ikptr_t x /*, ikpcb_t* pcb */);
@@ -624,8 +624,8 @@ ik_api_decl ikptr ika_cflonum_from_doubles (ikpcb* pcb, double re, double im);
 #define off_pointer_tag		(disp_pointer_tag  - vector_tag)
 #define off_pointer_data	(disp_pointer_data - vector_tag)
 
-ik_api_decl ikptr_t ika_pointer_alloc	(ikpcb_t* pcb, ik_ulong memory);
-ik_api_decl ikptr_t iku_pointer_alloc	(ikpcb_t* pcb, ik_ulong memory);
+ik_api_decl ikptr_t ika_pointer_alloc	(ikpcb_t* pcb, ikuword_t memory);
+ik_api_decl ikptr_t iku_pointer_alloc	(ikpcb_t* pcb, ikuword_t memory);
 ik_api_decl ikptr_t ikrt_is_pointer	(ikptr_t X);
 ik_api_decl int   ik_is_pointer	(ikptr_t X);
 
@@ -657,11 +657,11 @@ ik_api_decl int   ik_is_pointer	(ikptr_t X);
 #define off_vector_length	(disp_vector_length - vector_tag)
 #define off_vector_data		(disp_vector_data   - vector_tag)
 
-ik_api_decl ikptr_t ika_vector_alloc_no_init	(ikpcb_t * pcb, long number_of_items);
-ik_api_decl ikptr_t ika_vector_alloc_and_init	(ikpcb_t * pcb, long number_of_items);
+ik_api_decl ikptr_t ika_vector_alloc_no_init	(ikpcb_t * pcb, ikuword_t number_of_items);
+ik_api_decl ikptr_t ika_vector_alloc_and_init	(ikpcb_t * pcb, ikuword_t number_of_items);
 
-ik_api_decl ikptr_t iku_vector_alloc_no_init	(ikpcb_t * pcb, long number_of_items);
-ik_api_decl ikptr_t iku_vector_alloc_and_init (ikpcb_t * pcb, long number_of_items);
+ik_api_decl ikptr_t iku_vector_alloc_no_init	(ikpcb_t * pcb, ikuword_t number_of_items);
+ik_api_decl ikptr_t iku_vector_alloc_and_init (ikpcb_t * pcb, ikuword_t number_of_items);
 
 ik_api_decl int   ik_is_vector		(ikptr_t s_vec);
 ik_api_decl ikptr_t ikrt_vector_clean	(ikptr_t s_vec);
@@ -685,9 +685,9 @@ ik_api_decl ikptr_t ikrt_vector_copy	(ikptr_t s_dst, ikptr_t s_dst_start,
 #define off_bytevector_length	(disp_bytevector_length - bytevector_tag)
 #define off_bytevector_data	(disp_bytevector_data	- bytevector_tag)
 
-#define IK_IS_BYTEVECTOR(X)	(bytevector_tag == (((long)(X)) & bytevector_mask))
+#define IK_IS_BYTEVECTOR(X)	(bytevector_tag == (((ikuword_t)(X)) & bytevector_mask))
 
-ik_api_decl ikptr_t ika_bytevector_alloc		(ikpcb_t * pcb, long requested_number_of_bytes);
+ik_api_decl ikptr_t ika_bytevector_alloc		(ikpcb_t * pcb, ikuword_t requested_number_of_bytes);
 ik_api_decl ikptr_t ika_bytevector_from_cstring	(ikpcb_t * pcb, const char * cstr);
 ik_api_decl ikptr_t ika_bytevector_from_cstring_len	(ikpcb_t * pcb, const char * cstr, size_t len);
 ik_api_decl ikptr_t ika_bytevector_from_memory_block	(ikpcb_t * pcb, const void * memory,
@@ -700,7 +700,7 @@ ik_api_decl ikptr_t ikrt_bytevector_copy (ikptr_t s_dst, ikptr_t s_dst_start,
 #define IK_BYTEVECTOR_LENGTH_FX(BV)	IK_REF((BV), off_bytevector_length)
 #define IK_BYTEVECTOR_LENGTH(BV)	IK_UNFIX(IK_BYTEVECTOR_LENGTH_FX(BV))
 
-#define IK_BYTEVECTOR_DATA(BV)		((long)((BV) + off_bytevector_data))
+#define IK_BYTEVECTOR_DATA(BV)		((ikuword_t)((BV) + off_bytevector_data))
 #define IK_BYTEVECTOR_DATA_VOIDP(BV)	((void*)   IK_BYTEVECTOR_DATA(BV))
 #define IK_BYTEVECTOR_DATA_CHARP(BV)	((char*)   IK_BYTEVECTOR_DATA(BV))
 #define IK_BYTEVECTOR_DATA_UINT8P(BV)	((uint8_t*)IK_BYTEVECTOR_DATA(BV))
@@ -822,7 +822,7 @@ ik_api_decl int   ik_is_struct	(ikptr_t R);
 #define off_closure_code	(disp_closure_code - closure_tag)
 #define off_closure_data	(disp_closure_data - closure_tag)
 
-#define IK_IS_CLOSURE(X)	((((long)(X)) & closure_mask) == closure_tag)
+#define IK_IS_CLOSURE(X)	((((ikuword_t)(X)) & closure_mask) == closure_tag)
 
 #define IK_CLOSURE_ENTRY_POINT(X)	IK_REF((X),off_closure_code)
 #define IK_CLOSURE_CODE_OBJECT(X)	(IK_CLOSURE_ENTRY_POINT(X)-off_code_data)
