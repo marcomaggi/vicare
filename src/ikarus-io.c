@@ -211,7 +211,7 @@ ikrt_set_position (ikptr fd, ikptr pos /*, ikpcb* pcb */)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
@@ -227,7 +227,7 @@ ikptr_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikptr_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);
@@ -243,7 +243,7 @@ ikptr_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikptr_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FCNTL
   int		fd = IK_NUM_TO_FD(s_fd);

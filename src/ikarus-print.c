@@ -67,14 +67,14 @@ ik_print_no_newline (ikptr x)
 }
 
 ikptr
-ikrt_print_emergency (ikptr s_bv, ikpcb *pcb)
+ikrt_print_emergency (ikptr s_bv, ikpcb_t *pcb)
 {
   fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_bv));
   return IK_VOID;
 }
 
 ikptr
-ikrt_scheme_print (ikptr x, ikpcb * pcb)
+ikrt_scheme_print (ikptr x, ikpcb_t * pcb)
 /* This can be called from Scheme. */
 {
   print_object(stderr, x, 0);
@@ -280,7 +280,7 @@ ik_print_stack_frame (FILE * fh, ikptr top)
 }
 
 void
-ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames, ikpcb * pcb)
+ik_print_stack_frame_code_objects (FILE * fh, int max_num_of_frames, ikpcb_t * pcb)
 /* Visit  the current  Scheme  stack  printing to  FH  the code  objects
    referenced  by the  stack  frames.  At  most visit  MAX_NUM_OF_FRAMES
    frames (to avoid printing too much output). */

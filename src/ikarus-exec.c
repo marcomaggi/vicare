@@ -20,11 +20,11 @@
 
 #define DEBUG_EXEC	0
 
-static void ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont);
+static void ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont);
 
 
 ikptr
-ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
+ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 /* Execute  Scheme  code  and  all   its  continuations  until  no  more
    continuations are stored in the PCB or a system continuation is found
    in the continuations linked list.
@@ -322,7 +322,7 @@ ik_exec_code (ikpcb * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 
 
 static void
-ik_exec_code_log_and_abort (ikpcb * pcb, ikptr s_kont)
+ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
 {
   ikptr underflow_handler	= *(ikptr *)(pcb->frame_pointer - wordsize);
   ikcont * kont			= IK_CONTINUATION_STRUCT(s_kont);

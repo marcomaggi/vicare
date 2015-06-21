@@ -213,7 +213,7 @@ ikrt_linux_epoll_ctl (ikptr s_epfd, ikptr s_op, ikptr s_fd, ikptr s_event_struct
 }
 ikptr
 ikrt_linux_epoll_wait (ikptr s_epfd, ikptr s_events_array,
-		       ikptr s_maxevents, ikptr s_timeout_ms, ikpcb * pcb)
+		       ikptr s_maxevents, ikptr s_timeout_ms, ikpcb_t * pcb)
 {
 #ifdef HAVE_EPOLL_WAIT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
@@ -231,7 +231,7 @@ ikrt_linux_epoll_wait (ikptr s_epfd, ikptr s_events_array,
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_linux_epoll_event_alloc (ikptr s_number_of_entries, ikpcb * pcb)
+ikrt_linux_epoll_event_alloc (ikptr s_number_of_entries, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   void * event = malloc(IK_UNFIX(s_number_of_entries) * sizeof(struct epoll_event));
@@ -264,7 +264,7 @@ ikrt_linux_epoll_event_set_events (ikptr s_events_array, ikptr s_index, ikptr s_
 #endif
 }
 ikptr
-ikrt_linux_epoll_event_ref_events (ikptr s_events_array, ikptr s_index, ikpcb * pcb)
+ikrt_linux_epoll_event_ref_events (ikptr s_events_array, ikptr s_index, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
@@ -288,7 +288,7 @@ ikrt_linux_epoll_event_set_data_ptr (ikptr s_events_array, ikptr s_index, ikptr 
 #endif
 }
 ikptr
-ikrt_linux_epoll_event_ref_data_ptr (ikptr s_events_array, ikptr s_index, ikpcb * pcb)
+ikrt_linux_epoll_event_ref_data_ptr (ikptr s_events_array, ikptr s_index, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
@@ -312,7 +312,7 @@ ikrt_linux_epoll_event_set_data_fd (ikptr s_events_array, ikptr s_index, ikptr s
 #endif
 }
 ikptr
-ikrt_linux_epoll_event_ref_data_fd (ikptr s_events_array, ikptr s_index, ikpcb * pcb)
+ikrt_linux_epoll_event_ref_data_fd (ikptr s_events_array, ikptr s_index, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
@@ -336,7 +336,7 @@ ikrt_linux_epoll_event_set_data_u32 (ikptr s_events_array, ikptr s_index, ikptr 
 #endif
 }
 ikptr
-ikrt_linux_epoll_event_ref_data_u32 (ikptr s_events_array, ikptr s_index, ikpcb * pcb)
+ikrt_linux_epoll_event_ref_data_u32 (ikptr s_events_array, ikptr s_index, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
@@ -360,7 +360,7 @@ ikrt_linux_epoll_event_set_data_u64 (ikptr s_events_array, ikptr s_index, ikptr 
 #endif
 }
 ikptr
-ikrt_linux_epoll_event_ref_data_u64 (ikptr s_events_array, ikptr s_index, ikpcb * pcb)
+ikrt_linux_epoll_event_ref_data_u64 (ikptr s_events_array, ikptr s_index, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
@@ -399,7 +399,7 @@ ikrt_linux_signalfd (ikptr s_fd, ikptr s_mask, ikptr s_flags)
 #endif
 }
 ikptr
-ikrt_linux_read_signalfd_siginfo (ikptr s_fd, ikptr s_info, ikpcb * pcb)
+ikrt_linux_read_signalfd_siginfo (ikptr s_fd, ikptr s_info, ikpcb_t * pcb)
 {
 #ifdef HAVE_SIGNALFD
   struct signalfd_siginfo	info;
@@ -477,7 +477,7 @@ ikrt_linux_timerfd_create (ikptr s_clockid, ikptr s_flags)
 #endif
 }
 ikptr
-ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old, ikpcb * pcb)
+ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old, ikpcb_t * pcb)
 /* Interface to the  C function "timerfd_settime()".  Start  or stop the
    timer referred to by the  file descriptor S_FD.  If successful return
    the fixnum zero; if an error occurs return an encoded "errno" value.
@@ -527,7 +527,7 @@ ikrt_linux_timerfd_settime (ikptr s_fd, ikptr s_flags, ikptr s_new, ikptr s_old,
 #endif
 }
 ikptr
-ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
+ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb_t * pcb)
 /* Interface  to  the  C  function  "timerfd_gettime()".   Retrieve  the
    current timer  specification associated to the  file descriptor S_FD.
    If successful  return S_CURR; if  an error occurs: return  an encoded
@@ -566,7 +566,7 @@ ikrt_linux_timerfd_gettime (ikptr s_fd, ikptr s_curr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_linux_timerfd_read (ikptr s_fd, ikpcb * pcb)
+ikrt_linux_timerfd_read (ikptr s_fd, ikpcb_t * pcb)
 /* Perform a "read()" operation on S_FD, which must be a file descriptor
    associated to  a timer.  If  the operation is successful:  return the
    number of timer  expirations occurred since the timer was  set or the
@@ -593,7 +593,7 @@ ikrt_linux_timerfd_read (ikptr s_fd, ikpcb * pcb)
 ikptr
 ikrt_linux_prlimit (ikptr s_pid, ikptr s_resource,
 		    ikptr s_new_rlim, ikptr s_old_rlim,
-		    ikpcb * pcb)
+		    ikpcb_t * pcb)
 /* Interface to the  C function "prlimit()". */
 {
 #ifdef HAVE_PRLIMIT
@@ -695,7 +695,7 @@ ikrt_linux_inotify_init1 (ikptr s_flags)
 #endif
 }
 ikptr
-ikrt_linux_inotify_add_watch (ikptr s_fd, ikptr s_pathname, ikptr s_mask, ikpcb * pcb)
+ikrt_linux_inotify_add_watch (ikptr s_fd, ikptr s_pathname, ikptr s_mask, ikpcb_t * pcb)
 /* Interface to the C function "inotify_add_watch()".  Add a watch to an
    initialised   inotify  instance;   if  successful   return  a   watch
    descriptor, else return an encoded "errno" value.
@@ -737,7 +737,7 @@ ikrt_linux_inotify_rm_watch (ikptr s_fd, ikptr s_wd)
 #endif
 }
 ikptr
-ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb * pcb)
+ikrt_linux_inotify_read (ikptr s_fd, ikptr s_event, ikpcb_t * pcb)
 /* Perform a "read()" operation on S_FD, which must be a file descriptor
    associated to an  inotify instance.  If the  operation is successful:
    fill  S_EVENT with  the  result  and return  S_EVENT  itself; if  the
@@ -811,7 +811,7 @@ ikrt_linux_daemon (ikptr s_nochdir, ikptr s_noclose)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_linux_ether_ntoa (ikptr s_ether_addr_bv, ikpcb * pcb)
+ikrt_linux_ether_ntoa (ikptr s_ether_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_NTOA
   const struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
@@ -823,7 +823,7 @@ ikrt_linux_ether_ntoa (ikptr s_ether_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_linux_ether_aton (ikptr s_addr_str, ikptr s_addr_len, ikpcb * pcb)
+ikrt_linux_ether_aton (ikptr s_addr_str, ikptr s_addr_len, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_ATON
   const char *		name	= IK_GENERALISED_C_STRING(s_addr_str);
@@ -835,7 +835,7 @@ ikrt_linux_ether_aton (ikptr s_addr_str, ikptr s_addr_len, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_linux_ether_ntoa_r (ikptr s_ether_addr_bv, ikpcb * pcb)
+ikrt_linux_ether_ntoa_r (ikptr s_ether_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_NTOA
   const struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
@@ -848,7 +848,7 @@ ikrt_linux_ether_ntoa_r (ikptr s_ether_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_linux_ether_aton_r (ikptr s_addr_str, ikptr s_addr_len, ikpcb * pcb)
+ikrt_linux_ether_aton_r (ikptr s_addr_str, ikptr s_addr_len, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_ATON
   const char *		name	= IK_GENERALISED_C_STRING(s_addr_str);
@@ -861,7 +861,7 @@ ikrt_linux_ether_aton_r (ikptr s_addr_str, ikptr s_addr_len, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_linux_ether_ntohost (ikptr s_ether_addr_bv, ikpcb * pcb)
+ikrt_linux_ether_ntohost (ikptr s_ether_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_NTOHOST
   struct ether_addr *	addr	= IK_BYTEVECTOR_DATA_VOIDP(s_ether_addr_bv);
@@ -874,7 +874,7 @@ ikrt_linux_ether_ntohost (ikptr s_ether_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_linux_ether_hostton (ikptr s_hostname_str, ikptr s_hostname_len, ikpcb * pcb)
+ikrt_linux_ether_hostton (ikptr s_hostname_str, ikptr s_hostname_len, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_HOSTTON
   const char *		hostname = IK_GENERALISED_C_STRING(s_hostname_str);
@@ -887,7 +887,7 @@ ikrt_linux_ether_hostton (ikptr s_hostname_str, ikptr s_hostname_len, ikpcb * pc
 #endif
 }
 ikptr
-ikrt_linux_ether_line (ikptr s_line_str, ikptr s_line_len, ikpcb * pcb)
+ikrt_linux_ether_line (ikptr s_line_str, ikptr s_line_len, ikpcb_t * pcb)
 {
 #ifdef HAVE_ETHER_LINE
   const char *		line	= IK_GENERALISED_C_STRING(s_line_str);

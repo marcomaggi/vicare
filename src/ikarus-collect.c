@@ -93,7 +93,7 @@ typedef struct gc_t {
   meta_t	meta[meta_count];
   qupages_t *	queues[meta_count];
 
-  ikpcb *	pcb;
+  ikpcb_t *	pcb;
 
   /* FIXME This field is always kept equal to the corresponding field in
      the PCB;  IMHO it should be  safe to remove it.   (Marco Maggi; Mon
@@ -165,12 +165,12 @@ static const unsigned int META_MT[meta_count] = {
 static int verify_gc_integrity_option = 0;
 
 ikptr
-ikrt_enable_gc_integrity_checks (ikpcb * pcb) {
+ikrt_enable_gc_integrity_checks (ikpcb_t * pcb) {
   verify_gc_integrity_option = 1;
   return IK_VOID;
 }
 ikptr
-ikrt_disable_gc_integrity_checks (ikpcb * pcb) {
+ikrt_disable_gc_integrity_checks (ikpcb_t * pcb) {
   verify_gc_integrity_option = 0;
   return IK_VOID;
 }
@@ -297,12 +297,12 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
  *
  * 6. "ik_collect()" must not move the stack.
  */
-ikpcb *
+ikpcb_t *
 ik_collect (ik_ulong mem_req, ikpcb* pcb)
 {
   return ik_collect_gen(mem_req, IK_FALSE, pcb);
 }
-ikpcb *
+ikpcb_t *
 ik_collect_gen (ik_ulong mem_req, ikptr s_requested_generation, ikpcb* pcb)
 {
   static const uint32_t NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
@@ -599,7 +599,7 @@ static void
 deallocate_unused_pages (gc_t* gc)
 /* Subroutine of "ik_collect()". */
 {
-  ikpcb *	pcb         = gc->pcb;
+  ikpcb_t *	pcb         = gc->pcb;
   int		collect_gen = gc->collect_gen;
   uint32_t *	segment_vec = pcb->segment_vector;
   ikptr		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
@@ -624,7 +624,7 @@ static void
 fix_new_pages (gc_t* gc)
 /* Subroutine of "ik_collect()". */
 {
-  ikpcb *	pcb         = gc->pcb;
+  ikpcb_t *	pcb         = gc->pcb;
   uint32_t *	segment_vec = pcb->segment_vector;
   ikptr		lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
   ikptr		hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
@@ -1070,7 +1070,7 @@ static inline int	next_gen (int i);
 static void
 handle_guardians (gc_t* gc)
 {
-  ikpcb *	pcb = gc->pcb;
+  ikpcb_t *	pcb = gc->pcb;
   ik_ptr_page *	pend_hold_list = 0;
   ik_ptr_page *	pend_final_list = 0;
   int		gen;
@@ -2659,7 +2659,7 @@ scan_dirty_pages (gc_t* gc)
    page becomes dirty when a word is mutated at run-time.
 */
 {
-  ikpcb *	pcb         = gc->pcb;
+  ikpcb_t *	pcb         = gc->pcb;
   ik_ulong	lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
   ik_ulong	hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
   uint32_t *	dirty_vec   = (uint32_t*)pcb->dirty_vector;

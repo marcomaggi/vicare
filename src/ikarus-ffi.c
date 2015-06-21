@@ -336,7 +336,7 @@ ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb * pcb)
+ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb_t * pcb)
 /* Perform a callout and return the return value of the callout.
 
    S_DATA  must  be  a pair  whose  car  is  a  pointer object  of  type
@@ -448,7 +448,7 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
 #endif /* if FFI_CLOSURES */
 }
 ikptr
-ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb * pcb)
+ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb_t * pcb)
 {
   ik_callback_locative *  root;
   void *                  callable_pointer;
@@ -510,7 +510,7 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
   ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
   ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
   ikptr         s_proc        = IK_CDR(s_data);
-  ikpcb *       pcb           = ik_the_pcb();
+  ikpcb_t *       pcb           = ik_the_pcb();
   int		i;
   ikptr         rv;
   /* This setting  for "frame_pointer"  and "frame_base" is  expected by
@@ -623,7 +623,7 @@ ik_enter_c_function (ikpcb* pcb)
   pcb->next_k = sk;
 }
 void
-ik_leave_c_function (ikpcb * pcb)
+ik_leave_c_function (ikpcb_t * pcb)
 /* We call this function whenever we exit a C function that may invoke a
    Scheme callback.  Expect the first  "next process continuation" to be
    the system  continuation created by  "ik_enter_c_function()"; restore

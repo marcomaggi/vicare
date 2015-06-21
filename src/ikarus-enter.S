@@ -149,7 +149,7 @@ L_multi_value_reentry:
 #
 # * %rax must contain a fixnum representing the encoded number of
 #   arguments to the C function, EXcluding the last argument
-#   (the "ikpcb * pcb"), such arguments are on the Scheme stack.
+#   (the "ikpcb_t * pcb"), such arguments are on the Scheme stack.
 #
 # NOTE When we enter this routine to call the C function
 # "ik_stack_overflow()", we enter with a Scheme stack segment
@@ -247,7 +247,7 @@ _ik_foreign_call:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3, ikptr arg4,
   #              ikptr arg5, ikptr arg6, ikptr arg7, ikptr arg8,
-  #              ikpcb * pcb);
+  #              ikpcb_t * pcb);
   #
   # When arriving here: %ebx references the top of the Scheme stack;
   # %eax = -8 * wordsize = -64, the offset to add to %ebx to
@@ -366,7 +366,7 @@ L_six_args:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
   #              ikptr arg4, ikptr arg5, ikptr arg6,
-  #              ikpcb * pcb);
+  #              ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -391,7 +391,7 @@ L_five_args:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
   #              ikptr arg4, ikptr arg5,
-  #              ikpcb * pcb);
+  #              ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -411,7 +411,7 @@ L_four_args:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
   #              ikptr arg4,
-  #              ikpcb * pcb);
+  #              ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -429,7 +429,7 @@ L_three_args:
   # There are three arguments.  A function call to:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2, ikptr arg3,
-  #              ikpcb * pcb);
+  #              ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -446,7 +446,7 @@ L_two_args:
   # There are two arguments.  A function call to:
   #
   #   ikptr fun (ikptr arg1, ikptr arg2,
-  #              ikpcb * pcb);
+  #              ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -460,7 +460,7 @@ L_two_args:
 L_one_arg:
   # There is one argument.  A function call to:
   #
-  #   ikptr fun (ikptr arg1, ikpcb * pcb);
+  #   ikptr fun (ikptr arg1, ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -473,7 +473,7 @@ L_one_arg:
 L_zero_args:
   # There are zero arguments.  A function call to:
   #
-  #   ikptr fun (ikpcb * pcb);
+  #   ikptr fun (ikpcb_t * pcb);
   #
   # is performed by setting:
   #
@@ -930,7 +930,7 @@ L_multi_value_reentry:
 #
 # * %eax must contain a fixnum representing the encoded number of
 #   arguments to the C function, EXcluding the last argument
-#   (the "ikpcb * pcb"), such arguments are on the Scheme stack.
+#   (the "ikpcb_t * pcb"), such arguments are on the Scheme stack.
 #
 # NOTE When we enter this routine to call the C function
 # "ik_stack_overflow()", we enter with a Scheme stack segment

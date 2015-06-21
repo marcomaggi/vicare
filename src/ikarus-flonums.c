@@ -38,14 +38,14 @@ feature_failure_ (const char * funcname)
  ** ----------------------------------------------------------------- */
 
 ikptr
-iku_flonum_alloc (ikpcb * pcb, double fl)
+iku_flonum_alloc (ikpcb_t * pcb, double fl)
 {
   IKU_DEFINE_AND_ALLOC_FLONUM(F);
   IK_FLONUM_DATA(F) = fl;
   return F;
 }
 ikptr
-iku_cflonum_alloc_and_init (ikpcb * pcb, double re, double im)
+iku_cflonum_alloc_and_init (ikpcb_t * pcb, double re, double im)
 {
   IKU_DEFINE_AND_ALLOC_CFLONUM(F);
   /* No  need  to  update  the  dirty vector  about  F  because  we  are

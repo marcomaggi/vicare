@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -39,26 +39,26 @@
    calling C functions from Scheme code through FOREIGN-CALL. */
 
 ikptr
-ikrt_dummy_arg_0 (ikpcb * pcb)
+ikrt_dummy_arg_0 (ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_TRUE;
 }
 ikptr
-ikrt_dummy_arg_1 (ikptr arg1, ikpcb * pcb)
+ikrt_dummy_arg_1 (ikptr arg1, ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000 + IK_UNFIX(arg1));
 }
 ikptr
-ikrt_dummy_arg_2 (ikptr arg1, ikptr arg2, ikpcb * pcb)
+ikrt_dummy_arg_2 (ikptr arg1, ikptr arg2, ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000 + IK_UNFIX(arg1) + IK_UNFIX(arg2));
 }
 ikptr
 ikrt_dummy_arg_3 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikpcb * pcb)
+		  ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000
@@ -66,7 +66,7 @@ ikrt_dummy_arg_3 (ikptr arg1, ikptr arg2, ikptr arg3,
 }
 ikptr
 ikrt_dummy_arg_4 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikpcb * pcb)
+		  ikptr arg4, ikpcb_t * pcb)
 {
   assert(pcb == ik_the_pcb());
   return IK_FIX(1000
@@ -75,7 +75,7 @@ ikrt_dummy_arg_4 (ikptr arg1, ikptr arg2, ikptr arg3,
 }
 ikptr
 ikrt_dummy_arg_5 (ikptr arg1, ikptr arg2, ikptr arg3,
-		  ikptr arg4, ikptr arg5, ikpcb * pcb)
+		  ikptr arg4, ikptr arg5, ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -89,7 +89,7 @@ ikrt_dummy_arg_5 (ikptr arg1, ikptr arg2, ikptr arg3,
 ikptr
 ikrt_dummy_arg_6 (ikptr arg1, ikptr arg2, ikptr arg3,
 		  ikptr arg4, ikptr arg5, ikptr arg6,
-		  ikpcb * pcb)
+		  ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -103,7 +103,7 @@ ikrt_dummy_arg_6 (ikptr arg1, ikptr arg2, ikptr arg3,
 ikptr
 ikrt_dummy_arg_7 (ikptr arg1, ikptr arg2, ikptr arg3,
 		  ikptr arg4, ikptr arg5, ikptr arg6,
-		  ikptr arg7, ikpcb * pcb)
+		  ikptr arg7, ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -119,7 +119,7 @@ ikrt_dummy_arg_7 (ikptr arg1, ikptr arg2, ikptr arg3,
 ikptr
 ikrt_dummy_arg_8 (ikptr arg1, ikptr arg2, ikptr arg3,
 		  ikptr arg4, ikptr arg5, ikptr arg6,
-		  ikptr arg7, ikptr arg8, ikpcb * pcb)
+		  ikptr arg7, ikptr arg8, ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());
@@ -136,7 +136,7 @@ ikptr
 ikrt_dummy_arg_9 (ikptr arg1, ikptr arg2, ikptr arg3,
 		  ikptr arg4, ikptr arg5, ikptr arg6,
 		  ikptr arg7, ikptr arg8, ikptr arg9,
-		  ikpcb * pcb)
+		  ikpcb_t * pcb)
 {
   ik_debug_message("%s: pcb=0x%016lx, the_pcb=0x%016lx", __func__, (long)pcb, (long)ik_the_pcb());
   assert(pcb == ik_the_pcb());

@@ -117,12 +117,12 @@ compute_string_hash (ikptr str, ikptr s_max_len)
   return ((H << 4) >> 4);
 }
 ikptr
-ikrt_string_hash (ikptr str, ikptr s_max_len, ikpcb * pcb)
+ikrt_string_hash (ikptr str, ikptr s_max_len, ikpcb_t * pcb)
 {
   return IK_FIX(compute_string_hash(str, s_max_len));
 }
 ikptr
-ikrt_bytevector_hash (ikptr bv, ikptr s_max_len, ikpcb * pcb)
+ikrt_bytevector_hash (ikptr bv, ikptr s_max_len, ikpcb_t * pcb)
 {
   ikptr		len  = IK_BYTEVECTOR_LENGTH(bv);
   uint8_t *	data = IK_BYTEVECTOR_DATA_UINT8P(bv);
@@ -350,7 +350,7 @@ ikrt_unintern_gensym (ikptr s_sym, ikpcb* pcb)
 
 
 ikptr
-iku_string_to_symbol (ikpcb * pcb, ikptr str)
+iku_string_to_symbol (ikpcb_t * pcb, ikptr str)
 {
   ikptr s_symbol_table = pcb->symbol_table;
   if (IK_FALSE_OBJECT == s_symbol_table)

@@ -365,7 +365,7 @@ ikrt_posix_execvp (ikptr filename_bv, ikptr argv_list)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_waitpid (ikptr s_pid, ikptr s_options, ikpcb * pcb)
+ikrt_posix_waitpid (ikptr s_pid, ikptr s_options, ikpcb_t * pcb)
 {
 #ifdef HAVE_WAITPID
   int	status  = 0;
@@ -384,7 +384,7 @@ ikrt_posix_waitpid (ikptr s_pid, ikptr s_options, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_wait (ikpcb * pcb)
+ikrt_posix_wait (ikpcb_t * pcb)
 {
 #ifdef HAVE_WAIT
   int	status;
@@ -407,7 +407,7 @@ ikrt_posix_WIFEXITED (ikptr s_status)
 #endif
 }
 ikptr
-ikrt_posix_WEXITSTATUS (ikptr s_status, ikpcb * pcb)
+ikrt_posix_WEXITSTATUS (ikptr s_status, ikpcb_t * pcb)
 {
 #ifdef HAVE_WEXITSTATUS
   int	status = ik_integer_to_int(s_status);
@@ -427,7 +427,7 @@ ikrt_posix_WIFSIGNALED (ikptr s_status)
 #endif
 }
 ikptr
-ikrt_posix_WTERMSIG (ikptr s_status, ikpcb * pcb)
+ikrt_posix_WTERMSIG (ikptr s_status, ikpcb_t * pcb)
 {
 #ifdef HAVE_WTERMSIG
   int	status = ik_integer_to_int(s_status);
@@ -457,7 +457,7 @@ ikrt_posix_WIFSTOPPED (ikptr s_status)
 #endif
 }
 ikptr
-ikrt_posix_WSTOPSIG (ikptr s_status, ikpcb * pcb)
+ikrt_posix_WSTOPSIG (ikptr s_status, ikpcb_t * pcb)
 {
 #ifdef HAVE_WSTOPSIG
   int	status = ik_integer_to_int(s_status);
@@ -1181,7 +1181,7 @@ ikrt_posix_symlink (ikptr s_true_pathname, ikptr s_link_pathname)
 #endif
 }
 ikptr
-ikrt_posix_readlink (ikptr s_link_pathname, ikpcb * pcb)
+ikrt_posix_readlink (ikptr s_link_pathname, ikpcb_t * pcb)
 {
 #ifdef HAVE_READLINK
   char *	link_pathname = IK_BYTEVECTOR_DATA_CHARP(s_link_pathname);
@@ -1296,7 +1296,7 @@ ikrt_posix_rmdir (ikptr s_pathname)
 #endif
 }
 ikptr
-ikrt_posix_getcwd (ikpcb * pcb)
+ikrt_posix_getcwd (ikpcb_t * pcb)
 {
 #ifdef HAVE_GETCWD
   size_t	max_len;
@@ -1344,7 +1344,7 @@ ikrt_posix_fchdir (ikptr s_fd)
 #endif
 }
 ikptr
-ikrt_posix_opendir (ikptr s_pathname, ikpcb * pcb)
+ikrt_posix_opendir (ikptr s_pathname, ikpcb_t * pcb)
 {
 #ifdef HAVE_OPENDIR
   char *	pathname;
@@ -1358,7 +1358,7 @@ ikrt_posix_opendir (ikptr s_pathname, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_fdopendir (ikptr s_fd, ikpcb * pcb)
+ikrt_posix_fdopendir (ikptr s_fd, ikpcb_t * pcb)
 {
 #ifdef HAVE_FDOPENDIR
   DIR *		stream;
@@ -1370,7 +1370,7 @@ ikrt_posix_fdopendir (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_readdir (ikptr s_pointer, ikpcb * pcb)
+ikrt_posix_readdir (ikptr s_pointer, ikpcb_t * pcb)
 {
 #if ((defined HAVE_READDIR) && (defined HAVE_CLOSEDIR))
   DIR *		  stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
@@ -1394,7 +1394,7 @@ ikrt_posix_readdir (ikptr s_pointer, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_closedir (ikptr s_pointer, ikpcb * pcb)
+ikrt_posix_closedir (ikptr s_pointer, ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOSEDIR
   DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
@@ -1425,7 +1425,7 @@ ikrt_posix_rewinddir (ikptr s_pointer)
 #endif
 }
 ikptr
-ikrt_posix_telldir (ikptr s_pointer, ikpcb * pcb)
+ikrt_posix_telldir (ikptr s_pointer, ikpcb_t * pcb)
 {
 #ifdef HAVE_TELLDIR
   DIR *	 stream = (DIR *) IK_POINTER_DATA_VOIDP(s_pointer);
@@ -1481,7 +1481,7 @@ ikrt_posix_close (ikptr s_fd)
 #endif
 }
 ikptr
-ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
+ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb_t * pcb)
 {
 #ifdef HAVE_READ
   void *	buffer;
@@ -1497,7 +1497,7 @@ ikrt_posix_read (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off, ikpcb * pcb)
+ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off, ikpcb_t * pcb)
 {
 #ifdef HAVE_PREAD
   void *	buffer;
@@ -1522,7 +1522,7 @@ ikrt_posix_pread (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_off, ikpcb *
 #endif
 }
 ikptr
-ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
+ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb_t * pcb)
 {
 #ifdef HAVE_WRITE
   void *	buffer;
@@ -1545,7 +1545,7 @@ ikrt_posix_write (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset, ikpcb * pcb)
+ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset, ikpcb_t * pcb)
 {
 #ifdef HAVE_PWRITE
   void *	buffer;
@@ -1570,7 +1570,7 @@ ikrt_posix_pwrite (ikptr s_fd, ikptr s_buffer, ikptr s_size, ikptr s_offset, ikp
 #endif
 }
 ikptr
-ikrt_posix_lseek (ikptr s_fd, ikptr s_off, ikptr s_whence, ikpcb * pcb)
+ikrt_posix_lseek (ikptr s_fd, ikptr s_off, ikptr s_whence, ikpcb_t * pcb)
 {
 #ifdef HAVE_LSEEK
   off_t		off;
@@ -1587,7 +1587,7 @@ ikrt_posix_lseek (ikptr s_fd, ikptr s_off, ikptr s_whence, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_readv (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
+ikrt_posix_readv (ikptr s_fd, ikptr s_buffers, ikpcb_t * pcb)
 {
 #ifdef HAVE_READV
   int		number_of_buffers = ik_list_length(s_buffers);
@@ -1608,7 +1608,7 @@ ikrt_posix_readv (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_writev (ikptr s_fd, ikptr s_buffers, ikpcb * pcb)
+ikrt_posix_writev (ikptr s_fd, ikptr s_buffers, ikpcb_t * pcb)
 {
 #ifdef HAVE_WRITEV
   int		number_of_buffers = ik_list_length(s_buffers);
@@ -1635,7 +1635,7 @@ ikptr
 ikrt_posix_select (ikptr nfds_fx,
 		   ikptr read_fds_ell, ikptr write_fds_ell, ikptr except_fds_ell,
 		   ikptr sec, ikptr usec,
-		   ikpcb * pcb)
+		   ikpcb_t * pcb)
 {
 #ifdef HAVE_SELECT
   ikptr			L;	/* iterator for input lists */
@@ -1743,7 +1743,7 @@ ikrt_posix_select (ikptr nfds_fx,
 #endif
 }
 ikptr
-ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb * pcb)
+ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb_t * pcb)
 {
 #ifdef HAVE_SELECT
   fd_set		read_fds;
@@ -1782,7 +1782,7 @@ ikrt_posix_select_fd (ikptr s_fd, ikptr sec, ikptr usec, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_select_is_readable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+ikrt_posix_select_is_readable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb_t * pcb)
 /* Interface to the C function  "select()" for a single file descriptor.
    Wait for  a readable event with  timeout. The file  descriptor is the
    fixnum S_FD.   S_SEC and S_USEC must be  fixnums representing timeout
@@ -1819,7 +1819,7 @@ ikrt_posix_select_is_readable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pc
 #endif
 }
 ikptr
-ikrt_posix_select_is_writable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+ikrt_posix_select_is_writable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb_t * pcb)
 /* Interface to the C function  "select()" for a single file descriptor.
    Wait for  a writable event with  timeout. The file  descriptor is the
    fixnum S_FD.   S_SEC and S_USEC must be  fixnums representing timeout
@@ -1856,7 +1856,7 @@ ikrt_posix_select_is_writable (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pc
 #endif
 }
 ikptr
-ikrt_posix_select_is_exceptional (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+ikrt_posix_select_is_exceptional (ikptr s_fd, ikptr s_sec, ikptr s_usec, ikpcb_t * pcb)
 /* Interface to the C function  "select()" for a single file descriptor.
    Wait for  an exceptional event  with timeout. The file  descriptor is
    the  fixnum S_FD.   S_SEC  and S_USEC  must  be fixnums  representing
@@ -1980,7 +1980,7 @@ ikrt_posix_ioctl (ikptr fd, ikptr command, ikptr arg)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
 /* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
    FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
 {
@@ -1998,7 +1998,7 @@ ikptr_posix_fd_set_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
 /* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
    FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
 {
@@ -2016,7 +2016,7 @@ ikptr_posix_fd_unset_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb_t * pcb)
 /* Notice  that  O_NONBLOCK  needs  the F_SETFL  and  F_GETFL  commands.
    FD_CLOEXEC needs the F_SETFD and F_GETFD commands. */
 {
@@ -2034,7 +2034,7 @@ ikptr_posix_fd_ref_non_blocking_mode (ikptr s_fd, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb_t * pcb)
 /* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
    O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
 {
@@ -2052,7 +2052,7 @@ ikptr_posix_fd_set_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb_t * pcb)
 /* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
    O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
 {
@@ -2070,7 +2070,7 @@ ikptr_posix_fd_unset_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
 #endif
 }
 ikptr
-ikptr_posix_fd_ref_close_on_exec_mode (ikptr s_fd, ikpcb * pcb)
+ikptr_posix_fd_ref_close_on_exec_mode (ikptr s_fd, ikpcb_t * pcb)
 /* Notice  that  FD_CLOEXEC  needs  the F_SETFD  and  F_GETFD  commands.
    O_NONBLOCK needs the F_SETFL and F_GETFL commands. */
 {
@@ -2115,7 +2115,7 @@ ikrt_posix_dup2 (ikptr old, ikptr new)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_pipe (ikpcb * pcb)
+ikrt_posix_pipe (ikpcb_t * pcb)
 {
 #ifdef HAVE_PIPE
   int	rv;
@@ -2204,14 +2204,14 @@ ikrt_posix_lockf (ikptr s_fd, ikptr s_cmd, ikptr s_len)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_sizeof_fd_set (ikptr s_count, ikpcb * pcb)
+ikrt_posix_sizeof_fd_set (ikptr s_count, ikpcb_t * pcb)
 {
   /* Yes, we do not check for overflow. */
   size_t	len = sizeof(fd_set) * IK_UNFIX(s_count);
   return ika_integer_from_size_t(pcb, len);
 }
 ikptr
-ikrt_posix_make_fd_set_bytevector (ikptr s_count, ikpcb * pcb)
+ikrt_posix_make_fd_set_bytevector (ikptr s_count, ikpcb_t * pcb)
 {
   long		count	= IK_UNFIX(s_count);
   /* Yes, we do not check for overflow. */
@@ -2224,7 +2224,7 @@ ikrt_posix_make_fd_set_bytevector (ikptr s_count, ikpcb * pcb)
   return bv;
 }
 ikptr
-ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb * pcb)
+ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb_t * pcb)
 {
   long		count	= IK_UNFIX(s_count);
   /* Yes, we do not check for overflow. */
@@ -2239,7 +2239,7 @@ ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb * pcb)
     return IK_FALSE;
 }
 ikptr
-ikrt_posix_make_fd_set_memory_block (ikptr s_mblock, ikptr s_count, ikpcb * pcb)
+ikrt_posix_make_fd_set_memory_block (ikptr s_mblock, ikptr s_count, ikpcb_t * pcb)
 {
   long		count	= IK_UNFIX(s_count);
   /* Yes, we do not check for overflow. */
@@ -2264,7 +2264,7 @@ ikrt_posix_make_fd_set_memory_block (ikptr s_mblock, ikptr s_count, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_fd_zero (ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+ikrt_posix_fd_zero (ikptr s_fdset, ikptr s_idx, ikpcb_t * pcb)
 {
   fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK_OR_FALSE(s_fdset);
   if (set) {
@@ -2274,7 +2274,7 @@ ikrt_posix_fd_zero (ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
   return IK_VOID;
 }
 ikptr
-ikrt_posix_fd_set (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+ikrt_posix_fd_set (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb_t * pcb)
 {
   fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fdset);
   int		idx = IK_UNFIX(s_idx);
@@ -2283,7 +2283,7 @@ ikrt_posix_fd_set (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
   return IK_VOID;
 }
 ikptr
-ikrt_posix_fd_clr (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+ikrt_posix_fd_clr (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb_t * pcb)
 {
   fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fdset);
   int		idx = IK_UNFIX(s_idx);
@@ -2292,7 +2292,7 @@ ikrt_posix_fd_clr (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
   return IK_VOID;
 }
 ikptr
-ikrt_posix_fd_isset (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb * pcb)
+ikrt_posix_fd_isset (ikptr s_fd, ikptr s_fdset, ikptr s_idx, ikpcb_t * pcb)
 {
   fd_set *	set = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fdset);
   int		idx = IK_UNFIX(s_idx);
@@ -2308,7 +2308,7 @@ ikptr
 ikrt_posix_select_from_sets (ikptr s_nfds,
 			     ikptr s_read_fds, ikptr s_write_fds, ikptr s_except_fds,
 			     ikptr s_sec, ikptr s_usec,
-			     ikpcb * pcb)
+			     ikpcb_t * pcb)
 {
 #ifdef HAVE_SELECT
   fd_set *	read_fds   = \
@@ -2352,7 +2352,7 @@ ikrt_posix_select_from_sets (ikptr s_nfds,
 }
 ikptr
 ikrt_posix_select_from_sets_array (ikptr s_nfds, ikptr s_fd_sets,
-				   ikptr s_sec, ikptr s_usec, ikpcb * pcb)
+				   ikptr s_sec, ikptr s_usec, ikpcb_t * pcb)
 {
 #ifdef HAVE_SELECT
   fd_set *	fd_sets    = IK_VOIDP_FROM_BYTEVECTOR_OR_POINTER_OR_MBLOCK(s_fd_sets);
@@ -2385,7 +2385,7 @@ ikrt_posix_select_from_sets_array (ikptr s_nfds, ikptr s_fd_sets,
 
 ikptr
 ikrt_posix_mmap (ikptr s_address, ikptr s_length, ikptr s_protect,
-		 ikptr s_flags, ikptr s_fd, ikptr s_offset, ikpcb * pcb)
+		 ikptr s_flags, ikptr s_fd, ikptr s_offset, ikpcb_t * pcb)
 {
 #ifdef HAVE_MMAP
   void *	address = (IK_FALSE_OBJECT == s_address)? NULL : IK_POINTER_DATA_VOIDP(s_address);
@@ -2434,7 +2434,7 @@ ikrt_posix_msync (ikptr s_address, ikptr s_length, ikptr s_flags)
 #endif
 }
 ikptr
-ikrt_posix_mremap (ikptr s_address, ikptr s_length, ikptr s_new_length, ikptr s_flags, ikpcb * pcb)
+ikrt_posix_mremap (ikptr s_address, ikptr s_length, ikptr s_new_length, ikptr s_flags, ikpcb_t * pcb)
 {
 #ifdef HAVE_MREMAP
   void *	address     = IK_POINTER_DATA_VOIDP(s_address);
@@ -2538,7 +2538,7 @@ ikrt_posix_mprotect (ikptr s_address, ikptr s_length, ikptr s_prot)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_make_sockaddr_un (ikptr s_pathname, ikpcb * pcb)
+ikrt_posix_make_sockaddr_un (ikptr s_pathname, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_UN
 #undef SIZE
@@ -2555,7 +2555,7 @@ ikrt_posix_make_sockaddr_un (ikptr s_pathname, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_sockaddr_un_pathname (ikptr s_addr, ikpcb * pcb)
+ikrt_posix_sockaddr_un_pathname (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_UN
   struct sockaddr_un *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
@@ -2588,7 +2588,7 @@ ikrt_posix_sockaddr_un_pathname (ikptr s_addr, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_make_sockaddr_in (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
+ikrt_posix_make_sockaddr_in (ikptr s_host_address, ikptr s_port, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_IN
 #undef BV_LEN
@@ -2620,7 +2620,7 @@ ikrt_posix_make_sockaddr_in (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_sockaddr_in_in_addr (ikptr s_socket_address, ikpcb * pcb)
+ikrt_posix_sockaddr_in_in_addr (ikptr s_socket_address, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_IN
   struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
@@ -2645,7 +2645,7 @@ ikrt_posix_sockaddr_in_in_addr (ikptr s_socket_address, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_sockaddr_in_in_addr_number (ikptr s_socket_address, ikpcb * pcb)
+ikrt_posix_sockaddr_in_in_addr_number (ikptr s_socket_address, ikpcb_t * pcb)
 {
 #if ((defined HAVE_STRUCT_SOCKADDR_IN) && (defined HAVE_NTOHL))
   struct sockaddr_in *	socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
@@ -2687,7 +2687,7 @@ ikrt_posix_sockaddr_in_in_port (ikptr s_socket_address)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_make_sockaddr_in6 (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
+ikrt_posix_make_sockaddr_in6 (ikptr s_host_address, ikptr s_port, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_IN6
 #undef BV_LEN
@@ -2716,7 +2716,7 @@ ikrt_posix_make_sockaddr_in6 (ikptr s_host_address, ikptr s_port, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_sockaddr_in6_in6_addr (ikptr s_socket_address, ikpcb * pcb)
+ikrt_posix_sockaddr_in6_in6_addr (ikptr s_socket_address, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_SOCKADDR_IN6
   struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
@@ -2762,7 +2762,7 @@ ikrt_posix_sockaddr_in6_in6_port (ikptr s_socket_address)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_in6addr_loopback (ikpcb * pcb)
+ikrt_posix_in6addr_loopback (ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_IN6_ADDR
   static const struct in6_addr constant_host_address = IN6ADDR_LOOPBACK_INIT;
@@ -2779,7 +2779,7 @@ ikrt_posix_in6addr_loopback (ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_in6addr_any (ikpcb * pcb)
+ikrt_posix_in6addr_any (ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_IN6_ADDR
   static const struct in6_addr constant_host_address = IN6ADDR_ANY_INIT;
@@ -2802,7 +2802,7 @@ ikrt_posix_in6addr_any (ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_inet_aton (ikptr s_dotted_quad, ikpcb * pcb)
+ikrt_posix_inet_aton (ikptr s_dotted_quad, ikpcb_t * pcb)
 {
 #ifdef HAVE_INET_ATON
   void *		dotted_quad;
@@ -2825,7 +2825,7 @@ ikrt_posix_inet_aton (ikptr s_dotted_quad, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_inet_ntoa (ikptr s_host_address, ikpcb * pcb)
+ikrt_posix_inet_ntoa (ikptr s_host_address, ikpcb_t * pcb)
 {
 #ifdef HAVE_INET_NTOA
   struct in_addr *	host_address;
@@ -2852,7 +2852,7 @@ ikrt_posix_inet_ntoa (ikptr s_host_address, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_inet_pton (ikptr s_af, ikptr s_presentation, ikpcb * pcb)
+ikrt_posix_inet_pton (ikptr s_af, ikptr s_presentation, ikpcb_t * pcb)
 {
 #ifdef HAVE_INET_PTON
   void *	presentation;
@@ -2897,7 +2897,7 @@ ikrt_posix_inet_pton (ikptr s_af, ikptr s_presentation, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_inet_ntop (ikptr s_af, ikptr s_host_address, ikpcb * pcb)
+ikrt_posix_inet_ntop (ikptr s_af, ikptr s_host_address, ikpcb_t * pcb)
 {
 #ifdef HAVE_INET_NTOP
   switch (IK_UNFIX(s_af)) {
@@ -2937,7 +2937,7 @@ ikrt_posix_inet_ntop (ikptr s_af, ikptr s_host_address, ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_HOSTENT
 static ikptr
-hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
+hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb_t * pcb)
 /* Convert  a  C  language  "struct  hostent"  into  a  Scheme  language
    "struct-hostent".  Makes use of "pcb->root6,7,8". */
 {
@@ -3019,7 +3019,7 @@ hostent_to_struct (ikptr s_rtd, struct hostent * src, ikpcb * pcb)
 }
 #endif
 ikptr
-ikrt_posix_gethostbyname (ikptr s_rtd, ikptr s_hostname, ikpcb * pcb)
+ikrt_posix_gethostbyname (ikptr s_rtd, ikptr s_hostname, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETHOSTBYNAME
   char *		hostname;
@@ -3034,7 +3034,7 @@ ikrt_posix_gethostbyname (ikptr s_rtd, ikptr s_hostname, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_gethostbyname2 (ikptr s_rtd, ikptr s_hostname, ikptr s_af, ikpcb * pcb)
+ikrt_posix_gethostbyname2 (ikptr s_rtd, ikptr s_hostname, ikptr s_af, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETHOSTBYNAME2
   char *		hostname;
@@ -3049,7 +3049,7 @@ ikrt_posix_gethostbyname2 (ikptr s_rtd, ikptr s_hostname, ikptr s_af, ikpcb * pc
 #endif
 }
 ikptr
-ikrt_posix_gethostbyaddr (ikptr s_rtd, ikptr s_host_address, ikpcb * pcb)
+ikrt_posix_gethostbyaddr (ikptr s_rtd, ikptr s_host_address, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETHOSTBYADDR
   void *		host_address;
@@ -3068,7 +3068,7 @@ ikrt_posix_gethostbyaddr (ikptr s_rtd, ikptr s_host_address, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_host_entries (ikptr s_rtd, ikpcb_t * pcb)
 {
 #if ((defined HAVE_SETHOSTENT) && (defined HAVE_GETHOSTENT) && (defined HAVE_ENDHOSTENT))
   struct hostent *	entry;
@@ -3119,7 +3119,7 @@ ikrt_posix_host_entries (ikptr s_rtd, ikpcb * pcb)
 
 #if ((defined HAVE_STRUCT_ADDRINFO) && (defined HAVE_GETADDRINFO))
 static ikptr
-addrinfo_to_struct (ikpcb * pcb, ikptr s_rtd, struct addrinfo * src, int with_canon_name)
+addrinfo_to_struct (ikpcb_t * pcb, ikptr s_rtd, struct addrinfo * src, int with_canon_name)
 /* Convert  a  C  language  "struct  addrinfo" into  a  Scheme  language
    "struct-addrinfo".  Make use of "pcb->root9". */
 {
@@ -3147,7 +3147,7 @@ addrinfo_to_struct (ikpcb * pcb, ikptr s_rtd, struct addrinfo * src, int with_ca
 }
 #endif
 ikptr
-ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hints_struct, ikpcb * pcb)
+ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hints_struct, ikpcb_t * pcb)
 {
 #if ((defined HAVE_STRUCT_ADDRINFO) && (defined HAVE_GETADDRINFO))
   const char *		node;
@@ -3214,7 +3214,7 @@ ikrt_posix_getaddrinfo (ikptr s_rtd, ikptr s_node, ikptr s_service, ikptr s_hint
 #endif
 }
 ikptr
-ikrt_posix_gai_strerror (ikptr s_error_code, ikpcb * pcb)
+ikrt_posix_gai_strerror (ikptr s_error_code, ikpcb_t * pcb)
 {
 #ifdef HAVE_GAI_STRERROR
   return ika_bytevector_from_cstring(pcb, gai_strerror(IK_UNFIX(s_error_code)));
@@ -3230,7 +3230,7 @@ ikrt_posix_gai_strerror (ikptr s_error_code, ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_PROTOENT
 static ikptr
-protoent_to_struct (ikpcb * pcb, ikptr s_rtd, struct protoent * src)
+protoent_to_struct (ikpcb_t * pcb, ikptr s_rtd, struct protoent * src)
 /* Convert  a  C  language  "struct  protoent" into  a  Scheme  language
    "struct-protoent".  Make use of "pcb->root7,8,9". */
 {
@@ -3276,7 +3276,7 @@ protoent_to_struct (ikpcb * pcb, ikptr s_rtd, struct protoent * src)
 }
 #endif
 ikptr
-ikrt_posix_getprotobyname (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
+ikrt_posix_getprotobyname (ikptr s_rtd, ikptr s_name, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETPROTOBYNAME
   char *		name;
@@ -3289,7 +3289,7 @@ ikrt_posix_getprotobyname (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getprotobynumber (ikptr s_rtd, ikptr s_proto_num, ikpcb * pcb)
+ikrt_posix_getprotobynumber (ikptr s_rtd, ikptr s_proto_num, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETPROTOBYNUMBER
   struct protoent *	entry;
@@ -3300,7 +3300,7 @@ ikrt_posix_getprotobynumber (ikptr s_rtd, ikptr s_proto_num, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_protocol_entries (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_protocol_entries (ikptr s_rtd, ikpcb_t * pcb)
 {
 #if ((defined HAVE_SETPROTOENT) && (defined HAVE_GETPROTOENT) && (defined ENDPROTOENT))
   ikptr			s_list_of_entries;
@@ -3351,7 +3351,7 @@ ikrt_posix_protocol_entries (ikptr s_rtd, ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_SERVENT
 static ikptr
-servent_to_struct (ikpcb * pcb, ikptr s_rtd, struct servent * src)
+servent_to_struct (ikpcb_t * pcb, ikptr s_rtd, struct servent * src)
 /* Convert  a  C  language  "struct  servent"  into  a  Scheme  language
    "struct-servent". Make use of "pcb->root7,8,9". */
 {
@@ -3400,7 +3400,7 @@ servent_to_struct (ikpcb * pcb, ikptr s_rtd, struct servent * src)
 }
 #endif
 ikptr
-ikrt_posix_getservbyname (ikptr s_rtd, ikptr s_name, ikptr s_proto, ikpcb * pcb)
+ikrt_posix_getservbyname (ikptr s_rtd, ikptr s_name, ikptr s_proto, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETSERVBYNAME
   char *		name;
@@ -3415,7 +3415,7 @@ ikrt_posix_getservbyname (ikptr s_rtd, ikptr s_name, ikptr s_proto, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getservbyport (ikptr s_rtd, ikptr s_port, ikptr s_proto, ikpcb * pcb)
+ikrt_posix_getservbyport (ikptr s_rtd, ikptr s_port, ikptr s_proto, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETSERVBYPORT
   char *		proto;
@@ -3428,7 +3428,7 @@ ikrt_posix_getservbyport (ikptr s_rtd, ikptr s_port, ikptr s_proto, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_service_entries (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_service_entries (ikptr s_rtd, ikpcb_t * pcb)
 {
 #if ((defined HAVE_SETSERVENT) && (defined HAVE_GETSERVENT) && (defined HAVE_ENDSERVENT))
   ikptr			s_list_of_entries;
@@ -3479,7 +3479,7 @@ ikrt_posix_service_entries (ikptr s_rtd, ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_NETENT
 static ikptr
-netent_to_struct (ikpcb * pcb, ikptr s_rtd, struct netent * src)
+netent_to_struct (ikpcb_t * pcb, ikptr s_rtd, struct netent * src)
 /* Convert  a  C  language   "struct  netent"  into  a  Scheme  language
    "struct-netent".  Make use of "pcb->root7,8,9". */
 {
@@ -3524,7 +3524,7 @@ netent_to_struct (ikpcb * pcb, ikptr s_rtd, struct netent * src)
 }
 #endif
 ikptr
-ikrt_posix_getnetbyname (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
+ikrt_posix_getnetbyname (ikptr s_rtd, ikptr s_name, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETNETBYNAME
   char *		name;
@@ -3537,7 +3537,7 @@ ikrt_posix_getnetbyname (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getnetbyaddr (ikptr s_rtd, ikptr s_net_num, ikptr s_type, ikpcb * pcb)
+ikrt_posix_getnetbyaddr (ikptr s_rtd, ikptr s_net_num, ikptr s_type, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETNETBYADDR
   uint32_t		net;
@@ -3550,7 +3550,7 @@ ikrt_posix_getnetbyaddr (ikptr s_rtd, ikptr s_net_num, ikptr s_type, ikpcb * pcb
 #endif
 }
 ikptr
-ikrt_posix_network_entries (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_network_entries (ikptr s_rtd, ikpcb_t * pcb)
 {
 #if ((defined HAVE_SETNETENT) && (defined HAVE_GETNETENT) && (defined HAVE_ENDNETENT))
   struct netent *	entry;
@@ -3622,7 +3622,7 @@ ikrt_posix_shutdown (ikptr s_sock, ikptr s_how)
 #endif
 }
 ikptr
-ikrt_posix_socketpair (ikptr s_namespace, ikptr s_style, ikptr s_protocol, ikpcb * pcb)
+ikrt_posix_socketpair (ikptr s_namespace, ikptr s_style, ikptr s_protocol, ikpcb_t * pcb)
 {
 #ifdef HAVE_SOCKETPAIR
   int	rv;
@@ -3675,7 +3675,7 @@ ikrt_posix_listen (ikptr s_sock, ikptr s_number_of_pending_connections)
 #endif
 }
 ikptr
-ikrt_posix_accept (ikptr s_sock, ikpcb * pcb)
+ikrt_posix_accept (ikptr s_sock, ikpcb_t * pcb)
 {
 #ifdef HAVE_ACCEPT
 #undef SIZE
@@ -3725,7 +3725,7 @@ ikrt_posix_bind (ikptr s_sock, ikptr s_socks_addr)
 #endif
 }
 ikptr
-ikrt_posix_getpeername (ikptr s_sock, ikpcb * pcb)
+ikrt_posix_getpeername (ikptr s_sock, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETPEERNAME
 #undef SIZE
@@ -3745,7 +3745,7 @@ ikrt_posix_getpeername (ikptr s_sock, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getsockname (ikptr s_sock, ikpcb * pcb)
+ikrt_posix_getsockname (ikptr s_sock, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETSOCKNAME
 #undef SIZE
@@ -3826,7 +3826,7 @@ ikrt_posix_sendto (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ik
 #endif
 }
 ikptr
-ikrt_posix_recvfrom (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ikpcb * pcb)
+ikrt_posix_recvfrom (ikptr s_sock, ikptr s_buffer, ikptr s_size, ikptr s_flags, ikpcb_t * pcb)
 {
 #ifdef HAVE_RECVFROM
 #undef SIZE
@@ -3922,7 +3922,7 @@ ikrt_posix_setsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s
 #endif
 }
 ikptr
-ikrt_posix_getsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb * pcb)
+ikrt_posix_getsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETSOCKOPT
   int		optval;
@@ -3966,7 +3966,7 @@ ikrt_posix_setsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpt
 #endif
 }
 ikptr
-ikrt_posix_getsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb * pcb)
+ikrt_posix_getsockopt_size_t (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETSOCKOPT
   size_t	optval;
@@ -4012,7 +4012,7 @@ ikrt_posix_setsockopt_linger (ikptr s_sock, ikptr onoff, ikptr linger)
 #endif
 }
 ikptr
-ikrt_posix_getsockopt_linger (ikptr s_sock, ikpcb * pcb)
+ikrt_posix_getsockopt_linger (ikptr s_sock, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETSOCKOPT
   struct linger optval;
@@ -4080,7 +4080,7 @@ ikrt_posix_getegid (void)
 #endif
 }
 ikptr
-ikrt_posix_getgroups (ikpcb * pcb)
+ikrt_posix_getgroups (ikpcb_t * pcb)
 {
 #ifdef HAVE_GETGROUPS
   int	count;
@@ -4207,7 +4207,7 @@ ikrt_posix_setregid (ikptr s_real_gid, ikptr s_effective_gid)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_getlogin (ikpcb * pcb)
+ikrt_posix_getlogin (ikpcb_t * pcb)
 {
 #ifdef HAVE_GETLOGIN
   char *	username;
@@ -4225,7 +4225,7 @@ ikrt_posix_getlogin (ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_PASSWD
 static ikptr
-passwd_to_struct (ikptr s_rtd, struct passwd * src, ikpcb * pcb)
+passwd_to_struct (ikptr s_rtd, struct passwd * src, ikpcb_t * pcb)
 /* Convert  a  C  language   "struct  passwd"  into  a  Scheme  language
    "struct-passwd".  Makes use of "pcb->root9". */
 {
@@ -4251,7 +4251,7 @@ passwd_to_struct (ikptr s_rtd, struct passwd * src, ikpcb * pcb)
 }
 #endif
 ikptr
-ikrt_posix_getpwuid (ikptr s_rtd, ikptr s_uid, ikpcb * pcb)
+ikrt_posix_getpwuid (ikptr s_rtd, ikptr s_uid, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETPWUID
   struct passwd *	entry;
@@ -4262,7 +4262,7 @@ ikrt_posix_getpwuid (ikptr s_rtd, ikptr s_uid, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getpwnam (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
+ikrt_posix_getpwnam (ikptr s_rtd, ikptr s_name, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETPWNAM
   char *		name;
@@ -4275,7 +4275,7 @@ ikrt_posix_getpwnam (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_user_entries (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_user_entries (ikptr s_rtd, ikpcb_t * pcb)
 {
 #if ((defined HAVE_SETPWENT) && (defined HAVE_GETPWENT) && (defined HAVE_ENDPWENT))
   struct passwd *	entry;
@@ -4326,7 +4326,7 @@ ikrt_posix_user_entries (ikptr s_rtd, ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_GROUP
 static ikptr
-group_to_struct (ikptr s_rtd, struct group * src, ikpcb * pcb)
+group_to_struct (ikptr s_rtd, struct group * src, ikpcb_t * pcb)
 /* Convert  a   C  language  "struct  group"  into   a  Scheme  language
    "struct-group".  Makes use of "pcb->root7,8,9". */
 {
@@ -4371,7 +4371,7 @@ group_to_struct (ikptr s_rtd, struct group * src, ikpcb * pcb)
 }
 #endif
 ikptr
-ikrt_posix_getgrgid (ikptr s_rtd, ikptr s_gid, ikpcb * pcb)
+ikrt_posix_getgrgid (ikptr s_rtd, ikptr s_gid, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETGRGID
   struct group *       entry;
@@ -4382,7 +4382,7 @@ ikrt_posix_getgrgid (ikptr s_rtd, ikptr s_gid, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getgrnam (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
+ikrt_posix_getgrnam (ikptr s_rtd, ikptr s_name, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETGRNAM
   char *		name;
@@ -4395,7 +4395,7 @@ ikrt_posix_getgrnam (ikptr s_rtd, ikptr s_name, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_group_entries (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_group_entries (ikptr s_rtd, ikpcb_t * pcb)
 {
 #if ((defined HAVE_SETGRENT) && (defined HAVE_GETGRENT) && (defined HAVE_ENDGRENT))
   struct group *	entry;
@@ -4444,7 +4444,7 @@ ikrt_posix_group_entries (ikptr s_rtd, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_ctermid (ikpcb * pcb)
+ikrt_posix_ctermid (ikpcb_t * pcb)
 {
 #ifdef HAVE_CTERMID
   char		id[L_ctermid];
@@ -4550,7 +4550,7 @@ ikrt_posix_tcgetsid (ikptr s_fd)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_clock (ikpcb * pcb)
+ikrt_posix_clock (ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOCK
   clock_t	T;
@@ -4561,7 +4561,7 @@ ikrt_posix_clock (ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_time (ikpcb * pcb)
+ikrt_posix_time (ikpcb_t * pcb)
 {
 #ifdef HAVE_TIME
   time_t	T;
@@ -4576,7 +4576,7 @@ ikrt_posix_time (ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_TMS
 static ikptr
-tms_to_struct (ikptr s_rtd, struct tms * src, ikpcb * pcb)
+tms_to_struct (ikptr s_rtd, struct tms * src, ikpcb_t * pcb)
 /* Convert   a  C  language   "struct  tms"   into  a   Scheme  language
    "struct-tms".  Makes use of "pcb->root9". */
 {
@@ -4602,7 +4602,7 @@ tms_to_struct (ikptr s_rtd, struct tms * src, ikpcb * pcb)
 }
 #endif
 ikptr
-ikrt_posix_times (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_times (ikptr s_rtd, ikpcb_t * pcb)
 {
 #ifdef HAVE_TIMES
   struct tms	T = { 0, 0, 0, 0 };
@@ -4617,7 +4617,7 @@ ikrt_posix_times (ikptr s_rtd, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETTIMEOFDAY
   struct timeval	T;
@@ -4646,7 +4646,7 @@ ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
 
 #ifdef HAVE_STRUCT_TM
 static ikptr
-tm_to_struct (ikptr s_rtd, struct tm * src, ikpcb * pcb)
+tm_to_struct (ikptr s_rtd, struct tm * src, ikpcb_t * pcb)
 /* Convert a C language "struct  tm" into a Scheme language "struct-tm".
    Makes use of "pcb->root9" only. */
 {
@@ -4688,7 +4688,7 @@ tm_to_struct (ikptr s_rtd, struct tm * src, ikpcb * pcb)
 }
 #endif
 ikptr
-ikrt_posix_localtime (ikptr s_rtd, ikptr s_time_num, ikpcb * pcb)
+ikrt_posix_localtime (ikptr s_rtd, ikptr s_time_num, ikpcb_t * pcb)
 {
 #ifdef HAVE_LOCALTIME_R
   time_t	time = (time_t)ik_integer_to_ulong(s_time_num);
@@ -4701,7 +4701,7 @@ ikrt_posix_localtime (ikptr s_rtd, ikptr s_time_num, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_gmtime (ikptr s_rtd, ikptr s_time_num, ikpcb * pcb)
+ikrt_posix_gmtime (ikptr s_rtd, ikptr s_time_num, ikpcb_t * pcb)
 {
 #ifdef HAVE_GMTIME_R
   time_t	time = (time_t)ik_integer_to_ulong(s_time_num);
@@ -4741,7 +4741,7 @@ struct_to_tm (ikptr s_src, struct tm * dst)
 }
 #endif
 ikptr
-ikrt_posix_timelocal (ikptr s_tm_struct, ikpcb * pcb)
+ikrt_posix_timelocal (ikptr s_tm_struct, ikpcb_t * pcb)
 {
 #ifdef HAVE_TIMELOCAL
   struct tm	T;
@@ -4754,7 +4754,7 @@ ikrt_posix_timelocal (ikptr s_tm_struct, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_timegm (ikptr s_tm_struct, ikpcb * pcb)
+ikrt_posix_timegm (ikptr s_tm_struct, ikpcb_t * pcb)
 {
 #ifdef HAVE_TIMEGM
   struct tm	T;
@@ -4767,7 +4767,7 @@ ikrt_posix_timegm (ikptr s_tm_struct, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_strftime (ikptr s_template, ikptr s_tm_struct, ikpcb *pcb)
+ikrt_posix_strftime (ikptr s_template, ikptr s_tm_struct, ikpcb_t *pcb)
 {
 #ifdef HAVE_STRFTIME
   struct tm	T;
@@ -4790,7 +4790,7 @@ ikrt_posix_strftime (ikptr s_template, ikptr s_tm_struct, ikpcb *pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_nanosleep (ikptr s_secs, ikptr s_nsecs, ikpcb * pcb)
+ikrt_posix_nanosleep (ikptr s_secs, ikptr s_nsecs, ikpcb_t * pcb)
 {
 #ifdef HAVE_NANOSLEEP
   struct timespec	requested;
@@ -4875,7 +4875,7 @@ ikrt_bvftime (ikptr outbv, ikptr fmtbv)
 #endif
 }
 ikptr
-ikrt_current_time_fixnums (ikpcb * pcb)
+ikrt_current_time_fixnums (ikpcb_t * pcb)
 {
 #if ((defined HAVE_TIME) && (defined HAVE_GMTIME_R))
   time_t	T;
@@ -4895,7 +4895,7 @@ ikrt_current_time_fixnums (ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_current_time_fixnums_2 (ikpcb * pcb)
+ikrt_current_time_fixnums_2 (ikpcb_t * pcb)
 {
 #if ((defined HAVE_TIME) && (defined HAVE_GMTIME_R))
   time_t	T;
@@ -4940,7 +4940,7 @@ ikrt_posix_setitimer (ikptr s_which, ikptr s_new)
 #endif
 }
 ikptr
-ikrt_posix_getitimer (ikptr s_which, ikptr s_old, ikpcb * pcb)
+ikrt_posix_getitimer (ikptr s_which, ikptr s_old, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETITIMER
   struct itimerval	old;
@@ -4971,7 +4971,7 @@ ikrt_posix_getitimer (ikptr s_which, ikptr s_old, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_alarm (ikptr s_seconds, ikpcb * pcb)
+ikrt_posix_alarm (ikptr s_seconds, ikpcb_t * pcb)
 {
 #ifdef HAVE_ALARM
   unsigned	rv;
@@ -5075,7 +5075,7 @@ ikrt_posix_signal_bub_delivered (ikptr s_signum)
 #if ((defined HAVE_SIGEMPTYSET) && (defined HAVE_SIGADDSET) \
      && ((defined HAVE_SIGWAITINFO) || (defined HAVE_SIGTIMEDWAIT)))
 static void
-posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
+posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb_t * pcb)
 {
   pcb->root9 = &s_struct;
   {
@@ -5219,7 +5219,7 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_sigwaitinfo (ikptr s_signo, ikptr s_siginfo, ikpcb * pcb)
+ikrt_posix_sigwaitinfo (ikptr s_signo, ikptr s_siginfo, ikpcb_t * pcb)
 /* Interface to the C  function "sigwaitinfo()".  Synchronously wait for
    a queued signal; if successful  return a fixnum representing a signal
    number, else return an encoded "errno" value.
@@ -5248,7 +5248,7 @@ ikrt_posix_sigwaitinfo (ikptr s_signo, ikptr s_siginfo, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_sigtimedwait (ikptr s_signo, ikptr s_siginfo, ikptr s_timeout, ikpcb * pcb)
+ikrt_posix_sigtimedwait (ikptr s_signo, ikptr s_siginfo, ikptr s_timeout, ikpcb_t * pcb)
 /* Interface to the C function "sigtimedwait()".  Synchronously wait for
    a  queued signal,  with  a  timeout; if  successful  return a  fixnum
    representing a signal number, else return an encoded "errno" value.
@@ -5289,7 +5289,7 @@ ikrt_posix_sigtimedwait (ikptr s_signo, ikptr s_siginfo, ikptr s_timeout, ikpcb 
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_sysconf (ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_sysconf (ikptr s_parameter, ikpcb_t * pcb)
 {
 #ifdef HAVE_SYSCONF
   long  parameter = ik_integer_to_long(s_parameter);
@@ -5305,7 +5305,7 @@ ikrt_posix_sysconf (ikptr s_parameter, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_pathconf (ikptr s_pathname, ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_pathconf (ikptr s_pathname, ikptr s_parameter, ikpcb_t * pcb)
 {
 #ifdef HAVE_PATHCONF
   char *pathname  = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
@@ -5322,7 +5322,7 @@ ikrt_posix_pathconf (ikptr s_pathname, ikptr s_parameter, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_fpathconf (ikptr s_fd, ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_fpathconf (ikptr s_fd, ikptr s_parameter, ikpcb_t * pcb)
 {
 #ifdef HAVE_FPATHCONF
   long  parameter = ik_integer_to_long(s_parameter);
@@ -5338,7 +5338,7 @@ ikrt_posix_fpathconf (ikptr s_fd, ikptr s_parameter, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_confstr (ikptr s_parameter, ikpcb * pcb)
+ikrt_posix_confstr (ikptr s_parameter, ikpcb_t * pcb)
 {
 #ifdef HAVE_CONFSTR
   long          parameter = ik_integer_to_long(s_parameter);
@@ -5364,7 +5364,7 @@ ikrt_posix_confstr (ikptr s_parameter, ikpcb * pcb)
 
 ikptr
 ikrt_posix_mq_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_attr,
-		    ikpcb * pcb)
+		    ikpcb_t * pcb)
 /* Interface to the C function  "mq_open()".  Create a new message queue
    or  open an  existing  one.   If successful  return  a message  queue
    descriptor, else return an encoded "errno" value.
@@ -5422,7 +5422,7 @@ ikrt_posix_mq_close (ikptr s_mqd)
 #endif
 }
 ikptr
-ikrt_posix_mq_unlink (ikptr s_name, ikpcb * pcb)
+ikrt_posix_mq_unlink (ikptr s_name, ikpcb_t * pcb)
 /* Interface to the C function  "mq_unlink()".  Remove the message queue
    whose  name is  S_NAME, which  must  be a  bytevector representing  a
    pathname  in  ASCII  encoding;  the message  queue  name  is  removed
@@ -5508,7 +5508,7 @@ ikrt_posix_mq_timedsend (ikptr s_mqd, ikptr s_message, ikptr s_priority,
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb * pcb)
+ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb_t * pcb)
 /* Interface  to  the  C  function "mq_receive()".   Remove  the  oldest
    message with the  highest priority from the  message queue referenced
    by S_MQD.  If successful return a  pair whose car is an exact integer
@@ -5548,7 +5548,7 @@ ikrt_posix_mq_receive (ikptr s_mqd, ikptr s_message, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout, ikpcb * pcb)
+ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout, ikpcb_t * pcb)
 /* Interface to  the C function "mq_timedreceive()".   Remove the oldest
    message with the  highest priority from the  message queue referenced
    by S_MQD.  If successful return a  pair whose car is an exact integer
@@ -5599,7 +5599,7 @@ ikrt_posix_mq_timedreceive (ikptr s_mqd, ikptr s_message, ikptr s_epoch_timeout,
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb * pcb)
+ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb_t * pcb)
 /* Interface to the C function "mq_setattr()".  Modify the attributes of
    the message queue referenced by S_MQD.   The new values are read from
    S_NEW_ATTR, which must  be an instance of  "struct-mq-attr".  The old
@@ -5642,7 +5642,7 @@ ikrt_posix_mq_setattr (ikptr s_mqd, ikptr s_new_attr, ikptr s_old_attr, ikpcb * 
 #endif
 }
 ikptr
-ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
+ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb_t * pcb)
 /* Interface to the C  function "mq_getattr()".  Retrieve the attributes
    of the message  queue referenced by S_MQD.  The values  are stored in
    S_ATTR, which must be an instance of "struct-mq-attr".  If successful
@@ -5684,7 +5684,7 @@ ikrt_posix_mq_getattr (ikptr s_mqd, ikptr s_attr, ikpcb * pcb)
 /* We assume that "clockid_t" can be safely converted to a "long". */
 
 ikptr
-ikrt_posix_clock_getres (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
+ikrt_posix_clock_getres (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOCK_GETRES
   clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
@@ -5709,7 +5709,7 @@ ikrt_posix_clock_getres (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_clock_gettime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
+ikrt_posix_clock_gettime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOCK_GETTIME
   clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
@@ -5734,7 +5734,7 @@ ikrt_posix_clock_gettime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb
 #endif
 }
 ikptr
-ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb)
+ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOCK_SETTIME
   clockid_t		clock_id = (clockid_t)ik_integer_to_long(s_clock_id);
@@ -5759,7 +5759,7 @@ ikrt_posix_clock_settime (ikptr s_clock_id, ikptr s_struct_timespec, ikpcb * pcb
 #endif
 }
 ikptr
-ikrt_posix_clock_getcpuclockid (ikptr s_pid, ikpcb * pcb)
+ikrt_posix_clock_getcpuclockid (ikptr s_pid, ikpcb_t * pcb)
 /* Interface  to the  C  function  "clock_getcpuclockid()".  Obtain  the
    identifier of a process' CPU-time  clock; if successful return a pair
    whose car  is an exact  integer representing  the id, else  return an
@@ -5828,7 +5828,7 @@ ikrt_posix_shm_unlink (ikptr s_name)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_sizeof_sem_t (ikpcb * pcb)
+ikrt_posix_sizeof_sem_t (ikpcb_t * pcb)
 {
 #ifdef HAVE_SEM_OPEN
   /* It is "sizeof(sem_t)  == 16" on my  i686-pc-linux-gnu (Marco Maggi;
@@ -5845,7 +5845,7 @@ ikrt_posix_sizeof_sem_t (ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_sem_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_value, ikpcb * pcb)
+ikrt_posix_sem_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_value, ikpcb_t * pcb)
 /* Interface  to the  C function  "sem_open()".  Initialise  and open  a
    named semaphore using the pathname S_NAME, which must be a bytevector
    holding an  ASCII encoded pathname.   If successful return  a pointer
@@ -5923,7 +5923,7 @@ ikrt_posix_sem_unlink (ikptr s_name)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_sem_init (ikptr s_sem, ikptr s_pshared, ikptr s_value, ikpcb * pcb)
+ikrt_posix_sem_init (ikptr s_sem, ikptr s_pshared, ikptr s_value, ikpcb_t * pcb)
 /* Interface  to the  C  function "sem_init()".   Initialise an  unnamed
    semaphore; if successful return S_SEM  itself, else return an encoded
    "errno" value.
@@ -6063,7 +6063,7 @@ ikrt_posix_sem_timedwait (ikptr s_sem, ikptr s_abs_timeout)
 #endif
 }
 ikptr
-ikrt_posix_sem_getvalue (ikptr s_sem, ikpcb * pcb)
+ikrt_posix_sem_getvalue (ikptr s_sem, ikpcb_t * pcb)
 /* Interface to  the C function "sem_getvalue()".   Retrieve the current
    value of the  semaphore referenced by S_SEM, which must  be a pointer
    object; if  successful return a  pair whose  car is an  exact integer
@@ -6100,7 +6100,7 @@ ikrt_posix_sem_getvalue (ikptr s_sem, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_timer_create (ikptr s_clock_id, ikptr s_sigevent, ikpcb * pcb)
+ikrt_posix_timer_create (ikptr s_clock_id, ikptr s_sigevent, ikpcb_t * pcb)
 /* Interface  to   the  C  function  "timer_create()".    Create  a  new
    per-process interval timer, initially  disarmed; if successful return
    a  pair  whose  car  is  an  exact  integer  representing  the  timer
@@ -6184,7 +6184,7 @@ ikrt_posix_timer_delete (ikptr s_timer_id)
 ikptr
 ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
 			  ikptr s_new_timer_spec, ikptr s_old_timer_spec,
-			  ikpcb * pcb)
+			  ikpcb_t * pcb)
 /* Interface to  the C  function "timer_settime()".   Arms or  disarms a
    timer; if successful  return the fixnum zero, else  return an encoded
    "errno" value.
@@ -6238,7 +6238,7 @@ ikrt_posix_timer_settime (ikptr s_timer_id, ikptr s_flags,
 #endif
 }
 ikptr
-ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb * pcb)
+ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb_t * pcb)
 /* Interface to the C  function "timer_gettime()".  Retrieve the current
    timer  specification associated  to  the  identifier S_TIMER_ID.   If
    successful return  the fixnum  zero, else  return an  encoded "errno"
@@ -6277,7 +6277,7 @@ ikrt_posix_timer_gettime (ikptr s_timer_id, ikptr s_curr_timer_spec, ikpcb * pcb
 #endif
 }
 ikptr
-ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb * pcb)
+ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb_t * pcb)
 /* Interface to the C  function "timer_getoverrun()".  Get overrun count
    for  the  timer referenced  by  S_TIMER_ID;  if successful  return  a
    non-negative  exact integer  representing  the overrun  count of  the
@@ -6303,7 +6303,7 @@ ikrt_posix_timer_getoverrun (ikptr s_timer_id, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_RLIM_INFINITY (ikpcb * pcb)
+ikrt_posix_RLIM_INFINITY (ikpcb_t * pcb)
 {
 #ifdef RLIM_INFINITY
   return ika_integer_from_uint64(pcb, RLIM_INFINITY);
@@ -6340,7 +6340,7 @@ ikrt_posix_setrlimit (ikptr s_resource, ikptr s_rlim)
 #endif
 }
 ikptr
-ikrt_posix_getrlimit (ikptr s_resource, ikptr s_rlim, ikpcb * pcb)
+ikrt_posix_getrlimit (ikptr s_resource, ikptr s_rlim, ikpcb_t * pcb)
 {
 #ifdef HAVE_GETRLIMIT
   int		resource = ik_integer_to_int(s_resource);
@@ -6382,7 +6382,7 @@ ikrt_posix_getrlimit (ikptr s_resource, ikptr s_rlim, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_getrusage (ikptr s_processes, ikptr s_rusage, ikpcb * pcb)
+ikrt_posix_getrusage (ikptr s_processes, ikptr s_rusage, ikpcb_t * pcb)
 #define VICARE_POSIX_STRUCT_RUSAGE_RU_UTIME	0
 #define VICARE_POSIX_STRUCT_RUSAGE_RU_STIME	1
 #define VICARE_POSIX_STRUCT_RUSAGE_RU_MAXRSS	2
@@ -6509,7 +6509,7 @@ ikrt_posix_getrusage (ikptr s_processes, ikptr s_rusage, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_posix_htonl (ikptr s_host_long, ikpcb * pcb)
+ikrt_posix_htonl (ikptr s_host_long, ikpcb_t * pcb)
 {
 #ifdef HAVE_HTONL
   uint32_t	in = ik_integer_to_uint32(s_host_long);
@@ -6521,7 +6521,7 @@ ikrt_posix_htonl (ikptr s_host_long, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_htons (ikptr s_host_long, ikpcb * pcb)
+ikrt_posix_htons (ikptr s_host_long, ikpcb_t * pcb)
 {
 #ifdef HAVE_HTONS
   uint16_t	in = ik_integer_to_uint16(s_host_long);
@@ -6536,7 +6536,7 @@ ikrt_posix_htons (ikptr s_host_long, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_posix_ntohl (ikptr s_host_long, ikpcb * pcb)
+ikrt_posix_ntohl (ikptr s_host_long, ikpcb_t * pcb)
 {
 #ifdef HAVE_NTOHL
   uint32_t	in = ik_integer_to_uint32(s_host_long);
@@ -6548,7 +6548,7 @@ ikrt_posix_ntohl (ikptr s_host_long, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_posix_ntohs (ikptr s_host_long, ikpcb * pcb)
+ikrt_posix_ntohs (ikptr s_host_long, ikpcb_t * pcb)
 {
 #ifdef HAVE_NTOHS
   uint16_t	in = ik_integer_to_uint16(s_host_long);
@@ -6572,7 +6572,7 @@ ikrt_posix_ntohs (ikptr s_host_long, ikpcb * pcb)
 #define IK_UTSNAME_MACHINE(STRU)		IK_FIELD((STRU),4)
 
 ikptr
-ikrt_posix_uname (ikptr s_struct, ikpcb * pcb)
+ikrt_posix_uname (ikptr s_struct, ikpcb_t * pcb)
 {
 #ifdef HAVE_UNAME
   struct utsname	stru;

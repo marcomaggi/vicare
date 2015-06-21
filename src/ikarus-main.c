@@ -36,7 +36,7 @@ static void register_alt_stack();
 
 ikpcb* the_pcb;
 
-ikpcb *
+ikpcb_t *
 ik_the_pcb (void)
 {
   return the_pcb;
@@ -56,7 +56,7 @@ ikarus_main (int argc, char** argv, char* boot_file)
    "boot_file" must  be a string  representing the filename of  the boot
    file to use. */
 {
-  ikpcb *	pcb;
+  ikpcb_t *	pcb;
   int		repl_on_sigint	= 0;
   if (! cpu_has_sse2()) {
     fprintf(stderr, "Vicare Scheme cannot run on your computer because\n");
@@ -107,19 +107,19 @@ ikarus_main (int argc, char** argv, char* boot_file)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_get_argv0_bytevector (ikpcb * pcb)
+ikrt_get_argv0_bytevector (ikpcb_t * pcb)
 {
   return ika_bytevector_from_cstring(pcb, pcb->argv0);
 }
 ikptr
-ikrt_get_argv0_string (ikpcb * pcb)
+ikrt_get_argv0_string (ikpcb_t * pcb)
 {
   return ika_string_from_cstring(pcb, pcb->argv0);
 }
 /* FIXME To be  removed at the next boot image  rotation.  (Marco Maggi;
    Wed Mar 11, 2015) */
 ikptr
-ikrt_get_last_revision (ikpcb * pcb)
+ikrt_get_last_revision (ikpcb_t * pcb)
 {
   return ika_string_from_cstring(pcb, "unknown-revision");
 }
@@ -146,7 +146,7 @@ ikrt_get_last_revision (ikpcb * pcb)
 static void
 handler (int signo IK_UNUSED, siginfo_t* info IK_UNUSED, void* uap)
 {
-  ikpcb *	pcb = ik_the_pcb();
+  ikpcb_t *	pcb = ik_the_pcb();
   /* avoid compiler warnings on unused arguments */
   /* signo=signo; info=info; uap=uap; */
   pcb->engine_counter = IK_FIX(-1);

@@ -969,7 +969,7 @@ In short, memory allocation which may trigger a garbage collection is
 performed as follows:
 
 @example
-ikpcb *   pcb = ik_the_pcb();
+ikpcb_t *   pcb = ik_the_pcb();
 long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_safe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
@@ -979,7 +979,7 @@ while memory allocation without garbage collection is performed as
 follows:
 
 @example
-ikpcb *   pcb = ik_the_pcb();
+ikpcb_t *   pcb = ik_the_pcb();
 long int  number_of_bytes = the_number_of_bytes;
 ikptr     p = ik_unsafe_alloc(pcb, IK_ALIGN(number_of_bytes));
 @end example
@@ -992,7 +992,7 @@ To add a tag, for example the @code{vector_tag}, to an untagged memory
 pointer we can do:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 long    len = IK_ALIGN(the_number_of_bytes);
 ikptr   ref = ik_safe_alloc(pcb, len) | vector_tag;
 @end example
@@ -1060,7 +1060,7 @@ pcb->allocation_pointer   = (ikptr)next_free_block;
 @end example
 
 
-@deftypefun {ikpcb *} ik_the_pcb (void)
+@deftypefun {ikpcb_t *} ik_the_pcb (void)
 Return a pointer to the current process control block.  It is rarely
 needed because when calling a C function from Scheme a pointer to the
 @pcb{} is always pushed on the C stack as last argument.
@@ -1137,7 +1137,7 @@ We can simulate the computation with:
 @end deftypefn
 
 
-@deftypefun ikptr ik_safe_alloc (ikpcb * @var{pcb}, unsigned long @var{aligned_size})
+@deftypefun ikptr ik_safe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{aligned_size})
 Reserve a memory block on the Scheme heap hot block and return a
 reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{aligned_size} must be the
@@ -1156,7 +1156,7 @@ happens, because the garbage collector never sees them.
 @end deftypefun
 
 
-@deftypefun ikptr ik_unsafe_alloc (ikpcb * @var{pcb}, unsigned long @var{align_size})
+@deftypefun ikptr ik_unsafe_alloc (ikpcb_t * @var{pcb}, unsigned long @var{align_size})
 Reserve a memory block on the Scheme heap hot block and return a
 reference to it as an @strong{untagged} pointer.  @var{pcb} must
 reference the process control block, @var{align_size} must be the
@@ -1202,7 +1202,7 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 @end deffn
 
 
-@deftypefun void ik_signal_dirt_in_page_of_pointer (ikpcb * @var{pcb}, ikptr @var{pointer})
+@deftypefun void ik_signal_dirt_in_page_of_pointer (ikpcb_t * @var{pcb}, ikptr @var{pointer})
 Register in the dirty vector that the memory page containing the
 location referenced by @var{pointer} has been mutated.  This function
 must be called every time we mutate a pair, vector, structure, record,
@@ -1264,7 +1264,7 @@ Example of @strong{correct} code: @code{s_one} is protected while
 allocating @code{s_two}:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
@@ -1280,7 +1280,7 @@ example of @strong{wrong} code: after the second call to the allocation
 function the value in @code{s_one} may be invalid:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = ika_bytevector_alloc(pcb, 10);
@@ -1293,7 +1293,7 @@ allocating @code{s_two} and after the second allocation the pointer to
 the data area of @code{s_one} is retrieved again:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 ikptr   s_one;
 ikptr   s_two;
 char *  one;
@@ -1317,7 +1317,7 @@ example of @strong{wrong} code: after the second call to the allocation
 function the pointer to the data area of @code{s_one} may be invalid:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 ikptr   s_one;
 ikptr   s_two;
 char *  one;
@@ -1373,7 +1373,7 @@ yes, it is a hard life.
 Let's consider the following snippet, which is @strong{wrong}:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = IKA_PAIR_ALLOC(pcb); /* WRONG */
@@ -1392,7 +1392,7 @@ garbage collection tries to scan the first pair.  The @strong{correct}
 code is:
 
 @example
-ikpcb * pcb = ik_the_pcb();
+ikpcb_t * pcb = ik_the_pcb();
 ikptr   s_one, s_two;
 
 s_one = ika_pair_alloc(pcb); /* GOOD */
@@ -1629,7 +1629,7 @@ symbol @code{IK_NULL_OBJECT}.
 Pairs are allocated as follows, leaving the car and cdr uninitialised:
 
 @example
-ikpcb *  pcb = ik_the_pcb();
+ikpcb_t *  pcb = ik_the_pcb();
 ikptr    s_pair;
 
 s_pair = ik_safe_alloc(pcb, pair_size) | pair_tag;
@@ -1661,7 +1661,7 @@ s_cdr = IK_CDR(s_pair);
 the car and cdr of a pair are set as follows:
 
 @example
-ikpcb * pcb    = ...;
+ikpcb_t * pcb    = ...;
 ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
@@ -1675,7 +1675,7 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_pair);
 or as follows:
 
 @example
-ikpcb * pcb    = ...;
+ikpcb_t * pcb    = ...;
 ikptr   s_pair = ...;
 ikptr   s_car  = ...;
 ikptr   s_cdr  = ...;
@@ -1716,13 +1716,13 @@ Evaluate to true if the machine word @var{X} is tagged as pair.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IKA_PAIR_ALLOC (ikpcb * @var{pcb})
+@deftypefn {Preprocessor Macro} ikptr IKA_PAIR_ALLOC (ikpcb_t * @var{pcb})
 Allocate a new pair object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The pair words are left @strong{uninitialised}.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IKU_PAIR_ALLOC (ikpcb * @var{pcb})
+@deftypefn {Preprocessor Macro} ikptr IKU_PAIR_ALLOC (ikpcb_t * @var{pcb})
 Allocate a new pair object using @cfunc{ik_unsafe_alloc} and return a
 tagged reference to it.  The pair words are left @strong{uninitialised}.
 @end deftypefn
@@ -1748,8 +1748,8 @@ the cdr, the cdr of the cdr.
 @subsubheading Operations on pairs and lists
 
 
-@deftypefun ikptr ika_pair_alloc (ikpcb * @var{pcb})
-@deftypefunx ikptr iku_pair_alloc (ikpcb * @var{pcb})
+@deftypefun ikptr ika_pair_alloc (ikpcb_t * @var{pcb})
+@deftypefunx ikptr iku_pair_alloc (ikpcb_t * @var{pcb})
 Allocate and return a new pair object using, respectively,
 @cfunc{ik_safe_alloc} and @cfunc{ik_unsafe_alloc} and return a tagged
 reference to it.  Both the car and cdr are initialised to
@@ -1787,7 +1787,7 @@ lengths.
 @end deftypefun
 
 
-@deftypefun ikptr ika_list_from_argv (ikpcb * @var{pcb}, char ** @var{argv})
+@deftypefun ikptr ika_list_from_argv (ikpcb_t * @var{pcb}, char ** @var{argv})
 Given a pointer @var{argv} to a @cnull{}--terminated array of @asciiz{}
 strings build and return a list of bytevectors holding a copy of the
 @asciiz{} strings.  Make use of @code{pcb->root8} and @code{pcb->root9}.
@@ -1797,7 +1797,7 @@ This function takes care of calling
 @end deftypefun
 
 
-@deftypefun ikptr ika_list_from_argv_and_argc (ikpcb * @var{pcb}, char ** @var{argv}, int @var{argc})
+@deftypefun ikptr ika_list_from_argv_and_argc (ikpcb_t * @var{pcb}, char ** @var{argv}, int @var{argc})
 Given a pointer @var{argv} to an array of @asciiz{} strings holding
 @var{argc} pointers: build and return a list of bytevectors holding a
 copy of the @asciiz{} strings.  Make use of @code{pcb->root8} and
@@ -1815,7 +1815,7 @@ The suggested general way to allocate and initialise a pair is as
 follows:
 
 @example
-ikpcb * pcb    = ik_the_pcb();
+ikpcb_t * pcb    = ik_the_pcb();
 ikptr   s_pair = ika_pair_alloc(pcb);
 
 pcb->root0 = &s_pair;
@@ -1838,7 +1838,7 @@ because they are fixnums or already existing objects, we can use the
 faster code:
 
 @example
-ikpcb * pcb    = ik_the_pcb();
+ikpcb_t * pcb    = ik_the_pcb();
 ikptr   s_pair = IKA_PAIR_ALLOC(pcb);
 
 IK_CAR(s_pair) = IK_FIX(123);
@@ -1849,7 +1849,7 @@ Let's say we need to build a list of bytevectors from @asciiz{} strings
 in the array @code{argv} and there are @code{argc} of them:
 
 @example
-ikpcb *  pcb  = ik_the_pcb();
+ikpcb_t *  pcb  = ik_the_pcb();
 char **  argv = ...;
 long     argc = ...;
 ikptr    s_list;
@@ -1932,7 +1932,7 @@ of the bytevector data area, add to it room for meta data and finally
 compute the aligned block size:
 
 @example
-ikpcb * pcb        = ik_the_pcb();
+ikpcb_t * pcb        = ik_the_pcb();
 long    bv_len     = the_number_of_bytes;
 long    block_size = disp_bytevector_data + bv_len + 1;
 lont    align_size = IK_ALIGN(block_size);
@@ -1951,7 +1951,7 @@ looks like this:
 
 @example
 ikptr
-ika_bytevector_alloc (ikpcb * pcb, long bv_len)
+ika_bytevector_alloc (ikpcb_t * pcb, long bv_len)
 @{
   long   align_size;
   ikptr  s_bv;
@@ -2061,7 +2061,7 @@ Return a pointer referencing the first byte in the data area of
 @subsubheading Operations on bytevectors
 
 
-@deftypefun ikptr ika_bytevector_alloc (ikpcb * @var{pcb}, long @var{requested_number_of_bytes})
+@deftypefun ikptr ika_bytevector_alloc (ikpcb_t * @var{pcb}, long @var{requested_number_of_bytes})
 Allocate, initialise and return a new bytevector capable of holding the
 specified number of bytes.  The contents of the data area are
 unspecified.  The requested bytevector length @strong{must} be in the
@@ -2069,7 +2069,7 @@ range of fixnums.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+@deftypefun ikptr ika_bytevector_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
 Allocate, initialise and return a new bytevector and copy the contents
 of the @asciiz{} string referenced by @var{cstr} in the data area.  As
 special case: if @var{cstr} is @cnull{}, this function allocates and
@@ -2081,7 +2081,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_cstring_len (ikpcb * @var{pcb}, const char * @var{cstr}, size_t @var{len})
+@deftypefun ikptr ika_bytevector_from_cstring_len (ikpcb_t * @var{pcb}, const char * @var{cstr}, size_t @var{len})
 Allocate, initialise and return a new bytevector and copy the @var{len}
 bytes of the @ascii{} string referenced by @var{cstr} in the data area.
 
@@ -2091,7 +2091,7 @@ the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb * @var{pcb}, const void * @var{memory}, size_t @var{length})
+@deftypefun ikptr ika_bytevector_from_memory_block (ikpcb_t * @var{pcb}, const void * @var{memory}, size_t @var{length})
 Allocate, initialise and return a new bytevector and copy in the data
 area @var{length} bytes from of the memory block referenced by
 @var{memory}.
@@ -2102,7 +2102,7 @@ equal to the maximum positive fixnum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_bytevector_from_utf16z (ikpcb * @var{pcb}, const void * @var{data});
+@deftypefun ikptr ika_bytevector_from_utf16z (ikpcb_t * @var{pcb}, const void * @var{data});
 Build and return a new bytevector from a memory block referencing a
 @utf{}-16 string terminated with two consecutive zeros starting at even
 offset:
@@ -2173,7 +2173,7 @@ compute the whole size of the data area, add to it room for meta data
 and finally compute the aligned block size:
 
 @example
-ikpcb * pcb            = ik_the_pcb();
+ikpcb_t * pcb            = ik_the_pcb();
 long    length         = the_number_of_items;
 long    requested_size = wordsize * length;
 long    block_size     = disp_vector_data + requested_size;
@@ -2192,7 +2192,7 @@ fixnum, so usually a full allocation looks like this:
 
 @example
 ikptr
-ika_vector_alloc (ikpcb * pcb, long number_of_items)
+ika_vector_alloc (ikpcb_t * pcb, long number_of_items)
 @{
   long  align_size;
   ikptr s_len;
@@ -2321,8 +2321,8 @@ fx = IK_ITEM(s_vec, idx);
 @subsubheading Operations on vectors
 
 
-@deftypefun ikptr ika_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
-@deftypefunx ikptr iku_vector_alloc_no_init (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr ika_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr iku_vector_alloc_no_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Leave the data area uninitialised.
 
@@ -2331,8 +2331,8 @@ These functions @strong{do not} call
 @end deftypefun
 
 
-@deftypefun ikptr ika_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
-@deftypefunx ikptr iku_vector_alloc_and_init (ikpcb * @var{pcb}, long @var{number_of_items})
+@deftypefun ikptr ika_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
+@deftypefunx ikptr iku_vector_alloc_and_init (ikpcb_t * @var{pcb}, long @var{number_of_items})
 Allocate, initialise and return a new vector object capable of holding
 the specified number of items.  Initialise the data area so that all the
 items are set to the fixnum zero.
@@ -2355,7 +2355,7 @@ zero.
 @end deftypefun
 
 
-@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb * @var{pcb})
+@deftypefun ikptr ikrt_vector_copy (ikptr @var{dst}, ikptr @var{dst_start}, ikptr @var{src}, ikptr @var{src_start}, ikptr @var{count}, ikpcb_t * @var{pcb})
 Copy @var{count} items from vector @var{src} starting at offset
 @var{src_start}, to vector @var{dst} starting at offset @var{dst_start};
 @var{src_start}, @var{dst_start} and @var{count} must be non--negative
@@ -2513,7 +2513,7 @@ and at the C level we do:
 
 @example
 ikptr
-ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb * pcb)
+ikrt_posix_gettimeofday (ikptr s_rtd, ikpcb_t * pcb)
 @{
   /* build and return an instance of "timeval" */
 @}
@@ -2527,7 +2527,7 @@ Data structure objects are allocated on the heap; to perform the
 allocation we compute the whole size of the structure:
 
 @example
-ikpcb * pcb        = ik_the_pcb();
+ikpcb_t * pcb        = ik_the_pcb();
 long    num_of_fields = ...;
 long    block_size = disp_record_data +
                      wordsize * num_of_fields;
@@ -2546,7 +2546,7 @@ machine word of the structure, so a full allocation looks like this:
 
 @example
 ikptr
-ika_struct_alloc (ikpcb * pcb, ikptr s_rtd)
+ika_struct_alloc (ikpcb_t * pcb, ikptr s_rtd)
 @{
   long	num_of_fields;
   long  align_size;
@@ -2703,14 +2703,14 @@ ik_signal_dirt_in_page_of_pointer(pcb, s_stru);
 @subsubheading Operations on structs
 
 
-@deftypefun ikptr ika_struct_alloc_no_init (ikpcb * @var{pcb}, ikptr @var{rtd})
+@deftypefun ikptr ika_struct_alloc_no_init (ikpcb_t * @var{pcb}, ikptr @var{rtd})
 Allocate, initialise and return a new structure instance of type
 @var{rtd}.  The first word of the allocated block is initialised with
 @var{rtd}, the other words are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ika_struct_alloc_and_init (ikpcb * @var{pcb}, ikptr @var{rtd})
+@deftypefun ikptr ika_struct_alloc_and_init (ikpcb_t * @var{pcb}, ikptr @var{rtd})
 Allocate, initialise and return a new structure instance of type
 @var{rtd}.  The first word of the allocated block is initialised with
 @var{rtd}, the other words are initialised to the fixnum zero.
@@ -2923,7 +2923,7 @@ compute the whole size of the data area, add to it room for meta data
 and finally compute the aligned block size:
 
 @example
-ikpcb * pcb            = ik_the_pcb();
+ikpcb_t * pcb            = ik_the_pcb();
 long    length         = the_number_of_chars;
 long    requested_size = sizeof(ikchar) * length;
 long    block_size     = disp_string_data + requested_size;
@@ -2942,7 +2942,7 @@ fixnum, so usually a full allocation looks like this:
 
 @example
 ikptr
-ik_string_alloc (ikpcb * pcb, long number_of_chars)
+ik_string_alloc (ikpcb_t * pcb, long number_of_chars)
 @{
   long  align_size;
   ikptr str;
@@ -3077,15 +3077,15 @@ the first Scheme character in the data area.
 @subsubheading Operations on strings
 
 
-@deftypefun ikptr ika_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
-@deftypefunx ikptr iku_string_alloc (ikpcb * @var{pcb}, long @var{number_of_chars})
+@deftypefun ikptr ika_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
+@deftypefunx ikptr iku_string_alloc (ikpcb_t * @var{pcb}, long @var{number_of_chars})
 Allocate, initialise and return a new string object capable of holding
 the specified number of chars.
 @end deftypefun
 
 
-@deftypefun ikptr ika_string_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
-@deftypefunx ikptr iku_string_from_cstring (ikpcb * @var{pcb}, const char * @var{cstr})
+@deftypefun ikptr ika_string_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
+@deftypefunx ikptr iku_string_from_cstring (ikpcb_t * @var{pcb}, const char * @var{cstr})
 Allocate a new string object and fill it with the @ascii{} characters
 from the given @asciiz{} string.
 @end deftypefun
@@ -3282,7 +3282,7 @@ Return true if @var{obj} is a symbol.
 @end deftypefun
 
 
-@deftypefun ikptr iku_symbol_from_string (ikpcb * @var{pcb}, ikptr @var{str})
+@deftypefun ikptr iku_symbol_from_string (ikpcb_t * @var{pcb}, ikptr @var{str})
 Return a Scheme symbol object whose name is the Scheme string
 @var{str}.  This function is the same as @cfunc{iku_string_to_symbol}.
 @end deftypefun
@@ -3360,7 +3360,7 @@ always non--zero and outside the range of fixnums.
 To allocate a bignum we must know the number of required limbs:
 
 @example
-ikpcb * pcb        = ik_the_pcb();
+ikpcb_t * pcb        = ik_the_pcb();
 long    nlimbs     = the_number_of_limbs;
 long    block_size = disp_bignum_data + nlimbs * wordsize;
 long    align_size = IK_ALIGN(block_size);
@@ -3506,7 +3506,7 @@ block needed to hold the bignum.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikptr IKA_BIGNUM_ALLOC (ikpcb * @var{pcb}, long @var{nlimb})
+@deftypefn {Preprocessor Macro} ikptr IKA_BIGNUM_ALLOC (ikpcb_t * @var{pcb}, long @var{nlimb})
 Given a number of limbs: allocate, using @cfunc{ik_safe_alloc}, the
 memory block needed to hold the bignum and return an untagged pointer to
 it.
@@ -3591,34 +3591,34 @@ Return true if @var{obj} is a bignum.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_int (ikpcb * @var{pcb}, int @var{N})
-@deftypefunx ikptr ika_integer_from_long (ikpcb * @var{pcb}, long @var{N})
-@deftypefunx ikptr ika_integer_from_llong (ikpcb * @var{pcb}, ik_llong @var{N})
-@deftypefunx ikptr ika_integer_from_uint (ikpcb * @var{pcb}, ik_uint @var{N})
-@deftypefunx ikptr ika_integer_from_ulong (ikpcb * @var{pcb}, ik_ulong @var{N})
-@deftypefunx ikptr ika_integer_from_ullong (ikpcb * @var{pcb}, ik_ullong @var{N})
+@deftypefun ikptr ika_integer_from_int (ikpcb_t * @var{pcb}, int @var{N})
+@deftypefunx ikptr ika_integer_from_long (ikpcb_t * @var{pcb}, long @var{N})
+@deftypefunx ikptr ika_integer_from_llong (ikpcb_t * @var{pcb}, ik_llong @var{N})
+@deftypefunx ikptr ika_integer_from_uint (ikpcb_t * @var{pcb}, ik_uint @var{N})
+@deftypefunx ikptr ika_integer_from_ulong (ikpcb_t * @var{pcb}, ik_ulong @var{N})
+@deftypefunx ikptr ika_integer_from_ullong (ikpcb_t * @var{pcb}, ik_ullong @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_sint8 (ikpcb * @var{pcb}, int8_t @var{N})
-@deftypefunx ikptr ika_integer_from_sint16 (ikpcb * @var{pcb}, int16_t @var{N})
-@deftypefunx ikptr ika_integer_from_sint32 (ikpcb * @var{pcb}, int32_t @var{N})
-@deftypefunx ikptr ika_integer_from_sint64 (ikpcb * @var{pcb}, int64_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint8 (ikpcb * @var{pcb}, uint8_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint16 (ikpcb * @var{pcb}, uint16_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint32 (ikpcb * @var{pcb}, uint32_t @var{N})
-@deftypefunx ikptr ika_integer_from_uint64 (ikpcb * @var{pcb}, uint64_t @var{N})
+@deftypefun ikptr ika_integer_from_sint8 (ikpcb_t * @var{pcb}, int8_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint16 (ikpcb_t * @var{pcb}, int16_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint32 (ikpcb_t * @var{pcb}, int32_t @var{N})
+@deftypefunx ikptr ika_integer_from_sint64 (ikpcb_t * @var{pcb}, int64_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint8 (ikpcb_t * @var{pcb}, uint8_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint16 (ikpcb_t * @var{pcb}, uint16_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint32 (ikpcb_t * @var{pcb}, uint32_t @var{N})
+@deftypefunx ikptr ika_integer_from_uint64 (ikpcb_t * @var{pcb}, uint64_t @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
 
 
-@deftypefun ikptr ika_integer_from_off_t (ikpcb * @var{pcb}, off_t @var{N})
-@deftypefunx ikptr ika_integer_from_ssize_t (ikpcb * @var{pcb}, ssize_t @var{N})
-@deftypefunx ikptr ika_integer_from_size_t (ikpcb * @var{pcb}, size_t @var{N})
-@deftypefunx ikptr ika_integer_from_ptrdiff_t (ikpcb * @var{pcb}, ptrdiff_t @var{N})
+@deftypefun ikptr ika_integer_from_off_t (ikpcb_t * @var{pcb}, off_t @var{N})
+@deftypefunx ikptr ika_integer_from_ssize_t (ikpcb_t * @var{pcb}, ssize_t @var{N})
+@deftypefunx ikptr ika_integer_from_size_t (ikpcb_t * @var{pcb}, size_t @var{N})
+@deftypefunx ikptr ika_integer_from_ptrdiff_t (ikpcb_t * @var{pcb}, ptrdiff_t @var{N})
 Build and return a new exact integer object from the given C language
 value.
 @end deftypefun
@@ -3712,7 +3712,7 @@ denominator is stored in the third word:
 Ratnums are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = ik_the_pcb();
+ikpcb_t * pcb   = ik_the_pcb();
 ikptr   s_rn;
 
 s_rn = ik_safe_alloc(pcb, ratnum_size) | vector_tag;
@@ -3725,7 +3725,7 @@ fields to some correct value before running the next garbage collection;
 a full allocation and initialisation is as follows:
 
 @example
-ikpcb * pcb   = ik_the_pcb();
+ikpcb_t * pcb   = ik_the_pcb();
 ikptr   s_num = the_numerator;
 ikptr   s_den = the_denominator;
 ikptr   s_rn;
@@ -3850,13 +3850,13 @@ Return true if @var{obj} is a ratnum object.
 @end deftypefun
 
 
-@deftypefun ikptr ika_ratnum_alloc_no_init (ikpcb * @var{pcb})
+@deftypefun ikptr ika_ratnum_alloc_no_init (ikpcb_t * @var{pcb})
 Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The fields are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ika_ratnum_alloc_and_init (ikpcb * @var{pcb})
+@deftypefun ikptr ika_ratnum_alloc_and_init (ikpcb_t * @var{pcb})
 Allocate a new ratnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  Both the fields are set to the fixnum zero.
 @end deftypefun
@@ -3911,7 +3911,7 @@ on a 64-bit platform the actual number is stored in the second word:
 Flonums are allcated on the heap as follows:
 
 @example
-ikpcb * pcb  = ik_the_pcb();
+ikpcb_t * pcb  = ik_the_pcb();
 ikptr   s_fl;
 
 s_fl = ik_safe_alloc(pcb, flonum_size) | vector_tag;
@@ -4006,13 +4006,13 @@ Return true if @var{obj} is a flonum object.
 @end deftypefun
 
 
-@deftypefun ikptr iku_flonum_alloc (ikpcb * @var{pcb}, double @var{N})
+@deftypefun ikptr iku_flonum_alloc (ikpcb_t * @var{pcb}, double @var{N})
 Allocate and return a new flonum object, using @cfunc{ik_unsafe_alloc},
 intialised with @var{N}.
 @end deftypefun
 
 
-@deftypefun ikptr ika_flonum_from_double (ikpcb * @var{pcb}, double @var{N})
+@deftypefun ikptr ika_flonum_from_double (ikpcb_t * @var{pcb}, double @var{N})
 Allocate and return a new flonum object, using @cfunc{ik_safe_alloc},
 intialised with @var{N}.
 @end deftypefun
@@ -4058,7 +4058,7 @@ is stored in the third word
 Compnums are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = ik_the_pcb();
+ikpcb_t * pcb   = ik_the_pcb();
 ikptr   s_cn;
 
 s_cn = ik_safe_alloc(pcb, compnum_size) | vector_tag;
@@ -4071,7 +4071,7 @@ to some correct value before running the next garbage collection; a full
 allocation and initialisation is as follows:
 
 @example
-ikpcb * pcb  = ik_the_pcb();
+ikpcb_t * pcb  = ik_the_pcb();
 ikptr   s_re = the_real;
 ikptr   s_im = the_imag;
 ikptr   s_cn;
@@ -4194,13 +4194,13 @@ Return true if @var{obj} is a compnum object.
 @end deftypefun
 
 
-@deftypefun ikptr ika_compnum_alloc_no_init (ikpcb * @var{pcb})
+@deftypefun ikptr ika_compnum_alloc_no_init (ikpcb_t * @var{pcb})
 Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The fields are left uninitialised.
 @end deftypefun
 
 
-@deftypefun ikptr ika_compnum_alloc_and_init (ikpcb * @var{pcb})
+@deftypefun ikptr ika_compnum_alloc_and_init (ikpcb_t * @var{pcb})
 Allocate a new compnum object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  Both the fields are set to the fixnum zero.
 @end deftypefun
@@ -4242,7 +4242,7 @@ is stored in the third word
 Cflonums are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = ik_the_pcb();
+ikpcb_t * pcb   = ik_the_pcb();
 ikptr   s_cf;
 
 s_cf = ik_safe_alloc(pcb, cflonum_size) | vector_tag;
@@ -4255,7 +4255,7 @@ to some correct value before running the next garbage collection; a full
 allocation and initialisation is as follows:
 
 @example
-ikpcb * pcb  = ik_the_pcb();
+ikpcb_t * pcb  = ik_the_pcb();
 ikptr   s_re = the_real;
 ikptr   s_im = the_imag;
 ikptr   s_cf;
@@ -4378,14 +4378,14 @@ Return true if @var{obj} is a cflonum object.
 @end deftypefun
 
 
-@deftypefun ikptr iku_cflonum_alloc_and_init (ikpcb * @var{pcb}, double @var{re}, double @var{im})
+@deftypefun ikptr iku_cflonum_alloc_and_init (ikpcb_t * @var{pcb}, double @var{re}, double @var{im})
 Allocate a cflonum and its flonum components using
 @cfunc{ik_unsafe_alloc} and return a tagged reference to it.  No garbage
 collection is run while this function is evaluating.
 @end deftypefun
 
 
-@deftypefun ikptr ika_cflonum_from_doubles (ikpcb * @var{pcb}, double @var{re}, double @var{im})
+@deftypefun ikptr ika_cflonum_from_doubles (ikpcb_t * @var{pcb}, double @var{re}, double @var{im})
 Allocate a cflonum and its flonum components using @cfunc{ik_safe_alloc}
 and return a tagged reference to it.  This function makes use of
 @code{pcb->root9}.
@@ -4482,7 +4482,7 @@ block holds the actual pointer value.
 Pointers are allocated on the Scheme heap as follows:
 
 @example
-ikpcb * pcb   = ik_the_pcb();
+ikpcb_t * pcb   = ik_the_pcb();
 ikptr   s_ptr;
 
 s_ptr = ik_safe_alloc(pcb, pointer_size) | vector_tag;
@@ -4595,7 +4595,7 @@ Evaluate to true if the pointer value is @cnull{}.
 @subsubheading Operations on pointers
 
 
-@deftypefun ikptr ika_pointer_alloc (ikpcb * @var{pcb}, ik_ulong @var{memory})
+@deftypefun ikptr ika_pointer_alloc (ikpcb_t * @var{pcb}, ik_ulong @var{memory})
 Allocate a pointer object using @cfunc{ik_safe_alloc} and return a
 tagged reference to it.  The pointer is initialised to @var{memory}.
 @end deftypefun
@@ -5322,7 +5322,7 @@ else
 A Scheme continuation object is usually allocated as follows:
 
 @example
-ikpcb *     pcb = ...;
+ikpcb_t *     pcb = ...;
 ikptr       s_kont;
 ikcont *    kont;
 
@@ -6017,7 +6017,7 @@ language function which calls back a Scheme function we have to save and
 restore the current system continuation:
 
 @example
-ikpcb * pcb = the_pcb;
+ikpcb_t * pcb = the_pcb;
 
 ik_enter_c_function(pcb);
 @{
@@ -6031,14 +6031,14 @@ else, upon returning from the Scheme code, the execution flow will go to
 the wrong continuation and undefined behaviour ensues.
 
 
-@deftypefun void ik_enter_c_function (ikpcb * @var{pcb})
+@deftypefun void ik_enter_c_function (ikpcb_t * @var{pcb})
 Save the current Scheme continuation and followed by the current system
 continuation.  A call to this function must be matched by a call to
 @cfunc{ik_leave_c_function}.
 @end deftypefun
 
 
-@deftypefun void ik_leave_c_function (ikpcb * @var{pcb})
+@deftypefun void ik_leave_c_function (ikpcb_t * @var{pcb})
 Restore the previously saved Scheme continuation.  A call to this
 function must be matched by a call to @cfunc{ik_enter_c_function}.
 @end deftypefun

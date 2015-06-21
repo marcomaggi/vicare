@@ -343,7 +343,7 @@ extend_page_vectors_maybe (ikptr base_ptr, ik_ulong size, ikpcb* pcb)
 ikpcb*
 ik_make_pcb (void)
 {
-  ikpcb * pcb = ik_malloc(sizeof(ikpcb));
+  ikpcb_t * pcb = ik_malloc(sizeof(ikpcb));
   bzero(pcb, sizeof(ikpcb));
 
   /* The  Scheme heap  grows from  low memory  addresses to  high memory
@@ -724,7 +724,7 @@ ik_delete_pcb (ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
+ik_safe_alloc (ikpcb_t * pcb, ik_ulong aligned_size)
 /* Reserve a memory  block on the Scheme heap and  return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
    block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
@@ -768,7 +768,7 @@ ik_safe_alloc (ikpcb * pcb, ik_ulong aligned_size)
   return alloc_ptr;
 }
 ikptr
-ik_unsafe_alloc (ikpcb * pcb, ik_ulong aligned_size)
+ik_unsafe_alloc (ikpcb_t * pcb, ik_ulong aligned_size)
 /* Reserve a memory  block on the Scheme heap and  return a reference to
    it as an *untagged* pointer.   PCB must reference the process control
    block, ALIGNED_SIZE  must be the  requested number of  bytes filtered
@@ -850,7 +850,7 @@ ik_unsafe_alloc (ikpcb * pcb, ik_ulong aligned_size)
   }
 }
 void
-ik_signal_dirt_in_page_of_pointer (ikpcb * pcb, ikptr s_pointer)
+ik_signal_dirt_in_page_of_pointer (ikpcb_t * pcb, ikptr s_pointer)
 {
   IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pointer);
 }

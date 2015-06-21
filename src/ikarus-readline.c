@@ -7,7 +7,7 @@
 
 
 
-  Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2012, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 
   This program is  free software: you can redistribute  it and/or modify
   it under the  terms of the GNU General Public  License as published by
@@ -78,7 +78,7 @@ ik_readline_enabled (void)
 #endif
 }
 ikptr
-ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
+ik_readline_readline (ikptr s_prompt, ikpcb_t * pcb)
 {
 #ifdef HAVE_LIBREADLINE
   char *	prompt = (IK_FALSE_OBJECT == s_prompt)? NULL : IK_BYTEVECTOR_DATA_CHARP(s_prompt);
@@ -107,7 +107,7 @@ ik_readline_readline (ikptr s_prompt, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ik_readline_rl_version (ikpcb * pcb)
+ik_readline_rl_version (ikpcb_t * pcb)
 {
 #if ((defined HAVE_LIBREADLINE) && (defined RL_READLINE_VERSION))
   return ika_integer_from_int(pcb, (int)RL_READLINE_VERSION);

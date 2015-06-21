@@ -121,7 +121,7 @@ ikrt_glibc_dirfd (ikptr pointer)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_glibc_mkstemp (ikptr template_bv, ikpcb * pcb)
+ikrt_glibc_mkstemp (ikptr template_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_MKSTEMP
   char *        template;
@@ -135,7 +135,7 @@ ikrt_glibc_mkstemp (ikptr template_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_mkdtemp (ikptr template_bv, ikpcb * pcb)
+ikrt_glibc_mkdtemp (ikptr template_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_MKDTEMP
   char *        template;
@@ -210,7 +210,7 @@ ikrt_glibc_if_nametoindex (ikptr name_bv)
 #endif
 }
 ikptr
-ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
+ikrt_glibc_if_indextoname (ikptr index, ikpcb_t * pcb)
 {
 #ifdef HAVE_IF_INDEXTONAME
   char          buffer[1+IFNAMSIZ];
@@ -223,7 +223,7 @@ ikrt_glibc_if_indextoname (ikptr index, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_if_nameindex (ikpcb * pcb)
+ikrt_glibc_if_nameindex (ikpcb_t * pcb)
 {
 #ifdef HAVE_IF_NAMEINDEX
   struct if_nameindex * arry;
@@ -274,7 +274,7 @@ ikrt_glibc_if_nameindex (ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_glibc_IN_CLASSA (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_CLASSA (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_CLASSA
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -284,7 +284,7 @@ ikrt_glibc_IN_CLASSA (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN_CLASSB (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_CLASSB (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_CLASSB
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -294,7 +294,7 @@ ikrt_glibc_IN_CLASSB (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN_CLASSC (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_CLASSC (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_CLASSC
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -304,7 +304,7 @@ ikrt_glibc_IN_CLASSC (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN_CLASSD (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_CLASSD (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_CLASSD
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -314,7 +314,7 @@ ikrt_glibc_IN_CLASSD (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN_MULTICAST (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_MULTICAST (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_MULTICAST
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -324,7 +324,7 @@ ikrt_glibc_IN_MULTICAST (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN_EXPERIMENTAL (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_EXPERIMENTAL (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_EXPERIMENTAL
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -334,7 +334,7 @@ ikrt_glibc_IN_EXPERIMENTAL (ikptr s_addr, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN_BADCLASS (ikptr s_addr, ikpcb * pcb)
+ikrt_glibc_IN_BADCLASS (ikptr s_addr, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN_BADCLASS
   uint32_t	addr = ik_integer_to_uint32(s_addr);
@@ -347,7 +347,7 @@ ikrt_glibc_IN_BADCLASS (ikptr s_addr, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_IN6_IS_ADDR_UNSPECIFIED (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_UNSPECIFIED (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_UNSPECIFIED
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -357,7 +357,7 @@ ikrt_glibc_IN6_IS_ADDR_UNSPECIFIED (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_LOOPBACK (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_LOOPBACK (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_LOOPBACK
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -367,7 +367,7 @@ ikrt_glibc_IN6_IS_ADDR_LOOPBACK (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_LINKLOCAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_LINKLOCAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_LINKLOCAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -377,7 +377,7 @@ ikrt_glibc_IN6_IS_ADDR_LINKLOCAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_SITELOCAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_SITELOCAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_SITELOCAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -387,7 +387,7 @@ ikrt_glibc_IN6_IS_ADDR_SITELOCAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_V4MAPPED (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_V4MAPPED (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_V4MAPPED
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -397,7 +397,7 @@ ikrt_glibc_IN6_IS_ADDR_V4MAPPED (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_V4COMPAT (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_V4COMPAT (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_V4COMPAT
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -407,7 +407,7 @@ ikrt_glibc_IN6_IS_ADDR_V4COMPAT (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_MULTICAST (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_MULTICAST (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_MULTICAST
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -417,7 +417,7 @@ ikrt_glibc_IN6_IS_ADDR_MULTICAST (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_MC_NODELOCAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_MC_NODELOCAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_MC_NODELOCAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -427,7 +427,7 @@ ikrt_glibc_IN6_IS_ADDR_MC_NODELOCAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_MC_LINKLOCAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_MC_LINKLOCAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_MC_LINKLOCAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -437,7 +437,7 @@ ikrt_glibc_IN6_IS_ADDR_MC_LINKLOCAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_MC_SITELOCAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_MC_SITELOCAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_MC_SITELOCAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -447,7 +447,7 @@ ikrt_glibc_IN6_IS_ADDR_MC_SITELOCAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_MC_ORGLOCAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_MC_ORGLOCAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_MC_ORGLOCAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -457,7 +457,7 @@ ikrt_glibc_IN6_IS_ADDR_MC_ORGLOCAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL (ikptr s_addr_bv, ikpcb * pcb)
+ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL (ikptr s_addr_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_IS_ADDR_MC_GLOBAL
   struct in6_addr *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr_bv);
@@ -467,7 +467,7 @@ ikrt_glibc_IN6_IS_ADDR_MC_GLOBAL (ikptr s_addr_bv, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_IN6_ARE_ADDR_EQUAL (ikptr s_addr1_bv, ikptr s_addr2_bv, ikpcb * pcb)
+ikrt_glibc_IN6_ARE_ADDR_EQUAL (ikptr s_addr1_bv, ikptr s_addr2_bv, ikpcb_t * pcb)
 {
 #ifdef HAVE_IN6_ARE_ADDR_EQUAL
   struct in6_addr *	addr1 = IK_BYTEVECTOR_DATA_VOIDP(s_addr1_bv);
@@ -481,7 +481,7 @@ ikrt_glibc_IN6_ARE_ADDR_EQUAL (ikptr s_addr1_bv, ikptr s_addr2_bv, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_bindresvport (ikptr s_fd, ikptr s_sockaddr_in, ikpcb * pcb)
+ikrt_glibc_bindresvport (ikptr s_fd, ikptr s_sockaddr_in, ikpcb_t * pcb)
 {
 #ifdef HAVE_BINDRESVPORT
   int			fd	= IK_NUM_TO_FD(s_fd);
@@ -494,7 +494,7 @@ ikrt_glibc_bindresvport (ikptr s_fd, ikptr s_sockaddr_in, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_bindresvport6 (ikptr s_fd, ikptr s_sockaddr_in, ikpcb * pcb)
+ikrt_glibc_bindresvport6 (ikptr s_fd, ikptr s_sockaddr_in, ikpcb_t * pcb)
 {
 #ifdef HAVE_BINDRESVPORT6
   int			fd	= IK_NUM_TO_FD(s_fd);
@@ -519,7 +519,7 @@ ikrt_glibc_bindresvport6 (ikptr s_fd, ikptr s_sockaddr_in, ikpcb * pcb)
 #define MAKE_CDOUBLE(CFLO)	(RE(CFLO) + IM(CFLO) * _Complex_I)
 
 ikptr
-ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_csin (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CSIN
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -530,7 +530,7 @@ ikrt_glibc_csin (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_ccos (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_ccos (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CCOS
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -541,7 +541,7 @@ ikrt_glibc_ccos (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_ctan (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_ctan (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CTAN
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -555,7 +555,7 @@ ikrt_glibc_ctan (ikptr s_X, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_casin (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_casin (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CASIN
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -566,7 +566,7 @@ ikrt_glibc_casin (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_cacos (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_cacos (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CACOS
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -577,7 +577,7 @@ ikrt_glibc_cacos (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_catan (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CATAN
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -591,7 +591,7 @@ ikrt_glibc_catan (ikptr s_X, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_cexp (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_cexp (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CEXP
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -602,7 +602,7 @@ ikrt_glibc_cexp (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_clog (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_clog (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOG
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -613,7 +613,7 @@ ikrt_glibc_clog (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_clog10 (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_clog10 (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CLOG10
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -624,7 +624,7 @@ ikrt_glibc_clog10 (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_csqrt (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_csqrt (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CSQRT
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -635,7 +635,7 @@ ikrt_glibc_csqrt (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb * pcb)
+ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb_t * pcb)
 {
 #ifdef HAVE_CPOW
   complex double  base  = MAKE_CDOUBLE(s_base);
@@ -650,7 +650,7 @@ ikrt_glibc_cpow (ikptr s_base, ikptr s_power, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_sinh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_sinh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_SINH
   double        X   = IK_FLONUM_DATA(s_X);
@@ -661,7 +661,7 @@ ikrt_glibc_sinh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_cosh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_cosh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_COSH
   double        X   = IK_FLONUM_DATA(s_X);
@@ -672,7 +672,7 @@ ikrt_glibc_cosh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_tanh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_tanh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_TANH
   double        X   = IK_FLONUM_DATA(s_X);
@@ -683,7 +683,7 @@ ikrt_glibc_tanh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_csinh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_csinh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CSINH
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -694,7 +694,7 @@ ikrt_glibc_csinh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_ccosh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_ccosh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CCOSH
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -705,7 +705,7 @@ ikrt_glibc_ccosh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_ctanh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_ctanh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CTANH
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -716,7 +716,7 @@ ikrt_glibc_ctanh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_asinh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_asinh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_ASINH
   double        X   = IK_FLONUM_DATA(s_X);
@@ -727,7 +727,7 @@ ikrt_glibc_asinh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_acosh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_acosh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_ACOSH
   double        X   = IK_FLONUM_DATA(s_X);
@@ -738,7 +738,7 @@ ikrt_glibc_acosh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_atanh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_atanh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_ATANH
   double        X   = IK_FLONUM_DATA(s_X);
@@ -749,7 +749,7 @@ ikrt_glibc_atanh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_casinh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_casinh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CASINH
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -760,7 +760,7 @@ ikrt_glibc_casinh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_cacosh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_cacosh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CACOSH
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -771,7 +771,7 @@ ikrt_glibc_cacosh (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_catanh (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_CATANH
   complex double        X   = MAKE_CDOUBLE(s_X);
@@ -785,7 +785,7 @@ ikrt_glibc_catanh (ikptr s_X, ikpcb * pcb)
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_erf (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_erf (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_ERF
   double        X   = IK_FLONUM_DATA(s_X);
@@ -796,7 +796,7 @@ ikrt_glibc_erf (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_erfc (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_erfc (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_ERFC
   double        X   = IK_FLONUM_DATA(s_X);
@@ -807,7 +807,7 @@ ikrt_glibc_erfc (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_lgamma (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_LGAMMA_R
   double        X   = IK_FLONUM_DATA(s_X);
@@ -827,7 +827,7 @@ ikrt_glibc_lgamma (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_tgamma (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_tgamma (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_TGAMMA
   double        X   = IK_FLONUM_DATA(s_X);
@@ -838,7 +838,7 @@ ikrt_glibc_tgamma (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_y0 (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_y0 (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_Y0
   double        X   = IK_FLONUM_DATA(s_X);
@@ -849,7 +849,7 @@ ikrt_glibc_y0 (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_y1 (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_y1 (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_Y1
   double        X   = IK_FLONUM_DATA(s_X);
@@ -860,7 +860,7 @@ ikrt_glibc_y1 (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_j0 (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_j0 (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_J0
   double        X   = IK_FLONUM_DATA(s_X);
@@ -871,7 +871,7 @@ ikrt_glibc_j0 (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_j1 (ikptr s_X, ikpcb * pcb)
+ikrt_glibc_j1 (ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_J1
   double        X   = IK_FLONUM_DATA(s_X);
@@ -882,7 +882,7 @@ ikrt_glibc_j1 (ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb * pcb)
+ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_YN
   double        X   = IK_FLONUM_DATA(s_X);
@@ -893,7 +893,7 @@ ikrt_glibc_yn (ikptr s_N, ikptr s_X, ikpcb * pcb)
 #endif
 }
 ikptr
-ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
+ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb_t * pcb)
 {
 #ifdef HAVE_JN
   double        X   = IK_FLONUM_DATA(s_X);
@@ -910,7 +910,7 @@ ikrt_glibc_jn (ikptr s_N, ikptr s_X, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_glibc_rand (ikpcb * pcb)
+ikrt_glibc_rand (ikpcb_t * pcb)
 {
 #ifdef HAVE_RAND
   return ika_integer_from_long(pcb, (long)rand());
@@ -947,7 +947,7 @@ ikrt_glibc_fnmatch (ikptr s_pattern, ikptr s_string, ikptr s_flags)
 #endif
 }
 ikptr
-ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * pcb)
+ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb_t * pcb)
 {
 #ifdef HAVE_GLOB
   typedef int handler_t (const char * filename, int error_code);
@@ -978,7 +978,7 @@ ikrt_glibc_glob (ikptr s_pattern, ikptr s_flags, ikptr s_error_handler, ikpcb * 
 /* ------------------------------------------------------------------ */
 
 ikptr
-ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
+ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb_t *pcb)
 /* Interface  to  the  C  function  "regcomp()".   Compile  the  regular
    expression in S_PATTERN accoding  to S_FLAGS.  If successful return a
    pointer object  referencing the compiled regexp.  If  an error occurs
@@ -1034,7 +1034,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb *pcb)
 #endif
 }
 ikptr
-ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb *pcb)
+ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb_t *pcb)
 /* Interface to  the C function "regexec()".  Attempt  to match S_STRING
    against  the  precompiled   regular  expression  S_REX  according  to
    S_FLAGS.
@@ -1145,7 +1145,7 @@ ikrt_glibc_regfree (ikptr s_rex)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb * pcb)
+ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb_t * pcb)
 {
 #ifdef HAVE_WORDEXP
   ikptr		s_words;
@@ -1182,7 +1182,7 @@ ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb * pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ikrt_glibc_iconv_open (ikptr s_from_code, ikptr s_to_code, ikpcb * pcb)
+ikrt_glibc_iconv_open (ikptr s_from_code, ikptr s_to_code, ikpcb_t * pcb)
 /* Open  a  new  conversion  handle.   S_TO_CODE must  be  a  bytevector
    representing the name of the  output encoding.  S_FROM_CODE must be a
    bytevector  representing   the  name  of  the   input  encoding.   If
@@ -1265,7 +1265,7 @@ ikptr
 ikrt_glibc_iconv (ikptr s_handle,
 		  ikptr s_in_bv,  ikptr s_in_start,  ikptr s_in_past,
 		  ikptr s_out_bv, ikptr s_out_start, ikptr s_out_past,
-		  ikpcb * pcb)
+		  ikpcb_t * pcb)
 {
 #ifdef HAVE_ICONV
   iconv_t	handle = (iconv_t)IK_POINTER_DATA_VOIDP(s_handle);
