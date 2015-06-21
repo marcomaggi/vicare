@@ -69,7 +69,7 @@ iku_pair_alloc (ikpcb_t * pcb)
   IK_CDR(s_pair) = IK_VOID_OBJECT;
   return s_pair;
 }
-long
+ikuword_t
 ik_list_length (ikptr s_list)
 /* Return the  length of the list  S_LIST.  Do *not*  check for circular
    lists. */

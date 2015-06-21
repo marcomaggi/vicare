@@ -828,7 +828,7 @@ ikrt_fxfxmult(ikptr x, ikptr y, ikpcb* pcb) {
 }
 
 ikptr
-ik_normalize_bignum(iksword_t limbs, int sign, ikptr r) {
+ik_normalize_bignum (iksword_t limbs, int sign, ikptr r) {
   while(IK_REF(r, disp_bignum_data + (limbs-1)*wordsize) == 0) {
     limbs--;
     if (limbs == 0) { return 0;}

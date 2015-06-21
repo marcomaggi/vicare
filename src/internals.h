@@ -149,7 +149,7 @@
  * Notice that GRANULARITY is evaluated multiple times!!!
  */
 #define IK_SIZE_TO_GRANULARITY_SIZE(SIZE, GRANULARITY) \
-  ((ik_ulong)(((((ik_ulong)(SIZE)) + GRANULARITY - 1) / GRANULARITY) * GRANULARITY))
+  ((ikuword_t)(((((ikuword_t)(SIZE)) + GRANULARITY - 1) / GRANULARITY) * GRANULARITY))
 
 /* This constant is defined as 4096 = 4 * 1024 = 4 * 2^10 = 2^12.  Never
    change it!!! */
@@ -495,7 +495,7 @@
  *
  *     jmp L0
  *     livemask-bytes		;array of bytes             |
- *     framesize		;data word, a "long"        | call
+ *     framesize		;data word, a "ikuword_t"   | call
  *     rp_offset		;data word, a fixnum        | table
  *     multi-value-rp		;data word, assembly label  |
  *     pad-bytes                                            |
@@ -531,7 +531,7 @@
 #define disp_multivalue_rp		(- (IK_CALL_INSTRUCTION_SIZE + 1 * wordsize))
 
 #define IK_CALLTABLE_FRAMESIZE(RETURN_ADDRESS)	\
-		((long)IK_REF((RETURN_ADDRESS),disp_call_table_size))
+		((ikuword_t)IK_REF((RETURN_ADDRESS),disp_call_table_size))
 #define IK_CALLTABLE_OFFSET(RETURN_ADDRESS)	\
 		IK_REF((RETURN_ADDRESS),disp_call_table_offset)
 
@@ -608,10 +608,10 @@ typedef struct ik_callback_locative {
    members of the  data structure, while everything else is  used by the
    array "ptr". */
 #define IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS \
-  ((IK_PAGESIZE - sizeof(long) - sizeof(struct ik_ptr_page*))/sizeof(ikptr_t))
+  ((IK_PAGESIZE - sizeof(ikuword_t) - sizeof(struct ik_ptr_page*))/sizeof(ikptr_t))
 typedef struct ik_ptr_page {
-  long		count;
-  struct ik_ptr_page* next;
+  ikuword_t		count;
+  struct ik_ptr_page *	next;
   ikptr_t		ptr[IK_PTR_PAGE_NUMBER_OF_GUARDIANS_SLOTS];
 } ik_ptr_page;
 
@@ -747,14 +747,14 @@ typedef struct ikpcb_t {
    *     that  once were  nursery hot  memory, and  are now  fully used;
    *     initialised to NULL when building the PCB.
    */
-  ikptr_t			heap_base;
-  ik_ulong		heap_size;
+  ikptr_t		heap_base;
+  ikuword_t		heap_size;
   ikmemblock *		heap_pages;
 
   /* Pointer to and number of bytes of the current Scheme stack memory.
    */
-  ikptr_t			stack_base;
-  ik_ulong		stack_size;
+  ikptr_t		stack_base;
+  ikuword_t		stack_size;
 
   /* Vicare pages  cache.  An array  of "ikpage" structs allocated  in a
    * single memory  block; the array  is never reallocated: its  size is
@@ -984,7 +984,7 @@ typedef struct ikcont {
   /* The field  SIZE is  the number  of bytes in  all the  freezed stack
      frames  this continuation  references.  It  is the  sum of  all the
      freezed frame sizes. */
-  long		size;
+  ikuword_t		size;
   /* Every "ikcont" struct is a node  in a linked list of continuations.
      The  field NEXT  is  0  or a  reference  (tagged  pointer) to  next
      continuation object. */
@@ -1001,20 +1001,20 @@ typedef ikpcb_t			ikpcb;
  ** Internal function prototypes.
  ** ----------------------------------------------------------------- */
 
-ik_decl ikpcb_t *		ik_collect		(unsigned long requested_memory, ikpcb_t* pcb);
-ik_decl ikpcb_t *		ik_collect_gen		(unsigned long requested_memory, ikptr_t s_requested_generation, ikpcb_t* pcb);
+ik_decl ikpcb_t *	ik_collect		(ikuword_t requested_memory, ikpcb_t* pcb);
+ik_decl ikpcb_t *	ik_collect_gen		(ikuword_t requested_memory, ikptr_t s_requested_generation, ikpcb_t* pcb);
 ik_private_decl void	ik_verify_integrity	(ikpcb_t* pcb, char * when_description);
 
 ik_private_decl void*	ik_malloc		(int);
 ik_private_decl void	ik_free			(void*, int);
 
-ik_private_decl ikptr_t	ik_mmap			(unsigned long);
-ik_private_decl ikptr_t	ik_mmap_typed		(unsigned long size, unsigned type, ikpcb_t*);
-ik_private_decl ikptr_t	ik_mmap_ptr		(unsigned long size, int gen, ikpcb_t*);
-ik_private_decl ikptr_t	ik_mmap_data		(unsigned long size, int gen, ikpcb_t*);
-ik_private_decl ikptr_t	ik_mmap_code		(unsigned long size, int gen, ikpcb_t*);
-ik_private_decl ikptr_t	ik_mmap_mainheap	(unsigned long size, ikpcb_t*);
-ik_private_decl void	ik_munmap		(ikptr_t, unsigned long);
+ik_private_decl ikptr_t	ik_mmap			(ikuword_t);
+ik_private_decl ikptr_t	ik_mmap_typed		(ikuword_t size, unsigned type, ikpcb_t*);
+ik_private_decl ikptr_t	ik_mmap_ptr		(ikuword_t size, int gen, ikpcb_t*);
+ik_private_decl ikptr_t	ik_mmap_data		(ikuword_t size, int gen, ikpcb_t*);
+ik_private_decl ikptr_t	ik_mmap_code		(ikuword_t size, int gen, ikpcb_t*);
+ik_private_decl ikptr_t	ik_mmap_mainheap	(ikuword_t size, ikpcb_t*);
+ik_private_decl void	ik_munmap		(ikptr_t, ikuword_t);
 ik_private_decl ikpcb_t * ik_make_pcb		(void);
 ik_private_decl void	ik_delete_pcb		(ikpcb_t*);
 ik_private_decl void	ik_free_symbol_table	(ikpcb_t* pcb);
@@ -1030,7 +1030,7 @@ ik_private_decl ikptr_t	ik_asm_reenter		(ikpcb_t* pcb,
 						 ikptr_t new_frame_base_pointer,
 						 ikptr_t s_number_of_return_values);
 ik_private_decl void	ik_underflow_handler	(void);
-#define IK_UNDERFLOW_HANDLER		((ikptr_t)ik_underflow_handler)
+#define IK_UNDERFLOW_HANDLER	((ikptr_t)ik_underflow_handler)
 
 
 /** --------------------------------------------------------------------
@@ -1046,8 +1046,8 @@ ik_decl void	ik_debug_message	(const char * error_message, ...);
 ik_decl void	ik_debug_message_start	(const char * error_message, ...);
 ik_decl void	ik_debug_message_no_newline (const char * error_message, ...);
 
-ik_decl ikptr_t	ik_unsafe_alloc		(ikpcb_t* pcb, ik_ulong size);
-ik_decl ikptr_t	ik_safe_alloc		(ikpcb_t* pcb, ik_ulong size);
+ik_decl ikptr_t	ik_unsafe_alloc		(ikpcb_t* pcb, ikuword_t size);
+ik_decl ikptr_t	ik_safe_alloc		(ikpcb_t* pcb, ikuword_t size);
 
 ik_decl void	ik_print		(ikptr_t x);
 ik_decl void	ik_print_no_newline	(ikptr_t x);
@@ -1080,7 +1080,7 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 
 #define IK_TAGOF(X)	(((int)(X)) & 7)
 
-#define IK_REF(X,N)	(((ikptr_t*)(((long)(X)) + ((long)(N))))[0])
+#define IK_REF(X,N)	(((ikptr_t*)(((ikuword_t)(X)) + ((iksword_t)(N))))[0])
 
 /* This  macro computes  the number  of  bytes to  reserve in  allocated
    memory for the  data area of a Scheme object;  the reserved memory is
@@ -1149,7 +1149,7 @@ ik_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 #define off_car		(disp_car - pair_tag)
 #define off_cdr		(disp_cdr - pair_tag)
 
-#define IK_IS_PAIR(X)	(pair_tag == (((long)(X)) & pair_mask))
+#define IK_IS_PAIR(X)	(pair_tag == (((ikuword_t)(X)) & pair_mask))
 
 #define IK_CAR(PAIR)		    IK_REF((PAIR), off_car)
 #define IK_CDR(PAIR)		    IK_REF((PAIR), off_cdr)
@@ -1163,7 +1163,7 @@ ik_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 
 ik_decl ikptr_t ika_pair_alloc		(ikpcb_t * pcb);
 ik_decl ikptr_t iku_pair_alloc		(ikpcb_t * pcb);
-ik_decl long ik_list_length		(ikptr_t x);
+ik_decl ikuword_t ik_list_length	(ikptr_t x);
 ik_decl void ik_list_to_argv		(ikptr_t x, char **argv);
 ik_decl void ik_list_to_argv_and_argc	(ikptr_t x, char **argv, long *argc);
 
@@ -1184,17 +1184,17 @@ typedef uint32_t	ikchar;
 #define IK_IS_CHAR(X)		(char_tag == (char_mask & (ikptr_t)(X)))
 
 #define IK_CHAR_FROM_INTEGER(X) \
-  ((ikptr_t)((((ik_ulong)(X)) << char_shift) | char_tag))
+  ((ikptr_t)((((ikuword_t)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR32_FROM_INTEGER(X) \
-  ((ikchar)((((ik_ulong)(X)) << char_shift) | char_tag))
+  ((ikchar)((((ikuword_t)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR_TO_INTEGER(X) \
-  ((ik_ulong)(((ikptr_t)(X)) >> char_shift))
+  ((ikuword_t)(((ikptr_t)(X)) >> char_shift))
 
 #define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
 
-#define IK_UNICODE_FROM_ASCII(ASCII)	((ik_ulong)(ASCII))
+#define IK_UNICODE_FROM_ASCII(ASCII)	((ikuword_t)(ASCII))
 
 
 /** --------------------------------------------------------------------
@@ -2009,7 +2009,7 @@ ik_decl void ik_leave_c_function (ikpcb_t* pcb);
  ** Other objects stuff.
  ** ----------------------------------------------------------------- */
 
-ikptr_t	ik_normalize_bignum	(long limbs, int sign, ikptr_t r);
+ikptr_t	ik_normalize_bignum	(iksword_t limbs, int sign, ikptr_t r);
 
 #define max_digits_per_limb	((wordsize==4)?10:20)
 

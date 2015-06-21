@@ -197,8 +197,8 @@ ik_api_decl int		ik_abort		(const char * error_message, ...);
 ik_api_decl void	ik_error		(ikptr_t args);
 ik_api_decl void	ik_debug_message	(const char * error_message, ...);
 
-ik_api_decl ikptr_t	ik_unsafe_alloc		(ikpcb_t* pcb, ik_ulong size);
-ik_api_decl ikptr_t	ik_safe_alloc		(ikpcb_t* pcb, ik_ulong size);
+ik_api_decl ikptr_t	ik_unsafe_alloc		(ikpcb_t* pcb, ikuword_t size);
+ik_api_decl ikptr_t	ik_safe_alloc		(ikpcb_t* pcb, ikuword_t size);
 
 ik_api_decl void	ik_print		(ikptr_t x);
 ik_api_decl void	ik_print_no_newline	(ikptr_t x);
@@ -290,7 +290,7 @@ ik_api_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 
 ik_api_decl ikptr_t ika_pair_alloc		(ikpcb_t * pcb);
 ik_api_decl ikptr_t iku_pair_alloc		(ikpcb_t * pcb);
-ik_api_decl long ik_list_length			(ikptr_t x);
+ik_api_decl ikuword_t ik_list_length		(ikptr_t x);
 ik_api_decl void ik_list_to_argv		(ikptr_t x, char **argv);
 ik_api_decl void ik_list_to_argv_and_argc	(ikptr_t x, char **argv, long *argc);
 
