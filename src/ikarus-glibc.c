@@ -1011,7 +1011,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb_t *pcb)
       pattern = IK_BYTEVECTOR_DATA_CHARP(s_pattern);
       rv      = regcomp(rex, pattern, IK_UNFIX(s_flags));
       if (0 == rv) {
-	s_retval = ika_pointer_alloc(pcb, (ik_ulong)rex);
+	s_retval = ika_pointer_alloc(pcb, (ikuword_t)rex);
       } else {
 	s_retval	  = ika_pair_alloc(pcb);
 	error_message_len = regerror(rv, rex, NULL, 0);

@@ -11,7 +11,7 @@
         distribution  for no  reason I  can know  (Marco Maggi;  Nov 26,
         2011).
 
-  Copyright (C) 2011-2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011-2012, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute  it and/or modify
@@ -118,7 +118,7 @@ static size_t the_ffi_type_sizes[TYPE_ID_NUMBER] = {
   sizeof(short),                /* 15 */
   sizeof(unsigned int),         /* 16 */
   sizeof(int),                  /* 17 */
-  sizeof(ik_ulong),        /* 18 */
+  sizeof(ik_ulong),	        /* 18 */
   sizeof(long)                  /* 19 */
 };
 
@@ -240,7 +240,7 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
   }
   cif->arg_types[arity] = NULL;
   rv = ffi_prep_cif(&(cif->cif), FFI_DEFAULT_ABI, arity, cif->retval_type, cif->arg_types);
-  return (FFI_OK == rv)? ika_pointer_alloc(pcb, (ik_ulong)cif) : IK_FALSE_OBJECT;
+  return (FFI_OK == rv)? ika_pointer_alloc(pcb, (ikuword_t)cif) : IK_FALSE_OBJECT;
 }
 
 
@@ -284,9 +284,9 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
   case TYPE_ID_SCHAR:   *((char*)           buffer) = IK_UNFIX(s_scheme_value); return;
   case TYPE_ID_USHORT:  *((unsigned short*) buffer) = IK_UNFIX(s_scheme_value); return;
   case TYPE_ID_SSHORT:  *((signed short*)   buffer) = IK_UNFIX(s_scheme_value); return;
-  case TYPE_ID_UINT:    *((unsigned int*)   buffer) = ik_integer_to_long(s_scheme_value); return;
-  case TYPE_ID_SINT:    *((signed int*)     buffer) = ik_integer_to_long(s_scheme_value); return;
-  case TYPE_ID_ULONG:   *((ik_ulong*)       buffer) = ik_integer_to_long(s_scheme_value); return;
+  case TYPE_ID_UINT:    *((unsigned int*)   buffer) = ik_integer_to_uint(s_scheme_value); return;
+  case TYPE_ID_SINT:    *((signed int*)     buffer) = ik_integer_to_int(s_scheme_value); return;
+  case TYPE_ID_ULONG:   *((ik_ulong*)       buffer) = ik_integer_to_ulong(s_scheme_value); return;
   case TYPE_ID_SLONG:   *((long*)           buffer) = ik_integer_to_long(s_scheme_value); return;
 
   default:
@@ -442,7 +442,7 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
   callback_user_data->next              = pcb->callbacks;
   pcb->callbacks                        = callback_user_data;
   /* Return a pointer to callable code. */
-  return ika_pointer_alloc(pcb, (ik_ulong)callable_pointer);
+  return ika_pointer_alloc(pcb, (ikuword_t)callable_pointer);
 #else /* if FFI_CLOSURES */
   return IK_FALSE_OBJECT;
 #endif /* if FFI_CLOSURES */

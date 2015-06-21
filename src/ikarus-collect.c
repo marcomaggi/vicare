@@ -124,7 +124,7 @@ static void	handle_guardians	(gc_t* gc);
 static void	collect_stack(gc_t*, ikptr top, ikptr base);
 static void	collect_loop(gc_t*);
 
-static void	ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb);
+static void	ik_munmap_from_segment (ikptr base, ikuword_t size, ikpcb* pcb);
 
 static void	relocate_new_code (ikptr p_X, gc_t* gc);
 
@@ -181,7 +181,7 @@ ikrt_disable_gc_integrity_checks (ikpcb_t * pcb) {
  ** ----------------------------------------------------------------- */
 
 static void
-ik_munmap_from_segment (ikptr base, ik_ulong size, ikpcb* pcb)
+ik_munmap_from_segment (ikptr base, ikuword_t size, ikpcb* pcb)
 /* Given a block of memory starting at BASE and SIZE bytes wide:
  *
  * - Mark all its pages as "holes" in the segment vector.
@@ -298,12 +298,12 @@ static ikptr gather_live_object_proc(gc_t* gc, ikptr x);
  * 6. "ik_collect()" must not move the stack.
  */
 ikpcb_t *
-ik_collect (ik_ulong mem_req, ikpcb* pcb)
+ik_collect (ikuword_t mem_req, ikpcb* pcb)
 {
   return ik_collect_gen(mem_req, IK_FALSE, pcb);
 }
 ikpcb_t *
-ik_collect_gen (ik_ulong mem_req, ikptr s_requested_generation, ikpcb* pcb)
+ik_collect_gen (ikuword_t mem_req, ikptr s_requested_generation, ikpcb* pcb)
 {
   static const uint32_t NEXT_GEN_TAG[IK_GC_GENERATION_COUNT] = {
     (4 << META_DIRTY_SHIFT) | 1 | NEW_GEN_TAG,
@@ -465,7 +465,7 @@ ik_collect_gen (ik_ulong mem_req, ikptr s_requested_generation, ikpcb* pcb)
      its contents have to be  considered invalid and initialised to safe
      values before being scanned by the garbage collector. */
   {
-    ik_ulong free_space = ((ik_ulong)pcb->allocation_redline) - ((ik_ulong)pcb->allocation_pointer);
+    ikuword_t free_space = ((ikuword_t)pcb->allocation_redline) - ((ikuword_t)pcb->allocation_pointer);
     if ((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)) {
 #if ((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
       fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
@@ -1228,14 +1228,14 @@ move_tconc (ikptr tc, ik_ptr_page* ls)
 static void		gather_live_list	(gc_t* gc, unsigned segment_bits, ikptr X, ikptr* loc);
 static inline void	gc_tconc_push		(gc_t* gc, ikptr tcbucket);
 
-static inline ikptr	gc_alloc_new_data	(ik_ulong aligned_size, gc_t* gc);
-static inline ikptr	gc_alloc_new_ptr	(ik_ulong aligned_size, gc_t* gc);
-static inline ikptr	gc_alloc_new_large_ptr	(ik_ulong number_of_bytes, gc_t* gc);
-static inline void	enqueue_large_ptr	(ikptr mem, ik_ulong aligned_size, gc_t* gc);
+static inline ikptr	gc_alloc_new_data	(ikuword_t aligned_size, gc_t* gc);
+static inline ikptr	gc_alloc_new_ptr	(ikuword_t aligned_size, gc_t* gc);
+static inline ikptr	gc_alloc_new_large_ptr	(ikuword_t number_of_bytes, gc_t* gc);
+static inline void	enqueue_large_ptr	(ikptr mem, ikuword_t aligned_size, gc_t* gc);
 static inline ikptr	gc_alloc_new_symbol_record (gc_t* gc);
 static inline ikptr	gc_alloc_new_pair	(gc_t* gc);
 static inline ikptr	gc_alloc_new_weak_pair	(gc_t* gc);
-static inline ikptr	gc_alloc_new_code	(ik_ulong aligned_size, gc_t* gc);
+static inline ikptr	gc_alloc_new_code	(ikuword_t aligned_size, gc_t* gc);
 
 static ikptr
 #if (((defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC)) || (defined DEBUG_GATHER_LIVE_OBJECT))
@@ -1660,8 +1660,8 @@ gather_live_object_proc (gc_t* gc, ikptr X)
 	ikptr		s_rtd    = first_word;
 	ikptr		s_length = IK_REF(s_rtd, off_rtd_length);
 	ikptr		Y;
-	ik_ulong	requested_size = disp_record_data + s_length;
-	ik_ulong	aligned_size   = IK_ALIGN(requested_size);
+	ikuword_t	requested_size = disp_record_data + s_length;
+	ikuword_t	aligned_size   = IK_ALIGN(requested_size);
 	Y = gc_alloc_new_ptr(aligned_size, gc) | record_tag;
 	IK_REF(Y, off_record_rtd) = s_rtd;
 	{
@@ -1755,7 +1755,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       else if (port_tag == (((long)first_word) & port_mask)) {
 	/* Port object.  It goes in the pointers meta page. */
 	ikptr		Y = gc_alloc_new_ptr(port_size, gc) | vector_tag;
-	ik_ulong	i;
+	ikuword_t	i;
 	IK_REF(Y, -vector_tag) = first_word;
 	for (i=wordsize; i<port_size; i+=wordsize) {
 	  IK_REF(Y, i-vector_tag) = IK_REF(X, i-vector_tag);
@@ -1766,7 +1766,7 @@ gather_live_object_proc (gc_t* gc, ikptr X)
       }
       else if (bignum_tag == (first_word & bignum_mask)) {
 	/* Bignum object.  It goes in the data meta page. */
-	long	len    = ((ik_ulong)first_word) >> bignum_nlimbs_shift;
+	long	len    = ((ikuword_t)first_word) >> bignum_nlimbs_shift;
 	long	memreq = IK_ALIGN(disp_bignum_data + len*wordsize);
 	ikptr	Y      = gc_alloc_new_data(memreq, gc) | vector_tag;
 	memcpy((char*)(long)(Y - vector_tag),
@@ -1882,7 +1882,7 @@ gather_live_list (gc_t* gc, uint32_t page_sbits, ikptr X, ikptr* loc)
 	     it in  the cdr slot of  Y.  Notice that the  next iteration
 	     will use the value of PAGE_SBITS we have set above. */
           X   = second_word;
-          loc = (ikptr*)(ik_ulong)(Y + off_cdr);
+          loc = (ikptr*)(ikuword_t)(Y + off_cdr);
         }
       }
     }
@@ -1936,7 +1936,7 @@ gather_live_code_entry (gc_t* gc, ikptr entry)
    details. */
 {
   ikptr		X = entry - disp_code_data; /* UNtagged pointer to code object */
-  ik_ulong	page_idx;
+  ikuword_t	page_idx;
   /* If X  has already been moved  in a previous call  to this function:
      the first  word in the data  area is IK_FORWARD_PTR and  the second
      word is the new reference Y: compute the pointer to the entry point
@@ -2098,11 +2098,11 @@ gc_tconc_push_extending (gc_t* gc, ikptr tcbucket)
  * such objects can be scanned by "collect_loop()".
  */
 
-static inline ikptr	meta_alloc           (ik_ulong aligned_size, gc_t* gc, int meta_id);
-static ikptr		meta_alloc_extending (ik_ulong aligned_size, gc_t* gc, int meta_id);
+static inline ikptr	meta_alloc           (ikuword_t aligned_size, gc_t* gc, int meta_id);
+static ikptr		meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id);
 
 static inline ikptr
-gc_alloc_new_ptr (ik_ulong aligned_size, gc_t* gc)
+gc_alloc_new_ptr (ikuword_t aligned_size, gc_t* gc)
 /* Reserve enough room in the current  meta page for pointers to hold an
    object  of ALIGNED_SIZE  bytes.  Return  an untagged  pointer to  the
    first word of reserved memory. */
@@ -2111,14 +2111,14 @@ gc_alloc_new_ptr (ik_ulong aligned_size, gc_t* gc)
   return meta_alloc(aligned_size, gc, meta_ptrs);
 }
 static inline ikptr
-gc_alloc_new_large_ptr (ik_ulong number_of_bytes, gc_t* gc)
+gc_alloc_new_large_ptr (ikuword_t number_of_bytes, gc_t* gc)
 /* Alloc memory pages  in which a large object will  be stored; return a
    pointer to  the first allocated  page.  The  pages are marked  in the
    segments  vector as  "large  object", this  will  prevent later  such
    object to be  moved around.  The object's data area  is registered in
    the queues of objects to be scanned later by "collect_loop()". */
 {
-  ik_ulong	memreq;
+  ikuword_t	memreq;
   ikptr		mem;
   memreq = IK_ALIGN_TO_NEXT_PAGE(number_of_bytes);
   mem    = ik_mmap_typed(memreq, POINTERS_MT | LARGE_OBJECT_TAG | gc->collect_gen_tag, gc->pcb);
@@ -2142,14 +2142,14 @@ gc_alloc_new_large_ptr (ik_ulong number_of_bytes, gc_t* gc)
   return mem;
 }
 static inline void
-enqueue_large_ptr (ikptr mem, ik_ulong aligned_size, gc_t* gc)
+enqueue_large_ptr (ikptr mem, ikuword_t aligned_size, gc_t* gc)
 /* Assume that "mem" references a large object that is already stored in
    memory pages  marked as "large  object".  Such objects are  not moved
    around by the garbage collector, rather  we register the data area in
    the queues of objects to be scanned later by "collect_loop()". */
 {
-  ik_ulong	page_idx = IK_PAGE_INDEX(mem);
-  ik_ulong	page_end = IK_PAGE_INDEX(mem+aligned_size-1);
+  ikuword_t	page_idx = IK_PAGE_INDEX(mem);
+  ikuword_t	page_end = IK_PAGE_INDEX(mem+aligned_size-1);
   for (; page_idx <= page_end; ++page_idx) {
     gc->segment_vector[page_idx] = POINTERS_MT | LARGE_OBJECT_TAG | gc->collect_gen_tag;
   }
@@ -2218,7 +2218,7 @@ gc_alloc_new_weak_pair(gc_t* gc)
   }
 }
 static inline ikptr
-gc_alloc_new_data (ik_ulong aligned_size, gc_t* gc)
+gc_alloc_new_data (ikuword_t aligned_size, gc_t* gc)
 /* Reserve enough room in  the current meta page for raw  data to hold a
    data area of  ALIGNED_SIZE bytes.  Return an untagged  pointer to the
    first word of reserved memory. */
@@ -2227,7 +2227,7 @@ gc_alloc_new_data (ik_ulong aligned_size, gc_t* gc)
   return meta_alloc(aligned_size, gc, meta_data);
 }
 static inline ikptr
-gc_alloc_new_code (ik_ulong aligned_size, gc_t* gc)
+gc_alloc_new_code (ikuword_t aligned_size, gc_t* gc)
 /* Alloc memory  pages in which a  code object will be  stored; return a
    pointer  to the  first allocated  page.   The object's  data area  is
    registered  in  the  queues  of   objects  to  be  scanned  later  by
@@ -2237,11 +2237,11 @@ gc_alloc_new_code (ik_ulong aligned_size, gc_t* gc)
   if (aligned_size < IK_PAGESIZE) {
     return meta_alloc(aligned_size, gc, meta_code);
   } else { /* More than one page needed. */
-    ik_ulong	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
+    ikuword_t	memreq	= IK_ALIGN_TO_NEXT_PAGE(aligned_size);
     ikptr	mem	= ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
     /* Reset to  zero the portion of  allocated memory that will  not be
        used by the code object. */
-    bzero((char*)(ik_ulong)(mem+aligned_size), memreq-aligned_size);
+    bzero((char*)(ikuword_t)(mem+aligned_size), memreq-aligned_size);
     /* Retake   the  segment   vector   because   memory  allocated   by
        "ik_mmap_code()" might  have caused the reallocation  of the page
        vectors. */
@@ -2260,7 +2260,7 @@ gc_alloc_new_code (ik_ulong aligned_size, gc_t* gc)
 /* ------------------------------------------------------------------ */
 
 static inline ikptr
-meta_alloc (ik_ulong aligned_size, gc_t* gc, int meta_id)
+meta_alloc (ikuword_t aligned_size, gc_t* gc, int meta_id)
 /* Reserve enough room in the current meta page of type "meta_id" for an
    object of  size ALIGNED_SIZE  bytes.  Return a  pointer to  the first
    word of reserved space.
@@ -2282,7 +2282,7 @@ meta_alloc (ik_ulong aligned_size, gc_t* gc, int meta_id)
   }
 }
 static ikptr
-meta_alloc_extending (ik_ulong aligned_size, gc_t* gc, int meta_id)
+meta_alloc_extending (ikuword_t aligned_size, gc_t* gc, int meta_id)
 /* Allocate one or move new meta  pages of type "meta_id", so that there
    is enough  room to hold  the data area  of an object  of ALIGNED_SIZE
    bytes.  Return a pointer to the first word of allocated memory. */
@@ -2295,7 +2295,7 @@ meta_alloc_extending (ik_ulong aligned_size, gc_t* gc, int meta_id)
     1 * IK_PAGESIZE,
     1 * IK_PAGESIZE,
   };
-  ik_ulong	mapsize;
+  ikuword_t	mapsize;
   meta_t *	meta;
   ikptr		mem;
   mapsize = IK_ALIGN_TO_NEXT_PAGE(aligned_size);
@@ -2641,8 +2641,8 @@ static const uint32_t CLEANUP_MASK[IK_GC_GENERATION_COUNT] = {
   0xFFFFFFFF
 };
 
-static void scan_dirty_code_page     (gc_t* gc, ik_ulong page_idx);
-static void scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask);
+static void scan_dirty_code_page     (gc_t* gc, ikuword_t page_idx);
+static void scan_dirty_pointers_page (gc_t* gc, ikuword_t page_idx, uint32_t mask);
 
 static void
 scan_dirty_pages (gc_t* gc)
@@ -2660,13 +2660,13 @@ scan_dirty_pages (gc_t* gc)
 */
 {
   ikpcb_t *	pcb         = gc->pcb;
-  ik_ulong	lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
-  ik_ulong	hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
+  ikuword_t	lo_idx      = IK_PAGE_INDEX(pcb->memory_base);
+  ikuword_t	hi_idx      = IK_PAGE_INDEX(pcb->memory_end);
   uint32_t *	dirty_vec   = (uint32_t*)pcb->dirty_vector;
   uint32_t *	segment_vec = pcb->segment_vector;
   uint32_t	collect_gen = gc->collect_gen;
   uint32_t	mask        = DIRTY_MASK[collect_gen];
-  ik_ulong	page_idx;
+  ikuword_t	page_idx;
   for (page_idx = lo_idx; page_idx < hi_idx; ++page_idx) {
     if (dirty_vec[page_idx] & mask) {
       uint32_t page_bits               = segment_vec[page_idx];
@@ -2701,7 +2701,7 @@ scan_dirty_pages (gc_t* gc)
   }
 }
 static void
-scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask)
+scan_dirty_pointers_page (gc_t* gc, ikuword_t page_idx, uint32_t mask)
 /* Subroutine of "scan_dirty_pages()".  It is  used to scan a dirty page
    containing  the data  area of  Scheme objects  composed of  immediate
    objects or tagged pointers, but not code objects.
@@ -2753,7 +2753,7 @@ scan_dirty_pointers_page (gc_t* gc, ik_ulong page_idx, uint32_t mask)
   }
 }
 static void
-scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
+scan_dirty_code_page (gc_t* gc, ikuword_t page_idx)
 /* Subroutine of "scan_dirty_pages()".  It is  used to scan a dirty page
    containing the data area of Scheme code objects.
 
@@ -2774,7 +2774,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	uint32_t *	segment_vec;
 	ikptr		s_reloc_vec;
 	ikptr		s_reloc_vec_len;
-	long		card_idx    = ((ik_ulong)p_code - (ik_ulong)page_start) / CARDSIZE;
+	long		card_idx    = ((ikuword_t)p_code - (ikuword_t)page_start) / CARDSIZE;
 	uint32_t	code_dbits;
 	relocate_new_code(p_code, gc);
 	/* The call  to "relocate_new_code()"  might have  allocated new
@@ -2784,7 +2784,7 @@ scan_dirty_code_page (gc_t* gc, ik_ulong page_idx)
 	s_reloc_vec_len = IK_VECTOR_LENGTH_FX(s_reloc_vec);
 	code_dbits      = segment_vec[IK_PAGE_INDEX(s_reloc_vec)];
 	/* Iterate over the words in the relocation vector. */
-	for (ik_ulong i=0; i<s_reloc_vec_len; i+=wordsize) {
+	for (ikuword_t i=0; i<s_reloc_vec_len; i+=wordsize) {
 	  ikptr		s_item = IK_REF(s_reloc_vec, i+off_vector_data);
 	  if (IK_IS_FIXNUM(s_item) || (IK_TAGOF(s_item) == immediate_tag)) {
 	    /* do nothing */

@@ -235,7 +235,7 @@ ikrt_linux_epoll_event_alloc (ikptr s_number_of_entries, ikpcb_t * pcb)
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   void * event = malloc(IK_UNFIX(s_number_of_entries) * sizeof(struct epoll_event));
-  return (event)? ika_pointer_alloc(pcb, (ik_ulong)event) : IK_FALSE_OBJECT;
+  return (event)? ika_pointer_alloc(pcb, (ikuword_t)event) : IK_FALSE_OBJECT;
 #else
   feature_failure(__func__);
 #endif
@@ -292,7 +292,7 @@ ikrt_linux_epoll_event_ref_data_ptr (ikptr s_events_array, ikptr s_index, ikpcb_
 {
 #ifdef HAVE_STRUCT_EPOLL_EVENT
   struct epoll_event *	event = IK_POINTER_DATA_VOIDP(s_events_array);
-  return ika_pointer_alloc(pcb, (ik_ulong)event[IK_UNFIX(s_index)].data.ptr);
+  return ika_pointer_alloc(pcb, (ikuword_t)event[IK_UNFIX(s_index)].data.ptr);
 #else
   feature_failure(__func__);
 #endif

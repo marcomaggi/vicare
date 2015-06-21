@@ -67,7 +67,7 @@ static int	object_count = 0;
 
 static ikptr	fasl_read_super_code_object(ikpcb* pcb, fasl_port* p);
 static ikptr	do_read (ikpcb* pcb, fasl_port* p);
-static ikptr	alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p);
+static ikptr	alloc_code_object (ikuword_t scheme_object_size, ikpcb* pcb, fasl_port* p);
 static char	fasl_read_byte (fasl_port* p);
 static void	fasl_read_buf (fasl_port* p, void* buf, int n);
 
@@ -254,8 +254,8 @@ do_read (ikpcb* pcb, fasl_port* p)
      *   |...........................................................| allocated memory size
      *
      */
-    ik_ulong	scheme_object_size	= 0;
-    ik_ulong	binary_code_size	= 0;
+    ikuword_t	scheme_object_size	= 0;
+    ikuword_t	binary_code_size	= 0;
     ikptr	s_freevars		= IK_FIX(0);
     ikptr	s_annotation		= IK_FALSE;
     ikptr	p_code			= 0;
@@ -266,7 +266,7 @@ do_read (ikpcb* pcb, fasl_port* p)
 	   big-endian raw unsigned 32-bit integer. */
 	uint32_t	full_binary_code_size = 0;
 	fasl_read_buf(p, &full_binary_code_size, sizeof(uint32_t));
-	binary_code_size = (ik_ulong) full_binary_code_size;
+	binary_code_size = (ikuword_t) full_binary_code_size;
       } else {
 	/* 64-bit platform.   The binary  code size  is serialised  as a
 	   sequence of 2 big-endian raw unsigned 32-bit integers. */
@@ -274,7 +274,7 @@ do_read (ikpcb* pcb, fasl_port* p)
 	uint32_t	hi_binary_code_size = 0;
 	fasl_read_buf(p, &lo_binary_code_size, sizeof(uint32_t));
 	fasl_read_buf(p, &hi_binary_code_size, sizeof(uint32_t));
-	binary_code_size = (((ik_ulong) hi_binary_code_size) << 32) | ((ik_ulong) lo_binary_code_size);
+	binary_code_size = (((ikuword_t) hi_binary_code_size) << 32) | ((ikuword_t) lo_binary_code_size);
       }
     }
     /* Read the number of free variables. */
@@ -647,7 +647,7 @@ do_read (ikpcb* pcb, fasl_port* p)
   else if (c == 'b') {
     if (DEBUG_FASL) ik_debug_message("open %d: bignum object", object_count++);
     /* The first word in the memory block of the bignum object. */
-    ik_ulong	first_word;
+    ikuword_t	first_word;
     /* The number  of octets representing  the bignum.  If  positive the
        bignum is positive, if negative the bignum is negative. */
     long number_of_octets = 0;
@@ -712,7 +712,7 @@ do_read (ikpcb* pcb, fasl_port* p)
 
 
 static ikptr
-alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p)
+alloc_code_object (ikuword_t scheme_object_size, ikpcb* pcb, fasl_port* p)
 /* Scheme code are of 2 categories:
  *
  * - Small code objects whose size fits  in a single Vicare page.  Small
@@ -755,7 +755,7 @@ alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p)
  * fields with appropriate values.
  */
 {
-  ik_ulong	aligned_scheme_code_object_size = IK_ALIGN(scheme_object_size);
+  ikuword_t	aligned_scheme_code_object_size = IK_ALIGN(scheme_object_size);
   ikptr		ap    = p->code_ap;
   ikptr		nap   = ap + aligned_scheme_code_object_size;
   if (0 && DEBUG_FASL)
@@ -814,8 +814,8 @@ alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p)
      * "current code page".
      */
     ikptr	mem		= ik_mmap_code(IK_PAGESIZE, BOOT_IMAGE_CODE_OBJECTS_GENERATION, pcb);
-    ik_ulong	free_bytes_in_new_code_page = IK_PAGESIZE - aligned_scheme_code_object_size;
-    ik_ulong	free_bytes_in_old_code_page = ((ik_ulong)p->code_ep) - ((ik_ulong)ap);
+    ikuword_t	free_bytes_in_new_code_page = IK_PAGESIZE - aligned_scheme_code_object_size;
+    ikuword_t	free_bytes_in_old_code_page = ((ikuword_t)p->code_ep) - ((ikuword_t)ap);
     if (free_bytes_in_new_code_page > free_bytes_in_old_code_page) {
       p->code_ap = mem + aligned_scheme_code_object_size;
       p->code_ep = mem + IK_PAGESIZE;
@@ -830,7 +830,7 @@ alloc_code_object (ik_ulong scheme_object_size, ikpcb* pcb, fasl_port* p)
      * CODE_AP  and CODE_EP  as  "current code  page"  for future  small
      * objects allocations.
      */
-    ik_ulong	aligned_scheme_code_object_size = IK_ALIGN_TO_NEXT_PAGE(scheme_object_size);
+    ikuword_t	aligned_scheme_code_object_size = IK_ALIGN_TO_NEXT_PAGE(scheme_object_size);
     ikptr	mem   = ik_mmap_code(aligned_scheme_code_object_size, BOOT_IMAGE_CODE_OBJECTS_GENERATION, pcb);
     return mem;
   }
