@@ -147,9 +147,9 @@
 #define CYGWIN_SEGMENT_SHIFT	(4  + IK_PAGESHIFT)
 
 #define CYGWIN_SEGMENT_INDEX(X)	\
-  (((ik_ulong)(X)) >> CYGWIN_SEGMENT_SHIFT)
+  (((ikuword_t)(X)) >> CYGWIN_SEGMENT_SHIFT)
 
-/* Given  a  number  of  bytes  SIZE  as  "ik_ulong":  evaluate  to  the
+/* Given  a  number  of  bytes  SIZE  as  "ikuword_t":  evaluate  to  the
    difference between  two Cygwin segment indexes  representing a region
    big enough to hold SIZE bytes. */
 #define CYGWIN_SEGMENT_INDEX_RANGE(SIZE) \
@@ -161,7 +161,7 @@
   (CYGWIN_SEGMENT_INDEX(X)  - CYGWIN_SEGMENT_INDEX(cygwin_memory_base))
 
 #define MINIMUM_CYGWIN_SEGMENTS_NUMBER_FOR_SIZE(SIZE) \
-  (((ik_ulong)(SIZE) + CYGWIN_SEGMENT_SIZE - 1) >> CYGWIN_SEGMENT_SHIFT)
+  (((ikuword_t)(SIZE) + CYGWIN_SEGMENT_SIZE - 1) >> CYGWIN_SEGMENT_SHIFT)
 
 /* Given  a  number of  bytes:  compute  the  minimum number  of  Cygwin
    segments needed to  hold them and return the  corresponding number of
@@ -319,9 +319,9 @@ do_mmap (size_t length)
   /* Assert that the  16 least significant bits in MEM  are set to zero:
      this means MEM is a pointer  to the beginning of an absolute memory
      Cygwin segment. */
-  assert(((-CYGWIN_SEGMENT_SIZE) & (ik_ulong)mem) == (ik_ulong)mem);
-  assert(0 == (((ik_ulong)mem) & (CYGWIN_SEGMENT_SIZE-1)));
-  assert(0 == ((ik_ulong)0xFFF & (ik_ulong)mem));
+  assert(((-CYGWIN_SEGMENT_SIZE) & (ikuword_t)mem) == (ikuword_t)mem);
+  assert(0 == (((ikuword_t)mem) & (CYGWIN_SEGMENT_SIZE-1)));
+  assert(0 == ((ikuword_t)0xFFF & (ikuword_t)mem));
   return mem;
 }
 static void
@@ -338,7 +338,7 @@ do_munmap (void* addr, size_t size)
  ** Public memory mapped API.
  ** ----------------------------------------------------------------- */
 
-static void extend_segments_vectors_maybe (uint8_t * base_ptr, ik_ulong size);
+static void extend_segments_vectors_maybe (uint8_t * base_ptr, ikuword_t size);
 
 char*
 win_mmap (size_t size)
@@ -379,7 +379,7 @@ win_mmap (size_t size)
     /* Assert that the 16 least significant  bits in AP are set to zero:
        this means AP is a pointer to the beginning of an absolute memory
        Cygwin segment. */
-    assert(0 == (((ik_ulong)ap) & (CYGWIN_SEGMENT_SIZE-1)));
+    assert(0 == (((ikuword_t)ap) & (CYGWIN_SEGMENT_SIZE-1)));
     /* Reserve the requested bytes and  return a pointer to the reserved
        chunk. */
     {
@@ -403,8 +403,8 @@ win_mmap (size_t size)
       /* By setting all the  bits to 1 we mark as used  all the pages in
 	 the allocated Cygwin segments. */
       {
-	ik_ulong addr_slot_idx    = CYGWIN_SEGMENT_SLOT(addr);
-	for (ik_ulong i=0; i<number_of_segments; ++i) {
+	ikuword_t addr_slot_idx    = CYGWIN_SEGMENT_SLOT(addr);
+	for (ikuword_t i=0; i<number_of_segments; ++i) {
 	  cygwin_segments[i + addr_slot_idx] = 0xFFFF;
 	}
       }
@@ -422,19 +422,19 @@ win_munmap (char* addr, size_t size)
   /* Assert that the 12 least significant  bits in ADDR are set to zero:
      this means ADDR is a pointer to the beginning of an absolute Vicare
      memory page. */
-  assert(((-IK_PAGESIZE) & (ik_ulong)addr) == (ik_ulong)addr);
+  assert(((-IK_PAGESIZE) & (ikuword_t)addr) == (ikuword_t)addr);
   /* Assert that the number of bytes to free is an exact multiple of the
      Vicare page size. */
   assert(0 == (size % IK_PAGESIZE));
-  ik_ulong	base_segment_idx = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
+  ikuword_t	base_segment_idx = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
   while (size) {
-    ik_ulong	addr_segment_idx = CYGWIN_SEGMENT_INDEX(addr);
-    ik_ulong	addr_slot_idx    = addr_segment_idx - base_segment_idx;
+    ikuword_t	addr_segment_idx = CYGWIN_SEGMENT_INDEX(addr);
+    ikuword_t	addr_slot_idx    = addr_segment_idx - base_segment_idx;
     uint16_t	segment_bits     = cygwin_segments[addr_slot_idx];
     /* Compute the page bit offset  by isolating the 4 least significant
        bits in the page index (15 == 0b1111 == 0xF). */
-    ik_ulong	addr_page_idx        = IK_PAGE_INDEX(addr);
-    ik_ulong	addr_page_bit_offset = addr_page_idx & 0xF;
+    ikuword_t	addr_page_idx        = IK_PAGE_INDEX(addr);
+    ikuword_t	addr_page_bit_offset = addr_page_idx & 0xF;
     if (0)
       ik_debug_message("%s: freeing addr slot=%ld, bit offset=%ld", __func__,
 		       CYGWIN_SEGMENT_SLOT(addr), addr_page_bit_offset);
@@ -452,16 +452,16 @@ win_munmap (char* addr, size_t size)
   }
 }
 static void
-extend_segments_vectors_maybe (uint8_t * base_ptr, ik_ulong size)
+extend_segments_vectors_maybe (uint8_t * base_ptr, ikuword_t size)
 {
   uint8_t *	end_ptr = base_ptr + size;
   if (base_ptr < cygwin_memory_base) {
-    ik_ulong new_lo_seg   = CYGWIN_SEGMENT_INDEX(base_ptr);
-    ik_ulong old_lo_seg   = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
-    ik_ulong hi_seg       = CYGWIN_SEGMENT_INDEX(cygwin_memory_end); /* unchanged */
-    ik_ulong new_vec_size = (hi_seg - new_lo_seg) * sizeof(uint16_t);
-    ik_ulong old_vec_size = (hi_seg - old_lo_seg) * sizeof(uint16_t);
-    ik_ulong size_delta   = new_vec_size - old_vec_size;
+    ikuword_t new_lo_seg   = CYGWIN_SEGMENT_INDEX(base_ptr);
+    ikuword_t old_lo_seg   = CYGWIN_SEGMENT_INDEX(cygwin_memory_base);
+    ikuword_t hi_seg       = CYGWIN_SEGMENT_INDEX(cygwin_memory_end); /* unchanged */
+    ikuword_t new_vec_size = (hi_seg - new_lo_seg) * sizeof(uint16_t);
+    ikuword_t old_vec_size = (hi_seg - old_lo_seg) * sizeof(uint16_t);
+    ikuword_t size_delta   = new_vec_size - old_vec_size;
     { /* Allocate a new Cygwin segments vector.  The old slots go to the
 	 tail of the  new vector; the head  of the new vector  is set to
 	 zero. */
@@ -473,12 +473,12 @@ extend_segments_vectors_maybe (uint8_t * base_ptr, ik_ulong size)
     }
     cygwin_memory_base = (uint8_t*)(new_lo_seg * CYGWIN_SEGMENT_SIZE);
   } else if (end_ptr >= cygwin_memory_end) {
-    ik_ulong lo_seg       = CYGWIN_SEGMENT_INDEX(cygwin_memory_base); /* unchanged */
-    ik_ulong old_hi_seg   = CYGWIN_SEGMENT_INDEX(cygwin_memory_end);
-    ik_ulong new_hi_seg   = CYGWIN_SEGMENT_INDEX(end_ptr + CYGWIN_SEGMENT_SIZE - 1);
-    ik_ulong new_vec_size = (new_hi_seg - lo_seg) * sizeof(uint16_t);
-    ik_ulong old_vec_size = (old_hi_seg - lo_seg) * sizeof(uint16_t);
-    ik_ulong size_delta   = new_vec_size - old_vec_size;
+    ikuword_t lo_seg       = CYGWIN_SEGMENT_INDEX(cygwin_memory_base); /* unchanged */
+    ikuword_t old_hi_seg   = CYGWIN_SEGMENT_INDEX(cygwin_memory_end);
+    ikuword_t new_hi_seg   = CYGWIN_SEGMENT_INDEX(end_ptr + CYGWIN_SEGMENT_SIZE - 1);
+    ikuword_t new_vec_size = (new_hi_seg - lo_seg) * sizeof(uint16_t);
+    ikuword_t old_vec_size = (old_hi_seg - lo_seg) * sizeof(uint16_t);
+    ikuword_t size_delta   = new_vec_size - old_vec_size;
     { /* Allocate a new new Cygwin segments vector.  The old slots go to
 	 the head of the  new vector; the tail of the  new vector is set
 	 to zero. */

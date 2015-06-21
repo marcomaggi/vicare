@@ -524,7 +524,7 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
     IK_ASS(IK_FIELD(D, 2), ika_integer_from_long (pcb, (long)S->st_dev));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
-    IK_ASS(IK_FIELD(D, 3), ika_integer_from_ulong(pcb, (long)S->st_nlink));
+    IK_ASS(IK_FIELD(D, 3), ika_integer_from_ulong(pcb, (ik_ulong)S->st_nlink));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 
     IK_ASS(IK_FIELD(D, 4), ika_integer_from_ulong(pcb, (ik_ulong)S->st_uid));
@@ -579,9 +579,9 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
     IK_ASS(IK_FIELD(D, 1), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ino));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
-    IK_ASS(IK_FIELD(D, 2), ika_integer_from_llong(pcb, (long)S->st_dev));
+    IK_ASS(IK_FIELD(D, 2), ika_integer_from_llong(pcb, (long long)S->st_dev));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
-    IK_ASS(IK_FIELD(D, 3), ika_integer_from_ullong(pcb, (long)S->st_nlink));
+    IK_ASS(IK_FIELD(D, 3), ika_integer_from_ullong(pcb, (ik_ullong)S->st_nlink));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 
     IK_ASS(IK_FIELD(D, 4), ika_integer_from_ullong(pcb, (ik_ullong)S->st_uid));
@@ -591,7 +591,7 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
     IK_ASS(IK_FIELD(D, 6), ika_integer_from_ullong(pcb, (ik_ullong)S->st_size));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 
-    IK_ASS(IK_FIELD(D, 7), ika_integer_from_llong(pcb, (long)S->st_atime));
+    IK_ASS(IK_FIELD(D, 7), ika_integer_from_llong(pcb, (long long)S->st_atime));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 #ifdef HAVE_STAT_ST_ATIM_TV_NSEC
     IK_ASS(IK_FIELD(D, 8), ika_integer_from_ullong(pcb, (ik_ullong)S->st_atim.tv_nsec));
@@ -602,7 +602,7 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
 #endif
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 
-    IK_ASS(IK_FIELD(D, 9) , ika_integer_from_llong(pcb, (long)S->st_mtime));
+    IK_ASS(IK_FIELD(D, 9) , ika_integer_from_llong(pcb, (long long)S->st_mtime));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 #ifdef HAVE_STAT_ST_MTIM_TV_NSEC
     IK_ASS(IK_FIELD(D, 10), ika_integer_from_ullong(pcb, (ik_ullong)S->st_mtim.tv_nsec));
@@ -615,7 +615,7 @@ fill_stat_struct (struct stat * S, ikptr D, ikpcb* pcb)
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 #endif
 
-    IK_ASS(IK_FIELD(D, 11), ika_integer_from_llong(pcb, (long)S->st_ctime));
+    IK_ASS(IK_FIELD(D, 11), ika_integer_from_llong(pcb, (long long)S->st_ctime));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, D);
 #ifdef HAVE_STAT_ST_CTIM_TV_NSEC
     IK_ASS(IK_FIELD(D, 12), ika_integer_from_ullong(pcb, (ik_ullong)S->st_ctim.tv_nsec));
@@ -1352,7 +1352,7 @@ ikrt_posix_opendir (ikptr s_pathname, ikpcb_t * pcb)
   pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
   errno	   = 0;
   stream   = opendir(pathname);
-  return (stream)? ika_pointer_alloc(pcb, (ik_ulong)stream) : ik_errno_to_code();
+  return (stream)? ika_pointer_alloc(pcb, (ikuword_t)stream) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -1364,7 +1364,7 @@ ikrt_posix_fdopendir (ikptr s_fd, ikpcb_t * pcb)
   DIR *		stream;
   errno	   = 0;
   stream   = fdopendir(IK_NUM_TO_FD(s_fd));
-  return (stream)? ika_pointer_alloc(pcb, (ik_ulong)stream) : ik_errno_to_code();
+  return (stream)? ika_pointer_alloc(pcb, (ikuword_t)stream) : ik_errno_to_code();
 #else
   feature_failure(__func__);
 #endif
@@ -2234,7 +2234,7 @@ ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb_t * pcb)
     long	i;
     for (i=0; i<count; ++i)
       FD_ZERO(&(set[i]));
-    return ika_pointer_alloc(pcb, (ik_ulong)set);
+    return ika_pointer_alloc(pcb, (ikuword_t)set);
   } else
     return IK_FALSE;
 }
@@ -2398,7 +2398,7 @@ ikrt_posix_mmap (ikptr s_address, ikptr s_length, ikptr s_protect,
 	       IK_NUM_TO_FD(s_fd), offset);
   /* if (((void *)-1) != rv) */
   if (MAP_FAILED != rv)
-    return ika_pointer_alloc(pcb, (ik_ulong)rv);
+    return ika_pointer_alloc(pcb, (ikuword_t)rv);
   else
     return ik_errno_to_code();
 #else
@@ -2444,7 +2444,7 @@ ikrt_posix_mremap (ikptr s_address, ikptr s_length, ikptr s_new_length, ikptr s_
   errno = 0;
   rv    = mremap(address, length, new_length, IK_UNFIX(s_flags));
   if (((void *)-1) != rv)
-    return ika_pointer_alloc(pcb, (ik_ulong)rv);
+    return ika_pointer_alloc(pcb, (ikuword_t)rv);
   else
     return ik_errno_to_code();
 #else
@@ -2673,7 +2673,7 @@ ikrt_posix_sockaddr_in_in_port (ikptr s_socket_address)
   if (AF_INET == socket_address->sin_family) {
     uint16_t		port = ntohs((uint16_t)(socket_address->sin_port));
     /* fprintf(stderr, "%s: port %u\n", __func__, port); */
-    return IK_FIX((long)port);
+    return IK_FIX((ikuword_t)port);
   } else
     return IK_FALSE;
 #else
@@ -2746,11 +2746,11 @@ ikrt_posix_sockaddr_in6_in6_port (ikptr s_socket_address)
 #ifdef HAVE_STRUCT_SOCKADDR_IN6
   struct sockaddr_in6 *	 socket_address = IK_BYTEVECTOR_DATA_VOIDP(s_socket_address);
   /* return (AF_INET6 == socket_address->sin6_family)? */
-  /*   IK_FIX((long)socket_address->sin6_port) : IK_FALSE_OBJECT; */
+  /*   IK_FIX((ikuword_t)socket_address->sin6_port) : IK_FALSE_OBJECT; */
   if (AF_INET6 == socket_address->sin6_family) {
     uint16_t		port = ntohs((uint16_t)(socket_address->sin6_port));
     /* fprintf(stderr, "%s: port %u\n", __func__, port); */
-    return IK_FIX((long)port);
+    return IK_FIX((ikuword_t)port);
   } else
     return IK_FALSE;
 
@@ -4796,8 +4796,8 @@ ikrt_posix_nanosleep (ikptr s_secs, ikptr s_nsecs, ikpcb_t * pcb)
   struct timespec	requested;
   struct timespec	remaining = { 0, 0 }; /* required!!! */
   int			rv;
-  requested.tv_sec  = IK_IS_FIXNUM(s_secs)?  (ik_ulong)IK_UNFIX(s_secs) :IK_REF(s_secs, off_bignum_data);
-  requested.tv_nsec = IK_IS_FIXNUM(s_nsecs)? (ik_ulong)IK_UNFIX(s_nsecs):IK_REF(s_nsecs,off_bignum_data);
+  requested.tv_sec  = IK_IS_FIXNUM(s_secs)?  (long)IK_UNFIX(s_secs) :IK_REF(s_secs, off_bignum_data);
+  requested.tv_nsec = IK_IS_FIXNUM(s_nsecs)? (long)IK_UNFIX(s_nsecs):IK_REF(s_nsecs,off_bignum_data);
   errno = 0;
   rv	= nanosleep(&requested, &remaining);
   if (0 == rv) {
@@ -4861,9 +4861,9 @@ ikrt_bvftime (ikptr outbv, ikptr fmtbv)
   errno = 0;
   localtime_r(&t, &tmp);
   errno = 0;
-  rv    = strftime((char*)(long)(outbv + off_bytevector_data),
+  rv    = strftime((char*)(ikuword_t)(outbv + off_bytevector_data),
 		   IK_UNFIX(IK_REF(outbv, off_bytevector_length)) + 1,
-		   (char*)(long)(fmtbv + off_bytevector_data),
+		   (char*)(ikuword_t)(fmtbv + off_bytevector_data),
 		   &tmp);
 #ifdef VICARE_DEBUGGING
   if (rv == 0)
@@ -5150,7 +5150,7 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb_t * pcb)
 #endif
 
 #ifdef HAVE_SIGINFO_SI_VALUE
-    IK_ASS(IK_FIELD(s_struct, 10), ika_pointer_alloc(pcb, (ik_ulong)(info->si_value.sival_ptr)));
+    IK_ASS(IK_FIELD(s_struct, 10), ika_pointer_alloc(pcb, (ikuword_t)(info->si_value.sival_ptr)));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_struct);
 #else
     IK_ASS(IK_FIELD(s_struct, 10), IK_FALSE_OBJECT);
@@ -5164,7 +5164,7 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb_t * pcb)
 #endif
 
 #ifdef HAVE_SIGINFO_SI_PTR
-    IK_ASS(IK_FIELD(s_struct, 12), ika_pointer_alloc(pcb, (ik_ulong)(info->si_ptr)));
+    IK_ASS(IK_FIELD(s_struct, 12), ika_pointer_alloc(pcb, (ikuword_t)(info->si_ptr)));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_struct);
 #else
     IK_ASS(IK_FIELD(s_struct, 12), IK_FALSE_OBJECT);
@@ -5185,7 +5185,7 @@ posix_siginfo_to_struct (siginfo_t * info, ikptr s_struct, ikpcb_t * pcb)
 #endif
 
 #ifdef HAVE_SIGINFO_SI_ADDR
-    IK_ASS(IK_FIELD(s_struct, 15), ika_pointer_alloc(pcb, (ik_ulong)(info->si_addr)));
+    IK_ASS(IK_FIELD(s_struct, 15), ika_pointer_alloc(pcb, (ikuword_t)(info->si_addr)));
     IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_struct);
 #else
     IK_ASS(IK_FIELD(s_struct, 15), IK_FALSE_OBJECT);
@@ -5346,7 +5346,7 @@ ikrt_posix_confstr (ikptr s_parameter, ikpcb_t * pcb)
   errno = 0;
   length_including_zero = confstr((int)parameter, NULL, 0);
   if (length_including_zero) {
-    ikptr       s_result = ika_bytevector_alloc(pcb, (long)length_including_zero-1);
+    ikptr       s_result = ika_bytevector_alloc(pcb, (ikuword_t)(length_including_zero-1));
     char *      result   = IK_BYTEVECTOR_DATA_CHARP(s_result);
     confstr((int)parameter, result, length_including_zero);
     return s_result;
@@ -5874,7 +5874,7 @@ ikrt_posix_sem_open (ikptr s_name, ikptr s_oflag, ikptr s_mode, ikptr s_value, i
   errno = 0;
   rv    = sem_open(name, oflag, mode, value);
   if (SEM_FAILED != rv) {
-    return ika_pointer_alloc(pcb, (ik_ulong)rv);
+    return ika_pointer_alloc(pcb, (ikuword_t)rv);
   } else
     return ik_errno_to_code();
 #else

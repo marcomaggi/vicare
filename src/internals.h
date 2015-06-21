@@ -1125,14 +1125,14 @@ ik_private_decl void ik_print_stack_frame_code_objects (FILE * fh, int max_num_o
 #define fx_shift	wordshift
 #define fx_mask		(wordsize - 1)
 
-#define most_positive_fixnum	(((ik_ulong)-1) >> (fx_shift+1))
+#define most_positive_fixnum	(((ikuword_t)-1) >> (fx_shift+1))
 #define most_negative_fixnum	(most_positive_fixnum+1)
 #define IK_GREATEST_FIXNUM	most_positive_fixnum
 #define IK_LEAST_FIXNUM		(-most_negative_fixnum)
 
-#define IK_FIX(X)	((ikptr_t)(((long)(X)) << fx_shift))
-#define IK_UNFIX(X)	(((long)(X)) >> fx_shift)
-#define IK_IS_FIXNUM(X)	((((ik_ulong)(X)) & fx_mask) == fx_tag)
+#define IK_FIX(X)	((ikptr_t)(((iksword_t)(X)) << fx_shift))
+#define IK_UNFIX(X)	(((iksword_t)(X)) >> fx_shift)
+#define IK_IS_FIXNUM(X)	((((ikuword_t)(X)) & fx_mask) == fx_tag)
 
 ik_decl ikptr_t	ikrt_fxrandom		(ikptr_t x);
 

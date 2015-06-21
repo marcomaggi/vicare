@@ -761,8 +761,8 @@ ika_struct_alloc_no_init (ikpcb_t * pcb, ikptr s_rtd)
    descriptor.   All the  fields are  left uninitialised.   Make use  of
    "pcb->root9". */
 {
-  ik_ulong	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
-  ik_ulong	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
+  ikuword_t	num_of_fields = IK_UNFIX(IK_REF(s_rtd, off_rtd_length));
+  ikuword_t	align_size    = IK_ALIGN(disp_record_data + num_of_fields * wordsize);
   ikptr		p_stru;
   pcb->root9 = &s_rtd;
   {
@@ -786,7 +786,7 @@ ika_struct_alloc_and_init (ikpcb_t * pcb, ikptr s_rtd)
    use of "pcb->root9". */
 {
   ikptr		s_num_of_fields = IK_REF(s_rtd, off_rtd_length);
-  ik_ulong	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
+  ikuword_t	align_size      = IK_ALIGN(disp_record_data + s_num_of_fields);
   ikptr		p_stru;
   pcb->root9 = &s_rtd;
   {
@@ -937,14 +937,13 @@ ika_integer_from_uint (ikpcb_t * pcb, ik_uint N)
 ikptr
 ika_integer_from_ulong (ikpcb_t * pcb, ik_ulong N)
 {
-  ik_ulong mxn = most_positive_fixnum;
-  if (N <= mxn) {
+  if ((iksword_t)N <= most_positive_fixnum) {
     return IK_FIX(N);
   } else {
     /* wordsize == sizeof(unsigned long) */
     ikptr	s_bn = ik_safe_alloc(pcb, IK_ALIGN(disp_bignum_data + wordsize)) | vector_tag;
-    IK_REF(s_bn, off_bignum_tag)  = (ikptr)(bignum_tag | (1 << bignum_nlimbs_shift));
-    IK_REF(s_bn, off_bignum_data) = (ikptr)N;
+    IK_REF(s_bn, off_bignum_tag)  = (ikuword_t)(bignum_tag | (1 << bignum_nlimbs_shift));
+    IK_REF(s_bn, off_bignum_data) = (ikuword_t)N;
     return s_bn;
   }
 }

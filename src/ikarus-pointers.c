@@ -95,7 +95,7 @@ ikrt_dlopen (ikptr library_name_bv, ikptr load_lazy, ikptr load_global, ikpcb* p
     ((load_global == IK_FALSE_OBJECT) ? RTLD_LOCAL : RTLD_GLOBAL);
   name	 = (IK_FALSE_OBJECT == library_name_bv)? NULL : IK_BYTEVECTOR_DATA_CHARP(library_name_bv);
   memory = dlopen(name, flags);
-  return (NULL == memory)? IK_FALSE_OBJECT : ika_pointer_alloc(pcb, (ik_ulong)memory);
+  return (NULL == memory)? IK_FALSE_OBJECT : ika_pointer_alloc(pcb, (ikuword_t)memory);
 }
 ikptr
 ikrt_dlclose (ikptr x /*, ikpcb* pcb*/)
@@ -107,7 +107,7 @@ ikptr
 ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
 {
   void *  memory = dlsym(IK_POINTER_DATA_VOIDP(handle), IK_BYTEVECTOR_DATA_CHARP(sym));
-  return (NULL == memory)? IK_FALSE_OBJECT : ika_pointer_alloc(pcb, (ik_ulong)memory);
+  return (NULL == memory)? IK_FALSE_OBJECT : ika_pointer_alloc(pcb, (ikuword_t)memory);
 }
 
 
@@ -116,7 +116,7 @@ ikrt_dlsym (ikptr handle, ikptr sym, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 ikptr
-ika_pointer_alloc (ikpcb_t * pcb, ik_ulong memory)
+ika_pointer_alloc (ikpcb_t * pcb, ikuword_t memory)
 {
   ikptr	s_pointer = ik_safe_alloc(pcb, pointer_size) | vector_tag;
   IK_REF(s_pointer, off_pointer_tag)  = pointer_tag;
@@ -124,7 +124,7 @@ ika_pointer_alloc (ikpcb_t * pcb, ik_ulong memory)
   return s_pointer;
 }
 ikptr
-iku_pointer_alloc (ikpcb_t * pcb, ik_ulong memory)
+iku_pointer_alloc (ikpcb_t * pcb, ikuword_t memory)
 {
   ikptr	s_pointer = ik_unsafe_alloc(pcb, pointer_size) | vector_tag;
   IK_REF(s_pointer, off_pointer_tag)  = pointer_tag;
@@ -175,7 +175,7 @@ ikrt_pointer_to_int (ikptr pointer, ikpcb* pcb)
 {
   void *	memory;
   memory = IK_POINTER_DATA_VOIDP(pointer);
-  return ika_integer_from_ulong(pcb, (ik_ulong)memory);
+  return ika_integer_from_ulong(pcb, (ikuword_t)memory);
 }
 ikptr
 ikrt_fx_to_pointer(ikptr x, ikpcb* pcb)
@@ -217,7 +217,7 @@ ikrt_pointer_add (ikptr ptr, ikptr delta, ikpcb_t * pcb)
     if (-ptrdiff > memory) /* => 0 > ptrdiff + memory */
       return IK_FALSE_OBJECT;
   }
-  return ika_pointer_alloc(pcb, (ik_ulong)(memory + ptrdiff));
+  return ika_pointer_alloc(pcb, (ikuword_t)(memory + ptrdiff));
 }
 
 /* ------------------------------------------------------------------ */
@@ -274,7 +274,7 @@ ikptr
 ikrt_malloc (ikptr s_number_of_bytes, ikpcb* pcb)
 {
   void *	p = malloc(ik_integer_to_size_t(s_number_of_bytes));
-  return (p)? ika_pointer_alloc(pcb, (ik_ulong) p) : IK_FALSE_OBJECT;
+  return (p)? ika_pointer_alloc(pcb, (ikuword_t) p) : IK_FALSE_OBJECT;
 }
 ikptr
 ikrt_realloc (ikptr s_memory, ikptr s_number_of_bytes, ikpcb* pcb)
@@ -301,7 +301,7 @@ ikrt_calloc (ikptr s_number_of_elements, ikptr s_element_size, ikpcb* pcb)
 {
   void * memory = calloc(ik_integer_to_size_t(s_number_of_elements),
 			 ik_integer_to_size_t(s_element_size));
-  return (memory)? ika_pointer_alloc(pcb, (ik_ulong)memory) : IK_FALSE_OBJECT;
+  return (memory)? ika_pointer_alloc(pcb, (ikuword_t)memory) : IK_FALSE_OBJECT;
 }
 ikptr
 ikrt_free (ikptr s_memory)
@@ -395,7 +395,7 @@ ikrt_bytevector_to_memory (ikptr s_bv, ikpcb_t * pcb)
     void *	data;
     data = IK_BYTEVECTOR_DATA_VOIDP(s_bv);
     memcpy(memory, data, length);
-    return ika_pointer_alloc(pcb, (ik_ulong)memory);
+    return ika_pointer_alloc(pcb, (ikuword_t)memory);
   } else
     return IK_FALSE_OBJECT;
 }
@@ -427,7 +427,7 @@ ikrt_bytevector_to_cstring (ikptr bv, ikpcb_t * pcb)
     /*   cstr[i] = pointer[i]; */
     memcpy(cstr, pointer, length);
     cstr[length] = '\0';
-    return ika_pointer_alloc(pcb, (ik_ulong)cstr);
+    return ika_pointer_alloc(pcb, (ikuword_t)cstr);
   } else
     return IK_FALSE_OBJECT;
 }
@@ -476,14 +476,14 @@ ikrt_strdup (ikptr s_pointer, ikpcb_t * pcb)
 {
   char *	src = IK_POINTER_DATA_VOIDP(s_pointer);
   char *	dst = strdup(src);
-  return (dst)? ika_pointer_alloc(pcb, (ik_ulong)dst) : IK_FALSE_OBJECT;
+  return (dst)? ika_pointer_alloc(pcb, (ikuword_t)dst) : IK_FALSE_OBJECT;
 }
 ikptr
 ikrt_strndup (ikptr s_pointer, ikptr s_count, ikpcb_t * pcb)
 {
   char *	src = IK_POINTER_DATA_VOIDP(s_pointer);
   char *	dst = strndup(src, ik_integer_to_size_t(s_count));
-  return (dst)? ika_pointer_alloc(pcb, (ik_ulong)dst) : IK_FALSE_OBJECT;
+  return (dst)? ika_pointer_alloc(pcb, (ikuword_t)dst) : IK_FALSE_OBJECT;
 }
 
 /* ------------------------------------------------------------------ */
@@ -515,7 +515,7 @@ ikrt_argv_from_bytevectors (ikptr s_bvs, ikpcb_t * pcb)
       str += 1+len;
     }
     argv[argc] = NULL;
-    return ika_pointer_alloc(pcb, (ik_ulong)argv);
+    return ika_pointer_alloc(pcb, (ikuword_t)argv);
   } else
     return IK_FALSE_OBJECT;
 }
@@ -595,7 +595,7 @@ ikrt_with_local_storage (ikptr s_lengths, ikptr s_thunk, ikpcb_t * pcb)
     for (i=0, offset=0; i<arity; offset+=lengths[i], ++i) {
       IK_REF(pcb->frame_pointer, -2*wordsize-i*wordsize) =
 	/* Allocation without garbage collection!!! */
-	iku_pointer_alloc(pcb, (ik_ulong)&(buffer[offset]));
+	iku_pointer_alloc(pcb, (ikuword_t)&(buffer[offset]));
     }
     s_result = ik_exec_code(pcb, s_code, IK_FIX(-arity), s_thunk);
   }
@@ -693,7 +693,7 @@ ikrt_ref_pointer (ikptr s_pointer, ikptr s_offset, ikpcb* pcb)
 {
   uint8_t *	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
   void **	data   = (void **)(memory + IK_P_OFFSET(s_offset));
-  return ika_pointer_alloc(pcb, (ik_ulong)(*data));
+  return ika_pointer_alloc(pcb, (ikuword_t)(*data));
 }
 
 /* ------------------------------------------------------------------ */
@@ -1121,7 +1121,7 @@ ikrt_array_ref_pointer (ikptr s_pointer, ikptr s_index, ikpcb* pcb)
 {
   void **	memory = IK_POINTER_FROM_POINTER_OR_MBLOCK(s_pointer);
   void *	data   = memory[IK_P_INDEX(s_index)];
-  return ika_pointer_alloc(pcb, (ik_ulong)data);
+  return ika_pointer_alloc(pcb, (ikuword_t)data);
 }
 
 /* ------------------------------------------------------------------ */

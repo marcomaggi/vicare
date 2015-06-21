@@ -28,7 +28,7 @@
 #undef LOG_VERIFY
 #define LOG_VERIFY	0
 
-static ik_ulong	page_idx	  (uint8_t * x);
+static ikuword_t	page_idx	  (uint8_t * x);
 static uint8_t *verify_page       (uint8_t * mem,
 				   uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
 
@@ -44,7 +44,7 @@ static uint8_t *verify_code_page  (uint8_t * mem, uint32_t segment_bits, uint32_
 static uint8_t *verify_code_small_size_sequence (uint8_t * mem,
 						 uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
 static void	verify_code_object_first_word (ikptr p_code);
-static ik_ulong	verify_code_object_size (ikptr p_code);
+static ikuword_t	verify_code_object_size (ikptr p_code);
 static void	verify_code_common_fields (uint8_t * mem,
 					   uint8_t * mem_base, uint32_t * segment_vector, uint32_t * dirty_vector);
 static void	log_invalid_code_object (ikptr X);
@@ -60,8 +60,8 @@ ik_verify_integrity (ikpcb* pcb, char * when_description)
    by  Vicare.  Every  Vicare page  between  this range  of pointers  is
    described by a slot in the segments vector and the dirty vector. */
 {
-  uint8_t *	mem_base    = (uint8_t *)(ik_ulong)pcb->memory_base;
-  uint8_t *	mem_end     = (uint8_t *)(ik_ulong)pcb->memory_end;
+  uint8_t *	mem_base    = (uint8_t *)(ikuword_t)pcb->memory_base;
+  uint8_t *	mem_end     = (uint8_t *)(ikuword_t)pcb->memory_end;
   uint32_t *	segment_vec = pcb->segment_vector_base;
   uint32_t *	dirty_vec   = pcb->dirty_vector_base;
   if (LOG_VERIFY) {
@@ -80,12 +80,12 @@ ik_verify_integrity (ikpcb* pcb, char * when_description)
  ** Helpers.
  ** ----------------------------------------------------------------- */
 
-static ik_ulong
+static ikuword_t
 page_idx (uint8_t * mem)
 /* Given a raw (untagged) memory  address referencing a location used by
    Vicare: return the index of the memory page containing the location. */
 {
-  ik_ulong	xi = (ik_ulong) mem;
+  ikuword_t	xi = (ikuword_t) mem;
   return xi >> IK_PAGESHIFT;
 }
 
@@ -97,7 +97,7 @@ verify_page (uint8_t * mem,
    references a valid  Scheme object.  Return a  raw pointer referencing
    the next location to check. */
 {
-  ik_ulong	idx		= page_idx(mem) - page_idx(mem_base);
+  ikuword_t	idx		= page_idx(mem) - page_idx(mem_base);
   uint32_t	segment_bits	= segment_vector[idx];
   uint32_t	dirty_bits	=   dirty_vector[idx];
   uint32_t	type		= segment_bits & TYPE_MASK;
@@ -143,7 +143,7 @@ verify_code_page (uint8_t * mem, uint32_t segment_bits, uint32_t dirty_bits,
 {
   uint8_t *	first_word_of_next_page	= NULL;
   ikptr		p_code	= (ikptr)mem;
-  ik_ulong	aligned_code_object_size;
+  ikuword_t	aligned_code_object_size;
 
   verify_code_object_first_word(p_code);
   aligned_code_object_size = verify_code_object_size(p_code);
@@ -185,7 +185,7 @@ verify_code_small_size_sequence (uint8_t * first_word_in_this_page,
   for (;;) {
     ikptr	p_code	= (ikptr)current_code_object;
     /* The ALIGNED_CODE_OBJECT_SIZE is an exact multiple of 16 bytes. */
-    ik_ulong	aligned_code_object_size;
+    ikuword_t	aligned_code_object_size;
     uint8_t *	first_word_after_code_object;
 
     verify_code_common_fields(current_code_object, mem_base, segment_vector, dirty_vector);
@@ -237,7 +237,7 @@ verify_code_object_first_word (ikptr p_code)
     ik_abort("expected code_tag as first word of code object memory block, found: 0x%016lx\n", (long)fst);
   }
 }
-static ik_ulong
+static ikuword_t
 verify_code_object_size (ikptr p_code)
 /* Verify the binary code size.  Return the aligned code object size, an
  * exact multiple of 16.
@@ -262,9 +262,9 @@ verify_code_object_size (ikptr p_code)
  */
 {
   const ikptr	s_binary_code_size = IK_REF(p_code, disp_code_code_size);
-  ik_ulong	binary_code_size;
-  ik_ulong	code_object_size;
-  ik_ulong	aligned_code_object_size;
+  ikuword_t	binary_code_size;
+  ikuword_t	code_object_size;
+  ikuword_t	aligned_code_object_size;
   if (! IK_IS_FIXNUM(s_binary_code_size)) {
     ik_debug_message_no_newline("%s: expected fixnum as code object size, got: ", __func__);
     ik_print(s_binary_code_size);
@@ -302,7 +302,7 @@ verify_code_common_fields (uint8_t * mem,
       ik_print(s_freevars);
       goto integrity_error;
     } else {
-      ik_ulong	num_of_free_vars = IK_UNFIX(s_freevars);
+      ikuword_t	num_of_free_vars = IK_UNFIX(s_freevars);
       if (num_of_free_vars < 0) {
 	ik_debug_message_no_newline("%s: expected non-negative fixnum as number of free variables in code object, got: ", __func__);
 	ik_print(s_freevars);
