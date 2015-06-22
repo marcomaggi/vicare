@@ -2769,7 +2769,7 @@ is:
 
 At the Scheme level: standalone characters are moved around as @ikptr{}
 values, but when characters are stored in a string the @ikptr{} value is
-converted to a 32-bit integer of type @code{ikchar}.
+converted to a 32-bit integer of type @ikchar{}.
 
 @c ------------------------------------------------------------
 
@@ -2806,28 +2806,28 @@ else
   it_is_not();
 @end example
 
-Characters from a Scheme string are decoded from @code{ikchar} to
+Characters from a Scheme string are decoded from @ikchar{} to
 @code{unsigned long} as follows:
 
 @example
-ikchar          ch = the_32bit_character;
+ikchar_t        ch = the_32bit_character;
 unsigned long   unicode_code_point;
 
 unicode_code_point = s_char >> char_shift;
 @end example
 
 @noindent
-and encoded from @code{unsigned long} to @code{ikchar} as follows:
+and encoded from @code{unsigned long} to @ikchar{} as follows:
 
 @example
 unsigned long   unicode_code_point = the_code_point;
-ikchar          ch;
+ikchar_t        ch;
 
-ch = (ikchar)((unicode_code_point << char_shift) | char_tag);
+ch = (ikchar_t)((unicode_code_point << char_shift) | char_tag);
 @end example
 
 
-@deftp {Type Definition} ikchar
+@deftp {Type Definition} ikchar_t
 An alias for @code{uint32_t} used to store a Unicode code point tagged
 as character.
 @end deftp
@@ -2864,14 +2864,14 @@ representing the Unicode code point.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikchar IK_CHAR32_FROM_INTEGER (unsigned long @var{X})
+@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32_FROM_INTEGER (unsigned long @var{X})
 Convert a @code{unsigned long} value representing the Unicode code
 point into a 32-bit integer representing a Scheme character to be stored
 into a string.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {uint32_t} IK_CHAR32_TO_INTEGER (ikchar @var{ch})
+@deftypefn {Preprocessor Macro} {uint32_t} IK_CHAR32_TO_INTEGER (ikchar_t @var{ch})
 Given a 32-bit value representing a Scheme character: untag it and
 return a 32-bit value representing the Unicode code point.
 @end deftypefn
@@ -2925,7 +2925,7 @@ and finally compute the aligned block size:
 @example
 ikpcb_t * pcb            = ik_the_pcb();
 long    length         = the_number_of_chars;
-long    requested_size = sizeof(ikchar) * length;
+long    requested_size = sizeof(ikchar_t) * length;
 long    block_size     = disp_string_data + requested_size;
 long    align_size     = IK_ALIGN(block_size);
 ikptr   str = ik_safe_alloc(pcb, align_size) | string_tag;
@@ -2947,7 +2947,7 @@ ik_string_alloc (ikpcb_t * pcb, long number_of_chars)
   long  align_size;
   ikptr str;
   align_size = IK_ALIGN(disp_string_data
-                        + number_of_chars * sizeof(ikchar));
+                        + number_of_chars * sizeof(ikchar_t));
   str        = ik_safe_alloc(pcb, align_size) | string_tag;
   IK_REF(str, off_string_length) = IK_FIX(number_of_chars);
   return str;
@@ -2958,7 +2958,7 @@ To fill a string of @math{3} chars with characters we should do:
 
 @example
 ikptr     s_str = the_string;
-ikchar *  ch    = (ikchar*)(s_str + off_string_data);
+ikchar_t *  ch    = (ikchar_t*)(s_str + off_string_data);
 
 ch[0] = IK_CHAR32_FROM_INTEGER(10);
 ch[1] = IK_CHAR32_FROM_INTEGER(20);
@@ -2971,7 +2971,7 @@ to retrieve the character at index @math{2} we do:
 @example
 long      index  = 2;
 ikptr     s_str  = the_string;
-ikchar *  ch     = (ikchar*)(s_str + off_string_data);
+ikchar_t *  ch     = (ikchar_t*)(s_str + off_string_data);
 ikptr     s_char = (ikptr)ch[index];
 @end example
 
@@ -3045,7 +3045,7 @@ Return an integer representing the number of characters in the string
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} ikchar IK_CHAR32 (ikptr @var{str}, long @var{idx})
+@deftypefn {Preprocessor Macro} ikchar_t IK_CHAR32 (ikptr @var{str}, long @var{idx})
 Evaluate to the 32-bit character representation at index @var{idx} in
 the string @var{str}.  A use of this macro can appear both as operand
 and as left--side of an assignment; example:
@@ -3053,7 +3053,7 @@ and as left--side of an assignment; example:
 @example
 long    idx   = the_index;
 ikptr   s_str = the_string;
-ikchar  ch;
+ikchar_t  ch;
 
 IK_CHAR32(s_str, idx) = IK_CHAR32_FROM_INTEGER(10);
 ch = IK_CHAR32(s_str, idx);
@@ -3067,7 +3067,7 @@ the first byte in the data area.
 @end deftypefn
 
 
-@deftypefn {Preprocessor Macro} {ikchar *} IK_STRING_DATA_IKCHARP (ikptr @var{str})
+@deftypefn {Preprocessor Macro} {ikchar_t *} IK_STRING_DATA_IKCHARP (ikptr @var{str})
 Given a tagged reference to string object @var{str}, return a pointer to
 the first Scheme character in the data area.
 @end deftypefn
@@ -3996,13 +3996,18 @@ num = IK_FLONUM_DATA(s_fl);
 @end example
 @end deftypefn
 
+
+@deftypefn {Preprocessor Macro} int IK_IS_FLONUM (ikptr @var{obj})
+Return non--zero if @var{obj} is a flonum object; otherwise return zero.
+@end deftypefn
+
 @c ------------------------------------------------------------
 
 @subsubheading Operations on flonums
 
 
 @deftypefun int ik_is_flonum (ikptr @var{obj})
-Return true if @var{obj} is a flonum object.
+Return non--zero if @var{obj} is a flonum object; otherwise return zero.
 @end deftypefun
 
 

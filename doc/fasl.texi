@@ -88,7 +88,7 @@ A gensym.  Both @code{pretty-name} and @code{unique-name} are strings.
 A character in the @ascii{} range (@math{<= 255}).
 
 @item "C" + int32
-A character store as 32-bit integer representing a Unicode code point.
+A character stored as 32-bit integer representing a Unicode code point.
 
 @item "P" + object1 + object2
 A pair.

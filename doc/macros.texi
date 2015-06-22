@@ -599,6 +599,10 @@ Revised^6 Report on the algorithmic language Scheme
 @code{ikpcb_t}
 @end macro
 
+@macro ikchar{}
+@code{ikchar_t}
+@end macro
+
 @macro oob{}
 @acronym{OOB}
 @end macro
