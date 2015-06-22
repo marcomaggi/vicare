@@ -605,67 +605,67 @@
 (parametrise ((check-test-name	'links))
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
 	(unwind-protect
 	    (begin
-	      (px.link "one" "two")
-	      (px.file-is-regular-file? "two" #f))
-	  (px.system "rm -f two")))
+	      (px.link "posix-test-one" "posix-test-two")
+	      (px.file-is-regular-file? "posix-test-two" #f))
+	  (px.system "rm -f posix-test-two")))
     => #t)
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
   	(unwind-protect
   	    (begin
-  	      (px.symlink "one" "two")
-  	      (px.file-is-symbolic-link? "two" #f))
-  	  (px.system "rm -f two")))
+  	      (px.symlink "posix-test-one" "posix-test-two")
+  	      (px.file-is-symbolic-link? "posix-test-two" #f))
+  	  (px.system "rm -f posix-test-two")))
     => #t)
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
   	(unwind-protect
   	    (begin
-  	      (px.symlink "one" "two")
-  	      (px.readlink/string "two"))
-  	  (px.system "rm -f two")))
-    => "one")
+  	      (px.symlink "posix-test-one" "posix-test-two")
+  	      (px.readlink/string "posix-test-two"))
+  	  (px.system "rm -f posix-test-two")))
+    => "posix-test-one")
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
   	(unwind-protect
   	    (begin
-  	      (px.symlink "one" "two")
-  	      (px.realpath/string "two"))
-  	  (px.system "rm -f two")))
-    => (string-append (px.getcwd/string) "/one"))
+  	      (px.symlink "posix-test-one" "posix-test-two")
+  	      (px.realpath/string "posix-test-two"))
+  	  (px.system "rm -f posix-test-two")))
+    => (string-append (px.getcwd/string) "/posix-test-one"))
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
   	(unwind-protect
   	    (begin
-  	      (px.rename "one" "two")
-  	      (list (file-exists? "one")
-		    (file-exists? "two")))
-  	  (px.system "rm -f two")))
+  	      (px.rename "posix-test-one" "posix-test-two")
+  	      (list (file-exists? "posix-test-one")
+		    (file-exists? "posix-test-two")))
+  	  (px.system "rm -f posix-test-two")))
     => '(#f #t))
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
   	(unwind-protect
   	    (begin
-  	      (px.unlink "one")
-  	      (file-exists? "one"))
-  	  (px.system "rm -f one")))
+  	      (px.unlink "posix-test-one")
+  	      (file-exists? "posix-test-one"))
+  	  (px.system "rm -f posit-test-one")))
     => #f)
 
   (check
-      (with-temporary-file ("one")
+      (with-temporary-file ("posix-test-one")
   	(unwind-protect
   	    (begin
-  	      (px.remove "one")
-  	      (file-exists? "one"))
-  	  (px.system "rm -f one")))
+  	      (px.remove "posix-test-one")
+  	      (file-exists? "posix-test-one"))
+  	  (px.system "rm -f posix-test-one")))
     => #f)
 
   #t)
@@ -677,23 +677,23 @@
       (with-result
        (unwind-protect
 	   (begin
-	     (px.mkdir "one" S_IRWXU)
-	     (add-result (file-exists? "one"))
-	     (px.rmdir "one")
-	     (file-exists? "one"))
-	 (px.system "rm -fr one")))
+	     (px.mkdir "posix-test-one" S_IRWXU)
+	     (add-result (file-exists? "posix-test-one"))
+	     (px.rmdir "posix-test-one")
+	     (file-exists? "posix-test-one"))
+	 (px.system "rm -fr posix-test-one")))
     => '(#f (#t)))
 
   (let ((pwd (px.getcwd/string)))
     (check
 	(unwind-protect
 	    (begin
-	      (px.mkdir "one" S_IRWXU)
-	      (px.chdir "one")
+	      (px.mkdir "posix-test-one" S_IRWXU)
+	      (px.chdir "posix-test-one")
 	      (px.getcwd/string))
 	  (px.chdir pwd)
-	  (px.system "rm -fr one"))
-      => (string-append pwd "/one")))
+	  (px.system "rm -fr posix-test-one"))
+      => (string-append pwd "/posix-test-one")))
 
 ;;; --------------------------------------------------------------------
 

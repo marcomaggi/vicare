@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011, 2012, 2013, 2015 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -63,17 +63,17 @@
   (let ((pwd (px.getcwd/string)))
     (check
 	(begin
-	  (px.mkdir "one" S_IRWXU)
+	  (px.mkdir "glibc-tmpfile" S_IRWXU)
 	  (unwind-protect
-	      (let ((stream (px.opendir "one")))
+	      (let ((stream (px.opendir "glibc-tmpfile")))
 		(unwind-protect
 		    (let ((fd (glibc.dirfd stream)))
 		      (px.fchdir fd)
 		      (px.getcwd/string))
 		  (px.closedir stream)))
 	    (px.chdir pwd)
-	    (px.rmdir "one")))
-      => (string-append pwd "/one")))
+	    (px.rmdir "glibc-tmpfile")))
+      => (string-append pwd "/glibc-tmpfile")))
 
   #t)
 
