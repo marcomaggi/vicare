@@ -46,17 +46,17 @@ typedef struct {
      objects  allocation.  See  the  function "alloc_code_object()"  for
      details  about   how  code   objects  from   the  boot   image  are
      allocated. */
-  ikptr		code_ap;
-  ikptr		code_ep;
+  ikptr_t		code_ap;
+  ikptr_t		code_ep;
 
-  ikptr*	marks;
+  ikptr_t*	marks;
   int		marks_size;
-} fasl_port;
+} fasl_port_t;
 
 typedef struct {
   int		code_size;
   int		reloc_size;
-  ikptr		closure_size;
+  ikptr_t		closure_size;
 } code_header;
 
 /* ------------------------------------------------------------------ */
@@ -65,21 +65,21 @@ static int	object_count = 0;
 
 /* ------------------------------------------------------------------ */
 
-static ikptr	fasl_read_super_code_object(ikpcb* pcb, fasl_port* p);
-static ikptr	do_read (ikpcb* pcb, fasl_port* p);
-static ikptr	alloc_code_object (ikuword_t scheme_object_size, ikpcb* pcb, fasl_port* p);
-static char	fasl_read_byte (fasl_port* p);
-static void	fasl_read_buf (fasl_port* p, void* buf, int n);
+static ikptr_t	fasl_read_super_code_object(ikpcb_t * pcb, fasl_port_t* p);
+static ikptr_t	do_read (ikpcb_t * pcb, fasl_port_t* p);
+static ikptr_t	alloc_code_object (ikuword_t scheme_object_size, ikpcb_t * pcb, fasl_port_t* p);
+static int8_t	fasl_read_byte (fasl_port_t* p);
+static void	fasl_read_buf (fasl_port_t* p, void* buf, ikuword_t num_of_bytes);
 
 
 void
-ik_fasl_load (ikpcb* pcb, const char* fasl_file)
+ik_fasl_load (ikpcb_t * pcb, const char* fasl_file)
 {
   int		fd;
   int		filesize;
   int		mapsize;
   char *	mem;
-  fasl_port	p;
+  fasl_port_t	p;
   if (DEBUG_FASL)
     ik_debug_message("loading boot image file: %s", fasl_file);
 
@@ -108,7 +108,7 @@ ik_fasl_load (ikpcb* pcb, const char* fasl_file)
       ik_abort("mapping failed for %s: %s", fasl_file, strerror(errno));
   }
 
-  /* Iniitalise the FASL_PORT struct. */
+  /* Iniitalise the FASL_PORT_T struct. */
   {
     p.membase		= mem;			/* base of the input buffer */
     p.memp		= mem;			/* pointer to the next byte to read */
@@ -176,7 +176,7 @@ ik_fasl_load (ikpcb* pcb, const char* fasl_file)
 
 
 static ikptr
-fasl_read_super_code_object (ikpcb* pcb, fasl_port* p)
+fasl_read_super_code_object (ikpcb_t * pcb, fasl_port_t* p)
 {
   char		buf[IK_FASL_HEADER_LEN];
   ikptr		s_code;
@@ -195,7 +195,7 @@ fasl_read_super_code_object (ikpcb* pcb, fasl_port* p)
 
 
 static ikptr
-do_read (ikpcb* pcb, fasl_port* p)
+do_read (ikpcb_t * pcb, fasl_port_t* p)
 /* Read and return an object form a FASL port.
 
    This function  is used only  to load the  boot image, so it  does not
@@ -712,7 +712,7 @@ do_read (ikpcb* pcb, fasl_port* p)
 
 
 static ikptr
-alloc_code_object (ikuword_t scheme_object_size, ikpcb* pcb, fasl_port* p)
+alloc_code_object (ikuword_t scheme_object_size, ikpcb_t * pcb, fasl_port_t* p)
 /* Scheme code are of 2 categories:
  *
  * - Small code objects whose size fits  in a single Vicare page.  Small
@@ -730,7 +730,7 @@ alloc_code_object (ikuword_t scheme_object_size, ikpcb* pcb, fasl_port* p)
  *                                                ^                ^
  *                                             code_ap          code_ep
  *
- *   the fields CODE_AP and CODE_EP  in the FASL_PORT reference the free
+ *   the fields CODE_AP and CODE_EP  in the FASL_PORT_T reference the free
  *   portion in the current code page.
  *
  * - Large  code objects  whose size  fits in  a sequence  of contiguous
@@ -750,7 +750,7 @@ alloc_code_object (ikuword_t scheme_object_size, ikpcb* pcb, fasl_port* p)
  * The ALIGNED_SCHEME_CODE_OBJECT_SIZE is an exact multiple of 16 bytes.
  *
  * NOTE When this function is called  to allocate a "super code object":
- * the fields  CODE_AP and  CODE_EP in  the FASL_PORT  are set  to NULL.
+ * the fields  CODE_AP and  CODE_EP in  the FASL_PORT_T  are set  to NULL.
  * This  function behaves  correctly  in this  situation  and fills  the
  * fields with appropriate values.
  */
@@ -941,24 +941,25 @@ ik_relocate_code (ikptr p_code)
 }
 
 
-static char
-fasl_read_byte (fasl_port* p)
+static int8_t
+fasl_read_byte (fasl_port_t * port)
 {
-  char	c = '\0';
-  if (p->memp < p->memq) {
-    c = *(p->memp);
-    p->memp++;
+  int8_t	byte = 0;
+  if (port->memp < port->memq) {
+    byte = *(port->memp);
+    port->memp++;
   } else
     ik_abort("%s: attempt to read objects from boot image file beyond EOF", __func__);
-  return c;
+  return byte;
 }
 static void
-fasl_read_buf (fasl_port* p, void* buf, int n)
-/* Read a block of bytes from a FASL port.  N is the number of bytes and
- * BUF a pointer to the buffer that will hold them.
+fasl_read_buf (fasl_port_t * port, void * buf, ikuword_t num_of_bytes)
+/* Read a block  of bytes from a FASL port.   NUM_OF_BYTES is the number
+ * of bytes and BUF a pointer to the buffer that will hold them.
  *
- * Bytes are read in "big endian"  order; for example the block from the
- * underlying device:
+ * Bytes are read in "big endian"  order (the most-significant byte of a
+ * word is at the smallest memory address and the least significant byte
+ * at the largest); for example the block from the underlying device:
  *
  *                     DD CC BB AA
  *    head of file |--|--|--|--|--|--| tail of file
@@ -972,9 +973,9 @@ fasl_read_buf (fasl_port* p, void* buf, int n)
  *       most significant
  */
 {
-  if ((p->memp+n) <= p->memq) {
-    memcpy(buf, p->memp, n);
-    p->memp += n;
+  if ((port->memp + num_of_bytes) <= port->memq) {
+    memcpy(buf, port->memp, (size_t)num_of_bytes);
+    port->memp += num_of_bytes;
   } else
     ik_abort("%s: attempt to read objects from boot image file beyond EOF", __func__);
 }
