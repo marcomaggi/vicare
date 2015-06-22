@@ -113,7 +113,7 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
     /* FRAMESIZE is stack  frame size of the function we  have to return
        to.  This value was computed at compile time and stored in binary
        code just before the "call" instruction. */
-    long	framesize = IK_CALLTABLE_FRAMESIZE(return_address);
+    iksword_t	framesize = IK_CALLTABLE_FRAMESIZE(return_address);
     if (0 || DEBUG_EXEC) {
       ik_debug_message("%s: framesize=%ld kont->size=%ld return_address=0x%016lx",
 		       __func__, framesize, kont->size, return_address);
@@ -151,8 +151,8 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	 topmost  freezed frame  and  create a  new continuation  object
 	 referencing  the  rest of  the  freezed  frames.  Register  the
 	 "rest" continuation as "next process continuation". */
-      ikcont *	rest_kont   = (ikcont*)(long)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
-      ikptr	s_rest_kont = (ikptr)((long)rest_kont) | continuation_primary_tag;
+      ikcont *	rest_kont   = (ikcont*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
+      ikptr_t	s_rest_kont = (ikptr_t)(((ikuword_t)rest_kont) | continuation_primary_tag);
       rest_kont->tag	= continuation_tag;
       rest_kont->next	= kont->next;
       rest_kont->top	= kont->top  + framesize;
@@ -226,8 +226,8 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
      */
     {
       assert(pcb->frame_pointer == pcb->frame_base);
-      ikptr	fbase      = pcb->frame_base - wordsize;
-      ikptr	new_fbase  = fbase - framesize;
+      ikptr_t	fbase      = pcb->frame_base - wordsize;
+      ikptr_t	new_fbase  = fbase - framesize;
       /* Move the return values down a framesize:
        *
        *         high memory
@@ -253,8 +253,8 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *           low memory
        */
       {
-	char *	retval_dst = ((char*)(long)new_fbase) + s_retval_count;
-	char *	retval_src = ((char*)(long)fbase)     + s_retval_count;
+	uint8_t *	retval_dst = ((uint8_t*)new_fbase) + s_retval_count;
+	uint8_t *	retval_src = ((uint8_t*)fbase)     + s_retval_count;
 	memmove(retval_dst, retval_src, -s_retval_count);
       }
       /* Copy  to  this  stack  segment   the  freezed  frame  from  the
@@ -282,7 +282,7 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
        *  |                      |
        *        low memory
        */
-      memcpy((char*)(long)new_fbase, (char*)(long)(kont->top), framesize);
+      memcpy((uint8_t*)(ikuword_t)new_fbase, (uint8_t*)(ikuword_t)(kont->top), framesize);
       /* Then reenter  Scheme code execution using  "new_fbase" as frame
 	 pointer.*/
       if (0 || DEBUG_EXEC) {
@@ -329,9 +329,9 @@ ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
   ikptr	top			= IK_CONTINUATION_TOP(s_kont);
   ikptr	return_address		= IK_REF(top, 0);
   ikptr	call_table_framesize	= IK_CALLTABLE_FRAMESIZE(return_address);
-  long	framesize		= (call_table_framesize)? \
-    (long) call_table_framesize : IK_REF(top, wordsize);
-  long	redline_delta_words	= \
+  ikuword_t	framesize	= (call_table_framesize)?	\
+    (ikuword_t) call_table_framesize : IK_REF(top, wordsize);
+  ikuword_t	redline_delta_words	=			\
     (pcb->stack_base + pcb->stack_size - pcb->frame_redline)/wordsize;
   /* Make sure to output a message before accessing data structures that
      may be corrupted.  For this reason we use two function calls. */
@@ -355,7 +355,7 @@ ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
 \tinvalid framesize=%ld, expected %ld(=kont->size) or less",
 		   pcb->heap_base, pcb->heap_size, pcb->heap_size/wordsize,
 		   pcb->stack_base, pcb->stack_size, pcb->stack_size/wordsize,
-		   pcb->frame_redline, redline_delta_words,
+		   pcb->frame_redline, (long)redline_delta_words,
 		   pcb->frame_pointer, pcb->frame_base,
 		   (ikptr)ik_underflow_handler, underflow_handler,
 		   (long)s_kont, (long)kont,
@@ -363,7 +363,7 @@ ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
 		   IK_CONTINUATION_SIZE(s_kont),
 		   return_address, ((IK_UNDERFLOW_HANDLER == return_address)? "yes" : "no"),
 		   call_table_framesize,
-		   framesize, kont->size);
+		   (long)framesize, kont->size);
   {
     ik_debug_message("%s: next continuation object: ", __func__);
     ik_print(kont->next);
