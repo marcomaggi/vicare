@@ -30,7 +30,7 @@
 #include <sys/types.h>
 
 #ifndef RTLD_DEFAULT
-#define RTLD_DEFAULT 0
+#  define RTLD_DEFAULT 0
 #endif
 
 #define BOOT_IMAGE_CODE_OBJECTS_GENERATION	IK_GC_GENERATION_NURSERY
@@ -38,25 +38,25 @@
 #define DEBUG_FASL	0
 
 typedef struct {
-  char*		membase;
-  char*		memp;
-  char*		memq;
+  uint8_t *	membase;
+  uint8_t *	memp;
+  uint8_t *	memq;
 
   /* These  are the  "Allocation  Pointer" and  "End  Pointer" for  code
      objects  allocation.  See  the  function "alloc_code_object()"  for
      details  about   how  code   objects  from   the  boot   image  are
      allocated. */
-  ikptr_t		code_ap;
-  ikptr_t		code_ep;
+  ikptr_t	code_ap;
+  ikptr_t	code_ep;
 
-  ikptr_t*	marks;
+  ikptr_t *	marks;
   int		marks_size;
 } fasl_port_t;
 
 typedef struct {
   int		code_size;
   int		reloc_size;
-  ikptr_t		closure_size;
+  ikptr_t	closure_size;
 } code_header;
 
 /* ------------------------------------------------------------------ */
@@ -73,13 +73,15 @@ static void	fasl_read_buf (fasl_port_t* p, void* buf, ikuword_t num_of_bytes);
 
 
 void
-ik_fasl_load (ikpcb_t * pcb, const char* fasl_file)
+ik_fasl_load (ikpcb_t * pcb, const char * fasl_file)
+/* Load  the boot  image from  the file  whose pathname  is "fasl_file".
+   Execute the initialisation code of the boot image. */
 {
   int		fd;
   int		filesize;
   int		mapsize;
-  char *	mem;
-  fasl_port_t	p;
+  uint8_t *	mem;
+  fasl_port_t	port;
   if (DEBUG_FASL)
     ik_debug_message("loading boot image file: %s", fasl_file);
 
@@ -89,7 +91,7 @@ ik_fasl_load (ikpcb_t * pcb, const char* fasl_file)
     if (-1 == fd)
       ik_abort("failed to open boot file \"%s\": %s", fasl_file, strerror(errno));
     {
-      struct stat buf;
+      struct stat	buf;
       int		err = fstat(fd, &buf);
       if (err)
 	ik_abort("failed to stat \"%s\": %s", fasl_file, strerror(errno));
@@ -108,41 +110,41 @@ ik_fasl_load (ikpcb_t * pcb, const char* fasl_file)
       ik_abort("mapping failed for %s: %s", fasl_file, strerror(errno));
   }
 
-  /* Iniitalise the FASL_PORT_T struct. */
+  /* Initialise the "fasl_port_t" struct. */
   {
-    p.membase		= mem;			/* base of the input buffer */
-    p.memp		= mem;			/* pointer to the next byte to read */
-    p.memq		= mem + filesize;	/* one-off end pointer */
-    p.marks		= 0;
-    p.marks_size	= 0;
+    port.membase	= mem;			/* base of the input buffer */
+    port.memp		= mem;			/* pointer to the next byte to read */
+    port.memq		= mem + filesize;	/* one-off end pointer */
+    port.marks		= 0;
+    port.marks_size	= 0;
   }
 
   /* Read  all the  objects  from  the memory  mapped  buffer.  Run  the
      initialisation code. */
-  while (p.memp < p.memq) {
+  while (port.memp < port.memq) {
     ikptr	s_code;
-    p.code_ap	= 0;
-    p.code_ep	= 0;
+    port.code_ap	= 0;
+    port.code_ep	= 0;
 
     /* Read the next super object. */
     {
       if (DEBUG_FASL)
 	ik_debug_message("*** read boot image super code object");
-      s_code = fasl_read_super_code_object(pcb, &p);
+      s_code = fasl_read_super_code_object(pcb, &port);
     }
 
     /* Clear table of  marks.  Every super-object in the  boot image has
        its own table. */
-    if (p.marks_size) {
-      ik_munmap((ikptr)(long)p.marks, p.marks_size*sizeof(ikptr*));
-      p.marks = 0;
-      p.marks_size = 0;
+    if (port.marks_size) {
+      ik_munmap((ikptr)(ikuword_t)port.marks, port.marks_size * sizeof(ikptr_t*));
+      port.marks      = 0;
+      port.marks_size = 0;
     }
 
     /* Check if we have reached the end  of the boot image file.  At the
        end: we unmap the mmap buffer used to read the file and close the
        file descriptor. */
-    if (p.memp == p.memq) {
+    if (port.memp == port.memq) {
       int	err;
       if (DEBUG_FASL)
 	ik_debug_message("finished reading all the boot image");
@@ -170,28 +172,25 @@ ik_fasl_load (ikpcb_t * pcb, const char* fasl_file)
       }
     }
   }
-  if (p.memp != p.memq)
+  if (port.memp != port.memq)
     ik_abort("fasl-read did not reach EOF");
 }
 
 
-static ikptr
-fasl_read_super_code_object (ikpcb_t * pcb, fasl_port_t* p)
+static ikptr_t
+fasl_read_super_code_object (ikpcb_t * pcb, fasl_port_t* port)
 {
-  char		buf[IK_FASL_HEADER_LEN];
-  ikptr		s_code;
+  int8_t	buf[IK_FASL_HEADER_LEN];
+  ikptr_t	s_code;
   /* First check the header. */
-  fasl_read_buf(p, buf, IK_FASL_HEADER_LEN);
-  if (0 != strncmp(buf, IK_FASL_HEADER, IK_FASL_HEADER_LEN))
+  fasl_read_buf(port, buf, IK_FASL_HEADER_LEN);
+  if (0 != memcmp(buf, IK_FASL_HEADER, IK_FASL_HEADER_LEN))
     ik_abort("invalid fasl header");
   if (DEBUG_FASL) ik_debug_message("start reading boot image super code object");
-  s_code = do_read(pcb, p);
+  s_code = do_read(pcb, port);
   if (DEBUG_FASL) ik_debug_message("done reading boot image super code object");
   return s_code;
 }
-
-#undef DEBUG_FASL
-#define DEBUG_FASL	0
 
 
 static ikptr
