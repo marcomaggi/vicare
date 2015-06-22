@@ -73,7 +73,7 @@ static void	fasl_read_buf (fasl_port* p, void* buf, int n);
 
 
 void
-ik_fasl_load (ikpcb* pcb, char* fasl_file)
+ik_fasl_load (ikpcb* pcb, const char* fasl_file)
 {
   int		fd;
   int		filesize;

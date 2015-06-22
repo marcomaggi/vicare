@@ -1019,7 +1019,7 @@ ik_private_decl ikpcb_t * ik_make_pcb		(void);
 ik_private_decl void	ik_delete_pcb		(ikpcb_t*);
 ik_private_decl void	ik_free_symbol_table	(ikpcb_t* pcb);
 
-ik_private_decl void	ik_fasl_load		(ikpcb_t* pcb, char* filename);
+ik_private_decl void	ik_fasl_load		(ikpcb_t* pcb, const char * filename);
 ik_private_decl void	ik_relocate_code	(ikptr_t);
 
 ik_private_decl ikptr_t	ik_exec_code		(ikpcb_t* pcb, ikptr_t code_ptr, ikptr_t argcount, ikptr_t cp);
@@ -1175,7 +1175,8 @@ ik_decl ikptr_t ika_list_from_argv_and_argc(ikpcb_t * pcb, char ** argv, long ar
  ** Character objects.
  ** ----------------------------------------------------------------- */
 
-typedef uint32_t	ikchar;
+typedef uint32_t	ikchar_t;
+typedef ikchar_t	ikchar;
 
 #define char_tag	0x0F
 #define char_mask	0xFF
@@ -1187,12 +1188,12 @@ typedef uint32_t	ikchar;
   ((ikptr_t)((((ikuword_t)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR32_FROM_INTEGER(X) \
-  ((ikchar)((((ikuword_t)(X)) << char_shift) | char_tag))
+  ((ikchar_t)((((ikuword_t)(X)) << char_shift) | char_tag))
 
 #define IK_CHAR_TO_INTEGER(X) \
   ((ikuword_t)(((ikptr_t)(X)) >> char_shift))
 
-#define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar)(X)) >> char_shift))
+#define IK_CHAR32_TO_INTEGER(X)		((uint32_t)(((ikchar_t)(X)) >> char_shift))
 
 #define IK_UNICODE_FROM_ASCII(ASCII)	((ikuword_t)(ASCII))
 
@@ -1212,10 +1213,10 @@ typedef uint32_t	ikchar;
 #define IK_IS_STRING(X)			(string_tag == (string_mask & (ikptr_t)(X)))
 #define IK_STRING_LENGTH_FX(STR)	IK_REF((STR), off_string_length)
 #define IK_STRING_LENGTH(STR)		IK_UNFIX(IK_REF((STR), off_string_length))
-#define IK_CHAR32(STR,IDX)		(((ikchar*)(((ikptr_t)(STR)) + off_string_data))[IDX])
+#define IK_CHAR32(STR,IDX)		(((ikchar_t*)(((ikptr_t)(STR)) + off_string_data))[IDX])
 
 #define IK_STRING_DATA_VOIDP(STR)	((void*)(((ikptr_t)(STR)) + off_string_data))
-#define IK_STRING_DATA_IKCHARP(STR)	((ikchar*)(((ikptr_t)(STR)) + off_string_data))
+#define IK_STRING_DATA_IKCHARP(STR)	((ikchar_t*)(((ikptr_t)(STR)) + off_string_data))
 
 ik_decl ikptr_t ika_string_alloc	(ikpcb_t * pcb, ikuword_t number_of_chars);
 ik_decl ikptr_t ika_string_from_cstring	(ikpcb_t * pcb, const char * cstr);
@@ -1452,10 +1453,12 @@ ik_decl ikptr_t	ika_compnum_alloc_and_init	(ikpcb_t * pcb);
 
 #define IK_FLONUM_DATA(X)	(*((double*)(((ikuword_t)(X))+off_flonum_data)))
 
+#define IK_IS_FLONUM(X)		((vector_tag == IK_TAGOF(X)) && (flonum_tag == IK_REF((X), -vector_tag)))
+
 ik_decl int   ik_is_flonum		(ikptr_t obj);
-ik_decl ikptr_t iku_flonum_alloc		(ikpcb_t * pcb, double fl);
+ik_decl ikptr_t iku_flonum_alloc	(ikpcb_t * pcb, double fl);
 ik_decl ikptr_t ika_flonum_from_double	(ikpcb_t* pcb, double N);
-ik_decl ikptr_t ikrt_flonum_hash		(ikptr_t x /*, ikpcb_t* pcb */);
+ik_decl ikptr_t ikrt_flonum_hash	(ikptr_t x /*, ikpcb_t* pcb */);
 
 
 /** --------------------------------------------------------------------
@@ -1615,6 +1618,7 @@ ik_decl ikptr_t ika_struct_alloc_and_init	(ikpcb_t * pcb, ikptr_t rtd);
 ik_decl ikptr_t ika_struct_alloc_no_init	(ikpcb_t * pcb, ikptr_t rtd);
 ik_decl int   ik_is_struct	(ikptr_t R);
 
+#define IK_STRUCT_RTD(STRUCT)	IK_REF((STRUCT), off_record_rtd)
 #define IK_FIELD(STRUCT,FIELD)	IK_REF((STRUCT), (off_record_data+(FIELD)*wordsize))
 
 
