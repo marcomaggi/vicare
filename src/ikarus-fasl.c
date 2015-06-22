@@ -193,42 +193,41 @@ fasl_read_super_code_object (ikpcb_t * pcb, fasl_port_t* port)
 }
 
 
-static ikptr
+static ikptr_t
 do_read (ikpcb_t * pcb, fasl_port_t* p)
 /* Read and return an object form a FASL port.
 
    This function  is used only  to load the  boot image, so it  does not
    support the "O" object field which loads foreign libraries.  */
+#undef DEBUG_FASL
+#define DEBUG_FASL	0
 {
   char		c = fasl_read_byte(p);
   uint32_t	put_mark_index = 0;
-#if 0
-  if (DEBUG_FASL)
+  if (0 || DEBUG_FASL)
     ik_debug_message("reading object with header: %c", c);
-#endif
   if (c == '>') {
-    /* We  mark  the next  object  with  index "put_mark_index".   Every
-       object branch below will do it for its object.  Here we only make
-       sure that the mark is valid. */
+    /* We read  a mark index  from the  port; every object  branch below
+       will  fill the  slot "p->marks[put_mark_index]"  for its  object.
+       Here we only make sure that the mark index is valid. */
     uint32_t idx = 0;
     fasl_read_buf(p, &idx, sizeof(uint32_t));
     put_mark_index = idx;
     /* Read the header of the next object. */
     c = fasl_read_byte(p);
-    /* if (idx <= 0) */
-    /*   ik_abort("%s: invalid index %d", __func__, idx); */
     if (p->marks) {
+      /* Validate the mark index. */
       if (idx >= p->marks_size)
         ik_abort("%s: mark too big: %d", __func__, idx);
       if (idx < p->marks_size) {
-        if (p->marks[idx] != 0)
+        if (0 != p->marks[idx])
           ik_abort("%s: mark %d already set", __func__, idx);
       }
     } else {
       /* This is the first mark read.  Allocate the marks array. */
 #define NUM_OF_MARKS		(4 * IK_CHUNK_SIZE)
-#define MARKS_BLOCK_SIZE	(NUM_OF_MARKS * sizeof(ikptr*))
-      p->marks = (ikptr*)(long)ik_mmap(MARKS_BLOCK_SIZE);
+#define MARKS_BLOCK_SIZE	(NUM_OF_MARKS * sizeof(ikptr_t *))
+      p->marks = (ikptr_t*)ik_mmap(MARKS_BLOCK_SIZE);
       bzero(p->marks, MARKS_BLOCK_SIZE);
       p->marks_size = NUM_OF_MARKS;
     }
