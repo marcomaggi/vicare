@@ -204,7 +204,7 @@ ikrt_glibc_if_nametoindex (ikptr name_bv)
   unsigned int  rv;
   name  = IK_BYTEVECTOR_DATA_CHARP(name_bv);
   rv    = if_nametoindex(name);
-  return (0 == rv)? IK_FALSE_OBJECT : IK_FIX((long)rv);
+  return (0 == rv)? IK_FALSE_OBJECT : IK_FIX(rv);
 #else
   feature_failure(__func__);
 #endif
@@ -1016,7 +1016,7 @@ ikrt_glibc_regcomp (ikptr s_pattern, ikptr s_flags, ikpcb_t *pcb)
 	s_retval	  = ika_pair_alloc(pcb);
 	error_message_len = regerror(rv, rex, NULL, 0);
 	IK_CAR(s_retval)  = IK_FIX(rv);
-	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (long)error_message_len-1));
+	IK_ASS(IK_CDR(s_retval), ika_bytevector_alloc(pcb, (ikuword_t)(error_message_len-1)));
 	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_retval);
 	error_message     = IK_BYTEVECTOR_DATA_CHARP(IK_CDR(s_retval));
 	regerror(rv, rex, error_message, error_message_len);
@@ -1097,7 +1097,7 @@ ikrt_glibc_regexec (ikptr s_rex, ikptr s_string, ikptr s_flags, ikpcb_t *pcb)
       size_t	errmsg_len_including_zero;
       errmsg_len_including_zero = regerror(rv, rex, NULL, 0);
       s_error_code = IK_FIX(rv);
-      s_error_msg  = ika_bytevector_alloc(pcb, (long)errmsg_len_including_zero-1);
+      s_error_msg  = ika_bytevector_alloc(pcb, (ikuword_t)(errmsg_len_including_zero-1));
       errmsg       = IK_BYTEVECTOR_DATA_CHARP(s_error_msg);
       regerror(rv, rex, errmsg, errmsg_len_including_zero);
       pcb->root0 = &s_error_msg;
@@ -1158,7 +1158,7 @@ ikrt_glibc_wordexp (ikptr s_pattern, ikptr s_flags, ikpcb_t * pcb)
   W.we_offs     = 0;
   rv = wordexp(pattern, &W, IK_UNFIX(s_flags));
   if (0 == rv) {
-    s_words    = ika_vector_alloc_and_init(pcb, (long)W.we_wordc);
+    s_words    = ika_vector_alloc_and_init(pcb, (ikuword_t)W.we_wordc);
     pcb->root0 = &s_words;
     {
       for (i=0; i<W.we_wordc; ++i) {
@@ -1203,7 +1203,7 @@ ikrt_glibc_iconv_open (ikptr s_from_code, ikptr s_to_code, ikpcb_t * pcb)
      order than the Libiconv API. */
   handle = iconv_open(to_code, from_code);
   if (((iconv_t)-1) != handle)
-    return ika_pointer_alloc(pcb, (unsigned long)handle);
+    return ika_pointer_alloc(pcb, (ikuword_t)handle);
   else
     return ik_errno_to_code();
 #else
