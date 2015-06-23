@@ -557,16 +557,20 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
   }
   else if (c == 'Q') { /* thunk */
     if (DEBUG_FASL) ik_debug_message("open %d: thunk object", object_count++);
-    ikptr s_proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
+    ikptr_t	s_closure = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
+    ikptr_t	s_code;
+    /* Mark  the closure  object  before reading  its  code object:  the
+       relocation vector  of the code  object may reference  the closure
+       itself. */
     if (put_mark_index) {
-      p->marks[put_mark_index] = s_proc;
+      p->marks[put_mark_index] = s_closure;
     }
-    ikptr s_code = do_read(pcb, p);
+    s_code = do_read(pcb, p);
     /* Store in  the closure's memory block  a raw pointer to  the first
        byte of the code object's data area. */
-    IK_REF(s_proc, off_closure_code) = s_code + off_code_data;
+    IK_REF(s_closure, off_closure_code) = s_code + off_code_data;
     if (DEBUG_FASL) ik_debug_message("close %d: thunk object", --object_count);
-    return s_proc;
+    return s_closure;
   }
   else if (c == '<') {
     if (DEBUG_FASL) ik_debug_message("open %d: marked object", object_count++);
