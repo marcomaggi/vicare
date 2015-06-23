@@ -524,21 +524,24 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     }
     return s_rtd;
   }
-  else if (c == '{') { /* { is for struct instances */
-    if (DEBUG_FASL) ik_debug_message("open %d: struct instance object", object_count++);
-    long	i, num_of_fields = 0, struct_size;
-    ikptr	s_rtd;
-    ikptr	s_struct;
-    fasl_read_buf(p, &num_of_fields, sizeof(long));
-    struct_size = IK_ALIGN((1 + num_of_fields) * sizeof(ikptr));
-    s_struct    = ik_unsafe_alloc(pcb, struct_size) | vector_tag;
+  else if (c == '{') {	/* struct instance */
+    if (0 || DEBUG_FASL) ik_debug_message("open %d: struct instance object", object_count++);
+    ikuword_t	num_of_fields = 0;
+    ikuword_t	mem_size;
+    ikptr_t	s_rtd;
+    ikptr_t	s_struct;
+    fasl_read_buf(p, &num_of_fields, sizeof(ikuword_t));
+    mem_size	= IK_ALIGN((1 + num_of_fields) * sizeof(ikptr_t));
+    s_struct    = ik_unsafe_alloc(pcb, mem_size) | vector_tag;
     s_rtd       = do_read(pcb, p);
-    IK_REF(s_struct, 0) = s_rtd;
-    for (i=0; i<num_of_fields; ++i) {
-      IK_FIELD(s_struct, i) = do_read(pcb, p);
-    }
+    IK_STRUCT_RTD(s_struct) = s_rtd;
+    /* Mark  the  struct  before  reading its  fields:  the  struct  may
+       reference itself. */
     if (put_mark_index) {
       p->marks[put_mark_index] = s_struct;
+    }
+    for (iksword_t i=0; i<num_of_fields; ++i) {
+      IK_FIELD(s_struct, i) = do_read(pcb, p);
     }
     if (DEBUG_FASL) ik_debug_message("close %d: struct instance object", --object_count);
     return s_struct;
