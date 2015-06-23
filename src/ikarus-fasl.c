@@ -410,22 +410,27 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
       ik_debug_message("close %d: string object", --object_count);
     return s_str;
   }
-  else if (c == 'V') {
-    if (DEBUG_FASL) ik_debug_message("open %d: vector object", object_count++);
-    long len = 0;
-    fasl_read_buf(p, &len, sizeof(long));
-    long size = IK_ALIGN(len * wordsize + disp_vector_data);
-    ikptr vec = ik_unsafe_alloc(pcb, size) | vector_tag;
+  else if (c == 'V') {	/* vector object */
+    if (DEBUG_FASL)
+      ik_debug_message("open %d: vector object", object_count++);
+    ikuword_t	num_of_slots = 0;
+    ikuword_t	mem_size;
+    ikptr_t	s_vec;
+    fasl_read_buf(p, &num_of_slots, sizeof(ikuword_t));
+    mem_size	= IK_ALIGN(num_of_slots * wordsize + disp_vector_data);
+    s_vec	= ik_unsafe_alloc(pcb, mem_size) | vector_tag;
+    IK_VECTOR_LENGTH_FX(s_vec) = IK_FIX(num_of_slots);
+    /* Mark  the  vector  before  marking its  values:  the  vector  may
+       reference itself. */
     if (put_mark_index) {
-      p->marks[put_mark_index] = vec;
+      p->marks[put_mark_index] = s_vec;
     }
-    IK_REF(vec, off_vector_length) = IK_FIX(len);
-    long i;
-    for (i=0; i<len; i++) {
-      IK_REF(vec, off_vector_data + i*wordsize) = do_read(pcb, p);
+    for (iksword_t i=0; i<num_of_slots; ++i) {
+      IK_ITEM(s_vec, i) = do_read(pcb, p);
     }
-    if (DEBUG_FASL) ik_debug_message("close %d: vector object", --object_count);
-    return vec;
+    if (DEBUG_FASL)
+      ik_debug_message("close %d: vector object", --object_count);
+    return s_vec;
   }
   else if (c == 'I') {
     if (DEBUG_FASL) ik_debug_message("open %d: fixnum object", object_count++);
