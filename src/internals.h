@@ -944,11 +944,11 @@ struct ik_gc_avoidance_collection_t {
   ikptr_t		slots[IK_GC_AVOIDANCE_ARRAY_LEN];
 };
 
-/* The "ikcont"  data structure  is used  to access  Scheme continuation
-   objects: given an "ikptr_t" reference to continuation, we subtract from
-   it "continuation_primary_tag"  and the result is  an untagged pointer
-   to "ikcont".  This struct  is a useful helper to be  used in place of
-   the IK_REF getter. */
+/* The "ikcont_t" data  structure is used to  access Scheme continuation
+   objects: given  an "ikptr_t"  reference to continuation,  we subtract
+   from  it "continuation_primary_tag"  and  the result  is an  untagged
+   pointer to "ikcont_t".  This struct is  a useful helper to be used in
+   place of the IK_REF getter. */
 /* The  following   picture  shows  two   stack  frames  freezed   in  a
  * continuation object.  Freezed frame 0 is on the top of freezed stack.
  *
@@ -972,7 +972,7 @@ struct ik_gc_avoidance_collection_t {
  *    |                        |
  *            low memory
  */
-typedef struct ikcont {
+typedef struct ikcont_t {
   /* The field TAG is set to the constant value "continuation_tag". */
   ikptr_t		tag;
   /* The field TOP is a raw memory pointer referencing a machine word on
@@ -985,11 +985,11 @@ typedef struct ikcont {
      frames  this continuation  references.  It  is the  sum of  all the
      freezed frame sizes. */
   ikuword_t		size;
-  /* Every "ikcont" struct is a node  in a linked list of continuations.
-     The  field NEXT  is  0  or a  reference  (tagged  pointer) to  next
-     continuation object. */
+  /* Every  "ikcont_t"   struct  is   a  node  in   a  linked   list  of
+     continuations.  The field NEXT is 0 or a reference (tagged pointer)
+     to next continuation object. */
   ikptr_t		next;
-} ikcont;
+} ikcont_t;
 
 /* NOTE Some day  in a far, far future this  will be deprecated.  (Marco
    Maggi; Mon May 25, 2015) */
@@ -1774,7 +1774,7 @@ ik_private_decl ikptr_t ik_stack_frame_top_to_code_object (ikptr_t top);
 #define off_continuation_size		(disp_continuation_size - vector_tag)
 #define off_continuation_next		(disp_continuation_next - vector_tag)
 
-#define IK_CONTINUATION_STRUCT(KONT)	((ikcont *)((ikuword_t)((KONT) - vector_tag)))
+#define IK_CONTINUATION_STRUCT(KONT)	((ikcont_t *)((ikuword_t)((KONT) - vector_tag)))
 #define IK_CONTINUATION_TAG(KONT)	IK_REF((KONT),off_continuation_tag)
 #define IK_CONTINUATION_TOP(KONT)	IK_REF((KONT),off_continuation_top)
 #define IK_CONTINUATION_SIZE(KONT)	IK_REF((KONT),off_continuation_size)

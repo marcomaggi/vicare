@@ -122,12 +122,12 @@ print_object (FILE* fh, ikptr x, int nested_level)
     fprintf(fh, "}");
   }
   else if (IK_IS_CONTINUATION(x)) {
-    ikcont *	kont = IK_CONTINUATION_STRUCT(x);
+    ikcont_t *	kont = IK_CONTINUATION_STRUCT(x);
     fprintf(fh, "continuation={x=0x%016lx, top=0x%016lx, size=%ld, next=0x%016lx}",
 	    x, kont->top, kont->size, kont->next);
   }
   else if (IK_IS_SYSTEM_CONTINUATION(x)) {
-    ikcont *	kont = IK_CONTINUATION_STRUCT(x);
+    ikcont_t *	kont = IK_CONTINUATION_STRUCT(x);
     fprintf(fh,
 	    "system-continuation={x=0x%016lx, top=0x%016lx, size=%ld (unused), next=0x%016lx}",
 	    x, kont->top, kont->size, kont->next);

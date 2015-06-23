@@ -97,7 +97,7 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
       ik_debug_message("%s: resuming process continuation s_kont=0x%016lx",
 		       __func__, (long)s_kont);
     }
-    ikcont * kont = IK_CONTINUATION_STRUCT(s_kont);
+    ikcont_t * kont = IK_CONTINUATION_STRUCT(s_kont);
     /* System continuations are created by the FFI to save the current C
        execution contest just before calling back a Scheme function.  So
        if S_KONT is a system continuation:  we have no Scheme code to go
@@ -151,7 +151,7 @@ ik_exec_code (ikpcb_t * pcb, ikptr s_code, ikptr s_argcount, ikptr s_closure)
 	 topmost  freezed frame  and  create a  new continuation  object
 	 referencing  the  rest of  the  freezed  frames.  Register  the
 	 "rest" continuation as "next process continuation". */
-      ikcont *	rest_kont   = (ikcont*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
+      ikcont_t *	rest_kont   = (ikcont_t*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
       ikptr_t	s_rest_kont = (ikptr_t)(((ikuword_t)rest_kont) | continuation_primary_tag);
       rest_kont->tag	= continuation_tag;
       rest_kont->next	= kont->next;
@@ -325,7 +325,7 @@ static void
 ik_exec_code_log_and_abort (ikpcb_t * pcb, ikptr s_kont)
 {
   ikptr underflow_handler	= *(ikptr *)(pcb->frame_pointer - wordsize);
-  ikcont * kont			= IK_CONTINUATION_STRUCT(s_kont);
+  ikcont_t * kont		= IK_CONTINUATION_STRUCT(s_kont);
   ikptr	top			= IK_CONTINUATION_TOP(s_kont);
   ikptr	return_address		= IK_REF(top, 0);
   ikptr	call_table_framesize	= IK_CALLTABLE_FRAMESIZE(return_address);

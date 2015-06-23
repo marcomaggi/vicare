@@ -727,7 +727,7 @@ seal_scheme_stack(ikpcb* pcb)
 {
   if ((pcb->frame_base - wordsize) != pcb->frame_pointer) {
     assert(IK_UNDERFLOW_HANDLER == IK_REF(pcb->frame_base, -wordsize));
-    ikcont *	kont   = (ikcont*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
+    ikcont_t *	kont   = (ikcont_t*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
     ikptr_t	s_kont = ((ikptr_t)kont) | continuation_primary_tag;
     kont->tag		= continuation_tag;
     kont->top		= pcb->frame_pointer;

@@ -1006,7 +1006,7 @@ ik_stack_overflow (ikpcb* pcb)
      the continuation object in the  PCB as "next process continuation".
      Mark the old Scheme stack segment as "data".*/
   {
-    ikcont *	kont   = (ikcont*)(long)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
+    ikcont_t *	kont   = (ikcont_t*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
     ikptr	s_kont = ((ikptr)kont) | continuation_primary_tag;
     kont->tag  = continuation_tag;
     kont->top  = pcb->frame_pointer;
