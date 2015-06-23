@@ -1900,7 +1900,7 @@ ikptr
 ikrt_posix_poll (ikptr s_fds, ikptr s_timeout)
 {
 #ifdef HAVE_POLL
-  long		nfds    = IK_VECTOR_LENGTH(s_fds);
+  long		nfds    = (long)IK_VECTOR_LENGTH(s_fds);
   int		timeout = ik_integer_to_int(s_timeout);
   struct pollfd	fds[nfds];
   int		rv, i;
@@ -2213,26 +2213,24 @@ ikrt_posix_sizeof_fd_set (ikptr s_count, ikpcb_t * pcb)
 ikptr
 ikrt_posix_make_fd_set_bytevector (ikptr s_count, ikpcb_t * pcb)
 {
-  long		count	= IK_UNFIX(s_count);
+  iksword_t	count	= IK_UNFIX(s_count);
   /* Yes, we do not check for overflow. */
-  long		len	= sizeof(fd_set) * count;
+  iksword_t	len	= sizeof(fd_set) * count;
   ikptr		bv	= ika_bytevector_alloc(pcb, len);
   fd_set *	set	= (fd_set *)IK_BYTEVECTOR_DATA_VOIDP(bv);
-  long		i;
-  for (i=0; i<count; ++i)
+  for (long i=0; i<count; ++i)
     FD_ZERO(&(set[i]));
   return bv;
 }
 ikptr
 ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb_t * pcb)
 {
-  long		count	= IK_UNFIX(s_count);
+  iksword_t	count	= IK_UNFIX(s_count);
   /* Yes, we do not check for overflow. */
   size_t	len = sizeof(fd_set) * count;
   fd_set *	set = malloc(len);
   if (set) {
-    long	i;
-    for (i=0; i<count; ++i)
+    for (long i=0; i<count; ++i)
       FD_ZERO(&(set[i]));
     return ika_pointer_alloc(pcb, (ikuword_t)set);
   } else
@@ -2241,13 +2239,12 @@ ikrt_posix_make_fd_set_pointer (ikptr s_count, ikpcb_t * pcb)
 ikptr
 ikrt_posix_make_fd_set_memory_block (ikptr s_mblock, ikptr s_count, ikpcb_t * pcb)
 {
-  long		count	= IK_UNFIX(s_count);
+  iksword_t	count	= IK_UNFIX(s_count);
   /* Yes, we do not check for overflow. */
   size_t	len = sizeof(fd_set) * count;
   fd_set *	set = malloc(len);
   if (set) {
-    long	i;
-    for (i=0; i<count; ++i)
+    for (long i=0; i<count; ++i)
       FD_ZERO(&(set[i]));
     pcb->root0 = &s_mblock;
     {
@@ -2544,7 +2541,7 @@ ikrt_posix_make_sockaddr_un (ikptr s_pathname, ikpcb_t * pcb)
 #undef SIZE
 #define SIZE	(sizeof(struct sockaddr_un)+pathname_len) /* better safe than sorry */
   char *	pathname     = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
-  long		pathname_len = IK_BYTEVECTOR_LENGTH(s_pathname);
+  size_t	pathname_len = (size_t)IK_BYTEVECTOR_LENGTH(s_pathname);
   uint8_t	bytes[SIZE];
   struct sockaddr_un *	name = (void *)bytes;
   name->sun_family = AF_LOCAL;
@@ -2561,7 +2558,7 @@ ikrt_posix_sockaddr_un_pathname (ikptr s_addr, ikpcb_t * pcb)
   struct sockaddr_un *	addr = IK_BYTEVECTOR_DATA_VOIDP(s_addr);
   if (AF_LOCAL == addr->sun_family) {
     ikptr	s_bv;
-    long	len = strlen(addr->sun_path);
+    size_t	len = strlen(addr->sun_path);
     void *	buf;
     pcb->root0 = &s_addr;
     {
@@ -2832,7 +2829,7 @@ ikrt_posix_inet_ntoa (ikptr s_host_address, ikpcb_t * pcb)
   ikptr			s_dotted_quad;
   char *		dotted_quad;
   char *		data;
-  long			data_len;
+  size_t		data_len;
   host_address  = IK_BYTEVECTOR_DATA_VOIDP(s_host_address);
   data          = inet_ntoa(*host_address);
   data_len      = strlen(data);
@@ -2913,7 +2910,7 @@ ikrt_posix_inet_ntop (ikptr s_af, ikptr s_host_address, ikpcb_t * pcb)
       if (NULL != rv) {
 	ikptr	  s_presentation;
 	char *	  presentation;
-	long	  presentation_len;
+	size_t	  presentation_len;
 	presentation_len = strlen(buffer);
 	s_presentation	 = ika_bytevector_alloc(pcb, presentation_len);
 	presentation	 = IK_BYTEVECTOR_DATA_CHARP(s_presentation);
@@ -3542,7 +3539,7 @@ ikrt_posix_getnetbyaddr (ikptr s_rtd, ikptr s_net_num, ikptr s_type, ikpcb_t * p
 #ifdef HAVE_GETNETBYADDR
   uint32_t		net;
   struct netent *	entry;
-  net   = (uint32_t)ik_integer_to_ulong(s_net_num);
+  net   = (uint32_t)ik_integer_to_uint(s_net_num);
   entry = getnetbyaddr(net, IK_UNFIX(s_type));
   return (entry)? netent_to_struct(pcb, s_rtd, entry) : IK_FALSE_OBJECT;
 #else
@@ -3911,8 +3908,7 @@ ikrt_posix_setsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikptr s
   else if (IK_FALSE_OBJECT == s_optval_num)
     optval = 0;
   else {
-    long	num = ik_integer_to_long(s_optval_num);
-    optval = (int)num;
+    optval = ik_integer_to_int(s_optval_num);
   }
   errno = 0;
   rv	= setsockopt(IK_NUM_TO_FD(s_sock), IK_UNFIX(s_level), IK_UNFIX(s_optname), &optval, optlen);
@@ -3936,7 +3932,7 @@ ikrt_posix_getsockopt_int (ikptr s_sock, ikptr s_level, ikptr s_optname, ikpcb_t
     ikptr	s_pair = ika_pair_alloc(pcb);
     pcb->root0 = &s_pair;
     {
-      IK_ASS(IK_CAR(s_pair), ika_integer_from_long(pcb, (long)optval));
+      IK_ASS(IK_CAR(s_pair), ika_integer_from_int(pcb, optval));
       IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
       IK_CDR(s_pair) = IK_TRUE_OBJECT;
     }
