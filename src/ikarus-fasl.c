@@ -327,16 +327,15 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: pair object", --object_count);
     return s_pair;
   }
-  else if (c == 'M') {
+  else if (c == 'M') {	/* symbol object */
     if (DEBUG_FASL) ik_debug_message("open %d: symbol object", object_count++);
-    /* symbol */
-    ikptr str = do_read(pcb, p);
-    ikptr sym = ikrt_string_to_symbol(str, pcb);
+    ikptr_t	s_str = do_read(pcb, p);
+    ikptr_t	s_sym = ikrt_string_to_symbol(s_str, pcb);
     if (put_mark_index) {
-      p->marks[put_mark_index] = sym;
+      p->marks[put_mark_index] = s_sym;
     }
     if (DEBUG_FASL) ik_debug_message("close %d: symbol object", --object_count);
-    return sym;
+    return s_sym;
   }
   else if (c == 's') {
     if (DEBUG_FASL) ik_debug_message("open %d: ascii string object", object_count++);
