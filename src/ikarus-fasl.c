@@ -254,9 +254,9 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
      */
     ikuword_t	scheme_object_size	= 0;
     ikuword_t	binary_code_size	= 0;
-    ikptr	s_freevars		= IK_FIX(0);
-    ikptr	s_annotation		= IK_FALSE;
-    ikptr	p_code			= 0;
+    ikptr_t	s_freevars		= IK_FIX(0);
+    ikptr_t	s_annotation		= IK_FALSE;
+    ikptr_t	p_code			= 0;
     /* Read the binary code size. */
     {
       if (4 == wordsize) {
@@ -283,7 +283,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
 	   fixnum. */
 	uint32_t	full_freevars = 0;
 	fasl_read_buf(p, &full_freevars, sizeof(uint32_t));
-	s_freevars = (ikptr) full_freevars;
+	s_freevars = (ikptr_t) full_freevars;
       } else {
 	/* 64-bit platform.   The binary  code size  is serialised  as a
 	   sequence   of   2   big-endian   unsigned   32-bit   integers
@@ -292,7 +292,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
 	uint32_t	hi_freevars = 0;
 	fasl_read_buf(p, &lo_freevars, sizeof(uint32_t));
 	fasl_read_buf(p, &hi_freevars, sizeof(uint32_t));
-	s_freevars = (((ikptr) hi_freevars) << 32) | ((ikptr) lo_freevars);
+	s_freevars = (((ikptr_t) hi_freevars) << 32) | ((ikptr_t) lo_freevars);
       }
     }
     /* Read the annotation. */
@@ -305,7 +305,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     IK_REF(p_code, disp_code_freevars)	= s_freevars;
     IK_REF(p_code, disp_code_annotation)= s_annotation;
     IK_REF(p_code, disp_code_unused)    = IK_FIX(0);
-    fasl_read_buf(p, (void*)(disp_code_data+(long)p_code), binary_code_size);
+    fasl_read_buf(p, (void*)(p_code+disp_code_data), binary_code_size);
     if (put_mark_index) {
       p->marks[put_mark_index] = p_code | vector_tag;
     }
