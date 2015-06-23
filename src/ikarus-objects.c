@@ -74,7 +74,7 @@ ik_list_length (ikptr s_list)
 /* Return the  length of the list  S_LIST.  Do *not*  check for circular
    lists. */
 {
-  long	 length;
+  ikuword_t	length;
   for (length = 0; pair_tag == IK_TAGOF(s_list); ++length) {
     if (LONG_MAX != length)
       s_list = IK_REF(s_list, off_cdr);
@@ -169,8 +169,7 @@ ika_list_from_argv_and_argc (ikpcb_t * pcb, char ** argv, long argc)
     pcb->root9 = &s_list;
     pcb->root8 = &s_pair;
     {
-      long	i;
-      for (i=0; i<argc;) {
+      for (long i=0; i<argc;) {
 	IK_ASS(IK_CAR(s_pair), ika_bytevector_from_cstring(pcb, argv[i]));
 	IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_pair);
 	if (++i < argc) {
