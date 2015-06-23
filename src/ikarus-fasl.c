@@ -68,7 +68,7 @@ static int	object_count = 0;
 static ikptr_t	fasl_read_super_code_object(ikpcb_t * pcb, fasl_port_t* p);
 static ikptr_t	do_read (ikpcb_t * pcb, fasl_port_t* p);
 static ikptr_t	alloc_code_object (ikuword_t scheme_object_size, ikpcb_t * pcb, fasl_port_t* p);
-static int8_t	fasl_read_byte (fasl_port_t* p);
+static uint8_t	fasl_read_byte (fasl_port_t* p);
 static void	fasl_read_buf (fasl_port_t* p, void* buf, ikuword_t num_of_bytes);
 
 
@@ -202,7 +202,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
 #undef DEBUG_FASL
 #define DEBUG_FASL	0
 {
-  char		c = fasl_read_byte(p);
+  unsigned char	c = fasl_read_byte(p);
   uint32_t	put_mark_index = 0;
   if (0 || DEBUG_FASL)
     ik_debug_message("reading object with header: %c", c);
@@ -432,13 +432,15 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
       ik_debug_message("close %d: vector object", --object_count);
     return s_vec;
   }
-  else if (c == 'I') {
+  else if (c == 'I') {	/* fixnum object */
     if (DEBUG_FASL) ik_debug_message("open %d: fixnum object", object_count++);
-    ikptr fixn;
-    fasl_read_buf(p, &fixn, sizeof(ikptr));
-    if (0 || DEBUG_FASL)
-      ik_debug_message("close %d: fixnum object, fixnum bytes size=%d, fx=%ld", --object_count, sizeof(ikptr), IK_UNFIX(fixn));
-    return fixn;
+    ikptr_t	s_fixn;
+    fasl_read_buf(p, &s_fixn, sizeof(ikptr_t));
+    if (0 || DEBUG_FASL) {
+      ik_debug_message("close %d: fixnum object, fixnum bytes size=%d, fx=%ld",
+		       --object_count, sizeof(ikptr_t), IK_UNFIX(s_fixn));
+    }
+    return s_fixn;
   }
   else if (c == 'F') {
     if (DEBUG_FASL) ik_debug_message("read %d: false object", object_count);
@@ -452,24 +454,23 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("read %d: null object", object_count);
     return IK_NULL_OBJECT;
   }
-  else if (c == 'c') {
-    if (DEBUG_FASL) ik_debug_message("open %d: char object", object_count++);
-    /* FIXME: sounds broken */
+  else if (c == 'c') {	/* ASCII char object */
+    if (DEBUG_FASL) ik_debug_message("open %d: char object in ASCII encoding", object_count++);
     unsigned char x = (unsigned char) fasl_read_byte(p);
-    if (DEBUG_FASL) ik_debug_message("close %d: char object", --object_count);
+    if (DEBUG_FASL) ik_debug_message("close %d: char object in ASCII encoding", --object_count);
     return IK_CHAR_FROM_INTEGER(x);
   }
-  else if (c == 'G') {
+  else if (c == 'G') {	/* gensym object */
     if (DEBUG_FASL) ik_debug_message("open %d: gensym object", object_count++);
     /* G is for gensym */
-    ikptr pretty = do_read(pcb, p);
-    ikptr unique = do_read(pcb, p);
-    ikptr sym    = ikrt_strings_to_gensym(pretty, unique, pcb);
+    ikptr_t	s_pretty = do_read(pcb, p);
+    ikptr_t	s_unique = do_read(pcb, p);
+    ikptr_t	s_sym    = ikrt_strings_to_gensym(s_pretty, s_unique, pcb);
     if (put_mark_index) {
-      p->marks[put_mark_index] = sym;
+      p->marks[put_mark_index] = s_sym;
     }
     if (DEBUG_FASL) ik_debug_message("close %d: gensym object", --object_count);
-    return sym;
+    return s_sym;
   }
   else if (c == 'R') { /* R is for RTD */
     if (DEBUG_FASL) ik_debug_message("open %d: rtd object", object_count++);
@@ -617,7 +618,7 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
   }
   else if (c == 'l') {
     if (DEBUG_FASL) ik_debug_message("open %d: short list object", object_count++);
-    int   len  = (unsigned char) fasl_read_byte(p);
+    int   len  = (int) fasl_read_byte(p);
     ikptr pair = ik_unsafe_alloc(pcb, pair_size * (len+1)) | pair_tag;
     if (put_mark_index) {
       p->marks[put_mark_index] = pair;
@@ -971,7 +972,7 @@ ik_relocate_code (ikptr_t p_code)
 }
 
 
-static int8_t
+static uint8_t
 fasl_read_byte (fasl_port_t * port)
 {
   int8_t	byte = 0;
