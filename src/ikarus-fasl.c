@@ -472,48 +472,57 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
     if (DEBUG_FASL) ik_debug_message("close %d: gensym object", --object_count);
     return s_sym;
   }
-  else if (c == 'R') { /* R is for RTD */
-    if (DEBUG_FASL) ik_debug_message("open %d: rtd object", object_count++);
-    ikptr name = do_read(pcb, p);
-    ikptr symb = do_read(pcb, p);
-    long i, n = 0;
-    fasl_read_buf(p, &n, sizeof(long));
-    ikptr fields;
-    if (n == 0) {
-      fields = IK_NULL_OBJECT;
+  else if (c == 'R') {	/* struct type descriptor */
+    if (0 || DEBUG_FASL) ik_debug_message("open %d: struct type descriptor object", object_count++);
+    ikptr_t	s_name = do_read(pcb, p);
+    ikptr_t	s_uid = do_read(pcb, p);
+    iksword_t	num_of_fields = 0;
+    ikptr_t	s_fields;
+    ikptr_t	s_rtd;
+    ikptr_t	s_uid_value_slot;
+    fasl_read_buf(p, &num_of_fields, sizeof(ikuword_t));
+    if (0 == num_of_fields) {
+      s_fields = IK_NULL_OBJECT;
     } else {
-      fields = ik_unsafe_alloc(pcb, n * IK_ALIGN(pair_size)) | pair_tag;
-      ikptr ptr = fields;
-      for (i=0; i<n; i++) {
-        IK_REF(ptr, off_car) = do_read(pcb, p);
-        IK_REF(ptr, off_cdr) = ptr + IK_ALIGN(pair_size);
-        ptr += IK_ALIGN(pair_size);
+      /* Allocate a single block of  memory holding all the pair objects
+	 in sequence. */
+      s_fields = ik_unsafe_alloc(pcb, num_of_fields * pair_size) | pair_tag;
+      {
+	ikptr_t	s_spine = s_fields;
+	for (iksword_t i=0; i<num_of_fields; ++i) {
+	  IK_CAR(s_spine) = do_read(pcb, p);
+	  IK_CDR(s_spine) = s_spine + pair_size; /* automatically tagged as pair */
+	  s_spine += pair_size;
+	}
+	s_spine -= pair_size;
+	IK_CDR(s_spine) = IK_NULL_OBJECT;
       }
-      ptr -= pair_size;
-      IK_REF(ptr, off_cdr) = IK_NULL_OBJECT;
     }
-    ikptr gensym_val = IK_REF(symb, off_symbol_record_value);
-    ikptr rtd;
-    if (gensym_val == IK_UNBOUND_OBJECT) {
-      rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | vector_tag;
-      ikptr base_rtd = pcb->base_rtd;
-      IK_REF(rtd, off_rtd_rtd)		= base_rtd;
-      IK_REF(rtd, off_rtd_name)		= name;
-      IK_REF(rtd, off_rtd_length)	= IK_FIX(n);
-      IK_REF(rtd, off_rtd_fields)	= fields;
-      IK_REF(rtd, off_rtd_printer)	= IK_FALSE_OBJECT;
-      IK_REF(rtd, off_rtd_symbol)	= symb;
-      IK_REF(rtd, off_rtd_destructor)	= IK_FALSE;
-      IK_REF(symb, off_symbol_record_value) = rtd;
-      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, symb + off_symbol_record_value);
+    /* S_UID is a  gensym.  If this the  RTD has not yet  been stored in
+       the "value" slot of the UID:  we do it here.  Otherwise we assume
+       the "value" slot already contains a reference to the RTD. */
+    s_uid_value_slot = IK_REF(s_uid, off_symbol_record_value);
+    if (IK_UNBOUND_OBJECT == s_uid_value_slot) {
+      s_rtd = ik_unsafe_alloc(pcb, IK_ALIGN(rtd_size)) | vector_tag;
+      IK_REF(s_rtd, off_rtd_rtd)	= pcb->base_rtd;
+      IK_REF(s_rtd, off_rtd_name)	= s_name;
+      IK_REF(s_rtd, off_rtd_length)	= IK_FIX(num_of_fields);
+      IK_REF(s_rtd, off_rtd_fields)	= s_fields;
+      IK_REF(s_rtd, off_rtd_printer)	= IK_FALSE_OBJECT;
+      IK_REF(s_rtd, off_rtd_symbol)	= s_uid;
+      IK_REF(s_rtd, off_rtd_destructor)	= IK_FALSE_OBJECT;
+      IK_REF(s_uid, off_symbol_record_value) = s_rtd;
+      IK_SIGNAL_DIRT_IN_PAGE_OF_POINTER(pcb, s_uid + off_symbol_record_value);
     } else {
-      rtd = gensym_val;
+      s_rtd = s_uid_value_slot;
     }
     if (put_mark_index) {
-      p->marks[put_mark_index] = rtd;
+      p->marks[put_mark_index] = s_rtd;
     }
-    if (DEBUG_FASL) ik_debug_message("close %d: rtd object", --object_count);
-    return rtd;
+    if (0 || DEBUG_FASL) {
+      ik_debug_message("close %d: rtd object", --object_count);
+    }
+    return s_rtd;
   }
   else if (c == '{') { /* { is for struct instances */
     if (DEBUG_FASL) ik_debug_message("open %d: struct instance object", object_count++);
