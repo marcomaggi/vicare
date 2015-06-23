@@ -588,21 +588,22 @@ do_read (ikpcb_t * pcb, fasl_port_t* p)
       return IK_VOID_OBJECT;
     }
   }
-  else if (c == 'v') {
+  else if (c == 'v') {	/* bytevector object */
     if (DEBUG_FASL) ik_debug_message("open %d: bytevector object", object_count++);
-    /* bytevector */
-    long len = 0;
-    fasl_read_buf(p, &len, sizeof(long));
-    long  size = IK_ALIGN(len + disp_bytevector_data + 1);
-    ikptr x    = ik_unsafe_alloc(pcb, size) | bytevector_tag;
-    IK_REF(x, off_bytevector_length) = IK_FIX(len);
-    fasl_read_buf(p, (void*)(long)(x+off_bytevector_data), len);
-    ((char*)(long)x)[off_bytevector_data+len] = 0;
+    ikuword_t	num_of_bytes = 0;
+    ikuword_t	mem_size;
+    ikptr_t	s_bv;
+    fasl_read_buf(p, &num_of_bytes, sizeof(ikuword_t));
+    mem_size	= IK_ALIGN(num_of_bytes + disp_bytevector_data + 1);
+    s_bv	= ik_unsafe_alloc(pcb, mem_size) | bytevector_tag;
+    IK_BYTEVECTOR_LENGTH_FX(s_bv) = IK_FIX(num_of_bytes);
+    fasl_read_buf(p, IK_BYTEVECTOR_DATA_VOIDP(s_bv), num_of_bytes);
+    IK_BYTEVECTOR_DATA_UINT8P(s_bv)[num_of_bytes] = 0;
     if (put_mark_index) {
-      p->marks[put_mark_index] = x;
+      p->marks[put_mark_index] = s_bv;
     }
     if (DEBUG_FASL) ik_debug_message("close %d: bytevector object", --object_count);
-    return x;
+    return s_bv;
   }
   else if (c == 'l') {
     if (DEBUG_FASL) ik_debug_message("open %d: short list object", object_count++);
