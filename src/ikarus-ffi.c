@@ -164,8 +164,8 @@ typedef ik_ffi_cif_stru_t *      ik_ffi_cif_t;
 #define IK_FFI_CIF_ARG_TYPE_IDS_PTR(CIF,ARITY)  \
   ((type_id_t*)(((uint8_t*)cif) + sizeof(ik_ffi_cif_stru_t) + (1+(ARITY))*sizeof(ffi_type*)))
 
-static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr s_scheme_value, void * buffer);
-static ikptr    ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
+static void     scheme_to_native_value_cast  (type_id_t type_id, ikptr_t s_scheme_value, void * buffer);
+static ikptr_t  ika_native_to_scheme_value_cast  (type_id_t type_id, void * buffer, ikpcb* pcb);
 static void     generic_callback             (ffi_cif *cif, void *ret, void **args, void *user_data);
 
 
@@ -181,7 +181,7 @@ alloc (size_t n, long m)
     ik_abort("failed memory allocation with calloc(%u, %ld)", n, m);
   return ptr;
 }
-ikptr
+ikptr_t
 ikrt_has_ffi (void)
 {
   return IK_TRUE_OBJECT;
@@ -192,9 +192,9 @@ static void
 dump_stack (ikpcb* pcb, char* msg)
 {
   fprintf(stderr, "====================  %s\n", msg);
-  ikptr frame_base = pcb->frame_base;
-  ikptr frame_pointer = pcb->frame_pointer;
-  ikptr p = frame_pointer;
+  ikptr_t frame_base = pcb->frame_base;
+  ikptr_t frame_pointer = pcb->frame_pointer;
+  ikptr_t p = frame_pointer;
   fprintf(stderr, "fp=0x%016lx   base=0x%016lx\n", frame_pointer, frame_base);
   while (p < frame_base) {
     fprintf(stderr, "*0x%016lx = 0x%016lx\n", p, IK_REF(p, 0));
@@ -208,8 +208,8 @@ dump_stack (ikpcb* pcb, char* msg)
  ** Call InterFace (CIF) preparation.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
+ikptr_t
+ikrt_ffi_prep_cif (ikptr_t s_type_ids, ikpcb* pcb)
 /* Wrapper  for   Libffi's  "ffi_prep_cif()";  prepare   a  Libffi  call
    interface (CIF) building an  appropriate data structure, whose memory
    is obtained  by "calloc()".  Return a pointer  object referencing the
@@ -249,7 +249,7 @@ ikrt_ffi_prep_cif (ikptr s_type_ids, ikpcb* pcb)
  ** ----------------------------------------------------------------- */
 
 static void
-scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buffer)
+scheme_to_native_value_cast (type_id_t type_id, ikptr_t s_scheme_value, void * buffer)
 /* Convert  the S_SCHEME_VALUE to  a native  value and  store it  in the
    block of memory  referenced by BUFFER; the type  is selected TYPE_ID.
    S_SCHEME_VALUE must have been already validated.  BUFFER must be wide
@@ -293,7 +293,7 @@ scheme_to_native_value_cast (type_id_t type_id, ikptr s_scheme_value, void * buf
     ik_abort("%s: invalid argument type selector %d", __func__, (int)type_id);
   }
 }
-static ikptr
+static ikptr_t
 ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
 /* Convert the native value stored  in the block of memory referenced by
    BUFFER to  a Scheme value  and return the  Scheme value; the  type is
@@ -335,8 +335,8 @@ ika_native_to_scheme_value_cast (type_id_t type_id, void * buffer, ikpcb* pcb)
  ** Callout: call a C function from Scheme code.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb_t * pcb)
+ikptr_t
+ikrt_ffi_call (ikptr_t s_data, ikptr_t s_args, ikpcb_t * pcb)
 /* Perform a callout and return the return value of the callout.
 
    S_DATA  must  be  a pair  whose  car  is  a  pointer object  of  type
@@ -345,7 +345,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb_t * pcb)
 
    S_ARGS must be a vector holding the call arguments.  */
 {
-  ikptr         return_value;
+  ikptr_t         return_value;
   size_t        args_bufsize;
   ik_enter_c_function(pcb);
   {
@@ -367,7 +367,7 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb_t * pcb)
        native argument values. */
     int		i;
     for (i=0; i<cif->arity; i++) {
-      ikptr  value = IK_ITEM(s_args, i);
+      ikptr_t  value = IK_ITEM(s_args, i);
       arg_value_ptrs[i] = arg_next;
       scheme_to_native_value_cast(cif->arg_type_ids[i], value, arg_next);
       arg_next += cif->arg_types[i]->size;
@@ -396,8 +396,8 @@ ikrt_ffi_call (ikptr s_data, ikptr s_args, ikpcb_t * pcb)
  ** Callback: call a Scheme closure from C code.
  ** ----------------------------------------------------------------- */
 
-ikptr
-ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
+ikptr_t
+ikrt_ffi_prepare_callback (ikptr_t s_data, ikpcb* pcb)
 /* Prepare  a Libffi's  callback interface  associated  to a  CIF and  a
    Scheme function.   If successful return a  pointer object referencing
    the  callback, else  return false.   A failure  is probably  an error
@@ -418,8 +418,8 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
 #ifdef LIBFFI_ON_DARWIN
   { /* This is  needed on some flavors  of Darwin to  make the generated
        callback code executable. */
-    long code_start = IK_ALIGN_TO_PREV_PAGE(callable_pointer);
-    long code_end   = IK_ALIGN_TO_NEXT_PAGE(FFI_TRAMPOLINE_SIZE+(-1)+(long)callable_pointer);
+    ikuword_t code_start = IK_ALIGN_TO_PREV_PAGE(callable_pointer);
+    ikuword_t code_end   = IK_ALIGN_TO_NEXT_PAGE(FFI_TRAMPOLINE_SIZE+(-1)+(ikuword_t)callable_pointer);
     int rv = mprotect((void*)code_start, code_end - code_start, PROT_READ|PROT_WRITE|PROT_EXEC);
     if (rv)
       fprintf(stderr, "*** Vicare warning: error mprotecting callback code page\n");
@@ -447,8 +447,8 @@ ikrt_ffi_prepare_callback (ikptr s_data, ikpcb* pcb)
   return IK_FALSE_OBJECT;
 #endif /* if FFI_CLOSURES */
 }
-ikptr
-ikrt_ffi_release_callback (ikptr s_callable_pointer, ikpcb_t * pcb)
+ikptr_t
+ikrt_ffi_release_callback (ikptr_t s_callable_pointer, ikpcb_t * pcb)
 {
   ik_callback_locative *  root;
   void *                  callable_pointer;
@@ -508,11 +508,11 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
    Access the PCB through "ik_the_pcb()". */
 {
   ik_ffi_cif_t  cif           = (ik_ffi_cif_t)cif_;
-  ikptr         s_data        = ((ik_callback_locative*)user_data)->data;
-  ikptr         s_proc        = IK_CDR(s_data);
-  ikpcb_t *       pcb           = ik_the_pcb();
+  ikptr_t       s_data        = ((ik_callback_locative*)user_data)->data;
+  ikptr_t       s_proc        = IK_CDR(s_data);
+  ikpcb_t *     pcb           = ik_the_pcb();
   int		i;
-  ikptr         rv;
+  ikptr_t         rv;
   /* This setting  for "frame_pointer"  and "frame_base" is  expected by
      "ik_exec_code()". */
   pcb->frame_pointer = pcb->frame_base;
@@ -549,7 +549,7 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
      * return address.
      */
     for (i=0; i<cif->arity; ++i) {
-      ikptr	s_value;
+      ikptr_t	s_value;
       s_value = ika_native_to_scheme_value_cast(cif->arg_type_ids[i], args[i], pcb);
       IK_REF(pcb->frame_pointer, -2*wordsize - i*wordsize) = s_value;
     }
@@ -557,11 +557,11 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
   pcb->root0 = NULL;
   { /* Perform the call.  S_CODE is a  tagged pointer to the code object
        implementing the closure S_PROC. */
-    ikptr	code_entry = IK_REF(s_proc, off_closure_code);
-    ikptr	s_code     = code_entry - off_code_data;
-    /* "cif->arity" is an "unsigned int",  so first convert it to "long"
-       and only after negate it and convert it to fixnum. */
-    rv = ik_exec_code(pcb, s_code, IK_FIX(-((long)cif->arity)), s_proc);
+    ikptr_t	code_entry = IK_REF(s_proc, off_closure_code);
+    ikptr_t	s_code     = code_entry - off_code_data;
+    /* "cif->arity"  is  an  "unsigned  int", so  first  convert  it  to
+       "iksword_t" and only after negate it and convert it to fixnum. */
+    rv = ik_exec_code(pcb, s_code, IK_FIX(-((iksword_t)cif->arity)), s_proc);
     /* Convert the Scheme return value to a native value. */
     scheme_to_native_value_cast(cif->retval_type_id, rv, retval_buffer);
   }
@@ -574,11 +574,11 @@ generic_callback (ffi_cif * cif_, void * retval_buffer, void ** args, void * use
 
 #else
 
-ikptr ikrt_ffi_prep_cif ()		{ return IK_FALSE_OBJECT; }
-ikptr ikrt_ffi_call()			{ return IK_FALSE_OBJECT; }
-ikptr ikrt_ffi_prepare_callback()	{ return IK_FALSE_OBJECT; }
-ikptr ikrt_ffi_release_callback ()	{ return IK_FALSE_OBJECT; }
-ikptr ikrt_has_ffi()			{ return IK_FALSE_OBJECT; }
+ikptr_t ikrt_ffi_prep_cif ()		{ return IK_FALSE_OBJECT; }
+ikptr_t ikrt_ffi_call()			{ return IK_FALSE_OBJECT; }
+ikptr_t ikrt_ffi_prepare_callback()	{ return IK_FALSE_OBJECT; }
+ikptr_t ikrt_ffi_release_callback ()	{ return IK_FALSE_OBJECT; }
+ikptr_t ikrt_has_ffi()			{ return IK_FALSE_OBJECT; }
 
 #endif
 
@@ -614,7 +614,7 @@ ik_enter_c_function (ikpcb* pcb)
  * in a code object.
  */
 {
-  ikptr		sk;
+  ikptr_t		sk;
   seal_scheme_stack(pcb);
   sk = ik_unsafe_alloc(pcb, IK_ALIGN(system_continuation_size)) | continuation_primary_tag;
   IK_REF(sk, off_system_continuation_tag)  = system_continuation_tag;
@@ -630,7 +630,7 @@ ik_leave_c_function (ikpcb_t * pcb)
    from such system  continuation the C stack that was  last stored into
    PCB when entering Scheme code. */
 {
-  ikptr		sk = pcb->next_k;
+  ikptr_t		sk = pcb->next_k;
   /* If Scheme code was called we have:
    *
    *   pcb->frame_pointer == pcb->frame_base
@@ -727,8 +727,8 @@ seal_scheme_stack(ikpcb* pcb)
 {
   if ((pcb->frame_base - wordsize) != pcb->frame_pointer) {
     assert(IK_UNDERFLOW_HANDLER == IK_REF(pcb->frame_base, -wordsize));
-    ikcont *	kont   = (ikcont*)(long)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
-    ikptr	s_kont = ((ikptr)kont) | continuation_primary_tag;
+    ikcont *	kont   = (ikcont*)ik_unsafe_alloc(pcb, IK_ALIGN(continuation_size));
+    ikptr_t	s_kont = ((ikptr_t)kont) | continuation_primary_tag;
     kont->tag		= continuation_tag;
     kont->top		= pcb->frame_pointer;
     kont->size		= (pcb->frame_base - wordsize) - pcb->frame_pointer;
